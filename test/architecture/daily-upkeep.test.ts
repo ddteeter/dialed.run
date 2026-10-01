@@ -13,7 +13,7 @@ import { withoutComments } from "./source-text";
  * nobody passes in never runs, and every test of it still passes.
  *
  * The data export (ACC-10) is wired the same way twice over: its sweep to
- * the hourly firing, and its build to the imports queue's consumer.
+ * the hourly firing, and its consumers to `dialed-exports` (decision D-86).
  */
 describe("the Worker entry hands the firings and the queue their upkeep", () => {
   it("passes account deletion's purge and the export sweep to handleScheduled", () => {
@@ -29,11 +29,11 @@ describe("the Worker entry hands the firings and the queue their upkeep", () => 
     );
   });
 
-  it("passes the export's build to handleQueueBatch", () => {
+  it("passes the export's consumers to handleQueueBatch", () => {
     const code = withoutComments(serverSource);
     expect(code).toContain(
-      'import { exportWorkFromEnv } from "./modules/account/export-build";',
+      'import { exportConsumersFromEnv } from "./modules/account/export-build";',
     );
-    expect(code).toContain("handleQueueBatch(batch, exportWorkFromEnv())");
+    expect(code).toContain("handleQueueBatch(batch, exportConsumersFromEnv())");
   });
 });

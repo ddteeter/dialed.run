@@ -643,10 +643,11 @@ describe("exportData and exportFiles", () => {
     // both.
     const { profileSheet, runsSheet, entriesSheet, kitSheet, garmentsSheet } =
       buildSheets({
-        data,
-        runFileOf: new Map(),
-        entryPhotos: new Map(),
-        garmentPhotos: new Map(),
+        profile: { account: undefined, profile: undefined },
+        runs: [],
+        entries: [],
+        kit: [],
+        garments: [],
       });
     expect(readme).toBe(
       [

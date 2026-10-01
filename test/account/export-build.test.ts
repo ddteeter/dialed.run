@@ -18,13 +18,16 @@ import { EXPORT_LINK_TTL_S } from "../../src/lib/data-export";
 import { newUlid } from "../../src/lib/ids";
 import {
   exportKeyFor,
+  exportPrefixFor,
+  failExport,
   newLinkToken,
 } from "../../src/modules/account/data-exports";
 import {
   buildExport,
-  exportWorkFromEnv,
+  exportConsumersFromEnv,
   type BuildDeps,
 } from "../../src/modules/account/export-build";
+import { batchOf, fakeMessage } from "../queue-fakes";
 import { core } from "../email/helpers";
 import { readZip, textOf } from "./zip-reader";
 
@@ -164,12 +167,64 @@ async function statusOf(id: string) {
 }
 
 /**
-The ZIP the build staged for this export, opened.
+Every ZIP any build staged for this export, by key.
 */
-async function stagedZip(userId: string, exportId: string) {
-  const staged = await env.IMPORTS.get(exportKeyFor(userId, exportId));
+async function stagedKeys(userId: string, exportId: string) {
+  const listed = await env.IMPORTS.list({
+    prefix: `${exportPrefixFor(userId)}${exportId}/`,
+  });
+  return listed.objects.map((object) => object.key);
+}
+
+/**
+The ZIP the claim holding the row staged, opened.
+*/
+async function stagedZip(exportId: string) {
+  const row = await rowOf(exportId);
+  const key = row && exportKeyFor(row);
+  if (key === undefined) throw new Error("nothing claimed");
+  const staged = await env.IMPORTS.get(key);
   if (staged === null) throw new Error("nothing staged");
   return { staged, zip: readZip(await staged.arrayBuffer()) };
+}
+
+/**
+ * A media bucket whose first listing waits for `release`: the build that
+ * gets it has claimed its row and stops there, so a test can do what
+ * another delivery, the DLQ or the purge would do meanwhile.
+ */
+function pausedMedia() {
+  const reached = Promise.withResolvers<undefined>();
+  const gate = Promise.withResolvers<undefined>();
+  const media: BuildDeps["media"] = {
+    get: (key) => env.MEDIA.get(key),
+    list: async (options) => {
+      reached.resolve(undefined);
+      await gate.promise;
+      return env.MEDIA.list(options);
+    },
+  };
+  return {
+    media,
+    reached: reached.promise,
+    release: () => {
+      gate.resolve(undefined);
+    },
+  };
+}
+
+function silenced() {
+  return vi.spyOn(console, "error").mockImplementation(() => {
+    /*
+    Sentry is disabled in tests; the capture logs instead.
+    */
+  });
+}
+
+function unreported(): void {
+  /*
+  The DLQ's report is not what these tests read.
+  */
 }
 
 async function owedFor(exportId: string) {
@@ -188,7 +243,7 @@ describe("buildExport", () => {
 
     await buildExport(deps, exported.id);
 
-    const { staged, zip } = await stagedZip(userId, exported.id);
+    const { staged, zip } = await stagedZip(exported.id);
     expect(staged.httpMetadata?.contentType).toBe("application/zip");
     const { files } = zip;
     expect(zip.names).toStrictEqual([
@@ -216,12 +271,18 @@ describe("buildExport", () => {
       `,run-files/${seeded.importId}.gpx\r\n`,
     );
 
-    expect(await rowOf(exported.id)).toMatchObject({
+    const row = await rowOf(exported.id);
+    expect(row).toMatchObject({
       status: "ready",
       claimedAt: NOW,
       readyAt: NOW,
       expiresAt: NOW + EXPORT_LINK_TTL_S,
     });
+    // One ZIP, under the claim the row holds.
+    expect(row?.claimId).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/u);
+    expect(await stagedKeys(userId, exported.id)).toStrictEqual([
+      `exports/${userId}/${exported.id}/${String(row?.claimId)}.zip`,
+    ]);
     const owed = await owedFor(exported.id);
     expect(owed.map((row): unknown => JSON.parse(row.payload))).toStrictEqual([
       {
@@ -245,7 +306,7 @@ describe("buildExport", () => {
     await buildExport(deps, exported.id);
 
     expect(await statusOf(exported.id)).toBe("ready");
-    const { zip } = await stagedZip(userId, exported.id);
+    const { zip } = await stagedZip(exported.id);
     // Nothing in the account but the account: the texts, no files.
     expect(zip.names).toHaveLength(6);
   });
@@ -260,9 +321,7 @@ describe("buildExport", () => {
       await buildExport(deps, exported.id);
 
       expect(await statusOf(exported.id)).toBe(status);
-      expect(
-        await env.IMPORTS.head(exportKeyFor(userId, exported.id)),
-      ).toBeNull();
+      expect(await stagedKeys(userId, exported.id)).toStrictEqual([]);
       expect(await owedFor(exported.id)).toStrictEqual([]);
       expect(settled).toStrictEqual([]);
     },
@@ -274,7 +333,7 @@ describe("buildExport", () => {
     expect(settled).toStrictEqual([]);
   });
 
-  it("reports the ids and throws for the queue to retry when a file vanishes mid-build", async () => {
+  it("reports the ids, leaves no ZIP, and throws for the queue to retry when a file vanishes mid-build", async () => {
     const userId = await seedRunner();
     await seedEverything(userId);
     const exported = await seedExport(userId, "pending");
@@ -293,10 +352,50 @@ describe("buildExport", () => {
     expect(reports.map((report) => report.context)).toStrictEqual([
       { surface: "account-export-build", exportId: exported.id, userId },
     ]);
-    // Still claimed, so the redelivery re-claims it; nothing owed.
+    // Still claimed, so the redelivery re-claims it; nothing owed, and
+    // the half-made ZIP (zeros where the file was) is gone.
     expect(await statusOf(exported.id)).toBe("building");
     expect(await owedFor(exported.id)).toStrictEqual([]);
     expect(settled).toStrictEqual([]);
+    expect(await stagedKeys(userId, exported.id)).toStrictEqual([]);
+  });
+
+  it("writes a vanished file larger than one chunk as zeros of its full size, so the upload completes", async () => {
+    const userId = await seedRunner();
+    const seeded = await seedEverything(userId);
+    const big = 200 * 1024;
+    const photoKey = `items/${userId}/${seeded.garmentId}/01V1/original.jpg`;
+    await env.MEDIA.put(photoKey, new Uint8Array(big));
+    const exported = await seedExport(userId, "pending");
+    const written: { key: string; bytes: number }[] = [];
+    const { deps } = depsWith({
+      media: {
+        list: (options) => env.MEDIA.list(options),
+        get: (key) =>
+          // Gone since the listing: R2's own answer for a missing key.
+          env.MEDIA.get(key === photoKey ? `missing/${newUlid()}` : key),
+      },
+      imports: {
+        list: (options) => env.IMPORTS.list(options),
+        get: (key) => env.IMPORTS.get(key),
+        delete: (keys) => env.IMPORTS.delete(keys),
+        put: async (key, value, options) => {
+          const stored = await env.IMPORTS.put(key, value, options);
+          written.push({ key, bytes: stored.size });
+          return stored;
+        },
+      },
+    });
+
+    await expect(buildExport(deps, exported.id)).rejects.toThrow(
+      "an export file went missing",
+    );
+
+    // The upload reached its promised length, which it cannot short of a
+    // zero for every byte of the missing photo.
+    expect(written).toHaveLength(1);
+    expect(written[0]?.bytes).toBeGreaterThan(big);
+    expect(await stagedKeys(userId, exported.id)).toStrictEqual([]);
   });
 
   it("throws the underlying error, not the missing-file message, when the write itself fails", async () => {
@@ -311,6 +410,7 @@ describe("buildExport", () => {
       imports: {
         list: (options) => env.IMPORTS.list(options),
         get: (key) => env.IMPORTS.get(key),
+        delete: (keys) => env.IMPORTS.delete(keys),
         put: () => Promise.reject(failure),
       },
     });
@@ -328,7 +428,7 @@ describe("buildExport", () => {
 
     await buildExport(deps, exported.id);
 
-    const { zip } = await stagedZip(userId, exported.id);
+    const { zip } = await stagedZip(exported.id);
     const stamped = zip.modified.get("README.txt");
     // NOW is 1_800_000_000 seconds — 2027. `deps.now / 1000` would land
     // within seconds of the epoch, which DOS's date field cannot even
@@ -351,6 +451,7 @@ describe("buildExport", () => {
       imports: {
         get: (key) => env.IMPORTS.get(key),
         put: (key, value, options) => env.IMPORTS.put(key, value, options),
+        delete: (keys) => env.IMPORTS.delete(keys),
         list: (options) => {
           listed.push(options?.prefix);
           return env.IMPORTS.list(options);
@@ -385,35 +486,124 @@ describe("buildExport", () => {
 
     await buildExport(deps, exported.id);
 
-    const { zip } = await stagedZip(userId, exported.id);
+    const { zip } = await stagedZip(exported.id);
     expect(zip.names).toContain(`photos/closet/${seeded.garmentId}.jpg`);
     expect(pages.length).toBeGreaterThan(2);
   });
 });
 
-describe("exportWorkFromEnv", () => {
+describe("two builds of one export", () => {
+  it("send one email and leave one ZIP when a second delivery overtakes the first", async () => {
+    const userId = await seedRunner();
+    const exported = await seedExport(userId, "pending");
+    const paused = pausedMedia();
+    const first = depsWith({ media: paused.media });
+    const second = depsWith();
+
+    const overtaken = buildExport(first.deps, exported.id);
+    await paused.reached;
+    // A sweep re-send or a duplicate delivery, while the first still runs.
+    await buildExport(second.deps, exported.id);
+    paused.release();
+    await overtaken;
+
+    expect(await statusOf(exported.id)).toBe("ready");
+    const owed = await owedFor(exported.id);
+    expect(owed).toHaveLength(1);
+    // The one debt is the winner's, and only the winner settled.
+    expect(second.settled).toStrictEqual(owed.map((row) => row.id));
+    expect(first.settled).toStrictEqual([]);
+    const row = await rowOf(exported.id);
+    expect(await stagedKeys(userId, exported.id)).toStrictEqual([
+      exportKeyFor({ userId, id: exported.id, claimId: String(row?.claimId) }),
+    ]);
+  });
+
+  it("send one email and leave one ZIP when they race", async () => {
+    const userId = await seedRunner();
+    await seedEverything(userId);
+    const exported = await seedExport(userId, "pending");
+    const one = depsWith();
+    const two = depsWith();
+
+    await Promise.all([
+      buildExport(one.deps, exported.id),
+      buildExport(two.deps, exported.id),
+    ]);
+
+    expect(await statusOf(exported.id)).toBe("ready");
+    expect(await owedFor(exported.id)).toHaveLength(1);
+    expect([...one.settled, ...two.settled]).toHaveLength(1);
+    expect(await stagedKeys(userId, exported.id)).toHaveLength(1);
+  });
+});
+
+describe("an export that stops being this build's mid-build", () => {
+  it("owes no email and leaves no ZIP when the runner's purge takes the row", async () => {
+    const userId = await seedRunner();
+    const exported = await seedExport(userId, "pending");
+    const paused = pausedMedia();
+    const { deps, settled } = depsWith({ media: paused.media });
+
+    const build = buildExport(deps, exported.id);
+    await paused.reached;
+    await db.delete(dataExports).where(eq(dataExports.id, exported.id));
+    paused.release();
+    await build;
+
+    expect(await rowOf(exported.id)).toBeUndefined();
+    expect(await owedFor(exported.id)).toStrictEqual([]);
+    expect(settled).toStrictEqual([]);
+    expect(await stagedKeys(userId, exported.id)).toStrictEqual([]);
+  });
+
+  it("owes no email and leaves no ZIP when the DLQ has failed it", async () => {
+    const userId = await seedRunner();
+    const exported = await seedExport(userId, "pending");
+    const paused = pausedMedia();
+    const { deps, settled } = depsWith({ media: paused.media });
+
+    const build = buildExport(deps, exported.id);
+    await paused.reached;
+    await failExport(db, exported.id, unreported);
+    paused.release();
+    await build;
+
+    expect(await statusOf(exported.id)).toBe("failed");
+    expect(await owedFor(exported.id)).toStrictEqual([]);
+    expect(settled).toStrictEqual([]);
+    expect(await stagedKeys(userId, exported.id)).toStrictEqual([]);
+  });
+});
+
+describe("exportConsumersFromEnv", () => {
   it("builds on the live bindings", async () => {
     const userId = await seedRunner();
     const exported = await seedExport(userId, "pending");
+    const error = silenced();
+    const message = fakeMessage("m1", {
+      type: "account_export",
+      exportId: exported.id,
+    });
 
-    await exportWorkFromEnv().build(exported.id);
+    await exportConsumersFromEnv().batch(batchOf("dialed-exports", [message]));
 
+    expect(message.ack).toHaveBeenCalled();
     expect(await statusOf(exported.id)).toBe("ready");
-    expect(
-      await env.IMPORTS.head(exportKeyFor(userId, exported.id)),
-    ).not.toBeNull();
+    expect(await stagedKeys(userId, exported.id)).toHaveLength(1);
+    error.mockRestore();
   });
 
   it("settles the ready email through the real outbox, not a no-op", async () => {
     const userId = await seedRunner();
     const exported = await seedExport(userId, "pending");
-    const error = vi.spyOn(console, "error").mockImplementation(() => {
-      /*
-      Sentry is disabled in tests; the capture logs instead.
-      */
-    });
+    const error = silenced();
 
-    await exportWorkFromEnv().build(exported.id);
+    await exportConsumersFromEnv().batch(
+      batchOf("dialed-exports", [
+        fakeMessage("m2", { type: "account_export", exportId: exported.id }),
+      ]),
+    );
 
     const owed = await owedFor(exported.id);
     // A stubbed `settle` never touches the outbox at all, so either
@@ -426,19 +616,38 @@ describe("exportWorkFromEnv", () => {
   it("marks a dead-lettered export failed and tells Sentry its ids", async () => {
     const userId = await seedRunner();
     const exported = await seedExport(userId, "building");
-    const error = vi.spyOn(console, "error").mockImplementation(() => {
-      /*
-      Sentry is disabled in tests; the capture logs instead.
-      */
-    });
+    const error = silenced();
 
-    await exportWorkFromEnv().fail(exported.id);
+    await exportConsumersFromEnv().deadLetters(
+      batchOf("dialed-exports-dlq", [
+        fakeMessage("m3", { type: "account_export", exportId: exported.id }),
+      ]),
+    );
 
     expect(await statusOf(exported.id)).toBe("failed");
     expect(error).toHaveBeenCalledWith(
       expect.stringContaining("sentry-disabled"),
       expect.objectContaining({ exportId: exported.id, userId }),
       expect.objectContaining({ message: "account export dead-lettered" }),
+    );
+    error.mockRestore();
+  });
+
+  it("acks and reports, on the live reporter, a body that is not an export job", async () => {
+    const error = silenced();
+    const message = fakeMessage("m4", {
+      type: "account_export",
+      exportId: "not-a-row",
+    });
+    const broken = { ...message, body: { type: "account_export" } };
+
+    await exportConsumersFromEnv().batch(batchOf("dialed-exports", [broken]));
+
+    expect(broken.ack).toHaveBeenCalled();
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining("sentry-disabled"),
+      expect.objectContaining({ queue: "dialed-exports", messageId: "m4" }),
+      expect.objectContaining({ message: "invalid exports queue message" }),
     );
     error.mockRestore();
   });

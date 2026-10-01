@@ -128,14 +128,15 @@
       // which kind each names. Split from `email.ts` so the ignore covers
       // the table and not `preferenceFor` or the recipient/payload schemas
       // beside it -- same shape as `tap-list-data.ts` (D-34).
-      "src/lib/email-kinds.ts",
+      "src/lib/email-kinds.ts", // zod declaration table: emailKind() rows only, no behaviour
       // Task 126's export ZIP sheets: the five CSV column tables
       // (`{ name, about, value }` per column) are a reporting schema, not
       // behaviour -- a run of columns in one sheet reads as a duplicate of a
       // run of columns in any other. Split from `export-files.ts` so the
-      // ignore covers the table and not the photo/CSV/README rendering
-      // beside it.
-      "src/modules/account/export-sheets.ts",
+      // ignore covers the table and not the photo resolution and row
+      // building beside it; every column here only reads a field of a row
+      // `export-files.ts` built (PR #132 review), and must stay that way.
+      "src/modules/account/export-sheets.ts", // column table: every value is a plain field read
     ],
   },
 }

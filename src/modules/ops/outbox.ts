@@ -13,8 +13,19 @@
  * - **the digest** (`checkOutboxBacklog`) reports rows that have exhausted
  *   their attempts, and rows of a kind this build cannot read (law 6).
  */
-import { and, asc, count, eq, gte, lte, notInArray, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  gte,
+  lte,
+  notInArray,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
+import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import { outbox } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
@@ -106,24 +117,60 @@ export function oweOutbox(
  * early to see.
  */
 export function outboxInsert(db: Db, debt: OutboxDebt, now = nowSeconds()) {
-  // A debt held back (`notBefore`) is due when it says, or
-  // after the grace if that is later: the drain must still not race a
-  // fast path.
-  const due = Math.max(now + OUTBOX_FAST_PATH_GRACE_S, debt.notBefore ?? 0);
+  const row = outboxRow(debt, now);
+  return db.insert(outbox).values(row).onConflictDoUpdate(takeOver(row));
+}
+
+/**
+ * `outboxInsert`, owed only if `where` matches a row of `from` when the
+ * statement runs — `INSERT … SELECT … WHERE`, for a batch whose other
+ * write may match nothing. A batch cannot branch on its own results, so
+ * this is how the debt lands exactly when the change it pays for did, and
+ * never without it.
+ */
+export function outboxInsertWhere(
+  db: Db,
+  debt: OutboxDebt,
+  from: Readonly<{ table: SQLiteTable; where: SQL }>,
+  now = nowSeconds(),
+) {
+  const row = outboxRow(debt, now);
+  // Drizzle names every column of `outbox`, in the table's order, so the
+  // select gives each one: the row's values, then a fresh row's defaults
+  // (no attempts, never sent). A column added to the table fails this
+  // loudly, as a count mismatch, on the first test that owes an export.
   return db
     .insert(outbox)
-    .values({
-      id: debt.id,
-      kind: debt.message.kind,
-      dedupeKey: dedupeKeyFor(debt.message),
-      payload: JSON.stringify(debt.message.payload),
-      nextAttemptAt: due,
-      createdAt: now,
-    })
-    .onConflictDoUpdate({
-      target: [outbox.kind, outbox.dedupeKey],
-      set: { id: debt.id, nextAttemptAt: due },
-    });
+    .select(
+      sql`select ${row.id}, ${row.kind}, ${row.dedupeKey}, ${row.payload}, 0, ${row.nextAttemptAt}, ${row.createdAt}, null, null from ${from.table} where ${from.where}`,
+    )
+    .onConflictDoUpdate(takeOver(row));
+}
+
+/**
+ * The row a debt writes. A debt held back (`notBefore`) is due when it
+ * says, or after the grace if that is later: the drain must still not race
+ * a fast path.
+ */
+function outboxRow(debt: OutboxDebt, now: number) {
+  return {
+    id: debt.id,
+    kind: debt.message.kind,
+    dedupeKey: dedupeKeyFor(debt.message),
+    payload: JSON.stringify(debt.message.payload),
+    nextAttemptAt: Math.max(
+      now + OUTBOX_FAST_PATH_GRACE_S,
+      debt.notBefore ?? 0,
+    ),
+    createdAt: now,
+  };
+}
+
+function takeOver(row: ReturnType<typeof outboxRow>) {
+  return {
+    target: [outbox.kind, outbox.dedupeKey],
+    set: { id: row.id, nextAttemptAt: row.nextAttemptAt },
+  };
 }
 
 /**

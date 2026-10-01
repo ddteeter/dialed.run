@@ -29,7 +29,6 @@ import { PARSE_FAILURE_MESSAGE, extensionFromKey, sourceFor } from "./parsers";
 import {
   importsQueueMessageSchema,
   type DeauthorizeJob,
-  type ExportJob,
   type ImportJob,
   type ReminderJob,
   type RevokeJob,
@@ -68,34 +67,6 @@ export interface ConsumerDeps {
    * `ops` imports this module and so cannot be imported by it.
    */
   owe: Owe;
-  /**
-   * A runner's data export (task 126, ACC-10): built by `account`, which
-   * this module cannot import (account imports runs), so the Worker entry
-   * hands it down through `ops`' queue router. Optional so a test of the
-   * import jobs need not build one; a job that arrives without it throws,
-   * and the queue's retries and DLQ report it.
-   */
-  exports?: ExportWork | undefined;
-}
-
-/**
- * What the `account_export` job needs done: build the ZIP and email it,
- * or — from the DLQ, once retries are spent — mark the export failed so
- * the runner is told (law 6).
- */
-export interface ExportWork {
-  build: (exportId: string) => Promise<void>;
-  fail: (exportId: string) => Promise<void>;
-}
-
-/**
-The export work this consumer was handed, or a loud failure without it.
-*/
-function exportWork(deps: ConsumerDeps): ExportWork {
-  if (deps.exports === undefined) {
-    throw new Error("account export job with no export work wired");
-  }
-  return deps.exports;
 }
 
 const IMPORT_TERMINAL_STATUSES = ["done", "failed", "duplicate"] as const;
@@ -370,13 +341,9 @@ async function processRevokeJob(
 
 async function processJob(
   deps: ConsumerDeps,
-  job: ImportJob | ReminderJob | RevokeJob | DeauthorizeJob | ExportJob,
+  job: ImportJob | ReminderJob | RevokeJob | DeauthorizeJob,
 ): Promise<void> {
   switch (job.type) {
-    case "account_export": {
-      await exportWork(deps).build(job.exportId);
-      return;
-    }
     case "strava_deauthorize": {
       await deauthorizeAthlete(deps.db, job.athleteId, job.eventTime, deps.owe);
       return;
@@ -424,10 +391,6 @@ export async function handleImportsDlqBatch(
 ): Promise<void> {
   await deadLetterEach(batch, importsQueueMessageSchema, {
     onJob: async (job) => {
-      if (job.type === "account_export") {
-        await exportWork(deps).fail(job.exportId);
-        return;
-      }
       if (job.type === "strava_deauthorize") {
         await deauthorizeAthlete(
           deps.db,

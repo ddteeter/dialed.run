@@ -65,10 +65,27 @@ async function seedExport(
     linkToken: newLinkToken(),
     status,
     requestedAt: NOW - 60,
+    claimId: newUlid(),
     ...overrides,
   };
   await db.insert(dataExports).values(row);
   return row;
+}
+
+/**
+The ZIP key of a seeded, claimed row.
+*/
+function keyOf(
+  row: Readonly<{
+    userId: string;
+    id: string;
+    claimId?: string | null | undefined;
+  }>,
+): string {
+  if (row.claimId === undefined || row.claimId === null) {
+    throw new Error("seeded without a claim");
+  }
+  return exportKeyFor({ userId: row.userId, id: row.id, claimId: row.claimId });
 }
 
 async function rowsOf(userId: string) {
@@ -88,7 +105,19 @@ describe("the export's link and key", () => {
 
   it("stages a runner's ZIPs beside their uploads, never inside them", () => {
     expect(exportPrefixFor("u1")).toBe("exports/u1/");
-    expect(exportKeyFor("u1", "e1")).toBe("exports/u1/e1.zip");
+  });
+
+  it("keys each claim's ZIP apart, and a row never claimed has none", async () => {
+    expect(exportKeyFor({ userId: "u1", id: "e1", claimId: "c1" })).toBe(
+      "exports/u1/e1/c1.zip",
+    );
+    expect(exportKeyFor({ userId: "u1", id: "e1", claimId: "c2" })).toBe(
+      "exports/u1/e1/c2.zip",
+    );
+    // As the table holds a row no build has claimed.
+    const unclaimed = await rowWith("pending", { claimId: undefined });
+    expect(unclaimed?.claimId).toBeNull();
+    expect(unclaimed && exportKeyFor(unclaimed)).toBeUndefined();
   });
 });
 
@@ -440,7 +469,7 @@ async function readyExport(userId: string, expiresAt = NOW + 60) {
     readyAt: NOW - 86_400 * 2,
     expiresAt,
   });
-  await env.IMPORTS.put(exportKeyFor(userId, row.id), "zip bytes");
+  await env.IMPORTS.put(keyOf(row), "zip bytes");
   return row;
 }
 
@@ -467,7 +496,7 @@ describe("exportFileResponse", () => {
       "content-disposition":
         'attachment; filename="dialed-run-export-2027-01-08.zip"',
       "content-length": "9",
-      "cache-control": "no-store",
+      "cache-control": "private, no-store",
     });
     expect(new TextDecoder().decode(await response.arrayBuffer())).toBe(
       "zip bytes",
@@ -501,11 +530,16 @@ describe("exportFileResponse", () => {
       requestedAt: NOW - 30,
       expiresAt: NOW + 60,
     });
-    await env.IMPORTS.put(exportKeyFor(userId, pending.id), "partial");
+    await env.IMPORTS.put(keyOf(pending), "partial");
     const undated = await seedExport(userId, "ready");
-    await env.IMPORTS.put(exportKeyFor(userId, undated.id), "zip bytes");
+    await env.IMPORTS.put(keyOf(undated), "zip bytes");
     const gone = await readyExport(userId);
-    await env.IMPORTS.delete(exportKeyFor(userId, gone.id));
+    await env.IMPORTS.delete(keyOf(gone));
+    // Ready and dated but never claimed: no build's key, so no ZIP.
+    const unclaimed = await seedExport(userId, "ready", {
+      claimId: undefined,
+      expiresAt: NOW + 60,
+    });
     const cases = [
       { token: "not-a-token", userId },
       { token: newLinkToken(), userId },
@@ -515,6 +549,7 @@ describe("exportFileResponse", () => {
       { token: pending.linkToken, userId },
       { token: undated.linkToken, userId },
       { token: gone.linkToken, userId },
+      { token: unclaimed.linkToken, userId },
     ];
     for (const request of cases) {
       expect(

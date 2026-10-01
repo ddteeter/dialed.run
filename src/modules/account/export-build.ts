@@ -13,7 +13,7 @@
  * (`predictLength`) from sizes the bucket listings report, and the ZIP is
  * piped through a `FixedLengthStream` of exactly that length.
  */
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { makeZip, predictLength } from "client-zip";
 
@@ -22,17 +22,19 @@ import { env } from "../../env";
 import { EXPORT_LINK_TTL_S } from "../../lib/data-export";
 import { entryPhotoPrefix } from "../../lib/entry-photo-key";
 import { garmentPhotoPrefix } from "../../lib/garment-photo-key";
+import { newUlid } from "../../lib/ids";
+import { importFilePrefix } from "../../lib/import-file-key";
 import { nowSeconds } from "../../lib/now";
 import { listedPages } from "../../lib/r2-pages";
 import { emailDebt } from "../email";
 import {
   captureException,
-  outboxInsert,
+  outboxInsertWhere,
   oweOutbox,
   settleOutbox,
+  type ExportConsumers,
   type OutboxDebt,
 } from "../ops";
-import type { ExportWork } from "../runs";
 import { exportKeyFor, failExport, IN_FLIGHT } from "./data-exports";
 import { exportData } from "./export";
 import {
@@ -40,6 +42,7 @@ import {
   type ExportObject,
   type ExportText,
 } from "./export-files";
+import { exportConsumers } from "./export-queue";
 
 type Db = ReturnType<typeof drizzle>;
 type Report = (error: unknown, context: Record<string, string>) => void;
@@ -47,7 +50,7 @@ type Report = (error: unknown, context: Record<string, string>) => void;
 export interface BuildDeps {
   readonly db: Db;
   readonly media: Pick<R2Bucket, "get" | "list">;
-  readonly imports: Pick<R2Bucket, "get" | "list" | "put">;
+  readonly imports: Pick<R2Bucket, "get" | "list" | "put" | "delete">;
   readonly report: Report;
   /**
   The email's fast path (ops' `settleOutbox`); the drain is its net.
@@ -74,9 +77,39 @@ async function sizesUnder(
 }
 
 /**
+ * The most bytes one zero-filled stand-in hands the zip at a time.
+ */
+const ZERO_CHUNK = 64 * 1024;
+
+/**
+ * `size` zero bytes, a chunk at a time: the stand-in for a file that went
+ * missing, so the ZIP still ends at the length R2 was promised.
+ */
+function zeros(size: number): ReadableStream<Uint8Array> {
+  let left = size;
+  return new ReadableStream({
+    pull(controller) {
+      if (left > 0) {
+        const chunk = Math.min(left, ZERO_CHUNK);
+        left -= chunk;
+        controller.enqueue(new Uint8Array(chunk));
+      } else {
+        controller.close();
+      }
+    },
+  });
+}
+
+/**
  * The ZIP, written to `key`: the texts first, then each object fetched as
- * the zip asks for it. A file that is gone by the time it is fetched
- * throws, and the queue's retry lists again (law 3).
+ * the zip asks for it.
+ *
+ * **A file gone since the listing never errors the stream.** An errored
+ * body leaves R2's `put` with rejections nobody holds ("Network connection
+ * lost", measured in workerd), and throwing inside the zip library does
+ * the same. So a missing file is written as zeros of its listed size, the
+ * upload completes at its promised length, and then the half-made ZIP is
+ * deleted and this throws; the queue's retry lists again (law 3).
  */
 async function writeZip(
   deps: BuildDeps,
@@ -98,37 +131,30 @@ async function writeZip(
     })),
   ]);
   const buckets = { media: deps.media, imports: deps.imports };
-  // A file gone between the listing and now ends the ZIP short rather than
-  // throwing inside the zip library, which cannot hand a source's error
-  // back without leaving a rejection nobody holds. Short of its length,
-  // the stream refuses to close, the upload fails, and this says why.
   const missing: string[] = [];
   async function* entries() {
     yield* texts;
     for (const object of files.objects) {
       const stored = await buckets[object.bucket].get(object.key);
-      if (stored === null) {
-        missing.push(object.key);
-        return;
-      }
+      if (stored === null) missing.push(object.key);
       yield {
         name: object.name,
-        input: stored.body,
+        input: stored === null ? zeros(object.size) : stored.body,
         size: object.size,
-        lastModified: stored.uploaded,
+        lastModified: stored?.uploaded,
       };
     }
   }
   const { readable, writable } = new FixedLengthStream(length);
-  try {
-    await Promise.all([
-      deps.imports.put(key, readable, {
-        httpMetadata: { contentType: "application/zip" },
-      }),
-      makeZip(entries()).pipeTo(writable),
-    ]);
-  } catch (error) {
-    throw missing.length > 0 ? new Error("an export file went missing") : error;
+  await Promise.all([
+    deps.imports.put(key, readable, {
+      httpMetadata: { contentType: "application/zip" },
+    }),
+    makeZip(entries()).pipeTo(writable),
+  ]);
+  if (missing.length > 0) {
+    await deps.imports.delete(key);
+    throw new Error("an export file went missing");
   }
 }
 
@@ -136,23 +162,38 @@ async function writeZip(
  * The `account_export` job: claim the row, build and stage the ZIP, then
  * mark it ready and owe the email in one batch (a write and the message
  * that records it). A job whose row is finished, failed or gone claims
- * nothing and stops; `building` is claimable again, so a redelivery after
- * a crash rebuilds rather than stranding the row.
+ * nothing and stops.
+ *
+ * **Every claim is its own** (`claim_id`, fresh each time). `building` is
+ * claimable again, so a redelivery after a crash rebuilds rather than
+ * stranding the row — which also means a sweep re-send or a duplicate
+ * delivery can take the claim while another build is still running. Each
+ * writes its own ZIP (the key carries the claim), and only the build still
+ * holding the claim can finish: the ready update is guarded on it, and the
+ * email is an `INSERT … SELECT` that owes a row only if that update made
+ * the export ready under this claim. A build that finishes nothing deletes
+ * the ZIP it wrote. So one export sends one email and leaves one ZIP,
+ * whoever wins, and a row purged or failed mid-build gets neither.
  */
 export async function buildExport(
   deps: BuildDeps,
   exportId: string,
 ): Promise<void> {
   const { db, now } = deps;
+  const claimId = newUlid();
   const [row] = await db
     .update(dataExports)
-    .set({ status: "building", claimedAt: now })
+    .set({ status: "building", claimedAt: now, claimId })
     .where(
       and(eq(dataExports.id, exportId), inArray(dataExports.status, IN_FLIGHT)),
     )
-    .returning();
+    .returning({
+      userId: dataExports.userId,
+      linkToken: dataExports.linkToken,
+    });
   if (row === undefined) return;
   const { userId } = row;
+  const key = exportKeyFor({ userId, id: exportId, claimId });
   try {
     const data = await exportData(db, userId);
     const stored = {
@@ -160,13 +201,9 @@ export async function buildExport(
         entryPhotoPrefix(userId),
         garmentPhotoPrefix(userId),
       ]),
-      imports: await sizesUnder(deps.imports, [`imports/${userId}/`]),
+      imports: await sizesUnder(deps.imports, [importFilePrefix(userId)]),
     };
-    await writeZip(
-      deps,
-      exportKeyFor(userId, exportId),
-      exportFiles(data, stored, now),
-    );
+    await writeZip(deps, key, exportFiles(data, stored, now));
   } catch (error) {
     // The ids, never a file name or a byte (law 7); the queue retries.
     deps.report(error, { surface: "account-export-build", exportId, userId });
@@ -181,11 +218,17 @@ export async function buildExport(
       { dedupeKey: `export_ready:${exportId}` },
     ),
   );
-  const stillBuilding = and(
-    eq(dataExports.id, exportId),
-    eq(dataExports.status, "building"),
-  );
-  await db.batch([
+  // This export, under this build's claim, in `status`.
+  const mine = (status: "building" | "ready") =>
+    sql.join(
+      [
+        eq(dataExports.id, exportId),
+        eq(dataExports.claimId, claimId),
+        eq(dataExports.status, status),
+      ],
+      sql` and `,
+    );
+  const [readied] = await db.batch([
     db
       .update(dataExports)
       .set({
@@ -193,9 +236,22 @@ export async function buildExport(
         readyAt: now,
         expiresAt: now + EXPORT_LINK_TTL_S,
       })
-      .where(stillBuilding),
-    outboxInsert(db, debt, now),
+      .where(mine("building"))
+      .returning({ id: dataExports.id }),
+    outboxInsertWhere(
+      db,
+      debt,
+      { table: dataExports, where: mine("ready") },
+      now,
+    ),
   ]);
+  if (readied.length === 0) {
+    // The claim was taken over, or the row failed or went while this
+    // built: another build owns the export now, or nobody does. Nothing
+    // was owed; what this build wrote is its own to remove.
+    await deps.imports.delete(key);
+    return;
+  }
   await deps.settle(db, debt);
 }
 
@@ -211,13 +267,16 @@ function liveBuildDeps(): BuildDeps {
 }
 
 /**
- * The export work `dialed-imports`' consumer is handed (`ExportWork`), on
- * the live bindings. The Worker entry passes it to `handleQueueBatch`.
+ * `dialed-exports`' consumer and dead-letter consumer, on the live
+ * bindings. The Worker entry passes them to `handleQueueBatch`.
  */
-export function exportWorkFromEnv(): ExportWork {
-  return {
-    build: (exportId) => buildExport(liveBuildDeps(), exportId),
-    fail: (exportId) =>
-      failExport(drizzle(env.DIALED_CORE), exportId, captureException),
-  };
+export function exportConsumersFromEnv(): ExportConsumers {
+  return exportConsumers(
+    {
+      build: (exportId) => buildExport(liveBuildDeps(), exportId),
+      fail: (exportId) =>
+        failExport(drizzle(env.DIALED_CORE), exportId, captureException),
+    },
+    captureException,
+  );
 }

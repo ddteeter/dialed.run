@@ -1,30 +1,30 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import {
+  exportConsumers,
+  exportsQueueMessageSchema,
+  type ExportWork,
+} from "../../src/modules/account/export-queue";
 import { handleQueueBatch, handleScheduled } from "../../src/modules/ops";
 import type { CronReporter } from "../../src/modules/ops/sentry";
-import {
-  handleImportsBatch,
-  handleImportsDlqBatch,
-  type ExportWork,
-} from "../../src/modules/runs";
 import { importsQueueMessageSchema } from "../../src/modules/runs/queue-messages";
-import { coreDb } from "../../src/modules/runs/core-db";
-import { env } from "../../src/env";
-import { batchOf, fakeMessage, oweInCore } from "../queue-fakes";
+import { batchOf, fakeMessage } from "../queue-fakes";
 
 /**
- * The data export's seams (task 126, ACC-10): its job on `dialed-imports`
- * (a variant added, law 9), the export work handed down to that queue's
- * consumer and DLQ, and the sweep handed to the hourly firing.
+ * The data export's seams (task 126, ACC-10): its job on `dialed-exports`
+ * (its own queue, decision D-86), the consumers handed to ops' queue
+ * router, and the sweep handed to the hourly firing.
  */
 
-function recordingWork() {
+function recordingWork(buildError?: Error) {
   const built: string[] = [];
   const failed: string[] = [];
   const work: ExportWork = {
     build: (exportId) => {
       built.push(exportId);
-      return Promise.resolve();
+      return buildError === undefined
+        ? Promise.resolve()
+        : Promise.reject(buildError);
     },
     fail: (exportId) => {
       failed.push(exportId);
@@ -34,108 +34,141 @@ function recordingWork() {
   return { work, built, failed };
 }
 
-function consumerDeps(exports?: ExportWork) {
-  const reports: Record<string, string>[] = [];
-  return {
-    reports,
-    deps: {
-      db: coreDb(),
-      importBucket: env.IMPORTS,
-      captureException: (_error: unknown, context: Record<string, string>) => {
-        reports.push(context);
-      },
-      owe: oweInCore,
-      exports,
-    },
-  };
+function recordingConsumers(buildError?: Error) {
+  const recorded = recordingWork(buildError);
+  const reports: { error: unknown; context: Record<string, string> }[] = [];
+  const consumers = exportConsumers(recorded.work, (error, context) => {
+    reports.push({ error, context });
+  });
+  return { ...recorded, reports, consumers };
 }
 
 function nothing(): void {
   /*
-   * Sentry is disabled in tests; its capture logs, and the log is not the
-   * assertion here.
+   * The point is to do nothing.
    */
 }
 
 describe("the account_export job", () => {
-  it("is a variant of the imports queue's union, carrying only the export's id", () => {
+  it("is dialed-exports' one job, carrying only the export's id", () => {
     expect(
-      importsQueueMessageSchema.parse({
+      exportsQueueMessageSchema.parse({
         type: "account_export",
         exportId: "e1",
       }),
     ).toStrictEqual({ type: "account_export", exportId: "e1" });
     expect(
-      importsQueueMessageSchema.safeParse({
+      exportsQueueMessageSchema.safeParse({
         type: "account_export",
         exportId: "",
       }).success,
     ).toBe(false);
   });
 
-  it("is built by the export work the consumer was handed, and acked", async () => {
-    const { work, built, failed } = recordingWork();
+  it("is no longer a job on dialed-imports (moved before any deploy, law 9)", () => {
+    expect(
+      importsQueueMessageSchema.safeParse({
+        type: "account_export",
+        exportId: "e1",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("is built by the export work, and acked", async () => {
+    const { consumers, built, failed, reports } = recordingConsumers();
     const message = fakeMessage("m1", {
       type: "account_export",
       exportId: "e1",
     });
-    await handleImportsBatch(
-      batchOf("dialed-imports", [message]),
-      consumerDeps(work).deps,
-    );
+    await consumers.batch(batchOf("dialed-exports", [message]));
     expect(built).toStrictEqual(["e1"]);
     expect(failed).toStrictEqual([]);
     expect(message.ack).toHaveBeenCalled();
+    expect(message.retry).not.toHaveBeenCalled();
+    expect(reports).toStrictEqual([]);
   });
 
-  it("is retried, and reported, when no export work was wired", async () => {
+  it("is retried, and reported with its export's id, when the build throws", async () => {
+    const boom = new Error("R2 went away");
+    const { consumers, reports } = recordingConsumers(boom);
     const message = fakeMessage("m2", {
       type: "account_export",
       exportId: "e2",
     });
-    const { deps, reports } = consumerDeps();
-    await handleImportsBatch(batchOf("dialed-imports", [message]), deps);
+    await consumers.batch(batchOf("dialed-exports", [message]));
     expect(message.retry).toHaveBeenCalled();
     expect(message.ack).not.toHaveBeenCalled();
     expect(reports).toStrictEqual([
-      { queue: "dialed-imports", messageId: "m2" },
+      {
+        error: boom,
+        context: { queue: "dialed-exports", messageId: "m2", exportId: "e2" },
+      },
     ]);
   });
 
-  it("is marked failed from the DLQ once retries are spent", async () => {
-    const { work, built, failed } = recordingWork();
-    const message = fakeMessage("m3", {
-      type: "account_export",
-      exportId: "e3",
-    });
-    await handleImportsDlqBatch(
-      batchOf("dialed-imports-dlq", [message]),
-      consumerDeps(work).deps,
-    );
-    expect(failed).toStrictEqual(["e3"]);
+  it("acks and reports a body that is not an export job, and builds nothing", async () => {
+    const { consumers, built, reports } = recordingConsumers();
+    const message = fakeMessage("m3", { type: "import", importId: "i1" });
+    await consumers.batch(batchOf("dialed-exports", [message]));
     expect(built).toStrictEqual([]);
     expect(message.ack).toHaveBeenCalled();
+    expect(reports.map((report) => report.context)).toStrictEqual([
+      { queue: "dialed-exports", messageId: "m3" },
+    ]);
+    expect((reports[0]?.error as Error).message).toBe(
+      "invalid exports queue message",
+    );
   });
 
-  it("reaches the imports consumer and its DLQ through the queue router", async () => {
-    const error = vi.spyOn(console, "error").mockImplementation(nothing);
-    const { work, built, failed } = recordingWork();
-    await handleQueueBatch(
-      batchOf("dialed-imports", [
-        fakeMessage("m4", { type: "account_export", exportId: "e4" }),
-      ]),
-      work,
+  it("is marked failed from the DLQ once retries are spent, and reported", async () => {
+    const { consumers, built, failed, reports } = recordingConsumers();
+    const message = fakeMessage("m4", {
+      type: "account_export",
+      exportId: "e4",
+    });
+    await consumers.deadLetters(batchOf("dialed-exports-dlq", [message]));
+    expect(failed).toStrictEqual(["e4"]);
+    expect(built).toStrictEqual([]);
+    expect(message.ack).toHaveBeenCalled();
+    expect(reports.map((report) => report.context)).toStrictEqual([
+      { queue: "dialed-exports-dlq", messageId: "m4" },
+    ]);
+    expect((reports[0]?.error as Error).message).toBe(
+      "dead-lettered dialed-exports message",
     );
+  });
+
+  it("reaches the export consumers through the queue router", async () => {
+    const { consumers, built, failed } = recordingConsumers();
     await handleQueueBatch(
-      batchOf("dialed-imports-dlq", [
+      batchOf("dialed-exports", [
         fakeMessage("m5", { type: "account_export", exportId: "e5" }),
       ]),
-      work,
+      consumers,
     );
-    expect(built).toStrictEqual(["e4"]);
-    expect(failed).toStrictEqual(["e5"]);
-    error.mockRestore();
+    await handleQueueBatch(
+      batchOf("dialed-exports-dlq", [
+        fakeMessage("m6", { type: "account_export", exportId: "e6" }),
+      ]),
+      consumers,
+    );
+    expect(built).toStrictEqual(["e5"]);
+    expect(failed).toStrictEqual(["e6"]);
   });
+
+  it.each(["dialed-exports", "dialed-exports-dlq"])(
+    "throws a %s batch back for the queue to redeliver when no consumers were wired",
+    async (queue) => {
+      const message = fakeMessage("m7", {
+        type: "account_export",
+        exportId: "e7",
+      });
+      await expect(handleQueueBatch(batchOf(queue, [message]))).rejects.toThrow(
+        "dialed-exports batch with no export consumers wired",
+      );
+      expect(message.ack).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe("the export sweep's firing", () => {

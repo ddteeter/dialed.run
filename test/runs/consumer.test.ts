@@ -241,23 +241,6 @@ describe("handleImportsBatch (102 §4, §8)", () => {
     ).toBe(true);
   });
 
-  it("reports a clear error and retries, rather than crashing on undefined, when no export work is wired", async () => {
-    const deps = makeDeps(); // no `exports` override
-    const { batch, wrapped } = fakeBatch([
-      { body: { type: "account_export", exportId: newUlid() } },
-    ]);
-
-    await handleImportsBatch(batch, deps);
-
-    // Retried, not acked: this is a wiring bug the queue's redelivery
-    // should keep re-surfacing, not a conclusion.
-    expect(wrapped[0]?.wasRetried).toBe(true);
-    expect(wrapped[0]?.wasAcked).toBe(false);
-    expect((deps.exceptions[0]?.error as Error).message).toBe(
-      "account export job with no export work wired",
-    );
-  });
-
   it("an invalid queue message is acked, never retried", async () => {
     const deps = makeDeps();
     const { batch, wrapped } = fakeBatch([{ body: { garbage: true } }]);

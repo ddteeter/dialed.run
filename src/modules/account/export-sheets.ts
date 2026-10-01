@@ -1,8 +1,8 @@
 /**
  * The export ZIP's five sheets themselves — one column table each (task
  * 126, ACC-10; round 27 #13), kept apart from the behaviour that resolves
- * photos, renders CSV/README text and assembles the ZIP manifest
- * (`./export-files`).
+ * photos, formats times and builds each sheet's rows (`./export-files`),
+ * and from the CSV/README rendering (`./export-format`).
  *
  * Split out for the same reason `db/schema-*.ts` and
  * `modules/closet/tap-list-data.ts` are (CLAUDE.md, `.fallowrc.jsonc`): a
@@ -12,12 +12,17 @@
  * Moving the table here lets `.fallowrc.jsonc` ignore this file without
  * also blinding itself to `export-files.ts`'s real behaviour.
  *
+ * **So every column here is a plain field read** of a row `export-files`
+ * built — no lookup, no conversion, no branch. Anything that decides a
+ * value belongs on the row-building step, where the clone check still
+ * reads it.
+ *
  * **Every column is written once**, as a name, a sentence and a value, and
  * both the CSV and the README are read from that one table — so a column
  * the CSV gains is a column the README names.
  */
 import type { ExportData } from "./export";
-import { iso, list, type Sheet } from "./export-format";
+import type { Sheet } from "./export-format";
 
 type Garment = ExportData["garments"][number];
 type Run = ExportData["runs"][number];
@@ -25,88 +30,113 @@ type Entry = ExportData["entries"][number];
 type KitRow = Entry["kit"][number];
 
 /**
-The one thing a sheet ever reads off a resolved photo or run file: its
-name inside the ZIP.
-*/
-interface SheetFile {
-  readonly name: string;
+ * `profile.csv`'s one row: the account's address and the day it was made
+ * (UTC, already written out), and the profile as stored. Either is absent
+ * for an account that is gone or never finished onboarding.
+ */
+export interface ProfileRow {
+  readonly account:
+    { readonly email: string; readonly joinedAt: string } | undefined;
+  readonly profile: ExportData["profile"];
 }
 
 /**
- * What `export-files.ts` has already resolved against R2 by the time a
- * sheet is built: each garment's and entry's photo (if kept), and the run
- * a given upload became the source of.
- */
-interface ExportSheetInputs {
-  readonly data: ExportData;
-  readonly runFileOf: ReadonlyMap<string, string>;
-  readonly entryPhotos: ReadonlyMap<string, readonly SheetFile[]>;
-  readonly garmentPhotos: ReadonlyMap<string, SheetFile | undefined>;
+A run, its start written out (UTC), and the file it was imported from.
+*/
+export type RunRow = Omit<Run, "startedAt"> & {
+  readonly startedAt: string;
+  readonly runFile: string | undefined;
+};
+
+/**
+An entry, with its tags and photo names as cells and its time written out.
+*/
+export type EntryRow = Omit<Entry, "tags" | "photos" | "createdAt"> & {
+  readonly tags: string;
+  readonly photos: string;
+  readonly createdAt: string;
+};
+
+/**
+A garment, its time written out, and its photo's name inside the ZIP.
+*/
+export type GarmentRow = Omit<Garment, "createdAt"> & {
+  readonly createdAt: string;
+  readonly photo: string | undefined;
+};
+
+/**
+Every sheet's rows, as `export-files` builds them.
+*/
+export interface ExportRows {
+  readonly profile: ProfileRow;
+  readonly runs: readonly RunRow[];
+  readonly entries: readonly EntryRow[];
+  readonly kit: readonly KitRow[];
+  readonly garments: readonly GarmentRow[];
 }
 
 interface ExportSheets {
-  readonly profileSheet: Sheet<undefined>;
-  readonly runsSheet: Sheet<Run>;
-  readonly entriesSheet: Sheet<Entry>;
+  readonly profileSheet: Sheet<ProfileRow>;
+  readonly runsSheet: Sheet<RunRow>;
+  readonly entriesSheet: Sheet<EntryRow>;
   readonly kitSheet: Sheet<KitRow>;
-  readonly garmentsSheet: Sheet<Garment>;
+  readonly garmentsSheet: Sheet<GarmentRow>;
 }
 
-export function buildSheets(inputs: ExportSheetInputs): ExportSheets {
-  const { data, runFileOf, entryPhotos, garmentPhotos } = inputs;
-  const { account, profile } = data;
-
-  const profileSheet: Sheet<undefined> = {
+export function buildSheets(rows: ExportRows): ExportSheets {
+  const profileSheet: Sheet<ProfileRow> = {
     file: "profile.csv",
     about: "your account and settings, one row.",
-    rows: [undefined],
+    rows: [rows.profile],
     columns: [
       {
         name: "email",
         about: "the address you log in with.",
-        value: () => account?.email,
+        value: (row) => row.account?.email,
       },
       {
         name: "joined_at",
         about: "when you made the account (UTC).",
-        value: () =>
-          account === undefined
-            ? undefined
-            : iso(Math.floor(account.createdAt.getTime() / 1000)),
+        value: (row) => row.account?.joinedAt,
       },
       {
         name: "username",
         about: "your handle, without the @.",
-        value: () => profile?.username,
+        value: (row) => row.profile?.username,
       },
       {
         name: "place",
         about: "the place your conditions are read for.",
-        value: () => profile?.cityLabel,
+        value: (row) => row.profile?.cityLabel,
       },
       {
         name: "thermal_level",
         about: "your calibration: how warm or cold you run, from -2 to +2.",
-        value: () => profile?.thermalLevel,
+        value: (row) => row.profile?.thermalLevel,
       },
-      { name: "temp_unit", about: "f or c.", value: () => profile?.tempUnit },
+      {
+        name: "temp_unit",
+        about: "f or c.",
+        value: (row) => row.profile?.tempUnit,
+      },
       {
         name: "distance_unit",
         about: "mi or km.",
-        value: () => profile?.distanceUnit,
+        value: (row) => row.profile?.distanceUnit,
       },
       {
         name: "share_new_runs",
         about: "whether a new kit is shared by default.",
-        value: () => profile?.shareDefault,
+        value: (row) => row.profile?.shareDefault,
       },
     ],
   };
 
-  const runsSheet: Sheet<Run> = {
+  const runsSheet: Sheet<RunRow> = {
     file: "runs.csv",
     about: "every run, oldest first.",
-    rows: data.runs,
+    rows: rows.runs,
     columns: [
       {
         name: "id",
@@ -117,7 +147,7 @@ export function buildSheets(inputs: ExportSheetInputs): ExportSheets {
       {
         name: "started_at",
         about: "when it started (UTC).",
-        value: (run) => iso(run.startedAt),
+        value: (run) => run.startedAt,
       },
       {
         name: "duration_seconds",
@@ -187,15 +217,15 @@ export function buildSheets(inputs: ExportSheetInputs): ExportSheets {
       {
         name: "run_file",
         about: "the file this run was imported from, in run-files/.",
-        value: (run) => runFileOf.get(run.id),
+        value: (run) => run.runFile,
       },
     ],
   };
 
-  const entriesSheet: Sheet<Entry> = {
+  const entriesSheet: Sheet<EntryRow> = {
     file: "entries.csv",
     about: "every kit you logged, with its verdict.",
-    rows: data.entries,
+    rows: rows.entries,
     columns: [
       {
         name: "id",
@@ -225,38 +255,25 @@ export function buildSheets(inputs: ExportSheetInputs): ExportSheets {
       {
         name: "tags",
         about: "its tags, separated by semicolons.",
-        value: (entry) => list(entry.tags),
+        value: (entry) => entry.tags,
       },
       {
         name: "photos",
         about: "its photos, in photos/entries/, separated by semicolons.",
-        value: (entry) => {
-          // export-files.ts builds this map from these same entries, so
-          // every id here is already a key in it — a missing key is a bug
-          // in that construction, not a shape this sheet should paper
-          // over with an empty cell.
-          const resolved = entryPhotos.get(entry.id);
-          if (resolved === undefined) {
-            throw new Error(
-              `export-sheets: no resolved photos for entry ${entry.id}`,
-            );
-          }
-          return list(resolved.map((photo) => photo.name));
-        },
+        value: (entry) => entry.photos,
       },
       {
         name: "created_at",
         about: "when you logged it (UTC).",
-        value: (entry) => iso(entry.createdAt),
+        value: (entry) => entry.createdAt,
       },
     ],
   };
 
-  const kitRows = data.entries.flatMap((entry) => entry.kit);
   const kitSheet: Sheet<KitRow> = {
     file: "kit.csv",
     about: "each garment in each kit, one row a garment.",
-    rows: kitRows,
+    rows: rows.kit,
     columns: [
       {
         name: "entry_id",
@@ -281,10 +298,10 @@ export function buildSheets(inputs: ExportSheetInputs): ExportSheets {
     ],
   };
 
-  const garmentsSheet: Sheet<Garment> = {
+  const garmentsSheet: Sheet<GarmentRow> = {
     file: "garments.csv",
     about: "your closet, retired garments included.",
-    rows: data.garments,
+    rows: rows.garments,
     columns: [
       {
         name: "id",
@@ -362,12 +379,12 @@ export function buildSheets(inputs: ExportSheetInputs): ExportSheets {
       {
         name: "added_at",
         about: "when you added it (UTC).",
-        value: (garment) => iso(garment.createdAt),
+        value: (garment) => garment.createdAt,
       },
       {
         name: "photo",
         about: "its photo, in photos/closet/.",
-        value: (garment) => garmentPhotos.get(garment.id)?.name,
+        value: (garment) => garment.photo,
       },
     ],
   };

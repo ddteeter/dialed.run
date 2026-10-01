@@ -1,41 +1,27 @@
 import { describe, expect, it } from "vitest";
 
-import { outfitEntries, runs } from "../../src/db/schema-core";
-import { newUlid } from "../../src/lib/ids";
-import { exportData, type ExportData } from "../../src/modules/account/export";
 import { buildSheets } from "../../src/modules/account/export-sheets";
-import { core } from "../email/helpers";
 
 /**
  * The export ZIP's five column tables (task 126, ACC-10; round 27 #13),
  * unit-tested directly against `buildSheets` rather than through
- * `exportFiles` — the "about" sentences and the id columns are static, so
- * they need no seeded data, and the one dynamic branch (a photo the caller
- * never resolved) needs a map `exportFiles` itself can never hand it
- * incomplete.
+ * `exportFiles`: the "about" sentences and the id columns are static, so
+ * they need no seeded data. Every value a column reads is decided on
+ * `exportFiles`' row-building step, and tested there
+ * (`export.test.ts`).
  */
 
-const db = core();
-
-function emptyData(): ExportData {
-  return {
-    account: undefined,
-    profile: undefined,
-    garments: [],
-    runs: [],
-    entries: [],
-    uploads: [],
-  };
-}
+const NO_ROWS = {
+  profile: { account: undefined, profile: undefined },
+  runs: [],
+  entries: [],
+  kit: [],
+  garments: [],
+};
 
 describe("buildSheets", () => {
   it("names what each sheet holds, and what its id column is for", () => {
-    const sheets = buildSheets({
-      data: emptyData(),
-      runFileOf: new Map(),
-      entryPhotos: new Map(),
-      garmentPhotos: new Map(),
-    });
+    const sheets = buildSheets(NO_ROWS);
 
     expect(sheets.profileSheet.about).toBe(
       "your account and settings, one row.",
@@ -61,45 +47,10 @@ describe("buildSheets", () => {
     );
   });
 
-  it("throws rather than silently hiding photos for an entry the resolved-photo map does not know", async () => {
-    const userId = newUlid();
-    const runId = newUlid();
-    await db.insert(runs).values({
-      id: runId,
-      userId,
-      source: "manual",
-      startedAt: 0,
-      durationS: 0,
-      distanceM: 0,
-      title: "run",
-    });
-    const entryId = newUlid();
-    await db.insert(outfitEntries).values({
-      id: entryId,
-      runId,
-      userId,
-      createdAt: 0,
-    });
-
-    const data = await exportData(db, userId);
-    const sheets = buildSheets({
-      data,
-      runFileOf: new Map(),
-      // Deliberately missing entryId: export-files.ts never builds this
-      // map incomplete, so this can only happen if that invariant breaks.
-      entryPhotos: new Map(),
-      garmentPhotos: new Map(),
-    });
-    const photosColumn = sheets.entriesSheet.columns.find(
-      (column) => column.name === "photos",
-    );
-    const [row] = sheets.entriesSheet.rows;
-    if (row === undefined || photosColumn === undefined) {
-      throw new Error("expected one entry row and a photos column");
-    }
-    expect(row.id).toBe(entryId);
-    expect(() => photosColumn.value(row)).toThrow(
-      `export-sheets: no resolved photos for entry ${entryId}`,
-    );
+  it("puts the one profile row it is handed in profile.csv", () => {
+    const profile = { account: undefined, profile: undefined };
+    expect(
+      buildSheets({ ...NO_ROWS, profile }).profileSheet.rows,
+    ).toStrictEqual([profile]);
   });
 });

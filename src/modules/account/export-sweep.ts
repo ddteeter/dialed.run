@@ -41,6 +41,9 @@ export const EXPORT_LEASE_S = 60 * 60;
 export interface SweepDeps {
   readonly db: Db;
   readonly bucket: Pick<R2Bucket, "delete">;
+  /**
+  `EXPORTS_QUEUE`: the re-send of an export whose send or message was lost.
+  */
   readonly queue: ExportQueue;
   readonly report: Report;
   readonly now: number;
@@ -50,7 +53,7 @@ function liveSweepDeps(): SweepDeps {
   return {
     db: drizzle(env.DIALED_CORE),
     bucket: env.IMPORTS,
-    queue: env.IMPORTS_QUEUE,
+    queue: env.EXPORTS_QUEUE,
     report: captureException,
     now: nowSeconds(),
   };
@@ -61,18 +64,58 @@ export async function sweepExports(
   deps: SweepDeps = liveSweepDeps(),
 ): Promise<void> {
   await expireExports(anomalies, deps);
-  // A failure's row lives as long as a ready one would have: the page says
-  // "didn't work" until the runner asks again, or a week passes. A failed
-  // build never completed its `put`, so there is nothing staged.
-  await deps.db
-    .delete(dataExports)
+  await forgetFailures(anomalies, deps);
+  await resendStalled(anomalies, deps);
+}
+
+/**
+ * A failure's row lives as long as a ready one would have: the page says
+ * "didn't work" until the runner asks again, or a week passes. Then its
+ * ZIP goes, and after it the row.
+ *
+ * **A failed export can hold a whole ZIP**: the last build's `put` may
+ * have finished before its ready batch failed and the queue gave up. So
+ * the claim's key is deleted too (a row never claimed has none). The ZIP
+ * first: an R2 failure leaves the row, and the next firing tries both
+ * again — a delete of a key already gone is a no-op, so no claim is
+ * needed to re-run it.
+ */
+async function forgetFailures(
+  anomalies: string[],
+  deps: SweepDeps,
+): Promise<void> {
+  const { db, now } = deps;
+  const failed = await db
+    .select({
+      id: dataExports.id,
+      userId: dataExports.userId,
+      claimId: dataExports.claimId,
+    })
+    .from(dataExports)
     .where(
       and(
         eq(dataExports.status, "failed"),
-        lt(dataExports.requestedAt, deps.now - EXPORT_LINK_TTL_S),
+        lt(dataExports.requestedAt, now - EXPORT_LINK_TTL_S),
+      ),
+    )
+    .limit(EXPORT_SWEEP_CAP);
+  if (failed.length === 0) return;
+  // `failed` is final — nothing moves a row out of it — so the ids read
+  // are still failures when their rows go.
+  try {
+    await deps.bucket.delete(failed.flatMap((row) => exportKeyFor(row) ?? []));
+    await db.delete(dataExports).where(
+      inArray(
+        dataExports.id,
+        failed.map((row) => row.id),
       ),
     );
-  await resendStalled(anomalies, deps);
+  } catch (error) {
+    deps.report(error, { surface: "account-export-forget" });
+    anomalies.push(
+      `${String(failed.length)} failed data export(s) could not be deleted and are retried next hour`,
+    );
+  }
 }
 
 /**
@@ -102,11 +145,15 @@ async function expireExports(
     .update(dataExports)
     .set({ status: "expiring", claimedAt: now })
     .where(and(inArray(dataExports.id, oldest), expirable))
-    .returning({ id: dataExports.id, userId: dataExports.userId });
+    .returning({
+      id: dataExports.id,
+      userId: dataExports.userId,
+      claimId: dataExports.claimId,
+    });
   let failed = 0;
   for (const row of claimed) {
     try {
-      await deps.bucket.delete(exportKeyFor(row.userId, row.id));
+      await deps.bucket.delete(exportKeyFor(row) ?? []);
       await db
         .delete(dataExports)
         .where(

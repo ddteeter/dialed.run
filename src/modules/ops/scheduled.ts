@@ -135,22 +135,57 @@ async function runCron(
       return runDailyDigest(reporter, upkeep);
     }
     case "weather-retry": {
-      // docs/tasks/103-weather.md requirement 4/5: the hourly
-      // pending-observation retry, claim-then-work at the module level.
-      await retryPendingWeather();
       const anomalies: string[] = [];
-      await upkeep.sweepExports?.(anomalies);
-      return drainOwedEmail(anomalies);
+      await eachStep([
+        // docs/tasks/103-weather.md requirement 4/5: the hourly
+        // pending-observation retry, claim-then-work at the module level.
+        () => retryPendingWeather(),
+        () => upkeep.sweepExports?.(anomalies),
+        () => drainOwedEmail(anomalies),
+      ]);
+      return anomalies;
     }
     case "enrichment-retry": {
       const anomalies: string[] = [];
-      await redispatchStalledEnrichments(anomalies);
-      return drainOwedEmail(anomalies);
+      await eachStep([
+        () => redispatchStalledEnrichments(anomalies),
+        () => drainOwedEmail(anomalies),
+      ]);
+      return anomalies;
     }
     case "screening-retry": {
-      return drainOwedEmail(await runScreeningRetry());
+      const anomalies: string[] = [];
+      await eachStep([
+        () => runScreeningRetry(anomalies),
+        () => drainOwedEmail(anomalies),
+      ]);
+      return anomalies;
     }
   }
+}
+
+/**
+ * An hourly firing's steps, each run whichever of the others fail (law
+ * 5): a sweep that throws must not cost that hour's email drain, nor a
+ * weather retry the sweep. The firing still throws once every step has
+ * run — the one failure itself, or all of them together — so its check-in
+ * closes as an error and the Worker entry reports what went wrong.
+ */
+async function eachStep(
+  steps: readonly (() => Promise<unknown> | undefined)[],
+): Promise<void> {
+  const failures: unknown[] = [];
+  for (const step of steps) {
+    try {
+      await step();
+    } catch (error) {
+      failures.push(error);
+    }
+  }
+  if (failures.length === 0) return;
+  throw failures.length === 1
+    ? failures[0]
+    : new AggregateError(failures, "several upkeep steps failed");
 }
 
 /**
@@ -163,16 +198,14 @@ async function runCron(
  * Each firing claims before it works (`drainOutbox`), so two overlapping
  * firings never send one row twice.
  */
-async function drainOwedEmail(anomalies: string[]): Promise<string[]> {
+async function drainOwedEmail(anomalies: string[]): Promise<void> {
   await drainOutbox(drizzle(env.DIALED_CORE), anomalies, { kinds: ["email"] });
-  return anomalies;
 }
 
-async function runScreeningRetry(): Promise<string[]> {
+async function runScreeningRetry(anomalies: string[]): Promise<void> {
   // Task 106 §1: re-drive photos still marked `pending` (law 8c).
   // `pending` is the durable marker, so this is reconciliation and the
   // path needs no queue.
-  const anomalies: string[] = [];
   await retryPendingScreenings(classifierFromEnv(), anomalies);
   // Two more reconciliations share this firing, both raised on PR #73
   // and both the same shape as the screening retry: a durable marker
@@ -195,7 +228,6 @@ async function runScreeningRetry(): Promise<string[]> {
       `${String(released.released)} review claims went stale and were returned to the queue`,
     );
   }
-  return anomalies;
 }
 
 /**

@@ -209,10 +209,13 @@ export const accountDeletions = /*#__PURE__*/ sqliteTable(
  * the link the email carries.
  *
  * **`status` is the reconciliation marker** (law 8c): `pending` until a
- * consumer claims it (`building`, `claimed_at`), `ready` once the ZIP is
- * staged and the email owed, `failed` when the DLQ gives up, `expiring`
- * while the hourly sweep deletes an expired ZIP. The ZIP's key is derived
- * from the row (`exports/{user_id}/{id}.zip` in `IMPORTS`), never stored.
+ * consumer claims it (`building`, `claimed_at`, a fresh `claim_id`),
+ * `ready` once the ZIP is staged and the email owed, `failed` when the DLQ
+ * gives up, `expiring` while the hourly sweep deletes an expired ZIP. The
+ * ZIP's key is derived from the row
+ * (`exports/{user_id}/{id}/{claim_id}.zip` in `IMPORTS`), never stored:
+ * each claim writes its own, so a build whose claim was taken over can
+ * delete what it wrote without touching the winner's.
  *
  * `link_token` is the download link's path segment: 128 random bits, not
  * the id, which is partly a timestamp. It opens nothing without the
@@ -230,6 +233,9 @@ export const dataExports = /*#__PURE__*/ sqliteTable(
     }).notNull(),
     requestedAt: integer("requested_at").notNull(),
     claimedAt: integer("claimed_at"),
+    // Which build holds the claim: a fresh id per claim, so a build whose
+    // claim was taken over finishes nothing (its ZIP key carries it too).
+    claimId: text("claim_id"),
     readyAt: integer("ready_at"),
     expiresAt: integer("expires_at"),
   },

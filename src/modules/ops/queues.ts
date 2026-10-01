@@ -11,7 +11,6 @@ import {
   handleImportsBatch,
   handleImportsDlqBatch,
   stravaApiFromEnv,
-  type ExportWork,
 } from "../runs";
 import { outboxInsert, oweOutbox } from "./outbox";
 import { captureException } from "./sentry";
@@ -25,6 +24,9 @@ import { captureException } from "./sentry";
 export const queueRegistry = [
   { queue: "dialed-imports", deadLetterQueue: "dialed-imports-dlq" },
   { queue: "dialed-enrichment", deadLetterQueue: "dialed-enrichment-dlq" },
+  // Task 126's data export (ACC-10; decision D-86): one ZIP a delivery,
+  // on its own queue so a long build never holds up a run file's parse.
+  { queue: "dialed-exports", deadLetterQueue: "dialed-exports-dlq" },
 ] as const;
 
 /**
@@ -57,18 +59,36 @@ function oweInCore(message: OutboxMessage) {
 }
 
 /**
+ * The `dialed-exports` consumer and its DLQ's (task 126, ACC-10). Both are
+ * `account`'s, which `ops` cannot import without a cycle, so the Worker
+ * entry hands them in, as it hands the purge to `handleScheduled`.
+ */
+export interface ExportConsumers {
+  readonly batch: (batch: MessageBatch) => Promise<void>;
+  readonly deadLetters: (batch: MessageBatch) => Promise<void>;
+}
+
+/**
+ * The export consumers the Worker entry handed in, or a loud failure: a
+ * batch retried is reported and redelivered, and a wiring slip dead-letters
+ * where a human sees it rather than acking a runner's export into nothing.
+ */
+function exportConsumers(exports: ExportConsumers | undefined) {
+  if (exports === undefined) {
+    throw new Error("dialed-exports batch with no export consumers wired");
+  }
+  return exports;
+}
+
+/**
  * Queue consumer entry (000 §10): lane 102 owns the dialed-imports consumer
- * + DLQ user-notification; lane 107 owns dialed-enrichment. Every consumer
- * acks or retries per message, so one bad message never blocks a batch.
- *
- * `exports` is task 126's data export (ACC-10), which rides dialed-imports
- * but is built in `account` — a module `ops` cannot import without a
- * cycle, so the Worker entry hands it in, as it hands the purge to
- * `handleScheduled`.
+ * + DLQ user-notification; lane 107 owns dialed-enrichment; lane 126 owns
+ * dialed-exports, handed in as `exports`. Every consumer acks or retries
+ * per message, so one bad message never blocks a batch.
  */
 export async function handleQueueBatch(
   batch: MessageBatch,
-  exports?: ExportWork,
+  exports?: ExportConsumers,
 ): Promise<void> {
   switch (batch.queue) {
     case "dialed-imports": {
@@ -78,7 +98,6 @@ export async function handleQueueBatch(
         captureException,
         stravaApi: stravaApiFromEnv(),
         owe: oweInCore,
-        exports,
       });
       break;
     }
@@ -92,12 +111,19 @@ export async function handleQueueBatch(
         importBucket: env.IMPORTS,
         captureException,
         owe: oweInCore,
-        exports,
       });
       break;
     }
     case "dialed-enrichment-dlq": {
       await handleEnrichmentDlqBatch(batch, enrichmentDeps());
+      break;
+    }
+    case "dialed-exports": {
+      await exportConsumers(exports).batch(batch);
+      break;
+    }
+    case "dialed-exports-dlq": {
+      await exportConsumers(exports).deadLetters(batch);
       break;
     }
     default: {

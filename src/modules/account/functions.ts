@@ -279,7 +279,7 @@ export const requestExportFn = createServerFn({ method: "POST" })
     requestExport(
       db(),
       { userId: await requireUserId(), idempotencyKey: data.idempotencyKey },
-      { queue: env.IMPORTS_QUEUE, report: captureException },
+      { queue: env.EXPORTS_QUEUE, report: captureException },
       nowSeconds(),
     ),
   );

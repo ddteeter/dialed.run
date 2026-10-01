@@ -6,16 +6,22 @@
  * Pure: the rows (`exportData`) and the objects actually in R2 in, the
  * texts and the objects to copy out. The column table itself is
  * `export-sheets.ts`'s (split out so `.fallowrc.jsonc` can ignore the
- * table without also ignoring the photo/file resolution below, which is
- * this file's own real behaviour); the CSV/README rendering is
- * `export-format.ts`'s.
+ * table without also ignoring the behaviour here: which files go in, and
+ * every sheet's rows, built so each column only reads a field); the
+ * CSV/README rendering is `export-format.ts`'s.
  *
  * A file a row names but R2 no longer holds is left out, and its cell is
  * empty: the CSVs never point at a file the ZIP does not have.
  */
 import type { ExportData } from "./export";
-import { csvOf, readmeSection, iso, type ExportText } from "./export-format";
-import { buildSheets } from "./export-sheets";
+import {
+  csvOf,
+  iso,
+  list,
+  readmeSection,
+  type ExportText,
+} from "./export-format";
+import { buildSheets, type ProfileRow } from "./export-sheets";
 
 /**
 Where an object the ZIP copies lives, and the name it takes inside.
@@ -100,42 +106,77 @@ function runFile(
 }
 
 /**
+ * `profile.csv`'s one row: the account's address and the day it was made,
+ * written out as every other time in the ZIP is (UTC), beside the profile.
+ */
+function profileRow(data: ExportData): ProfileRow {
+  const { account, profile } = data;
+  return {
+    account:
+      account === undefined
+        ? undefined
+        : {
+            email: account.email,
+            joinedAt: iso(Math.floor(account.createdAt.getTime() / 1000)),
+          },
+    profile,
+  };
+}
+
+/**
  * Everything the ZIP holds: the five CSVs and the README as text, and the
  * photos and run files to copy from R2.
+ *
+ * Every sheet's rows are built here, each value decided once — a photo
+ * resolved against what R2 holds, a time written out, a list joined — so
+ * `export-sheets.ts`'s columns only read them. Each resolved file is kept
+ * beside the row it belongs to, and the objects list is read from those
+ * same pairs: no row is looked back up by id, so none can be missing.
  */
 export function exportFiles(
   data: ExportData,
   stored: StoredObjects,
   now: number,
 ): { texts: ExportText[]; objects: ExportObject[] } {
-  const garmentPhotos = new Map(
-    data.garments.map((garment) => [garment.id, garmentPhoto(garment, stored)]),
-  );
-  const photosByEntry = data.entries.map((entry) => ({
-    id: entry.id,
-    files: entry.photos.flatMap((photo) => entryPhoto(photo, stored) ?? []),
+  const closet = data.garments.map((garment) => ({
+    garment,
+    photo: garmentPhoto(garment, stored),
   }));
-  const entryPhotos = new Map(
-    photosByEntry.map((entry) => [entry.id, entry.files]),
-  );
+  const kits = data.entries.map((entry) => ({
+    entry,
+    photos: entry.photos.flatMap((photo) => entryPhoto(photo, stored) ?? []),
+  }));
   const uploaded = data.uploads.flatMap((upload) => {
     const file = runFile(upload, stored);
     return file === undefined ? [] : [{ upload, file }];
   });
-  // The file a run was imported from: the upload that became it. A
-  // duplicate upload names a run too, but it was not the run's source.
-  // Asked run by run, so only a run's own id is ever a key.
-  const runFileOf = new Map(
-    data.runs.flatMap((run) => {
-      const source = uploaded.find(
-        ({ upload }) => upload.status === "done" && upload.runId === run.id,
-      );
-      return source === undefined ? [] : [[run.id, source.file.name] as const];
-    }),
-  );
 
   const { profileSheet, runsSheet, entriesSheet, kitSheet, garmentsSheet } =
-    buildSheets({ data, runFileOf, entryPhotos, garmentPhotos });
+    buildSheets({
+      profile: profileRow(data),
+      runs: data.runs.map((run) => ({
+        ...run,
+        startedAt: iso(run.startedAt),
+        // The file a run was imported from: the upload that became it. A
+        // duplicate upload names a run too, but it was not the run's
+        // source.
+        runFile: uploaded.find(
+          ({ upload }) => upload.status === "done" && upload.runId === run.id,
+        )?.file.name,
+      })),
+      entries: kits.map(({ entry, photos }) => ({
+        ...entry,
+        tags: list(entry.tags),
+        photos: list(photos.map((photo) => photo.name)),
+        createdAt: iso(entry.createdAt),
+      })),
+      kit: data.entries.flatMap((entry) => entry.kit),
+      garments: closet.map(({ garment, photo }) => ({
+        ...garment,
+        createdAt: iso(garment.createdAt),
+        photo: photo?.name,
+      })),
+    });
 
   const sheets = [
     csvOf(profileSheet),
@@ -162,11 +203,9 @@ export function exportFiles(
     readmeSection(garmentsSheet),
     "",
   ].join("\n");
-  // Read from the list the map was built from, not looked back up by id:
-  // there is no entry the map lacks, so no fallback for one.
   const objects = [
-    ...photosByEntry.flatMap((entry) => entry.files),
-    ...data.garments.flatMap((garment) => garmentPhotos.get(garment.id) ?? []),
+    ...kits.flatMap(({ photos }) => photos),
+    ...closet.flatMap(({ photo }) => photo ?? []),
     ...uploaded.map(({ file }) => file),
   ];
   return { texts: [{ name: "README.txt", text: readme }, ...sheets], objects };

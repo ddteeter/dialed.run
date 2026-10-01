@@ -136,10 +136,14 @@ test("account settings -> change password -> reminder emails off and on -> sign 
   await hydrated(page);
   const exportRow = page.locator("[data-part='export-row']");
   await exportRow.getByRole("button", { name: "Get a copy" }).click();
+  // Preparing — or already past it. `dialed-exports` hands its consumer one
+  // job at a time with no batch wait (decision D-86), so the local stack
+  // can finish a new account's small ZIP before the row reloads.
   await expect(
-    exportRow.getByText("We'll email a link when it's ready."),
+    exportRow
+      .getByText("We'll email a link when it's ready.")
+      .or(exportRow.getByRole("link", { name: "Download" })),
   ).toBeVisible({ timeout: 15_000 });
-  await expect(exportRow).toContainText("[Preparing]");
 
   // The queued build runs in the local stack's own consumer; the email
   // goes to the local send_email binding. What the page shows once it has

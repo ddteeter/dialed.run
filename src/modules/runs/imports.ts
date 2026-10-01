@@ -9,6 +9,7 @@
 import { and, eq } from "drizzle-orm";
 
 import { imports, runs } from "../../db/schema-core";
+import { importFileKeyFor } from "../../lib/import-file-key";
 import { firstColumnWhere } from "../../lib/keyed-read";
 import { ImportUploadError, checkUpload } from "./upload-limits";
 import { newUlid } from "../../lib/ids";
@@ -82,7 +83,7 @@ export async function startImport(
   }
 
   const importId = newUlid();
-  const r2Key = `imports/${input.userId}/${importId}.${extension}`;
+  const r2Key = importFileKeyFor(input.userId, importId, extension);
   await importBucket.put(r2Key, input.bytes);
 
   await db.insert(imports).values({

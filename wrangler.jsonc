@@ -71,6 +71,7 @@
     "producers": [
       { "binding": "IMPORTS_QUEUE", "queue": "dialed-imports" },
       { "binding": "ENRICHMENT_QUEUE", "queue": "dialed-enrichment" },
+      { "binding": "EXPORTS_QUEUE", "queue": "dialed-exports" },
     ],
     // src/server.ts has exported a `queue()` handler since Phase 0, but with
     // no consumers bound here nothing ever invoked it: both queues would
@@ -94,6 +95,15 @@
         "max_retries": 3,
         "dead_letter_queue": "dialed-enrichment-dlq",
       },
+      // The data export (task 126, ACC-10; decision D-86, owner-approved):
+      // one ZIP build a delivery, so a batch never holds several runners'
+      // files in one invocation's CPU and memory.
+      {
+        "queue": "dialed-exports",
+        "max_batch_size": 1,
+        "max_retries": 3,
+        "dead_letter_queue": "dialed-exports-dlq",
+      },
       // The DLQs are consumed too — law 6: a dead-lettered job has to land
       // somewhere a human eventually sees, which handleQueueBatch does by
       // reporting each one to Sentry. Left unconsumed they are a silent
@@ -104,6 +114,7 @@
         "max_batch_size": 10,
         "max_retries": 1,
       },
+      { "queue": "dialed-exports-dlq", "max_batch_size": 10, "max_retries": 1 },
     ],
   },
   // Cloudflare Email Sending (decision D-42, owner-authorised; task 126).

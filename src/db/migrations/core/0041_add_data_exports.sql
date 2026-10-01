@@ -6,6 +6,7 @@ CREATE TABLE `data_exports` (
 	`status` text NOT NULL,
 	`requested_at` integer NOT NULL,
 	`claimed_at` integer,
+	`claim_id` text,
 	`ready_at` integer,
 	`expires_at` integer
 );

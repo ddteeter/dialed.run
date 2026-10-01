@@ -20,6 +20,7 @@ import {
 } from "../../lib/data-export";
 import { newUlid } from "../../lib/ids";
 import { firstRowWhere } from "../../lib/keyed-read";
+import type { ExportJob } from "./export-queue";
 
 type Db = ReturnType<typeof drizzle>;
 type Report = (error: unknown, context: Record<string, string>) => void;
@@ -39,8 +40,25 @@ export function exportPrefixFor(userId: string): string {
   return `exports/${userId}/`;
 }
 
-export function exportKeyFor(userId: string, exportId: string): string {
-  return `${exportPrefixFor(userId)}${exportId}.zip`;
+interface ExportKeyParts {
+  readonly userId: string;
+  readonly id: string;
+  readonly claimId: string | null;
+}
+
+/**
+ * One build's ZIP: `exports/{userId}/{exportId}/{claimId}.zip`. Keyed by
+ * the claim, so two builds of one export never write the same object, and
+ * a build whose claim was taken over deletes only what it wrote. A row
+ * never claimed has no ZIP, and says so.
+ */
+export function exportKeyFor(
+  row: ExportKeyParts & { readonly claimId: string },
+): string;
+export function exportKeyFor(row: ExportKeyParts): string | undefined;
+export function exportKeyFor(row: ExportKeyParts): string | undefined {
+  if (row.claimId === null) return undefined;
+  return `${exportPrefixFor(row.userId)}${row.id}/${row.claimId}.zip`;
 }
 
 /**
@@ -117,13 +135,11 @@ export async function exportRowState(
 }
 
 /**
- * The one thing asked of `IMPORTS_QUEUE` here: the `account_export` job
- * (runs' `importsQueueMessageSchema` is its wire format).
+ * The one thing asked of `EXPORTS_QUEUE` here: the `account_export` job,
+ * in `exportsQueueMessageSchema`'s shape (its wire format).
  */
 export interface ExportQueue {
-  readonly send: (
-    message: Readonly<{ type: "account_export"; exportId: string }>,
-  ) => Promise<unknown>;
+  readonly send: (message: Readonly<ExportJob>) => Promise<unknown>;
 }
 
 export interface ExportEffects {
@@ -252,7 +268,9 @@ export async function exportFileResponse(
   if (row?.expiresAt == undefined || row.expiresAt <= now) {
     return redirectTo(ACCOUNT_PAGE);
   }
-  const object = await bucket.get(exportKeyFor(row.userId, row.id));
+  const key = exportKeyFor(row);
+  if (key === undefined) return redirectTo(ACCOUNT_PAGE);
+  const object = await bucket.get(key);
   if (object === null) return redirectTo(ACCOUNT_PAGE);
   // The day it was made: a ready export expires a fixed time after.
   const madeAt = row.expiresAt - EXPORT_LINK_TTL_S;
@@ -262,7 +280,7 @@ export async function exportFileResponse(
       "content-type": "application/zip",
       "content-disposition": `attachment; filename="dialed-run-export-${day}.zip"`,
       "content-length": String(object.size),
-      "cache-control": "no-store",
+      "cache-control": "private, no-store",
     },
   });
 }

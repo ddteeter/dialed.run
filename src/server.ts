@@ -14,7 +14,7 @@ import {
   handleScheduled,
   secureResponse,
 } from "./modules/ops";
-import { exportWorkFromEnv } from "./modules/account/export-build";
+import { exportConsumersFromEnv } from "./modules/account/export-build";
 import { sweepExports } from "./modules/account/export-sweep";
 import { purgeDueAccounts } from "./modules/account/purge";
 import { mintNonce } from "./lib/csp-nonce";
@@ -43,9 +43,9 @@ export default {
   },
   async queue(batch): Promise<void> {
     try {
-      // The data export's build rides dialed-imports (task 126, ACC-10),
-      // handed in because `ops` and `runs` cannot import `account`.
-      await handleQueueBatch(batch, exportWorkFromEnv());
+      // The data export's consumers (task 126, ACC-10; dialed-exports),
+      // handed in because `ops` cannot import `account`.
+      await handleQueueBatch(batch, exportConsumersFromEnv());
     } catch (error) {
       captureException(error, { surface: "queue", queue: batch.queue });
       throw error; // rethrow so queue retry machinery owns it (law 3)

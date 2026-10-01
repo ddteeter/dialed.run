@@ -40,14 +40,31 @@ async function seedExport(
     linkToken: newLinkToken(),
     status,
     requestedAt: NOW - 60,
+    claimId: newUlid(),
     ...overrides,
   };
   await db.insert(dataExports).values(row);
   return row;
 }
 
-async function stagedFor(row: { userId: string; id: string }) {
-  await env.IMPORTS.put(exportKeyFor(row.userId, row.id), "zip");
+/**
+The ZIP key of a seeded, claimed row.
+*/
+function keyOf(
+  row: Readonly<{
+    userId: string;
+    id: string;
+    claimId?: string | null | undefined;
+  }>,
+): string {
+  if (row.claimId === undefined || row.claimId === null) {
+    throw new Error("seeded without a claim");
+  }
+  return exportKeyFor({ userId: row.userId, id: row.id, claimId: row.claimId });
+}
+
+async function stagedFor<Row extends { userId: string; id: string }>(row: Row) {
+  await env.IMPORTS.put(keyOf(row), "zip");
   return row;
 }
 
@@ -116,13 +133,9 @@ describe("sweepExports", () => {
     await sweepExports(anomalies, sweep);
 
     expect(await statusOf(expired.id)).toBeUndefined();
-    expect(
-      await env.IMPORTS.head(exportKeyFor(expired.userId, expired.id)),
-    ).toBeNull();
+    expect(await env.IMPORTS.head(keyOf(expired))).toBeNull();
     expect(await statusOf(live.id)).toMatchObject({ status: "ready" });
-    expect(
-      await env.IMPORTS.head(exportKeyFor(live.userId, live.id)),
-    ).not.toBeNull();
+    expect(await env.IMPORTS.head(keyOf(live))).not.toBeNull();
     expect(anomalies).toStrictEqual([]);
     expect(reports).toStrictEqual([]);
   });
@@ -205,6 +218,69 @@ describe("sweepExports", () => {
     await sweepExports([], deps().deps);
     expect(await statusOf(old.id)).toBeUndefined();
     expect(await statusOf(recent.id)).toMatchObject({ status: "failed" });
+  });
+
+  it("deletes a forgotten failure's ZIP with it: the put can finish before the ready batch fails", async () => {
+    const staged = await stagedFor(
+      await seedExport("failed", { requestedAt: NOW - EXPORT_LINK_TTL_S - 1 }),
+    );
+    // Dead-lettered before any build claimed it: no key, nothing staged.
+    const unclaimed = await seedExport("failed", {
+      requestedAt: NOW - EXPORT_LINK_TTL_S - 1,
+      claimId: undefined,
+    });
+    const recent = await stagedFor(
+      await seedExport("failed", { requestedAt: NOW - EXPORT_LINK_TTL_S }),
+    );
+    const anomalies: string[] = [];
+    const { deps: sweep, reports } = deps();
+
+    await sweepExports(anomalies, sweep);
+
+    expect(await statusOf(staged.id)).toBeUndefined();
+    expect(await env.IMPORTS.head(keyOf(staged))).toBeNull();
+    expect(await statusOf(unclaimed.id)).toBeUndefined();
+    expect(await env.IMPORTS.head(keyOf(recent))).not.toBeNull();
+    expect(anomalies).toStrictEqual([]);
+    expect(reports).toStrictEqual([]);
+  });
+
+  it("keeps a failure whose ZIP will not delete, reports it, and finishes it next firing", async () => {
+    const old = await stagedFor(
+      await seedExport("failed", { requestedAt: NOW - EXPORT_LINK_TTL_S - 1 }),
+    );
+    const failure = new Error("R2 down");
+    const anomalies: string[] = [];
+    const { deps: failing, reports } = deps({
+      bucket: { delete: () => Promise.reject(failure) },
+    });
+
+    await sweepExports(anomalies, failing);
+
+    expect(await statusOf(old.id)).toMatchObject({ status: "failed" });
+    expect(reports).toStrictEqual([
+      { error: failure, context: { surface: "account-export-forget" } },
+    ]);
+    expect(anomalies).toStrictEqual([
+      "1 failed data export(s) could not be deleted and are retried next hour",
+    ]);
+    await sweepExports([], deps().deps);
+    expect(await statusOf(old.id)).toBeUndefined();
+    expect(await env.IMPORTS.head(keyOf(old))).toBeNull();
+  });
+
+  it("forgets at most a firing's cap of failures", async () => {
+    for (let index = 0; index <= EXPORT_SWEEP_CAP; index += 1) {
+      await seedExport("failed", {
+        requestedAt: NOW - EXPORT_LINK_TTL_S - 1 - index,
+      });
+    }
+    await sweepExports([], deps().deps);
+    const left = await db
+      .select({ id: dataExports.id })
+      .from(dataExports)
+      .where(eq(dataExports.status, "failed"));
+    expect(left).toHaveLength(1);
   });
 
   it("re-sends a pending export past the stall window and a build past its lease, and says so", async () => {
