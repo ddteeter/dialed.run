@@ -521,6 +521,34 @@ describe("exportFileResponse", () => {
     });
   });
 
+  it("redirects an unclaimed ready row to the account page without ever asking R2 for it", async () => {
+    // A ready row with no claim has no key (`exportKeyFor` says so), so the
+    // redirect must come from that check alone — never from `bucket.get`
+    // happening to treat a bad key as "not found".
+    const userId = newUlid();
+    const unclaimed = await seedExport(userId, "ready", {
+      claimId: undefined,
+      expiresAt: NOW + 60,
+    });
+    const gets: string[] = [];
+    const response = await exportFileResponse(
+      db,
+      { token: unclaimed.linkToken, userId },
+      {
+        get: (key: string) => {
+          gets.push(key);
+          return env.IMPORTS.get(key);
+        },
+      },
+      NOW,
+    );
+    expect(locationOf(response)).toStrictEqual({
+      status: 302,
+      location: "/account/sign-in",
+    });
+    expect(gets).toStrictEqual([]);
+  });
+
   it("sends everything that is not the runner's live export to the row", async () => {
     const userId = newUlid();
     const live = await readyExport(userId);

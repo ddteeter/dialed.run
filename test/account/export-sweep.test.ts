@@ -233,7 +233,15 @@ describe("sweepExports", () => {
       await seedExport("failed", { requestedAt: NOW - EXPORT_LINK_TTL_S }),
     );
     const anomalies: string[] = [];
-    const { deps: sweep, reports } = deps();
+    const deleted: (string | readonly string[])[] = [];
+    const { deps: sweep, reports } = deps({
+      bucket: {
+        delete: (keys) => {
+          deleted.push(keys);
+          return env.IMPORTS.delete(keys);
+        },
+      },
+    });
 
     await sweepExports(anomalies, sweep);
 
@@ -241,6 +249,41 @@ describe("sweepExports", () => {
     expect(await env.IMPORTS.head(keyOf(staged))).toBeNull();
     expect(await statusOf(unclaimed.id)).toBeUndefined();
     expect(await env.IMPORTS.head(keyOf(recent))).not.toBeNull();
+    // The unclaimed failure never had a ZIP: the batch asks the bucket to
+    // delete only the one key that exists, never a stand-in for "nothing".
+    expect(deleted).toStrictEqual([[keyOf(staged)]]);
+    expect(anomalies).toStrictEqual([]);
+    expect(reports).toStrictEqual([]);
+  });
+
+  it("expires an unclaimed ready row too, asking the bucket to delete nothing for it", async () => {
+    // Not reachable in production — a build always assigns a claim before a
+    // row goes `ready` — but the cleanup must not corrupt itself if it ever
+    // is: an absent key must stay "nothing asked for", not a stand-in
+    // string a mutator would have us hand the bucket instead.
+    const unclaimed = await seedExport("ready", {
+      expiresAt: NOW,
+      claimId: undefined,
+    });
+    const live = await stagedFor(
+      await seedExport("ready", { expiresAt: NOW + 1 }),
+    );
+    const anomalies: string[] = [];
+    const deleted: (string | readonly string[])[] = [];
+    const { deps: sweep, reports } = deps({
+      bucket: {
+        delete: (keys) => {
+          deleted.push(keys);
+          return env.IMPORTS.delete(keys);
+        },
+      },
+    });
+
+    await sweepExports(anomalies, sweep);
+
+    expect(await statusOf(unclaimed.id)).toBeUndefined();
+    expect(deleted).toStrictEqual([[]]);
+    expect(await env.IMPORTS.head(keyOf(live))).not.toBeNull();
     expect(anomalies).toStrictEqual([]);
     expect(reports).toStrictEqual([]);
   });
