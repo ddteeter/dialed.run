@@ -41,6 +41,11 @@ describe("AccountIndex (U1 Account)", () => {
         username="maya_runs"
         confirmBand={<p>the band</p>}
         signOutEverywhere={<button type="button">everywhere</button>}
+        dataExport={
+          <li>
+            <button type="button">export</button>
+          </li>
+        }
         deletion={<button type="button">delete</button>}
       />,
     );
@@ -64,14 +69,10 @@ describe("AccountIndex (U1 Account)", () => {
       (node) => node.textContent,
     );
     expect(order[0]).toBe("the band");
-    expect(order.slice(-3)).toStrictEqual([
-      "everywhere",
-      "Export your dataRuns, closet, entries and photo links, as one fileGet a copy",
-      "delete",
-    ]);
+    expect(order.slice(-3)).toStrictEqual(["everywhere", "export", "delete"]);
   });
 
-  it("offers the export as a download, never a page the router draws (ACC-10)", async () => {
+  it("puts the export row under Your data (ACC-10)", async () => {
     await renderWithRouter(
       <AccountIndex
         account={{
@@ -82,14 +83,15 @@ describe("AccountIndex (U1 Account)", () => {
         username="maya_runs"
         confirmBand={undefined}
         signOutEverywhere={undefined}
+        dataExport={
+          <li>
+            <button type="button">export</button>
+          </li>
+        }
         deletion={undefined}
       />,
     );
-    const exporting = screen.getByRole("link", { name: /^Export your data/u });
-    expect(exporting).toHaveAttribute("href", "/account/export");
-    expect(exporting).toHaveAttribute("download");
-    expect(exporting).toHaveAttribute("data-part", "settings-row");
-    expect(exporting).toHaveClass("target");
+    const exporting = screen.getByRole("button", { name: "export" });
     expect(
       screen.getByRole("heading", { name: "Your data" }).closest("section"),
     ).toContainElement(exporting);
@@ -106,6 +108,7 @@ describe("AccountIndex (U1 Account)", () => {
         username={undefined}
         confirmBand={undefined}
         signOutEverywhere={undefined}
+        dataExport={undefined}
         deletion={undefined}
       />,
     );

@@ -663,11 +663,30 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       title is mono `CONTENTS`, and "↑ Contents" is a small muted link at
       each section's foot. The page draws no "LAST UPDATED" line of its
       own — the owner's text says its date.
-    - **Export** is a JSON file downloaded at once (the packet's ACC-10),
-      the interim until round 27 #13's emailed ZIP, which the owner has
-      decided ships before launch (D-79, register D-116). The row's
-      sub-line says what the file holds: "Runs, closet, entries and photo
-      links, as one file"; "Get a copy" downloads rather than preparing.
+    - **Export** is round 27 #13's emailed ZIP since PR 2b-3 (D-79,
+      register D-116): the row's idle and `[ Preparing ]` states and the
+      "Email export" are the board's. Undrawn, and ours:
+      - **Ready**, on the day a copy was asked for (one a day): the
+        sub-line "Emailed. The link works until {day}." (UTC) and the
+        action "Download", the row's own link to the ZIP. After the day
+        the row is idle again. **Owner kept it (decision D-84), for
+        design round 28.**
+      - **Failed**, once the queue gives up (law 6): the sub-line "Your
+        export didn't work. Try again." with Get a copy.
+      - **The press failing** uses round 23's control failure band with
+        the kicker "Not started".
+      - **A link opened signed out** goes to log in and then to Settings ›
+        Account, where the row offers the download; **an expired or
+        someone else's link** goes to the row with no message.
+      - **The ZIP holds two files the board does not list**: `kit.csv`
+        (each garment in each kit, with its flag and note) and
+        `profile.csv` (the account and settings, one row), both named in
+        the README. **Owner kept both (decision D-83), for design round 28.**
+
+      **The ask (design round 28):** draw Ready and Failed, say whether
+      an expired link deserves a line of its own, and add the two extra
+      CSVs to the ZIP's list.
+
     - **Delete account's sheet** follows round 27 #14. For an account made
       with Google, the sheet asks nothing; if the Google sign-in is more
       than ten minutes old, the sheet treats it as a refused field, as it

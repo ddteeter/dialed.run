@@ -62,3 +62,11 @@ export const deskRowInput = z.object({ id: rowIdSchema });
 const legalSlugSchema = z.enum(["privacy"]);
 export type LegalSlug = z.infer<typeof legalSlugSchema>;
 export const legalPageInput = z.object({ slug: legalSlugSchema });
+
+/**
+ * "Get a copy" (ACC-10): the press's key, minted when the row mounts and
+ * resent on a retry of that press (law 8b).
+ */
+export const exportRequestInput = z.object({
+  idempotencyKey: z.string().min(1).max(64),
+});

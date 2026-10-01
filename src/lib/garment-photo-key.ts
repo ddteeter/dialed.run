@@ -10,5 +10,13 @@
  * cleanup can only ever reach that runner's objects.
  */
 export function photoKeyFor(userId: string, itemId: string): string {
-  return `items/${userId}/${itemId}`;
+  return `${garmentPhotoPrefix(userId)}${itemId}`;
+}
+
+/**
+ * Every garment photo a runner has, under one prefix — what the data
+ * export lists (task 126, ACC-10).
+ */
+export function garmentPhotoPrefix(userId: string): string {
+  return `items/${userId}/`;
 }

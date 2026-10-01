@@ -18,6 +18,7 @@ import {
   requireUserId,
   requireUserIdWhileLeaving,
 } from "../auth";
+import { nowSeconds } from "../../lib/now";
 import { emailDepsFromEnv } from "../email";
 import {
   captureException,
@@ -28,6 +29,7 @@ import {
 import { requireAdmin } from "../safety";
 import { requestAccess, turnstileAttempt } from "./access";
 import { accountPage, accountView } from "./account-view";
+import { requestExport } from "./data-exports";
 import {
   deletionEffectsFromEnv,
   keepAccount,
@@ -38,6 +40,7 @@ import {
   changeEmailInput,
   confirmInput,
   deskRowInput,
+  exportRequestInput,
   legalPageInput,
   newInviteInput,
   requestAccessInput,
@@ -265,6 +268,21 @@ export const restoreInviteCodeFn = createServerFn({ method: "POST" })
     requireAdmin(await requireUserId());
     await restoreInviteCode(db(), data.id);
   });
+
+/**
+ * ACC-10's Get a copy: queue the runner's emailed ZIP, or nothing new if
+ * one is under way or was made today — and what the row shows now.
+ */
+export const requestExportFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => exportRequestInput.parse(data))
+  .handler(async ({ data }) =>
+    requestExport(
+      db(),
+      { userId: await requireUserId(), idempotencyKey: data.idempotencyKey },
+      { queue: env.EXPORTS_QUEUE, report: captureException },
+      nowSeconds(),
+    ),
+  );
 
 /**
  * ACC-9's Delete my account: proved by the current password, or by a

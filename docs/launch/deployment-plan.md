@@ -57,6 +57,8 @@ them twice:
 | Decide whether `workers.dev` stays enabled. Recommend off once the domain works, so there is one origin for cookies.                                                | owner                                                                                                                                             | §3.3          |
 | Zone settings: Always Use HTTPS; HSTS at the zone if not sent by the Worker (125's OPS-8 sends it; do not double-set with conflicting values).                      | owner                                                                                                                                             | §3.9          |
 | Create the D1 databases, R2 buckets and queues, replace the placeholder D1 ids, set the `dialed-imports` 30-day lifecycle rule.                                     | owner, per `docs/deployment.md` §1–3                                                                                                              | §3.1          |
+| Create the `dialed-exports` queue and its `dialed-exports-dlq` before the first deploy that binds them (any deploy of PR #132 or later).                            | owner, per `docs/deployment.md` §3                                                                                                                | decision D-86 |
+| Add a second lifecycle rule on `dialed-imports`: prefix `exports/`, delete after 8 days, the net behind the hourly export sweep.                                    | owner, per `docs/deployment.md` §2                                                                                                                | decision D-85 |
 | Observability: tracing **off** (billable); logs at full sample (`head_sampling_rate: 1` is fine at launch volume). Carried over from the old launch-gate checklist. | owner                                                                                                                                             | workflow.md   |
 | Usage notifications for Workers, D1, R2 and Email.                                                                                                                  | owner                                                                                                                                             | §3.7          |
 
@@ -247,7 +249,7 @@ items each gate depends on if that ever slips.
 
 - The custom domain serves the app; `/api/health` is all `ok`.
 - Both databases migrated with `--remote`; the four crons listed under
-  Triggers; the four queues have consumers.
+  Triggers; the six queues have consumers.
 - Every required secret and var in §2 set; `BETTER_AUTH_URL` is the domain.
 - **Sentry proven** from a fetch and a cron; the digest alert rule and the
   cron heartbeat in place; uptime ping on.

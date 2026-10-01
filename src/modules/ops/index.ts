@@ -1,7 +1,12 @@
 export { checkHealth } from "./health";
-export { oweOutbox, outboxInsert, settleOutbox } from "./outbox";
+export {
+  oweOutbox,
+  outboxInsert,
+  outboxInsertWhere,
+  settleOutbox,
+} from "./outbox";
 export type { OutboxDebt } from "./outbox";
-export { handleQueueBatch } from "./queues";
+export { handleQueueBatch, type ExportConsumers } from "./queues";
 export { handleScheduled } from "./scheduled";
 export { secureResponse } from "./secure-response";
 export { captureException } from "./sentry";

@@ -233,6 +233,7 @@ describe("the account's settings read", () => {
       account: { email: google.email, isVerified: true, hasPassword: false },
       username: undefined,
       notifications: { email: google.email, runReminder: true },
+      dataExport: { state: "idle" },
     });
     await expect(accountPage(db, "gone")).rejects.toThrow(
       "signed in to an account that is gone",

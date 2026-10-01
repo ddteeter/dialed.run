@@ -264,6 +264,16 @@ describe("which type an edge resolves to", () => {
     expect(navTypeFor("/nowhere", "/elsewhere", false)).toBeUndefined();
   });
 
+  it("types the export row's Download, a file with no page (ACC-10)", () => {
+    expect(
+      navTypeFor(
+        "/account/sign-in",
+        "/account/export/0123456789abcdef0123456789abcdef",
+        false,
+      ),
+    ).toBe("push");
+  });
+
   it("cuts the OAuth return, which is a document load", () => {
     // NAV: "A document load from another origin. There is no outgoing
     // screen." Nothing here can run; the row stops it being typed later.

@@ -33,6 +33,7 @@ import {
 } from "../../../db/schema-core";
 import type { CoreDb } from "../core-db";
 import { newUlid } from "../../../lib/ids";
+import { firstRowWhere } from "../../../lib/keyed-read";
 import { StravaApiError } from "./api";
 import type { StravaApi, StravaConfig } from "./api";
 import type { RevokeJob } from "../queue-messages";
@@ -162,12 +163,11 @@ export async function getStravaConnection(
   db: CoreDb,
   userId: string,
 ): Promise<StravaConnectionRow | undefined> {
-  const rows = await db
-    .select()
-    .from(stravaConnections)
-    .where(eq(stravaConnections.userId, userId))
-    .limit(1);
-  return rows[0];
+  return firstRowWhere(
+    db,
+    stravaConnections,
+    eq(stravaConnections.userId, userId),
+  );
 }
 
 /**
