@@ -23,7 +23,7 @@ equal columns make it free.
 `data-ground="ink"` cannot be applied per-breakpoint — it is an attribute, and
 the roles it redefines are inherited — so the inverted bar is `hidden
 wide:flex` and `TabBar` gains `wide:hidden`. What must not be duplicated is
-the *set of destinations*: `TABS`, `activeTabIndex` and `tabToLight` move out
+the _set of destinations_: `TABS`, `activeTabIndex` and `tabToLight` move out
 of `TabBar.tsx` into a new pure `src/ui/tabs.ts` that both bars import, and a
 test pins that the two render the same four in the same order.
 
@@ -31,7 +31,7 @@ test pins that the two render the same four in the same order.
   "Log a run". `data-ground="ink"`, `bg-ground text-ink`: T2 rule 04 and the
   focus ring both fall out of `--ink` flipping, per 112's note. The bell is
   `Layout`'s existing `bell` node rendered in a second place — the S1 list
-  stays the `/notifications` route, which at width *is* the centred panel, so
+  stays the `/notifications` route, which at width _is_ the centred panel, so
   D-87's unread-inside-ink trap never arises.
 - `src/ui/Page.tsx` — `narrow`/`wide` become **`panel`/`column`**, DS3's own
   two answers. Panel stays centred at 390; column is left-aligned at width
@@ -103,7 +103,7 @@ contract describes was never built, so nothing collapses into two headings.
 - `test/modules/verdict-backlog.dom.test.tsx` (unit) — every key, the row that
   has no suggestion, the two ways Enter is early, and the saved row that stays
   put. `test/runs/backlog-keys.test.ts` (unit) for the key map, including the
-  keys the table must *not* claim.
+  keys the table must _not_ claim.
 - `test/ui/use-file-drop.dom.test.tsx` (unit) — bend 1's two silent failures:
   the missing `preventDefault` that stops the drop firing at all, and a drag
   carrying no file.
