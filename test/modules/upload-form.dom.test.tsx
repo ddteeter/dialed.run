@@ -1,15 +1,25 @@
 import {
   act,
   cleanup,
+  configure,
   fireEvent,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+} from "vitest";
 import { z } from "zod";
 
+import { importPollIntervalMs } from "../../src/modules/runs/import-polling";
 import type { ImportOutcome } from "../../src/modules/runs/imports";
 import { UploadForm } from "../../src/modules/runs/components/UploadForm";
 import type { Retime } from "../../src/modules/runs/components/ParsedCard";
@@ -70,12 +80,19 @@ function outcome(overrides: Partial<ImportOutcome> = {}): ImportOutcome {
 }
 
 /**
-A read that never answers — an import still being looked for.
+A promise that never settles.
 */
-function neverAnswers(): Promise<ImportOutcome | undefined> {
+function never(): Promise<never> {
   return new Promise(() => {
     // deliberately never settled
   });
+}
+
+/**
+A read that never answers — an import still being looked for.
+*/
+function neverAnswers(): Promise<ImportOutcome | undefined> {
+  return never();
 }
 
 function parsed(overrides: Parameters<typeof runSummary>[0] = {}) {
@@ -99,9 +116,8 @@ type GetOutcome = (input: {
 /**
  * Waits until the form is watching the import: its first poll has gone
  * out, so the poll and stall timers exist. Fake time advanced before that
- * jumps the clock over timers not yet set — under `shouldAdvanceTime` the
- * send can land on either side of the first advance, and a test that
- * advanced straight after `user.upload` passed or failed on that race.
+ * jumps the clock over timers not yet set, and the poll and stall timers
+ * land past the window instead of in it.
  */
 async function firstPoll(getOutcome: Mock<GetOutcome>): Promise<void> {
   await waitFor(() => {
@@ -129,10 +145,123 @@ function form(
   );
 }
 
-afterEach(() => {
+/**
+ * Every test in this file runs on a clock it owns, and the wall clock
+ * decides nothing.
+ *
+ * A1 is made of timers — a poll every two seconds, a stall at twenty, a
+ * grace before a success moves on — and these tests used to wait for them
+ * in real time: most on the real clock inside `waitFor`'s one-second
+ * budget (one at four seconds, to fit a real two-second poll), the rest on
+ * a fake clock that `shouldAdvanceTime` also moved with the wall clock. So
+ * a process that stopped being scheduled for a second or two — a loaded
+ * machine, a push gate's dry run — failed whichever test it landed in.
+ * When it resumes, every timer that came due during the pause fires in
+ * order of due time, so `waitFor`'s deadline goes off before the work it
+ * was waiting for, which only queues its next step once it runs.
+ *
+ * Now the clock moves only when a test moves it: `user-event` advances it
+ * for its own pauses, `elapse` for the form's, and Testing Library's
+ * `waitFor` — which recognises fake timers only through a global named
+ * `jest` — steps it fifty milliseconds a turn, so its budget is counted in
+ * fake time and a pause in the real world spends none of it. Only the
+ * timers are faked: `Date` and `Intl` stay real, because the run's clock
+ * is read through them and one test spies on `Intl` itself.
+ */
+const ONLY_TIMERS: Parameters<typeof vi.useFakeTimers>[0] = {
+  toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"],
+};
+
+/**
+ * The test that owns the clock, for as long as it runs.
+ *
+ * This exists for a test that times out, whose body vitest does not stop.
+ * It used to run on into the tests after it — parked in a `waitFor` whose
+ * deadline had gone with the uninstalled clock, re-checking on every later
+ * change to the page until one happened to pass, then advancing the next
+ * test's clock inside an `act()` that overlapped the next test's own.
+ * React keeps one depth counter for every `act()` in the file, and scopes
+ * that overlap rather than nest leave it wrong for good: the queue is
+ * never flushed again, and every render after that came up empty — one
+ * slow test, then thirty-odd "no drop zone input" failures. So every move
+ * of the clock is made on behalf of the test that started it, a test ends
+ * only once its last move has, and a body that runs on past its test
+ * stops at its next move and touches nothing.
+ */
+interface Owner {
+  isOpen: boolean;
+}
+const clock: { owner: Owner; moving: Promise<void> | undefined } = {
+  owner: { isOpen: false },
+  moving: undefined,
+};
+
+/**
+ * Moves the clock for `by`, inside `act()` so what it wakes lands. A body
+ * that has outlived its test waits here forever instead, holding no
+ * `act()`.
+ */
+function move(by: Owner, work: () => unknown): Promise<void> {
+  if (!by.isOpen) return never();
+  const step = act(async () => {
+    await work();
+  });
+  clock.moving = step;
+  return step;
+}
+
+beforeEach(() => {
+  const test: Owner = { isOpen: true };
+  clock.owner = test;
+  vi.useFakeTimers(ONLY_TIMERS);
+  vi.stubGlobal("jest", {
+    advanceTimersByTime: (ms: number) => {
+      vi.advanceTimersByTime(ms);
+    },
+  });
+  // Read once by each `waitFor` as it starts, so a `waitFor` left running
+  // by a timed-out test keeps the owner it started under.
+  configure({ unstable_advanceTimersWrapper: (work) => move(test, work) });
+});
+
+afterEach(async () => {
+  clock.owner.isOpen = false;
+  try {
+    await clock.moving;
+  } catch {
+    // The test has already failed, with its own error.
+  }
+  clock.moving = undefined;
+  vi.unstubAllGlobals();
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
+
+/**
+A runner at the keyboard, whose pauses are spent on this file's clock.
+*/
+function setupUser(options: Parameters<typeof userEvent.setup>[0] = {}) {
+  const by = clock.owner;
+  return userEvent.setup({
+    ...options,
+    advanceTimers: async (ms) => {
+      if (!by.isOpen) await never();
+      vi.advanceTimersByTime(ms);
+    },
+  });
+}
+
+/**
+Moves this file's clock, and lets everything that was waiting on it land.
+*/
+async function elapse(ms: number): Promise<void> {
+  await move(clock.owner, () => vi.advanceTimersByTimeAsync(ms));
+}
+
+/**
+How long A1 waits between asks, read from its own policy.
+*/
+const POLL_MS = importPollIntervalMs(undefined, 0);
 
 describe("A1 at rest", () => {
   it("is the drop zone, in the board's words, taking the three file types", async () => {
@@ -180,7 +309,7 @@ describe("A1: a file refused before it is sent", () => {
     ],
     ["an empty file", new File([], "run.gpx"), "That file is empty."],
   ])("marks the well for %s, and sends nothing", async (_, file, sentence) => {
-    const user = userEvent.setup({ applyAccept: false });
+    const user = setupUser({ applyAccept: false });
     const upload = vi.fn<Upload>();
     await renderWithRouter(form({ upload }));
 
@@ -192,7 +321,7 @@ describe("A1: a file refused before it is sent", () => {
   });
 
   it("refuses a file over the cap by its size", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderWithRouter(form());
 
     const big = new File([new Uint8Array(25 * 1024 * 1024 + 1)], "long.gpx");
@@ -202,7 +331,7 @@ describe("A1: a file refused before it is sent", () => {
   });
 
   it("clears the mark when a good file follows", async () => {
-    const user = userEvent.setup({ applyAccept: false });
+    const user = setupUser({ applyAccept: false });
     await renderWithRouter(form({ getOutcome: neverAnswers }));
 
     await user.upload(dropInput(), new File(["x"], "run.csv"));
@@ -212,7 +341,7 @@ describe("A1: a file refused before it is sent", () => {
   });
 
   it("does nothing when the picker is dismissed", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const upload = vi.fn<Upload>();
     await renderWithRouter(form({ upload }));
 
@@ -249,7 +378,7 @@ describe("A1: a file refused before it is sent", () => {
   });
 
   it("drops the last refusal the moment a good file starts sending", async () => {
-    const user = userEvent.setup({ applyAccept: false });
+    const user = setupUser({ applyAccept: false });
     const pending = Promise.withResolvers<{ importId: string }>();
     await renderWithRouter(form({ upload: () => pending.promise }));
 
@@ -262,7 +391,7 @@ describe("A1: a file refused before it is sent", () => {
   });
 
   it("drops a failed send's band when a refused file follows it", async () => {
-    const user = userEvent.setup({ applyAccept: false });
+    const user = setupUser({ applyAccept: false });
     await renderWithRouter(
       form({ upload: () => Promise.reject(new TypeError("Failed to fetch")) }),
     );
@@ -278,7 +407,7 @@ describe("A1: a file refused before it is sent", () => {
   });
 
   it("puts a refused file on the well in a failed read's place", async () => {
-    const user = userEvent.setup({ applyAccept: false });
+    const user = setupUser({ applyAccept: false });
     await renderWithRouter(
       form({
         getOutcome: () => Promise.resolve(outcome({ status: "failed" })),
@@ -298,7 +427,7 @@ describe("A1: a file refused before it is sent", () => {
 
 describe("A1: sending and reading", () => {
   it("sends the file under a fresh key, and breathes its name while it goes", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const pending = Promise.withResolvers<{ importId: string }>();
     const upload = vi.fn<Upload>(() => pending.promise);
     await renderWithRouter(form({ upload }));
@@ -321,7 +450,7 @@ describe("A1: sending and reading", () => {
   });
 
   it("keeps breathing while the file is read, and never navigates", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const getOutcome = vi.fn<GetOutcome>(() => Promise.resolve(outcome()));
     const { router } = await renderWithRouter(form({ getOutcome }));
 
@@ -338,7 +467,7 @@ describe("A1: sending and reading", () => {
   });
 
   it("puts a dropped connection on the form's band, and resends the same upload", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const upload = vi
       .fn<Upload>()
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
@@ -364,10 +493,7 @@ describe("A1: sending and reading", () => {
   });
 
   it("calls a slow read slow after twenty seconds, and tries again under the same key", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    const user = userEvent.setup({
-      advanceTimers: (ms) => vi.advanceTimersByTime(ms),
-    });
+    const user = setupUser();
     const upload = vi.fn<Upload>(() =>
       Promise.resolve({ importId: "01IMPORT" }),
     );
@@ -379,16 +505,12 @@ describe("A1: sending and reading", () => {
       expect(well()).toHaveAttribute("data-state", "uploading");
     });
     await firstPoll(getOutcome);
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(19_000);
-    });
+    await elapse(19_000);
     expect(
       screen.queryByText("Our end is slow. Your file is fine."),
     ).toBeNull();
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1000);
-    });
+    await elapse(1000);
 
     expect(
       screen.getByText("Our end is slow. Your file is fine."),
@@ -412,12 +534,9 @@ describe("A1: sending and reading", () => {
   it("never calls an idle form slow", async () => {
     // The stall clock is the read's, not the page's: a runner who opens
     // A1 and wanders off has sent nothing that could be slow.
-    vi.useFakeTimers({ shouldAdvanceTime: true });
     await renderWithRouter(form({}));
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(25_000);
-    });
+    await elapse(25_000);
 
     expect(
       screen.queryByText("Our end is slow. Your file is fine."),
@@ -430,7 +549,6 @@ describe("A1: sending and reading", () => {
     // and react-query's default scheduled a five-minute collection of a
     // cache that only this form's own client could ever reach. Both fired
     // into a torn-down window in this project (test/dom-setup.ts).
-    vi.useFakeTimers({ shouldAdvanceTime: true });
     const upload = vi.fn<Upload>(() =>
       Promise.resolve({ importId: "01IMPORT" }),
     );
@@ -451,10 +569,7 @@ describe("A1: sending and reading", () => {
   it("gives a retried import twenty seconds of its own before calling it slow again", async () => {
     // The retry comes back to the same import (same key), so the stall has
     // to be reset by the send, not by a new import id.
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    const user = userEvent.setup({
-      advanceTimers: (ms) => vi.advanceTimersByTime(ms),
-    });
+    const user = setupUser();
     const upload = vi.fn<Upload>(() =>
       Promise.resolve({ importId: "01IMPORT" }),
     );
@@ -462,45 +577,38 @@ describe("A1: sending and reading", () => {
     await renderWithRouter(form({ upload, getOutcome }));
     await user.upload(dropInput(), gpx());
     await firstPoll(getOutcome);
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(20_000);
-    });
+    await elapse(20_000);
     await user.click(screen.getByRole("button", { name: "Try again" }));
+    // The resend lands, and the import is watched again, before time moves.
+    // Waiting for "uploading" alone was not that: the well says so while
+    // the file is still being sent, before the new watch has a stall timer
+    // at all, and twenty seconds advanced from there never reached it.
+    await elapse(0);
 
-    await waitFor(() => {
-      expect(well()).toHaveAttribute("data-state", "uploading");
-    });
+    expect(upload).toHaveBeenCalledTimes(2);
+    expect(well()).toHaveAttribute("data-state", "uploading");
     expect(
       screen.queryByText("Our end is slow. Your file is fine."),
     ).toBeNull();
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(20_000);
-    });
+    await elapse(20_000);
     expect(
       screen.getByText("Our end is slow. Your file is fine."),
     ).toBeVisible();
   });
 
   it("counts failed polls against the budget, so a dead endpoint is not asked forever", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
     const getOutcome = vi
       .fn<GetOutcome>()
       .mockRejectedValue(new TypeError("Failed to fetch"));
-    const user = userEvent.setup({
-      advanceTimers: (ms) => vi.advanceTimersByTime(ms),
-    });
+    const user = setupUser();
     await renderWithRouter(form({ getOutcome }));
     await user.upload(dropInput(), gpx());
     await firstPoll(getOutcome);
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
-    });
+    await elapse(60 * 60 * 1000);
     const asked = getOutcome.mock.calls.length;
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
-    });
+    await elapse(60 * 60 * 1000);
 
     // More than the first poll: it kept asking, then the budget stopped it.
     expect(asked).toBeGreaterThan(1);
@@ -510,7 +618,6 @@ describe("A1: sending and reading", () => {
   it("keeps asking after a poll that failed, and lands the card when the answer comes", async () => {
     // A first poll that errors leaves no answer at all, which used to read
     // as settled and stop the polling for good.
-    vi.useFakeTimers({ shouldAdvanceTime: true });
     const getOutcome = vi
       .fn<GetOutcome>()
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
@@ -518,23 +625,19 @@ describe("A1: sending and reading", () => {
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
       .mockResolvedValue(outcome({ status: "done", run: runSummary() }));
-    const user = userEvent.setup({
-      advanceTimers: (ms) => vi.advanceTimersByTime(ms),
-    });
+    const user = setupUser();
     await renderWithRouter(form({ getOutcome }));
     await user.upload(dropInput(), gpx());
     await firstPoll(getOutcome);
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(15_000);
-    });
+    await elapse(15_000);
 
     expect(screen.getByText("Parsed · run.gpx")).toBeVisible();
     expect(getOutcome.mock.calls.length).toBeGreaterThanOrEqual(5);
   });
 
   it("clears a failed send's band as soon as the next file starts", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const pending = Promise.withResolvers<{ importId: string }>();
     const upload = vi
       .fn<Upload>()
@@ -552,7 +655,7 @@ describe("A1: sending and reading", () => {
   });
 
   it("leaves a failed read behind the moment another file is sent", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const pending = Promise.withResolvers<{ importId: string }>();
     const upload = vi
       .fn<Upload>()
@@ -575,7 +678,7 @@ describe("A1: sending and reading", () => {
   });
 
   it("never shows a new import the last one's answer", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const upload = vi
       .fn<Upload>()
       .mockResolvedValueOnce({ importId: "01IMPORT" })
@@ -602,23 +705,19 @@ describe("A1: sending and reading", () => {
   });
 
   it("keeps reading while the row says so, even once it names its run", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const getOutcome = vi.fn<GetOutcome>(() =>
       Promise.resolve(outcome({ status: "pending", run: runSummary() })),
     );
     await renderWithRouter(form({ getOutcome }));
 
     await user.upload(dropInput(), gpx());
-    await waitFor(() => {
-      expect(getOutcome).toHaveBeenCalled();
-    });
-    // Long enough for the answer to be rendered, however it renders.
-    await act(async () => {
-      await new Promise((resolve) => {
-        globalThis.setTimeout(resolve, 50);
-      });
-    });
+    await firstPoll(getOutcome);
+    // A whole poll: the first answer rendered, however it renders, and
+    // the next one asked for.
+    await elapse(POLL_MS);
 
+    expect(getOutcome.mock.calls.length).toBeGreaterThan(1);
     expect(well()).toHaveAttribute("data-state", "uploading");
     expect(document.querySelector("[data-slot='parsed-card']")).toBeNull();
   });
@@ -626,7 +725,7 @@ describe("A1: sending and reading", () => {
 
 describe("A1: a file that would not parse", () => {
   it("names the file when it had no track in it", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderWithRouter(
       form({
         getOutcome: () =>
@@ -647,7 +746,7 @@ describe("A1: a file that would not parse", () => {
   });
 
   it("says it could not read one with no reason recorded", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderWithRouter(
       form({
         getOutcome: () => Promise.resolve(outcome({ status: "failed" })),
@@ -660,7 +759,7 @@ describe("A1: a file that would not parse", () => {
   });
 
   it("takes another file straight from the marked well", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const upload = vi.fn<Upload>(() =>
       Promise.resolve({ importId: "01IMPORT" }),
     );
@@ -683,7 +782,7 @@ describe("A1: a file that would not parse", () => {
 
 describe("A1: the parsed card", () => {
   it("lands in place: the file, the run, and its conditions", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const { router } = await renderWithRouter(form({ getOutcome: parsed() }));
 
     await user.upload(dropInput(), gpx("morning.gpx"));
@@ -719,7 +818,7 @@ describe("A1: the parsed card", () => {
   });
 
   it("breathes in the conditions' place while the weather is asked for, then shows it", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const getOutcome = vi
       .fn<GetOutcome>()
       .mockResolvedValueOnce(
@@ -734,15 +833,16 @@ describe("A1: the parsed card", () => {
     await user.upload(dropInput(), gpx());
 
     expect(await screen.findByText("Fetching weather")).toBeVisible();
-    expect(
-      await screen.findByText("Conditions · auto-attached", undefined, {
-        timeout: 4000,
-      }),
-    ).toBeVisible();
+    expect(screen.queryByText("Conditions · auto-attached")).toBeNull();
+
+    // The next poll brings the weather.
+    await elapse(POLL_MS);
+
+    expect(screen.getByText("Conditions · auto-attached")).toBeVisible();
   });
 
   it("says so when the weather never came, and offers nothing to type", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderWithRouter(
       form({
         getOutcome: parsed({
@@ -760,7 +860,7 @@ describe("A1: the parsed card", () => {
   });
 
   it("goes back to the drop zone on REPLACE — the only way back", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderWithRouter(form({ getOutcome: parsed() }));
     await user.upload(dropInput(), gpx());
     await screen.findByText("Parsed · run.gpx");
@@ -772,7 +872,7 @@ describe("A1: the parsed card", () => {
   });
 
   it("opens the START TIME row in the time's place, with the hint and focus on the field", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderWithRouter(form({ getOutcome: parsed() }));
     await user.upload(dropInput(), gpx());
 
@@ -804,7 +904,7 @@ describe("A1: the parsed card", () => {
   });
 
   it("moves the start on the run's own clock, and says CHANGED when the weather comes", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const retime = vi.fn<Retime>(() => Promise.resolve("moved"));
     const getOutcome = vi.fn<GetOutcome>(parsed());
     await renderWithRouter(form({ getOutcome, retime }));
@@ -841,7 +941,7 @@ describe("A1: the parsed card", () => {
   });
 
   it("says what it is getting, and what it was, while the weather is fetched", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const pending = Promise.withResolvers<"moved">();
     const retime = vi.fn<Retime>(() => pending.promise);
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
@@ -875,7 +975,7 @@ describe("A1: the parsed card", () => {
   });
 
   it("says STILL the old time, and offers the same time again, when there is no weather for the new one", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const retime = vi
       .fn<Retime>()
       .mockResolvedValueOnce("no-weather")
@@ -922,7 +1022,7 @@ describe("A1: the parsed card", () => {
   });
 
   it("asks for a time when the field is emptied, in the schema's words", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const retime = vi.fn<Retime>(() => Promise.resolve("moved"));
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
     await user.upload(dropInput(), gpx());
@@ -943,7 +1043,7 @@ describe("A1: the parsed card", () => {
   });
 
   it("treats a refused correction as a failure: nothing changed", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const retime = vi.fn<Retime>(() => Promise.resolve("refused"));
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
     await user.upload(dropInput(), gpx());
@@ -958,7 +1058,7 @@ describe("A1: the parsed card", () => {
   });
 
   it("keeps the page where it is when the time is sent", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const submitted: SubmitEvent[] = [];
     const onSubmit = (event: SubmitEvent) => {
       submitted.push(event);
@@ -985,7 +1085,7 @@ describe("A1: the parsed card", () => {
   });
 
   it("holds the primary action in brackets while the weather is fetched, then goes", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const pending = Promise.withResolvers<"moved">();
     const retime = vi.fn<Retime>(() => pending.promise);
     const { router } = await renderWithRouter(
@@ -1018,7 +1118,7 @@ describe("A1: the parsed card", () => {
   });
 
   it("goes straight away, as a plain link, when nothing is being fetched", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const { router } = await renderWithRouter(form({ getOutcome: parsed() }));
     await user.upload(dropInput(), gpx());
     const next = await screen.findByRole("link", {
@@ -1035,7 +1135,7 @@ describe("A1: the parsed card", () => {
   });
 
   it("says there was no weather before, when the run had none", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const pending = Promise.withResolvers<"moved">();
     await renderWithRouter(
       form({
@@ -1061,7 +1161,7 @@ describe("A1: the parsed card", () => {
   });
 
   it("announces only the answer, never a sentence of its own first", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderWithRouter(form({ getOutcome: parsed() }));
     await user.upload(dropInput(), gpx());
     await user.click(
@@ -1096,7 +1196,7 @@ describe("A1: the parsed card", () => {
       ...resolved,
       timeZone: "America/Los_Angeles",
     });
-    const user = userEvent.setup();
+    const user = setupUser();
     const retime = vi.fn<Retime>(() => Promise.resolve("moved"));
     await renderWithRouter(
       form({
@@ -1131,7 +1231,7 @@ describe("A1: the parsed card", () => {
   it("sends the same start when the correction is tried again", async () => {
     // A response lost on the way back: the retry must not move the run a
     // second time, which a relative shift did.
-    const user = userEvent.setup();
+    const user = setupUser();
     const retime = vi
       .fn<Retime>()
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
@@ -1155,7 +1255,7 @@ describe("A1: the parsed card", () => {
   });
 
   it("splits the facts with a rule between each, never before the first", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderWithRouter(form({ getOutcome: parsed() }));
     await user.upload(dropInput(), gpx());
 
@@ -1169,7 +1269,7 @@ describe("A1: the parsed card", () => {
 
 describe("A1: a run already logged", () => {
   it("is a receipt in the card's place, from the existing run", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderWithRouter(
       form({
         getOutcome: () =>
@@ -1199,7 +1299,7 @@ describe("A1: a run already logged", () => {
   });
 
   it("opens A2 for a run with no kit, in ink rather than the log verb's pink", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderWithRouter(
       form({
         getOutcome: () =>
@@ -1214,7 +1314,7 @@ describe("A1: a run already logged", () => {
   });
 
   it("opens the run itself when it already has an entry", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderWithRouter(
       form({
         getOutcome: () =>
@@ -1236,7 +1336,7 @@ describe("A1: a run already logged", () => {
   });
 
   it("goes back to the drop zone on REPLACE", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderWithRouter(
       form({
         getOutcome: () =>
@@ -1256,7 +1356,7 @@ const FIVE_DEGREES = runConditions({ tempC: 5 });
 
 describe("A1: the units are the runner's", () => {
   it("writes kilometres and Celsius for a runner who uses them", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderWithRouter(
       form({
         units: { temp: "c", distance: "km" },
