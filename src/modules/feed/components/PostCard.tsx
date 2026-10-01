@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 
 import type { Units } from "../../../lib/contracts";
-import { formatDistance } from "../../../lib/measures";
+import { formatDistance } from "../../../lib/contracts/measures";
 import { Mono, WeatherAttribution } from "../../../ui";
 import type { FeedItem } from "../feed";
 import { postedLabel } from "../posted";

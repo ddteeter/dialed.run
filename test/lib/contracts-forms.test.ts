@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { z } from "zod";
 
-import { IS_INVITE_ONLY } from "../../src/lib/access";
+import { IS_INVITE_ONLY } from "../../src/lib/contracts/access";
 import {
   accountDeletionInput,
   requestAccessSchema,

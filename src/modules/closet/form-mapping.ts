@@ -6,7 +6,7 @@
  *
  * This was a switch over all eight categories listing each one's fields by
  * hand — the third copy of a fact `garmentSchema` already states. It is now
- * driven by lib/garment-fields, and the result is `parse`d rather than
+ * driven by lib/contracts/garment-fields, and the result is `parse`d rather than
  * asserted: CLAUDE.md requires every wardrobe write to go through
  * `garmentSchema`, and the previous version returned a hand-built object
  * typed as `Garment` that the schema never actually saw.

@@ -16,7 +16,7 @@ import { z } from "zod";
 
 import { manualSkies } from "../../lib/contracts";
 import type { ManualSky, TempUnit } from "../../lib/contracts";
-import { bandLabel } from "../../lib/temperature";
+import { bandLabel } from "../../lib/contracts/temperature";
 
 /**
  * The bands R2b offers, as the floor of each in °C: −20 °C to 40 °C, which

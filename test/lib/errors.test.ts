@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ForbiddenError, NotFoundError } from "../../src/lib/errors";
-import { requireOwned, requireOwner } from "../../src/lib/owned";
+import { requireOwned, requireOwner } from "../../src/lib/sql/owned";
 
 /**
  * The two answers that are not "here it is" and not "we broke".

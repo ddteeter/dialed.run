@@ -3,7 +3,7 @@
  * code is open, spending one on a new account, and Desk D7's writes —
  * minting, answering a request, revoking and its undo.
  *
- * The code's shape and its words are `lib/access.ts`'s; the gate that
+ * The code's shape and its words are `lib/contracts/access.ts`'s; the gate that
  * calls these at sign-up is `modules/auth/access-hook.ts`.
  */
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
@@ -19,11 +19,11 @@ import {
   outbox,
   userProfiles,
 } from "../../db/schema-core";
-import { mintInviteCode } from "../../lib/access";
+import { mintInviteCode } from "../../lib/contracts/access";
 import { newUlid } from "../../lib/ids";
-import { firstColumnWhere } from "../../lib/keyed-read";
+import { firstColumnWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
-import { orSqlNull } from "../../lib/sql-null";
+import { orSqlNull } from "../../lib/sql/sql-null";
 import { emailDebt } from "../email";
 import { outboxInsert, oweOutbox, type OutboxDebt } from "../ops";
 import type { OwedMail } from "./verification";
@@ -35,7 +35,7 @@ type Db = ReturnType<typeof drizzle>;
  * so the caller decides whether it rides a batch or is awaited alone.
  *
  * `claimFor` and `codeOfRequestStatement` had each written this out: select
- * one column, filtered to one row by `LIMIT 1`. `lib/keyed-read.ts`'s
+ * one column, filtered to one row by `LIMIT 1`. `lib/sql/keyed-read.ts`'s
  * `firstColumnWhere` is the same read already awaited — not reusable here
  * because these two are batch statements, and awaiting one before `batch()`
  * sees it would run it outside the transaction it needs to land in.

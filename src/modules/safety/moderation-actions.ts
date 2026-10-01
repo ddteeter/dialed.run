@@ -12,7 +12,7 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import { moderationActions } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
-import { hasRowWhere } from "../../lib/keyed-read";
+import { hasRowWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 
 type Db = ReturnType<typeof drizzle>;

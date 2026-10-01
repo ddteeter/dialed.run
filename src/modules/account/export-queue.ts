@@ -10,7 +10,7 @@
  */
 import { z } from "zod";
 
-import { consumeEach, deadLetterEach } from "../../lib/queue-batch";
+import { consumeEach, deadLetterEach } from "../../lib/sql/queue-batch";
 import type { ExportConsumers } from "../ops";
 
 type Report = (error: unknown, context: Record<string, string>) => void;

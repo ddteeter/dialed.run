@@ -1,7 +1,7 @@
 import { afterEach, expect, it } from "vitest";
 import { z } from "zod";
 
-import { ZOD_JITLESS_SCRIPT } from "../../src/lib/zod-jitless";
+import { ZOD_JITLESS_SCRIPT } from "../../src/lib/browser/zod-jitless";
 
 /**
  * The head script, run the way the page runs it: as an inline `<script>`

@@ -17,8 +17,8 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import { cronCheckpoints } from "../../db/schema-core";
 import { dayLabel } from "../../lib/dates";
-import type { EmailTemplate } from "../../lib/email";
-import { firstColumnWhere } from "../../lib/keyed-read";
+import type { EmailTemplate } from "../../lib/contracts/email";
+import { firstColumnWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 import { emailDebt } from "../email";
 import { adminUserIds } from "../safety";

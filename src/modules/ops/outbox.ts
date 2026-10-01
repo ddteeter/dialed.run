@@ -36,7 +36,7 @@ import {
   readOutboxRow,
   type OutboxKind,
   type OutboxMessage,
-} from "../../lib/outbox";
+} from "../../lib/sql/outbox";
 import {
   boundHandler,
   outboxHandlers,

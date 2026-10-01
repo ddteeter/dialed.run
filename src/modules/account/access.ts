@@ -8,10 +8,10 @@ import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { accessRequests } from "../../db/schema-core";
-import { IS_INVITE_ONLY } from "../../lib/access";
+import { IS_INVITE_ONLY } from "../../lib/contracts/access";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
-import { orSqlNull } from "../../lib/sql-null";
+import { orSqlNull } from "../../lib/sql/sql-null";
 import { countSend, sendAllowed, sendClaimOf } from "../email";
 import type { TurnstileAttempt, TurnstileVerdict } from "../ops";
 import { confirmRedemption, inviteStanding, redeemInvite } from "./invites";

@@ -13,7 +13,10 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import { passwordAttempts } from "../../db/schema-core";
 import { nowSeconds } from "../../lib/now";
-import { windowedCountSet, windowedCountUntil } from "../../lib/window-count";
+import {
+  windowedCountSet,
+  windowedCountUntil,
+} from "../../lib/sql/window-count";
 
 type Db = ReturnType<typeof drizzle>;
 

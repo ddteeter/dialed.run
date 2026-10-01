@@ -5,7 +5,7 @@ import {
   isRememberedForSession,
   noteSessionOwner,
   rememberForSession,
-} from "../../lib/session-memo";
+} from "../../lib/browser/session-memo";
 import type { LeavingView } from "./deletion";
 import type { LegalDoc } from "./legal-markdown";
 import type { HandleGateAnswer } from "./username";
@@ -59,7 +59,7 @@ export function startHandleIfNeeded(
 }
 
 /**
- * The fact the browser remembers once it has heard it (`lib/session-memo`).
+ * The fact the browser remembers once it has heard it (`lib/browser/session-memo`).
  */
 const HANDLE_CLAIMED = "has-handle";
 

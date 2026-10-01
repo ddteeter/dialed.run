@@ -6,7 +6,7 @@ import {
   garmentSchema,
   garmentVisibilities,
 } from "../src/lib/contracts";
-import type { GarmentCategory } from "../src/lib/garment-fields";
+import type { GarmentCategory } from "../src/lib/contracts/garment-fields";
 import {
   allGarmentTypes,
   hasGarmentAttribute,
@@ -14,7 +14,7 @@ import {
   garmentCategoriesInOrder,
   garmentFieldSpec,
   garmentTypesFor,
-} from "../src/lib/garment-fields";
+} from "../src/lib/contracts/garment-fields";
 import { TAP_LIST } from "../src/modules/closet/tap-list-data";
 import { ICONS } from "../src/ui/icons";
 

@@ -21,7 +21,7 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { follows, userProfiles } from "../../db/schema-core";
 import { env } from "../../env";
 import { normalizeUsername } from "../../lib/contracts";
-import { columnWhere } from "../../lib/keyed-read";
+import { columnWhere } from "../../lib/sql/keyed-read";
 import { runnersVisibleTo } from "./runner-visibility";
 
 const RESULT_LIMIT = 20;

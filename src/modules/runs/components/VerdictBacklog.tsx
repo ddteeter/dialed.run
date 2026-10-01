@@ -7,10 +7,10 @@ import {
   formatDistance,
   formatDuration,
   formatWind,
-} from "../../../lib/measures";
+} from "../../../lib/contracts/measures";
 import type { Units } from "../../../lib/contracts";
 import { dayLabel, proseDayLabel } from "../../../lib/dates";
-import { formatTemp } from "../../../lib/temperature";
+import { formatTemp } from "../../../lib/contracts/temperature";
 import {
   Bracketed,
   classifyFailure,

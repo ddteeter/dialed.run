@@ -13,7 +13,7 @@ import {
   preferenceFor,
   type EmailPayload,
   type EmailRecipient,
-} from "../../lib/email";
+} from "../../lib/contracts/email";
 import { isEmailWanted } from "./preferences";
 import { renderEmail } from "./render";
 import { unsubscribeUrl } from "./unsubscribe";

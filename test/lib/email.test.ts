@@ -5,7 +5,7 @@ import {
   emailRecipientSchema,
   emailTemplateSchema,
   preferenceFor,
-} from "../../src/lib/email";
+} from "../../src/lib/contracts/email";
 
 /**
  * The email wire format (task 126, ACC-2): every kind's literal discriminant,

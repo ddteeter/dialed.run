@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { cityLookupInput, cityNotFound } from "../../src/lib/city-lookup";
+import {
+  cityLookupInput,
+  cityNotFound,
+} from "../../src/lib/contracts/city-lookup";
 import { lookUpCity } from "../../src/modules/onboarding/place";
 import type { PlaceResolver } from "../../src/modules/onboarding/place";
 

@@ -11,9 +11,9 @@ import {
   emailPayloadSchema,
   preferenceFor,
   type EmailKind,
-} from "../../src/lib/email";
+} from "../../src/lib/contracts/email";
 import { nowSeconds } from "../../src/lib/now";
-import { dedupeKeyFor } from "../../src/lib/outbox";
+import { dedupeKeyFor } from "../../src/lib/sql/outbox";
 import {
   claimEmailSend,
   deliverEmail,

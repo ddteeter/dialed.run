@@ -28,7 +28,11 @@
  * the log-in page is refused by Better Auth itself
  * (`disableImplicitSignUp`).
  */
-import { APIError, addOAuthServerContext, getOAuthState } from "better-auth/api";
+import {
+  APIError,
+  addOAuthServerContext,
+  getOAuthState,
+} from "better-auth/api";
 import { z } from "zod";
 
 import {
@@ -37,7 +41,7 @@ import {
   INVITE_COPY,
   TURNSTILE_REFUSED,
   inviteCodeField,
-} from "../../lib/access";
+} from "../../lib/contracts/access";
 import { newUlid } from "../../lib/ids";
 
 /**
@@ -54,7 +58,7 @@ export type InviteClaim = "redeemed" | "used" | "invalid";
  */
 export interface AccessGate {
   /**
-  `lib/access.ts`'s `IS_INVITE_ONLY`, handed in so a test can turn it off.
+  `lib/contracts/access.ts`'s `IS_INVITE_ONLY`, handed in so a test can turn it off.
   */
   isInviteOnly: boolean;
   /**
@@ -157,7 +161,8 @@ export async function admitSignUp(
   // `used` reads as `invalid`: one sentence for both, so a prober cannot
   // tell a spent code from one nobody made.
   if (standing !== "open") refuse("invalid");
-  if (kind === "google") await addOAuthServerContext({ inviteCode: typed.code });
+  if (kind === "google")
+    await addOAuthServerContext({ inviteCode: typed.code });
 }
 
 /**

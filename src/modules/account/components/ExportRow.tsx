@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
-import type { ExportRowState } from "../../../lib/data-export";
+import type { ExportRowState } from "../../../lib/contracts/data-export";
 import { proseDayLabel } from "../../../lib/dates";
 import {
   Bracketed,

@@ -10,7 +10,7 @@ import {
   inviteCodeField,
   mintInviteCode,
   normalizeInviteCode,
-} from "../../src/lib/access";
+} from "../../src/lib/contracts/access";
 
 /**
  * The invite code's shape and words (task 126, ACC-5; round 26 #20,
@@ -35,7 +35,9 @@ describe("the invite code", () => {
   it("parses to the stored form, refusing the wrong shape as invalid", () => {
     expect(inviteCodeField.parse("dial-7k3p")).toBe("DIAL-7K3P");
     const message = (typed: string) =>
-      inviteCodeField.safeParse(typed).error?.issues.map((issue) => issue.message);
+      inviteCodeField
+        .safeParse(typed)
+        .error?.issues.map((issue) => issue.message);
     expect(message("")).toStrictEqual([INVITE_COPY.missing]);
     expect(message("DIAL-7K3")).toStrictEqual([INVITE_COPY.invalid]);
     expect(message("DIAL-7K3PP")).toStrictEqual([INVITE_COPY.invalid]);

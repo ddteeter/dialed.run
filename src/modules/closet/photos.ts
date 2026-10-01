@@ -21,7 +21,7 @@ import {
   withReleased,
 } from "../../lib/photo-pipeline";
 import { photoKeyFor } from "../../lib/garment-photo-key";
-import { ownedBy } from "../../lib/owned";
+import { ownedBy } from "../../lib/sql/owned";
 import { getOwnedItem } from "./service";
 import {
   captureException,
@@ -217,7 +217,7 @@ export async function removeItemPhoto(
   );
   const clearPhoto = db
     .update(wardrobeItems)
-    // `sql\`NULL\`` rather than the literal — see lib/sql-null.
+    // `sql\`NULL\`` rather than the literal — see lib/sql/sql-null.
     .set({ photoKey: sql`NULL`, visibility: "ok" })
     .where(stillNamesAPhoto);
   await db.batch([clearPhoto, outboxInsert(db, debt)]);

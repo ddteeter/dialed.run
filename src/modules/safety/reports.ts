@@ -26,7 +26,7 @@ import {
   reviewQueue,
 } from "../../db/schema-core";
 import { env } from "../../env";
-import { columnWhere, hasRowWhere } from "../../lib/keyed-read";
+import { columnWhere, hasRowWhere } from "../../lib/sql/keyed-read";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 
@@ -93,7 +93,7 @@ export async function fileReport(
       reason: input.reason,
       // Omitted rather than an explicit NULL: on an INSERT drizzle stores
       // NULL for an absent nullable column, so `?? null` would only be
-      // ceremony. (On an UPDATE it would matter — see lib/sql-null.)
+      // ceremony. (On an UPDATE it would matter — see lib/sql/sql-null.)
       note: input.note,
       createdAt: nowSeconds(),
     })
@@ -197,7 +197,7 @@ export async function reconcileUnhiddenReports(
  *
  * Three reads were building it inline — the reporter count, the queue
  * lookup, and the hide — and a clone detector is right that they are one
- * idea. The columns stay arguments for the reason `lib/keyed-read.ts`
+ * idea. The columns stay arguments for the reason `lib/sql/keyed-read.ts`
  * gives: which column a query touches decides whether SQLite answers from
  * an index, and D1 bills rows scanned, so that choice stays visible at the
  * call site rather than being picked by a helper.

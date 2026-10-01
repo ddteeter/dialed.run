@@ -32,7 +32,7 @@ import { eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { accountDeletions } from "../../db/schema-core";
-import { firstRowWhere } from "../../lib/keyed-read";
+import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { AccountLeavingError, AuthRequiredError } from "./auth-error";
 
 type Db = ReturnType<typeof drizzle>;

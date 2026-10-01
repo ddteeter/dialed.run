@@ -2,7 +2,7 @@ import { isNotNull } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { products } from "../../db/schema-core";
-import { didClaim } from "../../lib/claim";
+import { didClaim } from "../../lib/sql/claim";
 import type { EnrichJob } from "./queue-messages";
 
 type Db = ReturnType<typeof drizzle>;

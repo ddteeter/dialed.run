@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 
 import { user, verification } from "../../src/db/schema-auth";
 import { emailVerifications } from "../../src/db/schema-core";
-import { firstColumnWhere } from "../../src/lib/keyed-read";
+import { firstColumnWhere } from "../../src/lib/sql/keyed-read";
 import { nowSeconds } from "../../src/lib/now";
 import { unsubscribeUrl } from "../../src/modules/email/unsubscribe";
 import { withLocalDb } from "./local-db";

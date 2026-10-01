@@ -21,7 +21,7 @@ import { and, eq, isNotNull, lt } from "drizzle-orm";
 
 import { notifications, processedWebhookEvents } from "../../../db/schema-core";
 import { nowSeconds } from "../../../lib/now";
-import { orSqlNull } from "../../../lib/sql-null";
+import { orSqlNull } from "../../../lib/sql/sql-null";
 import type { CoreDb } from "../core-db";
 
 const SEVEN_DAYS_S = 7 * 24 * 60 * 60;

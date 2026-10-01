@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 
 import type { Units } from "../../../lib/contracts";
-import { bandLabel } from "../../../lib/temperature";
+import { bandLabel } from "../../../lib/contracts/temperature";
 import { Mono } from "../../../ui";
 
 /**

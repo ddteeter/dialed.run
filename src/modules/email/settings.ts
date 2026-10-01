@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { user } from "../../db/schema-auth";
-import { firstColumnWhere } from "../../lib/keyed-read";
+import { firstColumnWhere } from "../../lib/sql/keyed-read";
 import { emailPreferencesOf } from "./preferences";
 
 type Db = ReturnType<typeof drizzle>;

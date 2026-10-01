@@ -5,9 +5,9 @@ import { useEffect, useState } from "react";
 import type { Units } from "../../../lib/contracts";
 import { dayLabel } from "../../../lib/dates";
 import { newUlid } from "../../../lib/ids";
-import { distanceNumber } from "../../../lib/measures";
+import { distanceNumber } from "../../../lib/contracts/measures";
 import { photoAcceptAttribute } from "../../../lib/photo-constraints";
-import { formatTemp, precipClassOf } from "../../../lib/temperature";
+import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
 import { toggledIn } from "../../../lib/toggled-in";
 import {
   ControlFailureBand,

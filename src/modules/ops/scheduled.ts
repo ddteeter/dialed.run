@@ -10,7 +10,7 @@ import {
 } from "../../db/schema-core";
 import { env } from "../../env";
 import { chunked, IN_LIST_CHUNK } from "../../lib/chunked";
-import { columnWhere } from "../../lib/keyed-read";
+import { columnWhere } from "../../lib/sql/keyed-read";
 import { pruneStravaIds } from "../runs";
 import { retryPendingWeather } from "../weather";
 import { cronNameFor, type CronName } from "./crons";

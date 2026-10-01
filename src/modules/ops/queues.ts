@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
-import type { OutboxMessage } from "../../lib/outbox";
+import type { OutboxMessage } from "../../lib/sql/outbox";
 import {
   extractionModelFromEnv,
   handleEnrichmentBatch,

@@ -42,8 +42,8 @@ import {
 } from "../../db/schema-core";
 import { env } from "../../env";
 import { readInChunks } from "../../lib/chunked";
-import { precipClassOf } from "../../lib/temperature";
-import type { PrecipClass } from "../../lib/temperature";
+import { precipClassOf } from "../../lib/contracts/temperature";
+import type { PrecipClass } from "../../lib/contracts/temperature";
 import type { Conditions } from "./conditions";
 import { observationsForEntries, conditionsAt } from "./conditions";
 import { judgedFeelsLikeC } from "./judged-conditions";

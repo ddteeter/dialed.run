@@ -20,7 +20,7 @@ import { accountDeletions } from "../../db/schema-core";
 import { env, waitUntil } from "../../env";
 import { DELETION_GRACE_S } from "../../lib/contracts";
 import { proseDayLabel } from "../../lib/dates";
-import { firstRowWhere } from "../../lib/keyed-read";
+import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 import type { PasswordCheck } from "../auth";
 import { emailDebt } from "../email";

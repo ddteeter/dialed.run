@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import strykerParsed from "../../stryker.conf.json";
 import strykerConfig from "../../stryker.conf.json?raw";
+import { ratchetGlob } from "./ratchet-glob";
 import { codeOnly, isInstrumented, repoPath } from "./source-text";
 
 /**
@@ -205,25 +206,10 @@ const positives = strykerParsed.mutate
   .filter((entry) => entry !== "" && !entry.startsWith("!"));
 
 /**
- * Does any positive glob in the ratchet cover this path? `**` spans
- * directories and `*` stops at one, which is the whole of the glob syntax
- * this array uses.
- */
+Does any positive glob in the ratchet cover this path?
+*/
 function isInTheRatchet(path: string): boolean {
-  return positives.some((glob) => {
-    // One pass, so `**/` is decided before `*` can claim its stars — two
-    // passes would turn it into a pair of single-segment wildcards and
-    // stop `src/modules/**/*.tsx` covering anything nested.
-    const pattern = glob.replaceAll(
-      /\*\*\/|\*|[.+?^${}()|[\]\\]/gu,
-      (token) => {
-        if (token === "**/") return "(?:.*/)?";
-        if (token === "*") return "[^/]*";
-        return `\\${token}`;
-      },
-    );
-    return new RegExp(`^${pattern}$`, "u").test(path);
-  });
+  return positives.some((glob) => ratchetGlob(glob).test(path));
 }
 
 describe("the mutate exclusions and the untestable files are the same set", () => {

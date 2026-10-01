@@ -17,4 +17,4 @@ export const linkSearchInput = z.object({ search: z.unknown() });
  */
 export const unsubscribeFormSchema = z.object({});
 
-export { notificationSettingsSchema as notificationSettingsInput } from "../../lib/email";
+export { notificationSettingsSchema as notificationSettingsInput } from "../../lib/contracts/email";

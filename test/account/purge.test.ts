@@ -37,7 +37,7 @@ import { manualConditions } from "../../src/db/schema-weather";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { orSqlNull } from "../../src/lib/sql-null";
+import { orSqlNull } from "../../src/lib/sql/sql-null";
 import {
   PURGE_LEASE_S,
   PURGE_PER_FIRING,

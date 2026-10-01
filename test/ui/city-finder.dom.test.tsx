@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { CityLookup } from "../../src/lib/city-lookup";
+import type { CityLookup } from "../../src/lib/contracts/city-lookup";
 import type { ResolvedPlace } from "../../src/lib/contracts";
 import { CITY_HINT, CityFinder } from "../../src/ui";
 import type { FieldProps } from "../../src/ui";

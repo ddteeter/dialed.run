@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import type { JSX } from "react";
 
-import { TURNSTILE_REFUSED } from "../../../lib/access";
+import { TURNSTILE_REFUSED } from "../../../lib/contracts/access";
 import { requestAccessSchema } from "../../../lib/contracts";
 import { clockLabel, deviceTimeZone } from "../../../lib/dates";
 import {
@@ -54,7 +54,11 @@ function Receipt({ email }: Readonly<{ email: string }>): JSX.Element {
       </p>
       <p className="m-0 pt-4 text-body text-quiet">
         Have a code after all?{" "}
-        <Link data-target="inline" to="/auth/signup" className={INLINE_LINK_CLASS}>
+        <Link
+          data-target="inline"
+          to="/auth/signup"
+          className={INLINE_LINK_CLASS}
+        >
           Create an account
         </Link>
       </p>

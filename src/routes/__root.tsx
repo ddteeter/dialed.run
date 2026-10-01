@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 
-import { ZOD_JITLESS_SCRIPT } from "../lib/zod-jitless";
+import { ZOD_JITLESS_SCRIPT } from "../lib/browser/zod-jitless";
 import { handleGateQuery } from "../modules/account/functions";
 import { gateOnHandle } from "../modules/account/route-decisions";
 import { signedInQuery } from "../modules/auth/functions";
@@ -97,7 +97,7 @@ export const Route = createRootRoute({
       },
     ],
     // zod's JIT off before any module runs, so its `new Function` probe
-    // is not a CSP report on every page view (OPS-8, lib/zod-jitless).
+    // is not a CSP report on every page view (OPS-8, lib/browser/zod-jitless).
     scripts: [{ children: ZOD_JITLESS_SCRIPT }],
   }),
   // O0 before anything else, on every navigation (round 26 #7): the one

@@ -23,7 +23,7 @@ import { describe, expect, it } from "vitest";
 describe("modules that build a table at import time", () => {
   it("builds the garment field spec", async () => {
     const { garmentFieldSpec, garmentCategoriesInOrder } =
-      await import("../../src/lib/garment-fields");
+      await import("../../src/lib/contracts/garment-fields");
     expect(garmentCategoriesInOrder.length).toBeGreaterThan(0);
     expect(garmentFieldSpec.size).toBe(garmentCategoriesInOrder.length);
     for (const category of garmentCategoriesInOrder) {

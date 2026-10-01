@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
-import { EMAIL_SENDS_PER_HOUR } from "../../../lib/email";
+import { EMAIL_SENDS_PER_HOUR } from "../../../lib/contracts/email";
 import { clockLabel, deviceTimeZone } from "../../../lib/dates";
 import {
   ControlFailureBand,

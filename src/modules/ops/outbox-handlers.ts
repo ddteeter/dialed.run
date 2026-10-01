@@ -14,7 +14,7 @@ import { env } from "../../env";
 import { readInChunks } from "../../lib/chunked";
 import { entryPhotoIdOf, entryPhotoPrefix } from "../../lib/entry-photo-key";
 import { photoKeyFor } from "../../lib/garment-photo-key";
-import type { OutboxKind, OutboxMessage } from "../../lib/outbox";
+import type { OutboxKind, OutboxMessage } from "../../lib/sql/outbox";
 import { nowSeconds } from "../../lib/now";
 import { deliverOwedEmail, emailDepsFromEnv, type EmailDeps } from "../email";
 

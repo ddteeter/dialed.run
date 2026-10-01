@@ -12,7 +12,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { dataExports } from "../../db/schema-core";
 import { env } from "../../env";
-import { EXPORT_LINK_TTL_S } from "../../lib/data-export";
+import { EXPORT_LINK_TTL_S } from "../../lib/contracts/data-export";
 import { nowSeconds } from "../../lib/now";
 import { captureException } from "../ops";
 import { exportKeyFor, type ExportQueue } from "./data-exports";

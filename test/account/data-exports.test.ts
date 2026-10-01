@@ -7,7 +7,7 @@ import {
   EXPORT_EVERY_S,
   EXPORT_LINK_TTL_S,
   exportTokenSchema,
-} from "../../src/lib/data-export";
+} from "../../src/lib/contracts/data-export";
 import { newUlid } from "../../src/lib/ids";
 import {
   canRequest,

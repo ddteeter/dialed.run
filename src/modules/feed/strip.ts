@@ -1,5 +1,5 @@
 import type { Units } from "../../lib/contracts";
-import { formatTempRange } from "../../lib/measures";
+import { formatTempRange } from "../../lib/contracts/measures";
 import type { Conditions } from "./conditions-shape";
 
 /**

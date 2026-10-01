@@ -9,7 +9,7 @@ import {
   garmentAttributeKeys,
   garmentCategoriesInOrder,
   garmentFieldSpec,
-} from "../../src/lib/garment-fields";
+} from "../../src/lib/contracts/garment-fields";
 import { formValuesFromItem } from "../../src/modules/closet/form-mapping";
 import {
   garmentFormSchema,

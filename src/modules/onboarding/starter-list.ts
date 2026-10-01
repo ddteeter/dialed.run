@@ -64,7 +64,7 @@ async function bandFor(
   userId: string,
   normalsFor: (place: ClimatePlace) => Promise<ClimateNormals>,
 ) {
-  // A generic `firstRowWhere(db, table, columns, where)` in `lib/keyed-read`
+  // A generic `firstRowWhere(db, table, columns, where)` in `lib/sql/keyed-read`
   // is the obvious extraction and it does not typecheck. Drizzle infers the
   // row type for a *literal* column map and stops for a generic one: with
   // `TColumns extends Record<string, SQLiteColumn>` the `select().from()

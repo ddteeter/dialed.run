@@ -17,7 +17,7 @@ import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { TURNSTILE_REFUSED } from "../../src/lib/access";
+import { TURNSTILE_REFUSED } from "../../src/lib/contracts/access";
 import type { AccessRequestResult } from "../../src/modules/account/access";
 import {
   DeskAccess,
@@ -145,9 +145,9 @@ describe("Au5 · Request access", () => {
     );
     expect(inReceipt.getByText(/Have a code after all\?/)).toBeVisible();
     // The question and its link read as one sentence, a space between.
-    expect(
-      inReceipt.getByText(/Have a code after all\?/).textContent,
-    ).toBe("Have a code after all? Create an account");
+    expect(inReceipt.getByText(/Have a code after all\?/).textContent).toBe(
+      "Have a code after all? Create an account",
+    );
     const receiptLink = inReceipt.getByRole("link", {
       name: "Create an account",
     });
@@ -167,9 +167,7 @@ describe("Au5 · Request access", () => {
       target: { value: "n".repeat(281) },
     });
     await user.click(screen.getByRole("button", { name: "Request access" }));
-    expect(
-      await screen.findByRole("button", { name: /^Email/ }),
-    ).toBeVisible();
+    expect(await screen.findByRole("button", { name: /^Email/ })).toBeVisible();
     expect(
       screen.getByRole("button", { name: /A note · optional/ }),
     ).toBeVisible();
@@ -263,7 +261,12 @@ function code(overrides: Partial<DeskCode> = {}): DeskCode {
 
 const DESK: AccessDesk = {
   requests: [
-    { id: "r1", email: "sam@example.com", note: "Winter runner.", createdAt: 0 },
+    {
+      id: "r1",
+      email: "sam@example.com",
+      note: "Winter runner.",
+      createdAt: 0,
+    },
     { id: "r2", email: "j@example.com", note: NOTHING, createdAt: 3600 * 20 },
   ],
   codes: [

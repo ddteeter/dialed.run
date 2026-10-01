@@ -80,7 +80,11 @@ src/
   modules/    # Feature modules. Public API = the module's index.ts only.
     auth/  closet/  products/  runs/  weather/  feed/  onboarding/  enrichment/
   ui/         # Layout, shared components, design tokens, bracket-notation primitives.
-  lib/        # Pure shared utilities, zod codecs, contracts.
+  lib/        # Shared code, foldered by WHERE IT MAY RUN, not by topic:
+    contracts/  # domain truth + derive-don't-mirror tables (barrel: lib/contracts.ts). Isomorphic.
+    sql/        # drizzle/D1 helpers + the server plumbing they serve (outbox, queue batches). Server-only.
+    browser/    # localStorage, the inline head script — means something only in a browser. Client-only.
+    *.ts        # pure, isomorphic utilities (dates, ids, now, errors, photo keys, …).
 ```
 
 - A module may import: `db`, `env`, `lib`, `ui`, and **other modules only via
@@ -122,6 +126,13 @@ src/
   nothing server-side (`feed/route-decisions.ts`, `runs/not-found.ts` are the
   worked examples), and the queries stay behind callbacks the caller owns.
 
+- **`lib/sql/` is server-only and `lib/browser/` is client-only**, and
+  dependency-cruiser enforces both: no route file or `.tsx` component may
+  import `lib/sql/`, and no server-side entry (`src/server.ts`, a
+  `functions.ts`, a queue consumer or cron handler) may import
+  `lib/browser/`. A new `lib` file goes where its runtime constraint puts
+  it, so the D-50 bug class is visible in the path before it is in the
+  bundle.
 - No circular imports.
 - Only `src/env/` touches Workers bindings directly.
 - Each lane owns its `src/routes/<lane>/` directory exclusively — route merges
@@ -137,7 +148,7 @@ structural casts. Server function inputs are parsed with zod validators, always.
 
 The garment contract is a **discriminated union on `category`** — only the
 attributes valid for that category exist on the parsed type. All wardrobe
-reads/writes go through `garmentSchema` in `lib/contracts.ts`; never construct
+reads/writes go through `garmentSchema` in `lib/contracts/garments.ts`; never construct
 a garment object outside it.
 
 ## Derive, don't mirror
@@ -149,8 +160,8 @@ the compiler stays silent.
 
 The four-lane review found the same category→attributes fact written three
 times, and a verdict table written three times with the canonical copy imported
-by nobody. Both are now derived — see `lib/garment-fields.ts`, which reads
-`garmentSchema.options`, and `verdictScale` in `lib/contracts.ts`.
+by nobody. Both are now derived — see `lib/contracts/garment-fields.ts`, which reads
+`garmentSchema.options`, and `verdictScale` in `lib/contracts/verdicts.ts`.
 
 - zod discriminated unions expose `.options`, and each option exposes `.shape`.
   That is enough to answer "which fields does this variant have" in code.

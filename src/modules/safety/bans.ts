@@ -21,9 +21,9 @@ import { drizzle } from "drizzle-orm/d1";
 import { session } from "../../db/schema-auth";
 import { userProfiles } from "../../db/schema-core";
 import { env } from "../../env";
-import { firstRowWhere } from "../../lib/keyed-read";
-import type { OutboxMessage } from "../../lib/outbox";
-import { orSqlNull } from "../../lib/sql-null";
+import { firstRowWhere } from "../../lib/sql/keyed-read";
+import type { OutboxMessage } from "../../lib/sql/outbox";
+import { orSqlNull } from "../../lib/sql/sql-null";
 import { nowSeconds } from "../../lib/now";
 import { emailDebt } from "../email";
 
@@ -111,7 +111,7 @@ export async function unbanUser(
     // orSqlNull, not `undefined`. Drizzle DROPS an undefined set-value, so
     // the plain version of this silently did nothing at all — the row kept
     // its banned_at and the user stayed banned, with no error anywhere.
-    // This is the exact failure lib/sql-null.ts was written to prevent, and
+    // This is the exact failure lib/sql/sql-null.ts was written to prevent, and
     // it still got written once before the docblock was taken seriously.
     .set({ bannedAt: orSqlNull(undefined), banReason: orSqlNull(undefined) })
     .where(eq(userProfiles.userId, userId));
@@ -149,7 +149,7 @@ export async function banStateOf(userId: string): Promise<BanState> {
   // The full row, not just the two ban columns: `userId` is the primary
   // key, so this is one row read whichever way it is written, and
   // `firstRowWhere` is the shared primary-key lookup the rest of this
-  // module already leans on (see `lib/keyed-read.ts`).
+  // module already leans on (see `lib/sql/keyed-read.ts`).
   const row = await firstRowWhere(
     db(),
     userProfiles,

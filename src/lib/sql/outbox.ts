@@ -13,8 +13,8 @@
  */
 import { z } from "zod";
 
-import { emailPayloadSchema } from "./email";
-import { importFilePrefix } from "./import-file-key";
+import { emailPayloadSchema } from "../contracts/email";
+import { importFilePrefix } from "../import-file-key";
 
 /**
  * Clear what a garment's photo prefix holds beyond the photo its row names

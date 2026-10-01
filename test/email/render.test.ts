@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { EmailTemplate } from "../../src/lib/email";
+import type { EmailTemplate } from "../../src/lib/contracts/email";
 import { emailContent } from "../../src/modules/email/content";
 import { renderEmail } from "../../src/modules/email/render";
 import { ORIGIN } from "./helpers";

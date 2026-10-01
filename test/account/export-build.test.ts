@@ -14,7 +14,7 @@ import {
   wardrobeItems,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import { EXPORT_LINK_TTL_S } from "../../src/lib/data-export";
+import { EXPORT_LINK_TTL_S } from "../../src/lib/contracts/data-export";
 import { newUlid } from "../../src/lib/ids";
 import {
   exportKeyFor,

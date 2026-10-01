@@ -21,7 +21,7 @@ import {
   garmentCategoriesInOrder,
   hasGarmentAttribute,
   type GarmentAttributeKey,
-} from "../../../lib/garment-fields";
+} from "../../../lib/contracts/garment-fields";
 import { estimateTempRange, formatTempRange } from "../../../lib/thermal";
 import {
   Bracketed,
@@ -156,7 +156,7 @@ const VISIBILITY_LABELS: Record<GarmentVisibility, string> = {
 
 /**
  * Which attribute inputs a category admits. Derived from `garmentSchema`
- * via lib/garment-fields — this used to be a hand-written switch mirroring
+ * via lib/contracts/garment-fields — this used to be a hand-written switch mirroring
  * the union, which meant adding an attribute to a category required
  * editing the schema, this file, and form-mapping.ts, with no type error
  * if you missed one.

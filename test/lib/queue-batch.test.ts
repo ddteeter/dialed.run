@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { consumeEach, deadLetterEach } from "../../src/lib/queue-batch";
+import { consumeEach, deadLetterEach } from "../../src/lib/sql/queue-batch";
 import { batchOf, fakeMessage } from "../queue-fakes";
 
 /**

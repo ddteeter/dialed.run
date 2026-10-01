@@ -24,8 +24,8 @@ import {
   userProfiles,
 } from "../../db/schema-core";
 import { env } from "../../env";
-import { columnWhere, firstRowWhere } from "../../lib/keyed-read";
-import { orSqlNull } from "../../lib/sql-null";
+import { columnWhere, firstRowWhere } from "../../lib/sql/keyed-read";
+import { orSqlNull } from "../../lib/sql/sql-null";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 
@@ -79,7 +79,7 @@ export function enqueueForReview(
           // Cleared, not left alone: this row is being re-opened, and a
           // stale reviewer stamped on a pending decision would read as
           // "someone already looked at this". An `undefined` here would
-          // silently keep the old values (see lib/sql-null).
+          // silently keep the old values (see lib/sql/sql-null).
           resolvedBy: orSqlNull(undefined),
           resolvedAt: orSqlNull(undefined),
           claimedAt: orSqlNull(undefined),

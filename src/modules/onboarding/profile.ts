@@ -3,7 +3,7 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../db/schema-core";
 import { defaultUnits } from "../../lib/contracts";
-import { orSqlNull } from "../../lib/sql-null";
+import { orSqlNull } from "../../lib/sql/sql-null";
 import type {
   Calibration,
   Place,

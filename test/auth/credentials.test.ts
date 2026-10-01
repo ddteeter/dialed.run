@@ -4,8 +4,8 @@ import {
   forgetSession,
   isRememberedForSession,
   rememberForSession,
-} from "../../src/lib/session-memo";
-import { INVITE_COPY, TURNSTILE_REFUSED } from "../../src/lib/access";
+} from "../../src/lib/browser/session-memo";
+import { INVITE_COPY, TURNSTILE_REFUSED } from "../../src/lib/contracts/access";
 import {
   AUTH_COPY,
   AccessRefused,
@@ -174,15 +174,18 @@ describe("signUp", () => {
   it.each([
     ["INVITE_MISSING", INVITE_COPY.missing],
     ["INVITE_INVALID", INVITE_COPY.invalid],
-  ])("lands %s on the invite code, in the board's words", async (code, message) => {
-    client.signUp.mockResolvedValue({
-      data: undefined,
-      error: { code, status: 400 },
-    });
-    expect(await caught(signUp(account, TOKEN))).toMatchObject({
-      issues: [{ path: ["inviteCode"], message }],
-    });
-  });
+  ])(
+    "lands %s on the invite code, in the board's words",
+    async (code, message) => {
+      client.signUp.mockResolvedValue({
+        data: undefined,
+        error: { code, status: 400 },
+      });
+      expect(await caught(signUp(account, TOKEN))).toMatchObject({
+        issues: [{ path: ["inviteCode"], message }],
+      });
+    },
+  );
 
   it("puts a Turnstile refusal in the band as NOT SENT (round 27 #12)", async () => {
     client.signUp.mockResolvedValue({
@@ -453,9 +456,11 @@ describe("googleConsentUrl", () => {
       data: undefined,
       error: { code: "PASSWORD_BREACHED", status: 400 },
     });
-    const thrown = await caught(googleConsentUrl("/", "/auth/signup", {
-      turnstileToken: "t",
-    }));
+    const thrown = await caught(
+      googleConsentUrl("/", "/auth/signup", {
+        turnstileToken: "t",
+      }),
+    );
     expect(thrown).toBeInstanceOf(AuthRejected);
   });
 

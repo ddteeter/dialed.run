@@ -14,7 +14,7 @@ import {
 } from "../../ui";
 import { SignedOutPanel } from "../../ui/SignedOutPanel";
 import type { ControlFailure, FormShell } from "../../ui";
-import { IS_INVITE_ONLY } from "../../lib/access";
+import { IS_INVITE_ONLY } from "../../lib/contracts/access";
 import { authFailure, authStatus } from "./auth-copy";
 import { GoogleButton, type GoogleSignIn } from "./google-button";
 import { PasswordField } from "./password-field";
@@ -302,7 +302,7 @@ export const SIGN_UP_LABELS = {
 /**
  * Au2's first field, above email and Google (round 26 #20): INVITE CODE,
  * filled from `/join?code=`, under the board's one line saying why. Not
- * drawn at all when invite-only is off — the one flag (`lib/access.ts`)
+ * drawn at all when invite-only is off — the one flag (`lib/contracts/access.ts`)
  * removes it and `RequestAccessLink` together.
  */
 export function InviteCodeField({

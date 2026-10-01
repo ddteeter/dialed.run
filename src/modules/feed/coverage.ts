@@ -1,6 +1,6 @@
 import type { VerdictKind } from "../../ui";
 
-import { bandFloorC } from "../../lib/temperature";
+import { bandFloorC } from "../../lib/contracts/temperature";
 import type { Conditions } from "./conditions-shape";
 import { judgedFeelsLikeC } from "./judged-conditions";
 

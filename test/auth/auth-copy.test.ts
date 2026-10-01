@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { TURNSTILE_REFUSED } from "../../src/lib/access";
+import { TURNSTILE_REFUSED } from "../../src/lib/contracts/access";
 import {
   AUTH_COPY,
   AUTH_KICKER,

@@ -27,9 +27,9 @@ import {
   usernameHistory,
 } from "../../db/schema-core";
 import { USERNAME_MAX_LENGTH, usernameSchema } from "../../lib/contracts";
-import { hasRowWhere } from "../../lib/keyed-read";
+import { hasRowWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
-import { isProfaneHandle, readBackDigits } from "../../lib/profanity";
+import { isProfaneHandle, readBackDigits } from "../../lib/contracts/profanity";
 import type { ScreenHandle } from "./handle-screen";
 
 type Db = ReturnType<typeof drizzle>;
@@ -75,7 +75,7 @@ const RESERVED_WITHIN: readonly string[] = [
  * Whether nobody may hold this handle: a reserved name or one of its
  * obvious disguises (underscores dropped, digits read back as letters —
  * `adm1n`, `d_i_a_l_e_d`), or a word on the vendored list
- * (`lib/profanity.ts`). Takes the stored (lowercased) form.
+ * (`lib/contracts/profanity.ts`). Takes the stored (lowercased) form.
  */
 export function isReservedHandle(handle: string): boolean {
   const isReserved = readBackDigits(handle.replaceAll("_", "")).some(
@@ -505,7 +505,7 @@ export type HandleGate =
 
 /**
  * The gate's answer, with whom it is about: the browser keys what it
- * remembers to that runner (`lib/session-memo`), so a sign-in as someone
+ * remembers to that runner (`lib/browser/session-memo`), so a sign-in as someone
  * else in another tab is never answered from this one's memo.
  */
 export type HandleGateAnswer =

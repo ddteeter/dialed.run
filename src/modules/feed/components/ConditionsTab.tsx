@@ -2,11 +2,11 @@ import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
-import type { CityLookup } from "../../../lib/city-lookup";
+import type { CityLookup } from "../../../lib/contracts/city-lookup";
 import type { ResolvedPlace, Units } from "../../../lib/contracts";
-import { formatTempRange } from "../../../lib/measures";
-import { formatTemp } from "../../../lib/temperature";
-import type { PrecipClass } from "../../../lib/temperature";
+import { formatTempRange } from "../../../lib/contracts/measures";
+import { formatTemp } from "../../../lib/contracts/temperature";
+import type { PrecipClass } from "../../../lib/contracts/temperature";
 import {
   Bracketed,
   CityFinder,

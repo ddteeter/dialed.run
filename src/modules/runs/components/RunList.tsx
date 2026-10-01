@@ -4,8 +4,8 @@ import { useState } from "react";
 
 import type { Units } from "../../../lib/contracts";
 import { dayLabel } from "../../../lib/dates";
-import { distanceNumber } from "../../../lib/measures";
-import { formatTemp, precipClassOf } from "../../../lib/temperature";
+import { distanceNumber } from "../../../lib/contracts/measures";
+import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
 import { Bracketed, Mono } from "../../../ui";
 import { setBandLabel, SKY_WORDS } from "../run-conditions";
 import type { RunConditions, RunSummary } from "../service";

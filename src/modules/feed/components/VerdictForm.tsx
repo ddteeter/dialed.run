@@ -4,8 +4,15 @@ import { useState } from "react";
 import { entryTags, verdictScale } from "../../../lib/contracts";
 import type { Units, VerdictValue } from "../../../lib/contracts";
 import { clockLabel, dayLabel } from "../../../lib/dates";
-import { distanceNumber, formatDuration } from "../../../lib/measures";
-import { bandLabel, formatTemp, precipClassOf } from "../../../lib/temperature";
+import {
+  distanceNumber,
+  formatDuration,
+} from "../../../lib/contracts/measures";
+import {
+  bandLabel,
+  formatTemp,
+  precipClassOf,
+} from "../../../lib/contracts/temperature";
 import {
   DeskSplit,
   FieldMessage,

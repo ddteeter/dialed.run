@@ -1,7 +1,7 @@
 /**
  * The considered half of a handle's word check (task 126; owner,
  * 2026-09-27): OpenAI's omni-moderation, asked once at claim time. The
- * instant half is the vendored list (`lib/profanity.ts`), which runs
+ * instant half is the vendored list (`lib/contracts/profanity.ts`), which runs
  * first and is all there is when this cannot answer.
  *
  * **Fails open, to the list** (law 5). Claiming a handle is the primary

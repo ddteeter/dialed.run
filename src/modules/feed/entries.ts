@@ -36,9 +36,9 @@ import {
   publicPhotoStatus,
   publiclyVisibleEntry,
 } from "../safety";
-import { requireOwned, requireOwner } from "../../lib/owned";
+import { requireOwned, requireOwner } from "../../lib/sql/owned";
 import { newUlid } from "../../lib/ids";
-import { bandFloorC } from "../../lib/temperature";
+import { bandFloorC } from "../../lib/contracts/temperature";
 import type { Conditions } from "./conditions";
 import { observationsForEntries, observationsForRuns } from "./conditions";
 import { judgedFeelsLikeC } from "./judged-conditions";

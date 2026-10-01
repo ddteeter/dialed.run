@@ -10,7 +10,7 @@ import { and, eq } from "drizzle-orm";
 
 import { imports, runs } from "../../db/schema-core";
 import { importFileKeyFor } from "../../lib/import-file-key";
-import { firstColumnWhere } from "../../lib/keyed-read";
+import { firstColumnWhere } from "../../lib/sql/keyed-read";
 import { ImportUploadError, checkUpload } from "./upload-limits";
 import { newUlid } from "../../lib/ids";
 import type { CoreDb } from "./core-db";

@@ -2,7 +2,7 @@ import type { JSX } from "react";
 import { useState } from "react";
 
 import type { Units } from "../../../lib/contracts";
-import { formatTemp, precipClassOf } from "../../../lib/temperature";
+import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
 import { Bracketed, FieldMessage, Mono, Sheet } from "../../../ui";
 import type { Conditions } from "../conditions-shape";
 import { uiGroupLabels } from "../groups";
