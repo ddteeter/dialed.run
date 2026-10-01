@@ -7,8 +7,9 @@ what we copied.
 
 ## List of Dirty, Naughty, Obscene, and Otherwise Bad Words
 
-- **Where:** `src/lib/profanity-words.ts`, read by `src/lib/profanity.ts`
-  (the instant half of a handle's word check, task 126).
+- **Where:** `src/lib/profanity-words.txt`, one entry per line as
+  upstream publishes it, read by `src/lib/profanity.ts` (the instant half
+  of a handle's word check, task 126).
 - **Source:** github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words,
   file `en`, fetched 2026-09-28.
 - **Copyright:** © Shutterstock, Inc. and contributors.

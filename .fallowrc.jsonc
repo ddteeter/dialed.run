@@ -117,11 +117,6 @@
       // ignore covers the table and not `photo`/`validatedCorpus` beside
       // it.
       "eval/photos/corpus-data.ts",
-      // Task 126's vendored word list (LDNOOBW, CC BY 4.0): a list of
-      // strings and nothing else, split from its matcher (`profanity.ts`)
-      // so the ignore covers the data and not the behaviour. A column of
-      // quoted words matches any other column of quoted words.
-      "src/lib/profanity-words.ts",
     ],
   },
 }

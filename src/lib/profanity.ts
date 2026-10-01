@@ -1,10 +1,9 @@
 /**
  * The instant half of a handle's word check (task 126; owner, 2026-09-27):
- * a vendored open-source list (`./profanity-words.ts`, CC BY 4.0 — its
- * attribution is in `docs/legal/third-party-notices.md`), matched
- * the moment a handle is claimed. The other half, OpenAI's moderation,
- * lives with the claim (`modules/account`), and this is what is left when
- * it cannot answer.
+ * a vendored open-source list (`./profanity-words.txt`, CC BY 4.0 — see
+ * below), matched the moment a handle is claimed. The other half,
+ * OpenAI's moderation, lives with the claim (`modules/account`), and this
+ * is what is left when it cannot answer.
  *
  * **Whole parts only, never `includes`.** A handle is 3–20 of
  * `[a-z0-9_]`, so the list is compacted to the same alphabet ("g-spot" is
@@ -19,7 +18,44 @@
  * failure. A word run into others (`bigshitrunner`) is the moderation
  * check's to catch.
  */
-import { PROFANE_WORDS } from "./profanity-words";
+import wordList from "./profanity-words.txt?raw";
+
+/**
+ * **The list is vendored data, not code.** It is the English list from
+ * "List of Dirty, Naughty, Obscene, and Otherwise Bad Words" (LDNOOBW,
+ * github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words,
+ * file `en`, fetched 2026-09-28), © Shutterstock, Inc. and contributors,
+ * licensed under **Creative Commons Attribution 4.0 International**
+ * (CC BY 4.0, creativecommons.org/licenses/by/4.0/). Changes from the
+ * original: the one entry with no letter or digit in it (an emoji, which
+ * no handle can contain) is left out. Nothing else is edited, so the list
+ * can be re-vendored by replacing the file whole. The attribution the
+ * licence asks for is published in `docs/legal/third-party-notices.md`;
+ * keep the two in step on a re-vendor.
+ *
+ * **A text file, one entry per line, and not an array literal**, because
+ * of what a mutation tester makes of an array literal: each of its 402
+ * strings was a mutant that runs at module load, and such a mutant
+ * re-runs every test that imports the file — on every PR that touches a
+ * test. Bundled as a string at build time (`?raw`, as `modules/account`
+ * bundles its legal texts), so nothing is read at run time.
+ * `test/lib/profanity.test.ts` pins its count and checksum, so a botched
+ * re-vendor fails there rather than quietly letting words through.
+ */
+
+/**
+ * A vendored word list, one entry per line: trimmed, so a CRLF checkout or
+ * a stray space cannot make a word unmatchable, and with blank lines (the
+ * file's trailing newline among them) dropped.
+ */
+export function parseWordList(text: string): string[] {
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
+}
+
+export const PROFANE_WORDS: readonly string[] = parseWordList(wordList);
 
 /**
 [a-z0-9] only: the handle's alphabet, less `_`, which never carries meaning.
