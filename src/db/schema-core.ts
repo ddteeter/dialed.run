@@ -204,6 +204,56 @@ export const accountDeletions = /*#__PURE__*/ sqliteTable(
 );
 
 /**
+ * Emailed data exports (task 126, ACC-10; decision D-79; round 27 #13).
+ * One row per "Get a copy": the queued build's claim, the ZIP's life, and
+ * the link the email carries.
+ *
+ * **`status` is the reconciliation marker** (law 8c): `pending` until a
+ * consumer claims it (`building`, `claimed_at`, a fresh `claim_id`),
+ * `ready` once the ZIP is staged and the email owed, `failed` when the DLQ
+ * gives up, `expiring` while the hourly sweep deletes an expired ZIP. The
+ * ZIP's key is derived from the row
+ * (`exports/{user_id}/{id}/{claim_id}.zip` in `IMPORTS`), never stored:
+ * each claim writes its own, so a build whose claim was taken over can
+ * delete what it wrote without touching the winner's.
+ *
+ * `link_token` is the download link's path segment: 128 random bits, not
+ * the id, which is partly a timestamp. It opens nothing without the
+ * owner's session. `idempotency_key` is the request's (law 8b).
+ */
+export const dataExports = /*#__PURE__*/ sqliteTable(
+  "data_exports",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    linkToken: text("link_token").notNull(),
+    status: text("status", {
+      enum: ["pending", "building", "ready", "failed", "expiring"],
+    }).notNull(),
+    requestedAt: integer("requested_at").notNull(),
+    claimedAt: integer("claimed_at"),
+    // Which build holds the claim: a fresh id per claim, so a build whose
+    // claim was taken over finishes nothing (its ZIP key carries it too).
+    claimId: text("claim_id"),
+    readyAt: integer("ready_at"),
+    expiresAt: integer("expires_at"),
+  },
+  (t) => [
+    uniqueIndex("data_exports_idempotency").on(t.userId, t.idempotencyKey),
+    uniqueIndex("data_exports_link").on(t.linkToken),
+    // One export in flight per runner, whatever two racing requests read.
+    uniqueIndex("data_exports_in_flight")
+      .on(t.userId)
+      .where(sql`${t.status} IN ('pending', 'building')`),
+    // The row's latest export, for Settings › Account.
+    index("data_exports_user").on(t.userId, t.requestedAt),
+    // The hourly sweep's reads: by status, oldest first.
+    index("data_exports_status").on(t.status, t.requestedAt),
+  ],
+);
+
+/**
  * Invite codes (task 126, ACC-5; decision D-39; round 26 #20). `DIAL-XXXX`,
  * stored as `lib/access.ts` normalizes it, minted on Desk D7 — by hand,
  * or by answering an access request — or seeded for the owner as a

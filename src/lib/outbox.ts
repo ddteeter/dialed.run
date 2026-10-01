@@ -14,6 +14,7 @@
 import { z } from "zod";
 
 import { emailPayloadSchema } from "./email";
+import { importFilePrefix } from "./import-file-key";
 
 /**
  * Clear what a garment's photo prefix holds beyond the photo its row names
@@ -59,7 +60,9 @@ const importFileDelete = z.object({
       userId: z.string().min(1),
       key: z.string().min(1),
     })
-    .refine((payload) => payload.key.startsWith(`imports/${payload.userId}/`)),
+    .refine((payload) =>
+      payload.key.startsWith(importFilePrefix(payload.userId)),
+    ),
 });
 
 /**

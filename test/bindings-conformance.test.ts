@@ -128,6 +128,21 @@ function queueConsumers(config: unknown): BoundConsumer[] {
 }
 
 /**
+ * The queue producer bindings a config declares, as it declares them.
+ */
+function queueProducers(config: unknown): unknown {
+  if (typeof config !== "object" || config === null) {
+    throw new Error(configSchemaError);
+  }
+  if (!("queues" in config)) return [];
+  const { queues } = config;
+  if (typeof queues !== "object" || queues === null) {
+    throw new Error(configSchemaError);
+  }
+  return "producers" in queues ? queues.producers : [];
+}
+
+/**
  * Every production source, for the one-sender check below.
  */
 const sources: Record<string, string> = import.meta.glob(
@@ -160,6 +175,18 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
         `dead_letter_queue for ${entry.queue}`,
       ).toBe(entry.deadLetterQueue);
     }
+  });
+
+  it("gives the test pool every queue producer the Worker has", () => {
+    // test/wrangler.test.jsonc is what the workers pool binds, so a
+    // producer missing there is an `env.X_QUEUE` that is undefined in
+    // every test and defined in production (dialed-exports, D-86).
+    const testConfig: unknown = JSON.parse(stripJsonc(testWranglerJsonc));
+    expect(queueProducers(testConfig)).toStrictEqual(queueProducers(config));
+    expect(queueProducers(config)).toContainEqual({
+      binding: "EXPORTS_QUEUE",
+      queue: "dialed-exports",
+    });
   });
 
   it("declares the vars the code reads, with the production origin on https", () => {

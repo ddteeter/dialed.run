@@ -515,6 +515,293 @@ New kinds in `lib/email.ts`, all transactional (no switch):
 `0040_add_account_deletions` (core, additive: one new table). Lane 128's
 safety 2b may also take 0040; whoever merges second renumbers.
 
+## PR 2b-3: emailed export
+
+Branch `feat/126-export-zip`. ACC-10 as round 27 #13 draws it and the
+owner decided (D-79, register D-116): the interim JSON download goes, and
+"Get a copy" queues a ZIP that is emailed as a link.
+
+### What the board says, and where it is followed
+
+Round 27 #13 (`Round 27 Rulings.dc.html`, the Export ruling, the U1 row
+and "Email export"):
+
+- The row: "Export your data" · "Runs, closet, entries, photos and your
+  run files" · Get a copy. Pressed, the action becomes `[ Preparing ]`
+  and the sub-line "We'll email a link when it's ready."
+- **One export a day.**
+- The ZIP: `runs.csv`, `entries.csv`, `garments.csv`, the original run
+  files and the photos, and a README naming each column.
+- The email: "Your dialed.run export is ready" · "Your runs, closet,
+  entries, photos and original run files are in one ZIP." · Download
+  export · "The link works for 7 days, only while you're logged in."
+
+So: **expiry 7 days** (the board's), and **the link needs the owner
+signed in** (the board's "only while you're logged in").
+
+**Where the ZIP holds more than the board lists** (design deltas; the
+owner kept both, decision D-83): a runner's kit rows carry a flag and a note per garment,
+which one `entries.csv` row per entry cannot hold without packing a list
+into a cell, so they are `kit.csv` (entry, garment, flag, note); and the
+account and profile (email, joined, handle, place, units, calibration,
+share default) — in the JSON today, and the runner's data — are
+`profile.csv`, one row. Both are named in the README like the rest.
+
+### Request
+
+A server function, `requestExportFn`, from the row's button (a control
+outside a form: `useControlAction`, the Sign-out pattern). It carries a
+client key (`useIdempotencyKey`, law 8b), rotated after a success.
+
+`requestExport` decides, in order:
+
+1. **A repeat of the same key** returns what the first call made.
+2. **One in flight** (`pending` or `building`): nothing new; the row
+   shows Preparing.
+3. **One a day**: a request made less than 24 hours after the last one
+   that did not fail makes nothing. A failed one never counts, so "try
+   again" works at once.
+4. Otherwise one row (`pending`) and a queue message.
+
+The table enforces 1 and 2 by itself: `UNIQUE (user_id,
+idempotency_key)` and a **partial** unique index on `user_id WHERE status
+IN ('pending','building')`, so two racing requests make one export
+whatever the reads said. The insert is `ON CONFLICT DO NOTHING`, then the
+row is read back.
+
+The row goes first and the queue send second — two systems (law 8c).
+**Reconciliation, not an outbox**: `status = 'pending'` is already the
+durable marker, so a send that fails is reported and the hourly sweep
+(below) re-sends it. The runner is told "We'll email a link when it's
+ready", which stays true.
+
+### Work: its own queue, `dialed-exports`
+
+**One new binding, owner-approved (decision D-86).** The job is
+`{ type: "account_export", exportId }` on `dialed-exports`
+(`EXPORTS_QUEUE`), with its own DLQ `dialed-exports-dlq`,
+`max_batch_size: 1` — one ZIP build a delivery — and `max_retries: 3` as
+`dialed-imports` has. The first draft rode `dialed-imports` as a new
+variant; the review moved it, and **moved** rather than kept it on both
+queues, which law 9 allows only because nothing has deployed: no message
+of the old shape can be in flight. `modules/ops/queues.ts` registers the
+queue, so `test/bindings-conformance.test.ts` asserts it (law 10), and
+the same test now holds the test pool's producers to `wrangler.jsonc`'s.
+
+The wire format (`exportsQueueMessageSchema`) and both consumers are
+`account`'s (`account/export-queue.ts`). `ops` cannot import `account`
+(the cycle 2b-2 documents), so `handleQueueBatch` takes them from the
+Worker entry as `ExportConsumers`, exactly as the purge is handed to
+`handleScheduled`; a `dialed-exports` batch that arrives with none wired
+throws, so the queue redelivers and dead-letters it rather than acking a
+runner's export into nothing.
+
+The ZIP is staged in the `IMPORTS` bucket under
+`exports/{userId}/{exportId}/{claimId}.zip`. Not `MEDIA`: `IMPORTS` is
+never served by any route, and `exports/` sits beside `imports/{userId}/`,
+never inside it, so the `import_file_delete` kind cannot reach an export.
+
+**The build** (`account/export-build.ts`, reached only from
+`src/server.ts`, never from the barrel — it imports the zip library):
+
+1. **Claim** (law 2): `UPDATE … SET status = 'building', claimed_at = now,
+claim_id = <fresh> WHERE id = ? AND status IN ('pending','building')`.
+   Nothing moved — finished, failed, or gone — is a no-op ack. `building`
+   is re-claimable so a redelivery after a crash rebuilds, **which means a
+   sweep re-send or a duplicate delivery can take the claim while another
+   build is still running.** The first draft said two such builds "write
+   the same key with the same bytes"; that was false — the rows can change
+   between their reads, and the loser's ready batch still owed a second
+   email (review finding 1). So each claim is its own: the ZIP key carries
+   the claim id, and only the build still holding the claim can finish
+   (step 5).
+2. **Read** the runner's rows (the JSON export's reads, kept): profile,
+   closet, runs with **derived conditions only** (never a raw Visual
+   Crossing row, §1.8), entries with kit, tags and photos, uploads.
+3. **List** `IMPORTS` `imports/{userId}/` and `MEDIA` `entries/{userId}/`
+   and `items/{userId}/` — sizes for the files the rows name. Listing is
+   R2, not SQL; the intersection with the rows is in code.
+4. **Stream**: `makeZip` over an async generator that `get`s one object
+   at a time, piped into a `FixedLengthStream` whose length
+   `predictLength` computed from those sizes, which `IMPORTS.put`
+   consumes. **At most one photo is in flight**; the CSVs are strings.
+5. **Ready, and the email, in one batch**: `status = 'ready'`,
+   `ready_at`, `expires_at = ready_at + 7 days` **where the row is still
+   `building` under this claim**, and the `export_ready` email owed
+   through the outbox (dedupe key `export_ready:{id}`) as an
+   `INSERT … SELECT … FROM data_exports WHERE id = ? AND claim_id = ? AND
+status = 'ready'` — so it owes a row only if that update did (a batch
+   cannot branch on its own results; ops' `outboxInsertWhere`). If the
+   update changed nothing — the claim was taken over, or the row was
+   failed or purged mid-build — the build deletes the ZIP it wrote and
+   stops: one export, one email, one ZIP, whoever wins; a purged or failed
+   row gets neither. Then the fast path. **A file that vanished between
+   list and get** is written as zeros of its listed size, so the upload
+   completes at its promised length (an errored stream leaves R2's `put`
+   with rejections nobody holds); then the half-made ZIP is deleted and
+   the build throws, and the queue retries (law 3).
+
+**Photos in the ZIP**: every entry photo the runner posted, shared or not
+(their JPEG, as stored), and each garment's current photo — its
+re-encoded `original.jpg`, the full size the app keeps, falling back to
+`full.webp` for a photo stored before originals were. **Run files**: every
+upload whose file is still there, as uploaded (GPX, FIT, TCX).
+
+**Size.** `FixedLengthStream` + a single `put` is bounded by R2's 5 GB
+single-object limit. At the app's photo sizes that is thousands of
+photos; a runner past it gets "failed" and Sentry an event with the ids.
+Multipart would lift it at the cost of part bookkeeping; not built.
+CPU is the CRC32 over each byte, in JS — about a second a gigabyte.
+
+### The zip library: `client-zip`
+
+`client-zip` 2.5.1 (MIT, zero dependencies, 6.5 kB, last release
+2026-09): streaming by design — it pulls the next file from an async
+iterable only after the last is written, so the generator above decides
+what is in memory; Web Streams in and out, which is what R2 speaks;
+ZIP64, so a large export is still a valid file; `predictLength`, which is
+what lets R2 take the stream with a known length; and CRC32 in plain JS
+since 2.4 (no WebAssembly compile, which Workers forbid at runtime). It
+stores rather than deflates, which costs nothing on JPEGs and a little on
+the CSVs. `fflate` was the alternative: it deflates, but its streaming
+`Zip` is push-based with callbacks, and bridging that to a pull stream
+with back-pressure is code this repo would own.
+
+Server-only: the build file is imported by `src/server.ts` alone, and
+`npm run build`'s `check:bundle` confirms nothing of it reaches the
+client chunk.
+
+**The files, as built.** `data-exports.ts` (request, row state, DLQ fail,
+download), `export.ts` (the reads), `export-files.ts` (which R2 objects
+go in, under what name, and every sheet's rows), `export-sheets.ts` (the
+five CSVs' column tables: name, README sentence, value),
+`export-format.ts` (CSV cells, the README's lines), `export-queue.ts`
+(the queue's wire format and consumers), `export-build.ts`,
+`export-sweep.ts`. **Two additions to `.fallowrc.jsonc`'s `ignore`** came
+from the commit gate's clone check: `export-sheets.ts` (a column table
+reads as a copy of any other) and `src/lib/email-kinds.ts`, the email
+kinds split out of `lib/email.ts` for the same reason, beside
+`tap-list-data.ts`'s precedent. The coordinator kept both, on one
+condition for the sheets: **every column there is a plain field read.**
+The review found behaviour in it — the `joined_at` conversion, three map
+lookups and a throw — so those moved onto `export-files.ts`' row-building
+step, where the clone check reads them. The throw went altogether: each
+entry's photos are now resolved beside the entry itself, so there is no
+lookup that could miss.
+
+A CSV text cell starting `=`, `+`, `-`, `@`, a tab or a CR is prefixed
+with `'` (OWASP's CSV-injection advice): product names and captions are
+other people's words, opened in a spreadsheet.
+
+### Delivery
+
+`GET /account/export/$token` (a server route, glue; `exportFileResponse`
+decides):
+
+- **Unguessable**: the link carries `link_token`, 128 random bits (hex),
+  UNIQUE, minted with the row — not the row id, which is a ULID and
+  partly a timestamp.
+- **Single-runner**: the signed-in runner must be the export's owner;
+  anyone else gets the same answer as a token that does not exist.
+- **Signed out** → log in, and back to Settings › Account (a page route;
+  log-in's return is a client navigation, which cannot land on a file),
+  where the row offers the download.
+- **Expiring**: `status = 'ready'` and `expires_at > now`; otherwise back
+  to Settings › Account, where the row offers a new copy.
+- The file: `application/zip`, `attachment;
+filename="dialed-run-export-YYYY-MM-DD.zip"`, `private, no-store`, its
+  length.
+
+The token rides the outbox payload (the email's link), which "a payload
+never carries a secret" allows only because **the token is not a bearer
+credential**: without the owner's session it opens nothing.
+
+### Expiry: the hourly `:00` firing
+
+`handleScheduled`'s upkeep (the Worker entry's hand-off) gains
+`sweepExports`, run on the `0 * * * *` firing. Claim-then-work (law 2)
+and re-runnable (law 1):
+
+1. **Expire**: claim `ready` rows past `expires_at` (and `expiring` rows
+   whose claim is over an hour old) as `expiring`, capped at 50; delete
+   each ZIP; then delete the row. A failure between leaves `expiring`,
+   which the next firing re-claims.
+2. **Failed rows** older than 7 days are deleted, **with their ZIP**: a
+   failed export can hold a whole one, when the last build's `put`
+   finished and its ready batch failed before the queue gave up (review
+   finding 2; the first draft assumed nothing was staged). The claim's key
+   goes first, then the row; an R2 failure leaves both for the next
+   firing, reported, with an anomaly line.
+3. **Re-send** `pending` rows older than 15 minutes and `building` rows
+   claimed over an hour ago (a lost send, a lost message), capped at 50,
+   with an anomaly line for the digest.
+
+**An R2 lifecycle rule on `IMPORTS`' `exports/` prefix** (delete after 8
+days) is the net behind the sweep (decision D-85), set by the owner at
+deploy time (`docs/deployment.md` §2): it catches a ZIP a build left under
+a claim no row holds, when it died between its upload and its ready
+batch. No code.
+
+Every hourly firing's steps now run whichever of them fail (law 5): a
+sweep that throws no longer costs that hour's email drain, nor a weather
+retry the sweep. The firing still throws afterwards — the one error, or
+an `AggregateError` of all of them — so its check-in closes as an error
+and the Worker entry reports it.
+
+### Failures (law 6)
+
+The DLQ's `fail` marks the export `failed` (only from `pending` or
+`building`) and reports to Sentry with the export and runner ids — never
+file names or contents. The row then says "Your export didn't work. Try
+again." with Get a copy.
+
+### Deletion (ACC-9)
+
+The purge gains a step before the account rows: every object under
+`exports/{userId}/` in `IMPORTS` (listed, so a ZIP an unfinished build
+staged is found too), then the rows go in the last batch with the other
+by-user tables. The purge test's `GONE` footprint gains `exports` and
+`exportFiles`.
+
+### The row's states
+
+| state     | when                                           | sub-line                                           | action          |
+| --------- | ---------------------------------------------- | -------------------------------------------------- | --------------- |
+| idle      | no export, or the last is over a day old       | "Runs, closet, entries, photos and your run files" | Get a copy      |
+| preparing | the last is `pending` / `building`             | "We'll email a link when it's ready."              | `[ Preparing ]` |
+| ready     | the last is `ready`, requested under a day ago | "Emailed. The link works until {day}."             | Download        |
+| failed    | the last `failed`                              | "Your export didn't work. Try again."              | Get a copy      |
+
+Ready and failed are **undesigned** (design deltas): the board draws
+idle and preparing only.
+
+### Migration
+
+`0041_add_data_exports` (core, **additive**: one new table, its indexes).
+The review's `claim_id` column is folded into it, snapshot included,
+rather than a second migration: `0041` has not merged anywhere.
+
+### Privacy policy
+
+The policy's "Export your data" lines are the owner's; what this makes
+stale is listed in `docs/legal/privacy-policy-sources.md`, not edited in
+`privacy-policy.md`.
+
+### Owner questions
+
+Answered by the owner, 2026-09-30:
+
+1. `kit.csv` and `profile.csv` beyond the board's three CSVs: **kept**
+   (decision D-83), a board delta for round 28.
+2. A ready export shows Download on the row for its first day: **yes**
+   (decision D-84), a board delta for round 28; so the link token stays
+   stored in plain text, which the row reads back.
+3. A lifecycle rule on `IMPORTS` `exports/` as a second net: **yes**, 8
+   days, at deploy time (decision D-85).
+4. The two `.fallowrc.jsonc` ignore entries: **kept**, the sheets' only
+   once every column is a plain field read (above). Exports also got their
+   own queue (decision D-86).
+
 ## Contract touches
 
 - Schema (all core): `replace_display_name_with_username` (**destructive,
@@ -526,7 +813,8 @@ safety 2b may also take 0040; whoever merges second renumbers.
   (the confirm links and the per-address limit) and
   `add_verification_identifier_index` (Better Auth's reset lookup scanned
   its `verification` table).
-- Binding: `send_email` `EMAIL` (decision D-42). No queue, no cron.
+- Bindings: `send_email` `EMAIL` (decision D-42); the `dialed-exports`
+  queue, its DLQ and `EXPORTS_QUEUE` (decision D-86, PR 2b-3). No cron.
 - Routes: `/onboarding/handle`, `/account/*`, `/join`, `/privacy`, `/terms`,
   `/copyright`, `/desk/access`.
 

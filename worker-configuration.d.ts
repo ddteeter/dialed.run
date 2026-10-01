@@ -9,6 +9,7 @@ interface __BaseEnv_Env {
 	EMAIL: SendEmail;
 	IMPORTS_QUEUE: Queue;
 	ENRICHMENT_QUEUE: Queue;
+	EXPORTS_QUEUE: Queue;
 	BETTER_AUTH_SECRET: string;
 }
 declare namespace Cloudflare {

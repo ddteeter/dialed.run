@@ -184,3 +184,19 @@ whatever product URL a runner pastes.
 - `docs/architecture.md` mentions Turnstile on sign-up. No Turnstile code
   exists, so the policy does not name it; add Cloudflare Turnstile to the
   processor table if it is switched on.
+
+## Drift from the emailed export (task 126 PR 2b-3)
+
+**Report only.** `privacy-policy.md` is the owner's text and is not edited
+here. PR #128 adds a wider "Drift since be70c6d" section to this file;
+whichever merges second folds these rows into it. Each is a line the
+emailed ZIP export (ACC-10, D-79) makes stale, or a fact the policy now
+lacks.
+
+| Policy section · line                                                                  | What is true now                                                                                                                                                                                                  | Current source                                                                              |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Short version · "You cannot yet delete your account or export your data from the app." | Settings › Account › Export your data emails a link to one ZIP: profile, runs (with the conditions the app showed), kits, closet, the runner's photos at the size kept, and the run files as uploaded. One a day  | `src/modules/account/data-exports.ts` `requestExport`; `export-files.ts`; `export-build.ts` |
+| Your choices · "Export your data. [OWNER: not built]"                                  | Built, as above. The link works for 7 days and only for the runner, signed in                                                                                                                                     | `data-exports.ts` `exportFileResponse`; `src/lib/data-export.ts` `EXPORT_LINK_TTL_S`        |
+| How long we keep it · missing · export files                                           | A ZIP sits in R2 (`IMPORTS`, `exports/{user id}/`) for 7 days from when it is ready, then the hourly sweep deletes it and its row; a failed export's row goes after 7 days; account deletion deletes both at once | `src/modules/account/export-sweep.ts`; `purge.ts` `deleteExportFiles`                       |
+| Account · the list of emails sent                                                      | Adds "your export is ready", with its link; transactional, no switch                                                                                                                                              | `src/lib/email.ts` `export_ready`; `src/modules/email/content.ts`                           |
+| What we keep · missing · `data_exports`                                                | One row per export asked for: when, its status, and the link's token. No file contents                                                                                                                            | `src/db/schema-core.ts` `dataExports` (migration 0041)                                      |

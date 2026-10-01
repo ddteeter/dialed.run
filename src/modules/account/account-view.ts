@@ -7,8 +7,11 @@ import { and, eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { account, user } from "../../db/schema-auth";
+import type { ExportRowState } from "../../lib/data-export";
 import { firstRowWhere, hasRowWhere } from "../../lib/keyed-read";
+import { nowSeconds } from "../../lib/now";
 import { notificationSettings, type NotificationSettings } from "../email";
+import { exportRowState } from "./data-exports";
 import { usernameOf } from "./username";
 
 type Db = ReturnType<typeof drizzle>;
@@ -62,20 +65,24 @@ export async function ownAccountView(
 
 /**
  * Everything the account's settings pages show, in one read for one
- * route: the account, the handle, and the email switches.
+ * route: the account, the handle, the email switches, and the export
+ * row's state (ACC-10).
  */
 export async function accountPage(
   db: Db,
   userId: string,
+  now = nowSeconds(),
 ): Promise<{
   account: AccountView;
   username: string | undefined;
   notifications: NotificationSettings;
+  dataExport: ExportRowState;
 }> {
-  const [account, username, notifications] = await Promise.all([
+  const [account, username, notifications, dataExport] = await Promise.all([
     ownAccountView(db, userId),
     usernameOf(db, userId),
     notificationSettings(db, userId),
+    exportRowState(db, userId, now),
   ]);
-  return { account, username, notifications };
+  return { account, username, notifications, dataExport };
 }

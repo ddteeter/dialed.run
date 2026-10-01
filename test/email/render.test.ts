@@ -166,6 +166,19 @@ describe("emailContent", () => {
       },
     ],
     [
+      { kind: "export_ready", token: "0123456789abcdef0123456789abcdef" },
+      {
+        subject: "Your dialed.run export is ready",
+        body: "Your runs, closet, entries, photos and original run files are in one ZIP.",
+        button: {
+          label: "Download export",
+          href: `${ORIGIN}/account/export/0123456789abcdef0123456789abcdef`,
+        },
+        foot: "The link works for 7 days, only while you're logged in.",
+        footer: [PRIVACY],
+      },
+    ],
+    [
       {
         kind: "digest",
         day: "Tue Sep 16",

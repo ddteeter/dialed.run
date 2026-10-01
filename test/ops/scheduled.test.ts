@@ -724,6 +724,98 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
   });
 });
 
+/**
+An email debt already due, which any drain claims (its attempts go up).
+*/
+async function seedDueEmail(): Promise<string> {
+  const id = newUlid();
+  await coreDb()
+    .insert(outbox)
+    .values({
+      id,
+      kind: "email",
+      dedupeKey: newUlid(),
+      payload: "{}",
+      nextAttemptAt: nowSeconds() - 60,
+      createdAt: nowSeconds() - HOUR,
+    });
+  return id;
+}
+
+async function attemptsOf(id: string) {
+  const [row] = await coreDb()
+    .select({ attempts: outbox.attempts })
+    .from(outbox)
+    .where(eq(outbox.id, id));
+  return row?.attempts;
+}
+
+describe("every hourly step runs, whichever fail (law 5)", () => {
+  it.each(["0 * * * *", "30 * * * *", "15 * * * *"])(
+    "%s drains the email owed",
+    async (cron) => {
+      vi.spyOn(console, "error").mockImplementation(nothing);
+      const id = await seedDueEmail();
+
+      await handleScheduled({ cron } as ScheduledController);
+
+      expect(await attemptsOf(id)).toBe(1);
+    },
+  );
+
+  it("drains the hour's email after a sweep that throws, then throws what the sweep did", async () => {
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    const id = await seedDueEmail();
+    const boom = new Error("sweep fell over");
+    const { reporter, checkIns } = recordingReporter();
+
+    await expect(
+      handleScheduled({ cron: "0 * * * *" } as ScheduledController, reporter, {
+        sweepExports: () => Promise.reject(boom),
+      }),
+    ).rejects.toBe(boom);
+
+    expect(await attemptsOf(id)).toBe(1);
+    expect(checkIns.map((checkIn) => checkIn.status)).toStrictEqual([
+      "in_progress",
+      "error",
+    ]);
+  });
+
+  it("throws every failure together when more than one step fails", async () => {
+    const boom = new Error("database gone");
+    const sweep = new Error("sweep fell over");
+    // The heartbeat lands; every core statement after it fails, so the
+    // weather retry and the drain both throw around the sweep.
+    const prepare = env.DIALED_CORE.prepare.bind(env.DIALED_CORE);
+    let statements = 0;
+    vi.spyOn(env.DIALED_CORE, "prepare").mockImplementation((query) => {
+      statements += 1;
+      if (statements > 1) throw boom;
+      return prepare(query);
+    });
+    let swept = 0;
+
+    const firing = handleScheduled(
+      { cron: "0 * * * *" } as ScheduledController,
+      recordingReporter().reporter,
+      {
+        sweepExports: () => {
+          swept += 1;
+          return Promise.reject(sweep);
+        },
+      },
+    );
+
+    await expect(firing).rejects.toBeInstanceOf(AggregateError);
+    await expect(firing).rejects.toMatchObject({
+      message: "several upkeep steps failed",
+      errors: [boom, sweep, boom],
+    });
+    expect(swept).toBe(1);
+  });
+});
+
 describe("every cron checks in (OPS-3)", () => {
   it.each([
     ["0 12 * * *", "daily-digest"],
@@ -754,9 +846,7 @@ describe("every cron checks in (OPS-3)", () => {
       return prepare(query);
     });
 
-    await expect(
-      handleScheduled({ cron: "0 * * * *" } as ScheduledController, reporter),
-    ).rejects.toBe(boom);
+    await expect(handleScheduled(DIGEST, reporter)).rejects.toBe(boom);
 
     // Rethrown, so the platform records the failed invocation as well.
     expect(checkIns.map((checkIn) => checkIn.status)).toStrictEqual([

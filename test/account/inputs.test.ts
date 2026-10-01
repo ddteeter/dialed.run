@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   deskRowInput,
+  exportRequestInput,
   legalPageInput,
   newInviteInput,
   newInviteSchema,
@@ -55,6 +56,28 @@ describe("newInviteSchema", () => {
     expect(result.error?.issues[0]?.message).toBe(
       "Keep the label under 60 characters.",
     );
+  });
+});
+
+describe("exportRequestInput", () => {
+  it("keeps the press's key, from one character to 64", () => {
+    expect(exportRequestInput.parse({ idempotencyKey: "k" })).toStrictEqual({
+      idempotencyKey: "k",
+    });
+    const longest = "k".repeat(64);
+    expect(exportRequestInput.parse({ idempotencyKey: longest })).toStrictEqual(
+      { idempotencyKey: longest },
+    );
+  });
+
+  it("refuses no key, an empty one, and one past 64", () => {
+    expect(exportRequestInput.safeParse({}).success).toBe(false);
+    expect(exportRequestInput.safeParse({ idempotencyKey: "" }).success).toBe(
+      false,
+    );
+    expect(
+      exportRequestInput.safeParse({ idempotencyKey: "k".repeat(65) }).success,
+    ).toBe(false);
   });
 });
 
