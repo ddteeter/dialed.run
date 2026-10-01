@@ -63,7 +63,7 @@ function AddTile(): JSX.Element {
     <li className="only:min-h-40">
       <Link
         to="/closet/new"
-        className="target flex h-full flex-col items-center justify-center gap-2 rounded-field border border-dashed border-hairline-2 p-3 text-muted no-underline"
+        className="target flex h-full flex-col items-center justify-center gap-2 rounded-tile border border-dashed border-hairline-2 p-3 text-muted no-underline"
       >
         <Icon name="add" />
         <Mono step="xs">Add garment</Mono>
@@ -86,7 +86,7 @@ function Tile({ view }: Readonly<{ view: ClosetItemView }>): JSX.Element {
     <Link
       to="/closet/$itemId"
       params={{ itemId: view.item.id }}
-      className="target row-press flex h-full flex-col gap-1 rounded-field border border-hairline bg-panel p-3 no-underline"
+      className="target row-press flex h-full flex-col gap-1 rounded-tile border border-hairline bg-panel p-3 no-underline"
     >
       <span className="text-body font-semibold">{itemLabel(view)}</span>
       {view.isGeneric || view.item.retired || isPhotoBeingChecked(view.item) ? (
