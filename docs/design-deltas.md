@@ -646,7 +646,8 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       - **Ready**, on the day a copy was asked for (one a day): the
         sub-line "Emailed. The link works until {day}." (UTC) and the
         action "Download", the row's own link to the ZIP. After the day
-        the row is idle again.
+        the row is idle again. **Owner kept it (decision D-84), for
+        design round 28.**
       - **Failed**, once the queue gives up (law 6): the sub-line "Your
         export didn't work. Try again." with Get a copy.
       - **The press failing** uses round 23's control failure band with
@@ -657,10 +658,11 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       - **The ZIP holds two files the board does not list**: `kit.csv`
         (each garment in each kit, with its flag and note) and
         `profile.csv` (the account and settings, one row), both named in
-        the README.
+        the README. **Owner kept both (decision D-83), for design round 28.**
 
-      **The ask:** draw Ready and Failed, say whether an expired link
-      deserves a line of its own, and confirm the two extra CSVs.
+      **The ask (design round 28):** draw Ready and Failed, say whether
+      an expired link deserves a line of its own, and add the two extra
+      CSVs to the ZIP's list.
 
     - **Delete account's sheet** follows round 27 #14. For an account made
       with Google, the sheet asks nothing; if the Google sign-in is more

@@ -74,6 +74,14 @@ wrangler r2 bucket create dialed-imports
 not manage R2 object lifecycle. In the dashboard: R2 → `dialed-imports` →
 Settings → Object lifecycle rules → delete objects 30 days after upload.
 
+**And a second rule on the same bucket, for data exports** (decision D-85):
+prefix `exports/`, delete objects **8 days** after upload. Task 126's
+emailed ZIPs are staged there (`exports/<user>/<export>/<claim>.zip`) and
+the hourly sweep deletes each once its 7-day link expires; this rule is the
+net behind it, for a ZIP a build left under a claim no row holds (it died
+between its upload and marking the export ready). Eight is past the
+seven-day link, so the rule never takes a live export.
+
 Why 30 and not forever: an import file has done its job once it is parsed
 into a run. The only later use is re-parsing after a parser bug, and a month
 covers that. They are also GPS traces — the most sensitive data the product
@@ -86,15 +94,22 @@ stops a photo ever being written to a path that expires.
 
 ## 3. Queues
 
-Four: two work queues and their dead-letter queues. `wrangler.jsonc` already
-binds all four; they must exist first or the deploy fails.
+Six: three work queues and their dead-letter queues. `wrangler.jsonc` already
+binds all six; they must exist first or the deploy fails.
 
 ```sh
 wrangler queues create dialed-imports
 wrangler queues create dialed-imports-dlq
 wrangler queues create dialed-enrichment
 wrangler queues create dialed-enrichment-dlq
+wrangler queues create dialed-exports
+wrangler queues create dialed-exports-dlq
 ```
+
+`dialed-exports` (task 126, decision D-86) carries the emailed data
+export, one ZIP build a delivery (`max_batch_size: 1`). Create it and its
+DLQ **before the first deploy that binds them** — any deploy of PR #132 or
+later.
 
 The DLQs are consumed, not just written to — a dead-lettered job has to land
 somewhere a human sees it (resilience law 6), which `handleQueueBatch` does
@@ -229,7 +244,7 @@ needs its own Strava app, not a second subscription.
   `UNSUBSCRIBE_SECRET`), which
   is faster than reading a stack. Either makes it answer 503.
 - Confirm all four cron triggers are listed under Settings → Triggers.
-- Confirm the four queues show a consumer attached.
+- Confirm the six queues show a consumer attached.
 - **Prove Sentry delivers, from a fetch and from a cron**, before relying on
   it to tell you about anything. The two paths end their invocation
   differently, and the audit's finding 0.4 was that a report which does not

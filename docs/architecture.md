@@ -20,6 +20,7 @@ flowchart LR
         R2[(R2: photos)]
         Q[[Queue: imports]]
         QE[[Queue: enrichment]]
+        QX[[Queue: exports]]
         CRON[Cron Triggers]
     end
 
@@ -30,6 +31,8 @@ flowchart LR
     Q -->|consume| W
     W -->|produce| QE
     QE -->|consume| W
+    W -->|produce| QX
+    QX -->|consume| W
     CRON --> W
 
     W -->|product page fetch\nbounded, https-only| SHOP[Brand product pages\nShopify JSON / JSON-LD / OG]
@@ -178,7 +181,7 @@ flowchart TD
     ACCT -->|index.ts only: the one visibility rule| SAFE
     PURGE[account/purge.ts] -->|index.ts only: SAF-3's deletes| FEED
     WORKER[src/server.ts] -->|hands the daily firing its upkeep| PURGE
-    WORKER -->|hands the imports queue its export work,\nthe :00 firing its sweep| EXPORT[account/export-build.ts,\nexport-sweep.ts]
+    WORKER -->|hands dialed-exports its consumers,\nthe :00 firing its sweep| EXPORT[account/export-build.ts,\nexport-sweep.ts]
     RUNS -->|index.ts only: the Strava-disconnected email| MAIL
 
     CLOSET --> UI[ui]
@@ -211,11 +214,12 @@ deauthorization's email: `ops` imports `runs`, so `runs` cannot import
 `ops`'s outbox.
 
 The emailed data export (task 126 PR 2b-3, ACC-10) is wired the same way.
-Its job is an `account_export` variant on `dialed-imports` (runs owns the
-union), but the work is `account`'s, and neither `runs` nor `ops` may
-import it: `handleQueueBatch` takes an `ExportWork` (`build`, and the DLQ's
-`fail`) that it passes to the imports consumer, and `handleScheduled`'s
-upkeep takes `sweepExports` for the hourly `0 * * * *` firing. Both are
+Its job, `account_export`, rides its own queue, `dialed-exports` (decision
+D-86), whose wire format and consumers are `account`'s
+(`account/export-queue.ts`) — and `ops` may not import `account`: so
+`handleQueueBatch` takes `ExportConsumers` (the batch consumer and the
+DLQ's) for the two `dialed-exports` queues, and `handleScheduled`'s upkeep
+takes `sweepExports` for the hourly `0 * * * *` firing. Both come from
 `account/export-build.ts` and `export-sweep.ts`, outside the barrel,
 imported only by `src/server.ts` — the build also keeps the zip library
 out of every route's reach, and so out of the client bundle.
@@ -401,6 +405,8 @@ exception, the human never polls dashboards.
 flowchart LR
     Q[[dialed-imports\nmax_retries=3, backoff]] -->|exhausted| DLQ[[dialed-imports-dlq]]
     DLQ --> DC[DLQ consumer:\nmark job failed,\nnotify affected user,\nSentry event]
+    QX[[dialed-exports\nmax_batch_size=1, max_retries=3]] -->|exhausted| DLQX[[dialed-exports-dlq]]
+    DLQX --> DCX[DLQ consumer:\nexport failed,\nshown on Settings,\nSentry event]
     CRON2[Daily digest cron] -->|only if anomalies:\none event per kind| SENTRY
     CRON2 -.->|OPS-11, after 126's email| ADMIN[Admin digest email]
     CRONS[Every cron] -->|check-in: in_progress, ok / error| CRONMON[Sentry Crons]
@@ -445,12 +451,18 @@ flowchart LR
   The purge also lists and deletes the runner's export ZIPs.
 - **Data export** (task 126, ACC-10) is **reconciliation** too:
   `data_exports.status` is the marker. A request writes the `pending` row,
-  then sends `account_export` on `dialed-imports`; a lost send is re-sent
-  by the hourly sweep. The consumer claims (`building`), streams the ZIP
-  into `IMPORTS` under `exports/{userId}/` one file at a time, then marks
-  it `ready` and owes the `export_ready` email in one batch. The DLQ marks
-  it `failed`, which the Settings row shows. The sweep claims expired ZIPs
-  (`expiring`), deletes each, then its row. No binding was added.
+  then sends `account_export` on `dialed-exports` (its own queue and DLQ,
+  decision D-86); a lost send is re-sent by the hourly sweep. The consumer
+  claims (`building`, a fresh `claim_id`), streams the ZIP into `IMPORTS`
+  under `exports/{userId}/{exportId}/{claimId}.zip` one file at a time,
+  then — only if it still holds the claim — marks it `ready` and owes the
+  `export_ready` email in one batch, the email as an `INSERT … SELECT` that
+  owes nothing unless the export became ready under that claim. A build
+  that lost its claim deletes its own ZIP. The DLQ marks it `failed`, which
+  the Settings row shows. The sweep claims expired ZIPs (`expiring`),
+  deletes each, then its row, and deletes a week-old failure's ZIP with
+  its row; an R2 lifecycle rule on `exports/` (8 days, D-85) is the net
+  behind it.
 - **Email** (task 126, decision D-42): `modules/email` is the only sender
   and the only reader of the `send_email` binding `EMAIL`
   (`test/bindings-conformance.test.ts` pins both). What the runner just

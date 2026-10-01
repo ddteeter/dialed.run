@@ -539,8 +539,8 @@ and "Email export"):
 So: **expiry 7 days** (the board's), and **the link needs the owner
 signed in** (the board's "only while you're logged in").
 
-**Where the ZIP holds more than the board lists** (design deltas, owner
-question 1): a runner's kit rows carry a flag and a note per garment,
+**Where the ZIP holds more than the board lists** (design deltas; the
+owner kept both, decision D-83): a runner's kit rows carry a flag and a note per garment,
 which one `entries.csv` row per entry cannot hold without packing a list
 into a cell, so they are `kit.csv` (entry, garment, flag, note); and the
 account and profile (email, joined, handle, place, units, calibration,
@@ -575,33 +575,46 @@ durable marker, so a send that fails is reported and the hourly sweep
 (below) re-sends it. The runner is told "We'll email a link when it's
 ready", which stays true.
 
-### Work: a new variant on `dialed-imports`
+### Work: its own queue, `dialed-exports`
 
-**No new binding.** The job is `{ type: "account_export", exportId }`,
-**added** to `importsQueueMessageSchema` (law 9: no existing variant
-changes; the old consumer never sees it because no old producer sends
-it). It rides `IMPORTS_QUEUE` and `dialed-imports`'s consumer and DLQ,
-which `wrangler.jsonc` already binds; the ZIP is staged in the `IMPORTS`
-bucket, which the consumer already reads, under `exports/{userId}/
-{exportId}.zip`. Not `MEDIA`: `IMPORTS` is never served by any route,
-and `exports/` sits beside `imports/{userId}/`, never inside it, so the
-`import_file_delete` kind cannot reach an export.
+**One new binding, owner-approved (decision D-86).** The job is
+`{ type: "account_export", exportId }` on `dialed-exports`
+(`EXPORTS_QUEUE`), with its own DLQ `dialed-exports-dlq`,
+`max_batch_size: 1` — one ZIP build a delivery — and `max_retries: 3` as
+`dialed-imports` has. The first draft rode `dialed-imports` as a new
+variant; the review moved it, and **moved** rather than kept it on both
+queues, which law 9 allows only because nothing has deployed: no message
+of the old shape can be in flight. `modules/ops/queues.ts` registers the
+queue, so `test/bindings-conformance.test.ts` asserts it (law 10), and
+the same test now holds the test pool's producers to `wrangler.jsonc`'s.
 
-`runs` owns the queue's union and its consumer, and `runs` cannot import
-`account` (account imports runs). So the consumer takes the work as a
-dependency — `ConsumerDeps.exports: { build, fail }` — handed down from
-the Worker entry through `handleQueueBatch`, exactly as the purge is
-handed to `handleScheduled`. `ops` cannot import `account` either (the
-cycle 2b-2 already documents).
+The wire format (`exportsQueueMessageSchema`) and both consumers are
+`account`'s (`account/export-queue.ts`). `ops` cannot import `account`
+(the cycle 2b-2 documents), so `handleQueueBatch` takes them from the
+Worker entry as `ExportConsumers`, exactly as the purge is handed to
+`handleScheduled`; a `dialed-exports` batch that arrives with none wired
+throws, so the queue redelivers and dead-letters it rather than acking a
+runner's export into nothing.
+
+The ZIP is staged in the `IMPORTS` bucket under
+`exports/{userId}/{exportId}/{claimId}.zip`. Not `MEDIA`: `IMPORTS` is
+never served by any route, and `exports/` sits beside `imports/{userId}/`,
+never inside it, so the `import_file_delete` kind cannot reach an export.
 
 **The build** (`account/export-build.ts`, reached only from
 `src/server.ts`, never from the barrel — it imports the zip library):
 
-1. **Claim** (law 2): `UPDATE … SET status = 'building', claimed_at = now
-WHERE id = ? AND status IN ('pending','building')`. Nothing moved —
-   finished, failed, or gone — is a no-op ack. `building` is re-claimable
-   so a redelivery after a crash rebuilds; two copies of one message
-   racing write the same key with the same bytes.
+1. **Claim** (law 2): `UPDATE … SET status = 'building', claimed_at = now,
+claim_id = <fresh> WHERE id = ? AND status IN ('pending','building')`.
+   Nothing moved — finished, failed, or gone — is a no-op ack. `building`
+   is re-claimable so a redelivery after a crash rebuilds, **which means a
+   sweep re-send or a duplicate delivery can take the claim while another
+   build is still running.** The first draft said two such builds "write
+   the same key with the same bytes"; that was false — the rows can change
+   between their reads, and the loser's ready batch still owed a second
+   email (review finding 1). So each claim is its own: the ZIP key carries
+   the claim id, and only the build still holding the claim can finish
+   (step 5).
 2. **Read** the runner's rows (the JSON export's reads, kept): profile,
    closet, runs with **derived conditions only** (never a raw Visual
    Crossing row, §1.8), entries with kit, tags and photos, uploads.
@@ -613,10 +626,20 @@ WHERE id = ? AND status IN ('pending','building')`. Nothing moved —
    `predictLength` computed from those sizes, which `IMPORTS.put`
    consumes. **At most one photo is in flight**; the CSVs are strings.
 5. **Ready, and the email, in one batch**: `status = 'ready'`,
-   `ready_at`, `expires_at = ready_at + 7 days`, and the `export_ready`
-   email owed through the outbox (dedupe key `export_ready:{id}`), then
-   the fast path. A file that vanished between list and get throws; the
-   queue retries (law 3) and the next attempt lists again.
+   `ready_at`, `expires_at = ready_at + 7 days` **where the row is still
+   `building` under this claim**, and the `export_ready` email owed
+   through the outbox (dedupe key `export_ready:{id}`) as an
+   `INSERT … SELECT … FROM data_exports WHERE id = ? AND claim_id = ? AND
+status = 'ready'` — so it owes a row only if that update did (a batch
+   cannot branch on its own results; ops' `outboxInsertWhere`). If the
+   update changed nothing — the claim was taken over, or the row was
+   failed or purged mid-build — the build deletes the ZIP it wrote and
+   stops: one export, one email, one ZIP, whoever wins; a purged or failed
+   row gets neither. Then the fast path. **A file that vanished between
+   list and get** is written as zeros of its listed size, so the upload
+   completes at its promised length (an errored stream leaves R2's `put`
+   with rejections nobody holds); then the half-made ZIP is deleted and
+   the build throws, and the queue retries (law 3).
 
 **Photos in the ZIP**: every entry photo the runner posted, shared or not
 (their JPEG, as stored), and each garment's current photo — its
@@ -650,15 +673,21 @@ client chunk.
 
 **The files, as built.** `data-exports.ts` (request, row state, DLQ fail,
 download), `export.ts` (the reads), `export-files.ts` (which R2 objects
-go in, and under what name), `export-sheets.ts` (the five CSVs' column
-tables: name, README sentence, value), `export-format.ts` (CSV cells,
-the README's lines), `export-build.ts`, `export-sweep.ts`. **Two
-additions to `.fallowrc.jsonc`'s `ignore`** came from the commit gate's
-clone check: `export-sheets.ts` (a column table reads as a copy of any
-other) and `src/lib/email-kinds.ts`, the email kinds split out of
-`lib/email.ts` for the same reason, beside `tap-list-data.ts`'s
-precedent. Both are data tables only; the behaviour beside them stayed
-in files the check still reads. **Owner question 4.**
+go in, under what name, and every sheet's rows), `export-sheets.ts` (the
+five CSVs' column tables: name, README sentence, value),
+`export-format.ts` (CSV cells, the README's lines), `export-queue.ts`
+(the queue's wire format and consumers), `export-build.ts`,
+`export-sweep.ts`. **Two additions to `.fallowrc.jsonc`'s `ignore`** came
+from the commit gate's clone check: `export-sheets.ts` (a column table
+reads as a copy of any other) and `src/lib/email-kinds.ts`, the email
+kinds split out of `lib/email.ts` for the same reason, beside
+`tap-list-data.ts`'s precedent. The coordinator kept both, on one
+condition for the sheets: **every column there is a plain field read.**
+The review found behaviour in it — the `joined_at` conversion, three map
+lookups and a throw — so those moved onto `export-files.ts`' row-building
+step, where the clone check reads them. The throw went altogether: each
+entry's photos are now resolved beside the entry itself, so there is no
+lookup that could miss.
 
 A CSV text cell starting `=`, `+`, `-`, `@`, a tab or a CR is prefixed
 with `'` (OWASP's CSV-injection advice): product names and captions are
@@ -680,7 +709,8 @@ decides):
 - **Expiring**: `status = 'ready'` and `expires_at > now`; otherwise back
   to Settings › Account, where the row offers a new copy.
 - The file: `application/zip`, `attachment;
-filename="dialed-run-export-YYYY-MM-DD.zip"`, `no-store`, its length.
+filename="dialed-run-export-YYYY-MM-DD.zip"`, `private, no-store`, its
+  length.
 
 The token rides the outbox payload (the email's link), which "a payload
 never carries a secret" allows only because **the token is not a bearer
@@ -696,15 +726,27 @@ and re-runnable (law 1):
    whose claim is over an hour old) as `expiring`, capped at 50; delete
    each ZIP; then delete the row. A failure between leaves `expiring`,
    which the next firing re-claims.
-2. **Failed rows** older than 7 days are deleted (nothing staged: a
-   failed build never completed its `put`).
+2. **Failed rows** older than 7 days are deleted, **with their ZIP**: a
+   failed export can hold a whole one, when the last build's `put`
+   finished and its ready batch failed before the queue gave up (review
+   finding 2; the first draft assumed nothing was staged). The claim's key
+   goes first, then the row; an R2 failure leaves both for the next
+   firing, reported, with an anomaly line.
 3. **Re-send** `pending` rows older than 15 minutes and `building` rows
    claimed over an hour ago (a lost send, a lost message), capped at 50,
    with an anomaly line for the digest.
 
-`wrangler.jsonc`'s R2 lifecycle rule (D-116's ask) is **not needed**:
-the sweep deletes what it staged. A lifecycle rule on `exports/` would
-be a second net, and is the owner's to add.
+**An R2 lifecycle rule on `IMPORTS`' `exports/` prefix** (delete after 8
+days) is the net behind the sweep (decision D-85), set by the owner at
+deploy time (`docs/deployment.md` §2): it catches a ZIP a build left under
+a claim no row holds, when it died between its upload and its ready
+batch. No code.
+
+Every hourly firing's steps now run whichever of them fail (law 5): a
+sweep that throws no longer costs that hour's email drain, nor a weather
+retry the sweep. The firing still throws afterwards — the one error, or
+an `AggregateError` of all of them — so its check-in closes as an error
+and the Worker entry reports it.
 
 ### Failures (law 6)
 
@@ -736,6 +778,8 @@ idle and preparing only.
 ### Migration
 
 `0041_add_data_exports` (core, **additive**: one new table, its indexes).
+The review's `claim_id` column is folded into it, snapshot included,
+rather than a second migration: `0041` has not merged anywhere.
 
 ### Privacy policy
 
@@ -745,11 +789,18 @@ stale is listed in `docs/legal/privacy-policy-sources.md`, not edited in
 
 ### Owner questions
 
-1. `kit.csv` and `profile.csv` beyond the board's three CSVs [ship them].
-2. A ready export shows Download on the row for its first day [yes].
-3. A lifecycle rule on `IMPORTS` `exports/` as a second net [not needed].
-4. The two `.fallowrc.jsonc` ignore entries (`email-kinds.ts`,
-   `export-sheets.ts`) [keep; each file is a table and nothing else].
+Answered by the owner, 2026-09-30:
+
+1. `kit.csv` and `profile.csv` beyond the board's three CSVs: **kept**
+   (decision D-83), a board delta for round 28.
+2. A ready export shows Download on the row for its first day: **yes**
+   (decision D-84), a board delta for round 28; so the link token stays
+   stored in plain text, which the row reads back.
+3. A lifecycle rule on `IMPORTS` `exports/` as a second net: **yes**, 8
+   days, at deploy time (decision D-85).
+4. The two `.fallowrc.jsonc` ignore entries: **kept**, the sheets' only
+   once every column is a plain field read (above). Exports also got their
+   own queue (decision D-86).
 
 ## Contract touches
 
@@ -762,7 +813,8 @@ stale is listed in `docs/legal/privacy-policy-sources.md`, not edited in
   (the confirm links and the per-address limit) and
   `add_verification_identifier_index` (Better Auth's reset lookup scanned
   its `verification` table).
-- Binding: `send_email` `EMAIL` (decision D-42). No queue, no cron.
+- Bindings: `send_email` `EMAIL` (decision D-42); the `dialed-exports`
+  queue, its DLQ and `EXPORTS_QUEUE` (decision D-86, PR 2b-3). No cron.
 - Routes: `/onboarding/handle`, `/account/*`, `/join`, `/privacy`, `/terms`,
   `/copyright`, `/desk/access`.
 
