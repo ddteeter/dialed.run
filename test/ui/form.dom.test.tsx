@@ -358,6 +358,28 @@ describe("the mark, the message and the hint", () => {
     expect(screen.getByText("Give it a name.")).toBeVisible();
   });
 
+  it("draws the box at Form Contract 02b's 50 tall, 16px type and radius 10, marked or not", async () => {
+    // Round 28 put all three in tokens.js (HEIGHT.field, TYPE.field,
+    // RADIUS.field). Before it the box drew `min-h-12`, 48, which never
+    // bound, and `text-body`'s 15px reached the input through inheritance.
+    // The type sits on the box so the control inherits it, and so does
+    // its placeholder.
+    const user = userEvent.setup();
+    render(<Harness action={() => Promise.resolve()} />);
+    const box = () => screen.getByLabelText("Name").parentElement;
+    const contract = ["min-h-field", "text-field", "rounded-field"];
+
+    expect(box()).toHaveClass(...contract);
+    expect(box()).not.toHaveClass("min-h-12");
+
+    await user.type(screen.getByLabelText("Brand"), "Patagonia");
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    await waitFor(() => {
+      expect(box()).toHaveAttribute("data-invalid", "true");
+    });
+    expect(box()).toHaveClass(...contract);
+  });
+
   it("drops the hint while the field is invalid, and brings it back", async () => {
     // The hint and the message never sit together: two sentences under one
     // control is one too many, and the message is the one that matters.

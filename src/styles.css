@@ -110,6 +110,14 @@
   --text-micro--line-height: 1.4;
   --text-micro--letter-spacing: 0em;
 
+  /* The eighth step, and the only one to type into (round 28 #1): what the
+   * runner types and its placeholder, inside a FormField or the Desk
+   * search. 16px because below it iOS Safari zooms the page on focus.
+   * Labels stay MONO.sm and hints TYPE.small. */
+  --text-field: 16px;
+  --text-field--line-height: 1.4;
+  --text-field--letter-spacing: 0em;
+
   /* ---- mono ramp · tokens.js MONO --------------------------------- */
   /* Four steps, four trackings. `Mono` carried one hardcoded 0.08em,
    * which is a value no step has, and 17 call sites wrote their own
@@ -143,14 +151,27 @@
   --font-display: var(--font-family-display);
   --font-mono: var(--font-family-mono);
 
+  /* ---- heights · tokens.js HEIGHT --------------------------------- */
+  /* Fixed minimums for controls (round 28 #1). They are heights, not
+   * spacing, so they sit off the 4px SPACE step on purpose and are not
+   * spelled as a spacing multiple: `min-h-field` is FormField's 50, where
+   * `min-h-12.5` would be a value no contract names. */
+  --height-*: initial;
+  --height-target: 44px;
+  --height-control: 48px;
+  --height-field: 50px;
+
   /* ---- radius · tokens.js RADIUS ---------------------------------- */
-  /* Five, plus none. `rounded-none` stays a static utility, and it is not
+  /* Six, plus none. `field` and `tile` are both 10 and stay two names,
+   * because they are two jobs: inputs and the Desk search, and the closet
+   * tile. `rounded-none` stays a static utility, and it is not
    * an absence of styling: square is the brand's tell for "this is a
    * statement, not a control" — notices, tints, the failure band,
    * coverage cells, verdict slots. */
   --radius-*: initial;
   --radius-tight: 4px;
-  --radius-field: 8px;
+  --radius-field: 10px;
+  --radius-tile: 10px;
   --radius-card: 12px;
   --radius-sheet: 20px;
   --radius-pill: 999px;

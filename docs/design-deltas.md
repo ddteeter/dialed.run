@@ -421,7 +421,9 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     redrawn as a 3×3 map of 44px squares; the case line stays out. Not
     built.** **The blur cells are built (PR #129, SAF-11), and W3's bullet
     is open again with a new ask for design round 28 (decision D-76).**
-    Each is
+    **ANSWERED by round 28 (items 5 and 14): W3 stays open until "Use this
+    photo"; the photo button's glyph is `remove`, the cells' tick is
+    `check`. Not built.** Each is
     composed from existing primitives and copy in the system; none adds a
     glyph, colour or motion.
     - **The delete links.** "Delete this entry", "Delete photo {n}" at the
@@ -465,7 +467,9 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     width").** Both were measured in the running app, not on a board.
     **CLOSED by round 27 (item 31): 50px, now in the Form Contract §02b;
     the tile photo is 4:5. Not built; two of the values disagree with
-    `tokens.js` (see round 27).**
+    `tokens.js` (see round 27).** **The disagreement is CLOSED by round 28
+    (item 1): `tokens.js` now carries `HEIGHT.field` 50, `RADIUS.field` 10,
+    `RADIUS.tile` 10 and `TYPE.field` 16. Not ported.**
     - **How tall is a field?** The owner asked whether fields are too
       tall. The Form Contract gives the field's anatomy (1px rule → 2px
       ink, padding that never resizes the box) and tokens.js gives
@@ -487,9 +491,12 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       the tile itself is still short of C. **The ask:** the photo well's
       height as a token (nothing in tokens.js gives one), or a ruling
       that v1's tile is text-only.
-33. **Two surfaces task 129's follow-up built without a drawing.** Both
-    are composed from existing primitives; neither adds a glyph, colour or
-    motion.
+33. **Two surfaces task 129's follow-up built without a drawing.**
+    **ANSWERED by round 28 (items 6 and 11): a hi-viz `UNDER REVIEW` tag on
+    the card and a §4a band on D, without brackets (see the D-67 conflict);
+    `/@old` is confirmed as the sentence alone. The marker is not built.**
+    Both are composed from existing primitives; neither adds a glyph,
+    colour or motion.
     - **The under-review marker (register row D-62, not decision D-62),
       on the card and on D** (FEED-6,
       `feed/components/PostCard.tsx`, `feed/components/EntryDetail.tsx`).
@@ -511,7 +518,8 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     a wrong one reads "That's not your current password." (built, for
     Change password too), and reset no longer waits (D-63 stands). The U1
     list-and-sheets composition is not built.** One placeholder remains
-    from the same field:
+    from the same field. **ANSWERED by round 28 (item 10): "That's 5 wrong
+    tries. You can try again at 7:42 PM." Not built.**
     - **Too many tries at the current password.** The server now limits
       tries at it to 5 per 15 minutes per runner (Better Auth's HTTP
       limiter never sees a server-side check). Past the limit the field
@@ -532,6 +540,10 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
 
 36. **Task 128 PR 2a's Desk and notice placeholders.** Built from existing
     `ui/` primitives, bracket text and no new glyph; each wants a drawing.
+    **ANSWERED by round 28 (items 2 and 8), except the content-removed
+    email, which round 28 was not asked: the review row's decision bar,
+    the takedown form, D8's search states, Reopen and the notice band are
+    drawn, and the ban email's foot is D-73's. Not built.**
     - **Review queue decisions.** Each row picks a reason from the removal
       list (the sentence the author is sent, round 27 #20) and offers
       Approve · Remove · Remove as suspected CSAM. Only one row carries the
@@ -555,6 +567,8 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       names no handle ("We closed your account…") and drops the board's
       "No case number." from its foot; it has no button, as drawn.
 37. **Eight placeholders task 126 built into the invite stage (PR 2b-1).**
+    **ANSWERED by round 28 (item 9): all eight, with new copy for most of
+    them, and one sentence for every refused code. Not built.**
     Round 26 #20 drew Au2's code, Au5, its receipt and D7; these are the
     states it did not draw, each built from existing primitives and copy
     in the register:
@@ -587,7 +601,11 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       contract's lowercase mono).
 
 38. **Task 128 PR 2b's deltas and undesigned surfaces (PR #129), for
-    design round 28.** Six the PR shipped, and two its review added. The
+    design round 28.** **ANSWERED by round 28 (item 13), except F's rail
+    card by category, which round 28 was not asked: ink for the merge
+    words, "RETIRED MAR 2026", "middle", the hatch, and both Edit failures
+    reuse a band. The hi-viz kicker conflicts with the Form Contract and is
+    sent back to design (D-91, item 40). Not built.** Six the PR shipped, and two its review added. The
     first three ship as built by the owner's decision (D-77); each is the
     build's reading of a board against a contract or an existing pattern,
     and nothing waits on the answers.
@@ -620,7 +638,12 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       well with Y's own Remove kicker, "Photo kept", the cause line and
       Try again. **The ask:** confirm the borrowed band here.
 
-39. **What task 126 PR 2b-2 built beside or without a drawing.** Legal
+39. **What task 126 PR 2b-2 built beside or without a drawing.**
+    **Partly ANSWERED by round 28:** Settings › About (item 7), the reading
+    page (item 16), "Keep your account?" (item 12), the deleted handle and
+    its `/@handle` (items 4 and 11), and the export states PR #132 adds to
+    this item (item 15). The delete sheet's Google flow and the five emails
+    below were not asked, and stay open. Legal
     pages, export, deletion and the email hookups, from existing
     primitives and the register's copy:
     - **The legal footer** on the signed-out shell reads only "Privacy":
@@ -697,6 +720,439 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       board's `desk@`, and D5's three rows read as three sentences in the
       one-paragraph template. Its third number is Today's "bans this week",
       not D5's "since yesterday", so the email and the Desk agree.
+
+40. **Do §4a failure kickers sit on hi-viz? (round 28 #13, sent back by
+    the owner, D-91).** Not decided; nothing is built differently while it
+    is open.
+    - **What the board draws.** Round 28 #13 rules on PR #129's PHOTO NOT
+      ADDED band: _"Every §4a kicker sits on the hi-viz ground. Put round
+      26's back."_ The round's own failure bands are drawn the same way:
+      `STILL CLOSED`, `STILL ACTIVE`, `NOT COPIED`, `NOT CREATED`,
+      `NOT SENT` and `NOT STARTED`.
+    - **What the contract says.** The Form Contract's failure band: _"No
+      fill, no yellow, values untouched."_ `docs/product.md` §4: _"No fill.
+      No yellow — yellow means 'the fix is here' and it isn't."_ §4a is
+      "the same band", and `ui/FailureBand` builds it with no hi-viz. The
+      contract stays in force (D-91).
+    - **The ask:** does round 28 mean to amend the Form Contract, so that
+      every failure band in the product gains the hi-viz ground, and if so,
+      what replaces §4's reason that yellow means "the fix is here"? Or does
+      it mean only notice bands (`PHOTO REMOVED`, `BEING CHECKED`, `HIDDEN
+WHILE WE CHECK`), which offer no fix and are a different case? Either
+      answer arrives as an amended Form Contract, not a board.
+
+## Answered in round 28 (imported 2026-09-30)
+
+Sixteen asks in three parts: amend the contracts and boards to match the
+owner's decisions (1–4), draw what the launch sweep needs (5–9), and confirm
+or redraw what it built as placeholders (10–16). **All sixteen are
+answered.** They are on a new board, `Round 28 Rulings.dc.html`. Unlike
+round 27, nothing is mirrored into `design/docs/product.md`, which is
+unchanged. Design amended three other files in place: `Operator
+Screens.dc.html` (D4's appeal line), `Round 27 Rulings.dc.html` (#11–#15,
+#21 and #28, listed under the items below) and the Form Contract.
+
+**Two contract files changed, and this time values moved.** Round 27's
+contract changes were all additive text. Round 28 changes `tokens.js`'s
+values and the number of steps in its type scale:
+
+- **`tokens.js`** (item 1):
+  - TYPE gains an eighth step, `field`: family `text`, 16px, line-height
+    1.4, tracking 0, no transform. Its job: _"What the runner types and its
+    placeholder, inside a FormField, textarea or the Desk search. Nothing
+    else. Labels stay MONO.sm, hints TYPE.small."_ Was: no step; inputs
+    were `body` (15 / 1.5).
+  - Law 2 now reads "THE SCALE IS EIGHT STEPS (SEVEN TO READ, ONE TO TYPE
+    INTO) AND A FOUR-STEP MONO RAMP", and the TYPE header says "eight
+    steps".
+  - COLLAPSE `'16px text'`: was `'TYPE.body'`, now `'TYPE.field inside a
+field, TYPE.body everywhere else'`.
+  - A new export, `HEIGHT`: `target: 44` (the hit-area floor,
+    Accessibility 03), `control: 48` (filled and outline buttons, and the
+    Google and Strava buttons), `field: 50` (FormField min-height). Was:
+    none. 44 lived only in Accessibility 03 and `SPACE_RULES`, and 48 and
+    50 lived nowhere. `CSS_VARS` emits `--height-*`, and the CONTRACT FOR
+    AGENTS import list adds HEIGHT.
+  - `RADIUS.field`: was `8` ("boards: 9 → 8"), now `10` ("inputs,
+    textareas, selects, the Desk search … boards: 8/9 → 10").
+  - `RADIUS.tile`: new, `10` ("the closet tile and its photo's top
+    corners"). Was: missing.
+
+  Two lines were not updated with the rest and now say otherwise: TYPE.body's
+  `for` still lists "inputs", and the RADIUS header still says "five, plus
+  none" (there are six). Both read as oversights. The new entries are
+  explicit, and they win.
+
+- **Form Contract**: 02a's four field samples are redrawn at radius 10 and
+  min-height 50 (were 8 and 48). 02b's FormField paragraph now ends
+  "carried in tokens.js as TYPE.field, HEIGHT.field and RADIUS.field (round
+  28)". No rule changed.
+
+**The import made one test fail, by that test's design, and the same PR
+ports the values.** `test/ui/tokens.dom.test.tsx` pins `design/tokens.js`
+against `src/styles.css`'s `@theme` block, and its doc comment says "Import
+a new design round and this says which step moved". It expected 7 TYPE
+steps (now 8), 6 RADIUS entries (now 7), `--radius-field` at 8 (now 10) and
+11 named text steps (now 12), and found no `--radius-tile` or
+`--text-field`. PR #134 ports item 1 (below) and the test pins HEIGHT too.
+CLAUDE.md's "seven TYPE steps … five radii" is stale, and that file is the
+owner's.
+
+Lanes are the launch plan's: 125 ops/platform and the Desk shell, 126
+accounts/auth/email/legal/export, 127 runs/Strava, 128 safety, closet and
+moderation, 129 feed. "ui/shared" means `src/ui`, which 125 holds.
+
+**A · Amendments to match owner decisions**
+
+1. **Field type, radius and height.** _Done on the contracts:_ the Form
+   Contract's 16 / 10 / 50 wins on all three (above). The field is 50 tall
+   and buttons stay 48. _Build:_ ui/shared (125). Port TYPE.field,
+   RADIUS.field 10, RADIUS.tile and HEIGHT into `src/styles.css`'s `@theme`
+   and `src/ui/tokens.css`, and update `test/ui/tokens.dom.test.tsx`. In
+   `ui/form.tsx` the field box moves from `text-body` to the field step, and
+   from `min-h-12` (48, which never binds) to 50. `ClosetGrid`'s tile and
+   photo take `RADIUS.tile` (128). Audit `rounded-field` before the value
+   moves: it is also on things that are not fields (`FailureBand`'s Try again
+   button, `AlreadyInCloset`'s thumbnail), and those would go to 10 with it.
+   **Ported in PR #134:** `@theme` gains `--text-field` (16 / 1.4 / 0em),
+   `--height-target` / `--height-control` / `--height-field` (44 / 48 / 50,
+   with `--height-*` cleared) and `--radius-tile` (10), and `--radius-field`
+   moves to 10; `tokens.css` declares no type or radius values, so it is
+   unchanged. The field box draws `min-h-field text-field rounded-field`, the
+   Desk search `text-field`, and `ClosetGrid`'s tile and Add tile
+   `rounded-tile` (it has no photo yet). Every other `rounded-field` moves to
+   10 with the value, since RADIUS has no 8 left: the buttons in
+   `FailureBand`, `PhotoRefused`, `StravaConnect`, `SetConditionsSheet` and
+   `StravaCallbackResult`, `KitPicker`'s kit tiles, `form.tsx`'s stacked
+   option rows, `NamePieces`' group, `AlreadyInCloset`'s thumbnail,
+   `ShadeSheet`'s photo and `FileWell`'s photo well. Moving those to the step
+   their contract names (`pill` for buttons) is their lanes' work.
+   `HEIGHT.control` and `HEIGHT.target` are ported and not yet worn; `feed`'s
+   `RunnerSearch` keeps its `min-h-12` box, which the contract does not name.
+2. **Appeals.** _Done on the boards:_ round 27's "Email ban" foot reads
+   "Think we got it wrong? Reply to this email to appeal and we'll look
+   again." Operator Screens D4 reads "If you think this is wrong, write to
+   desk@dialed.run. A person reads every message." The same rule strikes
+   "usually within a day" from round 27 #21 and #28, so no copy promises a
+   time. This is D-73 exactly. _Build:_ 128. The ban email already matches
+   (`email/content.ts`). `safety/components/AccountClosed.tsx` still says
+   "answers within a week", and `safety/components/NoticeBand.tsx`'s `BEING
+CHECKED` band still says "usually within a day". #28's line is item 6.
+3. **Minimum age 16.** _Confirmed:_ Au2 draws "dialed.run is for runners 16
+   and over." exactly. _Build:_ none. D-71, built in PR #130.
+4. **A deleted handle is never released.** _Done on the board:_ round 27
+   #14's note now reads "At day 7 everything else is deleted … The handle is
+   never released: it stays in username_history for good, as after a rename
+   (round 28 #4)." No runner-facing copy mentioned a release, so the copy
+   stands. `/@handle` for a deleted runner shows #11's "This runner isn't
+   here." _Build:_ none. D-56, D-72(6) and D-82, built in PR #130.
+
+**B · Drawn**
+
+5. **W3 waits for "Use this photo".** _Drawn:_ "W3 confirm" and "W3 confirm
+   nothing". W3 stays open once auto-blur paints. The sheet head is "Check
+   the blur", with Cancel on the right. The line under it reads "Auto-blur
+   covered 2 areas. Tap the photo or a cell to change it." or "Auto-blur
+   found nothing to cover. Tap the photo or a cell to blur an area." Under
+   the cells sit **Use this photo** (ink) and **Pick another** (outline).
+   Nothing is attached until Use this photo.
+   - **Cancel** closes W3 and adds nothing. The form stays as it was, and a
+     photo already on it stays.
+   - **Pick another** opens the picker. A new photo replaces this one in W3
+     and auto-blur runs again. Dismissing the picker returns to W3
+     unchanged.
+   - **Focus** lands on the heading, so Tab reaches the cells before the
+     primary. Esc is Cancel.
+   - After Use this photo, W3 closes and the upload runs in the form, with
+     round 26's states.
+
+   _Build:_ 128. `safety/components/PhotoBlur.tsx` stops closing on the
+   first `onReady` (D-76, register D-113), along with the closet form that
+   hosts it (`closet/components/GarmentForm.tsx`, `photo-pick.ts`).
+   AttachKit (`feed/components/AttachKit.tsx`) is 129's, and takes the same
+   sheet.
+
+6. **Under review, as the author sees it.** _Drawn:_ "Feed own under
+   review" and "D own under review". The card carries a hi-viz `UNDER
+REVIEW` tag where its SHARED label would be, with no sentence. D carries a
+   §4a band at the top: `HIDDEN WHILE WE CHECK` · "Only you can see this
+   while we look at it." · "You can still edit or delete it." **There are
+   no brackets**, because brackets mean a press is running. Profile and the
+   closet's run list use the same tag. Other runners see nothing. If the
+   entry is removed, #20's band replaces this one; if it is approved, the
+   band and the tag go with no message. Nothing says who reported it, why,
+   or how long it takes. Round 27 #28's band copy is amended to the same
+   line. _Build:_ 129. `feed/components/UnderReview.tsx` (today
+   `[UNDER REVIEW]` in muted bracket notation) becomes the tag on `PostCard`
+   and the profile, and the band on `EntryDetail`. The closet's run list is
+   128's. **The bracket form is D-67's wording, and it stays (D-90)**: the
+   tag is `[UNDER REVIEW]`, not the board's plain tag.
+7. **Settings › About.** _Drawn:_ "U1 About launch" and "U1 About full". An
+   ABOUT group sits after Strava and before Log out, with one row per page
+   that exists. **Privacy policy** · "What we keep, and who sees it" ships
+   now (the build's sub-line, confirmed). **Terms** · "The rules for using
+   dialed.run" and **Copyright** · "Report something of yours posted here"
+   join when their pages do, in the footer's order. There are no disabled
+   rows. Rows open the page in place, and Log out stays last, below its 2px
+   rule. _Build:_ 126. Add the Terms and Copyright rows behind the same
+   published mark as their pages (`onboarding/components/Settings.tsx`).
+   `e2e/conformance/system-settings.conformance.spec.ts` can stop excluding
+   the group by name once its comparison can read this board. D-80 stands.
+8. **The Desk: review, takedown, runners, notice.** _Drawn:_ the Review
+   page, four D8 states, Reopen, the CSAM second press and two notice bands.
+   - **Review.** "Review · 4 WAITING · OLDEST FIRST", with the columns
+     ITEM, BY, WHY IT'S HERE and AGE. One row opens at a time into a
+     decision bar. The bar holds the item as posted, a context line
+     ("Reported by 2 runners. On @n8's Sat, Aug 29 run, shared. Hidden from
+     everyone but @n8 since the first report."), then **Approve**,
+     **Remove**, and **Remove as suspected CSAM** set apart. A remove-reason
+     select ("SHOWS WHERE SOMEONE LIVES ▾ · SENT AS #20'S NOTICE") goes with
+     Remove. Approve puts the item back for everyone and tells the author
+     nothing. Remove hides it and sends #20's band and email. After either,
+     focus moves to the next row, which opens.
+   - **CSAM** asks again in the row, with Cancel focused: "Remove it
+     everywhere, close @n8's account and keep the evidence for the report?"
+     · Remove and report / Cancel. There is no undo afterwards. The
+     procedure behind it is the owner's.
+   - **Takedown** is a form under the queue: "TAKEDOWN · FROM A NOTICE";
+     WHAT (Photo / Entry); its ID; and THE NOTICE, with the hint "Paste it
+     whole: who sent it, what they own, where it is." **Take it down** hides
+     the item at once and records the notice against it. An unknown ID gets
+     the field message "No photo has that ID."
+   - **D8 search.** The placeholder is "Handle or email". Filters are text
+     links with whole-table counts (All 412 · Reported 9 · Closed 6); the
+     current one is ink, semibold and underlined, with `aria-current`.
+     Results update as you type, matching the start of a handle or any part
+     of an email, combined with the filter ("2 MATCH IN REPORTED"). No match
+     reads "No runner matches "qz9"." · "Search by handle without the @, or
+     by the whole email.", where the first row would be. Clearing the field
+     is the reset.
+   - **Reopen account** takes D3's place on a closed runner: "Lets them log
+     in again and puts their runs back with the share state they had. They
+     get one email saying so." It is one press, with no confirm. A failure
+     is 02b's band, `STILL CLOSED` · "That didn't go through. Try again?".
+     The email reads "Your dialed.run account is open again." The handle
+     stays reserved.
+   - **The notice band** is §4a without the retry. After a takedown it reads
+     `PHOTO REMOVED` · "We removed this photo after a copyright notice." ·
+     "Your run and verdict stay." "See the community rules" appears only
+     once that page exists.
+
+   _Build:_ 128, the largest item this round. `safety/components/ReviewQueue.tsx`
+   drops "Decide this one" for the open row and gains the CSAM second press.
+   The takedown form gets the unknown-ID message.
+   `safety/components/DeskRunners.tsx` gets the live search, the filter
+   states, the no-match state, and the Reopen panel on `bans.ts`'
+   `unbanUser`. The notice band gets the takedown sentence. The reopen email
+   is a new kind (128, sent through 125's outbox). **The CSAM confirm's
+   "close @n8's account" and the new email were owner calls:** a CSAM
+   removal does not close the account, so the confirm says only what
+   happens (D-88), and the reopen email is added (D-89, 126 and 128).
+
+9. **Invite stage.** _Ruling:_ every refused code gets one sentence, whether
+   it was used, never existed or was revoked: "That code doesn't work. Check
+   it, or request access." Google gives the same messages in a band under
+   its button.
+   - **Au2, no code:** the field message "Enter the code from your invite."
+     (built: "Enter your invite code.").
+   - **Au2, Google with no code:** the band `NOT CREATED` · "Enter your
+     invite code above, then continue with Google."
+   - **Au2, Google with a refused code:** the band `NOT CREATED` · the
+     sentence above · Request access (built: "Not signed in").
+   - **Au1, Google with no account:** confirmed. The band reads `NOT LOGGED
+IN` · "No account uses that Google address. Create one first." · Create
+     an account.
+   - **Au5:** the band `NOT SENT` · "Too many requests from here. You can
+     send another at 7:42 PM." (#11's grammar, in local time). The note is a
+     one-line FormField of 140 characters, with a counter from 120 and the
+     hint "Where you run, or who sent you. One line."
+   - **Back links** use the pack's `back` glyph and the destination's name,
+     with no "←" or "‹" anywhere. Round 27's U1 header is redrawn the same
+     way.
+   - **D7:** ages are MONO.sm capitals: "NOW" under a minute, then "12M",
+     "5H" and "3D", and a date ("AUG 29") from 30 days. Revoke leaves the row
+     in place at reduced weight, showing `REVOKED` and Undo for 10 seconds
+     with no countdown, then sorts it to the foot. A new code gets a status
+     line above the list ("DIAL-7QX2 MADE · LINK COPIED") and a `NEW` tag on
+     its row until the page reloads. When copying fails, the band reads `NOT
+COPIED` · "Copying didn't work here. The link is selected: copy it
+     yourself." with the URL shown selected. A failed row action is the band
+     `STILL ACTIVE` · "Revoke didn't go through. Try again?" · Try again
+     (built: `NOT CHANGED`).
+
+   _Build:_ 126, in `lib/access.ts`, `auth/auth-copy.ts`,
+   `auth/google-button.tsx`, `account/components/RequestAccess.tsx` (the
+   back link, the limit, the note's 140 and its counter) and
+   `account/components/DeskAccess.tsx` (`ageLabel`, the undo, the status
+   line and the bands). **The revoked row's "reduced weight" is drawn as
+   opacity**, which the contract overrides: it is built from T1 roles
+   (D-92).
+
+**C · Placeholders confirmed or redrawn**
+
+10. **Too many tries.** _Reworded:_ "That's 5 wrong tries. You can try again
+    at 7:42 PM." It is a field message on CURRENT PASSWORD, in local time
+    with no seconds. The field stays usable, and pressing before then shows
+    the message again. _Build:_ 126 (`currentPasswordLimited`, now in
+    `lib/contracts/`).
+11. **H's two silent states.** _Confirmed, both:_ H's column, the back link
+    and the sentence as the lead are the whole page. "This runner changed
+    their name." links nowhere. "This runner isn't here." covers purged,
+    deleted **and never-existed** handles on purpose, so no one can tell them
+    apart. _Build:_ 129. `feed/components/RunnerAtHandle.tsx` already matches.
+    Check that an unknown handle reaches the same page rather than a 404 or a
+    redirect (`feed/redirect.ts`' `orHandlePage`). The back link takes the
+    `back` glyph (#9).
+12. **"Keep your account?"** _Confirmed, with the body amended:_ it now ends
+    "Keep it and your runs, closet and entries come back as they were.", so
+    it no longer promises Strava back. The Strava line stays, in TYPE.small,
+    muted (built in the quiet body cut). Round 27's frame is amended.
+    _Build:_ 126 (`account/components/Leaving.tsx`).
+13. **PR #129's deltas.**
+    - **GOES / STAYS hues:** _No, ink._ Hue means verdict, and a merge
+      outcome is not a verdict. GOES, SAME NAME, STAYS and SAVED TO CLOSET
+      all go in ink, MONO.xs, and D-77's built hues are reversed. _Build:_
+      128 (`closet/components/DeleteWithRuns.tsx`, `AlreadyInCloset.tsx`).
+    - **PHOTO NOT ADDED kicker:** _No, hi-viz:_ "Every §4a kicker sits on
+      the hi-viz ground. Put round 26's back." **Not adopted: sent back to
+      design (D-91, open item 40).**
+    - **Retired date:** _No, month and year:_ "RETIRED MAR 2026" in MONO.sm
+      on the rail. Retired gear is read across years, and the day doesn't
+      matter. _Build:_ 128 (`AlreadyInCloset.tsx`; `closet/retired-label.ts`
+      keeps the closet's own format).
+    - **Middle cell:** _Yes,_ "Blur middle". The product is in US English,
+      and "middle" pairs with top and bottom. The board's "centre" is
+      corrected. _Build:_ none.
+    - **Photo-less rail thumbnail:** _No, hatch._ The hatch means "no photo"
+      everywhere (round 27 #31b), and the photo ground means a photo is
+      still loading. _Build:_ 128 (`AlreadyInCloset.tsx`'s `bg-photo`).
+    - **Edit's photo failures:** _Yes, reuse._ A saved photo that is refused
+      gets #20's `PHOTO REMOVED` band. A removal that fails gets 02b's band
+      under the photo: `PHOTO STILL ON` · "That didn't go through. Try
+      again?" (built: "Photo kept"). _Build:_ 128 (`GarmentForm.tsx`,
+      `GarmentDetail.tsx`). `feed/components/RetractEntry.tsx` also says
+      "Photo kept" when D's photo delete fails. The ruling does not name it,
+      but the same rule makes it `PHOTO STILL ON`.
+14. **Odds and ends.**
+    - **Desk destinations:** _Five, in this order:_ Today, Review, Access,
+      Duplicates, Runners. That is the queues that need a person first, then
+      upkeep, then lookup. Access is a destination because it has its own
+      queue. Gave up is a section on Today, carrying its count, because it is
+      a list to check rather than a place to work. **This revises D-35, and
+      the owner adopted it (D-87).** _Build:_ 125 (`ops/components/DeskShell.tsx`'s
+      order; Gave up moves off the rail and onto `Today.tsx`).
+    - **Photo-delete glyph:** `remove` (keywords: delete, trash, bin). The
+      accessible name stays "Delete photo 2". _Build:_ 128.
+    - **Blur cell check:** the pack's `check` at 20px, paper on ink. _Build:_
+      128 (`PhotoBlur.tsx`'s `BlurCells`).
+15. **Export states.** _Three confirmed, two redrawn,_ in "U1 export
+    states":
+    - **Ready** (confirmed): "Emailed. The link works until Oct 7." with
+      **Download** on the row (D-84, PR #132). The next day the row is idle
+      again, and the emailed link works until its date.
+    - **Failed** (redrawn): "Your export didn't finish, and it doesn't count
+      as today's." with **Try again** (built: "Your export didn't work. Try
+      again." with Get a copy). PR #132 already lets a new request through
+      after a failure, so "doesn't count" is true as built.
+    - **The press failing** (confirmed): `NOT STARTED` · "That didn't go
+      through. Try again?".
+    - **A link opened signed out** (confirmed) goes to log in, then to the
+      row.
+    - **An expired or someone else's link** (redrawn): the row's sub-line
+      reads "That link doesn't work any more. Get a copy for a new one."
+      Both cases read the same, so nothing about the other account shows.
+    - **The ZIP:** kit.csv and profile.csv are added to round 27 #13's list
+      (D-83, PR #132).
+
+    _Build:_ 126, on PR #132's `account/components/ExportRow.tsx` and its
+    token route. PR #132 is still open: it adds these states to open item 39,
+    and records D-83 and D-84.
+
+16. **The legal reading page.** _Two confirmed, one redrawn:_ mono `CONTENTS`
+    (MONO.xs) and no LAST UPDATED line are confirmed, and round 27's Terms
+    and Copyright kickers drop their dates. "↑ Contents" becomes **"Back to
+    contents"** in TYPE.small, in link colour, with no arrow, because ↑ is
+    not a product glyph. It shows only where the contents sit above the text
+    (phone and wide). At desk the contents column stays in view and the link
+    isn't drawn. _Build:_ 126 (`account/components/LegalPage.tsx`).
+
+**Conflicts for the owner.** None of these was adopted by the import. Each
+quotes both sides and ends with a recommendation, and the owner ruled on
+all six on 2026-09-30 (D-87 to D-92); each one's resolution follows it.
+
+- **§4a kickers on hi-viz (13) vs the Form Contract and `docs/product.md`
+  §4.** Round 28: _"Every §4a kicker sits on the hi-viz ground. Put round
+  26's back."_ The Form Contract's failure band: _"No fill, no yellow,
+  values untouched."_ `docs/product.md` §4: _"No fill. No yellow — yellow
+  means 'the fix is here' and it isn't."_ §4a is "the same band", and
+  `ui/form.tsx`'s `FailureBand` builds the contract ("No hi-viz"). So the
+  ruling would change every failure band in the product, not one. This
+  round's own failure bands (`STILL CLOSED`, `STILL ACTIVE`, `NOT COPIED`,
+  `NOT CREATED`, `NOT SENT`, `NOT STARTED`) are drawn the board's way too.
+  The contract wins until design amends it. _Recommendation:_ ask design
+  whether it means to amend the Form Contract, or only notice bands
+  (`PHOTO REMOVED`, `BEING CHECKED`, `HIDDEN WHILE WE CHECK`), which offer
+  no fix and are a different case. **Resolved: not decided, sent back to
+  design (D-91).** The Form Contract and `docs/product.md` §4 stay in
+  force, and `FailureBand` stays as built. The question is open item 40.
+- **Five Desk destinations (14) vs D-35.** D-35: _"Its destinations are
+  Today, Review, Duplicates and Runners."_ Round 28: _"Today, Review,
+  Access, Duplicates, Runners … Gave up is a section on Today."_ The build's
+  rail already carries Access, and `DeskShell.tsx` also names Gave up.
+  _Recommendation:_ supersede D-35 with the five, and record round 27 #22's
+  "no separate runner page" in the same row. **Resolved: adopted (D-87),
+  amending D-35.** The five are the board's, and Gave up lives under
+  Today. Build work for 125, not this PR.
+- **The CSAM second press (8) vs D-70.** Round 28's confirm: _"Remove it
+  everywhere, close @n8's account and keep the evidence for the report?"_
+  D-70: _"A suspected-CSAM quarantine is silent and preserves everything for
+  a year … The owner reports to NCMEC's CyberTipline by hand."_ D-70 does
+  not close the uploader's account, and `safety/quarantine.ts` does not
+  ban. The board itself says the procedure is the owner's.
+  _Recommendation:_ decide whether a CSAM removal also closes the account;
+  the confirm's copy follows that decision. **Resolved: it does not
+  (D-88).** Quarantine stays separate from closing an account and never
+  closes one by itself, as D-70 and `quarantine.ts` already behave. The
+  board's "close @n8's account" is not adopted: the confirm says only what
+  happens. Build work for 128.
+- **The reopen email (8) vs D-43.** Round 28: _"The runner gets one email:
+  'Your dialed.run account is open again.'"_ D-43 says _"Which emails exist
+  at launch"_: verify, password reset, email change, Strava broken or
+  revoked, content removed, ban. Round 27's export and deletion emails are
+  not on that list either. _Recommendation:_ add it as transactional mail,
+  and bring D-43's list up to date. **Resolved: added (D-89), amending
+  D-43's launch-email list.** Build work for 126 and 128.
+- **The under-review tag without brackets (6) vs D-67.** D-67: _"marked
+  `[UNDER REVIEW]` on the card and on D"_. Round 28: _"No brackets.
+  Brackets mean a press is running."_ Round 27 #28 already drew the tag,
+  and D-67's substance (the author always sees their own entry) is
+  unchanged. _Recommendation:_ amend D-67's wording to the hi-viz tag and
+  the band. **Resolved: not adopted (D-90).** The tag stays D-67's
+  bracketed `[UNDER REVIEW]`.
+- **The revoked row's opacity (9) vs T1 and Accessibility 02.** The board
+  draws "reduced weight" as `opacity: 0.55` over the whole row. T1:
+  _"Full strength, never opacity"_ (on `--quiet`, and again on
+  `--dialed-tint`). Accessibility 02 sets 4.5:1 for body text, which a muted
+  mono line at 55% will not hold. The contract wins without an owner call.
+  _Recommendation:_ build the reduced weight from T1 roles (`--quiet` text,
+  `REVOKED` in its state colour), and tell design. **Resolved by
+  precedence, with no owner call (D-92).** The contract wins; the reduced
+  weight is built from T1 roles.
+
+**Round 27's disagreements this round resolves:** Form Contract §02b vs
+`tokens.js` (tokens.js amended to 16 / 10 / 50, item 1); the closet tile's
+radius 10 (`RADIUS.tile`); the deleted handle's release vs D-56 (board
+amended, item 4); the minimum age (D-71, confirmed, item 3); and the ban
+email's appeal (D-73, boards amended, item 2). Round 28 does not address the
+other four: per-entry OG cards vs D-51, indexing vs D-53, D8's missing runner
+page vs D-35 (folded into the destinations conflict above), and the Strava
+disconnect email's wording.
+
+**Not asked in round 28, and still open in the queue:** item 36's
+content-removed email ("one of your runs", and a Log in button); item 38's F
+rail card by category alone, which should settle with D-75's TYPE picker; and
+item 39's delete-sheet Google flow and its deletion, invite,
+Strava-disconnected and digest emails.
 
 ## Answered in round 27 (imported 2026-09-27)
 

@@ -408,6 +408,21 @@ describe("ClosetGrid: what a tile says", () => {
     expect(row).toHaveClass("row-press");
     expect(row.firstElementChild).not.toHaveClass("text-ink");
   });
+
+  it("rounds a tile, and the Add tile beside it, by RADIUS.tile", async () => {
+    // tokens.js gained `tile` in round 28: the closet tile is not a field,
+    // and borrowing `rounded-field` tied its corners to the inputs'. The
+    // two are both 10 today and stay two names because they are two jobs.
+    await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
+
+    for (const cell of [
+      screen.getByRole("link", { name: /Harrier/ }),
+      tile(),
+    ]) {
+      expect(cell).toHaveClass("rounded-tile");
+      expect(cell).not.toHaveClass("rounded-field");
+    }
+  });
 });
 
 describe("ClosetGrid: the enrichment nudge", () => {

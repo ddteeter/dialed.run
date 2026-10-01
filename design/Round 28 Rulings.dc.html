@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px;">
+  <div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px;">
+
+    <div style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Round 28 &nbsp;/&nbsp; 16 items · amend, draw, confirm</span>
+        <span style="color: #FF2D8A;">dialed.run</span>
+      </div>
+      <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 1120px; text-transform: uppercase;">One operator, no promises it can't keep. Nothing attaches until you say so.</h1>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em;">
+        <sc-for list="{{ toc }}" as="t" hint-placeholder-count="8">
+          <a href="{{ t.href }}" style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px; color: #F4F3EF;">{{ t.label }}</a>
+        </sc-for>
+      </div>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 860px;">Light mode at 390 unless marked DESK. Dark follows by the T1 swap. Amendments are made where they live (<span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">tokens.js</span>, Form Contract 02a/02b, Operator Screens D4, Round 27 #12–#15, #21, #28); this board records them.</p>
+    </div>
+
+    <sc-for list="{{ sections }}" as="s" hint-placeholder-count="4">
+      <div id="{{ s.id }}" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+        <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+          <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">{{ s.title }}</span>
+          <span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45;"><strong style="color: #F4F3EF;">{{ s.ruling }}</strong> {{ s.why }}</span>
+        </div>
+
+        <sc-if value="{{ s.rows }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; border: 1px solid #2A2A31;">
+            <sc-for list="{{ s.rows }}" as="r" hint-placeholder-count="4">
+              <div id="{{ r.id }}" style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 170px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;">
+                <span style="font-size: 15px; font-weight: 600;">{{ r.q }}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: {{ r.vc }};">{{ r.v }}</span>
+                <span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">{{ r.a }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ s.tokens }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 1px; background: #2A2A31; border: 1px solid #2A2A31;">
+            <div style="background: #1C1C22; padding: 10px 16px; display: grid; grid-template-columns: minmax(0, 170px) minmax(0, 150px) minmax(0, 150px) minmax(0, 1fr); gap: 20px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;"><span>1 · TOKEN</span><span>NOW</span><span>WAS</span><span>JOB</span></div>
+            <sc-for list="{{ s.tokens }}" as="k" hint-placeholder-count="6">
+              <div style="background: #0B0B0E; padding: 12px 16px; display: grid; grid-template-columns: minmax(0, 170px) minmax(0, 150px) minmax(0, 150px) minmax(0, 1fr); gap: 20px; align-items: baseline; font-size: 14px; line-height: 1.5;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #F5FF3D;">{{ k.k }}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">{{ k.v }}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #8B8B93;">{{ k.was }}</span>
+                <span style="color: #DEDDD6;">{{ k.job }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ s.deskReview }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">DESK · REVIEW · ONE ROW OPEN · TAKEDOWN UNDER THE QUEUE · RAIL PER #14</span>
+            <div style="overflow-x: auto; max-width: 100%;">
+              <div data-screen-label="Desk Review r28" data-state="desk" style="width: 1280px; background: #0B0B0E; color: #F4F3EF; border-radius: 12px; overflow: hidden; border: 1px solid #2A2A31; display: grid; grid-template-columns: 200px minmax(0, 1fr);">
+                <div style="border-right: 1px solid #2A2A31; padding: 20px 0; display: flex; flex-direction: column; gap: 2px;">
+                  <span style="padding: 0 25px 16px; font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span>desk<span style="color: #FF2D8A;">]</span></span>
+                  <sc-for list="{{ deskNav }}" as="d" hint-placeholder-count="5">
+                    <div style="display: flex; justify-content: space-between; padding: 10px 20px 10px {{ d.pl }}; background: {{ d.bg }}; border-left: {{ d.bl }}; font-size: 14px; font-weight: {{ d.w }};"><span>{{ d.t }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: {{ d.cc }};">{{ d.c }}</span></div>
+                  </sc-for>
+                </div>
+                <div style="padding: 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0;">
+                  <div style="display: flex; align-items: baseline; gap: 16px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 26px; letter-spacing: -0.03em;">Review</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8B8B93;">4 WAITING · OLDEST FIRST</span></div>
+                  <div style="display: grid; grid-template-columns: 56px minmax(0, 140px) minmax(0, 120px) minmax(0, 1fr) 60px; gap: 14px; padding: 0 12px 8px; border-bottom: 1px solid #2A2A31; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;"><span></span><span>ITEM</span><span>BY</span><span>WHY IT'S HERE</span><span>AGE</span></div>
+                  <sc-for list="{{ reviewRows }}" as="r" hint-placeholder-count="4">
+                    <div style="display: flex; flex-direction: column; background: {{ r.bg }}; border-left: {{ r.bl }};">
+                      <div style="display: grid; grid-template-columns: 56px minmax(0, 140px) minmax(0, 120px) minmax(0, 1fr) 60px; gap: 14px; padding: 10px 12px; align-items: center; font-size: 14px;">
+                        <span style="width: 56px; height: 56px; border-radius: 6px; background-color: #1C1C22; background-image: repeating-linear-gradient(135deg, #24242B 0 6px, #1C1C22 6px 12px);"></span>
+                        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">{{ r.item }}</span>
+                        <span style="font-weight: 600;">{{ r.who }}</span>
+                        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #B9B8AE;">{{ r.why }}</span>
+                        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #8B8B93;">{{ r.age }}</span>
+                      </div>
+                      <sc-if value="{{ r.open }}" hint-placeholder-val="{{ false }}">
+                        <div data-part="review-decision" style="display: flex; gap: 20px; padding: 6px 12px 16px 82px; align-items: flex-start;">
+                          <div style="flex: 0 0 200px; height: 250px; border-radius: 10px; background-color: #1C1C22; background-image: repeating-linear-gradient(135deg, #24242B 0 7px, #1C1C22 7px 14px); position: relative;"><span style="position: absolute; left: 10px; top: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F4F3EF; color: #0B0B0E; padding: 4px 7px;">PHOTO · AS POSTED</span></div>
+                          <div style="flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0;">
+                            <span style="font-size: 14px; line-height: 1.5; color: #DEDDD6;">Reported by 2 runners. On @n8's Sat, Aug 29 run, shared. Hidden from everyone but @n8 since the first report.</span>
+                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                              <span style="border: 1px solid #F4F3EF; border-radius: 100px; padding: 11px 18px; font-size: 14px; font-weight: 700;">Approve</span>
+                              <span style="background: #F4F3EF; color: #0B0B0E; border-radius: 100px; padding: 11px 18px; font-size: 14px; font-weight: 700;">Remove</span>
+                              <span style="width: 1px; height: 28px; background: #3A3A42; margin: 0 10px;"></span>
+                              <span style="border: 1px solid #FF2D8A; color: #FF2D8A; border-radius: 100px; padding: 11px 18px; font-size: 14px; font-weight: 700;">Remove as suspected CSAM</span>
+                            </div>
+                            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #8B8B93;">REMOVE REASON: SHOWS WHERE SOMEONE LIVES ▾ · SENT AS #20'S NOTICE</span>
+                          </div>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                  <div data-part="takedown-form" style="margin-top: 14px; border: 1px solid #3A3A42; border-radius: 10px; padding: 18px; display: flex; flex-direction: column; gap: 14px; max-width: 620px;">
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #F5FF3D;">TAKEDOWN · FROM A NOTICE</span>
+                    <div style="display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">WHAT</span><div role="radiogroup" style="display: flex; gap: 6px;"><span aria-checked="true" style="background: #F4F3EF; color: #0B0B0E; border-radius: 100px; padding: 10px 16px; font-size: 14px; font-weight: 700;">Photo</span><span aria-checked="false" style="border: 1px solid #3A3A42; border-radius: 100px; padding: 10px 16px; font-size: 14px;">Entry</span></div></div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">PHOTO ID</span><div style="min-height: 50px; display: flex; align-items: center; border: 1px solid #3A3A42; border-radius: 10px; padding: 0 15px; font-family: 'IBM Plex Mono', monospace; font-size: 15px;">p_9140</div></div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">THE NOTICE</span><span style="font-size: 13px; color: #B9B8AE;">Paste it whole: who sent it, what they own, where it is.</span><div style="min-height: 110px; border: 1px solid #3A3A42; border-radius: 10px; padding: 13px 15px; font-size: 16px; line-height: 1.4; color: #8B8B93;">From: J. Ortega &lt;j.ortega@example.com&gt; …</div></div>
+                    <span style="align-self: flex-start; background: #F4F3EF; color: #0B0B0E; border-radius: 100px; padding: 12px 20px; font-size: 14px; font-weight: 700;">Take it down</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ s.deskBits }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+            <sc-for list="{{ deskCards }}" as="c" hint-placeholder-count="5">
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ c.label }}</span>
+                <div data-screen-label="{{ c.screen }}" data-state="desk" style="width: 400px; max-width: 100%; background: #0B0B0E; color: #F4F3EF; border: 1px solid #2A2A31; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+                  <sc-if value="{{ c.search }}" hint-placeholder-val="{{ false }}">
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                      <div style="min-height: 50px; display: flex; align-items: center; gap: 10px; border: {{ c.search.b }}; border-radius: 10px; padding: 0 14px; font-size: 16px; color: {{ c.search.c }};"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#8B8B93" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zM16 16l5 5"></path></svg>{{ c.search.q }}</div>
+                      <div style="display: flex; gap: 18px;">
+                        <sc-for list="{{ c.search.filters }}" as="x" hint-placeholder-count="3"><span aria-current="{{ x.cur }}" style="padding: 10px 0; font-size: 14px; color: {{ x.c }}; font-weight: {{ x.w }}; border-bottom: {{ x.bb }}; display: flex; gap: 6px; align-items: baseline;">{{ x.t }}<span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8B8B93;">{{ x.n }}</span></span></sc-for>
+                      </div>
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #8B8B93;">{{ c.search.meta }}</span>
+                      <sc-for list="{{ c.search.rows }}" as="r" hint-placeholder-count="2"><div style="display: flex; justify-content: space-between; padding: 10px 0; border-top: 1px solid #2A2A31; font-size: 14px;"><span style="font-weight: 600;">{{ r.h }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: {{ r.sc }};">{{ r.s }}</span></div></sc-for>
+                      <sc-if value="{{ c.search.empty }}" hint-placeholder-val="{{ false }}"><div style="border-top: 1px solid #2A2A31; padding-top: 14px; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 15px;">{{ c.search.empty }}</span><span style="font-size: 13px; color: #B9B8AE;">{{ c.search.empty2 }}</span></div></sc-if>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ c.reopen }}" hint-placeholder-val="{{ false }}">
+                    <div style="display: flex; flex-direction: column; gap: 14px;">
+                      <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 20px; font-weight: 600;">@runner_1290</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #FF2D8A; letter-spacing: 0.06em;">CLOSED SEP 14 · REPEATED HARASSMENT</span></div>
+                      <div data-part="reopen-panel" style="border: 1px solid #3A3A42; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+                        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #00E0C6;">REOPEN ACCOUNT · IN PLACE OF D3</span>
+                        <span style="font-size: 13px; line-height: 1.45; color: #B9B8AE;">Lets them log in again and puts their runs back with the share state they had. They get one email saying so.</span>
+                        <span style="align-self: flex-start; border: 1px solid #F4F3EF; border-radius: 100px; padding: 11px 18px; font-size: 14px; font-weight: 700;">Reopen account</span>
+                      </div>
+                      <div role="status" style="border: 1px solid #F4F3EF; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;"><span style="align-self: flex-start; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; color: #0B0B0E; padding: 3px 6px;">STILL CLOSED</span><span style="font-size: 14px; line-height: 1.45;">That didn't go through. Try again?</span></div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ c.csam }}" hint-placeholder-val="{{ false }}">
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #FF2D8A;">REMOVE AS SUSPECTED CSAM · SECOND PRESS, IN THE ROW</span>
+                      <span style="font-size: 15px; line-height: 1.5;">Remove it everywhere, close @n8's account and keep the evidence for the report?</span>
+                      <div style="display: flex; gap: 10px;"><span style="background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 11px 18px; font-size: 14px; font-weight: 700;">Remove and report</span><span style="border: 1px solid #F4F3EF; border-radius: 100px; padding: 11px 18px; font-size: 14px; font-weight: 700; outline: 2px solid #F4F3EF; outline-offset: 2px;">Cancel</span></div>
+                    </div>
+                  </sc-if>
+                </div>
+                <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 400px;">{{ c.note }}</p>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ s.deskAccess }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">D7 · ACCESS › CODES · EVERY SMALL STATE AT ONCE</span>
+            <div style="overflow-x: auto; max-width: 100%;">
+              <div data-screen-label="D7 Access r28" data-state="desk" style="width: 980px; background: #0B0B0E; color: #F4F3EF; border-radius: 12px; border: 1px solid #2A2A31; padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+                <div style="display: flex; align-items: baseline; gap: 20px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 26px; letter-spacing: -0.03em;">Access</span><span style="font-size: 14px; font-weight: 600; border-bottom: 2px solid #F4F3EF; padding: 6px 0;">Codes</span><span style="font-size: 14px; color: #B9B8AE; padding: 6px 0;">Requests <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #F5FF3D;">3</span></span><span style="margin-left: auto; background: #F4F3EF; color: #0B0B0E; border-radius: 100px; padding: 11px 18px; font-size: 14px; font-weight: 700;">New code</span></div>
+                <span role="status" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #00E0C6;">DIAL-7QX2 MADE · LINK COPIED</span>
+                <div style="display: grid; grid-template-columns: 170px minmax(0, 1fr) 70px 110px 180px; gap: 14px; padding: 0 12px 8px; border-bottom: 1px solid #2A2A31; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;"><span>CODE</span><span>FOR</span><span>MADE</span><span>STATE</span><span></span></div>
+                <sc-for list="{{ accessRows }}" as="r" hint-placeholder-count="5">
+                  <div style="display: flex; flex-direction: column; gap: 8px; padding: 0 0 4px;">
+                    <div style="display: grid; grid-template-columns: 170px minmax(0, 1fr) 70px 110px 180px; gap: 14px; padding: 10px 12px; align-items: baseline; font-size: 14px; opacity: {{ r.op }}; background: {{ r.bg }};">
+                      <span style="display: flex; gap: 8px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">{{ r.code }}</span><sc-if value="{{ r.isNew }}" hint-placeholder-val="{{ false }}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; color: #0B0B0E; padding: 2px 5px;">NEW</span></sc-if></span>
+                      <span style="color: #B9B8AE;">{{ r.who }}</span>
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #8B8B93;">{{ r.age }}</span>
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: {{ r.sc }};">{{ r.st }}</span>
+                      <span style="display: flex; gap: 16px; justify-content: flex-end; font-size: 14px; font-weight: 600; color: {{ r.ac }};">{{ r.actions }}</span>
+                    </div>
+                    <sc-if value="{{ r.band }}" hint-placeholder-val="{{ false }}">
+                      <div role="status" style="margin-left: 12px; max-width: 620px; border: 1px solid #F4F3EF; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
+                        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; color: #0B0B0E; padding: 3px 6px;">{{ r.band.k }}</span>
+                        <span style="font-size: 14px; line-height: 1.45;">{{ r.band.t }}</span>
+                        <sc-if value="{{ r.band.url }}" hint-placeholder-val="{{ false }}"><span style="align-self: stretch; min-height: 44px; display: flex; align-items: center; border: 1px solid #3A3A42; border-radius: 10px; padding: 0 12px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; background: #1F2A55;">{{ r.band.url }}</span></sc-if>
+                        <sc-if value="{{ r.band.action }}" hint-placeholder-val="{{ false }}"><span style="border: 1px solid #F4F3EF; border-radius: 100px; padding: 9px 16px; font-size: 14px; font-weight: 700;">{{ r.band.action }}</span></sc-if>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ s.frames }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+            <sc-for list="{{ s.frames }}" as="f" hint-placeholder-count="2">
+              <div style="display: flex; flex-direction: column; gap: 10px; max-width: 100%;">
+                <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93; max-width: 390px;">{{ f.label }}</span>
+                <div data-screen-label="{{ f.screen }}" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
+                  <sc-if value="{{ f.bar }}" hint-placeholder-val="{{ false }}"><div style="background: #0B0B0E; padding: 16px 20px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em; color: #F4F3EF;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span></div></sc-if>
+                  <sc-if value="{{ f.grab }}" hint-placeholder-val="{{ false }}"><div style="padding: 10px 0 0; display: flex; justify-content: center;"><span style="width: 36px; height: 4px; border-radius: 100px; background: #B9B8AE;"></span></div></sc-if>
+                  <sc-if value="{{ f.nav }}" hint-placeholder-val="{{ false }}"><div style="background: #0B0B0E; color: #F4F3EF; padding: 16px 20px; display: flex; flex-direction: column; gap: 3px;"><sc-if value="{{ f.nav.back }}" hint-placeholder-val="{{ false }}"><span style="display: flex; align-items: center; gap: 4px; font-size: 14px; color: #B9B8AE;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>{{ f.nav.back }}</span></sc-if><span style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">{{ f.nav.title }}</span></div></sc-if>
+                  <div style="padding: 20px 20px 24px; display: flex; flex-direction: column; gap: 14px;">
+                    <sc-for list="{{ f.blocks }}" as="b" hint-placeholder-count="4">
+                      <sc-if value="{{ b.back }}" hint-placeholder-val="{{ false }}"><span style="display: flex; align-items: center; gap: 4px; min-height: 44px; font-size: 15px; font-weight: 600; color: #4E4E44;"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>{{ b.back }}</span></sc-if>
+                      <sc-if value="{{ b.sheethead }}" hint-placeholder-val="{{ false }}"><div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em;">{{ b.sheethead.title }}</span><span style="min-height: 44px; display: flex; align-items: center; font-size: 15px; font-weight: 600; color: #4E4E44;">{{ b.sheethead.side }}</span></div></sc-if>
+                      <sc-if value="{{ b.group }}" hint-placeholder-val="{{ false }}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70; padding-top: 8px;">{{ b.group }}</span></sc-if>
+                      <sc-if value="{{ b.kicker }}" hint-placeholder-val="{{ false }}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: {{ b.kc }};">{{ b.kicker }}</span></sc-if>
+                      <sc-if value="{{ b.head }}" hint-placeholder-val="{{ false }}"><span style="font-family: 'Archivo Black', sans-serif; font-size: 28px; letter-spacing: -0.03em; line-height: 1.04;">{{ b.head }}</span></sc-if>
+                      <sc-if value="{{ b.h2 }}" hint-placeholder-val="{{ false }}"><span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em; padding-top: 6px;">{{ b.h2 }}</span></sc-if>
+                      <sc-if value="{{ b.lead }}" hint-placeholder-val="{{ false }}"><p data-type-step="lead" style="margin: 0; font-size: 17px; line-height: 1.5;">{{ b.lead }}</p></sc-if>
+                      <sc-if value="{{ b.body }}" hint-placeholder-val="{{ false }}"><p style="margin: 0; font-size: 15px; line-height: 1.5;">{{ b.body }}</p></sc-if>
+                      <sc-if value="{{ b.small }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">{{ b.small }}</span></sc-if>
+                      <sc-if value="{{ b.card }}" hint-placeholder-val="{{ false }}"><div style="border: 1px solid #DCDBD2; background: #FFFFFF; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px;"><div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.03em;">{{ b.card.title }}</span><sc-if value="{{ b.card.tag }}" hint-placeholder-val="{{ false }}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; padding: 3px 6px; white-space: nowrap;">{{ b.card.tag }}</span></sc-if><sc-if value="{{ b.card.label }}" hint-placeholder-val="{{ false }}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">{{ b.card.label }}</span></sc-if></div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44;">{{ b.card.meta }}</span><div style="height: 110px; border-radius: 10px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 7px, #E9E8DE 7px 14px);"></div></div></sc-if>
+                      <sc-if value="{{ b.photo }}" hint-placeholder-val="{{ false }}"><div style="position: relative; height: 200px; border-radius: 10px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 7px, #E9E8DE 7px 14px);"><span style="position: absolute; left: 10px; top: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #0B0B0E; color: #F4F3EF; padding: 4px 7px;">{{ b.photo }}</span></div></sc-if>
+                      <sc-if value="{{ b.w3 }}" hint-placeholder-val="{{ false }}">
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                          <div style="height: 300px; border-radius: 10px; overflow: hidden; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 7px, #E9E8DE 7px 14px); display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);">
+                            <sc-for list="{{ b.w3.canvas }}" as="c" hint-placeholder-count="9"><span style="background: {{ c.bg }}; outline: {{ c.ol }}; outline-offset: -2px;"></span></sc-for>
+                          </div>
+                          <div role="group" aria-label="Blur by area" style="display: flex; align-items: flex-start; gap: 14px;">
+                            <div style="display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3, 44px); gap: 4px;">
+                              <sc-for list="{{ b.w3.cells }}" as="c" hint-placeholder-count="9"><span role="button" aria-label="{{ c.name }}" aria-pressed="{{ c.pressed }}" style="border: 1px solid #0B0B0E; border-radius: 4px; background: {{ c.bg }}; color: #F4F3EF; display: flex; align-items: center; justify-content: center; outline: {{ c.ol }}; outline-offset: 2px;"><sc-if value="{{ c.on }}" hint-placeholder-val="{{ false }}"><svg data-icon="check" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13l5 5L20 6"></path></svg></sc-if></span></sc-for>
+                            </div>
+                            <span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">Blur by area. Ink = blurred.</span>
+                          </div>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ b.row }}" hint-placeholder-val="{{ false }}"><div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; min-height: 56px; border-top: {{ b.row.rule }};"><div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;"><span style="font-size: 16px; font-weight: 600; color: {{ b.row.c }};">{{ b.row.t }}</span><sc-if value="{{ b.row.sub }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">{{ b.row.sub }}</span></sc-if></div><sc-if value="{{ b.row.action }}" hint-placeholder-val="{{ false }}"><span style="flex: 0 0 auto; font-size: 15px; font-weight: 600; color: {{ b.row.ac }};">{{ b.row.action }}</span></sc-if><sc-if value="{{ b.row.chev }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#7A7A70" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg></sc-if></div></sc-if>
+                      <sc-if value="{{ b.field }}" hint-placeholder-val="{{ false }}">
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                          <label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">{{ b.field.k }}</label>
+                          <sc-if value="{{ b.field.hint }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; color: #4E4E44;">{{ b.field.hint }}</span></sc-if>
+                          <div style="min-height: 50px; display: flex; align-items: center; background: #FFFFFF; border: {{ b.field.border }}; border-radius: 10px; padding: 0 15px; font-size: 16px; letter-spacing: {{ b.field.ls }};">{{ b.field.v }}</div>
+                          <sc-if value="{{ b.field.msg }}" hint-placeholder-val="{{ false }}"><span data-part="field-message" style="background: #F5FF3D; font-size: 13px; line-height: 1.35; padding: 7px 10px; align-self: flex-start;">{{ b.field.msg }}</span></sc-if>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ b.or }}" hint-placeholder-val="{{ false }}"><div style="display: flex; align-items: center; gap: 12px;"><span style="flex: 1; height: 1px; background: #DCDBD2;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">OR</span><span style="flex: 1; height: 1px; background: #DCDBD2;"></span></div></sc-if>
+                      <sc-if value="{{ b.google }}" hint-placeholder-val="{{ false }}"><span data-part="google-button" style="display: flex; align-items: center; justify-content: center; gap: 10px; background: #FFFFFF; border: 1px solid #747775; border-radius: 100px; height: 48px; font-family: Archivo, sans-serif; font-weight: 500; font-size: 15px; color: #1F1F1F;"><svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.470 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.090-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path></svg>Continue with Google</span></sc-if>
+                      <sc-if value="{{ b.band }}" hint-placeholder-val="{{ false }}">
+                        <div data-part="control-failure" role="status" style="border: 1px solid #0B0B0E; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
+                          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; padding: 3px 6px;">{{ b.band.k }}</span>
+                          <span style="font-size: 15px; line-height: 1.45;">{{ b.band.t }}</span>
+                          <sc-if value="{{ b.band.t2 }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">{{ b.band.t2 }}</span></sc-if>
+                          <sc-if value="{{ b.band.link }}" hint-placeholder-val="{{ false }}"><span style="font-size: 14px; font-weight: 600; color: #C21A6B; text-decoration: underline; text-underline-offset: 3px;">{{ b.band.link }}</span></sc-if>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ b.primary }}" hint-placeholder-val="{{ false }}"><span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 15px; text-align: center; font-size: 16px; font-weight: 700;">{{ b.primary }}</span></sc-if>
+                      <sc-if value="{{ b.secondary }}" hint-placeholder-val="{{ false }}"><span style="border: 1px solid #0B0B0E; border-radius: 100px; padding: 14px; text-align: center; font-size: 15px; font-weight: 600;">{{ b.secondary }}</span></sc-if>
+                      <sc-if value="{{ b.quiet }}" hint-placeholder-val="{{ false }}"><span style="text-align: center; font-size: 15px; font-weight: 600; color: #4E4E44; padding: 10px 0;">{{ b.quiet }}</span></sc-if>
+                      <sc-if value="{{ b.link }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; font-weight: 600; color: #C21A6B; text-decoration: underline; text-underline-offset: 3px; min-height: 44px; display: flex; align-items: center;">{{ b.link }}</span></sc-if>
+                    </sc-for>
+                  </div>
+                </div>
+                <sc-if value="{{ f.note }}" hint-placeholder-val="{{ false }}"><p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px;">{{ f.note }}</p></sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ s.notes }}" hint-placeholder-val="{{ false }}">
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 1px; background: #2A2A31; border: 1px solid #2A2A31;">
+            <sc-for list="{{ s.notes }}" as="n" hint-placeholder-count="3">
+              <div style="background: #0B0B0E; padding: 14px 16px; font-size: 14px; line-height: 1.5; color: #DEDDD6;"><strong style="color: #F4F3EF;">{{ n.h }}</strong> {{ n.t }}</div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </sc-for>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const INK = '#0B0B0E', MAG = '#C21A6B', TEAL = '#00776A', MUTE = '#7A7A70';
+    const Y = '#00E0C6', N = '#FF2D8A', A = '#F5FF3D';
+    const R = (id, q, v, a) => ({ id, q, v, a, vc: /^(YES|CONFIRM|DONE)/.test(v) ? Y : v.startsWith('NO') ? N : A });
+    const F = (k, v, o = {}) => ({ field: { k, v, hint: '', msg: '', border: o.err ? '2px solid #0B0B0E' : '1px solid #B9B8AE', ls: o.pw ? '0.2em' : 'normal', ...o } });
+    const K = (kicker, kc = MUTE) => ({ kicker, kc });
+    const row = (t, sub, o = {}) => ({ row: { t, sub, action: '', ac: MAG, chev: false, c: INK, rule: '1px solid #DCDBD2', ...o } });
+    const band = (k, t, o = {}) => ({ band: { k, t, t2: '', link: '', ...o } });
+    const note = (h, t) => ({ h, t });
+
+    const pos = ['top left', 'top', 'top right', 'left', 'middle', 'right', 'bottom left', 'bottom', 'bottom right'];
+    const w3 = (blurred, focus) => ({
+      canvas: pos.map((p, i) => ({ bg: blurred.includes(i) ? 'rgba(11,11,14,0.55)' : 'transparent', ol: i === focus ? '2px solid #F5FF3D' : 'none' })),
+      cells: pos.map((p, i) => ({ name: 'Blur ' + p, on: blurred.includes(i), pressed: String(blurred.includes(i)), bg: blurred.includes(i) ? INK : '#FFFFFF', ol: i === focus ? '2px solid #0B0B0E' : 'none' })),
+    });
+
+    const sections = [
+      { id: 'rA', title: 'A · Amendments', ruling: 'Made on the boards they live on. This board records them.', why: '',
+        rows: [
+          R('r1', '1 · Field type, radius, height', 'DONE · 16 / 10 / 50', 'The Form Contract wins on all three. tokens.js gets TYPE.field (16), RADIUS.field going from 8 to 10, RADIUS.tile (10, which was missing), and a HEIGHT group: target 44, control 48, field 50. The field is 50 high and buttons stay 48. Form Contract 02a\'s field samples are redrawn at 50 / 10. Table below.'),
+          R('r2', '2 · Appeals: no deadline, no second moderator', 'DONE', 'The ban email\'s foot (round 27 #15) now reads "Think we got it wrong? Reply to this email to appeal and we\'ll look again." Operator Screens D4 now reads "If you think this is wrong, write to desk@dialed.run. A person reads every message." The same rule took "usually within a day" out of round 27 #21 and #28. No copy promises a time.'),
+          R('r3', '3 · Minimum age 16', 'CONFIRM', 'Au2 draws "dialed.run is for runners 16 and over." exactly, as in round 27 #12. The privacy page\'s wording is the owner\'s.'),
+          R('r4', '4 · A deleted handle is never released', 'DONE', 'Round 27 #14\'s note for the pending week no longer frees the handle. At day 7 everything else is deleted. The handle stays in username_history for good, as after a rename. None of the runner\'s screens mentioned a release, so their copy stands. /@handle for a deleted runner shows #11\'s "This runner isn\'t here."'),
+        ],
+        tokens: [
+          { k: 'TYPE.field', v: '16 / 1.4 Archivo', was: '— (body 15)', job: 'What the runner types, and its placeholder. Nothing else. Below 16px, iOS Safari zooms the page on focus. Labels stay MONO.sm and hints stay TYPE.small.' },
+          { k: 'RADIUS.field', v: '10', was: '8', job: 'Inputs, textareas, selects, the Desk search.' },
+          { k: 'RADIUS.tile', v: '10', was: '— (missing)', job: 'The closet tile and the top corners of its photo.' },
+          { k: 'HEIGHT.field', v: '50', was: '— (missing)', job: 'FormField min-height. Content centred; the 2px error border draws inward.' },
+          { k: 'HEIGHT.control', v: '48', was: '— (implicit)', job: 'Filled and outline buttons, and the Google and Strava buttons.' },
+          { k: 'HEIGHT.target', v: '44', was: '— (A11y 03)', job: 'The hit-area floor, now importable instead of retyped.' },
+        ] },
+
+      { id: 'r5', title: '5 · W3 waits for "Use this photo"', ruling: 'Ruling: W3 stays open once auto-blur paints. A foot under the cells holds "Use this photo" (ink) and "Pick another" (outline), and Cancel sits in the header. Nothing is attached until "Use this photo".', why: 'The closet form and AttachKit use the same sheet.',
+        frames: [
+          { label: '5 · W3 · AUTO-BLUR HAS PAINTED · WAITING', screen: 'W3 confirm', grab: true, blocks: [{ sheethead: { title: 'Check the blur', side: 'Cancel' } }, { small: 'Auto-blur covered 2 areas. Tap the photo or a cell to change it.' }, { w3: w3([0, 4], 4) }, { primary: 'Use this photo' }, { secondary: 'Pick another' }] },
+          { label: '5 · W3 · AUTO-BLUR FOUND NOTHING', screen: 'W3 confirm nothing', grab: true, blocks: [{ sheethead: { title: 'Check the blur', side: 'Cancel' } }, { small: 'Auto-blur found nothing to cover. Tap the photo or a cell to blur an area.' }, { w3: w3([], -1) }, { primary: 'Use this photo' }, { secondary: 'Pick another' }] },
+        ],
+        notes: [
+          note('Cancel', 'closes W3 and adds nothing. The form stays as it was, and a photo that was already on it stays.'),
+          note('Pick another', 'opens the picker. Choosing a photo replaces this one in W3 and runs auto-blur again. Dismissing the picker goes back to W3 with the photo and blur unchanged.'),
+          note('Focus', 'lands on the heading when W3 opens, not on the primary, so Tab reaches the cells before "Use this photo". Esc is Cancel.'),
+          note('After "Use this photo"', 'W3 closes and the upload runs in the form, with round 26\'s states. Pressed cells draw the pack\'s check glyph (#14).'),
+        ] },
+
+      { id: 'r6', title: '6 · Under review, as the author sees it', ruling: 'Ruling: the card shows a hi-viz UNDER REVIEW tag where its SHARED label would be. D shows a §4a band at the top. Only D explains, in one line: "Only you can see this while we look at it."', why: 'No brackets. Brackets mean a press is running (as in [ Preparing ]), and the runner hasn\'t pressed anything here.',
+        frames: [
+          { label: '6 · FOLLOWING FEED · OWN CARD', screen: 'Feed own under review', nav: { back: '', title: 'Feed' }, blocks: [{ group: 'FOLLOWING' }, { card: { title: '6.2 MI · 41° DAMP', tag: 'UNDER REVIEW', label: '', meta: '@MAYA_RUNS · SAT AUG 29 · DIALED' } }, { card: { title: '5.0 MI · 38° CLEAR', tag: '', label: '', meta: '@DEE_K · SAT AUG 29 · COLD' } }] },
+          { label: '6 · D · OWN ENTRY · BAND AT THE TOP', screen: 'D own under review', nav: { back: 'Feed', title: 'Your run' }, blocks: [band('HIDDEN WHILE WE CHECK', 'Only you can see this while we look at it.', { t2: 'You can still edit or delete it.' }), K('SAT AUG 29 · 6:10 AM'), { head: '6.2 MI · 41° DAMP' }, { photo: 'PHOTO 1' }] },
+        ],
+        notes: [
+          note('The card gets the tag and no sentence.', 'Cards are for scanning, and D is one tap away. Profile and the closet\'s run list use the same tag.'),
+          note('Other runners see nothing:', 'no gap and no "removed". If it\'s removed, #20\'s band replaces this one. If it\'s approved, the band and tag disappear with no message.'),
+          note('It never says', 'who reported it or why, and it gives no time. Round 27 #28\'s "usually within a day" is struck (#2).'),
+        ] },
+
+      { id: 'r7', title: '7 · Settings › About', ruling: 'Ruling: an ABOUT group after Strava and before Log out, with one row per page that exists. Privacy ships now. Terms and Copyright join when their pages do, in the footer\'s order.', why: 'No disabled rows for pages that don\'t exist yet.',
+        frames: [
+          { label: '7 · U1 · AT LAUNCH', screen: 'U1 About launch', nav: { back: 'You', title: 'Settings' }, blocks: [{ group: '… ACCOUNT · SHARING · NOTIFICATIONS' }, { group: 'STRAVA' }, row('Strava', 'Connected. Runs arrive on their own.', { chev: true, rule: '0' }), { group: 'ABOUT' }, row('Privacy policy', 'What we keep, and who sees it', { chev: true, rule: '0' }), row('Log out', '', { rule: '2px solid #0B0B0E' })] },
+          { label: '7 · U1 · ONCE TERMS AND COPYRIGHT EXIST', screen: 'U1 About full', nav: { back: 'You', title: 'Settings' }, blocks: [{ group: 'STRAVA' }, row('Strava', 'Connected. Runs arrive on their own.', { chev: true, rule: '0' }), { group: 'ABOUT' }, row('Privacy policy', 'What we keep, and who sees it', { chev: true, rule: '0' }), row('Terms', 'The rules for using dialed.run', { chev: true }), row('Copyright', 'Report something of yours posted here', { chev: true }), row('Log out', '', { rule: '2px solid #0B0B0E' })] },
+        ],
+        notes: [
+          note('Rows open the page in place.', 'The page\'s own top bar is the way back. Its footer carries the same three links.'),
+          note('Log out stays last,', 'set apart by the 2px rule as drawn. About never moves below it.'),
+        ] },
+
+      { id: 'r8', title: '8 · Desk: review, takedown, runners, notice', ruling: 'Ruling: in the review queue one row opens at a time into a decision bar. CSAM is the third button, set apart, and needs a second press. Takedowns are a form under the queue. D8\'s filters are text links with counts. Reopen takes Close\'s place on a closed runner.', why: '',
+        deskReview: true, deskBits: true,
+        frames: [
+          { label: '8 · NOTICE BAND · AFTER A TAKEDOWN · TODAY', screen: 'Notice takedown', nav: { back: 'Feed', title: 'Your run' }, blocks: [K('SAT AUG 29 · 6:10 AM'), { head: '6.2 MI · 41° DAMP' }, band('PHOTO REMOVED', 'We removed this photo after a copyright notice.', { t2: 'Your run and verdict stay.' })] },
+          { label: '8 · SAME BAND · ONCE THE RULES PAGE EXISTS', screen: 'Notice takedown rules', nav: { back: 'Feed', title: 'Your run' }, blocks: [K('SAT AUG 29 · 6:10 AM'), { head: '6.2 MI · 41° DAMP' }, band('PHOTO REMOVED', 'A moderator removed this photo: it shows where someone lives.', { t2: 'Your run and verdict stay.', link: 'See the community rules' })] },
+        ],
+        notes: [
+          note('Approve', 'puts the item back for everyone and sends the author nothing. Remove hides it and sends #20\'s band and email. After either one, focus moves to the next row and it opens.'),
+          note('Remove as suspected CSAM', 'asks again in the row, with Cancel focused. The procedure behind it (removal, evidence, the report) is the owner\'s; nothing about it ever reaches the runner\'s screens.'),
+          note('Takedown:', 'WHAT (Photo or Entry), its ID, and the whole notice. "Take it down" hides the item at once and records the notice against it. An unknown ID gets a field message: "No photo has that ID."'),
+          note('The notice band', 'is §4a without the retry, because there\'s nothing to retry. "See the community rules" appears only once that page exists. Until then the band ends after its second line.'),
+          note('Reopen', 'gives back log-in, the handle (still reserved) and the runs, with the share state they had. The runner gets one email: "Your dialed.run account is open again."'),
+        ] },
+
+      { id: 'r9', title: '9 · Invite stage', ruling: 'Ruling: every bad code gets one sentence, whether it was used or never existed: "That code doesn\'t work. Check it, or request access." Google gives the same messages in a band under its button.', why: 'Someone probing learns nothing, and a real runner learns what to do next.',
+        frames: [
+          { label: '9 · Au2 · CREATE ACCOUNT, NO CODE', screen: 'Au2 empty code', bar: true, blocks: [{ head: 'Create an account' }, F('INVITE CODE', '', { err: true, msg: 'Enter the code from your invite.' }), F('EMAIL', 'maya@example.com'), F('PASSWORD', '••••••••••••', { pw: true }), { primary: 'Create account' }] },
+          { label: '9 · Au2 · GOOGLE, NO CODE', screen: 'Au2 Google empty code', bar: true, blocks: [{ head: 'Create an account' }, F('INVITE CODE', ''), { primary: 'Create account' }, { or: true }, { google: true }, band('NOT CREATED', 'Enter your invite code above, then continue with Google.')] },
+          { label: '9 · Au2 · GOOGLE, CODE REFUSED (USED OR UNKNOWN)', screen: 'Au2 Google bad code', bar: true, blocks: [{ head: 'Create an account' }, F('INVITE CODE', 'DIAL-0000', { ls: '0.08em' }), { primary: 'Create account' }, { or: true }, { google: true }, band('NOT CREATED', 'That code doesn\'t work. Check it, or request access.', { link: 'Request access' })] },
+          { label: '9 · Au1 · GOOGLE, NO SUCH ACCOUNT', screen: 'Au1 Google no account', bar: true, blocks: [{ head: 'Log in' }, F('EMAIL', ''), F('PASSWORD', ''), { primary: 'Log in' }, { or: true }, { google: true }, band('NOT LOGGED IN', 'No account uses that Google address. Create one first.', { link: 'Create an account' })] },
+          { label: '9 · Au5 · RATE LIMITED · BACK LINK · NOTE FIELD', screen: 'Au5 rate limit', bar: true, blocks: [{ back: 'Create an account' }, { head: 'Request access' }, F('EMAIL', 'sam@example.com'), F('NOTE · OPTIONAL', 'Winter runner in Duluth.', { hint: 'Where you run, or who sent you. One line.' }), { primary: 'Send request' }, band('NOT SENT', 'Too many requests from here. You can send another at 7:42 PM.')] },
+        ],
+        deskAccess: true,
+        notes: [
+          note('Used vs unknown:', 'one sentence for both, plus revoked codes. It\'s a field message on the form and a band under Google.'),
+          note('Au1\'s Google line', 'can name the address because Google has just proved it belongs to them, so nothing leaks.'),
+          note('Back links', 'use the pack\'s back glyph and the destination\'s name. No "←" or "‹" characters anywhere. Round 27\'s U1 header is redrawn the same way.'),
+          note('Au5\'s note', 'is a one-line FormField: 140 characters, with a counter from 120. The rate limit uses #11\'s grammar with a local time.'),
+          note('D7 ages', 'are MONO.sm in capitals: "NOW" under a minute, then "12M", "5H", "3D". From 30 days on they show a date, "AUG 29".'),
+          note('Revoke\'s undo:', 'the row stays where it is at reduced weight, showing REVOKED and "Undo" for 10 seconds. No countdown digits. After that it sorts to the foot.'),
+          note('New code:', 'a status line above the list, plus a NEW tag on the row at the top until the page reloads. Copy failing: a band showing the link already selected, so Ctrl-C works.'),
+        ] },
+
+      { id: 'rC', title: 'C · Placeholders', ruling: '10–16.', why: 'Drawn below where the answer is a shape rather than a word.',
+        rows: [
+          R('r10', '10 · Too many tries', 'REWORDED', '"That\'s 5 wrong tries. You can try again at 7:42 PM." A field message on CURRENT PASSWORD in #11\'s grammar: the runner\'s local time, no seconds. The field stays usable, and pressing before then shows the message again.'),
+          R('r11', '11 · H\'s silent states', 'CONFIRM · BOTH', 'Both are the whole page: H\'s column, the back link, and the sentence as the lead. "This runner changed their name." links nowhere. "This runner isn\'t here." covers purged, deleted and never-existed handles on purpose, so no one can tell them apart.'),
+          R('r12', '12 · Keep your account?', 'CONFIRM · BODY AMENDED', 'The Strava line stays, in TYPE.small, muted. The body above it now says "your runs, closet and entries come back as they were", so it no longer promises Strava back. Round 27\'s frame is amended.'),
+          R('r13a', '13 · GOES / STAYS hues', 'NO · INK', 'Hue means verdict, and cold-text and dialed-text are verdict colours. A merge outcome isn\'t a verdict, so all four labels go in ink, MONO.xs, and the words carry the meaning.'),
+          R('r13b', '13 · PHOTO NOT ADDED kicker', 'NO · HI-VIZ', 'Every §4a kicker sits on the hi-viz ground. Put round 26\'s back.'),
+          R('r13c', '13 · Retired date', 'NO · MONTH + YEAR', '"RETIRED MAR 2026" in MONO.sm. Retired gear gets read across years, and the day doesn\'t matter.'),
+          R('r13d', '13 · Middle cell', 'YES · "MIDDLE"', '"Blur middle". The product is written in US English, and "middle" pairs with top and bottom. The board\'s "centre" is corrected.'),
+          R('r13e', '13 · Photo-less rail thumbnail', 'NO · HATCH', 'The hatch means "no photo" everywhere (round 27 #31b). The photo ground means a photo is still loading.'),
+          R('r13f', '13 · Edit\'s photo failures', 'YES · REUSE', 'A saved photo that\'s refused gets #20\'s PHOTO REMOVED band. A removal that fails gets 02b\'s band under the photo: kicker PHOTO STILL ON, "That didn\'t go through. Try again?"'),
+          R('r14a', '14 · Desk destinations', 'FIVE, IN THIS ORDER', 'Today, Review, Access, Duplicates, Runners: the queues that need a person first, then upkeep, then lookup. Access is a destination because it has its own queue. Gave up is a section on Today, carrying its count, because it\'s a list to check, not a place to work. Drawn in 8.'),
+          R('r14b', '14 · Photo-delete glyph', 'remove', 'The pack\'s `remove` (keywords: delete, trash, bin). Its accessible name stays "Delete photo 2".'),
+          R('r14c', '14 · Blur cell check', 'YES · check', 'Pressed cells draw the pack\'s `check` at 20px, paper on ink. Drawn in 5.'),
+          R('r15', '15 · Export states', 'CONFIRM 3 · REDRAW 2', 'Ready, the failed press and the signed-out link are confirmed as built. Failed: "Your export didn\'t finish, and it doesn\'t count as today\'s." with the action "Try again". An expired link and someone else\'s link both land on the row with one line: "That link doesn\'t work any more. Get a copy for a new one." Because the two read the same, nothing about the other account shows. kit.csv and profile.csv are added to round 27 #13\'s list.'),
+          R('r16', '16 · Legal reading page', 'CONFIRM 2 · REDRAW 1', 'Mono CONTENTS (MONO.xs) is confirmed. "↑ Contents" becomes "Back to contents" in TYPE.small, link colour, no arrow, because ↑ isn\'t a product glyph. It shows only where the contents sit above the text (phone and wide); at desk the contents column stays in view. No LAST UPDATED line is confirmed, and round 27\'s kickers drop their dates.'),
+        ] },
+
+      { id: 'rCd', title: 'C · Drawn', ruling: '10 · 11 · 12 · 15 · 16.', why: '',
+        frames: [
+          { label: '10 · U1 · CHANGE PASSWORD · LOCKED', screen: 'U1 too many tries', grab: true, blocks: [{ head: 'Change your password' }, { body: 'Your other devices will be signed out.' }, F('CURRENT PASSWORD', '••••••', { pw: true, err: true, msg: 'That\'s 5 wrong tries. You can try again at 7:42 PM.' }), F('NEW PASSWORD', '', { hint: 'At least 10 characters.' }), { primary: 'Change password' }, { secondary: 'Cancel' }] },
+          { label: '11 · H · /@OLD · RENAMED', screen: 'H renamed', bar: true, blocks: [{ back: 'Feed' }, { lead: 'This runner changed their name.' }] },
+          { label: '11 · H · PURGED, DELETED OR NEVER EXISTED', screen: 'H gone', bar: true, blocks: [{ back: 'Feed' }, { lead: 'This runner isn\'t here.' }] },
+          { label: '12 · LOGGING IN DURING THE 7 DAYS', screen: 'Keep account r28', bar: true, blocks: [K('DELETION SCHEDULED', MAG), { head: 'Keep your account?' }, { body: 'It\'s set to be deleted on Sat, Oct 4, with everything in it. Keep it and your runs, closet and entries come back as they were.' }, { small: 'Strava is disconnected, and stays that way until you connect it again.' }, { primary: 'Keep my account' }, { quiet: 'Log out' }] },
+          { label: '15 · U1 · THE EXPORT ROW, FOUR STATES', screen: 'U1 export states', nav: { back: 'Settings', title: 'Account' }, blocks: [
+            { group: 'READY · THE DAY IT WAS ASKED FOR' }, row('Export your data', 'Emailed. The link works until Oct 7.', { action: 'Download', rule: '0' }),
+            { group: 'FAILED · THE QUEUE GAVE UP' }, row('Export your data', 'Your export didn\'t finish, and it doesn\'t count as today\'s.', { action: 'Try again', rule: '0' }),
+            { group: 'THE PRESS FAILED' }, row('Export your data', 'Runs, closet, entries, photos and your run files', { action: 'Get a copy', rule: '0' }), band('NOT STARTED', 'That didn\'t go through. Try again?'),
+            { group: 'FROM AN EXPIRED OR SOMEONE ELSE\'S LINK' }, row('Export your data', 'That link doesn\'t work any more. Get a copy for a new one.', { action: 'Get a copy', rule: '0' }),
+          ], note: 'The ZIP: runs.csv, entries.csv, garments.csv, kit.csv, profile.csv, your original run files and photos, and a README naming every column. The day after it\'s Ready the row goes back to idle, and the emailed link still works until its date.' },
+          { label: '16 · /TERMS · PHONE · FOOT OF A SECTION', screen: 'Legal phone foot', bar: true, blocks: [K('TERMS'), { h2: '3. What you share' }, { body: 'You own your runs, notes and photos. Sharing one lets signed-in runners on dialed.run see it. Delete it and that stops.' }, { link: 'Back to contents' }, { h2: '4. Community rules' }], note: 'The kicker has no date: the owner\'s text carries its own. At desk the contents column stays in view and the foot link isn\'t drawn.' },
+        ] },
+    ];
+
+    const nv = (t, c, active, cc) => ({ t, c, bg: active ? '#16161B' : 'transparent', bl: active ? '3px solid #F5FF3D' : '0', pl: active ? '22px' : '25px', w: active ? 600 : 400, cc: cc || '#8B8B93' });
+    const deskNav = [nv('Today', '3', false, A), nv('Review', '4', true, A), nv('Access', '3', false, A), nv('Duplicates', '23'), nv('Runners', '')];
+
+    const rv = (item, who, why, age, open) => ({ item, who, why, age, open, bg: open ? '#16161B' : 'transparent', bl: open ? '3px solid #F5FF3D' : '3px solid transparent' });
+    const reviewRows = [
+      rv('PHOTO · p_8812', '@n8', 'REPORTED ×2 · SHOWS WHERE SOMEONE LIVES', '5H', true),
+      rv('NOTE · e_4410', '@quadzilla_69', 'REPORTED · HARASSMENT', '9H', false),
+      rv('PHOTO · p_8790', '@dee_k', 'GARMENT PHOTO · FIRST UPLOAD', '1D', false),
+      rv('PHOTO · p_8761', '@paulo', 'REPORTED · NOT A RUN', '3D', false),
+    ];
+
+    const fl = (cur) => [['All', '412'], ['Reported', '9'], ['Closed', '6']].map(([t, n]) => ({ t, n, cur: String(t === cur), c: t === cur ? '#F4F3EF' : '#B9B8AE', w: t === cur ? 600 : 400, bb: t === cur ? '2px solid #F4F3EF' : '2px solid transparent' }));
+    const st = (s) => (s === 'CLOSED' ? N : s === 'PENDING DELETE' ? A : Y);
+    const deskCards = [
+      { label: 'D8 · SEARCH · IDLE', screen: 'D8 search idle', search: { q: 'Handle or email', c: '#8B8B93', b: '1px solid #3A3A42', filters: fl('All'), meta: '412 ACCOUNTS · NEWEST FIRST', rows: [{ h: '@n8', s: 'ACTIVE', sc: Y }, { h: '@runner_1290', s: 'CLOSED', sc: N }], empty: '', empty2: '' }, note: 'Filters are text links. The current one is ink, semibold and underlined, with aria-current. The counts are the whole table, not this search.' },
+      { label: 'D8 · TYPING · FILTER COMBINED', screen: 'D8 search typing', search: { q: 'qz', c: '#F4F3EF', b: '2px solid #F4F3EF', filters: fl('Reported'), meta: '2 MATCH IN REPORTED', rows: [{ h: '@quadzilla_69', s: 'ACTIVE', sc: Y }, { h: '@qz_runs', s: 'ACTIVE', sc: Y }], empty: '', empty2: '' }, note: 'Results update as you type, matching the start of a handle or any part of an email. The search and the filter combine.' },
+      { label: 'D8 · NO MATCH', screen: 'D8 search none', search: { q: 'qz9', c: '#F4F3EF', b: '2px solid #F4F3EF', filters: fl('All'), meta: '0 MATCH', rows: [], empty: 'No runner matches "qz9".', empty2: 'Search by handle without the @, or by the whole email.' }, note: 'The empty state sits where the first row would be. There\'s no illustration and no reset button; clearing the field is the reset.' },
+      { label: 'D8 · CLOSED RUNNER · REOPEN', screen: 'D8 reopen', reopen: true, note: 'Reopen takes D3\'s place in the right column. It goes through in one press (the account is already closed, so nothing is lost if it\'s pressed by mistake). If it fails, 02b\'s band appears with the kicker STILL CLOSED.' },
+      { label: 'REVIEW · CSAM · SECOND PRESS', screen: 'Review CSAM confirm', csam: true, note: 'It replaces the decision bar in the same row. Cancel is focused. There\'s no undo afterwards, so this is the only check.' },
+    ];
+
+    const ac = (code, who, age, stt, actions, o = {}) => ({ code, who, age, st: stt, sc: stt === 'REVOKED' ? N : stt === 'USED' ? '#8B8B93' : Y, actions, ac: '#F4F3EF', op: 1, bg: 'transparent', isNew: false, band: null, ...o });
+    const accessRows = [
+      ac('DIAL-7QX2', 'Anyone with the link', 'NOW', 'UNUSED', 'Copy link · Revoke', { isNew: true, bg: '#16161B' }),
+      ac('DIAL-TR8K', 'sam@example.com', '5H', 'UNUSED', 'Copy link · Revoke', { band: { k: 'NOT COPIED', t: 'Copying didn\'t work here. The link is selected: copy it yourself.', url: 'https://dialed.run/join/DIAL-TR8K', action: '' } }),
+      ac('DIAL-K2P9', 'jo@example.com', '3D', 'REVOKED', 'Undo', { op: 0.55, ac: A }),
+      ac('DIAL-M4QA', 'Anyone with the link', '3D', 'UNUSED', 'Copy link · Revoke', { band: { k: 'STILL ACTIVE', t: 'Revoke didn\'t go through. Try again?', url: '', action: 'Try again' } }),
+      ac('DIAL-3HV7', '@maya_runs', 'AUG 29', 'USED', ''),
+    ];
+
+    const toc = [['rA', 'A · 1–4 amendments'], ['r5', '5 · W3 confirm'], ['r6', '6 · Under review'], ['r7', '7 · About'], ['r8', '8 · Desk'], ['r9', '9 · Invite stage'], ['rC', 'C · 10–16'], ['rCd', 'C · drawn']].map(([h, label]) => ({ href: '#' + h, label }));
+
+    return { toc, sections, deskNav, reviewRows, deskCards, accessRows };
+  }
+}
+</script>
+</body>
+</html>

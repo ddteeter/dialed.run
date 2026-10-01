@@ -304,6 +304,12 @@ export function FormField({
   // widths." So the second pixel is an inset ring instead. A ring is a
   // box-shadow, so it occupies no space at all and there is nothing left
   // to compensate for.
+  //
+  // Form Contract 02b, carried in tokens.js since round 28: 50 tall
+  // (`min-h-field`, HEIGHT.field), 16px type (`text-field`, TYPE.field,
+  // which the control inherits through preflight's `font: inherit`) and
+  // radius 10 (`rounded-field`). The padding alone reaches 48, so the
+  // minimum is what makes it 50.
   const box = (
     <div
       data-invalid={isInvalid ? "true" : undefined}
@@ -316,8 +322,8 @@ export function FormField({
       // Which is why a *group* does not get one — see `FieldGroup`.
       className={
         isInvalid
-          ? "field-box flex min-h-12 items-center rounded-field border border-ink inset-ring-1 inset-ring-ink bg-ground px-4 py-3"
-          : "field-box flex min-h-12 items-center rounded-field border border-hairline bg-ground px-4 py-3"
+          ? "field-box flex min-h-field items-center rounded-field border border-ink inset-ring-1 inset-ring-ink bg-ground px-4 py-3 text-field"
+          : "field-box flex min-h-field items-center rounded-field border border-hairline bg-ground px-4 py-3 text-field"
       }
     >
       {children}
