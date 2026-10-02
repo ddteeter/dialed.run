@@ -5,13 +5,15 @@ import type { Block, Inline, LegalDoc } from "../legal-markdown";
 
 /**
  * A legal text as a reading page (task 126, ACC-13; round 26 #14, round
- * 27 #5 and #12; D-52): `/privacy` now, `/terms` and `/copyright` when
- * their texts exist.
+ * 27 #5 and #12, round 28 #16; D-52): `/privacy`, `/terms` and
+ * `/copyright`.
  *
  * **Contract values, not the board's**: the 620 document measure
  * (`max-w-column`) and the `lead` step. At the desk the contents sit in a
  * sticky column to the left; on the phone they are a plain list under the
- * heading. Every H2 has an id and ends with "↑ Contents". No accordions;
+ * heading. Every H2 has an id and, below the desk, ends with "Back to
+ * contents" (round 28 #16: no arrow, which is not a product glyph; at the
+ * desk the column is in view, so the link is not drawn). No accordions;
  * inline links are underlined. A signed-in reader reads in the signed-in
  * shell, anyone else in the signed-out one.
  */
@@ -84,9 +86,9 @@ function ReadingPage({ doc }: Readonly<{ doc: LegalDoc }>): JSX.Element {
             ))}
             <a
               href="#contents"
-              className="target self-start text-small text-muted underline underline-offset-4"
+              className="target self-start text-small text-ink underline underline-offset-4 desk:hidden"
             >
-              ↑ Contents
+              Back to contents
             </a>
           </section>
         ))}
@@ -108,7 +110,7 @@ interface Section {
 
 /**
  * The blocks under the title before the first H2, then each H2 with what
- * follows it up to the next — so "↑ Contents" closes a section rather than
+ * follows it up to the next — so "Back to contents" closes a section rather than
  * being a block of its own in the text.
  */
 function sectionsOf(blocks: readonly Block[]): {
@@ -153,12 +155,18 @@ function BlockView({ block }: Readonly<{ block: BodyBlock }>): JSX.Element {
     case "list": {
       return (
         <ul className="m-0 flex list-disc flex-col gap-2 pl-6">
-          {block.items.map((item, index) => (
-            <li key={index}>
-              <Inlines inlines={item} />
-            </li>
-          ))}
+          <Items items={block.items} />
         </ul>
+      );
+    }
+    case "numbered": {
+      return (
+        <ol
+          start={block.start}
+          className="m-0 flex list-decimal flex-col gap-2 pl-6"
+        >
+          <Items items={block.items} />
+        </ol>
       );
     }
     // The last kind is the default, so a block of no kind at all is drawn
@@ -167,6 +175,20 @@ function BlockView({ block }: Readonly<{ block: BodyBlock }>): JSX.Element {
       return <TableView head={block.head} rows={block.rows} />;
     }
   }
+}
+
+function Items({
+  items,
+}: Readonly<{ items: readonly (readonly Inline[])[] }>): JSX.Element {
+  return (
+    <>
+      {items.map((item, index) => (
+        <li key={index}>
+          <Inlines inlines={item} />
+        </li>
+      ))}
+    </>
+  );
 }
 
 function TableView({

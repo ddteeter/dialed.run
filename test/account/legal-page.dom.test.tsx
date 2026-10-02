@@ -13,7 +13,7 @@ import { parseLegalDoc } from "../../src/modules/account/legal-markdown";
 
 /**
  * The reading page (ACC-13; round 26 #14, round 27 #5): contract type,
- * contents that link every H2, "↑ Contents" closing each section, and the
+ * contents that link every H2, "Back to contents" closing each section, and the
  * shell that fits the reader.
  */
 async function renderWithRouter(element: ReactElement) {
@@ -44,6 +44,9 @@ const DOC = parseLegalDoc(
     "## Your choices",
     "",
     "> A note.",
+    "",
+    "2. Second step.",
+    "3. Third step.",
     "",
     "| What | How long |",
     "| ---- | -------- |",
@@ -96,7 +99,7 @@ describe("LegalPage", () => {
     for (const link of links) expect(link).toHaveClass("underline");
   });
 
-  it("gives every H2 its id and closes its section with ↑ Contents", async () => {
+  it("gives every H2 its id and closes its section with Back to contents", async () => {
     await renderWithRouter(
       <LegalPage doc={DOC} unreadCount={undefined} bell={bell} />,
     );
@@ -108,13 +111,15 @@ describe("LegalPage", () => {
     const section = heading.closest("section");
     expect(section).toHaveAttribute("aria-labelledby", "who-we-are");
     const back = within(section ?? document.body).getAllByRole("link", {
-      name: "↑ Contents",
+      name: "Back to contents",
     });
     expect(back).toHaveLength(1);
     expect(back[0]).toHaveAttribute("href", "#contents");
+    // Round 28 #16: below the desk only, where the contents sit above.
+    expect(back[0]).toHaveClass("text-small", "underline", "desk:hidden");
     // The last thing in the section.
     expect(section?.lastElementChild).toBe(back[0]);
-    expect(screen.getAllByRole("link", { name: "↑ Contents" })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: "Back to contents" })).toHaveLength(2);
   });
 
   it("keeps what comes before the first H2 out of any section", async () => {
@@ -164,6 +169,15 @@ describe("LegalPage", () => {
       "#your-choices",
     );
     expect(screen.getByText("A note.").tagName).toBe("BLOCKQUOTE");
+    const numbered = screen.getByText("Second step.").closest("ol");
+    expect(numbered).toHaveAttribute("start", "2");
+    expect(numbered).toHaveClass("list-decimal");
+    if (numbered === null) throw new Error("no numbered list");
+    expect(
+      within(numbered)
+        .getAllByRole("listitem")
+        .map((item) => item.textContent),
+    ).toEqual(["Second step.", "Third step."]);
     const table = screen.getByRole("table");
     expect(
       within(table)
