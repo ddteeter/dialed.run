@@ -115,15 +115,11 @@ export function ReportAffordance({
         // on the write side.
         canBlock={subject.type === "profile" && subject.authorId !== undefined}
         // The server refuses an unconfirmed reporter too, for a page whose
-        // answer about the address is older than the server's: W1 gives
-        // way to the confirm sheet. W1's own "Report sent." is set in a
-        // dialog that has just closed, which nothing announces.
+        // answer about the address is older than the server's: the confirm
+        // sheet opens, and W1 shuts as it does on any answer (`onFiled`).
         fileReport={async (input) => {
           const outcome = await fileReport(input);
-          if (outcome.status === "unverified") {
-            close();
-            guard.ask();
-          }
+          if (outcome.status === "unverified") guard.ask();
           return outcome;
         }}
         onFiled={close}
