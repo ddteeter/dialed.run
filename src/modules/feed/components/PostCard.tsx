@@ -38,7 +38,7 @@ export interface PostCardProps {
   /**
   The screen's "Confirm your email first", which Useful waits on.
   */
-  guard: ControlGuard;
+  guard: ControlGuard<"useful">;
   onStatus: (status: string) => void;
 }
 

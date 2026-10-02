@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
@@ -12,7 +13,8 @@ import type {
   OtherProfile,
   OwnProfile as OwnProfileData,
 } from "../../src/modules/feed/profiles";
-import { CONFIRMED, MILES, renderFeedScreen } from "./feed-fixtures";
+import type { ControlGuard } from "../../src/ui";
+import { CONFIRM_FIRST, MILES, renderFeedScreen } from "./feed-fixtures";
 
 /**
  * Round 26 #7's handle placements (FEED-10), `/@handle`'s two pages, and
@@ -80,22 +82,62 @@ const ravi: OtherProfile = {
 
 describe("RunnerAtHandle", () => {
   it("shows the runner holding the handle, with the report control made for them", async () => {
-    const reportFor = vi.fn((profile: OtherProfile) => (
-      <button type="button">Report {profile.userId}</button>
-    ));
+    const reportFor = vi.fn(
+      (profile: OtherProfile, guard: ControlGuard<"report">) => (
+        <button
+          type="button"
+          onClick={() => {
+            guard.ask("report");
+          }}
+        >
+          Report {profile.userId}
+        </button>
+      ),
+    );
     await renderFeedScreen(
       <RunnerAtHandle
         found={{ kind: "runner", profile: ravi, isFollowing: true }}
         follow={done}
         unfollow={done}
         reportAffordanceFor={reportFor}
+        confirmFirst={CONFIRM_FIRST}
       />,
     );
 
     expect(screen.getByRole("heading", { name: "@ravi_k" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Following" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Report 01RAVI" })).toBeVisible();
-    expect(reportFor).toHaveBeenCalledWith(ravi);
+    expect(reportFor).toHaveBeenCalledOnce();
+    expect(reportFor.mock.calls[0]?.[0]).toBe(ravi);
+  });
+
+  it("opens its confirm sheet when the report control is refused (round 26 #11; SAF-15)", async () => {
+    const user = userEvent.setup();
+    await renderFeedScreen(
+      <RunnerAtHandle
+        found={{ kind: "runner", profile: ravi, isFollowing: true }}
+        follow={done}
+        unfollow={done}
+        reportAffordanceFor={(profile, guard) => (
+          <button
+            type="button"
+            onClick={() => {
+              guard.ask("report");
+            }}
+          >
+            Report {profile.userId}
+          </button>
+        )}
+        confirmFirst={CONFIRM_FIRST}
+      />,
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Report 01RAVI" }));
+
+    expect(
+      screen.getByRole("dialog", { name: "Confirm your email first" }),
+    ).toHaveTextContent("Opened from report");
   });
 
   it("says only that an old handle's runner changed their name, with the way back", async () => {
@@ -106,6 +148,7 @@ describe("RunnerAtHandle", () => {
         follow={done}
         unfollow={done}
         reportAffordanceFor={reportFor}
+        confirmFirst={CONFIRM_FIRST}
       />,
     );
 
@@ -128,6 +171,7 @@ describe("RunnerAtHandle", () => {
         follow={done}
         unfollow={done}
         reportAffordanceFor={reportFor}
+        confirmFirst={CONFIRM_FIRST}
       />,
     );
 
@@ -173,7 +217,7 @@ function entry(isUnderReview: boolean): Entry {
 async function detailFor(isUnderReview: boolean) {
   await renderFeedScreen(
     <EntryDetail
-      confirmFirst={CONFIRMED}
+      confirmFirst={CONFIRM_FIRST}
       units={MILES}
       entry={entry(isUnderReview)}
       viewerId="01USER"

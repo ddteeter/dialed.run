@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
-import { Icon } from "../../../ui";
+import { Icon, useControlGate } from "../../../ui";
+import type { ControlGate, ControlGuard } from "../../../ui";
 import type { OtherProfile as OtherProfileData } from "../profiles";
 import type { ProfileAtHandle } from "../profiles";
 import type { FollowAction } from "./Follow";
@@ -22,6 +23,7 @@ export function RunnerAtHandle({
   follow,
   unfollow,
   reportAffordanceFor,
+  confirmFirst,
 }: Readonly<{
   found: Exclude<ProfileAtHandle, { kind: "own" }>;
   follow: FollowAction;
@@ -29,10 +31,21 @@ export function RunnerAtHandle({
   /**
    * W1's report control for the runner shown, composed by the route for
    * the reason `OtherProfile` gives — this module may not reach
-   * `modules/safety`. A function, because only a found runner has one.
+   * `modules/safety`. A function, because only a found runner has one,
+   * and because it is handed this screen's confirm sheet to open.
    */
-  reportAffordanceFor: (profile: OtherProfileData) => ReactNode;
+  reportAffordanceFor: (
+    profile: OtherProfileData,
+    guard: ControlGuard<"report">,
+  ) => ReactNode;
+  /**
+   * Report waits for a confirmed address (round 26 #11; SAF-15): the
+   * route composes the "Confirm your email first" sheet the server's
+   * refusal opens, and this screen renders it.
+   */
+  confirmFirst: ControlGate<"report">;
 }>) {
+  const { guard, sheet } = useControlGate(confirmFirst);
   if (found.kind === "changed") {
     return <NoRunnerHere>This runner changed their name.</NoRunnerHere>;
   }
@@ -40,13 +53,16 @@ export function RunnerAtHandle({
     return <NoRunnerHere>{RUNNER_GONE}</NoRunnerHere>;
   }
   return (
-    <OtherProfile
-      profile={found.profile}
-      isFollowing={found.isFollowing}
-      follow={follow}
-      unfollow={unfollow}
-      reportAffordance={reportAffordanceFor(found.profile)}
-    />
+    <>
+      <OtherProfile
+        profile={found.profile}
+        isFollowing={found.isFollowing}
+        follow={follow}
+        unfollow={unfollow}
+        reportAffordance={reportAffordanceFor(found.profile, guard)}
+      />
+      {sheet}
+    </>
   );
 }
 

@@ -33,20 +33,23 @@ export const Route = createFileRoute("/feed/entry/$entryId")({
     requireSignedIn(await getSession());
   },
   loader: async ({ params }) => {
-    const session = requireSignedIn(await getSession());
-    const entry = orBackToFeed(
-      await entryDetailQuery({ data: { entryId: params.entryId } }),
-    );
+    const [session, found, units, bell, account] = await Promise.all([
+      getSession(),
+      entryDetailQuery({ data: { entryId: params.entryId } }),
+      viewerUnitsQuery(),
+      bellStateFn(),
+      ownAccountQuery(),
+    ]);
+    const viewerId = requireSignedIn(session).user.id;
+    const entry = orBackToFeed(found);
     return {
       entry,
-      viewerId: session.user.id,
-      units: await viewerUnitsQuery(),
-      bell: await bellStateFn(),
-      account: await ownAccountQuery(),
-      shouldPromptVerdict: await shouldAskForVerdict(
-        entry,
-        session.user.id,
-        () => verdictPromptQuery({ data: { entryId: params.entryId } }),
+      viewerId,
+      units,
+      bell,
+      account,
+      shouldPromptVerdict: await shouldAskForVerdict(entry, viewerId, () =>
+        verdictPromptQuery({ data: { entryId: params.entryId } }),
       ),
     };
   },
@@ -68,8 +71,8 @@ function EntryDetailPage() {
         shouldPromptVerdict={shouldPromptVerdict}
         recordPrompted={recordVerdictPromptedAction}
         setUseful={setUsefulAction}
-        confirmFirst={confirmEmailGate(account, resendConfirmationFn, "useful")}
-        reportAffordance={
+        confirmFirst={confirmEmailGate(account, resendConfirmationFn)}
+        reportAffordance={(guard) => (
           <ReportAffordance
             subject={{
               type: "entry",
@@ -80,13 +83,9 @@ function EntryDetailPage() {
             }}
             viewerId={viewerId}
             fileReport={fileReportAction}
-            confirmFirst={confirmEmailGate(
-              account,
-              resendConfirmationFn,
-              "report",
-            )}
+            guard={guard}
           />
-        }
+        )}
       />
       <RetractEntry
         entry={entry}

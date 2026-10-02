@@ -9,7 +9,7 @@ import type { FeedItem } from "../../src/modules/feed/feed";
 import type { ControlGuard } from "../../src/ui";
 import { pointConditions } from "../feed/conditions-fixture";
 import {
-  CONFIRMED_GUARD,
+  ANY_GUARD,
   feedItem,
   MILES,
   NOW,
@@ -29,7 +29,7 @@ async function card(
   overrides: Partial<FeedItem> = {},
   setUseful: Setter = nothing,
   onStatus: (status: string) => void = vi.fn(),
-  guard: ControlGuard = CONFIRMED_GUARD,
+  guard: ControlGuard<"useful"> = ANY_GUARD,
 ) {
   await renderFeedScreen(
     <PostCard
@@ -397,42 +397,29 @@ describe("PostCard: the author's under-review marker (R-62, D-67)", () => {
 });
 
 describe("PostCard: Useful waits for a confirmed address (round 26 #11; seam 7)", () => {
-  it("draws at full strength, and an unconfirmed press asks instead of marking", async () => {
-    const user = userEvent.setup();
-    const set = vi.fn<Setter>(nothing);
-    const ask = vi.fn();
-    await card({ usefulCount: 2 }, set, vi.fn(), { canAct: false, ask });
-
-    // Rule 07, "not yet": the same control, never disabled.
-    expect(useful()).not.toHaveAttribute("aria-disabled");
-    await user.click(useful());
-
-    expect(ask).toHaveBeenCalledOnce();
-    expect(set).not.toHaveBeenCalled();
-    expect(useful()).toHaveAttribute("aria-pressed", "false");
-    expect(useful()).toHaveTextContent(/^♡2Useful\[Noting\]$/u);
-  });
-
-  it("asks when the server refuses, and leaves the mark and the count as they were", async () => {
-    // A page whose answer about the address is older than the server's.
+  it("asks the server on every press, and opens the sheet only on its refusal", async () => {
+    // Drawn at full strength (rule 07, "not yet"), and the server decides:
+    // the page's answer about the address is as old as its loader.
     const user = userEvent.setup();
     const ask = vi.fn();
     const onStatus = vi.fn();
-    await card(
-      { usefulCount: 2 },
-      () => Promise.resolve({ status: "unverified" }),
-      onStatus,
-      { canAct: true, ask },
-    );
+    const set = vi.fn<Setter>(() => Promise.resolve({ status: "unverified" }));
+    await card({ entryId: "01A", usefulCount: 2 }, set, onStatus, { ask });
+    expect(useful()).not.toHaveAttribute("aria-disabled");
 
     await user.click(useful());
 
+    expect(set).toHaveBeenCalledWith({
+      data: { entryId: "01A", useful: true },
+    });
     await waitFor(() => {
-      expect(ask).toHaveBeenCalledOnce();
+      expect(ask).toHaveBeenCalledWith("useful");
     });
     await waitFor(() => {
       expect(useful()).not.toHaveAttribute("aria-busy");
     });
+    expect(ask).toHaveBeenCalledOnce();
+    // Nothing changed, so the mark and the count stay as they were.
     expect(useful()).toHaveAttribute("aria-pressed", "false");
     expect(useful()).toHaveTextContent(/^♡2Useful\[Noting\]$/u);
     // A refusal is an answer, not a failure: no band, nothing announced.
@@ -440,10 +427,10 @@ describe("PostCard: Useful waits for a confirmed address (round 26 #11; seam 7)"
     expect(onStatus).toHaveBeenLastCalledWith("");
   });
 
-  it("does not ask a confirmed runner anything", async () => {
+  it("asks a runner the server says yes to nothing", async () => {
     const user = userEvent.setup();
     const ask = vi.fn();
-    await card({ usefulCount: 0 }, nothing, vi.fn(), { canAct: true, ask });
+    await card({ usefulCount: 0 }, nothing, vi.fn(), { ask });
 
     await user.click(useful());
 

@@ -43,10 +43,17 @@ const schema = z.object({
 function Harness({
   action,
   onSuccess,
+  refusal,
   withLabels = true,
 }: Readonly<{
   action: (values: z.output<typeof schema>) => Promise<unknown>;
   onSuccess?: (() => void) | undefined;
+  refusal?:
+    | {
+        matches: (result: unknown) => boolean;
+        answer: (result: unknown) => void;
+      }
+    | undefined;
   /**
    * `labels` is optional on the hook; without it a row is named by its key.
    */
@@ -60,6 +67,7 @@ function Harness({
     successMessage: "Saved.",
     ...(withLabels && { labels: { name: "Name", brand: "Brand" } }),
     ...(onSuccess !== undefined && { onSuccess }),
+    ...(refusal !== undefined && { refusal }),
   });
 
   return (
@@ -837,6 +845,105 @@ describe("the live region starts empty", () => {
     render(<Harness action={() => Promise.resolve(undefined)} />);
 
     expect(screen.getByRole("status")).toHaveTextContent("");
+  });
+});
+
+/**
+The server's "no" that a screen answers itself, as `refusal` matches it.
+*/
+const REFUSED = { status: "unverified" } as const;
+
+/**
+Longer than the hook's announce-then-move grace: whatever a success would do has had its chance.
+*/
+async function settle(): Promise<void> {
+  await new Promise((resolve) => {
+    globalThis.setTimeout(resolve, DURATION.instant * 3);
+  });
+}
+
+describe("a refusal is neither a success nor a failure (seam 7)", () => {
+  it("hands the answer to the screen, announces nothing, runs no onSuccess, and draws no band", async () => {
+    const user = userEvent.setup();
+    const answer = vi.fn();
+    const onSuccess = vi.fn();
+    render(
+      <Harness
+        action={() => Promise.resolve(REFUSED)}
+        onSuccess={onSuccess}
+        refusal={{ matches: (result) => result === REFUSED, answer }}
+      />,
+    );
+
+    await fillValid(user);
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(answer).toHaveBeenCalledWith(REFUSED);
+    });
+    await settle();
+    expect(answer).toHaveBeenCalledOnce();
+    // Nothing was saved, so "Saved." is never said; nothing failed, so
+    // there is no band and no "Nothing saved." either.
+    expect(screen.getByRole("status").textContent).toBe("");
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: /try again/i })).toBeNull();
+    // And it comes to rest with what was typed, ready to send again.
+    expect(screen.getByRole("button", { name: /save/i })).not.toHaveAttribute(
+      "aria-busy",
+    );
+    expect(screen.getByLabelText("Name")).toHaveValue("Houdini");
+    expect(screen.getByLabelText("Name")).not.toHaveAttribute("readonly");
+  });
+
+  it("can be sent again once refused", async () => {
+    const user = userEvent.setup();
+    const answer = vi.fn();
+    const action = vi
+      .fn<(values: z.output<typeof schema>) => Promise<unknown>>()
+      .mockResolvedValueOnce(REFUSED)
+      .mockResolvedValueOnce(undefined);
+    render(
+      <Harness
+        action={action}
+        refusal={{ matches: (result) => result === REFUSED, answer }}
+      />,
+    );
+
+    await fillValid(user);
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    await waitFor(() => {
+      expect(answer).toHaveBeenCalledOnce();
+    });
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Saved.");
+    });
+    expect(action).toHaveBeenCalledTimes(2);
+    expect(answer).toHaveBeenCalledOnce();
+  });
+
+  it("lets an answer it does not match through as the success it is", async () => {
+    const user = userEvent.setup();
+    const answer = vi.fn();
+    const onSuccess = vi.fn();
+    render(
+      <Harness
+        action={() => Promise.resolve({ status: "filed" })}
+        onSuccess={onSuccess}
+        refusal={{ matches: (result) => result === REFUSED, answer }}
+      />,
+    );
+
+    await fillValid(user);
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalledOnce();
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Saved.");
+    expect(answer).not.toHaveBeenCalled();
   });
 });
 

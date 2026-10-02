@@ -1,7 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { ConfirmEmailBand } from "../../modules/account/components/ConfirmEmailBand";
-import { resendConfirmationFn } from "../../modules/account/functions";
+import {
+  ownAccountQuery,
+  resendConfirmationFn,
+} from "../../modules/account/functions";
 import { getSession } from "../../modules/auth/functions";
 import { OwnProfile } from "../../modules/feed/components/OwnProfile";
 import { ownProfileQuery } from "../../modules/feed/functions";
@@ -13,25 +16,21 @@ export const Route = createFileRoute("/feed/me")({
   beforeLoad: async () => {
     requireSignedIn(await getSession());
   },
-  loader: async () => ({
-    you: await ownProfileQuery(),
-    bell: await bellStateFn(),
-  }),
+  // Three independent reads, in parallel, as the tuple they arrive in.
+  loader: () =>
+    Promise.all([ownProfileQuery(), bellStateFn(), ownAccountQuery()]),
   component: OwnProfilePage,
 });
 
 function OwnProfilePage() {
-  const { you, bell } = Route.useLoaderData();
+  const [profile, bell, account] = Route.useLoaderData();
 
   return (
     <BelledLayout {...bell}>
       <OwnProfile
-        profile={you.profile}
+        profile={profile}
         confirmBand={
-          <ConfirmEmailBand
-            account={you.account}
-            resend={resendConfirmationFn}
-          />
+          <ConfirmEmailBand account={account} resend={resendConfirmationFn} />
         }
       />
     </BelledLayout>

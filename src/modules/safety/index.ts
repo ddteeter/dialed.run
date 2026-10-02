@@ -98,8 +98,10 @@ export {
   reconcileUnhiddenReports,
   reportedSubjectIdsFor,
   type FileReportInput,
+  type FileReportOutcome,
   type FileReportResult,
   type ReconcileReport,
+  type ReporterGate,
 } from "./reports";
 
 export {

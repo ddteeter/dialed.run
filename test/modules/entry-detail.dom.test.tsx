@@ -6,14 +6,8 @@ import { describe, expect, it, vi } from "vitest";
 import { EntryDetail } from "../../src/modules/feed/components/EntryDetail";
 import type { SetUsefulFn } from "../../src/modules/feed/components/useful-reaction";
 import type { entryDetailForViewer } from "../../src/modules/feed/entries";
-import type { ControlGate } from "../../src/ui";
 import { pointConditions } from "../feed/conditions-fixture";
-import {
-  CONFIRMED,
-  MILES,
-  renderFeedScreen,
-  UNCONFIRMED,
-} from "./feed-fixtures";
+import { CONFIRM_FIRST, MILES, renderFeedScreen } from "./feed-fixtures";
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
 type Item = Entry["items"][number];
@@ -77,12 +71,11 @@ function detail(
     recordPrompted?: () => Promise<unknown>;
     setUseful?: SetUsefulFn;
     report?: boolean;
-    confirmFirst?: ControlGate;
   } = {},
 ) {
   return (
     <EntryDetail
-      confirmFirst={options.confirmFirst ?? CONFIRMED}
+      confirmFirst={CONFIRM_FIRST}
       units={MILES}
       entry={entry(overrides)}
       viewerId={"viewerId" in options ? options.viewerId : "01STRANGER"}
@@ -90,9 +83,20 @@ function detail(
       recordPrompted={options.recordPrompted ?? nothing}
       setUseful={options.setUseful ?? marked}
       reportAffordance={
-        options.report === false ? undefined : (
-          <button type="button">Report this entry</button>
-        )
+        options.report === false
+          ? undefined
+          : (guard) => (
+              // A stand-in for safety's control, refused as the server
+              // refuses an unconfirmed reporter.
+              <button
+                type="button"
+                onClick={() => {
+                  guard.ask("report");
+                }}
+              >
+                Report this entry
+              </button>
+            )
       }
     />
   );
@@ -457,46 +461,67 @@ describe("EntryDetail: Useful and Report", () => {
   });
 });
 
-describe("EntryDetail: Useful waits for a confirmed address (round 26 #11; seam 7)", () => {
-  it("opens the confirm sheet instead of marking", async () => {
+function sheet() {
+  return screen.queryByRole("dialog", { name: "Confirm your email first" });
+}
+
+describe("EntryDetail: Useful and report wait for a confirmed address (round 26 #11; seam 7)", () => {
+  it("asks the server, and opens the confirm sheet on its refusal", async () => {
     const user = userEvent.setup();
-    const setUseful = vi.fn(marked);
-    await renderFeedScreen(
-      detail({}, { confirmFirst: UNCONFIRMED, setUseful }),
+    const setUseful = vi.fn<SetUsefulFn>(() =>
+      Promise.resolve({ status: "unverified" }),
     );
-    expect(screen.queryByRole("dialog")).toBeNull();
+    await renderFeedScreen(detail({}, { setUseful }));
+    expect(sheet()).toBeNull();
 
     await user.click(screen.getByRole("button", { name: /Useful/u }));
 
-    expect(
-      screen.getByRole("dialog", { name: "Confirm your email first" }),
-    ).toBeVisible();
-    expect(setUseful).not.toHaveBeenCalled();
+    expect(setUseful).toHaveBeenCalledOnce();
+    await waitFor(() => {
+      expect(sheet()).toHaveTextContent("Opened from useful");
+    });
     expect(screen.getByRole("button", { name: /Useful/u })).toHaveAttribute(
       "aria-pressed",
       "false",
     );
 
     await user.click(screen.getByRole("button", { name: "Not now" }));
-    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(sheet()).toBeNull();
   });
 
-  it("opens it when the server refuses, too", async () => {
+  it("marks for a runner the server says yes to, and opens nothing", async () => {
+    const user = userEvent.setup();
+    await renderFeedScreen(detail());
+
+    await user.click(screen.getByRole("button", { name: /Useful/u }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Useful/u })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+    });
+    expect(sheet()).toBeNull();
+  });
+
+  it("has one sheet for the screen, which says whether Useful or report opened it", async () => {
     const user = userEvent.setup();
     await renderFeedScreen(
       detail(
         {},
-        {
-          confirmFirst: { ...UNCONFIRMED, canAct: true },
-          setUseful: () => Promise.resolve({ status: "unverified" }),
-        },
+        { setUseful: () => Promise.resolve({ status: "unverified" }) },
       ),
     );
 
-    await user.click(screen.getByRole("button", { name: /Useful/u }));
+    await user.click(screen.getByRole("button", { name: "Report this entry" }));
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(sheet()).toHaveTextContent("Opened from report");
+    await user.click(screen.getByRole("button", { name: "Not now" }));
 
-    expect(
-      await screen.findByRole("dialog", { name: "Confirm your email first" }),
-    ).toBeVisible();
+    await user.click(screen.getByRole("button", { name: /Useful/u }));
+    await waitFor(() => {
+      expect(sheet()).toHaveTextContent("Opened from useful");
+    });
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
   });
 });

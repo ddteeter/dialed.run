@@ -22,9 +22,14 @@ function renderSheet(overrides: Partial<SheetProps> = {}) {
   // would also let a wrong call shape pass unnoticed.
   const fileReport: SheetProps["fileReport"] = vi
     .fn<SheetProps["fileReport"]>()
-    .mockResolvedValue({ reporterCount: 1 });
+    .mockResolvedValue({
+      status: "filed",
+      reporterCount: 1,
+      hiddenPendingReview: false,
+    });
   const onFiled = vi.fn();
   const onClose = vi.fn();
+  const onRefused = vi.fn();
   render(
     <ReportSheet
       open
@@ -38,10 +43,11 @@ function renderSheet(overrides: Partial<SheetProps> = {}) {
       canBlock
       fileReport={fileReport}
       onFiled={onFiled}
+      onRefused={onRefused}
       {...overrides}
     />,
   );
-  return { fileReport, onFiled, onClose };
+  return { fileReport, onFiled, onClose, onRefused };
 }
 
 describe("the sheet names whose entry it is (round 26 #7)", () => {
@@ -253,7 +259,7 @@ describe("filing a report", () => {
 
   it("says the report was sent, in the artboard's words", async () => {
     const user = userEvent.setup();
-    renderSheet();
+    const { onRefused } = renderSheet();
 
     await user.click(screen.getByRole("radio", { name: "Something else" }));
     await user.click(screen.getByRole("button", { name: "Send report" }));
@@ -263,6 +269,30 @@ describe("filing a report", () => {
     await waitFor(() => {
       expect(screen.getByText("Report sent.")).toBeInTheDocument();
     });
+    expect(onRefused).not.toHaveBeenCalled();
+  });
+
+  it("hands a refused reporter to the caller, and says nothing was sent (round 26 #11; SAF-15)", async () => {
+    // The server refuses a reporter whose address is not confirmed: an
+    // answer, not a failure — and not a success either.
+    const user = userEvent.setup();
+    const { onFiled, onClose, onRefused } = renderSheet({
+      fileReport: vi
+        .fn<SheetProps["fileReport"]>()
+        .mockResolvedValue({ status: "unverified" }),
+    });
+
+    await user.click(screen.getByRole("radio", { name: "Something else" }));
+    await user.click(screen.getByRole("button", { name: "Send report" }));
+
+    await waitFor(() => {
+      expect(onRefused).toHaveBeenCalledOnce();
+    });
+    expect(screen.getByRole("status").textContent).toBe("");
+    expect(onFiled).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    // No failure band: nothing went wrong.
+    expect(screen.queryByRole("button", { name: /Try again/u })).toBeNull();
   });
 
   it("names the fields in the summary the way the sheet labels them", async () => {

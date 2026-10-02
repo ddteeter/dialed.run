@@ -70,7 +70,7 @@ function FeedPage() {
         confirmBand={
           <ConfirmEmailBand account={account} resend={resendConfirmationFn} />
         }
-        confirmFirst={confirmEmailGate(account, resendConfirmationFn, "useful")}
+        confirmFirst={confirmEmailGate(account, resendConfirmationFn)}
         conditions={{
           home,
           locate: geolocate,

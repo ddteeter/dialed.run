@@ -19,10 +19,10 @@ export interface UsefulReactionInput {
   viewerHasReacted: boolean;
   setUseful: SetUsefulFn;
   /**
-   * Useful waits for a confirmed address (round 26 #11; seam 7): an
-   * unconfirmed runner's press opens "Confirm your email first" instead.
+   * Useful waits for a confirmed address (round 26 #11; seam 7): the
+   * server's refusal opens the screen's "Confirm your email first".
    */
-  guard: ControlGuard;
+  guard: ControlGuard<"useful">;
 }
 
 /**
@@ -39,10 +39,11 @@ export interface UsefulReactionInput {
  * §4a names "Not marked" for Useful, and taking one back that fails is
  * still marked (design-deltas item 27).
  *
- * **An unconfirmed runner's press never reaches the server**: it opens
- * the sheet. The server's own refusal opens the same sheet, for a page
- * whose answer about the address is older than the server's — the mark
- * and the count stay as they were, because nothing changed.
+ * **Every press asks the server**, whatever the page thinks of the
+ * runner's address: a page's answer is as old as its loader, and a runner
+ * who confirmed in another tab must not be told to confirm. The server's
+ * refusal opens the screen's sheet, and the mark and the count stay as
+ * they were, because nothing changed.
  */
 export function useUsefulReaction({
   entryId,
@@ -59,19 +60,12 @@ export function useUsefulReaction({
     action: async (isUseful: boolean) => {
       const result = await setUseful({ data: { entryId, useful: isUseful } });
       if (result.status === "unverified") {
-        guard.ask();
+        guard.ask("useful");
         return;
       }
       setState({ count: result.count, reacted: result.useful });
     },
     kicker: useful.reacted ? "Still marked" : "Not marked",
   });
-  return {
-    useful,
-    markUseful,
-    press: () => {
-      if (guard.canAct) void markUseful.run(!useful.reacted);
-      else guard.ask();
-    },
-  };
+  return { useful, markUseful };
 }

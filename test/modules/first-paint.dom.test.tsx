@@ -4,7 +4,13 @@ import { z } from "zod";
 import { EntryDetail } from "../../src/modules/feed/components/EntryDetail";
 import { Feed } from "../../src/modules/feed/components/Feed";
 import { OtherProfile } from "../../src/modules/feed/components/OtherProfile";
-import { CONFIRMED, feedItem, firstPaintOf, MILES, NOW } from "./feed-fixtures";
+import {
+  CONFIRM_FIRST,
+  feedItem,
+  firstPaintOf,
+  MILES,
+  NOW,
+} from "./feed-fixtures";
 
 /**
  * A screen's one status region says nothing in the page the server sends
@@ -22,7 +28,7 @@ describe("the status region on first paint", () => {
     const html = await firstPaintOf(
       <Feed
         confirmBand={undefined}
-        confirmFirst={CONFIRMED}
+        confirmFirst={CONFIRM_FIRST}
         items={[feedItem()]}
         followeeCount={1}
         now={NOW}
@@ -47,7 +53,7 @@ describe("the status region on first paint", () => {
   it("is empty on D", async () => {
     const html = await firstPaintOf(
       <EntryDetail
-        confirmFirst={CONFIRMED}
+        confirmFirst={CONFIRM_FIRST}
         units={MILES}
         viewerId="01STRANGER"
         shouldPromptVerdict={false}

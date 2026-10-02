@@ -14,7 +14,7 @@ import {
   pendingReviewQueue,
   reportedSubjectIdsFor,
 } from "../../src/modules/safety";
-import { fileConfirmedReport } from "../../src/modules/safety/confirmed-report";
+import { isVerified } from "../../src/modules/account";
 
 import {
   addAccount,
@@ -22,6 +22,7 @@ import {
   makeRun,
   makeUser,
   resetSafetyTables,
+  confirmedReporter,
 } from "./helpers";
 import { nowSeconds } from "../../src/lib/now";
 
@@ -56,12 +57,15 @@ describe("the distinct-reporter threshold", () => {
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
       const reporter = await makeUser();
       results.push(
-        await fileReport({
-          reporterId: reporter,
-          subjectType: "entry",
-          subjectId: entryId,
-          reason: "explicit",
-        }),
+        await fileReport(
+          {
+            reporterId: reporter,
+            subjectType: "entry",
+            subjectId: entryId,
+            reason: "explicit",
+          },
+          confirmedReporter,
+        ),
       );
     }
 
@@ -80,12 +84,15 @@ describe("the distinct-reporter threshold", () => {
     const entryId = await reportableEntry();
     const before = nowSeconds();
 
-    await fileReport({
-      reporterId: await makeUser(),
-      subjectType: "entry",
-      subjectId: entryId,
-      reason: "spam",
-    });
+    await fileReport(
+      {
+        reporterId: await makeUser(),
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "spam",
+      },
+      confirmedReporter,
+    );
 
     const [row] = await core()
       .select({ createdAt: reports.createdAt })
@@ -104,12 +111,15 @@ describe("the distinct-reporter threshold", () => {
     // second queue row for it.
     const entryId = await reportableEntry();
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
-      await fileReport({
-        reporterId: await makeUser(),
-        subjectType: "entry",
-        subjectId: entryId,
-        reason: "spam",
-      });
+      await fileReport(
+        {
+          reporterId: await makeUser(),
+          subjectType: "entry",
+          subjectId: entryId,
+          reason: "spam",
+        },
+        confirmedReporter,
+      );
     }
     const [queued] = await pendingReviewQueue();
     if (!queued) throw new Error("nothing queued");
@@ -123,12 +133,15 @@ describe("the distinct-reporter threshold", () => {
     const reporter = await makeUser();
 
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
-      const result = await fileReport({
-        reporterId: reporter,
-        subjectType: "entry",
-        subjectId: entryId,
-        reason: "spam",
-      });
+      const result = await fileReport(
+        {
+          reporterId: reporter,
+          subjectType: "entry",
+          subjectId: entryId,
+          reason: "spam",
+        },
+        confirmedReporter,
+      );
       // Every repeat reports the same truth rather than erroring: a
       // double-click and a retried POST are indistinguishable (law 8b).
       expect(result).toEqual({
@@ -149,12 +162,15 @@ describe("the distinct-reporter threshold", () => {
 
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
       const reporter = await makeUser();
-      await fileReport({
-        reporterId: reporter,
-        subjectType: "entry",
-        subjectId: n === 0 ? second : first,
-        reason: "other",
-      });
+      await fileReport(
+        {
+          reporterId: reporter,
+          subjectType: "entry",
+          subjectId: n === 0 ? second : first,
+          reason: "other",
+        },
+        confirmedReporter,
+      );
     }
 
     // Two reporters on `first` and one on `second` — neither reaches three,
@@ -171,18 +187,24 @@ describe("the distinct-reporter threshold", () => {
     const sharedId = await reportableEntry();
     const reporter = await makeUser();
 
-    await fileReport({
-      reporterId: reporter,
-      subjectType: "entry",
-      subjectId: sharedId,
-      reason: "explicit",
-    });
-    const asProduct = await fileReport({
-      reporterId: reporter,
-      subjectType: "product",
-      subjectId: sharedId,
-      reason: "spam",
-    });
+    await fileReport(
+      {
+        reporterId: reporter,
+        subjectType: "entry",
+        subjectId: sharedId,
+        reason: "explicit",
+      },
+      confirmedReporter,
+    );
+    const asProduct = await fileReport(
+      {
+        reporterId: reporter,
+        subjectType: "product",
+        subjectId: sharedId,
+        reason: "spam",
+      },
+      confirmedReporter,
+    );
 
     expect(asProduct).toMatchObject({ status: "filed", reporterCount: 1 });
     expect(await distinctReporterCount("entry", sharedId)).toBe(1);
@@ -198,18 +220,24 @@ describe("the reporter's own hide (W1)", () => {
     const me = await makeUser();
     const someoneElse = await makeUser();
 
-    await fileReport({
-      reporterId: me,
-      subjectType: "entry",
-      subjectId: mine,
-      reason: "harassment",
-    });
-    await fileReport({
-      reporterId: someoneElse,
-      subjectType: "entry",
-      subjectId: theirs,
-      reason: "harassment",
-    });
+    await fileReport(
+      {
+        reporterId: me,
+        subjectType: "entry",
+        subjectId: mine,
+        reason: "harassment",
+      },
+      confirmedReporter,
+    );
+    await fileReport(
+      {
+        reporterId: someoneElse,
+        subjectType: "entry",
+        subjectId: theirs,
+        reason: "harassment",
+      },
+      confirmedReporter,
+    );
 
     // The promise is "hidden from YOUR feed" — one report must not hide an
     // entry from everyone, which is the whole point of the threshold.
@@ -222,18 +250,24 @@ describe("the reporter's own hide (W1)", () => {
     const entryId = await reportableEntry();
     const me = await makeUser();
 
-    await fileReport({
-      reporterId: me,
-      subjectType: "entry",
-      subjectId: entryId,
-      reason: "other",
-    });
-    await fileReport({
-      reporterId: me,
-      subjectType: "product",
-      subjectId: "some-product",
-      reason: "spam",
-    });
+    await fileReport(
+      {
+        reporterId: me,
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "other",
+      },
+      confirmedReporter,
+    );
+    await fileReport(
+      {
+        reporterId: me,
+        subjectType: "product",
+        subjectId: "some-product",
+        reason: "spam",
+      },
+      confirmedReporter,
+    );
 
     expect(await reportedSubjectIdsFor(me, "entry")).toEqual([entryId]);
     expect(await reportedSubjectIdsFor(me, "product")).toEqual([
@@ -248,7 +282,12 @@ async function unconfirmedRunner(): Promise<string> {
   return userId;
 }
 
-describe("fileConfirmedReport: a report waits for a confirmed address (round 26 #11; SAF-15)", () => {
+/**
+`account`'s own check, as `fileReportAction` wires it.
+*/
+const accountGate = { isVerified };
+
+describe("fileReport waits for a confirmed address (round 26 #11; SAF-15)", () => {
   beforeEach(resetSafetyTables);
 
   it("refuses an unconfirmed reporter with an answer, and writes nothing — the block included", async () => {
@@ -256,13 +295,16 @@ describe("fileConfirmedReport: a report waits for a confirmed address (round 26 
     const subject = await makeUser();
 
     expect(
-      await fileConfirmedReport({
-        reporterId: reporter,
-        subjectType: "profile",
-        subjectId: subject,
-        reason: "harassment",
-        alsoBlock: true,
-      }),
+      await fileReport(
+        {
+          reporterId: reporter,
+          subjectType: "profile",
+          subjectId: subject,
+          reason: "harassment",
+          alsoBlock: true,
+        },
+        accountGate,
+      ),
     ).toStrictEqual({ status: "unverified" });
 
     expect(await distinctReporterCount("profile", subject)).toBe(0);
@@ -275,12 +317,15 @@ describe("fileConfirmedReport: a report waits for a confirmed address (round 26 
     // must not be a takedown on demand.
     const entryId = await reportableEntry();
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
-      await fileConfirmedReport({
-        reporterId: await unconfirmedRunner(),
-        subjectType: "entry",
-        subjectId: entryId,
-        reason: "spam",
-      });
+      await fileReport(
+        {
+          reporterId: await unconfirmedRunner(),
+          subjectType: "entry",
+          subjectId: entryId,
+          reason: "spam",
+        },
+        accountGate,
+      );
     }
 
     expect(await moderationStatusOf(entryId)).toBe("ok");
@@ -291,12 +336,15 @@ describe("fileConfirmedReport: a report waits for a confirmed address (round 26 
     const entryId = await reportableEntry();
 
     expect(
-      await fileConfirmedReport({
-        reporterId: await makeUser(),
-        subjectType: "entry",
-        subjectId: entryId,
-        reason: "spam",
-      }),
+      await fileReport(
+        {
+          reporterId: await makeUser(),
+          subjectType: "entry",
+          subjectId: entryId,
+          reason: "spam",
+        },
+        accountGate,
+      ),
     ).toStrictEqual({ status: "unverified" });
     expect(await distinctReporterCount("entry", entryId)).toBe(0);
   });
@@ -307,12 +355,15 @@ describe("fileConfirmedReport: a report waits for a confirmed address (round 26 
     await addAccount(reporter, true);
 
     expect(
-      await fileConfirmedReport({
-        reporterId: reporter,
-        subjectType: "entry",
-        subjectId: entryId,
-        reason: "spam",
-      }),
+      await fileReport(
+        {
+          reporterId: reporter,
+          subjectType: "entry",
+          subjectId: entryId,
+          reason: "spam",
+        },
+        accountGate,
+      ),
     ).toStrictEqual({
       status: "filed",
       reporterCount: 1,
@@ -328,13 +379,16 @@ describe("W1's block-with-report checkbox", () => {
     const reporter = await makeUser();
     const subject = await makeUser();
 
-    await fileReport({
-      reporterId: reporter,
-      subjectType: "profile",
-      subjectId: subject,
-      reason: "harassment",
-      alsoBlock: true,
-    });
+    await fileReport(
+      {
+        reporterId: reporter,
+        subjectType: "profile",
+        subjectId: subject,
+        reason: "harassment",
+        alsoBlock: true,
+      },
+      confirmedReporter,
+    );
 
     // One call, not two. A reporter who ticked the box and lost a second
     // request would be told the report worked while the block silently
@@ -346,12 +400,15 @@ describe("W1's block-with-report checkbox", () => {
     const reporter = await makeUser();
     const subject = await makeUser();
 
-    await fileReport({
-      reporterId: reporter,
-      subjectType: "profile",
-      subjectId: subject,
-      reason: "harassment",
-    });
+    await fileReport(
+      {
+        reporterId: reporter,
+        subjectType: "profile",
+        subjectId: subject,
+        reason: "harassment",
+      },
+      confirmedReporter,
+    );
 
     expect(await isBlocked(reporter, subject)).toBe(false);
   });
@@ -360,13 +417,16 @@ describe("W1's block-with-report checkbox", () => {
     const reporter = await makeUser();
     const entryId = await reportableEntry();
 
-    await fileReport({
-      reporterId: reporter,
-      subjectType: "entry",
-      subjectId: entryId,
-      reason: "explicit",
-      alsoBlock: true,
-    });
+    await fileReport(
+      {
+        reporterId: reporter,
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "explicit",
+        alsoBlock: true,
+      },
+      confirmedReporter,
+    );
 
     // An entry id is not a user id. Blocking it would create a row naming
     // a person who does not exist — and W1 only offers the checkbox where
@@ -384,12 +444,15 @@ describe("subjects with no moderation column of their own", () => {
 
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
       const reporter = await makeUser();
-      await fileReport({
-        reporterId: reporter,
-        subjectType: "profile",
-        subjectId: subject,
-        reason: "harassment",
-      });
+      await fileReport(
+        {
+          reporterId: reporter,
+          subjectType: "profile",
+          subjectId: subject,
+          reason: "harassment",
+        },
+        confirmedReporter,
+      );
     }
 
     // A reported profile is a ban decision, and a ban is a person's call —

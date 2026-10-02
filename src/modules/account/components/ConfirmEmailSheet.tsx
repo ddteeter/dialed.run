@@ -26,8 +26,9 @@ export type ConfirmTrigger = keyof typeof WAITS_FOR;
 
 /**
  * "Confirm your email first" (round 26 #11, as round 27 #17 redrew it;
- * seam 7): what a control opens when it waits for a confirmed address —
- * Useful and report, through `confirmEmailGate` below, and an email
+ * seam 7): what a control opens when the server refuses it for want of a
+ * confirmed address — Useful and report, through `confirmEmailGate`
+ * below, one sheet per screen whichever opened it — and an email
  * change here. *"The control draws at full strength (rule 07: 'not
  * yet'). Pressing it opens a small sheet."*
  *
@@ -85,21 +86,24 @@ export function ConfirmEmailSheet({
 }
 
 /**
- * The gate a route hands a screen whose control waits for a confirmed
- * address: act when the runner is confirmed, open this sheet when not.
- * The route composes it because the screen's module may not import this
- * one's components (docs/architecture.md, "Composing across modules").
+ * The gate a route hands a screen whose controls wait for a confirmed
+ * address: the sheet the screen opens when the server refuses one of
+ * them, led by the sentence for whichever control it was. The route
+ * composes it because the screen's module may not import this one's
+ * components (docs/architecture.md, "Composing across modules").
+ *
+ * It asks nothing about whether the runner is confirmed: the server
+ * decides that on every press (`ui/control-gate`), and this only says
+ * where the link went.
  */
 export function confirmEmailGate(
-  account: Readonly<{ email: string; isVerified: boolean }>,
+  account: Readonly<{ email: string }>,
   resend: (input: { data: { email: string } }) => Promise<ResendResult>,
-  trigger: ConfirmTrigger,
-): ControlGate {
+): ControlGate<ConfirmTrigger> {
   return {
-    canAct: account.isVerified,
-    sheet: (isOpen, onClose) => (
+    sheet: ({ open, trigger }, onClose) => (
       <ConfirmEmailSheet
-        open={isOpen}
+        open={open}
         onClose={onClose}
         email={account.email}
         resend={resend}

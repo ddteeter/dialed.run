@@ -438,25 +438,13 @@ describe("the confirm-first sheet and the nag", () => {
     },
   );
 
-  it("is the gate a route hands a waiting control, for a confirmed runner and not", async () => {
+  it("is the sheet a route hands a screen, led by the control the server refused", async () => {
     const resend = resender();
     const user = userEvent.setup();
     const onClose = vi.fn();
-    const unconfirmed = confirmEmailGate(
-      { email: "maya@example.com", isVerified: false },
-      resend,
-      "report",
-    );
-    expect(unconfirmed.canAct).toBe(false);
-    expect(
-      confirmEmailGate(
-        { email: "maya@example.com", isVerified: true },
-        resend,
-        "report",
-      ).canAct,
-    ).toBe(true);
+    const gate = confirmEmailGate({ email: "maya@example.com" }, resend);
 
-    render(<>{unconfirmed.sheet(true, onClose)}</>);
+    render(<>{gate.sheet({ open: true, trigger: "report" }, onClose)}</>);
     const sheet = screen.getByRole("dialog", {
       name: "Confirm your email first",
     });
@@ -473,13 +461,17 @@ describe("the confirm-first sheet and the nag", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("stays shut when the gate says so", () => {
-    const gate = confirmEmailGate(
-      { email: "maya@example.com", isVerified: false },
-      resender(),
-      "useful",
+  it("leads with Useful when Useful was refused", () => {
+    const gate = confirmEmailGate({ email: "maya@example.com" }, resender());
+    render(<>{gate.sheet({ open: true, trigger: "useful" }, vi.fn())}</>);
+    expect(screen.getByText(/We sent a link to/u)).toHaveTextContent(
+      /^Marking runs Useful, /u,
     );
-    render(<>{gate.sheet(false, vi.fn())}</>);
+  });
+
+  it("stays shut until the screen opens it", () => {
+    const gate = confirmEmailGate({ email: "maya@example.com" }, resender());
+    render(<>{gate.sheet({ open: false, trigger: undefined }, vi.fn())}</>);
     expect(document.querySelector("dialog")?.open).toBe(false);
   });
 

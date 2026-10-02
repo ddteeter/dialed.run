@@ -28,7 +28,7 @@ import {
 } from "../ops";
 import { requireAdmin } from "../safety";
 import { requestAccess, turnstileAttempt } from "./access";
-import { accountPage, accountView, ownAccountView } from "./account-view";
+import { accountPage, accountView, ownAddressView } from "./account-view";
 import { requestExport } from "./data-exports";
 import {
   deletionEffectsFromEnv,
@@ -118,10 +118,11 @@ export const optionalAccountQuery = createServerFn({ method: "GET" }).handler(
 /**
  * The signed-in runner's address and whether it is confirmed, for the
  * screens that wait on it (seam 7): the nag band on Feed and You, and the
- * gate on Useful and report.
+ * address the confirm sheet names on Feed, D and H. One read of the
+ * `user` row — none of them asks whether there is a password.
  */
 export const ownAccountQuery = createServerFn({ method: "GET" }).handler(
-  async () => ownAccountView(db(), await requireUserId()),
+  async () => ownAddressView(db(), await requireUserId()),
 );
 
 /**

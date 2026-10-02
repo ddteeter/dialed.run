@@ -13,6 +13,7 @@ import { unsubscribeUrl } from "../../src/modules/email/unsubscribe";
 import {
   accountPage,
   accountView,
+  ownAddressView,
 } from "../../src/modules/account/account-view";
 import { newUlid } from "../../src/lib/ids";
 import { core, ORIGIN, SECRET, seedUser } from "./helpers";
@@ -236,6 +237,20 @@ describe("the account's settings read", () => {
       dataExport: { state: "idle" },
     });
     await expect(accountPage(db, "gone")).rejects.toThrow(
+      "signed in to an account that is gone",
+    );
+
+    // The address alone, for the screens that only show the nag and the
+    // confirm sheet: no password question asked.
+    expect(await ownAddressView(db, withPassword.userId)).toStrictEqual({
+      email: withPassword.email,
+      isVerified: false,
+    });
+    expect(await ownAddressView(db, google.userId)).toStrictEqual({
+      email: google.email,
+      isVerified: true,
+    });
+    await expect(ownAddressView(db, "gone")).rejects.toThrow(
       "signed in to an account that is gone",
     );
   });

@@ -396,14 +396,26 @@ only the verb.
 
 **A control that waits on another module's state is a gate, not a
 node.** Useful (feed) and report (safety) wait for a confirmed address
-(account), and pressing either opens `account`'s "Confirm your email
-first" instead. The screen owns the control and when the sheet opens; the
-sheet is account's. So the route hands a `ControlGate` (`ui`): `canAct`,
-and `sheet: (isOpen, onClose) => ReactNode`, built by
-`account`'s `confirmEmailGate`. `useControlGate` renders it once per
-screen. The render function is the one place a callback is right here,
-because the open state belongs to the screen and the subtree still moves
-across whole.
+(account). Every press asks the server, and the server's refusal opens
+`account`'s "Confirm your email first" — never the page's own idea of
+the address, which is as old as its loader. The screen owns the control
+and when the sheet opens; the sheet is account's. So the route hands a
+`ControlGate<Trigger>` (`ui`), `sheet: ({ open, trigger }, onClose) =>
+ReactNode`, built by `account`'s `confirmEmailGate`. `useControlGate`
+renders it once per screen and gives each control a guard,
+`ask(trigger)`, so D's Useful and report share one sheet and the trigger
+picks its lead sentence. The render function is the one place a callback
+is right here, because the open state belongs to the screen and the
+subtree still moves across whole. A control composed by the route for a
+screen that owns the sheet (report on D and H) is handed as a render
+function of that guard.
+
+**A server-side check owned by another module is a required argument.**
+`safety`'s `fileReport(input, { isVerified })` cannot import `account`
+(account reaches safety's barrel through `ops`, so that is a cycle), and
+an optional check is a door nobody has to close. So the check is a
+required parameter, and `safety/functions.ts` wires `account`'s own
+`isVerified` into it — glue, which is all a server-function file may be.
 
 Raised as a question on PR #73 ("do we need to adjust the rules?"), and
 written down here because the answer is no but nothing recorded it — the

@@ -29,6 +29,7 @@ import {
   makeUser,
   NOW,
   resetSafetyTables,
+  confirmedReporter,
 } from "./helpers";
 import { nowSeconds } from "../../src/lib/now";
 
@@ -47,12 +48,15 @@ async function queuedEntry(): Promise<{ entryId: string; queueId: string }> {
 
   for (let n = 0; n < autoHideReporterThreshold; n += 1) {
     const reporter = await makeUser();
-    await fileReport({
-      reporterId: reporter,
-      subjectType: "entry",
-      subjectId: entryId,
-      reason: "explicit",
-    });
+    await fileReport(
+      {
+        reporterId: reporter,
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "explicit",
+      },
+      confirmedReporter,
+    );
   }
 
   const [queued] = await pendingReviewQueue();
@@ -78,12 +82,15 @@ async function reportedPhoto(): Promise<string> {
       position: 0,
     });
   for (let n = 0; n < autoHideReporterThreshold; n += 1) {
-    await fileReport({
-      reporterId: await makeUser(),
-      subjectType: "photo",
-      subjectId: photoId,
-      reason: "explicit",
-    });
+    await fileReport(
+      {
+        reporterId: await makeUser(),
+        subjectType: "photo",
+        subjectId: photoId,
+        reason: "explicit",
+      },
+      confirmedReporter,
+    );
   }
   return photoId;
 }
@@ -160,12 +167,15 @@ describe("resolving a decision", () => {
     // isPublic, approving would silently publish it.
     const entryId = await makeEntry({ userId: author, runId, isPublic: false });
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
-      await fileReport({
-        reporterId: await makeUser(),
-        subjectType: "entry",
-        subjectId: entryId,
-        reason: "spam",
-      });
+      await fileReport(
+        {
+          reporterId: await makeUser(),
+          subjectType: "entry",
+          subjectId: entryId,
+          reason: "spam",
+        },
+        confirmedReporter,
+      );
     }
     const [queued] = await pendingReviewQueue();
     if (!queued) throw new Error("nothing queued");
@@ -248,12 +258,15 @@ describe("resolving a decision", () => {
       });
 
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
-      await fileReport({
-        reporterId: await makeUser(),
-        subjectType: "product",
-        subjectId: productId,
-        reason: "spam",
-      });
+      await fileReport(
+        {
+          reporterId: await makeUser(),
+          subjectType: "product",
+          subjectId: productId,
+          reason: "spam",
+        },
+        confirmedReporter,
+      );
     }
     const [queued] = await pendingReviewQueue();
     if (!queued) throw new Error("nothing queued");
@@ -345,12 +358,15 @@ describe("what a decision writes", () => {
         createdAt: NOW,
       });
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
-      await fileReport({
-        reporterId: await makeUser(),
-        subjectType: "product",
-        subjectId: productId,
-        reason: "spam",
-      });
+      await fileReport(
+        {
+          reporterId: await makeUser(),
+          subjectType: "product",
+          subjectId: productId,
+          reason: "spam",
+        },
+        confirmedReporter,
+      );
     }
     const [queued] = await pendingReviewQueue();
     if (!queued) throw new Error("nothing queued");
@@ -414,12 +430,15 @@ describe("what a decision writes", () => {
     // here must settle the queue row and touch nothing else.
     const subject = await makeUser();
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
-      await fileReport({
-        reporterId: await makeUser(),
-        subjectType: "profile",
-        subjectId: subject,
-        reason: "harassment",
-      });
+      await fileReport(
+        {
+          reporterId: await makeUser(),
+          subjectType: "profile",
+          subjectId: subject,
+          reason: "harassment",
+        },
+        confirmedReporter,
+      );
     }
     const [queued] = await pendingReviewQueue();
     if (!queued) throw new Error("nothing queued");
@@ -437,12 +456,15 @@ describe("the queue itself", () => {
   it("is one row per subject, however many people reported it", async () => {
     const { entryId } = await queuedEntry();
     // A fourth reporter on an already-queued entry.
-    await fileReport({
-      reporterId: await makeUser(),
-      subjectType: "entry",
-      subjectId: entryId,
-      reason: "harassment",
-    });
+    await fileReport(
+      {
+        reporterId: await makeUser(),
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "harassment",
+      },
+      confirmedReporter,
+    );
 
     expect(await pendingReviewCount()).toBe(1);
   });
@@ -454,12 +476,15 @@ describe("the queue itself", () => {
     expect(await pendingReviewCount()).toBe(0);
 
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
-      await fileReport({
-        reporterId: await makeUser(),
-        subjectType: "entry",
-        subjectId: entryId,
-        reason: "explicit",
-      });
+      await fileReport(
+        {
+          reporterId: await makeUser(),
+          subjectType: "entry",
+          subjectId: entryId,
+          reason: "explicit",
+        },
+        confirmedReporter,
+      );
     }
 
     // Settled last week is not settled forever, and the reviewer must see
@@ -482,12 +507,15 @@ describe("the queue itself", () => {
   it("carries what was alleged and how many people said it", async () => {
     const { entryId } = await queuedEntry();
     // A fourth reporter, with a different reason.
-    await fileReport({
-      reporterId: await makeUser(),
-      subjectType: "entry",
-      subjectId: entryId,
-      reason: "spam",
-    });
+    await fileReport(
+      {
+        reporterId: await makeUser(),
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "spam",
+      },
+      confirmedReporter,
+    );
 
     const [queued] = await pendingReviewQueue();
 
@@ -505,18 +533,24 @@ describe("the queue itself", () => {
   it("counts people, not reports, the way the threshold does", async () => {
     const { entryId } = await queuedEntry();
     const repeater = await makeUser();
-    await fileReport({
-      reporterId: repeater,
-      subjectType: "entry",
-      subjectId: entryId,
-      reason: "spam",
-    });
-    await fileReport({
-      reporterId: repeater,
-      subjectType: "entry",
-      subjectId: entryId,
-      reason: "spam",
-    });
+    await fileReport(
+      {
+        reporterId: repeater,
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "spam",
+      },
+      confirmedReporter,
+    );
+    await fileReport(
+      {
+        reporterId: repeater,
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "spam",
+      },
+      confirmedReporter,
+    );
 
     // One person reporting twice is one person — the same rule that
     // decides the auto-hide. A reviewer reading "5 people" about four
@@ -529,12 +563,15 @@ describe("the queue itself", () => {
   it("does not attribute one subject's reports to another", async () => {
     const first = await queuedEntry();
     await queuedEntry();
-    await fileReport({
-      reporterId: await makeUser(),
-      subjectType: "entry",
-      subjectId: first.entryId,
-      reason: "not_theirs",
-    });
+    await fileReport(
+      {
+        reporterId: await makeUser(),
+        subjectType: "entry",
+        subjectId: first.entryId,
+        reason: "not_theirs",
+      },
+      confirmedReporter,
+    );
 
     // The join is on subject type AND id. Getting it wrong pools every
     // report in the table onto every row, which reads as unanimity.
@@ -587,12 +624,15 @@ describe("the queue itself", () => {
         });
     }
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
-      await fileReport({
-        reporterId: await makeUser(),
-        subjectType: "entry",
-        subjectId: entryId,
-        reason: "explicit",
-      });
+      await fileReport(
+        {
+          reporterId: await makeUser(),
+          subjectType: "entry",
+          subjectId: entryId,
+          reason: "explicit",
+        },
+        confirmedReporter,
+      );
     }
 
     const [queued] = await pendingReviewQueue();
@@ -628,12 +668,15 @@ describe("the queue itself", () => {
       ["product", productId],
     ] as const) {
       for (let n = 0; n < autoHideReporterThreshold; n += 1) {
-        await fileReport({
-          reporterId: await makeUser(),
-          subjectType,
-          subjectId,
-          reason: "spam",
-        });
+        await fileReport(
+          {
+            reporterId: await makeUser(),
+            subjectType,
+            subjectId,
+            reason: "spam",
+          },
+          confirmedReporter,
+        );
       }
     }
 
@@ -671,12 +714,15 @@ describe("the queue itself", () => {
         createdAt: NOW,
       });
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
-      await fileReport({
-        reporterId: await makeUser(),
-        subjectType: "profile",
-        subjectId: subject,
-        reason: "harassment",
-      });
+      await fileReport(
+        {
+          reporterId: await makeUser(),
+          subjectType: "profile",
+          subjectId: subject,
+          reason: "harassment",
+        },
+        confirmedReporter,
+      );
     }
 
     const [queued] = await pendingReviewQueue();

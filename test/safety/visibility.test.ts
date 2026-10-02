@@ -35,6 +35,7 @@ import {
   makeVerifiedUser,
   NOW,
   resetSafetyTables,
+  confirmedReporter,
 } from "./helpers";
 
 /**
@@ -264,14 +265,20 @@ describe("a reporter's own hide (SAF-13)", () => {
     await follow(reporter, posted.author);
     await follow(bystander, posted.author);
 
-    const filed = await fileReport({
-      reporterId: reporter,
-      subjectType: "entry",
-      subjectId: posted.entryId,
-      reason: "spam",
-    });
+    const filed = await fileReport(
+      {
+        reporterId: reporter,
+        subjectType: "entry",
+        subjectId: posted.entryId,
+        reason: "spam",
+      },
+      confirmedReporter,
+    );
     // One report is far under the threshold: nothing global happened.
-    expect(filed.hiddenPendingReview).toBe(false);
+    expect(filed).toMatchObject({
+      status: "filed",
+      hiddenPendingReview: false,
+    });
 
     expect(await sightings(reporter, posted.entryId, posted.photoKey)).toEqual(
       UNSEEN,
@@ -287,12 +294,15 @@ describe("a reporter's own hide (SAF-13)", () => {
     await follow(reporter, posted.author);
     // The same id under another subject type must not match the entry's
     // probe — the subject type is part of what was reported.
-    await fileReport({
-      reporterId: reporter,
-      subjectType: "product",
-      subjectId: posted.entryId,
-      reason: "spam",
-    });
+    await fileReport(
+      {
+        reporterId: reporter,
+        subjectType: "product",
+        subjectId: posted.entryId,
+        reason: "spam",
+      },
+      confirmedReporter,
+    );
     expect(await sightings(reporter, posted.entryId, posted.photoKey)).toEqual(
       SEEN,
     );

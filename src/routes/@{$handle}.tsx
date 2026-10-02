@@ -31,14 +31,20 @@ export const Route = createFileRoute("/@{$handle}")({
   beforeLoad: async () => {
     requireSignedIn(await getSession());
   },
-  loader: async ({ params }) => ({
-    found: orHandlePage(
-      await profileAtHandleQuery({ data: { handle: params.handle } }),
-    ),
-    viewerId: requireSignedIn(await getSession()).user.id,
-    bell: await bellStateFn(),
-    account: await ownAccountQuery(),
-  }),
+  loader: async ({ params }) => {
+    const [found, session, bell, account] = await Promise.all([
+      profileAtHandleQuery({ data: { handle: params.handle } }),
+      getSession(),
+      bellStateFn(),
+      ownAccountQuery(),
+    ]);
+    return {
+      found: orHandlePage(found),
+      viewerId: requireSignedIn(session).user.id,
+      bell,
+      account,
+    };
+  },
   component: HandlePage,
 });
 
@@ -51,16 +57,13 @@ function HandlePage() {
         found={found}
         follow={followAction}
         unfollow={unfollowAction}
-        reportAffordanceFor={(profile) => (
+        confirmFirst={confirmEmailGate(account, resendConfirmationFn)}
+        reportAffordanceFor={(profile, guard) => (
           <ReportAffordance
             subject={profileReportSubject(profile)}
             viewerId={viewerId}
             fileReport={fileReportAction}
-            confirmFirst={confirmEmailGate(
-              account,
-              resendConfirmationFn,
-              "report",
-            )}
+            guard={guard}
           />
         )}
       />

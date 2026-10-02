@@ -23,8 +23,8 @@ import type { UsefulReactionInput } from "./useful-reaction";
  * Contract rule 08).
  *
  * **It waits for a confirmed address** (round 26 #11): it draws at full
- * strength for everyone, and an unconfirmed runner's press opens the
- * screen's "Confirm your email first" sheet through `guard`.
+ * strength for everyone and every press asks the server, whose refusal
+ * opens the screen's "Confirm your email first" sheet through `guard`.
  *
  * The heart is text, as the frames draw it, and hidden from a screen
  * reader: `aria-pressed` already says whether it is marked, and "black
@@ -38,7 +38,7 @@ export function UsefulButton({
     onStatus: (status: string) => void;
   }
 >) {
-  const { useful, markUseful, press } = useUsefulReaction(reaction);
+  const { useful, markUseful } = useUsefulReaction(reaction);
   const { status } = markUseful;
   useEffect(() => {
     onStatus(status);
@@ -51,7 +51,9 @@ export function UsefulButton({
         data-part="reactions"
         aria-pressed={useful.reacted}
         {...inFlight(markUseful.pending)}
-        onClick={press}
+        onClick={() => {
+          void markUseful.run(!useful.reacted);
+        }}
         className={`target flex cursor-pointer items-center self-start border-none bg-transparent p-0 ${
           useful.reacted ? "font-semibold text-cold-text" : "text-quiet"
         }`}

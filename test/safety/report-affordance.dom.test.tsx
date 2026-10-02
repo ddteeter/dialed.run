@@ -3,7 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { ReportAffordance } from "../../src/modules/safety/components/ReportAffordance";
-import { CONFIRMED, UNCONFIRMED } from "../modules/feed-fixtures";
 
 type Props = Parameters<typeof ReportAffordance>[0];
 
@@ -11,8 +10,6 @@ type Props = Parameters<typeof ReportAffordance>[0];
 The foot link, whichever of its two wordings the subject gets.
 */
 const REPORT = /^Report (this entry|or block )/u;
-
-const CONFIRM_FIRST = "Confirm your email first";
 
 function renderAffordance(overrides: Partial<Props> = {}) {
   const fileReport: Props["fileReport"] = vi
@@ -33,7 +30,7 @@ function renderAffordance(overrides: Partial<Props> = {}) {
       }}
       viewerId="viewer-1"
       fileReport={fileReport}
-      confirmFirst={CONFIRMED}
+      guard={{ ask: vi.fn() }}
       {...overrides}
     />,
   );
@@ -282,36 +279,25 @@ async function sendSpamReport(
 }
 
 describe("report waits for a confirmed address (round 26 #11; SAF-15)", () => {
-  it("draws the link at full strength, and opens the confirm sheet rather than W1", async () => {
+  it("draws the link at full strength and opens W1 for anyone: the server decides", async () => {
+    // Rule 07, "not yet": the same link, never disabled — and never a
+    // refusal of the page's own, whose answer is as old as its loader.
     const user = userEvent.setup();
-    const { fileReport } = renderAffordance({ confirmFirst: UNCONFIRMED });
-    expect(screen.queryByRole("dialog", { name: CONFIRM_FIRST })).toBeNull();
+    const ask = vi.fn();
+    renderAffordance({ guard: { ask } });
 
-    // Rule 07, "not yet": the same link, never disabled.
     const link = screen.getByRole("button", { name: "Report this entry" });
     expect(link).not.toHaveAttribute("aria-disabled");
     await user.click(link);
 
-    expect(screen.getByRole("dialog", { name: CONFIRM_FIRST })).toBeVisible();
-    expect(isSheetOpen()).toBe(false);
-    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
-    expect(fileReport).not.toHaveBeenCalled();
-
-    await user.click(screen.getByRole("button", { name: "Not now" }));
-    expect(screen.queryByRole("dialog", { name: CONFIRM_FIRST })).toBeNull();
+    expect(isSheetOpen()).toBe(true);
+    expect(ask).not.toHaveBeenCalled();
   });
 
-  it("gives way to the confirm sheet when the server refuses the reporter", async () => {
-    // A page whose answer about the address is older than the server's:
-    // the link opened W1, and the server said no.
+  it("files for a runner who confirmed since the page loaded, and asks them nothing", async () => {
     const user = userEvent.setup();
-    const fileReport = vi
-      .fn<Props["fileReport"]>()
-      .mockResolvedValue({ status: "unverified" });
-    renderAffordance({
-      fileReport,
-      confirmFirst: { ...UNCONFIRMED, canAct: true },
-    });
+    const ask = vi.fn();
+    const { fileReport } = renderAffordance({ guard: { ask } });
 
     await sendSpamReport(user);
 
@@ -319,18 +305,34 @@ describe("report waits for a confirmed address (round 26 #11; SAF-15)", () => {
     await waitFor(() => {
       expect(isSheetOpen()).toBe(false);
     });
-    expect(screen.getByRole("dialog", { name: CONFIRM_FIRST })).toBeVisible();
+    expect(ask).not.toHaveBeenCalled();
   });
 
-  it("opens nothing else once a report is filed", async () => {
+  it("opens the screen's confirm sheet on the server's refusal, and never says the report went", async () => {
     const user = userEvent.setup();
-    renderAffordance({ confirmFirst: { ...UNCONFIRMED, canAct: true } });
+    const ask = vi.fn();
+    const fileReport = vi
+      .fn<Props["fileReport"]>()
+      .mockResolvedValue({ status: "unverified" });
+    renderAffordance({ fileReport, guard: { ask } });
 
     await sendSpamReport(user);
 
     await waitFor(() => {
-      expect(isSheetOpen()).toBe(false);
+      expect(ask).toHaveBeenCalledWith("report");
     });
-    expect(screen.queryByRole("dialog", { name: CONFIRM_FIRST })).toBeNull();
+    expect(ask).toHaveBeenCalledOnce();
+    expect(fileReport).toHaveBeenCalledOnce();
+    // Nothing was filed: no "Report sent.", and W1 stays as it was, the
+    // reason still chosen, ready to send once the address is confirmed.
+    expect(screen.getByRole("status").textContent).toBe("");
+    expect(screen.queryByText("Report sent.")).toBeNull();
+    expect(isSheetOpen()).toBe(true);
+    expect(
+      screen.getByRole("radio", { name: "It's an ad, or it's spam" }),
+    ).toBeChecked();
+    expect(
+      screen.getByRole("button", { name: "Send report" }),
+    ).not.toHaveAttribute("aria-busy", "true");
   });
 });

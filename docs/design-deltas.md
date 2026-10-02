@@ -742,7 +742,7 @@ WHILE WE CHECK`), which offer no fix and are a different case? Either
       answer arrives as an amended Form Contract, not a board.
 
 41. **The unconfirmed runner's band and sheet, as wired (FEED-11, SAF-15;
-    round 26 #11, round 27 #7 and #17).** Built to the words; four
+    round 26 #11, round 27 #7 and #17).** Built to the words; five
     composition calls no frame makes.
     - **Where the band sits.** Round 26 says "a hairline band at the top
       of Feed and You" and draws no Feed or You with it. It is the first
@@ -767,6 +767,13 @@ WHILE WE CHECK`), which offer no fix and are a different case? Either
       unconfirmed Feed has two regions, the cards' and the band's. Rule
       08 says one. Ask: may the band's Resend report into the screen's
       region, or does a band count as its own?
+    - **When the sheet opens, and over what.** The server decides, not the
+      page (a page's answer is as old as its loader), so a press always
+      asks it and the sheet opens on its refusal. Useful's sheet comes up
+      a beat after the press, behind `[ Noting ]`. Report's link opens W1
+      for anyone, and the sheet comes up over W1 after Send, leaving W1 as
+      it was. One sheet per screen: D's Useful and report open the same
+      one, and the control picks its lead sentence.
 
 ## Answered in round 28 (imported 2026-09-30)
 

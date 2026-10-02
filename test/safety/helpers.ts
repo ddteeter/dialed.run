@@ -24,6 +24,7 @@ import {
   usernameHistory,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import type { ReporterGate } from "../../src/modules/safety";
 
 import {
   deleteAllFrom,
@@ -39,6 +40,16 @@ export {
   makeVerifiedUser,
   NOW,
 } from "../feed/helpers";
+
+/**
+ * The gate `fileReport` requires, answering yes for every reporter: for
+ * the tests about what a report does once it is filed. What the real gate
+ * refuses is `reports.test.ts`'s, asked through `account`'s own
+ * `isVerified` exactly as the server function wires it.
+ */
+export const confirmedReporter: ReporterGate = {
+  isVerified: () => Promise.resolve(true),
+};
 
 export async function resetSafetyTables(): Promise<void> {
   await deleteAllFrom(drizzle(env.DIALED_CORE), [

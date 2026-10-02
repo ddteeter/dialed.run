@@ -7,7 +7,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
-import { ownAccountView } from "../account";
 import { optionalUserId, requireUserId } from "../auth";
 import {
   attachKitInput,
@@ -238,19 +237,10 @@ export const viewerUnitsQuery = createServerFn({ method: "GET" }).handler(
 
 // ---- Profiles (G/H) -----------------------------------------------------------
 
-/**
- * G, and the runner's own account beside it: You carries round 26 #11's
- * nag band while the address is unconfirmed (FEED-11), so the page's one
- * read brings `account`'s view of it.
- */
 export const ownProfileQuery = createServerFn({ method: "GET" }).handler(
   async () => {
     const userId = await requireUserId();
-    const [profile, account] = await Promise.all([
-      ownProfile(userId),
-      ownAccountView(drizzle(env.DIALED_CORE), userId),
-    ]);
-    return { profile, account };
+    return ownProfile(userId);
   },
 );
 

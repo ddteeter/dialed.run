@@ -70,9 +70,10 @@ export interface FeedProps {
   confirmBand: ReactNode;
   /**
   Useful waits for a confirmed address (seam 7); the route composes the
-  sheet it opens instead, and this screen renders it once for every card.
+  sheet the server's refusal opens, and this screen renders it once for
+  every card.
   */
-  confirmFirst: ControlGate;
+  confirmFirst: ControlGate<"useful">;
 }
 
 export function Feed(props: Readonly<FeedProps>) {
@@ -191,7 +192,7 @@ function FollowingTab({
   now: number;
   units: Units;
   setUseful: SetUsefulFn;
-  guard: ControlGuard;
+  guard: ControlGuard<"useful">;
   onConditions: () => void;
 }>) {
   // One status region for the screen, however many cards (Accessibility

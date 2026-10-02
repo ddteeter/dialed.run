@@ -8,10 +8,8 @@ import { ConfirmEmailBand } from "../../src/modules/account/components/ConfirmEm
 import { defaultFeedTab, Feed } from "../../src/modules/feed/components/Feed";
 import type { SetUsefulFn } from "../../src/modules/feed/components/useful-reaction";
 import type { FeedItem } from "../../src/modules/feed/feed";
-import type { ControlGate } from "../../src/ui";
 import {
-  CONFIRMED,
-  UNCONFIRMED,
+  CONFIRM_FIRST,
   feedItem,
   MILES,
   NOW,
@@ -33,7 +31,6 @@ function feed(
     unjudgedCount?: number;
     conditionsFor?: () => Promise<undefined>;
     confirmBand?: ReactNode;
-    confirmFirst?: ControlGate;
     setUseful?: SetUsefulFn;
   } = {},
 ) {
@@ -46,7 +43,7 @@ function feed(
       unjudgedCount={overrides.unjudgedCount ?? 0}
       setUseful={overrides.setUseful ?? useful}
       confirmBand={overrides.confirmBand}
-      confirmFirst={overrides.confirmFirst ?? CONFIRMED}
+      confirmFirst={CONFIRM_FIRST}
       conditions={{
         home: { coords: undefined, cityLabel: undefined },
         locate: () => Promise.resolve(undefined),
@@ -206,7 +203,7 @@ describe("Feed: Following", () => {
         unjudgedCount={0}
         setUseful={() => Promise.reject(new TypeError("offline"))}
         confirmBand={undefined}
-        confirmFirst={CONFIRMED}
+        confirmFirst={CONFIRM_FIRST}
         conditions={{
           home: { coords: undefined, cityLabel: undefined },
           locate: () => Promise.resolve(undefined),
@@ -331,16 +328,18 @@ describe("Feed: an unconfirmed runner (round 26 #11; FEED-11)", () => {
     expect(screen.queryByRole("complementary")).toBeNull();
   });
 
-  it("opens one confirm sheet from any card's Useful, and marks nothing", async () => {
+  it("asks the server from any card's Useful, and opens one confirm sheet on its refusal", async () => {
     const user = userEvent.setup();
-    const setUseful = vi.fn(useful);
+    const setUseful = vi.fn<SetUsefulFn>(() =>
+      Promise.resolve({ status: "unverified" }),
+    );
     await renderFeedScreen(
       feed({
         items: [
           feedItem({ entryId: "01A", authorUsername: "dana" }),
           feedItem({ entryId: "01B", authorUsername: "mark" }),
         ],
-        confirmFirst: UNCONFIRMED,
+        confirmBand: band(false),
         setUseful,
       }),
     );
@@ -350,12 +349,39 @@ describe("Feed: an unconfirmed runner (round 26 #11; FEED-11)", () => {
     if (second === undefined) throw new Error("two cards, two Usefuls");
     await user.click(second);
 
-    expect(
-      screen.getAllByRole("dialog", { name: "Confirm your email first" }),
-    ).toHaveLength(1);
-    expect(setUseful).not.toHaveBeenCalled();
+    expect(setUseful).toHaveBeenCalledWith({
+      data: { entryId: "01B", useful: true },
+    });
+    await waitFor(() => {
+      expect(
+        screen.getAllByRole("dialog", { name: "Confirm your email first" }),
+      ).toHaveLength(1);
+    });
+    expect(second).toHaveAttribute("aria-pressed", "false");
 
     await user.click(screen.getByRole("button", { name: "Not now" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("marks for a runner who confirmed since the page loaded, whatever the band still says", async () => {
+    // A stale page: its loader saw an unconfirmed address, and the runner
+    // has since confirmed in another tab. The server decides, and says yes.
+    const user = userEvent.setup();
+    const setUseful = vi.fn(useful);
+    await renderFeedScreen(
+      feed({ items: [feedItem()], confirmBand: band(false), setUseful }),
+    );
+    expect(
+      screen.getByRole("complementary", { name: "Confirm your email" }),
+    ).toBeVisible();
+
+    const button = screen.getByRole("button", { name: /Useful/u });
+    await user.click(button);
+
+    expect(setUseful).toHaveBeenCalledOnce();
+    await waitFor(() => {
+      expect(button).toHaveAttribute("aria-pressed", "true");
+    });
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
