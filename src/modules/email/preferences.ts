@@ -6,8 +6,8 @@ import { and, eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { notificationPreferences } from "../../db/schema-core";
-import type { EmailPreferenceKind } from "../../lib/email";
-import { columnWhere } from "../../lib/keyed-read";
+import type { EmailPreferenceKind } from "../../lib/contracts/email";
+import { columnWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 
 type Db = ReturnType<typeof drizzle>;

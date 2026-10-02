@@ -10,7 +10,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { entryPhotos, outfitEntries } from "../../db/schema-core";
 import { env } from "../../env";
-import { firstColumnWhere } from "../../lib/keyed-read";
+import { firstColumnWhere } from "../../lib/sql/keyed-read";
 import { newUlid } from "../../lib/ids";
 import { isAllowedPhotoType } from "../../lib/photo-constraints";
 import { photoRefusal, withReleased } from "../../lib/photo-pipeline";
@@ -18,7 +18,7 @@ import type { z } from "zod";
 
 import { uploadPhotoFields } from "./inputs";
 import { entryPhotoIdOf, entryPhotoKeyFor } from "../../lib/entry-photo-key";
-import { requireOwned } from "../../lib/owned";
+import { requireOwned } from "../../lib/sql/owned";
 import { filePartFrom } from "../../lib/file-part";
 import type { FilePartProblem } from "../../lib/file-part";
 import { isAdmin, publicPhotoStatus, publiclyVisibleEntry } from "../safety";

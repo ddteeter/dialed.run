@@ -19,10 +19,10 @@ import {
   stravaConnections,
   stravaRevocations,
 } from "../../db/schema-core";
-import { didClaim } from "../../lib/claim";
+import { didClaim } from "../../lib/sql/claim";
 import { newUlid } from "../../lib/ids";
-import { firstRowWhere } from "../../lib/keyed-read";
-import { consumeEach, deadLetterEach } from "../../lib/queue-batch";
+import { firstRowWhere } from "../../lib/sql/keyed-read";
+import { consumeEach, deadLetterEach } from "../../lib/sql/queue-batch";
 import type { CoreDb } from "./core-db";
 import { createNotification, notificationInsert } from "../notifications";
 import { PARSE_FAILURE_MESSAGE, extensionFromKey, sourceFor } from "./parsers";

@@ -6,7 +6,7 @@
 import { useRef, useState } from "react";
 import type { JSX } from "react";
 
-import { ACCESS_CODES, INVITE_COPY } from "../../lib/access";
+import { ACCESS_CODES, INVITE_COPY } from "../../lib/contracts/access";
 import {
   FailureBand,
   PendingLabel,
@@ -64,7 +64,10 @@ function returnedFailure(error: string | undefined): ControlFailure {
 /**
 Every other failure of the attempt: Au6's sentence.
 */
-const FAILED: ControlFailure = { kicker: AUTH_KICKER, message: AUTH_COPY.google };
+const FAILED: ControlFailure = {
+  kicker: AUTH_KICKER,
+  message: AUTH_COPY.google,
+};
 
 /**
  * Round 22, Au5–Au6: *"Google is a submit button"* — so it goes through

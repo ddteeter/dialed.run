@@ -3,7 +3,7 @@ import type { JSX } from "react";
 import { garmentCategoryLabels } from "../../../lib/contracts";
 import type { garmentCategories } from "../../../lib/contracts";
 import { normalizeIdentity } from "../../../lib/normalize";
-import { formatTempRange } from "../../../lib/thermal";
+import { formatTempRange } from "../../../lib/contracts/thermal";
 import { Mono, RailCard } from "../../../ui";
 import { garmentLabel, runsLabel } from "../label";
 import { photoUrlFor } from "../photo-url";

@@ -21,7 +21,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { blocks, userProfiles } from "../../db/schema-core";
 import { env } from "../../env";
-import { columnSetAmong } from "../../lib/keyed-read";
+import { columnSetAmong } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 
 function db() {

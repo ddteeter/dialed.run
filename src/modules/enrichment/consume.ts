@@ -2,8 +2,8 @@ import { and, desc, eq, gt, isNotNull } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { products, productSnapshots } from "../../db/schema-core";
-import { firstColumnWhere, firstRowWhere } from "../../lib/keyed-read";
-import { consumeEach, deadLetterEach } from "../../lib/queue-batch";
+import { firstColumnWhere, firstRowWhere } from "../../lib/sql/keyed-read";
+import { consumeEach, deadLetterEach } from "../../lib/sql/queue-batch";
 import type { ExtractionModel } from "../../lib/contracts";
 import { applyExtraction, type ApplyReport } from "../products";
 import { PageFetchError } from "./bounds";
@@ -16,7 +16,7 @@ import { putSnapshot, readSnapshot, recordSnapshot } from "./snapshot";
 
 /**
  * The concrete handle `drizzle(env.DIALED_CORE)` returns, spelled out:
- * `lib/keyed-read` takes the un-parameterised `DrizzleD1Database`, and the
+ * `lib/sql/keyed-read` takes the un-parameterised `DrizzleD1Database`, and the
  * generic `ReturnType<typeof drizzle>` other modules use is wider than it —
  * so this names the one type both sides accept.
  */

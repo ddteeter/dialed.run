@@ -15,7 +15,7 @@ import { z } from "zod";
 import {
   emailPreferenceKindSchema,
   type EmailPreferenceKind,
-} from "../../lib/email";
+} from "../../lib/contracts/email";
 
 /**
 The key's purpose label. Changing it invalidates every link ever sent.

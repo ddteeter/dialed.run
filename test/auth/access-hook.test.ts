@@ -11,7 +11,7 @@ import {
   INVITE_COPY,
   TURNSTILE_REFUSED,
   mintInviteCode,
-} from "../../src/lib/access";
+} from "../../src/lib/contracts/access";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { accessGate } from "../../src/modules/account";
@@ -168,8 +168,18 @@ describe("email sign-up through the gate", () => {
 
   it.each([
     ["no code", {}, "INVITE_MISSING", INVITE_COPY.missing],
-    ["a code of the wrong shape", { "x-invite-code": "hello" }, "INVITE_INVALID", INVITE_COPY.invalid],
-    ["a code nobody made", { "x-invite-code": "DIAL-ZZZZ" }, "INVITE_INVALID", INVITE_COPY.invalid],
+    [
+      "a code of the wrong shape",
+      { "x-invite-code": "hello" },
+      "INVITE_INVALID",
+      INVITE_COPY.invalid,
+    ],
+    [
+      "a code nobody made",
+      { "x-invite-code": "DIAL-ZZZZ" },
+      "INVITE_INVALID",
+      INVITE_COPY.invalid,
+    ],
   ])("refuses %s, and makes no account", async (_, headers, code, message) => {
     const auth = instance(accessGate(db, turnstile().verify));
     const email = address();
@@ -216,12 +226,18 @@ describe("email sign-up through the gate", () => {
     await seedCode(first);
     const email = address();
     await auth.handler(
-      signUpRequest(email, { "x-invite-code": first, "x-turnstile-token": "t" }),
+      signUpRequest(email, {
+        "x-invite-code": first,
+        "x-turnstile-token": "t",
+      }),
     );
     const second = freshCode();
     const secondId = await seedCode(second);
     const again = await auth.handler(
-      signUpRequest(email, { "x-invite-code": second, "x-turnstile-token": "t" }),
+      signUpRequest(email, {
+        "x-invite-code": second,
+        "x-turnstile-token": "t",
+      }),
     );
     expect(again.status).toBe(200);
     const spent = await db
@@ -525,7 +541,9 @@ describe("Google sign-up through the gate", () => {
         claim: () => Promise.resolve("redeemed"),
         confirm: () => Promise.resolve(),
       });
-      await expect(create({ email: address() }, NO_CONTEXT)).rejects.toMatchObject({
+      await expect(
+        create({ email: address() }, NO_CONTEXT),
+      ).rejects.toMatchObject({
         body: { code: "INVITE_MISSING" },
       });
     } finally {
@@ -535,14 +553,16 @@ describe("Google sign-up through the gate", () => {
 });
 
 describe("signUpKind", () => {
-  it("names the email form's request \"email\", not just non-undefined", () => {
+  it('names the email form\'s request "email", not just non-undefined', () => {
     expect(signUpKind("/sign-up/email", {})).toBe("email");
   });
 
   it("only treats a social attempt as one on the social path", () => {
     // isSocial gates on the path, not on the body alone: a request that
     // asks to sign up from a different path must not read as Google's.
-    expect(signUpKind("/sign-in/email", { requestSignUp: true })).toBeUndefined();
+    expect(
+      signUpKind("/sign-in/email", { requestSignUp: true }),
+    ).toBeUndefined();
   });
 });
 

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { GarmentForm } from "../../src/modules/closet/components/GarmentForm";
 import type { GarmentFormProps } from "../../src/modules/closet/components/GarmentForm";
-import { garmentCategoriesInOrder } from "../../src/lib/garment-fields";
+import { garmentCategoriesInOrder } from "../../src/lib/contracts/garment-fields";
 
 /**
  * Screen F, driven.

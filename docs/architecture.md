@@ -202,6 +202,17 @@ Rules: modules import foundation freely; cross-module imports go through the
 target module's `index.ts`; only `env/` reads bindings; route files import
 modules but are imported by nothing; no cycles.
 
+`lib` is foldered by where its code may run, and two dependency-cruiser
+rules hold the split (D-50's bug class, made visible in the path):
+`lib/contracts/` (domain truth and derived tables, behind the
+`lib/contracts.ts` barrel) and the root files are isomorphic;
+`lib/sql/` (drizzle/D1 helpers, the outbox wire format, queue batches, R2
+paging) is **server-only** — `lib-sql-is-server-only` keeps it out of every
+route file and `.tsx` component; `lib/browser/` (session memo, the zod
+jitless head script) is **client-only** — `lib-browser-is-client-only`
+keeps it out of `src/server.ts`, every `functions.ts`, and the queue
+consumers and cron handlers the Worker entry wires.
+
 Task 126 (ACC-9) added account deletion's purge, `modules/account/purge.ts`,
 which is **not** in `account`'s barrel and is imported by nothing but the
 Worker entry. It calls `feed`'s delete primitives, and both `feed` and

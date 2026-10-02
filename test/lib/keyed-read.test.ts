@@ -11,7 +11,7 @@ import {
   firstColumnWhere,
   firstRowWhere,
   hasRowWhere,
-} from "../../src/lib/keyed-read";
+} from "../../src/lib/sql/keyed-read";
 
 /**
  * The two reads a join table gets, against a real D1.

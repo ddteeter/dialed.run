@@ -4,7 +4,7 @@ import type { SQL } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 
-import { ForbiddenError, NotFoundError } from "./errors";
+import { ForbiddenError, NotFoundError } from "../errors";
 
 /**
  * "This row, and it belongs to this user" — the predicate behind every

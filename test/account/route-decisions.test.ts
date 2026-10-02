@@ -5,7 +5,7 @@ import {
   forgetSession,
   isRememberedForSession,
   noteSessionOwner,
-} from "../../src/lib/session-memo";
+} from "../../src/lib/browser/session-memo";
 
 import { takenMessage } from "../../src/modules/account/handle-copy";
 import {

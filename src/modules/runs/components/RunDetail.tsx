@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import type { Units } from "../../../lib/contracts";
 import { clockLabel, dayLabel } from "../../../lib/dates";
-import { distanceNumber, formatPace } from "../../../lib/measures";
+import { distanceNumber, formatPace } from "../../../lib/contracts/measures";
 import { Mono } from "../../../ui";
 import type { RunSummary } from "../service";
 import { ConditionsRow } from "./ConditionsBlock";

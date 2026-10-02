@@ -23,7 +23,7 @@ import { describe, expect, it } from "vitest";
 describe("modules that build a table at import time", () => {
   it("builds the garment field spec", async () => {
     const { garmentFieldSpec, garmentCategoriesInOrder } =
-      await import("../../src/lib/garment-fields");
+      await import("../../src/lib/contracts/garment-fields");
     expect(garmentCategoriesInOrder.length).toBeGreaterThan(0);
     expect(garmentFieldSpec.size).toBe(garmentCategoriesInOrder.length);
     for (const category of garmentCategoriesInOrder) {
@@ -32,7 +32,8 @@ describe("modules that build a table at import time", () => {
   });
 
   it("builds the thermal tables", async () => {
-    const { estimateTempRange } = await import("../../src/lib/thermal");
+    const { estimateTempRange } =
+      await import("../../src/lib/contracts/thermal");
     expect(estimateTempRange({ category: "top", weight: "mid" })).toEqual({
       lowC: 4,
       highC: 15,

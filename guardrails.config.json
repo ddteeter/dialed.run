@@ -68,12 +68,12 @@
       "count": 1
     },
     {
-      "key": "src/lib/thermal.ts|mutation-suppress|// Stryker disable next-line UnaryOperator",
+      "key": "src/lib/contracts/thermal.ts|mutation-suppress|// Stryker disable next-line UnaryOperator",
       "reason": "Equivalent mutant, proof at the site: a heavy OUTER layer has no lower bound (nothing goes over it), so estimateTempRange drops this floor before returning and no input can distinguish -4 from +4. Hoisted to a named constant because a Stryker directive cannot attach inside an object literal.",
       "count": 1
     },
     {
-      "key": "src/lib/thermal.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "key": "src/lib/contracts/thermal.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutant, proof at the site: removing the undefined-weight guard changes no behaviour, because an undefined weight indexes every table to undefined and the next guard returns the same thing. It is load-bearing for the compiler, not the runtime \u2014 without it `Weight | undefined` cannot index `Record<Weight, Band>`.",
       "count": 1
     },
@@ -393,7 +393,7 @@
       "count": 1
     },
     {
-      "key": "src/lib/thermal.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- same shape, different physics",
+      "key": "src/lib/contracts/thermal.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- same shape, different physics",
       "reason": "Semantic clone detection reports skeletons, so it matches two shapes whether or not they are the same idea. Owner-approved 2026-09-10: per-group markers rather than a blanket src/routes ignore. This one: same shape, different physics.",
       "count": 1
     },

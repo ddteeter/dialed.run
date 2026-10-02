@@ -9,7 +9,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { ExportRowState } from "../../src/lib/data-export";
+import type { ExportRowState } from "../../src/lib/contracts/data-export";
 import { ExportRow } from "../../src/modules/account/components/ExportRow";
 
 /**

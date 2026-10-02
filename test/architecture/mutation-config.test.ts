@@ -1,9 +1,34 @@
 import { describe, expect, it } from "vitest";
 
 import strykerConfig from "../../stryker.conf.json";
+import { ratchetGlob } from "./ratchet-glob";
 
 function byPath(a: string, b: string): number {
   return a.localeCompare(b);
+}
+
+/**
+ * Every `.ts` file under `src/lib`, subdirectories included.
+ *
+ * `import.meta.glob`, not `readdirSync`: these run in the workers pool,
+ * which has no real filesystem — `readdir("src/lib")` resolves inside
+ * workerd and fails. Vite resolves this at build time, so it sees the
+ * directory as it is on disk. Same device `server-functions-are-glue`
+ * uses to enumerate modules.
+ */
+function libFilesOnDisk(): string[] {
+  return Object.keys(
+    import.meta.glob("../../src/lib/**/*.ts", { query: "?raw" }),
+  ).map((path) => path.replace("../../", ""));
+}
+
+/**
+The `src/lib` entries, each as its list of positive paths and globs.
+*/
+function libEntries(): string[][] {
+  return strykerConfig.mutate
+    .filter((entry) => entry.startsWith("src/lib/"))
+    .map((entry) => entry.split(",").filter((path) => !path.startsWith("!")));
 }
 
 /**
@@ -75,46 +100,60 @@ describe("stryker.conf.json", () => {
     expect(strykerConfig).not.toHaveProperty("incremental");
   });
 
-  it("covers every file in src/lib, which five positive entries cannot do on their own", () => {
+  it("matches every file in src/lib to exactly one entry, which split entries cannot promise on their own", () => {
     /**
-     * `src/lib` is split across five entries rather than one
+     * `src/lib` is split across seven entries rather than one
      * `src/lib/**\/*.ts` glob, because it was the longest shard in every
      * run — 31.8 minutes cold, 4.3 warm, about 2.5x the next one either
-     * way — and `contracts.ts` plus `thermal.ts` were 248 of its 367
-     * mutants. `contracts.ts` is now a barrel over `src/lib/contracts/`,
-     * whose section files are three of the five, so the walk below goes
-     * into subdirectories: a file added under `src/lib/contracts/` is as
-     * easy to forget as one added beside it.
+     * way — and its static mutants each re-run the whole suite. The
+     * directory is laid out by where code may run (`contracts/`, `sql/`,
+     * `browser/`, isomorphic files at the root), and so are the entries:
+     * `sql/` and `browser/` are one glob each, while `contracts/` is
+     * four explicit lists — three balanced by static-mutant count, plus
+     * `thermal.ts` on its own — and the root is one list, because the
+     * `contracts.ts` barrel rides with a contracts shard.
      *
      * The split has to be by *positive* path. A `!src/lib/contracts.ts`
      * negation would read as "this file cannot be mutated" to the
      * commit-gate analyzer, which appends every negation in the array to
      * its own `--mutate` — exempting the file from the gate entirely.
      *
-     * The cost is that adding a file to `src/lib` joins no shard unless
-     * someone remembers to list it, and nothing would fail: the file would
-     * simply never be mutated, and the ratchet would report 100% on a
-     * scope that no longer covers the directory. This is the check that
-     * makes the split safe — and it checks *exactly one* entry, because a
-     * file listed in two shards is mutated twice for nothing.
+     * The cost is that a file added to the root or to `contracts/` joins
+     * no shard unless someone remembers to list it, and nothing would
+     * fail: the file would simply never be mutated, and the ratchet would
+     * report 100% on a scope that no longer covers the directory. This is
+     * the check that makes the split safe — and it checks *exactly one*
+     * entry, because a file matched by two shards is mutated twice for
+     * nothing.
      */
-    // `import.meta.glob`, not `readdirSync`: these run in the workers
-    // pool, which has no real filesystem — `readdir("src/lib")` resolves
-    // inside workerd and fails. Vite resolves this at build time, so it
-    // sees the directory as it is on disk. Same device
-    // `server-functions-are-glue` uses to enumerate modules.
-    const onDisk = Object.keys(
-      import.meta.glob("../../src/lib/**/*.ts", { query: "?raw" }),
-    ).map((path) => path.replace("../../", ""));
+    // For each file, how many entries match it. A path named twice inside
+    // one entry still counts once — stryker dedupes within a scope — but
+    // two entries matching it is two shards mutating it. Sorted, because
+    // the order entries appear in is a sharding decision and not a fact
+    // about coverage.
+    const onDisk = libFilesOnDisk().toSorted(byPath);
+    const matches = Object.fromEntries(
+      onDisk.map((file) => [
+        file,
+        libEntries().filter((paths) =>
+          paths.some((path) => ratchetGlob(path).test(file)),
+        ).length,
+      ]),
+    );
+    expect(matches).toStrictEqual(
+      Object.fromEntries(onDisk.map((file) => [file, 1])),
+    );
+  });
 
-    const inScopes = strykerConfig.mutate
-      .filter((entry) => entry.startsWith("src/lib/"))
-      .flatMap((entry) => entry.split(","))
-      .filter((path) => !path.startsWith("!"));
+  it("names no src/lib path that matches nothing on disk", () => {
+    // The other direction: an entry left pointing at a moved or deleted
+    // file matches nothing, and a shard made only of such paths mutates
+    // nothing and passes.
+    const onDisk = libFilesOnDisk();
+    const deadPaths = libEntries()
+      .flat()
+      .filter((path) => onDisk.every((file) => !ratchetGlob(path).test(file)));
 
-    // Sorted, because the order entries appear in is a sharding decision
-    // and not a fact about coverage. Not sets: a set would hide a file
-    // listed twice.
-    expect(inScopes.toSorted(byPath)).toStrictEqual(onDisk.toSorted(byPath));
+    expect(deadPaths).toStrictEqual([]);
   });
 });

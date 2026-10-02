@@ -10,7 +10,7 @@ import {
 
 /**
  * D-7: the unit vocabularies were written twice — a bare `"f" | "c"` union
- * in `lib/temperature.ts` and a column enum in `db/schema-core.ts` — with
+ * in `lib/contracts/temperature.ts` and a column enum in `db/schema-core.ts` — with
  * nothing making them agree. Two lists that mean one thing drift in
  * silence, because nothing fails when they disagree.
  *

@@ -33,7 +33,7 @@ import {
 } from "../../../db/schema-core";
 import type { CoreDb } from "../core-db";
 import { newUlid } from "../../../lib/ids";
-import { firstRowWhere } from "../../../lib/keyed-read";
+import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import { StravaApiError } from "./api";
 import type { StravaApi, StravaConfig } from "./api";
 import type { RevokeJob } from "../queue-messages";

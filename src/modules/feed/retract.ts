@@ -41,7 +41,7 @@ import {
 } from "../../db/schema-core";
 import { NotFoundError } from "../../lib/errors";
 import { ulidSchema } from "../../lib/ids";
-import { columnWhere } from "../../lib/keyed-read";
+import { columnWhere } from "../../lib/sql/keyed-read";
 import {
   captureException,
   outboxInsert,

@@ -9,7 +9,7 @@
  * Unit choice is display-only and stays here: D-6 will make it a user
  * preference, and the contract keeps storing SI either way.
  */
-import type { DistanceUnit, TempUnit } from "./contracts";
+import type { DistanceUnit, TempUnit } from "./profile";
 import { formatTemp } from "./temperature";
 
 const METRES_PER_MILE = 1609.34;

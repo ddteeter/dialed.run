@@ -9,7 +9,7 @@
  * (lat_r, lng_r, hour_bucket), never by scanning dialed-weather.
  *
  * Pure classification/formatting helpers (precipClassOf, bandFloorC,
- * bandLabel, formatTemp) live in lib/temperature.ts, not here — this file
+ * bandLabel, formatTemp) live in lib/contracts/temperature.ts, not here — this file
  * imports `env`, and a route component that value-imports anything from an
  * env-touching file breaks the client build (Vite/Rolldown must resolve
  * `cloudflare:workers` even for bindings the component never uses).

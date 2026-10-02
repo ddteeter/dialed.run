@@ -36,13 +36,13 @@ import type {
 } from "../../lib/contracts";
 import { garmentSchema, uiGroupFor } from "../../lib/contracts";
 // Was private to this file until modules/safety needed the same helper.
-import { orSqlNull } from "../../lib/sql-null";
-import { garmentTypesFor } from "../../lib/garment-fields";
+import { orSqlNull } from "../../lib/sql/sql-null";
+import { garmentTypesFor } from "../../lib/contracts/garment-fields";
 import { NotFoundError } from "../../lib/errors";
 import { newUlid } from "../../lib/ids";
 import { topByCount } from "../../lib/top-by-count";
-import type { TempRange } from "../../lib/thermal";
-import { estimateTempRange } from "../../lib/thermal";
+import type { TempRange } from "../../lib/contracts/thermal";
+import { estimateTempRange } from "../../lib/contracts/thermal";
 import { enqueueEnrichment } from "../enrichment";
 import {
   captureException,
@@ -57,7 +57,7 @@ import {
   resolveProduct,
 } from "../products";
 import type { ProductAttributeDefaults, ProductComposition } from "../products";
-import { ownedBy } from "../../lib/owned";
+import { ownedBy } from "../../lib/sql/owned";
 import { isDeniedDomain } from "../safety";
 import { nowSeconds } from "../../lib/now";
 

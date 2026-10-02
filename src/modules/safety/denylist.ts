@@ -15,7 +15,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { domainDenylist } from "../../db/schema-core";
 import { env } from "../../env";
 import { domainOf } from "../../lib/domain";
-import { hasRowWhere } from "../../lib/keyed-read";
+import { hasRowWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 
 function db() {

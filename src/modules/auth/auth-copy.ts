@@ -1,4 +1,4 @@
-import { TURNSTILE_REFUSED } from "../../lib/access";
+import { TURNSTILE_REFUSED } from "../../lib/contracts/access";
 import { CURRENT_PASSWORD_WRONG } from "../../lib/contracts";
 import type { ControlFailure, FormFailure } from "../../ui";
 

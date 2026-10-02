@@ -25,7 +25,7 @@ import {
 } from "../../db/schema-core";
 import { readInChunks } from "../../lib/chunked";
 import { ulidSchema, type Ulid } from "../../lib/ids";
-import { firstRowWhere } from "../../lib/keyed-read";
+import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { manualReadingsForRuns, observationsForRuns } from "../weather";
 import type { WeatherReading } from "../weather";
 

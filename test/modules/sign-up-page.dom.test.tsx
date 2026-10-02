@@ -10,7 +10,7 @@ import { useState } from "react";
 import type { ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { INVITE_COPY, TURNSTILE_REFUSED } from "../../src/lib/access";
+import { INVITE_COPY, TURNSTILE_REFUSED } from "../../src/lib/contracts/access";
 import { signUpSchema } from "../../src/lib/contracts";
 import { AUTH_COPY } from "../../src/modules/auth/auth-copy";
 import {
@@ -146,11 +146,17 @@ beforeEach(() => {
 describe("Au2 · invite stage at rest", () => {
   it("asks for the code first, says why, and offers Au5 under Google", async () => {
     await signUpPage();
-    expect(screen.getByText("dialed.run is invite-only for now.")).toBeVisible();
+    expect(
+      screen.getByText("dialed.run is invite-only for now."),
+    ).toBeVisible();
     const fields = [...document.querySelectorAll("input")].map(
       (input) => input.name,
     );
-    expect(fields.slice(0, 3)).toStrictEqual(["inviteCode", "email", "password"]);
+    expect(fields.slice(0, 3)).toStrictEqual([
+      "inviteCode",
+      "email",
+      "password",
+    ]);
     const link = screen.getByRole("link", { name: "Request access" });
     expect(link).toHaveAttribute("href", "/account/request-access");
     expect(part("request-access")).toHaveTextContent("No code? Request access");
@@ -248,7 +254,9 @@ describe("Au2 · Google in the invite stage", () => {
     });
     const { user, leave } = await signUpPage();
     await user.type(screen.getByLabelText("Invite code"), "DIAL-7K3P");
-    await user.click(screen.getByRole("button", { name: "Continue with Google" }));
+    await user.click(
+      screen.getByRole("button", { name: "Continue with Google" }),
+    );
     await waitFor(() => {
       expect(leave).toHaveBeenCalledWith("https://accounts.example/consent");
     });
@@ -266,7 +274,9 @@ describe("Au2 · Google in the invite stage", () => {
       error: { code: "INVITE_INVALID", status: 400 },
     });
     const { user, leave } = await signUpPage();
-    await user.click(screen.getByRole("button", { name: "Continue with Google" }));
+    await user.click(
+      screen.getByRole("button", { name: "Continue with Google" }),
+    );
     const band = await waitFor(() => {
       const found = part("failure-band");
       expect(found).toHaveTextContent(INVITE_COPY.invalid);

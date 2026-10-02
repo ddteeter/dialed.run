@@ -52,7 +52,7 @@ export async function ensureInviteCode(): Promise<string> {
 
 /**
  * The headers Better Auth's before-hook reads a sign-up's way in from
- * (`lib/access.ts`'s `ACCESS_HEADERS`), for a sign-up through the API.
+ * (`lib/contracts/access.ts`'s `ACCESS_HEADERS`), for a sign-up through the API.
  */
 export function admissionHeaders(): Record<string, string> {
   return {

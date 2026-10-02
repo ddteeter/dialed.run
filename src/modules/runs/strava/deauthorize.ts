@@ -20,11 +20,11 @@ import { and, eq, isNull, lte, or } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 
 import { stravaConnections, stravaRevocations } from "../../../db/schema-core";
-import { firstRowWhere } from "../../../lib/keyed-read";
+import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import { newUlid } from "../../../lib/ids";
 import { nowSeconds } from "../../../lib/now";
-import { STRAVA_DISCONNECTED_LINE } from "../../../lib/email";
-import type { OutboxMessage } from "../../../lib/outbox";
+import { STRAVA_DISCONNECTED_LINE } from "../../../lib/contracts/email";
+import type { OutboxMessage } from "../../../lib/sql/outbox";
 import { emailDebt } from "../../email";
 import { notificationInsert } from "../../notifications";
 import type { CoreDb } from "../core-db";

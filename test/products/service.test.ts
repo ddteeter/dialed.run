@@ -19,7 +19,7 @@ import {
 import { brands, products } from "../../src/db/schema-core";
 import { CURATED_BRANDS } from "../../src/modules/products/seed-brands";
 import { nowSeconds } from "../../src/lib/now";
-import { orSqlNull } from "../../src/lib/sql-null";
+import { orSqlNull } from "../../src/lib/sql/sql-null";
 
 function db() {
   return drizzle(env.DIALED_CORE);

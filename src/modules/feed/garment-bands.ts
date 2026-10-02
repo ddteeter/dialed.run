@@ -23,7 +23,7 @@ import { z } from "zod";
 
 import { outfitEntries, outfitEntryItems } from "../../db/schema-core";
 import { ulidSchema } from "../../lib/ids";
-import { bandFloorC } from "../../lib/temperature";
+import { bandFloorC } from "../../lib/contracts/temperature";
 import { captureException } from "../ops";
 import { observationsForEntries } from "./conditions";
 import { judgedFeelsLikeC } from "./judged-conditions";

@@ -23,7 +23,7 @@ import type { ManualSky, WeatherObservation } from "../../lib/contracts";
 import { readInChunks } from "../../lib/chunked";
 import { isTimeZone } from "../../lib/dates";
 import { nowSeconds } from "../../lib/now";
-import { orSqlNull } from "../../lib/sql-null";
+import { orSqlNull } from "../../lib/sql/sql-null";
 
 export interface CacheKey {
   latR: number;

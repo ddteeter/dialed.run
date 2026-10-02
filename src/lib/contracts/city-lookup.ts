@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { ResolvedPlace } from "./contracts";
+import type { ResolvedPlace } from "./weather";
 
 /**
  * The typed city's contract (round 26 #12), shared by the field that asks

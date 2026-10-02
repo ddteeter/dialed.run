@@ -21,7 +21,7 @@ import {
   firstColumnWhere,
   firstRowWhere,
   hasRowWhere,
-} from "../../lib/keyed-read";
+} from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 import {
   claimEmailSend,

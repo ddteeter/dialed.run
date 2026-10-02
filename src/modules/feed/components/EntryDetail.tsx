@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 import { entryTagSchema } from "../../../lib/contracts";
 import type { Units } from "../../../lib/contracts";
-import { formatDistance, formatPace } from "../../../lib/measures";
+import { formatDistance, formatPace } from "../../../lib/contracts/measures";
 import { FormStatus, Icon, Mono, WeatherAttribution } from "../../../ui";
 import { tagLabel } from "../chips";
 import type { EntryTag } from "../chips";

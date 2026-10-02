@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
-import { orSqlNull } from "../../src/lib/sql-null";
+import { orSqlNull } from "../../src/lib/sql/sql-null";
 
 describe("orSqlNull", () => {
   it("passes a present value straight through, unwrapped", () => {

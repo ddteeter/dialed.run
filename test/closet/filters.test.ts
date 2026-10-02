@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import type { TempRange } from "../../src/lib/thermal";
+import type { TempRange } from "../../src/lib/contracts/thermal";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {

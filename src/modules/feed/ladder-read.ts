@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
-import { bandLabel } from "../../lib/temperature";
+import { bandLabel } from "../../lib/contracts/temperature";
 import { observationsForEntries } from "./conditions";
 import { bandsAscendingWithGaps, tallyCoverage } from "./coverage";
 import type { CoverageBand } from "./coverage";

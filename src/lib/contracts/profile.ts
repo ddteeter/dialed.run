@@ -98,7 +98,7 @@ export type ThermalLevel = (typeof thermalScale)[number]["value"];
  * stores SI regardless: `temp_c`, `distance_m`.
  *
  * One `z.enum` each, because these were two independent lists: a bare
- * `"f" | "c"` union in `lib/temperature.ts` and a column enum in
+ * `"f" | "c"` union in `lib/contracts/temperature.ts` and a column enum in
  * `db/schema-core.ts`, with nothing making them agree (D-7). A validator, a
  * type and the stored vocabulary are one fact, so they get one statement —
  * the type comes off the schema via `z.infer`, and `unit-contract.test.ts`
@@ -114,7 +114,7 @@ export type DistanceUnit = z.infer<typeof distanceUnitSchema>;
 /**
  * What the app shows when a person has not chosen. Fahrenheit and miles
  * because the owner is US-based and the calibration tables are authored in
- * Fahrenheit (see `lib/thermal.ts`); 105 replaces this with a locale guess
+ * Fahrenheit (see `lib/contracts/thermal.ts`); 105 replaces this with a locale guess
  * at onboarding, and this stays the fallback for a profile that predates
  * the question.
  */

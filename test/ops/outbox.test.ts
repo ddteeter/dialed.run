@@ -11,7 +11,7 @@ import {
 import { photoKeyFor } from "../../src/lib/garment-photo-key";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import type { OutboxMessage } from "../../src/lib/outbox";
+import type { OutboxMessage } from "../../src/lib/sql/outbox";
 import { createItem } from "../../src/modules/closet";
 import { handleScheduled } from "../../src/modules/ops";
 import {

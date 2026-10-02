@@ -13,7 +13,7 @@
  * zod 4 keeps the per-option shape on a discriminated union, so the union
  * can answer the question itself. There is exactly one place to edit now.
  */
-import { garmentSchema, garmentTypesByCategory } from "./contracts";
+import { garmentSchema, garmentTypesByCategory } from "./garments";
 
 export type GarmentCategory = ReturnType<
   (typeof garmentSchema)["parse"]

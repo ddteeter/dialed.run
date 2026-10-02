@@ -5,7 +5,7 @@ import type { JSX, ReactNode } from "react";
 import type { z } from "zod";
 
 import { thermalOffsetLabel, thermalScale } from "../../../lib/contracts";
-import { notificationSettingsSchema } from "../../../lib/email";
+import { notificationSettingsSchema } from "../../../lib/contracts/email";
 import type { DistanceUnit, TempUnit } from "../../../lib/contracts";
 import {
   FormErrorSummary,

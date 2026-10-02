@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { listedPages } from "../../src/lib/r2-pages";
+import { listedPages } from "../../src/lib/sql/r2-pages";
 import {
   garmentPhotoPrefix,
   photoKeyFor,

@@ -1,4 +1,4 @@
-import type { CityLookup } from "../../lib/city-lookup";
+import type { CityLookup } from "../../lib/contracts/city-lookup";
 import type { ResolvedPlace } from "../../lib/contracts";
 
 /**

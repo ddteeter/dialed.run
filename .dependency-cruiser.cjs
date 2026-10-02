@@ -57,9 +57,57 @@ module.exports = {
       severity: "error",
       comment:
         "src/ui/ and src/lib/ are foundation: they must not import from modules, " +
-        "routes, db, or env.",
+        "routes, db, or env. (src/lib/ is further split by where code may run — see " +
+        "lib-sql-is-server-only and lib-browser-is-client-only below.)",
       from: { path: "^src/(ui|lib)/" },
       to: { path: "^src/(modules|routes|db|env)/" },
+    },
+    {
+      name: "lib-sql-is-server-only",
+      severity: "error",
+      comment:
+        "src/lib/sql/ holds the drizzle/D1 helpers and the server plumbing they serve " +
+        "(outbox, queue batches, R2 paging). A route file or any .tsx component is in the " +
+        "client bundle, so it may not import it: server code reaching the browser chunk is " +
+        "the D-50 bug class that tsc, eslint and the test suite cannot see (only " +
+        "`npm run check:bundle` can, after a build). Server functions reach lib/sql through " +
+        "their handler bodies, which the Start plugin strips; this rule is about a plain " +
+        "top-level import. Added with the lib-by-constraint restructure (owner-approved " +
+        "one-time edit, 2026-09-30).",
+      from: { path: "^src/routes/|^src/.+\\.tsx$" },
+      to: { path: "^src/lib/sql/" },
+    },
+    {
+      name: "lib-browser-is-client-only",
+      severity: "error",
+      comment:
+        "src/lib/browser/ holds code that only means something in the browser (localStorage, " +
+        "the inline head script). A server-side entry point may not import it — the mirror " +
+        "of lib-sql-is-server-only, and the other half of D-50's lesson that which side of " +
+        "the build a file runs on must be visible in where it lives. Added with the " +
+        "lib-by-constraint restructure (owner-approved one-time edit, 2026-09-30). " +
+        "APPROXIMATION: dependency-cruiser has no notion of an entry point, so 'server-side " +
+        "entry' is spelled out by path — the Worker entry (src/server.ts), every server-" +
+        "function module (src/modules/*/functions.ts), and the queue consumers and cron " +
+        "handlers src/server.ts wires (ops/queues.ts, ops/scheduled.ts, runs/consumer.ts, " +
+        "enrichment/consume.ts, account/export-queue.ts, export-build.ts, export-sweep.ts, " +
+        "purge.ts). A new consumer or cron handler joins this list by name. 'Module files " +
+        "that are not .tsx' was measured and rejected as the approximation: auth/credentials.ts " +
+        "and account/route-decisions.ts are plain .ts that run in the browser and legitimately " +
+        "import lib/browser/session-memo. The rule checks direct imports only: a server-function " +
+        "module reaches session-memo transitively (account/functions.ts -> inputs.ts -> " +
+        "route-decisions.ts), which is sound because session-memo remembers nothing outside the " +
+        "browser, and SSR renders every route, so reachability cannot be the test.",
+      from: {
+        path:
+          "^src/server\\.ts$" +
+          "|^src/modules/[^/]+/functions\\.ts$" +
+          "|^src/modules/ops/(queues|scheduled)\\.ts$" +
+          "|^src/modules/runs/consumer\\.ts$" +
+          "|^src/modules/enrichment/consume\\.ts$" +
+          "|^src/modules/account/(export-queue|export-build|export-sweep|purge)\\.ts$",
+      },
+      to: { path: "^src/lib/browser/" },
     },
     {
       name: "db-imports-lib-only",

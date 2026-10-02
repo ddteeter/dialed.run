@@ -3,7 +3,7 @@ import type { JSX } from "react";
 import { useEffect, useState } from "react";
 
 import { uiGroups } from "../../../lib/contracts";
-import { formatTempRange } from "../../../lib/thermal";
+import { formatTempRange } from "../../../lib/contracts/thermal";
 import { Bracketed, Icon, Mono, useListMotion } from "../../../ui";
 import { garmentLabel } from "../label";
 import { isPhotoBeingChecked } from "../photo-url";

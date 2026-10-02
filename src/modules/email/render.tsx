@@ -1,7 +1,7 @@
 import { convert } from "html-to-text";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import type { EmailTemplate } from "../../lib/email";
+import type { EmailTemplate } from "../../lib/contracts/email";
 import { emailContent, type EmailLinks } from "./content";
 import { EmailLayout } from "./EmailLayout";
 

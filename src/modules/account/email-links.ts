@@ -15,7 +15,7 @@ import { z } from "zod";
 
 import { user } from "../../db/schema-auth";
 import { emailVerifications } from "../../db/schema-core";
-import { firstColumnWhere, firstRowWhere } from "../../lib/keyed-read";
+import { firstColumnWhere, firstRowWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 
 type Db = ReturnType<typeof drizzle>;
@@ -210,7 +210,7 @@ export async function releaseEmailLink(
  * the two gates below decide what an absent account means.
  */
 export async function emailConfirmationOf(
-  // The wider handle `lib/keyed-read` explains: every spelling of a
+  // The wider handle `lib/sql/keyed-read` explains: every spelling of a
   // dialed-core handle in the repo fits it, the feed's included.
   db: DrizzleD1Database<Record<string, unknown>>,
   userId: string,

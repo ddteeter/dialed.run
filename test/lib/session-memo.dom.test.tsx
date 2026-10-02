@@ -5,7 +5,7 @@ import {
   isRememberedForSession,
   noteSessionOwner,
   rememberForSession,
-} from "../../src/lib/session-memo";
+} from "../../src/lib/browser/session-memo";
 
 /**
  * The memo as a browser runs it: its owner in `localStorage`, which every

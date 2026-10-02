@@ -10,13 +10,13 @@ import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { emailSendLimits } from "../../db/schema-core";
-import { EMAIL_SENDS_PER_HOUR } from "../../lib/email";
+import { EMAIL_SENDS_PER_HOUR } from "../../lib/contracts/email";
 import { nowSeconds } from "../../lib/now";
 import {
   windowedCountSet,
   windowedCountUntil,
   windowedCountWithin,
-} from "../../lib/window-count";
+} from "../../lib/sql/window-count";
 
 type Db = ReturnType<typeof drizzle>;
 

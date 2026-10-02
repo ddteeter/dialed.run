@@ -32,7 +32,7 @@ import {
   colorNameSchema,
   garmentVisibilitySchema,
 } from "../../lib/contracts";
-import { hasGarmentAttribute } from "../../lib/garment-fields";
+import { hasGarmentAttribute } from "../../lib/contracts/garment-fields";
 
 /**
 An unanswered `<select>` is `""`, which is not absence to the DOM.
@@ -72,7 +72,7 @@ function optional(value: string): string | undefined {
  * Only the attributes this category declares: the union is a
  * `strictObject`, so carrying an extra one is a parse error rather than a
  * field that gets quietly dropped. Which attributes those are is read from
- * `garmentSchema` via `lib/garment-fields` — this was once a switch over
+ * `garmentSchema` via `lib/contracts/garment-fields` — this was once a switch over
  * all eight categories, the third hand-written copy of a fact the schema
  * already states.
  */

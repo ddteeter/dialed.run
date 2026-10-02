@@ -6,7 +6,7 @@ import {
   parseWordList,
   PROFANE_WORDS,
   readBackDigits,
-} from "../../src/lib/profanity";
+} from "../../src/lib/contracts/profanity";
 
 /**
  * The vendored word list (LDNOOBW, CC BY 4.0) as a handle check (task

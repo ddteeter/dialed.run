@@ -11,7 +11,7 @@
  * second video beside the one the reviewer is meant to watch; standalone
  * assertions belong in a sibling *.spec.ts (see home.spec.ts).
  */
-import { INVITE_COPY } from "../../src/lib/access";
+import { INVITE_COPY } from "../../src/lib/contracts/access";
 import { signInAsOperator } from "../desk/operator";
 import { expect, scene, test } from "../support/demo";
 import { confirmLinkFor, resetLinkFor } from "../support/email-links";

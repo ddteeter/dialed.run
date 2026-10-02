@@ -13,8 +13,8 @@ import { eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { user } from "../../db/schema-auth";
-import type { EmailPreferenceKind } from "../../lib/email";
-import { firstColumnWhere } from "../../lib/keyed-read";
+import type { EmailPreferenceKind } from "../../lib/contracts/email";
+import { firstColumnWhere } from "../../lib/sql/keyed-read";
 import { isEmailWanted, setEmailPreference } from "./preferences";
 import { verifiedUnsubscribe } from "./unsubscribe";
 

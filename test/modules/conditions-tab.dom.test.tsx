@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { CityLookup } from "../../src/lib/city-lookup";
+import type { CityLookup } from "../../src/lib/contracts/city-lookup";
 import { ConditionsTab } from "../../src/modules/feed/components/ConditionsTab";
 import type { ConsensusResult } from "../../src/modules/feed/consensus";
 import type { ConditionsHome } from "../../src/modules/feed/home";

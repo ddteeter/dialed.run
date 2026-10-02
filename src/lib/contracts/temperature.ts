@@ -13,7 +13,7 @@
  * structurally safe to import from a route component.
  */
 
-import type { TempUnit } from "./contracts";
+import type { TempUnit } from "./profile";
 
 export type PrecipClass = "dry" | "damp" | "wet";
 

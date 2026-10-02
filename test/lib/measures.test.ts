@@ -7,8 +7,8 @@ import {
   formatDuration,
   formatWind,
   formatTempRange,
-} from "../../src/lib/measures";
-import { formatTemp } from "../../src/lib/temperature";
+} from "../../src/lib/contracts/measures";
+import { formatTemp } from "../../src/lib/contracts/temperature";
 
 /**
  * Both were local helpers inside route files, so neither had a test — and

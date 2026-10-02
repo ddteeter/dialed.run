@@ -8,7 +8,7 @@
  */
 import { z } from "zod";
 
-import { ACCESS_NOTE_MAX, IS_INVITE_ONLY, inviteCodeField } from "../access";
+import { ACCESS_NOTE_MAX, IS_INVITE_ONLY, inviteCodeField } from "./access";
 import { httpsUrlSchema } from "./common";
 
 // ---- Garments: discriminated union on category ----------------------------

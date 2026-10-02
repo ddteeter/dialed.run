@@ -1,8 +1,8 @@
 import type { JSX, ReactNode } from "react";
 
 import type { Units } from "../../../lib/contracts";
-import { formatWind } from "../../../lib/measures";
-import { formatTemp, precipClassOf } from "../../../lib/temperature";
+import { formatWind } from "../../../lib/contracts/measures";
+import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
 import { Mono, PendingLabel, WeatherAttribution } from "../../../ui";
 import { setBandLabel, SKY_WORDS } from "../run-conditions";
 import type { RunConditions, RunSummary } from "../service";

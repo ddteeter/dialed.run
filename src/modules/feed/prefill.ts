@@ -20,7 +20,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { outfitEntries, outfitEntryItems } from "../../db/schema-core";
 import { env } from "../../env";
-import { precipClassOf } from "../../lib/temperature";
+import { precipClassOf } from "../../lib/contracts/temperature";
 import type { Conditions } from "./conditions";
 import { conditionsAt, observationsForEntries } from "./conditions";
 

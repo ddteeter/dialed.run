@@ -8,7 +8,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { outfitEntries, reactions } from "../../db/schema-core";
 import { env } from "../../env";
-import { hasRowWhere } from "../../lib/keyed-read";
+import { hasRowWhere } from "../../lib/sql/keyed-read";
 import { countOf, countWhere } from "./count-where";
 import { entryVisibleTo } from "../safety";
 import { nowSeconds } from "../../lib/now";

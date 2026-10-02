@@ -15,8 +15,8 @@ import {
   distanceNumber,
   formatDuration,
   formatPace,
-} from "../../../lib/measures";
-import { formatTemp, precipClassOf } from "../../../lib/temperature";
+} from "../../../lib/contracts/measures";
+import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
 import {
   ControlFailureBand,
   FormFailureBand,

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { dedupeKeyFor, outboxKinds, readOutboxRow } from "../../src/lib/outbox";
+import {
+  dedupeKeyFor,
+  outboxKinds,
+  readOutboxRow,
+} from "../../src/lib/sql/outbox";
 
 describe("outboxKinds", () => {
   it("is read from the union, so a new kind is drained without a second list", () => {

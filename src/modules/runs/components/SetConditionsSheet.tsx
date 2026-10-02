@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import type { ManualSky, Units } from "../../../lib/contracts";
 import { manualSkies } from "../../../lib/contracts";
-import { bandLabel } from "../../../lib/temperature";
+import { bandLabel } from "../../../lib/contracts/temperature";
 import {
   ChoiceList,
   ControlFailureBand,

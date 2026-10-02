@@ -1,5 +1,9 @@
-import { ACCESS_CODES, ACCESS_HEADERS, INVITE_COPY } from "../../lib/access";
-import { forgetSession } from "../../lib/session-memo";
+import {
+  ACCESS_CODES,
+  ACCESS_HEADERS,
+  INVITE_COPY,
+} from "../../lib/contracts/access";
+import { forgetSession } from "../../lib/browser/session-memo";
 import {
   AUTH_COPY,
   AUTH_KICKER,
@@ -146,7 +150,7 @@ export async function signIn(values: SignInValues): Promise<void> {
   const { error } = await authClient.signIn.email(values);
   throwIfRefused(error, SIGN_IN_REFUSALS);
   // A different runner may be signed in now: what the browser remembered
-  // about the last one (`lib/session-memo`) is not about them.
+  // about the last one (`lib/browser/session-memo`) is not about them.
   forgetSession();
 }
 

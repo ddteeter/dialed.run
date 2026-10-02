@@ -1,5 +1,5 @@
-import type { EmailPayload } from "../../lib/email";
-import type { OutboxMessage } from "../../lib/outbox";
+import type { EmailPayload } from "../../lib/contracts/email";
+import type { OutboxMessage } from "../../lib/sql/outbox";
 
 /**
  * An email owed, as an outbox message (law 8c): pass it to ops'

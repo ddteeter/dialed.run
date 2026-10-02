@@ -12,7 +12,7 @@ import type { drizzle } from "drizzle-orm/d1";
 import { brands, products } from "../../db/schema-core";
 import { fabricPartsSchema, type FabricPart } from "../../lib/contracts";
 import { readInChunks } from "../../lib/chunked";
-import { firstRowWhere } from "../../lib/keyed-read";
+import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { newUlid } from "../../lib/ids";
 import { normalizeIdentity } from "../../lib/normalize";
 import { nowSeconds } from "../../lib/now";

@@ -5,10 +5,10 @@ import {
   bandLabel,
   formatTemp,
   precipClassOf,
-} from "../../src/lib/temperature";
+} from "../../src/lib/contracts/temperature";
 
 /**
- * `lib/temperature` had no test of its own — it was executed only
+ * `lib/contracts/temperature` had no test of its own — it was executed only
  * incidentally, through feed and weather tests that assert something else.
  * Mutation testing put a number on that: 14% score, 21 of 35 mutants never
  * executed at all.

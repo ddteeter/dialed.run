@@ -11,8 +11,11 @@
  * change, the changed notice) have no drawing and are placeholders in the
  * same voice, listed under the PR's "Design deltas".
  */
-import { EXPORT_LINK_DAYS } from "../../lib/data-export";
-import { STRAVA_DISCONNECTED_LINE, type EmailTemplate } from "../../lib/email";
+import { EXPORT_LINK_DAYS } from "../../lib/contracts/data-export";
+import {
+  STRAVA_DISCONNECTED_LINE,
+  type EmailTemplate,
+} from "../../lib/contracts/email";
 
 export interface EmailLink {
   readonly label: string;

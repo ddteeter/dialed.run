@@ -11,7 +11,7 @@ import {
   startImport,
 } from "../../src/modules/runs/imports";
 import { newUlid } from "../../src/lib/ids";
-import { selectOwnedRow } from "../../src/lib/owned";
+import { selectOwnedRow } from "../../src/lib/sql/owned";
 import type { ImportJob } from "../../src/modules/runs/queue-messages";
 import { nowSeconds } from "../../src/lib/now";
 

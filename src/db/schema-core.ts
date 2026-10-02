@@ -8,7 +8,7 @@
 import { sql } from "drizzle-orm";
 
 import { colorNames, garmentVisibilities } from "../lib/contracts";
-import { EMAIL_PREFERENCE_KINDS } from "../lib/email";
+import { EMAIL_PREFERENCE_KINDS } from "../lib/contracts/email";
 import {
   index,
   integer,
