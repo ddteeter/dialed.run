@@ -4,7 +4,7 @@
  * `functions.ts` imports `createServerFn`, which drags TanStack Start's
  * virtual entries in with it — so nothing in that file can be imported by
  * a test running in the vitest workers pool, and nothing in it can be
- * mutation tested (D-41). A zod schema is a trust boundary and belongs
+ * mutation tested (R-41). A zod schema is a trust boundary and belongs
  * where it can be, which is here.
  */
 import { z } from "zod";

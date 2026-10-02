@@ -42,7 +42,7 @@ import {
  *
  * Every assertion is a read a runner makes — the feed, entry detail, a
  * photo, a Useful — rather than the predicate's SQL, because the defect
- * this lane exists to fix is a rule nothing called (D-107, D-108).
+ * this lane exists to fix is a rule nothing called (R-107, R-108).
  */
 
 function core() {
@@ -341,7 +341,7 @@ describe("the rule's cost", () => {
   });
 });
 
-describe("D-62's predicate (SAF-9)", () => {
+describe("R-62's predicate (SAF-9)", () => {
   const author = "01AUTHOR";
 
   it("is true for the author of an entry hidden pending review", () => {

@@ -55,7 +55,7 @@ const CHIP_OFF =
  * 2. **The band is the sort key**, applied before the list gets here.
  * 3. **Fold at `fold`, and the disclosure states the remainder.** It states
  *    the real one: design specified 24 rows and named 14, and the table
- *    holds 18 today (D-49), so a hardcoded "10 more" would have been a lie
+ *    holds 18 today (R-49), so a hardcoded "10 more" would have been a lie
  *    the moment the missing six landed.
  * 4. **Nothing arrives ticked.** There is deliberately no prop for a
  *    starting selection — the state begins empty and is derived from taps

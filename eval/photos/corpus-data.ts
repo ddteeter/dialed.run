@@ -2,7 +2,7 @@
  * The photo corpus table itself — data, kept apart from the shape that
  * describes it (`./corpus-entry`).
  *
- * Split for the reason `src/modules/closet/tap-list-data.ts` was (D-34):
+ * Split for the reason `src/modules/closet/tap-list-data.ts` was (R-34):
  * every row of a table necessarily has the shape of every other row, so a
  * semantic clone detector reads twenty entries as one large duplicate.
  * Ignoring this file in `.fallowrc.jsonc` costs nothing, because there is

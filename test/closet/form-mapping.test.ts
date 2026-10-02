@@ -35,7 +35,7 @@ import type {
 
 /**
  * The mapping used to be a function called `garmentFromFormValues`, which
- * ended in `garmentSchema.parse`. D-17 moved it into `garmentFormSchema` as
+ * ended in `garmentSchema.parse`. R-17 moved it into `garmentFormSchema` as
  * the transform ahead of a `.pipe()`, so the form's own submit path runs it
  * and a rejection is a field message rather than an unhandled rejection.
  * These assertions are about the behaviour, which did not change — so they

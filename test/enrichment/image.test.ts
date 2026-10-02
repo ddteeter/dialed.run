@@ -221,7 +221,7 @@ describe("copyProductImage", () => {
 
   it("refuses an image past the cap before decoding it, and stores nothing", async () => {
     // The cap runs on the bytes that arrived and ahead of the decode: a
-    // decode is the expensive step (D-3), and a JPEG that is real up to
+    // decode is the expensive step (R-3), and a JPEG that is real up to
     // the cap and padded past it must not reach it.
     const productId = newUlid();
     const oversized = new Uint8Array(maxPhotoBytes + 1);

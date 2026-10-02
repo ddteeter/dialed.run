@@ -238,7 +238,7 @@ describe("ManualRunForm: effort is optional", () => {
 });
 
 describe("ManualRunForm: after it lands", () => {
-  it("takes them on to picking the outfit for the run it just created (R1, D-102)", async () => {
+  it("takes them on to picking the outfit for the run it just created (R1, R-102)", async () => {
     const user = userEvent.setup();
     const router = await renderWithRouter(
       <ManualRunForm submitRun={() => Promise.resolve({ id: "01NEWRUN" })} />,

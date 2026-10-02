@@ -4,7 +4,7 @@
  * numbers in the digest's order, each with the words the board gives it.
  *
  * The operator exists only with `ADMIN_USER_IDS=e2e-desk-operator` in the
- * dev server's `.dev.vars`, which CI's e2e job writes (D-72, PR #114).
+ * dev server's `.dev.vars`, which CI's e2e job writes (R-72, PR #114).
  *
  * What it does not compare, on purpose: the board's own values (4, 23, 3,
  * "OLDEST · 19H") are the drawing's data, not the app's; "@mara · OPERATOR

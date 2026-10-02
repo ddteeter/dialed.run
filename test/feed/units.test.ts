@@ -8,7 +8,7 @@ import { unitsFor } from "../../src/modules/feed/units";
 import { makeUser, resetTables } from "./helpers";
 
 /**
- * D-6: `temp_unit` and `distance_unit` existed from the first migration and
+ * R-6: `temp_unit` and `distance_unit` existed from the first migration and
  * nothing read them, so every screen rendered Fahrenheit and miles whatever
  * the row said. This is the read that fixes it.
  */

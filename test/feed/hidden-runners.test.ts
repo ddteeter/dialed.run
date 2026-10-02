@@ -19,7 +19,7 @@ import { banUser, blockRunner, fileReport } from "../../src/modules/safety";
 import { makeEntry, makeRun, makeUser, resetTables, NOW } from "./helpers";
 
 /**
- * FEED-7 (D-107, D-108): a banned runner, and anyone in a block pair with
+ * FEED-7 (R-107, R-108): a banned runner, and anyone in a block pair with
  * the viewer, leaves runner search and reads as not found on H — and H's
  * entries go through the viewer-aware visibility rule, so what the viewer
  * reported leaves too. FEED-10: `/@handle`'s answers. FEED-6: the author's

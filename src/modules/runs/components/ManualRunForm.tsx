@@ -41,7 +41,7 @@ function toEpochSeconds(localDateTime: string): number {
  *
  * The contract stores SI — `durationS` is seconds, `distanceM` is metres —
  * because that is what makes pace arithmetic and the future unit
- * preference (D-6) a display concern rather than a storage one. Nobody
+ * preference (R-6) a display concern rather than a storage one. Nobody
  * types seconds into a form, so the inputs take minutes and kilometres and
  * `toSeconds`/`toMetres` convert on submit.
  *
@@ -105,7 +105,7 @@ export function ManualRunForm({ submitRun }: Readonly<ManualRunFormProps>) {
     // `onSuccess` navigates to the new run, which unmounts the live region
     // in the same commit that fills it. Nothing can observe the
     // announcement, and a screen reader very likely cannot either.
-    // Recorded as D-44.
+    // Recorded as R-44.
     // Stryker disable next-line StringLiteral
     successMessage: "Run logged.",
     labels: LABELS,
@@ -117,7 +117,7 @@ export function ManualRunForm({ submitRun }: Readonly<ManualRunFormProps>) {
       // Stryker disable next-line CallExpression
       rotate();
       // Onto picking the outfit, as R1 ends — "Next · pick the outfit" —
-      // not onto run detail (D-102): manual entry adds the run and hands
+      // not onto run detail (R-102): manual entry adds the run and hands
       // off to the same two steps as an import.
       await navigate({
         to: "/feed/attach/$runId",

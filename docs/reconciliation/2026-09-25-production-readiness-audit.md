@@ -16,7 +16,7 @@ These contradict something the docs or code claim, and each would break producti
 
 1. **The Strava refresh path is unused.** `refreshStravaToken` (`src/modules/runs/strava/oauth.ts:170`) is called only by `test/runs/strava-oauth.test.ts`. Because of that:
    - **Revocation cannot succeed.** Disconnect copies the _stored access token_ into `strava_revocations` (`oauth.ts:311-318`). Strava access tokens expire about 6 h after issue, and nothing refreshes them. So `deauthorize` gets a 401 → 3 retries → DLQ → Sentry. The daily digest then re-dispatches the row (`ops/scheduled.ts:232`) and it fails again, every day, forever. The user believes they disconnected; the grant stays live on Strava.
-   - **D-1's fix never runs.** Its "broken after 3 failures / 30 min" logic (dfc1e39) is unreachable, so the `strava_broken` notification can never fire.
+   - **R-1's fix never runs.** Its "broken after 3 failures / 30 min" logic (dfc1e39) is unreachable, so the `strava_broken` notification can never fire.
 2. **Athlete deauthorization is ignored.** The webhook drops every non-`activity/create` event (`webhook.ts:68`), including `object_type: "athlete"` with `updates.authorized: "false"`. That leaves our tokens and athlete id in place indefinitely. Strava's API Policy §7.4 requires deletion "within thirty (30) days" of a user revoking authorization (**legal/contractual requirement**).
 3. **Ban mechanics are mostly unbuilt.** `bans.ts` only writes `banned_at` and deletes sessions:
    - `banStateOf` is never called, so a banned user signs straight back in.
@@ -59,8 +59,8 @@ These contradict something the docs or code claim, and each would break producti
   - No statute requires a ToS (**best practice**, and effectively mandatory).
   - Without one, a ban has no contractual basis, and the photo licence rests on implied consent.
   - The Strava review also looks for a real, public-facing app.
-- **Size:** owner/lawyer text, 0.5–1 day. Page and links ride with D-105's lane (about 2 h).
-- **Who:** owner (text), build lane (page and links), design agent (placement — same slot as D-105).
+- **Size:** owner/lawyer text, 0.5–1 day. Page and links ride with R-105's lane (about 2 h).
+- **Who:** owner (text), build lane (page and links), design agent (placement — same slot as R-105).
 
 ### 1.2 DMCA designated agent and takedown process — missing
 
@@ -68,7 +68,7 @@ These contradict something the docs or code claim, and each would break producti
 - **Why it matters:** safe harbour under 17 U.S.C. §512(c) requires a designated agent registered with the Copyright Office.
   - Copyright Office FAQ: "$6 per designation", renewed every three years; a lapse means "Service providers risk losing the safe harbor protections of section 512".
   - **Legal requirement to get the safe harbour.**
-  - Exposure: user photos, plus product images copied into R2 (D-67; not served yet, so dormant).
+  - Exposure: user photos, plus product images copied into R2 (R-67; not served yet, so dormant).
 - **Size:** 1 h of owner time (registration plus a contact address). Takedown tooling (delete object, null key, audit row) is about 0.5 day, shared with 0.9's deletion work.
 - **Who:** owner (registration, and deciding whether a P.O. box or registered-agent address is acceptable); build lane.
 
@@ -87,7 +87,7 @@ These contradict something the docs or code claim, and each would break producti
   - Art. 17 erasure and Art. 20 portability: no delete, no export (see §2).
   - Art. 28 processor agreements.
   - An Art. 27 EU representative decision.
-- **Processors that receive personal data** — each must be named in D-105's policy and, where offered, have a DPA:
+- **Processors that receive personal data** — each must be named in R-105's policy and, where offered, have a DPA:
   - Cloudflare (all data).
   - OpenAI (every uploaded photo, for `omni-moderation`, plus product page text).
   - Visual Crossing (run coordinates and times — location data).
@@ -110,7 +110,7 @@ These contradict something the docs or code claim, and each would break producti
 ### 1.5 Cookie notice — not needed, with one condition
 
 - **Why:** the only cookie is Better Auth's session cookie, and `sessionStorage`/`localStorage` hold UI conveniences (carried email, blur preference). The ICO says consent isn't needed where a cookie is "strictly necessary", and "it is still good practice to provide users with information about these cookies".
-- **Action:** a paragraph in D-105's policy. No banner.
+- **Action:** a paragraph in R-105's policy. No banner.
 - **Condition:** this holds only while no analytics or third-party scripts are added. **Best practice.**
 
 ### 1.6 Strava API Agreement and API Policy (new terms effective 1 June 2026) — several gaps
@@ -134,7 +134,7 @@ The API Policy (https://www.strava.com/legal/api_policy) requires the following.
   - Whether a bare activity id counts as "Strava Data" is arguable. A 7-day prune is about 1 h in an existing cron. **Contractual; do it.**
 - **Deauthorize endpoint:** we call `/oauth/deauthorize` (`strava/api.ts:39`). Strava: `POST /oauth/revoke` "will be the only endpoint supported for deauthorization effective June 1, 2027". Not a launch blocker; fix it together with 0.1.
 - **AI (§5.3):** Strava data must never reach an "AI Application", including context windows. Compliant today (only the athlete id is kept). Keep that true when the Call epic starts.
-- **Privacy policy (§7.3):** it must meet "GDPR and the UK GDPR" requirements and be reachable by prominent links. D-105 covers this, but the §7.3 wording means the policy must be GDPR-grade even if we geo-restrict.
+- **Privacy policy (§7.3):** it must meet "GDPR and the UK GDPR" requirements and be reachable by prominent links. R-105 covers this, but the §7.3 wording means the policy must be GDPR-grade even if we geo-restrict.
 
 ### 1.7 Google OAuth — dashboard work only
 
@@ -144,7 +144,7 @@ The API Policy (https://www.strava.com/legal/api_policy) requires the following.
   - a homepage "hosted on a verified domain you own";
   - a privacy policy on that same domain;
   - Search Console ownership of every authorized domain.
-- That makes it depend on the custom domain (§3.3) and D-105.
+- That makes it depend on the custom domain (§3.3) and R-105.
 - **Size:** 1 h of owner time plus 2–3 business days if a manual review happens.
 - **Who:** owner.
 
@@ -163,13 +163,13 @@ The API Policy (https://www.strava.com/legal/api_policy) requires the following.
 - The OFL FAQ counts subsetting as modification. IBM Plex has a Reserved Font Name ("Plex"), so a _subset_ Plex Mono file should not be distributed under the name Plex.
 - Our files are Google Fonts' own latin and latin-ext subsets. That is common practice and low risk. Keep the licence file and don't rename. **No action.**
 
-### 1.10 CSAM (D-71) — the dashboard toggle does not cover us, and there is a reporting duty
+### 1.10 CSAM (R-71) — the dashboard toggle does not cover us, and there is a reporting duty
 
 - **What the tool scans:** Cloudflare's docs say it compares "content served for your website through the Cloudflare cache". Our photos are Worker-served with `private` cache headers (`feed/photos.ts:312`, `closet/photo.$itemId.$size.ts:34`) on workers.dev. The docs don't mention private or uncached Worker responses, so I infer that turning the tool on scans nothing of ours.
 - **Options:**
   - **(a)** Serve _screened, public_ entry photos with `Cache-Control: public` on the custom zone, so the tool sees them. The cost: purge on hide, unpublish and delete.
   - **(b)** A hash-matching service such as PhotoDNA Cloud or Thorn Safer. Paid, or free on application.
-  - **(c)** Accept report-driven detection plus the OpenAI classifier. Its `sexual/minors` score is text-only per D-71, so image coverage is still zero.
+  - **(c)** Accept report-driven detection plus the OpenAI classifier. Its `sexual/minors` score is text-only per R-71, so image coverage is still zero.
 - **Reporting duty:** separately, 18 U.S.C. §2258A requires providers to report apparent CSAM to NCMEC once they have actual knowledge, and to preserve it. The Cloudflare doc itself says the site owner must "file a report to NCMEC". **Legal requirement.** There is no written procedure for the admin who sees it in `/safety/review`, and no preservation step (the preservation period was lengthened in 2024 — confirm the current figure).
 - **Size:**
   - Procedure doc: about 2 h of owner time.
@@ -326,7 +326,7 @@ Everything the code reads, as a checklist for the owner:
 
 ## 4. Notifications and email
 
-- **Today:** four notification kinds, in-app only (`notifications/service.ts:14`): `kit_reminder`, `import_failed`, `strava_reminder`, `strava_broken`. D-1's text ("emails the user") is wrong — no email path exists.
+- **Today:** four notification kinds, in-app only (`notifications/service.ts:14`): `kit_reminder`, `import_failed`, `strava_reminder`, `strava_broken`. R-1's text ("emails the user") is wrong — no email path exists.
 - **Recommended email set:**
 
 | Event                                      | Email?                                                                                                  | CAN-SPAM class (FTC: transactional/relationship vs commercial)                                               |
@@ -352,12 +352,12 @@ Everything the code reads, as a checklist for the owner:
 
 | Packet 106 item                    | Status on main                                                                                                                                                    |
 | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Photo screening                    | Built. Uses **OpenAI**, not Workers AI. Without `OPENAI_API_KEY` every photo stays `pending` and is never public. Garment-photo flags notify nobody (D-69, open). |
+| Photo screening                    | Built. Uses **OpenAI**, not Workers AI. Without `OPENAI_API_KEY` every photo stays `pending` and is never public. Garment-photo flags notify nobody (R-69, open). |
 | Report → hide → review             | Built for entries, photos and products. The report link is on D and H (`routes/feed/entry…`, `u.$userId`). A **profile** report cannot result in any action.      |
 | Link hygiene                       | Built: `ProductLink` has `rel="ugc nofollow noopener"`; denylist is enforced in `closet/service.ts`.                                                              |
 | Bans                               | **Mostly unbuilt** — finding 0.3. There is also no ban notice, which the packet relies on for appeals ("email in the ban notice").                                |
-| Under-review marker for the author | Missing. D-62 is open; the constant has since been deleted.                                                                                                       |
-| Unblock (D-64)                     | Fixed in PR #104 (settings row → `/safety/blocked`). Closes on merge.                                                                                             |
+| Under-review marker for the author | Missing. R-62 is open; the constant has since been deleted.                                                                                                       |
+| Unblock (R-64)                     | Fixed in PR #104 (settings row → `/safety/blocked`). Closes on merge.                                                                                             |
 
 Further gaps:
 
@@ -366,7 +366,7 @@ Further gaps:
   - Let a moderator force-rename a profile. That is what "Remove" on a profile report should do.
   - Impersonation is otherwise handled only by ban, which doesn't work (0.3).
   - About 0.5 day on top of the username lane.
-- **Admin access:** reaching the review UI needs `ADMIN_USER_IDS` in production (D-72's CI line is a separate issue).
+- **Admin access:** reaching the review UI needs `ADMIN_USER_IDS` in production (R-72's CI line is a separate issue).
 - **Admin console for a ban:** today banning means calling a server function by hand. At minimum, add a Ban control on the review row for profile reports (1 day including sign-in gate and content filter). **Who:** design (The Desk D1 already draws it?), build.
 
 ---
@@ -379,14 +379,14 @@ Further gaps:
   - `public/` contains only `fonts/` and `mediapipe/`: no favicon (every tab shows a generic icon, and `/favicon.ico` hits the Worker as a 404 SSR render), no web manifest, no `robots.txt`.
   - Decide whether public profiles and entries should be indexable: runner names plus photos in Google is a privacy call.
   - **Size:** 0.5 day. **Who:** design (icon, OG card — undesigned surfaces), owner (indexing), build.
-- **Landing hero:** open (D-93; PR #104 asks the owner).
+- **Landing hero:** open (R-93; PR #104 asks the owner).
 - **Accessibility:**
-  - D-84(b): tap-to-blur is canvas `onClick` with no keyboard path. The row itself says it "should not wait", and it is still open on main and in #104.
-  - D-84(a)/(c), D-86 and D-87 are minor.
+  - R-84(b): tap-to-blur is canvas `onClick` with no keyboard path. The row itself says it "should not wait", and it is still open on main and in #104.
+  - R-84(a)/(c), R-86 and R-87 are minor.
   - Legal: ADA Title III web claims are a real litigation pattern in the US (**risk, not a clear statutory requirement for a small app**).
-- **Copy pass (D-45):** "before launch", still `ready`. Undone.
-- **Icon pack adoption (D-30/D-31):** 3 files render `<Icon>`; the tab bar is still text. "Audited at the launch gate."
-- **Following feed breaks past 92 follows (D-101):** waiting on the owner. For a social app this is a guaranteed launch bug for any well-connected early user. About 0.5 day plus EXPLAIN evidence.
+- **Copy pass (R-45):** "before launch", still `ready`. Undone.
+- **Icon pack adoption (R-30/R-31):** 3 files render `<Icon>`; the tab bar is still text. "Audited at the launch gate."
+- **Following feed breaks past 92 follows (R-101):** waiting on the owner. For a social app this is a guaranteed launch bug for any well-connected early user. About 0.5 day plus EXPLAIN evidence.
 - **Performance budgets:** no documented budget. The client bundle is guarded by `check:bundle` against server-only code, but not by size. Soon-after.
 
 ---
@@ -401,7 +401,7 @@ Further gaps:
   - `strava_revocations` is broken by finding 0.1.
   - Its drain rides the **daily** digest (`scheduled.ts:419`). That's fine, apart from the expiring-token problem.
   - The outbox row stores a live access token in plain text. Once refresh is fixed, store the refresh token and refresh-then-revoke. Consider app-level encryption for `strava_connections` tokens (**best practice**; D1 is encrypted at rest by Cloudflare).
-- **Orphans:** R2 orphans (D-27, `watch`) become more visible once deletion exists. Deletion must be claim-then-delete to avoid the reverse orphan (a row pointing at a deleted object).
+- **Orphans:** R2 orphans (R-27, `watch`) become more visible once deletion exists. Deletion must be claim-then-delete to avoid the reverse orphan (a row pointing at a deleted object).
 - **Idempotency:** creates are covered (task 108, `test/idempotency.test.ts`). Not checked beyond that.
 - **Backups:** R2 has no versioning or backup, and `MEDIA` is "the source of truth" with no point-in-time recovery. A bad bulk delete (e.g. from the new account-deletion code) is permanent. Mitigate with a delayed deletion (tombstone and a 7-day purge). Soon-after.
 
@@ -411,31 +411,31 @@ Further gaps:
 
 | Row   | Register says                                 | Real status (verified)                                                                                                                      |
 | ----- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| D-1   | blocked, "before Strava OAuth for real users" | **Stale.** Fixed in dfc1e39. But the fixed function is **never called in production** (finding 0.1), so the underlying goal is still unmet. |
-| D-3   | blocked                                       | Still open (`closet/photos.ts:111`, no pixel cap). Known; fix chosen.                                                                       |
-| D-4   | ready                                         | **Stale — done** in 93bb336 (webhook enqueues; `webhook.ts:72-89`).                                                                         |
-| D-105 | blocked                                       | Open. Known. See §1.6 for the GDPR-grade bar Strava sets.                                                                                   |
-| D-71  | blocked                                       | Open. **Insufficient as scoped** (§1.10).                                                                                                   |
-| D-32  | ready, "before the launch gate for R/S/T/U"   | Largely in flight via PRs #101–#104. U1's Account, Notifications, Export and Delete rows are still unbuilt (#104's own register).           |
-| D-45  | ready, "before launch"                        | Open.                                                                                                                                       |
-| D-30  | ready, "audited at the launch gate"           | Open (3 files use `<Icon>`).                                                                                                                |
-| D-84  | ready; (b) "should not wait"                  | Open on main and in #104.                                                                                                                   |
-| D-102 | ready                                         | 3 of 11 fixed by task 120; the rest ride #101–#104. The "garment photo blur privacy gap" item is fixed.                                     |
-| D-64  | ready                                         | Fixed in #104; closes on merge.                                                                                                             |
-| D-62  | ready                                         | Open. The text is slightly stale (the constant is gone).                                                                                    |
-| D-72  | blocked on one owner line                     | Open.                                                                                                                                       |
-| D-101 | waiting on owner                              | Open. Recommend before launch.                                                                                                              |
-| D-8   | blocked                                       | Open (`note` is still never sent). A product call.                                                                                          |
-| D-37  | ready                                         | **Stale — done** by task 114 (`ui/Skeleton.tsx` breathes).                                                                                  |
-| D-67  | blocked                                       | Dormant until a product page renders images. Needs the §1.2 takedown path when it does.                                                     |
+| R-1   | blocked, "before Strava OAuth for real users" | **Stale.** Fixed in dfc1e39. But the fixed function is **never called in production** (finding 0.1), so the underlying goal is still unmet. |
+| R-3   | blocked                                       | Still open (`closet/photos.ts:111`, no pixel cap). Known; fix chosen.                                                                       |
+| R-4   | ready                                         | **Stale — done** in 93bb336 (webhook enqueues; `webhook.ts:72-89`).                                                                         |
+| R-105 | blocked                                       | Open. Known. See §1.6 for the GDPR-grade bar Strava sets.                                                                                   |
+| R-71  | blocked                                       | Open. **Insufficient as scoped** (§1.10).                                                                                                   |
+| R-32  | ready, "before the launch gate for R/S/T/U"   | Largely in flight via PRs #101–#104. U1's Account, Notifications, Export and Delete rows are still unbuilt (#104's own register).           |
+| R-45  | ready, "before launch"                        | Open.                                                                                                                                       |
+| R-30  | ready, "audited at the launch gate"           | Open (3 files use `<Icon>`).                                                                                                                |
+| R-84  | ready; (b) "should not wait"                  | Open on main and in #104.                                                                                                                   |
+| R-102 | ready                                         | 3 of 11 fixed by task 120; the rest ride #101–#104. The "garment photo blur privacy gap" item is fixed.                                     |
+| R-64  | ready                                         | Fixed in #104; closes on merge.                                                                                                             |
+| R-62  | ready                                         | Open. The text is slightly stale (the constant is gone).                                                                                    |
+| R-72  | blocked on one owner line                     | Open.                                                                                                                                       |
+| R-101 | waiting on owner                              | Open. Recommend before launch.                                                                                                              |
+| R-8   | blocked                                       | Open (`note` is still never sent). A product call.                                                                                          |
+| R-37  | ready                                         | **Stale — done** by task 114 (`ui/Skeleton.tsx` breathes).                                                                                  |
+| R-67  | blocked                                       | Dormant until a product page renders images. Needs the §1.2 takedown path when it does.                                                     |
 
 **Stale rows to retire or correct:**
 
-- D-1 — retire, and open a new row for finding 0.1.
-- D-4 — retire.
-- D-37 — retire.
-- D-62 — wording.
-- D-64 — retire when #104 merges.
+- R-1 — retire, and open a new row for finding 0.1.
+- R-4 — retire.
+- R-37 — retire.
+- R-62 — wording.
+- R-64 — retire when #104 merges.
 
 **Stale architecture claims:**
 
@@ -455,18 +455,18 @@ Further gaps:
 2. **Custom domain** (owner, 1 h). Many items below depend on it.
 3. **Sentry actually delivering** (0.4, 0.5) and a cron heartbeat — 0.5 day. Otherwise everything else fails silently.
 4. **deployment.md fixes, CI migration step, and `NODE_ENV`/`BETTER_AUTH_URL` vars** (§3.1, 0.7) — 0.5 day plus owner edits.
-5. **Terms of Service and privacy policy** (§1.1, D-105), DMCA agent registration (§1.2), minimum-age clause (§1.3). Also the geography decision (§1.4) — owner.
+5. **Terms of Service and privacy policy** (§1.1, R-105), DMCA agent registration (§1.2), minimum-age clause (§1.3). Also the geography decision (§1.4) — owner.
 6. **Email plumbing plus password reset and verification** (§2.3). Verification is already planned.
 7. **Account deletion including Strava revocation**, and the Strava refresh-before-revoke and deauth-event handling (0.1, 0.2, §2.1) — about 3–4 days together.
 8. **Retract your own post / photo** (0.9, §2.5) — 1 day.
-9. **Strip EXIF server-side** (0.8) — about 0.5 day (photon re-encode; this pairs with the D-3 fix).
+9. **Strip EXIF server-side** (0.8) — about 0.5 day (photon re-encode; this pairs with the R-3 fix).
 10. **Bans that work** (0.3) — 1 day. Plus reserved usernames.
 11. **Turnstile, rate limits and vendor spend caps** (§3.6, §3.7) — 1.5 days plus owner.
 12. **The Visual Crossing 24× fix and a plan choice** (0.6, §1.8) — 0.5 day.
 13. **CSAM coverage decision and NCMEC procedure** (§1.10).
 14. **Webhook `subscription_id` check** (0.10) — 1 h.
 15. **Google consent screen "In production"** (§1.7) — owner.
-16. Already known items: D-3 and the D-71 dashboard step.
+16. Already known items: R-3 and the R-71 dashboard step.
 
 ### Should-before
 
@@ -474,13 +474,13 @@ Further gaps:
 - Change password / sign out everywhere (§2.4).
 - Strava reminder and broken-connection emails with an opt-out, and the admin digest by email (§4).
 - Ban and removal notices (§4/§5).
-- D-101.
-- D-84(b).
-- The D-45 copy pass.
+- R-101.
+- R-84(b).
+- The R-45 copy pass.
 - Security headers (§3.9).
 - Favicon, OG and robots decision (§6).
 - The 7-day Strava id prune (§1.6).
-- Author "under review" marker (D-62).
+- Author "under review" marker (R-62).
 - Deletion runbook and Time Travel restore drill.
 
 ### Soon-after
@@ -491,7 +491,7 @@ Further gaps:
 - Token encryption.
 - The Desk's dead-letter list.
 - Performance budget.
-- D-30/D-31 icon adoption.
+- R-30/R-31 icon adoption.
 - Notification preferences beyond the reminder toggle.
 - DSA/UK OSA work if the geography opens.
 

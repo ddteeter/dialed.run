@@ -17,7 +17,7 @@ import {
 } from "../../src/modules/runs/inputs";
 
 /**
- * The trust boundaries `functions.ts` sits behind (D-41).
+ * The trust boundaries `functions.ts` sits behind (R-41).
  *
  * They used to be declared inline in the server-function file, which
  * cannot be imported by a test — so the rules about what the outside world

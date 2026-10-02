@@ -372,7 +372,7 @@ describe("disconnectStrava when there is nothing connected", () => {
   });
 });
 
-describe("stravaCallbackOutcome (the CSRF guard, D-41)", () => {
+describe("stravaCallbackOutcome (the CSRF guard, R-41)", () => {
   /**
    * This used to be a branch inside `functions.ts`, which imports TanStack
    * Start and so cannot be imported by a test at all — the one security

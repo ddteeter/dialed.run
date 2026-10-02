@@ -88,7 +88,7 @@ export async function uploadItemPhoto(
   report: typeof captureException = captureException,
 ): Promise<PhotoUploadResult> {
   validatePhoto(contentType, bytes.byteLength);
-  // Read from the header, before anything decodes it (SAF-2, D-3): a
+  // Read from the header, before anything decodes it (SAF-2, R-3): a
   // 10 MB file can decode to ~96 MB, and the isolate has 128.
   const refusal = photoRefusal(bytes);
   if (refusal !== undefined) throw new PhotoValidationError(refusal);
@@ -242,7 +242,7 @@ export type UploadPhotoResult =
  * In this file rather than in `functions.ts` because every line of it is a
  * decision — is there a file, did validation pass, what does the runner
  * get told when it did not — and `functions.ts` cannot be imported by a
- * test (D-41).
+ * test (R-41).
  */
 export async function uploadPhotoFromForm(
   db: Db,

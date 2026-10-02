@@ -79,9 +79,9 @@ item 13 ruling).
 - Mark all read moves onto `useControlAction`, with its in-flight label.
 - The bell's number counts runs awaiting a verdict; everything else is the
   dot. It caps at 9+.
-- D-102: the bell is missing on the five feed routes. They need
+- R-102: the bell is missing on the five feed routes. They need
   `BelledLayout`.
-- D-102: Notifications opens as the panel at desk, not a 620 column.
+- R-102: Notifications opens as the panel at desk, not a 620 column.
 
 ## Conformance specs
 

@@ -9,7 +9,7 @@ import { judgedFeelsLikeC } from "./judged-conditions";
  *
  * Pure, and in its own file, for two reasons: the profile screen and the
  * Call tab both need this counted the same way — two implementations of
- * it is the rival-truth failure D-10 already cost us once — and nothing
+ * it is the rival-truth failure R-10 already cost us once — and nothing
  * here touches `env`, so a component or a jsdom test can import it.
  */
 export interface CoverageBand {
@@ -136,7 +136,7 @@ function spanFloors(tally: CoverageTally): number[] {
  * same way and no longer does — it now asks for the more extreme band at
  * either end, because overdressing in heat ends a run as surely as
  * underdressing in cold. Whether a band's one-word *verdict* should be
- * symmetric too is a word a user reads, so it is the owner's call: D-60.
+ * symmetric too is a word a user reads, so it is the owner's call: R-60.
  */
 export function bandVerdict(band: CoverageBand): VerdictKind {
   if (band.cold >= band.dialed && band.cold >= band.warm) return "cold";

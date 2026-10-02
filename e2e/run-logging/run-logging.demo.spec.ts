@@ -5,7 +5,7 @@
  * A2 (the picker from the first frame, a kit required, the outfit photo
  * through W3's blur), S1 (the Strava reminder a matching upload clears,
  * round 25), A3 (Noted, with the band the corrected run now has), R1 (manual entry going
- * on to the outfit, D-102), R (the runs list's badges) and R2b (setting
+ * on to the outfit, R-102), R (the runs list's badges) and R2b (setting
  * conditions by picking a band and a sky, never typing a number — round 26
  * item 2) and deleting a run from its own page (task 128 · SAF-3).
  *
@@ -21,7 +21,7 @@
  * which is a first paint — NAV types it `cut`, so a demo that jumps
  * straight to a screen records none of the move that gets it there. Going
  * in through the bar records two things at once: the `rise` that lays the
- * flow over where the runner was, and D-80's other half — the Closet tab
+ * flow over where the runner was, and R-80's other half — the Closet tab
  * stays lit underneath, because `+ Add` is a launcher and not a tab.
  *
  * Exactly one test() per demo spec. A second test here would record a
@@ -107,7 +107,7 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
 }, testInfo) => {
   // Generous, because recording pace is not a latency budget. `scene()`
   // holds a beat at each boundary and slowMo paces the actions between
-  // them (D-58), so a recorded run takes minutes where CI's takes seconds.
+  // them (R-58), so a recorded run takes minutes where CI's takes seconds.
   testInfo.setTimeout(180_000);
 
   // A piece to wear, and a run the weather gave up on for R2b — seeded,

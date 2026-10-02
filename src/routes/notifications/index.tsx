@@ -22,7 +22,7 @@ export const Route = createFileRoute("/notifications/")({
 });
 
 /**
- * DS3: notifications is a panel at desk, not a 620 column (D-102). The
+ * DS3: notifications is a panel at desk, not a 620 column (R-102). The
  * heading is the list's own, because Mark all read sits beside it and
  * holds state a route may not.
  */

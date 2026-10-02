@@ -239,7 +239,7 @@ describe("placeInput", () => {
   });
 });
 
-describe("a profile's coordinates are rounded where they are parsed (STR-14, D-110)", () => {
+describe("a profile's coordinates are rounded where they are parsed (STR-14, R-110)", () => {
   const PRECISE = { ...PORTLAND, lat: 45.523456, lng: -122.676789 };
 
   it("rounds a place from Your conditions to two decimal places", () => {
@@ -535,7 +535,7 @@ describe("requiresOnboarding", () => {
   });
 
   it("keeps saying yes to someone who bailed halfway", async () => {
-    // The case D-52 exists for, and the one a signup-only redirect
+    // The case R-52 exists for, and the one a signup-only redirect
     // strands: O1 answered, tab closed, `onboarding_complete` still false.
     // Every step past O1 is skippable, so bailing has to be recoverable.
     const userId = newUlid();

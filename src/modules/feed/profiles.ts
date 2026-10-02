@@ -163,7 +163,7 @@ export function visibleRunnerStatement(
 /**
 H's entries: the runner's, through the viewer-aware form of the one
 visibility rule, so what the viewer reported drops out too — in SQL and
-ahead of the `LIMIT` (FEED-7, D-107/D-108).
+ahead of the `LIMIT` (FEED-7, R-107/R-108).
 
 Rhyme with consensus.ts's function of the same name, not a copy: this one
 is a single runner's most-recent page — ordered, LIMITed. Consensus's is

@@ -15,7 +15,7 @@ import {
  * The closet server functions' input contracts.
  *
  * They lived in `functions.ts`, which cannot be imported by a test at all
- * (D-41) — so the filter set every closet read is parsed against, and the
+ * (R-41) — so the filter set every closet read is parsed against, and the
  * idempotency key that stops a double-tap creating two garments, had no
  * coverage of any kind.
  */

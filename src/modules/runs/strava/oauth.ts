@@ -18,7 +18,7 @@
  * **There is no token refresh here, on purpose** (task 127, STR-1). The
  * app never reads activity data, so a stored grant is used for exactly one
  * thing — revoking it — and `/oauth/revoke` takes the refresh token, which
- * does not expire until it is rotated. The refresh path and D-1's "broken
+ * does not expire until it is rotated. The refresh path and R-1's "broken
  * after three failures" logic it carried had no production caller
  * (finding 0.1), and with revocation fixed they have no reason to exist.
  * A grant the runner kills on Strava's side arrives as a deauthorization
@@ -46,7 +46,7 @@ export interface RevokeQueueProducer {
 export type StravaConnectionRow = typeof stravaConnections.$inferSelect;
 
 /**
- * The cookie the OAuth `state` nonce round-trips in (D-41). Named once:
+ * The cookie the OAuth `state` nonce round-trips in (R-41). Named once:
  * the connect redirect writes it and the callback reads it.
  */
 export const STRAVA_STATE_COOKIE = "strava_oauth_state";
@@ -58,7 +58,7 @@ export const STRAVA_STATE_COOKIE = "strava_oauth_state";
 const STATE_COOKIE_MAX_AGE_S = 600;
 
 /**
- * Whether a Strava callback may be exchanged for tokens (D-41).
+ * Whether a Strava callback may be exchanged for tokens (R-41).
  *
  * The CSRF guard, as a decision rather than a branch inside the server
  * function: `state` is a nonce this app minted and put in an httpOnly

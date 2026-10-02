@@ -30,7 +30,7 @@ export function photoUrlFor(
 
 /**
  * Whether a garment's photo is still waiting on screening or a person
- * (D-69, round 27 #21): its owner sees it, nobody else does, and both the
+ * (R-69, round 27 #21): its owner sees it, nobody else does, and both the
  * detail and the closet tile say so. `ok` is "never screened" from before
  * screening existed and `pass` is cleared, so neither is being checked.
  */

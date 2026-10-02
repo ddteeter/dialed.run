@@ -121,7 +121,7 @@ export default defineConfig({
         // journeys at full speed and asserts everything they assert.
         // Recording is a separate, deliberate act.
         //
-        // **This number is small now, and `scene()` is why** (D-58).
+        // **This number is small now, and `scene()` is why** (R-58).
         // Pacing used to be 1800ms on *every* action — keystrokes and
         // trivial clicks included — because one knob had to serve both
         // "keep an action legible" and "give the viewer time to understand

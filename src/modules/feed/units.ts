@@ -14,7 +14,7 @@ import type { Units } from "../../lib/contracts";
  *
  * `user_profiles.temp_unit` and `.distance_unit` have existed since the
  * schema was written and nothing read them, so every temperature rendered
- * in Fahrenheit and every distance in miles whatever the row said (D-6).
+ * in Fahrenheit and every distance in miles whatever the row said (R-6).
  * The work was never a formatter — it was this read, and carrying the
  * answer to the four places that format.
  *

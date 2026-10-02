@@ -28,5 +28,5 @@ BETTER_AUTH_URL=http://localhost:3000
 # Desk. A comma-separated list of user ids; unset or empty means NOBODY is
 # an admin, which fails closed. There is no `vars` block in
 # wrangler.jsonc, so this file is the only place it can be set locally —
-# which is also why the admin surfaces have no demo video yet (D-72).
+# which is also why the admin surfaces have no demo video yet (R-72).
 # ADMIN_USER_IDS=

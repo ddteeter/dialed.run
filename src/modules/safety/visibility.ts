@@ -39,7 +39,7 @@ import {
  * entries stop counting for everybody. Every read that shows entries to a
  * person names them, and gets the rest.
  *
- * **All of it in SQL** (D-107, D-108). Each clause is a `NOT EXISTS` on an
+ * **All of it in SQL** (R-107, R-108). Each clause is a `NOT EXISTS` on an
  * index the table already has, so a `LIMIT` after it returns the first N
  * survivors, not the survivors of the first N — the failure CLAUDE.md's D1
  * discipline names, and the one a post-query filter would have walked
@@ -105,7 +105,7 @@ export function runnerNotLeaving(runnerId: SQLiteColumn): SQL {
 /**
  * W2 promises both directions: "They can't see your entries" and "You
  * won't see them in the feed" — and, for a runner, "They can't … find you
- * in search" (FEED-7, D-107). One row, read from both ends — `blocks_pk`
+ * in search" (FEED-7, R-107). One row, read from both ends — `blocks_pk`
  * leads on `blocker_id`, `blocks_blocked` on `blocked_id` — so the
  * `NOT EXISTS` per candidate is two index probes and never a scan.
  *
@@ -146,7 +146,7 @@ export function profileNotReportedBy(
 }
 
 /**
- * D-62, the safety half (SAF-9): the entry is hidden pending review **and**
+ * R-62, the safety half (SAF-9): the entry is hidden pending review **and**
  * the viewer is its author — the one person who still sees it, and so the
  * one person who needs telling why nobody else does. The feed renders the
  * marker (129, FEED-6); this is what it asks.

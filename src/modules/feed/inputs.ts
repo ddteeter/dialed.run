@@ -2,7 +2,7 @@
  * The feed server functions' input contracts, kept out of `functions.ts`.
  *
  * That file imports `createServerFn`, so nothing in it can be imported by
- * a test or reached by mutation testing (D-41). A zod schema is a trust
+ * a test or reached by mutation testing (R-41). A zod schema is a trust
  * boundary and belongs where it can be exercised, which is here.
  */
 import { z } from "zod";
@@ -68,7 +68,7 @@ export const itemFlagInput = z.object({
  * already expressible: the run reads −1 and the tights carry
  * `not_enough`. What is *not* expressible is a magnitude per garment, or
  * per-half-of-body aggregation. Whether the Call needs that fidelity is
- * a real open question and is recorded as D-95 rather than guessed at
+ * a real open question and is recorded as R-95 rather than guessed at
  * here; `docs/contracts.md` is the place it would change.
  */
 export const submitVerdictInput = z.object({

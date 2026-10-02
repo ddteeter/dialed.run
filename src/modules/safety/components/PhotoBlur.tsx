@@ -400,7 +400,7 @@ function Ninths({
 }
 
 /**
- * Tap-to-blur's keyboard path (D-84(b), the Accessibility Contract's
+ * Tap-to-blur's keyboard path (R-84(b), the Accessibility Contract's
  * "buttons named by position ('Blur top-left')"): the photo in a 3 × 3
  * grid, one button a cell, each blurring its whole cell and pressed while
  * it does. A tap on a canvas has no keyboard equivalent; these are it.

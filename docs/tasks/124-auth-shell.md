@@ -23,10 +23,10 @@ Lane 4 of 4 building to rounds 21–23. Read
 
 - Seven phone states, and the 1040 layout.
 - The failure band opens "Not signed in", not "Nothing saved".
-- The Google button's in-flight and error states. D-102: its error is a pink
+- The Google button's in-flight and error states. R-102: its error is a pink
   line today.
 - **The signed-out arrival (Au7).** The Form Contract routes an expired
-  session to sign-in carrying the payload. D-102: it shows a band today.
+  session to sign-in carrying the payload. R-102: it shows a band today.
 
 **The signed-out shell** (Auth rulings; Round 21 "Landing bar …" frames).
 
@@ -84,7 +84,7 @@ route").
   the Call starts."
 - Threshold met: the meter full, "That's enough to call. The Call arrives in
   the next release." No button.
-- D-102: at desk it's the panel.
+- R-102: at desk it's the panel.
 
 **Small folds** (item 25 ruling).
 

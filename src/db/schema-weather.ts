@@ -30,7 +30,7 @@ export const weatherObservations = /*#__PURE__*/ sqliteTable(
     // the owner's approval (2026-09-26, task 129); a TS enum, so no SQL moved.
     source: text("source", { enum: ["visualcrossing"] }).notNull(),
     fetchedAt: integer("fetched_at").notNull(),
-    // D-96: the IANA zone of the place observed, as Visual Crossing names
+    // R-96: the IANA zone of the place observed, as Visual Crossing names
     // it. On the observation rather than the run because observations are
     // a shared cache: a run whose hour is already cached never fetches, so
     // the zone has to be here for a cache hit to supply it. Nullable and

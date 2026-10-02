@@ -259,7 +259,7 @@ describe("NamePieces", () => {
 
   it("tells the runner nothing the build cannot back up", async () => {
     // Design's three payout lines need `products.type` (lane 107), an
-    // owner count (no read exists) and O4's tagged runs. D-54. This is the
+    // owner count (no read exists) and O4's tagged runs. R-54. This is the
     // one screen whose entire job is to be believed, so it says what
     // happened and stops.
     const user = userEvent.setup();

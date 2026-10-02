@@ -548,7 +548,7 @@ describe("VerdictBacklog: what each state is drawn as", () => {
   });
 
   it("dates a row where its run happened, not where UTC had reached", async () => {
-    // D-96. 03:30 UTC on Thursday 3 September is still Wednesday evening
+    // R-96. 03:30 UTC on Thursday 3 September is still Wednesday evening
     // in Chicago. The row, the rail and the table cell all say Wednesday,
     // because the run's own observation names its zone; the same row
     // without one is dated in UTC, as every row was before.

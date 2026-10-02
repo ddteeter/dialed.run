@@ -9,7 +9,7 @@
  * viewer is never a result: following yourself is not a thing.
  *
  * Nor is a banned runner, or anyone in a block pair with the viewer
- * (FEED-7, D-107): W2 says a blocked runner cannot find you in search and
+ * (FEED-7, R-107): W2 says a blocked runner cannot find you in search and
  * you will not see them there. Both in the `WHERE`, ahead of the `LIMIT`,
  * so twenty hidden matches cannot leave an empty page that looks real.
  * Nor, for the viewer alone, a runner whose profile they reported (D-68).

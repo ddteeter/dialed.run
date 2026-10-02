@@ -359,7 +359,7 @@ describe("PostCard: Useful", () => {
   });
 });
 
-describe("PostCard: the author's under-review marker (D-62, D-67)", () => {
+describe("PostCard: the author's under-review marker (R-62, D-67)", () => {
   it("marks the author's own hidden entry, under the author row", async () => {
     const post = await card({ underReview: true, caption: "Held." });
 

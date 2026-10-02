@@ -133,7 +133,7 @@ summary:focus-visible,
  * `@utility`, not a bare class, for the reason `motion.css` gives at
  * length: a class Tailwind does not know is dropped in silence, and
  * `styles.css`'s `@theme` block is the whole of the protection until
- * D-78's `no-unknown-classes` rule lands.
+ * R-78's `no-unknown-classes` rule lands.
  * ------------------------------------------------------------------ */
 @utility target {
   min-height: 44px;

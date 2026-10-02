@@ -6,7 +6,7 @@ Round 22 draws what the feed, post detail, profiles and notifications are in
 v1, and rules search and the bell. The build predates it: the card carries
 kit and pace, the empty and conditions states are prose, D is a grid with a
 banner, G/H hide zeros, M washes unread in hi-viz, and the bell counts the
-wrong thing and is missing on the five feed routes (D-102).
+wrong thing and is missing on the five feed routes (R-102).
 
 ## Approach
 

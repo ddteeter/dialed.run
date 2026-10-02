@@ -99,7 +99,7 @@ export type ThermalLevel = (typeof thermalScale)[number]["value"];
  *
  * One `z.enum` each, because these were two independent lists: a bare
  * `"f" | "c"` union in `lib/contracts/temperature.ts` and a column enum in
- * `db/schema-core.ts`, with nothing making them agree (D-7). A validator, a
+ * `db/schema-core.ts`, with nothing making them agree (R-7). A validator, a
  * type and the stored vocabulary are one fact, so they get one statement —
  * the type comes off the schema via `z.infer`, and `unit-contract.test.ts`
  * pins both against the columns so a value added to one has to be added to

@@ -79,7 +79,7 @@ const LOG_FLOW_PATHS = [
 /**
  * Whether this path is a step of the log flow.
  *
- * Exported because `ui/TabBar` needs the same answer for D-80 — _"the tab
+ * Exported because `ui/TabBar` needs the same answer for R-80 — _"the tab
  * beneath stays selected"_ — and a second copy of this list is a rival
  * truth, not a duplicate: the two would drift the first time the flow gains
  * a step and nothing would say so.
@@ -94,7 +94,7 @@ export function isLogFlowPath(pathname: string): boolean {
 }
 
 /**
-The four tabs. `+ Add` is a launcher and owns no seat (D-80).
+The four tabs. `+ Add` is a launcher and owns no seat (R-80).
 */
 const TABS = ["/feed", "/closet", "/call", "/feed/me"] as const;
 

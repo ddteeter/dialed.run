@@ -138,7 +138,7 @@ export function classifyFailure(error: unknown): FormFailure {
  * The contract's rule is *announce, then move* (§1). `onSuccess` almost
  * always navigates, and navigation unmounts the `role="status"` region —
  * so without this the success sentence was set and destroyed inside one
- * commit and no screen reader could read it. Recorded as D-44; every form
+ * commit and no screen reader could read it. Recorded as R-44; every form
  * in the app that navigates on success had the shape, which is why the
  * wait lives in the hook and not in any of them.
  *
@@ -268,7 +268,7 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
         // grace period and be silently dropped.
         setPending(false);
         inFlight.current = false;
-        // Announce, then move — see `announced` above (D-44).
+        // Announce, then move — see `announced` above (R-44).
         await announced();
         await onSuccess?.(result);
       } catch (error: unknown) {

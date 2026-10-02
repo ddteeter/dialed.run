@@ -13,7 +13,7 @@ runbook first, so read it after 125 merges.
 
 Sources: the production-readiness audit
 (`docs/reconciliation/2026-09-25-production-readiness-audit.md`, cited as
-§N or finding 0.N) and decisions D-37 to D-52. A bare `D-N` is a row in
+§N or finding 0.N) and decisions D-37 to D-52. An `R-N` is a row in
 `docs/deferred.md`.
 
 **Who** is the owner unless it says otherwise. Where a config change needs
@@ -98,7 +98,7 @@ runbook, §3.1), variable `DEPLOY_ENABLED=true` when ready.
   deploys, so the first schema-changing merge after launch would run
   against an unmigrated database (§3.1 item 5).
 - Deploy `needs: e2e` as well as `test`.
-- D-72's one line: `ADMIN_USER_IDS` in the e2e job's `.dev.vars`, so the
+- R-72's one line: `ADMIN_USER_IDS` in the e2e job's `.dev.vars`, so the
   admin surfaces get a demo.
 
 ## 4. Email (Cloudflare Email Sending)
@@ -213,7 +213,7 @@ as a var, secret as a secret. Free.
 
 | item                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | stage   | cites            |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------- |
-| **Privacy policy text**, GDPR-grade (Strava §7.3 requires it whatever the geography): what we collect, lawful bases, retention, rights (erasure, export — 126 builds both), the processors below, the Strava paragraph (the grant and an activity id per reminder, never activity data; pruned after 7 days), the cookie paragraph (strictly necessary only; no banner while no analytics are added, §1.5). 126's ACC-13 publishes it. **A draft exists** (`docs/legal/privacy-policy.md`, PR #109) with every factual claim mapped to code; the owner's job is the `[OWNER: …]` blanks, a lawyer's read, and re-checking the claims the launch lanes change (deletion, export, blocks, coordinates). | friends | D-105, §1.4–§1.6 |
+| **Privacy policy text**, GDPR-grade (Strava §7.3 requires it whatever the geography): what we collect, lawful bases, retention, rights (erasure, export — 126 builds both), the processors below, the Strava paragraph (the grant and an activity id per reminder, never activity data; pruned after 7 days), the cookie paragraph (strictly necessary only; no banner while no analytics are added, §1.5). 126's ACC-13 publishes it. **A draft exists** (`docs/legal/privacy-policy.md`, PR #109) with every factual claim mapped to code; the owner's job is the `[OWNER: …]` blanks, a lawyer's read, and re-checking the claims the launch lanes change (deletion, export, blocks, coordinates). | friends | R-105, §1.4–§1.6 |
 | **Terms of service**: content licence, acceptable use, termination (the basis for a ban), not-safety-advice disclaimer, limitation of liability, **minimum age** (13+, or 16+ for the EU if simpler). 126's ACC-6 adds acceptance under the sign-up form.                                                                                                                                                                                                                                                                                                                                                                                                                                             | friends | §1.1, §1.3       |
 | **DMCA designated agent**: register with the Copyright Office ($6, renew every three years; set a reminder), with a contact address (decide whether a P.O. box or a registered-agent address is acceptable). The contact goes on 126's `/copyright` page (ACC-13).                                                                                                                                                                                                                                                                                                                                                                                                                                    | public  | §1.2             |
 | **Processor agreements (GDPR Art. 28)**: OpenAI (execute its DPA form), Cloudflare (self-serve terms), Sentry, Visual Crossing, Firecrawl, Google, Strava, Cloudflare Email. Name each in the policy.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | public  | §1.4             |
@@ -307,5 +307,5 @@ Everything in stage 1, plus:
 - Processor agreements executed; EU/UK representative decision made; DSA
   contact published; UK OSA assessments written.
 - WAF rate-limiting rules live.
-- The D-45 copy pass done with design (every placeholder string these lanes
+- The R-45 copy pass done with design (every placeholder string these lanes
   shipped has been read by a human).

@@ -11,7 +11,7 @@ import {
  * They used to live in `functions.ts`, where nothing could reach them: that
  * file imports `createServerFn`, which drags TanStack Start's virtual
  * entries in with it, so importing it in the workers pool fails outright
- * (D-41). Thirteen mutants sat in there with no coverage at all — including
+ * (R-41). Thirteen mutants sat in there with no coverage at all — including
  * the `.max(60)` on a value that reaches a `LIKE`.
  */
 

@@ -76,7 +76,7 @@ function slotClass(value: VerdictValue, isChosen: boolean): string {
 }
 
 /**
- * The day a row's run happened, where it happened (D-96).
+ * The day a row's run happened, where it happened (R-96).
  *
  * A late-evening Chicago run is the Monday it was run on, not the Tuesday
  * UTC had reached; the zone comes from the run's own observation. A run
@@ -604,7 +604,7 @@ function BacklogTable({
                         between *rows*, so a group promising arrow-key
                         selection would be a promise the table cannot keep.
                         A3 reached the same answer from the other side
-                        (D-84), and one answer to "what is a verdict
+                        (R-84), and one answer to "what is a verdict
                         control" is the point. */}
                     <div className="flex gap-1">
                       {verdictKeys.map((slot) => (

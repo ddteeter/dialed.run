@@ -15,7 +15,7 @@ import {
 import { pointConditions } from "./conditions-fixture";
 
 /**
- * D-5: a run that spans hours is not the hour it began in.
+ * R-5: a run that spans hours is not the hour it began in.
  *
  * `attach.ts` has resolved every hour a run touches since `db1e0c6`; what
  * this covers is the read side, which took only the first until task 054.
@@ -181,7 +181,7 @@ describe("conditions across a run", () => {
 
 describe("the coverage ladder bands a run at the hour it was judged", () => {
   it("puts a warming run rated 'way warm' in the band it ended in", async () => {
-    // The D-5 regression itself. A 2->14 run rated way warm is a statement
+    // The R-5 regression itself. A 2->14 run rated way warm is a statement
     // about 14 degrees, not about 2.
     const user = await makeUser();
     const item = await makeItem({ userId: user, category: "top" });

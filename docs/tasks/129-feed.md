@@ -46,7 +46,7 @@ The bell's accessible names are "Notifications" and "Notifications, 3 new"
 (round 26 #9).
 Test: a run from 30 days ago with no verdict counts.
 
-**FEED-4 · The following feed past 92 follows [P]** (D-101). Replace the
+**FEED-4 · The following feed past 92 follows [P]** (R-101). Replace the
 bound followee list with a subquery on `follows`, so the statement binds
 one value however many people a runner follows. **Attach `EXPLAIN QUERY
 PLAN` before and after** to the PR, showing the covering indexes still
@@ -57,16 +57,16 @@ ordered and paged by cursor.
 `user_profiles` city/lat/lng has two writers: onboarding's `saveCalibration`
 and Your conditions' typed-city save in `feed/home.ts`. Make it one,
 exported through `modules/onboarding/index.ts`, and have Your conditions
-and O1 call it. Round coordinates with 127's helper (STR-14, D-110) before
+and O1 call it. Round coordinates with 127's helper (STR-14, R-110) before
 storing. Test: both paths write the same three columns together, or none.
 
-**FEED-6 · D-62, the feed half [P].** The author sees "under review" on
+**FEED-6 · R-62, the feed half [P].** The author sees "under review" on
 their own hidden entry, on the card and on D, from 128's predicate
 (SAF-9). Nobody else sees the entry at all, as today. Design ask for the
 marker.
 
-**FEED-7 · Hidden authors leave search and profiles [P]** (0.3, §2.1; D-107,
-D-108). Apply the one viewer-aware visibility rule (seam 6) to runner search
+**FEED-7 · Hidden authors leave search and profiles [P]** (0.3, §2.1; R-107,
+R-108). Apply the one viewer-aware visibility rule (seam 6) to runner search
 and H: banned authors, accounts pending deletion, a blocked pair, and what
 the viewer reported.
 Build against the predicate's signature as 128 and 126 publish it in their

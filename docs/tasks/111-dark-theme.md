@@ -15,7 +15,7 @@ work arriving without a slot, and the honest thing is to give it one rather
 than let it leak into whichever lane touches a component next.
 
 It is also broad rather than deep: every surface, every primitive, the
-tokens, and the one place the app already needs it — **D-36**, which has sat
+tokens, and the one place the app already needs it — **R-36**, which has sat
 in the register since the forms contract shipped, because the design
 specifies every form primitive on dark and no v1 form sits on ink.
 
@@ -31,7 +31,7 @@ specifies every form primitive on dark and no v1 form sits on ink.
    settings is where a choice would live.
 3. **Every primitive in `src/ui`**, then every surface, against the Dark
    artboards.
-4. **D-36 closes with it**: the form primitives' ink surface is specified
+4. **R-36 closes with it**: the form primitives' ink surface is specified
    (`border 1px #2A2A31 → 2px #F4F3EF`, same hi-viz band) and unwritten.
 5. **The Desk is exempt and must stay exempt.** `/desk` is always dark and
    deliberately does not read the operator's preference (task 110). Whatever

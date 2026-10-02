@@ -21,7 +21,7 @@ import { dayLabel, isTimeZone } from "../../lib/dates";
  * the subtree away when it does. The route's loader reads the clock once
  * and both renders use that.
  *
- * Days are counted in the run's own zone (D-96), the same one its time is
+ * Days are counted in the run's own zone (R-96), the same one its time is
  * printed in, so "yesterday" and "6:04 AM" can never be about two
  * different places. No zone means UTC, as it does in `lib/dates`.
  */

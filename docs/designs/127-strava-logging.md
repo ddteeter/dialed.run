@@ -21,13 +21,13 @@ revokes with it directly. That is simpler than refresh-then-revoke and
 strictly better: a refresh would rotate the token only to revoke it.
 
 That leaves **no call anywhere that needs a live access token**, since we
-never read activity data. `refreshStravaToken` and D-1's "broken after 3
+never read activity data. `refreshStravaToken` and R-1's "broken after 3
 failures over 3 days" logic are dead code, and I delete them. Nothing else
 writes `status='broken'`, so T1's Reconnect branch goes too. The columns
 stay, because dropping them is destructive; they go in a later contract step
 (Register). Legacy rows with no refresh token revoke with the access token.
 
-**D-103: keep `strava_revocations` apart** (the default). Its rows hold a
+**R-103: keep `strava_revocations` apart** (the default). Its rows hold a
 credential, and `lib/outbox.ts` forbids a secret in a payload. The rewrite
 did not make folding it in any cheaper. Owner question.
 
@@ -103,6 +103,6 @@ provider reads the stored point, so what we send is rounded too.
 ## Open questions
 
 1. Refresh path deleted rather than wired (above). Veto if you want it kept.
-2. D-103: keep apart [recommended].
+2. R-103: keep apart [recommended].
 3. Two-decimal coordinates [recommended].
 4. Reminder clearing by landing time rather than start time (above).

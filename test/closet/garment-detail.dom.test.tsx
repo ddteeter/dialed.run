@@ -102,7 +102,7 @@ function withVisibility(
   );
 }
 
-describe("GarmentDetail: a photo being checked (D-69, round 27 #21)", () => {
+describe("GarmentDetail: a photo being checked (R-69, round 27 #21)", () => {
   it.each(["pending", "flagged", "hidden_pending_review"] as const)(
     "shows the route's notice under the photo while it is %s",
     async (visibility) => {

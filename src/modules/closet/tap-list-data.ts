@@ -5,7 +5,7 @@
  * Split out for two reasons. It is a table, so every row necessarily has
  * the shape of every other row, and a semantic clone detector reads the
  * whole thing as one 52-line duplicate; `.fallowrc.jsonc` can ignore this
- * file without also blinding itself to `addFromTapList` (D-34). And it is
+ * file without also blinding itself to `addFromTapList` (R-34). And it is
  * the file design will hand edits to when P2 changes, which is a different
  * kind of change from touching the write path.
  *
@@ -71,7 +71,7 @@ function entry(
  * The 18 here are those 14 plus the four distinct rows the previous
  * per-band lists carried that the artboard does not name. The remaining
  * six are unspecified content, not unspecified structure — see
- * `docs/deferred.md` D-49. The fold works at any length; the disclosure
+ * `docs/deferred.md` R-49. The fold works at any length; the disclosure
  * states the real remainder.
  */
 export const TAP_LIST: readonly TapListEntry[] = [

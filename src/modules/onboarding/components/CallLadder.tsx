@@ -23,7 +23,7 @@ import type { Ladder } from "../ladder";
  * "Coverage is the progress bar — not run count" (O6): forty verdicts all
  * at 50° is still nothing known about January, so the ladder renders the
  * bands a runner has *not* covered alongside the ones they have. **Coverage
- * is ink density, never a hue** (design round 6 §AB, D-48), and the words
+ * is ink density, never a hue** (design round 6 §AB, R-48), and the words
  * stay beside the swatches — *"the counts are there so the reading never
  * depends on the swatch"*.
  *

@@ -93,7 +93,7 @@ setup("create the demo accounts", async ({ browser }, testInfo) => {
       .fill(demoHandle(account, suffix));
     await page.getByRole("button", { name: "Next" }).click();
 
-    // Then O1 (D-52), and `/` sends it back here until
+    // Then O1 (R-52), and `/` sends it back here until
     // `onboarding_complete` is set. Every demo but `onboarding` wants to
     // start past that, and `/onboarding/done` is the route that sets it —
     // the same one P3 uses, rather than a hand-written upsert that could

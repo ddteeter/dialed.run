@@ -96,7 +96,7 @@ export function deletionEffectsFromEnv(): DeletionEffects {
 /**
  * The day a deletion lands, as the email and both pages of the week say
  * it — **in UTC, on purpose**. A profile carries no time zone to say it in
- * (a run's zone is the run's own, D-96), and the purge runs on the daily
+ * (a run's zone is the run's own, R-96), and the purge runs on the daily
  * firing, which is scheduled in UTC. `proseDayLabel` with no zone is UTC;
  * passing the string would say the same thing and leave a mutant no input
  * could tell apart. The delete sheet says its day the same way.

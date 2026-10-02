@@ -25,7 +25,7 @@ export const GARMENT_PHOTO_COPY = {
  * A picked garment photo, on its way through W3's blur.
  *
  * **Every garment photo passes through the step the route hands in**
- * (D-102): the picked file and the step answering for it are held
+ * (R-102): the picked file and the step answering for it are held
  * together — so a held file always has the step that opened for it, the
  * pair `VerdictForm` holds for the same reason — until the step hands back
  * the bytes that should actually be used. Those, and never the picked

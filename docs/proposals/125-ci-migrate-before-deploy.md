@@ -14,7 +14,7 @@ Audit §3.1 item 5, confirmed against `ci.yml` on `main`:
    `docs/architecture.md` said CI did this; it now says it does not.
 2. **Deploy waits for the unit job only** (`needs: test`). A merge whose
    browser e2e fails still deploys.
-3. **The admin surfaces cannot be tested in CI** (register D-72).
+3. **The admin surfaces cannot be tested in CI** (register R-72).
    `ADMIN_USER_IDS` is read from `.dev.vars` and nowhere else locally, and
    the e2e job writes a `.dev.vars` without it — so the Desk and the review
    queue answer not-found to every e2e account, and `e2e/desk/`'s operator
@@ -31,7 +31,7 @@ Audit §3.1 item 5, confirmed against `ci.yml` on `main`:
 @@ e2e job @@
        - run: npm run stage:mediapipe
 -      - run: echo "BETTER_AUTH_SECRET=ci-only-secret" > .dev.vars
-+      # ADMIN_USER_IDS: the Desk's operator in e2e/desk (register D-72).
++      # ADMIN_USER_IDS: the Desk's operator in e2e/desk (register R-72).
 +      # The TURNSTILE_* pair are Cloudflare's documented always-pass test
 +      # keys, so sign-up works in CI once the widget is on it (OPS-5).
 +      # BETTER_AUTH_URL: overrides the production var in wrangler.jsonc so

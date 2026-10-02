@@ -4,7 +4,7 @@
  * stays loadable in the vitest workers pool without pulling in TanStack
  * Start's virtual server entry.
  *
- * Nothing here decides anything (D-41). A file that imports
+ * Nothing here decides anything (R-41). A file that imports
  * `@tanstack/react-start` cannot be imported by a test, so it cannot be
  * mutation tested — which makes it the wrong place for a branch, a schema
  * or a refusal. Those live in `./inputs`, `./imports`, `./service` and

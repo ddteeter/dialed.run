@@ -59,7 +59,7 @@ export class RunParseError extends Error {
  * is one place for that decision to be changed and another to be forgotten.
  *
  * **Built per call, not at module scope, and that is a bundle decision
- * rather than a performance one (D-50).** `new XMLParser(…)` is a call
+ * rather than a performance one (R-50).** `new XMLParser(…)` is a call
  * rollup cannot prove pure, so a module-scope one is a side effect it must
  * keep — and keeping it kept `fast-xml-parser` and its four dependencies,
  * ~63 kB, in the *client* entry chunk that every visitor downloads.

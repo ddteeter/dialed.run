@@ -7,7 +7,7 @@
 covered at all. That is the number that decides whether the guardrails
 commit-gate analyzer can ever be turned on: it scopes to every changed
 TypeScript file, so switching it on today blocks the next commit touching a
-module with a hundred findings it did not cause (D-40).
+module with a hundred findings it did not cause (R-40).
 
 The debt also grows with every PR. Paying it down module by module, with a
 ratchet behind each one, is what stops that.
@@ -112,7 +112,7 @@ What came out of those files was worth having out: `sessionUser` and
 the single most security-relevant branch in the codebase and had no test
 because nothing could import the file it lived in.
 
-**The `.tsx` question is still open** and is D-42. Nothing here changed it:
+**The `.tsx` question is still open** and is R-42. Nothing here changed it:
 the globs still end `**/*.ts`.
 
 **What the mutants actually found**, beyond missing assertions: `escapeLike`

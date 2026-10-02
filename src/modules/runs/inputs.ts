@@ -1,5 +1,5 @@
 /**
- * Every trust boundary this module's server functions sit behind (D-41).
+ * Every trust boundary this module's server functions sit behind (R-41).
  *
  * `functions.ts` imports TanStack Start, which makes it unimportable in
  * the workers pool and so unreachable by mutation testing. A zod schema is

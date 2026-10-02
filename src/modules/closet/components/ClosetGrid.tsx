@@ -174,7 +174,7 @@ export interface ClosetGridProps {
  * one-column fallback: **one flat grid**, a heading row of `47 pieces` on
  * the left and a `Show retired` switch on the right, retired tiles last.
  *
- * The rail itself is D-94: round 16 made it three real filter groups and
+ * The rail itself is R-94: round 16 made it three real filter groups and
  * all-or-nothing, and this closet has no filters yet. Until it does, the
  * grid is the page at every width.
  *

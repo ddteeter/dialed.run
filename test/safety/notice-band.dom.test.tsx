@@ -19,7 +19,7 @@ function band(): HTMLElement {
   return found;
 }
 
-describe("PhotoBeingChecked (D-69)", () => {
+describe("PhotoBeingChecked (R-69)", () => {
   it("says who can see it, and for how long", () => {
     render(<PhotoBeingChecked />);
     expect(band()).toHaveTextContent(

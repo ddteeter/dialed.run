@@ -104,7 +104,7 @@ default card), with per-route overrides left to the owning lane.
 to the owner through 126's email interface when anomalies trip. Lands after
 ACC-2.
 
-**OPS-12 · The runbook and the CI proposal [F]** (§3.1, D-72). Correct
+**OPS-12 · The runbook and the CI proposal [F]** (§3.1, R-72). Correct
 `docs/deployment.md`: `--remote` on both migration commands (confirm with
 `wrangler d1 migrations apply --help`), the four missing secrets, the two
 missing crons, `CLOUDFLARE_ACCOUNT_ID`, and a D1 Time Travel restore section
@@ -112,9 +112,9 @@ that covers two databases restored independently and says that
 `wrangler rollback` does not roll back migrations. Write
 `docs/proposals/125-ci-migrate-before-deploy.md` as the exact diff to
 `ci.yml` the owner applies: migrations before deploy, deploy `needs: e2e`,
-and D-72's `ADMIN_USER_IDS` line. You do not edit `.github/workflows/`.
+and R-72's `ADMIN_USER_IDS` line. You do not edit `.github/workflows/`.
 
-**OPS-13 · `docs/architecture.md` corrected [F]** (§8; D-111, found by PR
+**OPS-13 · `docs/architecture.md` corrected [F]** (§8; R-111, found by PR
 #109). Photo screening is OpenAI `omni-moderation-latest`, not Workers AI;
 product extraction is OpenAI plus Firecrawl; photos are not served from
 "public bucket URLs" (the Worker serves them, and after 128's SAF-7 through
@@ -165,6 +165,6 @@ every `.tsx` you touch.
 ## Demos
 
 - **New `e2e/desk/`**: an admin opens `/desk`, sees Today; a non-admin gets
-  not-found. Needs D-72's line in CI; until the owner applies it, record
+  not-found. Needs R-72's line in CI; until the owner applies it, record
   locally with `.dev.vars` and say so in the PR.
 - The auth demo shows the FormField focus ring (OPS-15).

@@ -6,7 +6,7 @@ import { Mono } from "../../../ui";
 
 /**
  * A3's line beneath the verdict row: this runner's own verdicts in the
- * run's temperature band (D-97).
+ * run's temperature band (R-97).
  *
  * *"Five states. Your history in this band: [38–46°] · 2 cold · 7 dialed ·
  * 1 warm"* — design round 20 moved it out of the Dialed cell ("the in-band

@@ -10,7 +10,7 @@ import { TapListForm } from "../../src/modules/onboarding/components/TapListForm
  * Screen O3, against design round 6 §AA's six rules.
  *
  * The fixture is synthetic rather than the real `TAP_LIST`, and on purpose
- * twice over. The table is 18 rows today and 24 when D-49 closes, so a
+ * twice over. The table is 18 rows today and 24 when R-49 closes, so a
  * test built on it would have to be rewritten to add a garment; and the
  * screen's whole contract is that it works *at any list length* — the fold
  * is a prop, the remainder is counted, and nothing is hardcoded. A fixture
@@ -350,7 +350,7 @@ describe("TapListForm", () => {
     await user.click(next());
 
     // One live region, one sentence, and `onSaved` — which navigates — runs
-    // after it (D-44).
+    // after it (R-44).
     const status = screen.getByRole("status");
     expect(within(status).getByText("Closet started.")).toBeInTheDocument();
     // The sentence is in the region *before* the move happens: it is set

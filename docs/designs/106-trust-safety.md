@@ -284,7 +284,7 @@ the bare domain); `modules/safety` in `stryker.conf.json`'s `mutate`
 array, and **at 100.00% across 699 mutants**. The paydown was not a
 matter of adding assertions: it found the `indexOf` bug in
 `duplicates.ts`, the unhandled `photo` subject type in `review.ts`
-(D-61), two dead exports, a false comment in `detect.ts`'s `boxesFrom`,
+(R-61), two dead exports, a false comment in `detect.ts`'s `boxesFrom`,
 and four unbounded timestamps that would have passed a millisecond
 value. Six branches were deleted rather than tested, each because no
 input could tell it from its opposite.
@@ -305,7 +305,7 @@ and a ULID, so Approve was being pressed on an opaque identifier. The
 queue now carries what was alleged and how many distinct people alleged
 it. What it still does not carry is the subject itself — above all the
 image, which is hidden precisely because it was reported, and whose only
-reader is `feed/photos.ts`. That is D-63.
+reader is `feed/photos.ts`. That is R-63.
 
 **Still to build.** The demo video, and a re-record: W3's blur step is
 user-visible and rides on `e2e/verdict`'s journey rather than this

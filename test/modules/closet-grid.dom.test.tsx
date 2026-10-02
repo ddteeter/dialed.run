@@ -270,7 +270,7 @@ describe("ClosetGrid: one flat grid (§6c.10)", () => {
   });
 });
 
-describe("ClosetGrid: a photo being checked (D-69, round 27 #21)", () => {
+describe("ClosetGrid: a photo being checked (R-69, round 27 #21)", () => {
   it("tags the tile ONLY YOU, alone in the kicker", async () => {
     const checking = itemView({
       item: wardrobeItem({

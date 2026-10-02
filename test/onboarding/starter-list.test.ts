@@ -84,7 +84,7 @@ describe("starterList", () => {
   });
 
   it("asks about the typed city when the browser was not allowed to say", async () => {
-    // D-59: a refused permission plus a typed "Minneapolis" used to mean
+    // R-59: a refused permission plus a typed "Minneapolis" used to mean
     // the mild list, because the label was never used. It is the place
     // now, and the provider resolves it — so this runner gets tights first.
     const userId = newUlid();

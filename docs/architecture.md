@@ -203,7 +203,7 @@ target module's `index.ts`; only `env/` reads bindings; route files import
 modules but are imported by nothing; no cycles.
 
 `lib` is foldered by where its code may run, and two dependency-cruiser
-rules hold the split (D-50's bug class, made visible in the path):
+rules hold the split (R-50's bug class, made visible in the path):
 `lib/contracts/` (domain truth and derived tables, behind the
 `lib/contracts.ts` barrel) and the root files are isomorphic;
 `lib/sql/` (drizzle/D1 helpers, the outbox wire format, queue batches, R2
@@ -550,7 +550,7 @@ flowchart LR
 **Launch gate** (must merge before public sign-ups): Task 106 trust & safety
 floor — photo screening via OpenAI's `omni-moderation-latest`, report→hide→review, link hygiene,
 ban mechanics — plus the dashboard-side CSAM scanning tool and a
-published privacy policy (D-105). MVP lanes
+published privacy policy (R-105). MVP lanes
 101–105 + 107 can land and be dogfooded privately without it.
 
 **Post-MVP** (see `docs/post-mvp.md` — documented so agents don't build

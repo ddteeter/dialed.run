@@ -128,13 +128,13 @@ from a suppression.
 The first screen through found two, and both were resolved by design in
 round 19 rather than by us:
 
-- **D-97** — the board's dialed cell read "DIALED 7 IN BAND" and ours
+- **R-97** — the board's dialed cell read "DIALED 7 IN BAND" and ours
   "DIALED". Design moved the count to a line beneath the row, never inside
   a cell. The gap's own check failed with _"DIALED 7 IN BAND is no longer
   drawn — delete its KNOWN_GAPS entry"_, and it was deleted: the mechanism
   doing exactly what it was for. What remains (the line itself) is outside
   any region and stays in the register.
-- **D-98** — the chosen cell wore `--ink` where the board drew `--action`,
+- **R-98** — the chosen cell wore `--ink` where the board drew `--action`,
   and the backlog that mirrors it filled by hue. Design ruled the fill is
   the verdict's T2 hue on both. That made the colour axis live: the spec
   now chooses the cell the board has chosen and compares fills as T1 roles,

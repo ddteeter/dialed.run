@@ -58,7 +58,7 @@ interface Locatable {
   lng: number | null;
   startedAt: number;
   /** How far past `startedAt` to read. Without it a 2-hour run reads as
-   *  the hour it began in, which is D-5. */
+   *  the hour it began in, which is R-5. */
   durationS: number;
 }
 
@@ -74,7 +74,7 @@ interface Locatable {
  */
 /**
  * A stored zone as a field to spread, present only if this runtime's
- * `Intl` accepts it (D-96). The column is text written from a third
+ * `Intl` accepts it (R-96). The column is text written from a third
  * party's response; checked again here so an unusable one can never reach
  * a formatter and throw at render time.
  *
@@ -302,7 +302,7 @@ export async function currentConditions(
  * The picker asks for a location it may not have — a browser can refuse
  * geolocation — and shows the whole closet when it gets nothing back.
  * That decision lives here rather than in `functions.ts`, which no test
- * can import (D-41).
+ * can import (R-41).
  */
 export async function conditionsAt(
   lat: number | undefined,

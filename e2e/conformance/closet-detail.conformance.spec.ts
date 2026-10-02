@@ -287,7 +287,7 @@ test("garment detail at 1040 keeps the order in one column, photo capped at 320"
     isDrawnDeleteApart,
   );
 
-  // DS3's cap, which the photo used to break at desk (D-102): 320 tall,
+  // DS3's cap, which the photo used to break at desk (R-102): 320 tall,
   // letterboxed rather than cropped.
   const builtPhoto = await box(page, '[data-part="photo-well"]');
   expect(Math.round(builtPhoto.height)).toBe(Math.round(drawnPhoto.height));

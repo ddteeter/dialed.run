@@ -73,7 +73,7 @@ this task is the _remaining_ surface, not a re-run.
 | `startImport`                                | reconciliation — the digest re-dispatches imports stalled `pending`                              |
 | `attach.ts` cross-database writes            | reconciliation — `runs.weather_status` + the hourly cron, verified by reading it                 |
 | `modules/closet/photos.ts`                   | safe as-is: the photo key is deterministic per item, so a retry overwrites rather than orphaning |
-| `modules/feed/photos.ts`                     | accepted, recorded as D-27 — visible failure, orphan is storage not correctness                  |
+| `modules/feed/photos.ts`                     | accepted, recorded as R-27 — visible failure, orphan is storage not correctness                  |
 
 ## Still to read
 

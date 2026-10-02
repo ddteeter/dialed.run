@@ -18,14 +18,14 @@ Lane 2 of 4 building to rounds 21–23. Read
   Task 120 already put the photo in the well straight after identity.
 - Photo is 4:3 full column: 262 tall on phone, 320 cap at desk.
 - Delete is a text link, apart from Edit and Retire.
-- Retire confirms, as drawn. The Flow Map names the confirm and D-102 lists
+- Retire confirms, as drawn. The Flow Map names the confirm and R-102 lists
   it.
 - Draw the retired garment as the frame does.
 - **Remove photo.** `FileWell` already takes `onRemove`. Add the server
   function: clear `photo_key`, delete the R2 objects, and batch where the
   writes belong together (CLAUDE.md D1 discipline). Then pass it in.
 
-**Closet at desk, no rail** (Round 22 item 16 ruling; D-94's rail is still
+**Closet at desk, no rail** (Round 22 item 16 ruling; R-94's rail is still
 out of scope).
 
 - Heading row: "47 pieces" on the left, a "Show retired" switch on the

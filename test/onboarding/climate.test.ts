@@ -155,7 +155,7 @@ describe("resolveClimateBand", () => {
   });
 
   it("answers a typed city from what the weather says", async () => {
-    // D-59: a refused permission plus a typed city used to mean the mild
+    // R-59: a refused permission plus a typed city used to mean the mild
     // list. The label goes to the provider now, and Minneapolis is cold.
     const band = await resolveClimateBand(
       { kind: "label", label: "Minneapolis" },

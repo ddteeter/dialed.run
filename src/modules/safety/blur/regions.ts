@@ -212,7 +212,7 @@ function countOf(count: number, noun: string): string {
 
 /**
  * The keyboard path's cells, in reading order: the photo split into a
- * 3 × 3 grid, each named by where it sits (D-84(b)).
+ * 3 × 3 grid, each named by where it sits (R-84(b)).
  */
 export const BLUR_CELLS = [
   "top-left",

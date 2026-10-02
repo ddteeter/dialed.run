@@ -15,7 +15,7 @@ import { garmentCategoriesInOrder } from "../../src/lib/contracts/garment-fields
  * category, rather than that one arrangement produces some markup.
  *
  * **What `save` receives is a parsed `Garment`, not the form's state.**
- * That is the D-17 change: the form runs `garmentFormSchema`, which
+ * That is the R-17 change: the form runs `garmentFormSchema`, which
  * reshapes and validates before anything is called, so a blank text field
  * arrives absent rather than as `""` and an invalid one never arrives at
  * all. Before this the route did the parse, inside a `void`-ed handler,
@@ -162,7 +162,7 @@ describe("GarmentForm: identity leads", () => {
     // The rendered `<select>` cannot tell us this on its own: a value that
     // matches no option shows as the first option regardless, so an
     // initial value of nonsense looks identical to an initial value of "".
-    // What the caller receives is the thing that matters — and after D-17
+    // What the caller receives is the thing that matters — and after R-17
     // that is the parsed garment, where "not answered" is absence.
     const user = userEvent.setup();
     const { save } = renderForm();
@@ -233,7 +233,7 @@ describe("GarmentForm: identity leads", () => {
   });
 });
 
-describe("GarmentForm: the failure path D-17 was about", () => {
+describe("GarmentForm: the failure path R-17 was about", () => {
   it("gives every control its own field name", () => {
     // Not decoration: `useFormSubmit` focuses a failed field by
     // `[name="…"]`, and reads `aria-invalid`/`aria-describedby` out of a
@@ -254,7 +254,7 @@ describe("GarmentForm: the failure path D-17 was about", () => {
   });
 
   it("marks a field and says why, instead of doing nothing", async () => {
-    // The bug D-17 replaced: the parse used to throw into a `void`-ed
+    // The bug R-17 replaced: the parse used to throw into a `void`-ed
     // handler — no message, no mark, a button that did nothing at all.
     const user = userEvent.setup();
     const { save } = renderForm();

@@ -115,7 +115,7 @@ Every finding is one of three things, and **deciding which is the work**:
 1. **The code is wrong** → fix it.
 2. **The artboard is stale** → the code is right and the drawing is behind.
    Add a `design-deltas` item so nobody "fixes" the code to match it later.
-   **D-55 is the worked example**: O3's artboard still draws a paste field
+   **R-55 is the worked example**: O3's artboard still draws a paste field
    that `TapListForm` correctly never built.
 3. **A deliberate divergence** → record it at the site, in a comment, saying
    why and pointing at the decision. **The worked example is `TAB_BAR`**,

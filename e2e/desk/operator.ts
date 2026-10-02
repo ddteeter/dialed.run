@@ -8,7 +8,7 @@ import { withLocalDb } from "../support/local-db";
 
 /**
  * The Desk's operator for e2e: the one user id `ADMIN_USER_IDS` names in
- * the dev server's `.dev.vars` (`e2e-desk-operator`; register D-72).
+ * the dev server's `.dev.vars` (`e2e-desk-operator`; register R-72).
  *
  * **Admin-ness is configuration, not data** — `isAdmin` reads the env var
  * and nothing else — so the operator needs a *known id*, and a sign-up

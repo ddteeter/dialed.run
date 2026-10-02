@@ -2,7 +2,7 @@
  * Covers: D0 (the Desk's shell) and Today — one journey, one video.
  *
  * The journey needs `ADMIN_USER_IDS=e2e-desk-operator` in the dev server's
- * `.dev.vars`, which CI's e2e job writes (register D-72, PR #114). Locally,
+ * `.dev.vars`, which CI's e2e job writes (register R-72, PR #114). Locally,
  * put the same line in yours.
  *
  * Exactly one test() per demo spec.

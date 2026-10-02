@@ -4,7 +4,7 @@
 
 Photos can publish a runner's home (0.8), nothing can be deleted (0.9), a
 ban does one of its three jobs (0.3), and blocks, a reporter's own hide and
-the signed-out check are promises the code does not keep (D-107–D-109).
+the signed-out check are promises the code does not keep (R-107–R-109).
 This lane makes uploads safe to publish, makes them possible to take back,
 and makes the safety controls do what their copy says.
 

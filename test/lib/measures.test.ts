@@ -147,7 +147,7 @@ describe("formatDistance in the reader's own unit", () => {
   });
 
   it("renders kilometres for a reader who chose kilometres", () => {
-    // The contract stores metres either way (D-6); only the reading moves.
+    // The contract stores metres either way (R-6); only the reading moves.
     expect(formatDistance(5000, "km")).toBe("5.0km");
   });
 

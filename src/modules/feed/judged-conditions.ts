@@ -6,7 +6,7 @@ import type { Conditions } from "./conditions";
  *
  * A 9–11am run can begin at 4° and finish at 12°. The verdict covers the
  * whole run, so banding it at 4° teaches the call epic that 4° means
- * overdressed (D-5). Owner's call, 2026-09-11: **a run is judged at its
+ * overdressed (R-5). Owner's call, 2026-09-11: **a run is judged at its
  * worst hour relative to its verdict.**
  *
  * - Felt cold (`verdict < 0`) → the coldest hour it reached. That is the

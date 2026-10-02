@@ -111,11 +111,11 @@ describe("dayTimeLabel", () => {
 });
 
 // 2026-09-22T03:30:00Z — the Tuesday in UTC, and still Monday evening in
-// Chicago (UTC−5 in September). The shape of the bug D-96 is about: a
+// Chicago (UTC−5 in September). The shape of the bug R-96 is about: a
 // late-evening run at a negative offset read as the next day.
 const AFTER_UTC_MIDNIGHT = Math.floor(Date.UTC(2026, 8, 22, 3, 30) / 1000);
 
-describe("the run's own zone (D-96)", () => {
+describe("the run's own zone (R-96)", () => {
   it("dates a run where it happened, not where UTC is", () => {
     expect(dayLabel(AFTER_UTC_MIDNIGHT)).toBe("Tue Sep 22");
     expect(dayLabel(AFTER_UTC_MIDNIGHT, "America/Chicago")).toBe("Mon Sep 21");

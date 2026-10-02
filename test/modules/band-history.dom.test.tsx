@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { BandHistory } from "../../src/modules/feed/components/BandHistory";
 
 /**
- * A3's history line (D-97): "Five states. Your history in this band:
+ * A3's history line (R-97): "Five states. Your history in this band:
  * [38–46°] · 2 cold · 7 dialed · 1 warm".
  *
  * `verdictBandCounts` answers keyed by verdict, −2..+2. The line folds by

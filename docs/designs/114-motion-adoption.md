@@ -12,7 +12,7 @@ value that is not already in the port.
 
 `src/ui/motion.css` grows the moves as Tailwind `@utility` rules (including
 `breathe`, converted from a hand-written class so it is registered in the
-same index as everything else — D-78). Three of the nine need behaviour as
+same index as everything else — R-78). Three of the nine need behaviour as
 well as CSS, and those get one small unit each in `src/ui/`:
 
 | #   | surface          | where                                    | move                                                                |
@@ -84,7 +84,7 @@ indicator — with one exception it rules on directly: `+ Add` is a bar
 launcher rather than a tab, so the indicator must never travel to it. The
 indicator half is in this PR; the other half (the tab beneath stays
 selected) needs the bar to remember the last real tab and is one behaviour
-with round 12's `rise`, so it is D-80 and belongs to the navigation lane.
+with round 12's `rise`, so it is R-80 and belongs to the navigation lane.
 Owner accepted the interim, pre-launch.
 
 ## Open questions

@@ -147,7 +147,7 @@ export async function screenPhoto(
  * What the reviewer is asked to look at, which is not the same set as what
  * gets hidden.
  *
- * **`flag` and `review` both queue; only `flag` hides.** That was D-65:
+ * **`flag` and `review` both queue; only `flag` hides.** That was R-65:
  * `review_queue.source` has carried a `"classifier"` variant since this
  * table existed and nothing ever wrote one, so a photo the model hid was
  * hidden with no one told — the same write-only shape as the `screen_status`
@@ -159,7 +159,7 @@ export async function screenPhoto(
  * **Entry photos only.** A garment photo lives in a closet, which nobody
  * but its owner can see, so queueing one would put a private photo in front
  * of an operator to settle a question nobody asked. It still hides on
- * `flag`, and stays hidden until the owner replaces it — see D-69.
+ * `flag`, and stays hidden until the owner replaces it — see R-69.
  */
 function queueWritesFor(photo: PhotoToScreen, decision: ScreenDecision) {
   if (decision === "pass") return [];
