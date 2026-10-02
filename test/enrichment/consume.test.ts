@@ -592,7 +592,7 @@ describe("handleEnrichmentBatch: the primary image", () => {
   it("copies it once: a later fetch of the same product re-reads the page and not the image", async () => {
     // Fill-only-what-is-blank, and here that is right — nobody edits an R2
     // key, so the only question is whether we have already paid for this
-    // image (D-61). Driven through a *second real fetch*: the snapshot is
+    // image (R-123). Driven through a *second real fetch*: the snapshot is
     // aged past the reuse window, so the page is fetched again and the
     // image is the only thing that must not be.
     const productId = await pendingProduct();

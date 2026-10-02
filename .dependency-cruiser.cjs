@@ -69,7 +69,7 @@ module.exports = {
         "src/lib/sql/ holds the drizzle/D1 helpers and the server plumbing they serve " +
         "(outbox, queue batches, R2 paging). A route file or any .tsx component is in the " +
         "client bundle, so it may not import it: server code reaching the browser chunk is " +
-        "the D-50 bug class that tsc, eslint and the test suite cannot see (only " +
+        "the R-50 bug class that tsc, eslint and the test suite cannot see (only " +
         "`npm run check:bundle` can, after a build). Server functions reach lib/sql through " +
         "their handler bodies, which the Start plugin strips; this rule is about a plain " +
         "top-level import. Added with the lib-by-constraint restructure (owner-approved " +
@@ -83,7 +83,7 @@ module.exports = {
       comment:
         "src/lib/browser/ holds code that only means something in the browser (localStorage, " +
         "the inline head script). A server-side entry point may not import it — the mirror " +
-        "of lib-sql-is-server-only, and the other half of D-50's lesson that which side of " +
+        "of lib-sql-is-server-only, and the other half of R-50's lesson that which side of " +
         "the build a file runs on must be visible in where it lives. Added with the " +
         "lib-by-constraint restructure (owner-approved one-time edit, 2026-09-30). " +
         "APPROXIMATION: dependency-cruiser has no notion of an entry point, so 'server-side " +

@@ -75,7 +75,7 @@ jobs:
       # stryker here, the dev server for e2e — has to ask for it, or the
       # model 404s and every browser test fails as "unavailable".
       - run: npm run stage:mediapipe
-      # ADMIN_USER_IDS: the Desk's operator in e2e/desk (register D-72).
+      # ADMIN_USER_IDS: the Desk's operator in e2e/desk (register R-72).
       # The TURNSTILE_* pair are Cloudflare's documented always-pass test
       # keys, so sign-up works in CI once the widget is on it (OPS-5).
       # BETTER_AUTH_URL: overrides the production var in wrangler.jsonc so
