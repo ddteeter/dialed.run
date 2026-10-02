@@ -228,9 +228,6 @@ const NAV: readonly Edge[] = [
       "/privacy",
       "/terms",
       "/copyright",
-      // Task 126 (ACC-6): the terms prompt, which the root's gate opens
-      // in front of whatever was asked for, as it opens O0.
-      "/account/terms",
       "/onboarding/calibrate",
       "/onboarding/taplist",
       "/onboarding/settings",

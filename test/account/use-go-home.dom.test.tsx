@@ -1,7 +1,9 @@
 import {
+  Outlet,
   RouterProvider,
   createMemoryHistory,
   createRootRoute,
+  createRoute,
   createRouter,
 } from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -20,9 +22,22 @@ import {
  * to the prompt, then home — or, for a stale Accept, stay and reload.
  */
 async function renderWithRouter(element: ReactElement) {
-  const rootRoute = createRootRoute({ component: () => element });
+  // The prompt's own page is a route of its own, so going home is a real
+  // move away from it rather than a match on the root that both share.
+  const rootRoute = createRootRoute({
+    component: () => (
+      <>
+        {element}
+        <Outlet />
+      </>
+    ),
+  });
+  const promptRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/account/terms",
+  });
   const router = createRouter({
-    routeTree: rootRoute,
+    routeTree: rootRoute.addChildren([promptRoute]),
     history: createMemoryHistory({ initialEntries: ["/account/terms"] }),
   });
   await router.load();

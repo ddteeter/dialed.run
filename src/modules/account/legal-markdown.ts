@@ -156,12 +156,21 @@ function cellsOf(row: TableRow): Inline[][] {
 }
 
 /**
- * One top-level node, other than the title, as a block.
+ * The `#` heading, which is the page's title rather than one of its blocks.
  */
-function blockOf(node: RootContent): Block {
+interface Title {
+  readonly kind: "title";
+  readonly inlines: readonly Inline[];
+}
+
+/**
+ * One top-level node as a block, or the title.
+ */
+function blockOf(node: RootContent): Block | Title {
   switch (node.type) {
     case "heading": {
       const inlines = inlinesOf(node.children);
+      if (node.depth === 1) return { kind: "title", inlines };
       if (node.depth === 2) {
         return { kind: "section", id: headingId(plainText(inlines)), inlines };
       }
@@ -209,10 +218,11 @@ export function parseLegalDoc(text: string): LegalDoc {
   let title: string | undefined;
   const blocks: Block[] = [];
   for (const node of tree.children) {
-    if (node.type !== "heading" || node.depth !== 1) {
-      blocks.push(blockOf(node));
+    const block = blockOf(node);
+    if (block.kind !== "title") {
+      blocks.push(block);
     } else if (title === undefined) {
-      title = plainText(inlinesOf(node.children));
+      title = plainText(block.inlines);
     } else {
       unsupported(node);
     }

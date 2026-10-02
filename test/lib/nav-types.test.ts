@@ -222,7 +222,8 @@ describe("which type an edge resolves to", () => {
       ["/auth/signup", "/account/check-email"],
       ["/auth/login", "/account/forgot"],
       // Task 126 (ACC-13): the legal texts, from Au2 and Settings; and
-      // ACC-6's terms prompt, in front of any page.
+      // ACC-6's terms prompt, in front of any page (`/account/$section`
+      // claims `/account/terms`, as it claims the other account pages).
       ["/auth/signup", "/privacy"],
       ["/onboarding/settings", "/privacy"],
       ["/auth/signup", "/terms"],
