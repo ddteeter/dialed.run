@@ -14,8 +14,15 @@ import {
   pendingReviewQueue,
   reportedSubjectIdsFor,
 } from "../../src/modules/safety";
+import { fileConfirmedReport } from "../../src/modules/safety/confirmed-report";
 
-import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
+import {
+  addAccount,
+  makeEntry,
+  makeRun,
+  makeUser,
+  resetSafetyTables,
+} from "./helpers";
 import { nowSeconds } from "../../src/lib/now";
 
 function core() {
@@ -60,12 +67,11 @@ describe("the distinct-reporter threshold", () => {
 
     // Only the third crosses it: the first two must leave the entry alone,
     // or "three reports" would be decoration on a one-report takedown.
-    expect(results.map((r) => r.hiddenPendingReview)).toEqual([
-      false,
-      false,
-      true,
+    expect(results).toStrictEqual([
+      { status: "filed", reporterCount: 1, hiddenPendingReview: false },
+      { status: "filed", reporterCount: 2, hiddenPendingReview: false },
+      { status: "filed", reporterCount: 3, hiddenPendingReview: true },
     ]);
-    expect(results.map((r) => r.reporterCount)).toEqual([1, 2, 3]);
     expect(await moderationStatusOf(entryId)).toBe("hidden_pending_review");
     expect(await isQueuedForReview("entry", entryId)).toBe(true);
   });
@@ -125,7 +131,11 @@ describe("the distinct-reporter threshold", () => {
       });
       // Every repeat reports the same truth rather than erroring: a
       // double-click and a retried POST are indistinguishable (law 8b).
-      expect(result).toEqual({ reporterCount: 1, hiddenPendingReview: false });
+      expect(result).toEqual({
+        status: "filed",
+        reporterCount: 1,
+        hiddenPendingReview: false,
+      });
     }
 
     expect(await distinctReporterCount("entry", entryId)).toBe(1);
@@ -174,7 +184,7 @@ describe("the distinct-reporter threshold", () => {
       reason: "spam",
     });
 
-    expect(asProduct.reporterCount).toBe(1);
+    expect(asProduct).toMatchObject({ status: "filed", reporterCount: 1 });
     expect(await distinctReporterCount("entry", sharedId)).toBe(1);
   });
 });
@@ -229,6 +239,85 @@ describe("the reporter's own hide (W1)", () => {
     expect(await reportedSubjectIdsFor(me, "product")).toEqual([
       "some-product",
     ]);
+  });
+});
+
+async function unconfirmedRunner(): Promise<string> {
+  const userId = await makeUser();
+  await addAccount(userId, false);
+  return userId;
+}
+
+describe("fileConfirmedReport: a report waits for a confirmed address (round 26 #11; SAF-15)", () => {
+  beforeEach(resetSafetyTables);
+
+  it("refuses an unconfirmed reporter with an answer, and writes nothing — the block included", async () => {
+    const reporter = await unconfirmedRunner();
+    const subject = await makeUser();
+
+    expect(
+      await fileConfirmedReport({
+        reporterId: reporter,
+        subjectType: "profile",
+        subjectId: subject,
+        reason: "harassment",
+        alsoBlock: true,
+      }),
+    ).toStrictEqual({ status: "unverified" });
+
+    expect(await distinctReporterCount("profile", subject)).toBe(0);
+    expect(await reportedSubjectIdsFor(reporter, "profile")).toEqual([]);
+    expect(await isBlocked(reporter, subject)).toBe(false);
+  });
+
+  it("does not let unconfirmed accounts reach the threshold", async () => {
+    // An address nobody confirmed costs nothing to make: three of them
+    // must not be a takedown on demand.
+    const entryId = await reportableEntry();
+    for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+      await fileConfirmedReport({
+        reporterId: await unconfirmedRunner(),
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "spam",
+      });
+    }
+
+    expect(await moderationStatusOf(entryId)).toBe("ok");
+    expect(await isQueuedForReview("entry", entryId)).toBe(false);
+  });
+
+  it("refuses a reporter with no account at all", async () => {
+    const entryId = await reportableEntry();
+
+    expect(
+      await fileConfirmedReport({
+        reporterId: await makeUser(),
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "spam",
+      }),
+    ).toStrictEqual({ status: "unverified" });
+    expect(await distinctReporterCount("entry", entryId)).toBe(0);
+  });
+
+  it("files once the address is confirmed", async () => {
+    const entryId = await reportableEntry();
+    const reporter = await makeUser();
+    await addAccount(reporter, true);
+
+    expect(
+      await fileConfirmedReport({
+        reporterId: reporter,
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "spam",
+      }),
+    ).toStrictEqual({
+      status: "filed",
+      reporterCount: 1,
+      hiddenPendingReview: false,
+    });
   });
 });
 

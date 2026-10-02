@@ -12,7 +12,7 @@ import type {
   OtherProfile,
   OwnProfile as OwnProfileData,
 } from "../../src/modules/feed/profiles";
-import { MILES, renderFeedScreen } from "./feed-fixtures";
+import { CONFIRMED, MILES, renderFeedScreen } from "./feed-fixtures";
 
 /**
  * Round 26 #7's handle placements (FEED-10), `/@handle`'s two pages, and
@@ -60,7 +60,9 @@ function ownProfile(overrides: Partial<OwnProfileData> = {}): OwnProfileData {
 
 describe("G's heading", () => {
   it("is the runner's @handle in the handle style", async () => {
-    await renderFeedScreen(<OwnProfile profile={ownProfile()} />);
+    await renderFeedScreen(
+      <OwnProfile confirmBand={undefined} profile={ownProfile()} />,
+    );
     const heading = screen.getByRole("heading", { name: "@dana_kim" });
     expect(heading.querySelector(".font-semibold")).toHaveTextContent(
       "@dana_kim",
@@ -171,12 +173,15 @@ function entry(isUnderReview: boolean): Entry {
 async function detailFor(isUnderReview: boolean) {
   await renderFeedScreen(
     <EntryDetail
+      confirmFirst={CONFIRMED}
       units={MILES}
       entry={entry(isUnderReview)}
       viewerId="01USER"
       shouldPromptVerdict={false}
       recordPrompted={done}
-      setUseful={() => Promise.resolve({ useful: true, count: 1 })}
+      setUseful={() =>
+        Promise.resolve({ status: "set", useful: true, count: 1 })
+      }
     />,
   );
 }

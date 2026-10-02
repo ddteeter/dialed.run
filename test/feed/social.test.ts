@@ -18,7 +18,14 @@ import {
   usefulCount,
 } from "../../src/modules/feed/reactions";
 import { searchRunners } from "../../src/modules/feed/search";
-import { makeEntry, makeRun, makeUser, resetTables } from "./helpers";
+import {
+  addAccount,
+  makeEntry,
+  makeRun,
+  makeUser,
+  makeVerifiedUser,
+  resetTables,
+} from "./helpers";
 import { nowSeconds } from "../../src/lib/now";
 
 describe("useful reactions (D-11)", () => {
@@ -26,12 +33,13 @@ describe("useful reactions (D-11)", () => {
 
   it("marks, then unmarks, answering with the state and count it left", async () => {
     const author = await makeUser();
-    const reactor = await makeUser();
+    const reactor = await makeVerifiedUser();
     const runId = await makeRun({ userId: author });
     const entryId = await makeEntry({ userId: author, runId, isPublic: true });
 
     expect(await usefulCount(entryId)).toBe(0);
     expect(await setUsefulReaction(entryId, reactor, true)).toStrictEqual({
+      status: "set",
       useful: true,
       count: 1,
     });
@@ -39,6 +47,7 @@ describe("useful reactions (D-11)", () => {
     expect(await hasReacted(entryId, reactor)).toBe(true);
 
     expect(await setUsefulReaction(entryId, reactor, false)).toStrictEqual({
+      status: "set",
       useful: false,
       count: 0,
     });
@@ -48,17 +57,22 @@ describe("useful reactions (D-11)", () => {
 
   it("counts everyone's marks, and answers with this viewer's own", async () => {
     const author = await makeUser();
-    const [first, second] = [await makeUser(), await makeUser()];
+    const [first, second] = [
+      await makeVerifiedUser(),
+      await makeVerifiedUser(),
+    ];
     const runId = await makeRun({ userId: author });
     const entryId = await makeEntry({ userId: author, runId, isPublic: true });
 
     await setUsefulReaction(entryId, first, true);
 
     expect(await setUsefulReaction(entryId, second, true)).toStrictEqual({
+      status: "set",
       useful: true,
       count: 2,
     });
     expect(await setUsefulReaction(entryId, second, false)).toStrictEqual({
+      status: "set",
       useful: false,
       count: 1,
     });
@@ -117,7 +131,7 @@ describe("useful reactions: who may react", () => {
 
   it("refuses a reaction to an entry that does not exist, and says why", async () => {
     await expect(
-      setUsefulReaction(newUlid(), await makeUser(), true),
+      setUsefulReaction(newUlid(), await makeVerifiedUser(), true),
     ).rejects.toThrow(/not visible/);
   });
 
@@ -125,7 +139,7 @@ describe("useful reactions: who may react", () => {
     // Private entries never appear in feeds; reacting to one by id is the
     // way around that, and this is what closes it.
     const owner = await makeUser();
-    const stranger = await makeUser();
+    const stranger = await makeVerifiedUser();
     const runId = await makeRun({ userId: owner });
     const entryId = await makeEntry({ userId: owner, runId, isPublic: false });
 
@@ -135,11 +149,12 @@ describe("useful reactions: who may react", () => {
   });
 
   it("lets the owner react to their own private entry", async () => {
-    const owner = await makeUser();
+    const owner = await makeVerifiedUser();
     const runId = await makeRun({ userId: owner });
     const entryId = await makeEntry({ userId: owner, runId, isPublic: false });
 
     expect(await setUsefulReaction(entryId, owner, true)).toStrictEqual({
+      status: "set",
       useful: true,
       count: 1,
     });
@@ -149,7 +164,7 @@ describe("useful reactions: who may react", () => {
     // `kind` is what a second reaction type would be told apart by, and
     // the timestamp is what any later ordering reads.
     const owner = await makeUser();
-    const reactor = await makeUser();
+    const reactor = await makeVerifiedUser();
     const runId = await makeRun({ userId: owner });
     const entryId = await makeEntry({ userId: owner, runId, isPublic: true });
     const before = nowSeconds();
@@ -163,5 +178,79 @@ describe("useful reactions: who may react", () => {
     expect(row?.kind).toBe("useful");
     expect(row?.createdAt).toBeGreaterThanOrEqual(before - 5);
     expect(row?.createdAt).toBeLessThanOrEqual(before + 5);
+  });
+});
+
+async function publicEntry(): Promise<string> {
+  const author = await makeUser();
+  const runId = await makeRun({ userId: author });
+  return makeEntry({ userId: author, runId, isPublic: true });
+}
+
+describe("useful reactions wait for a confirmed address (round 26 #11; seam 7)", () => {
+  beforeEach(resetTables);
+
+  it("refuses an unconfirmed runner's mark with an answer, and writes nothing", async () => {
+    const entryId = await publicEntry();
+    const unconfirmed = await makeUser();
+    await addAccount(unconfirmed, false);
+
+    expect(await setUsefulReaction(entryId, unconfirmed, true)).toStrictEqual({
+      status: "unverified",
+    });
+    expect(await usefulCount(entryId)).toBe(0);
+    expect(await hasReacted(entryId, unconfirmed)).toBe(false);
+  });
+
+  it("refuses taking a mark back too, and leaves it where it was", async () => {
+    // A mark from before the address stopped being confirmed is not a
+    // state production reaches, which is what makes it the honest probe:
+    // the refusal must come before the delete, not after it.
+    const entryId = await publicEntry();
+    const unconfirmed = await makeUser();
+    await addAccount(unconfirmed, false);
+    await drizzle(env.DIALED_CORE).insert(reactionsTable).values({
+      entryId,
+      userId: unconfirmed,
+      kind: "useful",
+      createdAt: nowSeconds(),
+    });
+
+    expect(await setUsefulReaction(entryId, unconfirmed, false)).toStrictEqual({
+      status: "unverified",
+    });
+    expect(await hasReacted(entryId, unconfirmed)).toBe(true);
+  });
+
+  it("answers before it looks at the entry, so a refusal says nothing about one", async () => {
+    const unconfirmed = await makeUser();
+    await addAccount(unconfirmed, false);
+
+    expect(await setUsefulReaction(newUlid(), unconfirmed, true)).toStrictEqual(
+      { status: "unverified" },
+    );
+  });
+
+  it("refuses a runner with no account at all", async () => {
+    // `isVerified`'s own rule: a runner who is gone is not confirmed.
+    const entryId = await publicEntry();
+    const gone = await makeUser();
+
+    expect(await setUsefulReaction(entryId, gone, true)).toStrictEqual({
+      status: "unverified",
+    });
+    expect(await usefulCount(entryId)).toBe(0);
+  });
+
+  it("lets the runner mark it once the address is confirmed", async () => {
+    const entryId = await publicEntry();
+    const confirmed = await makeUser();
+    await addAccount(confirmed, true);
+
+    expect(await setUsefulReaction(entryId, confirmed, true)).toStrictEqual({
+      status: "set",
+      useful: true,
+      count: 1,
+    });
   });
 });

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { ReportAffordance } from "../../src/modules/safety/components/ReportAffordance";
+import { CONFIRMED, UNCONFIRMED } from "../modules/feed-fixtures";
 
 type Props = Parameters<typeof ReportAffordance>[0];
 
@@ -11,10 +12,16 @@ The foot link, whichever of its two wordings the subject gets.
 */
 const REPORT = /^Report (this entry|or block )/u;
 
+const CONFIRM_FIRST = "Confirm your email first";
+
 function renderAffordance(overrides: Partial<Props> = {}) {
   const fileReport: Props["fileReport"] = vi
     .fn<Props["fileReport"]>()
-    .mockResolvedValue({});
+    .mockResolvedValue({
+      status: "filed",
+      reporterCount: 1,
+      hiddenPendingReview: false,
+    });
   render(
     <ReportAffordance
       subject={{
@@ -26,6 +33,7 @@ function renderAffordance(overrides: Partial<Props> = {}) {
       }}
       viewerId="viewer-1"
       fileReport={fileReport}
+      confirmFirst={CONFIRMED}
       {...overrides}
     />,
   );
@@ -257,5 +265,72 @@ describe("the sheet's close control (round 22, item 21)", () => {
       screen.getByRole("radio", { name: "It's an ad, or it's spam" }),
     ).not.toBeChecked();
     expect(screen.getByLabelText(/Anything else/u)).toHaveValue("");
+  });
+});
+
+/**
+Pick a reason and send — W1's whole path, for the tests that only need it gone.
+*/
+async function sendSpamReport(
+  user: ReturnType<typeof userEvent.setup>,
+): Promise<void> {
+  await user.click(screen.getByRole("button", { name: REPORT }));
+  await user.click(
+    screen.getByRole("radio", { name: "It's an ad, or it's spam" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Send report" }));
+}
+
+describe("report waits for a confirmed address (round 26 #11; SAF-15)", () => {
+  it("draws the link at full strength, and opens the confirm sheet rather than W1", async () => {
+    const user = userEvent.setup();
+    const { fileReport } = renderAffordance({ confirmFirst: UNCONFIRMED });
+    expect(screen.queryByRole("dialog", { name: CONFIRM_FIRST })).toBeNull();
+
+    // Rule 07, "not yet": the same link, never disabled.
+    const link = screen.getByRole("button", { name: "Report this entry" });
+    expect(link).not.toHaveAttribute("aria-disabled");
+    await user.click(link);
+
+    expect(screen.getByRole("dialog", { name: CONFIRM_FIRST })).toBeVisible();
+    expect(isSheetOpen()).toBe(false);
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(fileReport).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Not now" }));
+    expect(screen.queryByRole("dialog", { name: CONFIRM_FIRST })).toBeNull();
+  });
+
+  it("gives way to the confirm sheet when the server refuses the reporter", async () => {
+    // A page whose answer about the address is older than the server's:
+    // the link opened W1, and the server said no.
+    const user = userEvent.setup();
+    const fileReport = vi
+      .fn<Props["fileReport"]>()
+      .mockResolvedValue({ status: "unverified" });
+    renderAffordance({
+      fileReport,
+      confirmFirst: { ...UNCONFIRMED, canAct: true },
+    });
+
+    await sendSpamReport(user);
+
+    expect(fileReport).toHaveBeenCalledOnce();
+    await waitFor(() => {
+      expect(isSheetOpen()).toBe(false);
+    });
+    expect(screen.getByRole("dialog", { name: CONFIRM_FIRST })).toBeVisible();
+  });
+
+  it("opens nothing else once a report is filed", async () => {
+    const user = userEvent.setup();
+    renderAffordance({ confirmFirst: { ...UNCONFIRMED, canAct: true } });
+
+    await sendSpamReport(user);
+
+    await waitFor(() => {
+      expect(isSheetOpen()).toBe(false);
+    });
+    expect(screen.queryByRole("dialog", { name: CONFIRM_FIRST })).toBeNull();
   });
 });

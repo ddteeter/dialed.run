@@ -1,5 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { confirmEmailGate } from "../modules/account/components/ConfirmEmailSheet";
+import {
+  ownAccountQuery,
+  resendConfirmationFn,
+} from "../modules/account/functions";
 import { getSession } from "../modules/auth/functions";
 import { RunnerAtHandle } from "../modules/feed/components/RunnerAtHandle";
 import {
@@ -32,12 +37,13 @@ export const Route = createFileRoute("/@{$handle}")({
     ),
     viewerId: requireSignedIn(await getSession()).user.id,
     bell: await bellStateFn(),
+    account: await ownAccountQuery(),
   }),
   component: HandlePage,
 });
 
 function HandlePage() {
-  const { found, viewerId, bell } = Route.useLoaderData();
+  const { found, viewerId, bell, account } = Route.useLoaderData();
 
   return (
     <BelledLayout {...bell}>
@@ -50,6 +56,11 @@ function HandlePage() {
             subject={profileReportSubject(profile)}
             viewerId={viewerId}
             fileReport={fileReportAction}
+            confirmFirst={confirmEmailGate(
+              account,
+              resendConfirmationFn,
+              "report",
+            )}
           />
         )}
       />

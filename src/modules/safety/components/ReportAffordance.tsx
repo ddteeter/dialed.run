@@ -1,6 +1,9 @@
 import type { JSX } from "react";
 import { useState } from "react";
 
+import { useControlGate } from "../../../ui";
+import type { ControlGate } from "../../../ui";
+import type { FileReportOutcome } from "../confirmed-report";
 import { ReportSheet, type ReportSubject } from "./ReportSheet";
 
 /**
@@ -30,20 +33,30 @@ function reportLabel(subject: ReportSubject): string {
  * may not branch (`server-functions-are-glue`) and a decision there is
  * one no test can reach. There are two: whether to offer reporting at
  * all, and whether to offer the block alongside it.
+ *
+ * **Report waits for a confirmed address** (round 26 #11; SAF-15, seam
+ * 7). The link draws at full strength for everyone, and an unconfirmed
+ * runner's press opens "Confirm your email first" rather than W1 — the
+ * sheet `confirmFirst` carries, composed by the route from `account`.
  */
 export function ReportAffordance({
   subject,
   viewerId,
   fileReport,
+  confirmFirst,
 }: Readonly<{
   subject: ReportSubject;
   /**
   Absent when signed out.
   */
   viewerId?: string | undefined;
-  fileReport: Parameters<typeof ReportSheet>[0]["fileReport"];
+  fileReport: (
+    input: Parameters<Parameters<typeof ReportSheet>[0]["fileReport"]>[0],
+  ) => Promise<FileReportOutcome>;
+  confirmFirst: ControlGate;
 }>): JSX.Element | undefined {
   const [isOpen, setIsOpen] = useState(false);
+  const { guard, sheet } = useControlGate(confirmFirst);
   // Flips on every opening, and keys the sheet by it: every report starts
   // from an empty sheet, so ✕ really is "discard" (round 22, item 21)
   // rather than "hide what you had chosen until next time". A flip is
@@ -75,6 +88,10 @@ export function ReportAffordance({
         type="button"
         className="target cursor-pointer self-start border-none bg-transparent p-0 py-3 text-small text-label underline underline-offset-4"
         onClick={() => {
+          if (!guard.canAct) {
+            guard.ask();
+            return;
+          }
           setGeneration((previous) => previous !== true);
           setIsOpen(true);
         }}
@@ -97,9 +114,21 @@ export function ReportAffordance({
         // the subject IS a person — the same rule `fileReport` enforces
         // on the write side.
         canBlock={subject.type === "profile" && subject.authorId !== undefined}
-        fileReport={fileReport}
+        // The server refuses an unconfirmed reporter too, for a page whose
+        // answer about the address is older than the server's: W1 gives
+        // way to the confirm sheet. W1's own "Report sent." is set in a
+        // dialog that has just closed, which nothing announces.
+        fileReport={async (input) => {
+          const outcome = await fileReport(input);
+          if (outcome.status === "unverified") {
+            close();
+            guard.ask();
+          }
+          return outcome;
+        }}
         onFiled={close}
       />
+      {sheet}
     </>
   );
 }

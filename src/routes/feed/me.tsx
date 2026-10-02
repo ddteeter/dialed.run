@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { ConfirmEmailBand } from "../../modules/account/components/ConfirmEmailBand";
+import { resendConfirmationFn } from "../../modules/account/functions";
 import { getSession } from "../../modules/auth/functions";
 import { OwnProfile } from "../../modules/feed/components/OwnProfile";
 import { ownProfileQuery } from "../../modules/feed/functions";
@@ -12,18 +14,26 @@ export const Route = createFileRoute("/feed/me")({
     requireSignedIn(await getSession());
   },
   loader: async () => ({
-    profile: await ownProfileQuery(),
+    you: await ownProfileQuery(),
     bell: await bellStateFn(),
   }),
   component: OwnProfilePage,
 });
 
 function OwnProfilePage() {
-  const { profile, bell } = Route.useLoaderData();
+  const { you, bell } = Route.useLoaderData();
 
   return (
     <BelledLayout {...bell}>
-      <OwnProfile profile={profile} />
+      <OwnProfile
+        profile={you.profile}
+        confirmBand={
+          <ConfirmEmailBand
+            account={you.account}
+            resend={resendConfirmationFn}
+          />
+        }
+      />
     </BelledLayout>
   );
 }

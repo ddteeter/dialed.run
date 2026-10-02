@@ -4,7 +4,7 @@ import { z } from "zod";
 import { EntryDetail } from "../../src/modules/feed/components/EntryDetail";
 import { Feed } from "../../src/modules/feed/components/Feed";
 import { OtherProfile } from "../../src/modules/feed/components/OtherProfile";
-import { feedItem, firstPaintOf, MILES, NOW } from "./feed-fixtures";
+import { CONFIRMED, feedItem, firstPaintOf, MILES, NOW } from "./feed-fixtures";
 
 /**
  * A screen's one status region says nothing in the page the server sends
@@ -21,12 +21,16 @@ describe("the status region on first paint", () => {
   it("is empty on Following", async () => {
     const html = await firstPaintOf(
       <Feed
+        confirmBand={undefined}
+        confirmFirst={CONFIRMED}
         items={[feedItem()]}
         followeeCount={1}
         now={NOW}
         units={MILES}
         unjudgedCount={0}
-        setUseful={() => Promise.resolve({ useful: true, count: 1 })}
+        setUseful={() =>
+          Promise.resolve({ status: "set", useful: true, count: 1 })
+        }
         conditions={{
           home: { coords: undefined, cityLabel: undefined },
           locate: () => Promise.resolve(undefined),
@@ -43,11 +47,14 @@ describe("the status region on first paint", () => {
   it("is empty on D", async () => {
     const html = await firstPaintOf(
       <EntryDetail
+        confirmFirst={CONFIRMED}
         units={MILES}
         viewerId="01STRANGER"
         shouldPromptVerdict={false}
         recordPrompted={done}
-        setUseful={() => Promise.resolve({ useful: true, count: 1 })}
+        setUseful={() =>
+          Promise.resolve({ status: "set", useful: true, count: 1 })
+        }
         entry={{
           id: "01ENTRY",
           userId: "01USER",

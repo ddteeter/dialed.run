@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
 import type { Units } from "../../../lib/contracts";
-import { FormStatus, Mono } from "../../../ui";
+import { FormStatus, Mono, useControlGate } from "../../../ui";
+import type { ControlGate, ControlGuard } from "../../../ui";
 import type { FeedItem } from "../feed";
 import { isBacklogWorthOpening } from "../route-decisions";
 import { BracketHeadline } from "./BracketHeadline";
@@ -62,6 +63,16 @@ export interface FeedProps {
   props, read off it, less the units this screen already passes.
   */
   conditions: Omit<ComponentProps<typeof ConditionsTab>, "units">;
+  /**
+  Round 26 #11's nag, composed by the route: `account`'s band, which draws
+  nothing once the address is confirmed. It sits at the top of the screen.
+  */
+  confirmBand: ReactNode;
+  /**
+  Useful waits for a confirmed address (seam 7); the route composes the
+  sheet it opens instead, and this screen renders it once for every card.
+  */
+  confirmFirst: ControlGate;
 }
 
 export function Feed(props: Readonly<FeedProps>) {
@@ -73,7 +84,10 @@ export function Feed(props: Readonly<FeedProps>) {
     unjudgedCount,
     setUseful,
     conditions,
+    confirmBand,
+    confirmFirst,
   } = props;
+  const { guard, sheet } = useControlGate(confirmFirst);
   // The runner's own choice wins; until they make one, the default follows
   // the data. Held as a choice rather than as the tab, because a loader
   // can refresh under a mounted screen — a stale page first, the fresh one
@@ -86,6 +100,7 @@ export function Feed(props: Readonly<FeedProps>) {
     // "left-aligned inside the page measure, not centred, so it lines up
     // with the wide screens' primary column".
     <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0 wide:px-6">
+      {confirmBand}
       <div className="flex items-center justify-between">
         <h1 className="font-display text-title uppercase">Feed</h1>
         <Link
@@ -148,6 +163,7 @@ export function Feed(props: Readonly<FeedProps>) {
           now={now}
           units={units}
           setUseful={setUseful}
+          guard={guard}
           onConditions={() => {
             setTab("conditions");
           }}
@@ -155,6 +171,7 @@ export function Feed(props: Readonly<FeedProps>) {
       ) : (
         <ConditionsTab {...conditions} units={units} />
       )}
+      {sheet}
     </div>
   );
 }
@@ -166,6 +183,7 @@ function FollowingTab({
   now,
   units,
   setUseful,
+  guard,
   onConditions,
 }: Readonly<{
   items: FeedItem[];
@@ -173,6 +191,7 @@ function FollowingTab({
   now: number;
   units: Units;
   setUseful: SetUsefulFn;
+  guard: ControlGuard;
   onConditions: () => void;
 }>) {
   // One status region for the screen, however many cards (Accessibility
@@ -197,6 +216,7 @@ function FollowingTab({
           units={units}
           now={now}
           setUseful={setUseful}
+          guard={guard}
           onStatus={setStatus}
         />
       ))}

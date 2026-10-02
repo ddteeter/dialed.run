@@ -32,6 +32,7 @@ import {
   makeEntry,
   makeRun,
   makeUser,
+  makeVerifiedUser,
   NOW,
   resetSafetyTables,
 } from "./helpers";
@@ -126,7 +127,7 @@ describe("a banned author (SAF-4)", () => {
 
   it("cannot be marked Useful", async () => {
     const { author, entryId } = await postedEntry();
-    const viewer = await makeUser();
+    const viewer = await makeVerifiedUser();
     await banUser({ userId: author, reason: "spam", bannedBy: viewer });
     await expect(setUsefulReaction(entryId, viewer, true)).rejects.toThrow(
       "entry is not visible to this viewer",
@@ -245,7 +246,7 @@ describe("a block (SAF-12)", () => {
 
   it("stops a blocked runner marking the entry Useful", async () => {
     const posted = await postedEntry();
-    const blocked = await makeUser();
+    const blocked = await makeVerifiedUser();
     await blockRunner(posted.author, blocked);
     await expect(
       setUsefulReaction(posted.entryId, blocked, true),

@@ -34,7 +34,7 @@ import {
   runnersFilterInput,
   unbanUserInput,
 } from "./inputs";
-import { fileReport } from "./reports";
+import { fileConfirmedReport } from "./confirmed-report";
 import { claimForReview, pendingReviewQueue } from "./review";
 
 export const fileReportAction = createServerFn({ method: "POST" })
@@ -44,7 +44,7 @@ export const fileReportAction = createServerFn({ method: "POST" })
     // The block rides with the report (W1's checkbox) rather than being a
     // second round trip the reporter could lose; `fileReport` owns that
     // decision, because a route may not branch.
-    return fileReport({ reporterId, ...data });
+    return fileConfirmedReport({ reporterId, ...data });
   });
 
 export const blockRunnerAction = createServerFn({ method: "POST" })

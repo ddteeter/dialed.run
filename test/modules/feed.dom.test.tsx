@@ -1,18 +1,30 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { ConfirmEmailBand } from "../../src/modules/account/components/ConfirmEmailBand";
 import { defaultFeedTab, Feed } from "../../src/modules/feed/components/Feed";
+import type { SetUsefulFn } from "../../src/modules/feed/components/useful-reaction";
 import type { FeedItem } from "../../src/modules/feed/feed";
-import { feedItem, MILES, NOW, renderFeedScreen } from "./feed-fixtures";
+import type { ControlGate } from "../../src/ui";
+import {
+  CONFIRMED,
+  UNCONFIRMED,
+  feedItem,
+  MILES,
+  NOW,
+  renderFeedScreen,
+} from "./feed-fixtures";
 
 /**
  * The feed's shell (E1 and E2-lite): which tab it opens on, the queue
  * link, and Following — its cards and its drawn empty state. The cards
  * and Your conditions have files of their own.
  */
-const useful = () => Promise.resolve({ useful: true, count: 1 });
+const useful: SetUsefulFn = () =>
+  Promise.resolve({ status: "set", useful: true, count: 1 });
 
 function feed(
   overrides: {
@@ -20,6 +32,9 @@ function feed(
     followeeCount?: number;
     unjudgedCount?: number;
     conditionsFor?: () => Promise<undefined>;
+    confirmBand?: ReactNode;
+    confirmFirst?: ControlGate;
+    setUseful?: SetUsefulFn;
   } = {},
 ) {
   return (
@@ -29,7 +44,9 @@ function feed(
       now={NOW}
       units={MILES}
       unjudgedCount={overrides.unjudgedCount ?? 0}
-      setUseful={useful}
+      setUseful={overrides.setUseful ?? useful}
+      confirmBand={overrides.confirmBand}
+      confirmFirst={overrides.confirmFirst ?? CONFIRMED}
       conditions={{
         home: { coords: undefined, cityLabel: undefined },
         locate: () => Promise.resolve(undefined),
@@ -188,6 +205,8 @@ describe("Feed: Following", () => {
         units={MILES}
         unjudgedCount={0}
         setUseful={() => Promise.reject(new TypeError("offline"))}
+        confirmBand={undefined}
+        confirmFirst={CONFIRMED}
         conditions={{
           home: { coords: undefined, cityLabel: undefined },
           locate: () => Promise.resolve(undefined),
@@ -272,5 +291,71 @@ describe("Feed: Following, empty", () => {
     const conditionsFor = vi.fn(() => Promise.resolve(undefined));
     await renderFeedScreen(feed({ followeeCount: 1, conditionsFor }));
     expect(conditionsFor).not.toHaveBeenCalled();
+  });
+});
+
+const resend = () => Promise.resolve({ status: "sent" } as const);
+
+/**
+`account`'s own band, as the route composes it.
+*/
+function band(isVerified: boolean) {
+  return (
+    <ConfirmEmailBand
+      account={{ email: "maya@example.com", isVerified }}
+      resend={resend}
+    />
+  );
+}
+
+describe("Feed: an unconfirmed runner (round 26 #11; FEED-11)", () => {
+  it("carries the nag at the top of the screen, above the heading", async () => {
+    await renderFeedScreen(feed({ confirmBand: band(false) }));
+
+    const nag = screen.getByRole("complementary", {
+      name: "Confirm your email",
+    });
+    expect(nag).toHaveTextContent(
+      /^Confirm your email to share runs with other runners\./u,
+    );
+    const heading = screen.getByRole("heading", { name: "Feed" });
+    // The band comes first in the column: nothing above it.
+    expect(nag.compareDocumentPosition(heading)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(nag.parentElement?.firstElementChild).toBe(nag);
+  });
+
+  it("carries none once the address is confirmed", async () => {
+    await renderFeedScreen(feed({ confirmBand: band(true) }));
+    expect(screen.queryByRole("complementary")).toBeNull();
+  });
+
+  it("opens one confirm sheet from any card's Useful, and marks nothing", async () => {
+    const user = userEvent.setup();
+    const setUseful = vi.fn(useful);
+    await renderFeedScreen(
+      feed({
+        items: [
+          feedItem({ entryId: "01A", authorUsername: "dana" }),
+          feedItem({ entryId: "01B", authorUsername: "mark" }),
+        ],
+        confirmFirst: UNCONFIRMED,
+        setUseful,
+      }),
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    const [, second] = screen.getAllByRole("button", { name: /Useful/u });
+    if (second === undefined) throw new Error("two cards, two Usefuls");
+    await user.click(second);
+
+    expect(
+      screen.getAllByRole("dialog", { name: "Confirm your email first" }),
+    ).toHaveLength(1);
+    expect(setUseful).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Not now" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

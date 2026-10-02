@@ -43,6 +43,8 @@ export { Turnstile } from "./Turnstile";
 export { classifyFailure, useFormSubmit } from "./use-form-submit";
 export { causeLine, useControlAction } from "./use-control-action";
 export type { ControlAction } from "./use-control-action";
+export { useControlGate } from "./control-gate";
+export type { ControlGate, ControlGuard } from "./control-gate";
 export type { FieldProps, FormFailure, FormShell } from "./use-form-submit";
 export type { ControlFailure } from "./form";
 export { useIdempotencyKey } from "./use-idempotency-key";

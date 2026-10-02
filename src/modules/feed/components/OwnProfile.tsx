@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 
 import { Bracketed, Icon, ListSection, Mono, VerdictMark } from "../../../ui";
 import type { VerdictKind } from "../../../ui";
@@ -42,10 +43,17 @@ const VERDICT_WORD: Readonly<Record<VerdictKind, string>> = {
  *   something in them — none is drawn empty.
  * - The line under the name is the city, when O1 got one, and nothing
  *   otherwise.
+ * - **Round 26 #11's nag sits on top** while the address is unconfirmed:
+ *   `confirmBand` is `account`'s band, composed by the route, and draws
+ *   nothing once the address is confirmed.
  */
-export function OwnProfile({ profile }: Readonly<{ profile: Profile }>) {
+export function OwnProfile({
+  profile,
+  confirmBand,
+}: Readonly<{ profile: Profile; confirmBand: ReactNode }>) {
   return (
     <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0">
+      {confirmBand}
       <div data-part="header" className="flex flex-col gap-3">
         <div className="flex items-center gap-4">
           <Avatar name={profile.username ?? "You"} size="large" />

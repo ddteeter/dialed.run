@@ -98,6 +98,39 @@ places), the enum drop (#112).
   is not built — there is no useful notification to style.
 - **FEED-11** stays sequenced: 126's verification has not landed.
 
+### Follow-up PR: FEED-11 (and SAF-15's verification half), seam 7
+
+126's pieces were on main and called by nobody but U1. Wired:
+
+- **The band** is `account`'s `ConfirmEmailBand`, composed by the Feed
+  and You routes from the signed-in runner's `AccountView` (Feed: a new
+  `ownAccountQuery`; You: `ownProfileQuery` now brings it beside G's
+  profile, one read for the page) and passed to `Feed` and `OwnProfile`
+  as a `confirmBand` node, which each renders first in its column. The band
+  draws nothing once the address is confirmed, so neither screen decides.
+  Copy is round 27 #7's: "…to share runs with other runners."
+- **Useful.** `setUsefulReaction` asks `account`'s `isVerified` first and
+  answers `{ status: "unverified" }`, writing nothing — before the
+  visibility check, so the refusal says nothing about the entry. A set
+  answers `{ status: "set", useful, count }`. On the client a press opens
+  the screen's "Confirm your email first" instead of acting, and so does
+  the server's refusal.
+- **Report** (128's SAF-15, same seam). `fileConfirmedReport`
+  (`safety/confirmed-report.ts`) asks `isVerified` before `fileReport`
+  writes anything, the block included; `fileReportAction` calls it.
+  It is outside safety's barrel because `account` reaches that barrel
+  through `ops`, so importing `account` from it is a cycle.
+  `ReportAffordance` opens the confirm sheet instead of W1.
+- **One gate, composed by the route.** Feed and safety may not import
+  `account`'s components, so the route builds a `ControlGate` (`ui`):
+  `canAct` from the account view, and a render function for the sheet,
+  from `account`'s `confirmEmailGate`. `useControlGate` gives the screen
+  one sheet, however many controls it gates. There is no second
+  verification predicate: the server reads `isVerified`, the page reads
+  `AccountView.isVerified`.
+- **The sheet** takes round 27 #17's lead sentence by trigger and its
+  **Not now**, which has focus. Design deltas, item 41.
+
 ## Test plan
 
 - worker: 150-follow feed page + cursor + EXPLAIN; bell counts a 30-day-old

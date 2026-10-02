@@ -4,9 +4,16 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { EntryDetail } from "../../src/modules/feed/components/EntryDetail";
+import type { SetUsefulFn } from "../../src/modules/feed/components/useful-reaction";
 import type { entryDetailForViewer } from "../../src/modules/feed/entries";
+import type { ControlGate } from "../../src/ui";
 import { pointConditions } from "../feed/conditions-fixture";
-import { MILES, renderFeedScreen } from "./feed-fixtures";
+import {
+  CONFIRMED,
+  MILES,
+  renderFeedScreen,
+  UNCONFIRMED,
+} from "./feed-fixtures";
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
 type Item = Entry["items"][number];
@@ -59,7 +66,8 @@ function item(overrides: Partial<Item> = {}): Item {
 }
 
 const nothing = () => Promise.resolve();
-const marked = () => Promise.resolve({ useful: true, count: 1 });
+const marked: SetUsefulFn = () =>
+  Promise.resolve({ status: "set", useful: true, count: 1 });
 
 function detail(
   overrides: Partial<Entry> = {},
@@ -67,12 +75,14 @@ function detail(
     viewerId?: string | undefined;
     shouldPrompt?: boolean;
     recordPrompted?: () => Promise<unknown>;
-    setUseful?: () => Promise<{ useful: boolean; count: number }>;
+    setUseful?: SetUsefulFn;
     report?: boolean;
+    confirmFirst?: ControlGate;
   } = {},
 ) {
   return (
     <EntryDetail
+      confirmFirst={options.confirmFirst ?? CONFIRMED}
       units={MILES}
       entry={entry(overrides)}
       viewerId={"viewerId" in options ? options.viewerId : "01STRANGER"}
@@ -243,7 +253,6 @@ describe("EntryDetail: the run strip", () => {
 
 const credit = () =>
   screen.queryByRole("link", { name: "Weather by Visual Crossing" });
-
 
 describe("EntryDetail: the owner's verdict prompt", () => {
   it("takes the badge's place, directly under the strip, and opens A3", async () => {
@@ -445,5 +454,49 @@ describe("EntryDetail: Useful and Report", () => {
     const report = part("report");
     expect(report).toHaveTextContent("Report this entry");
     expect(report).toHaveClass("text-small", "text-label");
+  });
+});
+
+describe("EntryDetail: Useful waits for a confirmed address (round 26 #11; seam 7)", () => {
+  it("opens the confirm sheet instead of marking", async () => {
+    const user = userEvent.setup();
+    const setUseful = vi.fn(marked);
+    await renderFeedScreen(
+      detail({}, { confirmFirst: UNCONFIRMED, setUseful }),
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /Useful/u }));
+
+    expect(
+      screen.getByRole("dialog", { name: "Confirm your email first" }),
+    ).toBeVisible();
+    expect(setUseful).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /Useful/u })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Not now" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("opens it when the server refuses, too", async () => {
+    const user = userEvent.setup();
+    await renderFeedScreen(
+      detail(
+        {},
+        {
+          confirmFirst: { ...UNCONFIRMED, canAct: true },
+          setUseful: () => Promise.resolve({ status: "unverified" }),
+        },
+      ),
+    );
+
+    await user.click(screen.getByRole("button", { name: /Useful/u }));
+
+    expect(
+      await screen.findByRole("dialog", { name: "Confirm your email first" }),
+    ).toBeVisible();
   });
 });

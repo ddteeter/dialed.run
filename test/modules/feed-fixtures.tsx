@@ -7,9 +7,11 @@ import {
 } from "@tanstack/react-router";
 import { render } from "@testing-library/react";
 import type { ReactElement } from "react";
+import { vi } from "vitest";
 import { renderToString } from "react-dom/server";
 
 import type { FeedItem } from "../../src/modules/feed/feed";
+import type { ControlGate, ControlGuard } from "../../src/ui";
 
 /**
  * The routes the feed's screens link to, stubbed, so a typed `<Link>`
@@ -91,3 +93,38 @@ export function feedItem(overrides: Partial<FeedItem> = {}): FeedItem {
 }
 
 export const MILES = { temp: "f", distance: "mi" } as const;
+
+/**
+ * A confirmed runner's gate, for the screens whose Useful waits on one
+ * (seam 7): a press acts, and there is no sheet to open. The unconfirmed
+ * runner has tests of their own.
+ */
+export const CONFIRMED: ControlGate = {
+  canAct: true,
+  sheet: vi.fn(),
+};
+
+/**
+The same, as the card and the button take it from their screen.
+*/
+export const CONFIRMED_GUARD: ControlGuard = {
+  canAct: true,
+  ask: vi.fn(),
+};
+
+/**
+ * An unconfirmed runner's gate: a press opens this stand-in for
+ * `account`'s sheet — a dialog named as the real one is, present only
+ * while open — and Not now closes it.
+ */
+export const UNCONFIRMED: ControlGate = {
+  canAct: false,
+  sheet: (isOpen, onClose) =>
+    isOpen ? (
+      <div role="dialog" aria-label="Confirm your email first">
+        <button type="button" onClick={onClose}>
+          Not now
+        </button>
+      </div>
+    ) : undefined,
+};

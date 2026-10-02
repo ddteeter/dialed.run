@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { ConfirmEmailBand } from "../../src/modules/account/components/ConfirmEmailBand";
 import { Avatar, initialOf } from "../../src/modules/feed/components/Avatar";
 import { OtherProfile } from "../../src/modules/feed/components/OtherProfile";
 import { OwnProfile } from "../../src/modules/feed/components/OwnProfile";
@@ -133,15 +134,63 @@ describe("Avatar", () => {
   });
 });
 
+const resend = () => Promise.resolve({ status: "sent" } as const);
+
+describe("OwnProfile (G): an unconfirmed runner (round 26 #11; FEED-11)", () => {
+  it("carries the nag at the top of You, above the identity line", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        confirmBand={
+          <ConfirmEmailBand
+            account={{ email: "maya@example.com", isVerified: false }}
+            resend={resend}
+          />
+        }
+        profile={ownProfile()}
+      />,
+    );
+
+    const nag = screen.getByRole("complementary", {
+      name: "Confirm your email",
+    });
+    expect(nag.parentElement?.firstElementChild).toBe(nag);
+    expect(nag.compareDocumentPosition(part("header") ?? nag)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(
+      within(nag).getByRole("button", { name: "Resend link" }),
+    ).toBeVisible();
+  });
+
+  it("carries none once the address is confirmed", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        confirmBand={
+          <ConfirmEmailBand
+            account={{ email: "maya@example.com", isVerified: true }}
+            resend={resend}
+          />
+        }
+        profile={ownProfile()}
+      />,
+    );
+    expect(screen.queryByRole("complementary")).toBeNull();
+  });
+});
+
 describe("OwnProfile (G): day one", () => {
   it("shows its counts at zero, never hidden", async () => {
-    await renderFeedScreen(<OwnProfile profile={ownProfile()} />);
+    await renderFeedScreen(
+      <OwnProfile confirmBand={undefined} profile={ownProfile()} />,
+    );
 
     expect(part("counts")).toHaveTextContent("0 Runs0 Following0 Followers");
   });
 
   it("offers one next step: [ NO RUNS YET ], a line, Log a run — and Settings", async () => {
-    await renderFeedScreen(<OwnProfile profile={ownProfile()} />);
+    await renderFeedScreen(
+      <OwnProfile confirmBand={undefined} profile={ownProfile()} />,
+    );
 
     expect(part("entries")).toHaveAttribute("data-state", "empty");
     expect(screen.getByText("No runs yet")).toBeVisible();
@@ -167,7 +216,10 @@ describe("OwnProfile (G): day one", () => {
 
   it("names the runner, or You, and shows a city only when O1 got one", async () => {
     await renderFeedScreen(
-      <OwnProfile profile={ownProfile({ username: undefined })} />,
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile({ username: undefined })}
+      />,
     );
     expect(screen.getByRole("heading", { name: "You" })).toBeVisible();
     expect(part("header")?.querySelectorAll(".font-mono")).toHaveLength(3);
@@ -179,7 +231,10 @@ describe("OwnProfile (G): day one", () => {
 
   it("shows the city in mono under the name", async () => {
     await renderFeedScreen(
-      <OwnProfile profile={ownProfile({ cityLabel: "Portland" })} />,
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile({ cityLabel: "Portland" })}
+      />,
     );
     expect(screen.getByText("Portland")).toHaveClass("font-mono");
   });
@@ -196,7 +251,10 @@ describe("OwnProfile (G): past day one", () => {
 
   it("keeps the way to Settings, the only place to sign out, as the icon alone", async () => {
     await renderFeedScreen(
-      <OwnProfile profile={ownProfile({ runCount: 12 })} />,
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile({ runCount: 12 })}
+      />,
     );
 
     // Round 26 #18: "The established G has the icon only."
@@ -211,6 +269,7 @@ describe("OwnProfile (G): past day one", () => {
   it("drops the next step and shows the counts it has", async () => {
     await renderFeedScreen(
       <OwnProfile
+        confirmBand={undefined}
         profile={ownProfile({
           runCount: 12,
           followingCount: 3,
@@ -226,7 +285,10 @@ describe("OwnProfile (G): past day one", () => {
 
   it("draws each section only once there is something in it", async () => {
     await renderFeedScreen(
-      <OwnProfile profile={ownProfile({ runCount: 1 })} />,
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile({ runCount: 1 })}
+      />,
     );
     expect(screen.queryByText("How you call it, by band")).toBeNull();
     expect(screen.queryByText("Most worn")).toBeNull();
@@ -235,7 +297,10 @@ describe("OwnProfile (G): past day one", () => {
 
   it("names how each band was called", async () => {
     await renderFeedScreen(
-      <OwnProfile profile={ownProfile({ runCount: 3, coverage: [band] })} />,
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile({ runCount: 3, coverage: [band] })}
+      />,
     );
     const row = screen.getByText("Dialed").closest("li");
     expect(row).toHaveTextContent("[41–50°]Dialed3 runs");
@@ -244,6 +309,7 @@ describe("OwnProfile (G): past day one", () => {
   it("counts every run in a band, whichever way it went", async () => {
     await renderFeedScreen(
       <OwnProfile
+        confirmBand={undefined}
         profile={ownProfile({
           runCount: 4,
           coverage: [{ ...band, cold: 1, dialed: 2, warm: 1 }],
@@ -258,6 +324,7 @@ describe("OwnProfile (G): past day one", () => {
   it("names a band called cold as under-dressed and warm as over-dressed", async () => {
     await renderFeedScreen(
       <OwnProfile
+        confirmBand={undefined}
         profile={ownProfile({
           runCount: 3,
           coverage: [
@@ -274,6 +341,7 @@ describe("OwnProfile (G): past day one", () => {
   it("lists the most-worn pieces and links the recent entries", async () => {
     await renderFeedScreen(
       <OwnProfile
+        confirmBand={undefined}
         profile={ownProfile({
           runCount: 2,
           mostWornItems: [{ itemId: "01A", name: "Houdini", wearCount: 4 }],

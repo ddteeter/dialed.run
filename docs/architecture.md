@@ -394,6 +394,17 @@ it is the sheet and its copy, which a callback would still have to render
 from inside feed. A node moves the whole subtree across; a callback moves
 only the verb.
 
+**A control that waits on another module's state is a gate, not a
+node.** Useful (feed) and report (safety) wait for a confirmed address
+(account), and pressing either opens `account`'s "Confirm your email
+first" instead. The screen owns the control and when the sheet opens; the
+sheet is account's. So the route hands a `ControlGate` (`ui`): `canAct`,
+and `sheet: (isOpen, onClose) => ReactNode`, built by
+`account`'s `confirmEmailGate`. `useControlGate` renders it once per
+screen. The render function is the one place a callback is right here,
+because the open state belongs to the screen and the subtree still moves
+across whole.
+
 Raised as a question on PR #73 ("do we need to adjust the rules?"), and
 written down here because the answer is no but nothing recorded it — the
 next lane that needs a cross-module control should find this rather than

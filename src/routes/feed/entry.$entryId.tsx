@@ -1,5 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
+import { confirmEmailGate } from "../../modules/account/components/ConfirmEmailSheet";
+import {
+  ownAccountQuery,
+  resendConfirmationFn,
+} from "../../modules/account/functions";
 import { getSession } from "../../modules/auth/functions";
 import { EntryDetail } from "../../modules/feed/components/EntryDetail";
 import { RetractEntry } from "../../modules/feed/components/RetractEntry";
@@ -37,6 +42,7 @@ export const Route = createFileRoute("/feed/entry/$entryId")({
       viewerId: session.user.id,
       units: await viewerUnitsQuery(),
       bell: await bellStateFn(),
+      account: await ownAccountQuery(),
       shouldPromptVerdict: await shouldAskForVerdict(
         entry,
         session.user.id,
@@ -49,7 +55,7 @@ export const Route = createFileRoute("/feed/entry/$entryId")({
 
 function EntryDetailPage() {
   const { entryId } = Route.useParams();
-  const { entry, shouldPromptVerdict, units, viewerId, bell } =
+  const { entry, shouldPromptVerdict, units, viewerId, bell, account } =
     Route.useLoaderData();
   const navigate = useNavigate();
 
@@ -62,6 +68,7 @@ function EntryDetailPage() {
         shouldPromptVerdict={shouldPromptVerdict}
         recordPrompted={recordVerdictPromptedAction}
         setUseful={setUsefulAction}
+        confirmFirst={confirmEmailGate(account, resendConfirmationFn, "useful")}
         reportAffordance={
           <ReportAffordance
             subject={{
@@ -73,6 +80,11 @@ function EntryDetailPage() {
             }}
             viewerId={viewerId}
             fileReport={fileReportAction}
+            confirmFirst={confirmEmailGate(
+              account,
+              resendConfirmationFn,
+              "report",
+            )}
           />
         }
       />

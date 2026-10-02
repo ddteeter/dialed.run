@@ -15,7 +15,10 @@ import { clockLabel, deviceTimeZone } from "../../src/lib/dates";
 import { ChangeEmail } from "../../src/modules/account/components/ChangeEmail";
 import { CheckEmail } from "../../src/modules/account/components/CheckEmail";
 import { ConfirmEmailBand } from "../../src/modules/account/components/ConfirmEmailBand";
-import { ConfirmEmailSheet } from "../../src/modules/account/components/ConfirmEmailSheet";
+import {
+  ConfirmEmailSheet,
+  confirmEmailGate,
+} from "../../src/modules/account/components/ConfirmEmailSheet";
 import {
   LinkLanding,
   landingCopy,
@@ -353,7 +356,7 @@ describe("LinkLanding", () => {
 });
 
 describe("the confirm-first sheet and the nag", () => {
-  it("opens as a sheet naming the address, with Resend and Close", async () => {
+  it("opens as a sheet naming the address, with Resend and Not now", async () => {
     const onClose = vi.fn();
     const resend = resender();
     const user = userEvent.setup();
@@ -372,7 +375,7 @@ describe("the confirm-first sheet and the nag", () => {
       within(sheet).getByRole("heading", { name: "Confirm your email first" }),
     ).toBeVisible();
     expect(within(sheet).getByText(/We sent a link to/u)).toHaveTextContent(
-      "We sent a link to maya@example.com.",
+      /^We sent a link to maya@example\.com\.$/u,
     );
     await user.click(
       within(sheet).getByRole("button", { name: "Resend link" }),
@@ -380,8 +383,104 @@ describe("the confirm-first sheet and the nag", () => {
     expect(resend).toHaveBeenCalledWith({
       data: { email: "maya@example.com" },
     });
-    await user.click(within(sheet).getByRole("button", { name: "Close" }));
+    await user.click(within(sheet).getByRole("button", { name: "Not now" }));
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("lands on Not now, the way out, when it opens (round 27 #17)", async () => {
+    const resend = resender();
+    const { rerender } = render(
+      <ConfirmEmailSheet
+        open={false}
+        onClose={vi.fn()}
+        email="maya@example.com"
+        resend={resend}
+      />,
+    );
+    // Shut, it takes nothing: the page keeps its own focus.
+    expect(document.activeElement).toBe(document.body);
+
+    rerender(
+      <ConfirmEmailSheet
+        open
+        onClose={vi.fn()}
+        email="maya@example.com"
+        resend={resend}
+      />,
+    );
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Not now" })).toHaveFocus();
+    });
+  });
+
+  it.each([
+    [
+      "useful",
+      "Marking runs Useful, sharing and reporting need a confirmed address. We sent a link to maya@example.com.",
+    ],
+    [
+      "report",
+      "Reporting, sharing and marking runs Useful need a confirmed address. We sent a link to maya@example.com.",
+    ],
+  ] as const)(
+    "leads with what the %s control was waiting for",
+    (trigger, body) => {
+      render(
+        <ConfirmEmailSheet
+          open
+          onClose={vi.fn()}
+          email="maya@example.com"
+          resend={resender()}
+          trigger={trigger}
+        />,
+      );
+      expect(screen.getByText(/We sent a link to/u)).toHaveTextContent(body);
+    },
+  );
+
+  it("is the gate a route hands a waiting control, for a confirmed runner and not", async () => {
+    const resend = resender();
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const unconfirmed = confirmEmailGate(
+      { email: "maya@example.com", isVerified: false },
+      resend,
+      "report",
+    );
+    expect(unconfirmed.canAct).toBe(false);
+    expect(
+      confirmEmailGate(
+        { email: "maya@example.com", isVerified: true },
+        resend,
+        "report",
+      ).canAct,
+    ).toBe(true);
+
+    render(<>{unconfirmed.sheet(true, onClose)}</>);
+    const sheet = screen.getByRole("dialog", {
+      name: "Confirm your email first",
+    });
+    expect(within(sheet).getByText(/We sent a link to/u)).toHaveTextContent(
+      /^Reporting, .* We sent a link to maya@example\.com\.$/u,
+    );
+    await user.click(
+      within(sheet).getByRole("button", { name: "Resend link" }),
+    );
+    expect(resend).toHaveBeenCalledWith({
+      data: { email: "maya@example.com" },
+    });
+    await user.click(within(sheet).getByRole("button", { name: "Not now" }));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("stays shut when the gate says so", () => {
+    const gate = confirmEmailGate(
+      { email: "maya@example.com", isVerified: false },
+      resender(),
+      "useful",
+    );
+    render(<>{gate.sheet(false, vi.fn())}</>);
+    expect(document.querySelector("dialog")?.open).toBe(false);
   });
 
   it("nags an unconfirmed runner once, and says nothing to a confirmed one or nobody", () => {
@@ -395,7 +494,9 @@ describe("the confirm-first sheet and the nag", () => {
     const band = screen.getByRole("complementary", {
       name: "Confirm your email",
     });
-    expect(band).toHaveTextContent(/^Confirm your email to share runs\./u);
+    expect(band).toHaveTextContent(
+      /^Confirm your email to share runs with other runners\./u,
+    );
     expect(
       within(band).getByRole("button", { name: "Resend link" }),
     ).toBeVisible();
@@ -520,7 +621,7 @@ describe("ChangeEmail (ACC-8)", () => {
     expect(within(sheet).getByText(/We sent a link to/u)).toHaveTextContent(
       "old@example.com",
     );
-    await user.click(within(sheet).getByRole("button", { name: "Close" }));
+    await user.click(within(sheet).getByRole("button", { name: "Not now" }));
     await waitFor(() => {
       expect(
         screen.queryByRole("dialog", { name: "Confirm your email first" }),

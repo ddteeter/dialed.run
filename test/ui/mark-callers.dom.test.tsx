@@ -173,7 +173,10 @@ describe("VerdictMark's caller prints the verdict", () => {
     const readings = new Set<string>();
     for (const counts of [{ cold: 3 }, { dialed: 3 }, { warm: 3 }]) {
       const { unmount } = await renderWithRouter(
-        <OwnProfile profile={ownProfile([band(0, counts)])} />,
+        <OwnProfile
+          confirmBand={undefined}
+          profile={ownProfile([band(0, counts)])}
+        />,
       );
       const [mark] = marks("data-verdict");
       expect(mark).toBeDefined();
@@ -191,7 +194,10 @@ describe("VerdictMark's caller prints the verdict", () => {
     // announced *as well*, which is the "partial, partial" the packet
     // warns about.
     await renderWithRouter(
-      <OwnProfile profile={ownProfile([band(0, { dialed: 4 })])} />,
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile([band(0, { dialed: 4 })])}
+      />,
     );
 
     for (const mark of marks("data-verdict")) {

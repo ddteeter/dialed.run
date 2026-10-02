@@ -5,7 +5,14 @@ import type { ReactNode } from "react";
 import { entryTagSchema } from "../../../lib/contracts";
 import type { Units } from "../../../lib/contracts";
 import { formatDistance, formatPace } from "../../../lib/contracts/measures";
-import { FormStatus, Icon, Mono, WeatherAttribution } from "../../../ui";
+import {
+  FormStatus,
+  Icon,
+  Mono,
+  useControlGate,
+  WeatherAttribution,
+} from "../../../ui";
+import type { ControlGate } from "../../../ui";
 import { tagLabel } from "../chips";
 import type { EntryTag } from "../chips";
 import type { entryDetailForViewer } from "../entries";
@@ -69,6 +76,11 @@ export interface EntryDetailProps {
    * modules"). Lane 124 owns the control; this screen owns where it sits.
    */
   reportAffordance?: ReactNode;
+  /**
+  Useful waits for a confirmed address (round 26 #11; seam 7): the route
+  composes the "Confirm your email first" sheet a press opens instead.
+  */
+  confirmFirst: ControlGate;
 }
 
 export function EntryDetail(props: Readonly<EntryDetailProps>) {
@@ -80,7 +92,9 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
     setUseful,
     units,
     reportAffordance,
+    confirmFirst,
   } = props;
+  const { guard, sheet } = useControlGate(confirmFirst);
   // `entry.id` rather than an `entryId` prop beside it: two sources for one
   // fact is how a route comes to disagree with itself.
   const entryId = entry.id;
@@ -149,11 +163,13 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
           usefulCount={entry.usefulCount}
           viewerHasReacted={entry.viewerHasReacted}
           setUseful={setUseful}
+          guard={guard}
           onStatus={setStatus}
         />
       )}
 
       <ReportFoot>{isOwn ? undefined : reportAffordance}</ReportFoot>
+      {sheet}
     </div>
   );
 }

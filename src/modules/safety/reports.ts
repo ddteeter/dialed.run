@@ -59,6 +59,7 @@ export interface FileReportInput {
 }
 
 export interface FileReportResult {
+  readonly status: "filed";
   /**
   Distinct people who have now reported this subject.
   */
@@ -79,6 +80,10 @@ export interface FileReportResult {
  * would let them tell either. `onConflictDoNothing` against the UNIQUE
  * index makes the second one a no-op that still returns the truth about
  * where the subject stands.
+ *
+ * **A runner's report goes through `fileConfirmedReport`**
+ * (`./confirmed-report`), which asks first whether the reporter's address
+ * is confirmed. This is the write once that is settled.
  */
 export async function fileReport(
   input: FileReportInput,
@@ -116,11 +121,11 @@ export async function fileReport(
   );
 
   if (reporterCount < autoHideReporterThreshold) {
-    return { reporterCount, hiddenPendingReview: false };
+    return { status: "filed", reporterCount, hiddenPendingReview: false };
   }
 
   await hidePendingReview(input.subjectType, input.subjectId);
-  return { reporterCount, hiddenPendingReview: true };
+  return { status: "filed", reporterCount, hiddenPendingReview: true };
 }
 
 export interface ReconcileReport {
