@@ -109,10 +109,11 @@ describe("stryker.conf.json", () => {
      * directory is laid out by where code may run (`contracts/`, `sql/`,
      * `browser/`, isomorphic files at the root), and so are the entries:
      * `sql/` and `browser/` are one glob each, while `contracts/` is
-     * three explicit lists balanced by static-mutant count and the root
-     * is one list, because `thermal.ts` keeps a shard of its own.
+     * four explicit lists — three balanced by static-mutant count, plus
+     * `thermal.ts` on its own — and the root is one list, because the
+     * `contracts.ts` barrel rides with a contracts shard.
      *
-     * The split has to be by *positive* path. A `!src/lib/thermal.ts`
+     * The split has to be by *positive* path. A `!src/lib/contracts.ts`
      * negation would read as "this file cannot be mutated" to the
      * commit-gate analyzer, which appends every negation in the array to
      * its own `--mutate` — exempting the file from the gate entirely.

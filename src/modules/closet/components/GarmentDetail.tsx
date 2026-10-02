@@ -5,7 +5,7 @@ import type { JSX, ReactNode } from "react";
 import { garmentCategoryLabels } from "../../../lib/contracts";
 import type { GarmentVisibility } from "../../../lib/contracts";
 import { photoAcceptAttribute } from "../../../lib/photo-constraints";
-import { formatTempRange } from "../../../lib/thermal";
+import { formatTempRange } from "../../../lib/contracts/thermal";
 import {
   Bracketed,
   ControlFailureBand,

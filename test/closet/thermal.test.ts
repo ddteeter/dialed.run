@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { estimateTempRange, formatTempRange } from "../../src/lib/thermal";
-import type { TempRange, ThermalInput } from "../../src/lib/thermal";
+import {
+  estimateTempRange,
+  formatTempRange,
+} from "../../src/lib/contracts/thermal";
+import type { TempRange, ThermalInput } from "../../src/lib/contracts/thermal";
 
 describe("estimateTempRange", () => {
   it("returns undefined when no weight is given", () => {

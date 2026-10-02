@@ -22,7 +22,10 @@ import {
   hasGarmentAttribute,
   type GarmentAttributeKey,
 } from "../../../lib/contracts/garment-fields";
-import { estimateTempRange, formatTempRange } from "../../../lib/thermal";
+import {
+  estimateTempRange,
+  formatTempRange,
+} from "../../../lib/contracts/thermal";
 import {
   Bracketed,
   causeLine,

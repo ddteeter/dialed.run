@@ -41,8 +41,8 @@ import { garmentTypesFor } from "../../lib/contracts/garment-fields";
 import { NotFoundError } from "../../lib/errors";
 import { newUlid } from "../../lib/ids";
 import { topByCount } from "../../lib/top-by-count";
-import type { TempRange } from "../../lib/thermal";
-import { estimateTempRange } from "../../lib/thermal";
+import type { TempRange } from "../../lib/contracts/thermal";
+import { estimateTempRange } from "../../lib/contracts/thermal";
 import { enqueueEnrichment } from "../enrichment";
 import {
   captureException,

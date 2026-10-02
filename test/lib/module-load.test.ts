@@ -32,7 +32,8 @@ describe("modules that build a table at import time", () => {
   });
 
   it("builds the thermal tables", async () => {
-    const { estimateTempRange } = await import("../../src/lib/thermal");
+    const { estimateTempRange } =
+      await import("../../src/lib/contracts/thermal");
     expect(estimateTempRange({ category: "top", weight: "mid" })).toEqual({
       lowC: 4,
       highC: 15,

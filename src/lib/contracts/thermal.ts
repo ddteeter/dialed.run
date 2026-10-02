@@ -1,6 +1,6 @@
 import type { z } from "zod";
 
-import type { garmentSchema, layerSchema, weightSchema } from "./contracts";
+import type { garmentSchema, layerSchema, weightSchema } from "./garments";
 
 type Category = z.infer<typeof garmentSchema>["category"];
 type Layer = z.infer<typeof layerSchema>;

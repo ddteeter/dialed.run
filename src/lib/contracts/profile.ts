@@ -114,7 +114,7 @@ export type DistanceUnit = z.infer<typeof distanceUnitSchema>;
 /**
  * What the app shows when a person has not chosen. Fahrenheit and miles
  * because the owner is US-based and the calibration tables are authored in
- * Fahrenheit (see `lib/thermal.ts`); 105 replaces this with a locale guess
+ * Fahrenheit (see `lib/contracts/thermal.ts`); 105 replaces this with a locale guess
  * at onboarding, and this stays the fallback for a profile that predates
  * the question.
  */
