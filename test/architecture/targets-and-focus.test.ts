@@ -257,10 +257,16 @@ describe("03 · every tappable thing has a 44×44 hit area", () => {
       // account" on the receipt, and the way back to Au2 under the form.
       "src/modules/account/components/RequestAccess.tsx",
       "src/modules/account/components/RequestAccess.tsx",
+      // The terms prompt's "The Terms have changed…" and "…or delete your
+      // account in Settings." (ACC-6).
+      "src/modules/account/components/TermsPrompt.tsx",
+      "src/modules/account/components/TermsPrompt.tsx",
       "src/modules/auth/auth-page.tsx",
       // Au2's "No code? Request access" (round 26 #20).
       "src/modules/auth/auth-page.tsx",
-      // Au2's "…you've read our Privacy policy." (ACC-13, D-52).
+      // Au2's "By creating an account you agree to the Terms and have
+      // read the Privacy policy." (ACC-6, ACC-13; round 27 #12).
+      "src/modules/auth/auth-page.tsx",
       "src/modules/auth/auth-page.tsx",
       // "Remembered it? Log in" (ACC-4).
       "src/modules/auth/components/ForgotPassword.tsx",

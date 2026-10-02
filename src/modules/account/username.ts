@@ -31,6 +31,7 @@ import { hasRowWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 import { isProfaneHandle, readBackDigits } from "../../lib/contracts/profanity";
 import type { ScreenHandle } from "./handle-screen";
+import { termsStanding } from "./terms-acceptance";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -499,9 +500,15 @@ export async function usernameOf(
  * their account and signed in again inside the week: every page sends them
  * to "Keep your account?" first, since logging in never cancels a
  * deletion silently. It outranks everything else about them.
+ *
+ * **"needs-terms"** (ACC-6) is a runner whose latest acceptance is below
+ * the current terms, or who has none: every page sends them to the terms
+ * prompt first. After leaving, before O0 — a handle is claimed through a
+ * server function, which refuses a runner who is behind. So "has-handle",
+ * the one answer the browser remembers, also means the terms are current.
  */
 export type HandleGate =
-  "signed-out" | "needs-handle" | "has-handle" | "leaving";
+  "signed-out" | "needs-handle" | "has-handle" | "leaving" | "needs-terms";
 
 /**
  * The gate's answer, with whom it is about: the browser keys what it
@@ -520,16 +527,18 @@ export async function handleGate(
   userId: string | undefined,
 ): Promise<HandleGateAnswer> {
   if (userId === undefined) return { gate: "signed-out", userId };
-  const [isLeaving, username] = await Promise.all([
+  const [isLeaving, terms, username] = await Promise.all([
     hasRowWhere(
       db,
       accountDeletions,
       accountDeletions.userId,
       eq(accountDeletions.userId, userId),
     ),
+    termsStanding(db, userId),
     usernameOf(db, userId),
   ]);
   if (isLeaving) return { gate: "leaving", userId };
+  if (terms === "behind") return { gate: "needs-terms", userId };
   return {
     gate: username === undefined ? "needs-handle" : "has-handle",
     userId,

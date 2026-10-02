@@ -18,6 +18,10 @@ import {
   usernameOf,
 } from "../../src/modules/account/username";
 import type { ScreenHandle } from "../../src/modules/account/handle-screen";
+import {
+  acceptanceOf,
+  currentTermsVersion,
+} from "../../src/modules/account/terms-acceptance";
 
 /**
  * The handle (task 126, ACC-1; round 26 #7), through the one writer on
@@ -650,6 +654,14 @@ describe("lookUpHandle", () => {
   });
 });
 
+/**
+A runner who has accepted the terms this build ships (ACC-6).
+*/
+async function accepted(userId: string): Promise<string> {
+  await acceptanceOf(db, userId, currentTermsVersion(), nowSeconds());
+  return userId;
+}
+
 describe("usernameOf and handleGate", () => {
   it("reads the handle, and nothing before O0", async () => {
     expect(await usernameOf(db, await runner({ username: "dee" }))).toBe("dee");
@@ -658,17 +670,17 @@ describe("usernameOf and handleGate", () => {
   });
 
   it("sends a signed-in runner with no handle to O0, and nobody else", async () => {
-    const newcomer = await runner();
+    const newcomer = await accepted(await runner());
     expect(await handleGate(db, newcomer)).toStrictEqual({
       gate: "needs-handle",
       userId: newcomer,
     });
-    const nobody = newUlid();
+    const nobody = await accepted(newUlid());
     expect(await handleGate(db, nobody)).toStrictEqual({
       gate: "needs-handle",
       userId: nobody,
     });
-    const dee = await runner({ username: "dee" });
+    const dee = await accepted(await runner({ username: "dee" }));
     expect(await handleGate(db, dee)).toStrictEqual({
       gate: "has-handle",
       userId: dee,
@@ -695,7 +707,32 @@ describe("usernameOf and handleGate", () => {
       userId: newcomer,
     });
     await db.delete(accountDeletions);
+    await accepted(dee);
     const { gate } = await handleGate(db, dee);
     expect(gate).toBe("has-handle");
+  });
+
+  it("answers needs-terms for a runner behind on the terms, before O0 and after leaving (ACC-6)", async () => {
+    const dee = await runner({ username: "dee" });
+    const newcomer = await runner();
+    expect(await handleGate(db, dee)).toStrictEqual({
+      gate: "needs-terms",
+      userId: dee,
+    });
+    expect(await handleGate(db, newcomer)).toStrictEqual({
+      gate: "needs-terms",
+      userId: newcomer,
+    });
+    // A version behind is behind too.
+    await acceptanceOf(db, dee, currentTermsVersion() - 1, nowSeconds());
+    expect(await handleGate(db, dee)).toMatchObject({ gate: "needs-terms" });
+    await db
+      .insert(accountDeletions)
+      .values({ userId: dee, requestedAt: 1, purgeAfter: 2 });
+    expect(await handleGate(db, dee)).toMatchObject({ gate: "leaving" });
+    await accepted(newcomer);
+    expect(await handleGate(db, newcomer)).toMatchObject({
+      gate: "needs-handle",
+    });
   });
 });

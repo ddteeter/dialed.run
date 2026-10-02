@@ -2,16 +2,10 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import type { JSX } from "react";
 
-import {
-  ControlFailureBand,
-  FormStatus,
-  Mono,
-  PendingLabel,
-  inFlight,
-  useControlAction,
-} from "../../../ui";
+import { Mono, useControlAction } from "../../../ui";
 import { SignedOutPanel } from "../../../ui/SignedOutPanel";
 import type { KeepResult, LeavingView } from "../deletion";
+import { ActionCard, useLogOutAction } from "./ActionCard";
 
 /**
  * Round 27 #14's two deletion pages, in the signed-out panel: "Delete
@@ -57,10 +51,18 @@ export function Leaving({
             before then and choose to keep it.
           </p>
           <div className="flex flex-wrap items-center gap-4">
-            <Link to="/auth/login" className={PRIMARY}>
+            {/* ActionCard's two pill styles, as links: written out here
+                because a class list is read where the control is. */}
+            <Link
+              to="/auth/login"
+              className="target inline-flex cursor-pointer items-center justify-center rounded-pill border-none bg-ink px-5 font-bold text-ground no-underline"
+            >
               Log in
             </Link>
-            <Link to="/" className={SECONDARY}>
+            <Link
+              to="/"
+              className="target inline-flex cursor-pointer items-center justify-center rounded-pill border border-hairline bg-transparent px-5 font-semibold text-ink no-underline"
+            >
               Open dialed.run
             </Link>
           </div>
@@ -74,11 +76,6 @@ export function Leaving({
     </SignedOutPanel>
   );
 }
-
-const PRIMARY =
-  "target inline-flex cursor-pointer items-center justify-center rounded-pill border-none bg-ink px-5 font-bold text-ground no-underline";
-const SECONDARY =
-  "target inline-flex cursor-pointer items-center justify-center rounded-pill border border-hairline bg-transparent px-5 font-semibold text-ink no-underline";
 
 function KeepOrLeave({
   day,
@@ -100,13 +97,14 @@ function KeepOrLeave({
     },
     kicker: "Still scheduled",
   });
-  const leaving = useControlAction<[]>({
-    action: logOut,
-    kicker: "Still logged in",
-  });
+  const leaving = useLogOutAction(logOut);
   return (
-    <div data-part="landing" data-state="ask" className="flex flex-col gap-6">
-      <FormStatus>{keeping.status || leaving.status}</FormStatus>
+    <ActionCard
+      primary={keeping}
+      primaryLabel="Keep my account"
+      primaryPendingLabel="Keeping"
+      logOut={leaving}
+    >
       <p className="m-0 text-lead">
         It&apos;s set to be deleted on {day}, with everything in it. Keep it and
         it all comes back as it was.
@@ -117,47 +115,7 @@ function KeepOrLeave({
           {TOO_LATE}
         </p>
       ) : undefined}
-      <ControlFailureBand
-        failure={keeping.failure}
-        onRetry={keeping.retry}
-        retryRef={keeping.retryRef}
-      />
-      <ControlFailureBand
-        failure={leaving.failure}
-        onRetry={leaving.retry}
-        retryRef={leaving.retryRef}
-      />
-      <div className="flex flex-wrap items-center gap-4">
-        <button
-          type="button"
-          {...inFlight(keeping.pending)}
-          className={PRIMARY}
-          onClick={() => {
-            void keeping.run();
-          }}
-        >
-          <PendingLabel
-            label="Keep my account"
-            pendingLabel="Keeping"
-            pending={keeping.pending}
-          />
-        </button>
-        <button
-          type="button"
-          {...inFlight(leaving.pending)}
-          className={SECONDARY}
-          onClick={() => {
-            void leaving.run();
-          }}
-        >
-          <PendingLabel
-            label="Log out"
-            pendingLabel="Logging out"
-            pending={leaving.pending}
-          />
-        </button>
-      </div>
-    </div>
+    </ActionCard>
   );
 }
 

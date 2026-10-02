@@ -191,14 +191,27 @@ export function SettingsIndex({
           value="Strava"
         />
       </SettingsGroup>
-      {/* Settings › About (ACC-13; round 26 #14, D-52): the legal texts.
-          Terms and Copyright join when the owner's texts exist. */}
+      {/* Settings › About (ACC-13; round 26 #14, round 28 #7, D-52): the
+          legal texts, in the footer's order. Each links even while its
+          page answers X1 (D-81). */}
       <SettingsGroup title="About">
         <SettingsRow
           to="/privacy"
           params={{}}
           label="Privacy policy"
           value="What we keep, and who sees it"
+        />
+        <SettingsRow
+          to="/terms"
+          params={{}}
+          label="Terms"
+          value="The rules for using dialed.run"
+        />
+        <SettingsRow
+          to="/copyright"
+          params={{}}
+          label="Copyright"
+          value="Report something of yours posted here"
         />
       </SettingsGroup>
       {signOut}

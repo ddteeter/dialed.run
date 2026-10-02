@@ -54,8 +54,8 @@ const DOC = parseLegalDoc(
   ].join("\n"),
 );
 
-function bell(count: number) {
-  return <span data-testid="bell">{count}</span>;
+function bell({ unreadCount }: Readonly<{ unreadCount: number }>) {
+  return <span data-testid="bell">{unreadCount}</span>;
 }
 
 describe("LegalPage", () => {

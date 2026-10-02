@@ -15,6 +15,7 @@ import { orSqlNull } from "../../lib/sql/sql-null";
 import { countSend, sendAllowed, sendClaimOf } from "../email";
 import type { TurnstileAttempt, TurnstileVerdict } from "../ops";
 import { confirmRedemption, inviteStanding, redeemInvite } from "./invites";
+import { acceptanceOf, currentTermsVersion } from "./terms-acceptance";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -55,8 +56,18 @@ export function accessGate(
     standing: (code: string) => inviteStanding(db, code),
     claim: (claim: Readonly<{ code: string; userId: string; email: string }>) =>
       redeemInvite(db, claim),
+    // The account exists: its invite's use is spent for good, and the
+    // terms it was made under are recorded (ACC-6: creating the account is
+    // the acceptance) — one batch, the account's first app write. Better
+    // Auth makes the `user` row itself, so no batch can hold that too; a
+    // failure here leaves an account with no acceptance, which the terms
+    // prompt asks about at its first sign-in.
     confirm: async (userId: string) => {
-      await confirmRedemption(db, userId);
+      const now = nowSeconds();
+      await db.batch([
+        confirmRedemption(db, userId, now),
+        acceptanceOf(db, userId, currentTermsVersion(), now),
+      ]);
     },
   };
 }

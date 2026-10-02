@@ -42,7 +42,8 @@ export interface EmailContent {
   readonly reason?: string | undefined;
   /**
    * The footer's links, after "dialed.run". Every email ends with the
-   * privacy policy (decision D-52).
+   * legal texts, in the footer's order: Privacy policy · Terms ·
+   * Copyright (decision D-52, round 27 #12).
    */
   readonly footer: readonly EmailLink[];
 }
@@ -56,8 +57,16 @@ export interface EmailLinks {
   readonly unsubscribe?: string | undefined;
 }
 
-function privacy(origin: string): EmailLink {
-  return { label: "Privacy policy", href: `${origin}/privacy` };
+/**
+ * The legal links every email ends with, in the signed-out footer's order
+ * (round 27 #12).
+ */
+function legal(origin: string): EmailLink[] {
+  return [
+    { label: "Privacy policy", href: `${origin}/privacy` },
+    { label: "Terms", href: `${origin}/terms` },
+    { label: "Copyright", href: `${origin}/copyright` },
+  ];
 }
 
 function logIn(origin: string): EmailLink {
@@ -145,7 +154,7 @@ export function emailContent(
   links: EmailLinks,
 ): EmailContent {
   const { origin } = links;
-  const footer = [privacy(origin)];
+  const footer = legal(origin);
   switch (template.kind) {
     case "verify_email": {
       return {
@@ -274,7 +283,7 @@ export function emailContent(
             href: links.unsubscribe ?? `${origin}/account/notifications`,
           },
           { label: "Email settings", href: `${origin}/account/notifications` },
-          privacy(origin),
+          ...legal(origin),
         ],
       };
     }

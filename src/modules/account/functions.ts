@@ -16,6 +16,7 @@ import {
   optionalUserId,
   requireSignedInSince,
   requireUserId,
+  requireUserIdBeforeTerms,
   requireUserIdWhileLeaving,
 } from "../auth";
 import { nowSeconds } from "../../lib/now";
@@ -37,6 +38,7 @@ import {
   requestAccountDeletion,
 } from "./deletion";
 import {
+  acceptTermsInput,
   changeEmailInput,
   confirmInput,
   deskRowInput,
@@ -55,8 +57,14 @@ import {
   revokeInviteCode,
 } from "./invites";
 import { handleScreenFromEnv } from "./handle-screen";
+import type { LegalSlug } from "./inputs";
 import { legalPage } from "./legal";
-import { leavingSearch } from "./route-decisions";
+import {
+  homeIfNothingToSay,
+  legalDocOrNotFound,
+  leavingSearch,
+} from "./route-decisions";
+import { acceptTerms, termsPromptView } from "./terms-acceptance";
 import { claimUsername, handleGate, usernameOf } from "./username";
 import {
   confirmEmail,
@@ -253,7 +261,7 @@ export const revokeInviteCodeFn = createServerFn({ method: "POST" })
  * A legal page (ACC-13): its text if it is finished, and the bell's count
  * for a signed-in reader. No session needed — the policy is for anyone.
  */
-export const legalPageQuery = createServerFn({ method: "GET" })
+const legalPageQuery = createServerFn({ method: "GET" })
   .validator((data: unknown) => legalPageInput.parse(data))
   .handler(async ({ data }) =>
     legalPage(db(), data.slug, await optionalUserId()),
@@ -319,3 +327,40 @@ export const leavingQuery = createServerFn({ method: "GET" })
   .handler(async ({ data }) =>
     leavingView(db(), await optionalUserId(), data.on),
   );
+
+/**
+ * What `/account/terms` shows this visitor (ACC-6): the prompt, for a
+ * signed-in runner behind on the terms.
+ */
+const termsPromptQuery = createServerFn({ method: "GET" }).handler(
+  async () => termsPromptView(db(), await optionalUserId()),
+);
+
+/**
+ * The terms prompt's Accept (ACC-6): the one write a runner behind on the
+ * terms may make, so it is gated by everything but the terms.
+ */
+export const acceptTermsFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => acceptTermsInput.parse(data))
+  .handler(async ({ data }) =>
+    acceptTerms(db(), await requireUserIdBeforeTerms(), data.version),
+  );
+
+/**
+ * `/privacy`, `/terms` and `/copyright`'s loader (ACC-13): the page's
+ * text, or X1 while it is unpublished, and the bell's count.
+ */
+export async function legalPageLoader(slug: LegalSlug) {
+  const page = await legalPageQuery({ data: { slug } });
+  return { doc: legalDocOrNotFound(page.doc), unreadCount: page.unreadCount };
+}
+
+/**
+ * `/account/terms`' loader (ACC-6): the prompt's view, or home for anyone
+ * with nothing to accept.
+ */
+export async function termsPromptLoader() {
+  const view = await termsPromptQuery();
+  homeIfNothingToSay(view);
+  return view;
+}

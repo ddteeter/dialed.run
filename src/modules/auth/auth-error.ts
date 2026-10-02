@@ -56,3 +56,27 @@ export class AccountLeavingError extends Error {
     this.name = "AccountLeavingError";
   }
 }
+
+/**
+ * The code a runner behind on the terms is refused with (task 126,
+ * ACC-6): `requireUserId` saying no to a write from a runner whose latest
+ * acceptance is below the current terms. Its own code, as the leaving
+ * refusal's is, because the runner is signed in — "You were signed out"
+ * would be untrue.
+ */
+const TERMS_NOT_ACCEPTED_CODE = "TERMS_NOT_ACCEPTED";
+
+/**
+ * A signed-in runner who has not accepted the current terms, asking a
+ * server function to write. Their way on is the terms prompt, which the
+ * root route already puts in front of them; this is the server saying so
+ * to a client that went round it.
+ */
+export class TermsNotAcceptedError extends Error {
+  readonly code = TERMS_NOT_ACCEPTED_CODE;
+
+  constructor() {
+    super("Accept the current terms first.");
+    this.name = "TermsNotAcceptedError";
+  }
+}

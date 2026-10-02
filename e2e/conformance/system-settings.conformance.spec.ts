@@ -20,12 +20,17 @@ test.use({ storageState: storageStateFor("closet") });
 /**
  * **Settings › About is the build's, not U1's, and stays** (decision D-80, owner
  * 2026-09-29). U1 draws no About group; ACC-13 needs the legal texts
- * reachable from Settings (D-52), so the group and its one row ship as a
- * placeholder and go to design round 28 (design-deltas item 38). Left out
- * of the comparison by name — the rest of the index is still held to U1.
+ * reachable from Settings (D-52), so the group and its rows ship as a
+ * placeholder and go to design round 28 (design-deltas item 38; drawn
+ * there as #7 on a board this comparison cannot read yet). Left out of the
+ * comparison by name — the rest of the index is still held to U1.
  */
 const UNDRAWN_GROUP = "About";
-const UNDRAWN_ROWS: ReadonlySet<string> = new Set(["Privacy policy"]);
+const UNDRAWN_ROWS: ReadonlySet<string> = new Set([
+  "Privacy policy",
+  "Terms",
+  "Copyright",
+]);
 
 /**
  * Whether `wanted` appears in `words` in order, each matched by prefix.

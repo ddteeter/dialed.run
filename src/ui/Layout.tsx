@@ -113,9 +113,8 @@ export function SignedOutLayout({
 
 /**
  * The signed-out footer's legal links (task 126, ACC-13; D-52; round 27
- * #12: "Footer order everywhere: Privacy · Terms · Copyright"). Only the
- * texts that exist are linked: Terms and Copyright join, in that order,
- * when the owner's texts do.
+ * #12: "Footer order everywhere: Privacy · Terms · Copyright"). Each
+ * links even while its page answers X1 (D-81).
  */
 function LegalFooter() {
   return (
@@ -123,14 +122,19 @@ function LegalFooter() {
       data-part="legal-footer"
       className="border-t border-hairline px-6 py-4 text-small text-muted"
     >
-      <p className="mx-auto m-0 w-full max-w-page">
-        <Link
-          to="/privacy"
-          className="target text-muted underline underline-offset-4"
-        >
+      <p className="mx-auto m-0 flex w-full max-w-page flex-wrap gap-x-4">
+        <Link to="/privacy" className={FOOTER_LINK}>
           Privacy
+        </Link>
+        <Link to="/terms" className={FOOTER_LINK}>
+          Terms
+        </Link>
+        <Link to="/copyright" className={FOOTER_LINK}>
+          Copyright
         </Link>
       </p>
     </footer>
   );
 }
+
+const FOOTER_LINK = "target text-muted underline underline-offset-4";

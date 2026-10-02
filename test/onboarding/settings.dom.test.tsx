@@ -87,10 +87,18 @@ describe("the index (U1/N)", () => {
       "/onboarding/settings/sharing",
     );
     expect(row(/^Privacy New/u)).toHaveTextContent("New runs go to the feed");
-    // Settings › About (ACC-13, D-52): the privacy policy.
+    // Settings › About (ACC-13, D-52; round 28 #7): the legal texts.
     expect(row(/^Privacy policy/u)).toHaveAttribute("href", "/privacy");
     expect(row(/^Privacy policy/u)).toHaveTextContent(
       /^Privacy policyWhat we keep, and who sees it›$/u,
+    );
+    expect(row(/^Terms/u)).toHaveAttribute("href", "/terms");
+    expect(row(/^Terms/u)).toHaveTextContent(
+      /^TermsThe rules for using dialed\.run›$/u,
+    );
+    expect(row(/^Copyright/u)).toHaveAttribute("href", "/copyright");
+    expect(row(/^Copyright/u)).toHaveTextContent(
+      /^CopyrightReport something of yours posted here›$/u,
     );
     expect(row(/^Blocked runners/u)).toHaveAttribute("href", "/safety/blocked");
     expect(row(/^Blocked runners/u)).toHaveTextContent("2 blocked");

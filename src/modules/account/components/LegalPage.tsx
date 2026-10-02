@@ -1,4 +1,4 @@
-import type { JSX, ReactNode } from "react";
+import type { ComponentType, JSX } from "react";
 
 import { Layout, Mono, SignedOutLayout } from "../../../ui";
 import type { Block, Inline, LegalDoc } from "../legal-markdown";
@@ -30,13 +30,14 @@ export function LegalPage({
   /**
   The bell for the signed-in shell, given its count (the route's to wire).
   */
-  bell: (unreadCount: number) => ReactNode;
+  bell: ComponentType<{ unreadCount: number }>;
 }>): JSX.Element {
   const page = <ReadingPage doc={doc} />;
+  const Bell = bell;
   return unreadCount === undefined ? (
     <SignedOutLayout action="log-in">{page}</SignedOutLayout>
   ) : (
-    <Layout bell={bell(unreadCount)}>{page}</Layout>
+    <Layout bell={<Bell unreadCount={unreadCount} />}>{page}</Layout>
   );
 }
 

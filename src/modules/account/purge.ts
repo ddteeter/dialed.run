@@ -62,6 +62,7 @@ import {
   reports,
   runs,
   stravaConnections,
+  termsAcceptances,
   userProfiles,
   usernameHistory,
   wardrobeItems,
@@ -459,6 +460,7 @@ async function deleteAccountRows(
     passwordAttempts,
     stravaConnections,
     dataExports,
+    termsAcceptances,
   ] as const;
   // The trailing rows below share the same "found by nothing but the
   // runner's id" shape as `byUserId`, just on a column that is not always

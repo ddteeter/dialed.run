@@ -61,6 +61,8 @@ describe("startHandleIfNeeded (round 26 #7)", () => {
       "/account/reset",
       "/account/unsubscribe",
       "/privacy",
+      "/terms",
+      "/copyright",
     ]) {
       expect(gateAt(true, pathname), pathname).toBeUndefined();
     }
@@ -128,12 +130,14 @@ describe("the leaving gate (ACC-9; round 27 #14)", () => {
     expect(again.asked).toBe(1);
   });
 
-  it("lets them stay on the page itself, the auth pages and the privacy policy", async () => {
+  it("lets them stay on the page itself, the auth pages and the legal texts", async () => {
     for (const pathname of [
       "/account/leaving",
       "/auth/login",
       "/auth/signup",
       "/privacy",
+      "/terms",
+      "/copyright",
     ]) {
       const { thrown } = await gateOnce("leaving", true, pathname);
       expect(thrown).toBeUndefined();
@@ -149,6 +153,62 @@ describe("the leaving gate (ACC-9; round 27 #14)", () => {
     for (const gate of ["signed-out", "has-handle"] as const) {
       const { thrown } = await gateOnce(gate, true, "/closet");
       expect(thrown).toBeUndefined();
+    }
+  });
+});
+
+describe("the terms gate (ACC-6)", () => {
+  beforeEach(() => {
+    forgetSession();
+  });
+
+  it("sends a runner behind on the terms to the prompt from any page, O0 included", async () => {
+    for (const pathname of [
+      "/",
+      "/closet",
+      "/feed",
+      "/onboarding/handle",
+      "/account/username",
+      "/account/leaving",
+      "/termsx",
+    ]) {
+      const behind = await gateOnce("needs-terms", true, pathname);
+      expect(isRedirect(behind.thrown), pathname).toBe(true);
+      expect(behind.thrown).toMatchObject({
+        options: { to: "/account/terms" },
+      });
+    }
+    // Never remembered: Accept changes the answer, and so does a bump.
+    expect(isRememberedForSession("has-handle")).toBe(false);
+    const again = await gateOnce("needs-terms", true);
+    expect(again.asked).toBe(1);
+  });
+
+  it("lets them read the texts, leave, log out and finish an email link", async () => {
+    for (const pathname of [
+      "/account/terms",
+      "/terms",
+      "/privacy",
+      "/copyright",
+      "/account/sign-in",
+      "/account/check-email",
+      "/account/verify",
+      "/account/reset",
+      "/account/unsubscribe",
+      "/auth/login",
+      "/auth/signup",
+    ]) {
+      const { thrown } = await gateOnce("needs-terms", true, pathname);
+      expect(thrown, pathname).toBeUndefined();
+    }
+  });
+
+  it("stands alone: nobody else is sent there", async () => {
+    for (const gate of ["signed-out", "leaving", "has-handle"] as const) {
+      const { thrown } = await gateOnce(gate, true, "/account/sign-in");
+      expect(thrown, gate).not.toMatchObject({
+        options: { to: "/account/terms" },
+      });
     }
   });
 });
@@ -180,6 +240,10 @@ describe("leavingSearch and homeIfNothingToSay", () => {
     }).not.toThrow();
     expect(() => {
       homeIfNothingToSay({ state: "scheduled", day: "Sat, Oct 4" });
+    }).not.toThrow();
+    // The terms prompt's view (ACC-6) reads the same way.
+    expect(() => {
+      homeIfNothingToSay({ state: "ask", version: 2 });
     }).not.toThrow();
   });
 });

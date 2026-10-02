@@ -10,6 +10,7 @@ import {
   inviteCodes,
   inviteRedemptions,
   outbox,
+  termsAcceptances,
   userProfiles,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
@@ -33,6 +34,7 @@ import {
   restoreInviteCode,
   revokeInviteCode,
 } from "../../src/modules/account/invites";
+import { currentTermsVersion } from "../../src/modules/account/terms-acceptance";
 import type { TurnstileAttempt } from "../../src/modules/ops";
 import { fakeMail, owedTo } from "../email/helpers";
 
@@ -874,6 +876,31 @@ describe("accessGate", () => {
       .select({ confirmedAt: inviteRedemptions.confirmedAt })
       .from(inviteRedemptions);
     expect(row?.confirmedAt).toBeGreaterThan(0);
+    // ACC-6: the account accepted the current terms, at the same moment.
+    const accepted = await db
+      .select()
+      .from(termsAcceptances)
+      .where(eq(termsAcceptances.userId, mine.userId));
+    expect(accepted).toStrictEqual([
+      {
+        userId: mine.userId,
+        version: currentTermsVersion(),
+        acceptedAt: row?.confirmedAt,
+      },
+    ]);
+  });
+
+  it("records the terms for an account made with no invite, once however often it runs", async () => {
+    const gate = accessGate(db, verifyAs(true).verify);
+    const userId = newUlid();
+    await gate.confirm(userId);
+    await gate.confirm(userId);
+    expect(
+      await db
+        .select({ version: termsAcceptances.version })
+        .from(termsAcceptances)
+        .where(eq(termsAcceptances.userId, userId)),
+    ).toStrictEqual([{ version: currentTermsVersion() }]);
   });
 
   it("passes Turnstile only on its verdict, handing it the request's attempt", async () => {

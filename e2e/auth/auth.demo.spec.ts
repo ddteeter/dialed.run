@@ -1,21 +1,27 @@
 /**
  * Covers: Au2 in the invite stage (the code first, a code that doesn't
- * work), Au5 (request access and its receipt), D7 (the request, Send
- * invite), `/join` (the invite link fills the code), Au2 (create account),
- * Au4 (check your email, Resend), the confirm link's landing, O0 (pick a
- * handle, a taken one first), Au3 (wrong password), ACC-4 (forgot it, the
- * reset link, a new password), Au1 (log in), sign out from the settings
- * index — one journey, one video.
+ * work, the terms line under the form — ACC-6), Au5 (request access and
+ * its receipt), D7 (the request, Send invite), `/join` (the invite link
+ * fills the code), Au2 (create account), Au4 (check your email, Resend),
+ * the confirm link's landing, O0 (pick a handle, a taken one first), Au3
+ * (wrong password), ACC-4 (forgot it, the reset link, a new password), Au1
+ * (log in), sign out from the settings index, and the terms prompt (ACC-6:
+ * an account behind on the terms accepts them) — one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
  * assertions belong in a sibling *.spec.ts (see home.spec.ts).
  */
+import { eq } from "drizzle-orm";
+
+import { user } from "../../src/db/schema-auth";
+import { termsAcceptances } from "../../src/db/schema-core";
 import { INVITE_COPY } from "../../src/lib/contracts/access";
 import { signInAsOperator } from "../desk/operator";
 import { expect, scene, test } from "../support/demo";
 import { confirmLinkFor, resetLinkFor } from "../support/email-links";
 import { turnstileAnswered } from "../support/invites";
+import { withLocalDb } from "../support/local-db";
 
 /** Layout stamps html[data-hydrated] once React attaches; driving
  *  controlled inputs before that races hydration's state reset. */
@@ -47,6 +53,15 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   await expect(
     page.getByText("dialed.run is invite-only for now."),
   ).toBeVisible();
+  // ACC-6 (round 27 #12): creating the account is accepting the Terms.
+  await expect(
+    page.getByText(
+      "By creating an account you agree to the Terms and have read the Privacy policy.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("main").getByRole("link", { name: "Terms" }),
+  ).toHaveAttribute("href", "/terms");
 
   await scene(page, "A code that doesn't work is marked on the code");
   await page.getByLabel("Invite code").fill("DIAL-ZZZZ");
@@ -231,4 +246,38 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   await page.getByRole("button", { name: "Log in" }).click();
   // Back where the runner was going, not home.
   await expect(page).toHaveURL(/\/call$/u, { timeout: 15_000 });
+
+  // ACC-6: sign-up recorded the terms. An account made before that — no
+  // acceptance on record, as here — or one behind after the terms change
+  // meets the prompt before any page, and Accept lets it on.
+  await withLocalDb(async ({ core }) => {
+    const [account] = await core
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, email));
+    if (account === undefined) throw new Error("no account for the demo");
+    const accepted = await core
+      .select({ version: termsAcceptances.version })
+      .from(termsAcceptances)
+      .where(eq(termsAcceptances.userId, account.id));
+    expect(accepted).toHaveLength(1);
+    await core
+      .delete(termsAcceptances)
+      .where(eq(termsAcceptances.userId, account.id));
+  });
+  await scene(page, "Behind on the terms: the prompt comes before any page");
+  await page.goto("/closet");
+  await expect(page).toHaveURL(/\/account\/terms$/u, { timeout: 15_000 });
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Accept the terms" }),
+  ).toBeVisible();
+  await hydrated(page);
+  await expect(
+    page.getByRole("main").getByRole("link", { name: "Terms" }),
+  ).toHaveAttribute("href", "/terms");
+  await scene(page, "Accept records the version shown, and the app opens");
+  await page.getByRole("button", { name: "Accept" }).click();
+  await expect(page).not.toHaveURL(/\/account\/terms/u, { timeout: 15_000 });
+  await page.goto("/closet");
+  await expect(page).toHaveURL(/\/closet$/u, { timeout: 15_000 });
 });

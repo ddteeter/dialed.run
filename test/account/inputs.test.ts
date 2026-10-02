@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  acceptTermsInput,
   deskRowInput,
   exportRequestInput,
   legalPageInput,
@@ -124,12 +125,23 @@ describe("deskRowInput", () => {
 
 describe("legalPageInput (ACC-13)", () => {
   it("names only a legal text that exists", () => {
-    expect(legalPageInput.parse({ slug: "privacy" })).toStrictEqual({
-      slug: "privacy",
-    });
-    for (const slug of ["terms", "copyright", "", undefined]) {
+    for (const slug of ["privacy", "terms", "copyright"]) {
+      expect(legalPageInput.parse({ slug })).toStrictEqual({ slug });
+    }
+    for (const slug of ["privacy-policy", "Terms", "", undefined]) {
       expect(legalPageInput.safeParse({ slug }).success).toBe(false);
     }
     expect(legalPageInput.safeParse({}).success).toBe(false);
+  });
+});
+
+describe("acceptTermsInput (ACC-6)", () => {
+  it("takes the whole, positive version the page showed, and nothing else", () => {
+    expect(acceptTermsInput.parse({ version: 2 })).toStrictEqual({
+      version: 2,
+    });
+    for (const version of [0, -1, 1.5, "2", undefined]) {
+      expect(acceptTermsInput.safeParse({ version }).success).toBe(false);
+    }
   });
 });
