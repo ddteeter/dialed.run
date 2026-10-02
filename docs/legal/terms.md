@@ -21,8 +21,8 @@ say so.
   work with its links so the app can run.
 - Kits are shared with other signed-in runners by default. You can make any
   kit private, or make private your default.
-- Be decent. No harassment, no impersonation, nothing illegal, nothing that
-  shows where someone lives.
+- Be decent. No harassment, no impersonation, nothing sexual, nothing
+  illegal, nothing that shows where someone lives.
 - A person reviews reports. We can remove content and close accounts, and
   you can appeal any decision, with no deadline.
 - The Call, the conditions numbers and product details are information, not
@@ -88,7 +88,10 @@ When you use [dialed.run], do not:
   address, phone number, and the like) without their permission. That
   includes your own photos that give away someone's home.
 - **Post sexual or explicit content**, or anything that sexualises a child.
-  We report suspected child sexual abuse material to the authorities (see
+  Running kit is fine: sports bras, short shorts, a shirtless summer run are
+  what running looks like. Nudity, sexualised poses, sexual captions, notes
+  or usernames, and links to sexual content are not. We report suspected
+  child sexual abuse material to the authorities (see
   [Suspected illegal content](#suspected-illegal-content)).
 - **Post photos of other people** without their permission. Faces are
   blurred by default; leaving them unblurred is your call and your
