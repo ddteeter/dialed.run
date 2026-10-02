@@ -3,9 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   INNOCENT_IN_HANDLES,
   isProfaneHandle,
+  parseWordList,
+  PROFANE_WORDS,
   readBackDigits,
 } from "../../src/lib/profanity";
-import { PROFANE_WORDS } from "../../src/lib/profanity-words";
 
 /**
  * The vendored word list (LDNOOBW, CC BY 4.0) as a handle check (task
@@ -17,7 +18,6 @@ function asHandle(word: string): string {
 
 describe("isProfaneHandle", () => {
   it("refuses every listed word, as a whole handle, but the innocent ones", () => {
-    expect(PROFANE_WORDS.length).toBeGreaterThan(400);
     for (const word of PROFANE_WORDS) {
       const handle = asHandle(word);
       expect(isProfaneHandle(handle), word).toBe(
@@ -117,5 +117,39 @@ describe("readBackDigits", () => {
   it("reads 0 3 4 5 7 as letters, 1 as both i and l, and leaves the rest", () => {
     expect(readBackDigits("0345761")).toStrictEqual(["oeast6i", "oeast6l"]);
     expect(readBackDigits("run")).toStrictEqual(["run", "run"]);
+  });
+});
+
+describe("the vendored list", () => {
+  /**
+   * The list is a text file bundled at build time, so nothing but this
+   * notices if a re-vendor goes wrong: a file saved empty, an entry lost to
+   * a bad merge, a word edited by hand where `INNOCENT_IN_HANDLES` is the
+   * place for it. Each of those lets words through silently. So the count
+   * and the content are pinned, the content as a checksum of the parsed
+   * entries joined by newlines — after parsing, so line endings and the
+   * trailing newline do not move it.
+   *
+   * A deliberate re-vendor changes both numbers here, and
+   * `docs/legal/third-party-notices.md`'s fetch date with them.
+   */
+  it("holds the 402 entries it was vendored with, unedited", async () => {
+    expect(PROFANE_WORDS).toHaveLength(402);
+    const digest = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(PROFANE_WORDS.join("\n")),
+    );
+    expect(Buffer.from(digest).toString("hex")).toBe(
+      "2a52c3c03662ec179f7ca1cfd78c561d27807922f9285e8ed8f7aaaedaa70810",
+    );
+  });
+
+  it("reads one entry per line, trimmed, and skips blank lines", () => {
+    expect(parseWordList(" 2g1c \r\nball gag\n\n  \nyiffy\n")).toStrictEqual([
+      "2g1c",
+      "ball gag",
+      "yiffy",
+    ]);
+    expect(parseWordList("")).toStrictEqual([]);
   });
 });

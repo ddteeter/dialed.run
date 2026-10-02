@@ -221,6 +221,9 @@ describe("which type an edge resolves to", () => {
       ["/onboarding/settings", "/account/sign-in"],
       ["/auth/signup", "/account/check-email"],
       ["/auth/login", "/account/forgot"],
+      // Task 126 (ACC-13): the privacy policy, from Au2 and Settings.
+      ["/auth/signup", "/privacy"],
+      ["/onboarding/settings", "/privacy"],
       ["/onboarding/name", "/onboarding/calibrate"],
       ["/onboarding/calibrate", "/onboarding/taplist"],
       ["/onboarding/taplist", "/onboarding/settings"],
@@ -259,6 +262,16 @@ describe("which type an edge resolves to", () => {
     // cut"; it is a row somebody owes the table.
     expect(navTypeFor("/feed", "/nowhere", false)).toBeUndefined();
     expect(navTypeFor("/nowhere", "/elsewhere", false)).toBeUndefined();
+  });
+
+  it("types the export row's Download, a file with no page (ACC-10)", () => {
+    expect(
+      navTypeFor(
+        "/account/sign-in",
+        "/account/export/0123456789abcdef0123456789abcdef",
+        false,
+      ),
+    ).toBe("push");
   });
 
   it("cuts the OAuth return, which is a document load", () => {

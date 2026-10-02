@@ -6,15 +6,21 @@ import {
 } from "@tanstack/react-router";
 
 import { ChangeEmail } from "../../modules/account/components/ChangeEmail";
+import { DeleteAccount } from "../../modules/account/components/DeleteAccount";
 import { ConfirmEmailBand } from "../../modules/account/components/ConfirmEmailBand";
+import { ExportRow } from "../../modules/account/components/ExportRow";
 import {
   accountPageQuery,
+  requestDeletionFn,
   requestEmailChangeFn,
+  requestExportFn,
   resendConfirmationFn,
 } from "../../modules/account/functions";
 import {
   ACCOUNT_SECTION_TITLES,
   accountSectionOrNotFound,
+  accountSectionSearch,
+  DELETE_REAUTH_RETURN,
 } from "../../modules/account/route-decisions";
 import { ChangePassword } from "../../modules/auth/components/ChangePassword";
 import { SignOutButton } from "../../modules/auth/components/SignOutButton";
@@ -23,6 +29,10 @@ import {
   signOutEverywhere,
 } from "../../modules/auth/credentials";
 import { requireSession } from "../../modules/auth/functions";
+import {
+  GoogleButton,
+  useGoogleSignIn,
+} from "../../modules/auth/google-button";
 import { saveNotificationSettingsFn } from "../../modules/email/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { unreadNotificationCountFn } from "../../modules/notifications/functions";
@@ -39,6 +49,7 @@ import { PickedSubPage } from "../../modules/onboarding/components/SettingsSubPa
  * An unknown section is X1.
  */
 export const Route = createFileRoute("/account/$section")({
+  validateSearch: accountSectionSearch,
   loader: async ({ params, location }) => {
     // Signed in first: a signed-out visitor to a bad section is sent to
     // log in, not told the page does not exist.
@@ -54,8 +65,19 @@ export const Route = createFileRoute("/account/$section")({
 
 function AccountSectionRoute() {
   const { section, page, unreadCount } = Route.useLoaderData();
+  const search = Route.useSearch();
   const router = useRouter();
   const navigate = useNavigate();
+  // ACC-9's re-authentication for an account made with Google: a fresh
+  // sign-in, back to this page with the delete sheet open again.
+  const google = useGoogleSignIn({
+    callbackURL: DELETE_REAUTH_RETURN,
+    errorCallbackURL: DELETE_REAUTH_RETURN,
+    returnedError: undefined,
+    leave: (url) => {
+      globalThis.location.assign(url);
+    },
+  });
 
   return (
     <BelledLayout unreadCount={unreadCount}>
@@ -80,6 +102,28 @@ function AccountSectionRoute() {
                     await signOutEverywhere();
                     await router.invalidate();
                     await navigate({ to: "/" });
+                  }}
+                />
+              }
+              dataExport={
+                <ExportRow
+                  state={page.dataExport}
+                  request={requestExportFn}
+                  onRequested={() => router.invalidate()}
+                />
+              }
+              deletion={
+                <DeleteAccount
+                  hasPassword={page.account.hasPassword}
+                  request={requestDeletionFn}
+                  reauth={<GoogleButton google={google} />}
+                  isReturningFromGoogle={search.deleting === true}
+                  onScheduled={async (purgeAfter) => {
+                    await router.invalidate();
+                    await navigate({
+                      to: "/account/leaving",
+                      search: { on: purgeAfter },
+                    });
                   }}
                 />
               }

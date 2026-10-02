@@ -114,16 +114,17 @@ describe("the ported value contract (design/tokens.js)", () => {
   it("parsed every section, so nothing below is vacuous", () => {
     // A parser that silently matched nothing would make every assertion in
     // this file pass against an empty app.
-    expect(steps("TYPE")).toHaveLength(7);
+    expect(steps("TYPE")).toHaveLength(8);
     expect(steps("MONO")).toHaveLength(4);
     expect(scalars("SPACE")).toHaveLength(9);
-    expect(scalars("RADIUS")).toHaveLength(6);
+    expect(scalars("HEIGHT")).toHaveLength(3);
+    expect(scalars("RADIUS")).toHaveLength(7);
     expect(scalars("BREAKPOINT")).toHaveLength(2);
     expect(scalars("MEASURE")).toHaveLength(3);
     expect(Object.keys(theme).length).toBeGreaterThan(50);
   });
 
-  it("carries all seven TYPE steps, each with its own line-height and tracking", () => {
+  it("carries all eight TYPE steps, each with its own line-height and tracking", () => {
     // Law 1: tracking is a function of size, not context. Tailwind pairs
     // `--text-x--letter-spacing` with the size, so porting the triple is what
     // makes that true in the app rather than true on paper.
@@ -168,7 +169,7 @@ describe("the ported value contract (design/tokens.js)", () => {
       (name) => !name.includes("--", 2),
     );
     expect(declared.filter((name) => !named.has(name))).toEqual(["--text-*"]);
-    expect(named.size).toBe(11);
+    expect(named.size).toBe(12);
   });
 
   it("collapses tracking and line-height into the step, with nothing to override them", () => {
@@ -191,6 +192,18 @@ describe("the ported value contract (design/tokens.js)", () => {
       }
       expect([name, px(theme[`--radius-${name}`])]).toEqual([name, value]);
     }
+  });
+
+  it("puts every HEIGHT on the theme, and nothing else there", () => {
+    // Round 28 #1: FormField's 50 had no token, so `ui/form.tsx` drew 48
+    // (`min-h-12`) and could not draw the contract's value without typing
+    // a raw one. The namespace is cleared like the others, so the three
+    // minimums are the only `h-*` / `min-h-*` names that are not spacing.
+    for (const [name, value] of scalars("HEIGHT")) {
+      expect([name, px(theme[`--height-${name}`])]).toEqual([name, value]);
+    }
+    expect(theme["--height-*"]).toBe("initial");
+    expect(themeKeys("--height-")).toHaveLength(scalars("HEIGHT").length + 1);
   });
 
   it("pins the two breakpoints and the three measures", () => {

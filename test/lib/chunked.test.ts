@@ -35,8 +35,13 @@ describe("readInChunks", () => {
   it("never hands a read more ids than D1 can bind, and keeps them all", async () => {
     // D1 refuses a statement with more than 100 bound parameters.
     expect(IN_LIST_CHUNK).toBeLessThan(100);
-    const ids = Array.from({ length: 2 * IN_LIST_CHUNK + 1 }, (_, index) => index);
-    const read = vi.fn((chunk: number[]) => Promise.resolve(chunk.map((id) => id * 10)));
+    const ids = Array.from(
+      { length: 2 * IN_LIST_CHUNK + 1 },
+      (_, index) => index,
+    );
+    const read = vi.fn((chunk: number[]) =>
+      Promise.resolve(chunk.map((id) => id * 10)),
+    );
 
     const rows = await readInChunks(ids, read);
 
@@ -47,6 +52,19 @@ describe("readInChunks", () => {
     ]);
     // Every row, in chunk order.
     expect(rows).toStrictEqual(ids.map((id) => id * 10));
+  });
+
+  it("takes a smaller chunk for a read that binds several parameters an id", async () => {
+    const read = vi.fn((chunk: number[]) => Promise.resolve(chunk));
+
+    const rows = await readInChunks([1, 2, 3, 4, 5], read, 2);
+
+    expect(read.mock.calls.map(([chunk]) => chunk)).toStrictEqual([
+      [1, 2],
+      [3, 4],
+      [5],
+    ]);
+    expect(rows).toStrictEqual([1, 2, 3, 4, 5]);
   });
 
   it("reads nothing for no ids", async () => {

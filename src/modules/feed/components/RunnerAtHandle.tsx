@@ -10,7 +10,8 @@ import { OtherProfile } from "./OtherProfile";
 /**
  * `/@handle` (round 26 #7): the runner who holds the handle now, or — for
  * a handle somebody used to hold — "This runner changed their name." and
- * nothing more. Never who they are now, and never a redirect: either would
+ * nothing more; for one whose runner's account was deleted, "This runner
+ * isn't here." (decision D-82). Never who they are now, and never a redirect: either would
  * link the old handle to the new one (decision D-56).
  *
  * The viewer's own handle and one nobody may be shown never get here; the
@@ -32,7 +33,12 @@ export function RunnerAtHandle({
    */
   reportAffordanceFor: (profile: OtherProfileData) => ReactNode;
 }>) {
-  if (found.kind === "changed") return <NameChanged />;
+  if (found.kind === "changed") {
+    return <NoRunnerHere>This runner changed their name.</NoRunnerHere>;
+  }
+  if (found.kind === "gone") {
+    return <NoRunnerHere>{RUNNER_GONE}</NoRunnerHere>;
+  }
   return (
     <OtherProfile
       profile={found.profile}
@@ -45,11 +51,17 @@ export function RunnerAtHandle({
 }
 
 /**
- * The ruling's sentence, and the way back. Undesigned beyond the sentence
- * (placeholder protocol): H's own column and back link, and the copy set
- * as H's empty-state lead.
+ * A deleted account's old handle (decision D-82, owner 2026-09-29): neutral — it
+ * says neither that the account was deleted, nor renamed, nor removed.
  */
-function NameChanged() {
+const RUNNER_GONE = "This runner isn't here.";
+
+/**
+ * A handle with nobody behind it to show: the ruling's sentence, and the
+ * way back. Undesigned beyond the sentence (placeholder protocol): H's own
+ * column and back link, and the copy set as H's empty-state lead.
+ */
+function NoRunnerHere({ children }: Readonly<{ children: string }>) {
   return (
     <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0">
       <Link
@@ -59,8 +71,8 @@ function NameChanged() {
       >
         <Icon name="back" size={20} />
       </Link>
-      <p data-part="name-changed" className="m-0 text-lead">
-        This runner changed their name.
+      <p data-part="no-runner" className="m-0 text-lead">
+        {children}
       </p>
     </div>
   );

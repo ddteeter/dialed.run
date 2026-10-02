@@ -12,8 +12,8 @@ three to Round 22 `#y`, `#well` and rulings 16–17.
 
 - **Detail** (`GarmentDetail.tsx`): identity (← Closet, kicker
   `CATEGORY · SIZE` + `[RETIRED]`, name, colorway line with the hex square
-  when known) → photo (the filled well only — *"no photo means no well
-  here; adding one is Edit's job"*) → stats (`km logged · n/m dialed`, then
+  when known) → photo (the filled well only — _"no photo means no well
+  here; adding one is Edit's job"_) → stats (`km logged · n/m dialed`, then
   `WORKS AT [range]`, `WORKED AT` when retired) → composition (§AG block +
   the attribute words) → pairs with (chips `NAME · n`, up to three by
   co-dialed count, absent under 3 runs; retired: absent) → actions (Edit,

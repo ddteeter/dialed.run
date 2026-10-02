@@ -32,28 +32,16 @@ function keptSentence(runCount: number): string {
 }
 
 /**
- * What deleting costs a piece with runs, ending with the space that joins
- * it to the sentence after. Round 22 draws the kit half ("Its 14 runs keep
- * their verdicts but lose this piece from their kit"); the owner's ruling
- * on task 122 asks for the band records to be said too, so that clause is
- * added and is a design delta.
- */
-function lostSentence(runCount: number): string {
-  if (runCount === 0) return "";
-  if (runCount === 1) {
-    return "Its 1 run keeps its verdict but loses this piece from its kit, and its record in every band is gone. ";
-  }
-  return `Its ${String(runCount)} runs keep their verdicts but lose this piece from their kit, and its record in every band is gone. `;
-}
-
-/**
  * The body under the heading. Delete spells out its cost plainly; retire
  * says what it keeps. Both are round 22's sentences, extended to every
  * run count.
+ *
+ * Delete is only ever asked here of a piece with no runs: one with runs
+ * gets round 26's own sheet (`DeleteWithRuns`), which lists what goes.
  */
 function body(kind: ConfirmKind, runCount: number): string {
   if (kind === "delete") {
-    return `${lostSentence(runCount)}This can't be undone. Retire keeps the history.`;
+    return "This can't be undone. Retire keeps the history.";
   }
   return `It leaves the closet and the picker.${keptSentence(runCount)} You can bring it back.`;
 }

@@ -191,6 +191,16 @@ export function SettingsIndex({
           value="Strava"
         />
       </SettingsGroup>
+      {/* Settings › About (ACC-13; round 26 #14, D-52): the legal texts.
+          Terms and Copyright join when the owner's texts exist. */}
+      <SettingsGroup title="About">
+        <SettingsRow
+          to="/privacy"
+          params={{}}
+          label="Privacy policy"
+          value="What we keep, and who sees it"
+        />
+      </SettingsGroup>
       {signOut}
     </div>
   );
@@ -546,8 +556,9 @@ export function NotificationsForm({
 }
 
 /**
- * U1 · Account (ACC-7, ACC-8): the address and whether it is confirmed,
- * the handle, the password, and signing out everywhere. A row with
+ * U1 · Account (ACC-7, ACC-8, ACC-10, ACC-9): the address and whether it
+ * is confirmed, the handle, the password, signing out everywhere, the
+ * export, and deleting the account (round 27 #13, #14). A row with
  * nowhere to go is absent — an account made with Google has no password
  * to change.
  */
@@ -556,6 +567,8 @@ export function AccountIndex({
   username,
   confirmBand,
   signOutEverywhere,
+  dataExport,
+  deletion,
 }: Readonly<{
   account: { email: string; isVerified: boolean; hasPassword: boolean };
   username: string | undefined;
@@ -565,6 +578,14 @@ export function AccountIndex({
    */
   confirmBand: ReactNode;
   signOutEverywhere: ReactNode;
+  /**
+  "Export your data" (ACC-10; account's `ExportRow`, the route's to wire).
+  */
+  dataExport: ReactNode;
+  /**
+  U1's last row, Delete account, and its sheet (ACC-9; the route's to wire).
+  */
+  deletion: ReactNode;
 }>): JSX.Element {
   return (
     <div className="flex flex-col gap-6">
@@ -598,6 +619,9 @@ export function AccountIndex({
         ) : undefined}
       </SettingsGroup>
       {signOutEverywhere}
+      {/* Round 27 #13: "Export your data" · Get a copy (ACC-10). */}
+      <SettingsGroup title="Your data">{dataExport}</SettingsGroup>
+      {deletion}
     </div>
   );
 }

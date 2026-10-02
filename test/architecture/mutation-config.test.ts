@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import strykerConfig from "../../stryker.conf.json";
 
+function byPath(a: string, b: string): number {
+  return a.localeCompare(b);
+}
+
 /**
  * The settings CI's `--incremental` depends on, pinned.
  *
@@ -71,13 +75,16 @@ describe("stryker.conf.json", () => {
     expect(strykerConfig).not.toHaveProperty("incremental");
   });
 
-  it("covers every file in src/lib, which three positive entries cannot do on their own", () => {
+  it("covers every file in src/lib, which five positive entries cannot do on their own", () => {
     /**
-     * `src/lib` is split across three entries rather than one
+     * `src/lib` is split across five entries rather than one
      * `src/lib/**\/*.ts` glob, because it was the longest shard in every
      * run — 31.8 minutes cold, 4.3 warm, about 2.5x the next one either
-     * way — and `contracts.ts` plus `thermal.ts` are 248 of its 367
-     * mutants.
+     * way — and `contracts.ts` plus `thermal.ts` were 248 of its 367
+     * mutants. `contracts.ts` is now a barrel over `src/lib/contracts/`,
+     * whose section files are three of the five, so the walk below goes
+     * into subdirectories: a file added under `src/lib/contracts/` is as
+     * easy to forget as one added beside it.
      *
      * The split has to be by *positive* path. A `!src/lib/contracts.ts`
      * negation would read as "this file cannot be mutated" to the
@@ -88,7 +95,8 @@ describe("stryker.conf.json", () => {
      * someone remembers to list it, and nothing would fail: the file would
      * simply never be mutated, and the ratchet would report 100% on a
      * scope that no longer covers the directory. This is the check that
-     * makes the split safe.
+     * makes the split safe — and it checks *exactly one* entry, because a
+     * file listed in two shards is mutated twice for nothing.
      */
     // `import.meta.glob`, not `readdirSync`: these run in the workers
     // pool, which has no real filesystem — `readdir("src/lib")` resolves
@@ -96,7 +104,7 @@ describe("stryker.conf.json", () => {
     // sees the directory as it is on disk. Same device
     // `server-functions-are-glue` uses to enumerate modules.
     const onDisk = Object.keys(
-      import.meta.glob("../../src/lib/*.ts", { query: "?raw" }),
+      import.meta.glob("../../src/lib/**/*.ts", { query: "?raw" }),
     ).map((path) => path.replace("../../", ""));
 
     const inScopes = strykerConfig.mutate
@@ -104,8 +112,9 @@ describe("stryker.conf.json", () => {
       .flatMap((entry) => entry.split(","))
       .filter((path) => !path.startsWith("!"));
 
-    // Sets, because the order entries appear in is a sharding decision and
-    // not a fact about coverage.
-    expect(new Set(inScopes)).toStrictEqual(new Set(onDisk));
+    // Sorted, because the order entries appear in is a sharding decision
+    // and not a fact about coverage. Not sets: a set would hide a file
+    // listed twice.
+    expect(inScopes.toSorted(byPath)).toStrictEqual(onDisk.toSorted(byPath));
   });
 });

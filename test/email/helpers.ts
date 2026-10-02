@@ -3,7 +3,13 @@ import { drizzle } from "drizzle-orm/d1";
 import { user } from "../../src/db/schema-auth";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
+import type { OwedMail } from "../../src/modules/account/verification";
 import type { EmailDeps } from "../../src/modules/email";
+import { settleOutbox } from "../../src/modules/ops/outbox";
+import {
+  emailHandler,
+  outboxHandlers,
+} from "../../src/modules/ops/outbox-handlers";
 
 export const ORIGIN = "https://dialed.test";
 /**
@@ -124,4 +130,39 @@ export async function seedUser(
       updatedAt: now,
     });
   return { userId, email };
+}
+
+/**
+ * Where a request's owed email goes after the answer: held until the test
+ * lets it go, so a test can look before it is sent and after, and sent
+ * through `mail`.
+ */
+export function owedTo(mail: ReturnType<typeof fakeMail>): {
+  owed: OwedMail;
+  settled: () => Promise<void>;
+} {
+  const work: Promise<unknown>[] = [];
+  const { promise: gate, resolve: release } =
+    Promise.withResolvers<undefined>();
+  const handlers = { ...outboxHandlers, email: emailHandler(() => mail) };
+  return {
+    owed: {
+      keepAlive: (promise) => {
+        work.push(promise);
+      },
+      report: quiet,
+      settle: async (database, debt, report) => {
+        await gate;
+        await settleOutbox(database, debt, report, handlers);
+      },
+    },
+    settled: async () => {
+      release(undefined);
+      await Promise.all(work);
+    },
+  };
+}
+
+export function quiet(): void {
+  // these sends succeed, so there is nothing to report
 }

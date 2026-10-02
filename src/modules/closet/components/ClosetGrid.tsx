@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { uiGroups } from "../../../lib/contracts";
 import { formatTempRange } from "../../../lib/thermal";
@@ -63,7 +63,7 @@ function AddTile(): JSX.Element {
     <li className="only:min-h-40">
       <Link
         to="/closet/new"
-        className="target flex h-full flex-col items-center justify-center gap-2 rounded-field border border-dashed border-hairline-2 p-3 text-muted no-underline"
+        className="target flex h-full flex-col items-center justify-center gap-2 rounded-tile border border-dashed border-hairline-2 p-3 text-muted no-underline"
       >
         <Icon name="add" />
         <Mono step="xs">Add garment</Mono>
@@ -86,7 +86,7 @@ function Tile({ view }: Readonly<{ view: ClosetItemView }>): JSX.Element {
     <Link
       to="/closet/$itemId"
       params={{ itemId: view.item.id }}
-      className="target row-press flex h-full flex-col gap-1 rounded-field border border-hairline bg-panel p-3 no-underline"
+      className="target row-press flex h-full flex-col gap-1 rounded-tile border border-hairline bg-panel p-3 no-underline"
     >
       <span className="text-body font-semibold">{itemLabel(view)}</span>
       {view.isGeneric || view.item.retired || isPhotoBeingChecked(view.item) ? (
@@ -161,7 +161,12 @@ export interface ClosetGridProps {
   lands on the piece still present and marked, rather than on a grid it
   has just vanished from.
   */
-  initialShowRetired?: boolean;
+  initialShowRetired?: boolean | undefined;
+  /**
+   * The piece a delete just took away, for round 26 #3's landing:
+   * "{name} deleted." in the screen's status line.
+   */
+  deleted?: string | undefined;
 }
 
 /**
@@ -183,8 +188,16 @@ export interface ClosetGridProps {
 export function ClosetGrid({
   listing,
   initialShowRetired = false,
+  deleted,
 }: Readonly<ClosetGridProps>) {
   const [showRetired, setShowRetired] = useState(initialShowRetired);
+  // Written after mount rather than rendered with the page: a status
+  // region announces what changes in it, and a sentence that arrives with
+  // the region itself is never read out.
+  const [said, setSaid] = useState("");
+  useEffect(() => {
+    if (deleted !== undefined) setSaid(`${deleted} deleted.`);
+  }, [deleted]);
 
   const visible = gridOrder(
     listing.items.filter((view) => showRetired || !view.item.retired),
@@ -197,6 +210,12 @@ export function ClosetGrid({
 
   return (
     <div className="flex flex-col gap-6 px-4 py-6 wide:px-6">
+      {/* `sr-only` while empty rather than hidden: out of the column's
+          gap, and still in the accessibility tree, so the sentence that
+          arrives is announced. */}
+      <p role="status" className="m-0 text-body empty:sr-only">
+        {said}
+      </p>
       <div className="flex flex-col gap-2">
         <div
           data-part="grid-header"
@@ -213,7 +232,7 @@ export function ClosetGrid({
               nothing is a dead control. */}
           {retiredCount > 0 ? (
             <label className="target flex cursor-pointer items-center gap-2 text-body font-semibold">
-              Show retired
+              {`Show retired (${String(retiredCount)})`}
               <input
                 type="checkbox"
                 role="switch"

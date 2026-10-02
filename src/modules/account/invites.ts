@@ -9,20 +9,45 @@
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
+import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import { user } from "../../db/schema-auth";
 import {
   accessRequests,
   inviteCodes,
   inviteRedemptions,
+  outbox,
   userProfiles,
 } from "../../db/schema-core";
 import { mintInviteCode } from "../../lib/access";
 import { newUlid } from "../../lib/ids";
+import { firstColumnWhere } from "../../lib/keyed-read";
 import { nowSeconds } from "../../lib/now";
 import { orSqlNull } from "../../lib/sql-null";
+import { emailDebt } from "../email";
+import { outboxInsert, oweOutbox, type OutboxDebt } from "../ops";
+import type { OwedMail } from "./verification";
 
 type Db = ReturnType<typeof drizzle>;
+
+/**
+ * One column, one row, for a `db.batch()` statement — never awaited here,
+ * so the caller decides whether it rides a batch or is awaited alone.
+ *
+ * `claimFor` and `codeOfRequestStatement` had each written this out: select
+ * one column, filtered to one row by `LIMIT 1`. `lib/keyed-read.ts`'s
+ * `firstColumnWhere` is the same read already awaited — not reusable here
+ * because these two are batch statements, and awaiting one before `batch()`
+ * sees it would run it outside the transaction it needs to land in.
+ */
+function selectOneWhere<TColumn extends SQLiteColumn>(
+  db: Db,
+  table: SQLiteTable,
+  column: TColumn,
+  where: SQL,
+) {
+  return db.select({ value: column }).from(table).where(where).limit(1);
+}
 
 /**
  * How long a claim holds its use of a code before the account it was for
@@ -131,11 +156,12 @@ function claimUse(
 }
 
 function claimFor(db: Db, userId: string) {
-  return db
-    .select({ userId: inviteRedemptions.userId })
-    .from(inviteRedemptions)
-    .where(eq(inviteRedemptions.userId, userId))
-    .limit(1);
+  return selectOneWhere(
+    db,
+    inviteRedemptions,
+    inviteRedemptions.userId,
+    eq(inviteRedemptions.userId, userId),
+  );
 }
 
 /**
@@ -144,11 +170,7 @@ function claimFor(db: Db, userId: string) {
  * (PR 2b-2) never hands a single-use code back. Until it runs, the
  * account's address is what counts the use (`stillCounts`).
  */
-export function confirmRedemption(
-  db: Db,
-  userId: string,
-  now = nowSeconds(),
-) {
+export function confirmRedemption(db: Db, userId: string, now = nowSeconds()) {
   const unconfirmed = and(
     eq(inviteRedemptions.userId, userId),
     isNull(inviteRedemptions.confirmedAt),
@@ -219,6 +241,23 @@ function spender(row: { username: string | null; email: string }): string {
   return row.username === null ? row.email : `@${row.username}`;
 }
 
+/**
+ * A code's label as D7 draws it: "{address} (request)" for a code that
+ * answered a request, read from the request at display time, and the
+ * operator's own label otherwise.
+ *
+ * **Read, never stored.** The label used to be written with the address
+ * in it, and account deletion's purge — which forgets the request by its
+ * address — left the address behind on the code (review of PR #130). A
+ * code whose request is gone shows the label it was made with, which a
+ * request's code never has.
+ */
+function requestLabelOr(label: SQLiteColumn) {
+  return sql<
+    string | null
+  >`coalesce(${accessRequests.email} || ' (request)', ${label})`;
+}
+
 export async function accessDesk(db: Db): Promise<AccessDesk> {
   const listed = inArray(inviteRedemptions.codeId, listedCodeIds(db));
   const [requests, codes, spent] = await db.batch([
@@ -237,12 +276,13 @@ export async function accessDesk(db: Db): Promise<AccessDesk> {
       .select({
         id: inviteCodes.id,
         code: inviteCodes.code,
-        label: inviteCodes.label,
+        label: requestLabelOr(inviteCodes.label),
         maxUses: inviteCodes.maxUses,
         createdAt: inviteCodes.createdAt,
         revokedAt: inviteCodes.revokedAt,
       })
       .from(inviteCodes)
+      .leftJoin(accessRequests, eq(accessRequests.id, inviteCodes.requestId))
       .orderBy(desc(inviteCodes.createdAt))
       .limit(DESK_LIST_LIMIT),
     // Only accounts that exist — a claim whose account never arrived
@@ -322,47 +362,110 @@ export async function createInviteCode(
 }
 
 /**
- * D7's Send invite: mints a single-use code for a pending request,
- * labelled "{address} (request)" as the board draws it, and moves the
- * request to invited — one batch, and a second press returns the code the first one minted
+ * D7's Send invite: mints a single-use code for a pending request —
+ * which D7 labels "{address} (request)", as the board draws it — and
+ * moves the request to invited — one batch, and a second press returns the code the first one minted
  * (`invite_codes.request_id` is unique).
  *
- * The email that carries it ("Your dialed.run invite") is not sent from
- * here yet: it lands with the email hookups (PR 2b-2). Until then the
- * operator copies the link from Codes.
+ * **The email that carries it** ("Your dialed.run invite", round 26 #20)
+ * is owed in the same batch (law 8c) and sent after the answer, through
+ * the outbox. The code is minted before the batch so the email can name
+ * it; if another press won the race for this request, this batch's code
+ * was never stored, and the same batch withdraws its email — so no email
+ * ever carries a code that does not exist.
  */
 export async function inviteFromRequest(
   db: Db,
   input: Readonly<{ operatorId: string; requestId: string }>,
+  owed: OwedMail,
   now = nowSeconds(),
 ): Promise<{ code: string } | undefined> {
+  const requested = await firstColumnWhere(
+    db,
+    accessRequests,
+    accessRequests.email,
+    and(
+      eq(accessRequests.id, input.requestId),
+      eq(accessRequests.status, "pending"),
+    ),
+  );
+  if (requested === undefined) return codeOfRequest(db, input.requestId);
+  const code = mintInviteCode();
+  const debt = oweOutbox(
+    emailDebt(
+      { to: { address: requested }, template: { kind: "invite", code } },
+      { dedupeKey: `invite:${code}` },
+    ),
+  );
   const results = await db.batch([
-    codeForRequest(db, input, now),
+    codeForRequest(db, input, code, now),
     markInvited(db, input.requestId, now),
-    db
-      .select({ code: inviteCodes.code })
-      .from(inviteCodes)
-      .where(eq(inviteCodes.requestId, input.requestId))
-      .limit(1),
+    outboxInsert(db, debt, now),
+    unlessStored(db, debt, code),
+    codeOfRequestStatement(db, input.requestId),
   ]);
-  return results[2][0];
+  const [minted] = results[4];
+  if (minted?.value === code) {
+    owed.keepAlive(owed.settle(db, debt, owed.report));
+  }
+  return minted === undefined ? undefined : { code: minted.value };
+}
+
+function codeOfRequestStatement(db: Db, requestId: string) {
+  return selectOneWhere(
+    db,
+    inviteCodes,
+    inviteCodes.code,
+    eq(inviteCodes.requestId, requestId),
+  );
 }
 
 /**
- * A single-use code for a pending request, labelled as the board draws
- * it. Nothing for a request already answered; a second code for the same
- * request is refused by its unique index.
+ * The code an answered request already has — a second press, or a
+ * request somebody else answered first.
+ */
+async function codeOfRequest(
+  db: Db,
+  requestId: string,
+): Promise<{ code: string } | undefined> {
+  const [row] = await codeOfRequestStatement(db, requestId);
+  return row === undefined ? undefined : { code: row.value };
+}
+
+/**
+ * Withdraws this batch's invite email when its code did not land — another
+ * press answered the request first. A statement in the same batch, so it
+ * sees exactly what the insert before it did. It names the debt by its own
+ * id, which only this batch wrote.
+ */
+function unlessStored(db: Db, debt: OutboxDebt, code: string) {
+  return db
+    .delete(outbox)
+    .where(
+      and(
+        eq(outbox.id, debt.id),
+        sql`not exists (select 1 from ${inviteCodes} where ${inviteCodes.code} = ${code})`,
+      ),
+    );
+}
+
+/**
+ * A single-use code for a pending request, with no label of its own: D7
+ * reads "{address} (request)" from the request (`requestLabelOr`), so no
+ * address is copied onto the code. Nothing for a request already
+ * answered; a second code for the same request is refused by its unique
+ * index.
  */
 function codeForRequest(
   db: Db,
   input: Readonly<{ operatorId: string; requestId: string }>,
+  code: string,
   now: number,
 ) {
-  const label = sql`${accessRequests.email} || ' (request)'`;
   return db
     .insert(inviteCodes)
     .select(
-      sql`SELECT ${newUlid()}, ${mintInviteCode()}, ${label}, 1, ${input.operatorId}, NULL, ${accessRequests.id}, ${now}, NULL FROM ${accessRequests} WHERE ${accessRequests.id} = ${input.requestId} AND ${accessRequests.status} = 'pending'`,
+      sql`SELECT ${newUlid()}, ${code}, NULL, 1, ${input.operatorId}, NULL, ${accessRequests.id}, ${now}, NULL FROM ${accessRequests} WHERE ${accessRequests.id} = ${input.requestId} AND ${accessRequests.status} = 'pending'`,
     )
     .onConflictDoNothing({ target: inviteCodes.requestId });
 }
@@ -420,10 +523,7 @@ export async function revokeInviteCode(
 /**
 Revoke's undo: the code works again.
 */
-export async function restoreInviteCode(
-  db: Db,
-  codeId: string,
-): Promise<void> {
+export async function restoreInviteCode(db: Db, codeId: string): Promise<void> {
   await db
     .update(inviteCodes)
     .set({ revokedAt: orSqlNull(undefined) })

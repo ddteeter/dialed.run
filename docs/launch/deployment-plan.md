@@ -57,6 +57,8 @@ them twice:
 | Decide whether `workers.dev` stays enabled. Recommend off once the domain works, so there is one origin for cookies.                                                | owner                                                                                                                                             | §3.3          |
 | Zone settings: Always Use HTTPS; HSTS at the zone if not sent by the Worker (125's OPS-8 sends it; do not double-set with conflicting values).                      | owner                                                                                                                                             | §3.9          |
 | Create the D1 databases, R2 buckets and queues, replace the placeholder D1 ids, set the `dialed-imports` 30-day lifecycle rule.                                     | owner, per `docs/deployment.md` §1–3                                                                                                              | §3.1          |
+| Create the `dialed-exports` queue and its `dialed-exports-dlq` before the first deploy that binds them (any deploy of PR #132 or later).                            | owner, per `docs/deployment.md` §3                                                                                                                | decision D-86 |
+| Add a second lifecycle rule on `dialed-imports`: prefix `exports/`, delete after 8 days, the net behind the hourly export sweep.                                    | owner, per `docs/deployment.md` §2                                                                                                                | decision D-85 |
 | Observability: tracing **off** (billable); logs at full sample (`head_sampling_rate: 1` is fine at launch volume). Carried over from the old launch-gate checklist. | owner                                                                                                                                             | workflow.md   |
 | Usage notifications for Workers, D1, R2 and Email.                                                                                                                  | owner                                                                                                                                             | §3.7          |
 
@@ -190,8 +192,10 @@ as a var, secret as a secret. Free.
   suspected CSAM sends the uploader nothing, hides the content at once,
   and keeps the rows (entry, items, tags, photos, uploader, upload time)
   in `quarantined_content` and the bytes under `quarantine/` for 365 days,
-  readable only by an admin. Nothing purges on `retain_until` yet; the
-  owner deletes by hand after it until a purge exists.
+  readable only by an admin. The daily digest's firing purges each record
+  and its copies once `retain_until` passes (task 128 PR 2b), silently. A
+  record that must be kept longer (a legal hold) needs its `retain_until`
+  moved on by hand before then.
 - **The owner reports to NCMEC's CyberTipline by hand**, following the
   procedure below. 18 U.S.C. §2258A requires a report on actual knowledge,
   and preservation.
@@ -229,7 +233,9 @@ as a var, secret as a secret. Free.
 - **Do a restore drill** on a scratch database once before friends.
 - **R2 has no versioning or backup**, and `MEDIA` is the source of truth.
   126's 7-day deletion tombstone (ACC-9) is the mitigation for a bad bulk
-  delete; a real R2 backup is soon-after.
+  delete; a real R2 backup is soon-after. What each prefix holds, what
+  losing it costs, and three options with a recommendation are in
+  `docs/deployment.md` §10.
 
 ---
 
@@ -243,7 +249,7 @@ items each gate depends on if that ever slips.
 
 - The custom domain serves the app; `/api/health` is all `ok`.
 - Both databases migrated with `--remote`; the four crons listed under
-  Triggers; the four queues have consumers.
+  Triggers; the six queues have consumers.
 - Every required secret and var in §2 set; `BETTER_AUTH_URL` is the domain.
 - **Sentry proven** from a fetch and a cron; the digest alert rule and the
   cron heartbeat in place; uptime ping on.

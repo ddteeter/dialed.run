@@ -9,6 +9,7 @@ import {
   emailSendLimits,
   inviteCodes,
   inviteRedemptions,
+  outbox,
   userProfiles,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
@@ -33,6 +34,7 @@ import {
   revokeInviteCode,
 } from "../../src/modules/account/invites";
 import type { TurnstileAttempt } from "../../src/modules/ops";
+import { fakeMail, owedTo } from "../email/helpers";
 
 /**
  * Invite codes and access requests (task 126, ACC-5) on real D1: a code's
@@ -58,6 +60,7 @@ beforeEach(async () => {
     db.delete(inviteRedemptions),
     db.delete(accessRequests),
     db.delete(emailSendLimits),
+    db.delete(outbox),
   ]);
 });
 
@@ -76,16 +79,14 @@ async function seedCode(
 An account row, as Better Auth would have made it.
 */
 async function account(id: string, email: string): Promise<void> {
-  await db
-    .insert(user)
-    .values({
-      id,
-      email,
-      name: "",
-      emailVerified: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+  await db.insert(user).values({
+    id,
+    email,
+    name: "",
+    emailVerified: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
 }
 
 function claim(code: string, email = `${newUlid().toLowerCase()}@x.test`) {
@@ -105,12 +106,12 @@ function byId(a: string, b: string) {
  * so the code is `INVITE_ALPHABET[byte % 32]` four times over.
  */
 function forceCode(byte: number) {
-  return vi.spyOn(globalThis.crypto, "getRandomValues").mockImplementation(
-    (array) => {
+  return vi
+    .spyOn(globalThis.crypto, "getRandomValues")
+    .mockImplementation((array) => {
       if (array instanceof Uint8Array) array.fill(byte);
       return array;
-    },
-  );
+    });
 }
 
 describe("CLAIM_HOLD_S", () => {
@@ -244,9 +245,9 @@ describe("redeemInvite", () => {
     // A confirmed claim is a finished sign-up, not one in flight: a new
     // sign-up from its address (its account since deleted) is a new use,
     // and there is none left.
-    expect(
-      await redeemInvite(db, claim("DIAL-CONF", "conf@x.test"), now),
-    ).toBe("used");
+    expect(await redeemInvite(db, claim("DIAL-CONF", "conf@x.test"), now)).toBe(
+      "used",
+    );
   });
 
   it("never clears a claim whose account exists", async () => {
@@ -295,7 +296,13 @@ describe("Desk D7", () => {
   it("lists pending requests oldest first, and codes newest first with who used them", async () => {
     await db.insert(accessRequests).values([
       { id: newUlid(), email: "new@x.test", createdAt: 30, updatedAt: 30 },
-      { id: newUlid(), email: "old@x.test", note: "Hi", createdAt: 10, updatedAt: 10 },
+      {
+        id: newUlid(),
+        email: "old@x.test",
+        note: "Hi",
+        createdAt: 10,
+        updatedAt: 10,
+      },
       {
         id: newUlid(),
         email: "done@x.test",
@@ -422,13 +429,46 @@ describe("Desk D7", () => {
       createdAt: 1,
       updatedAt: 1,
     });
-    const first = await inviteFromRequest(db, { operatorId: "op", requestId }, 9);
-    const second = await inviteFromRequest(db, { operatorId: "op", requestId }, 10);
+    const mail = fakeMail();
+    const later = owedTo(mail);
+    const first = await inviteFromRequest(
+      db,
+      { operatorId: "op", requestId },
+      later.owed,
+      9,
+    );
+    // Owed in the same batch, sent after the answer.
+    expect(mail.sent).toHaveLength(0);
+    expect(await db.select().from(outbox)).toMatchObject([
+      { kind: "email", dedupeKey: `invite:${first?.code ?? ""}` },
+    ]);
+    await later.settled();
+    expect(mail.sent).toHaveLength(1);
+    expect(mail.sent[0]).toMatchObject({
+      to: "sam@x.test",
+      subject: "Your dialed.run invite",
+    });
+    expect(mail.sent[0]?.text).toContain(
+      `Here's your code: ${first?.code ?? ""}. It works once.`,
+    );
+    expect(await db.select().from(outbox)).toStrictEqual([]);
+    const again = owedTo(mail);
+    const second = await inviteFromRequest(
+      db,
+      { operatorId: "op", requestId },
+      again.owed,
+      10,
+    );
+    await again.settled();
     expect(second).toStrictEqual(first);
+    // A second press answers with the same code and emails nothing more.
+    expect(mail.sent).toHaveLength(1);
+    expect(await db.select().from(outbox)).toStrictEqual([]);
     expect(await db.select().from(inviteCodes)).toMatchObject([
       {
         code: first?.code,
-        label: "sam@x.test (request)",
+        // No address is copied onto the code: D7 reads it from the request.
+        label: NOTHING,
         maxUses: 1,
         createdBy: "op",
         requestId,
@@ -441,6 +481,72 @@ describe("Desk D7", () => {
     expect(request).toMatchObject({ status: "invited", updatedAt: 9 });
     const desk = await accessDesk(db);
     expect(desk.requests).toStrictEqual([]);
+    expect(desk.codes.map((listed) => listed.label)).toStrictEqual([
+      "sam@x.test (request)",
+    ]);
+  });
+
+  it("labels a code by its request while the request is there, and by its own label otherwise", async () => {
+    const requestId = newUlid();
+    await db.insert(accessRequests).values({
+      id: requestId,
+      email: "gone@x.test",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    await db.insert(inviteCodes).values([
+      { id: newUlid(), code: "DIAL-REQS", requestId, createdAt: 3 },
+      {
+        id: newUlid(),
+        code: "DIAL-OWNL",
+        label: "Tuesday track group",
+        createdAt: 2,
+      },
+    ]);
+    const labels = async () => {
+      const desk = await accessDesk(db);
+      return desk.codes.map(({ code, label }) => ({ code, label }));
+    };
+    expect(await labels()).toStrictEqual([
+      { code: "DIAL-REQS", label: "gone@x.test (request)" },
+      { code: "DIAL-OWNL", label: "Tuesday track group" },
+    ]);
+
+    // The request forgotten — as account deletion forgets it by address —
+    // takes the address off the Desk with it.
+    await db.delete(accessRequests).where(eq(accessRequests.id, requestId));
+    expect(await labels()).toStrictEqual([
+      { code: "DIAL-REQS", label: NOTHING },
+      { code: "DIAL-OWNL", label: "Tuesday track group" },
+    ]);
+  });
+
+  it("emails nothing when another press answered the request first", async () => {
+    // The race: this press read the request as pending, then another
+    // press's batch stored its code before this one's ran. This batch's
+    // code is never stored, so its email is withdrawn in the same batch.
+    const requestId = newUlid();
+    await db.insert(accessRequests).values({
+      id: requestId,
+      email: "race@x.test",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    await db.insert(inviteCodes).values({
+      id: newUlid(),
+      code: "DIAL-AAAA",
+      requestId,
+      createdAt: 1,
+    });
+    const mail = fakeMail();
+    const later = owedTo(mail);
+    expect(
+      await inviteFromRequest(db, { operatorId: "op", requestId }, later.owed),
+    ).toStrictEqual({ code: "DIAL-AAAA" });
+    await later.settled();
+    expect(await db.select().from(outbox)).toStrictEqual([]);
+    expect(mail.sent).toStrictEqual([]);
+    expect(await db.select().from(inviteCodes)).toHaveLength(1);
   });
 
   it("does not let a code collision hide behind the request's own conflict target", async () => {
@@ -457,9 +563,12 @@ describe("Desk D7", () => {
         createdAt: 1,
         updatedAt: 1,
       });
+      const { owed } = owedTo(fakeMail());
       await expect(
-        inviteFromRequest(db, { operatorId: "op", requestId }),
+        inviteFromRequest(db, { operatorId: "op", requestId }, owed),
       ).rejects.toThrow();
+      // The batch failed whole: no email is owed for a code never stored.
+      expect(await db.select().from(outbox)).toStrictEqual([]);
     } finally {
       random.mockRestore();
     }
@@ -474,10 +583,59 @@ describe("Desk D7", () => {
       createdAt: 1,
       updatedAt: 1,
     });
-    expect(
-      await inviteFromRequest(db, { operatorId: "op", requestId }),
-    ).toBeUndefined();
+    const mail = fakeMail();
+    const later = owedTo(mail);
+    const random = vi.spyOn(globalThis.crypto, "getRandomValues");
+    try {
+      expect(
+        await inviteFromRequest(
+          db,
+          { operatorId: "op", requestId },
+          later.owed,
+        ),
+      ).toBeUndefined();
+      // Not even drawn: a code is only minted for a request still waiting.
+      expect(random).not.toHaveBeenCalled();
+    } finally {
+      random.mockRestore();
+    }
+    await later.settled();
     expect(await db.select().from(inviteCodes)).toStrictEqual([]);
+    expect(await db.select().from(outbox)).toStrictEqual([]);
+    expect(mail.sent).toStrictEqual([]);
+  });
+
+  it("answers nothing and emails nothing when the request's code does not land", async () => {
+    // The request was waiting when it was read, and was answered some
+    // other way before this press's batch ran — so the batch stores no
+    // code for it. A trigger stands in for that: it drops the insert.
+    const requestId = newUlid();
+    await db.insert(accessRequests).values({
+      id: requestId,
+      email: "gone@x.test",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    await env.DIALED_CORE.exec(
+      "CREATE TRIGGER invite_code_lost BEFORE INSERT ON invite_codes BEGIN SELECT RAISE(IGNORE); END",
+    );
+    try {
+      const mail = fakeMail();
+      const later = owedTo(mail);
+      expect(
+        await inviteFromRequest(
+          db,
+          { operatorId: "op", requestId },
+          later.owed,
+        ),
+      ).toBeUndefined();
+      await later.settled();
+      expect(await db.select().from(inviteCodes)).toStrictEqual([]);
+      expect(await db.select().from(outbox)).toStrictEqual([]);
+      expect(mail.sent).toStrictEqual([]);
+    } finally {
+      await env.DIALED_CORE.exec("DROP TRIGGER invite_code_lost");
+    }
   });
 
   it("declines silently, and only a pending request", async () => {
@@ -535,7 +693,12 @@ describe("requestAccess (Au5)", () => {
     expect(
       await requestAccess(
         db,
-        { email: "Sam@X.test", note: "Winter runner.", attempt: ATTEMPT, isLimited: false },
+        {
+          email: "Sam@X.test",
+          note: "Winter runner.",
+          attempt: ATTEMPT,
+          isLimited: false,
+        },
         verify,
         5,
       ),
@@ -574,8 +737,20 @@ describe("requestAccess (Au5)", () => {
   it("puts a declined address back on the list when it asks again, and leaves an invited one invited", async () => {
     const { verify } = verifyAs(true);
     await db.insert(accessRequests).values([
-      { id: newUlid(), email: "no@x.test", status: "declined", createdAt: 1, updatedAt: 1 },
-      { id: newUlid(), email: "yes@x.test", status: "invited", createdAt: 1, updatedAt: 1 },
+      {
+        id: newUlid(),
+        email: "no@x.test",
+        status: "declined",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+      {
+        id: newUlid(),
+        email: "yes@x.test",
+        status: "invited",
+        createdAt: 1,
+        updatedAt: 1,
+      },
     ]);
     for (const email of ["no@x.test", "yes@x.test"]) {
       await requestAccess(
@@ -610,7 +785,12 @@ describe("requestAccess (Au5)", () => {
   it("limits a visitor to five an hour on a real deployment, keyed by their address", async () => {
     const { verify } = verifyAs(true);
     const ask = (email: string, attempt: TurnstileAttempt) =>
-      requestAccess(db, { email, note: "", attempt, isLimited: true }, verify, 1000);
+      requestAccess(
+        db,
+        { email, note: "", attempt, isLimited: true },
+        verify,
+        1000,
+      );
     for (const n of [1, 2, 3, 4, 5]) {
       expect(await ask(`${String(n)}@x.test`, ATTEMPT)).toStrictEqual({
         status: "received",
@@ -629,7 +809,9 @@ describe("requestAccess (Au5)", () => {
     expect(
       await ask("7@x.test", { ...ATTEMPT, remoteIp: undefined }),
     ).toStrictEqual({ status: "received" });
-    const keys = await db.select({ key: emailSendLimits.key }).from(emailSendLimits);
+    const keys = await db
+      .select({ key: emailSendLimits.key })
+      .from(emailSendLimits);
     expect(
       keys.map((key) => key.key).toSorted((a, b) => a.localeCompare(b)),
     ).toStrictEqual(["access:203.0.113.9", "access:unknown"]);
@@ -640,7 +822,12 @@ describe("requestAccess (Au5)", () => {
     for (const n of [1, 2, 3, 4, 5, 6]) {
       await requestAccess(
         db,
-        { email: `${String(n)}@x.test`, note: "", attempt: ATTEMPT, isLimited: false },
+        {
+          email: `${String(n)}@x.test`,
+          note: "",
+          attempt: ATTEMPT,
+          isLimited: false,
+        },
         verify,
       );
     }

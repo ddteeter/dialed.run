@@ -121,3 +121,156 @@ header refused without decoding. ui: the retract controls. browser: the
    **Answered (owner, 2026-09-27; decision D-59): allowed, as built.**
    The server's 16 MP pixel cap (SAF-2) is accepted too (decision D-60).
 2. SAF-7 purge: moot — no photo is cached (D-69).
+
+## PR 2b: the closet, W3's blur cells, and the quarantine purge
+
+**Scope.** SAF-16–19 (round 26 #3, #4, #9, #10), SAF-11 as redrawn by
+round 27 #27 (and #29's "Photo not added" body, the same file), and the
+one-year purge of `quarantined_content`.
+
+**Already done, checked against main (31a0375).** The two email hookups
+this lane owed are in: a ban owes `account_closed` (`safety/bans.ts`) and a
+Remove or takedown owes `content_removed` (`feed/moderation.ts`), each an
+`emailDebt` through `modules/email`, never the binding. W3's counts are
+digits already (`blurSummary`). Nothing to build for either.
+
+**SAF-16 · Delete a garment that has runs.** A piece with runs gets round
+26's sheet instead of the plain confirm (`closet/components/DeleteWithRuns.tsx`,
+built on `ui/Sheet` because `ConfirmSheet` has one primary and this has
+two): "Delete the {name}? Retire it instead.", "It's on {n} runs. …", the
+`IF YOU DELETE IT` rows, pink **Retire it**, hairline **Delete it and its
+record**, Cancel (focused, as Keep it is). Retire it runs the existing
+retire; Delete runs the existing `deleteItem` with no second confirm, lands
+on C, and C says "{name} deleted." (the name rides the navigation as
+history state, `deletedGarment`, which the grid reads into its status
+region — not a search value, which a crafted link could fill with any
+sentence: PR #129 review). Failure keeps the sheet open under the
+`Not deleted` band. **"{b} bands"** is the number of 5 °C bands the piece
+has a verdicted run in — the unit A3's band record uses — and it needs the
+cross-database walk feed already owns (`observationsForEntries`,
+`judgedFeelsLikeC`). Closet may not import feed (the arrow is feed →
+closet), so the count is a new feed export, `garmentBandCount`, in a new
+file (`feed/garment-bands.ts`) with a server function beside feed's
+others, and the garment route passes the function down. **The sheet asks
+for it when it opens, never the page's loader** (PR #129 review, law 5):
+the count walks every verdicted run and then the weather, so with the page
+it cost every view and a weather failure failed the page. A failed count
+is `undefined` and reported (`garmentBandCountOrNone`); the band row is
+left out while the count is on its way or missing. Retire it and Delete
+share one in-flight guard (`aria-disabled`, never `disabled`). A piece with no runs keeps
+round 22's plain confirm. **Retire, don't delete** is honoured by the
+sheet's shape: retiring is the primary, and deleting keeps every entry and
+verdict (the owner's task-122 ruling that delete stays available).
+
+**SAF-17 · Saved, photo refused.** When the save lands and the photo does
+not, F stops being a form: the fields go, the kicker reads
+`SAVED TO CLOSET · {CATEGORY}`, the heading is the piece's name, the well
+is empty, and a §4a band under it says `PHOTO NOT ADDED` · "Garment saved,
+photo didn't. Try again?" plus the reason. The reason is the server's
+refusal sentence for a type or size refusal (`{ ok: false }`), and the
+control pattern's cause line (`causeLine`: "Our end failed.", "Your
+connection dropped.") for a throw — not the form's, whose "Nothing
+changed." contradicted the garment that saved (PR #129 review; exporting
+`causeLine` is the one `ui/` change, additive). **Try again** shows only when
+`classifyFailure` says `network`, and re-sends the held file; **Pick
+another** is always there (a file input, as Replace is) and sends the new
+photo through W3's step straight to the saved row. The action becomes
+**Done**, to Y. A photo that lands from this state goes to Y too. The band
+is composed in closet from `Mono` and the band's classes: `ui`'s
+`FailureBand` has one button and no reason line, and `ui/` is not ours to
+change (named in the PR). On Edit, a failed photo _removal_ is not this
+state — there is no photo to add — but the control failure band under the
+well, "Photo kept", as on Y.
+
+**SAF-18 · F at the desk.** `GarmentForm` takes the runner's closet as
+`nearby` and, when given it (the add form only), renders inside
+`DeskSplit` with one `RailCard`: "Already in your closet · {CATEGORY}" —
+up to five, newest first, retired included and marked `RETIRED`, a
+brand+name match with what is typed marked `SAME NAME` (normalised as
+products normalise), read-only, unlinked. Each row: a 48px photo or the
+photo ground, the label, and a mono record line (`{n} RUNS · {d}/{v}
+DIALED {range}`, `… · RETIRED {MON YYYY}`, or `… · NO VERDICT YET`).
+Empty: "No {tops} yet.". The read is one `db.batch()` of one
+`WHERE user_id = ? AND category = ? ORDER BY created_at DESC LIMIT 5` per
+category (index `wardrobe_user_category`), plus the performance summary
+`listItems` already computes. **Two differences from the board, both
+deltas:** F asks no garment type (the schema comment records why), so the
+card matches and is titled by category alone, and the empty line says
+"No tops yet." rather than "No half-zips yet."; and F's category is a
+select that always holds one, so the "no card before a category" state
+never occurs.
+
+**SAF-19 · Closet confirms.** The switch reads "Show retired (4)" and is
+still absent at 0. F and Edit gain the way back, `<Icon name="back">`
+Closet, as garment detail has it.
+
+**SAF-11 · W3's blur cells (round 27 #27).** `BlurCells` becomes a 3 × 3
+grid of 44px square cells (`radius-tight`, 1px ink border), each named
+"Blur {position}" and `aria-pressed`; a pressed cell is ink with the pack's
+`check` in ground. Focusing a cell outlines its ninth of the photo: a 3 × 3
+overlay on the canvas, `aria-hidden`, with a 2px hi-viz outline on the
+focused ninth. Round 27 #29's body replaces REDRAW_FAILED's message.
+
+**Quarantine purge (D-69/D-70: silent, a year).** Rides the daily-digest
+firing as upkeep, beside `pruneStravaIds` — no new cron (`wrangler.jsonc`
+is not ours). `safety/quarantine.ts · purgeExpiredQuarantine`:
+
+1. Read up to 50 rows with `retain_until <= now`, oldest first
+   (`quarantined_content_retain`).
+2. **Claim** each by compare-and-swap on the `retain_until` it read,
+   moving it a twelve-hour lease on (`RETURNING`), in one batch — shorter
+   than the daily interval, because `now` is read partway into the digest
+   and a full day taken late would skip the next firing (PR #129 review).
+   An overlapping run read
+   the same value, finds it moved, and claims nothing (law 2). Retention
+   is only ever lengthened, so no evidence goes early.
+3. **Work** each claimed row: delete its copies from R2 — the
+   `preservedKey`s its `photos_snapshot` names (zod-parsed; only keys under
+   `quarantine/`) — then delete the row.
+
+**Law 8c: reconciliation, not an outbox.** The row is the durable marker
+that bytes are owed a delete, and the daily firing re-drives it: an R2
+failure leaves the row, due again when its lease passes; a Worker that
+dies between the R2 delete and the row delete leaves a row whose keys are
+already gone, and the re-run's delete is a no-op. Keys are named, never
+listed by prefix, because two records can share an entry's prefix (a
+photo quarantined, then the rest of the entry) and must expire apart.
+Failures, and a snapshot that will not parse, go to Sentry with the row id
+(law 6/7); nobody else is told (silent, D-70). The `moderation_actions`
+audit row stays: it holds who, when and why, not the content.
+
+### Not built, and not in 2b
+
+- **SAF-15, second half (seam 7):** report does not yet open 126's
+  "Confirm your email first" sheet for an unverified runner. 126's
+  `isVerified` and `ConfirmEmailSheet` are on main now.
+- **Round 27 #31, the closet tile's photo** (4:5, full width, the hatch
+  without one; "Build: 128 (ClosetGrid)"). Not a SAF item; reported.
+- **Conformance for round 26's closet frames** ships with this PR for the
+  frames' text and parts; see the specs for the named gaps.
+
+### Contract touches (2b)
+
+- Schema: none. Migrations: none.
+- Bindings/queues/crons: none; the purge rides `daily-digest`.
+- New cross-module edge: none — the closet route composes feed's count.
+
+### As built (2b)
+
+- **SAF-16.** `DeleteWithRuns` is its own sheet on `ui/Sheet` (not a change
+  to `ConfirmSheet`, which is not this lane's). A piece with no runs never
+  mounts it. A band row with 0 bands is left out.
+- **SAF-17** applies to Edit as well as F: the component does not branch on
+  which one it is. `updateSaved` is gone — with the fields gone there is no
+  second submit to update. The rail does not yet list the piece the save
+  just made (the loader's rows predate it); the board says it should.
+- **SAF-18/19.** F's heading and "← Closet" moved from the routes into the
+  form, so the saved state can replace the heading with the piece's name;
+  the way back is `closet/components/BackToCloset`, shared with Y.
+- **Found, not fixed: W3's cells can hardly be used.** Every photo step's
+  host (`usePhotoPick` here, `AttachKit` in 127's lane) closes the step on
+  the first `onReady`, and `PhotoBlur` calls `onReady` as soon as the
+  detector's blur is painted. So the canvas, tap-to-blur and the keyboard
+  cells are on screen for a moment, not until the runner is done. Keeping
+  the step open needs a "use this photo" moment the W3 board would have to
+  say how to draw; it is a question for the owner, not a 2b change.

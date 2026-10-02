@@ -90,7 +90,7 @@ function Search({ filter }: Readonly<{ filter: RunnersFilter }>): JSX.Element {
           onChange={(event) => {
             setQuery(event.target.value);
           }}
-          className="rounded-field border border-hairline bg-panel px-3 py-2"
+          className="rounded-field border border-hairline bg-panel px-3 py-2 text-field"
         />
       </label>
       <nav aria-label="Filter runners" className="flex gap-4">

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   deskRowInput,
+  exportRequestInput,
+  legalPageInput,
   newInviteInput,
   newInviteSchema,
   requestAccessInput,
@@ -57,6 +59,28 @@ describe("newInviteSchema", () => {
   });
 });
 
+describe("exportRequestInput", () => {
+  it("keeps the press's key, from one character to 64", () => {
+    expect(exportRequestInput.parse({ idempotencyKey: "k" })).toStrictEqual({
+      idempotencyKey: "k",
+    });
+    const longest = "k".repeat(64);
+    expect(exportRequestInput.parse({ idempotencyKey: longest })).toStrictEqual(
+      { idempotencyKey: longest },
+    );
+  });
+
+  it("refuses no key, an empty one, and one past 64", () => {
+    expect(exportRequestInput.safeParse({}).success).toBe(false);
+    expect(exportRequestInput.safeParse({ idempotencyKey: "" }).success).toBe(
+      false,
+    );
+    expect(
+      exportRequestInput.safeParse({ idempotencyKey: "k".repeat(65) }).success,
+    ).toBe(false);
+  });
+});
+
 describe("newInviteInput", () => {
   const base = { label: "Group", maxUses: 5 };
 
@@ -94,8 +118,18 @@ describe("deskRowInput", () => {
     expect(deskRowInput.safeParse({ id: "r" }).success).toBe(true);
     expect(deskRowInput.safeParse({ id: "r".repeat(64) }).success).toBe(true);
     expect(deskRowInput.safeParse({ id: "" }).success).toBe(false);
-    expect(deskRowInput.safeParse({ id: "r".repeat(65) }).success).toBe(
-      false,
-    );
+    expect(deskRowInput.safeParse({ id: "r".repeat(65) }).success).toBe(false);
+  });
+});
+
+describe("legalPageInput (ACC-13)", () => {
+  it("names only a legal text that exists", () => {
+    expect(legalPageInput.parse({ slug: "privacy" })).toStrictEqual({
+      slug: "privacy",
+    });
+    for (const slug of ["terms", "copyright", "", undefined]) {
+      expect(legalPageInput.safeParse({ slug }).success).toBe(false);
+    }
+    expect(legalPageInput.safeParse({}).success).toBe(false);
   });
 });

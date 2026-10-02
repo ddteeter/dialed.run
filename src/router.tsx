@@ -1,10 +1,9 @@
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
+import { getGlobalStartContext } from "@tanstack/react-start";
 
+import { routerSsr } from "./lib/csp-nonce";
 import { viewTransitionTypesFor } from "./lib/nav-types";
-import {
-  NotFound,
-  RouteFailed,
-} from "./modules/auth/components/SystemState";
+import { NotFound, RouteFailed } from "./modules/auth/components/SystemState";
 import { routeTree } from "./routeTree.gen";
 
 export function getRouter() {
@@ -45,6 +44,18 @@ export function getRouter() {
      */
     defaultNotFoundComponent: NotFound,
     defaultErrorComponent: RouteFailed,
+    /**
+     * The request's CSP nonce (OPS-8), which `server.ts` mints and passes
+     * as request context: the framework stamps it on every inline script
+     * it writes, so the policy can refuse the ones it did not. The router
+     * is built per request on the server, so this is read per request;
+     * `lib/csp-nonce` holds the decision, including why a request with no
+     * nonce throws in dev and only reports in production.
+     */
+    ssr: routerSsr(getGlobalStartContext, {
+      DEV: import.meta.env.DEV,
+      SSR: import.meta.env.SSR,
+    }),
   });
 
   return router;

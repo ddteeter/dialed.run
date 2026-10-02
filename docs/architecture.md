@@ -20,6 +20,7 @@ flowchart LR
         R2[(R2: photos)]
         Q[[Queue: imports]]
         QE[[Queue: enrichment]]
+        QX[[Queue: exports]]
         CRON[Cron Triggers]
     end
 
@@ -30,6 +31,8 @@ flowchart LR
     Q -->|consume| W
     W -->|produce| QE
     QE -->|consume| W
+    W -->|produce| QX
+    QX -->|consume| W
     CRON --> W
 
     W -->|product page fetch\nbounded, https-only| SHOP[Brand product pages\nShopify JSON / JSON-LD / OG]
@@ -174,6 +177,12 @@ flowchart TD
     FEED -->|index.ts only| ACCT
     FEED -->|index.ts only: the removal email| MAIL
     SAFE -->|index.ts only: D8's run counts| RUNS
+    ACCT -->|index.ts only: Strava revoked on deletion| RUNS
+    ACCT -->|index.ts only: the one visibility rule| SAFE
+    PURGE[account/purge.ts] -->|index.ts only: SAF-3's deletes| FEED
+    WORKER[src/server.ts] -->|hands the daily firing its upkeep| PURGE
+    WORKER -->|hands dialed-exports its consumers,\nthe :00 firing its sweep| EXPORT[account/export-build.ts,\nexport-sweep.ts]
+    RUNS -->|index.ts only: the Strava-disconnected email| MAIL
 
     CLOSET --> UI[ui]
     RUNS --> UI
@@ -192,6 +201,28 @@ flowchart TD
 Rules: modules import foundation freely; cross-module imports go through the
 target module's `index.ts`; only `env/` reads bindings; route files import
 modules but are imported by nothing; no cycles.
+
+Task 126 (ACC-9) added account deletion's purge, `modules/account/purge.ts`,
+which is **not** in `account`'s barrel and is imported by nothing but the
+Worker entry. It calls `feed`'s delete primitives, and both `feed` and
+`ops` import `account`'s barrel, so a barrel export — or an import from
+`ops/scheduled.ts` — would be a cycle. `handleScheduled` takes it as
+daily upkeep instead, and `src/server.ts` hands it over
+(`test/architecture/daily-upkeep.test.ts` reads that wiring). For the same
+reason the imports consumer takes an injected `owe` for the Strava
+deauthorization's email: `ops` imports `runs`, so `runs` cannot import
+`ops`'s outbox.
+
+The emailed data export (task 126 PR 2b-3, ACC-10) is wired the same way.
+Its job, `account_export`, rides its own queue, `dialed-exports` (decision
+D-86), whose wire format and consumers are `account`'s
+(`account/export-queue.ts`) — and `ops` may not import `account`: so
+`handleQueueBatch` takes `ExportConsumers` (the batch consumer and the
+DLQ's) for the two `dialed-exports` queues, and `handleScheduled`'s upkeep
+takes `sweepExports` for the hourly `0 * * * *` firing. Both come from
+`account/export-build.ts` and `export-sweep.ts`, outside the barrel,
+imported only by `src/server.ts` — the build also keeps the zip library
+out of every route's reach, and so out of the client bundle.
 
 Lane 101 added `CLOSET/PROD -->|index.ts only| AUTH`: every `closet.*` /
 `products.*` server function scopes its query to the signed-in user, which
@@ -374,6 +405,8 @@ exception, the human never polls dashboards.
 flowchart LR
     Q[[dialed-imports\nmax_retries=3, backoff]] -->|exhausted| DLQ[[dialed-imports-dlq]]
     DLQ --> DC[DLQ consumer:\nmark job failed,\nnotify affected user,\nSentry event]
+    QX[[dialed-exports\nmax_batch_size=1, max_retries=3]] -->|exhausted| DLQX[[dialed-exports-dlq]]
+    DLQX --> DCX[DLQ consumer:\nexport failed,\nshown on Settings,\nSentry event]
     CRON2[Daily digest cron] -->|only if anomalies:\none event per kind| SENTRY
     CRON2 -.->|OPS-11, after 126's email| ADMIN[Admin digest email]
     CRONS[Every cron] -->|check-in: in_progress, ok / error| CRONMON[Sentry Crons]
@@ -404,6 +437,32 @@ flowchart LR
   the same batch as its event, keyed by its writer, optionally held back
   (`notBefore`), and drained on the three hourly firings as well as the
   digest, so a held reminder goes within the half hour it falls due.
+- **Account deletion** (task 126, ACC-9) is **reconciliation**, not an
+  outbox: the claim row in `account_deletions` is the durable "not
+  finished" marker. A request writes it with every session's deletion and
+  the "delete scheduled" email in one batch; the runner's content is
+  hidden through safety's one visibility rule while it exists. After seven
+  days the daily firing claims due rows (lease an hour, three a firing) and
+  purges step by step — `manual_conditions` in `DIALED_WEATHER` first,
+  then Strava, feed's SAF-3 deletes (which owe the R2 prefixes), the
+  closet and uploads (their R2 owed to the drain), and last, in one batch,
+  every remaining row, Better Auth's, and the claim. Each step deletes what
+  is left, so a purge that stops anywhere is finished by the next firing.
+  The purge also lists and deletes the runner's export ZIPs.
+- **Data export** (task 126, ACC-10) is **reconciliation** too:
+  `data_exports.status` is the marker. A request writes the `pending` row,
+  then sends `account_export` on `dialed-exports` (its own queue and DLQ,
+  decision D-86); a lost send is re-sent by the hourly sweep. The consumer
+  claims (`building`, a fresh `claim_id`), streams the ZIP into `IMPORTS`
+  under `exports/{userId}/{exportId}/{claimId}.zip` one file at a time,
+  then — only if it still holds the claim — marks it `ready` and owes the
+  `export_ready` email in one batch, the email as an `INSERT … SELECT` that
+  owes nothing unless the export became ready under that claim. A build
+  that lost its claim deletes its own ZIP. The DLQ marks it `failed`, which
+  the Settings row shows. The sweep claims expired ZIPs (`expiring`),
+  deletes each, then its row, and deletes a week-old failure's ZIP with
+  its row; an R2 lifecycle rule on `exports/` (8 days, D-85) is the net
+  behind it.
 - **Email** (task 126, decision D-42): `modules/email` is the only sender
   and the only reader of the `send_email` binding `EMAIL`
   (`test/bindings-conformance.test.ts` pins both). What the runner just
@@ -448,7 +507,11 @@ flowchart LR
     origin (`BETTER_AUTH_URL`) rather than by `NODE_ENV`, keyed on
     `cf-connecting-ip`, with its counters in D1 (`rate_limit`) so every
     isolate shares them; secure cookies on the same condition.
-  - **Not built yet**: invite-only sign-up (decision D-39, task 126).
+  - **Built (task 126)**: invite-only sign-up (decision D-39). Turnstile,
+    then an open invite code, on both email and Google sign-up, and the
+    code claimed as the account is created (`auth/access-hook.ts`);
+    everyone else can request access, and codes and requests live on Desk
+    D7.
   - **Not built, and not code**: WAF and rate-limiting rules at the zone,
     which need the custom domain (deployment plan). A Workers Rate Limiting
     binding would be a `wrangler.jsonc` change, which is the owner's.
@@ -459,8 +522,14 @@ flowchart LR
   without them. A report-only CSP reporting to Sentry (the static copy has
   no report-uri, which comes from a secret),
   `frame-ancestors 'none'`, HSTS, Referrer-Policy, Permissions-Policy and
-  nosniff. The CSP allows inline script until a nonce is threaded through
-  `router.tsx`.
+  nosniff. Inline script runs on a per-request nonce (`lib/csp-nonce`:
+  minted in `server.ts`, stamped on the framework's scripts through
+  `router.tsx`'s `ssr.nonce`), never on `'unsafe-inline'`.
+- **A size budget on the client entry chunk**: `npm run check:bundle`,
+  which `postbuild` runs, fails a build whose entry chunk is over
+  **280,000 bytes** (measured at 269,735 raw, 85.5 kB gzipped, on
+  2026-09-30). The number, and what raising it should come with, live in
+  `scripts/check-bundle.ts`; the build prints the size every time.
 - **The Desk** (`/desk`, decision D-35): the operator's surface, behind the
   admin gate as not-found for anyone else. Task 125 built the shell and
   Today; 126 adds Access (D7), 128 the ban panel and Runners.

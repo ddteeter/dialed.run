@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { requireSession } from "../../modules/auth/functions";
+import { BackToCloset } from "../../modules/closet/components/BackToCloset";
 import { GarmentForm } from "../../modules/closet/components/GarmentForm";
 import { formValuesFromItem } from "../../modules/closet/form-mapping";
 import { photoUrlFor } from "../../modules/closet/photo-url";
@@ -33,33 +34,32 @@ function EditGarmentPage() {
 
   return (
     <Layout>
-      <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-4 py-8 wide:px-6">
-        <h1 className="font-display text-title uppercase">{`Edit ${detail.item.name}`}</h1>
-        <GarmentForm
-          initial={formValuesFromItem(detail.item, detail.effective)}
-          save={async (garment) =>
-            updateItemFn({ data: { itemId: detail.item.id, garment } })
-          }
-          onSaved={async () => {
-            await navigate({
-              to: "/closet/$itemId",
-              params: { itemId: detail.item.id },
-            });
-          }}
-          onBrandInput={(value) => {
-            void handleBrandInput(value);
-          }}
-          submitLabel="Save"
-          pendingLabel="Saving"
-          successMessage="Changes saved."
-          photo={{
-            url: photoUrlFor(detail.item),
-            upload: uploadPhotoFn,
-            remove: removePhotoFn,
-            renderStep: photoBlurStep,
-          }}
-        />
-      </div>
+      <GarmentForm
+        heading={`Edit ${detail.item.name}`}
+        back={<BackToCloset />}
+        initial={formValuesFromItem(detail.item, detail.effective)}
+        save={async (garment) =>
+          updateItemFn({ data: { itemId: detail.item.id, garment } })
+        }
+        onSaved={async () => {
+          await navigate({
+            to: "/closet/$itemId",
+            params: { itemId: detail.item.id },
+          });
+        }}
+        onBrandInput={(value) => {
+          void handleBrandInput(value);
+        }}
+        submitLabel="Save"
+        pendingLabel="Saving"
+        successMessage="Changes saved."
+        photo={{
+          url: photoUrlFor(detail.item),
+          upload: uploadPhotoFn,
+          remove: removePhotoFn,
+          renderStep: photoBlurStep,
+        }}
+      />
     </Layout>
   );
 }

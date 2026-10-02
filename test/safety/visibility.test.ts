@@ -2,7 +2,11 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { entryPhotos, outfitEntries } from "../../src/db/schema-core";
+import {
+  accountDeletions,
+  entryPhotos,
+  outfitEntries,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { entryPhotoKeyFor } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
@@ -11,7 +15,9 @@ import { entryDetailForViewer } from "../../src/modules/feed/entries";
 import { followingFeed } from "../../src/modules/feed/feed";
 import { follow } from "../../src/modules/feed/follows";
 import { isPhotoVisible, photoResponse } from "../../src/modules/feed/photos";
+import { visibleRunnerHandle } from "../../src/modules/feed/profiles";
 import { setUsefulReaction } from "../../src/modules/feed/reactions";
+import { searchRunners } from "../../src/modules/feed/search";
 import {
   banUser,
   blockRunner,
@@ -125,6 +131,67 @@ describe("a banned author (SAF-4)", () => {
     await expect(setUsefulReaction(entryId, viewer, true)).rejects.toThrow(
       "entry is not visible to this viewer",
     );
+  });
+});
+
+/**
+A runner's deletion requested: the claim row, which is the hide.
+*/
+async function leave(userId: string) {
+  await core()
+    .insert(accountDeletions)
+    .values({ userId, requestedAt: NOW, purgeAfter: NOW + 1 });
+}
+
+describe("a runner deleting their account (task 126, ACC-9)", () => {
+  beforeEach(async () => {
+    await resetSafetyTables();
+    await core().delete(accountDeletions);
+  });
+
+  it("leaves the feed, entry detail and the photo route at once, and comes back as it was on Keep", async () => {
+    const { author, entryId, photoKey } = await postedEntry();
+    const viewer = await makeUser();
+    await follow(viewer, author);
+    expect(await sightings(viewer, entryId, photoKey)).toEqual(SEEN);
+
+    await leave(author);
+    expect(await sightings(viewer, entryId, photoKey)).toEqual(UNSEEN);
+
+    // Keep deletes the claim, and nothing about the entry had changed.
+    await core().delete(accountDeletions);
+    expect(await sightings(viewer, entryId, photoKey)).toEqual(SEEN);
+  });
+
+  it("stops counting toward anyone's Call at once", async () => {
+    const { author, entryId } = await postedEntry();
+    expect(await countable(core())).toContain(entryId);
+    await leave(author);
+    expect(await countable(core())).not.toContain(entryId);
+  });
+
+  it("leaves runner search and their profile, for everyone else", async () => {
+    const leaving = await makeUser({ username: "leaving_runner" });
+    const viewer = await makeUser();
+    const found = await searchRunners(viewer, "leaving_r");
+    expect(found.map((row) => row.username)).toStrictEqual(["leaving_runner"]);
+    expect(await visibleRunnerHandle(leaving, viewer)).toMatchObject({
+      username: "leaving_runner",
+    });
+
+    await leave(leaving);
+    expect(await searchRunners(viewer, "leaving_r")).toStrictEqual([]);
+    expect(await visibleRunnerHandle(leaving, viewer)).toBeUndefined();
+  });
+
+  it("hides nobody else", async () => {
+    const { entryId, photoKey } = await postedEntry();
+    const bystander = await makeUser();
+    const viewer = await makeUser();
+    await leave(bystander);
+    const seen = await sightings(viewer, entryId, photoKey);
+    expect(seen.detail).toBe(true);
+    expect(await countable(core())).toContain(entryId);
   });
 });
 

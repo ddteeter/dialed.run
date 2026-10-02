@@ -11,7 +11,8 @@
  * change, the changed notice) have no drawing and are placeholders in the
  * same voice, listed under the PR's "Design deltas".
  */
-import type { EmailTemplate } from "../../lib/email";
+import { EXPORT_LINK_DAYS } from "../../lib/data-export";
+import { STRAVA_DISCONNECTED_LINE, type EmailTemplate } from "../../lib/email";
 
 export interface EmailLink {
   readonly label: string;
@@ -94,6 +95,48 @@ const STAYS = {
   entry: "The run itself stays.",
 } as const;
 
+/**
+ * "1 photo" and "2 photos": the count, then the word it takes.
+ */
+function counted(count: number, one: string, many: string): string {
+  return `${String(count)} ${count === 1 ? one : many}`;
+}
+
+/**
+ * D5's subject: the two numbers that matter, or the zero day's own line
+ * ("A zero day reads 'Nothing waiting. Nothing failed.'").
+ */
+function digestSubject(
+  template: Extract<EmailTemplate, { kind: "digest" }>,
+): string {
+  const { day, waiting, screenerUnfinished } = template;
+  if (waiting === 0 && screenerUnfinished === 0) {
+    return `${day} — Nothing waiting. Nothing failed.`;
+  }
+  const needs = screenerUnfinished === 1 ? "needs" : "need";
+  return `${day} — ${String(waiting)} waiting, ${counted(screenerUnfinished, "photo", "photos")} ${needs} eyes`;
+}
+
+/**
+ * D5's three numbers, each with its sentence — the same three the Desk's
+ * Today shows, from the same read.
+ */
+function digestBody(
+  template: Extract<EmailTemplate, { kind: "digest" }>,
+): string {
+  const oldest =
+    template.oldestHours === undefined
+      ? ""
+      : ` The oldest has waited ${counted(template.oldestHours, "hour", "hours")}.`;
+  const unfinished = template.screenerUnfinished;
+  const hidden = unfinished === 0 ? "" : " It's hidden until someone looks.";
+  return [
+    `${String(template.waiting)} waiting for a decision.${oldest}`,
+    `${counted(unfinished, "photo", "photos")} the screener couldn't finish.${hidden}`,
+    `${counted(template.bansThisWeek, "ban", "bans")} this week.`,
+  ].join(" ");
+}
+
 export function emailContent(
   template: EmailTemplate,
   links: EmailLinks,
@@ -159,7 +202,59 @@ export function emailContent(
       return {
         subject: "Your dialed.run account is closed",
         body: `We closed your account for breaking the community rules: ${template.reason}. You can't log in, and your shared runs are gone from the feed.`,
-        foot: "Think we got it wrong? Reply within 30 days and a different moderator will look.",
+        foot: "Think we got it wrong? Reply to this email to appeal and we'll look again.",
+        footer,
+      };
+    }
+    case "invite": {
+      return {
+        subject: "Your dialed.run invite",
+        body: `Here's your code: ${template.code}. It works once.`,
+        button: {
+          label: "Create your account",
+          href: `${origin}/join?code=${encodeURIComponent(template.code)}`,
+        },
+        foot: "You asked for an invite. Didn't? Ignore this and nothing happens.",
+        footer,
+      };
+    }
+    case "strava_disconnected": {
+      return {
+        subject: "Strava is disconnected",
+        body: `${STRAVA_DISCONNECTED_LINE} Your runs here haven't changed.`,
+        button: { label: "Connect again", href: `${origin}/runs/strava` },
+        foot: "Runs you already added stay.",
+        footer,
+      };
+    }
+    case "deletion_scheduled": {
+      return {
+        subject: `Your dialed.run account goes on ${template.day}`,
+        body: `You asked to delete your account. Everything in it goes on ${template.day}.`,
+        button: { label: "Keep my account", href: `${origin}/auth/login` },
+        foot: "Didn't ask? Log in and keep it, then change your password.",
+        footer,
+      };
+    }
+    case "export_ready": {
+      // Round 27 #13's "Email export", word for word.
+      return {
+        subject: "Your dialed.run export is ready",
+        body: "Your runs, closet, entries, photos and original run files are in one ZIP.",
+        button: {
+          label: "Download export",
+          href: `${origin}/account/export/${template.token}`,
+        },
+        foot: `The link works for ${String(EXPORT_LINK_DAYS)} days, only while you're logged in.`,
+        footer,
+      };
+    }
+    case "digest": {
+      return {
+        subject: digestSubject(template),
+        body: digestBody(template),
+        button: { label: "Open the Desk", href: `${origin}/desk` },
+        foot: "Sent every morning, even when every number is zero. If it stops arriving, something is broken.",
         footer,
       };
     }

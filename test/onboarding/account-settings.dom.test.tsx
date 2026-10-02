@@ -41,6 +41,12 @@ describe("AccountIndex (U1 Account)", () => {
         username="maya_runs"
         confirmBand={<p>the band</p>}
         signOutEverywhere={<button type="button">everywhere</button>}
+        dataExport={
+          <li>
+            <button type="button">export</button>
+          </li>
+        }
+        deletion={<button type="button">delete</button>}
       />,
     );
     const email = screen.getByRole("link", { name: /^Email/u });
@@ -56,13 +62,39 @@ describe("AccountIndex (U1 Account)", () => {
     const password = screen.getByRole("link", { name: /^Password/u });
     expect(password).toHaveAttribute("href", "/account/password");
     expect(password).toHaveTextContent("Change the password you log in with");
-    // The nag sits first, then the rows, then signing out everywhere.
+    // The nag sits first, then the rows, then signing out everywhere, the
+    // export and — last, round 27 #14 — deleting the account.
     const order = Array.from(
       document.querySelectorAll("p, a, button"),
       (node) => node.textContent,
     );
     expect(order[0]).toBe("the band");
-    expect(order.at(-1)).toBe("everywhere");
+    expect(order.slice(-3)).toStrictEqual(["everywhere", "export", "delete"]);
+  });
+
+  it("puts the export row under Your data (ACC-10)", async () => {
+    await renderWithRouter(
+      <AccountIndex
+        account={{
+          email: "maya@example.com",
+          isVerified: true,
+          hasPassword: true,
+        }}
+        username="maya_runs"
+        confirmBand={undefined}
+        signOutEverywhere={undefined}
+        dataExport={
+          <li>
+            <button type="button">export</button>
+          </li>
+        }
+        deletion={undefined}
+      />,
+    );
+    const exporting = screen.getByRole("button", { name: "export" });
+    expect(
+      screen.getByRole("heading", { name: "Your data" }).closest("section"),
+    ).toContainElement(exporting);
   });
 
   it("says an unconfirmed address is not confirmed yet, and a Google account has no password row", async () => {
@@ -76,6 +108,8 @@ describe("AccountIndex (U1 Account)", () => {
         username={undefined}
         confirmBand={undefined}
         signOutEverywhere={undefined}
+        dataExport={undefined}
+        deletion={undefined}
       />,
     );
     expect(screen.getByRole("link", { name: /^Email/u })).toHaveTextContent(

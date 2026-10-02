@@ -12,13 +12,13 @@
  * 1. TRACKING IS A FUNCTION OF SIZE, NOT CONTEXT. Every step carries its own
  *    letter-spacing. There is no "tighter for this card". If a step's tracking
  *    looks wrong somewhere, the step is wrong, not the tracking.
- * 2. THE SCALE IS SEVEN STEPS AND A FOUR-STEP MONO RAMP. The boards drift to
+ * 2. THE SCALE IS EIGHT STEPS (SEVEN TO READ, ONE TO TYPE INTO) AND A FOUR-STEP MONO RAMP. The boards drift to
  *    ~20 sizes; the system does not. COLLAPSE below says where each stray goes.
  * 3. TYPE DOES NOT SHRINK AT WIDTH. Desktop gets more room, not smaller text.
  *    Nothing below MONO.xs (10px) exists anywhere, on any ground, at any width.
  *
  * CONTRACT FOR AGENTS
- * Import TYPE, MONO, SPACE, RADIUS, BREAKPOINT, MEASURE. Never type a raw
+ * Import TYPE, MONO, SPACE, HEIGHT, RADIUS, BREAKPOINT, MEASURE. Never type a raw
  * font-size, letter-spacing, font-family, border-radius, gap/padding, or
  * media-query width into a screen. Colours come from T1 variables — a raw hex
  * is a review failure; a raw `0.08em` is the same failure.
@@ -42,7 +42,7 @@ export const FAMILY = {
 export const WEIGHT = { regular: 400, semibold: 600, bold: 700, black: 400 /* Archivo Black has one cut */ };
 
 /**
- * THE TYPE SCALE — seven steps. px, unitless line-height, em tracking.
+ * THE TYPE SCALE — eight steps. px, unitless line-height, em tracking.
  * `for` is the whole job description. If your use isn't listed, pick the
  * step whose job is closest — do not invent a size between two steps.
  */
@@ -61,6 +61,9 @@ export const TYPE = {
     for: 'Secondary prose under a row or field: helper text, the theme-source line, error explanations.' },
   micro:   { family: 'text',    size: 12, lineHeight: 1.4,  tracking: 0,      transform: 'none',
     for: 'Text-family floor. Legal lines, attribution ("Weather by Visual Crossing"). Never for a control.' },
+  // Round 28 #1. The Form Contract's 16px wins over body's 15 for typed values: below 16, iOS Safari zooms the page on focus.
+  field:   { family: 'text',    size: 16, lineHeight: 1.4,  tracking: 0,      transform: 'none',
+    for: 'What the runner types and its placeholder, inside a FormField, textarea or the Desk search. Nothing else. Labels stay MONO.sm, hints TYPE.small.' },
 };
 
 /**
@@ -87,7 +90,7 @@ export const MONO = {
 export const COLLAPSE = {
   type: {
     '30px display': 'TYPE.display', '34px+ display': 'TYPE.display (clamp only on brand/marketing pages, never in-app)',
-    '21px text': 'TYPE.lead',  '16px text': 'TYPE.body',  '14px text': 'TYPE.body for controls and rows, TYPE.small for helper prose',
+    '21px text': 'TYPE.lead',  '16px text': 'TYPE.field inside a field, TYPE.body everywhere else',  '14px text': 'TYPE.body for controls and rows, TYPE.small for helper prose',
     '12px mono': 'MONO.sm',    '9px mono': 'MONO.xs. The boards carry 9px in ~96 places (theme segment, payout labels, NOT-IN-V1 tags). Build them at 10px, padded to a 44px target.',
     '22px+ mono heroes': 'MONO.lg',
   },
@@ -102,6 +105,16 @@ export const COLLAPSE = {
 
 /** SPACING — a 4px step. Nothing else. 1px and 2px exist only as border widths. */
 export const SPACE = { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32, 10: 40, 12: 48 };
+/**
+ * HEIGHTS — round 28 #1. Fixed minimums for controls. They are heights, not
+ * spacing, so they sit outside the 4px SPACE step on purpose.
+ */
+export const HEIGHT = {
+  target: 44,  // the hit-area floor (Accessibility Contract 03)
+  control: 48, // filled and outline buttons, the Google and Strava buttons
+  field: 50,   // FormField min-height (round 27 #31a, Form Contract 02b). The 2px error border draws inward.
+};
+
 export const SPACE_RULES = [
   'Inside a row or chip: SPACE[2]–SPACE[3]. Between rows: SPACE[2]. Between groups: SPACE[6]. Screen edge: SPACE[5] on phone, SPACE[6] at width.',
   'Odd board values (5, 6, 7, 9, 10, 11, 14, 18, 22, 28) collapse to the nearest step. 14 → 16. 18 → 16. 22 → 24. 28 → 32.',
@@ -116,7 +129,8 @@ export const SPACE_RULES = [
 export const RADIUS = {
   none: 0,    // notices, tints, the failure band, coverage cells, verdict slots
   tight: 4,   // meter bars, small data cells
-  field: 8,   // inputs, textareas, the search field at width (boards: 9 → 8)
+  field: 10,  // inputs, textareas, selects, the Desk search (round 28 #1: Form Contract 02b wins; boards: 8/9 → 10)
+  tile: 10,   // the closet tile and its photo's top corners (round 27 #31b; was missing)
   card: 12,   // cards, rows that stand alone, photo wells (boards: 14 → 12)
   sheet: 20,  // sheets, drawers, the centred panel at width (boards: 18/22 → 20)
   pill: 999,  // buttons, chips, segments, avatars, the bell badge
@@ -157,6 +171,7 @@ export const CSS_VARS = `:root {
 ${Object.entries(TYPE).map(([k, t]) => `  --type-${k}: ${step(t)};\n  --track-${k}: ${t.tracking}em;`).join('\n')}
 ${Object.entries(MONO).map(([k, t]) => `  --mono-${k}: ${step(t)};\n  --track-mono-${k}: ${t.tracking}em;`).join('\n')}
 ${Object.entries(SPACE).map(([k, v]) => `  --space-${k}: ${v}px;`).join('\n')}
+${Object.entries(HEIGHT).map(([k, v]) => `  --height-${k}: ${v}px;`).join('\n')}
 ${Object.entries(RADIUS).map(([k, v]) => `  --radius-${k}: ${v}px;`).join('\n')}
   --measure-panel: ${MEASURE.panel}px;
   --measure-column: ${MEASURE.column}px;

@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { products } from "../../src/db/schema-core";
+import { outbox, products, stravaConnections } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { handleQueueBatch } from "../../src/modules/ops";
@@ -61,6 +61,39 @@ describe("handleQueueBatch routes by queue name", () => {
       expect.objectContaining({ queue: "dialed-imports", messageId: "m1" }),
       expect.objectContaining({ message: "invalid imports queue message" }),
     );
+  });
+
+  it("gives the imports consumer an outbox in dialed-core to owe its emails to", async () => {
+    // A Strava deauthorization owes the runner an email (task 126), and
+    // the consumer cannot reach `ops`' outbox itself — this module hands
+    // it in. The row landing in dialed-core is what proves the hand-off.
+    const db = drizzle(env.DIALED_CORE);
+    const userId = newUlid();
+    const athleteId = newUlid();
+    await db.insert(stravaConnections).values({
+      userId,
+      athleteId,
+      refreshToken: `refresh-${athleteId}`,
+    });
+    const message = fakeMessage("m8", {
+      type: "strava_deauthorize",
+      athleteId,
+      eventTime: 1_516_126_040,
+    });
+
+    await handleQueueBatch(batchOf("dialed-imports", [message]));
+
+    expect(message.ack).toHaveBeenCalled();
+    const owed = await db
+      .select({ kind: outbox.kind, dedupeKey: outbox.dedupeKey })
+      .from(outbox)
+      .where(eq(outbox.dedupeKey, `strava_disconnected:${userId}:1516126040`));
+    expect(owed).toStrictEqual([
+      {
+        kind: "email",
+        dedupeKey: `strava_disconnected:${userId}:1516126040`,
+      },
+    ]);
   });
 
   it("hands a dialed-imports-dlq batch to the DLQ consumer", async () => {

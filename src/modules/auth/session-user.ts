@@ -53,3 +53,21 @@ export function sessionIdFrom(
 ): string | undefined {
   return session?.session.id;
 }
+
+/**
+ * Who is signed in and when this session was made (epoch seconds), or
+ * `AuthRequiredError` — for a change that trusts a recent sign-in in place
+ * of a password (ACC-9: deleting an account made with Google).
+ */
+export function signedInSince(
+  session: {
+    readonly user: { readonly id: string };
+    readonly session: { readonly createdAt: Date };
+  } | null,
+): { userId: string; signedInAt: number } {
+  if (session === null) throw new AuthRequiredError();
+  return {
+    userId: session.user.id,
+    signedInAt: Math.floor(session.session.createdAt.getTime() / 1000),
+  };
+}

@@ -137,6 +137,15 @@ describe("D8's table", () => {
     await renderDesk({ filter: { filter: "all", query: "ad" } });
     expect(screen.getByRole("searchbox")).toHaveValue("ad");
   });
+
+  it("sets what the operator types in TYPE.field, at RADIUS.field", async () => {
+    // tokens.js names the Desk search in both jobs (round 28 #1).
+    await renderDesk({ filter: { filter: "all", query: "" } });
+    expect(screen.getByRole("searchbox")).toHaveClass(
+      "text-field",
+      "rounded-field",
+    );
+  });
 });
 
 describe("selecting a runner", () => {

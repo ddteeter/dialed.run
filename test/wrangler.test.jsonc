@@ -46,6 +46,7 @@
     "producers": [
       { "binding": "IMPORTS_QUEUE", "queue": "dialed-imports" },
       { "binding": "ENRICHMENT_QUEUE", "queue": "dialed-enrichment" },
+      { "binding": "EXPORTS_QUEUE", "queue": "dialed-exports" },
     ],
   },
 }

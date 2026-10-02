@@ -281,6 +281,20 @@
       "when": 1790633180371,
       "tag": "0039_add_invite_redemption_confirmed_at",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1790699852299,
+      "tag": "0040_add_account_deletions",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "6",
+      "when": 1790763420401,
+      "tag": "0041_add_data_exports",
+      "breakpoints": true
     }
   ]
 }

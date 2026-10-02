@@ -16,6 +16,23 @@
  */
 import { z } from "zod";
 
+import {
+  accountClosed,
+  address,
+  contentRemoved,
+  deletionScheduled,
+  digest,
+  emailChange,
+  emailChanged,
+  existingAccount,
+  exportReady,
+  invite,
+  resetPassword,
+  runReminder,
+  stravaDisconnected,
+  verifyEmail,
+} from "./email-kinds";
+
 /**
  * The emails a runner can switch off, each with a row in
  * `notification_preferences` (decision D-43; round 26 #19). In v1 only the
@@ -33,83 +50,6 @@ export type EmailPreferenceKind = z.infer<typeof emailPreferenceKindSchema>;
  */
 export const EMAIL_SENDS_PER_HOUR = 5;
 
-const address = z.email();
-const link = z.url({ protocol: /^https?$/u });
-
-/**
- * Round 26 #11's "Email verify": the link that confirms the address. Sent
- * now, never through the outbox — it carries a live token.
- */
-const verifyEmail = z.object({ kind: z.literal("verify_email"), url: link });
-
-/**
- * Round 26 #11's "Email existing account": what a sign-up for a
- * registered address sends instead, so the page can say the same thing
- * whoever typed it.
- */
-const existingAccount = z.object({ kind: z.literal("existing_account") });
-
-/**
-ACC-4: the link that sets a new password. Sent now, like `verify_email`.
-*/
-const resetPassword = z.object({
-  kind: z.literal("reset_password"),
-  url: link,
-});
-
-/**
- * ACC-8: the link that moves the account to a new address, sent to that
- * new address — confirming it is how the runner proves they hold it.
- */
-const emailChange = z.object({
-  kind: z.literal("email_change"),
-  url: link,
-  newEmail: address,
-});
-
-/**
- * ACC-8: the notice to the old address once the change is done, so a
- * change the runner did not make is seen by the one inbox that can say
- * so. Secondary to the change, so it rides the outbox.
- */
-const emailChanged = z.object({
-  kind: z.literal("email_changed"),
-  newEmail: address,
-});
-
-/**
- * Round 26 #19: the Strava run reminder — the one optional email. What
- * the sender knows is when the run landed, already in the runner's own
- * time ("6:58 AM"), and how many runs the one-a-day email is counting.
- */
-const runReminder = z.object({
-  kind: z.literal("run_reminder"),
-  landedAt: z.string().min(1),
-  runs: z.int().min(1),
-});
-
-/**
- * Round 27 #15/#20's "Email content removed": a moderator's Remove or a
- * copyright takedown (task 128 · SAF-8), telling the author what went and
- * the reason from the removal list, word for word. Account mail, so always
- * sent. A suspected-CSAM quarantine sends nothing (decision D-70).
- */
-const contentRemoved = z.object({
-  kind: z.literal("content_removed"),
-  subject: z.enum(["entry", "photo"]),
-  reason: z.string().min(1),
-});
-
-/**
- * Round 27 #15's "Email ban": a moderator closed the account (task 128 ·
- * SAF-4), with the reason the notice quotes. Account mail, so always sent,
- * and no button — there is nothing to log in to.
- */
-const accountClosed = z.object({
-  kind: z.literal("account_closed"),
-  reason: z.string().min(1),
-});
-
 export const emailTemplateSchema = z.discriminatedUnion("kind", [
   verifyEmail,
   existingAccount,
@@ -119,6 +59,11 @@ export const emailTemplateSchema = z.discriminatedUnion("kind", [
   runReminder,
   contentRemoved,
   accountClosed,
+  invite,
+  stravaDisconnected,
+  deletionScheduled,
+  digest,
+  exportReady,
 ]);
 
 export type EmailTemplate = z.infer<typeof emailTemplateSchema>;
@@ -161,6 +106,11 @@ const PREFERENCE_OF: Readonly<
   run_reminder: "run_reminder",
   content_removed: undefined,
   account_closed: undefined,
+  invite: undefined,
+  strava_disconnected: undefined,
+  deletion_scheduled: undefined,
+  digest: undefined,
+  export_ready: undefined,
 };
 
 /**
@@ -176,3 +126,5 @@ export function preferenceFor(
 ): EmailPreferenceKind | undefined {
   return PREFERENCE_OF[kind];
 }
+
+export { STRAVA_DISCONNECTED_LINE } from "./email-kinds";

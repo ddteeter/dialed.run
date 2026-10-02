@@ -6,6 +6,8 @@ import {
   noteSessionOwner,
   rememberForSession,
 } from "../../lib/session-memo";
+import type { LeavingView } from "./deletion";
+import type { LegalDoc } from "./legal-markdown";
 import type { HandleGateAnswer } from "./username";
 
 /**
@@ -21,6 +23,7 @@ const OPEN_WITHOUT_HANDLE: ReadonlySet<string> = new Set([
   "/account/verify",
   "/account/reset",
   "/account/unsubscribe",
+  "/privacy",
 ]);
 
 /**
@@ -92,7 +95,36 @@ export async function gateOnHandle({
   if (isInBrowser && answer.gate === "has-handle") {
     rememberForSession(answer.userId, HANDLE_CLAIMED);
   }
+  startLeavingIfNeeded(answer.gate === "leaving", pathname);
   startHandleIfNeeded(answer.gate === "needs-handle", pathname);
+}
+
+/**
+ * The pages a runner whose account is being deleted may still reach
+ * (ACC-9; round 27 #14): "Keep your account?" itself, the auth pages —
+ * Log out is how they leave it as it was — and the privacy policy.
+ */
+const OPEN_WHILE_LEAVING: ReadonlySet<string> = new Set([
+  "/account/leaving",
+  "/privacy",
+]);
+
+/**
+ * A runner who asked to delete their account and signed in again inside
+ * the week sees "Keep your account?" before anything else: logging in
+ * never cancels a deletion silently (round 27 #14).
+ */
+export function startLeavingIfNeeded(
+  isLeaving: boolean,
+  pathname: string,
+): void {
+  if (
+    isLeaving &&
+    !OPEN_WHILE_LEAVING.has(pathname) &&
+    !pathname.startsWith("/auth/")
+  ) {
+    redirect({ to: "/account/leaving", throw: true });
+  }
 }
 
 /**
@@ -152,6 +184,28 @@ export function checkEmailView(
 }
 
 /**
+ * Where a Google re-authentication for deleting the account comes back
+ * to (ACC-9; round 27 #14): U1 Account, with the delete sheet open again.
+ */
+export const DELETE_REAUTH_RETURN = "/account/sign-in?deleting=1";
+
+/**
+ * The account pages' search: only whether this load is the way back from
+ * that sign-in. Anything else is ignored.
+ */
+export const accountSectionSearch = z.object({
+  // `true` or absent, never `false`: the router writes a parsed search
+  // back into the URL, and a `deleting=false` there would read as present
+  // on the next load and open the sheet on every visit.
+  deleting: z
+    .unknown()
+    .optional()
+    .transform((value) =>
+      value === 1 || value === "1" ? (true as const) : undefined,
+    ),
+});
+
+/**
  * The account's settings pages (ACC-7, ACC-8, ACC-11), one route like
  * Settings' own sections: U1 Account ("sign-in"), and its Email and
  * Password, and Notifications. Every email footer's "Email settings" is
@@ -174,9 +228,7 @@ export type AccountSection = z.infer<typeof accountSectionSchema>;
 export function accountSectionOrNotFound(section: string): AccountSection {
   const parsed = accountSectionSchema.safeParse(section);
   if (parsed.success) return parsed.data;
-  throw Object.assign(new Error(`no account section "${section}"`), {
-    isNotFound: true,
-  });
+  throw notFound(`no account section "${section}"`);
 }
 
 /**
@@ -189,3 +241,38 @@ export const ACCOUNT_SECTION_TITLES: Readonly<Record<AccountSection, string>> =
     password: "Password",
     notifications: "Notifications",
   };
+
+/**
+ * X1 for a page with nothing to show, by the same marker
+ * `accountSectionOrNotFound` throws.
+ */
+function notFound(what: string): Error {
+  return Object.assign(new Error(what), { isNotFound: true });
+}
+
+/**
+ * A legal page's text, or X1 while the text is unfinished (`legal.ts`): a
+ * page with a placeholder where the policy should be is worse than no
+ * page.
+ */
+export function legalDocOrNotFound(doc: LegalDoc | undefined): LegalDoc {
+  if (doc === undefined) throw notFound("no published legal text");
+  return doc;
+}
+
+/**
+ * `/account/leaving`'s search: the date a request just answered (epoch
+ * seconds), for the signed-out "Your account goes on …". Anything else is
+ * dropped, and the page answers as it would with none.
+ */
+export const leavingSearch = z.object({
+  on: z.coerce.number().int().positive().optional().catch(undefined),
+});
+
+/**
+ * Home, when the page has nothing to say: a runner with no deletion
+ * pending, or a signed-out visitor with no date.
+ */
+export function homeIfNothingToSay(view: LeavingView): void {
+  if (view.state === "none") redirect({ to: "/", throw: true });
+}

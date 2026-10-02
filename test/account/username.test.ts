@@ -2,7 +2,11 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { userProfiles, usernameHistory } from "../../src/db/schema-core";
+import {
+  accountDeletions,
+  userProfiles,
+  usernameHistory,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
@@ -129,9 +133,11 @@ describe("claimUsername", () => {
   it("changes a handle, keeping the old one in the history", async () => {
     const userId = await runner({ username: "maya_runs" });
     const before = nowSeconds();
-    expect(await claimUsername(db, userId, "maya_trails", CLEAR)).toMatchObject({
-      kind: "claimed",
-    });
+    expect(await claimUsername(db, userId, "maya_trails", CLEAR)).toMatchObject(
+      {
+        kind: "claimed",
+      },
+    );
     expect(await handleOf(userId)).toBe("maya_trails");
     const [retired] = await db
       .select()
@@ -171,7 +177,9 @@ describe("claimUsername", () => {
     await runner({ username: "maya_runs" });
     const userId = await runner({ cityLabel: "Portland, OR" });
     const { db: tracked, sizes } = trackBatches();
-    expect(await claimUsername(tracked, userId, "maya_runs", CLEAR)).toStrictEqual({
+    expect(
+      await claimUsername(tracked, userId, "maya_runs", CLEAR),
+    ).toStrictEqual({
       kind: "taken",
       username: "maya_runs",
       suggestion: "maya_runs_runs",
@@ -191,7 +199,9 @@ describe("claimUsername", () => {
     await claimUsername(db, previous, "maya_trails", CLEAR);
     const userId = await runner();
     const { db: tracked, sizes } = trackBatches();
-    expect(await claimUsername(tracked, userId, "maya_runs", CLEAR)).toMatchObject({
+    expect(
+      await claimUsername(tracked, userId, "maya_runs", CLEAR),
+    ).toMatchObject({
       kind: "taken",
       username: "maya_runs",
     });
@@ -427,7 +437,9 @@ describe("claimUsername", () => {
     const racing = beforeBatch(2, async () => {
       await runner({ username: "sam_runs" });
     });
-    expect(await claimUsername(racing, userId, "sam_runs", CLEAR)).toStrictEqual({
+    expect(
+      await claimUsername(racing, userId, "sam_runs", CLEAR),
+    ).toStrictEqual({
       kind: "taken",
       username: "sam_runs",
       suggestion: "sam_runs_runs",
@@ -443,7 +455,9 @@ describe("claimUsername", () => {
       const rival = await runner({ username: "sam_runs" });
       await claimUsername(db, rival, "sam_trails", CLEAR);
     });
-    expect(await claimUsername(racing, userId, "sam_runs", CLEAR)).toStrictEqual({
+    expect(
+      await claimUsername(racing, userId, "sam_runs", CLEAR),
+    ).toStrictEqual({
       kind: "taken",
       username: "sam_runs",
       suggestion: "sam_runs_runs",
@@ -460,7 +474,9 @@ describe("claimUsername", () => {
       const rival = await runner({ username: "sam_runs" });
       await claimUsername(db, rival, "sam_trails", CLEAR);
     });
-    expect(await claimUsername(racing, userId, "sam_runs", CLEAR)).toMatchObject({
+    expect(
+      await claimUsername(racing, userId, "sam_runs", CLEAR),
+    ).toMatchObject({
       kind: "taken",
     });
     expect(await handleOf(userId)).toBeNull();
@@ -472,7 +488,9 @@ describe("claimUsername", () => {
     const doubled = beforeBatch(2, async () => {
       await claimUsername(db, userId, "maya_trails", CLEAR);
     });
-    expect(await claimUsername(doubled, userId, "maya_trails", CLEAR)).toStrictEqual({
+    expect(
+      await claimUsername(doubled, userId, "maya_trails", CLEAR),
+    ).toStrictEqual({
       kind: "claimed",
       username: "maya_trails",
     });
@@ -488,7 +506,9 @@ describe("claimUsername", () => {
     const racing = beforeBatch(2, async () => {
       await claimUsername(db, userId, "maya_trails", CLEAR);
     });
-    expect(await claimUsername(racing, userId, "maya_roads", CLEAR)).toMatchObject({
+    expect(
+      await claimUsername(racing, userId, "maya_roads", CLEAR),
+    ).toMatchObject({
       kind: "claimed",
     });
     expect(await handleOf(userId)).toBe("maya_roads");
@@ -505,9 +525,9 @@ describe("claimUsername", () => {
         "D1_ERROR: UNIQUE constraint failed: username_history.username: SQLITE_CONSTRAINT",
       );
     });
-    await expect(claimUsername(failing, userId, "fine_handle", CLEAR)).rejects.toThrow(
-      "username_history.username",
-    );
+    await expect(
+      claimUsername(failing, userId, "fine_handle", CLEAR),
+    ).rejects.toThrow("username_history.username");
   });
 
   it("lets any other write failure through", async () => {
@@ -515,9 +535,9 @@ describe("claimUsername", () => {
     const failing = beforeBatch(2, () => {
       throw new Error("D1_ERROR: the database is unavailable");
     });
-    await expect(claimUsername(failing, userId, "fine_handle", CLEAR)).rejects.toThrow(
-      "the database is unavailable",
-    );
+    await expect(
+      claimUsername(failing, userId, "fine_handle", CLEAR),
+    ).rejects.toThrow("the database is unavailable");
   });
 });
 
@@ -605,6 +625,25 @@ describe("lookUpHandle", () => {
     });
   });
 
+  it("says a deleted account's handle, and the one it gave up before, is nobody's — never that it changed", async () => {
+    const userId = await runner({ username: "maya_runs" });
+    await claimUsername(db, userId, "maya_trails", CLEAR);
+    // What the purge leaves (ACC-9): both handles in the history, no
+    // profile.
+    await db.batch([
+      db
+        .insert(usernameHistory)
+        .values({ username: "maya_trails", userId, retiredAt: 1 }),
+      db.delete(userProfiles).where(eq(userProfiles.userId, userId)),
+    ]);
+    expect(await lookUpHandle(db, "maya_trails")).toStrictEqual({
+      kind: "gone",
+    });
+    expect(await lookUpHandle(db, "maya_runs")).toStrictEqual({
+      kind: "gone",
+    });
+  });
+
   it("knows nothing of a handle nobody held, or one that is not a handle", async () => {
     expect(await lookUpHandle(db, "nobody_here")).toBeUndefined();
     expect(await lookUpHandle(db, "no")).toBeUndefined();
@@ -638,5 +677,25 @@ describe("usernameOf and handleGate", () => {
       gate: "signed-out",
       userId: undefined,
     });
+  });
+
+  it("answers leaving for a runner whose account is being deleted, handle or not (ACC-9)", async () => {
+    const dee = await runner({ username: "dee" });
+    const newcomer = await runner();
+    await db.insert(accountDeletions).values([
+      { userId: dee, requestedAt: 1, purgeAfter: 2 },
+      { userId: newcomer, requestedAt: 1, purgeAfter: 2 },
+    ]);
+    expect(await handleGate(db, dee)).toStrictEqual({
+      gate: "leaving",
+      userId: dee,
+    });
+    expect(await handleGate(db, newcomer)).toStrictEqual({
+      gate: "leaving",
+      userId: newcomer,
+    });
+    await db.delete(accountDeletions);
+    const { gate } = await handleGate(db, dee);
+    expect(gate).toBe("has-handle");
   });
 });

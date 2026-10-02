@@ -251,12 +251,16 @@ describe("03 · every tappable thing has a 44×44 hit area", () => {
       "src/modules/account/components/CheckEmail.tsx",
       "src/modules/account/components/CheckEmail.tsx",
       "src/modules/account/components/CheckEmail.tsx",
+      // A link inside a legal text's sentence (ACC-13).
+      "src/modules/account/components/LegalPage.tsx",
       // Au5's two (round 26 #20): "Have a code after all? Create an
       // account" on the receipt, and the way back to Au2 under the form.
       "src/modules/account/components/RequestAccess.tsx",
       "src/modules/account/components/RequestAccess.tsx",
       "src/modules/auth/auth-page.tsx",
       // Au2's "No code? Request access" (round 26 #20).
+      "src/modules/auth/auth-page.tsx",
+      // Au2's "…you've read our Privacy policy." (ACC-13, D-52).
       "src/modules/auth/auth-page.tsx",
       // "Remembered it? Log in" (ACC-4).
       "src/modules/auth/components/ForgotPassword.tsx",

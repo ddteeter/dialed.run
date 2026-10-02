@@ -13,9 +13,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AtChar123handleChar125RouteImport } from './routes/@{$handle}'
 import { Route as DeskRouteRouteImport } from './routes/desk/route'
 import { Route as JoinRouteImport } from './routes/join'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as AccountSectionRouteImport } from './routes/account/$section'
 import { Route as AccountCheckEmailRouteImport } from './routes/account/check-email'
 import { Route as AccountForgotRouteImport } from './routes/account/forgot'
+import { Route as AccountLeavingRouteImport } from './routes/account/leaving'
 import { Route as AccountRequestAccessRouteImport } from './routes/account/request-access'
 import { Route as AccountResetRouteImport } from './routes/account/reset'
 import { Route as AccountUnsubscribeRouteImport } from './routes/account/unsubscribe'
@@ -52,6 +54,7 @@ import { Route as RunsStravaCallbackRouteImport } from './routes/runs/strava-cal
 import { Route as RunsStravaConnectRouteImport } from './routes/runs/strava-connect'
 import { Route as SafetyBlockedRouteImport } from './routes/safety/blocked'
 import { Route as SafetyReviewRouteImport } from './routes/safety/review'
+import { Route as AccountExportTokenRouteImport } from './routes/account/export.$token'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ClosetEditItemIdRouteImport } from './routes/closet/edit.$itemId'
 import { Route as FeedAttachRunIdRouteImport } from './routes/feed/attach.$runId'
@@ -85,6 +88,11 @@ const JoinRoute = JoinRouteImport.update({
   path: '/join',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountSectionRoute = AccountSectionRouteImport.update({
   id: '/account/$section',
   path: '/account/$section',
@@ -98,6 +106,11 @@ const AccountCheckEmailRoute = AccountCheckEmailRouteImport.update({
 const AccountForgotRoute = AccountForgotRouteImport.update({
   id: '/account/forgot',
   path: '/account/forgot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountLeavingRoute = AccountLeavingRouteImport.update({
+  id: '/account/leaving',
+  path: '/account/leaving',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountRequestAccessRoute = AccountRequestAccessRouteImport.update({
@@ -280,6 +293,11 @@ const SafetyReviewRoute = SafetyReviewRouteImport.update({
   path: '/safety/review',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountExportTokenRoute = AccountExportTokenRouteImport.update({
+  id: '/account/export/$token',
+  path: '/account/export/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -347,9 +365,11 @@ export interface FileRoutesByFullPath {
   '/desk': typeof DeskRouteRouteWithChildren
   '/@{$handle}': typeof AtChar123handleChar125Route
   '/join': typeof JoinRoute
+  '/privacy': typeof PrivacyRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
   '/account/forgot': typeof AccountForgotRoute
+  '/account/leaving': typeof AccountLeavingRoute
   '/account/request-access': typeof AccountRequestAccessRoute
   '/account/reset': typeof AccountResetRoute
   '/account/unsubscribe': typeof AccountUnsubscribeRoute
@@ -386,6 +406,7 @@ export interface FileRoutesByFullPath {
   '/feed/': typeof FeedIndexRoute
   '/notifications/': typeof NotificationsIndexRoute
   '/runs/': typeof RunsIndexRoute
+  '/account/export/$token': typeof AccountExportTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
   '/feed/attach/$runId': typeof FeedAttachRunIdRoute
@@ -403,9 +424,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/@{$handle}': typeof AtChar123handleChar125Route
   '/join': typeof JoinRoute
+  '/privacy': typeof PrivacyRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
   '/account/forgot': typeof AccountForgotRoute
+  '/account/leaving': typeof AccountLeavingRoute
   '/account/request-access': typeof AccountRequestAccessRoute
   '/account/reset': typeof AccountResetRoute
   '/account/unsubscribe': typeof AccountUnsubscribeRoute
@@ -442,6 +465,7 @@ export interface FileRoutesByTo {
   '/feed': typeof FeedIndexRoute
   '/notifications': typeof NotificationsIndexRoute
   '/runs': typeof RunsIndexRoute
+  '/account/export/$token': typeof AccountExportTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
   '/feed/attach/$runId': typeof FeedAttachRunIdRoute
@@ -461,9 +485,11 @@ export interface FileRoutesById {
   '/desk': typeof DeskRouteRouteWithChildren
   '/@{$handle}': typeof AtChar123handleChar125Route
   '/join': typeof JoinRoute
+  '/privacy': typeof PrivacyRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
   '/account/forgot': typeof AccountForgotRoute
+  '/account/leaving': typeof AccountLeavingRoute
   '/account/request-access': typeof AccountRequestAccessRoute
   '/account/reset': typeof AccountResetRoute
   '/account/unsubscribe': typeof AccountUnsubscribeRoute
@@ -500,6 +526,7 @@ export interface FileRoutesById {
   '/feed/': typeof FeedIndexRoute
   '/notifications/': typeof NotificationsIndexRoute
   '/runs/': typeof RunsIndexRoute
+  '/account/export/$token': typeof AccountExportTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
   '/feed/attach/$runId': typeof FeedAttachRunIdRoute
@@ -520,9 +547,11 @@ export interface FileRouteTypes {
     | '/desk'
     | '/@{$handle}'
     | '/join'
+    | '/privacy'
     | '/account/$section'
     | '/account/check-email'
     | '/account/forgot'
+    | '/account/leaving'
     | '/account/request-access'
     | '/account/reset'
     | '/account/unsubscribe'
@@ -559,6 +588,7 @@ export interface FileRouteTypes {
     | '/feed/'
     | '/notifications/'
     | '/runs/'
+    | '/account/export/$token'
     | '/api/auth/$'
     | '/closet/edit/$itemId'
     | '/feed/attach/$runId'
@@ -576,9 +606,11 @@ export interface FileRouteTypes {
     | '/'
     | '/@{$handle}'
     | '/join'
+    | '/privacy'
     | '/account/$section'
     | '/account/check-email'
     | '/account/forgot'
+    | '/account/leaving'
     | '/account/request-access'
     | '/account/reset'
     | '/account/unsubscribe'
@@ -615,6 +647,7 @@ export interface FileRouteTypes {
     | '/feed'
     | '/notifications'
     | '/runs'
+    | '/account/export/$token'
     | '/api/auth/$'
     | '/closet/edit/$itemId'
     | '/feed/attach/$runId'
@@ -633,9 +666,11 @@ export interface FileRouteTypes {
     | '/desk'
     | '/@{$handle}'
     | '/join'
+    | '/privacy'
     | '/account/$section'
     | '/account/check-email'
     | '/account/forgot'
+    | '/account/leaving'
     | '/account/request-access'
     | '/account/reset'
     | '/account/unsubscribe'
@@ -672,6 +707,7 @@ export interface FileRouteTypes {
     | '/feed/'
     | '/notifications/'
     | '/runs/'
+    | '/account/export/$token'
     | '/api/auth/$'
     | '/closet/edit/$itemId'
     | '/feed/attach/$runId'
@@ -691,9 +727,11 @@ export interface RootRouteChildren {
   DeskRouteRoute: typeof DeskRouteRouteWithChildren
   AtChar123handleChar125Route: typeof AtChar123handleChar125Route
   JoinRoute: typeof JoinRoute
+  PrivacyRoute: typeof PrivacyRoute
   AccountSectionRoute: typeof AccountSectionRoute
   AccountCheckEmailRoute: typeof AccountCheckEmailRoute
   AccountForgotRoute: typeof AccountForgotRoute
+  AccountLeavingRoute: typeof AccountLeavingRoute
   AccountRequestAccessRoute: typeof AccountRequestAccessRoute
   AccountResetRoute: typeof AccountResetRoute
   AccountUnsubscribeRoute: typeof AccountUnsubscribeRoute
@@ -727,6 +765,7 @@ export interface RootRouteChildren {
   FeedIndexRoute: typeof FeedIndexRoute
   NotificationsIndexRoute: typeof NotificationsIndexRoute
   RunsIndexRoute: typeof RunsIndexRoute
+  AccountExportTokenRoute: typeof AccountExportTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ClosetEditItemIdRoute: typeof ClosetEditItemIdRoute
   FeedAttachRunIdRoute: typeof FeedAttachRunIdRoute
@@ -771,6 +810,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JoinRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/account/$section': {
       id: '/account/$section'
       path: '/account/$section'
@@ -790,6 +836,13 @@ declare module '@tanstack/react-router' {
       path: '/account/forgot'
       fullPath: '/account/forgot'
       preLoaderRoute: typeof AccountForgotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/leaving': {
+      id: '/account/leaving'
+      path: '/account/leaving'
+      fullPath: '/account/leaving'
+      preLoaderRoute: typeof AccountLeavingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account/request-access': {
@@ -1044,6 +1097,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SafetyReviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account/export/$token': {
+      id: '/account/export/$token'
+      path: '/account/export/$token'
+      fullPath: '/account/export/$token'
+      preLoaderRoute: typeof AccountExportTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -1152,9 +1212,11 @@ const rootRouteChildren: RootRouteChildren = {
   DeskRouteRoute: DeskRouteRouteWithChildren,
   AtChar123handleChar125Route: AtChar123handleChar125Route,
   JoinRoute: JoinRoute,
+  PrivacyRoute: PrivacyRoute,
   AccountSectionRoute: AccountSectionRoute,
   AccountCheckEmailRoute: AccountCheckEmailRoute,
   AccountForgotRoute: AccountForgotRoute,
+  AccountLeavingRoute: AccountLeavingRoute,
   AccountRequestAccessRoute: AccountRequestAccessRoute,
   AccountResetRoute: AccountResetRoute,
   AccountUnsubscribeRoute: AccountUnsubscribeRoute,
@@ -1188,6 +1250,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeedIndexRoute: FeedIndexRoute,
   NotificationsIndexRoute: NotificationsIndexRoute,
   RunsIndexRoute: RunsIndexRoute,
+  AccountExportTokenRoute: AccountExportTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ClosetEditItemIdRoute: ClosetEditItemIdRoute,
   FeedAttachRunIdRoute: FeedAttachRunIdRoute,

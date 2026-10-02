@@ -3,7 +3,11 @@ import type { SQL } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../db/schema-core";
-import { notBlockedEitherWay, profileNotReportedBy } from "../safety";
+import {
+  notBlockedEitherWay,
+  profileNotReportedBy,
+  runnerNotLeaving,
+} from "../safety";
 
 /**
  * Whether `viewerId` may see a runner at all: not banned, not in a block
@@ -21,6 +25,9 @@ import { notBlockedEitherWay, profileNotReportedBy } from "../safety";
 export function runnerVisibleToViewer(viewerId: string) {
   return and(
     isNull(userProfiles.bannedAt),
+    // Task 126 (ACC-9): a runner deleting their account leaves search and
+    // H at once, by safety's rule (seam 6).
+    runnerNotLeaving(userProfiles.userId),
     notBlockedEitherWay(viewerId, userProfiles.userId),
     profileNotReportedBy(viewerId, userProfiles.userId),
   );

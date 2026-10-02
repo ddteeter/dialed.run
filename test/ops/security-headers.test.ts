@@ -31,11 +31,14 @@ describe("withSecurityHeaders", () => {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
 
-    const secured = withSecurityHeaders(page, REPORT);
+    const secured = withSecurityHeaders(page, REPORT, "n0nce");
 
     expect(Object.fromEntries(secured.headers)).toStrictEqual({
       "content-type": "text/html; charset=utf-8",
-      "content-security-policy-report-only": contentSecurityPolicy(REPORT),
+      "content-security-policy-report-only": contentSecurityPolicy(
+        REPORT,
+        "n0nce",
+      ),
       "x-frame-options": "DENY",
       "x-content-type-options": "nosniff",
       "referrer-policy": "strict-origin-when-cross-origin",
@@ -96,13 +99,15 @@ describe("withSecurityHeaders", () => {
 
 describe("contentSecurityPolicy", () => {
   it("names every directive the app needs, and nothing looser", () => {
-    const policy = directives(contentSecurityPolicy(REPORT));
+    const policy = directives(contentSecurityPolicy(REPORT, "n0nce+/="));
 
     expect(Object.fromEntries(policy)).toStrictEqual({
       "default-src": "'self'",
       // MediaPipe compiles wasm; Turnstile's script comes from Cloudflare.
+      // Never 'unsafe-inline': an inline script runs on the request's
+      // nonce or not at all.
       "script-src":
-        "'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com",
+        "'self' 'nonce-n0nce+/=' 'wasm-unsafe-eval' https://challenges.cloudflare.com",
       "style-src": "'self' 'unsafe-inline'",
       "img-src": "'self' blob: data:",
       "font-src": "'self'",
@@ -117,6 +122,12 @@ describe("contentSecurityPolicy", () => {
         "'self' https://accounts.google.com https://www.strava.com",
       "report-uri": REPORT,
     });
+  });
+
+  it("names no nonce, and still no 'unsafe-inline', for the static copy", () => {
+    expect(directives(contentSecurityPolicy(undefined)).get("script-src")).toBe(
+      "'self' 'wasm-unsafe-eval' https://challenges.cloudflare.com",
+    );
   });
 
   it("leaves out the report-uri when there is nowhere to report", () => {
@@ -152,20 +163,31 @@ describe("secureResponse, as server.ts calls it", () => {
   it("reports CSP violations to the deployed DSN's project", () => {
     Reflect.set(env, "SENTRY_DSN", "https://abc@o1.ingest.sentry.io/42");
 
-    const secured = secureResponse(new Response("<p>page</p>"));
+    const secured = secureResponse(new Response("<p>page</p>"), "n0nce");
 
     const policy = secured.headers.get("Content-Security-Policy-Report-Only");
-    expect(policy).toBe(contentSecurityPolicy(REPORT));
+    expect(policy).toBe(contentSecurityPolicy(REPORT, "n0nce"));
   });
 
   it("still secures every response when there is no DSN", () => {
     Reflect.deleteProperty(env, "SENTRY_DSN");
 
-    const secured = secureResponse(new Response("<p>page</p>"));
+    const secured = secureResponse(new Response("<p>page</p>"), "n0nce");
 
     expect(secured.headers.get("Content-Security-Policy-Report-Only")).toBe(
-      contentSecurityPolicy(undefined),
+      contentSecurityPolicy(undefined, "n0nce"),
     );
     expect(secured.headers.get("X-Frame-Options")).toBe("DENY");
+  });
+
+  it("admits inline script by this request's nonce and no other way", () => {
+    const secured = secureResponse(new Response("<p>page</p>"), "r3quest");
+
+    const policy = directives(
+      secured.headers.get("Content-Security-Policy-Report-Only") ?? "",
+    );
+    expect(policy.get("script-src")).toBe(
+      "'self' 'nonce-r3quest' 'wasm-unsafe-eval' https://challenges.cloudflare.com",
+    );
   });
 });

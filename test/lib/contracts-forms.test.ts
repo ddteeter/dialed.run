@@ -3,6 +3,7 @@ import type { z } from "zod";
 
 import { IS_INVITE_ONLY } from "../../src/lib/access";
 import {
+  accountDeletionInput,
   requestAccessSchema,
   signUpSchemaFor,
   changeEmailSchema,
@@ -98,13 +99,17 @@ describe("signUpSchemaFor (the invite-only flag)", () => {
       messagesFor(withCode, { ...signUp, inviteCode: "" }, "inviteCode"),
     ).toStrictEqual(["Enter your invite code."]);
     expect(
-      messagesFor(withCode, { ...signUp, inviteCode: "DIAL-0000" }, "inviteCode"),
+      messagesFor(
+        withCode,
+        { ...signUp, inviteCode: "DIAL-0000" },
+        "inviteCode",
+      ),
     ).toStrictEqual([
       "That code doesn't work. Check it against the email or message it came in.",
     ]);
-    expect(withCode.parse({ ...signUp, inviteCode: " dial-7k3p " })).toMatchObject(
-      { inviteCode: "DIAL-7K3P" },
-    );
+    expect(
+      withCode.parse({ ...signUp, inviteCode: " dial-7k3p " }),
+    ).toMatchObject({ inviteCode: "DIAL-7K3P" });
   });
 
   it("asks for no code when invite-only is off, and ignores one that comes", () => {
@@ -243,6 +248,29 @@ describe("the account forms (ACC-4, ACC-7, ACC-8)", () => {
         password: "a".repeat(10),
       }).success,
     ).toBe(true);
+  });
+});
+
+describe("accountDeletionInput", () => {
+  it("takes the password an account has, or none from one that has none", () => {
+    expect(
+      accountDeletionInput.safeParse({ currentPassword: "pw-1" }),
+    ).toStrictEqual({ success: true, data: { currentPassword: "pw-1" } });
+    expect(accountDeletionInput.safeParse({})).toStrictEqual({
+      success: true,
+      data: {},
+    });
+  });
+
+  it("holds the password to a ceiling of 1024 characters, not a floor", () => {
+    expect(
+      accountDeletionInput.safeParse({ currentPassword: "a".repeat(1024) })
+        .success,
+    ).toBe(true);
+    expect(
+      accountDeletionInput.safeParse({ currentPassword: "a".repeat(1025) })
+        .success,
+    ).toBe(false);
   });
 });
 
