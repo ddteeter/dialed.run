@@ -19,8 +19,8 @@ Finish your [F] items first.
 | 128  | Content & safety | `128-content-safety.md` | now                           |
 | 129  | Feed             | `129-feed.md`           | after PR #102 merges          |
 
-**Numbering.** A bare `D-N` is a row in `docs/deferred.md`; a decision-log
-row is always written "decision D-NN". The two registers share a prefix.
+**Numbering.** An `R-N` is a row in `docs/deferred.md`; a `D-NN` is a row
+in `docs/decisions.md`.
 
 ## Read first
 

@@ -3,7 +3,7 @@
 ## Problem
 
 The feed lane's launch items (`docs/tasks/129-feed.md`): the following feed
-must survive a runner who follows more than 92 people (D-101), the bell must
+must survive a runner who follows more than 92 people (R-101), the bell must
 count every run still owed a verdict, the profile city must have one writer,
 the typed city must be found and confirmed before it is used (round 26 #12),
 and round 26's feed confirms and indexing default must land. Several items

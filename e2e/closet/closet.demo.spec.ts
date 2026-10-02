@@ -79,7 +79,7 @@ test("add garments with product identity -> detail in round 22's order -> retire
 }, testInfo) => {
   // Generous, because recording pace is not a latency budget. `scene()`
   // holds a beat at each boundary and slowMo paces the actions between
-  // them (D-58), so a recorded run is minutes where CI's is seconds — and
+  // them (R-58), so a recorded run is minutes where CI's is seconds — and
   // the first paced run of a session also pays Vite's on-demand compile of
   // whatever a real submit reaches. A timeout here is for catching a hang.
   testInfo.setTimeout(150_000);

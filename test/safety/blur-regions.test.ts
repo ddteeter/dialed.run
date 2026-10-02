@@ -325,7 +325,7 @@ describe("the detector's answer as regions", () => {
   });
 });
 
-describe("the keyboard's cells (D-84(b))", () => {
+describe("the keyboard's cells (R-84(b))", () => {
   it("names nine cells by position, in reading order", () => {
     expect(BLUR_CELLS).toStrictEqual([
       "top-left",

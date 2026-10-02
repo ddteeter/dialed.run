@@ -245,7 +245,7 @@ describe("namedResult", () => {
   });
 
   it("tells the runner none of the three things it cannot know", async () => {
-    // D-54: type comes from lane 107, an owner count has no read, and
+    // R-54: type comes from lane 107, an owner count has no read, and
     // tagged runs need O4. This is the one screen design says has to be
     // believed, so nothing here may imply any of them.
     const userId = await seededCloset(["merino-base"]);

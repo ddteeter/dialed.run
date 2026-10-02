@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { captionRule, holdFor } from "../../e2e/support/caption";
 
 /**
- * The pure half of the demo narration (D-58). `demo.ts` next to it is
+ * The pure half of the demo narration (R-58). `demo.ts` next to it is
  * Playwright-only — most of what is left there runs inside the browser via
  * `addInitScript` — so these two moved out to where a test can reach them
  * rather than being exempted along with it.

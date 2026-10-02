@@ -85,7 +85,7 @@ describe("following feed (E1)", () => {
     expect(secondPage.nextCursor).toBeUndefined();
   });
 
-  it("pages a viewer who follows 150 runners, newest first, by cursor (D-101)", async () => {
+  it("pages a viewer who follows 150 runners, newest first, by cursor (R-101)", async () => {
     const viewer = await makeUser();
     const followees: string[] = [];
     for (let index = 0; index < 150; index += 1) {

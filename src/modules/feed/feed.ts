@@ -97,7 +97,7 @@ function feedCursorPredicate(cursor: FeedCursor) {
  * `LIMIT`. Each author's read is an `entries_user_public_created` seek;
  * the outer sort is over at most `limit` × authors rows.
  *
- * **The authors are a subquery, not a bound list** (D-101). Binding the
+ * **The authors are a subquery, not a bound list** (R-101). Binding the
  * ids put one parameter per follow into the statement, and the 93rd follow
  * crossed D1's 100-parameter cap. The viewer joins the set through their
  * own `user` row — a primary-key read, and a row that exists for anyone
@@ -208,7 +208,7 @@ export interface FeedItem {
   conditions: Conditions | undefined;
   /**
   The viewer's own entry, hidden from everyone else pending review — the
-  card says so (D-62, D-67). Always false on anyone else's: nobody else
+  card says so (R-62, D-67). Always false on anyone else's: nobody else
   is ever shown one.
   */
   underReview: boolean;

@@ -29,7 +29,7 @@ their own create paths.
 - `src/db/schema-core.ts` and one migration (this task is the exception to the
   serialized-schema rule — it _is_ the serialization)
 - The create paths listed below, across every merged module
-- `docs/deferred.md` (retire D-2b when done)
+- `docs/deferred.md` (retire R-2b when done)
 
 ## The paths
 
@@ -77,7 +77,7 @@ from the lane branches and a path may have moved.
 - Every row in the table above is either fixed or has a test proving it was
   already safe, with a comment saying which.
 - One migration, applied cleanly to a fresh database.
-- `docs/deferred.md` D-2b retired.
+- `docs/deferred.md` R-2b retired.
 - `npm run verify && npm test` green.
 
 ## Out of scope

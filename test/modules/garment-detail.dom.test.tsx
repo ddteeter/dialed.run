@@ -434,7 +434,7 @@ describe("GarmentDetail: the photo", () => {
   });
 
   it("holds a replacement until W3's step hands back the bytes to send", async () => {
-    // D-102: a face in a garment photo is somebody's face whatever screen
+    // R-102: a face in a garment photo is somebody's face whatever screen
     // it was taken on.
     const user = userEvent.setup();
     const uploadPhoto = vi.fn<Props["uploadPhoto"]>(uploads);

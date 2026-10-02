@@ -54,7 +54,7 @@ export async function starterList(
  * rather than an error. It used to be the end of the road — the typed
  * city was a label with nothing behind it, and a Minneapolis runner who
  * refused the permission got the mild list. The provider resolves place
- * names itself (D-59), so the label is now the second answer rather than
+ * names itself (R-59), so the label is now the second answer rather than
  * no answer. A runner who gave neither gets the mild ordering and never a
  * lookup: asking the provider about `null` would be a wasted record and a
  * failure to catch.

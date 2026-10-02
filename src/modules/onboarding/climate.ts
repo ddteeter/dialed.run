@@ -97,7 +97,7 @@ export function bandFromNormals(normals: ClimateNormals): ClimateBand {
  * tap. That is the correct trade, and the reason the latitude heuristic
  * stays rather than being deleted once normals landed.
  *
- * **A typed label has no latitude to fall back to** (D-59). When the
+ * **A typed label has no latitude to fall back to** (R-59). When the
  * provider cannot place "Minneapolis" — an outage, or a label it does not
  * recognise — the answer is the one a runner with no location gets, not
  * a guess parsed out of their text.

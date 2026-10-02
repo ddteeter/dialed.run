@@ -154,7 +154,7 @@ describe("what a stored observation records about itself", () => {
   });
 });
 
-describe("the observation's zone (D-96)", () => {
+describe("the observation's zone (R-96)", () => {
   it("stores the zone the provider named, so a cache hit can supply it", async () => {
     // On the observation, not the run, because a run whose hour is cached
     // never fetches — the row is the only place its zone can come from.

@@ -69,7 +69,7 @@ before publishing.
 | Cache rounded to 2 dp and hour, carries a run id             | `src/modules/weather/store.ts` (`roundCoord`, `hourBucketFor`, `runId` written); `schema-weather.ts` `weatherObservations`                                                       |
 | Setup place sent for climate normals                         | `src/modules/weather/normals.ts`; `visual-crossing.ts` `locationPath` (coordinates or typed label); `src/modules/onboarding/climate.ts`                                          |
 | "Your conditions" location not stored or sent upstream       | `src/modules/feed/components/Feed.tsx` (browser geolocation → `conditionsFor`); `src/modules/feed/conditions.ts` `currentConditions` (read-only query of the cache)              |
-| Time zone from Visual Crossing                               | `schema-weather.ts` `timeZone` (D-96); `visual-crossing.ts` (`parsed.timezone`)                                                                                                  |
+| Time zone from Visual Crossing                               | `schema-weather.ts` `timeZone` (R-96); `visual-crossing.ts` (`parsed.timezone`)                                                                                                  |
 | Coordinates never shown                                      | `feed/entries.ts` `EntryDetail` and `feed/profiles.ts` `OtherProfile` carry no `lat`/`lng`                                                                                       |
 
 ## Photos
@@ -82,7 +82,7 @@ before publishing.
 | Blur on: upload is a canvas re-encode (no metadata) | `blur/paint.ts` `blurredFile` (`canvas.toBlob(…, "image/jpeg")`); `src/modules/safety/components/PhotoBlur.tsx` `publish` hands only the blurred file on                                  |
 | Blur off: original uploaded                         | `PhotoBlur.tsx` (`if (!isOn) { onReady(file) }`)                                                                                                                                          |
 | No server-side metadata stripping                   | `src/modules/feed/photos.ts` `uploadPhoto` puts the bytes unchanged; `src/modules/closet/photos.ts` stores `original.{ext}` unchanged. No EXIF code in `src/`                             |
-| Both upload surfaces go through blur                | `src/routes/feed/attach.$runId.tsx`, `src/routes/closet/$itemId.tsx` (only importers of `PhotoBlur`; D-102 / task 120)                                                                    |
+| Both upload surfaces go through blur                | `src/routes/feed/attach.$runId.tsx`, `src/routes/closet/$itemId.tsx` (only importers of `PhotoBlur`; R-102 / task 120)                                                                    |
 | Garment photos owner-only; original + three sizes   | `src/routes/closet/photo.$itemId.$size.ts` (401/404 unless owner); `closet/photos.ts` `photoSizes`                                                                                        |
 | Kit photos public once screened; owner sees own     | `feed/photos.ts` `isPhotoVisible`; `src/routes/feed/photo.$.tsx` (uses `optionalUserId`, so signed-out requests are answered)                                                             |
 | Every photo screened by OpenAI, scores kept         | `src/modules/safety/classifier/moderation.ts` (`omni-moderation-latest`, image as base64); `schema-core.ts` `photoScreenings`; `closet/photos.ts` and `feed/photos.ts` call `screenPhoto` |
@@ -173,7 +173,7 @@ whatever product URL a runner pastes.
 | No deletion sweeps                | `src/modules/ops/crons.ts` (four crons: digest, weather retry, enrichment retry, screening retry; none deletes)                                       |
 | No account deletion or export     | No such server function in any `src/modules/*/functions.ts`; Better Auth `deleteUser` not enabled in `create-auth.ts`                                 |
 | No run, kit or kit-photo deletion | Same; the only `.delete(` calls in modules are blocks, reactions, entry tags (replaced on re-verdict), follows, garments, sessions (ban), Strava rows |
-| Orphaned photos never expire      | `docs/deferred.md` D-27; `wrangler.jsonc` comment "MEDIA: no expiry"                                                                                  |
+| Orphaned photos never expire      | `docs/deferred.md` R-27; `wrangler.jsonc` comment "MEDIA: no expiry"                                                                                  |
 
 ## Not in the policy, on purpose
 

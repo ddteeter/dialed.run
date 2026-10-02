@@ -18,7 +18,7 @@ import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
  * double-submit guard, error copy from the schema, nothing animating in
  * the failure path) had no test that could reach them, and neither did
  * every other component state a journey does not walk. Playwright covers
- * journeys; it is single-worker by design (D-28) and is the wrong
+ * journeys; it is single-worker by design (R-28) and is the wrong
  * instrument for a state space.
  *
  * happy-dom rather than jsdom because jsdom (still, at 30.0.1) does not

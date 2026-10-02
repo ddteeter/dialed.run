@@ -28,7 +28,7 @@ import { Mono, Page } from "../../../ui";
  * route because the answer has several shapes and a route cannot be
  * tested.
  *
- * **It wears `Page` because every screen must** (D-53): `Page` is what
+ * **It wears `Page` because every screen must** (R-53): `Page` is what
  * stamps `html[data-hydrated="true"]`, which every e2e wait depends on —
  * one `Page` around every answer, so the screen has one heading.
  */

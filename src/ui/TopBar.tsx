@@ -32,7 +32,7 @@ import { Wordmark } from "./Wordmark";
  *
  * The bell is `Layout`'s own node in a second seat, and the list it opens
  * is still the `/notifications` route — which at width *is* DS3's centred
- * panel. So D-87's trap (an unread row inside an inverted block, where
+ * panel. So R-87's trap (an unread row inside an inverted block, where
  * `--unread` stays the light column's pale yellow) never arises here: no
  * notification row is ever a descendant of this bar.
  */

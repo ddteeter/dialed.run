@@ -6,7 +6,7 @@ import { onboardingGateQuery } from "../modules/onboarding/functions";
 import { startOnboardingIfNeeded } from "../modules/onboarding/route-decisions";
 
 /**
- * The marketing page, and the door into onboarding (D-52).
+ * The marketing page, and the door into onboarding (R-52).
  *
  * A signed-in runner who has not finished onboarding is sent to O1 from
  * here rather than only at signup, because every step past O1 is skippable

@@ -14,7 +14,7 @@ import { SignedOutLayout, Wordmark } from "../../../ui";
  * **The hero keeps the primary ask** — that is why the bar's Log in is
  * only hairline — and below 720, where there is no bar, it carries the
  * bar's one action too, so a phone is never left without the way in.
- * The full landing brief is still open (D-93), so the hero is the copy
+ * The full landing brief is still open (R-93), so the hero is the copy
  * the page already had and nothing new.
  */
 export function Landing({

@@ -35,7 +35,7 @@ honest ladder instead of a promise.
      band (PR #71). The typed city was a label with nothing behind it, and
      the provider turns out to geocode a place string itself — so
      `ClimatePlace` is coordinates _or_ a label, `starterList` asks about
-     whichever O1 left, and O1 stays one question (D-59). A label the
+     whichever O1 left, and O1 stays one question (R-59). A label the
      provider cannot place falls back to `mild`, never to a latitude
      guessed from text.
      Neither coordinates nor a city → `mild`, and no provider call at all.
@@ -86,7 +86,7 @@ two that are easiest to lose are **nothing arrives ticked** (so the
 component has no prop for a starting selection, deliberately) and **the
 disclosure states the real remainder** (so nothing hardcodes design's "10
 more", which was true of 24 rows and is not true of the 18 that exist —
-D-49).
+R-49).
 
 Two things that fell out of building it, both recorded at their sites:
 
@@ -109,7 +109,7 @@ ownership list with the owner's go-ahead:
    module's public API" had no API to read. Created, exporting the coverage
    read and nothing else.
 2. **The Call tab linked to `/`** in `src/ui/TabBar.tsx`; it now reaches
-   `/call`. D-31 (tab bar renders text, not glyphs) touches the same file
+   `/call`. R-31 (tab bar renders text, not glyphs) touches the same file
    and stays deferred to its own PR, because it is visible and wants its own
    demo.
 
@@ -117,14 +117,14 @@ ownership list with the owner's go-ahead:
 index spanning account, privacy, blocked runners, notifications,
 connections, export and delete. Three of those rows are this packet's —
 how you run warm or cold, units, and the sharing default — and the rest
-belong to other lanes and to D-32. The page is where they will join.
+belong to other lanes and to R-32. The page is where they will join.
 
 U1's rule is that every row states its current value, "a settings list you
 can read without opening anything"; the calibration row honours it
 literally, stating the answer _and_ the offset, in whichever unit is
 selected above it.
 
-Still open: **nothing routes a new account into the flow** (D-52). Signup
+Still open: **nothing routes a new account into the flow** (R-52). Signup
 lands on `/`, so O1 is reachable only by URL or from settings. Wiring it is
 a product call with a demo-spec blast radius across four other lanes — the
 options and their costs are in the register row.
@@ -139,15 +139,15 @@ three rows of design's U1 this packet owns), and the **Call teaser** (O6).
 
 `/` sends a signed-in runner with `onboarding_complete` false to O1, so
 bailing is recoverable — a signup-only redirect would strand exactly the
-person the skippable design invites (D-52).
+person the skippable design invites (R-52).
 
-**D-48's redraw landed with it**: hue means verdict everywhere and
+**R-48's redraw landed with it**: hue means verdict everywhere and
 permanently, coverage became ink density, and the profile row stopped
 carrying a three-way distinction on hue alone at 30% ink.
 
 ### What this packet could not finish, and why
 
-- **D-54** — P2.5's payout lines. §AC3 makes the on-save moment the
+- **R-54** — P2.5's payout lines. §AC3 makes the on-save moment the
   screen's argument "made literal", and all three lines need something that
   does not exist: `products.type` (lane 107), an owner count (no such read),
   O4's tagged runs. The row states what happened and stops.
@@ -155,11 +155,11 @@ carrying a three-way distinction on hue alone at 30% ink.
   and O4 is out of scope, so rule 02's flat-list fallback is what every v1
   runner sees. Design wrote that branch, so it is their answer — but the
   screen shipped is the fallback, not AC1 as drawn.
-- **D-49** — the tap list is 18 rows where design specified 24. Unspecified
+- **R-49** — the tap list is 18 rows where design specified 24. Unspecified
   content, not structure: the fold, the ranking and the disclosure all work
   at any length.
-- **D-57** — the onboarding demo needs a retry roughly one run in three,
+- **R-57** — the onboarding demo needs a retry roughly one run in three,
   because a D1 write makes the dev server reload the page a few seconds
   later and wipe the taps. Recording only; CI is unaffected.
-- **D-31** — the tab bar still renders text rather than glyphs, deferred to
+- **R-31** — the tab bar still renders text rather than glyphs, deferred to
   its own PR because it is visible and wants its own demo.

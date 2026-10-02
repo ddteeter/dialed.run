@@ -61,7 +61,7 @@ the thing round 12's new NEVER entry forbids.
 1. `FlowStep` keeps the slide for steps _inside_ the flow, but the entry
    from the bar is a `rise` and A1 currently plays the slide. The arrival
    move is deleted from `FlowStep`, not rebuilt — the router owns it.
-2. D-80's second half. `TabBar` learns the last tab the runner was actually
+2. R-80's second half. `TabBar` learns the last tab the runner was actually
    on, module state with an SSR answer in `FlowStep`'s `flow.lastStep`
    shape, so the tab beneath stays selected while the flow is up. Today
    `/feed/attach/$runId` lights **Feed** mid-flow whatever you started from,

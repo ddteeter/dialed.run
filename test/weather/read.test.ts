@@ -203,7 +203,7 @@ describe("observationsForRuns answers about exactly the runs it was asked about"
   });
 });
 
-describe("observationsForRuns takes any number of runs (D-117)", () => {
+describe("observationsForRuns takes any number of runs (R-117)", () => {
   it("answers for 120 located runs, past D1's hundred-parameter cap on both databases", async () => {
     // Each run is one parameter on the core read and three on the weather
     // read, so unchunked this fails at 101 runs on core and at 34 on

@@ -35,7 +35,7 @@ describe("visual crossing adapter (103)", () => {
       windKph: 14.2,
       precipMm: 0.2,
       condition: "Overcast",
-      // D-96: the zone at the response root, which used to be stripped.
+      // R-96: the zone at the response root, which used to be stripped.
       timeZone: "America/Chicago",
     });
     expect(fetchImpl).toHaveBeenCalledTimes(1);
@@ -293,7 +293,7 @@ const SYDNEY: ClimatePlace = { kind: "coordinates", lat: -33.87, lng: 151.21 };
 
 describe("visual crossing climate normals (105)", () => {
   it("asks about a typed place by name, encoded for the path", async () => {
-    // D-59: the endpoint geocodes a label itself. The label is a runner's
+    // R-59: the endpoint geocodes a label itself. The label is a runner's
     // own text landing in a URL path, so a `/` or a `,` in it must not be
     // read as structure — the encoded form is what leaves the adapter.
     const fetchImpl = statsFetch();

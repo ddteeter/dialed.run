@@ -8,7 +8,7 @@ would ship its own copy. So they land first, alone:
 
 1. **Garment photos skip W3's blur.** `PhotoBlur` is mounted only on the verdict
    route; garment detail uploads the picked bytes as they are. It is a privacy
-   gap (D-102), and the shared photo well is where it gets closed.
+   gap (R-102), and the shared photo well is where it gets closed.
 2. **One photo well** (round 22, item 8), for A1's run file and every photo.
    Rest, drag-over, uploading, the field-message error, and — with a photo —
    the well _is_ the preview, with Replace and Remove under it.

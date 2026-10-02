@@ -60,7 +60,7 @@ export async function uploadPhoto(
     throw new InvalidPhotoError("photo too large");
   }
   // Read from the header, before anything decodes it (task 128 · SAF-2,
-  // register D-3): a 10 MB file can decode to ~96 MB, and the isolate has
+  // register R-3): a 10 MB file can decode to ~96 MB, and the isolate has
   // 128.
   const uploaded = new Uint8Array(input.bytes);
   const refusal = photoRefusal(uploaded);
@@ -113,7 +113,7 @@ export async function uploadPhoto(
   // R2 then the row, which cannot be atomic (law 8c). Deliberately left as
   // two writes: a failure between them is visible — the upload errors and
   // the user retries — and the only residue is an orphaned object under a
-  // random key. Recorded as D-27 rather than swept, because MEDIA has no
+  // random key. Recorded as R-27 rather than swept, because MEDIA has no
   // expiry so orphans are permanent, but the failure needs D1 to fail
   // between two calls and the cost is storage, not correctness.
   const photoId = newUlid();
@@ -189,7 +189,7 @@ const ENTRY_PHOTO_QUALITY = 88;
  * classifier flagged on a public entry was once served with HTTP 200,
  * because nothing read the column `screenPhoto` writes.
  *
- * **Signed out is refused** (SAF-14, D-109): the pages that show these
+ * **Signed out is refused** (SAF-14, R-109): the pages that show these
  * photos require a session, so the bytes do too.
  *
  * One read, joined, and found by primary key: the photo's id is the key's
@@ -243,7 +243,7 @@ const PHOTO_REFUSALS: Readonly<Record<FilePartProblem, string>> = {
  * The size is checked against the *declared* size, before the bytes are
  * read, so an oversized upload is refused without being allocated. All
  * three refusals are decisions, which is why they are here rather than in
- * the server function's validator (D-41).
+ * the server function's validator (R-41).
  */
 export function photoUploadFrom(
   input: unknown,

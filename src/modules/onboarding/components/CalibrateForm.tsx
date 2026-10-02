@@ -102,7 +102,7 @@ export function CalibrateForm({
   saveCalibration: (input: { data: Calibration }) => Promise<unknown>;
   /**
    * Where O1 goes next. A prop rather than a `navigate` inside the action,
-   * because the contract is announce-*then*-move (D-44).
+   * because the contract is announce-*then*-move (R-44).
    */
   onSaved: () => void;
 }>): JSX.Element {

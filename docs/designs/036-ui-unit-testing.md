@@ -2,7 +2,7 @@
 
 Spike, answered, and applied everywhere. **`src/ui` and
 `src/modules/**/*.tsx` are at 100% and in the ratchet; every route is glue
-and excluded.** D-42 is closed.
+and excluded.** R-42 is closed.
 
 ## Problem
 
@@ -22,7 +22,7 @@ human reading a diff.
 Playwright was doing real UI testing, and still is, but it is the wrong
 instrument for this: it walks one path per journey, and it is single-worker
 by design because every spec shares one dev server and one local D1 file
-(D-28). A component's state space — each variant of a discriminated union,
+(R-28). A component's state space — each variant of a discriminated union,
 each field's error, pending/failure/success, the retry path — cannot be
 enumerated there at a sane cost.
 

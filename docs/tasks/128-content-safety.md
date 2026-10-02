@@ -43,7 +43,7 @@ decoder. Tests: a fixture carrying GPS EXIF comes back from the photo
 route with none, for an entry photo uploaded blur-off and for a garment
 original.
 
-**SAF-2 · Photo size, register D-3 [F]** (decision D-45). The browser
+**SAF-2 · Photo size, register R-3 [F]** (decision D-45). The browser
 downscales before upload, capping the long edge (about 2048px) inside the
 existing W3 canvas step, so a blur-off upload goes through the canvas too.
 The server refuses anything over a decoded-pixel budget, read from the
@@ -95,7 +95,7 @@ audit row (`add_moderation_actions`, additive, yours; also records SAF-5's
 actions). Tests: the object is gone and the audit row names who, what and
 why.
 
-**SAF-7 · Signed URLs for public photos [P]** (decision D-46; D-71, §1.10).
+**SAF-7 · Signed URLs for public photos [P]** (decision D-46; R-71, §1.10).
 
 - A public, screened entry photo is served at a URL carrying an expiry and
   an HMAC over the key and expiry, with `Cache-Control: public` for no
@@ -116,19 +116,19 @@ why.
 removed and why: an S1 row and an email through 126. The reason is the
 statement of reasons the EU DSA asks for (decision D-40 keeps EU users).
 
-**SAF-9 · D-62, the safety half [P].** Export a predicate for "this entry is
+**SAF-9 · R-62, the safety half [P].** Export a predicate for "this entry is
 hidden pending review, and the viewer is its author". 129 renders the marker
 (FEED-6).
 
-**SAF-10 · D-69 [P].** A garment whose photo is flagged tells its owner the
+**SAF-10 · R-69 [P].** A garment whose photo is flagged tells its owner the
 photo is being checked, on garment detail. Design ask.
 
-**SAF-11 · D-84(b) [P].** W3's tap-to-blur gets a keyboard path: focusable
+**SAF-11 · R-84(b) [P].** W3's tap-to-blur gets a keyboard path: focusable
 controls named by position ("Blur top-left"), per the Accessibility
 Contract. Design ask for what they look like. And W3's counts are digits,
 always, "You blurred 1 spot." included (round 26 #18).
 
-**SAF-12 · Blocks are enforced [F]** (D-107, PR #109). `hiddenCounterpartIds`
+**SAF-12 · Blocks are enforced [F]** (R-107, PR #109). `hiddenCounterpartIds`
 and `isBlocked` are exported from safety and imported by nothing, so a block
 hides nothing: W2 promises what the code does not do. Make the one
 visibility rule viewer-aware, so a blocked pair's entries leave each other's
@@ -138,13 +138,13 @@ to search and profiles (FEED-7). Tests: after a block, neither runner sees
 the other's entry anywhere; unblocking restores it; the consensus counts are
 unchanged (blocks do not touch counts, per `docs/contracts.md`).
 
-**SAF-13 · A reporter's own hide [F]** (D-108, PR #109). W1 promises
+**SAF-13 · A reporter's own hide [F]** (R-108, PR #109). W1 promises
 "hidden from your feed straight away", and `reportedSubjectIdsFor` has no
 callers. The same viewer-aware rule hides what the viewer reported, from
 the viewer only. Test: the reporter stops seeing it at once; nobody else
 does until the threshold.
 
-**SAF-14 · Signed-out requests refused [F]** (D-109, PR #109).
+**SAF-14 · Signed-out requests refused [F]** (R-109, PR #109).
 `entryDetailQuery` (`optionalUserId`), `otherProfileQuery` (no auth check)
 and the entry photo route answer signed-out requests though their pages
 require sign-in. Require a session on both queries (additions to feed's

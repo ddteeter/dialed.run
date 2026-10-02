@@ -107,7 +107,7 @@ afterEach(() => {
  * `window.event` to pick a lane — throws `window is not defined`, and
  * vitest fails the whole run on an unhandled error that no test owns.
  * `useFormSubmit` is the one that did it: a success waits one
- * `DURATION.instant` before `onSuccess` (D-44), then clears its pending
+ * `DURATION.instant` before `onSuccess` (R-44), then clears its pending
  * state, so any test that ends on "the status says Saved." leaves that
  * tail behind. Whether it fires into a live window or a dead one depends
  * on how long the worker takes to exit, which is why it failed on CI

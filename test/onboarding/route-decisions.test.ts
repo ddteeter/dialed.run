@@ -9,7 +9,7 @@ import {
 
 /**
  * The decision `/` makes, tested where a route's own `loader` could not be
- * (D-52). A route file cannot be imported by any test, which is why this
+ * (R-52). A route file cannot be imported by any test, which is why this
  * lives next door rather than inside `routes/index.tsx`.
  */
 describe("startOnboardingIfNeeded", () => {

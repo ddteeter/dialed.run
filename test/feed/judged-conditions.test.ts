@@ -7,7 +7,7 @@ import type { Conditions } from "../../src/modules/feed/conditions-shape";
 import { judgedFeelsLikeC } from "../../src/modules/feed/judged-conditions";
 
 /**
- * Which hour a run is judged at (D-5, owner's call 2026-09-11).
+ * Which hour a run is judged at (R-5, owner's call 2026-09-11).
  *
  * A 9-11am run that begins at 4° and ends at 12° carries one verdict for
  * the whole thing. Banding it at 4° is what teaches the call epic that 4°

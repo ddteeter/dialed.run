@@ -663,7 +663,7 @@ describe("the failure band", () => {
   });
 });
 
-describe("announce, then move (D-44)", () => {
+describe("announce, then move (R-44)", () => {
   it("has filled the live region before onSuccess runs", async () => {
     /**
      * The rule is *announce, then move*, and every form in the app that

@@ -291,7 +291,7 @@ function useObjectUrl(file: File | undefined): string | undefined {
  * them. A generic entry (category + name only) is still one submit away —
  * never blocked on brand/model.
  *
- * **This form had no failure path before D-17.** It was presentational,
+ * **This form had no failure path before R-17.** It was presentational,
  * and the route called `garmentFromFormValues` — which ended in
  * `garmentSchema.parse` — inside a `void`-ed async handler. An invalid
  * garment threw into an unhandled rejection: no message, no mark, the

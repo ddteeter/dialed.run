@@ -70,7 +70,7 @@ const visualCrossingCurrentSchema = z.object({
   currentConditions: visualCrossingHourSchema,
   /**
    * The IANA zone of the location — at the response root, beside
-   * `tzoffset` (D-96). It used to be stripped here, which is why every
+   * `tzoffset` (R-96). It used to be stripped here, which is why every
    * date the app rendered was UTC. Any string at this layer: whether it
    * is a zone `Intl` accepts is decided when the observation is built,
    * where an invalid one is dropped rather than failing the whole
@@ -112,7 +112,7 @@ const MEAN = 1;
 
 /**
  * Where the endpoint resolved a location to — at the response root, for
- * any request. A typed label is geocoded upstream (D-59), and these are
+ * any request. A typed label is geocoded upstream (R-59), and these are
  * what it found: the coordinates, and its own name for the place.
  *
  * `resolvedAddress` is what the runner is shown and what is saved, because

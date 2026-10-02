@@ -83,7 +83,7 @@
  * A class Tailwind does not know is dropped in silence — no error, no
  * warning, an unstyled element and a green suite — and `src/styles.css`'s
  * `@theme inline` block is the whole of the protection against that until
- * D-78's `no-unknown-classes` rule lands. A hand-written rule sits
+ * R-78's `no-unknown-classes` rule lands. A hand-written rule sits
  * outside that index, which is why the measurement in
  * `docs/proposals/082-tailwind-unknown-class-lint.md` reports `breathe`
  * as unknown twice. Registered here, every move in this file is in the

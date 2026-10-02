@@ -12,7 +12,7 @@ import { codeOnly, isInstrumented, repoPath } from "./source-text";
  * A test that imports one fails outright — `createServerFn` and
  * `getRequestHeaders` pull in TanStack Start's virtual entries, which only
  * the dev/build pipeline provides — so those files sit outside
- * `stryker.conf.json`'s `mutate` globs, named by a `!` negation (D-41). An
+ * `stryker.conf.json`'s `mutate` globs, named by a `!` negation (R-41). An
  * exclusion like that is only honest while the excluded file holds nothing
  * worth an assertion: the moment a decision moves into one, it is a
  * decision no gate can see.
@@ -55,7 +55,7 @@ const loaders: Record<string, () => Promise<unknown>> = import.meta.glob([
 
 /**
  * Files that import TanStack Start and still hold more than glue. Every
- * entry is open D-41 work, and the list only ever shrinks — a stale entry
+ * entry is open R-41 work, and the list only ever shrinks — a stale entry
  * fails below, so it cannot be left behind once the file is cleaned.
  */
 const NOT_YET_GLUE = new Set<string>();

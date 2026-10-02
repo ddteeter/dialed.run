@@ -39,7 +39,7 @@ function weatherDb() {
 export async function makeUser(overrides?: {
   username?: string;
   shareDefault?: boolean;
-  /** Left unset by default, which is what a profile predating D-6 looks
+  /** Left unset by default, which is what a profile predating R-6 looks
    *  like: the columns exist and hold NULL. */
   tempUnit?: "f" | "c";
   distanceUnit?: "mi" | "km";

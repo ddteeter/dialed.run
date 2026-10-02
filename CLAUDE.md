@@ -109,7 +109,7 @@ src/
   `onConflictDoUpdate` and not even a string constant from a parser module.
   But `const x = new XMLParser({…})` and `export const runs = sqliteTable(…)`
   are side effects it must keep, and keeping one keeps its whole library. Two
-  of those were a quarter of the 354 kB client entry chunk (D-50, fixed
+  of those were a quarter of the 354 kB client entry chunk (R-50, fixed
   2026-09-11: −89 kB). So **construct on first use, not at module scope**, and
   annotate a pure-but-unprovable constructor `/*#__PURE__*/`.
 
@@ -131,7 +131,7 @@ src/
   import `lib/sql/`, and no server-side entry (`src/server.ts`, a
   `functions.ts`, a queue consumer or cron handler) may import
   `lib/browser/`. A new `lib` file goes where its runtime constraint puts
-  it, so the D-50 bug class is visible in the path before it is in the
+  it, so the R-50 bug class is visible in the path before it is in the
   bundle.
 - No circular imports.
 - Only `src/env/` touches Workers bindings directly.
@@ -551,7 +551,7 @@ stryker run --mutate "src/ui/form.tsx,src/ui/Mono.tsx"` is 27 seconds
   (without it stryker's own vitest cannot parse the photo fixture and the
   fast runner will not start at all).
 
-  **The debt is paid (D-40 and D-42 closed).** `src/modules` measured
+  **The debt is paid (R-40 and R-42 closed).** `src/modules` measured
   43.98% when the work started — 1,793 mutants surviving or uncovered —
   and the components were not in the ratchet at all. Both are now at 100%,
   so **every file the app ships is under the gate.** What is outside it is
@@ -559,7 +559,7 @@ stryker run --mutate "src/ui/form.tsx,src/ui/Mono.tsx"` is 27 seconds
   `server-functions-are-glue` rather than by trust: `src/routes/**`, which
   cannot be imported by any test and must therefore be glue, and
   `src/modules/*/functions.ts`, which cannot be imported in the workers
-  pool at all (D-41 — `createServerFn` drags TanStack Start's virtual
+  pool at all (R-41 — `createServerFn` drags TanStack Start's virtual
   entries in with it). The negation rule above covers the second.
 
   **`"stryker"` is `required` in `guardrails.config.json`** (owner's call,
@@ -618,7 +618,7 @@ stryker run --mutate "src/ui/form.tsx,src/ui/Mono.tsx"` is 27 seconds
   no other check does — and it cannot be satisfied by editing a test, because
   the evidence is `dist/`. It hangs off the npm lifecycle rather than a job
   because `.github/workflows/` is a forbidden zone, which is why it sat
-  unwired from D-50 until now: a check that existed and was run by nobody.
+  unwired from R-50 until now: a check that existed and was run by nobody.
   The lifecycle reaches CI's test job, the deploy job and every local build.
 - **`dupes` reports clones only in files your change touches**, which is why
   turning it on did not require a 74-group cleanup first. If it names a

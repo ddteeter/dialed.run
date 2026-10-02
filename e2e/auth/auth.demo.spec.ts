@@ -166,7 +166,7 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   await handleField.fill(`smoke_${String(Date.now()).slice(-8)}`);
   await page.getByRole("button", { name: "Next" }).click();
 
-  // O1 next (D-52); the close screen's own link is the way a runner first
+  // O1 next (R-52); the close screen's own link is the way a runner first
   // leaves onboarding.
   await expect(page).toHaveURL(/\/onboarding\/calibrate/u, { timeout: 15_000 });
   await page.goto("/onboarding/done");

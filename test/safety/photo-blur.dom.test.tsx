@@ -822,7 +822,7 @@ function focusedNinths(): (string | undefined)[] {
   ].map((ninth) => ninth.dataset.ninth);
 }
 
-describe("the keyboard path (D-84(b))", () => {
+describe("the keyboard path (R-84(b))", () => {
   it("offers nine buttons named by position, once the photo has decoded", async () => {
     const { pipeline } = fakePipeline();
     render(

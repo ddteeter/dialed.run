@@ -1,4 +1,4 @@
-# Design: 054 run-span conditions (closes D-5)
+# Design: 054 run-span conditions (closes R-5)
 
 ## Problem
 
@@ -7,7 +7,7 @@ resolves `cacheKeyFor(lat, lng, startedAt)` and takes the first hour. The
 verdict covers the whole run, so a "way warm" on that run teaches the call
 epic that 4°C means overdressed.
 
-**Half of D-5 is already done and the register is stale.** `db1e0c6` made
+**Half of R-5 is already done and the register is stale.** `db1e0c6` made
 `attach.ts` resolve _every_ hour a run spans (capped at 6), so the
 observations exist in `DIALED_WEATHER` today. It deliberately stopped
 before deciding which value represents a run, because that is a product
@@ -60,7 +60,7 @@ maxFeelsLikeC, minTempC, maxTempC }`. `tempC`/`feelsLikeC` keep meaning
   missing from cache still reports a span over the hours that exist —
   integration, workers pool.
 - `coverageLadder`: a 4→12° run with a "way warm" verdict lands in the 10°
-  band, not the 0° band — integration. This is the regression D-5 names.
+  band, not the 0° band — integration. This is the regression R-5 names.
 - `itemWearInBand`: an **unrated** entry still bands, at its start hour.
 - `isWithinConsensusWindow`: an entry matches on its judged hour, not its
   first.

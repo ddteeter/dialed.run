@@ -95,7 +95,7 @@ the email is Today sent to you.
    `thresholds` — the photo **stays visible** and is queued anyway, so a
    reviewer's agreement or disagreement is the calibration signal the eval
    cannot produce. Garment photos are excluded on purpose (a closet is
-   private); that half is D-69.
+   private); that half is R-69.
 2. **Opening the "who reported" fold is logged** — logged where? There is no
    audit table. Sentry is for errors. A `review_audit` table is the obvious
    answer and it is a schema change.
@@ -124,7 +124,7 @@ operator opens the Desk, sees the photo, removes it, and undoes it.
 admin — and today it cannot.** This is the first thing to do in this lane,
 not the last, because every assertion above depends on it and because 106
 shipped its whole admin surface with no video for exactly this reason
-(D-72, raised twice on PR #73).
+(R-72, raised twice on PR #73).
 
 `isAdmin` reads one thing, `env.ADMIN_USER_IDS`. Seeding a user row cannot
 make an admin — admin-ness is env, not data — and the usual escapes do not

@@ -300,7 +300,7 @@ describe("a run's own band (B1)", () => {
 
 });
 
-describe("the run's own zone (D-96)", () => {
+describe("the run's own zone (R-96)", () => {
   it("carries the observation's zone, so the run's date is local to it", async () => {
     const userId = await makeUser();
     const run = await makeRun({ userId, lat: 41.88, lng: -87.63 });

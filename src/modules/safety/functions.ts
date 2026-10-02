@@ -3,7 +3,7 @@
  * then delegates. Route files import from here and only from here — no
  * business logic lives in `src/routes/safety/`.
  *
- * Nothing in this file can be imported by a test (D-41: `createServerFn`
+ * Nothing in this file can be imported by a test (R-41: `createServerFn`
  * drags TanStack Start's virtual entries in with it), which is why the
  * schemas live in `./inputs` and every decision lives in a sibling that a
  * test can reach.

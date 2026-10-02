@@ -36,7 +36,7 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   // any real work, past Playwright's 30s default. Same bump as the closet
   // and run-logging demos.
   testInfo.setTimeout(150_000);
-  // Onboarding is where an unfinished account lands from anywhere (D-52),
+  // Onboarding is where an unfinished account lands from anywhere (R-52),
   // so this opens by going to `/` and being sent here — the real entry,
   // not a typed URL.
   await page.goto("/");
@@ -118,7 +118,7 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   //
   // `html[data-hydrated]` does not help here: it is stamped once and never
   // cleared, so it is already true from O1 and says nothing about whether
-  // *this* screen has attached (D-53). Waiting on the count is waiting on
+  // *this* screen has attached (R-53). Waiting on the count is waiting on
   // the state the tap actually changes, which is both the honest check and
   // the one a viewer watches tick up.
   const tapped = [
@@ -162,10 +162,10 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   await page.getByLabel("Model").fill("Intraknit 200");
   await page.getByRole("button", { name: "Save" }).click();
 
-  // The payout is what actually happened and nothing more (D-54): the
+  // The payout is what actually happened and nothing more (R-54): the
   // piece is linked to a shared product. Design's three GAINED/KEPT lines
   // need lane 107, an owner count and O4, none of which exist.
-  await scene(page, "The payout states what happened, and stops (D-54)");
+  await scene(page, "The payout states what happened, and stops (R-54)");
   await expect(page.getByText("Smartwool Intraknit 200")).toBeVisible();
   await expect(page.getByText("1 of 6 named")).toBeVisible();
   await page.getByRole("button", { name: "Next" }).click();

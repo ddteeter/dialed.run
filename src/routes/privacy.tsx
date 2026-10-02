@@ -6,7 +6,7 @@ import { legalDocOrNotFound } from "../modules/account/route-decisions";
 import { NotificationBell } from "../modules/notifications/components/NotificationBell";
 
 /**
- * The privacy policy (task 126, ACC-13; round 26 #14; D-52, D-105): the
+ * The privacy policy (task 126, ACC-13; round 26 #14; D-52, R-105): the
  * owner's text from `docs/legal/privacy-policy.md`, for anyone, signed in
  * or not. X1 until that text is finished (`account/legal.ts`).
  */

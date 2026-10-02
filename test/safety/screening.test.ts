@@ -355,7 +355,7 @@ describe("a garment row with nothing to screen", () => {
   });
 });
 
-describe("what the classifier puts in front of a person (D-65)", () => {
+describe("what the classifier puts in front of a person (R-65)", () => {
   it("queues a flagged photo instead of hiding it silently", async () => {
     // The bug this closes: `review_queue.source` has carried a
     // `"classifier"` variant since the table existed and nothing wrote
@@ -443,7 +443,7 @@ describe("what the classifier puts in front of a person (D-65)", () => {
 
   it("does not queue a garment photo, which nobody but its owner can see", async () => {
     // A closet is private. Queueing one would put a private photo in front
-    // of an operator to settle a question nobody asked — see D-69.
+    // of an operator to settle a question nobody asked — see R-69.
     const userId = await makeUser();
     const itemId = newUlid();
     await core()

@@ -1,5 +1,5 @@
 /**
- * How precisely a place is kept (task 127, STR-14; register D-110).
+ * How precisely a place is kept (task 127, STR-14; register R-110).
  *
  * **Two decimal places: about 1.1 km of latitude**, and less of longitude
  * away from the equator. That is the precision every weather lookup here

@@ -34,7 +34,7 @@ kit").
   conditions ›", which opens R2b. The runner picks from what R2b offers and
   never types a number; weather that arrived is never editable.
 - Draw the list's status badges and empty state as the frame does.
-- D-102: manual entry lands on picking the outfit (R1: "Next · pick the
+- R-102: manual entry lands on picking the outfit (R1: "Next · pick the
   outfit"), not on run detail.
 
 **A2 · attach kit** (Product Screens A2, A2b; Round 22 `#a2`: "A2 Waiting",
@@ -45,7 +45,7 @@ kit").
 - Round 20: the kit is required, with the count in the header. The "ALL ›"
   and "+ CATEGORY" controls open A2b as a sheet. "Attach" never changes its
   label — pressing it with nothing chosen marks the picker with "Pick at
-  least one piece." (D-102: the round-13 "Attach 0 items" is superseded).
+  least one piece." (R-102: the round-13 "Attach 0 items" is superseded).
 - A failed attach is `useControlAction` with `NOTHING ATTACHED`, not a pink
   line.
 - Round 20 moves the outfit photo from A3 to A2: the `FileWell` with

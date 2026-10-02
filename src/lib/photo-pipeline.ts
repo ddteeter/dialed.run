@@ -57,11 +57,11 @@ export async function withReleased<Image extends { free: () => void }, Result>(
 
 /**
  * The most pixels any stored photo may decode to (task 128 · SAF-2,
- * decision D-45, register D-3): 4096 × 4096.
+ * decision D-45, register R-3): 4096 × 4096.
  *
  * Photon decodes to RGBA, four bytes a pixel, so this is 64 MiB of decoded
  * image inside a 128 MB isolate — with room left for the upload itself
- * (up to 10 MB) and the re-encoded copy. D-3's case, a 10 MB JPEG decoding
+ * (up to 10 MB) and the re-encoded copy. R-3's case, a 10 MB JPEG decoding
  * to ~96 MB, is refused before it is decoded. The browser scales a picked
  * photo to a 2048px long edge first (`photoLongEdge`), so an honest upload
  * is a quarter of this; the cap is the backstop for everything else.

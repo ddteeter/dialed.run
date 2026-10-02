@@ -222,7 +222,7 @@ export async function currentSettings(
  * requires a session would be a redirect loop dressed as a feature.
  *
  * **And it is asked on every visit, not once at signup**, which is the
- * whole point (D-52). Every step past O1 is skippable and a runner who
+ * whole point (R-52). Every step past O1 is skippable and a runner who
  * bails still has a working app — so bailing has to be *recoverable*, and
  * a one-shot redirect at account creation strands exactly the person the
  * skippable design invites. `onboarding_complete` flips only at P3, so

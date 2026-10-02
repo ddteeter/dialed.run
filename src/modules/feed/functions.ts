@@ -222,7 +222,7 @@ export const saveConditionsCityAction = createServerFn({ method: "POST" })
     savePlace(drizzle(env.DIALED_CORE), await requireUserId(), data),
   );
 
-// ---- Units (D-6) --------------------------------------------------------------
+// ---- Units (R-6) --------------------------------------------------------------
 
 /**
  * The viewer's own units, for the screens that render measured values.

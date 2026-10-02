@@ -55,7 +55,7 @@ export async function putSnapshot(
  * the same reason.
  *
  * The residue is an orphaned object when D1 fails between the two. `MEDIA`
- * has no expiry, so it is permanent — the same cost D-27 already records for
+ * has no expiry, so it is permanent — the same cost R-27 already records for
  * entry photos, and it is storage rather than correctness.
  */
 export async function recordSnapshot(

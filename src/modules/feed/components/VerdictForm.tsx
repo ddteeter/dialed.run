@@ -143,7 +143,7 @@ const QUESTION_ID = "verdict-question";
  * A3's ink header: the run, where and when it happened, and the question.
  *
  * *"SAT AUG 29 · 6:04 AM / 6.2 AT 41° / Did it work?"* — the date and time
- * are the run's own zone (D-96, from the observation), the distance is the
+ * are the run's own zone (R-96, from the observation), the distance is the
  * runner's unit, and the temperature is the one the run started in. With
  * no conditions the line names the unit instead ("6.2 MI", the
  * nothing-moved frame), since there is no "at" to say.
@@ -230,7 +230,7 @@ export function VerdictForm({
   /**
    * This runner's history in the run's band, both halves read over the
    * same in-band entries: `counts`, their verdicts keyed −2..+2, for the
-   * line beneath the row (D-97); `signals`, each kit garment's record and
+   * line beneath the row (R-97); `signals`, each kit garment's record and
    * the tag use, for the generated chips (round 20). Absent when the run
    * has no conditions, and therefore no band — then the line is not drawn
    * and the chips suggest no garment.
@@ -444,7 +444,7 @@ export function VerdictForm({
                     // behaviour change this lane may not make. A
                     // single-select toggle group is honest about what the
                     // control does today and announces the state; the
-                    // radiogroup is D-84.
+                    // radiogroup is R-84.
                     aria-pressed={isChosen}
                     // Read-only once logged, and still focusable: rule 07
                     // bans `disabled`, and a receipt is for reading.

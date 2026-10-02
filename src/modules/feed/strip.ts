@@ -9,7 +9,7 @@ import type { Conditions } from "./conditions-shape";
  *
  * Conditions win over the indoor flag: a run with a real observation
  * attached has conditions to show whatever it was marked. The temperature
- * is the range the run actually covered (D-5), in the viewer's own unit.
+ * is the range the run actually covered (R-5), in the viewer's own unit.
  */
 export type StripConditions =
   { kind: "conditions"; text: string } | { kind: "indoor" } | undefined;

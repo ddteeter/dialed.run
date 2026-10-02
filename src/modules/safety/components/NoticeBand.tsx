@@ -33,7 +33,7 @@ export function NoticeBand({
 }
 
 /**
- * D-69 (round 27 #21): a garment photo the classifier has not cleared yet,
+ * R-69 (round 27 #21): a garment photo the classifier has not cleared yet,
  * on its owner's garment detail. Only they can see it until then.
  */
 export function PhotoBeingChecked(): JSX.Element {

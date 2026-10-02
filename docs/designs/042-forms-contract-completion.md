@@ -1,13 +1,13 @@
-# Design: 042 Forms contract completion (D-17, D-43, D-44)
+# Design: 042 Forms contract completion (R-17, R-43, R-44)
 
-Closes the register's D-17 — the last two forms that never adopted
+Closes the register's R-17 — the last two forms that never adopted
 `docs/product.md` §Forms & failure — and the two bugs whose triggers name
-this pass: D-44 (announce-then-navigate) and D-43 (a failed "mark all read"
+this pass: R-44 (announce-then-navigate) and R-43 (a failed "mark all read"
 escaping as an unhandled rejection).
 
 ## Problem
 
-D-17 says the closet "still hand-rolls its errors". **Read the code and it
+R-17 says the closet "still hand-rolls its errors". **Read the code and it
 is worse than that: the closet form has no failure path at all.**
 
 `GarmentForm` is presentational — `onSubmit: (values) => void` — and the
@@ -40,7 +40,7 @@ _"Too small: expected string to have >=1 characters"_. The contract's rule
 is that error copy lives in the schema; `signUpSchema`, twelve lines below
 in the same file, already does it right (`"Tell us what to call you."`).
 
-`VerdictForm` is the second half of D-17. It hand-rolls `error` and
+`VerdictForm` is the second half of R-17. It hand-rolls `error` and
 `photoError` as bare `<p className="text-sm font-semibold text-pink">`,
 which is the contract's other named violation — **pink is action, never
 failure** — and it has no live region at all, so a save failure is silent
@@ -48,10 +48,10 @@ to a screen reader.
 
 Two register rows attach to this pass by their own triggers:
 
-- **D-44** — `useFormSubmit` sets the success sentence and then calls
+- **R-44** — `useFormSubmit` sets the success sentence and then calls
   `onSuccess`, which navigates. The `role="status"` region unmounts in the
   same commit, so nothing can read it.
-- **D-43** — `NotificationList`'s handler is `try { … } finally { … }` with
+- **R-43** — `NotificationList`'s handler is `try { … } finally { … }` with
   no `catch`, so a D1 failure re-throws out of a `void`-ed call. The button
   re-enables, the user is told nothing, nothing reaches Sentry (laws 5, 7).
 
@@ -97,14 +97,14 @@ which means `onSubmit` becomes `action` and the route hands in the server
 function — the same injection shape the routes lane established, so
 `GarmentForm` stays testable and stays in the mutation ratchet.
 
-**4. D-44 in `useFormSubmit`, once, for every form.** The fix already exists
+**4. R-44 in `useFormSubmit`, once, for every form.** The fix already exists
 eight lines below the bug: the _failure_ path sets the status and then
 defers the focus move by `DURATION.instant`. Success gets the same
 treatment, so `onSuccess` runs after the region has committed. Fixing it in
 the hook rather than per-form is the point — every form that navigates on
 success has this shape.
 
-**5. D-43 gets the failure band**, which is the smallest honest version and
+**5. R-43 gets the failure band**, which is the smallest honest version and
 the one the register already named. No new product decision.
 
 ## Contract touches
@@ -116,7 +116,7 @@ the one the register already named. No new product decision.
   trailing `.parse()` to become the pipe's transform. Its one caller pair
   (`new.tsx`, `edit.$itemId.tsx`) moves to the schema, so the parse still
   happens — one layer out.
-- `ui/use-form-submit.ts` — success-path timing (D-44). Behavioural, shared
+- `ui/use-form-submit.ts` — success-path timing (R-44). Behavioural, shared
   by every form; the existing `test/ui/form.test.tsx` pins the contract and
   must stay green.
 - No database, queue, cron or binding changes.
@@ -135,11 +135,11 @@ The mutation ratchet covers `src/ui/**/*.tsx` and `src/modules/**/*.tsx` at
 - One field error → field message and focus. Two+ → summary, both messages,
   focus to summary.
 - `FormStatus` receives exactly one sentence on every outcome, including
-  success — the D-44 assertion, which must fail before the hook change.
+  success — the R-44 assertion, which must fail before the hook change.
 - `VerdictForm`: a save failure announces and bands rather than printing
   pink text.
 - `NotificationList`: a rejecting "mark all read" surfaces the band instead
-  of escaping (D-43), asserted by the absence of an unhandled rejection.
+  of escaping (R-43), asserted by the absence of an unhandled rejection.
 - `npm run verify && npm test && npm run build`, and `npm run mutate` for
   `src/ui/**/*.tsx`, `src/modules/**/*.tsx` and `src/lib/**/*.ts`.
 
@@ -159,7 +159,7 @@ screens C and F. Re-record per workflow rule 5.
    `http://`. The alternative — accept `http://` and upgrade it — is a
    product decision about someone else's link, not a form fix. Flagging,
    not deciding.
-3. **D-35 is not in this PR.** The feed's triplicated session redirect is
+3. **R-35 is not in this PR.** The feed's triplicated session redirect is
    its own change with its own analyzer flip, and mixing it in would make
    both unreviewable. Next in the stack.
 

@@ -20,7 +20,7 @@ import validGpx from "./fixtures/valid.gpx?raw";
 import { batchOf, fakeMessage, oweInCore } from "../queue-fakes";
 
 /**
- * STR-14 (register D-110): a run's start point is kept, and sent to the
+ * STR-14 (register R-110): a run's start point is kept, and sent to the
  * weather provider, at two decimal places — never at the precision the
  * device wrote it.
  */

@@ -17,7 +17,7 @@ build the app to match, one area each, in parallel worktrees:
 2. `docs/design-deltas.md` — "Answered in round 21", "Answered in round 22"
    (which includes round 23's item-9 addendum). These are the rulings.
 3. `docs/reconciliation/2026-09-23-design-coverage.md` — the inventory your
-   screens appear in, and the build bugs (D-102) your lane owns.
+   screens appear in, and the build bugs (R-102) your lane owns.
 4. The boards your packet names. **Round 22's drawings are not yet folded into
    the screen boards**: they live in `design/Round 22 Coverage.dc.html` and
    `design/Auth.dc.html`, each section marked with the board it will fold into
@@ -71,7 +71,7 @@ origin/main` — a new branch's push gate diffs against local `main`, and a
   `e2e/support/conformance.ts`): cells, fills and alignments compared against
   the round-22 frame, not asserted from memory. A3's spec is the model.
 - Your feature demos re-recorded and attached.
-- The D-102 bugs your packet lists, fixed with a test each.
+- The R-102 bugs your packet lists, fixed with a test each.
 - `npm run verify && npm test && npm run build` green; PR checks green.
 - PR body: a table of screen → states built → conformance spec; "Needs from
   other lanes"; "Register"; "Design deltas" (undesigned surfaces, if any).

@@ -71,7 +71,7 @@ from the other side: _"never a sixth type."_
     Nothing is blocked; the digest carries the count meanwhile.
     **Still not built (task 125 leftovers, 2026-09-30):** the board's row
     needs a reason, a try count and a time that no dead-letter handler
-    records, so the page waits on one additive table (register row D-119).
+    records, so the page waits on one additive table (register row R-119).
 
 11. **Call epic screens** (B1/B2, O2, O4, O5) — already drawn; revisit when
     Epic 200 opens, incl. multi-part fabric display on garment/product
@@ -93,7 +93,7 @@ from the other side: _"never a sixth type."_
     that needs it** — nothing copies a link or leaves the device — so the
     map's row stays unbuilt rather than being given a home it does not
     have. `docs/product.md` §Forms & failure says the same from the other
-    side ("a toast takes the retry away with it when it leaves"), and D-9
+    side ("a toast takes the retry away with it when it leaves"), and R-9
     is closed as "answered by design, not by a toast".
 
     One thing this delta's own wording got wrong, recorded because it
@@ -208,7 +208,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     so the bar carries four tabs at five seats, and the launcher takes
     none of them. The indicator half shipped in task 114; the selected-tab
     half shipped in task 117 with the `rise` it is one behaviour with, and
-    D-80 is closed. The two open questions above are untouched by that
+    R-80 is closed. The two open questions above are untouched by that
     ruling and still stand.
 
 19. **The tab held beneath the log flow is lit, and silent.**
@@ -228,7 +228,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
 
     Expected: _"Closet, link, current, 2 of 5"_ · _"Add, button, dialog"_.
 
-    Built by task 117 in the PR that asked; D-81 closes with it. Verified
+    Built by task 117 in the PR that asked; R-81 closes with it. Verified
     in Chromium — the launcher's accessible name is computed from re-nested
     markup, which happy-dom cannot see.
 
@@ -253,10 +253,10 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     shortcuts in the legend and skip a key rather than a slot. The Flow
     Map already forbade numeric scores in UI, which is the reason the
     digits could not stay on the face of the control even though the keys
-    do. Built; D-91 closed.
+    do. Built; R-91 closed.
 
 21. **Bend 2 is satisfied by construction, and its extra line would be
-    false.** **CLOSED by round 21: met; the sentence is retired. D-92 closed.** DS0's second bend says desktop onboarding runs O1 → O3 → O4 →
+    false.** **CLOSED by round 21: met; the sentence is retired. R-92 closed.** DS0's second bend says desktop onboarding runs O1 → O3 → O4 →
     O5 and that O5 gains _"Photos come from your phone — we'll remind
     you."_ The built flow is O1 (calibrate) → O3 (tap-list) → O4 (name) →
     **P3** — and P3's own artboard note says it _"replaces O4 and O5"_. So
@@ -266,7 +266,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     The line was therefore not added, for a second reason as well: once
     bend 1's drop zone lands, "photos come from your phone" is **wrong at
     width**. **The ask is one line**: confirm the bend is met, or say
-    where the sentence should live now that O5 does not exist. D-92.
+    where the sentence should live now that O5 does not exist. R-92.
 
 22. **The shell carries two of three controls, one hidden at each width.** **CLOSED by round 21: understood.**
     Undesigned consequence shipped by task 115 under the placeholder
@@ -284,10 +284,10 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
 
     Nothing is blocked and no drawing is contradicted. Flagged because it
     is the kind of thing that looks like a bug in a screen reader
-    transcript and is not. D-90.
+    transcript and is not. R-90.
 
 23. **The landing page wears the product shell, and now wears the top
-    bar.** **ANSWERED by round 21 (its own bar, drawn); not built. D-93.** DS5 reserves this screen — _"no footer, no 'about', no pricing
+    bar.** **ANSWERED by round 21 (its own bar, drawn); not built. R-93.** DS5 reserves this screen — _"no footer, no 'about', no pricing
     in the product bar. The logged-out landing page is a separate page
     with a separate brief"_ — so it is outside the Desktop Contract and
     task 115 did not redesign it. But it does wear `Layout`, which means a
@@ -309,7 +309,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     like at 720 and 1040 — does it keep the product bar, lose it, or get a
     marketing bar of its own; and if it loses it, what does a signed-in
     visitor use to get back in? Owner's call to send it rather than guess
-    (2026-09-21). D-93.
+    (2026-09-21). R-93.
 
 24. **A3b is described, not drawn.** **ANSWERED by round 21: drawn as built; Done and swipe-down both keep.** Round 20 gives it in one sentence —
     _"every kit garment as a Fine / Too much / Not enough triple, plus all
@@ -447,7 +447,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       `BlurCells`). What is open is the step's lifetime. W3 closes on its
       first `onReady`, which `PhotoBlur` calls as soon as the detector's
       blur is painted, so tap-to-blur and the cells are on screen for a
-      moment rather than until the runner is done (register D-113; it
+      moment rather than until the runner is done (register R-113; it
       pre-dates PR #129). **The ask (design round 28, decision D-76):** a
       "use this photo" confirm that keeps W3 open until the runner says
       so — where it sits, what it says, and what Cancel or a new pick
@@ -497,7 +497,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     `/@old` is confirmed as the sentence alone. The marker is not built.**
     Both are composed from existing primitives; neither adds a glyph,
     colour or motion.
-    - **The under-review marker (register row D-62, not decision D-62),
+    - **The under-review marker (register row R-62, not decision D-62),
       on the card and on D** (FEED-6,
       `feed/components/PostCard.tsx`, `feed/components/EntryDetail.tsx`).
       The author of an entry hidden pending review still sees it in their
@@ -620,7 +620,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       format; the board has "RETIRED MAR 2026". **The ask:** which.
     - **F's rail card by category alone.** "Already in your closet · Top",
       not "· TOP · HALF-ZIP", with "No tops yet." when empty, because F
-      asks no type yet (D-75, register D-112) and its category is a select
+      asks no type yet (D-75, register R-112) and its category is a select
       that always holds one, so the "no card before a category" state
       never occurs. Expected to resolve itself once the TYPE picker lands.
     - **W3's cell caption.** "Blur by area. Ink = blurred. The focused cell
@@ -629,7 +629,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       the board's data says "centre". **The ask:** confirm "middle".
     - **A rail thumbnail with no photo** uses the photo ground, not the
       board's hatch. **The ask:** which.
-    - **Edit's saved-photo-refused state** (register D-115). Round 26 #4
+    - **Edit's saved-photo-refused state** (register R-115). Round 26 #4
       draws "F Photo failed" for adding; Edit uses the same state when a
       replacement photo is refused. **The ask:** confirm, or draw Edit's.
     - **A failed photo removal on Edit** (PR #129 review). Not the
@@ -664,7 +664,7 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       each section's foot. The page draws no "LAST UPDATED" line of its
       own — the owner's text says its date.
     - **Export** is round 27 #13's emailed ZIP since PR 2b-3 (D-79,
-      register D-116): the row's idle and `[ Preparing ]` states and the
+      register R-116): the row's idle and `[ Preparing ]` states and the
       "Email export" are the board's. Undrawn, and ours:
       - **Ready**, on the day a copy was asked for (one a day): the
         sub-line "Emailed. The link works until {day}." (UTC) and the
@@ -867,7 +867,7 @@ CHECKED` band still says "usually within a day". #28's line is item 6.
      round 26's states.
 
    _Build:_ 128. `safety/components/PhotoBlur.tsx` stops closing on the
-   first `onReady` (D-76, register D-113), along with the closet form that
+   first `onReady` (D-76, register R-113), along with the closet form that
    hosts it (`closet/components/GarmentForm.tsx`, `photo-pick.ts`).
    AttachKit (`feed/components/AttachKit.tsx`) is 129's, and takes the same
    sheet.
@@ -1406,7 +1406,7 @@ feed. "ui/shared" means `src/ui`, which 125 holds as the platform lane.
     verdict stay." · See the community rules. The kicker is `NOTE REMOVED`
     or `REMOVED FROM THE FEED` for a note or a whole entry, and the bell
     gets one row. _Build:_ 128, with the bell row in 129.
-21. **A garment photo being checked (D-69).** _Drawn:_ "Garment photo
+21. **A garment photo being checked (R-69).** _Drawn:_ "Garment photo
     checking". The band reads `BEING CHECKED` · "Only you can see this photo
     until it's checked, usually within a day." The photo and its closet
     tile carry an `ONLY YOU` tag. If the photo is refused, #20's band says
@@ -1459,12 +1459,12 @@ feed. "ui/shared" means `src/ui`, which 125 holds as the platform lane.
     with "✓", and the names stay "Blur top-left"…. Focus outlines the
     matching ninth on the canvas. _Build:_ 128 (`PhotoBlur`'s `BlurCells`).
     The "✓" should be the pack's `check`, not a text character.
-28. **Own entry under review (D-62).** _Drawn:_ a hi-viz `UNDER REVIEW` tag
+28. **Own entry under review (R-62).** _Drawn:_ a hi-viz `UNDER REVIEW` tag
     on the card, and a §4a band on the detail: `HIDDEN WHILE WE CHECK` · "A
     runner reported this entry. Other runners can't see it until a
     moderator has looked, usually within a day." · "You can still edit or
     delete it." Neither says who reported it or why. _Build:_ 129 (card and
-    detail) on 128's review state. D-62 closes once it is built.
+    detail) on 128's review state. R-62 closes once it is built.
 29. **"Photo not added."** _Ruling:_ the kicker stays. The body becomes
     "This photo couldn't be prepared without blur. Turn blur on, or pick
     another photo." _Build:_ 128 (`PhotoBlur.tsx`).
@@ -1703,7 +1703,7 @@ AT {t0}`. At the desk that block is in the rail. On success the row
     linked from the signed-out footer, under Au2 only** ("Creating an
     account means you've read our Privacy policy."), from Settings › About,
     and from every email footer. **Not under Au1**: _"logging in isn't
-    consent to anything new."_ _Build:_ 126 (D-105).
+    consent to anything new."_ _Build:_ 126 (R-105).
 
 **New, ruled**
 
@@ -1818,7 +1818,7 @@ file or the owner to decide.
 - **Privacy page type (14):** "680 measure" is not a `MEASURE` (620 is the
   document measure), and "17/1.65" is not a TYPE step (`lead` is 17/1.5).
   By the contract, it collapses to `column` and `lead`.
-- **Privacy link placement (14) vs D-105**, which says "a link from the
+- **Privacy link placement (14) vs R-105**, which says "a link from the
   signed-out shell and both auth forms". Design says not under Au1.
 - **Unverified shares queue (11).** An entry that is neither public nor
   private is a change to the sharing rules in `docs/contracts.md`.
@@ -1826,7 +1826,7 @@ file or the owner to decide.
   still reads "no swatch".
 - **The reminder email (19)** is a second effect of the Strava webhook.
   CLAUDE.md's product rules say its only effect is a notification row.
-  D-105's policy note already expects "an activity id per reminder", so this
+  R-105's policy note already expects "an activity id per reminder", so this
   is wording to update, not a conflict of substance.
 
 ## Answered in round 25 (imported 2026-09-24)
@@ -1929,13 +1929,13 @@ tests moved with it.
   privacy control ever uses "visibility"; sharing stays "Share to feed".
 - **"Color" (item 17): stays American on every board.** Noted, no answer.
 - **Bend 2 (item 21): met; the sentence is retired, not moved.** The
-  Desktop Contract now reads O1 → O3 → O4 → P3. D-92 closed.
-- **Two bars in the markup (item 22): understood.** D-90 stands as a note.
+  Desktop Contract now reads O1 → O3 → O4 → P3. R-92 closed.
+- **Two bars in the markup (item 22): understood.** R-90 stands as a note.
 - **The landing page at width (item 23): its own bar.** From 720 up, a
   wordmark and one action — "Log in" (hairline) signed out, "Your closet"
   (ink) signed in — and the hero drops its own wordmark. Below 720, no bar.
   No nav, search, bell or "Log a run"; pink stays off it. **Not built yet**;
-  D-93 narrowed to that. The full landing brief stays open.
+  R-93 narrowed to that. The full landing brief stays open.
 - **Dead-lettered work (item 10): drawn** as D6 · Gave up on Operator
   Screens, a rail item with a hi-viz count and one row per job. Not built.
 
@@ -1957,9 +1957,9 @@ contracts moved with them.
 - **A3's chosen fill is the verdict's T2 hue** — _"cold pink, dialed teal,
   warm quiet grey — exactly as DS2's row does; --action is never a verdict
   fill."_ A3's board had filled its chosen cell pink to mean _selected_.
-  Built: `ui/verdictHue` is the one table A3 and DS2 both read. D-98 closed.
+  Built: `ui/verdictHue` is the one table A3 and DS2 both read. R-98 closed.
 - **The in-band count is a line beneath the row, never in a cell.** The
-  harness's known gap for it closed itself. The line is not built; D-97.
+  harness's known gap for it closed itself. The line is not built; R-97.
 - **One beat, not two** — now in `motion.js`, not only the doctrine
   caption: _"close by TRAVEL.frame as the fill lands (one beat, not two),
   then the row locks."_ The fill used to wait a whole `reveal` and then
@@ -1968,7 +1968,7 @@ contracts moved with them.
   contract change was invisible to it until that exception became an
   assertion read from the contract.
 - **`--action-hover` and `--ink-hover` joined T1.** Ported; nothing wears
-  them, because the app has no hover states at all. D-99.
+  them, because the app has no hover states at all. R-99.
 - **Regions named** on A1, A2, A3, C, D, E1, DS1 and DS2, and
   `data-status="unbuilt"` on seven regions, which the harness now honours.
 - **Wrappers stay 390px.**
@@ -2167,7 +2167,7 @@ reads "including MONO.xs chips (10px, the type floor — nothing is drawn
 smaller)", and COLLAPSE gained the detail: the boards carry 9px in ~96
 places, and all of them build at 10px padded to a 44px target.
 
-**The tied band — D-60 — is answered as `Split`.** A cold/warm tie fills _both_
+**The tied band — R-60 — is answered as `Split`.** A cold/warm tie fills _both_
 outer slots in `--ink`, the knowledge colour, with the centre empty and no
 hue at all. Any tie that includes dialed is Dialed. The reasoning is the one
 the owner asked for: _"a tie is not a direction"_, so it never defaults to
@@ -2366,7 +2366,7 @@ what it costs us.
 15. **O3's paste field is gone.** `Onboarding.dc.html` now carries the note
     in so many words: _"The paste-a-product-link field that used to sit here
     is gone: it needed enrichment, which doesn't exist in v1. The build never
-    had it; the artboard now agrees."_ Closes D-55, which existed so nobody
+    had it; the artboard now agrees."_ Closes R-55, which existed so nobody
     would "fix" the code to match the drawing. O3 is also re-cut as one list
     ordered by climate band (§AA), and coverage is ink rather than hue (§AB).
 
@@ -2378,7 +2378,7 @@ what it costs us.
 artboard. The app has no dark mode, and this did not arrive through the queue
 — so it gets a lane of its own rather than leaking into whichever surface a
 future lane touches next: `docs/tasks/111-dark-theme.md`, unscheduled, with
-"is a dark theme in v1 at all?" as its first open question. **D-36** (the
+"is a dark theme in v1 at all?" as its first open question. **R-36** (the
 form primitives' unwritten ink surface) closes with it.
 
     **Items 12 and 13 were renumbered on the merge**, from 9 and 10: lanes
@@ -2417,7 +2417,7 @@ joins a population.
 
 **What v1 could not build, and why** — two rows rather than silent gaps:
 
-- **D-54**: §AC3's three payout lines each need something that does not
+- **R-54**: §AC3's three payout lines each need something that does not
   exist (`products.type` → lane 107; an owner count → no such read; tagged
   runs → O4). The named row states what happened and stops.
 - **The ranked heading is inert.** Rule 01 sorts by O4-tagged runs and O4
@@ -2426,7 +2426,7 @@ joins a population.
 
 **Design also flagged one back at us, and the build was already right:**
 O3's artboard still draws a paste field with `SPECS FOUND`, same lane-107
-dependency. `TapListForm` never built one. Recorded as **D-55** so nobody
+dependency. `TapListForm` never built one. Recorded as **R-55** so nobody
 "fixes" the code to match a stale artboard.
 
 ## Answered in round 6 (imported 2026-09-11)
@@ -2517,7 +2517,7 @@ debt these created is tracked in `docs/deferred.md`, not here.
 | **Lane 102's placeholder surfaces** — manual run entry, notifications bell + list, Strava connect/disconnect, import status | R1/R2 (prefilled + failure states), S1/S2 (list, and bell/badge/empty), T1/T2/T3 (not connected, importing, connected & disconnect).                                                                                                                                                                                                                                                                            |
 | **Settings/privacy screen** (You tab)                                                                                       | U1/U2.                                                                                                                                                                                                                                                                                                                                                                                                          |
 | **Icon Pack nav drift** — four nav glyphs for five tabs, no `call` glyph                                                    | `icons.js` now exports `TAB_BAR`, ported to `ui/icons.tsx` and pinned by `test/ui/icons.test.tsx`. Call borrows `verdictPending`: brackets around three dots is already the pack's idiom for "no verdict yet", which is what an unopened surface is. A dedicated glyph would ship a meaning we have not decided, so it waits for Epic 200. `discover` moved nav → social; it is a browse surface, not a v1 tab. |
-| **No form-validation strategy** (`docs/deferred.md` D-17)                                                                   | `Form Contract.dc.html`, the new §Forms & failure in `product.md`, and a reference `design/src/ui/FormField.tsx`. Field failure and form failure are different events with different marks; per-field vs summary is decided by count so every lane lands in the same place; errors are marked, not reddened; nothing animates.                                                                                  |
+| **No form-validation strategy** (`docs/deferred.md` R-17)                                                                   | `Form Contract.dc.html`, the new §Forms & failure in `product.md`, and a reference `design/src/ui/FormField.tsx`. Field failure and form failure are different events with different marks; per-field vs summary is decided by count so every lane lands in the same place; errors are marked, not reddened; nothing animates.                                                                                  |
 
 ## Resolved design↔contract nit (no upstream change needed)
 

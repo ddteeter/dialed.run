@@ -382,7 +382,7 @@ one a day. That is a queue message type, an R2 prefix with a lifecycle
 rule, a ZIP library and an email — 125's queue and R2 as well as this
 lane's — and it contradicts the packet's JSON. **The owner has decided
 the ZIP ships before launch** (decision D-79), in a follow-up PR
-(register D-116); the JSON ships here as the interim. Garment photos
+(register R-116); the JSON ships here as the interim. Garment photos
 link their full size, not the closet's card.
 
 ### ACC-9 · account deletion
@@ -518,7 +518,7 @@ safety 2b may also take 0040; whoever merges second renumbers.
 ## PR 2b-3: emailed export
 
 Branch `feat/126-export-zip`. ACC-10 as round 27 #13 draws it and the
-owner decided (D-79, register D-116): the interim JSON download goes, and
+owner decided (D-79, register R-116): the interim JSON download goes, and
 "Get a copy" queues a ZIP that is emailed as a link.
 
 ### What the board says, and where it is followed

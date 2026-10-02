@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 /**
- * What keeps server-only code out of the client bundle (D-50).
+ * What keeps server-only code out of the client bundle (R-50).
  *
  * **The mechanism is narrower than it looks, and knowing which one it is
  * decides what a fix has to do.** The Start plugin replaces a
@@ -30,7 +30,7 @@ import { describe, expect, it } from "vitest";
  * These assertions pin the two fixes. They are a proxy, not the real
  * check: the honest one reads the built chunk and is `npm run
  * check:bundle`, which needs a CI job to be a gate and CI config is
- * human-managed. D-50 carries that.
+ * human-managed. R-50 carries that.
  *
  * Raw text rather than `readFileSync`, because the workers pool sandboxes
  * the filesystem — same reason `server-functions-are-glue.test.ts` does it.

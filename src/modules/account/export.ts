@@ -35,7 +35,7 @@ type Db = ReturnType<typeof drizzle>;
  * Each run's conditions: the band the runner set, else the observation
  * at its place and hour. Two databases, so assembled here (CLAUDE.md's
  * one exception to "filter in SQL"); both reads chunk themselves under
- * D1's parameter cap (D-117).
+ * D1's parameter cap (R-117).
  */
 async function conditionsFor(
   runIds: readonly Ulid[],

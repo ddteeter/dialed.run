@@ -128,7 +128,7 @@ describe("Tab switch: the indicator slides under the label", () => {
     unmount();
   });
 
-  it("holds the tab beneath while the flow is up (D-80)", async () => {
+  it("holds the tab beneath while the flow is up (R-80)", async () => {
     // The other half of the launcher row: "the tab beneath stays
     // selected". The runner was in the closet; logging a run is laid over
     // it, so the closet is still where they are.

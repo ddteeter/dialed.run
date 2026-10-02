@@ -407,7 +407,7 @@ export async function verdictedEntriesInBand(
 
 /**
  * Distribution of the user's own past verdicts within a 5°C band —
- * calibration context shown under the A3 choices (D-97).
+ * calibration context shown under the A3 choices (R-97).
  */
 export async function verdictBandCounts(
   userId: string,
@@ -565,7 +565,7 @@ export interface EntryDetail {
   usefulCount: number;
   conditions: Conditions | undefined;
   /**
-  D-62: hidden pending review, and the viewer is its author — the one
+  R-62: hidden pending review, and the viewer is its author — the one
   person who still sees it, so the one who needs telling why nobody else
   does (FEED-6, from 128's predicate).
   */
@@ -701,7 +701,7 @@ export async function getEntryDetail(
  * The reaction lookup is skipped for a signed-out viewer rather than asked
  * with an undefined id, and a missing entry answers with nothing rather
  * than a half-built card. Both are decisions, which is why they are here
- * and not in `functions.ts` (D-41).
+ * and not in `functions.ts` (R-41).
  */
 export async function entryDetailForViewer(
   entryId: string,

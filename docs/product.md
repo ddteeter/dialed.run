@@ -165,7 +165,7 @@ Conditions, Mileage. The reaction is **"useful"**.
 
 Imported 2026-09-07 with `design/Form Contract.dc.html`. Written because
 four lanes shipped four different answers to "the save failed": the
-register carried it as D-17, and this closes it.
+register carried it as R-17, and this closes it.
 
 ### 0. The position
 

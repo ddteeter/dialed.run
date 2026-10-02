@@ -140,9 +140,9 @@ recorded here so the choice is visible rather than forgotten.
 ## Related
 
 `eslint-plugin-tailwindcss` v4 (a different package) ships
-`no-arbitrary-value` and `no-custom-classname`, which overlap **D-76**'s
+`no-arbitrary-value` and `no-custom-classname`, which overlap **R-76**'s
 hand-written arbitrary-value rule. It is **not** a clean swap:
-`no-arbitrary-value` has no allowlist option, and D-76 has to keep
+`no-arbitrary-value` has no allowlist option, and R-76 has to keep
 `pb-[env(safe-area-inset-bottom)]` and `[grid-area:1/1]`. Since this repo
 forbids `eslint-disable`, an all-or-nothing rule cannot express that. Worth
-a look when D-76 is picked up, not a reason to delay it.
+a look when R-76 is picked up, not a reason to delay it.

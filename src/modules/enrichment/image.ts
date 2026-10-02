@@ -104,7 +104,7 @@ export async function copyProductImage(
   // bytes, the cap is 10 MB where the page's is 6, and `content-length` on
   // an image from a CDN is reliable in a way a rendered page's is not. The
   // length check still runs on what actually arrived, and before the
-  // decode — a decode is the expensive step, and the one D-3 records as
+  // decode — a decode is the expensive step, and the one R-3 records as
   // bounded only by this cap.
   const bytes = await response.arrayBuffer();
   if (bytes.byteLength > maxPhotoBytes) {

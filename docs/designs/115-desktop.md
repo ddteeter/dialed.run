@@ -32,7 +32,7 @@ test pins that the two render the same four in the same order.
   focus ring both fall out of `--ink` flipping, per 112's note. The bell is
   `Layout`'s existing `bell` node rendered in a second place — the S1 list
   stays the `/notifications` route, which at width _is_ the centred panel, so
-  D-87's unread-inside-ink trap never arises.
+  R-87's unread-inside-ink trap never arises.
 - `src/ui/Page.tsx` — `narrow`/`wide` become **`panel`/`column`**, DS3's own
   two answers. Panel stays centred at 390; column is left-aligned at width
   inside `max-w-page`, which is DS3's reflow rule ("not centred, so it lines
@@ -75,7 +75,7 @@ contract describes was never built, so nothing collapses into two headings.
 - Screens: DS1, DS2. Every other surface is DS3's panel or reflow rule and
   adds no screen. `docs/design-deltas.md` item 18 **closes** (round 15) and
   items 20–22 open: DS2's four verdict slots superseded by five, bend 2's
-  extra line, and the duplicated controls. `docs/deferred.md` gains D-89–D-92.
+  extra line, and the duplicated controls. `docs/deferred.md` gains R-89–R-92.
 - **Module boundary moved**: `WeatherAttribution` from `modules/weather` to
   `ui/`, recorded in `docs/architecture.md`. Not a preference — reaching it
   through the weather barrel pulled `cloudflare:workers` into the client
@@ -123,7 +123,7 @@ raised while building DS2 and answered by the owner (five keys, 1–5) with the
 drawing sent back to design as item 20. Three things to know rather than
 decide: the bell, the launcher and the `Main` landmark exist twice in the
 markup (one hidden at each width — no single-DOM arrangement avoids it once
-the bar must invert, D-90); Feed's desk rail is deferred to Epic 200 rather
-than part-built (D-89); and bend 2 turned out to be satisfied by construction,
+the bar must invert, R-90); Feed's desk rail is deferred to Epic 200 rather
+than part-built (R-89); and bend 2 turned out to be satisfied by construction,
 because the built onboarding has no O2 to skip and no O5 to add a line to
-(D-92).
+(R-92).

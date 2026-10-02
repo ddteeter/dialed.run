@@ -13,7 +13,7 @@ import {
 
 /**
  * A profile's coordinates, rounded as they are parsed (task 127, STR-14;
- * D-110): the fallback point is often home, and nothing needs more than
+ * R-110): the fallback point is often home, and nothing needs more than
  * `lib/coords`' two places. Rounding here, at the boundary both writers of
  * the place parse through (O1's calibration and Your conditions' Use
  * this), means `onboarding/profile.ts` stores what it is given and an

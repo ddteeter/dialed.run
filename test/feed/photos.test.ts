@@ -548,7 +548,7 @@ describe("photoResponse: the whole cached GET, in one function", () => {
   });
 
   it("refuses a signed-out viewer even a public entry's photo (SAF-14)", async () => {
-    // D-109: the pages that show these photos require a session, so the
+    // R-109: the pages that show these photos require a session, so the
     // bytes do too. A signed-in stranger still gets the same photo.
     const { key } = await ownedPhoto(true);
     const refused = await photoResponse(key, undefined);

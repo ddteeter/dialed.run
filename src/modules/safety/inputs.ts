@@ -2,7 +2,7 @@
  * The safety server functions' input contracts, kept out of `functions.ts`.
  *
  * That file imports `createServerFn`, so nothing in it can be imported by
- * a test or reached by mutation testing (D-41). A zod schema is a trust
+ * a test or reached by mutation testing (R-41). A zod schema is a trust
  * boundary and belongs where it can be exercised, which is here.
  *
  * **Error copy lives in these messages**, not in the components. Both

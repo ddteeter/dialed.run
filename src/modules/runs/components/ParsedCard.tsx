@@ -317,7 +317,7 @@ export function ParsedCard({
   onRetimed: () => void;
   onReplace: () => void;
 }>): JSX.Element {
-  // The run's own zone, from its observation (D-96). With none — a
+  // The run's own zone, from its observation (R-96). With none — a
   // treadmill, no GPS, weather that never came — the runner's own clock,
   // which is the one they read the start from; never UTC, which would put
   // a Chicago evening run at the next morning. The card is drawn only after

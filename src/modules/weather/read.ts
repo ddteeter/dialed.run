@@ -75,7 +75,7 @@ const CELLS_PER_READ = 30;
  * given runs land in.
  *
  * **Any number of runs.** Both reads are chunked under D1's
- * hundred-parameter cap here (D-117), so a caller hands over its whole
+ * hundred-parameter cap here (R-117), so a caller hands over its whole
  * list rather than having to know that a run costs three parameters on
  * the weather side. No runs, or no located runs, send no query at all:
  * there is nothing to chunk.

@@ -558,7 +558,7 @@ WoolTech Half Tights` → `Men`, `Arc'teryx` → `Arc`), the entity strip
 - **"Use the image later? Legal risk?"** — the R2 copy is not served by
   anything yet (`photoResponse` accepts entry-photo keys only), so the
   question is ahead of the surface. It is a product-and-rights decision
-  and it is the owner's: D-67.
+  and it is the owner's: R-67.
 - **"Sanitise the images?"** — yes, and now the same way a runner's photo
   is: decoded and re-encoded to WebP through photon, bounded to the
   closet's `full` edge, so metadata, appended payloads and a lying type

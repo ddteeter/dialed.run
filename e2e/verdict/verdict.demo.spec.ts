@@ -214,7 +214,7 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
   await scene(page, "A3 · five points, coldest to warmest, one scale");
   await page.getByRole("button", { name: "A bit cold" }).click();
 
-  // D-97: beneath the row, this runner's own history in the run's band —
+  // R-97: beneath the row, this runner's own history in the run's band —
   // loaded by the route all along, and until round 20 never shown.
   await scene(page, "Beneath the row: your history in this band");
   await expect(page.getByText(/^Five states\./)).toBeVisible();

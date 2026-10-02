@@ -334,7 +334,7 @@ describe("photoRefusal", () => {
     expect(photoRefusal(pngOf(4096, 4097))).toBe(pixelBudgetRefusal);
   });
 
-  it("refuses D-3's case: a 12 MP-plus frame the browser should have shrunk", () => {
+  it("refuses R-3's case: a 12 MP-plus frame the browser should have shrunk", () => {
     expect(photoRefusal(pngOf(6000, 4000))).toBe(pixelBudgetRefusal);
   });
 

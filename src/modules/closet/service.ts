@@ -952,7 +952,7 @@ export interface PairedItem {
  *
  * Here rather than in `getItemFn`, because matching the named rows back to
  * the counts is a decision — the order is the count's, not the query's —
- * and `functions.ts` is where no test can reach one (D-41). A pair whose
+ * and `functions.ts` is where no test can reach one (R-41). A pair whose
  * row is gone (another runner's, or deleted) simply drops out.
  */
 export async function getItemDetailWithPairs(

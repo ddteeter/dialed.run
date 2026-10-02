@@ -21,7 +21,7 @@ import { feedUserId, holdForever, removeSeeded, seeded } from "./feed-support";
  *
  * Unread is a white row and a pink dot, read is the paper; Mark all read
  * breathes in place while the rows stay as they are. At desk the screen
- * is DS3's panel, not a column (D-102).
+ * is DS3's panel, not a column (R-102).
  */
 test.use({ storageState: storageStateFor("feed") });
 
@@ -105,7 +105,7 @@ test("M in flight: white-and-dot rows, and Mark all read breathing in place", as
     expect(inFlight.slice(0, drawn.rowFills.length)).toEqual(drawn.rowFills);
     await page.unrouteAll({ behavior: "ignoreErrors" });
 
-    // **At desk it is the panel** (DS3, D-102): 390 wide, not the column.
+    // **At desk it is the panel** (DS3, R-102): 390 wide, not the column.
     await page.setViewportSize(DESK);
     const panel = page
       .getByRole("heading", { name: "Notifications" })
@@ -117,7 +117,7 @@ test("M in flight: white-and-dot rows, and Mark all read breathing in place", as
   }
 });
 
-test("the bell is on the feed's own screens (D-102)", async ({ page }) => {
+test("the bell is on the feed's own screens (R-102)", async ({ page }) => {
   await page.setViewportSize(PHONE);
   for (const path of ["/feed", "/feed/me", "/feed/search"]) {
     await page.goto(path);

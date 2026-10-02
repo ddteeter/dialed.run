@@ -6,7 +6,7 @@
  * every entry in the app at once. They live in `lib` because the feed and
  * the runs lane both show the same numbers.
  *
- * Unit choice is display-only and stays here: D-6 will make it a user
+ * Unit choice is display-only and stays here: R-6 will make it a user
  * preference, and the contract keeps storing SI either way.
  */
 import type { DistanceUnit, TempUnit } from "./profile";

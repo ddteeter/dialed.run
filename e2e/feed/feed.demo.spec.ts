@@ -117,7 +117,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
         startedAt,
         // Two hours, so the run spans three hour buckets and the feed can
         // show what it actually covered rather than the hour it began in
-        // (D-5). The caption is already written for a run that warms up.
+        // (R-5). The caption is already written for a run that warms up.
         durationS: 2 * 3600,
         distanceM: 6437,
         lat: latR,
@@ -342,7 +342,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       "Dialed",
     );
     // The strip: distance, then the range the run covered and the
-    // weather it started in. 6C -> 43F and 14C -> 57F (D-5).
+    // weather it started in. 6C -> 43F and 14C -> 57F (R-5).
     await expect(card.locator('[data-part="run-strip"]')).toContainText(
       "43–57° · light rain",
     );

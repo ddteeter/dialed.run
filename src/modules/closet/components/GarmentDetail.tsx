@@ -271,7 +271,7 @@ export function GarmentDetail({
    */
   renderPhotoStep?: PhotoStep | undefined;
   /**
-   * D-69's "being checked" band (round 27 #21), composed by the route
+   * R-69's "being checked" band (round 27 #21), composed by the route
    * because its copy is safety's and this module may not import it. Shown
    * under the photo while `isPhotoBeingChecked` says so.
    */

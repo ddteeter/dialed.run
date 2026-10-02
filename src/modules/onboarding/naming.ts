@@ -104,7 +104,7 @@ export interface NamedResult {
 
 /**
  * **Design's three payout lines cannot be told in v1** (§AC3, recorded as
- * D-54): nothing writes `products.type` until lane 107's enrichment lands,
+ * R-54): nothing writes `products.type` until lane 107's enrichment lands,
  * no read counts the owners of a product, and "your 3 tagged runs" needs
  * O4. So this states what actually happened and nothing more — on the one
  * screen whose entire job, in design's own words, is to be believed.

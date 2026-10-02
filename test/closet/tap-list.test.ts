@@ -84,7 +84,7 @@ describe("tapListFor", () => {
     // table that only has to be internally consistent drifts from the
     // design one row at a time and never fails. The first fourteen are
     // the artboard's own order for Minneapolis; the last four are what the
-    // old per-band lists contributed, and D-49 records that design
+    // old per-band lists contributed, and R-49 records that design
     // specified 24 rows and named 14, so six are still unwritten.
     expect(
       tapListFor("cold").map((row) => [row.key, row.garment.name]),

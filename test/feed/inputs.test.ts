@@ -23,7 +23,7 @@ import {
 
 /**
  * The feed's input contracts. They lived in `functions.ts`, which no test
- * can import (D-41), so every bound in them — the kit cap, the caption
+ * can import (R-41), so every bound in them — the kit cap, the caption
  * length, the coordinate range — was unasserted.
  */
 

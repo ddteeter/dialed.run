@@ -21,7 +21,7 @@
  * 26, item 9): "SAT AUG 29" as a mono label and "Sat, Aug 29" in prose.
  * "Sat 29 Aug" is wrong for an en-US reader.
  *
- * **The zone is the run's own, when we know it** (D-96). A run's date is
+ * **The zone is the run's own, when we know it** (R-96). A run's date is
  * where the run happened — a Chicago run viewed from Berlin is still a
  * Chicago run — and Visual Crossing names the zone on every observation,
  * which is now stored. Passed explicitly, it gives the same text in both
@@ -97,7 +97,7 @@ function part(
  *   single-field formatter returns a `string`, so there is nothing to fall
  *   back from and the mutant cannot exist. Restructuring beat granting it.
  *
- * `timeZone` is the run's own (D-96); omitted or invalid, it is UTC.
+ * `timeZone` is the run's own (R-96); omitted or invalid, it is UTC.
  */
 function dayParts(
   epochSeconds: number,
@@ -158,7 +158,7 @@ export function dayTimeLabel(epochSeconds: number, timeZone?: string): string {
  * because `en-GB` writes "am" and a screen reader should hear the letters
  * the eye sees.
  *
- * `timeZone` is the run's own (D-96); omitted or invalid, it is UTC.
+ * `timeZone` is the run's own (R-96); omitted or invalid, it is UTC.
  */
 export function clockLabel(epochSeconds: number, timeZone?: string): string {
   return part(epochSeconds, timeZone, {

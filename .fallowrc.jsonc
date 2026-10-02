@@ -109,7 +109,7 @@
       // table of 79 glyphs or 16 tap-list entries reads as one big clone.
       // `icons.tsx` is still a whole-file ignore covering ~40 lines of real
       // behaviour (`Icon`); splitting its manifest out would narrow it, the
-      // way `tap-list-data.ts` already did — see D-34.
+      // way `tap-list-data.ts` already did — see R-34.
       "src/ui/icons.tsx",
       "src/modules/closet/tap-list-data.ts",
       // Task 106's photo-eval corpus: twenty rows of the same four fields,
@@ -122,7 +122,7 @@
       // run of them reads as a duplicate of any other run regardless of
       // which kind each names. Split from `email.ts` so the ignore covers
       // the table and not `preferenceFor` or the recipient/payload schemas
-      // beside it -- same shape as `tap-list-data.ts` (D-34).
+      // beside it -- same shape as `tap-list-data.ts` (R-34).
       "src/lib/contracts/email-kinds.ts", // zod declaration table: emailKind() rows only, no behaviour
       // Task 126's export ZIP sheets: the five CSV column tables
       // (`{ name, about, value }` per column) are a reporting schema, not

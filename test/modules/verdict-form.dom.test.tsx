@@ -280,7 +280,7 @@ describe("VerdictForm: the scale", () => {
     // `aria-pressed` rather than a `radiogroup`: the contract asks for
     // five radios with arrow-key navigation, which is a behaviour change
     // this lane may not make. A single-select toggle group is honest about
-    // what the control does today. The radiogroup is D-84.
+    // what the control does today. The radiogroup is R-84.
     const user = userEvent.setup();
     await renderWithRouter(form());
 
@@ -1115,7 +1115,7 @@ describe("VerdictForm: tags and sharing", () => {
   });
 });
 
-describe("VerdictForm: the history line beneath the row (D-97)", () => {
+describe("VerdictForm: the history line beneath the row (R-97)", () => {
   it("shows this runner's history in the band, which the route already loads", async () => {
     // The verdict route has fetched `verdictBandCounts` on every visit and
     // discarded it; round 20 put the line beneath the row.
@@ -1464,7 +1464,7 @@ describe("VerdictForm: the details that go missing silently", () => {
     // stat, so the form is still mounted with the region filled. Holding
     // that promise open is what makes the window big enough to assert in.
     //
-    // That the window exists at all is D-44's fix: before it, the status
+    // That the window exists at all is R-44's fix: before it, the status
     // and the unmount landed in the same commit.
     const user = userEvent.setup();
     const stat = Promise.withResolvers<{ worn: number; total: number }>();
@@ -1504,7 +1504,7 @@ describe("VerdictForm: the run header (round 21)", () => {
 
   it("dates the run where it happened, and says how far at what", async () => {
     // "SAT AUG 29 · 6:04 AM / 6.2 AT 41°" — the zone is the observation's
-    // (D-96), so a Chicago morning is not read as UTC's 11 AM.
+    // (R-96), so a Chicago morning is not read as UTC's 11 AM.
     await renderWithRouter(
       form({
         entry: { startedAt: SAT_MORNING, distanceM: 9978, conditions },

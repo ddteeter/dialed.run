@@ -2,7 +2,7 @@
  * What an upload is refused for, on both sides of the wire.
  *
  * **Split out of `./imports` because a route reaches this and must not
- * reach that** (D-50). `runs/inputs.ts` needs the cap and the error type to
+ * reach that** (R-50). `runs/inputs.ts` needs the cap and the error type to
  * validate a submission, routes import `inputs.ts`, and `imports.ts` pulls
  * `db/schema-core` and the FIT/GPX/TCX parsers with it — so one constant
  * and one three-word class were holding drizzle's column builders and the

@@ -1,5 +1,5 @@
 /**
- * The legal pages' texts (task 126, ACC-13; D-105, D-52): which exist,
+ * The legal pages' texts (task 126, ACC-13; R-105, D-52): which exist,
  * and whether each is ready to be read by anyone.
  *
  * **The text is the file in `docs/legal/`**, bundled as a string at build

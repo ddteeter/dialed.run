@@ -173,7 +173,7 @@ export function tabToLight(
 }
 
 /**
- * The last tab the runner was actually standing on (D-80).
+ * The last tab the runner was actually standing on (R-80).
  *
  * Module scope and a one-field object, for the reasons `ui/FlowStep`'s
  * `flow.lastStep` gives and this shares: the bar is remounted by every

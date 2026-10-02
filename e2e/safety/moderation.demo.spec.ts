@@ -3,7 +3,7 @@
  * queue's Remove that deletes — one journey, one video.
  *
  * The journey needs `ADMIN_USER_IDS=e2e-desk-operator` in the dev server's
- * `.dev.vars`, which CI's e2e job writes (register D-72). Locally, put the
+ * `.dev.vars`, which CI's e2e job writes (register R-72). Locally, put the
  * same line in yours.
  *
  * Exactly one test() per demo spec.

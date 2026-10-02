@@ -34,7 +34,7 @@ const sources: Record<string, string> = import.meta.glob(
  * Routes are in scope by the owner's word rather than by the packet's,
  * which put them out of it beyond adding a heading — four of them held an
  * interactive element, two needing padding and two taking the inline
- * exception. D-83 asked and is closed. Two module files predate the
+ * exception. R-83 asked and is closed. Two module files predate the
  * `components/` convention and are screens all the same.
  */
 function isOwned(path: string): boolean {

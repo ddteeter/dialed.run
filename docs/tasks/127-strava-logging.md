@@ -38,7 +38,7 @@ that; keep it true.
 **STR-1 · Refresh before use [F]** (0.1). Every call that needs a live
 access token gets one through a single function that refreshes when the
 token is expired or close to it, and stores the rotated pair. Today the
-only such call is revocation. D-1's "broken after 3 failures / 30 min"
+only such call is revocation. R-1's "broken after 3 failures / 30 min"
 logic then either has a real caller or is dead code; decide which in the
 design doc and delete it if dead. Tests: an expired token is refreshed
 before the call; a 401 on refresh marks the connection broken and writes
@@ -48,7 +48,7 @@ before the call; a 401 on refresh marks the connection broken and writes
 copies an access token that will be expired by the time it drains. Store
 what a later refresh needs (`add_strava_revocation_refresh_token`,
 additive, yours, if the design needs a column), and drain as
-refresh-then-revoke. **D-103 is the owner's open question** on folding
+refresh-then-revoke. **R-103 is the owner's open question** on folding
 `strava_revocations` into #101's generic `outbox`, and this rewrite is its
 natural moment: put it in your design doc and ask. The default is to keep it
 apart, because its rows carry a credential and the generic outbox forbids one
@@ -156,7 +156,7 @@ journal. Manual rows stay out of consensus and training.
 29". Replace the day-first renderings wherever they are; other lanes adopt
 it in their own screens.
 
-**STR-14 · Coordinate precision [F]** (D-110, found by PR #109). A run's
+**STR-14 · Coordinate precision [F]** (R-110, found by PR #109). A run's
 start point and the profile fallback are stored at full precision, and the
 raw point goes to Visual Crossing. Decide the precision (the development
 plan's default: two decimal places, about 1 km, which no weather lookup we

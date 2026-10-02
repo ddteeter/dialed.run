@@ -15,7 +15,7 @@ import { expect } from "vitest";
  *
  * Nine controls moved from `disabled` to this, and nine tests said
  * `expect(button).toBeDisabled()` — a passing test holding the old
- * behaviour in place, which is the shape D-82 was. Shared rather than
+ * behaviour in place, which is the shape R-82 was. Shared rather than
  * written out nine times so the third part cannot be the one somebody
  * forgets: `toBeDisabled()` alone is satisfied by an element that has been
  * dropped from the tab order, and that is the failure, not the fix.

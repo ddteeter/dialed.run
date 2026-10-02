@@ -16,7 +16,7 @@ import { MILES, renderFeedScreen } from "./feed-fixtures";
 
 /**
  * Round 26 #7's handle placements (FEED-10), `/@handle`'s two pages, and
- * D-62's under-review marker on D (FEED-6).
+ * R-62's under-review marker on D (FEED-6).
  */
 const NOTHING = z.null().parse(JSON.parse("null"));
 const done = () => Promise.resolve();
@@ -181,7 +181,7 @@ async function detailFor(isUnderReview: boolean) {
   );
 }
 
-describe("D's under-review marker (D-62)", () => {
+describe("D's under-review marker (R-62)", () => {
   it("tells the author their entry is under review, in bracket notation", async () => {
     await detailFor(true);
     const marker = document.querySelector('[data-part="under-review"]');

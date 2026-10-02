@@ -16,7 +16,7 @@ export const weatherObservationSchema = z.object({
   precipMm: z.number().min(0),
   condition: z.string(),
   /**
-   * The IANA zone of the place observed, as the provider names it (D-96).
+   * The IANA zone of the place observed, as the provider names it (R-96).
    *
    * Optional, and additive: a manual observation has none, and neither
    * does anything cached before the column existed. Refined rather than
@@ -58,7 +58,7 @@ export interface ClimateNormals {
 /**
  * Where a runner runs, as O1 leaves it: coordinates when the browser was
  * allowed to say, otherwise the label they typed. Either is enough for
- * the provider to find the place (D-59) — a typed "Omaha, NE" resolves
+ * the provider to find the place (R-59) — a typed "Omaha, NE" resolves
  * upstream, so refusing geolocation no longer costs the starter list its
  * ordering. Never both: coordinates are the better answer when present.
  */
