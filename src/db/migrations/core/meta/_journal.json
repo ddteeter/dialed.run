@@ -302,6 +302,13 @@
       "when": 1790972432409,
       "tag": "0042_add_terms_acceptances",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "6",
+      "when": 1791006831306,
+      "tag": "0043_add_username_screen_verdict",
+      "breakpoints": true
     }
   ]
 }

@@ -116,6 +116,10 @@ export async function handleScheduled(
  * and rides the `:00` firing so a lost send costs a runner an hour, not a
  * day. `account` again, so handed in for the same reason as the purge.
  *
+ * **The handle re-ask** (task 126 PR B) rides the `:15` firing beside
+ * photo screening, its sibling: handles claimed while moderation could
+ * not answer are asked about again (`account/handle-rescreen.ts`).
+ *
  * All are optional: a firing handed none purges and sweeps nothing and
  * mails the digest the live way (`oweDigestEmail`'s default).
  */
@@ -123,6 +127,9 @@ export interface DailyUpkeep {
   readonly purgeAccounts?: ((anomalies: string[]) => Promise<void>) | undefined;
   readonly digestMail?: DigestMail | undefined;
   readonly sweepExports?: ((anomalies: string[]) => Promise<void>) | undefined;
+  readonly rescreenHandles?:
+    | ((anomalies: string[]) => Promise<void>)
+    | undefined;
 }
 
 async function runCron(
@@ -157,6 +164,7 @@ async function runCron(
       const anomalies: string[] = [];
       await eachStep([
         () => runScreeningRetry(anomalies),
+        () => upkeep.rescreenHandles?.(anomalies),
         () => drainOwedEmail(anomalies),
       ]);
       return anomalies;

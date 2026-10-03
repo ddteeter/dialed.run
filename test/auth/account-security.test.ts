@@ -16,8 +16,8 @@ import {
   checkOwnPassword,
   isOwnPassword,
   PASSWORD_ATTEMPT_WINDOW_S,
-  PASSWORD_ATTEMPTS_PER_WINDOW,
 } from "../../src/modules/auth/password-check";
+import { PASSWORD_ATTEMPTS_PER_WINDOW } from "../../src/lib/contracts";
 import { recordingMail } from "./mail-recorder";
 import { OPEN_ACCESS } from "./open-access";
 

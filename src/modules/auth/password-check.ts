@@ -12,6 +12,7 @@ import { eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { passwordAttempts } from "../../db/schema-core";
+import { PASSWORD_ATTEMPTS_PER_WINDOW } from "../../lib/contracts";
 import { nowSeconds } from "../../lib/now";
 import {
   windowedCountSet,
@@ -65,12 +66,13 @@ export async function isOwnPassword(
 }
 
 /**
- * Tries at the current password a runner gets per window. Better Auth's
- * own limiter counts HTTP requests to its endpoints, and a server-side
- * `auth.api.verifyPassword` never passes through it, so this is the only
- * thing between an open session and unlimited guesses.
+ * Tries at the current password a runner gets per window
+ * (`PASSWORD_ATTEMPTS_PER_WINDOW`, in `lib/contracts` so the refusal can
+ * say it). Better Auth's own limiter counts HTTP requests to its
+ * endpoints, and a server-side `auth.api.verifyPassword` never passes
+ * through it, so this is the only thing between an open session and
+ * unlimited guesses.
  */
-export const PASSWORD_ATTEMPTS_PER_WINDOW = 5;
 export const PASSWORD_ATTEMPT_WINDOW_S = 15 * 60;
 
 /**

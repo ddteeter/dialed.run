@@ -763,6 +763,28 @@ describe("every hourly step runs, whichever fail (law 5)", () => {
     },
   );
 
+  it("re-asks about handles on the :15 firing alone, with that firing's anomalies", async () => {
+    const asked: string[] = [];
+    const rescreenHandles = (anomalies: string[]) => {
+      asked.push("asked");
+      anomalies.push("1 handle(s) still unscreened");
+      return Promise.resolve();
+    };
+
+    const quarter = await handleScheduled(
+      { cron: "15 * * * *" } as ScheduledController,
+      undefined,
+      { rescreenHandles },
+    );
+    await handleScheduled({ cron: "0 * * * *" } as ScheduledController, undefined, {
+      rescreenHandles,
+    });
+    await handleScheduled(ENRICHMENT_RETRY, undefined, { rescreenHandles });
+
+    expect(asked).toStrictEqual(["asked"]);
+    expect(quarter.anomalies).toContain("1 handle(s) still unscreened");
+  });
+
   it("drains the hour's email after a sweep that throws, then throws what the sweep did", async () => {
     vi.spyOn(console, "error").mockImplementation(nothing);
     const id = await seedDueEmail();

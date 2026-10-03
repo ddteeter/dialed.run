@@ -102,7 +102,12 @@ export async function gateOnHandle({
   }
   startLeavingIfNeeded(answer.gate === "leaving", pathname);
   startTermsIfNeeded(answer.gate === "needs-terms", pathname);
-  startHandleIfNeeded(answer.gate === "needs-handle", pathname);
+  // A runner a moderator renamed meets O0 too, in its re-pick form (ACC-12;
+  // round 27 #16), past the same open pages.
+  startHandleIfNeeded(
+    answer.gate === "needs-handle" || answer.gate === "renamed",
+    pathname,
+  );
 }
 
 /**

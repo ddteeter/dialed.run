@@ -12,9 +12,12 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import {
   claimUsername,
+  forceRename,
   isReservedHandle,
+  keepPlaceholder,
   lookUpHandle,
   handleGate,
+  renameNoticeOf,
   usernameOf,
 } from "../../src/modules/account/username";
 import type { ScreenHandle } from "../../src/modules/account/handle-screen";
@@ -743,6 +746,23 @@ describe("usernameOf and handleGate", () => {
     });
   });
 
+  it("answers renamed for a runner owed a re-pick, after the terms and before the handle answers (ACC-12)", async () => {
+    const renamed = await accepted(await runner({ username: "runner_0042" }));
+    await db
+      .update(userProfiles)
+      .set({ usernameResetReason: "Advertising" })
+      .where(eq(userProfiles.userId, renamed));
+    expect(await handleGate(db, renamed, PUBLISHED)).toStrictEqual({
+      gate: "renamed",
+      userId: renamed,
+    });
+    await keepPlaceholder(db, renamed);
+    expect(await handleGate(db, renamed, PUBLISHED)).toMatchObject({
+      gate: "has-handle",
+    });
+    expect(await usernameOf(db, renamed)).toBe("runner_0042");
+  });
+
   it("asks nothing about the terms while none are published, as today (D-93)", async () => {
     const dee = await runner({ username: "dee" });
     const newcomer = await runner();
@@ -754,5 +774,83 @@ describe("usernameOf and handleGate", () => {
       gate: "needs-handle",
       userId: newcomer,
     });
+  });
+});
+
+/**
+A runner a moderator renamed from `handle` to `@runner_4821`.
+*/
+async function renamedFrom(handle: string): Promise<string> {
+  const userId = await runner({ username: handle });
+  const renamed = await forceRename(db, {
+    userId,
+    typed: "runner_4821",
+    reason: "Offensive or sexual",
+    recordedAs: () => db.select().from(userProfiles).limit(0),
+  });
+  expect(renamed).toMatchObject({ kind: "renamed" });
+  return userId;
+}
+
+describe("the rename notice (ACC-12; round 27 #16)", () => {
+
+  it("says the handle taken away, the placeholder and why", async () => {
+    const userId = await renamedFrom("quadzilla_69");
+    expect(await renameNoticeOf(db, userId)).toStrictEqual({
+      previous: "quadzilla_69",
+      current: "runner_4821",
+      reason: "Offensive or sexual",
+    });
+  });
+
+  it("names the latest handle taken away, not an older one", async () => {
+    const userId = await runner({ username: "first_pick" });
+    await claimUsername(db, userId, "second_pick", CLEAR);
+    await db
+      .update(usernameHistory)
+      .set({ lockedAt: 10 })
+      .where(eq(usernameHistory.username, "first_pick"));
+    await forceRename(db, {
+      userId,
+      typed: "runner_4821",
+      reason: "Advertising",
+      recordedAs: () => db.select().from(userProfiles).limit(0),
+    });
+    expect(await renameNoticeOf(db, userId)).toMatchObject({
+      previous: "second_pick",
+    });
+  });
+
+  it("is nothing once no re-pick is owed, for anyone never renamed, or nobody", async () => {
+    const kept = await renamedFrom("quadzilla_69");
+    await keepPlaceholder(db, kept);
+    expect(await renameNoticeOf(db, kept)).toBeUndefined();
+    expect(
+      await renameNoticeOf(db, await runner({ username: "dee" })),
+    ).toBeUndefined();
+    expect(await renameNoticeOf(db, newUlid())).toBeUndefined();
+  });
+
+  it("is nothing for a reason with no handle taken away on record", async () => {
+    const userId = await runner({ username: "runner_0042" });
+    await db
+      .update(userProfiles)
+      .set({ usernameResetReason: "Advertising" })
+      .where(eq(userProfiles.userId, userId));
+    expect(await renameNoticeOf(db, userId)).toBeUndefined();
+  });
+
+  it("is settled by Save: a claim clears the reason", async () => {
+    const userId = await renamedFrom("quadzilla_69");
+    expect(await claimUsername(db, userId, "quiet_mile", CLEAR)).toMatchObject({
+      kind: "claimed",
+    });
+    expect(await renameNoticeOf(db, userId)).toBeUndefined();
+  });
+
+  it("keeps the placeholder on Keep", async () => {
+    const userId = await renamedFrom("quadzilla_69");
+    await keepPlaceholder(db, userId);
+    expect(await usernameOf(db, userId)).toBe("runner_4821");
   });
 });

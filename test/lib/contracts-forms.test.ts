@@ -8,6 +8,7 @@ import {
   signUpSchemaFor,
   changeEmailSchema,
   CURRENT_PASSWORD_WRONG,
+  currentPasswordLimited,
   changePasswordSchema,
   newPasswordSchema,
   PASSWORD_MIN_LENGTH,
@@ -216,6 +217,12 @@ describe("the account forms (ACC-4, ACC-7, ACC-8)", () => {
       }),
     ).toStrictEqual({ email: "dee@example.com", currentPassword: "x" });
     expect(CURRENT_PASSWORD_WRONG).toBe("That's not your current password.");
+  });
+
+  it("say round 28 #10's lockout, with the limiter's own count", () => {
+    expect(currentPasswordLimited("7:42 PM")).toBe(
+      "That's 5 wrong tries. You can try again at 7:42 PM.",
+    );
   });
 
   it("hold a new password to sign-up's floor", () => {

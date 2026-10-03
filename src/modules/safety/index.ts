@@ -107,6 +107,7 @@ export {
 export {
   claimForReview,
   claimLeaseSeconds,
+  enqueueForReview,
   openSubject,
   pendingReviewCount,
   pendingReviewQueue,

@@ -305,6 +305,19 @@ describe("gateOnHandle (the root's O0 gate, memoised)", () => {
     expect(onO0.thrown).toBeUndefined();
   });
 
+  it("sends a renamed runner to O0's re-pick from any page, and asks again until it is done (ACC-12)", async () => {
+    const renamed = await gateOnce("renamed", true, "/closet");
+    expect(renamed.thrown).toMatchObject({
+      options: { to: "/onboarding/handle" },
+    });
+    const onO0 = await gateOnce("renamed", true, "/onboarding/handle");
+    expect(onO0.thrown).toBeUndefined();
+    // Never remembered: Save or Keep changes the answer.
+    expect(isRememberedForSession("has-handle")).toBe(false);
+    const again = await gateOnce("renamed", true, "/feed");
+    expect(again.asked).toBe(1);
+  });
+
   it("asks once a session in the browser once the runner has a handle", async () => {
     const first = await gateOnce("has-handle", true);
     expect(first.asked).toBe(1);

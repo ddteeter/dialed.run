@@ -14,9 +14,10 @@ import { withoutComments } from "./source-text";
  *
  * The data export (ACC-10) is wired the same way twice over: its sweep to
  * the hourly firing, and its consumers to `dialed-exports` (decision D-86).
+ * The handle re-ask (task 126 PR B) is the third firing upkeep.
  */
 describe("the Worker entry hands the firings and the queue their upkeep", () => {
-  it("passes account deletion's purge and the export sweep to handleScheduled", () => {
+  it("passes account deletion's purge, the export sweep and the handle re-ask to handleScheduled", () => {
     const code = withoutComments(serverSource);
     expect(code).toContain(
       'import { purgeDueAccounts } from "./modules/account/purge";',
@@ -24,8 +25,11 @@ describe("the Worker entry hands the firings and the queue their upkeep", () => 
     expect(code).toContain(
       'import { sweepExports } from "./modules/account/export-sweep";',
     );
+    expect(code).toContain(
+      'import { rescreenHandlesFromEnv } from "./modules/account/handle-rescreen";',
+    );
     expect(code).toMatch(
-      /handleScheduled\(controller, undefined, \{\s*purgeAccounts: purgeDueAccounts,\s*sweepExports,\s*\}\)/u,
+      /handleScheduled\(controller, undefined, \{\s*purgeAccounts: purgeDueAccounts,\s*sweepExports,\s*rescreenHandles: rescreenHandlesFromEnv,\s*\}\)/u,
     );
   });
 
