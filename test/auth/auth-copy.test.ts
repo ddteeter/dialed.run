@@ -41,10 +41,20 @@ describe("authFailure", () => {
   });
 
   it("builds a refusal that is an error with a kicker", () => {
-    const refusal = new AccessRefused("Kicker", "Words.");
+    const refusal = new AccessRefused({ kicker: "Kicker", message: "Words." });
     expect(refusal).toBeInstanceOf(Error);
     expect(refusal.name).toBe("AccessRefused");
     expect(refusal).toMatchObject({ kicker: "Kicker", message: "Words." });
+    expect(refusal.retry).toBeUndefined();
+    expect(refusal.link).toBeUndefined();
+    expect(
+      new AccessRefused({
+        kicker: "Kicker",
+        message: "Words.",
+        retry: false,
+        link: "create-account",
+      }),
+    ).toMatchObject({ retry: false, link: "create-account" });
   });
 
   it("has nothing to say when nothing failed", () => {

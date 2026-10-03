@@ -1,4 +1,8 @@
-import { TURNSTILE_REFUSED } from "../../lib/contracts/access";
+import {
+  ACCESS_CODES,
+  INVITE_COPY,
+  TURNSTILE_REFUSED,
+} from "../../lib/contracts/access";
 import { CURRENT_PASSWORD_WRONG } from "../../lib/contracts";
 import type { ControlFailure, FormFailure } from "../../ui";
 
@@ -49,9 +53,13 @@ export const AUTH_COPY = {
   /**
    * Google from the log-in page, for an address with no account: Better
    * Auth refuses to make one there (`disableImplicitSignUp`), because an
-   * account is made on Au2, with a code. Placeholder copy (design deltas).
+   * account is made on Au2, with a code (round 28 #9, confirmed).
    */
   googleNoAccount: "No account uses that Google address. Create one first.",
+  /**
+  Round 28 #9: Google on Au2 with the code field empty.
+  */
+  googleNoCode: "Enter your invite code above, then continue with Google.",
 } as const;
 
 /**
@@ -62,25 +70,89 @@ export const AUTH_COPY = {
 export const NOT_SENT = "Not sent";
 
 /**
+ * Round 28 #9's kickers for Google's refusals: Au2's account was not
+ * made, Au1's runner was not logged in.
+ */
+export const NOT_CREATED = "Not created";
+export const NOT_LOGGED_IN = "Not logged in";
+
+/**
+Where a refusal's band points, when its fix is on another page.
+*/
+export type RefusalLink = "request-access" | "create-account";
+
+/**
+ * A band about the way in. `retry` is false for a refusal whose fix is
+ * not pressing again — the code field above, or another page, which
+ * `link` names — so its band carries no Try again (round 28 #9).
+ */
+export interface AuthBand extends ControlFailure {
+  readonly retry?: false | undefined;
+  readonly link?: RefusalLink | undefined;
+}
+
+/**
  * A refusal the way in made (ACC-5) that belongs in a band rather than on
  * a field: Turnstile's on the form, and every refusal on Au2's Google
  * button — whose band is the only place its failure can be said (Au6).
  */
-export class AccessRefused extends Error implements ControlFailure {
+export class AccessRefused extends Error implements AuthBand {
   readonly kicker: string;
+  readonly retry: false | undefined;
+  readonly link: RefusalLink | undefined;
 
-  constructor(kicker: string, message: string) {
-    super(message);
+  constructor(band: AuthBand) {
+    super(band.message);
     this.name = "AccessRefused";
-    this.kicker = kicker;
+    this.kicker = band.kicker;
+    this.retry = band.retry;
+    this.link = band.link;
   }
 }
+
+/**
+ * Better Auth's answer when Google would have made an account from the
+ * log-in page, which only Au2 may do (ACC-5).
+ */
+export const SIGNUP_DISABLED = "signup_disabled";
+
+/**
+ * Google's refusals, by the code that names them, as round 28 #9 draws
+ * them in a band under the button: no code ("enter it above"), a refused
+ * code (the field's sentence, and Request access), and Au1's address with
+ * no account (Create an account). None offers Try again.
+ */
+export const GOOGLE_REFUSALS: ReadonlyMap<string | undefined, AuthBand> =
+  new Map([
+    [
+      ACCESS_CODES.missing,
+      { kicker: NOT_CREATED, message: AUTH_COPY.googleNoCode, retry: false },
+    ],
+    [
+      ACCESS_CODES.invalid,
+      {
+        kicker: NOT_CREATED,
+        message: INVITE_COPY.invalid,
+        retry: false,
+        link: "request-access",
+      },
+    ],
+    [
+      SIGNUP_DISABLED,
+      {
+        kicker: NOT_LOGGED_IN,
+        message: AUTH_COPY.googleNoAccount,
+        retry: false,
+        link: "create-account",
+      },
+    ],
+  ]);
 
 /**
 Turnstile's refusal, as a band says it.
 */
 export function turnstileRefused(): AccessRefused {
-  return new AccessRefused(NOT_SENT, TURNSTILE_REFUSED);
+  return new AccessRefused({ kicker: NOT_SENT, message: TURNSTILE_REFUSED });
 }
 
 /**
@@ -115,7 +187,7 @@ export class AuthRejected extends Error {
 export function authFailure(
   failure: FormFailure | undefined,
   cause: unknown,
-): ControlFailure | undefined {
+): AuthBand | undefined {
   if (failure === undefined) return undefined;
   if (cause instanceof AccessRefused) return cause;
   return { kicker: AUTH_KICKER, message: authFailureMessage(failure, cause) };

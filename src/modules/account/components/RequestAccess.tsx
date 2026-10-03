@@ -2,13 +2,18 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import type { JSX } from "react";
 
-import { TURNSTILE_REFUSED } from "../../../lib/contracts/access";
+import {
+  ACCESS_NOTE_COUNT_FROM,
+  ACCESS_NOTE_MAX,
+  TURNSTILE_REFUSED,
+} from "../../../lib/contracts/access";
 import { requestAccessSchema } from "../../../lib/contracts";
 import { clockLabel, deviceTimeZone } from "../../../lib/dates";
 import {
   FailureBand,
   FormElement,
   FormFailureBand,
+  Icon,
   Mono,
   SubmitButton,
   TextField,
@@ -27,14 +32,14 @@ const INLINE_LINK_CLASS = "font-bold text-ink underline underline-offset-4";
 /**
  * What the band says when the request was not taken — both are about the
  * browser, never the address: Turnstile's (round 27 #12) and the limit's
- * (placeholder copy, design deltas).
+ * (round 28 #9, #11's grammar in local time).
  */
 export function refusalMessage(
   result: Exclude<AccessRequestResult, { status: "received" }>,
 ): string {
   return result.status === "refused"
     ? TURNSTILE_REFUSED
-    : `Too many requests from here. Try again at ${clockLabel(result.until, deviceTimeZone())}.`;
+    : `Too many requests from here. You can send another at ${clockLabel(result.until, deviceTimeZone())}.`;
 }
 
 /**
@@ -67,9 +72,43 @@ function Receipt({ email }: Readonly<{ email: string }>): JSX.Element {
 }
 
 /**
- * Au5 · Request access (task 126, ACC-5; round 26 #20): an email and an
- * optional note, Turnstile directly above the primary (round 27 #12), and
- * the one receipt.
+ * Round 28 #9's back link: the pack's `back` glyph and the destination's
+ * name, above the heading — never "‹".
+ */
+function BackToSignUp(): JSX.Element {
+  return (
+    <Link
+      to="/auth/signup"
+      className="target inline-flex items-center gap-1 self-start font-semibold text-quiet no-underline"
+    >
+      <Icon name="back" size={20} />
+      Create an account
+    </Link>
+  );
+}
+
+/**
+ * The note's counter, from 120 of its 140 characters (round 28 #9): a
+ * count, so mono, and quiet until it matters. Polite, so a screen reader
+ * hears it once typing pauses rather than on every key.
+ */
+export function NoteCounter({
+  length,
+}: Readonly<{ length: number }>): JSX.Element | undefined {
+  if (length < ACCESS_NOTE_COUNT_FROM) return undefined;
+  return (
+    <span aria-live="polite" className="self-end">
+      <Mono step="xs" className="text-muted">
+        {`${String(length)} / ${String(ACCESS_NOTE_MAX)}`}
+      </Mono>
+    </span>
+  );
+}
+
+/**
+ * Au5 · Request access (task 126, ACC-5; round 26 #20, round 28 #9): an
+ * email and a one-line optional note, Turnstile directly above the
+ * primary (round 27 #12), and the one receipt.
  */
 export function RequestAccess({
   siteKey,
@@ -90,12 +129,15 @@ export function RequestAccess({
     action: (values) =>
       request({ data: { ...values, turnstileToken: turnstile.take() } }),
     successMessage: "Request sent.",
-    labels: { email: "Email", note: "A note · optional" },
+    labels: { email: "Email", note: "Note · optional" },
     onSuccess: setOutcome,
   });
 
   return (
-    <SignedOutPanel heading="Request access">
+    <SignedOutPanel
+      heading="Request access"
+      notice={outcome?.status === "received" ? undefined : <BackToSignUp />}
+    >
       {outcome?.status === "received" ? (
         <Receipt email={email} />
       ) : (
@@ -120,15 +162,18 @@ export function RequestAccess({
             field={form.field}
             error={form.fieldErrors.email}
           />
-          <TextField
-            name="note"
-            label="A note · optional"
-            hint="How you run, or who sent you. Up to 280 characters."
-            value={note}
-            onChange={setNote}
-            field={form.field}
-            error={form.fieldErrors.note}
-          />
+          <div className="flex flex-col gap-2">
+            <TextField
+              name="note"
+              label="Note · optional"
+              hint="Where you run, or who sent you. One line."
+              value={note}
+              onChange={setNote}
+              field={form.field}
+              error={form.fieldErrors.note}
+            />
+            <NoteCounter length={note.length} />
+          </div>
           {outcome === undefined ? undefined : (
             <FailureBand
               kicker="Not sent"
@@ -150,19 +195,10 @@ export function RequestAccess({
             onToken={turnstile.onToken}
           />
           <SubmitButton
-            label="Request access"
+            label="Send request"
             pendingLabel="Sending"
             pending={form.pending}
           />
-          <p className="m-0 pt-4 text-body text-quiet">
-            <Link
-              data-target="inline"
-              to="/auth/signup"
-              className={INLINE_LINK_CLASS}
-            >
-              ‹ Create an account
-            </Link>
-          </p>
         </FormElement>
       )}
     </SignedOutPanel>

@@ -88,10 +88,10 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   ).toBeVisible();
   await page.getByLabel("Email").fill(email);
   await page
-    .getByLabel("A note · optional")
+    .getByLabel("Note · optional")
     .fill("Winter runner. Maya said to ask.");
   await turnstileAnswered(page);
-  await page.getByRole("button", { name: "Request access" }).click();
+  await page.getByRole("button", { name: "Send request" }).click();
   await scene(page, "One receipt, for a new, repeat or registered address");
   await expect(
     page.getByRole("heading", { name: "You're on the list" }),

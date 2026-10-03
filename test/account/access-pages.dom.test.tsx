@@ -101,16 +101,39 @@ describe("Au5 · Request access", () => {
       ),
     ).toBeVisible();
     expect(screen.getByLabelText("Email")).toHaveAttribute("type", "email");
-    expect(screen.getByLabelText("A note · optional")).toBeVisible();
+    expect(screen.getByLabelText("Note · optional")).toBeVisible();
     expect(
-      screen.getByText("How you run, or who sent you. Up to 280 characters."),
+      screen.getByText("Where you run, or who sent you. One line."),
     ).toBeVisible();
-    const bottomLink = screen.getByRole("link", {
-      name: "‹ Create an account",
-    });
-    expect(bottomLink).toHaveAttribute("href", "/auth/signup");
-    // The board's inline link: ink, bold, underlined — never pink.
-    expect(bottomLink).toHaveClass("font-bold", "text-ink", "underline");
+    // Round 28 #9: the back link is the pack's glyph and the destination's
+    // name, above the heading, and no "‹" anywhere.
+    const back = screen.getByRole("link", { name: "Create an account" });
+    expect(back).toHaveAttribute("href", "/auth/signup");
+    expect(back.querySelector("svg")).not.toBeNull();
+    expect(
+      back.compareDocumentPosition(screen.getByRole("heading", { level: 1 })),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(document.body).not.toHaveTextContent("‹");
+    expect(
+      screen.getByRole("button", { name: "Send request" }),
+    ).toBeInTheDocument();
+  });
+
+  it("counts the note's characters from 120 of its 140 (round 28 #9)", async () => {
+    await renderWithRouter(
+      <RequestAccess siteKey={undefined} request={vi.fn<RequestFn>()} />,
+    );
+    const note = screen.getByLabelText("Note · optional");
+    fireEvent.change(note, { target: { value: "n".repeat(119) } });
+    expect(screen.queryByText(/\/ 140$/u)).toBeNull();
+    fireEvent.change(note, { target: { value: "n".repeat(120) } });
+    const counter = screen.getByText("120 / 140");
+    expect(counter.closest("[aria-live]")).toHaveAttribute(
+      "aria-live",
+      "polite",
+    );
+    fireEvent.change(note, { target: { value: "n".repeat(141) } });
+    expect(screen.getByText("141 / 140")).toBeVisible();
   });
 
   it("sends the request with Turnstile's answer and shows the one receipt", async () => {
@@ -121,8 +144,8 @@ describe("Au5 · Request access", () => {
     await renderWithRouter(<RequestAccess siteKey="site" request={request} />);
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("Email"), "sam@example.com");
-    await user.type(screen.getByLabelText("A note · optional"), "Duluth.");
-    await user.click(screen.getByRole("button", { name: "Request access" }));
+    await user.type(screen.getByLabelText("Note · optional"), "Duluth.");
+    await user.click(screen.getByRole("button", { name: "Send request" }));
     const receipt = await waitFor(() => {
       const found = part("receipt");
       expect(found).not.toBeNull();
@@ -163,13 +186,13 @@ describe("Au5 · Request access", () => {
     );
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("Email"), "nope");
-    fireEvent.change(screen.getByLabelText("A note · optional"), {
-      target: { value: "n".repeat(281) },
+    fireEvent.change(screen.getByLabelText("Note · optional"), {
+      target: { value: "n".repeat(141) },
     });
-    await user.click(screen.getByRole("button", { name: "Request access" }));
+    await user.click(screen.getByRole("button", { name: "Send request" }));
     expect(await screen.findByRole("button", { name: /^Email/ })).toBeVisible();
     expect(
-      screen.getByRole("button", { name: /A note · optional/ }),
+      screen.getByRole("button", { name: /Note · optional/ }),
     ).toBeVisible();
     expect(request).not.toHaveBeenCalled();
   });
@@ -186,7 +209,7 @@ describe("Au5 · Request access", () => {
       target: { value: "sam@example.com" },
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Request access" }));
+      fireEvent.click(screen.getByRole("button", { name: "Send request" }));
       await vi.advanceTimersByTimeAsync(0);
     });
     expect(screen.getByRole("status")).toHaveTextContent("Request sent.");
@@ -206,7 +229,7 @@ describe("Au5 · Request access", () => {
     );
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("Email"), "sam@example.com");
-    await user.click(screen.getByRole("button", { name: "Request access" }));
+    await user.click(screen.getByRole("button", { name: "Send request" }));
     const band = await waitFor(() => {
       const found = part("failure-band");
       expect(found).not.toBeNull();
@@ -231,17 +254,34 @@ describe("Au5 · Request access", () => {
     );
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("Email"), "sam");
-    await user.click(screen.getByRole("button", { name: "Request access" }));
+    await user.click(screen.getByRole("button", { name: "Send request" }));
     expect(
       await screen.findByText("That does not look like an email address."),
     ).toBeVisible();
     expect(request).not.toHaveBeenCalled();
   });
 
+  it("leaves the back link off the receipt", async () => {
+    const request = vi
+      .fn<RequestFn>()
+      .mockResolvedValue({ status: "received" });
+    await renderWithRouter(
+      <RequestAccess siteKey={undefined} request={request} />,
+    );
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Email"), "sam@example.com");
+    await user.click(screen.getByRole("button", { name: "Send request" }));
+    await waitFor(() => {
+      expect(part("receipt")).not.toBeNull();
+    });
+    // The receipt's own "Create an account" is the only one.
+    expect(screen.getAllByRole("link", { name: "Create an account" })).toHaveLength(1);
+  });
+
   it("names the limit's time, and Turnstile's sentence for its refusal", () => {
     expect(refusalMessage({ status: "refused" })).toBe(TURNSTILE_REFUSED);
     expect(refusalMessage({ status: "limited", until: 0 })).toMatch(
-      /^Too many requests from here\. Try again at .+\.$/u,
+      /^Too many requests from here\. You can send another at .+\.$/u,
     );
   });
 });

@@ -98,7 +98,7 @@ describe("signUpSchemaFor (the invite-only flag)", () => {
     const withCode = signUpSchemaFor(true);
     expect(
       messagesFor(withCode, { ...signUp, inviteCode: "" }, "inviteCode"),
-    ).toStrictEqual(["Enter your invite code."]);
+    ).toStrictEqual(["Enter the code from your invite."]);
     expect(
       messagesFor(
         withCode,
@@ -106,7 +106,7 @@ describe("signUpSchemaFor (the invite-only flag)", () => {
         "inviteCode",
       ),
     ).toStrictEqual([
-      "That code doesn't work. Check it against the email or message it came in.",
+      "That code doesn't work. Check it, or request access.",
     ]);
     expect(
       withCode.parse({ ...signUp, inviteCode: " dial-7k3p " }),
@@ -131,21 +131,21 @@ describe("signUpSchemaFor (the invite-only flag)", () => {
 });
 
 describe("requestAccessSchema (Au5)", () => {
-  it("takes an address and a note of up to 280 characters", () => {
+  it("takes an address and a note of up to 140 characters (round 28 #9)", () => {
     expect(
       requestAccessSchema.parse({ email: "sam@example.com", note: "" }),
     ).toStrictEqual({ email: "sam@example.com", note: "" });
     expect(
       messagesFor(
         requestAccessSchema,
-        { email: "sam@example.com", note: "a".repeat(281) },
+        { email: "sam@example.com", note: "a".repeat(141) },
         "note",
       ),
-    ).toStrictEqual(["Keep the note under 280 characters."]);
+    ).toStrictEqual(["Keep the note under 140 characters."]);
     expect(
       requestAccessSchema.safeParse({
         email: "sam@example.com",
-        note: "a".repeat(280),
+        note: "a".repeat(140),
       }).success,
     ).toBe(true);
     expect(

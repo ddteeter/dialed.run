@@ -6,9 +6,9 @@ import {
 import { forgetSession } from "../../lib/browser/session-memo";
 import {
   AUTH_COPY,
-  AUTH_KICKER,
   AccessRefused,
   AuthRejected,
+  GOOGLE_REFUSALS,
   turnstileRefused,
 } from "./auth-copy";
 import { BREACHED_CODE } from "./breached-password";
@@ -316,13 +316,14 @@ export async function googleConsentUrl(
 
 /**
  * Why the Google attempt was refused, as its band says it: the way in's
- * refusals in their own words (the code's under Au2's kicker, Turnstile's
- * as `NOT SENT`), and anything else as the status it came with.
+ * refusals in their own words (the code's as round 28 #9's `NOT CREATED`,
+ * Turnstile's as `NOT SENT`), and anything else as the status it came
+ * with.
  */
 function googleRefusal(error: ClientError): Error {
   if (error.code === ACCESS_CODES.turnstile) return turnstileRefused();
-  const refusal = SIGN_UP_REFUSALS.get(error.code);
-  return refusal?.field === "inviteCode"
-    ? new AccessRefused(AUTH_KICKER, refusal.message)
-    : new AuthRejected(error.status);
+  const refusal = GOOGLE_REFUSALS.get(error.code);
+  return refusal === undefined
+    ? new AuthRejected(error.status)
+    : new AccessRefused(refusal);
 }
