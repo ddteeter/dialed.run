@@ -89,22 +89,24 @@ export function headingId(title: string): string {
 
 /**
  * GitHub's ids for a whole text: a heading whose id is already taken gets
- * `-1`, then `-2`, and so on, skipping any suffix another heading already
- * holds. Every heading counts, the title and `###` included, as GitHub
- * counts them — though only a `##` section shows its id here.
+ * the first of `-1`, `-2`, … that no heading holds yet. Every heading
+ * counts, the title and `###` included, as GitHub counts them — though
+ * only a `##` section shows its id here.
+ *
+ * GitHub's slugger also remembers the last suffix each id reached, and
+ * starts from there; ids are never given back, so every suffix below that
+ * one is taken and starting from 1 lands on the same id.
  */
 function headingIds(): (title: string) => string {
   const taken = new Set<string>();
-  const suffixes = new Map<string, number>();
   return (title) => {
     const base = headingId(title);
-    let suffix = suffixes.get(base) ?? 0;
     let id = base;
+    let suffix = 0;
     while (taken.has(id)) {
       suffix += 1;
       id = `${base}-${String(suffix)}`;
     }
-    suffixes.set(base, suffix);
     taken.add(id);
     return id;
   };

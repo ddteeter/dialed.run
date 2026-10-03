@@ -47,10 +47,30 @@ async function refused(): Promise<never> {
   });
 }
 
+/**
+A server function failing for a reason that is not the terms.
+*/
+async function broke(): Promise<never> {
+  await Promise.resolve();
+  throw new Error("D1 down");
+}
+
 const RUNNER = "01RUNNER";
 
+/**
+ * What the pages below call: the terms refusal unless a test swaps it.
+ */
+const calls: { action: () => Promise<never> } = { action: refused };
+
+beforeEach(() => {
+  calls.action = refused;
+});
+
 function Saver() {
-  const save = useControlAction<[]>({ action: refused, kicker: "Not saved" });
+  const save = useControlAction<[]>({
+    action: () => calls.action(),
+    kicker: "Not saved",
+  });
   return (
     <>
       <FormStatus>{save.status}</FormStatus>
@@ -72,7 +92,7 @@ const nameSchema = z.object({ name: z.string() });
 function NameForm() {
   const form = useFormSubmit({
     schema: nameSchema,
-    action: refused,
+    action: () => calls.action(),
     successMessage: "Saved.",
   });
   return (
@@ -206,6 +226,35 @@ describe("a refusal for being behind on the terms (D-96)", () => {
       expect(router.state.location.pathname).toBe("/account/terms");
     });
     expect(screen.queryByRole("heading", { name: "Feed" })).toBeNull();
+  });
+
+  it("leaves any other failure to the control's band, even with the answer above", async () => {
+    calls.action = broke;
+    const { router } = await app(Saver);
+
+    await userEvent.setup().click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("band")).toHaveTextContent("Our end failed.");
+    });
+    expect(router.state.location.pathname).toBe("/closet");
+    expect(isRememberedForSession("has-handle")).toBe(true);
+  });
+
+  it("leaves any other failure to the form's band, even with the answer above", async () => {
+    calls.action = broke;
+    const { router } = await app(NameForm);
+
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Submit" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Nothing saved. Our end failed. Nothing changed.",
+      );
+    });
+    expect(router.state.location.pathname).toBe("/closet");
   });
 
   it("is the refusal's cause line where nothing above answers it", async () => {
