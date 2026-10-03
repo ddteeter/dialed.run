@@ -7,9 +7,11 @@ import {
 } from "@tanstack/react-router";
 import { render } from "@testing-library/react";
 import type { ReactElement } from "react";
+import { vi } from "vitest";
 import { renderToString } from "react-dom/server";
 
 import type { FeedItem } from "../../src/modules/feed/feed";
+import type { ControlGate, ControlGuard } from "../../src/ui";
 
 /**
  * The routes the feed's screens link to, stubbed, so a typed `<Link>`
@@ -91,3 +93,27 @@ export function feedItem(overrides: Partial<FeedItem> = {}): FeedItem {
 }
 
 export const MILES = { temp: "f", distance: "mi" } as const;
+
+/**
+ * The confirm sheet's gate, for the screens whose Useful and report wait
+ * on a confirmed address (seam 7): a stand-in for `account`'s sheet — a
+ * dialog named as the real one is, present only while open, saying which
+ * control opened it — and Not now closes it. It opens only on the
+ * server's refusal, so a screen whose server says yes never shows it.
+ */
+export const CONFIRM_FIRST: ControlGate<"useful" | "report"> = {
+  sheet: ({ open, trigger }, onClose) =>
+    open ? (
+      <div role="dialog" aria-label="Confirm your email first">
+        <p>Opened from {trigger}</p>
+        <button type="button" onClick={onClose}>
+          Not now
+        </button>
+      </div>
+    ) : undefined,
+};
+
+/**
+The guard a card or a button takes from its screen, for tests that only need one.
+*/
+export const ANY_GUARD: ControlGuard<"useful"> = { ask: vi.fn() };

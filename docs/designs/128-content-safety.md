@@ -241,9 +241,14 @@ audit row stays: it holds who, when and why, not the content.
 
 ### Not built, and not in 2b
 
-- **SAF-15, second half (seam 7):** report does not yet open 126's
-  "Confirm your email first" sheet for an unverified runner. 126's
-  `isVerified` and `ConfirmEmailSheet` are on main now.
+- **SAF-15, second half (seam 7):** built with FEED-11 (see
+  `docs/designs/129-feed.md`, "Follow-up PR: FEED-11"). `fileReport`
+  takes the verification check as a required argument, so nothing can
+  file without one; `fileReportAction` wires `account`'s `isVerified`.
+  An unconfirmed reporter is refused with `{ status: "unverified" }`
+  before anything is written, the block included. W1 opens for anyone;
+  the server's refusal opens "Confirm your email first" over it, with
+  no "Report sent." and W1 left as it was.
 - **Round 27 #31, the closet tile's photo** (4:5, full width, the hatch
   without one; "Build: 128 (ClosetGrid)"). Not a SAF item; reported.
 - **Conformance for round 26's closet frames** ships with this PR for the

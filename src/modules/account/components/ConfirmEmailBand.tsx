@@ -6,9 +6,11 @@ import { ResendLink } from "./ResendLink";
 /**
  * The one nag (round 26 #11): *"A hairline band at the top of Feed and You:
  * 'Confirm your email to share runs. Resend link'. No modal, no badge on
- * the bell, and no dismiss, because it goes once verified."* Lane 129
- * places it (FEED-11); it renders nothing once the address is confirmed,
- * so the page need not decide.
+ * the bell, and no dismiss, because it goes once verified."* Round 27 #7
+ * retired "public" from the copy, so it reads "…to share runs with other
+ * runners." Lane 129 places it (FEED-11) on Feed and You, and U1 Account
+ * carries it too; it renders nothing once the address is confirmed, so
+ * the page need not decide.
  */
 export function ConfirmEmailBand({
   account,
@@ -24,7 +26,9 @@ export function ConfirmEmailBand({
       aria-label="Confirm your email"
       className="flex flex-col gap-2 border border-hairline p-4"
     >
-      <p className="m-0 text-body">Confirm your email to share runs.</p>
+      <p className="m-0 text-body">
+        Confirm your email to share runs with other runners.
+      </p>
       <ResendLink email={account.email} resend={resend} />
     </aside>
   );

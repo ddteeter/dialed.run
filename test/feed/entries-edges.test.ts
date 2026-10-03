@@ -29,6 +29,7 @@ import {
   makeObservation,
   makeRun,
   makeUser,
+  makeVerifiedUser,
   resetTables,
   NOW,
 } from "./helpers";
@@ -728,7 +729,7 @@ describe("the verdict prompt notification", () => {
 describe("entryDetailForViewer", () => {
   it("folds the useful count and the viewer's own reaction into the card", async () => {
     const owner = await makeUser();
-    const reactor = await makeUser();
+    const reactor = await makeVerifiedUser();
     const runId = await makeRun({ userId: owner });
     const entryId = await attachKit({ userId: owner, runId, itemIds: [] });
     await setUsefulReaction(entryId, reactor, true);

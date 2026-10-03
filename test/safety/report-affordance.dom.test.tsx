@@ -14,7 +14,11 @@ const REPORT = /^Report (this entry|or block )/u;
 function renderAffordance(overrides: Partial<Props> = {}) {
   const fileReport: Props["fileReport"] = vi
     .fn<Props["fileReport"]>()
-    .mockResolvedValue({});
+    .mockResolvedValue({
+      status: "filed",
+      reporterCount: 1,
+      hiddenPendingReview: false,
+    });
   render(
     <ReportAffordance
       subject={{
@@ -26,6 +30,7 @@ function renderAffordance(overrides: Partial<Props> = {}) {
       }}
       viewerId="viewer-1"
       fileReport={fileReport}
+      guard={{ ask: vi.fn() }}
       {...overrides}
     />,
   );
@@ -257,5 +262,77 @@ describe("the sheet's close control (round 22, item 21)", () => {
       screen.getByRole("radio", { name: "It's an ad, or it's spam" }),
     ).not.toBeChecked();
     expect(screen.getByLabelText(/Anything else/u)).toHaveValue("");
+  });
+});
+
+/**
+Pick a reason and send — W1's whole path, for the tests that only need it gone.
+*/
+async function sendSpamReport(
+  user: ReturnType<typeof userEvent.setup>,
+): Promise<void> {
+  await user.click(screen.getByRole("button", { name: REPORT }));
+  await user.click(
+    screen.getByRole("radio", { name: "It's an ad, or it's spam" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Send report" }));
+}
+
+describe("report waits for a confirmed address (round 26 #11; SAF-15)", () => {
+  it("draws the link at full strength and opens W1 for anyone: the server decides", async () => {
+    // Rule 07, "not yet": the same link, never disabled — and never a
+    // refusal of the page's own, whose answer is as old as its loader.
+    const user = userEvent.setup();
+    const ask = vi.fn();
+    renderAffordance({ guard: { ask } });
+
+    const link = screen.getByRole("button", { name: "Report this entry" });
+    expect(link).not.toHaveAttribute("aria-disabled");
+    await user.click(link);
+
+    expect(isSheetOpen()).toBe(true);
+    expect(ask).not.toHaveBeenCalled();
+  });
+
+  it("files for a runner who confirmed since the page loaded, and asks them nothing", async () => {
+    const user = userEvent.setup();
+    const ask = vi.fn();
+    const { fileReport } = renderAffordance({ guard: { ask } });
+
+    await sendSpamReport(user);
+
+    expect(fileReport).toHaveBeenCalledOnce();
+    await waitFor(() => {
+      expect(isSheetOpen()).toBe(false);
+    });
+    expect(ask).not.toHaveBeenCalled();
+  });
+
+  it("opens the screen's confirm sheet on the server's refusal, and never says the report went", async () => {
+    const user = userEvent.setup();
+    const ask = vi.fn();
+    const fileReport = vi
+      .fn<Props["fileReport"]>()
+      .mockResolvedValue({ status: "unverified" });
+    renderAffordance({ fileReport, guard: { ask } });
+
+    await sendSpamReport(user);
+
+    await waitFor(() => {
+      expect(ask).toHaveBeenCalledWith("report");
+    });
+    expect(ask).toHaveBeenCalledOnce();
+    expect(fileReport).toHaveBeenCalledOnce();
+    // Nothing was filed: no "Report sent.", and W1 stays as it was, the
+    // reason still chosen, ready to send once the address is confirmed.
+    expect(screen.getByRole("status").textContent).toBe("");
+    expect(screen.queryByText("Report sent.")).toBeNull();
+    expect(isSheetOpen()).toBe(true);
+    expect(
+      screen.getByRole("radio", { name: "It's an ad, or it's spam" }),
+    ).toBeChecked();
+    expect(
+      screen.getByRole("button", { name: "Send report" }),
+    ).not.toHaveAttribute("aria-busy", "true");
   });
 });

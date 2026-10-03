@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 import { useState } from "react";
 
+import type { ControlGuard } from "../../../ui";
 import { ReportSheet, type ReportSubject } from "./ReportSheet";
 
 /**
@@ -30,11 +31,19 @@ function reportLabel(subject: ReportSubject): string {
  * may not branch (`server-functions-are-glue`) and a decision there is
  * one no test can reach. There are two: whether to offer reporting at
  * all, and whether to offer the block alongside it.
+ *
+ * **Report waits for a confirmed address** (round 26 #11; SAF-15, seam
+ * 7). The link draws at full strength and opens W1 for everyone, and the
+ * server decides: its refusal opens the screen's "Confirm your email
+ * first" through `guard`, over a W1 left as it was — never "Report sent."
+ * A page's own answer about the address is as old as its loader, so it
+ * is never what decides.
  */
 export function ReportAffordance({
   subject,
   viewerId,
   fileReport,
+  guard,
 }: Readonly<{
   subject: ReportSubject;
   /**
@@ -42,6 +51,12 @@ export function ReportAffordance({
   */
   viewerId?: string | undefined;
   fileReport: Parameters<typeof ReportSheet>[0]["fileReport"];
+  /**
+   * The screen's "Confirm your email first", which the server's refusal
+   * opens. The screen owns the sheet (one per screen, whichever control
+   * was refused); this only says it was report.
+   */
+  guard: ControlGuard<"report">;
 }>): JSX.Element | undefined {
   const [isOpen, setIsOpen] = useState(false);
   // Flips on every opening, and keys the sheet by it: every report starts
@@ -99,6 +114,9 @@ export function ReportAffordance({
         canBlock={subject.type === "profile" && subject.authorId !== undefined}
         fileReport={fileReport}
         onFiled={close}
+        onRefused={() => {
+          guard.ask("report");
+        }}
       />
     </>
   );
