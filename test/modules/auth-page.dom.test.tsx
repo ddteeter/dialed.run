@@ -758,6 +758,19 @@ describe("PasswordField", () => {
     expect(input).toHaveAttribute("type", "password");
   });
 
+  it("is a text field's height: the toggle's 44px target cancels the box's padding rather than growing it", () => {
+    // happy-dom lays nothing out, so this pins the class contract that
+    // makes the heights equal; the auth demo measures them in a browser.
+    // The box is 50 (`min-h-field`) only while nothing inside it is taller
+    // than its content area, and `target` is 44 — so the toggle's margins
+    // must cancel exactly the box's padding.
+    render(<ArrivingPassword isArrival={false} />);
+    const toggle = screen.getByRole("button", { name: "Show" });
+    const box = toggle.parentElement;
+    expect(box).toHaveClass("field-box", "min-h-field", "py-3");
+    expect(toggle).toHaveClass("target", "-my-3", "self-stretch");
+  });
+
   it("focuses when arrival is decided after it has mounted", () => {
     const { rerender } = render(<ArrivingPassword isArrival={false} />);
     expect(screen.getByLabelText("Password")).not.toHaveFocus();
