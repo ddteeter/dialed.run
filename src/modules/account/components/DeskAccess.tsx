@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
+import { monthDayLabel } from "../../../lib/dates";
 import {
   ControlFailureBand,
+  FailureBand,
   FormElement,
   FormFailureBand,
   FormStatus,
@@ -17,23 +19,32 @@ import { newInviteSchema } from "../inputs";
 import type { AccessDesk, DeskCode, DeskRequest } from "../invites";
 
 /**
- * How long Revoke's undo stays in the status line (round 26 #20: "no
- * confirm; it's undoable for 10 s").
+ * How long a revoked row keeps its Undo (round 26 #20: "no confirm; it's
+ * undoable for 10 s"; round 28 #9: on the row, with no countdown).
  */
 export const UNDO_WINDOW_MS = 10_000;
 
-const HOUR_S = 3600;
+const MINUTE_S = 60;
+const HOUR_S = 60 * MINUTE_S;
 const DAY_S = 24 * HOUR_S;
+/**
+From here an age is a date (round 28 #9: "From 30 days on they show a date").
+*/
+const DATED_FROM_S = 30 * DAY_S;
 
 /**
- * A request's age as the board draws it: `5H`, `3D` — whole hours under
- * a day, whole days after.
+ * An age as round 28 #9 draws it, in MONO.sm capitals: `NOW` under a
+ * minute, then whole minutes, hours and days (`12M`, `5H`, `3D`), and a
+ * date (`AUG 29`) from 30 days. Lowercase here; the mono step's CSS sets
+ * the capitals, so a screen reader hears "5h", not five letters.
  */
 export function ageLabel(createdAt: number, asOf: number): string {
   const seconds = Math.max(0, asOf - createdAt);
-  return seconds < DAY_S
-    ? `${String(Math.floor(seconds / HOUR_S))}h`
-    : `${String(Math.floor(seconds / DAY_S))}d`;
+  if (seconds < MINUTE_S) return "now";
+  if (seconds < HOUR_S) return `${String(Math.floor(seconds / MINUTE_S))}m`;
+  if (seconds < DAY_S) return `${String(Math.floor(seconds / HOUR_S))}h`;
+  if (seconds < DATED_FROM_S) return `${String(Math.floor(seconds / DAY_S))}d`;
+  return monthDayLabel(createdAt);
 }
 
 /**
@@ -53,6 +64,31 @@ export function codeCounts(codes: readonly DeskCode[]): string {
   return `${String(active)} active · ${String(used)} used`;
 }
 
+/**
+ * The codes in the server's order (newest first), with revoked ones at
+ * the foot — except the one whose Undo is showing, which stays where it
+ * was until its ten seconds are up (round 28 #9).
+ */
+export function orderedCodes(
+  codes: readonly DeskCode[],
+  holding: string | undefined,
+): DeskCode[] {
+  const isStaying = (code: DeskCode) => !code.isRevoked || code.id === holding;
+  return [
+    ...codes.filter((code) => isStaying(code)),
+    ...codes.filter((code) => !isStaying(code)),
+  ];
+}
+
+/**
+ * The status line over the list when a code is made (round 28 #9):
+ * "DIAL-7QX2 MADE · LINK COPIED", or just MADE when the copy failed and
+ * the row's band shows the link instead.
+ */
+export function madeLine(code: string, isCopied: boolean): string {
+  return isCopied ? `${code} made · link copied` : `${code} made`;
+}
+
 type RowAction = (input: { data: { id: string } }) => Promise<unknown>;
 
 /**
@@ -66,6 +102,38 @@ function useRowAction(onChanged: () => Promise<void>) {
       await onChanged();
     },
   });
+}
+
+/**
+ * Revoke, with its own band on its own row: `STILL ACTIVE` · "Revoke
+ * didn't go through. Try again?" (round 28 #9).
+ */
+function useRevoke(revoke: RowAction, onChanged: () => Promise<void>) {
+  return useControlAction<[string]>({
+    kicker: "Still active",
+    action: async (id) => {
+      await revoke({ data: { id } });
+      await onChanged();
+    },
+  });
+}
+
+/**
+ * The row whose Undo is showing, forgotten ten seconds after its revoke
+ * went through — never while it has failed, when its band shows instead.
+ */
+function useHold(isFailed: boolean) {
+  const [holding, setHolding] = useState<string>();
+  useEffect(() => {
+    if (holding === undefined || isFailed) return;
+    const timer = setTimeout(() => {
+      setHolding(undefined);
+    }, UNDO_WINDOW_MS);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [holding, isFailed]);
+  return [holding, setHolding] as const;
 }
 
 function RequestRow({
@@ -103,18 +171,37 @@ function RequestRow({
 }
 
 /**
- * What a code's actions cell says: its two actions while it works, and
- * why not once it does not.
+ * What a code's actions cell says: Undo while its revoke can still be
+ * taken back, its two actions while it works, and why not once it does
+ * not.
  */
 function CodeActions({
   code,
+  isHeld,
   onCopy,
   onRevoke,
+  onUndo,
 }: Readonly<{
   code: DeskCode;
+  isHeld: boolean;
   onCopy: () => void;
   onRevoke: () => void;
+  onUndo: () => void;
 }>): JSX.Element {
+  if (isHeld) {
+    // D-92: the board's "reduced weight" is opacity, which T1 forbids, so
+    // the held row is drawn from roles — REVOKED in its state colour.
+    return (
+      <span className="flex items-baseline gap-4">
+        <Mono step="xs" className="text-cold-text">
+          Revoked
+        </Mono>
+        <button type="button" className="target font-semibold underline" onClick={onUndo}>
+          Undo
+        </button>
+      </span>
+    );
+  }
   if (code.isRevoked) return <span className="text-muted">Revoked</span>;
   if (!isActive(code)) return <span className="text-muted">Used</span>;
   return (
@@ -129,34 +216,110 @@ function CodeActions({
   );
 }
 
+/**
+ * `NOT COPIED` (round 28 #9): the browser would not copy, so the link is
+ * shown selected for the operator to copy themselves. No Try again — the
+ * same press would fail the same way.
+ */
+function NotCopied({ url }: Readonly<{ url: string }>): JSX.Element {
+  return (
+    <div
+      data-part="failure-band"
+      data-state="not-copied"
+      className="flex flex-col items-start gap-3 border border-ink p-4"
+    >
+      <Mono step="xs">Not copied</Mono>
+      <span className="text-body">
+        Copying didn&apos;t work here. The link is selected: copy it yourself.
+      </span>
+      <input
+        readOnly
+        aria-label="Invite link"
+        value={url}
+        ref={(node) => {
+          node?.select();
+        }}
+        className="min-h-target w-full rounded-field border border-hairline bg-ground px-3 font-mono text-mono-sm"
+      />
+    </div>
+  );
+}
+
+/**
+What one code row shows besides the code itself.
+*/
+interface CodeRowState {
+  readonly asOf: number;
+  readonly isNew: boolean;
+  readonly isHeld: boolean;
+  readonly uncopiedLink: string | undefined;
+}
+
 function CodeRow({
   code,
+  state,
   onCopy,
   onRevoke,
+  onUndo,
+  revokeBand,
 }: Readonly<{
   code: DeskCode;
+  state: CodeRowState;
   onCopy: () => void;
   onRevoke: () => void;
+  onUndo: () => void;
+  /**
+  The revoke's failure band, when this row's revoke failed.
+  */
+  revokeBand: JSX.Element | undefined;
 }>): JSX.Element {
-  const tone = isActive(code) ? "text-ink" : "text-muted";
+  const tone = isActive(code) && !state.isHeld ? "text-ink" : "text-muted";
   return (
     <li
       data-state={isActive(code) ? undefined : "spent"}
-      className="grid grid-cols-[auto_1fr_auto_auto] items-baseline gap-4 border-b border-hairline py-4"
+      className="flex flex-col gap-3 border-b border-hairline py-4"
     >
-      <Mono step="sm" className={tone}>
-        {code.code}
-      </Mono>
-      <span className="flex flex-col gap-1">
-        <span>{code.label ?? "No label"}</span>
-        <span className="text-small text-quiet">
-          {code.usedBy.length === 0 ? "Not used yet" : code.usedBy.join(", ")}
+      <span
+        className={
+          state.isHeld
+            ? "grid grid-cols-[auto_1fr_auto_auto_auto] items-baseline gap-4 text-quiet"
+            : "grid grid-cols-[auto_1fr_auto_auto_auto] items-baseline gap-4"
+        }
+      >
+        <span className="flex items-baseline gap-2">
+          <Mono step="sm" className={tone}>
+            {code.code}
+          </Mono>
+          {state.isNew ? (
+            <Mono step="xs" className="bg-hi-viz px-1 text-accent-ink">
+              New
+            </Mono>
+          ) : undefined}
         </span>
+        <span className="flex flex-col gap-1">
+          <span>{code.label ?? "No label"}</span>
+          <span className="text-small text-quiet">
+            {code.usedBy.length === 0 ? "Not used yet" : code.usedBy.join(", ")}
+          </span>
+        </span>
+        <Mono step="sm" className="text-muted">
+          {ageLabel(code.createdAt, state.asOf)}
+        </Mono>
+        <Mono step="sm" className={tone}>
+          {`${String(code.usedBy.length)}/${String(code.maxUses)}`}
+        </Mono>
+        <CodeActions
+          code={code}
+          isHeld={state.isHeld}
+          onCopy={onCopy}
+          onRevoke={onRevoke}
+          onUndo={onUndo}
+        />
       </span>
-      <Mono step="sm" className={tone}>
-        {`${String(code.usedBy.length)}/${String(code.maxUses)}`}
-      </Mono>
-      <CodeActions code={code} onCopy={onCopy} onRevoke={onRevoke} />
+      {revokeBand}
+      {state.uncopiedLink === undefined ? undefined : (
+        <NotCopied url={state.uncopiedLink} />
+      )}
     </li>
   );
 }
@@ -228,38 +391,10 @@ function NewCodeForm({
 }
 
 /**
- * Revoke's undo, in the status line for ten seconds and then gone. The
- * revoke has already happened; Undo puts the code back.
- */
-export function UndoRevoke({
-  code,
-  onUndo,
-  onExpire,
-}: Readonly<{
-  code: DeskCode;
-  onUndo: () => void;
-  onExpire: () => void;
-}>): JSX.Element {
-  useEffect(() => {
-    const timer = setTimeout(onExpire, UNDO_WINDOW_MS);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [onExpire]);
-  return (
-    <p data-part="undo" className="m-0 flex gap-3">
-      <span>{`Revoked ${code.code}.`}</span>
-      <button type="button" className="target font-semibold underline" onClick={onUndo}>
-        Undo
-      </button>
-    </p>
-  );
-}
-
-/**
- * Desk D7 · Access (task 126, ACC-5; round 26 #20): Requests, oldest
- * first, each with Send invite and a silent Decline; and Codes, with a
- * form to make one, who used each, Copy link and Revoke with a 10 s undo.
+ * Desk D7 · Access (task 126, ACC-5; round 26 #20, round 28 #9):
+ * Requests, oldest first, each with Send invite and a silent Decline; and
+ * Codes, with a form to make one (its link copied as it is made), who used
+ * each, Copy link, and Revoke with ten seconds of Undo on the row.
  */
 export function DeskAccess({
   desk,
@@ -293,13 +428,26 @@ export function DeskAccess({
   restore: RowAction;
 }>): JSX.Element {
   const row = useRowAction(onChanged);
+  const revoking = useRevoke(revoke, onChanged);
+  const isRevokeFailed = revoking.failure !== undefined;
+  const [holding, setHolding] = useHold(isRevokeFailed);
   const [said, setSaid] = useState("");
-  const [revoked, setRevoked] = useState<DeskCode>();
-  // Made once (a state setter is stable), so the undo's ten seconds are
-  // not restarted by every render.
-  const [forgetRevoked] = useState(() => () => {
-    setRevoked(undefined);
-  });
+  const [madeStatus, setMadeStatus] = useState("");
+  // Codes made on this page load wear NEW until it reloads; codes whose
+  // copy failed show their link selected. Both by the code itself, which
+  // a new row has before the reload gives it an id.
+  const [made, setMade] = useState<readonly string[]>([]);
+  const [uncopied, setUncopied] = useState<string>();
+  const wasCopied = async (code: string): Promise<boolean> => {
+    try {
+      await copy(linkFor(code));
+      setUncopied(undefined);
+      return true;
+    } catch {
+      setUncopied(code);
+      return false;
+    }
+  };
   return (
     <div className="flex flex-col gap-10">
       <FormStatus>{said}</FormStatus>
@@ -308,16 +456,6 @@ export function DeskAccess({
         onRetry={row.retry}
         retryRef={row.retryRef}
       />
-      {revoked === undefined ? undefined : (
-        <UndoRevoke
-          code={revoked}
-          onExpire={forgetRevoked}
-          onUndo={() => {
-            setRevoked(undefined);
-            void row.run(restore, revoked.id);
-          }}
-        />
-      )}
       <section aria-labelledby="desk-requests" className="flex flex-col gap-4">
         <h1 id="desk-requests" className="m-0 font-display text-title uppercase">
           Requests
@@ -351,28 +489,49 @@ export function DeskAccess({
         <NewCodeForm
           createCode={createCode}
           onCreated={async (code) => {
-            setSaid(`Created ${code}.`);
+            setMade((codes) => [...codes, code]);
+            setMadeStatus(madeLine(code, await wasCopied(code)));
             await onChanged();
           }}
         />
+        <p role="status" data-part="status-line" className="m-0">
+          <Mono step="xs">{madeStatus}</Mono>
+        </p>
         <ul className="m-0 flex list-none flex-col p-0">
-          {desk.codes.map((code) => (
+          {orderedCodes(desk.codes, holding).map((code) => (
             <CodeRow
               key={code.id}
               code={code}
+              state={{
+                asOf,
+                isNew: made.includes(code.code),
+                isHeld: code.id === holding && !isRevokeFailed,
+                uncopiedLink:
+                  uncopied === code.code ? linkFor(code.code) : undefined,
+              }}
               onCopy={() => {
-                void copy(linkFor(code.code))
-                  .then(() => {
-                    setSaid("Link copied.");
-                  })
-                  .catch(() => {
-                    setSaid("Link not copied. Your browser refused.");
-                  });
+                void wasCopied(code.code).then((isCopied) => {
+                  setSaid(isCopied ? "Link copied." : "Link not copied.");
+                });
               }}
               onRevoke={() => {
-                setRevoked(code);
-                void row.run(revoke, code.id);
+                setHolding(code.id);
+                void revoking.run(code.id);
               }}
+              onUndo={() => {
+                setHolding(undefined);
+                void row.run(restore, code.id);
+              }}
+              revokeBand={
+                isRevokeFailed && code.id === holding ? (
+                  <FailureBand
+                    kicker="Still active"
+                    message="Revoke didn't go through. Try again?"
+                    onRetry={revoking.retry}
+                    retryRef={revoking.retryRef}
+                  />
+                ) : undefined
+              }
             />
           ))}
         </ul>

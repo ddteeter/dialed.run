@@ -22,9 +22,10 @@ import type { AccessRequestResult } from "../../src/modules/account/access";
 import {
   DeskAccess,
   UNDO_WINDOW_MS,
-  UndoRevoke,
   ageLabel,
   codeCounts,
+  madeLine,
+  orderedCodes,
 } from "../../src/modules/account/components/DeskAccess";
 import {
   RequestAccess,
@@ -340,6 +341,10 @@ function desk(overrides: Partial<Parameters<typeof DeskAccess>[0]> = {}) {
   return { props, user: userEvent.setup() };
 }
 
+function undo(): HTMLElement | null {
+  return screen.queryByRole("button", { name: "Undo" });
+}
+
 function rowOf(text: string): HTMLElement {
   const row = screen.getByText(text).closest("li");
   if (row === null) throw new Error(`no row for ${text}`);
@@ -446,33 +451,82 @@ describe("D7 · Access", () => {
     );
   });
 
-  it("says so when the browser will not copy", async () => {
+  it("shows the link selected on its row when the browser will not copy (round 28 #9)", async () => {
     const { user } = desk({ copy: () => Promise.reject(new Error("denied")) });
     await user.click(
       within(rowOf("DIAL-TR8K")).getByRole("button", { name: "Copy link" }),
     );
     await waitFor(() => {
       expect(screen.getAllByRole("status")[0]).toHaveTextContent(
-        "Link not copied. Your browser refused.",
+        "Link not copied.",
       );
     });
+    const band = within(rowOf("DIAL-TR8K")).getByText(/^Copying/u).closest(
+      "[data-part='failure-band']",
+    );
+    expect(band).toHaveTextContent(
+      "Not copiedCopying didn't work here. The link is selected: copy it yourself.",
+    );
+    const link = within(rowOf("DIAL-TR8K")).getByRole("textbox", {
+      name: "Invite link",
+    });
+    expect(link).toHaveValue("https://dialed.run/join?code=DIAL-TR8K");
+    expect(link).toHaveAttribute("readonly");
+    if (!(link instanceof HTMLInputElement)) throw new Error("not an input");
+    expect(link.selectionStart).toBe(0);
+    expect(link.selectionEnd).toBe(link.value.length);
+    // No Try again: the same press would fail the same way.
+    expect(
+      within(rowOf("DIAL-TR8K")).queryByRole("button", { name: "Try again" }),
+    ).toBeNull();
+    // Only that row, and gone once a copy works.
+    expect(screen.getAllByRole("textbox", { name: "Invite link" })).toHaveLength(1);
   });
 
-  it("revokes at once, with an undo for ten seconds that puts the code back", async () => {
+  it("forgets the selected link once a copy works", async () => {
+    const copy = vi
+      .fn<(text: string) => Promise<void>>()
+      .mockRejectedValueOnce(new Error("denied"))
+      .mockResolvedValueOnce();
+    const { user } = desk({ copy });
+    const copyButton = within(rowOf("DIAL-TR8K")).getByRole("button", {
+      name: "Copy link",
+    });
+    await user.click(copyButton);
+    await screen.findByRole("textbox", { name: "Invite link" });
+    await user.click(copyButton);
+    await waitFor(() => {
+      expect(screen.queryByRole("textbox", { name: "Invite link" })).toBeNull();
+    });
+    expect(screen.getAllByRole("status")[0]).toHaveTextContent("Link copied.");
+  });
+
+  it("revokes at once, the row staying put with REVOKED and Undo, which puts the code back (round 28 #9)", async () => {
     const { props, user } = desk();
     await user.click(
       within(rowOf("DIAL-TR8K")).getByRole("button", { name: "Revoke" }),
     );
     expect(props.revoke).toHaveBeenCalledWith({ data: { id: "c1" } });
-    expect(part("undo")).toHaveTextContent("Revoked DIAL-TR8K.");
-    await user.click(screen.getByRole("button", { name: "Undo" }));
+    const held = within(rowOf("DIAL-TR8K"));
+    // Reduced weight from T1 roles, never opacity (D-92).
+    expect(held.getByText("Revoked")).toHaveClass("text-cold-text");
+    expect(held.getByText("DIAL-TR8K")).toHaveClass("text-muted");
+    expect(held.getByText("DIAL-TR8K").closest(".grid")).toHaveClass(
+      "text-quiet",
+    );
+    expect(held.queryByRole("button", { name: "Copy link" })).toBeNull();
+    // No countdown digits anywhere on the row.
+    expect(rowOf("DIAL-TR8K")).not.toHaveTextContent(/\ds\b/u);
+    await user.click(held.getByRole("button", { name: "Undo" }));
     await waitFor(() => {
       expect(props.restore).toHaveBeenCalledWith({ data: { id: "c1" } });
     });
-    expect(part("undo")).toBeNull();
+    expect(
+      within(rowOf("DIAL-TR8K")).queryByRole("button", { name: "Undo" }),
+    ).toBeNull();
   });
 
-  it("drops the undo after ten seconds, and not before", async () => {
+  it("drops the Undo after ten seconds, and not before", async () => {
     vi.useFakeTimers();
     desk();
     act(() => {
@@ -480,31 +534,50 @@ describe("D7 · Access", () => {
         .getByRole("button", { name: "Revoke" })
         .click();
     });
-    expect(part("undo")).not.toBeNull();
     await act(async () => {
       await vi.advanceTimersByTimeAsync(UNDO_WINDOW_MS - 1);
     });
-    expect(part("undo")).not.toBeNull();
+    expect(undo()).not.toBeNull();
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1);
     });
-    expect(part("undo")).toBeNull();
+    expect(undo()).toBeNull();
     expect(UNDO_WINDOW_MS).toBe(10_000);
   });
 
-  it("restarts the timer against the newest onExpire when it changes, and clears the old one", () => {
+  it("says STILL ACTIVE on the row when a revoke fails, keeps the code live, and retries it", async () => {
     vi.useFakeTimers();
-    const first = vi.fn();
-    const second = vi.fn();
-    const { rerender } = render(
-      <UndoRevoke code={code()} onUndo={vi.fn()} onExpire={first} />,
-    );
-    rerender(<UndoRevoke code={code()} onUndo={vi.fn()} onExpire={second} />);
-    act(() => {
-      vi.advanceTimersByTime(UNDO_WINDOW_MS);
+    const revoke = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("down"))
+      .mockResolvedValueOnce(undefined);
+    desk({ revoke });
+    await act(async () => {
+      within(rowOf("DIAL-TR8K"))
+        .getByRole("button", { name: "Revoke" })
+        .click();
+      await vi.advanceTimersByTimeAsync(0);
     });
-    expect(first).not.toHaveBeenCalled();
-    expect(second).toHaveBeenCalledTimes(1);
+    const band = within(rowOf("DIAL-TR8K")).getByText("Still active").closest(
+      "[data-part='failure-band']",
+    );
+    expect(band).toHaveTextContent("Revoke didn't go through. Try again?");
+    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+    // A failed revoke's band is not timed away with the Undo's ten seconds.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(UNDO_WINDOW_MS);
+    });
+    expect(within(rowOf("DIAL-TR8K")).getByText("Still active")).toBeVisible();
+    await act(async () => {
+      within(rowOf("DIAL-TR8K"))
+        .getByRole("button", { name: "Try again" })
+        .click();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(revoke).toHaveBeenCalledTimes(2);
+    expect(revoke).toHaveBeenLastCalledWith({ data: { id: "c1" } });
+    expect(within(rowOf("DIAL-TR8K")).queryByText("Still active")).toBeNull();
+    expect(screen.getByRole("button", { name: "Undo" })).toBeVisible();
   });
 
   it("creates a code with a label and uses, once per key, and says which", async () => {
@@ -515,11 +588,16 @@ describe("D7 · Access", () => {
     await user.clear(screen.getByLabelText("Uses"));
     await user.type(screen.getByLabelText("Uses"), "3");
     await user.click(screen.getByRole("button", { name: "Create code" }));
+    // Made and copied at once, said over the list (round 28 #9).
     await waitFor(() => {
-      expect(screen.getAllByRole("status")[0]).toHaveTextContent(
-        "Created DIAL-NEW2.",
+      expect(part("status-line")).toHaveTextContent(
+        "DIAL-NEW2 made · link copied",
       );
     });
+    expect(part("status-line")).toHaveAttribute("role", "status");
+    expect(props.copy).toHaveBeenCalledWith(
+      "https://dialed.run/join?code=DIAL-NEW2",
+    );
     // The form's own status region, distinct from the desk-wide one above.
     await waitFor(() => {
       expect(screen.getAllByRole("status")[1]).toHaveTextContent(
@@ -543,6 +621,33 @@ describe("D7 · Access", () => {
       return arg.data.idempotencyKey;
     });
     expect(idempotencyKeys[0]).not.toBe(idempotencyKeys[1]);
+  });
+
+  it("tags a code made on this page NEW, dates every code, and shows the link when the copy fails", async () => {
+    const fresh = code({
+      id: "c9",
+      code: "DIAL-NEW2",
+      createdAt: 3 * 24 * 3600 - 30,
+      usedBy: [],
+    });
+    const { user } = desk({
+      desk: { ...DESK, codes: [fresh, ...DESK.codes] },
+      copy: () => Promise.reject(new Error("denied")),
+    });
+    expect(within(rowOf("DIAL-NEW2")).queryByText("New")).toBeNull();
+    expect(within(rowOf("DIAL-NEW2")).getByText("now")).toBeVisible();
+    expect(within(rowOf("DIAL-TR8K")).getByText("3d")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Create code" }));
+    await waitFor(() => {
+      expect(part("status-line")).toHaveTextContent("DIAL-NEW2 made");
+    });
+    expect(part("status-line")).not.toHaveTextContent("link copied");
+    const row = within(rowOf("DIAL-NEW2"));
+    expect(row.getByText("New")).toHaveClass("bg-hi-viz", "text-accent-ink");
+    expect(row.getByRole("textbox", { name: "Invite link" })).toHaveValue(
+      "https://dialed.run/join?code=DIAL-NEW2",
+    );
+    expect(within(rowOf("DIAL-TR8K")).queryByText("New")).toBeNull();
   });
 
   it("names both fields by their labels in the summary when both are wrong", async () => {
@@ -573,12 +678,37 @@ describe("D7 · Access", () => {
 });
 
 describe("D7's labels", () => {
-  it("draws an age in hours under a day and days after", () => {
-    expect(ageLabel(0, 3599)).toBe("0h");
-    expect(ageLabel(0, 3600 * 23)).toBe("23h");
+  it("draws an age as round 28 #9 does: now, minutes, hours, days, then a date", () => {
+    expect(ageLabel(0, 0)).toBe("now");
+    expect(ageLabel(0, 59)).toBe("now");
+    expect(ageLabel(100, 0)).toBe("now");
+    expect(ageLabel(0, 60)).toBe("1m");
+    expect(ageLabel(0, 3599)).toBe("59m");
+    expect(ageLabel(0, 3600)).toBe("1h");
     expect(ageLabel(0, 3600 * 24 - 1)).toBe("23h");
     expect(ageLabel(0, 3600 * 24)).toBe("1d");
-    expect(ageLabel(100, 0)).toBe("0h");
+    const DAY = 3600 * 24;
+    expect(ageLabel(0, DAY * 30 - 1)).toBe("29d");
+    // 2026-08-29, thirty days before the asOf: a date, in UTC.
+    const aug29 = Math.floor(Date.UTC(2026, 7, 29, 12) / 1000);
+    expect(ageLabel(aug29, aug29 + DAY * 30)).toBe("Aug 29");
+  });
+
+  it("keeps revoked codes at the foot, except the one whose Undo is showing", () => {
+    const fresh = code({ id: "a" });
+    const revoked = code({ id: "b", isRevoked: true });
+    const later = code({ id: "c" });
+    expect(
+      orderedCodes([fresh, revoked, later], undefined).map((c) => c.id),
+    ).toStrictEqual(["a", "c", "b"]);
+    expect(
+      orderedCodes([fresh, revoked, later], "b").map((c) => c.id),
+    ).toStrictEqual(["a", "b", "c"]);
+  });
+
+  it("says a made code, and whether its link was copied", () => {
+    expect(madeLine("DIAL-7QX2", true)).toBe("DIAL-7QX2 made · link copied");
+    expect(madeLine("DIAL-7QX2", false)).toBe("DIAL-7QX2 made");
   });
 
   it("counts a code active while it has a use left and is not revoked", () => {
