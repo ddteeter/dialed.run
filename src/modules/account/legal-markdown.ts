@@ -76,14 +76,38 @@ export interface LegalDoc {
 /**
  * A heading's id, the way GitHub makes one, so an in-page link written
  * against the rendered file (`[Your choices](#your-choices)`) lands here
- * too.
+ * too: lowercase, punctuation but `-` and `_` dropped, and **each** space a
+ * hyphen — `Opt-in  twice` is `opt-in--twice`, as GitHub has it.
  */
 export function headingId(title: string): string {
   return title
     .toLowerCase()
-    .replaceAll(/[^\p{L}\p{N}\s-]/gu, "")
+    .replaceAll(/[^\p{L}\p{N}\s_-]/gu, "")
     .trim()
-    .replaceAll(/\s+/gu, "-");
+    .replaceAll(/\s/gu, "-");
+}
+
+/**
+ * GitHub's ids for a whole text: a heading whose id is already taken gets
+ * `-1`, then `-2`, and so on, skipping any suffix another heading already
+ * holds. Every heading counts, the title and `###` included, as GitHub
+ * counts them — though only a `##` section shows its id here.
+ */
+function headingIds(): (title: string) => string {
+  const taken = new Set<string>();
+  const suffixes = new Map<string, number>();
+  return (title) => {
+    const base = headingId(title);
+    let suffix = suffixes.get(base) ?? 0;
+    let id = base;
+    while (taken.has(id)) {
+      suffix += 1;
+      id = `${base}-${String(suffix)}`;
+    }
+    suffixes.set(base, suffix);
+    taken.add(id);
+    return id;
+  };
 }
 
 /**
@@ -166,14 +190,17 @@ interface Title {
 /**
  * One top-level node as a block, or the title.
  */
-function blockOf(node: RootContent): Block | Title {
+function blockOf(
+  node: RootContent,
+  idOf: (title: string) => string,
+): Block | Title {
   switch (node.type) {
     case "heading": {
       const inlines = inlinesOf(node.children);
+      // Taken by every heading, in order, so the ids match GitHub's.
+      const id = idOf(plainText(inlines));
       if (node.depth === 1) return { kind: "title", inlines };
-      if (node.depth === 2) {
-        return { kind: "section", id: headingId(plainText(inlines)), inlines };
-      }
+      if (node.depth === 2) return { kind: "section", id, inlines };
       if (node.depth === 3) return { kind: "subheading", inlines };
       return unsupported(node);
     }
@@ -217,8 +244,9 @@ export function parseLegalDoc(text: string): LegalDoc {
   });
   let title: string | undefined;
   const blocks: Block[] = [];
+  const idOf = headingIds();
   for (const node of tree.children) {
-    const block = blockOf(node);
+    const block = blockOf(node, idOf);
     if (block.kind !== "title") {
       blocks.push(block);
     } else if (title === undefined) {

@@ -743,9 +743,13 @@ WHILE WE CHECK`), which offer no fix and are a different case? Either
 
 41. **The terms prompt, and what task 126 PR A built beside a drawing
     (ACC-6, ACC-13; round 28 PR A).** Built from existing primitives.
-    - **The terms prompt (`/account/terms`) is undrawn.** A signed-in
-      runner whose latest acceptance is below the current terms sees it
-      before any page, as a leaving runner sees "Keep your account?". Built
+    - **The terms prompt (`/account/terms`) is undrawn.** Once the terms
+      are published (D-93; nothing is asked until then), a signed-in
+      runner whose latest acceptance is below the current version sees it
+      before any page, as a leaving runner sees "Keep your account?" — and
+      so does a tab left open across the change, whose next refused call
+      opens it with no band and no new copy, returning the runner where
+      they were after Accept (D-96). Built
       as that page is: the signed-out panel, a `MONO.xs` notice "Terms
       updated" in `cold-text`, the heading "Accept the terms", "The Terms
       have changed. Read them, then accept to carry on." (Terms links
@@ -765,6 +769,11 @@ ACCEPTED`, `STILL LOGGED IN`. If the terms change again while the
     - **The email footer's Terms and Copyright** read "Terms" and
       "Copyright", after "Privacy policy" (round 27 #12's order; no email
       board draws the three together). **The ask:** confirm the labels.
+    - **The export ZIP holds `terms.csv`** (D-95), beyond round 27 #13's
+      list and D-83's: every version of the terms the runner accepted,
+      with when (`version`, `accepted_at`), named in the README like every
+      other file. **The ask:** add it to the board's list, as D-83's two
+      were.
 
 ## Answered in round 28 (imported 2026-09-30)
 

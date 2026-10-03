@@ -365,13 +365,13 @@ async function seedAccount(): Promise<Seeded> {
   for (const key of [looseUploadKey, runUploadKey]) {
     await env.IMPORTS.put(key, "bytes");
   }
-  // A data export (ACC-10): one ready, with its ZIP, and one ZIP a build
-  // staged with no row to name it — the purge lists the prefix for both.
   // The terms they accepted (ACC-6), two versions of them.
   await core.insert(termsAcceptances).values([
     { userId, version: 1, acceptedAt: NOW - 120 },
     { userId, version: 2, acceptedAt: NOW - 60 },
   ]);
+  // A data export (ACC-10): one ready, with its ZIP, and one ZIP a build
+  // staged with no row to name it — the purge lists the prefix for both.
   const exportId = newUlid();
   await core.insert(dataExports).values({
     id: exportId,

@@ -97,8 +97,9 @@ export async function signInAsOperator(page: Page): Promise<void> {
         .update(userProfiles)
         .set({ userId: OPERATOR_ID })
         .where(eq(userProfiles.userId, from)),
-      // The terms the sign-up accepted (ACC-6) go with the account, or the
-      // root's gate would send the operator to the terms prompt.
+      // The terms the sign-up accepted (ACC-6) go with the account, or —
+      // once the terms are published (D-93) — the root's gate would send
+      // the operator to the terms prompt.
       core
         .update(termsAcceptances)
         .set({ userId: OPERATOR_ID })

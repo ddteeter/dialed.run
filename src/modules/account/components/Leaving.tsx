@@ -1,11 +1,10 @@
-import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import type { JSX } from "react";
 
 import { Mono, useControlAction } from "../../../ui";
 import { SignedOutPanel } from "../../../ui/SignedOutPanel";
 import type { KeepResult, LeavingView } from "../deletion";
-import { ActionCard, useLogOutAction } from "./ActionCard";
+import { ActionCard, LogInOrOpen, useLogOutAction } from "./ActionCard";
 
 /**
  * Round 27 #14's two deletion pages, in the signed-out panel: "Delete
@@ -50,22 +49,7 @@ export function Leaving({
             You&apos;re signed out on every device. Changed your mind? Log in
             before then and choose to keep it.
           </p>
-          <div className="flex flex-wrap items-center gap-4">
-            {/* ActionCard's two pill styles, as links: written out here
-                because a class list is read where the control is. */}
-            <Link
-              to="/auth/login"
-              className="target inline-flex cursor-pointer items-center justify-center rounded-pill border-none bg-ink px-5 font-bold text-ground no-underline"
-            >
-              Log in
-            </Link>
-            <Link
-              to="/"
-              className="target inline-flex cursor-pointer items-center justify-center rounded-pill border border-hairline bg-transparent px-5 font-semibold text-ink no-underline"
-            >
-              Open dialed.run
-            </Link>
-          </div>
+          <LogInOrOpen />
         </div>
       </SignedOutPanel>
     );

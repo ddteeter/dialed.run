@@ -873,22 +873,45 @@ acceptance is below the current version (or who has none) is behind:
   not shown.
 - **The server refuses too** (the leaving refusal's shape, the one gate):
   `requireUserId` throws `TermsNotAcceptedError` (`TERMS_NOT_ACCEPTED`)
-  for a runner who is behind **on a mutation** — any server function not
-  declared `GET`. Reads go through, so the Settings › Account page a
-  runner deletes from still loads, and a tab open across a bump keeps
-  rendering until its next save. Exempt by construction: Accept
-  (`requireUserIdBeforeTerms`), Delete account (`requireSignedInSince` and
-  `checkCurrentPassword` check leaving only), Keep, and sign-out, which is
-  Better Auth's and never passed through `requireUserId`.
-- **The browser's has-handle memo** skips the root's question for the rest
-  of a page load, and is only for facts that cannot go stale; a bump can.
-  So `has-handle` is remembered only when the terms are current, and a
-  bump during an open tab is caught by the server refusal and by the next
-  full load. Stated, not fixed: catching it mid-tab means a round trip on
-  every navigation, which the memo exists to save.
+  for a runner who is behind, **whatever the server function and whatever
+  the request's method** (review of PR #140). The first build let a `GET`
+  through as a read, but TanStack's default method is `GET`, and during a
+  server render the request is the page's `GET`, so a `POST` function a
+  loader called (`completeOnboardingFn`, `completeStravaConnectFn`)
+  skipped the gate. So the gate is by function: the whole decision is
+  `auth/terms-gate.ts`' `agreedUserId`, which takes the session and never
+  the method, and reads the leaving claim and the latest acceptance in one
+  `db.batch()`. Exempt by calling another gate, named and held both ways
+  by `test/architecture/terms-exempt.test.ts`:
+  `requireUserIdBeforeTerms` for Accept, Get a copy (D-95), and
+  Settings › Account's `accountPageQuery` and `unreadNotificationCountFn`;
+  `requireSignedInSince` and `checkCurrentPassword` for Delete account;
+  `requireUserIdWhileLeaving` for Keep. Sign-out is Better Auth's and
+  never passes through `requireUserId`. Every `createServerFn` now names
+  its method (`test/architecture/server-functions-declare-method.test.ts`).
+- **A stale tab** (D-96): the has-handle memo skips the root's question
+  for the rest of a page load, so a tab open across the terms being
+  published or bumped hears it first as a refusal. The refusal opens
+  `/account/terms` instead of a failure band — from a form, a control or a
+  loader (`ui/terms-refusal.tsx`'s provider at the root, read by
+  `useFormSubmit`, `useControlAction` and `RouteFailed`) — forgets the
+  memo, so the next in-app navigation asks the gate again, and carries
+  `from`, where Accept returns the runner (`lib/return-path.ts`, the rule
+  log-in's `redirect` already used).
 
-**Unpublished terms.** The version is read from the draft today, so sign-up
-records "Version 1" of a text that answers X1. **Owner question** below.
+**Unpublished terms** (D-93): `currentTermsVersion()` is `undefined` until
+`terms.md` carries the published mark. Then sign-up records nothing
+(`signUpAcceptances`), `termsStanding` is `unpublished`, the root never
+answers `needs-terms`, the gate refuses nobody over the terms, and Accept
+records nothing (`stale`). Once marked, every account without that
+version's acceptance is behind and meets the prompt once.
+
+**Explicit Accept stays** (D-94) though `terms.md` says continued use is
+acceptance; `docs/legal/terms-sources.md` records the mismatch for the
+owner's legal review.
+
+**The export** (D-95) gains `terms.csv` (`version`, `accepted_at`, oldest
+first), named in the README like every other file.
 
 ### The terms line and the links
 
@@ -912,12 +935,9 @@ row maps to the code. The legal prose is the owner's and is not edited.
 
 ### Owner questions
 
-1. **Acceptance of an unpublished draft.** Sign-up records the draft's
-   "Version 1" now, and the prompt asks existing runners to accept a
-   `/terms` that answers X1. [Built as asked. Recommend publishing with
-   "Version 2" if the text changes before it is marked published, which
-   re-prompts everyone with no code change; the alternative is gating the
-   record and the prompt on the published mark, a one-line change.]
+1. **Acceptance of an unpublished draft.** Answered (owner, 2026-10-02;
+   D-93): gated on the published mark. Nothing is recorded or asked until
+   the terms are published.
 
 ## Contract touches
 

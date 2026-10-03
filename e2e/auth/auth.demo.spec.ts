@@ -5,8 +5,9 @@
  * fills the code), Au2 (create account), Au4 (check your email, Resend),
  * the confirm link's landing, O0 (pick a handle, a taken one first), Au3
  * (wrong password), ACC-4 (forgot it, the reset link, a new password), Au1
- * (log in), sign out from the settings index, and the terms prompt (ACC-6:
- * an account behind on the terms accepts them) — one journey, one video.
+ * (log in), sign out from the settings index, and unpublished terms asking
+ * nothing (ACC-6, D-93: no acceptance recorded, no prompt) — one journey,
+ * one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
@@ -247,9 +248,11 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   // Back where the runner was going, not home.
   await expect(page).toHaveURL(/\/call$/u, { timeout: 15_000 });
 
-  // ACC-6: sign-up recorded the terms. An account made before that — no
-  // acceptance on record, as here — or one behind after the terms change
-  // meets the prompt before any page, and Accept lets it on.
+  // ACC-6, D-93: no terms are published yet, so sign-up recorded no
+  // acceptance and nothing asks for one — the app opens as it would. Once
+  // the owner marks docs/legal/terms.md published, every account without
+  // an acceptance meets the terms prompt once (unit-tested both ways in
+  // test/account/terms-acceptance.test.ts and test/auth/terms-gate.test.ts).
   await withLocalDb(async ({ core }) => {
     const [account] = await core
       .select({ id: user.id })
@@ -260,24 +263,12 @@ test("request access -> an invite from the Desk -> create an account -> sign out
       .select({ version: termsAcceptances.version })
       .from(termsAcceptances)
       .where(eq(termsAcceptances.userId, account.id));
-    expect(accepted).toHaveLength(1);
-    await core
-      .delete(termsAcceptances)
-      .where(eq(termsAcceptances.userId, account.id));
+    expect(accepted).toStrictEqual([]);
   });
-  await scene(page, "Behind on the terms: the prompt comes before any page");
-  await page.goto("/closet");
-  await expect(page).toHaveURL(/\/account\/terms$/u, { timeout: 15_000 });
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Accept the terms" }),
-  ).toBeVisible();
-  await hydrated(page);
-  await expect(
-    page.getByRole("main").getByRole("link", { name: "Terms" }),
-  ).toHaveAttribute("href", "/terms");
-  await scene(page, "Accept records the version shown, and the app opens");
-  await page.getByRole("button", { name: "Accept" }).click();
-  await expect(page).not.toHaveURL(/\/account\/terms/u, { timeout: 15_000 });
+  await scene(page, "Unpublished terms ask nothing: the app opens, no prompt");
   await page.goto("/closet");
   await expect(page).toHaveURL(/\/closet$/u, { timeout: 15_000 });
+  // The prompt itself has nothing to ask, and sends the runner home.
+  await page.goto("/account/terms");
+  await expect(page).not.toHaveURL(/\/account\/terms/u, { timeout: 15_000 });
 });

@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import type { JSX, ReactNode } from "react";
 
 import {
@@ -14,11 +15,14 @@ import type { ControlAction } from "../../../ui";
  * kind of page: one action that changes something, Log out beside it as the
  * way out that changes nothing. `Leaving.tsx` and `TermsPrompt.tsx` differ
  * only in what the primary action is and what it asks the runner to read
- * first — everything else here is shared rather than carried twice.
+ * first — everything else here is shared rather than carried twice. So are
+ * the two pill styles: "Delete pending" draws them as links
+ * (`LogInOrOpen` below), and one class list each serves every control that
+ * wears it.
  */
-const PRIMARY =
+const PRIMARY_PILL =
   "target inline-flex cursor-pointer items-center justify-center rounded-pill border-none bg-ink px-5 font-bold text-ground no-underline";
-const SECONDARY =
+const SECONDARY_PILL =
   "target inline-flex cursor-pointer items-center justify-center rounded-pill border border-hairline bg-transparent px-5 font-semibold text-ink no-underline";
 
 /**
@@ -70,7 +74,7 @@ export function ActionCard({
         <button
           type="button"
           {...inFlight(primary.pending)}
-          className={PRIMARY}
+          className={PRIMARY_PILL}
           onClick={() => {
             void primary.run();
           }}
@@ -84,7 +88,7 @@ export function ActionCard({
         <button
           type="button"
           {...inFlight(logOut.pending)}
-          className={SECONDARY}
+          className={SECONDARY_PILL}
           onClick={() => {
             void logOut.run();
           }}
@@ -96,6 +100,24 @@ export function ActionCard({
           />
         </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * "Delete pending"'s two ways on (ACC-9; round 27 #14), in ActionCard's
+ * pill styles as links: Log in, to keep the account inside the week, and
+ * Open dialed.run.
+ */
+export function LogInOrOpen(): JSX.Element {
+  return (
+    <div className="flex flex-wrap items-center gap-4">
+      <Link to="/auth/login" className={PRIMARY_PILL}>
+        Log in
+      </Link>
+      <Link to="/" className={SECONDARY_PILL}>
+        Open dialed.run
+      </Link>
     </div>
   );
 }

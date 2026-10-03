@@ -26,7 +26,10 @@ describe("headingId", () => {
       "cookies-and-browser-storage",
     );
     expect(headingId("Who we are?")).toBe("who-we-are");
-    expect(headingId("Opt-in  twice")).toBe("opt-in-twice");
+    // Each space is a hyphen, not each run of them, as GitHub has it.
+    expect(headingId("Opt-in  twice")).toBe("opt-in--twice");
+    // GitHub keeps an underscore, as it keeps a hyphen.
+    expect(headingId("snake_case & co")).toBe("snake_case--co");
     expect(headingId("Year 2026")).toBe("year-2026");
     expect(headingId("Café")).toBe("café");
     // A heading line's trailing spaces are not part of it.
@@ -185,6 +188,31 @@ describe("parseLegalDoc", () => {
     const doc = parseLegalDoc("# T\n\n1. one\n2. two\n");
     expect(doc.blocks).toEqual([
       { kind: "numbered", start: 1, items: [text("one"), text("two")] },
+    ]);
+  });
+
+  it("suffixes a repeated heading's id as GitHub does, counting every heading", () => {
+    const doc = parseLegalDoc(
+      [
+        "# Terms",
+        "## Terms",
+        "## Your data",
+        "### Your data",
+        "## Your data",
+        "## Your data 1",
+        "## Your data",
+      ].join("\n\n"),
+    );
+    expect(doc.contents.map((entry) => entry.id)).toStrictEqual([
+      // The title holds `terms`, so the first `##` of the same name is -1.
+      "terms-1",
+      "your-data",
+      // The `###` between took `your-data-1`, as on GitHub.
+      "your-data-2",
+      // `your-data-1` is a heading's own id here, and the next repeat
+      // skips past both it and the one taken.
+      "your-data-1-1",
+      "your-data-3",
     ]);
   });
 
