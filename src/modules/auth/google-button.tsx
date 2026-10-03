@@ -213,13 +213,14 @@ function GoogleMark(): JSX.Element {
  * font — so this builds to D-49 and the PR asks the owner to confirm. At
  * the weights that exist here (never 500), semibold.
  *
- * In flight the glyph drops for the label, so the width holds (Au5). On
- * a failure the band sits directly above this button and not above Log
- * in, because *"the band belongs to the button that failed"* (Au6). A
- * refusal (`retry: false`) sits directly under it, as round 28 #9 draws
- * it, and offers no Try again: its fix is the field above or the page it
- * links. Each is where its own board puts it; whether the two should
- * meet is a design delta. No pink anywhere on either.
+ * In flight the glyph drops for the label, so the width holds (Au5).
+ * **Every band Google owns sits directly under this button** (round 29
+ * #13, design-deltas item 43): the fault, with Try again, and a refusal
+ * (`retry: false`), which offers none — its fix is the field above or the
+ * page it links. §4a puts a band under the control it belongs to, and
+ * never above Log in, because *"the band belongs to the button that
+ * failed"* (Au6). Round 22's Au6 still draws the fault above; round 29
+ * supersedes it (item 44 asks for the redraw). No pink anywhere on either.
  */
 /**
  * Google's colours, stroke and shape, light then dark. Held in a constant
@@ -236,14 +237,6 @@ export function GoogleButton({
   const fault = refusal === undefined ? failure : undefined;
   return (
     <>
-      {fault === undefined ? undefined : (
-        <FailureBand
-          kicker={fault.kicker}
-          message={fault.message}
-          onRetry={google.retry}
-          retryRef={google.retryRef}
-        />
-      )}
       <button
         type="button"
         data-part="google-button"
@@ -265,6 +258,14 @@ export function GoogleButton({
           pending={google.pending}
         />
       </button>
+      {fault === undefined ? undefined : (
+        <FailureBand
+          kicker={fault.kicker}
+          message={fault.message}
+          onRetry={google.retry}
+          retryRef={google.retryRef}
+        />
+      )}
       {refusal === undefined ? undefined : <RefusalBand band={refusal} />}
     </>
   );

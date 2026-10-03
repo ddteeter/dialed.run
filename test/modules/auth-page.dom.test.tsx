@@ -465,7 +465,8 @@ describe("Au6 · a refusal Google's round trip brought back", () => {
     const band = part("failure-band");
     expect(band).toHaveTextContent("Not signed in");
     expect(band).toHaveTextContent(AUTH_COPY.google);
-    expect(band?.nextElementSibling).toBe(part("google-button"));
+    // Under the button, as every band Google owns is (round 29 #13).
+    expect(band?.previousElementSibling).toBe(part("google-button"));
   });
 
   it("returns to rest, silently, when consent was cancelled", async () => {
@@ -492,7 +493,7 @@ describe("Au6 · a refusal Google's round trip brought back", () => {
 });
 
 describe("Au6 · Google failed", () => {
-  it("puts the band above Google, not above Log in, and says so once", async () => {
+  it("puts the band under Google, not above Log in, and says so once", async () => {
     const { user, leave } = await logIn();
     client.social.mockResolvedValue({
       data: undefined,
@@ -509,8 +510,13 @@ describe("Au6 · Google failed", () => {
     });
     expect(band).toHaveTextContent("Not signed in");
     expect(band).toHaveTextContent(AUTH_COPY.google);
-    // The band belongs to the button that failed.
-    expect(band?.nextElementSibling).toBe(part("google-button"));
+    // The band belongs to the button that failed, directly under it
+    // (round 29 #13), and nothing of Google's sits above the button.
+    expect(band?.previousElementSibling).toBe(part("google-button"));
+    expect(part("google-button")?.previousElementSibling).not.toHaveAttribute(
+      "data-part",
+      "failure-band",
+    );
     expect(band?.closest("form")).toBeNull();
     expect(screen.getByRole("status")).toHaveTextContent(
       `Not signed in. ${AUTH_COPY.google}`,

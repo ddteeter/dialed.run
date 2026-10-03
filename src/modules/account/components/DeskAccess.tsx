@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { JSX } from "react";
 
 import { monthDayLabel } from "../../../lib/dates";
 import {
-  ControlFailureBand,
   FailureBand,
   FormElement,
   FormFailureBand,
@@ -92,60 +91,123 @@ export function madeLine(code: string, isCopied: boolean): string {
 type RowAction = (input: { data: { id: string } }) => Promise<unknown>;
 
 /**
-The one row action in flight, and its failure band.
-*/
-function useRowAction(onChanged: () => Promise<void>) {
-  return useControlAction<[RowAction, string]>({
-    kicker: "Not changed",
-    action: async (act, id) => {
+ * What each row action says when it fails, under its own row (round 29
+ * #14): the state still true, and the board's sentence. The page-level
+ * band is gone; only New code, which has no row yet, keeps the form's.
+ */
+const ROW_FAILURES = {
+  invite: {
+    kicker: "Not sent",
+    sentence: "Send invite didn't go through. No email went out. Try again?",
+  },
+  decline: {
+    kicker: "Still waiting",
+    sentence:
+      "Decline didn't go through. The request is still here. Try again?",
+  },
+  undo: {
+    kicker: "Still revoked",
+    sentence: "Undo didn't go through. Try again?",
+  },
+  revoke: {
+    kicker: "Still active",
+    sentence: "Revoke didn't go through. Try again?",
+  },
+} as const;
+
+type RowFailureKind = keyof typeof ROW_FAILURES;
+
+/**
+ * One row action: in flight behind the server (never optimistic), which
+ * row it was last pressed on, and that row's band. A failure is said once
+ * in the page's one status region, in the band's own words; focus stays on
+ * the control, and Try again repeats the same action on the same row.
+ */
+function useRowAction({
+  kind,
+  act,
+  onChanged,
+  announce,
+  onSuccess,
+}: Readonly<{
+  kind: RowFailureKind;
+  act: RowAction;
+  onChanged: () => Promise<void>;
+  announce: (sentence: string) => void;
+  onSuccess?: (() => void) | undefined;
+}>) {
+  const { kicker, sentence } = ROW_FAILURES[kind];
+  const [target, setTarget] = useState<string>();
+  const control = useControlAction<[string]>({
+    kicker,
+    action: async (id) => {
       await act({ data: { id } });
       await onChanged();
     },
+    onSuccess,
   });
-}
-
-/**
- * Revoke, with its own band on its own row: `STILL ACTIVE` · "Revoke
- * didn't go through. Try again?" (round 28 #9).
- */
-function useRevoke(revoke: RowAction, onChanged: () => Promise<void>) {
-  return useControlAction<[string]>({
-    kicker: "Still active",
-    action: async (id) => {
-      await revoke({ data: { id } });
-      await onChanged();
+  const { failure } = control;
+  useEffect(() => {
+    if (failure !== undefined) announce(`${kicker}. ${sentence}`);
+  }, [failure, announce, kicker, sentence]);
+  return {
+    isFailed: failure !== undefined,
+    run: (id: string) => {
+      setTarget(id);
+      void control.run(id);
     },
-  });
+    /**
+    The band under `id`'s row, when this action failed there.
+    */
+    bandFor: (id: string): JSX.Element | undefined =>
+      failure !== undefined && id === target ? (
+        <FailureBand
+          kicker={failure.kicker}
+          message={sentence}
+          onRetry={control.retry}
+          retryRef={control.retryRef}
+        />
+      ) : undefined,
+  };
 }
 
 /**
- * The row whose Undo is showing, forgotten ten seconds after its revoke
- * went through — never while it has failed, when its band shows instead.
+ * Forgets the row whose Undo is showing ten seconds after its revoke went
+ * through — never while its revoke or its Undo has failed, when its band
+ * shows instead.
  */
-function useHold(isFailed: boolean) {
-  const [holding, setHolding] = useState<string>();
+function useReleaseHold(
+  holding: string | undefined,
+  release: () => void,
+  isFailed: boolean,
+): void {
   useEffect(() => {
     if (holding === undefined || isFailed) return;
-    const timer = setTimeout(() => {
-      setHolding(undefined);
-    }, UNDO_WINDOW_MS);
+    const timer = setTimeout(release, UNDO_WINDOW_MS);
     return () => {
       clearTimeout(timer);
     };
-  }, [holding, isFailed]);
-  return [holding, setHolding] as const;
+  }, [holding, isFailed, release]);
 }
+
+/**
+One row action, as a row uses it: press it on a row, and read that row's band.
+*/
+type RowActionHandle = Pick<ReturnType<typeof useRowAction>, "run" | "bandFor">;
 
 function RequestRow({
   request,
   asOf,
-  onInvite,
-  onDecline,
+  invite,
+  decline,
 }: Readonly<{
   request: DeskRequest;
   asOf: number;
-  onInvite: () => void;
-  onDecline: () => void;
+  /**
+  Send invite, whose band shows here when it failed on this row; Decline's likewise.
+  */
+  invite: RowActionHandle;
+  decline: RowActionHandle;
 }>): JSX.Element {
   return (
     <li className="flex flex-col gap-2 border-b border-hairline py-4">
@@ -159,13 +221,26 @@ function RequestRow({
         {request.note ?? "No note."}
       </span>
       <span className="flex gap-4">
-        <button type="button" className="target font-semibold underline" onClick={onInvite}>
+        <button
+          type="button"
+          className="target font-semibold underline"
+          onClick={() => {
+            invite.run(request.id);
+          }}
+        >
           Send invite
         </button>
-        <button type="button" className="target text-quiet underline" onClick={onDecline}>
+        <button
+          type="button"
+          className="target text-quiet underline"
+          onClick={() => {
+            decline.run(request.id);
+          }}
+        >
           Decline
         </button>
       </span>
+      {invite.bandFor(request.id) ?? decline.bandFor(request.id)}
     </li>
   );
 }
@@ -189,27 +264,52 @@ function CodeActions({
   onUndo: () => void;
 }>): JSX.Element {
   if (isHeld) {
-    // D-92: the board's "reduced weight" is opacity, which T1 forbids, so
-    // the held row is drawn from roles — REVOKED in its state colour.
+    // D-92, round 29 #5: from T1 roles, never opacity — REVOKED in
+    // `--quiet` MONO.xs, and Undo in ink, semibold and underlined.
     return (
       <span className="flex items-baseline gap-4">
-        <Mono step="xs" className="text-cold-text">
+        <Mono step="xs" className="text-quiet">
           Revoked
         </Mono>
-        <button type="button" className="target font-semibold underline" onClick={onUndo}>
+        <button
+          type="button"
+          className="target font-semibold text-ink underline"
+          onClick={onUndo}
+        >
           Undo
         </button>
       </span>
     );
   }
-  if (code.isRevoked) return <span className="text-muted">Revoked</span>;
-  if (!isActive(code)) return <span className="text-muted">Used</span>;
+  // Round 29 #14: USED and REVOKED in `--quiet`, as the STATE column is.
+  if (code.isRevoked) {
+    return (
+      <Mono step="xs" className="text-quiet">
+        Revoked
+      </Mono>
+    );
+  }
+  if (!isActive(code)) {
+    return (
+      <Mono step="xs" className="text-quiet">
+        Used
+      </Mono>
+    );
+  }
   return (
     <span className="flex gap-4">
-      <button type="button" className="target font-semibold underline" onClick={onCopy}>
+      <button
+        type="button"
+        className="target font-semibold underline"
+        onClick={onCopy}
+      >
         Copy link
       </button>
-      <button type="button" className="target text-quiet underline" onClick={onRevoke}>
+      <button
+        type="button"
+        className="target text-quiet underline"
+        onClick={onRevoke}
+      >
         Revoke
       </button>
     </span>
@@ -261,7 +361,7 @@ function CodeRow({
   onCopy,
   onRevoke,
   onUndo,
-  revokeBand,
+  band,
 }: Readonly<{
   code: DeskCode;
   state: CodeRowState;
@@ -269,11 +369,15 @@ function CodeRow({
   onRevoke: () => void;
   onUndo: () => void;
   /**
-  The revoke's failure band, when this row's revoke failed.
+  Revoke's or Undo's failure band, when one failed on this row.
   */
-  revokeBand: JSX.Element | undefined;
+  band: JSX.Element | undefined;
 }>): JSX.Element {
-  const tone = isActive(code) && !state.isHeld ? "text-ink" : "text-muted";
+  const isStruck = code.isRevoked || state.isHeld;
+  const tone = isActive(code) && !state.isHeld ? "text-ink" : "text-quiet";
+  // Round 29 #5: a revoked code is struck through in `--quiet`, held or at
+  // the foot — the strike carries the meaning without colour.
+  const codeTone = isStruck ? "text-quiet line-through" : tone;
   return (
     <li
       data-state={isActive(code) ? undefined : "spent"}
@@ -281,13 +385,13 @@ function CodeRow({
     >
       <span
         className={
-          state.isHeld
+          isStruck
             ? "grid grid-cols-[auto_1fr_auto_auto_auto] items-baseline gap-4 text-quiet"
             : "grid grid-cols-[auto_1fr_auto_auto_auto] items-baseline gap-4"
         }
       >
         <span className="flex items-baseline gap-2">
-          <Mono step="sm" className={tone}>
+          <Mono step="sm" className={codeTone}>
             {code.code}
           </Mono>
           {state.isNew ? (
@@ -316,7 +420,7 @@ function CodeRow({
           onUndo={onUndo}
         />
       </span>
-      {revokeBand}
+      {band}
       {state.uncopiedLink === undefined ? undefined : (
         <NotCopied url={state.uncopiedLink} />
       )}
@@ -427,11 +531,41 @@ export function DeskAccess({
   revoke: RowAction;
   restore: RowAction;
 }>): JSX.Element {
-  const row = useRowAction(onChanged);
-  const revoking = useRevoke(revoke, onChanged);
-  const isRevokeFailed = revoking.failure !== undefined;
-  const [holding, setHolding] = useHold(isRevokeFailed);
   const [said, setSaid] = useState("");
+  const inviting = useRowAction({
+    kind: "invite",
+    act: sendInvite,
+    onChanged,
+    announce: setSaid,
+  });
+  const declining = useRowAction({
+    kind: "decline",
+    act: decline,
+    onChanged,
+    announce: setSaid,
+  });
+  const revoking = useRowAction({
+    kind: "revoke",
+    act: revoke,
+    onChanged,
+    announce: setSaid,
+  });
+  const isRevokeFailed = revoking.isFailed;
+  const [holding, setHolding] = useState<string>();
+  const release = useCallback(() => {
+    setHolding(undefined);
+  }, []);
+  const undoing = useRowAction({
+    kind: "undo",
+    act: restore,
+    onChanged,
+    announce: setSaid,
+    // Not optimistic: the row stays held until the code is back.
+    onSuccess: release,
+  });
+  // A failed Undo keeps its row held, so its Undo and its band stay where
+  // the operator's focus is rather than sorting to the foot.
+  useReleaseHold(holding, release, isRevokeFailed || undoing.isFailed);
   const [madeStatus, setMadeStatus] = useState("");
   // Codes made on this page load wear NEW until it reloads; codes whose
   // copy failed show their link selected. Both by the code itself, which
@@ -451,13 +585,11 @@ export function DeskAccess({
   return (
     <div className="flex flex-col gap-10">
       <FormStatus>{said}</FormStatus>
-      <ControlFailureBand
-        failure={row.failure}
-        onRetry={row.retry}
-        retryRef={row.retryRef}
-      />
       <section aria-labelledby="desk-requests" className="flex flex-col gap-4">
-        <h1 id="desk-requests" className="m-0 font-display text-title uppercase">
+        <h1
+          id="desk-requests"
+          className="m-0 font-display text-title uppercase"
+        >
           Requests
         </h1>
         <Mono step="xs" className="text-muted">
@@ -469,12 +601,8 @@ export function DeskAccess({
               key={request.id}
               request={request}
               asOf={asOf}
-              onInvite={() => {
-                void row.run(sendInvite, request.id);
-              }}
-              onDecline={() => {
-                void row.run(decline, request.id);
-              }}
+              invite={inviting}
+              decline={declining}
             />
           ))}
         </ul>
@@ -516,22 +644,12 @@ export function DeskAccess({
               }}
               onRevoke={() => {
                 setHolding(code.id);
-                void revoking.run(code.id);
+                revoking.run(code.id);
               }}
               onUndo={() => {
-                setHolding(undefined);
-                void row.run(restore, code.id);
+                undoing.run(code.id);
               }}
-              revokeBand={
-                revoking.failure !== undefined && code.id === holding ? (
-                  <FailureBand
-                    kicker={revoking.failure.kicker}
-                    message="Revoke didn't go through. Try again?"
-                    onRetry={revoking.retry}
-                    retryRef={revoking.retryRef}
-                  />
-                ) : undefined
-              }
+              band={revoking.bandFor(code.id) ?? undoing.bandFor(code.id)}
             />
           ))}
         </ul>

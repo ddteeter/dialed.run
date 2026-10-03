@@ -21,6 +21,7 @@ import {
   useFormSubmit,
   useTurnstileToken,
 } from "../../../ui";
+import type { FieldProps } from "../../../ui";
 import { SignedOutPanel } from "../../../ui/SignedOutPanel";
 import type { AccessRequestResult } from "../access";
 
@@ -88,21 +89,70 @@ function BackToSignUp(): JSX.Element {
 }
 
 /**
- * The note's counter, from 120 of its 140 characters (round 28 #9): a
- * count, so mono, and quiet until it matters. Polite, so a screen reader
- * hears it once typing pauses rather than on every key.
+The id the note's field points its description at.
+*/
+export const NOTE_COUNTER_ID = "note-counter";
+
+/**
+The counter's words: a count, as round 28 #9 draws it.
+*/
+function counted(length: number): string {
+  return `${String(length)} / ${String(ACCESS_NOTE_MAX)}`;
+}
+
+/**
+ * What a change of the note's length announces (round 29 #8): only the
+ * moment it reaches 120 and the moment it passes 140, so a screen reader
+ * does not hear every keystroke. Crossing, not landing: a paste that jumps
+ * past either mark says so too, and typing on beyond it says nothing.
+ */
+export function noteAnnouncement(
+  before: number,
+  after: number,
+): string | undefined {
+  const isReaching =
+    before < ACCESS_NOTE_COUNT_FROM && after >= ACCESS_NOTE_COUNT_FROM;
+  const isPassing = before <= ACCESS_NOTE_MAX && after > ACCESS_NOTE_MAX;
+  return isReaching || isPassing ? counted(after) : undefined;
+}
+
+/**
+ * The note's counter, from 120 of its 140 characters (round 28 #9; round
+ * 29 #8): right-aligned under the field, a count so mono, `--muted` and
+ * no hue while it is only near the limit — getting near isn't a failure —
+ * and ink, semibold, once past it. Not a live region: the field's
+ * `aria-describedby` names it, and the form's one status region says it
+ * at 120 and 141 (`noteAnnouncement`).
  */
 export function NoteCounter({
   length,
 }: Readonly<{ length: number }>): JSX.Element | undefined {
   if (length < ACCESS_NOTE_COUNT_FROM) return undefined;
+  const tone =
+    length > ACCESS_NOTE_MAX ? "font-semibold text-ink" : "text-muted";
   return (
-    <span aria-live="polite" className="self-end">
-      <Mono step="xs" className="text-muted">
-        {`${String(length)} / ${String(ACCESS_NOTE_MAX)}`}
+    <span id={NOTE_COUNTER_ID} className="self-end">
+      <Mono step="xs" className={tone}>
+        {counted(length)}
       </Mono>
     </span>
   );
+}
+
+/**
+ * The note's field props, its description naming the counter while the
+ * counter shows — after the field's own message, when it has one.
+ */
+export function withCounter(props: FieldProps, length: number): FieldProps {
+  if (length < ACCESS_NOTE_COUNT_FROM) return props;
+  const described = props["aria-describedby"];
+  return {
+    ...props,
+    "aria-describedby":
+      described === undefined
+        ? NOTE_COUNTER_ID
+        : `${described} ${NOTE_COUNTER_ID}`,
+  };
 }
 
 /**
@@ -168,8 +218,12 @@ export function RequestAccess({
               label="Note · optional"
               hint="Where you run, or who sent you. One line."
               value={note}
-              onChange={setNote}
-              field={form.field}
+              onChange={(next) => {
+                const said = noteAnnouncement(note.length, next.length);
+                if (said !== undefined) form.announce(said);
+                setNote(next);
+              }}
+              field={(name) => withCounter(form.field(name), note.length)}
               error={form.fieldErrors.note}
             />
             <NoteCounter length={note.length} />

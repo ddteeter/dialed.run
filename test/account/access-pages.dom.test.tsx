@@ -28,7 +28,9 @@ import {
   orderedCodes,
 } from "../../src/modules/account/components/DeskAccess";
 import {
+  NOTE_COUNTER_ID,
   RequestAccess,
+  noteAnnouncement,
   refusalMessage,
 } from "../../src/modules/account/components/RequestAccess";
 import type { AccessDesk, DeskCode } from "../../src/modules/account/invites";
@@ -120,21 +122,86 @@ describe("Au5 · Request access", () => {
     ).toBeInTheDocument();
   });
 
-  it("counts the note's characters from 120 of its 140 (round 28 #9)", async () => {
+  it("counts the note's characters from 120 of its 140, muted, then ink and semibold past it (round 29 #8)", async () => {
     await renderWithRouter(
       <RequestAccess siteKey={undefined} request={vi.fn<RequestFn>()} />,
     );
     const note = screen.getByLabelText("Note · optional");
     fireEvent.change(note, { target: { value: "n".repeat(119) } });
     expect(screen.queryByText(/\/ 140$/u)).toBeNull();
+    expect(note).not.toHaveAttribute("aria-describedby");
     fireEvent.change(note, { target: { value: "n".repeat(120) } });
-    const counter = screen.getByText("120 / 140");
-    expect(counter.closest("[aria-live]")).toHaveAttribute(
-      "aria-live",
-      "polite",
+    const counter = (): HTMLElement => {
+      const found = document.querySelector<HTMLElement>(`#${NOTE_COUNTER_ID}`);
+      if (found === null) throw new Error("no counter");
+      return within(found).getByText(/\/ 140$/u);
+    };
+    const near = counter();
+    expect(near).toHaveTextContent(/^120 \/ 140$/u);
+    expect(near).toHaveClass("text-muted");
+    expect(near).not.toHaveClass("font-semibold");
+    // Not a region of its own: the field names it, and the form's one
+    // status region says it.
+    expect(near.closest("[aria-live]")).toBeNull();
+    expect(document.querySelector(`#${NOTE_COUNTER_ID}`)).toHaveClass(
+      "self-end",
     );
+    expect(note).toHaveAttribute("aria-describedby", NOTE_COUNTER_ID);
+    fireEvent.change(note, { target: { value: "n".repeat(140) } });
+    expect(counter()).toHaveTextContent(/^140 \/ 140$/u);
+    expect(counter()).toHaveClass("text-muted");
     fireEvent.change(note, { target: { value: "n".repeat(141) } });
-    expect(screen.getByText("141 / 140")).toBeVisible();
+    const over = counter();
+    expect(over).toHaveTextContent(/^141 \/ 140$/u);
+    expect(over).toHaveClass("font-semibold", "text-ink");
+    expect(over).not.toHaveClass("text-muted");
+  });
+
+  it("announces the count at 120 and at 141 only, in the form's one status region", async () => {
+    await renderWithRouter(
+      <RequestAccess siteKey={undefined} request={vi.fn<RequestFn>()} />,
+    );
+    const note = screen.getByLabelText("Note · optional");
+    const status = screen.getByRole("status");
+    fireEvent.change(note, { target: { value: "n".repeat(119) } });
+    expect(status).toHaveTextContent(/^$/u);
+    fireEvent.change(note, { target: { value: "n".repeat(120) } });
+    expect(status).toHaveTextContent(/^120 \/ 140$/u);
+    fireEvent.change(note, { target: { value: "n".repeat(141) } });
+    expect(status).toHaveTextContent(/^141 \/ 140$/u);
+    fireEvent.change(note, { target: { value: "n".repeat(142) } });
+    expect(status).toHaveTextContent(/^141 \/ 140$/u);
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+  });
+
+  it("keeps the field's own message first in its description, the counter after", async () => {
+    await renderWithRouter(
+      <RequestAccess siteKey={undefined} request={vi.fn<RequestFn>()} />,
+    );
+    const note = screen.getByLabelText("Note · optional");
+    fireEvent.change(note, { target: { value: "n".repeat(141) } });
+    fireEvent.click(screen.getByRole("button", { name: "Send request" }));
+    await waitFor(() => {
+      expect(note).toHaveAttribute(
+        "aria-describedby",
+        `note-message ${NOTE_COUNTER_ID}`,
+      );
+    });
+    // The text is kept, never truncated.
+    expect(note).toHaveValue("n".repeat(141));
+  });
+
+  it("announces only on crossing 120 or 140, whichever way a change jumps", () => {
+    expect(noteAnnouncement(118, 119)).toBeUndefined();
+    expect(noteAnnouncement(119, 120)).toBe("120 / 140");
+    expect(noteAnnouncement(120, 121)).toBeUndefined();
+    expect(noteAnnouncement(0, 130)).toBe("130 / 140");
+    expect(noteAnnouncement(139, 140)).toBeUndefined();
+    expect(noteAnnouncement(140, 141)).toBe("141 / 140");
+    expect(noteAnnouncement(141, 142)).toBeUndefined();
+    expect(noteAnnouncement(130, 150)).toBe("150 / 140");
+    expect(noteAnnouncement(130, 120)).toBeUndefined();
+    expect(noteAnnouncement(141, 140)).toBeUndefined();
   });
 
   it("sends the request with Turnstile's answer and shows the one receipt", async () => {
@@ -394,26 +461,87 @@ describe("D7 · Access", () => {
     });
   });
 
-  it("says Not changed when a row action fails, and retries it", async () => {
-    const decline = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("down"))
-      .mockResolvedValueOnce(undefined);
-    const { user } = desk({ decline });
+  it.each([
+    {
+      action: "Send invite" as const,
+      prop: "sendInvite" as const,
+      kicker: "Not sent",
+      sentence: "Send invite didn't go through. No email went out. Try again?",
+    },
+    {
+      action: "Decline" as const,
+      prop: "decline" as const,
+      kicker: "Still waiting",
+      sentence:
+        "Decline didn't go through. The request is still here. Try again?",
+    },
+  ])(
+    "says $kicker under the row whose $action failed, announces it, and retries it there (round 29 #14)",
+    async ({ action, prop, kicker, sentence }) => {
+      const act = vi
+        .fn()
+        .mockRejectedValueOnce(new Error("down"))
+        .mockResolvedValueOnce(undefined);
+      const { props, user } = desk({ [prop]: act });
+      const button = within(rowOf("j@example.com")).getByRole("button", {
+        name: action,
+      });
+      await user.click(button);
+      const band = await waitFor(() => {
+        const found = within(rowOf("j@example.com")).getByText(kicker);
+        return found.closest("[data-part='failure-band']");
+      });
+      expect(band).toHaveTextContent(sentence);
+      // On its own row only, and no page-level band above the sections.
+      expect(
+        document.querySelectorAll("[data-part='failure-band']"),
+      ).toHaveLength(1);
+      expect(within(rowOf("sam@example.com")).queryByText(kicker)).toBeNull();
+      expect(screen.queryByText("Not changed")).toBeNull();
+      // Said once, in the page's one status region, in the band's words.
+      expect(screen.getAllByRole("status")[0]).toHaveTextContent(
+        `${kicker}. ${sentence}`,
+      );
+      // Focus stays on the control that failed.
+      expect(button).toHaveFocus();
+      // Nothing optimistic: the page was not reloaded for a failure.
+      expect(props.onChanged).not.toHaveBeenCalled();
+      await user.click(
+        within(rowOf("j@example.com")).getByRole("button", {
+          name: "Try again",
+        }),
+      );
+      await waitFor(() => {
+        expect(act).toHaveBeenCalledTimes(2);
+      });
+      expect(act).toHaveBeenLastCalledWith({ data: { id: "r2" } });
+      await waitFor(() => {
+        expect(part("failure-band")).toBeNull();
+      });
+    },
+  );
+
+  it("keeps the last thing said when another row action starts and has not failed", async () => {
+    const pending = Promise.withResolvers<undefined>();
+    const { user } = desk({ sendInvite: vi.fn(() => pending.promise) });
     await user.click(
-      within(rowOf("j@example.com")).getByRole("button", { name: "Decline" }),
+      within(rowOf("DIAL-TR8K")).getByRole("button", { name: "Copy link" }),
     );
-    const band = await waitFor(() => {
-      const found = part("failure-band");
-      expect(found).not.toBeNull();
-      return found;
-    });
-    expect(band).toHaveTextContent("Not changed");
-    await user.click(screen.getByRole("button", { name: "Try again" }));
     await waitFor(() => {
-      expect(decline).toHaveBeenCalledTimes(2);
+      expect(screen.getAllByRole("status")[0]).toHaveTextContent(
+        "Link copied.",
+      );
     });
-    expect(decline).toHaveBeenLastCalledWith({ data: { id: "r2" } });
+    await user.click(
+      within(rowOf("sam@example.com")).getByRole("button", {
+        name: "Send invite",
+      }),
+    );
+    expect(screen.getAllByRole("status")[0]).toHaveTextContent("Link copied.");
+    await act(async () => {
+      pending.resolve(undefined);
+      await Promise.resolve();
+    });
   });
 
   it("lists codes with their label, who used them and their uses, and counts them", () => {
@@ -439,13 +567,25 @@ describe("D7 · Access", () => {
     const used = within(rowOf("DIAL-7K3P"));
     expect(used.getByText("No label")).toBeVisible();
     expect(used.getByText("maya@example.com")).toBeVisible();
-    expect(used.getByText("Used")).toBeVisible();
-    expect(used.getByText("DIAL-7K3P")).toHaveClass("text-muted");
-    expect(used.getByText("1/1")).toHaveClass("text-muted");
+    // Round 29 #14: USED in `--quiet`, the spent code too, not struck.
+    expect(used.getByText("Used")).toHaveClass("text-quiet");
+    expect(used.getByText("DIAL-7K3P")).toHaveClass("text-quiet");
+    expect(used.getByText("DIAL-7K3P")).not.toHaveClass("line-through");
+    expect(used.getByText("1/1")).toHaveClass("text-quiet");
     expect(used.queryByRole("button")).toBeNull();
     expect(rowOf("DIAL-7K3P")).toHaveAttribute("data-state", "spent");
     const revoked = within(rowOf("DIAL-H2XN"));
-    expect(revoked.getByText("Revoked")).toBeVisible();
+    // A revoked code at the foot reads as it did while held (round 29 #5).
+    expect(revoked.getByText("Revoked")).toHaveClass("text-quiet");
+    expect(revoked.getByText("DIAL-H2XN")).toHaveClass(
+      "text-quiet",
+      "line-through",
+    );
+    expect(revoked.getByText("DIAL-H2XN").closest(".grid")).toHaveClass(
+      "text-quiet",
+    );
+    expect(revoked.queryByRole("button")).toBeNull();
+    expect(open.getByText("DIAL-TR8K")).not.toHaveClass("line-through");
     expect(revoked.getByText("Not used yet")).toBeVisible();
     expect(rowOf("DIAL-TR8K")).not.toHaveAttribute("data-state");
     // No revoke has failed, so no row carries its band.
@@ -526,9 +666,20 @@ describe("D7 · Access", () => {
     );
     expect(props.revoke).toHaveBeenCalledWith({ data: { id: "c1" } });
     const held = within(rowOf("DIAL-TR8K"));
-    // Reduced weight from T1 roles, never opacity (D-92).
-    expect(held.getByText("Revoked")).toHaveClass("text-cold-text");
-    expect(held.getByText("DIAL-TR8K")).toHaveClass("text-muted");
+    // From T1 roles, never opacity (D-92; round 29 #5): the code struck
+    // through in `--quiet`, REVOKED in `--quiet`, Undo ink and semibold.
+    expect(held.getByText("Revoked")).toHaveClass("text-quiet");
+    expect(held.getByText("DIAL-TR8K")).toHaveClass(
+      "text-quiet",
+      "line-through",
+    );
+    expect(held.getByRole("button", { name: "Undo" })).toHaveClass(
+      "font-semibold",
+      "text-ink",
+      "underline",
+    );
+    expect(held.getByText("2/8")).toHaveClass("text-quiet");
+    expect(rowOf("DIAL-TR8K").querySelector("[style*='opacity']")).toBeNull();
     expect(held.getByText("DIAL-TR8K").closest(".grid")).toHaveClass(
       "text-quiet",
     );
@@ -542,6 +693,68 @@ describe("D7 · Access", () => {
     expect(
       within(rowOf("DIAL-TR8K")).queryByRole("button", { name: "Undo" }),
     ).toBeNull();
+  });
+
+  it("says STILL REVOKED under a held row whose Undo fails, keeps its Undo, and retries it (round 29 #14)", async () => {
+    vi.useFakeTimers();
+    const restore = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("down"))
+      .mockResolvedValueOnce(undefined);
+    const onChanged = vi.fn(() => Promise.resolve());
+    desk({ restore, onChanged });
+    act(() => {
+      within(rowOf("DIAL-TR8K"))
+        .getByRole("button", { name: "Revoke" })
+        .click();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await act(async () => {
+      within(rowOf("DIAL-TR8K")).getByRole("button", { name: "Undo" }).click();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    const band = within(rowOf("DIAL-TR8K"))
+      .getByText("Still revoked")
+      .closest("[data-part='failure-band']");
+    expect(band).toHaveTextContent("Undo didn't go through. Try again?");
+    expect(screen.getAllByRole("status")[0]).toHaveTextContent(
+      "Still revoked. Undo didn't go through. Try again?",
+    );
+    expect(within(rowOf("DIAL-7K3P")).queryByText("Still revoked")).toBeNull();
+    // Nothing optimistic: the row is still held, Undo and all, and its ten
+    // seconds do not take it away while the band is up.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(UNDO_WINDOW_MS);
+    });
+    expect(undo()).not.toBeNull();
+    expect(within(rowOf("DIAL-TR8K")).getByText("Still revoked")).toBeVisible();
+    const reloads = onChanged.mock.calls.length;
+    await act(async () => {
+      within(rowOf("DIAL-TR8K"))
+        .getByRole("button", { name: "Try again" })
+        .click();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(restore).toHaveBeenCalledTimes(2);
+    expect(restore).toHaveBeenLastCalledWith({ data: { id: "c1" } });
+    expect(onChanged.mock.calls).toHaveLength(reloads + 1);
+    expect(undo()).toBeNull();
+    expect(screen.queryByText("Still revoked")).toBeNull();
+  });
+
+  it("announces a failed revoke in the page's status region", async () => {
+    const revoke = vi.fn().mockRejectedValueOnce(new Error("down"));
+    const { user } = desk({ revoke });
+    await user.click(
+      within(rowOf("DIAL-TR8K")).getByRole("button", { name: "Revoke" }),
+    );
+    await waitFor(() => {
+      expect(screen.getAllByRole("status")[0]).toHaveTextContent(
+        "Still active. Revoke didn't go through. Try again?",
+      );
+    });
   });
 
   it("arms no Undo timer while nothing is held", async () => {
