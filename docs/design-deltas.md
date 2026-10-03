@@ -809,6 +809,47 @@ ACCEPTED`, `STILL LOGGED IN`. If the terms change again while the
       other file. **The ask:** add it to the board's list, as D-83's two
       were.
 
+43. **What task 126 PR B built beside round 28's drawings (round 28 #9,
+    #10, #15, D-89; round 27 #16).** Built from existing primitives.
+    - **Google's two band positions.** Round 22's Au6 draws the fault band
+      ("Google didn't answer", with Try again) _above_ the button; round 28
+      #9 draws the refusal bands (`NOT CREATED`, `NOT LOGGED IN`) _under_
+      it. Each is built where its board puts it. **The ask:** one place
+      for both, or confirm the two.
+    - **The refusal bands carry no Try again**, only the link the board
+      draws (Request access, Create an account), or nothing for "Enter
+      your invite code above". The frame is the failure band's (1px ink,
+      no fill). **The ask:** confirm.
+    - **Au5's counter** reads `128 / 140` in `MONO.xs`, muted, under the
+      note's field, from 120 characters; past 140 it keeps counting and
+      the schema's "Keep the note under 140 characters." refuses on send.
+      Round 28 #9 asks for a counter from 120 and draws none. **The ask:**
+      draw it.
+    - **D7's `NEW` tag** is `MONO.xs` on hi-viz with `accent-ink`, the
+      board's look; the made line `DIAL-7QX2 MADE · LINK COPIED` is
+      `MONO.xs` in ink, not the board's teal (no T1 role names teal for
+      text on the Desk). The `NOT COPIED` band shows the link in a
+      read-only, selected field. A copy at the moment of making can fail
+      where a press would not (browsers want the press itself), which is
+      exactly when the band shows. **The ask:** confirm the made line's
+      colour.
+    - **D7's other row actions** (Send invite, Decline, Undo) keep the
+      page-level `NOT CHANGED` band; only Revoke's failure is drawn, as
+      `STILL ACTIVE` on its row. **The ask:** confirm, or draw the others.
+    - **The reopen email (D-89)** says the board's sentence, then "You can
+      log in, and your runs are back as you shared them.", a Log in
+      button, and the foot "Your handle is still yours." No email board
+      draws it. **The ask:** draw "Email reopen".
+    - **O0's re-pick (round 27 #16)** is built as drawn, plus two states
+      the board does not draw: Keep failing (§4a's `NOT KEPT`, Try again)
+      and Keep in flight (`[ Keeping ]`). Save username's failures are the
+      field's own. **The ask:** confirm.
+    - **#10's lockout on Change password.** The sentence is built where a
+      per-runner count exists (Change email and Delete account). Change
+      password goes through Better Auth's own endpoint, whose limiter is
+      per request, so it still answers with the band's "Too many tries.
+      Wait a minute, then try again." (register R-124).
+
 ## Answered in round 28 (imported 2026-09-30)
 
 Sixteen asks in three parts: amend the contracts and boards to match the

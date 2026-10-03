@@ -1028,7 +1028,8 @@ here:
 
 - **#9, invite stage.** One sentence for a refused code ("That code
   doesn't work. Check it, or request access."), "Enter the code from your
-  invite." for none. Google's refusals in a band **under** its button
+  invite." for none. Google's refusals in a band **under** its button (a
+  fault keeps round 22 Au6's band above it: design delta 43)
   with the board's kickers: `NOT CREATED` on Au2 (no code: "Enter your
   invite code above, then continue with Google."; refused: the sentence
   and a Request access link), `NOT LOGGED IN` on Au1 (no account, with a
@@ -1096,6 +1097,8 @@ The old handle is the runner's latest locked history row.
   (the confirm links and the per-address limit) and
   `add_verification_identifier_index` (Better Auth's reset lookup scanned
   its `verification` table).
+  PR B adds `add_username_screen_verdict` (additive, `0043`): two
+  nullable columns on `user_profiles` and a partial index.
 - Bindings: `send_email` `EMAIL` (decision D-42); the `dialed-exports`
   queue, its DLQ and `EXPORTS_QUEUE` (decision D-86, PR 2b-3). No cron.
 - Routes: `/onboarding/handle`, `/account/*`, `/join`, `/privacy`, `/terms`,

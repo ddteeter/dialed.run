@@ -74,6 +74,11 @@ Key decisions embedded here:
   binding; the retry is the `screening-retry` cron reconciling rows still
   marked `pending`, because that marker already exists (law 8c) and a queue
   would be the over-engineered version.
+- **Handle screening asks the same endpoint, and re-asks the same way**
+  (task 126 PR B). A claim it cannot answer is stored
+  `user_profiles.username_screen = 'unknown'`, and the `screening-retry`
+  firing re-drives it through `DailyUpkeep.rescreenHandles`, handed in by
+  `src/server.ts` because `ops` cannot import `account`. No new cron.
 - **Weather is an adapter** (`modules/weather/provider/`). Visual Crossing is
   the first implementation; swapping providers is a one-directory change.
   (The design artboards label the forecast "NWS" — that's a design delta, not
