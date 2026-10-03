@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   accountDeletions,
@@ -780,11 +780,14 @@ describe("usernameOf and handleGate", () => {
 /**
 A runner a moderator renamed from `handle` to `@runner_4821`.
 */
-async function renamedFrom(handle: string): Promise<string> {
+async function renamedFrom(
+  handle: string,
+  placeholder = "runner_4821",
+): Promise<string> {
   const userId = await runner({ username: handle });
   const renamed = await forceRename(db, {
     userId,
-    typed: "runner_4821",
+    typed: placeholder,
     reason: "Offensive or sexual",
     recordedAs: () => db.select().from(userProfiles).limit(0),
   });
@@ -858,6 +861,24 @@ describe("the rename notice (ACC-12; round 27 #16)", () => {
       kind: "claimed",
     });
     expect(await renameNoticeOf(db, userId)).toBeUndefined();
+  });
+
+  it("is settled by saving the placeholder itself, which keeps it", async () => {
+    const userId = await renamedFrom("quadzilla_69");
+    const screen = vi.fn(CLEAR);
+    expect(await claimUsername(db, userId, "runner_4821", screen)).toStrictEqual(
+      { kind: "claimed", username: "runner_4821" },
+    );
+    expect(screen).not.toHaveBeenCalled();
+    expect(await renameNoticeOf(db, userId)).toBeUndefined();
+    expect(await usernameOf(db, userId)).toBe("runner_4821");
+  });
+
+  it("settles only the runner who saved", async () => {
+    const userId = await renamedFrom("quadzilla_69");
+    const other = await renamedFrom("other_name", "runner_7777");
+    await claimUsername(db, userId, "runner_4821", CLEAR);
+    expect(await renameNoticeOf(db, other)).toBeDefined();
   });
 
   it("keeps the placeholder on Keep", async () => {

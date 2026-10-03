@@ -309,8 +309,9 @@ function ensureProfile(db: Db, userId: string) {
  * batch re-checks D-56 itself, and the unique index settles a race with a
  * runner claiming the same handle now. Either reads as taken.
  *
- * Claiming the handle you already have is a success that writes nothing
- * new — including a second submit of a change that has already landed.
+ * Claiming the handle you already have is a success that writes no new
+ * handle — including a second submit of a change that has already landed
+ * — and settles a moderator's owed re-pick, as Keep does.
  */
 export async function claimUsername(
   db: Db,
@@ -325,7 +326,13 @@ export async function claimUsername(
   };
   if (isReservedHandle(typed)) return refused;
   const profile = await profileOf(db, userId);
-  if (profile?.username === typed) return { kind: "claimed", username: typed };
+  if (profile?.username === typed) {
+    // Saving the handle you hold is a choice to keep it — on O0's re-pick,
+    // the placeholder itself — so an owed re-pick is settled here too, or
+    // the next load sends the runner straight back to O0.
+    await keepPlaceholder(db, userId);
+    return { kind: "claimed", username: typed };
+  }
   const verdict = await screen(typed);
   if (verdict === "flagged") return refused;
   const taken = async (): Promise<HandleClaim> => ({
@@ -399,6 +406,11 @@ export interface ForceRenameRequest {
    * was taken away, so it lands in the same batch as the rename.
    */
   readonly recordedAs: (previous: string) => BatchItem<"sqlite">;
+  /**
+   * Anything else the rename settles, in its batch — the Desk's review
+   * row when the rename answers a flagged handle (D-97).
+   */
+  readonly also?: readonly BatchItem<"sqlite">[] | undefined;
 }
 
 /**
@@ -459,6 +471,7 @@ export async function forceRename(
         .where(eq(userProfiles.userId, userId)),
       db.delete(usernameHistory).where(ownUnlocked(userId, username)),
       request.recordedAs(previous),
+      ...(request.also ?? []),
     ]);
   } catch (error: unknown) {
     if (isHandleIndexViolation(error)) return { kind: "taken" };

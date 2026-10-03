@@ -137,6 +137,18 @@ describe("emailContent", () => {
       },
     ],
     [
+      { kind: "account_reopened", handle: "maya_runs" },
+      {
+        subject: "Your dialed.run account is open again",
+        body: "We reopened @maya_runs. You can log in, and your runs are back as you shared them.",
+        button: LOG_IN,
+        foot: "Your handle is still yours.",
+        footer: LEGAL,
+      },
+    ],
+    [
+      // Owed by the build before round 29 #7, or for a runner closed
+      // before they picked a handle (law 9: the field is optional).
       { kind: "account_reopened" },
       {
         subject: "Your dialed.run account is open again",

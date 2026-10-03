@@ -8,7 +8,10 @@ import {
   decideReviewAction,
   takedownAction,
 } from "../../modules/feed/functions";
-import { reviewQueueQuery } from "../../modules/safety/functions";
+import {
+  reviewHandleAction,
+  reviewQueueQuery,
+} from "../../modules/safety/functions";
 import { Layout, Page } from "../../ui";
 
 // fallow-ignore-next-line code-duplication -- two signed-in routes of one lane are the same shape by mandate: createFileRoute + requireSignedIn + one loader call + Layout + Page + a component is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids
@@ -29,7 +32,11 @@ function ReviewPage() {
   return (
     <Layout>
       <Page title="Review queue" width="column">
-        <ReviewQueue queue={queue} resolve={decideReviewAction} />
+        <ReviewQueue
+          queue={queue}
+          resolve={decideReviewAction}
+          reviewHandle={reviewHandleAction}
+        />
         {/* SAF-6: a removal the queue did not raise — a copyright notice
             naming a photo or an entry. */}
         <Takedown takeDown={takedownAction} />

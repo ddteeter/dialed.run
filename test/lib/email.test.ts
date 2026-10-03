@@ -27,6 +27,7 @@ describe("emailTemplateSchema", () => {
       { kind: "content_removed", subject: "entry", reason: "it's spam" },
       { kind: "account_closed", reason: "spam" },
       { kind: "account_reopened" },
+      { kind: "account_reopened", handle: "maya_runs" },
       { kind: "invite", code: "DIAL-7K2Q" },
       { kind: "strava_disconnected" },
       { kind: "deletion_scheduled", day: "Sat, Oct 4" },
@@ -53,6 +54,13 @@ describe("emailTemplateSchema", () => {
   it("refuses a ban notice with no reason", () => {
     expect(
       emailTemplateSchema.safeParse({ kind: "account_closed", reason: "" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("refuses a reopen notice naming an empty handle", () => {
+    expect(
+      emailTemplateSchema.safeParse({ kind: "account_reopened", handle: "" })
         .success,
     ).toBe(false);
   });

@@ -16,14 +16,20 @@ import { requireAdmin } from "./admin";
 import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
-import { outboxInsert, oweOutbox, settleOutbox } from "../ops";
+import {
+  outboxInsert,
+  outboxInsertWhere,
+  oweOutbox,
+  settleOutbox,
+} from "../ops";
 
-import { banEmail, banUser, reopenEmail, unbanUser } from "./bans";
+import { banEmail, banUser, reopenEmailFor, unbanUser } from "./bans";
 import {
   accountCount,
   forceRename,
   isVerified,
   listAccounts,
+  reviewFlaggedHandle,
 } from "../account";
 import { placeholderHandle, renameRecord } from "./rename";
 import { deskRunners, runnersWhere } from "./runners";
@@ -35,6 +41,7 @@ import {
   denyDomainInput,
   fileReportInput,
   forceRenameInput,
+  handleReviewInput,
   reviewDecisionInput,
   runnersFilterInput,
   unbanUserInput,
@@ -114,13 +121,34 @@ export const unbanUserAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => unbanUserInput.parse(input))
   .handler(async ({ data }) => {
     const unbannedBy = requireAdmin(await requireUserId());
-    // D-89's reopen email, owed in the lift's batch, then the fast path.
-    const debt = oweOutbox(reopenEmail(data.userId));
-    await unbanUser(data.userId, unbannedBy, (database) => [
-      outboxInsert(database, debt),
-    ]);
-    await settleOutbox(drizzle(env.DIALED_CORE), debt);
+    // D-89's reopen email, naming the handle (round 29 #7): owed in the
+    // lift's batch only while the account is still closed, and sent by the
+    // fast path only when the lift reopened it (`unbanUser`).
+    const debt = oweOutbox(await reopenEmailFor(data.userId));
+    await unbanUser(data.userId, unbannedBy, {
+      owe: (database, stillBanned) =>
+        outboxInsertWhere(database, debt, stillBanned),
+      settle: () => settleOutbox(drizzle(env.DIALED_CORE), debt),
+    });
     return { banned: false };
+  });
+
+/**
+ * A review row about a handle the re-ask flagged (D-97): Keep, which
+ * clears the flag, or Rename, the force-rename below with its reasons.
+ * Admin-only; the decision lives in `account/handle-review.ts`.
+ */
+export const reviewHandleAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => handleReviewInput.parse(input))
+  .handler(async ({ data }) => {
+    const reviewerId = requireAdmin(await requireUserId());
+    return {
+      outcome: await reviewFlaggedHandle(
+        drizzle(env.DIALED_CORE),
+        reviewerId,
+        data,
+      ),
+    };
   });
 
 /**
