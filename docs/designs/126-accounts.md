@@ -939,6 +939,152 @@ row maps to the code. The legal prose is the owner's and is not edited.
    D-93): gated on the published mark. Nothing is recorded or asked until
    the terms are published.
 
+## PR B (round 28): handle re-ask, field heights, round 28's rulings
+
+Branch `feat/126-round28-accounts`. Five pieces, each its own commit.
+
+### 1. The handle re-ask (owner, pre-public)
+
+The claim's moderation check fails open to the word list (`handle-screen.ts`:
+no key, a timeout or an answer that does not parse is `unknown`, which the
+claim treats as clear). Today nothing remembers that it was never answered,
+so a handle the list missed during an outage is never looked at again.
+
+- **The verdict is recorded.** `user_profiles.username_screen` (`clear` /
+  `flagged` / `unknown` / `checking`, nullable) and
+  `username_screened_at` (epoch seconds, nullable), both **additive**, in
+  `0043_add_username_screen_verdict` (core). The claim's own `UPDATE`
+  writes both beside the handle, so the verdict and the handle it is about
+  can never disagree. A flagged claim writes nothing (it is refused). A
+  moderator's rename writes `NULL` (the placeholder is ours, not the
+  runner's words), and so does every row from before the column: null
+  means "not the runner's to re-ask". A partial index on
+  `username_screen IN ('unknown', 'checking')` keeps the sweep off the
+  table: it reads only the rows it might claim.
+- **The re-ask is reconciliation, not a queue** (law 8c): `unknown` is the
+  durable marker and the hourly `:15` firing (`screening-retry`, which
+  already re-drives photo screening) re-drives it through a new
+  `DailyUpkeep` field, `rescreenHandles`, handed in by `src/server.ts`
+  because `ops` cannot import `account`. No new trigger and no
+  `wrangler.jsonc` change.
+- **Claim, then work** (law 2): one `UPDATE … SET username_screen =
+  'checking', username_screened_at = now WHERE user_id IN (SELECT … WHERE
+  username_screen = 'unknown' OR (username_screen = 'checking' AND
+  username_screened_at < now − 15 min) LIMIT 20) RETURNING user_id,
+  username`. Two overlapping firings claim disjoint rows; a firing that
+  died mid-run leaves `checking` rows that the lease returns to the pool.
+  At most 20 handles a firing (each call is up to 5 s; 20 keeps a firing
+  under two minutes of waiting).
+- **Each answer is written only over its own claim**: `WHERE user_id = ?
+  AND username = <the claimed handle> AND username_screen = 'checking'`.
+  A runner who renamed meanwhile has a fresh verdict on the new handle,
+  and the stale answer writes nothing.
+  - `clear`: written; the handle is never asked about again.
+  - `flagged`: written **in one batch with** `enqueueForReview({
+    subjectType: 'profile', subjectId: userId, source: 'classifier' })`
+    (safety's one writer of `review_queue`, now exported from its barrel).
+    The Desk's Review row shows the handle; the person renames from D8
+    (ACC-12) or approves. **No automatic rename.**
+  - `unknown` again: the claim is released back to `unknown`, asked again
+    next hour. With no key deployed the sweep claims nothing at all.
+- **Reporting**: each failed call goes to Sentry with `surface:
+  "handle-rescreen"` and the `userId` — never the handle (law 7).
+- `docs/deployment.md`'s `OPENAI_API_KEY` row gains "handle screening".
+
+### 2. The password field's height
+
+`PasswordField`'s Show/Hide is `target` (44 min-height) inside the field
+box, which pads `py-3`: 44 + 24 + 2 = 70 against the text field's 50.
+
+**Negative margins, not `target-seam`.** The toggle becomes `target -my-3
+self-stretch`: its margins cancel the box's padding, so it contributes
+nothing to the box's height (which `min-h-field` holds at 50), and
+stretching makes its own box the full 48px inside the border. Accessibility
+03 says "pad the target, not the glyph": this is the target's own box, and
+it is 48 tall and at least 44 wide, so the hit area is the element itself.
+`target-seam` is a `::before` six pixels proud of a 32px chip, scoped by
+its own comment to "A3's chips and A3b's tags, and nowhere else by
+default"; on a ~20px text button it would need its own inset, and a
+pseudo-element hit area is the weaker answer where a real box fits.
+
+Pinned by a ui test on the class contract: happy-dom has no layout, so
+the test asserts the toggle's negative margin equals the box's padding
+(`-my-3` against `py-3`) and that it stretches. The e2e auth demo
+measures the two boxes for real (equal heights). No other `target` sits
+inside a `FormField` box today (checked: `form.tsx`, `HandleForm`,
+`GarmentForm`, `ManualRunForm`, `ParsedCard`).
+
+### 3. ChangeEmail's "Link sent."
+
+`unverified` and `limited` both reached `onSuccess`, so the live region
+said "Link sent." over the confirm sheet and over the `NOT SENT` band.
+Both go through `useFormSubmit`'s `refusal` (#139): nothing announced as
+done, the sheet or the band answering instead.
+
+### 4. Round 28's accounts rulings
+
+Already built by #140: #7 (About rows) and #16 (Back to contents). Built
+here:
+
+- **#9, invite stage.** One sentence for a refused code ("That code
+  doesn't work. Check it, or request access."), "Enter the code from your
+  invite." for none. Google's refusals in a band **under** its button
+  with the board's kickers: `NOT CREATED` on Au2 (no code: "Enter your
+  invite code above, then continue with Google."; refused: the sentence
+  and a Request access link), `NOT LOGGED IN` on Au1 (no account, with a
+  Create an account link). Those bands carry a link or nothing, never Try
+  again (the fix is the field above, or another page); a fault is still
+  `FailureBand` with Try again. Au5: the `back` glyph link to Create an
+  account above the heading, NOTE · OPTIONAL at 140 characters with a
+  counter from 120 and the hint "Where you run, or who sent you. One
+  line.", Send request, and the limit's "You can send another at 7:42
+  PM.". D7: ages `NOW` / `12M` / `5H` / `3D` / `AUG 29`, codes dated too;
+  Revoke leaves the row in place showing `REVOKED` and Undo for 10 s
+  (from T1 roles, D-92), then it sorts to the foot; a new code's status
+  line (`DIAL-7QX2 MADE · LINK COPIED`, the link copied on making) and
+  its `NEW` tag until reload; `NOT COPIED` with the link shown selected;
+  a failed revoke `STILL ACTIVE` · "Revoke didn't go through. Try again?"
+  on its row.
+- **#10.** "That's 5 wrong tries. You can try again at 7:42 PM." The 5
+  is `PASSWORD_ATTEMPTS_PER_WINDOW`, moved to `lib/contracts` so the
+  sentence reads the limiter's number rather than restating it. Change
+  password itself has no per-runner limit (Better Auth's rate limiter
+  answers it in the band), so the frame's U1 placement is register R-124.
+- **#12.** Keep's body ends "Keep it and your runs, closet and entries
+  come back as they were."; the Strava line is TYPE.small, muted.
+- **#15.** Failed: "Your export didn't finish, and it doesn't count as
+  today's." with Try again. An expired or someone else's link lands on
+  the row (`?export=expired`) reading "That link doesn't work any more.
+  Get a copy for a new one."
+- **D-89's reopen email.** `account_reopened` (transactional, no switch):
+  subject and lead "Your dialed.run account is open again.", a Log in
+  button. Owed in `unbanUser`'s batch through the outbox (lane 128's
+  `unbanUserAction`, wired directly: one `also` argument, as `banUser`
+  already takes).
+
+### 5. ACC-12's runner half: "USERNAME CHANGED BY A MODERATOR"
+
+Drawn (round 27 #16, "Renamed runner"). The root gate gains a sixth
+answer, `renamed` (after `needs-terms`, before the handle answers): a
+runner whose `username_reset_reason` is set is sent to `/onboarding/handle`
+on the next load, which draws the board's variant: the kicker in
+`cold-text`, "Pick a new username", "@old broke the rules on names:
+offensive or sexual. For now you're @runner_4821. Your runs and closet
+haven't changed.", the field, **Save username** and **Keep @runner_4821
+for now**. Both clear the reason (Save in the claim's own `UPDATE`); then
+home. Shown once; no email (the board: "the name wasn't the account").
+The old handle is the runner's latest locked history row.
+
+### Migration
+
+`0043_add_username_screen_verdict` (core): two nullable columns on
+`user_profiles` and one partial index. Additive.
+
+### Owner questions
+
+1. Change password's lockout (#10's frame) needs a per-runner limiter on
+   a Better Auth endpoint: register R-124, not built here.
+
 ## Contract touches
 
 - Schema (all core): `replace_display_name_with_username` (**destructive,
