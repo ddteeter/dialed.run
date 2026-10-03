@@ -101,10 +101,14 @@ export function banEmail(input: BanInput): OutboxMessage {
  *
  * Sessions are not restored, and could not be: they were deleted. The user
  * signs in again, which is the correct outcome.
+ *
+ * `also` is the reopen email's insert (D-89, `reopenEmail`), in the lift's
+ * batch as `banUser`'s ban email is in the ban's.
  */
 export async function unbanUser(
   userId: string,
   unbannedBy: string,
+  also: (database: ReturnType<typeof db>) => BatchItem<"sqlite">[] = () => [],
 ): Promise<void> {
   const lift = db()
     .update(userProfiles)
@@ -126,7 +130,20 @@ export async function unbanUser(
       subjectOwnerId: userId,
       reason: "Reopened from the Desk",
     }),
+    ...also(db()),
   ]);
+}
+
+/**
+ * D-89's email (round 28 #8): "Your dialed.run account is open again.",
+ * owed in the lift's batch like the ban's (task 126 wrote the template).
+ * Keyed by the runner, so a second press replaces the debt.
+ */
+export function reopenEmail(userId: string): OutboxMessage {
+  return emailDebt(
+    { to: { userId }, template: { kind: "account_reopened" } },
+    { dedupeKey: `account_reopened:${userId}` },
+  );
 }
 
 export interface BanState {

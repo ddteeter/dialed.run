@@ -18,7 +18,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { env } from "../../env";
 import { outboxInsert, oweOutbox, settleOutbox } from "../ops";
 
-import { banEmail, banUser, unbanUser } from "./bans";
+import { banEmail, banUser, reopenEmail, unbanUser } from "./bans";
 import {
   accountCount,
   forceRename,
@@ -114,7 +114,12 @@ export const unbanUserAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => unbanUserInput.parse(input))
   .handler(async ({ data }) => {
     const unbannedBy = requireAdmin(await requireUserId());
-    await unbanUser(data.userId, unbannedBy);
+    // D-89's reopen email, owed in the lift's batch, then the fast path.
+    const debt = oweOutbox(reopenEmail(data.userId));
+    await unbanUser(data.userId, unbannedBy, (database) => [
+      outboxInsert(database, debt),
+    ]);
+    await settleOutbox(drizzle(env.DIALED_CORE), debt);
     return { banned: false };
   });
 

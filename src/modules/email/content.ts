@@ -218,6 +218,18 @@ export function emailContent(
         footer,
       };
     }
+    case "account_reopened": {
+      // D-89: round 28 #8 draws the one sentence; the rest says what the
+      // Desk's Reopen gives back (log-in, the runs as shared, the handle)
+      // and is a placeholder in the same voice (design deltas).
+      return {
+        subject: "Your dialed.run account is open again",
+        body: "Your dialed.run account is open again. You can log in, and your runs are back as you shared them.",
+        button: logIn(origin),
+        foot: "Your handle is still yours.",
+        footer,
+      };
+    }
     case "invite": {
       return {
         subject: "Your dialed.run invite",

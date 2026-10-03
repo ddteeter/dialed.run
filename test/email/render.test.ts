@@ -137,6 +137,16 @@ describe("emailContent", () => {
       },
     ],
     [
+      { kind: "account_reopened" },
+      {
+        subject: "Your dialed.run account is open again",
+        body: "Your dialed.run account is open again. You can log in, and your runs are back as you shared them.",
+        button: LOG_IN,
+        foot: "Your handle is still yours.",
+        footer: LEGAL,
+      },
+    ],
+    [
       { kind: "invite", code: "DIAL-7K3P" },
       {
         subject: "Your dialed.run invite",

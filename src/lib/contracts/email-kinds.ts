@@ -101,6 +101,13 @@ export const accountClosed = emailKind("account_closed", {
 });
 
 /**
+ * D-89 (round 28 #8): an operator reopened a closed account. Account
+ * mail, so always sent: a runner told their account was closed is owed
+ * being told it is open again.
+ */
+export const accountReopened = emailKind("account_reopened", {});
+
+/**
  * Round 26 #20's invite (task 126, ACC-5): the code D7's Send invite
  * minted for an access request, and the way in with it filled.
  */

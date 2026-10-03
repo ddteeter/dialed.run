@@ -9,6 +9,7 @@ import { newUlid } from "../../src/lib/ids";
 import { outboxInsert, oweOutbox } from "../../src/modules/ops";
 import {
   banEmail,
+  reopenEmail,
   banStateOf,
   banUser,
   unbanUser,
@@ -178,6 +179,31 @@ describe("unbanning", () => {
       reason: undefined,
       bannedAt: undefined,
     });
+  });
+
+  it("owes the reopen email in the lift's own batch (D-89)", async () => {
+    const userId = await signedInUser(1);
+    await banUser({ userId, reason: "mistake", bannedBy: await makeUser() });
+    await core().delete(outbox);
+    const message = reopenEmail(userId);
+
+    expect(message).toStrictEqual({
+      kind: "email",
+      payload: {
+        dedupeKey: `account_reopened:${userId}`,
+        email: { to: { userId }, template: { kind: "account_reopened" } },
+      },
+    });
+    await unbanUser(userId, "desk-operator", (database) => [
+      outboxInsert(database, oweOutbox(message)),
+    ]);
+    const owed = await core()
+      .select({ dedupeKey: outbox.dedupeKey })
+      .from(outbox)
+      .where(eq(outbox.kind, "email"));
+    expect(owed).toStrictEqual([{ dedupeKey: `account_reopened:${userId}` }]);
+    const banState = await banStateOf(userId);
+    expect(banState.banned).toBe(false);
   });
 
   it("does not restore the revoked sessions", async () => {
