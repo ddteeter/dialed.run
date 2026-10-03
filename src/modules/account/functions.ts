@@ -65,7 +65,13 @@ import {
   leavingSearch,
 } from "./route-decisions";
 import { acceptTerms, termsPromptView } from "./terms-acceptance";
-import { claimUsername, handleGate, usernameOf } from "./username";
+import {
+  claimUsername,
+  handleGate,
+  keepPlaceholder,
+  renameNoticeOf,
+  usernameOf,
+} from "./username";
 import {
   confirmEmail,
   requestEmailChange,
@@ -97,6 +103,23 @@ export const claimUsernameFn = createServerFn({ method: "POST" })
  */
 export const usernameQuery = createServerFn({ method: "GET" }).handler(
   async () => ({ username: await usernameOf(db(), await requireUserId()) }),
+);
+
+/**
+ * O0's "USERNAME CHANGED BY A MODERATOR" (ACC-12; round 27 #16): what
+ * was taken, what stands in for it, and why — or nothing, which is O0.
+ */
+export const renameNoticeQuery = createServerFn({ method: "GET" }).handler(
+  async () => ({ notice: await renameNoticeOf(db(), await requireUserId()) }),
+);
+
+/**
+ * "Keep @runner_4821 for now": the re-pick is no longer owed.
+ */
+export const keepPlaceholderFn = createServerFn({ method: "POST" }).handler(
+  async () => {
+    await keepPlaceholder(db(), await requireUserId());
+  },
 );
 
 /**
