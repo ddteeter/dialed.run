@@ -725,8 +725,8 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     the owner, D-91).** **CLOSED by round 29 (item 1): the contract is
     right, and a §4a kicker takes no fill. Neither the Form Contract nor
     `docs/product.md` §4 is amended, and round 28 #13b is reversed. Nothing
-    to build. The kicker's face (Archivo Black 11 or `MONO.xs`) is a
-    separate conflict for the owner.** As raised: not decided, and nothing
+    to build. The kicker's face (Archivo Black 11 or `MONO.xs`) is
+    open item 44.** As raised: not decided, and nothing
     was built differently while it was open.
     - **What the board draws.** Round 28 #13 rules on PR #129's PHOTO NOT
       ADDED band: _"Every §4a kicker sits on the hi-viz ground. Put round
@@ -788,7 +788,7 @@ WHILE WE CHECK`), which offer no fix and are a different case? Either
     and 17): the prompt is a page with two leads and the owner's WHAT
     CHANGED summary; "Back to contents" and the footer labels are
     confirmed; and `terms.csv` is on the board, with a `how` column. Two
-    parts of the prompt are conflicts for the owner (D-95, D-96). Not
+    parts of the prompt are not adopted, because D-95 and D-96 stand. Not
     built.** Built from existing primitives.
     - **The terms prompt (`/account/terms`) is undrawn.** Once the terms
       are published (D-93; nothing is asked until then), a signed-in
@@ -821,6 +821,38 @@ ACCEPTED`, `STILL LOGGED IN`. If the terms change again while the
       with when (`version`, `accepted_at`), named in the README like every
       other file. **The ask:** add it to the board's list, as D-83's two
       were.
+
+43. _Held for PR B (`feat/126-round28-accounts`), which adds item 43 on its
+    branch. Its round 29 answers are in "Answered in round 29" below._
+44. **The failure-band kicker's face: two contracts disagree (round 29
+    #1).** Round 29 settled the fill (none) and restated
+    the face, and that face is not one `tokens.js` has. No owner call is
+    needed: it is design's to reconcile, in the contracts. Nothing is built
+    differently while it is open, and `FailureBand` keeps `MONO.xs`.
+    - **One side.** Round 29 #1: _"Archivo Black, 11px, capitals, ink,
+      inside the 1px ink band."_ The Form Contract's 02b samples draw the
+      kicker that way (Archivo Black, 11px, 0.12em, uppercase), and
+      `docs/product.md` §4 says _"Kicker in Archivo Black, uppercase, 11px:
+      `NOTHING SAVED`."_
+    - **The other side.** `tokens.js` has no 11px step in the display
+      family (TYPE.display is 32px, and the smallest display step,
+      TYPE.heading, is 19). Its uppercase rule rejects _"text-transform:
+      uppercase on any --type-\* step except display"_ and allows it on
+      _"MONO.xs / MONO.sm / TYPE.display only"_. Its COLLAPSE maps
+      _"'0.12em' board eyebrows"_ to _"MONO.xs → 0.10em (0.12 was the
+      document-board eyebrow, not the product)"_. `ui/form.tsx`'s
+      `FailureBand` draws the kicker as `<Mono step="xs">`.
+    - **The ask:** reconcile them in `tokens.js`. Either name the kicker's
+      step there (and the build ports it, as round 28's field tokens were
+      ported), or say the kicker is `MONO.xs` and amend the Form Contract's
+      samples and `docs/product.md` §4 to match.
+    - **Two boards round 29 says it redrew did not change.** Round 29 #2
+      says _"Operator Screens D0 and Round 28 #14a are redrawn to this
+      order"_, and #13 says _"Round 22's above-button frame is redrawn"_.
+      `Operator Screens.dc.html` and `Round 22 Coverage.dc.html` are
+      byte-identical to round 28's bundle, so D0 still draws the old rail
+      and Au6 still draws Google's fault band above the button. **The ask:**
+      redraw both, D0 in D-87's order.
 
 ## Answered in round 29 (imported 2026-10-03)
 
@@ -856,7 +888,7 @@ redrawn to this order") and `Round 22 Coverage.dc.html` ("Round 22's
 above-button frame is redrawn"). Both are byte-identical to round 28's
 bundle. The rulings are on round 29's board, so nothing waits on this, but
 those older frames still draw the old rail and the band above Google's
-button.
+button. Open item 44 asks for both.
 
 **Item 43 is not on `main` yet.** PR B (`feat/126-round28-accounts`, task 126) adds it on its branch for the reopen email, the Au5 counter, D7's small
 states, O0's re-pick and Google's bands, and it was not open when this was
@@ -885,10 +917,11 @@ moderation, 129 feed.
    the fill. **This closes open item 40, and settles D-91 the way the
    contract already reads.** _Build:_ none. `ui/FailureBand` and
    `safety/components/NoticeBand.tsx` already draw no hi-viz. **The kicker's
-   face is a conflict for the owner (below):** the board, the Form
-   Contract's samples and `docs/product.md` §4 say Archivo Black 11px
-   capitals, while `tokens.js` has no such step and `FailureBand` draws the
-   kicker in `MONO.xs`.
+   face is open item 44:** the board, the Form Contract's samples and
+   `docs/product.md` §4 say Archivo Black 11px capitals, while `tokens.js`
+   has no such step and `FailureBand` draws the kicker in `MONO.xs`. The two
+   contracts disagree with each other, so design reconciles them in
+   `tokens.js`, and no owner call is needed.
 
 **B · The owner's round 28 rulings, on the boards**
 
@@ -900,14 +933,15 @@ JOBS · OLDEST 2D]`. It shows the two newest jobs, then "+ N MORE · SHOW
    and retries are unchanged. Today's rail count is the Gave up count, in
    hi-viz because it needs a person. At zero the count goes away and the
    section reads "Nothing gave up." on one line. The digest email keeps its
-   one Gave up line. _Build:_ 125, M. `ops/components/DeskShell.tsx` drops
-   `gave-up` from the rail, and `ops/components/Today.tsx` gains the section
-   and the count. The rows still wait on the reason, try count and time that
-   no dead-letter handler records (item 10, register R-119). **The order is
-   not adopted.** D-87's order is Today, Review, Access, Duplicates, Runners,
-   and the board moves Access to the end (conflicts, below). The round 29
-   ask quoted D-87 in the board's order, so the mistake started on our side
-   and the board drew what it was told.
+   one Gave up line. **The board's order is not adopted (owner,
+   2026-10-03).** It came from our round 29 ask, which misquoted D-87, and
+   the board drew what it was told. D-87 stands: **Today, Review, Access,
+   Duplicates, Runners.** _Build:_ 125, M. `ops/components/DeskShell.tsx`'s
+   rail goes to D-87's order (today it is Today, Review, Duplicates, Gave
+   up, Runners, Access) and drops `gave-up`, and `ops/components/Today.tsx`
+   gains the Gave up section and the count. The rows still wait on the
+   reason, try count and time that no dead-letter handler records (item 10,
+   register R-119).
 3. **The CSAM second press says only what happens (D-88).** _Redrawn:_
    "Remove this photo everywhere and keep the evidence for the report?" A
    quiet line under it reads "@n8's account stays open. Closing it is a
@@ -970,10 +1004,12 @@ JOBS · OLDEST 2D]`. It shows the two newest jobs, then "+ N MORE · SHOW
    block, which needs a per-version summary the owner writes beside
    `docs/legal/terms.md` and its published mark; the read link on its own
    line; the in-flight and failed copy; and the delete link going straight
-   to the confirm. **Two parts are conflicts for the owner (below):** the
-   board calls the delete confirm "the one route the gate lets through",
-   where D-95 exempts more than that, and returning to the _filled_ form goes
-   further than D-96.
+   to the confirm. **Two parts are not adopted (owner, 2026-10-03).** The
+   board calls the delete confirm "the one route the gate lets through";
+   D-95 stands, so Get a copy and Settings › Account's reads stay allowed
+   while a runner is behind on the terms. And the board returns the runner
+   to the _filled_ form; D-96 stands, so Accept returns them where they were
+   (`from`), or home, without restoring the form's values.
 
 7. **Email reopen (D-89).** _Drawn as built, with one change:_ the account is
    named by its handle. It is from `hello@dialed.run`, with the subject "Your
@@ -1146,7 +1182,10 @@ built from a T1 role or waits for design to name one. The desk match block's
 this board, which is now its composition truth.
 
 **Conflicts for the owner.** None of these was adopted by the import. Each
-quotes both sides and ends with a recommendation.
+quotes both sides and ends with a recommendation. **All four are resolved
+(owner, 2026-10-03):** the three against owner decisions keep the decision,
+and the kicker's face goes to design as open item 44. Each one's resolution
+follows it.
 
 - **The Desk rail's order (2) vs D-87.** D-87: _"Today, Review, Access,
   Duplicates and Runners."_ Round 29: _"Today, Review, Duplicates, Runners,
@@ -1158,7 +1197,9 @@ quotes both sides and ends with a recommendation.
   Duplicates, Gave up, Runners, Access. _Recommendation:_ keep D-87's order,
   which has a reason behind it, and ask design to redraw the rail. Or amend
   D-87 to the board's order, which is the build's minus Gave up. Either way
-  Gave up leaves the rail.
+  Gave up leaves the rail. **Resolved: D-87 stands, and the board's order is
+  not adopted.** The order came from our misquote, not from design. Lane 125
+  builds Today, Review, Access, Duplicates, Runners (item 2).
 - **The kicker's face (1) vs `tokens.js`.** Round 29: _"Archivo Black,
   11px, capitals, ink."_ The Form Contract's 02b samples draw it that way,
   and `docs/product.md` §4 says _"Kicker in Archivo Black, uppercase, 11px"_.
@@ -1170,14 +1211,20 @@ quotes both sides and ends with a recommendation.
   _Recommendation:_ keep MONO.xs, which is the type contract and what ships,
   and ask design to amend the Form Contract's samples and `docs/product.md`
   §4 to match. The other way, design adds the step to `tokens.js`, and that
-  is a token port.
+  is a token port. **Resolved: no owner call is needed.** The two contracts
+  disagree with each other, so it goes to design to reconcile in
+  `tokens.js` as open item 44, with both sides quoted. `FailureBand` keeps
+  `MONO.xs` meanwhile.
 - **"The one route the gate lets through" (6) vs D-95.** Round 29: _"'Delete
   your account' opens U1's delete confirm directly, the one route the gate
   lets through."_ D-95: _"Get a copy is exempt from the terms gate, beside
   Delete account, Keep, Accept and sign-out … Settings › Account's two reads
   are exempt with it."_ _Recommendation:_ build the link straight to the
   delete confirm, which D-95 already allows, keep D-95's exemptions, and
-  tell design the gate lets more than one route through.
+  tell design the gate lets more than one route through. **Resolved: D-95
+  stands, and "the one route" is not adopted.** Get a copy and Settings ›
+  Account's reads stay allowed while a runner is behind on the terms. The
+  link straight to the delete confirm is built (item 6).
 - **Back to the filled form (6) vs D-96.** Round 29: _"The refused save
   lands here carrying its payload (§4's session rule). After Accept the
   runner goes back to the filled form and saves again."_ D-96: _"After
@@ -1189,14 +1236,16 @@ quotes both sides and ends with a recommendation.
   schedule, not part of the prompt's build. The form's values have to
   survive a navigation to another route and back, and that is worth
   building once, for session expiry and the terms refusal together. D-96
-  stands until then.
+  stands until then. **Resolved: D-96 stands, and the filled-form return is
+  not adopted.** Accept returns the runner where they were (`from`), or
+  home, and the form's values are not restored.
 
-**For design's next round.** These are errata in the bundle, not owner
-calls: Operator Screens D0 and round 22's Au6 still draw what round 29 says
-it redrew (above); the Feed gutter needs a T1 role; "The two typefaces"
-should be three; and the ZIP's list should read `run-files/`, without
-"unblurred". The two not-adopted rulings above go back with them once the
-owner has ruled.
+**For design's next round.** Open item 44 carries the kicker's face and the
+two boards that were not redrawn. The rest are errata in the bundle, not
+owner calls: the Feed gutter needs a T1 role; "The two typefaces" should be
+three; the ZIP's list should read `run-files/`, without "unblurred"; and the
+boards should match the three rulings not adopted above (D-87's rail order,
+D-95's exemptions and D-96's return).
 
 **Not asked in round 29, and still open in the queue:** item 36's
 content-removed email; item 38's F rail card by category alone; and item
