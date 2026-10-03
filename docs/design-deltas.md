@@ -722,8 +722,12 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       not D5's "since yesterday", so the email and the Desk agree.
 
 40. **Do §4a failure kickers sit on hi-viz? (round 28 #13, sent back by
-    the owner, D-91).** Not decided; nothing is built differently while it
-    is open.
+    the owner, D-91).** **CLOSED by round 29 (item 1): the contract is
+    right, and a §4a kicker takes no fill. Neither the Form Contract nor
+    `docs/product.md` §4 is amended, and round 28 #13b is reversed. Nothing
+    to build. The kicker's face (Archivo Black 11 or `MONO.xs`) is
+    open item 44.** As raised: not decided, and nothing
+    was built differently while it was open.
     - **What the board draws.** Round 28 #13 rules on PR #129's PHOTO NOT
       ADDED band: _"Every §4a kicker sits on the hi-viz ground. Put round
       26's back."_ The round's own failure bands are drawn the same way:
@@ -742,8 +746,12 @@ WHILE WE CHECK`), which offer no fix and are a different case? Either
       answer arrives as an amended Form Contract, not a board.
 
 41. **The unconfirmed runner's band and sheet, as wired (FEED-11, SAF-15;
-    round 26 #11, round 27 #7 and #17).** Built to the words; five
-    composition calls no frame makes.
+    round 26 #11, round 27 #7 and #17).** **ANSWERED by round 29 (items
+    10–12), except the last part, which round 29 was not asked: the band
+    is not a region and its Resend reports into the screen's region, each
+    trigger leads with its own sentence (Share is added, and the email
+    change gets one), and the sheet's Resend is an outline pill. Not
+    built.** Built to the words; five composition calls no frame makes.
     - **Where the band sits.** Round 26 says "a hairline band at the top
       of Feed and You" and draws no Feed or You with it. It is the first
       thing in each screen's column, above the "Feed" heading and above
@@ -776,7 +784,12 @@ WHILE WE CHECK`), which offer no fix and are a different case? Either
       one, and the control picks its lead sentence.
 
 42. **The terms prompt, and what task 126 PR A built beside a drawing
-    (ACC-6, ACC-13; round 28 PR A).** Built from existing primitives.
+    (ACC-6, ACC-13; round 28 PR A).** **ANSWERED by round 29 (items 6, 16
+    and 17): the prompt is a page with two leads and the owner's WHAT
+    CHANGED summary; "Back to contents" and the footer labels are
+    confirmed; and `terms.csv` is on the board, with a `how` column. Two
+    parts of the prompt are not adopted, because D-95 and D-96 stand. Not
+    built.** Built from existing primitives.
     - **The terms prompt (`/account/terms`) is undrawn.** Once the terms
       are published (D-93; nothing is asked until then), a signed-in
       runner whose latest acceptance is below the current version sees it
@@ -849,6 +862,434 @@ ACCEPTED`, `STILL LOGGED IN`. If the terms change again while the
       password goes through Better Auth's own endpoint, whose limiter is
       per request, so it still answers with the band's "Too many tries.
       Wait a minute, then try again." (register R-124).
+44. **The failure-band kicker's face: two contracts disagree (round 29
+    #1).** Round 29 settled the fill (none) and restated
+    the face, and that face is not one `tokens.js` has. No owner call is
+    needed: it is design's to reconcile, in the contracts. Nothing is built
+    differently while it is open, and `FailureBand` keeps `MONO.xs`.
+    - **One side.** Round 29 #1: _"Archivo Black, 11px, capitals, ink,
+      inside the 1px ink band."_ The Form Contract's 02b samples draw the
+      kicker that way (Archivo Black, 11px, 0.12em, uppercase), and
+      `docs/product.md` §4 says _"Kicker in Archivo Black, uppercase, 11px:
+      `NOTHING SAVED`."_
+    - **The other side.** `tokens.js` has no 11px step in the display
+      family (TYPE.display is 32px, and the smallest display step,
+      TYPE.heading, is 19). Its uppercase rule rejects _"text-transform:
+      uppercase on any --type-\* step except display"_ and allows it on
+      _"MONO.xs / MONO.sm / TYPE.display only"_. Its COLLAPSE maps
+      _"'0.12em' board eyebrows"_ to _"MONO.xs → 0.10em (0.12 was the
+      document-board eyebrow, not the product)"_. `ui/form.tsx`'s
+      `FailureBand` draws the kicker as `<Mono step="xs">`.
+    - **The ask:** reconcile them in `tokens.js`. Either name the kicker's
+      step there (and the build ports it, as round 28's field tokens were
+      ported), or say the kicker is `MONO.xs` and amend the Form Contract's
+      samples and `docs/product.md` §4 to match.
+    - **Two boards round 29 says it redrew did not change.** Round 29 #2
+      says _"Operator Screens D0 and Round 28 #14a are redrawn to this
+      order"_, and #13 says _"Round 22's above-button frame is redrawn"_.
+      `Operator Screens.dc.html` and `Round 22 Coverage.dc.html` are
+      byte-identical to round 28's bundle, so D0 still draws the old rail
+      and Au6 still draws Google's fault band above the button. **The ask:**
+      redraw both, D0 in D-87's order.
+
+## Answered in round 29 (imported 2026-10-03)
+
+Seventeen asks in four parts: reconcile round 28's hi-viz kickers with the
+contract (1), bring the boards into line with the owner's round 28 rulings
+(2–5), draw what task 126 built without a frame (6–9), and confirm or redraw
+the placeholders (10–17). **All seventeen are answered.** They are on a new
+board, `Round 29 Rulings.dc.html`.
+
+**No contract file changed.** `tokens.js`, the Form Contract, T1 and the
+other contracts are byte-identical to round 28's, and the board says so: "No
+contract text changes this round." Nothing here needs a code port, and
+`test/ui/tokens.dom.test.tsx` is unaffected.
+
+Design amended four files in place and added one:
+
+- `Round 26 Rulings.dc.html`: the PHOTO NOT ADDED and rate-limited NOT SENT
+  kickers lose the hi-viz fill (item 1).
+- `Round 27 Rulings.dc.html`: the control-failure, notice and HIDDEN WHILE
+  WE CHECK kickers lose the fill, and the author's tag is `[UNDER REVIEW]`
+  (items 1 and 4).
+- `Round 28 Rulings.dc.html`: #6's tag is bracketed, #8's CSAM confirm reads
+  as item 3, #9's revoked row is struck through in `--quiet`, #13b reads
+  REVERSED, #14a and the Desk rail take item 2's order, and #15's ZIP list
+  adds terms.csv.
+- `design/docs/product.md`: a "Round 29" section that mirrors the board, as
+  round 27's import had one.
+- **`Feed.dc.html`, new and not asked for.** See "A new board" below.
+
+The board says two other files were redrawn, but neither changed:
+`Operator Screens.dc.html` ("Operator Screens D0 and Round 28 #14a are
+redrawn to this order") and `Round 22 Coverage.dc.html` ("Round 22's
+above-button frame is redrawn"). Both are byte-identical to round 28's
+bundle. The rulings are on round 29's board, so nothing waits on this, but
+those older frames still draw the old rail and the band above Google's
+button. Open item 44 asks for both.
+
+**Item 43 is not on `main` yet.** PR B (`feat/126-round28-accounts`, task 126) adds it on its branch for the reopen email, the Au5 counter, D7's small
+states, O0's re-pick and Google's bands, and it was not open when this was
+imported. Those answers (items 5, 7, 8, 13, 14 and 15) are recorded here, and
+PR B marks its item 43 answered against them.
+
+Lanes are the launch plan's: 125 ops/platform and the Desk shell, 126
+accounts/auth/email/legal/export, 127 runs/Strava, 128 safety, closet and
+moderation, 129 feed.
+
+**A · Reconcile a ruling with the contract**
+
+1. **§4a kickers.** _Ruling: the contract is right._ A §4a kicker takes no
+   fill: "Archivo Black, 11px, capitals, ink, inside the 1px ink band." Round
+   28 #13b is reversed. Yellow means "the fix is here". A field error points
+   at something the runner can fix, so its message keeps hi-viz. A failed
+   control or a refused save leaves nothing to fix on the screen, so it gets
+   ink. Against "pink is action, never failure" the two agree: a failure band
+   uses neither pink nor yellow, and its only filled element is the ink Try
+   again. Notices (`PHOTO REMOVED`, `BEING CHECKED`, `HIDDEN WHILE WE CHECK`)
+   follow the same rule, because none of them is the runner's to fix. On the
+   Desk, hi-viz stays the accent for "needs a person" (the active rail item,
+   counts and `NEW`), but a Desk §4a band has no fill either. Neither the
+   Form Contract nor `docs/product.md` §4 is amended, because neither needs
+   to be. Every band on rounds 26–28 and the Feed board is redrawn without
+   the fill. **This closes open item 40, and settles D-91 the way the
+   contract already reads.** _Build:_ none. `ui/FailureBand` and
+   `safety/components/NoticeBand.tsx` already draw no hi-viz. **The kicker's
+   face is open item 44:** the board, the Form Contract's samples and
+   `docs/product.md` §4 say Archivo Black 11px capitals, while `tokens.js`
+   has no such step and `FailureBand` draws the kicker in `MONO.xs`. The two
+   contracts disagree with each other, so design reconciles them in
+   `tokens.js`, and no owner call is needed.
+
+**B · The owner's round 28 rulings, on the boards**
+
+2. **Five Desk destinations (D-87).** _Drawn:_ "Desk · Today · Gave up as its
+   section", with the rail **Today, Review, Duplicates, Runners, Access**.
+   Gave up is a section on Today, under the three numbers: `Gave up` · `[3
+JOBS · OLDEST 2D]`. It shows the two newest jobs, then "+ N MORE · SHOW
+   ALL", which expands in place with no route of its own. D6's row grammar
+   and retries are unchanged. Today's rail count is the Gave up count, in
+   hi-viz because it needs a person. At zero the count goes away and the
+   section reads "Nothing gave up." on one line. The digest email keeps its
+   one Gave up line. **The board's order is not adopted (owner,
+   2026-10-03).** It came from our round 29 ask, which misquoted D-87, and
+   the board drew what it was told. D-87 stands: **Today, Review, Access,
+   Duplicates, Runners.** _Build:_ 125, M. `ops/components/DeskShell.tsx`'s
+   rail goes to D-87's order (today it is Today, Review, Duplicates, Gave
+   up, Runners, Access) and drops `gave-up`, and `ops/components/Today.tsx`
+   gains the Gave up section and the count. The rows still wait on the
+   reason, try count and time that no dead-letter handler records (item 10,
+   register R-119).
+3. **The CSAM second press says only what happens (D-88).** _Redrawn:_
+   "Remove this photo everywhere and keep the evidence for the report?" A
+   quiet line under it reads "@n8's account stays open. Closing it is a
+   separate action on their Runners page.", followed by Remove and report /
+   Cancel. The quiet line is there so the operator doesn't assume the account
+   was closed. _Build:_ 128, S (`safety/components/ReviewQueue.tsx`, with
+   the rest of round 28 #8's Review work).
+4. **`[UNDER REVIEW]` stays bracketed (D-90).** _Redrawn:_ the tag is
+   `[UNDER REVIEW]` in MONO.xs ink with no fill, where SHARED would sit on
+   the card. It doesn't breathe, because only a pending press breathes, and
+   because it is ink rather than pink it doesn't read as one. Its accessible
+   name is "Under review, only you can see this". Round 28 #6, round 27 #28
+   and the Feed board are redrawn. D's `HIDDEN WHILE WE CHECK` band is
+   unchanged apart from item 1's kicker. _Build:_ 129, S.
+   `feed/components/UnderReview.tsx` moves from muted to ink, into the
+   SHARED slot, and takes that accessible name. D's band is still round 28
+   #6's unbuilt work, and the closet's run list is 128's.
+5. **D7's revoked row, from T1 roles (D-92).** _Redrawn without opacity._
+   The code is in `--quiet` with a line-through, `REVOKED` is in `--quiet`
+   MONO.xs, and "Undo" is ink, semibold and underlined. After 10 seconds
+   Undo goes and the row sorts to the foot unchanged. A failed Undo gets
+   `STILL REVOKED` (item 14). The strike-through carries the meaning without
+   colour. On the always-dark Desk, `--quiet` is T1's dark value, `#B9B8AE`,
+   so it holds Accessibility 02. _Build:_ 126, S
+   (`account/components/DeskAccess.tsx`, on PR B).
+
+**C · Drawn**
+
+6. **The terms prompt (`/account/terms`, item 42).** _Ruling: a page, not a
+   sheet,_ on the panel "Keep your account?" uses. The prompt gates every
+   route, so a sheet would have nothing real behind it, and a page has a URL
+   for D-96's redirect. Four frames:
+   - **Never accepted** (every account so far): the kicker `TERMS` in
+     `cold-text`, "Accept the terms", "dialed.run has Terms now. Read them,
+     then accept to carry on.", the link "Read the Terms", Accept / Log out,
+     and "Rather not? Log out, or delete your account." There is no WHAT
+     CHANGED block, because nothing changed for this runner.
+   - **A version bump:** the kicker `TERMS UPDATED`, then "The Terms have
+     changed. Read them, then accept to carry on." Under it is the owner's
+     **WHAT CHANGED** summary: one to three lines, written when the version
+     is published, as a plain list on `--tint`. Then "Read the full Terms".
+     With no summary the block is left out. It never shows a diff, because a
+     diff of legal text is unreadable on a phone.
+   - **Changed again while open:** `NOT ACCEPTED` · "The terms changed again
+     while this page was open. Read them once more.", directly above Accept.
+     WHAT CHANGED refreshes to the newest version, and the next Accept
+     records that one.
+   - **Accept in flight, then failed:** `[ Accepting ]`, then `NOT ACCEPTED`
+     · "Your connection dropped. Nothing was recorded." · Try again. A failed
+     Log out gets `STILL LOGGED IN` under Log out.
+
+   "Read the Terms" opens `/terms`, and that page's back link returns here.
+   Accept is the only filled button, and the kicker carries no date. "delete
+   your account" opens U1's delete confirm directly. A tab left open across
+   the change lands here from its refused save, "carrying its payload (§4's
+   session rule). After Accept the runner goes back to the filled form and
+   saves again. Nothing is resubmitted for them." _Build:_ 126, M
+   (`account/components/TermsPrompt.tsx`). The work is the two kickers and
+   leads, chosen by whether the runner has any acceptance; the WHAT CHANGED
+   block, which needs a per-version summary the owner writes beside
+   `docs/legal/terms.md` and its published mark; the read link on its own
+   line; the in-flight and failed copy; and the delete link going straight
+   to the confirm. **Two parts are not adopted (owner, 2026-10-03).** The
+   board calls the delete confirm "the one route the gate lets through";
+   D-95 stands, so Get a copy and Settings › Account's reads stay allowed
+   while a runner is behind on the terms. And the board returns the runner
+   to the _filled_ form; D-96 stands, so Accept returns them where they were
+   (`from`), or home, without restoring the form's values.
+
+7. **Email reopen (D-89).** _Drawn as built, with one change:_ the account is
+   named by its handle. It is from `hello@dialed.run`, with the subject "Your
+   dialed.run account is open again". The body reads "We reopened
+   @maya_runs. You can log in, and your runs are back as you shared them.",
+   then **Log in** (a plain link to Au1, not a magic link) and the foot "Your
+   handle is still yours." The footer is Privacy policy · Terms · Copyright.
+   There is no reason line and no apology, since the operator's note stays on
+   the Desk. If Strava was disconnected at the ban, it stays disconnected,
+   and S1 says so, so the email doesn't. _Build:_ 126, S (`email/content.ts`'s
+   reopen kind, on PR B; 128 sends it). The board names the handle "the way
+   the ban email names it", but the ban email as built names none ("We
+   closed your account…", item 36). The reopen email takes the handle anyway,
+   and the ban email is not changed by this.
+8. **Au5's note counter.** _Drawn as built._ Under 120 characters nothing
+   shows. From 120, `128 / 140` sits right-aligned under the field in
+   `--muted` MONO.xs. It takes no hue, because getting near the limit isn't a
+   failure. Past 140 the count goes ink and semibold while typing. On send,
+   the schema's "Keep the note under 140 characters." is the field message
+   (the 2px border and the hi-viz message, because the fix is in that field),
+   focus moves to the field, and the text is kept. The field never stops the
+   typing and never truncates. The counter is the field's `aria-describedby`
+   and is announced only at 120 and 141. _Build:_ 126, S
+   (`account/components/RequestAccess.tsx`, on PR B): the right alignment,
+   the ink and semibold state past 140, and the two announcements.
+9. **`/open-source`.** _Ruling: grouped by licence and searchable, with each
+   licence text printed once per group and each group collapsed to its first
+   three packages._ Type comes first, "because it's the part the runner
+   actually sees".
+   - **The thank-you** is the kicker `OPEN SOURCE`, the heading "Built with
+     thanks", the lead "dialed.run runs on code and type that people chose to
+     give away. Here are all {N} pieces, grouped by licence, with a link to
+     each project.", and the type group first, with "The two typefaces you
+     read everything in." There is no mascot and there are no hearts. The
+     page thanks people by naming them, and the copyright line is that name.
+   - **A group** is headed by its licence and count. "Read the MIT licence"
+     expands the full text once, inline, above the group's rows, and "Show
+     all {N}" ends the group. Each row has the name, the shipped version, the
+     copyright line and "Project", plus "Notice" where a licence needs its
+     own (Apache NOTICE files). The smallest groups share one line: "ISC · 14
+     · BSD-3-CLAUSE · 9 · …".
+   - **Search** is a FormField, "FIND A PACKAGE", with the placeholder "Name,
+     e.g. date-fns". It filters every group as you type, on the package name
+     only. Empty groups hide, an expanded group stays expanded, and no match
+     reads "Nothing we ship is called "xyz"." Clearing the field resets it.
+   - **It's generated, not written,** from the lockfile and the font and icon
+     manifests at release. There are no hand-kept rows.
+   - **The layout** is the legal reading page: `MEASURE.column` (620), the
+     lead step, a sticky contents column at desk listing the licence groups
+     with counts, and "Back to contents" below desk.
+   - **It's linked** from the signed-out footer and from Settings › About,
+     after Copyright, as "Open source" · "What dialed.run is built on". It
+     isn't in the email footer.
+
+   _Build:_ 126, L. The work is a release-time generator for what the bundles
+   and fonts ship, the page on `account/components/LegalPage.tsx`'s layout,
+   the footer link (`ui/Layout.tsx`) and the About row
+   (`onboarding/components/Settings.tsx`). The board's 214 entries and their
+   versions are placeholders. **The type group has three families, not
+   two:** `ui/fonts.css` ships Archivo, Archivo Black and IBM Plex Mono, so
+   "The two typefaces" needs design's word once the generated list says
+   three.
+
+**D · Placeholders confirmed or redrawn**
+
+10. **The confirm-email band (item 41).** _Ruling: it is not a region._ The
+    band is static content, present on load, and it changes only on a
+    reload. It has no `role="status"` and no live region, so it isn't a
+    second region and rule 08 holds. It comes first in the column, above
+    the first post, and scrolls with the feed. It has no dismiss and leaves
+    on confirm. Resend's sending, sent and rate-limited states are announced
+    through Feed's one visually hidden status region, and the band's text
+    doesn't change. _Build:_ 126 and 129, S.
+    `account/components/ResendLink.tsx` stops carrying its own status line
+    in the band and reports into the host screen's region (Feed and You),
+    which is 129's. `ConfirmEmailBand.tsx` is already an `aside` with no
+    live region. Au4, which has no other region, keeps the link's own.
+11. **The sheet's lead, per trigger.** _Two confirmed, one added and one
+    given._ Useful: "Marking runs Useful needs a confirmed email." Report:
+    "Reporting needs a confirmed email." **A3's share switch** (added, as
+    round 27 #4's third trigger): "Sharing needs a confirmed email. This run
+    saves private." **The email change** (its own): "Confirm this address
+    before you change it." Then, for every trigger: "We sent a link to
+    {email}." Round 27's list of all three things is struck, because the
+    sheet names only the one that was refused. The Useful count doesn't
+    change and gets no band, because nothing failed. The email-change sheet
+    opens from U1's Email row "Change" while the account is unverified, and
+    after confirming the runner goes back to U1 to change it. _Build:_ 126,
+    S (`account/components/ConfirmEmailSheet.tsx`'s `WAITS_FOR`, the address
+    line, and the email change's sentence in `ChangeEmail.tsx`). The share
+    trigger is 127's if A3's switch opens the sheet: today only Useful,
+    Report and the email change do.
+12. **Resend on the sheet.** _A pill, outline._ It's the sheet's only real
+    action, so it stays a 48px pill (`HEIGHT.control`), but outline, as Au4
+    draws it, instead of ink, because Not now is focused and is the default.
+    The band keeps the text link, because a pill in a hairline band would
+    weigh more than the feed. Both run round 26's three states. _Build:_
+    126, S (`ConfirmEmailSheet.tsx`; the band is unchanged).
+13. **Google's bands (item 43).** _One place, under the button._ All of
+    Google's bands go directly under its button, the fault ("Google didn't
+    answer") and the refusals (`NOT CREATED`, `NOT LOGGED IN`), because §4a
+    puts a band under the control it belongs to. The Au1 frame reads `NOT
+LOGGED IN` · "Google didn't answer. Try again?" · Try again, under the
+    button. _Confirmed:_ the refusals carry no Try again, because pressing
+    again won't change them. They get the board's link or nothing, and only
+    the fault gets Try again. _Build:_ 126, S (`auth/google-button.tsx`, on
+    PR B): the fault band moves below the button. Round 22's Au6 still draws
+    it above (see above).
+14. **D7's small states (item 43).**
+    - **`NEW`:** _confirmed,_ MONO.xs on hi-viz with ink. On the Desk,
+      hi-viz is the accent for "look here" (D0). In the runner app item 1
+      would forbid it.
+    - **The made line:** _confirmed in ink,_ because no T1 role gives teal
+      text on the Desk. The STATE column follows: UNUSED in ink, USED and
+      REVOKED in `--quiet`. The board's teal and pink states are struck.
+    - **Other row actions:** _No, on the row._ Every row action fails under
+      its own row and names the state that's still true. Send invite: `NOT
+SENT` · "Send invite didn't go through. No email went out. Try
+      again?" Decline: `STILL WAITING` · "Decline didn't go through. The
+      request is still here. Try again?" Undo: `STILL REVOKED` · "Undo
+      didn't go through. Try again?" Revoke: `STILL ACTIVE` · "Revoke didn't
+      go through. Try again?" Focus stays on the control that failed, the
+      band is announced through the page's single status region, Try again
+      repeats the same action, and nothing changes optimistically. The
+      page-level `NOT CHANGED` band stays only for New code, which has no
+      row yet.
+
+    _Build:_ 126, M (`account/components/DeskAccess.tsx`, on PR B).
+
+15. **O0's re-pick (round 27 #16).** _Confirmed:_ `NOT KEPT` with Try again,
+    and `[ Keeping ]` in flight, per §4a and §5. Pick a new username stays
+    the primary throughout. _Build:_ none (PR B).
+16. **The legal pages (item 42).** _Both confirmed._ "Back to contents"
+    shows below desk only. From desk up the contents column stays in view,
+    and at wide (720–1039) the contents sit above the text, so the link
+    shows there. The email footer reads "Privacy policy", "Terms",
+    "Copyright", the same labels as Settings › About, and Open source isn't
+    in it. _Build:_ none.
+17. **`terms.csv` (D-95).** _Done on the board._ Round 28 #15's list adds
+    `terms.csv` after `profile.csv`, with one row per accepted version:
+    `version`, `accepted_at` (ISO 8601, UTC) and **`how`** (page or
+    sign-up). _Build:_ 126, S, plus an additive migration.
+    `terms_acceptances` holds `user_id`, `version` and `accepted_at` only, so
+    `how` needs a nullable column that sign-up and the prompt write, with
+    existing rows left empty. `account/export-sheets.ts` already writes the
+    other two columns. **Two labels in the board's contents list are not
+    adopted,** though it calls the list "as shipped". It names `runs/` where
+    the build writes `run-files/`. And it describes `photos/` as "as
+    uploaded, unblurred", which the product can't do: W3's promise is that
+    "the unblurred frame never leaves the device" (`safety/blur/detect.ts`),
+    so the ZIP holds the photo after the blur. The README in the ZIP stays
+    the source for what it holds.
+
+**A new board, not asked for: `Feed.dc.html`.** "Every shipping Feed state
+in one place, redrawn with every ruling up to round 27: phone and desk,
+light and dark." It takes over from the scattered E frames, and lists as
+superseded the E1 card with kit chips and display names, the full Your
+conditions screen (post-MVP), and the desktop feed's three-card rail. Most
+of its "rules in force" restate earlier rulings and cite them: the card's
+order, the badge in the author row, `@handle` in Archivo 600, Useful never
+optimistic and failing with `NOT MARKED`, the five-runner floor, only SHARED
+entries, and one 620 column under DS1 at desk, with no rail until Epic 200.
+One rule cites only this board: **posts are divided by a 10px gutter of
+darker ground, never a line**, running the full window width at desk. Its
+colours are not T1 roles. `#E3E2D8` is `--photo`'s light value, whose job is
+"Where a photo will be", and the dark `#1E1E24` matches no role (`--tint` is
+`#1C1C22` and `--photo` is `#24242B`). The contract wins, so the gutter is
+built from a T1 role or waits for design to name one. The desk match block's
+12px radius is `RADIUS.card`. _Build:_ 129, S to M: audit the feed against
+this board, which is now its composition truth.
+
+**Conflicts for the owner.** None of these was adopted by the import. Each
+quotes both sides and ends with a recommendation. **All four are resolved
+(owner, 2026-10-03):** the three against owner decisions keep the decision,
+and the kicker's face goes to design as open item 44. Each one's resolution
+follows it.
+
+- **The Desk rail's order (2) vs D-87.** D-87: _"Today, Review, Access,
+  Duplicates and Runners."_ Round 29: _"Today, Review, Duplicates, Runners,
+  Access"_, and round 28 #14a is amended to say D-87 reads that way. Round
+  28's reason for its order was _"the queues that need a person first, then
+  upkeep, then lookup. Access is a destination because it has its own
+  queue."_ The round 29 ask quoted D-87 in the wrong order, and the board
+  drew what it was told. The build's rail today is Today, Review,
+  Duplicates, Gave up, Runners, Access. _Recommendation:_ keep D-87's order,
+  which has a reason behind it, and ask design to redraw the rail. Or amend
+  D-87 to the board's order, which is the build's minus Gave up. Either way
+  Gave up leaves the rail. **Resolved: D-87 stands, and the board's order is
+  not adopted.** The order came from our misquote, not from design. Lane 125
+  builds Today, Review, Access, Duplicates, Runners (item 2).
+- **The kicker's face (1) vs `tokens.js`.** Round 29: _"Archivo Black,
+  11px, capitals, ink."_ The Form Contract's 02b samples draw it that way,
+  and `docs/product.md` §4 says _"Kicker in Archivo Black, uppercase, 11px"_.
+  `tokens.js` has no 11px step in the display family (TYPE.display is 32),
+  its uppercase rule allows `text-transform: uppercase` on _"MONO.xs /
+  MONO.sm / TYPE.display only"_, and its COLLAPSE maps _"'0.12em' board
+  eyebrows"_ to MONO.xs. `ui/form.tsx`'s `FailureBand` draws the kicker as
+  `MONO.xs`. Two contracts disagree, and round 29 amended neither.
+  _Recommendation:_ keep MONO.xs, which is the type contract and what ships,
+  and ask design to amend the Form Contract's samples and `docs/product.md`
+  §4 to match. The other way, design adds the step to `tokens.js`, and that
+  is a token port. **Resolved: no owner call is needed.** The two contracts
+  disagree with each other, so it goes to design to reconcile in
+  `tokens.js` as open item 44, with both sides quoted. `FailureBand` keeps
+  `MONO.xs` meanwhile.
+- **"The one route the gate lets through" (6) vs D-95.** Round 29: _"'Delete
+  your account' opens U1's delete confirm directly, the one route the gate
+  lets through."_ D-95: _"Get a copy is exempt from the terms gate, beside
+  Delete account, Keep, Accept and sign-out … Settings › Account's two reads
+  are exempt with it."_ _Recommendation:_ build the link straight to the
+  delete confirm, which D-95 already allows, keep D-95's exemptions, and
+  tell design the gate lets more than one route through. **Resolved: D-95
+  stands, and "the one route" is not adopted.** Get a copy and Settings ›
+  Account's reads stay allowed while a runner is behind on the terms. The
+  link straight to the delete confirm is built (item 6).
+- **Back to the filled form (6) vs D-96.** Round 29: _"The refused save
+  lands here carrying its payload (§4's session rule). After Accept the
+  runner goes back to the filled form and saves again."_ D-96: _"After
+  Accept the runner returns where they were (`from`), or home"_, and
+  `ui/terms-refusal.tsx` carries the path, not the form's values. The
+  precedent the board cites is `docs/product.md` §4: session expiry _"routes
+  to sign-in carrying the pending payload, and returns to the filled
+  form."_ _Recommendation:_ treat it as a follow-up for the owner to
+  schedule, not part of the prompt's build. The form's values have to
+  survive a navigation to another route and back, and that is worth
+  building once, for session expiry and the terms refusal together. D-96
+  stands until then. **Resolved: D-96 stands, and the filled-form return is
+  not adopted.** Accept returns the runner where they were (`from`), or
+  home, and the form's values are not restored.
+
+**For design's next round.** Open item 44 carries the kicker's face and the
+two boards that were not redrawn. The rest are errata in the bundle, not
+owner calls: the Feed gutter needs a T1 role; "The two typefaces" should be
+three; the ZIP's list should read `run-files/`, without "unblurred"; and the
+boards should match the three rulings not adopted above (D-87's rail order,
+D-95's exemptions and D-96's return).
+
+**Not asked in round 29, and still open in the queue:** item 36's
+content-removed email; item 38's F rail card by category alone; and item
+39's delete-sheet Google flow and its deletion, invite, Strava-disconnected
+and digest emails. Item 41's last part (when the sheet opens, and over what)
+was not asked either, and stands as built.
 
 ## Answered in round 28 (imported 2026-09-30)
 

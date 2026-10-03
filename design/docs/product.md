@@ -457,3 +457,17 @@ Drawn in `Round 26 Rulings.dc.html`.
 - **Notices.** §4a bands in place: STRAVA IS FULL (build copy), S1 NOT CONNECTED, PHOTO/NOTE REMOVED, garment photo BEING CHECKED ("ONLY YOU" tag), Au1 ACCOUNT CLOSED (Google or password, no case line).
 - **Desk D8 Runners.** Search, list (handle, email, joined, runs, reports, state), right column: Rename (reason list → @runner_NNNN, old handle blocked; runner sees "Pick a new username" once) then D3 ban.
 - **Confirmed.** Consensus "Most"/"Some" ("Split" on ties, "All" alone). Bell "Notifications, 3 new", ">9" = "more than 9 new". Deletes at the foot under YOURS, photo delete on the photo, no overflow; retire-confirm grammar with "Keep it" focused. W3 blur: 3×3 44px square map. Own under-review: UNDER REVIEW tag + HIDDEN WHILE WE CHECK band. "Photo not added" body reworded. Closet tile photo 4:5. Desk primary sized to label.
+
+## Round 29
+- **§4a kickers stay unfilled.** The contract wins. Kicker: Archivo Black 11, caps, ink, inside the 1px band. Yellow only where the fix is (the field message). Round 28 #13b reversed; R26/R27/R28 and Feed bands redrawn. Desk keeps hi-viz as its "needs a person" accent (rail, counts, NEW), never on a band.
+- **Desk (D-87).** Today, Review, Duplicates, Runners, Access. Gave up is a section on Today; Today's count is the Gave up count.
+- **CSAM (D-88).** Confirm: "Remove this photo everywhere and keep the evidence for the report?" + "@x's account stays open. Closing it is a separate action on their Runners page."
+- **[UNDER REVIEW] (D-90).** Bracketed, MONO.xs ink, no fill, in the SHARED slot.
+- **D7.** Revoked = --quiet + line-through, no opacity. STATE column ink/quiet, no hue. Made line ink. NEW on hi-viz (Desk accent). Every row action fails on its row: NOT SENT, STILL WAITING, STILL REVOKED, STILL ACTIVE; page-level NOT CHANGED only for New code.
+- **Terms prompt.** A page (Keep-your-account panel). Never accepted: TERMS · "dialed.run has Terms now. Read them, then accept to carry on." Bump: TERMS UPDATED · "The Terms have changed…" + owner's WHAT CHANGED summary (1–3 lines, --tint; absent if none). Accept / Log out; "delete your account" opens U1 delete. Changed-again = NOT ACCEPTED band. Refused save returns to the filled form after Accept.
+- **Email reopen.** "We reopened @x. You can log in, and your runs are back as you shared them." · Log in · "Your handle is still yours." Footer: Privacy policy · Terms · Copyright.
+- **Au5 counter.** From 120, right under the field, --muted MONO.xs; ink+600 past 140; refusal on send as field message. Announced at 120 and 141 only.
+- **/open-source.** Legal layout. "Built with thanks". Grouped by licence (type first), licence text once per group, three packages then "Show all N", search by name. Generated from lockfile and manifests. Linked from signed-out footer and Settings › About ("Open source · What dialed.run is built on").
+- **Confirm-email band** is static, no role — not a second region. Sheet leads: Useful "Marking runs Useful needs a confirmed email." · Report "Reporting needs a confirmed email." · Share "Sharing needs a confirmed email. This run saves private." · Email change "Confirm this address before you change it." Body "We sent a link to {email}." Resend: outline pill on the sheet, link on the band.
+- **Google bands** all under the button. Refusals: link or nothing; fault: Try again.
+- **Confirmed.** O0 NOT KEPT / [ Keeping ]. Back to contents below desk. Email footer labels. Export adds terms.csv (version, accepted_at, how).
