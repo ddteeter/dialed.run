@@ -2,10 +2,18 @@
  * Facts about the signed-in runner that the browser may keep until the
  * session changes, so a navigation does not have to ask the server again.
  *
- * Only for a fact that **cannot become false while the session lasts**:
- * "this runner has a handle" is the one today — a claimed handle is
- * renamed, never cleared — so remembering it is exact, not a guess that
- * goes stale. Anything that can flip back belongs in a loader.
+ * Only for a fact that **cannot become false while the session lasts
+ * without the server saying so**. "Has a handle" is the one today — the
+ * root gate's answer (`modules/account/route-decisions`' `gateOnHandle`),
+ * which also means the account was not leaving and the published terms
+ * were accepted when it was asked. A claimed handle is renamed, never
+ * cleared, and leaving is something this tab asks for itself; but a deploy
+ * can publish newer terms under an open tab (task 126, ACC-6). That one is
+ * not a guess left to go stale: every server function then refuses the
+ * runner (`TERMS_NOT_ACCEPTED`), and the refusal's answer forgets the memo
+ * (`ui/terms-refusal`, decision D-96), so the next navigation asks again.
+ * Anything that can flip back with no refusal to say so belongs in a
+ * loader.
  *
  * **Keyed to the runner.** A fact is remembered *for a user id*, and is
  * only read back while that runner is still the one the browser last
@@ -130,9 +138,11 @@ export function isRememberedForSession(fact: string): boolean {
 
 /**
  * Called by every change of who is signed in that does not reload the
- * page — signing in and signing out (`auth/credentials`). Clearing the
- * shared owner is what tells the other tabs. A Google sign-in comes back
- * through a full page load, which starts this module empty and asks.
+ * page — signing in and signing out (`auth/credentials`) — and by a
+ * refusal that says a remembered fact has gone stale (`ui/terms-refusal`).
+ * Clearing the shared owner is what tells the other tabs. A Google sign-in
+ * comes back through a full page load, which starts this module empty and
+ * asks.
  */
 export function forgetSession(): void {
   remembered.clear();

@@ -1,6 +1,7 @@
 import { redirect } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { returnPathSchema } from "../../lib/return-path";
 import {
   isRememberedForSession,
   noteSessionOwner,
@@ -72,9 +73,10 @@ const HANDLE_CLAIMED = "has-handle";
  *
  * **Asked once per session in the browser, not on every navigation.**
  * The question is a server round trip, and it used to be paid before
- * every page. Its one answer that cannot change while the session lasts
- * is "has a handle" — a handle is renamed, never cleared — so the browser
- * keeps that one and skips the trip afterwards. The other two answers are
+ * every page. Its one answer kept is "has a handle" — a handle is renamed,
+ * never cleared — so the browser keeps that one and skips the trip
+ * afterwards, until a refusal says it went stale: newer terms published
+ * under an open tab (`lib/browser/session-memo`, decision D-96). The other two answers are
  * asked again each time: "signed out" and "no handle yet" both end the
  * moment the runner signs in or claims one. Signing in or out forgets the
  * memo (`auth/credentials`), and the memo is keyed to the runner the
@@ -308,6 +310,15 @@ export function legalDocOrNotFound(doc: LegalDoc | undefined): LegalDoc {
  */
 export const leavingSearch = z.object({
   on: z.coerce.number().int().positive().optional().catch(undefined),
+});
+
+/**
+ * `/account/terms`' search: where the runner was when a stale tab's call
+ * was refused (`ui/terms-refusal`, decision D-96), for Accept to return
+ * them to — a path on this site, or nothing, and Accept goes home.
+ */
+export const termsPromptSearch = z.object({
+  from: returnPathSchema.optional().catch(undefined),
 });
 
 /**

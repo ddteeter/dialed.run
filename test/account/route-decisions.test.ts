@@ -21,6 +21,7 @@ import {
   legalDocOrNotFound,
   startHandleIfNeeded,
   startOverIfNoAddress,
+  termsPromptSearch,
   tokenSearch,
   unsubscribeSearch,
 } from "../../src/modules/account/route-decisions";
@@ -245,6 +246,27 @@ describe("leavingSearch and homeIfNothingToSay", () => {
     expect(() => {
       homeIfNothingToSay({ state: "ask", version: 2 });
     }).not.toThrow();
+  });
+});
+
+describe("termsPromptSearch (ACC-6, D-96)", () => {
+  it("keeps a path on this site to return to after Accept", () => {
+    expect(termsPromptSearch.parse({ from: "/closet?tab=shoes" })).toEqual({
+      from: "/closet?tab=shoes",
+    });
+  });
+
+  it("drops anything that is not one, rather than failing the prompt", () => {
+    for (const from of [
+      "https://evil.example/",
+      "//evil.example",
+      "/auth/login",
+      "closet",
+      7,
+      undefined,
+    ]) {
+      expect(termsPromptSearch.parse({ from })).toEqual({ from: undefined });
+    }
   });
 });
 

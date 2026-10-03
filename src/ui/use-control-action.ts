@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import type { RefObject } from "react";
 
 import type { ControlFailure } from "./form";
+import { useTermsRefusal } from "./terms-refusal";
 import { classifyFailure } from "./use-form-submit";
 
 /**
@@ -77,6 +78,7 @@ export function useControlAction<TArgs extends unknown[]>({
   const inFlight = useRef(false);
   const lastArgs = useRef<TArgs | undefined>(undefined);
   const retryRef = useRef<HTMLButtonElement>(null);
+  const answerTermsRefusal = useTermsRefusal();
 
   async function run(...args: TArgs): Promise<void> {
     if (inFlight.current) return;
@@ -89,6 +91,11 @@ export function useControlAction<TArgs extends unknown[]>({
       await action(...args);
       await onSuccess?.(...args);
     } catch (error: unknown) {
+      // Behind on the terms: the prompt, not a band (D-96).
+      if (answerTermsRefusal && classifyFailure(error).kind === "terms") {
+        answerTermsRefusal();
+        return;
+      }
       const message = causeLine(error);
       setFailure({ kicker, message });
       setStatus(`${kicker}. ${message}`);

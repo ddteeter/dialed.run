@@ -36,8 +36,13 @@ async function renderWithRouter(element: ReactElement) {
     getParentRoute: () => rootRoute,
     path: "/account/terms",
   });
+  // Where a stale tab's refused call was made, for Accept to return to.
+  const closetRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/closet",
+  });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([promptRoute]),
+    routeTree: rootRoute.addChildren([promptRoute, closetRoute]),
     history: createMemoryHistory({ initialEntries: ["/account/terms"] }),
   });
   await router.load();
@@ -59,8 +64,11 @@ What the wired Log out let fall, for the test that fails it.
 */
 const failures: string[] = [];
 
-function Wired({ signOut }: Readonly<{ signOut: () => Promise<unknown> }>) {
-  const wiring = useTermsPromptWiring(signOut);
+function Wired({
+  signOut,
+  from,
+}: Readonly<{ signOut: () => Promise<unknown>; from?: string }>) {
+  const wiring = useTermsPromptWiring(signOut, from);
   return (
     <>
       <button
@@ -110,6 +118,21 @@ describe("useTermsPromptWiring", () => {
     });
     expect(invalidate).toHaveBeenCalled();
     expect(signOut).not.toHaveBeenCalled();
+  });
+
+  it("goes back where a refused call left the runner, once accepted", async () => {
+    const signOut = vi.fn(() => Promise.resolve());
+    const { router, invalidate } = await renderWithRouter(
+      <Wired signOut={signOut} from="/closet?tab=shoes" />,
+    );
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Accepted" }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/closet");
+    });
+    expect(router.state.location.searchStr).toBe("?tab=shoes");
+    expect(invalidate).toHaveBeenCalled();
   });
 
   it("signs out, then goes home", async () => {

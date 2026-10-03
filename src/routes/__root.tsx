@@ -9,6 +9,7 @@ import { gateOnHandle } from "../modules/account/route-decisions";
 import { signedInQuery } from "../modules/auth/functions";
 import { SITE_LINKS, SITE_META } from "../modules/ops/og/site-head";
 import { Devtools } from "../ui/Devtools";
+import { TermsRefusalAnswer } from "../ui/terms-refusal";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -125,7 +126,9 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         <HeadContent />
       </head>
       <body className="bg-ground font-sans text-ink antialiased">
-        {children}
+        {/* A refusal for being behind on the terms opens the prompt, from
+            any form, control or loader under here (decision D-96). */}
+        <TermsRefusalAnswer>{children}</TermsRefusalAnswer>
         <Devtools />
         <Scripts />
       </body>

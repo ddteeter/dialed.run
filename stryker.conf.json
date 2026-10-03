@@ -31,7 +31,7 @@
     "src/lib/sql/**/*.ts",
     "src/lib/browser/**/*.ts",
     "src/lib/nav-types.ts",
-    "src/lib/photo-constraints.ts,src/lib/csp-nonce.ts,src/lib/dates.ts,src/lib/file-part.ts,src/lib/normalize.ts,src/lib/entry-photo-key.ts,src/lib/domain.ts,src/lib/chunked.ts,src/lib/toggled-in.ts,src/lib/coords.ts",
+    "src/lib/photo-constraints.ts,src/lib/csp-nonce.ts,src/lib/dates.ts,src/lib/file-part.ts,src/lib/normalize.ts,src/lib/entry-photo-key.ts,src/lib/domain.ts,src/lib/chunked.ts,src/lib/toggled-in.ts,src/lib/coords.ts,src/lib/return-path.ts",
     "src/lib/photo-pipeline.ts,src/lib/ids.ts,src/lib/auth-signal.ts,src/lib/copy.ts,src/lib/errors.ts,src/lib/top-by-count.ts,src/lib/now.ts,src/lib/import-file-key.ts,src/lib/garment-photo-key.ts,src/lib/for-ids.ts",
     "src/ui/**/*.tsx",
     "src/ui/**/*.ts",

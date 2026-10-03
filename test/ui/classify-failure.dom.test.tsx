@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AUTH_REQUIRED_CODE } from "../../src/lib/auth-signal";
+import {
+  AUTH_REQUIRED_CODE,
+  TERMS_NOT_ACCEPTED_CODE,
+} from "../../src/lib/auth-signal";
 import { classifyFailure } from "../../src/ui";
 
 /**
@@ -40,6 +43,17 @@ describe("classifyFailure", () => {
       kind: "session",
       message: "You were signed out.",
     });
+  });
+
+  it("reads a refusal for being behind on the terms from its code (ACC-6)", () => {
+    expect(classifyFailure({ code: TERMS_NOT_ACCEPTED_CODE })).toStrictEqual({
+      kind: "terms",
+      message: "Accept the current terms first.",
+    });
+    // Wording alone is not the signal here either.
+    expect(classifyFailure(new Error("terms not accepted")).kind).toBe(
+      "server",
+    );
   });
 
   it("does not read a session failure out of a message that says so", () => {
