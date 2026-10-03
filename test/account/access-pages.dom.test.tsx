@@ -368,6 +368,9 @@ describe("D7 · Access", () => {
   it("shows nothing in its own status line until something happens", () => {
     desk();
     expect(screen.getAllByRole("status")[0]).toHaveTextContent("");
+    // The Codes section's own status line (what a made code's line fills
+    // in) starts empty too, before any code is made.
+    expect(part("status-line")).toHaveTextContent("");
   });
 
   it("sends an invite and declines, each reloading the page", async () => {
@@ -422,6 +425,15 @@ describe("D7 · Access", () => {
     // An active code's code and count read in ink; a spent one, muted.
     expect(open.getByText("DIAL-TR8K")).toHaveClass("text-ink");
     expect(open.getByText("2/8")).toHaveClass("text-ink");
+    // Not held: the row's own grid, with none of the held row's dimming.
+    expect(open.getByText("DIAL-TR8K").closest(".grid")).toHaveClass(
+      "grid",
+      "items-baseline",
+      "gap-4",
+    );
+    expect(open.getByText("DIAL-TR8K").closest(".grid")).not.toHaveClass(
+      "text-quiet",
+    );
     const used = within(rowOf("DIAL-7K3P"));
     expect(used.getByText("No label")).toBeVisible();
     expect(used.getByText("maya@example.com")).toBeVisible();
@@ -434,6 +446,8 @@ describe("D7 · Access", () => {
     expect(revoked.getByText("Revoked")).toBeVisible();
     expect(revoked.getByText("Not used yet")).toBeVisible();
     expect(rowOf("DIAL-TR8K")).not.toHaveAttribute("data-state");
+    // No revoke has failed, so no row carries its band.
+    expect(screen.queryByText("Still active")).toBeNull();
   });
 
   it("copies the code's link and says so", async () => {
@@ -578,6 +592,55 @@ describe("D7 · Access", () => {
     expect(revoke).toHaveBeenLastCalledWith({ data: { id: "c1" } });
     expect(within(rowOf("DIAL-TR8K")).queryByText("Still active")).toBeNull();
     expect(screen.getByRole("button", { name: "Undo" })).toBeVisible();
+  });
+
+  it("never re-arms Undo's timer once a revoke has failed, however late the failure lands", async () => {
+    vi.useFakeTimers();
+    const pending = Promise.withResolvers<undefined>();
+    const revoke = vi.fn(() => pending.promise);
+    desk({ revoke });
+    act(() => {
+      within(rowOf("DIAL-TR8K"))
+        .getByRole("button", { name: "Revoke" })
+        .click();
+    });
+    // The failure lands after Undo's own timer has already been armed
+    // (from the revoke), but well before that timer would fire.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+      pending.reject(new Error("down"));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(
+      within(rowOf("DIAL-TR8K")).getByText("Still active"),
+    ).toBeVisible();
+    // Ten seconds from the click — when Undo's timer would have fired had
+    // the failure never cancelled it — the band is still up.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(
+      within(rowOf("DIAL-TR8K")).getByText("Still active"),
+    ).toBeVisible();
+    // And so is ten seconds after the failure itself, which a guard that
+    // forgot to check "has this revoke failed" would re-arm the timer from.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(
+      within(rowOf("DIAL-TR8K")).getByText("Still active"),
+    ).toBeVisible();
+  });
+
+  it("wears no NEW badge before any code has been made this load", () => {
+    // A code that happens to share Stryker's own placeholder string: if the
+    // "codes made this load" list ever started with anything in it instead
+    // of empty, this is the row that would wrongly wear NEW from the start.
+    const planted = code({ id: "c9", code: "Stryker was here" });
+    desk({ desk: { ...DESK, codes: [planted, ...DESK.codes] } });
+    expect(
+      within(rowOf("Stryker was here")).queryByText("New"),
+    ).toBeNull();
   });
 
   it("creates a code with a label and uses, once per key, and says which", async () => {

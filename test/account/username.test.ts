@@ -840,6 +840,18 @@ describe("the rename notice (ACC-12; round 27 #16)", () => {
     expect(await renameNoticeOf(db, userId)).toBeUndefined();
   });
 
+  it("never answers from another runner's locked handle", async () => {
+    // Someone else has a locked history row — the most recent one on the
+    // table, if the lookup forgot to filter by userId.
+    await renamedFrom("quadzilla_69");
+    const userId = await runner({ username: "runner_9999" });
+    await db
+      .update(userProfiles)
+      .set({ usernameResetReason: "Advertising" })
+      .where(eq(userProfiles.userId, userId));
+    expect(await renameNoticeOf(db, userId)).toBeUndefined();
+  });
+
   it("is settled by Save: a claim clears the reason", async () => {
     const userId = await renamedFrom("quadzilla_69");
     expect(await claimUsername(db, userId, "quiet_mile", CLEAR)).toMatchObject({

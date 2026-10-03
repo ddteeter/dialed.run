@@ -317,13 +317,24 @@ describe("rescreenHandlesFromEnv", () => {
     "claims nothing with no key (%j): the handles wait for one",
     async (apiKey) => {
       const userId = await claimedDuringOutage("quiet_mile");
+      // An old timestamp that `now` (whatever it is) would never produce,
+      // so a claim-and-release that stamps `now()` is distinguishable from
+      // the guard returning before any row is touched.
+      await db
+        .update(userProfiles)
+        .set({ usernameScreenedAt: 1000 })
+        .where(eq(userProfiles.userId, userId));
       const before = await screenOf(userId);
       const fetchSpy = vi.spyOn(globalThis, "fetch");
+      const anomalies: string[] = [];
 
-      await rescreenWithKey(db, apiKey, []);
+      await rescreenWithKey(db, apiKey, anomalies);
 
       expect(fetchSpy).not.toHaveBeenCalled();
-      expect(await screenOf(userId)).toStrictEqual(before);
+      const after = await screenOf(userId);
+      expect(after).toStrictEqual(before);
+      expect(after?.at).toBe(1000);
+      expect(anomalies).toStrictEqual([]);
     },
   );
 

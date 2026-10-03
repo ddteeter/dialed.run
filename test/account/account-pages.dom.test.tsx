@@ -600,6 +600,11 @@ describe("ChangeEmail (ACC-8)", () => {
     expect(await screen.findByText(limitedMessage(until))).toBeVisible();
     // Nothing went, so nothing says it did (task 126 PR B).
     expect(screen.queryByText("Link sent.")).toBeNull();
+    // "limited" is not "unverified": the confirm-first sheet never opens
+    // for the hour's limit, only for an unconfirmed address.
+    expect(
+      screen.queryByRole("dialog", { name: "Confirm your email first" }),
+    ).toBeNull();
     await user.click(screen.getByRole("button", { name: "Try again" }));
     expect(request).toHaveBeenCalledTimes(2);
   });

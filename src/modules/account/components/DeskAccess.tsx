@@ -523,9 +523,9 @@ export function DeskAccess({
                 void row.run(restore, code.id);
               }}
               revokeBand={
-                isRevokeFailed && code.id === holding ? (
+                revoking.failure !== undefined && code.id === holding ? (
                   <FailureBand
-                    kicker="Still active"
+                    kicker={revoking.failure.kicker}
                     message="Revoke didn't go through. Try again?"
                     onRetry={revoking.retry}
                     retryRef={revoking.retryRef}
