@@ -276,7 +276,9 @@ describe("Au5 · Request access", () => {
       expect(part("receipt")).not.toBeNull();
     });
     // The receipt's own "Create an account" is the only one.
-    expect(screen.getAllByRole("link", { name: "Create an account" })).toHaveLength(1);
+    expect(
+      screen.getAllByRole("link", { name: "Create an account" }),
+    ).toHaveLength(1);
   });
 
   it("names the limit's time, and Turnstile's sentence for its refusal", () => {
@@ -475,9 +477,9 @@ describe("D7 · Access", () => {
         "Link not copied.",
       );
     });
-    const band = within(rowOf("DIAL-TR8K")).getByText(/^Copying/u).closest(
-      "[data-part='failure-band']",
-    );
+    const band = within(rowOf("DIAL-TR8K"))
+      .getByText(/^Copying/u)
+      .closest("[data-part='failure-band']");
     expect(band).toHaveTextContent(
       "Not copiedCopying didn't work here. The link is selected: copy it yourself.",
     );
@@ -494,7 +496,9 @@ describe("D7 · Access", () => {
       within(rowOf("DIAL-TR8K")).queryByRole("button", { name: "Try again" }),
     ).toBeNull();
     // Only that row, and gone once a copy works.
-    expect(screen.getAllByRole("textbox", { name: "Invite link" })).toHaveLength(1);
+    expect(
+      screen.getAllByRole("textbox", { name: "Invite link" }),
+    ).toHaveLength(1);
   });
 
   it("forgets the selected link once a copy works", async () => {
@@ -540,6 +544,21 @@ describe("D7 · Access", () => {
     ).toBeNull();
   });
 
+  it("arms no Undo timer while nothing is held", async () => {
+    // With no row held, the hold's clear-after-ten-seconds timer must not
+    // start: it would only clear a hold that is already empty, so nothing
+    // on screen shows it, but it is a timer left running for no row.
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+    desk();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(
+      setTimeoutSpy.mock.calls.filter(([, delay]) => delay === UNDO_WINDOW_MS),
+    ).toStrictEqual([]);
+    setTimeoutSpy.mockRestore();
+  });
+
   it("drops the Undo after ten seconds, and not before", async () => {
     vi.useFakeTimers();
     desk();
@@ -572,9 +591,9 @@ describe("D7 · Access", () => {
         .click();
       await vi.advanceTimersByTimeAsync(0);
     });
-    const band = within(rowOf("DIAL-TR8K")).getByText("Still active").closest(
-      "[data-part='failure-band']",
-    );
+    const band = within(rowOf("DIAL-TR8K"))
+      .getByText("Still active")
+      .closest("[data-part='failure-band']");
     expect(band).toHaveTextContent("Revoke didn't go through. Try again?");
     expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
     // A failed revoke's band is not timed away with the Undo's ten seconds.
@@ -594,6 +613,23 @@ describe("D7 · Access", () => {
     expect(screen.getByRole("button", { name: "Undo" })).toBeVisible();
   });
 
+  it("puts a failed revoke's band only on that row, never on an untouched sibling", async () => {
+    const revoke = vi.fn().mockRejectedValueOnce(new Error("down"));
+    const { user } = desk({ revoke });
+    await user.click(
+      within(rowOf("DIAL-TR8K")).getByRole("button", { name: "Revoke" }),
+    );
+    await waitFor(() => {
+      expect(
+        within(rowOf("DIAL-TR8K")).getByText("Still active"),
+      ).toBeVisible();
+    });
+    // The band's condition is `code.id === holding`, not "some revoke
+    // failed" — a sibling row with no revoke of its own must not wear it.
+    expect(within(rowOf("DIAL-7K3P")).queryByText("Still active")).toBeNull();
+    expect(within(rowOf("DIAL-H2XN")).queryByText("Still active")).toBeNull();
+  });
+
   it("never re-arms Undo's timer once a revoke has failed, however late the failure lands", async () => {
     vi.useFakeTimers();
     const pending = Promise.withResolvers<undefined>();
@@ -611,25 +647,41 @@ describe("D7 · Access", () => {
       pending.reject(new Error("down"));
       await vi.advanceTimersByTimeAsync(0);
     });
-    expect(
-      within(rowOf("DIAL-TR8K")).getByText("Still active"),
-    ).toBeVisible();
+    expect(within(rowOf("DIAL-TR8K")).getByText("Still active")).toBeVisible();
     // Ten seconds from the click — when Undo's timer would have fired had
     // the failure never cancelled it — the band is still up.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(5000);
     });
-    expect(
-      within(rowOf("DIAL-TR8K")).getByText("Still active"),
-    ).toBeVisible();
+    expect(within(rowOf("DIAL-TR8K")).getByText("Still active")).toBeVisible();
     // And so is ten seconds after the failure itself, which a guard that
     // forgot to check "has this revoke failed" would re-arm the timer from.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(5000);
     });
-    expect(
-      within(rowOf("DIAL-TR8K")).getByText("Still active"),
-    ).toBeVisible();
+    expect(within(rowOf("DIAL-TR8K")).getByText("Still active")).toBeVisible();
+  });
+
+  it("leaves no timer pending that could clear a held row once its revoke has failed", async () => {
+    vi.useFakeTimers();
+    const revoke = vi.fn().mockRejectedValueOnce(new Error("down"));
+    desk({ revoke });
+    await act(async () => {
+      within(rowOf("DIAL-TR8K"))
+        .getByRole("button", { name: "Revoke" })
+        .click();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(within(rowOf("DIAL-TR8K")).getByText("Still active")).toBeVisible();
+    // Run every timer left pending to completion, however many there are
+    // or whenever they fire. The real guard leaves none once a revoke has
+    // failed; a guard that stopped checking isFailed on the dependency
+    // change would re-arm a clear-the-hold timer instead of returning
+    // early, and running it out would clear the hold.
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    expect(within(rowOf("DIAL-TR8K")).getByText("Still active")).toBeVisible();
   });
 
   it("wears no NEW badge before any code has been made this load", () => {
@@ -638,9 +690,7 @@ describe("D7 · Access", () => {
     // of empty, this is the row that would wrongly wear NEW from the start.
     const planted = code({ id: "c9", code: "Stryker was here" });
     desk({ desk: { ...DESK, codes: [planted, ...DESK.codes] } });
-    expect(
-      within(rowOf("Stryker was here")).queryByText("New"),
-    ).toBeNull();
+    expect(within(rowOf("Stryker was here")).queryByText("New")).toBeNull();
   });
 
   it("creates a code with a label and uses, once per key, and says which", async () => {
