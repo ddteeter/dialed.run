@@ -72,9 +72,16 @@ export function ChangeEmail({
       return result;
     },
     successMessage: "Link sent.",
-    onSuccess: (result) => {
-      setOutcome(result);
-      if (result.status === "unverified") setIsSheetOpen(true);
+    onSuccess: setOutcome,
+    // Nothing was sent, so nothing is announced as sent: an unconfirmed
+    // address opens "Confirm your email first", and the hour's limit
+    // draws its own band (seam 7's refusal, #139).
+    refusal: {
+      matches: (result) => result.status !== "sent",
+      answer: (result) => {
+        setOutcome(result);
+        if (result.status === "unverified") setIsSheetOpen(true);
+      },
     },
   });
 

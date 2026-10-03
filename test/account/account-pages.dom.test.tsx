@@ -598,6 +598,8 @@ describe("ChangeEmail (ACC-8)", () => {
     await fillChange(user, "new@example.com");
     await user.click(sendLink());
     expect(await screen.findByText(limitedMessage(until))).toBeVisible();
+    // Nothing went, so nothing says it did (task 126 PR B).
+    expect(screen.queryByText("Link sent.")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Try again" }));
     expect(request).toHaveBeenCalledTimes(2);
   });
@@ -629,6 +631,8 @@ describe("ChangeEmail (ACC-8)", () => {
       await screen.findByRole("dialog", { name: "Confirm your email first" }),
     ).toBeVisible();
     expect(screen.queryByText(/^Sent ✓/u)).toBeNull();
+    // A refusal, not a send: the live region never says "Link sent.".
+    expect(screen.queryByText("Link sent.")).toBeNull();
   });
 
   it("asks for the current password before the round trip", async () => {
