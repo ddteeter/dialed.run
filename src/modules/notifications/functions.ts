@@ -5,7 +5,7 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 
-import { requireUserId } from "../auth";
+import { requireUserId, requireUserIdBeforeTerms } from "../auth";
 import { runsAwaitingVerdict } from "../runs";
 import { notificationsDb } from "./db";
 import {
@@ -22,10 +22,15 @@ export const listNotificationsFn = createServerFn({ method: "GET" }).handler(
   },
 );
 
+/**
+ * The bell's dot. Before the terms (task 126, ACC-6): Settings › Account,
+ * which a runner behind on them may still open to delete their account,
+ * loads it.
+ */
 export const unreadNotificationCountFn = createServerFn({
   method: "GET",
 }).handler(async () => {
-  const userId = await requireUserId();
+  const userId = await requireUserIdBeforeTerms();
   return unreadNotificationCount(notificationsDb(), userId);
 });
 

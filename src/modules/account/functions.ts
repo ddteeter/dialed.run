@@ -109,10 +109,11 @@ export const handleGateQuery = createServerFn({ method: "GET" }).handler(
 
 /**
  * The account's settings pages (ACC-7, ACC-8, ACC-11): the account, the
- * handle and the email switches.
+ * handle and the email switches. Before the terms: Settings › Account is
+ * where a runner who will not accept them deletes their account.
  */
 export const accountPageQuery = createServerFn({ method: "GET" }).handler(
-  async () => accountPage(db(), await requireUserId()),
+  async () => accountPage(db(), await requireUserIdBeforeTerms()),
 );
 
 /**
@@ -279,14 +280,19 @@ export const restoreInviteCodeFn = createServerFn({ method: "POST" })
 
 /**
  * ACC-10's Get a copy: queue the runner's emailed ZIP, or nothing new if
- * one is under way or was made today — and what the row shows now.
+ * one is under way or was made today — and what the row shows now. Before
+ * the terms (D-95): a runner's copy of their data never waits on their
+ * accepting new terms.
  */
 export const requestExportFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => exportRequestInput.parse(data))
   .handler(async ({ data }) =>
     requestExport(
       db(),
-      { userId: await requireUserId(), idempotencyKey: data.idempotencyKey },
+      {
+        userId: await requireUserIdBeforeTerms(),
+        idempotencyKey: data.idempotencyKey,
+      },
       { queue: env.EXPORTS_QUEUE, report: captureException },
       nowSeconds(),
     ),

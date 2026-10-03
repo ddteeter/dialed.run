@@ -31,7 +31,7 @@ import { hasRowWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 import { isProfaneHandle, readBackDigits } from "../../lib/contracts/profanity";
 import type { ScreenHandle } from "./handle-screen";
-import { termsStanding } from "./terms-acceptance";
+import { currentTermsVersion, termsStanding } from "./terms-acceptance";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -502,10 +502,13 @@ export async function usernameOf(
  * deletion silently. It outranks everything else about them.
  *
  * **"needs-terms"** (ACC-6) is a runner whose latest acceptance is below
- * the current terms, or who has none: every page sends them to the terms
- * prompt first. After leaving, before O0 — a handle is claimed through a
- * server function, which refuses a runner who is behind. So "has-handle",
- * the one answer the browser remembers, also means the terms are current.
+ * the current published terms, or who has none — never anyone while no
+ * terms are published (D-93): every page sends them to the terms prompt
+ * first. After leaving, before O0 — a handle is claimed through a server
+ * function, which refuses a runner who is behind. So "has-handle", the one
+ * answer the browser remembers, also means the terms were current when it
+ * was asked; a deploy that publishes newer ones makes that untrue, and the
+ * first refusal it earns forgets the memo (`ui/terms-refusal`, D-96).
  */
 export type HandleGate =
   "signed-out" | "needs-handle" | "has-handle" | "leaving" | "needs-terms";
@@ -525,6 +528,7 @@ export type HandleGateAnswer =
 export async function handleGate(
   db: Db,
   userId: string | undefined,
+  currentTerms: number | undefined = currentTermsVersion(),
 ): Promise<HandleGateAnswer> {
   if (userId === undefined) return { gate: "signed-out", userId };
   const [isLeaving, terms, username] = await Promise.all([
@@ -534,11 +538,11 @@ export async function handleGate(
       accountDeletions.userId,
       eq(accountDeletions.userId, userId),
     ),
-    termsStanding(db, userId),
+    termsStanding(db, userId, currentTerms),
     usernameOf(db, userId),
   ]);
   if (isLeaving) return { gate: "leaving", userId };
-  if (terms === "behind") return { gate: "needs-terms", userId };
+  if (terms.state === "behind") return { gate: "needs-terms", userId };
   return {
     gate: username === undefined ? "needs-handle" : "has-handle",
     userId,

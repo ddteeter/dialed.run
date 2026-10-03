@@ -253,6 +253,7 @@ describe("buildExport", () => {
       "entries.csv",
       "kit.csv",
       "garments.csv",
+      "terms.csv",
       `photos/entries/${seeded.entryId}-1.jpg`,
       `photos/closet/${seeded.garmentId}.jpg`,
       `run-files/${seeded.importId}.gpx`,
@@ -308,7 +309,7 @@ describe("buildExport", () => {
     expect(await statusOf(exported.id)).toBe("ready");
     const { zip } = await stagedZip(exported.id);
     // Nothing in the account but the account: the texts, no files.
-    expect(zip.names).toHaveLength(6);
+    expect(zip.names).toHaveLength(7);
   });
 
   it.each(["ready", "failed", "expiring"] as const)(

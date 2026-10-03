@@ -15,7 +15,7 @@
  * ./auth-error. Both of those import nothing from TanStack and so stay
  * loadable in the workers pool.
  */
-import { getRequest, getRequestHeaders } from "@tanstack/react-start/server";
+import { getRequestHeaders } from "@tanstack/react-start/server";
 import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
@@ -38,22 +38,23 @@ function db() {
  * The signed-in user's id, or `AuthRequiredError` — and
  * `AccountLeavingError` for a runner whose account is set to be deleted
  * (ACC-9; ./leaving-gate says why the server, and not only the root
- * route, says no), and `TermsNotAcceptedError` for a write from a runner
- * behind on the terms (ACC-6; ./terms-gate). Server-function side only —
- * route loaders want `requireSession` from ./functions, which redirects
- * instead of throwing.
+ * route, says no), and `TermsNotAcceptedError` for a runner behind on the
+ * published terms (ACC-6). Every caller, whatever its method: the whole
+ * decision, and why it never reads the method, is ./terms-gate's.
+ * Server-function side only — route loaders want `requireSession` from
+ * ./functions, which redirects instead of throwing.
  */
 export async function requireUserId(): Promise<string> {
   return agreedUserId(
     db(),
-    await requireUserIdBeforeTerms(),
-    getRequest().method,
+    await auth.api.getSession({ headers: getRequestHeaders() }),
   );
 }
 
 /**
- * `requireUserId` without the terms rule, for the writes a runner behind
- * on the terms must still make: accepting them, and (through
+ * `requireUserId` without the terms rule, for what a runner behind on the
+ * terms must still reach (./terms-gate names the list): accepting them,
+ * Get a copy, Settings › Account's reads, and (through
  * `checkCurrentPassword`) proving the password that deletes the account.
  * Any other caller wants `requireUserId`.
  */

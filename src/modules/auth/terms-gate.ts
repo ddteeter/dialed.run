@@ -1,45 +1,67 @@
 /**
- * A runner behind on the terms, at the one auth gate (task 126, ACC-6;
- * round 28 PR A) — the leaving refusal's shape (./leaving-gate).
+ * `requireUserId`'s whole decision (task 126, ACC-6 and ACC-9; round 28
+ * PR A), with the session handed in — so it can be imported by a test,
+ * which `./require-user` cannot (it reads TanStack's request).
  *
- * The root route's gate sends a runner whose latest acceptance is below
- * the current terms to the prompt before any page, but a redirect is the
- * client's to skip, and the browser's has-handle memo skips the question
- * for the rest of a page load. So the server says no itself, in
- * `requireUserId`, which every server function passes through.
+ * **Gated by function, never by request method** (review of PR #140).
+ * The gate used to let a `GET` through as a read and treat anything else
+ * as a write. Neither half holds: TanStack's default method is `GET`, not
+ * `POST`, and during a server render the request is the *page's* `GET`, so
+ * a `POST` function a loader calls (`onboarding/done` →
+ * `completeOnboardingFn`, the Strava callback → `completeStravaConnectFn`)
+ * walked straight past it. So the method is never read. Every server
+ * function that calls `requireUserId` needs the current terms, reads and
+ * writes alike — the leaving gate's rule, one rule rather than a list of
+ * which functions write. A runner behind on the terms reaches nothing
+ * through it, which costs them nothing: the root's gate already shows them
+ * the prompt in front of every page, and a stale tab's refused call opens
+ * it too (decision D-96).
  *
- * **Writes only.** A server function declared `GET` reads, and is let
- * through: Settings › Account, where a runner who will not accept goes to
- * delete their account, loads through reads; and a tab left open across a
- * terms bump keeps rendering until its next save, rather than every page
- * failing. Anything else — `POST`, the default — is a write, or is treated
- * as one, and needs the current terms.
+ * **The exempt are named, by calling something else**:
+ * `requireUserIdBeforeTerms` for Accept itself, Get a copy (D-95: data
+ * portability never waits on new terms), and the two reads Settings ›
+ * Account loads, where Delete account is; `requireSignedInSince` and
+ * `checkCurrentPassword` for Delete account; `requireUserIdWhileLeaving`
+ * for Keep. Sign-out is Better Auth's own endpoint and never passes
+ * through here. `test/architecture/terms-exempt.test.ts` holds that list
+ * against the code, both ways.
  *
- * Exempt by construction rather than by a list: Accept itself
- * (`requireUserIdBeforeTerms`), Delete account (`requireSignedInSince` and
- * `checkCurrentPassword` check leaving only), Keep, and sign-out, which is
- * Better Auth's own endpoint and never passes through here.
+ * **One round trip.** The leaving claim and the latest acceptance are two
+ * seeks, read in one `db.batch()` rather than one after the other behind
+ * the session's own read.
  */
 import type { drizzle } from "drizzle-orm/d1";
 
-import { termsStanding } from "../account";
-import { TermsNotAcceptedError } from "./auth-error";
+import {
+  currentTermsVersion,
+  latestAcceptanceOf,
+  termsStandingOf,
+} from "../account";
+import { AccountLeavingError, TermsNotAcceptedError } from "./auth-error";
+import { deletionClaimOf, standingFrom } from "./leaving-gate";
+import { userIdOrThrow, type SessionWithUser } from "./session-user";
 
 type Db = ReturnType<typeof drizzle>;
 
 /**
- * Every server function's terms rule: the runner, on a read or while they
- * have accepted the current terms — `TermsNotAcceptedError` otherwise.
- * `method` is the request's, which for a server function is the one it was
- * declared with.
+ * The signed-in runner's id — or `AuthRequiredError` with no session,
+ * `AccountLeavingError` for an account set to be deleted, and
+ * `TermsNotAcceptedError` for a runner behind on the published terms.
+ * `current` is the published version, `undefined` while none is (D-93),
+ * when nobody is behind.
  */
 export async function agreedUserId(
   db: Db,
-  userId: string,
-  method: string,
+  session: SessionWithUser | null,
+  current: number | undefined = currentTermsVersion(),
 ): Promise<string> {
-  if (method === "GET") return userId;
-  if ((await termsStanding(db, userId)) === "behind") {
+  const userId = userIdOrThrow(session);
+  const [[claim], [latest]] = await db.batch([
+    deletionClaimOf(db, userId),
+    latestAcceptanceOf(db, userId),
+  ]);
+  if (standingFrom(claim) !== "active") throw new AccountLeavingError();
+  if (termsStandingOf(latest?.version, current).state === "behind") {
     throw new TermsNotAcceptedError();
   }
   return userId;

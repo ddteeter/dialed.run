@@ -32,7 +32,6 @@ import { eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { accountDeletions } from "../../db/schema-core";
-import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { AccountLeavingError, AuthRequiredError } from "./auth-error";
 
 type Db = ReturnType<typeof drizzle>;
@@ -44,11 +43,28 @@ type Db = ReturnType<typeof drizzle>;
 export type Standing = "active" | "leaving" | "purging";
 
 export async function standingOf(db: Db, userId: string): Promise<Standing> {
-  const claim = await firstRowWhere(
-    db,
-    accountDeletions,
-    eq(accountDeletions.userId, userId),
-  );
+  const [claim] = await deletionClaimOf(db, userId);
+  return standingFrom(claim);
+}
+
+/**
+ * The runner's deletion claim, if any, unsent — a seek on the table's
+ * primary key, so at most one row and no `LIMIT` to say so — for the one
+ * auth gate to batch with the terms read (`./terms-gate`).
+ */
+export function deletionClaimOf(db: Db, userId: string) {
+  return db
+    .select({ purgeStartedAt: accountDeletions.purgeStartedAt })
+    .from(accountDeletions)
+    .where(eq(accountDeletions.userId, userId));
+}
+
+/**
+The standing a deletion claim (or none) means.
+*/
+export function standingFrom(
+  claim: { readonly purgeStartedAt: number | null } | undefined,
+): Standing {
   if (claim === undefined) return "active";
   return claim.purgeStartedAt === null ? "leaving" : "purging";
 }

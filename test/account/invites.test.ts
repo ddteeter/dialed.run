@@ -34,7 +34,6 @@ import {
   restoreInviteCode,
   revokeInviteCode,
 } from "../../src/modules/account/invites";
-import { currentTermsVersion } from "../../src/modules/account/terms-acceptance";
 import type { TurnstileAttempt } from "../../src/modules/ops";
 import { fakeMail, owedTo } from "../email/helpers";
 
@@ -864,7 +863,8 @@ describe("turnstileAttempt", () => {
 
 describe("accessGate", () => {
   it("is invite-only by the flag, and answers from the database", async () => {
-    const gate = accessGate(db, verifyAs(true).verify);
+    // Version 2 of the terms, as if published (D-93).
+    const gate = accessGate(db, verifyAs(true).verify, 2);
     expect(gate.isInviteOnly).toBe(true);
     await seedCode("DIAL-GATE");
     expect(await gate.standing("DIAL-GATE")).toBe("open");
@@ -876,22 +876,18 @@ describe("accessGate", () => {
       .select({ confirmedAt: inviteRedemptions.confirmedAt })
       .from(inviteRedemptions);
     expect(row?.confirmedAt).toBeGreaterThan(0);
-    // ACC-6: the account accepted the current terms, at the same moment.
+    // ACC-6: the account accepted the published terms, at the same moment.
     const accepted = await db
       .select()
       .from(termsAcceptances)
       .where(eq(termsAcceptances.userId, mine.userId));
     expect(accepted).toStrictEqual([
-      {
-        userId: mine.userId,
-        version: currentTermsVersion(),
-        acceptedAt: row?.confirmedAt,
-      },
+      { userId: mine.userId, version: 2, acceptedAt: row?.confirmedAt },
     ]);
   });
 
   it("records the terms for an account made with no invite, once however often it runs", async () => {
-    const gate = accessGate(db, verifyAs(true).verify);
+    const gate = accessGate(db, verifyAs(true).verify, 2);
     const userId = newUlid();
     await gate.confirm(userId);
     await gate.confirm(userId);
@@ -900,7 +896,27 @@ describe("accessGate", () => {
         .select({ version: termsAcceptances.version })
         .from(termsAcceptances)
         .where(eq(termsAcceptances.userId, userId)),
-    ).toStrictEqual([{ version: currentTermsVersion() }]);
+    ).toStrictEqual([{ version: 2 }]);
+  });
+
+  it("records no terms while none are published, and still spends the invite", async () => {
+    // No version: the shipped draft, unpublished (D-93).
+    const gate = accessGate(db, verifyAs(true).verify);
+    await seedCode("DIAL-DRFT");
+    const mine = claim("DIAL-DRFT");
+    expect(await gate.claim(mine)).toBe("redeemed");
+    await gate.confirm(mine.userId);
+    const [row] = await db
+      .select({ confirmedAt: inviteRedemptions.confirmedAt })
+      .from(inviteRedemptions)
+      .where(eq(inviteRedemptions.userId, mine.userId));
+    expect(row?.confirmedAt).toBeGreaterThan(0);
+    expect(
+      await db
+        .select()
+        .from(termsAcceptances)
+        .where(eq(termsAcceptances.userId, mine.userId)),
+    ).toStrictEqual([]);
   });
 
   it("passes Turnstile only on its verdict, handing it the request's attempt", async () => {

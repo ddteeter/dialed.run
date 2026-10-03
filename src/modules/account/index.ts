@@ -26,7 +26,11 @@ export {
 export type { AccountRow, AccountsQuery } from "./accounts";
 export { isUnconfirmed, isVerified } from "./email-links";
 export { accessGate } from "./access";
-export { termsStanding } from "./terms-acceptance";
+export {
+  currentTermsVersion,
+  latestAcceptanceOf,
+  termsStandingOf,
+} from "./terms-acceptance";
 export {
   authMail,
   confirmEmail,

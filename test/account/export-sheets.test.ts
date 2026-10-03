@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { buildSheets } from "../../src/modules/account/export-sheets";
 
 /**
- * The export ZIP's five column tables (task 126, ACC-10; round 27 #13),
+ * The export ZIP's six column tables (task 126, ACC-10; round 27 #13),
  * unit-tested directly against `buildSheets` rather than through
  * `exportFiles`: the "about" sentences and the id columns are static, so
  * they need no seeded data. Every value a column reads is decided on
@@ -17,6 +17,7 @@ const NO_ROWS = {
   entries: [],
   kit: [],
   garments: [],
+  terms: [],
 };
 
 describe("buildSheets", () => {
@@ -45,6 +46,33 @@ describe("buildSheets", () => {
     expect(sheets.garmentsSheet.columns[0]?.about).toBe(
       "the garment's id; kit.csv names it.",
     );
+    expect(sheets.termsSheet.about).toBe(
+      "every version of the terms you accepted, oldest first.",
+    );
+  });
+
+  it("writes terms.csv from the acceptances it is handed (D-95)", () => {
+    const terms = [
+      { version: 1, acceptedAt: "2026-10-01T00:00:00.000Z" },
+      { version: 2, acceptedAt: "2026-10-02T00:00:00.000Z" },
+    ];
+    const { termsSheet } = buildSheets({ ...NO_ROWS, terms });
+    expect(termsSheet.file).toBe("terms.csv");
+    expect(termsSheet.rows).toStrictEqual(terms);
+    expect(
+      termsSheet.columns.map((column) => ({
+        name: column.name,
+        about: column.about,
+        values: terms.map((row) => column.value(row)),
+      })),
+    ).toStrictEqual([
+      { name: "version", about: "the version of the terms.", values: [1, 2] },
+      {
+        name: "accepted_at",
+        about: "when you accepted it (UTC).",
+        values: ["2026-10-01T00:00:00.000Z", "2026-10-02T00:00:00.000Z"],
+      },
+    ]);
   });
 
   it("puts the one profile row it is handed in profile.csv", () => {
