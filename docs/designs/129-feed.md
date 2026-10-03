@@ -98,6 +98,44 @@ places), the enum drop (#112).
   is not built — there is no useful notification to style.
 - **FEED-11** stays sequenced: 126's verification has not landed.
 
+### Follow-up PR: FEED-11 (and SAF-15's verification half), seam 7
+
+126's pieces were on main and called by nobody but U1. Wired:
+
+- **The band** is `account`'s `ConfirmEmailBand`, composed by the Feed
+  and You routes from the signed-in runner's address (`ownAccountQuery`,
+  one read of the `user` row — no password lookup — run in parallel with
+  each route's other loader reads, as on D and H) and passed to `Feed`
+  and `OwnProfile` as a `confirmBand` node, which each renders first in
+  its column. The band
+  draws nothing once the address is confirmed, so neither screen decides.
+  Copy is round 27 #7's: "…to share runs with other runners."
+- **Useful.** `setUsefulReaction` asks `account`'s `isVerified` first and
+  answers `{ status: "unverified" }`, writing nothing — before the
+  visibility check, so the refusal says nothing about the entry. A set
+  answers `{ status: "set", useful, count }`. On the client every press
+  asks the server, and only its refusal opens the screen's "Confirm your
+  email first" — a page whose loader saw an unconfirmed address must not
+  refuse a runner who has since confirmed in another tab.
+- **Report** (128's SAF-15, same seam). `fileReport(input, gate)` takes
+  the check as a required argument and asks it before anything is
+  written, the block included; `fileReportAction` passes `account`'s
+  `isVerified`. Safety's barrel does not import `account` (that would be
+  a cycle through `ops`), and no caller can file without a gate. W1
+  opens for anyone; the server's refusal reaches `useFormSubmit`'s new
+  `refusal` path — not a success, so no "Report sent." and W1 stays as it
+  was, and not a failure, so no band — and opens the confirm sheet.
+- **One gate per screen, composed by the route.** Feed and safety may
+  not import `account`'s components, so the route builds a
+  `ControlGate<Trigger>` (`ui`) from `account`'s `confirmEmailGate`: a
+  render function for the sheet. `useControlGate` gives the screen one
+  sheet and each control a guard, `ask(trigger)`; D's Useful and report
+  share one, and the trigger picks round 27 #17's lead sentence. The page
+  knows the address only to draw the band; the server alone decides
+  whether a control may act.
+- **The sheet** takes round 27 #17's lead sentence by trigger and its
+  **Not now**, which has focus. Design deltas, item 41.
+
 ## Test plan
 
 - worker: 150-follow feed page + cursor + EXPLAIN; bell counts a 30-day-old

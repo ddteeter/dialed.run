@@ -176,6 +176,18 @@ export interface UseFormSubmitOptions<TSchema extends z.ZodType, TResult> {
   Field name -> human label, for the summary rows.
   */
   labels?: Record<string, string>;
+  /**
+   * An answer that is neither a success nor a failure: the server
+   * declined for a reason the screen answers itself — a report from a
+   * runner whose address is not confirmed, which opens "Confirm your
+   * email first" (seam 7). Nothing was saved, so nothing is announced as
+   * done and `onSuccess` does not run; nothing failed, so there is no
+   * band. The form stays as it was, ready to send again.
+   */
+  refusal?: {
+    matches: (result: TResult) => boolean;
+    answer: (result: TResult) => void;
+  };
 }
 
 export function useFormSubmit<TSchema extends z.ZodType, TResult>({
@@ -184,6 +196,7 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
   onSuccess,
   successMessage,
   labels,
+  refusal,
 }: UseFormSubmitOptions<TSchema, TResult>) {
   const [pending, setPending] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -268,6 +281,10 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
       setPending(true);
       try {
         const result = await action(pre.data);
+        if (refusal?.matches(result) === true) {
+          refusal.answer(result);
+          return;
+        }
         setFieldErrors({});
         setStatus(successMessage);
         // The submission is over at this point, and the guard is
@@ -313,7 +330,15 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
     // Equivalent: stryker's replacement dependency array is a constant, so
     // the callback is exactly as stable as this list makes it.
     // Stryker disable next-line ArrayDeclaration
-    [schema, action, onSuccess, successMessage, land, answerTermsRefusal],
+    [
+      schema,
+      action,
+      onSuccess,
+      successMessage,
+      land,
+      refusal,
+      answerTermsRefusal,
+    ],
   );
 
   /**

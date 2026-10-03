@@ -6,9 +6,11 @@
  * bell counting a run of any age that still owes a verdict (S2), G's
  * settings button, `@handle` on the author row and `/@old` saying the
  * runner changed their name (FEED-10), the author's own under-review entry
- * marked on the card and on D (FEED-6, D-67), and a runner taking back
- * their own entry — one photo, then the whole entry (task 128 · SAF-3) —
- * one journey, one video.
+ * marked on the card and on D (FEED-6, D-67), the unconfirmed runner's
+ * band on Feed and You and the "Confirm your email first" sheet that the
+ * server's refusal of Useful and Report opens (round 26 #11; FEED-11,
+ * SAF-15), and a runner taking back their own entry — one photo, then the
+ * whole entry (task 128 · SAF-3) — one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
@@ -23,6 +25,7 @@ import { readFile } from "node:fs/promises";
 import { eq, inArray } from "drizzle-orm";
 import { getPlatformProxy } from "wrangler";
 
+import { user } from "../../src/db/schema-auth";
 import {
   entryPhotos,
   entryTags as entryTagsTable,
@@ -50,6 +53,21 @@ import {
   feedUserId,
   forgetPlace,
 } from "../conformance/feed-support";
+
+/**
+ * The feed runner's address, confirmed or not (round 26 #11): flipped for
+ * the unconfirmed beats, and always flipped back, because every later
+ * demo in the run signs in as a confirmed runner.
+ */
+async function setEmailConfirmed(isConfirmed: boolean): Promise<void> {
+  const userId = await feedUserId();
+  await withLocalDb(async ({ core }) => {
+    await core
+      .update(user)
+      .set({ emailVerified: isConfirmed })
+      .where(eq(user.id, userId));
+  });
+}
 
 test("follow a runner, browse their feed, open a verdict, and mark it useful", async ({
   page,
@@ -385,6 +403,79 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await useful.click();
     await expect(useful).toHaveAttribute("aria-pressed", "true");
     await expect(useful).toContainText("1");
+
+    // ---- An unconfirmed runner (round 26 #11; FEED-11, SAF-15) ---------
+    //
+    // The same runner with their address unconfirmed again: one hairline
+    // band on Feed and You, and Useful and Report draw at full strength and
+    // ask the server, whose refusal opens "Confirm your email first".
+    await setEmailConfirmed(false);
+    try {
+      await scene(page, "Unconfirmed · the refused report opens Confirm first");
+      await page.reload();
+      await hydrated(page);
+      await page.getByRole("button", { name: "Report this entry" }).click();
+      const reportSheet = page.getByRole("dialog", { name: /^Report /u });
+      await expect(reportSheet).toBeVisible();
+      await reportSheet
+        .getByRole("radio", { name: "It's an ad, or it's spam" })
+        .click();
+      await reportSheet.getByRole("button", { name: "Send report" }).click();
+      const confirmFirst = page.getByRole("dialog", {
+        name: "Confirm your email first",
+      });
+      await expect(confirmFirst).toBeVisible();
+      await expect(confirmFirst).toContainText(
+        "Reporting, sharing and marking runs Useful need a confirmed address.",
+      );
+      await confirmFirst.getByRole("button", { name: "Not now" }).click();
+      await expect(confirmFirst).toBeHidden();
+      // Nothing was filed, and W1 says nothing of the kind: it is as it was.
+      await expect(page.getByText("Report sent.")).toHaveCount(0);
+      await expect(reportSheet).toBeVisible();
+      await reportSheet.getByRole("button", { name: "Close" }).click();
+      await expect(reportSheet).toBeHidden();
+
+      await scene(page, "Unconfirmed · one band at the top of Feed");
+      await bar(page).getByRole("link", { name: "Feed" }).click();
+      await expect(page.getByRole("heading", { name: "Feed" })).toBeVisible();
+      await hydrated(page);
+      const nag = page.getByRole("complementary", {
+        name: "Confirm your email",
+      });
+      await expect(nag).toContainText(
+        "Confirm your email to share runs with other runners.",
+      );
+      await expect(
+        nag.getByRole("button", { name: "Resend link" }),
+      ).toBeVisible();
+
+      await scene(page, "Unconfirmed · Useful is refused, and nothing changes");
+      const cardUseful = page
+        .locator('[data-part="post"]')
+        .filter({ hasText: publicCaption })
+        .getByRole("button", { name: /Useful/u });
+      await cardUseful.click();
+      await expect(confirmFirst).toBeVisible();
+      await expect(confirmFirst).toContainText(
+        "Marking runs Useful, sharing and reporting need a confirmed address.",
+      );
+      await expect(
+        confirmFirst.getByRole("button", { name: "Not now" }),
+      ).toBeFocused();
+      await confirmFirst.getByRole("button", { name: "Not now" }).click();
+      await expect(confirmFirst).toBeHidden();
+      // Still the mark the confirmed runner left: nothing was sent.
+      await expect(cardUseful).toHaveAttribute("aria-pressed", "true");
+      await expect(cardUseful).toContainText("1");
+
+      await scene(page, "Unconfirmed · the same band on You");
+      await bar(page).getByRole("link", { name: "You" }).click();
+      await expect(page.locator('[data-part="settings-button"]')).toBeVisible();
+      await expect(nag).toBeVisible();
+    } finally {
+      await setEmailConfirmed(true);
+    }
 
     // G: the settings icon button at the right of the identity line, in
     // every state (round 26 #18).

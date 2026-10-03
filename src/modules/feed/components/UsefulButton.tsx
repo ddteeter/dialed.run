@@ -22,6 +22,10 @@ import type { UsefulReactionInput } from "./useful-reaction";
  * of twenty cards is still one screen with one region (Accessibility
  * Contract rule 08).
  *
+ * **It waits for a confirmed address** (round 26 #11): it draws at full
+ * strength for everyone and every press asks the server, whose refusal
+ * opens the screen's "Confirm your email first" sheet through `guard`.
+ *
  * The heart is text, as the frames draw it, and hidden from a screen
  * reader: `aria-pressed` already says whether it is marked, and "black
  * heart suit" says nothing.

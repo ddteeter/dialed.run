@@ -7,6 +7,7 @@ import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 
+import { user } from "../../src/db/schema-auth";
 import {
   entryTags,
   follows,
@@ -58,6 +59,40 @@ export async function makeUser(overrides?: {
       distanceUnit: overrides?.distanceUnit,
     });
   return userId;
+}
+
+/**
+ * A runner with an account whose address is confirmed — what Useful and
+ * report wait for (round 26 #11; seam 7). `makeUser` alone leaves no
+ * `user` row, which `isVerified` reads as a runner who is gone.
+ */
+export async function makeVerifiedUser(
+  overrides?: Parameters<typeof makeUser>[0],
+): Promise<string> {
+  const userId = await makeUser(overrides);
+  await addAccount(userId, true);
+  return userId;
+}
+
+/**
+ * Better Auth's `user` row for a runner `makeUser` made, confirmed or
+ * not, as sign-up and the confirm link leave it.
+ */
+export async function addAccount(
+  userId: string,
+  isVerified: boolean,
+): Promise<void> {
+  const now = new Date();
+  await coreDb()
+    .insert(user)
+    .values({
+      id: userId,
+      name: "",
+      email: `${userId.toLowerCase()}@example.test`,
+      emailVerified: isVerified,
+      createdAt: now,
+      updatedAt: now,
+    });
 }
 
 export async function makeRun(params: {

@@ -18,6 +18,7 @@ import {
   makeItem,
   makeRun,
   makeUser,
+  makeVerifiedUser,
   resetTables,
 } from "./feed/helpers";
 
@@ -179,24 +180,26 @@ describe("Useful is a set, so a repeated request leaves the same state", () => {
   // its answer was lost, the retry took the mark back (law 8b; PR #102
   // review). The press now carries the state it wants.
   it("marking twice is marked once", async () => {
-    const [author, viewer] = [await makeUser(), await makeUser()];
+    const [author, viewer] = [await makeUser(), await makeVerifiedUser()];
     const runId = await makeRun({ userId: author });
     const entryId = await makeEntry({ userId: author, runId });
 
     await setUsefulReaction(entryId, viewer, true);
 
     expect(await setUsefulReaction(entryId, viewer, true)).toStrictEqual({
+      status: "set",
       useful: true,
       count: 1,
     });
   });
 
   it("unmarking twice is unmarked, and unmarking what was never marked is harmless", async () => {
-    const [author, viewer] = [await makeUser(), await makeUser()];
+    const [author, viewer] = [await makeUser(), await makeVerifiedUser()];
     const runId = await makeRun({ userId: author });
     const entryId = await makeEntry({ userId: author, runId });
 
     expect(await setUsefulReaction(entryId, viewer, false)).toStrictEqual({
+      status: "set",
       useful: false,
       count: 0,
     });
@@ -204,6 +207,7 @@ describe("Useful is a set, so a repeated request leaves the same state", () => {
     await setUsefulReaction(entryId, viewer, false);
 
     expect(await setUsefulReaction(entryId, viewer, false)).toStrictEqual({
+      status: "set",
       useful: false,
       count: 0,
     });

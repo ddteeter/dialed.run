@@ -32,8 +32,10 @@ import {
   makeEntry,
   makeRun,
   makeUser,
+  makeVerifiedUser,
   NOW,
   resetSafetyTables,
+  confirmedReporter,
 } from "./helpers";
 
 /**
@@ -126,7 +128,7 @@ describe("a banned author (SAF-4)", () => {
 
   it("cannot be marked Useful", async () => {
     const { author, entryId } = await postedEntry();
-    const viewer = await makeUser();
+    const viewer = await makeVerifiedUser();
     await banUser({ userId: author, reason: "spam", bannedBy: viewer });
     await expect(setUsefulReaction(entryId, viewer, true)).rejects.toThrow(
       "entry is not visible to this viewer",
@@ -245,7 +247,7 @@ describe("a block (SAF-12)", () => {
 
   it("stops a blocked runner marking the entry Useful", async () => {
     const posted = await postedEntry();
-    const blocked = await makeUser();
+    const blocked = await makeVerifiedUser();
     await blockRunner(posted.author, blocked);
     await expect(
       setUsefulReaction(posted.entryId, blocked, true),
@@ -263,14 +265,20 @@ describe("a reporter's own hide (SAF-13)", () => {
     await follow(reporter, posted.author);
     await follow(bystander, posted.author);
 
-    const filed = await fileReport({
-      reporterId: reporter,
-      subjectType: "entry",
-      subjectId: posted.entryId,
-      reason: "spam",
-    });
+    const filed = await fileReport(
+      {
+        reporterId: reporter,
+        subjectType: "entry",
+        subjectId: posted.entryId,
+        reason: "spam",
+      },
+      confirmedReporter,
+    );
     // One report is far under the threshold: nothing global happened.
-    expect(filed.hiddenPendingReview).toBe(false);
+    expect(filed).toMatchObject({
+      status: "filed",
+      hiddenPendingReview: false,
+    });
 
     expect(await sightings(reporter, posted.entryId, posted.photoKey)).toEqual(
       UNSEEN,
@@ -286,12 +294,15 @@ describe("a reporter's own hide (SAF-13)", () => {
     await follow(reporter, posted.author);
     // The same id under another subject type must not match the entry's
     // probe — the subject type is part of what was reported.
-    await fileReport({
-      reporterId: reporter,
-      subjectType: "product",
-      subjectId: posted.entryId,
-      reason: "spam",
-    });
+    await fileReport(
+      {
+        reporterId: reporter,
+        subjectType: "product",
+        subjectId: posted.entryId,
+        reason: "spam",
+      },
+      confirmedReporter,
+    );
     expect(await sightings(reporter, posted.entryId, posted.photoKey)).toEqual(
       SEEN,
     );

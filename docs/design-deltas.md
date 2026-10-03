@@ -741,7 +741,41 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
 WHILE WE CHECK`), which offer no fix and are a different case? Either
       answer arrives as an amended Form Contract, not a board.
 
-41. **The terms prompt, and what task 126 PR A built beside a drawing
+41. **The unconfirmed runner's band and sheet, as wired (FEED-11, SAF-15;
+    round 26 #11, round 27 #7 and #17).** Built to the words; five
+    composition calls no frame makes.
+    - **Where the band sits.** Round 26 says "a hairline band at the top
+      of Feed and You" and draws no Feed or You with it. It is the first
+      thing in each screen's column, above the "Feed" heading and above
+      G's identity line, at the column's width. U1 Account keeps it where
+      126 put it.
+    - **The sheet's lead sentence for the other triggers.** Round 27 #17:
+      _"'Sharing…', 'Marking runs Useful…', 'Reporting…' leads, the rest
+      stays."_ Read as the trigger's phrase first and the other two after
+      it in the drawn order: "Marking runs Useful, sharing and reporting
+      need a confirmed address." and "Reporting, sharing and marking runs
+      Useful need a confirmed address." An email change (U1's Email page,
+      also a WAITS item) has no drawn lead, so its sheet keeps the address
+      sentence alone.
+    - **Resend link is the shared text link, not an ink pill.** #17 draws
+      Resend as the sheet's ink primary. The sheet uses the one Resend
+      link Au4, the band and the email change share (round 26's three
+      states), so all four read the same; drawing the sheet's as a pill is
+      a variant nobody has asked the link for yet.
+    - **One status region.** The band's Resend link carries its own
+      status line (it was built for Au4, which has no other), so an
+      unconfirmed Feed has two regions, the cards' and the band's. Rule
+      08 says one. Ask: may the band's Resend report into the screen's
+      region, or does a band count as its own?
+    - **When the sheet opens, and over what.** The server decides, not the
+      page (a page's answer is as old as its loader), so a press always
+      asks it and the sheet opens on its refusal. Useful's sheet comes up
+      a beat after the press, behind `[ Noting ]`. Report's link opens W1
+      for anyone, and the sheet comes up over W1 after Send, leaving W1 as
+      it was. One sheet per screen: D's Useful and report open the same
+      one, and the control picks its lead sentence.
+
+42. **The terms prompt, and what task 126 PR A built beside a drawing
     (ACC-6, ACC-13; round 28 PR A).** Built from existing primitives.
     - **The terms prompt (`/account/terms`) is undrawn.** Once the terms
       are published (D-93; nothing is asked until then), a signed-in

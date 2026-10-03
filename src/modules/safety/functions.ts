@@ -19,7 +19,12 @@ import { env } from "../../env";
 import { outboxInsert, oweOutbox, settleOutbox } from "../ops";
 
 import { banEmail, banUser, unbanUser } from "./bans";
-import { accountCount, forceRename, listAccounts } from "../account";
+import {
+  accountCount,
+  forceRename,
+  isVerified,
+  listAccounts,
+} from "../account";
 import { placeholderHandle, renameRecord } from "./rename";
 import { deskRunners, runnersWhere } from "./runners";
 import { blockRunner, blockedRunners, unblockRunner } from "./blocks";
@@ -43,8 +48,9 @@ export const fileReportAction = createServerFn({ method: "POST" })
     const reporterId = await requireUserId();
     // The block rides with the report (W1's checkbox) rather than being a
     // second round trip the reporter could lose; `fileReport` owns that
-    // decision, because a route may not branch.
-    return fileReport({ reporterId, ...data });
+    // decision, because a route may not branch. It waits for a confirmed
+    // address, and `account`'s check is the one it asks (seam 7).
+    return fileReport({ reporterId, ...data }, { isVerified });
   });
 
 export const blockRunnerAction = createServerFn({ method: "POST" })

@@ -16,10 +16,27 @@ import { usernameOf } from "./username";
 
 type Db = ReturnType<typeof drizzle>;
 
-export interface AccountView {
+/**
+ * The address and whether it is confirmed: all that Feed, You, D and H
+ * need (seam 7's nag band and confirm sheet), in the one read of the
+ * `user` row.
+ */
+export interface AddressView {
   readonly email: string;
   readonly isVerified: boolean;
+}
+
+export interface AccountView extends AddressView {
   readonly hasPassword: boolean;
+}
+
+async function addressView(
+  db: Db,
+  userId: string,
+): Promise<AddressView | undefined> {
+  const row = await firstRowWhere(db, user, eq(user.id, userId));
+  if (row === undefined) return undefined;
+  return { email: row.email, isVerified: row.emailVerified };
 }
 
 /**
@@ -31,11 +48,10 @@ export async function accountView(
   userId: string | undefined,
 ): Promise<AccountView | undefined> {
   if (userId === undefined) return undefined;
-  const row = await firstRowWhere(db, user, eq(user.id, userId));
-  if (row === undefined) return undefined;
+  const address = await addressView(db, userId);
+  if (address === undefined) return undefined;
   return {
-    email: row.email,
-    isVerified: row.emailVerified,
+    ...address,
     // Better Auth's email-and-password sign-up links a `credential`
     // account holding the hash; Google's links a `google` one.
     hasPassword: await hasRowWhere(
@@ -48,19 +64,37 @@ export async function accountView(
 }
 
 /**
- * The signed-in runner's own view, for pages behind a session. A session
- * whose account is gone cannot happen — sessions cascade with the user
- * row — so this is the compiler's case, and it fails loudly rather than
- * drawing an empty page.
+ * A view of the signed-in runner's own account, for pages behind a
+ * session. A session whose account is gone cannot happen — sessions
+ * cascade with the user row — so this is the compiler's case, and it
+ * fails loudly rather than drawing an empty page.
  */
+function signedIn<T>(view: T | undefined): T {
+  if (view === undefined)
+    throw new Error("signed in to an account that is gone");
+  return view;
+}
+
+/**
+The signed-in runner's own view, with whether there is a password.
+*/
 export async function ownAccountView(
   db: Db,
   userId: string,
 ): Promise<AccountView> {
-  const view = await accountView(db, userId);
-  if (view === undefined)
-    throw new Error("signed in to an account that is gone");
-  return view;
+  return signedIn(await accountView(db, userId));
+}
+
+/**
+ * The signed-in runner's address alone, for the screens that only need
+ * to know whether it is confirmed — no read of the `account` table they
+ * would throw away.
+ */
+export async function ownAddressView(
+  db: Db,
+  userId: string,
+): Promise<AddressView> {
+  return signedIn(await addressView(db, userId));
 }
 
 /**

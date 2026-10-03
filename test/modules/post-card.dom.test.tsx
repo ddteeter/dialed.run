@@ -4,24 +4,32 @@ import { describe, expect, it, vi } from "vitest";
 
 import { PostCard } from "../../src/modules/feed/components/PostCard";
 import { VerdictBadge } from "../../src/modules/feed/components/VerdictBadge";
+import type { SetUsefulFn } from "../../src/modules/feed/components/useful-reaction";
 import type { FeedItem } from "../../src/modules/feed/feed";
+import type { ControlGuard } from "../../src/ui";
 import { pointConditions } from "../feed/conditions-fixture";
-import { feedItem, MILES, NOW, renderFeedScreen } from "./feed-fixtures";
+import {
+  ANY_GUARD,
+  feedItem,
+  MILES,
+  NOW,
+  renderFeedScreen,
+} from "./feed-fixtures";
 
 /**
  * The v1 post card (round 22, "E1v1 Following"): author and badge, photo,
  * caption, strip, Useful — in that order, and a missing part absent.
  */
-const nothing = () => Promise.resolve({ useful: true, count: 1 });
+const nothing: Setter = () =>
+  Promise.resolve({ status: "set", useful: true, count: 1 });
 
-type Setter = (input: {
-  data: { entryId: string; useful: boolean };
-}) => Promise<{ useful: boolean; count: number }>;
+type Setter = SetUsefulFn;
 
 async function card(
   overrides: Partial<FeedItem> = {},
   setUseful: Setter = nothing,
   onStatus: (status: string) => void = vi.fn(),
+  guard: ControlGuard<"useful"> = ANY_GUARD,
 ) {
   await renderFeedScreen(
     <PostCard
@@ -29,6 +37,7 @@ async function card(
       units={MILES}
       now={NOW}
       setUseful={setUseful}
+      guard={guard}
       onStatus={onStatus}
     />,
   );
@@ -245,7 +254,11 @@ describe("PostCard: Useful", () => {
 
   it("asks to mark it, waits behind [ Noting ], then shows the server's count", async () => {
     const user = userEvent.setup();
-    const pending = Promise.withResolvers<{ useful: boolean; count: number }>();
+    const pending = Promise.withResolvers<{
+      status: "set";
+      useful: boolean;
+      count: number;
+    }>();
     const set = vi.fn(() => pending.promise);
     await card({ entryId: "01A", usefulCount: 2 }, set);
     const button = useful();
@@ -260,7 +273,7 @@ describe("PostCard: Useful", () => {
 
     // The server's count, not the card's 2 + 1: two others marked it
     // while this card sat open.
-    pending.resolve({ useful: true, count: 5 });
+    pending.resolve({ status: "set", useful: true, count: 5 });
     await waitFor(() => {
       expect(button).toHaveAttribute("aria-pressed", "true");
     });
@@ -272,7 +285,9 @@ describe("PostCard: Useful", () => {
 
   it("asks to take it back, and shows what the server then has", async () => {
     const user = userEvent.setup();
-    const set = vi.fn(() => Promise.resolve({ useful: false, count: 1 }));
+    const set = vi.fn<Setter>(() =>
+      Promise.resolve({ status: "set", useful: false, count: 1 }),
+    );
     await card({ entryId: "01A", usefulCount: 2, viewerHasReacted: true }, set);
 
     await user.click(useful());
@@ -294,7 +309,7 @@ describe("PostCard: Useful", () => {
     // for "marked", and the server — which already has it — says so.
     const user = userEvent.setup();
     await card({ usefulCount: 0 }, () =>
-      Promise.resolve({ useful: true, count: 1 }),
+      Promise.resolve({ status: "set", useful: true, count: 1 }),
     );
 
     await user.click(useful());
@@ -342,7 +357,7 @@ describe("PostCard: Useful", () => {
     const set = vi
       .fn<Setter>()
       .mockRejectedValueOnce(new TypeError("offline"))
-      .mockResolvedValueOnce({ useful: true, count: 1 });
+      .mockResolvedValueOnce({ status: "set", useful: true, count: 1 });
     await card({ entryId: "01A", usefulCount: 0 }, set);
 
     await user.click(useful());
@@ -378,5 +393,50 @@ describe("PostCard: the author's under-review marker (R-62, D-67)", () => {
 
     expect(post.querySelector('[data-part="under-review"]')).toBeNull();
     expect(screen.queryByText(/Under review/u)).toBeNull();
+  });
+});
+
+describe("PostCard: Useful waits for a confirmed address (round 26 #11; seam 7)", () => {
+  it("asks the server on every press, and opens the sheet only on its refusal", async () => {
+    // Drawn at full strength (rule 07, "not yet"), and the server decides:
+    // the page's answer about the address is as old as its loader.
+    const user = userEvent.setup();
+    const ask = vi.fn();
+    const onStatus = vi.fn();
+    const set = vi.fn<Setter>(() => Promise.resolve({ status: "unverified" }));
+    await card({ entryId: "01A", usefulCount: 2 }, set, onStatus, { ask });
+    expect(useful()).not.toHaveAttribute("aria-disabled");
+
+    await user.click(useful());
+
+    expect(set).toHaveBeenCalledWith({
+      data: { entryId: "01A", useful: true },
+    });
+    await waitFor(() => {
+      expect(ask).toHaveBeenCalledWith("useful");
+    });
+    await waitFor(() => {
+      expect(useful()).not.toHaveAttribute("aria-busy");
+    });
+    expect(ask).toHaveBeenCalledOnce();
+    // Nothing changed, so the mark and the count stay as they were.
+    expect(useful()).toHaveAttribute("aria-pressed", "false");
+    expect(useful()).toHaveTextContent(/^♡2Useful\[Noting\]$/u);
+    // A refusal is an answer, not a failure: no band, nothing announced.
+    expect(screen.queryByText("Not marked")).toBeNull();
+    expect(onStatus).toHaveBeenLastCalledWith("");
+  });
+
+  it("asks a runner the server says yes to nothing", async () => {
+    const user = userEvent.setup();
+    const ask = vi.fn();
+    await card({ usefulCount: 0 }, nothing, vi.fn(), { ask });
+
+    await user.click(useful());
+
+    await waitFor(() => {
+      expect(useful()).toHaveAttribute("aria-pressed", "true");
+    });
+    expect(ask).not.toHaveBeenCalled();
   });
 });
