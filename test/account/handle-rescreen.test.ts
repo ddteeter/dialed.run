@@ -1,8 +1,9 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  accountDeletions,
   reviewQueue,
   userProfiles,
   usernameHistory,
@@ -10,9 +11,11 @@ import {
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
+import { orSqlNull } from "../../src/lib/sql/sql-null";
 import {
   RESCREEN_CAP,
   RESCREEN_LEASE_S,
+  claimCandidates,
   rescreenHandles,
   rescreenHandlesFromEnv,
   rescreenWithKey,
@@ -32,6 +35,7 @@ beforeEach(async () => {
     db.delete(userProfiles),
     db.delete(usernameHistory),
     db.delete(reviewQueue),
+    db.delete(accountDeletions),
   ]);
 });
 
@@ -289,9 +293,92 @@ describe("rescreenHandles", () => {
   );
 });
 
+describe("who waits, and who is skipped", () => {
+  it("asks the longest-waiting first, so handles that never get an answer do not starve the rest", async () => {
+    // A full firing's worth of handles moderation will never answer for,
+    // claimed first, then one more behind them.
+    const stuck = await Promise.all(
+      Array.from({ length: RESCREEN_CAP }, (_, n) =>
+        claimedDuringOutage(`stuck_${String(n)}`),
+      ),
+    );
+    await db
+      .update(userProfiles)
+      .set({ usernameScreenedAt: 1000 })
+      .where(inArray(userProfiles.userId, stuck));
+    const patient = await claimedDuringOutage("patient_one");
+    await db
+      .update(userProfiles)
+      .set({ usernameScreenedAt: 2000 })
+      .where(eq(userProfiles.userId, patient));
+    const asked: string[] = [];
+    const rescreen: Rescreen = (handle, userId) => {
+      asked.push(userId);
+      return Promise.resolve(handle.startsWith("stuck_") ? "unknown" : "clear");
+    };
+
+    await rescreenHandles(db, rescreen, [], 5000);
+    expect(asked).not.toContain(patient);
+    expect(asked).toHaveLength(RESCREEN_CAP);
+
+    // The failures went to the back of the line; the next firing reaches
+    // the handle that was waiting behind them.
+    await rescreenHandles(db, rescreen, [], 9000);
+    expect(asked.slice(RESCREEN_CAP)).toContain(patient);
+    expect(await stateOf(patient)).toBe("clear");
+  });
+
+  it("skips a banned runner and a leaving one, and asks again once a ban is lifted", async () => {
+    const banned = await claimedDuringOutage("closed_down");
+    const leaving = await claimedDuringOutage("on_the_way_out");
+    const here = await claimedDuringOutage("still_here");
+    await db
+      .update(userProfiles)
+      .set({ bannedAt: 100 })
+      .where(eq(userProfiles.userId, banned));
+    await db
+      .insert(accountDeletions)
+      .values({ userId: leaving, requestedAt: 100, purgeAfter: 700 });
+    const { asked, rescreen } = answering("clear");
+
+    await rescreenHandles(db, rescreen, [], 5000);
+    expect(asked).toStrictEqual([{ handle: "still_here", userId: here }]);
+    expect(await stateOf(banned)).toBe("unknown");
+    expect(await stateOf(leaving)).toBe("unknown");
+
+    await db
+      .update(userProfiles)
+      .set({ bannedAt: orSqlNull(undefined) })
+      .where(eq(userProfiles.userId, banned));
+    await rescreenHandles(db, rescreen, [], 9000);
+    expect(asked.at(-1)).toStrictEqual({ handle: "closed_down", userId: banned });
+  });
+});
+
+describe("the claim's read (D1 bills rows scanned)", () => {
+  it("is served by the partial index, never a scan of every profile", async () => {
+    const { sql, params } = claimCandidates(db, 5000).toSQL();
+    const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+      .bind(...params)
+      .all<{ detail: string }>();
+    const details = plan.results.map((row) => row.detail);
+    expect(details).toContain(
+      "SEARCH user_profiles USING INDEX user_profiles_username_screen_pending (username_screen=?)",
+    );
+    expect(details.filter((line) => line.startsWith("SCAN"))).toStrictEqual(
+      [],
+    );
+  });
+});
+
 describe("rescreenHandlesFromEnv", () => {
-  it("asks the deployment's moderation and reports a failure by runner, never by handle", async () => {
-    const userId = await claimedDuringOutage("quiet_mile");
+  it("asks the deployment's moderation and reports an outage once a firing, by runner, never by handle", async () => {
+    const first = await claimedDuringOutage("quiet_mile");
+    await db
+      .update(userProfiles)
+      .set({ usernameScreenedAt: 1000 })
+      .where(eq(userProfiles.userId, first));
+    const second = await claimedDuringOutage("long_run");
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockRejectedValue(new Error("down"));
@@ -302,15 +389,34 @@ describe("rescreenHandlesFromEnv", () => {
 
     await rescreenHandlesFromEnv(anomalies);
 
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(await stateOf(userId)).toBe("unknown");
-    expect(logged).toHaveBeenCalledWith(
-      "[sentry-disabled]",
-      { surface: "handle-rescreen", userId },
-      expect.any(Error),
-    );
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(await stateOf(first)).toBe("unknown");
+    expect(await stateOf(second)).toBe("unknown");
+    // Two failed calls, one event: the first failure, the first runner
+    // (the longest-waiting, asked first) and how many failed.
+    expect(logged.mock.calls).toStrictEqual([
+      [
+        "[sentry-disabled]",
+        { surface: "handle-rescreen", userId: first, failed: "2" },
+        expect.any(Error),
+      ],
+    ]);
     expect(JSON.stringify(logged.mock.calls)).not.toContain("quiet");
     expect(anomalies).toHaveLength(1);
+  });
+
+  it("reports nothing for a firing whose every call answered", async () => {
+    await claimedDuringOutage("quiet_mile");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({ results: [{ flagged: false }] }),
+    );
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {
+      // Sentry is disabled in tests and logs instead; read it here.
+    });
+
+    await rescreenHandlesFromEnv([]);
+
+    expect(logged).not.toHaveBeenCalled();
   });
 
   it.each([undefined, ""])(

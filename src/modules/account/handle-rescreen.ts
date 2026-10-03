@@ -22,11 +22,11 @@
  *   decides; nothing renames automatically;
  * - `unknown` again — the claim goes back to `unknown` for the next hour.
  */
-import { and, eq, inArray, lt, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { drizzle, type DrizzleD1Database } from "drizzle-orm/d1";
 
-import { userProfiles } from "../../db/schema-core";
+import { accountDeletions, userProfiles } from "../../db/schema-core";
 import { env } from "../../env";
 import { nowSeconds } from "../../lib/now";
 import { captureException } from "../ops";
@@ -59,17 +59,34 @@ export type Rescreen = (
 ) => Promise<HandleScreenVerdict>;
 
 /**
+ * The partial index's own predicate, written as the index writes it
+ * (`schema-core.ts`, `user_profiles_username_screen_pending`).
+ *
+ * **A literal, not `inArray`.** SQLite uses a partial index only when the
+ * query's WHERE contains the index's condition term for term, and drizzle's
+ * `inArray` binds `'unknown'` and `'checking'` as parameters — which the
+ * planner cannot match against the index's literals, so the claim scanned
+ * the whole table (review of PR #142, EXPLAIN in workerd D1). The query
+ * plan test in `test/account/handle-rescreen.test.ts` holds it.
+ */
+const PENDING_SCREEN = sql`${userProfiles.usernameScreen} IN ('unknown', 'checking')`;
+
+/**
  * Which rows a firing may claim: still `unknown`, or `checking` under a
- * lease that ran out. The `IN` term is the partial index's own predicate,
- * which is what lets SQLite serve the read from that index.
+ * lease that ran out — and only for a runner who is still here. A banned
+ * runner's handle is not shown to anyone, and a leaving runner's goes
+ * with the account, so neither is worth a call; both stay `unknown`, and
+ * a reopened account is asked about on the next firing.
  */
 function claimable(now: number): SQL | undefined {
   return and(
-    inArray(userProfiles.usernameScreen, ["unknown", "checking"]),
+    PENDING_SCREEN,
     or(
       eq(userProfiles.usernameScreen, "unknown"),
       lt(userProfiles.usernameScreenedAt, now - RESCREEN_LEASE_S),
     ),
+    isNull(userProfiles.bannedAt),
+    sql`NOT EXISTS (SELECT 1 FROM ${accountDeletions} WHERE ${accountDeletions.userId} = ${userProfiles.userId})`,
   );
 }
 
@@ -98,16 +115,30 @@ function settle(
 }
 
 /**
+ * The rows a firing would claim: the longest-waiting first, so handles
+ * that never get an answer — each failure stamps `username_screened_at`
+ * anew — go to the back of the line instead of filling every firing's
+ * `RESCREEN_CAP` and starving the rest. The order is sorted from the
+ * partial index's few rows (a temp B-tree over them), never the table.
+ *
+ * Exported for the query-plan test, which reads this statement's plan.
+ */
+export function claimCandidates(db: Db, now: number) {
+  return db
+    .select({ userId: userProfiles.userId })
+    .from(userProfiles)
+    .where(claimable(now))
+    .orderBy(asc(userProfiles.usernameScreenedAt))
+    .limit(RESCREEN_CAP);
+}
+
+/**
  * Claims up to `RESCREEN_CAP` handles. A screen value only ever sits
  * beside a handle — the claim writes both, and a moderator's rename nulls
  * both — so every claimed row has one.
  */
 async function claim(db: Db, now: number) {
-  const candidates = db
-    .select({ userId: userProfiles.userId })
-    .from(userProfiles)
-    .where(claimable(now))
-    .limit(RESCREEN_CAP);
+  const candidates = claimCandidates(db, now);
   return db
     .update(userProfiles)
     .set({ usernameScreen: "checking", usernameScreenedAt: now })
@@ -177,10 +208,15 @@ export async function rescreenHandles(
 
 /**
  * The re-ask against one key. With no key there is nothing to ask, so
- * nothing is claimed: the handles stay `unknown` until one is deployed. A
- * failed call is reported with the runner's id and never the handle
- * (law 7). The key is a parameter because a test cannot change the
- * Worker's bindings from inside the isolate.
+ * nothing is claimed: the handles stay `unknown` until one is deployed.
+ * The key is a parameter because a test cannot change the Worker's
+ * bindings from inside the isolate.
+ *
+ * **One report a firing, not one a handle.** An outage fails every call
+ * the same way, and twenty identical events an hour say nothing the first
+ * does not. So the firing reports once, after its last call: the first
+ * failure, how many calls failed, and the first failing runner's id —
+ * never a handle (law 7).
  */
 export async function rescreenWithKey(
   db: Db,
@@ -188,21 +224,25 @@ export async function rescreenWithKey(
   anomalies: string[],
 ): Promise<void> {
   if (apiKey === undefined || apiKey === "") return;
+  const failures: { error: unknown; userId: string }[] = [];
   await rescreenHandles(
     db,
     (handle, userId) =>
       screenHandle(handle, {
         apiKey,
-        report: (error, context) => {
-          captureException(error, {
-            ...context,
-            surface: "handle-rescreen",
-            userId,
-          });
+        report: (error) => {
+          failures.push({ error, userId });
         },
       }),
     anomalies,
   );
+  const [first] = failures;
+  if (first === undefined) return;
+  captureException(first.error, {
+    surface: "handle-rescreen",
+    userId: first.userId,
+    failed: String(failures.length),
+  });
 }
 
 /**

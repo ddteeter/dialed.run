@@ -785,6 +785,22 @@ describe("every hourly step runs, whichever fail (law 5)", () => {
     expect(quarter.anomalies).toContain("1 handle(s) still unscreened");
   });
 
+  it("drains the :15 firing's email before the handle re-ask starts waiting on moderation", async () => {
+    const id = await seedDueEmail();
+    const attemptsWhenAsked: (number | undefined)[] = [];
+    const rescreenHandles = async () => {
+      attemptsWhenAsked.push(await attemptsOf(id));
+    };
+
+    await handleScheduled(
+      { cron: "15 * * * *" } as ScheduledController,
+      undefined,
+      { rescreenHandles },
+    );
+
+    expect(attemptsWhenAsked).toStrictEqual([1]);
+  });
+
   it("drains the hour's email after a sweep that throws, then throws what the sweep did", async () => {
     vi.spyOn(console, "error").mockImplementation(nothing);
     const id = await seedDueEmail();

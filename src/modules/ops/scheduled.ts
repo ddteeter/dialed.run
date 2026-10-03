@@ -118,7 +118,9 @@ export async function handleScheduled(
  *
  * **The handle re-ask** (task 126 PR B) rides the `:15` firing beside
  * photo screening, its sibling: handles claimed while moderation could
- * not answer are asked about again (`account/handle-rescreen.ts`).
+ * not answer are asked about again (`account/handle-rescreen.ts`). It
+ * runs last, after that firing's email drain, because its calls wait on
+ * moderation and the mail should not.
  *
  * All are optional: a firing handed none purges and sweeps nothing and
  * mails the digest the live way (`oweDigestEmail`'s default).
@@ -164,8 +166,10 @@ async function runCron(
       const anomalies: string[] = [];
       await eachStep([
         () => runScreeningRetry(anomalies),
-        () => upkeep.rescreenHandles?.(anomalies),
+        // Email before the re-ask: each handle may wait its full five
+        // seconds on moderation, and owed mail should not wait behind it.
         () => drainOwedEmail(anomalies),
+        () => upkeep.rescreenHandles?.(anomalies),
       ]);
       return anomalies;
     }
