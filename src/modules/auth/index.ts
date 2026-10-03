@@ -29,6 +29,7 @@ export {
   optionalUserId,
   requireSignedInSince,
   requireUserId,
+  requireUserIdBeforeTerms,
   requireUserIdWhileLeaving,
 } from "./require-user";
 export type { PasswordCheck } from "./password-check";

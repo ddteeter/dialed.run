@@ -56,12 +56,20 @@ One request or one code, by id — D7's row actions.
 export const deskRowInput = z.object({ id: rowIdSchema });
 
 /**
- * Which legal text a page reads (ACC-13). Only the texts that exist:
- * `/terms` and `/copyright` join when the owner's texts do.
+ * Which legal text a page reads (ACC-13): `/privacy`, `/terms` and
+ * `/copyright`, each a file in `docs/legal/`.
  */
-const legalSlugSchema = z.enum(["privacy"]);
+const legalSlugSchema = z.enum(["privacy", "terms", "copyright"]);
 export type LegalSlug = z.infer<typeof legalSlugSchema>;
 export const legalPageInput = z.object({ slug: legalSlugSchema });
+
+/**
+ * The terms prompt's Accept (ACC-6): the version the page showed, which
+ * the server records only while it is still the current one.
+ */
+export const acceptTermsInput = z.object({
+  version: z.number().int().positive(),
+});
 
 /**
  * "Get a copy" (ACC-10): the press's key, minted when the row mounts and

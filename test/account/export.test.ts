@@ -9,6 +9,7 @@ import {
   outfitEntries,
   outfitEntryItems,
   runs,
+  termsAcceptances,
   userProfiles,
   wardrobeItems,
 } from "../../src/db/schema-core";
@@ -155,6 +156,9 @@ async function seedStranger(startedAt: number): Promise<string> {
     createdAt: NOW - 400,
   });
   await db.insert(entryTags).values({ entryId, tag: "stranger" });
+  await db
+    .insert(termsAcceptances)
+    .values({ userId: strangerId, version: 7, acceptedAt: NOW - 450 });
   await db.insert(entryPhotos).values({
     id: newUlid(),
     entryId,
@@ -364,6 +368,12 @@ describe("exportData and exportFiles", () => {
       },
     ]);
     const strangerId = await seedStranger(observedAt);
+    // The terms they accepted (D-95): inserted newest first, written
+    // oldest first.
+    await db.insert(termsAcceptances).values([
+      { userId, version: 2, acceptedAt: NOW - 100 },
+      { userId, version: 1, acceptedAt: NOW - 900 },
+    ]);
 
     const stored: StoredObjects = {
       // No original for this garment: a photo from before originals were
@@ -393,6 +403,12 @@ describe("exportData and exportFiles", () => {
       "entries.csv",
       "kit.csv",
       "garments.csv",
+      "terms.csv",
+    ]);
+    expect(linesOf(texts, "terms.csv")).toStrictEqual([
+      "version,accepted_at",
+      `1,${iso(NOW - 900)}`,
+      `2,${iso(NOW - 100)}`,
     ]);
     expect(linesOf(texts, "profile.csv")).toStrictEqual([
       "email,joined_at,username,place,thermal_level,temp_unit,distance_unit,share_new_runs",
@@ -641,14 +657,21 @@ describe("exportData and exportFiles", () => {
     // Rebuilding the exact expected text from the same sheets (built
     // independently here, not reused from exportFiles' own call) pins
     // both.
-    const { profileSheet, runsSheet, entriesSheet, kitSheet, garmentsSheet } =
-      buildSheets({
-        profile: { account: undefined, profile: undefined },
-        runs: [],
-        entries: [],
-        kit: [],
-        garments: [],
-      });
+    const {
+      profileSheet,
+      runsSheet,
+      entriesSheet,
+      kitSheet,
+      garmentsSheet,
+      termsSheet,
+    } = buildSheets({
+      profile: { account: undefined, profile: undefined },
+      runs: [],
+      entries: [],
+      kit: [],
+      garments: [],
+      terms: [],
+    });
     expect(readme).toBe(
       [
         "dialed.run export",
@@ -667,6 +690,8 @@ describe("exportData and exportFiles", () => {
         "",
         readmeSection(garmentsSheet),
         "",
+        readmeSection(termsSheet),
+        "",
       ].join("\n"),
     );
   });
@@ -683,7 +708,13 @@ describe("exportData and exportFiles", () => {
     expect(linesOf(empty.texts, "profile.csv")[1]).toBe(
       `${email},${iso(JOINED)},,,,,,`,
     );
-    for (const name of ["runs.csv", "entries.csv", "kit.csv", "garments.csv"]) {
+    for (const name of [
+      "runs.csv",
+      "entries.csv",
+      "kit.csv",
+      "garments.csv",
+      "terms.csv",
+    ]) {
       expect(linesOf(empty.texts, name)).toHaveLength(1);
     }
     const gone = exportFiles(

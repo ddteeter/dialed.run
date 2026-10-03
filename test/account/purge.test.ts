@@ -22,6 +22,7 @@ import {
   outfitEntries,
   outfitEntryItems,
   passwordAttempts,
+  termsAcceptances,
   photoScreenings,
   reactions,
   reports,
@@ -364,6 +365,11 @@ async function seedAccount(): Promise<Seeded> {
   for (const key of [looseUploadKey, runUploadKey]) {
     await env.IMPORTS.put(key, "bytes");
   }
+  // The terms they accepted (ACC-6), two versions of them.
+  await core.insert(termsAcceptances).values([
+    { userId, version: 1, acceptedAt: NOW - 120 },
+    { userId, version: 2, acceptedAt: NOW - 60 },
+  ]);
   // A data export (ACC-10): one ready, with its ZIP, and one ZIP a build
   // staged with no row to name it — the purge lists the prefix for both.
   const exportId = newUlid();
@@ -602,6 +608,10 @@ async function footprint(seeded: Seeded) {
       .select()
       .from(dataExports)
       .where(eq(dataExports.userId, userId)),
+    terms: await core
+      .select()
+      .from(termsAcceptances)
+      .where(eq(termsAcceptances.userId, userId)),
     claim: await claimOf(userId),
   };
 }
@@ -633,6 +643,7 @@ const GONE = {
   imports: [],
   strava: [],
   exports: [],
+  terms: [],
   claim: [],
 };
 

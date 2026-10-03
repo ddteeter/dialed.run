@@ -74,8 +74,9 @@ export interface AccessGate {
     claim: Readonly<{ code: string; userId: string; email: string }>,
   ) => Promise<InviteClaim>;
   /**
-   * The account a claim was for now exists: its use is spent for good,
-   * whatever later happens to the account.
+   * The account now exists: a claim's use is spent for good, whatever
+   * later happens to the account, and the terms it was made under are
+   * recorded (ACC-6). Every account, invite or not, email or Google.
    */
   confirm: (userId: string) => Promise<void>;
 }

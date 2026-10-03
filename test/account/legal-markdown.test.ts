@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import privacyDraft from "../../docs/legal/privacy-policy.md?raw";
 import {
   headingId,
-  parseInline,
   parseLegalDoc,
   plainText,
   publishedText,
@@ -20,90 +19,6 @@ const MARK = "---\npublished: true\n---\n";
  * into the blocks the reading page renders.
  */
 
-describe("parseInline", () => {
-  it("reads plain text as one run", () => {
-    expect(parseInline("Plain words.")).toEqual([
-      { kind: "text", text: "Plain words." },
-    ]);
-  });
-
-  it("reads bold, code and links between the text around them", () => {
-    expect(
-      parseInline("A **bold** word, `code`, and [a link](#here) end."),
-    ).toEqual([
-      { kind: "text", text: "A " },
-      { kind: "strong", children: [{ kind: "text", text: "bold" }] },
-      { kind: "text", text: " word, " },
-      { kind: "code", text: "code" },
-      { kind: "text", text: ", and " },
-      {
-        kind: "link",
-        href: "#here",
-        children: [{ kind: "text", text: "a link" }],
-      },
-      { kind: "text", text: " end." },
-    ]);
-  });
-
-  it("reads marks inside bold and inside a link's words", () => {
-    expect(parseInline("**[in](/x)** and [**b** `c`](https://x.test)")).toEqual(
-      [
-        {
-          kind: "strong",
-          children: [
-            {
-              kind: "link",
-              href: "/x",
-              children: [{ kind: "text", text: "in" }],
-            },
-          ],
-        },
-        { kind: "text", text: " and " },
-        {
-          kind: "link",
-          href: "https://x.test",
-          children: [
-            { kind: "strong", children: [{ kind: "text", text: "b" }] },
-            { kind: "text", text: " " },
-            { kind: "code", text: "c" },
-          ],
-        },
-      ],
-    );
-  });
-
-  it("starts with a mark and ends with one, leaving no empty text runs", () => {
-    expect(parseInline("**a**`b`")).toEqual([
-      { kind: "strong", children: [{ kind: "text", text: "a" }] },
-      { kind: "code", text: "b" },
-    ]);
-  });
-
-  it("reads a mark that never closes, or closes on nothing, as text", () => {
-    expect(parseInline("a ** b")).toEqual([{ kind: "text", text: "a ** b" }]);
-    expect(parseInline("a ` b")).toEqual([{ kind: "text", text: "a ` b" }]);
-    expect(parseInline("a **** b")).toEqual([
-      { kind: "text", text: "a **** b" },
-    ]);
-    expect(parseInline("a `` b")).toEqual([{ kind: "text", text: "a `` b" }]);
-  });
-
-  it("reads brackets that are not a link as text", () => {
-    expect(parseInline("[dialed.run] is")).toEqual([
-      { kind: "text", text: "[dialed.run] is" },
-    ]);
-    expect(parseInline("[x](y")).toEqual([{ kind: "text", text: "[x](y" }]);
-    expect(parseInline("see [x]")).toEqual([{ kind: "text", text: "see [x]" }]);
-  });
-
-  it("finds a link's close after its middle, not a bracket before it", () => {
-    expect(parseInline("(a) [b](c)")).toEqual([
-      { kind: "text", text: "(a) " },
-      { kind: "link", href: "c", children: [{ kind: "text", text: "b" }] },
-    ]);
-  });
-});
-
 describe("headingId", () => {
   it("is GitHub's: lowercase, punctuation dropped, spaces to hyphens", () => {
     expect(headingId("What we keep, and why")).toBe("what-we-keep-and-why");
@@ -111,7 +26,10 @@ describe("headingId", () => {
       "cookies-and-browser-storage",
     );
     expect(headingId("Who we are?")).toBe("who-we-are");
-    expect(headingId("Opt-in  twice")).toBe("opt-in-twice");
+    // Each space is a hyphen, not each run of them, as GitHub has it.
+    expect(headingId("Opt-in  twice")).toBe("opt-in--twice");
+    // GitHub keeps an underscore, as it keeps a hyphen.
+    expect(headingId("snake_case & co")).toBe("snake_case--co");
     expect(headingId("Year 2026")).toBe("year-2026");
     expect(headingId("Café")).toBe("café");
     // A heading line's trailing spaces are not part of it.
@@ -126,11 +44,34 @@ function text(value: string) {
   return [{ kind: "text", text: value }];
 }
 
+/**
+ * Every file in `docs/legal/`, as written — the texts and their sources
+ * alike, so a construct the owner adds to any of them fails here, not on
+ * the page.
+ */
+const LEGAL_FILES: Record<string, string> = import.meta.glob(
+  "../../docs/legal/*.md",
+  { query: "?raw", import: "default", eager: true },
+);
+
+/**
+ * A file as the page would read it once the owner marks it published:
+ * the mark is what the owner's edit adds, so a file that already has it
+ * is read as it stands.
+ */
+function asPublished(source: string): string {
+  const text = publishedText(
+    source.startsWith(MARK) ? source : `${MARK}${source}`,
+  );
+  if (text === undefined) throw new Error("the marked text was refused");
+  return text;
+}
+
 describe("parseLegalDoc", () => {
-  it("takes the first # as the title and the rest as blocks", () => {
+  it("takes the # as the title and the rest as blocks", () => {
     const doc = parseLegalDoc(
       [
-        "# The title",
+        "# The **title**",
         "",
         "First paragraph,",
         "  carried on.",
@@ -143,6 +84,9 @@ describe("parseLegalDoc", () => {
         "  still one",
         "- two",
         "",
+        "3. third",
+        "4. fourth",
+        "",
         "> A quoted",
         "> note.",
         "",
@@ -150,8 +94,6 @@ describe("parseLegalDoc", () => {
         "| ---- | :------: |",
         "| Runs | **Kept** |",
         "| Files | 30 days |",
-        "",
-        "# A second title",
       ].join("\n"),
     );
     expect(doc.title).toBe("The title");
@@ -181,28 +123,97 @@ describe("parseLegalDoc", () => {
         ],
       },
       {
+        kind: "numbered",
+        start: 3,
+        items: [
+          [{ kind: "text", text: "third" }],
+          [{ kind: "text", text: "fourth" }],
+        ],
+      },
+      {
         kind: "quote",
         inlines: [{ kind: "text", text: "A quoted note." }],
       },
       {
         kind: "table",
-        head: [
-          [{ kind: "text", text: "What" }],
-          [{ kind: "text", text: "How long" }],
-        ],
+        head: [text("What"), text("How long")],
         rows: [
           [
-            [{ kind: "text", text: "Runs" }],
+            text("Runs"),
             [{ kind: "strong", children: [{ kind: "text", text: "Kept" }] }],
           ],
-          [
-            [{ kind: "text", text: "Files" }],
-            [{ kind: "text", text: "30 days" }],
-          ],
+          [text("Files"), text("30 days")],
         ],
       },
     ]);
     expect(doc.contents).toEqual([{ id: "who-we-are", title: "Who we are" }]);
+  });
+
+  it("reads bold, code and links inside one another", () => {
+    const doc = parseLegalDoc(
+      "# T\n\nA **[in](/x)** and [**b** `c`](https://x.test) end.\n",
+    );
+    expect(doc.blocks).toEqual([
+      {
+        kind: "paragraph",
+        inlines: [
+          { kind: "text", text: "A " },
+          {
+            kind: "strong",
+            children: [
+              {
+                kind: "link",
+                href: "/x",
+                children: [{ kind: "text", text: "in" }],
+              },
+            ],
+          },
+          { kind: "text", text: " and " },
+          {
+            kind: "link",
+            href: "https://x.test",
+            children: [
+              { kind: "strong", children: [{ kind: "text", text: "b" }] },
+              { kind: "text", text: " " },
+              { kind: "code", text: "c" },
+            ],
+          },
+          { kind: "text", text: " end." },
+        ],
+      },
+    ]);
+  });
+
+  it("numbers a list from 1 when the source does", () => {
+    const doc = parseLegalDoc("# T\n\n1. one\n2. two\n");
+    expect(doc.blocks).toEqual([
+      { kind: "numbered", start: 1, items: [text("one"), text("two")] },
+    ]);
+  });
+
+  it("suffixes a repeated heading's id as GitHub does, counting every heading", () => {
+    const doc = parseLegalDoc(
+      [
+        "# Terms",
+        "## Terms",
+        "## Your data",
+        "### Your data",
+        "## Your data",
+        "## Your data 1",
+        "## Your data",
+      ].join("\n\n"),
+    );
+    expect(doc.contents.map((entry) => entry.id)).toStrictEqual([
+      // The title holds `terms`, so the first `##` of the same name is -1.
+      "terms-1",
+      "your-data",
+      // The `###` between took `your-data-1`, as on GitHub.
+      "your-data-2",
+      // `your-data-1` is a heading's own id here, and the next repeat
+      // skips past both it and the one taken.
+      "your-data-1-1",
+      "your-data-3",
+    ]);
   });
 
   it("lists every H2 in the contents, as plain words, and no H3", () => {
@@ -215,58 +226,17 @@ describe("parseLegalDoc", () => {
     ]);
   });
 
-  it("ends a block at a line of only spaces, which belongs to neither", () => {
-    const doc = parseLegalDoc("# T\n\nOne\n   \nTwo\n");
-    expect(doc.blocks).toEqual([
-      { kind: "paragraph", inlines: [{ kind: "text", text: "One" }] },
-      { kind: "paragraph", inlines: [{ kind: "text", text: "Two" }] },
-    ]);
-  });
-
-  it("reads a quote's > with or without its space, and only at the start of a line", () => {
+  it("reads a quote's lazy line as the quote's", () => {
     const doc = parseLegalDoc("# T\n\n> One\n>two\nthree > four\n");
     expect(doc.blocks).toEqual([
-      {
-        kind: "quote",
-        inlines: [{ kind: "text", text: "One two three > four" }],
-      },
+      { kind: "quote", inlines: text("One two three > four") },
     ]);
   });
 
-  it("is a table only when the block starts with a pipe, not when it ends with one", () => {
-    const doc = parseLegalDoc("# T\n\nEither a | b |\n");
+  it("is a table only with its rule line", () => {
+    const doc = parseLegalDoc("# T\n\n| a | b |\n| c | d |\n");
     expect(doc.blocks).toEqual([
-      {
-        kind: "paragraph",
-        inlines: [{ kind: "text", text: "Either a | b |" }],
-      },
-    ]);
-  });
-
-  it("keeps a row that only looks like a rule at one end, and reads rows with loose pipes", () => {
-    const doc = parseLegalDoc(
-      [
-        "# T",
-        "",
-        "| A | B |",
-        "| - | - |",
-        "| Runs | - |",
-        "| - | Kept |",
-        "| Files | 30 days |  ",
-        "Photos | 30 days |",
-      ].join("\n"),
-    );
-    expect(doc.blocks).toEqual([
-      {
-        kind: "table",
-        head: [text("A"), text("B")],
-        rows: [
-          [text("Runs"), text("-")],
-          [text("-"), text("Kept")],
-          [text("Files"), text("30 days")],
-          [text("Photos"), text("30 days")],
-        ],
-      },
+      { kind: "paragraph", inlines: text("| a | b | | c | d |") },
     ]);
   });
 
@@ -276,10 +246,48 @@ describe("parseLegalDoc", () => {
     );
   });
 
+  it.each([
+    ["a second title", "# T\n\n# Again\n", "heading"],
+    ["a fourth heading level", "# T\n\n#### Deep\n", "heading"],
+    ["emphasis", "# T\n\nAn *aside*.\n", "emphasis"],
+    ["an image", "# T\n\n![a](/a.png)\n", "image"],
+    ["a hard line break", "# T\n\nOne  \ntwo\n", "break"],
+    ["a code block", "# T\n\n```\ncode\n```\n", "code"],
+    ["a thematic break", "# T\n\nOne\n\n***\n", "thematicBreak"],
+    ["raw HTML", "# T\n\n<div>x</div>\n", "html"],
+    ["a nested list", "# T\n\n- one\n  - two\n", "listItem"],
+    ["a list item of two paragraphs", "# T\n\n- one\n\n  two\n", "listItem"],
+    ["an empty list item", "# T\n\n-\n", "listItem"],
+    ["a quote of two paragraphs", "# T\n\n> one\n>\n> two\n", "blockquote"],
+    ["a quote holding a list", "# T\n\n> - one\n", "blockquote"],
+  ])("refuses %s, by name", (_, source, type) => {
+    expect(() => parseLegalDoc(source)).toThrow(
+      `a legal text cannot use ${type}: the page does not draw it`,
+    );
+  });
+
+  it.each(Object.keys(LEGAL_FILES))(
+    "reads %s with nothing the page cannot draw",
+    (path) => {
+      const source = LEGAL_FILES[path] ?? "";
+      expect(parseLegalDoc(asPublished(source)).title).not.toBe("");
+    },
+  );
+
+  it("finds every file in docs/legal", () => {
+    expect(Object.keys(LEGAL_FILES).length).toBeGreaterThanOrEqual(6);
+  });
+
+  it("reads copyright's numbered lists as numbered lists", () => {
+    const source = LEGAL_FILES["../../docs/legal/copyright.md"] ?? "";
+    const lists = parseLegalDoc(asPublished(source)).blocks.filter(
+      (block) => block.kind === "numbered",
+    );
+    expect(lists.map((list) => list.items.length)).toEqual([6, 4]);
+  });
+
   it("reads the privacy draft end to end, once marked: every H2 in the contents, every link's anchor on one, and none of the source's note", () => {
-    const text = publishedText(`${MARK}${privacyDraft}`);
-    if (text === undefined) throw new Error("the marked draft was refused");
-    const doc = parseLegalDoc(text);
+    const doc = parseLegalDoc(asPublished(privacyDraft));
     expect(JSON.stringify(doc)).not.toContain("Publishing this text");
     expect(JSON.stringify(doc)).not.toContain("<!--");
     expect(doc.title).toBe("[dialed.run] privacy policy");
@@ -297,9 +305,12 @@ describe("parseLegalDoc", () => {
 
 describe("plainText", () => {
   it("drops the marks and keeps the words", () => {
-    expect(plainText(parseInline("A **b** `c` [d **e**](#f)"))).toBe(
-      "A b c d e",
-    );
+    const [paragraph] = parseLegalDoc(
+      "# T\n\nA **b** `c` [d **e**](#f)\n",
+    ).blocks;
+    expect(
+      paragraph?.kind === "paragraph" ? plainText(paragraph.inlines) : "",
+    ).toBe("A b c d e");
   });
 });
 

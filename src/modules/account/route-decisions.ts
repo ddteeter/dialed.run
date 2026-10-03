@@ -1,12 +1,14 @@
 import { redirect } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { returnPathSchema } from "../../lib/return-path";
 import {
   isRememberedForSession,
   noteSessionOwner,
   rememberForSession,
 } from "../../lib/browser/session-memo";
 import type { LeavingView } from "./deletion";
+import type { TermsPromptView } from "./terms-acceptance";
 import type { LegalDoc } from "./legal-markdown";
 import type { HandleGateAnswer } from "./username";
 
@@ -24,6 +26,8 @@ const OPEN_WITHOUT_HANDLE: ReadonlySet<string> = new Set([
   "/account/reset",
   "/account/unsubscribe",
   "/privacy",
+  "/terms",
+  "/copyright",
 ]);
 
 /**
@@ -69,9 +73,10 @@ const HANDLE_CLAIMED = "has-handle";
  *
  * **Asked once per session in the browser, not on every navigation.**
  * The question is a server round trip, and it used to be paid before
- * every page. Its one answer that cannot change while the session lasts
- * is "has a handle" — a handle is renamed, never cleared — so the browser
- * keeps that one and skips the trip afterwards. The other two answers are
+ * every page. Its one answer kept is "has a handle" — a handle is renamed,
+ * never cleared — so the browser keeps that one and skips the trip
+ * afterwards, until a refusal says it went stale: newer terms published
+ * under an open tab (`lib/browser/session-memo`, decision D-96). The other two answers are
  * asked again each time: "signed out" and "no handle yet" both end the
  * moment the runner signs in or claims one. Signing in or out forgets the
  * memo (`auth/credentials`), and the memo is keyed to the runner the
@@ -96,6 +101,7 @@ export async function gateOnHandle({
     rememberForSession(answer.userId, HANDLE_CLAIMED);
   }
   startLeavingIfNeeded(answer.gate === "leaving", pathname);
+  startTermsIfNeeded(answer.gate === "needs-terms", pathname);
   startHandleIfNeeded(answer.gate === "needs-handle", pathname);
 }
 
@@ -107,6 +113,8 @@ export async function gateOnHandle({
 const OPEN_WHILE_LEAVING: ReadonlySet<string> = new Set([
   "/account/leaving",
   "/privacy",
+  "/terms",
+  "/copyright",
 ]);
 
 /**
@@ -124,6 +132,41 @@ export function startLeavingIfNeeded(
     !pathname.startsWith("/auth/")
   ) {
     redirect({ to: "/account/leaving", throw: true });
+  }
+}
+
+/**
+ * The pages a runner who is behind on the terms may still reach (ACC-6):
+ * the prompt itself; the texts it asks them to read; Settings › Account,
+ * where Delete account is, since a runner who will not accept must still
+ * be able to leave; the pages an email link opens, which finish something
+ * started elsewhere; and the auth pages, Log out among them. Not O0: a
+ * handle is claimed through a server function, which refuses them.
+ */
+const OPEN_WHILE_BEHIND: ReadonlySet<string> = new Set([
+  "/account/terms",
+  "/terms",
+  "/privacy",
+  "/copyright",
+  "/account/sign-in",
+  "/account/check-email",
+  "/account/verify",
+  "/account/reset",
+  "/account/unsubscribe",
+]);
+
+/**
+ * A runner whose latest acceptance is below the current terms sees the
+ * terms prompt before anything else, as a leaving runner sees "Keep your
+ * account?".
+ */
+export function startTermsIfNeeded(isBehind: boolean, pathname: string): void {
+  if (
+    isBehind &&
+    !OPEN_WHILE_BEHIND.has(pathname) &&
+    !pathname.startsWith("/auth/")
+  ) {
+    redirect({ to: "/account/terms", throw: true });
   }
 }
 
@@ -270,9 +313,21 @@ export const leavingSearch = z.object({
 });
 
 /**
- * Home, when the page has nothing to say: a runner with no deletion
- * pending, or a signed-out visitor with no date.
+ * `/account/terms`' search: where the runner was when a stale tab's call
+ * was refused (`ui/terms-refusal`, decision D-96), for Accept to return
+ * them to — a path on this site, or nothing, and Accept goes home.
  */
-export function homeIfNothingToSay(view: LeavingView): void {
+export const termsPromptSearch = z.object({
+  from: returnPathSchema.optional().catch(undefined),
+});
+
+/**
+ * Home, when the page has nothing to say: on `/account/leaving`, a runner
+ * with no deletion pending or a signed-out visitor with no date; on
+ * `/account/terms`, a runner who is current, or nobody.
+ */
+export function homeIfNothingToSay(
+  view: LeavingView | TermsPromptView,
+): void {
   if (view.state === "none") redirect({ to: "/", throw: true });
 }

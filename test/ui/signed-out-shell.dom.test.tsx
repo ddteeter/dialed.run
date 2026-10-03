@@ -104,7 +104,7 @@ describe("SignedOutLayout", () => {
     });
   });
 
-  it("ends with the legal footer: Privacy, the one text there is (ACC-13)", async () => {
+  it("ends with the legal footer: Privacy · Terms · Copyright (ACC-13, round 27 #12)", async () => {
     await renderAt(<SignedOutLayout action="none">page</SignedOutLayout>);
 
     const footer = document.querySelector("[data-part='legal-footer']");
@@ -112,10 +112,17 @@ describe("SignedOutLayout", () => {
     expect(footer).toHaveClass("border-t", "border-hairline");
     // Last in the shell, after the page.
     expect(footer?.parentElement?.lastElementChild).toBe(footer);
-    const privacy = screen.getByRole("link", { name: "Privacy" });
-    expect(privacy).toHaveAttribute("href", "/privacy");
-    expect(privacy).toHaveClass("underline");
-    expect(footer).toContainElement(privacy);
+    const links = [...(footer?.querySelectorAll("a") ?? [])];
+    expect(
+      links.map((link) => [link.textContent, link.getAttribute("href")]),
+    ).toEqual([
+      ["Privacy", "/privacy"],
+      ["Terms", "/terms"],
+      ["Copyright", "/copyright"],
+    ]);
+    for (const link of links) {
+      expect(link).toHaveClass("target", "text-muted", "underline");
+    }
   });
 });
 

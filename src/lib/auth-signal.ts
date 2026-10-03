@@ -27,6 +27,24 @@ export function isAuthRequired(error: unknown): boolean {
 }
 
 /**
+ * "You have not accepted the current terms" (task 126, ACC-6): the one
+ * auth gate refusing a runner behind on them. Here for the same reason as
+ * `AUTH_REQUIRED_CODE`: `modules/auth` throws it, and `ui/` has to tell it
+ * apart — a refused write sends the runner to the terms prompt rather than
+ * to a failure band (decision D-96).
+ */
+export const TERMS_NOT_ACCEPTED_CODE = "TERMS_NOT_ACCEPTED";
+
+/**
+ * True for the terms refusal, raised here or cloned back from a server
+ * function.
+ */
+export function isTermsRefusal(error: unknown): boolean {
+  const parsed = signalSchema.safeParse(error);
+  return parsed.success && parsed.data.code === TERMS_NOT_ACCEPTED_CODE;
+}
+
+/**
  * Parsed rather than narrowed by hand. `typeof x === "object"` plus a
  * `"code" in x` guard is three branches the compiler needs and no input can
  * distinguish — every one of them was an equivalent mutant. One schema does

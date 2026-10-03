@@ -12,7 +12,11 @@ import { ORIGIN } from "./helpers";
  */
 
 const UNSUBSCRIBE = `${ORIGIN}/account/unsubscribe?u=u1&k=run_reminder&s=sig`;
-const PRIVACY = { label: "Privacy policy", href: `${ORIGIN}/privacy` };
+const LEGAL = [
+  { label: "Privacy policy", href: `${ORIGIN}/privacy` },
+  { label: "Terms", href: `${ORIGIN}/terms` },
+  { label: "Copyright", href: `${ORIGIN}/copyright` },
+];
 const LOG_IN = { label: "Log in", href: `${ORIGIN}/auth/login` };
 
 describe("emailContent", () => {
@@ -27,7 +31,7 @@ describe("emailContent", () => {
           href: `${ORIGIN}/account/verify?token=t`,
         },
         foot: "The link works once, for 24 hours. Didn't sign up? Ignore this and nothing happens.",
-        footer: [PRIVACY],
+        footer: LEGAL,
       },
     ],
     [
@@ -37,7 +41,7 @@ describe("emailContent", () => {
         body: "Someone, probably you, tried to create an account with this address. It already has one.",
         button: LOG_IN,
         foot: "Forgot the password? Reset it from the log-in page. Didn't try to sign up? Ignore this; nothing changed.",
-        footer: [PRIVACY],
+        footer: LEGAL,
       },
     ],
     [
@@ -50,7 +54,7 @@ describe("emailContent", () => {
           href: `${ORIGIN}/account/reset?token=r`,
         },
         foot: "The link works once, for 1 hour. Didn't ask for it? Ignore this and nothing changes.",
-        footer: [PRIVACY],
+        footer: LEGAL,
       },
     ],
     [
@@ -67,7 +71,7 @@ describe("emailContent", () => {
           href: `${ORIGIN}/account/verify?token=c`,
         },
         foot: "The link works once, for 24 hours. Didn't ask for it? Ignore this and nothing changes.",
-        footer: [PRIVACY],
+        footer: LEGAL,
       },
     ],
     [
@@ -77,7 +81,7 @@ describe("emailContent", () => {
         body: "Your account's email is now new@example.com. Emails go there from now on.",
         button: LOG_IN,
         foot: "Didn't change it? Write to hello@dialed.run.",
-        footer: [PRIVACY],
+        footer: LEGAL,
       },
     ],
     [
@@ -91,7 +95,7 @@ describe("emailContent", () => {
         footer: [
           { label: "Stop run reminder emails", href: UNSUBSCRIBE },
           { label: "Email settings", href: `${ORIGIN}/account/notifications` },
-          PRIVACY,
+          ...LEGAL,
         ],
       },
     ],
@@ -106,7 +110,7 @@ describe("emailContent", () => {
         body: "We removed a photo from one of your runs. Reason: it shows where someone lives. Your run and verdict stay.",
         button: LOG_IN,
         foot: "Think we got it wrong? Reply to this email.",
-        footer: [PRIVACY],
+        footer: LEGAL,
       },
     ],
     [
@@ -120,7 +124,7 @@ describe("emailContent", () => {
         body: "We removed one of your runs from the feed. Reason: it's an ad or spam. The run itself stays.",
         button: LOG_IN,
         foot: "Think we got it wrong? Reply to this email.",
-        footer: [PRIVACY],
+        footer: LEGAL,
       },
     ],
     [
@@ -129,7 +133,7 @@ describe("emailContent", () => {
         subject: "Your dialed.run account is closed",
         body: "We closed your account for breaking the community rules: repeated harassment. You can't log in, and your shared runs are gone from the feed.",
         foot: "Think we got it wrong? Reply to this email to appeal and we'll look again.",
-        footer: [PRIVACY],
+        footer: LEGAL,
       },
     ],
     [
@@ -142,7 +146,7 @@ describe("emailContent", () => {
           href: `${ORIGIN}/join?code=DIAL-7K3P`,
         },
         foot: "You asked for an invite. Didn't? Ignore this and nothing happens.",
-        footer: [PRIVACY],
+        footer: LEGAL,
       },
     ],
     [
@@ -152,7 +156,7 @@ describe("emailContent", () => {
         body: "Strava says dialed.run was disconnected, so run reminders have stopped. Your runs here haven't changed.",
         button: { label: "Connect again", href: `${ORIGIN}/runs/strava` },
         foot: "Runs you already added stay.",
-        footer: [PRIVACY],
+        footer: LEGAL,
       },
     ],
     [
@@ -162,7 +166,7 @@ describe("emailContent", () => {
         body: "You asked to delete your account. Everything in it goes on Sat, Oct 4.",
         button: { label: "Keep my account", href: `${ORIGIN}/auth/login` },
         foot: "Didn't ask? Log in and keep it, then change your password.",
-        footer: [PRIVACY],
+        footer: LEGAL,
       },
     ],
     [
@@ -175,7 +179,7 @@ describe("emailContent", () => {
           href: `${ORIGIN}/account/export/0123456789abcdef0123456789abcdef`,
         },
         foot: "The link works for 7 days, only while you're logged in.",
-        footer: [PRIVACY],
+        footer: LEGAL,
       },
     ],
     [
@@ -192,7 +196,7 @@ describe("emailContent", () => {
         body: "4 waiting for a decision. The oldest has waited 19 hours. 1 photo the screener couldn't finish. It's hidden until someone looks. 0 bans this week.",
         button: { label: "Open the Desk", href: `${ORIGIN}/desk` },
         foot: "Sent every morning, even when every number is zero. If it stops arriving, something is broken.",
-        footer: [PRIVACY],
+        footer: LEGAL,
       },
     ],
   ])("says what round 26 draws for %o", (template, expected) => {
@@ -320,7 +324,8 @@ describe("renderEmail", () => {
         "dialed.run · Stop run reminder emails",
         `[${UNSUBSCRIBE}] · Email`,
         `settings [${ORIGIN}/account/notifications] · Privacy policy`,
-        `[${ORIGIN}/privacy]`,
+        `[${ORIGIN}/privacy] · Terms [${ORIGIN}/terms] · Copyright`,
+        `[${ORIGIN}/copyright]`,
       ].join("\n"),
     );
   });
@@ -356,7 +361,12 @@ describe("renderEmail", () => {
     );
     expect(verify.text).not.toContain("You get this because");
     expect(
-      verify.text.endsWith(`dialed.run · Privacy policy [${ORIGIN}/privacy]`),
+      verify.text.endsWith(
+        [
+          `dialed.run · Privacy policy [${ORIGIN}/privacy] · Terms`,
+          `[${ORIGIN}/terms] · Copyright [${ORIGIN}/copyright]`,
+        ].join("\n"),
+      ),
     ).toBe(true);
     // A template with no reason renders no reason paragraph at all — not an
     // empty one. Both the (absent) reason line and the real footer line

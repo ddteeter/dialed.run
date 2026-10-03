@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { LegalPage } from "../modules/account/components/LegalPage";
-import { legalPageQuery } from "../modules/account/functions";
-import { legalDocOrNotFound } from "../modules/account/route-decisions";
+import { legalPageLoader } from "../modules/account/functions";
 import { NotificationBell } from "../modules/notifications/components/NotificationBell";
 
 /**
@@ -11,20 +10,8 @@ import { NotificationBell } from "../modules/notifications/components/Notificati
  * or not. X1 until that text is finished (`account/legal.ts`).
  */
 export const Route = createFileRoute("/privacy")({
-  loader: async () => {
-    const page = await legalPageQuery({ data: { slug: "privacy" } });
-    return { doc: legalDocOrNotFound(page.doc), unreadCount: page.unreadCount };
-  },
-  component: PrivacyPage,
+  loader: () => legalPageLoader("privacy"),
+  component: () => (
+    <LegalPage {...Route.useLoaderData()} bell={NotificationBell} />
+  ),
 });
-
-function PrivacyPage() {
-  const { doc, unreadCount } = Route.useLoaderData();
-  return (
-    <LegalPage
-      doc={doc}
-      unreadCount={unreadCount}
-      bell={(count) => <NotificationBell unreadCount={count} />}
-    />
-  );
-}

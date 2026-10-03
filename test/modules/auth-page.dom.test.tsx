@@ -812,18 +812,21 @@ describe("AuthCrossLink and AuthLegal", () => {
     expect(part("cross-link")).toHaveTextContent(/^Have an account\? Log in$/u);
   });
 
-  it("carries Au2's privacy and age lines at micro (D-52, D-71)", async () => {
+  it("carries Au2's terms and age lines at micro (round 27 #12; D-52, D-71)", async () => {
     await renderWithRouter(<AuthLegal />);
     const legal = screen.getByText(
       "dialed.run is for runners 16 and over.",
     ).parentElement;
     expect(legal).toHaveClass("text-micro", "text-muted");
     expect(legal).toHaveTextContent(
-      /^Creating an account means you've read our Privacy policy\.dialed\.run is for runners 16 and over\.$/u,
+      /^By creating an account you agree to the Terms and have read the Privacy policy\.dialed\.run is for runners 16 and over\.$/u,
     );
+    const terms = screen.getByRole("link", { name: "Terms" });
+    expect(terms).toHaveAttribute("href", "/terms");
+    expect(terms).toHaveClass("text-ink", "underline", "underline-offset-4");
     const policy = screen.getByRole("link", { name: "Privacy policy" });
     expect(policy).toHaveAttribute("href", "/privacy");
-    expect(policy).toHaveClass("text-ink", "underline");
+    expect(policy).toHaveClass("text-ink", "underline", "underline-offset-4");
   });
 });
 

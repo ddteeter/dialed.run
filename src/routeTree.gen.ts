@@ -11,15 +11,18 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AtChar123handleChar125RouteImport } from './routes/@{$handle}'
+import { Route as CopyrightRouteImport } from './routes/copyright'
 import { Route as DeskRouteRouteImport } from './routes/desk/route'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AccountSectionRouteImport } from './routes/account/$section'
 import { Route as AccountCheckEmailRouteImport } from './routes/account/check-email'
 import { Route as AccountForgotRouteImport } from './routes/account/forgot'
 import { Route as AccountLeavingRouteImport } from './routes/account/leaving'
 import { Route as AccountRequestAccessRouteImport } from './routes/account/request-access'
 import { Route as AccountResetRouteImport } from './routes/account/reset'
+import { Route as AccountTermsRouteImport } from './routes/account/terms'
 import { Route as AccountUnsubscribeRouteImport } from './routes/account/unsubscribe'
 import { Route as AccountUsernameRouteImport } from './routes/account/username'
 import { Route as AccountVerifyRouteImport } from './routes/account/verify'
@@ -78,6 +81,11 @@ const AtChar123handleChar125Route = AtChar123handleChar125RouteImport.update({
   path: '/@{$handle}',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CopyrightRoute = CopyrightRouteImport.update({
+  id: '/copyright',
+  path: '/copyright',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DeskRouteRoute = DeskRouteRouteImport.update({
   id: '/desk',
   path: '/desk',
@@ -91,6 +99,11 @@ const JoinRoute = JoinRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountSectionRoute = AccountSectionRouteImport.update({
@@ -121,6 +134,11 @@ const AccountRequestAccessRoute = AccountRequestAccessRouteImport.update({
 const AccountResetRoute = AccountResetRouteImport.update({
   id: '/account/reset',
   path: '/account/reset',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountTermsRoute = AccountTermsRouteImport.update({
+  id: '/account/terms',
+  path: '/account/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountUnsubscribeRoute = AccountUnsubscribeRouteImport.update({
@@ -364,14 +382,17 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/desk': typeof DeskRouteRouteWithChildren
   '/@{$handle}': typeof AtChar123handleChar125Route
+  '/copyright': typeof CopyrightRoute
   '/join': typeof JoinRoute
   '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
   '/account/forgot': typeof AccountForgotRoute
   '/account/leaving': typeof AccountLeavingRoute
   '/account/request-access': typeof AccountRequestAccessRoute
   '/account/reset': typeof AccountResetRoute
+  '/account/terms': typeof AccountTermsRoute
   '/account/unsubscribe': typeof AccountUnsubscribeRoute
   '/account/username': typeof AccountUsernameRoute
   '/account/verify': typeof AccountVerifyRoute
@@ -423,14 +444,17 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/@{$handle}': typeof AtChar123handleChar125Route
+  '/copyright': typeof CopyrightRoute
   '/join': typeof JoinRoute
   '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
   '/account/forgot': typeof AccountForgotRoute
   '/account/leaving': typeof AccountLeavingRoute
   '/account/request-access': typeof AccountRequestAccessRoute
   '/account/reset': typeof AccountResetRoute
+  '/account/terms': typeof AccountTermsRoute
   '/account/unsubscribe': typeof AccountUnsubscribeRoute
   '/account/username': typeof AccountUsernameRoute
   '/account/verify': typeof AccountVerifyRoute
@@ -484,14 +508,17 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/desk': typeof DeskRouteRouteWithChildren
   '/@{$handle}': typeof AtChar123handleChar125Route
+  '/copyright': typeof CopyrightRoute
   '/join': typeof JoinRoute
   '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
   '/account/forgot': typeof AccountForgotRoute
   '/account/leaving': typeof AccountLeavingRoute
   '/account/request-access': typeof AccountRequestAccessRoute
   '/account/reset': typeof AccountResetRoute
+  '/account/terms': typeof AccountTermsRoute
   '/account/unsubscribe': typeof AccountUnsubscribeRoute
   '/account/username': typeof AccountUsernameRoute
   '/account/verify': typeof AccountVerifyRoute
@@ -546,14 +573,17 @@ export interface FileRouteTypes {
     | '/'
     | '/desk'
     | '/@{$handle}'
+    | '/copyright'
     | '/join'
     | '/privacy'
+    | '/terms'
     | '/account/$section'
     | '/account/check-email'
     | '/account/forgot'
     | '/account/leaving'
     | '/account/request-access'
     | '/account/reset'
+    | '/account/terms'
     | '/account/unsubscribe'
     | '/account/username'
     | '/account/verify'
@@ -605,14 +635,17 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/@{$handle}'
+    | '/copyright'
     | '/join'
     | '/privacy'
+    | '/terms'
     | '/account/$section'
     | '/account/check-email'
     | '/account/forgot'
     | '/account/leaving'
     | '/account/request-access'
     | '/account/reset'
+    | '/account/terms'
     | '/account/unsubscribe'
     | '/account/username'
     | '/account/verify'
@@ -665,14 +698,17 @@ export interface FileRouteTypes {
     | '/'
     | '/desk'
     | '/@{$handle}'
+    | '/copyright'
     | '/join'
     | '/privacy'
+    | '/terms'
     | '/account/$section'
     | '/account/check-email'
     | '/account/forgot'
     | '/account/leaving'
     | '/account/request-access'
     | '/account/reset'
+    | '/account/terms'
     | '/account/unsubscribe'
     | '/account/username'
     | '/account/verify'
@@ -726,14 +762,17 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DeskRouteRoute: typeof DeskRouteRouteWithChildren
   AtChar123handleChar125Route: typeof AtChar123handleChar125Route
+  CopyrightRoute: typeof CopyrightRoute
   JoinRoute: typeof JoinRoute
   PrivacyRoute: typeof PrivacyRoute
+  TermsRoute: typeof TermsRoute
   AccountSectionRoute: typeof AccountSectionRoute
   AccountCheckEmailRoute: typeof AccountCheckEmailRoute
   AccountForgotRoute: typeof AccountForgotRoute
   AccountLeavingRoute: typeof AccountLeavingRoute
   AccountRequestAccessRoute: typeof AccountRequestAccessRoute
   AccountResetRoute: typeof AccountResetRoute
+  AccountTermsRoute: typeof AccountTermsRoute
   AccountUnsubscribeRoute: typeof AccountUnsubscribeRoute
   AccountUsernameRoute: typeof AccountUsernameRoute
   AccountVerifyRoute: typeof AccountVerifyRoute
@@ -796,6 +835,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AtChar123handleChar125RouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/copyright': {
+      id: '/copyright'
+      path: '/copyright'
+      fullPath: '/copyright'
+      preLoaderRoute: typeof CopyrightRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/desk': {
       id: '/desk'
       path: '/desk'
@@ -815,6 +861,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account/$section': {
@@ -857,6 +910,13 @@ declare module '@tanstack/react-router' {
       path: '/account/reset'
       fullPath: '/account/reset'
       preLoaderRoute: typeof AccountResetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/terms': {
+      id: '/account/terms'
+      path: '/account/terms'
+      fullPath: '/account/terms'
+      preLoaderRoute: typeof AccountTermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account/unsubscribe': {
@@ -1211,14 +1271,17 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DeskRouteRoute: DeskRouteRouteWithChildren,
   AtChar123handleChar125Route: AtChar123handleChar125Route,
+  CopyrightRoute: CopyrightRoute,
   JoinRoute: JoinRoute,
   PrivacyRoute: PrivacyRoute,
+  TermsRoute: TermsRoute,
   AccountSectionRoute: AccountSectionRoute,
   AccountCheckEmailRoute: AccountCheckEmailRoute,
   AccountForgotRoute: AccountForgotRoute,
   AccountLeavingRoute: AccountLeavingRoute,
   AccountRequestAccessRoute: AccountRequestAccessRoute,
   AccountResetRoute: AccountResetRoute,
+  AccountTermsRoute: AccountTermsRoute,
   AccountUnsubscribeRoute: AccountUnsubscribeRoute,
   AccountUsernameRoute: AccountUsernameRoute,
   AccountVerifyRoute: AccountVerifyRoute,

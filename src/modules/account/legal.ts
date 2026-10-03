@@ -7,15 +7,14 @@
  * say different things and the text never rides in the client bundle.
  *
  * **Only a text the owner has marked published is shown** (`PUBLISHED_MARK`
- * in ./legal-markdown). The privacy text is the draft PR #109 wrote for
- * the owner, and a legal page must not show a placeholder to the public.
- * So a text without the mark reads as absent, and its route answers X1,
- * until the owner marks the reviewed text; then it is live with no code
- * change. `/terms` and
- * `/copyright` have no text at all yet (the owner's), and join the table
- * when they do.
+ * in ./legal-markdown). Each text is a draft for the owner to review, and
+ * a legal page must not show a placeholder to the public. So a text
+ * without the mark reads as absent, and its route answers X1, until the
+ * owner marks the reviewed text; then it is live with no code change.
  */
+import copyright from "../../../docs/legal/copyright.md?raw";
 import privacyPolicy from "../../../docs/legal/privacy-policy.md?raw";
+import terms from "../../../docs/legal/terms.md?raw";
 import { unreadNotificationCount } from "../notifications";
 import type { LegalSlug } from "./inputs";
 import { parseLegalDoc, publishedText, type LegalDoc } from "./legal-markdown";
@@ -24,6 +23,8 @@ type Db = Parameters<typeof unreadNotificationCount>[0];
 
 const LEGAL_TEXTS: Readonly<Record<LegalSlug, string>> = {
   privacy: privacyPolicy,
+  terms,
+  copyright,
 };
 
 /**

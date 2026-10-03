@@ -204,6 +204,30 @@ export const accountDeletions = /*#__PURE__*/ sqliteTable(
 );
 
 /**
+ * Which terms each runner accepted, and when (task 126, ACC-6; round 27
+ * #12: "the server stores the terms version and time"). **One row per
+ * acceptance**, so a version bump adds a row and the history stays: the
+ * terms say "we record which version you accepted", and a column on the
+ * profile would forget the one before.
+ *
+ * Written as the account is made (the user create hook, in the batch that
+ * spends its invite) and by the terms prompt's Accept. `version` is the
+ * integer on the terms' own "Version N." line (`account/terms-acceptance`).
+ * The unique key is both law 8b's idempotency — a repeat keeps the first
+ * time — and the index the gate's latest-version read uses. Deleted with
+ * the account by the purge.
+ */
+export const termsAcceptances = /*#__PURE__*/ sqliteTable(
+  "terms_acceptances",
+  {
+    userId: text("user_id").notNull(),
+    version: integer("version").notNull(),
+    acceptedAt: integer("accepted_at").notNull(),
+  },
+  (t) => [uniqueIndex("terms_acceptances_pk").on(t.userId, t.version)],
+);
+
+/**
  * Emailed data exports (task 126, ACC-10; decision D-79; round 27 #13).
  * One row per "Get a copy": the queued build's claim, the ZIP's life, and
  * the link the email carries.

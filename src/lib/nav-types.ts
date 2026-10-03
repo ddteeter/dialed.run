@@ -221,11 +221,13 @@ const NAV: readonly Edge[] = [
       // invite link) and goes straight on to Au2; D7's Copy link is the
       // one place the app builds it. Typed as Au2's other forward steps.
       "/join",
-      // Task 126 (ACC-13): the privacy policy, from Au2's line, the
+      // Task 126 (ACC-13): the legal texts, from Au2's line, the
       // signed-out footer and Settings › About — a document opened
       // forward from wherever it is linked, typed by analogy (NAV has no
-      // row for it: a design delta).
+      // row for them: a design delta).
       "/privacy",
+      "/terms",
+      "/copyright",
       "/onboarding/calibrate",
       "/onboarding/taplist",
       "/onboarding/settings",

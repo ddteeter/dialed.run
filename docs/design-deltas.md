@@ -775,6 +775,40 @@ WHILE WE CHECK`), which offer no fix and are a different case? Either
       it was. One sheet per screen: D's Useful and report open the same
       one, and the control picks its lead sentence.
 
+42. **The terms prompt, and what task 126 PR A built beside a drawing
+    (ACC-6, ACC-13; round 28 PR A).** Built from existing primitives.
+    - **The terms prompt (`/account/terms`) is undrawn.** Once the terms
+      are published (D-93; nothing is asked until then), a signed-in
+      runner whose latest acceptance is below the current version sees it
+      before any page, as a leaving runner sees "Keep your account?" — and
+      so does a tab left open across the change, whose next refused call
+      opens it with no band and no new copy, returning the runner where
+      they were after Accept (D-96). Built
+      as that page is: the signed-out panel, a `MONO.xs` notice "Terms
+      updated" in `cold-text`, the heading "Accept the terms", "The Terms
+      have changed. Read them, then accept to carry on." (Terms links
+      `/terms`), "Rather not? Log out, or delete your account in Settings."
+      (links Settings › Account), and **Accept** / **Log out** in the
+      leaving page's two pill styles. Failure bands are §4a's: `NOT
+ACCEPTED`, `STILL LOGGED IN`. If the terms change again while the
+      page is open, Accept records nothing and says "The terms changed
+      again while this page was open. Read them once more." **The ask:**
+      draw the prompt — its copy for an account that never accepted any
+      version (every account made before ACC-6) as well as for a bump,
+      whether it shows what changed, and whether it is a page or a sheet.
+    - **"Back to contents" at wide.** Round 28 #16 shows it "only where the
+      contents sit above the text (phone and wide)". The build's contents
+      are a sticky column from desk up, so the link shows below desk only.
+      **The ask:** confirm, or draw wide's contents above the text.
+    - **The email footer's Terms and Copyright** read "Terms" and
+      "Copyright", after "Privacy policy" (round 27 #12's order; no email
+      board draws the three together). **The ask:** confirm the labels.
+    - **The export ZIP holds `terms.csv`** (D-95), beyond round 27 #13's
+      list and D-83's: every version of the terms the runner accepted,
+      with when (`version`, `accepted_at`), named in the README like every
+      other file. **The ask:** add it to the board's list, as D-83's two
+      were.
+
 ## Answered in round 28 (imported 2026-09-30)
 
 Sixteen asks in three parts: amend the contracts and boards to match the

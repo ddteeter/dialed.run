@@ -13,29 +13,50 @@ import { legalDoc, legalPage } from "../../src/modules/account/legal";
  */
 const db = drizzle(env.DIALED_CORE);
 
+const MARK = "---\npublished: true\n---\n";
+
 const FINISHED = {
-  privacy:
-    "---\npublished: true\n---\n# Privacy policy\n\n## Who we are\n\nUs.",
+  privacy: `${MARK}# Privacy policy\n\n## Who we are\n\nUs.`,
+  terms: `${MARK}# Terms\n\n## The rules\n\nBe decent.`,
+  copyright: `${MARK}# Copyright\n\n## Where to send a notice\n\nHere.`,
 };
 
 /**
-The same text, which the owner has not marked published.
+The same texts, which the owner has not marked published.
 */
-const UNMARKED = { privacy: "# Privacy policy\n\n## Who we are\n\nUs." };
+const UNMARKED = {
+  privacy: FINISHED.privacy.slice(MARK.length),
+  terms: FINISHED.terms.slice(MARK.length),
+  copyright: FINISHED.copyright.slice(MARK.length),
+};
 
 describe("legalDoc", () => {
-  it("publishes nothing while the privacy text is the owner's unreviewed draft", () => {
-    expect(legalDoc("privacy")).toBeUndefined();
-  });
+  it.each(["privacy", "terms", "copyright"] as const)(
+    "publishes nothing while the %s text is the owner's unreviewed draft",
+    (slug) => {
+      expect(legalDoc(slug)).toBeUndefined();
+    },
+  );
 
   it("publishes nothing for a finished-looking text the owner has not marked", () => {
     expect(legalDoc("privacy", UNMARKED)).toBeUndefined();
+    expect(legalDoc("terms", UNMARKED)).toBeUndefined();
   });
 
-  it("publishes a finished text, parsed", () => {
+  it("publishes each finished text as its own page, parsed", () => {
     expect(legalDoc("privacy", FINISHED)).toMatchObject({
       title: "Privacy policy",
       contents: [{ id: "who-we-are", title: "Who we are" }],
+    });
+    expect(legalDoc("terms", FINISHED)).toMatchObject({
+      title: "Terms",
+      contents: [{ id: "the-rules", title: "The rules" }],
+    });
+    expect(legalDoc("copyright", FINISHED)).toMatchObject({
+      title: "Copyright",
+      contents: [
+        { id: "where-to-send-a-notice", title: "Where to send a notice" },
+      ],
     });
   });
 });

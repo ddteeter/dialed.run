@@ -5,7 +5,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import type { ErrorComponentProps } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import { z } from "zod";
 
@@ -16,6 +16,7 @@ import {
   TABS,
   classifyFailure,
   tabToLight,
+  useTermsRefusal,
 } from "../../../ui";
 
 /**
@@ -174,11 +175,27 @@ export function LoaderFailedState({
  * as log-in's way back.
  */
 export function RouteFailed(props: Readonly<ErrorComponentProps>): JSX.Element {
-  return classifyFailure(props.error).kind === "session" ? (
-    <SignInAgain />
-  ) : (
-    <LoaderFailed error={props.error} />
-  );
+  const { kind } = classifyFailure(props.error);
+  if (kind === "session") return <SignInAgain />;
+  if (kind === "terms") return <TermsAgain error={props.error} />;
+  return <LoaderFailed error={props.error} />;
+}
+
+/**
+ * A stale tab's loader refused because the runner is behind on the terms
+ * (ACC-6; decision D-96): not a failure either, so it goes to the terms
+ * prompt, by the root's answer (`ui/terms-refusal`) — the one place that
+ * knows how, so the memo is forgotten here too. With no answer above it —
+ * a test with no root — it is the band.
+ */
+function TermsAgain({
+  error,
+}: Readonly<{ error: unknown }>): JSX.Element | undefined {
+  const answer = useTermsRefusal();
+  useEffect(() => {
+    answer?.();
+  });
+  return answer === undefined ? <LoaderFailed error={error} /> : undefined;
 }
 
 /**

@@ -28,6 +28,7 @@ import {
   signedInSince,
   userIdOrThrow,
 } from "./session-user";
+import { agreedUserId } from "./terms-gate";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -37,10 +38,27 @@ function db() {
  * The signed-in user's id, or `AuthRequiredError` — and
  * `AccountLeavingError` for a runner whose account is set to be deleted
  * (ACC-9; ./leaving-gate says why the server, and not only the root
- * route, says no). Server-function side only — route loaders want
- * `requireSession` from ./functions, which redirects instead of throwing.
+ * route, says no), and `TermsNotAcceptedError` for a runner behind on the
+ * published terms (ACC-6). Every caller, whatever its method: the whole
+ * decision, and why it never reads the method, is ./terms-gate's.
+ * Server-function side only — route loaders want `requireSession` from
+ * ./functions, which redirects instead of throwing.
  */
 export async function requireUserId(): Promise<string> {
+  return agreedUserId(
+    db(),
+    await auth.api.getSession({ headers: getRequestHeaders() }),
+  );
+}
+
+/**
+ * `requireUserId` without the terms rule, for what a runner behind on the
+ * terms must still reach (./terms-gate names the list): accepting them,
+ * Get a copy, Settings › Account's reads, and (through
+ * `checkCurrentPassword`) proving the password that deletes the account.
+ * Any other caller wants `requireUserId`.
+ */
+export async function requireUserIdBeforeTerms(): Promise<string> {
   const session = await auth.api.getSession({ headers: getRequestHeaders() });
   return activeUserId(db(), userIdOrThrow(session));
 }
@@ -88,7 +106,10 @@ export async function currentSessionId(): Promise<string | undefined> {
 /**
  * Whether `password` is the signed-in runner's current one (ACC-8), within
  * the per-runner limit on tries. The decision is `checkOwnPassword`'s;
- * this only hands it the request.
+ * this only hands it the request. Before the terms rule: proving a
+ * password changes nothing by itself, and Delete account, which a runner
+ * behind on the terms may still use, proves one. Email change, its other
+ * caller, is refused by its own `requireUserId`.
  */
 export async function checkCurrentPassword(
   password: string,
@@ -97,7 +118,7 @@ export async function checkCurrentPassword(
     {
       auth,
       db: db(),
-      userId: await requireUserId(),
+      userId: await requireUserIdBeforeTerms(),
       headers: getRequestHeaders(),
     },
     password,
@@ -107,7 +128,9 @@ export async function checkCurrentPassword(
 /**
  * The signed-in runner and when their session was made — for a change a
  * fresh sign-in can prove (ACC-9's Google re-auth). Refused, as
- * `requireUserId` is, for an account already set to be deleted.
+ * `requireUserId` is, for an account already set to be deleted — but not
+ * for one behind on the terms: its one caller is Delete account, which a
+ * runner who will not accept must still be able to use.
  */
 export async function requireSignedInSince(): Promise<{
   userId: string;

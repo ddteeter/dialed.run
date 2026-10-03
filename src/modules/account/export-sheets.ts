@@ -1,5 +1,5 @@
 /**
- * The export ZIP's five sheets themselves — one column table each (task
+ * The export ZIP's six sheets themselves — one column table each (task
  * 126, ACC-10; round 27 #13), kept apart from the behaviour that resolves
  * photos, formats times and builds each sheet's rows (`./export-files`),
  * and from the CSV/README rendering (`./export-format`).
@@ -66,6 +66,14 @@ export type GarmentRow = Omit<Garment, "createdAt"> & {
 };
 
 /**
+One acceptance of the terms, its time written out.
+*/
+export interface TermsRow {
+  readonly version: number;
+  readonly acceptedAt: string;
+}
+
+/**
 Every sheet's rows, as `export-files` builds them.
 */
 export interface ExportRows {
@@ -74,6 +82,7 @@ export interface ExportRows {
   readonly entries: readonly EntryRow[];
   readonly kit: readonly KitRow[];
   readonly garments: readonly GarmentRow[];
+  readonly terms: readonly TermsRow[];
 }
 
 interface ExportSheets {
@@ -82,6 +91,7 @@ interface ExportSheets {
   readonly entriesSheet: Sheet<EntryRow>;
   readonly kitSheet: Sheet<KitRow>;
   readonly garmentsSheet: Sheet<GarmentRow>;
+  readonly termsSheet: Sheet<TermsRow>;
 }
 
 export function buildSheets(rows: ExportRows): ExportSheets {
@@ -389,5 +399,30 @@ export function buildSheets(rows: ExportRows): ExportSheets {
     ],
   };
 
-  return { profileSheet, runsSheet, entriesSheet, kitSheet, garmentsSheet };
+  const termsSheet: Sheet<TermsRow> = {
+    file: "terms.csv",
+    about: "every version of the terms you accepted, oldest first.",
+    rows: rows.terms,
+    columns: [
+      {
+        name: "version",
+        about: "the version of the terms.",
+        value: (acceptance) => acceptance.version,
+      },
+      {
+        name: "accepted_at",
+        about: "when you accepted it (UTC).",
+        value: (acceptance) => acceptance.acceptedAt,
+      },
+    ],
+  };
+
+  return {
+    profileSheet,
+    runsSheet,
+    entriesSheet,
+    kitSheet,
+    garmentsSheet,
+    termsSheet,
+  };
 }

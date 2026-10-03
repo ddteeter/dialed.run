@@ -2,7 +2,7 @@ import { eq, sql } from "drizzle-orm";
 import type { Page } from "@playwright/test";
 
 import { account, session, user } from "../../src/db/schema-auth";
-import { userProfiles } from "../../src/db/schema-core";
+import { termsAcceptances, userProfiles } from "../../src/db/schema-core";
 import { admissionHeaders, ensureInviteCode } from "../support/invites";
 import { withLocalDb } from "../support/local-db";
 
@@ -76,6 +76,9 @@ export async function signInAsOperator(page: Page): Promise<void> {
     // The last run's operator goes first: the id is fixed, so it is taken.
     await core.delete(user).where(eq(user.id, OPERATOR_ID));
     await core.delete(userProfiles).where(eq(userProfiles.userId, OPERATOR_ID));
+    await core
+      .delete(termsAcceptances)
+      .where(eq(termsAcceptances.userId, OPERATOR_ID));
     // One batch, with foreign keys checked at the end of it rather than per
     // statement: mid-batch, the session briefly points at a user id that
     // does not exist yet.
@@ -94,6 +97,13 @@ export async function signInAsOperator(page: Page): Promise<void> {
         .update(userProfiles)
         .set({ userId: OPERATOR_ID })
         .where(eq(userProfiles.userId, from)),
+      // The terms the sign-up accepted (ACC-6) go with the account, or —
+      // once the terms are published (D-93) — the root's gate would send
+      // the operator to the terms prompt.
+      core
+        .update(termsAcceptances)
+        .set({ userId: OPERATOR_ID })
+        .where(eq(termsAcceptances.userId, from)),
       core
         .insert(userProfiles)
         .values({ userId: OPERATOR_ID, username: OPERATOR_HANDLE })

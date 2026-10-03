@@ -228,25 +228,22 @@ export function LoginCrossLink({
 }
 
 /**
- * The lines under Au2 (ACC-6, ACC-13; round 26 #14, round 27 #12; D-52,
- * D-71): micro, muted, above the cross-link — the privacy line, linking
- * the policy, and the age line. Never under Au1 (D-52).
- *
- * Round 27's line also has the runner agree to the Terms, and the server
- * record which version and when. The terms are the owner's to write and
- * do not exist yet, so that half waits for them rather than asking anyone
- * to agree to a page that is not there.
+ * The lines under Au2 (ACC-6, ACC-13; round 27 #12; D-52, D-71): micro,
+ * muted, above the cross-link — the terms line, linking the Terms and the
+ * policy, and the age line. Never under Au1 (D-52). No checkbox: creating
+ * the account is the acceptance, and the server records the terms'
+ * version and when as the account is made (`account/terms-acceptance`).
  */
 export function AuthLegal(): JSX.Element {
   return (
     <div className="flex flex-col gap-1 text-micro text-muted">
       <p className="m-0">
-        Creating an account means you&apos;ve read our{" "}
-        <Link
-          data-target="inline"
-          to="/privacy"
-          className="text-ink underline underline-offset-4"
-        >
+        By creating an account you agree to the{" "}
+        <Link data-target="inline" to="/terms" className={INLINE_LINK}>
+          Terms
+        </Link>{" "}
+        and have read the{" "}
+        <Link data-target="inline" to="/privacy" className={INLINE_LINK}>
           Privacy policy
         </Link>
         .
@@ -255,6 +252,8 @@ export function AuthLegal(): JSX.Element {
     </div>
   );
 }
+
+const INLINE_LINK = "text-ink underline underline-offset-4";
 
 /**
  * Au7's notice: *"an ink block (square, --hiviz-text eyebrow on ink only)

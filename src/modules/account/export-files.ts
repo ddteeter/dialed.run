@@ -124,7 +124,7 @@ function profileRow(data: ExportData): ProfileRow {
 }
 
 /**
- * Everything the ZIP holds: the five CSVs and the README as text, and the
+ * Everything the ZIP holds: the six CSVs and the README as text, and the
  * photos and run files to copy from R2.
  *
  * Every sheet's rows are built here, each value decided once — a photo
@@ -151,32 +151,42 @@ export function exportFiles(
     return file === undefined ? [] : [{ upload, file }];
   });
 
-  const { profileSheet, runsSheet, entriesSheet, kitSheet, garmentsSheet } =
-    buildSheets({
-      profile: profileRow(data),
-      runs: data.runs.map((run) => ({
-        ...run,
-        startedAt: iso(run.startedAt),
-        // The file a run was imported from: the upload that became it. A
-        // duplicate upload names a run too, but it was not the run's
-        // source.
-        runFile: uploaded.find(
-          ({ upload }) => upload.status === "done" && upload.runId === run.id,
-        )?.file.name,
-      })),
-      entries: kits.map(({ entry, photos }) => ({
-        ...entry,
-        tags: list(entry.tags),
-        photos: list(photos.map((photo) => photo.name)),
-        createdAt: iso(entry.createdAt),
-      })),
-      kit: data.entries.flatMap((entry) => entry.kit),
-      garments: closet.map(({ garment, photo }) => ({
-        ...garment,
-        createdAt: iso(garment.createdAt),
-        photo: photo?.name,
-      })),
-    });
+  const {
+    profileSheet,
+    runsSheet,
+    entriesSheet,
+    kitSheet,
+    garmentsSheet,
+    termsSheet,
+  } = buildSheets({
+    profile: profileRow(data),
+    runs: data.runs.map((run) => ({
+      ...run,
+      startedAt: iso(run.startedAt),
+      // The file a run was imported from: the upload that became it. A
+      // duplicate upload names a run too, but it was not the run's
+      // source.
+      runFile: uploaded.find(
+        ({ upload }) => upload.status === "done" && upload.runId === run.id,
+      )?.file.name,
+    })),
+    entries: kits.map(({ entry, photos }) => ({
+      ...entry,
+      tags: list(entry.tags),
+      photos: list(photos.map((photo) => photo.name)),
+      createdAt: iso(entry.createdAt),
+    })),
+    kit: data.entries.flatMap((entry) => entry.kit),
+    garments: closet.map(({ garment, photo }) => ({
+      ...garment,
+      createdAt: iso(garment.createdAt),
+      photo: photo?.name,
+    })),
+    terms: data.terms.map((acceptance) => ({
+      version: acceptance.version,
+      acceptedAt: iso(acceptance.acceptedAt),
+    })),
+  });
 
   const sheets = [
     csvOf(profileSheet),
@@ -184,6 +194,7 @@ export function exportFiles(
     csvOf(entriesSheet),
     csvOf(kitSheet),
     csvOf(garmentsSheet),
+    csvOf(termsSheet),
   ];
   const readme = [
     "dialed.run export",
@@ -201,6 +212,8 @@ export function exportFiles(
     readmeSection(kitSheet),
     "",
     readmeSection(garmentsSheet),
+    "",
+    readmeSection(termsSheet),
     "",
   ].join("\n");
   const objects = [

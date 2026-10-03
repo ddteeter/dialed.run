@@ -5,7 +5,8 @@
  *
  * **What it reads**: the account and profile, the closet (retired garments
  * too), every run with its conditions, every entry with its kit, tags and
- * photos, and every upload. **Derived conditions only** — the reading the
+ * photos, every upload, and every version of the terms they accepted.
+ * **Derived conditions only** — the reading the
  * app shows for the run, never a raw Visual Crossing row (its licence,
  * §1.8): no cache key, no place, no fetch time.
  */
@@ -20,6 +21,7 @@ import {
   outfitEntries,
   outfitEntryItems,
   runs,
+  termsAcceptances,
   userProfiles,
   wardrobeItems,
 } from "../../db/schema-core";
@@ -62,7 +64,7 @@ export async function exportData(db: Db, userId: string) {
     userProfiles,
     eq(userProfiles.userId, userId),
   );
-  const [garments, runRows, entries, uploads] = await db.batch([
+  const [garments, runRows, entries, uploads, terms] = await db.batch([
     db
       .select()
       .from(wardrobeItems)
@@ -88,6 +90,15 @@ export async function exportData(db: Db, userId: string) {
       .from(imports)
       .where(eq(imports.userId, userId))
       .orderBy(asc(imports.createdAt)),
+    // Every version of the terms they accepted, oldest first (D-95).
+    db
+      .select({
+        version: termsAcceptances.version,
+        acceptedAt: termsAcceptances.acceptedAt,
+      })
+      .from(termsAcceptances)
+      .where(eq(termsAcceptances.userId, userId))
+      .orderBy(asc(termsAcceptances.version)),
   ]);
   const entryIds = entries.map((entry) => entry.id);
   const [items, tags, photos] = await Promise.all([
@@ -131,6 +142,7 @@ export async function exportData(db: Db, userId: string) {
       photos: photosOf.get(entry.id) ?? [],
     })),
     uploads,
+    terms,
   };
 }
 

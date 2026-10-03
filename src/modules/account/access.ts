@@ -15,6 +15,7 @@ import { orSqlNull } from "../../lib/sql/sql-null";
 import { countSend, sendAllowed, sendClaimOf } from "../email";
 import type { TurnstileAttempt, TurnstileVerdict } from "../ops";
 import { confirmRedemption, inviteStanding, redeemInvite } from "./invites";
+import { currentTermsVersion, signUpAcceptances } from "./terms-acceptance";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -37,11 +38,14 @@ export function turnstileAttempt(
 
 /**
  * The gate `createAuth` takes (`modules/auth/access-hook.ts`), against one
- * database and one Turnstile check.
+ * database and one Turnstile check. `termsVersion` is the published terms'
+ * version, `undefined` while none are published (D-93) — the shipped
+ * text's, unless a test says otherwise.
  */
 export function accessGate(
   db: Db,
   verify: (attempt: TurnstileAttempt) => Promise<TurnstileVerdict>,
+  termsVersion: number | undefined = currentTermsVersion(),
 ) {
   return {
     isInviteOnly: IS_INVITE_ONLY,
@@ -55,8 +59,19 @@ export function accessGate(
     standing: (code: string) => inviteStanding(db, code),
     claim: (claim: Readonly<{ code: string; userId: string; email: string }>) =>
       redeemInvite(db, claim),
+    // The account exists: its invite's use is spent for good, and the
+    // published terms it was made under are recorded (ACC-6: creating the
+    // account is the acceptance) — one batch, the account's first app
+    // write. While no terms are published there is nothing to record
+    // (D-93). Better Auth makes the `user` row itself, so no batch can
+    // hold that too; a failure here leaves an account with no acceptance,
+    // which the terms prompt asks about at its first sign-in.
     confirm: async (userId: string) => {
-      await confirmRedemption(db, userId);
+      const now = nowSeconds();
+      await db.batch([
+        confirmRedemption(db, userId, now),
+        ...signUpAcceptances(db, userId, termsVersion, now),
+      ]);
     },
   };
 }

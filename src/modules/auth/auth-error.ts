@@ -8,7 +8,10 @@
  * matters more for them than for the session lookup they accompany.
  */
 
-import { AUTH_REQUIRED_CODE } from "../../lib/auth-signal";
+import {
+  AUTH_REQUIRED_CODE,
+  TERMS_NOT_ACCEPTED_CODE,
+} from "../../lib/auth-signal";
 
 /**
  * The single unauthenticated signal.
@@ -54,5 +57,24 @@ export class AccountLeavingError extends Error {
   constructor() {
     super("This account is set to be deleted.");
     this.name = "AccountLeavingError";
+  }
+}
+
+/**
+ * A signed-in runner who has not accepted the current published terms,
+ * asking a server function for anything (task 126, ACC-6). Its own code
+ * (`TERMS_NOT_ACCEPTED_CODE`, in `lib/` so the client can read it), as the
+ * leaving refusal's is, because the runner is signed in — "You were signed
+ * out" would be untrue. Their way on is the terms prompt, which the root
+ * route already puts in front of them; this is the server saying so to a
+ * client that went round it, and the client answers it by opening the
+ * prompt (decision D-96).
+ */
+export class TermsNotAcceptedError extends Error {
+  readonly code = TERMS_NOT_ACCEPTED_CODE;
+
+  constructor() {
+    super("Accept the current terms first.");
+    this.name = "TermsNotAcceptedError";
   }
 }

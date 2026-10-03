@@ -802,13 +802,150 @@ Answered by the owner, 2026-09-30:
    once every column is a plain field read (above). Exports also got their
    own queue (decision D-86).
 
+## PR A (round 28): acceptance, legal routes, parser
+
+Branch `feat/126-legal-acceptance`. The soft-launch legal path
+(`docs/launch/deployment-plan.md` §11, Stage 1: "the privacy policy and
+terms are published and linked; the sign-up form records acceptance"):
+ACC-6's stored acceptance, ACC-13's `/terms` and `/copyright`, and the
+parser under all three. Owner decisions of 2026-10-01.
+
+### The parser: mdast, not a hand-rolled subset
+
+`account/legal-markdown.ts` stops parsing by hand. `mdast-util-from-markdown`
+(2.0.3) reads the text, with the GFM table extension
+(`micromark-extension-gfm-table` 2.1.2 for the syntax,
+`mdast-util-gfm-table` 2.0.0 for the tree), and a small walk maps the tree
+onto the existing `Block`/`Inline` types, so `LegalPage.tsx` keeps its
+components.
+
+- **Ordered lists are new.** `copyright.md`'s two numbered lists (ten
+  lines) read as one paragraph each under the old parser. `list` gains an
+  `ordered` flag and a `start`, drawn as an `<ol>`.
+- **Anything the page does not draw throws**, naming the node type and
+  its line: emphasis, images, code blocks, raw HTML, a thematic break, a
+  `####` heading, a nested list, a list item of two paragraphs. A test
+  parses **every** `docs/legal/*.md` (as if published, which is what the
+  owner's edit will do), so a construct the owner adds fails CI, not the
+  page. The old parser read anything it did not know as text.
+- Unchanged: `publishedText` and its positive `published: true` front
+  matter (stripped before the parse, so no front-matter extension), the
+  dropped source comments, GitHub-compatible heading ids (`headingId`, the
+  same function), and "a text needs a `#` title".
+- **Server only.** The parse runs in the loader's server function; the
+  blocks reach the page, never the text or the library. `check:bundle`
+  and the 280,000-byte client budget are the evidence.
+
+### ACC-6: the record
+
+**A table, one row per acceptance**: `terms_acceptances` (`user_id`,
+`version` integer, `accepted_at`), primary key `(user_id, version)`.
+Additive (`0042_add_terms_acceptances`, core). A table rather than columns
+on the profile, so a bump keeps the history; the composite key is the
+idempotency (law 8b: `onConflictDoNothing`, a repeat keeps the first time)
+and the index the gate's `max(version)` reads. The purge deletes the rows
+with the account's other by-user rows.
+
+**The version is the terms' own line.** `termsVersionOf(text)` reads
+"**Version N.**" from `docs/legal/terms.md` — no second constant. A text
+with no such line throws, and a test pins the real file's number.
+
+**At sign-up**, email or Google: Better Auth makes the `user` row itself, so
+no batch of ours can hold it. The account's first app write is already in
+the user create hook's `after` (`access.confirm`, which spends the invite
+for good); acceptance joins it **in that one batch**. A failure there
+leaves an account with no acceptance, which the prompt below asks about on
+first sign-in — the record heals itself rather than being lost.
+
+**Existing accounts and later bumps.** A signed-in runner whose latest
+acceptance is below the current version (or who has none) is behind:
+
+- **The root's gate** (`handleGate`) answers `needs-terms`, after
+  `leaving` and before `needs-handle`, and every page but the open ones
+  sends them to `/account/terms`: "The terms have changed", a link to
+  `/terms`, **Accept**, and **Log out**, with a line pointing to Settings ›
+  Account for deletion. Open while behind: the prompt, `/terms`,
+  `/privacy`, `/copyright`, the auth pages, `/account/leaving` and
+  `/account/sign-in` (where Delete account lives). Undrawn: a design delta.
+- **Accept** sends the version the page showed. The server records it only
+  if it is still the current one ("stale" otherwise, and the page reloads
+  to the new text), so nobody is recorded as accepting a text they were
+  not shown.
+- **The server refuses too** (the leaving refusal's shape, the one gate):
+  `requireUserId` throws `TermsNotAcceptedError` (`TERMS_NOT_ACCEPTED`)
+  for a runner who is behind, **whatever the server function and whatever
+  the request's method** (review of PR #140). The first build let a `GET`
+  through as a read, but TanStack's default method is `GET`, and during a
+  server render the request is the page's `GET`, so a `POST` function a
+  loader called (`completeOnboardingFn`, `completeStravaConnectFn`)
+  skipped the gate. So the gate is by function: the whole decision is
+  `auth/terms-gate.ts`' `agreedUserId`, which takes the session and never
+  the method, and reads the leaving claim and the latest acceptance in one
+  `db.batch()`. Exempt by calling another gate, named and held both ways
+  by `test/architecture/terms-exempt.test.ts`:
+  `requireUserIdBeforeTerms` for Accept, Get a copy (D-95), and
+  Settings › Account's `accountPageQuery` and `unreadNotificationCountFn`;
+  `requireSignedInSince` and `checkCurrentPassword` for Delete account;
+  `requireUserIdWhileLeaving` for Keep. Sign-out is Better Auth's and
+  never passes through `requireUserId`. Every `createServerFn` now names
+  its method (`test/architecture/server-functions-declare-method.test.ts`).
+- **A stale tab** (D-96): the has-handle memo skips the root's question
+  for the rest of a page load, so a tab open across the terms being
+  published or bumped hears it first as a refusal. The refusal opens
+  `/account/terms` instead of a failure band — from a form, a control or a
+  loader (`ui/terms-refusal.tsx`'s provider at the root, read by
+  `useFormSubmit`, `useControlAction` and `RouteFailed`) — forgets the
+  memo, so the next in-app navigation asks the gate again, and carries
+  `from`, where Accept returns the runner (`lib/return-path.ts`, the rule
+  log-in's `redirect` already used).
+
+**Unpublished terms** (D-93): `currentTermsVersion()` is `undefined` until
+`terms.md` carries the published mark. Then sign-up records nothing
+(`signUpAcceptances`), `termsStanding` is `unpublished`, the root never
+answers `needs-terms`, the gate refuses nobody over the terms, and Accept
+records nothing (`stale`). Once marked, every account without that
+version's acceptance is behind and meets the prompt once.
+
+**Explicit Accept stays** (D-94) though `terms.md` says continued use is
+acceptance; `docs/legal/terms-sources.md` records the mismatch for the
+owner's legal review.
+
+**The export** (D-95) gains `terms.csv` (`version`, `accepted_at`, oldest
+first), named in the README like every other file.
+
+### The terms line and the links
+
+- Under Au2, round 27 #12's copy: "By creating an account you agree to the
+  Terms and have read the Privacy policy.", both linked, then the age
+  line. No checkbox.
+- `/terms` and `/copyright`: the same `LegalPage`, gated by the same
+  published mark, so both are X1 today (D-81: the links show anyway). Glue
+  routes; the slug enum grows to the three texts.
+- Linked, in round 27 #12's order — Privacy · Terms · Copyright — from the
+  signed-out footer, Settings › About (round 28 #7's sub-lines, "The rules
+  for using dialed.run" and "Report something of yours posted here") and
+  every email footer.
+- Round 28 #16 on the reading page: "↑ Contents" becomes "Back to
+  contents", TYPE.small, link colour, no arrow, drawn only below desk.
+
+### Docs
+
+`docs/legal/terms-sources.md`'s "We record which version you accepted"
+row maps to the code. The legal prose is the owner's and is not edited.
+
+### Owner questions
+
+1. **Acceptance of an unpublished draft.** Answered (owner, 2026-10-02;
+   D-93): gated on the published mark. Nothing is recorded or asked until
+   the terms are published.
+
 ## Contract touches
 
 - Schema (all core): `replace_display_name_with_username` (**destructive,
   authorised**, decision D-41, expires at the first production deploy — the
   history table folds in), `add_invite_codes_and_access_requests`,
   `add_notification_preferences`, `add_account_deletions`, plus
-  `add_terms_acceptance` (**additive, not in the shared list — flagged**).
+  `add_terms_acceptances` (additive, PR A, `0042`).
   PR 2a adds two more, both additive: `add_email_verifications_and_send_limits`
   (the confirm links and the per-address limit) and
   `add_verification_identifier_index` (Better Auth's reset lookup scanned

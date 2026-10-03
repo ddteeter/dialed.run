@@ -1,8 +1,9 @@
 import { useCallback, useRef, useState } from "react";
 import { z } from "zod";
 
-import { isAuthRequired } from "../lib/auth-signal";
+import { isAuthRequired, isTermsRefusal } from "../lib/auth-signal";
 import { DURATION } from "./motion";
+import { useTermsRefusal } from "./terms-refusal";
 
 /**
  * The submit half of the Forms & failure contract (docs/product.md).
@@ -34,7 +35,7 @@ Field name -> the one sentence to show under it.
 export type FieldErrors = Record<string, string>;
 
 export interface FormFailure {
-  kind: "network" | "server" | "session";
+  kind: "network" | "server" | "session" | "terms";
   message: string;
 }
 
@@ -122,6 +123,13 @@ export function classifyFailure(error: unknown): FormFailure {
   if (isAuthRequired(error)) {
     return { kind: "session", message: "You were signed out." };
   }
+  // Behind on the terms (ACC-6), also by its code. Not a failure: where a
+  // root provides `ui/terms-refusal`'s answer, the form and control hooks
+  // open the terms prompt instead of showing this (decision D-96), and the
+  // sentence is the server's own, for anywhere that shows a cause line.
+  if (isTermsRefusal(error)) {
+    return { kind: "terms", message: "Accept the current terms first." };
+  }
   // `fetch` rejects with a TypeError, and it rejects *here* — client-side,
   // never having crossed a structured clone — so the prototype is intact
   // and `instanceof` is safe in a way it is not for a server rejection.
@@ -199,6 +207,7 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
   const retryRef = useRef<HTMLButtonElement>(null);
   const inFlight = useRef(false);
   const lastValues = useRef<unknown>(undefined);
+  const answerTermsRefusal = useTermsRefusal();
 
   // Two equivalent mutants in here. `formRef.current` is null only before
   // the form has mounted, and nothing can call `focusField` until it has —
@@ -299,6 +308,12 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
         if (Object.keys(named).length === 0) {
           const classified = classifyFailure(error);
           setFieldErrors({});
+          // A stale tab behind on the terms: straight to the prompt, with
+          // nothing announced — not saved, and not failed (D-96).
+          if (answerTermsRefusal && classified.kind === "terms") {
+            answerTermsRefusal();
+            return;
+          }
           setFailure(classified);
           setStatus(`Nothing saved. ${classified.message}`);
           globalThis.setTimeout(() => {
@@ -315,7 +330,15 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
     // Equivalent: stryker's replacement dependency array is a constant, so
     // the callback is exactly as stable as this list makes it.
     // Stryker disable next-line ArrayDeclaration
-    [schema, action, onSuccess, successMessage, land, refusal],
+    [
+      schema,
+      action,
+      onSuccess,
+      successMessage,
+      land,
+      refusal,
+      answerTermsRefusal,
+    ],
   );
 
   /**

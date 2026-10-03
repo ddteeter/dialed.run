@@ -19,7 +19,11 @@ import {
   RouteFailed,
   loaderFailureMessage,
 } from "../../src/modules/auth/components/SystemState";
-import { AuthRequiredError } from "../../src/modules/auth/auth-error";
+import {
+  AuthRequiredError,
+  TermsNotAcceptedError,
+} from "../../src/modules/auth/auth-error";
+import { TermsRefusalAnswer } from "../../src/ui";
 
 /**
  * Round 22's system states: X1 not found, X2 loader failed. *"Signed in,
@@ -125,7 +129,9 @@ describe("loaderFailureMessage", () => {
   });
 
   it("says only the cause anywhere else", () => {
-    expect(loaderFailureMessage(new Error("x"), "Call")).toBe("Our end failed.");
+    expect(loaderFailureMessage(new Error("x"), "Call")).toBe(
+      "Our end failed.",
+    );
     expect(loaderFailureMessage(new Error("x"), undefined)).toBe(
       "Our end failed.",
     );
@@ -142,14 +148,52 @@ describe("loaderFailureMessage", () => {
  * The two router-facing components, inside a router whose root loader
  * says who is signed in — the way `__root.tsx` hands it down.
  */
+/**
+ * A load that never settles: the navigation to the prompt stays pending,
+ * so what the failed page shows meanwhile can be read.
+ */
+const NEVER = new Promise<never>(() => {
+  // Never settles.
+});
+
 async function routedApp({
   signedIn,
   path,
   failWith,
-}: Readonly<{ signedIn: boolean | "unloaded"; path: string; failWith?: Error }>) {
+  answersTerms = false,
+  termsLoaderPending = false,
+}: Readonly<{
+  signedIn: boolean | "unloaded";
+  path: string;
+  failWith?: Error;
+  /**
+  Whether the root mounts the terms refusal's answer, as `__root.tsx` does.
+  */
+  answersTerms?: boolean;
+  /**
+  Holds `/account/terms`'s loader pending forever, so a test can observe the
+  failed page while the navigation to the prompt is still in flight — the
+  prompt route never actually mounts.
+  */
+  termsLoaderPending?: boolean;
+}>) {
   const rootRoute = createRootRoute({
     loader: () => (signedIn === "unloaded" ? undefined : { signedIn }),
-    component: () => <Outlet />,
+    component: () =>
+      answersTerms ? (
+        <TermsRefusalAnswer>
+          <Outlet />
+        </TermsRefusalAnswer>
+      ) : (
+        <Outlet />
+      ),
+  });
+  const terms = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/account/terms",
+    // Returning `undefined` when not pending behaves exactly as no loader.
+    loader: () => (termsLoaderPending ? NEVER : undefined),
+    component: () => <p>the terms prompt</p>,
   });
   const closet = createRoute({
     getParentRoute: () => rootRoute,
@@ -174,7 +218,7 @@ async function routedApp({
     component: () => <p>the log-in page</p>,
   });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([closet, gone, login]),
+    routeTree: rootRoute.addChildren([closet, gone, login, terms]),
     history: createMemoryHistory({ initialEntries: [path] }),
     defaultNotFoundComponent: NotFound,
     defaultErrorComponent: RouteFailed,
@@ -218,7 +262,9 @@ describe("the router's defaults", () => {
     });
     await screen.findByText("Our end failed. Your closet is fine.");
     // The tab stays lit: the route did.
-    expect(document.querySelector("[data-slot='tab-indicator']")).not.toBeNull();
+    expect(
+      document.querySelector("[data-slot='tab-indicator']"),
+    ).not.toBeNull();
 
     const invalidate = vi.spyOn(router, "invalidate");
     await user.click(screen.getByRole("button", { name: "Try again" }));
@@ -239,6 +285,72 @@ describe("the router's defaults", () => {
     expect(router.state.location.search).toEqual({
       redirect: "/closet?view=all",
     });
+    expect(screen.queryByText(/Our end failed/u)).toBeNull();
+    expect(document.querySelector("[data-part='failure-band']")).toBeNull();
+  });
+
+  it("send a stale tab behind on the terms to the prompt, once, carrying the page back (D-96)", async () => {
+    const router = await routedApp({
+      signedIn: true,
+      path: "/closet?view=all",
+      failWith: new TermsNotAcceptedError(),
+      answersTerms: true,
+    });
+
+    await screen.findByText("the terms prompt");
+    expect(router.state.location.pathname).toBe("/account/terms");
+    expect(router.state.location.search).toEqual({ from: "/closet?view=all" });
+    expect(router.history).toHaveLength(2);
+    expect(screen.queryByText(/Our end failed/u)).toBeNull();
+    expect(document.querySelector("[data-part='failure-band']")).toBeNull();
+  });
+
+  it("show the band for that refusal where nothing above answers it", async () => {
+    await routedApp({
+      signedIn: true,
+      path: "/closet",
+      failWith: new TermsNotAcceptedError(),
+    });
+    expect(
+      await screen.findByText("Our end failed. Your closet is fine."),
+    ).toBeVisible();
+  });
+
+  it("keeps an ordinary read failure in the band even with the terms answer mounted", async () => {
+    // Only a `kind === "terms"` refusal goes to the prompt. An unrelated
+    // failure (D1 down) must still land in the band and stay on the page
+    // that failed, whether or not a terms-refusal provider happens to be
+    // mounted above it.
+    const router = await routedApp({
+      signedIn: true,
+      path: "/closet",
+      failWith: new Error("D1 down"),
+      answersTerms: true,
+    });
+    expect(
+      await screen.findByText("Our end failed. Your closet is fine."),
+    ).toBeVisible();
+    expect(router.state.location.pathname).toBe("/closet");
+  });
+
+  it("holds the band back while the terms navigation is still in flight", async () => {
+    // The prompt's own loader never resolves here, so the navigation it
+    // starts never lands — exposing whatever the failed page renders while
+    // it is still the thing on screen.
+    const router = await routedApp({
+      signedIn: true,
+      path: "/closet",
+      failWith: new TermsNotAcceptedError(),
+      answersTerms: true,
+      termsLoaderPending: true,
+    });
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/account/terms");
+    });
+    // Still showing the failed page's output, not the prompt: the prompt's
+    // loader is stuck, so its component never mounts.
+    expect(screen.queryByText("the terms prompt")).toBeNull();
     expect(screen.queryByText(/Our end failed/u)).toBeNull();
     expect(document.querySelector("[data-part='failure-band']")).toBeNull();
   });

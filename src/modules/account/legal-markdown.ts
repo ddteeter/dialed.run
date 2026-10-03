@@ -1,17 +1,34 @@
 /**
  * The legal texts' markdown, read into blocks a reading page renders
- * (task 126, ACC-13).
+ * (task 126, ACC-13; round 28 PR A).
  *
- * **Only the subset the texts use**: a `#` title, `##` and `###`
- * headings, paragraphs, `-` lists (a line indented under an item carries
- * it on), tables, `>` quotes, and inline `**bold**`, `` `code` `` and
- * `[links](…)`. The texts are files in `docs/legal/`, written here, so a
- * general parser — and a dependency to hold it — would buy nothing a test
- * of the real file does not; anything else reads as the text it is.
+ * **A real parser, and a closed set of what the page draws.** The text is
+ * read by `mdast-util-from-markdown` with GFM's table extension, and the
+ * tree is mapped onto the page's own `Block`/`Inline` types: a `#` title,
+ * `##` and `###` headings, paragraphs, bulleted and numbered lists, tables,
+ * block quotes, and inline bold, code and links. **Anything else throws**,
+ * naming the construct and its line — emphasis, an image, a code block, a
+ * fourth heading level, a nested list — so a construct the owner adds to a
+ * file in `docs/legal/` fails the test that parses every one of them,
+ * rather than reaching the page as something it cannot draw. The parser
+ * this replaced read anything it did not know as text, and merged a
+ * numbered list into one paragraph.
  *
- * Pure and framework-free: the parse runs on the server, and the blocks
- * are what reach the page, never the text.
+ * Server only: the loader's server function runs the parse, and the blocks
+ * are what reach the page, never the text or the library.
  */
+import type {
+  BlockContent,
+  DefinitionContent,
+  ListItem,
+  Node,
+  PhrasingContent,
+  RootContent,
+  TableRow,
+} from "mdast";
+import { fromMarkdown } from "mdast-util-from-markdown";
+import { gfmTableFromMarkdown } from "mdast-util-gfm-table";
+import { gfmTable } from "micromark-extension-gfm-table";
 
 export type Inline =
   | { readonly kind: "text"; readonly text: string }
@@ -34,6 +51,14 @@ export type Block =
   | { readonly kind: "quote"; readonly inlines: readonly Inline[] }
   | { readonly kind: "list"; readonly items: readonly (readonly Inline[])[] }
   | {
+      readonly kind: "numbered";
+      /**
+      The first item's number, as the source wrote it.
+      */
+      readonly start: number;
+      readonly items: readonly (readonly Inline[])[];
+    }
+  | {
       readonly kind: "table";
       readonly head: readonly (readonly Inline[])[];
       readonly rows: readonly (readonly (readonly Inline[])[])[];
@@ -51,194 +76,186 @@ export interface LegalDoc {
 /**
  * A heading's id, the way GitHub makes one, so an in-page link written
  * against the rendered file (`[Your choices](#your-choices)`) lands here
- * too.
+ * too: lowercase, punctuation but `-` and `_` dropped, and **each** space a
+ * hyphen — `Opt-in  twice` is `opt-in--twice`, as GitHub has it.
  */
 export function headingId(title: string): string {
   return title
     .toLowerCase()
-    .replaceAll(/[^\p{L}\p{N}\s-]/gu, "")
+    .replaceAll(/[^\p{L}\p{N}\s_-]/gu, "")
     .trim()
-    .replaceAll(/\s+/gu, "-");
+    .replaceAll(/\s/gu, "-");
 }
-
-const MARKS = [
-  { open: "**", close: "**" },
-  { open: "`", close: "`" },
-] as const;
 
 /**
- * The run at `at` if a mark opens there and closes later, with where it
- * ends; otherwise nothing, and the character is text.
+ * GitHub's ids for a whole text: a heading whose id is already taken gets
+ * the first of `-1`, `-2`, … that no heading holds yet. Every heading
+ * counts, the title and `###` included, as GitHub counts them — though
+ * only a `##` section shows its id here.
+ *
+ * GitHub's slugger also remembers the last suffix each id reached, and
+ * starts from there; ids are never given back, so every suffix below that
+ * one is taken and starting from 1 lands on the same id.
  */
-function markAt(
-  line: string,
-  at: number,
-): { inline: Inline; end: number } | undefined {
-  for (const mark of MARKS) {
-    if (!line.startsWith(mark.open, at)) continue;
-    const start = at + mark.open.length;
-    const close = line.indexOf(mark.close, start);
-    if (close <= start) continue;
-    const inner = line.slice(start, close);
-    const inline: Inline =
-      mark.open === "`"
-        ? { kind: "code", text: inner }
-        : { kind: "strong", children: parseInline(inner) };
-    return { inline, end: close + mark.close.length };
-  }
-  return linkAt(line, at);
-}
-
-function linkAt(
-  line: string,
-  at: number,
-): { inline: Inline; end: number } | undefined {
-  if (line[at] !== "[") return undefined;
-  const middle = line.indexOf("](", at);
-  const close = line.indexOf(")", middle);
-  if (middle === -1 || close === -1) return undefined;
-  return {
-    inline: {
-      kind: "link",
-      href: line.slice(middle + 2, close),
-      children: parseInline(line.slice(at + 1, middle)),
-    },
-    end: close + 1,
-  };
-}
-
-export function parseInline(line: string): Inline[] {
-  const inlines: Inline[] = [];
-  let text = "";
-  let at = 0;
-  // `!==`, not `<`: `at` only ever lands on a character or exactly on the
-  // end (a mark's `end` is at most `line.length`), so the two say the same
-  // thing — and `<` admits a `<=` mutant no input can tell apart.
-  while (at !== line.length) {
-    const mark = markAt(line, at);
-    if (mark === undefined) {
-      text += line.charAt(at);
-      at += 1;
-      continue;
+function headingIds(): (title: string) => string {
+  const taken = new Set<string>();
+  return (title) => {
+    const base = headingId(title);
+    let id = base;
+    let suffix = 0;
+    while (taken.has(id)) {
+      suffix += 1;
+      id = `${base}-${String(suffix)}`;
     }
-    if (text !== "") inlines.push({ kind: "text", text });
-    text = "";
-    inlines.push(mark.inline);
-    at = mark.end;
-  }
-  if (text !== "") inlines.push({ kind: "text", text });
-  return inlines;
-}
-
-/**
- * A table row's cells: split at `|`, with the pipes that open and close
- * the row dropped.
- */
-function cells(line: string): Inline[][] {
-  return line
-    .trim()
-    .replace(/^\|/u, "")
-    .replace(/\|$/u, "")
-    .split("|")
-    .map((cell) => parseInline(cell.trim()));
-}
-
-const TABLE_RULE = /^\|[\s|:-]+\|$/u;
-
-/**
-One block's lines: never empty, so its first line is always there.
-*/
-type Lines = readonly [string, ...string[]];
-
-/**
- * The lines of one block — they run to a blank line — as a block.
- */
-function blockOf(lines: Lines): Block {
-  const [first] = lines;
-  if (first.startsWith("### ")) {
-    return { kind: "subheading", inlines: parseInline(first.slice(4)) };
-  }
-  if (first.startsWith("## ")) {
-    const title = first.slice(3);
-    return {
-      kind: "section",
-      id: headingId(title),
-      inlines: parseInline(title),
-    };
-  }
-  if (first.startsWith(">")) {
-    const text = lines.map((line) => line.replace(/^>\s?/u, "")).join(" ");
-    return { kind: "quote", inlines: parseInline(text) };
-  }
-  if (first.startsWith("|")) {
-    const [head, ...rest] = lines;
-    return {
-      kind: "table",
-      head: cells(head),
-      rows: rest
-        .filter((line) => !TABLE_RULE.test(line))
-        .map((line) => cells(line)),
-    };
-  }
-  if (first.startsWith("- ")) {
-    // An item runs until the next line that starts one.
-    const items = lines
-      .join("\n")
-      .split(/\n(?=- )/u)
-      .map((item) =>
-        item
-          .slice(2)
-          .split("\n")
-          .map((line) => line.trim())
-          .join(" "),
-      );
-    return { kind: "list", items: items.map((item) => parseInline(item)) };
-  }
-  return {
-    kind: "paragraph",
-    inlines: parseInline(lines.map((line) => line.trim()).join(" ")),
+    taken.add(id);
+    return id;
   };
 }
 
 /**
- * A heading is a block of its own even with no blank line after it.
+ * A construct the page does not draw, refused by name. The test that
+ * parses every file in `docs/legal/` says which file holds it.
  */
-function isHeading(line: string): boolean {
-  return line.startsWith("#");
+function unsupported(node: Node): never {
+  throw new Error(
+    `a legal text cannot use ${node.type}: the page does not draw it`,
+  );
 }
 
 /**
-The text's lines, grouped into blocks at blank lines and headings.
-*/
-function groups(text: string): Lines[] {
-  const out: Lines[] = [];
-  let current: string[] = [];
-  const close = () => {
-    const [first, ...rest] = current;
-    if (first !== undefined) out.push([first, ...rest]);
-    current = [];
-  };
-  for (const line of text.split("\n")) {
-    if (line.trim() === "" || isHeading(line)) close();
-    if (isHeading(line)) out.push([line]);
-    else if (line.trim() !== "") current.push(line);
+ * A soft line break inside a paragraph is a space, as a browser would
+ * read it; the text keeps no trace of where the source wrapped. (The
+ * parser has already dropped the spaces either side of the break.)
+ */
+function unwrapped(text: string): string {
+  return text.replaceAll("\n", " ");
+}
+
+function inlinesOf(nodes: readonly PhrasingContent[]): Inline[] {
+  return nodes.map((node) => inlineOf(node));
+}
+
+function inlineOf(node: PhrasingContent): Inline {
+  switch (node.type) {
+    case "text": {
+      return { kind: "text", text: unwrapped(node.value) };
+    }
+    case "strong": {
+      return { kind: "strong", children: inlinesOf(node.children) };
+    }
+    case "inlineCode": {
+      return { kind: "code", text: node.value };
+    }
+    case "link": {
+      return {
+        kind: "link",
+        href: node.url,
+        children: inlinesOf(node.children),
+      };
+    }
+    default: {
+      return unsupported(node);
+    }
   }
-  close();
-  return out;
+}
+
+/**
+ * What a list item or a quote holds when the page can draw it: exactly
+ * one paragraph. Two paragraphs, a nested list or a code block inside one
+ * is refused.
+ */
+function onlyParagraph(
+  parent: Node,
+  children: readonly (BlockContent | DefinitionContent)[],
+): Inline[] {
+  const [first, ...rest] = children;
+  if (first?.type !== "paragraph" || rest.length > 0) unsupported(parent);
+  return inlinesOf(first.children);
+}
+
+function itemsOf(items: readonly ListItem[]): Inline[][] {
+  return items.map((item) => onlyParagraph(item, item.children));
+}
+
+function cellsOf(row: TableRow): Inline[][] {
+  return row.children.map((cell) => inlinesOf(cell.children));
+}
+
+/**
+ * The `#` heading, which is the page's title rather than one of its blocks.
+ */
+interface Title {
+  readonly kind: "title";
+  readonly inlines: readonly Inline[];
+}
+
+/**
+ * One top-level node as a block, or the title.
+ */
+function blockOf(
+  node: RootContent,
+  idOf: (title: string) => string,
+): Block | Title {
+  switch (node.type) {
+    case "heading": {
+      const inlines = inlinesOf(node.children);
+      // Taken by every heading, in order, so the ids match GitHub's.
+      const id = idOf(plainText(inlines));
+      if (node.depth === 1) return { kind: "title", inlines };
+      if (node.depth === 2) return { kind: "section", id, inlines };
+      if (node.depth === 3) return { kind: "subheading", inlines };
+      return unsupported(node);
+    }
+    case "paragraph": {
+      return { kind: "paragraph", inlines: inlinesOf(node.children) };
+    }
+    case "blockquote": {
+      return { kind: "quote", inlines: onlyParagraph(node, node.children) };
+    }
+    case "list": {
+      const items = itemsOf(node.children);
+      return node.ordered === true
+        ? { kind: "numbered", start: node.start ?? 1, items }
+        : { kind: "list", items };
+    }
+    case "table": {
+      // A GFM table always has its head row (without one, micromark
+      // reads the lines as a paragraph), so the first row is the head.
+      return {
+        kind: "table",
+        head: node.children.slice(0, 1).flatMap((row) => cellsOf(row)),
+        rows: node.children.slice(1).map((row) => cellsOf(row)),
+      };
+    }
+    default: {
+      return unsupported(node);
+    }
+  }
 }
 
 /**
  * The whole text: its `#` title, and every other block in order. A text
  * with no title is refused — a legal page with no heading is a file that
- * was not written as one.
+ * was not written as one — and so is a second title, which the page has
+ * nowhere to put.
  */
 export function parseLegalDoc(text: string): LegalDoc {
+  const tree = fromMarkdown(text, {
+    extensions: [gfmTable()],
+    mdastExtensions: [gfmTableFromMarkdown()],
+  });
   let title: string | undefined;
   const blocks: Block[] = [];
-  for (const lines of groups(text)) {
-    const [first] = lines;
-    if (first.startsWith("# ")) title ??= first.slice(2);
-    else blocks.push(blockOf(lines));
+  const idOf = headingIds();
+  for (const node of tree.children) {
+    const block = blockOf(node, idOf);
+    if (block.kind !== "title") {
+      blocks.push(block);
+    } else if (title === undefined) {
+      title = plainText(block.inlines);
+    } else {
+      unsupported(node);
+    }
   }
   if (title === undefined) throw new Error("a legal text needs a # title");
   return {
