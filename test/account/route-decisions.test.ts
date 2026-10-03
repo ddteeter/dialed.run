@@ -286,6 +286,17 @@ describe("accountSectionSearch and the way back from Google (ACC-9)", () => {
     }
     expect(DELETE_REAUTH_RETURN).toBe("/account/sign-in?deleting=1");
   });
+
+  it("knows a dead export link only by its own word (round 28 #15)", () => {
+    expect(accountSectionSearch.parse({ export: "expired" }).export).toBe(
+      "expired",
+    );
+    for (const value of [undefined, "", "ready", 1, true]) {
+      expect(
+        accountSectionSearch.parse({ export: value }).export,
+      ).toBeUndefined();
+    }
+  });
 });
 
 describe("gateOnHandle (the root's O0 gate, memoised)", () => {

@@ -225,9 +225,16 @@ export async function failExport(
 }
 
 /**
-Where every refused download goes: the export row, which says what is true.
+Settings › Account, where the export row is.
 */
 const ACCOUNT_PAGE = "/account/sign-in";
+
+/**
+ * Where every refused download goes: the export row, told the link is dead
+ * (round 28 #15) — the same words for an expired link and someone else's,
+ * so nothing about the other account shows.
+ */
+const DEAD_LINK_PAGE = `${ACCOUNT_PAGE}?export=expired`;
 
 function redirectTo(location: string): Response {
   return new Response(undefined, { status: 302, headers: { location } });
@@ -255,7 +262,7 @@ export async function exportFileResponse(
     );
   }
   const token = exportTokenSchema.safeParse(request.token);
-  if (!token.success) return redirectTo(ACCOUNT_PAGE);
+  if (!token.success) return redirectTo(DEAD_LINK_PAGE);
   const row = await firstRowWhere(
     db,
     dataExports,
@@ -266,12 +273,12 @@ export async function exportFileResponse(
     ),
   );
   if (row?.expiresAt == undefined || row.expiresAt <= now) {
-    return redirectTo(ACCOUNT_PAGE);
+    return redirectTo(DEAD_LINK_PAGE);
   }
   const key = exportKeyFor(row);
-  if (key === undefined) return redirectTo(ACCOUNT_PAGE);
+  if (key === undefined) return redirectTo(DEAD_LINK_PAGE);
   const object = await bucket.get(key);
-  if (object === null) return redirectTo(ACCOUNT_PAGE);
+  if (object === null) return redirectTo(DEAD_LINK_PAGE);
   // The day it was made: a ready export expires a fixed time after.
   const madeAt = row.expiresAt - EXPORT_LINK_TTL_S;
   const day = new Date(madeAt * 1000).toISOString().slice(0, 10);

@@ -108,6 +108,7 @@ function AccountSectionRoute() {
               dataExport={
                 <ExportRow
                   state={page.dataExport}
+                  isLinkDead={search.export === "expired"}
                   request={requestExportFn}
                   onRequested={() => router.invalidate()}
                 />

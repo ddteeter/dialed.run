@@ -251,6 +251,15 @@ export const accountSectionSearch = z.object({
     .transform((value) =>
       value === 1 || value === "1" ? (true as const) : undefined,
     ),
+  // A refused export link lands here (round 28 #15): `expired` or absent,
+  // whatever else the URL says, so the row reads "That link doesn't work
+  // any more." only when a download sent it.
+  export: z
+    .unknown()
+    .optional()
+    .transform((value) =>
+      value === "expired" ? ("expired" as const) : undefined,
+    ),
 });
 
 /**
