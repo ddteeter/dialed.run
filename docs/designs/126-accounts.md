@@ -1079,12 +1079,59 @@ The old handle is the runner's latest locked history row.
 ### Migration
 
 `0043_add_username_screen_verdict` (core): two nullable columns on
-`user_profiles` and one partial index. Additive.
+`user_profiles` and one partial index. Additive. The review's fixes did
+not change it: the ordered claim is served by the same index (below).
 
 ### Owner questions
 
 1. Change password's lockout (#10's frame) needs a per-runner limiter on
-   a Better Auth endpoint: register R-124, not built here.
+   a Better Auth endpoint: register R-124. **Answered (D-98): built before
+   public, not in this PR.**
+
+### Review of PR #142, and the owner's two calls (2026-10-03)
+
+- **The claim used the partial index only on paper.** Drizzle's
+  `inArray` binds `'unknown'` and `'checking'` as parameters, and SQLite
+  uses a partial index only when the WHERE repeats its condition term for
+  term, so the claim scanned `user_profiles`. The `IN` is now a `sql`
+  literal written as the index writes it, and a test reads the plan:
+  `SEARCH user_profiles USING INDEX user_profiles_username_screen_pending
+  (username_screen=?)`, and no `SCAN`.
+- **Oldest first.** The claim orders by `username_screened_at`, which
+  every failed ask stamps anew, so handles moderation never answers go to
+  the back instead of filling every firing's 20. The order is a temp
+  B-tree over the partial index's few rows; no index column was needed.
+- **Skipped:** a banned runner (`banned_at` set) and a leaving one (an
+  `account_deletions` row). Both stay `unknown`; a reopened account is
+  asked on the next firing.
+- **One Sentry event a firing**, after its last call: the first error,
+  the first failing runner's id and how many failed. Never a handle.
+- **The `:15` firing drains email before the re-ask**, whose calls can
+  each wait five seconds.
+- **O0's Save on the placeholder itself** returned "claimed" before the
+  batch that clears `username_reset_reason`, so the runner came back to
+  O0. Claiming the handle you hold now settles an owed re-pick, as Keep
+  does.
+- **A second Reopen sent a second email.** The reopen email's insert is
+  now `outboxInsertWhere` on `banned_at IS NOT NULL`, ahead of the lift in
+  its batch, and the fast path runs only when the lift found a ban. The
+  email names the handle (round 29 #7), as a new optional `handle` on
+  `account_reopened` (law 9).
+- **D-97: a flagged handle's review row offers Keep and Rename.** Keep
+  sets the verdict `clear` (over the flag only) and approves the row, in
+  one batch. Rename is `forceRename` with a placeholder, the reason, the
+  audit row and the queue row settled as removed, in its one batch
+  (`ForceRenameRequest.also`). Built in lane 128's Review queue through
+  both barrels: `account/handle-review.ts` decides, `safety`'s
+  `reviewResolution` builds the queue row's write, and the row is marked
+  from the profile's `username_screen = 'flagged'`. Design delta item 45.
+- **Not built: forgetting the has-handle memo on a rename** (register
+  R-125). #140 forgets it on a terms refusal, and a rename refuses
+  nothing.
+- **Round 29's answers for this PR's surfaces** are built (design deltas
+  item 43, now answered): Google's fault band under the button, Au5's
+  counter, D7's revoked row and per-row bands, and the reopen email's
+  handle.
 
 ## Contract touches
 

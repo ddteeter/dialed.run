@@ -823,7 +823,24 @@ ACCEPTED`, `STILL LOGGED IN`. If the terms change again while the
       were.
 
 43. **What task 126 PR B built beside round 28's drawings (round 28 #9,
-    #10, #15, D-89; round 27 #16).** Built from existing primitives.
+    #10, #15, D-89; round 27 #16).** **ANSWERED by round 29 (items 5, 7,
+    8, 13, 14 and 15), and built in PR B (#142):** Google's fault band
+    sits under the button with the refusals, which keep no Try again;
+    the reopen email names the handle ("We reopened @maya_runs.", a new
+    optional `handle` on `account_reopened`); Au5's counter goes ink and
+    semibold past 140, is the field's description, and is announced only
+    at 120 and 141; D7's revoked code is struck through in `--quiet` with
+    `REVOKED` in `--quiet` and Undo in ink, Used is `--quiet`, and Send
+    invite, Decline and Undo fail on their own rows (`NOT SENT`, `STILL
+WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
+    code alone; the made line and `NEW` stay as built; O0's `NOT KEPT` and
+    `[ Keeping ]` are confirmed. No ruling here conflicts with a D-row.
+    **Not built:** the Au1 frame's own words for the fault ("Not logged
+    in" · "Google didn't answer. Try again?") — #13's Build moves the band
+    and nothing else, so it keeps round 22 Au6's "Not signed in" and
+    sentence, and Au6's redraw is item 44's; and D7's STATE column as
+    words (UNUSED, USED, REVOKED), where the build shows uses as a count.
+    Built from existing primitives.
     - **Google's two band positions.** Round 22's Au6 draws the fault band
       ("Google didn't answer", with Try again) _above_ the button; round 28
       #9 draws the refusal bands (`NOT CREATED`, `NOT LOGGED IN`) _under_
@@ -891,6 +908,18 @@ ACCEPTED`, `STILL LOGGED IN`. If the terms change again while the
       byte-identical to round 28's bundle, so D0 still draws the old rail
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
+
+45. **A flagged handle's review row: Keep and Rename (decision D-97;
+    task 126 PR B, in lane 128's Review queue).** Undesigned; built from
+    the review row's own parts. A row about a runner whose handle the
+    hourly re-ask flagged (`username_screen = 'flagged'`) offers **Keep**
+    (a text button, as Approve is) and **Rename** (the row's submit),
+    with D8's "Why the name has to go" picker and its four reasons, and
+    no Approve, Remove or Remove as suspected CSAM. A placeholder that is
+    taken keeps the row and says D8's "That placeholder is taken. Press
+    Rename again." The row's header and `[classifier]` tag are the queue's
+    own. **The ask:** draw the flagged-handle row, and say whether it
+    should name why it is there (it reads as any classifier row today).
 
 ## Answered in round 29 (imported 2026-10-03)
 
