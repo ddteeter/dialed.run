@@ -26,6 +26,7 @@ describe("emailTemplateSchema", () => {
       { kind: "content_removed", subject: "photo", reason: "it's spam" },
       { kind: "content_removed", subject: "entry", reason: "it's spam" },
       { kind: "account_closed", reason: "spam" },
+      { kind: "account_reopened" },
       { kind: "invite", code: "DIAL-7K2Q" },
       { kind: "strava_disconnected" },
       { kind: "deletion_scheduled", day: "Sat, Oct 4" },
