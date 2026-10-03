@@ -147,13 +147,13 @@
                         <span style="font-size: 13px; line-height: 1.45; color: #B9B8AE;">Lets them log in again and puts their runs back with the share state they had. They get one email saying so.</span>
                         <span style="align-self: flex-start; border: 1px solid #F4F3EF; border-radius: 100px; padding: 11px 18px; font-size: 14px; font-weight: 700;">Reopen account</span>
                       </div>
-                      <div role="status" style="border: 1px solid #F4F3EF; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;"><span style="align-self: flex-start; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; color: #0B0B0E; padding: 3px 6px;">STILL CLOSED</span><span style="font-size: 14px; line-height: 1.45;">That didn't go through. Try again?</span></div>
+                      <div role="status" style="border: 1px solid #F4F3EF; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;"><span style="align-self: flex-start; font-family: 'Archivo Black', sans-serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;">STILL CLOSED</span><span style="font-size: 14px; line-height: 1.45;">That didn't go through. Try again?</span></div>
                     </div>
                   </sc-if>
                   <sc-if value="{{ c.csam }}" hint-placeholder-val="{{ false }}">
                     <div style="display: flex; flex-direction: column; gap: 12px;">
                       <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #FF2D8A;">REMOVE AS SUSPECTED CSAM · SECOND PRESS, IN THE ROW</span>
-                      <span style="font-size: 15px; line-height: 1.5;">Remove it everywhere, close @n8's account and keep the evidence for the report?</span>
+                      <span style="font-size: 15px; line-height: 1.5;">Remove this photo everywhere and keep the evidence for the report?</span>
                       <div style="display: flex; gap: 10px;"><span style="background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 11px 18px; font-size: 14px; font-weight: 700;">Remove and report</span><span style="border: 1px solid #F4F3EF; border-radius: 100px; padding: 11px 18px; font-size: 14px; font-weight: 700; outline: 2px solid #F4F3EF; outline-offset: 2px;">Cancel</span></div>
                     </div>
                   </sc-if>
@@ -170,12 +170,12 @@
             <div style="overflow-x: auto; max-width: 100%;">
               <div data-screen-label="D7 Access r28" data-state="desk" style="width: 980px; background: #0B0B0E; color: #F4F3EF; border-radius: 12px; border: 1px solid #2A2A31; padding: 24px; display: flex; flex-direction: column; gap: 14px;">
                 <div style="display: flex; align-items: baseline; gap: 20px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 26px; letter-spacing: -0.03em;">Access</span><span style="font-size: 14px; font-weight: 600; border-bottom: 2px solid #F4F3EF; padding: 6px 0;">Codes</span><span style="font-size: 14px; color: #B9B8AE; padding: 6px 0;">Requests <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #F5FF3D;">3</span></span><span style="margin-left: auto; background: #F4F3EF; color: #0B0B0E; border-radius: 100px; padding: 11px 18px; font-size: 14px; font-weight: 700;">New code</span></div>
-                <span role="status" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #00E0C6;">DIAL-7QX2 MADE · LINK COPIED</span>
+                <span role="status" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #F4F3EF;">DIAL-7QX2 MADE · LINK COPIED</span>
                 <div style="display: grid; grid-template-columns: 170px minmax(0, 1fr) 70px 110px 180px; gap: 14px; padding: 0 12px 8px; border-bottom: 1px solid #2A2A31; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;"><span>CODE</span><span>FOR</span><span>MADE</span><span>STATE</span><span></span></div>
                 <sc-for list="{{ accessRows }}" as="r" hint-placeholder-count="5">
                   <div style="display: flex; flex-direction: column; gap: 8px; padding: 0 0 4px;">
                     <div style="display: grid; grid-template-columns: 170px minmax(0, 1fr) 70px 110px 180px; gap: 14px; padding: 10px 12px; align-items: baseline; font-size: 14px; opacity: {{ r.op }}; background: {{ r.bg }};">
-                      <span style="display: flex; gap: 8px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">{{ r.code }}</span><sc-if value="{{ r.isNew }}" hint-placeholder-val="{{ false }}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; color: #0B0B0E; padding: 2px 5px;">NEW</span></sc-if></span>
+                      <span style="display: flex; gap: 8px; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: {{ r.cc }}; text-decoration: {{ r.td }};">{{ r.code }}</span><sc-if value="{{ r.isNew }}" hint-placeholder-val="{{ false }}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; color: #0B0B0E; padding: 2px 5px;">NEW</span></sc-if></span>
                       <span style="color: #B9B8AE;">{{ r.who }}</span>
                       <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #8B8B93;">{{ r.age }}</span>
                       <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: {{ r.sc }};">{{ r.st }}</span>
@@ -183,7 +183,7 @@
                     </div>
                     <sc-if value="{{ r.band }}" hint-placeholder-val="{{ false }}">
                       <div role="status" style="margin-left: 12px; max-width: 620px; border: 1px solid #F4F3EF; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
-                        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; color: #0B0B0E; padding: 3px 6px;">{{ r.band.k }}</span>
+                        <span style="font-family: 'Archivo Black', sans-serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;">{{ r.band.k }}</span>
                         <span style="font-size: 14px; line-height: 1.45;">{{ r.band.t }}</span>
                         <sc-if value="{{ r.band.url }}" hint-placeholder-val="{{ false }}"><span style="align-self: stretch; min-height: 44px; display: flex; align-items: center; border: 1px solid #3A3A42; border-radius: 10px; padding: 0 12px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; background: #1F2A55;">{{ r.band.url }}</span></sc-if>
                         <sc-if value="{{ r.band.action }}" hint-placeholder-val="{{ false }}"><span style="border: 1px solid #F4F3EF; border-radius: 100px; padding: 9px 16px; font-size: 14px; font-weight: 700;">{{ r.band.action }}</span></sc-if>
@@ -216,7 +216,7 @@
                       <sc-if value="{{ b.lead }}" hint-placeholder-val="{{ false }}"><p data-type-step="lead" style="margin: 0; font-size: 17px; line-height: 1.5;">{{ b.lead }}</p></sc-if>
                       <sc-if value="{{ b.body }}" hint-placeholder-val="{{ false }}"><p style="margin: 0; font-size: 15px; line-height: 1.5;">{{ b.body }}</p></sc-if>
                       <sc-if value="{{ b.small }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">{{ b.small }}</span></sc-if>
-                      <sc-if value="{{ b.card }}" hint-placeholder-val="{{ false }}"><div style="border: 1px solid #DCDBD2; background: #FFFFFF; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px;"><div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.03em;">{{ b.card.title }}</span><sc-if value="{{ b.card.tag }}" hint-placeholder-val="{{ false }}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; padding: 3px 6px; white-space: nowrap;">{{ b.card.tag }}</span></sc-if><sc-if value="{{ b.card.label }}" hint-placeholder-val="{{ false }}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">{{ b.card.label }}</span></sc-if></div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44;">{{ b.card.meta }}</span><div style="height: 110px; border-radius: 10px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 7px, #E9E8DE 7px 14px);"></div></div></sc-if>
+                      <sc-if value="{{ b.card }}" hint-placeholder-val="{{ false }}"><div style="border: 1px solid #DCDBD2; background: #FFFFFF; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px;"><div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.03em;">{{ b.card.title }}</span><sc-if value="{{ b.card.tag }}" hint-placeholder-val="{{ false }}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; white-space: nowrap;">{{ b.card.tag }}</span></sc-if><sc-if value="{{ b.card.label }}" hint-placeholder-val="{{ false }}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">{{ b.card.label }}</span></sc-if></div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44;">{{ b.card.meta }}</span><div style="height: 110px; border-radius: 10px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 7px, #E9E8DE 7px 14px);"></div></div></sc-if>
                       <sc-if value="{{ b.photo }}" hint-placeholder-val="{{ false }}"><div style="position: relative; height: 200px; border-radius: 10px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 7px, #E9E8DE 7px 14px);"><span style="position: absolute; left: 10px; top: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #0B0B0E; color: #F4F3EF; padding: 4px 7px;">{{ b.photo }}</span></div></sc-if>
                       <sc-if value="{{ b.w3 }}" hint-placeholder-val="{{ false }}">
                         <div style="display: flex; flex-direction: column; gap: 12px;">
@@ -244,7 +244,7 @@
                       <sc-if value="{{ b.google }}" hint-placeholder-val="{{ false }}"><span data-part="google-button" style="display: flex; align-items: center; justify-content: center; gap: 10px; background: #FFFFFF; border: 1px solid #747775; border-radius: 100px; height: 48px; font-family: Archivo, sans-serif; font-weight: 500; font-size: 15px; color: #1F1F1F;"><svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.470 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.090-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path></svg>Continue with Google</span></sc-if>
                       <sc-if value="{{ b.band }}" hint-placeholder-val="{{ false }}">
                         <div data-part="control-failure" role="status" style="border: 1px solid #0B0B0E; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
-                          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; padding: 3px 6px;">{{ b.band.k }}</span>
+                          <span style="font-family: 'Archivo Black', sans-serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;">{{ b.band.k }}</span>
                           <span style="font-size: 15px; line-height: 1.45;">{{ b.band.t }}</span>
                           <sc-if value="{{ b.band.t2 }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">{{ b.band.t2 }}</span></sc-if>
                           <sc-if value="{{ b.band.link }}" hint-placeholder-val="{{ false }}"><span style="font-size: 14px; font-weight: 600; color: #C21A6B; text-decoration: underline; text-underline-offset: 3px;">{{ b.band.link }}</span></sc-if>
@@ -323,9 +323,9 @@ class Component extends DCLogic {
           note('After "Use this photo"', 'W3 closes and the upload runs in the form, with round 26\'s states. Pressed cells draw the pack\'s check glyph (#14).'),
         ] },
 
-      { id: 'r6', title: '6 · Under review, as the author sees it', ruling: 'Ruling: the card shows a hi-viz UNDER REVIEW tag where its SHARED label would be. D shows a §4a band at the top. Only D explains, in one line: "Only you can see this while we look at it."', why: 'No brackets. Brackets mean a press is running (as in [ Preparing ]), and the runner hasn\'t pressed anything here.',
+      { id: 'r6', title: '6 · Under review, as the author sees it', ruling: 'Ruling: the card shows an [UNDER REVIEW] tag where its SHARED label would be (round 29 #4: bracketed, MONO.xs ink, no fill). D shows a §4a band at the top. Only D explains, in one line: "Only you can see this while we look at it."', why: 'Amended in round 29 (D-90): the brackets stay, in ink, so they don\'t read as a pending press.',
         frames: [
-          { label: '6 · FOLLOWING FEED · OWN CARD', screen: 'Feed own under review', nav: { back: '', title: 'Feed' }, blocks: [{ group: 'FOLLOWING' }, { card: { title: '6.2 MI · 41° DAMP', tag: 'UNDER REVIEW', label: '', meta: '@MAYA_RUNS · SAT AUG 29 · DIALED' } }, { card: { title: '5.0 MI · 38° CLEAR', tag: '', label: '', meta: '@DEE_K · SAT AUG 29 · COLD' } }] },
+          { label: '6 · FOLLOWING FEED · OWN CARD', screen: 'Feed own under review', nav: { back: '', title: 'Feed' }, blocks: [{ group: 'FOLLOWING' }, { card: { title: '6.2 MI · 41° DAMP', tag: '[UNDER REVIEW]', label: '', meta: '@MAYA_RUNS · SAT AUG 29 · DIALED' } }, { card: { title: '5.0 MI · 38° CLEAR', tag: '', label: '', meta: '@DEE_K · SAT AUG 29 · COLD' } }] },
           { label: '6 · D · OWN ENTRY · BAND AT THE TOP', screen: 'D own under review', nav: { back: 'Feed', title: 'Your run' }, blocks: [band('HIDDEN WHILE WE CHECK', 'Only you can see this while we look at it.', { t2: 'You can still edit or delete it.' }), K('SAT AUG 29 · 6:10 AM'), { head: '6.2 MI · 41° DAMP' }, { photo: 'PHOTO 1' }] },
         ],
         notes: [
@@ -373,7 +373,7 @@ class Component extends DCLogic {
           note('Back links', 'use the pack\'s back glyph and the destination\'s name. No "←" or "‹" characters anywhere. Round 27\'s U1 header is redrawn the same way.'),
           note('Au5\'s note', 'is a one-line FormField: 140 characters, with a counter from 120. The rate limit uses #11\'s grammar with a local time.'),
           note('D7 ages', 'are MONO.sm in capitals: "NOW" under a minute, then "12M", "5H", "3D". From 30 days on they show a date, "AUG 29".'),
-          note('Revoke\'s undo:', 'the row stays where it is at reduced weight, showing REVOKED and "Undo" for 10 seconds. No countdown digits. After that it sorts to the foot.'),
+          note('Revoke\'s undo:', 'the row stays where it is, code in --quiet and struck through (round 29 #5, no opacity), showing REVOKED and "Undo" for 10 seconds. No countdown digits. After that it sorts to the foot.'),
           note('New code:', 'a status line above the list, plus a NEW tag on the row at the top until the page reloads. Copy failing: a band showing the link already selected, so Ctrl-C works.'),
         ] },
 
@@ -383,12 +383,12 @@ class Component extends DCLogic {
           R('r11', '11 · H\'s silent states', 'CONFIRM · BOTH', 'Both are the whole page: H\'s column, the back link, and the sentence as the lead. "This runner changed their name." links nowhere. "This runner isn\'t here." covers purged, deleted and never-existed handles on purpose, so no one can tell them apart.'),
           R('r12', '12 · Keep your account?', 'CONFIRM · BODY AMENDED', 'The Strava line stays, in TYPE.small, muted. The body above it now says "your runs, closet and entries come back as they were", so it no longer promises Strava back. Round 27\'s frame is amended.'),
           R('r13a', '13 · GOES / STAYS hues', 'NO · INK', 'Hue means verdict, and cold-text and dialed-text are verdict colours. A merge outcome isn\'t a verdict, so all four labels go in ink, MONO.xs, and the words carry the meaning.'),
-          R('r13b', '13 · PHOTO NOT ADDED kicker', 'NO · HI-VIZ', 'Every §4a kicker sits on the hi-viz ground. Put round 26\'s back.'),
+          R('r13b', '13 · PHOTO NOT ADDED kicker', 'REVERSED · R29 #1', 'Reversed in round 29: the Form Contract stands. §4a kickers take no fill (Archivo Black 11, ink). Every band on this board is redrawn that way.'),
           R('r13c', '13 · Retired date', 'NO · MONTH + YEAR', '"RETIRED MAR 2026" in MONO.sm. Retired gear gets read across years, and the day doesn\'t matter.'),
           R('r13d', '13 · Middle cell', 'YES · "MIDDLE"', '"Blur middle". The product is written in US English, and "middle" pairs with top and bottom. The board\'s "centre" is corrected.'),
           R('r13e', '13 · Photo-less rail thumbnail', 'NO · HATCH', 'The hatch means "no photo" everywhere (round 27 #31b). The photo ground means a photo is still loading.'),
           R('r13f', '13 · Edit\'s photo failures', 'YES · REUSE', 'A saved photo that\'s refused gets #20\'s PHOTO REMOVED band. A removal that fails gets 02b\'s band under the photo: kicker PHOTO STILL ON, "That didn\'t go through. Try again?"'),
-          R('r14a', '14 · Desk destinations', 'FIVE, IN THIS ORDER', 'Today, Review, Access, Duplicates, Runners: the queues that need a person first, then upkeep, then lookup. Access is a destination because it has its own queue. Gave up is a section on Today, carrying its count, because it\'s a list to check, not a place to work. Drawn in 8.'),
+          R('r14a', '14 · Desk destinations', 'AMENDED · D-87', 'Amended by D-87 (round 29 #2): Today, Review, Duplicates, Runners, Access. Gave up is a section on Today, carrying its count. Drawn on Round 29.'),
           R('r14b', '14 · Photo-delete glyph', 'remove', 'The pack\'s `remove` (keywords: delete, trash, bin). Its accessible name stays "Delete photo 2".'),
           R('r14c', '14 · Blur cell check', 'YES · check', 'Pressed cells draw the pack\'s `check` at 20px, paper on ink. Drawn in 5.'),
           R('r15', '15 · Export states', 'CONFIRM 3 · REDRAW 2', 'Ready, the failed press and the signed-out link are confirmed as built. Failed: "Your export didn\'t finish, and it doesn\'t count as today\'s." with the action "Try again". An expired link and someone else\'s link both land on the row with one line: "That link doesn\'t work any more. Get a copy for a new one." Because the two read the same, nothing about the other account shows. kit.csv and profile.csv are added to round 27 #13\'s list.'),
@@ -406,13 +406,13 @@ class Component extends DCLogic {
             { group: 'FAILED · THE QUEUE GAVE UP' }, row('Export your data', 'Your export didn\'t finish, and it doesn\'t count as today\'s.', { action: 'Try again', rule: '0' }),
             { group: 'THE PRESS FAILED' }, row('Export your data', 'Runs, closet, entries, photos and your run files', { action: 'Get a copy', rule: '0' }), band('NOT STARTED', 'That didn\'t go through. Try again?'),
             { group: 'FROM AN EXPIRED OR SOMEONE ELSE\'S LINK' }, row('Export your data', 'That link doesn\'t work any more. Get a copy for a new one.', { action: 'Get a copy', rule: '0' }),
-          ], note: 'The ZIP: runs.csv, entries.csv, garments.csv, kit.csv, profile.csv, your original run files and photos, and a README naming every column. The day after it\'s Ready the row goes back to idle, and the emailed link still works until its date.' },
+          ], note: 'The ZIP: runs.csv, entries.csv, garments.csv, kit.csv, profile.csv, terms.csv (round 29 #17), your original run files and photos, and a README naming every column. The day after it\'s Ready the row goes back to idle, and the emailed link still works until its date.' },
           { label: '16 · /TERMS · PHONE · FOOT OF A SECTION', screen: 'Legal phone foot', bar: true, blocks: [K('TERMS'), { h2: '3. What you share' }, { body: 'You own your runs, notes and photos. Sharing one lets signed-in runners on dialed.run see it. Delete it and that stops.' }, { link: 'Back to contents' }, { h2: '4. Community rules' }], note: 'The kicker has no date: the owner\'s text carries its own. At desk the contents column stays in view and the foot link isn\'t drawn.' },
         ] },
     ];
 
     const nv = (t, c, active, cc) => ({ t, c, bg: active ? '#16161B' : 'transparent', bl: active ? '3px solid #F5FF3D' : '0', pl: active ? '22px' : '25px', w: active ? 600 : 400, cc: cc || '#8B8B93' });
-    const deskNav = [nv('Today', '3', false, A), nv('Review', '4', true, A), nv('Access', '3', false, A), nv('Duplicates', '23'), nv('Runners', '')];
+    const deskNav = [nv('Today', '3', false, A), nv('Review', '4', true, A), nv('Duplicates', '23'), nv('Runners', ''), nv('Access', '3', false, A)];
 
     const rv = (item, who, why, age, open) => ({ item, who, why, age, open, bg: open ? '#16161B' : 'transparent', bl: open ? '3px solid #F5FF3D' : '3px solid transparent' });
     const reviewRows = [
@@ -432,11 +432,11 @@ class Component extends DCLogic {
       { label: 'REVIEW · CSAM · SECOND PRESS', screen: 'Review CSAM confirm', csam: true, note: 'It replaces the decision bar in the same row. Cancel is focused. There\'s no undo afterwards, so this is the only check.' },
     ];
 
-    const ac = (code, who, age, stt, actions, o = {}) => ({ code, who, age, st: stt, sc: stt === 'REVOKED' ? N : stt === 'USED' ? '#8B8B93' : Y, actions, ac: '#F4F3EF', op: 1, bg: 'transparent', isNew: false, band: null, ...o });
+    const ac = (code, who, age, stt, actions, o = {}) => ({ code, who, age, st: stt, sc: stt === 'UNUSED' ? '#F4F3EF' : '#B9B8AE', actions, ac: '#F4F3EF', op: 1, cc: '#F4F3EF', td: 'none', bg: 'transparent', isNew: false, band: null, ...o });
     const accessRows = [
       ac('DIAL-7QX2', 'Anyone with the link', 'NOW', 'UNUSED', 'Copy link · Revoke', { isNew: true, bg: '#16161B' }),
       ac('DIAL-TR8K', 'sam@example.com', '5H', 'UNUSED', 'Copy link · Revoke', { band: { k: 'NOT COPIED', t: 'Copying didn\'t work here. The link is selected: copy it yourself.', url: 'https://dialed.run/join/DIAL-TR8K', action: '' } }),
-      ac('DIAL-K2P9', 'jo@example.com', '3D', 'REVOKED', 'Undo', { op: 0.55, ac: A }),
+      ac('DIAL-K2P9', 'jo@example.com', '3D', 'REVOKED', 'Undo', { cc: '#B9B8AE', td: 'line-through' }),
       ac('DIAL-M4QA', 'Anyone with the link', '3D', 'UNUSED', 'Copy link · Revoke', { band: { k: 'STILL ACTIVE', t: 'Revoke didn\'t go through. Try again?', url: '', action: 'Try again' } }),
       ac('DIAL-3HV7', '@maya_runs', 'AUG 29', 'USED', ''),
     ];

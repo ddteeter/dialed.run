@@ -191,7 +191,7 @@
                   </div>
                 </sc-for>
                 <sc-if value="{{ f.band }}" hint-placeholder-val="{{ false }}">
-                  <div data-part="control-failure" role="status" style="border: 1px solid #0B0B0E; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;"><span style="align-self: flex-start; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; padding: 3px 6px;">{{ f.band.k }}</span><span style="font-size: 14px; line-height: 1.45;">{{ f.band.t }}</span></div>
+                  <div data-part="control-failure" role="status" style="border: 1px solid #0B0B0E; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;"><span style="align-self: flex-start; font-family: 'Archivo Black', sans-serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;">{{ f.band.k }}</span><span style="font-size: 14px; line-height: 1.45;">{{ f.band.t }}</span></div>
                 </sc-if>
                 <sc-if value="{{ f.turnstile }}" hint-placeholder-val="{{ false }}"><div data-part="turnstile" style="height: 65px; border: 1px dashed #B9B8AE; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">TURNSTILE · SHOWN ONLY IF CHALLENGED</div></sc-if>
                 <sc-if value="{{ f.primary }}" hint-placeholder-val="{{ true }}"><span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">{{ f.primary }}</span></sc-if>
@@ -387,7 +387,7 @@
               <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">{{ n.where }}</span><span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em; line-height: 1.1;">{{ n.title }}</span></div>
               <sc-if value="{{ n.photo }}" hint-placeholder-val="{{ false }}"><div style="position: relative; aspect-ratio: 4 / 5; max-height: 200px; border-radius: 10px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 7px, #E9E8DE 7px 14px);"><span style="position: absolute; left: 10px; top: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #0B0B0E; color: #F4F3EF; padding: 4px 7px;">{{ n.photo }}</span></div></sc-if>
               <div role="status" style="border: 1px solid #0B0B0E; padding: 14px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; background: #F4F3EF;">
-                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; padding: 3px 6px;">{{ n.k }}</span>
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;">{{ n.k }}</span>
                 <span style="font-size: 15px; line-height: 1.45;">{{ n.t }}</span>
                 <sc-if value="{{ n.t2 }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">{{ n.t2 }}</span></sc-if>
                 <sc-if value="{{ n.strava }}" hint-placeholder-val="{{ false }}"><span data-part="strava-button" role="img" aria-label="Connect with Strava" style="height: 48px; padding: 0 18px; background: #FC5200; color: #FFFFFF; border-radius: 4px; display: flex; align-items: center; font-size: 14px; font-weight: 700; letter-spacing: 0.02em;">CONNECT WITH STRAVA · OFFICIAL ASSET</span></sc-if>
@@ -544,11 +544,11 @@
           <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">28 · D-62 · AUTHOR'S OWN, UNDER REVIEW · CARD + DETAIL</span>
           <div data-screen-label="Under review own" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 18px 20px 22px; display: flex; flex-direction: column; gap: 14px;">
             <div style="border: 1px solid #DCDBD2; background: #FFFFFF; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
-              <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.03em;">6.2 MI · 41° DAMP</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; padding: 3px 6px;">UNDER REVIEW</span></div>
+              <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.03em;">6.2 MI · 41° DAMP</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; white-space: nowrap;">[UNDER REVIEW]</span></div>
               <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #4E4E44;">SAT AUG 29 · DIALED</span>
             </div>
             <div role="status" style="border: 1px solid #0B0B0E; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
-              <span style="align-self: flex-start; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #F5FF3D; padding: 3px 6px;">HIDDEN WHILE WE CHECK</span>
+              <span style="align-self: flex-start; font-family: 'Archivo Black', sans-serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;">HIDDEN WHILE WE CHECK</span>
               <span style="font-size: 15px; line-height: 1.45;">Only you can see this while we look at it.</span>
               <span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">You can still edit or delete it.</span>
             </div>
