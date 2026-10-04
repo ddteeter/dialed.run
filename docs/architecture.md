@@ -584,3 +584,7 @@ behind `RunSource`, iOS app. None of these justify speculative abstraction
 now — `RunSource`, `WeatherProvider`, and the nullable recommender-ready
 columns (`effort`, `thermal_level`, garment attributes, `est_temp_*`) are the
 only seams built ahead of need, deliberately.
+
+**Designed, post-launch**: the personal read API (bearer tokens, read-only,
+`/api/v1/`) for the owner's blog — `docs/designs/130-read-api.md`, built
+after the friends stage (R-125).
