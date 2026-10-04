@@ -43,7 +43,7 @@ const FILTERS: readonly { value: RunnersFilter["filter"]; label: string }[] = [
   { value: "closed", label: "Closed" },
 ];
 
-const RENAME_LABELS: Readonly<Record<RenameReason, string>> =
+export const RENAME_LABELS: Readonly<Record<RenameReason, string>> =
   Object.fromEntries(renameReasons.map((reason) => [reason, reason])) as Record<
     RenameReason,
     string

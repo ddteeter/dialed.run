@@ -418,7 +418,7 @@ describe("googleConsentUrl", () => {
     );
   });
 
-  it("says a refused code in the band, under Au2's kicker", async () => {
+  it("says a refused code in the band as round 28 #9's NOT CREATED, with no retry and Request access", async () => {
     client.social.mockResolvedValue({
       data: undefined,
       error: { code: "INVITE_INVALID", status: 400 },
@@ -431,8 +431,10 @@ describe("googleConsentUrl", () => {
     );
     expect(thrown).toBeInstanceOf(AccessRefused);
     expect(thrown).toMatchObject({
-      kicker: "Not signed in",
+      kicker: "Not created",
       message: INVITE_COPY.invalid,
+      retry: false,
+      link: "request-access",
     });
   });
 

@@ -102,7 +102,12 @@ export async function gateOnHandle({
   }
   startLeavingIfNeeded(answer.gate === "leaving", pathname);
   startTermsIfNeeded(answer.gate === "needs-terms", pathname);
-  startHandleIfNeeded(answer.gate === "needs-handle", pathname);
+  // A runner a moderator renamed meets O0 too, in its re-pick form (ACC-12;
+  // round 27 #16), past the same open pages.
+  startHandleIfNeeded(
+    answer.gate === "needs-handle" || answer.gate === "renamed",
+    pathname,
+  );
 }
 
 /**
@@ -245,6 +250,15 @@ export const accountSectionSearch = z.object({
     .optional()
     .transform((value) =>
       value === 1 || value === "1" ? (true as const) : undefined,
+    ),
+  // A refused export link lands here (round 28 #15): `expired` or absent,
+  // whatever else the URL says, so the row reads "That link doesn't work
+  // any more." only when a download sent it.
+  export: z
+    .unknown()
+    .optional()
+    .transform((value) =>
+      value === "expired" ? ("expired" as const) : undefined,
     ),
 });
 

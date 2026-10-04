@@ -68,13 +68,20 @@ export function PasswordField({
         }}
         className="w-full border-none bg-transparent"
       />
+      {/* The 44px target must not grow the box (task 126 PR B: it made
+            the field 70 tall against a text field's 50). `-my-3` cancels
+            the box's `py-3`, so the toggle adds nothing to its height,
+            which `min-h-field` holds at 50; `self-stretch` then makes the
+            toggle's own box the full 48 inside the border. The hit area is
+            the element itself, at least 44 each way (Accessibility 03:
+            "pad the target, not the glyph"), with no pseudo-element. */}
       <button
         type="button"
         aria-controls={name}
         onClick={() => {
           setIsShown((shown) => !shown);
         }}
-        className="target shrink-0 cursor-pointer border-none bg-transparent p-0 text-small font-semibold text-ink"
+        className="target -my-3 shrink-0 cursor-pointer self-stretch border-none bg-transparent p-0 text-small font-semibold text-ink"
       >
         {isShown ? "Hide" : "Show"}
       </button>

@@ -88,6 +88,23 @@ export const reviewActionInput = z.discriminatedUnion("action", [
 export type ReviewActionValues = z.infer<typeof reviewActionInput>;
 
 /**
+ * A decision on a handle the re-ask flagged (D-97): **Keep** — the handle
+ * is fine, and the flag clears — or **Rename**, the moderator's
+ * force-rename with a reason from its fixed list, which O0's "USERNAME
+ * CHANGED BY A MODERATOR" quotes to the runner. Never Remove.
+ */
+export const handleReviewInput = z.discriminatedUnion("action", [
+  z.object({ queueId: ulidSchema, action: z.literal("keep") }),
+  z.object({
+    queueId: ulidSchema,
+    action: z.literal("rename"),
+    nameReason: renameReasonSchema,
+  }),
+]);
+
+export type HandleReviewValues = z.infer<typeof handleReviewInput>;
+
+/**
  * A copyright takedown from the Desk (SAF-6): a named photo or entry, and
  * the notice it answers — kept on the audit row, "who, what and why".
  */

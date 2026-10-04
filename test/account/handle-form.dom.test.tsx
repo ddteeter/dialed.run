@@ -9,7 +9,11 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { HandleForm } from "../../src/modules/account/components/HandleForm";
-import { HandleStep } from "../../src/modules/account/components/HandleStep";
+import {
+  HandleStep,
+  renamedLine,
+} from "../../src/modules/account/components/HandleStep";
+import { OnboardingHandle } from "../../src/modules/account/components/OnboardingHandle";
 import type { HandleClaim } from "../../src/modules/account/username";
 
 /**
@@ -191,6 +195,137 @@ describe("O0's head", () => {
     );
     expect(heading.compareDocumentPosition(screen.getByText("the form"))).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+});
+
+const NOTICE = {
+  previous: "quadzilla_69",
+  current: "runner_4821",
+  reason: "Offensive or sexual",
+};
+
+/**
+O0's re-pick for NOTICE, with Keep as given and every claim succeeding.
+*/
+function renderRepick(keep: () => Promise<unknown> = () => Promise.resolve()) {
+  const claim = vi.fn((input: { data: { username: string } }) =>
+    Promise.resolve<HandleClaim>({
+      kind: "claimed",
+      username: input.data.username,
+    }),
+  );
+  const onFirstHandle = vi.fn();
+  const onRepicked = vi.fn();
+  render(
+    <OnboardingHandle
+      notice={NOTICE}
+      claim={claim}
+      keep={keep}
+      onFirstHandle={onFirstHandle}
+      onRepicked={onRepicked}
+    />,
+  );
+  return { claim, onFirstHandle, onRepicked, user: userEvent.setup() };
+}
+
+describe("O0's re-pick after a moderator's rename (ACC-12; round 27 #16)", () => {
+
+  it("says what was taken, what stands in, and why, as the board draws it", () => {
+    renderRepick();
+    const kicker = screen.getByText("Username changed by a moderator");
+    expect(kicker).toHaveClass("text-cold-text");
+    const heading = screen.getByRole("heading", {
+      level: 1,
+      name: "Pick a new username",
+    });
+    expect(kicker.compareDocumentPosition(heading)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(
+      screen.getByText(
+        "@quadzilla_69 broke the rules on names: offensive or sexual. For now you're @runner_4821. Your runs and closet haven't changed.",
+      ),
+    ).toBeVisible();
+    expect(screen.getByText("3–20 letters, numbers or _.")).toBeVisible();
+    expect(screen.queryByText("Step 1 of 4")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Save username" }),
+    ).toBeInTheDocument();
+  });
+
+  it("saves a new username, then goes home", async () => {
+    const { claim, onRepicked, onFirstHandle, user } = renderRepick();
+    await user.type(field(), "quiet_mile");
+    await user.click(screen.getByRole("button", { name: "Save username" }));
+    await waitFor(() => {
+      expect(onRepicked).toHaveBeenCalledTimes(1);
+    });
+    expect(claim).toHaveBeenCalledWith({ data: { username: "quiet_mile" } });
+    expect(onFirstHandle).not.toHaveBeenCalled();
+  });
+
+  it("keeps the placeholder for now, then goes home", async () => {
+    const keep = vi.fn(() => Promise.resolve());
+    const { onRepicked, user } = renderRepick(keep);
+    await user.click(
+      screen.getByRole("button", { name: "Keep @runner_4821 for now" }),
+    );
+    await waitFor(() => {
+      expect(onRepicked).toHaveBeenCalledTimes(1);
+    });
+    expect(keep).toHaveBeenCalledTimes(1);
+  });
+
+  it("says Not kept when Keep fails, and tries it again", async () => {
+    const keep = vi
+      .fn<() => Promise<unknown>>()
+      .mockRejectedValueOnce(new Error("down"))
+      .mockResolvedValueOnce(undefined);
+    const { onRepicked, user } = renderRepick(keep);
+    await user.click(
+      screen.getByRole("button", { name: "Keep @runner_4821 for now" }),
+    );
+    expect(await screen.findByText("Not kept")).toBeVisible();
+    expect(onRepicked).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    await waitFor(() => {
+      expect(onRepicked).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("is O0's first pick with no notice: Next goes on to O1, and nothing to keep", async () => {
+    const claim = vi.fn(() =>
+      Promise.resolve<HandleClaim>({ kind: "claimed", username: "dee" }),
+    );
+    const onFirstHandle = vi.fn();
+    const onRepicked = vi.fn();
+    render(
+      <OnboardingHandle
+        notice={undefined}
+        claim={claim}
+        keep={vi.fn()}
+        onFirstHandle={onFirstHandle}
+        onRepicked={onRepicked}
+      />,
+    );
+    expect(screen.getByText("Step 1 of 4")).toHaveClass("text-muted");
+    expect(screen.queryByRole("button", { name: /^Keep/u })).toBeNull();
+    const user = userEvent.setup();
+    await user.type(field(), "dee");
+    await user.click(next());
+    await waitFor(() => {
+      expect(onFirstHandle).toHaveBeenCalledTimes(1);
+    });
+    expect(onRepicked).not.toHaveBeenCalled();
+  });
+
+  it("reads every reason on the fixed list mid-sentence", () => {
+    expect(
+      renamedLine({ ...NOTICE, reason: "Pretends to be someone else" }),
+    ).toContain("names: pretends to be someone else. For now");
+    expect(renamedLine({ ...NOTICE, reason: "Advertising" })).toContain(
+      "names: advertising.",
     );
   });
 });

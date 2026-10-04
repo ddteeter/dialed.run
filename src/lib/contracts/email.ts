@@ -18,6 +18,7 @@ import { z } from "zod";
 
 import {
   accountClosed,
+  accountReopened,
   address,
   contentRemoved,
   deletionScheduled,
@@ -59,6 +60,7 @@ export const emailTemplateSchema = z.discriminatedUnion("kind", [
   runReminder,
   contentRemoved,
   accountClosed,
+  accountReopened,
   invite,
   stravaDisconnected,
   deletionScheduled,
@@ -106,6 +108,7 @@ const PREFERENCE_OF: Readonly<
   run_reminder: "run_reminder",
   content_removed: undefined,
   account_closed: undefined,
+  account_reopened: undefined,
   invite: undefined,
   strava_disconnected: undefined,
   deletion_scheduled: undefined,

@@ -138,6 +138,12 @@ export function settleOpenReviews(
 export interface QueueSubject {
   label?: string | undefined;
   photoKeys: readonly string[];
+  /**
+   * A runner whose handle the re-ask flagged and nobody has answered
+   * (`username_screen = 'flagged'`): the row offers Rename and Keep, not
+   * Remove (D-97).
+   */
+  handleFlagged?: boolean | undefined;
 }
 
 export interface QueueRow {
@@ -270,6 +276,7 @@ async function subjectsFor(
         .select({
           userId: userProfiles.userId,
           username: userProfiles.username,
+          screen: userProfiles.usernameScreen,
         })
         .from(userProfiles)
         .where(inArray(userProfiles.userId, subjectIds)),
@@ -292,6 +299,7 @@ async function subjectsFor(
     found.set(`profile:${row.userId}`, {
       label: row.username ?? undefined,
       photoKeys: [],
+      handleFlagged: row.screen === "flagged",
     });
   }
   for (const row of productRows) {
@@ -434,6 +442,13 @@ export type ReviewDecision = "approve" | "remove" | "quarantine";
 export type ResolveOutcome = "resolved" | "already_resolved" | "not_found";
 
 /**
+ * A decision on a flagged handle (D-97, made in `account/handle-review`):
+ * the queue's own outcomes, or `taken` — the placeholder Rename drew is
+ * held by someone, and the operator presses Rename again.
+ */
+export type HandleReviewOutcome = ResolveOutcome | "taken";
+
+/**
  * What `openRow` hands back: the subject to act on, or the reason there is
  * nothing to act on. Named rather than written inline so the signature is
  * one line — a multi-line return type put the function's body and its own
@@ -455,8 +470,11 @@ type OpenRow =
  * Three answers rather than a boolean, because the review page says
  * something different for each: a stale tab whose row someone else already
  * settled is not the same as a link to a row that is gone.
+ *
+ * Exported for account's flagged-handle decision (D-97), which answers
+ * the same three ways.
  */
-async function openRow(queueId: string): Promise<OpenRow> {
+export async function openRow(queueId: string): Promise<OpenRow> {
   // fallow-ignore-next-line code-duplication -- the well-factored-pair residue CLAUDE.md names: openRow, feed/reactions.ts's assertVisible and feed/entries.ts's read all select a few columns for one row by id and branch on what they find, because that is what "load a row and decide" looks like once the bodies are already in lib/keyed-read.ts. A review decision, an entry's visibility to a reactor, and an entry's own load are three different facts over two tables; merging them would couple a moderation outcome to a feed read, and the extraction that produced this shape is what removed two OTHER clone groups from this module
   const [row] = await db()
     .select({
@@ -522,22 +540,41 @@ export async function resolveReview(
   // that could not happen, and an unreachable throw is a branch no test
   // can reach.
   const writes = [
-    db()
-      .update(reviewQueue)
-      .set({
-        status: decision === "approve" ? "approved" : "removed",
-        resolvedBy: reviewerId,
-        resolvedAt: nowSeconds(),
-        // Settled rows carry no claim. Left set, a resolved row would still
-        // look claimed to anything reading the lease.
-        claimedAt: orSqlNull(undefined),
-      })
-      .where(eq(reviewQueue.id, queueId)),
+    reviewResolution(
+      db(),
+      queueId,
+      reviewerId,
+      decision === "approve" ? "approved" : "removed",
+    ),
     ...subjectWritesFor(row.subjectType, row.subjectId, decision),
   ] as const;
 
   await db().batch(writes);
   return "resolved";
+}
+
+/**
+ * The queue row settled as `status`, as a statement for the caller's
+ * batch — `resolveReview`'s own, and account's for a flagged handle's
+ * Keep or Rename (D-97), whose subject writes are account's to make.
+ */
+export function reviewResolution(
+  database: ReturnType<typeof drizzle>,
+  queueId: string,
+  reviewerId: string,
+  status: "approved" | "removed",
+) {
+  return database
+    .update(reviewQueue)
+    .set({
+      status,
+      resolvedBy: reviewerId,
+      resolvedAt: nowSeconds(),
+      // Settled rows carry no claim. Left set, a resolved row would still
+      // look claimed to anything reading the lease.
+      claimedAt: orSqlNull(undefined),
+    })
+    .where(eq(reviewQueue.id, queueId));
 }
 
 /**

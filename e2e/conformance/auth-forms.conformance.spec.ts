@@ -271,23 +271,19 @@ test.describe("Au · phone", () => {
       page.locator(`${PANEL} [data-part='failure-band']`),
     ).toBeVisible({ timeout: 15_000 });
 
-    // Known gap: the build still draws round 22's Au6, the shared failure
-    // band between the divider and Google, where round 33 draws a control
-    // failure under the button. Queued for lane 126 (R-128); when it lands
-    // this fails, and the build's order becomes the board's.
+    // Known gap: the build draws the shared failure band where round 33
+    // draws a control failure. Since round 29 #13 (PR #142) both sit
+    // directly under Google, so only the region differs. Queued for lane
+    // 126 (R-128); when it lands this fails, and the build's order becomes
+    // the board's.
     // Au6 draws no cross-link beneath; the build keeps Au2's.
-    const withoutFailure = board.order.filter(
-      (part) => part !== "control-failure",
-    );
     expect(await partsExcept(page, PANEL, ["cross-link"])).toEqual(
-      withoutFailure.toSpliced(
-        withoutFailure.indexOf("google-button"),
-        0,
-        "failure-band",
+      board.order.map((part) =>
+        part === "control-failure" ? "failure-band" : part,
       ),
     );
     // What the band says is what the board's control failure says, Try
-    // again included; only the region and its place differ.
+    // again included; only the region differs.
     expect(await wordsOf(page, `${PANEL} [data-part='failure-band']`)).toEqual(
       board.words.get("control-failure"),
     );

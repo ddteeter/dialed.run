@@ -74,8 +74,25 @@ test("request access -> an invite from the Desk -> create an account -> sign out
     timeout: 15_000,
   });
 
+  // Round 28 #9: Google says the same refusal in a band under its button,
+  // NOT CREATED, with Request access and no Try again. The server's
+  // refusal is answered here so the demo never reaches Google.
+  await scene(page, "Google with a refused code: the band under the button");
+  await page.route("**/api/auth/sign-in/social", (route) =>
+    route.fulfill({
+      status: 400,
+      json: { code: "INVITE_INVALID", message: INVITE_COPY.invalid },
+    }),
+  );
+  await page.getByRole("button", { name: "Continue with Google" }).click();
+  const refused = page.locator("[data-part='failure-band'][data-state='refused']");
+  await expect(refused).toContainText("Not created", { timeout: 15_000 });
+  await expect(refused).toContainText(INVITE_COPY.invalid);
+  await expect(refused.getByRole("button", { name: "Try again" })).toHaveCount(0);
+  await page.unroute("**/api/auth/sign-in/social");
+
   await scene(page, "No code? Au5 · Request access");
-  await page.getByRole("link", { name: "Request access" }).click();
+  await refused.getByRole("link", { name: "Request access" }).click();
   await expect(page).toHaveURL(/\/account\/request-access/u, {
     timeout: 15_000,
   });
@@ -86,12 +103,20 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   await expect(
     page.getByRole("heading", { level: 1, name: "Request access" }),
   ).toBeVisible();
+  // Round 28 #9: the way back is the back glyph and the page's name, and
+  // the note is one line.
+  await expect(
+    page.getByRole("link", { name: "Create an account" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Where you run, or who sent you. One line."),
+  ).toBeVisible();
   await page.getByLabel("Email").fill(email);
   await page
-    .getByLabel("A note · optional")
+    .getByLabel("Note · optional")
     .fill("Winter runner. Maya said to ask.");
   await turnstileAnswered(page);
-  await page.getByRole("button", { name: "Request access" }).click();
+  await page.getByRole("button", { name: "Send request" }).click();
   await scene(page, "One receipt, for a new, repeat or registered address");
   await expect(
     page.getByRole("heading", { name: "You're on the list" }),
@@ -103,6 +128,8 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   await hydrated(page);
   const request = page.getByRole("listitem").filter({ hasText: email });
   await expect(request).toContainText("Winter runner. Maya said to ask.");
+  // Round 28 #9's ages: under a minute old reads NOW.
+  await expect(request.getByText("now", { exact: true })).toBeVisible();
   await request.getByRole("button", { name: "Send invite" }).click();
   const invite = page
     .getByRole("listitem")
@@ -133,6 +160,17 @@ test("request access -> an invite from the Desk -> create an account -> sign out
         getComputedStyle(input.closest(".field-box") ?? input).outlineOffset,
     );
   expect(ringOffset).toBe("-1px");
+  // Task 126 PR B: the password box is a text field's height, its Show
+  // target inside the box rather than growing it (50, HEIGHT.field).
+  const boxHeight = (label: string) =>
+    page
+      .getByLabel(label)
+      .evaluate(
+        (input) =>
+          (input.closest(".field-box") ?? input).getBoundingClientRect().height,
+      );
+  expect(await boxHeight("Password")).toBe(await boxHeight("Email"));
+  expect(await boxHeight("Password")).toBe(50);
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSPHRASE);
   await page.getByRole("button", { name: "Show" }).click();

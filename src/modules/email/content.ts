@@ -108,6 +108,16 @@ const STAYS = {
 } as const;
 
 /**
+ * The reopen email's first sentence (round 29 #7): the account named by
+ * its handle, or — for a reopen owed without one — by the product's name.
+ */
+function reopened(handle: string | undefined): string {
+  return handle === undefined
+    ? "Your dialed.run account is open again."
+    : `We reopened @${handle}.`;
+}
+
+/**
  * "1 photo" and "2 photos": the count, then the word it takes.
  */
 function counted(count: number, one: string, many: string): string {
@@ -215,6 +225,18 @@ export function emailContent(
         subject: "Your dialed.run account is closed",
         body: `We closed your account for breaking the community rules: ${template.reason}. You can't log in, and your shared runs are gone from the feed.`,
         foot: "Think we got it wrong? Reply to this email to appeal and we'll look again.",
+        footer,
+      };
+    }
+    case "account_reopened": {
+      // D-89, as round 29 #7 draws it: the account named by its handle.
+      // A reopen owed before the handle was carried (law 9), or for a
+      // runner closed before they picked one, says the account instead.
+      return {
+        subject: "Your dialed.run account is open again",
+        body: `${reopened(template.handle)} You can log in, and your runs are back as you shared them.`,
+        button: logIn(origin),
+        foot: "Your handle is still yours.",
         footer,
       };
     }
