@@ -413,8 +413,8 @@ describe("exportData and exportFiles", () => {
       `2,${iso(NOW - 100)}`,
     ]);
     expect(linesOf(texts, "profile.csv")).toStrictEqual([
-      "email,joined_at,username,place,thermal_level,temp_unit,distance_unit,share_new_runs",
-      `${email},${iso(JOINED)},${username},"Minneapolis, MN",-1,f,mi,false`,
+      "email,joined_at,username,place,thermal_level,temp_unit,distance_unit,default_audience",
+      `${email},${iso(JOINED)},${username},"Minneapolis, MN",-1,f,mi,private`,
     ]);
     expect(linesOf(texts, "runs.csv")).toStrictEqual([
       "id,title,started_at,duration_seconds,distance_meters,indoor,effort,added_from,conditions_from,temp_c,feels_like_c,humidity,wind_kph,precip_mm,condition,sky,run_file",
@@ -423,9 +423,9 @@ describe("exportData and exportFiles", () => {
       `${indoorRun},Treadmill,${iso(indoorAt)},1800,5000,true,,manual,,,,,,,,,`,
     ]);
     expect(linesOf(texts, "entries.csv")).toStrictEqual([
-      "id,run_id,verdict,shared,caption,tags,photos,created_at",
-      `${observedEntry},${observedRun},1,true,Cold start,hills; windy,photos/entries/${observedEntry}-1.jpg; photos/entries/${observedEntry}-2.jpg,${iso(observedAt + 3600)}`,
-      `${bandEntry},${bandRun},,false,,,,${iso(bandAt + 3600)}`,
+      "id,run_id,verdict,audience,caption,tags,photos,created_at",
+      `${observedEntry},${observedRun},1,shared,Cold start,hills; windy,photos/entries/${observedEntry}-1.jpg; photos/entries/${observedEntry}-2.jpg,${iso(observedAt + 3600)}`,
+      `${bandEntry},${bandRun},,private,,,,${iso(bandAt + 3600)}`,
     ]);
     const [kitHeader, ...kitRows] = linesOf(texts, "kit.csv");
     expect(kitHeader).toBe("entry_id,garment_id,flag,note");
@@ -540,7 +540,7 @@ describe("exportData and exportFiles", () => {
       },
     ]);
     expect(linesOf(texts, "entries.csv")[1]).toBe(
-      `${entryId},${runId},,true,,,,${iso(NOW - 60)}`,
+      `${entryId},${runId},,shared,,,,${iso(NOW - 60)}`,
     );
     expect(linesOf(texts, "runs.csv")[1]?.endsWith(",")).toBe(true);
     expect(
@@ -669,7 +669,11 @@ describe("exportData and exportFiles", () => {
       garmentsSheet,
       termsSheet,
     } = buildSheets({
-      profile: { account: undefined, profile: undefined },
+      profile: {
+        account: undefined,
+        profile: undefined,
+        defaultAudience: undefined,
+      },
       runs: [],
       entries: [],
       kit: [],

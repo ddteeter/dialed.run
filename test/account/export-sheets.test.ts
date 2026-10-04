@@ -12,7 +12,11 @@ import { buildSheets } from "../../src/modules/account/export-sheets";
  */
 
 const NO_ROWS = {
-  profile: { account: undefined, profile: undefined },
+  profile: {
+    account: undefined,
+    profile: undefined,
+    defaultAudience: undefined,
+  },
   runs: [],
   entries: [],
   kit: [],
@@ -76,7 +80,11 @@ describe("buildSheets", () => {
   });
 
   it("puts the one profile row it is handed in profile.csv", () => {
-    const profile = { account: undefined, profile: undefined };
+    const profile = {
+      account: undefined,
+      profile: undefined,
+      defaultAudience: undefined,
+    };
     expect(
       buildSheets({ ...NO_ROWS, profile }).profileSheet.rows,
     ).toStrictEqual([profile]);

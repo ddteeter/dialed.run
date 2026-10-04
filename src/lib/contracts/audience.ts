@@ -67,3 +67,17 @@ export function audienceOfShareToggle(isOn: boolean): WritableAudience {
 export function isSharedAudience(audience: Audience): boolean {
   return audience === SHARED_AUDIENCE;
 }
+
+/**
+ * The word a file a person reads writes for each audience: the export's
+ * `audience` and `default_audience` columns now, design 130's API
+ * `visibility` later. They are the UI's words (SHARED / PRIVATE on
+ * screen; D-109: files write the UI's words), so `runners` itself never
+ * leaves the server.
+ */
+export const audienceWord = {
+  private: "private",
+  groups: "groups",
+  runners: "shared",
+} as const satisfies Record<Audience, string>;
+export type AudienceWord = (typeof audienceWord)[Audience];

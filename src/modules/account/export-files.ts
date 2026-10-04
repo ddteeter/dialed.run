@@ -13,6 +13,7 @@
  * A file a row names but R2 no longer holds is left out, and its cell is
  * empty: the CSVs never point at a file the ZIP does not have.
  */
+import { audienceWord } from "../../lib/contracts";
 import type { ExportData } from "./export";
 import {
   csvOf,
@@ -107,7 +108,9 @@ function runFile(
 
 /**
  * `profile.csv`'s one row: the account's address and the day it was made,
- * written out as every other time in the ZIP is (UTC), beside the profile.
+ * written out as every other time in the ZIP is (UTC), beside the profile
+ * and its default audience in the UI's word (`audienceWord`: `runners`
+ * never leaves the server).
  */
 function profileRow(data: ExportData): ProfileRow {
   const { account, profile } = data;
@@ -120,6 +123,8 @@ function profileRow(data: ExportData): ProfileRow {
             joinedAt: iso(Math.floor(account.createdAt.getTime() / 1000)),
           },
     profile,
+    defaultAudience:
+      profile === undefined ? undefined : audienceWord[profile.defaultAudience],
   };
 }
 
@@ -175,6 +180,7 @@ export function exportFiles(
       tags: list(entry.tags),
       photos: list(photos.map((photo) => photo.name)),
       createdAt: iso(entry.createdAt),
+      audience: audienceWord[entry.audience],
     })),
     kit: data.entries.flatMap((entry) => entry.kit),
     garments: closet.map(({ garment, photo }) => ({
