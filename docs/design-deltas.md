@@ -898,6 +898,11 @@ byte-identical, so there was nothing to copy. The archive leaves out
 `screenshots/` and `.thumbnail`, as earlier imports did, and nothing was
 removed from `design/`.
 
+**The owner's 22:13 update** re-exported three of these files:
+`Marketing Site.dc.html` and `- Dark` add M8 · Reports, and
+`design/docs/product.md` adds "Pre-launch data requirements". Both are
+recorded below, and nothing else in the bundle changed.
+
 Lanes are the launch plan's: 125 ops/platform and the Desk shell, 126
 accounts/auth/email/legal/export, 127 runs/Strava, 128 safety, closet and
 moderation, 129 feed. "New: read API" is task 130 (design doc on
@@ -1138,6 +1143,19 @@ reader knows what the boards hold.
     Atom feed, dated anchors. **M7b** adds a "What's new" row in U that
     opens it in a new tab, with `NEW · OCT 3` until opened; the board asks
     whether hi-viz there needs a ruling against §AH.
+  - **M8 · Reports (after launch, not in v1).** Added by the owner's
+    22:13 update. A seasonal report at `/reports/{season}-{year}`, with a
+    yearly roll-up at `/reports/{year}`, each keeping its URL for good.
+    Three to six findings per report, each a headline, a chart (its own
+    1200×630 OG image and `#finding-01` anchor) and links through to the
+    guide or gear page it comes from. A METHOD block (shared entries only;
+    20 runners for a brand figure, 5 for a band; matched catalogue models
+    only; opted-in region only; "early, enthusiastic runners, not all
+    runners"), and THE DATA: every figure as CSV under CC BY 4.0, with a
+    citation line. Structured data: Dataset, with the CSV as its
+    distribution. Brand findings are worded neutrally, and no brand sees a
+    report before it is published. It depends on the pre-launch data
+    requirements below. Not built and not scheduled.
 - **Integration Opportunities** (`Integration Opportunities.dc.html`). "Your
   blog says how it fits. dialed.run says how it did."
   - **01 · The biglongrun block.** "Real-World Conditions", a sibling under
@@ -1174,9 +1192,49 @@ reader knows what the boards hold.
   for real vectors, a trademark search on 03 and 04, and a home-screen
   test.
 
+**Pre-launch data requirements (for seasonal and annual reports).** The
+owner's 22:13 update adds this section to `design/docs/product.md`: _"cheap
+to add before launch and expensive after."_ M8 depends on it. Each item's
+status was checked against `main`:
+
+- **(a) Terms and Privacy: aggregate publication. Missing.** The section
+  asks for a clause saying dialed.run may publish anonymous aggregates of
+  shared entries and closet pieces, at 20 or more runners for a brand
+  figure and 5 or more for a band, never naming or linking a runner. It
+  must ship in the launch Terms version (v1) so it doesn't trigger a second
+  acceptance prompt. Neither `docs/legal/terms.md` nor
+  `docs/legal/privacy-policy.md` mentions aggregates today. _Build:_ the
+  owner's legal text, before the terms are published (D-93). No lane
+  writes it.
+- **(b) One catalogue entry per brand and model. Already true.**
+  `wardrobe_items.product_id` resolves to `products`, an item with no brand
+  is "unmatched", and Desk Duplicates is the merge tool. _Build:_ none.
+- **(c) Closet `added_at`. Already true,** as `wardrobe_items.created_at`.
+  First-worn derives from the piece's earliest entry, so it needs no
+  column. _Build:_ none.
+- **(d) Region, optional and opt-in. Missing.** Settings › Profile ›
+  Region: country, plus state or province where it applies. Off by
+  default, used only in aggregates, never shown on a profile or entry, and
+  included in `profile.csv`. Hint: "Used only in anonymous totals, like
+  what runners in your state wear. Never shown to anyone." _Build:_ 126
+  (onboarding's Settings › Profile), S to M, pre-launch: an additive
+  migration (nullable country and region columns) under the schema
+  protocol, the Settings row, and the `profile.csv` columns in
+  `account/export-sheets.ts`.
+
+Counting closet pieces in published aggregates amends D-29; see Conflicts.
+
 **Conflicts for the owner.** None of these was adopted by the import. Each
 quotes both sides and ends with a recommendation.
 
+- **Reports count closet pieces (M8 and the data requirements) vs D-29.**
+  D-29: _"Social-proof ownership counts derive only from public entries …
+  never from closet contents."_ The requirements publish "anonymous
+  aggregates of shared entries and closet pieces", M8 headlines "2,940
+  PIECES", and (c) exists for "growing brands", which reads closet
+  additions. _Recommendation:_ an owner call alongside the D-58 one below.
+  Reports built from shared entries alone keep D-29. Counting closets needs
+  D-29 amended and clause (a) to say so.
 - **Two hosts (Marketing M0) vs D-53 and the deployment plan.** D-53: _"The
   whole site is `noindex` until the public launch … at the stage 2 gate the
   landing page and other public marketing pages flip to index by their own
@@ -1199,12 +1257,14 @@ quotes both sides and ends with a recommendation.
   (`account/terms-acceptance.ts`). Round 27 kept them `noindex`.
   _Recommendation:_ keep them in the app until a marketing site is
   scheduled; moving them is part of that decision, not this import.
-- **Guides publish shared-run data to the open web (M1–M3) vs D-58.**
+- **Guides and reports publish shared-run data to the open web (M1–M3,
+  M8) vs D-58.**
   D-58: _"nothing is served to a signed-out visitor or a search index by
   being public."_ The guides aggregate shared runs (five runners per band,
   types not brands, no names) for signed-out visitors and search; M1's
-  Call card and M3's review cards publish the owner's own piece record.
-  _Recommendation:_ an owner call before any guide is built. If the
+  Call card and M3's review cards publish the owner's own piece record;
+  M8 publishes findings and their CSV under CC BY 4.0.
+  _Recommendation:_ an owner call before any guide or report is built. If the
   answer is yes, D-58 gains an aggregate exception and the privacy
   policy's "What other runners see" section needs a line.
 - **The terms prompt's "go back to" line (4b) vs D-96.** D-96: a refused
