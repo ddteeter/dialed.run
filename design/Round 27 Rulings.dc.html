@@ -184,7 +184,7 @@
                 <sc-if value="{{ f.body }}" hint-placeholder-val="{{ true }}"><p style="margin: 0; font-size: 16px; line-height: 1.5;">{{ f.body }}</p></sc-if>
                 <sc-for list="{{ f.fields }}" as="x" hint-placeholder-count="1">
                   <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <div style="display: flex; justify-content: space-between; align-items: baseline;"><label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">{{ x.k }}</label><span style="font-size: 14px; font-weight: 600; color: #C21A6B;">{{ x.aside }}</span></div>
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;"><label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #6E6E64;">{{ x.k }}</label><span style="font-size: 14px; font-weight: 600; color: #C21A6B;">{{ x.aside }}</span></div>
                     <sc-if value="{{ x.hint }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; color: #4E4E44;">{{ x.hint }}</span></sc-if>
                     <div style="min-height: 50px; display: flex; align-items: center; background: #FFFFFF; border: {{ x.border }}; border-radius: 10px; padding: 0 15px; font-size: 16px; letter-spacing: {{ x.ls }};">{{ x.v }}</div>
                     <sc-if value="{{ x.msg }}" hint-placeholder-val="{{ false }}"><span data-part="field-message" style="background: #F5FF3D; font-size: 13px; line-height: 1.35; padding: 7px 10px; align-self: flex-start;">{{ x.msg }}</span></sc-if>
@@ -193,7 +193,7 @@
                 <sc-if value="{{ f.band }}" hint-placeholder-val="{{ false }}">
                   <div data-part="control-failure" role="status" style="border: 1px solid #0B0B0E; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;"><span style="align-self: flex-start; font-family: 'Archivo Black', sans-serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;">{{ f.band.k }}</span><span style="font-size: 14px; line-height: 1.45;">{{ f.band.t }}</span></div>
                 </sc-if>
-                <sc-if value="{{ f.turnstile }}" hint-placeholder-val="{{ false }}"><div data-part="turnstile" style="height: 65px; border: 1px dashed #B9B8AE; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">TURNSTILE · SHOWN ONLY IF CHALLENGED</div></sc-if>
+                <sc-if value="{{ f.turnstile }}" hint-placeholder-val="{{ false }}"><div data-part="turnstile" style="height: 65px; border: 1px dashed #B9B8AE; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">TURNSTILE · SHOWN ONLY IF CHALLENGED</div></sc-if>
                 <sc-if value="{{ f.primary }}" hint-placeholder-val="{{ true }}"><span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">{{ f.primary }}</span></sc-if>
                 <sc-if value="{{ f.secondary }}" hint-placeholder-val="{{ false }}"><span style="font-size: 14px; color: #4E4E44;">{{ f.secondaryLead }} <span style="color: #C21A6B; font-weight: 600;">{{ f.secondary }}</span></span></sc-if>
                 <sc-if value="{{ f.foot }}" hint-placeholder-val="{{ false }}"><span style="margin-top: auto; font-size: 13px; line-height: 1.45; color: #4E4E44; border-top: 1px solid #DCDBD2; padding-top: 12px;">{{ f.foot }}</span></sc-if>
@@ -245,7 +245,7 @@
                 <span style="font-size: 15px; line-height: 1.5;">{{ s.body }}</span>
                 <sc-for list="{{ s.fields }}" as="x" hint-placeholder-count="1">
                   <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">{{ x.k }}</label>
+                    <label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #6E6E64;">{{ x.k }}</label>
                     <sc-if value="{{ x.hint }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; color: #4E4E44;">{{ x.hint }}</span></sc-if>
                     <div style="min-height: 50px; display: flex; align-items: center; background: #FFFFFF; border: {{ x.border }}; border-radius: 10px; padding: 0 15px; font-size: 16px; letter-spacing: {{ x.ls }};">{{ x.v }}</div>
                     <sc-if value="{{ x.msg }}" hint-placeholder-val="{{ false }}"><span data-part="field-message" style="background: #F5FF3D; font-size: 13px; line-height: 1.35; padding: 7px 10px; align-self: flex-start;">{{ x.msg }}</span></sc-if>
@@ -299,13 +299,13 @@
               <div style="padding: 26px 24px 22px; display: flex; flex-direction: column; gap: 16px;">
                 <span style="font-family: 'Archivo Black', sans-serif; font-size: 28px; letter-spacing: -0.03em;">{{ f.head }}</span>
                 <sc-for list="{{ f.fields }}" as="x" hint-placeholder-count="2">
-                  <div style="display: flex; flex-direction: column; gap: 8px;"><label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">{{ x.k }}</label><div style="min-height: 50px; display: flex; align-items: center; background: #FFFFFF; border: 1px solid #B9B8AE; border-radius: 10px; padding: 0 15px; font-size: 16px; color: {{ x.c }}; letter-spacing: {{ x.ls }};">{{ x.v }}</div></div>
+                  <div style="display: flex; flex-direction: column; gap: 8px;"><label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #6E6E64;">{{ x.k }}</label><div style="min-height: 50px; display: flex; align-items: center; background: #FFFFFF; border: 1px solid #B9B8AE; border-radius: 10px; padding: 0 15px; font-size: 16px; color: {{ x.c }}; letter-spacing: {{ x.ls }};">{{ x.v }}</div></div>
                 </sc-for>
-                <div data-part="turnstile" style="height: 65px; border: 1px dashed #B9B8AE; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70; text-align: center; padding: 0 12px;">TURNSTILE · 300×65 · ONLY WHEN CHALLENGED</div>
+                <div data-part="turnstile" style="height: 65px; border: 1px dashed #B9B8AE; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64; text-align: center; padding: 0 12px;">TURNSTILE · 300×65 · ONLY WHEN CHALLENGED</div>
                 <span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">{{ f.primary }}</span>
                 <sc-if value="{{ f.google }}" hint-placeholder-val="{{ false }}">
                   <div style="display: flex; flex-direction: column; gap: 16px;">
-                    <div style="display: flex; align-items: center; gap: 12px;"><span style="flex: 1; height: 1px; background: #DCDBD2;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">OR</span><span style="flex: 1; height: 1px; background: #DCDBD2;"></span></div>
+                    <div style="display: flex; align-items: center; gap: 12px;"><span style="flex: 1; height: 1px; background: #DCDBD2;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6E6E64;">OR</span><span style="flex: 1; height: 1px; background: #DCDBD2;"></span></div>
                     <span data-part="google-button" style="display: flex; align-items: center; justify-content: center; gap: 10px; background: #FFFFFF; border: 1px solid #747775; border-radius: 100px; height: 48px; font-family: Archivo, sans-serif; font-weight: 500; font-size: 15px; color: #1F1F1F;"><span style="width: 20px; height: 20px; border-radius: 100px; border: 3px solid #4285F4; border-right-color: #EA4335; border-bottom-color: #34A853; border-left-color: #FBBC05;"></span>Continue with Google</span>
                   </div>
                 </sc-if>
@@ -332,11 +332,11 @@
                 <div style="background: #0B0B0E; color: #F4F3EF; height: 60px; padding: 0 24px; display: flex; align-items: center;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #8B8B93;">.run</span><span style="color: #FF2D8A;">]</span></span><span style="margin-left: auto; font-size: 15px; color: #B9B8AE;">Log in</span></div>
                 <div style="padding: 40px 24px 48px; display: grid; grid-template-columns: 220px minmax(0, 620px); gap: 56px; justify-content: center;">
                   <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
-                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">CONTENTS</span>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">CONTENTS</span>
                     <sc-for list="{{ p.toc }}" as="t" hint-placeholder-count="6"><span style="color: {{ t.c }}; font-weight: {{ t.w }};">{{ t.t }}</span></sc-for>
                   </div>
                   <div style="display: flex; flex-direction: column; gap: 18px; max-width: 620px;">
-                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">{{ p.kicker }}</span>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #6E6E64;">{{ p.kicker }}</span>
                     <span style="font-family: 'Archivo Black', sans-serif; font-size: 44px; letter-spacing: -0.03em; line-height: 0.98;">{{ p.head }}</span>
                     <p data-type-step="lead" style="margin: 0; font-size: 19px; line-height: 1.5;">{{ p.lead }}</p>
                     <span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.02em; padding-top: 8px;">{{ p.h2 }}</span>
@@ -362,11 +362,11 @@
           <div data-screen-label="{{ m.screen }}" style="background: #FFFFFF; color: #0B0B0E; border-radius: 8px; overflow: hidden; border: 1px solid #DCDBD2; display: flex; flex-direction: column;">
             <div style="background: #EDECE3; padding: 10px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.6; color: #4E4E44;">{{ m.tag }} · TO {{ m.to }}<br />SUBJECT <span style="color: #0B0B0E; font-weight: 600;">{{ m.subject }}</span></div>
             <div style="padding: 20px 18px; display: flex; flex-direction: column; gap: 12px; flex: 1;">
-              <span style="font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #7A7A70;">.run</span><span style="color: #FF2D8A;">]</span></span>
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 18px; letter-spacing: -0.03em;"><span style="color: #FF2D8A;">[</span>dialed<span style="color: #6E6E64;">.run</span><span style="color: #FF2D8A;">]</span></span>
               <p style="margin: 0; font-size: 15px; line-height: 1.5;">{{ m.body }}</p>
               <sc-if value="{{ m.button }}" hint-placeholder-val="{{ true }}"><span style="align-self: flex-start; background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 12px 20px; font-size: 15px; font-weight: 700;">{{ m.button }}</span></sc-if>
               <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44;">{{ m.foot }}</p>
-              <span style="margin-top: auto; font-size: 12px; color: #7A7A70; border-top: 1px solid #EDECE3; padding-top: 10px;">dialed.run · <span style="text-decoration: underline;">Privacy policy</span> · <span style="text-decoration: underline;">Terms</span></span>
+              <span style="margin-top: auto; font-size: 12px; color: #6E6E64; border-top: 1px solid #EDECE3; padding-top: 10px;">dialed.run · <span style="text-decoration: underline;">Privacy policy</span> · <span style="text-decoration: underline;">Terms</span></span>
             </div>
           </div>
         </sc-for>
@@ -384,7 +384,7 @@
           <div style="display: flex; flex-direction: column; gap: 10px;">
             <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ n.label }}</span>
             <div data-screen-label="{{ n.screen }}" style="background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 14px; max-width: 390px;">
-              <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">{{ n.where }}</span><span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em; line-height: 1.1;">{{ n.title }}</span></div>
+              <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">{{ n.where }}</span><span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em; line-height: 1.1;">{{ n.title }}</span></div>
               <sc-if value="{{ n.photo }}" hint-placeholder-val="{{ false }}"><div style="position: relative; aspect-ratio: 4 / 5; max-height: 200px; border-radius: 10px; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 7px, #E9E8DE 7px 14px);"><span style="position: absolute; left: 10px; top: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; background: #0B0B0E; color: #F4F3EF; padding: 4px 7px;">{{ n.photo }}</span></div></sc-if>
               <div role="status" style="border: 1px solid #0B0B0E; padding: 14px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; background: #F4F3EF;">
                 <span style="font-family: 'Archivo Black', sans-serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;">{{ n.k }}</span>
@@ -462,7 +462,7 @@
               <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #C21A6B;">USERNAME CHANGED BY A MODERATOR</span>
               <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.03em; line-height: 1.02;">Pick a new username</span>
               <p style="margin: 0; font-size: 16px; line-height: 1.5;">@quadzilla_69 broke the rules on names: offensive or sexual. For now you're @runner_4821. Your runs and closet haven't changed.</p>
-              <div style="display: flex; flex-direction: column; gap: 8px;"><label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #7A7A70;">USERNAME</label><span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">3–20 letters, numbers or _.</span><div style="min-height: 50px; display: flex; align-items: center; background: #FFFFFF; border: 1px solid #B9B8AE; border-radius: 10px; padding: 0 15px; font-size: 16px;"><span style="color: #7A7A70;">@</span></div></div>
+              <div style="display: flex; flex-direction: column; gap: 8px;"><label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #6E6E64;">USERNAME</label><span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">3–20 letters, numbers or _.</span><div style="min-height: 50px; display: flex; align-items: center; background: #FFFFFF; border: 1px solid #B9B8AE; border-radius: 10px; padding: 0 15px; font-size: 16px;"><span style="color: #6E6E64;">@</span></div></div>
               <span style="margin-top: auto; background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 16px; text-align: center; font-size: 16px; font-weight: 700;">Save username</span>
               <span style="text-align: center; font-size: 15px; font-weight: 600; color: #4E4E44;">Keep @runner_4821 for now</span>
             </div>
@@ -517,9 +517,9 @@
         <div id="r26" style="display: flex; flex-direction: column; gap: 10px;">
           <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">26 · D, OWNER · FOOT OF THE PAGE · NO OVERFLOW</span>
           <div data-screen-label="D delete links" style="width: 390px; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 18px 20px 22px; display: flex; flex-direction: column; gap: 12px;">
-            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">… THE ENTRY ABOVE</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">… THE ENTRY ABOVE</span>
             <div style="border-top: 1px solid #DCDBD2; padding-top: 14px; display: flex; flex-direction: column; gap: 12px;">
-              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">YOURS</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">YOURS</span>
               <span style="font-size: 15px; font-weight: 600;">Edit this entry</span>
               <span style="font-size: 15px; font-weight: 600; color: #C21A6B; text-decoration: underline; text-underline-offset: 3px;">Delete this entry</span>
             </div>
@@ -580,7 +580,7 @@ class Component extends DCLogic {
     ];
 
     const googleFrames = [
-      { screen: 'Google button light r27', ground: '#F4F3EF', kc: '#7A7A70', label: 'LIGHT · ARCHIVO 500 15 · #1F1F1F', bg: '#FFFFFF', stroke: '#747775', fg: '#1F1F1F' },
+      { screen: 'Google button light r27', ground: '#F4F3EF', kc: '#6E6E64', label: 'LIGHT · ARCHIVO 500 15 · #1F1F1F', bg: '#FFFFFF', stroke: '#747775', fg: '#1F1F1F' },
       { screen: 'Google button dark r27', ground: '#0B0B0E', kc: '#8B8B93', label: 'DARK · ARCHIVO 500 15 · #E3E3E3', bg: '#131314', stroke: '#8E918F', fg: '#E3E3E3' },
     ];
 
@@ -600,7 +600,7 @@ class Component extends DCLogic {
     ];
 
     const unsubFrames = [
-      { label: '8 · LANDING · FROM THE EMAIL BODY', screen: 'Unsubscribe landing', kicker: 'RUN REMINDER EMAILS', kc: '#7A7A70', head: 'Stop run reminder emails?', body: 'We\'ll stop emailing ma•••@example.com when a run lands on Strava. Push reminders and account emails don\'t change.', primary: 'Unsubscribe', link: '', foot: 'Change every kind in Settings › Notifications.' },
+      { label: '8 · LANDING · FROM THE EMAIL BODY', screen: 'Unsubscribe landing', kicker: 'RUN REMINDER EMAILS', kc: '#6E6E64', head: 'Stop run reminder emails?', body: 'We\'ll stop emailing ma•••@example.com when a run lands on Strava. Push reminders and account emails don\'t change.', primary: 'Unsubscribe', link: '', foot: 'Change every kind in Settings › Notifications.' },
       { label: '8 · DONE · SAME URL AFTER THE POST', screen: 'Unsubscribe done', kicker: 'UNSUBSCRIBED', kc: '#00776A', head: 'Run reminder emails are off', body: 'You won\'t get another one. Strava stays connected, and push reminders still work if they\'re on.', primary: '', link: 'Turn them back on', foot: 'Change every kind in Settings › Notifications.' },
     ];
 
@@ -700,7 +700,7 @@ class Component extends DCLogic {
     const blurred = [0, 4];
     const focused = 4;
     const blurCanvas = pos.map((p, i) => ({ bg: blurred.includes(i) ? 'rgba(11,11,14,0.55)' : 'transparent', ol: i === focused ? '2px solid #F5FF3D' : 'none' }));
-    const blurCells = pos.map((p, i) => ({ pressed: String(blurred.includes(i)), bg: blurred.includes(i) ? '#0B0B0E' : '#FFFFFF', fg: blurred.includes(i) ? '#F4F3EF' : '#7A7A70', t: blurred.includes(i) ? '✓' : '', ol: i === focused ? '2px solid #0B0B0E' : 'none' }));
+    const blurCells = pos.map((p, i) => ({ pressed: String(blurred.includes(i)), bg: blurred.includes(i) ? '#0B0B0E' : '#FFFFFF', fg: blurred.includes(i) ? '#F4F3EF' : '#6E6E64', t: blurred.includes(i) ? '✓' : '', ol: i === focused ? '2px solid #0B0B0E' : 'none' }));
 
     return { toc, rulingGroups, googleFrames, shareFrames, publicRows, unsubFrames, resetFrames, accountRows, accountSheets, pendingFrames, signFrames, legalPages, emails, notices, deskNav, runners, confirmGroups, deleteSheets, blurCanvas, blurCells };
   }

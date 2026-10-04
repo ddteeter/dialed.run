@@ -83,8 +83,8 @@
             </div>
           </div>
           <div data-part="columns" style="padding: 24px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 24px; min-height: 220px;">
-            <div data-part="primary" data-status="unbuilt" style="border: 1px dashed #B9B8AE; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;">PRIMARY COLUMN · THE PHONE SCREEN'S CONTENT · MIN 620</span></div>
-            <div data-part="rail" data-status="unbuilt" style="border: 1px dashed #B9B8AE; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;">RAIL · FEED, CLOSET, BACKLOG, LOG A RUN · NEVER A THIRD</span></div>
+            <div data-part="primary" data-status="unbuilt" style="border: 1px dashed #B9B8AE; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #6E6E64;">PRIMARY COLUMN · THE PHONE SCREEN'S CONTENT · MIN 620</span></div>
+            <div data-part="rail" data-status="unbuilt" style="border: 1px dashed #B9B8AE; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #6E6E64;">RAIL · FEED, CLOSET, BACKLOG, LOG A RUN · NEVER A THIRD</span></div>
           </div>
         </div>
       </div></div>
@@ -94,7 +94,7 @@
           <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">DS1b · TOP BAR · 720–1039 · DARK · ONE COLUMN</span>
           <div style="overflow-x: auto; max-width: 100%;"><div data-screen-label="DS1b Shell wide dark" style="background: #0B0B0E; color: #F4F3EF; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; border: 1px solid #2A2A31; width: 720px; min-width: 720px;">
             <div data-part="top-bar" style="background: #F4F3EF; color: #0B0B0E; height: 60px; padding: 0 24px; display: flex; align-items: center; gap: 20px;">
-              <span data-part="wordmark" style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;"><span style="color: #C21A6B;">[</span><span>dialed</span><span style="color: #7A7A70;">.run</span><span style="color: #C21A6B;">]</span></span>
+              <span data-part="wordmark" style="display: flex; align-items: center; gap: 0.1em; font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;"><span style="color: #C21A6B;">[</span><span>dialed</span><span style="color: #6E6E64;">.run</span><span style="color: #C21A6B;">]</span></span>
               <div data-part="bar-nav" style="display: flex; gap: 4px; align-items: stretch; height: 60px; font-size: 15px;">
                 <span style="display: flex; align-items: center; padding: 0 10px; color: #4E4E44;">Feed</span>
                 <span style="display: flex; align-items: center; padding: 0 10px; font-weight: 700; border-bottom: 2px solid #C21A6B; margin-bottom: -1px;">Closet</span>
@@ -152,16 +152,16 @@
             <div data-part="primary" style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
               <div data-part="backlog-header" style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
                 <span style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em;">Needs a verdict</span>
-                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;">6 RUNS · NO VERDICT YET · OLDEST FIRST</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #6E6E64;">6 RUNS · NO VERDICT YET · OLDEST FIRST</span>
               </div>
 
-              <div data-part="column-heads" style="display: grid; grid-template-columns: 104px minmax(0, 0.8fr) minmax(0, 1.2fr) 262px; gap: 0 12px; padding: 0 12px 8px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70; border-bottom: 1px solid #DCDBD2;">
+              <div data-part="column-heads" style="display: grid; grid-template-columns: 104px minmax(0, 0.8fr) minmax(0, 1.2fr) 262px; gap: 0 12px; padding: 0 12px 8px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64; border-bottom: 1px solid #DCDBD2;">
                 <span>RUN</span><span>CONDITIONS</span><span>OUTFIT</span><span>DID IT WORK?</span>
               </div>
 
               <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
                 <div data-part="backlog-row" style="display: grid; grid-template-columns: 104px minmax(0, 0.8fr) minmax(0, 1.2fr) 262px; gap: 0 12px; align-items: center; min-height: 60px; padding: 8px 12px; border-radius: 12px; background: {{ r.bg }}; border: 1px solid {{ r.border }};">
-                  <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 15px; font-weight: 600;">{{ r.day }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;">{{ r.time }}</span></div>
+                  <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 15px; font-weight: 600;">{{ r.day }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #6E6E64;">{{ r.time }}</span></div>
                   <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44; line-height: 1.4;">{{ r.cond }}</span>
                   <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
                     <sc-if value="{{ r.hasOutfit }}" hint-placeholder-val="{{ true }}">
@@ -170,7 +170,7 @@
                       </div>
                     </sc-if>
                     <sc-if value="{{ r.noOutfit }}" hint-placeholder-val="{{ false }}">
-                      <span style="border: 1px dashed #9A9A90; border-radius: 100px; padding: 6px 12px; font-size: 13px; color: #7A7A70; white-space: nowrap;">Same as {{ r.suggest }}? <span style="color: #C21A6B; font-weight: 600;">Use</span> · <span style="color: #C21A6B; font-weight: 600;">Pick</span></span>
+                      <span style="border: 1px dashed #6E6E64; border-radius: 100px; padding: 6px 12px; font-size: 13px; color: #6E6E64; white-space: nowrap;">Same as {{ r.suggest }}? <span style="color: #C21A6B; font-weight: 600;">Use</span> · <span style="color: #C21A6B; font-weight: 600;">Pick</span></span>
                     </sc-if>
                   </div>
                   <div data-part="verdict-row" role="radiogroup" style="display: flex; gap: 3px;">
@@ -182,23 +182,23 @@
               </sc-for>
 
               <div data-part="keys" style="display: flex; align-items: center; gap: 12px; padding-top: 8px; font-size: 13px; color: #4E4E44;">
-                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">KEYS</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">KEYS</span>
                 <span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; border: 1px solid #C9C8BE; padding: 2px 6px;">↑↓</span> row</span>
                 <span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; border: 1px solid #C9C8BE; padding: 2px 6px;">1–5</span> way cold → way warm</span>
                 <span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; border: 1px solid #C9C8BE; padding: 2px 6px;">↵</span> save &amp; next</span>
                 <span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; border: 1px solid #C9C8BE; padding: 2px 6px;">↓</span> skip</span>
                 <span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; border: 1px solid #C9C8BE; padding: 2px 6px;">Tab</span> outfit</span>
-                <span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #7A7A70;">2 OF 6 SAVED</span>
+                <span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #6E6E64;">2 OF 6 SAVED</span>
               </div>
             </div>
 
             <div data-part="rail" style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
               <div data-part="selected-card" style="background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
-                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">SELECTED · WED 4 SEP</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">SELECTED · WED 4 SEP</span>
                 <span style="font-family: 'IBM Plex Mono', monospace; font-size: 22px; letter-spacing: 0.02em; line-height: 1.2;">41°F · 88% · SE 9</span>
                 <span style="font-size: 15px; line-height: 1.5;">Cold and damp at 6 AM. You logged three runs in this band; you were under-dressed in two and dialed in the one with gloves.</span>
                 <div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #DCDBD2; padding-top: 12px;">
-                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">WHAT YOU USUALLY WEAR HERE</span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">WHAT YOU USUALLY WEAR HERE</span>
                   <div style="display: flex; flex-wrap: wrap; gap: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em;">
                     <span style="border: 1px solid #0B0B0E; padding: 4px 8px; border-radius: 100px;">JANJI ROVER HALF-ZIP</span>
                     <span style="border: 1px solid #0B0B0E; padding: 4px 8px; border-radius: 100px;">BANDIT 5" SPLIT</span>
@@ -207,7 +207,7 @@
                 </div>
               </div>
               <div data-annotation="" style="background: #EDECE3; padding: 14px 16px; font-size: 13px; line-height: 1.5; color: #4E4E44;">Verdicts saved here count exactly like verdicts from the phone. There is no "bulk" rule — every row is one A3, and the bracket closes on each one (motion: Verdict commit, 320ms, align).</div>
-              <div data-part="attribution" style="display: flex; flex-direction: column; gap: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;"><span>WEATHER BY <a href="https://www.visualcrossing.com/" style="color: #C21A6B;">VISUAL CROSSING</a></span></div>
+              <div data-part="attribution" style="display: flex; flex-direction: column; gap: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;"><span>WEATHER BY <a href="https://www.visualcrossing.com/" style="color: #C21A6B;">VISUAL CROSSING</a></span></div>
             </div>
           </div>
         </div></div>

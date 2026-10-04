@@ -200,14 +200,28 @@ ${Object.entries(RADIUS).map(([k, v]) => `  --radius-${k}: ${v}px;`).join('\n')}
  * LINT — each entry is one rule a stylelint/ESLint plugin can enforce.
  * `reject` is what a raw match looks like; `allow` is the only legal form.
  */
+const SPACING_PROP = '(?:(?:padding|margin|inset|scroll-padding|scroll-margin)(?:-(?:top|right|bottom|left|inline|block)(?:-start|-end)?)?|(?:row-|column-)?gap|top|right|bottom|left|(?:padding|margin|inset)(?:Top|Right|Bottom|Left|Inline|Block)(?:Start|End)?|rowGap|columnGap)';
 export const LINT = [
   { id: 'no-raw-font-size',     reject: /font-size:\s*\d/,                allow: 'font: var(--type-*) | var(--mono-*)' },
   { id: 'no-raw-tracking',      reject: /letter-spacing:\s*-?[\d.]+(em|px)/, allow: 'letter-spacing: var(--track-*)' },
   { id: 'no-raw-font-family',   reject: /font-family:\s*['"A-Za-z]/,      allow: 'var(--font-display|text|mono) — or omit; --type-*/--mono-* already carry the family' },
   { id: 'no-raw-radius',        reject: /border-radius:\s*[1-9]/,          allow: 'var(--radius-*)  (0 is allowed literally)' },
-  { id: 'no-raw-spacing',       reject: /(padding|margin|gap|inset|top|left|right|bottom):\s*[^v0;]*\d{1,2}px/, allow: 'var(--space-*). 1px/2px permitted on border-width only.' },
+  // Round 33: scans the whole value, so shorthands (`0 20px`), mixed (`var(--space-4) 20px`), negatives,
+  // longhands (padding-top, paddingTop, padding-inline) and unitless JSX numbers are caught.
+  // The prefix boundary stops `border-top: 1px` matching as `top:`.
+  { id: 'no-raw-spacing',       reject: new RegExp(`(?:^|[\\s;{"'\`(,])${SPACING_PROP}\\s*:\\s*[^;},\\n]*?(?<![\\w.])(?<!\\w-)(?:-?(?!0+(?:\\.0+)?px)\\d*\\.?\\d+px|-?[1-9]\\d*(?:\\.\\d+)?(?![\\w.%]))`), allow: 'var(--space-*) or var(--height-*). 0 is allowed literally. 1px/2px exist only as border widths.' },
   { id: 'no-raw-breakpoint',    reject: /min-width:\s*\d+px/,             allow: `${BREAKPOINT.wide}px or ${BREAKPOINT.desk}px only — export from here, don't retype` },
   { id: 'no-raw-measure',       reject: /(max-)?width:\s*(390|620|1180|980|1440)px/, allow: 'var(--measure-*)' },
   { id: 'mono-is-not-prose',    reject: 'a --mono-* step on an element with > 40 characters of non-numeric text', allow: 'TYPE.small or TYPE.body' },
   { id: 'uppercase-floor',      reject: 'text-transform: uppercase on any --type-* step except display', allow: 'MONO.xs / MONO.sm / TYPE.display only' },
 ];
+
+/** Fixtures for no-raw-spacing. The plugin's test must reject every `bad` and pass every `good`. */
+export const LINT_FIXTURES = {
+  'no-raw-spacing': {
+    bad:  ['padding: 0 20px', 'margin: 0 auto 16px', 'padding: var(--space-4) 20px', 'margin-top: -8px', 'padding-inline: 24px',
+           'gap: 12px 0', "style={{ paddingTop: 20 }}", "style={{ padding: '0 20px' }}", 'top: calc(100% - 20px)', 'padding: 120px'],
+    good: ['padding: 0', 'padding: var(--space-4) var(--space-5)', 'border-top: 1px solid var(--hairline)', 'top: 50%', 'inset: 0',
+           'min-height: var(--height-target)', "style={{ padding: 0 }}", 'margin: 0 auto'],
+  },
+};
