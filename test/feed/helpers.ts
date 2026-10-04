@@ -28,25 +28,16 @@ import { cacheKeyFor } from "../../src/modules/weather";
 import { isSharedAudience } from "../../src/lib/contracts";
 import type { Audience } from "../../src/lib/contracts";
 import { newUlid } from "../../src/lib/ids";
+import { entryAudienceColumns } from "../../e2e/support/audience";
 
 export const NOW = 1_757_000_000;
 
-/**
- * An entry's audience as a seed writes it: the audience column and the
- * boolean it replaces, kept in step exactly as the app's writers keep them
- * until the booleans go (design 131, C1). Every seed goes through this, so
- * the suite reads the same rows on both sides of PR B's read flip.
- */
-export function entryAudienceColumns(audience: Audience): {
-  audience: Audience;
-  isPublic: boolean;
-} {
-  return { audience, isPublic: isSharedAudience(audience) };
-}
+export { entryAudienceColumns } from "../../e2e/support/audience";
 
 /**
-A runner's default audience as a seed writes it; see above.
-*/
+ * A runner's default audience as a seed writes it, kept in step with the
+ * boolean it replaces the same way `entryAudienceColumns` keeps an entry's.
+ */
 export function profileAudienceColumns(defaultAudience: Audience): {
   defaultAudience: Audience;
   shareDefault: boolean;

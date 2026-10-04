@@ -27,6 +27,7 @@ import {
   exportConsumersFromEnv,
   type BuildDeps,
 } from "../../src/modules/account/export-build";
+import { entryAudienceColumns } from "../feed/helpers";
 import { batchOf, fakeMessage } from "../queue-fakes";
 import { core } from "../email/helpers";
 import { readZip, textOf } from "./zip-reader";
@@ -96,6 +97,7 @@ async function seedEverything(userId: string) {
     runId,
     userId,
     verdict: 0,
+    ...entryAudienceColumns("runners"),
     createdAt: NOW - 2000,
   });
   await db

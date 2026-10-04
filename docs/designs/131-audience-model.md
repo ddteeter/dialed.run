@@ -1,9 +1,10 @@
 # Design: 131 The audience model (R-129, D-109)
 
 > Over the template's one-page cap on purpose: the owner asked for the full
-> inventory, the migration SQL and a step plan in one place. Plan only.
-> Nothing here is built until the owner approves. D-109 and R-129 arrive on
-> `main` with #144; this doc cites them from there.
+> inventory, the migration SQL and a step plan in one place. Approved by the
+> owner on 2026-10-04. PR A (#146) builds the contract, the migration, the
+> seeds and the dual writes; PR B, the read flip, follows it. D-109 and
+> R-129 arrive on `main` with #144; this doc cites them from there.
 
 ## Problem
 
@@ -78,6 +79,14 @@ type is the launch subset, so nothing can write `groups`:
 
 When groups ship, the change is to widen `writableAudienceSchema`, plus the
 additive `entry_groups` join table.
+
+The form has to change before that schema does. `VerdictForm.tsx` seeds its
+switch with `isSharedAudience(entry.audience)` (line 256) and saves
+`audienceOfShareToggle(isShared)` (line 334), so a `groups` entry opens as
+unshared and saving it, even to change only the verdict, writes `private`.
+That is harmless while nothing can write `groups`. Whoever widens
+`writableAudienceSchema` must first give the form a groups state, or the
+first edit of a groups entry silently narrows it.
 
 **The wire words live in one place**, `src/lib/contracts/audience.ts`
 (re-exported by the `lib/contracts.ts` barrel):

@@ -154,6 +154,7 @@ async function seedStranger(startedAt: number): Promise<string> {
     runId,
     userId: strangerId,
     verdict: -2,
+    ...entryAudienceColumns("runners"),
     createdAt: NOW - 400,
   });
   await db.insert(entryTags).values({ entryId, tag: "stranger" });
@@ -499,6 +500,7 @@ describe("exportData and exportFiles", () => {
       id: entryId,
       runId,
       userId,
+      ...entryAudienceColumns("runners"),
       createdAt: NOW - 60,
     });
     await db.insert(entryPhotos).values({
@@ -621,6 +623,7 @@ describe("exportData and exportFiles", () => {
       id: entryId,
       runId,
       userId,
+      ...entryAudienceColumns("runners"),
       createdAt: NOW - 60,
     });
 
