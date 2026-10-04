@@ -90,7 +90,7 @@
                     </div>
                     <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
                       <span data-part="primary-action" style="background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 15px 26px; font-size: 16px; font-weight: 700;">Looks right — what did you wear?</span>
-                      <span style="font-size: 13px; color: #7A7A70;">No file? <span style="color: #C21A6B; font-weight: 600;">Enter the run by hand</span> instead.</span>
+                      <span style="font-size: 13px; color: #6E6E64;">No file? <span style="color: #C21A6B; font-weight: 600;">Enter the run by hand</span> instead.</span>
                     </div>
                   </sc-if>
 
@@ -108,11 +108,11 @@
                       </div>
                     </div>
                     <div data-part="closet-picker" style="display: flex; flex-direction: column; gap: 12px;">
-                      <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">OR PICK FROM THE CLOSET</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #C21A6B; font-weight: 600;">SEARCH</span></div>
-                      <div style="display: flex; align-items: center; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em; background: #00E0C6; padding: 6px 10px; border-radius: 100px;">41° DAMP ✕</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #7A7A70;">SHOWING 11 OF 47</span></div>
+                      <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">OR PICK FROM THE CLOSET</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #C21A6B; font-weight: 600;">SEARCH</span></div>
+                      <div style="display: flex; align-items: center; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.04em; background: #00E0C6; padding: 6px 10px; border-radius: 100px;">41° DAMP ✕</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6E6E64;">SHOWING 11 OF 47</span></div>
                       <sc-for list="{{ kitRows }}" as="k" hint-placeholder-count="2">
                         <div style="display: flex; flex-direction: column; gap: 6px;">
-                          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #7A7A70;">{{ k.label }} &nbsp;<span style="color: #C21A6B;">ALL ›</span></span>
+                          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;">{{ k.label }} &nbsp;<span style="color: #C21A6B;">ALL ›</span></span>
                           <div style="display: flex; gap: 8px; overflow: hidden;">
                             <sc-for list="{{ k.thumbs }}" as="t" hint-placeholder-count="7">
                               <div style="flex: 0 0 72px; height: 72px; border-radius: 10px; border: {{ t.border }}; background-color: #E9E8DE; background-image: repeating-linear-gradient(135deg, #E1E0D5 0 6px, #E9E8DE 6px 12px);"></div>
@@ -120,17 +120,17 @@
                           </div>
                         </div>
                       </sc-for>
-                      <div style="display: flex; gap: 8px; flex-wrap: wrap; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #7A7A70;">
+                      <div style="display: flex; gap: 8px; flex-wrap: wrap; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;">
                         <span style="border: 1px solid #DCDBD2; padding: 6px 10px; border-radius: 100px;">+ HANDS 2</span><span style="border: 1px solid #DCDBD2; padding: 6px 10px; border-radius: 100px;">+ HEAD 1</span><span style="border: 1px solid #DCDBD2; padding: 6px 10px; border-radius: 100px;">+ SHOES 6</span><span style="border: 1px solid #DCDBD2; padding: 6px 10px; border-radius: 100px;">+ EXTRAS 5</span>
                       </div>
                     </div>
                     <div data-part="outfit-photo" style="display: flex; flex-direction: column; gap: 8px;">
-                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">OUTFIT PHOTO · OPTIONAL</span>
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">OUTFIT PHOTO · OPTIONAL</span>
                       <div style="height: 80px; border-radius: 10px; border: 1px dashed #B9B8AE; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #6E6E64;">Drop a photo, or browse</div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
                       <span data-part="primary-action" style="background: #FF2D8A; color: #0B0B0E; border-radius: 100px; padding: 15px 26px; font-size: 16px; font-weight: 700;">Next — did it work?</span>
-                      <span style="font-size: 13px; color: #7A7A70;">Not now — <span style="color: #C21A6B; font-weight: 600;">leave it in the queue</span>.</span>
+                      <span style="font-size: 13px; color: #6E6E64;">Not now — <span style="color: #C21A6B; font-weight: 600;">leave it in the queue</span>.</span>
                     </div>
                   </sc-if>
 
@@ -141,10 +141,10 @@
                           <div style="flex: {{ c.flex }}; background: {{ c.bg }}; border: 1px solid {{ c.border }}; border-radius: 12px; padding: 16px 5px; text-align: center; white-space: pre-line; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.03em; line-height: 1.3; font-weight: {{ c.weight }};">{{ c.word }}</div>
                         </sc-for>
                       </div>
-                      <span style="font-size: 13px; color: #7A7A70;">Your history in this band: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">[38–46°] · 2 cold · 7 dialed · 1 warm</span></span>
+                      <span style="font-size: 13px; color: #6E6E64;">Your history in this band: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">[38–46°] · 2 cold · 7 dialed · 1 warm</span></span>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 10px;">
-                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">ANYTHING SPECIFIC? · OPTIONAL</span>
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">ANYTHING SPECIFIC? · OPTIONAL</span>
                       <div data-part="flag-chips" style="display: flex; flex-wrap: wrap; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em;">
                         <span style="background: #0B0B0E; color: #F4F3EF; padding: 8px 12px; border-radius: 100px;">GLOVES TOO MUCH ✕</span>
                         <span style="border: 1px solid #DCDBD2; padding: 8px 12px; border-radius: 100px; color: #4E4E44;">SLEEVES DAMP</span>
@@ -155,7 +155,7 @@
                       </div>
                     </div>
                     <div data-part="share-toggle" style="display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-top: 1px solid #DCDBD2; border-bottom: 1px solid #DCDBD2;">
-                      <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 15px; font-weight: 600;">Share to feed</span><span style="font-size: 12px; color: #7A7A70;">Shared runs show your kit, conditions, and your verdict.</span></div>
+                      <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 15px; font-weight: 600;">Share to feed</span><span style="font-size: 12px; color: #6E6E64;">Shared runs show your kit, conditions, and your verdict.</span></div>
                       <div style="width: 48px; height: 28px; border-radius: 100px; background: #FF2D8A; display: flex; justify-content: flex-end; padding: 3px;"><div style="width: 22px; height: 22px; border-radius: 100px; background: #F4F3EF;"></div></div>
                     </div>
                     <span data-part="submit" style="align-self: flex-start; background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 15px 30px; font-size: 16px; font-weight: 700;">Log it</span>
@@ -174,23 +174,23 @@
                       </div>
                     </div>
                     <div data-part="band-record" style="background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px;">
-                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">YOU IN 38–46° DAMP</span>
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">YOU IN 38–46° DAMP</span>
                       <span style="font-size: 15px; line-height: 1.5;">Ten runs here before this one. Dialed in seven, and every time you wore the half-zip.</span>
                     </div>
                   </sc-if>
 
                   <sc-if value="{{ f.notA1 }}" hint-placeholder-val="{{ false }}">
                     <div data-part="this-run" style="background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px;">
-                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">THIS RUN · SAT AUG 29 · 6:04 AM</span>
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">THIS RUN · SAT AUG 29 · 6:04 AM</span>
                       <span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em;">6.2 MI · 51:38</span>
                       <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; color: #00776A;">41°F DAMP · FEELS 36° · SE 9MPH</span>
-                      <a href="https://www.visualcrossing.com/" style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #7A7A70; text-decoration: underline; text-underline-offset: 2px; align-self: flex-start;">WEATHER · VISUAL CROSSING</a>
+                      <a href="https://www.visualcrossing.com/" style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: #6E6E64; text-decoration: underline; text-underline-offset: 2px; align-self: flex-start;">WEATHER · VISUAL CROSSING</a>
                     </div>
                   </sc-if>
 
                   <sc-if value="{{ f.isA3 }}" hint-placeholder-val="{{ false }}">
                     <div data-part="kit-record" style="background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
-                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">THE KIT YOU'RE JUDGING</span>
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">THE KIT YOU'RE JUDGING</span>
                       <sc-for list="{{ kit }}" as="p" hint-placeholder-count="3">
                         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 14px;"><span style="font-weight: 600;">{{ p.name }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #4E4E44;">{{ p.rec }}</span></div>
                       </sc-for>
@@ -199,10 +199,10 @@
 
                   <sc-if value="{{ f.notA1 }}" hint-placeholder-val="{{ false }}">
                     <div data-part="band-history" style="background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
-                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #7A7A70;">{{ f.histHead }}</span>
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">{{ f.histHead }}</span>
                       <sc-for list="{{ history }}" as="h" hint-placeholder-count="3">
                         <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid #EDECE3;">
-                          <div style="display: flex; align-items: center; gap: 10px;"><span style="font-size: 14px; font-weight: 600;">{{ h.day }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #7A7A70;">{{ h.cond }}</span><span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; padding: 4px 8px; background: {{ h.bg }}; color: {{ h.fg }};">{{ h.word }}</span></div>
+                          <div style="display: flex; align-items: center; gap: 10px;"><span style="font-size: 14px; font-weight: 600;">{{ h.day }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6E6E64;">{{ h.cond }}</span><span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; padding: 4px 8px; background: {{ h.bg }}; color: {{ h.fg }};">{{ h.word }}</span></div>
                           <div style="display: flex; flex-wrap: wrap; gap: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em;">
                             <sc-for list="{{ h.pieces }}" as="p" hint-placeholder-count="3"><span style="border: 1px solid #0B0B0E; padding: 4px 8px; border-radius: 100px;">{{ p }}</span></sc-for>
                           </div>
@@ -253,7 +253,7 @@
           <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">THE REMINDER · PUSH AND S1 ROW</span>
           <div style="background: #F4F3EF; color: #0B0B0E; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
             <div style="background: #FFFFFF; border: 1px solid #DCDBD2; border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 3px;">
-              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #7A7A70;">DIALED.RUN · NOW</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;">DIALED.RUN · NOW</span>
               <span style="font-size: 15px; font-weight: 700;">New run on Strava</span>
               <span style="font-size: 14px; line-height: 1.4;">Add it here: upload the file, then what you wore.</span>
             </div>

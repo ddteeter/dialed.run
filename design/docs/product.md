@@ -502,7 +502,7 @@ Drawn in `Round 31 Rulings.dc.html`.
 
 ## Round 32 · Anonymous totals
 Drawn in `Round 32 Rulings.dc.html`. **The middle path, with five conditions. If A or B can't be met at launch, ship shared-only.**
-- **Scope.** Published totals (guides, reports, any "runners wore…") count shared and private entries. In-app social proof stays shared-only. Closet pieces count only when worn on a counted run. Manual-temperature runs are excluded.
+- **Scope.** Published totals (guides, reports, any "runners wore…") count shared and private entries. In-app social proof stays shared-only. Closet pieces count only when worn on a counted run. Runs whose conditions the runner set in R2b (SET BY YOU) are excluded. Round 34: the old wording "manual-temperature" referred to the form removed in round 22.
 - **A · Fields.** Band, sky, month, garment type and model, verdict, and region if set. Never notes, photos, route, start time or place, handle, or free text. The aggregate job has no read access to anything else.
 - **B · Thresholds per figure.** Every displayed number needs 5 or more distinct runners (20 for a brand), including rows, sky sections, split sentences and region slices. Below that, the cell is left out.
 - **C · Who counts.** Confirmed-email accounts only. Excluded: removed or quarantined entries, banned accounts, accounts pending deletion.
@@ -525,3 +525,23 @@ Drawn in `Round 32 Rulings.dc.html`. **The middle path, with five conditions. If
 - API `visibility` already returns a word. `"groups"` will be added under /v1 (additive).
 - Export: entries.csv `visibility` column → `audience`.
 - Day 2 design lives in `Day 2 Groups.dc.html`.
+
+## Round 33 · Contrast and lint fixes
+- **--muted on paper is now #6E6E64**, the same as --label (4.6:1). The old #7A7A70 was 3.9:1 and failed AA for MONO captions, which is the job round 31 gave it. Dark was already the same as --label (#8B8B93). All boards are updated. The token name stays, so caption code keeps reading --muted.
+- **no-raw-spacing lint** now checks the whole value. It used to stop at the first `0` or `v`, so it missed `padding: 0 20px`, `var(--space-4) 20px`, negative values, longhands, camelCase JSX and unitless numbers. It also flagged `border-top: 1px` by mistake. The test cases are in tokens.js LINT_FIXTURES.
+- **--placeholder is now the same as --label**: #6E6E64 on paper and #8B8B93 on dark. The old #9A9A90 (about 2.8:1) and #6E6E74 (3.7:1) failed AA. Axe doesn't check placeholders, so it didn't flag them. On the boards the token had also spread to tab labels, field captions, metadata and footers, so every use is replaced. An entered value is still told apart from a placeholder because the value is --ink. Disabled labels take the same grey. They're exempt, but nothing in V1 needs a lighter grey.
+
+## Round 34 · M4 copy review (dialed.run-site, Phase 1)
+- **a · Weather.** Both are true. Weather is fetched. R2b lets a runner set conditions only when the archive has no record for that hour. Brand principle 02 stands, because those runs never reach the totals. So the marketing copy is qualified and C is reworded:
+  - M1 step 01: "From Strava or a file. Weather comes with it, fetched for when and where you ran."
+  - FAQ "Where does the weather come from?": "Visual Crossing, for the time and place your run started. If there's no record for that hour, you set it yourself, and that run stays out of the guides."
+  - In-app A1 "Never typed by hand." is unchanged. It sits on a fetched block, so it's true there.
+- **1 · The loop** (TYPE.lead): "Log the run from Strava or a file, and the weather comes with it, fetched for when and where you ran. Then say how it went, from way cold to way warm, and which piece was off if one was. That takes ten seconds, and every run you log adds to your record."
+- **2 · The call** (TYPE.lead): confirmed as written.
+- **3 · #totals** (TYPE.body, bold lead-ins). Written in second person, like the rest of M4:
+  - **What's counted.** "Each run adds its feels-like temperature, sky and month, the type, brand and model of each piece you wore, and your verdict. Your region counts too, if you've set one in Settings. Never your name, handle, notes or photos, and never where the run started or the time of day."
+  - **When a figure shows.** "Every number we publish needs at least 5 different runners behind it, or 20 if it's about a brand. That goes for every row, section and sentence. Below that, the figure is left out. It's never shown as 'fewer than 5'."
+  - **Who counts.** "Confirmed accounts only. If you've turned off Count my runs in anonymous totals, your runs are left out. So are removed entries, banned accounts, accounts being deleted, and runs where you set the conditions yourself."
+- **b · Region.** Keep it. It's disclosure, not a feature claim. A says the job reads region, so the page must say so even before region slices ship.
+- **c · Shared-only fallback.** Not needed. Before public launch Phase 1 is Home and Invite only (round 33), so M4, the FAQ and #totals publish with the app, after A and B are confirmed. If launch goes shared-only, M4 waits for a copy pass then. No alternate copy is kept in the repo.
+- **d · Models.** The public copy says "brand and model". "Catalogue" stays an internal word.
