@@ -14,7 +14,6 @@ import { newUlid } from "../../src/lib/ids";
 import { selectOwnedRow } from "../../src/lib/sql/owned";
 import type { ImportJob } from "../../src/modules/runs/queue-messages";
 import { nowSeconds } from "../../src/lib/now";
-import { entryAudienceColumns } from "../feed/helpers";
 
 /**
 The stored row, read the way the module reads it — owner-scoped.
@@ -149,7 +148,7 @@ async function landed(
       id: newUlid(),
       userId,
       runId,
-      ...entryAudienceColumns("runners"),
+      audience: "runners",
       createdAt: nowSeconds(),
     });
   }

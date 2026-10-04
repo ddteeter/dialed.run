@@ -12,7 +12,6 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { withLocalDb } from "../support/local-db";
 import { userIdOf } from "./logging-fixtures";
-import { entryAudienceColumns } from "../support/audience";
 
 /**
 The closet demo account's user id — every closet conformance spec uses it.
@@ -134,7 +133,7 @@ export async function seedRoundTwentyTwoGarment(
         userId,
         runId,
         verdict: index < 9 ? 0 : -1,
-        ...entryAudienceColumns("private"),
+        audience: "private",
         createdAt: createdAt - index * 86_400,
       });
       const kit = [itemId];

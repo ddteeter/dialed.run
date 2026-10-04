@@ -37,19 +37,11 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     thermalLevel: integer("thermal_level"),
     tempUnit: text("temp_unit", { enum: ["f", "c"] }),
     distanceUnit: text("distance_unit", { enum: ["mi", "km"] }),
-    // LEGACY (design 131, PR B): written in step with `defaultAudience`
-    // until C1, dropped in C2, read by nothing. The property is named so
-    // that a read of it stands out; the column name is unchanged, so the
-    // rename needed no migration. `test/architecture/audience-only.test.ts`
-    // pins where it may appear.
-    legacyShareDefault: integer("share_default", { mode: "boolean" })
-      .notNull()
-      .default(true),
     // Who the runner's new entries are for unless they say otherwise
-    // (D-109, design 131). Replaces `share_default`, which writers keep in
-    // step until C1. Defaults to `runners` because several profile inserts
-    // rely on the column default on purpose, as `share_default`'s
-    // `DEFAULT true` did. Writers only ever store `writableAudienceSchema`.
+    // (D-109, design 131). It replaced a boolean, dropped in design 131's
+    // C2. Defaults to `runners` because several profile inserts rely on the
+    // column default on purpose ("shared by default"). Writers only ever
+    // store `writableAudienceSchema`.
     defaultAudience: text("default_audience", { enum: audiences })
       .notNull()
       .default("runners"),
@@ -671,14 +663,8 @@ export const outfitEntries = /*#__PURE__*/ sqliteTable(
     runId: text("run_id").notNull(),
     userId: text("user_id").notNull(),
     verdict: integer("verdict"),
-    // LEGACY (design 131, PR B), as `userProfiles.legacyShareDefault`:
-    // written in step with `audience` until C1, dropped in C2 with the two
-    // indexes below that lead on it, read by nothing.
-    legacyIsPublic: integer("is_public", { mode: "boolean" })
-      .notNull()
-      .default(true),
-    // Who may see the entry (D-109, design 131). Replaces `is_public`,
-    // which writers keep in step until C1. **Fails closed**: the default is
+    // Who may see the entry (D-109, design 131). It replaced a boolean,
+    // dropped in design 131's C2. **Fails closed**: the default is
     // `private`, not `runners`, so a writer that forgot the column hides
     // the entry rather than publishing it. Every app writer sets it.
     audience: text("audience", { enum: audiences })
@@ -704,34 +690,21 @@ export const outfitEntries = /*#__PURE__*/ sqliteTable(
   (t) => [
     uniqueIndex("entries_run").on(t.runId),
     index("entries_user_created").on(t.userId, t.createdAt),
-    // moderationStatus joins the covering index because every public read
-    // now filters on it too. Left out, the feed query filters in memory
-    // after LIMIT — which CLAUDE.md's D1 discipline calls out by name as
+    // Shared entries, newest first: "Your conditions" (`feed/consensus.ts`).
+    // moderationStatus is in the covering index because every public read
+    // filters on it too. Left out, the feed query filters in memory after
+    // LIMIT — which CLAUDE.md's D1 discipline calls out by name as
     // returning "the survivors of the first 200 rows".
-    index("entries_public_created").on(
-      t.legacyIsPublic,
-      t.moderationStatus,
-      t.createdAt,
-    ),
-    // One runner's public entries, newest first: the Following feed's
-    // per-author seek (FEED-5 review, `feed/feed.ts`). Driving the page
-    // from the viewer's followees, each read to at most a page, is what
-    // makes the rows it scans scale with who they follow rather than with
-    // every runner on the site.
-    index("entries_user_public_created").on(
-      t.userId,
-      t.legacyIsPublic,
-      t.moderationStatus,
-      t.createdAt,
-    ),
-    // The two above with `audience` in `is_public`'s place, for the read
-    // flip (design 131, PR B). The old pair stays until C2, because code a
-    // rollback could restore still seeks it.
     index("entries_audience_created").on(
       t.audience,
       t.moderationStatus,
       t.createdAt,
     ),
+    // One runner's shared entries, newest first: the Following feed's
+    // per-author seek (FEED-5 review, `feed/feed.ts`) and H's entries.
+    // Driving the page from the viewer's followees, each read to at most a
+    // page, is what makes the rows it scans scale with who they follow
+    // rather than with every runner on the site.
     index("entries_user_audience_created").on(
       t.userId,
       t.audience,

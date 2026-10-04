@@ -47,7 +47,6 @@ import {
 } from "../../src/modules/account/purge";
 import type { PurgeDeps } from "../../src/modules/account/purge";
 import { drainOutbox } from "../../src/modules/ops/outbox";
-import { entryAudienceColumns } from "../feed/helpers";
 
 /**
  * ACC-9: the purge at the end of a deletion's week. Every assertion is
@@ -178,7 +177,7 @@ async function seedAccount(): Promise<Seeded> {
       runId: runIds[0] ?? "",
       userId,
       verdict: 0,
-      ...entryAudienceColumns("runners"),
+      audience: "runners",
       createdAt: NOW,
     }),
     core.insert(wardrobeItems).values([
