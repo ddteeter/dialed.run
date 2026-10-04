@@ -16,11 +16,15 @@ import { ImportUploadError, MAX_IMPORT_BYTES } from "./upload-limits";
 import { filePartFrom } from "../../lib/file-part";
 import type { FilePartProblem } from "../../lib/file-part";
 
-export const manualRunInput = runDraftSchema.extend({
-  // Minted once when the form mounts, resent on every retry of that same
-  // composed submission.
-  idempotencyKey: ulidSchema.optional(),
-});
+// A manual run has no file to read moving time or a climb from (D-111), so
+// the form may not send either: what the runner types is distance and time.
+export const manualRunInput = runDraftSchema
+  .omit({ movingS: true, elevationGainM: true })
+  .extend({
+    // Minted once when the form mounts, resent on every retry of that same
+    // composed submission.
+    idempotencyKey: ulidSchema.optional(),
+  });
 
 export const importIdInput = z.object({ importId: z.string().min(1) });
 

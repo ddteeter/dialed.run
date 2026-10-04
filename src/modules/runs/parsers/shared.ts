@@ -6,6 +6,7 @@
  */
 import { XMLParser } from "fast-xml-parser";
 
+import type { RunDraft } from "../../../lib/contracts";
 import { NO_TRACK_MESSAGE, PARSE_FAILURE_MESSAGE } from "../upload-limits";
 
 /**
@@ -154,4 +155,90 @@ export function haversineMeters(
     sinLat * sinLat +
     Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * sinLon * sinLon;
   return 2 * earthRadiusM * Math.asin(Math.sqrt(a));
+}
+
+/**
+ * One child of an XML element, or undefined when the value is not an
+ * element at all. The guard lives here once, so a parser reading a field
+ * off a node it has not narrowed does not repeat it at every read.
+ */
+export function child(value: unknown, key: string): unknown {
+  return isRecord(value) ? value[key] : undefined;
+}
+
+/**
+ * A value as a list of zero or one, for `flatMap`: a reading the file did
+ * not carry adds nothing rather than an `undefined`.
+ */
+export function present<T>(value: T | undefined): T[] {
+  return value === undefined ? [] : [value];
+}
+
+/**
+ * How far the altitude must turn before the turn counts (D-111, design
+ * 132). GPS altitude wanders by a few metres from one point to the next,
+ * and a sum of every rise would read that wander as a climb — a flat loop
+ * can come out at a hundred metres. Five sits above the wander and below
+ * any hill a runner would call one; a barometric file loses under five
+ * metres a climb to it.
+ */
+export const ELEVATION_HYSTERESIS_M = 5;
+
+/**
+ * Metres climbed over a run of altitudes, in order, with hysteresis: the
+ * reference follows the altitude freely in the direction it is already
+ * going, and a turn only counts once it exceeds `ELEVATION_HYSTERESIS_M`.
+ * A climb that has started is counted in full, every metre of it. The
+ * first rise has to clear the threshold like any other turn.
+ *
+ * Undefined with fewer than two altitudes: a file that carries none has
+ * not said the run was flat.
+ */
+export function elevationGainMeters(
+  altitudes: readonly number[],
+): number | undefined {
+  let gain = 0;
+  let isClimbing = false;
+  let reference: number | undefined;
+  for (const altitude of altitudes) {
+    if (reference === undefined) {
+      reference = altitude;
+    } else if (isClimbing) {
+      const peak = Math.max(reference, altitude);
+      gain += peak - reference;
+      reference = peak;
+      if (peak - altitude > ELEVATION_HYSTERESIS_M) {
+        isClimbing = false;
+        reference = altitude;
+      }
+    } else {
+      reference = Math.min(reference, altitude);
+      if (altitude - reference > ELEVATION_HYSTERESIS_M) {
+        isClimbing = true;
+        gain += altitude - reference;
+        reference = altitude;
+      }
+    }
+  }
+  return altitudes.length < 2 ? undefined : gain;
+}
+
+/**
+ * The two readings D-111 adds, as a draft carries them. An indoor run
+ * carries neither — a treadmill's moving time and climb are not the
+ * runner's (D-111) — and a moving time that rounds to nothing is left out
+ * rather than stored as a zero nobody measured.
+ */
+export function fileMetrics(
+  isIndoor: boolean,
+  movingSeconds: number | undefined,
+  elevationGainM: number | undefined,
+): Pick<RunDraft, "movingS" | "elevationGainM"> {
+  if (isIndoor) return {};
+  const movingS = Math.round(movingSeconds ?? 0);
+  return { movingS: movingS > 0 ? movingS : undefined, elevationGainM };
+}
+
+export function sum(values: readonly number[]): number {
+  return values.reduce((total, value) => total + value, 0);
 }

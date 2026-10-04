@@ -13,10 +13,14 @@ import type { RunDraft, RunSource } from "../../../lib/contracts";
 import {
   RunParseError,
   parseXmlDocument,
+  elevationGainMeters,
+  fileMetrics,
   haversineMeters,
   isRecord,
+  present,
   readDate,
   readNumber,
+  sum,
   toArray,
 } from "./shared";
 
@@ -24,7 +28,24 @@ interface TrackPoint {
   lat: number;
   lon: number;
   time: Date;
+  ele: number | undefined;
 }
+
+/**
+ * A gap between two points shorter than this is recording, never a pause
+ * (D-111, design 132). A watch records every second or, with "smart
+ * recording", every few; ten seconds is above both.
+ */
+export const PAUSE_GAP_S = 10;
+
+/**
+ * A longer gap is a pause when the runner covered it slower than this.
+ * Auto-pause stops recording, so a pause shows up as a long gap that ends
+ * about where it began; a long gap the runner ran through (a sparse file,
+ * a tunnel) is moving. 0.5 m/s is about 33 min/km — slower than any walk,
+ * faster than GPS drift while stood still.
+ */
+export const STOPPED_SPEED_MPS = 0.5;
 
 function parseTrackPoint(node: unknown): TrackPoint | undefined {
   // Equivalent mutant on this guard alone: a non-record node has no
@@ -38,7 +59,7 @@ function parseTrackPoint(node: unknown): TrackPoint | undefined {
   if (lat === undefined || lon === undefined || time === undefined) {
     return undefined;
   }
-  return { lat, lon, time };
+  return { lat, lon, time, ele: readNumber(node.ele) };
 }
 
 function pointsInSegment(seg: unknown): TrackPoint[] {
@@ -53,17 +74,49 @@ function pointsInSegment(seg: unknown): TrackPoint[] {
   return points;
 }
 
-function pointsInTrack(trk: unknown): TrackPoint[] {
+/**
+Each `<trkseg>` kept apart: a segment break is where the receiver was off
+or lost its fix (GPX 1.1), so the time across one is not moving time.
+*/
+function segmentsInTrack(trk: unknown): TrackPoint[][] {
   // Same shape again: a non-record track has no `trkseg` to read.
   // Stryker disable next-line ArrayDeclaration,ConditionalExpression
   if (!isRecord(trk)) return [];
-  return toArray(trk.trkseg).flatMap((seg: unknown) => pointsInSegment(seg));
+  return toArray(trk.trkseg).map((seg: unknown) => pointsInSegment(seg));
 }
 
-function extractTrackPoints(doc: unknown): TrackPoint[] {
+function extractSegments(doc: unknown): TrackPoint[][] {
   // Stryker disable next-line ArrayDeclaration
   if (!isRecord(doc) || !isRecord(doc.gpx)) return [];
-  return toArray(doc.gpx.trk).flatMap((trk: unknown) => pointsInTrack(trk));
+  return toArray(doc.gpx.trk).flatMap((trk: unknown) => segmentsInTrack(trk));
+}
+
+function metresBetween(a: TrackPoint, b: TrackPoint): number {
+  return haversineMeters(a.lat, a.lon, b.lat, b.lon);
+}
+
+/**
+ * Whether the time between two points was a pause. The distance is read in
+ * whole metres, which is as fine as GPS can tell one apart from another.
+ */
+function isPause(gapS: number, metres: number): boolean {
+  return gapS > PAUSE_GAP_S && Math.round(metres) < STOPPED_SPEED_MPS * gapS;
+}
+
+/**
+The time between consecutive points in one segment, pauses left out.
+*/
+function movingSecondsIn(segment: readonly TrackPoint[]): number {
+  let seconds = 0;
+  let previous: TrackPoint | undefined;
+  for (const point of segment) {
+    if (previous !== undefined) {
+      const gapS = (point.time.getTime() - previous.time.getTime()) / 1000;
+      if (!isPause(gapS, metresBetween(previous, point))) seconds += gapS;
+    }
+    previous = point;
+  }
+  return seconds;
 }
 
 function totalDistanceMeters(points: readonly TrackPoint[]): number {
@@ -99,7 +152,8 @@ export const gpxSource: RunSource = {
     await Promise.resolve();
     const doc = parseXmlDocument(bytes, "gpx");
 
-    const points = extractTrackPoints(doc);
+    const segments = extractSegments(doc);
+    const points = segments.flat();
     if (points.length < 2)
       throw new RunParseError("gpx: fewer than 2 track points with time", {
         problem: "no-track",
@@ -127,6 +181,10 @@ export const gpxSource: RunSource = {
         problem: "no-track",
       });
 
+    const movingS = sum(segments.map((segment) => movingSecondsIn(segment)));
+    const altitudes = points.flatMap((point) => present(point.ele));
+    const elevationGainM = elevationGainMeters(altitudes);
+
     const parsed = runDraftSchema.safeParse({
       startedAt: Math.floor(first.time.getTime() / 1000),
       durationS,
@@ -135,6 +193,7 @@ export const gpxSource: RunSource = {
       lng: first.lon,
       indoor: false,
       title: "Imported run",
+      ...fileMetrics(false, movingS, elevationGainM),
     });
     if (!parsed.success)
       throw new RunParseError("gpx: assembled draft failed runDraftSchema", {

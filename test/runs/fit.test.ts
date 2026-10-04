@@ -272,3 +272,48 @@ describe("fit: the contract has the last word", () => {
     expect(failure.cause).toBeDefined();
   });
 });
+
+describe("fit: moving time and the climb (D-111)", () => {
+  const OUTDOORS = { startPositionLat: 2 ** 29, startPositionLong: 0 };
+
+  it("reads the watch's own moving time, and keeps elapsed as the duration", async () => {
+    const draft = await fitSource.parse(
+      fitFile({
+        ...OUTDOORS,
+        totalElapsedTime: 2000,
+        totalTimerTime: 1900,
+        totalMovingTime: 1750.6,
+        totalAscent: 87,
+      }),
+    );
+
+    expect(draft.durationS).toBe(2000);
+    expect(draft.movingS).toBe(1751);
+    expect(draft.elevationGainM).toBe(87);
+  });
+
+  it("falls back to timer time when the watch writes no moving time", async () => {
+    // Timer time stops when the runner pauses the watch, which is the
+    // nearest thing to moving time a file without one carries.
+    const draft = await fitSource.parse(
+      fitFile({ ...OUTDOORS, totalElapsedTime: 2000, totalTimerTime: 1900 }),
+    );
+
+    expect(draft.durationS).toBe(2000);
+    expect(draft.movingS).toBe(1900);
+    // No ascent written: the climb is unknown, not zero.
+    expect(draft.elevationGainM).toBeUndefined();
+  });
+
+  it("carries neither for an indoor run", async () => {
+    // A treadmill file still writes timer time and sometimes an ascent
+    // (from the incline); D-111 leaves both null for it.
+    const draft = await fitSource.parse(
+      fitFile({ totalMovingTime: 1750, totalAscent: 30 }),
+    );
+
+    expect(draft.indoor).toBe(true);
+    expect(draft).not.toHaveProperty("movingS");
+    expect(draft).not.toHaveProperty("elevationGainM");
+  });
+});

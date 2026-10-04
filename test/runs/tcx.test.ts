@@ -7,6 +7,9 @@ import {
   PARSE_FAILURE_MESSAGE,
   RunParseError,
 } from "../../src/modules/runs/parsers/shared";
+import multiLapTcx from "./fixtures/multi-lap.tcx?raw";
+import pausedClimbTcx from "./fixtures/paused-climb.tcx?raw";
+import treadmillTcx from "./fixtures/treadmill.tcx?raw";
 
 /**
  * Every way a TCX file can be wrong, and the one way it is different from
@@ -399,5 +402,105 @@ describe("tcx: every way it refuses", () => {
 <TrainingCenterDatabase/>`;
     const shared = await failureFrom(rejected);
     expect(shared.reason.startsWith("tcx:")).toBe(true);
+  });
+});
+
+/**
+A trackpoint at `time` with a position, and an altitude if given.
+*/
+function timedPoint(time: string, altitude?: number): string {
+  const altitudeMeters =
+    altitude === undefined
+      ? ""
+      : `<AltitudeMeters>${String(altitude)}</AltitudeMeters>`;
+  return `<Trackpoint><Time>${time}</Time><Position><LatitudeDegrees>44.98</LatitudeDegrees><LongitudeDegrees>-93.27</LongitudeDegrees></Position>${altitudeMeters}</Trackpoint>`;
+}
+
+/**
+One outdoor 1800 s lap whose track is the given trackpoints.
+*/
+function parseLapWith(...points: string[]): Promise<RunDraft> {
+  const track = `<Track>${points.join("")}</Track>`;
+  return parse(tcxWith(lap({ ...OUTDOOR_LAP, track })));
+}
+
+describe("tcx: elapsed duration, moving time and the climb (D-111)", () => {
+  it("runs the duration through a pause, and sums the laps for moving time", async () => {
+    // Two 600 s laps with the watch paused three minutes between them.
+    const draft = await parse(pausedClimbTcx);
+
+    expect(draft.durationS).toBe(1380);
+    expect(draft.movingS).toBe(1200);
+    expect(draft.distanceM).toBe(3800);
+  });
+
+  it("reads the climb off the altitudes, past the wander", async () => {
+    const draft = await parse(pausedClimbTcx);
+    expect(draft.elevationGainM).toBeCloseTo(32.1, 6);
+  });
+
+  it("reads a Garmin auto-lap export's wander as no climb", async () => {
+    // Six laps whose altitudes stay within four metres of each other.
+    const draft = await parse(multiLapTcx);
+
+    expect(draft.movingS).toBe(2509);
+    expect(draft.durationS).toBe(2509);
+    expect(draft.elevationGainM).toBe(0);
+  });
+
+  it("measures elapsed from the first lap's start to the last trackpoint", async () => {
+    const end = timedPoint("2026-01-15T07:40:00.4Z");
+    const draft = await parseLapWith(timedPoint(START), end);
+
+    expect(draft.durationS).toBe(2400);
+    expect(draft.movingS).toBe(1800);
+  });
+
+  it("never makes the duration shorter than the laps' timer time", async () => {
+    // Points that stop before the timer did (the watch lost its fix at the
+    // end) do not shorten the run below what the laps say.
+    const early = timedPoint("2026-01-15T07:20:00Z");
+    const draft = await parseLapWith(timedPoint(START), early);
+
+    expect(draft.durationS).toBe(1800);
+  });
+
+  it("skips a trackpoint time it cannot read", async () => {
+    const unreadable = timedPoint("not a time");
+    const draft = await parseLapWith(timedPoint(START), unreadable);
+    expect(draft.durationS).toBe(1800);
+  });
+
+  it("says nothing of a climb in a file without altitudes", async () => {
+    const draft = await parse(tcxWith(lap(OUTDOOR_LAP)));
+
+    expect(draft.movingS).toBe(1800);
+    expect(draft.elevationGainM).toBeUndefined();
+  });
+
+  it("reads the altitudes in order across laps and tracks", async () => {
+    const first = lap({
+      ...OUTDOOR_LAP,
+      track:
+        `<Track>${timedPoint(START, 100)}</Track><Track/>` +
+        `<Track>${timedPoint(START)}${timedPoint(START, 104)}</Track>`,
+    });
+    const second = lap({
+      seconds: 60,
+      metres: 200,
+      track: `<Track>${timedPoint(START, 108)}</Track>`,
+    });
+    const draft = await parse(tcxWith(first + second));
+
+    expect(draft.elevationGainM).toBe(8);
+  });
+
+  it("carries neither for a treadmill run", async () => {
+    const draft = await parse(treadmillTcx);
+
+    expect(draft.indoor).toBe(true);
+    expect(draft.durationS).toBe(1800);
+    expect(draft).not.toHaveProperty("movingS");
+    expect(draft).not.toHaveProperty("elevationGainM");
   });
 });

@@ -9,7 +9,7 @@ import { Decoder, Stream, Utils } from "@garmin/fitsdk";
 
 import { runDraftSchema } from "../../../lib/contracts";
 import type { RunDraft, RunSource } from "../../../lib/contracts";
-import { RunParseError } from "./shared";
+import { RunParseError, fileMetrics } from "./shared";
 
 // FIT positions are stored as semicircles (int32 covering ±180°).
 const SEMICIRCLE_TO_DEGREES = 180 / 2 ** 31;
@@ -83,13 +83,23 @@ export const fitSource: RunSource = {
           }
         : undefined;
 
+    const isIndoor = startPosition === undefined;
     const parsed = runDraftSchema.safeParse({
       startedAt: Math.floor(toDate(session.startTime).getTime() / 1000),
+      // Elapsed: it keeps running through a pause (D-111).
       durationS: Math.round(session.totalElapsedTime),
       distanceM: session.totalDistance,
-      indoor: startPosition === undefined,
+      indoor: isIndoor,
       title: "Imported run",
       ...startPosition,
+      // The watch's own moving time where it writes one; otherwise its
+      // timer time, which stops when the runner pauses it. The climb is the
+      // watch's own total, barometric on most that write it.
+      ...fileMetrics(
+        isIndoor,
+        session.totalMovingTime ?? session.totalTimerTime,
+        session.totalAscent,
+      ),
     });
     if (!parsed.success) {
       throw new RunParseError("fit: assembled draft failed runDraftSchema", {

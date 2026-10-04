@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import type { RunDraft } from "../../src/lib/contracts";
-import { gpxSource } from "../../src/modules/runs/parsers/gpx";
 import {
+  PAUSE_GAP_S,
+  STOPPED_SPEED_MPS,
+  gpxSource,
+} from "../../src/modules/runs/parsers/gpx";
+import {
+  ELEVATION_HYSTERESIS_M,
   NO_TRACK_MESSAGE,
   PARSE_FAILURE_MESSAGE,
   RunParseError,
 } from "../../src/modules/runs/parsers/shared";
+import pausedClimbGpx from "./fixtures/paused-climb.gpx?raw";
 
 /**
  * Every way a GPX file can be wrong.
@@ -255,5 +261,127 @@ describe("gpx: every way it refuses", () => {
     const textSegment = await reasonFor(gpxWith("<trkseg>plain text</trkseg>"));
     expect(textTrack).toContain("fewer than 2 track points");
     expect(textSegment).toContain("fewer than 2 track points");
+  });
+});
+
+// Metres per degree of latitude, as the haversine reads a step due north.
+const METRES_PER_DEGREE = (6_371_000 * Math.PI) / 180;
+const BASE_MS = Date.parse(START);
+
+/**
+A point `metres` north of the start, `seconds` into the run.
+*/
+function at(metres: number, seconds: number, ele?: number): string {
+  const lat = 44.98 + metres / METRES_PER_DEGREE;
+  const time = new Date(BASE_MS + seconds * 1000).toISOString();
+  const elevation = ele === undefined ? "" : `<ele>${String(ele)}</ele>`;
+  return `<trkpt lat="${String(lat)}" lon="-93.27">${elevation}<time>${time}</time></trkpt>`;
+}
+
+/**
+Parses a track of the given segments, each a list of points.
+*/
+function parseSegments(...segments: string[][]): Promise<RunDraft> {
+  const body = segments
+    .map((points) => `<trkseg>${points.join("")}</trkseg>`)
+    .join("");
+  return parse(gpxWith(body));
+}
+
+/**
+One segment, a point every 5 s and 15 m apart, at each of these altitudes.
+*/
+function parseAltitudes(altitudes: readonly number[]): Promise<RunDraft> {
+  return parseSegments(
+    altitudes.map((ele, index) => at(index * 15, index * 5, ele)),
+  );
+}
+
+describe("gpx: moving time, pauses left out (D-111)", () => {
+  it("leaves out a stand-still and a segment break, and counts a gap run through", async () => {
+    const draft = await parse(pausedClimbGpx);
+
+    expect(draft.durationS).toBe(340);
+    expect(draft.movingS).toBe(70);
+  });
+
+  it("counts a gap of exactly the pause threshold as recording, however still", async () => {
+    // Ten seconds stood still, then five moving: a watch recording every
+    // ten seconds is not paused between its points.
+    expect(PAUSE_GAP_S).toBe(10);
+    const draft = await parseSegments([at(0, 0), at(0, 10), at(15, 15)]);
+    expect(draft.movingS).toBe(15);
+  });
+
+  it("leaves out a still gap one second longer", async () => {
+    const draft = await parseSegments([at(0, 0), at(0, 11), at(15, 16)]);
+    expect(draft.movingS).toBe(5);
+  });
+
+  it("counts a long gap covered at the stopped speed, and leaves out a slower one", async () => {
+    // 40 s at 0.5 m/s is 20 m. Covering exactly that is moving; a metre
+    // less is stood still. Distance is read in whole metres.
+    expect(STOPPED_SPEED_MPS).toBe(0.5);
+    const atSpeed = await parseSegments([at(0, 0), at(20, 40), at(35, 45)]);
+    const slower = await parseSegments([at(0, 0), at(19.4, 40), at(34.4, 45)]);
+
+    expect(atSpeed.movingS).toBe(45);
+    expect(slower.movingS).toBe(5);
+  });
+
+  it("leaves out the time across a segment break, however short", async () => {
+    const draft = await parseSegments(
+      [at(0, 0), at(15, 5)],
+      [at(24, 8), at(39, 13)],
+    );
+
+    expect(draft.durationS).toBe(13);
+    expect(draft.movingS).toBe(10);
+  });
+
+  it("stores no moving time when every gap was a pause", async () => {
+    // A sparse file walked slowly reads as all pause. Nothing measured is
+    // not zero: the read API falls back to the duration.
+    const draft = await parseSegments([at(0, 0), at(60, 300)]);
+
+    expect(draft.durationS).toBe(300);
+    expect(draft.movingS).toBeUndefined();
+  });
+});
+
+describe("gpx: the climb (D-111)", () => {
+  it("reads a jittery flat track as no climb", async () => {
+    // GPS altitude on a flat loop: every rise is under the threshold.
+    expect(ELEVATION_HYSTERESIS_M).toBe(5);
+    const jitter = [100, 103, 98.5, 102, 99, 103.4, 98.6, 101, 100.2, 103];
+    const draft = await parseAltitudes(jitter);
+
+    expect(draft.elevationGainM).toBe(0);
+  });
+
+  it("reads a real climb in full, through the noise on it", async () => {
+    const climb = [100, 104, 103, 109, 112, 111, 118, 124, 123, 131, 150];
+    const draft = await parseAltitudes(climb);
+
+    expect(draft.elevationGainM).toBe(50);
+  });
+
+  it("reads the climb in the fixture, across its segment break", async () => {
+    const draft = await parse(pausedClimbGpx);
+    expect(draft.elevationGainM).toBeCloseTo(30.5, 6);
+  });
+
+  it("skips points with no altitude, and says nothing without two", async () => {
+    const partial = await parseSegments([
+      at(0, 0, 100),
+      at(15, 5),
+      at(30, 10, 110),
+    ]);
+    const one = await parseSegments([at(0, 0, 100), at(15, 5)]);
+    const none = await parseSegments([at(0, 0), at(15, 5)]);
+
+    expect(partial.elevationGainM).toBe(10);
+    expect(one.elevationGainM).toBeUndefined();
+    expect(none.elevationGainM).toBeUndefined();
   });
 });

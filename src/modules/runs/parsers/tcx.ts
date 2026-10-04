@@ -9,17 +9,29 @@
  * A run is every lap, not the first one. A Garmin export writes one
  * `<Lap>` per auto-lap — often each mile — so a 6-mile run is six laps,
  * and reading only the first imported it as its first mile (R-130).
- * Duration and distance are the sums of every lap's totals; the start time
- * is the first lap's.
+ * Distance is the sum of every lap's totals; the start time is the first
+ * lap's.
+ *
+ * Time is read two ways (D-111, design 132). A lap's `TotalTimeSeconds` is
+ * timer time — it stops when the watch is paused — so the laps' sum is the
+ * run's moving time. The run's duration is elapsed time, which keeps
+ * running through a pause: from the first lap's start to the last
+ * trackpoint, and never less than the laps' sum, which is what a file with
+ * no timed trackpoints falls back to.
  */
 import { runDraftSchema } from "../../../lib/contracts";
 import type { RunDraft, RunSource } from "../../../lib/contracts";
 import {
   RunParseError,
+  child,
+  elevationGainMeters,
+  fileMetrics,
   parseXmlDocument,
   isRecord,
+  present,
   readDate,
   readNumber,
+  sum,
   toArray,
 } from "./shared";
 
@@ -98,6 +110,16 @@ interface LapReading {
   seconds: number;
   metres: number;
   position: Position | undefined;
+  // Every trackpoint's altitude, in order, where it has one.
+  altitudes: number[];
+  // Every trackpoint's time, in epoch milliseconds, where it has one.
+  times: number[];
+}
+
+function trackpointsOf(lap: Record<string, unknown>): unknown[] {
+  return toArray(lap.Track).flatMap((track: unknown) =>
+    toArray(child(track, "Trackpoint")),
+  );
 }
 
 function readLap(lap: unknown): LapReading {
@@ -107,15 +129,18 @@ function readLap(lap: unknown): LapReading {
   // narrows `unknown`.
   // Stryker disable next-line ConditionalExpression
   const fields: Record<string, unknown> = isRecord(lap) ? lap : {};
+  const points = trackpointsOf(fields);
   return {
     seconds: lapTotal(fields.TotalTimeSeconds),
     metres: lapTotal(fields.DistanceMeters),
     position: firstPosition(fields),
+    altitudes: points.flatMap((point) =>
+      present(readNumber(child(point, "AltitudeMeters"))),
+    ),
+    times: points.flatMap((point) =>
+      present(readDate(child(point, "Time"))?.getTime()),
+    ),
   };
-}
-
-function sum(values: number[]): number {
-  return values.reduce((total, value) => total + value, 0);
 }
 
 export const tcxSource: RunSource = {
@@ -154,9 +179,9 @@ export const tcxSource: RunSource = {
         { problem: "no-track" },
       );
 
-    const durationS = sum(readings.map((reading) => reading.seconds));
+    const lapSeconds = sum(readings.map((reading) => reading.seconds));
     const distanceM = sum(readings.map((reading) => reading.metres));
-    if (!(durationS > 0 && distanceM > 0))
+    if (!(lapSeconds > 0 && distanceM > 0))
       throw new RunParseError(
         `tcx: ${count} lap(s) sum to zero TotalTimeSeconds or DistanceMeters`,
         { problem: "no-track" },
@@ -168,15 +193,27 @@ export const tcxSource: RunSource = {
       (reading) => reading.position !== undefined,
     )?.position;
 
+    // A loop, not `Math.max(...times)`: a long run at one point a second
+    // is tens of thousands of arguments.
+    const startMs = startedAtDate.getTime();
+    const times = readings.flatMap((reading) => reading.times);
+    let elapsedS = lapSeconds;
+    for (const time of times) {
+      elapsedS = Math.max(elapsedS, (time - startMs) / 1000);
+    }
+
+    const isIndoor = position === undefined;
+    const altitudes = readings.flatMap((reading) => reading.altitudes);
     const parsed = runDraftSchema.safeParse({
-      startedAt: Math.floor(startedAtDate.getTime() / 1000),
+      startedAt: Math.floor(startMs / 1000),
       // Rounded once, after summing: rounding each lap would drift by up
       // to half a second a lap.
-      durationS: Math.round(durationS),
+      durationS: Math.round(elapsedS),
       distanceM,
-      indoor: position === undefined,
+      indoor: isIndoor,
       title: "Imported run",
       ...(position && { lat: position.lat, lng: position.lon }),
+      ...fileMetrics(isIndoor, lapSeconds, elevationGainMeters(altitudes)),
     });
     if (!parsed.success)
       throw new RunParseError("tcx: assembled draft failed runDraftSchema", {

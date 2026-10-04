@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  child,
+  elevationGainMeters,
+  fileMetrics,
   haversineMeters,
+  present,
   isRecord,
   PARSE_FAILURE_MESSAGE,
   readDate,
@@ -162,5 +166,82 @@ describe("haversineMeters", () => {
   it("measures a short leg the way a GPS track is summed", () => {
     // The realistic case: a few metres between consecutive trackpoints.
     expect(haversineMeters(44.98, -93.27, 44.9801, -93.27)).toBeCloseTo(11, 0);
+  });
+});
+
+describe("child", () => {
+  it("reads a child off an element", () => {
+    expect(child({ Time: "07:00" }, "Time")).toBe("07:00");
+  });
+
+  it("reads nothing off a value that is not an element", () => {
+    // `<Track/>` parses to "", and a string has properties of its own —
+    // a length — that are not children.
+    expect(child("text", "length")).toBeUndefined();
+    expect(child(undefined, "Time")).toBeUndefined();
+  });
+});
+
+describe("present", () => {
+  it("is a list of one for a reading, and empty for none", () => {
+    expect(present(0)).toStrictEqual([0]);
+    expect(present(undefined)).toStrictEqual([]);
+  });
+});
+
+describe("elevationGainMeters (D-111)", () => {
+  it("says nothing with fewer than two altitudes", () => {
+    expect(elevationGainMeters([])).toBeUndefined();
+    expect(elevationGainMeters([100])).toBeUndefined();
+    expect(elevationGainMeters([100, 106])).toBe(6);
+  });
+
+  it("counts a turn only once it exceeds the threshold", () => {
+    expect(elevationGainMeters([100, 105])).toBe(0);
+    expect(elevationGainMeters([100, 105.5])).toBe(5.5);
+  });
+
+  it("makes the first rise clear the threshold like any other", () => {
+    expect(elevationGainMeters([100, 103, 104])).toBe(0);
+  });
+
+  it("follows a descent freely, and counts a climb from its foot", () => {
+    expect(elevationGainMeters([100, 90, 96])).toBe(6);
+    // Once climbing, every metre counts, small ones included.
+    expect(elevationGainMeters([100, 90, 96, 97])).toBe(7);
+  });
+
+  it("counts a started climb in full, and the wobble at its top once", () => {
+    expect(elevationGainMeters([100, 106, 108, 107, 110])).toBe(10);
+    expect(elevationGainMeters([100, 120, 117, 120, 117, 120])).toBe(20);
+  });
+
+  it("needs a real turn down before a rise counts again", () => {
+    // Down 10 from the top is a turn; up 4 from there is not a climb.
+    expect(elevationGainMeters([100, 120, 110, 114])).toBe(20);
+    // Up 6 from the foot of that turn is.
+    expect(elevationGainMeters([100, 120, 110, 114, 116])).toBe(26);
+  });
+});
+
+describe("fileMetrics (D-111)", () => {
+  it("carries neither reading for an indoor run", () => {
+    expect(fileMetrics(true, 1800, 40)).toStrictEqual({});
+  });
+
+  it("rounds moving time to whole seconds and passes the climb through", () => {
+    expect(fileMetrics(false, 1800.5, 40.25)).toStrictEqual({
+      movingS: 1801,
+      elevationGainM: 40.25,
+    });
+  });
+
+  it("leaves out a moving time that is missing or rounds to nothing", () => {
+    expect(fileMetrics(false, undefined, undefined)).toStrictEqual({
+      movingS: undefined,
+      elevationGainM: undefined,
+    });
+    expect(fileMetrics(false, 0.4, 0).movingS).toBeUndefined();
+    expect(fileMetrics(false, 0.5, 0).movingS).toBe(1);
   });
 });
