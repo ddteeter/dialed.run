@@ -84,11 +84,11 @@ function findActivity(doc: unknown): Record<string, unknown> | undefined {
 /**
 One lap total, or NaN when it is missing, unreadable or negative.
 
-NaN is the point: it poisons the sum, so one lap without a usable total
-refuses the whole file — the refusal a single-lap file without one has
-always earned — rather than dropping that lap and importing a run shorter
-than the one that happened. Zero is a real total (a lap button pressed
-twice, a lap spent stood at a crossing) and adds nothing.
+NaN marks the lap, and one marked lap refuses the whole file — the refusal
+a single-lap file without a total has always earned — rather than dropping
+that lap and importing a run shorter than the one that happened. Zero is a
+real total (a lap button pressed twice, a lap spent stood at a crossing)
+and adds nothing.
 */
 function lapTotal(value: unknown): number {
   const total = readNumber(value) ?? NaN;
@@ -134,14 +134,32 @@ export const tcxSource: RunSource = {
       });
     }
 
+    // Every refusal below names the lap, or the laps, it found wrong: the
+    // reason is how a maintainer tells one bad file from another.
+    const count = String(laps.length);
     const startedAtDate = readDate(firstLap["@_StartTime"]);
+    if (startedAtDate === undefined)
+      throw new RunParseError(
+        `tcx: lap 1 of ${count} has no readable StartTime`,
+        { problem: "no-track" },
+      );
+
     const readings = laps.map((lap) => readLap(lap));
+    const unusable = readings.findIndex(
+      (reading) =>
+        Number.isNaN(reading.seconds) || Number.isNaN(reading.metres),
+    );
+    if (unusable !== -1)
+      throw new RunParseError(
+        `tcx: lap ${String(unusable + 1)} of ${count} has no usable TotalTimeSeconds/DistanceMeters`,
+        { problem: "no-track" },
+      );
+
     const durationS = sum(readings.map((reading) => reading.seconds));
     const distanceM = sum(readings.map((reading) => reading.metres));
-    // A NaN sum — some lap had no usable total — fails both comparisons.
-    if (startedAtDate === undefined || !(durationS > 0 && distanceM > 0))
+    if (!(durationS > 0 && distanceM > 0))
       throw new RunParseError(
-        "tcx: lap missing positive TotalTimeSeconds/DistanceMeters",
+        `tcx: ${count} lap(s) sum to zero TotalTimeSeconds or DistanceMeters`,
         { problem: "no-track" },
       );
 

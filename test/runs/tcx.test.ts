@@ -43,7 +43,9 @@ async function failureFrom(text: string): Promise<RunParseError> {
  * be read.
  */
 function sentenceFor(reason: string): string {
-  return /no Lap element|lap missing positive/u.test(reason)
+  return /no Lap element|tcx: lap \d+ of \d+ has no|lap\(s\) sum to zero/u.test(
+    reason,
+  )
     ? NO_TRACK_MESSAGE
     : PARSE_FAILURE_MESSAGE;
 }
@@ -164,8 +166,8 @@ describe("tcx: a run of many laps", () => {
     const unstarted = tcxWith(
       lap({ seconds: 600, metres: 1609 }) + lap(OUTDOOR_LAP),
     );
-    expect(await reasonFor(unstarted)).toContain(
-      "missing positive TotalTimeSeconds/DistanceMeters",
+    expect(await reasonFor(unstarted)).toBe(
+      "tcx: lap 1 of 2 has no readable StartTime",
     );
   });
 
@@ -181,6 +183,15 @@ describe("tcx: a run of many laps", () => {
     );
     expect(draft.durationS).toBe(1845);
     expect(draft.distanceM).toBe(5000);
+
+    // Unless every lap is empty: then there is no run in the file at all.
+    const empty = tcxWith(
+      lap({ ...OUTDOOR_LAP, metres: 0 }) +
+        lap({ startTime: LATER, seconds: 45, metres: 0 }),
+    );
+    expect(await reasonFor(empty)).toBe(
+      "tcx: 2 lap(s) sum to zero TotalTimeSeconds or DistanceMeters",
+    );
   });
 
   it("refuses the file when any lap has no usable total, rather than shortening the run", async () => {
@@ -198,10 +209,29 @@ describe("tcx: a run of many laps", () => {
 
     for (const bad of broken) {
       const document = tcxWith(lap(OUTDOOR_LAP) + bad);
-      expect(await reasonFor(document), bad).toContain(
-        "missing positive TotalTimeSeconds/DistanceMeters",
+      expect(await reasonFor(document), bad).toBe(
+        "tcx: lap 2 of 2 has no usable TotalTimeSeconds/DistanceMeters",
       );
     }
+  });
+
+  it("names the first bad lap, and how many laps there were", async () => {
+    // The reason is a maintainer's only clue to which part of a long file
+    // was wrong (RunParseError's doc), so it counts from one, as a watch
+    // numbers its laps.
+    const mile = lap({ startTime: LATER, seconds: 480, metres: 1609.34 });
+    const bad = lap({ startTime: LATER, seconds: 480 });
+    const sixLaps = tcxWith(
+      [lap(OUTDOOR_LAP), mile, bad, mile, bad, mile].join(""),
+    );
+
+    expect(await reasonFor(sixLaps)).toBe(
+      "tcx: lap 3 of 6 has no usable TotalTimeSeconds/DistanceMeters",
+    );
+    const firstBad = tcxWith(lap({ startTime: START, seconds: 480 }) + mile);
+    expect(await reasonFor(firstBad)).toBe(
+      "tcx: lap 1 of 2 has no usable TotalTimeSeconds/DistanceMeters",
+    );
   });
 
   it("takes the first fix in any lap, not just the first", async () => {
@@ -306,6 +336,8 @@ describe("tcx: every way it refuses", () => {
     const documents = [
       '<?xml version="1.0"?><other/>',
       '<?xml version="1.0"?><TrainingCenterDatabase/>',
+      // A Garmin course file: the record root, and no Activities at all.
+      '<?xml version="1.0"?><TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"><Courses/></TrainingCenterDatabase>',
       '<?xml version="1.0"?><TrainingCenterDatabase><Activities/></TrainingCenterDatabase>',
       '<?xml version="1.0"?><TrainingCenterDatabase><Activities><Activity/></Activities></TrainingCenterDatabase>',
       '<?xml version="1.0"?><TrainingCenterDatabase><Activities><Activity><Lap/></Activity></Activities></TrainingCenterDatabase>',
@@ -318,22 +350,24 @@ describe("tcx: every way it refuses", () => {
     }
   });
 
-  it("says when the lap has no usable totals", async () => {
-    const missing = [
-      lap({ seconds: 1800, metres: 5000 }),
-      lap({ startTime: START, metres: 5000 }),
-      lap({ startTime: START, seconds: 1800 }),
-      lap({ startTime: START, seconds: 0, metres: 5000 }),
-      lap({ startTime: START, seconds: 1800, metres: 0 }),
-      lap({ startTime: START, seconds: -60, metres: 5000 }),
-      lap({ startTime: "not a date", seconds: 1800, metres: 5000 }),
-      lap({ startTime: START, seconds: "soon", metres: 5000 }),
+  it("says when the lap has no start or no usable totals", async () => {
+    const noStart = "tcx: lap 1 of 1 has no readable StartTime";
+    const noTotal =
+      "tcx: lap 1 of 1 has no usable TotalTimeSeconds/DistanceMeters";
+    const zero = "tcx: 1 lap(s) sum to zero TotalTimeSeconds or DistanceMeters";
+    const cases: [string, string][] = [
+      [lap({ seconds: 1800, metres: 5000 }), noStart],
+      [lap({ startTime: "not a date", seconds: 1800, metres: 5000 }), noStart],
+      [lap({ startTime: START, metres: 5000 }), noTotal],
+      [lap({ startTime: START, seconds: 1800 }), noTotal],
+      [lap({ startTime: START, seconds: -60, metres: 5000 }), noTotal],
+      [lap({ startTime: START, seconds: "soon", metres: 5000 }), noTotal],
+      [lap({ startTime: START, seconds: 0, metres: 5000 }), zero],
+      [lap({ startTime: START, seconds: 1800, metres: 0 }), zero],
     ];
 
-    for (const body of missing) {
-      expect(await reasonFor(tcxWith(body)), body).toContain(
-        "missing positive TotalTimeSeconds/DistanceMeters",
-      );
+    for (const [body, reason] of cases) {
+      expect(await reasonFor(tcxWith(body)), body).toBe(reason);
     }
   });
 

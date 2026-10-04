@@ -1,7 +1,8 @@
 /**
  * Covers: A1 (upload, read in place — the parsed card, no import page;
  * at the desk in two columns with the conditions in the rail; the start-time
- * correction, round 26 item 1),
+ * correction, round 26 item 1; a Garmin TCX of many laps read as the whole
+ * run, R-130),
  * A2 (the picker from the first frame, a kit required, the outfit photo
  * through W3's blur), S1 (the Strava reminder a matching upload clears,
  * round 25), A3 (Noted, with the band the corrected run now has), R1 (manual entry going
@@ -14,7 +15,7 @@
  * pick a piece, add a photo -> A3: log it and read the receipt -> enter a
  * run by hand and land on picking its outfit -> the runs list -> set the
  * conditions of a run the weather gave up on -> the retired import URL
- * lands on A1.
+ * lands on A1 -> delete a run -> a six-lap Garmin TCX reads as every lap.
  *
  * **It opens on the closet rather than on `/runs/new`, and that is the
  * point of the first beat** (task 117). A `page.goto` is a document load,
@@ -31,9 +32,15 @@
  * Deliberately excluded: Strava OAuth (no credentials, and the connect flow
  * redirects off-app so it can't be recorded).
  */
+import { readFileSync } from "node:fs";
+
 import { eq } from "drizzle-orm";
 
 import { notifications } from "../../src/db/schema-core";
+import {
+  distanceNumber,
+  formatDuration,
+} from "../../src/lib/contracts/measures";
 import { clockLabel, timeOfDay } from "../../src/lib/dates";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
@@ -70,6 +77,19 @@ const PNG_1X1 = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
   "base64",
 );
+
+/**
+ * The parser suite's Garmin fixture: five 1609.34m auto-laps and a short
+ * last lap, as a Forerunner writes them. Its laps sum to 2509.4 seconds and
+ * 8459.4 metres; its first lap alone is 482 seconds and one mile, which is
+ * what A1 read before R-130.
+ */
+const SIX_LAPS = new URL(
+  "../../test/runs/fixtures/multi-lap.tcx",
+  import.meta.url,
+);
+const SIX_LAPS_SECONDS = 2509;
+const SIX_LAPS_METRES = 8459.4;
 
 /**
  * A start as the parsed card reads it, and as its time input takes it: on
@@ -375,6 +395,25 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
     await page.getByRole("button", { name: "Delete", exact: true }).click();
     await expect(page).toHaveURL(/\/runs$/u);
     await expect(page.locator(`a[href="/runs/${staleRunId}"]`)).toHaveCount(0);
+
+    // ---- A1 · a watch's laps are one run (R-130) ------------------------
+    await scene(page, "A Garmin file writes a lap a mile — A1 reads every lap");
+    await page.goto("/runs/new");
+    await hydrated(page);
+    await page.setInputFiles('[data-part="drop-zone"] input[type="file"]', {
+      name: "forerunner_six_laps.tcx",
+      mimeType: "application/vnd.garmin.tcx+xml",
+      buffer: readFileSync(SIX_LAPS),
+    });
+    await expect(
+      page.getByText("Parsed · forerunner_six_laps.tcx"),
+    ).toBeVisible({ timeout: 20_000 });
+    await scene(page, "Five auto-lap miles and a short last one, all counted");
+    // The card's headline in the app's own formatters: "5.3 mi · 41:49",
+    // where the first lap alone read "1.0 mi · 8:02".
+    await expect(card).toContainText(
+      `${distanceNumber(SIX_LAPS_METRES, "mi")} mi · ${formatDuration(SIX_LAPS_SECONDS)}`,
+    );
   } finally {
     await unseed(seeded);
     await unseedObservations(observations);

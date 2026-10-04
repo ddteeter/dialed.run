@@ -129,16 +129,22 @@ describe("parsers (102 §3)", () => {
     });
 
     it("a Garmin auto-lap export is every lap, not the first mile", async () => {
-      // Three laps — two auto-laps at a mile and a manual one to finish.
-      // Reading the first alone imported 480s and 1609.25m.
+      // Six laps, as a Forerunner writes them: five auto-laps at its mile,
+      // 1609.34m, and a short manual lap where the watch was stopped.
+      // Reading the first alone imported 482s and 1609.34m.
+      const lapMetres = [1609.34, 1609.34, 1609.34, 1609.34, 1609.34, 412.7];
       const draft = await tcxSource.parse(textBytes(multiLapTcx));
       expect(draft.startedAt).toBe(
         Math.floor(Date.parse("2026-09-20T13:00:00Z") / 1000),
       );
-      // 480.4 + 470.4 + 301.4 = 1252.2, rounded once. Rounding each lap
-      // first would give 1251.
-      expect(draft.durationS).toBe(1252);
-      expect(draft.distanceM).toBe(4219);
+      // 482.4 + 478.4 + 475.4 + 480.4 + 471.4 + 121.4 = 2509.4, rounded
+      // once. Rounding each lap first would give 2507.
+      expect(draft.durationS).toBe(2509);
+      // About 8459.4m. Summed left to right from zero, as the parser sums,
+      // so the expected float is the one the parser arrives at, exactly.
+      expect(draft.distanceM).toBe(
+        lapMetres.reduce((total, metres) => total + metres, 0),
+      );
       expect(draft.indoor).toBe(false);
       expect(draft.lat).toBeCloseTo(44.9778, 3);
       expect(draft.lng).toBeCloseTo(-93.265, 3);
