@@ -8,6 +8,7 @@
 import { sql } from "drizzle-orm";
 
 import {
+  audiences,
   colorNames,
   garmentVisibilities,
   HANDLE_SCREEN_STATES,
@@ -39,6 +40,14 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     shareDefault: integer("share_default", { mode: "boolean" })
       .notNull()
       .default(true),
+    // Who the runner's new entries are for unless they say otherwise
+    // (D-109, design 131). Replaces `share_default`, which writers keep in
+    // step until C1. Defaults to `runners` because several profile inserts
+    // rely on the column default on purpose, as `share_default`'s
+    // `DEFAULT true` did. Writers only ever store `writableAudienceSchema`.
+    defaultAudience: text("default_audience", { enum: audiences })
+      .notNull()
+      .default("runners"),
     onboardingComplete: integer("onboarding_complete", { mode: "boolean" })
       .notNull()
       .default(false),
@@ -658,6 +667,13 @@ export const outfitEntries = /*#__PURE__*/ sqliteTable(
     userId: text("user_id").notNull(),
     verdict: integer("verdict"),
     isPublic: integer("is_public", { mode: "boolean" }).notNull().default(true),
+    // Who may see the entry (D-109, design 131). Replaces `is_public`,
+    // which writers keep in step until C1. **Fails closed**: the default is
+    // `private`, not `runners`, so a writer that forgot the column hides
+    // the entry rather than publishing it. Every app writer sets it.
+    audience: text("audience", { enum: audiences })
+      .notNull()
+      .default("private"),
     // Task 106. Deliberately NOT `isPublic`: that column is the runner's own
     // sharing choice, and a moderator writing to it would silently rewrite a
     // preference the runner set. Two different facts, two columns — an entry
@@ -695,6 +711,20 @@ export const outfitEntries = /*#__PURE__*/ sqliteTable(
     index("entries_user_public_created").on(
       t.userId,
       t.isPublic,
+      t.moderationStatus,
+      t.createdAt,
+    ),
+    // The two above with `audience` in `is_public`'s place, for the read
+    // flip (design 131, PR B). The old pair stays until C2, because code a
+    // rollback could restore still seeks it.
+    index("entries_audience_created").on(
+      t.audience,
+      t.moderationStatus,
+      t.createdAt,
+    ),
+    index("entries_user_audience_created").on(
+      t.userId,
+      t.audience,
       t.moderationStatus,
       t.createdAt,
     ),

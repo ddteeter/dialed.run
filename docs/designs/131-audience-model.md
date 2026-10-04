@@ -383,3 +383,24 @@ The questions as they were asked:
    are keyed on. If the reshaped functions still clone, may PR A re-key both
    grants (same reason, new text)? If they stop cloning, PR A drops the
    comments and both grants, which your standing OK on dead grants covers.
+
+## Built: where PR A diverged from the plan
+
+Following the code where it contradicts the plan, as instructed:
+
+- **The migration is `0044_add_audience_columns`, as planned**, but only
+  because #142 merged mid-build. `test/migration-chain.test.ts` refuses a
+  gap in the journal or the snapshot chain, so `0044` cannot exist on a
+  branch without `0043`: the plan's "assumes #142 lands first" was a hard
+  precondition, not a numbering choice. It was generated as `0043`,
+  then regenerated as `0044` on top of #142 after rebasing.
+  `test/audience-backfill.test.ts` finds the migration by its name suffix,
+  so a later law-11 renumber would not touch it.
+- **`schema-core.ts` reads an exported `audiences` tuple, not
+  `audienceSchema.options`.** zod 4 types `.options` as a plain array and
+  drizzle's `text` enum needs a non-empty tuple. The schema is built from
+  the tuple (`z.enum(audiences)`), so there is still one list, and
+  `test/lib/audience.test.ts` pins the two equal.
+- **`SHARED_AUDIENCE` is not exported in A.** Its only readers outside the
+  contract (`safety/visibility.ts`, `feed/feed.ts`) flip in B, so A keeps
+  it module-private and B exports it with them.
