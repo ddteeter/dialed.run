@@ -19,3 +19,4 @@ export * from "./contracts/verdicts";
 export * from "./contracts/runs";
 export * from "./contracts/weather";
 export * from "./contracts/profile";
+export * from "./contracts/audience";

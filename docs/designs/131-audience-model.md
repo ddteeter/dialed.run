@@ -345,6 +345,28 @@ and named in the PR body.
 
 ## Open questions
 
+**Decided by the owner, 2026-10-04.** Plan approved; PR A is being built
+on this branch.
+
+1. **Export words: yes.** `entries.csv`'s `shared` becomes `audience` and
+   `profile.csv`'s `share_new_runs` becomes `default_audience`, both
+   written with the UI words `shared` / `private`. Both land in PR B with
+   `audienceWord` (step 8), as planned.
+2. **Two build PRs, as planned.** This branch is PR A (expand plus dual
+   write). PR B, the read flip, is a separate later branch, opened only
+   after A is deployed.
+3. **Pair A grants: yes, re-key.** A one-time OK to re-key exactly the
+   two `guardrails.config.json` grants whose keyed comment text changes
+   when `isPublicByDefault` is renamed: same reason, new text, no new
+   grants and no other edit to that file.
+
+The CLAUDE.md wording (the Sharing bullet and the Products bullet's
+social-proof sentence) is also owner-approved as a one-time edit. This
+plan puts it in PR B's docs step (step 10), rebased over #145, so PR A
+does not touch CLAUDE.md.
+
+The questions as they were asked:
+
 1. **Export words.** `entries.csv`'s column on main is `shared`
    (true/false), not `visibility`, so the plan renames `shared` to
    `audience`, valued `shared`/`private`. `profile.csv` also has
