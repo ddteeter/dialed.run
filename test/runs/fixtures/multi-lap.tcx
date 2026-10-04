@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2" xmlns:ns3="http://www.garmin.com/xmlschemas/ActivityExtension/v2">
+  <Activities>
+    <Activity Sport="Running">
+      <Id>2026-09-20T13:00:00.000Z</Id>
+      <Lap StartTime="2026-09-20T13:00:00.000Z">
+        <TotalTimeSeconds>480.4</TotalTimeSeconds>
+        <DistanceMeters>1609.25</DistanceMeters>
+        <MaximumSpeed>3.6</MaximumSpeed>
+        <Calories>112</Calories>
+        <Intensity>Active</Intensity>
+        <TriggerMethod>Distance</TriggerMethod>
+        <Track>
+          <Trackpoint>
+            <Time>2026-09-20T13:00:00.000Z</Time>
+            <Position>
+              <LatitudeDegrees>44.9778</LatitudeDegrees>
+              <LongitudeDegrees>-93.2650</LongitudeDegrees>
+            </Position>
+            <AltitudeMeters>256.2</AltitudeMeters>
+            <DistanceMeters>0.0</DistanceMeters>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-09-20T13:08:00.000Z</Time>
+            <Position>
+              <LatitudeDegrees>44.9900</LatitudeDegrees>
+              <LongitudeDegrees>-93.2650</LongitudeDegrees>
+            </Position>
+            <AltitudeMeters>258.0</AltitudeMeters>
+            <DistanceMeters>1609.25</DistanceMeters>
+          </Trackpoint>
+        </Track>
+      </Lap>
+      <Lap StartTime="2026-09-20T13:08:00.400Z">
+        <TotalTimeSeconds>470.4</TotalTimeSeconds>
+        <DistanceMeters>1609.5</DistanceMeters>
+        <MaximumSpeed>3.7</MaximumSpeed>
+        <Calories>109</Calories>
+        <Intensity>Active</Intensity>
+        <TriggerMethod>Distance</TriggerMethod>
+        <Track>
+          <Trackpoint>
+            <Time>2026-09-20T13:08:01.000Z</Time>
+            <Position>
+              <LatitudeDegrees>44.9901</LatitudeDegrees>
+              <LongitudeDegrees>-93.2650</LongitudeDegrees>
+            </Position>
+            <AltitudeMeters>258.1</AltitudeMeters>
+            <DistanceMeters>1612.0</DistanceMeters>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-09-20T13:15:50.000Z</Time>
+            <Position>
+              <LatitudeDegrees>45.0045</LatitudeDegrees>
+              <LongitudeDegrees>-93.2650</LongitudeDegrees>
+            </Position>
+            <AltitudeMeters>255.4</AltitudeMeters>
+            <DistanceMeters>3218.75</DistanceMeters>
+          </Trackpoint>
+        </Track>
+      </Lap>
+      <Lap StartTime="2026-09-20T13:15:50.800Z">
+        <TotalTimeSeconds>301.4</TotalTimeSeconds>
+        <DistanceMeters>1000.25</DistanceMeters>
+        <MaximumSpeed>3.5</MaximumSpeed>
+        <Calories>70</Calories>
+        <Intensity>Active</Intensity>
+        <TriggerMethod>Manual</TriggerMethod>
+        <Track>
+          <Trackpoint>
+            <Time>2026-09-20T13:15:51.000Z</Time>
+            <Position>
+              <LatitudeDegrees>45.0046</LatitudeDegrees>
+              <LongitudeDegrees>-93.2650</LongitudeDegrees>
+            </Position>
+            <AltitudeMeters>255.5</AltitudeMeters>
+            <DistanceMeters>3221.0</DistanceMeters>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-09-20T13:20:52.000Z</Time>
+            <Position>
+              <LatitudeDegrees>45.0136</LatitudeDegrees>
+              <LongitudeDegrees>-93.2650</LongitudeDegrees>
+            </Position>
+            <AltitudeMeters>257.9</AltitudeMeters>
+            <DistanceMeters>4219.0</DistanceMeters>
+          </Trackpoint>
+        </Track>
+      </Lap>
+      <Creator xsi:type="Device_t" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <Name>Forerunner 265</Name>
+        <UnitId>3400000000</UnitId>
+        <ProductID>4257</ProductID>
+      </Creator>
+    </Activity>
+  </Activities>
+</TrainingCenterDatabase>

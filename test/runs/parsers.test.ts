@@ -21,6 +21,7 @@ import validGpx from "./fixtures/valid.gpx?raw";
 import malformedGpx from "./fixtures/malformed.gpx?raw";
 import validTcx from "./fixtures/valid.tcx?raw";
 import treadmillTcx from "./fixtures/treadmill.tcx?raw";
+import multiLapTcx from "./fixtures/multi-lap.tcx?raw";
 import malformedTcx from "./fixtures/malformed.tcx?raw";
 
 function textBytes(text: string): ArrayBuffer {
@@ -125,6 +126,22 @@ describe("parsers (102 §3)", () => {
       expect(draft.durationS).toBe(1800);
       expect(draft.distanceM).toBe(5000);
       expect(draft.lat).toBeCloseTo(44.9778, 3);
+    });
+
+    it("a Garmin auto-lap export is every lap, not the first mile", async () => {
+      // Three laps — two auto-laps at a mile and a manual one to finish.
+      // Reading the first alone imported 480s and 1609.25m.
+      const draft = await tcxSource.parse(textBytes(multiLapTcx));
+      expect(draft.startedAt).toBe(
+        Math.floor(Date.parse("2026-09-20T13:00:00Z") / 1000),
+      );
+      // 480.4 + 470.4 + 301.4 = 1252.2, rounded once. Rounding each lap
+      // first would give 1251.
+      expect(draft.durationS).toBe(1252);
+      expect(draft.distanceM).toBe(4219);
+      expect(draft.indoor).toBe(false);
+      expect(draft.lat).toBeCloseTo(44.9778, 3);
+      expect(draft.lng).toBeCloseTo(-93.265, 3);
     });
 
     it("treadmill lap (no Position) imports as indoor", async () => {

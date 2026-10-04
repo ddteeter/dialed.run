@@ -5,6 +5,12 @@
  * `<Position>` on any trackpoint, which is exactly the "no GPS track"
  * signal the packet asks for (imports as `indoor` with real duration and
  * distance from the lap totals, no separate code path).
+ *
+ * A run is every lap, not the first one. A Garmin export writes one
+ * `<Lap>` per auto-lap — often each mile — so a 6-mile run is six laps,
+ * and reading only the first imported it as its first mile (R-130).
+ * Duration and distance are the sums of every lap's totals; the start time
+ * is the first lap's.
  */
 import { runDraftSchema } from "../../../lib/contracts";
 import type { RunDraft, RunSource } from "../../../lib/contracts";
@@ -56,9 +62,11 @@ function firstOf(value: unknown): Record<string, unknown> | undefined {
 }
 
 /**
-Navigates TrainingCenterDatabase > Activities > Activity[0] > Lap[0].
+Navigates TrainingCenterDatabase > Activities > Activity[0]. Only the first
+activity is read: v1 imports one run per file, and a multi-activity export
+(a multisport session, say) is out of scope rather than summed.
 */
-function findLap(doc: unknown): Record<string, unknown> | undefined {
+function findActivity(doc: unknown): Record<string, unknown> | undefined {
   // Equivalent: `parseXmlDocument` always hands back an object for a
   // document it accepted. The guard is what narrows `unknown`.
   // Stryker disable next-line ConditionalExpression
@@ -70,9 +78,45 @@ function findLap(doc: unknown): Record<string, unknown> | undefined {
   // `firstOf` answers undefined and the lap is missing either way.
   // Stryker disable next-line ConditionalExpression
   if (!isRecord(activities)) return undefined;
-  const activity = firstOf(activities.Activity);
-  if (activity === undefined) return undefined;
-  return firstOf(activity.Lap);
+  return firstOf(activities.Activity);
+}
+
+/**
+One lap total, or NaN when it is missing, unreadable or negative.
+
+NaN is the point: it poisons the sum, so one lap without a usable total
+refuses the whole file — the refusal a single-lap file without one has
+always earned — rather than dropping that lap and importing a run shorter
+than the one that happened. Zero is a real total (a lap button pressed
+twice, a lap spent stood at a crossing) and adds nothing.
+*/
+function lapTotal(value: unknown): number {
+  const total = readNumber(value) ?? NaN;
+  return total >= 0 ? total : NaN;
+}
+
+interface LapReading {
+  seconds: number;
+  metres: number;
+  position: Position | undefined;
+}
+
+function readLap(lap: unknown): LapReading {
+  // Equivalent: a non-record lap (`<Lap/>` parses to "") has no children,
+  // so every read below answers undefined — NaN totals, no position —
+  // whether or not it is swapped for an empty object. The guard is what
+  // narrows `unknown`.
+  // Stryker disable next-line ConditionalExpression
+  const fields: Record<string, unknown> = isRecord(lap) ? lap : {};
+  return {
+    seconds: lapTotal(fields.TotalTimeSeconds),
+    metres: lapTotal(fields.DistanceMeters),
+    position: firstPosition(fields),
+  };
+}
+
+function sum(values: number[]): number {
+  return values.reduce((total, value) => total + value, 0);
 }
 
 export const tcxSource: RunSource = {
@@ -82,38 +126,35 @@ export const tcxSource: RunSource = {
     await Promise.resolve();
     const doc = parseXmlDocument(bytes, "tcx");
 
-    const lap = findLap(doc);
-    if (lap === undefined) {
+    const laps = toArray(findActivity(doc)?.Lap);
+    const firstLap = laps[0];
+    if (!isRecord(firstLap)) {
       throw new RunParseError("tcx: no Lap element found", {
         problem: "no-track",
       });
     }
 
-    const startedAtDate = readDate(lap["@_StartTime"]);
-    const durationS = readNumber(lap.TotalTimeSeconds);
-    const distanceM = readNumber(lap.DistanceMeters);
-    // The two `!== undefined` checks are equivalent on their own —
-    // `undefined > 0` is already false — and are here so the comparison
-    // below reads as a comparison between numbers.
-    // Stryker disable next-line ConditionalExpression
-    const hasRequiredTotals =
-      startedAtDate !== undefined &&
-      // Stryker disable next-line ConditionalExpression
-      durationS !== undefined &&
-      // Stryker disable next-line ConditionalExpression
-      distanceM !== undefined &&
-      durationS > 0 &&
-      distanceM > 0;
-    if (!hasRequiredTotals)
+    const startedAtDate = readDate(firstLap["@_StartTime"]);
+    const readings = laps.map((lap) => readLap(lap));
+    const durationS = sum(readings.map((reading) => reading.seconds));
+    const distanceM = sum(readings.map((reading) => reading.metres));
+    // A NaN sum — some lap had no usable total — fails both comparisons.
+    if (startedAtDate === undefined || !(durationS > 0 && distanceM > 0))
       throw new RunParseError(
         "tcx: lap missing positive TotalTimeSeconds/DistanceMeters",
         { problem: "no-track" },
       );
 
-    const position = firstPosition(lap);
+    // Where the run started is the first fix in any lap: a watch still
+    // acquiring through the whole first lap has not made the run indoor.
+    const position = readings.find(
+      (reading) => reading.position !== undefined,
+    )?.position;
 
     const parsed = runDraftSchema.safeParse({
       startedAt: Math.floor(startedAtDate.getTime() / 1000),
+      // Rounded once, after summing: rounding each lap would drift by up
+      // to half a second a lap.
       durationS: Math.round(durationS),
       distanceM,
       indoor: position === undefined,
