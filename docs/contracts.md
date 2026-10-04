@@ -7,7 +7,7 @@ CLAUDE.md** (stop, propose in design doc, human review).
 Supersedes `plan/docs/contracts.md`. Key changes from that archive: the garment
 model is category × layer with typed attributes (not `body_part`); verdicts are
 per-run 5-state (not per-item 3-state); likes are `reactions` (kind `useful`);
-entries carry `is_public`; users carry onboarding fields; garments link to
+entries carry an `audience` (D-109); users carry onboarding fields; garments link to
 canonical `products` with an enrichment pipeline behind them (D-26/D-31).
 Rationale: `docs/decisions.md`.
 
@@ -42,7 +42,11 @@ lat, lng         real     -- geocoded home location, nullable
 thermal_level    int      -- -2..+2 from onboarding O1 (-2 = runs warm,
                           --  +2 = always freezing); °C mapping lives in code
 temp_unit        text     -- 'f' | 'c'; distance_unit 'mi' | 'km'; from locale
-share_default    int      -- 1 = new entries public (default), 0 = private
+default_audience text     -- 'runners' (default) | 'private' | 'groups': who new entries are
+                          --  for (D-109, design 131). Writers store only
+                          --  runners | private until groups ship.
+share_default    int      -- LEGACY: written in step with default_audience until
+                          --  design 131's C1, read by nothing, dropped in C2
 ```
 
 ### wardrobe_items
@@ -174,7 +178,7 @@ created_at         int
 Rules: product rows are shared; a user "creating" an existing normalized
 brand+name gets the existing row. Garments inherit product attributes as
 defaults where their own columns are NULL (application logic, not triggers).
-Social-proof counts ("worn by N runners") derive **only from public
+Social-proof counts ("worn by N runners") derive **only from shared (`runners`)
 outfit_entries** — never from closet linkage (D-29).
 
 ### product_snapshots (retention — lane 107)
@@ -218,7 +222,12 @@ run_id       text FK   -- UNIQUE (at most one entry per run)
 user_id      text FK   -- denormalized deliberately: backs the feed index
 verdict      int       -- -2..+2, NULLABLE until the user answers
                        -- -2 way_cold, -1 bit_cold, 0 dialed, +1 bit_warm, +2 way_warm
-is_public    int       -- snapshot of share choice at log time (user toggleable)
+audience     text      -- 'private' | 'groups' | 'runners' (D-109): who may see it.
+                       -- Seeded from default_audience at log time, user
+                       -- toggleable. DEFAULT 'private' fails closed; every app
+                       -- writer sets it. Only 'runners' is shown to strangers.
+is_public    int       -- LEGACY: written in step with audience until design
+                       -- 131's C1, read by nothing, dropped in C2
 caption      text      -- NULLABLE
 created_at   int
 ```
@@ -228,7 +237,7 @@ created_at   int
   or a profile — not its data, not its photo, not entry-specific head
   meta. There is no crawler exception: link previews use the site-wide
   generic card only.
-- A run appears in the feed **only when it has a public outfit_entry**.
+- A run appears in the feed **only when it has a shared (`runners`) outfit_entry**.
 - The shared post shows the 5-state verdict label. What is never public:
   aggregate verdict history, coverage charts, per-item flags/notes, thermal level.
 
@@ -309,8 +318,8 @@ user_profiles:   + banned_at NULLABLE, ban_reason NULLABLE
                    -- `banned_at IS NOT NULL` IS the ban: one fact, not a
                    -- boolean and a date that can disagree.
 outfit_entries:  + moderation_status ('ok'|'hidden_pending_review'|'removed')
-                   -- SEPARATE from is_public, which is the runner's own
-                   -- sharing choice. A moderator writing is_public would
+                   -- SEPARATE from audience, which is the runner's own
+                   -- sharing choice. A moderator writing audience would
                    -- silently rewrite a preference they set, and approving
                    -- could never restore it correctly.
 entry_photos:    + screen_status ('pending'|'pass'|'flagged'|
@@ -319,7 +328,7 @@ entry_photos:    + screen_status ('pending'|'pass'|'flagged'|
                    -- retry be a cron rather than a queue (law 8c).
 ```
 
-**One rule for "visible to a stranger".** `is_public = 1 AND
+**One rule for "visible to a stranger".** `audience = 'runners' AND
 moderation_status = 'ok'` and the author not banned, expressed once as
 `publiclyVisibleEntry()` in `modules/safety` and imported by every read
 that shows entries to someone other than their author. Given the viewer
@@ -337,7 +346,8 @@ nothing visibly and only skews the numbers.
 
 ```
 outfit_entries(user_id, created_at DESC)           -- feed + profile
-outfit_entries(is_public, created_at DESC)         -- consensus scan window
+outfit_entries(audience, moderation_status, created_at)          -- consensus window
+outfit_entries(user_id, audience, moderation_status, created_at) -- feed + H seek
 follows(follower_id, followee_id)
 wardrobe_items(user_id, category)
 wardrobe_items(product_id)                         -- worn-by counts via entries

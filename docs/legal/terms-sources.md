@@ -37,7 +37,7 @@ read.
 | Under-16 account closed                           | D-71 ("a report of an under-16 account is handled as any other takedown"); closure is the ban flow, `src/modules/safety/bans.ts` `banUser`                             |
 | Invite code required; codes may be requested      | `src/lib/access.ts` `IS_INVITE_ONLY`; `src/modules/auth/access-hook.ts` (code checked before sign-up, email and Google); `src/routes/account/request-access.tsx` (Au5) |
 | Account email and security email                  | `src/lib/email.ts` `emailTemplateSchema` (verify, reset, email change, account closed, content removed); `src/modules/email/deliver.ts` `EMAIL_FROM`                   |
-| Unconfirmed runner's kits save private            | D-50; `docs/designs/126-accounts.md` ACC-3 (`share_default` read through `isVerified`)                                                                                 |
+| Unconfirmed runner's kits save private            | D-50; `docs/designs/126-accounts.md` ACC-3; `feed/share-default.ts` (`default_audience` read with `isUnconfirmed`)                                                     |
 | Google sign-in                                    | `src/modules/auth/create-auth.ts` `socialProviders.google`                                                                                                             |
 | "One person, one account"; no sharing or transfer | A rule, not a code fact: nothing in the code detects a shared account                                                                                                  |
 
@@ -79,7 +79,7 @@ read.
 
 | Claim                                                      | Source                                                                                                                                                                                                  |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Shared by default, per kit, default setting                | D-19; `schema-core.ts` (`isPublic` default true, `shareDefault` default true); `privacy-policy-sources.md` "What others see"                                                                            |
+| Shared by default, per kit, default setting                | D-19; `schema-core.ts` (`defaultAudience` default `'runners'`; each entry's `audience`, D-109); `privacy-policy-sources.md` "What others see"                                                           |
 | Private kits never in feeds or counts                      | `src/modules/safety/visibility.ts` `publiclyVisibleEntry`; `feed/consensus.ts`                                                                                                                          |
 | Shown only to signed-in viewers, photos included           | D-58; `src/modules/feed/functions.ts` `entryDetailQuery` (`requireUserId`, SAF-14); `feed/photos.ts` `isPhotoVisible` (`viewerId === undefined` refused); D-69                                          |
 | Link preview is a generic card                             | `src/routes/og/default.ts` is the only card route; `src/modules/ops/og/site-head.ts` default `og:image`. **D-51's per-entry card and 129's FEED-14 are not built**; if they ship, this line must change |
