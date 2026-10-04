@@ -93,6 +93,7 @@ export const COLLAPSE = {
     '21px text': 'TYPE.lead',  '16px text': 'TYPE.field inside a field, TYPE.body everywhere else',  '14px text': 'TYPE.body for controls and rows, TYPE.small for helper prose',
     '12px mono': 'MONO.sm',    '9px mono': 'MONO.xs. The boards carry 9px in ~96 places (theme segment, payout labels, NOT-IN-V1 tags). Build them at 10px, padded to a 44px target.',
     '22px+ mono heroes': 'MONO.lg',
+    '11px Archivo Black kicker (§4a band)': 'MONO.xs, ink, caps. Round 30 #1: the build is right. A kicker is a status caption, which is MONO.xs\'s job. No display step exists below 19.',
   },
   tracking: {
     'mono 10px @ 0.06 / 0.04 / 0.08 / 0.03em': 'MONO.xs → 0.10em. Tracking follows size; the context never adjusts it.',

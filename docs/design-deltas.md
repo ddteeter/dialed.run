@@ -789,7 +789,8 @@ WHILE WE CHECK`), which offer no fix and are a different case? Either
     CHANGED summary; "Back to contents" and the footer labels are
     confirmed; and `terms.csv` is on the board, with a `how` column. Two
     parts of the prompt are not adopted, because D-95 and D-96 stand. Not
-    built.** Built from existing primitives.
+    built. Round 30 #4 redraws both parts to D-95 and D-96.** Built from
+    existing primitives.
     - **The terms prompt (`/account/terms`) is undrawn.** Once the terms
       are published (D-93; nothing is asked until then), a signed-in
       runner whose latest acceptance is below the current version sees it
@@ -825,7 +826,13 @@ ACCEPTED`, `STILL LOGGED IN`. If the terms change again while the
 43. _Held for PR B (`feat/126-round28-accounts`), which adds item 43 on its
     branch. Its round 29 answers are in "Answered in round 29" below._
 44. **The failure-band kicker's face: two contracts disagree (round 29
-    #1).** Round 29 settled the fill (none) and restated
+    #1).** **ANSWERED by round 30 (items 1–3), except Au6: the kicker is
+    `MONO.xs`, ink, caps, and `tokens.js` COLLAPSE now says so, with no
+    new step. Operator Screens D0 and D6 are redrawn to D-87's rail.
+    Nothing to build. Au6 is on `Auth.dc.html`, not on
+    `Round 22 Coverage.dc.html` as this item said, and still draws
+    Google's band above the button. Round 29 #13's ruling (under the button) stands, so
+    only the drawing is behind.** Round 29 settled the fill (none) and restated
     the face, and that face is not one `tokens.js` has. No owner call is
     needed: it is design's to reconcile, in the contracts. Nothing is built
     differently while it is open, and `FailureBand` keeps `MONO.xs`.
@@ -853,6 +860,443 @@ ACCEPTED`, `STILL LOGGED IN`. If the terms change again while the
       byte-identical to round 28's bundle, so D0 still draws the old rail
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
+
+## Answered in round 30 (imported 2026-10-03)
+
+Six asks in two parts: reconcile what round 29 left open (1–4), and draw
+two surfaces for the personal read API, which is built after the friends
+stage (5–6). **All six are answered.** They are on a new board,
+`Round 30 Rulings.dc.html`.
+
+**One contract file changed, and nothing needs a code port.** `tokens.js`
+gains one COLLAPSE entry: _"'11px Archivo Black kicker (§4a band)': 'MONO.xs,
+ink, caps. Round 30 #1: the build is right.'"_ No TYPE, MONO, SPACE, HEIGHT,
+RADIUS, BREAKPOINT or MEASURE value moved, and `test/ui/tokens.dom.test.tsx`
+passes against the new file unchanged. The Form Contract, T1, `motion.js`,
+`icons.js` and the other contracts are byte-identical to round 29's.
+
+Design amended four files in place and added one ruling board:
+
+- `tokens.js`: the COLLAPSE entry above (item 1).
+- `Operator Screens.dc.html`: D0 and D6 take D-87's rail (Today, Review,
+  Access, Duplicates, Runners), and D6's note now reads "Gave up · a section
+  of Today" (items 2 and 3).
+- `Round 29 Rulings.dc.html`: the three Desk frames move Access to third
+  (item 3), and #6's prose is amended to D-95 and D-96 (item 4).
+- `design/docs/product.md`: the §4 kicker line, round 29's kicker and rail
+  lines, and a "Round 30" section that mirrors the board.
+
+This import also amends `docs/product.md` §4's kicker line to `MONO.xs`, as
+the ruling says, and changes nothing else under `docs/` beyond this file.
+
+Three boards nobody asked for are new design areas, recorded below:
+`Marketing Site.dc.html` (with `Marketing Site - Dark.dc.html`),
+`Integration Opportunities.dc.html` and `Logo Directions.dc.html`. The
+first three are new to `design/`. **`Logo Directions.dc.html` is not:** it
+has been in `design/` since the initial commit, and the bundle's copy is
+byte-identical, so there was nothing to copy. The archive leaves out
+`screenshots/` and `.thumbnail`, as earlier imports did, and nothing was
+removed from `design/`.
+
+Lanes are the launch plan's: 125 ops/platform and the Desk shell, 126
+accounts/auth/email/legal/export, 127 runs/Strava, 128 safety, closet and
+moderation, 129 feed. "New: read API" is task 130 (design doc on
+`docs/read-api-design`, not merged). "New: marketing site" has no task.
+
+**A · Reconcile what round 29 left open**
+
+1. **The kicker's type (item 44).** _Ruling: `MONO.xs`, ink, caps. "The
+   build is right, and no step is added."_ A kicker is a status caption,
+   which is MONO.xs's job, and the display family has no step below 19
+   (TYPE.heading), so adding an 11px one would break law 2. `tokens.js`
+   COLLAPSE maps "11px Archivo Black kicker (§4a band)" to MONO.xs. Boards
+   drawn in Archivo Black are not redrawn (round 10 precedence). Round 29
+   #1's fill ruling still holds: no fill, and Try again is the only filled
+   thing. The board's sample is "10px Plex Mono, 0.10em, ink", which is
+   MONO.xs exactly. **This closes the kicker part of open item 44.**
+   _Build:_ none. `ui/form.tsx`'s `FailureBand` already draws
+   `<Mono step="xs">`, and `docs/product.md` §4 is amended in this PR.
+   **One loose end:** the Form Contract's 02b samples still draw Archivo
+   Black 11px with 0.12em. Round 30 treats them like any other drawing (the
+   COLLAPSE entry is how a reader resolves them), so nothing waits on it,
+   but the two contracts still read differently on their face.
+2. **The two boards round 29 said it redrew (item 44).** _Operator Screens:
+   redrawn now._ D0 and D6 still had the round 27 rail, with Gave up as a
+   destination. Both now use D-87's rail, and on D6 Today is the current
+   item, because Gave up is Today's section. _Round 22 Coverage: "the note
+   was wrong."_ It draws neither the rail nor the kicker's type, its §4a
+   copy rules (9.1–9.4) stand as written, and there is nothing to
+   re-export. _Build:_ none. **That answers the ask as we wrote it, and our
+   ask named the wrong board.** Round 29 #13's "Round 22's above-button
+   frame" is Au6, which lives on `Auth.dc.html` (round 22), not on
+   `Round 22 Coverage.dc.html`. Au6 still reads "The band belongs to the
+   button that failed, so it sits above Google". Round 29 #13's ruling
+   (every Google band directly under its button) stands and is what lane
+   126 builds, so only the drawing is behind. It goes to design's next
+   round, below.
+3. **The Desk rail in D-87's order.** _Redrawn:_ Today, Review, Access,
+   Duplicates, Runners, on Operator Screens and on all three round 29 Desk
+   frames (Today, D7 Codes and Requests). The board now agrees with D-87.
+   _Build:_ 125, M, which is round 29 #2's work unchanged:
+   `ops/components/DeskShell.tsx`'s `DESK_PAGES` goes from Today, Review,
+   Duplicates, Gave up, Runners, Access to D-87's order and drops
+   `gave-up`, and `ops/components/Today.tsx` gains the Gave up section and
+   its count. The rows still wait on register R-119.
+4. **The terms gate, redrawn to D-95 and D-96.**
+   - **4a · What the gate lets through (D-95).** `/account` read-only,
+     export and delete. On `/account` every editing control (email,
+     password, Strava, tokens) shows the field hint "Accept the Terms to
+     change this." with a link back to the prompt, and the controls leave
+     the tab order. Values show as text, not fields. The hint is
+     TYPE.small in `--muted` with no band, "because nothing failed". There
+     is no tab bar, and the back link "‹ Terms" returns to the gate. Sign
+     out everywhere stays live, "because it's a safety action" (it is
+     Better Auth's own endpoint and never passes the gate today). Export
+     and Delete run their normal U1 flows and come back here.
+   - **4b · After Accept (D-96).** "Route, not values." This replaces round
+     29's r6f. Accept goes back to the refused save's route as a fresh form,
+     and the page warns first: "After you accept, you'll go back to Log a
+     run. What you typed wasn't kept." The line appears only when a
+     refused save brought the runner here, and names the route in the
+     runner's words (Log a run, Add a piece). Arriving at login skips it.
+   - **The escape line** names all three ways out: "Rather not? Log out, or
+     go to your account to export or delete it." Round 29's standalone Log
+     out pill is gone, because the escape line carries both exits. The
+     never-accepted and changed-again frames get the same escape line and
+     nothing else changes on them.
+
+   _Build:_ 126, M, on or after PR B. `account/components/TermsPrompt.tsx`:
+   the new escape line (today "Rather not? Log out, or delete your account
+   in Settings."), the Log out pill removed from `ActionCard`'s use here,
+   and the "go back to" line, which needs a route-to-words map for the
+   paths `ui/terms-refusal.tsx` carries in `from`. The read-only `/account`
+   is new: `routes/account/$section.tsx` and the Settings › Account
+   components render values as text with the hint while the runner is
+   behind, which the page already knows because its two reads are exempt
+   (D-95). The Strava row's hint touches 127's connect control. **The
+   warning line is new copy on the prompt, which D-96 says has none;** see
+   Conflicts.
+
+**B · Drawn for the read API**
+
+5. **A shared link, signed out (D-58).** _Same URL, two states._
+   `/feed/entry/{id}` signed in is D. Signed out it is a landing that
+   carries nothing of the entry: no handle, date, kit, photo or
+   conditions. The response is identical for a real, private, deleted or
+   made-up id, so the page cannot be used to probe which entries exist.
+   It is `noindex`, and its OG card is the default one, never the entry's.
+   - **5a · First visit:** "Log in to see this run", "Runs on dialed.run
+     are shared with runners who have an account.", **Log in** (filled),
+     **Request an invite** (outline), "Have a code? Join", then the pitch:
+     `WHAT DIALED.RUN IS` · "Wear what worked." · "It remembers what you
+     wore, the weather you ran in, and whether you got it right. The night
+     before your next run, it makes the call." · How it works. The actions
+     come first, "because the visitor came for a run".
+   - **5b · This browser has signed in before:** a first-party flag with
+     no identity in it. Log in is the only button, the lead is "You're
+     signed out on this browser.", the invite drops to one line ("New to
+     dialed.run? Request an invite") and the pitch goes. The page never
+     asks who you are.
+   - **5c · Desk:** the pitch on the left and the panel on the right (the
+     Desktop Contract's centred panel, offset). The returning-browser state
+     at desk is the panel alone, centred.
+   - **After signing in** the runner lands on the entry: Log in carries
+     `?next=/feed/entry/{id}`, and so do Google, the invite-code path and
+     email confirmation. If the runner can't see the entry, it is the Feed
+     board's removed-entry state, with no reason given.
+   - "Request an invite" matches the marketing site and becomes "Create an
+     account" at public launch. It opens `dialed.run/invite` (marketing
+     M5), and How it works opens marketing M4. The landing **withdraws the
+     read-only public `/r/{id}` view** the Integrations board first drew.
+
+   _Build:_ 129 and 126, M. Today `feed/redirect.ts`'s `requireSignedIn`
+   sends a signed-out `/feed/entry/$entryId` to `/auth/login` with no
+   `next`, and round 27 #7's "Log in to see this run" was never built, so
+   this supersedes it. 129 owns the entry route's signed-out branch (a
+   landing instead of the redirect, built on `ui/SignedOutPanel.tsx`); 126
+   owns `next` through Au1's password and Google paths, the invite code
+   and email confirmation, and the device flag (`lib/browser/`). Until a
+   marketing site exists, Request an invite goes to the app's own
+   `/account/request-access` (Au5) and How it works has nowhere to go, so
+   it is left out. The landing reads the same on today's single host as on
+   the board's `app.dialed.run`. Lane 129 can build it before the read API
+   if the owner wants shared links to land well at the friends stage.
+
+6. **Settings › Account › API tokens.** _A section below Strava._ Tokens
+   are read-only, cover only the runner's own account, and never expire:
+   revoking is the only way to end one. **The token decides scope, so the
+   per-piece publish toggle the Integrations board first drew is dropped.**
+   - **6a · Empty:** "API tokens" · "A token lets your own tools read your
+     dialed.run data. For example, a blog can show how a jacket did." ·
+     **Create a token**, an outline pill ("a secondary action on a settings
+     page", like round 29's Resend). No docs link until docs exist.
+   - **6b · Two tokens:** each row is the name, Revoke, the scope label and
+     `MADE SEP 12 · USED OCT 2` (or `NEVER USED`). Newest first; dates are
+     date only, in the runner's zone; last used updates at most hourly. The
+     scope label is `SHARED ONLY` in `--muted`, or `[INCLUDES PRIVATE]` in
+     ink, bracketed like `[UNDER REVIEW]` "because it's the one you should
+     notice". No hue for either. A row leaves on a successful revoke, never
+     on the press, and a failed revoke gets round 29's row band,
+     `NOT REVOKED`, inside the row.
+   - **6c · Create sheet:** NAME ("So you can tell your tokens apart.",
+     required, up to 40 characters, not unique; its error is "Name the token
+     so you can tell it apart."), then WHAT IT CAN READ: **Shared entries
+     only** (preselected) · "Runs you've shared with runners on dialed.run."
+     or **Include my private entries** · "Whatever uses this token can read
+     runs only you can see. If it publishes them, they're public." No extra
+     confirm for private. **Create token.**
+   - **6d · Shown once:** "Copy your token" · "You won't see this again. If
+     you lose it, revoke it and make another." The token is shown whole
+     (`drn_…`), never masked, and selectable. Copy becomes `[ Copied ]` for
+     2s with a polite announcement; if copying fails, the label reads
+     "Select it and copy" and the text is pre-selected. Under it, the name
+     and scope (`BIGLONGRUN BUILD · SHARED ONLY`). The sheet doesn't close
+     on scrim tap or swipe: Done is the only way out. After this the server
+     keeps only a hash.
+   - **6e · Revoke confirm:** `Revoke "biglongrun build"?` · "Anything
+     using it stops working straight away. This can't be undone." ·
+     `LAST USED OCT 2` · **Revoke** (filled ink, not pink: "pink is 'go',
+     and this is a stop that you asked for") / Keep it. In flight it reads
+     `[ Revoking ]`. On success the sheet closes, the row leaves, and the
+     status region says "Revoked biglongrun build." A request with a
+     revoked token gets a 401 with the body "This token was revoked."
+   - **Rules:** at most 10 per account; at 10, Create is replaced by the
+     hint "You have 10 tokens, the most there can be. Revoke one to make
+     another." Scope is fixed after creation, so to change it, create a new
+     token and revoke the old one. Creating one emails "A token called
+     {name} was created on your account.", with the scope and a "This
+     wasn't me" link that revokes that token and lands on Account; revoking
+     sends nothing. The export adds `tokens.csv` (name, scope, created_at,
+     last_used_at), never the secret. Behind on the terms, the list shows
+     and Revoke works, Create shows #4's hint, and **tokens keep working,
+     "because reading your own data isn't using the service."**
+
+   _Build:_ new: read API (task 130), L, with 126 for the email and the
+   export. Per the design doc: `auth/api-tokens.ts` and
+   `auth/components/ApiTokens.tsx`, wired by `routes/account/$section.tsx`;
+   a new email kind in `email/content.ts`; `tokens.csv` in
+   `account/export-sheets.ts`; and the additive `add_api_tokens` migration.
+   The board settles three of the design doc's open questions (no expiry;
+   export the tokens without the secret; the show-once, empty-state and
+   revoke copy) and differs from it in several places, listed under "The
+   read API design doc" below. Two rulings amend owner decisions (D-95 and
+   D-43); see Conflicts.
+
+**New design areas, not built and not scheduled**
+
+None of these was asked for, and none is in any lane. Recorded so the next
+reader knows what the boards hold.
+
+- **Marketing site** (`Marketing Site.dc.html`, and `- Dark`, which is the
+  T1 swap following the visitor's system setting, with no toggle). "The app
+  makes the call. The site shows the record." Drawn at desk 1180 unless
+  marked 390.
+  - **M0 · Two hosts.** `dialed.run` is the marketing site, indexed and
+    followed: `/`, `/what-to-wear`, `/what-to-wear/{band}`,
+    `/how-it-works`, `/invite`, `/changelog` (and `/changelog.xml`),
+    `/privacy`, `/terms`, `/open-source` and `/copyright`, static and built
+    nightly from the guide data; `www.` 301s here. `app.dialed.run` is the
+    app, never indexed: robots.txt disallows the whole host, every response
+    sends `X-Robots-Tag: noindex`, and cookies are scoped to it. It holds
+    everything signed in, `/login`, `/join?code=`, reset and confirm links,
+    and `/feed/entry/{id}` (item 5's landing when signed out).
+    `api.dialed.run` is the published-record feed and whatever the guide
+    build reads. Until public launch, only Home and Invite are linked; the
+    nav links What to wear once one band is published. "This amends Round
+    27."
+  - **M1 · Home.** "Wear what worked." One promise, one proof, three steps,
+    one ask. The proof is a real Call card, static markup filled at build
+    time from the owner's own published piece. Request an invite (pink) and
+    "Have a code? Join" sit together. A guide strip ("What to wear · from
+    1,240 shared runs") appears once a band is published. Structured data:
+    WebApplication.
+  - **M2 · What to wear.** Published bands only, coldest first; an
+    unpublished band is absent, not greyed. Each tile is the band, its
+    most-dialed kit in one line (the most-dialed type per category at ≥50%
+    dialed share), and runs and runners. A °F/°C client switch rewrites
+    labels; the URL stays in °F.
+  - **M3 · Per-band guide** (`/what-to-wear/32-41f`). One page per band,
+    with sky as sections (Dry, Damp, Rain), each needing 5 runners. A
+    generated lead sentence answers first ("Most runners were dialed in a
+    long sleeve, tights and light gloves…"), then a table of garment types
+    (never brands) by part with dialed share, and "When it went wrong".
+    An invite card ("This is everyone's record. Yours would be about
+    you."), then "Reviewed at this temperature" cards linking published
+    pieces to their biglongrun reviews. Structured data: FAQPage.
+  - **M4 · How it works.** The legal layout (620 measure, sticky contents)
+    for the loop, the verdict's five steps, the call and a FAQ. "Owner to
+    confirm 'Why invite-only?'". No pricing until the owner decides it.
+  - **M5 · Invite.** One field, email, with Turnstile; every address gets
+    the same answer ("You're on the list"), as Au4 does. "Have a code?"
+    hands over to `app.dialed.run/join?code=`, so Au2 stays the only place
+    an account is made. It has no note field, unlike Au5.
+  - **M6 · Gear (after launch, not in v1).** One page per model, pooled
+    across runners by band, needing one catalogue entry per model. The
+    board flags its own bar colours as placeholders: pink can't mean warm.
+  - **M7 · Changelog.** One owner-written Markdown file per entry, newest
+    first, tags NEW, BETTER and FIXED (`MONO.xs` ink in a 1px box), an
+    Atom feed, dated anchors. **M7b** adds a "What's new" row in U that
+    opens it in a new tab, with `NEW · OCT 3` until opened; the board asks
+    whether hi-viz there needs a ruling against §AH.
+- **Integration Opportunities** (`Integration Opportunities.dc.html`). "Your
+  blog says how it fits. dialed.run says how it did."
+  - **01 · The biglongrun block.** "Real-World Conditions", a sibling under
+    the existing Strava block on biglongrun's apparel reviews, rendered by
+    Astro at build time in the blog's own styling, credited in its footer.
+    At Review and Lifetime tabs (`?asOf=` the post's date); runs worn,
+    feels-like range, dialed count, worn period; a by-conditions table
+    whose bands link to `dialed.run/what-to-wear/{band}` (plain text when
+    unpublished); sky counts; "most often worn with"; and a run list whose
+    dates link to the entry on dialed.run, landing signed-out readers on
+    item 5. Every temperature comes in °F and °C.
+  - **02 · The published-record endpoint.**
+    `GET https://api.dialed.run/v1/pieces/{piece_id}/record?asOf=…` with
+    a `drn_` bearer: totals, bands, sky, wornWith and runs, dates only, no
+    time or place. Shared-only by default (the token decides, item 6);
+    unpublished, deleted or revoked is 404 and the block renders nothing;
+    a retired piece keeps its record with `"retired"`.
+  - **03 · Tokens.** The token from item 6 is the only switch. The blog
+    names a piece by its id in the review's frontmatter
+    (`dialedPiece: pc_…`), and revoking removes the block on the next build.
+  - **04 · Other openings, none committed:** shoe reviews with the same
+    block; a kit line appended to the Strava activity; biglongrun
+    `/compare`; other runners' sites ("in v1 only the owner makes tokens");
+    and guides linking back to reviews.
+- **Logo Directions** (`Logo Directions.dc.html`, in `design/` since the
+  initial commit and unchanged). Eleven direction studies in a system font,
+  "NAME LOCKED: dialed.run". Round 1 draws dialed as a dial (01 flat
+  wordmark, 02 indicator dot, 03 the dial, 04 the band, 05 bib tiles, 06
+  the tick). Round 2, the live one, draws it as "lined up" (07 in register,
+  08 within tolerance, 09 interlocked, 10 flush left, 11 dead centre), and
+  recommends **08's brackets as the system and 07's registration mark as
+  the icon**. The shipped wordmark `[dialed.run]` and round 26 #22's `[d]`
+  favicon are 08's grammar already. Next steps it names: a type designer
+  for real vectors, a trademark search on 03 and 04, and a home-screen
+  test.
+
+**Conflicts for the owner.** None of these was adopted by the import. Each
+quotes both sides and ends with a recommendation.
+
+- **Two hosts (Marketing M0) vs D-53 and the deployment plan.** D-53: _"The
+  whole site is `noindex` until the public launch … at the stage 2 gate the
+  landing page and other public marketing pages flip to index by their own
+  route meta, and profiles and entries stay `noindex`."_ The deployment
+  plan routes one Worker to `dialed.run` and recommends one origin for
+  cookies (§1). M0 splits the product across `dialed.run` (indexed),
+  `app.dialed.run` (never) and `api.dialed.run`, says "This amends Round
+  27", and does not say the marketing host waits for stage 2 to be
+  indexed. Profiles and entries staying out of the index agrees with D-53.
+  _Recommendation:_ keep D-53 and the single host until the owner decides
+  to build a marketing site at all. If one is built, the split is a
+  deployment-plan change (Better Auth's URL, the Strava callback, Google's
+  origins, every email link) and the marketing host still ships `noindex`
+  until stage 2.
+- **Legal pages on the marketing host (M0) vs D-81 and D-93.** M0 puts
+  `/privacy`, `/terms`, `/open-source` and `/copyright` on the static
+  `dialed.run`, indexed. D-81 fixes the links where they are, with
+  `/privacy` answering X1 until the app reads the published mark; D-93's
+  "no published terms" state is read by the app worker
+  (`account/terms-acceptance.ts`). Round 27 kept them `noindex`.
+  _Recommendation:_ keep them in the app until a marketing site is
+  scheduled; moving them is part of that decision, not this import.
+- **Guides publish shared-run data to the open web (M1–M3) vs D-58.**
+  D-58: _"nothing is served to a signed-out visitor or a search index by
+  being public."_ The guides aggregate shared runs (five runners per band,
+  types not brands, no names) for signed-out visitors and search; M1's
+  Call card and M3's review cards publish the owner's own piece record.
+  _Recommendation:_ an owner call before any guide is built. If the
+  answer is yes, D-58 gains an aggregate exception and the privacy
+  policy's "What other runners see" section needs a line.
+- **The terms prompt's "go back to" line (4b) vs D-96.** D-96: a refused
+  call opens the prompt _"instead of a failure band, with no new copy,
+  never saying the refused write was saved."_ Round 30 adds "After you
+  accept, you'll go back to Log a run. What you typed wasn't kept."
+  _Recommendation:_ adopt it. It never says the write was saved, and it
+  tells the runner the one thing D-96 leaves them to discover. It needs
+  D-96 amended.
+- **Tokens and the terms gate (6) vs D-95.** D-95 names the exemptions:
+  _"Get a copy … beside Delete account, Keep, Accept and sign-out …
+  Settings › Account's two reads are exempt with it."_ Round 30 adds the
+  token list, Revoke, and the API itself ("tokens keep working, because
+  reading your own data isn't using the service"). The read API design doc
+  refuses a token while its owner is behind (403 `terms_not_accepted`).
+  _Recommendation:_ adopt it, on D-95's own reasoning (portability, and
+  Revoke is a safety action like sign-out), amend D-95, and change the
+  design doc before task 130 is built.
+- **The token-created email (6) vs D-43.** D-43 lists the emails that
+  exist; D-89 amended it for the reopen email. Round 30 adds "A token
+  called {name} was created on your account." with a "This wasn't me"
+  revoke link. _Recommendation:_ adopt it with task 130 as a transactional
+  kind, and amend D-43 then, as D-89 did.
+- **The default OG card (5) vs D-51**, still unresolved from round 27.
+  D-51: _"Per-entry OG share cards are generated now."_ Round 30: "The OG
+  card is the default one, never the entry's", as round 27 #7 ruled.
+  _Recommendation:_ supersede D-51, as round 27's import already asked.
+- **A kit line on the Strava activity (Integrations 04) vs D-14 and D-54.**
+  D-54: Strava keeps _"only the athlete id and a refresh token, used solely
+  to revoke"_; D-14: _"No activity data stored, ever."_ The board's
+  "41°F damp · Dialed · kit via dialed.run" needs Strava's write scope and
+  writes to an activity. It is marked "not committed". _Recommendation:_
+  not adopted; it would reverse two owner decisions and Strava's review.
+
+**The read API design doc (`docs/read-api-design`, open).** The
+Integrations board's endpoint and the design doc describe different shapes.
+None is an owner decision yet, so these go to task 130's review rather than
+to the owner here:
+
+- **Path and host:** `GET https://api.dialed.run/v1/pieces/{piece_id}/record`
+  on its own host, one endpoint, against `GET /api/v1/garments/:id/runs` on
+  the app's host, plus `/api/v1/garments`, `/api/v1/runs` and
+  `/api/v1/runs/:id`.
+- **"Pieces":** `piece` with a `pc_` id and `{ id, name, category, type }`,
+  frontmatter `dialedPiece`, against garments with plain ids, brand as its
+  own field and frontmatter `dialedGarmentId`.
+- **Bands:** server-side feels-like bands (`"0-5c"`, labels in °F and °C,
+  counts and a guide URL) against no bands: min/max ranges for temperature,
+  feels-like, wind and precipitation, with the blog doing any binning.
+- **Sky:** `{ dry, damp, rain, snow }` totals and a sky word per run,
+  against no sky aggregate and, per run, Visual Crossing's `condition`
+  string and `precipMm` (a sky value only on manual runs).
+- **`wornWith`:** on the board, absent from the doc's garment endpoint (kit
+  is only on `/runs`).
+- **Verdict keys:** five strings (`way_cold … way_warm`) on rows, folded to
+  `dialed`, `warm` and `cold` in totals, against the integer `verdictSchema`
+  with `byValue` counts and a `none` bucket for runs with no verdict.
+- **`asOf`:** `?asOf=YYYY-MM-DD` returns the record to that date and echoes
+  `"asOf"`, so At Review and Lifetime are two fetches; the doc's `?until=`
+  returns both `stats.lifetime` and `stats.atReview` in one response, with
+  `atReview` on each run.
+- **Also:** dual °F/°C values against SI only; dates only against ISO
+  instants with a time zone; no distance, pace or duration (the board keeps
+  the Strava block) against stats meant to replace it; `"version": 1` in
+  the body against path-only versioning; empty links for private rows
+  against `visibility` and `includesPrivate`; owner-only tokens in v1
+  (board 04) against any runner; a distinct "This token was revoked." 401
+  against one `invalid_token` answer for four cases; `tokens.csv` (four
+  columns) against `api_tokens.csv` (six, with prefix and revoked); and
+  the doc's displayed `drn_` prefix per row, which item 6's rows do not
+  show.
+
+**For design's next round.** No owner call is needed for these:
+
+- Au6 on `Auth.dc.html` still draws Google's band above the button; round
+  29 #13 puts it under. Our round 30 ask named the wrong board.
+- The Form Contract's 02b samples still draw the kicker in Archivo Black
+  11px; tokens.js now maps them, but the contract's own samples could
+  match.
+- Integrations 02 still lists `published.csv` (piece, published_at, key
+  last used) in the export, which item 6's `tokens.csv` replaces now that
+  the per-piece toggle is gone.
+- The marketing nav draws the wordmark as `[dialed]`; `docs/product.md`
+  §Brand says `[dialed.run]`, lowercase always.
+- Round 29's errata still stand: the Feed gutter needs a T1 role, "The two
+  typefaces" should be three, and the ZIP list should read `run-files/`
+  without "unblurred".
+
+**Not asked in round 30, and still open in the queue:** item 10's Gave up
+rows (waiting on R-119); item 36's content-removed email; item 38's F rail
+card by category alone; item 39's delete-sheet Google flow and its emails;
+and item 43, which is held for PR B.
 
 ## Answered in round 29 (imported 2026-10-03)
 

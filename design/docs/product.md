@@ -146,7 +146,7 @@ are, not the top of the form.
 
 - `1px solid #0B0B0E` on paper, `1px solid #F4F3EF` on ink. No fill. No yellow —
   yellow means "the fix is here" and it isn't.
-- Kicker in Archivo Black, uppercase, 11px: `NOTHING SAVED`.
+- Kicker in MONO.xs, ink, caps: `NOTHING SAVED` (round 30 #1).
 - One sentence naming what happened in the user's terms: `Your connection
   dropped.` / `Our end failed. Nothing about your run changed.`
 - A `Try again` button that re-submits the same values. Values are never cleared
@@ -459,8 +459,8 @@ Drawn in `Round 26 Rulings.dc.html`.
 - **Confirmed.** Consensus "Most"/"Some" ("Split" on ties, "All" alone). Bell "Notifications, 3 new", ">9" = "more than 9 new". Deletes at the foot under YOURS, photo delete on the photo, no overflow; retire-confirm grammar with "Keep it" focused. W3 blur: 3×3 44px square map. Own under-review: UNDER REVIEW tag + HIDDEN WHILE WE CHECK band. "Photo not added" body reworded. Closet tile photo 4:5. Desk primary sized to label.
 
 ## Round 29
-- **§4a kickers stay unfilled.** The contract wins. Kicker: Archivo Black 11, caps, ink, inside the 1px band. Yellow only where the fix is (the field message). Round 28 #13b reversed; R26/R27/R28 and Feed bands redrawn. Desk keeps hi-viz as its "needs a person" accent (rail, counts, NEW), never on a band.
-- **Desk (D-87).** Today, Review, Duplicates, Runners, Access. Gave up is a section on Today; Today's count is the Gave up count.
+- **§4a kickers stay unfilled.** The contract wins. Kicker: MONO.xs (round 30 #1), caps, ink, inside the 1px band. Yellow only where the fix is (the field message). Round 28 #13b reversed; R26/R27/R28 and Feed bands redrawn. Desk keeps hi-viz as its "needs a person" accent (rail, counts, NEW), never on a band.
+- **Desk (D-87).** Today, Review, Access, Duplicates, Runners (order corrected round 30). Gave up is a section on Today; Today's count is the Gave up count.
 - **CSAM (D-88).** Confirm: "Remove this photo everywhere and keep the evidence for the report?" + "@x's account stays open. Closing it is a separate action on their Runners page."
 - **[UNDER REVIEW] (D-90).** Bracketed, MONO.xs ink, no fill, in the SHARED slot.
 - **D7.** Revoked = --quiet + line-through, no opacity. STATE column ink/quiet, no hue. Made line ink. NEW on hi-viz (Desk accent). Every row action fails on its row: NOT SENT, STILL WAITING, STILL REVOKED, STILL ACTIVE; page-level NOT CHANGED only for New code.
@@ -471,3 +471,12 @@ Drawn in `Round 26 Rulings.dc.html`.
 - **Confirm-email band** is static, no role — not a second region. Sheet leads: Useful "Marking runs Useful needs a confirmed email." · Report "Reporting needs a confirmed email." · Share "Sharing needs a confirmed email. This run saves private." · Email change "Confirm this address before you change it." Body "We sent a link to {email}." Resend: outline pill on the sheet, link on the band.
 - **Google bands** all under the button. Refusals: link or nothing; fault: Try again.
 - **Confirmed.** O0 NOT KEPT / [ Keeping ]. Back to contents below desk. Email footer labels. Export adds terms.csv (version, accepted_at, how).
+
+## Round 30
+Drawn in `Round 30 Rulings.dc.html`.
+- **§4a kicker = MONO.xs**, ink, caps. tokens.js COLLAPSE carries it; no new step. Boards drawn in Archivo Black 11 are not redrawn (round 10 precedence).
+- **Redraw notes.** Operator Screens D0/D6 rail was not redrawn in round 29 and now is. Round 22 Coverage has nothing that depends on round 29, so the note was wrong and there's nothing to re-export.
+- **Rail (D-87).** Today, Review, Access, Duplicates, Runners.
+- **Terms gate (D-95, D-96).** Lets through: delete, export, read-only Settings › Account. Escape line: "Rather not? Log out, or go to your account to export or delete it." After Accept: back to the route; typed values aren't restored.
+- **Signed-out entry link (D-58).** app.dialed.run/feed/entry/{id} signed out shows nothing of the entry. Title "Log in to see this run", the pitch, Log in (filled), Request an invite (outline, → dialed.run/invite), "Have a code? Join". On a device that has signed in before, Log in leads and the invite drops to one line. After login → the entry; if it isn't visible to them → the Feed board's removed-entry state. noindex; default OG card. Supersedes the /r/{id} public view drawn on the Integrations board.
+- **API tokens.** Settings › Account › API tokens. Name + "Shared entries only" (default) / "Include my private entries". Shown once as drn_…, Copy, "You won't see this again." The list shows name, scope, created, last used ("Never used"), and Revoke, which is immediate. Up to 10. Read-only, own account only, no expiry. Creating one emails a notice with "This wasn't me" (which revokes it). The export adds tokens.csv (name, scope, created, last_used; never the secret). The per-piece publish toggle on the Integrations board is dropped: the token decides scope.

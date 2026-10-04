@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px;">
+<div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px;">
+
+<div style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+  <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;"><span>Integration opportunities &nbsp;/&nbsp; where the record lives outside the app</span><span style="color: #FF2D8A;">dialed.run</span></div>
+  <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 1120px; text-transform: uppercase;">Your blog says how it fits. dialed.run says how it did.</h1>
+  <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">A garment's record (runs, the conditions it was worn in, the verdicts) published as data, so other sites can render it in their own styling. Each one links back to a dialed.run conditions guide, which is where the search value comes from. biglongrun.com is the first and reference integration.</p>
+  <div style="display: flex; flex-wrap: wrap; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em;"><a href="#i1" style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px; color: #F4F3EF;">01 · biglongrun block</a><a href="#i2" style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px; color: #F4F3EF;">02 · The data</a><a href="#i3" style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px; color: #F4F3EF;">03 · Token</a><a href="#i4" style="border: 1px solid #3A3A42; padding: 7px 12px; border-radius: 100px; color: #F4F3EF;">04 · Other openings</a></div>
+</div>
+
+<div id="i1" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+  <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">01 · Real-world conditions</span><span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45; text-wrap: pretty;"><strong style="color: #F4F3EF;">A sibling to the Strava block on apparel reviews. It has the same tabs and the same grammar, and it's rendered by Astro at build time.</strong> The Strava block answers "how much was it used?". This block answers "in what conditions, and did it work?". Drawn below in neutral blog styling. The real one takes biglongrun's own CSS.</span></div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+  <div style="display: flex; flex-direction: column; gap: 10px; flex: 1 1 760px; max-width: 820px; min-width: 0;">
+    <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">01 · BIGLONGRUN.COM/REVIEWS/{SLUG} · UNDER THE STRAVA BLOCK</span>
+    <div data-screen-label="biglongrun conditions block" style="background: #FFFFFF; color: #1F2328; border-radius: 12px; overflow: hidden; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; display: flex; flex-direction: column;">
+      <div style="padding: 20px 28px; border-bottom: 1px solid #E5E7EB; display: flex; flex-direction: column; gap: 8px; background: #F9FAFB;">
+        <span style="font-size: 13px; color: #6B7280;">Real-World Usage Stats · Strava block, existing</span>
+        <div style="display: flex; gap: 24px; flex-wrap: wrap; font-size: 13px; color: #9CA3AF;"><span>Total Distance</span><span>Total Runs</span><span>Average Pace</span><span>Usage Period</span><span>…</span></div>
+      </div>
+      <div style="padding: 28px; display: flex; flex-direction: column; gap: 22px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 12px;">
+          <h2 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em;">Real-World Conditions</h2>
+          <div style="display: flex; gap: 4px; background: #F3F4F6; border-radius: 8px; padding: 3px; font-size: 14px;"><span style="background: #FFFFFF; border-radius: 6px; padding: 6px 12px; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.08);">At Review</span><span style="padding: 6px 12px; color: #6B7280;">Lifetime</span></div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+          <div style="border: 1px solid #E5E7EB; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; color: #6B7280;">Runs Worn</span><span style="font-size: 22px; font-weight: 700;">23</span></div>
+          <div style="border: 1px solid #E5E7EB; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; color: #6B7280;">Feels-like Range</span><span style="font-size: 22px; font-weight: 700;">27–49°F</span></div>
+          <div style="border: 1px solid #E5E7EB; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; color: #6B7280;">Dialed</span><span style="font-size: 22px; font-weight: 700;">15 of 23</span></div>
+          <div style="border: 1px solid #E5E7EB; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; color: #6B7280;">Worn Period</span><span style="font-size: 15px; font-weight: 600; line-height: 1.35;">Nov 2, 2025 to Mar 3, 2026</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <h3 style="margin: 0; font-size: 16px; font-weight: 700;">By conditions</h3>
+          <div style="display: flex; flex-direction: column; border: 1px solid #E5E7EB; border-radius: 8px; overflow: hidden; font-size: 15px;">
+            <div style="display: grid; grid-template-columns: minmax(0, 1.2fr) 70px minmax(0, 2fr); gap: 16px; padding: 10px 14px; background: #F9FAFB; font-size: 13px; color: #6B7280;"><span>Feels like</span><span>Runs</span><span>How it went</span></div>
+            <div style="display: grid; grid-template-columns: minmax(0, 1.2fr) 70px minmax(0, 2fr); gap: 16px; padding: 12px 14px; border-top: 1px solid #E5E7EB; align-items: center;"><a href="#" style="color: #0F766E; font-weight: 600; text-decoration: underline;">23–32°F</a><span>5</span><span style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;"><span style="display: flex; height: 8px; width: 120px; border-radius: 4px; overflow: hidden; background: #E5E7EB;"><span style="width: 60%; background: #0F766E;"></span><span style="width: 40%; background: #93C5FD;"></span></span><span style="color: #4B5563; font-size: 14px;">3 dialed · 2 too cold</span></span></div>
+            <div style="display: grid; grid-template-columns: minmax(0, 1.2fr) 70px minmax(0, 2fr); gap: 16px; padding: 12px 14px; border-top: 1px solid #E5E7EB; align-items: center;"><a href="#" style="color: #0F766E; font-weight: 600; text-decoration: underline;">32–41°F</a><span>11</span><span style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;"><span style="display: flex; height: 8px; width: 120px; border-radius: 4px; overflow: hidden; background: #E5E7EB;"><span style="width: 73%; background: #0F766E;"></span><span style="width: 9%; background: #FCA5A5;"></span><span style="width: 18%; background: #93C5FD;"></span></span><span style="color: #4B5563; font-size: 14px;">8 dialed · 1 too warm · 2 too cold</span></span></div>
+            <div style="display: grid; grid-template-columns: minmax(0, 1.2fr) 70px minmax(0, 2fr); gap: 16px; padding: 12px 14px; border-top: 1px solid #E5E7EB; align-items: center;"><a href="#" style="color: #0F766E; font-weight: 600; text-decoration: underline;">41–50°F</a><span>7</span><span style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;"><span style="display: flex; height: 8px; width: 120px; border-radius: 4px; overflow: hidden; background: #E5E7EB;"><span style="width: 57%; background: #0F766E;"></span><span style="width: 43%; background: #FCA5A5;"></span></span><span style="color: #4B5563; font-size: 14px;">4 dialed · 3 too warm</span></span></div>
+          </div>
+          <span style="font-size: 13px; color: #6B7280;">Each range links to dialed.run's guide for running in it.</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px;">
+          <div style="display: flex; flex-direction: column; gap: 10px;"><h3 style="margin: 0; font-size: 16px; font-weight: 700;">Sky</h3><div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 14px;"><span style="border: 1px solid #E5E7EB; border-radius: 999px; padding: 5px 12px;">Dry 14</span><span style="border: 1px solid #E5E7EB; border-radius: 999px; padding: 5px 12px;">Damp 6</span><span style="border: 1px solid #E5E7EB; border-radius: 999px; padding: 5px 12px;">Rain 2</span><span style="border: 1px solid #E5E7EB; border-radius: 999px; padding: 5px 12px;">Snow 1</span></div></div>
+          <div style="display: flex; flex-direction: column; gap: 10px;"><h3 style="margin: 0; font-size: 16px; font-weight: 700;">Most often worn with</h3><div style="display: flex; flex-direction: column; gap: 6px; font-size: 15px;"><a href="#" style="color: #0F766E; text-decoration: underline;">Tights, example A · 12 runs</a><span>Gloves, example B · 9 runs</span><span>Vest, example C · 6 runs</span></div><span style="font-size: 13px; color: #6B7280;">A name is a link only if biglongrun has reviewed it.</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <h3 style="margin: 0; font-size: 16px; font-weight: 700;">View all 23 runs in this piece</h3>
+          <div style="display: flex; flex-direction: column; font-size: 15px;">
+            <div style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr); gap: 12px; padding: 8px 0; font-size: 13px; color: #6B7280; border-bottom: 1px solid #E5E7EB;"><span>Date</span><span>Feels like</span><span>Sky</span><span>Verdict</span></div>
+            <div style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid #F3F4F6;"><a href="#" style="color: #0F766E; text-decoration: underline;">Mar 3, 2026</a><span>38°F</span><span>Damp</span><span>Dialed</span></div>
+            <div style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid #F3F4F6;"><a href="#" style="color: #0F766E; text-decoration: underline;">Feb 21, 2026</a><span>29°F</span><span>Dry</span><span>Too cold</span></div>
+            <div style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid #F3F4F6;"><a href="#" style="color: #0F766E; text-decoration: underline;">Feb 16, 2026</a><span>46°F</span><span>Dry</span><span>Too warm</span></div>
+            <span style="padding: 10px 0; font-size: 14px; color: #6B7280;">+ 20 more</span>
+          </div>
+          <span style="font-size: 13px; color: #6B7280;">Dates link to the run on dialed.run.</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding-top: 14px; border-top: 1px solid #E5E7EB; font-size: 14px; color: #4B5563;"><span>Conditions and verdicts logged on <a href="#" style="color: #1F2328; font-weight: 700; text-decoration: underline;">dialed.run</a></span><a href="#" style="color: #0F766E; text-decoration: underline;">Request an invite</a></div>
+      </div>
+    </div>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 0; flex: 1 1 380px; max-width: 520px; border: 1px solid #2A2A31;">
+    <div style="padding: 14px 16px; background: #0B0B0E; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #F5FF3D;">AT REVIEW · LIFETIME</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">Same split as Strava. At Review is the record up to the post's publish date (<code style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">?asOf=2026-03-04</code>), so the numbers match what the review says. Lifetime grows with every rebuild.</span></div>
+    <div style="padding: 14px 16px; background: #0B0B0E; border-top: 1px solid #2A2A31; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #F5FF3D;">BY CONDITIONS · THE LINK THAT MATTERS</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">Each band is a normal followed link to <code style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">dialed.run/what-to-wear/{band}</code>. A band whose guide isn't published yet (fewer than 5 runners) is rendered as plain text, not a link, so a link never lands on a missing page.</span></div>
+    <div style="padding: 14px 16px; background: #0B0B0E; border-top: 1px solid #2A2A31; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #F5FF3D;">VERDICTS · THE BLOG'S WORDS</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">The feed returns the five verdict keys (<code style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">way_cold … way_warm</code>) on rows and folded to <code style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">cold · dialed · warm</code> in totals, and biglongrun picks the words and colours. The block never uses dialed.run's hues or type. It's credited in the footer, the same way Strava is.</span></div>
+    <div style="padding: 14px 16px; background: #0B0B0E; border-top: 1px solid #2A2A31; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #F5FF3D;">RUN ROWS · LINK TO DIALED.RUN</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">Each date links to the entry on dialed.run (<code style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">app.dialed.run/feed/entry/{id}</code>). Signed-out readers get the Round 30 #5 landing, which shows nothing of the entry (D-58), then the pitch and Log in / Request an invite. After signing in, they land on the entry. <em>The read-only public view first drawn here is withdrawn.</em></span></span></div>
+    <div style="padding: 14px 16px; background: #0B0B0E; border-top: 1px solid #2A2A31; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #F5FF3D;">UNIT PREFERENCES</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">Every temperature comes in both °F and °C, so biglongrun's existing unit switch drives it with no second request.</span></div>
+  </div>
+  </div>
+</div>
+
+<div id="i2" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+  <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">02 · The data</span><span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45; text-wrap: pretty;"><strong style="color: #F4F3EF;">One read-only endpoint per piece, fetched by Astro at build time.</strong> A versioned path so a schema change can't break a build, and a personal key so only the owner's own published pieces come back.</span></div>
+  <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+    <pre style="margin: 0; flex: 1 1 560px; max-width: 760px; min-width: 0; overflow-x: auto; background: #0B0B0E; border: 1px solid #2A2A31; border-radius: 12px; padding: 20px 22px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.6; color: #DEDDD6;"><span style="color: #8B8B93;">GET https://api.dialed.run/v1/pieces/{piece_id}/record?asOf=2026-03-04
+Authorization: Bearer drn_••••••••</span>
+
+{
+  <span style="color: #F5FF3D;">"version"</span>: 1,
+  <span style="color: #F5FF3D;">"piece"</span>: { "id": "pc_8f2…", "name": "…", "category": "top", "type": "long sleeve" },
+  <span style="color: #F5FF3D;">"asOf"</span>: "2026-03-04",
+  <span style="color: #F5FF3D;">"totals"</span>: { "runs": 23, "dialed": 15, "warm": 4, "cold": 4,
+              "feels": { "lo": { "f": 27, "c": -3 }, "hi": { "f": 49, "c": 9 } },
+              "first": "2025-11-02", "last": "2026-03-03" },
+  <span style="color: #F5FF3D;">"bands"</span>: [
+    { "band": "0-5c", "label": { "f": "32–41°F", "c": "0–5°C" }, "runs": 11,
+      "dialed": 8, "warm": 1, "cold": 2,
+      "guide": "https://dialed.run/what-to-wear/32-41f" }, …
+  ],
+  <span style="color: #F5FF3D;">"sky"</span>: { "dry": 14, "damp": 6, "rain": 2, "snow": 1 },
+  <span style="color: #F5FF3D;">"wornWith"</span>: [ { "id": "pc_…", "name": "…", "runs": 12 }, … ],
+  <span style="color: #F5FF3D;">"runs"</span>: [
+    { "date": "2026-03-03", "feels": { "f": 38, "c": 3 }, "sky": "damp",
+      "verdict": "dialed", "url": "https://app.dialed.run/feed/entry/e_4k9…" }, …
+  ]
+}</pre>
+    <div style="display: flex; flex-direction: column; flex: 1 1 380px; max-width: 520px; border: 1px solid #2A2A31;">
+      <div style="padding: 14px 16px; background: #0B0B0E; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #00E0C6;">SHARED ONLY BY DEFAULT</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">The token decides (Round 30 #6). For a token set to shared entries only, PRIVATE entries never appear, in the totals or the rows. A token set to include private entries counts them too, but row links to private entries are left empty, since nobody else can open them anyway. A blog token should be shared-only.</span></span></div>
+      <div style="padding: 14px 16px; background: #0B0B0E; border-top: 1px solid #2A2A31; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #00E0C6;">NO TIME, NO PLACE</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">The feed carries dates only, with no start time and no location. Strava links show what the owner has already chosen to show there.</span></div>
+      <div style="padding: 14px 16px; background: #0B0B0E; border-top: 1px solid #2A2A31; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #00E0C6;">UNPUBLISHED = 404</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">If a piece is unpublished, deleted or its key is revoked, the endpoint returns 404. The Astro component then renders nothing and logs a build warning, and the page still builds.</span></div>
+      <div style="padding: 14px 16px; background: #0B0B0E; border-top: 1px solid #2A2A31; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #00E0C6;">RETIRED KEEPS ITS RECORD</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">A retired piece stays published. Lifetime stops growing and the feed adds <code style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">"retired": "2026-05-01"</code>.</span></div>
+      <div style="padding: 14px 16px; background: #0B0B0E; border-top: 1px solid #2A2A31; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #00E0C6;">EXPORT LISTS IT</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">U1 export gains published.csv (piece, published_at, key last used).</span></div>
+    </div>
+  </div>
+</div>
+
+<div id="i3" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+  <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">03 · Turning it on</span><span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45; text-wrap: pretty;"><strong style="color: #F4F3EF;">A personal API token from Settings › Account, drawn in <a href="Round 30 Rulings.dc.html#q6">Round 30 #6</a>. The per-piece publish toggle first drawn here is dropped, so the token is the only switch.</strong> The blog asks for a piece by its id, which is shown on the piece's page and goes in the review's frontmatter (<code style="font-family: 'IBM Plex Mono', monospace;">dialedPiece: pc_8f2c41a9</code>) next to the Strava gear id. Revoking the token removes the block on the next build, through the 404 rule in 02.</span></div>
+</div>
+<div id="i4" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+  <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">04 · Other openings</span><span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45; text-wrap: pretty;"><strong style="color: #F4F3EF;">Ranked by how much attention each brings, against how much it costs to build.</strong> None of these are committed. Marked for a decision.</span></div>
+  <div style="display: flex; flex-direction: column; border: 1px solid #2A2A31;">
+    <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 170px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; background: #0B0B0E; align-items: baseline;"><span style="font-size: 15px; font-weight: 600;">Shoe reviews too</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #F5FF3D;">V1 · SAME BLOCK</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">If shoes are in the closet, the same endpoint works for them. The Nimbus 27 review would gain "Rain 4 · slippy after fresh rain" as data next to what the review says about it.</span></div>
+    <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 170px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;"><span style="font-size: 15px; font-weight: 600;">Kit line on the Strava activity</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #F5FF3D;">AFTER LAUNCH · BIGGEST REACH</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">Opt-in. After a verdict, dialed.run appends one line to the activity description: "41°F damp · Dialed · kit via dialed.run". Every follower sees it. It needs Strava's write scope and a brand check with Strava.</span></div>
+    <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 170px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;"><span style="font-size: 15px; font-weight: 600;">biglongrun /compare</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #F5FF3D;">AFTER LAUNCH</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">Compare two jackets by band: which one was dialed more often at 32–41°F. It reads the same feed and needs no new endpoint.</span></div>
+    <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 170px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;"><span style="font-size: 15px; font-weight: 600;">Other runners' sites</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #8B8B93;">LATER · OWNER-ONLY FIRST</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">In v1 only the owner makes tokens (Round 30 #6 is built after the friends stage). Opening it to every runner adds rate limits, abuse handling and a Desk view of who has keys. Worth doing once biglongrun shows whether it brings traffic.</span></div>
+    <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 170px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;"><span style="font-size: 15px; font-weight: 600;">Guides link to reviews</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #F5FF3D;">V1 · THE RETURN LINK</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">When a published piece's band has a guide, the guide shows "Reviewed on biglongrun" against that piece. Links in both directions, between sites you own, about the same garment.</span></div>
+  </div>
+</div>
+
+</div>
+</div>
+</x-dc>
+</body>
+</html>
