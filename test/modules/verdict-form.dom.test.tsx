@@ -58,7 +58,7 @@ function entry(overrides: Partial<Entry> = {}): Entry {
     startedAt: 1_755_000_000,
     indoor: false,
     verdict: undefined,
-    isPublic: true,
+    audience: "runners",
     caption: undefined,
     createdAt: 1_755_000_000,
     items: [],
@@ -226,7 +226,7 @@ describe("VerdictForm: the scale", () => {
                 path: ["itemFlags"],
                 message: "That piece is not on this run.",
               },
-              { path: ["isPublic"], message: "Not allowed for this account." },
+              { path: ["audience"], message: "Not allowed for this account." },
             ],
           }),
       }),
@@ -1105,12 +1105,19 @@ describe("VerdictForm: tags and sharing", () => {
       expect(submitVerdict).toHaveBeenCalledTimes(1);
     });
     expect(submitVerdict.mock.calls[0]?.[0]?.data).toMatchObject({
-      isPublic: false,
+      audience: "private",
     });
   });
 
   it("starts private when the entry already is", async () => {
-    await renderWithRouter(form({ entry: { isPublic: false } }));
+    await renderWithRouter(form({ entry: { audience: "private" } }));
+    expect(screen.getByLabelText("Share to feed")).not.toBeChecked();
+  });
+
+  it("starts unshared for a groups entry, which strangers do not see", async () => {
+    // Groups are storable before they are writable (D-109): the switch
+    // stands for `runners` alone, so a groups entry is not "shared".
+    await renderWithRouter(form({ entry: { audience: "groups" } }));
     expect(screen.getByLabelText("Share to feed")).not.toBeChecked();
   });
 });

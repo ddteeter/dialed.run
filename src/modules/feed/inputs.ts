@@ -13,6 +13,7 @@ import {
   latitudeSchema,
   longitudeSchema,
   verdictSchema,
+  writableAudienceSchema,
 } from "../../lib/contracts";
 import { ulidSchema } from "../../lib/ids";
 import { allowedPhotoTypes } from "../../lib/photo-constraints";
@@ -74,7 +75,9 @@ export const itemFlagInput = z.object({
 export const submitVerdictInput = z.object({
   entryId: ulidSchema,
   verdict: verdictSchema,
-  isPublic: z.boolean(),
+  // The writable subset, so nothing can store `groups` before groups ship
+  // (D-109, design 131).
+  audience: writableAudienceSchema,
   caption: z.string().max(280).optional(),
   tags: z.array(entryTagSchema).max(entryTagSchema.options.length),
   itemFlags: z.array(itemFlagInput),

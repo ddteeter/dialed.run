@@ -1,7 +1,12 @@
 import type { JSX } from "react";
 import { useState } from "react";
 
-import { entryTags, verdictScale } from "../../../lib/contracts";
+import {
+  audienceOfShareToggle,
+  entryTags,
+  isSharedAudience,
+  verdictScale,
+} from "../../../lib/contracts";
 import type { Units, VerdictValue } from "../../../lib/contracts";
 import { clockLabel, dayLabel } from "../../../lib/dates";
 import {
@@ -129,7 +134,7 @@ const LABELS = {
   verdict: "Did it work?",
   tags: "Tags",
   itemFlags: "Per-item notes",
-  isPublic: "Sharing",
+  audience: "Sharing",
 };
 
 /**
@@ -248,7 +253,7 @@ export function VerdictForm({
 }>) {
   const [verdict, setVerdict] = useState<number | undefined>(entry.verdict);
   const [tags, setTags] = useState<Set<string>>(new Set(entry.tags));
-  const [isPublic, setIsPublic] = useState(entry.isPublic);
+  const [isShared, setIsShared] = useState(isSharedAudience(entry.audience));
   // Seeded from the entry, not from nothing.
   //
   // `entry.items[].flag` is what was saved last time, and starting empty
@@ -326,7 +331,7 @@ export function VerdictForm({
     return {
       entryId,
       verdict,
-      isPublic,
+      audience: audienceOfShareToggle(isShared),
       tags: [...tags] as (typeof entryTags)[number][],
       itemFlags: entry.items.map((item) => {
         // `=== "none"` alone: an item with no entry reads as undefined,
@@ -530,10 +535,10 @@ export function VerdictForm({
                 <label className="target flex items-center gap-2 text-body">
                   <input
                     type="checkbox"
-                    checked={isPublic}
+                    checked={isShared}
                     aria-describedby={SHARE_HINT_ID}
                     onChange={(event) => {
-                      setIsPublic(event.target.checked);
+                      setIsShared(event.target.checked);
                     }}
                   />
                   Share to feed

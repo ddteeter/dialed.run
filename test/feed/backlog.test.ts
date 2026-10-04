@@ -443,6 +443,7 @@ describe("saving a row", () => {
       .where(eq(outfitEntries.id, entryId));
     expect(entry?.verdict).toBe(-1);
     expect(entry?.runId).toBe(runId);
+    expect(entry?.audience).toBe("runners");
     expect(entry?.isPublic).toBe(true);
 
     const items = await coreDb()
@@ -471,6 +472,7 @@ describe("saving a row", () => {
       .select()
       .from(outfitEntries)
       .where(eq(outfitEntries.id, entryId));
+    expect(entry?.audience).toBe("private");
     expect(entry?.isPublic).toBe(false);
   });
 

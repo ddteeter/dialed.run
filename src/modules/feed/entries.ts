@@ -26,7 +26,13 @@ import {
   wardrobeItems,
 } from "../../db/schema-core";
 import { env } from "../../env";
-import type { entryTags, itemFlagSchema } from "../../lib/contracts";
+import { audienceOfShareToggle, isSharedAudience } from "../../lib/contracts";
+import type {
+  Audience,
+  WritableAudience,
+  entryTags,
+  itemFlagSchema,
+} from "../../lib/contracts";
 import { ForbiddenError } from "../../lib/errors";
 import { readInChunks } from "../../lib/chunked";
 import { forIds } from "../../lib/for-ids";
@@ -43,7 +49,7 @@ import type { Conditions } from "./conditions";
 import { observationsForEntries, observationsForRuns } from "./conditions";
 import { judgedFeelsLikeC } from "./judged-conditions";
 import { hasReacted, usefulCount } from "./reactions";
-import { isPublicByDefault, isSharedAsChosen } from "./share-default";
+import { audienceAsChosen, defaultAudienceFor } from "./share-default";
 import { nowSeconds } from "../../lib/now";
 
 type EntryTag = (typeof entryTags)[number];
@@ -160,7 +166,7 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     }
   }
 
-  const isPublic = await isPublicByDefault(database, input.userId);
+  const audience = await defaultAudienceFor(database, input.userId);
 
   const entryId = newUlid();
   // One batch, not two awaits: the entry and the items it contains are the
@@ -178,13 +184,17 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     userId: input.userId,
     // **The runner's default, seeding this entry's own column.** Asked on
     // review, and the distinction is the product rule: sharing is
-    // per-entry (`outfit_entries.is_public`, which A3's toggle writes and
+    // per-entry (`outfit_entries.audience`, which A3's toggle writes and
     // `submitVerdict` carries on every save) *with* a per-user default
     // that decides where a new one starts. This line is only that start.
     // Changing the preference later republishes nothing, and an entry
     // made private stays private. The run itself has no public flag —
     // see `./share-default`.
-    isPublic,
+    //
+    // **Both columns, until C1** (design 131): the boolean is what every
+    // version a rollback could restore still reads.
+    audience,
+    isPublic: isSharedAudience(audience),
     // Present only for a caller that has both at once. `undefined` is
     // what the phone flow passes and inserts SQL NULL, which is the
     // unjudged state `shouldPromptForVerdict` looks for.
@@ -214,7 +224,7 @@ export interface SubmitVerdictInput {
   userId: string;
   entryId: string;
   verdict: number;
-  isPublic: boolean;
+  audience: WritableAudience;
   caption?: string | undefined;
   tags: readonly EntryTag[];
   itemFlags: readonly ItemFlagInput[];
@@ -275,10 +285,10 @@ export async function submitVerdict(input: SubmitVerdictInput): Promise<void> {
 
   // Decision D-50: an unconfirmed runner's entry stays private whatever
   // the toggle said (task 126; `./share-default`).
-  const isPublic = await isSharedAsChosen(
+  const audience = await audienceAsChosen(
     database,
     input.userId,
-    input.isPublic,
+    input.audience,
   );
 
   const statements = [
@@ -286,7 +296,9 @@ export async function submitVerdict(input: SubmitVerdictInput): Promise<void> {
       .update(outfitEntries)
       .set({
         verdict: input.verdict,
-        isPublic,
+        // Both columns, until C1 (design 131); see `attachKit`.
+        audience,
+        isPublic: isSharedAudience(audience),
         // A clear-to-null update needs a real SQL NULL, not `undefined`
         // (drizzle drops `undefined` set-values entirely — see mapUpdateSet).
         caption: input.caption ?? sql`NULL`,
@@ -556,7 +568,7 @@ export interface EntryDetail {
   startedAt: number;
   indoor: boolean;
   verdict: number | undefined;
-  isPublic: boolean;
+  audience: Audience;
   caption: string | undefined;
   createdAt: number;
   items: EntryDetailItem[];
@@ -672,7 +684,10 @@ export async function getEntryDetail(
     startedAt: run.startedAt,
     indoor: run.indoor,
     verdict: entry.verdict ?? undefined,
-    isPublic: entry.isPublic,
+    // From the boolean until PR B reads the column (design 131): a row
+    // the previous version wrote between `migrations apply` and this
+    // deploy has only the boolean right, until B's resync.
+    audience: audienceOfShareToggle(entry.isPublic),
     caption: entry.caption ?? undefined,
     createdAt: entry.createdAt,
     items: entryItemRows.map((row) => {

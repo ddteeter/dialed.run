@@ -183,7 +183,7 @@ describe("authorization", () => {
       userId: owner,
       entryId,
       verdict: 1,
-      isPublic: true,
+      audience: "runners",
       tags: [],
       itemFlags: [
         { itemId: item, flag: "too_much", note: "sweated through it" },

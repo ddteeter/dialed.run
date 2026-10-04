@@ -95,13 +95,36 @@ describe("submitVerdictInput", () => {
   const valid = {
     entryId: newUlid(),
     verdict: 0,
-    isPublic: true,
+    audience: "runners",
     tags: [],
     itemFlags: [],
   };
 
   it("takes the whole submission", () => {
     expect(submitVerdictInput.safeParse(valid).success).toBe(true);
+    expect(
+      submitVerdictInput.safeParse({ ...valid, audience: "private" }).success,
+    ).toBe(true);
+  });
+
+  it("refuses groups, which are storable but not yet writable (D-109)", () => {
+    expect(
+      submitVerdictInput.safeParse({ ...valid, audience: "groups" }).success,
+    ).toBe(false);
+  });
+
+  it("refuses the old boolean in place of an audience", () => {
+    // A tab still holding the previous bundle posts `isPublic`; it is
+    // refused with a form error rather than guessed at (design 131).
+    expect(
+      submitVerdictInput.safeParse({
+        entryId: valid.entryId,
+        verdict: valid.verdict,
+        isPublic: true,
+        tags: [],
+        itemFlags: [],
+      }).success,
+    ).toBe(false);
   });
 
   it("holds the verdict to the −2..+2 scale", () => {
@@ -263,12 +286,12 @@ describe("handleInput", () => {
   });
 
   it("shares its bound with the search prefix, sixty characters", () => {
-    expect(
-      handleInput.safeParse({ handle: "a".repeat(60) }).success,
-    ).toBe(true);
-    expect(
-      handleInput.safeParse({ handle: "a".repeat(61) }).success,
-    ).toBe(false);
+    expect(handleInput.safeParse({ handle: "a".repeat(60) }).success).toBe(
+      true,
+    );
+    expect(handleInput.safeParse({ handle: "a".repeat(61) }).success).toBe(
+      false,
+    );
   });
 
   it("refuses a non-string handle, and needs one at all", () => {
