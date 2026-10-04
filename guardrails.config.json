@@ -225,7 +225,7 @@
     {
       "key": "src/modules/runs/parsers/tcx.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutants: non-record inputs have no child elements to read, so loops/reads below find nothing and functions return undefined either way. The guards narrow `unknown` and state intent. Every one also appears across multiple locations with the same reasoning.",
-      "count": 6
+      "count": 3
     },
     {
       "key": "src/modules/runs/strava/api-from-env.ts|mutation-suppress|// Stryker disable next-line BlockStatement",
