@@ -11,6 +11,7 @@ export {
   lookUpHandle,
   usernameOf,
 } from "./username";
+export { reviewFlaggedHandle } from "./handle-review";
 export type {
   ForcedRename,
   ForceRenameRequest,

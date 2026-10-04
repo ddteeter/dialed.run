@@ -7,7 +7,11 @@
  */
 import { sql } from "drizzle-orm";
 
-import { colorNames, garmentVisibilities } from "../lib/contracts";
+import {
+  colorNames,
+  garmentVisibilities,
+  HANDLE_SCREEN_STATES,
+} from "../lib/contracts";
 import { EMAIL_PREFERENCE_KINDS } from "../lib/contracts/email";
 import {
   index,
@@ -49,8 +53,23 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     // A MODERATOR" field quotes on their next load. Null means no re-pick
     // is owed; 126's screen clears it on Save or Keep.
     usernameResetReason: text("username_reset_reason"),
+    // What the moderation check said about the current handle when it was
+    // claimed (task 126 PR B): `unknown` when it could not answer, which
+    // the hourly re-ask holds as `checking` while it asks again. Null for
+    // a handle nobody typed (a moderator's placeholder) and for every row
+    // from before the column. Written in the claim's own UPDATE, so the
+    // verdict and the handle it is about cannot disagree.
+    usernameScreen: text("username_screen", { enum: HANDLE_SCREEN_STATES }),
+    // When `username_screen` was last written: the claim, the verdict, or
+    // the re-ask's claim, whose lease it times.
+    usernameScreenedAt: integer("username_screened_at"),
   },
   (t) => [
+    // The re-ask's sweep reads only the rows it might claim. Partial, so
+    // the index holds those few and nothing else.
+    index("user_profiles_username_screen_pending")
+      .on(t.usernameScreen)
+      .where(sql`${t.usernameScreen} IN ('unknown', 'checking')`),
     // One index, two jobs. **Uniqueness regardless of case**: a handle is
     // stored lowercased, and NOCASE makes the index refuse "Maya" beside
     // "maya" even from a writer that forgot to lowercase. **Search's prefix

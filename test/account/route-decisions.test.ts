@@ -286,6 +286,17 @@ describe("accountSectionSearch and the way back from Google (ACC-9)", () => {
     }
     expect(DELETE_REAUTH_RETURN).toBe("/account/sign-in?deleting=1");
   });
+
+  it("knows a dead export link only by its own word (round 28 #15)", () => {
+    expect(accountSectionSearch.parse({ export: "expired" }).export).toBe(
+      "expired",
+    );
+    for (const value of [undefined, "", "ready", 1, true]) {
+      expect(
+        accountSectionSearch.parse({ export: value }).export,
+      ).toBeUndefined();
+    }
+  });
 });
 
 describe("gateOnHandle (the root's O0 gate, memoised)", () => {
@@ -303,6 +314,19 @@ describe("gateOnHandle (the root's O0 gate, memoised)", () => {
     // O0 itself is never a redirect to O0.
     const onO0 = await gateOnce("needs-handle", true, "/onboarding/handle");
     expect(onO0.thrown).toBeUndefined();
+  });
+
+  it("sends a renamed runner to O0's re-pick from any page, and asks again until it is done (ACC-12)", async () => {
+    const renamed = await gateOnce("renamed", true, "/closet");
+    expect(renamed.thrown).toMatchObject({
+      options: { to: "/onboarding/handle" },
+    });
+    const onO0 = await gateOnce("renamed", true, "/onboarding/handle");
+    expect(onO0.thrown).toBeUndefined();
+    // Never remembered: Save or Keep changes the answer.
+    expect(isRememberedForSession("has-handle")).toBe(false);
+    const again = await gateOnce("renamed", true, "/feed");
+    expect(again.asked).toBe(1);
   });
 
   it("asks once a session in the browser once the runner has a handle", async () => {

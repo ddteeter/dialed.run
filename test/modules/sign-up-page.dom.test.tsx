@@ -4,7 +4,7 @@ import {
   createRootRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import type { ReactElement } from "react";
@@ -268,7 +268,7 @@ describe("Au2 · Google in the invite stage", () => {
     );
   });
 
-  it("says a refused code in Google's band, and Au6's words again for a later fault", async () => {
+  it("says a refused code in Google's band under it, with Request access and no retry, and Au6's words again for a later fault (round 28 #9)", async () => {
     client.social.mockResolvedValueOnce({
       data: undefined,
       error: { code: "INVITE_INVALID", status: 400 },
@@ -282,8 +282,16 @@ describe("Au2 · Google in the invite stage", () => {
       expect(found).toHaveTextContent(INVITE_COPY.invalid);
       return found;
     });
-    expect(band).toHaveTextContent("Not signed in");
-    expect(band?.nextElementSibling).toBe(part("google-button"));
+    expect(band).toHaveTextContent("Not created");
+    expect(band).toHaveAttribute("data-state", "refused");
+    expect(band?.previousElementSibling).toBe(part("google-button"));
+    const requestAccess = within(band ?? document.body).getByRole("link", {
+      name: "Request access",
+    });
+    expect(requestAccess).toHaveAttribute("href", "/account/request-access");
+    expect(requestAccess).toHaveClass("target");
+    // Pressing again cannot fix a refused code, so there is no Try again.
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
     expect(leave).not.toHaveBeenCalled();
 
     client.social.mockResolvedValueOnce({
@@ -291,30 +299,49 @@ describe("Au2 · Google in the invite stage", () => {
       error: { status: 503 },
     });
     await act(async () => {
-      await user.click(screen.getByRole("button", { name: "Try again" }));
+      await user.click(
+        screen.getByRole("button", { name: "Continue with Google" }),
+      );
     });
     await waitFor(() => {
       expect(part("failure-band")).toHaveTextContent(AUTH_COPY.google);
     });
     expect(part("failure-band")).not.toHaveTextContent(INVITE_COPY.invalid);
+    expect(
+      screen.getByRole("button", { name: "Try again" }),
+    ).toBeInTheDocument();
   });
 
-  it("tells a Google address with no account where accounts are made", async () => {
+  it("tells a Google address with no account where accounts are made, as NOT LOGGED IN (round 28 #9)", async () => {
     await signUpPage({ returnedError: "signup_disabled" });
-    expect(part("failure-band")).toHaveTextContent(AUTH_COPY.googleNoAccount);
+    const band = part("failure-band");
+    expect(band).toHaveTextContent("Not logged in");
+    expect(band).toHaveTextContent(AUTH_COPY.googleNoAccount);
+    expect(
+      within(band ?? document.body).getByRole("link", {
+        name: "Create an account",
+      }),
+    ).toHaveAttribute("href", "/auth/signup");
     expect(AUTH_COPY.googleNoAccount).toBe(
       "No account uses that Google address. Create one first.",
     );
   });
 
   it.each([
-    ["INVITE_MISSING", INVITE_COPY.missing],
-    ["INVITE_INVALID", INVITE_COPY.invalid],
+    ["INVITE_MISSING", AUTH_COPY.googleNoCode, false],
+    ["INVITE_INVALID", INVITE_COPY.invalid, true],
   ])(
-    "says a new Google account's %s from the round trip in the code field's words",
-    async (error, message) => {
+    "says a new Google account's %s from the round trip as round 28 #9 draws it",
+    async (error, message, linksRequestAccess) => {
       await signUpPage({ returnedError: error });
-      expect(part("failure-band")).toHaveTextContent(message);
+      const band = part("failure-band");
+      expect(band).toHaveTextContent(`Not created${message}`);
+      expect(
+        within(band ?? document.body).queryByRole("link") !== null,
+      ).toBe(linksRequestAccess);
+      expect(AUTH_COPY.googleNoCode).toBe(
+        "Enter your invite code above, then continue with Google.",
+      );
     },
   );
 });

@@ -13,13 +13,17 @@ import {
 } from "../../../ui";
 
 /**
- * The row's sub-line for each state. Idle and preparing are round 27 #13's
- * words; ready and failed are undesigned (design deltas).
+ * The row's sub-line for each state: idle and preparing are round 27 #13's
+ * words, ready and failed round 28 #15's. An idle row a refused link
+ * opened says the link is dead, the same for an expired link and someone
+ * else's (#15).
  */
-function subLine(state: ExportRowState): string {
+function subLine(state: ExportRowState, isLinkDead: boolean): string {
   switch (state.state) {
     case "idle": {
-      return "Runs, closet, entries, photos and your run files";
+      return isLinkDead
+        ? "That link doesn't work any more. Get a copy for a new one."
+        : "Runs, closet, entries, photos and your run files";
     }
     case "preparing": {
       return "We'll email a link when it's ready.";
@@ -29,7 +33,7 @@ function subLine(state: ExportRowState): string {
       return `Emailed. The link works until ${proseDayLabel(state.expiresAt)}.`;
     }
     case "failed": {
-      return "Your export didn't work. Try again.";
+      return "Your export didn't finish, and it doesn't count as today's.";
     }
   }
 }
@@ -43,10 +47,15 @@ function subLine(state: ExportRowState): string {
  */
 export function ExportRow({
   state,
+  isLinkDead = false,
   request,
   onRequested,
 }: Readonly<{
   state: ExportRowState;
+  /**
+  Whether a refused download link opened this page (`?export=expired`).
+  */
+  isLinkDead?: boolean | undefined;
   request: (input: {
     data: { idempotencyKey: string };
   }) => Promise<ExportRowState>;
@@ -69,7 +78,9 @@ export function ExportRow({
       <div className="flex items-center justify-between gap-3 border-b border-hairline py-3">
         <span className="flex flex-col gap-1">
           <span className="text-body font-semibold">Export your data</span>
-          <span className="text-small text-muted">{subLine(state)}</span>
+          <span className="text-small text-muted">
+            {subLine(state, isLinkDead)}
+          </span>
         </span>
         <ExportAction
           state={state}
@@ -123,7 +134,7 @@ function ExportAction({
       className="target shrink-0 cursor-pointer border-none bg-transparent p-0 text-body text-ink"
     >
       <PendingLabel
-        label="Get a copy"
+        label={state.state === "failed" ? "Try again" : "Get a copy"}
         pendingLabel="Preparing"
         pending={pending}
       />

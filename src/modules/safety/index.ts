@@ -18,10 +18,13 @@ export {
 export {
   banStateOf,
   banEmail,
+  reopenEmail,
+  reopenEmailFor,
   banUser,
   unbanUser,
   type BanInput,
   type BanState,
+  type Reopening,
 } from "./bans";
 
 export { ACCOUNT_CLOSED_CODE, banGate } from "./ban-gate";
@@ -107,14 +110,18 @@ export {
 export {
   claimForReview,
   claimLeaseSeconds,
+  enqueueForReview,
+  openRow as openReviewRow,
   openSubject,
   pendingReviewCount,
   pendingReviewQueue,
   reasonsFrom,
   releaseStaleClaims,
   resolveReview,
+  reviewResolution,
   settleOpenReviews,
   type ClaimOutcome,
+  type HandleReviewOutcome,
   type QueueRow,
   type ReleaseReport,
   type ResolveOutcome,
@@ -180,12 +187,14 @@ export {
   denyDomainInput,
   fileReportInput,
   forceRenameInput,
+  handleReviewInput,
   reviewActionInput,
   reviewDecisionInput,
   runnersFilterInput,
   takedownInput,
   unbanUserInput,
   type FileReportValues,
+  type HandleReviewValues,
   type ReviewActionValues,
 } from "./inputs";
 

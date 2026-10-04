@@ -15,6 +15,7 @@ import {
   secureResponse,
 } from "./modules/ops";
 import { exportConsumersFromEnv } from "./modules/account/export-build";
+import { rescreenHandlesFromEnv } from "./modules/account/handle-rescreen";
 import { sweepExports } from "./modules/account/export-sweep";
 import { purgeDueAccounts } from "./modules/account/purge";
 import { mintNonce } from "./lib/csp-nonce";
@@ -55,10 +56,12 @@ export default {
     try {
       // Account deletion's purge rides the daily firing (task 126, ACC-9),
       // and the data export's sweep the hourly `:00` one (ACC-10): handed
-      // in here because `ops` cannot import either without a cycle.
+      // in here because `ops` cannot import either without a cycle. So
+      // does the handle re-ask, on the `:15` one (task 126 PR B).
       await handleScheduled(controller, undefined, {
         purgeAccounts: purgeDueAccounts,
         sweepExports,
+        rescreenHandles: rescreenHandlesFromEnv,
       });
     } catch (error) {
       captureException(error, { surface: "scheduled", cron: controller.cron });

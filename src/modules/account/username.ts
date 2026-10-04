@@ -9,6 +9,7 @@
  */
 import {
   and,
+  desc,
   eq,
   getTableName,
   isNotNull,
@@ -28,12 +29,18 @@ import {
 } from "../../db/schema-core";
 import { USERNAME_MAX_LENGTH, usernameSchema } from "../../lib/contracts";
 import { hasRowWhere } from "../../lib/sql/keyed-read";
+import { orSqlNull } from "../../lib/sql/sql-null";
 import { nowSeconds } from "../../lib/now";
 import { isProfaneHandle, readBackDigits } from "../../lib/contracts/profanity";
 import type { ScreenHandle } from "./handle-screen";
 import { currentTermsVersion, termsStanding } from "./terms-acceptance";
 
 type Db = ReturnType<typeof drizzle>;
+
+/**
+A nullable column cleared on an UPDATE (`lib/sql/sql-null`: drizzle drops an `undefined` set-value).
+*/
+const CLEARED = orSqlNull(undefined);
 
 /**
  * Handles nobody may claim, whatever the case (the audit's §5 list plus the
@@ -226,14 +233,19 @@ function isHandleIndexViolation(error: unknown): boolean {
 }
 
 /**
-The runner's current handle.
+The runner's current handle, and the reason a moderator's rename left, if one did.
 */
 async function profileOf(
   db: Db,
   userId: string,
-): Promise<{ username: string | null } | undefined> {
+): Promise<
+  { username: string | null; usernameResetReason: string | null } | undefined
+> {
   const [row] = await db
-    .select({ username: userProfiles.username })
+    .select({
+      username: userProfiles.username,
+      usernameResetReason: userProfiles.usernameResetReason,
+    })
     .from(userProfiles)
     .where(eq(userProfiles.userId, userId))
     .limit(1);
@@ -284,7 +296,11 @@ function ensureProfile(db: Db, userId: string) {
  * suggestion beside it would tell a prober which names are on the list.
  * So does one on the word list, and one `screen` (OpenAI's moderation)
  * flags — asked only once the handle has passed the list, and taken as
- * clear when it cannot answer (`./handle-screen.ts`).
+ * clear when it cannot answer (`./handle-screen.ts`). What it said is
+ * stored beside the handle (`username_screen`), so a handle it could not
+ * answer for is asked about again by the hourly re-ask
+ * (`./handle-rescreen.ts`). A claim also settles a moderator's owed
+ * re-pick: the reason O0 quotes is cleared with it.
  *
  * **One batch** (CLAUDE.md "default to one batch"): the old handle kept in
  * the history, the new handle, and the runner's own history row for it
@@ -293,8 +309,9 @@ function ensureProfile(db: Db, userId: string) {
  * batch re-checks D-56 itself, and the unique index settles a race with a
  * runner claiming the same handle now. Either reads as taken.
  *
- * Claiming the handle you already have is a success that writes nothing
- * new — including a second submit of a change that has already landed.
+ * Claiming the handle you already have is a success that writes no new
+ * handle — including a second submit of a change that has already landed
+ * — and settles a moderator's owed re-pick, as Keep does.
  */
 export async function claimUsername(
   db: Db,
@@ -309,8 +326,15 @@ export async function claimUsername(
   };
   if (isReservedHandle(typed)) return refused;
   const profile = await profileOf(db, userId);
-  if (profile?.username === typed) return { kind: "claimed", username: typed };
-  if ((await screen(typed)) === "flagged") return refused;
+  if (profile?.username === typed) {
+    // Saving the handle you hold is a choice to keep it — on O0's re-pick,
+    // the placeholder itself — so an owed re-pick is settled here too, or
+    // the next load sends the runner straight back to O0.
+    await keepPlaceholder(db, userId);
+    return { kind: "claimed", username: typed };
+  }
+  const verdict = await screen(typed);
+  if (verdict === "flagged") return refused;
   const taken = async (): Promise<HandleClaim> => ({
     kind: "taken",
     username: typed,
@@ -326,11 +350,22 @@ export async function claimUsername(
     notRetiredByAnother(userId, typed),
   );
   const holdsTyped = and(eq(userProfiles.userId, userId), sameHandle(typed));
+  const now = nowSeconds();
   try {
     const results = await db.batch([
-      retireCurrent(db, userId, typed, nowSeconds()),
+      retireCurrent(db, userId, typed, now),
       ensureProfile(db, userId),
-      db.update(userProfiles).set({ username: typed }).where(mayTake),
+      // The verdict beside the handle it is about, so the two cannot
+      // disagree; and a moderator's re-pick, if one was owed, is done.
+      db
+        .update(userProfiles)
+        .set({
+          username: typed,
+          usernameScreen: verdict,
+          usernameScreenedAt: now,
+          usernameResetReason: CLEARED,
+        })
+        .where(mayTake),
       db.delete(usernameHistory).where(ownHistoryRow),
       holdersNow(db, holdsTyped),
     ]);
@@ -371,6 +406,11 @@ export interface ForceRenameRequest {
    * was taken away, so it lands in the same batch as the rename.
    */
   readonly recordedAs: (previous: string) => BatchItem<"sqlite">;
+  /**
+   * Anything else the rename settles, in its batch — the Desk's review
+   * row when the rename answers a flagged handle (D-97).
+   */
+  readonly also?: readonly BatchItem<"sqlite">[] | undefined;
 }
 
 /**
@@ -420,10 +460,18 @@ export async function forceRename(
         }),
       db
         .update(userProfiles)
-        .set({ username, usernameResetReason: reason })
+        // The placeholder is ours, not the runner's words: nothing for the
+        // re-ask to ask about.
+        .set({
+          username,
+          usernameResetReason: reason,
+          usernameScreen: CLEARED,
+          usernameScreenedAt: CLEARED,
+        })
         .where(eq(userProfiles.userId, userId)),
       db.delete(usernameHistory).where(ownUnlocked(userId, username)),
       request.recordedAs(previous),
+      ...(request.also ?? []),
     ]);
   } catch (error: unknown) {
     if (isHandleIndexViolation(error)) return { kind: "taken" };
@@ -509,9 +557,20 @@ export async function usernameOf(
  * answer the browser remembers, also means the terms were current when it
  * was asked; a deploy that publishes newer ones makes that untrue, and the
  * first refusal it earns forgets the memo (`ui/terms-refusal`, D-96).
+ *
+ * **"renamed"** (ACC-12; round 27 #16) is a runner a moderator renamed
+ * who has not yet picked again or kept the placeholder: the next load,
+ * whatever the page, shows O0's "USERNAME CHANGED BY A MODERATOR" first,
+ * once. After the terms, since Save is a claim; never remembered, since
+ * Save or Keep ends it.
  */
 export type HandleGate =
-  "signed-out" | "needs-handle" | "has-handle" | "leaving" | "needs-terms";
+  | "signed-out"
+  | "needs-handle"
+  | "has-handle"
+  | "leaving"
+  | "needs-terms"
+  | "renamed";
 
 /**
  * The gate's answer, with whom it is about: the browser keys what it
@@ -531,7 +590,7 @@ export async function handleGate(
   currentTerms: number | undefined = currentTermsVersion(),
 ): Promise<HandleGateAnswer> {
   if (userId === undefined) return { gate: "signed-out", userId };
-  const [isLeaving, terms, username] = await Promise.all([
+  const [isLeaving, terms, profile] = await Promise.all([
     hasRowWhere(
       db,
       accountDeletions,
@@ -539,12 +598,75 @@ export async function handleGate(
       eq(accountDeletions.userId, userId),
     ),
     termsStanding(db, userId, currentTerms),
-    usernameOf(db, userId),
+    profileOf(db, userId),
   ]);
   if (isLeaving) return { gate: "leaving", userId };
   if (terms.state === "behind") return { gate: "needs-terms", userId };
+  if (profile?.usernameResetReason != undefined) return { gate: "renamed", userId };
   return {
-    gate: username === undefined ? "needs-handle" : "has-handle",
+    gate: profile?.username == undefined ? "needs-handle" : "has-handle",
     userId,
   };
+}
+
+/**
+ * What O0's "USERNAME CHANGED BY A MODERATOR" says (round 27 #16): the
+ * handle taken away, the placeholder the runner holds now, and why. The
+ * handle taken away is the runner's latest locked history row — the one
+ * a rename writes. `undefined` when no re-pick is owed.
+ */
+export interface RenameNotice {
+  readonly previous: string;
+  readonly current: string;
+  readonly reason: string;
+}
+
+/**
+The handles a moderator took from this runner.
+*/
+function lockedFrom(userId: string): SQL | undefined {
+  return and(
+    eq(usernameHistory.userId, userId),
+    isNotNull(usernameHistory.lockedAt),
+  );
+}
+
+export async function renameNoticeOf(
+  db: Db,
+  userId: string,
+): Promise<RenameNotice | undefined> {
+  const [[profile], [locked]] = await db.batch([
+    db
+      .select({
+        current: userProfiles.username,
+        reason: userProfiles.usernameResetReason,
+      })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, userId))
+      .limit(1),
+    db
+      .select({ previous: usernameHistory.username })
+      .from(usernameHistory)
+      .where(lockedFrom(userId))
+      .orderBy(desc(usernameHistory.lockedAt))
+      .limit(1),
+  ]);
+  if (profile?.current == undefined || profile.reason == undefined) return undefined;
+  if (locked === undefined) return undefined;
+  return {
+    previous: locked.previous,
+    current: profile.current,
+    reason: profile.reason,
+  };
+}
+
+/**
+ * "Keep @runner_4821 for now": the re-pick is no longer owed, and the
+ * placeholder stays. Settings › Username works as usual afterwards.
+ */
+export async function keepPlaceholder(db: Db, userId: string): Promise<void> {
+  await db
+    .update(userProfiles)
+    .set({ usernameResetReason: CLEARED })
+    .where(eq(userProfiles.userId, userId));
 }

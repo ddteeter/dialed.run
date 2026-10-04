@@ -157,13 +157,46 @@ describe("ExportRow", () => {
     expect(within(row()).queryByRole("button")).toBeNull();
   });
 
-  it("says a failed export didn't work, and offers Get a copy again", async () => {
+  it("says a failed export didn't finish and doesn't count, and offers Try again (round 28 #15)", async () => {
     await renderRow({ state: "failed" });
     expect(
-      within(row()).getByText("Your export didn't work. Try again."),
+      within(row()).getByText(
+        "Your export didn't finish, and it doesn't count as today's.",
+      ),
     ).toBeInTheDocument();
+    expect(
+      within(row()).getByRole("button", { name: "Try again" }),
+    ).toBeInTheDocument();
+    expect(within(row()).queryByRole("button", { name: "Get a copy" })).toBeNull();
+  });
+
+  it("says a refused link is dead on an idle row, and nowhere else (round 28 #15)", async () => {
+    const dead = "That link doesn't work any more. Get a copy for a new one.";
+    const { unmount } = await renderWithRouter(
+      <ul>
+        <ExportRow
+          state={{ state: "idle" }}
+          isLinkDead
+          request={vi.fn<Request>()}
+          onRequested={vi.fn<() => Promise<void>>()}
+        />
+      </ul>,
+    );
+    expect(within(row()).getByText(dead)).toBeInTheDocument();
     expect(
       within(row()).getByRole("button", { name: "Get a copy" }),
     ).toBeInTheDocument();
+    unmount();
+    await renderWithRouter(
+      <ul>
+        <ExportRow
+          state={{ state: "preparing" }}
+          isLinkDead
+          request={vi.fn<Request>()}
+          onRequested={vi.fn<() => Promise<void>>()}
+        />
+      </ul>,
+    );
+    expect(within(row()).queryByText(dead)).toBeNull();
   });
 });

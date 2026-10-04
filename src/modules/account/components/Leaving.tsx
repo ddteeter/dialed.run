@@ -91,9 +91,11 @@ function KeepOrLeave({
     >
       <p className="m-0 text-lead">
         It&apos;s set to be deleted on {day}, with everything in it. Keep it and
-        it all comes back as it was.
+        your runs, closet and entries come back as they were.
       </p>
-      <p className="m-0 text-body text-quiet">{STRAVA_STAYS_DISCONNECTED}</p>
+      {/* Round 28 #12: TYPE.small, muted, under a body that no longer
+          promises Strava back. */}
+      <p className="m-0 text-small text-muted">{STRAVA_STAYS_DISCONNECTED}</p>
       {isTooLate ? (
         <p data-state="too-late" className="m-0 text-body font-semibold">
           {TOO_LATE}
@@ -112,7 +114,7 @@ export const TOO_LATE = "Your account is already being deleted.";
 /**
  * What Keep does not bring back: the request revoked the Strava grant
  * (ACC-9, seam 5), and a kept account connects again itself. Built from
- * the Strava email's "Strava is disconnected" (undrawn: a design delta).
+ * the Strava email's "Strava is disconnected"; round 28 #12 confirms it.
  */
 const STRAVA_STAYS_DISCONNECTED =
   "Strava is disconnected, and stays that way until you connect it again.";

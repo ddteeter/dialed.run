@@ -237,7 +237,7 @@ test.describe("Au · phone", () => {
     await expectSameWords(page, board.words, {});
   });
 
-  test("Au6 Google failed, the band above Google", async ({
+  test("Au6 Google failed, the band under Google (round 29 #13)", async ({
     page,
     baseURL,
   }) => {
@@ -254,9 +254,18 @@ test.describe("Au · phone", () => {
       page.locator(`${PANEL} [data-part='failure-band']`),
     ).toBeVisible({ timeout: 15_000 });
 
-    // The band sits between the divider and Google, as drawn.
+    // Round 22's Au6 draws the band between the divider and Google; round
+    // 29 #13 moves every band Google owns directly under its button, and
+    // the old frame is not redrawn yet (design-deltas item 44). So the
+    // board's order, with the band moved to just after Google.
     // Au6 draws no cross-link beneath; the build keeps Au2's.
-    expect(await partsExcept(page, PANEL, ["cross-link"])).toEqual(board.order);
+    const underGoogle = board.order.filter((part) => part !== "failure-band");
+    underGoogle.splice(
+      underGoogle.indexOf("google-button") + 1,
+      0,
+      "failure-band",
+    );
+    expect(await partsExcept(page, PANEL, ["cross-link"])).toEqual(underGoogle);
     // Known gap: the shared band carries its own Try again, and the Google
     // button keeps its rest label rather than "Try Google again".
     expect(await wordsOf(page, `${PANEL} [data-part='failure-band']`)).toEqual([

@@ -3,7 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { ReviewQueue } from "../../src/modules/safety/components/ReviewQueue";
-import type { QueueRow } from "../../src/modules/safety/review";
+import type {
+  HandleReviewOutcome,
+  QueueRow,
+} from "../../src/modules/safety/review";
 
 type Props = Parameters<typeof ReviewQueue>[0];
 
@@ -21,12 +24,19 @@ function row(overrides: Partial<QueueRow> = {}): QueueRow {
   };
 }
 
-function renderQueue(queue: readonly QueueRow[]) {
+function renderQueue(
+  queue: readonly QueueRow[],
+  reviewHandle: Props["reviewHandle"] = vi
+    .fn<Props["reviewHandle"]>()
+    .mockResolvedValue({ outcome: "resolved" }),
+) {
   const resolve: Props["resolve"] = vi
     .fn<Props["resolve"]>()
     .mockResolvedValue({ outcome: "resolved" });
-  render(<ReviewQueue queue={queue} resolve={resolve} />);
-  return { resolve };
+  render(
+    <ReviewQueue queue={queue} resolve={resolve} reviewHandle={reviewHandle} />,
+  );
+  return { resolve, reviewHandle };
 }
 
 describe("an empty queue", () => {
@@ -126,6 +136,37 @@ describe("deciding", () => {
     });
   });
 
+  it("shows the in-flight label while a removal is pending", async () => {
+    const user = userEvent.setup();
+    const { promise, resolve: settle } = Promise.withResolvers<unknown>();
+    const resolve: Props["resolve"] = vi
+      .fn<Props["resolve"]>()
+      .mockReturnValue(promise);
+    render(
+      <ReviewQueue queue={[row()]} resolve={resolve} reviewHandle={vi.fn()} />,
+    );
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why it comes down/ }),
+      "it shows where someone lives",
+    );
+    const button = screen.getByRole("button", { name: "Remove" });
+    await user.click(button);
+
+    await waitFor(() => {
+      expect(button).toHaveAttribute("aria-busy", "true");
+    });
+    // `PendingLabel` swaps the button's accessible name to the in-flight
+    // verb while the request is outstanding. A StringLiteral mutant
+    // turning "Removing" into "" would leave this empty instead.
+    expect(button).toHaveAccessibleName("Removing");
+
+    settle({ outcome: "resolved" });
+    await waitFor(() => {
+      expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
+    });
+  });
+
   it("quarantines as suspected CSAM, with its reason", async () => {
     const user = userEvent.setup();
     const { resolve } = renderQueue([row()]);
@@ -179,7 +220,9 @@ describe("deciding", () => {
     const resolve: Props["resolve"] = vi
       .fn<Props["resolve"]>()
       .mockRejectedValue(new Error("offline"));
-    render(<ReviewQueue queue={[row()]} resolve={resolve} />);
+    render(
+      <ReviewQueue queue={[row()]} resolve={resolve} reviewHandle={vi.fn()} />,
+    );
 
     await user.click(screen.getByRole("button", { name: "Approve" }));
 
@@ -369,5 +412,177 @@ describe("the subject itself", () => {
       ...screen.getByRole("listitem").querySelectorAll("span"),
     ].filter((node) => node.childElementCount === 0 && node.textContent === "");
     expect(empties).toEqual([]);
+  });
+});
+
+/**
+A review row about a runner whose handle the re-ask flagged.
+*/
+function flagged(overrides: Partial<QueueRow> = {}): QueueRow {
+  return row({
+    subjectType: "profile",
+    subjectId: "u-1",
+    source: "classifier",
+    reporterCount: 0,
+    reasons: [],
+    subject: { label: "quadzilla_69", photoKeys: [], handleFlagged: true },
+    ...overrides,
+  });
+}
+
+describe("a handle the re-ask flagged (D-97)", () => {
+  const QUEUE_ID = "01HZZZZZZZZZZZZZZZZZZZZZZZ";
+
+  it("offers Keep and Rename with D8's reasons, and never Remove", () => {
+    renderQueue([flagged()]);
+
+    // Nothing said yet: the row's own line is for a taken placeholder.
+    expect(document.querySelector("li p.text-body")).toBeNull();
+
+    expect(screen.getByText(/profile · quadzilla_69/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Keep" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rename" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Remove as suspected CSAM" }),
+    ).toBeNull();
+    const picker = screen.getByRole("combobox", {
+      name: /Why the name has to go/,
+    });
+    expect(
+      [...picker.querySelectorAll("option")].map((option) => option.textContent),
+    ).toStrictEqual([
+      "—",
+      "Offensive or sexual",
+      "Pretends to be someone else",
+      "Contains personal information",
+      "Advertising",
+    ]);
+  });
+
+  it("keeps the handle with no reason, and takes the row off the list", async () => {
+    const user = userEvent.setup();
+    const { reviewHandle } = renderQueue([flagged()]);
+
+    await user.click(screen.getByRole("button", { name: "Keep" }));
+
+    expect(reviewHandle).toHaveBeenCalledWith({
+      data: { queueId: QUEUE_ID, action: "keep" },
+    });
+    await waitFor(() => {
+      expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
+    });
+  });
+
+  it("announces the decision in the live region", async () => {
+    const user = userEvent.setup();
+    renderQueue([flagged()]);
+
+    await user.click(screen.getByRole("button", { name: "Keep" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Decided.");
+    });
+  });
+
+  it("renames with the reason the runner will read", async () => {
+    const user = userEvent.setup();
+    const { reviewHandle } = renderQueue([flagged()]);
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why the name has to go/ }),
+      "Offensive or sexual",
+    );
+    await user.click(screen.getByRole("button", { name: "Rename" }));
+
+    expect(reviewHandle).toHaveBeenCalledWith({
+      data: {
+        queueId: QUEUE_ID,
+        action: "rename",
+        nameReason: "Offensive or sexual",
+      },
+    });
+    await waitFor(() => {
+      expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
+    });
+  });
+
+  it("shows the in-flight label while a rename is pending", async () => {
+    const user = userEvent.setup();
+    const { promise, resolve: settle } =
+      Promise.withResolvers<{ outcome: HandleReviewOutcome }>();
+    const reviewHandle: Props["reviewHandle"] = vi
+      .fn<Props["reviewHandle"]>()
+      .mockReturnValue(promise);
+    render(
+      <ReviewQueue
+        queue={[flagged()]}
+        resolve={vi.fn()}
+        reviewHandle={reviewHandle}
+      />,
+    );
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why the name has to go/ }),
+      "Offensive or sexual",
+    );
+    const button = screen.getByRole("button", { name: "Rename" });
+    await user.click(button);
+
+    await waitFor(() => {
+      expect(button).toHaveAttribute("aria-busy", "true");
+    });
+    // Same `PendingLabel` swap as the content row's Remove, for the
+    // flagged-handle row's own submit — the "Renaming" StringLiteral
+    // mutant survives unless something reads this name while pending.
+    expect(button).toHaveAccessibleName("Renaming");
+
+    settle({ outcome: "resolved" });
+    await waitFor(() => {
+      expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
+    });
+  });
+
+  it("refuses a Rename with no reason, and says why", async () => {
+    const user = userEvent.setup();
+    const { reviewHandle } = renderQueue([flagged()]);
+
+    await user.click(screen.getByRole("button", { name: "Rename" }));
+
+    expect(reviewHandle).not.toHaveBeenCalled();
+    const said = await screen.findAllByText("Pick why the name has to go.");
+    expect(said.length).toBeGreaterThan(0);
+  });
+
+  it("keeps the row when the drawn placeholder is taken, with D8's sentence", async () => {
+    const user = userEvent.setup();
+    renderQueue(
+      [flagged()],
+      vi.fn<Props["reviewHandle"]>().mockResolvedValue({ outcome: "taken" }),
+    );
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why the name has to go/ }),
+      "Advertising",
+    );
+    await user.click(screen.getByRole("button", { name: "Rename" }));
+
+    expect(
+      await screen.findByText("That placeholder is taken. Press Rename again."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
+  });
+
+  it("decides a reported profile, whose handle nobody flagged, as any other row", () => {
+    renderQueue([
+      flagged({
+        source: "reports",
+        subject: { label: "dee", photoKeys: [], handleFlagged: false },
+      }),
+    ]);
+
+    expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Keep" })).toBeNull();
   });
 });
