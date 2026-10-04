@@ -66,16 +66,19 @@ wrangler r2 bucket create dialed-imports
 wrangler r2 bucket create dialed-guides
 ```
 
-| Bucket           | Binding                | Holds                                                  | Retention                                                                                         |
-| ---------------- | ---------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| `dialed-media`   | `MEDIA`                | Garment photos, entry photos                           | Indefinite — the app renders these; deleting one breaks a page                                    |
-| `dialed-imports` | `IMPORTS`              | Uploaded `.fit`/`.gpx`/`.tcx`; data export ZIPs        | Run files: **until the run or account is deleted** (D-110). Export ZIPs under `exports/`: 8 days  |
-| `dialed-guides`  | (R-134, not yet bound) | `guide-artifact/v1.json`, the nightly anonymous totals | Overwritten nightly; read by the marketing site's CI with a read-only token scoped to this bucket |
+| Bucket           | Binding                | Holds                                                  | Retention                                                                                                                             |
+| ---------------- | ---------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `dialed-media`   | `MEDIA`                | Garment photos, entry photos                           | Indefinite — the app renders these; deleting one breaks a page                                                                        |
+| `dialed-imports` | `IMPORTS`              | Uploaded `.fit`/`.gpx`/`.tcx`; data export ZIPs        | Run files: **until the run or account is deleted** (D-110); a file whose import failed, 30 days. Export ZIPs under `exports/`: 8 days |
+| `dialed-guides`  | (R-134, not yet bound) | `guide-artifact/v1.json`, the nightly anonymous totals | Overwritten nightly; read by the marketing site's CI with a read-only token scoped to this bucket                                     |
 
 **No rule expires a run file** (decision D-110). An uploaded file is kept
 for as long as its run: deleting a run deletes its file (feed's `deleteRuns`,
 through the outbox's `import_file_delete`), and deleting an account deletes
-everything under `imports/<user>/` (the purge lists the prefix). A bucket
+everything under `imports/<user>/` (the purge lists the prefix). A file
+whose import failed has no run, so the batch that fails the import owes its
+deletion 30 days later (outbox `import_file_expire`, owner 2026-10-04), and
+the daily digest's drain deletes it — in code, not a bucket rule. A bucket
 whose whole-bucket 30-day rule is still set from before D-110 must have it
 **removed** — it would delete files the runner was promised we keep.
 

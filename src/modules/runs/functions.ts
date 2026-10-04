@@ -68,12 +68,18 @@ export const startFileImport = createServerFn({ method: "POST" })
   .validator(importUploadFrom)
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return startImport(coreDb(), env.IMPORTS, env.IMPORTS_QUEUE, {
-      userId,
-      filename: data.file.name,
-      bytes: await data.file.arrayBuffer(),
-      idempotencyKey: data.idempotencyKey,
-    });
+    return startImport(
+      coreDb(),
+      env.IMPORTS,
+      env.IMPORTS_QUEUE,
+      {
+        userId,
+        filename: data.file.name,
+        bytes: await data.file.arrayBuffer(),
+        idempotencyKey: data.idempotencyKey,
+      },
+      captureException,
+    );
   });
 
 export const getImportOutcomeFn = createServerFn({ method: "GET" })

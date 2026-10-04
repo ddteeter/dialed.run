@@ -41,11 +41,15 @@ export const STRAVA_REVOKED_BODY = STRAVA_DISCONNECTED_LINE;
 
 /**
  * An outbox row owed, as a statement for the caller's batch — ops'
- * `outboxInsert(db, oweOutbox(message))`, handed in by the queue entry:
- * `ops` imports this module for its consumer, so this module cannot
- * import `ops`.
+ * `outboxInsert(db, oweOutbox(message, notBefore))`, handed in by the
+ * queue entry: `ops` imports this module for its consumer, so this module
+ * cannot import `ops`. `notBefore` holds the row back to a date, as a
+ * failed import's file is (epoch seconds).
  */
-export type Owe = (message: OutboxMessage) => BatchItem<"sqlite">;
+export type Owe = (
+  message: OutboxMessage,
+  notBefore?: number,
+) => BatchItem<"sqlite">;
 
 /**
  * Delete the connection for this athlete, owe Strava the revoke, and tell

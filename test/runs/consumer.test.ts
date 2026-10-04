@@ -27,6 +27,7 @@ import validTcx from "./fixtures/valid.tcx?raw";
 import malformedTcx from "./fixtures/malformed.tcx?raw";
 import treadmillTcx from "./fixtures/treadmill.tcx?raw";
 import { nowSeconds } from "../../src/lib/now";
+import { drainOutbox } from "../../src/modules/ops/outbox";
 import { oweInCore } from "../queue-fakes";
 
 function fakeMessage(body: unknown) {
@@ -1104,5 +1105,109 @@ describe("the Strava deauthorize job (STR-3, API Policy §7.4)", () => {
       .where(eq(stravaConnections.athleteId, other.athleteId));
     expect(kept).toHaveLength(1);
     expect(await revokedRows(other.userId)).toStrictEqual([]);
+  });
+});
+
+const DAY_S = 24 * 60 * 60;
+
+/**
+The expiry a failed import's file is owed, if any.
+*/
+async function expiryOf(userId: string, key: string) {
+  const [row] = await coreDb()
+    .select()
+    .from(outbox)
+    .where(
+      and(
+        eq(outbox.kind, "import_file_expire"),
+        eq(outbox.dedupeKey, `${userId}:${key}`),
+      ),
+    );
+  return row;
+}
+
+function drainExpiries(anomalies: string[], now: number) {
+  return drainOutbox(coreDb(), anomalies, {
+    now,
+    kinds: ["import_file_expire"],
+  });
+}
+
+describe("a failed import's file is deleted 30 days after it failed (owner, 2026-10-04)", () => {
+  it("is owed in the batch that fails the import, and the drain takes the file and nothing else", async () => {
+    const deps = makeDeps();
+    const userId = newUlid();
+    const importId = await seedImport(deps.db, userId, malformedTcx, "tcx");
+    const before = nowSeconds();
+
+    await handleImportsBatch(
+      fakeBatch([{ body: { type: "import", importId } }]).batch,
+      deps,
+    );
+
+    const [failed] = await deps.db
+      .select()
+      .from(imports)
+      .where(eq(imports.id, importId));
+    const key = failed?.r2Key ?? "";
+    const owed = await expiryOf(userId, key);
+    expect(failed?.status).toBe("failed");
+    expect(owed?.nextAttemptAt).toBeGreaterThanOrEqual(before + 30 * DAY_S);
+    expect(owed?.nextAttemptAt).toBeLessThanOrEqual(nowSeconds() + 30 * DAY_S);
+    const due = owed?.nextAttemptAt ?? 0;
+
+    // A second short of 30 days: kept.
+    await drainExpiries([], due - 1);
+    expect(await env.IMPORTS.head(key)).not.toBeNull();
+
+    // Due: the file goes, the digest hears nothing, and everything the
+    // runner can see of the failure stays.
+    const anomalies: string[] = [];
+    await drainExpiries(anomalies, due);
+    expect(await env.IMPORTS.head(key)).toBeNull();
+    expect(anomalies).toStrictEqual([]);
+    expect(await expiryOf(userId, key)).toBeUndefined();
+    const [after] = await deps.db
+      .select()
+      .from(imports)
+      .where(eq(imports.id, importId));
+    expect(after).toStrictEqual(failed);
+    expect(await unreadNotificationCount(deps.db, userId)).toBe(1);
+  });
+
+  it("is owed when the DLQ fails the import, too", async () => {
+    const deps = makeDeps();
+    const userId = newUlid();
+    const importId = await seedImport(deps.db, userId, validTcx, "tcx");
+
+    await handleImportsDlqBatch(
+      fakeBatch([{ body: { type: "import", importId } }]).batch,
+      deps,
+    );
+
+    expect(
+      await expiryOf(userId, `imports/${userId}/${importId}.tcx`),
+    ).toMatchObject({
+      payload: JSON.stringify({
+        userId,
+        key: `imports/${userId}/${importId}.tcx`,
+      }),
+    });
+  });
+
+  it("leaves a succeeded import's file alone, however long the drain waits", async () => {
+    const deps = makeDeps();
+    const userId = newUlid();
+    const importId = await seedImport(deps.db, userId, validTcx, "tcx");
+    const key = `imports/${userId}/${importId}.tcx`;
+
+    await handleImportsBatch(
+      fakeBatch([{ body: { type: "import", importId } }]).batch,
+      deps,
+    );
+    await drainExpiries([], nowSeconds() + 365 * DAY_S);
+
+    expect(await expiryOf(userId, key)).toBeUndefined();
+    expect(await env.IMPORTS.head(key)).not.toBeNull();
   });
 });

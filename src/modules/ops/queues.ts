@@ -54,8 +54,8 @@ function enrichmentDeps() {
  * deauthorization's email). Handed in rather than imported there: `runs`
  * is imported by this module, so it cannot import `ops` back.
  */
-function oweInCore(message: OutboxMessage) {
-  return outboxInsert(drizzle(env.DIALED_CORE), oweOutbox(message));
+function oweInCore(message: OutboxMessage, notBefore?: number) {
+  return outboxInsert(drizzle(env.DIALED_CORE), oweOutbox(message, notBefore));
 }
 
 /**

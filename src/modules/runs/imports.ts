@@ -40,6 +40,15 @@ export interface StartImportInput {
 }
 
 /**
+Sentry's `captureException`, handed in by `functions.ts`: importing `ops`
+here would be a cycle (see `strava/oauth.ts`).
+*/
+export type ReportException = (
+  error: unknown,
+  context: Record<string, string>,
+) => void;
+
+/**
 Validates size/type, writes the raw bytes to R2, records the `imports` row,
 and enqueues the parse job. Never throws on a parseable-later problem — only
 on inputs the upload step itself can reject outright (size, extension).
@@ -49,6 +58,7 @@ export async function startImport(
   importBucket: R2Bucket,
   queue: ImportsQueueProducer,
   input: StartImportInput,
+  report: ReportException,
 ): Promise<{ importId: string }> {
   // The well refuses the same file by the same rule before sending it;
   // this is the guarantee behind that courtesy.
@@ -101,9 +111,15 @@ export async function startImport(
   } catch (error) {
     try {
       await importBucket.delete(r2Key);
-    } catch {
+    } catch (deleteError) {
       // The insert's failure is the one the runner is owed; a delete that
-      // fails too leaves the object for the purge, as above.
+      // fails too leaves the object for the purge, as above, and is
+      // reported so the stray file is known (law 7: ids, never the bytes).
+      report(deleteError, {
+        surface: "import-orphan-delete",
+        userId: input.userId,
+        importId,
+      });
     }
     throw error;
   }

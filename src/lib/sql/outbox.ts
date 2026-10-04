@@ -53,16 +53,35 @@ const entryMediaDelete = z.object({
  * same batch. It must sit under the runner's own prefix, so a drain can
  * only ever reach their objects.
  */
+const importFileKey = z
+  .object({
+    userId: z.string().min(1),
+    key: z.string().min(1),
+  })
+  .refine((payload) =>
+    payload.key.startsWith(importFilePrefix(payload.userId)),
+  );
+
 const importFileDelete = z.object({
   kind: z.literal("import_file_delete"),
-  payload: z
-    .object({
-      userId: z.string().min(1),
-      key: z.string().min(1),
-    })
-    .refine((payload) =>
-      payload.key.startsWith(importFilePrefix(payload.userId)),
-    ),
+  payload: importFileKey,
+});
+
+/**
+ * Delete a run file whose import failed, 30 days after it failed (owner,
+ * 2026-10-04). A failed import has no run, so no run deletion will ever
+ * owe its file; this debt is written in the batch that marks the import
+ * failed, held back to its date, and paid by the daily drain. The same
+ * payload and the same prefix rule as `import_file_delete`.
+ *
+ * Its own kind rather than a held `import_file_delete`, because the drain
+ * reads the two differently: a due `import_file_delete` is a fast path
+ * that failed, which the digest reports, where a due `import_file_expire`
+ * is the schedule arriving, which it does not (`scheduledOutboxKinds`).
+ */
+const importFileExpire = z.object({
+  kind: z.literal("import_file_expire"),
+  payload: importFileKey,
 });
 
 /**
@@ -88,6 +107,7 @@ export const outboxMessageSchema = z.discriminatedUnion("kind", [
   photoDelete,
   entryMediaDelete,
   importFileDelete,
+  importFileExpire,
   email,
 ]);
 
@@ -101,13 +121,24 @@ export const outboxKinds: readonly OutboxKind[] =
   outboxMessageSchema.options.map((option) => option.shape.kind.value);
 
 /**
+ * Kinds whose rows are owed on a date rather than by a failure: no fast
+ * path ever works them, so a row the drain finds due is the schedule, not
+ * a debt someone failed to pay. The drain settles them without a digest
+ * line; one that does not settle is reported like any other.
+ */
+export const scheduledOutboxKinds: readonly OutboxKind[] = [
+  "import_file_expire",
+];
+
+/**
  * The debt's identity: a second enqueue of the same key is the same row.
  *
  * Per kind, because what makes two debts one differs. One `photo_delete`
  * per garment, because what it does — reconcile the garment's prefix
  * against its row — covers every version at once. One `entry_media_delete`
  * per entry, and one `*` for "every entry of this runner's". One
- * `import_file_delete` per object. An email's is its writer's to name.
+ * `import_file_delete` or `import_file_expire` per object. An email's is
+ * its writer's to name.
  */
 export function dedupeKeyFor(message: OutboxMessage): string {
   switch (message.kind) {
@@ -117,7 +148,8 @@ export function dedupeKeyFor(message: OutboxMessage): string {
     case "entry_media_delete": {
       return `${message.payload.userId}:${message.payload.entryId ?? "*"}`;
     }
-    case "import_file_delete": {
+    case "import_file_delete":
+    case "import_file_expire": {
       return `${message.payload.userId}:${message.payload.key}`;
     }
     case "email": {

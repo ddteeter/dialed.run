@@ -47,16 +47,17 @@
   ],
   // Two buckets, split by retention rather than by cost. Photos are
   // load-bearing for rendering and live as long as the row that references
-  // them. Import files exist to be parsed once; after that they are only
-  // useful for re-parsing after a parser bug, and they are GPS traces —
-  // the most sensitive thing we hold. A prefix-scoped lifecycle rule on a
-  // single bucket could express this, but it makes retention a rule
-  // someone can misconfigure instead of a property of where the object
-  // lives.
+  // them. Import files are kept as long as their run (D-110) so new fields
+  // can be re-parsed from old runs and routes stay possible later, and
+  // they are GPS traces — the most sensitive thing we hold — so they live
+  // apart, where only the deletion paths reach them. Keeping them in their
+  // own bucket makes that a property of where the object lives rather than
+  // a prefix rule someone can misconfigure.
   //
   // MEDIA: no expiry.
   // IMPORTS: run files under imports/ have no expiry since D-110; the
-  // deletion paths remove them with their run or account. One lifecycle
+  // deletion paths remove them with their run or account, and a failed
+  // import's file 30 days on (outbox import_file_expire). One lifecycle
   // rule, prefix exports/, 8 days (D-85) — set in the Cloudflare
   // dashboard, since wrangler does not manage R2 lifecycle policy.
   "r2_buckets": [

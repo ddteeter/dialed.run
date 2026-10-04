@@ -34,6 +34,7 @@ import {
   dedupeKeyFor,
   outboxKinds,
   readOutboxRow,
+  scheduledOutboxKinds,
   type OutboxKind,
   type OutboxMessage,
 } from "../../lib/sql/outbox";
@@ -320,7 +321,9 @@ async function didSettle(
  *
  * Every row it found is a fast path that failed, so each kind's count is
  * an anomaly line: the digest says the debt existed whether or not this
- * run paid it.
+ * run paid it. A scheduled kind (`scheduledOutboxKinds`) is the exception:
+ * its rows are due by design, so it earns a line only when one of them
+ * did not settle.
  */
 export async function drainOutbox(
   db: Db,
@@ -338,6 +341,8 @@ export async function drainOutbox(
     for (const row of claimed) {
       if (await didSettle(db, row, report, handlers)) settled += 1;
     }
+    const isScheduled = scheduledOutboxKinds.includes(kind);
+    if (isScheduled && settled === claimed.length) continue;
     anomalies.push(
       `${String(claimed.length)} ${kind} outbox row(s) were owed; ${String(settled)} settled`,
     );
