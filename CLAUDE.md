@@ -303,13 +303,21 @@ explicitly says the migration is yours — or the owner has said yes.
   per-item verdict. See `docs/contracts.md`.
 - **Weather is never typed by a human** as the default path. The manual-temp
   fallback exists only when no observation is resolvable; it is stored with
-  `source='manual'` and excluded from consensus aggregates and (later) training.
+  `source='manual'` and excluded from consensus aggregates, published anonymous
+  totals and (later) training.
 - **Strava activity data is never stored, displayed, or used.** The webhook's
   only effect is a notification row and, if the runner allows it, a reminder
   email.
 - **Sharing**: entries are public by default with a per-entry toggle and a
-  per-user default preference. Private entries never appear in feeds or
-  consensus aggregates.
+  per-user default preference. Private entries never appear in feeds or in
+  in-app consensus and social-proof counts (the conditions consensus, "worn by
+  N"). **Published anonymous totals** — the marketing site's guides and
+  reports — **do count private runs**, under D-108's conditions: counted fields
+  only (feels-like band, sky, month, garment type and model, verdict, region if
+  set; never notes, photos, times, places or handles), 5+ distinct runners per
+  figure (20+ for a brand), confirmed accounts only, and the runner's opt-out
+  honoured. Don't "fix" the guide job to drop private runs; do make sure it can
+  read nothing beyond the counted fields.
 - **Retire, don't delete** garments referenced by any entry.
 - **Products are shared canonical rows** (create-if-missing on normalized
   brand+name); product names are UGC. Social-proof counts derive only from
