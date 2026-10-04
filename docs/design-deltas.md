@@ -1225,7 +1225,9 @@ status was checked against `main`:
 Counting closet pieces in published aggregates amends D-29; see Conflicts.
 
 **Conflicts for the owner.** None of these was adopted by the import. Each
-quotes both sides and ends with a recommendation.
+quotes both sides and ends with a recommendation. **The owner ruled on eight
+of the nine on 2026-10-03 (D-99 to D-104, D-106 and D-107)**, and each
+one's resolution follows it. Closet pieces in reports (D-29) is still open.
 
 - **Reports count closet pieces (M8 and the data requirements) vs D-29.**
   D-29: _"Social-proof ownership counts derive only from public entries …
@@ -1234,7 +1236,10 @@ quotes both sides and ends with a recommendation.
   PIECES", and (c) exists for "growing brands", which reads closet
   additions. _Recommendation:_ an owner call alongside the D-58 one below.
   Reports built from shared entries alone keep D-29. Counting closets needs
-  D-29 amended and clause (a) to say so.
+  D-29 amended and clause (a) to say so. **Open (owner, 2026-10-03).** The
+  owner is checking with design whether published totals count private
+  entries (with an opt-out) and whether closet pieces count only when worn.
+  D-29 stands until then.
 - **Two hosts (Marketing M0) vs D-53 and the deployment plan.** D-53: _"The
   whole site is `noindex` until the public launch … at the stage 2 gate the
   landing page and other public marketing pages flip to index by their own
@@ -1248,7 +1253,12 @@ quotes both sides and ends with a recommendation.
   to build a marketing site at all. If one is built, the split is a
   deployment-plan change (Better Auth's URL, the Strava callback, Google's
   origins, every email link) and the marketing host still ships `noindex`
-  until stage 2.
+  until stage 2. **Resolved: adopted, D-99, amending D-53.** `dialed.run`
+  is the marketing site, indexable once its `SITE_INDEXABLE` flag is turned
+  on at public launch; `app.dialed.run` is never indexed and scopes its
+  cookies to itself; `api.dialed.run` is the read API. The deployment sweep
+  moves `BETTER_AUTH_URL`, the OAuth redirect URIs, the Strava callback
+  domain, cookies, email links and the CSP.
 - **Legal pages on the marketing host (M0) vs D-81 and D-93.** M0 puts
   `/privacy`, `/terms`, `/open-source` and `/copyright` on the static
   `dialed.run`, indexed. D-81 fixes the links where they are, with
@@ -1257,6 +1267,9 @@ quotes both sides and ends with a recommendation.
   (`account/terms-acceptance.ts`). Round 27 kept them `noindex`.
   _Recommendation:_ keep them in the app until a marketing site is
   scheduled; moving them is part of that decision, not this import.
+  **Resolved: adopted, D-100, amending D-81 and D-93 only as to host.**
+  They move to the marketing host once it exists, sourced from this repo's
+  `docs/legal`; until then the app keeps serving them.
 - **Guides and reports publish shared-run data to the open web (M1–M3,
   M8) vs D-58.**
   D-58: _"nothing is served to a signed-out visitor or a search index by
@@ -1266,14 +1279,18 @@ quotes both sides and ends with a recommendation.
   M8 publishes findings and their CSV under CC BY 4.0.
   _Recommendation:_ an owner call before any guide or report is built. If the
   answer is yes, D-58 gains an aggregate exception and the privacy
-  policy's "What other runners see" section needs a line.
+  policy's "What other runners see" section needs a line. **Resolved:
+  adopted, D-101.** Guides and reports are anonymous totals, not entries;
+  D-58 still governs entries and profiles, and nothing of an entry is ever
+  public. The privacy line is data requirement (a).
 - **The terms prompt's "go back to" line (4b) vs D-96.** D-96: a refused
   call opens the prompt _"instead of a failure band, with no new copy,
   never saying the refused write was saved."_ Round 30 adds "After you
   accept, you'll go back to Log a run. What you typed wasn't kept."
   _Recommendation:_ adopt it. It never says the write was saved, and it
   tells the runner the one thing D-96 leaves them to discover. It needs
-  D-96 amended.
+  D-96 amended. **Resolved: adopted, D-102, amending D-96,** whose point
+  was no failure band, not no words.
 - **Tokens and the terms gate (6) vs D-95.** D-95 names the exemptions:
   _"Get a copy … beside Delete account, Keep, Accept and sign-out …
   Settings › Account's two reads are exempt with it."_ Round 30 adds the
@@ -1282,22 +1299,39 @@ quotes both sides and ends with a recommendation.
   refuses a token while its owner is behind (403 `terms_not_accepted`).
   _Recommendation:_ adopt it, on D-95's own reasoning (portability, and
   Revoke is a safety action like sign-out), amend D-95, and change the
-  design doc before task 130 is built.
+  design doc before task 130 is built. **Resolved: adopted, D-103.**
+  Tokens keep reading while a runner is behind, consistent with D-95's
+  export exemption, and Revoke stays allowed. Task 130's design doc changes
+  to match.
 - **The token-created email (6) vs D-43.** D-43 lists the emails that
   exist; D-89 amended it for the reopen email. Round 30 adds "A token
   called {name} was created on your account." with a "This wasn't me"
   revoke link. _Recommendation:_ adopt it with task 130 as a transactional
-  kind, and amend D-43 then, as D-89 did.
+  kind, and amend D-43 then, as D-89 did. **Resolved: adopted, D-104,
+  amending D-43:** a security email with no opt-out, built with the read
+  API.
 - **The default OG card (5) vs D-51**, still unresolved from round 27.
   D-51: _"Per-entry OG share cards are generated now."_ Round 30: "The OG
   card is the default one, never the entry's", as round 27 #7 ruled.
   _Recommendation:_ supersede D-51, as round 27's import already asked.
+  **Resolved: default card only, D-107, superseding D-51,** per the owner's
+  earlier "generic card only" call.
 - **A kit line on the Strava activity (Integrations 04) vs D-14 and D-54.**
   D-54: Strava keeps _"only the athlete id and a refresh token, used solely
   to revoke"_; D-14: _"No activity data stored, ever."_ The board's
   "41°F damp · Dialed · kit via dialed.run" needs Strava's write scope and
   writes to an activity. It is marked "not committed". _Recommendation:_
   not adopted; it would reverse two owner decisions and Strava's review.
+  **Resolved: not adopted, D-106.** D-14 and D-54 stand.
+
+**One more ruling, not a conflict: D-105.** The marketing site is a
+separate public repo built with Astro (`~/dev/projects/dialed.run-site`),
+deployed to the same Cloudflare account with a scoped token. Guide data
+reaches it as a nightly aggregate JSON that an app cron writes to R2 (bands
+with 5 or more runners only), and changelog entries are drafted by Claude
+from merged PRs and approved by the owner. It is a public-launch item, so
+"new: marketing site" in the build work above is that repo, plus the app's
+cron.
 
 **The read API design doc (`docs/read-api-design`, open).** The
 Integrations board's endpoint and the design doc describe different shapes.
