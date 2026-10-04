@@ -69,7 +69,7 @@ describe("the audience schema", () => {
       `SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'user_profiles_username_nocase'`,
     ).all();
     const [index] = z.array(z.object({ sql: z.string() })).parse(results);
-    expect(index?.sql).toMatch(/COLLATE NOCASE/iu);
+    expect(index?.sql).toMatch(/username.*COLLATE NOCASE/iu);
   });
 
   it("fails closed for an entry that never set its audience", async () => {
