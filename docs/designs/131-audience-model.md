@@ -450,7 +450,7 @@ Following the code where it contradicts the plan, as instructed:
   store `groups` yet; whoever widens `writableAudienceSchema` must revisit
   both, as with `VerdictForm.tsx` above.
 - **The README sentences are drafted, for the owner's edit.** `audience`:
-  "shared when other runners can see it, private when only you can."
-  `default_audience`: "whether a new kit starts shared or private." No
+  "who can see this run's kit and verdict: shared means any runner on dialed.run, private means only you."
+  `default_audience`: "what a new run starts as when you log it, shared or private. You can change any run afterwards." (owner-approved wording, 2026-10-04) No
   other document names either export column, so nothing else changed for
   them; the legal sources' code citations were updated (citations only).

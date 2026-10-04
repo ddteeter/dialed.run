@@ -145,7 +145,8 @@ export function buildSheets(rows: ExportRows): ExportSheets {
       },
       {
         name: "default_audience",
-        about: "whether a new kit starts shared or private.",
+        about:
+          "what a new run starts as when you log it, shared or private. You can change any run afterwards.",
         value: (row) => row.defaultAudience,
       },
     ],
@@ -263,7 +264,7 @@ export function buildSheets(rows: ExportRows): ExportSheets {
       {
         name: "audience",
         about:
-          "shared when other runners can see it, private when only you can.",
+          "who can see this run's kit and verdict: shared means any runner on dialed.run, private means only you.",
         value: (entry) => entry.audience,
       },
       {
