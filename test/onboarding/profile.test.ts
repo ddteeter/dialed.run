@@ -8,6 +8,7 @@ import { newUlid } from "../../src/lib/ids";
 import {
   CITY_UNCONFIRMED,
   calibrationInput,
+  sharingInput,
 } from "../../src/modules/onboarding/inputs";
 import { placeInput, savePlace } from "../../src/modules/onboarding";
 import {
@@ -75,6 +76,7 @@ describe("saveCalibration", () => {
     expect(await profileOf(userId)).toMatchObject({
       username: "Ada",
       shareDefault: false,
+      defaultAudience: "private",
       onboardingComplete: true,
       thermalLevel: -1,
     });
@@ -201,6 +203,7 @@ describe("savePlace — the one writer of the profile's place (FEED-5)", () => {
       distanceUnit: "km",
       username: "Ada",
       shareDefault: false,
+      defaultAudience: "private",
     });
   });
 
@@ -409,13 +412,13 @@ describe("savePreferences and currentSettings", () => {
     await savePreferences(coreDb(), userId, {
       tempUnit: "c",
       distanceUnit: "km",
-      shareDefault: false,
+      defaultAudience: "private",
     });
 
     expect(await currentSettings(coreDb(), userId)).toMatchObject({
       tempUnit: "c",
       distanceUnit: "km",
-      shareDefault: false,
+      defaultAudience: "private",
     });
   });
 
@@ -431,7 +434,7 @@ describe("savePreferences and currentSettings", () => {
     await savePreferences(coreDb(), userId, {
       tempUnit: "c",
       distanceUnit: "km",
-      shareDefault: false,
+      defaultAudience: "private",
     });
 
     expect(await currentSettings(coreDb(), userId)).toMatchObject({
@@ -451,7 +454,7 @@ describe("savePreferences and currentSettings", () => {
     await savePreferences(coreDb(), userId, {
       tempUnit: "c",
       distanceUnit: "km",
-      shareDefault: false,
+      defaultAudience: "private",
     });
 
     await saveCalibration(coreDb(), userId, {
@@ -464,7 +467,7 @@ describe("savePreferences and currentSettings", () => {
       thermalLevel: -1,
       tempUnit: "c",
       distanceUnit: "km",
-      shareDefault: false,
+      defaultAudience: "private",
     });
   });
 
@@ -472,7 +475,7 @@ describe("savePreferences and currentSettings", () => {
     // Each sub-page is its own small form: saving units cannot reset the
     // sharing default, and saving sharing cannot reset the units.
     const userId = newUlid();
-    await savePreferences(coreDb(), userId, { shareDefault: false });
+    await savePreferences(coreDb(), userId, { defaultAudience: "private" });
     await savePreferences(coreDb(), userId, {
       tempUnit: "c",
       distanceUnit: "km",
@@ -480,13 +483,43 @@ describe("savePreferences and currentSettings", () => {
     expect(await currentSettings(coreDb(), userId)).toMatchObject({
       tempUnit: "c",
       distanceUnit: "km",
-      shareDefault: false,
+      defaultAudience: "private",
     });
 
-    await savePreferences(coreDb(), userId, { shareDefault: true });
+    await savePreferences(coreDb(), userId, { defaultAudience: "runners" });
     expect(await currentSettings(coreDb(), userId)).toMatchObject({
       tempUnit: "c",
       distanceUnit: "km",
+      defaultAudience: "runners",
+    });
+
+    // And units again, now that the default is shared: a units save that
+    // wrote a sharing column at all would turn it off.
+    await savePreferences(coreDb(), userId, {
+      tempUnit: "f",
+      distanceUnit: "mi",
+    });
+    expect(await profileOf(userId)).toMatchObject({
+      tempUnit: "f",
+      defaultAudience: "runners",
+      shareDefault: true,
+    });
+  });
+
+  it("writes the default audience and keeps share_default in step", async () => {
+    // The dual write (design 131): a version a rollback could restore reads
+    // only the boolean, so an opt-out that left it at 1 would be undone
+    // there without anyone seeing it.
+    const userId = newUlid();
+    await savePreferences(coreDb(), userId, { defaultAudience: "private" });
+    expect(await profileOf(userId)).toMatchObject({
+      defaultAudience: "private",
+      shareDefault: false,
+    });
+
+    await savePreferences(coreDb(), userId, { defaultAudience: "runners" });
+    expect(await profileOf(userId)).toMatchObject({
+      defaultAudience: "runners",
       shareDefault: true,
     });
   });
@@ -499,7 +532,7 @@ describe("savePreferences and currentSettings", () => {
       thermalLevel: undefined,
       tempUnit: "f",
       distanceUnit: "mi",
-      shareDefault: true,
+      defaultAudience: "runners",
     });
   });
 
@@ -510,7 +543,7 @@ describe("savePreferences and currentSettings", () => {
     await savePreferences(coreDb(), userId, {
       tempUnit: "f",
       distanceUnit: "mi",
-      shareDefault: true,
+      defaultAudience: "runners",
     });
 
     const settings = await currentSettings(coreDb(), userId);
@@ -525,7 +558,23 @@ describe("savePreferences and currentSettings", () => {
     await saveCalibration(coreDb(), userId, { thermalLevel: 0 });
 
     const settings = await currentSettings(coreDb(), userId);
-    expect(settings.shareDefault).toBe(true);
+    expect(settings.defaultAudience).toBe("runners");
+  });
+});
+
+describe("sharingInput", () => {
+  it("takes either writable default audience and refuses groups (D-109)", () => {
+    expect(sharingInput.parse({ defaultAudience: "runners" })).toEqual({
+      defaultAudience: "runners",
+    });
+    expect(sharingInput.parse({ defaultAudience: "private" })).toEqual({
+      defaultAudience: "private",
+    });
+    expect(sharingInput.safeParse({ defaultAudience: "groups" }).success).toBe(
+      false,
+    );
+    // The previous bundle's boolean is refused, not guessed at.
+    expect(sharingInput.safeParse({ shareDefault: true }).success).toBe(false);
   });
 });
 
