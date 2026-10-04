@@ -520,7 +520,7 @@ export async function openSubject(
  * still showing it as open.
  *
  * Approving restores `ok` rather than restoring "whatever it was", and that
- * is safe precisely because the hide never touched `isPublic` — the
+ * is safe precisely because the hide never touched the audience — the
  * runner's own sharing choice survived the whole round trip untouched.
  */
 export async function resolveReview(

@@ -382,7 +382,7 @@ describe("H's entries", () => {
     );
 
     expect(details).toMatch(
-      /SEARCH outfit_entries USING INDEX entries_user_public_created \(user_id=\? AND is_public=\? AND moderation_status=\?\)/u,
+      /SEARCH outfit_entries USING INDEX entries_user_audience_created \(user_id=\? AND audience=\? AND moderation_status=\?\)/u,
     );
     expect(
       details.match(

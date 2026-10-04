@@ -42,9 +42,13 @@ export const writableAudienceSchema = audienceSchema.extract([
 export type WritableAudience = z.infer<typeof writableAudienceSchema>;
 
 /**
-The one audience strangers see.
-*/
-const SHARED_AUDIENCE = "runners" satisfies WritableAudience;
+ * The one audience strangers see. Every read that shows an entry to
+ * someone other than its author tests for this value and nothing else
+ * (`safety/visibility.ts`'s one rule, `feed/feed.ts`'s index seek), so a
+ * `groups` row is hidden from strangers without anyone having to remember
+ * it.
+ */
+export const SHARED_AUDIENCE = "runners" satisfies WritableAudience;
 
 /**
  * The audience a sharing switch stands for. A3's checkbox and the Settings

@@ -1,7 +1,7 @@
 /**
  * What "visible to the public" means for an entry, in one place.
  *
- * Before 106 this was a single condition — `is_public = 1` — and every read
+ * Before 106 this was a single condition — the entry was shared — and every read
  * that needed it simply wrote it. A second condition turns that into five
  * copies of a rule, and CLAUDE.md is explicit about what happens next: a
  * hand-written second copy is not a duplicate of the truth, it is a rival
@@ -24,6 +24,7 @@ import {
   reports,
   userProfiles,
 } from "../../db/schema-core";
+import { SHARED_AUDIENCE } from "../../lib/contracts";
 
 /**
  * The entry is shared by its author, nothing is pending or settled against
@@ -45,7 +46,12 @@ import {
  * discipline names, and the one a post-query filter would have walked
  * straight into.
  *
- * Column order still matches `entries_public_created` (is_public,
+ * **Shared means the `runners` audience and nothing else** (D-109,
+ * design 131): `private` and `groups` alike are hidden from strangers, so
+ * a groups entry needs no clause of its own here. The legacy boolean is
+ * not read; writers keep it in step only until design 131's C1.
+ *
+ * Column order matches `entries_audience_created` (audience,
  * moderation_status, created_at), so a caller that adds a `created_at`
  * range gets two equalities then a range — an index seek rather than a
  * scan. The subqueries run per surviving row, each a primary-key or
@@ -53,7 +59,7 @@ import {
  */
 export function publiclyVisibleEntry(viewerId?: string): SQL | undefined {
   return and(
-    eq(outfitEntries.isPublic, true),
+    eq(outfitEntries.audience, SHARED_AUDIENCE),
     eq(outfitEntries.moderationStatus, "ok"),
     authorNotBanned(),
     runnerNotLeaving(outfitEntries.userId),

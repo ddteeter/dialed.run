@@ -6,6 +6,7 @@ import {
   audienceOfShareToggle,
   defaultUnits,
   isSharedAudience,
+  SHARED_AUDIENCE,
 } from "../../lib/contracts";
 import { orSqlNull } from "../../lib/sql/sql-null";
 import type {
@@ -208,10 +209,11 @@ export interface CurrentSettings extends Preferences {
  * and miles a feed reader is already seeing rather than a blank the save
  * would then have to invent a value for.
  *
- * The default audience is read from `share_default` until PR B reads
- * `default_audience` (design 131): the writers keep the two in step.
- * `share_default` is `NOT NULL DEFAULT true`, so its only missing case is
- * a missing row, and `true` there is the contract's "public by default".
+ * The default audience is read from `default_audience` (design 131,
+ * PR B). It is `NOT NULL DEFAULT 'runners'`, so its only missing case is a
+ * missing row, and shared there is the contract's "shared by default". The
+ * toggle shows a stored `groups`, which nothing can write yet, as off: the
+ * Settings switch is on for `runners` alone, as A3's is.
  */
 export async function currentSettings(
   db: DrizzleD1Database,
@@ -222,7 +224,7 @@ export async function currentSettings(
       thermalLevel: userProfiles.thermalLevel,
       tempUnit: userProfiles.tempUnit,
       distanceUnit: userProfiles.distanceUnit,
-      shareDefault: userProfiles.shareDefault,
+      defaultAudience: userProfiles.defaultAudience,
     })
     .from(userProfiles)
     .where(eq(userProfiles.userId, userId))
@@ -231,7 +233,9 @@ export async function currentSettings(
     thermalLevel: row?.thermalLevel ?? undefined,
     tempUnit: row?.tempUnit ?? defaultUnits.temp,
     distanceUnit: row?.distanceUnit ?? defaultUnits.distance,
-    defaultAudience: audienceOfShareToggle(row?.shareDefault ?? true),
+    defaultAudience: audienceOfShareToggle(
+      isSharedAudience(row?.defaultAudience ?? SHARED_AUDIENCE),
+    ),
   };
 }
 

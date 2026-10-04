@@ -524,6 +524,31 @@ describe("savePreferences and currentSettings", () => {
     });
   });
 
+  it("reads the default audience, not the boolean (design 131, PR B)", async () => {
+    // Writers keep the two in step, so only a seed can split them.
+    const quiet = newUlid();
+    const open = newUlid();
+    const grouped = newUlid();
+    await coreDb()
+      .insert(userProfiles)
+      .values([
+        { userId: quiet, defaultAudience: "private", shareDefault: true },
+        { userId: open, defaultAudience: "runners", shareDefault: false },
+        // Nothing can write `groups` yet; the switch shows it as off.
+        { userId: grouped, defaultAudience: "groups", shareDefault: false },
+      ]);
+
+    expect(await currentSettings(coreDb(), quiet)).toMatchObject({
+      defaultAudience: "private",
+    });
+    expect(await currentSettings(coreDb(), open)).toMatchObject({
+      defaultAudience: "runners",
+    });
+    expect(await currentSettings(coreDb(), grouped)).toMatchObject({
+      defaultAudience: "private",
+    });
+  });
+
   it("answers with the app defaults for an account with no row", async () => {
     // Not a throw and not blanks: settings shows the same Fahrenheit and
     // miles a feed reader is already being shown, because `feed/units.ts`

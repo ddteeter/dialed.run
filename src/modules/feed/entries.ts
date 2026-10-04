@@ -26,7 +26,7 @@ import {
   wardrobeItems,
 } from "../../db/schema-core";
 import { env } from "../../env";
-import { audienceOfShareToggle, isSharedAudience } from "../../lib/contracts";
+import { isSharedAudience } from "../../lib/contracts";
 import type {
   Audience,
   WritableAudience,
@@ -684,10 +684,7 @@ export async function getEntryDetail(
     startedAt: run.startedAt,
     indoor: run.indoor,
     verdict: entry.verdict ?? undefined,
-    // From the boolean until PR B reads the column (design 131): a row
-    // the previous version wrote between `migrations apply` and this
-    // deploy has only the boolean right, until B's resync.
-    audience: audienceOfShareToggle(entry.isPublic),
+    audience: entry.audience,
     caption: entry.caption ?? undefined,
     createdAt: entry.createdAt,
     items: entryItemRows.map((row) => {

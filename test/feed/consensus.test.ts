@@ -254,6 +254,12 @@ describe("matchTally: who matched", () => {
       .all<{ detail: string }>();
     const details = plan.results.map((row) => row.detail).join("\n");
     expect(details).not.toMatch(/SCAN\s+outfit_entries/i);
+    // On the audience's index (design 131, PR B): two equalities, then
+    // the window as a range. The boolean's index stays until C2 drops it.
+    expect(details).toMatch(
+      /SEARCH outfit_entries USING INDEX entries_audience_created \(audience=\? AND moderation_status=\? AND created_at>\?\)/u,
+    );
+    expect(details).not.toMatch(/entries_public_created/u);
   });
 });
 

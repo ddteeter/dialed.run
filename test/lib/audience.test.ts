@@ -5,6 +5,7 @@ import {
   audienceSchema,
   audiences,
   isSharedAudience,
+  SHARED_AUDIENCE,
   writableAudienceSchema,
 } from "../../src/lib/contracts";
 
@@ -58,6 +59,11 @@ describe("the share toggle", () => {
   it("is shared only for runners, of every stored audience", () => {
     const shared = audiences.filter((audience) => isSharedAudience(audience));
     expect(shared).toEqual(["runners"]);
+  });
+
+  it("is on for SHARED_AUDIENCE, the one audience strangers see", () => {
+    expect(SHARED_AUDIENCE).toBe("runners");
+    expect(audienceOfShareToggle(true)).toBe(SHARED_AUDIENCE);
   });
 
   it("only ever produces a writable audience", () => {
