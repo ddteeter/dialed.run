@@ -81,20 +81,20 @@ on the next build.
 
 ```ts
 // src/lib/dialed/aggregator.ts — the blog's side, sketched
-const runs = await allPages(`/v1/pieces/${pieceId}/runs`); // 1–2 requests
+const runs = await allPages(`/v1/pieces/${pieceId}/runs`); // follows `next`; 1–2 requests
 const bands = await getBands(); // 1 request, cached
 const atReview = runs.filter((r) => Date.parse(r.startedAt) <= reviewDayEndMs); // offsets differ, so compare instants
 
 function record(rs: Run[]) {
-  const felt = rs.flatMap((r) => (r.conditions?.feelsLikeF == null ? [] : [r]));
+  const felt = rs.flatMap((r) => (r.conditions?.feelsLike == null ? [] : [r]));
   return {
     runsWorn: rs.length, // "Runs Worn 23"
-    feelsLike: minMax(felt, (r) => r.conditions.feelsLikeF), // "27–49°F" (or C)
+    feelsLike: minMax(felt, (r) => r.conditions.feelsLike.f), // "27–49°F" (or .c)
     dialed: count(rs, (r) => r.verdict === "dialed"), // "Dialed 15 of 23"
     period: [first(rs).startedAt, last(rs).startedAt], // "Worn Period"
     byBand: bands.map((b) => {
       // "By conditions"
-      const inBand = felt.filter((r) => inRange(r.conditions.feelsLikeC, b));
+      const inBand = felt.filter((r) => inRange(r.conditions.feelsLike.c, b));
       return {
         label: b.labelF,
         runs: inBand.length,
@@ -104,35 +104,35 @@ function record(rs: Run[]) {
     }),
     sky: tally(rs, (r) => r.conditions?.sky), // "Dry 14 Damp 6 Rain 2 Snow 1"
     wornWith: top(
-      tallyMany(rs, (r) => r.wornWith),
+      tallyMany(rs, (r) => r.kit.filter((k) => k.id !== pieceId)),
       3,
-    ), // "Most often worn with"
+    ), // "Most often worn with": the kit minus this piece
     rows: rs.map((r) => ({
       date: r.startedAt,
       tz: r.timeZone, // "View all 23 runs"
-      feels: r.conditions?.feelsLikeF,
+      feels: r.conditions?.feelsLike?.f,
       sky: r.conditions?.sky,
       verdict: r.verdict,
       href: r.entryUrl ?? null,
     })),
-    // Strava-block parity, if wanted: distance, duration and pace per run,
-    // summed and weighted exactly as aggregator.ts does today.
+    // Strava-block parity, if wanted: distance.mi (or .km), durationS and
+    // pace per run, summed and weighted exactly as aggregator.ts does today.
   };
 }
 ```
 
-| Board stat (Integration Opportunities 01) | Computed by the blog from                                                                     |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Runs Worn                                 | `runs.length`                                                                                 |
-| Feels-like Range                          | min and max of `conditions.feelsLikeF` (or `…C`) over runs that have one                      |
-| Dialed N of M                             | count of `verdict === "dialed"`                                                               |
-| Worn Period                               | first and last `startedAt`                                                                    |
-| By conditions: band, runs, how it went    | `/v1/bands` ranges × `conditions.feelsLikeC`; tally `verdict`, folded to cold, dialed or warm |
-| Band links                                | `guideUrl` when `guidePublished`, else plain text                                             |
-| Sky                                       | tally of `conditions.sky`                                                                     |
-| Most often worn with                      | tally of `wornWith[].id`, named by `wornWith[].name`                                          |
-| Run rows: date, feels like, sky, verdict  | the run fields directly; the date links to `entryUrl` when present                            |
-| Strava-style distance, pace, totals       | `distanceM` and `durationS`, as `aggregator.ts` sums them                                     |
+| Board stat (Integration Opportunities 01) | Computed by the blog from                                                                      |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Runs Worn                                 | `runs.length`                                                                                  |
+| Feels-like Range                          | min and max of `conditions.feelsLike.f` (or `.c`) over runs that have one                      |
+| Dialed N of M                             | count of `verdict === "dialed"`                                                                |
+| Worn Period                               | first and last `startedAt`                                                                     |
+| By conditions: band, runs, how it went    | `/v1/bands` ranges × `conditions.feelsLike.c`; tally `verdict`, folded to cold, dialed or warm |
+| Band links                                | `guideUrl` when `guidePublished`, else plain text                                              |
+| Sky                                       | tally of `conditions.sky`                                                                      |
+| Most often worn with                      | tally of `kit[]` minus the current piece, by `id`, named by `name`                             |
+| Run rows: date, feels like, sky, verdict  | the run fields directly; the date links to `entryUrl` when present                             |
+| Strava-style distance, pace, totals       | `distance.mi` (or `.km`) and `durationS`, as `aggregator.ts` sums them                         |
 
 **What dialed.run lacks next to Strava, which the blog must accept:**
 
@@ -294,30 +294,41 @@ and Better Auth's `bearer` plugin stays off.
 
 ### Endpoints (`https://api.dialed.run/v1/…`, `GET`, JSON)
 
-Every body carries `includesPrivate: boolean`. Instants are ISO 8601 with
-the run's UTC offset, plus an IANA `timeZone` when known. Distances are
-metres and durations seconds. Temperatures come in **both °F and °C**, so
-a caller's unit switch needs no second request. Wind comes in both kph
-and mph.
+**Field-level settlements (owner, 2026-10-03):**
 
-| endpoint                                          | returns                                                                                  |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `/v1/pieces`                                      | the closet: `id`, `name`, `brand`, `category`, `type`, `retired`, `retiredAt`, `addedAt` |
-| `/v1/pieces/:id`                                  | one piece, same fields                                                                   |
-| `/v1/pieces/:id/runs?asOf=&since=&cursor=&limit=` | every run the piece was worn on, newest first, paginated                                 |
-| `/v1/runs?from=&to=&cursor=&limit=`               | runs in a window, for general use and Strava time-matching                               |
-| `/v1/bands`                                       | the feels-like bands, with `guidePublished` and `guideUrl`                               |
+- **camelCase throughout** (`durationS`, `entryUrl`, `timeZone`), not the
+  board's snake_case.
+- **One envelope.** Every list is `{ data, next, includesPrivate }`, where
+  `next` is the opaque cursor for the following page, or `null`. A single
+  object is the same envelope without `next`: `{ data, includesPrivate }`.
+- **Both units for every measure**, so a caller's unit switch needs no
+  second request:
+  - `distance: { mi, km }`;
+  - `temp` and `feelsLike: { f, c }`;
+  - `wind: { mph, kph }`.
+
+  Durations are seconds (`durationS`). Instants are ISO 8601 with the
+  run's UTC offset, plus an IANA `timeZone` when known.
+
+| endpoint                                          | returns                                                                                |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `/v1/pieces`                                      | the closet: `id`, `name`, `brand`, `model`, `category`, `type`, `retiredAt`, `addedAt` |
+| `/v1/pieces/:id`                                  | one piece, same fields                                                                 |
+| `/v1/pieces/:id/runs?asOf=&since=&cursor=&limit=` | every run the piece was worn on, newest first, paginated                               |
+| `/v1/runs?from=&to=&since=&cursor=&limit=`        | runs in a window, for general use and Strava time-matching                             |
+| `/v1/bands`                                       | the feels-like bands, with `guidePublished` and `guideUrl`                             |
 
 **A run** (both run endpoints):
 
-- `id`, `startedAt` (with offset), `timeZone`, `title`, `distanceM`,
-  `durationS`, `indoor` and `effort`.
+- `id`, `startedAt` (with offset), `timeZone`, `title`, `distance`
+  (`{ mi, km }`), `durationS`, `indoor` and `effort`. `timeZone`, `title`,
+  `indoor` and `effort` stay, by the owner's settlement.
 - **`conditions`**, or `null` for indoor and unlocated runs:
   - `source`: `observed` or `manual`;
-  - `tempC`/`tempF` and `feelsLikeC`/`feelsLikeF`. For a manual band these
-    are its low and high in both units (`tempBand`), never a midpoint
+  - `temp` and `feelsLike`, each `{ f, c }`. A manual band has
+    `tempBand: { low: { f, c }, high: { f, c } }` instead, never a midpoint
     (round 26 #2);
-  - `windKph`/`windMph`;
+  - `wind: { mph, kph }`;
   - `sky`: `dry`, `damp`, `rain` or `snow`. On a manual run it is the
     runner's pick. On an observed run it is derived from precipitation
     through `precipClassOf`, with wet read as `rain`. That is the rule
@@ -333,15 +344,49 @@ and mph.
   `https://app.dialed.run/feed/entry/<entryId>`, present only when the run
   is shared.
 
-The piece-runs endpoint adds:
+- **`kit`**, on **both** run endpoints: every piece worn on the run,
+  **including the current one** on `/v1/pieces/:id/runs`. Each entry has
+  `id`, `name`, `flag` and `note`. That carries this piece's flag and note
+  too. "Worn with" is the kit minus the current piece, computed by the
+  caller. There is no `wornWith` field.
 
-- `piece`: this piece's `flag` and `note` on the run;
-- `wornWith`: the **other pieces in that kit**, as ids and names, so a
-  caller can compute "worn with".
-
-The runs endpoint adds:
-
-- `kit`: every piece in the run's kit, with id, name, flag and note.
+```json
+{
+  "data": [
+    {
+      "id": "01JB7Q4ZK8V3M2N6P0R5S9T1WX",
+      "startedAt": "2026-03-03T06:42:00-05:00",
+      "timeZone": "America/New_York",
+      "title": "Morning loop",
+      "distance": { "mi": 6.21, "km": 10.0 },
+      "durationS": 3120,
+      "indoor": false,
+      "effort": "easy",
+      "conditions": {
+        "source": "observed",
+        "temp": { "f": 41.0, "c": 5.0 },
+        "feelsLike": { "f": 37.4, "c": 3.0 },
+        "wind": { "mph": 6.2, "kph": 10.0 },
+        "sky": "damp"
+      },
+      "verdict": "dialed",
+      "kit": [
+        {
+          "id": "01JA…",
+          "name": "Harrier half-zip",
+          "flag": null,
+          "note": null
+        },
+        { "id": "01JA…", "name": "Tights", "flag": "too_much", "note": null }
+      ],
+      "visibility": "shared",
+      "entryUrl": "https://app.dialed.run/feed/entry/01JB7Q50…"
+    }
+  ],
+  "next": null,
+  "includesPrivate": false
+}
+```
 
 **Visibility.** A run is `shared` exactly when the public can see its
 entry: `is_public = 1 AND moderation_status = 'ok'`. A run with no entry,
@@ -363,10 +408,15 @@ normally, since reviews outlive gear.
   on or after the given instant. A verdict edited on an older run is not
   "since". A changed-since filter would need an `updated_at` on entries
   (open question 3).
-- **`from` and `to`** take a date or an instant; a bare date is a whole UTC
-  day.
+- **`from` and `to`** (on `/v1/runs`) take a date or an instant; a bare
+  date is a whole UTC day. `/v1/runs` takes `since` too.
 - **`cursor`** is opaque base64url of `(startedAt, id)`, parsed by zod.
 - **`limit`** defaults to 200, which is also the cap.
+
+**Pieces.** Each has `id`, `name`, `brand`, **`model`** (the catalogue
+product's name, through `wardrobe_items.product_id`, or `null` for a piece
+with no product), `category`, `type`, `retiredAt` (`null` while in use;
+there is no `retired` boolean, because it is derivable) and `addedAt`.
 
 **`/v1/bands`.** The 5 °C feels-like bands that `bandFloorC` and
 `bandLabel` already define, from −20 °C to 40 °C. The range moves to `lib`
@@ -395,8 +445,8 @@ r.started_at DESC, r.id DESC LIMIT limit + 1`. That is a seek on the new
   reads the page's kits (`outfit_entry_items` by `entry_id`, a chunked
   `IN` on the pk index) and the pieces they name (`wardrobe_items` by id).
 - **Runs window.** `runs LEFT JOIN outfit_entries ON run_id WHERE user_id
-AND started_at BETWEEN …` on `runs_user_started`, with the same kit
-  batch after it.
+AND started_at BETWEEN … [AND started_at >= since]` on
+  `runs_user_started`, with the same kit batch after it.
 - **Visibility and paging are SQL, never filters after `LIMIT`.** Done in
   memory, they would return "the survivors of the first page", which is
   CLAUDE.md's named bug.
@@ -612,8 +662,10 @@ Worker pool unless marked.
   - private rows carry no `entryUrl`;
   - `includesPrivate` matches the token;
   - `asOf` includes its own day, and `since` is honoured;
-  - `wornWith` excludes the piece itself;
-  - °F and °C agree;
+  - `kit` includes the piece itself, on both run endpoints;
+  - every unit pair agrees (`mi`/`km`, `f`/`c`, `mph`/`kph`);
+  - every list is `{ data, next, includesPrivate }`, and `next` walks to
+    the end;
   - manual bands give low and high, never a midpoint;
   - the verdict words cover every `verdictScale` value;
   - a weather failure is 503.
