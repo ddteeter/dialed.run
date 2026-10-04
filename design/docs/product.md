@@ -487,3 +487,34 @@ These are cheap to add before launch and expensive after. The report page is dra
 - **One catalogue entry per brand and model.** Every closet piece resolves to a catalogue model (or "unmatched"). Desk Duplicates is the merge tool. Reports only count matched pieces.
 - **Closet added_at.** Store the date a piece was added, and its first worn date (derived from the first entry). This is required for "growing brands" and can't be backfilled.
 - **Region (optional, opt-in).** Settings › Profile › Region: country, plus state/province where it applies. Off by default. It's only used in aggregates, never shown on a profile or entry, and it's included in the export (profile.csv). Hint: "Used only in anonymous totals, like what runners in your state wear. Never shown to anyone."
+
+## Round 31 (marketing site, Phase 1)
+Drawn in `Round 31 Rulings.dc.html`.
+- **Hero type.** tokens.js MARKETING.hero: clamp(44px, calc(28px + 4.05vw), 76px), lh 0.95, −0.035em, caps. Used on the M1 and M8 h1 only. Every other marketing h1 is TYPE.display, and leads are TYPE.lead.
+- **Ink blocks on marketing** (the Call card, the guide strip, the M3 invite card, the M8 data card). Light: `data-ground="ink"`, which takes T1's dark column. Dark: `--panel` plus a 1px `--hairline` (the T2 04 fallback), not `--tint`. The dark board is corrected. The guide strip follows the same rule, with hairlines top and bottom.
+- **Off-table hexes.** #2A2A26 → --ink. #24242B (Call card rules) → --hairline in the ink scope. #4E4E44 on paper → --quiet for prose, --muted for MONO captions. Its dark twin is #B9B8AE, not #A0A0A6. #DEDDD6 → --ink. #E9E8DE (bar tracks) → --tint.
+- **Wordmark.** Direction 08 everywhere: [dialed.run] with --action brackets and .run in --muted. The marketing boards' "[dialed]" is corrected.
+- **M4 verdict scale.** The A3 verdict-row component, static, with Dialed selected: teal surface, ink text, the other four as hairline slots with MONO.xs ink words. No cold hue, so no pink on the page except the CTA.
+- **Changelog, zero entries.** Not built and not linked until the first entry exists (like the guides). The footer link and /changelog.xml appear with entry 1.
+- **404.** Legal layout, status 404, noindex. MONO.xs "404" · TYPE.display "Nothing at this address" · lead "The link may be mistyped, or the page has moved." · links Home / What to wear (if any band is published) / How it works. App paths on the marketing host (/feed, /login, /join, /account…) 301 to app.dialed.run with the same path and query.
+- **M5b.** "When your code is ready we'll email you." No address echo.
+- **Icons.** Unchanged from round 26 #22. **Default OG card**: a 600×315 layout rendered at 2× to make the 1200×630 image. Ground #0B0B0E. Padding SPACE[8]. Wordmark TYPE.title at top left. "Wear what worked." in TYPE.display, ink-dark (#F4F3EF), bottom left. MONO.sm "DIALED.RUN" in --muted dark at bottom right. One card for every URL on both hosts. This replaces round 27's "Log runs, see what worked" line.
+
+## Round 32 · Anonymous totals
+Drawn in `Round 32 Rulings.dc.html`. **The middle path, with five conditions. If A or B can't be met at launch, ship shared-only.**
+- **Scope.** Published totals (guides, reports, any "runners wore…") count shared and private entries. In-app social proof stays shared-only. Closet pieces count only when worn on a counted run. Manual-temperature runs are excluded.
+- **A · Fields.** Band, sky, month, garment type and model, verdict, and region if set. Never notes, photos, route, start time or place, handle, or free text. The aggregate job has no read access to anything else.
+- **B · Thresholds per figure.** Every displayed number needs 5 or more distinct runners (20 for a brand), including rows, sky sections, split sentences and region slices. Below that, the cell is left out.
+- **C · Who counts.** Confirmed-email accounts only. Excluded: removed or quarantined entries, banned accounts, accounts pending deletion.
+- **D · Opt-out.** Settings › Sharing › "Count my runs in anonymous totals", on by default. Off sub-line: "Off. Your runs leave the guides at tonight's update. Reports already published stay as they are." No confirm. Deleting an account opts out.
+- **E · Disclosure.** A3 PRIVATE sub-line: "Only you see this run. Its kit and verdict still count, anonymously, in the guides. Change". If opted out: "Only you see this run." Au2 legal line adds: "Your runs count, without your name, in totals like the guides. You can turn that off in Settings." No onboarding step.
+- **Copy.** M1/M2/M3/M4/M8 updated on both marketing boards. M4 gains a FAQ entry and a "How the guides are made" (#totals) section.
+- **Terms/Privacy.** The draft paragraphs on the Round 32 board are for legal review and ship in the first published versions.
+
+## Round 33 · Sync after round 30
+- **Read API is general.** api.dialed.run: GET /v1/pieces, /v1/pieces/:id, /v1/pieces/:id/runs?asOf=&since=&cursor=, /v1/runs, /v1/bands. Each run has start, distance, duration, temp/feels in °F and °C, wind, sky, verdict word, the piece's flag and note, kit, visibility, and entry_url when shared. Callers aggregate for themselves. Integration Opportunities 02 is redrawn. The biglongrun block still shows the date only.
+- **Owner adopted:** three hosts; legal pages move to the marketing host; guides and reports as anonymous totals on the open web (entries and profiles stay signed-in only, D-58); the terms "go back to" line; tokens keep reading while a runner is behind on the Terms; the token-created email (Round 30 6f); any runner can create tokens.
+- **Not adopted:** the Strava kit line, and any link-preview card except the default.
+- **Marketing site:** its own public Astro repo, rebuilt nightly, with guide data from the app's nightly anonymous-totals file. Before public launch it's Home and Invite only. Changelog entries are drafted by Claude from merged changes and approved by the owner (M7 amended).
+- **Aggregates:** answered in Round 32: the middle path with five conditions. Reports count closet pieces only when worn on a counted run.
+- **Au6** (Auth.dc.html): the Google fault band moves under the button, which keeps Google's own spec. MONO.xs kicker, and Try again in the band.

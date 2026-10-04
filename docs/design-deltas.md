@@ -826,13 +826,12 @@ ACCEPTED`, `STILL LOGGED IN`. If the terms change again while the
 43. _Held for PR B (`feat/126-round28-accounts`), which adds item 43 on its
     branch. Its round 29 answers are in "Answered in round 29" below._
 44. **The failure-band kicker's face: two contracts disagree (round 29
-    #1).** **ANSWERED by round 30 (items 1–3), except Au6: the kicker is
-    `MONO.xs`, ink, caps, and `tokens.js` COLLAPSE now says so, with no
-    new step. Operator Screens D0 and D6 are redrawn to D-87's rail.
-    Nothing to build. Au6 is on `Auth.dc.html`, not on
-    `Round 22 Coverage.dc.html` as this item said, and still draws
-    Google's band above the button. Round 29 #13's ruling (under the button) stands, so
-    only the drawing is behind.** Round 29 settled the fill (none) and restated
+    #1).** **ANSWERED by rounds 30 and 31–32. Nothing to build. Round 30
+    (items 1–3): the kicker is `MONO.xs`, ink, caps, and `tokens.js`
+    COLLAPSE now says so, with no new step; Operator Screens D0 and D6 are
+    redrawn to D-87's rail. Au6 lives on `Auth.dc.html`, not on
+    `Round 22 Coverage.dc.html` as this item said, and rounds 31–32 redraw
+    it with Google's band under the button, as round 29 #13 ruled.** Round 29 settled the fill (none) and restated
     the face, and that face is not one `tokens.js` has. No owner call is
     needed: it is design's to reconcile, in the contracts. Nothing is built
     differently while it is open, and `FailureBand` keeps `MONO.xs`.
@@ -860,6 +859,298 @@ ACCEPTED`, `STILL LOGGED IN`. If the terms change again while the
       byte-identical to round 28's bundle, so D0 still draws the old rail
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
+
+## Answered in rounds 31–32 (imported 2026-10-03)
+
+Design sent both rounds at 22:42, after round 30's rulings. **Round 31** is
+six contract edits for marketing-site Phase 1, on `Round 31 Rulings.dc.html`.
+**Round 32** answers the question round 30 left open, anonymous totals, on
+`Round 32 Rulings.dc.html`. `design/docs/product.md` mirrors both, plus a
+"Round 33 · Sync after round 30" section that restates the owner's round 30
+rulings (D-99 to D-107) and redraws Au6.
+
+**One contract file changed, and nothing needs a code port.** `tokens.js`
+gains `MARKETING.hero`, a step outside the eight for the marketing site's
+two cover pages: `clamp(44px, calc(28px + 4.05vw), 76px)`, line-height 0.95,
+tracking −0.035em, caps, Archivo Black. It is "the only fluid size in the
+system" and "never appears in-app". `CSS_VARS` exports it as `--type-hero` /
+`--track-hero`, and COLLAPSE maps "44–76px marketing hero" to it, the
+48–64px marketing page h1s (M2, M3, M4, M6, M7) to TYPE.display, and the
+19px marketing lead to TYPE.lead. The app's port reads only TYPE, MONO,
+SPACE, HEIGHT, RADIUS, BREAKPOINT and MEASURE, so `src/styles.css` gains
+nothing. `test/ui/tokens.dom.test.tsx` and
+`test/architecture/annotations-are-not-copy.test.ts` pass against the new
+files unchanged. The hero step is the marketing repo's to port.
+
+Design changed six files and added two:
+
+- `Round 31 Rulings.dc.html` and `Round 32 Rulings.dc.html` (new).
+- `tokens.js`: `MARKETING.hero`, its CSS vars and three COLLAPSE entries.
+- `Marketing Site.dc.html` and `- Dark`: the `[dialed.run]` wordmark, M5b's
+  copy, the dark ink blocks, round 32's copy, and M7's changelog drafted by
+  Claude.
+- `Auth.dc.html`: Au6's Google band moves under the button.
+- `Integration Opportunities.dc.html`: 02 redrawn as a general read API, and
+  04 records the owner's rulings.
+- `Round 30 Rulings.dc.html`: frame 6f, the token-created email.
+- `design/docs/product.md`: "Round 31", "Round 32" and "Round 33 · Sync".
+
+**Round 31 · Marketing site, Phase 1.** "The contracts win. One new step,
+and it's only for covers." T1 gains no roles. Every item is **new:
+marketing site** work, in the separate `dialed.run-site` repo (D-105),
+unless it says otherwise.
+
+1. **Hero size.** `MARKETING.hero` (above), on the M1 and M8 h1s only. M2,
+   M3, M4, M6, M7 and the 404 use TYPE.display (32), because "a guide's h1
+   is a long sentence, and at 76 it would wrap to four lines". The board's
+   19px leads are TYPE.lead. _Build:_ marketing site, S.
+2. **The Call card surface.** _Light confirmed, dark corrected._ Light is
+   `data-ground="ink"`, which takes T1's dark column. Dark is `--panel` with
+   a 1px `--hairline`, T2 04's fallback for an ink block, not `--tint`
+   ("for recessed notes"). The guide strip, the M3 invite card and the M8
+   data card follow the same rule; in dark the strip is a full-bleed
+   `--panel` band with hairlines top and bottom. _Build:_ marketing site, S.
+3. **Off-table hexes.** _Mapped to roles, not hexes._ `#2A2A26` → `--ink`.
+   `#24242B` → `--hairline` in the ink scope. `#A0A0A6` was a drawing
+   error: it is the dark side of `#4E4E44`, which is `--quiet`, whose dark
+   value is `#B9B8AE`. Prose on paper (FAQ answers, footer, sub-lines) is
+   `--quiet`; MONO captions and eyebrows are `--muted`. `#DEDDD6` →
+   `--ink`. `#E9E8DE` (bar tracks) → `--tint`. _Build:_ marketing site, S.
+4. **M4's verdict scale.** _The real component, Dialed selected._ A3's
+   `verdict-row`, static and not interactive (`role="img"`, label "Verdict
+   scale: way cold to way warm, Dialed selected"): the teal slot with ink
+   text, and four hairline slots with MONO.xs ink words. "The page shows
+   the one state that has no cold hue, and the only pink stays the CTA."
+   _Build:_ marketing site, S. It imports A3's component, so it needs the
+   markup and the two-line words, not a redraw.
+5. **The changelog, the 404 and app paths.**
+   - **5a · Zero entries:** no page, no footer link and no feed until entry
+     1 exists; before that `/changelog` is the 404, and there is no
+     empty-state copy.
+   - **5b · The 404:** the legal layout, status 404, `noindex`, the same nav
+     and footer. MONO.xs "404" · "Nothing at this address" · "The link may
+     be mistyped, or the page has moved." · Home › / What to wear › (only
+     once a band is published) / How it works ›. "No search and no invite
+     CTA: a 404 is a wrong turn, not a sales moment." Title "Not found ·
+     dialed.run".
+   - **App paths:** before any 404, `/feed`, `/login`, `/join`, `/account`,
+     `/reset`, `/confirm` and their children answer 301 to
+     `app.dialed.run` with the path and query intact.
+   - **5c · M5b:** "When your code is ready we'll email you." No address
+     echo. The "nearest guide" link is the coldest published band, chosen
+     at build time, or left out.
+
+   _Build:_ marketing site, S.
+
+6. **The favicon, the OG card and the wordmark.** _Direction 08, already
+   ruled._ Icons stand as round 26 #22: `[d]` on an ink tile, favicon.svg,
+   .ico at 16 (brackets only) and 32, apple-touch 180, manifest 192 and 512
+   plus a 512 maskable, `theme_color` `#0B0B0E`. "The SVG is shared with
+   the app." **The default OG card** is a 600×315 layout rendered at 2×
+   (1200×630): ground `#0B0B0E`, padding SPACE[8], the wordmark in
+   TYPE.title top left, "Wear what worked." in TYPE.display bottom left,
+   MONO.sm "DIALED.RUN" in `--muted` bottom right. It is one card for every
+   URL on both hosts, with a per-page og:title on the marketing host and
+   "dialed.run" on the app host, built once and static. **"Wear what
+   worked." replaces round 27's "Log runs, see what worked."** Marketing
+   adopts the full wordmark, `[dialed.run]` with `--action` brackets and
+   `.run` in `--muted`; the boards' bare `[dialed]` is corrected, which
+   closes round 30's wordmark erratum. _Build:_ marketing site, S, plus
+   **two app-side items, lane 125:** the icon set, since the favicon SVG
+   is shared with the app; and the default OG card, `ops/og/cards.tsx`'s
+   default with round 31's layout and line, served by the app host too
+   (D-107).
+
+**An app-side task for the marketing site: a public request-access
+endpoint.** _Build:_ 126, M, needed for public launch.
+`POST https://app.dialed.run/api/access-requests`, form-encoded (`email`,
+`note`, `cf-turnstile-response`). It verifies Turnstile server-side and
+applies the existing same-answer rule and rate limits. On success it answers
+303 to `https://dialed.run/invite/sent`, and otherwise 303 to
+`/invite?error=turnstile|invalid_email|rate_limited`. The Turnstile site
+key's allowed hostnames gain `dialed.run`. Once the marketing site is live,
+the app's request page (Au5) redirects to `https://dialed.run/invite`. M5
+draws one field (email), so whether the site sends `note` is the marketing
+repo's call; the endpoint accepts it.
+
+**Round 32 · Anonymous totals.** "Private means nobody sees it. It doesn't
+have to mean it never counts." _Ruling: the middle path, with five
+conditions._ "The bias argument decides it, more than volume does. A guide
+built only from shared runs is a guide built from the runs people were
+proud of, so it would overstate 'dialed' exactly where runners need the
+truth." What would break it is "a runner finding out from a screenshot
+instead of from us, and a figure small enough to point at one person",
+which are A and B. **"If either one can't be met at launch, ship
+shared-only and revisit."**
+
+- **A · Counted fields only:** the feels-like band, sky, month, garment
+  type and catalogue model, and the verdict, plus region if the runner set
+  it. Never the note, photo, route, start time, start place, handle or any
+  free text, "so the aggregate job must not have read access to the rest".
+- **B · Thresholds per figure:** every number needs 5 or more distinct
+  runners, or 20 for a brand, including every row, sky section, split
+  sentence and region slice. A cell below the line is left out, never
+  shown as "fewer than 5".
+- **C · Who counts:** confirmed-email accounts only. Excluded: removed or
+  quarantined entries, banned accounts, accounts pending deletion, and
+  manual-temperature runs.
+- **D · What opting out undoes:** guides are rebuilt nightly, so an
+  opted-out runner is gone by morning; published reports stay as they are;
+  opting back in counts from the next build; deleting an account is an
+  opt-out.
+- **E · Told at the moment of choice:** under A3's PRIVATE state, in
+  Settings and in Au2's legal line, each linking to the setting. In-app
+  social proof ("worn by N runners") stays shared-only, and closet pieces
+  count only when worn on a counted run.
+
+**The screens:**
+
+- **Settings › Sharing,** one SHARING group beside "Share new runs":
+  "Count my runs in anonymous totals". On (the default): "Shared and
+  private runs add their temperature, kit and verdict to the guides and
+  reports. Never your name, notes, photos, or where and when you ran." ·
+  How the guides are made (`dialed.run/how-it-works#totals`). Off: "Off.
+  Your runs leave the guides at tonight's update. Reports already published
+  stay as they are." It saves on toggle with a §4a `NOT CHANGED` band if
+  that fails, and has no confirm.
+- **A3's PRIVATE sub-line:** "Only you see this run. Its kit and verdict
+  still count, anonymously, in the guides. Change". Change opens Settings ›
+  Sharing as a sheet and returns to the form with its values kept. Opted
+  out, the line is just "Only you see this run." Round 27's unverified line
+  takes precedence.
+- **Au2's legal line** gains one sentence and no checkbox: "Your runs
+  count, without your name, in totals like the guides. You can turn that
+  off in Settings." No onboarding step.
+
+**Owner decision: D-108.** The owner adopted the middle path (2026-10-03,
+with design's round 32 conditions). **It closes the D-29 question**:
+closet pieces count only when worn on a counted run, and in-app social
+proof stays shared-only. _Build:_ 126, with feed and onboarding, M,
+pre-launch:
+
+- the Settings › Sharing switch and its on and off sub-lines
+  (`onboarding/components/Settings.tsx`);
+- A3's PRIVATE sub-line and its Change sheet (127 owns A3's form, so the
+  sub-line touches its share switch);
+- Au2's legal sentence;
+- the opt-out stored per account, an additive nullable column under the
+  schema protocol, written by the switch, in `profile.csv`, and honoured by
+  the guide-artifact cron (D-105);
+- the cron reading only condition A's fields, which means a query with no
+  path to notes, photos, routes, start times or handles.
+
+The marketing boards' copy changes (M1's "FROM 1,240 RUNS", M2's and M8's
+leads, M3's footer line, M4's answer, new FAQ and "How the guides are made"
+section, M8's METHOD) are marketing-site work.
+
+**The Terms and Privacy wording is for the owner's legal review.** The
+board calls both "drafts in the product's voice, not legal text", to go
+into the first published version of each document. They are quoted here,
+and `docs/legal/*` is not edited:
+
+> **Terms · anonymous totals.** When you log a run, you let us combine its
+> feels-like temperature, sky, month, the kit you wore and your verdict
+> with other runners' runs, and publish the totals. This covers runs you
+> share and runs you keep private. We use these totals for the What to
+> wear guides, seasonal reports and similar pages, and we may publish the
+> totals as data that others can reuse. A total never includes your name,
+> handle, notes, photos, route, or when or where you started. We only
+> publish a figure when at least 5 runners are behind it, or 20 if it's
+> about a brand. You can stop your runs counting at any time in Settings.
+> That takes effect for anything we build after you change it. Totals
+> we've already published stay as they are.
+
+> **Privacy policy · anonymous totals.** We add up some details of every
+> run (feels-like temperature band, sky, month, kit and verdict) across
+> many runners to make public guides and reports. Private runs are
+> included: "private" means no other person can see the run, not that it's
+> never counted. We never read your notes, photos, route, start time or
+> start place for this. No figure is published unless at least 5 runners
+> are behind it, or 20 for a brand, so a total can't point to you. If
+> you've chosen to add your region, we use it only to group totals, such
+> as "runners in Minnesota", and only when at least 5 runners share that
+> region. Your region is never shown on your profile or your runs. To opt
+> out, turn off "Count my runs in anonymous totals" in Settings. Your runs
+> are removed from the guides at the next nightly update and left out of
+> future reports. Deleting your account opts you out too.
+
+This is round 30's data requirement (a), and it must land before the terms
+are published (D-93).
+
+**Wording the owner may want to align:** CLAUDE.md's sharing rule says
+"Private entries never appear in feeds or consensus aggregates", and
+`docs/product.md` says "Public entries feed E1/E2 and the consensus
+aggregates". Both read as in-app consensus, which D-108 keeps shared-only,
+but a reader could take them to cover published totals. This import edits
+neither.
+
+**Au6: answered.** `Auth.dc.html`'s Au6 now draws the band under the
+Google button (labelled round 33 in `design/docs/product.md`): "the band
+sits under the Google button (round 29: every Google band goes under it).
+The button keeps Google's own spec and label, and Try again in the band is
+the retry. The kicker is MONO.xs (round 31)." **This closes the Au6 part
+of open item 44**, and round 30's Au6 erratum. _Build:_ none beyond round
+29 #13's (126, `auth/google-button.tsx`).
+
+**The token-created email (round 30 frame 6f, D-104).** From
+`hello@dialed.run`, subject "A new API token was created on your account":
+"A token called biglongrun build was created on @maya_runs.", then
+`CAN READ · SHARED ENTRIES ONLY` (or `SHARED AND PRIVATE ENTRIES`) and the
+creation time in the runner's zone, "If that was you, there's nothing to
+do.", and **This wasn't me** · "That revokes the token straight away. Then
+change your password." The secret is never in it. **This refines round 30
+#6:** "This wasn't me" is a state-changing link, so it lands on a page with
+a button ("Revoke biglongrun build?" · Revoke), per round 27's email rule,
+then shows Account with "Revoked. Change your password next." _Build:_ new:
+read API (task 130), with 126's email.
+
+**Integration Opportunities, redrawn.** 02 is now "a general read API on
+api.dialed.run. It returns runs and pieces, and callers aggregate for
+themselves." `GET /v1/pieces`, `/v1/pieces/:id`,
+`/v1/pieces/:id/runs?asOf=&since=&cursor=`, `/v1/runs?asOf=&since=&cursor=`
+and `/v1/bands`. Each run carries its start, distance, duration, temperature
+and feels-like in °F and °C, wind, sky, the verdict as a word, the piece's
+flag and note, the kit, `visibility` and `entry_url` when shared; the body
+is `data` plus `next`. A revoked or unknown token is 401, and someone
+else's piece is 404. 04 marks the Strava kit line "NOT ADOPTED" (D-106) and
+other runners' sites "ADOPTED · ANY RUNNER". This closes round 30's
+`published.csv` erratum and most of the differences with design 130 listed
+under round 30 below. The ones that remain:
+
+- **Field names:** the board writes snake case (`duration_s`,
+  `entry_url`, `added_at`, `retired_at`, `guide_published`, `guide_url`,
+  `start`); the doc writes camel case (`durationS`, `entryUrl`, `addedAt`,
+  `retiredAt`, `guidePublished`, `guideUrl`, `startedAt`).
+- **Units and nesting:** the board has `distance: { mi, km }` and top-level
+  `temp`, `feels` and `wind` objects in both units. The doc has
+  `distanceM`, and a nullable `conditions` object with `source`,
+  `tempC`/`tempF`, `feelsLikeC`/`feelsLikeF`, `windKph`/`windMph` and
+  `sky`.
+- **Pieces:** the board lists `model`, which the doc doesn't have, and
+  `retired_at`; the doc has `retired` plus `retiredAt`.
+- **Kit and worn-with:** the board puts `kit` on piece runs. The doc's piece
+  runs carry `wornWith` (the other pieces), and `kit` is on `/v1/runs` only.
+- **`/v1/runs` parameters:** the board has `asOf`, `since` and `cursor`;
+  the doc has `from`, `to`, `cursor` and `limit`.
+- **Envelope:** the board has `data` and `next`. The doc has
+  `includesPrivate` on every body, and doesn't name the list or cursor
+  fields.
+- **Run fields only in the doc:** `timeZone`, `title`, `indoor`, `effort`,
+  and the 401 split between `invalid_token` and `token_revoked` (the board
+  says only "401").
+
+They agree on the verdict words (`way_cold … way_warm`), dual units, the
+bands endpoint with guide state, start instants, a shared-only scope by
+token, and any runner creating tokens.
+
+**Conflicts for the owner: none.** Round 31 edits contracts design owns and
+follows D-99, D-105 and D-107. Round 32 was decided by the owner as D-108.
+
+**For design's next round:** none from these rounds. Round 30's errata
+that rounds 31–32 close: Au6, the marketing wordmark, and Integrations'
+`published.csv`. Still open from round 30: the Form Contract's 02b kicker
+samples, the Feed gutter's T1 role, "The two typefaces", and the ZIP's
+`run-files/` wording.
 
 ## Answered in round 30 (imported 2026-10-03)
 
@@ -1227,7 +1518,8 @@ Counting closet pieces in published aggregates amends D-29; see Conflicts.
 **Conflicts for the owner.** None of these was adopted by the import. Each
 quotes both sides and ends with a recommendation. **The owner ruled on eight
 of the nine on 2026-10-03 (D-99 to D-104, D-106 and D-107)**, and each
-one's resolution follows it. Closet pieces in reports (D-29) is still open.
+one's resolution follows it. The ninth, closet pieces in reports (D-29), is
+closed by D-108 after round 32.
 
 - **Reports count closet pieces (M8 and the data requirements) vs D-29.**
   D-29: _"Social-proof ownership counts derive only from public entries …
@@ -1239,7 +1531,10 @@ one's resolution follows it. Closet pieces in reports (D-29) is still open.
   D-29 amended and clause (a) to say so. **Open (owner, 2026-10-03).** The
   owner is checking with design whether published totals count private
   entries (with an opt-out) and whether closet pieces count only when worn.
-  D-29 stands until then.
+  D-29 stands until then. **Closed by D-108 (owner, 2026-10-03):** the
+  middle path with round 32's conditions. Closet pieces count only when
+  worn on a counted run, and in-app social proof stays shared-only. See
+  "Answered in rounds 31–32" above.
 - **Two hosts (Marketing M0) vs D-53 and the deployment plan.** D-53: _"The
   whole site is `noindex` until the public launch … at the stage 2 gate the
   landing page and other public marketing pages flip to index by their own

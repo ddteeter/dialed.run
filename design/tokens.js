@@ -67,6 +67,17 @@ export const TYPE = {
 };
 
 /**
+ * MARKETING — round 31. One step, outside the eight, for dialed.run's two cover pages.
+ * It's the only fluid size in the system. It grows with width (law 3 forbids shrinking,
+ * not growing) and never appears in-app.
+ * Fit: 44px at 390 → 76px at 1180. Linear between them, clamped at both ends.
+ */
+export const MARKETING = {
+  hero: { family: 'display', size: 'clamp(44px, calc(28px + 4.05vw), 76px)', min: 44, max: 76, lineHeight: 0.95, tracking: -0.035, transform: 'uppercase',
+    for: 'The h1 on Home (M1) and on a report (M8). Nothing else: guide, index, How it works, changelog, gear, invite and 404 h1s are TYPE.display.' },
+};
+
+/**
  * THE MONO RAMP — four steps, tracking paired and fixed. Mono is the tell
  * that a value came from a sensor or a clock; it is never used for prose.
  * Uppercase is allowed at xs and sm only. Weight 400 unless `weight` says.
@@ -89,7 +100,8 @@ export const MONO = {
  */
 export const COLLAPSE = {
   type: {
-    '30px display': 'TYPE.display', '34px+ display': 'TYPE.display (clamp only on brand/marketing pages, never in-app)',
+    '30px display': 'TYPE.display', '34px+ display': 'TYPE.display. Round 31: the only exception is MARKETING.hero, on the M1 and M8 h1s',
+    '44–76px marketing hero': 'MARKETING.hero', '48–64px marketing page h1 (M2, M3, M4, M6, M7)': 'TYPE.display', '19px marketing lead': 'TYPE.lead',
     '21px text': 'TYPE.lead',  '16px text': 'TYPE.field inside a field, TYPE.body everywhere else',  '14px text': 'TYPE.body for controls and rows, TYPE.small for helper prose',
     '12px mono': 'MONO.sm',    '9px mono': 'MONO.xs. The boards carry 9px in ~96 places (theme segment, payout labels, NOT-IN-V1 tags). Build them at 10px, padded to a 44px target.',
     '22px+ mono heroes': 'MONO.lg',
@@ -170,6 +182,8 @@ export const CSS_VARS = `:root {
   --font-text: ${FAMILY.text};
   --font-mono: ${FAMILY.mono};
 ${Object.entries(TYPE).map(([k, t]) => `  --type-${k}: ${step(t)};\n  --track-${k}: ${t.tracking}em;`).join('\n')}
+  --type-hero: ${MARKETING.hero.size}/${MARKETING.hero.lineHeight} ${FAMILY.display};
+  --track-hero: ${MARKETING.hero.tracking}em;
 ${Object.entries(MONO).map(([k, t]) => `  --mono-${k}: ${step(t)};\n  --track-mono-${k}: ${t.tracking}em;`).join('\n')}
 ${Object.entries(SPACE).map(([k, v]) => `  --space-${k}: ${v}px;`).join('\n')}
 ${Object.entries(HEIGHT).map(([k, v]) => `  --height-${k}: ${v}px;`).join('\n')}
