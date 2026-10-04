@@ -333,7 +333,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     );
     await expect(page.getByText(publicCaption)).toBeVisible();
     // Their private entry never appears here either — the profile query
-    // only ever selects isPublic entries.
+    // only ever selects shared (`runners`) entries.
     await expect(page.getByText(privateCaption)).toHaveCount(0);
 
     // Follow them: the label waits for the server, then flips.
