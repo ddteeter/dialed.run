@@ -98,7 +98,7 @@ export function recentPublicEntriesStatement(
       userId: outfitEntries.userId,
       verdict: outfitEntries.verdict,
     },
-    // publiclyVisibleEntry(), not a bare isPublic: a removed or
+    // publiclyVisibleEntry(), not a bare audience test: a removed or
     // pending-review entry must not count toward the numbers everyone
     // reads (packet: "hidden content must not count"). A missed clause
     // here hides nothing visibly — it just quietly skews the aggregate.

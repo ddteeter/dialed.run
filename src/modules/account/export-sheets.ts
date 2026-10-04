@@ -21,6 +21,7 @@
  * both the CSV and the README are read from that one table — so a column
  * the CSV gains is a column the README names.
  */
+import type { AudienceWord } from "../../lib/contracts";
 import type { ExportData } from "./export";
 import type { Sheet } from "./export-format";
 
@@ -31,13 +32,15 @@ type KitRow = Entry["kit"][number];
 
 /**
  * `profile.csv`'s one row: the account's address and the day it was made
- * (UTC, already written out), and the profile as stored. Either is absent
- * for an account that is gone or never finished onboarding.
+ * (UTC, already written out), the profile as stored, and its default
+ * audience in the UI's word. Each is absent for an account that is gone
+ * or never finished onboarding.
  */
 export interface ProfileRow {
   readonly account:
     { readonly email: string; readonly joinedAt: string } | undefined;
   readonly profile: ExportData["profile"];
+  readonly defaultAudience: AudienceWord | undefined;
 }
 
 /**
@@ -49,12 +52,17 @@ export type RunRow = Omit<Run, "startedAt"> & {
 };
 
 /**
-An entry, with its tags and photo names as cells and its time written out.
-*/
-export type EntryRow = Omit<Entry, "tags" | "photos" | "createdAt"> & {
+ * An entry, with its tags and photo names as cells, its time written out
+ * and its audience in the UI's word.
+ */
+export type EntryRow = Omit<
+  Entry,
+  "tags" | "photos" | "createdAt" | "audience"
+> & {
   readonly tags: string;
   readonly photos: string;
   readonly createdAt: string;
+  readonly audience: AudienceWord;
 };
 
 /**
@@ -136,9 +144,10 @@ export function buildSheets(rows: ExportRows): ExportSheets {
         value: (row) => row.profile?.distanceUnit,
       },
       {
-        name: "share_new_runs",
-        about: "whether a new kit is shared by default.",
-        value: (row) => row.profile?.shareDefault,
+        name: "default_audience",
+        about:
+          "what a new run starts as when you log it, shared or private. You can change any run afterwards.",
+        value: (row) => row.defaultAudience,
       },
     ],
   };
@@ -253,9 +262,10 @@ export function buildSheets(rows: ExportRows): ExportSheets {
         value: (entry) => entry.verdict,
       },
       {
-        name: "shared",
-        about: "true when other runners can see it.",
-        value: (entry) => entry.isPublic,
+        name: "audience",
+        about:
+          "who can see this run's kit and verdict: shared means any runner on dialed.run, private means only you.",
+        value: (entry) => entry.audience,
       },
       {
         name: "caption",

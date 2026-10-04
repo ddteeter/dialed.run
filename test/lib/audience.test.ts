@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   audienceOfShareToggle,
   audienceSchema,
+  audienceWord,
   audiences,
   isSharedAudience,
+  SHARED_AUDIENCE,
   writableAudienceSchema,
 } from "../../src/lib/contracts";
 
@@ -60,11 +62,36 @@ describe("the share toggle", () => {
     expect(shared).toEqual(["runners"]);
   });
 
+  it("is on for SHARED_AUDIENCE, the one audience strangers see", () => {
+    expect(SHARED_AUDIENCE).toBe("runners");
+    expect(audienceOfShareToggle(true)).toBe(SHARED_AUDIENCE);
+  });
+
   it("only ever produces a writable audience", () => {
     for (const isOn of [true, false]) {
       expect(
         writableAudienceSchema.safeParse(audienceOfShareToggle(isOn)).success,
       ).toBe(true);
     }
+  });
+});
+
+describe("audienceWord", () => {
+  it("gives every stored audience exactly one word, and no two the same", () => {
+    expect(
+      Object.keys(audienceWord).toSorted((a, b) => a.localeCompare(b)),
+    ).toEqual([...audiences].toSorted((a, b) => a.localeCompare(b)));
+    const words = audiences.map((audience) => audienceWord[audience]);
+    expect(new Set(words).size).toBe(audiences.length);
+  });
+
+  it("writes the UI's words, so runners never leaves the server", () => {
+    expect(audienceWord).toEqual({
+      private: "private",
+      groups: "groups",
+      runners: "shared",
+    });
+    expect(audienceWord[SHARED_AUDIENCE]).toBe("shared");
+    expect(Object.values(audienceWord)).not.toContain("runners");
   });
 });

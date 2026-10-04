@@ -26,7 +26,7 @@ import {
   wardrobeItems,
 } from "../../db/schema-core";
 import { env } from "../../env";
-import { audienceOfShareToggle, isSharedAudience } from "../../lib/contracts";
+import { isSharedAudience } from "../../lib/contracts";
 import type {
   Audience,
   WritableAudience,
@@ -194,7 +194,7 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     // **Both columns, until C1** (design 131): the boolean is what every
     // version a rollback could restore still reads.
     audience,
-    isPublic: isSharedAudience(audience),
+    legacyIsPublic: isSharedAudience(audience),
     // Present only for a caller that has both at once. `undefined` is
     // what the phone flow passes and inserts SQL NULL, which is the
     // unjudged state `shouldPromptForVerdict` looks for.
@@ -298,7 +298,7 @@ export async function submitVerdict(input: SubmitVerdictInput): Promise<void> {
         verdict: input.verdict,
         // Both columns, until C1 (design 131); see `attachKit`.
         audience,
-        isPublic: isSharedAudience(audience),
+        legacyIsPublic: isSharedAudience(audience),
         // A clear-to-null update needs a real SQL NULL, not `undefined`
         // (drizzle drops `undefined` set-values entirely — see mapUpdateSet).
         caption: input.caption ?? sql`NULL`,
@@ -684,10 +684,7 @@ export async function getEntryDetail(
     startedAt: run.startedAt,
     indoor: run.indoor,
     verdict: entry.verdict ?? undefined,
-    // From the boolean until PR B reads the column (design 131): a row
-    // the previous version wrote between `migrations apply` and this
-    // deploy has only the boolean right, until B's resync.
-    audience: audienceOfShareToggle(entry.isPublic),
+    audience: entry.audience,
     caption: entry.caption ?? undefined,
     createdAt: entry.createdAt,
     items: entryItemRows.map((row) => {

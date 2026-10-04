@@ -195,7 +195,8 @@ describe("following feed (E1)", () => {
     });
     const { sql, params } = statement.toSQL();
     // The viewer three times (the follows lookup, and their two own author
-    // rows — D-67), `is_public` and the under-review arm's status, the two
+    // rows — D-67), the shared audience and the under-review arm's
+    // status, the two
     // visibility values, the viewer three more times for the viewer rule
     // (a block from either end, and their own reports — SAF-12/13), the
     // three cursor values and the limit twice (per author, and the page):
@@ -219,16 +220,19 @@ describe("following feed (E1)", () => {
     const details = plan.results.map((row) => row.detail).join("\n");
     // Driven from the authors: the followees off `follows_pk`, the viewer
     // off their own user row, and each author's entries a seek on
-    // `entries_user_public_created` that starts at the cursor. What it
+    // `entries_user_audience_created` that starts at the cursor. What it
     // scans is at most a page per author, never the site's entries.
     expect(details).toMatch(
       /SEARCH follows USING COVERING INDEX follows_pk \(follower_id=\?\)/u,
     );
     expect(details).toMatch(/SCAN CONSTANT ROW/u);
     expect(details).toMatch(
-      /SEARCH outfit_entries USING INDEX entries_user_public_created \(user_id=\? AND is_public=\? AND moderation_status=\? AND created_at<\?\)/u,
+      /SEARCH outfit_entries USING INDEX entries_user_audience_created \(user_id=\? AND audience=\? AND moderation_status=\? AND created_at<\?\)/u,
     );
-    expect(details).not.toMatch(/entries_public_created/u);
+    // Neither site-wide index, and not the boolean's per-runner one the
+    // read flip left behind for C2 to drop.
+    expect(details).not.toMatch(/entries_(?:public|audience)_created/u);
+    expect(details).not.toMatch(/entries_user_public_created/u);
     expect(details).not.toMatch(/SCAN\s+(?:outfit_entries|page|follows)/iu);
   });
 });

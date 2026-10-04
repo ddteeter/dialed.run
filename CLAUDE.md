@@ -308,11 +308,14 @@ explicitly says the migration is yours — or the owner has said yes.
 - **Strava activity data is never stored, displayed, or used.** The webhook's
   only effect is a notification row and, if the runner allows it, a reminder
   email.
-- **Sharing**: entries are public by default with a per-entry toggle and a
-  per-user default preference. Private entries never appear in feeds or in
-  in-app consensus and social-proof counts (the conditions consensus, "worn by
-  N"). **Published anonymous totals** — the marketing site's guides and
-  reports — **do count private runs**, under D-108's conditions: counted fields
+- **Sharing**: an entry's audience is `private`, `groups` or `runners`
+  (D-109); launch writes only `private` and `runners` (PRIVATE / SHARED),
+  `runners` by default with a per-entry choice and a per-user default
+  audience. Strangers see only `runners` entries, and every check reads the
+  audience, never the legacy booleans. Only `runners` entries appear in feeds
+  or in in-app consensus and social-proof counts (the conditions consensus,
+  "worn by N"). **Published anonymous totals** — the marketing site's guides
+  and reports — **do count private runs**, under D-108's conditions: counted fields
   only (feels-like band, sky, month, garment type and model, verdict, region if
   set; never notes, photos, times, places or handles), 5+ distinct runners per
   figure (20+ for a brand), confirmed accounts only, and the runner's opt-out
@@ -321,8 +324,8 @@ explicitly says the migration is yours — or the owner has said yes.
 - **Retire, don't delete** garments referenced by any entry.
 - **Products are shared canonical rows** (create-if-missing on normalized
   brand+name); product names are UGC. Social-proof counts derive only from
-  public entries, never closet contents. Enrichment never blocks a save;
-  user-entered fields are always the floor.
+  shared (`runners`) entries, never closet contents. Enrichment never blocks
+  a save; user-entered fields are always the floor.
 - **UI lexicon** (user-facing copy only; internal names unchanged): the Closet,
   a Kit, the Call, Verdict, Conditions, Mileage. "useful", never "like".
   Measured values render in mono with bracket notation per `docs/product.md`.

@@ -138,7 +138,7 @@ describe("attachKit follows the runner's sharing default", () => {
       .from(outfitEntries)
       .where(eq(outfitEntries.id, entryId));
     expect(entry?.audience).toBe("runners");
-    expect(entry?.isPublic).toBe(true);
+    expect(entry?.legacyIsPublic).toBe(true);
   });
 
   it("keeps an entry private when the profile says to", async () => {
@@ -154,7 +154,7 @@ describe("attachKit follows the runner's sharing default", () => {
       .from(outfitEntries)
       .where(eq(outfitEntries.id, entryId));
     expect(entry?.audience).toBe("private");
-    expect(entry?.isPublic).toBe(false);
+    expect(entry?.legacyIsPublic).toBe(false);
   });
 
   it("shares by default when there is no profile row at all", async () => {
@@ -168,7 +168,7 @@ describe("attachKit follows the runner's sharing default", () => {
       .from(outfitEntries)
       .where(eq(outfitEntries.id, entryId));
     expect(entry?.audience).toBe("runners");
-    expect(entry?.isPublic).toBe(true);
+    expect(entry?.legacyIsPublic).toBe(true);
   });
 });
 
@@ -183,7 +183,7 @@ describe("submitVerdict stores the chosen audience in both columns", () => {
       const [entry] = await db()
         .select({
           audience: outfitEntries.audience,
-          isPublic: outfitEntries.isPublic,
+          legacyIsPublic: outfitEntries.legacyIsPublic,
         })
         .from(outfitEntries)
         .where(eq(outfitEntries.id, entryId));
@@ -198,7 +198,10 @@ describe("submitVerdict stores the chosen audience in both columns", () => {
       tags: [],
       itemFlags: [],
     });
-    expect(await stored()).toEqual({ audience: "private", isPublic: false });
+    expect(await stored()).toEqual({
+      audience: "private",
+      legacyIsPublic: false,
+    });
 
     await submitVerdict({
       userId,
@@ -208,7 +211,10 @@ describe("submitVerdict stores the chosen audience in both columns", () => {
       tags: [],
       itemFlags: [],
     });
-    expect(await stored()).toEqual({ audience: "runners", isPublic: true });
+    expect(await stored()).toEqual({
+      audience: "runners",
+      legacyIsPublic: true,
+    });
   });
 });
 

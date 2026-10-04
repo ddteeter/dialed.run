@@ -62,11 +62,11 @@ Both stored columns, which every write keeps in step until C1 (design 131).
 */
 async function storedAudience(
   entryId: string,
-): Promise<{ audience: Audience; isPublic: boolean } | undefined> {
+): Promise<{ audience: Audience; legacyIsPublic: boolean } | undefined> {
   const [row] = await db
     .select({
       audience: outfitEntries.audience,
-      isPublic: outfitEntries.isPublic,
+      legacyIsPublic: outfitEntries.legacyIsPublic,
     })
     .from(outfitEntries)
     .where(eq(outfitEntries.id, entryId));

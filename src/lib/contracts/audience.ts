@@ -42,9 +42,13 @@ export const writableAudienceSchema = audienceSchema.extract([
 export type WritableAudience = z.infer<typeof writableAudienceSchema>;
 
 /**
-The one audience strangers see.
-*/
-const SHARED_AUDIENCE = "runners" satisfies WritableAudience;
+ * The one audience strangers see. Every read that shows an entry to
+ * someone other than its author tests for this value and nothing else
+ * (`safety/visibility.ts`'s one rule, `feed/feed.ts`'s index seek), so a
+ * `groups` row is hidden from strangers without anyone having to remember
+ * it.
+ */
+export const SHARED_AUDIENCE = "runners" satisfies WritableAudience;
 
 /**
  * The audience a sharing switch stands for. A3's checkbox and the Settings
@@ -63,3 +67,17 @@ export function audienceOfShareToggle(isOn: boolean): WritableAudience {
 export function isSharedAudience(audience: Audience): boolean {
   return audience === SHARED_AUDIENCE;
 }
+
+/**
+ * The word a file a person reads writes for each audience: the export's
+ * `audience` and `default_audience` columns now, design 130's API
+ * `visibility` later. They are the UI's words (SHARED / PRIVATE on
+ * screen; D-109: files write the UI's words), so `runners` itself never
+ * leaves the server.
+ */
+export const audienceWord = {
+  private: "private",
+  groups: "groups",
+  runners: "shared",
+} as const satisfies Record<Audience, string>;
+export type AudienceWord = (typeof audienceWord)[Audience];

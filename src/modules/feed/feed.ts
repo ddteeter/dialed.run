@@ -30,6 +30,7 @@ import {
   userProfiles,
 } from "../../db/schema-core";
 import { env } from "../../env";
+import { SHARED_AUDIENCE } from "../../lib/contracts";
 import { garmentNamesByIds } from "./garment-names";
 import { observationsForRuns } from "./conditions";
 import type { Conditions } from "./conditions";
@@ -57,7 +58,7 @@ type ModerationStatus = (typeof outfitEntries.$inferSelect)["moderationStatus"];
  * across two shapes gives the planner no range, and D1's plan read each
  * author's entries from their newest rather than from the cursor — so
  * page k re-read the k − 1 pages before it. With the conjunct, the
- * `entries_user_public_created` seek starts at the cursor (`feed.test.ts`
+ * `entries_user_audience_created` seek starts at the cursor (`feed.test.ts`
  * pins `created_at<?` in the plan).
  */
 function feedCursorPredicate(cursor: FeedCursor) {
@@ -71,7 +72,7 @@ function feedCursorPredicate(cursor: FeedCursor) {
 }
 
 /**
- * One page of E1: the viewer's own public entries and those of everyone
+ * One page of E1: the viewer's own shared entries and those of everyone
  * they follow, newest first.
  *
  * **Driven from the authors, each read to at most a page** (FEED-5
@@ -79,13 +80,13 @@ function feedCursorPredicate(cursor: FeedCursor) {
  *
  *     authors (the viewer's followees, and the viewer)
  *       CROSS JOIN page
- *       WHERE page.id IN (that author's newest `limit` public entries
+ *       WHERE page.id IN (that author's newest `limit` shared entries
  *                         past the cursor)
  *
  * so the rows it scans are at most `limit` per author — they scale with
  * who the viewer follows, never with how many runners the site has. The
- * earlier shape seeked `entries_public_created` across every runner's
- * public entries and checked each author against the followee set row by
+ * earlier shape seeked the site-wide index across every runner's
+ * shared entries and checked each author against the followee set row by
  * row, so a viewer following a few quiet runners walked the whole site
  * looking for a page. Taking each author's top `limit` loses nothing: the
  * page's newest `limit` across all authors are all inside the union of
@@ -94,7 +95,7 @@ function feedCursorPredicate(cursor: FeedCursor) {
  * `CROSS JOIN` is load-bearing, not style: it is SQLite's one way of
  * fixing the join order, and without it the planner prefers the
  * site-wide index because it reads in `ORDER BY` order and can stop at the
- * `LIMIT`. Each author's read is an `entries_user_public_created` seek;
+ * `LIMIT`. Each author's read is an `entries_user_audience_created` seek;
  * the outer sort is over at most `limit` × authors rows.
  *
  * **The authors are a subquery, not a bound list** (R-101). Binding the
@@ -162,7 +163,7 @@ export function followingFeedStatement(
     .where(
       and(
         eq(outfitEntries.userId, authors.id),
-        eq(outfitEntries.isPublic, true),
+        eq(outfitEntries.audience, SHARED_AUDIENCE),
         eq(outfitEntries.moderationStatus, authors.status),
         shownToViewer,
         cursor ? feedCursorPredicate(cursor) : undefined,

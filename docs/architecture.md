@@ -57,7 +57,7 @@ Key decisions embedded here:
   it protects the core DB from the 10 GB per-database cap.
 - **One rule decides public visibility** (106). `modules/safety` owns
   `publiclyVisibleEntry()`, and `modules/feed` imports it rather than
-  writing `is_public = 1` at each of its five read sites. The arrow
+  writing `audience = 'runners'` at each of its five read sites. The arrow
   therefore runs feed → safety, not the reverse: safety knows about entries,
   and nothing in safety imports feed.
 - **A photo has a second gate, and it is a different question** (106). The
@@ -347,8 +347,8 @@ minutes.
 
 **Following feed** — fanout-on-read, one indexed query driven from the
 authors: the viewer's followees (`follows(follower_id, followee_id)`) plus
-the viewer, `CROSS JOIN`ed to each author's newest page of public entries
-past the cursor (`outfit_entries(user_id, is_public, moderation_status,
+the viewer, `CROSS JOIN`ed to each author's newest page of shared entries
+past the cursor (`outfit_entries(user_id, audience, moderation_status,
 created_at)`), then ordered by `created_at DESC, id DESC` and cut to the
 page. Rows scanned are at most a page per author — they scale with who
 the viewer follows, not with the site. No feed table, no write
@@ -357,8 +357,8 @@ amplification. Photos are not public bucket URLs: every photo is served by the W
 reads R2. Task 128 (SAF-7) moves public-entry photos to short-lived signed
 URLs, cacheable for their TTL (decision D-46).
 
-**Your conditions (E2-lite)** — the consensus block only in v1: recent public
-entries (last 72h, `outfit_entries(is_public, created_at DESC)` index) whose
+**Your conditions (E2-lite)** — the consensus block only in v1: recent shared
+entries (last 72h, `outfit_entries(audience, moderation_status, created_at)` index) whose
 runs' observations fall within a proximity window of the viewer's current
 conditions (±3°C on feels-like, same precip class), aggregated to
 per-UI-group wear counts ("15/18 wore long sleeve"). Bounded scan window +

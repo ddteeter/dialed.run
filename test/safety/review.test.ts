@@ -172,7 +172,8 @@ describe("resolving a decision", () => {
     const author = await makeUser();
     const runId = await makeRun({ userId: author });
     // A private entry that then gets reported. If the hide had written
-    // isPublic, approving would silently publish it.
+    // the audience (or the boolean kept in step with it until C1),
+    // approving would silently publish it.
     const entryId = await makeEntry({
       userId: author,
       runId,
@@ -195,11 +196,14 @@ describe("resolving a decision", () => {
     await resolveReview(queued.id, await makeUser(), "approve");
 
     const [row] = await core()
-      .select({ isPublic: outfitEntries.isPublic })
+      .select({
+        audience: outfitEntries.audience,
+        legacyIsPublic: outfitEntries.legacyIsPublic,
+      })
       .from(outfitEntries)
       .where(eq(outfitEntries.id, entryId))
       .limit(1);
-    expect(row?.isPublic).toBe(false);
+    expect(row).toEqual({ audience: "private", legacyIsPublic: false });
   });
 
   it("removing marks the entry removed and stamps the reviewer", async () => {

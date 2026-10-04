@@ -37,7 +37,12 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     thermalLevel: integer("thermal_level"),
     tempUnit: text("temp_unit", { enum: ["f", "c"] }),
     distanceUnit: text("distance_unit", { enum: ["mi", "km"] }),
-    shareDefault: integer("share_default", { mode: "boolean" })
+    // LEGACY (design 131, PR B): written in step with `defaultAudience`
+    // until C1, dropped in C2, read by nothing. The property is named so
+    // that a read of it stands out; the column name is unchanged, so the
+    // rename needed no migration. `test/architecture/audience-only.test.ts`
+    // pins where it may appear.
+    legacyShareDefault: integer("share_default", { mode: "boolean" })
       .notNull()
       .default(true),
     // Who the runner's new entries are for unless they say otherwise
@@ -666,7 +671,12 @@ export const outfitEntries = /*#__PURE__*/ sqliteTable(
     runId: text("run_id").notNull(),
     userId: text("user_id").notNull(),
     verdict: integer("verdict"),
-    isPublic: integer("is_public", { mode: "boolean" }).notNull().default(true),
+    // LEGACY (design 131, PR B), as `userProfiles.legacyShareDefault`:
+    // written in step with `audience` until C1, dropped in C2 with the two
+    // indexes below that lead on it, read by nothing.
+    legacyIsPublic: integer("is_public", { mode: "boolean" })
+      .notNull()
+      .default(true),
     // Who may see the entry (D-109, design 131). Replaces `is_public`,
     // which writers keep in step until C1. **Fails closed**: the default is
     // `private`, not `runners`, so a writer that forgot the column hides
@@ -674,7 +684,7 @@ export const outfitEntries = /*#__PURE__*/ sqliteTable(
     audience: text("audience", { enum: audiences })
       .notNull()
       .default("private"),
-    // Task 106. Deliberately NOT `isPublic`: that column is the runner's own
+    // Task 106. Deliberately NOT the audience: that column is the runner's own
     // sharing choice, and a moderator writing to it would silently rewrite a
     // preference the runner set. Two different facts, two columns — an entry
     // hidden for review that the owner had shared must go back to shared when
@@ -699,7 +709,7 @@ export const outfitEntries = /*#__PURE__*/ sqliteTable(
     // after LIMIT — which CLAUDE.md's D1 discipline calls out by name as
     // returning "the survivors of the first 200 rows".
     index("entries_public_created").on(
-      t.isPublic,
+      t.legacyIsPublic,
       t.moderationStatus,
       t.createdAt,
     ),
@@ -710,7 +720,7 @@ export const outfitEntries = /*#__PURE__*/ sqliteTable(
     // every runner on the site.
     index("entries_user_public_created").on(
       t.userId,
-      t.isPublic,
+      t.legacyIsPublic,
       t.moderationStatus,
       t.createdAt,
     ),

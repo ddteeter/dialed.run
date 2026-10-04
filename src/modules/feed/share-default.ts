@@ -2,7 +2,11 @@ import { eq } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../db/schema-core";
-import { audienceOfShareToggle } from "../../lib/contracts";
+import {
+  audienceOfShareToggle,
+  isSharedAudience,
+  SHARED_AUDIENCE,
+} from "../../lib/contracts";
 import type { WritableAudience } from "../../lib/contracts";
 import { isUnconfirmed } from "../account";
 
@@ -17,11 +21,12 @@ import { isUnconfirmed } from "../account";
  * no sharing control of their own and so carry the default into
  * `submitVerdict`.
  *
- * **Read from `share_default` until PR B** (design 131): the writers keep
- * it and `default_audience` in step, and a version a rollback could
- * restore reads only the boolean. `share_default` is `NOT NULL DEFAULT
- * true`, so the only missing case is a missing profile row — a runner who
- * signed up and has not reached O1.
+ * **Read from `default_audience`** (design 131, PR B). It is `NOT NULL
+ * DEFAULT 'runners'`, so the only missing case is a missing profile row —
+ * a runner who signed up and has not reached O1 — and that is shared too.
+ * A stored `groups` default, which nothing can write yet, starts the entry
+ * `private`: of the two audiences a new entry may be stored with, it is
+ * the one that shows nobody who was not meant to see it.
  *
  * **This is the seed, not the state.** The per-entry truth is the entry's
  * own audience, which A3's sharing toggle writes and which
@@ -49,15 +54,16 @@ export async function defaultAudienceFor(
   userId: string,
 ): Promise<WritableAudience> {
   const [profile] = await database
-    .select({ shareDefault: userProfiles.shareDefault })
+    .select({ defaultAudience: userProfiles.defaultAudience })
     .from(userProfiles)
     .where(eq(userProfiles.userId, userId))
     .limit(1);
-  // The missing-profile `?? true` is asserted directly
+  // The missing-profile `?? SHARED_AUDIENCE` is asserted directly
   // (`test/feed/share-default.test.ts`): `attachKit`'s fixtures always make
   // a profile row, so only that file reaches it.
   return audienceOfShareToggle(
-    (profile?.shareDefault ?? true) && !(await isUnconfirmed(database, userId)),
+    isSharedAudience(profile?.defaultAudience ?? SHARED_AUDIENCE) &&
+      !(await isUnconfirmed(database, userId)),
   );
 }
 

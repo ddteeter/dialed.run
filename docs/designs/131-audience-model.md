@@ -413,3 +413,44 @@ Following the code where it contradicts the plan, as instructed:
 - **`SHARED_AUDIENCE` is not exported in A.** Its only readers outside the
   contract (`safety/visibility.ts`, `feed/feed.ts`) flip in B, so A keeps
   it module-private and B exports it with them.
+
+## Built: where PR B diverged from the plan
+
+- **"A must be deployed before B merges" did not apply.** Nothing is
+  deployed yet: "Deploy to workers.dev" is skipped on `main`, and the
+  first deploy, in the deployment sweep, carries A and B together. The
+  dual write and `0045` are kept anyway, as planned (two PRs, owner's
+  answer 2); `0045` is then a no-op on a fresh database, which is what
+  idempotent means. No deploy-ordering machinery was added.
+- **`tsc` does not catch every leftover after the rename.** The plan said
+  "any leftover `isPublic:` seed or read fails `tsc`". A read does. A
+  _write_ through a spread does not: `preferenceColumns` returns an object
+  that `savePreferences` spreads into `.values({ userId, ...columns })`,
+  and a spread escapes TypeScript's excess-property check. After the
+  schema rename, `profile.ts` still returned `shareDefault`, compiled
+  clean, and would have silently stopped writing `share_default`, exactly
+  the rollback leak the dual write exists to prevent. The same held for
+  both seed helpers. So `audience-only.test.ts` also checks the old
+  property names as text: none in `src/`, and in tests only where a test
+  posts the previous bundle's boolean to prove the input schema refuses
+  it (`feed/inputs.test.ts`, `onboarding/profile.test.ts`).
+- **The test's allowed sites are counted, not only listed.** `src/` may
+  name a legacy property in `schema-core.ts` and the three dual writes:
+  two in `feed/entries.ts`, and two in `onboarding/profile.ts`, where
+  `preferenceColumns`' return type names it as well as its one write. The
+  test-side list (seed helpers, dual-write assertions, the migration
+  tests, and the tests that seed a disagreement to prove which column a
+  read follows) is checked in both directions, so it cannot outlive its
+  reasons.
+- **A stored `groups` default narrows to `private` on read.** The plan
+  left this open. `defaultAudienceFor` and `currentSettings` read the full
+  `Audience` but answer `WritableAudience`, so they go through
+  `audienceOfShareToggle(isSharedAudience(…))`: a `groups` default starts
+  a new entry `private` and shows the Settings switch off. Nothing can
+  store `groups` yet; whoever widens `writableAudienceSchema` must revisit
+  both, as with `VerdictForm.tsx` above.
+- **The README sentences are drafted, for the owner's edit.** `audience`:
+  "who can see this run's kit and verdict: shared means any runner on dialed.run, private means only you."
+  `default_audience`: "what a new run starts as when you log it, shared or private. You can change any run afterwards." (owner-approved wording, 2026-10-04) No
+  other document names either export column, so nothing else changed for
+  them; the legal sources' code citations were updated (citations only).
