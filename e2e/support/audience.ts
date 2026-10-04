@@ -11,7 +11,7 @@ import type { Audience } from "../../src/lib/contracts";
 
 export function entryAudienceColumns(audience: Audience): {
   audience: Audience;
-  isPublic: boolean;
+  legacyIsPublic: boolean;
 } {
-  return { audience, isPublic: isSharedAudience(audience) };
+  return { audience, legacyIsPublic: isSharedAudience(audience) };
 }

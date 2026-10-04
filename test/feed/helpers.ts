@@ -40,9 +40,12 @@ export { entryAudienceColumns } from "../../e2e/support/audience";
  */
 export function profileAudienceColumns(defaultAudience: Audience): {
   defaultAudience: Audience;
-  shareDefault: boolean;
+  legacyShareDefault: boolean;
 } {
-  return { defaultAudience, shareDefault: isSharedAudience(defaultAudience) };
+  return {
+    defaultAudience,
+    legacyShareDefault: isSharedAudience(defaultAudience),
+  };
 }
 
 function coreDb() {

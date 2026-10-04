@@ -46,8 +46,16 @@ describe("defaultAudienceFor reads the audience, not the boolean (design 131, PR
     await coreDb()
       .insert(userProfiles)
       .values([
-        { userId: "quiet", defaultAudience: "private", shareDefault: true },
-        { userId: "open", defaultAudience: "runners", shareDefault: false },
+        {
+          userId: "quiet",
+          defaultAudience: "private",
+          legacyShareDefault: true,
+        },
+        {
+          userId: "open",
+          defaultAudience: "runners",
+          legacyShareDefault: false,
+        },
       ]);
 
     expect(await defaultAudienceFor(coreDb(), "quiet")).toBe("private");

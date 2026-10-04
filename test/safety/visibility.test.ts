@@ -338,11 +338,11 @@ describe("the owner", () => {
 async function setAudience(
   entryId: string,
   audience: Audience,
-  isPublic: boolean,
+  isPublicLegacy: boolean,
 ): Promise<void> {
   await core()
     .update(outfitEntries)
-    .set({ audience, isPublic })
+    .set({ audience, legacyIsPublic: isPublicLegacy })
     .where(eq(outfitEntries.id, entryId));
 }
 

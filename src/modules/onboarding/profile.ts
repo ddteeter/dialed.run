@@ -179,9 +179,9 @@ export async function savePreferences(
  */
 function preferenceColumns(
   input: UnitsChoice | SharingChoice,
-): UnitsChoice | (SharingChoice & { shareDefault: boolean }) {
+): UnitsChoice | (SharingChoice & { legacyShareDefault: boolean }) {
   return "defaultAudience" in input
-    ? { ...input, shareDefault: isSharedAudience(input.defaultAudience) }
+    ? { ...input, legacyShareDefault: isSharedAudience(input.defaultAudience) }
     : input;
 }
 

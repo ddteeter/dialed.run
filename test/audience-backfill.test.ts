@@ -71,7 +71,7 @@ describe("the audience backfill", () => {
         id: shared,
         runId: newUlid(),
         userId: newUlid(),
-        isPublic: true,
+        legacyIsPublic: true,
         audience: "private",
         createdAt: 1,
       },
@@ -79,7 +79,7 @@ describe("the audience backfill", () => {
         id: hidden,
         runId: newUlid(),
         userId: newUlid(),
-        isPublic: false,
+        legacyIsPublic: false,
         audience: "groups",
         createdAt: 1,
       },
@@ -90,14 +90,14 @@ describe("the audience backfill", () => {
     const rows = await db
       .select({
         id: outfitEntries.id,
-        isPublic: outfitEntries.isPublic,
+        legacyIsPublic: outfitEntries.legacyIsPublic,
         audience: outfitEntries.audience,
       })
       .from(outfitEntries)
       .where(inArray(outfitEntries.id, [shared, hidden]));
     expect(rows).toHaveLength(2);
     for (const row of rows) {
-      expect(row.audience).toBe(audienceOfShareToggle(row.isPublic));
+      expect(row.audience).toBe(audienceOfShareToggle(row.legacyIsPublic));
     }
     const byId = new Map(rows.map((row) => [row.id, row.audience]));
     expect(byId.get(shared)).toBe("runners");
@@ -109,8 +109,12 @@ describe("the audience backfill", () => {
     const sharing = newUlid();
     const keeping = newUlid();
     await db.insert(userProfiles).values([
-      { userId: sharing, shareDefault: true, defaultAudience: "private" },
-      { userId: keeping, shareDefault: false, defaultAudience: "runners" },
+      { userId: sharing, legacyShareDefault: true, defaultAudience: "private" },
+      {
+        userId: keeping,
+        legacyShareDefault: false,
+        defaultAudience: "runners",
+      },
     ]);
 
     await runBackfill();
@@ -163,11 +167,9 @@ describe("the audience backfill", () => {
  * in which code older than A wrote only the boolean, and a second run is a
  * no-op.
  */
-const resync = (): string[] =>
-  updatesOf("_resync_audience_from_booleans.sql");
+const resync = (): string[] => updatesOf("_resync_audience_from_booleans.sql");
 
 describe("the audience resync", () => {
-
   it("is exactly two UPDATEs, one per table, each limited to disagreeing rows", () => {
     const statements = resync();
     expect(statements).toHaveLength(2);
@@ -192,14 +194,14 @@ describe("the audience resync", () => {
         id: shared,
         runId: newUlid(),
         userId: newUlid(),
-        isPublic: true,
+        legacyIsPublic: true,
         createdAt: 1,
       },
       {
         id: hidden,
         runId: newUlid(),
         userId: newUlid(),
-        isPublic: false,
+        legacyIsPublic: false,
         audience: "runners",
         createdAt: 1,
       },
@@ -207,14 +209,18 @@ describe("the audience resync", () => {
         id: agreeing,
         runId: newUlid(),
         userId: newUlid(),
-        isPublic: true,
+        legacyIsPublic: true,
         audience: "runners",
         createdAt: 1,
       },
     ]);
     await db.insert(userProfiles).values([
-      { userId: sharing, shareDefault: true, defaultAudience: "private" },
-      { userId: keeping, shareDefault: false, defaultAudience: "runners" },
+      { userId: sharing, legacyShareDefault: true, defaultAudience: "private" },
+      {
+        userId: keeping,
+        legacyShareDefault: false,
+        defaultAudience: "runners",
+      },
     ]);
 
     expect(await run(resync())).toBeGreaterThanOrEqual(4);

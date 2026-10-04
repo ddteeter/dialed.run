@@ -75,7 +75,7 @@ describe("saveCalibration", () => {
 
     expect(await profileOf(userId)).toMatchObject({
       username: "Ada",
-      shareDefault: false,
+      legacyShareDefault: false,
       defaultAudience: "private",
       onboardingComplete: true,
       thermalLevel: -1,
@@ -202,7 +202,7 @@ describe("savePlace — the one writer of the profile's place (FEED-5)", () => {
       tempUnit: "c",
       distanceUnit: "km",
       username: "Ada",
-      shareDefault: false,
+      legacyShareDefault: false,
       defaultAudience: "private",
     });
   });
@@ -502,7 +502,7 @@ describe("savePreferences and currentSettings", () => {
     expect(await profileOf(userId)).toMatchObject({
       tempUnit: "f",
       defaultAudience: "runners",
-      shareDefault: true,
+      legacyShareDefault: true,
     });
   });
 
@@ -514,13 +514,13 @@ describe("savePreferences and currentSettings", () => {
     await savePreferences(coreDb(), userId, { defaultAudience: "private" });
     expect(await profileOf(userId)).toMatchObject({
       defaultAudience: "private",
-      shareDefault: false,
+      legacyShareDefault: false,
     });
 
     await savePreferences(coreDb(), userId, { defaultAudience: "runners" });
     expect(await profileOf(userId)).toMatchObject({
       defaultAudience: "runners",
-      shareDefault: true,
+      legacyShareDefault: true,
     });
   });
 
@@ -532,10 +532,14 @@ describe("savePreferences and currentSettings", () => {
     await coreDb()
       .insert(userProfiles)
       .values([
-        { userId: quiet, defaultAudience: "private", shareDefault: true },
-        { userId: open, defaultAudience: "runners", shareDefault: false },
+        { userId: quiet, defaultAudience: "private", legacyShareDefault: true },
+        { userId: open, defaultAudience: "runners", legacyShareDefault: false },
         // Nothing can write `groups` yet; the switch shows it as off.
-        { userId: grouped, defaultAudience: "groups", shareDefault: false },
+        {
+          userId: grouped,
+          defaultAudience: "groups",
+          legacyShareDefault: false,
+        },
       ]);
 
     expect(await currentSettings(coreDb(), quiet)).toMatchObject({
