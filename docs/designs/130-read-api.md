@@ -47,7 +47,7 @@ all N runs", each row linking to the Strava activity.
 | `dateRange.first/last` (strings) | `dateRange.first/last`, ISO instants; the blog formats           |
 | —                                | `conditions` (temp, feels-like, wind, precip ranges), `verdicts` |
 | `activities[]`                   | `runs[]`, with `atReview: boolean` on each when `until` is given |
-| activity `name`, `url`           | run `title`, `url` (the dialed.run entry page)                   |
+| activity `name`, `url`           | run `title`, `entryUrl` (shared runs only; see Durable links)    |
 | activity `pace`, `movingTime`    | run `paceSPerKm`, `durationS`                                    |
 | —                                | run `conditions`, `verdict`, `garment.flag/note`, `visibility`   |
 
@@ -246,7 +246,7 @@ const runV1 = z.object({
   conditions: conditionsV1,
   verdict: verdictSchema.nullable(),
   visibility: z.enum(["shared", "private"]),
-  url: z.url(), // entry page when there is an entry, else /runs/:id
+  entryUrl: z.url().optional(), // /feed/entry/:entryId, on shared runs only
   kit: z.array(kitItemV1), // on /runs and /runs/:id
   garment: z
     .object({ flag: itemFlagSchema.nullable(), note: z.string().nullable() })
@@ -420,6 +420,68 @@ create form has a name and the flag, defaulting to "Shared entries only".
 The value appears once, with a copy control. Copy beyond the owner's two
 labels is the owner's call (open question 7).
 
+### Durable links from the blog
+
+Owner's decision, 2026-10-03.
+
+**The links themselves are durable.** `/feed/entry/:entryId` is keyed by
+a ULID, so it dies only if the entry is deleted. **Who can open them is
+the problem.** Under D-58, "public" means visible to signed-in runners,
+so a signed-out reader sees nothing, and sign-up is invite-only. The
+owner chose **options 1 and 2 together**:
+
+1. **The blog renders the footer inline from the API**: the stats and the
+   whole run list, conditions and verdicts included. The review's content
+   never depends on a reader following a link.
+2. **Each shared run carries an `entryUrl`; a private run carries none.**
+   That is `https://dialed.run/feed/entry/<entryId>`, present only when
+   `visibility` is `shared`. A private run gets no link at all, not even
+   the owner-only `/runs/:id`. That link would be no use to a reader and
+   would say that a private run existed.
+
+   **A signed-out visitor who opens an entry link gets a landing page**,
+   not today's bare bounce to log-in. It says what dialed.run is, and
+   offers "Request access" while sign-up is invite-only, plus "Log in".
+   **It reveals nothing of the entry (D-58)**: no handle, no kit, no
+   photo, no conditions, and no hint of whether the entry exists or is
+   shared. Every entry id, including a made-up one, gets the same page. It
+   keeps `noindexHead`. Its pieces come from `auth/components/Landing`. The
+   choice between entry and landing is a decision in
+   `feed/route-decisions.ts`, and the component that renders it lives
+   under `feed/components/`, so the route stays glue.
+
+   **After signing in, the visitor goes back to that entry.** Checked
+   2026-10-03, and today they do not: log-in honours a validated `redirect`
+   (`auth/sign-in-search.ts` parses it with `returnPathSchema` from
+   `lib/return-path.ts`, #140, same-origin by resolution, `/auth` refused),
+   and Google's `googleReturn` carries it. But the entry route's
+   `beforeLoad` calls `feed/redirect.ts`'s `requireSignedIn`, which
+   redirects to a bare `/auth/login` and drops the path. **The fix is
+   small:** `requireSignedIn(session, returnTo)` passes the route's
+   `location.href` as `search.redirect`, as `auth/require-session.ts`'s
+   `sessionOrRedirect` already does. The landing's "Log in" carries the
+   same value. Nothing new parses it: `returnPathSchema` is the one rule.
+   That covers a runner who already has an account. A new visitor's
+   "Request access" leads to an invite email days later, a different link,
+   which does not carry the entry back. That is accepted, because the
+   return path is not durable state.
+
+3. **No per-entry public mode** ("publish to the web") was **considered
+   and rejected.** It would reverse D-58 for chosen entries, bringing a
+   signed-out read path, index exposure and a moderation surface the open
+   web can reach. Option 1 already puts the content on the blog.
+
+### Design deltas
+
+Both surfaces are **undrawn**. Each gets a `docs/design-deltas.md`
+open-queue entry in the build PR and is built under the placeholder
+protocol until it is drawn:
+
+- **Settings › Account › API tokens** (above).
+- **The signed-out entry landing**: what dialed.run is, "Request access"
+  while the stage is invite-only, and "Log in" carrying the return path.
+  Nothing of the entry is shown.
+
 ## Contract touches
 
 - Schema changes: `add_api_tokens` (new table) and
@@ -431,7 +493,8 @@ labels is the owner's call (open question 7).
 - `docs/architecture.md` §Authentication gets rewritten in the build PR,
   because "no bearer-token path" stops being true. `docs/contracts.md`
   gains the v1 contract.
-- Screens: Settings › Account › API tokens (undesigned, design-delta).
+- Screens: Settings › Account › API tokens and the signed-out entry
+  landing, both undrawn (see Design deltas).
 
 ## Test plan
 
@@ -474,7 +537,14 @@ USING INDEX` for every endpoint's statements.
   flag beside each row, and revoke.
 - Mutation: `modules/read-api` joins `stryker.conf.json`'s array in the PR
   that finishes it. Auth is already there.
-- e2e: the Settings page is user-visible, so it needs a demo spec and video.
+- `test/feed/redirect.test.ts`: `requireSignedIn` carries `returnTo` as
+  `search.redirect`. The entry route's decision picks the landing when
+  signed out, for a real id and a made-up one alike.
+- `ui` project: the landing renders no handle, kit, photo or conditions,
+  and its "Log in" carries the entry's path.
+- e2e: the Settings page and the landing are user-visible, so they need
+  demo specs and a video. The landing's journey is: signed out, open an
+  entry link, log in, arrive on the entry.
 
 ## Rollout: the blog cutover (described, not built here)
 
@@ -492,8 +562,8 @@ USING INDEX` for every endpoint's statements.
    `USE_FIXTURE_DATA` fixture carries over.
 5. `DialedGarmentStats.astro` replaces `StravaShoeStats.astro`. It keeps
    the same toggle and stat grid, drops elevation, and adds the conditions
-   ranges and verdict distribution. `DialedRunList.astro` links each run to
-   its dialed.run entry page. The SI fields are converted through the
+   ranges and verdict distribution. `DialedRunList.astro` renders every
+   run inline and links each one to its `entryUrl`. The SI fields are converted through the
    blog's existing unit formatters.
 6. The one review with a `stravaId` moves once its shoe has a
    `dialedGarmentId`. Then the blog deletes `src/lib/strava/`, both Strava
@@ -523,5 +593,6 @@ USING INDEX` for every endpoint's statements.
 6. **Secret scanning.** Should `drn_` be registered with GitHub's secret
    scanning partner program, which needs a public verification endpoint? The
    proposal is not in v1.
-7. **Copy.** The show-once warning, the replay message and the empty state
-   are user-facing wording, and need the owner's words.
+7. **Copy.** The show-once warning, the replay message, the empty state and
+   the entry landing's text are user-facing wording, and need the owner's
+   words.
