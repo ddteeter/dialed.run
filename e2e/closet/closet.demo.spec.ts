@@ -44,6 +44,7 @@ import { storageStateFor } from "../support/accounts";
 import { bar } from "../support/bars";
 import { expect, scene, test } from "../support/demo";
 import { withLocalDb } from "../support/local-db";
+import { entryAudienceColumns } from "../support/audience";
 
 // Signed in already: the account is created by the `demo-setup` project, so
 // this video opens on the closet rather than on a signup form.
@@ -400,7 +401,7 @@ test("add garments with product identity -> detail in round 22's order -> retire
         userId,
         runId,
         verdict: 0,
-        isPublic: false,
+        ...entryAudienceColumns("private"),
         createdAt: startedAt + index * 86_400,
       });
       await core.insert(outfitEntryItems).values({ entryId, itemId });

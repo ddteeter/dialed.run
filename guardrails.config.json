@@ -498,7 +498,7 @@
       "count": 1
     },
     {
-      "key": "src/modules/onboarding/profile.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- rhymes with feed/share-default.ts's isPublicByDefault: same select-by-userId-with-limit-1-then-??-default shape, but a different column with a different default (not-yet-onboarded vs public-by-default) that will evolve on its own product timeline",
+      "key": "src/modules/onboarding/profile.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- rhymes with feed/share-default.ts's defaultAudienceFor: same select-by-userId-with-limit-1-then-??-default shape, but a different column with a different default (not-yet-onboarded vs public-by-default) that will evolve on its own product timeline",
       "reason": "Pair A, both sides. See the matching grant on `modules/feed/share-default.ts`: same skeleton, different column, different default, different module, no shared home. Owner's call, 2026-09-21 (task 115).",
       "count": 1
     },

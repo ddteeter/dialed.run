@@ -309,6 +309,13 @@
       "when": 1791006831306,
       "tag": "0043_add_username_screen_verdict",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "6",
+      "when": 1791128927048,
+      "tag": "0044_add_audience_columns",
+      "breakpoints": true
     }
   ]
 }

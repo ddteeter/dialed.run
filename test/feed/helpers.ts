@@ -25,9 +25,25 @@ import {
 } from "../../src/db/schema-weather";
 import { env } from "../../src/env";
 import { cacheKeyFor } from "../../src/modules/weather";
+import { isSharedAudience } from "../../src/lib/contracts";
+import type { Audience } from "../../src/lib/contracts";
 import { newUlid } from "../../src/lib/ids";
+import { entryAudienceColumns } from "../../e2e/support/audience";
 
 export const NOW = 1_757_000_000;
+
+export { entryAudienceColumns } from "../../e2e/support/audience";
+
+/**
+ * A runner's default audience as a seed writes it, kept in step with the
+ * boolean it replaces the same way `entryAudienceColumns` keeps an entry's.
+ */
+export function profileAudienceColumns(defaultAudience: Audience): {
+  defaultAudience: Audience;
+  shareDefault: boolean;
+} {
+  return { defaultAudience, shareDefault: isSharedAudience(defaultAudience) };
+}
 
 function coreDb() {
   return drizzle(env.DIALED_CORE);
@@ -39,7 +55,7 @@ function weatherDb() {
 
 export async function makeUser(overrides?: {
   username?: string;
-  shareDefault?: boolean;
+  defaultAudience?: Audience;
   /** Left unset by default, which is what a profile predating R-6 looks
    *  like: the columns exist and hold NULL. */
   tempUnit?: "f" | "c";
@@ -54,7 +70,7 @@ export async function makeUser(overrides?: {
       // is unique regardless of case.
       username:
         overrides?.username ?? `runner_${userId.slice(-8).toLowerCase()}`,
-      shareDefault: overrides?.shareDefault ?? true,
+      ...profileAudienceColumns(overrides?.defaultAudience ?? "runners"),
       tempUnit: overrides?.tempUnit,
       distanceUnit: overrides?.distanceUnit,
     });
@@ -161,7 +177,7 @@ export async function makeItem(params: {
 export async function makeEntry(params: {
   userId: string;
   runId: string;
-  isPublic?: boolean;
+  audience?: Audience;
   verdict?: number;
   createdAt?: number;
   itemIds?: string[];
@@ -174,7 +190,7 @@ export async function makeEntry(params: {
       runId: params.runId,
       userId: params.userId,
       verdict: params.verdict,
-      isPublic: params.isPublic ?? true,
+      ...entryAudienceColumns(params.audience ?? "runners"),
       createdAt: params.createdAt ?? NOW,
     });
   const itemIds = params.itemIds ?? [];

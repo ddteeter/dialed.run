@@ -34,6 +34,7 @@ import { expect, scene, test } from "../support/demo";
 test.use({ storageState: storageStateFor("verdict") });
 import { withLocalDb } from "../support/local-db";
 import { nowSeconds } from "../../src/lib/now";
+import { entryAudienceColumns } from "../support/audience";
 
 /** Layout stamps html[data-hydrated] once React attaches; driving
  *  controlled inputs before that races hydration's state reset. */
@@ -113,7 +114,7 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
       id: entryId,
       userId: row.id,
       runId,
-      isPublic: true,
+      ...entryAudienceColumns("runners"),
       createdAt: startedAt,
     });
     await core.insert(outfitEntryItems).values({ entryId, itemId });
@@ -137,7 +138,7 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
         userId: row.id,
         runId: prior.runId,
         verdict: -1,
-        isPublic: false,
+        ...entryAudienceColumns("private"),
         createdAt: priorStart(prior.daysAgo),
       });
       await core

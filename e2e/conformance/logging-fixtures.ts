@@ -15,6 +15,7 @@ import { nowSeconds } from "../../src/lib/now";
 import { accountEmail } from "../support/accounts";
 import type { DemoAccount } from "../support/accounts";
 import { withLocalDb } from "../support/local-db";
+import { entryAudienceColumns } from "../support/audience";
 
 /**
  * What the logging lane's conformance specs seed: a run in the boards' own
@@ -221,7 +222,7 @@ export async function seedEntry(
       id: entryId,
       userId: seeded.userId,
       runId,
-      isPublic: false,
+      ...entryAudienceColumns("private"),
       createdAt: nowSeconds(),
     });
     if (itemIds.length > 0) {

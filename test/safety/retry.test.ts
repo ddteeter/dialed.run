@@ -42,7 +42,7 @@ const unavailable: Classify = () => Promise.reject(new Error("503"));
 async function pendingPhoto(hasBytes = true): Promise<string> {
   const userId = await makeUser();
   const runId = await makeRun({ userId });
-  const entryId = await makeEntry({ userId, runId, isPublic: true });
+  const entryId = await makeEntry({ userId, runId, audience: "runners" });
   const photoId = newUlid();
   const photoKey = `entries/${userId}/${entryId}/${photoId}`;
   await core()
@@ -135,7 +135,7 @@ describe("what the sweep hands the classifier", () => {
     };
     const userId = await makeUser();
     const runId = await makeRun({ userId });
-    const entryId = await makeEntry({ userId, runId, isPublic: true });
+    const entryId = await makeEntry({ userId, runId, audience: "runners" });
     const photoId = newUlid();
     const photoKey = `entries/${userId}/${entryId}/${photoId}`;
     await core()

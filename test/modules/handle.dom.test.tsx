@@ -201,7 +201,7 @@ function entry(isUnderReview: boolean): Entry {
     startedAt: 1_755_000_000,
     indoor: false,
     verdict: undefined,
-    isPublic: true,
+    audience: "runners",
     caption: undefined,
     createdAt: 1_755_000_000,
     items: [],

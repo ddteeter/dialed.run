@@ -20,7 +20,7 @@ import {
   listRunSummaries,
 } from "../../src/modules/runs/service";
 import { recordManualObservation } from "../../src/modules/weather";
-import { makeObservation } from "../feed/helpers";
+import { entryAudienceColumns, makeObservation } from "../feed/helpers";
 
 import { nowSeconds } from "../../src/lib/now";
 const START = 1_755_000_000;
@@ -492,14 +492,14 @@ describe("getRunSummary / listRunSummaries: a run as the screens draw it", () =>
           userId,
           runId: judged,
           verdict: 0,
-          isPublic: true,
+          ...entryAudienceColumns("runners"),
           createdAt: START,
         },
         {
           id: kittedEntry,
           userId,
           runId: kitted,
-          isPublic: true,
+          ...entryAudienceColumns("runners"),
           createdAt: START,
         },
       ]);

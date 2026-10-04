@@ -32,7 +32,7 @@ function entry(overrides: Partial<Entry> = {}): Entry {
     startedAt: Date.UTC(2025, 7, 12, 6, 30) / 1000,
     indoor: false,
     verdict: undefined,
-    isPublic: true,
+    audience: "runners",
     caption: undefined,
     createdAt: 1_755_000_000,
     items: [],

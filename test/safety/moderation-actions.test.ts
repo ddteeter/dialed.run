@@ -111,7 +111,11 @@ async function postedPhoto() {
       updatedAt: new Date(),
     });
   const runId = await makeRun({ userId: author });
-  const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+  const entryId = await makeEntry({
+    userId: author,
+    runId,
+    audience: "runners",
+  });
   const photoId = newUlid();
   const key = entryPhotoKeyFor(author, entryId, photoId);
   await env.MEDIA.put(key, new Uint8Array([1, 2, 3]), {
@@ -682,7 +686,11 @@ describe("quarantine: silent, preserved, admin-only (SAF-5, D-70)", () => {
   it("asks R2 for nothing when a whole entry has no photos", async () => {
     const author = await makeUser();
     const runId = await makeRun({ userId: author });
-    const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+    const entryId = await makeEntry({
+      userId: author,
+      runId,
+      audience: "runners",
+    });
     const media = env.MEDIA;
     const asked: string[] = [];
     Reflect.set(

@@ -26,7 +26,7 @@
   "mutate": [
     "src/lib/contracts/garments.ts,src/lib/contracts/garment-fields.ts",
     "src/lib/contracts/email.ts,src/lib/contracts/email-kinds.ts,src/lib/contracts/data-export.ts,src/lib/contracts/access.ts,src/lib/contracts/profanity.ts",
-    "src/lib/contracts/products.ts,src/lib/contracts/verdicts.ts,src/lib/contracts/runs.ts,src/lib/contracts/profile.ts,src/lib/contracts/common.ts,src/lib/contracts/weather.ts,src/lib/contracts/measures.ts,src/lib/contracts/temperature.ts,src/lib/contracts/city-lookup.ts,src/lib/contracts.ts",
+    "src/lib/contracts/products.ts,src/lib/contracts/verdicts.ts,src/lib/contracts/runs.ts,src/lib/contracts/profile.ts,src/lib/contracts/audience.ts,src/lib/contracts/common.ts,src/lib/contracts/weather.ts,src/lib/contracts/measures.ts,src/lib/contracts/temperature.ts,src/lib/contracts/city-lookup.ts,src/lib/contracts.ts",
     "src/lib/contracts/thermal.ts",
     "src/lib/sql/**/*.ts",
     "src/lib/browser/**/*.ts",

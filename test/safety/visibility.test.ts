@@ -37,6 +37,7 @@ import {
   resetSafetyTables,
   confirmedReporter,
 } from "./helpers";
+import { entryAudienceColumns } from "../feed/helpers";
 
 /**
  * The one visibility rule, observed through the reads that use it (task
@@ -316,7 +317,10 @@ describe("the owner", () => {
     const posted = await postedEntry();
     await core()
       .update(outfitEntries)
-      .set({ moderationStatus: "hidden_pending_review", isPublic: false })
+      .set({
+        moderationStatus: "hidden_pending_review",
+        ...entryAudienceColumns("private"),
+      })
       .where(eq(outfitEntries.id, posted.entryId));
     const own = await entryDetailForViewer(posted.entryId, posted.author);
     expect(own?.id).toBe(posted.entryId);

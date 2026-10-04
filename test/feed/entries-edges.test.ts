@@ -128,7 +128,7 @@ describe("attachKit follows the runner's sharing default", () => {
   });
 
   it("shares by default when the profile says to", async () => {
-    const userId = await makeUser({ shareDefault: true });
+    const userId = await makeUser({ defaultAudience: "runners" });
     const runId = await makeRun({ userId });
 
     const entryId = await attachKit({ userId, runId, itemIds: [] });
@@ -137,13 +137,14 @@ describe("attachKit follows the runner's sharing default", () => {
       .select()
       .from(outfitEntries)
       .where(eq(outfitEntries.id, entryId));
+    expect(entry?.audience).toBe("runners");
     expect(entry?.isPublic).toBe(true);
   });
 
   it("keeps an entry private when the profile says to", async () => {
     // The per-user default is a privacy setting; ignoring it publishes
     // something the runner asked to keep to themselves.
-    const userId = await makeUser({ shareDefault: false });
+    const userId = await makeUser({ defaultAudience: "private" });
     const runId = await makeRun({ userId });
 
     const entryId = await attachKit({ userId, runId, itemIds: [] });
@@ -152,6 +153,7 @@ describe("attachKit follows the runner's sharing default", () => {
       .select()
       .from(outfitEntries)
       .where(eq(outfitEntries.id, entryId));
+    expect(entry?.audience).toBe("private");
     expect(entry?.isPublic).toBe(false);
   });
 
@@ -165,7 +167,48 @@ describe("attachKit follows the runner's sharing default", () => {
       .select()
       .from(outfitEntries)
       .where(eq(outfitEntries.id, entryId));
+    expect(entry?.audience).toBe("runners");
     expect(entry?.isPublic).toBe(true);
+  });
+});
+
+describe("submitVerdict stores the chosen audience in both columns", () => {
+  it("writes the audience and keeps the boolean in step, both ways", async () => {
+    // The dual write (design 131): the boolean is what a rollback's code
+    // reads, so a private choice that left it at 1 would leak silently.
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    const entryId = await attachKit({ userId, runId, itemIds: [] });
+    const stored = async () => {
+      const [entry] = await db()
+        .select({
+          audience: outfitEntries.audience,
+          isPublic: outfitEntries.isPublic,
+        })
+        .from(outfitEntries)
+        .where(eq(outfitEntries.id, entryId));
+      return entry;
+    };
+
+    await submitVerdict({
+      userId,
+      entryId,
+      verdict: 0,
+      audience: "private",
+      tags: [],
+      itemFlags: [],
+    });
+    expect(await stored()).toEqual({ audience: "private", isPublic: false });
+
+    await submitVerdict({
+      userId,
+      entryId,
+      verdict: 0,
+      audience: "runners",
+      tags: [],
+      itemFlags: [],
+    });
+    expect(await stored()).toEqual({ audience: "runners", isPublic: true });
   });
 });
 
@@ -176,7 +219,7 @@ describe("submitVerdict refuses what is not the caller's", () => {
         userId: await makeUser(),
         entryId: newUlid(),
         verdict: 0,
-        isPublic: true,
+        audience: "runners",
         tags: [],
         itemFlags: [],
       }),
@@ -194,7 +237,7 @@ describe("submitVerdict refuses what is not the caller's", () => {
         userId: other,
         entryId,
         verdict: 0,
-        isPublic: true,
+        audience: "runners",
         tags: [],
         itemFlags: [],
       }),
@@ -222,7 +265,7 @@ describe("submitVerdict writes the whole submission or none of it", () => {
       userId,
       entryId,
       verdict: -1,
-      isPublic: true,
+      audience: "runners",
       tags: ["cold_first_mile"],
       itemFlags: [],
     });
@@ -233,7 +276,7 @@ describe("submitVerdict writes the whole submission or none of it", () => {
       userId,
       entryId,
       verdict: 1,
-      isPublic: true,
+      audience: "runners",
       tags: ["hands_sweaty"],
       itemFlags: [],
     });
@@ -247,7 +290,7 @@ describe("submitVerdict writes the whole submission or none of it", () => {
       userId,
       entryId,
       verdict: 0,
-      isPublic: true,
+      audience: "runners",
       tags: ["cold_first_mile"],
       itemFlags: [],
     });
@@ -256,7 +299,7 @@ describe("submitVerdict writes the whole submission or none of it", () => {
       userId,
       entryId,
       verdict: 0,
-      isPublic: true,
+      audience: "runners",
       tags: [],
       itemFlags: [],
     });
@@ -272,7 +315,7 @@ describe("submitVerdict writes the whole submission or none of it", () => {
       userId,
       entryId,
       verdict: 0,
-      isPublic: true,
+      audience: "runners",
       tags: [],
       itemFlags: [{ itemId, flag: "too_much", note: "Hands cooked" }],
     });
@@ -286,7 +329,7 @@ describe("submitVerdict writes the whole submission or none of it", () => {
       userId,
       entryId,
       verdict: 0,
-      isPublic: true,
+      audience: "runners",
       tags: [],
       itemFlags: [{ itemId }],
     });
@@ -306,7 +349,7 @@ describe("submitVerdict writes the whole submission or none of it", () => {
       userId,
       entryId,
       verdict: 0,
-      isPublic: true,
+      audience: "runners",
       tags: [],
       itemFlags: [{ itemId: notInKit, flag: "not_enough" }],
     });
@@ -324,7 +367,7 @@ describe("submitVerdict writes the whole submission or none of it", () => {
       userId,
       entryId,
       verdict: 0,
-      isPublic: true,
+      audience: "runners",
       tags: [],
       itemFlags: [],
       caption: "Windy",
@@ -336,7 +379,7 @@ describe("submitVerdict writes the whole submission or none of it", () => {
       userId,
       entryId,
       verdict: 0,
-      isPublic: true,
+      audience: "runners",
       tags: [],
       itemFlags: [],
     });
@@ -376,7 +419,7 @@ describe("getEntryDetail copes with what is missing", () => {
       userId,
       entryId,
       verdict: 0,
-      isPublic: true,
+      audience: "runners",
       tags: [],
       itemFlags: [{ itemId, flag: "too_much", note: "Private note" }],
     });
@@ -424,7 +467,7 @@ describe("the verdict prompt", () => {
       userId,
       entryId,
       verdict: 0,
-      isPublic: true,
+      audience: "runners",
       tags: [],
       itemFlags: [],
     });
@@ -489,7 +532,7 @@ async function ratedEntryInBand(params: {
     userId: params.userId,
     entryId,
     verdict: params.verdict,
-    isPublic: true,
+    audience: "runners",
     tags: [],
     itemFlags: [],
   });
@@ -646,7 +689,7 @@ describe("getEntryDetail says what the card shows", () => {
       userId,
       entryId,
       verdict: -2,
-      isPublic: true,
+      audience: "runners",
       tags: [],
       itemFlags: [],
     });
@@ -694,7 +737,7 @@ describe("the band windows leave out what they cannot place", () => {
       userId,
       entryId,
       verdict: 0,
-      isPublic: true,
+      audience: "runners",
       tags: [],
       itemFlags: [],
     });

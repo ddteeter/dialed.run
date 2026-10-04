@@ -7,11 +7,17 @@ import { isUnconfirmed, isVerified } from "../../src/modules/account";
 import { emailConfirmationOf } from "../../src/modules/account/email-links";
 import { attachKit, submitVerdict } from "../../src/modules/feed/entries";
 import {
-  isPublicByDefault,
-  isSharedAsChosen,
+  audienceAsChosen,
+  defaultAudienceFor,
 } from "../../src/modules/feed/share-default";
 import { core } from "../email/helpers";
-import { makeRun, makeUser, resetTables } from "../feed/helpers";
+import {
+  entryAudienceColumns,
+  makeRun,
+  makeUser,
+  resetTables,
+} from "../feed/helpers";
+import type { Audience } from "../../src/lib/contracts";
 
 /**
  * Decision D-50: an unconfirmed account's entries save private, and
@@ -29,12 +35,12 @@ beforeEach(async () => {
 A runner as sign-up leaves them: a profile and a `user` row.
 */
 async function runner(
-  options: Readonly<{ isVerified: boolean; shareDefault?: boolean }>,
+  options: Readonly<{ isVerified: boolean; defaultAudience?: Audience }>,
 ): Promise<string> {
   const userId = await makeUser(
-    options.shareDefault === undefined
+    options.defaultAudience === undefined
       ? undefined
-      : { shareDefault: options.shareDefault },
+      : { defaultAudience: options.defaultAudience },
   );
   await db.insert(user).values({
     id: userId,
@@ -51,13 +57,24 @@ async function confirm(userId: string): Promise<void> {
   await db.update(user).set({ emailVerified: true }).where(eq(user.id, userId));
 }
 
-async function isEntryPublic(entryId: string): Promise<boolean | undefined> {
+/**
+Both stored columns, which every write keeps in step until C1 (design 131).
+*/
+async function storedAudience(
+  entryId: string,
+): Promise<{ audience: Audience; isPublic: boolean } | undefined> {
   const [row] = await db
-    .select({ isPublic: outfitEntries.isPublic })
+    .select({
+      audience: outfitEntries.audience,
+      isPublic: outfitEntries.isPublic,
+    })
     .from(outfitEntries)
     .where(eq(outfitEntries.id, entryId));
-  return row?.isPublic;
+  return row;
 }
+
+const SHARED = entryAudienceColumns("runners");
+const PRIVATE = entryAudienceColumns("private");
 
 describe("the confirmation gates", () => {
   it("reads one fact three ways: confirmed, unconfirmed, and no account", async () => {
@@ -83,26 +100,29 @@ describe("the confirmation gates", () => {
 
 describe("an unconfirmed runner's entries (D-50)", () => {
   it("start private whatever the default, and start at the default once confirmed", async () => {
-    const userId = await runner({ isVerified: false, shareDefault: true });
-    expect(await isPublicByDefault(db, userId)).toBe(false);
+    const userId = await runner({
+      isVerified: false,
+      defaultAudience: "runners",
+    });
+    expect(await defaultAudienceFor(db, userId)).toBe("private");
 
     const entryId = await attachKit({
       userId,
       runId: await makeRun({ userId }),
       itemIds: [],
     });
-    expect(await isEntryPublic(entryId)).toBe(false);
+    expect(await storedAudience(entryId)).toEqual(PRIVATE);
 
     await confirm(userId);
-    expect(await isPublicByDefault(db, userId)).toBe(true);
+    expect(await defaultAudienceFor(db, userId)).toBe("runners");
     const after = await attachKit({
       userId,
       runId: await makeRun({ userId }),
       itemIds: [],
     });
-    expect(await isEntryPublic(after)).toBe(true);
+    expect(await storedAudience(after)).toEqual(SHARED);
     // Confirming changes nothing stored: the earlier entry stays private.
-    expect(await isEntryPublic(entryId)).toBe(false);
+    expect(await storedAudience(entryId)).toEqual(PRIVATE);
   });
 
   it("stay private when a verdict is saved with the share toggle on", async () => {
@@ -117,28 +137,31 @@ describe("an unconfirmed runner's entries (D-50)", () => {
       userId,
       entryId,
       verdict: 0,
-      isPublic: true,
+      audience: "runners",
       tags: [],
       itemFlags: [],
     });
-    expect(await isEntryPublic(entryId)).toBe(false);
+    expect(await storedAudience(entryId)).toEqual(PRIVATE);
 
     await confirm(userId);
     await submitVerdict({
       userId,
       entryId,
       verdict: 0,
-      isPublic: true,
+      audience: "runners",
       tags: [],
       itemFlags: [],
     });
-    expect(await isEntryPublic(entryId)).toBe(true);
+    expect(await storedAudience(entryId)).toEqual(SHARED);
   });
 
   it("keep a confirmed runner's own private choice and opt-out", async () => {
-    const quiet = await runner({ isVerified: true, shareDefault: false });
-    expect(await isPublicByDefault(db, quiet)).toBe(false);
-    expect(await isSharedAsChosen(db, quiet, false)).toBe(false);
-    expect(await isSharedAsChosen(db, quiet, true)).toBe(true);
+    const quiet = await runner({
+      isVerified: true,
+      defaultAudience: "private",
+    });
+    expect(await defaultAudienceFor(db, quiet)).toBe("private");
+    expect(await audienceAsChosen(db, quiet, "private")).toBe("private");
+    expect(await audienceAsChosen(db, quiet, "runners")).toBe("runners");
   });
 });

@@ -30,6 +30,7 @@ import {
 } from "../../src/modules/closet/service";
 
 import { nowSeconds } from "../../src/lib/now";
+import { entryAudienceColumns } from "../feed/helpers";
 /**
  * The closet service's remaining edges: product resolution on save, the
  * stored-versus-estimated temperature range, and the reads that answer with
@@ -763,7 +764,7 @@ async function logEntryFor(
     userId,
     runId,
     verdict: 0,
-    isPublic: true,
+    ...entryAudienceColumns("runners"),
     createdAt,
   });
   await client.insert(outfitEntryItems).values({ entryId, itemId });

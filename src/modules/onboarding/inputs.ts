@@ -9,6 +9,7 @@ import {
   longitudeSchema,
   tempUnitSchema,
   thermalLevelSchema,
+  writableAudienceSchema,
 } from "../../lib/contracts";
 
 /**
@@ -119,8 +120,11 @@ export const sharingInput = z.object({
    * The per-entry toggle's starting position, never a lock: the contract
    * is "public by default with a per-entry toggle and a per-user default
    * preference", and this is only the third of those.
+   *
+   * The writable subset (D-109, design 131), so nothing can make `groups`
+   * a default before groups ship.
    */
-  shareDefault: z.boolean(),
+  defaultAudience: writableAudienceSchema,
 });
 export type UnitsChoice = z.infer<typeof unitsInput>;
 export type SharingChoice = z.infer<typeof sharingInput>;

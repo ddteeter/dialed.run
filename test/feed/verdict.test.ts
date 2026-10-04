@@ -51,7 +51,7 @@ describe("verdict flow (A3)", () => {
       userId,
       entryId,
       verdict: 0,
-      isPublic: true,
+      audience: "runners",
       tags: [],
       itemFlags: [],
     });
@@ -82,7 +82,7 @@ describe("verdict flow (A3)", () => {
         userId,
         entryId,
         verdict,
-        isPublic: true,
+        audience: "runners",
         tags: [],
         itemFlags: [],
       });

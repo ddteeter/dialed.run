@@ -2,7 +2,11 @@ import { eq } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../db/schema-core";
-import { defaultUnits } from "../../lib/contracts";
+import {
+  audienceOfShareToggle,
+  defaultUnits,
+  isSharedAudience,
+} from "../../lib/contracts";
 import { orSqlNull } from "../../lib/sql/sql-null";
 import type {
   Calibration,
@@ -129,7 +133,7 @@ export async function completeOnboarding(
  * account that has never reached O1 — and the common one, since the row is
  * created by O1 itself.
  */
-// fallow-ignore-next-line code-duplication -- rhymes with feed/share-default.ts's isPublicByDefault: same select-by-userId-with-limit-1-then-??-default shape, but a different column with a different default (not-yet-onboarded vs public-by-default) that will evolve on its own product timeline
+// fallow-ignore-next-line code-duplication -- rhymes with feed/share-default.ts's defaultAudienceFor: same select-by-userId-with-limit-1-then-??-default shape, but a different column with a different default (not-yet-onboarded vs public-by-default) that will evolve on its own product timeline
 export async function hasOnboarded(
   db: DrizzleD1Database,
   userId: string,
@@ -159,10 +163,25 @@ export async function savePreferences(
   userId: string,
   input: UnitsChoice | SharingChoice,
 ): Promise<void> {
+  const columns = preferenceColumns(input);
   await db
     .insert(userProfiles)
-    .values({ userId, ...input })
-    .onConflictDoUpdate({ target: userProfiles.userId, set: input });
+    .values({ userId, ...columns })
+    .onConflictDoUpdate({ target: userProfiles.userId, set: columns });
+}
+
+/**
+ * The columns a sub-page's answer writes. The sharing default goes to
+ * `default_audience` and to `share_default` with it, until C1
+ * (design 131): the boolean is what a version a rollback could restore
+ * still reads, so leaving it behind would undo a runner's opt-out there.
+ */
+function preferenceColumns(
+  input: UnitsChoice | SharingChoice,
+): UnitsChoice | (SharingChoice & { shareDefault: boolean }) {
+  return "defaultAudience" in input
+    ? { ...input, shareDefault: isSharedAudience(input.defaultAudience) }
+    : input;
 }
 
 /**
@@ -189,6 +208,8 @@ export interface CurrentSettings extends Preferences {
  * and miles a feed reader is already seeing rather than a blank the save
  * would then have to invent a value for.
  *
+ * The default audience is read from `share_default` until PR B reads
+ * `default_audience` (design 131): the writers keep the two in step.
  * `share_default` is `NOT NULL DEFAULT true`, so its only missing case is
  * a missing row, and `true` there is the contract's "public by default".
  */
@@ -210,7 +231,7 @@ export async function currentSettings(
     thermalLevel: row?.thermalLevel ?? undefined,
     tempUnit: row?.tempUnit ?? defaultUnits.temp,
     distanceUnit: row?.distanceUnit ?? defaultUnits.distance,
-    shareDefault: row?.shareDefault ?? true,
+    defaultAudience: audienceOfShareToggle(row?.shareDefault ?? true),
   };
 }
 

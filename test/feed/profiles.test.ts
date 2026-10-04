@@ -15,6 +15,7 @@ import {
   resetTables,
   NOW,
 } from "./helpers";
+import type { Audience } from "../../src/lib/contracts";
 
 /**
  * Screens G (own profile) and H (someone else's). A hundred and eleven
@@ -43,7 +44,7 @@ async function ratedEntry(params: {
   verdict: number;
   createdAt?: number;
   itemIds?: string[];
-  isPublic?: boolean;
+  audience?: Audience;
 }): Promise<string> {
   const startedAt = params.createdAt ?? NOW;
   const runId = await makeRun({
@@ -65,7 +66,7 @@ async function ratedEntry(params: {
     verdict: params.verdict,
     createdAt: startedAt,
     itemIds: params.itemIds ?? [],
-    isPublic: params.isPublic ?? true,
+    audience: params.audience ?? "runners",
   });
 }
 
@@ -312,7 +313,9 @@ describe("ownProfile: the social counts", () => {
 
 describe("otherProfile", () => {
   it("answers with nothing for a runner who has no profile", async () => {
-    expect(await otherProfile("01JNOBODY000000000000000", await makeUser())).toBeUndefined();
+    expect(
+      await otherProfile("01JNOBODY000000000000000", await makeUser()),
+    ).toBeUndefined();
   });
 
   it("shows public entries and hides private ones", async () => {
@@ -324,14 +327,14 @@ describe("otherProfile", () => {
       lat: 47.11,
       feelsLikeC: 3,
       verdict: 0,
-      isPublic: true,
+      audience: "runners",
     });
     await ratedEntry({
       userId,
       lat: 47.12,
       feelsLikeC: 3,
       verdict: 0,
-      isPublic: false,
+      audience: "private",
     });
 
     const profile = await otherProfile(userId, await makeUser());

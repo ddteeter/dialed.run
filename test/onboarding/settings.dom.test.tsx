@@ -39,7 +39,7 @@ const ANSWERED: CurrentSettings = {
   thermalLevel: 0,
   tempUnit: "f",
   distanceUnit: "mi",
-  shareDefault: true,
+  defaultAudience: "runners",
 };
 
 function row(name: RegExp) {
@@ -140,7 +140,7 @@ describe("the index (U1/N)", () => {
           thermalLevel: -2,
           tempUnit: "c",
           distanceUnit: "km",
-          shareDefault: false,
+          defaultAudience: "private",
         }}
         runReminderEmail={false}
         blockedCount={0}
@@ -253,7 +253,9 @@ describe("the sub-pages", () => {
     ).toBeChecked();
     expect(screen.queryByRole("radio")).toBeNull();
     await userEvent.setup().click(screen.getByRole("button", { name: "Save" }));
-    expect(saveSharing).toHaveBeenCalledWith({ data: { shareDefault: true } });
+    expect(saveSharing).toHaveBeenCalledWith({
+      data: { defaultAudience: "runners" },
+    });
     expect(saveUnits).not.toHaveBeenCalled();
   });
 
@@ -303,7 +305,9 @@ describe("the sub-pages", () => {
     await user.click(toggle);
     await user.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(saveSharing).toHaveBeenCalledWith({ data: { shareDefault: false } });
+    expect(saveSharing).toHaveBeenCalledWith({
+      data: { defaultAudience: "private" },
+    });
     await waitFor(() => {
       expect(screen.getByRole("status")).toHaveTextContent("Privacy saved.");
     });

@@ -30,6 +30,7 @@ import {
 import { buildSheets } from "../../src/modules/account/export-sheets";
 import { cacheKeyFor } from "../../src/modules/weather";
 import { core } from "../email/helpers";
+import { entryAudienceColumns, profileAudienceColumns } from "../feed/helpers";
 
 /**
  * What the export ZIP holds (task 126, ACC-10; round 27 #13), read on
@@ -153,6 +154,7 @@ async function seedStranger(startedAt: number): Promise<string> {
     runId,
     userId: strangerId,
     verdict: -2,
+    ...entryAudienceColumns("runners"),
     createdAt: NOW - 400,
   });
   await db.insert(entryTags).values({ entryId, tag: "stranger" });
@@ -222,7 +224,7 @@ describe("exportData and exportFiles", () => {
       thermalLevel: -1,
       tempUnit: "f",
       distanceUnit: "mi",
-      shareDefault: false,
+      ...profileAudienceColumns("private"),
     });
 
     const shirtId = newUlid();
@@ -294,7 +296,7 @@ describe("exportData and exportFiles", () => {
         runId: observedRun,
         userId,
         verdict: 1,
-        isPublic: true,
+        ...entryAudienceColumns("runners"),
         caption: "Cold start",
         createdAt: observedAt + 3600,
       },
@@ -302,7 +304,7 @@ describe("exportData and exportFiles", () => {
         id: bandEntry,
         runId: bandRun,
         userId,
-        isPublic: false,
+        ...entryAudienceColumns("private"),
         createdAt: bandAt + 3600,
       },
     ]);
@@ -498,6 +500,7 @@ describe("exportData and exportFiles", () => {
       id: entryId,
       runId,
       userId,
+      ...entryAudienceColumns("runners"),
       createdAt: NOW - 60,
     });
     await db.insert(entryPhotos).values({
@@ -620,6 +623,7 @@ describe("exportData and exportFiles", () => {
       id: entryId,
       runId,
       userId,
+      ...entryAudienceColumns("runners"),
       createdAt: NOW - 60,
     });
 

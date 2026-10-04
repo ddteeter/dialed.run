@@ -4,7 +4,12 @@ import { useState } from "react";
 import type { JSX, ReactNode } from "react";
 import type { z } from "zod";
 
-import { thermalOffsetLabel, thermalScale } from "../../../lib/contracts";
+import {
+  audienceOfShareToggle,
+  isSharedAudience,
+  thermalOffsetLabel,
+  thermalScale,
+} from "../../../lib/contracts";
 import { notificationSettingsSchema } from "../../../lib/contracts/email";
 import type { DistanceUnit, TempUnit } from "../../../lib/contracts";
 import {
@@ -158,7 +163,7 @@ export function SettingsIndex({
           params={{ section: "sharing" }}
           label="Privacy"
           value={
-            current.shareDefault
+            isSharedAudience(current.defaultAudience)
               ? "New runs go to the feed"
               : "New runs stay private"
           }
@@ -379,12 +384,12 @@ function SharingFields({
   return (
     <div className="flex flex-col gap-1">
       <ToggleField
-        name="shareDefault"
+        name="defaultAudience"
         label={SHARE_DEFAULT_LABEL}
         field={form.field}
-        isOn={value.shareDefault}
-        onChange={(shareDefault) => {
-          onChange({ shareDefault });
+        isOn={isSharedAudience(value.defaultAudience)}
+        onChange={(isOn) => {
+          onChange({ defaultAudience: audienceOfShareToggle(isOn) });
         }}
       />
       <p className="m-0 text-micro text-muted">You can flip it per run.</p>
@@ -406,7 +411,7 @@ export function SharingForm({
   return (
     <SectionForm
       schema={sharingInput}
-      initial={{ shareDefault: current.shareDefault }}
+      initial={{ defaultAudience: current.defaultAudience }}
       save={saveSharing}
       successMessage="Privacy saved."
       // No summary labels: labels name rows in the error summary, which

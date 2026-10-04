@@ -72,7 +72,7 @@ describe("the status region on first paint", () => {
           startedAt: NOW,
           indoor: false,
           verdict: undefined,
-          isPublic: true,
+          audience: "runners",
           caption: undefined,
           createdAt: NOW,
           items: [],

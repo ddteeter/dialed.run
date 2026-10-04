@@ -35,7 +35,11 @@ describe("useful reactions (D-11)", () => {
     const author = await makeUser();
     const reactor = await makeVerifiedUser();
     const runId = await makeRun({ userId: author });
-    const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+    const entryId = await makeEntry({
+      userId: author,
+      runId,
+      audience: "runners",
+    });
 
     expect(await usefulCount(entryId)).toBe(0);
     expect(await setUsefulReaction(entryId, reactor, true)).toStrictEqual({
@@ -62,7 +66,11 @@ describe("useful reactions (D-11)", () => {
       await makeVerifiedUser(),
     ];
     const runId = await makeRun({ userId: author });
-    const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+    const entryId = await makeEntry({
+      userId: author,
+      runId,
+      audience: "runners",
+    });
 
     await setUsefulReaction(entryId, first, true);
 
@@ -141,7 +149,11 @@ describe("useful reactions: who may react", () => {
     const owner = await makeUser();
     const stranger = await makeVerifiedUser();
     const runId = await makeRun({ userId: owner });
-    const entryId = await makeEntry({ userId: owner, runId, isPublic: false });
+    const entryId = await makeEntry({
+      userId: owner,
+      runId,
+      audience: "private",
+    });
 
     await expect(setUsefulReaction(entryId, stranger, true)).rejects.toThrow(
       /not visible/,
@@ -151,7 +163,11 @@ describe("useful reactions: who may react", () => {
   it("lets the owner react to their own private entry", async () => {
     const owner = await makeVerifiedUser();
     const runId = await makeRun({ userId: owner });
-    const entryId = await makeEntry({ userId: owner, runId, isPublic: false });
+    const entryId = await makeEntry({
+      userId: owner,
+      runId,
+      audience: "private",
+    });
 
     expect(await setUsefulReaction(entryId, owner, true)).toStrictEqual({
       status: "set",
@@ -166,7 +182,11 @@ describe("useful reactions: who may react", () => {
     const owner = await makeUser();
     const reactor = await makeVerifiedUser();
     const runId = await makeRun({ userId: owner });
-    const entryId = await makeEntry({ userId: owner, runId, isPublic: true });
+    const entryId = await makeEntry({
+      userId: owner,
+      runId,
+      audience: "runners",
+    });
     const before = nowSeconds();
 
     await setUsefulReaction(entryId, reactor, true);
@@ -184,7 +204,7 @@ describe("useful reactions: who may react", () => {
 async function publicEntry(): Promise<string> {
   const author = await makeUser();
   const runId = await makeRun({ userId: author });
-  return makeEntry({ userId: author, runId, isPublic: true });
+  return makeEntry({ userId: author, runId, audience: "runners" });
 }
 
 describe("useful reactions wait for a confirmed address (round 26 #11; seam 7)", () => {

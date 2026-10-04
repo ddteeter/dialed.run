@@ -15,6 +15,7 @@ import { storageStateFor } from "../support/accounts";
 import { cellsOf, hydrated, openBoard } from "../support/conformance";
 import { withLocalDb } from "../support/local-db";
 import { closetUserId } from "./closet-seed";
+import { entryAudienceColumns } from "../support/audience";
 
 /**
  * Round 26's closet frames — "Y Delete with runs", "F Photo failed" and
@@ -105,7 +106,7 @@ async function wear(
         userId,
         runId,
         verdict: index < options.dialed ? 0 : -1,
-        isPublic: false,
+        ...entryAudienceColumns("private"),
         createdAt: startedAt + index * 3600,
       });
       await core.insert(outfitEntryItems).values({ entryId, itemId });
