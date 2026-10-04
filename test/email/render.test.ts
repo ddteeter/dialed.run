@@ -364,12 +364,12 @@ describe("renderEmail", () => {
       "background-color:#f4f3ef;color:#0b0b0e;font-family:Archivo, Helvetica, Arial, sans-serif;margin:0;padding:24px 0",
       "max-width:480px;background-color:#ffffff;padding:24px",
       "font-size:14px;line-height:24px;font-family:&#x27;IBM Plex Mono&#x27;, Menlo, Consolas, monospace;margin:0 0 24px",
-      '<span style="color:#ff2d8a">[</span> dialed<span style="color:#7a7a70">.run</span> <span style="color:#ff2d8a">]</span>',
+      '<span style="color:#ff2d8a">[</span> dialed<span style="color:#6e6e64">.run</span> <span style="color:#ff2d8a">]</span>',
       "font-size:16px;line-height:24px;margin:0 0 24px",
       "background-color:#ff2d8a;border-radius:999px;color:#0b0b0e;font-size:16px;font-weight:600;padding:12px 24px",
       "font-size:14px;line-height:20px;color:#4e4e44;margin:24px 0 0",
       "border-color:#dcdbd2;margin:24px 0",
-      "font-size:12px;line-height:18px;color:#7a7a70;margin:0",
+      "font-size:12px;line-height:18px;color:#6e6e64;margin:0",
       'style="color:#4e4e44;text-decoration-line:none;text-decoration:underline"',
     ]) {
       expect(reminder.html, style).toContain(style);
@@ -395,7 +395,7 @@ describe("renderEmail", () => {
     // share FOOTER_STYLE, so a stray empty paragraph would show up as a
     // second copy of its inline style in the HTML.
     const footerStyle =
-      "font-size:12px;line-height:18px;color:#7a7a70;margin:0";
+      "font-size:12px;line-height:18px;color:#6e6e64;margin:0";
     expect(verify.html.split(footerStyle).length - 1, verify.html).toBe(1);
     // The reminder genuinely has a reason, so it carries two.
     expect(reminder.html.split(footerStyle).length - 1).toBe(2);

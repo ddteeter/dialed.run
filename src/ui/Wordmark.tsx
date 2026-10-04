@@ -25,7 +25,7 @@ export function Wordmark({
       {brackets ? <span className="text-cold-text">[</span> : undefined}
       <span>dialed</span>
       {/* T1's --muted. The brand board draws #8B8B93, which is the *dark*
-          column's muted; on paper the role resolves to #7A7A70 and keeps
+          column's muted; on paper the role resolves to #6E6E64 and keeps
           its contrast. CLAUDE.md §Design truth: the contract wins. */}
       <span className="text-muted">.run</span>
       {brackets ? <span className="text-cold-text">]</span> : undefined}

@@ -54,10 +54,11 @@
   --hairline: #dcdbd2;
   /* Empty verdict slots, empty coverage bands. */
   --hairline-2: #c9c8be;
-  /* Mono captions, secondary metadata. Decoration only: 3.90:1 on paper,
-   * so T1's own row says "never a control's only label on paper — that is
-   * --label". */
-  --muted: #7a7a70;
+  /* Mono captions, secondary metadata. Round 33 (imported with round 34)
+   * folds it into --label's #6E6E64, 4.64:1: the old #7A7A70 was 3.90:1
+   * and failed AA for the MONO captions round 31 gave it. The name stays
+   * so caption code keeps reading --muted. */
+  --muted: #6e6e64;
   /* Round 13. The grey a control's only label is written in: field
    * captions, radiogroup legends, inactive tab labels. 4.64:1 on ground,
    * which is what --muted could not do and what the Accessibility
@@ -65,8 +66,11 @@
   --label: #6e6e64;
   /* Secondary prose — and the warm-verdict grey, per §AB. */
   --quiet: #4e4e44;
-  /* Input placeholders and disabled labels. */
-  --placeholder: #9a9a90;
+  /* Input placeholders and disabled labels. Round 33 folds it into
+   * --label too: #9A9A90 was about 2.8:1, and axe does not check a
+   * placeholder. A value still reads apart from one, because a value is
+   * --ink. */
+  --placeholder: #6e6e64;
   /* Where a photo will be. Hatch is one step darker. */
   --photo: #e3e2d8;
   /* Dialed verdict, matched state. Teal as a *surface* stays --split-teal.
@@ -180,7 +184,9 @@
   --hairline-2: #3a3a42;
   --muted: #8b8b93;
   --quiet: #b9b8ae;
-  --placeholder: #6e6e74;
+  /* Round 33: T1's dark column folds this into --muted (#8B8B93), as it
+   * does --label; #6E6E74 was 3.7:1 on ink. */
+  --placeholder: var(--muted);
   /* T1's dark column folds --label into --muted, which already clears
    * (5.81:1 on ink). Written as the role rather than as #8B8B93 so the
    * fold is the code rather than a comment about it. */

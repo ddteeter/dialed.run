@@ -927,6 +927,193 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     own. **The ask:** draw the flagged-handle row, and say whether it
     should name why it is there (it reads as any classifier row today).
 
+46. **The onboarding close still says "you never type it" (round 34
+    import).** Round 34 qualified that claim on the marketing site, because
+    R2b lets a runner set conditions when the archive has no record for the
+    hour, and kept A1's "Never typed by hand." because it sits on a fetched
+    block. `V1 Screens.dc.html`'s onboarding close ("What happens as you
+    log", built as `onboarding/components/NowGoRun.tsx`) still reads
+    "Weather attaches itself from your GPS and the time — you never type
+    it." It sits on no fetched block, so the reasoning that kept A1's line
+    does not cover it. The build matches the board, which is authoritative
+    for a built screen, so nothing changes until design rules. **The ask:**
+    keep the line as written, or qualify it as M1 step 01 was ("fetched for
+    when and where you ran").
+
+47. **Two "was" values in T1's new notes are the new value (round 34
+    import, erratum).** Theme's Muted row says it "was #6E6E64 at 3.9:1"
+    and the Placeholder row says it "was #6E6E64 / #8B8B93, under 3:1 /
+    3.7:1". The old values were #7A7A70 (Muted, paper) and #9A9A90 /
+    #6E6E74 (Placeholder), as round 33's T1 and `design/docs/product.md`'s
+    "Round 33 · Contrast and lint fixes" both say. The board-wide
+    `#7A7A70 → #6E6E64` replacement looks to have reached the history in
+    the notes too. Nothing reads the notes column, so the port is
+    unaffected. **The ask:** correct the two notes.
+
+48. **M5's optional note: placement, label and hint (decision D-112).**
+    The owner gave M5 Au5's optional note. The marketing site built it to
+    match Au5: "Note · optional", the hint "Where you run, or who sent you.
+    One line.", 140 characters with a counter from 120. M5 draws one
+    field. **The ask:** draw the note on M5, or confirm Au5's placement.
+
+## Answered in round 34 (imported 2026-10-04)
+
+Design sent round 34 with `Theme.dc.html` as the primary file. It carries
+two things. **"Round 33 · Contrast and lint fixes"**, new to
+`design/docs/product.md` in this bundle although it is titled round 33,
+folds two greys into `--label` and rewrites one `tokens.js` lint rule.
+**"Round 34 · M4 copy review"** answers the marketing-site agent's Phase 1
+copy questions (`dialed.run-site`, D-105). No board was added and no
+screen's composition or words changed: apart from the Marketing Site's two
+copy lines, every board diff is the grey replacement below. No open-queue
+item is answered; the round raises two (items 46 and 47).
+
+Design changed 35 files:
+
+- `Theme.dc.html`: T1's Muted and Placeholder rows, and the board's own
+  greys.
+- `tokens.js`: the `no-raw-spacing` lint rule, and a new `LINT_FIXTURES`.
+- `Accessibility Contract.dc.html`: 02 · Contrast floors.
+- `Marketing Site.dc.html` and `- Dark`: M1 step 01 and the weather FAQ.
+- `Round 21 Rulings.dc.html`: #6's `.run` value now names `#6E6E64`.
+- `design/docs/product.md`: anonymous totals' Scope line, "Round 33 ·
+  Contrast and lint fixes" and "Round 34 · M4 copy review".
+- Every other board (Auth, Brand Brief, Call Epic, Desktop and Form
+  contracts, Feed, Flow Map, Icon Pack, Logo Directions, Motion Doctrine,
+  Onboarding, Operator, Product, Remaining and V1 Screens, both themes,
+  Round 22 Coverage and Round 25–32 Rulings): `#7A7A70` and `#9A9A90` become `#6E6E64`
+  on paper, and `#6E6E74` becomes `#8B8B93` on dark. A script that applies
+  those three replacements to round 33's files and diffs the result
+  against round 34's finds no other change in any of them.
+
+### The contracts
+
+1. **Theme, T1. Code port required (R-133).** `--muted` on paper goes from
+   `#7A7A70` (3.9:1, which failed AA for the MONO captions round 31 gave
+   it) to `#6E6E64`, the same as `--label`; dark stays `#8B8B93`. The
+   name stays, so caption code keeps reading `--muted`. `--placeholder`
+   goes from `#9A9A90` / `#6E6E74` to `#6E6E64` / `#8B8B93`, also
+   `--label`'s values ("axe doesn't check placeholders"). A value still
+   reads apart from a placeholder because a value is `--ink`, and disabled
+   labels take the same grey. T1 gains and loses no roles; two now share
+   `--label`'s values in both columns. The notes column records the old
+   values wrongly (item 47).
+
+   **This import fails `test/ui/contrast.dom.test.tsx` until R-133
+   lands.** That test reads T1 from `design/Theme.dc.html` and pins
+   `src/ui/tokens.css` to it. Measured against the imported files, three
+   cases fail: `--muted` light (`#7a7a70`, expected `#6e6e64`), and
+   `--placeholder` light (`#9a9a90`) and dark (`#6e6e74`, expected
+   `#8b8b93`). `test/ui/tokens.dom.test.tsx` passes unchanged. The port is
+   `tokens.css`' two light values and the ink block's `--placeholder`
+   (which can read `var(--muted)`, as `--label` already does), then
+   `email/palette.ts`'s `muted`, which `test/email/palette.dom.test.tsx`
+   pins to `tokens.css`, and the three `#7a7a70` strings in
+   `test/email/render.test.ts`. `ops/og/palette.ts` is drawn on ink and
+   its `#8b8b93` is unchanged.
+
+   **A side effect on e2e conformance.** `e2e/support/conformance.ts` maps
+   a hex back to a T1 role, and the last row for a hex wins. `#6E6E64` and
+   `#8B8B93` now belong to three rows each, so a caption, a label and a
+   placeholder all report as `--placeholder`. Comparisons stay correct,
+   because the board and the app go through the same map, but a diff can
+   no longer tell `--muted` from `--label`. No conformance spec asserts a
+   grey by name: the colour checks in `a1-upload`, `a2-attach`,
+   `a3-verdict`, `r-run` and `auth-parts` read fills and borders. Text
+   signatures carry no colour, and no app board's text changed, so no
+   conformance spec should move.
+
+2. **`tokens.js`. No code change.** `LINT`'s `no-raw-spacing` now checks
+   the whole value: shorthands (`0 20px`), mixed values (`var(--space-4)
+20px`), negatives, longhands, camelCase JSX properties and unitless JSX
+   numbers. It no longer misreads `border-top: 1px` as `top:`.
+   `LINT_FIXTURES` gives the cases a plugin's test must reject and pass.
+   The app ports `LINT`'s intent, not its CSS patterns (proposal 113), and
+   that port is R-76, still waiting on the owner because `eslint.config.js`
+   is a forbidden zone. When R-76 lands, two places write raw spacing on
+   purpose and need an exemption: `email/EmailLayout.tsx`, because an
+   email client reads no custom property, and `ops/og/cards.tsx`, because
+   Satori lays out from inline numbers. The app's `@theme` port reads no
+   `LINT`.
+3. **Accessibility Contract, 02 · Contrast floors.** It restates T1:
+   `#6E6E64` is the lightest grey that carries text on paper, and lighter
+   greys are hairlines only. No separate code change beyond R-133.
+4. **Form and Desktop contracts.** Only the grey replacement. The Form
+   Contract's placeholders become `#6E6E64`, which is R-133's
+   `--placeholder`.
+5. **`motion.js`, `icons.js`.** Unchanged. `Motion Doctrine.dc.html` and
+   `Icon Pack.dc.html` changed only their greys, and the icon manifest
+   needs nothing.
+
+`test/architecture/annotations-are-not-copy.test.ts` reads every board's
+annotations. No annotation markup changed in this round, only colours and
+two marketing lines, so it should pass unchanged; CI runs it with the rest
+of the worker suite.
+
+### Built screens
+
+Every built screen that wears `--muted` or `--placeholder` on paper changes
+colour with R-133, since the boards for all of them now draw `#6E6E64`.
+That is one token port, not a per-screen gap. No board for a built screen
+changed composition, words or states.
+
+One sentence on a built screen is now inconsistent with the round's own
+reasoning: the onboarding close still says "you never type it" (item 46).
+The build matches the board, so it waits for design.
+
+### Round 34 · M4 copy review: marketing site only
+
+Each of these is for `dialed.run-site`, and none needs app work:
+
+- **a · Weather.** M1 step 01 now reads "From Strava or a file. Weather
+  comes with it, fetched for when and where you ran." The FAQ answer to
+  "Where does the weather come from?" now reads "Visual Crossing, for the
+  time and place your run started. If there's no record for that hour,
+  you set it yourself, and that run stays out of the guides." Brand
+  principle 02 stands, because those runs never reach the totals. In-app
+  A1's "Never typed by hand." is unchanged, because it sits on a fetched
+  block.
+- **1 · The loop** (TYPE.lead) is rewritten: "Log the run from Strava or a
+  file, and the weather comes with it, fetched for when and where you ran.
+  Then say how it went, from way cold to way warm, and which piece was off
+  if one was. That takes ten seconds, and every run you log adds to your
+  record."
+- **2 · The call** is confirmed as written.
+- **3 · #totals** (TYPE.body, bold lead-ins, second person) gives three
+  paragraphs: _What's counted_, _When a figure shows_ and _Who counts_.
+  They state D-108's A, B and C in public words.
+- **b · Region.** Keep the region line. It is disclosure, not a feature
+  claim: D-108 A says the job reads region, so the page says so before
+  region slices ship.
+- **c · No shared-only fallback copy.** Before public launch Phase 1 is
+  Home and Invite only, so M4, the FAQ and #totals publish with the app.
+  If launch goes shared-only, M4 waits for a copy pass then.
+- **d · "Brand and model"** in public copy; "catalogue" stays internal.
+
+### Against the owner's decisions
+
+Nothing contradicts a recorded decision, so no `docs/decisions.md` row
+changes.
+
+- **D-108 C** excludes "manual-temperature runs". Product's Scope line now
+  says "runs whose conditions the runner set in R2b (SET BY YOU)", and
+  notes the old word named the form round 22 removed. In the build these
+  are the same runs: an R2b band is a `manual_conditions` row, the only
+  manual weather there is (`db/schema-weather.ts`). This restates D-108;
+  it does not change it.
+- **D-108 A and B** are what #totals says, in public words: feels-like,
+  sky, month, type, brand and model, verdict and region; never name,
+  handle, notes, photos, start location or time of day; 5 runners, or 20
+  for a brand. D-108 makes the Terms and Privacy wording the owner's legal
+  text. #totals is marketing copy, not that text, but it describes the
+  same rule, so the owner may want it read beside the privacy policy
+  before M4 publishes.
+- **D-24 and CLAUDE.md** ("Weather is never typed by a human as the
+  default path"). The qualified marketing copy agrees with both, and is
+  more exact than "You never type it" was.
+- **D-105** puts the site in its own repo; every copy item above is that
+  repo's.
+
 ## Answered in round 33 (imported 2026-10-03)
 
 Design sent round 33 at 23:14. It adds one board, `Day 2 Groups.dc.html`,

@@ -43,7 +43,9 @@ async function failureFrom(text: string): Promise<RunParseError> {
  * be read.
  */
 function sentenceFor(reason: string): string {
-  return /no Lap element|lap missing positive/u.test(reason)
+  return /no Lap element|tcx: lap \d+ of \d+ has no|lap\(s\) sum to zero/u.test(
+    reason,
+  )
     ? NO_TRACK_MESSAGE
     : PARSE_FAILURE_MESSAGE;
 }
@@ -124,13 +126,151 @@ describe("tcx: a well-formed lap", () => {
     expect(draft.lat).toBeCloseTo(45.5, 6);
     expect(draft.lng).toBeCloseTo(-93.5, 6);
   });
+});
 
-  it("takes only the first lap of the first activity", async () => {
-    // v1 imports one run. A second lap or a second activity is a longer
-    // file, not a second run.
+describe("tcx: a run of many laps", () => {
+  // A Garmin export writes one <Lap> per auto-lap — often each mile — so a
+  // run is the sum of its laps. Reading the first alone imported a 6-mile
+  // run as its first mile (R-130).
+  const LATER = "2026-01-15T07:10:00Z";
+
+  it("sums every lap's totals and starts when the first lap did", async () => {
     const draft = await parse(
-      tcxWith(lap(OUTDOOR_LAP) + lap({ ...OUTDOOR_LAP, metres: 99_999 })),
+      tcxWith(
+        lap(OUTDOOR_LAP) +
+          lap({ startTime: LATER, seconds: 600, metres: 1609 }) +
+          lap({ startTime: "2026-01-15T07:20:00Z", seconds: 300, metres: 800 }),
+      ),
     );
+
+    expect(draft.startedAt).toBe(Math.floor(Date.parse(START) / 1000));
+    expect(draft.durationS).toBe(1800 + 600 + 300);
+    expect(draft.distanceM).toBe(5000 + 1609 + 800);
+  });
+
+  it("rounds the summed duration once, not each lap", async () => {
+    // 3 × 600.4 = 1801.2. Rounding each lap first would lose 1.2 seconds.
+    const third = lap({ startTime: LATER, seconds: "600.4", metres: 1000 });
+    const draft = await parse(tcxWith(third + third + third));
+    expect(draft.durationS).toBe(1801);
+  });
+
+  it("needs a start time on the first lap only", async () => {
+    const draft = await parse(
+      tcxWith(lap(OUTDOOR_LAP) + lap({ seconds: 600, metres: 1609 })),
+    );
+    expect(draft.startedAt).toBe(Math.floor(Date.parse(START) / 1000));
+    expect(draft.durationS).toBe(2400);
+
+    // A later lap's start time does not stand in for a missing first one.
+    const unstarted = tcxWith(
+      lap({ seconds: 600, metres: 1609 }) + lap(OUTDOOR_LAP),
+    );
+    expect(await reasonFor(unstarted)).toBe(
+      "tcx: lap 1 of 2 has no readable StartTime",
+    );
+  });
+
+  it("counts a lap with a zero total as adding nothing", async () => {
+    // A lap button pressed twice, or a lap spent stood at a crossing, is
+    // a real lap with nothing in it; it does not make the file unreadable.
+    const draft = await parse(
+      tcxWith(
+        lap(OUTDOOR_LAP) +
+          lap({ startTime: LATER, seconds: 45, metres: 0 }) +
+          lap({ startTime: LATER, seconds: 0, metres: 0 }),
+      ),
+    );
+    expect(draft.durationS).toBe(1845);
+    expect(draft.distanceM).toBe(5000);
+
+    // Unless every lap is empty: then there is no run in the file at all.
+    const empty = tcxWith(
+      lap({ ...OUTDOOR_LAP, metres: 0 }) +
+        lap({ startTime: LATER, seconds: 45, metres: 0 }),
+    );
+    expect(await reasonFor(empty)).toBe(
+      "tcx: 2 lap(s) sum to zero TotalTimeSeconds or DistanceMeters",
+    );
+  });
+
+  it("refuses the file when any lap has no usable total, rather than shortening the run", async () => {
+    // Skipping the bad lap would import a run shorter than the one that
+    // happened, and nobody would know. The file is refused, as a single
+    // lap without totals always was.
+    const broken = [
+      lap({ startTime: LATER, metres: 1609 }),
+      lap({ startTime: LATER, seconds: 600 }),
+      lap({ startTime: LATER, seconds: -60, metres: 1609 }),
+      lap({ startTime: LATER, seconds: 600, metres: -1 }),
+      lap({ startTime: LATER, seconds: "soon", metres: 1609 }),
+      "<Lap/>",
+    ];
+
+    for (const bad of broken) {
+      const document = tcxWith(lap(OUTDOOR_LAP) + bad);
+      expect(await reasonFor(document), bad).toBe(
+        "tcx: lap 2 of 2 has no usable TotalTimeSeconds/DistanceMeters",
+      );
+    }
+  });
+
+  it("names the first bad lap, and how many laps there were", async () => {
+    // The reason is a maintainer's only clue to which part of a long file
+    // was wrong (RunParseError's doc), so it counts from one, as a watch
+    // numbers its laps.
+    const mile = lap({ startTime: LATER, seconds: 480, metres: 1609.34 });
+    const bad = lap({ startTime: LATER, seconds: 480 });
+    const sixLaps = tcxWith(
+      [lap(OUTDOOR_LAP), mile, bad, mile, bad, mile].join(""),
+    );
+
+    expect(await reasonFor(sixLaps)).toBe(
+      "tcx: lap 3 of 6 has no usable TotalTimeSeconds/DistanceMeters",
+    );
+    const firstBad = tcxWith(lap({ startTime: START, seconds: 480 }) + mile);
+    expect(await reasonFor(firstBad)).toBe(
+      "tcx: lap 1 of 2 has no usable TotalTimeSeconds/DistanceMeters",
+    );
+  });
+
+  it("takes the first fix in any lap, not just the first", async () => {
+    // A watch can still be acquiring through the whole of a short first
+    // lap; that does not make the run indoor.
+    const emptyTrack = `<Track>${trackpoint()}</Track>`;
+    const withFixTrack = `<Track>${trackpoint(45.5, -93.5)}</Track>`;
+    const draft = await parse(
+      tcxWith(
+        lap({
+          startTime: START,
+          seconds: 300,
+          metres: 800,
+          track: emptyTrack,
+        }) +
+          lap({
+            startTime: LATER,
+            seconds: 600,
+            metres: 1609,
+            track: withFixTrack,
+          }) +
+          lap(OUTDOOR_LAP),
+      ),
+    );
+
+    expect(draft.indoor).toBe(false);
+    expect(draft.lat).toBeCloseTo(45.5, 6);
+    expect(draft.lng).toBeCloseTo(-93.5, 6);
+  });
+
+  it("reads only the first activity", async () => {
+    // v1 imports one run. A second activity in the same file is out of
+    // scope, not more laps of the first.
+    const draft = await parse(`<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase><Activities>
+<Activity Sport="Running">${lap(OUTDOOR_LAP)}</Activity>
+<Activity Sport="Running">${lap({ ...OUTDOOR_LAP, metres: 99_999 })}${lap(OUTDOOR_LAP)}</Activity>
+</Activities></TrainingCenterDatabase>`);
+    expect(draft.durationS).toBe(1800);
     expect(draft.distanceM).toBe(5000);
   });
 });
@@ -196,8 +336,11 @@ describe("tcx: every way it refuses", () => {
     const documents = [
       '<?xml version="1.0"?><other/>',
       '<?xml version="1.0"?><TrainingCenterDatabase/>',
+      // A Garmin course file: the record root, and no Activities at all.
+      '<?xml version="1.0"?><TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"><Courses/></TrainingCenterDatabase>',
       '<?xml version="1.0"?><TrainingCenterDatabase><Activities/></TrainingCenterDatabase>',
       '<?xml version="1.0"?><TrainingCenterDatabase><Activities><Activity/></Activities></TrainingCenterDatabase>',
+      '<?xml version="1.0"?><TrainingCenterDatabase><Activities><Activity><Lap/></Activity></Activities></TrainingCenterDatabase>',
       '<?xml version="1.0"?><TrainingCenterDatabase>text</TrainingCenterDatabase>',
       '<?xml version="1.0"?><TrainingCenterDatabase><Activities>text</Activities></TrainingCenterDatabase>',
     ];
@@ -207,22 +350,24 @@ describe("tcx: every way it refuses", () => {
     }
   });
 
-  it("says when the lap has no usable totals", async () => {
-    const missing = [
-      lap({ seconds: 1800, metres: 5000 }),
-      lap({ startTime: START, metres: 5000 }),
-      lap({ startTime: START, seconds: 1800 }),
-      lap({ startTime: START, seconds: 0, metres: 5000 }),
-      lap({ startTime: START, seconds: 1800, metres: 0 }),
-      lap({ startTime: START, seconds: -60, metres: 5000 }),
-      lap({ startTime: "not a date", seconds: 1800, metres: 5000 }),
-      lap({ startTime: START, seconds: "soon", metres: 5000 }),
+  it("says when the lap has no start or no usable totals", async () => {
+    const noStart = "tcx: lap 1 of 1 has no readable StartTime";
+    const noTotal =
+      "tcx: lap 1 of 1 has no usable TotalTimeSeconds/DistanceMeters";
+    const zero = "tcx: 1 lap(s) sum to zero TotalTimeSeconds or DistanceMeters";
+    const cases: [string, string][] = [
+      [lap({ seconds: 1800, metres: 5000 }), noStart],
+      [lap({ startTime: "not a date", seconds: 1800, metres: 5000 }), noStart],
+      [lap({ startTime: START, metres: 5000 }), noTotal],
+      [lap({ startTime: START, seconds: 1800 }), noTotal],
+      [lap({ startTime: START, seconds: -60, metres: 5000 }), noTotal],
+      [lap({ startTime: START, seconds: "soon", metres: 5000 }), noTotal],
+      [lap({ startTime: START, seconds: 0, metres: 5000 }), zero],
+      [lap({ startTime: START, seconds: 1800, metres: 0 }), zero],
     ];
 
-    for (const body of missing) {
-      expect(await reasonFor(tcxWith(body)), body).toContain(
-        "missing positive TotalTimeSeconds/DistanceMeters",
-      );
+    for (const [body, reason] of cases) {
+      expect(await reasonFor(tcxWith(body)), body).toBe(reason);
     }
   });
 
