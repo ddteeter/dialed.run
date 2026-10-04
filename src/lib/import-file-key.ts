@@ -5,7 +5,9 @@
  * In `lib/` for the reason `garment-photo-key.ts` is: three places spell
  * the prefix and none may import the others. `runs` writes the files, the
  * outbox's `import_file_delete` kind (lib) refuses a key outside the
- * runner's own prefix, and `account`'s data export lists it.
+ * runner's own prefix, and `account`'s data export and purge list it.
+ * Since D-110 nothing expires these files: a run's goes when the run is
+ * deleted, and every one of a runner's goes with their account.
  */
 
 /**

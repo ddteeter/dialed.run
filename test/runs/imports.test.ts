@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { imports, outfitEntries, runs } from "../../src/db/schema-core";
 import { env } from "../../src/env";
@@ -364,5 +364,63 @@ describe("startImport: the rules, in the words the user reads", () => {
     expect(row?.createdAt).toBeGreaterThanOrEqual(before - 5);
     expect(row?.createdAt).toBeLessThanOrEqual(before + 5);
     expect(queue.sent).toStrictEqual([{ type: "import", importId }]);
+  });
+});
+
+/**
+A database whose insert fails, as D1 being down would fail it.
+*/
+function failingInsert() {
+  const db = coreDb();
+  vi.spyOn(db, "insert").mockImplementation(() => {
+    throw new Error("D1 is down");
+  });
+  return db;
+}
+
+async function storedFor(userId: string): Promise<string[]> {
+  const listed = await env.IMPORTS.list({ prefix: `imports/${userId}/` });
+  return listed.objects.map((object) => object.key);
+}
+
+describe("startImport: an upload whose row could not be written (D-110)", () => {
+  const bytes = new TextEncoder().encode("<gpx/>").buffer;
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("takes its file back out of R2, since no bucket rule will", async () => {
+    const userId = newUlid();
+    const queue = fakeQueue();
+
+    await expect(
+      startImport(failingInsert(), env.IMPORTS, queue, {
+        userId,
+        filename: "run.gpx",
+        bytes,
+      }),
+    ).rejects.toThrow("D1 is down");
+
+    expect(await storedFor(userId)).toStrictEqual([]);
+    expect(queue.sent).toStrictEqual([]);
+  });
+
+  it("still fails with the insert's error when the delete fails too", async () => {
+    const userId = newUlid();
+    vi.spyOn(env.IMPORTS, "delete").mockRejectedValueOnce(
+      new Error("R2 is down"),
+    );
+
+    await expect(
+      startImport(failingInsert(), env.IMPORTS, fakeQueue(), {
+        userId,
+        filename: "run.gpx",
+        bytes,
+      }),
+    ).rejects.toThrow("D1 is down");
+
+    // Left for account deletion's purge, which lists the whole prefix.
+    expect(await storedFor(userId)).toHaveLength(1);
   });
 });

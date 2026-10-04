@@ -103,7 +103,8 @@ visibility), a product link if you paste one, and a photo if you take one.
 - **Imported files (GPX, FIT, TCX, up to 25 MB):** we store the file, read
   the start time, duration, distance and **the first GPS point** from it, and
   save those to the run. The run keeps only that start point, not the route.
-  The file itself sits in separate storage set to delete it after 30 days.
+  The file itself sits in separate storage, kept until you delete the run
+  or your account. [OWNER: review]
   [OWNER: this is a lifecycle rule in the Cloudflare dashboard, not in code.
   Confirm it is set on the `dialed-imports` bucket before this sentence goes
   live.]
@@ -289,19 +290,22 @@ it.]
 No advertising or analytics cookies. No third-party scripts; our fonts and
 the face-blur model are served from our own site.
 
+dialed.run (the marketing site) counts page views with GoatCounter, which
+sets no cookies and keeps no personal data. [OWNER: review]
+
 ## How long we keep it
 
-| What                                                                                            | How long                                                                        |
-| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Imported run files                                                                              | 30 days [OWNER: confirm the bucket rule is set]                                 |
-| Session records                                                                                 | Expire after 7 days. [OWNER: expired rows are not swept today; decide a period] |
-| Strava refresh token                                                                            | Until you disconnect, then until Strava confirms revocation                     |
-| Garments you delete (never used in a kit)                                                       | The record is deleted; the photo files are not. [OWNER: launch gap]             |
-| Garments used in a kit                                                                          | Kept, marked retired, so old kits still make sense                              |
-| Everything else: account, profile, runs, kits, photos, follows, reports, notifications, weather | [OWNER: not built. There is no deletion. Decide a period, or build deletion]    |
-| Server logs                                                                                     | [OWNER: Cloudflare Workers Logs retention for your plan]                        |
-| Error reports                                                                                   | [OWNER: Sentry retention for your plan]                                         |
-| Product pages we fetched                                                                        | Kept, to re-read later. Not personal data                                       |
+| What                                                                                            | How long                                                                                         |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Imported run files                                                                              | Until you delete the run or your account [OWNER: review] [OWNER: confirm the bucket rule is set] |
+| Session records                                                                                 | Expire after 7 days. [OWNER: expired rows are not swept today; decide a period]                  |
+| Strava refresh token                                                                            | Until you disconnect, then until Strava confirms revocation                                      |
+| Garments you delete (never used in a kit)                                                       | The record is deleted; the photo files are not. [OWNER: launch gap]                              |
+| Garments used in a kit                                                                          | Kept, marked retired, so old kits still make sense                                               |
+| Everything else: account, profile, runs, kits, photos, follows, reports, notifications, weather | [OWNER: not built. There is no deletion. Decide a period, or build deletion]                     |
+| Server logs                                                                                     | [OWNER: Cloudflare Workers Logs retention for your plan]                                         |
+| Error reports                                                                                   | [OWNER: Sentry retention for your plan]                                                          |
+| Product pages we fetched                                                                        | Kept, to re-read later. Not personal data                                                        |
 
 ## Your choices
 

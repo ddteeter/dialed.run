@@ -45,14 +45,14 @@ before publishing.
 
 ## Runs
 
-| Claim                                               | Source                                                                                                                                                |
-| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Manual run fields                                   | `schema-core.ts` `runs`                                                                                                                               |
-| GPX/FIT/TCX, 25 MB cap                              | `src/modules/runs/parsers/` (`gpx.ts`, `fit.ts`, `tcx.ts`); `src/modules/runs/upload-limits.ts` `MAX_IMPORT_BYTES`                                    |
-| File stored in its own bucket                       | `src/modules/runs/imports.ts` (`imports/{userId}/{importId}.{ext}` into `IMPORTS`); `wrangler.jsonc` `r2_buckets` `IMPORTS` → `dialed-imports`        |
-| Only the first GPS point kept                       | `parsers/gpx.ts` (`lat: first.lat, lng: first.lon`); `runs` has one `lat`/`lng` pair and no track column                                              |
-| 30-day file deletion                                | **Config outside the repo.** `wrangler.jsonc` comment: "IMPORTS: 30-day object lifecycle rule — set in the Cloudflare dashboard". Owner must confirm. |
-| Manual temperature excluded from conditions numbers | `src/db/schema-weather.ts` `manualConditions` (separate table); `src/modules/feed/conditions.ts` (`ne(source, "manual")`); `docs/decisions.md` D-24   |
+| Claim                                               | Source                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Manual run fields                                   | `schema-core.ts` `runs`                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| GPX/FIT/TCX, 25 MB cap                              | `src/modules/runs/parsers/` (`gpx.ts`, `fit.ts`, `tcx.ts`); `src/modules/runs/upload-limits.ts` `MAX_IMPORT_BYTES`                                                                                                                                                                                                                                                                                                                                                                               |
+| File stored in its own bucket                       | `src/modules/runs/imports.ts` (`imports/{userId}/{importId}.{ext}` into `IMPORTS`); `wrangler.jsonc` `r2_buckets` `IMPORTS` → `dialed-imports`                                                                                                                                                                                                                                                                                                                                                   |
+| Only the first GPS point kept                       | `parsers/gpx.ts` (`lat: first.lat, lng: first.lon`); `runs` has one `lat`/`lng` pair and no track column                                                                                                                                                                                                                                                                                                                                                                                         |
+| File kept until the run or account is deleted       | D-110 (R-131). A run's delete owes its file: `src/modules/feed/retract.ts` `deleteRuns` (outbox `import_file_delete`, drained by `src/modules/ops/outbox.ts`). Account deletion lists `imports/{userId}/`: `src/modules/account/purge.ts` `deleteStoredFiles`. No lifecycle rule on `imports/`: `wrangler.jsonc` comment "IMPORTS: run files under imports/ have no expiry since D-110"; the owner removes the old whole-bucket 30-day rule in the dashboard (`docs/launch/deployment-plan.md`). |
+| Manual temperature excluded from conditions numbers | `src/db/schema-weather.ts` `manualConditions` (separate table); `src/modules/feed/conditions.ts` (`ne(source, "manual")`); `docs/decisions.md` D-24                                                                                                                                                                                                                                                                                                                                              |
 
 ## Kits
 
@@ -159,12 +159,13 @@ whatever product URL a runner pastes.
 
 ## Cookies and storage
 
-| Claim                       | Source                                                                                                                                   |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Session cookie, 7 days      | `better-auth/dist/cookies/index.mjs` (`session_token`, default `maxAge` 7 days); `src/modules/auth/instance.ts` (`tanstackStartCookies`) |
-| Short-lived sign-in cookies | `better-auth/dist/state.mjs` (`state` 300 s / `oauth_state` 600 s)                                                                       |
-| Strava state cookie         | `runs/functions.ts` `STRAVA_STATE_COOKIE`                                                                                                |
-| One localStorage key        | `safety/blur/preference.ts`; a search for `localStorage`, `sessionStorage` and `document.cookie` in `src/` finds nothing else            |
+| Claim                       | Source                                                                                                                                                             |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Session cookie, 7 days      | `better-auth/dist/cookies/index.mjs` (`session_token`, default `maxAge` 7 days); `src/modules/auth/instance.ts` (`tanstackStartCookies`)                           |
+| Short-lived sign-in cookies | `better-auth/dist/state.mjs` (`state` 300 s / `oauth_state` 600 s)                                                                                                 |
+| Strava state cookie         | `runs/functions.ts` `STRAVA_STATE_COOKIE`                                                                                                                          |
+| One localStorage key        | `safety/blur/preference.ts`; a search for `localStorage`, `sessionStorage` and `document.cookie` in `src/` finds nothing else                                      |
+| GoatCounter on dialed.run   | **Not in this repo**: the marketing site (`dialed.run-site`). The sentence is the owner's, approved 2026-10-04 with R-131. The app itself still loads no analytics |
 
 ## Retention
 

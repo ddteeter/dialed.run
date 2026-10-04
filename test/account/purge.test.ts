@@ -89,7 +89,7 @@ function depsAt(now: number, failFor: readonly string[] = []): Recorded {
         }
         return Promise.resolve();
       },
-      exportBucket: env.IMPORTS,
+      importsBucket: env.IMPORTS,
       report: (error, context) => {
         reported.push({ error, context });
       },
@@ -112,7 +112,10 @@ interface Seeded {
   readonly entryId: string;
   readonly garmentIds: readonly string[];
   readonly screeningIds: readonly string[];
-  readonly looseUploadKey: string;
+  /**
+  Every run file of theirs in `IMPORTS`, named by a row or not.
+  */
+  readonly uploadKeys: readonly string[];
 }
 
 /**
@@ -133,6 +136,9 @@ async function seedAccount(): Promise<Seeded> {
   const screeningIds = [newUlid(), newUlid()];
   const looseUploadKey = `imports/${userId}/${newUlid()}.gpx`;
   const runUploadKey = `imports/${userId}/${newUlid()}.fit`;
+  // An upload whose row was never written: `startImport` puts the file
+  // first, and since D-110 no bucket rule expires it.
+  const unnamedUploadKey = `imports/${userId}/${newUlid()}.tcx`;
   const redeemedAs = firstAddress(email);
   await core.batch([
     core.insert(user).values({
@@ -364,7 +370,8 @@ async function seedAccount(): Promise<Seeded> {
   ]) {
     await env.MEDIA.put(key, "bytes");
   }
-  for (const key of [looseUploadKey, runUploadKey]) {
+  const uploadKeys = [looseUploadKey, runUploadKey, unnamedUploadKey];
+  for (const key of uploadKeys) {
     await env.IMPORTS.put(key, "bytes");
   }
   // The terms they accepted (ACC-6), two versions of them.
@@ -400,7 +407,7 @@ async function seedAccount(): Promise<Seeded> {
     entryId,
     garmentIds,
     screeningIds,
-    looseUploadKey,
+    uploadKeys,
   };
 }
 
@@ -860,25 +867,25 @@ describe("purgeDueAccounts — a full purge", () => {
       .where(eq(emailSendLimits.key, `access:1.2.3.4-${runner.userId}`));
     expect(access).toHaveLength(1);
 
-    // What R2 is owed: each garment's photos and the upload that never
-    // became a run. The entries' prefix and the run's upload were settled
-    // by feed's fast path.
+    // What R2 is owed: each garment's photos. The entries' prefix and the
+    // run's upload were settled by feed's fast path, and every other run
+    // file (D-110) by the purge's own listing — the upload that never
+    // became a run and the one no row ever named alike — before any drain.
     const owed = await core
       .select({ kind: outbox.kind, dedupeKey: outbox.dedupeKey })
       .from(outbox)
       .where(like(outbox.dedupeKey, `${runner.userId}:%`));
     expect(owed.toSorted(byKey)).toStrictEqual(
-      [
-        ...runner.garmentIds.map((itemId) => ({
+      runner.garmentIds
+        .map((itemId) => ({
           kind: "photo_delete",
           dedupeKey: `${runner.userId}:${itemId}`,
-        })),
-        {
-          kind: "import_file_delete",
-          dedupeKey: `${runner.userId}:${runner.looseUploadKey}`,
-        },
-      ].toSorted(byKey),
+        }))
+        .toSorted(byKey),
     );
+    for (const key of runner.uploadKeys) {
+      expect(await env.IMPORTS.head(key)).toBeNull();
+    }
     const otherOwes = await core
       .select({ id: outbox.id })
       .from(outbox)
@@ -888,7 +895,7 @@ describe("purgeDueAccounts — a full purge", () => {
     // And once those are paid, R2 holds nothing of theirs — and all of
     // the other runner's.
     const otherObjects = await r2Keys(other.userId);
-    expect(otherObjects).toHaveLength(7);
+    expect(otherObjects).toHaveLength(8);
     expect(await r2Left(runner.userId)).toStrictEqual([]);
     expect(await r2Keys(other.userId)).toStrictEqual(otherObjects);
     // The codes that named them are kept, labelled by nothing.
@@ -1086,6 +1093,56 @@ describe("purgeDueAccounts — a purge that stops part way", () => {
     expect(next.reported).toStrictEqual([]);
     expect(nextAnomalies).toStrictEqual([]);
     expect(await footprint(runner)).toStrictEqual(GONE);
+  });
+});
+
+describe("purgeDueAccounts — a purge that stops deleting the runner's files", () => {
+  it("keeps the claim and the files it could not reach, and the next firing deletes them", async () => {
+    const runner = await seedAccount();
+    await claim(runner.userId, NOW - 1);
+    // The purge's listing deletes a page at a time, as a list of keys;
+    // feed's fast path deletes one key, a string, and is left alone.
+    const remove = env.IMPORTS.delete.bind(env.IMPORTS);
+    let hasFailed = false;
+    vi.spyOn(env.IMPORTS, "delete").mockImplementation((keys) => {
+      if (!hasFailed && Array.isArray(keys)) {
+        hasFailed = true;
+        return Promise.reject(new Error("R2 is down"));
+      }
+      return remove(keys);
+    });
+    const first = depsAt(NOW);
+    const anomalies: string[] = [];
+
+    await purgeDueAccounts(anomalies, first.deps);
+    vi.restoreAllMocks();
+
+    expect(first.reported).toStrictEqual([
+      {
+        error: new Error("R2 is down"),
+        context: { surface: "account-purge", userId: runner.userId },
+      },
+    ]);
+    expect(anomalies).toStrictEqual([
+      "1 account deletion(s) stopped part way and are finished on the next firing",
+    ]);
+    const stopped = await footprint(runner);
+    expect(stopped.imports).toStrictEqual([]);
+    expect(stopped.claim).toHaveLength(1);
+    const [looseUpload, runUpload, unnamedUpload] = runner.uploadKeys;
+    // The run's file went with its run, on feed's fast path; the other
+    // two wait for the listing.
+    expect(await env.IMPORTS.head(runUpload ?? "")).toBeNull();
+    expect(await env.IMPORTS.head(looseUpload ?? "")).not.toBeNull();
+    expect(await env.IMPORTS.head(unnamedUpload ?? "")).not.toBeNull();
+
+    await purgeDueAccounts([], depsAt(NOW + PURGE_LEASE_S + 1).deps);
+
+    expect(await footprint(runner)).toStrictEqual(GONE);
+    const left = await env.IMPORTS.list({
+      prefix: `imports/${runner.userId}/`,
+    });
+    expect(left.objects).toStrictEqual([]);
   });
 });
 

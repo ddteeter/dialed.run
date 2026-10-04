@@ -55,7 +55,9 @@
   // lives.
   //
   // MEDIA: no expiry.
-  // IMPORTS: 30-day object lifecycle rule — set in the Cloudflare
+  // IMPORTS: run files under imports/ have no expiry since D-110; the
+  // deletion paths remove them with their run or account. One lifecycle
+  // rule, prefix exports/, 8 days (D-85) — set in the Cloudflare
   // dashboard, since wrangler does not manage R2 lifecycle policy.
   "r2_buckets": [
     {
