@@ -49,7 +49,7 @@ async function keep(
     );
   await db.batch([
     cleared,
-    reviewResolution(db, queueId, reviewerId, "approve"),
+    reviewResolution(db, queueId, reviewerId, "approved"),
   ]);
   return "resolved";
 }
@@ -76,7 +76,7 @@ async function rename(
       actorId: input.reviewerId,
       reason: input.nameReason,
     }),
-    also: [reviewResolution(db, input.queueId, input.reviewerId, "remove")],
+    also: [reviewResolution(db, input.queueId, input.reviewerId, "removed")],
   });
   return RENAMED[renamed.kind];
 }

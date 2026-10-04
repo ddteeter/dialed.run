@@ -540,7 +540,12 @@ export async function resolveReview(
   // that could not happen, and an unreachable throw is a branch no test
   // can reach.
   const writes = [
-    reviewResolution(db(), queueId, reviewerId, decision),
+    reviewResolution(
+      db(),
+      queueId,
+      reviewerId,
+      decision === "approve" ? "approved" : "removed",
+    ),
     ...subjectWritesFor(row.subjectType, row.subjectId, decision),
   ] as const;
 
@@ -549,7 +554,7 @@ export async function resolveReview(
 }
 
 /**
- * The queue row settled by a decision, as a statement for the caller's
+ * The queue row settled as `status`, as a statement for the caller's
  * batch — `resolveReview`'s own, and account's for a flagged handle's
  * Keep or Rename (D-97), whose subject writes are account's to make.
  */
@@ -557,12 +562,12 @@ export function reviewResolution(
   database: ReturnType<typeof drizzle>,
   queueId: string,
   reviewerId: string,
-  decision: ReviewDecision,
+  status: "approved" | "removed",
 ) {
   return database
     .update(reviewQueue)
     .set({
-      status: decision === "approve" ? "approved" : "removed",
+      status,
       resolvedBy: reviewerId,
       resolvedAt: nowSeconds(),
       // Settled rows carry no claim. Left set, a resolved row would still

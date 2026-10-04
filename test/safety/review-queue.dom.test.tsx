@@ -3,7 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { ReviewQueue } from "../../src/modules/safety/components/ReviewQueue";
-import type { QueueRow } from "../../src/modules/safety/review";
+import type {
+  HandleReviewOutcome,
+  QueueRow,
+} from "../../src/modules/safety/review";
 
 type Props = Parameters<typeof ReviewQueue>[0];
 
@@ -128,6 +131,37 @@ describe("deciding", () => {
     expect(resolve).toHaveBeenCalledWith({
       data: { queueId: QUEUE_ID, action: "remove", reason: "home" },
     });
+    await waitFor(() => {
+      expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
+    });
+  });
+
+  it("shows the in-flight label while a removal is pending", async () => {
+    const user = userEvent.setup();
+    const { promise, resolve: settle } = Promise.withResolvers<unknown>();
+    const resolve: Props["resolve"] = vi
+      .fn<Props["resolve"]>()
+      .mockReturnValue(promise);
+    render(
+      <ReviewQueue queue={[row()]} resolve={resolve} reviewHandle={vi.fn()} />,
+    );
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why it comes down/ }),
+      "it shows where someone lives",
+    );
+    const button = screen.getByRole("button", { name: "Remove" });
+    await user.click(button);
+
+    await waitFor(() => {
+      expect(button).toHaveAttribute("aria-busy", "true");
+    });
+    // `PendingLabel` swaps the button's accessible name to the in-flight
+    // verb while the request is outstanding. A StringLiteral mutant
+    // turning "Removing" into "" would leave this empty instead.
+    expect(button).toHaveAccessibleName("Removing");
+
+    settle({ outcome: "resolved" });
     await waitFor(() => {
       expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
     });
@@ -469,6 +503,42 @@ describe("a handle the re-ask flagged (D-97)", () => {
         nameReason: "Offensive or sexual",
       },
     });
+    await waitFor(() => {
+      expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
+    });
+  });
+
+  it("shows the in-flight label while a rename is pending", async () => {
+    const user = userEvent.setup();
+    const { promise, resolve: settle } =
+      Promise.withResolvers<{ outcome: HandleReviewOutcome }>();
+    const reviewHandle: Props["reviewHandle"] = vi
+      .fn<Props["reviewHandle"]>()
+      .mockReturnValue(promise);
+    render(
+      <ReviewQueue
+        queue={[flagged()]}
+        resolve={vi.fn()}
+        reviewHandle={reviewHandle}
+      />,
+    );
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why the name has to go/ }),
+      "Offensive or sexual",
+    );
+    const button = screen.getByRole("button", { name: "Rename" });
+    await user.click(button);
+
+    await waitFor(() => {
+      expect(button).toHaveAttribute("aria-busy", "true");
+    });
+    // Same `PendingLabel` swap as the content row's Remove, for the
+    // flagged-handle row's own submit — the "Renaming" StringLiteral
+    // mutant survives unless something reads this name while pending.
+    expect(button).toHaveAccessibleName("Renaming");
+
+    settle({ outcome: "resolved" });
     await waitFor(() => {
       expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
     });
