@@ -115,35 +115,51 @@ function record(rs: Run[]) {
       verdict: r.verdict,
       href: r.entryUrl ?? null,
     })),
-    // Strava-block parity, if wanted: distance.mi (or .km), durationS and
-    // pace per run, summed and weighted exactly as aggregator.ts does today.
+    // Strava-block parity, if wanted: distance.mi (or .km), elevation?.ft,
+    // and pace from movingS ?? durationS, summed and weighted exactly as
+    // aggregator.ts does today. Both new fields are nullable.
   };
 }
 ```
 
-| Board stat (Integration Opportunities 01) | Computed by the blog from                                                                      |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Runs Worn                                 | `runs.length`                                                                                  |
-| Feels-like Range                          | min and max of `conditions.feelsLike.f` (or `.c`) over runs that have one                      |
-| Dialed N of M                             | count of `verdict === "dialed"`                                                                |
-| Worn Period                               | first and last `startedAt`                                                                     |
-| By conditions: band, runs, how it went    | `/v1/bands` ranges × `conditions.feelsLike.c`; tally `verdict`, folded to cold, dialed or warm |
-| Band links                                | `guideUrl` when `guidePublished`, else plain text                                              |
-| Sky                                       | tally of `conditions.sky`                                                                      |
-| Most often worn with                      | tally of `kit[]` minus the current piece, by `id`, named by `name`                             |
-| Run rows: date, feels like, sky, verdict  | the run fields directly; the date links to `entryUrl` when present                             |
-| Strava-style distance, pace, totals       | `distance.mi` (or `.km`) and `durationS`, as `aggregator.ts` sums them                         |
+| Board stat (Integration Opportunities 01) | Computed by the blog from                                                                                                           |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Runs Worn                                 | `runs.length`                                                                                                                       |
+| Feels-like Range                          | min and max of `conditions.feelsLike.f` (or `.c`) over runs that have one                                                           |
+| Dialed N of M                             | count of `verdict === "dialed"`                                                                                                     |
+| Worn Period                               | first and last `startedAt`                                                                                                          |
+| By conditions: band, runs, how it went    | `/v1/bands` ranges × `conditions.feelsLike.c`; tally `verdict`, folded to cold, dialed or warm                                      |
+| Band links                                | `guideUrl` when `guidePublished`, else plain text                                                                                   |
+| Sky                                       | tally of `conditions.sky`                                                                                                           |
+| Most often worn with                      | tally of `kit[]` minus the current piece, by `id`, named by `name`                                                                  |
+| Run rows: date, feels like, sky, verdict  | the run fields directly; the date links to `entryUrl` when present                                                                  |
+| Strava-style distance, pace, totals       | `distance.mi` (or `.km`); pace from `movingS ?? durationS`; `elevation.ft` (or `.m`) where not null; summed as `aggregator.ts` does |
 
 **What dialed.run lacks next to Strava, which the blog must accept:**
 
-- **No elevation.** `runs` holds `startedAt`, `durationS`, `distanceM`,
-  `lat`, `lng`, `indoor`, `effort` and `title`; nothing else. Conditions
-  come from `DIALED_WEATHER`.
 - **Only runs logged in dialed.run.** A piece's runs are the runs whose
   kit names it. There is no gear auto-assignment, and nothing from before
   the runner started logging.
-- **Elapsed, not moving, time.** FIT gives `totalElapsedTime`, so a pace
-  here reads slower than Strava's moving pace for the same run.
+
+**No longer gaps, by the owner's ruling (D-111, 2026-10-04): moving time and
+elevation.**
+
+- **New columns.** Runs gain two nullable columns, `moving_s` and
+  `elevation_gain_m`.
+- **New run fields.** The run object adds `movingS` (nullable) and
+  `elevation: { m, ft } | null`.
+- **`durationS` stays elapsed time**, which keeps running through a pause.
+- **Pace.** The blog computes pace from `movingS` when it is present, else
+  from `durationS`. That matches Strava's moving pace whenever the file
+  recorded moving time.
+- **Treadmill and manual runs** leave both fields null.
+- **Old runs.** A run logged before the build has the new fields **only if
+  its original file is still held.** Those runs are re-parsed. Until D-110,
+  files expired after 30 days, so older runs stay null. D-110 keeps files
+  from now on.
+- **Treat both as nullable.** The fields land with build **R-130**, which
+  ships separately from this API, so the API returns `null` until that build
+  has run. A caller must handle null either way.
 
 **Where the board and this doc differ, by the owner's ruling:**
 
@@ -323,6 +339,11 @@ and Better Auth's `bearer` plugin stays off.
 - `id`, `startedAt` (with offset), `timeZone`, `title`, `distance`
   (`{ mi, km }`), `durationS`, `indoor` and `effort`. `timeZone`, `title`,
   `indoor` and `effort` stay, by the owner's settlement.
+- **`durationS`** is elapsed time. **`movingS`** is moving time, or `null`.
+  **`elevation`** is `{ m, ft }` of gain, or `null` (D-111). Both new fields
+  are nullable for good: R-130 builds them, treadmill and manual runs have
+  neither, and an old run has them only if its file was still held when it
+  was re-parsed.
 - **`conditions`**, or `null` for indoor and unlocated runs:
   - `source`: `observed` or `manual`;
   - `temp` and `feelsLike`, each `{ f, c }`. A manual band has
@@ -360,6 +381,8 @@ and Better Auth's `bearer` plugin stays off.
       "title": "Morning loop",
       "distance": { "mi": 6.21, "km": 10.0 },
       "durationS": 3120,
+      "movingS": 3045,
+      "elevation": { "m": 48, "ft": 157 },
       "indoor": false,
       "effort": "easy",
       "conditions": {
@@ -431,6 +454,14 @@ carries an `ETag`. **The guide artifact does not exist yet.** The guides
 themselves are #144's conflict 3, an owner call under D-58. Until it
 exists, every band answers `guidePublished: false`, so callers render
 plain text, which is correct rather than broken.
+
+### Later, additive
+
+A **route-track endpoint**, such as `/v1/runs/:id/track`, becomes possible
+once R-132's simplified tracks exist. It would be **private to the owner's
+token by default**, with the privacy zones that trim each run's start and
+finish already applied. It is **not part of v1**. It would be a new
+endpoint, so adding it later changes nothing for v1's callers.
 
 ### Queries, indexes and the cross-database join
 
