@@ -111,12 +111,40 @@ function dayParts(
 }
 
 /**
+ * `month` and `day`, joined with a space, and the weekday in front of them
+ * when asked for — every shape `dayLabel`, `monthDayLabel` and
+ * `proseDayLabel` draw is this one join. `afterWeekday` is `undefined` to
+ * leave the weekday off entirely (`monthDayLabel`), and otherwise is what
+ * follows it: "" for the mono label's row of cells (`dayLabel`), "," for
+ * the sentence prose puts after it (`proseDayLabel`). One function so the
+ * pull from `dayParts` and the join are written once, however the three
+ * exports slice it.
+ */
+function dayJoin(
+  epochSeconds: number,
+  timeZone: string | undefined,
+  afterWeekday: "" | "," | undefined,
+): string {
+  const { weekday, month, day } = dayParts(epochSeconds, timeZone);
+  return afterWeekday === undefined
+    ? `${month} ${day}`
+    : `${weekday}${afterWeekday} ${month} ${day}`;
+}
+
+/**
  * The day as a mono label draws it — "Sat Aug 29", which the mono step's
  * CSS sets as "SAT AUG 29". No comma: a label is a row of cells.
  */
 export function dayLabel(epochSeconds: number, timeZone?: string): string {
-  const { weekday, month, day } = dayParts(epochSeconds, timeZone);
-  return `${weekday} ${month} ${day}`;
+  return dayJoin(epochSeconds, timeZone, "");
+}
+
+/**
+ * The day without its weekday, as a mono label draws an age past a month
+ * (D7, round 28 #9) — "Aug 29", which the mono step sets as "AUG 29".
+ */
+export function monthDayLabel(epochSeconds: number, timeZone?: string): string {
+  return dayJoin(epochSeconds, timeZone, undefined);
 }
 
 /**
@@ -124,8 +152,7 @@ export function dayLabel(epochSeconds: number, timeZone?: string): string {
  * prose puts after the weekday.
  */
 export function proseDayLabel(epochSeconds: number, timeZone?: string): string {
-  const { weekday, month, day } = dayParts(epochSeconds, timeZone);
-  return `${weekday}, ${month} ${day}`;
+  return dayJoin(epochSeconds, timeZone, ",");
 }
 
 /**

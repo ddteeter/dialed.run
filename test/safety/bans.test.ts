@@ -1,21 +1,29 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { session, user } from "../../src/db/schema-auth";
 import { outbox, userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import { outboxInsert, oweOutbox } from "../../src/modules/ops";
+import {
+  outboxInsert,
+  outboxInsertWhere,
+  oweOutbox,
+} from "../../src/modules/ops";
 import {
   banEmail,
+  reopenEmail,
+  reopenEmailFor,
   banStateOf,
   banUser,
   unbanUser,
+  type Reopening,
 } from "../../src/modules/safety";
 
 import { makeUser, NOW, resetSafetyTables } from "./helpers";
 import { nowSeconds } from "../../src/lib/now";
+import { orSqlNull } from "../../src/lib/sql/sql-null";
 
 function core() {
   return drizzle(env.DIALED_CORE);
@@ -68,6 +76,13 @@ async function sessionCountOf(userId: string): Promise<number> {
     .from(session)
     .where(eq(session.userId, userId));
   return rows.length;
+}
+
+async function owedReopens() {
+  return core()
+    .select({ dedupeKey: outbox.dedupeKey })
+    .from(outbox)
+    .where(eq(outbox.kind, "email"));
 }
 
 async function resetAuthTables(): Promise<void> {
@@ -178,6 +193,115 @@ describe("unbanning", () => {
       reason: undefined,
       bannedAt: undefined,
     });
+  });
+
+  it("names the handle in the reopen email, or nothing for a runner with none (round 29 #7)", async () => {
+    const userId = await signedInUser(1);
+    await core()
+      .update(userProfiles)
+      .set({ username: "maya_runs" })
+      .where(eq(userProfiles.userId, userId));
+
+    expect(await reopenEmailFor(userId)).toStrictEqual({
+      kind: "email",
+      payload: {
+        dedupeKey: `account_reopened:${userId}`,
+        email: {
+          to: { userId },
+          template: { kind: "account_reopened", handle: "maya_runs" },
+        },
+      },
+    });
+    // A runner closed before they picked a handle, and an id with no
+    // profile at all, are named by nothing.
+    const unnamed = await signedInUser(1);
+    await core()
+      .update(userProfiles)
+      .set({ username: orSqlNull(undefined) })
+      .where(eq(userProfiles.userId, unnamed));
+    for (const id of [unnamed, newUlid()]) {
+      expect(await reopenEmailFor(id)).toStrictEqual({
+        kind: "email",
+        payload: {
+          dedupeKey: `account_reopened:${id}`,
+          email: { to: { userId: id }, template: { kind: "account_reopened" } },
+        },
+      });
+    }
+    expect(reopenEmail(userId, undefined)).toStrictEqual({
+      kind: "email",
+      payload: {
+        dedupeKey: `account_reopened:${userId}`,
+        email: { to: { userId }, template: { kind: "account_reopened" } },
+      },
+    });
+  });
+
+  it("owes the reopen email in the lift's own batch, and sends it (D-89)", async () => {
+    const userId = await signedInUser(1);
+    await banUser({ userId, reason: "mistake", bannedBy: await makeUser() });
+    await core().delete(outbox);
+    const settle = vi.fn(() => Promise.resolve());
+
+    await unbanUser(userId, "desk-operator", {
+      owe: (database, stillBanned) =>
+        outboxInsertWhere(
+          database,
+          oweOutbox(reopenEmail(userId, undefined)),
+          stillBanned,
+        ),
+      settle,
+    });
+
+    expect(await owedReopens()).toStrictEqual([
+      { dedupeKey: `account_reopened:${userId}` },
+    ]);
+    expect(settle).toHaveBeenCalledTimes(1);
+    expect(await banStateOf(userId)).toMatchObject({ banned: false });
+  });
+
+  it("owes and sends nothing for a second Reopen once the first email went out", async () => {
+    const userId = await signedInUser(1);
+    await banUser({ userId, reason: "mistake", bannedBy: await makeUser() });
+    await core().delete(outbox);
+    const reopening = () => {
+      const debt = oweOutbox(reopenEmail(userId, undefined));
+      const owe: Reopening["owe"] = (database, stillBanned) =>
+        outboxInsertWhere(database, debt, stillBanned);
+      const settle = vi.fn(async () => {
+        // The fast path sent it: its row is gone.
+        await core().delete(outbox).where(eq(outbox.id, debt.id));
+      });
+      return { owe, settle };
+    };
+    const first = reopening();
+    await unbanUser(userId, "desk-operator", first);
+    expect(first.settle).toHaveBeenCalledTimes(1);
+    expect(await owedReopens()).toStrictEqual([]);
+
+    const second = reopening();
+    await unbanUser(userId, "desk-operator", second);
+    expect(second.settle).not.toHaveBeenCalled();
+    expect(await owedReopens()).toStrictEqual([]);
+  });
+
+  it("owes nothing for a runner who was never closed", async () => {
+    const userId = await signedInUser(1);
+    await core().delete(outbox);
+    const settle = vi.fn(() => Promise.resolve());
+
+    await unbanUser(userId, "desk-operator", {
+      owe: (database, stillBanned) =>
+        outboxInsertWhere(
+          database,
+          oweOutbox(reopenEmail(userId, undefined)),
+          stillBanned,
+        ),
+      settle,
+    });
+
+    expect(await owedReopens()).toStrictEqual([]);
+    expect(settle).not.toHaveBeenCalled();
   });
 
   it("does not restore the revoked sessions", async () => {

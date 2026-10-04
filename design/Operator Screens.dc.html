@@ -56,10 +56,10 @@
         </div>
         <div style="display: flex; flex: 1; min-height: 0;">
           <div style="flex: 0 0 220px; border-right: 1px solid #24242B; padding: 22px 0; display: flex; flex-direction: column; gap: 2px;">
-            <div style="padding: 11px 22px; display: flex; justify-content: space-between; align-items: center; background: #16161B; border-left: 3px solid #F5FF3D;"><span style="font-size: 15px; font-weight: 600;">Today</span></div>
+            <div style="padding: 11px 22px; display: flex; justify-content: space-between; align-items: center; background: #16161B; border-left: 3px solid #F5FF3D;"><span style="font-size: 15px; font-weight: 600;">Today</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #F5FF3D;">3</span></div>
             <div style="padding: 11px 22px 11px 25px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; color: #DEDDD6;">Review</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #F5FF3D;">4</span></div>
+            <div style="padding: 11px 22px 11px 25px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; color: #DEDDD6;">Access</span></div>
             <div style="padding: 11px 22px 11px 25px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; color: #DEDDD6;">Duplicates</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8B8B93;">23</span></div>
-            <div style="padding: 11px 22px 11px 25px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; color: #DEDDD6;">Gave up</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #F5FF3D;">3</span></div>
             <div style="padding: 11px 22px 11px 25px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; color: #DEDDD6;">Runners</span></div>
             <div style="margin-top: auto; padding: 14px 22px 0; display: flex; flex-direction: column; gap: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #6E6E64;"><span>SCREENING · OK</span><span>LAST DIGEST · 07:00</span></div>
           </div>
@@ -366,10 +366,10 @@
         </div>
         <div style="display: flex; flex: 1; min-height: 0;">
           <div style="flex: 0 0 220px; border-right: 1px solid #24242B; padding: 22px 0; display: flex; flex-direction: column; gap: 2px;">
-            <div style="padding: 11px 22px 11px 25px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; color: #DEDDD6;">Today</span></div>
+            <div style="padding: 11px 22px; display: flex; justify-content: space-between; align-items: center; background: #16161B; border-left: 3px solid #F5FF3D;"><span style="font-size: 15px; font-weight: 600;">Today</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #F5FF3D;">3</span></div>
             <div style="padding: 11px 22px 11px 25px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; color: #DEDDD6;">Review</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #F5FF3D;">4</span></div>
+            <div style="padding: 11px 22px 11px 25px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; color: #DEDDD6;">Access</span></div>
             <div style="padding: 11px 22px 11px 25px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; color: #DEDDD6;">Duplicates</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8B8B93;">23</span></div>
-            <div style="padding: 11px 22px; display: flex; justify-content: space-between; align-items: center; background: #16161B; border-left: 3px solid #F5FF3D;"><span style="font-size: 15px; font-weight: 600;">Gave up</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #F5FF3D;">3</span></div>
             <div style="padding: 11px 22px 11px 25px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 15px; color: #DEDDD6;">Runners</span></div>
           </div>
           <div data-part="dead-letter" style="flex: 1; min-width: 0; padding: 28px 32px; display: flex; flex-direction: column; gap: 6px;">
@@ -401,7 +401,7 @@
       <div style="display: flex; flex-wrap: wrap; gap: 28px;">
         <div style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">THE RETRY FITS THE JOB</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">Enrichment has two steps, so two retries: re-fetch starts over; re-run extraction reuses the stored page and is disabled when there isn't one. Everything else gets one Retry. A retry leaves the row at once and goes back to the queue; if it fails again it returns here with the new reason.</p></div>
         <div style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">WHY IN WORDS</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">The reason is the last failure translated, one sentence. The raw error is one click away in the row's detail, never the headline. Drop is quiet on purpose: it removes the row and the job, nothing else.</p></div>
-        <div style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">ONE MORE RAIL ITEM</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;">D0's rail gains <em>Gave up</em> after Duplicates, with a hi-viz count — it needs a person. At zero the item stays and the count goes. Today's three numbers stay three; the digest adds one line only when the count is above zero.</p></div>
+        <div style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">GAVE UP · A SECTION OF TODAY</span><p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DEDDD6;"><em>Round 30:</em> Gave up is a section on Today (D-87), not a rail item. The rail is Today, Review, Access, Duplicates, Runners. Today carries the Gave up count in hi-viz, and at zero the count goes. Today's three numbers stay three; the digest adds one line only when the count is above zero.</p></div>
       </div>
     </div>
 

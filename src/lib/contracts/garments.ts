@@ -307,12 +307,19 @@ const currentPasswordField = z.string().min(1, "Enter your current password.");
 export const CURRENT_PASSWORD_WRONG = "That's not your current password.";
 
 /**
+ * How many tries at the current password a runner gets in a window
+ * (`auth/password-check.ts` counts them) — here so the refusal below says
+ * the limiter's own number.
+ */
+export const PASSWORD_ATTEMPTS_PER_WINDOW = 5;
+
+/**
  * The same field, once the tries at the password are used up (ACC-8):
- * `clock` is when the next may go, in the runner's own time. Placeholder
- * copy, built from Au's "Too many tries." — design deltas.
+ * `clock` is when the next may go, in the runner's own time, with no
+ * seconds (round 28 #10's wording).
  */
 export function currentPasswordLimited(clock: string): string {
-  return `Too many tries. You can try again at ${clock}.`;
+  return `That's ${String(PASSWORD_ATTEMPTS_PER_WINDOW)} wrong tries. You can try again at ${clock}.`;
 }
 
 export const changePasswordSchema = z.object({
@@ -414,6 +421,19 @@ export const usernameSchema = z
   .pipe(storedUsername);
 
 export const usernameInput = z.object({ username: usernameSchema });
+
+/**
+ * What the moderation check said about a claimed handle (task 126 PR B),
+ * as `user_profiles.username_screen` stores it: its three answers, and
+ * `checking` while the hourly re-ask holds the row. Here, beside the
+ * handle's rule, so the schema and the module read one list.
+ */
+export const HANDLE_SCREEN_STATES = [
+  "clear",
+  "flagged",
+  "unknown",
+  "checking",
+] as const;
 
 /**
  * A WGS84 coordinate pair, bounded. Written out four times before this —

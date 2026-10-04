@@ -253,9 +253,9 @@ describe("03 · every tappable thing has a 44×44 hit area", () => {
       "src/modules/account/components/CheckEmail.tsx",
       // A link inside a legal text's sentence (ACC-13).
       "src/modules/account/components/LegalPage.tsx",
-      // Au5's two (round 26 #20): "Have a code after all? Create an
-      // account" on the receipt, and the way back to Au2 under the form.
-      "src/modules/account/components/RequestAccess.tsx",
+      // Au5's one (round 26 #20): "Have a code after all? Create an
+      // account" on the receipt. The way back to Au2 is a standalone back
+      // link with a full target since round 28 #9.
       "src/modules/account/components/RequestAccess.tsx",
       // The terms prompt's "The Terms have changed…" and "…or delete your
       // account in Settings." (ACC-6).

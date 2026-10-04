@@ -310,15 +310,16 @@ describe("Leaving (round 27 #14)", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "It's set to be deleted on Sat, Oct 4, with everything in it. Keep it and it all comes back as it was.",
+        "It's set to be deleted on Sat, Oct 4, with everything in it. Keep it and your runs, closet and entries come back as they were.",
       ),
     ).toBeInTheDocument();
-    // Except Strava, which the request disconnected and Keep does not.
+    // Except Strava, which the request disconnected and Keep does not:
+    // round 28 #12's quiet line, TYPE.small and muted.
     expect(
       screen.getByText(
         "Strava is disconnected, and stays that way until you connect it again.",
       ),
-    ).toBeInTheDocument();
+    ).toHaveClass("text-small", "text-muted");
     // Nothing is too late until Keep has been pressed and said so.
     expect(screen.queryByText(TOO_LATE)).toBeNull();
     // Keep is the primary answer, Log out the secondary one.

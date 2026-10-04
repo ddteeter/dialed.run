@@ -2,13 +2,18 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import type { JSX } from "react";
 
-import { TURNSTILE_REFUSED } from "../../../lib/contracts/access";
+import {
+  ACCESS_NOTE_COUNT_FROM,
+  ACCESS_NOTE_MAX,
+  TURNSTILE_REFUSED,
+} from "../../../lib/contracts/access";
 import { requestAccessSchema } from "../../../lib/contracts";
 import { clockLabel, deviceTimeZone } from "../../../lib/dates";
 import {
   FailureBand,
   FormElement,
   FormFailureBand,
+  Icon,
   Mono,
   SubmitButton,
   TextField,
@@ -16,6 +21,7 @@ import {
   useFormSubmit,
   useTurnstileToken,
 } from "../../../ui";
+import type { FieldProps } from "../../../ui";
 import { SignedOutPanel } from "../../../ui/SignedOutPanel";
 import type { AccessRequestResult } from "../access";
 
@@ -27,14 +33,14 @@ const INLINE_LINK_CLASS = "font-bold text-ink underline underline-offset-4";
 /**
  * What the band says when the request was not taken — both are about the
  * browser, never the address: Turnstile's (round 27 #12) and the limit's
- * (placeholder copy, design deltas).
+ * (round 28 #9, #11's grammar in local time).
  */
 export function refusalMessage(
   result: Exclude<AccessRequestResult, { status: "received" }>,
 ): string {
   return result.status === "refused"
     ? TURNSTILE_REFUSED
-    : `Too many requests from here. Try again at ${clockLabel(result.until, deviceTimeZone())}.`;
+    : `Too many requests from here. You can send another at ${clockLabel(result.until, deviceTimeZone())}.`;
 }
 
 /**
@@ -67,9 +73,92 @@ function Receipt({ email }: Readonly<{ email: string }>): JSX.Element {
 }
 
 /**
- * Au5 · Request access (task 126, ACC-5; round 26 #20): an email and an
- * optional note, Turnstile directly above the primary (round 27 #12), and
- * the one receipt.
+ * Round 28 #9's back link: the pack's `back` glyph and the destination's
+ * name, above the heading — never "‹".
+ */
+function BackToSignUp(): JSX.Element {
+  return (
+    <Link
+      to="/auth/signup"
+      className="target inline-flex items-center gap-1 self-start font-semibold text-quiet no-underline"
+    >
+      <Icon name="back" size={20} />
+      Create an account
+    </Link>
+  );
+}
+
+/**
+The id the note's field points its description at.
+*/
+export const NOTE_COUNTER_ID = "note-counter";
+
+/**
+The counter's words: a count, as round 28 #9 draws it.
+*/
+function counted(length: number): string {
+  return `${String(length)} / ${String(ACCESS_NOTE_MAX)}`;
+}
+
+/**
+ * What a change of the note's length announces (round 29 #8): only the
+ * moment it reaches 120 and the moment it passes 140, so a screen reader
+ * does not hear every keystroke. Crossing, not landing: a paste that jumps
+ * past either mark says so too, and typing on beyond it says nothing.
+ */
+export function noteAnnouncement(
+  before: number,
+  after: number,
+): string | undefined {
+  const isReaching =
+    before < ACCESS_NOTE_COUNT_FROM && after >= ACCESS_NOTE_COUNT_FROM;
+  const isPassing = before <= ACCESS_NOTE_MAX && after > ACCESS_NOTE_MAX;
+  return isReaching || isPassing ? counted(after) : undefined;
+}
+
+/**
+ * The note's counter, from 120 of its 140 characters (round 28 #9; round
+ * 29 #8): right-aligned under the field, a count so mono, `--muted` and
+ * no hue while it is only near the limit — getting near isn't a failure —
+ * and ink, semibold, once past it. Not a live region: the field's
+ * `aria-describedby` names it, and the form's one status region says it
+ * at 120 and 141 (`noteAnnouncement`).
+ */
+export function NoteCounter({
+  length,
+}: Readonly<{ length: number }>): JSX.Element | undefined {
+  if (length < ACCESS_NOTE_COUNT_FROM) return undefined;
+  const tone =
+    length > ACCESS_NOTE_MAX ? "font-semibold text-ink" : "text-muted";
+  return (
+    <span id={NOTE_COUNTER_ID} className="self-end">
+      <Mono step="xs" className={tone}>
+        {counted(length)}
+      </Mono>
+    </span>
+  );
+}
+
+/**
+ * The note's field props, its description naming the counter while the
+ * counter shows — after the field's own message, when it has one.
+ */
+export function withCounter(props: FieldProps, length: number): FieldProps {
+  if (length < ACCESS_NOTE_COUNT_FROM) return props;
+  const described = props["aria-describedby"];
+  return {
+    ...props,
+    "aria-describedby":
+      described === undefined
+        ? NOTE_COUNTER_ID
+        : `${described} ${NOTE_COUNTER_ID}`,
+  };
+}
+
+/**
+ * Au5 · Request access (task 126, ACC-5; round 26 #20, round 28 #9): an
+ * email and a one-line optional note, Turnstile directly above the
+ * primary (round 27 #12), and the one receipt.
  */
 export function RequestAccess({
   siteKey,
@@ -90,12 +179,15 @@ export function RequestAccess({
     action: (values) =>
       request({ data: { ...values, turnstileToken: turnstile.take() } }),
     successMessage: "Request sent.",
-    labels: { email: "Email", note: "A note · optional" },
+    labels: { email: "Email", note: "Note · optional" },
     onSuccess: setOutcome,
   });
 
   return (
-    <SignedOutPanel heading="Request access">
+    <SignedOutPanel
+      heading="Request access"
+      notice={outcome?.status === "received" ? undefined : <BackToSignUp />}
+    >
       {outcome?.status === "received" ? (
         <Receipt email={email} />
       ) : (
@@ -120,15 +212,22 @@ export function RequestAccess({
             field={form.field}
             error={form.fieldErrors.email}
           />
-          <TextField
-            name="note"
-            label="A note · optional"
-            hint="How you run, or who sent you. Up to 280 characters."
-            value={note}
-            onChange={setNote}
-            field={form.field}
-            error={form.fieldErrors.note}
-          />
+          <div className="flex flex-col gap-2">
+            <TextField
+              name="note"
+              label="Note · optional"
+              hint="Where you run, or who sent you. One line."
+              value={note}
+              onChange={(next) => {
+                const said = noteAnnouncement(note.length, next.length);
+                if (said !== undefined) form.announce(said);
+                setNote(next);
+              }}
+              field={(name) => withCounter(form.field(name), note.length)}
+              error={form.fieldErrors.note}
+            />
+            <NoteCounter length={note.length} />
+          </div>
           {outcome === undefined ? undefined : (
             <FailureBand
               kicker="Not sent"
@@ -150,19 +249,10 @@ export function RequestAccess({
             onToken={turnstile.onToken}
           />
           <SubmitButton
-            label="Request access"
+            label="Send request"
             pendingLabel="Sending"
             pending={form.pending}
           />
-          <p className="m-0 pt-4 text-body text-quiet">
-            <Link
-              data-target="inline"
-              to="/auth/signup"
-              className={INLINE_LINK_CLASS}
-            >
-              ‹ Create an account
-            </Link>
-          </p>
         </FormElement>
       )}
     </SignedOutPanel>

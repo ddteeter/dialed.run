@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 
 import {
   Bracketed,
@@ -8,16 +8,25 @@ import {
   SubmitButton,
   useFormSubmit,
 } from "../../../ui";
+import type { FormShell } from "../../../ui";
 import {
   removalReasonSchema,
   removalReasons,
   removalStatements,
+  renameReasonSchema,
+  renameReasons,
   reportReasonLabels,
 } from "../contracts";
-import type { RemovalReason, ReportReason } from "../contracts";
-import { reviewActionInput, type ReviewActionValues } from "../inputs";
-import type { QueueRow } from "../review";
+import type { RemovalReason, RenameReason, ReportReason } from "../contracts";
+import {
+  handleReviewInput,
+  reviewActionInput,
+  type HandleReviewValues,
+  type ReviewActionValues,
+} from "../inputs";
+import type { HandleReviewOutcome, QueueRow } from "../review";
 import { DeskForm, PickOne } from "./DeskForm";
+import { RENAME_LABELS, renameMessage } from "./DeskRunners";
 import { useSettled } from "./use-settled";
 
 /**
@@ -118,6 +127,58 @@ const REASON_LABELS: Readonly<Record<RemovalReason, string>> =
 type Decide = (input: { data: ReviewActionValues }) => Promise<unknown>;
 
 /**
+A decision that needs no reason: a text button beside the row's submit.
+*/
+function QuietAction({
+  label,
+  onPress,
+}: Readonly<{ label: string; onPress: () => void }>): JSX.Element {
+  return (
+    <button className="target" type="button" onClick={onPress}>
+      <Mono step="xs">{label}</Mono>
+    </button>
+  );
+}
+
+/**
+ * A review row's decision bar: a reasonless decision first, the one that
+ * takes the picked reason as the submit, and anything after it — the same
+ * frame for a content row and a flagged handle's (D-97).
+ */
+function DecisionForm(
+  props: Readonly<{
+    form: FormShell;
+    onSubmit: () => void;
+    first: ReactNode;
+    submit: { label: string; pendingLabel: string };
+    last?: ReactNode;
+    children: ReactNode;
+  }>,
+): JSX.Element {
+  const { form, submit } = props;
+  return (
+    <DeskForm
+      form={form}
+      className="flex flex-col gap-2"
+      onSubmit={props.onSubmit}
+      action={
+        <div className="flex flex-wrap gap-2">
+          {props.first}
+          <SubmitButton
+            label={submit.label}
+            pendingLabel={submit.pendingLabel}
+            pending={form.pending}
+          />
+          {props.last}
+        </div>
+      }
+    >
+      {props.children}
+    </DeskForm>
+  );
+}
+
+/**
  * One row, and the three things a reviewer can do with it (task 128 ·
  * SAF-5). **Remove deletes** the entry or photo and tells its author why;
  * **Remove as suspected CSAM** does the same but keeps one copy out of
@@ -153,38 +214,27 @@ function Decision({
   }
 
   return (
-    <DeskForm
+    <DecisionForm
       form={form}
-      className="flex flex-col gap-2"
       onSubmit={() => {
         send("remove");
       }}
-      action={
-        <div className="flex flex-wrap gap-2">
-          <button
-            className="target"
-            type="button"
-            onClick={() => {
-              void form.submit({ queueId: row.id, action: "approve" });
-            }}
-          >
-            <Mono step="xs">Approve</Mono>
-          </button>
-          <SubmitButton
-            label="Remove"
-            pendingLabel="Removing"
-            pending={form.pending}
-          />
-          <button
-            className="target"
-            type="button"
-            onClick={() => {
-              send("quarantine");
-            }}
-          >
-            <Mono step="xs">Remove as suspected CSAM</Mono>
-          </button>
-        </div>
+      first={
+        <QuietAction
+          label="Approve"
+          onPress={() => {
+            void form.submit({ queueId: row.id, action: "approve" });
+          }}
+        />
+      }
+      submit={{ label: "Remove", pendingLabel: "Removing" }}
+      last={
+        <QuietAction
+          label="Remove as suspected CSAM"
+          onPress={() => {
+            send("quarantine");
+          }}
+        />
       }
     >
       <PickOne<RemovalReason>
@@ -198,7 +248,79 @@ function Decision({
         field={form.field}
         error={form.fieldErrors.reason}
       />
-    </DeskForm>
+    </DecisionForm>
+  );
+}
+
+export type ReviewHandle = (input: {
+  data: HandleReviewValues;
+}) => Promise<{ outcome: HandleReviewOutcome }>;
+
+/**
+ * A handle the re-ask flagged (D-97): **Keep** — the handle is fine, and
+ * the flag clears — or **Rename**, D8's force-rename with its reasons
+ * list, after which the runner meets O0's "USERNAME CHANGED BY A
+ * MODERATOR". No Remove: removing a person is a ban, and a name is not a
+ * reason to close an account. A drawn placeholder somebody holds keeps
+ * the row, with D8's sentence for it.
+ */
+function HandleDecision({
+  row,
+  reviewHandle,
+  onSettled,
+}: Readonly<{
+  row: QueueRow;
+  reviewHandle: ReviewHandle;
+  onSettled: (id: string) => void;
+}>): JSX.Element {
+  const [reason, setReason] = useState<RenameReason | undefined>();
+  const [said, setSaid] = useState("");
+  const form = useFormSubmit({
+    schema: handleReviewInput,
+    action: (values) => reviewHandle({ data: values }),
+    onSuccess: ({ outcome }) => {
+      if (outcome === "taken") {
+        setSaid(renameMessage({ kind: "taken" }));
+        return;
+      }
+      onSettled(row.id);
+    },
+    successMessage: "Decided.",
+  });
+
+  return (
+    <DecisionForm
+      form={form}
+      onSubmit={() => {
+        void form.submit({
+          queueId: row.id,
+          action: "rename",
+          nameReason: reason,
+        });
+      }}
+      first={
+        <QuietAction
+          label="Keep"
+          onPress={() => {
+            void form.submit({ queueId: row.id, action: "keep" });
+          }}
+        />
+      }
+      submit={{ label: "Rename", pendingLabel: "Renaming" }}
+    >
+      <PickOne<RenameReason>
+        name="nameReason"
+        label="Why the name has to go"
+        options={renameReasons}
+        optionLabels={RENAME_LABELS}
+        schema={renameReasonSchema}
+        value={reason}
+        onChange={setReason}
+        field={form.field}
+        error={form.fieldErrors.nameReason}
+      />
+      {said === "" ? undefined : <p className="text-body">{said}</p>}
+    </DecisionForm>
   );
 }
 
@@ -212,12 +334,14 @@ function ReviewRow({
   active,
   onActivate,
   decide,
+  reviewHandle,
   onSettled,
 }: Readonly<{
   row: QueueRow;
   active: boolean;
   onActivate: () => void;
   decide: Decide;
+  reviewHandle: ReviewHandle;
   onSettled: (id: string) => void;
 }>): JSX.Element {
   return (
@@ -231,7 +355,12 @@ function ReviewRow({
         <Bracketed>{row.source}</Bracketed>
       </span>
       {active ? (
-        <Decision row={row} decide={decide} onSettled={onSettled} />
+        <RowDecision
+          row={row}
+          decide={decide}
+          reviewHandle={reviewHandle}
+          onSettled={onSettled}
+        />
       ) : (
         <button
           className="target self-start"
@@ -246,6 +375,31 @@ function ReviewRow({
 }
 
 /**
+ * The decision a row offers: a flagged handle's Keep and Rename, or the
+ * content decision every other row takes.
+ */
+function RowDecision(
+  props: Readonly<{
+    row: QueueRow;
+    decide: Decide;
+    reviewHandle: ReviewHandle;
+    onSettled: (id: string) => void;
+  }>,
+): JSX.Element {
+  const { row, onSettled } = props;
+  if (row.subject.handleFlagged === true) {
+    return (
+      <HandleDecision
+        row={row}
+        reviewHandle={props.reviewHandle}
+        onSettled={onSettled}
+      />
+    );
+  }
+  return <Decision row={row} decide={props.decide} onSettled={onSettled} />;
+}
+
+/**
 A queue row's identity, for `useSettled`.
 */
 function queueRowId(row: QueueRow): string {
@@ -253,7 +407,11 @@ function queueRowId(row: QueueRow): string {
 }
 
 export function ReviewQueue(
-  props: Readonly<{ queue: readonly QueueRow[]; resolve: Decide }>,
+  props: Readonly<{
+    queue: readonly QueueRow[];
+    resolve: Decide;
+    reviewHandle: ReviewHandle;
+  }>,
 ): JSX.Element {
   // Rows leave the list as they are decided; `useSettled` says why that
   // is safe.
@@ -284,6 +442,7 @@ export function ReviewQueue(
               setChosen(row.id);
             }}
             decide={props.resolve}
+            reviewHandle={props.reviewHandle}
             onSettled={settle}
           />
         )}

@@ -51,6 +51,7 @@ function AtMark(): JSX.Element {
  */
 export function HandleForm({
   initial = "",
+  hint = HANDLE_COPY.hint,
   claim,
   submitLabel,
   pendingLabel,
@@ -58,6 +59,10 @@ export function HandleForm({
   onClaimed,
 }: Readonly<{
   initial?: string | undefined;
+  /**
+  The field's hint: O0's and Settings' by default, the re-pick's shorter one.
+  */
+  hint?: string | undefined;
   claim: (input: { data: { username: string } }) => Promise<HandleClaim>;
   submitLabel: string;
   pendingLabel: string;
@@ -110,7 +115,7 @@ export function HandleForm({
       <FormField
         name="username"
         label={HANDLE_COPY.label}
-        hint={HANDLE_COPY.hint}
+        hint={hint}
         error={form.fieldErrors.username}
       >
         <AtMark />

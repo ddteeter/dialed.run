@@ -64,11 +64,10 @@ describe("the invite code", () => {
 });
 
 describe("the words", () => {
-  it("are round 26 #20's and round 27 #12's, as drawn", () => {
+  it("are round 28 #9's and round 27 #12's, as drawn", () => {
     expect(INVITE_COPY).toStrictEqual({
-      missing: "Enter your invite code.",
-      invalid:
-        "That code doesn't work. Check it against the email or message it came in.",
+      missing: "Enter the code from your invite.",
+      invalid: "That code doesn't work. Check it, or request access.",
     });
     expect(TURNSTILE_REFUSED).toBe(
       "We couldn't check this browser. Reload the page and try again.",

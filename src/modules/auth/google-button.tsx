@@ -6,15 +6,21 @@
 import { useRef, useState } from "react";
 import type { JSX } from "react";
 
-import { ACCESS_CODES, INVITE_COPY } from "../../lib/contracts/access";
 import {
   FailureBand,
   PendingLabel,
   inFlight,
   useControlAction,
 } from "../../ui";
-import type { ControlAction, ControlFailure } from "../../ui";
-import { AUTH_COPY, AUTH_KICKER, AccessRefused } from "./auth-copy";
+import type { ControlAction } from "../../ui";
+import {
+  AUTH_COPY,
+  AUTH_KICKER,
+  AccessRefused,
+  GOOGLE_REFUSALS,
+  type AuthBand,
+} from "./auth-copy";
+import { RefusalBand } from "./refusal-band";
 import { googleConsentUrl, type Admission } from "./credentials";
 import { didGoogleFail } from "./sign-in-search";
 
@@ -22,6 +28,11 @@ import { didGoogleFail } from "./sign-in-search";
  * The Google attempt: `useControlAction`'s state, plus a way to abandon it.
  */
 export interface GoogleSignIn extends ControlAction<[]> {
+  /**
+   * The band to draw: Au6's failure, which offers Try again, or one of
+   * round 28 #9's refusals, which do not.
+   */
+  failure: AuthBand | undefined;
   /**
    * Au5: *"The other form stays live: tapping Log in cancels the Google
    * attempt."* An answer for a cancelled attempt is dropped rather than
@@ -31,43 +42,24 @@ export interface GoogleSignIn extends ControlAction<[]> {
 }
 
 /**
- * Better Auth's answer when Google would have made an account from the
- * log-in page, which only Au2 may do (ACC-5).
- */
-const SIGNUP_DISABLED = "signup_disabled";
-
-/**
- * The round trip's refusals that have their own words: an address with no
- * account, told where accounts are made; and, from Au2, a new Google
- * account with no code (or one spent while the runner was at Google),
- * told what the code field would have said (ACC-5).
- */
-const RETURNED_MESSAGES: ReadonlyMap<string | undefined, string> = new Map([
-  [SIGNUP_DISABLED, AUTH_COPY.googleNoAccount],
-  [ACCESS_CODES.missing, INVITE_COPY.missing],
-  [ACCESS_CODES.invalid, INVITE_COPY.invalid],
-]);
+Every other failure of the attempt: Au6's sentence.
+*/
+const FAILED: AuthBand = {
+  kicker: AUTH_KICKER,
+  message: AUTH_COPY.google,
+};
 
 /**
  * The band for a failure Google's round trip brought back, rather than one
  * this page saw happen. Same kicker, same sentence — the runner cannot
- * tell the two apart and should not have to — except for the refusals in
- * `RETURNED_MESSAGES`.
+ * tell the two apart and should not have to — except for round 28 #9's
+ * refusals (`GOOGLE_REFUSALS`): an address with no account, told where
+ * accounts are made; and, from Au2, a new Google account with no code (or
+ * one spent while the runner was at Google).
  */
-function returnedFailure(error: string | undefined): ControlFailure {
-  return {
-    kicker: AUTH_KICKER,
-    message: RETURNED_MESSAGES.get(error) ?? AUTH_COPY.google,
-  };
+function returnedFailure(error: string | undefined): AuthBand {
+  return GOOGLE_REFUSALS.get(error) ?? FAILED;
 }
-
-/**
-Every other failure of the attempt: Au6's sentence.
-*/
-const FAILED: ControlFailure = {
-  kicker: AUTH_KICKER,
-  message: AUTH_COPY.google,
-};
 
 /**
  * Round 22, Au5–Au6: *"Google is a submit button"* — so it goes through
@@ -128,7 +120,7 @@ export function useGoogleSignIn({
   );
   // What the way in said, when it refused the attempt: its own words in
   // the band, rather than Au6's "Google didn't answer".
-  const [refusal, setRefusal] = useState<ControlFailure>();
+  const [refusal, setRefusal] = useState<AuthBand>();
   const control = useControlAction<[]>({
     kicker: AUTH_KICKER,
     action: async () => {
@@ -221,10 +213,14 @@ function GoogleMark(): JSX.Element {
  * font — so this builds to D-49 and the PR asks the owner to confirm. At
  * the weights that exist here (never 500), semibold.
  *
- * In flight the glyph drops for the label, so the width holds (Au5); on
- * failure the band sits directly above this button and not above Log in,
- * because *"the band belongs to the button that failed"* (Au6). No pink
- * anywhere on either.
+ * In flight the glyph drops for the label, so the width holds (Au5).
+ * **Every band Google owns sits directly under this button** (round 29
+ * #13, design-deltas item 43): the fault, with Try again, and a refusal
+ * (`retry: false`), which offers none — its fix is the field above or the
+ * page it links. §4a puts a band under the control it belongs to, and
+ * never above Log in, because *"the band belongs to the button that
+ * failed"* (Au6). Round 22's Au6 still draws the fault above; round 29
+ * supersedes it (item 44 asks for the redraw). No pink anywhere on either.
  */
 /**
  * Google's colours, stroke and shape, light then dark. Held in a constant
@@ -236,16 +232,11 @@ export const GOOGLE_BUTTON_CLASS =
 export function GoogleButton({
   google,
 }: Readonly<{ google: GoogleSignIn }>): JSX.Element {
+  const { failure } = google;
+  const refusal = failure?.retry === false ? failure : undefined;
+  const fault = refusal === undefined ? failure : undefined;
   return (
     <>
-      {google.failure === undefined ? undefined : (
-        <FailureBand
-          kicker={google.failure.kicker}
-          message={google.failure.message}
-          onRetry={google.retry}
-          retryRef={google.retryRef}
-        />
-      )}
       <button
         type="button"
         data-part="google-button"
@@ -267,6 +258,15 @@ export function GoogleButton({
           pending={google.pending}
         />
       </button>
+      {fault === undefined ? undefined : (
+        <FailureBand
+          kicker={fault.kicker}
+          message={fault.message}
+          onRetry={google.retry}
+          retryRef={google.retryRef}
+        />
+      )}
+      {refusal === undefined ? undefined : <RefusalBand band={refusal} />}
     </>
   );
 }

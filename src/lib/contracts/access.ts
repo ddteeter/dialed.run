@@ -34,16 +34,14 @@ const INVITE_SHAPE = new RegExp(
 );
 
 /**
- * Round 26 #20's refusals. A spent code, a revoked one, one nobody made
+ * Round 28 #9's refusals. A spent code, a revoked one, one nobody made
  * and one that is not the right shape all read as `invalid`: the form's
  * check and the server's say the same thing, so none of them tells a
- * prober which it was (PR #127 review — the board's separate "already
- * been used" sentence was that signal, and is retired).
+ * prober which it was, and a real runner learns what to do next.
  */
 export const INVITE_COPY = {
-  missing: "Enter your invite code.",
-  invalid:
-    "That code doesn't work. Check it against the email or message it came in.",
+  missing: "Enter the code from your invite.",
+  invalid: "That code doesn't work. Check it, or request access.",
 } as const;
 
 /**
@@ -84,9 +82,11 @@ export function mintInviteCode(
 }
 
 /**
-Au5's note: optional, 280 characters (round 26 #20).
-*/
-export const ACCESS_NOTE_MAX = 280;
+ * Au5's note: optional, one line of 140 characters (round 28 #9; round 26
+ * #20 drew 280), with a counter shown from 120.
+ */
+export const ACCESS_NOTE_MAX = 140;
+export const ACCESS_NOTE_COUNT_FROM = 120;
 
 /**
  * Round 27 #12: what Au2 and Au5 say when Turnstile refused the browser.

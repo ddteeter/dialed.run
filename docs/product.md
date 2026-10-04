@@ -87,7 +87,9 @@ call-epic screens.
    per-item flags. The "noted" confirmation shows the updated band count —
    proof the logging did something.
 4. **Share**: on by default (per-entry toggle; global default in settings).
-   Public entries feed E1/E2 and the consensus aggregates.
+   Public entries feed E1/E2 and the in-app consensus aggregates. Published
+   anonymous totals (the marketing guides and reports) count private runs too,
+   under D-108's conditions, unless the runner opts out.
 
 Target: under 15 seconds from file to logged verdict. Any added step must
 justify itself against that number.
@@ -290,7 +292,7 @@ are, not the top of the form.
 
 - `1px solid #0B0B0E` on paper, `1px solid #F4F3EF` on ink. No fill. No yellow —
   yellow means "the fix is here" and it isn't.
-- Kicker in Archivo Black, uppercase, 11px: `NOTHING SAVED`.
+- Kicker in `MONO.xs`, ink, caps: `NOTHING SAVED` (design round 30 #1).
 - One sentence naming what happened in the user's terms: `Your connection
 dropped.` / `Our end failed. Nothing about your run changed.`
 - A `Try again` button that re-submits the same values. Values are never cleared

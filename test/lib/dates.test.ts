@@ -4,6 +4,7 @@ import {
   calendarDay,
   clockLabel,
   dayLabel,
+  monthDayLabel,
   dayTimeLabel,
   isTimeZone,
   proseDayLabel,
@@ -38,6 +39,13 @@ describe("dayLabel", () => {
   it("keeps the month to three letters, September included", () => {
     // en-GB's short September is "Sept"; the boards draw "SEP".
     expect(dayLabel(LATE_ON_THE_21ST)).not.toContain("Sept");
+  });
+});
+
+describe("monthDayLabel", () => {
+  it("drops the weekday, in the runner's zone when given one", () => {
+    expect(monthDayLabel(LATE_ON_THE_21ST)).toBe("Sep 21");
+    expect(monthDayLabel(LATE_ON_THE_21ST, "Asia/Tokyo")).toBe("Sep 22");
   });
 });
 

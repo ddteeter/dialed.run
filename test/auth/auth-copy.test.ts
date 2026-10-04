@@ -1,12 +1,20 @@
 import { describe, expect, it } from "vitest";
 
-import { TURNSTILE_REFUSED } from "../../src/lib/contracts/access";
+import {
+  ACCESS_CODES,
+  INVITE_COPY,
+  TURNSTILE_REFUSED,
+} from "../../src/lib/contracts/access";
 import {
   AUTH_COPY,
   AUTH_KICKER,
   AccessRefused,
   AuthRejected,
+  GOOGLE_REFUSALS,
+  NOT_CREATED,
+  NOT_LOGGED_IN,
   NOT_SENT,
+  SIGNUP_DISABLED,
   authFailure,
   authStatus,
   turnstileRefused,
@@ -41,10 +49,20 @@ describe("authFailure", () => {
   });
 
   it("builds a refusal that is an error with a kicker", () => {
-    const refusal = new AccessRefused("Kicker", "Words.");
+    const refusal = new AccessRefused({ kicker: "Kicker", message: "Words." });
     expect(refusal).toBeInstanceOf(Error);
     expect(refusal.name).toBe("AccessRefused");
     expect(refusal).toMatchObject({ kicker: "Kicker", message: "Words." });
+    expect(refusal.retry).toBeUndefined();
+    expect(refusal.link).toBeUndefined();
+    expect(
+      new AccessRefused({
+        kicker: "Kicker",
+        message: "Words.",
+        retry: false,
+        link: "create-account",
+      }),
+    ).toMatchObject({ retry: false, link: "create-account" });
   });
 
   it("has nothing to say when nothing failed", () => {
@@ -72,6 +90,34 @@ describe("authFailure", () => {
     );
     // A status on something that is not Better Auth's refusal is not one.
     expect(authFailureMessage(server, { status: 429 })).toBe(AUTH_COPY.server);
+  });
+});
+
+describe("GOOGLE_REFUSALS", () => {
+  it("offers no Try again for a missing code, and points nowhere", () => {
+    expect(GOOGLE_REFUSALS.get(ACCESS_CODES.missing)).toStrictEqual({
+      kicker: NOT_CREATED,
+      message: AUTH_COPY.googleNoCode,
+      retry: false,
+    });
+  });
+
+  it("offers no Try again for a refused code, and points at Request access", () => {
+    expect(GOOGLE_REFUSALS.get(ACCESS_CODES.invalid)).toStrictEqual({
+      kicker: NOT_CREATED,
+      message: INVITE_COPY.invalid,
+      retry: false,
+      link: "request-access",
+    });
+  });
+
+  it("offers no Try again for a Google address with no account, and points at Create an account", () => {
+    expect(GOOGLE_REFUSALS.get(SIGNUP_DISABLED)).toStrictEqual({
+      kicker: NOT_LOGGED_IN,
+      message: AUTH_COPY.googleNoAccount,
+      retry: false,
+      link: "create-account",
+    });
   });
 });
 

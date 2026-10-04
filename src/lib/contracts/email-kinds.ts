@@ -101,6 +101,21 @@ export const accountClosed = emailKind("account_closed", {
 });
 
 /**
+ * D-89 (round 28 #8): an operator reopened a closed account. Account
+ * mail, so always sent: a runner told their account was closed is owed
+ * being told it is open again. Round 29 #7 names the account by its
+ * handle ("We reopened @maya_runs.").
+ *
+ * `handle` is **optional, and must stay so** (law 9): an outbox row is a
+ * wire format between deploys, and a reopen owed by the build before this
+ * one carries no handle. A runner closed before they picked one has none
+ * either.
+ */
+export const accountReopened = emailKind("account_reopened", {
+  handle: z.string().min(1).optional(),
+});
+
+/**
  * Round 26 #20's invite (task 126, ACC-5): the code D7's Send invite
  * minted for an access request, and the way in with it filled.
  */

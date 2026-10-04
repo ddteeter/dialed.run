@@ -8,6 +8,10 @@
 export const HANDLE_COPY = {
   label: "Username",
   hint: "3–20 letters, numbers or _. It's on everything you share. You can change it in settings.",
+  /**
+  A moderator's re-pick (round 27 #16): the rule alone.
+  */
+  repickHint: "3–20 letters, numbers or _.",
 } as const;
 
 /**
