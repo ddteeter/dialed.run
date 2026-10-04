@@ -1,6 +1,6 @@
 /**
  * "Your conditions" (E2-lite, D-10/D-16): consensus block only, no stranger
- * cards. Every public entry in the window, via the `entries_public_created`
+ * cards. Every public entry in the window, via the `entries_audience_created`
  * index, then the weather cache cells of their runs.
  * `source='manual'` observations are excluded from the aggregate.
  *

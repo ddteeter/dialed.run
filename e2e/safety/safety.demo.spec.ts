@@ -22,7 +22,6 @@ import { storageStateFor } from "../support/accounts";
 import { expect, hydrated, scene, test } from "../support/demo";
 import { withLocalDb } from "../support/local-db";
 import { nowSeconds } from "../../src/lib/now";
-import { entryAudienceColumns } from "../support/audience";
 
 test.use({ storageState: storageStateFor("safety") });
 
@@ -63,7 +62,7 @@ test("report a runner, block them, and take the block back", async ({
       runId,
       userId: strangerId,
       verdict: 0,
-      ...entryAudienceColumns("runners"),
+      audience: "runners",
       createdAt: startedAt,
     });
     // A second entry, the one this runner will report.
@@ -84,7 +83,7 @@ test("report a runner, block them, and take the block back", async ({
       runId: reportedRunId,
       userId: strangerId,
       verdict: 0,
-      ...entryAudienceColumns("runners"),
+      audience: "runners",
       createdAt: startedAt - 86_400,
     });
   });

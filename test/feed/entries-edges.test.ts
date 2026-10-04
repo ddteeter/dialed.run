@@ -138,7 +138,6 @@ describe("attachKit follows the runner's sharing default", () => {
       .from(outfitEntries)
       .where(eq(outfitEntries.id, entryId));
     expect(entry?.audience).toBe("runners");
-    expect(entry?.legacyIsPublic).toBe(true);
   });
 
   it("keeps an entry private when the profile says to", async () => {
@@ -154,7 +153,6 @@ describe("attachKit follows the runner's sharing default", () => {
       .from(outfitEntries)
       .where(eq(outfitEntries.id, entryId));
     expect(entry?.audience).toBe("private");
-    expect(entry?.legacyIsPublic).toBe(false);
   });
 
   it("shares by default when there is no profile row at all", async () => {
@@ -168,23 +166,17 @@ describe("attachKit follows the runner's sharing default", () => {
       .from(outfitEntries)
       .where(eq(outfitEntries.id, entryId));
     expect(entry?.audience).toBe("runners");
-    expect(entry?.legacyIsPublic).toBe(true);
   });
 });
 
-describe("submitVerdict stores the chosen audience in both columns", () => {
-  it("writes the audience and keeps the boolean in step, both ways", async () => {
-    // The dual write (design 131): the boolean is what a rollback's code
-    // reads, so a private choice that left it at 1 would leak silently.
+describe("submitVerdict stores the chosen audience", () => {
+  it("writes the audience, both ways", async () => {
     const userId = await makeUser();
     const runId = await makeRun({ userId });
     const entryId = await attachKit({ userId, runId, itemIds: [] });
     const stored = async () => {
       const [entry] = await db()
-        .select({
-          audience: outfitEntries.audience,
-          legacyIsPublic: outfitEntries.legacyIsPublic,
-        })
+        .select({ audience: outfitEntries.audience })
         .from(outfitEntries)
         .where(eq(outfitEntries.id, entryId));
       return entry;
@@ -198,10 +190,7 @@ describe("submitVerdict stores the chosen audience in both columns", () => {
       tags: [],
       itemFlags: [],
     });
-    expect(await stored()).toEqual({
-      audience: "private",
-      legacyIsPublic: false,
-    });
+    expect(await stored()).toEqual({ audience: "private" });
 
     await submitVerdict({
       userId,
@@ -211,10 +200,7 @@ describe("submitVerdict stores the chosen audience in both columns", () => {
       tags: [],
       itemFlags: [],
     });
-    expect(await stored()).toEqual({
-      audience: "runners",
-      legacyIsPublic: true,
-    });
+    expect(await stored()).toEqual({ audience: "runners" });
   });
 });
 

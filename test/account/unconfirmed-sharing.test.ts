@@ -11,12 +11,7 @@ import {
   defaultAudienceFor,
 } from "../../src/modules/feed/share-default";
 import { core } from "../email/helpers";
-import {
-  entryAudienceColumns,
-  makeRun,
-  makeUser,
-  resetTables,
-} from "../feed/helpers";
+import { makeRun, makeUser, resetTables } from "../feed/helpers";
 import type { Audience } from "../../src/lib/contracts";
 
 /**
@@ -58,23 +53,20 @@ async function confirm(userId: string): Promise<void> {
 }
 
 /**
-Both stored columns, which every write keeps in step until C1 (design 131).
+The entry's stored audience.
 */
 async function storedAudience(
   entryId: string,
-): Promise<{ audience: Audience; legacyIsPublic: boolean } | undefined> {
+): Promise<{ audience: Audience } | undefined> {
   const [row] = await db
-    .select({
-      audience: outfitEntries.audience,
-      legacyIsPublic: outfitEntries.legacyIsPublic,
-    })
+    .select({ audience: outfitEntries.audience })
     .from(outfitEntries)
     .where(eq(outfitEntries.id, entryId));
   return row;
 }
 
-const SHARED = entryAudienceColumns("runners");
-const PRIVATE = entryAudienceColumns("private");
+const SHARED = { audience: "runners" };
+const PRIVATE = { audience: "private" };
 
 describe("the confirmation gates", () => {
   it("reads one fact three ways: confirmed, unconfirmed, and no account", async () => {

@@ -75,7 +75,6 @@ describe("saveCalibration", () => {
 
     expect(await profileOf(userId)).toMatchObject({
       username: "Ada",
-      legacyShareDefault: false,
       defaultAudience: "private",
       onboardingComplete: true,
       thermalLevel: -1,
@@ -202,7 +201,6 @@ describe("savePlace — the one writer of the profile's place (FEED-5)", () => {
       tempUnit: "c",
       distanceUnit: "km",
       username: "Ada",
-      legacyShareDefault: false,
       defaultAudience: "private",
     });
   });
@@ -502,44 +500,33 @@ describe("savePreferences and currentSettings", () => {
     expect(await profileOf(userId)).toMatchObject({
       tempUnit: "f",
       defaultAudience: "runners",
-      legacyShareDefault: true,
     });
   });
 
-  it("writes the default audience and keeps share_default in step", async () => {
-    // The dual write (design 131): a version a rollback could restore reads
-    // only the boolean, so an opt-out that left it at 1 would be undone
-    // there without anyone seeing it.
+  it("writes the default audience, both ways", async () => {
     const userId = newUlid();
     await savePreferences(coreDb(), userId, { defaultAudience: "private" });
     expect(await profileOf(userId)).toMatchObject({
       defaultAudience: "private",
-      legacyShareDefault: false,
     });
 
     await savePreferences(coreDb(), userId, { defaultAudience: "runners" });
     expect(await profileOf(userId)).toMatchObject({
       defaultAudience: "runners",
-      legacyShareDefault: true,
     });
   });
 
-  it("reads the default audience, not the boolean (design 131, PR B)", async () => {
-    // Writers keep the two in step, so only a seed can split them.
+  it("reads the stored default audience", async () => {
     const quiet = newUlid();
     const open = newUlid();
     const grouped = newUlid();
     await coreDb()
       .insert(userProfiles)
       .values([
-        { userId: quiet, defaultAudience: "private", legacyShareDefault: true },
-        { userId: open, defaultAudience: "runners", legacyShareDefault: false },
+        { userId: quiet, defaultAudience: "private" },
+        { userId: open, defaultAudience: "runners" },
         // Nothing can write `groups` yet; the switch shows it as off.
-        {
-          userId: grouped,
-          defaultAudience: "groups",
-          legacyShareDefault: false,
-        },
+        { userId: grouped, defaultAudience: "groups" },
       ]);
 
     expect(await currentSettings(coreDb(), quiet)).toMatchObject({

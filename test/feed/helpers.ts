@@ -25,28 +25,10 @@ import {
 } from "../../src/db/schema-weather";
 import { env } from "../../src/env";
 import { cacheKeyFor } from "../../src/modules/weather";
-import { isSharedAudience } from "../../src/lib/contracts";
 import type { Audience } from "../../src/lib/contracts";
 import { newUlid } from "../../src/lib/ids";
-import { entryAudienceColumns } from "../../e2e/support/audience";
 
 export const NOW = 1_757_000_000;
-
-export { entryAudienceColumns } from "../../e2e/support/audience";
-
-/**
- * A runner's default audience as a seed writes it, kept in step with the
- * boolean it replaces the same way `entryAudienceColumns` keeps an entry's.
- */
-export function profileAudienceColumns(defaultAudience: Audience): {
-  defaultAudience: Audience;
-  legacyShareDefault: boolean;
-} {
-  return {
-    defaultAudience,
-    legacyShareDefault: isSharedAudience(defaultAudience),
-  };
-}
 
 function coreDb() {
   return drizzle(env.DIALED_CORE);
@@ -73,7 +55,7 @@ export async function makeUser(overrides?: {
       // is unique regardless of case.
       username:
         overrides?.username ?? `runner_${userId.slice(-8).toLowerCase()}`,
-      ...profileAudienceColumns(overrides?.defaultAudience ?? "runners"),
+      defaultAudience: overrides?.defaultAudience ?? "runners",
       tempUnit: overrides?.tempUnit,
       distanceUnit: overrides?.distanceUnit,
     });
@@ -193,7 +175,7 @@ export async function makeEntry(params: {
       runId: params.runId,
       userId: params.userId,
       verdict: params.verdict,
-      ...entryAudienceColumns(params.audience ?? "runners"),
+      audience: params.audience ?? "runners",
       createdAt: params.createdAt ?? NOW,
     });
   const itemIds = params.itemIds ?? [];

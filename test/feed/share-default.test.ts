@@ -39,29 +39,7 @@ describe("defaultAudienceFor", () => {
   });
 });
 
-describe("defaultAudienceFor reads the audience, not the boolean (design 131, PR B)", () => {
-  it("follows default_audience where the legacy boolean disagrees", async () => {
-    // Writers keep the two in step, so only a seed can split them: the
-    // answer has to come from the audience either way.
-    await coreDb()
-      .insert(userProfiles)
-      .values([
-        {
-          userId: "quiet",
-          defaultAudience: "private",
-          legacyShareDefault: true,
-        },
-        {
-          userId: "open",
-          defaultAudience: "runners",
-          legacyShareDefault: false,
-        },
-      ]);
-
-    expect(await defaultAudienceFor(coreDb(), "quiet")).toBe("private");
-    expect(await defaultAudienceFor(coreDb(), "open")).toBe("runners");
-  });
-
+describe("defaultAudienceFor narrows what no writer can store yet", () => {
   it("starts a new entry private for a groups default, which no writer can store yet", async () => {
     await coreDb()
       .insert(userProfiles)

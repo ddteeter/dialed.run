@@ -27,8 +27,7 @@ about half the files (see Test cost).
 | ------------------------- | ------------------------ | ---------------------------- | ------------------------------------------- |
 | **A** expand + dual-write | audience **and** boolean | boolean (mapped to audience) | `0044_add_audience_columns`                 |
 | **B** flip reads          | audience **and** boolean | **audience only**            | `0045_resync_audience_from_booleans` (data) |
-| C1 (later, owner)         | audience only            | audience                     | none                                        |
-| C2 (later, owner)         | —                        | —                            | drop the booleans and the two old indexes   |
+| **C** (C1 + C2, one PR)   | audience only            | audience                     | `0046_drop_legacy_sharing_booleans`         |
 
 **Writers keep writing the booleans until C1.** Every version that could
 still be serving, or that `wrangler rollback` could restore, reads
@@ -174,7 +173,7 @@ This is a one-time scan of two small tables. It is safe in both directions
 only because A, which always writes both columns, is the code serving while
 it applies. So **A must be deployed before B merges**.
 
-**Later, not in this build.** C1 removes the dual write. C2 drops
+**C, as planned before it was built** (see "Built: C" below). C1 removes the dual write. C2 drops
 `is_public`, `share_default`, `entries_public_created` and
 `entries_user_public_created`. That is destructive, goes back to the owner
 as its own PR, and ships one deploy after C1 (law 8). C2 has a trap: read
@@ -454,3 +453,54 @@ Following the code where it contradicts the plan, as instructed:
   `default_audience`: "what a new run starts as when you log it, shared or private. You can change any run afterwards." (owner-approved wording, 2026-10-04) No
   other document names either export column, so nothing else changed for
   them; the legal sources' code citations were updated (citations only).
+
+## Built: C (C1 and C2 together)
+
+**Why one PR, and why now.** The plan shipped C1 one deploy after A and
+B, and C2 one deploy after C1, because a rollback could restore code that
+reads the booleans. Nothing has ever been deployed: "Deploy to
+workers.dev" is skipped on `main`, and the first deploy is a later sweep.
+So there is no older version to roll back to, and the owner decided
+(2026-10-04) to build C right after B, in one PR, so that the first real
+deploy never carries the booleans at all. The owner explicitly approved
+the destructive part: dropping `outfit_entries.is_public`,
+`user_profiles.share_default`, `entries_public_created` and
+`entries_user_public_created`.
+
+- **C1.** The three dual writes are gone: `attachKit`'s insert and
+  `submitVerdict`'s update in `feed/entries.ts`, and `preferenceColumns`
+  in `onboarding/profile.ts`, which `savePreferences` no longer needs
+  (it spreads the parsed sub-page input straight into the upsert). The
+  `legacyIsPublic`/`legacyShareDefault` properties and their two indexes
+  left `schema-core.ts`. The seed helpers write only the audience:
+  `e2e/support/audience.ts` (`entryAudienceColumns`) and
+  `test/feed/helpers.ts`' `profileAudienceColumns` were deleted and each
+  seed sets `audience` / `defaultAudience` directly.
+- **C2.** `npm run db:generate:core -- --name=drop_legacy_sharing_booleans`
+  produced `0046`, and it needed no hand edit: the indexes drop before
+  their columns, and the columns go with `DROP COLUMN`, not a table
+  rebuild, so `user_profiles_username_nocase` is never re-emitted:
+
+  ```sql
+  DROP INDEX `entries_public_created`;
+  DROP INDEX `entries_user_public_created`;
+  ALTER TABLE `outfit_entries` DROP COLUMN `is_public`;
+  ALTER TABLE `user_profiles` DROP COLUMN `share_default`;
+  ```
+
+- **Tests.** `test/audience-backfill.test.ts` became
+  `test/audience-schema.test.ts`. The backfill (0044) and resync (0045)
+  tests ran those migrations' `UPDATE`s over rows seeded with each
+  boolean, which cannot exist once 0046 has applied, so they went; both
+  migrations still apply to a fresh D1 on every run. In their place: the
+  booleans and their indexes are gone, the audience columns and both
+  audience indexes are present, and `user_profiles_username_nocase` is
+  still a `COLLATE NOCASE` expression index. The two column-default tests
+  stayed. Tests that seeded a disagreeing boolean to prove which column a
+  read follows now assert the audience alone.
+- **The guard.** `test/architecture/audience-only.test.ts` is now one
+  assertion: no file under `src/` names `legacyIsPublic`,
+  `legacyShareDefault`, `isPublic`, `is_public`, `shareDefault` or
+  `share_default`, in code or in a comment. Migration SQL and snapshots
+  are not `.ts`, so they are outside it. The allowed-site counts and the
+  test-side lists went with the sites they counted.
