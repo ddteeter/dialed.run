@@ -31,7 +31,7 @@ export const EMAIL_PALETTE = {
   /**
   `--muted`: the footer, and the wordmark's `.run`.
   */
-  muted: "#7a7a70",
+  muted: "#6e6e64",
   /**
   `--hairline`: the rule above the footer.
   */
