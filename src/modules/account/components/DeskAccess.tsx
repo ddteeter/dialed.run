@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
 import { monthDayLabel } from "../../../lib/dates";
@@ -178,16 +178,18 @@ function useRowAction({
  */
 function useReleaseHold(
   holding: string | undefined,
-  release: () => void,
+  setHolding: (id: string | undefined) => void,
   isFailed: boolean,
 ): void {
   useEffect(() => {
     if (holding === undefined || isFailed) return;
-    const timer = setTimeout(release, UNDO_WINDOW_MS);
+    const timer = setTimeout(() => {
+      setHolding(undefined);
+    }, UNDO_WINDOW_MS);
     return () => {
       clearTimeout(timer);
     };
-  }, [holding, isFailed, release]);
+  }, [holding, isFailed, setHolding]);
 }
 
 /**
@@ -552,20 +554,21 @@ export function DeskAccess({
   });
   const isRevokeFailed = revoking.isFailed;
   const [holding, setHolding] = useState<string>();
-  const release = useCallback(() => {
-    setHolding(undefined);
-  }, []);
   const undoing = useRowAction({
     kind: "undo",
     act: restore,
     onChanged,
     announce: setSaid,
     // Not optimistic: the row stays held until the code is back.
-    onSuccess: release,
+    onSuccess: () => {
+      setHolding(undefined);
+    },
   });
   // A failed Undo keeps its row held, so its Undo and its band stay where
-  // the operator's focus is rather than sorting to the foot.
-  useReleaseHold(holding, release, isRevokeFailed || undoing.isFailed);
+  // the operator's focus is rather than sorting to the foot. `setHolding`
+  // is React's own setter, stable across renders, so the timer is armed
+  // once per hold and not again on every render.
+  useReleaseHold(holding, setHolding, isRevokeFailed || undoing.isFailed);
   const [madeStatus, setMadeStatus] = useState("");
   // Codes made on this page load wear NEW until it reloads; codes whose
   // copy failed show their link selected. Both by the code itself, which
