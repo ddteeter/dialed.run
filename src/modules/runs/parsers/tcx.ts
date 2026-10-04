@@ -74,9 +74,8 @@ function findActivity(doc: unknown): Record<string, unknown> | undefined {
   const root = doc.TrainingCenterDatabase;
   if (!isRecord(root)) return undefined;
   const activities = root.Activities;
-  // Equivalent: a non-record `Activities` has no `Activity` to read, so
-  // `firstOf` answers undefined and the lap is missing either way.
-  // Stryker disable next-line ConditionalExpression
+  // A course file has no `Activities` at all, and reading `.Activity` off
+  // undefined would throw a TypeError instead of refusing the file.
   if (!isRecord(activities)) return undefined;
   return firstOf(activities.Activity);
 }
