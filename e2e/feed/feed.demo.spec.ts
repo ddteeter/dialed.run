@@ -53,7 +53,6 @@ import {
   feedUserId,
   forgetPlace,
 } from "../conformance/feed-support";
-import { entryAudienceColumns } from "../support/audience";
 
 /**
  * The feed runner's address, confirmed or not (round 26 #11): flipped for
@@ -166,7 +165,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
         runId: publicRunId,
         userId: otherUserId,
         verdict: 0,
-        ...entryAudienceColumns("runners"),
+        audience: "runners",
         caption: publicCaption,
         createdAt: startedAt,
       },
@@ -175,7 +174,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
         runId: privateRunId,
         userId: otherUserId,
         verdict: -1,
-        ...entryAudienceColumns("private"),
+        audience: "private",
         caption: privateCaption,
         createdAt: startedAt,
       },
@@ -565,7 +564,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
         runId: ownRunId,
         userId: ownerId,
         verdict: 0,
-        ...entryAudienceColumns("runners"),
+        audience: "runners",
         caption: "Two photos, one too many",
         createdAt: nowSeconds() - 7000,
       });

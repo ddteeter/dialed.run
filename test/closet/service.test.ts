@@ -30,7 +30,6 @@ import {
 } from "../../src/modules/closet/service";
 import { addFromTapList } from "../../src/modules/closet/tap-list";
 import { nowSeconds } from "../../src/lib/now";
-import { entryAudienceColumns } from "../feed/helpers";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -62,7 +61,7 @@ async function logEntry(
     runId,
     userId,
     verdict,
-    ...entryAudienceColumns("runners"),
+    audience: "runners",
     createdAt,
   });
   for (const itemId of itemIds) {

@@ -27,7 +27,7 @@ import type {
  * no error to show for it.
  *
  * The `set` clause names only the calibrated columns on purpose:
- * `username`, `share_default` and `onboarding_complete` are other
+ * `username`, `default_audience` and `onboarding_complete` are other
  * people's business, and recalibrating from settings must not reset them.
  *
  * **The place goes through `placeWrite`, the one writer of it** (FEED-5),
@@ -164,25 +164,10 @@ export async function savePreferences(
   userId: string,
   input: UnitsChoice | SharingChoice,
 ): Promise<void> {
-  const columns = preferenceColumns(input);
   await db
     .insert(userProfiles)
-    .values({ userId, ...columns })
-    .onConflictDoUpdate({ target: userProfiles.userId, set: columns });
-}
-
-/**
- * The columns a sub-page's answer writes. The sharing default goes to
- * `default_audience` and to `share_default` with it, until C1
- * (design 131): the boolean is what a version a rollback could restore
- * still reads, so leaving it behind would undo a runner's opt-out there.
- */
-function preferenceColumns(
-  input: UnitsChoice | SharingChoice,
-): UnitsChoice | (SharingChoice & { legacyShareDefault: boolean }) {
-  return "defaultAudience" in input
-    ? { ...input, legacyShareDefault: isSharedAudience(input.defaultAudience) }
-    : input;
+    .values({ userId, ...input })
+    .onConflictDoUpdate({ target: userProfiles.userId, set: input });
 }
 
 /**

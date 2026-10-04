@@ -38,7 +38,6 @@ import {
   resetSafetyTables,
   confirmedReporter,
 } from "./helpers";
-import { entryAudienceColumns } from "../feed/helpers";
 
 /**
  * The one visibility rule, observed through the reads that use it (task
@@ -320,7 +319,7 @@ describe("the owner", () => {
       .update(outfitEntries)
       .set({
         moderationStatus: "hidden_pending_review",
-        ...entryAudienceColumns("private"),
+        audience: "private",
       })
       .where(eq(outfitEntries.id, posted.entryId));
     const own = await entryDetailForViewer(posted.entryId, posted.author);
@@ -330,19 +329,12 @@ describe("the owner", () => {
 });
 
 /**
- * The audience is the whole sharing rule (D-109, design 131, PR B). The
- * legacy boolean is set against it on purpose in each case: writers keep
- * the two in step, so only a seed can split them, and only a split shows
- * which one the reads follow.
- */
-async function setAudience(
-  entryId: string,
-  audience: Audience,
-  isPublicLegacy: boolean,
-): Promise<void> {
+The audience is the whole sharing rule (D-109, design 131).
+*/
+async function setAudience(entryId: string, audience: Audience): Promise<void> {
   await core()
     .update(outfitEntries)
-    .set({ audience, legacyIsPublic: isPublicLegacy })
+    .set({ audience })
     .where(eq(outfitEntries.id, entryId));
 }
 
@@ -353,7 +345,7 @@ describe("the audience", () => {
     const posted = await postedEntry();
     const viewer = await makeUser();
     await follow(viewer, posted.author);
-    await setAudience(posted.entryId, "groups", true);
+    await setAudience(posted.entryId, "groups");
 
     expect(await sightings(viewer, posted.entryId, posted.photoKey)).toEqual(
       UNSEEN,
@@ -364,14 +356,14 @@ describe("the audience", () => {
     expect(await isPhotoVisible(posted.photoKey, posted.author)).toBe(true);
   });
 
-  it("follows the audience where the boolean says otherwise", async () => {
+  it("shows a runners entry and hides a private one, in sightings and counts", async () => {
     const shown = await postedEntry();
     const hidden = await postedEntry();
     const viewer = await makeUser();
     await follow(viewer, shown.author);
     await follow(viewer, hidden.author);
-    await setAudience(shown.entryId, "runners", false);
-    await setAudience(hidden.entryId, "private", true);
+    await setAudience(shown.entryId, "runners");
+    await setAudience(hidden.entryId, "private");
 
     expect(await sightings(viewer, shown.entryId, shown.photoKey)).toEqual(
       SEEN,

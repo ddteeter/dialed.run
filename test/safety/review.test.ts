@@ -196,14 +196,11 @@ describe("resolving a decision", () => {
     await resolveReview(queued.id, await makeUser(), "approve");
 
     const [row] = await core()
-      .select({
-        audience: outfitEntries.audience,
-        legacyIsPublic: outfitEntries.legacyIsPublic,
-      })
+      .select({ audience: outfitEntries.audience })
       .from(outfitEntries)
       .where(eq(outfitEntries.id, entryId))
       .limit(1);
-    expect(row).toEqual({ audience: "private", legacyIsPublic: false });
+    expect(row).toEqual({ audience: "private" });
   });
 
   it("removing marks the entry removed and stamps the reviewer", async () => {

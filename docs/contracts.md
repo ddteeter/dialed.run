@@ -45,8 +45,6 @@ temp_unit        text     -- 'f' | 'c'; distance_unit 'mi' | 'km'; from locale
 default_audience text     -- 'runners' (default) | 'private' | 'groups': who new entries are
                           --  for (D-109, design 131). Writers store only
                           --  runners | private until groups ship.
-share_default    int      -- LEGACY: written in step with default_audience until
-                          --  design 131's C1, read by nothing, dropped in C2
 ```
 
 ### wardrobe_items
@@ -226,8 +224,6 @@ audience     text      -- 'private' | 'groups' | 'runners' (D-109): who may see 
                        -- Seeded from default_audience at log time, user
                        -- toggleable. DEFAULT 'private' fails closed; every app
                        -- writer sets it. Only 'runners' is shown to strangers.
-is_public    int       -- LEGACY: written in step with audience until design
-                       -- 131's C1, read by nothing, dropped in C2
 caption      text      -- NULLABLE
 created_at   int
 ```

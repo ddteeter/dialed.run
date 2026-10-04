@@ -24,7 +24,6 @@ import {
   createOrGetBrand,
   createOrGetProduct,
 } from "../../src/modules/products";
-import { entryAudienceColumns } from "../feed/helpers";
 
 /**
  * The daily digest is a cron whose entire product is a list of things a
@@ -193,16 +192,14 @@ describe("the cron heartbeat", () => {
     const userId = newUlid();
     const runId = await insertRun({ userId });
     const entryId = newUlid();
-    await coreDb()
-      .insert(outfitEntries)
-      .values({
-        id: entryId,
-        userId,
-        runId,
-        verdict: 0,
-        ...entryAudienceColumns("runners"),
-        createdAt: nowSeconds(),
-      });
+    await coreDb().insert(outfitEntries).values({
+      id: entryId,
+      userId,
+      runId,
+      verdict: 0,
+      audience: "runners",
+      createdAt: nowSeconds(),
+    });
     await coreDb()
       .insert(entryPhotos)
       .values({
@@ -238,16 +235,14 @@ describe("the cron heartbeat", () => {
     const author = newUlid();
     const runId = await insertRun({ userId: author });
     const entryId = newUlid();
-    await coreDb()
-      .insert(outfitEntries)
-      .values({
-        id: entryId,
-        userId: author,
-        runId,
-        verdict: 0,
-        ...entryAudienceColumns("runners"),
-        createdAt: nowSeconds(),
-      });
+    await coreDb().insert(outfitEntries).values({
+      id: entryId,
+      userId: author,
+      runId,
+      verdict: 0,
+      audience: "runners",
+      createdAt: nowSeconds(),
+    });
     for (let n = 0; n < 3; n += 1) {
       await coreDb().insert(reports).values({
         id: newUlid(),
@@ -781,9 +776,13 @@ describe("every hourly step runs, whichever fail (law 5)", () => {
       undefined,
       { rescreenHandles },
     );
-    await handleScheduled({ cron: "0 * * * *" } as ScheduledController, undefined, {
-      rescreenHandles,
-    });
+    await handleScheduled(
+      { cron: "0 * * * *" } as ScheduledController,
+      undefined,
+      {
+        rescreenHandles,
+      },
+    );
     await handleScheduled(ENRICHMENT_RETRY, undefined, { rescreenHandles });
 
     expect(asked).toStrictEqual(["asked"]);

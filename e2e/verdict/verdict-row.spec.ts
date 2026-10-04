@@ -31,7 +31,6 @@ import { nowSeconds } from "../../src/lib/now";
 import { accountEmail, storageStateFor } from "../support/accounts";
 import { withLocalDb } from "../support/local-db";
 import { expect, test } from "@playwright/test";
-import { entryAudienceColumns } from "../support/audience";
 
 test.use({ storageState: storageStateFor("verdict") });
 
@@ -80,7 +79,7 @@ test("the five verdict buttons sit in one row at 390 and at 1280", async ({
       id: entryId,
       userId: row.id,
       runId,
-      ...entryAudienceColumns("private"),
+      audience: "private",
       createdAt: startedAt,
     });
     await core.insert(outfitEntryItems).values({ entryId, itemId });

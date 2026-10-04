@@ -26,7 +26,6 @@ import {
   wardrobeItems,
 } from "../../db/schema-core";
 import { env } from "../../env";
-import { isSharedAudience } from "../../lib/contracts";
 import type {
   Audience,
   WritableAudience,
@@ -190,11 +189,7 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
     // Changing the preference later republishes nothing, and an entry
     // made private stays private. The run itself has no public flag —
     // see `./share-default`.
-    //
-    // **Both columns, until C1** (design 131): the boolean is what every
-    // version a rollback could restore still reads.
     audience,
-    legacyIsPublic: isSharedAudience(audience),
     // Present only for a caller that has both at once. `undefined` is
     // what the phone flow passes and inserts SQL NULL, which is the
     // unjudged state `shouldPromptForVerdict` looks for.
@@ -296,9 +291,7 @@ export async function submitVerdict(input: SubmitVerdictInput): Promise<void> {
       .update(outfitEntries)
       .set({
         verdict: input.verdict,
-        // Both columns, until C1 (design 131); see `attachKit`.
         audience,
-        legacyIsPublic: isSharedAudience(audience),
         // A clear-to-null update needs a real SQL NULL, not `undefined`
         // (drizzle drops `undefined` set-values entirely — see mapUpdateSet).
         caption: input.caption ?? sql`NULL`,
@@ -593,7 +586,7 @@ export async function getEntryDetail(
   // Through the one visibility rule (task 128): the owner sees their own
   // entry whatever its state, and anyone else only what the rule allows —
   // shared, `ok`, an author who is not banned, no block between the two
-  // and nothing the viewer reported. It used to read `is_public` alone, so
+  // and nothing the viewer reported. It used to read the sharing flag alone, so
   // an entry three people reported stayed open here to anyone with its link.
   const [entry] = await database
     .select()

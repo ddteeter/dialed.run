@@ -3,9 +3,9 @@
  * `../contracts.ts`. Import from there, not from here.
  *
  * Who may see an entry, and who a runner's new entries are for by default
- * (decision D-109, design 131). It replaces two booleans,
- * `outfit_entries.is_public` and `user_profiles.share_default`, because
- * groups need a third answer that a boolean cannot hold.
+ * (decision D-109, design 131). It replaced two booleans, an entry's
+ * sharing flag and the runner's sharing default (dropped in design 131's
+ * C2), because groups need a third answer that a boolean cannot hold.
  */
 import { z } from "zod";
 

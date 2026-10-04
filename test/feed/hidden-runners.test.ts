@@ -16,14 +16,7 @@ import {
 } from "../../src/modules/feed/profiles";
 import { searchRunners, searchStatement } from "../../src/modules/feed/search";
 import { banUser, blockRunner, fileReport } from "../../src/modules/safety";
-import {
-  entryAudienceColumns,
-  makeEntry,
-  makeRun,
-  makeUser,
-  resetTables,
-  NOW,
-} from "./helpers";
+import { makeEntry, makeRun, makeUser, resetTables, NOW } from "./helpers";
 import { confirmedReporter } from "../safety/helpers";
 
 /**
@@ -428,7 +421,7 @@ describe("the author's own under-review entry on Following (D-67)", () => {
     await db()
       .update(outfitEntries)
       .set({
-        ...entryAudienceColumns("private"),
+        audience: "private",
         moderationStatus: "hidden_pending_review",
       })
       .where(eq(outfitEntries.id, await postedBy(author)));
