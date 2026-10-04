@@ -87,7 +87,9 @@ call-epic screens.
    per-item flags. The "noted" confirmation shows the updated band count —
    proof the logging did something.
 4. **Share**: on by default (per-entry toggle; global default in settings).
-   Public entries feed E1/E2 and the consensus aggregates.
+   Public entries feed E1/E2 and the in-app consensus aggregates. Published
+   anonymous totals (the marketing guides and reports) count private runs too,
+   under D-108's conditions, unless the runner opts out.
 
 Target: under 15 seconds from file to logged verdict. Any added step must
 justify itself against that number.
