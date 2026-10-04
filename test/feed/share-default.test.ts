@@ -32,7 +32,7 @@ describe("isPublicByDefault", () => {
   });
 
   it("honours an explicit opt-out", async () => {
-    const quiet = await makeUser({ shareDefault: false });
+    const quiet = await makeUser({ defaultAudience: "private" });
 
     expect(await isPublicByDefault(coreDb(), quiet)).toBe(false);
   });

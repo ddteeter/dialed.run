@@ -24,6 +24,7 @@ import { nowSeconds } from "../../src/lib/now";
 import { signInAsOperator } from "../desk/operator";
 import { expect, hydrated, scene, test } from "../support/demo";
 import { withLocalDb } from "../support/local-db";
+import { entryAudienceColumns } from "../support/audience";
 
 test("an operator renames and closes a runner, and a Remove deletes", async ({
   page,
@@ -70,7 +71,7 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
       runId,
       userId: runnerId,
       verdict: 0,
-      isPublic: true,
+      ...entryAudienceColumns("runners"),
       createdAt: now - 3600,
     });
     await core.insert(reviewQueue).values({

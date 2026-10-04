@@ -49,7 +49,7 @@ const CLEAN: Classify = () =>
 async function publicEntry() {
   const userId = await makeUser();
   const runId = await makeRun({ userId });
-  const entryId = await makeEntry({ userId, runId, isPublic: true });
+  const entryId = await makeEntry({ userId, runId, audience: "runners" });
   return { userId, entryId };
 }
 

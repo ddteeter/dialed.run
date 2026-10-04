@@ -43,7 +43,7 @@ async function moderationStatusOf(entryId: string): Promise<string> {
 async function reportableEntry(): Promise<string> {
   const author = await makeUser();
   const runId = await makeRun({ userId: author });
-  return makeEntry({ userId: author, runId, isPublic: true });
+  return makeEntry({ userId: author, runId, audience: "runners" });
 }
 
 describe("the distinct-reporter threshold", () => {

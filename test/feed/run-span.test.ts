@@ -218,7 +218,7 @@ describe("the coverage ladder bands a run at the hour it was judged", () => {
     await makeEntry({
       userId: user,
       runId,
-      isPublic: true,
+      audience: "runners",
       createdAt: NOW,
       itemIds: [item],
       verdict: 2,
@@ -272,7 +272,7 @@ describe("consensus matches an entry at the hour its runner judged by", () => {
     await makeEntry({
       userId: author,
       runId,
-      isPublic: true,
+      audience: "runners",
       createdAt: NOW,
       itemIds: [item],
       verdict: 2,
@@ -325,7 +325,7 @@ describe("consensus matches an entry at the hour its runner judged by", () => {
     await makeEntry({
       userId: author,
       runId,
-      isPublic: true,
+      audience: "runners",
       createdAt: NOW,
       itemIds: [item],
       verdict: 2,

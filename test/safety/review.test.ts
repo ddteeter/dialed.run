@@ -44,7 +44,11 @@ function core() {
 async function queuedEntry(): Promise<{ entryId: string; queueId: string }> {
   const author = await makeUser();
   const runId = await makeRun({ userId: author });
-  const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+  const entryId = await makeEntry({
+    userId: author,
+    runId,
+    audience: "runners",
+  });
 
   for (let n = 0; n < autoHideReporterThreshold; n += 1) {
     const reporter = await makeUser();
@@ -71,7 +75,11 @@ async function queuedEntry(): Promise<{ entryId: string; queueId: string }> {
 async function reportedPhoto(): Promise<string> {
   const author = await makeUser();
   const runId = await makeRun({ userId: author });
-  const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+  const entryId = await makeEntry({
+    userId: author,
+    runId,
+    audience: "runners",
+  });
   const photoId = newUlid();
   await core()
     .insert(entryPhotos)
@@ -165,7 +173,11 @@ describe("resolving a decision", () => {
     const runId = await makeRun({ userId: author });
     // A private entry that then gets reported. If the hide had written
     // isPublic, approving would silently publish it.
-    const entryId = await makeEntry({ userId: author, runId, isPublic: false });
+    const entryId = await makeEntry({
+      userId: author,
+      runId,
+      audience: "private",
+    });
     for (let n = 0; n < autoHideReporterThreshold; n += 1) {
       await fileReport(
         {
@@ -612,7 +624,11 @@ describe("the queue itself", () => {
   it("carries a reported entry's photos, in the order they were posted", async () => {
     const author = await makeUser();
     const runId = await makeRun({ userId: author });
-    const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+    const entryId = await makeEntry({
+      userId: author,
+      runId,
+      audience: "runners",
+    });
     for (const position of [1, 0]) {
       await core()
         .insert(entryPhotos)

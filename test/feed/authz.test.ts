@@ -78,7 +78,11 @@ describe("authorization", () => {
     const owner = await makeUser();
     const viewer = await makeUser();
     const runId = await makeRun({ userId: owner });
-    const entryId = await makeEntry({ userId: owner, runId, isPublic: false });
+    const entryId = await makeEntry({
+      userId: owner,
+      runId,
+      audience: "private",
+    });
 
     await expect(getEntryDetail(entryId, viewer)).resolves.toBeUndefined();
     await expect(getEntryDetail(entryId, owner)).resolves.toMatchObject({
@@ -97,13 +101,13 @@ describe("authorization", () => {
     const publicEntry = await makeEntry({
       userId: author,
       runId: publicRun,
-      isPublic: true,
+      audience: "runners",
       createdAt: NOW,
     });
     await makeEntry({
       userId: author,
       runId: privateRun,
-      isPublic: false,
+      audience: "private",
       createdAt: NOW + 1,
     });
 
@@ -120,9 +124,9 @@ describe("authorization", () => {
     const publicEntry = await makeEntry({
       userId: author,
       runId: publicRun,
-      isPublic: true,
+      audience: "runners",
     });
-    await makeEntry({ userId: author, runId: privateRun, isPublic: false });
+    await makeEntry({ userId: author, runId: privateRun, audience: "private" });
 
     const profile = await otherProfile(author, await makeUser());
     const entryIds = profile?.recentPublicEntries.map((e) => e.entryId) ?? [];
@@ -145,7 +149,7 @@ describe("authorization", () => {
     await makeEntry({
       userId: author,
       runId: privateRun,
-      isPublic: false,
+      audience: "private",
       createdAt: NOW,
       itemIds: [item],
     });
@@ -172,7 +176,7 @@ describe("authorization", () => {
     const entryId = await makeEntry({
       userId: owner,
       runId,
-      isPublic: true,
+      audience: "runners",
       itemIds: [item],
     });
     await submitVerdict({

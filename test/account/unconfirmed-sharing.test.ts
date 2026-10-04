@@ -12,6 +12,7 @@ import {
 } from "../../src/modules/feed/share-default";
 import { core } from "../email/helpers";
 import { makeRun, makeUser, resetTables } from "../feed/helpers";
+import type { Audience } from "../../src/lib/contracts";
 
 /**
  * Decision D-50: an unconfirmed account's entries save private, and
@@ -29,12 +30,12 @@ beforeEach(async () => {
 A runner as sign-up leaves them: a profile and a `user` row.
 */
 async function runner(
-  options: Readonly<{ isVerified: boolean; shareDefault?: boolean }>,
+  options: Readonly<{ isVerified: boolean; defaultAudience?: Audience }>,
 ): Promise<string> {
   const userId = await makeUser(
-    options.shareDefault === undefined
+    options.defaultAudience === undefined
       ? undefined
-      : { shareDefault: options.shareDefault },
+      : { defaultAudience: options.defaultAudience },
   );
   await db.insert(user).values({
     id: userId,
@@ -83,7 +84,10 @@ describe("the confirmation gates", () => {
 
 describe("an unconfirmed runner's entries (D-50)", () => {
   it("start private whatever the default, and start at the default once confirmed", async () => {
-    const userId = await runner({ isVerified: false, shareDefault: true });
+    const userId = await runner({
+      isVerified: false,
+      defaultAudience: "runners",
+    });
     expect(await isPublicByDefault(db, userId)).toBe(false);
 
     const entryId = await attachKit({
@@ -136,7 +140,10 @@ describe("an unconfirmed runner's entries (D-50)", () => {
   });
 
   it("keep a confirmed runner's own private choice and opt-out", async () => {
-    const quiet = await runner({ isVerified: true, shareDefault: false });
+    const quiet = await runner({
+      isVerified: true,
+      defaultAudience: "private",
+    });
     expect(await isPublicByDefault(db, quiet)).toBe(false);
     expect(await isSharedAsChosen(db, quiet, false)).toBe(false);
     expect(await isSharedAsChosen(db, quiet, true)).toBe(true);

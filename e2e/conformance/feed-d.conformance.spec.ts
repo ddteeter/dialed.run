@@ -81,7 +81,7 @@ test("D's sparse own entry is the strip, the prompt in the badge's place, and th
     userId: await feedUserId(),
     place: { lat: 62.11, lng: 13.21 },
     startedAt: nowSeconds() - 3 * 3600,
-    isPublic: false,
+    audience: "private",
   });
 
   try {

@@ -20,6 +20,8 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { withLocalDb } from "../support/local-db";
 import { userIdOf } from "./logging-fixtures";
+import type { Audience } from "../../src/lib/contracts";
+import { entryAudienceColumns } from "../support/audience";
 
 /**
  * What the feed lane's conformance specs share: who the signed-in runner
@@ -230,7 +232,7 @@ export interface EntrySeed {
   startedAt: number;
   feelsLikeC?: number;
   verdict?: number;
-  isPublic?: boolean;
+  audience?: Audience;
   isIndoor?: boolean;
   caption?: string;
   category?: "top" | "bottom" | "gloves";
@@ -276,7 +278,7 @@ export async function seedEntry(
       userId: params.userId,
       runId,
       verdict: params.verdict,
-      isPublic: params.isPublic ?? true,
+      ...entryAudienceColumns(params.audience ?? "runners"),
       caption: params.caption,
       createdAt: params.startedAt,
     });

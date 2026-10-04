@@ -456,7 +456,7 @@ describe("saving a row", () => {
     // The sharing default is `attachKit`'s to apply as it creates the
     // entry — the backlog neither asks for it nor carries it, which is
     // one read fewer per page and one fewer thing to keep in step.
-    const quiet = await makeUser({ shareDefault: false });
+    const quiet = await makeUser({ defaultAudience: "private" });
     const halfZip = await makeItem({ userId: quiet });
     const runId = await runAt(quiet, NOW - DAY, 3);
 

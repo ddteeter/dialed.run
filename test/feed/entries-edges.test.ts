@@ -128,7 +128,7 @@ describe("attachKit follows the runner's sharing default", () => {
   });
 
   it("shares by default when the profile says to", async () => {
-    const userId = await makeUser({ shareDefault: true });
+    const userId = await makeUser({ defaultAudience: "runners" });
     const runId = await makeRun({ userId });
 
     const entryId = await attachKit({ userId, runId, itemIds: [] });
@@ -143,7 +143,7 @@ describe("attachKit follows the runner's sharing default", () => {
   it("keeps an entry private when the profile says to", async () => {
     // The per-user default is a privacy setting; ignoring it publishes
     // something the runner asked to keep to themselves.
-    const userId = await makeUser({ shareDefault: false });
+    const userId = await makeUser({ defaultAudience: "private" });
     const runId = await makeRun({ userId });
 
     const entryId = await attachKit({ userId, runId, itemIds: [] });

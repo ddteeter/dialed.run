@@ -30,6 +30,7 @@ import {
   unseed,
   userIdOf,
 } from "./logging-fixtures";
+import { entryAudienceColumns } from "../support/audience";
 
 /**
  * A3's verdict row, built against drawn.
@@ -136,7 +137,7 @@ test("A3's verdict row and chips are composed as the board draws them", async ({
       id: entryId,
       userId: row.id,
       runId,
-      isPublic: false,
+      ...entryAudienceColumns("private"),
       createdAt: startedAt,
     });
     await core.insert(outfitEntryItems).values({ entryId, itemId });

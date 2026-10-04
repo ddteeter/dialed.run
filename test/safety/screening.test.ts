@@ -73,7 +73,7 @@ const unavailable: Classify = () => Promise.reject(new Error("moderation 503"));
 async function entryPhotoRow(): Promise<string> {
   const userId = await makeUser();
   const runId = await makeRun({ userId });
-  const entryId = await makeEntry({ userId, runId, isPublic: true });
+  const entryId = await makeEntry({ userId, runId, audience: "runners" });
   const photoId = newUlid();
   await core()
     .insert(entryPhotos)

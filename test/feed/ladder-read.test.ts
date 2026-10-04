@@ -41,7 +41,7 @@ async function verdictAt(
   await makeEntry({
     userId,
     runId,
-    isPublic: true,
+    audience: "runners",
     createdAt: NOW + seq,
     itemIds: [item],
     verdict,

@@ -6,7 +6,7 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { follow } from "../../src/modules/feed/follows";
 import { searchRunners } from "../../src/modules/feed/search";
-import { makeUser, resetTables } from "./helpers";
+import { makeUser, profileAudienceColumns, resetTables } from "./helpers";
 
 /**
  * Runner search (round 22, item 15): a prefix on the handle, never
@@ -70,7 +70,7 @@ describe("searchRunners", () => {
     const viewer = await makeUser();
     await drizzle(env.DIALED_CORE)
       .insert(userProfiles)
-      .values({ userId: newUlid(), shareDefault: true });
+      .values({ userId: newUlid(), ...profileAudienceColumns("runners") });
 
     expect(await searchRunners(viewer, "runner")).toStrictEqual([]);
   });

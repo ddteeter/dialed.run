@@ -31,6 +31,7 @@ import {
 
 import { makeEntry, makeRun, makeUser, resetTables } from "./helpers";
 import { tinyJpeg } from "./photos-fixture";
+import type { Audience } from "../../src/lib/contracts";
 
 // A real JPEG: every stored photo is decoded and re-encoded (task 128 ·
 // SAF-1), so three made-up bytes would be refused before they reached R2.
@@ -140,7 +141,11 @@ describe("entry photos", () => {
     const owner = await makeUser();
     const stranger = await makeUser();
     const runId = await makeRun({ userId: owner });
-    const entryId = await makeEntry({ userId: owner, runId, isPublic: false });
+    const entryId = await makeEntry({
+      userId: owner,
+      runId,
+      audience: "private",
+    });
     const key = await uploadPhoto({
       userId: owner,
       entryId,
@@ -487,10 +492,10 @@ const CLEAN: Classify = () =>
     ) as CategoryScores,
   });
 
-async function ownedPhoto(isPublic = true) {
+async function ownedPhoto(audience: Audience = "runners") {
   const userId = await makeUser();
   const runId = await makeRun({ userId });
-  const entryId = await makeEntry({ userId, runId, isPublic });
+  const entryId = await makeEntry({ userId, runId, audience });
   const key = await uploadPhoto(
     {
       userId,
@@ -532,7 +537,7 @@ describe("photoResponse: the whole cached GET, in one function", () => {
   it("says not found — never forbidden — for a photo the viewer may not see", async () => {
     // A 403 tells a stranger the photo exists, which is most of what they
     // wanted to know.
-    const { key } = await ownedPhoto(false);
+    const { key } = await ownedPhoto("private");
     const stranger = await makeUser();
 
     const response = await photoResponse(key, stranger);
@@ -542,7 +547,7 @@ describe("photoResponse: the whole cached GET, in one function", () => {
   });
 
   it("says not found for a signed-out viewer of a private entry", async () => {
-    const { key } = await ownedPhoto(false);
+    const { key } = await ownedPhoto("private");
     const refused = await photoResponse(key, undefined);
     expect(refused.status).toBe(404);
   });
@@ -550,7 +555,7 @@ describe("photoResponse: the whole cached GET, in one function", () => {
   it("refuses a signed-out viewer even a public entry's photo (SAF-14)", async () => {
     // R-109: the pages that show these photos require a session, so the
     // bytes do too. A signed-in stranger still gets the same photo.
-    const { key } = await ownedPhoto(true);
+    const { key } = await ownedPhoto("runners");
     const refused = await photoResponse(key, undefined);
     expect(refused.status).toBe(404);
     const served = await photoResponse(key, await makeUser());

@@ -44,7 +44,11 @@ beforeEach(async () => {
 async function reportedButNotHidden(): Promise<string> {
   const author = await makeUser();
   const runId = await makeRun({ userId: author });
-  const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+  const entryId = await makeEntry({
+    userId: author,
+    runId,
+    audience: "runners",
+  });
 
   for (let n = 0; n < autoHideReporterThreshold; n += 1) {
     await core()
@@ -86,7 +90,11 @@ describe("reconciling reports that crossed the threshold and were never hidden",
   it("leaves a subject one report short alone", async () => {
     const author = await makeUser();
     const runId = await makeRun({ userId: author });
-    const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+    const entryId = await makeEntry({
+      userId: author,
+      runId,
+      audience: "runners",
+    });
     for (let n = 0; n < autoHideReporterThreshold - 1; n += 1) {
       await core()
         .insert(reports)
@@ -114,7 +122,11 @@ describe("reconciling reports that crossed the threshold and were never hidden",
     // from.
     const author = await makeUser();
     const runId = await makeRun({ userId: author });
-    const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+    const entryId = await makeEntry({
+      userId: author,
+      runId,
+      audience: "runners",
+    });
     const reporter = await makeUser();
     await core().insert(reports).values({
       id: newUlid(),
@@ -186,7 +198,11 @@ describe("reconciling reports that crossed the threshold and were never hidden",
 async function queuedAndClaimed(): Promise<string> {
   const author = await makeUser();
   const runId = await makeRun({ userId: author });
-  const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+  const entryId = await makeEntry({
+    userId: author,
+    runId,
+    audience: "runners",
+  });
   for (let n = 0; n < autoHideReporterThreshold; n += 1) {
     await fileReport(
       {

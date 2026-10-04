@@ -64,7 +64,10 @@ describe("saveCalibration", () => {
   it("recalibrates an existing profile without resetting anything else", async () => {
     // Settings "recalibrate" reaches O1 again. A display name, a share
     // preference and a completed flag are other people's business.
-    const userId = await makeUser({ username: "Ada", shareDefault: false });
+    const userId = await makeUser({
+      username: "Ada",
+      defaultAudience: "private",
+    });
     await completeOnboarding(coreDb(), userId);
 
     await saveCalibration(coreDb(), userId, { thermalLevel: -1 });
@@ -176,7 +179,10 @@ describe("savePlace — the one writer of the profile's place (FEED-5)", () => {
   });
 
   it("replaces a place whole, and leaves everything O1 saved beside it alone", async () => {
-    const userId = await makeUser({ username: "Ada", shareDefault: false });
+    const userId = await makeUser({
+      username: "Ada",
+      defaultAudience: "private",
+    });
     await saveCalibration(coreDb(), userId, {
       thermalLevel: 1,
       cityLabel: "Minneapolis, MN, United States",

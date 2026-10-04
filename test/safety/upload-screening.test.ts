@@ -87,7 +87,7 @@ const PNG_PIXEL = Uint8Array.from(
 async function anEntry(): Promise<string> {
   const userId = await makeUser();
   const runId = await makeRun({ userId });
-  return makeEntry({ userId, runId, isPublic: true });
+  return makeEntry({ userId, runId, audience: "runners" });
 }
 
 /**
@@ -306,7 +306,11 @@ describe("what the screening verdict keeps off a stranger's screen", () => {
   it("drops a flagged photo from the feed list but leaves the entry", async () => {
     const author = await makeUser();
     const runId = await makeRun({ userId: author });
-    const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+    const entryId = await makeEntry({
+      userId: author,
+      runId,
+      audience: "runners",
+    });
     await uploadPhoto(
       {
         userId: author,
@@ -334,7 +338,11 @@ describe("what the screening verdict keeps off a stranger's screen", () => {
   it("leaves it in the author's own feed", async () => {
     const author = await makeUser();
     const runId = await makeRun({ userId: author });
-    const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+    const entryId = await makeEntry({
+      userId: author,
+      runId,
+      audience: "runners",
+    });
     await uploadPhoto(
       {
         userId: author,
@@ -356,7 +364,11 @@ describe("what the screening verdict keeps off a stranger's screen", () => {
   it("drops it from entry detail for a stranger and keeps it for the author", async () => {
     const author = await makeUser();
     const runId = await makeRun({ userId: author });
-    const entryId = await makeEntry({ userId: author, runId, isPublic: true });
+    const entryId = await makeEntry({
+      userId: author,
+      runId,
+      audience: "runners",
+    });
     await uploadPhoto(
       {
         userId: author,
