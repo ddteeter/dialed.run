@@ -518,3 +518,10 @@ Drawn in `Round 32 Rulings.dc.html`. **The middle path, with five conditions. If
 - **Marketing site:** its own public Astro repo, rebuilt nightly, with guide data from the app's nightly anonymous-totals file. Before public launch it's Home and Invite only. Changelog entries are drafted by Claude from merged changes and approved by the owner (M7 amended).
 - **Aggregates:** answered in Round 32: the middle path with five conditions. Reports count closet pieces only when worn on a counted run.
 - **Au6** (Auth.dc.html): the Google fault band moves under the button, which keeps Google's own spec. MONO.xs kicker, and Try again in the band.
+
+## Pre-launch: audience model (for Day 2 groups)
+- **Visibility is an audience, not a flag.** `audience: 'private' | 'groups' | 'runners'` plus `group_ids[]` (empty at launch). Launch uses only private and runners. The UI copy is unchanged: SHARED = runners, PRIVATE = private.
+- Every audience check (feed, entry page, API visibility, social proof, export) reads `audience`, never a boolean, so groups ship without changing existing data.
+- API `visibility` already returns a word. `"groups"` will be added under /v1 (additive).
+- Export: entries.csv `visibility` column → `audience`.
+- Day 2 design lives in `Day 2 Groups.dc.html`.

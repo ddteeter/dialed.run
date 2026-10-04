@@ -860,6 +860,38 @@ ACCEPTED`, `STILL LOGGED IN`. If the terms change again while the
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
+## Answered in round 33 (imported 2026-10-03)
+
+Design sent round 33 at 23:14. It adds one board, `Day 2 Groups.dc.html`,
+and a section at the end of `design/docs/product.md`, "Pre-launch: audience
+model". No contract file changed, and nothing needs a code port.
+
+**The pre-launch half is decided (D-109).** Visibility becomes an audience:
+`'private' | 'groups' | 'runners'`, plus the groups an entry goes to, which
+is empty at launch. Launch uses only the two ends, and the copy does not
+change. Every audience check reads the audience, never a boolean, so groups
+can ship later without rewriting existing rows. The export's `visibility`
+column becomes `audience`, and the read API's `visibility` word gains
+`groups` additively under `/v1`. Both write the UI's words (`shared`,
+`private`); `runners` stays internal. The board's `group_ids[]` lands with
+groups, as a join table. The build is R-129, scheduled next.
+
+**The groups half is parked, not scheduled.** The board is direction only.
+It covers:
+
+- the model: auto-share per membership, with no per-run group picker;
+  three join types (open, request, invite); follows unchanged; group-only
+  runs counted in anonymous totals under D-108;
+- two sketches: A3's audience as three choices, shown only once the runner
+  is in a group, and a group page with "This morning", what the club wore in
+  today's weather;
+- seven open questions, each with a lean: who creates groups, leaving,
+  admin powers, reports inside a group, where groups live in the feed, size
+  and count limits, and group pages on the marketing site.
+
+Those questions need the owner's decisions before design starts, so none
+of them is recorded here as decided.
+
 ## Answered in rounds 31–32 (imported 2026-10-03)
 
 Design sent both rounds at 22:42, after round 30's rulings. **Round 31** is

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px;">
+<div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px;">
+
+<div style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+  <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;"><span>Day 2 &nbsp;/&nbsp; groups · parked, not scheduled</span><span style="color: #FF2D8A;">dialed.run</span></div>
+  <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 1120px; text-transform: uppercase;">You follow a person. You join a place.</h1>
+  <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">Groups give runs a middle audience between Only me and All runners. Kit advice is local, so the most useful answer to "what do I wear at 34°F" comes from people in the same weather. The only thing that ships before launch is the audience model (docs/product.md). Everything else here is a direction, with the open questions marked.</p>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+  <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">01 · The model</span></div>
+  <div style="display: flex; flex-direction: column; border: 1px solid #2A2A31;">
+    <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 200px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; background: #0B0B0E; align-items: baseline;"><span style="font-size: 15px; font-weight: 600;">Audience</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #00E0C6;">PRE-LAUNCH · DECIDED</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">Only me · My groups · All runners. It's stored as <code style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">audience</code> plus <code style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">group_ids[]</code>. Launch uses only the two ends, and the copy doesn't change.</span></div>
+    <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 200px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;"><span style="font-size: 15px; font-weight: 600;">Auto-share per membership</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #00E0C6;">DIRECTION</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">Each membership has "Share my runs here automatically". A run set to My groups goes to every group with it on. There's no per-run group picker, because it slows logging and invites mistakes.</span></div>
+    <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 200px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;"><span style="font-size: 15px; font-weight: 600;">Join types</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #00E0C6;">DIRECTION</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;"><strong style="color: #F4F3EF;">Open:</strong> anyone can join, and turning auto-share on warns that this is close to sharing with everyone. <strong style="color: #F4F3EF;">Request:</strong> an admin approves each request. <strong style="color: #F4F3EF;">Invite:</strong> by link or code only, and never listed.</span></div>
+    <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 200px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;"><span style="font-size: 15px; font-weight: 600;">Follows</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #00E0C6;">UNCHANGED</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">Following still controls whose shared runs appear in your feed. Groups add a feed tab per group, or one Groups tab (open question 5).</span></div>
+    <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 200px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;"><span style="font-size: 15px; font-weight: 600;">Totals</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #00E0C6;">FOLLOWS ROUND 32</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">Group-only runs count in anonymous totals like any other run. In-app "worn by N runners" stays All-runners only. A group's own totals page ("what the club wore this month") needs no threshold, because members already see each other's runs.</span></div>
+  </div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+  <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">02 · Sketches</span><span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45; text-wrap: pretty;"><strong style="color: #F4F3EF;">These are direction only, not specs.</strong> They show where the audience choice and the membership switch sit.</span></div>
+  <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+    <div style="display: flex; flex-direction: column; gap: 10px; max-width: 100%;">
+      <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">A · A3 · AUDIENCE, THREE CHOICES</span>
+      <div data-screen-label="Groups audience" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden;"><div style="padding: 20px; display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44;">WHO SEES THIS RUN</span>
+        <div role="radiogroup" style="display: flex; gap: 6px;"><span style="flex: 1; min-height: 48px; border: 1px solid #DCDBD2; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600;">Only me</span><span style="flex: 1; min-height: 48px; border: 2px solid #0B0B0E; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700;">My groups</span><span style="flex: 1; min-height: 48px; border: 1px solid #DCDBD2; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600;">All runners</span></div>
+        <span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">Goes to Lakeside Run Club and biglongrun readers. <span style="color: #C21A6B; font-weight: 600; text-decoration: underline;">Change</span></span>
+      </div></div>
+      <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px; text-wrap: pretty;">This only appears once the runner is in a group. Until then, A3 keeps its single switch.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px; max-width: 100%;">
+      <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">B · GROUP PAGE · MEMBER</span>
+      <div data-screen-label="Group page" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden;"><div style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.03em; line-height: 1.1;">Lakeside Run Club</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #4E4E44;">REQUEST TO JOIN · 48 RUNNERS</span></div>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-top: 1px solid #DCDBD2; border-bottom: 1px solid #DCDBD2;"><div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 15px; font-weight: 600;">Share my runs here automatically</span><span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">Runs set to My groups appear here.</span></div><span role="switch" aria-checked="true" style="flex: none; width: 52px; height: 32px; border-radius: 999px; background: #FF2D8A; position: relative;"><span style="position: absolute; right: 4px; top: 4px; width: 24px; height: 24px; border-radius: 999px; background: #FFFFFF;"></span></span></div>
+        <div style="background: #0B0B0E; color: #F4F3EF; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">THIS MORNING · 34°F · DAMP · 9 RUNS</span><span style="font-size: 15px; line-height: 1.45;">Most were dialed in a long sleeve, tights and light gloves.</span></div>
+        <span style="font-size: 13px; color: #4E4E44;">Then the group's feed, newest first.</span>
+      </div></div>
+      <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px; text-wrap: pretty;">"This morning" is the reason the group exists: what the club wore in today's weather. It's built from members' group and All-runners runs.</p>
+    </div>
+  </div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+  <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">03 · Open questions</span><span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45; text-wrap: pretty;"><strong style="color: #F4F3EF;">These need owner decisions before design starts.</strong> Each has a lean.</span></div>
+  <div style="display: flex; flex-direction: column; border: 1px solid #2A2A31;">
+    <div style="display: grid; grid-template-columns: 40px minmax(0, 260px) minmax(0, 1fr); gap: 16px; padding: 14px 16px; background: #0B0B0E; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #F5FF3D;">1</span><span style="font-size: 15px; font-weight: 600;">Who can create groups?</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">Lean: the owner, or runners the owner approves, at first. Run clubs, plus biglongrun readers as group one. Open to any runner once the Desk can moderate groups.</span></div>
+    <div style="display: grid; grid-template-columns: 40px minmax(0, 260px) minmax(0, 1fr); gap: 16px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #F5FF3D;">2</span><span style="font-size: 15px; font-weight: 600;">Leaving a group</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">Lean: the group loses access to your runs straight away. A group-only run becomes Only me unless you're still in another group with auto-share on. The leave confirm says so.</span></div>
+    <div style="display: grid; grid-template-columns: 40px minmax(0, 260px) minmax(0, 1fr); gap: 16px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #F5FF3D;">3</span><span style="font-size: 15px; font-weight: 600;">Admin powers</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">Lean: admins can approve, remove, rename, close the group, and hide a run from the group. They can't see private runs, edit anyone's run, or remove a run from dialed.run (that's the Desk).</span></div>
+    <div style="display: grid; grid-template-columns: 40px minmax(0, 260px) minmax(0, 1fr); gap: 16px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #F5FF3D;">4</span><span style="font-size: 15px; font-weight: 600;">Reports inside a group</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">Lean: they go to the Desk Review queue as today, tagged with the group. Operators can see a reported group-only run.</span></div>
+    <div style="display: grid; grid-template-columns: 40px minmax(0, 260px) minmax(0, 1fr); gap: 16px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #F5FF3D;">5</span><span style="font-size: 15px; font-weight: 600;">Where groups live in the feed</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">Lean: one Groups tab next to Following, with a group switcher. A tab per group doesn't scale beyond two.</span></div>
+    <div style="display: grid; grid-template-columns: 40px minmax(0, 260px) minmax(0, 1fr); gap: 16px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #F5FF3D;">6</span><span style="font-size: 15px; font-weight: 600;">Size and count limits</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">Lean: a runner can be in up to 10 groups. No cap on group size, but an open group over 200 members gets a reminder on its auto-share warning.</span></div>
+    <div style="display: grid; grid-template-columns: 40px minmax(0, 260px) minmax(0, 1fr); gap: 16px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #F5FF3D;">7</span><span style="font-size: 15px; font-weight: 600;">Group pages on the marketing site</span><span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">Lean: no. Groups are signed-in only, like entries and profiles (D-58). A public "Lakeside Run Club" page is a later SEO idea, and would show anonymous totals only.</span></div>
+  </div>
+</div>
+
+</div>
+</div>
+</x-dc>
+</body>
+</html>
