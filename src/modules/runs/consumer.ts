@@ -182,6 +182,10 @@ async function processImportJob(
     indoor: draft.indoor,
     title: draft.title,
     weatherStatus,
+    // Absent from the draft is NULL in the row (D-111): indoor, or a file
+    // that could not say.
+    movingS: draft.movingS,
+    elevationGainM: draft.elevationGainM,
   });
 
   if (weatherStatus === "pending" && deps.attachObservation) {
