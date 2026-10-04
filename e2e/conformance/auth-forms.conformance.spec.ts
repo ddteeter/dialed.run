@@ -7,7 +7,8 @@ import { fillOf, hydrated, openBoard } from "../support/conformance";
 import { partsExcept, partsIn, wordsOf } from "./auth-parts";
 
 /**
- * Au1–Au7 and Au2 at 1040, built against `design/Auth.dc.html` (round 22).
+ * Au1–Au7 and Au2 at 1040, built against `design/Auth.dc.html` (round 22,
+ * with Au6 redrawn in round 33).
  *
  * Region to region: which of the board's `data-part`s the page has, in
  * which order, and what each says. The board's fake values ("dana.k@…")
@@ -22,6 +23,11 @@ import { partsExcept, partsIn, wordsOf } from "./auth-parts";
  *   `data-part`. Changing it is the coordinator's (task 120's primitives).
  * - The failure band: the board's has no button and relabels the primary
  *   "Try again"; the shared `FailureBand` always carries its own. Same.
+ * - Au6's Google failure: round 33 draws it as a `control-failure` under
+ *   the Google button (round 29 #13: every Google band goes under it); the
+ *   build still shows the shared failure band above the button, with the
+ *   same words. Lane 126's build (`auth/google-button.tsx`), queued;
+ *   register R-128.
  * - "Forgot it?" is drawn on Au2–Au4 and Au7; there is no reset flow to
  *   send it to, so it is absent rather than a dead link.
  * - The Google button's "G" is Google's official image, not the board's
@@ -29,8 +35,9 @@ import { partsExcept, partsIn, wordsOf } from "./auth-parts";
  *
  * **The Google button's part is `google-button`**, round 26 #13's name for
  * it (the one element exempt from the palette and icon checks); this
- * board, round 22's, calls the same region `google`, so its name is
- * translated on the way in.
+ * board's round 22 frames call the same region `google`, so its name is
+ * translated on the way in. Au6, redrawn in round 33, already says
+ * `google-button`.
  */
 
 const BOARD = "Auth.dc.html";
@@ -237,14 +244,24 @@ test.describe("Au · phone", () => {
     await expectSameWords(page, board.words, {});
   });
 
-  test("Au6 Google failed, the band under Google (round 29 #13)", async ({
+  test("Au6 Google failed, the control failure under Google", async ({
     page,
     baseURL,
   }) => {
     if (baseURL === undefined) throw new Error("no baseURL");
     const board = await drawn(page, baseURL, "Au6 Google error", [
-      "failure-band",
+      "google-button",
+      "control-failure",
     ]);
+    // Round 33: the failure sits directly under the Google button, as a
+    // control failure, and the board draws no failure band at all.
+    expect(board.order.slice(-3)).toEqual([
+      "or-divider",
+      "google-button",
+      "control-failure",
+    ]);
+    expect(board.order).not.toContain("failure-band");
+
     await builtAt390(page, "/auth/login");
     await page.route("**/api/auth/sign-in/social", (route) =>
       route.fulfill({ status: 502, body: "{}" }),
@@ -254,24 +271,25 @@ test.describe("Au · phone", () => {
       page.locator(`${PANEL} [data-part='failure-band']`),
     ).toBeVisible({ timeout: 15_000 });
 
-    // Round 22's Au6 draws the band between the divider and Google; round
-    // 29 #13 moves every band Google owns directly under its button, and
-    // the old frame is not redrawn yet (design-deltas item 44). So the
-    // board's order, with the band moved to just after Google.
+    // Known gap: the build draws the shared failure band where round 33
+    // draws a control failure. Since round 29 #13 (PR #142) both sit
+    // directly under Google, so only the region differs. Queued for lane
+    // 126 (R-128); when it lands this fails, and the build's order becomes
+    // the board's.
     // Au6 draws no cross-link beneath; the build keeps Au2's.
-    const underGoogle = board.order.filter((part) => part !== "failure-band");
-    underGoogle.splice(
-      underGoogle.indexOf("google-button") + 1,
-      0,
-      "failure-band",
+    expect(await partsExcept(page, PANEL, ["cross-link"])).toEqual(
+      board.order.map((part) =>
+        part === "control-failure" ? "failure-band" : part,
+      ),
     );
-    expect(await partsExcept(page, PANEL, ["cross-link"])).toEqual(underGoogle);
-    // Known gap: the shared band carries its own Try again, and the Google
-    // button keeps its rest label rather than "Try Google again".
-    expect(await wordsOf(page, `${PANEL} [data-part='failure-band']`)).toEqual([
-      ...(board.words.get("failure-band") ?? []),
-      "TRY AGAIN",
-    ]);
+    // What the band says is what the board's control failure says, Try
+    // again included; only the region differs.
+    expect(await wordsOf(page, `${PANEL} [data-part='failure-band']`)).toEqual(
+      board.words.get("control-failure"),
+    );
+    board.words.delete("control-failure");
+    // The button keeps its rest label, as round 33 draws it.
+    await expectSameWords(page, board.words, {});
   });
 
   test("Au7 signed out arrival", async ({ page, baseURL }) => {
