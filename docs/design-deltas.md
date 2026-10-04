@@ -950,6 +950,12 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     the notes too. Nothing reads the notes column, so the port is
     unaffected. **The ask:** correct the two notes.
 
+48. **M5's optional note: placement, label and hint (decision D-112).**
+    The owner gave M5 Au5's optional note. The marketing site built it to
+    match Au5: "Note · optional", the hint "Where you run, or who sent you.
+    One line.", 140 characters with a counter from 120. M5 draws one
+    field. **The ask:** draw the note on M5, or confirm Au5's placement.
+
 ## Answered in round 34 (imported 2026-10-04)
 
 Design sent round 34 with `Theme.dc.html` as the primary file. It carries

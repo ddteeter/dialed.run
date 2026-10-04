@@ -63,12 +63,14 @@ Two buckets, split by **retention**, not by cost.
 ```sh
 wrangler r2 bucket create dialed-media
 wrangler r2 bucket create dialed-imports
+wrangler r2 bucket create dialed-guides
 ```
 
-| Bucket           | Binding   | Holds                         | Retention                                                      |
-| ---------------- | --------- | ----------------------------- | -------------------------------------------------------------- |
-| `dialed-media`   | `MEDIA`   | Garment photos, entry photos  | Indefinite — the app renders these; deleting one breaks a page |
-| `dialed-imports` | `IMPORTS` | Uploaded `.fit`/`.gpx`/`.tcx` | **30 days**                                                    |
+| Bucket           | Binding                | Holds                                                  | Retention                                                                                         |
+| ---------------- | ---------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| `dialed-media`   | `MEDIA`                | Garment photos, entry photos                           | Indefinite — the app renders these; deleting one breaks a page                                    |
+| `dialed-imports` | `IMPORTS`              | Uploaded `.fit`/`.gpx`/`.tcx`                          | **30 days**                                                                                       |
+| `dialed-guides`  | (R-134, not yet bound) | `guide-artifact/v1.json`, the nightly anonymous totals | Overwritten nightly; read by the marketing site's CI with a read-only token scoped to this bucket |
 
 **The 30-day rule on `dialed-imports` must be set by hand** — wrangler does
 not manage R2 object lifecycle. In the dashboard: R2 → `dialed-imports` →
@@ -148,21 +150,21 @@ that has stopped firing altogether.
 `wrangler secret put <NAME>` for each. None of these belong in
 `wrangler.jsonc` — it is committed.
 
-| Secret                        | Required   | Without it                                                                                                                                                    |
-| ----------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BETTER_AUTH_SECRET`          | **yes**    | Auth cannot sign sessions. Use ≥32 random chars (`openssl rand -base64 32`)                                                                                   |
-| `VISUAL_CROSSING_API_KEY`     | **yes**    | No weather resolves; every run falls back to manual temp                                                                                                      |
-| `STRAVA_CLIENT_ID`            | for Strava | The connect screen renders a "not configured" state                                                                                                           |
-| `STRAVA_CLIENT_SECRET`        | for Strava | As above                                                                                                                                                      |
-| `STRAVA_WEBHOOK_VERIFY_TOKEN` | for Strava | The subscription handshake rejects; pick any long random string and reuse it in step 6                                                                        |
-| `SENTRY_DSN`                  | strongly   | Errors go nowhere. This is the only place terminal failures surface for a solo operator                                                                       |
-| `GOOGLE_CLIENT_ID`            | optional   | Google sign-in button 500s — set **both** or neither                                                                                                          |
-| `GOOGLE_CLIENT_SECRET`        | optional   | As above                                                                                                                                                      |
+| Secret                        | Required   | Without it                                                                                                                                                                                                                                                                                        |
+| ----------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BETTER_AUTH_SECRET`          | **yes**    | Auth cannot sign sessions. Use ≥32 random chars (`openssl rand -base64 32`)                                                                                                                                                                                                                       |
+| `VISUAL_CROSSING_API_KEY`     | **yes**    | No weather resolves; every run falls back to manual temp                                                                                                                                                                                                                                          |
+| `STRAVA_CLIENT_ID`            | for Strava | The connect screen renders a "not configured" state                                                                                                                                                                                                                                               |
+| `STRAVA_CLIENT_SECRET`        | for Strava | As above                                                                                                                                                                                                                                                                                          |
+| `STRAVA_WEBHOOK_VERIFY_TOKEN` | for Strava | The subscription handshake rejects; pick any long random string and reuse it in step 6                                                                                                                                                                                                            |
+| `SENTRY_DSN`                  | strongly   | Errors go nowhere. This is the only place terminal failures surface for a solo operator                                                                                                                                                                                                           |
+| `GOOGLE_CLIENT_ID`            | optional   | Google sign-in button 500s — set **both** or neither                                                                                                                                                                                                                                              |
+| `GOOGLE_CLIENT_SECRET`        | optional   | As above                                                                                                                                                                                                                                                                                          |
 | `OPENAI_API_KEY`              | **yes**    | Photo screening cannot run, so every photo stays `pending` — **no entry photo is ever publicly visible** — product extraction stops at the declared rungs, and handle screening falls back to the word list alone: every handle claimed is stored `unknown` and the hourly re-ask waits for a key |
-| `ADMIN_USER_IDS`              | **yes**    | Comma-separated user ids. Unset means nobody is an admin: the Desk and the review queue answer not-found to everyone, the owner included                      |
-| `FIRECRAWL_API_KEY`           | optional   | A shop that refuses a Worker (11 of 14 sampled) is a failed fetch, and its product gets no composition                                                        |
-| `TURNSTILE_SECRET_KEY`        | **yes**    | Turnstile fails closed: every sign-up and access request is refused, and Sentry says why                                                                      |
-| `UNSUBSCRIBE_SECRET`          | **yes**    | Signs unsubscribe links (its own secret, not the auth one). Fails closed: no optional email goes, every link is refused, and `/api/health` names it           |
+| `ADMIN_USER_IDS`              | **yes**    | Comma-separated user ids. Unset means nobody is an admin: the Desk and the review queue answer not-found to everyone, the owner included                                                                                                                                                          |
+| `FIRECRAWL_API_KEY`           | optional   | A shop that refuses a Worker (11 of 14 sampled) is a failed fetch, and its product gets no composition                                                                                                                                                                                            |
+| `TURNSTILE_SECRET_KEY`        | **yes**    | Turnstile fails closed: every sign-up and access request is refused, and Sentry says why                                                                                                                                                                                                          |
+| `UNSUBSCRIBE_SECRET`          | **yes**    | Signs unsubscribe links (its own secret, not the auth one). Fails closed: no optional email goes, every link is refused, and `/api/health` names it                                                                                                                                               |
 
 **Vars, not secrets** — printed into the page or read as configuration.
 They live in `wrangler.jsonc`'s `vars` block (owner-approved, 2026-09-26),
