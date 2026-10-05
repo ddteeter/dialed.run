@@ -2,7 +2,7 @@
  * Covers: A1 (upload, read in place — the parsed card, no import page;
  * at the desk in two columns with the conditions in the rail; the start-time
  * correction, round 26 item 1; a Garmin TCX of many laps read as the whole
- * run, R-130),
+ * run, R-130; a paused TCX read at its elapsed time, D-111),
  * A2 (the picker from the first frame, a kit required, the outfit photo
  * through W3's blur), S1 (the Strava reminder a matching upload clears,
  * round 25), A3 (Noted, with the band the corrected run now has), R1 (manual entry going
@@ -15,7 +15,8 @@
  * pick a piece, add a photo -> A3: log it and read the receipt -> enter a
  * run by hand and land on picking its outfit -> the runs list -> set the
  * conditions of a run the weather gave up on -> the retired import URL
- * lands on A1 -> delete a run -> a six-lap Garmin TCX reads as every lap.
+ * lands on A1 -> delete a run -> a six-lap Garmin TCX reads as every lap
+ * -> a TCX paused between laps reads at its elapsed time.
  *
  * **It opens on the closet rather than on `/runs/new`, and that is the
  * point of the first beat** (task 117). A `page.goto` is a document load,
@@ -40,6 +41,7 @@ import { notifications } from "../../src/db/schema-core";
 import {
   distanceNumber,
   formatDuration,
+  formatPace,
 } from "../../src/lib/contracts/measures";
 import { clockLabel, timeOfDay } from "../../src/lib/dates";
 import { newUlid } from "../../src/lib/ids";
@@ -90,6 +92,21 @@ const SIX_LAPS = new URL(
 );
 const SIX_LAPS_SECONDS = 2509;
 const SIX_LAPS_METRES = 8459.4;
+
+/**
+ * The parser suite's paused fixture: two 600-second laps with the watch
+ * paused three minutes between them. Elapsed is 1380 seconds, which is what
+ * the card reads since D-111; timer time is the laps' 1200, which is what
+ * it read before. Pace on screen is elapsed-based until design 130's read
+ * API gives moving pace.
+ */
+const PAUSED = new URL(
+  "../../test/runs/fixtures/paused-climb.tcx",
+  import.meta.url,
+);
+const PAUSED_ELAPSED_SECONDS = 1380;
+const PAUSED_TIMER_SECONDS = 1200;
+const PAUSED_METRES = 3800;
 
 /**
  * A start as the parsed card reads it, and as its time input takes it: on
@@ -413,6 +430,29 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
     // where the first lap alone read "1.0 mi · 8:02".
     await expect(card).toContainText(
       `${distanceNumber(SIX_LAPS_METRES, "mi")} mi · ${formatDuration(SIX_LAPS_SECONDS)}`,
+    );
+
+    // ---- A1 · a pause is part of the run's time (D-111) -----------------
+    await scene(page, "A run with a stop in it — the watch paused at a light");
+    await page.goto("/runs/new");
+    await hydrated(page);
+    await page.setInputFiles('[data-part="drop-zone"] input[type="file"]', {
+      name: "paused_at_the_light.tcx",
+      mimeType: "application/vnd.garmin.tcx+xml",
+      buffer: readFileSync(PAUSED),
+    });
+    await expect(
+      page.getByText("Parsed · paused_at_the_light.tcx"),
+    ).toBeVisible({ timeout: 20_000 });
+    await scene(page, "A1 reads the time on the clock, the stop included");
+    // "2.4 mi · 23:00", where the laps' timer time read "2.4 mi · 20:00";
+    // the pace beside it is elapsed pace too.
+    await expect(card).toContainText(
+      `${distanceNumber(PAUSED_METRES, "mi")} mi · ${formatDuration(PAUSED_ELAPSED_SECONDS)}`,
+    );
+    await expect(card).not.toContainText(formatDuration(PAUSED_TIMER_SECONDS));
+    await expect(card).toContainText(
+      formatPace(PAUSED_ELAPSED_SECONDS, PAUSED_METRES, "mi") ?? "",
     );
   } finally {
     await unseed(seeded);

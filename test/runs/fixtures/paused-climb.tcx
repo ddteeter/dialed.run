@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Two laps with the watch paused for three minutes between them (07:10 to
+  07:13), and a climb in the second. Lap timer time sums to 1200 s; elapsed,
+  from the first lap's start to the last trackpoint, is 1380 s. The first
+  lap's altitudes wander within two metres; the second climbs from 100.4 to
+  131.9 and wobbles 1.3 m at the top. The median takes out the single low
+  fix at 99.8 and the single high one at 131.9, so the climb reads from
+  100.0 to 130.6: 30.6 m.
+-->
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
+  <Activities>
+    <Activity Sport="Running">
+      <Id>2026-08-20T07:00:00Z</Id>
+      <Lap StartTime="2026-08-20T07:00:00Z">
+        <TotalTimeSeconds>600</TotalTimeSeconds>
+        <DistanceMeters>2000.0</DistanceMeters>
+        <TriggerMethod>Manual</TriggerMethod>
+        <Track>
+          <Trackpoint>
+            <Time>2026-08-20T07:00:00Z</Time>
+            <Position>
+              <LatitudeDegrees>44.9800</LatitudeDegrees>
+              <LongitudeDegrees>-93.2650</LongitudeDegrees>
+            </Position>
+            <AltitudeMeters>100.0</AltitudeMeters>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-08-20T07:02:00Z</Time>
+            <Position>
+              <LatitudeDegrees>44.9836</LatitudeDegrees>
+              <LongitudeDegrees>-93.2650</LongitudeDegrees>
+            </Position>
+            <AltitudeMeters>101.5</AltitudeMeters>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-08-20T07:04:00Z</Time>
+            <Position>
+              <LatitudeDegrees>44.9872</LatitudeDegrees>
+              <LongitudeDegrees>-93.2650</LongitudeDegrees>
+            </Position>
+            <AltitudeMeters>99.8</AltitudeMeters>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-08-20T07:06:00Z</Time>
+            <Position>
+              <LatitudeDegrees>44.9908</LatitudeDegrees>
+              <LongitudeDegrees>-93.2650</LongitudeDegrees>
+            </Position>
+            <AltitudeMeters>100.9</AltitudeMeters>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-08-20T07:08:00Z</Time>
+            <Position>
+              <LatitudeDegrees>44.9944</LatitudeDegrees>
+              <LongitudeDegrees>-93.2650</LongitudeDegrees>
+            </Position>
+            <AltitudeMeters>100.2</AltitudeMeters>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-08-20T07:10:00Z</Time>
+            <Position>
+              <LatitudeDegrees>44.9980</LatitudeDegrees>
+              <LongitudeDegrees>-93.2650</LongitudeDegrees>
+            </Position>
+            <AltitudeMeters>100.4</AltitudeMeters>
+          </Trackpoint>
+        </Track>
+      </Lap>
+      <Lap StartTime="2026-08-20T07:13:00Z">
+        <TotalTimeSeconds>600</TotalTimeSeconds>
+        <DistanceMeters>1800.0</DistanceMeters>
+        <TriggerMethod>Manual</TriggerMethod>
+        <Track>
+          <Trackpoint>
+            <Time>2026-08-20T07:13:00Z</Time>
+            <Position>
+              <LatitudeDegrees>44.9980</LatitudeDegrees>
+              <LongitudeDegrees>-93.2650</LongitudeDegrees>
+            </Position>
+            <AltitudeMeters>100.4</AltitudeMeters>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-08-20T07:15:00Z</Time>
+            <Position>
+              <LatitudeDegrees>45.0012</LatitudeDegrees>
+              <LongitudeDegrees>-93.2650</LongitudeDegrees>
+            </Position>
+            <AltitudeMeters>108.0</AltitudeMeters>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-08-20T07:17:00Z</Time>
+            <Position>
+              <LatitudeDegrees>45.0044</LatitudeDegrees>
+              <LongitudeDegrees>-93.2650</LongitudeDegrees>
+            </Position>
+            <AltitudeMeters>116.0</AltitudeMeters>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-08-20T07:19:00Z</Time>
+            <Position>
+              <LatitudeDegrees>45.0076</LatitudeDegrees>
+              <LongitudeDegrees>-93.2650</LongitudeDegrees>
+            </Position>
+            <AltitudeMeters>124.0</AltitudeMeters>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-08-20T07:21:00Z</Time>
+            <Position>
+              <LatitudeDegrees>45.0108</LatitudeDegrees>
+              <LongitudeDegrees>-93.2650</LongitudeDegrees>
+            </Position>
+            <AltitudeMeters>131.9</AltitudeMeters>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-08-20T07:23:00Z</Time>
+            <Position>
+              <LatitudeDegrees>45.0140</LatitudeDegrees>
+              <LongitudeDegrees>-93.2650</LongitudeDegrees>
+            </Position>
+            <AltitudeMeters>130.6</AltitudeMeters>
+          </Trackpoint>
+        </Track>
+      </Lap>
+    </Activity>
+  </Activities>
+</TrainingCenterDatabase>

@@ -7,6 +7,9 @@ import {
   PARSE_FAILURE_MESSAGE,
   RunParseError,
 } from "../../src/modules/runs/parsers/shared";
+import multiLapTcx from "./fixtures/multi-lap.tcx?raw";
+import pausedClimbTcx from "./fixtures/paused-climb.tcx?raw";
+import treadmillTcx from "./fixtures/treadmill.tcx?raw";
 
 /**
  * Every way a TCX file can be wrong, and the one way it is different from
@@ -399,5 +402,124 @@ describe("tcx: every way it refuses", () => {
 <TrainingCenterDatabase/>`;
     const shared = await failureFrom(rejected);
     expect(shared.reason.startsWith("tcx:")).toBe(true);
+  });
+});
+
+/**
+A trackpoint at `time` with a position, and an altitude if given.
+*/
+function timedPoint(time: string, altitude?: number): string {
+  const altitudeMeters =
+    altitude === undefined
+      ? ""
+      : `<AltitudeMeters>${String(altitude)}</AltitudeMeters>`;
+  return `<Trackpoint><Time>${time}</Time><Position><LatitudeDegrees>44.98</LatitudeDegrees><LongitudeDegrees>-93.27</LongitudeDegrees></Position>${altitudeMeters}</Trackpoint>`;
+}
+
+/**
+One outdoor 1800 s lap whose track is the given trackpoints.
+*/
+function parseLapWith(...points: string[]): Promise<RunDraft> {
+  const track = `<Track>${points.join("")}</Track>`;
+  return parse(tcxWith(lap({ ...OUTDOOR_LAP, track })));
+}
+
+describe("tcx: elapsed duration, moving time and the climb (D-111)", () => {
+  it("runs the duration through a pause, and sums the laps for moving time", async () => {
+    // Two 600 s laps with the watch paused three minutes between them.
+    const draft = await parse(pausedClimbTcx);
+
+    expect(draft.durationS).toBe(1380);
+    expect(draft.movingS).toBe(1200);
+    expect(draft.distanceM).toBe(3800);
+  });
+
+  it("reads the climb off the altitudes, past the wander", async () => {
+    const draft = await parse(pausedClimbTcx);
+    expect(draft.elevationGainM).toBeCloseTo(30.6, 6);
+  });
+
+  it("reads a Garmin auto-lap export's wander as no climb", async () => {
+    // Six laps whose altitudes stay within four metres of each other.
+    const draft = await parse(multiLapTcx);
+
+    expect(draft.movingS).toBe(2509);
+    expect(draft.durationS).toBe(2509);
+    expect(draft.elevationGainM).toBe(0);
+  });
+
+  it("measures elapsed to the last lap's start plus its timer time", async () => {
+    // The watch paused ten minutes between laps: the second starts at
+    // 07:40, after an 1800 s first lap, and runs 60 s.
+    const second = lap({
+      startTime: "2026-01-15T07:40:00.4Z",
+      seconds: 60,
+      metres: 200,
+    });
+    const draft = await parse(tcxWith(lap(OUTDOOR_LAP) + second));
+
+    expect(draft.durationS).toBe(2460);
+    expect(draft.movingS).toBe(1860);
+  });
+
+  it("ignores a trackpoint dated far past the laps", async () => {
+    // The review's probe: one fix a year ahead used to make a half-hour
+    // run 31,537,800 seconds long. Trackpoint times are not read for the
+    // duration at all.
+    const yearAhead = timedPoint("2027-01-15T07:30:00Z");
+    const draft = await parseLapWith(timedPoint(START), yearAhead);
+
+    expect(draft.durationS).toBe(1800);
+    expect(draft.movingS).toBe(1800);
+  });
+
+  it("never makes the duration shorter than the laps' timer time", async () => {
+    // A second lap stamped with the first lap's start ends 60 s in, long
+    // before the laps' 1860 s of timer time.
+    const second = lap({ startTime: START, seconds: 60, metres: 200 });
+    const draft = await parse(tcxWith(lap(OUTDOOR_LAP) + second));
+
+    expect(draft.durationS).toBe(1860);
+  });
+
+  it("takes no end from a lap whose start it cannot read", async () => {
+    const second = lap({ startTime: "not a time", seconds: 60, metres: 200 });
+    const unstamped = lap({ seconds: 60, metres: 200 });
+    const draft = await parse(tcxWith(lap(OUTDOOR_LAP) + second + unstamped));
+
+    expect(draft.durationS).toBe(1920);
+  });
+
+  it("says nothing of a climb in a file without altitudes", async () => {
+    const draft = await parse(tcxWith(lap(OUTDOOR_LAP)));
+
+    expect(draft.movingS).toBe(1800);
+    expect(draft.elevationGainM).toBeUndefined();
+  });
+
+  it("reads the altitudes in order across laps and tracks", async () => {
+    const first = lap({
+      ...OUTDOOR_LAP,
+      track:
+        `<Track>${timedPoint(START, 100)}</Track><Track/>` +
+        `<Track>${timedPoint(START)}${timedPoint(START, 106)}</Track>`,
+    });
+    const second = lap({
+      seconds: 60,
+      metres: 200,
+      track: `<Track>${timedPoint(START, 112)}</Track>`,
+    });
+    const draft = await parse(tcxWith(first + second));
+
+    expect(draft.elevationGainM).toBe(12);
+  });
+
+  it("carries neither for a treadmill run", async () => {
+    const draft = await parse(treadmillTcx);
+
+    expect(draft.indoor).toBe(true);
+    expect(draft.durationS).toBe(1800);
+    expect(draft).not.toHaveProperty("movingS");
+    expect(draft).not.toHaveProperty("elevationGainM");
   });
 });
