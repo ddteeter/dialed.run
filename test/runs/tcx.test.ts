@@ -436,7 +436,7 @@ describe("tcx: elapsed duration, moving time and the climb (D-111)", () => {
 
   it("reads the climb off the altitudes, past the wander", async () => {
     const draft = await parse(pausedClimbTcx);
-    expect(draft.elevationGainM).toBeCloseTo(32.1, 6);
+    expect(draft.elevationGainM).toBeCloseTo(30.6, 6);
   });
 
   it("reads a Garmin auto-lap export's wander as no climb", async () => {
@@ -448,27 +448,46 @@ describe("tcx: elapsed duration, moving time and the climb (D-111)", () => {
     expect(draft.elevationGainM).toBe(0);
   });
 
-  it("measures elapsed from the first lap's start to the last trackpoint", async () => {
-    const end = timedPoint("2026-01-15T07:40:00.4Z");
-    const draft = await parseLapWith(timedPoint(START), end);
+  it("measures elapsed to the last lap's start plus its timer time", async () => {
+    // The watch paused ten minutes between laps: the second starts at
+    // 07:40, after an 1800 s first lap, and runs 60 s.
+    const second = lap({
+      startTime: "2026-01-15T07:40:00.4Z",
+      seconds: 60,
+      metres: 200,
+    });
+    const draft = await parse(tcxWith(lap(OUTDOOR_LAP) + second));
 
-    expect(draft.durationS).toBe(2400);
+    expect(draft.durationS).toBe(2460);
+    expect(draft.movingS).toBe(1860);
+  });
+
+  it("ignores a trackpoint dated far past the laps", async () => {
+    // The review's probe: one fix a year ahead used to make a half-hour
+    // run 31,537,800 seconds long. Trackpoint times are not read for the
+    // duration at all.
+    const yearAhead = timedPoint("2027-01-15T07:30:00Z");
+    const draft = await parseLapWith(timedPoint(START), yearAhead);
+
+    expect(draft.durationS).toBe(1800);
     expect(draft.movingS).toBe(1800);
   });
 
   it("never makes the duration shorter than the laps' timer time", async () => {
-    // Points that stop before the timer did (the watch lost its fix at the
-    // end) do not shorten the run below what the laps say.
-    const early = timedPoint("2026-01-15T07:20:00Z");
-    const draft = await parseLapWith(timedPoint(START), early);
+    // A second lap stamped with the first lap's start ends 60 s in, long
+    // before the laps' 1860 s of timer time.
+    const second = lap({ startTime: START, seconds: 60, metres: 200 });
+    const draft = await parse(tcxWith(lap(OUTDOOR_LAP) + second));
 
-    expect(draft.durationS).toBe(1800);
+    expect(draft.durationS).toBe(1860);
   });
 
-  it("skips a trackpoint time it cannot read", async () => {
-    const unreadable = timedPoint("not a time");
-    const draft = await parseLapWith(timedPoint(START), unreadable);
-    expect(draft.durationS).toBe(1800);
+  it("takes no end from a lap whose start it cannot read", async () => {
+    const second = lap({ startTime: "not a time", seconds: 60, metres: 200 });
+    const unstamped = lap({ seconds: 60, metres: 200 });
+    const draft = await parse(tcxWith(lap(OUTDOOR_LAP) + second + unstamped));
+
+    expect(draft.durationS).toBe(1920);
   });
 
   it("says nothing of a climb in a file without altitudes", async () => {

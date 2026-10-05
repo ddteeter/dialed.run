@@ -349,6 +349,61 @@ describe("gpx: moving time, pauses left out (D-111)", () => {
   });
 });
 
+/**
+A climb sampled every 20 s for `minutes`: `ground` metres north and `rise`
+metres up between each point, or no altitude at all when `rise` is omitted.
+*/
+function sparseClimb(
+  minutes: number,
+  ground: number,
+  rise?: number,
+): Promise<RunDraft> {
+  const count = (minutes * 60) / 20 + 1;
+  return parseSegments(
+    Array.from({ length: count }, (_, index) =>
+      at(
+        index * ground,
+        index * 20,
+        rise === undefined ? undefined : 100 + index * rise,
+      ),
+    ),
+  );
+}
+
+describe("gpx: a slow climb is not a pause", () => {
+  it("measures the move through the climb where both points have an altitude", async () => {
+    // 9 m over the ground in 20 s is 0.45 m/s, under the stopped speed;
+    // with 5 m of climb it is 10.3 m, which is not.
+    const steep = await sparseClimb(5, 9, 5);
+    const groundOnly = await sparseClimb(5, 9);
+
+    expect(steep.movingS).toBe(300);
+    expect(groundOnly.movingS).toBeUndefined();
+  });
+
+  it("measures the ground alone when either point has no altitude", async () => {
+    const draft = await parseSegments([
+      at(0, 0, 100),
+      at(9, 20),
+      at(18, 40, 110),
+    ]);
+    expect(draft.movingS).toBeUndefined();
+  });
+
+  it("still reads a 0.45 m/s climb as all pause (the threshold under review)", async () => {
+    // The review's case: twenty minutes at 0.45 m/s, a point every 20 s, on
+    // a 30% grade. Through the climb that is 9.4 m a gap, under the
+    // 10 m the stopped speed asks of 20 s, so every gap is a pause and no
+    // moving time is stored. Whether STOPPED_SPEED_MPS should come down is
+    // the owner's call; if it does, this is the test that flips.
+    expect(STOPPED_SPEED_MPS).toBe(0.5);
+    const draft = await sparseClimb(20, 9, 2.7);
+
+    expect(draft.durationS).toBe(1200);
+    expect(draft.movingS).toBeUndefined();
+  });
+});
+
 describe("gpx: the climb (D-111)", () => {
   it("reads a jittery flat track as no climb", async () => {
     // GPS altitude on a flat loop: every rise is under the threshold.
@@ -368,7 +423,7 @@ describe("gpx: the climb (D-111)", () => {
 
   it("reads the climb in the fixture, across its segment break", async () => {
     const draft = await parse(pausedClimbGpx);
-    expect(draft.elevationGainM).toBeCloseTo(30.5, 6);
+    expect(draft.elevationGainM).toBe(30);
   });
 
   it("skips points with no altitude, and says nothing without two", async () => {

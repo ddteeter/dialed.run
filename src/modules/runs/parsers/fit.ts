@@ -92,12 +92,16 @@ export const fitSource: RunSource = {
       indoor: isIndoor,
       title: "Imported run",
       ...startPosition,
-      // The watch's own moving time where it writes one; otherwise its
-      // timer time, which stops when the runner pauses it. The climb is the
-      // watch's own total, barometric on most that write it.
+      // The watch's own moving time where it writes a real one; otherwise
+      // its timer time, which stops when the runner pauses it. A zero or
+      // negative moving time is a field the watch wrote and did not fill,
+      // not a run without moving. The climb is the watch's own total,
+      // barometric on most that write it.
       ...fileMetrics(
         isIndoor,
-        session.totalMovingTime ?? session.totalTimerTime,
+        (session.totalMovingTime ?? 0) > 0
+          ? session.totalMovingTime
+          : session.totalTimerTime,
         session.totalAscent,
       ),
     });

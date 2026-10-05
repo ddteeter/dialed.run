@@ -6,7 +6,8 @@
   starts 210 s later. The second segment ends with a 30 s gap the runner ran
   through (about 100 m, a sparse point), which is moving. Moving time is
   20 + 10 + 10 + 30 = 70 s; elapsed is 340 s. Altitude wanders within 1.5 m
-  before a climb from 199.5 to 230: gain 30.5 m with a 5 m hysteresis.
+  before a climb to 230. The median takes out the single low fix at 199.5,
+  so the climb is from 200.0: gain 30 m.
 -->
 <gpx version="1.1" creator="dialed-test">
   <trk>

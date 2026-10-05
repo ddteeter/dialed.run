@@ -91,8 +91,18 @@ function extractSegments(doc: unknown): TrackPoint[][] {
   return toArray(doc.gpx.trk).flatMap((trk: unknown) => segmentsInTrack(trk));
 }
 
+/**
+ * How far the runner moved between two points, for telling a pause from a
+ * slow climb: straight-line over the ground, and through the climb too
+ * where both points carry an altitude. A steep hill walked slowly covers
+ * little ground per second, and measuring only the ground read it as
+ * stood still. The run's distance stays the ground distance; this is only
+ * the pause test.
+ */
 function metresBetween(a: TrackPoint, b: TrackPoint): number {
-  return haversineMeters(a.lat, a.lon, b.lat, b.lon);
+  const ground = haversineMeters(a.lat, a.lon, b.lat, b.lon);
+  if (a.ele === undefined || b.ele === undefined) return ground;
+  return Math.hypot(ground, b.ele - a.ele);
 }
 
 /**

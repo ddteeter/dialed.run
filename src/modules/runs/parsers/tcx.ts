@@ -15,9 +15,10 @@
  * Time is read two ways (D-111, design 132). A lap's `TotalTimeSeconds` is
  * timer time — it stops when the watch is paused — so the laps' sum is the
  * run's moving time. The run's duration is elapsed time, which keeps
- * running through a pause: from the first lap's start to the last
- * trackpoint, and never less than the laps' sum, which is what a file with
- * no timed trackpoints falls back to.
+ * running through a pause: from the first lap's start to the latest lap
+ * end — a lap's own `StartTime` plus its timer time — and never less than
+ * the laps' sum. See `elapsedSeconds` for why trackpoint times are not
+ * read for it.
  */
 import { runDraftSchema } from "../../../lib/contracts";
 import type { RunDraft, RunSource } from "../../../lib/contracts";
@@ -110,10 +111,10 @@ interface LapReading {
   seconds: number;
   metres: number;
   position: Position | undefined;
+  // The lap's own StartTime, in epoch milliseconds, where it is readable.
+  startMs: number | undefined;
   // Every trackpoint's altitude, in order, where it has one.
   altitudes: number[];
-  // Every trackpoint's time, in epoch milliseconds, where it has one.
-  times: number[];
 }
 
 function trackpointsOf(lap: Record<string, unknown>): unknown[] {
@@ -134,13 +135,44 @@ function readLap(lap: unknown): LapReading {
     seconds: lapTotal(fields.TotalTimeSeconds),
     metres: lapTotal(fields.DistanceMeters),
     position: firstPosition(fields),
+    startMs: readDate(fields["@_StartTime"])?.getTime(),
     altitudes: points.flatMap((point) =>
       present(readNumber(child(point, "AltitudeMeters"))),
     ),
-    times: points.flatMap((point) =>
-      present(readDate(child(point, "Time"))?.getTime()),
-    ),
   };
+}
+
+/**
+ * Elapsed seconds from the run's start to the latest lap end, never less
+ * than the laps' timer time. A lap ends at its own `StartTime` plus its
+ * timer time; a lap whose start is unreadable adds no end of its own.
+ *
+ * Read off the laps, not the trackpoints. The latest trackpoint time was
+ * the first answer, and one bad fix set the whole duration: a point dated
+ * a year ahead (a GPS week rollover, a clock that never synced) made a
+ * half-hour run 31,537,800 seconds long. A cap on how far a trackpoint may
+ * reach would only move the problem — an hour's timezone slip is as
+ * corrupt as a year's and sits under any cap a real pause also fits. Lap
+ * starts are different in kind: one per lap, written by the watch's own
+ * lap logic off the same clock as the timer, rather than one per GPS fix.
+ *
+ * A pause between laps is in it, because the next lap starts after it. A
+ * pause inside the last lap is not — the lap's timer stopped for it — so a
+ * single-lap file paused mid-run reads as its timer time. That under-reads
+ * elapsed rather than inventing it, and it is the trade this makes.
+ */
+function elapsedSeconds(
+  readings: readonly LapReading[],
+  startMs: number,
+  lapSeconds: number,
+): number {
+  let elapsedS = lapSeconds;
+  for (const reading of readings) {
+    if (reading.startMs === undefined) continue;
+    const lapEndS = (reading.startMs - startMs) / 1000 + reading.seconds;
+    elapsedS = Math.max(elapsedS, lapEndS);
+  }
+  return elapsedS;
 }
 
 export const tcxSource: RunSource = {
@@ -193,14 +225,8 @@ export const tcxSource: RunSource = {
       (reading) => reading.position !== undefined,
     )?.position;
 
-    // A loop, not `Math.max(...times)`: a long run at one point a second
-    // is tens of thousands of arguments.
     const startMs = startedAtDate.getTime();
-    const times = readings.flatMap((reading) => reading.times);
-    let elapsedS = lapSeconds;
-    for (const time of times) {
-      elapsedS = Math.max(elapsedS, (time - startMs) / 1000);
-    }
+    const elapsedS = elapsedSeconds(readings, startMs, lapSeconds);
 
     const isIndoor = position === undefined;
     const altitudes = readings.flatMap((reading) => reading.altitudes);

@@ -185,6 +185,42 @@ export function present<T>(value: T | undefined): T[] {
 export const ELEVATION_HYSTERESIS_M = 5;
 
 /**
+ * How many points the altitude median is taken over before the hysteresis
+ * reads it (design 132). The hysteresis alone is not enough: GPS altitude
+ * is noisy *per point*, a few metres each way, so two neighbouring points
+ * can sit six metres apart on flat ground and clear the threshold between
+ * them. A flat hour at one point a second with ±3 m of noise read 790 m.
+ *
+ * Eleven, measured rather than picked: against a flat hour of ±3 m uniform
+ * noise, or Gaussian noise of σ = 2 m, a window of 9 still left phantom
+ * climbs in some seeds and 11 left none in any. A median rather than a
+ * mean because a median keeps a steady climb exactly as it was — the
+ * middle of a rising window is its middle point — and throws away a single
+ * wild fix instead of spreading it over its neighbours. The cost is a
+ * crest shorter than about half the window: a bump of under six points
+ * (six seconds at 1 Hz, half a minute with smart recording) is shaved,
+ * and no hill a runner would call one is that short.
+ */
+export const ELEVATION_MEDIAN_WINDOW = 11;
+
+/**
+ * Each altitude replaced by the median of the window centred on it. The
+ * window shrinks symmetrically towards the ends, so the first and last
+ * altitudes are kept as they are and a short file is not averaged into
+ * one value.
+ */
+export function smoothedAltitudes(altitudes: readonly number[]): number[] {
+  const radius = (ELEVATION_MEDIAN_WINDOW - 1) / 2;
+  return altitudes.map((altitude, index) => {
+    const reach = Math.min(radius, index, altitudes.length - 1 - index);
+    const window = altitudes
+      .slice(index - reach, index + reach + 1)
+      .toSorted((a, b) => a - b);
+    return window[reach] ?? altitude;
+  });
+}
+
+/**
  * Metres climbed over a run of altitudes, in order, with hysteresis: the
  * reference follows the altitude freely in the direction it is already
  * going, and a turn only counts once it exceeds `ELEVATION_HYSTERESIS_M`.
@@ -194,7 +230,7 @@ export const ELEVATION_HYSTERESIS_M = 5;
  * Undefined with fewer than two altitudes: a file that carries none has
  * not said the run was flat.
  */
-export function elevationGainMeters(
+export function hysteresisGainMeters(
   altitudes: readonly number[],
 ): number | undefined {
   let gain = 0;
@@ -221,6 +257,16 @@ export function elevationGainMeters(
     }
   }
   return altitudes.length < 2 ? undefined : gain;
+}
+
+/**
+ * The climb a file's altitudes describe: the per-point noise taken out by
+ * the median, then the slower wander by the hysteresis.
+ */
+export function elevationGainMeters(
+  altitudes: readonly number[],
+): number | undefined {
+  return hysteresisGainMeters(smoothedAltitudes(altitudes));
 }
 
 /**

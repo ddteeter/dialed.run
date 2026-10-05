@@ -2,15 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import {
   child,
+  ELEVATION_MEDIAN_WINDOW,
   elevationGainMeters,
   fileMetrics,
   haversineMeters,
+  hysteresisGainMeters,
   present,
   isRecord,
   PARSE_FAILURE_MESSAGE,
   readDate,
   readNumber,
   RunParseError,
+  smoothedAltitudes,
   toArray,
 } from "../../src/modules/runs/parsers/shared";
 
@@ -189,6 +192,115 @@ describe("present", () => {
   });
 });
 
+describe("hysteresisGainMeters (D-111)", () => {
+  it("says nothing with fewer than two altitudes", () => {
+    expect(hysteresisGainMeters([])).toBeUndefined();
+    expect(hysteresisGainMeters([100])).toBeUndefined();
+    expect(hysteresisGainMeters([100, 106])).toBe(6);
+  });
+
+  it("counts a turn only once it exceeds the threshold", () => {
+    expect(hysteresisGainMeters([100, 105])).toBe(0);
+    expect(hysteresisGainMeters([100, 105.5])).toBe(5.5);
+  });
+
+  it("makes the first rise clear the threshold like any other", () => {
+    expect(hysteresisGainMeters([100, 103, 104])).toBe(0);
+  });
+
+  it("follows a descent freely, and counts a climb from its foot", () => {
+    expect(hysteresisGainMeters([100, 90, 96])).toBe(6);
+    // Once climbing, every metre counts, small ones included.
+    expect(hysteresisGainMeters([100, 90, 96, 97])).toBe(7);
+  });
+
+  it("counts a started climb in full, and the wobble at its top once", () => {
+    expect(hysteresisGainMeters([100, 106, 108, 107, 110])).toBe(10);
+    expect(hysteresisGainMeters([100, 120, 117, 120, 117, 120])).toBe(20);
+  });
+
+  it("needs a real turn down before a rise counts again", () => {
+    // Down 10 from the top is a turn; up 4 from there is not a climb.
+    expect(hysteresisGainMeters([100, 120, 110, 114])).toBe(20);
+    // Down exactly 5 is not a turn: the climb goes on from its top.
+    expect(hysteresisGainMeters([100, 120, 115, 121])).toBe(21);
+    // Up 6 from the foot of that turn is.
+    expect(hysteresisGainMeters([100, 120, 110, 114, 116])).toBe(26);
+  });
+});
+
+/**
+ * A deterministic stand-in for noise: the same "random" altitudes on every
+ * run, so a seed that once read a phantom climb always will.
+ */
+function noise(seed: number): () => number {
+  let state = seed;
+  return () => {
+    state = (state * 1_103_515_245 + 12_345) % 2_147_483_648;
+    return state / 2_147_483_648;
+  };
+}
+
+/**
+ * A flat hour at one point a second: every altitude 100 m plus uniform
+ * noise of up to `spread` metres either way, plus `wander` metres of slow
+ * drift (one full sine over the hour).
+ */
+function flatHour(seed: number, spread: number, wander: number): number[] {
+  const next = noise(seed);
+  return Array.from({ length: 3600 }, (_, second) => {
+    const drift = wander * Math.sin((2 * Math.PI * second) / 3600);
+    return 100 + (next() * 2 - 1) * spread + drift;
+  });
+}
+
+/**
+ * Thirty flat points with a bump `width` points wide, fifty metres high,
+ * starting at the tenth.
+ */
+function withBump(width: number): number[] {
+  return Array.from({ length: 30 }, (_, index) =>
+    index >= 10 && index < 10 + width ? 50 : 0,
+  );
+}
+
+describe("smoothedAltitudes (design 132)", () => {
+  it("takes each altitude's median over an eleven-point window", () => {
+    expect(ELEVATION_MEDIAN_WINDOW).toBe(11);
+    // One wild fix in the middle of a flat stretch is thrown away, not
+    // spread over its neighbours as a mean would.
+    const flat = [100, 101, 99, 100, 102, 140, 100, 99, 101, 100, 100];
+    expect(smoothedAltitudes(flat)[5]).toBe(100);
+  });
+
+  it("reaches five points either side and no further", () => {
+    // In a window of eleven a value needs six points to be the median. So
+    // a five-point bump is shaved flat (a window of nine would keep it),
+    // and a six-point one is kept whole (a window of thirteen would not).
+    expect(smoothedAltitudes(withBump(5))).toStrictEqual(withBump(0));
+    expect(smoothedAltitudes(withBump(6))).toStrictEqual(withBump(6));
+  });
+
+  it("sorts each window by value, not as text", () => {
+    // Sorted as strings, "100" comes before "98", and the median of
+    // [98, 99, 100] would read 100.
+    expect(smoothedAltitudes([98, 100, 99])).toStrictEqual([98, 99, 99]);
+  });
+
+  it("keeps the ends, and a steady climb, exactly as they were", () => {
+    // The window shrinks symmetrically, so the first and last altitudes
+    // are their own median, and the middle of a rising window is its
+    // middle point.
+    expect(smoothedAltitudes([100, 106])).toStrictEqual([100, 106]);
+    const climb = Array.from({ length: 30 }, (_, index) => 100 + index * 2);
+    expect(smoothedAltitudes(climb)).toStrictEqual(climb);
+  });
+
+  it("is empty for no altitudes", () => {
+    expect(smoothedAltitudes([])).toStrictEqual([]);
+  });
+});
+
 describe("elevationGainMeters (D-111)", () => {
   it("says nothing with fewer than two altitudes", () => {
     expect(elevationGainMeters([])).toBeUndefined();
@@ -196,33 +308,35 @@ describe("elevationGainMeters (D-111)", () => {
     expect(elevationGainMeters([100, 106])).toBe(6);
   });
 
-  it("counts a turn only once it exceeds the threshold", () => {
-    expect(elevationGainMeters([100, 105])).toBe(0);
-    expect(elevationGainMeters([100, 105.5])).toBe(5.5);
+  it("reads a flat hour of per-point GPS noise as no climb", () => {
+    // The review's probe: ±3 m of noise a point clears the 5 m hysteresis
+    // between neighbours, and the hysteresis alone read a flat hour as
+    // over a thousand metres.
+    for (const seed of [7919, 15_838, 23_757]) {
+      const altitudes = flatHour(seed, 3, 0);
+      expect(hysteresisGainMeters(altitudes)).toBeGreaterThan(500);
+      expect(elevationGainMeters(altitudes)).toBe(0);
+    }
   });
 
-  it("makes the first rise clear the threshold like any other", () => {
-    expect(elevationGainMeters([100, 103, 104])).toBe(0);
+  it("reads slow wander under the noise as the wander, not the noise", () => {
+    // ±8 m of drift is a real 16 m swing a hysteresis cannot tell from a
+    // hill; the noise on top of it adds a few metres, not hundreds.
+    const gain = elevationGainMeters(flatHour(7919, 3, 8)) ?? NaN;
+    expect(gain).toBeGreaterThan(14);
+    expect(gain).toBeLessThan(26);
   });
 
-  it("follows a descent freely, and counts a climb from its foot", () => {
-    expect(elevationGainMeters([100, 90, 96])).toBe(6);
-    // Once climbing, every metre counts, small ones included.
-    expect(elevationGainMeters([100, 90, 96, 97])).toBe(7);
-  });
-
-  it("counts a started climb in full, and the wobble at its top once", () => {
-    expect(elevationGainMeters([100, 106, 108, 107, 110])).toBe(10);
-    expect(elevationGainMeters([100, 120, 117, 120, 117, 120])).toBe(20);
-  });
-
-  it("needs a real turn down before a rise counts again", () => {
-    // Down 10 from the top is a turn; up 4 from there is not a climb.
-    expect(elevationGainMeters([100, 120, 110, 114])).toBe(20);
-    // Down exactly 5 is not a turn: the climb goes on from its top.
-    expect(elevationGainMeters([100, 120, 115, 121])).toBe(21);
-    // Up 6 from the foot of that turn is.
-    expect(elevationGainMeters([100, 120, 110, 114, 116])).toBe(26);
+  it("reads a real climb in full through the same noise", () => {
+    // Fifteen minutes climbing 60 m, then flat: the climb survives.
+    const next = noise(31);
+    const altitudes = Array.from({ length: 1800 }, (_, second) => {
+      const ground = 100 + Math.min(second, 900) * (60 / 900);
+      return ground + (next() * 2 - 1) * 3;
+    });
+    const gain = elevationGainMeters(altitudes) ?? NaN;
+    expect(gain).toBeGreaterThan(57);
+    expect(gain).toBeLessThan(66);
   });
 });
 

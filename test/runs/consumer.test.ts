@@ -178,7 +178,7 @@ describe("handleImportsBatch (102 §4, §8)", () => {
     const treadmill = stored.find((row) => row.importId === treadmillId);
 
     expect(outdoor).toMatchObject({ durationS: 340, movingS: 70 });
-    expect(outdoor?.elevationGainM).toBeCloseTo(30.5, 6);
+    expect(outdoor?.elevationGainM).toBe(30);
     // NULL in the row: drizzle reads it back as null, never undefined.
     expect(treadmill?.durationS).toBe(1800);
     expect(treadmill?.movingS).toBeNull();

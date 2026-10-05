@@ -305,6 +305,21 @@ describe("fit: moving time and the climb (D-111)", () => {
     expect(draft.elevationGainM).toBeUndefined();
   });
 
+  it("falls back to timer time when the moving time is zero", async () => {
+    // A watch that writes the field without filling it has not said the
+    // runner never moved. (The field is unsigned on the wire, so zero is
+    // the only non-positive value a decoded file can carry.)
+    const draft = await fitSource.parse(
+      fitFile({
+        ...OUTDOORS,
+        totalElapsedTime: 2000,
+        totalTimerTime: 1900,
+        totalMovingTime: 0,
+      }),
+    );
+    expect(draft.movingS).toBe(1900);
+  });
+
   it("carries neither for an indoor run", async () => {
     // A treadmill file still writes timer time and sometimes an ascent
     // (from the incline); D-111 leaves both null for it.
