@@ -354,17 +354,17 @@ export async function nameItem(
   itemId: string,
   identity: { brand: string; model?: string | undefined },
 ): Promise<WardrobeItemRow> {
-  const model = identity.model?.trim();
+  const model = identity.model?.trim() ?? "";
   if (await isUnconfirmed(db, userId)) {
     return updateOwnedItem(db, userId, itemId, {
       brand: identity.brand.trim(),
-      ...(model !== undefined && model !== "" && { name: model }),
+      ...(model !== "" && { name: model }),
       origin: "manual",
     });
   }
   // Brand-only: resolve the brand so it joins the shared vocabulary, but
   // link no product.
-  if (model === undefined || model === "") {
+  if (model === "") {
     const brand = await createOrGetBrand(db, identity.brand);
     return updateOwnedItem(db, userId, itemId, {
       brand: brand.name,

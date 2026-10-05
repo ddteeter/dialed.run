@@ -59,7 +59,7 @@ export function ConfirmEmailSheet({
   useEffect(() => {
     if (open && notNow !== undefined) notNow.focus();
   }, [open, notNow]);
-  const lead = trigger === undefined ? undefined : WAITS_FOR[trigger];
+  const lead = trigger && WAITS_FOR[trigger];
   // The lead alone while the address is on its way; nothing at all when
   // there is neither.
   const leadAlone =
