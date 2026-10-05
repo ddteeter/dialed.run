@@ -194,6 +194,25 @@ describe("confirmEmail", () => {
     });
   });
 
+  it("owes the link of the runner's garments in the confirmation's own batch (D-113 Q1)", async () => {
+    const { userId, email } = await seedUser({ isVerified: false });
+    const token = await issueEmailLink(
+      db,
+      { userId, purpose: "verify", email },
+      NOW,
+    );
+
+    await confirmEmail(db, token, undefined, NOW + 60);
+
+    const owed = await db
+      .select({ kind: outbox.kind, payload: outbox.payload })
+      .from(outbox)
+      .where(eq(outbox.dedupeKey, userId));
+    expect(owed).toStrictEqual([
+      { kind: "product_link", payload: JSON.stringify({ userId }) },
+    ]);
+  });
+
   it("confirms nothing for a token that names no live link", async () => {
     expect(
       await confirmEmail(db, "not-a-real-token", undefined, NOW),
@@ -455,6 +474,10 @@ describe("confirmEmail, when two open one link (law 2)", () => {
     expect(await readEmailLink(db, token)).toMatchObject({
       usedAt: undefined,
     });
+    // Nothing confirmed, so nothing owed.
+    expect(
+      await db.select().from(outbox).where(eq(outbox.dedupeKey, userId)),
+    ).toStrictEqual([]);
   });
 });
 

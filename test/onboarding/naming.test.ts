@@ -18,7 +18,7 @@ import {
   nameGarmentInput,
   nameIdentityInput,
 } from "../../src/modules/onboarding/inputs";
-import { resetTables } from "../feed/helpers";
+import { addAccount, resetTables } from "../feed/helpers";
 
 function coreDb() {
   return drizzle(env.DIALED_CORE);
@@ -277,6 +277,54 @@ describe("namedResult on a row nobody has named", () => {
       isNamed: false,
     });
     expect(offered?.subtitle).toBe("Headwear · Generic");
+  });
+});
+
+/**
+A tap-list closet whose runner has an account, not confirmed yet.
+*/
+async function unconfirmedCloset(keys: string[]) {
+  const userId = await seededCloset(keys);
+  await addAccount(userId, false);
+  return userId;
+}
+
+describe("naming before the address is confirmed (design 133, D-113 Q1)", () => {
+  it("reads a named model as named, though nothing shared is linked yet", async () => {
+    const userId = await unconfirmedCloset(["merino-base"]);
+    const row = await firstOffer(userId);
+    const model = uniqueBrand();
+
+    const named = await nameItem(coreDb(), userId, row?.itemId ?? "", {
+      brand: "Smartwool",
+      model,
+    });
+
+    expect(named.productId).toBeNull();
+    expect(namedResult(named)).toStrictEqual({
+      label: `Smartwool ${model}`,
+      subtitle: "Top · Matched",
+      isNamed: true,
+    });
+    // And it leaves the offer, as a linked row would.
+    const offer = await namingOffer(coreDb(), userId);
+    expect(offer.items).toStrictEqual([]);
+  });
+
+  it("still reads a brand alone as unfinished, and keeps it on offer", async () => {
+    const userId = await unconfirmedCloset(["merino-base"]);
+    const row = await firstOffer(userId);
+
+    const named = await nameItem(coreDb(), userId, row?.itemId ?? "", {
+      brand: "Smartwool",
+    });
+
+    expect(namedResult(named)).toStrictEqual({
+      label: "Merino base layer",
+      subtitle: "Smartwool · No model",
+      isNamed: false,
+    });
+    expect(await firstOffer(userId)).toMatchObject({ itemId: row?.itemId });
   });
 });
 

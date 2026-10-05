@@ -293,8 +293,12 @@ export interface ConfirmOptions {
 }
 
 /**
- * Spend a link. For `verify`, the account's address is confirmed; for
- * `change`, the account moves to the new address, which the link has just
+ * Spend a link. For `verify`, the account's address is confirmed, and the
+ * link of its garments to the shared products is owed in the same batch
+ * (design 133, D-113 Q1: an unconfirmed runner's garments saved with
+ * none) — an outbox row the hourly drain works, so a failure there never
+ * fails the confirmation (law 5); for `change`, the account moves to the
+ * new address, which the link has just
  * confirmed, the old address is told (outbox, law 8c), every other
  * session is signed out — whoever else holds one was signed in to the old
  * address — and every reset or confirm link still open is withdrawn.
@@ -331,11 +335,18 @@ export async function confirmEmail(
     // A link for an address the account has since left confirms nothing.
     if (current !== link.email) return EXPIRED;
     if (!(await didClaimEmailLink(db, link, now))) return USED;
+    const productLink = oweOutbox({
+      kind: "product_link",
+      payload: { userId: link.userId },
+    });
     await spendClaimed(db, link, now, () =>
-      db
-        .update(user)
-        .set({ emailVerified: true, updatedAt })
-        .where(eq(user.id, link.userId)),
+      db.batch([
+        db
+          .update(user)
+          .set({ emailVerified: true, updatedAt })
+          .where(eq(user.id, link.userId)),
+        outboxInsert(db, productLink, now),
+      ]),
     );
     return confirmed;
   }

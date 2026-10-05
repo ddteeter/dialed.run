@@ -850,9 +850,11 @@ describe("every hourly step runs, whichever fail (law 5)", () => {
     );
 
     await expect(firing).rejects.toBeInstanceOf(AggregateError);
+    // The weather retry, the sweep, the email drain and the product-link
+    // drain (D-113 Q1), in that order.
     await expect(firing).rejects.toMatchObject({
       message: "several upkeep steps failed",
-      errors: [boom, sweep, boom],
+      errors: [boom, sweep, boom, boom],
     });
     expect(swept).toBe(1);
   });
@@ -1299,3 +1301,87 @@ async function queueItem(
     createdAt: nowSeconds(),
   });
 }
+
+/**
+A product link a confirmation owes (D-113 Q1), already due.
+*/
+async function seedDueProductLink(userId: string): Promise<string> {
+  const id = newUlid();
+  await coreDb()
+    .insert(outbox)
+    .values({
+      id,
+      kind: "product_link",
+      dedupeKey: userId,
+      payload: JSON.stringify({ userId }),
+      nextAttemptAt: nowSeconds() - 60,
+      createdAt: nowSeconds() - HOUR,
+    });
+  return id;
+}
+
+describe("the product link a confirmation owes (design 133, D-113 Q1)", () => {
+  it("is drained on the :00 firing with the linker handed in, and settles quietly", async () => {
+    const userId = newUlid();
+    const id = await seedDueProductLink(userId);
+    const linked: string[] = [];
+
+    const outcome = await handleScheduled(
+      { cron: "0 * * * *" } as ScheduledController,
+      undefined,
+      {
+        linkProducts: (_db, owed) => {
+          linked.push(owed);
+          return Promise.resolve();
+        },
+      },
+    );
+
+    expect(linked).toStrictEqual([userId]);
+    expect(await attemptsOf(id)).toBeUndefined();
+    // Owed on a schedule rather than by a failure: no digest line.
+    expect(outcome.anomalies).toStrictEqual([]);
+  });
+
+  it("stays owed, and says so, when no linker was handed in", async () => {
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    const id = await seedDueProductLink(newUlid());
+
+    const outcome = await handleScheduled({
+      cron: "0 * * * *",
+    } as ScheduledController);
+
+    expect(await attemptsOf(id)).toBe(1);
+    expect(outcome.anomalies).toContain(
+      "1 product_link outbox row(s) were owed; 0 settled",
+    );
+  });
+
+  it("is left alone by the :30 and :15 firings", async () => {
+    const id = await seedDueProductLink(newUlid());
+    const linkProducts = vi.fn(() => Promise.resolve());
+
+    await handleScheduled(ENRICHMENT_RETRY, undefined, { linkProducts });
+    await handleScheduled(
+      { cron: "15 * * * *" } as ScheduledController,
+      undefined,
+      { linkProducts },
+    );
+
+    expect(linkProducts).not.toHaveBeenCalled();
+    expect(await attemptsOf(id)).toBe(0);
+  });
+
+  it("is drained by the daily firing with the same linker", async () => {
+    const userId = newUlid();
+    const id = await seedDueProductLink(userId);
+    const linkProducts = vi.fn(() => Promise.resolve());
+
+    await handleScheduled(DIGEST, recordingReporter().reporter, {
+      linkProducts,
+    });
+
+    expect(linkProducts).toHaveBeenCalledWith(expect.anything(), userId);
+    expect(await attemptsOf(id)).toBeUndefined();
+  });
+});

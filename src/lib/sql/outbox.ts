@@ -103,12 +103,26 @@ const email = z.object({
   }),
 });
 
+/**
+ * Link a newly confirmed runner's typed garments to the shared products
+ * (design 133, decision D-113 Q1). An unconfirmed runner's garments save
+ * with no product; the confirmation owes this in its own batch, so the
+ * debt lands exactly when the address is confirmed. No fast path works
+ * it — the link is `closet`'s, which the confirmation's module cannot
+ * import — so the hourly drain does, with the Worker entry's wiring.
+ */
+const productLink = z.object({
+  kind: z.literal("product_link"),
+  payload: z.object({ userId: z.string().min(1) }),
+});
+
 export const outboxMessageSchema = z.discriminatedUnion("kind", [
   photoDelete,
   entryMediaDelete,
   importFileDelete,
   importFileExpire,
   email,
+  productLink,
 ]);
 
 export type OutboxMessage = z.infer<typeof outboxMessageSchema>;
@@ -128,6 +142,8 @@ export const outboxKinds: readonly OutboxKind[] =
  */
 export const scheduledOutboxKinds: readonly OutboxKind[] = [
   "import_file_expire",
+  // Never a fast path's (D-113 Q1): the drain is the only worker it has.
+  "product_link",
 ];
 
 /**
@@ -137,8 +153,9 @@ export const scheduledOutboxKinds: readonly OutboxKind[] = [
  * per garment, because what it does — reconcile the garment's prefix
  * against its row — covers every version at once. One `entry_media_delete`
  * per entry, and one `*` for "every entry of this runner's". One
- * `import_file_delete` or `import_file_expire` per object. An email's is
- * its writer's to name.
+ * `import_file_delete` or `import_file_expire` per object. One
+ * `product_link` per runner, because one run links all of their garments.
+ * An email's is its writer's to name.
  */
 export function dedupeKeyFor(message: OutboxMessage): string {
   switch (message.kind) {
@@ -154,6 +171,9 @@ export function dedupeKeyFor(message: OutboxMessage): string {
     }
     case "email": {
       return message.payload.dedupeKey;
+    }
+    case "product_link": {
+      return message.payload.userId;
     }
   }
 }

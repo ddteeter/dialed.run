@@ -6,12 +6,13 @@ import { betterAuth } from "better-auth";
 import type { BetterAuthPlugin } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError, createAuthMiddleware } from "better-auth/api";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import * as authSchema from "../../db/schema-auth";
 import type { AuthMail } from "../account";
 import { PASSWORD_MIN_LENGTH } from "../../lib/contracts";
+import { outboxInsertWhere, oweOutbox } from "../ops";
 import {
   admitSignUp,
   claimInvite,
@@ -226,12 +227,27 @@ export function createAuth({
       revokeSessionsOnPasswordReset: true,
       // A spent reset link proves the runner reads that inbox, which is
       // everything a confirm link proves (owner, 2026-09-27): an
-      // unconfirmed runner who resets is confirmed by it.
+      // unconfirmed runner who resets is confirmed by it — and is owed
+      // what a confirmation owes, the link of their garments to the
+      // shared products (design 133, D-113 Q1). Owed only when this reset
+      // is what confirms the address: the debt's insert reads the row
+      // before the update beside it does, in one batch.
       onPasswordReset: async ({ user }) => {
-        await db
-          .update(authSchema.user)
-          .set({ emailVerified: true })
-          .where(eq(authSchema.user.id, user.id));
+        const account = eq(authSchema.user.id, user.id);
+        const productLink = oweOutbox({
+          kind: "product_link",
+          payload: { userId: user.id },
+        });
+        await db.batch([
+          outboxInsertWhere(db, productLink, {
+            table: authSchema.user,
+            where: sql`${authSchema.user.id} = ${user.id} AND ${authSchema.user.emailVerified} = 0`,
+          }),
+          db
+            .update(authSchema.user)
+            .set({ emailVerified: true })
+            .where(account),
+        ]);
       },
     },
     // The confirm link goes out once the account exists. Only an email

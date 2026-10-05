@@ -33,11 +33,13 @@ export {
   addFromTapList,
   climateBandSchema,
   climateBands,
+  isTapListPlaceholder,
   TAP_LIST,
   TAP_LIST_FOLD,
   tapListFor,
   tapListSelectionSchema,
 } from "./tap-list";
 export { photoUrlFor } from "./photo-url";
+export { linkTypedGarments } from "./product-link";
 export type { PhotoSize, PhotoUploadResult } from "./photos";
 export { photoSizes } from "./photos";

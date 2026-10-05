@@ -43,6 +43,7 @@ import { newUlid } from "../../lib/ids";
 import { topByCount } from "../../lib/top-by-count";
 import type { TempRange } from "../../lib/contracts/thermal";
 import { estimateTempRange } from "../../lib/contracts/thermal";
+import { isUnconfirmed } from "../account";
 import { enqueueEnrichment } from "../enrichment";
 import {
   captureException,
@@ -340,6 +341,12 @@ export async function updateItem(
  *
  * `origin` flips to `manual` because the row is no longer what the
  * tap-list made: a person has told us what it is.
+ *
+ * **An unconfirmed runner names their own row and nothing shared** (design
+ * 133, decision D-113 Q1): the brand and the model are written as typed,
+ * no brand or product row is made, and confirming owes the link
+ * (`linkTypedGarments`). A brand-only answer keeps the tap list's name,
+ * which is how the link tells it from a named model.
  */
 export async function nameItem(
   db: Db,
@@ -348,6 +355,13 @@ export async function nameItem(
   identity: { brand: string; model?: string | undefined },
 ): Promise<WardrobeItemRow> {
   const model = identity.model?.trim();
+  if (await isUnconfirmed(db, userId)) {
+    return updateOwnedItem(db, userId, itemId, {
+      brand: identity.brand.trim(),
+      ...(model !== undefined && model !== "" && { name: model }),
+      origin: "manual",
+    });
+  }
   // Brand-only: resolve the brand so it joins the shared vocabulary, but
   // link no product.
   if (model === undefined || model === "") {
@@ -987,11 +1001,7 @@ export async function getItemDetailWithPairs(
  * This ran in the browser first, once per route, which meant two round
  * trips and a rule a caller could simply not call. Here it runs wherever a
  * garment is written, so it cannot be skipped and the client is one
- * request lighter.
- *
- * The type is validated against the garment's category rather than
- * trusted: a product row could carry a type belonging to another category,
- * and the whole save would fail rather than a bad hint being ignored.
+ * request lighter. The link itself is `productLinkFor`'s.
  */
 export async function withResolvedProduct(
   db: Db,
@@ -1000,31 +1010,72 @@ export async function withResolvedProduct(
 ): Promise<Garment> {
   const brand = garment.brand?.trim() ?? "";
   if (brand === "" || garment.name.trim() === "") return garment;
+  // Products are shared rows (D-26), so an unconfirmed runner makes none
+  // (design 133, decision D-113 Q1): the garment saves with what was typed
+  // and no product, and confirming owes the link (`linkTypedGarments`).
+  if (await isUnconfirmed(db, createdBy)) {
+    return garmentSchema.parse({ ...garment, productId: undefined });
+  }
+  const link = await productLinkFor(
+    db,
+    {
+      brand,
+      name: garment.name,
+      productUrl: garment.productUrl,
+      category: garment.category,
+    },
+    createdBy,
+  );
+  return garmentSchema.parse({
+    ...garment,
+    productId: link.productId,
+    ...(link.type !== undefined && { type: link.type }),
+  });
+}
+
+/**
+ * What a typed brand and name link a garment to: the shared product,
+ * found or made on the normalized pair (D-26), and the type it lends the
+ * garment when that type belongs to the garment's category. One answer
+ * for a save (`withResolvedProduct`) and for the link a confirmation owes
+ * (`linkTypedGarments`), so the two cannot link differently.
+ *
+ * The paste path (107): a product with a URL and no extraction yet gets
+ * one asked for. Here rather than in the server function for the same
+ * reason the type inheritance is — it runs wherever a garment is linked,
+ * so it cannot be skipped. `enqueueEnrichment` never throws: enrichment
+ * must not be able to fail the save that asked for it (law 5), and the
+ * row it leaves behind is what the retry cron re-drives.
+ *
+ * The type is validated against the garment's category rather than
+ * trusted: a product row could carry a type belonging to another category,
+ * and the whole save would fail rather than a bad hint being ignored.
+ */
+export async function productLinkFor(
+  db: Db,
+  typed: Readonly<{
+    brand: string;
+    name: string;
+    productUrl: string | null | undefined;
+    category: Garment["category"];
+  }>,
+  createdBy: string,
+): Promise<{ productId: string; type: string | undefined }> {
   const { product } = await resolveProduct(db, {
-    brandName: brand,
-    productName: garment.name,
-    sourceUrl: garment.productUrl,
+    brandName: typed.brand,
+    productName: typed.name,
+    sourceUrl: typed.productUrl ?? undefined,
     createdBy,
   });
-  // The paste path (107): a product with a URL and no extraction yet gets
-  // one asked for. Here rather than in the server function for the same
-  // reason the type inheritance is — it runs wherever a garment is
-  // written, so it cannot be skipped. `enqueueEnrichment` never throws:
-  // enrichment must not be able to fail the save that asked for it (law 5),
-  // and the row it leaves behind is what the retry cron re-drives.
   await enqueueEnrichment(db, product.id, captureException);
-  const allowed: readonly string[] = garmentTypesFor(garment.category);
+  const allowed: readonly string[] = garmentTypesFor(typed.category);
   // Equivalent mutant on the null check: `allowed.includes(null)` is already
   // false, so dropping it changes no answer. It is here because `includes`
   // takes a string.
-  const inherited =
+  const type =
     // Stryker disable next-line ConditionalExpression
     product.type !== null && allowed.includes(product.type)
       ? product.type
       : undefined;
-  return garmentSchema.parse({
-    ...garment,
-    productId: product.id,
-    ...(inherited !== undefined && { type: inherited }),
-  });
+  return { productId: product.id, type };
 }
