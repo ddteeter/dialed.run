@@ -247,12 +247,17 @@ web, against D-58 ("public" means signed-in).
 
 ## Contract touches
 
-- Schema: **none**. A backfill when a runner confirms (Q1) would need a
-  marker column, which is an additive ask and not in this plan.
+- Schema: **none**. The link on confirm (Q1) needs no marker column: the
+  confirmation owes it as an outbox row, and the rows it links are the
+  ones still carrying a typed brand and no product.
+- Wire format: one new outbox kind, `product_link` `{ userId }` (law 9:
+  added, nothing repurposed).
 - Routes: `__root.tsx` provides the unconfirmed answer (the root's own
-  wiring). Bindings: **none**.
-- Design delta: the confirm sheet has no sentence for **Follow**
-  (`WAITS_FOR`). It shows the address alone until one is drawn.
+  wiring); D, H and the feed stop composing their own sheets. Bindings and
+  crons: **none** new; the `:00` firing gains a step.
+- Design delta (item 49): the confirm sheet has no sentence for
+  **Follow** (`WAITS_FOR`) and shows the address alone; the moment before
+  the address arrives shows the lead alone.
 
 ## Steps (each lands green on its own)
 
@@ -295,6 +300,65 @@ The architecture test is text, so it adds no mutants. **The known
 coarseness:** steps 5, 6, 8 and 9 edit `functions.ts` files, which the push
 analyzer mutates. None of those mutants can be killed (CLAUDE.md: about 65
 for `runs` alone). The PR will say so; nothing gets weakened to pass.
+
+## As built
+
+**The gate.** `confirmedUserId` (`auth/terms-gate.ts`) reads the
+confirmation (`account`'s `emailConfirmationRead`) as a third seek in the
+terms gate's batch; `verifiedUserId` is its glue. Useful, report and email
+change lost their module-level `isVerified` checks and `unverified`
+variants, and `fileReport` its `{ isVerified }` argument.
+
+**The client.** `ui/unconfirmed-refusal.tsx` renders nothing until the
+first refusal, then the sheet `account`'s `confirmEmailOnRefusal` draws,
+which fetches the address with `ownAccountQuery` on its first opening. The
+per-screen `ControlGate`/`ControlGuard`/`useControlGate` plumbing and
+`confirmEmailGate` are deleted; `ChangeEmail` lost its own sheet and its
+client pre-check.
+
+**Q1, link on confirm.** The clamp is in `closet`
+(`withResolvedProduct`, `nameItem`), so no `closet/functions.ts` or
+`nameGarmentFn` edit. `confirmEmail`'s verify branch batches the
+confirmation with an outbox row, `product_link` `{ userId }` (one per
+runner). A spent reset link also confirms an address (D-63), so
+`onPasswordReset` owes the same row, by `INSERT … SELECT … WHERE` the
+account is still unconfirmed, ahead of its update in one batch. The link
+is `closet`'s `linkTypedGarments`: for each of the runner's rows with a
+typed brand and no product, the same `productLinkFor` a save uses
+(find-or-create on the normalized pair, enrichment, type inheritance). A
+row whose name is still the tap list's (`isTapListPlaceholder`) is a
+brand-only answer: it joins the shared brands and links no product, as
+`nameItem` does for a confirmed runner. It is re-runnable and idempotent
+(law 1), reads only unlinked rows, and does nothing for a runner still
+unconfirmed. `ops` cannot import `closet` (it imports `ops`), so there is
+no fast path: `src/server.ts` hands the linker to `handleScheduled`
+(`DailyUpkeep.linkProducts`), the `:00` firing drains `product_link` as a
+scheduled kind, and the digest's full drain does too. A newly confirmed
+runner's garments link within about 75 minutes (15 minutes' grace, then
+the next `:00`); a failure leaves the row owed and never touches the
+confirmation (law 5). One known gap: an unconfirmed runner who edits a
+tap-list row in the closet form to a brand and a name that is still the
+tap list's is linked as brand-only; their next save after confirming
+links it.
+
+**O3.** `namedResult` reads an unconfirmed runner's named model as named
+(`Matched`) though no product is linked yet: their own row is unaffected
+(Q4's "a runner's own history"), and the offer list uses the same answer,
+so the row leaves it.
+
+**Q2.** `account`'s `runnerConfirmed(column)` is the fact as a `WHERE`
+clause, and `feed`'s runner-visibility floor carries it, so search, H and
+the `/feed/u/$userId` redirect agree.
+
+**`functions.ts` edits (the owner's acceptance needed).** The push
+analyzer mutates a changed `functions.ts` whole and none of its mutants
+can be killed (CLAUDE.md, D-41). Six files change, each edit glue:
+`account` (email change and six Desk functions to `verifiedUserId`),
+`feed` (Useful, follow, two Desk), `safety` (report, eight Desk; drops
+`{ isVerified }`), `ops` (one Desk), `onboarding` (`namingSuggestionsQuery`
+gains `requireUserId`), `products` (`resolveProductFn` deleted). The Desk,
+F1 and the deletion cannot be done anywhere else, so the other edits ride
+in files that change regardless.
 
 ## Decisions (owner, 2026-10-04)
 

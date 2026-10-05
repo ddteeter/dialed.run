@@ -116,3 +116,32 @@ export function repoPath(globPath: string): string {
 export function isInstrumented(source: string): boolean {
   return source.includes("stryMutAct_");
 }
+
+const DECLARATION = /^(?:export )?(?:const|async function|function) (\w+)/u;
+const DECLARATION_START =
+  /^(?=(?:export )?(?:const|async function|function) \w)/mu;
+
+/**
+ * Each server function in a set of `functions.ts` sources, by name
+ * (`account/functions.ts claimUsernameFn`), with its own text: from its
+ * declaration to the next top-level declaration. Skips a file stryker is
+ * instrumenting. Shared by `terms-exempt` and `verification-class`, which
+ * classify the same functions by different gates.
+ */
+export function serverFunctionsIn(
+  sources: Readonly<Record<string, string>>,
+): { name: string; body: string }[] {
+  return Object.entries(sources)
+    .filter(([, source]) => !isInstrumented(source))
+    .flatMap(([path, source]) => {
+      const file = repoPath(path).replace("src/modules/", "");
+      // One chunk per top-level declaration, each starting at it.
+      const chunks = withoutComments(source).split(DECLARATION_START);
+      return chunks.flatMap((body) => {
+        const name = DECLARATION.exec(body)?.[1];
+        return name !== undefined && body.includes("createServerFn(")
+          ? [{ name: `${file} ${name}`, body }]
+          : [];
+      });
+    });
+}

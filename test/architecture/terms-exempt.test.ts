@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isInstrumented, repoPath, withoutComments } from "./source-text";
+import { serverFunctionsIn } from "./source-text";
 
 /**
  * Which server functions a runner behind on the terms may still reach
@@ -45,36 +45,12 @@ const EXEMPT: Readonly<Record<string, readonly string[]>> = {
   requireUserIdWhileLeaving: ["account/functions.ts keepAccountFn"],
 };
 
-const DECLARATION = /^(?:export )?(?:const|async function|function) (\w+)/u;
-const DECLARATION_START =
-  /^(?=(?:export )?(?:const|async function|function) \w)/mu;
-
-/**
- * Each server function in a `functions.ts`, by name, with its own text:
- * from its declaration to the next top-level declaration.
- */
-function serverFunctions(): { name: string; body: string }[] {
-  return Object.entries(sources)
-    .filter(([, source]) => !isInstrumented(source))
-    .flatMap(([path, source]) => {
-      const file = repoPath(path).replace("src/modules/", "");
-      // One chunk per top-level declaration, each starting at it.
-      const chunks = withoutComments(source).split(DECLARATION_START);
-      return chunks.flatMap((body) => {
-        const name = DECLARATION.exec(body)?.[1];
-        return name !== undefined && body.includes("createServerFn(")
-          ? [{ name: `${file} ${name}`, body }]
-          : [];
-      });
-    });
-}
-
 function byName(left: string, right: string): number {
   return left.localeCompare(right);
 }
 
 describe("the terms gate's exemptions", () => {
-  const functions = serverFunctions();
+  const functions = serverFunctionsIn(sources);
 
   it("finds the server functions it checks", () => {
     expect(functions.length).toBeGreaterThan(100);
