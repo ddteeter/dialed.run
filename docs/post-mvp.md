@@ -45,9 +45,10 @@ design screens B1/B2, O2, O4, O5/O6 and the Onboarding artboard's
   than the other. That is a product decision (accept the split? ask Strava
   users to self-report effort? ignore intensity entirely for parity?) and
   it should be made before the engine depends on it.
-  Note also that imported files are retained for 30 days
-  (`docs/deployment.md`), so anything wanted long-term has to be extracted
-  at parse time, not recovered later.
+  Note also that imported files are kept for as long as their run (D-110,
+  `docs/deployment.md`), so a field wanted later — intensity included — can
+  be re-parsed from the stored file rather than having to be extracted at
+  parse time. Only a file whose import failed is deleted, 30 days on.
 - **Cohort model**: aggregates by climate zone, offset, effort. Geographic
   density matters — city-by-city launch argument lives here.
 - **Forecast**: `WeatherProvider.forecast()` is already in the contract.

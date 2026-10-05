@@ -232,6 +232,19 @@ export async function reconcileEntryPhotos(
   }
 }
 
+/**
+ * One uploaded run file, deleted. Deleting a missing key is not an error
+ * in R2, so a repeat — or a file the account purge already took — is a
+ * no-op.
+ */
+const importFileDelete: OutboxHandlers["import_file_delete"] = {
+  run: async (_db, payload) => {
+    await env.IMPORTS.delete(payload.key);
+  },
+  // The key names the runner and the upload's id; it carries no content.
+  context: (payload) => ({ userId: payload.userId, key: payload.key }),
+};
+
 export const outboxHandlers: OutboxHandlers = {
   photo_delete: {
     run: (db, payload) =>
@@ -249,14 +262,9 @@ export const outboxHandlers: OutboxHandlers = {
       entryId: payload.entryId ?? "*",
     }),
   },
-  // Deleting a missing key is not an error in R2, so a repeat is a no-op.
-  import_file_delete: {
-    run: async (_db, payload) => {
-      await env.IMPORTS.delete(payload.key);
-    },
-    // The key names the runner and the upload's id; it carries no content.
-    context: (payload) => ({ userId: payload.userId, key: payload.key }),
-  },
+  import_file_delete: importFileDelete,
+  // A failed import's file, 30 days on: the same delete, owed on a date.
+  import_file_expire: importFileDelete,
   // Task 126 (ACC-2): an owed email (`emailHandler`).
   email: emailHandler(emailDepsFromEnv),
 };

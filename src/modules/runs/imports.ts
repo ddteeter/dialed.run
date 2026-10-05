@@ -40,6 +40,15 @@ export interface StartImportInput {
 }
 
 /**
+Sentry's `captureException`, handed in by `functions.ts`: importing `ops`
+here would be a cycle (see `strava/oauth.ts`).
+*/
+export type ReportException = (
+  error: unknown,
+  context: Record<string, string>,
+) => void;
+
+/**
 Validates size/type, writes the raw bytes to R2, records the `imports` row,
 and enqueues the parse job. Never throws on a parseable-later problem — only
 on inputs the upload step itself can reject outright (size, extension).
@@ -49,6 +58,7 @@ export async function startImport(
   importBucket: R2Bucket,
   queue: ImportsQueueProducer,
   input: StartImportInput,
+  report: ReportException,
 ): Promise<{ importId: string }> {
   // The well refuses the same file by the same rule before sending it;
   // this is the guarantee behind that courtesy.
@@ -63,8 +73,11 @@ export async function startImport(
   // them (law 8c). The reconciliation is `imports.status`: a row stuck
   // `pending` past the grace window is re-dispatched by the daily digest,
   // so a failed queue send costs a delay rather than the upload. An R2 put
-  // that succeeds where the insert then fails leaves an orphan object,
-  // which the bucket's 30-day lifecycle rule collects.
+  // that succeeds where the insert then fails would leave an object no row
+  // names, and since D-110 no bucket rule expires it: so the failed insert
+  // takes its object back with it, one attempt (law 3). A Worker that dies
+  // between the two still leaves one, and account deletion's purge lists
+  // the runner's whole prefix rather than reading rows, so it goes then.
   // A repeat of a submission we already have returns its import, so a
   // retry does not upload the same file twice or start a second parse
   // (law 8b). Checked before the R2 put, because the put is the expensive
@@ -86,14 +99,30 @@ export async function startImport(
   const r2Key = importFileKeyFor(input.userId, importId, extension);
   await importBucket.put(r2Key, input.bytes);
 
-  await db.insert(imports).values({
-    id: importId,
-    userId: input.userId,
-    r2Key,
-    idempotencyKey: input.idempotencyKey,
-    status: "pending",
-    createdAt: nowSeconds(),
-  });
+  try {
+    await db.insert(imports).values({
+      id: importId,
+      userId: input.userId,
+      r2Key,
+      idempotencyKey: input.idempotencyKey,
+      status: "pending",
+      createdAt: nowSeconds(),
+    });
+  } catch (error) {
+    try {
+      await importBucket.delete(r2Key);
+    } catch (deleteError) {
+      // The insert's failure is the one the runner is owed; a delete that
+      // fails too leaves the object for the purge, as above, and is
+      // reported so the stray file is known (law 7: ids, never the bytes).
+      report(deleteError, {
+        surface: "import-orphan-delete",
+        userId: input.userId,
+        importId,
+      });
+    }
+    throw error;
+  }
 
   await queue.send({ type: "import", importId });
 

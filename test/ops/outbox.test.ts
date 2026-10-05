@@ -215,6 +215,17 @@ describe("settleOutbox (the fast path)", () => {
   });
 });
 
+/**
+A failed import's file, due now.
+*/
+async function expiring(key: string): Promise<string> {
+  return owedRow({
+    kind: "import_file_expire",
+    dedupeKey: key,
+    payload: JSON.stringify({ userId: "u1", key }),
+  });
+}
+
 describe("drainOutbox", () => {
   it("does nothing, and says nothing, when nothing is owed", async () => {
     const anomalies: string[] = [];
@@ -243,6 +254,41 @@ describe("drainOutbox", () => {
     expect(await rowById(id)).toBeUndefined();
     expect(anomalies).toStrictEqual([
       "1 photo_delete outbox row(s) were owed; 1 settled",
+    ]);
+  });
+
+  it("settles a scheduled kind's due rows without a digest line, and names them once one fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    // A failed import's file coming due is the schedule arriving, not a
+    // fast path that failed: the drain pays it and says nothing.
+    const first = await expiring("imports/u1/a.gpx");
+    const run = vi.fn().mockResolvedValue(undefined);
+    const handlers = {
+      ...outboxHandlers,
+      import_file_expire: {
+        run,
+        context: outboxHandlers.import_file_expire.context,
+      },
+    } satisfies OutboxHandlers;
+    const quiet: string[] = [];
+
+    await drainOutbox(db(), quiet, { now: NOW, handlers });
+
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(await rowById(first)).toBeUndefined();
+    expect(quiet).toStrictEqual([]);
+
+    // One that does not settle is a debt like any other.
+    await expiring("imports/u1/b.gpx");
+    await expiring("imports/u1/c.gpx");
+    run.mockResolvedValueOnce(undefined);
+    run.mockRejectedValueOnce(new Error("R2 down"));
+    const loud: string[] = [];
+
+    await drainOutbox(db(), loud, { now: NOW, handlers, report: vi.fn() });
+
+    expect(loud).toStrictEqual([
+      "2 import_file_expire outbox row(s) were owed; 1 settled",
     ]);
   });
 
@@ -674,6 +720,21 @@ describe("reconcileEntryPhotos (task 128)", () => {
     expect(
       outboxHandlers.entry_media_delete.context({ userId: "u1" }),
     ).toStrictEqual({ userId: "u1", entryId: "*" });
+  });
+});
+
+describe("the import_file_expire handler (owner, 2026-10-04)", () => {
+  it("is the same delete as a run's file, owed on a date", async () => {
+    const userId = newUlid();
+    const key = `imports/${userId}/${newUlid()}.fit`;
+    await env.IMPORTS.put(key, new Uint8Array([1]));
+
+    await outboxHandlers.import_file_expire.run(db(), { userId, key }, "row");
+
+    expect(await env.IMPORTS.head(key)).toBeNull();
+    expect(
+      outboxHandlers.import_file_expire.context({ userId: "u1", key: "k" }),
+    ).toStrictEqual({ userId: "u1", key: "k" });
   });
 });
 
