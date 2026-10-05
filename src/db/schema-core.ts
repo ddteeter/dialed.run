@@ -647,6 +647,15 @@ export const runs = /*#__PURE__*/ sqliteTable(
     // uploaded; a run with it set can neither clear nor suppress another.
     // NULL for a manual run and for a file with no reminder yet.
     reminderMatchedAt: integer("reminder_matched_at"),
+    // Read from the uploaded file (D-111, design 132). `duration_s` is
+    // elapsed time and keeps running through a pause; this is the time the
+    // runner was moving, which is what pace is computed from when present.
+    // NULL for a manual run, an indoor run, and a file that cannot say.
+    movingS: integer("moving_s"),
+    // Metres climbed: the watch's own total (FIT), or a hysteresis sum of
+    // the file's altitudes (TCX, GPX). NULL on the same terms as moving_s,
+    // and for a file with no altitude in it.
+    elevationGainM: real("elevation_gain_m"),
   },
   (t) => [
     index("runs_user_started").on(t.userId, t.startedAt),

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A run with both kinds of pause D-111 leaves out of moving time. In the
+  first segment the runner stands still for 60 s (07:00:20 to 07:01:20, the
+  same position both ends). Then the recording stops and a second segment
+  starts 210 s later. The second segment ends with a 30 s gap the runner ran
+  through (about 100 m, a sparse point), which is moving. Moving time is
+  20 + 10 + 10 + 30 = 70 s; elapsed is 340 s. Altitude wanders within 1.5 m
+  before a climb to 230. The median takes out the single low fix at 199.5,
+  so the climb is from 200.0: gain 30 m.
+-->
+<gpx version="1.1" creator="dialed-test">
+  <trk>
+    <name>Paused climb</name>
+    <trkseg>
+      <trkpt lat="44.980000" lon="-93.265000"><ele>200.0</ele><time>2026-08-20T07:00:00Z</time></trkpt>
+      <trkpt lat="44.980135" lon="-93.265000"><ele>201.0</ele><time>2026-08-20T07:00:05Z</time></trkpt>
+      <trkpt lat="44.980270" lon="-93.265000"><ele>199.5</ele><time>2026-08-20T07:00:10Z</time></trkpt>
+      <trkpt lat="44.980405" lon="-93.265000"><ele>200.8</ele><time>2026-08-20T07:00:15Z</time></trkpt>
+      <trkpt lat="44.980540" lon="-93.265000"><ele>200.3</ele><time>2026-08-20T07:00:20Z</time></trkpt>
+      <trkpt lat="44.980540" lon="-93.265000"><ele>200.3</ele><time>2026-08-20T07:01:20Z</time></trkpt>
+      <trkpt lat="44.980675" lon="-93.265000"><ele>206.0</ele><time>2026-08-20T07:01:25Z</time></trkpt>
+      <trkpt lat="44.980810" lon="-93.265000"><ele>212.0</ele><time>2026-08-20T07:01:30Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <trkpt lat="44.982000" lon="-93.265000"><ele>218.0</ele><time>2026-08-20T07:05:00Z</time></trkpt>
+      <trkpt lat="44.982135" lon="-93.265000"><ele>224.0</ele><time>2026-08-20T07:05:05Z</time></trkpt>
+      <trkpt lat="44.982270" lon="-93.265000"><ele>223.0</ele><time>2026-08-20T07:05:10Z</time></trkpt>
+      <trkpt lat="44.983170" lon="-93.265000"><ele>230.0</ele><time>2026-08-20T07:05:40Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

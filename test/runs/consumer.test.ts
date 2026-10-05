@@ -26,6 +26,7 @@ import { unreadNotificationCount } from "../../src/modules/notifications";
 import validTcx from "./fixtures/valid.tcx?raw";
 import malformedTcx from "./fixtures/malformed.tcx?raw";
 import treadmillTcx from "./fixtures/treadmill.tcx?raw";
+import pausedClimbGpx from "./fixtures/paused-climb.gpx?raw";
 import { nowSeconds } from "../../src/lib/now";
 import { drainOutbox } from "../../src/modules/ops/outbox";
 import { oweInCore } from "../queue-fakes";
@@ -147,6 +148,41 @@ describe("handleImportsBatch (102 §4, §8)", () => {
     expect(runRow?.distanceM).toBe(5000);
 
     expect(await unreadNotificationCount(deps.db, userId)).toBe(1);
+  });
+
+  it("stores the file's moving time and climb on the run, and neither for a treadmill (D-111)", async () => {
+    const deps = makeDeps();
+    const userId = newUlid();
+    const outdoorId = await seedImport(deps.db, userId, pausedClimbGpx, "gpx");
+    const treadmillId = await seedImport(deps.db, userId, treadmillTcx, "tcx");
+
+    await handleImportsBatch(
+      fakeBatch([
+        { body: { type: "import", importId: outdoorId } },
+        { body: { type: "import", importId: treadmillId } },
+      ]).batch,
+      deps,
+    );
+
+    const stored = await deps.db
+      .select({
+        importId: imports.id,
+        durationS: runs.durationS,
+        movingS: runs.movingS,
+        elevationGainM: runs.elevationGainM,
+      })
+      .from(imports)
+      .innerJoin(runs, eq(runs.id, imports.runId))
+      .where(eq(imports.userId, userId));
+    const outdoor = stored.find((row) => row.importId === outdoorId);
+    const treadmill = stored.find((row) => row.importId === treadmillId);
+
+    expect(outdoor).toMatchObject({ durationS: 340, movingS: 70 });
+    expect(outdoor?.elevationGainM).toBe(30);
+    // NULL in the row: drizzle reads it back as null, never undefined.
+    expect(treadmill?.durationS).toBe(1800);
+    expect(treadmill?.movingS).toBeNull();
+    expect(treadmill?.elevationGainM).toBeNull();
   });
 
   it("is idempotent on redelivery — a second delivery inserts no second run", async () => {

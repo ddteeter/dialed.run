@@ -6,6 +6,7 @@
  */
 import { XMLParser } from "fast-xml-parser";
 
+import type { RunDraft } from "../../../lib/contracts";
 import { NO_TRACK_MESSAGE, PARSE_FAILURE_MESSAGE } from "../upload-limits";
 
 /**
@@ -154,4 +155,143 @@ export function haversineMeters(
     sinLat * sinLat +
     Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * sinLon * sinLon;
   return 2 * earthRadiusM * Math.asin(Math.sqrt(a));
+}
+
+/**
+ * One child of an XML element, or undefined when the value is not an
+ * element at all. The guard lives here once, so a parser reading a field
+ * off a node it has not narrowed does not repeat it at every read.
+ */
+export function child(value: unknown, key: string): unknown {
+  return isRecord(value) ? value[key] : undefined;
+}
+
+/**
+ * A value as a list of zero or one, for `flatMap`: a reading the file did
+ * not carry adds nothing rather than an `undefined`.
+ */
+export function present<T>(value: T | undefined): T[] {
+  return value === undefined ? [] : [value];
+}
+
+/**
+ * How far the altitude must turn before the turn counts (D-111, design
+ * 132; ten metres is the owner's ruling, 2026-10-04). It runs after the
+ * median, which takes out the per-point noise; what is left is GPS
+ * altitude's slower wander, several metres over minutes, and a sum of
+ * every rise would read that as a climb. Ten is Strava's published
+ * threshold for elevation without a barometer (it uses two for barometric
+ * data), so a runner comparing the two sees the same kind of number. GPX
+ * and TCX altitudes are treated as GPS-derived because neither format says
+ * which they are; FIT reads the watch's own `totalAscent` and never comes
+ * here. The cost is a climb under ten metres, which goes uncounted.
+ */
+export const ELEVATION_HYSTERESIS_M = 10;
+
+/**
+ * How many points the altitude median is taken over before the hysteresis
+ * reads it (design 132). The hysteresis alone is not enough: GPS altitude
+ * is noisy *per point*, and a noisy fix in the tail clears any threshold
+ * against its neighbour. At the 5 m hysteresis first built, a flat hour at
+ * one point a second with ±3 m of noise read 790 m (review of #152); at
+ * 10 m, a flat hour of Gaussian noise reads 170–230 m at σ = 2 m and
+ * 1,600–1,750 m at σ = 3 m.
+ *
+ * A median of eleven points drops any burst of up to five consecutive bad
+ * fixes — multipath and a lost lock come in bursts of seconds, not single
+ * points — and measured, takes the σ = 2 m hour to 0 and the σ = 3 m hour
+ * to between 0 and 11 m, depending on the seed. A median rather than a mean because a
+ * median keeps a steady climb exactly as it was — the middle of a rising
+ * window is its middle point — and throws a wild fix away instead of
+ * spreading it over its neighbours. The cost is a crest shorter than about
+ * half the window: a bump of under six points (six seconds at 1 Hz, half a
+ * minute with smart recording) is shaved, and no hill a runner would call
+ * one is that short.
+ */
+export const ELEVATION_MEDIAN_WINDOW = 11;
+
+/**
+ * Each altitude replaced by the median of the window centred on it. The
+ * window shrinks symmetrically towards the ends, so the first and last
+ * altitudes are kept as they are and a short file is not averaged into
+ * one value.
+ */
+export function smoothedAltitudes(altitudes: readonly number[]): number[] {
+  const radius = (ELEVATION_MEDIAN_WINDOW - 1) / 2;
+  return altitudes.map((altitude, index) => {
+    const reach = Math.min(radius, index, altitudes.length - 1 - index);
+    const window = altitudes
+      .slice(index - reach, index + reach + 1)
+      .toSorted((a, b) => a - b);
+    return window[reach] ?? altitude;
+  });
+}
+
+/**
+ * Metres climbed over a run of altitudes, in order, with hysteresis: the
+ * reference follows the altitude freely in the direction it is already
+ * going, and a turn only counts once it exceeds `ELEVATION_HYSTERESIS_M`.
+ * A climb that has started is counted in full, every metre of it. The
+ * first rise has to clear the threshold like any other turn.
+ *
+ * Undefined with fewer than two altitudes: a file that carries none has
+ * not said the run was flat.
+ */
+export function hysteresisGainMeters(
+  altitudes: readonly number[],
+): number | undefined {
+  let gain = 0;
+  let isClimbing = false;
+  let reference: number | undefined;
+  for (const altitude of altitudes) {
+    if (reference === undefined) {
+      reference = altitude;
+    } else if (isClimbing) {
+      const peak = Math.max(reference, altitude);
+      gain += peak - reference;
+      reference = peak;
+      if (peak - altitude > ELEVATION_HYSTERESIS_M) {
+        isClimbing = false;
+        reference = altitude;
+      }
+    } else {
+      reference = Math.min(reference, altitude);
+      if (altitude - reference > ELEVATION_HYSTERESIS_M) {
+        isClimbing = true;
+        gain += altitude - reference;
+        reference = altitude;
+      }
+    }
+  }
+  return altitudes.length < 2 ? undefined : gain;
+}
+
+/**
+ * The climb a file's altitudes describe: the per-point noise taken out by
+ * the median, then the slower wander by the hysteresis.
+ */
+export function elevationGainMeters(
+  altitudes: readonly number[],
+): number | undefined {
+  return hysteresisGainMeters(smoothedAltitudes(altitudes));
+}
+
+/**
+ * The two readings D-111 adds, as a draft carries them. An indoor run
+ * carries neither — a treadmill's moving time and climb are not the
+ * runner's (D-111) — and a moving time that rounds to nothing is left out
+ * rather than stored as a zero nobody measured.
+ */
+export function fileMetrics(
+  isIndoor: boolean,
+  movingSeconds: number | undefined,
+  elevationGainM: number | undefined,
+): Pick<RunDraft, "movingS" | "elevationGainM"> {
+  if (isIndoor) return {};
+  const movingS = Math.round(movingSeconds ?? 0);
+  return { movingS: movingS > 0 ? movingS : undefined, elevationGainM };
+}
+
+export function sum(values: readonly number[]): number {
+  return values.reduce((total, value) => total + value, 0);
 }

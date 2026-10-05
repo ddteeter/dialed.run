@@ -54,6 +54,16 @@ describe("manualRunInput", () => {
   it("still enforces the run contract underneath", () => {
     expect(() => manualRunInput.parse({ ...draft, durationS: 0 })).toThrow();
   });
+
+  it("drops moving time and a climb, which only a file can say (D-111)", () => {
+    const parsed = manualRunInput.parse({
+      ...draft,
+      movingS: 1700,
+      elevationGainM: 42,
+    });
+    expect(parsed).not.toHaveProperty("movingS");
+    expect(parsed).not.toHaveProperty("elevationGainM");
+  });
 });
 
 describe("the id inputs", () => {

@@ -201,8 +201,12 @@ id           text PK   -- ULID
 user_id      text FK
 source       text      -- enum: manual | file   (Strava is NOT a source)
 started_at   int       -- epoch seconds
-duration_s   int
+duration_s   int       -- elapsed: keeps running through a pause (D-111)
 distance_m   real
+moving_s     int       -- NULLABLE; moving time read from the file (D-111).
+                       -- NULL for manual and indoor runs
+elevation_gain_m real  -- NULLABLE; metres climbed, from the file (D-111).
+                       -- NULL for manual and indoor runs, and no altitude
 lat, lng     real      -- NULLABLE
 indoor       int       -- 0/1; indoor runs skip conditions entirely
 effort       text      -- enum: easy | steady | workout | race, NULLABLE

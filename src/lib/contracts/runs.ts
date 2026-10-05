@@ -24,6 +24,12 @@ export const runDraftSchema = z.object({
   indoor: z.boolean().default(false),
   effort: effortSchema.optional(),
   title: z.string().min(1, "Give the run a name.").max(120),
+  // Read from an uploaded file only (D-111). `durationS` is elapsed time and
+  // keeps running through a pause; `movingS` is the time spent moving. An
+  // indoor run and a manual one carry neither, and a file that cannot say
+  // leaves them out rather than inventing a zero.
+  movingS: z.number().int().positive().optional(),
+  elevationGainM: z.number().nonnegative().optional(),
 });
 export type RunDraft = z.infer<typeof runDraftSchema>;
 

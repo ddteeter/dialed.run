@@ -330,6 +330,13 @@
       "when": 1791151539391,
       "tag": "0046_drop_legacy_sharing_booleans",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "6",
+      "when": 1791156190209,
+      "tag": "0047_add_run_moving_time_and_elevation_gain",
+      "breakpoints": true
     }
   ]
 }
