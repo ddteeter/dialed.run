@@ -445,6 +445,57 @@ describe("deleting a run", () => {
     ).toStrictEqual([]);
   });
 
+  // D-110: no bucket rule expires an upload any more, so this delete is
+  // the only thing that ever will — and it must heal when R2 fails.
+  it("owes the file when R2 fails, and the drain deletes it", async () => {
+    const userId = await makeUser();
+    const { runId, key } = await importedRun(userId);
+    const report = vi.fn(quiet);
+    vi.spyOn(env.IMPORTS, "delete").mockRejectedValueOnce(new Error("R2 down"));
+
+    await deleteRun(core(), userId, runId, report);
+
+    // The runner's delete happened: the run and its upload's row are gone.
+    expect(
+      await core().select().from(runs).where(eq(runs.id, runId)),
+    ).toStrictEqual([]);
+    expect(
+      await core().select().from(imports).where(eq(imports.runId, runId)),
+    ).toStrictEqual([]);
+    expect(report).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ kind: "import_file_delete", key, userId }),
+    );
+    expect(await env.IMPORTS.head(key)).not.toBeNull();
+    expect(
+      await core()
+        .select({ kind: outbox.kind, dedupeKey: outbox.dedupeKey })
+        .from(outbox),
+    ).toStrictEqual([
+      { kind: "import_file_delete", dedupeKey: `${userId}:${key}` },
+    ]);
+
+    await drainOutbox(core(), [], { now: NOW * 10 });
+
+    expect(await env.IMPORTS.head(key)).toBeNull();
+    expect(await core().select().from(outbox)).toStrictEqual([]);
+  });
+
+  it("deletes a run whose file is already gone, and owes nothing", async () => {
+    const userId = await makeUser();
+    const { runId, key } = await importedRun(userId);
+    await env.IMPORTS.delete(key);
+    const report = vi.fn(quiet);
+
+    await deleteRun(core(), userId, runId, report);
+
+    expect(
+      await core().select().from(runs).where(eq(runs.id, runId)),
+    ).toStrictEqual([]);
+    expect(report).not.toHaveBeenCalled();
+    expect(await core().select().from(outbox)).toStrictEqual([]);
+  });
+
   it("refuses another runner's run as not found", async () => {
     const owner = await makeUser();
     const { runId, key } = await importedRun(owner);

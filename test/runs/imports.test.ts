@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { imports, outfitEntries, runs } from "../../src/db/schema-core";
 import { env } from "../../src/env";
@@ -22,6 +22,13 @@ async function importRow(userId: string, importId: string) {
   return selectOwnedRow(coreDb(), imports, { id: importId, userId });
 }
 
+/**
+For the calls with nothing to report: only the delete-fails path reports.
+*/
+function noReport(): void {
+  // Nothing is expected here; the tests that expect a report pass their own.
+}
+
 function fakeQueue() {
   const sent: ImportJob[] = [];
   return {
@@ -38,11 +45,17 @@ describe("startImport (102 §2)", () => {
     const db = coreDb();
     const queue = fakeQueue();
     await expect(
-      startImport(db, env.IMPORTS, queue, {
-        userId: newUlid(),
-        filename: "run.pdf",
-        bytes: new ArrayBuffer(10),
-      }),
+      startImport(
+        db,
+        env.IMPORTS,
+        queue,
+        {
+          userId: newUlid(),
+          filename: "run.pdf",
+          bytes: new ArrayBuffer(10),
+        },
+        noReport,
+      ),
     ).rejects.toBeInstanceOf(ImportUploadError);
   });
 
@@ -50,11 +63,17 @@ describe("startImport (102 §2)", () => {
     const db = coreDb();
     const queue = fakeQueue();
     await expect(
-      startImport(db, env.IMPORTS, queue, {
-        userId: newUlid(),
-        filename: "run.gpx",
-        bytes: new ArrayBuffer(0),
-      }),
+      startImport(
+        db,
+        env.IMPORTS,
+        queue,
+        {
+          userId: newUlid(),
+          filename: "run.gpx",
+          bytes: new ArrayBuffer(0),
+        },
+        noReport,
+      ),
     ).rejects.toBeInstanceOf(ImportUploadError);
   });
 
@@ -62,11 +81,17 @@ describe("startImport (102 §2)", () => {
     const db = coreDb();
     const queue = fakeQueue();
     await expect(
-      startImport(db, env.IMPORTS, queue, {
-        userId: newUlid(),
-        filename: "run.fit",
-        bytes: new ArrayBuffer(MAX_IMPORT_BYTES + 1),
-      }),
+      startImport(
+        db,
+        env.IMPORTS,
+        queue,
+        {
+          userId: newUlid(),
+          filename: "run.fit",
+          bytes: new ArrayBuffer(MAX_IMPORT_BYTES + 1),
+        },
+        noReport,
+      ),
     ).rejects.toBeInstanceOf(ImportUploadError);
   });
 
@@ -76,11 +101,17 @@ describe("startImport (102 §2)", () => {
     const userId = newUlid();
     const bytes = new TextEncoder().encode("<gpx></gpx>").buffer;
 
-    const { importId } = await startImport(db, env.IMPORTS, queue, {
-      userId,
-      filename: "run.gpx",
-      bytes,
-    });
+    const { importId } = await startImport(
+      db,
+      env.IMPORTS,
+      queue,
+      {
+        userId,
+        filename: "run.gpx",
+        bytes,
+      },
+      noReport,
+    );
 
     expect(queue.sent).toEqual([{ type: "import", importId }]);
 
@@ -97,11 +128,17 @@ describe("startImport (102 §2)", () => {
     const queue = fakeQueue();
     const userId = newUlid();
     const otherUserId = newUlid();
-    const { importId } = await startImport(db, env.IMPORTS, queue, {
-      userId,
-      filename: "run.tcx",
-      bytes: new TextEncoder().encode("<tcx></tcx>").buffer,
-    });
+    const { importId } = await startImport(
+      db,
+      env.IMPORTS,
+      queue,
+      {
+        userId,
+        filename: "run.tcx",
+        bytes: new TextEncoder().encode("<tcx></tcx>").buffer,
+      },
+      noReport,
+    );
 
     expect(await getImportOutcome(db, otherUserId, importId)).toBeUndefined();
     const outcome = await getImportOutcome(db, userId, importId);
@@ -224,11 +261,17 @@ describe("startImport: the rules, in the words the user reads", () => {
     // The copy lists them, and the list is the same one the parsers are
     // registered under.
     await expect(
-      startImport(coreDb(), env.IMPORTS, fakeQueue(), {
-        userId: newUlid(),
-        filename: "run.csv",
-        bytes,
-      }),
+      startImport(
+        coreDb(),
+        env.IMPORTS,
+        fakeQueue(),
+        {
+          userId: newUlid(),
+          filename: "run.csv",
+          bytes,
+        },
+        noReport,
+      ),
     ).rejects.toThrow("That's not a GPX, TCX or FIT file.");
   });
 
@@ -242,29 +285,47 @@ describe("startImport: the rules, in the words the user reads", () => {
     // `>`, not `>=`: 25 MB is the cap.
     const queue = fakeQueue();
     await expect(
-      startImport(coreDb(), env.IMPORTS, queue, {
-        userId: newUlid(),
-        filename: "run.gpx",
-        bytes: new ArrayBuffer(MAX_IMPORT_BYTES),
-      }),
+      startImport(
+        coreDb(),
+        env.IMPORTS,
+        queue,
+        {
+          userId: newUlid(),
+          filename: "run.gpx",
+          bytes: new ArrayBuffer(MAX_IMPORT_BYTES),
+        },
+        noReport,
+      ),
     ).resolves.toBeTruthy();
 
     await expect(
-      startImport(coreDb(), env.IMPORTS, queue, {
-        userId: newUlid(),
-        filename: "run.gpx",
-        bytes: new ArrayBuffer(MAX_IMPORT_BYTES + 1),
-      }),
+      startImport(
+        coreDb(),
+        env.IMPORTS,
+        queue,
+        {
+          userId: newUlid(),
+          filename: "run.gpx",
+          bytes: new ArrayBuffer(MAX_IMPORT_BYTES + 1),
+        },
+        noReport,
+      ),
     ).rejects.toThrow(/25 MB/);
   });
 
   it("says an empty file is empty rather than that it is the wrong type", async () => {
     await expect(
-      startImport(coreDb(), env.IMPORTS, fakeQueue(), {
-        userId: newUlid(),
-        filename: "run.gpx",
-        bytes: new ArrayBuffer(0),
-      }),
+      startImport(
+        coreDb(),
+        env.IMPORTS,
+        fakeQueue(),
+        {
+          userId: newUlid(),
+          filename: "run.gpx",
+          bytes: new ArrayBuffer(0),
+        },
+        noReport,
+      ),
     ).rejects.toThrow(/empty/);
   });
 
@@ -272,11 +333,17 @@ describe("startImport: the rules, in the words the user reads", () => {
     // The consumer reads the format back out of this key, so its shape is
     // a contract between the two halves.
     const userId = newUlid();
-    const { importId } = await startImport(coreDb(), env.IMPORTS, fakeQueue(), {
-      userId,
-      filename: "Morning Run.TCX",
-      bytes,
-    });
+    const { importId } = await startImport(
+      coreDb(),
+      env.IMPORTS,
+      fakeQueue(),
+      {
+        userId,
+        filename: "Morning Run.TCX",
+        bytes,
+      },
+      noReport,
+    );
 
     const row = await importRow(userId, importId);
     expect(row?.r2Key).toBe(`imports/${userId}/${importId}.tcx`);
@@ -290,18 +357,30 @@ describe("startImport: the rules, in the words the user reads", () => {
     const idempotencyKey = newUlid();
     const queue = fakeQueue();
 
-    const first = await startImport(coreDb(), env.IMPORTS, queue, {
-      userId,
-      filename: "run.gpx",
-      bytes,
-      idempotencyKey,
-    });
-    const second = await startImport(coreDb(), env.IMPORTS, queue, {
-      userId,
-      filename: "run.gpx",
-      bytes,
-      idempotencyKey,
-    });
+    const first = await startImport(
+      coreDb(),
+      env.IMPORTS,
+      queue,
+      {
+        userId,
+        filename: "run.gpx",
+        bytes,
+        idempotencyKey,
+      },
+      noReport,
+    );
+    const second = await startImport(
+      coreDb(),
+      env.IMPORTS,
+      queue,
+      {
+        userId,
+        filename: "run.gpx",
+        bytes,
+        idempotencyKey,
+      },
+      noReport,
+    );
 
     expect(second.importId).toBe(first.importId);
     expect(queue.sent).toHaveLength(1);
@@ -312,18 +391,30 @@ describe("startImport: the rules, in the words the user reads", () => {
     const idempotencyKey = newUlid();
     const queue = fakeQueue();
 
-    const mine = await startImport(coreDb(), env.IMPORTS, queue, {
-      userId: newUlid(),
-      filename: "run.gpx",
-      bytes,
-      idempotencyKey,
-    });
-    const theirs = await startImport(coreDb(), env.IMPORTS, queue, {
-      userId: newUlid(),
-      filename: "run.gpx",
-      bytes,
-      idempotencyKey,
-    });
+    const mine = await startImport(
+      coreDb(),
+      env.IMPORTS,
+      queue,
+      {
+        userId: newUlid(),
+        filename: "run.gpx",
+        bytes,
+        idempotencyKey,
+      },
+      noReport,
+    );
+    const theirs = await startImport(
+      coreDb(),
+      env.IMPORTS,
+      queue,
+      {
+        userId: newUlid(),
+        filename: "run.gpx",
+        bytes,
+        idempotencyKey,
+      },
+      noReport,
+    );
 
     expect(theirs.importId).not.toBe(mine.importId);
     expect(queue.sent).toHaveLength(2);
@@ -333,16 +424,28 @@ describe("startImport: the rules, in the words the user reads", () => {
     const userId = newUlid();
     const queue = fakeQueue();
 
-    const first = await startImport(coreDb(), env.IMPORTS, queue, {
-      userId,
-      filename: "run.gpx",
-      bytes,
-    });
-    const second = await startImport(coreDb(), env.IMPORTS, queue, {
-      userId,
-      filename: "run.gpx",
-      bytes,
-    });
+    const first = await startImport(
+      coreDb(),
+      env.IMPORTS,
+      queue,
+      {
+        userId,
+        filename: "run.gpx",
+        bytes,
+      },
+      noReport,
+    );
+    const second = await startImport(
+      coreDb(),
+      env.IMPORTS,
+      queue,
+      {
+        userId,
+        filename: "run.gpx",
+        bytes,
+      },
+      noReport,
+    );
 
     expect(second.importId).not.toBe(first.importId);
   });
@@ -352,16 +455,104 @@ describe("startImport: the rules, in the words the user reads", () => {
     const queue = fakeQueue();
     const before = nowSeconds();
 
-    const { importId } = await startImport(coreDb(), env.IMPORTS, queue, {
-      userId,
-      filename: "run.gpx",
-      bytes,
-    });
+    const { importId } = await startImport(
+      coreDb(),
+      env.IMPORTS,
+      queue,
+      {
+        userId,
+        filename: "run.gpx",
+        bytes,
+      },
+      noReport,
+    );
 
     const row = await importRow(userId, importId);
     expect(row?.status).toBe("pending");
     expect(row?.createdAt).toBeGreaterThanOrEqual(before - 5);
     expect(row?.createdAt).toBeLessThanOrEqual(before + 5);
     expect(queue.sent).toStrictEqual([{ type: "import", importId }]);
+  });
+});
+
+/**
+A database whose insert fails, as D1 being down would fail it.
+*/
+function failingInsert() {
+  const db = coreDb();
+  vi.spyOn(db, "insert").mockImplementation(() => {
+    throw new Error("D1 is down");
+  });
+  return db;
+}
+
+async function storedFor(userId: string): Promise<string[]> {
+  const listed = await env.IMPORTS.list({ prefix: `imports/${userId}/` });
+  return listed.objects.map((object) => object.key);
+}
+
+describe("startImport: an upload whose row could not be written (D-110)", () => {
+  const bytes = new TextEncoder().encode("<gpx/>").buffer;
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("takes its file back out of R2, since no bucket rule will", async () => {
+    const userId = newUlid();
+    const queue = fakeQueue();
+    const report = vi.fn();
+
+    await expect(
+      startImport(
+        failingInsert(),
+        env.IMPORTS,
+        queue,
+        {
+          userId,
+          filename: "run.gpx",
+          bytes,
+        },
+        report,
+      ),
+    ).rejects.toThrow("D1 is down");
+
+    expect(await storedFor(userId)).toStrictEqual([]);
+    expect(queue.sent).toStrictEqual([]);
+    expect(report).not.toHaveBeenCalled();
+  });
+
+  it("still fails with the insert's error when the delete fails too, and reports the delete", async () => {
+    const userId = newUlid();
+    const r2Failure = new Error("R2 is down");
+    vi.spyOn(env.IMPORTS, "delete").mockRejectedValueOnce(r2Failure);
+    const report = vi.fn();
+
+    await expect(
+      startImport(
+        failingInsert(),
+        env.IMPORTS,
+        fakeQueue(),
+        {
+          userId,
+          filename: "run.gpx",
+          bytes,
+        },
+        report,
+      ),
+    ).rejects.toThrow("D1 is down");
+
+    // Left for account deletion's purge, which lists the whole prefix.
+    const stored = await storedFor(userId);
+    expect(stored).toHaveLength(1);
+    // Ids to find the stray file by, and nothing of what is in it.
+    const importId = stored[0]
+      ?.replace(`imports/${userId}/`, "")
+      .split(".", 1)[0];
+    expect(report).toHaveBeenCalledExactlyOnceWith(r2Failure, {
+      surface: "import-orphan-delete",
+      userId,
+      importId,
+    });
   });
 });

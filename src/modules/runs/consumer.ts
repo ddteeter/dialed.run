@@ -21,6 +21,7 @@ import {
 } from "../../db/schema-core";
 import { didClaim } from "../../lib/sql/claim";
 import { newUlid } from "../../lib/ids";
+import { nowSeconds } from "../../lib/now";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { consumeEach, deadLetterEach } from "../../lib/sql/queue-batch";
 import type { CoreDb } from "./core-db";
@@ -82,21 +83,45 @@ async function didClaimImport(db: CoreDb, importId: string): Promise<boolean> {
   );
 }
 
+/**
+ * How long a file we could not read is kept after its import failed
+ * (owner, 2026-10-04): long enough for the runner to ask about it, and
+ * for us to re-parse it after a parser fix. A failed import has no run, so
+ * "as long as the run" (D-110) cannot apply to it.
+ */
+const FAILED_IMPORT_FILE_DAYS = 30;
+
+/**
+ * Mark the import failed, tell its runner, and owe its file's deletion
+ * `FAILED_IMPORT_FILE_DAYS` from now — one batch, so a failure is never
+ * recorded without the date its file goes (law 8c: the outbox row is the
+ * only thing that will ever remember it). The daily drain deletes it.
+ */
 async function failImport(
-  db: CoreDb,
-  importRow: { id: string; userId: string },
+  deps: Pick<ConsumerDeps, "db" | "owe">,
+  importRow: { id: string; userId: string; r2Key: string },
   reason: string,
 ): Promise<void> {
-  await db
-    .update(imports)
-    .set({ status: "failed", failureReason: reason })
-    .where(eq(imports.id, importRow.id));
-  await createNotification(db, {
-    userId: importRow.userId,
-    kind: "import_failed",
-    subjectId: importRow.id,
-    body: `Your run import didn't work: ${reason}`,
-  });
+  const { db } = deps;
+  await db.batch([
+    db
+      .update(imports)
+      .set({ status: "failed", failureReason: reason })
+      .where(eq(imports.id, importRow.id)),
+    notificationInsert(db, {
+      userId: importRow.userId,
+      kind: "import_failed",
+      subjectId: importRow.id,
+      body: `Your run import didn't work: ${reason}`,
+    }),
+    deps.owe(
+      {
+        kind: "import_file_expire",
+        payload: { userId: importRow.userId, key: importRow.r2Key },
+      },
+      nowSeconds() + FAILED_IMPORT_FILE_DAYS * 24 * 60 * 60,
+    ),
+  ]);
 }
 
 /**
@@ -142,7 +167,7 @@ async function processImportJob(
 
   const object = await deps.importBucket.get(importRow.r2Key);
   if (object === null) {
-    await failImport(deps.db, importRow, PARSE_FAILURE_MESSAGE);
+    await failImport(deps, importRow, PARSE_FAILURE_MESSAGE);
     return;
   }
 
@@ -152,7 +177,7 @@ async function processImportJob(
     const bytes = await object.arrayBuffer();
     draft = await sourceFor(extension).parse(bytes);
   } catch (error) {
-    await failImport(deps.db, importRow, importFailureReason(error));
+    await failImport(deps, importRow, importFailureReason(error));
     return;
   }
 
@@ -413,7 +438,7 @@ export async function handleImportsDlqBatch(
         )
       ) {
         await failImport(
-          deps.db,
+          deps,
           importRow,
           "We couldn't process this import after several tries. Try uploading it again.",
         );

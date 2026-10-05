@@ -46,6 +46,6 @@ export function batchOf(queue: string, messages: SpiedMessage[]): MessageBatch {
  * The imports consumer's `owe`, as the queue entry wires it: an outbox
  * row in the core database, for the caller's batch.
  */
-export function oweInCore(message: OutboxMessage) {
-  return outboxInsert(coreDb(), oweOutbox(message));
+export function oweInCore(message: OutboxMessage, notBefore?: number) {
+  return outboxInsert(coreDb(), oweOutbox(message, notBefore));
 }

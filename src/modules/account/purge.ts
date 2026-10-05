@@ -70,6 +70,7 @@ import {
 import { manualConditions } from "../../db/schema-weather";
 import { env } from "../../env";
 import { chunked, IN_LIST_CHUNK } from "../../lib/chunked";
+import { importFilePrefix } from "../../lib/import-file-key";
 import { columnWhere, firstRowWhere } from "../../lib/sql/keyed-read";
 import { listedPages } from "../../lib/sql/r2-pages";
 import { orSqlNull } from "../../lib/sql/sql-null";
@@ -105,9 +106,11 @@ export interface PurgeDeps {
   */
   readonly revokeStrava: (userId: string) => Promise<void>;
   /**
-  `IMPORTS`, where the runner's data export ZIPs are staged (ACC-10).
-  */
-  readonly exportBucket: Pick<R2Bucket, "list" | "delete">;
+   * `IMPORTS`: the runner's uploaded run files (`imports/`, kept for as
+   * long as the run since D-110) and their data export ZIPs (`exports/`,
+   * ACC-10).
+   */
+  readonly importsBucket: Pick<R2Bucket, "list" | "delete">;
   readonly report: Report;
   readonly now: number;
 }
@@ -119,7 +122,7 @@ function liveDeps(): PurgeDeps {
     weather: drizzle(env.DIALED_WEATHER),
     revokeStrava: (userId) =>
       disconnectStrava(core, env.IMPORTS_QUEUE, userId, captureException),
-    exportBucket: env.IMPORTS,
+    importsBucket: env.IMPORTS,
     report: captureException,
     now: nowSeconds(),
   };
@@ -225,23 +228,32 @@ export async function purgeAccount(
   // items, tags, reactions, photos and notifications — and the R2 owed.
   await deleteRuns(core, userId, "all", report);
   await deleteCloset(core, userId);
-  await deleteExportFiles(deps.exportBucket, userId);
+  await deleteStoredFiles(deps.importsBucket, userId);
   await deleteAccountRows(core, userId, deps.now);
 }
 
 /**
- * The runner's data export ZIPs (ACC-10), found by listing their prefix
- * rather than from the rows — so a ZIP a build staged before its row said
- * so goes too. The rows go in the last batch with the other by-user
- * tables; a listing that stops part way is finished by the next firing.
+ * Everything the runner has in `IMPORTS`: their uploaded run files and
+ * their data export ZIPs (ACC-10), each found by listing its prefix rather
+ * than from rows. So a ZIP a build staged before its row said so goes too,
+ * and so does an upload whose row was never written (`startImport` puts
+ * the file before the row). Since D-110 no bucket rule expires either
+ * kind of upload, so this listing is the only thing that ever removes one
+ * of those.
+ *
+ * Reconciled by the purge's claim, not owed to the outbox: the runs' and
+ * the closet's rows are already gone, so nothing under these prefixes is
+ * still named, and a listing that stops part way throws, keeps the claim,
+ * and is finished by the next firing.
  */
-async function deleteExportFiles(
-  bucket: PurgeDeps["exportBucket"],
+async function deleteStoredFiles(
+  bucket: PurgeDeps["importsBucket"],
   userId: string,
 ): Promise<void> {
-  const pages = listedPages(bucket, exportPrefixFor(userId));
-  for await (const objects of pages) {
-    await bucket.delete(objects.map((object) => object.key));
+  for (const prefix of [importFilePrefix(userId), exportPrefixFor(userId)]) {
+    for await (const objects of listedPages(bucket, prefix)) {
+      await bucket.delete(objects.map((object) => object.key));
+    }
   }
 }
 
@@ -333,9 +345,10 @@ async function forgetScreenings(db: Db, userId: string): Promise<void> {
 
 /**
  * The closet, and any upload that never became a run: the rows, and the
- * R2 each is owed (a garment's photo prefix, an upload's file), in one
- * batch. Left to the drain rather than sent now: a closet is dozens of
- * prefixes, and the drain clears them within days.
+ * R2 each garment is owed (its photo prefix), in one batch. Left to the
+ * drain rather than sent now: a closet is dozens of prefixes, and the
+ * drain clears them within days. The uploads' files are not owed here:
+ * `deleteStoredFiles` lists the runner's whole `imports/` prefix next.
  */
 async function deleteCloset(db: Db, userId: string): Promise<void> {
   const garments = await columnWhere(
@@ -344,20 +357,9 @@ async function deleteCloset(db: Db, userId: string): Promise<void> {
     wardrobeItems.id,
     eq(wardrobeItems.userId, userId),
   );
-  const uploadKeys = await columnWhere(
-    db,
-    imports,
-    imports.r2Key,
-    eq(imports.userId, userId),
+  const debts = garments.map((itemId) =>
+    oweOutbox({ kind: "photo_delete", payload: { userId, itemId } }),
   );
-  const debts = [
-    ...garments.map((itemId) =>
-      oweOutbox({ kind: "photo_delete", payload: { userId, itemId } }),
-    ),
-    ...uploadKeys.map((key) =>
-      oweOutbox({ kind: "import_file_delete", payload: { userId, key } }),
-    ),
-  ];
   await db.batch([
     db.delete(wardrobeItems).where(eq(wardrobeItems.userId, userId)),
     db.delete(imports).where(eq(imports.userId, userId)),

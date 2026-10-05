@@ -66,28 +66,38 @@ wrangler r2 bucket create dialed-imports
 wrangler r2 bucket create dialed-guides
 ```
 
-| Bucket           | Binding                | Holds                                                  | Retention                                                                                         |
-| ---------------- | ---------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| `dialed-media`   | `MEDIA`                | Garment photos, entry photos                           | Indefinite — the app renders these; deleting one breaks a page                                    |
-| `dialed-imports` | `IMPORTS`              | Uploaded `.fit`/`.gpx`/`.tcx`                          | **30 days**                                                                                       |
-| `dialed-guides`  | (R-134, not yet bound) | `guide-artifact/v1.json`, the nightly anonymous totals | Overwritten nightly; read by the marketing site's CI with a read-only token scoped to this bucket |
+| Bucket           | Binding                | Holds                                                  | Retention                                                                                                                             |
+| ---------------- | ---------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `dialed-media`   | `MEDIA`                | Garment photos, entry photos                           | Indefinite — the app renders these; deleting one breaks a page                                                                        |
+| `dialed-imports` | `IMPORTS`              | Uploaded `.fit`/`.gpx`/`.tcx`; data export ZIPs        | Run files: **until the run or account is deleted** (D-110); a file whose import failed, 30 days. Export ZIPs under `exports/`: 8 days |
+| `dialed-guides`  | (R-134, not yet bound) | `guide-artifact/v1.json`, the nightly anonymous totals | Overwritten nightly; read by the marketing site's CI with a read-only token scoped to this bucket                                     |
 
-**The 30-day rule on `dialed-imports` must be set by hand** — wrangler does
-not manage R2 object lifecycle. In the dashboard: R2 → `dialed-imports` →
-Settings → Object lifecycle rules → delete objects 30 days after upload.
+**No rule expires a run file** (decision D-110). An uploaded file is kept
+for as long as its run: deleting a run deletes its file (feed's `deleteRuns`,
+through the outbox's `import_file_delete`), and deleting an account deletes
+everything under `imports/<user>/` (the purge lists the prefix). A file
+whose import failed has no run, so the batch that fails the import owes its
+deletion 30 days later (outbox `import_file_expire`, owner 2026-10-04), and
+the daily digest's drain deletes it — in code, not a bucket rule. A bucket
+whose whole-bucket 30-day rule is still set from before D-110 must have it
+**removed** — it would delete files the runner was promised we keep.
 
-**And a second rule on the same bucket, for data exports** (decision D-85):
-prefix `exports/`, delete objects **8 days** after upload. Task 126's
+**One rule on the bucket, for data exports only, set by hand** (decision
+D-85) — wrangler does not manage R2 object lifecycle. In the dashboard: R2 →
+`dialed-imports` → Settings → Object lifecycle rules → prefix `exports/`,
+delete objects **8 days** after upload. Task 126's
 emailed ZIPs are staged there (`exports/<user>/<export>/<claim>.zip`) and
 the hourly sweep deletes each once its 7-day link expires; this rule is the
 net behind it, for a ZIP a build left under a claim no row holds (it died
 between its upload and marking the export ready). Eight is past the
 seven-day link, so the rule never takes a live export.
 
-Why 30 and not forever: an import file has done its job once it is parsed
-into a run. The only later use is re-parsing after a parser bug, and a month
-covers that. They are also GPS traces — the most sensitive data the product
-holds — so keeping them indefinitely is a liability with no product value.
+Why kept, not expired (D-110, which replaced a 30-day rule): expiry cannot
+be undone, and the file is what lets a new field be re-parsed from an old run
+(D-111's moving time and elevation) and leaves routes and maps possible later
+(R-132). They are GPS traces — the most sensitive data the product holds — so
+they go the moment the runner deletes the run or the account, by the deletion
+paths and not by a rule someone has to remember to set.
 
 Why not one bucket with a prefix rule: R2 lifecycle rules can be
 prefix-scoped, so one bucket would work. Two makes retention a property of
@@ -334,13 +344,14 @@ costs:**
 | `health-probe`                       | `/api/health`'s probe (a `head`, never written)                                 | Nothing.                                                                                                                                                                 |
 
 **`dialed-imports` (`IMPORTS`)** holds uploaded `.fit`/`.gpx`/`.tcx` files
-under `imports/<user>/<import>.<ext>`, for 30 days at most (§2), and
-deletes a file early when its run is retracted. A parsed file has done its
-job: the run is in D1. Losing the bucket loses only imports still waiting
-in the queue, which fail and dead-letter, and the runner sees that import
-failed and can upload the file again. **It does not need a backup**, and
-keeping a copy of GPS traces somewhere else would undo the reason for the
-30-day rule.
+under `imports/<user>/<import>.<ext>`, for as long as the run (§2, D-110),
+and deletes a file when its run or account is deleted. The run itself is in
+D1, so losing the bucket loses imports still waiting in the queue, which
+fail and dead-letter (the runner sees that import failed and can upload the
+file again), and the originals of runs already parsed — which cost the
+re-parse D-110 keeps them for, never a run. **It does not need a backup**:
+a copy of GPS traces somewhere else is a copy the deletion paths cannot
+reach.
 
 **A D1 restore does not bring R2 back with it.** Restoring core to before
 a photo was removed brings back a row whose object the reconcile has

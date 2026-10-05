@@ -4,6 +4,7 @@ import {
   dedupeKeyFor,
   outboxKinds,
   readOutboxRow,
+  scheduledOutboxKinds,
 } from "../../src/lib/sql/outbox";
 
 describe("outboxKinds", () => {
@@ -12,8 +13,15 @@ describe("outboxKinds", () => {
       "photo_delete",
       "entry_media_delete",
       "import_file_delete",
+      "import_file_expire",
       "email",
     ]);
+  });
+});
+
+describe("scheduledOutboxKinds", () => {
+  it("is the failed import's file alone: every other kind is a fast path's debt", () => {
+    expect(scheduledOutboxKinds).toStrictEqual(["import_file_expire"]);
   });
 });
 
@@ -43,6 +51,12 @@ describe("dedupeKeyFor", () => {
     expect(
       dedupeKeyFor({
         kind: "import_file_delete",
+        payload: { userId: "u1", key: "imports/u1/i1.gpx" },
+      }),
+    ).toBe("u1:imports/u1/i1.gpx");
+    expect(
+      dedupeKeyFor({
+        kind: "import_file_expire",
         payload: { userId: "u1", key: "imports/u1/i1.gpx" },
       }),
     ).toBe("u1:imports/u1/i1.gpx");
@@ -128,6 +142,27 @@ describe("readOutboxRow", () => {
       readOutboxRow(
         "import_file_delete",
         JSON.stringify({ userId: "", key: "imports//a" }),
+      ),
+    ).toStrictEqual(UNKNOWN);
+  });
+
+  it("reads a failed import's expiry under the same prefix rule", () => {
+    expect(
+      readOutboxRow(
+        "import_file_expire",
+        JSON.stringify({ userId: "u1", key: "imports/u1/a.fit" }),
+      ),
+    ).toStrictEqual({
+      ok: true,
+      message: {
+        kind: "import_file_expire",
+        payload: { userId: "u1", key: "imports/u1/a.fit" },
+      },
+    });
+    expect(
+      readOutboxRow(
+        "import_file_expire",
+        JSON.stringify({ userId: "u1", key: "imports/u2/a.fit" }),
       ),
     ).toStrictEqual(UNKNOWN);
   });
