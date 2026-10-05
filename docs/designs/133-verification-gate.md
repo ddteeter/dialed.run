@@ -309,6 +309,17 @@ terms gate's batch; `verifiedUserId` is its glue. Useful, report and email
 change lost their module-level `isVerified` checks and `unverified`
 variants, and `fileReport` its `{ isVerified }` argument.
 
+**The wire (found building it).** TanStack Start serializes a thrown
+`Error` with its `message` alone (router-core's `ShallowErrorPlugin`), so
+no refusal's `code` ever reached the client: `AUTH_REQUIRED` and D-96's
+`TERMS_NOT_ACCEPTED` read as "Our end failed" in the browser, and only the
+DOM tests, which throw the code directly, saw them work. `src/start.ts`
+(new; the framework reads `startInstance` from it) registers `lib`'s
+`signalAdapter`, which carries `{ code, message }` for exactly the three
+signals and leaves every other error to the framework. The feed demo's
+refusal beats are what caught it. This fixes the session and terms
+answers too.
+
 **The client.** `ui/unconfirmed-refusal.tsx` renders nothing until the
 first refusal, then the sheet `account`'s `confirmEmailOnRefusal` draws,
 which fetches the address with `ownAccountQuery` on its first opening. The
@@ -358,7 +369,9 @@ can be killed (CLAUDE.md, D-41). Six files change, each edit glue:
 `{ isVerified }`), `ops` (one Desk), `onboarding` (`namingSuggestionsQuery`
 gains `requireUserId`), `products` (`resolveProductFn` deleted). The Desk,
 F1 and the deletion cannot be done anywhere else, so the other edits ride
-in files that change regardless.
+in files that change regardless. `src/start.ts` is the same class of
+file: framework glue no test can import, holding no decision
+(`signalAdapter` is tested in `lib`).
 
 ## Decisions (owner, 2026-10-04)
 

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { EMAIL_UNCONFIRMED_CODE } from "../../src/lib/auth-signal";
 import type { ConfirmTrigger } from "../../src/lib/auth-signal";
 import { FormStatus, useControlAction, useFormSubmit } from "../../src/ui";
+import { didAnswerRefusal } from "../../src/ui/use-form-submit";
 import type { ConfirmGate } from "../../src/ui";
 import { UnconfirmedRefusalAnswer } from "../../src/ui/unconfirmed-refusal";
 
@@ -111,6 +112,13 @@ function spyGate() {
 
 function sheet() {
   return screen.queryByRole("dialog", { name: "Confirm your email first" });
+}
+
+function answers() {
+  return {
+    terms: vi.fn<() => void>(),
+    unconfirmed: vi.fn<(trigger: ConfirmTrigger | undefined) => void>(),
+  };
 }
 
 describe("an unconfirmed refusal, answered at the root (D-113)", () => {
@@ -270,5 +278,42 @@ describe("an unconfirmed refusal, answered at the root (D-113)", () => {
         "Nothing saved. Confirm your email first.",
       );
     });
+  });
+});
+
+describe("didAnswerRefusal, with both answers above", () => {
+  it("sends an unconfirmed refusal to the confirm sheet alone, with its trigger", () => {
+    const both = answers();
+    expect(didAnswerRefusal("unconfirmed", both, "follow")).toBe(true);
+    expect(both.unconfirmed).toHaveBeenCalledWith("follow");
+    expect(both.terms).not.toHaveBeenCalled();
+  });
+
+  it("sends a terms refusal to the terms prompt alone", () => {
+    const both = answers();
+    expect(didAnswerRefusal("terms", both, "follow")).toBe(true);
+    expect(both.terms).toHaveBeenCalledOnce();
+    expect(both.unconfirmed).not.toHaveBeenCalled();
+  });
+
+  it("answers nothing else, and nothing without its own answer", () => {
+    const both = answers();
+    expect(didAnswerRefusal("server", both, undefined)).toBe(false);
+    expect(
+      didAnswerRefusal(
+        "unconfirmed",
+        { terms: both.terms, unconfirmed: undefined },
+        undefined,
+      ),
+    ).toBe(false);
+    expect(
+      didAnswerRefusal(
+        "terms",
+        { terms: undefined, unconfirmed: both.unconfirmed },
+        undefined,
+      ),
+    ).toBe(false);
+    expect(both.terms).not.toHaveBeenCalled();
+    expect(both.unconfirmed).not.toHaveBeenCalled();
   });
 });

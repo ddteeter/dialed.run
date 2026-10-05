@@ -30,6 +30,7 @@ import {
   boundHandler,
   isLiveObject,
   outboxHandlers,
+  productLinkHandler,
   reconcileEntryPhotos,
   reconcileItemPhotos,
   type OutboxHandlers,
@@ -758,5 +759,44 @@ describe("the import_file_delete handler (task 128)", () => {
         key: "imports/u1/a.gpx",
       }),
     ).toStrictEqual({ userId: "u1", key: "imports/u1/a.gpx" });
+  });
+});
+
+describe("the product link's handler (design 133, D-113 Q1)", () => {
+  it("runs the linker it was handed, for the payload's runner", async () => {
+    const link = vi.fn(() => Promise.resolve());
+    const userId = newUlid();
+    const debt = oweOutbox({ kind: "product_link", payload: { userId } });
+    await db().insert(outbox).values({
+      id: debt.id,
+      kind: "product_link",
+      dedupeKey: userId,
+      payload: JSON.stringify({ userId }),
+      nextAttemptAt: NOW,
+      createdAt: NOW,
+    });
+
+    await settleOutbox(db(), debt, vi.fn(), {
+      ...outboxHandlers,
+      product_link: productLinkHandler(link),
+    });
+
+    expect(link).toHaveBeenCalledWith(expect.anything(), userId);
+    expect(await db().select().from(outbox)).toStrictEqual([]);
+  });
+
+  it("fails loudly with no linker, naming the runner in the report", async () => {
+    const report = vi.fn();
+    const userId = newUlid();
+    const debt = oweOutbox({ kind: "product_link", payload: { userId } });
+
+    await settleOutbox(db(), debt, report, outboxHandlers);
+
+    expect(report).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "product_link drained with no linker handed in",
+      }),
+      expect.objectContaining({ kind: "product_link", userId }),
+    );
   });
 });

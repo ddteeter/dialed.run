@@ -293,7 +293,7 @@ describe("naming before the address is confirmed (design 133, D-113 Q1)", () => 
   it("reads a named model as named, though nothing shared is linked yet", async () => {
     const userId = await unconfirmedCloset(["merino-base"]);
     const row = await firstOffer(userId);
-    const model = uniqueBrand();
+    const model = `Model${newUlid()}`;
 
     const named = await nameItem(coreDb(), userId, row?.itemId ?? "", {
       brand: "Smartwool",
@@ -309,6 +309,20 @@ describe("naming before the address is confirmed (design 133, D-113 Q1)", () => 
     // And it leaves the offer, as a linked row would.
     const offer = await namingOffer(coreDb(), userId);
     expect(offer.items).toStrictEqual([]);
+  });
+
+  it("reads a linked row as named whatever its name", async () => {
+    // A product named like the tap list's row is still a product: only an
+    // unlinked row is asked whether its name is the tap list's.
+    const userId = await seededCloset(["merino-base"]);
+    const row = await firstOffer(userId);
+    const named = await nameItem(coreDb(), userId, row?.itemId ?? "", {
+      brand: `Linked${newUlid()}`,
+      model: "Merino base layer",
+    });
+
+    expect(named.productId).not.toBeNull();
+    expect(namedResult(named).isNamed).toBe(true);
   });
 
   it("still reads a brand alone as unfinished, and keeps it on offer", async () => {

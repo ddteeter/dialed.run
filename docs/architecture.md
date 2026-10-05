@@ -403,8 +403,10 @@ only the verb.
 Useful, report, follow and an email change wait for a confirmed address
 (design 133, decision D-113). The server decides — `auth`'s
 `verifiedUserId` refuses with `EMAIL_UNCONFIRMED`, never the page's own
-idea of the address, which is as old as its loader — and the client
-answers that refusal once: `__root.tsx` provides `ui`'s
+idea of the address, which is as old as its loader; the code crosses the
+response through `lib/auth-signal`'s `signalAdapter`, registered in
+`src/start.ts`, because Start's own serializer keeps only an error's
+message — and the client answers that refusal once: `__root.tsx` provides `ui`'s
 `UnconfirmedRefusalAnswer` with `account`'s `confirmEmailOnRefusal`, a
 `ConfirmGate` (`sheet: ({ open, trigger }, onClose) => ReactNode`) whose
 sheet asks for the address as it opens. `useFormSubmit` and

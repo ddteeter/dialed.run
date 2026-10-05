@@ -10,8 +10,16 @@
  * kind of thing that silently stops working.
  *
  * `code` rather than `instanceof`: a server function's rejection is
- * structurally cloned on the way back, so the prototype is gone by the time
- * a component sees it. A plain own property survives that trip.
+ * serialized on the way back, so the prototype is gone by the time a
+ * component sees it.
+ *
+ * **And the code survives that trip only because of `signalAdapter`
+ * below.** TanStack Start serializes a thrown `Error` with its `message`
+ * alone (router-core's `ShallowErrorPlugin`), so until design 133 every
+ * code here reached the client stripped, and a refused call read as "Our
+ * end failed". `src/start.ts` registers the adapter, which carries the
+ * code across for exactly these signals and leaves every other error to
+ * the framework.
  */
 import { z } from "zod";
 
@@ -79,3 +87,42 @@ export function isUnconfirmedRefusal(error: unknown): boolean {
  * from a server function is `unknown` until something parses it.
  */
 const signalSchema = z.object({ code: z.string() });
+
+/**
+ * The signals that cross a server function's response with their code:
+ * the ones the client answers rather than bands.
+ */
+const signalErrorSchema = z.object({
+  code: z.enum([
+    AUTH_REQUIRED_CODE,
+    TERMS_NOT_ACCEPTED_CODE,
+    EMAIL_UNCONFIRMED_CODE,
+  ]),
+  message: z.string(),
+});
+
+/**
+What a signal is on the wire: its code and its sentence.
+*/
+export type SignalOnTheWire = z.infer<typeof signalErrorSchema>;
+
+/**
+ * The serialization adapter's options for the auth signals, as
+ * `createSerializationAdapter` takes them (`src/start.ts` registers it):
+ * an `Error` carrying one of the signal codes goes as `{ code, message }`
+ * and comes back as an `Error` with that code, so `isAuthRequired`,
+ * `isTermsRefusal` and `isUnconfirmedRefusal` read on the client what the
+ * server threw. Anything else is not matched, and keeps the framework's
+ * message-only treatment.
+ */
+export const signalAdapter = {
+  key: "auth-signal",
+  test: (value: unknown): value is Error & SignalOnTheWire =>
+    value instanceof Error && signalErrorSchema.safeParse(value).success,
+  toSerializable: (error: Error & SignalOnTheWire): SignalOnTheWire => ({
+    code: error.code,
+    message: error.message,
+  }),
+  fromSerializable: (wire: SignalOnTheWire): Error & SignalOnTheWire =>
+    Object.assign(new Error(wire.message), { code: wire.code }),
+};
