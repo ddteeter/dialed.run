@@ -15,6 +15,7 @@ import {
   userProfiles,
   wardrobeItems,
 } from "../../src/db/schema-core";
+import { user } from "../../src/db/schema-auth";
 import { weatherObservations } from "../../src/db/schema-weather";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
@@ -163,6 +164,7 @@ export async function removeSeeded(rows: Seeded): Promise<void> {
     [wardrobeItems, wardrobeItems.id, rows.items],
     [follows, follows.followeeId, rows.runners],
     [userProfiles, userProfiles.userId, rows.runners],
+    [user, user.id, rows.runners],
     [notifications, notifications.id, rows.notifications],
     // What the app wrote *about* a seeded entry: opening one's own sparse
     // entry records a `verdict_prompt` row (`recordVerdictPrompted`), and
@@ -325,13 +327,24 @@ export async function seedPhoto(rows: Seeded, entryId: string): Promise<void> {
 }
 
 /**
-A runner with a public profile and nothing else — no account, no session.
-*/
+ * A runner with a public profile and a confirmed account, and nothing else
+ * — no session. Confirmed, because search and H show only runners whose
+ * address is (design 133, D-113 Q2).
+ */
 export async function seedRunner(
   rows: Seeded,
   username: string,
 ): Promise<string> {
   const userId = minted(rows.runners);
+  const joined = new Date(nowSeconds() * 1000);
+  await insertRow(user, {
+    id: userId,
+    name: username,
+    email: `${username}-${userId.toLowerCase()}@example.com`,
+    emailVerified: true,
+    createdAt: joined,
+    updatedAt: joined,
+  });
   await insertRow(userProfiles, { userId, username });
   return userId;
 }
