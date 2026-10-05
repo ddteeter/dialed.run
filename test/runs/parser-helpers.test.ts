@@ -219,6 +219,8 @@ describe("elevationGainMeters (D-111)", () => {
   it("needs a real turn down before a rise counts again", () => {
     // Down 10 from the top is a turn; up 4 from there is not a climb.
     expect(elevationGainMeters([100, 120, 110, 114])).toBe(20);
+    // Down exactly 5 is not a turn: the climb goes on from its top.
+    expect(elevationGainMeters([100, 120, 115, 121])).toBe(21);
     // Up 6 from the foot of that turn is.
     expect(elevationGainMeters([100, 120, 110, 114, 116])).toBe(26);
   });
