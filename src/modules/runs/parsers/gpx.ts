@@ -42,8 +42,11 @@ export const PAUSE_GAP_S = 10;
  * A longer gap is a pause when the runner covered it slower than this.
  * Auto-pause stops recording, so a pause shows up as a long gap that ends
  * about where it began; a long gap the runner ran through (a sparse file,
- * a tunnel) is moving. 0.5 m/s is about 33 min/km — slower than any walk,
- * faster than GPS drift while stood still.
+ * a tunnel) is moving. 0.5 m/s is about 33 min/km, 54 min/mile — slower
+ * than any running or walking pace, faster than GPS drift while stood
+ * still. Kept at 0.5 by the owner's decision (2026-10-04) after review
+ * asked whether a slow, sparse climb needed it lower; `gpx.test.ts` pins
+ * that climb, which still reads as all pause.
  */
 export const STOPPED_SPEED_MPS = 0.5;
 

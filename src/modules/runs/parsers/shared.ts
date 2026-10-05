@@ -176,30 +176,37 @@ export function present<T>(value: T | undefined): T[] {
 
 /**
  * How far the altitude must turn before the turn counts (D-111, design
- * 132). GPS altitude wanders by a few metres from one point to the next,
- * and a sum of every rise would read that wander as a climb — a flat loop
- * can come out at a hundred metres. Five sits above the wander and below
- * any hill a runner would call one; a barometric file loses under five
- * metres a climb to it.
+ * 132; ten metres is the owner's ruling, 2026-10-04). It runs after the
+ * median, which takes out the per-point noise; what is left is GPS
+ * altitude's slower wander, several metres over minutes, and a sum of
+ * every rise would read that as a climb. Ten is Strava's published
+ * threshold for elevation without a barometer (it uses two for barometric
+ * data), so a runner comparing the two sees the same kind of number. GPX
+ * and TCX altitudes are treated as GPS-derived because neither format says
+ * which they are; FIT reads the watch's own `totalAscent` and never comes
+ * here. The cost is a climb under ten metres, which goes uncounted.
  */
-export const ELEVATION_HYSTERESIS_M = 5;
+export const ELEVATION_HYSTERESIS_M = 10;
 
 /**
  * How many points the altitude median is taken over before the hysteresis
  * reads it (design 132). The hysteresis alone is not enough: GPS altitude
- * is noisy *per point*, a few metres each way, so two neighbouring points
- * can sit six metres apart on flat ground and clear the threshold between
- * them. A flat hour at one point a second with ±3 m of noise read 790 m.
+ * is noisy *per point*, and a noisy fix in the tail clears any threshold
+ * against its neighbour. At the 5 m hysteresis first built, a flat hour at
+ * one point a second with ±3 m of noise read 790 m (review of #152); at
+ * 10 m, a flat hour of Gaussian noise reads 170–230 m at σ = 2 m and
+ * 1,600–1,750 m at σ = 3 m.
  *
- * Eleven, measured rather than picked: against a flat hour of ±3 m uniform
- * noise, or Gaussian noise of σ = 2 m, a window of 9 still left phantom
- * climbs in some seeds and 11 left none in any. A median rather than a
- * mean because a median keeps a steady climb exactly as it was — the
- * middle of a rising window is its middle point — and throws away a single
- * wild fix instead of spreading it over its neighbours. The cost is a
- * crest shorter than about half the window: a bump of under six points
- * (six seconds at 1 Hz, half a minute with smart recording) is shaved,
- * and no hill a runner would call one is that short.
+ * A median of eleven points drops any burst of up to five consecutive bad
+ * fixes — multipath and a lost lock come in bursts of seconds, not single
+ * points — and measured, takes the σ = 2 m hour to 0 and the σ = 3 m hour
+ * to between 0 and 11 m, depending on the seed. A median rather than a mean because a
+ * median keeps a steady climb exactly as it was — the middle of a rising
+ * window is its middle point — and throws a wild fix away instead of
+ * spreading it over its neighbours. The cost is a crest shorter than about
+ * half the window: a bump of under six points (six seconds at 1 Hz, half a
+ * minute with smart recording) is shaved, and no hill a runner would call
+ * one is that short.
  */
 export const ELEVATION_MEDIAN_WINDOW = 11;
 

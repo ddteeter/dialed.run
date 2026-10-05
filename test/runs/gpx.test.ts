@@ -407,7 +407,7 @@ describe("gpx: a slow climb is not a pause", () => {
 describe("gpx: the climb (D-111)", () => {
   it("reads a jittery flat track as no climb", async () => {
     // GPS altitude on a flat loop: every rise is under the threshold.
-    expect(ELEVATION_HYSTERESIS_M).toBe(5);
+    expect(ELEVATION_HYSTERESIS_M).toBe(10);
     const jitter = [100, 103, 98.5, 102, 99, 103.4, 98.6, 101, 100.2, 103];
     const draft = await parseAltitudes(jitter);
 
@@ -430,12 +430,12 @@ describe("gpx: the climb (D-111)", () => {
     const partial = await parseSegments([
       at(0, 0, 100),
       at(15, 5),
-      at(30, 10, 110),
+      at(30, 10, 112),
     ]);
     const one = await parseSegments([at(0, 0, 100), at(15, 5)]);
     const none = await parseSegments([at(0, 0), at(15, 5)]);
 
-    expect(partial.elevationGainM).toBe(10);
+    expect(partial.elevationGainM).toBe(12);
     expect(one.elevationGainM).toBeUndefined();
     expect(none.elevationGainM).toBeUndefined();
   });

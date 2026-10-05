@@ -502,16 +502,16 @@ describe("tcx: elapsed duration, moving time and the climb (D-111)", () => {
       ...OUTDOOR_LAP,
       track:
         `<Track>${timedPoint(START, 100)}</Track><Track/>` +
-        `<Track>${timedPoint(START)}${timedPoint(START, 104)}</Track>`,
+        `<Track>${timedPoint(START)}${timedPoint(START, 106)}</Track>`,
     });
     const second = lap({
       seconds: 60,
       metres: 200,
-      track: `<Track>${timedPoint(START, 108)}</Track>`,
+      track: `<Track>${timedPoint(START, 112)}</Track>`,
     });
     const draft = await parse(tcxWith(first + second));
 
-    expect(draft.elevationGainM).toBe(8);
+    expect(draft.elevationGainM).toBe(12);
   });
 
   it("carries neither for a treadmill run", async () => {

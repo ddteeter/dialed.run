@@ -39,23 +39,29 @@ elapsed-based until design 130's read API.
   while stood still. The distance in that test is through the climb where
   both points carry `ele` (3D), so a steep hill walked slowly is not read
   as stood still; the run's `distanceM` stays the ground distance. A total
-  of zero is stored as null, not as 0. Whether 0.5 m/s is too high for a
-  slow, sparse climb is with the owner; `gpx.test.ts` pins the case (20 min
-  at 0.45 m/s, a point every 20 s, a 30% grade still reads as all pause).
+  of zero is stored as null, not as 0. **Owner decision (2026-10-04): 0.5
+  m/s stays** — about 54 min/mile, already slower than any running or
+  walking pace. `gpx.test.ts` keeps the slow, sparse climb the review raised
+  (20 min at 0.45 m/s, a point every 20 s, a 30% grade), which still reads
+  as all pause, as the documented behaviour.
 - **Elevation (TCX, GPX).** Two stages. First a moving median over
   `ELEVATION_MEDIAN_WINDOW` = 11 points, shrinking symmetrically at the
-  ends: GPS altitude is noisy per point, so neighbours can sit 6 m apart on
-  flat ground, and the hysteresis alone read a flat hour at 1 Hz with ±3 m
-  noise as 790 m (review of #152). Eleven is measured: on a flat hour of
-  ±3 m uniform or σ = 2 m Gaussian noise, nine still left phantom climbs
-  and eleven left none. A median, not a mean, because it keeps a steady
-  climb and the endpoints exactly and drops a single wild fix rather than
+  ends: GPS altitude is noisy per point, and a noisy fix clears any
+  threshold against its neighbour. At the 5 m first built, a flat hour at
+  1 Hz with ±3 m noise read 790 m (review of #152); at 10 m, Gaussian noise
+  reads 170–230 m at σ = 2 m and 1,600–1,750 m at σ = 3 m. A median of 11
+  drops any burst of up to five bad fixes and measured, takes σ = 2 m to 0
+  and σ = 3 m to 0–11 m. A median, not a mean, because it keeps a steady
+  climb and the endpoints exactly and drops a wild fix rather than
   spreading it; the cost is a crest under about six points wide. Then a
   hysteresis sum: the reference follows the altitude freely in the current
   direction, and a reversal only counts once it exceeds
-  `ELEVATION_HYSTERESIS_M` = 5 m, which takes out the slower wander. A
-  barometric file loses under 5 m per climb. Fewer than two altitudes in
-  the file is null.
+  `ELEVATION_HYSTERESIS_M`, which takes out the slower wander. **Owner
+  ruling (2026-10-04): 10 m**, Strava's published threshold for
+  non-barometric elevation (it uses 2 m for barometric). GPX and TCX do not
+  say which their altitudes are, so both are treated as GPS; FIT keeps the
+  watch's own `totalAscent`. A climb under 10 m goes uncounted. Fewer than
+  two altitudes in the file is null.
 - **TCX `durationS` becomes elapsed.** #147 made it the laps' summed
   `TotalTimeSeconds`, which is timer time: it stops when the watch is
   paused. D-111 says `durationS` is elapsed and keeps running through a
@@ -112,4 +118,5 @@ whose file is held is a candidate. R-130 stays open until it lands.
 
 ## Open questions
 
-- The thresholds (10 s / 0.5 m/s / 5 m) are judgement calls; veto early.
+- `PAUSE_GAP_S` = 10 s is a judgement call; veto early. 0.5 m/s and the
+  10 m hysteresis are owner decisions (2026-10-04).
