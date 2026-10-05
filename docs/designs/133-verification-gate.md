@@ -1,8 +1,9 @@
 # Design: 133 the structural verification gate
 
-> **Plan for approval, nothing implemented.** Over the one-page cap on
-> purpose: the owner asked for every server function to be audited, and the
-> audit is the table in §Audit. The prose sections stay inside the cap.
+> **Approved by the owner on 2026-10-04 (D-113)**; the answers are in
+> §Decisions. Over the one-page cap on purpose: the owner asked for every
+> server function to be audited, and the audit is the table in §Audit. The
+> prose sections stay inside the cap.
 
 ## Problem
 
@@ -295,27 +296,43 @@ coarseness:** steps 5, 6, 8 and 9 edit `functions.ts` files, which the push
 analyzer mutates. None of those mutants can be killed (CLAUDE.md: about 65
 for `runs` alone). The PR will say so; nothing gets weakened to pass.
 
-## Questions for the owner
+## Decisions (owner, 2026-10-04)
 
-- **Q1 Products.** (a) Refuse closet create, edit and name until confirmed.
-  (b) **Recommended:** clamp, like D-50. The garment saves and the shared
-  rows wait; they resolve on the runner's next save after confirming.
-  (c) Leave them open.
-- **Q2 Handle.** **Recommended: U.** O0 comes first and cannot wait on
-  email. Add step 10, so an unconfirmed runner is not findable (they have
-  nothing public anyway).
-- **Q3 Follow.** **Recommended: V**, the same as Useful (a count others
-  see). **Unfollow U**: it only removes.
-- **Q4 Private entry, verdict, caption, photo.** **Recommended: U**, with
-  D-50's clamp unchanged.
-- **Q5 Desk (17).** **Recommended: Ad = verified.** Operators are confirmed
-  accounts, and the Desk's writes reach runners.
-- **Q6 Export and delete.** **Recommended: U** (D-95: portability and
-  leaving never wait).
-- **Q7 Block.** **Recommended: U**: it is private, and a safety tool should
-  work for anyone. Report stays V (D-50).
-- **Q8 Email change** is V without being visible to others. **Recommended:**
-  state the rule as "writes others can see, **or that trust the
-  address**", which D-50 already implies.
-- **Q9 Mechanism.** **Recommended:** the classification table over a strict
-  `requireUserId`, which would mean about 80 renames.
+All nine questions are decided; D-113 records the rule and the answers.
+
+- **The rule (Q8):** writes that others can see, **or that trust the
+  address**, require a confirmed email. Email change is verified on the
+  second half.
+- **Q1 Products: clamp, then link on confirm.** An unconfirmed runner's
+  garment saves with its typed brand and name and no `product_id`, so no
+  shared `brands` or `products` row is created. When the runner confirms, a
+  one-time link job runs the existing normalized find-or-create
+  (`brands_normalized`, `products_brand_name`) for each of their unlinked
+  garments and fills `product_id`. It hangs off the confirm path
+  (`account/verification.ts` `confirmEmail`), is re-runnable and idempotent
+  (laws 1 and 2), and its failure never fails the confirmation (law 5).
+  Covers `closet/createItemFn`, `closet/updateItemFn` and
+  `onboarding/nameGarmentFn`. The dead `products/resolveProductFn` is
+  deleted.
+- **Q2 Handles: U**, as recommended, with the read-side clamp (step 10):
+  unconfirmed runners are hidden from search and from H.
+- **Q3 Follow: V; unfollow U.**
+- **Q4 Private entry, verdict, caption, photo: U**, with D-50's clamp kept.
+  **Anything other runners see, or that combines runners** (the feeds, the
+  conditions consensus, "worn by N", the Call's band recommendations from
+  others) **reads only confirmed accounts' shared entries.** That holds
+  today through D-50's clamp: an unconfirmed runner's entries save
+  `private`, and every one of those reads is audience-only. Published
+  anonymous totals already require confirmed accounts (D-108 C). A runner's
+  own history is unaffected.
+- **Q5 Desk: Ad = verified**, `requireAdmin(await verifiedUserId())`.
+- **Q6 Export and account deletion: U** (D-95).
+- **Q7 Block: U; report stays V.**
+- **Q9 Mechanism: one `verifiedUserId()` gate plus the classification
+  table** in the architecture test, listing every function and route with
+  its class and failing both ways. The server is the authority. The client
+  handles `EMAIL_UNCONFIRMED` with one root-level handler that opens the
+  existing `ConfirmEmailSheet`, and forms reach it through `useFormSubmit`
+  (no band: nothing failed, nothing saved, as #139's refusal path). Client
+  pre-checks are UX only and never relied on.
+- **F1:** `onboarding/namingSuggestionsQuery` requires a session (D-58).
