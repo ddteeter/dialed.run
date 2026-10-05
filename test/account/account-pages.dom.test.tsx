@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { EMAIL_UNCONFIRMED_CODE } from "../../src/lib/auth-signal";
 import { currentPasswordLimited } from "../../src/lib/contracts";
 import { clockLabel, deviceTimeZone } from "../../src/lib/dates";
 import { ChangeEmail } from "../../src/modules/account/components/ChangeEmail";
@@ -17,7 +18,7 @@ import { CheckEmail } from "../../src/modules/account/components/CheckEmail";
 import { ConfirmEmailBand } from "../../src/modules/account/components/ConfirmEmailBand";
 import {
   ConfirmEmailSheet,
-  confirmEmailGate,
+  confirmEmailOnRefusal,
 } from "../../src/modules/account/components/ConfirmEmailSheet";
 import {
   LinkLanding,
@@ -32,6 +33,7 @@ import type {
   ChangeResult,
   ResendResult,
 } from "../../src/modules/account/verification";
+import { UnconfirmedRefusalAnswer } from "../../src/ui/unconfirmed-refusal";
 
 /**
  * Round 26 #11's pages, as a runner meets them: Au4, the link landings,
@@ -438,17 +440,87 @@ describe("the confirm-first sheet and the nag", () => {
     },
   );
 
-  it("is the sheet a route hands a screen, led by the control the server refused", async () => {
+  it("shows the address alone for a control no board draws a sentence for", () => {
+    // Follow waits too (D-113), and no board leads with it yet.
+    render(
+      <ConfirmEmailSheet
+        open
+        onClose={vi.fn()}
+        email="maya@example.com"
+        resend={resender()}
+        trigger="follow"
+      />,
+    );
+    expect(screen.getByText(/We sent a link to/u)).toHaveTextContent(
+      /^We sent a link to maya@example\.com\.$/u,
+    );
+  });
+
+  it("says what waits, and offers no resend, before the address has arrived", () => {
+    render(
+      <ConfirmEmailSheet
+        open
+        onClose={vi.fn()}
+        email={undefined}
+        resend={resender()}
+        trigger="report"
+      />,
+    );
+    const sheet = screen.getByRole("dialog", {
+      name: "Confirm your email first",
+    });
+    expect(
+      within(sheet).getByText(
+        "Reporting, sharing and marking runs Useful need a confirmed address.",
+      ),
+    ).toBeVisible();
+    expect(within(sheet).queryByText(/We sent a link to/u)).toBeNull();
+    expect(
+      within(sheet).queryByRole("button", { name: "Resend link" }),
+    ).toBeNull();
+    expect(
+      within(sheet).getByRole("button", { name: "Not now" }),
+    ).toBeVisible();
+  });
+
+  it("says nothing but the heading with neither a sentence nor an address", () => {
+    render(
+      <ConfirmEmailSheet
+        open
+        onClose={vi.fn()}
+        email={undefined}
+        resend={resender()}
+      />,
+    );
+    const sheet = screen.getByRole("dialog", {
+      name: "Confirm your email first",
+    });
+    expect(sheet.querySelector("p")).toBeNull();
+  });
+});
+
+/**
+`account`'s `ownAccountQuery`, answering with the runner's address.
+*/
+function ownAccount(email = "maya@example.com") {
+  return vi.fn(() => Promise.resolve({ email }));
+}
+
+describe("the sheet the root opens on a refusal (design 133)", () => {
+  it("asks for the address as it opens, leads with the refused control, and resends to it", async () => {
     const resend = resender();
-    const user = userEvent.setup();
+    const account = ownAccount();
     const onClose = vi.fn();
-    const gate = confirmEmailGate({ email: "maya@example.com" }, resend);
+    const user = userEvent.setup();
+    const gate = confirmEmailOnRefusal(account, resend);
 
     render(<>{gate.sheet({ open: true, trigger: "report" }, onClose)}</>);
     const sheet = screen.getByRole("dialog", {
       name: "Confirm your email first",
     });
-    expect(within(sheet).getByText(/We sent a link to/u)).toHaveTextContent(
+    expect(
+      await within(sheet).findByText(/We sent a link to/u),
+    ).toHaveTextContent(
       /^Reporting, .* We sent a link to maya@example\.com\.$/u,
     );
     await user.click(
@@ -459,20 +531,52 @@ describe("the confirm-first sheet and the nag", () => {
     });
     await user.click(within(sheet).getByRole("button", { name: "Not now" }));
     expect(onClose).toHaveBeenCalled();
+    expect(account).toHaveBeenCalledOnce();
   });
 
-  it("leads with Useful when Useful was refused", () => {
-    const gate = confirmEmailGate({ email: "maya@example.com" }, resender());
-    render(<>{gate.sheet({ open: true, trigger: "useful" }, vi.fn())}</>);
-    expect(screen.getByText(/We sent a link to/u)).toHaveTextContent(
+  it("asks nothing while shut, and keeps the address once it has it", async () => {
+    const account = ownAccount();
+    const gate = confirmEmailOnRefusal(account, resender());
+    const { rerender } = render(
+      <>{gate.sheet({ open: false, trigger: undefined }, vi.fn())}</>,
+    );
+    expect(document.querySelector("dialog")?.open).toBe(false);
+    expect(account).not.toHaveBeenCalled();
+
+    rerender(<>{gate.sheet({ open: true, trigger: "useful" }, vi.fn())}</>);
+    expect(await screen.findByText(/We sent a link to/u)).toHaveTextContent(
       /^Marking runs Useful, /u,
     );
+    rerender(<>{gate.sheet({ open: false, trigger: "useful" }, vi.fn())}</>);
+    rerender(<>{gate.sheet({ open: true, trigger: "useful" }, vi.fn())}</>);
+    expect(account).toHaveBeenCalledOnce();
   });
 
-  it("stays shut until the screen opens it", () => {
-    const gate = confirmEmailGate({ email: "maya@example.com" }, resender());
-    render(<>{gate.sheet({ open: false, trigger: undefined }, vi.fn())}</>);
-    expect(document.querySelector("dialog")?.open).toBe(false);
+  it("still says what waits when the address cannot be read, and asks again on the next opening", async () => {
+    const account = vi
+      .fn<() => Promise<{ email: string }>>()
+      .mockRejectedValueOnce(new Error("D1 down"))
+      .mockResolvedValueOnce({ email: "maya@example.com" });
+    const gate = confirmEmailOnRefusal(account, resender());
+    const { rerender } = render(
+      <>{gate.sheet({ open: true, trigger: "useful" }, vi.fn())}</>,
+    );
+    await waitFor(() => {
+      expect(account).toHaveBeenCalledOnce();
+    });
+    expect(
+      screen.getByText(
+        "Marking runs Useful, sharing and reporting need a confirmed address.",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText(/We sent a link to/u)).toBeNull();
+
+    rerender(<>{gate.sheet({ open: false, trigger: "useful" }, vi.fn())}</>);
+    rerender(<>{gate.sheet({ open: true, trigger: "useful" }, vi.fn())}</>);
+    expect(await screen.findByText(/We sent a link to/u)).toHaveTextContent(
+      "maya@example.com",
+    );
+    expect(account).toHaveBeenCalledTimes(2);
   });
 
   it("nags an unconfirmed runner once, and says nothing to a confirmed one or nobody", () => {
@@ -511,23 +615,14 @@ describe("the confirm-first sheet and the nag", () => {
 
 function renderChange(
   options: Readonly<{
-    isVerified?: boolean;
     answer?: ChangeResult;
   }> = {},
 ) {
   const request = vi.fn(() =>
     Promise.resolve(options.answer ?? ({ status: "sent" } as const)),
   );
-  const resend = resender();
-  render(
-    <ChangeEmail
-      current="old@example.com"
-      isVerified={options.isVerified ?? true}
-      request={request}
-      resend={resend}
-    />,
-  );
-  return { request, resend, user: userEvent.setup() };
+  render(<ChangeEmail current="old@example.com" request={request} />);
+  return { request, user: userEvent.setup() };
 }
 
 const newEmailField = () => screen.getByRole("textbox", { name: "New email" });
@@ -564,8 +659,7 @@ describe("ChangeEmail (ACC-8)", () => {
       "Sent ✓ Open the link we sent to the new address. Your email stays old@example.com until you do.",
     );
     expect(screen.getByRole("status")).toHaveTextContent("Link sent.");
-    // A "sent" answer is not "unverified": the confirm-first sheet stays
-    // closed, it does not open for every successful send.
+    // A "sent" answer opens no confirm-first sheet.
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
@@ -600,8 +694,7 @@ describe("ChangeEmail (ACC-8)", () => {
     expect(await screen.findByText(limitedMessage(until))).toBeVisible();
     // Nothing went, so nothing says it did (task 126 PR B).
     expect(screen.queryByText("Link sent.")).toBeNull();
-    // "limited" is not "unverified": the confirm-first sheet never opens
-    // for the hour's limit, only for an unconfirmed address.
+    // The confirm-first sheet never opens for the hour's limit.
     expect(
       screen.queryByRole("dialog", { name: "Confirm your email first" }),
     ).toBeNull();
@@ -609,35 +702,42 @@ describe("ChangeEmail (ACC-8)", () => {
     expect(request).toHaveBeenCalledTimes(2);
   });
 
-  it("while unconfirmed, opens the confirm-first sheet instead of sending", async () => {
-    const { request, user } = renderChange({ isVerified: false });
+  it("opens the root's sheet, with the address alone, when the server says the address is not confirmed", async () => {
+    // What the gate throws, as it arrives: a plain object, cloned (D-113).
+    const request = vi.fn(() =>
+      Promise.reject(
+        Object.assign(new Error("Confirm your email first."), {
+          code: EMAIL_UNCONFIRMED_CODE,
+        }),
+      ),
+    );
+    const ownAccount = vi.fn(() =>
+      Promise.resolve({ email: "old@example.com" }),
+    );
+    render(
+      <UnconfirmedRefusalAnswer
+        gate={confirmEmailOnRefusal(ownAccount, resender())}
+      >
+        <ChangeEmail current="old@example.com" request={request} />
+      </UnconfirmedRefusalAnswer>,
+    );
+    const user = userEvent.setup();
     await fillChange(user, "new@example.com");
     await user.click(sendLink());
-    expect(request).not.toHaveBeenCalled();
-    const sheet = screen.getByRole("dialog", {
+    const sheet = await screen.findByRole("dialog", {
       name: "Confirm your email first",
     });
-    expect(within(sheet).getByText(/We sent a link to/u)).toHaveTextContent(
-      "old@example.com",
-    );
-    await user.click(within(sheet).getByRole("button", { name: "Not now" }));
-    await waitFor(() => {
-      expect(
-        screen.queryByRole("dialog", { name: "Confirm your email first" }),
-      ).toBeNull();
-    });
-  });
-
-  it("opens the sheet when the server says the address is not confirmed", async () => {
-    const { user } = renderChange({ answer: { status: "unverified" } });
-    await fillChange(user, "new@example.com");
-    await user.click(sendLink());
+    // No board draws the email change a sentence: the address alone.
     expect(
-      await screen.findByRole("dialog", { name: "Confirm your email first" }),
-    ).toBeVisible();
+      await within(sheet).findByText(/We sent a link to/u),
+    ).toHaveTextContent(/^We sent a link to old@example\.com\.$/u);
     expect(screen.queryByText(/^Sent ✓/u)).toBeNull();
-    // A refusal, not a send: the live region never says "Link sent.".
-    expect(screen.queryByText("Link sent.")).toBeNull();
+    // A refusal, not a send and not a failure: nothing is announced, and
+    // there is no band. (The sheet's Resend carries a region of its own.)
+    for (const region of screen.getAllByRole("status")) {
+      expect(region).toHaveTextContent("");
+    }
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   });
 
   it("asks for the current password before the round trip", async () => {

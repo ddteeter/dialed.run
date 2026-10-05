@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   AUTH_REQUIRED_CODE,
+  EMAIL_UNCONFIRMED_CODE,
   TERMS_NOT_ACCEPTED_CODE,
 } from "../../src/lib/auth-signal";
 import { classifyFailure } from "../../src/ui";
@@ -52,6 +53,16 @@ describe("classifyFailure", () => {
     });
     // Wording alone is not the signal here either.
     expect(classifyFailure(new Error("terms not accepted")).kind).toBe(
+      "server",
+    );
+  });
+
+  it("reads a refusal for an unconfirmed address from its code (D-113)", () => {
+    expect(classifyFailure({ code: EMAIL_UNCONFIRMED_CODE })).toStrictEqual({
+      kind: "unconfirmed",
+      message: "Confirm your email first.",
+    });
+    expect(classifyFailure(new Error("Confirm your email first.")).kind).toBe(
       "server",
     );
   });

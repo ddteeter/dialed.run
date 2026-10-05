@@ -5,7 +5,7 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 
-import { optionalUserId, requireUserId } from "../auth";
+import { optionalUserId, verifiedUserId } from "../auth";
 import { requireAdmin } from "../safety";
 import { deskToday, isOperator } from "./desk";
 
@@ -24,7 +24,7 @@ export const deskAccessQuery = createServerFn({ method: "GET" }).handler(
  */
 export const deskTodayQuery = createServerFn({ method: "GET" }).handler(
   async () => {
-    requireAdmin(await requireUserId());
+    requireAdmin(await verifiedUserId());
     return deskToday();
   },
 );

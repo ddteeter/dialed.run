@@ -18,7 +18,6 @@ import type { SQL } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { drizzle } from "drizzle-orm/d1";
-import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import {
   entryPhotos,
@@ -72,26 +71,6 @@ export interface FileReportResult {
 }
 
 /**
- * A report filed, or refused because the reporter's address is not
- * confirmed yet. The refusal is an answer, not a failure: the screen opens
- * "Confirm your email first".
- */
-export type FileReportOutcome =
-  FileReportResult | { readonly status: "unverified" };
-
-/**
- * What `fileReport` asks before it writes anything: whether the
- * reporter's address is confirmed. `account`'s `isVerified` has exactly
- * this shape, so the server function passes it as it is.
- */
-export interface ReporterGate {
-  readonly isVerified: (
-    db: DrizzleD1Database<Record<string, unknown>>,
-    userId: string,
-  ) => Promise<boolean>;
-}
-
-/**
  * Files a report, and hides the subject globally if this is the third
  * distinct person to object.
  *
@@ -107,23 +86,13 @@ export interface ReporterGate {
  * distinct-reporter threshold counts accounts, and an address nobody has
  * confirmed costs nothing to make — three of them would be a takedown on
  * demand. So an unconfirmed reporter is refused before anything is
- * written, the block a report may carry included.
- *
- * The check is `gate`, and it is required: there is no way to file
- * without supplying one. It is passed in rather than imported because
- * `account` owns it, and `account` already reaches this barrel through
- * `ops` (`account` -> `ops` -> `ops/scheduled` -> `safety`) — importing it
- * here would be a cycle. The server function wires `account`'s own
- * `isVerified`, which is glue.
+ * written, the block a report may carry included — by the server
+ * function's gate, `verifiedUserId` (design 133, D-113), before this runs.
  */
 export async function fileReport(
   input: FileReportInput,
-  gate: ReporterGate,
-): Promise<FileReportOutcome> {
+): Promise<FileReportResult> {
   const database = db();
-  if (!(await gate.isVerified(database, input.reporterId))) {
-    return { status: "unverified" };
-  }
   await database
     .insert(reports)
     .values({

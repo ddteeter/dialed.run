@@ -45,6 +45,33 @@ export function isTermsRefusal(error: unknown): boolean {
 }
 
 /**
+ * "Confirm your email first" (design 133, decision D-113): the one
+ * verification gate refusing a runner whose address is not confirmed, for a
+ * write other runners see or that trusts the address. Here for the terms
+ * refusal's reason: `modules/auth` throws it, and `ui/` answers it by
+ * opening the confirm sheet rather than a failure band — nothing failed.
+ */
+export const EMAIL_UNCONFIRMED_CODE = "EMAIL_UNCONFIRMED";
+
+/**
+ * The controls that can be refused for want of a confirmed address, by
+ * the name "Confirm your email first" leads with (round 27 #17: the body's
+ * first word changes with the trigger). A form or control names its own;
+ * the sheet, which belongs to `modules/account`, says the sentence. Here
+ * because `ui/`'s hooks carry it and may not import a module.
+ */
+export type ConfirmTrigger = "useful" | "report" | "follow";
+
+/**
+ * True for the unconfirmed refusal, raised here or cloned back from a
+ * server function.
+ */
+export function isUnconfirmedRefusal(error: unknown): boolean {
+  const parsed = signalSchema.safeParse(error);
+  return parsed.success && parsed.data.code === EMAIL_UNCONFIRMED_CODE;
+}
+
+/**
  * Parsed rather than narrowed by hand. `typeof x === "object"` plus a
  * `"code" in x` guard is three branches the compiler needs and no input can
  * distinguish — every one of them was an equivalent mutant. One schema does

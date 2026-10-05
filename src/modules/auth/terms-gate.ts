@@ -29,19 +29,46 @@
  * **One round trip.** The leaving claim and the latest acceptance are two
  * seeks, read in one `db.batch()` rather than one after the other behind
  * the session's own read.
+ *
+ * **The verification gate is this one plus the address** (design 133,
+ * decision D-113): `confirmedUserId`, behind `verifiedUserId`, reads the
+ * confirmation as a third seek in the same batch, so it costs no round
+ * trip. Refusal order: no session, leaving, behind on the terms,
+ * unconfirmed — a runner behind on the terms sees the terms prompt first,
+ * because confirming would not let them through anyway.
  */
 import type { drizzle } from "drizzle-orm/d1";
 
 import {
   currentTermsVersion,
+  emailConfirmationRead,
   latestAcceptanceOf,
   termsStandingOf,
 } from "../account";
-import { AccountLeavingError, TermsNotAcceptedError } from "./auth-error";
+import {
+  AccountLeavingError,
+  EmailUnconfirmedError,
+  TermsNotAcceptedError,
+} from "./auth-error";
 import { deletionClaimOf, standingFrom } from "./leaving-gate";
 import { userIdOrThrow, type SessionWithUser } from "./session-user";
 
 type Db = ReturnType<typeof drizzle>;
+
+/**
+ * The refusals both gates share, from the rows they read: leaving, then
+ * behind on the terms.
+ */
+function refuseUnlessAgreed(
+  claim: Parameters<typeof standingFrom>[0],
+  latest: number | undefined,
+  current: number | undefined,
+): void {
+  if (standingFrom(claim) !== "active") throw new AccountLeavingError();
+  if (termsStandingOf(latest, current).state === "behind") {
+    throw new TermsNotAcceptedError();
+  }
+}
 
 /**
  * The signed-in runner's id — or `AuthRequiredError` with no session,
@@ -60,9 +87,28 @@ export async function agreedUserId(
     deletionClaimOf(db, userId),
     latestAcceptanceOf(db, userId),
   ]);
-  if (standingFrom(claim) !== "active") throw new AccountLeavingError();
-  if (termsStandingOf(latest?.version, current).state === "behind") {
-    throw new TermsNotAcceptedError();
-  }
+  refuseUnlessAgreed(claim, latest?.version, current);
+  return userId;
+}
+
+/**
+ * `agreedUserId`, and then `EmailUnconfirmedError` for a runner whose
+ * address is not confirmed — or who has no account row, which is a runner
+ * who is gone (`account`'s `isVerified` reads it the same way).
+ * `verifiedUserId`'s whole decision.
+ */
+export async function confirmedUserId(
+  db: Db,
+  session: SessionWithUser | null,
+  current: number | undefined = currentTermsVersion(),
+): Promise<string> {
+  const userId = userIdOrThrow(session);
+  const [[claim], [latest], [confirmation]] = await db.batch([
+    deletionClaimOf(db, userId),
+    latestAcceptanceOf(db, userId),
+    emailConfirmationRead(db, userId),
+  ]);
+  refuseUnlessAgreed(claim, latest?.version, current);
+  if (confirmation?.isConfirmed !== true) throw new EmailUnconfirmedError();
   return userId;
 }

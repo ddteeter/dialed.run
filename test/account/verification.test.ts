@@ -952,24 +952,6 @@ describe("requestEmailChange", () => {
     });
   });
 
-  it("waits for a confirmed address first", async () => {
-    const mail = fakeMail();
-    const later = owedTo(mail);
-    const { userId } = await seedUser({ isVerified: false });
-    expect(
-      await requestEmailChange(
-        db,
-        change(userId, "new@example.com"),
-        mail,
-        later.owed,
-        NOW,
-      ),
-    ).toStrictEqual({ status: "unverified" });
-    await later.settled();
-    expect(mail.sent).toHaveLength(0);
-    expect(await db.select().from(outbox)).toHaveLength(0);
-  });
-
   it("asks for the current password, and does nothing else when it is wrong", async () => {
     const mail = fakeMail();
     const later = owedTo(mail);
@@ -1015,24 +997,6 @@ describe("requestEmailChange", () => {
     ).toStrictEqual({ status: "password-limited", until: NOW + 900 });
     expect(await db.select().from(emailSendLimits)).toHaveLength(0);
     expect(await db.select().from(outbox)).toHaveLength(0);
-  });
-
-  it("says confirm first before it asks about the password", async () => {
-    const mail = fakeMail();
-    const { userId } = await seedUser({ isVerified: false });
-    const passwordCheck = vi.fn(() =>
-      Promise.resolve({ status: "wrong" } as const),
-    );
-    expect(
-      await requestEmailChange(
-        db,
-        change(userId, "new@example.com", passwordCheck),
-        mail,
-        owedTo(mail).owed,
-        NOW,
-      ),
-    ).toStrictEqual({ status: "unverified" });
-    expect(passwordCheck).not.toHaveBeenCalled();
   });
 
   it("is limited per new address", async () => {

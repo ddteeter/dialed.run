@@ -27,6 +27,11 @@ export interface FollowToggle {
  * `Not following` / `Still following`. The sentence goes to the screen's
  * one status region through `onStatus`.
  *
+ * **Follow waits for a confirmed address** (design 133, D-113: a
+ * follower count is something other runners see); Unfollow does not. The
+ * server's refusal of a Follow opens the root's "Confirm your email
+ * first", and the pill stays as it was.
+ *
  * A hook plus two pieces rather than one component, because the band sits
  * under the whole thing that failed: under H's pill, but under a search
  * row's full width — never squeezed beside a pill.
@@ -54,6 +59,7 @@ export function useFollowToggle({
       setIsFollowing(!isFollowing);
     },
     kicker: isFollowing ? "Still following" : "Not following",
+    confirmTrigger: "follow",
   });
   const { status } = control;
   useEffect(() => {

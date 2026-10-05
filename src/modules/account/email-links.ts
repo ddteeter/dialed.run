@@ -15,7 +15,7 @@ import { z } from "zod";
 
 import { user } from "../../db/schema-auth";
 import { emailVerifications } from "../../db/schema-core";
-import { firstColumnWhere, firstRowWhere } from "../../lib/sql/keyed-read";
+import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 
 type Db = ReturnType<typeof drizzle>;
@@ -205,17 +205,34 @@ export async function releaseEmailLink(
 }
 
 /**
+ * The read of whether this runner's address is confirmed, unsent — a seek
+ * on `user`'s primary key, so at most one row — for a caller whose
+ * `db.batch()` it rides in: the verification gate reads it beside the
+ * terms gate's two (`auth/terms-gate.ts`).
+ */
+export function emailConfirmationRead(
+  // The wider handle `lib/sql/keyed-read` explains: every spelling of a
+  // dialed-core handle in the repo fits it, the feed's included.
+  db: DrizzleD1Database<Record<string, unknown>>,
+  userId: string,
+) {
+  return db
+    .select({ isConfirmed: user.emailVerified })
+    .from(user)
+    .where(eq(user.id, userId));
+}
+
+/**
  * Whether this runner's address is confirmed: `true` or `false`, or
  * `undefined` when there is no such account. The one read of the fact;
  * the two gates below decide what an absent account means.
  */
 export async function emailConfirmationOf(
-  // The wider handle `lib/sql/keyed-read` explains: every spelling of a
-  // dialed-core handle in the repo fits it, the feed's included.
   db: DrizzleD1Database<Record<string, unknown>>,
   userId: string,
 ): Promise<boolean | undefined> {
-  return firstColumnWhere(db, user, user.emailVerified, eq(user.id, userId));
+  const [row] = await emailConfirmationRead(db, userId);
+  return row?.isConfirmed;
 }
 
 /**

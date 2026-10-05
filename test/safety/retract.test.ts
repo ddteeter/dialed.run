@@ -42,7 +42,6 @@ import {
   makeUser,
   NOW,
   resetSafetyTables,
-  confirmedReporter,
 } from "./helpers";
 
 /**
@@ -236,15 +235,12 @@ describe("deleting an entry", () => {
     const userId = await makeUser();
     const { entryId } = await fullEntry(userId);
     for (let n = 0; n < 3; n += 1) {
-      await fileReport(
-        {
-          reporterId: await makeUser(),
-          subjectType: "entry",
-          subjectId: entryId,
-          reason: "spam",
-        },
-        confirmedReporter,
-      );
+      await fileReport({
+        reporterId: await makeUser(),
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "spam",
+      });
     }
 
     await retractEntry(core(), userId, entryId);
@@ -299,15 +295,12 @@ describe("deleting an entry", () => {
     const [photo] = photos;
     if (photo === undefined) throw new Error("fixture");
     for (let n = 0; n < 3; n += 1) {
-      await fileReport(
-        {
-          reporterId: await makeUser(),
-          subjectType: "photo",
-          subjectId: photo.id,
-          reason: "spam",
-        },
-        confirmedReporter,
-      );
+      await fileReport({
+        reporterId: await makeUser(),
+        subjectType: "photo",
+        subjectId: photo.id,
+        reason: "spam",
+      });
     }
 
     await retractEntry(core(), userId, entryId);

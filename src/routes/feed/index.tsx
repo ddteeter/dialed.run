@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { ConfirmEmailBand } from "../../modules/account/components/ConfirmEmailBand";
-import { confirmEmailGate } from "../../modules/account/components/ConfirmEmailSheet";
 import {
   ownAccountQuery,
   resendConfirmationFn,
@@ -70,7 +69,6 @@ function FeedPage() {
         confirmBand={
           <ConfirmEmailBand account={account} resend={resendConfirmationFn} />
         }
-        confirmFirst={confirmEmailGate(account, resendConfirmationFn)}
         conditions={{
           home,
           locate: geolocate,

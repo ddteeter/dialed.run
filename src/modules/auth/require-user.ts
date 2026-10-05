@@ -28,7 +28,7 @@ import {
   signedInSince,
   userIdOrThrow,
 } from "./session-user";
-import { agreedUserId } from "./terms-gate";
+import { agreedUserId, confirmedUserId } from "./terms-gate";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -46,6 +46,22 @@ function db() {
  */
 export async function requireUserId(): Promise<string> {
   return agreedUserId(
+    db(),
+    await auth.api.getSession({ headers: getRequestHeaders() }),
+  );
+}
+
+/**
+ * `requireUserId`, and `EmailUnconfirmedError` for a runner whose address
+ * is not confirmed (design 133, decision D-113): the one gate for a write
+ * other runners can see, or that trusts the address — Useful, follow,
+ * report, an email change, and every Desk function. Which functions call
+ * it is a product decision, held against the code both ways by
+ * `test/architecture/verification-class.test.ts`. The decision is
+ * ./terms-gate's `confirmedUserId`.
+ */
+export async function verifiedUserId(): Promise<string> {
+  return confirmedUserId(
     db(),
     await auth.api.getSession({ headers: getRequestHeaders() }),
   );

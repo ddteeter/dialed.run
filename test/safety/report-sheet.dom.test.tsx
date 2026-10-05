@@ -2,8 +2,11 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import { EMAIL_UNCONFIRMED_CODE } from "../../src/lib/auth-signal";
 import { reportReasons } from "../../src/modules/safety/contracts";
 import { ReportSheet } from "../../src/modules/safety/components/ReportSheet";
+import type { ConfirmGate } from "../../src/ui";
+import { UnconfirmedRefusalAnswer } from "../../src/ui/unconfirmed-refusal";
 
 type SheetProps = Parameters<typeof ReportSheet>[0];
 
@@ -29,25 +32,27 @@ function renderSheet(overrides: Partial<SheetProps> = {}) {
     });
   const onFiled = vi.fn();
   const onClose = vi.fn();
-  const onRefused = vi.fn();
+  // The root's "Confirm your email first", as a spy (D-113).
+  const confirmFirst = vi.fn<ConfirmGate["sheet"]>();
   render(
-    <ReportSheet
-      open
-      onClose={onClose}
-      subject={{
-        type: "entry",
-        id: "01HZZZZZZZZZZZZZZZZZZZZZZZ",
-        label: "mark_t · yesterday",
-        authorName: "mark_t",
-      }}
-      canBlock
-      fileReport={fileReport}
-      onFiled={onFiled}
-      onRefused={onRefused}
-      {...overrides}
-    />,
+    <UnconfirmedRefusalAnswer gate={{ sheet: confirmFirst }}>
+      <ReportSheet
+        open
+        onClose={onClose}
+        subject={{
+          type: "entry",
+          id: "01HZZZZZZZZZZZZZZZZZZZZZZZ",
+          label: "mark_t · yesterday",
+          authorName: "mark_t",
+        }}
+        canBlock
+        fileReport={fileReport}
+        onFiled={onFiled}
+        {...overrides}
+      />
+    </UnconfirmedRefusalAnswer>,
   );
-  return { fileReport, onFiled, onClose, onRefused };
+  return { fileReport, onFiled, onClose, confirmFirst };
 }
 
 describe("the sheet names whose entry it is (round 26 #7)", () => {
@@ -259,7 +264,7 @@ describe("filing a report", () => {
 
   it("says the report was sent, in the artboard's words", async () => {
     const user = userEvent.setup();
-    const { onRefused } = renderSheet();
+    const { confirmFirst } = renderSheet();
 
     await user.click(screen.getByRole("radio", { name: "Something else" }));
     await user.click(screen.getByRole("button", { name: "Send report" }));
@@ -269,24 +274,28 @@ describe("filing a report", () => {
     await waitFor(() => {
       expect(screen.getByText("Report sent.")).toBeInTheDocument();
     });
-    expect(onRefused).not.toHaveBeenCalled();
+    expect(confirmFirst).not.toHaveBeenCalled();
   });
 
-  it("hands a refused reporter to the caller, and says nothing was sent (round 26 #11; SAF-15)", async () => {
-    // The server refuses a reporter whose address is not confirmed: an
-    // answer, not a failure — and not a success either.
+  it("opens the root's confirm sheet for a refused reporter, and says nothing was sent (round 26 #11; SAF-15)", async () => {
+    // The server refuses a reporter whose address is not confirmed: not a
+    // failure — and not a success either (D-113).
     const user = userEvent.setup();
-    const { onFiled, onClose, onRefused } = renderSheet({
-      fileReport: vi
-        .fn<SheetProps["fileReport"]>()
-        .mockResolvedValue({ status: "unverified" }),
+    const refusal = Object.assign(new Error("Confirm your email first."), {
+      code: EMAIL_UNCONFIRMED_CODE,
+    });
+    const { onFiled, onClose, confirmFirst } = renderSheet({
+      fileReport: vi.fn<SheetProps["fileReport"]>().mockRejectedValue(refusal),
     });
 
     await user.click(screen.getByRole("radio", { name: "Something else" }));
     await user.click(screen.getByRole("button", { name: "Send report" }));
 
     await waitFor(() => {
-      expect(onRefused).toHaveBeenCalledOnce();
+      expect(confirmFirst).toHaveBeenLastCalledWith(
+        { open: true, trigger: "report" },
+        expect.any(Function),
+      );
     });
     expect(screen.getByRole("status").textContent).toBe("");
     expect(onFiled).not.toHaveBeenCalled();

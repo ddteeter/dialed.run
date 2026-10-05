@@ -34,7 +34,6 @@ import { outboxInsert, oweOutbox, settleOutbox, type OutboxDebt } from "../ops";
 import {
   didClaimEmailLink,
   emailLinkWrite,
-  isVerified,
   issueEmailLink,
   readEmailLink,
   releaseEmailLink,
@@ -386,9 +385,10 @@ export async function confirmEmail(
 
 /**
  * ACC-8: move the account to a new address, once the runner proves they
- * hold it. Waits for a confirmed address (round 26 #11) — `unverified` is
- * the "Confirm your email first" sheet — and for the account's current
- * password: a session left open on a shared machine must not be enough to
+ * hold it. Waits for a confirmed address (round 26 #11) — the server
+ * function's gate, `verifiedUserId`, refuses before this runs (design 133,
+ * D-113), and the client opens "Confirm your email first" — and for the
+ * account's current password: a session left open on a shared machine must not be enough to
  * take the account's address, and with it every reset link after. Tries
  * at the password are limited per runner (`password-limited`).
  *
@@ -399,7 +399,6 @@ export async function confirmEmail(
  */
 export type ChangeResult =
   | ResendResult
-  | { readonly status: "unverified" }
   | { readonly status: "wrong-password" }
   | { readonly status: "password-limited"; readonly until: number };
 
@@ -478,7 +477,6 @@ export async function requestEmailChange(
   now = nowSeconds(),
 ): Promise<ChangeResult> {
   const { userId } = request;
-  if (!(await isVerified(db, userId))) return { status: "unverified" };
   const password = await request.checkPassword(request.currentPassword);
   if (password.status === "limited") {
     return { status: "password-limited", until: password.until };

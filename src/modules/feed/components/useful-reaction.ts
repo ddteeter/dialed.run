@@ -1,13 +1,13 @@
 import { useState } from "react";
 
 import { useControlAction } from "../../../ui";
-import type { ControlGuard } from "../../../ui";
 import type { UsefulOutcome } from "../reactions";
 
 /**
  * Asks the server for the viewer's Useful as a state, and answers with the
  * state the server now holds — its own count and mark, never a ±1 on the
- * client's guess (law 8b) — or its refusal of an unconfirmed runner.
+ * client's guess (law 8b) — or rejects with its refusal of an unconfirmed
+ * runner.
  */
 export type SetUsefulFn = (input: {
   data: { entryId: string; useful: boolean };
@@ -18,11 +18,6 @@ export interface UsefulReactionInput {
   usefulCount: number;
   viewerHasReacted: boolean;
   setUseful: SetUsefulFn;
-  /**
-   * Useful waits for a confirmed address (round 26 #11; seam 7): the
-   * server's refusal opens the screen's "Confirm your email first".
-   */
-  guard: ControlGuard<"useful">;
 }
 
 /**
@@ -41,16 +36,17 @@ export interface UsefulReactionInput {
  *
  * **Every press asks the server**, whatever the page thinks of the
  * runner's address: a page's answer is as old as its loader, and a runner
- * who confirmed in another tab must not be told to confirm. The server's
- * refusal opens the screen's sheet, and the mark and the count stay as
- * they were, because nothing changed.
+ * who confirmed in another tab must not be told to confirm. Useful waits
+ * for a confirmed address (round 26 #11; D-113), and the server's refusal
+ * opens the root's "Confirm your email first", led by Useful's sentence
+ * (`ui/unconfirmed-refusal`); the mark and the count stay as they were,
+ * because nothing changed.
  */
 export function useUsefulReaction({
   entryId,
   usefulCount,
   viewerHasReacted,
   setUseful,
-  guard,
 }: UsefulReactionInput) {
   const [useful, setState] = useState({
     count: usefulCount,
@@ -59,13 +55,10 @@ export function useUsefulReaction({
   const markUseful = useControlAction({
     action: async (isUseful: boolean) => {
       const result = await setUseful({ data: { entryId, useful: isUseful } });
-      if (result.status === "unverified") {
-        guard.ask("useful");
-        return;
-      }
       setState({ count: result.count, reacted: result.useful });
     },
     kicker: useful.reacted ? "Still marked" : "Not marked",
+    confirmTrigger: "useful",
   });
   return { useful, markUseful };
 }

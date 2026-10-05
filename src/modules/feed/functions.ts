@@ -7,7 +7,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
-import { optionalUserId, requireUserId } from "../auth";
+import { optionalUserId, requireUserId, verifiedUserId } from "../auth";
 import {
   attachKitInput,
   bandCountsInput,
@@ -158,7 +158,7 @@ export const entryDetailQuery = createServerFn({ method: "GET" })
 export const setUsefulAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => usefulInput.parse(input))
   .handler(async ({ data }) => {
-    const userId = await requireUserId();
+    const userId = await verifiedUserId();
     return setUsefulReaction(data.entryId, userId, data.useful);
   });
 
@@ -167,7 +167,7 @@ export const setUsefulAction = createServerFn({ method: "POST" })
 export const followAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => userIdInput.parse(input))
   .handler(async ({ data }) => {
-    const userId = await requireUserId();
+    const userId = await verifiedUserId();
     await follow(userId, data.userId);
   });
 
@@ -339,7 +339,7 @@ export const garmentBandCountQuery = createServerFn({ method: "GET" })
 export const decideReviewAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => reviewActionInput.parse(input))
   .handler(async ({ data }) => {
-    const reviewerId = requireAdmin(await requireUserId());
+    const reviewerId = requireAdmin(await verifiedUserId());
     return {
       outcome: await decideReview(drizzle(env.DIALED_CORE), reviewerId, data),
     };
@@ -351,7 +351,7 @@ A copyright takedown from the Desk (SAF-6).
 export const takedownAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => takedownInput.parse(input))
   .handler(async ({ data }) => {
-    const actorId = requireAdmin(await requireUserId());
+    const actorId = requireAdmin(await verifiedUserId());
     return {
       outcome: await moderateContent(drizzle(env.DIALED_CORE), {
         actorId,

@@ -4,12 +4,18 @@ import type { ReactNode } from "react";
 import appCss from "../styles.css?url";
 
 import { ZOD_JITLESS_SCRIPT } from "../lib/browser/zod-jitless";
-import { handleGateQuery } from "../modules/account/functions";
+import { confirmEmailOnRefusal } from "../modules/account/components/ConfirmEmailSheet";
+import {
+  handleGateQuery,
+  ownAccountQuery,
+  resendConfirmationFn,
+} from "../modules/account/functions";
 import { gateOnHandle } from "../modules/account/route-decisions";
 import { signedInQuery } from "../modules/auth/functions";
 import { SITE_LINKS, SITE_META } from "../modules/ops/og/site-head";
 import { Devtools } from "../ui/Devtools";
 import { TermsRefusalAnswer } from "../ui/terms-refusal";
+import { UnconfirmedRefusalAnswer } from "../ui/unconfirmed-refusal";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -127,8 +133,15 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       </head>
       <body className="bg-ground font-sans text-ink antialiased">
         {/* A refusal for being behind on the terms opens the prompt, from
-            any form, control or loader under here (decision D-96). */}
-        <TermsRefusalAnswer>{children}</TermsRefusalAnswer>
+            any form, control or loader under here (decision D-96); one for
+            an unconfirmed address opens "Confirm your email first" (D-113). */}
+        <TermsRefusalAnswer>
+          <UnconfirmedRefusalAnswer
+            gate={confirmEmailOnRefusal(ownAccountQuery, resendConfirmationFn)}
+          >
+            {children}
+          </UnconfirmedRefusalAnswer>
+        </TermsRefusalAnswer>
         <Devtools />
         <Scripts />
       </body>

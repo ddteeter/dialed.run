@@ -5,14 +5,7 @@ import type { ReactNode } from "react";
 import { entryTagSchema } from "../../../lib/contracts";
 import type { Units } from "../../../lib/contracts";
 import { formatDistance, formatPace } from "../../../lib/contracts/measures";
-import {
-  FormStatus,
-  Icon,
-  Mono,
-  useControlGate,
-  WeatherAttribution,
-} from "../../../ui";
-import type { ControlGate, ControlGuard } from "../../../ui";
+import { FormStatus, Icon, Mono, WeatherAttribution } from "../../../ui";
 import { tagLabel } from "../chips";
 import type { EntryTag } from "../chips";
 import type { entryDetailForViewer } from "../entries";
@@ -73,18 +66,11 @@ export interface EntryDetailProps {
    * not import `modules/safety`: its barrel reaches D1, and a component
    * importing it puts the drizzle schema in the client bundle
    * (docs/architecture.md, "Composing across modules"). Lane 124 owns the
-   * control; this screen owns where it sits — and the confirm sheet it
-   * shares with Useful, which is why it is handed that sheet's guard.
+   * control; this screen owns where it sits. Useful and report wait for
+   * a confirmed address (round 26 #11; D-113), and the server's refusal of
+   * either opens the root's "Confirm your email first".
    */
-  reportAffordance?: ((guard: ControlGuard<"report">) => ReactNode) | undefined;
-  /**
-   * Useful and report wait for a confirmed address (round 26 #11; seam 7):
-   * the route composes the "Confirm your email first" sheet the server's
-   * refusal of either opens. One sheet for the screen, whichever control
-   * it was; the control says which, and that picks its lead sentence
-   * (round 27 #17).
-   */
-  confirmFirst: ControlGate<"useful" | "report">;
+  reportAffordance?: ReactNode;
 }
 
 export function EntryDetail(props: Readonly<EntryDetailProps>) {
@@ -96,9 +82,7 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
     setUseful,
     units,
     reportAffordance,
-    confirmFirst,
   } = props;
-  const { guard, sheet } = useControlGate(confirmFirst);
   // `entry.id` rather than an `entryId` prop beside it: two sources for one
   // fact is how a route comes to disagree with itself.
   const entryId = entry.id;
@@ -167,13 +151,11 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
           usefulCount={entry.usefulCount}
           viewerHasReacted={entry.viewerHasReacted}
           setUseful={setUseful}
-          guard={guard}
           onStatus={setStatus}
         />
       )}
 
-      <ReportFoot>{isOwn ? undefined : reportAffordance?.(guard)}</ReportFoot>
-      {sheet}
+      <ReportFoot>{isOwn ? undefined : reportAffordance}</ReportFoot>
     </div>
   );
 }

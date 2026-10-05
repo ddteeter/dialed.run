@@ -18,6 +18,7 @@ import {
   requireUserId,
   requireUserIdBeforeTerms,
   requireUserIdWhileLeaving,
+  verifiedUserId,
 } from "../auth";
 import { nowSeconds } from "../../lib/now";
 import { emailDepsFromEnv } from "../email";
@@ -194,7 +195,8 @@ export const requestEmailChangeFn = createServerFn({ method: "POST" })
     requestEmailChange(
       db(),
       {
-        userId: await requireUserId(),
+        // Trusts the address, so it waits for a confirmed one (D-113).
+        userId: await verifiedUserId(),
         newEmail: data.email,
         currentPassword: data.currentPassword,
         checkPassword: checkCurrentPassword,
@@ -236,7 +238,7 @@ Desk D7 · Access: requests and codes, for an operator only.
 */
 export const accessDeskQuery = createServerFn({ method: "GET" }).handler(
   async () => {
-    requireAdmin(await requireUserId());
+    requireAdmin(await verifiedUserId());
     return accessDesk(db());
   },
 );
@@ -248,7 +250,7 @@ export const createInviteCodeFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => newInviteInput.parse(data))
   .handler(async ({ data }) =>
     createInviteCode(db(), {
-      operatorId: requireAdmin(await requireUserId()),
+      operatorId: requireAdmin(await verifiedUserId()),
       label: data.label,
       maxUses: data.maxUses,
       idempotencyKey: data.idempotencyKey,
@@ -264,7 +266,7 @@ export const inviteFromRequestFn = createServerFn({ method: "POST" })
     inviteFromRequest(
       db(),
       {
-        operatorId: requireAdmin(await requireUserId()),
+        operatorId: requireAdmin(await verifiedUserId()),
         requestId: data.id,
       },
       { keepAlive: waitUntil, report: captureException, settle: settleOutbox },
@@ -277,7 +279,7 @@ D7's Decline, on a request.
 export const declineRequestFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => deskRowInput.parse(data))
   .handler(async ({ data }) => {
-    requireAdmin(await requireUserId());
+    requireAdmin(await verifiedUserId());
     await declineRequest(db(), data.id);
   });
 
@@ -287,7 +289,7 @@ D7's Revoke, on a code.
 export const revokeInviteCodeFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => deskRowInput.parse(data))
   .handler(async ({ data }) => {
-    requireAdmin(await requireUserId());
+    requireAdmin(await verifiedUserId());
     await revokeInviteCode(db(), data.id);
   });
 
@@ -307,7 +309,7 @@ Revoke's undo.
 export const restoreInviteCodeFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => deskRowInput.parse(data))
   .handler(async ({ data }) => {
-    requireAdmin(await requireUserId());
+    requireAdmin(await verifiedUserId());
     await restoreInviteCode(db(), data.id);
   });
 

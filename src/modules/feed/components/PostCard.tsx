@@ -3,7 +3,6 @@ import { Link } from "@tanstack/react-router";
 import type { Units } from "../../../lib/contracts";
 import { formatDistance } from "../../../lib/contracts/measures";
 import { Mono, WeatherAttribution } from "../../../ui";
-import type { ControlGuard } from "../../../ui";
 import type { FeedItem } from "../feed";
 import { postedLabel } from "../posted";
 import { isProvidersReading, stripConditions } from "../strip";
@@ -35,15 +34,11 @@ export interface PostCardProps {
   */
   now: number;
   setUseful: SetUsefulFn;
-  /**
-  The screen's "Confirm your email first", which Useful waits on.
-  */
-  guard: ControlGuard<"useful">;
   onStatus: (status: string) => void;
 }
 
 export function PostCard(props: Readonly<PostCardProps>) {
-  const { item, units, now, setUseful, guard, onStatus } = props;
+  const { item, units, now, setUseful, onStatus } = props;
   const [photo] = item.photoKeys;
   const second = stripConditions(item.conditions, item.indoor, units);
 
@@ -108,7 +103,6 @@ export function PostCard(props: Readonly<PostCardProps>) {
         usefulCount={item.usefulCount}
         viewerHasReacted={item.viewerHasReacted}
         setUseful={setUseful}
-        guard={guard}
         onStatus={onStatus}
       />
     </article>
