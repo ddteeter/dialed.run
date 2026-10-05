@@ -151,18 +151,20 @@ export function outboxInsertWhere(
 /**
  * The row a debt writes. A debt held back (`notBefore`) is due when it
  * says, or after the grace if that is later: the drain must still not race
- * a fast path.
+ * a fast path. A scheduled kind has no fast path to race, so it waits for
+ * no grace — a `product_link` is due at once, and the next hourly drain
+ * takes it.
  */
 function outboxRow(debt: OutboxDebt, now: number) {
+  const grace = scheduledOutboxKinds.includes(debt.message.kind)
+    ? 0
+    : OUTBOX_FAST_PATH_GRACE_S;
   return {
     id: debt.id,
     kind: debt.message.kind,
     dedupeKey: dedupeKeyFor(debt.message),
     payload: JSON.stringify(debt.message.payload),
-    nextAttemptAt: Math.max(
-      now + OUTBOX_FAST_PATH_GRACE_S,
-      debt.notBefore ?? 0,
-    ),
+    nextAttemptAt: Math.max(now + grace, debt.notBefore ?? 0),
     createdAt: now,
   };
 }

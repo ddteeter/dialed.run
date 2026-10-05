@@ -87,7 +87,9 @@ Gate key: **R** `requireUserId`, **BT** `requireUserIdBeforeTerms`,
 **A** `requireAdmin(requireUserId)`, **O** `optionalUserId`, **—** no
 session, **L** signed link or token, **P** password or fresh sign-in,
 **W** while leaving, **iV** `isVerified` inside the module. Classes:
-**V** verified, **U** unconfirmed, **Ad** admin, **S** sessionless.
+**V** verified, **U** unconfirmed, **Ad** admin, **S** sessionless,
+**VV** verified viewer (`optionalVerifiedUserId`: the same gate, with a
+refusal read as nobody, for a door that answers "no" as not-found).
 **≠** means current behaviour differs from the proposed class.
 
 | module/function                          | M    | does                                         | others see?                                       | now    | class                    |
@@ -185,7 +187,7 @@ session, **L** signed link or token, **P** password or fresh sign-in,
 | onboarding/namingOfferQuery              | GET  | O3 naming offer                              | no                                                | R      | U                        |
 | onboarding/nameGarmentFn                 | POST | name garment, **creates brand/product rows** | **yes**, as createItemFn                          | R      | **≠** U + clamp (Q1)     |
 | onboarding/namingSuggestionsQuery        | GET  | brand/product suggestions                    | reads others' UGC                                 | **—**  | **≠** U (finding F1)     |
-| ops/deskAccessQuery                      | GET  | operator?                                    | no                                                | O      | S                        |
+| ops/deskAccessQuery                      | GET  | operator?                                    | no                                                | O      | **≠** VV (Q5)            |
 | ops/deskTodayQuery                       | GET  | Desk D0                                      | operator                                          | A      | Ad                       |
 | products/searchBrandsFn                  | GET  | brand autocomplete                           | no                                                | R      | U                        |
 | products/resolveProductFn                | POST | **create brand + product**                   | **yes**                                           | R      | **≠** delete (no caller) |
@@ -223,7 +225,7 @@ handlers. `api/auth/$` GET/POST is Better Auth's own endpoint; D-50's
 reset-by-email wait lives in `create-auth.ts`. `api/strava` POST is a
 machine webhook. `account/unsubscribe` POST is a signed one-click link.
 The others: `feed/photo.$` (O), `safety/review-photo.$` (O + admin
-inside), `closet/photo.$itemId.$size` (session, owner-only),
+inside; **VV** as built, a Desk read under Q5), `closet/photo.$itemId.$size` (session, owner-only),
 `account/export.$token` (token), `og/default`, `api/health`,
 `runs/strava-connect` (O). All are **S** or U, and the table lists them so
 a new handler is classified too.
@@ -338,15 +340,27 @@ is `closet`'s `linkTypedGarments`: for each of the runner's rows with a
 typed brand and no product, the same `productLinkFor` a save uses
 (find-or-create on the normalized pair, enrichment, type inheritance). A
 row whose name is still the tap list's (`isTapListPlaceholder`) is a
-brand-only answer: it joins the shared brands and links no product, as
-`nameItem` does for a confirmed runner. It is re-runnable and idempotent
+brand-only answer: it joins the shared brands and links no product.
+**`nameItem` for a confirmed runner writes the same columns, through the
+same `linkedColumns`**, so an answer gives one row whether the runner had
+confirmed when they gave it or confirmed later. Before review it went
+through `resolveProduct` and wrote the catalogue's spelling with no type
+and no enrichment; it now has a save's semantics (`withResolvedProduct`):
+the typed spelling stays, the product lends its type, enrichment is asked
+for. A save's were chosen because the deferred link cannot tell a named
+row from a closet-form row, and a closet save already has them. **Each
+row links on its own**: a brand or name that normalizes to nothing ("?";
+today also any non-Latin script, R-137) is skipped and stays as typed,
+and a row that fails is reported with its id while the rest link; the
+handler throws afterwards so the outbox row stays owed for what is left.
+It is re-runnable and idempotent
 (law 1), reads only unlinked rows, and does nothing for a runner still
 unconfirmed. `ops` cannot import `closet` (it imports `ops`), so there is
 no fast path: `src/server.ts` hands the linker to `handleScheduled`
 (`DailyUpkeep.linkProducts`), the `:00` firing drains `product_link` as a
 scheduled kind, and the digest's full drain does too. A newly confirmed
-runner's garments link within about 75 minutes (15 minutes' grace, then
-the next `:00`); a failure leaves the row owed and never touches the
+runner's garments link within an hour: a scheduled kind has no fast path
+to race, so `outboxRow` gives it no grace and the next `:00` takes it; a failure leaves the row owed and never touches the
 confirmation (law 5). One known gap: an unconfirmed runner who edits a
 tap-list row in the closet form to a brand and a name that is still the
 tap list's is linked as brand-only; their next save after confirming
@@ -403,6 +417,9 @@ All nine questions are decided; D-113 records the rule and the answers.
   anonymous totals already require confirmed accounts (D-108 C). A runner's
   own history is unaffected.
 - **Q5 Desk: Ad = verified**, `requireAdmin(await verifiedUserId())`.
+  The Desk's door (`deskAccessQuery`) and the reviewer's photo route ask
+  `optionalVerifiedUserId` (**VV**), so an operator the Desk's functions
+  would refuse is not an operator there either (review of PR #153).
 - **Q6 Export and account deletion: U** (D-95).
 - **Q7 Block: U; report stays V.**
 - **Q9 Mechanism: one `verifiedUserId()` gate plus the classification

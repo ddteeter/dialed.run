@@ -28,7 +28,7 @@ import {
   signedInSince,
   userIdOrThrow,
 } from "./session-user";
-import { agreedUserId, confirmedUserId } from "./terms-gate";
+import { agreedUserId, confirmedUserId, confirmedViewerId } from "./terms-gate";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -62,6 +62,20 @@ export async function requireUserId(): Promise<string> {
  */
 export async function verifiedUserId(): Promise<string> {
   return confirmedUserId(
+    db(),
+    await auth.api.getSession({ headers: getRequestHeaders() }),
+  );
+}
+
+/**
+ * The viewer `verifiedUserId` would let through, or `undefined` for anyone
+ * it would refuse, signed out included. For a door that turns "no" into
+ * not-found rather than an error: the Desk's (`deskAccessQuery`) and a
+ * reviewer's photo, so an operator whose address is unconfirmed is not an
+ * operator (D-113 Q5). The decision is ./terms-gate's `confirmedViewerId`.
+ */
+export async function optionalVerifiedUserId(): Promise<string | undefined> {
+  return confirmedViewerId(
     db(),
     await auth.api.getSession({ headers: getRequestHeaders() }),
   );

@@ -27,6 +27,7 @@ export {
   checkCurrentPassword,
   currentSessionId,
   optionalUserId,
+  optionalVerifiedUserId,
   requireSignedInSince,
   requireUserId,
   requireUserIdBeforeTerms,

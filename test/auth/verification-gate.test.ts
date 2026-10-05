@@ -6,7 +6,10 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { acceptanceOf } from "../../src/modules/account/terms-acceptance";
 import { sessionFromRequest } from "../../src/modules/auth/session";
-import { confirmedUserId } from "../../src/modules/auth/terms-gate";
+import {
+  confirmedUserId,
+  confirmedViewerId,
+} from "../../src/modules/auth/terms-gate";
 import { addAccount } from "../feed/helpers";
 
 /**
@@ -116,5 +119,46 @@ describe("confirmedUserId — verifiedUserId's whole decision", () => {
     await expect(
       confirmedUserId(db, sessionOf(userId), PUBLISHED),
     ).rejects.toMatchObject(UNCONFIRMED);
+  });
+});
+
+describe("confirmedViewerId — the Desk's door, asked as confirmedUserId asks", () => {
+  it("is a confirmed runner's own id", async () => {
+    const userId = await runner(true);
+    await expect(
+      confirmedViewerId(db, sessionOf(userId), PUBLISHED),
+    ).resolves.toBe(userId);
+  });
+
+  it("is nobody for anyone confirmedUserId refuses, signed out included", async () => {
+    const unconfirmed = await runner(false);
+    const behind = newUlid();
+    await addAccount(behind, true);
+    const leaving = await runner(true);
+    await db
+      .insert(accountDeletions)
+      .values({ userId: leaving, requestedAt: 1, purgeAfter: 2 });
+    const nobody = await sessionFromRequest(
+      new Request("https://dialed.run/desk"),
+    );
+
+    for (const session of [
+      sessionOf(unconfirmed),
+      sessionOf(behind),
+      sessionOf(leaving),
+      nobody,
+    ]) {
+      await expect(
+        confirmedViewerId(db, session, PUBLISHED),
+      ).resolves.toBeUndefined();
+    }
+  });
+
+  it("asks nothing of the terms while none are published", async () => {
+    const userId = newUlid();
+    await addAccount(userId, true);
+    await expect(confirmedViewerId(db, sessionOf(userId))).resolves.toBe(
+      userId,
+    );
   });
 });

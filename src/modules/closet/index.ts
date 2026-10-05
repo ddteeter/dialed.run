@@ -22,7 +22,6 @@ export {
   getItemsByIds,
   getOwnedItem,
   listItems,
-  nameItem,
   NotFoundError,
   retireItem,
   unretireItem,
@@ -40,6 +39,6 @@ export {
   tapListSelectionSchema,
 } from "./tap-list";
 export { photoUrlFor } from "./photo-url";
-export { linkTypedGarments } from "./product-link";
+export { linkTypedGarments, nameItem } from "./product-link";
 export type { PhotoSize, PhotoUploadResult } from "./photos";
 export { photoSizes } from "./photos";

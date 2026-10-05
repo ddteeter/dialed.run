@@ -5,16 +5,18 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 
-import { optionalUserId, verifiedUserId } from "../auth";
+import { optionalVerifiedUserId, verifiedUserId } from "../auth";
 import { requireAdmin } from "../safety";
 import { deskToday, isOperator } from "./desk";
 
 /**
  * Whether the viewer may see the Desk. Signed out is a plain "no", not a
- * redirect to sign-in: the route turns "no" into not-found.
+ * redirect to sign-in: the route turns "no" into not-found. An operator
+ * the Desk's own functions would refuse — unconfirmed, behind on the
+ * terms — is not an operator here either (D-113 Q5).
  */
 export const deskAccessQuery = createServerFn({ method: "GET" }).handler(
-  async () => ({ operator: isOperator(await optionalUserId()) }),
+  async () => ({ operator: isOperator(await optionalVerifiedUserId()) }),
 );
 
 /**

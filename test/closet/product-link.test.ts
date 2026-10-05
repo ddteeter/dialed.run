@@ -165,6 +165,101 @@ describe("nameItem for an unconfirmed runner", () => {
   });
 });
 
+/**
+The row an answer leaves, without what differs by runner.
+*/
+function identityOf(row: Awaited<ReturnType<typeof getOwnedItem>>) {
+  return {
+    brand: row.brand,
+    name: row.name,
+    productId: row.productId,
+    type: row.type,
+    origin: row.origin,
+  };
+}
+
+describe("nameItem for a confirmed runner — the link a confirmation owes, now", () => {
+  it("gives the same row as naming unconfirmed and then confirming", async () => {
+    const brand = unique("Brand");
+    const model = unique("Model");
+    const { product } = await resolveProduct(db(), {
+      brandName: brand.toUpperCase(),
+      productName: model.toUpperCase(),
+      createdBy: newUlid(),
+    });
+    await db()
+      .update(products)
+      .set({ type: "longSleeve" })
+      .where(eq(products.id, product.id));
+
+    const now = await runner(true);
+    const nowItem = await tapListRow(now);
+    const named = await nameItem(db(), now, nowItem, { brand, model });
+
+    const later = await runner(false);
+    const laterItem = await tapListRow(later);
+    await nameItem(db(), later, laterItem, { brand, model });
+    await confirm(later);
+    await linkTypedGarments(db(), later);
+    const linked = await getOwnedItem(db(), later, laterItem);
+
+    expect(identityOf(named)).toStrictEqual(identityOf(linked));
+    // A save's link: the typed spelling stays, and the product lends its
+    // type.
+    expect(identityOf(named)).toStrictEqual({
+      brand,
+      name: model,
+      productId: product.id,
+      type: "longSleeve",
+      origin: "manual",
+    });
+  });
+
+  it("asks for enrichment of the product it links, as a save does", async () => {
+    const userId = await runner(true);
+    const itemId = await tapListRow(userId);
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+    const brand = unique("Brand");
+    const model = unique("Model");
+    const { product } = await resolveProduct(db(), {
+      brandName: brand,
+      productName: model,
+      sourceUrl: "https://shop.example.com/products/tee",
+      createdBy: newUlid(),
+    });
+
+    await nameItem(db(), userId, itemId, { brand, model });
+
+    expect(send).toHaveBeenCalledWith({
+      type: "enrich",
+      productId: product.id,
+    });
+  });
+
+  it("gives a brand alone the shared brand's spelling, and no product", async () => {
+    const brand = unique("Canonical");
+    await db().insert(brands).values({
+      id: newUlid(),
+      name: brand,
+      normalized: brand.toLowerCase(),
+    });
+    const userId = await runner(true);
+    const itemId = await tapListRow(userId);
+
+    const named = await nameItem(db(), userId, itemId, {
+      brand: brand.toUpperCase(),
+      model: " ",
+    });
+
+    expect(identityOf(named)).toMatchObject({
+      brand,
+      name: "Merino base layer",
+      origin: "manual",
+    });
+    expect(named.productId).toBeNull();
+  });
+});
+
 describe("isTapListPlaceholder", () => {
   it("is the tap list's own name, in its own category", () => {
     expect(
@@ -322,6 +417,88 @@ describe("linkTypedGarments — the link a confirmation owes", () => {
     const untouched = await getOwnedItem(db(), userId, blank.id);
     expect(untouched.brand).toBe(" ".repeat(3));
     expect(untouched.productId).toBeNull();
+  });
+
+  it("leaves a row the catalogue cannot take as typed, and still links the rest", async () => {
+    // A brand of only punctuation, or a model of it, normalizes to
+    // nothing: find-or-create would throw on every run.
+    const userId = await runner(false);
+    const good = await createItem(db(), userId, {
+      category: "top",
+      name: unique("Tee"),
+      brand: unique("Brand"),
+    });
+    const noBrand = await createItem(db(), userId, {
+      category: "top",
+      name: unique("Tee"),
+      brand: "?",
+    });
+    const noName = await createItem(db(), userId, {
+      category: "top",
+      name: "?",
+      brand: unique("Brand"),
+    });
+    const report = vi.fn();
+
+    await confirm(userId);
+    await linkTypedGarments(db(), userId, report);
+
+    const linked = await getOwnedItem(db(), userId, good.id);
+    expect(linked.productId).not.toBeNull();
+    for (const typed of [noBrand, noName]) {
+      const left = await getOwnedItem(db(), userId, typed.id);
+      expect(left.productId).toBeNull();
+      expect({ brand: left.brand, name: left.name }).toStrictEqual({
+        brand: typed.brand,
+        name: typed.name,
+      });
+    }
+    expect(report).not.toHaveBeenCalled();
+  });
+
+  it("reports a row that fails, links the others, and leaves the debt owed", async () => {
+    const userId = await runner(true);
+    const items = [
+      await createItem(db(), userId, {
+        category: "top",
+        name: unique("Tee"),
+        brand: unique("Brand"),
+      }),
+      await createItem(db(), userId, {
+        category: "top",
+        name: unique("Tee"),
+        brand: unique("Brand"),
+      }),
+    ];
+    const client = db();
+    const outage = new Error("D1 is down");
+    // The first garment's write fails; every other update, enrichment's
+    // own included, goes through.
+    const update = client.update.bind(client);
+    let isDown = true;
+    vi.spyOn(client, "update").mockImplementation((table) => {
+      if (table === wardrobeItems && isDown) {
+        isDown = false;
+        throw outage;
+      }
+      return update(table);
+    });
+    const report = vi.fn();
+
+    await expect(linkTypedGarments(client, userId, report)).rejects.toThrow(
+      "1 garment(s) did not link",
+    );
+
+    const after = await Promise.all(
+      items.map(async (item) => getOwnedItem(db(), userId, item.id)),
+    );
+    const failed = after.filter((row) => row.productId === null);
+    expect(failed).toHaveLength(1);
+    expect(report).toHaveBeenCalledExactlyOnceWith(outage, {
+      surface: "product-link",
+      userId,
+      itemId: failed[0]?.id,
+    });
   });
 
   it("touches only this runner's garments", async () => {

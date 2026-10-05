@@ -140,6 +140,17 @@ describe("outboxInsert", () => {
     });
   });
 
+  it("makes a product link due at once: no fast path works it, so there is no grace to wait out", async () => {
+    const debt = oweOutbox({ kind: "product_link", payload: { userId: "u1" } });
+
+    await outboxInsert(db(), debt, NOW);
+
+    expect(await rowById(debt.id)).toMatchObject({
+      kind: "product_link",
+      nextAttemptAt: NOW,
+    });
+  });
+
   it("makes a second debt with the same key the same row, taken over by the newer writer", async () => {
     const first = oweOutbox(photoDelete("u1", "i1"));
     const second = oweOutbox(photoDelete("u1", "i1"));
@@ -767,14 +778,16 @@ describe("the product link's handler (design 133, D-113 Q1)", () => {
     const link = vi.fn(() => Promise.resolve());
     const userId = newUlid();
     const debt = oweOutbox({ kind: "product_link", payload: { userId } });
-    await db().insert(outbox).values({
-      id: debt.id,
-      kind: "product_link",
-      dedupeKey: userId,
-      payload: JSON.stringify({ userId }),
-      nextAttemptAt: NOW,
-      createdAt: NOW,
-    });
+    await db()
+      .insert(outbox)
+      .values({
+        id: debt.id,
+        kind: "product_link",
+        dedupeKey: userId,
+        payload: JSON.stringify({ userId }),
+        nextAttemptAt: NOW,
+        createdAt: NOW,
+      });
 
     await settleOutbox(db(), debt, vi.fn(), {
       ...outboxHandlers,

@@ -54,7 +54,6 @@ import {
 import {
   getProductAttributeDefaultsBulk,
   getProductForDetail,
-  createOrGetBrand,
   resolveProduct,
 } from "../products";
 import type { ProductAttributeDefaults, ProductComposition } from "../products";
@@ -297,7 +296,7 @@ function ownedItemWhere(userId: string, itemId: string) {
  * apply, re-read — differing only in what gets set. updateItem, retireItem
  * and unretireItem were three copies of it.
  */
-async function updateOwnedItem(
+export async function updateOwnedItem(
   db: Db,
   userId: string,
   itemId: string,
@@ -319,69 +318,6 @@ export async function updateItem(
 ): Promise<WardrobeItemRow> {
   await assertLinkAllowed(garment);
   return updateOwnedItem(db, userId, itemId, garmentRowValues(garment));
-}
-
-/**
- * P2.5's write: give a generic garment an identity, and change nothing
- * else about it.
- *
- * **It links a record, it never replaces one** (design §AC rule 05). The
- * row keeps its id, so every verdict, wear count and earned range stays
- * attached — which is the difference between naming a piece and deleting
- * it to add a better one. Only the identity columns move, which is why
- * this does not go through `updateItem`: that rebuilds the whole row from
- * a `Garment`, including the estimated range, and P2.5 has no attribute
- * fields to rebuild it from.
- *
- * **Brand alone is a legitimate answer** (rule 04). A runner who knows it
- * is a Smartwool and not which Smartwool gets a brand and no
- * `product_id` — so no type, no social count, and the row stays on offer.
- * Resolving a product from a brand and a blank model would invent a
- * canonical product named after nothing, and products are shared rows.
- *
- * `origin` flips to `manual` because the row is no longer what the
- * tap-list made: a person has told us what it is.
- *
- * **An unconfirmed runner names their own row and nothing shared** (design
- * 133, decision D-113 Q1): the brand and the model are written as typed,
- * no brand or product row is made, and confirming owes the link
- * (`linkTypedGarments`). A brand-only answer keeps the tap list's name,
- * which is how the link tells it from a named model.
- */
-export async function nameItem(
-  db: Db,
-  userId: string,
-  itemId: string,
-  identity: { brand: string; model?: string | undefined },
-): Promise<WardrobeItemRow> {
-  const model = identity.model?.trim() ?? "";
-  if (await isUnconfirmed(db, userId)) {
-    return updateOwnedItem(db, userId, itemId, {
-      brand: identity.brand.trim(),
-      ...(model !== "" && { name: model }),
-      origin: "manual",
-    });
-  }
-  // Brand-only: resolve the brand so it joins the shared vocabulary, but
-  // link no product.
-  if (model === "") {
-    const brand = await createOrGetBrand(db, identity.brand);
-    return updateOwnedItem(db, userId, itemId, {
-      brand: brand.name,
-      origin: "manual",
-    });
-  }
-  const { brand, product } = await resolveProduct(db, {
-    brandName: identity.brand,
-    productName: model,
-    createdBy: userId,
-  });
-  return updateOwnedItem(db, userId, itemId, {
-    brand: brand.name,
-    name: product.name,
-    productId: product.id,
-    origin: "manual",
-  });
 }
 
 /**

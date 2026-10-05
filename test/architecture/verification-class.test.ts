@@ -24,6 +24,9 @@ import {
  *
  * - `verified`: calls `verifiedUserId`.
  * - `admin`: `requireAdmin(await verifiedUserId())` — the Desk (Q5).
+ * - `verified-viewer`: calls `optionalVerifiedUserId`, the same gate
+ *   asked so that a refusal reads as nobody — for a door that answers
+ *   "no" as not-found: the Desk's, and a reviewer's photo (Q5).
  * - `unconfirmed`: calls one of the signed-in gates that do not ask the
  *   address (`requireUserId` and the terms gate's named exemptions), and
  *   not `verifiedUserId`.
@@ -46,7 +49,8 @@ const routeSources: Record<string, string> = import.meta.glob(
   { query: "?raw", import: "default", eager: true },
 );
 
-type VerificationClass = "verified" | "admin" | "unconfirmed" | "sessionless";
+type VerificationClass =
+  "verified" | "admin" | "verified-viewer" | "unconfirmed" | "sessionless";
 
 const SIGNED_IN_GATES =
   /\b(?:requireUserId|requireUserIdBeforeTerms|requireSignedInSince|requireUserIdWhileLeaving|checkCurrentPassword)\b/u;
@@ -62,6 +66,7 @@ function classOf(body: string): string {
     return isVerified ? "admin" : "admin-unconfirmed";
   }
   if (isVerified) return "verified";
+  if (/\boptionalVerifiedUserId\(/u.test(body)) return "verified-viewer";
   const hasSessionRead =
     /\bsessionFromRequest\(/u.test(body) &&
     !/\boptionalUserIdFrom\(/u.test(body);
@@ -217,7 +222,9 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // F1 (D-58): other runners' names, signed-in only.
   "onboarding/functions.ts namingSuggestionsQuery": "unconfirmed",
   // ---- ops
-  "ops/functions.ts deskAccessQuery": "sessionless",
+  // Q5: the Desk's door asks what its functions ask, so an unconfirmed
+  // operator is not shown a Desk that refuses them.
+  "ops/functions.ts deskAccessQuery": "verified-viewer",
   "ops/functions.ts deskTodayQuery": "admin",
   // ---- products
   "products/functions.ts searchBrandsFn": "unconfirmed",
@@ -268,9 +275,9 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "routes/feed/photo.$.tsx GET": "sessionless",
   "routes/og/default.ts GET": "sessionless",
   "routes/runs/strava-connect.ts GET": "sessionless",
-  // A reviewer's view of a photo: read-only, and asked of `isAdmin`
-  // inside (`reviewerPhotoResponse`).
-  "routes/safety/review-photo.$.tsx GET": "sessionless",
+  // A reviewer's view of a photo: a Desk read (Q5), asked of `isAdmin`
+  // inside (`reviewerPhotoResponse`) for a confirmed viewer only.
+  "routes/safety/review-photo.$.tsx GET": "verified-viewer",
 };
 
 function byName(left: string, right: string): number {
@@ -326,6 +333,7 @@ describe("the classes, read from the text", () => {
     ["await sessionFromRequest(request);", "unconfirmed"],
     ["optionalUserIdFrom(await sessionFromRequest(request));", "sessionless"],
     ["await optionalUserId();", "sessionless"],
+    ["isOperator(await optionalVerifiedUserId());", "verified-viewer"],
     ["return auth.handler(request);", "sessionless"],
   ])("reads %s as %s", (body, expected) => {
     expect(classOf(body)).toBe(expected);
