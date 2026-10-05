@@ -27,6 +27,7 @@ export {
 export type { AccountRow, AccountsQuery } from "./accounts";
 export {
   emailConfirmationRead,
+  runnerConfirmed,
   isUnconfirmed,
   isVerified,
 } from "./email-links";

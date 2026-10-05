@@ -173,7 +173,7 @@ describe("a runner deleting their account (task 126, ACC-9)", () => {
   });
 
   it("leaves runner search and their profile, for everyone else", async () => {
-    const leaving = await makeUser({ username: "leaving_runner" });
+    const leaving = await makeVerifiedUser({ username: "leaving_runner" });
     const viewer = await makeUser();
     const found = await searchRunners(viewer, "leaving_r");
     expect(found.map((row) => row.username)).toStrictEqual(["leaving_runner"]);

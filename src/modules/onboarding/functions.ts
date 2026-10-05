@@ -133,4 +133,8 @@ export const nameGarmentFn = createServerFn({ method: "POST" })
 
 export const namingSuggestionsQuery = createServerFn({ method: "GET" })
   .validator((data: unknown) => brandPrefixInput.parse(data))
-  .handler(async ({ data }) => namingSuggestions(db(), data.brand));
+  .handler(async ({ data }) => {
+    // Other runners' brand and product names: signed-in only (D-58, F1).
+    await requireUserId();
+    return namingSuggestions(db(), data.brand);
+  });

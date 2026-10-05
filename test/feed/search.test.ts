@@ -6,7 +6,7 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { follow } from "../../src/modules/feed/follows";
 import { searchRunners } from "../../src/modules/feed/search";
-import { makeUser, resetTables } from "./helpers";
+import { makeVerifiedUser, resetTables } from "./helpers";
 
 /**
  * Runner search (round 22, item 15): a prefix on the handle, never
@@ -19,15 +19,15 @@ describe("searchRunners", () => {
   it("answers with nothing for a blank query", async () => {
     // Including one that is only spaces: an untrimmed blank becomes
     // `LIKE ' %'`, which is a full scan for nothing.
-    const viewer = await makeUser();
-    await makeUser({ username: "somebody" });
+    const viewer = await makeVerifiedUser();
+    await makeVerifiedUser({ username: "somebody" });
     expect(await searchRunners(viewer, "")).toStrictEqual([]);
     expect(await searchRunners(viewer, " ".repeat(3))).toStrictEqual([]);
   });
 
   it("matches on a trimmed prefix", async () => {
-    const viewer = await makeUser();
-    const userId = await makeUser({ username: "tracksmith_runner" });
+    const viewer = await makeVerifiedUser();
+    const userId = await makeVerifiedUser({ username: "tracksmith_runner" });
 
     expect(await searchRunners(viewer, "  Tracksmith ")).toStrictEqual([
       { userId, username: "tracksmith_runner", following: false },
@@ -35,14 +35,14 @@ describe("searchRunners", () => {
   });
 
   it("matches a prefix, not a substring", async () => {
-    const viewer = await makeUser();
-    await makeUser({ username: "fast_runner" });
+    const viewer = await makeVerifiedUser();
+    await makeVerifiedUser({ username: "fast_runner" });
     expect(await searchRunners(viewer, "runner")).toStrictEqual([]);
   });
 
   it("never offers the viewer themself", async () => {
-    const viewer = await makeUser({ username: "dana_kim" });
-    const other = await makeUser({ username: "dana_lee" });
+    const viewer = await makeVerifiedUser({ username: "dana_kim" });
+    const other = await makeVerifiedUser({ username: "dana_lee" });
 
     const results = await searchRunners(viewer, "dana");
 
@@ -50,10 +50,10 @@ describe("searchRunners", () => {
   });
 
   it("says which results the viewer already follows, and only the viewer's follows", async () => {
-    const viewer = await makeUser();
-    const someoneElse = await makeUser();
-    const followed = await makeUser({ username: "ana_followed" });
-    const notYet = await makeUser({ username: "ana_stranger" });
+    const viewer = await makeVerifiedUser();
+    const someoneElse = await makeVerifiedUser();
+    const followed = await makeVerifiedUser({ username: "ana_followed" });
+    const notYet = await makeVerifiedUser({ username: "ana_stranger" });
     await follow(viewer, followed);
     await follow(someoneElse, notYet);
 
@@ -67,7 +67,7 @@ describe("searchRunners", () => {
   it("leaves out a profile that has no handle", async () => {
     // The result type promises a name. A row with none is not a person you
     // can offer to follow.
-    const viewer = await makeUser();
+    const viewer = await makeVerifiedUser();
     await drizzle(env.DIALED_CORE)
       .insert(userProfiles)
       .values({ userId: newUlid(), defaultAudience: "runners" });
@@ -76,10 +76,10 @@ describe("searchRunners", () => {
   });
 
   it("reads `_`, `%` and `\\` as themselves, never as LIKE wildcards", async () => {
-    const viewer = await makeUser();
-    const maya = await makeUser({ username: "maya_" });
-    await makeUser({ username: "mayax" });
-    await makeUser({ username: "maya_x" });
+    const viewer = await makeVerifiedUser();
+    const maya = await makeVerifiedUser({ username: "maya_" });
+    await makeVerifiedUser({ username: "mayax" });
+    await makeVerifiedUser({ username: "maya_x" });
     const found = await searchRunners(viewer, "maya_");
     expect(
       found.map((row) => row.username).toSorted((a, b) => a.localeCompare(b)),
@@ -93,8 +93,8 @@ describe("searchRunners", () => {
   });
 
   it("finds a handle typed with the @ the field shows in front of it", async () => {
-    const viewer = await makeUser();
-    const maya = await makeUser({ username: "maya" });
+    const viewer = await makeVerifiedUser();
+    const maya = await makeVerifiedUser({ username: "maya" });
     expect(await searchRunners(viewer, " @Maya")).toStrictEqual([
       { userId: maya, username: "maya", following: false },
     ]);

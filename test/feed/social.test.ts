@@ -117,9 +117,9 @@ describe("username search", () => {
   beforeEach(resetTables);
 
   it("prefix-matches display names (public profiles only, per MVP)", async () => {
-    await makeUser({ username: "Ana Runner" });
-    await makeUser({ username: "Andy Trails" });
-    await makeUser({ username: "Beth Miles" });
+    await makeVerifiedUser({ username: "Ana Runner" });
+    await makeVerifiedUser({ username: "Andy Trails" });
+    await makeVerifiedUser({ username: "Beth Miles" });
 
     const viewer = await makeUser({ username: "Viewer" });
     const results = await searchRunners(viewer, "An");

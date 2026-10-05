@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { user } from "../../src/db/schema-auth";
 import { outfitEntries, usernameHistory } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { entryDetailForViewer } from "../../src/modules/feed/entries";
@@ -16,7 +17,15 @@ import {
 } from "../../src/modules/feed/profiles";
 import { searchRunners, searchStatement } from "../../src/modules/feed/search";
 import { banUser, blockRunner, fileReport } from "../../src/modules/safety";
-import { makeEntry, makeRun, makeUser, resetTables, NOW } from "./helpers";
+import {
+  addAccount,
+  makeEntry,
+  makeRun,
+  makeUser,
+  makeVerifiedUser,
+  resetTables,
+  NOW,
+} from "./helpers";
 
 /**
  * FEED-7 (R-107, R-108): a banned runner, and anyone in a block pair with
@@ -42,7 +51,7 @@ async function markerFor(entryId: string, viewer: string) {
 }
 
 async function entryIn(status: "ok" | "hidden_pending_review" | "removed") {
-  const author = await makeUser();
+  const author = await makeVerifiedUser();
   const entryId = await postedBy(author);
   await db()
     .update(outfitEntries)
@@ -84,9 +93,9 @@ async function postedBy(author: string): Promise<string> {
 
 describe("runner search leaves out hidden runners", () => {
   it("drops a banned runner and keeps the one beside them", async () => {
-    const viewer = await makeUser();
-    const banned = await makeUser({ username: "kai_banned" });
-    const kept = await makeUser({ username: "kai_kept" });
+    const viewer = await makeVerifiedUser();
+    const banned = await makeVerifiedUser({ username: "kai_banned" });
+    const kept = await makeVerifiedUser({ username: "kai_kept" });
     await banUser({ userId: banned, reason: "spam", bannedBy: viewer });
 
     const found = await searchRunners(viewer, "kai");
@@ -95,10 +104,10 @@ describe("runner search leaves out hidden runners", () => {
   });
 
   it("drops a runner the viewer blocked, and one who blocked the viewer", async () => {
-    const viewer = await makeUser();
-    const blockedByViewer = await makeUser({ username: "lee_one" });
-    const blockedViewer = await makeUser({ username: "lee_two" });
-    const kept = await makeUser({ username: "lee_three" });
+    const viewer = await makeVerifiedUser();
+    const blockedByViewer = await makeVerifiedUser({ username: "lee_one" });
+    const blockedViewer = await makeVerifiedUser({ username: "lee_two" });
+    const kept = await makeVerifiedUser({ username: "lee_three" });
     await blockRunner(viewer, blockedByViewer);
     await blockRunner(blockedViewer, viewer);
 
@@ -110,9 +119,9 @@ describe("runner search leaves out hidden runners", () => {
   it("is not moved by a block between two other runners", async () => {
     // The pair is the viewer and the result, never any block that happens
     // to name the result.
-    const viewer = await makeUser();
-    const bystander = await makeUser();
-    const found = await makeUser({ username: "moe_found" });
+    const viewer = await makeVerifiedUser();
+    const bystander = await makeVerifiedUser();
+    const found = await makeVerifiedUser({ username: "moe_found" });
     await blockRunner(bystander, found);
     await blockRunner(found, bystander);
 
@@ -120,12 +129,14 @@ describe("runner search leaves out hidden runners", () => {
   });
 
   it("filters before the LIMIT, so twenty hidden matches cannot empty the page", async () => {
-    const viewer = await makeUser();
+    const viewer = await makeVerifiedUser();
     for (let index = 0; index < 20; index += 1) {
-      const hidden = await makeUser({ username: `nia_${String(index)}` });
+      const hidden = await makeVerifiedUser({
+        username: `nia_${String(index)}`,
+      });
       await blockRunner(viewer, hidden);
     }
-    const kept = await makeUser({ username: "nia_kept" });
+    const kept = await makeVerifiedUser({ username: "nia_kept" });
 
     expect(await foundIds(viewer, "nia")).toStrictEqual([kept]);
   });
@@ -159,17 +170,17 @@ describe("runner search leaves out hidden runners", () => {
 
 describe("H reads as not found for a hidden runner", () => {
   it("answers nothing for a banned runner", async () => {
-    const viewer = await makeUser();
-    const banned = await makeUser();
+    const viewer = await makeVerifiedUser();
+    const banned = await makeVerifiedUser();
     await banUser({ userId: banned, reason: "spam", bannedBy: viewer });
 
     expect(await otherProfile(banned, viewer)).toBeUndefined();
   });
 
   it("answers nothing across a block, from either end", async () => {
-    const viewer = await makeUser();
-    const blockedByViewer = await makeUser();
-    const blockedViewer = await makeUser();
+    const viewer = await makeVerifiedUser();
+    const blockedByViewer = await makeVerifiedUser();
+    const blockedViewer = await makeVerifiedUser();
     await blockRunner(viewer, blockedByViewer);
     await blockRunner(blockedViewer, viewer);
 
@@ -178,9 +189,9 @@ describe("H reads as not found for a hidden runner", () => {
   });
 
   it("still shows the runner to someone outside the pair", async () => {
-    const viewer = await makeUser();
-    const bystander = await makeUser();
-    const runner = await makeUser();
+    const viewer = await makeVerifiedUser();
+    const bystander = await makeVerifiedUser();
+    const runner = await makeVerifiedUser();
     await blockRunner(bystander, runner);
 
     const profile = await otherProfile(runner, viewer);
@@ -188,9 +199,9 @@ describe("H reads as not found for a hidden runner", () => {
   });
 
   it("leaves out the entry the viewer reported, and only for them", async () => {
-    const reporter = await makeUser();
-    const bystander = await makeUser();
-    const author = await makeUser();
+    const reporter = await makeVerifiedUser();
+    const bystander = await makeVerifiedUser();
+    const author = await makeVerifiedUser();
     const reported = await postedBy(author);
     await fileReport({
       reporterId: reporter,
@@ -210,8 +221,8 @@ describe("H reads as not found for a hidden runner", () => {
 
 describe("profileAtHandle", () => {
   it("finds the runner holding the handle, and whether the viewer follows them", async () => {
-    const viewer = await makeUser();
-    const runner = await makeUser({ username: "pia_runs" });
+    const viewer = await makeVerifiedUser();
+    const runner = await makeVerifiedUser({ username: "pia_runs" });
     await follow(viewer, runner);
 
     const found = await profileAtHandle(viewer, "pia_runs");
@@ -224,8 +235,8 @@ describe("profileAtHandle", () => {
   });
 
   it("says when the viewer does not follow them yet", async () => {
-    const viewer = await makeUser();
-    await makeUser({ username: "quin_runs" });
+    const viewer = await makeVerifiedUser();
+    await makeVerifiedUser({ username: "quin_runs" });
 
     expect(await profileAtHandle(viewer, "quin_runs")).toMatchObject({
       kind: "runner",
@@ -234,7 +245,7 @@ describe("profileAtHandle", () => {
   });
 
   it("answers `own` for the viewer's own handle", async () => {
-    const viewer = await makeUser({ username: "rae_self" });
+    const viewer = await makeVerifiedUser({ username: "rae_self" });
 
     expect(await profileAtHandle(viewer, "rae_self")).toStrictEqual({
       kind: "own",
@@ -242,8 +253,8 @@ describe("profileAtHandle", () => {
   });
 
   it("answers `changed` for a handle somebody used to hold, and names nobody", async () => {
-    const viewer = await makeUser();
-    const runner = await makeUser({ username: "sol_new" });
+    const viewer = await makeVerifiedUser();
+    const runner = await makeVerifiedUser({ username: "sol_new" });
     await db()
       .insert(usernameHistory)
       .values({ username: "sol_old", userId: runner, retiredAt: NOW });
@@ -254,16 +265,16 @@ describe("profileAtHandle", () => {
   });
 
   it("answers nothing for a handle nobody has held, or one no handle could be", async () => {
-    const viewer = await makeUser();
+    const viewer = await makeVerifiedUser();
 
     expect(await profileAtHandle(viewer, "tia_nobody")).toBeUndefined();
     expect(await profileAtHandle(viewer, "_not a handle")).toBeUndefined();
   });
 
   it("answers nothing for a banned holder or one in a block pair", async () => {
-    const viewer = await makeUser();
-    const banned = await makeUser({ username: "uma_banned" });
-    const blocked = await makeUser({ username: "uma_blocked" });
+    const viewer = await makeVerifiedUser();
+    const banned = await makeVerifiedUser({ username: "uma_banned" });
+    const blocked = await makeVerifiedUser({ username: "uma_blocked" });
     await banUser({ userId: banned, reason: "spam", bannedBy: viewer });
     await blockRunner(blocked, viewer);
 
@@ -290,10 +301,10 @@ describe("D's under-review marker", () => {
 
 describe("a runner whose profile the viewer reported (D-68)", () => {
   it("leaves the reporter's search, and nobody else's", async () => {
-    const reporter = await makeUser();
-    const bystander = await makeUser();
-    const reported = await makeUser({ username: "vic_reported" });
-    const kept = await makeUser({ username: "vic_kept" });
+    const reporter = await makeVerifiedUser();
+    const bystander = await makeVerifiedUser();
+    const reported = await makeVerifiedUser({ username: "vic_reported" });
+    const kept = await makeVerifiedUser({ username: "vic_kept" });
     await reportProfile(reporter, reported);
 
     expect(await foundIds(reporter, "vic")).toStrictEqual([kept]);
@@ -305,8 +316,8 @@ describe("a runner whose profile the viewer reported (D-68)", () => {
   it("is not moved by a report against one of their entries", async () => {
     // A profile report and an entry report are different subjects, and
     // the entry's id is not the runner's.
-    const reporter = await makeUser();
-    const runner = await makeUser({ username: "wen_runs" });
+    const reporter = await makeVerifiedUser();
+    const runner = await makeVerifiedUser({ username: "wen_runs" });
     await fileReport({
       reporterId: reporter,
       subjectType: "entry",
@@ -320,9 +331,9 @@ describe("a runner whose profile the viewer reported (D-68)", () => {
   });
 
   it("reads as not found on the reporter's H, by id and by handle, and nobody else's", async () => {
-    const reporter = await makeUser();
-    const bystander = await makeUser();
-    const reported = await makeUser({ username: "xan_reported" });
+    const reporter = await makeVerifiedUser();
+    const bystander = await makeVerifiedUser();
+    const reported = await makeVerifiedUser({ username: "xan_reported" });
     await reportProfile(reporter, reported);
 
     expect(await otherProfile(reported, reporter)).toBeUndefined();
@@ -395,7 +406,7 @@ describe("the author's own under-review entry on Following (D-67)", () => {
   it("is gone from a follower's feed, whose own entries are unmarked", async () => {
     const { author, entryId } = await entryIn("hidden_pending_review");
     const shown = await postedBy(author);
-    const follower = await makeUser();
+    const follower = await makeVerifiedUser();
     await follow(follower, author);
     const theirs = await postedBy(follower);
 
@@ -420,10 +431,10 @@ describe("the author's own under-review entry on Following (D-67)", () => {
   });
 
   it("still leaves out a followee blocked or reported by the viewer, and a banned one", async () => {
-    const viewer = await makeUser();
-    const blocked = await makeUser();
-    const reported = await makeUser();
-    const banned = await makeUser();
+    const viewer = await makeVerifiedUser();
+    const blocked = await makeVerifiedUser();
+    const reported = await makeVerifiedUser();
+    const banned = await makeVerifiedUser();
     for (const runner of [blocked, reported, banned]) {
       await follow(viewer, runner);
     }
@@ -440,5 +451,39 @@ describe("the author's own under-review entry on Following (D-67)", () => {
     await banUser({ userId: banned, reason: "spam", bannedBy: viewer });
 
     expect(await followingIds(viewer)).toStrictEqual([]);
+  });
+});
+
+describe("an unconfirmed runner is not findable (design 133, D-113 Q2)", () => {
+  it("leaves search, H and the old redirect until the address is confirmed", async () => {
+    const viewer = await makeVerifiedUser();
+    const waiting = await makeUser({ username: "nia_waiting" });
+    await addAccount(waiting, false);
+    const confirmed = await makeVerifiedUser({ username: "nia_confirmed" });
+
+    expect(await foundIds(viewer, "nia_")).toStrictEqual([confirmed]);
+    expect(await otherProfile(waiting, viewer)).toBeUndefined();
+    expect(await visibleRunnerHandle(waiting, viewer)).toBeUndefined();
+    expect(await profileAtHandle(viewer, "nia_waiting")).toBeUndefined();
+
+    await db()
+      .update(user)
+      .set({ emailVerified: true })
+      .where(eq(user.id, waiting));
+
+    const found = await foundIds(viewer, "nia_");
+    expect(found).toHaveLength(2);
+    expect(found).toStrictEqual(expect.arrayContaining([confirmed, waiting]));
+    expect(await visibleRunnerHandle(waiting, viewer)).toMatchObject({
+      username: "nia_waiting",
+    });
+  });
+
+  it("is not found with no account at all, a runner who is gone", async () => {
+    const viewer = await makeVerifiedUser();
+    const gone = await makeUser({ username: "oli_gone" });
+
+    expect(await foundIds(viewer, "oli_")).toStrictEqual([]);
+    expect(await otherProfile(gone, viewer)).toBeUndefined();
   });
 });

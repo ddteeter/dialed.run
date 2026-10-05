@@ -10,7 +10,9 @@
  * stored.
  */
 import { and, eq, isNull, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { DrizzleD1Database, drizzle } from "drizzle-orm/d1";
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 
 import { user } from "../../db/schema-auth";
@@ -233,6 +235,18 @@ export async function emailConfirmationOf(
 ): Promise<boolean | undefined> {
   const [row] = await emailConfirmationRead(db, userId);
   return row?.isConfirmed;
+}
+
+/**
+ * The same fact as a `WHERE` clause over another table's runner column:
+ * whether the runner it names has a confirmed address (design 133,
+ * decision D-113 Q2). A primary-key probe on `user` per candidate, so it
+ * never scans. An absent account is not confirmed, as `isVerified` reads
+ * it. For a surface that shows one runner to another — search and H —
+ * where an unconfirmed runner must not be found.
+ */
+export function runnerConfirmed(runnerId: SQLiteColumn): SQL {
+  return sql`exists (select 1 from ${user} where ${user.id} = ${runnerId} and ${user.emailVerified} = 1)`;
 }
 
 /**
