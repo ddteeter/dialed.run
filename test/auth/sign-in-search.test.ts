@@ -62,7 +62,9 @@ describe("parseSignInSearch", () => {
 
   it("returns only to a path on this site", () => {
     expect(back("/closet/abc")).toBe("/closet/abc");
-    expect(back("/call?from=tab#top")).toBe("/call?from=tab#top");
+    // Kept as the path a router lands on: path and search, normalised, and
+    // never the hash, which no server sees.
+    expect(back("/call?from=tab#top")).toBe("/call?from=tab");
     // Another host, however it is spelled.
     expect(back("https://evil.example/")).toBeUndefined();
     expect(back("//evil.example/")).toBeUndefined();
@@ -71,7 +73,8 @@ describe("parseSignInSearch", () => {
     expect(back("")).toBeUndefined();
     // Never back into the auth pages.
     expect(back("/auth/login")).toBeUndefined();
-    expect(back("/authority")).toBeUndefined();
+    // The auth segment, not its letters: `/authority` is somewhere else.
+    expect(back("/authority")).toBe("/authority");
   });
 
   it("refuses what a URL parser would quietly rewrite into another host", () => {
@@ -89,10 +92,10 @@ describe("parseSignInSearch", () => {
     expect(back("/closet\u{1F}")).toBeUndefined();
     expect(back("/closet\u{7F}")).toBeUndefined();
     // The edges of the range, from the inside out.
-    expect(back("/closet\u{20}x")).toBe("/closet x");
+    expect(back("/closet\u{20}x")).toBe("/closet%20x");
     expect(back("/closet\u{7E}")).toBe("/closet~");
     expect(back("/closet\u{9F}")).toBeUndefined();
-    expect(back("/closet\u{A0}")).toBe("/closet\u{A0}");
+    expect(back("/closet\u{A0}")).toBe("/closet%C2%A0");
     // An ordinary escape is still a path on this site.
     expect(back("/feed/search?q=a%20b")).toBe("/feed/search?q=a%20b");
   });

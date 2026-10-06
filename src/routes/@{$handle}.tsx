@@ -7,7 +7,7 @@ import {
   profileAtHandleQuery,
   unfollowAction,
 } from "../modules/feed/functions";
-import { orHandlePage, requireSignedIn } from "../modules/feed/redirect";
+import { orHandlePage, viewerContext } from "../modules/feed/redirect";
 import {
   noindexHead,
   profileReportSubject,
@@ -22,23 +22,16 @@ import { fileReportAction } from "../modules/safety/functions";
  * noindex (SAF-14, FEED-1). The one H: `/feed/u/$userId` redirects here.
  */
 export const Route = createFileRoute("/@{$handle}")({
-  beforeLoad: async ({ location }) => {
-    requireSignedIn(await getSession(), location);
-  },
-  loader: async ({ params, location }) => {
-    const [found, session, bell] = await Promise.all([
+  head: noindexHead,
+  beforeLoad: ({ location }) => viewerContext(getSession, location),
+  loader: async ({ params, context }) => {
+    const [found, bell] = await Promise.all([
       profileAtHandleQuery({ data: { handle: params.handle } }),
-      getSession(),
       bellStateFn(),
     ]);
-    return {
-      found: orHandlePage(found),
-      viewerId: requireSignedIn(session, location).user.id,
-      bell,
-    };
+    return { found: orHandlePage(found), viewerId: context.viewerId, bell };
   },
   component: HandlePage,
-  head: noindexHead,
 });
 
 function HandlePage() {

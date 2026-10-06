@@ -50,6 +50,20 @@ describe("landingAfterSignIn", () => {
     );
   });
 
+  it("goes to the path a router would land on, not the spelling it came in", () => {
+    expect(landingAfterSignIn("/feed/./entry/../me?tab=kits")).toBe(
+      "/feed/me?tab=kits",
+    );
+    expect(landingAfterSignIn("/feed?q=a b")).toBe("/feed?q=a%20b");
+  });
+
+  it("keeps a way back as long as any real page, and no longer", () => {
+    const longest = `/${"a".repeat(2047)}`;
+    expect(longest).toHaveLength(2048);
+    expect(landingAfterSignIn(longest)).toBe(longest);
+    expect(landingAfterSignIn(`${longest}a`)).toBe("/");
+  });
+
   it("falls back to home with nothing carried", () => {
     expect(DEFAULT_LANDING).toBe("/");
     expect(landingAfterSignIn(undefined)).toBe("/");
@@ -62,8 +76,17 @@ describe("landingAfterSignIn", () => {
       String.raw`/\evil.example/`,
       "/\t/evil.example",
       "/%2Fevil.example",
+      // On this origin, but resolving to the pathname `//evil.example/x`,
+      // which is protocol-relative to anything building a Location.
+      "/.//evil.example/x",
+      "/..//evil.example",
+      "/feed/..//evil.example",
+      // No host to resolve to at all: refused, not thrown.
+      "//",
       "javascript:alert(1)",
       "/auth/login",
+      "/%61uth/login",
+      `/${"a".repeat(2048)}`,
       "",
       42,
     ]) {
@@ -84,6 +107,15 @@ describe("returnPathSchema's loop rule", () => {
     expect(isAccepted("/feed/../auth/login")).toBe(false);
     expect(isAccepted("/AUTH/login")).toBe(false);
     expect(isAccepted("/Auth/signup")).toBe(false);
+    expect(isAccepted("/auth")).toBe(false);
+    // A router decodes an escaped letter before it matches.
+    expect(isAccepted("/%61uth/login")).toBe(false);
+    expect(isAccepted("/%41%55%54%48/signup")).toBe(false);
+  });
+
+  it("refuses the auth segment, not every path that begins with its letters", () => {
+    expect(isAccepted("/authors")).toBe(true);
+    expect(isAccepted("/%61uthors")).toBe(true);
   });
 
   it("judges the path, not the search", () => {

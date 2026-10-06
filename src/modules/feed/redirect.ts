@@ -55,6 +55,21 @@ export function requireSignedIn<T>(
 }
 
 /**
+ * `beforeLoad`'s gate as route context: the signed-in viewer's id, or the
+ * log-in redirect. A route that needs the viewer reads `context.viewerId`
+ * in its loader rather than asking for the session a second time — one
+ * session read per navigation, and one gate rather than a gate and a
+ * re-check. `getSession` is the caller's, so this stays importable by a
+ * test while the route wires the server function in.
+ */
+export async function viewerContext(
+  getSession: () => Promise<{ user: { id: string } } | null>,
+  location: Readonly<{ pathname: string; searchStr: string }>,
+): Promise<{ viewerId: string }> {
+  return { viewerId: requireSignedIn(await getSession(), location).user.id };
+}
+
+/**
 Back to the feed for anything the viewer may not see, or that is not there.
 The two are deliberately the same answer: telling someone a private entry
 exists is most of what they wanted to know.

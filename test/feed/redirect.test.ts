@@ -9,6 +9,7 @@ import {
   redirectTo,
   toHandlePage,
   requireSignedIn,
+  viewerContext,
 } from "../../src/modules/feed/redirect";
 
 /**
@@ -103,6 +104,31 @@ describe("requireSignedIn", () => {
       }),
     ).toMatchObject({
       options: { to: "/auth/login", search: { redirect: undefined } },
+    });
+  });
+});
+
+describe("viewerContext", () => {
+  it("is the signed-in viewer's id, as route context", async () => {
+    await expect(
+      viewerContext(
+        () => Promise.resolve({ user: { id: "01USER" } }),
+        ENTRY_LINK,
+      ),
+    ).resolves.toStrictEqual({ viewerId: "01USER" });
+  });
+
+  it("sends a signed-out visitor to log in, carrying the page as the way back", async () => {
+    const signedOut = viewerContext(
+      () => Promise.resolve(NO_SESSION),
+      ENTRY_LINK,
+    );
+    await expect(signedOut).rejects.toSatisfy(isRedirect);
+    await expect(signedOut).rejects.toMatchObject({
+      options: {
+        to: "/auth/login",
+        search: { redirect: "/feed/entry/01ENTRY?from=mail" },
+      },
     });
   });
 });

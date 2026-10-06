@@ -18,23 +18,19 @@ import {
   verdictPromptQuery,
   viewerUnitsQuery,
 } from "../../modules/feed/functions";
-import { orBackToFeed, requireSignedIn } from "../../modules/feed/redirect";
+import { orBackToFeed, viewerContext } from "../../modules/feed/redirect";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../modules/notifications/functions";
 
 export const Route = createFileRoute("/feed/entry/$entryId")({
   head: noindexHead,
-  beforeLoad: async ({ location }) => {
-    requireSignedIn(await getSession(), location);
-  },
-  loader: async ({ params, location }) => {
-    const [session, found, units, bell] = await Promise.all([
-      getSession(),
+  beforeLoad: ({ location }) => viewerContext(getSession, location),
+  loader: async ({ params, context: { viewerId } }) => {
+    const [found, units, bell] = await Promise.all([
       entryDetailQuery({ data: { entryId: params.entryId } }),
       viewerUnitsQuery(),
       bellStateFn(),
     ]);
-    const viewerId = requireSignedIn(session, location).user.id;
     const entry = orBackToFeed(found);
     return {
       entry,
