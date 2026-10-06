@@ -4,7 +4,8 @@
  * its receipt), D7 (the request, Send invite), `/join` (the invite link
  * fills the code), Au2 (create account), Au4 (check your email, Resend),
  * the confirm link's landing, O0 (pick a handle, a taken one first), Au3
- * (wrong password), ACC-4 (forgot it, the reset link, a new password), Au1
+ * (wrong password), Au6 (Google didn't answer, under its button), ACC-4
+ * (forgot it, the reset link, a new password), Au1
  * (log in, landing on the deep link that sent the runner there), sign out
  * from the settings index, and unpublished terms asking
  * nothing (ACC-6, D-93: no acceptance recorded, no prompt) — one journey,
@@ -259,6 +260,28 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   await expect(page.getByRole("status")).toHaveText(
     "Not signed in. One field needs a fix.",
   );
+
+  // Au6 as round 33 draws it (R-128): Google's failure is a control
+  // failure directly under its button, with Try again. Google's answer is
+  // made to fail here so the demo never reaches Google.
+  await scene(page, "Au6 · Google didn't answer: the band under its button");
+  await page.route("**/api/auth/sign-in/social", (route) =>
+    route.fulfill({ status: 502, body: "{}" }),
+  );
+  await page.getByRole("button", { name: "Continue with Google" }).click();
+  const googleFailed = page.locator(
+    "[data-part='control-failure'][data-state='google-failed']",
+  );
+  await expect(googleFailed).toContainText("Not signed in", {
+    timeout: 15_000,
+  });
+  await expect(googleFailed).toContainText(
+    "Google didn't answer. Try again, or use your email.",
+  );
+  await expect(
+    googleFailed.getByRole("button", { name: "Try again" }),
+  ).toBeVisible();
+  await page.unroute("**/api/auth/sign-in/social");
 
   // ACC-4: forgotten, it is reset by email.
   await scene(page, "Forgot it? A reset link goes to the address");

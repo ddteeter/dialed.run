@@ -788,8 +788,10 @@ WHILE WE CHECK`), which offer no fix and are a different case? Either
     and 17): the prompt is a page with two leads and the owner's WHAT
     CHANGED summary; "Back to contents" and the footer labels are
     confirmed; and `terms.csv` is on the board, with a `how` column. Two
-    parts of the prompt are not adopted, because D-95 and D-96 stand. Not
-    built. Round 30 #4 redraws both parts to D-95 and D-96.** Built from
+    parts of the prompt are not adopted, because D-95 and D-96 stand.
+    Round 30 #4 redraws both parts to D-95 and D-96. Built in design PR E:
+    the prompt to rounds 29–30, `terms.csv`'s `how`, and the read-only
+    `/account`; what it built beside the drawings is item 50.** Built from
     existing primitives.
     - **The terms prompt (`/account/terms`) is undrawn.** Once the terms
       are published (D-93; nothing is asked until then), a signed-in
@@ -968,7 +970,55 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     sentence alone, with no address line and no Resend. **The ask:** a
     lead for Follow ("Following runners…"?), and whether the
     no-address-yet state needs drawing or the brackets should breathe in
-    the address's place.
+    the address's place. **Round 29 #11 answered the email change** ("Confirm
+    this address before you change it.", built in design PR E) and struck
+    round 27's list, so each lead names only the refused control; Follow
+    is still undrawn.
+
+50. **What design PR E built beside rounds 29–30's drawings (round 29 #6,
+    #11–13, #17; round 30 #4; D-95, D-102).** Built from existing
+    primitives. Each is a reading of a drawing or a contract, not a
+    question that blocks anything.
+    - **Au6's band is not a second `role="status"`.** Round 33's Au6 and
+      round 29's Google frames mark the control failure `role="status"`.
+      The Accessibility Contract's rule 08 allows one status region per
+      screen, and the page's own already speaks the band's words, so the
+      build keeps one and the band is announced through it (the contract
+      outranks the board). Google's refusals are the same `control-failure`
+      region, as round 29 draws them. **The ask:** drop the role from the
+      frames, or say when a band should be its own region.
+    - **D-102 names "Add a garment", not "Add a piece".** Round 30's note
+      gives "Log a run, Add a piece" as the runner's words. No page in the
+      build is called "Add a piece"; `/closet/new`'s heading is "Add a
+      garment", so the line names the page by the heading the runner saw.
+      `/runs/new` and `/runs/manual` are "Log a run". Any other page,
+      including a refused control's, gets no line, since nothing typed was
+      lost there. **The ask:** confirm, or rename the page.
+    - **Log out in the escape line is a button with a 44px target.** Rule
+      03's inline exception is for links, and Log out is an action, so it
+      keeps `target` and the line is a little taller than the board's.
+      **The ask:** none unless design wants the inline target for buttons.
+    - **A failed Accept says the shared cause line.** The board's "Your
+      connection dropped. Nothing was recorded." is round 29's; the build's
+      band reads `NOT ACCEPTED` with `useControlAction`'s one cause line, the
+      same sentence every control uses, under Accept. **The ask:** confirm,
+      or rule that controls may name what was not recorded.
+    - **The read-only `/account` has no Strava row.** Round 30 #4a draws
+      Email and Strava. Settings › Account holds Email, Username and
+      Password; Strava is its own settings page. So the gated page shows
+      those three as text, each with "Accept the Terms to change this." and
+      an Accept link to the prompt, then Sign out everywhere, Get a copy
+      and Delete account, live. There is no tab bar, as drawn, but the
+      back link is the sub-page's "‹ Settings", not "‹ Terms": the root's
+      gate sends Settings to the prompt, so it lands where the board's
+      does, and the page keeps the one heading source every settings
+      sub-page shares (rule 04). **The ask:** confirm both, or move
+      Strava here.
+    - **WHAT CHANGED's kicker is `MONO.xs` in `--muted`** on `--tint`, a
+      plain list with a `·` before each line, under the lead and above
+      "Read the full Terms". The owner writes the lines in the terms' front
+      matter (`changed:` beside `published: true`), and v1 has none, so the
+      block does not show yet. **The ask:** none.
 
 ## Answered in round 34 (imported 2026-10-04)
 
