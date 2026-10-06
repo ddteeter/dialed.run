@@ -318,6 +318,22 @@ describe("deciding", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("refuses suspected CSAM with no reason, on the field, without asking", async () => {
+    const user = userEvent.setup();
+    const { resolve } = renderQueue([row()]);
+
+    await user.click(
+      screen.getByRole("button", { name: "Remove as suspected CSAM" }),
+    );
+
+    expect(resolve).not.toHaveBeenCalled();
+    const said = await screen.findAllByText("Pick why it's coming down.");
+    expect(said.length).toBeGreaterThan(0);
+    expect(
+      screen.queryByRole("button", { name: "Remove and report" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("treats a reason picked and then taken back as nothing chosen", async () => {
     const user = userEvent.setup();
     const { resolve } = renderQueue([row()]);
@@ -416,6 +432,45 @@ describe("deciding", () => {
       expect(next).toHaveFocus();
     });
     expect(next).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("keeps handing focus on, row after row", async () => {
+    const user = userEvent.setup();
+    renderQueue([
+      row(),
+      row({ id: "01HYYYYYYYYYYYYYYYYYYYYYYY", subjectId: "e-2" }),
+      row({ id: "01HXXXXXXXXXXXXXXXXXXXXXXX", subjectId: "e-3" }),
+    ]);
+
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "entry · e-2" })).toHaveFocus();
+    });
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "entry · e-3" })).toHaveFocus();
+    });
+    expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
+  });
+
+  it("does not take focus back from the decision once the row has it", async () => {
+    const user = userEvent.setup();
+    renderQueue([
+      row(),
+      row({ id: "01HYYYYYYYYYYYYYYYYYYYYYYY", subjectId: "e-2" }),
+    ]);
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+    const next = screen.getByRole("button", { name: "entry · e-2" });
+    await waitFor(() => {
+      expect(next).toHaveFocus();
+    });
+
+    // Picking a reason re-renders the row; focus stays on the picker.
+    const picker = screen.getByRole("combobox", { name: /Why it comes down/ });
+    await user.selectOptions(picker, "it's an ad or spam");
+
+    expect(picker).toHaveFocus();
   });
 
   it("does not ask the same row twice", async () => {

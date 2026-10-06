@@ -1183,6 +1183,40 @@ describe("with blur off from the start (SAF-2)", () => {
 });
 
 describe("W3 waits for the runner (round 28 #5)", () => {
+  it("names the upload after the photo it now holds", async () => {
+    const toFile = vi.fn<BlurPipeline["toFile"]>().mockResolvedValue(BLURRED);
+    const { pipeline } = fakePipeline({ toFile });
+    const second = new File([new Uint8Array([2])], "second.jpg", {
+      type: "image/jpeg",
+    });
+    const view = render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={vi.fn()}
+        onCancel={noop}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+    await waitFor(() => {
+      expect(toFile).toHaveBeenCalledWith(expect.anything(), "run.jpg");
+    });
+
+    view.rerender(
+      <PhotoBlur
+        file={second}
+        onReady={vi.fn()}
+        onCancel={noop}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(toFile).toHaveBeenLastCalledWith(expect.anything(), "second.jpg");
+    });
+  });
+
   it("draws the head, and the foot under the cells", async () => {
     const { pipeline } = fakePipeline();
     render(
@@ -1200,10 +1234,9 @@ describe("W3 waits for the runner (round 28 #5)", () => {
     ).toBeInTheDocument();
     const cancel = screen.getByRole("button", { name: "Cancel" });
     const use = screen.getByRole("button", { name: "Use this photo" });
-    const another = screen.getByRole("button", { name: "Pick another" });
+    const another = screen.getByLabelText("Pick another");
     expect(cancel).toHaveAttribute("type", "button");
     expect(use).toHaveAttribute("type", "button");
-    expect(another).toHaveAttribute("type", "button");
     // Under the cells, in the board's order.
     const cells = await screen.findByRole("group", { name: "Blur by area" });
     expect(cells.compareDocumentPosition(use)).toBe(
@@ -1449,9 +1482,8 @@ describe("W3 waits for the runner (round 28 #5)", () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it("opens the picker on Pick another", async () => {
+  it("offers Pick another as the picker itself, for photos only", () => {
     const { pipeline } = fakePipeline();
-    const user = userEvent.setup();
     render(
       <PhotoBlur
         file={PHOTO}
@@ -1461,15 +1493,12 @@ describe("W3 waits for the runner (round 28 #5)", () => {
         storage={emptyStorage()}
       />,
     );
-    const input = picker();
-    const opened = vi.fn();
-    input.addEventListener("click", opened);
 
-    await user.click(screen.getByRole("button", { name: "Pick another" }));
-
-    expect(opened).toHaveBeenCalledTimes(1);
-    expect(input).toHaveAttribute("accept", photoAcceptAttribute);
+    // The label is the press; the input inside it opens the picker.
+    const input = screen.getByLabelText("Pick another");
+    expect(input).toBe(picker());
     expect(input).toHaveAttribute("type", "file");
+    expect(input).toHaveAttribute("accept", photoAcceptAttribute);
   });
 
   it("checks a new pick from the start, and hands that one over", async () => {

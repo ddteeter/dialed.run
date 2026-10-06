@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
 
 import {
@@ -464,18 +464,21 @@ function ReviewRow({
   reviewHandle,
   onSettled,
 }: ReviewRowProps): JSX.Element {
-  const [opener, setOpener] = useState<HTMLButtonElement | undefined>();
   const shouldFocus = active && focusOnOpen;
-  useEffect(() => {
-    if (shouldFocus) opener?.focus();
-  }, [shouldFocus, opener]);
+  // A ref callback that changes only with `shouldFocus`: React calls it
+  // with the button when it changes, so focus moves once — when this row
+  // becomes the one to decide — and not on every render after.
+  const opener = useCallback(
+    (node: HTMLButtonElement | null) => {
+      if (shouldFocus && node !== null) node.focus();
+    },
+    [shouldFocus],
+  );
 
   return (
     <li className="flex flex-col gap-2 border border-hairline p-3">
       <button
-        ref={(node) => {
-          setOpener(node ?? undefined);
-        }}
+        ref={opener}
         type="button"
         aria-expanded={active}
         onClick={onActivate}

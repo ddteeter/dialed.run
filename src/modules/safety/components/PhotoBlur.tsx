@@ -151,7 +151,6 @@ export function PhotoBlur({
    */
   const [prepared, setPrepared] = useState<File>();
   const [heading, setHeading] = useState<HTMLHeadingElement>();
-  const [picker, setPicker] = useState<HTMLInputElement>();
 
   useEffect(() => {
     heading?.focus();
@@ -202,29 +201,23 @@ export function PhotoBlur({
       >
         Use this photo
       </button>
-      <button
-        type="button"
-        onClick={() => {
-          picker?.click();
-        }}
-        className="target w-full cursor-pointer rounded-pill border border-hairline bg-transparent px-4 py-4 text-lead font-semibold text-ink"
-      >
+      {/* The picker's own input inside its label, as the well's Replace
+          is (`ui/FileWell`): pressing it opens the picker with no script,
+          and the input is what a keyboard reaches. */}
+      <label className="target flex w-full cursor-pointer items-center justify-center rounded-pill border border-hairline bg-transparent px-4 py-4 text-lead font-semibold text-ink has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink">
         Pick another
-      </button>
-      <input
-        ref={(node) => {
-          setPicker(node ?? undefined);
-        }}
-        type="file"
-        accept={photoAcceptAttribute}
-        hidden
-        data-part="pick-another"
-        onChange={(event) => {
-          // Dismissing the picker is an empty list, and changes nothing.
-          const next = event.currentTarget.files?.[0];
-          if (next !== undefined) setAnother({ file: next, key: newUlid() });
-        }}
-      />
+        <input
+          type="file"
+          accept={photoAcceptAttribute}
+          className="sr-only"
+          data-part="pick-another"
+          onChange={(event) => {
+            // Dismissing the picker is an empty list, and changes nothing.
+            const [next] = event.currentTarget.files ?? [];
+            if (next !== undefined) setAnother({ file: next, key: newUlid() });
+          }}
+        />
+      </label>
     </div>
   );
 }
@@ -320,8 +313,9 @@ function BlurBody({
       if (signal.aborted) return;
       // No fallback to `file`. Handing back the original because the
       // canvas failed would upload exactly the frame this screen promises
-      // never leaves the device, and would do it silently.
-      if (blurred !== undefined) onPrepared(blurred);
+      // never leaves the device, and would do it silently: a canvas with
+      // no file leaves nothing behind Use this photo.
+      onPrepared(blurred);
     },
     [file.name, onPrepared, pipeline],
   );

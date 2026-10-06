@@ -170,7 +170,10 @@ test("add garments with product identity -> detail in round 22's order -> retire
   });
   await expect(well).toHaveAttribute("data-state", "uploading");
   const choosing = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: "Pick another" }).click();
+  await page
+    .locator("[data-part='photo-check']")
+    .getByText("Pick another", { exact: true })
+    .click();
   const chooser = await choosing;
   await chooser.setFiles({
     name: "houdini.png",
