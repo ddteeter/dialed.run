@@ -876,13 +876,19 @@ describe("accessGate", () => {
       .select({ confirmedAt: inviteRedemptions.confirmedAt })
       .from(inviteRedemptions);
     expect(row?.confirmedAt).toBeGreaterThan(0);
-    // ACC-6: the account accepted the published terms, at the same moment.
+    // ACC-6: the account accepted the published terms, at the same moment,
+    // by signing up (round 29 #17).
     const accepted = await db
       .select()
       .from(termsAcceptances)
       .where(eq(termsAcceptances.userId, mine.userId));
     expect(accepted).toStrictEqual([
-      { userId: mine.userId, version: 2, acceptedAt: row?.confirmedAt },
+      {
+        userId: mine.userId,
+        version: 2,
+        acceptedAt: row?.confirmedAt,
+        how: "sign-up",
+      },
     ]);
   });
 
