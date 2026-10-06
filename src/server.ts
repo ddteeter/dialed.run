@@ -18,6 +18,7 @@ import { exportConsumersFromEnv } from "./modules/account/export-build";
 import { rescreenHandlesFromEnv } from "./modules/account/handle-rescreen";
 import { sweepExports } from "./modules/account/export-sweep";
 import { purgeDueAccounts } from "./modules/account/purge";
+import { linkTypedGarments } from "./modules/closet";
 import { mintNonce } from "./lib/csp-nonce";
 
 const startFetch = createStartHandler(defaultStreamHandler);
@@ -57,11 +58,14 @@ export default {
       // Account deletion's purge rides the daily firing (task 126, ACC-9),
       // and the data export's sweep the hourly `:00` one (ACC-10): handed
       // in here because `ops` cannot import either without a cycle. So
-      // does the handle re-ask, on the `:15` one (task 126 PR B).
+      // does the handle re-ask, on the `:15` one (task 126 PR B), and the
+      // product link a confirmation owes (design 133, D-113 Q1), which is
+      // `closet`'s, on the `:00` one and the daily drain.
       await handleScheduled(controller, undefined, {
         purgeAccounts: purgeDueAccounts,
         sweepExports,
         rescreenHandles: rescreenHandlesFromEnv,
+        linkProducts: linkTypedGarments,
       });
     } catch (error) {
       captureException(error, { surface: "scheduled", cron: controller.cron });

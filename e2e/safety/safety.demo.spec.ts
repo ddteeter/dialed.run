@@ -16,6 +16,7 @@
  * away, the author is never told who reported them — rather than infer
  * them from a diff.
  */
+import { user } from "../../src/db/schema-auth";
 import { newUlid } from "../../src/lib/ids";
 import { outfitEntries, runs, userProfiles } from "../../src/db/schema-core";
 import { storageStateFor } from "../support/accounts";
@@ -40,6 +41,15 @@ test("report a runner, block them, and take the block back", async ({
   // One stranger with one public entry. Scoped to ids generated here —
   // never a bare delete of these tables.
   await withLocalDb(async ({ core }) => {
+    // A confirmed account: H shows only those (design 133, D-113 Q2).
+    await core.insert(user).values({
+      id: strangerId,
+      name: strangerName,
+      email: `${strangerName}@example.com`,
+      emailVerified: true,
+      createdAt: new Date(startedAt * 1000),
+      updatedAt: new Date(startedAt * 1000),
+    });
     await core.insert(userProfiles).values({
       userId: strangerId,
       username: strangerName,

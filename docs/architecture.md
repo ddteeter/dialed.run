@@ -399,28 +399,32 @@ it is the sheet and its copy, which a callback would still have to render
 from inside feed. A node moves the whole subtree across; a callback moves
 only the verb.
 
-**A control that waits on another module's state is a gate, not a
-node.** Useful (feed) and report (safety) wait for a confirmed address
-(account). Every press asks the server, and the server's refusal opens
-`account`'s "Confirm your email first" — never the page's own idea of
-the address, which is as old as its loader. The screen owns the control
-and when the sheet opens; the sheet is account's. So the route hands a
-`ControlGate<Trigger>` (`ui`), `sheet: ({ open, trigger }, onClose) =>
-ReactNode`, built by `account`'s `confirmEmailGate`. `useControlGate`
-renders it once per screen and gives each control a guard,
-`ask(trigger)`, so D's Useful and report share one sheet and the trigger
-picks its lead sentence. The render function is the one place a callback
-is right here, because the open state belongs to the screen and the
-subtree still moves across whole. A control composed by the route for a
-screen that owns the sheet (report on D and H) is handed as a render
-function of that guard.
+**A refusal every screen answers the same way is answered at the root.**
+Useful, report, follow and an email change wait for a confirmed address
+(design 133, decision D-113). The server decides — `auth`'s
+`verifiedUserId` refuses with `EMAIL_UNCONFIRMED`, never the page's own
+idea of the address, which is as old as its loader; the code crosses the
+response through `lib/auth-signal`'s `signalAdapter`, registered in
+`src/start.ts`, because Start's own serializer keeps only an error's
+message — and the client answers that refusal once: `__root.tsx` provides `ui`'s
+`UnconfirmedRefusalAnswer` with `account`'s `confirmEmailOnRefusal`, a
+`ConfirmGate` (`sheet: ({ open, trigger }, onClose) => ReactNode`) whose
+sheet asks for the address as it opens. `useFormSubmit` and
+`useControlAction` open it on the refusal, led by the control's
+`confirmTrigger`, with no band and nothing announced — as the terms
+refusal opens the terms prompt (D-96). The render function is the one
+place a callback is right here: the open state is the root's, and the
+subtree still moves across whole. Before this, each screen built its own
+sheet and threaded a guard to every control, and a refusal reached a
+sheet only where a screen had remembered to wire one.
 
 **A server-side check owned by another module is a required argument.**
-`safety`'s `fileReport(input, { isVerified })` cannot import `account`
-(account reaches safety's barrel through `ops`, so that is a cycle), and
-an optional check is a door nobody has to close. So the check is a
-required parameter, and `safety/functions.ts` wires `account`'s own
-`isVerified` into it — glue, which is all a server-function file may be.
+`safety`'s ban lift owes the reopen email through `ops`, which it cannot
+import (`ops` imports safety), and an optional step is a door nobody has
+to close. So the owing is a required parameter (`Reopening`), and
+`safety/functions.ts` wires `ops`'s own outbox into it — glue, which is
+all a server-function file may be. (Report's address check used to be
+the example; it is the verification gate's now.)
 
 Raised as a question on PR #73 ("do we need to adjust the rules?"), and
 written down here because the answer is no but nothing recorded it — the
@@ -453,6 +457,7 @@ flowchart LR
     REQ -->|fast path failed| OB[(outbox table)]
     CRON2 -->|drain: claim, work, back off| OB
     HOURLY[The three hourly crons] -->|drain kind email only| OB
+    HOUR00[The :00 cron and the digest] -->|drain kind product_link,\ncloset's linker handed in| OB
     OB -->|kind email: deliverEmail| MAILER[[EMAIL send_email binding]]
     W[Worker] -->|exceptions, kept alive by waitUntil| SENTRY[Sentry]
     PING[External uptime ping] --> HEALTH["/api/health: D1 SELECT 1\non both, R2 head"]
@@ -475,7 +480,13 @@ flowchart LR
   email-change notice, the run reminder, an invite, the digest — is owed in
   the same batch as its event, keyed by its writer, optionally held back
   (`notBefore`), and drained on the three hourly firings as well as the
-  digest, so a held reminder goes within the half hour it falls due.
+  digest, so a held reminder goes within the half hour it falls due. The
+  third is `product_link` (design 133, D-113 Q1): confirming an address
+  owes the link of the runner's typed garments to the shared products,
+  in the confirmation's batch. It has no fast path — the link is
+  `closet`'s, which `ops` cannot import — so the Worker entry hands
+  `linkTypedGarments` to the `:00` firing and the digest (`DailyUpkeep`),
+  which drain it as a scheduled kind.
 - **Account deletion** (task 126, ACC-9) is **reconciliation**, not an
   outbox: the claim row in `account_deletions` is the durable "not
   finished" marker. A request writes it with every session's deletion and

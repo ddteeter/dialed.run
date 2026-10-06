@@ -8,8 +8,10 @@
  * runner changed their name (FEED-10), the author's own under-review entry
  * marked on the card and on D (FEED-6, D-67), the unconfirmed runner's
  * band on Feed and You and the "Confirm your email first" sheet that the
- * server's refusal of Useful and Report opens (round 26 #11; FEED-11,
- * SAF-15), and a runner taking back their own entry — one photo, then the
+ * server's refusal of Useful, Report and Follow opens (round 26 #11;
+ * FEED-11, SAF-15; design 133, D-113 Q3) while Unfollow goes through, an
+ * unconfirmed runner nobody can find in search (D-113 Q2), and a runner
+ * taking back their own entry — one photo, then the
  * whole entry (task 128 · SAF-3) — one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
@@ -79,6 +81,10 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
   const suffix = String(Date.now());
   const otherUserId = newUlid();
   const otherUsername = `trail_${suffix.slice(-8)}`;
+  // A runner who has claimed a handle and not confirmed their address yet:
+  // nobody finds them until they do (design 133, D-113 Q2).
+  const waitingUserId = newUlid();
+  const waitingUsername = `wait_${suffix.slice(-8)}`;
   // A handle the same runner used to hold (FEED-10): `/@old` says they
   // changed their name, and never who they are now (D-56).
   const oldUsername = `was_${suffix.slice(-8)}`;
@@ -105,11 +111,35 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
   // kit) and one private entry, scoped entirely to ids generated above —
   // never a bare delete of these tables.
   await withLocalDb(async ({ core, weather }) => {
-    await core.insert(userProfiles).values({
-      userId: otherUserId,
-      username: otherUsername,
-      cityLabel: "Portland, OR",
-    });
+    // Accounts as sign-up and the confirm link leave them: search and H
+    // show only runners whose address is confirmed (D-113 Q2).
+    const joined = new Date(nowSeconds() * 1000);
+    await core.insert(user).values([
+      {
+        id: otherUserId,
+        name: otherUsername,
+        email: `${otherUsername}@example.com`,
+        emailVerified: true,
+        createdAt: joined,
+        updatedAt: joined,
+      },
+      {
+        id: waitingUserId,
+        name: waitingUsername,
+        email: `${waitingUsername}@example.com`,
+        emailVerified: false,
+        createdAt: joined,
+        updatedAt: joined,
+      },
+    ]);
+    await core.insert(userProfiles).values([
+      {
+        userId: otherUserId,
+        username: otherUsername,
+        cityLabel: "Portland, OR",
+      },
+      { userId: waitingUserId, username: waitingUsername },
+    ]);
     await core.insert(usernameHistory).values({
       username: oldUsername,
       userId: otherUserId,
@@ -317,6 +347,13 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     // Find the other runner — a row with a Follow pill inline — and open
     // their profile (H).
     await page.getByRole("link", { name: "Find a runner" }).click();
+    // A runner who has not confirmed their address has a handle, and no
+    // way to be found by it until they do (D-113 Q2).
+    await scene(page, "Search · nobody finds a runner who has not confirmed");
+    await page.getByPlaceholder("Search by name").fill(waitingUsername);
+    await expect(
+      page.getByText(`No runner called @${waitingUsername}.`),
+    ).toBeVisible();
     await scene(page, "Search · name and a Follow pill, no city");
     await page.getByPlaceholder("Search by name").fill(otherUsername);
     const row = page.getByRole("listitem").filter({ hasText: otherUsername });
@@ -473,9 +510,35 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       await bar(page).getByRole("link", { name: "You" }).click();
       await expect(page.locator('[data-part="settings-button"]')).toBeVisible();
       await expect(nag).toBeVisible();
+
+      // Follow is a count other runners see, so it waits too; Unfollow
+      // only takes one away, so it does not (D-113 Q3). No board leads the
+      // sheet for Follow yet: the address alone (design-deltas item 49).
+      await scene(page, "Unconfirmed · Unfollow goes through, Follow waits");
+      await page.goto(`/@${otherUsername}`);
+      await hydrated(page);
+      await page.getByRole("button", { name: "Following" }).click();
+      const follow = page.getByRole("button", { name: "Follow" });
+      await expect(follow).toBeVisible();
+      await follow.click();
+      await expect(confirmFirst).toBeVisible();
+      await expect(confirmFirst).toContainText("We sent a link to");
+      await expect(confirmFirst).not.toContainText("need a confirmed address");
+      await confirmFirst.getByRole("button", { name: "Not now" }).click();
+      await expect(confirmFirst).toBeHidden();
+      // Nothing changed and nothing failed: the pill is as it was.
+      await expect(follow).toBeVisible();
+      await expect(page.getByText("Not following")).toHaveCount(0);
     } finally {
       await setEmailConfirmed(true);
     }
+
+    // Confirmed again, the same press goes through.
+    await scene(page, "Confirmed · Follow goes through");
+    await page.reload();
+    await hydrated(page);
+    await page.getByRole("button", { name: "Follow" }).click();
+    await expect(page.getByRole("button", { name: "Following" })).toBeVisible();
 
     // G: the settings icon button at the right of the identity line, in
     // every state (round 26 #18).
@@ -673,7 +736,10 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
         .where(eq(usernameHistory.username, oldUsername));
       await core
         .delete(userProfiles)
-        .where(eq(userProfiles.userId, otherUserId));
+        .where(inArray(userProfiles.userId, [otherUserId, waitingUserId]));
+      await core
+        .delete(user)
+        .where(inArray(user.id, [otherUserId, waitingUserId]));
       await weather
         .delete(weatherObservations)
         .where(

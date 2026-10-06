@@ -6,14 +6,13 @@ import { PostCard } from "../../src/modules/feed/components/PostCard";
 import { VerdictBadge } from "../../src/modules/feed/components/VerdictBadge";
 import type { SetUsefulFn } from "../../src/modules/feed/components/useful-reaction";
 import type { FeedItem } from "../../src/modules/feed/feed";
-import type { ControlGuard } from "../../src/ui";
 import { pointConditions } from "../feed/conditions-fixture";
 import {
-  ANY_GUARD,
   feedItem,
   MILES,
   NOW,
   renderFeedScreen,
+  unconfirmed,
 } from "./feed-fixtures";
 
 /**
@@ -29,7 +28,6 @@ async function card(
   overrides: Partial<FeedItem> = {},
   setUseful: Setter = nothing,
   onStatus: (status: string) => void = vi.fn(),
-  guard: ControlGuard<"useful"> = ANY_GUARD,
 ) {
   await renderFeedScreen(
     <PostCard
@@ -37,7 +35,6 @@ async function card(
       units={MILES}
       now={NOW}
       setUseful={setUseful}
-      guard={guard}
       onStatus={onStatus}
     />,
   );
@@ -401,10 +398,9 @@ describe("PostCard: Useful waits for a confirmed address (round 26 #11; seam 7)"
     // Drawn at full strength (rule 07, "not yet"), and the server decides:
     // the page's answer about the address is as old as its loader.
     const user = userEvent.setup();
-    const ask = vi.fn();
     const onStatus = vi.fn();
-    const set = vi.fn<Setter>(() => Promise.resolve({ status: "unverified" }));
-    await card({ entryId: "01A", usefulCount: 2 }, set, onStatus, { ask });
+    const set = vi.fn<Setter>(unconfirmed);
+    await card({ entryId: "01A", usefulCount: 2 }, set, onStatus);
     expect(useful()).not.toHaveAttribute("aria-disabled");
 
     await user.click(useful());
@@ -412,13 +408,13 @@ describe("PostCard: Useful waits for a confirmed address (round 26 #11; seam 7)"
     expect(set).toHaveBeenCalledWith({
       data: { entryId: "01A", useful: true },
     });
-    await waitFor(() => {
-      expect(ask).toHaveBeenCalledWith("useful");
-    });
+    // The root's sheet, led by Useful's sentence (D-113).
+    expect(
+      await screen.findByRole("dialog", { name: "Confirm your email first" }),
+    ).toHaveTextContent("Opened from useful");
     await waitFor(() => {
       expect(useful()).not.toHaveAttribute("aria-busy");
     });
-    expect(ask).toHaveBeenCalledOnce();
     // Nothing changed, so the mark and the count stay as they were.
     expect(useful()).toHaveAttribute("aria-pressed", "false");
     expect(useful()).toHaveTextContent(/^♡2Useful\[Noting\]$/u);
@@ -429,14 +425,13 @@ describe("PostCard: Useful waits for a confirmed address (round 26 #11; seam 7)"
 
   it("asks a runner the server says yes to nothing", async () => {
     const user = userEvent.setup();
-    const ask = vi.fn();
-    await card({ usefulCount: 0 }, nothing, vi.fn(), { ask });
+    await card({ usefulCount: 0 }, nothing, vi.fn());
 
     await user.click(useful());
 
     await waitFor(() => {
       expect(useful()).toHaveAttribute("aria-pressed", "true");
     });
-    expect(ask).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

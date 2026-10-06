@@ -1,10 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
-import { confirmEmailGate } from "../../modules/account/components/ConfirmEmailSheet";
-import {
-  ownAccountQuery,
-  resendConfirmationFn,
-} from "../../modules/account/functions";
 import { getSession } from "../../modules/auth/functions";
 import { EntryDetail } from "../../modules/feed/components/EntryDetail";
 import { RetractEntry } from "../../modules/feed/components/RetractEntry";
@@ -33,12 +28,11 @@ export const Route = createFileRoute("/feed/entry/$entryId")({
     requireSignedIn(await getSession());
   },
   loader: async ({ params }) => {
-    const [session, found, units, bell, account] = await Promise.all([
+    const [session, found, units, bell] = await Promise.all([
       getSession(),
       entryDetailQuery({ data: { entryId: params.entryId } }),
       viewerUnitsQuery(),
       bellStateFn(),
-      ownAccountQuery(),
     ]);
     const viewerId = requireSignedIn(session).user.id;
     const entry = orBackToFeed(found);
@@ -47,7 +41,6 @@ export const Route = createFileRoute("/feed/entry/$entryId")({
       viewerId,
       units,
       bell,
-      account,
       shouldPromptVerdict: await shouldAskForVerdict(entry, viewerId, () =>
         verdictPromptQuery({ data: { entryId: params.entryId } }),
       ),
@@ -58,7 +51,7 @@ export const Route = createFileRoute("/feed/entry/$entryId")({
 
 function EntryDetailPage() {
   const { entryId } = Route.useParams();
-  const { entry, shouldPromptVerdict, units, viewerId, bell, account } =
+  const { entry, shouldPromptVerdict, units, viewerId, bell } =
     Route.useLoaderData();
   const navigate = useNavigate();
 
@@ -71,8 +64,7 @@ function EntryDetailPage() {
         shouldPromptVerdict={shouldPromptVerdict}
         recordPrompted={recordVerdictPromptedAction}
         setUseful={setUsefulAction}
-        confirmFirst={confirmEmailGate(account, resendConfirmationFn)}
-        reportAffordance={(guard) => (
+        reportAffordance={
           <ReportAffordance
             subject={{
               type: "entry",
@@ -83,9 +75,8 @@ function EntryDetailPage() {
             }}
             viewerId={viewerId}
             fileReport={fileReportAction}
-            guard={guard}
           />
-        )}
+        }
       />
       <RetractEntry
         entry={entry}

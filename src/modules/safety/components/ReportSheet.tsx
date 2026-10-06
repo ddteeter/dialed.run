@@ -17,7 +17,7 @@ import {
 import { reportReasonLabels, reportReasons } from "../contracts";
 import type { ReportReason, ReportSubjectType } from "../contracts";
 import { fileReportInput } from "../inputs";
-import type { FileReportOutcome } from "../reports";
+import type { FileReportResult } from "../reports";
 
 /**
  * W1 · REPORT AN ENTRY.
@@ -77,7 +77,6 @@ export function ReportSheet({
   canBlock,
   fileReport,
   onFiled,
-  onRefused,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
@@ -96,15 +95,8 @@ export function ReportSheet({
       note?: string | undefined;
       alsoBlock?: boolean | undefined;
     };
-  }) => Promise<FileReportOutcome>;
+  }) => Promise<FileReportResult>;
   onFiled: () => void;
-  /**
-   * The server refused the reporter because their address is not
-   * confirmed (round 26 #11; SAF-15). Not a success — nothing was filed,
-   * so "Report sent." is never said and the sheet stays as it was — and
-   * not a failure either: the caller opens "Confirm your email first".
-   */
-  onRefused: () => void;
 }>): JSX.Element {
   // `undefined` rather than `""` for "not chosen yet": that is what
   // ChoiceList's own value type says, and it is also what the schema
@@ -123,10 +115,11 @@ export function ReportSheet({
     },
     successMessage: "Report sent.",
     labels: { reason: "What's wrong with it", note: "Anything else" },
-    refusal: {
-      matches: (outcome) => outcome.status === "unverified",
-      answer: onRefused,
-    },
+    // The server refuses a reporter whose address is not confirmed
+    // (round 26 #11; SAF-15; D-113). Not a success — nothing was filed, so
+    // "Report sent." is never said and the sheet stays as it was — and not
+    // a failure either: the root opens "Confirm your email first".
+    confirmTrigger: "report",
   });
 
   // **The block offer needs a name, so it is gated on having one.**

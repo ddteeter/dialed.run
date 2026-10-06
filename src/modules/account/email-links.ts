@@ -10,12 +10,14 @@
  * stored.
  */
 import { and, eq, isNull, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { DrizzleD1Database, drizzle } from "drizzle-orm/d1";
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 
 import { user } from "../../db/schema-auth";
 import { emailVerifications } from "../../db/schema-core";
-import { firstColumnWhere, firstRowWhere } from "../../lib/sql/keyed-read";
+import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 
 type Db = ReturnType<typeof drizzle>;
@@ -205,17 +207,46 @@ export async function releaseEmailLink(
 }
 
 /**
+ * The read of whether this runner's address is confirmed, unsent — a seek
+ * on `user`'s primary key, so at most one row — for a caller whose
+ * `db.batch()` it rides in: the verification gate reads it beside the
+ * terms gate's two (`auth/terms-gate.ts`).
+ */
+export function emailConfirmationRead(
+  // The wider handle `lib/sql/keyed-read` explains: every spelling of a
+  // dialed-core handle in the repo fits it, the feed's included.
+  db: DrizzleD1Database<Record<string, unknown>>,
+  userId: string,
+) {
+  return db
+    .select({ isConfirmed: user.emailVerified })
+    .from(user)
+    .where(eq(user.id, userId));
+}
+
+/**
  * Whether this runner's address is confirmed: `true` or `false`, or
  * `undefined` when there is no such account. The one read of the fact;
  * the two gates below decide what an absent account means.
  */
 export async function emailConfirmationOf(
-  // The wider handle `lib/sql/keyed-read` explains: every spelling of a
-  // dialed-core handle in the repo fits it, the feed's included.
   db: DrizzleD1Database<Record<string, unknown>>,
   userId: string,
 ): Promise<boolean | undefined> {
-  return firstColumnWhere(db, user, user.emailVerified, eq(user.id, userId));
+  const [row] = await emailConfirmationRead(db, userId);
+  return row?.isConfirmed;
+}
+
+/**
+ * The same fact as a `WHERE` clause over another table's runner column:
+ * whether the runner it names has a confirmed address (design 133,
+ * decision D-113 Q2). A primary-key probe on `user` per candidate, so it
+ * never scans. An absent account is not confirmed, as `isVerified` reads
+ * it. For a surface that shows one runner to another — search and H —
+ * where an unconfirmed runner must not be found.
+ */
+export function runnerConfirmed(runnerId: SQLiteColumn): SQL {
+  return sql`exists (select 1 from ${user} where ${user.id} = ${runnerId} and ${user.emailVerified} = 1)`;
 }
 
 /**

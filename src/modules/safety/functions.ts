@@ -10,7 +10,7 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 
-import { requireUserId } from "../auth";
+import { requireUserId, verifiedUserId } from "../auth";
 
 import { requireAdmin } from "./admin";
 import { drizzle } from "drizzle-orm/d1";
@@ -27,7 +27,6 @@ import { banEmail, banUser, reopenEmailFor, unbanUser } from "./bans";
 import {
   accountCount,
   forceRename,
-  isVerified,
   listAccounts,
   reviewFlaggedHandle,
 } from "../account";
@@ -52,12 +51,12 @@ import { claimForReview, pendingReviewQueue } from "./review";
 export const fileReportAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => fileReportInput.parse(input))
   .handler(async ({ data }) => {
-    const reporterId = await requireUserId();
+    // Waits for a confirmed address (seam 7; D-113): the gate says so.
+    const reporterId = await verifiedUserId();
     // The block rides with the report (W1's checkbox) rather than being a
     // second round trip the reporter could lose; `fileReport` owns that
-    // decision, because a route may not branch. It waits for a confirmed
-    // address, and `account`'s check is the one it asks (seam 7).
-    return fileReport({ reporterId, ...data }, { isVerified });
+    // decision, because a route may not branch.
+    return fileReport({ reporterId, ...data });
   });
 
 export const blockRunnerAction = createServerFn({ method: "POST" })
@@ -85,7 +84,7 @@ export const blockedRunnersQuery = createServerFn({ method: "GET" }).handler(
 
 export const reviewQueueQuery = createServerFn({ method: "GET" }).handler(
   async () => {
-    requireAdmin(await requireUserId());
+    requireAdmin(await verifiedUserId());
     return { queue: await pendingReviewQueue() };
   },
 );
@@ -93,14 +92,14 @@ export const reviewQueueQuery = createServerFn({ method: "GET" }).handler(
 export const claimReviewAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => reviewDecisionInput.parse(input))
   .handler(async ({ data }) => {
-    const reviewerId = requireAdmin(await requireUserId());
+    const reviewerId = requireAdmin(await verifiedUserId());
     return { outcome: await claimForReview(data.queueId, reviewerId) };
   });
 
 export const banUserAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => banUserInput.parse(input))
   .handler(async ({ data }) => {
-    const bannedBy = requireAdmin(await requireUserId());
+    const bannedBy = requireAdmin(await verifiedUserId());
     const ban = { userId: data.userId, reason: data.reason, bannedBy };
     // The ban's email, owed in the ban's batch, then the fast path.
     const debt = oweOutbox(banEmail(ban));
@@ -112,7 +111,7 @@ export const banUserAction = createServerFn({ method: "POST" })
 export const denyDomainAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => denyDomainInput.parse(input))
   .handler(async ({ data }) => {
-    const addedBy = requireAdmin(await requireUserId());
+    const addedBy = requireAdmin(await verifiedUserId());
     await denyDomain(data.domain, addedBy, data.reason);
     return { denied: true };
   });
@@ -120,7 +119,7 @@ export const denyDomainAction = createServerFn({ method: "POST" })
 export const unbanUserAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => unbanUserInput.parse(input))
   .handler(async ({ data }) => {
-    const unbannedBy = requireAdmin(await requireUserId());
+    const unbannedBy = requireAdmin(await verifiedUserId());
     // D-89's reopen email, naming the handle (round 29 #7): owed in the
     // lift's batch only while the account is still closed, and sent by the
     // fast path only when the lift reopened it (`unbanUser`).
@@ -141,7 +140,7 @@ export const unbanUserAction = createServerFn({ method: "POST" })
 export const reviewHandleAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => handleReviewInput.parse(input))
   .handler(async ({ data }) => {
-    const reviewerId = requireAdmin(await requireUserId());
+    const reviewerId = requireAdmin(await verifiedUserId());
     return {
       outcome: await reviewFlaggedHandle(
         drizzle(env.DIALED_CORE),
@@ -157,7 +156,7 @@ Round 27 #16: the handle becomes `@runner_NNNN`, with a reason.
 export const forceRenameAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => forceRenameInput.parse(input))
   .handler(async ({ data }) => {
-    const actorId = requireAdmin(await requireUserId());
+    const actorId = requireAdmin(await verifiedUserId());
     const db = drizzle(env.DIALED_CORE);
     return forceRename(db, {
       userId: data.userId,
@@ -177,7 +176,7 @@ Desk · Runners, "D8" (round 27 #22).
 export const deskRunnersQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => runnersFilterInput.parse(input))
   .handler(async ({ data }) => {
-    requireAdmin(await requireUserId());
+    requireAdmin(await verifiedUserId());
     const db = drizzle(env.DIALED_CORE);
     const accounts = await listAccounts(db, {
       query: data.query,

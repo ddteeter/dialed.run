@@ -25,7 +25,12 @@ export {
   prefixPattern,
 } from "./accounts";
 export type { AccountRow, AccountsQuery } from "./accounts";
-export { isUnconfirmed, isVerified } from "./email-links";
+export {
+  emailConfirmationRead,
+  runnerConfirmed,
+  isUnconfirmed,
+  isVerified,
+} from "./email-links";
 export { accessGate } from "./access";
 export {
   currentTermsVersion,

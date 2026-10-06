@@ -84,7 +84,12 @@ export async function signInAsOperator(page: Page): Promise<void> {
     // does not exist yet.
     await core.batch([
       core.run(sql`PRAGMA defer_foreign_keys = ON`),
-      core.update(user).set({ id: OPERATOR_ID }).where(eq(user.id, from)),
+      // Confirmed, as an operator is: every Desk function waits for a
+      // confirmed address (design 133, D-113 Q5).
+      core
+        .update(user)
+        .set({ id: OPERATOR_ID, emailVerified: true })
+        .where(eq(user.id, from)),
       core
         .update(session)
         .set({ userId: OPERATOR_ID })

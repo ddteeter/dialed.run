@@ -1,9 +1,15 @@
 import { useCallback, useRef, useState } from "react";
 import { z } from "zod";
 
-import { isAuthRequired, isTermsRefusal } from "../lib/auth-signal";
+import {
+  isAuthRequired,
+  isTermsRefusal,
+  isUnconfirmedRefusal,
+} from "../lib/auth-signal";
+import type { ConfirmTrigger } from "../lib/auth-signal";
 import { DURATION } from "./motion";
 import { useTermsRefusal } from "./terms-refusal";
+import { useUnconfirmedRefusal } from "./unconfirmed-refusal";
 
 /**
  * The submit half of the Forms & failure contract (docs/product.md).
@@ -35,7 +41,7 @@ Field name -> the one sentence to show under it.
 export type FieldErrors = Record<string, string>;
 
 export interface FormFailure {
-  kind: "network" | "server" | "session" | "terms";
+  kind: "network" | "server" | "session" | "terms" | "unconfirmed";
   message: string;
 }
 
@@ -130,6 +136,12 @@ export function classifyFailure(error: unknown): FormFailure {
   if (isTermsRefusal(error)) {
     return { kind: "terms", message: "Accept the current terms first." };
   }
+  // An address not confirmed yet (design 133, D-113), by its code too, and
+  // not a failure either: under the root's `ui/unconfirmed-refusal` answer
+  // the hooks open "Confirm your email first" instead of showing this.
+  if (isUnconfirmedRefusal(error)) {
+    return { kind: "unconfirmed", message: "Confirm your email first." };
+  }
   // `fetch` rejects with a TypeError, and it rejects *here* — client-side,
   // never having crossed a structured clone — so the prototype is intact
   // and `instanceof` is safe in a way it is not for a server rejection.
@@ -137,6 +149,33 @@ export function classifyFailure(error: unknown): FormFailure {
     return { kind: "network", message: "Your connection dropped." };
   }
   return { kind: "server", message: "Our end failed. Nothing changed." };
+}
+
+/**
+ * The answer, where a root provides one, to a refusal that is not a
+ * failure: behind on the terms opens the terms prompt (D-96), and an
+ * unconfirmed address opens "Confirm your email first", led by `trigger`
+ * (D-113). `true` when it was answered, and the hook then shows nothing
+ * of its own — not saved, and not failed. Shared by the form and control
+ * hooks, so the two cannot answer a refusal differently.
+ */
+export function didAnswerRefusal(
+  kind: FormFailure["kind"],
+  answers: Readonly<{
+    terms: (() => void) | undefined;
+    unconfirmed: ((trigger: ConfirmTrigger | undefined) => void) | undefined;
+  }>,
+  trigger: ConfirmTrigger | undefined,
+): boolean {
+  if (kind === "terms" && answers.terms !== undefined) {
+    answers.terms();
+    return true;
+  }
+  if (kind === "unconfirmed" && answers.unconfirmed !== undefined) {
+    answers.unconfirmed(trigger);
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -188,6 +227,13 @@ export interface UseFormSubmitOptions<TSchema extends z.ZodType, TResult> {
     matches: (result: TResult) => boolean;
     answer: (result: TResult) => void;
   };
+  /**
+   * Which control this form is, should the server refuse it for want of a
+   * confirmed address (design 133): the sentence "Confirm your email
+   * first" leads with. The refusal opens the sheet whether or not this is
+   * given; without it the sheet shows the address alone.
+   */
+  confirmTrigger?: ConfirmTrigger | undefined;
 }
 
 export function useFormSubmit<TSchema extends z.ZodType, TResult>({
@@ -197,6 +243,7 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
   successMessage,
   labels,
   refusal,
+  confirmTrigger,
 }: UseFormSubmitOptions<TSchema, TResult>) {
   const [pending, setPending] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -208,6 +255,7 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
   const inFlight = useRef(false);
   const lastValues = useRef<unknown>(undefined);
   const answerTermsRefusal = useTermsRefusal();
+  const answerUnconfirmed = useUnconfirmedRefusal();
 
   // Two equivalent mutants in here. `formRef.current` is null only before
   // the form has mounted, and nothing can call `focusField` until it has —
@@ -308,10 +356,15 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
         if (Object.keys(named).length === 0) {
           const classified = classifyFailure(error);
           setFieldErrors({});
-          // A stale tab behind on the terms: straight to the prompt, with
-          // nothing announced — not saved, and not failed (D-96).
-          if (answerTermsRefusal && classified.kind === "terms") {
-            answerTermsRefusal();
+          // A stale tab behind on the terms (D-96), or an address not
+          // confirmed yet (D-113): the root's answer, with nothing
+          // announced and no band. The form stays as it was, ready to send
+          // again.
+          const answers = {
+            terms: answerTermsRefusal,
+            unconfirmed: answerUnconfirmed,
+          };
+          if (didAnswerRefusal(classified.kind, answers, confirmTrigger)) {
             return;
           }
           setFailure(classified);
@@ -338,6 +391,8 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
       land,
       refusal,
       answerTermsRefusal,
+      answerUnconfirmed,
+      confirmTrigger,
     ],
   );
 

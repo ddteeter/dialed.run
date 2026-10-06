@@ -13,8 +13,7 @@ import type {
   OtherProfile,
   OwnProfile as OwnProfileData,
 } from "../../src/modules/feed/profiles";
-import type { ControlGuard } from "../../src/ui";
-import { CONFIRM_FIRST, MILES, renderFeedScreen } from "./feed-fixtures";
+import { MILES, renderFeedScreen, unconfirmed } from "./feed-fixtures";
 
 /**
  * Round 26 #7's handle placements (FEED-10), `/@handle`'s two pages, and
@@ -82,25 +81,15 @@ const ravi: OtherProfile = {
 
 describe("RunnerAtHandle", () => {
   it("shows the runner holding the handle, with the report control made for them", async () => {
-    const reportFor = vi.fn(
-      (profile: OtherProfile, guard: ControlGuard<"report">) => (
-        <button
-          type="button"
-          onClick={() => {
-            guard.ask("report");
-          }}
-        >
-          Report {profile.userId}
-        </button>
-      ),
-    );
+    const reportFor = vi.fn((profile: OtherProfile) => (
+      <button type="button">Report {profile.userId}</button>
+    ));
     await renderFeedScreen(
       <RunnerAtHandle
         found={{ kind: "runner", profile: ravi, isFollowing: true }}
         follow={done}
         unfollow={done}
         reportAffordanceFor={reportFor}
-        confirmFirst={CONFIRM_FIRST}
       />,
     );
 
@@ -111,33 +100,29 @@ describe("RunnerAtHandle", () => {
     expect(reportFor.mock.calls[0]?.[0]).toBe(ravi);
   });
 
-  it("opens its confirm sheet when the report control is refused (round 26 #11; SAF-15)", async () => {
+  it("opens the confirm sheet when the server refuses a follow, and stays unfollowed (design 133, D-113)", async () => {
     const user = userEvent.setup();
+    const follow = vi.fn(unconfirmed);
     await renderFeedScreen(
       <RunnerAtHandle
-        found={{ kind: "runner", profile: ravi, isFollowing: true }}
-        follow={done}
+        found={{ kind: "runner", profile: ravi, isFollowing: false }}
+        follow={follow}
         unfollow={done}
-        reportAffordanceFor={(profile, guard) => (
-          <button
-            type="button"
-            onClick={() => {
-              guard.ask("report");
-            }}
-          >
-            Report {profile.userId}
-          </button>
-        )}
-        confirmFirst={CONFIRM_FIRST}
+        reportAffordanceFor={() => NOTHING}
       />,
     );
     expect(screen.queryByRole("dialog")).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Report 01RAVI" }));
+    await user.click(screen.getByRole("button", { name: "Follow" }));
 
+    expect(follow).toHaveBeenCalledWith({ data: { userId: "01RAVI" } });
     expect(
-      screen.getByRole("dialog", { name: "Confirm your email first" }),
-    ).toHaveTextContent("Opened from report");
+      await screen.findByRole("dialog", { name: "Confirm your email first" }),
+    ).toHaveTextContent("Opened from follow");
+    // Nothing changed, and nothing failed: the pill is as it was, with no
+    // band under it.
+    expect(screen.getByRole("button", { name: "Follow" })).toBeVisible();
+    expect(screen.queryByText("Not following")).toBeNull();
   });
 
   it("says only that an old handle's runner changed their name, with the way back", async () => {
@@ -148,7 +133,6 @@ describe("RunnerAtHandle", () => {
         follow={done}
         unfollow={done}
         reportAffordanceFor={reportFor}
-        confirmFirst={CONFIRM_FIRST}
       />,
     );
 
@@ -171,7 +155,6 @@ describe("RunnerAtHandle", () => {
         follow={done}
         unfollow={done}
         reportAffordanceFor={reportFor}
-        confirmFirst={CONFIRM_FIRST}
       />,
     );
 
@@ -217,7 +200,6 @@ function entry(isUnderReview: boolean): Entry {
 async function detailFor(isUnderReview: boolean) {
   await renderFeedScreen(
     <EntryDetail
-      confirmFirst={CONFIRM_FIRST}
       units={MILES}
       entry={entry(isUnderReview)}
       viewerId="01USER"

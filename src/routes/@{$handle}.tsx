@@ -1,10 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { confirmEmailGate } from "../modules/account/components/ConfirmEmailSheet";
-import {
-  ownAccountQuery,
-  resendConfirmationFn,
-} from "../modules/account/functions";
 import { getSession } from "../modules/auth/functions";
 import { RunnerAtHandle } from "../modules/feed/components/RunnerAtHandle";
 import {
@@ -32,24 +27,22 @@ export const Route = createFileRoute("/@{$handle}")({
     requireSignedIn(await getSession());
   },
   loader: async ({ params }) => {
-    const [found, session, bell, account] = await Promise.all([
+    const [found, session, bell] = await Promise.all([
       profileAtHandleQuery({ data: { handle: params.handle } }),
       getSession(),
       bellStateFn(),
-      ownAccountQuery(),
     ]);
     return {
       found: orHandlePage(found),
       viewerId: requireSignedIn(session).user.id,
       bell,
-      account,
     };
   },
   component: HandlePage,
 });
 
 function HandlePage() {
-  const { found, viewerId, bell, account } = Route.useLoaderData();
+  const { found, viewerId, bell } = Route.useLoaderData();
 
   return (
     <BelledLayout {...bell}>
@@ -57,13 +50,11 @@ function HandlePage() {
         found={found}
         follow={followAction}
         unfollow={unfollowAction}
-        confirmFirst={confirmEmailGate(account, resendConfirmationFn)}
-        reportAffordanceFor={(profile, guard) => (
+        reportAffordanceFor={(profile) => (
           <ReportAffordance
             subject={profileReportSubject(profile)}
             viewerId={viewerId}
             fileReport={fileReportAction}
-            guard={guard}
           />
         )}
       />

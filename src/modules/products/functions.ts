@@ -8,8 +8,8 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
 import { requireUserId } from "../auth";
-import { brandSearchInput, resolveProductInput } from "./inputs";
-import { resolveProduct, searchBrands } from "./service";
+import { brandSearchInput } from "./inputs";
+import { searchBrands } from "./service";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -23,15 +23,7 @@ export const searchBrandsFn = createServerFn({ method: "GET" })
     return searchBrands(client, data.prefix);
   });
 
-// products.searchProducts / products.createOrGetBrand are exercised directly
-// (see test/products/service.test.ts) and exported from ./index for a future
-// per-brand product-autocomplete step; the v1 form only autocompletes brand
-// names live (searchBrandsFn below) since product suggestions need a
-// resolved brand id first — resolveProductFn below resolves both at once.
-
-export const resolveProductFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => resolveProductInput.parse(data))
-  .handler(async ({ data }) => {
-    const userId = await requireUserId();
-    return resolveProduct(db(), { ...data, createdBy: userId });
-  });
+// A product is made only where a garment is written (`closet`'s
+// `withResolvedProduct`), which is where design 133 (D-113 Q1) clamps it
+// for an unconfirmed runner. There was a `resolveProductFn` here that made
+// a brand and a product for anyone signed in, and no route called it.

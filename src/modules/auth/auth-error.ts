@@ -10,6 +10,7 @@
 
 import {
   AUTH_REQUIRED_CODE,
+  EMAIL_UNCONFIRMED_CODE,
   TERMS_NOT_ACCEPTED_CODE,
 } from "../../lib/auth-signal";
 
@@ -76,5 +77,22 @@ export class TermsNotAcceptedError extends Error {
   constructor() {
     super("Accept the current terms first.");
     this.name = "TermsNotAcceptedError";
+  }
+}
+
+/**
+ * A signed-in runner whose address is not confirmed, asking for a write
+ * other runners see or that trusts the address (design 133, decision
+ * D-113): `verifiedUserId` saying no. Its own code
+ * (`EMAIL_UNCONFIRMED_CODE`, in `lib/` so the client can read it), for the
+ * terms refusal's reason: the runner is signed in. The client answers it
+ * by opening "Confirm your email first", never a failure band.
+ */
+export class EmailUnconfirmedError extends Error {
+  readonly code = EMAIL_UNCONFIRMED_CODE;
+
+  constructor() {
+    super("Confirm your email first.");
+    this.name = "EmailUnconfirmedError";
   }
 }

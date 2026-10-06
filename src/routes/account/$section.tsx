@@ -133,9 +133,7 @@ function AccountSectionRoute() {
           email: (
             <ChangeEmail
               current={page.account.email}
-              isVerified={page.account.isVerified}
               request={requestEmailChangeFn}
-              resend={resendConfirmationFn}
             />
           ),
           password: <ChangePassword change={changePassword} />,

@@ -22,6 +22,7 @@ import {
   makeObservation,
   makeRun,
   makeUser,
+  makeVerifiedUser,
   NOW,
 } from "./helpers";
 
@@ -118,7 +119,7 @@ describe("authorization", () => {
   });
 
   it("never shows a private entry on the author's other-profile view", async () => {
-    const author = await makeUser();
+    const author = await makeVerifiedUser();
     const publicRun = await makeRun({ userId: author });
     const privateRun = await makeRun({ userId: author });
     const publicEntry = await makeEntry({

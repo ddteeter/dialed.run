@@ -7,11 +7,12 @@ import {
 } from "@tanstack/react-router";
 import { render } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { vi } from "vitest";
 import { renderToString } from "react-dom/server";
 
+import { EMAIL_UNCONFIRMED_CODE } from "../../src/lib/auth-signal";
 import type { FeedItem } from "../../src/modules/feed/feed";
-import type { ControlGate, ControlGuard } from "../../src/ui";
+import type { ConfirmGate } from "../../src/ui";
+import { UnconfirmedRefusalAnswer } from "../../src/ui/unconfirmed-refusal";
 
 /**
  * The routes the feed's screens link to, stubbed, so a typed `<Link>`
@@ -25,10 +26,16 @@ function feedRouter(element: ReactElement, at: string) {
       path,
       component: () => <p>{text}</p>,
     });
+  // Under the answer the root mounts, so a control the server refuses for
+  // want of a confirmed address opens the stand-in sheet (D-113).
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/",
-    component: () => element,
+    component: () => (
+      <UnconfirmedRefusalAnswer gate={CONFIRM_FIRST}>
+        {element}
+      </UnconfirmedRefusalAnswer>
+    ),
   });
   return createRouter({
     routeTree: rootRoute.addChildren([
@@ -95,13 +102,14 @@ export function feedItem(overrides: Partial<FeedItem> = {}): FeedItem {
 export const MILES = { temp: "f", distance: "mi" } as const;
 
 /**
- * The confirm sheet's gate, for the screens whose Useful and report wait
- * on a confirmed address (seam 7): a stand-in for `account`'s sheet — a
- * dialog named as the real one is, present only while open, saying which
- * control opened it — and Not now closes it. It opens only on the
- * server's refusal, so a screen whose server says yes never shows it.
+ * The root's confirm sheet, for the screens whose Useful, report and
+ * follow wait on a confirmed address (seam 7; D-113): a stand-in for
+ * `account`'s sheet — a dialog named as the real one is, present only
+ * while open, saying which control opened it — and Not now closes it. It
+ * opens only on the server's refusal, so a screen whose server says yes
+ * never shows it.
  */
-export const CONFIRM_FIRST: ControlGate<"useful" | "report"> = {
+const CONFIRM_FIRST: ConfirmGate = {
   sheet: ({ open, trigger }, onClose) =>
     open ? (
       <div role="dialog" aria-label="Confirm your email first">
@@ -114,6 +122,13 @@ export const CONFIRM_FIRST: ControlGate<"useful" | "report"> = {
 };
 
 /**
-The guard a card or a button takes from its screen, for tests that only need one.
-*/
-export const ANY_GUARD: ControlGuard<"useful"> = { ask: vi.fn() };
+ * The verification gate's refusal, as a server function rejects with it:
+ * a plain object, cloned, carrying the code (design 133).
+ */
+export function unconfirmed(): Promise<never> {
+  return Promise.reject(
+    Object.assign(new Error("Confirm your email first."), {
+      code: EMAIL_UNCONFIRMED_CODE,
+    }),
+  );
+}

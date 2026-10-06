@@ -17,6 +17,12 @@ import { cronNameFor, type CronName } from "./crons";
 import { oweDigestEmail, type DigestMail } from "./digest-email";
 import { checkOutboxBacklog, drainOutbox } from "./outbox";
 import {
+  outboxHandlers,
+  productLinkHandler,
+  type OutboxHandlers,
+  type ProductLinker,
+} from "./outbox-handlers";
+import {
   captureException,
   sentryCronReporter,
   type CronReporter,
@@ -122,16 +128,46 @@ export async function handleScheduled(
  * runs last, after that firing's email drain, because its calls wait on
  * moderation and the mail should not.
  *
+ * **The product link** (design 133, D-113 Q1) is `closet`'s, which
+ * imports `ops`: the outbox rows a confirmation owes are drained on the
+ * `:00` firing with it, so a newly confirmed runner's garments link within
+ * the hour, and on the daily firing's full drain.
+ *
  * All are optional: a firing handed none purges and sweeps nothing and
- * mails the digest the live way (`oweDigestEmail`'s default).
+ * mails the digest the live way (`oweDigestEmail`'s default). A product
+ * link drained with no linker stays owed and is reported.
  */
 export interface DailyUpkeep {
   readonly purgeAccounts?: ((anomalies: string[]) => Promise<void>) | undefined;
   readonly digestMail?: DigestMail | undefined;
   readonly sweepExports?: ((anomalies: string[]) => Promise<void>) | undefined;
   readonly rescreenHandles?:
-    | ((anomalies: string[]) => Promise<void>)
-    | undefined;
+    ((anomalies: string[]) => Promise<void>) | undefined;
+  readonly linkProducts?: ProductLinker | undefined;
+}
+
+/**
+The outbox's handlers, with the product link bound to the one handed in.
+*/
+function handlersFor(upkeep: DailyUpkeep): OutboxHandlers {
+  return {
+    ...outboxHandlers,
+    product_link: productLinkHandler(upkeep.linkProducts),
+  };
+}
+
+/**
+ * The product links confirmations owe (D-113 Q1), every hour: no fast
+ * path works them, so this is how soon a confirmed runner's garments link.
+ */
+async function drainProductLinks(
+  anomalies: string[],
+  upkeep: DailyUpkeep,
+): Promise<void> {
+  await drainOutbox(drizzle(env.DIALED_CORE), anomalies, {
+    kinds: ["product_link"],
+    handlers: handlersFor(upkeep),
+  });
 }
 
 async function runCron(
@@ -151,6 +187,7 @@ async function runCron(
         () => retryPendingWeather(),
         () => upkeep.sweepExports?.(anomalies),
         () => drainOwedEmail(anomalies),
+        () => drainProductLinks(anomalies, upkeep),
       ]);
       return anomalies;
     }
@@ -606,7 +643,7 @@ async function runDailyDigest(
     "abandoned-enrichment": checkAbandonedEnrichments,
     "strava-revocation": redispatchStrandedRevocations,
     outbox: async (anomalies) => {
-      await drainOutbox(db, anomalies);
+      await drainOutbox(db, anomalies, { handlers: handlersFor(upkeep) });
       await checkOutboxBacklog(db, anomalies);
     },
     "stalled-import": redispatchStalledImports,

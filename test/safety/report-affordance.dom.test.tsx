@@ -2,16 +2,32 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import { EMAIL_UNCONFIRMED_CODE } from "../../src/lib/auth-signal";
 import { ReportAffordance } from "../../src/modules/safety/components/ReportAffordance";
+import type { ConfirmGate } from "../../src/ui";
+import { UnconfirmedRefusalAnswer } from "../../src/ui/unconfirmed-refusal";
 
 type Props = Parameters<typeof ReportAffordance>[0];
+
+/**
+ * The root's "Confirm your email first", as a spy: what it is asked to
+ * draw, and a line naming the control that opened it (D-113).
+ */
+function confirmGate() {
+  return vi.fn<ConfirmGate["sheet"]>(({ open, trigger }) =>
+    open ? <p data-testid="confirm-first">{trigger}</p> : undefined,
+  );
+}
 
 /**
 The foot link, whichever of its two wordings the subject gets.
 */
 const REPORT = /^Report (this entry|or block )/u;
 
-function renderAffordance(overrides: Partial<Props> = {}) {
+function renderAffordance(
+  overrides: Partial<Props> = {},
+  sheet = confirmGate(),
+) {
   const fileReport: Props["fileReport"] = vi
     .fn<Props["fileReport"]>()
     .mockResolvedValue({
@@ -20,21 +36,22 @@ function renderAffordance(overrides: Partial<Props> = {}) {
       hiddenPendingReview: false,
     });
   render(
-    <ReportAffordance
-      subject={{
-        type: "entry",
-        id: "e-1",
-        label: "Tuesday shakeout",
-        authorId: "author-1",
-        authorName: "mark_t",
-      }}
-      viewerId="viewer-1"
-      fileReport={fileReport}
-      guard={{ ask: vi.fn() }}
-      {...overrides}
-    />,
+    <UnconfirmedRefusalAnswer gate={{ sheet }}>
+      <ReportAffordance
+        subject={{
+          type: "entry",
+          id: "e-1",
+          label: "Tuesday shakeout",
+          authorId: "author-1",
+          authorName: "mark_t",
+        }}
+        viewerId="viewer-1"
+        fileReport={fileReport}
+        {...overrides}
+      />
+    </UnconfirmedRefusalAnswer>,
   );
-  return { fileReport };
+  return { fileReport, sheet };
 }
 
 /**
@@ -283,21 +300,19 @@ describe("report waits for a confirmed address (round 26 #11; SAF-15)", () => {
     // Rule 07, "not yet": the same link, never disabled — and never a
     // refusal of the page's own, whose answer is as old as its loader.
     const user = userEvent.setup();
-    const ask = vi.fn();
-    renderAffordance({ guard: { ask } });
+    const { sheet } = renderAffordance();
 
     const link = screen.getByRole("button", { name: "Report this entry" });
     expect(link).not.toHaveAttribute("aria-disabled");
     await user.click(link);
 
     expect(isSheetOpen()).toBe(true);
-    expect(ask).not.toHaveBeenCalled();
+    expect(sheet).not.toHaveBeenCalled();
   });
 
   it("files for a runner who confirmed since the page loaded, and asks them nothing", async () => {
     const user = userEvent.setup();
-    const ask = vi.fn();
-    const { fileReport } = renderAffordance({ guard: { ask } });
+    const { fileReport, sheet } = renderAffordance();
 
     await sendSpamReport(user);
 
@@ -305,23 +320,24 @@ describe("report waits for a confirmed address (round 26 #11; SAF-15)", () => {
     await waitFor(() => {
       expect(isSheetOpen()).toBe(false);
     });
-    expect(ask).not.toHaveBeenCalled();
+    expect(sheet).not.toHaveBeenCalled();
   });
 
-  it("opens the screen's confirm sheet on the server's refusal, and never says the report went", async () => {
+  it("opens the root's confirm sheet on the server's refusal, and never says the report went", async () => {
     const user = userEvent.setup();
-    const ask = vi.fn();
-    const fileReport = vi
-      .fn<Props["fileReport"]>()
-      .mockResolvedValue({ status: "unverified" });
-    renderAffordance({ fileReport, guard: { ask } });
+    // What the gate throws, as it arrives: a plain object, cloned (D-113).
+    const fileReport = vi.fn<Props["fileReport"]>().mockRejectedValue(
+      Object.assign(new Error("Confirm your email first."), {
+        code: EMAIL_UNCONFIRMED_CODE,
+      }),
+    );
+    renderAffordance({ fileReport });
 
     await sendSpamReport(user);
 
-    await waitFor(() => {
-      expect(ask).toHaveBeenCalledWith("report");
-    });
-    expect(ask).toHaveBeenCalledOnce();
+    expect(await screen.findByTestId("confirm-first")).toHaveTextContent(
+      "report",
+    );
     expect(fileReport).toHaveBeenCalledOnce();
     // Nothing was filed: no "Report sent.", and W1 stays as it was, the
     // reason still chosen, ready to send once the address is confirmed.

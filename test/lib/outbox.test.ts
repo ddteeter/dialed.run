@@ -15,17 +15,28 @@ describe("outboxKinds", () => {
       "import_file_delete",
       "import_file_expire",
       "email",
+      "product_link",
     ]);
   });
 });
 
 describe("scheduledOutboxKinds", () => {
-  it("is the failed import's file alone: every other kind is a fast path's debt", () => {
-    expect(scheduledOutboxKinds).toStrictEqual(["import_file_expire"]);
+  it("is the failed import's file and the product link: every other kind is a fast path's debt", () => {
+    // The link a confirmation owes (D-113 Q1) has no fast path at all.
+    expect(scheduledOutboxKinds).toStrictEqual([
+      "import_file_expire",
+      "product_link",
+    ]);
   });
 });
 
 describe("dedupeKeyFor", () => {
+  it("makes one product link per runner, since one run links them all", () => {
+    expect(
+      dedupeKeyFor({ kind: "product_link", payload: { userId: "u1" } }),
+    ).toBe("u1");
+  });
+
   it("makes one photo debt per runner and garment", () => {
     expect(
       dedupeKeyFor({

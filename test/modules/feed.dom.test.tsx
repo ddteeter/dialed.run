@@ -9,11 +9,11 @@ import { defaultFeedTab, Feed } from "../../src/modules/feed/components/Feed";
 import type { SetUsefulFn } from "../../src/modules/feed/components/useful-reaction";
 import type { FeedItem } from "../../src/modules/feed/feed";
 import {
-  CONFIRM_FIRST,
   feedItem,
   MILES,
   NOW,
   renderFeedScreen,
+  unconfirmed,
 } from "./feed-fixtures";
 
 /**
@@ -43,7 +43,6 @@ function feed(
       unjudgedCount={overrides.unjudgedCount ?? 0}
       setUseful={overrides.setUseful ?? useful}
       confirmBand={overrides.confirmBand}
-      confirmFirst={CONFIRM_FIRST}
       conditions={{
         home: { coords: undefined, cityLabel: undefined },
         locate: () => Promise.resolve(undefined),
@@ -203,7 +202,6 @@ describe("Feed: Following", () => {
         unjudgedCount={0}
         setUseful={() => Promise.reject(new TypeError("offline"))}
         confirmBand={undefined}
-        confirmFirst={CONFIRM_FIRST}
         conditions={{
           home: { coords: undefined, cityLabel: undefined },
           locate: () => Promise.resolve(undefined),
@@ -330,9 +328,7 @@ describe("Feed: an unconfirmed runner (round 26 #11; FEED-11)", () => {
 
   it("asks the server from any card's Useful, and opens one confirm sheet on its refusal", async () => {
     const user = userEvent.setup();
-    const setUseful = vi.fn<SetUsefulFn>(() =>
-      Promise.resolve({ status: "unverified" }),
-    );
+    const setUseful = vi.fn<SetUsefulFn>(unconfirmed);
     await renderFeedScreen(
       feed({
         items: [

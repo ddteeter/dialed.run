@@ -245,6 +245,33 @@ const importFileDelete: OutboxHandlers["import_file_delete"] = {
   context: (payload) => ({ userId: payload.userId, key: payload.key }),
 };
 
+/**
+ * What links a newly confirmed runner's typed garments to the shared
+ * products (design 133, decision D-113 Q1): `closet`'s
+ * `linkTypedGarments`, which `ops` cannot import — `closet` imports `ops`
+ * — so the Worker entry hands it to the firings (`DailyUpkeep`).
+ */
+export type ProductLinker = (db: Db, userId: string) => Promise<void>;
+
+/**
+ * The `product_link` handler, bound to the linker handed in. With none, it
+ * fails loudly, so the row stays owed and the drain reports it, rather
+ * than settling a runner's link into nothing.
+ */
+export function productLinkHandler(
+  link: ProductLinker | undefined,
+): OutboxHandlers["product_link"] {
+  return {
+    run: async (db, payload) => {
+      if (link === undefined) {
+        throw new Error("product_link drained with no linker handed in");
+      }
+      await link(db, payload.userId);
+    },
+    context: (payload) => ({ userId: payload.userId }),
+  };
+}
+
 export const outboxHandlers: OutboxHandlers = {
   photo_delete: {
     run: (db, payload) =>
@@ -267,4 +294,7 @@ export const outboxHandlers: OutboxHandlers = {
   import_file_expire: importFileDelete,
   // Task 126 (ACC-2): an owed email (`emailHandler`).
   email: emailHandler(emailDepsFromEnv),
+  // Design 133 (D-113 Q1): unwired here, and wired by the firings that
+  // are handed the linker (`scheduled.ts`).
+  product_link: productLinkHandler(undefined),
 };
