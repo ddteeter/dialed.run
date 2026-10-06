@@ -45,9 +45,10 @@ const PRODUCT_IDENTITY_CONFLICT = {
  * search for.
  *
  * No `LIKE` escaping, and that is not an oversight: `normalizeIdentity`
- * folds everything outside `[a-z0-9 ]` to a space, so a `%` or `_` a user
- * typed is gone before it reaches here and the only wildcard in the pattern
- * is the one appended below. There *was* an `escapeLike` here; mutation
+ * keeps letters and digits (in any script, R-137) and folds everything else
+ * to a space. `%` and `_` are punctuation, not letters, so a `%` or `_` a
+ * user typed is gone before it reaches here and the only wildcard in the
+ * pattern is the one appended below. There *was* an `escapeLike` here; mutation
  * testing showed both of its replacements could be deleted with every test
  * still green, which is what dead code looks like from the outside.
  *

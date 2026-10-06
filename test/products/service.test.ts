@@ -18,6 +18,7 @@ import {
 } from "../../src/modules/products/service";
 import { brands, products } from "../../src/db/schema-core";
 import { CURATED_BRANDS } from "../../src/modules/products/seed-brands";
+import { normalizeIdentity } from "../../src/lib/normalize";
 import { nowSeconds } from "../../src/lib/now";
 import { orSqlNull } from "../../src/lib/sql/sql-null";
 
@@ -42,6 +43,24 @@ describe("products: brand create-if-missing", () => {
 
   it("rejects a brand name with no letters or digits", async () => {
     await expect(createOrGetBrand(db(), "!!!")).rejects.toThrow();
+  });
+
+  it("saves a brand written in a non-Latin script (R-137)", async () => {
+    const client = db();
+    const brand = await createOrGetBrand(client, "ミズノ");
+    expect(brand.name).toBe("ミズノ");
+    expect(brand.normalized).toBe("ミズノ");
+    // The half-width spelling is the same brand and lands on the same row.
+    const halfWidth = await createOrGetBrand(client, "ﾐｽﾞﾉ");
+    expect(halfWidth.id).toBe(brand.id);
+    const found = await searchBrands(client, "ミズ");
+    expect(found.map((row) => row.id)).toContain(brand.id);
+  });
+
+  it("still refuses an emoji-only brand", async () => {
+    await expect(createOrGetBrand(db(), "👟️")).rejects.toThrow(
+      "Brand name must contain at least one letter or digit.",
+    );
   });
 });
 
@@ -155,6 +174,21 @@ describe("products: the curated brand seed", () => {
     const rows = await client.select().from(brands);
     const seeded = rows.filter((row) => row.seeded);
     expect(seeded).toHaveLength(CURATED_BRANDS.length);
+  });
+
+  it("stored keys agree with the normalizer the app runs today", async () => {
+    // The seed's `normalized` column was written by an earlier version of
+    // `normalizeIdentity`. If the current one disagreed on any of them,
+    // lookups would miss the stored row and create a duplicate beside it.
+    const rows = await db()
+      .select()
+      .from(brands)
+      .where(eq(brands.seeded, true));
+    const drift = rows.filter(
+      (row) => normalizeIdentity(row.name) !== row.normalized,
+    );
+    expect(rows).toHaveLength(CURATED_BRANDS.length);
+    expect(drift).toEqual([]);
   });
 
   it("normalises names so autocomplete matches regardless of case", async () => {
