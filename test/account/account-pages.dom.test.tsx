@@ -25,6 +25,7 @@ import {
   landingCopy,
 } from "../../src/modules/account/components/LinkLanding";
 import {
+  RESEND_LOOK,
   ResendLink,
   SENT_FOR_MS,
   limitedMessage,
@@ -87,6 +88,12 @@ afterEach(() => {
 });
 
 describe("ResendLink", () => {
+  it("is the band's text link unless asked for the sheet's pill (round 29 #12)", () => {
+    render(<ResendLink email="maya@example.com" resend={resender()} />);
+    expect(resendButton()).toHaveClass(...RESEND_LOOK.link.split(" "));
+    expect(resendButton()).not.toHaveClass("rounded-pill");
+  });
+
   it("sends to the address it was given, says Sent ✓ for a minute, then rests", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const user = userEvent.setup({
@@ -379,9 +386,14 @@ describe("the confirm-first sheet and the nag", () => {
     expect(within(sheet).getByText(/We sent a link to/u)).toHaveTextContent(
       /^We sent a link to maya@example\.com\.$/u,
     );
-    await user.click(
-      within(sheet).getByRole("button", { name: "Resend link" }),
-    );
+    // Round 29 #12: Resend is the sheet's outline pill, not the band's
+    // text link.
+    const resendButton = within(sheet).getByRole("button", {
+      name: "Resend link",
+    });
+    expect(resendButton).toHaveClass(...RESEND_LOOK.pill.split(" "));
+    expect(resendButton).not.toHaveClass("underline");
+    await user.click(resendButton);
     expect(resend).toHaveBeenCalledWith({
       data: { email: "maya@example.com" },
     });
@@ -416,17 +428,12 @@ describe("the confirm-first sheet and the nag", () => {
   });
 
   it.each([
-    [
-      "useful",
-      "Marking runs Useful, sharing and reporting need a confirmed address. We sent a link to maya@example.com.",
-    ],
-    [
-      "report",
-      "Reporting, sharing and marking runs Useful need a confirmed address. We sent a link to maya@example.com.",
-    ],
+    ["useful", "Marking runs Useful needs a confirmed email."],
+    ["report", "Reporting needs a confirmed email."],
+    ["email-change", "Confirm this address before you change it."],
   ] as const)(
-    "leads with what the %s control was waiting for",
-    (trigger, body) => {
+    "leads with the one control that was refused, %s, on its own line above the address (round 29 #11)",
+    (trigger, lead) => {
       render(
         <ConfirmEmailSheet
           open
@@ -436,7 +443,13 @@ describe("the confirm-first sheet and the nag", () => {
           trigger={trigger}
         />,
       );
-      expect(screen.getByText(/We sent a link to/u)).toHaveTextContent(body);
+      const leadLine = screen.getByText(lead);
+      expect(leadLine.tagName).toBe("P");
+      const address = screen.getByText(/We sent a link to/u);
+      expect(address).toHaveTextContent(
+        /^We sent a link to maya@example\.com\.$/u,
+      );
+      expect(leadLine.nextElementSibling).toBe(address);
     },
   );
 
@@ -470,9 +483,7 @@ describe("the confirm-first sheet and the nag", () => {
       name: "Confirm your email first",
     });
     expect(
-      within(sheet).getByText(
-        "Reporting, sharing and marking runs Useful need a confirmed address.",
-      ),
+      within(sheet).getByText("Reporting needs a confirmed email."),
     ).toBeVisible();
     expect(within(sheet).queryByText(/We sent a link to/u)).toBeNull();
     expect(
@@ -520,9 +531,10 @@ describe("the sheet the root opens on a refusal (design 133)", () => {
     });
     expect(
       await within(sheet).findByText(/We sent a link to/u),
-    ).toHaveTextContent(
-      /^Reporting, .* We sent a link to maya@example\.com\.$/u,
-    );
+    ).toHaveTextContent(/^We sent a link to maya@example\.com\.$/u);
+    expect(
+      within(sheet).getByText("Reporting needs a confirmed email."),
+    ).toBeVisible();
     await user.click(
       within(sheet).getByRole("button", { name: "Resend link" }),
     );
@@ -544,9 +556,10 @@ describe("the sheet the root opens on a refusal (design 133)", () => {
     expect(account).not.toHaveBeenCalled();
 
     rerender(<>{gate.sheet({ open: true, trigger: "useful" }, vi.fn())}</>);
-    expect(await screen.findByText(/We sent a link to/u)).toHaveTextContent(
-      /^Marking runs Useful, /u,
-    );
+    expect(await screen.findByText(/We sent a link to/u)).toBeVisible();
+    expect(
+      screen.getByText("Marking runs Useful needs a confirmed email."),
+    ).toBeVisible();
     rerender(<>{gate.sheet({ open: false, trigger: "useful" }, vi.fn())}</>);
     rerender(<>{gate.sheet({ open: true, trigger: "useful" }, vi.fn())}</>);
     expect(account).toHaveBeenCalledOnce();
@@ -565,9 +578,7 @@ describe("the sheet the root opens on a refusal (design 133)", () => {
       expect(account).toHaveBeenCalledOnce();
     });
     expect(
-      screen.getByText(
-        "Marking runs Useful, sharing and reporting need a confirmed address.",
-      ),
+      screen.getByText("Marking runs Useful needs a confirmed email."),
     ).toBeVisible();
     expect(screen.queryByText(/We sent a link to/u)).toBeNull();
 
@@ -702,7 +713,7 @@ describe("ChangeEmail (ACC-8)", () => {
     expect(request).toHaveBeenCalledTimes(2);
   });
 
-  it("opens the root's sheet, with the address alone, when the server says the address is not confirmed", async () => {
+  it("opens the root's sheet, with the email change's own lead, when the server says the address is not confirmed", async () => {
     // What the gate throws, as it arrives: a plain object, cloned (D-113).
     const request = vi.fn(() =>
       Promise.reject(
@@ -727,10 +738,13 @@ describe("ChangeEmail (ACC-8)", () => {
     const sheet = await screen.findByRole("dialog", {
       name: "Confirm your email first",
     });
-    // No board draws the email change a sentence: the address alone.
+    // Round 29 #11: the email change's own lead, then the address.
     expect(
       await within(sheet).findByText(/We sent a link to/u),
     ).toHaveTextContent(/^We sent a link to old@example\.com\.$/u);
+    expect(
+      within(sheet).getByText("Confirm this address before you change it."),
+    ).toBeVisible();
     expect(screen.queryByText(/^Sent ✓/u)).toBeNull();
     // A refusal, not a send and not a failure: nothing is announced, and
     // there is no band. (The sheet's Resend carries a region of its own.)
