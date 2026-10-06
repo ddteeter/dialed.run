@@ -86,10 +86,14 @@ test("request access -> an invite from the Desk -> create an account -> sign out
     }),
   );
   await page.getByRole("button", { name: "Continue with Google" }).click();
-  const refused = page.locator("[data-part='failure-band'][data-state='refused']");
+  const refused = page.locator(
+    "[data-part='control-failure'][data-state='refused']",
+  );
   await expect(refused).toContainText("Not created", { timeout: 15_000 });
   await expect(refused).toContainText(INVITE_COPY.invalid);
-  await expect(refused.getByRole("button", { name: "Try again" })).toHaveCount(0);
+  await expect(refused.getByRole("button", { name: "Try again" })).toHaveCount(
+    0,
+  );
   await page.unroute("**/api/auth/sign-in/social");
 
   await scene(page, "No code? Au5 · Request access");

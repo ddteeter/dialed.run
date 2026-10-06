@@ -23,11 +23,6 @@ import { partsExcept, partsIn, wordsOf } from "./auth-parts";
  *   `data-part`. Changing it is the coordinator's (task 120's primitives).
  * - The failure band: the board's has no button and relabels the primary
  *   "Try again"; the shared `FailureBand` always carries its own. Same.
- * - Au6's Google failure: round 33 draws it as a `control-failure` under
- *   the Google button (round 29 #13: every Google band goes under it); the
- *   build still shows the shared failure band above the button, with the
- *   same words. Lane 126's build (`auth/google-button.tsx`), queued;
- *   register R-128.
  * - "Forgot it?" is drawn on Au2–Au4 and Au7; there is no reset flow to
  *   send it to, so it is absent rather than a dead link.
  * - The Google button's "G" is Google's official image, not the board's
@@ -267,27 +262,20 @@ test.describe("Au · phone", () => {
       route.fulfill({ status: 502, body: "{}" }),
     );
     await page.getByRole("button", { name: "Continue with Google" }).click();
-    await expect(
-      page.locator(`${PANEL} [data-part='failure-band']`),
-    ).toBeVisible({ timeout: 15_000 });
-
-    // Known gap: the build draws the shared failure band where round 33
-    // draws a control failure. Since round 29 #13 (PR #142) both sit
-    // directly under Google, so only the region differs. Queued for lane
-    // 126 (R-128); when it lands this fails, and the build's order becomes
-    // the board's.
+    const band = page.locator(`${PANEL} [data-part='control-failure']`);
+    await expect(band).toBeVisible({ timeout: 15_000 });
+    // The board's state, and no failure band anywhere (R-128, closed).
+    await expect(band).toHaveAttribute("data-state", "google-failed");
     // Au6 draws no cross-link beneath; the build keeps Au2's.
-    expect(await partsExcept(page, PANEL, ["cross-link"])).toEqual(
-      board.order.map((part) =>
-        part === "control-failure" ? "failure-band" : part,
-      ),
+    expect(await partsExcept(page, PANEL, ["cross-link"])).toEqual(board.order);
+    // The board marks the band role="status"; the build does not, because
+    // the Accessibility Contract allows one status region per screen and
+    // the page's own already speaks the band's words (rule 08 outranks
+    // the drawing). That region is the panel's only one.
+    await expect(band).not.toHaveAttribute("role", "status");
+    await expect(page.locator(PANEL).getByRole("status")).toHaveText(
+      "Not signed in. Google didn't answer. Try again, or use your email.",
     );
-    // What the band says is what the board's control failure says, Try
-    // again included; only the region differs.
-    expect(await wordsOf(page, `${PANEL} [data-part='failure-band']`)).toEqual(
-      board.words.get("control-failure"),
-    );
-    board.words.delete("control-failure");
     // The button keeps its rest label, as round 33 draws it.
     await expectSameWords(page, board.words, {});
   });
