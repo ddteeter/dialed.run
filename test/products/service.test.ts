@@ -231,17 +231,17 @@ describe("prefix autocomplete refuses to guess", () => {
     expect(await searchProducts(client, brand.id, "###")).toStrictEqual([]);
   });
 
-  it("never lets a LIKE metacharacter the user typed reach the query", async () => {
-    // `%` and `_` are LIKE wildcards, and this is the assertion that says
-    // why no escaping is needed: normalisation folds them to a space long
-    // before the pattern is built. A user typing "100%" gets the brands
-    // whose names begin "100", not every brand in the table.
+  it("treats a LIKE metacharacter the user typed as punctuation", async () => {
+    // `%` and `_` were LIKE wildcards when the search was a LIKE, and the
+    // search is a range now, but the promise is the same: normalisation
+    // folds them to a space. A user typing "100%" gets the brands whose
+    // names begin "100", not every brand in the table.
     const client = db();
     await createOrGetBrand(client, "Wildcard 100% Wool");
     await createOrGetBrand(client, "Wildcard Zulu");
 
-    // A live `%` here would end the pattern at "wildcard 100" with a
-    // wildcard the user supplied, and the Zulu row would come back too.
+    // A live `%` here would match anything after "wildcard 100", and the
+    // Zulu row would come back too.
     const results = await searchBrands(client, "wildcard 100%");
     expect(results.map((brand) => brand.name)).toStrictEqual([
       "Wildcard 100% Wool",
@@ -531,5 +531,105 @@ describe("products: one read for garment detail", () => {
 
   it("answers nothing for a product that does not exist", async () => {
     expect(await getProductForDetail(db(), newUlid())).toBeUndefined();
+  });
+});
+
+function recordingDb(): {
+  client: ReturnType<typeof db>;
+  last: () => { sql: string; params: unknown[] };
+} {
+  const seen: { sql: string; params: unknown[] }[] = [];
+  const client = drizzle(env.DIALED_CORE, {
+    logger: {
+      logQuery(sql, params) {
+        seen.push({ sql, params });
+      },
+    },
+  });
+  return {
+    client,
+    last: () => {
+      const query = seen.at(-1);
+      if (query === undefined) throw new Error("no query was issued");
+      return query;
+    },
+  };
+}
+
+async function planOf(query: {
+  sql: string;
+  params: unknown[];
+}): Promise<string> {
+  const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${query.sql}`)
+    .bind(...query.params)
+    .all<{ detail: string }>();
+  return plan.results.map((row) => row.detail).join("\n");
+}
+
+/**
+ * Autocomplete runs on every keystroke, and D1 bills rows scanned. A
+ * `LIKE 'prefix%'` cannot use the binary-collated `normalized` indexes
+ * (SQLite's LIKE is case-insensitive), so it scanned the table; the range
+ * the search uses now is an index seek. The plan is the assertion — the
+ * results would be identical either way.
+ */
+describe("prefix autocomplete is an index range", () => {
+  it("searches brands through brands_normalized", async () => {
+    const { client, last } = recordingDb();
+    await searchBrands(client, "track");
+    const plan = await planOf(last());
+    expect(plan).toContain(
+      "USING INDEX brands_normalized (normalized>? AND normalized<?)",
+    );
+  });
+
+  it("searches products through products_brand_name", async () => {
+    const { client, last } = recordingDb();
+    await searchProducts(client, newUlid(), "speed");
+    const plan = await planOf(last());
+    expect(plan).toContain(
+      "USING INDEX products_brand_name (brand_id=? AND normalized_name>? AND normalized_name<?)",
+    );
+  });
+
+  it("finds a key whose next character is outside the BMP", async () => {
+    // The upper bound has to sort after every UTF-8 continuation. U+FFFF
+    // would not: 𠀋 (U+2000B) encodes from byte F0, after U+FFFF's EF.
+    const client = db();
+    const astral = await createOrGetBrand(client, "Rangeprobe\u{2000B}");
+    const found = await searchBrands(client, "rangeprobe");
+    expect(found.map((row) => row.id)).toContain(astral.id);
+  });
+
+  it("stops at the end of the prefix", async () => {
+    // The lower bound alone would return every key that sorts after it.
+    const client = db();
+    const inside = await createOrGetBrand(client, "Boundprobe Alpha");
+    const after = await createOrGetBrand(client, "Boundprobf");
+    const before = await createOrGetBrand(client, "Boundprobd");
+    const found = await searchBrands(client, "boundprobe");
+    const ids = found.map((row) => row.id);
+    expect(ids).toStrictEqual([inside.id]);
+    expect(ids).not.toContain(after.id);
+    expect(ids).not.toContain(before.id);
+  });
+
+  it("finds products by prefix and not past it", async () => {
+    const client = db();
+    const brand = await createOrGetBrand(client, "Range Product Brand");
+    const createdBy = newUlid();
+    const inside = await createOrGetProduct(client, {
+      brandId: brand.id,
+      name: "Glide 9",
+      createdBy,
+    });
+    await createOrGetProduct(client, {
+      brandId: brand.id,
+      name: "Glidf",
+      createdBy,
+    });
+    const found = await searchProducts(client, brand.id, "glide");
+    const ids = found.map((row) => row.id);
+    expect(ids).toStrictEqual([inside.id]);
   });
 });

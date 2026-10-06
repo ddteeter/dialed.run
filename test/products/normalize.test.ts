@@ -89,18 +89,98 @@ describe("normalizeIdentity: names in any script", () => {
   });
 
   it("keeps a Latin letter that has no unaccented form", () => {
-    // ø and ß do not decompose, so the old `[a-z0-9]` rule turned them into
-    // a space and "Norrøna" became two words.
+    // ø does not decompose, so the old `[a-z0-9]` rule turned it into a
+    // space and "Norrøna" became two words. Folding it to "o" is R-138.
     expect(normalizeIdentity("Norrøna")).toBe("norrøna");
-    expect(normalizeIdentity("Straße")).toBe("straße");
+  });
+
+  it("folds stacked accents, not just the first", () => {
+    // ệ decomposes to e + U+0323 + U+0302. Stripping one mark would leave
+    // "viêt". Stryker cannot mutate this regex (`\p{Script=…}` is beyond
+    // its parser), so this is the hand-written `\p{M}+` -> `\p{M}` mutant.
+    expect(normalizeIdentity("Việt")).toBe("viet");
   });
 
   it("refuses emoji-only and punctuation-only names", () => {
     // The variation selector after 👟 is a mark; once the emoji itself is
-    // stripped it has no letter to belong to and must not count as one.
+    // stripped it must not count as a letter.
     expect(normalizeIdentity("👟️")).toBe("");
     expect(normalizeIdentity("🏃‍♀️ 👟")).toBe("");
     expect(normalizeIdentity("—…・「」")).toBe("");
+  });
+
+  it("drops variation selectors and enclosing marks wherever they are", () => {
+    // Neither changes which letter it follows. Kept, a text-presentation
+    // selector after ミズノ made a second key that renders identically.
+    expect(normalizeIdentity("ミズノ\u{FE0E}")).toBe("ミズノ");
+    expect(normalizeIdentity("ミズ\u{FE0F}ノ")).toBe("ミズノ");
+    // Keycap one: "1" + U+FE0F + U+20E3 (an enclosing mark).
+    expect(normalizeIdentity("Nike 1\u{FE0F}\u{20E3}")).toBe("nike 1");
+    expect(normalizeIdentity("Nike 1\u{20E3}")).toBe("nike 1");
+    // The supplementary selectors (U+E0100…) are variation selectors too.
+    expect(normalizeIdentity("ミズノ\u{E0100}")).toBe("ミズノ");
+    // A lone enclosing mark is nothing at all, not a token.
+    expect(normalizeIdentity("\u{20DD}")).toBe("");
+  });
+
+  it("folds Greek accents the way Latin ones are folded", () => {
+    // All-caps Greek drops the tonos, so the same name arrives both ways.
+    expect(normalizeIdentity("Αθήνα")).toBe("αθηνα");
+    expect(normalizeIdentity("ΑΘΗΝΑ")).toBe("αθηνα");
+    // ΐ is ι + diaeresis + tonos: stacked, so both must go.
+    expect(normalizeIdentity("ΐ")).toBe("ι");
+  });
+
+  it("folds Hebrew points and Arabic harakat", () => {
+    // שָׁלוֹם with niqqud (qamats, shin dot, holam) is שלום.
+    expect(
+      normalizeIdentity("\u{5E9}\u{5C1}\u{5B8}\u{5DC}\u{5D5}\u{5B9}\u{5DD}"),
+    ).toBe("\u{5E9}\u{5DC}\u{5D5}\u{5DD}");
+    // Each end of the Hebrew range, and the marks between its punctuation.
+    expect(
+      normalizeIdentity(
+        "\u{5D0}\u{591}\u{5BD}\u{5BF}\u{5C2}\u{5C4}\u{5C5}\u{5C7}",
+      ),
+    ).toBe("\u{5D0}");
+    // A presentation form decomposes into letter + point under NFKD.
+    expect(normalizeIdentity("\u{FB2A}")).toBe("\u{5E9}");
+    // مُحَمَّد with harakat (damma, fatha, shadda) is محمد.
+    expect(
+      normalizeIdentity(
+        "\u{645}\u{64F}\u{62D}\u{64E}\u{645}\u{651}\u{64E}\u{62F}",
+      ),
+    ).toBe("\u{645}\u{62D}\u{645}\u{62F}");
+    // Each end of the harakat range, and the superscript alef.
+    expect(normalizeIdentity("\u{628}\u{64B}\u{65F}\u{670}")).toBe("\u{628}");
+  });
+
+  it("keeps Hebrew punctuation as a word break, not a point", () => {
+    // Maqaf (U+05BE), paseq (U+05C0), sof pasuq (U+05C3) and nun hafukha
+    // (U+05C6) sit inside the points block but are punctuation.
+    for (const mark of ["\u{5BE}", "\u{5C0}", "\u{5C3}", "\u{5C6}"]) {
+      expect(normalizeIdentity(`\u{5D0}${mark}\u{5D1}`)).toBe(
+        "\u{5D0} \u{5D1}",
+      );
+    }
+  });
+
+  it("still keeps the marks that make a letter", () => {
+    // Folding Greek and Hebrew must not widen into folding everything.
+    expect(normalizeIdentity("ё")).toBe("ё");
+    expect(normalizeIdentity("ё")).not.toBe(normalizeIdentity("е"));
+    expect(normalizeIdentity("ガ")).not.toBe(normalizeIdentity("カ"));
+  });
+
+  it("folds ß to ss and final sigma to sigma", () => {
+    expect(normalizeIdentity("Straße")).toBe("strasse");
+    expect(normalizeIdentity("STRASSE")).toBe("strasse");
+    // Capital sharp s lowercases to ß, and then folds the same way.
+    expect(normalizeIdentity("STRA\u{1E9E}E")).toBe("strasse");
+    // Lowercasing writes ς only for a word-final capital Σ; typed in
+    // lowercase with σ, the same word must land on the same key.
+    expect(normalizeIdentity("ΟΔΟΣ")).toBe("οδοσ");
+    expect(normalizeIdentity("οδος")).toBe("οδοσ");
+    expect(normalizeIdentity("οδοσ")).toBe("οδοσ");
   });
 
   it("separates non-Latin words with single spaces", () => {
