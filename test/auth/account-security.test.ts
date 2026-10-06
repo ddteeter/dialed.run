@@ -6,7 +6,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it, vi } from "vitest";
 
 import { session, user, verification } from "../../src/db/schema-auth";
-import { passwordAttempts } from "../../src/db/schema-core";
+import { outbox, passwordAttempts } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { createAuth } from "../../src/modules/auth/create-auth";
@@ -105,6 +105,17 @@ async function isVerified(userId: string): Promise<boolean | undefined> {
     .from(user)
     .where(eq(user.id, userId));
   return row?.emailVerified;
+}
+
+/**
+The outbox kinds owed under this runner's id: the product link, if any.
+*/
+async function owedFor(userId: string): Promise<string[]> {
+  const rows = await db
+    .select({ kind: outbox.kind })
+    .from(outbox)
+    .where(eq(outbox.dedupeKey, userId));
+  return rows.map((row) => row.kind);
 }
 
 async function resetTokenFor(
@@ -215,6 +226,28 @@ describe("a password reset (ACC-4)", () => {
 
     expect(response.status).toBe(200);
     expect(await isVerified(userId)).toBe(true);
+    // A confirmation, so what a confirmation owes (design 133, D-113 Q1).
+    expect(await owedFor(userId)).toStrictEqual(["product_link"]);
+  });
+
+  it("owes no product link when the address was confirmed already", async () => {
+    const { auth, mail } = instance();
+    const { email, userId } = await signUp(auth);
+    await db
+      .update(user)
+      .set({ emailVerified: true })
+      .where(eq(user.id, userId));
+
+    const token = await resetTokenFor(auth, mail, email);
+    await auth.handler(
+      post("reset-password", {
+        token,
+        newPassword: ["reset", "while", "confirmed"].join("-"),
+      }),
+    );
+
+    expect(await isVerified(userId)).toBe(true);
+    expect(await owedFor(userId)).toStrictEqual([]);
   });
 
   it("confirms only the runner whose link it was", async () => {
@@ -232,6 +265,7 @@ describe("a password reset (ACC-4)", () => {
 
     expect(await isVerified(resetter.userId)).toBe(true);
     expect(await isVerified(bystander.userId)).toBe(false);
+    expect(await owedFor(bystander.userId)).toStrictEqual([]);
   });
 });
 

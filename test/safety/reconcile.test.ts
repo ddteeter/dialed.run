@@ -16,13 +16,7 @@ import {
   releaseStaleClaims,
 } from "../../src/modules/safety";
 
-import {
-  makeEntry,
-  makeRun,
-  makeUser,
-  resetSafetyTables,
-  confirmedReporter,
-} from "./helpers";
+import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 
 function core() {
   return drizzle(env.DIALED_CORE);
@@ -204,15 +198,12 @@ async function queuedAndClaimed(): Promise<string> {
     audience: "runners",
   });
   for (let n = 0; n < autoHideReporterThreshold; n += 1) {
-    await fileReport(
-      {
-        reporterId: await makeUser(),
-        subjectType: "entry",
-        subjectId: entryId,
-        reason: "explicit",
-      },
-      confirmedReporter,
-    );
+    await fileReport({
+      reporterId: await makeUser(),
+      subjectType: "entry",
+      subjectId: entryId,
+      reason: "explicit",
+    });
   }
   const [queued] = await pendingReviewQueue();
   if (!queued) throw new Error("nothing queued");

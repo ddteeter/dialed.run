@@ -24,7 +24,7 @@ import type { UsefulReactionInput } from "./useful-reaction";
  *
  * **It waits for a confirmed address** (round 26 #11): it draws at full
  * strength for everyone and every press asks the server, whose refusal
- * opens the screen's "Confirm your email first" sheet through `guard`.
+ * opens the root's "Confirm your email first" sheet (D-113).
  *
  * The heart is text, as the frames draw it, and hidden from a screen
  * reader: `aria-pressed` already says whether it is marked, and "black

@@ -194,6 +194,25 @@ describe("confirmEmail", () => {
     });
   });
 
+  it("owes the link of the runner's garments in the confirmation's own batch (D-113 Q1)", async () => {
+    const { userId, email } = await seedUser({ isVerified: false });
+    const token = await issueEmailLink(
+      db,
+      { userId, purpose: "verify", email },
+      NOW,
+    );
+
+    await confirmEmail(db, token, undefined, NOW + 60);
+
+    const owed = await db
+      .select({ kind: outbox.kind, payload: outbox.payload })
+      .from(outbox)
+      .where(eq(outbox.dedupeKey, userId));
+    expect(owed).toStrictEqual([
+      { kind: "product_link", payload: JSON.stringify({ userId }) },
+    ]);
+  });
+
   it("confirms nothing for a token that names no live link", async () => {
     expect(
       await confirmEmail(db, "not-a-real-token", undefined, NOW),
@@ -455,6 +474,10 @@ describe("confirmEmail, when two open one link (law 2)", () => {
     expect(await readEmailLink(db, token)).toMatchObject({
       usedAt: undefined,
     });
+    // Nothing confirmed, so nothing owed.
+    expect(
+      await db.select().from(outbox).where(eq(outbox.dedupeKey, userId)),
+    ).toStrictEqual([]);
   });
 });
 
@@ -952,24 +975,6 @@ describe("requestEmailChange", () => {
     });
   });
 
-  it("waits for a confirmed address first", async () => {
-    const mail = fakeMail();
-    const later = owedTo(mail);
-    const { userId } = await seedUser({ isVerified: false });
-    expect(
-      await requestEmailChange(
-        db,
-        change(userId, "new@example.com"),
-        mail,
-        later.owed,
-        NOW,
-      ),
-    ).toStrictEqual({ status: "unverified" });
-    await later.settled();
-    expect(mail.sent).toHaveLength(0);
-    expect(await db.select().from(outbox)).toHaveLength(0);
-  });
-
   it("asks for the current password, and does nothing else when it is wrong", async () => {
     const mail = fakeMail();
     const later = owedTo(mail);
@@ -1015,24 +1020,6 @@ describe("requestEmailChange", () => {
     ).toStrictEqual({ status: "password-limited", until: NOW + 900 });
     expect(await db.select().from(emailSendLimits)).toHaveLength(0);
     expect(await db.select().from(outbox)).toHaveLength(0);
-  });
-
-  it("says confirm first before it asks about the password", async () => {
-    const mail = fakeMail();
-    const { userId } = await seedUser({ isVerified: false });
-    const passwordCheck = vi.fn(() =>
-      Promise.resolve({ status: "wrong" } as const),
-    );
-    expect(
-      await requestEmailChange(
-        db,
-        change(userId, "new@example.com", passwordCheck),
-        mail,
-        owedTo(mail).owed,
-        NOW,
-      ),
-    ).toStrictEqual({ status: "unverified" });
-    expect(passwordCheck).not.toHaveBeenCalled();
   });
 
   it("is limited per new address", async () => {

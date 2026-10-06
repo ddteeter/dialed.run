@@ -956,6 +956,20 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     One line.", 140 characters with a counter from 120. M5 draws one
     field. **The ask:** draw the note on M5, or confirm Au5's placement.
 
+49. **"Confirm your email first" from Follow, and before the address
+    arrives (design 133, decision D-113).** Follow now waits for a
+    confirmed address, as Useful and report do: a follower count is
+    something other runners see. Round 27 #17 gives the sheet a lead
+    sentence per trigger ("Sharing…", "Marking runs Useful…",
+    "Reporting…") and none for Follow, so a refused Follow opens the sheet
+    with the address alone, as the email change does. The sheet now opens
+    from the root, which asks for the address as it opens; for the moment
+    before it arrives, or if it cannot be read, the body is the lead
+    sentence alone, with no address line and no Resend. **The ask:** a
+    lead for Follow ("Following runners…"?), and whether the
+    no-address-yet state needs drawing or the brackets should breathe in
+    the address's place.
+
 ## Answered in round 34 (imported 2026-10-04)
 
 Design sent round 34 with `Theme.dc.html` as the primary file. It carries

@@ -1,9 +1,11 @@
 import { useRef, useState } from "react";
 import type { RefObject } from "react";
 
+import type { ConfirmTrigger } from "../lib/auth-signal";
 import type { ControlFailure } from "./form";
 import { useTermsRefusal } from "./terms-refusal";
-import { classifyFailure } from "./use-form-submit";
+import { useUnconfirmedRefusal } from "./unconfirmed-refusal";
+import { classifyFailure, didAnswerRefusal } from "./use-form-submit";
 
 /**
  * An action a control takes outside a form — Useful, Follow, Unblock,
@@ -64,6 +66,7 @@ export function useControlAction<TArgs extends unknown[]>({
   action,
   kicker,
   onSuccess,
+  confirmTrigger,
 }: {
   action: (...args: TArgs) => Promise<unknown>;
   /**
@@ -71,6 +74,12 @@ export function useControlAction<TArgs extends unknown[]>({
   */
   kicker: string;
   onSuccess?: ((...args: TArgs) => void | Promise<void>) | undefined;
+  /**
+   * Which control this is, should the server refuse it for want of a
+   * confirmed address (design 133): the sentence "Confirm your email
+   * first" leads with.
+   */
+  confirmTrigger?: ConfirmTrigger | undefined;
 }): ControlAction<TArgs> {
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState<ControlFailure | undefined>();
@@ -79,6 +88,7 @@ export function useControlAction<TArgs extends unknown[]>({
   const lastArgs = useRef<TArgs | undefined>(undefined);
   const retryRef = useRef<HTMLButtonElement>(null);
   const answerTermsRefusal = useTermsRefusal();
+  const answerUnconfirmed = useUnconfirmedRefusal();
 
   async function run(...args: TArgs): Promise<void> {
     if (inFlight.current) return;
@@ -91,9 +101,16 @@ export function useControlAction<TArgs extends unknown[]>({
       await action(...args);
       await onSuccess?.(...args);
     } catch (error: unknown) {
-      // Behind on the terms: the prompt, not a band (D-96).
-      if (answerTermsRefusal && classifyFailure(error).kind === "terms") {
-        answerTermsRefusal();
+      // Behind on the terms (D-96), or not confirmed yet (D-113): the
+      // root's answer, not a band, and the control stays as it was,
+      // because nothing changed.
+      const answers = {
+        terms: answerTermsRefusal,
+        unconfirmed: answerUnconfirmed,
+      };
+      if (
+        didAnswerRefusal(classifyFailure(error).kind, answers, confirmTrigger)
+      ) {
         return;
       }
       const message = causeLine(error);

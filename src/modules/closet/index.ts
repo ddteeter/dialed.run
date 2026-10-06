@@ -22,7 +22,6 @@ export {
   getItemsByIds,
   getOwnedItem,
   listItems,
-  nameItem,
   NotFoundError,
   retireItem,
   unretireItem,
@@ -33,11 +32,13 @@ export {
   addFromTapList,
   climateBandSchema,
   climateBands,
+  isTapListPlaceholder,
   TAP_LIST,
   TAP_LIST_FOLD,
   tapListFor,
   tapListSelectionSchema,
 } from "./tap-list";
 export { photoUrlFor } from "./photo-url";
+export { linkTypedGarments, nameItem } from "./product-link";
 export type { PhotoSize, PhotoUploadResult } from "./photos";
 export { photoSizes } from "./photos";

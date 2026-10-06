@@ -19,7 +19,6 @@ import {
 } from "../../src/modules/feed/reactions";
 import { searchRunners } from "../../src/modules/feed/search";
 import {
-  addAccount,
   makeEntry,
   makeRun,
   makeUser,
@@ -118,9 +117,9 @@ describe("username search", () => {
   beforeEach(resetTables);
 
   it("prefix-matches display names (public profiles only, per MVP)", async () => {
-    await makeUser({ username: "Ana Runner" });
-    await makeUser({ username: "Andy Trails" });
-    await makeUser({ username: "Beth Miles" });
+    await makeVerifiedUser({ username: "Ana Runner" });
+    await makeVerifiedUser({ username: "Andy Trails" });
+    await makeVerifiedUser({ username: "Beth Miles" });
 
     const viewer = await makeUser({ username: "Viewer" });
     const results = await searchRunners(viewer, "An");
@@ -198,79 +197,5 @@ describe("useful reactions: who may react", () => {
     expect(row?.kind).toBe("useful");
     expect(row?.createdAt).toBeGreaterThanOrEqual(before - 5);
     expect(row?.createdAt).toBeLessThanOrEqual(before + 5);
-  });
-});
-
-async function publicEntry(): Promise<string> {
-  const author = await makeUser();
-  const runId = await makeRun({ userId: author });
-  return makeEntry({ userId: author, runId, audience: "runners" });
-}
-
-describe("useful reactions wait for a confirmed address (round 26 #11; seam 7)", () => {
-  beforeEach(resetTables);
-
-  it("refuses an unconfirmed runner's mark with an answer, and writes nothing", async () => {
-    const entryId = await publicEntry();
-    const unconfirmed = await makeUser();
-    await addAccount(unconfirmed, false);
-
-    expect(await setUsefulReaction(entryId, unconfirmed, true)).toStrictEqual({
-      status: "unverified",
-    });
-    expect(await usefulCount(entryId)).toBe(0);
-    expect(await hasReacted(entryId, unconfirmed)).toBe(false);
-  });
-
-  it("refuses taking a mark back too, and leaves it where it was", async () => {
-    // A mark from before the address stopped being confirmed is not a
-    // state production reaches, which is what makes it the honest probe:
-    // the refusal must come before the delete, not after it.
-    const entryId = await publicEntry();
-    const unconfirmed = await makeUser();
-    await addAccount(unconfirmed, false);
-    await drizzle(env.DIALED_CORE).insert(reactionsTable).values({
-      entryId,
-      userId: unconfirmed,
-      kind: "useful",
-      createdAt: nowSeconds(),
-    });
-
-    expect(await setUsefulReaction(entryId, unconfirmed, false)).toStrictEqual({
-      status: "unverified",
-    });
-    expect(await hasReacted(entryId, unconfirmed)).toBe(true);
-  });
-
-  it("answers before it looks at the entry, so a refusal says nothing about one", async () => {
-    const unconfirmed = await makeUser();
-    await addAccount(unconfirmed, false);
-
-    expect(await setUsefulReaction(newUlid(), unconfirmed, true)).toStrictEqual(
-      { status: "unverified" },
-    );
-  });
-
-  it("refuses a runner with no account at all", async () => {
-    // `isVerified`'s own rule: a runner who is gone is not confirmed.
-    const entryId = await publicEntry();
-    const gone = await makeUser();
-
-    expect(await setUsefulReaction(entryId, gone, true)).toStrictEqual({
-      status: "unverified",
-    });
-    expect(await usefulCount(entryId)).toBe(0);
-  });
-
-  it("lets the runner mark it once the address is confirmed", async () => {
-    const entryId = await publicEntry();
-    const confirmed = await makeUser();
-    await addAccount(confirmed, true);
-
-    expect(await setUsefulReaction(entryId, confirmed, true)).toStrictEqual({
-      status: "set",
-      useful: true,
-      count: 1,
-    });
   });
 });

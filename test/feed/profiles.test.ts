@@ -11,7 +11,7 @@ import {
   makeItem,
   makeObservation,
   makeRun,
-  makeUser,
+  makeVerifiedUser,
   resetTables,
   NOW,
 } from "./helpers";
@@ -76,7 +76,7 @@ beforeEach(async () => {
 
 describe("ownProfile: the empty case", () => {
   it("answers for a runner with no entries at all", async () => {
-    const userId = await makeUser({ username: "Fresh runner" });
+    const userId = await makeVerifiedUser({ username: "Fresh runner" });
 
     const profile = await ownProfile(userId);
 
@@ -102,7 +102,7 @@ describe("ownProfile: the empty case", () => {
 
 describe("ownProfile: coverage bands", () => {
   it("counts a verdict into the band its conditions fall in", async () => {
-    const userId = await makeUser();
+    const userId = await makeVerifiedUser();
     await ratedEntry({ userId, lat: 41.11, feelsLikeC: 3, verdict: 0 });
 
     const profile = await ownProfile(userId);
@@ -115,7 +115,7 @@ describe("ownProfile: coverage bands", () => {
   it("splits cold, dialed and warm by the sign of the verdict", async () => {
     // −2..+2 with 0 = dialed. A verdict counted on the wrong side turns
     // "I get this band right" into its opposite.
-    const userId = await makeUser();
+    const userId = await makeVerifiedUser();
     await ratedEntry({ userId, lat: 42.11, feelsLikeC: 3, verdict: -2 });
     await ratedEntry({ userId, lat: 42.12, feelsLikeC: 3, verdict: 0 });
     await ratedEntry({ userId, lat: 42.13, feelsLikeC: 3, verdict: 2 });
@@ -127,7 +127,7 @@ describe("ownProfile: coverage bands", () => {
   });
 
   it("ignores an entry with no verdict", async () => {
-    const userId = await makeUser();
+    const userId = await makeVerifiedUser();
     const runId = await makeRun({ userId, lat: 43.11, lng: -93.27 });
     await makeObservation({
       lat: 43.11,
@@ -146,7 +146,7 @@ describe("ownProfile: coverage bands", () => {
 
   it("returns the bands coldest first", async () => {
     // The profile draws them as a scale; out of order it is not a scale.
-    const userId = await makeUser();
+    const userId = await makeVerifiedUser();
     await ratedEntry({ userId, lat: 44.11, feelsLikeC: 18, verdict: 0 });
     await ratedEntry({ userId, lat: 44.12, feelsLikeC: -8, verdict: 0 });
 
@@ -166,7 +166,7 @@ describe("ownProfile: most worn", () => {
     // D1 refuses more than 100 bound parameters in one statement, and the
     // history is up to 200 entries: read as one list, a runner with more
     // than a hundred runs had no profile at all.
-    const userId = await makeUser();
+    const userId = await makeVerifiedUser();
     const shell = await makeItem({ userId, name: "Shell" });
     await makeObservation({
       lat: 47.11,
@@ -194,7 +194,7 @@ describe("ownProfile: most worn", () => {
   });
 
   it("ranks items by how often they were worn", async () => {
-    const userId = await makeUser();
+    const userId = await makeVerifiedUser();
     const often = await makeItem({ userId, name: "Favourite" });
     const once = await makeItem({ userId, name: "Occasional" });
     await ratedEntry({
@@ -227,7 +227,7 @@ describe("ownProfile: most worn", () => {
     // Entries outlive garments — "retire, don't delete" covers referenced
     // items, but an unreferenced one is hard-deleted and the entry keeps
     // the id. A blank line in the list is worse than saying so.
-    const userId = await makeUser();
+    const userId = await makeVerifiedUser();
     await ratedEntry({
       userId,
       lat: 46.11,
@@ -249,9 +249,9 @@ describe("ownProfile: most worn", () => {
 
 describe("ownProfile: the social counts", () => {
   it("counts followers and following separately", async () => {
-    const me = await makeUser();
-    const follower = await makeUser();
-    const followed = await makeUser();
+    const me = await makeVerifiedUser();
+    const follower = await makeVerifiedUser();
+    const followed = await makeVerifiedUser();
     await follow(follower, me);
     await follow(me, followed);
 
@@ -264,11 +264,11 @@ describe("ownProfile: the social counts", () => {
   it("counts every run logged, with an entry or without, and only this runner's", async () => {
     // G's first count (round 22). A run nobody has dressed yet is still a
     // run — counting entries would call a runner with a backlog new.
-    const me = await makeUser();
+    const me = await makeVerifiedUser();
     await makeRun({ userId: me });
     const dressed = await makeRun({ userId: me });
     await makeEntry({ userId: me, runId: dressed });
-    await makeRun({ userId: await makeUser() });
+    await makeRun({ userId: await makeVerifiedUser() });
 
     const profile = await ownProfile(me);
 
@@ -277,7 +277,7 @@ describe("ownProfile: the social counts", () => {
   });
 
   it("counts no runs on day one", async () => {
-    const profile = await ownProfile(await makeUser());
+    const profile = await ownProfile(await makeVerifiedUser());
     expect(profile.runCount).toBe(0);
   });
 
@@ -285,9 +285,9 @@ describe("ownProfile: the social counts", () => {
     // PR #102 review: the run count read every run id to take `.length`,
     // and the follow counts did the same with every follower id — a
     // runner with a few thousand runs shipped all of them on each view.
-    const me = await makeUser();
+    const me = await makeVerifiedUser();
     await makeRun({ userId: me });
-    await follow(await makeUser(), me);
+    await follow(await makeVerifiedUser(), me);
     const prepare = vi.spyOn(env.DIALED_CORE, "prepare");
 
     const profile = await ownProfile(me);
@@ -314,14 +314,14 @@ describe("ownProfile: the social counts", () => {
 describe("otherProfile", () => {
   it("answers with nothing for a runner who has no profile", async () => {
     expect(
-      await otherProfile("01JNOBODY000000000000000", await makeUser()),
+      await otherProfile("01JNOBODY000000000000000", await makeVerifiedUser()),
     ).toBeUndefined();
   });
 
   it("shows public entries and hides private ones", async () => {
     // The privacy boundary. A private entry never appears in feeds or on
     // anyone else's screen.
-    const userId = await makeUser({ username: "Public runner" });
+    const userId = await makeVerifiedUser({ username: "Public runner" });
     const shown = await ratedEntry({
       userId,
       lat: 47.11,
@@ -337,7 +337,7 @@ describe("otherProfile", () => {
       audience: "private",
     });
 
-    const profile = await otherProfile(userId, await makeUser());
+    const profile = await otherProfile(userId, await makeVerifiedUser());
 
     expect(profile?.username).toBe("Public runner");
     expect(
@@ -346,7 +346,7 @@ describe("otherProfile", () => {
   });
 
   it("shows the newest entries first", async () => {
-    const userId = await makeUser();
+    const userId = await makeVerifiedUser();
     const older = await ratedEntry({
       userId,
       lat: 48.11,
@@ -362,7 +362,7 @@ describe("otherProfile", () => {
       createdAt: NOW,
     });
 
-    const profile = await otherProfile(userId, await makeUser());
+    const profile = await otherProfile(userId, await makeVerifiedUser());
 
     expect(
       profile?.recentPublicEntries.map((entry) => entry.entryId),
@@ -370,7 +370,7 @@ describe("otherProfile", () => {
   });
 
   it("carries the caption and the verdict, and nothing aggregated", async () => {
-    const userId = await makeUser();
+    const userId = await makeVerifiedUser();
     const entryId = await ratedEntry({
       userId,
       lat: 49.11,
@@ -382,7 +382,7 @@ describe("otherProfile", () => {
       .set({ caption: "Cold first mile" })
       .where(eq(outfitEntries.id, entryId));
 
-    const profile = await otherProfile(userId, await makeUser());
+    const profile = await otherProfile(userId, await makeVerifiedUser());
 
     expect(profile?.recentPublicEntries[0]).toStrictEqual({
       entryId,
@@ -394,13 +394,13 @@ describe("otherProfile", () => {
   });
 
   it("shows the city label a runner chose to publish", async () => {
-    const userId = await makeUser();
+    const userId = await makeVerifiedUser();
     await db()
       .update(userProfiles)
       .set({ cityLabel: "Minneapolis" })
       .where(eq(userProfiles.userId, userId));
 
-    const profile = await otherProfile(userId, await makeUser());
+    const profile = await otherProfile(userId, await makeVerifiedUser());
     expect(profile?.cityLabel).toBe("Minneapolis");
   });
 });
@@ -409,7 +409,7 @@ describe("ownProfile: what it leaves out", () => {
   it("skips an entry whose conditions were never resolved", async () => {
     // A rated run with no observation cannot be placed in a band. Reading
     // one anyway is a crash on the profile screen.
-    const userId = await makeUser();
+    const userId = await makeVerifiedUser();
     const runId = await makeRun({ userId, lat: 51.11, lng: -93.27 });
     await makeEntry({ userId, runId, verdict: 0 });
 
@@ -422,7 +422,7 @@ describe("ownProfile: what it leaves out", () => {
   it("labels a band in Fahrenheit", async () => {
     // The profile is the runner's own record and reads in their units; an
     // unlabelled band is a bar with no axis.
-    const userId = await makeUser();
+    const userId = await makeVerifiedUser();
     await ratedEntry({ userId, lat: 52.11, feelsLikeC: 0, verdict: 0 });
 
     const profile = await ownProfile(userId);
@@ -434,7 +434,7 @@ describe("ownProfile: what it leaves out", () => {
   it("reports an unset city and thermal level as unset, not as null", async () => {
     // These reach a component that renders "—" for `undefined`; `null`
     // renders as the word.
-    const userId = await makeUser();
+    const userId = await makeVerifiedUser();
 
     const profile = await ownProfile(userId);
 
@@ -443,7 +443,7 @@ describe("ownProfile: what it leaves out", () => {
   });
 
   it("shows the most recent twenty entries, and their verdicts", async () => {
-    const userId = await makeUser();
+    const userId = await makeVerifiedUser();
     for (let index = 0; index < 21; index += 1) {
       await ratedEntry({
         userId,

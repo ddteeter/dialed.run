@@ -29,19 +29,60 @@
  * **One round trip.** The leaving claim and the latest acceptance are two
  * seeks, read in one `db.batch()` rather than one after the other behind
  * the session's own read.
+ *
+ * **The verification gate is this one plus the address** (design 133,
+ * decision D-113): `confirmedUserId`, behind `verifiedUserId`, reads the
+ * confirmation as a third seek in the same batch, so it costs no round
+ * trip. Refusal order: no session, leaving, behind on the terms,
+ * unconfirmed — a runner behind on the terms sees the terms prompt first,
+ * because confirming would not let them through anyway.
  */
 import type { drizzle } from "drizzle-orm/d1";
 
 import {
   currentTermsVersion,
+  emailConfirmationRead,
   latestAcceptanceOf,
   termsStandingOf,
 } from "../account";
-import { AccountLeavingError, TermsNotAcceptedError } from "./auth-error";
+import {
+  AccountLeavingError,
+  EmailUnconfirmedError,
+  TermsNotAcceptedError,
+} from "./auth-error";
 import { deletionClaimOf, standingFrom } from "./leaving-gate";
-import { userIdOrThrow, type SessionWithUser } from "./session-user";
+import {
+  optionalUserIdFrom,
+  userIdOrThrow,
+  type SessionWithUser,
+} from "./session-user";
 
 type Db = ReturnType<typeof drizzle>;
+
+/**
+ * The refusals both gates share, from the rows they read: leaving, then
+ * behind on the terms.
+ */
+function agreedRefusal(
+  claim: Parameters<typeof standingFrom>[0],
+  latest: number | undefined,
+  current: number | undefined,
+): Error | undefined {
+  if (standingFrom(claim) !== "active") return new AccountLeavingError();
+  if (termsStandingOf(latest, current).state === "behind") {
+    return new TermsNotAcceptedError();
+  }
+  return undefined;
+}
+
+function refuseUnlessAgreed(
+  claim: Parameters<typeof standingFrom>[0],
+  latest: number | undefined,
+  current: number | undefined,
+): void {
+  const refusal = agreedRefusal(claim, latest, current);
+  if (refusal !== undefined) throw refusal;
+}
 
 /**
  * The signed-in runner's id — or `AuthRequiredError` with no session,
@@ -60,9 +101,66 @@ export async function agreedUserId(
     deletionClaimOf(db, userId),
     latestAcceptanceOf(db, userId),
   ]);
-  if (standingFrom(claim) !== "active") throw new AccountLeavingError();
-  if (termsStandingOf(latest?.version, current).state === "behind") {
-    throw new TermsNotAcceptedError();
-  }
+  refuseUnlessAgreed(claim, latest?.version, current);
   return userId;
+}
+
+/**
+ * What the verification gate refuses this runner with, or `undefined`
+ * when it lets them through: leaving, behind on the terms, and then an
+ * address not confirmed — or no account row, which is a runner who is
+ * gone (`account`'s `isVerified` reads it the same way). Three seeks, one
+ * batch.
+ */
+async function confirmationRefusal(
+  db: Db,
+  userId: string,
+  current: number | undefined,
+): Promise<Error | undefined> {
+  const [[claim], [latest], [confirmation]] = await db.batch([
+    deletionClaimOf(db, userId),
+    latestAcceptanceOf(db, userId),
+    emailConfirmationRead(db, userId),
+  ]);
+  return (
+    agreedRefusal(claim, latest?.version, current) ??
+    (confirmation?.isConfirmed === true
+      ? undefined
+      : new EmailUnconfirmedError())
+  );
+}
+
+/**
+ * `agreedUserId`, and then `EmailUnconfirmedError` for a runner whose
+ * address is not confirmed, or who has no account row.
+ * `verifiedUserId`'s whole decision.
+ */
+export async function confirmedUserId(
+  db: Db,
+  session: SessionWithUser | null,
+  current: number | undefined = currentTermsVersion(),
+): Promise<string> {
+  const userId = userIdOrThrow(session);
+  const refusal = await confirmationRefusal(db, userId, current);
+  if (refusal !== undefined) throw refusal;
+  return userId;
+}
+
+/**
+ * The viewer `confirmedUserId` would let through, or `undefined` for
+ * anyone it would refuse, signed out included — for a door that answers
+ * "no" as not-found rather than as an error: the Desk's, and a reviewer's
+ * photo (D-113 Q5). Asked this way, a viewer the Desk's functions would
+ * refuse is never shown the Desk. `optionalVerifiedUserId`'s whole
+ * decision.
+ */
+export async function confirmedViewerId(
+  db: Db,
+  session: SessionWithUser | null,
+  current: number | undefined = currentTermsVersion(),
+): Promise<string | undefined> {
+  const userId = optionalUserIdFrom(session);
+  if (userId === undefined) return undefined;
+  const refusal = await confirmationRefusal(db, userId, current);
+  return refusal === undefined ? userId : undefined;
 }

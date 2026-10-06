@@ -3,6 +3,7 @@ import type { SQL } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../db/schema-core";
+import { runnerConfirmed } from "../account";
 import {
   notBlockedEitherWay,
   profileNotReportedBy,
@@ -11,8 +12,9 @@ import {
 
 /**
  * Whether `viewerId` may see a runner at all: not banned, not in a block
- * pair with the viewer either way, and not a profile the viewer has
- * reported (D-68). Shared by runner search (W2, FEED-7) and H's
+ * pair with the viewer either way, not a profile the viewer has reported
+ * (D-68), and with a confirmed address (D-113 Q2: a handle may be claimed
+ * unconfirmed, but nobody finds it until the address is confirmed). Shared by runner search (W2, FEED-7) and H's
  * `visibleRunnerStatement` — both are a `WHERE` over `user_profiles` that
  * answers the same question, so a future exclusion (a new report reason, a
  * new kind of hide) belongs here once, not in two clauses that have to be
@@ -28,6 +30,9 @@ export function runnerVisibleToViewer(viewerId: string) {
     // Task 126 (ACC-9): a runner deleting their account leaves search and
     // H at once, by safety's rule (seam 6).
     runnerNotLeaving(userProfiles.userId),
+    // Design 133 (D-113 Q2): an unconfirmed runner is not findable — in
+    // search, at H, or through H's old `/feed/u/$userId` redirect.
+    runnerConfirmed(userProfiles.userId),
     notBlockedEitherWay(viewerId, userProfiles.userId),
     profileNotReportedBy(viewerId, userProfiles.userId),
   );

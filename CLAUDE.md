@@ -176,6 +176,14 @@ functions) and `requireSession` (route loaders) in `modules/auth` are the only
 implementations. Four private copies had already become three incompatible
 error types before anyone noticed. An eslint rule now rejects new ones.
 
+Confirmation is the second worked example (D-113). A write other runners can
+see, or one that trusts the address, takes `verifiedUserId()` instead of
+`requireUserId()`: follow, Useful, report, email change, the Desk. Every server
+function and route handler is classified in
+`test/architecture/verification-class.test.ts`, and an unclassified one fails
+it. So a new function needs a row there, and choosing the class is a product
+call. When it is not obvious from "visible to others", ask.
+
 ## Routing: typed, never string literals
 
 Navigation uses TanStack's typed `Link`/`navigate` with route paths checked

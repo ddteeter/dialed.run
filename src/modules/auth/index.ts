@@ -27,10 +27,12 @@ export {
   checkCurrentPassword,
   currentSessionId,
   optionalUserId,
+  optionalVerifiedUserId,
   requireSignedInSince,
   requireUserId,
   requireUserIdBeforeTerms,
   requireUserIdWhileLeaving,
+  verifiedUserId,
 } from "./require-user";
 export type { PasswordCheck } from "./password-check";
 export { deploymentPosture } from "./create-auth";

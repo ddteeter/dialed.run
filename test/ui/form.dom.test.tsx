@@ -851,7 +851,7 @@ describe("the live region starts empty", () => {
 /**
 The server's "no" that a screen answers itself, as `refusal` matches it.
 */
-const REFUSED = { status: "unverified" } as const;
+const REFUSED = { status: "limited" } as const;
 
 /**
 Longer than the hook's announce-then-move grace: whatever a success would do has had its chance.

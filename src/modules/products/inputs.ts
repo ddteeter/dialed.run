@@ -9,24 +9,8 @@
  */
 import { z } from "zod";
 
-import {
-  brandNameSchema,
-  httpsUrlSchema,
-  productNameSchema,
-} from "../../lib/contracts";
-
 /**
  * The brand autocomplete prefix. Bounded because it reaches a `LIKE`: an
  * unbounded prefix is a bigger scan for an answer nobody can read.
  */
 export const brandSearchInput = z.object({ prefix: z.string().max(60) });
-
-/**
- * The screen-F identity step: brand + product together, so the form can
- * pre-fill attributes and link `product_id` in one round trip.
- */
-export const resolveProductInput = z.object({
-  brandName: brandNameSchema,
-  productName: productNameSchema,
-  sourceUrl: httpsUrlSchema.optional(),
-});

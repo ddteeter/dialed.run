@@ -1,7 +1,7 @@
 import type { drizzle } from "drizzle-orm/d1";
 
 import { garmentCategoryLabels } from "../../lib/contracts";
-import { listItems } from "../closet";
+import { isTapListPlaceholder, listItems } from "../closet";
 import type { ClosetItemView, WardrobeItemRow } from "../closet";
 import { productsForBrand, searchBrands } from "../products";
 
@@ -50,7 +50,9 @@ export interface NamingOffer {
  *
  * Named pieces are absent rather than shown as done: P2.5 runs once,
  * immediately after the tap list, so in practice everything is generic —
- * and the closet nudge, not this screen, is what follows up later.
+ * and the closet nudge, not this screen, is what follows up later. "Named"
+ * is `namedResult`'s answer, so a row reads the same on the offer as in
+ * the result it left behind.
  */
 export async function namingOffer(
   db: Db,
@@ -59,7 +61,7 @@ export async function namingOffer(
   const listing = await listItems(db, userId, {});
   return {
     items: listing.items
-      .filter((view) => view.isGeneric)
+      .filter((view) => !namedResult(view.item).isNamed)
       .map((view) => toNameable(view)),
     totalCount: listing.totalCount,
   };
@@ -94,7 +96,13 @@ function toNameable(view: ClosetItemView): NameableItem {
  *
  * `isNamed` is design rule 04's other half: **brand-only is a partial
  * answer**, so that row keeps its own name, says `SMARTWOOL · NO MODEL`,
- * and *stays offered*. Only a linked product finishes it.
+ * and *stays offered*. A model finishes it.
+ *
+ * A model is a linked product, or — for a runner whose address is not
+ * confirmed yet, whose names link nothing until it is (design 133, D-113
+ * Q1) — a name that is no longer the tap list's. Their own row reads as
+ * named either way: what waits on the address is the shared product, not
+ * their answer.
  */
 export interface NamedResult {
   label: string;
@@ -123,7 +131,7 @@ export function namedResult(row: WardrobeItemRow): NamedResult {
       isNamed: false,
     };
   }
-  if (row.productId === null) {
+  if (row.productId === null && isTapListPlaceholder(row)) {
     return { label: row.name, subtitle: `${brand} · No model`, isNamed: false };
   }
   return {

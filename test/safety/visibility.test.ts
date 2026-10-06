@@ -36,7 +36,6 @@ import {
   makeVerifiedUser,
   NOW,
   resetSafetyTables,
-  confirmedReporter,
 } from "./helpers";
 
 /**
@@ -174,7 +173,7 @@ describe("a runner deleting their account (task 126, ACC-9)", () => {
   });
 
   it("leaves runner search and their profile, for everyone else", async () => {
-    const leaving = await makeUser({ username: "leaving_runner" });
+    const leaving = await makeVerifiedUser({ username: "leaving_runner" });
     const viewer = await makeUser();
     const found = await searchRunners(viewer, "leaving_r");
     expect(found.map((row) => row.username)).toStrictEqual(["leaving_runner"]);
@@ -266,15 +265,12 @@ describe("a reporter's own hide (SAF-13)", () => {
     await follow(reporter, posted.author);
     await follow(bystander, posted.author);
 
-    const filed = await fileReport(
-      {
-        reporterId: reporter,
-        subjectType: "entry",
-        subjectId: posted.entryId,
-        reason: "spam",
-      },
-      confirmedReporter,
-    );
+    const filed = await fileReport({
+      reporterId: reporter,
+      subjectType: "entry",
+      subjectId: posted.entryId,
+      reason: "spam",
+    });
     // One report is far under the threshold: nothing global happened.
     expect(filed).toMatchObject({
       status: "filed",
@@ -295,15 +291,12 @@ describe("a reporter's own hide (SAF-13)", () => {
     await follow(reporter, posted.author);
     // The same id under another subject type must not match the entry's
     // probe — the subject type is part of what was reported.
-    await fileReport(
-      {
-        reporterId: reporter,
-        subjectType: "product",
-        subjectId: posted.entryId,
-        reason: "spam",
-      },
-      confirmedReporter,
-    );
+    await fileReport({
+      reporterId: reporter,
+      subjectType: "product",
+      subjectId: posted.entryId,
+      reason: "spam",
+    });
     expect(await sightings(reporter, posted.entryId, posted.photoKey)).toEqual(
       SEEN,
     );

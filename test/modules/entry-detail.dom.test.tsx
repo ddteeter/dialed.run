@@ -7,7 +7,8 @@ import { EntryDetail } from "../../src/modules/feed/components/EntryDetail";
 import type { SetUsefulFn } from "../../src/modules/feed/components/useful-reaction";
 import type { entryDetailForViewer } from "../../src/modules/feed/entries";
 import { pointConditions } from "../feed/conditions-fixture";
-import { CONFIRM_FIRST, MILES, renderFeedScreen } from "./feed-fixtures";
+import { MILES, renderFeedScreen, unconfirmed } from "./feed-fixtures";
+import { useUnconfirmedRefusal } from "../../src/ui/unconfirmed-refusal";
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
 type Item = Entry["items"][number];
@@ -63,6 +64,25 @@ const nothing = () => Promise.resolve();
 const marked: SetUsefulFn = () =>
   Promise.resolve({ status: "set", useful: true, count: 1 });
 
+/**
+ * A stand-in for safety's control, refused as the server refuses an
+ * unconfirmed reporter: it reaches the root's answer, as the real one's
+ * form does (D-113).
+ */
+function RefusedReport() {
+  const ask = useUnconfirmedRefusal();
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        ask?.("report");
+      }}
+    >
+      Report this entry
+    </button>
+  );
+}
+
 function detail(
   overrides: Partial<Entry> = {},
   options: {
@@ -75,7 +95,6 @@ function detail(
 ) {
   return (
     <EntryDetail
-      confirmFirst={CONFIRM_FIRST}
       units={MILES}
       entry={entry(overrides)}
       viewerId={"viewerId" in options ? options.viewerId : "01STRANGER"}
@@ -83,20 +102,7 @@ function detail(
       recordPrompted={options.recordPrompted ?? nothing}
       setUseful={options.setUseful ?? marked}
       reportAffordance={
-        options.report === false
-          ? undefined
-          : (guard) => (
-              // A stand-in for safety's control, refused as the server
-              // refuses an unconfirmed reporter.
-              <button
-                type="button"
-                onClick={() => {
-                  guard.ask("report");
-                }}
-              >
-                Report this entry
-              </button>
-            )
+        options.report === false ? undefined : <RefusedReport />
       }
     />
   );
@@ -468,9 +474,7 @@ function sheet() {
 describe("EntryDetail: Useful and report wait for a confirmed address (round 26 #11; seam 7)", () => {
   it("asks the server, and opens the confirm sheet on its refusal", async () => {
     const user = userEvent.setup();
-    const setUseful = vi.fn<SetUsefulFn>(() =>
-      Promise.resolve({ status: "unverified" }),
-    );
+    const setUseful = vi.fn<SetUsefulFn>(unconfirmed);
     await renderFeedScreen(detail({}, { setUseful }));
     expect(sheet()).toBeNull();
 
@@ -506,12 +510,7 @@ describe("EntryDetail: Useful and report wait for a confirmed address (round 26 
 
   it("has one sheet for the screen, which says whether Useful or report opened it", async () => {
     const user = userEvent.setup();
-    await renderFeedScreen(
-      detail(
-        {},
-        { setUseful: () => Promise.resolve({ status: "unverified" }) },
-      ),
-    );
+    await renderFeedScreen(detail({}, { setUseful: unconfirmed }));
 
     await user.click(screen.getByRole("button", { name: "Report this entry" }));
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
