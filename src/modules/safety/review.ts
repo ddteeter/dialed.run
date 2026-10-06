@@ -276,7 +276,7 @@ async function subjectsFor(
         })
         .from(entryPhotos)
         .innerJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
-        .innerJoin(userProfiles, eq(userProfiles.userId, outfitEntries.userId))
+        .leftJoin(userProfiles, eq(userProfiles.userId, outfitEntries.userId))
         .where(inArray(entryPhotos.id, subjectIds)),
       database
         .select({
@@ -289,7 +289,7 @@ async function subjectsFor(
       database
         .select({ id: outfitEntries.id, owner: userProfiles.username })
         .from(outfitEntries)
-        .innerJoin(userProfiles, eq(userProfiles.userId, outfitEntries.userId))
+        .leftJoin(userProfiles, eq(userProfiles.userId, outfitEntries.userId))
         .where(inArray(outfitEntries.id, subjectIds)),
       database
         .select({
@@ -312,18 +312,16 @@ async function subjectsFor(
       owner: row.owner ?? undefined,
     });
   }
+  // An entry's photos, grouped before its subject is written, so every
+  // reported entry is one row of `entryRows` (the profile join is LEFT, so
+  // an author with no profile row loses nothing) and its photos are a
+  // lookup rather than a second subject to merge into.
+  const photosOf = Map.groupBy(entryPhotoRows, (row) => row.entryId);
   for (const row of entryRows) {
     found.set(`entry:${row.id}`, {
-      photoKeys: [],
+      photoKeys: (photosOf.get(row.id) ?? []).map((photo) => photo.photoKey),
       owner: row.owner ?? undefined,
     });
-  }
-  for (const row of entryPhotoRows) {
-    // Every photo's entry is in `entryRows` (the foreign key), so the
-    // entry's subject is already there to add to.
-    const key = `entry:${row.entryId}`;
-    const entry = found.get(key) ?? { photoKeys: [] };
-    found.set(key, { ...entry, photoKeys: [...entry.photoKeys, row.photoKey] });
   }
   for (const row of profileRows) {
     found.set(`profile:${row.userId}`, {
