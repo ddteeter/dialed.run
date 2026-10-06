@@ -1,7 +1,15 @@
 import type { JSX } from "react";
 import { useCallback, useEffect, useState } from "react";
 
-import { ControlFailureBand, Icon, Mono, ToggleField } from "../../../ui";
+import { newUlid } from "../../../lib/ids";
+import { photoAcceptAttribute } from "../../../lib/photo-constraints";
+import {
+  ControlFailureBand,
+  Icon,
+  inFlight,
+  Mono,
+  ToggleField,
+} from "../../../ui";
 import type { ControlFailure, PhotoStep } from "../../../ui";
 import { setBlurPreference, shouldBlurFaces } from "../blur/preference";
 import {
@@ -55,8 +63,8 @@ const CHECKING = "Checking this photo";
 /**
  * Blur off, and the canvas could not make a file from the redraw.
  *
- * Said rather than swallowed: with no file there is nothing to hand the
- * uploader, and a step that simply never calls `onReady` leaves the form
+ * Said rather than swallowed: with no file there is nothing behind Use
+ * this photo, and a press that silently does nothing leaves the runner
  * waiting on a photo that is not coming. The kicker names what is still
  * true — the round 23 control-failure pattern (`ui/ControlFailureBand`) —
  * and the body is round 27 #29's, which names the two ways out.
@@ -67,20 +75,48 @@ const REDRAW_FAILED: ControlFailure = {
     "This photo couldn't be prepared without blur. Turn blur on, or pick another photo.",
 };
 
+/**
+ * W3 · CHECK THE BLUR (round 28 #5, D-76): the step stays open once
+ * auto-blur paints, and **nothing is handed over until the runner presses
+ * Use this photo**. Before round 28 the step called `onReady` the moment
+ * the blur was painted, and every host closed it there, so tap-to-blur and
+ * the keyboard cells were on screen for a beat (R-113).
+ *
+ * The API, for the hosts (closet's `usePhotoPick`, feed's `AttachKit`):
+ *
+ * - **`onReady(file)`** is called once, on Use this photo, with the bytes
+ *   the canvas shows — blurred, or redrawn with blur off. Never the
+ *   original, and never before the runner has said so. Close the step and
+ *   take the file, as before.
+ * - **`onCancel()`** is Cancel in the head, and Esc: close the step and
+ *   add nothing. A photo already on the form stays.
+ * - **Pick another** is the step's own: it opens the picker, and a new
+ *   photo replaces this one here and auto-blur runs again. Dismissing the
+ *   picker leaves the step as it was. The host is not involved, because
+ *   whatever is picked comes back through the canvas and out as a fresh
+ *   file anyway.
+ *
+ * Focus lands on the heading when the step opens, so Tab reaches the
+ * cells before the primary.
+ */
 export function PhotoBlur({
   file,
   onReady,
+  onCancel,
   onAnnounce,
   pipeline = browserPipeline,
   storage,
 }: Readonly<{
   file: File;
   /**
-   * The bytes to upload. Called with the blurred file when blur is on and
-   * produced one, and with the original when blur is off — never with the
-   * original as a silent fallback for a blur that failed.
+   * The bytes to upload, on Use this photo. The blurred file when blur is
+   * on, the redrawn one when it is off — never the original.
    */
   onReady: (ready: File) => void;
+  /**
+  Cancel and Esc: the runner adds nothing.
+  */
+  onCancel: () => void;
   /**
    * Puts a sentence in the **screen's** status region.
    *
@@ -101,6 +137,115 @@ export function PhotoBlur({
   Injected in tests; production reads `localStorage`.
   */
   storage?: Storage | undefined;
+}>): JSX.Element {
+  /**
+   * The photo Pick another chose, keyed so the body below starts over for
+   * it — no regions, no decoded image and no bytes carried from the last
+   * one. A ULID rather than a counter: a counter's `+ 1` and `- 1` are
+   * both "a new key", so a mutant flipping one is invisible.
+   */
+  const [another, setAnother] = useState<{ file: File; key: string }>();
+  /**
+   * The bytes the canvas shows right now, or nothing while they are being
+   * made. Use this photo hands over exactly these.
+   */
+  const [prepared, setPrepared] = useState<File>();
+  const [heading, setHeading] = useState<HTMLHeadingElement>();
+  const [picker, setPicker] = useState<HTMLInputElement>();
+
+  useEffect(() => {
+    heading?.focus();
+  }, [heading]);
+
+  return (
+    <div
+      data-part="photo-check"
+      className="flex flex-col gap-3"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") onCancel();
+      }}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <h2
+          ref={(node) => {
+            setHeading(node ?? undefined);
+          }}
+          tabIndex={-1}
+          className="m-0 font-display text-heading"
+        >
+          Check the blur
+        </h2>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="target cursor-pointer border-none bg-transparent p-0 text-body font-semibold text-label"
+        >
+          Cancel
+        </button>
+      </div>
+      <BlurBody
+        key={another?.key}
+        file={another?.file ?? file}
+        onPrepared={setPrepared}
+        onAnnounce={onAnnounce}
+        pipeline={pipeline}
+        storage={storage}
+      />
+      <button
+        type="button"
+        data-part="primary-action"
+        {...inFlight(prepared === undefined)}
+        onClick={() => {
+          if (prepared !== undefined) onReady(prepared);
+        }}
+        className="target w-full cursor-pointer rounded-pill border-none bg-ink px-4 py-4 text-lead font-bold text-ground"
+      >
+        Use this photo
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          picker?.click();
+        }}
+        className="target w-full cursor-pointer rounded-pill border border-hairline bg-transparent px-4 py-4 text-lead font-semibold text-ink"
+      >
+        Pick another
+      </button>
+      <input
+        ref={(node) => {
+          setPicker(node ?? undefined);
+        }}
+        type="file"
+        accept={photoAcceptAttribute}
+        hidden
+        data-part="pick-another"
+        onChange={(event) => {
+          // Dismissing the picker is an empty list, and changes nothing.
+          const next = event.currentTarget.files?.[0];
+          if (next !== undefined) setAnother({ file: next, key: newUlid() });
+        }}
+      />
+    </div>
+  );
+}
+
+/**
+ * The photo, the toggle, the sentence and the cells: everything W3 shows
+ * between its head and its foot. It reports the bytes it would upload as
+ * they change, and nothing while they are being made.
+ */
+function BlurBody({
+  file,
+  onPrepared,
+  onAnnounce,
+  pipeline,
+  storage,
+}: Readonly<{
+  file: File;
+  onPrepared: (ready: File | undefined) => void;
+  onAnnounce: ((sentence: string) => void) | undefined;
+  pipeline: BlurPipeline;
+  storage: Storage | undefined;
 }>): JSX.Element {
   /**
    * The canvas, held as state through a callback ref rather than in a
@@ -163,15 +308,22 @@ export function PhotoBlur({
       next: readonly BlurRegion[],
       image: LoadedImage,
       target: HTMLCanvasElement,
+      signal: AbortSignal,
     ) => {
+      // The last bytes stop being these the moment the canvas changes: a
+      // press of Use this photo while the new file is being made must not
+      // hand over the one from before the tap.
+      onPrepared(undefined);
       pipeline.paint(target, image.image, image.width, image.height, next);
       const blurred = await pipeline.toFile(target, file.name);
+      // A newer paint has started since; its bytes are the ones to keep.
+      if (signal.aborted) return;
       // No fallback to `file`. Handing back the original because the
       // canvas failed would upload exactly the frame this screen promises
       // never leaves the device, and would do it silently.
-      if (blurred !== undefined) onReady(blurred);
+      if (blurred !== undefined) onPrepared(blurred);
     },
-    [file.name, onReady, pipeline],
+    [file.name, onPrepared, pipeline],
   );
 
   useEffect(() => {
@@ -183,6 +335,10 @@ export function PhotoBlur({
     // problem and says what it means.
     const effect = new AbortController();
     const isStale = (): boolean => effect.signal.aborted;
+    // Whatever was ready is not ready for this photo, this setting or this
+    // attempt: turning blur back on must not leave the unblurred redraw
+    // one press from the upload.
+    onPrepared(undefined);
     async function run(): Promise<void> {
       // Decoded either way (task 128 · SAF-2): the canvas step is where a
       // photo is scaled to its long edge and where its metadata — the GPS
@@ -202,7 +358,7 @@ export function PhotoBlur({
         // with the metadata in it. Nothing to hand over is a failure the
         // runner is shown, not a silence.
         if (redrawn === undefined) setFailed(true);
-        else onReady(redrawn);
+        else onPrepared(redrawn);
         return;
       }
       setLoaded(decoded);
@@ -216,7 +372,7 @@ export function PhotoBlur({
     return () => {
       effect.abort();
     };
-  }, [attempt, file, isOn, onReady, pipeline]);
+  }, [attempt, file, isOn, onPrepared, pipeline]);
 
   // Painting follows the regions rather than happening inside the handler
   // that changed them, so a detection and a tap take the same path.
@@ -226,7 +382,11 @@ export function PhotoBlur({
   const ready = isOn ? loaded : undefined;
   useEffect(() => {
     if (!canvas || !ready) return;
-    void publish(regions, ready, canvas);
+    const paint = new AbortController();
+    void publish(regions, ready, canvas, paint.signal);
+    return () => {
+      paint.abort();
+    };
   }, [canvas, publish, ready, regions]);
 
   const detected = regions.filter((r) => r.source === "detected").length;
@@ -488,6 +648,11 @@ function blurFieldProps(name: string) {
  * same arrow. The verdict's photos and the garment's go through the one
  * step.
  */
-export const photoBlurStep: PhotoStep = (file, onReady, announce) => (
-  <PhotoBlur file={file} onReady={onReady} onAnnounce={announce} />
+export const photoBlurStep: PhotoStep = (file, onReady, announce, cancel) => (
+  <PhotoBlur
+    file={file}
+    onReady={onReady}
+    onCancel={cancel}
+    onAnnounce={announce}
+  />
 );

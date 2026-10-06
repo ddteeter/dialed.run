@@ -6,6 +6,7 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -237,9 +238,9 @@ describe("AttachKit: the header", () => {
     const header = screen.getByRole("banner");
     // Ink on the phone, the title line from `wide` (DS0 bend 4).
     expect(header).toHaveAttribute("data-ground", "ink-until-wide");
-    expect(
-      within(header).getByRole("heading", { level: 1 }),
-    ).toHaveClass("wide:text-title");
+    expect(within(header).getByRole("heading", { level: 1 })).toHaveClass(
+      "wide:text-title",
+    );
     expect(
       within(header).getByRole("heading", {
         level: 1,
@@ -961,16 +962,19 @@ function recordingStep() {
   const seen: File[] = [];
   let release: ((ready: File) => void) | undefined;
   let say: ((sentence: string) => void) | undefined;
-  const step: PhotoStep = (file, onReady, announce) => {
+  let back: (() => void) | undefined;
+  const step: PhotoStep = (file, onReady, announce, cancel) => {
     seen.push(file);
     release = onReady;
     say = announce;
+    back = cancel;
     return <p>step for {file.name}</p>;
   };
   return {
     seen,
     step,
     hand: (ready: File) => release?.(ready),
+    cancel: () => back?.(),
     announce: (sentence: string) => {
       say?.(sentence);
     },
@@ -1036,6 +1040,23 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     expect(createObjectURL).toHaveBeenCalledWith(
       expect.objectContaining({ name: "blurred.jpg" }),
     );
+  });
+
+  it("closes W3 on its Cancel, keeping nothing and losing nothing (round 28 #5)", async () => {
+    const user = userEvent.setup();
+    const recording = recordingStep();
+    await renderWithRouter(attach({ renderPhotoStep: recording.step }));
+
+    await user.upload(photoInput(), jpeg("first.jpg"));
+    act(() => {
+      recording.cancel();
+    });
+    expect(screen.queryByText("step for first.jpg")).toBeNull();
+    expect(document.querySelector("[data-part='photo-well']")).toHaveAttribute(
+      "data-state",
+      "empty",
+    );
+    expect(createObjectURL).not.toHaveBeenCalled();
   });
 
   it("lends the step the screen's one status region", async () => {

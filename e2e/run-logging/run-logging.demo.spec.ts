@@ -317,6 +317,11 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
       mimeType: "image/png",
       buffer: PNG_1X1,
     });
+    // W3 waits for the runner (round 28 #5): nothing is attached until
+    // Use this photo, which waits behind aria-disabled while it blurs.
+    await page
+      .getByRole("button", { name: "Use this photo" })
+      .click({ timeout: 20_000 });
     await expect(photo).toHaveAttribute("data-state", "filled", {
       timeout: 20_000,
     });

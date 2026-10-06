@@ -249,6 +249,35 @@ describe("GarmentForm: a picked photo", () => {
     expect(uploadPhoto.mock.calls[0]?.[0].data.get("photo")).toBe(blurred);
   });
 
+  it("closes W3 on its Cancel and keeps nothing (round 28 #5)", async () => {
+    const user = userEvent.setup();
+    const createObjectURL = vi
+      .spyOn(URL, "createObjectURL")
+      .mockReturnValue("blob:blurred");
+    let cancel: (() => void) | undefined;
+    const { uploadPhoto, onSaved } = renderForm({
+      renderStep: (file, _onReady, _announce, onCancel) => {
+        cancel = onCancel;
+        return <p>Step for {file.name}</p>;
+      },
+    });
+
+    await user.upload(fileInput(), png("face.png"));
+    expect(screen.getByText("Step for face.png")).toBeVisible();
+    act(() => {
+      cancel?.();
+    });
+
+    expect(screen.queryByText("Step for face.png")).toBeNull();
+    expect(well()).toHaveAttribute("data-state", "empty");
+    expect(createObjectURL).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalled();
+    });
+    expect(uploadPhoto).not.toHaveBeenCalled();
+  });
+
   it("shows the upload in the well while the save carries it, and only then", async () => {
     const user = userEvent.setup();
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");

@@ -357,7 +357,11 @@ export function AttachKit({
           />
           {photoStep === undefined
             ? undefined
-            : photoStep.step(photoStep.file, keep, setSaid)}
+            : photoStep.step(photoStep.file, keep, setSaid, () => {
+                // Cancel in W3 (round 28 #5): nothing is kept, and a photo
+                // already held stays held.
+                setPhotoStep(undefined);
+              })}
 
           <div className="flex flex-col gap-3">
             <button

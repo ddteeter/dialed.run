@@ -75,6 +75,10 @@ export function usePhotoPick({
           onReady(ready);
         },
         announce,
+        // Cancel in W3 (round 28 #5): the step closes, nothing is kept.
+        () => {
+          setPending(undefined);
+        },
       ),
   };
 }
