@@ -244,7 +244,12 @@ describe("leavingSearch and homeIfNothingToSay", () => {
     }).not.toThrow();
     // The terms prompt's view (ACC-6) reads the same way.
     expect(() => {
-      homeIfNothingToSay({ state: "ask", version: 2 });
+      homeIfNothingToSay({
+        state: "ask",
+        version: 2,
+        isFirst: true,
+        changed: [],
+      });
     }).not.toThrow();
   });
 });

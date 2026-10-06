@@ -95,7 +95,7 @@ export function ResendLink({
         onClick={() => {
           void control.run();
         }}
-        className={RESEND_LOOK[look]}
+        className={look === "pill" ? RESEND_PILL : RESEND_LINK}
       >
         <PendingLabel
           label="Resend link"
@@ -131,10 +131,10 @@ export function ResendLink({
  * 1px ink rule, no fill, `HEIGHT.control` (48) high and the sheet's width,
  * as round 29 #12 draws it.
  */
-export const RESEND_LOOK = {
-  link: "target cursor-pointer border-none bg-transparent p-0 text-body font-semibold text-ink underline underline-offset-4",
-  pill: "target flex h-12 w-full cursor-pointer items-center justify-center rounded-pill border border-ink bg-transparent px-5 text-body font-bold text-ink",
-} as const;
+export const RESEND_LINK =
+  "target cursor-pointer border-none bg-transparent p-0 text-body font-semibold text-ink underline underline-offset-4";
+export const RESEND_PILL =
+  "target flex h-12 w-full cursor-pointer items-center justify-center rounded-pill border border-ink bg-transparent px-5 text-body font-bold text-ink";
 
 const SENT_SENTENCE = "A new link is on its way. The old one no longer works.";
 

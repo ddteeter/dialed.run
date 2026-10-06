@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import privacyDraft from "../../docs/legal/privacy-policy.md?raw";
 import {
+  changeSummaryOf,
   headingId,
   parseLegalDoc,
   plainText,
@@ -314,6 +315,36 @@ describe("plainText", () => {
   });
 });
 
+/**
+ * The mark with the owner's WHAT CHANGED summary beside it (round 29 #6).
+ */
+const SUMMARISED = [
+  "---",
+  "published: true",
+  "changed:",
+  "  - Photos that show where someone lives are removed.",
+  "  - Accounts can be closed for repeated harassment.",
+  "---",
+  "",
+].join("\n");
+
+describe("changeSummaryOf", () => {
+  it("is the summary's lines, in order", () => {
+    expect(changeSummaryOf(`${SUMMARISED}# T`)).toStrictEqual([
+      "Photos that show where someone lives are removed.",
+      "Accounts can be closed for repeated harassment.",
+    ]);
+  });
+
+  it("is nothing for a published text with no summary, and nothing for an unpublished one", () => {
+    expect(changeSummaryOf(`${MARK}# T`)).toStrictEqual([]);
+    expect(
+      changeSummaryOf("---\npublished: false\nchanged:\n  - A.\n---\n# T"),
+    ).toStrictEqual([]);
+    expect(changeSummaryOf(privacyDraft)).toStrictEqual([]);
+  });
+});
+
 describe("publishedText", () => {
   it("publishes nothing without the owner's mark, whatever the text says", () => {
     // The draft as it stands: its banner and notes are no longer what
@@ -334,6 +365,35 @@ describe("publishedText", () => {
 
   it("gives the text after the mark", () => {
     expect(publishedText(`${MARK}# T\n\nWords.`)).toBe("# T\n\nWords.");
+  });
+
+  it("publishes with a WHAT CHANGED summary beside the mark, and gives the text after it (round 29 #6)", () => {
+    expect(publishedText(`${SUMMARISED}# T\n\nWords.`)).toBe("# T\n\nWords.");
+    expect(publishedText("---\npublished: true\nchanged:\n---\n# T")).toBe(
+      "# T",
+    );
+  });
+
+  it("publishes nothing when the front matter holds a line it does not know", () => {
+    // The summary before the mark, a key it does not know, an item not
+    // under `changed:`, an item not indented as one, and an empty item.
+    for (const front of [
+      "changed:\n  - A.\npublished: true",
+      "published: true\ndraft: false",
+      "published: true\n  - A.",
+      "published: true\nchanged:\n- A.",
+      "published: true\nchanged:\n  - ",
+      "published: true\nchanged:\n  - A.\nchanged:",
+      // An item indented by one space or three, set after a word, or
+      // with its words after two spaces.
+      "published: true\nchanged:\n - A.",
+      "published: true\nchanged:\n   - A.",
+      "published: true\nchanged:\nx  - A.",
+      "published: true\nchanged:\n  -  A.",
+    ]) {
+      expect(publishedText(`---\n${front}\n---\n# T`)).toBeUndefined();
+      expect(changeSummaryOf(`---\n${front}\n---\n# T`)).toStrictEqual([]);
+    }
   });
 
   it("drops every source comment, however many lines, and keeps what is between them", () => {

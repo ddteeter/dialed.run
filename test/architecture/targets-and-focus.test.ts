@@ -257,9 +257,9 @@ describe("03 · every tappable thing has a 44×44 hit area", () => {
       // account" on the receipt. The way back to Au2 is a standalone back
       // link with a full target since round 28 #9.
       "src/modules/account/components/RequestAccess.tsx",
-      // The terms prompt's "The Terms have changed…" and "…or delete your
-      // account in Settings." (ACC-6).
-      "src/modules/account/components/TermsPrompt.tsx",
+      // The terms prompt's escape line, "…or go to your account to export
+      // or delete it." (ACC-6; round 30 #4). Its Log out is a button, so it
+      // keeps a full target, and "Read the Terms" has a line of its own.
       "src/modules/account/components/TermsPrompt.tsx",
       "src/modules/auth/auth-page.tsx",
       // Au2's "No code? Request access" (round 26 #20).

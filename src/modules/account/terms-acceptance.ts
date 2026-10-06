@@ -27,7 +27,7 @@ import type { drizzle } from "drizzle-orm/d1";
 import terms from "../../../docs/legal/terms.md?raw";
 import { termsAcceptances } from "../../db/schema-core";
 import { nowSeconds } from "../../lib/now";
-import { publishedText } from "./legal-markdown";
+import { changeSummaryOf, publishedText } from "./legal-markdown";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -182,19 +182,39 @@ export async function acceptTerms(
  * to a signed-in runner who is behind; nothing to anyone else — nobody, a
  * runner who is current, or everyone while no terms are published — whom
  * the route sends home.
+ *
+ * **Two prompts, by whether the runner has accepted before** (round 29
+ * #6). Never accepted — every account made before the terms were
+ * published — is `isFirst`, and nothing changed for them, so there is no
+ * summary. Behind an earlier acceptance is a version bump, with the
+ * owner's WHAT CHANGED summary from the terms' front matter
+ * (`legal-markdown`'s `changeSummaryOf`): empty, and the block left out,
+ * until the owner writes one.
  */
 export type TermsPromptView =
-  | { readonly state: "ask"; readonly version: number }
+  | {
+      readonly state: "ask";
+      readonly version: number;
+      readonly isFirst: boolean;
+      readonly changed: readonly string[];
+    }
   | { readonly state: "none" };
 
 export async function termsPromptView(
   db: Db,
   userId: string | undefined,
   current: number | undefined = currentTermsVersion(),
+  summary: readonly string[] = changeSummaryOf(terms),
 ): Promise<TermsPromptView> {
   if (userId === undefined) return { state: "none" };
-  const standing = await termsStanding(db, userId, current);
-  return standing.state === "behind"
-    ? { state: "ask", version: standing.version }
-    : { state: "none" };
+  const [latest] = await latestAcceptanceOf(db, userId);
+  const standing = termsStandingOf(latest?.version, current);
+  if (standing.state !== "behind") return { state: "none" };
+  const isFirst = latest === undefined;
+  return {
+    state: "ask",
+    version: standing.version,
+    isFirst,
+    changed: isFirst ? [] : summary,
+  };
 }

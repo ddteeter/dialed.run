@@ -25,7 +25,8 @@ import {
   landingCopy,
 } from "../../src/modules/account/components/LinkLanding";
 import {
-  RESEND_LOOK,
+  RESEND_LINK,
+  RESEND_PILL,
   ResendLink,
   SENT_FOR_MS,
   limitedMessage,
@@ -90,7 +91,7 @@ afterEach(() => {
 describe("ResendLink", () => {
   it("is the band's text link unless asked for the sheet's pill (round 29 #12)", () => {
     render(<ResendLink email="maya@example.com" resend={resender()} />);
-    expect(resendButton()).toHaveClass(...RESEND_LOOK.link.split(" "));
+    expect(resendButton()).toHaveClass(...RESEND_LINK.split(" "));
     expect(resendButton()).not.toHaveClass("rounded-pill");
   });
 
@@ -391,7 +392,7 @@ describe("the confirm-first sheet and the nag", () => {
     const resendButton = within(sheet).getByRole("button", {
       name: "Resend link",
     });
-    expect(resendButton).toHaveClass(...RESEND_LOOK.pill.split(" "));
+    expect(resendButton).toHaveClass(...RESEND_PILL.split(" "));
     expect(resendButton).not.toHaveClass("underline");
     await user.click(resendButton);
     expect(resend).toHaveBeenCalledWith({

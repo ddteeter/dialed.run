@@ -220,12 +220,35 @@ describe("acceptTerms", () => {
 });
 
 describe("termsPromptView", () => {
-  it("asks a runner who is behind, with the version it asks about", async () => {
+  it("asks a runner behind an earlier acceptance about the bump, with the owner's summary", async () => {
     const userId = newUlid();
     await acceptanceOf(db, userId, 2, 100, "page");
-    expect(await termsPromptView(db, userId, 3)).toStrictEqual({
+    const summary = ["Photos that show where someone lives are removed."];
+    expect(await termsPromptView(db, userId, 3, summary)).toStrictEqual({
       state: "ask",
       version: 3,
+      isFirst: false,
+      changed: summary,
+    });
+  });
+
+  it("asks a runner who never accepted for the first time, with no summary, since nothing changed for them (round 29 #6)", async () => {
+    const userId = newUlid();
+    // Another runner's acceptance is not this runner's.
+    await acceptanceOf(db, newUlid(), 2, 100, "page");
+    expect(
+      await termsPromptView(db, userId, 3, ["Something changed."]),
+    ).toStrictEqual({ state: "ask", version: 3, isFirst: true, changed: [] });
+  });
+
+  it("reads the shipped terms' summary by default: none, for v1", async () => {
+    const userId = newUlid();
+    await acceptanceOf(db, userId, 1, 100, "page");
+    expect(await termsPromptView(db, userId, 2)).toStrictEqual({
+      state: "ask",
+      version: 2,
+      isFirst: false,
+      changed: [],
     });
   });
 
