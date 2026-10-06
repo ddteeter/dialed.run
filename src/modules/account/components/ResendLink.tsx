@@ -53,11 +53,11 @@ export function limitedMessage(until: number): string {
 export function ResendLink({
   email,
   resend,
-  look = "link",
+  isPill = false,
 }: Readonly<{
   email: string;
   resend: (input: { data: { email: string } }) => Promise<ResendResult>;
-  look?: "link" | "pill" | undefined;
+  isPill?: boolean | undefined;
 }>): JSX.Element {
   const [isSent, setIsSent] = useState(false);
   const [limitedUntil, setLimitedUntil] = useState<number | undefined>();
@@ -95,7 +95,7 @@ export function ResendLink({
         onClick={() => {
           void control.run();
         }}
-        className={look === "pill" ? RESEND_PILL : RESEND_LINK}
+        className={isPill ? RESEND_PILL : RESEND_LINK}
       >
         <PendingLabel
           label="Resend link"

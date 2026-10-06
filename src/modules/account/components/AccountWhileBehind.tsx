@@ -96,7 +96,9 @@ function ReadOnlyRow({
         {label}
       </Mono>
       {value === undefined ? undefined : (
-        <span className="text-body text-ink">{value}</span>
+        <span data-part="value" className="text-body text-ink">
+          {value}
+        </span>
       )}
       <span className="text-small text-muted">
         Accept the Terms to change this.{" "}

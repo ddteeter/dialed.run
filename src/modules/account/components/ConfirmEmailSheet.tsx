@@ -82,7 +82,7 @@ export function ConfirmEmailSheet({
             <p className="m-0 text-body">
               We sent a link to <strong>{email}</strong>.
             </p>
-            <ResendLink email={email} resend={resend} look="pill" />
+            <ResendLink email={email} resend={resend} isPill />
           </>
         )}
         <button

@@ -54,6 +54,10 @@ describe("AccountWhileBehind (round 30 #4a)", () => {
       `Username@maya_runs${HINT} Accept`,
       `Password${HINT} Accept`,
     ]);
+    // Values as text; Password has none to show.
+    expect(
+      rows.map((row) => row.querySelector("[data-part='value']")?.textContent),
+    ).toStrictEqual(["maya@example.com", "@maya_runs", undefined]);
     for (const row of rows) {
       const hint = within(row as HTMLElement).getByText(HINT, {
         exact: false,

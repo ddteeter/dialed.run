@@ -329,8 +329,20 @@ describe("TermsPrompt · Accept and Log out", () => {
   });
 
   it("draws nothing when there is nothing to ask", async () => {
-    const { rendered } = prompt({ state: "none" });
-    await rendered;
+    await renderWithRouter(
+      <>
+        <p>The route rendered.</p>
+        <TermsPrompt
+          view={{ state: "none" }}
+          accept={vi.fn()}
+          logOut={vi.fn()}
+          onAccepted={vi.fn()}
+          onStale={vi.fn()}
+        />
+      </>,
+    );
+    // Wait for the route itself, so the absence below is not just early.
+    expect(await screen.findByText("The route rendered.")).toBeVisible();
     expect(screen.queryByRole("heading")).toBeNull();
     expect(document.querySelector("[data-part='landing']")).toBeNull();
   });

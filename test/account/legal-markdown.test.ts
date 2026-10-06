@@ -361,6 +361,8 @@ describe("publishedText", () => {
     expect(publishedText(`# T\n\n${MARK}`)).toBeUndefined();
     expect(publishedText("---\npublished: false\n---\n# T")).toBeUndefined();
     expect(publishedText("---\npublished: true\n# T")).toBeUndefined();
+    // The mark's closing fence with no opening one is not front matter.
+    expect(publishedText("# T\npublished: true\n---\nWords")).toBeUndefined();
   });
 
   it("gives the text after the mark", () => {
