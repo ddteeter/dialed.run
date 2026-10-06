@@ -17,7 +17,7 @@ import { Page } from "../../ui";
  */
 export const Route = createFileRoute("/onboarding/handle")({
   loader: async ({ location }) => {
-    await requireSession(location.href);
+    await requireSession(location);
     return renameNoticeQuery();
   },
   component: HandlePage,

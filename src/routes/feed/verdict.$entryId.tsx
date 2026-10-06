@@ -16,8 +16,8 @@ import { orBackToFeed, requireSignedIn } from "../../modules/feed/redirect";
 import { Layout } from "../../ui";
 
 export const Route = createFileRoute("/feed/verdict/$entryId")({
-  beforeLoad: async () => {
-    requireSignedIn(await getSession());
+  beforeLoad: async ({ location }) => {
+    requireSignedIn(await getSession(), location);
   },
   loader: async ({ params }) => {
     const entry = orBackToFeed(

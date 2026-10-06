@@ -16,8 +16,8 @@ import { Layout, Page } from "../../ui";
 
 // fallow-ignore-next-line code-duplication -- two signed-in routes of one lane are the same shape by mandate: createFileRoute + requireSignedIn + one loader call + Layout + Page + a component is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids
 export const Route = createFileRoute("/safety/review")({
-  beforeLoad: async () => {
-    requireSignedIn(await getSession());
+  beforeLoad: async ({ location }) => {
+    requireSignedIn(await getSession(), location);
   },
   // Admin-only, and the gate is `requireAdmin` inside the server function
   // rather than a check here: a route may not branch, and a privilege test

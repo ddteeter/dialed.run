@@ -33,7 +33,7 @@
  *   Devanagari vowel sign is half the syllable. Stripping those would
  *   merge different names, so they are kept and recomposed. (That is also
  *   why Cyrillic ё is not folded to е: it is the same mechanism as й. The
- *   splits this leaves — ё/е, Turkish ı/i, ø/æ/ł — are R-138.)
+ *   splits this leaves — ё/е, Turkish ı/i, ø/æ/ł — are R-139.)
  *
  * Then two case folds `toLowerCase` does not do: ß is "ss" (so "Straße"
  * meets "STRASSE", which is how it is written in capitals), and final

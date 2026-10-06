@@ -16,6 +16,8 @@ import type {
 } from "@tanstack/react-router";
 import { redirect } from "@tanstack/react-router";
 
+import { returnPathOf } from "../../lib/return-path";
+
 import type { ProfileAtHandle } from "./profiles";
 
 export function redirectTo<
@@ -37,9 +39,34 @@ export function redirectTo<
  * are ordinary functions with ordinary tests, and the route reads as the
  * wiring it is.
  */
-export function requireSignedIn<T>(session: T | null): T {
-  if (session === null) redirectTo({ to: "/auth/login" });
+export function requireSignedIn<T>(
+  session: T | null,
+  location: Readonly<{ pathname: string; searchStr: string }>,
+): T {
+  // The guarded page rides along as log-in's way back, so a link to an
+  // entry or a profile opened signed out lands there after signing in.
+  if (session === null) {
+    redirectTo({
+      to: "/auth/login",
+      search: { redirect: returnPathOf(location) },
+    });
+  }
   return session;
+}
+
+/**
+ * `beforeLoad`'s gate as route context: the signed-in viewer's id, or the
+ * log-in redirect. A route that needs the viewer reads `context.viewerId`
+ * in its loader rather than asking for the session a second time — one
+ * session read per navigation, and one gate rather than a gate and a
+ * re-check. `getSession` is the caller's, so this stays importable by a
+ * test while the route wires the server function in.
+ */
+export async function viewerContext(
+  getSession: () => Promise<{ user: { id: string } } | null>,
+  location: Readonly<{ pathname: string; searchStr: string }>,
+): Promise<{ viewerId: string }> {
+  return { viewerId: requireSignedIn(await getSession(), location).user.id };
 }
 
 /**

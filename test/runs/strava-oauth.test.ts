@@ -644,7 +644,7 @@ describe("stravaConnectRedirect (STR-7: the official button is a link)", () => {
     expect(STRAVA_STATE_COOKIE).toBe("strava_oauth_state");
   });
 
-  it("sends a signed-out visitor to log in, with no nonce", () => {
+  it("sends a signed-out visitor to log in, coming back to T1, with no nonce", () => {
     const response = stravaConnectRedirect({
       userId: undefined,
       config: CONFIG,
@@ -654,7 +654,7 @@ describe("stravaConnectRedirect (STR-7: the official button is a link)", () => {
 
     expect(response.status).toBe(302);
     expect(response.headers.get("location")).toBe(
-      "https://dialed.run/auth/login",
+      "https://dialed.run/auth/login?redirect=%2Fruns%2Fstrava",
     );
     expect(response.headers.get("set-cookie")).toBeNull();
   });

@@ -90,7 +90,7 @@ describe("normalizeIdentity: names in any script", () => {
 
   it("keeps a Latin letter that has no unaccented form", () => {
     // ø does not decompose, so the old `[a-z0-9]` rule turned it into a
-    // space and "Norrøna" became two words. Folding it to "o" is R-138.
+    // space and "Norrøna" became two words. Folding it to "o" is R-139.
     expect(normalizeIdentity("Norrøna")).toBe("norrøna");
   });
 

@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import { z } from "zod";
 
+import { returnPathOf } from "../../../lib/return-path";
 import {
   FailureBand,
   Layout,
@@ -206,7 +207,9 @@ function SignInAgain(): JSX.Element {
   // The page that failed, read once. Subscribed, it would change the moment
   // this navigation began — to log-in itself — and this would redirect
   // again, back to log-in, carrying log-in, forever.
-  const [from] = useState(() => router.state.location.href);
+  // `returnPathOf` keeps path and search, and drops a page log-in may not
+  // return to, so the URL never carries a way back into the auth pages.
+  const [from] = useState(() => returnPathOf(router.state.location));
   return <Navigate to="/auth/login" search={{ redirect: from }} replace />;
 }
 

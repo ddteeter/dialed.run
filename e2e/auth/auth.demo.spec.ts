@@ -5,7 +5,8 @@
  * fills the code), Au2 (create account), Au4 (check your email, Resend),
  * the confirm link's landing, O0 (pick a handle, a taken one first), Au3
  * (wrong password), ACC-4 (forgot it, the reset link, a new password), Au1
- * (log in), sign out from the settings index, and unpublished terms asking
+ * (log in, landing on the deep link that sent the runner there), sign out
+ * from the settings index, and unpublished terms asking
  * nothing (ACC-6, D-93: no acceptance recorded, no prompt) — one journey,
  * one video.
  *
@@ -37,7 +38,7 @@ Not a secret: a throwaway account on the local dev database.
 */
 const PASSPHRASE = ["a", "long", "enough", "passphrase"].join("-");
 
-test("request access -> an invite from the Desk -> create an account -> sign out -> a guarded page -> a wrong password -> log in and back", async ({
+test("request access -> an invite from the Desk -> create an account -> sign out -> a guarded page -> a wrong password -> a deep link -> log in and back to it", async ({
   page,
 }, testInfo) => {
   testInfo.setTimeout(240_000);
@@ -277,14 +278,26 @@ test("request access -> an invite from the Desk -> create an account -> sign out
     { timeout: 15_000 },
   );
 
-  await scene(page, "Au1 · the new one logs in");
-  await page.goto("/auth/login?redirect=%2Fcall");
+  // A deep link opened signed out — an emailed link to a feed page, say —
+  // goes to log-in carrying its path and search, and lands back on it.
+  await scene(page, "Signed out, a link into the feed goes to log in");
+  await page.goto("/feed/search?q=smoke");
+  await expect(page).toHaveURL(
+    /\/auth\/login\?redirect=%2Ffeed%2Fsearch%3Fq%3Dsmoke$/u,
+    { timeout: 15_000 },
+  );
   await hydrated(page);
+  // No notice: nothing was carried, so this is the ordinary log-in page.
+  await expect(page.locator("[data-part='session-notice']")).toHaveCount(0);
+
+  await scene(page, "Au1 · the new one logs in, and lands on the link");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(`${PASSPHRASE}-new`);
   await page.getByRole("button", { name: "Log in" }).click();
   // Back where the runner was going, not home.
-  await expect(page).toHaveURL(/\/call$/u, { timeout: 15_000 });
+  await expect(page).toHaveURL(/\/feed\/search\?q=smoke$/u, {
+    timeout: 15_000,
+  });
 
   // ACC-6, D-93: no terms are published yet, so sign-up recorded no
   // acceptance and nothing asks for one — the app opens as it would. Once

@@ -58,6 +58,11 @@ export const STRAVA_STATE_COOKIE = "strava_oauth_state";
 const STATE_COOKIE_MAX_AGE_S = 600;
 
 /**
+T1, Strava's settings: where the Connect button is.
+*/
+const STRAVA_SETTINGS_PAGE = "/runs/strava";
+
+/**
  * Whether a Strava callback may be exchanged for tokens (R-41).
  *
  * The CSRF guard, as a decision rather than a branch inside the server
@@ -134,10 +139,13 @@ export function stravaConnectRedirect(request: {
   state: string;
 }): Response {
   if (request.userId === undefined) {
-    return redirectTo(`${request.origin}/auth/login`);
+    // Log-in's way back is T1, where the button is: a client navigation
+    // after log-in cannot land on this handler, which only the server has.
+    const back = new URLSearchParams({ redirect: STRAVA_SETTINGS_PAGE });
+    return redirectTo(`${request.origin}/auth/login?${back.toString()}`);
   }
   if (request.config === undefined) {
-    return redirectTo(`${request.origin}/runs/strava`);
+    return redirectTo(`${request.origin}${STRAVA_SETTINGS_PAGE}`);
   }
   const response = redirectTo(
     stravaAuthorizeUrl(

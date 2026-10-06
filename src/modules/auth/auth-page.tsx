@@ -188,10 +188,17 @@ export function AuthCrossLink({
   prompt,
   to,
   label,
+  redirect,
 }: Readonly<{
   prompt: string;
   to: "/auth/login" | "/auth/signup";
   label: string;
+  /**
+   * The way back a deep link brought to log-in, carried across to the
+   * other form so a runner who makes their account with Google instead
+   * still lands where they were going.
+   */
+  redirect?: string | undefined;
 }>): JSX.Element {
   return (
     <p
@@ -202,6 +209,7 @@ export function AuthCrossLink({
       <Link
         data-target="inline"
         to={to}
+        search={{ redirect }}
         className="font-bold text-ink underline underline-offset-4"
       >
         {label}
@@ -216,13 +224,18 @@ export function AuthCrossLink({
  */
 export function LoginCrossLink({
   carried,
-}: Readonly<{ carried: CarriedForm | undefined }>): JSX.Element | undefined {
+  redirect,
+}: Readonly<{
+  carried: CarriedForm | undefined;
+  redirect?: string | undefined;
+}>): JSX.Element | undefined {
   if (carried !== undefined) return undefined;
   return (
     <AuthCrossLink
       prompt="New here?"
       to="/auth/signup"
       label="Create an account"
+      redirect={redirect}
     />
   );
 }

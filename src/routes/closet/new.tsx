@@ -14,8 +14,8 @@ import { searchBrandsFn } from "../../modules/products/functions";
 import { Layout, useIdempotencyKey } from "../../ui";
 
 export const Route = createFileRoute("/closet/new")({
-  loader: async () => {
-    await requireSession();
+  loader: async ({ location }) => {
+    await requireSession(location);
     // F at the desk's rail card (round 26 #10, task 128 · SAF-18).
     return { nearby: await closetNearbyFn() };
   },
