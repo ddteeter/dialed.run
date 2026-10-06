@@ -73,3 +73,19 @@ export async function readCapped(
   }
   return html + decoder.decode();
 }
+
+/**
+ * A fetch failure in the words the Desk's Gave up puts on its row
+ * (Operator Screens D6: "the last failure translated, one sentence"). The
+ * page's own status is the one fact an operator can act on — a 403 is a
+ * shop refusing us, which no retry changes — so it is named; everything
+ * else is the error itself, which the row keeps as its raw detail.
+ */
+export function pageFailureReason(error: PageFetchError): string {
+  const status = /^Page returned (\d{3})$/u.exec(error.message)?.[1];
+  if (status === undefined) return "The shop's page couldn't be read.";
+  const isRefused = status === "401" || status === "403";
+  return isRefused
+    ? `The shop returned ${status}. It may be blocking us.`
+    : `The shop returned ${status}.`;
+}

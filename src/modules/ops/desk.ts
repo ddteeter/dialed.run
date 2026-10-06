@@ -10,7 +10,7 @@
 import { count, eq, isNotNull, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
-import { reviewQueue, userProfiles } from "../../db/schema-core";
+import { gaveUp, reviewQueue, userProfiles } from "../../db/schema-core";
 import { env } from "../../env";
 import { nowSeconds } from "../../lib/now";
 import { adminUserIds, pendingReviewCount } from "../safety";
@@ -35,6 +35,15 @@ export interface TodayCounts {
   readonly screenerUnfinished: number;
   readonly bansThisWeek: number;
   readonly bansAllTime: number;
+  /**
+   * Jobs the system stopped retrying (Gave up, a section of Today; R-119):
+   * Today's rail count and the digest's one extra line.
+   */
+  readonly gaveUp: number;
+  /**
+  When the longest-standing of those first failed; absent at zero.
+  */
+  readonly oldestGaveUpAt: number | undefined;
 }
 
 const WEEK_SECONDS = 7 * 24 * 60 * 60;
@@ -57,7 +66,7 @@ export async function todayCounts(): Promise<TodayCounts> {
   const db = drizzle(env.DIALED_CORE);
   const weekAgo = nowSeconds() - WEEK_SECONDS;
   const waiting = await pendingReviewCount();
-  const [review, bans] = await db.batch([
+  const [review, bans, gave] = await db.batch([
     db
       .select({
         source: reviewQueue.source,
@@ -75,7 +84,19 @@ export async function todayCounts(): Promise<TodayCounts> {
       .from(userProfiles)
       .where(isNotNull(userProfiles.bannedAt))
       .groupBy(sql`1`),
+    // Grouped by a constant (not `1`, which would name the count), so an
+    // empty table is no row rather than a NULL oldest. A scan of
+    // `gave_up`, which holds only what is still owed an operator: retried
+    // and dropped rows leave it.
+    db
+      .select({
+        rows: count(),
+        oldest: sql<number>`min(${gaveUp.firstFailedAt})`,
+      })
+      .from(gaveUp)
+      .groupBy(sql`'gave_up'`),
   ]);
+  const [gaveUpGroup] = gave;
   return {
     waiting,
     oldestWaitingAt:
@@ -86,6 +107,8 @@ export async function todayCounts(): Promise<TodayCounts> {
       review.find((g) => g.source === "classifier")?.rows ?? 0,
     bansThisWeek: bans.find((g) => g.recent === 1)?.rows ?? 0,
     bansAllTime: sumOf(bans),
+    gaveUp: gaveUpGroup?.rows ?? 0,
+    oldestGaveUpAt: gaveUpGroup?.oldest,
   };
 }
 

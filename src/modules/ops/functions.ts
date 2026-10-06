@@ -8,6 +8,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { optionalVerifiedUserId, verifiedUserId } from "../auth";
 import { requireAdmin } from "../safety";
 import { deskToday, isOperator } from "./desk";
+import { dropGaveUp, gaveUpJobs, retryGaveUp } from "./gave-up";
+import { gaveUpDropInput, gaveUpRetryInput } from "./inputs";
 
 /**
  * Whether the viewer may see the Desk. Signed out is a plain "no", not a
@@ -30,3 +32,33 @@ export const deskTodayQuery = createServerFn({ method: "GET" }).handler(
     return deskToday();
   },
 );
+
+/**
+ * Today's Gave up rows (Operator Screens D6, a section of Today; R-119).
+ */
+export const deskGaveUpQuery = createServerFn({ method: "GET" }).handler(
+  async () => {
+    requireAdmin(await verifiedUserId());
+    return gaveUpJobs();
+  },
+);
+
+/**
+The retry that fits a Gave up row's job.
+*/
+export const retryGaveUpAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => gaveUpRetryInput.parse(input))
+  .handler(async ({ data }) => {
+    requireAdmin(await verifiedUserId());
+    return retryGaveUp(data);
+  });
+
+/**
+Drop a Gave up row: the row and the job, nothing else.
+*/
+export const dropGaveUpAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => gaveUpDropInput.parse(input))
+  .handler(async ({ data }) => {
+    requireAdmin(await verifiedUserId());
+    await dropGaveUp(data.id);
+  });

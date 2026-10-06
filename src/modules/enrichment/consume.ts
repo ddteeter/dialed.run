@@ -1,12 +1,13 @@
 import { and, desc, eq, gt, isNotNull } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
+import { dlqBatchHandler, gaveUpClear, gaveUpUpsert } from "../../db/gave-up";
 import { products, productSnapshots } from "../../db/schema-core";
 import { firstColumnWhere, firstRowWhere } from "../../lib/sql/keyed-read";
-import { consumeEach, deadLetterEach } from "../../lib/sql/queue-batch";
+import { consumeEach } from "../../lib/sql/queue-batch";
 import type { ExtractionModel } from "../../lib/contracts";
 import { applyExtraction, type ApplyReport } from "../products";
-import { PageFetchError } from "./bounds";
+import { PageFetchError, pageFailureReason } from "./bounds";
 import { fetchProductPage } from "./fetch-page";
 import { copyProductImage } from "./image";
 import { runLadder, type LadderResult } from "./ladder";
@@ -71,11 +72,30 @@ export interface EnrichmentDeps {
   model?: ExtractionModel | undefined;
 }
 
-async function markFailed(db: Db, productId: string): Promise<void> {
-  await db
-    .update(products)
-    .set({ extractionStatus: "failed" })
-    .where(eq(products.id, productId));
+/**
+ * A page that refused us: the row goes to `failed` and onto the Desk's
+ * Gave up in one batch (R-119), so the closet's "gave up" and the
+ * operator's row cannot disagree. One try, because a terminal failure is
+ * not retried by the queue; the sweep's re-drives each add one more.
+ */
+async function markFailed(
+  db: Db,
+  productId: string,
+  error: PageFetchError,
+): Promise<void> {
+  await db.batch([
+    db
+      .update(products)
+      .set({ extractionStatus: "failed" })
+      .where(eq(products.id, productId)),
+    gaveUpUpsert(db, {
+      kind: "enrichment",
+      subjectId: productId,
+      reason: pageFailureReason(error),
+      rawError: error.message,
+      tries: 1,
+    }),
+  ]);
 }
 
 /**
@@ -267,6 +287,30 @@ async function fetchAndExtract(
   return report;
 }
 
+/**
+ * The work for a `pending` product: the page stored within the reuse
+ * window, or a fresh fetch.
+ */
+async function extractPending(
+  deps: EnrichmentDeps,
+  productId: string,
+  sourceUrl: string,
+): Promise<void> {
+  const recent = await latestSnapshot(
+    deps.db,
+    productId,
+    Date.now() - REUSE_WINDOW_MS,
+  );
+  if (recent !== undefined) {
+    const stored = await readSnapshot(recent.r2Key);
+    if (stored !== undefined) {
+      await extractStored(deps, productId, recent, stored);
+      return;
+    }
+  }
+  await fetchAndExtract(deps, productId, sourceUrl);
+}
+
 async function processEnrichJob(
   deps: EnrichmentDeps,
   productId: string,
@@ -279,29 +323,25 @@ async function processEnrichJob(
   if (row?.extractionStatus !== "pending") return;
 
   try {
-    const recent = await latestSnapshot(
-      deps.db,
-      productId,
-      Date.now() - REUSE_WINDOW_MS,
-    );
-    if (recent !== undefined) {
-      const stored = await readSnapshot(recent.r2Key);
-      if (stored !== undefined) {
-        await extractStored(deps, productId, recent, stored);
-        return;
-      }
-    }
     // `String(null)` is "null", which is not a URL. A pending row with no
     // URL cannot come from `requestEnrichment`, which requires one to flip
     // the row; a hand-edited one goes through the same door as any other
     // bad URL — a terminal `PageFetchError`, reported, and the row failed —
     // rather than a private branch that fails it silently.
-    await fetchAndExtract(deps, productId, String(row.sourceUrl));
+    await extractPending(deps, productId, String(row.sourceUrl));
   } catch (error) {
     if (!(error instanceof PageFetchError)) throw error;
     deps.captureException(error, { surface: "enrichment-fetch", productId });
-    await markFailed(deps.db, productId);
+    await markFailed(deps.db, productId, error);
+    return;
   }
+  // A product the Desk listed as given up is off it: the sweep's re-drive,
+  // or the queue's own retry, got there (R-119). After the write-back
+  // rather than in its batch, because `applyExtraction` is the products
+  // module's own write; a clear that fails throws, and the redelivery
+  // finds the product `done` and stops — leaving a row whose Retry finds
+  // nothing to claim and goes, which is the operator's to press.
+  await gaveUpClear(deps.db, "enrichment", productId);
 }
 
 export async function handleEnrichmentBatch(
@@ -318,29 +358,47 @@ export async function handleEnrichmentBatch(
 
 /**
  * Law 6: a job that exhausted its retries lands on the row, where the
- * closet can show that enrichment gave up, and in Sentry. Only a row still
- * `pending` is marked — a retry that finally succeeded before the DLQ
- * caught up must not be un-succeeded.
+ * closet can show that enrichment gave up, on the Desk's Gave up, and in
+ * Sentry. Only a row still `pending` is marked — a retry that finally
+ * succeeded before the DLQ caught up must not be un-succeeded, nor listed
+ * as a failure. The read decides; the update re-checks, in case the
+ * product finished in between.
  */
 export async function handleEnrichmentDlqBatch(
   batch: MessageBatch,
   deps: EnrichmentDeps,
+  tries: number,
 ): Promise<void> {
-  await deadLetterEach(batch, enrichJobSchema, {
-    onJob: async (job) => {
-      await deps.db
-        .update(products)
-        .set({ extractionStatus: "failed" })
-        .where(
-          and(
-            eq(products.id, job.productId),
-            eq(products.extractionStatus, "pending"),
-          ),
-        );
+  await dlqBatchHandler(
+    batch,
+    enrichJobSchema,
+    deps,
+    tries,
+    `dead-lettered job on ${batch.queue}`,
+    async ({ productId }) => {
+      const status = await firstColumnWhere(
+        deps.db,
+        products,
+        products.extractionStatus,
+        eq(products.id, productId),
+      );
+      if (status !== "pending") return;
+      return {
+        subject: { kind: "enrichment", subjectId: productId },
+        writes: [
+          deps.db
+            .update(products)
+            .set({ extractionStatus: "failed" })
+            .where(
+              and(
+                eq(products.id, productId),
+                eq(products.extractionStatus, "pending"),
+              ),
+            ),
+        ],
+      };
     },
-    deadLettered: `dead-lettered job on ${batch.queue}`,
-    captureException: deps.captureException,
-  });
+  );
 }
 
 /**

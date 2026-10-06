@@ -1,24 +1,31 @@
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 
-import { DeskShell } from "../../modules/ops/components/DeskShell";
-import { Today } from "../../modules/ops/components/Today";
+import { DeskTodayPage } from "../../modules/ops/components/Today";
+import {
+  deskGaveUpQuery,
+  dropGaveUpAction,
+  retryGaveUpAction,
+} from "../../modules/ops/functions";
 
 const desk = getRouteApi("/desk");
 
 /**
  * Today (Operator Screens D0): the digest, rendered, from the `/desk`
- * layout's loader — the same `todayCounts` the daily digest reads.
+ * layout's loader — the same `todayCounts` the daily digest reads — and
+ * Gave up under it, from this page's own (D6; R-119).
  */
 export const Route = createFileRoute("/desk/")({
+  loader: async () => deskGaveUpQuery(),
   component: TodayPage,
 });
 
 function TodayPage() {
-  const today = desk.useLoaderData();
-
   return (
-    <DeskShell current="today" today={today}>
-      <Today today={today} />
-    </DeskShell>
+    <DeskTodayPage
+      today={desk.useLoaderData()}
+      gaveUp={Route.useLoaderData()}
+      retry={retryGaveUpAction}
+      drop={dropGaveUpAction}
+    />
   );
 }

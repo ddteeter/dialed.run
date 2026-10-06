@@ -119,7 +119,7 @@ describe("the rendered cards", () => {
     const svg = await renderCardSvg(<DefaultCard />);
 
     expect(await sha256(svg)).toBe(
-      "6dd8d1f8a3022ddfcb8c46ab2ac0c1cee6fed713d5a099ee963a602f7c32403f",
+      "3175a8b27d563f4d16204242d3d329617da8636c796f2efad2106d152595433a",
     );
   });
 

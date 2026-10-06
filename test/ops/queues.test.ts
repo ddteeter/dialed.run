@@ -10,6 +10,8 @@ import {
   createOrGetBrand,
   createOrGetProduct,
 } from "../../src/modules/products";
+import { reminderSubject } from "../../src/modules/runs/queue-messages";
+import { gaveUpRow } from "../gave-up-rows";
 import { batchOf, fakeMessage } from "../queue-fakes";
 
 /**
@@ -186,5 +188,52 @@ describe("handleQueueBatch routes by queue name", () => {
       { queue: "dialed-unheard-of" },
       expect.objectContaining({ message: UNKNOWN_QUEUE }),
     );
+  });
+});
+
+describe("a dead letter's tries are the queue's deliveries (R-119)", () => {
+  // `max_retries` plus the first delivery, from the registry a test pins
+  // to wrangler.jsonc: what the Desk's Gave up row says it tried.
+  it("gives a dead-lettered enrichment job its queue's deliveries", async () => {
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    const db = drizzle(env.DIALED_CORE);
+    const brand = await createOrGetBrand(db, `Dead ${newUlid()}`);
+    const product = await createOrGetProduct(db, {
+      brandId: brand.id,
+      name: "Dead Tee",
+      sourceUrl: "https://example.com/dead",
+      createdBy: newUlid(),
+    });
+    await db
+      .update(products)
+      .set({ extractionStatus: "pending" })
+      .where(eq(products.id, product.id));
+
+    await handleQueueBatch(
+      batchOf("dialed-enrichment-dlq", [
+        fakeMessage("m8", { type: "enrich", productId: product.id }),
+      ]),
+    );
+
+    const row = await gaveUpRow("enrichment", product.id);
+    expect(row?.tries).toBe(4);
+  });
+
+  it("gives a dead-lettered reminder its queue's deliveries", async () => {
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    const job = {
+      type: "strava_reminder",
+      athleteId: "7",
+      objectId: newUlid(),
+      aspectType: "create",
+      eventTime: 1,
+    } as const;
+
+    await handleQueueBatch(
+      batchOf("dialed-imports-dlq", [fakeMessage("m9", job)]),
+    );
+
+    const row = await gaveUpRow("reminder", reminderSubject(job));
+    expect(row?.tries).toBe(4);
   });
 });

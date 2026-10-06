@@ -13,9 +13,11 @@ import { OG_PALETTE } from "./palette";
  * no field that could carry one, so the rule is the type's rather than a
  * check someone could forget: a card cannot render what it is not given.
  *
- * Sizes are the board's own. No contract covers an image rendered at
- * 1200×630 — `tokens.js` is a type scale for screens — so the artboard is
- * the only source, and that is recorded as a design delta.
+ * The entry card's sizes are the board's own: no contract covers an image
+ * rendered at 1200×630 — `tokens.js` is a type scale for screens — so the
+ * artboard is the only source, and that is recorded as a design delta. The
+ * default card is round 31's, which names its contract steps and lays them
+ * out at 600×315 for a 2× export.
  */
 
 export const OG_WIDTH = 1200;
@@ -64,14 +66,15 @@ function chipColour(verdict: VerdictValue): string {
   return OG_PALETTE.teal;
 }
 
-function Wordmark() {
+function Wordmark({ size = 44 }: Readonly<{ size?: number }>) {
   return (
     <span
       style={{
         display: "flex",
         fontFamily: "Archivo Black",
-        fontSize: 44,
-        letterSpacing: -1.32,
+        fontSize: size,
+        // TYPE.title's tracking, -0.03em, at whatever size it is drawn.
+        letterSpacing: (size * -3) / 100,
       }}
     >
       <span style={{ color: OG_PALETTE.pink }}>[</span>
@@ -94,26 +97,56 @@ const CARD_STYLE = {
 } as const;
 
 /**
-The default card: home, profiles, and anything not shareable.
-*/
+ * The default card's scale (round 31 #6, D-107): laid out at 600×315 and
+ * exported at 2×, so every contract value below is doubled. Round 31 names
+ * the contracts it uses, which is what makes these the card's numbers
+ * rather than the board's drawing.
+ */
+const DEFAULT_SCALE = OG_WIDTH / 600;
+
+/**
+ * The default card (round 31 #6; D-107): home, profiles, and anything not
+ * shareable, on both hosts. The wordmark at TYPE.title, "Wear what worked."
+ * at TYPE.display — the hero's line, so the card and the hero say the same
+ * thing — and the address at MONO.sm in `--muted`, inside SPACE[8].
+ */
 export function DefaultCard(): JSX.Element {
   return (
-    <div style={{ ...CARD_STYLE, padding: 72 }}>
-      <Wordmark />
+    <div style={{ ...CARD_STYLE, padding: 32 * DEFAULT_SCALE }}>
+      <Wordmark size={24 * DEFAULT_SCALE} />
       <div
         style={{
           display: "flex",
-          flexDirection: "column",
-          fontFamily: "Archivo Black",
-          fontSize: 112,
-          lineHeight: 0.92,
-          letterSpacing: -4.48,
-          textTransform: "uppercase",
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+          gap: 24 * DEFAULT_SCALE,
         }}
       >
-        <span>What to wear</span>
-        <span>for the run</span>
-        <span style={{ color: OG_PALETTE.pink }}>you're about to do.</span>
+        <span
+          style={{
+            fontFamily: "Archivo Black",
+            fontSize: 32 * DEFAULT_SCALE,
+            lineHeight: 1.05,
+            // TYPE.display's -0.035em.
+            letterSpacing: (32 * DEFAULT_SCALE * -35) / 1000,
+            textTransform: "uppercase",
+          }}
+        >
+          Wear what worked.
+        </span>
+        <span
+          style={{
+            fontFamily: "IBM Plex Mono",
+            fontSize: 11 * DEFAULT_SCALE,
+            lineHeight: 1.4,
+            // MONO.sm's 0.06em.
+            letterSpacing: (11 * DEFAULT_SCALE * 6) / 100,
+            textTransform: "uppercase",
+            color: OG_PALETTE.muted,
+          }}
+        >
+          dialed.run
+        </span>
       </div>
     </div>
   );

@@ -296,6 +296,41 @@ describe("emailContent", () => {
     ).toBe("Sat Sep 20 — 0 waiting, 1 photo needs eyes");
   });
 
+  it("adds Gave up's one line, and its count to the subject, only above zero (R-119)", () => {
+    const base = {
+      kind: "digest",
+      day: "Wed Sep 17",
+      waiting: 0,
+      screenerUnfinished: 0,
+      bansThisWeek: 0,
+    } as const;
+    const one = emailContent({ ...base, gaveUp: 1 }, { origin: ORIGIN });
+    expect(one.subject).toBe(
+      "Wed Sep 17 — 0 waiting, 0 photos need eyes, 1 gave up",
+    );
+    expect(one.body).toBe(
+      "0 waiting for a decision. 0 photos the screener couldn't finish. 0 bans this week. 1 job the system gave up on. It's on the Desk's Today.",
+    );
+    const three = emailContent(
+      { ...base, waiting: 2, gaveUp: 3 },
+      { origin: ORIGIN },
+    );
+    expect(three.subject).toBe(
+      "Wed Sep 17 — 2 waiting, 0 photos need eyes, 3 gave up",
+    );
+    expect(three.body).toMatch(
+      / 3 jobs the system gave up on\. They're on the Desk's Today\.$/u,
+    );
+    // At zero, and from a deploy that never wrote the field: the zero day.
+    for (const zero of [{ ...base, gaveUp: 0 }, base]) {
+      const said = emailContent(zero, { origin: ORIGIN });
+      expect(said.subject).toBe(
+        "Wed Sep 17 — Nothing waiting. Nothing failed.",
+      );
+      expect(said.body).not.toContain("gave up");
+    }
+  });
+
   it("counts every run the one-a-day reminder covers", () => {
     expect(
       emailContent(

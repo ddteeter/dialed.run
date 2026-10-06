@@ -448,6 +448,13 @@ exception, the human never polls dashboards.
 flowchart LR
     Q[[dialed-imports\nmax_retries=3, backoff]] -->|exhausted| DLQ[[dialed-imports-dlq]]
     DLQ --> DC[DLQ consumer:\nmark job failed,\nnotify affected user,\nSentry event]
+    QE[[dialed-enrichment\nmax_retries=3]] -->|exhausted| DLQE[[dialed-enrichment-dlq]]
+    DLQE --> DCE[DLQ consumer:\nproduct failed,\nSentry event]
+    DC -->|same batch: giveUpEach| GU[(gave_up)]
+    DCE -->|same batch: giveUpEach| GU
+    WCRON[Hourly weather cron:\nfive-hour cap] -->|same batch as failed| GU
+    GU -->|count, rows| DESK[Desk · Today · Gave up\nRetry re-arms + re-sends,\nDrop deletes]
+    GU -->|one line when above zero| ADMIN
     QX[[dialed-exports\nmax_batch_size=1, max_retries=3]] -->|exhausted| DLQX[[dialed-exports-dlq]]
     DLQX --> DCX[DLQ consumer:\nexport failed,\nshown on Settings,\nSentry event]
     CRON2[Daily digest cron] -->|only if anomalies:\none event per kind| SENTRY
@@ -466,6 +473,18 @@ flowchart LR
 - **Queues**: `max_retries: 3` with delayed retry; DLQ bound and consumed —
   a dead-lettered job becomes a user-visible failure + Sentry event, never
   silence.
+- **Gave up** (R-119; Operator Screens D6, a section of the Desk's Today):
+  every job the system stops retrying writes a `gave_up` row in the batch
+  that marks its own status — the imports and enrichment DLQs through
+  `giveUpEach` (`lib/sql/queue-batch.ts`), enrichment's terminal page
+  refusal, and the weather cron's five-hour cap. A later success clears it
+  (enrichment's write-back, weather's `setStatus` on resolve). Today lists
+  the rows, its rail carries the count, and the digest adds one line when
+  it is above zero. Retry re-arms the job's own marker and re-sends an
+  existing message type (law 9); Drop deletes the row. A dead letter's
+  tries are its queue's `max_retries + 1`, from `queueRegistry`, which
+  `test/bindings-conformance.test.ts` pins to `wrangler.jsonc`. Photo
+  screening never gives up: its sweep retries `pending` forever.
 - **Two systems, one outbox** (law 8c): a write that owes work to another
   system records the debt in the generic `outbox` table in the same
   `db.batch()` as the change, runs the work as a fast path, and deletes the

@@ -8,6 +8,7 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
+import { gaveUpClear, gaveUpUpsert } from "../../db/gave-up";
 import { imports, runs } from "../../db/schema-core";
 import { env } from "../../env";
 import type { ManualSky } from "../../lib/contracts";
@@ -27,7 +28,16 @@ import { nowSeconds } from "../../lib/now";
 type WeatherStatus = (typeof runs.$inferSelect)["weatherStatus"];
 
 const RETRY_BATCH_SIZE = 50;
-const FAIL_AFTER_SECONDS = 5 * 60 * 60;
+const HOUR_SECONDS = 60 * 60;
+const FAIL_AFTER_SECONDS = 5 * HOUR_SECONDS;
+
+/**
+ * Why a run's conditions gave up, for its Gave up row. The cron keeps no
+ * error — a provider failure is logged and the run left `pending` — so
+ * what it can say is how long it tried; the logs have the rest.
+ */
+const WEATHER_GAVE_UP_REASON =
+  "No weather came back for this run in five hours of hourly tries.";
 
 function coreDb() {
   return drizzle(env.DIALED_CORE);
@@ -43,11 +53,22 @@ function isResolved(status: WeatherStatus): boolean {
   return status === "attached" || status === "manual";
 }
 
+/**
+ * Write a run's weather status. A run that resolves — fetched, or a band
+ * its runner typed — is off the Desk's Gave up in the same batch (R-119),
+ * whichever path resolved it: the hourly cron, an operator's Retry, R2b.
+ */
 async function setStatus(runId: Ulid, status: WeatherStatus): Promise<void> {
-  await coreDb()
+  const db = coreDb();
+  const update = db
     .update(runs)
     .set({ weatherStatus: status })
     .where(eq(runs.id, runId));
+  if (!isResolved(status)) {
+    await update;
+    return;
+  }
+  await db.batch([update, gaveUpClear(db, "weather", runId)]);
 }
 
 /**
@@ -308,10 +329,24 @@ export async function retryPendingWeather(): Promise<RetryCronResult> {
     .map((c) => c.id);
 
   if (toFailIds.length > 0) {
-    await db
-      .update(runs)
-      .set({ weatherStatus: "failed" })
-      .where(inArray(runs.id, toFailIds));
+    // Failed and on the Desk's Gave up together (R-119). Its tries are the
+    // window in hours: the cap is a five-hour age, not a counter (see
+    // above), and an hourly cron has had about that many goes.
+    const gaveUp = toFailIds.map((runId) =>
+      gaveUpUpsert(db, {
+        kind: "weather",
+        subjectId: runId,
+        reason: WEATHER_GAVE_UP_REASON,
+        tries: FAIL_AFTER_SECONDS / HOUR_SECONDS,
+      }),
+    );
+    await db.batch([
+      db
+        .update(runs)
+        .set({ weatherStatus: "failed" })
+        .where(inArray(runs.id, toFailIds)),
+      ...gaveUp,
+    ]);
     console.warn("[weather] retry cron: exhausted, marking failed", {
       runIds: toFailIds,
     });

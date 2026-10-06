@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
 import {
+  gaveUp,
   imports,
   notifications,
   runs,
@@ -30,6 +31,12 @@ import pausedClimbGpx from "./fixtures/paused-climb.gpx?raw";
 import { nowSeconds } from "../../src/lib/now";
 import { drainOutbox } from "../../src/modules/ops/outbox";
 import { oweInCore } from "../queue-fakes";
+import { DEAD_LETTER_REASON } from "../../src/db/gave-up";
+import {
+  reminderFromSubject,
+  reminderSubject,
+} from "../../src/modules/runs/queue-messages";
+import { gaveUpRow } from "../gave-up-rows";
 
 function fakeMessage(body: unknown) {
   let wasAcked = false;
@@ -384,7 +391,7 @@ describe("handleImportsDlqBatch (102 §8 — DLQ ownership)", () => {
       { body: { type: "import", importId } },
     ]);
 
-    await handleImportsDlqBatch(batch, deps);
+    await handleImportsDlqBatch(batch, deps, 4);
 
     expect(wrapped[0]?.wasAcked).toBe(true);
     const [importRow] = await deps.db
@@ -426,7 +433,7 @@ describe("handleImportsDlqBatch (102 §8 — DLQ ownership)", () => {
     // These tests share a database, so the assertion is on the change,
     // not on the total.
     const failedBefore = await failedImportCount(deps.db);
-    await handleImportsDlqBatch(batch, deps);
+    await handleImportsDlqBatch(batch, deps, 4);
 
     expect(wrapped[0]?.wasAcked).toBe(true);
     expect(deps.exceptions).toHaveLength(1);
@@ -440,7 +447,9 @@ describe("handleImportsDlqBatch (102 §8 — DLQ ownership)", () => {
       { body: { type: "import", importId: newUlid() } },
     ]);
 
-    await expect(handleImportsDlqBatch(batch, deps)).resolves.toBeUndefined();
+    await expect(
+      handleImportsDlqBatch(batch, deps, 4),
+    ).resolves.toBeUndefined();
 
     expect(wrapped[0]?.wasAcked).toBe(true);
     expect(deps.exceptions).toHaveLength(1);
@@ -456,7 +465,7 @@ describe("handleImportsDlqBatch (102 §8 — DLQ ownership)", () => {
       .where(and(eq(imports.id, importId), eq(imports.userId, userId)));
 
     const { batch } = fakeBatch([{ body: { type: "import", importId } }]);
-    await handleImportsDlqBatch(batch, deps);
+    await handleImportsDlqBatch(batch, deps, 4);
 
     expect(await unreadNotificationCount(deps.db, userId)).toBe(0);
   });
@@ -1066,7 +1075,7 @@ describe("the Strava deauthorize job (STR-3, API Policy §7.4)", () => {
     const { batch, wrapped } = fakeBatch([
       { body: { type: "strava_deauthorize", athleteId, eventTime: 7 } },
     ]);
-    await handleImportsDlqBatch(batch, deps);
+    await handleImportsDlqBatch(batch, deps, 4);
 
     expect(wrapped[0]?.wasAcked).toBe(true);
     const left = await coreDb()
@@ -1219,6 +1228,7 @@ describe("a failed import's file is deleted 30 days after it failed (owner, 2026
     await handleImportsDlqBatch(
       fakeBatch([{ body: { type: "import", importId } }]).batch,
       deps,
+      4,
     );
 
     expect(
@@ -1245,5 +1255,97 @@ describe("a failed import's file is deleted 30 days after it failed (owner, 2026
 
     expect(await expiryOf(userId, key)).toBeUndefined();
     expect(await env.IMPORTS.head(key)).not.toBeNull();
+  });
+});
+
+describe("the Desk's Gave up (R-119)", () => {
+  const reminder = {
+    type: "strava_reminder",
+    athleteId: "41",
+    objectId: "42",
+    aspectType: "create",
+    eventTime: 1_700_000_042,
+  } as const;
+
+  it("lists a dead-lettered import with the queue's tries", async () => {
+    const deps = makeDeps();
+    const importId = await seedImport(deps.db, newUlid(), validTcx, "tcx");
+
+    await handleImportsDlqBatch(
+      fakeBatch([{ body: { type: "import", importId } }]).batch,
+      deps,
+      4,
+    );
+
+    expect(await gaveUpRow("import", importId)).toMatchObject({
+      reason: DEAD_LETTER_REASON,
+      tries: 4,
+    });
+  });
+
+  it("does not list an import that already ended", async () => {
+    const deps = makeDeps();
+    const importId = await seedImport(deps.db, newUlid(), validTcx, "tcx");
+    await deps.db
+      .update(imports)
+      .set({ status: "duplicate" })
+      .where(eq(imports.id, importId));
+
+    await handleImportsDlqBatch(
+      fakeBatch([{ body: { type: "import", importId } }]).batch,
+      deps,
+      4,
+    );
+
+    expect(await gaveUpRow("import", importId)).toBeUndefined();
+  });
+
+  it("lists a dead-lettered reminder, keyed by the job a Retry sends again", async () => {
+    await handleImportsDlqBatch(
+      fakeBatch([{ body: reminder }]).batch,
+      makeDeps(),
+      4,
+    );
+
+    const row = await gaveUpRow("reminder", reminderSubject(reminder));
+    expect(row?.tries).toBe(4);
+    expect(reminderFromSubject(row?.subjectId ?? "")).toStrictEqual(reminder);
+  });
+
+  it("lists a reminder dead-lettered twice once, with both rounds of tries", async () => {
+    const deps = makeDeps();
+    // Its own job: the file shares one database across its tests.
+    const again = { ...reminder, objectId: "43" };
+    const twice = [fakeBatch([{ body: again }]), fakeBatch([{ body: again }])];
+    for (const { batch } of twice) await handleImportsDlqBatch(batch, deps, 4);
+
+    const row = await gaveUpRow("reminder", reminderSubject(again));
+    expect(row?.tries).toBe(8);
+  });
+
+  it("does not list a dead-lettered revoke, whose own row is its record", async () => {
+    const revocationId = newUlid();
+
+    await handleImportsDlqBatch(
+      fakeBatch([{ body: { type: "strava_revoke", revocationId } }]).batch,
+      makeDeps(),
+      4,
+    );
+
+    const rows = await coreDb()
+      .select()
+      .from(gaveUp)
+      .where(eq(gaveUp.subjectId, revocationId));
+    expect(rows).toStrictEqual([]);
+  });
+});
+
+describe("reminderFromSubject", () => {
+  it.each([
+    ["not json", "{"],
+    ["another job", JSON.stringify({ type: "import", importId: "i" })],
+    ["a reminder missing a field", JSON.stringify({ type: "strava_reminder" })],
+  ])("reads %s as no reminder", (_, subject) => {
+    expect(reminderFromSubject(subject)).toBeUndefined();
   });
 });

@@ -30,6 +30,8 @@ const COUNTS: TodayCounts = {
   screenerUnfinished: 1,
   bansThisWeek: 0,
   bansAllTime: 3,
+  gaveUp: 2,
+  oldestGaveUpAt: 900_000,
 };
 
 beforeEach(async () => {
@@ -47,6 +49,7 @@ describe("digestTemplate", () => {
       oldestHours: 19,
       screenerUnfinished: 1,
       bansThisWeek: 0,
+      gaveUp: 2,
     });
   });
 
@@ -210,6 +213,7 @@ describe("oweDigestEmail", () => {
         waiting: 0,
         oldestWaitingAt: undefined,
         screenerUnfinished: 0,
+        gaveUp: 0,
       }),
     );
     // The fast path is held until the test lets it go.

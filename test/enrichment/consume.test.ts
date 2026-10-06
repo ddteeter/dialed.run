@@ -14,7 +14,13 @@ import {
   createOrGetBrand,
   createOrGetProduct,
 } from "../../src/modules/products";
+import { DEAD_LETTER_REASON } from "../../src/db/gave-up";
+import {
+  PageFetchError,
+  pageFailureReason,
+} from "../../src/modules/enrichment/bounds";
 import samplePhotoBytes from "../fixtures/sample-photo.bin";
+import { gaveUpRow } from "../gave-up-rows";
 import { batchOf, fakeMessage } from "../queue-fakes";
 
 /**
@@ -479,6 +485,7 @@ describe("handleEnrichmentDlqBatch", () => {
     await handleEnrichmentDlqBatch(
       batchOf("dialed-enrichment-dlq", [message]),
       deps,
+      4,
     );
 
     expect(message.ack).toHaveBeenCalledTimes(1);
@@ -496,6 +503,7 @@ describe("handleEnrichmentDlqBatch", () => {
     await handleEnrichmentDlqBatch(
       batchOf("dialed-enrichment-dlq", [jobFor(productId)]),
       depsWith(serving(PAGE)),
+      4,
     );
     expect(await statusOf(productId)).toBe("done");
   });
@@ -506,6 +514,7 @@ describe("handleEnrichmentDlqBatch", () => {
     await handleEnrichmentDlqBatch(
       batchOf("dialed-enrichment-dlq", [message]),
       deps,
+      4,
     );
     expect(message.ack).toHaveBeenCalledTimes(1);
     expect(deps.captureException).toHaveBeenCalledTimes(1);
@@ -792,3 +801,107 @@ describe("handleEnrichmentBatch: the model rung", () => {
     expect(snapshot?.rung).toBe("og");
   });
 });
+
+describe("the Desk's Gave up (R-119)", () => {
+  it("lists a product whose page refused us, with the status in words and the error as detail", async () => {
+    const productId = await pendingProduct();
+
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      depsWith(serving("blocked", 403)),
+    );
+
+    expect(await gaveUpRow("enrichment", productId)).toMatchObject({
+      reason: "The shop returned 403. It may be blocking us.",
+      rawError: "Page returned 403",
+      tries: 1,
+    });
+  });
+
+  it("adds a try each time a re-driven product is refused again", async () => {
+    const productId = await pendingProduct();
+    const deps = depsWith(serving("blocked", 403));
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      deps,
+    );
+    await repend(productId);
+
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      deps,
+    );
+
+    const row = await gaveUpRow("enrichment", productId);
+    expect(row?.tries).toBe(2);
+  });
+
+  it("takes a product off the list once a later try succeeds", async () => {
+    const productId = await pendingProduct();
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      depsWith(serving("blocked", 403)),
+    );
+    await repend(productId);
+
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      depsWith(serving(PAGE)),
+    );
+
+    expect(await statusOf(productId)).toBe("done");
+    expect(await gaveUpRow("enrichment", productId)).toBeUndefined();
+  });
+
+  it("lists a dead-lettered product with the queue's tries, in the batch that fails it", async () => {
+    const productId = await pendingProduct();
+
+    await handleEnrichmentDlqBatch(
+      batchOf("dialed-enrichment-dlq", [jobFor(productId)]),
+      depsWith(serving(PAGE)),
+      4,
+    );
+
+    expect(await statusOf(productId)).toBe("failed");
+    expect(await gaveUpRow("enrichment", productId)).toMatchObject({
+      reason: DEAD_LETTER_REASON,
+      tries: 4,
+    });
+  });
+
+  it("does not list a product a late retry finished", async () => {
+    const productId = await pendingProduct({ extractionStatus: "done" });
+
+    await handleEnrichmentDlqBatch(
+      batchOf("dialed-enrichment-dlq", [jobFor(productId)]),
+      depsWith(serving(PAGE)),
+      4,
+    );
+
+    expect(await gaveUpRow("enrichment", productId)).toBeUndefined();
+  });
+});
+
+describe("pageFailureReason", () => {
+  it.each([
+    ["Page returned 403", "The shop returned 403. It may be blocking us."],
+    ["Page returned 401", "The shop returned 401. It may be blocking us."],
+    ["Page returned 404", "The shop returned 404."],
+    ["Page returned 4035", "The shop's page couldn't be read."],
+    ["A Page returned 403", "The shop's page couldn't be read."],
+    ["Proxy returned 502", "The shop's page couldn't be read."],
+    ["Page had no body", "The shop's page couldn't be read."],
+  ])("says %j as %j", (message, reason) => {
+    expect(pageFailureReason(new PageFetchError(message))).toBe(reason);
+  });
+});
+
+/**
+What the hourly sweep does to a failed product before it re-sends it.
+*/
+async function repend(productId: string): Promise<void> {
+  await drizzle(env.DIALED_CORE)
+    .update(products)
+    .set({ extractionStatus: "pending" })
+    .where(eq(products.id, productId));
+}

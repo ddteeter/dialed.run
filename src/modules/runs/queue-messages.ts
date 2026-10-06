@@ -82,3 +82,35 @@ export type DeauthorizeJob = Extract<
   ImportsQueueMessage,
   { type: "strava_deauthorize" }
 >;
+
+/**
+ * A dead-lettered reminder's key on the Desk's Gave up (R-119): the job
+ * itself, written out field by field so the same job is always the same
+ * string. A reminder that never landed has no row anywhere else to point
+ * at, so the job is both the row's identity and what its Retry sends.
+ */
+export function reminderSubject(job: ReminderJob): string {
+  return JSON.stringify({
+    type: job.type,
+    athleteId: job.athleteId,
+    objectId: job.objectId,
+    aspectType: job.aspectType,
+    eventTime: job.eventTime,
+  });
+}
+
+/**
+ * The reminder a Gave up row keys, read back through the queue's own
+ * schema — the row is stored data, parsed, never trusted — or nothing for
+ * a key that is not one.
+ */
+export function reminderFromSubject(subject: string): ReminderJob | undefined {
+  let value: unknown;
+  try {
+    value = JSON.parse(subject);
+  } catch {
+    return undefined;
+  }
+  const job = importsQueueMessageSchema.safeParse(value).data;
+  return job?.type === "strava_reminder" ? job : undefined;
+}

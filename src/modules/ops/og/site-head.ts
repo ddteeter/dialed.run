@@ -24,9 +24,9 @@ export const PUBLIC_ORIGIN = "https://dialed.run";
 
 const TITLE = "dialed.run";
 /**
- * The default card's own line (round 26 #22).
+ * The default card's own line (round 31 #6, D-107), which is the hero's.
  */
-const DESCRIPTION = "What to wear for the run you're about to do.";
+const DESCRIPTION = "Wear what worked.";
 
 export const SITE_META = [
   { name: "description", content: DESCRIPTION },

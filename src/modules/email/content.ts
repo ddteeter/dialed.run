@@ -127,17 +127,22 @@ function counted(count: number, one: string, many: string): string {
 
 /**
  * D5's subject: the two numbers that matter, or the zero day's own line
- * ("A zero day reads 'Nothing waiting. Nothing failed.'").
+ * ("A zero day reads 'Nothing waiting. Nothing failed.'"). A day with jobs
+ * the system gave up on is not a day when nothing failed, so it says how
+ * many after the two (R-119). `gaveUp` is absent from a digest owed by the
+ * deploy before it (law 9), and absent is none.
  */
 function digestSubject(
   template: Extract<EmailTemplate, { kind: "digest" }>,
 ): string {
   const { day, waiting, screenerUnfinished } = template;
-  if (waiting === 0 && screenerUnfinished === 0) {
+  const gaveUp = template.gaveUp ?? 0;
+  if (waiting === 0 && screenerUnfinished === 0 && gaveUp === 0) {
     return `${day} — Nothing waiting. Nothing failed.`;
   }
   const needs = screenerUnfinished === 1 ? "needs" : "need";
-  return `${day} — ${String(waiting)} waiting, ${counted(screenerUnfinished, "photo", "photos")} ${needs} eyes`;
+  const failed = gaveUp === 0 ? "" : `, ${String(gaveUp)} gave up`;
+  return `${day} — ${String(waiting)} waiting, ${counted(screenerUnfinished, "photo", "photos")} ${needs} eyes${failed}`;
 }
 
 /**
@@ -153,10 +158,20 @@ function digestBody(
       : ` The oldest has waited ${counted(template.oldestHours, "hour", "hours")}.`;
   const unfinished = template.screenerUnfinished;
   const hidden = unfinished === 0 ? "" : " It's hidden until someone looks.";
+  const gaveUp = template.gaveUp ?? 0;
+  // Operator Screens D6: "the digest adds one line only when the count is
+  // above zero" — Today's three numbers stay three.
+  const gaveUpLine =
+    gaveUp === 0
+      ? []
+      : [
+          `${counted(gaveUp, "job", "jobs")} the system gave up on. ${gaveUp === 1 ? "It's" : "They're"} on the Desk's Today.`,
+        ];
   return [
     `${String(template.waiting)} waiting for a decision.${oldest}`,
     `${counted(unfinished, "photo", "photos")} the screener couldn't finish.${hidden}`,
     `${counted(template.bansThisWeek, "ban", "bans")} this week.`,
+    ...gaveUpLine,
   ].join(" ");
 }
 

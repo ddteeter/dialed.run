@@ -5,6 +5,11 @@
  * (ops, for the queue entry point) import from here.
  */
 export { handleImportsBatch, handleImportsDlqBatch } from "./consumer";
+export {
+  reminderFromSubject,
+  type ImportJob,
+  type ReminderJob,
+} from "./queue-messages";
 export { stravaApiFromEnv } from "./strava/api-from-env";
 export { runsAwaitingVerdict } from "./awaiting-verdict";
 export { runCountsOf } from "./counts";

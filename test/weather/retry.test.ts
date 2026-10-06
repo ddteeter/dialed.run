@@ -8,7 +8,9 @@ import { newUlid, type Ulid } from "../../src/lib/ids";
 import { retryPendingWeather } from "../../src/modules/weather";
 import { handleScheduled } from "../../src/modules/ops";
 import { mockVisualCrossing } from "./fixtures/visual-crossing-observation";
+import { gaveUpUpsert } from "../../src/db/gave-up";
 import { nowSeconds } from "../../src/lib/now";
+import { gaveUpRow } from "../gave-up-rows";
 
 const HOUR = 3600;
 
@@ -248,5 +250,78 @@ describe("retryPendingWeather counts what it actually did", () => {
     const stillTrying = await retryPendingWeather();
     expect(stillTrying.failed).toBe(0);
     expect(await statusOf(justInside)).toBe("pending");
+  });
+});
+
+describe("the Desk's Gave up (R-119)", () => {
+  it("lists a run the cron gave up on, with the window's hours as its tries", async () => {
+    silenceWarn();
+    const runId = await insertPendingRun({
+      lat: 63.1,
+      lng: 23.1,
+      startedAt: nowSeconds() - 6 * HOUR,
+    });
+    mockFetchJson({ unexpected: "shape" });
+
+    await retryPendingWeather();
+
+    const row = await gaveUpRow("weather", runId);
+    expect(row?.rawError).toBeNull();
+    expect(row).toMatchObject({
+      reason:
+        "No weather came back for this run in five hours of hourly tries.",
+      tries: 5,
+    });
+  });
+
+  it("does not list a run still inside the window", async () => {
+    silenceWarn();
+    const runId = await insertPendingRun({
+      lat: 64.1,
+      lng: 24.1,
+      startedAt: nowSeconds() - HOUR,
+    });
+    mockFetchJson({ unexpected: "shape" });
+
+    await retryPendingWeather();
+
+    expect(await gaveUpRow("weather", runId)).toBeUndefined();
+  });
+
+  it("takes a run off the list once its conditions resolve", async () => {
+    const runId = await insertPendingRun({ lat: 65.1, lng: 25.1 });
+    await gaveUpUpsert(coreDb(), {
+      kind: "weather",
+      subjectId: runId,
+      reason: "x",
+      tries: 5,
+    });
+    mockVisualCrossing();
+
+    await retryPendingWeather();
+
+    expect(await statusOf(runId)).toBe("attached");
+    expect(await gaveUpRow("weather", runId)).toBeUndefined();
+  });
+
+  it("keeps a run on the list while it is only pending again", async () => {
+    silenceWarn();
+    const runId = await insertPendingRun({
+      lat: 66.1,
+      lng: 26.1,
+      startedAt: nowSeconds() - HOUR,
+    });
+    await gaveUpUpsert(coreDb(), {
+      kind: "weather",
+      subjectId: runId,
+      reason: "x",
+      tries: 5,
+    });
+    mockFetchJson({ unexpected: "shape" });
+
+    await retryPendingWeather();
+
+    expect(await statusOf(runId)).toBe("pending");
+    expect(await gaveUpRow("weather", runId)).toBeDefined();
   });
 });

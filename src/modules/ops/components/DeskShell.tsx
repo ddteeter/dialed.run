@@ -16,15 +16,16 @@ import type { DeskToday } from "../desk";
  */
 
 /**
- * Every destination the rail names, in D0's order plus round 26's D7.
+ * Every destination the rail names, in D-87's order (Operator Screens D0,
+ * redrawn in round 30). Gave up is not one: it is a section of Today, and
+ * Today's rail count is its count.
  */
 const DESK_PAGES = [
   "today",
   "review",
-  "duplicates",
-  "gave-up",
-  "runners",
   "access",
+  "duplicates",
+  "runners",
 ] as const;
 
 export type DeskPage = (typeof DESK_PAGES)[number];
@@ -32,19 +33,16 @@ export type DeskPage = (typeof DESK_PAGES)[number];
 const LABEL: Readonly<Record<DeskPage, string>> = {
   today: "Today",
   review: "Review",
-  duplicates: "Duplicates",
-  "gave-up": "Gave up",
-  runners: "Runners",
   access: "Access",
+  duplicates: "Duplicates",
+  runners: "Runners",
 };
 
 /**
  * Where each built destination lives. A page not in here is not built
  * yet, and its rail entry is text rather than a link (placeholder
- * protocol): Duplicates and Gave up are task 110's, Runners and its ban
- * panel 128's, Access 126's (D7). Each lane adds its line when its page
- * lands. Review is the queue task 106 built, at its own address until 128
- * moves it under `/desk`.
+ * protocol): Duplicates is task 110's. Review is the queue task 106 built,
+ * at its own address until 128 moves it under `/desk`.
  */
 const BUILT: Readonly<
   Partial<
@@ -124,8 +122,10 @@ export function DeskShell({
   today: DeskToday;
   children: ReactNode;
 }>) {
-  // Only a destination that needs a person carries a count.
+  // Only a destination that needs a person carries a count: Review's is
+  // what waits for a decision, Today's what the system gave up on.
   const counts: Partial<Record<DeskPage, number>> = {
+    today: today.counts.gaveUp,
     review: today.counts.waiting,
   };
   return (
