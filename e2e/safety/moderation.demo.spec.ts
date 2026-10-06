@@ -106,6 +106,12 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
       "Remove this entry everywhere and keep the evidence for the report?",
     ),
   ).toBeVisible();
+  // Round 29 #3: the quiet line, so nobody assumes the account closed.
+  await expect(
+    row.getByText(
+      `@${handle}'s account stays open. Closing it is a separate action on their Runners page.`,
+    ),
+  ).toBeVisible();
   await expect(row.getByRole("button", { name: "Cancel" })).toBeFocused();
   await row.getByRole("button", { name: "Cancel" }).click();
   await expect(

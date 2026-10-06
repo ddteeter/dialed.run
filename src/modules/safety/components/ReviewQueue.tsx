@@ -231,6 +231,7 @@ function Decision({
       <CsamQuestion
         form={form}
         subjectType={row.subjectType}
+        owner={row.subject.owner}
         onConfirm={() => {
           send("quarantine");
         }}
@@ -293,19 +294,24 @@ function Decision({
  * decision bar, **with Cancel focused** — so a reviewer who pressed by
  * mistake is one Enter from safety, never from the quarantine.
  *
- * The board's first draft said "close @n8's account"; that is not here
+ * Round 28's first draft said "close @n8's account"; that is not here
  * (D-88): removing suspected CSAM does not close the account, and the
- * question says what happens. The same form, so a quarantine that fails
- * shows its band here, with Try again beside the question it answers.
+ * question says what happens. Round 29 #3 adds the quiet line under it,
+ * "@n8's account stays open. Closing it is a separate action on their
+ * Runners page.", so the operator does not assume it was closed — said
+ * when the author's handle is known. The same form, so a quarantine that
+ * fails shows its band here, with Try again beside the question.
  */
 function CsamQuestion({
   form,
   subjectType,
+  owner,
   onConfirm,
   onCancel,
 }: Readonly<{
   form: FormShell;
   subjectType: QueueRow["subjectType"];
+  owner: string | undefined;
   onConfirm: () => void;
   onCancel: () => void;
 }>): JSX.Element {
@@ -345,6 +351,12 @@ function CsamQuestion({
         Remove this {subjectType} everywhere and keep the evidence for the
         report?
       </p>
+      {owner === undefined ? undefined : (
+        <p className="m-0 text-small text-quiet">
+          @{owner}&apos;s account stays open. Closing it is a separate action on
+          their Runners page.
+        </p>
+      )}
     </DeskForm>
   );
 }

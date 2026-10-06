@@ -12,6 +12,7 @@ import {
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
+import { orSqlNull } from "../../src/lib/sql/sql-null";
 import {
   autoHideReporterThreshold,
   claimForReview,
@@ -620,6 +621,104 @@ describe("the queue itself", () => {
     expect(queued?.subject.photoKeys).toEqual([
       `entries/${author}/${entryId}/0`,
       `entries/${author}/${entryId}/1`,
+    ]);
+  });
+
+  it("names whose photo or entry it is, for the CSAM question (round 29 #3)", async () => {
+    const author = await makeUser({ username: "n8" });
+    const bare = await makeEntry({
+      userId: author,
+      runId: await makeRun({ userId: author }),
+      audience: "runners",
+    });
+    const pictured = await makeEntry({
+      userId: author,
+      runId: await makeRun({ userId: author }),
+      audience: "runners",
+    });
+    const photoId = newUlid();
+    await core()
+      .insert(entryPhotos)
+      .values({
+        id: photoId,
+        entryId: pictured,
+        photoKey: `entries/${author}/${pictured}/0`,
+        position: 0,
+      });
+    for (const [subjectType, subjectId] of [
+      ["entry", bare],
+      ["entry", pictured],
+      ["photo", photoId],
+    ] as const) {
+      for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+        await fileReport({
+          reporterId: await makeUser(),
+          subjectType,
+          subjectId,
+          reason: "explicit",
+        });
+      }
+    }
+
+    const queue = await pendingReviewQueue();
+    const subjectOf = (id: string) =>
+      queue.find((row) => row.subjectId === id)?.subject;
+
+    // "@n8's account stays open": the author, not a reporter, and on an
+    // entry with no photo as much as on one with.
+    expect(subjectOf(bare)).toStrictEqual({ photoKeys: [], owner: "n8" });
+    expect(subjectOf(pictured)).toStrictEqual({
+      photoKeys: [`entries/${author}/${pictured}/0`],
+      owner: "n8",
+    });
+    expect(subjectOf(photoId)).toStrictEqual({
+      photoKeys: [`entries/${author}/${pictured}/0`],
+      owner: "n8",
+    });
+  });
+
+  it("names nobody when the author has no handle yet", async () => {
+    const author = await makeUser();
+    await core()
+      .update(userProfiles)
+      .set({ username: orSqlNull(undefined) })
+      .where(eq(userProfiles.userId, author));
+    const runId = await makeRun({ userId: author });
+    const entryId = await makeEntry({
+      userId: author,
+      runId,
+      audience: "runners",
+    });
+    const photoId = newUlid();
+    await core()
+      .insert(entryPhotos)
+      .values({
+        id: photoId,
+        entryId,
+        photoKey: `entries/${author}/${entryId}/0`,
+        position: 0,
+      });
+    for (const [subjectType, subjectId] of [
+      ["entry", entryId],
+      ["photo", photoId],
+    ] as const) {
+      for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+        await fileReport({
+          reporterId: await makeUser(),
+          subjectType,
+          subjectId,
+          reason: "explicit",
+        });
+      }
+    }
+
+    const queue = await pendingReviewQueue();
+
+    // Undefined, never null: the quiet line is left out rather than
+    // naming "@null".
+    expect(queue.map((row) => row.subject.owner)).toStrictEqual([
+      undefined,
+      undefined,
     ]);
   });
 

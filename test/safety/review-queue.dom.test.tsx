@@ -205,6 +205,25 @@ describe("deciding", () => {
     });
   });
 
+  it("says whose account stays open, when it knows (round 29 #3)", async () => {
+    const user = userEvent.setup();
+    renderQueue([row({ subject: { photoKeys: [], owner: "n8" } })]);
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why it comes down/ }),
+      "it's sexual or explicit",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Remove as suspected CSAM" }),
+    );
+
+    expect(
+      screen.getByText(
+        "@n8's account stays open. Closing it is a separate action on their Runners page.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("names what the second press removes", async () => {
     const user = userEvent.setup();
     renderQueue([row()]);
@@ -222,6 +241,8 @@ describe("deciding", () => {
         "Remove this entry everywhere and keep the evidence for the report?",
       ),
     ).toBeInTheDocument();
+    // No handle to name, so no line naming one.
+    expect(screen.queryByText(/account stays open/)).not.toBeInTheDocument();
   });
 
   it("goes back to the decision bar on Cancel, deciding nothing", async () => {
