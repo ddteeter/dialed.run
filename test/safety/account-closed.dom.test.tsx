@@ -1,10 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import {
-  AccountClosed,
-  APPEAL_ADDRESS,
-} from "../../src/modules/safety/components/AccountClosed";
+import { APPEAL_ADDRESS } from "../../src/lib/contracts/contact";
+import { AccountClosed } from "../../src/modules/safety/components/AccountClosed";
 
 /**
  * Operator Screens D4: what a banned runner opens to. Its promises are
