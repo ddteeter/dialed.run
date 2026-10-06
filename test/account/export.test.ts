@@ -370,9 +370,10 @@ describe("exportData and exportFiles", () => {
     ]);
     const strangerId = await seedStranger(observedAt);
     // The terms they accepted (D-95): inserted newest first, written
-    // oldest first.
+    // oldest first. Version 1 is from before `how` was kept (round 29
+    // #17), so its cell is empty.
     await db.insert(termsAcceptances).values([
-      { userId, version: 2, acceptedAt: NOW - 100 },
+      { userId, version: 2, acceptedAt: NOW - 100, how: "page" },
       { userId, version: 1, acceptedAt: NOW - 900 },
     ]);
 
@@ -407,9 +408,9 @@ describe("exportData and exportFiles", () => {
       "terms.csv",
     ]);
     expect(linesOf(texts, "terms.csv")).toStrictEqual([
-      "version,accepted_at",
-      `1,${iso(NOW - 900)}`,
-      `2,${iso(NOW - 100)}`,
+      "version,accepted_at,how",
+      `1,${iso(NOW - 900)},`,
+      `2,${iso(NOW - 100)},page`,
     ]);
     expect(linesOf(texts, "profile.csv")).toStrictEqual([
       "email,joined_at,username,place,thermal_level,temp_unit,distance_unit,default_audience",

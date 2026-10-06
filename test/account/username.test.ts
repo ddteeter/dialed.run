@@ -664,7 +664,7 @@ const PUBLISHED = 3;
 A runner who has accepted the published terms (ACC-6).
 */
 async function accepted(userId: string): Promise<string> {
-  await acceptanceOf(db, userId, PUBLISHED, nowSeconds());
+  await acceptanceOf(db, userId, PUBLISHED, nowSeconds(), "page");
   return userId;
 }
 
@@ -730,7 +730,7 @@ describe("usernameOf and handleGate", () => {
       userId: newcomer,
     });
     // A version behind is behind too.
-    await acceptanceOf(db, dee, PUBLISHED - 1, nowSeconds());
+    await acceptanceOf(db, dee, PUBLISHED - 1, nowSeconds(), "page");
     expect(await handleGate(db, dee, PUBLISHED)).toMatchObject({
       gate: "needs-terms",
     });

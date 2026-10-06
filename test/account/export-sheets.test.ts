@@ -57,8 +57,8 @@ describe("buildSheets", () => {
 
   it("writes terms.csv from the acceptances it is handed (D-95)", () => {
     const terms = [
-      { version: 1, acceptedAt: "2026-10-01T00:00:00.000Z" },
-      { version: 2, acceptedAt: "2026-10-02T00:00:00.000Z" },
+      { version: 1, acceptedAt: "2026-10-01T00:00:00.000Z", how: undefined },
+      { version: 2, acceptedAt: "2026-10-02T00:00:00.000Z", how: "page" },
     ];
     const { termsSheet } = buildSheets({ ...NO_ROWS, terms });
     expect(termsSheet.file).toBe("terms.csv");
@@ -75,6 +75,12 @@ describe("buildSheets", () => {
         name: "accepted_at",
         about: "when you accepted it (UTC).",
         values: ["2026-10-01T00:00:00.000Z", "2026-10-02T00:00:00.000Z"],
+      },
+      {
+        name: "how",
+        about:
+          "how you accepted it: sign-up when you made your account, page when you pressed Accept on the terms page. Empty for an acceptance recorded before we kept this.",
+        values: [undefined, "page"],
       },
     ]);
   });

@@ -36,6 +36,7 @@ function acceptedBy(userId: string) {
     .select({
       version: termsAcceptances.version,
       acceptedAt: termsAcceptances.acceptedAt,
+      how: termsAcceptances.how,
     })
     .from(termsAcceptances)
     .where(eq(termsAcceptances.userId, userId))
@@ -118,7 +119,7 @@ describe("termsStanding", () => {
       state: "behind",
       version: 1,
     });
-    await acceptanceOf(db, userId, 1, 100);
+    await acceptanceOf(db, userId, 1, 100, "page");
     expect(await termsStanding(db, userId, 1)).toStrictEqual({
       state: "current",
     });
@@ -130,9 +131,9 @@ describe("termsStanding", () => {
 
   it("reads the latest acceptance, not the first, and only the runner's own", async () => {
     const userId = newUlid();
-    await acceptanceOf(db, userId, 3, 300);
-    await acceptanceOf(db, userId, 1, 100);
-    await acceptanceOf(db, newUlid(), 9, 900);
+    await acceptanceOf(db, userId, 3, 300, "page");
+    await acceptanceOf(db, userId, 1, 100, "page");
+    await acceptanceOf(db, newUlid(), 9, 900, "page");
     const atThree = await termsStanding(db, userId, 3);
     const atFour = await termsStanding(db, userId, 4);
     const stranger = await termsStanding(db, newUlid(), 1);
@@ -155,12 +156,23 @@ describe("signUpAcceptances", () => {
     if (acceptance === undefined) throw new Error("no acceptance to record");
     await db.batch([acceptance]);
     expect(await acceptedBy(userId)).toStrictEqual([
-      { version: 2, acceptedAt: 100 },
+      { version: 2, acceptedAt: 100, how: "sign-up" },
     ]);
   });
 
   it("is nothing while no terms are published", () => {
     expect(signUpAcceptances(db, newUlid(), undefined, 100)).toStrictEqual([]);
+  });
+});
+
+describe("acceptanceOf", () => {
+  it("keeps the first acceptance's way, as it keeps its time", async () => {
+    const userId = newUlid();
+    await acceptanceOf(db, userId, 1, 100, "sign-up");
+    await acceptanceOf(db, userId, 1, 200, "page");
+    expect(await acceptedBy(userId)).toStrictEqual([
+      { version: 1, acceptedAt: 100, how: "sign-up" },
+    ]);
   });
 });
 
@@ -170,7 +182,7 @@ describe("acceptTerms", () => {
     expect(await acceptTerms(db, userId, 2, 2, 100)).toBe("accepted");
     expect(await acceptTerms(db, userId, 2, 2, 200)).toBe("accepted");
     expect(await acceptedBy(userId)).toStrictEqual([
-      { version: 2, acceptedAt: 100 },
+      { version: 2, acceptedAt: 100, how: "page" },
     ]);
   });
 
@@ -179,8 +191,8 @@ describe("acceptTerms", () => {
     await acceptTerms(db, userId, 1, 1, 100);
     await acceptTerms(db, userId, 2, 2, 200);
     expect(await acceptedBy(userId)).toStrictEqual([
-      { version: 1, acceptedAt: 100 },
-      { version: 2, acceptedAt: 200 },
+      { version: 1, acceptedAt: 100, how: "page" },
+      { version: 2, acceptedAt: 200, how: "page" },
     ]);
   });
 
@@ -210,7 +222,7 @@ describe("acceptTerms", () => {
 describe("termsPromptView", () => {
   it("asks a runner who is behind, with the version it asks about", async () => {
     const userId = newUlid();
-    await acceptanceOf(db, userId, 2, 100);
+    await acceptanceOf(db, userId, 2, 100, "page");
     expect(await termsPromptView(db, userId, 3)).toStrictEqual({
       state: "ask",
       version: 3,
@@ -219,7 +231,7 @@ describe("termsPromptView", () => {
 
   it("has nothing for a runner who is current, or for nobody", async () => {
     const userId = newUlid();
-    await acceptanceOf(db, userId, 3, 100);
+    await acceptanceOf(db, userId, 3, 100, "page");
     expect(await termsPromptView(db, userId, 3)).toStrictEqual({
       state: "none",
     });
