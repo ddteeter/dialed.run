@@ -53,7 +53,7 @@ export const Route = createFileRoute("/account/$section")({
   loader: async ({ params, location }) => {
     // Signed in first: a signed-out visitor to a bad section is sent to
     // log in, not told the page does not exist.
-    await requireSession(location.href);
+    await requireSession(location);
     return {
       section: accountSectionOrNotFound(params.section),
       page: await accountPageQuery(),

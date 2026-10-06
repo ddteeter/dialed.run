@@ -16,8 +16,8 @@ import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
 import { Layout } from "../../ui";
 
 export const Route = createFileRoute("/closet/$itemId")({
-  loader: async ({ params }) => {
-    await requireSession();
+  loader: async ({ params, location }) => {
+    await requireSession(location);
     return { detail: await getItemFn({ data: { itemId: params.itemId } }) };
   },
   component: GarmentDetailPage,

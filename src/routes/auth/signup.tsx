@@ -88,6 +88,7 @@ function SignupPage() {
           prompt="Have an account?"
           to="/auth/login"
           label="Log in"
+          redirect={search.redirect}
         />
       }
       onSubmit={() => {

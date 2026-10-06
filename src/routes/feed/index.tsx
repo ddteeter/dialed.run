@@ -24,8 +24,8 @@ import { geolocate } from "../../modules/onboarding/geolocate";
 import { nowSeconds } from "../../lib/now";
 
 export const Route = createFileRoute("/feed/")({
-  beforeLoad: async () => {
-    requireSignedIn(await getSession());
+  beforeLoad: async ({ location }) => {
+    requireSignedIn(await getSession(), location);
   },
   loader: async () => {
     const [page, units, unjudgedCount, bell, home, account] = await Promise.all(

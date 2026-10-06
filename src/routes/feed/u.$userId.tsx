@@ -13,8 +13,8 @@ import { noindexHead } from "../../modules/feed/route-decisions";
  */
 export const Route = createFileRoute("/feed/u/$userId")({
   head: noindexHead,
-  beforeLoad: async ({ params }) => {
-    requireSignedIn(await getSession());
+  beforeLoad: async ({ params, location }) => {
+    requireSignedIn(await getSession(), location);
     toHandlePage(await runnerHandleQuery({ data: { userId: params.userId } }));
   },
 });

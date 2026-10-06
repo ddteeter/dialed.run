@@ -816,6 +816,33 @@ describe("PasswordField", () => {
 });
 
 describe("AuthCrossLink and AuthLegal", () => {
+  it("carries a deep link's way back across to the other form", async () => {
+    await renderWithRouter(
+      <LoginCrossLink carried={undefined} redirect="/feed/entry/01ENTRY" />,
+    );
+    expect(
+      screen.getByRole("link", { name: "Create an account" }),
+    ).toHaveAttribute(
+      "href",
+      "/auth/signup?redirect=%2Ffeed%2Fentry%2F01ENTRY",
+    );
+  });
+
+  it("carries the way back from sign-up to log-in too", async () => {
+    await renderWithRouter(
+      <AuthCrossLink
+        prompt="Have an account?"
+        to="/auth/login"
+        label="Log in"
+        redirect="/@ravi_k"
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute(
+      "href",
+      "/auth/login?redirect=%2F%40ravi_k",
+    );
+  });
+
   it("reads as one sentence with an ink link, never pink", async () => {
     await renderWithRouter(
       <AuthCrossLink

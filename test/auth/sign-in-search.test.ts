@@ -144,6 +144,16 @@ describe("googleReturn", () => {
     });
   });
 
+  it("sends a hostile way back home, however it reached the page", () => {
+    // Validated where it is used, not only where the URL was parsed.
+    expect(
+      googleReturn("/auth/login", { redirect: "//evil.example/" }).callbackURL,
+    ).toBe("/");
+    expect(
+      googleReturn("/auth/login", { redirect: "/auth/login" }).callbackURL,
+    ).toBe("/");
+  });
+
   it("carries Au7's way back and its notice through the round trip", () => {
     expect(
       googleReturn("/auth/login", { redirect: "/runs/new", carried: "run" }),

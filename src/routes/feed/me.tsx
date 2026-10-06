@@ -13,8 +13,8 @@ import { BelledLayout } from "../../modules/notifications/components/BelledLayou
 import { bellStateFn } from "../../modules/notifications/functions";
 
 export const Route = createFileRoute("/feed/me")({
-  beforeLoad: async () => {
-    requireSignedIn(await getSession());
+  beforeLoad: async ({ location }) => {
+    requireSignedIn(await getSession(), location);
   },
   // Three independent reads, in parallel, as the tuple they arrive in.
   loader: () =>

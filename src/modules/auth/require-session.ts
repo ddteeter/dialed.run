@@ -14,20 +14,22 @@
  */
 import { redirect } from "@tanstack/react-router";
 
+import { returnPathOf } from "../../lib/return-path";
+
 /**
  * The session, or a redirect to sign-in. Returns a non-null session so a
  * loader can use the result directly instead of re-narrowing after the
  * guard.
  *
- * `returnTo` is the page being guarded — the loader's `location.href` —
- * and rides along as log-in's `redirect`, so signing in lands the runner
- * where they were going rather than on home. Log-in parses it like any
- * other search param, so a value that is not a path on this site is
- * dropped there, not trusted here.
+ * `location` is the page being guarded — the loader's `location` — and
+ * rides along as log-in's `redirect`, so signing in lands the runner where
+ * they were going rather than on home. `returnPathOf` decides what of it
+ * goes in the URL: path and search, and nothing at all for a page log-in
+ * may not return to.
  */
 export function sessionOrRedirect<Session>(
   session: Session | null,
-  returnTo?: string,
+  location: Readonly<{ pathname: string; searchStr: string }>,
 ): Session {
   if (session === null) {
     // `throw: true` is TanStack's own throwing form. A bare
@@ -35,7 +37,7 @@ export function sessionOrRedirect<Session>(
     // because what it returns is a Redirect, not an Error.
     redirect({
       to: "/auth/login",
-      search: { redirect: returnTo },
+      search: { redirect: returnPathOf(location) },
       throw: true,
     });
     // Unreachable: the call above throws. It exists so the compiler can

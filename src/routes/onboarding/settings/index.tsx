@@ -22,7 +22,7 @@ import { Page } from "../../../ui";
  */
 export const Route = createFileRoute("/onboarding/settings/")({
   loader: async ({ location }) => {
-    await requireSession(location.href);
+    await requireSession(location);
     const [current, { blocked }, unreadCount, { username }, notifications] =
       await Promise.all([
         settingsQuery(),

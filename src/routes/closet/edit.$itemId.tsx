@@ -16,8 +16,8 @@ import { searchBrandsFn } from "../../modules/products/functions";
 import { Layout } from "../../ui";
 
 export const Route = createFileRoute("/closet/edit/$itemId")({
-  loader: async ({ params }) => {
-    await requireSession();
+  loader: async ({ params, location }) => {
+    await requireSession(location);
     const detail = await getItemFn({ data: { itemId: params.itemId } });
     return { detail };
   },

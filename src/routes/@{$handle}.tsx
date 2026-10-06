@@ -22,11 +22,10 @@ import { fileReportAction } from "../modules/safety/functions";
  * noindex (SAF-14, FEED-1). The one H: `/feed/u/$userId` redirects here.
  */
 export const Route = createFileRoute("/@{$handle}")({
-  head: noindexHead,
-  beforeLoad: async () => {
-    requireSignedIn(await getSession());
+  beforeLoad: async ({ location }) => {
+    requireSignedIn(await getSession(), location);
   },
-  loader: async ({ params }) => {
+  loader: async ({ params, location }) => {
     const [found, session, bell] = await Promise.all([
       profileAtHandleQuery({ data: { handle: params.handle } }),
       getSession(),
@@ -34,11 +33,12 @@ export const Route = createFileRoute("/@{$handle}")({
     ]);
     return {
       found: orHandlePage(found),
-      viewerId: requireSignedIn(session).user.id,
+      viewerId: requireSignedIn(session, location).user.id,
       bell,
     };
   },
   component: HandlePage,
+  head: noindexHead,
 });
 
 function HandlePage() {

@@ -16,6 +16,8 @@ import type {
 } from "@tanstack/react-router";
 import { redirect } from "@tanstack/react-router";
 
+import { returnPathOf } from "../../lib/return-path";
+
 import type { ProfileAtHandle } from "./profiles";
 
 export function redirectTo<
@@ -37,8 +39,18 @@ export function redirectTo<
  * are ordinary functions with ordinary tests, and the route reads as the
  * wiring it is.
  */
-export function requireSignedIn<T>(session: T | null): T {
-  if (session === null) redirectTo({ to: "/auth/login" });
+export function requireSignedIn<T>(
+  session: T | null,
+  location: Readonly<{ pathname: string; searchStr: string }>,
+): T {
+  // The guarded page rides along as log-in's way back, so a link to an
+  // entry or a profile opened signed out lands there after signing in.
+  if (session === null) {
+    redirectTo({
+      to: "/auth/login",
+      search: { redirect: returnPathOf(location) },
+    });
+  }
   return session;
 }
 

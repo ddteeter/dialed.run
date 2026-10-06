@@ -289,6 +289,19 @@ describe("the router's defaults", () => {
     expect(document.querySelector("[data-part='failure-band']")).toBeNull();
   });
 
+  it("carry the page's path and search back, never its hash", async () => {
+    const router = await routedApp({
+      signedIn: true,
+      path: "/closet?view=all#top",
+      failWith: new AuthRequiredError(),
+    });
+
+    await screen.findByText("the log-in page");
+    expect(router.state.location.search).toEqual({
+      redirect: "/closet?view=all",
+    });
+  });
+
   it("send a stale tab behind on the terms to the prompt, once, carrying the page back (D-96)", async () => {
     const router = await routedApp({
       signedIn: true,

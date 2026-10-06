@@ -16,7 +16,7 @@ import { Page } from "../../ui";
  */
 export const Route = createFileRoute("/onboarding/done")({
   loader: async ({ location }) => {
-    await requireSession(location.href);
+    await requireSession(location);
     await completeOnboardingFn();
   },
   component: DonePage,

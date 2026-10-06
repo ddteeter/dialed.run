@@ -70,7 +70,9 @@ function LoginPage() {
       cause={cause}
       google={google}
       notice={<SessionNotice carried={search.carried} />}
-      crossLink={<LoginCrossLink carried={search.carried} />}
+      crossLink={
+        <LoginCrossLink carried={search.carried} redirect={search.redirect} />
+      }
       onSubmit={() => {
         void form.submit({ email, password });
       }}

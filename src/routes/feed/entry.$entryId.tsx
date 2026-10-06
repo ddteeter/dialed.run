@@ -24,17 +24,17 @@ import { bellStateFn } from "../../modules/notifications/functions";
 
 export const Route = createFileRoute("/feed/entry/$entryId")({
   head: noindexHead,
-  beforeLoad: async () => {
-    requireSignedIn(await getSession());
+  beforeLoad: async ({ location }) => {
+    requireSignedIn(await getSession(), location);
   },
-  loader: async ({ params }) => {
+  loader: async ({ params, location }) => {
     const [session, found, units, bell] = await Promise.all([
       getSession(),
       entryDetailQuery({ data: { entryId: params.entryId } }),
       viewerUnitsQuery(),
       bellStateFn(),
     ]);
-    const viewerId = requireSignedIn(session).user.id;
+    const viewerId = requireSignedIn(session, location).user.id;
     const entry = orBackToFeed(found);
     return {
       entry,
