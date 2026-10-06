@@ -12,6 +12,7 @@ import { firstRowWhere, hasRowWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 import { notificationSettings, type NotificationSettings } from "../email";
 import { exportRowState } from "./data-exports";
+import { currentTermsVersion, termsStanding } from "./terms-acceptance";
 import { usernameOf } from "./username";
 
 type Db = ReturnType<typeof drizzle>;
@@ -99,24 +100,36 @@ export async function ownAddressView(
 
 /**
  * Everything the account's settings pages show, in one read for one
- * route: the account, the handle, the email switches, and the export
- * row's state (ACC-10).
+ * route: the account, the handle, the email switches, the export row's
+ * state (ACC-10), and whether the runner is behind on the terms — the
+ * page is read only until they accept (round 30 #4a; D-95), and its
+ * loader is one of the reads the terms gate lets through, so it asks.
  */
 export async function accountPage(
   db: Db,
   userId: string,
   now = nowSeconds(),
+  current: number | undefined = currentTermsVersion(),
 ): Promise<{
   account: AccountView;
   username: string | undefined;
   notifications: NotificationSettings;
   dataExport: ExportRowState;
+  isBehindOnTerms: boolean;
 }> {
-  const [account, username, notifications, dataExport] = await Promise.all([
-    ownAccountView(db, userId),
-    usernameOf(db, userId),
-    notificationSettings(db, userId),
-    exportRowState(db, userId, now),
-  ]);
-  return { account, username, notifications, dataExport };
+  const [account, username, notifications, dataExport, terms] =
+    await Promise.all([
+      ownAccountView(db, userId),
+      usernameOf(db, userId),
+      notificationSettings(db, userId),
+      exportRowState(db, userId, now),
+      termsStanding(db, userId, current),
+    ]);
+  return {
+    account,
+    username,
+    notifications,
+    dataExport,
+    isBehindOnTerms: terms.state === "behind",
+  };
 }

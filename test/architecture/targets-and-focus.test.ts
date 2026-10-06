@@ -245,6 +245,9 @@ describe("03 · every tappable thing has a 44×44 hit area", () => {
         .map((element) => element.path)
         .toSorted((a, b) => a.localeCompare(b)),
     ).toEqual([
+      // The read-only account's hint, "Accept the Terms to change this.
+      // Accept" (round 30 #4a), once per row.
+      "src/modules/account/components/AccountWhileBehind.tsx",
       // Au4's three foot lines: "Wrong address? Start over", "Carry on
       // without confirming? Log in", "You're signed in. Carry on to your
       // closet ›" (round 26 #11).
