@@ -3,7 +3,8 @@
  * 17), Y (garment detail, round 22 `#y`: the photo well, Remove, the
  * retire confirm), §AG (what a garment is made of), §AH (colour as a
  * constraint), round 26 #3 (Y · delete with runs), #4 (F · saved, photo
- * refused), #9 (Show retired (N), "← Closet") and #10 (F at the desk) —
+ * refused), #9 (Show retired (N), "← Closet"), #10 (F at the desk) and
+ * R-137 (a brand written in any script) —
  * one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
@@ -433,5 +434,23 @@ test("add garments with product identity -> detail in round 22's order -> retire
   ).toHaveText("Houdini Air deleted.");
   await expect(
     page.getByRole("link", { name: /Patagonia Houdini Air/ }),
+  ).toHaveCount(0);
+
+  // ---- R-137 · a brand in any script --------------------------------------
+  // The identity key used to keep `[a-z0-9]` and nothing else, so "ミズノ"
+  // normalized to nothing and the save was refused for having no letters.
+  // A letter in any script is a letter now.
+  await scene(page, "F · a brand written in katakana saves like any other");
+  await page.getByRole("link", { name: "Add garment" }).click();
+  await hydrated(page);
+  await page.getByLabel("Brand").fill("ミズノ");
+  await page.getByLabel("Model / name").fill("ウエーブライダー 28");
+  await page.getByLabel("Category").selectOption("shoes");
+  await page.getByRole("button", { name: "Add to closet" }).click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "ミズノ ウエーブライダー 28" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Brand name must contain at least one letter or digit."),
   ).toHaveCount(0);
 });

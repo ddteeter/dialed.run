@@ -6,8 +6,9 @@
  * pages is lane 107's; this module only owns identity + the fields a user
  * can type directly.
  */
-import { and, eq, inArray, like } from "drizzle-orm";
+import { and, eq, gte, inArray, lt, type SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import { brands, products } from "../../db/schema-core";
 import { fabricPartsSchema, type FabricPart } from "../../lib/contracts";
@@ -41,23 +42,35 @@ const PRODUCT_IDENTITY_CONFLICT = {
 };
 
 /**
- * The autocomplete prefix pattern, or undefined when there is nothing to
- * search for.
- *
- * No `LIKE` escaping, and that is not an oversight: `normalizeIdentity`
- * folds everything outside `[a-z0-9 ]` to a space, so a `%` or `_` a user
- * typed is gone before it reaches here and the only wildcard in the pattern
- * is the one appended below. There *was* an `escapeLike` here; mutation
- * testing showed both of its replacements could be deleted with every test
- * still green, which is what dead code looks like from the outside.
- *
- * The dependency runs the other way to the obvious reading: this is safe
- * *because* the value is normalised. Loosening `normalizeIdentity` to keep
- * punctuation would need the escaping back.
+ * Above every code point a key can hold. SQLite's default BINARY collation
+ * compares UTF-8 bytes, so the sentinel must sort after any continuation:
+ * U+FFFF would not (a supplementary letter such as 𠀋 starts with byte
+ * F0, after U+FFFF's EF), and U+10FFFF does. It is a noncharacter, never a
+ * letter or digit, so no normalized key ever contains it.
  */
-function prefixPattern(prefix: string): string | undefined {
+const PREFIX_UPPER_SENTINEL = "\u{10FFFF}";
+
+/**
+ * The autocomplete prefix as an index range on `column`, or undefined when
+ * there is nothing to search for.
+ *
+ * A range and not `LIKE 'prefix%'`, because SQLite's `LIKE` is
+ * case-insensitive and the `normalized` indexes use the binary collation,
+ * so a `LIKE` cannot use them and every keystroke scanned the table — and
+ * rows scanned are what D1 bills. The key is already lowercase, so the
+ * case-insensitivity bought nothing.
+ *
+ * No escaping either: a range has no wildcards, and `normalizeIdentity`
+ * keeps only letters and digits (in any script, R-137) anyway.
+ */
+function prefixMatch(column: SQLiteColumn, prefix: string): SQL | undefined {
   const normalized = normalizeIdentity(prefix);
-  return normalized === "" ? undefined : `${normalized}%`;
+  return normalized === ""
+    ? undefined
+    : and(
+        gte(column, normalized),
+        lt(column, normalized + PREFIX_UPPER_SENTINEL),
+      );
 }
 
 /**
@@ -121,14 +134,14 @@ export async function searchBrands(
   prefix: string,
   limit = AUTOCOMPLETE_LIMIT,
 ): Promise<BrandRow[]> {
-  const likePattern = prefixPattern(prefix);
-  if (likePattern === undefined) return [];
+  const matches = prefixMatch(brands.normalized, prefix);
+  if (matches === undefined) return [];
   return (
     db
       .select()
       .from(brands)
       // fallow-ignore-next-line code-duplication -- two prefix searches over different tables; searchProducts also filters status='active', a moderation rule that belongs in sight at its own call site rather than inside a shared helper's argument
-      .where(like(brands.normalized, likePattern))
+      .where(matches)
       .orderBy(brands.name)
       .limit(limit)
   );
@@ -194,8 +207,8 @@ export async function searchProducts(
   prefix: string,
   limit = AUTOCOMPLETE_LIMIT,
 ): Promise<ProductRow[]> {
-  const likePattern = prefixPattern(prefix);
-  if (likePattern === undefined) return [];
+  const matches = prefixMatch(products.normalizedName, prefix);
+  if (matches === undefined) return [];
   return db
     .select()
     .from(products)
@@ -203,7 +216,7 @@ export async function searchProducts(
       and(
         eq(products.brandId, brandId),
         eq(products.status, "active"),
-        like(products.normalizedName, likePattern),
+        matches,
       ),
     )
     .orderBy(products.name)
