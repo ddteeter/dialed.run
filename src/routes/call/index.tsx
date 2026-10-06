@@ -13,7 +13,7 @@ itself is the next epic, and nothing here reads a garment.
 */
 export const Route = createFileRoute("/call/")({
   loader: async ({ location }) => {
-    await requireSession(location.href);
+    await requireSession(location);
     // fallow-ignore-next-line code-duplication -- two signed-in routes with a two-call loader are the same route shape by mandate: createFileRoute + Promise.all + shell is what server-functions-are-glue requires of a route
     const [ladder, unreadCount] = await Promise.all([
       callLadderQuery(),

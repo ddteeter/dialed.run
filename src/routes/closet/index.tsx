@@ -10,8 +10,8 @@ export const Route = createFileRoute("/closet/")({
   // `?retired=true` after a retire, optional so every other link to
   // /closet omits it. A delete's landing rides history state instead.
   validateSearch: closetSearch,
-  loader: async () => {
-    await requireSession();
+  loader: async ({ location }) => {
+    await requireSession(location);
     const listing = await listItemsFn({ data: { includeRetired: true } });
     return { listing };
   },

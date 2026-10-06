@@ -15,8 +15,8 @@ import { requireSignedIn } from "../../modules/feed/redirect";
 import { Layout, Page } from "../../ui";
 
 export const Route = createFileRoute("/safety/blocked")({
-  beforeLoad: async () => {
-    requireSignedIn(await getSession());
+  beforeLoad: async ({ location }) => {
+    requireSignedIn(await getSession(), location);
   },
   loader: async () => blockedRunnersQuery(),
   component: BlockedPage,

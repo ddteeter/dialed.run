@@ -7,7 +7,7 @@ import {
   profileAtHandleQuery,
   unfollowAction,
 } from "../modules/feed/functions";
-import { orHandlePage, requireSignedIn } from "../modules/feed/redirect";
+import { orHandlePage, viewerContext } from "../modules/feed/redirect";
 import {
   noindexHead,
   profileReportSubject,
@@ -23,20 +23,13 @@ import { fileReportAction } from "../modules/safety/functions";
  */
 export const Route = createFileRoute("/@{$handle}")({
   head: noindexHead,
-  beforeLoad: async () => {
-    requireSignedIn(await getSession());
-  },
-  loader: async ({ params }) => {
-    const [found, session, bell] = await Promise.all([
+  beforeLoad: ({ location }) => viewerContext(getSession, location),
+  loader: async ({ params, context }) => {
+    const [found, bell] = await Promise.all([
       profileAtHandleQuery({ data: { handle: params.handle } }),
-      getSession(),
       bellStateFn(),
     ]);
-    return {
-      found: orHandlePage(found),
-      viewerId: requireSignedIn(session).user.id,
-      bell,
-    };
+    return { found: orHandlePage(found), viewerId: context.viewerId, bell };
   },
   component: HandlePage,
 });

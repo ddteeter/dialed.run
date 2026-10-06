@@ -26,12 +26,14 @@ function signedOut(): Promise<{ user: { id: string } } | null> {
 /**
 The redirect `sessionOrRedirect` throws for a signed-out visitor.
 */
+const CLOSET = { pathname: "/closet", searchStr: "" };
+
 function redirectFrom(
   session: { user: { id: string } } | null,
-  returnTo?: string,
+  location = CLOSET,
 ): unknown {
   try {
-    sessionOrRedirect(session, returnTo);
+    sessionOrRedirect(session, location);
   } catch (error) {
     return error;
   }
@@ -40,7 +42,7 @@ function redirectFrom(
 
 describe("sessionOrRedirect", () => {
   it("hands back a session that exists, narrowed to non-null", () => {
-    expect(sessionOrRedirect(SIGNED_IN)).toBe(SIGNED_IN);
+    expect(sessionOrRedirect(SIGNED_IN, CLOSET)).toBe(SIGNED_IN);
   });
 
   it("throws a redirect — it does not return one", async () => {
@@ -55,9 +57,22 @@ describe("sessionOrRedirect", () => {
   });
 
   it("carries the guarded page as log-in's way back", async () => {
-    const thrown = redirectFrom(await signedOut(), "/call?from=tab");
+    const thrown = redirectFrom(await signedOut(), {
+      pathname: "/call",
+      searchStr: "?from=tab",
+    });
     expect(thrown).toMatchObject({
       options: { to: "/auth/login", search: { redirect: "/call?from=tab" } },
+    });
+  });
+
+  it("carries no way back from a page log-in may not return to", async () => {
+    const thrown = redirectFrom(await signedOut(), {
+      pathname: "/auth/signup",
+      searchStr: "",
+    });
+    expect(thrown).toMatchObject({
+      options: { to: "/auth/login", search: { redirect: undefined } },
     });
   });
 });

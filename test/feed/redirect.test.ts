@@ -9,6 +9,7 @@ import {
   redirectTo,
   toHandlePage,
   requireSignedIn,
+  viewerContext,
 } from "../../src/modules/feed/redirect";
 
 /**
@@ -57,21 +58,78 @@ function redirectFrom(work: () => unknown): { to: unknown } {
   throw new Error("expected a redirect");
 }
 
+/**
+What `work` threw, for matching the redirect's whole `options`.
+*/
+function thrownBy(work: () => unknown): unknown {
+  try {
+    work();
+  } catch (error) {
+    return error;
+  }
+  throw new Error("expected a redirect");
+}
+
+/**
+An emailed link to an entry, opened signed out.
+*/
+const ENTRY_LINK = { pathname: "/feed/entry/01ENTRY", searchStr: "?from=mail" };
+
 describe("requireSignedIn", () => {
   it("hands the session back when there is one", () => {
     const session = { user: { id: "01USER" } };
-    expect(requireSignedIn(session)).toBe(session);
+    expect(requireSignedIn(session, ENTRY_LINK)).toBe(session);
   });
 
-  it("sends a signed-out visitor to log in", () => {
+  it("sends a signed-out visitor to log in, carrying the page as the way back", () => {
     // `=== null`, which is what `getSession` answers — not a truthiness
     // check, because a session object is never falsy and a truthy check
     // would read as a wider guard than it is.
+    const thrown = thrownBy(() => {
+      requireSignedIn(NO_SESSION, ENTRY_LINK);
+    });
+    expect(isRedirect(thrown)).toBe(true);
+    expect(thrown).toMatchObject({
+      options: {
+        to: "/auth/login",
+        search: { redirect: "/feed/entry/01ENTRY?from=mail" },
+      },
+    });
+  });
+
+  it("carries no way back from a page log-in may not return to", () => {
     expect(
-      redirectFrom(() => {
-        requireSignedIn(NO_SESSION);
-      }).to,
-    ).toBe("/auth/login");
+      thrownBy(() => {
+        requireSignedIn(NO_SESSION, { pathname: "/auth/login", searchStr: "" });
+      }),
+    ).toMatchObject({
+      options: { to: "/auth/login", search: { redirect: undefined } },
+    });
+  });
+});
+
+describe("viewerContext", () => {
+  it("is the signed-in viewer's id, as route context", async () => {
+    await expect(
+      viewerContext(
+        () => Promise.resolve({ user: { id: "01USER" } }),
+        ENTRY_LINK,
+      ),
+    ).resolves.toStrictEqual({ viewerId: "01USER" });
+  });
+
+  it("sends a signed-out visitor to log in, carrying the page as the way back", async () => {
+    const signedOut = viewerContext(
+      () => Promise.resolve(NO_SESSION),
+      ENTRY_LINK,
+    );
+    await expect(signedOut).rejects.toSatisfy(isRedirect);
+    await expect(signedOut).rejects.toMatchObject({
+      options: {
+        to: "/auth/login",
+        search: { redirect: "/feed/entry/01ENTRY?from=mail" },
+      },
+    });
   });
 });
 

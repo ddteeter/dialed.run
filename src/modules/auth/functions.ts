@@ -27,10 +27,10 @@ export const signedInQuery = createServerFn({ method: "GET" }).handler(
 
 /**
  * Loader-side gate: the session, or a redirect to sign-in that comes back
- * to `returnTo` — pass the loader's `location.href`.
+ * to the guarded page — pass the loader's `location`.
  */
 export async function requireSession(
-  returnTo?: string,
+  location: Readonly<{ pathname: string; searchStr: string }>,
 ): Promise<NonNullable<Awaited<ReturnType<typeof getSession>>>> {
-  return sessionOrRedirect(await getSession(), returnTo);
+  return sessionOrRedirect(await getSession(), location);
 }

@@ -19,7 +19,7 @@ export const Route = createFileRoute("/onboarding/settings/$section")({
   loader: async ({ params, location }) => {
     // Signed in first: a signed-out visitor to a bad section is sent to
     // log in, not told the page does not exist.
-    await requireSession(location.href);
+    await requireSession(location);
     const section = settingsSectionOrNotFound(params.section);
     return {
       section,

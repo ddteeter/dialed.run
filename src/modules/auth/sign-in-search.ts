@@ -1,7 +1,7 @@
 import { redirect } from "@tanstack/react-router";
 import { z } from "zod";
 
-import { returnPathSchema } from "../../lib/return-path";
+import { landingAfterSignIn, returnPathSchema } from "../../lib/return-path";
 
 /**
  * What the log-in page can be handed in its URL: Au7's arrival.
@@ -130,7 +130,9 @@ export function googleReturn(
   if (search.code !== undefined) back.set("code", search.code);
   const query = back.toString();
   return {
-    callbackURL: search.redirect ?? "/",
+    // Validated again here, at the point of use, rather than trusted
+    // because `parseSignInSearch` ran: this is where the runner is sent.
+    callbackURL: landingAfterSignIn(search.redirect),
     errorCallbackURL: query === "" ? page : `${page}?${query}`,
   };
 }

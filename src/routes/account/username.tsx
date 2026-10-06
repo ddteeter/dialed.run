@@ -17,7 +17,7 @@ import { SettingsSubPage } from "../../modules/onboarding/components/SettingsSub
  */
 export const Route = createFileRoute("/account/username")({
   loader: async ({ location }) => {
-    await requireSession(location.href);
+    await requireSession(location);
     const [{ username }, unreadCount] = await Promise.all([
       usernameQuery(),
       unreadNotificationCountFn(),
