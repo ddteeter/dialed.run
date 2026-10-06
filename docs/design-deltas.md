@@ -2649,7 +2649,7 @@ REVIEW` tag where its SHARED label would be, with no sentence. D carries a
    notice band on the author's run (feed's). The bell row and email for a
    takedown still say the moderator's copyright reason
    (`feed/moderation.ts`'s `notice`, 129's); `takedownSentence` is there
-   for it.
+   for it (R-140).
 
 9. **Invite stage.** _Ruling:_ every refused code gets one sentence, whether
    it was used, never existed or was revoked: "That code doesn't work. Check
