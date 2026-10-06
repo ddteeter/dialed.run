@@ -337,6 +337,20 @@
       "when": 1791156190209,
       "tag": "0047_add_run_moving_time_and_elevation_gain",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "6",
+      "when": 1791326974242,
+      "tag": "0048_add_gave_up",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "6",
+      "when": 1791327014555,
+      "tag": "0049_add_product_snapshots_product_index",
+      "breakpoints": true
     }
   ]
 }

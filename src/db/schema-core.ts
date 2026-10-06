@@ -14,6 +14,7 @@ import {
   HANDLE_SCREEN_STATES,
 } from "../lib/contracts";
 import { EMAIL_PREFERENCE_KINDS } from "../lib/contracts/email";
+import { GAVE_UP_KINDS } from "../lib/contracts/gave-up";
 import {
   index,
   integer,
@@ -457,20 +458,29 @@ export const products = /*#__PURE__*/ sqliteTable(
   (t) => [uniqueIndex("products_brand_name").on(t.brandId, t.normalizedName)],
 );
 
-export const productSnapshots = /*#__PURE__*/ sqliteTable("product_snapshots", {
-  id: text("id").primaryKey(),
-  productId: text("product_id").notNull(),
-  url: text("url").notNull(),
-  r2Key: text("r2_key").notNull(),
-  // "text" is the page's rendered text, searched for a fibre percentage —
-  // added by 107 once measurement showed composition is almost never in a
-  // declared field. Type-level only: the column is plain TEXT with no CHECK,
-  // so widening the set needs no migration.
-  rung: text("rung", {
-    enum: ["jsonld", "shopify", "og", "text", "llm", "none"],
-  }).notNull(),
-  fetchedAt: integer("fetched_at").notNull(),
-});
+export const productSnapshots = /*#__PURE__*/ sqliteTable(
+  "product_snapshots",
+  {
+    id: text("id").primaryKey(),
+    productId: text("product_id").notNull(),
+    url: text("url").notNull(),
+    r2Key: text("r2_key").notNull(),
+    // "text" is the page's rendered text, searched for a fibre percentage —
+    // added by 107 once measurement showed composition is almost never in a
+    // declared field. Type-level only: the column is plain TEXT with no
+    // CHECK, so widening the set needs no migration.
+    rung: text("rung", {
+      enum: ["jsonld", "shopify", "og", "text", "llm", "none"],
+    }).notNull(),
+    fetchedAt: integer("fetched_at").notNull(),
+  },
+  (t) => [
+    // A product's pages, newest first: enrichment's reuse and re-extract
+    // reads, and the Desk's "is there a stored page to re-run" (D6), which
+    // had no index and scanned every snapshot.
+    index("product_snapshots_product_fetched").on(t.productId, t.fetchedAt),
+  ],
+);
 
 export const wardrobeItems = /*#__PURE__*/ sqliteTable(
   "wardrobe_items",
@@ -927,6 +937,37 @@ export const processedWebhookEvents = /*#__PURE__*/ sqliteTable(
     uniqueIndex("webhook_events_pk").on(t.objectId, t.aspectType, t.eventTime),
     // The same prune deletes keys older than a week by event time.
     index("webhook_events_time").on(t.eventTime),
+  ],
+);
+
+/**
+ * The jobs the system stopped retrying, one row each (Operator Screens D6,
+ * a section of the Desk's Today; register R-119). Written by whatever gave
+ * up — a dead-letter handler, enrichment's terminal fetch failure, the
+ * weather cron's cap — in the same batch as the status it marks, and
+ * deleted when a later try succeeds, or by the operator's Retry or Drop.
+ *
+ * UNIQUE on `(kind, subject_id)`, so a job that gives up again is the same
+ * row: its tries add up and `first_failed_at` stays. `reason` is the last
+ * failure in words, for the row's headline; `raw_error` is the error as
+ * thrown, one click away, when the writer had one. Today lists newest
+ * first on `last_failed_at`'s index.
+ */
+export const gaveUp = /*#__PURE__*/ sqliteTable(
+  "gave_up",
+  {
+    id: text("id").primaryKey(),
+    kind: text("kind", { enum: GAVE_UP_KINDS }).notNull(),
+    subjectId: text("subject_id").notNull(),
+    reason: text("reason").notNull(),
+    rawError: text("raw_error"),
+    tries: integer("tries").notNull(),
+    firstFailedAt: integer("first_failed_at").notNull(),
+    lastFailedAt: integer("last_failed_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("gave_up_kind_subject").on(t.kind, t.subjectId),
+    index("gave_up_last_failed").on(t.lastFailedAt),
   ],
 );
 
