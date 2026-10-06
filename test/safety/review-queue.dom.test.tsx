@@ -167,7 +167,64 @@ describe("deciding", () => {
     });
   });
 
-  it("quarantines as suspected CSAM, with its reason", async () => {
+  it("asks again before quarantining as suspected CSAM, with Cancel focused", async () => {
+    const user = userEvent.setup();
+    const { resolve } = renderQueue([row({ subjectType: "photo" })]);
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why it comes down/ }),
+      "it's sexual or explicit",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Remove as suspected CSAM" }),
+    );
+
+    // Round 28 #8: the second press replaces the decision bar in the row,
+    // and the question says only what happens (D-88) — no account closes.
+    expect(resolve).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(
+        "Remove this photo everywhere and keep the evidence for the report?",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Approve" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Remove and report" }));
+
+    expect(resolve).toHaveBeenCalledExactlyOnceWith({
+      data: { queueId: QUEUE_ID, action: "quarantine", reason: "explicit" },
+    });
+    await waitFor(() => {
+      expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
+    });
+  });
+
+  it("names what the second press removes", async () => {
+    const user = userEvent.setup();
+    renderQueue([row()]);
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why it comes down/ }),
+      "it's sexual or explicit",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Remove as suspected CSAM" }),
+    );
+
+    expect(
+      screen.getByText(
+        "Remove this entry everywhere and keep the evidence for the report?",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("goes back to the decision bar on Cancel, deciding nothing", async () => {
     const user = userEvent.setup();
     const { resolve } = renderQueue([row()]);
 
@@ -178,10 +235,47 @@ describe("deciding", () => {
     await user.click(
       screen.getByRole("button", { name: "Remove as suspected CSAM" }),
     );
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
 
-    expect(resolve).toHaveBeenCalledWith({
-      data: { queueId: QUEUE_ID, action: "quarantine", reason: "explicit" },
+    expect(resolve).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("button", { name: "Remove and report" }),
+    ).not.toBeInTheDocument();
+    // The reason picked before the question is still the reason.
+    expect(
+      screen.getByRole("combobox", { name: /Why it comes down/ }),
+    ).toHaveDisplayValue("it's sexual or explicit");
+    expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
+  });
+
+  it("keeps the question up, with the band, when the quarantine fails", async () => {
+    const user = userEvent.setup();
+    const resolve: Props["resolve"] = vi
+      .fn<Props["resolve"]>()
+      .mockRejectedValue(new Error("offline"));
+    render(
+      <ReviewQueue queue={[row()]} resolve={resolve} reviewHandle={vi.fn()} />,
+    );
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why it comes down/ }),
+      "it's sexual or explicit",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Remove as suspected CSAM" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Remove and report" }));
+
+    await waitFor(() => {
+      expect(resolve).toHaveBeenCalledTimes(1);
     });
+    expect(
+      await screen.findByRole("button", { name: "Try again" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Remove and report" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
   });
 
   it("refuses a Remove with no reason, and says why", async () => {
@@ -197,6 +291,10 @@ describe("deciding", () => {
     const said = await screen.findAllByText("Pick why it's coming down.");
     expect(said.length).toBeGreaterThan(0);
     expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
+    // No question is asked whose answer would only be refused.
+    expect(
+      screen.queryByRole("button", { name: "Remove and report" }),
+    ).not.toBeInTheDocument();
   });
 
   it("treats a reason picked and then taken back as nothing chosen", async () => {
@@ -253,11 +351,20 @@ describe("deciding", () => {
       row({ id: "01HYYYYYYYYYYYYYYYYYYYYYYY", subjectId: "e-2" }),
     ]);
 
-    expect(screen.getAllByRole("combobox")).toHaveLength(1);
-    await user.click(screen.getByRole("button", { name: "Decide this one" }));
+    // Round 28 #8: the row itself opens; there is no "Decide this one".
     expect(
       screen.queryByRole("button", { name: "Decide this one" }),
-    ).toBeInTheDocument();
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByRole("combobox")).toHaveLength(1);
+    const first = screen.getByRole("button", { name: "entry · e-1" });
+    const second = screen.getByRole("button", { name: "entry · e-2" });
+    expect(first).toHaveAttribute("aria-expanded", "true");
+    expect(second).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(second);
+    expect(first).toHaveAttribute("aria-expanded", "false");
+    expect(second).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getAllByRole("combobox")).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: "Approve" }));
 
     expect(resolve).toHaveBeenCalledWith({
@@ -267,10 +374,27 @@ describe("deciding", () => {
       expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
     });
     // The one left is decided next, with no pick needed.
-    expect(
-      screen.queryByRole("button", { name: "Decide this one" }),
-    ).not.toBeInTheDocument();
+    expect(first).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
+  });
+
+  it("moves focus to the next row once a decision lands, never on arrival", async () => {
+    const user = userEvent.setup();
+    renderQueue([
+      row(),
+      row({ id: "01HYYYYYYYYYYYYYYYYYYYYYYY", subjectId: "e-2" }),
+    ]);
+    const next = screen.getByRole("button", { name: "entry · e-2" });
+
+    // Arriving on the page moves nothing.
+    expect(document.body).toHaveFocus();
+
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+
+    await waitFor(() => {
+      expect(next).toHaveFocus();
+    });
+    expect(next).toHaveAttribute("aria-expanded", "true");
   });
 
   it("does not ask the same row twice", async () => {
@@ -451,7 +575,9 @@ describe("a handle the re-ask flagged (D-97)", () => {
       name: /Why the name has to go/,
     });
     expect(
-      [...picker.querySelectorAll("option")].map((option) => option.textContent),
+      [...picker.querySelectorAll("option")].map(
+        (option) => option.textContent,
+      ),
     ).toStrictEqual([
       "—",
       "Offensive or sexual",
@@ -510,8 +636,9 @@ describe("a handle the re-ask flagged (D-97)", () => {
 
   it("shows the in-flight label while a rename is pending", async () => {
     const user = userEvent.setup();
-    const { promise, resolve: settle } =
-      Promise.withResolvers<{ outcome: HandleReviewOutcome }>();
+    const { promise, resolve: settle } = Promise.withResolvers<{
+      outcome: HandleReviewOutcome;
+    }>();
     const reviewHandle: Props["reviewHandle"] = vi
       .fn<Props["reviewHandle"]>()
       .mockReturnValue(promise);
