@@ -11,6 +11,7 @@
  * change, the changed notice) have no drawing and are placeholders in the
  * same voice, listed under the PR's "Design deltas".
  */
+import { CONTACT_ADDRESS } from "../../lib/contracts/contact";
 import { EXPORT_LINK_DAYS } from "../../lib/contracts/data-export";
 import {
   STRAVA_DISCONNECTED_LINE,
@@ -207,7 +208,7 @@ export function emailContent(
         subject: "Your dialed.run email changed",
         body: `Your account's email is now ${template.newEmail}. Emails go there from now on.`,
         button: logIn(origin),
-        foot: "Didn't change it? Write to hello@dialed.run.",
+        foot: `Didn't change it? Write to ${CONTACT_ADDRESS}.`,
         footer,
       };
     }

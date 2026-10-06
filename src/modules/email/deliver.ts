@@ -9,8 +9,10 @@ import { z } from "zod";
 
 import { user } from "../../db/schema-auth";
 import { env } from "../../env";
+import { APPEAL_ADDRESS, CONTACT_ADDRESS } from "../../lib/contracts/contact";
 import {
   preferenceFor,
+  type EmailKind,
   type EmailPayload,
   type EmailRecipient,
 } from "../../lib/contracts/email";
@@ -25,7 +27,24 @@ type Db = ReturnType<typeof drizzle>;
  * <hello@dialed.run>". The address's domain has to be onboarded to
  * Cloudflare Email Sending before anything leaves (the deployment plan's).
  */
-export const EMAIL_FROM = { name: "dialed.run", email: "hello@dialed.run" };
+export const EMAIL_FROM = { name: "dialed.run", email: CONTACT_ADDRESS };
+
+/**
+ * The emails whose reply should not go to the From address: the
+ * moderation notices, whose reply is an appeal (decision D-73 — "Reply to
+ * this email to appeal"), so it goes to the inbox D4 and the terms name
+ * for appeals. Every other email's reply goes to the From address, which
+ * needs nothing set.
+ *
+ * Sent as the Workers API's `replyTo` field: Cloudflare refuses a
+ * `Reply-To` in `headers` with `E_HEADER_USE_API_FIELD`
+ * (https://developers.cloudflare.com/email-service/reference/headers/).
+ */
+const REPLY_TO: Partial<Record<EmailKind, string>> = {
+  content_removed: APPEAL_ADDRESS,
+  account_closed: APPEAL_ADDRESS,
+  account_reopened: APPEAL_ADDRESS,
+};
 
 /**
  * What sending needs from the platform, as one parameter so a test hands
@@ -156,10 +175,15 @@ async function send(
     origin: deps.origin,
     unsubscribe,
   });
-  // Only headers Cloudflare's allowlist accepts: `Message-ID`, `Date` and
-  // the other platform headers are refused with `E_HEADER_NOT_ALLOWED`
-  // (developers.cloudflare.com/email-service/reference/headers), so no
-  // header here can make a retried send collapse into the first.
+  // Cloudflare accepts only an allowlist of headers (the threading,
+  // `List-*`, display and `Auto-Submitted` families) plus any `X-` header,
+  // and refuses the rest with `E_HEADER_NOT_ALLOWED`. It generates
+  // `Message-ID`, `Date` and the other platform headers itself and refuses
+  // those too; `From`, `To`, `Subject` and `Reply-To` must use their API
+  // fields (`E_HEADER_USE_API_FIELD`). So nothing here can make a retried
+  // send collapse into the first: Cloudflare mints each one's Message-ID.
+  // https://developers.cloudflare.com/email-service/reference/headers/
+  const replyTo = REPLY_TO[payload.template.kind];
   const result = sendResultSchema.safeParse(
     await deps.send({
       from: EMAIL_FROM,
@@ -167,6 +191,7 @@ async function send(
       subject: email.subject,
       html: email.html,
       text: email.text,
+      ...(replyTo !== undefined && { replyTo }),
       ...(unsubscribe !== undefined && {
         headers: {
           "List-Unsubscribe": `<${unsubscribe}>`,

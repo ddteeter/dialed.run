@@ -1,12 +1,7 @@
 import type { JSX } from "react";
 
+import { APPEAL_ADDRESS } from "../../../lib/contracts/contact";
 import { Page, Wordmark } from "../../../ui";
-
-/**
- * The appeal address D4 names. One constant, because the notice and the
- * ban email (SAF-4, after 126's ACC-2) must name the same inbox.
- */
-export const APPEAL_ADDRESS = "desk@dialed.run";
 
 /**
  * "16 September" on the board; the month goes first for en-US (round 26

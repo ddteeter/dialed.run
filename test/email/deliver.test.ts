@@ -755,6 +755,35 @@ describe("an owed email", () => {
   });
 });
 
+describe("who a reply goes to", () => {
+  const to = { address: "a@example.com" } as const;
+
+  it.each([
+    { kind: "content_removed", subject: "photo", reason: "Spam." },
+    { kind: "account_closed", reason: "Spam." },
+    { kind: "account_reopened", handle: "maya_runs" },
+  ] as const)(
+    "sends $kind's reply — the appeal — to the appeals inbox, in the API field Cloudflare requires",
+    async (template) => {
+      const mail = fakeMail();
+      await deliverEmail(db, { to, template }, mail);
+      expect(mail.sent[0]?.replyTo).toBe("desk@dialed.run");
+      // Cloudflare refuses a Reply-To header (`E_HEADER_USE_API_FIELD`).
+      expect(mail.sent[0]?.headers).toBeUndefined();
+    },
+  );
+
+  it("sets no reply address on any other email, so a reply goes to the From address", async () => {
+    const mail = fakeMail();
+    await deliverEmail(
+      db,
+      { to, template: { kind: "email_changed", newEmail: "n@example.com" } },
+      mail,
+    );
+    expect(mail.sent[0]).not.toHaveProperty("replyTo");
+  });
+});
+
 describe("forgetSendLimits (ACC-9)", () => {
   it("forgets an address's counters for every emailed kind, whatever its case, and nothing else", async () => {
     const kept = ["verify:other@example.com", "access:1.2.3.4"];
