@@ -476,7 +476,7 @@ flowchart LR
 - **Gave up** (R-119; Operator Screens D6, a section of the Desk's Today):
   every job the system stops retrying writes a `gave_up` row in the batch
   that marks its own status — the imports and enrichment DLQs through
-  `giveUpEach` (`lib/sql/queue-batch.ts`), enrichment's terminal page
+  `giveUpEach` (`src/db/gave-up.ts`), enrichment's terminal page
   refusal, and the weather cron's five-hour cap. A later success clears it
   (enrichment's write-back, weather's `setStatus` on resolve). Today lists
   the rows, its rail carries the count, and the digest adds one line when

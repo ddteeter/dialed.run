@@ -16,7 +16,7 @@ share card still says round 26's line.
 - **One table, `gave_up`** (`0048_add_gave_up`): `kind`, `subject_id`,
   `reason`, `raw_error`, `tries`, `first_failed_at`, `last_failed_at`;
   UNIQUE `(kind, subject_id)`, indexed on `last_failed_at`. Writers use
-  `lib/sql/gave-up.ts` (upsert: tries add, first failure stays; clear),
+  `src/db/gave-up.ts` (upsert: tries add, first failure stays; clear),
   always inside the batch that marks their own status.
 - **Writers.** `giveUpEach` wraps `deadLetterEach` (unchanged, so the export
   DLQ is untouched) and batches a job's writes with its row. Enrichment: DLQ
