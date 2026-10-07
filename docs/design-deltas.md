@@ -1020,7 +1020,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       matter (`changed:` beside `published: true`), and v1 has none, so the
       block does not show yet. **The ask:** none.
 
-50. **What design PR A built beside round 28's W3 and Review drawings
+51. **What design PR A built beside round 28's W3 and Review drawings
     (round 28 #5 and #8).** Composed from existing primitives and copy; no
     new glyph, colour or motion.
     - **W3 with blur off also waits for Use this photo.** The board draws
@@ -1064,7 +1064,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       one before when it was the last), and deciding the last row focuses
       the "Nothing waiting" line.
 
-53. **What design PR D built beside the Feed board and rounds 27–29's feed
+52. **What design PR D built beside the Feed board and rounds 27–29's feed
     rulings (task 129, 2026-10-07).** Composed from existing primitives,
     T1 roles and the icon manifest; no new glyph, colour or motion.
     - **The photo delete button's ground.** Round 27 #26 draws "a 44×44
@@ -2433,7 +2433,7 @@ built from a T1 role or waits for design to name one. The desk match block's
 12px radius is `RADIUS.card`. _Build:_ 129, S to M: audit the feed against
 this board, which is now its composition truth. **Audited in design PR D
 (2026-10-07):** built to it — the own card's `· YOU` and `[UNDER REVIEW]`,
- the card photo's `1 / N`, Split and All, and RADIUS.card on the desk match
+the card photo's `1 / N`, Split and All, and RADIUS.card on the desk match
 block; the rest already matched. Not built: the 10px gutter, which waits
 for design to name a T1 role (posts keep their hairline meanwhile).
 `e2e/conformance/feed-board.conformance.spec.ts` compares the own card
@@ -2657,6 +2657,7 @@ CHECKED` band still says "usually within a day". #28's line is item 6.
    Any close of the sheet, Esc included, is Cancel; Use this photo and
    Cancel return focus to the well. `PhotoBlur` is unchanged. The closet's
    host is design PR C's.
+
 6. **Under review, as the author sees it.** _Drawn:_ "Feed own under
    review" and "D own under review". The card carries a hi-viz `UNDER
 REVIEW` tag where its SHARED label would be, with no sentence. D carries a
