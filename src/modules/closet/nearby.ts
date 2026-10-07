@@ -11,15 +11,22 @@
  * by type would answer "the survivors of the first five", and a runner
  * whose five newest tops are tees would be told they own no half-zips.
  */
-import { and, desc, eq } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
+import { alias } from "drizzle-orm/sqlite-core";
 
 import { wardrobeItems } from "../../db/schema-core";
 import { garmentCategories } from "../../lib/contracts";
-import {
-  garmentTypesFor,
-  type GarmentType,
-} from "../../lib/contracts/garment-fields";
+import { garmentTypesFor } from "../../lib/contracts/garment-fields";
 import { viewsOf, type ClosetItemView } from "./service";
 
 type Db = ReturnType<typeof drizzle>;
@@ -42,41 +49,53 @@ export interface ClosetNearby {
 }
 
 /**
- * A category's newest five, or one of its types', found by
- * `wardrobe_user_category`. A type's query names its category too, so the
- * index narrows the scan to that category's rows before the type is read.
+ * The categories whose types are listed past the category's own five.
+ * F shows the type picker only where a category has more than one type,
+ * so in a one-type category the category is the type: its pieces of that
+ * type are the ones among the category's five, and asking again for the
+ * type's own five would read the same rows twice for a card that lists
+ * the category.
  */
-function newestIn(
-  db: Db,
-  userId: string,
-  category: Category,
-  type?: GarmentType,
-) {
+const pickedCategories = garmentCategories.filter(
+  (category) => garmentTypesFor(category).length > 1,
+);
+
+const RANKED = "ranked";
+
+/**
+ * `ranked`'s garment columns, typed as the table's and read through the
+ * subquery's name. A subquery's fields are flat, and its rows carry the
+ * ranks as well; selecting this alias — whose name is the subquery's —
+ * reads back exactly a `wardrobe_items` row, decoded as one, so what
+ * reaches the card is the row the rest of the closet reads.
+ */
+const rankedItem = /*#__PURE__*/ alias(wardrobeItems, RANKED);
+
+/**
+ * The runner's whole closet, read once by `wardrobe_user_category`'s
+ * `user_id`, each row ranked newest first within its category (`rc`) and
+ * within its category and type (`rt`) — the same order, `created_at` then
+ * `id`, both descending, that the card lists in.
+ */
+function ranked(db: Db, userId: string) {
+  const newest = sql`order by ${wardrobeItems.createdAt} desc, ${wardrobeItems.id} desc`;
   return db
-    .select()
-    .from(wardrobeItems)
-    .where(
-      and(
-        eq(wardrobeItems.userId, userId),
-        eq(wardrobeItems.category, category),
-        type === undefined ? undefined : eq(wardrobeItems.type, type),
+    .select({
+      ...getTableColumns(wardrobeItems),
+      rc: sql<number>`row_number() over (partition by ${wardrobeItems.category} ${newest})`.as(
+        "rc",
       ),
-    )
-    .orderBy(desc(wardrobeItems.createdAt), desc(wardrobeItems.id))
-    .limit(NEARBY_LIMIT);
+      rt: sql<number>`row_number() over (partition by ${wardrobeItems.category}, ${wardrobeItems.type} ${newest})`.as(
+        "rt",
+      ),
+    })
+    .from(wardrobeItems)
+    .where(eq(wardrobeItems.userId, userId))
+    .as(RANKED);
 }
 
 /**
-A category's statement, then one for each of its types.
-*/
-function statementsFor(db: Db, userId: string, category: Category) {
-  return garmentTypesFor(category).map((type) =>
-    newestIn(db, userId, category, type),
-  );
-}
-
-/**
- * Adds a piece to one list, unless the list already has it or is full.
+ * Adds a piece to one list, unless the list is full.
  */
 function listInto(
   lists: Partial<Record<string, ClosetItemView[]>>,
@@ -85,39 +104,62 @@ function listInto(
 ): void {
   const listed = lists[key] ?? [];
   if (listed.length === NEARBY_LIMIT) return;
-  if (listed.some((held) => held.item.id === view.item.id)) return;
   listed.push(view);
   lists[key] = listed;
 }
 
 /**
- * Every category's newest five and every type's, one statement each, in
- * one batch — one round trip. Split from the categories' tuple rather
- * than mapped whole, so the batch is given the non-empty list it asks for
- * without a check that no input could fail.
+ * A row whose type is one of its own category's, in a category with a
+ * picker: a type's five are that category's pieces of it, never a stray
+ * row of another category that happens to carry the name.
+ */
+function ofPickedType() {
+  return or(
+    ...pickedCategories.map((category) =>
+      and(
+        eq(rankedItem.category, category),
+        inArray(rankedItem.type, garmentTypesFor(category)),
+      ),
+    ),
+  );
+}
+
+/**
+ * Every category's newest five and every picked type's, in one statement
+ * that reads the closet once: a row is kept when it is among its
+ * category's five, or among its type's five in a category with a picker.
  *
- * **The lists are assembled from what the statements found, in their
- * order**, and that is not an in-memory filter. Each category's
- * statement comes before its types', newest first. So a category's list
- * fills from its own statement and is full, or holds the whole category,
- * before any type's row reaches it; and a type's rows from the category's
- * statement are the newest of that type, which its own statement then
- * continues. A piece both statements found is listed once.
+ * **The lists are assembled from what the statement kept, in its order**,
+ * and that is not an in-memory filter — the `WHERE` already chose every
+ * row. Newest first, a category's own five come before any older row its
+ * types kept, so its list is full before one reaches it; and every row of
+ * a type the statement kept is among that type's newest five (a row in
+ * its category's five is in its type's too), so a type's list is exactly
+ * its rows, in order.
+ */
+export function nearbyStatement(db: Db, userId: string) {
+  const rows = ranked(db, userId);
+  const inTypesFive = and(lte(rows.rt, NEARBY_LIMIT), ofPickedType());
+  return db
+    .select({ item: rankedItem })
+    .from(rows)
+    .where(or(lte(rows.rc, NEARBY_LIMIT), inTypesFive))
+    .orderBy(desc(rankedItem.createdAt), desc(rankedItem.id));
+}
+
+/**
+ * The card's lists, from `nearbyStatement`'s rows.
  */
 export async function closetNearby(
   db: Db,
   userId: string,
 ): Promise<ClosetNearby> {
-  const [first, ...rest] = garmentCategories;
-  const found = await db.batch([
-    newestIn(db, userId, first),
-    ...statementsFor(db, userId, first),
-    ...rest.flatMap((category) => [
-      newestIn(db, userId, category),
-      ...statementsFor(db, userId, category),
-    ]),
-  ]);
-  const views = await viewsOf(db, userId, found.flat());
+  const found = await nearbyStatement(db, userId);
+  const views = await viewsOf(
+    db,
+    userId,
+    found.map((row) => row.item),
+  );
   const nearby: ClosetNearby = { byCategory: {}, byType: {} };
   for (const view of views) {
     listInto(nearby.byCategory, view.item.category, view);

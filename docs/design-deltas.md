@@ -1021,7 +1021,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       matter (`changed:` beside `published: true`), and v1 has none, so the
       block does not show yet. **The ask:** none.
 
-50. **What design PR A built beside round 28's W3 and Review drawings
+51. **What design PR A built beside round 28's W3 and Review drawings
     (round 28 #5 and #8).** Composed from existing primitives and copy; no
     new glyph, colour or motion.
     - **W3 with blur off also waits for Use this photo.** The board draws
@@ -1065,7 +1065,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       one before when it was the last), and deciding the last row focuses
       the "Nothing waiting" line.
 
-51. **What design PR C built beside rounds 26 and 28's closet drawings
+52. **What design PR C built beside rounds 26 and 28's closet drawings
     (round 26 #4 and #10, round 28 #5 and #13; D-75, R-112, R-114).**
     Composed from existing primitives and T1; no new glyph, colour or
     motion.
@@ -1092,10 +1092,11 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       to set the type outright (Z3's "it was never a question"); now it
       fills in only where TYPE was left unanswered. Y's kicker names the
       type too, as Z2a draws it (`TOP · HALF-ZIP · M`). **The ask:** none.
-    - **The hatch** is T1's photo fill with `--hairline`, the next step
-      darker on paper and lighter on ink, as Theme's "Photo fill" row
-      says. Its 135° angle and 2-on, 3-off rhythm are `ink.css`'s, the
-      only hatch the system has, because no contract gives a photo
+    - **The hatch** is `ink.css`'s `.photo-hatch`: T1's photo fill with
+      `--hairline`, the next step darker on paper and lighter on ink, as
+      Theme's "Photo fill" row says, drawn by the same rule as the ink
+      channel's partial mark — its 135° angle and 2-on, 3-off rhythm,
+      the only hatch the system has, because no contract gives a photo
       hatch's rhythm. **The ask:** a rhythm, if not that one.
     - **`PHOTO STILL ON`'s sentence** is the control band's cause line
       ("Our end failed.", or the connection's), as every control band's

@@ -100,16 +100,13 @@ function Row({
   return (
     <li className="flex items-center gap-3 border-t border-hairline pt-3">
       {photo === undefined ? (
-        // The hatch, which means "no photo" everywhere (round 28 #13,
-        // round 27 #31b); the plain photo ground means one is loading.
-        // T1's photo fill, hatched one step darker: `--hairline` on
-        // paper, one step lighter on ink. The 135° angle and the 2-on,
-        // 3-off rhythm are `ink.css`'s, the one hatch the system has.
+        // The hatch, which means "no photo" everywhere: `ink.css`'s
+        // `.photo-hatch`, the system's one hatch on T1's photo fill.
         <span
           data-part="thumb"
           data-state="no-photo"
           aria-hidden="true"
-          className="size-12 shrink-0 rounded-field bg-photo bg-[repeating-linear-gradient(135deg,var(--hairline)_0_2px,transparent_2px_5px)]"
+          className="photo-hatch size-12 shrink-0 rounded-field"
         />
       ) : (
         <img

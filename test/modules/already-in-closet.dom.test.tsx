@@ -195,6 +195,7 @@ describe("AlreadyInCloset", () => {
     expect(plain).toHaveAttribute("aria-hidden", "true");
     // The hatch means "no photo"; the plain photo ground means loading.
     expect(plain).toHaveAttribute("data-state", "no-photo");
+    expect(plain).toHaveClass("photo-hatch");
     expect(photoOf(second)).not.toHaveAttribute("data-state");
     const photo = second?.querySelector("[data-part='thumb']");
     expect(photo).toHaveAttribute("src", "/closet/photo/01ROV/card?v=01V1");

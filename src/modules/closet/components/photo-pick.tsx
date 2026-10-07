@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ComponentProps, ReactNode } from "react";
 
 import { photoFormatWords } from "../../../lib/photo-constraints";
-import { Sheet, useReturnFocus } from "../../../ui";
+import { DURATION, Sheet, useReturnFocus } from "../../../ui";
 import type { FileWell, PhotoStep } from "../../../ui";
 
 /**
@@ -69,37 +69,53 @@ export function usePhotoPick({
   wellRef: (node: HTMLElement | null) => void;
 } {
   const [pending, setPending] = useState<
-    { file: File; step: PhotoStep } | undefined
+    { file: File; step: PhotoStep; open: boolean } | undefined
   >();
   const returnFocus = useReturnFocus();
+
+  /**
+   * A closed step stays in the sheet while the sheet travels out, so it
+   * leaves with its content rather than as an empty panel, and lets go of
+   * the file once the exit is over (`quick`, the sheet's way out). A new
+   * pick in that time replaces it, and this timer with it.
+   */
+  useEffect(() => {
+    if (pending?.open !== false) return;
+    const timer = globalThis.setTimeout(() => {
+      setPending(undefined);
+    }, DURATION.quick);
+    return () => {
+      globalThis.clearTimeout(timer);
+    };
+  }, [pending]);
 
   /**
    * The step closes: on Use this photo, on Cancel, and on Esc or anything
    * else that shuts the sheet. Saying it twice is harmless — the sheet
    * reports its own close after either of the first two — because it
-   * only ever lets go of the file and puts focus back on the well.
+   * only ever shuts the sheet and puts focus back on the well.
    */
   function close(): void {
-    setPending(undefined);
+    setPending((held) => held && { ...held, open: false });
     returnFocus.restore();
   }
 
   return {
-    stepping: pending !== undefined,
+    stepping: pending?.open === true,
     wellRef: returnFocus.ref,
     pick: (file) => {
       if (renderPhotoStep === undefined) {
         onReady(file);
         return;
       }
-      setPending({ file, step: renderPhotoStep });
+      setPending({ file, step: renderPhotoStep, open: true });
     },
     // W3 is a sheet over the screen that picked the photo (round 28 #5:
     // "the closet form and AttachKit use the same sheet"), kept mounted so
     // it can travel out as well as in. Its label is the step's own head.
     step: (announce) => (
       <Sheet
-        open={pending !== undefined}
+        open={pending?.open === true}
         onClose={close}
         label={PHOTO_STEP_LABEL}
       >

@@ -12,6 +12,7 @@ import { z } from "zod";
 
 import { GarmentForm } from "../../src/modules/closet/components/GarmentForm";
 import type { GarmentFormProps } from "../../src/modules/closet/components/GarmentForm";
+import { DURATION } from "../../src/ui";
 
 /**
  * F's photo well (round 22, items 8 and 17): the last thing before the
@@ -276,7 +277,14 @@ describe("GarmentForm: a picked photo", () => {
       cancel?.();
     });
 
-    expect(screen.queryByText("Step for face.png")).toBeNull();
+    // The sheet shuts at once and travels out with its step still in it,
+    // then lets go of the file when the exit is over.
+    expect(document.querySelector("dialog")).not.toHaveAttribute("open");
+    expect(screen.getByText("Step for face.png")).toBeInTheDocument();
+    expect(well()).toHaveAttribute("data-state", "empty");
+    await waitFor(() => {
+      expect(screen.queryByText("Step for face.png")).toBeNull();
+    });
     // Cancel (and Esc, which is Cancel) closes back onto the well.
     expect(fileInput()).toHaveFocus();
     expect(well()).toHaveAttribute("data-state", "empty");
@@ -306,8 +314,11 @@ describe("GarmentForm: a picked photo", () => {
     // Esc shuts a modal dialog natively, and the dialog reports `close`.
     fireEvent(sheet, new Event("close"));
 
-    expect(screen.queryByText("Step for face.png")).toBeNull();
     expect(sheet).not.toHaveAttribute("open");
+    expect(within(sheet).getByText("Step for face.png")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText("Step for face.png")).toBeNull();
+    });
     expect(fileInput()).toHaveFocus();
     expect(well()).toHaveAttribute("data-state", "empty");
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -315,6 +326,53 @@ describe("GarmentForm: a picked photo", () => {
       expect(onSaved).toHaveBeenCalled();
     });
     expect(uploadPhoto).not.toHaveBeenCalled();
+  });
+
+  it("keeps W3's step while it is open, and a new pick's through the last one's exit", () => {
+    vi.useFakeTimers();
+    try {
+      let cancel: (() => void) | undefined;
+      renderForm({
+        renderStep: (file, _onReady, _announce, onCancel) => {
+          cancel = onCancel;
+          return <p>Step for {file.name}</p>;
+        },
+      });
+      // `fireEvent` rather than `userEvent`: the latter moves the clock,
+      // and this test is about what one millisecond either side does.
+      const pickFile = (name: string) => {
+        fireEvent.change(fileInput(), { target: { files: [png(name)] } });
+      };
+
+      pickFile("first.png");
+      act(() => {
+        vi.advanceTimersByTime(DURATION.move * 2);
+      });
+      // Open, it stays as long as the runner takes.
+      expect(screen.getByText("Step for first.png")).toBeVisible();
+      expect(well()).toHaveAttribute("data-state", "uploading");
+
+      act(() => {
+        cancel?.();
+      });
+      // Shut, the well is free at once though the step is still leaving.
+      expect(well()).toHaveAttribute("data-state", "empty");
+      act(() => {
+        vi.advanceTimersByTime(DURATION.quick - 1);
+      });
+      expect(screen.getByText("Step for first.png")).toBeInTheDocument();
+      pickFile("second.png");
+      act(() => {
+        vi.advanceTimersByTime(DURATION.quick * 2);
+      });
+
+      // The first exit's timer went with it: the new step stays.
+      expect(screen.queryByText("Step for first.png")).toBeNull();
+      expect(screen.getByText("Step for second.png")).toBeVisible();
+      expect(document.querySelector("dialog")).toHaveAttribute("open");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("shows the upload in the well while the save carries it, and only then", async () => {

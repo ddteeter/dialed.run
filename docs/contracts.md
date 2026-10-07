@@ -54,10 +54,14 @@ id               text PK  -- ULID
 user_id          text FK
 category         text     -- enum: top | bottom | headwear | neckwear | gloves
                           --       | socks | shoes | accessory
-type             text     -- CACHE of products.type, NULLABLE. Written on
-                          -- match and by enrichment, never by a user and
-                          -- never parsed from a name (design screen Z).
-                          -- A garment with no product has none.
+type             text     -- NULLABLE. The runner may pick it on F (D-75,
+                          -- R-112); a linked product's type fills it only
+                          -- where it is blank (on save, on naming, on the
+                          -- link a confirmation owes), and the runner's
+                          -- pick always wins. Never parsed from a name
+                          -- (design screen Z). Null means nobody said:
+                          -- a garment with no product may have one, and
+                          -- one with a product may not.
                           -- top: singlet|tee|longSleeve|halfZip|jacket|vest
                           --      |sportsBra
                           -- bottom: shorts|halfTights|tights
