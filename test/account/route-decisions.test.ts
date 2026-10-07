@@ -244,7 +244,12 @@ describe("leavingSearch and homeIfNothingToSay", () => {
     }).not.toThrow();
     // The terms prompt's view (ACC-6) reads the same way.
     expect(() => {
-      homeIfNothingToSay({ state: "ask", version: 2 });
+      homeIfNothingToSay({
+        state: "ask",
+        version: 2,
+        isFirst: true,
+        changed: [],
+      });
     }).not.toThrow();
   });
 });
@@ -266,6 +271,18 @@ describe("termsPromptSearch (ACC-6, D-96)", () => {
       undefined,
     ]) {
       expect(termsPromptSearch.parse({ from })).toEqual({ from: undefined });
+    }
+  });
+
+  it("keeps a refused save's page name, trimmed, and drops an empty or over-long one (D-102)", () => {
+    expect(termsPromptSearch.parse({ save: " Edit Harrier " }).save).toBe(
+      "Edit Harrier",
+    );
+    expect(termsPromptSearch.parse({ save: "x" }).save).toBe("x");
+    const longest = `Edit ${"h".repeat(95)}`;
+    expect(termsPromptSearch.parse({ save: longest }).save).toBe(longest);
+    for (const save of ["", " ".repeat(3), `${longest}h`, 7]) {
+      expect(termsPromptSearch.parse({ save }).save).toBeUndefined();
     }
   });
 });

@@ -283,8 +283,8 @@ export function plainText(inlines: readonly Inline[]): string {
 }
 
 /**
- * The owner's word that a text is final (review of PR #130): the file's
- * first three lines, exactly —
+ * The owner's word that a text is final (review of PR #130): front matter
+ * at the very top of the file, opening with `published: true` —
  *
  *     ---
  *     published: true
@@ -296,8 +296,67 @@ export function plainText(inlines: readonly Inline[]): string {
  * published until somebody says it is, and saying so is one edit the
  * owner makes on purpose. The source's own comment says how
  * (`docs/legal/privacy-policy.md`).
+ *
+ * **One more field, for the terms** (round 29 #6; owner, 2026-10-06): the
+ * version's WHAT CHANGED summary, written by the owner as they publish it,
+ * one to three lines, beside the mark —
+ *
+ *     ---
+ *     published: true
+ *     changed:
+ *       - Photos that show where someone lives are removed.
+ *     ---
+ *
+ * Absent, the summary is empty and the prompt leaves the block out. Any
+ * other line in the front matter refuses the whole text, so a typo can
+ * only keep a text off the page, never publish one.
  */
-const PUBLISHED_MARK = "---\npublished: true\n---\n";
+const FENCE = "---";
+
+const PUBLISHED_LINE = "published: true";
+const CHANGED_LINE = "changed:";
+/**
+ * One summary line: two spaces, a dash, a space, then the words — read to
+ * the end of the line, which the split has already cut.
+ */
+const CHANGED_ITEM = /^ {2}- (\S.*)/u;
+
+interface FrontMatter {
+  /**
+  The source after the front matter.
+  */
+  readonly body: string;
+  /**
+  The `changed:` list, in order: empty when there is none.
+  */
+  readonly changed: readonly string[];
+}
+
+/**
+ * A published text's front matter, or `undefined` for a text that is not
+ * marked published: no front matter, one not opening with the mark, or one
+ * holding a line it does not know.
+ */
+function publishedFrontMatter(text: string): FrontMatter | undefined {
+  const lines = text.split("\n");
+  const end = lines.indexOf(FENCE, 1);
+  if (end === -1 || lines[0] !== FENCE) return undefined;
+  const [first, listHead, ...items] = lines.slice(1, end);
+  if (first !== PUBLISHED_LINE) return undefined;
+  if (listHead !== undefined && listHead !== CHANGED_LINE) return undefined;
+  const changed = items.map((line) => CHANGED_ITEM.exec(line)?.[1]);
+  if (!isEveryLineKnown(changed)) return undefined;
+  return { body: lines.slice(end + 1).join("\n"), changed };
+}
+
+/**
+Every `changed:` item read as one, none refused.
+*/
+function isEveryLineKnown(
+  items: readonly (string | undefined)[],
+): items is readonly string[] {
+  return !items.includes(undefined);
+}
 
 /**
  * A notes-to-self comment in a text's source, which the page never shows:
@@ -306,10 +365,18 @@ const PUBLISHED_MARK = "---\npublished: true\n---\n";
 const SOURCE_COMMENT = /<!--[\s\S]*?-->/gu;
 
 /**
- * The text a page may show: everything after the published mark, with the
+ * The text a page may show: everything after the front matter, with the
  * source's comments dropped — or nothing, for a text not marked published.
  */
 export function publishedText(text: string): string | undefined {
-  if (!text.startsWith(PUBLISHED_MARK)) return undefined;
-  return text.slice(PUBLISHED_MARK.length).replaceAll(SOURCE_COMMENT, "");
+  return publishedFrontMatter(text)?.body.replaceAll(SOURCE_COMMENT, "");
+}
+
+/**
+ * A published text's WHAT CHANGED summary (round 29 #6): its `changed:`
+ * lines, or none — for a text with no summary, or one not published,
+ * which has nothing to summarise.
+ */
+export function changeSummaryOf(text: string): readonly string[] {
+  return publishedFrontMatter(text)?.changed ?? [];
 }

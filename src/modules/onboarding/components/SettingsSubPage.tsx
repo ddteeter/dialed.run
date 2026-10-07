@@ -15,17 +15,33 @@ import { SharingForm, UnitsForm } from "./Settings";
  */
 
 /**
+ * Where a sub-page's back link goes, and what it says. Settings, almost
+ * always; the terms prompt from the account page a runner behind on the
+ * terms reads, because there "the back link returns to the gate" (round 30
+ * #4a, "‹ Terms").
+ */
+const BACKS = {
+  settings: { to: "/onboarding/settings", label: "Settings" },
+  terms: { to: "/account/terms", label: "Terms" },
+} as const;
+
+type Back = keyof typeof BACKS;
+
+/**
  * The sub-pages' way back to the index: *"sub-pages keep [the tab bar],
  * with back"*.
  */
-export function SettingsBack(): JSX.Element {
+export function SettingsBack({
+  to = "settings",
+}: Readonly<{ to?: Back | undefined }>): JSX.Element {
+  const back = BACKS[to];
   return (
     <Link
-      to="/onboarding/settings"
+      to={back.to}
       className="target inline-flex items-center gap-2 self-start text-ink no-underline"
     >
       <Icon name="back" size={20} />
-      <span className="text-body">Settings</span>
+      <span className="text-body">{back.label}</span>
     </Link>
   );
 }
@@ -45,11 +61,16 @@ export function SettingsBack(): JSX.Element {
  */
 export function SettingsSubPage({
   title,
+  back,
   children,
-}: Readonly<{ title: string; children: ReactNode }>): JSX.Element {
+}: Readonly<{
+  title: string;
+  back?: Back | undefined;
+  children: ReactNode;
+}>): JSX.Element {
   return (
     <Page title={title} width="column">
-      <SettingsBack />
+      <SettingsBack to={back} />
       {children}
     </Page>
   );
@@ -90,12 +111,16 @@ export function PickedSubPage<TSection extends string>({
   section,
   titles,
   pages,
+  back,
 }: Readonly<{
   section: TSection;
   titles: Readonly<Record<TSection, string>>;
   pages: Readonly<Record<TSection, ReactNode>>;
+  back?: Back | undefined;
 }>): JSX.Element {
   return (
-    <SettingsSubPage title={titles[section]}>{pages[section]}</SettingsSubPage>
+    <SettingsSubPage title={titles[section]} back={back}>
+      {pages[section]}
+    </SettingsSubPage>
   );
 }

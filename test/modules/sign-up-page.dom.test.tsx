@@ -278,7 +278,7 @@ describe("Au2 · Google in the invite stage", () => {
       screen.getByRole("button", { name: "Continue with Google" }),
     );
     const band = await waitFor(() => {
-      const found = part("failure-band");
+      const found = part("control-failure");
       expect(found).toHaveTextContent(INVITE_COPY.invalid);
       return found;
     });
@@ -304,9 +304,9 @@ describe("Au2 · Google in the invite stage", () => {
       );
     });
     await waitFor(() => {
-      expect(part("failure-band")).toHaveTextContent(AUTH_COPY.google);
+      expect(part("control-failure")).toHaveTextContent(AUTH_COPY.google);
     });
-    expect(part("failure-band")).not.toHaveTextContent(INVITE_COPY.invalid);
+    expect(part("control-failure")).not.toHaveTextContent(INVITE_COPY.invalid);
     expect(
       screen.getByRole("button", { name: "Try again" }),
     ).toBeInTheDocument();
@@ -314,7 +314,7 @@ describe("Au2 · Google in the invite stage", () => {
 
   it("tells a Google address with no account where accounts are made, as NOT LOGGED IN (round 28 #9)", async () => {
     await signUpPage({ returnedError: "signup_disabled" });
-    const band = part("failure-band");
+    const band = part("control-failure");
     expect(band).toHaveTextContent("Not logged in");
     expect(band).toHaveTextContent(AUTH_COPY.googleNoAccount);
     expect(
@@ -334,7 +334,7 @@ describe("Au2 · Google in the invite stage", () => {
     "says a new Google account's %s from the round trip as round 28 #9 draws it",
     async (error, message, linksRequestAccess) => {
       await signUpPage({ returnedError: error });
-      const band = part("failure-band");
+      const band = part("control-failure");
       expect(band).toHaveTextContent(`Not created${message}`);
       expect(
         within(band ?? document.body).queryByRole("link") !== null,

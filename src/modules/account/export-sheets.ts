@@ -79,6 +79,11 @@ One acceptance of the terms, its time written out.
 export interface TermsRow {
   readonly version: number;
   readonly acceptedAt: string;
+  /**
+   * How it was accepted: `page` or `sign-up` (round 29 #17), or nothing
+   * for an acceptance recorded before the column existed.
+   */
+  readonly how: string | undefined;
 }
 
 /**
@@ -423,6 +428,12 @@ export function buildSheets(rows: ExportRows): ExportSheets {
         name: "accepted_at",
         about: "when you accepted it (UTC).",
         value: (acceptance) => acceptance.acceptedAt,
+      },
+      {
+        name: "how",
+        about:
+          "how you accepted it: sign-up when you made your account, page when you pressed Accept on the terms page. Empty for an acceptance recorded before we kept this.",
+        value: (acceptance) => acceptance.how,
       },
     ],
   };

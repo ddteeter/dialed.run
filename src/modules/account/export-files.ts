@@ -191,6 +191,7 @@ export function exportFiles(
     terms: data.terms.map((acceptance) => ({
       version: acceptance.version,
       acceptedAt: iso(acceptance.acceptedAt),
+      how: acceptance.how ?? undefined,
     })),
   });
 

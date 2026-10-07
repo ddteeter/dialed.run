@@ -6,7 +6,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import type { ReactElement } from "react";
@@ -455,14 +455,14 @@ describe("Au5 · Google in flight", () => {
       expect(client.social).toHaveBeenCalledTimes(1);
     });
     expect(screen.queryByText(AUTH_COPY.google)).toBeNull();
-    expect(part("failure-band")).toBeNull();
+    expect(part("control-failure")).toBeNull();
   });
 });
 
 describe("Au6 · a refusal Google's round trip brought back", () => {
   it("shows the band for any code but the runner's own cancel", async () => {
     await logIn({ returnedError: "invalid_code" });
-    const band = part("failure-band");
+    const band = part("control-failure");
     expect(band).toHaveTextContent("Not signed in");
     expect(band).toHaveTextContent(AUTH_COPY.google);
     // Under the button, as every band Google owns is (round 29 #13).
@@ -471,7 +471,7 @@ describe("Au6 · a refusal Google's round trip brought back", () => {
 
   it("returns to rest, silently, when consent was cancelled", async () => {
     await logIn({ returnedError: "access_denied" });
-    expect(part("failure-band")).toBeNull();
+    expect(part("control-failure")).toBeNull();
     expect(screen.queryByText(AUTH_COPY.google)).toBeNull();
   });
 
@@ -488,7 +488,7 @@ describe("Au6 · a refusal Google's round trip brought back", () => {
       expect(leave).toHaveBeenCalledWith("https://accounts.example/consent");
     });
     expect(client.social).toHaveBeenCalledTimes(1);
-    expect(part("failure-band")).toBeNull();
+    expect(part("control-failure")).toBeNull();
   });
 });
 
@@ -504,20 +504,30 @@ describe("Au6 · Google failed", () => {
     );
 
     const band = await waitFor(() => {
-      const found = part("failure-band");
+      const found = part("control-failure");
       expect(found).not.toBeNull();
       return found;
     });
     expect(band).toHaveTextContent("Not signed in");
     expect(band).toHaveTextContent(AUTH_COPY.google);
+    // Au6 as round 33 draws it: a control failure, not the form's band
+    // (R-128), with Try again as its one filled thing.
+    expect(band).toHaveAttribute("data-state", "google-failed");
+    expect(part("failure-band")).toBeNull();
+    expect(
+      within(band ?? document.body).getByRole("button", { name: "Try again" }),
+    ).toBeInTheDocument();
     // The band belongs to the button that failed, directly under it
     // (round 29 #13), and nothing of Google's sits above the button.
     expect(band?.previousElementSibling).toBe(part("google-button"));
     expect(part("google-button")?.previousElementSibling).not.toHaveAttribute(
       "data-part",
-      "failure-band",
+      "control-failure",
     );
     expect(band?.closest("form")).toBeNull();
+    // One status region on the screen (Accessibility Contract rule 08):
+    // the band is not a second one, and the page's region speaks for it.
+    expect(screen.getAllByRole("status")).toHaveLength(1);
     expect(screen.getByRole("status")).toHaveTextContent(
       `Not signed in. ${AUTH_COPY.google}`,
     );
@@ -540,7 +550,7 @@ describe("Au6 · Google failed", () => {
     await waitFor(() => {
       expect(leave).toHaveBeenCalledWith("https://accounts.example/consent");
     });
-    expect(part("failure-band")).toBeNull();
+    expect(part("control-failure")).toBeNull();
   });
 
   it("lets the form's own band speak first when both failed", async () => {

@@ -463,7 +463,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       });
       await expect(confirmFirst).toBeVisible();
       await expect(confirmFirst).toContainText(
-        "Reporting, sharing and marking runs Useful need a confirmed address.",
+        "Reporting needs a confirmed email.",
       );
       await confirmFirst.getByRole("button", { name: "Not now" }).click();
       await expect(confirmFirst).toBeHidden();
@@ -495,7 +495,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       await cardUseful.click();
       await expect(confirmFirst).toBeVisible();
       await expect(confirmFirst).toContainText(
-        "Marking runs Useful, sharing and reporting need a confirmed address.",
+        "Marking runs Useful needs a confirmed email.",
       );
       await expect(
         confirmFirst.getByRole("button", { name: "Not now" }),
@@ -523,7 +523,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       await follow.click();
       await expect(confirmFirst).toBeVisible();
       await expect(confirmFirst).toContainText("We sent a link to");
-      await expect(confirmFirst).not.toContainText("need a confirmed address");
+      await expect(confirmFirst).not.toContainText("needs a confirmed email");
       await confirmFirst.getByRole("button", { name: "Not now" }).click();
       await expect(confirmFirst).toBeHidden();
       // Nothing changed and nothing failed: the pill is as it was.

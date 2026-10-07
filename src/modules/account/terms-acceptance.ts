@@ -27,7 +27,7 @@ import type { drizzle } from "drizzle-orm/d1";
 import terms from "../../../docs/legal/terms.md?raw";
 import { termsAcceptances } from "../../db/schema-core";
 import { nowSeconds } from "../../lib/now";
-import { publishedText } from "./legal-markdown";
+import { changeSummaryOf, publishedText } from "./legal-markdown";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -61,10 +61,19 @@ export function currentTermsVersion(text: string = terms): number | undefined {
 }
 
 /**
+ * How an acceptance happened (round 29 #17), as `terms.csv`'s `how` column
+ * says it: `sign-up` as the account is made, `page` from the prompt's
+ * Accept. Read from the schema's column, not restated.
+ */
+export type AcceptanceWay = NonNullable<
+  (typeof termsAcceptances.$inferInsert)["how"]
+>;
+
+/**
  * One acceptance, unsent: the caller batches it with the write it belongs
  * to (the account's first, at sign-up) or awaits it (Accept). A repeat for
- * the same version keeps the first row and its time (law 8b), so a double
- * press, a replayed request or a hook that runs twice records one
+ * the same version keeps the first row, its time and its way (law 8b), so a
+ * double press, a replayed request or a hook that runs twice records one
  * acceptance.
  */
 export function acceptanceOf(
@@ -72,10 +81,11 @@ export function acceptanceOf(
   userId: string,
   version: number,
   now: number,
+  how: AcceptanceWay,
 ) {
   return db
     .insert(termsAcceptances)
-    .values({ userId, version, acceptedAt: now })
+    .values({ userId, version, acceptedAt: now, how })
     .onConflictDoNothing();
 }
 
@@ -90,7 +100,9 @@ export function signUpAcceptances(
   current: number | undefined,
   now: number,
 ) {
-  return current === undefined ? [] : [acceptanceOf(db, userId, current, now)];
+  return current === undefined
+    ? []
+    : [acceptanceOf(db, userId, current, now, "sign-up")];
 }
 
 /**
@@ -161,7 +173,7 @@ export async function acceptTerms(
   now: number = nowSeconds(),
 ): Promise<AcceptResult> {
   if (shown !== current) return "stale";
-  await acceptanceOf(db, userId, current, now);
+  await acceptanceOf(db, userId, current, now, "page");
   return "accepted";
 }
 
@@ -170,19 +182,39 @@ export async function acceptTerms(
  * to a signed-in runner who is behind; nothing to anyone else — nobody, a
  * runner who is current, or everyone while no terms are published — whom
  * the route sends home.
+ *
+ * **Two prompts, by whether the runner has accepted before** (round 29
+ * #6). Never accepted — every account made before the terms were
+ * published — is `isFirst`, and nothing changed for them, so there is no
+ * summary. Behind an earlier acceptance is a version bump, with the
+ * owner's WHAT CHANGED summary from the terms' front matter
+ * (`legal-markdown`'s `changeSummaryOf`): empty, and the block left out,
+ * until the owner writes one.
  */
 export type TermsPromptView =
-  | { readonly state: "ask"; readonly version: number }
+  | {
+      readonly state: "ask";
+      readonly version: number;
+      readonly isFirst: boolean;
+      readonly changed: readonly string[];
+    }
   | { readonly state: "none" };
 
 export async function termsPromptView(
   db: Db,
   userId: string | undefined,
   current: number | undefined = currentTermsVersion(),
+  summary: readonly string[] = changeSummaryOf(terms),
 ): Promise<TermsPromptView> {
   if (userId === undefined) return { state: "none" };
-  const standing = await termsStanding(db, userId, current);
-  return standing.state === "behind"
-    ? { state: "ask", version: standing.version }
-    : { state: "none" };
+  const [latest] = await latestAcceptanceOf(db, userId);
+  const standing = termsStandingOf(latest?.version, current);
+  if (standing.state !== "behind") return { state: "none" };
+  const isFirst = latest === undefined;
+  return {
+    state: "ask",
+    version: standing.version,
+    isFirst,
+    changed: isFirst ? [] : summary,
+  };
 }

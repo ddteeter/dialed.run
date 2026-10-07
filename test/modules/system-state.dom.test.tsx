@@ -198,6 +198,8 @@ async function routedApp({
   const closet = createRoute({
     getParentRoute: () => rootRoute,
     path: "/closet",
+    // A page with a name, so a loader's refusal that named it would show.
+    staticData: { savedPage: "Closet" },
     loader: () => {
       if (failWith) throw failWith;
     },
@@ -313,6 +315,8 @@ describe("the router's defaults", () => {
     await screen.findByText("the terms prompt");
     expect(router.state.location.pathname).toBe("/account/terms");
     expect(router.state.location.search).toEqual({ from: "/closet?view=all" });
+    // A loader lost nothing typed, so no page is named (D-102).
+    expect(router.state.location.searchStr).not.toContain("save");
     expect(router.history).toHaveLength(2);
     expect(screen.queryByText(/Our end failed/u)).toBeNull();
     expect(document.querySelector("[data-part='failure-band']")).toBeNull();

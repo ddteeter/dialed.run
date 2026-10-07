@@ -15,6 +15,7 @@ import {
   UnitsForm,
 } from "../../src/modules/onboarding/components/Settings";
 import {
+  PickedSubPage,
   SettingsBack,
   SettingsSectionPage,
   SettingsSubPage,
@@ -203,6 +204,31 @@ describe("the sub-pages", () => {
       "href",
       "/onboarding/settings",
     );
+  });
+
+  it("goes back to the terms prompt from the page a runner behind on the terms reads (round 30 #4a)", async () => {
+    await renderWithRouter(<SettingsBack to="terms" />);
+    expect(screen.getByRole("link", { name: "Terms" })).toHaveAttribute(
+      "href",
+      "/account/terms",
+    );
+  });
+
+  it("picks the sub-page's way back", async () => {
+    await renderWithRouter(
+      <PickedSubPage
+        section="sign-in"
+        titles={{ "sign-in": "Account" }}
+        pages={{ "sign-in": <p>Read only</p> }}
+        back="terms"
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "Account" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Terms" })).toHaveAttribute(
+      "href",
+      "/account/terms",
+    );
+    expect(screen.queryByRole("link", { name: "Settings" })).toBeNull();
   });
 
   it("wraps a sub-page in its shell: the title, the way back, and its own content", async () => {

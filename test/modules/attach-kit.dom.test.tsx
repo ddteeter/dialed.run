@@ -22,7 +22,9 @@ import type { AttachContext } from "../../src/modules/feed/attach-context";
 import { AttachKit } from "../../src/modules/feed/components/AttachKit";
 import type { PickerGroup } from "../../src/modules/feed/picker";
 import type { PrefillCandidate } from "../../src/modules/feed/prefill";
+import { TERMS_NOT_ACCEPTED_CODE } from "../../src/lib/auth-signal";
 import type { PhotoStep } from "../../src/ui";
+import { TermsRefusalAnswer } from "../../src/ui";
 import { expectAvailable, expectBusy } from "../ui/unavailable";
 
 /**
@@ -237,9 +239,9 @@ describe("AttachKit: the header", () => {
     const header = screen.getByRole("banner");
     // Ink on the phone, the title line from `wide` (DS0 bend 4).
     expect(header).toHaveAttribute("data-ground", "ink-until-wide");
-    expect(
-      within(header).getByRole("heading", { level: 1 }),
-    ).toHaveClass("wide:text-title");
+    expect(within(header).getByRole("heading", { level: 1 })).toHaveClass(
+      "wide:text-title",
+    );
     expect(
       within(header).getByRole("heading", {
         level: 1,
@@ -911,6 +913,48 @@ describe("AttachKit: a failed attach (round 23, item 9)", () => {
     await user.click(button);
     expect(attachKit).toHaveBeenCalledTimes(1);
     pending.resolve({ entryId: "01NEW" });
+  });
+
+  it("is a save a terms refusal loses, so the prompt names the page (D-102)", async () => {
+    const user = userEvent.setup();
+    const rootRoute = createRootRoute();
+    const attachRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/",
+      staticData: { savedPage: "Attach the kit" },
+      component: () => (
+        <TermsRefusalAnswer>
+          {attach({
+            attachKit: () =>
+              Promise.reject(
+                Object.assign(new Error("Accept the current terms first."), {
+                  code: TERMS_NOT_ACCEPTED_CODE,
+                }),
+              ),
+          })}
+        </TermsRefusalAnswer>
+      ),
+    });
+    const promptRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/account/terms",
+      component: () => <p>The prompt</p>,
+    });
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([attachRoute, promptRoute]),
+      history: createMemoryHistory({ initialEntries: ["/"] }),
+    });
+    await router.load();
+    render(<RouterProvider router={router} />);
+
+    await user.click(await screen.findByRole("button", { name: "Houdini" }));
+    await user.click(primary());
+
+    await screen.findByText("The prompt");
+    expect(router.state.location.search).toEqual({
+      from: "/",
+      save: "Attach the kit",
+    });
   });
 
   it("says nothing attached under the button, and tries again with the same kit", async () => {
