@@ -4,9 +4,11 @@
  * retire confirm), §AG (what a garment is made of), §AH (colour as a
  * constraint), round 26 #3 (Y · delete with runs), #4 (F · saved, photo
  * refused), #9 (Show retired (N), "← Closet"), #10 (F at the desk),
- * R-137 (a brand written in any script) and round 28 #5 (W3 confirm:
- * Check the blur, Pick another, Use this photo) —
- * one journey, one video.
+ * R-137 (a brand written in any script), round 28 #5 (W3 confirm:
+ * Check the blur, Pick another, Use this photo, as the closet's sheet)
+ * and #13 (the rail's hatch and "RETIRED MAR 2026", the merge words in
+ * ink), and D-75 / R-112 / R-114 (F's TYPE, the rail by type, and the
+ * rail listing a save F kept) — one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
@@ -137,6 +139,9 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await page.getByLabel("Brand").fill("Patagonia");
   await page.getByLabel("Model / name").fill("Houdini Jacket");
   await page.getByLabel("Category").selectOption("top");
+  // D-75: round 26's TYPE, under the category, the contract's types.
+  await scene(page, "F · TYPE, under the category: what shape it is");
+  await page.getByRole("radio", { name: "Jacket" }).check();
   await page.getByLabel("Layer").selectOption("outer");
   await page.getByLabel("Weight").selectOption("light");
   await page.getByLabel("Wind resistant").check();
@@ -171,7 +176,10 @@ test("add garments with product identity -> detail in round 22's order -> retire
   });
   // Round 28 #5: W3 stays open once auto-blur paints, and nothing is
   // attached until Use this photo. Pick another swaps the photo in place.
-  await scene(page, "W3 · check the blur: it waits for your choice");
+  await scene(page, "W3 · check the blur, in a sheet: it waits for your choice");
+  await expect(
+    page.getByRole("dialog", { name: "Check the blur" }),
+  ).toBeVisible();
   const use = page.getByRole("button", { name: "Use this photo" });
   await expect(
     page.getByRole("heading", { name: "Check the blur" }),
@@ -198,6 +206,7 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await expect(
     page.getByRole("heading", { name: "Check the blur" }),
   ).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Check the blur" })).toBeHidden();
   await expect(well).toHaveAttribute("data-state", "filled", {
     timeout: 20_000,
   });
@@ -369,11 +378,33 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await page.getByLabel("Brand").fill("Patagonia");
   await page.getByLabel("Model / name").fill("Houdini Jacket");
   await expect(rail.getByText("Same name")).toBeVisible();
+
+  // R-112: a picked type narrows the card to it, and says so by name.
+  await scene(page, "F at the desk · a type narrows the card to that type");
+  await page.getByRole("radio", { name: "Jacket" }).check();
+  await expect(
+    rail.getByRole("heading", {
+      name: "Already in your closet · Top · Jacket",
+    }),
+  ).toBeVisible();
+  await expect(rail.getByText("Patagonia Houdini Jacket")).toBeVisible();
+  await page.getByRole("radio", { name: "Half-zip" }).check();
+  await expect(rail.getByText("No half-zips yet.")).toBeVisible();
+
+  // Round 28 #13: no photo is the hatch; a retirement reads by month and
+  // year; SAME NAME and RETIRED are ink, not a verdict's hue.
+  await scene(page, "F at the desk · the hatch, and RETIRED by month and year");
   await page.getByLabel("Category").selectOption("shoes");
   await expect(
     rail.getByRole("heading", { name: "Already in your closet · Shoes" }),
   ).toBeVisible();
   await expect(rail.getByText("Retired", { exact: true })).toBeVisible();
+  await expect(
+    rail.getByText(/^0 runs · Retired [A-Z][a-z]{2} \d{4}$/u),
+  ).toBeVisible();
+  await expect(
+    rail.locator("[data-part='thumb'][data-state='no-photo']").first(),
+  ).toBeVisible();
 
   // ---- Round 26 #4 · saved, photo refused ---------------------------------
   // A new piece, and its photo lost to a dropped connection: the save is
@@ -383,8 +414,10 @@ test("add garments with product identity -> detail in round 22's order -> retire
     "F · the connection drops under the photo, not the garment",
   );
   await page.getByLabel("Category").selectOption("top");
+  await page.getByRole("radio", { name: "Jacket" }).check();
   await page.getByLabel("Model / name").fill("Houdini Air");
   await expect(rail.getByText("Same name")).toHaveCount(0);
+  await expect(rail.getByText("Patagonia Houdini Air")).toHaveCount(0);
   await page.setInputFiles('[data-part="photo-well"] input[type="file"]', {
     name: "houdini-air.png",
     mimeType: "image/png",
@@ -419,8 +452,11 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await expect(
     page.getByRole("heading", { level: 1, name: "Patagonia Houdini Air" }),
   ).toBeVisible();
-  await expect(page.getByText("Saved to closet · Top")).toBeVisible();
+  await expect(page.getByText("Saved to closet · Top · Jacket")).toBeVisible();
   await expect(page.getByLabel("Model / name")).toHaveCount(0);
+  // R-114: the rail stays, and the piece the save made is one of its rows.
+  await scene(page, "F · saved: the rail lists the piece it just made");
+  await expect(rail.getByText("Patagonia Houdini Air")).toBeVisible();
   await expect(page.getByLabel("Pick another")).toBeAttached();
   await expect(page.getByRole("button", { name: "Done" })).toBeVisible();
 

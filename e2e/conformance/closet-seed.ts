@@ -80,6 +80,7 @@ export async function seedRoundTwentyTwoGarment(
         id: itemId,
         userId,
         category: "top",
+        type: "halfZip",
         brand: "Janji",
         name: "Rover Half-zip",
         size: "M",
