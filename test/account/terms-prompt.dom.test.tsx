@@ -164,6 +164,8 @@ describe("TermsPrompt · never accepted (round 29 #6)", () => {
 
     expect(document.querySelector("[data-part='return-note']")).toBeNull();
     expect(screen.queryByText(STALE)).toBeNull();
+    // Nothing has happened, so nothing is said.
+    expect(screen.getByRole("status").textContent).toBe("");
   });
 });
 
