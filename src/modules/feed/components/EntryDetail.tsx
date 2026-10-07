@@ -18,6 +18,8 @@ import { ConditionsCell } from "./ConditionsCell";
 import { Handle } from "./Handle";
 import { HIDDEN_WHILE_WE_CHECK } from "./UnderReview";
 import { ReportFoot } from "./ReportFoot";
+import { DeletePhoto } from "./RetractEntry";
+import type { DeletePhotoProps } from "./RetractEntry";
 import { UsefulButton } from "./UsefulButton";
 import type { SetUsefulFn } from "./useful-reaction";
 import { VerdictBadge } from "./VerdictBadge";
@@ -63,6 +65,10 @@ export interface EntryDetailProps {
   units: Units;
   shouldPromptVerdict: boolean;
   recordPrompted: (input: { data: { entryId: string } }) => Promise<unknown>;
+  /**
+  Each photo's delete, on the photo, for the owner only (round 27 #26).
+  */
+  deletePhoto: DeletePhotoProps["deletePhoto"];
   setUseful: SetUsefulFn;
   /**
    * W1's report control, composed by the route, because this module may
@@ -93,6 +99,7 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
     units,
     reportAffordance,
     noticeBand: NoticeBand,
+    deletePhoto,
   } = props;
   // `entry.id` rather than an `entryId` prop beside it: two sources for one
   // fact is how a route comes to disagree with itself.
@@ -128,7 +135,10 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
         <NoticeBand {...HIDDEN_WHILE_WE_CHECK} />
       ) : undefined}
 
-      <PhotoPager photoKeys={entry.photoKeys} />
+      <PhotoPager
+        photoKeys={entry.photoKeys}
+        deletePhoto={isOwn ? deletePhoto : undefined}
+      />
 
       <RunStrip entry={entry} units={units} showBadge={!shouldPromptVerdict} />
 
@@ -189,9 +199,16 @@ function tagsOf(stored: readonly string[]): EntryTag[] {
 
 /**
  * The photos, one at a time: a scroll-snapping row a thumb swipes, each
- * photo carrying its own `1 / 2`. Absent with no photos.
+ * photo carrying its own `1 / 2`, and its delete top right when the viewer
+ * owns it. Absent with no photos.
  */
-function PhotoPager({ photoKeys }: Readonly<{ photoKeys: readonly string[] }>) {
+function PhotoPager({
+  photoKeys,
+  deletePhoto,
+}: Readonly<{
+  photoKeys: readonly string[];
+  deletePhoto: DeletePhotoProps["deletePhoto"] | undefined;
+}>) {
   if (photoKeys.length === 0) return;
   return (
     <ul
@@ -210,6 +227,13 @@ function PhotoPager({ photoKeys }: Readonly<{ photoKeys: readonly string[] }>) {
               {String(index + 1)} / {String(photoKeys.length)}
             </Mono>
           </span>
+          {deletePhoto === undefined ? undefined : (
+            <DeletePhoto
+              photoKey={key}
+              index={index}
+              deletePhoto={deletePhoto}
+            />
+          )}
         </li>
       ))}
     </ul>

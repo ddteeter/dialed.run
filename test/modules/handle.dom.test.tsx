@@ -202,6 +202,7 @@ async function detailFor(isUnderReview: boolean) {
   await renderFeedScreen(
     <EntryDetail
       noticeBand={NoticeBand}
+      deletePhoto={() => Promise.resolve()}
       units={MILES}
       entry={entry(isUnderReview)}
       viewerId="01USER"

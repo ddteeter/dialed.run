@@ -689,7 +689,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await expect(
       page.getByRole("heading", { name: "Delete photo 2?" }),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    await page.getByRole("button", { name: "Delete photo", exact: true }).click();
     await expect(
       page.getByRole("button", { name: "Delete photo 2" }),
     ).toHaveCount(0);
@@ -697,12 +697,12 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       page.getByRole("button", { name: "Delete photo 1" }),
     ).toBeVisible();
 
-    await scene(page, "…or the whole entry: its kit, verdict and photos go");
+    await scene(page, "…or the whole entry, from the foot under YOURS");
     await page.getByRole("button", { name: "Delete this entry" }).click();
     await expect(
       page.getByRole("heading", { name: "Delete this entry?" }),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    await page.getByRole("button", { name: "Delete entry", exact: true }).click();
     await expect(page).not.toHaveURL(new RegExp(ownEntryId));
     await page.goto(`/feed/entry/${ownEntryId}`);
     await expect(page).not.toHaveURL(new RegExp(ownEntryId));

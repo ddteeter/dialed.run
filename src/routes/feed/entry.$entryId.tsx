@@ -62,6 +62,7 @@ function EntryDetailPage() {
         recordPrompted={recordVerdictPromptedAction}
         setUseful={setUsefulAction}
         noticeBand={NoticeBand}
+        deletePhoto={deleteEntryPhotoAction}
         reportAffordance={
           <ReportAffordance
             subject={{
@@ -80,7 +81,6 @@ function EntryDetailPage() {
         entry={entry}
         viewerId={viewerId}
         retract={retractEntryAction}
-        deletePhoto={deleteEntryPhotoAction}
         onRetracted={async () => {
           await navigate({ to: "/feed" });
         }}

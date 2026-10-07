@@ -48,6 +48,7 @@ describe("the status region on first paint", () => {
     const html = await firstPaintOf(
       <EntryDetail
         noticeBand={NoticeBand}
+        deletePhoto={() => Promise.resolve()}
         units={MILES}
         viewerId="01STRANGER"
         shouldPromptVerdict={false}

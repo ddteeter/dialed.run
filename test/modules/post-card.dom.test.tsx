@@ -403,12 +403,8 @@ describe("PostCard: the author's under-review marker (R-62, D-67; round 29 #4)",
     // The card's link is what a screen reader lands on, and it says the
     // sentence rather than the brackets.
     const link = within(post).getByRole("link");
-    expect(link).toHaveAccessibleName(
-      /Under review, only you can see this/,
-    );
-    expect(link).not.toHaveAccessibleName(
-      /\[Under review\]/,
-    );
+    expect(link).toHaveAccessibleName(/Under review, only you can see this/);
+    expect(link).not.toHaveAccessibleName(/\[Under review\]/);
   });
 
   it("is absent from every other card", async () => {
