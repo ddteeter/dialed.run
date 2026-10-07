@@ -48,6 +48,14 @@ function primary(): HTMLElement {
   return element;
 }
 
+/**
+A re-read nothing here should ask for: the rail is only read again after a
+save F keeps (R-114), which these tests do not reach.
+*/
+function neverReread(): Promise<never> {
+  return Promise.reject(new Error("the rail was read again"));
+}
+
 function rail(): HTMLElement | null {
   return document.querySelector<HTMLElement>("[data-part='rail']");
 }
@@ -98,6 +106,7 @@ describe("GarmentForm at the desk (round 26 #10)", () => {
     renderForm({
       rail: {
         nearby: { byCategory: { top: [rover], bottom: [shorts] }, byType: {} },
+        reread: neverReread,
       },
     });
 
@@ -119,6 +128,7 @@ describe("GarmentForm at the desk (round 26 #10)", () => {
     renderForm({
       rail: {
         nearby: { byCategory: { top: [rover], bottom: [shorts] }, byType: {} },
+        reread: neverReread,
       },
     });
 
@@ -140,7 +150,10 @@ describe("GarmentForm at the desk (round 26 #10)", () => {
   it("marks the piece being typed again as SAME NAME", async () => {
     const user = userEvent.setup();
     renderForm({
-      rail: { nearby: { byCategory: { top: [rover] }, byType: {} } },
+      rail: {
+        nearby: { byCategory: { top: [rover] }, byType: {} },
+        reread: neverReread,
+      },
     });
 
     await user.type(screen.getByLabelText("Brand"), "Janji");
@@ -200,6 +213,7 @@ describe("GarmentForm's TYPE (round 26 #10, D-75, R-112)", () => {
           byCategory: { top: [rover] },
           byType: { halfZip: [halfZip] },
         },
+        reread: neverReread,
       },
     });
 
@@ -225,7 +239,10 @@ describe("GarmentForm's TYPE (round 26 #10, D-75, R-112)", () => {
     renderForm({
       save,
       initial: { name: "Split" },
-      rail: { nearby: { byCategory: { top: [rover] }, byType: {} } },
+      rail: {
+        nearby: { byCategory: { top: [rover] }, byType: {} },
+        reread: neverReread,
+      },
     });
 
     await user.click(screen.getByRole("radio", { name: "Half-zip" }));

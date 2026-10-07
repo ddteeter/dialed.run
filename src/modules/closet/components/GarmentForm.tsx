@@ -248,7 +248,7 @@ interface GarmentRail {
    * because the saved piece is now one of the rows" (round 26 #10, R-114).
    * The route hands in the server function its loader calls.
    */
-  reread?: (() => Promise<ClosetNearby>) | undefined;
+  reread: () => Promise<ClosetNearby>;
 }
 
 interface GarmentPhoto {
@@ -449,7 +449,7 @@ export function GarmentForm({
   function keepSaved(refusal: PhotoRefusal & { itemId: string }): void {
     setRefused(refusal);
     form.announce(PHOTO_NOT_SAVED);
-    void rail?.reread?.().then(setReread, () => {
+    void rail?.reread().then(setReread, () => {
       // The rows F loaded with stay: the rail is secondary to the save
       // beside it, and must not fail it (law 5).
     });
