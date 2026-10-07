@@ -288,6 +288,35 @@ describe("GarmentForm: a picked photo", () => {
     expect(uploadPhoto).not.toHaveBeenCalled();
   });
 
+  it("shows W3 as a sheet named for its head, and a close from the sheet keeps nothing (round 28 #5)", async () => {
+    const user = userEvent.setup();
+    const { uploadPhoto, onSaved } = renderForm({
+      renderStep: (file) => <p>Step for {file.name}</p>,
+    });
+    const closed = document.querySelector("dialog");
+    expect(closed).not.toHaveAttribute("open");
+
+    await user.upload(fileInput(), png("face.png"));
+    const sheet = screen.getByRole("dialog", { name: "Check the blur" });
+    expect(sheet).toHaveAttribute("open");
+    expect(within(sheet).getByText("Step for face.png")).toBeVisible();
+    act(() => {
+      fileInput().blur();
+    });
+    // Esc shuts a modal dialog natively, and the dialog reports `close`.
+    fireEvent(sheet, new Event("close"));
+
+    expect(screen.queryByText("Step for face.png")).toBeNull();
+    expect(sheet).not.toHaveAttribute("open");
+    expect(fileInput()).toHaveFocus();
+    expect(well()).toHaveAttribute("data-state", "empty");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalled();
+    });
+    expect(uploadPhoto).not.toHaveBeenCalled();
+  });
+
   it("shows the upload in the well while the save carries it, and only then", async () => {
     const user = userEvent.setup();
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");
@@ -353,8 +382,10 @@ describe("GarmentForm: a picked photo", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Janji Rover Half-zip" }),
     ).toBeVisible();
+    // Ink, not the dialed hue (round 28 #13): a save is not a verdict.
     expect(screen.getByText("Saved to closet · Top")).toHaveClass(
-      "text-dialed-text",
+      "text-ink",
+      "text-mono-xs",
     );
     // A refusal would refuse the same file again: another file is the fix.
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
@@ -605,15 +636,15 @@ describe("GarmentForm: editing a garment that has a photo", () => {
 
     // Not round 26 #4's state: there is no photo to add and nothing to
     // pick, so the fields stay and the control's band says what is true.
-    const band = await screen.findByText("Photo kept");
+    const band = await screen.findByText("Photo still on");
     expect(band.closest("[data-part='failure-band']")).toHaveTextContent(
-      "Photo keptOur end failed.",
+      "Photo still onOur end failed.",
     );
     expect(screen.queryByText("Photo not added")).toBeNull();
     expect(screen.queryByText("Pick another")).toBeNull();
     expect(screen.getByRole("button", { name: "Save" })).toBeVisible();
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Photo kept. Our end failed.",
+      "Photo still on. Our end failed.",
     );
     expect(onSaved).not.toHaveBeenCalled();
 

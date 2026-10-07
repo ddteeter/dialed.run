@@ -208,6 +208,17 @@ describe("GarmentDetail: identity", () => {
     expect(part("identity").querySelector("p")).toHaveTextContent(/^Top · M$/);
   });
 
+  it("names the type between them once the piece has one (Z2a, D-75)", async () => {
+    await renderWithRouter(
+      garment({
+        item: wardrobeItem({ category: "top", type: "halfZip", size: "M" }),
+      }),
+    );
+    expect(part("identity").querySelector("p")).toHaveTextContent(
+      /^Top · Half-zip · M$/,
+    );
+  });
+
   it("leaves out a size nobody gave, whether absent or blank", async () => {
     await renderWithRouter(garment({ item: wardrobeItem({ size: "" }) }));
     expect(part("identity").querySelector("p")).toHaveTextContent(/^Top$/);
@@ -510,9 +521,9 @@ describe("GarmentDetail: Remove photo", () => {
 
     await user.click(screen.getByRole("button", { name: "Remove" }));
 
-    expect(await screen.findByText("Photo kept")).toBeVisible();
+    expect(await screen.findByText("Photo still on")).toBeVisible();
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Photo kept. Our end failed.",
+      "Photo still on. Our end failed.",
     );
     expect(invalidate).not.toHaveBeenCalled();
     expect(part("photo-well")).toHaveAttribute("data-state", "filled");

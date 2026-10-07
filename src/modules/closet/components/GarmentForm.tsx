@@ -19,8 +19,10 @@ import {
 } from "../../../lib/contracts";
 import {
   garmentCategoriesInOrder,
+  garmentTypesFor,
   hasGarmentAttribute,
   type GarmentAttributeKey,
+  type GarmentType,
 } from "../../../lib/contracts/garment-fields";
 import {
   estimateTempRange,
@@ -52,13 +54,14 @@ import { garmentFormSchema, type GarmentFormValues } from "../form-schema";
 import { garmentLabel } from "../label";
 import type { ClosetNearby } from "../nearby";
 import { AlreadyInCloset } from "./AlreadyInCloset";
-import { GARMENT_PHOTO_COPY, usePhotoPick } from "./photo-pick";
+import { GARMENT_PHOTO_COPY, PHOTO_STILL_ON, usePhotoPick } from "./photo-pick";
 import {
   PHOTO_NOT_SAVED,
   PhotoRefused,
   type PhotoRefusal,
 } from "./PhotoRefused";
 import { ShadeSheet } from "./ShadeSheet";
+import { garmentTypeLabels, kindLabel, typeOf } from "../type-labels";
 
 type Category = (typeof garmentCategories)[number];
 
@@ -94,6 +97,7 @@ const LABELS = {
   brand: "Brand",
   name: "Model / name",
   category: "Category",
+  type: "Type",
   layer: "Layer",
   weight: "Weight",
   fabric: "Fabric",
@@ -180,6 +184,7 @@ const EMPTY_VALUES: GarmentFormValues = {
   brand: "",
   name: "",
   category: "top",
+  type: "",
   size: "",
   color: "",
   colorName: "",
@@ -226,10 +231,24 @@ export interface GarmentFormProps {
    */
   photo: GarmentPhoto;
   /**
-   * The runner's closet by category, for F at the desk's rail card (round
-   * 26 #10). The add form passes it; given it, the form is DS1's split.
+   * F at the desk's rail card (round 26 #10). The add form passes it;
+   * given it, the form is DS1's split.
    */
-  nearby?: ClosetNearby | undefined;
+  rail?: GarmentRail | undefined;
+}
+
+interface GarmentRail {
+  /**
+  The runner's closet by category and by type, as the loader read it.
+  */
+  nearby: ClosetNearby;
+  /**
+   * Reads `nearby` again. Called when a save has made the piece but F
+   * stays, because its photo was refused (round 26 #4): "the rail stays,
+   * because the saved piece is now one of the rows" (round 26 #10, R-114).
+   * The route hands in the server function its loader calls.
+   */
+  reread?: (() => Promise<ClosetNearby>) | undefined;
 }
 
 interface GarmentPhoto {
@@ -317,13 +336,15 @@ export function GarmentForm({
   pendingLabel,
   successMessage,
   photo,
-  nearby,
+  rail,
 }: Readonly<GarmentFormProps>) {
   const [values, setValues] = useState<GarmentFormValues>({
     ...EMPTY_VALUES,
     ...initial,
   });
   const fields = fieldsForCategory(values.category);
+  const types = garmentTypesFor(values.category);
+  const pickedType = typeOf(values.category, values.type);
   const [shadeOpen, setShadeOpen] = useState(false);
   /**
    * The photo is part of the form, so nothing about it is written until
@@ -343,6 +364,10 @@ export function GarmentForm({
     (PhotoRefusal & { itemId: string }) | undefined
   >();
   const [photoPending, setPhotoPending] = useState(false);
+  /**
+  The rail's rows as read after a save F kept (R-114), once they arrive.
+  */
+  const [reread, setReread] = useState<ClosetNearby | undefined>();
   const photoInFlight = useRef(false);
   const heldUrl = useObjectUrl(held);
   const preview = heldUrl ?? (removed ? undefined : photo.url);
@@ -370,7 +395,8 @@ export function GarmentForm({
    * Edit's Remove, once the row is saved. A removal that fails is not
    * round 26 #4's state — there is no photo to add and nothing to pick —
    * so it is the control failure band under the well, in the words Y's
-   * own Remove uses ("Photo kept"), with the fields left as they are.
+   * own Remove uses (`PHOTO STILL ON`, round 28 #13), with the fields left
+   * as they are.
    * Try again removes it and moves on; so does saving again.
    */
   const photoRemoval = useControlAction({
@@ -380,7 +406,7 @@ export function GarmentForm({
     onSuccess: async (itemId) => {
       await onSaved({ id: itemId });
     },
-    kicker: "Photo kept",
+    kicker: PHOTO_STILL_ON,
   });
 
   /**
@@ -401,20 +427,32 @@ export function GarmentForm({
       data.set("photo", file);
       const result = await photo.upload({ data });
       if (result.ok) return true;
-      setRefused({ itemId, reason: result.error, canRetry: false });
-      form.announce(PHOTO_NOT_SAVED);
+      keepSaved({ itemId, reason: result.error, canRetry: false });
       return false;
     } catch (error) {
-      setRefused({
+      keepSaved({
         itemId,
         reason: causeLine(error),
         canRetry: classifyFailure(error).kind === "network",
       });
-      form.announce(PHOTO_NOT_SAVED);
       return false;
     } finally {
       setPhotoPending(false);
     }
+  }
+
+  /**
+   * F becomes the saved garment's page (round 26 #4), and the rail is read
+   * again so it lists the piece the save made (R-114). The re-read is the
+   * rail's alone: one that fails leaves the old rows, and nothing else.
+   */
+  function keepSaved(refusal: PhotoRefusal & { itemId: string }): void {
+    setRefused(refusal);
+    form.announce(PHOTO_NOT_SAVED);
+    void rail?.reread?.().then(setReread, () => {
+      // The rows F loaded with stay: the rail is secondary to the save
+      // beside it, and must not fail it (law 5).
+    });
   }
 
   /**
@@ -551,7 +589,12 @@ export function GarmentForm({
           id="category"
           value={values.category}
           onChange={(event) => {
-            update("category", event.target.value as Category);
+            // A type belongs to one category, so a new category clears it.
+            setValues((current) => ({
+              ...current,
+              category: event.target.value as Category,
+              type: "",
+            }));
           }}
           className="rounded-field border border-hairline bg-panel px-3 py-2 font-normal"
         >
@@ -562,6 +605,24 @@ export function GarmentForm({
           ))}
         </select>
       </FormField>
+      {/* Round 26's TYPE chips, under the category (D-75, R-112). Only
+          where there is a choice: a category with one type (gloves,
+          socks, shoes, neckwear) asks nothing. */}
+      {types.length > 1 ? (
+        <ChoiceList
+          name="type"
+          legend={LABELS.type}
+          layout="chips"
+          options={types}
+          optionLabels={garmentTypeLabels}
+          value={pickedType}
+          field={form.field}
+          error={form.fieldErrors.type}
+          onChange={(picked) => {
+            update("type", picked);
+          }}
+        />
+      ) : undefined}
 
       <fieldset className="flex flex-col gap-3 border-t border-hairline pt-4">
         <legend className="sr-only">Attributes</legend>
@@ -753,7 +814,6 @@ export function GarmentForm({
         }}
         onFiles={pickFrom}
       />
-      {pick.step(form.announce)}
       <ControlFailureBand
         failure={photoRemoval.failure}
         onRetry={photoRemoval.retry}
@@ -782,6 +842,7 @@ export function GarmentForm({
       <FormHeading
         heading={heading}
         saved={refused === undefined ? undefined : values}
+        savedType={pickedType}
       />
       {refused === undefined ? (
         fieldsView
@@ -799,7 +860,6 @@ export function GarmentForm({
             accept={photoAcceptAttribute}
             onFiles={pickFrom}
           />
-          {pick.step(form.announce)}
           <PhotoRefused
             refusal={refused}
             onRetry={() => {
@@ -809,11 +869,18 @@ export function GarmentForm({
           />
         </SavedPhotoRefused>
       )}
+      {/* W3, as a sheet over whichever view picked the photo (round 28
+          #5: "the closet form and AttachKit use the same sheet"). */}
+      {pick.step(form.announce)}
     </>
   );
 
   return (
-    <FormFrame nearby={nearby} values={values}>
+    <FormFrame
+      nearby={reread ?? rail?.nearby}
+      values={values}
+      type={pickedType}
+    >
       {primary}
     </FormFrame>
   );
@@ -827,10 +894,15 @@ export function GarmentForm({
 function FormFrame({
   nearby,
   values,
+  type,
   children,
 }: Readonly<{
   nearby: ClosetNearby | undefined;
   values: GarmentFormValues;
+  /**
+  The picked type, when one is: the card then matches on it too.
+  */
+  type: GarmentType | undefined;
   children: ReactNode;
 }>): JSX.Element {
   if (nearby === undefined) {
@@ -845,7 +917,12 @@ function FormFrame({
       rail={
         <AlreadyInCloset
           category={values.category}
-          pieces={nearby[values.category] ?? []}
+          type={type}
+          pieces={
+            (type === undefined
+              ? nearby.byCategory[values.category]
+              : nearby.byType[type]) ?? []
+          }
           typed={{ brand: values.brand, name: values.name }}
         />
       }
@@ -860,22 +937,26 @@ function FormFrame({
 /**
  * F's one heading, whichever view (Accessibility Contract rule 04): the
  * page's own while there is a form; once the garment is saved, the
- * piece's name in its own case under `SAVED TO CLOSET · {CATEGORY}`.
+ * piece's name in its own case under `SAVED TO CLOSET · {CATEGORY}`, and
+ * its type when one was picked (`· TOP · HALF-ZIP`, round 26 #4).
  */
 function FormHeading({
   heading,
   saved,
+  savedType,
 }: Readonly<{
   heading: string;
   saved: GarmentFormValues | undefined;
+  savedType: GarmentType | undefined;
 }>): JSX.Element {
   // One `<h1>` in the source as well as on the screen, which is what the
   // one-heading check reads; the saved name keeps its own case.
   return (
     <div className="flex flex-col gap-1">
       {saved === undefined ? undefined : (
-        <Mono step="xs" className="text-dialed-text">
-          {`Saved to closet · ${garmentCategoryLabels[saved.category]}`}
+        // Ink, not the dialed hue (round 28 #13): a save is not a verdict.
+        <Mono step="xs" className="text-ink">
+          {`Saved to closet · ${kindLabel(saved.category, savedType)}`}
         </Mono>
       )}
       <h1

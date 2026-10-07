@@ -932,7 +932,8 @@ export async function getItemDetailWithPairs(
  * sleeve" (D-27) — so a brand and a name together resolve (create-if-
  * missing) a product row, link `product_id`, and bring the product's type
  * with them. Design's Z screen: the type "came with the match, from the
- * product record — it was never a question".
+ * product record — it was never a question". Since D-75 F asks it too,
+ * so the product's type fills in only where the runner left it unanswered.
  *
  * This ran in the browser first, once per route, which meant two round
  * trips and a rule a caller could simply not call. Here it runs wherever a
@@ -962,10 +963,13 @@ export async function withResolvedProduct(
     },
     createdBy,
   );
+  // The product lends its type only to a garment the runner gave none:
+  // F asks the type now (D-75), and what a runner enters is the floor.
   return garmentSchema.parse({
     ...garment,
     productId: link.productId,
-    ...(link.type !== undefined && { type: link.type }),
+    ...(garment.type === undefined &&
+      link.type !== undefined && { type: link.type }),
   });
 }
 

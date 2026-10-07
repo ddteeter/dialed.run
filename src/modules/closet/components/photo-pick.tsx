@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { ComponentProps, ReactNode } from "react";
 
 import { photoFormatWords } from "../../../lib/photo-constraints";
-import { useReturnFocus } from "../../../ui";
+import { Sheet, useReturnFocus } from "../../../ui";
 import type { FileWell, PhotoStep } from "../../../ui";
 
 /**
@@ -21,6 +21,14 @@ export const GARMENT_PHOTO_COPY = {
   pendingLabel: "Adding",
   hint: `Flat on the floor works best. ${photoFormatWords}.`,
 } satisfies ComponentProps<typeof FileWell>["copy"];
+
+/**
+ * The kicker when removing a garment's photo fails, on Edit and on Y
+ * alike: the state still true, in round 28 #13's words (was "Photo
+ * kept"). The band's capitals come from its CSS, so this stays in normal
+ * case for the status line.
+ */
+export const PHOTO_STILL_ON = "Photo still on";
 
 /**
  * A picked garment photo, on its way through W3's blur.
@@ -65,6 +73,17 @@ export function usePhotoPick({
   >();
   const returnFocus = useReturnFocus();
 
+  /**
+   * The step closes: on Use this photo, on Cancel, and on Esc or anything
+   * else that shuts the sheet. Saying it twice is harmless — the sheet
+   * reports its own close after either of the first two — because it
+   * only ever lets go of the file and puts focus back on the well.
+   */
+  function close(): void {
+    setPending(undefined);
+    returnFocus.restore();
+  }
+
   return {
     stepping: pending !== undefined,
     wellRef: returnFocus.ref,
@@ -75,20 +94,32 @@ export function usePhotoPick({
       }
       setPending({ file, step: renderPhotoStep });
     },
-    step: (announce) =>
-      pending?.step(
-        pending.file,
-        (ready) => {
-          setPending(undefined);
-          returnFocus.restore();
-          onReady(ready);
-        },
-        announce,
-        // Cancel in W3 (round 28 #5): the step closes, nothing is kept.
-        () => {
-          setPending(undefined);
-          returnFocus.restore();
-        },
-      ),
+    // W3 is a sheet over the screen that picked the photo (round 28 #5:
+    // "the closet form and AttachKit use the same sheet"), kept mounted so
+    // it can travel out as well as in. Its label is the step's own head.
+    step: (announce) => (
+      <Sheet
+        open={pending !== undefined}
+        onClose={close}
+        label={PHOTO_STEP_LABEL}
+      >
+        {pending?.step(
+          pending.file,
+          (ready) => {
+            close();
+            onReady(ready);
+          },
+          announce,
+          // Cancel in W3 (round 28 #5): the step closes, nothing is kept.
+          close,
+        )}
+      </Sheet>
+    ),
   };
 }
+
+/**
+ * The sheet's name, which is W3's head (round 28 #5): what a screen
+ * reader hears as the dialog opens, before focus lands on the heading.
+ */
+export const PHOTO_STEP_LABEL = "Check the blur";

@@ -49,6 +49,7 @@ const BLANK: GarmentFormValues = {
   brand: "",
   name: "Test garment",
   category: "top",
+  type: "",
   size: "",
   color: "",
   colorName: "",
@@ -166,6 +167,7 @@ async function storedItem(
 
 const BRANDED = {
   category: "top",
+  type: "halfZip",
   name: "Rover Half-Zip",
   brand: "Janji",
   size: "M",
@@ -195,6 +197,7 @@ describe("formValuesFromItem prefills from what the page actually shows", () => 
       brand: "Janji",
       name: "Rover Half-Zip",
       category: "top",
+      type: "halfZip",
       size: "M",
       color: "Slate",
       colorName: "",
@@ -222,6 +225,7 @@ describe("formValuesFromItem prefills from what the page actually shows", () => 
 
     expect(formValuesFromItem(bare, NOTHING_KNOWN)).toMatchObject({
       brand: "",
+      type: "",
       size: "",
       color: "",
       colorName: "",
@@ -242,5 +246,7 @@ describe("formValuesFromItem prefills from what the page actually shows", () => 
     );
     expect(garmentSchema.safeParse(garment).success).toBe(true);
     expect(garment.name).toBe("Rover Half-Zip");
+    // The type rides through Edit, rather than being cleared by a save.
+    expect(garment.type).toBe("halfZip");
   });
 });
