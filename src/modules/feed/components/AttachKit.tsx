@@ -23,6 +23,7 @@ import {
   Mono,
   PendingLabel,
   RailCard,
+  Sheet,
   useControlAction,
   useReturnFocus,
 } from "../../../ui";
@@ -261,6 +262,17 @@ export function AttachKit({
     });
   }
 
+  /**
+   * W3 closing without a photo: Cancel, or Esc or anything else that
+   * shuts the sheet (round 28 #5). Nothing is kept, a photo already held
+   * stays held, and focus goes back to the well. Said twice when Cancel
+   * shuts the sheet, which is harmless: it only lets go and refocuses.
+   */
+  function closePhotoStep(): void {
+    setPhotoStep(undefined);
+    wellFocus.restore();
+  }
+
   function onPhotoFiles(files: FileList | null): void {
     // No list, or an empty one — the picker was dismissed: nothing to keep.
     const file = files?.[0];
@@ -365,22 +377,24 @@ export function AttachKit({
             onFiles={onPhotoFiles}
             inputRef={wellFocus.ref}
           />
-          {photoStep === undefined
-            ? undefined
-            : photoStep.step(
-                photoStep.file,
-                (ready) => {
-                  wellFocus.restore();
-                  keep(ready);
-                },
-                setSaid,
-                () => {
-                  // Cancel in W3 (round 28 #5): nothing is kept, and a photo
-                  // already held stays held.
-                  setPhotoStep(undefined);
-                  wellFocus.restore();
-                },
-              )}
+          {/* W3 is a sheet over A2 (round 28 #5: "the closet form and
+              AttachKit use the same sheet"), kept mounted so it can travel
+              out as well as in. Its name is the step's own head. */}
+          <Sheet
+            open={photoStep !== undefined}
+            onClose={closePhotoStep}
+            label={PHOTO_STEP_LABEL}
+          >
+            {photoStep?.step(
+              photoStep.file,
+              (ready) => {
+                wellFocus.restore();
+                keep(ready);
+              },
+              setSaid,
+              closePhotoStep,
+            )}
+          </Sheet>
 
           <div className="flex flex-col gap-3">
             <button
@@ -575,3 +589,10 @@ function MostLikely({
     </div>
   );
 }
+
+/**
+ * W3's sheet's name, which is the step's own head (round 28 #5): what a
+ * screen reader hears as the dialog opens, before focus lands on the
+ * heading. The closet's host names its sheet the same (design PR C).
+ */
+export const PHOTO_STEP_LABEL = "Check the blur";

@@ -1115,6 +1115,50 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     expect(createObjectURL).not.toHaveBeenCalled();
   });
 
+  it("shows W3 as a sheet named for its head, and Esc on it is Cancel (round 28 #5)", async () => {
+    const user = userEvent.setup();
+    const recording = recordingStep();
+    await renderWithRouter(attach({ renderPhotoStep: recording.step }));
+    expect(screen.queryByRole("dialog", { name: "Check the blur" })).toBeNull();
+
+    await user.upload(photoInput(), jpeg("face.jpg"));
+    const sheet = screen.getByRole("dialog", { name: "Check the blur" });
+    expect(sheet).toHaveAttribute("open");
+    expect(within(sheet).getByText("step for face.jpg")).toBeVisible();
+    act(() => {
+      photoInput().blur();
+    });
+    // Esc shuts a modal dialog natively, and the dialog reports `close`.
+    fireEvent(sheet, new Event("close"));
+
+    expect(screen.queryByText("step for face.jpg")).toBeNull();
+    expect(sheet).not.toHaveAttribute("open");
+    expect(photoInput()).toHaveFocus();
+    expect(document.querySelector("[data-part='photo-well']")).toHaveAttribute(
+      "data-state",
+      "empty",
+    );
+    expect(createObjectURL).not.toHaveBeenCalled();
+  });
+
+  it("closes the sheet on Use this photo, with the bytes the step handed back", async () => {
+    const user = userEvent.setup();
+    const recording = recordingStep();
+    await renderWithRouter(attach({ renderPhotoStep: recording.step }));
+
+    await user.upload(photoInput(), jpeg("raw.jpg"));
+    const sheet = screen.getByRole("dialog", { name: "Check the blur" });
+    act(() => {
+      recording.hand(jpeg("blurred.jpg"));
+    });
+
+    expect(sheet).not.toHaveAttribute("open");
+    expect(within(sheet).queryByText("step for raw.jpg")).toBeNull();
+    expect(createObjectURL).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "blurred.jpg" }),
+    );
+  });
+
   it("lends the step the screen's one status region", async () => {
     // Rule 08: one `role="status"` per screen.
     const user = userEvent.setup();
