@@ -1432,6 +1432,94 @@ describe("W3 waits for the runner (round 28 #5)", () => {
     decoding.resolve({ image: {} as ImageBitmap, width: 10, height: 10 });
   });
 
+  it("hands nothing over while the detector is still looking", async () => {
+    // The e2e flake on PR #157: the photo is drawn before the detector
+    // answers, and that paint used to become the bytes behind Use this
+    // photo. A press then sent a frame whose faces nobody had looked for,
+    // and a press that landed as the answer repainted it was dropped.
+    const onReady = vi.fn();
+    const looking = Promise.withResolvers<DetectionOutcome>();
+    const toFile = vi.fn<BlurPipeline["toFile"]>(() =>
+      Promise.resolve(BLURRED),
+    );
+    const { pipeline, painted } = fakePipeline({
+      detect: () => looking.promise,
+      toFile,
+    });
+    const user = userEvent.setup();
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={onReady}
+        onCancel={noop}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+    const use = screen.getByRole("button", { name: "Use this photo" });
+    await waitFor(() => {
+      expect(painted.length).toBeGreaterThan(0);
+    });
+
+    // Drawn, and nothing made from it.
+    expect(toFile).not.toHaveBeenCalled();
+    expect(use).toHaveAttribute("aria-disabled", "true");
+    await user.click(use);
+    expect(onReady).not.toHaveBeenCalled();
+
+    await act(async () => {
+      looking.resolve({ status: "ran", faces: [ONE_FACE] });
+      await looking.promise;
+    });
+    await useThisPhoto();
+
+    expect(onReady).toHaveBeenCalledExactlyOnceWith(BLURRED);
+    // The bytes are the paint that carries the detector's answer.
+    expect(painted.at(-1)).toHaveLength(1);
+  });
+
+  it("looks again when blur goes back on, and waits for the answer", async () => {
+    const onReady = vi.fn();
+    const looking = Promise.withResolvers<DetectionOutcome>();
+    const detect = vi
+      .fn<BlurPipeline["detect"]>()
+      .mockResolvedValueOnce({ status: "ran", faces: [] })
+      .mockReturnValueOnce(looking.promise);
+    const { pipeline, painted } = fakePipeline({ detect });
+    const user = userEvent.setup();
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={onReady}
+        onCancel={noop}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+    const use = screen.getByRole("button", { name: "Use this photo" });
+    await waitFor(() => {
+      expect(use).not.toHaveAttribute("aria-disabled");
+    });
+    const toggle = screen.getByRole("checkbox", { name: "Blur faces" });
+    await user.click(toggle);
+    await waitFor(() => {
+      expect(use).not.toHaveAttribute("aria-disabled");
+    });
+
+    const paintsBefore = painted.length;
+    await user.click(toggle);
+    await waitFor(() => {
+      expect(painted.length).toBeGreaterThan(paintsBefore);
+    });
+
+    // The first photo's "found nothing" is not an answer about this look.
+    expect(screen.getByText("Checking this photo…")).toBeInTheDocument();
+    expect(use).toHaveAttribute("aria-disabled", "true");
+    await user.click(use);
+    expect(onReady).not.toHaveBeenCalled();
+    looking.resolve({ status: "ran", faces: [] });
+  });
+
   it("adds nothing on Cancel", async () => {
     const onReady = vi.fn();
     const onCancel = vi.fn();

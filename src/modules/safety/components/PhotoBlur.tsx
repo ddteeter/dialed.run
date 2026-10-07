@@ -373,6 +373,7 @@ function BlurBody({
       image: LoadedImage,
       target: HTMLCanvasElement,
       signal: AbortSignal,
+      hasAnswer: boolean,
     ) => {
       // The last bytes stop being these the moment the canvas changes: a
       // press of Use this photo while the new file is being made must not
@@ -382,6 +383,13 @@ function BlurBody({
       // a tap makes it paint again.
       onFailure(undefined);
       pipeline.paint(target, image.image, image.width, image.height, next);
+      // While the detector is still looking, the canvas shows the photo
+      // and takes taps, but nothing is made to hand over: the only regions
+      // it could carry are the runner's, and a face the detector is about
+      // to find would go up unblurred. Use this photo stays busy until the
+      // detector has answered and the paint that carries its answer is a
+      // file.
+      if (!hasAnswer) return;
       let blurred;
       try {
         blurred = await pipeline.toFile(target, file.name);
@@ -423,6 +431,9 @@ function BlurBody({
     // between the handler and this line.
     onPrepared(undefined);
     onFailure(undefined);
+    // And whatever the detector said was about the photo, the setting or
+    // the attempt before: this one has not been looked at yet.
+    setPhase("checking");
     // Every await below is caught where it is made, so nothing this
     // effect starts can end as an unhandled rejection: a file the browser
     // cannot decode, or a canvas that throws, becomes the band.
@@ -486,14 +497,15 @@ function BlurBody({
   // two conditions in the effect: the pair was two mutants where the fact
   // is one.
   const ready = isOn ? loaded : undefined;
+  const hasAnswer = phase !== "checking";
   useEffect(() => {
     if (!canvas || !ready) return;
     const paint = new AbortController();
-    void publish(regions, ready, canvas, paint.signal);
+    void publish(regions, ready, canvas, paint.signal, hasAnswer);
     return () => {
       paint.abort();
     };
-  }, [canvas, publish, ready, regions]);
+  }, [canvas, publish, ready, regions, hasAnswer]);
 
   const detected = regions.filter((r) => r.source === "detected").length;
   const tapped = regions.length - detected;
