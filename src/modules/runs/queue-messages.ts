@@ -19,6 +19,21 @@ function jobSchema<Type extends string, Shape extends z.ZodRawShape>(
 }
 
 /**
+ * Strava reminder (D-33): carries the recipient and a dedupe subject only —
+ * never distance, pace, time, or any other activity attribute. Carries the
+ * *athlete* id, not a userId: the webhook enqueues before it knows which
+ * user this is, so that the HTTP response does not wait on a database
+ * round trip. Resolving athlete -> user is the consumer's job, and so is
+ * the dedupe. Named, because a Gave up row reads one back (R-119).
+ */
+const reminderJobSchema = jobSchema("strava_reminder", {
+  athleteId: z.string().min(1),
+  objectId: z.string().min(1),
+  aspectType: z.string().min(1),
+  eventTime: z.number().int(),
+});
+
+/**
 Each variant is one `jobSchema(...)` call in this array, with its reason
 beside it. The only thing that differs between variants is the literal and
 its fields, and the array says exactly that.
@@ -29,18 +44,8 @@ export const importsQueueMessageSchema = z.discriminatedUnion("type", [
     importId: z.string().min(1),
   }),
 
-  // Strava reminder (D-33): carries the recipient and a dedupe subject
-  // only — never distance, pace, time, or any other activity attribute.
-  // Carries the *athlete* id, not a userId: the webhook enqueues before it
-  // knows which user this is, so that the HTTP response does not wait on
-  // a database round trip. Resolving athlete -> user is the consumer's
-  // job, and so is the dedupe.
-  jobSchema("strava_reminder", {
-    athleteId: z.string().min(1),
-    objectId: z.string().min(1),
-    aspectType: z.string().min(1),
-    eventTime: z.number().int(),
-  }),
+  // Strava reminder (D-33): see `reminderJobSchema` above.
+  reminderJobSchema,
 
   // Revoking a Strava grant after the user has already been disconnected
   // locally. Carries only the outbox row id: the token lives in
@@ -84,19 +89,20 @@ export type DeauthorizeJob = Extract<
 >;
 
 /**
- * A dead-lettered reminder's key on the Desk's Gave up (R-119): the job
- * itself, written out field by field so the same job is always the same
- * string. A reminder that never landed has no row anywhere else to point
- * at, so the job is both the row's identity and what its Retry sends.
+ * A dead-lettered reminder's key on the Desk's Gave up (R-119): the job's
+ * fields, as a query string, in a fixed order so the same job is always
+ * the same key. A reminder that never landed has no row anywhere else to
+ * point at, so the job is both the row's identity and what its Retry
+ * sends. A query string rather than JSON because reading one back cannot
+ * throw.
  */
 export function reminderSubject(job: ReminderJob): string {
-  return JSON.stringify({
-    type: job.type,
+  return new URLSearchParams({
     athleteId: job.athleteId,
     objectId: job.objectId,
     aspectType: job.aspectType,
-    eventTime: job.eventTime,
-  });
+    eventTime: String(job.eventTime),
+  }).toString();
 }
 
 /**
@@ -105,12 +111,12 @@ export function reminderSubject(job: ReminderJob): string {
  * a key that is not one.
  */
 export function reminderFromSubject(subject: string): ReminderJob | undefined {
-  let value: unknown;
-  try {
-    value = JSON.parse(subject);
-  } catch {
-    return undefined;
-  }
-  const job = importsQueueMessageSchema.safeParse(value).data;
-  return job?.type === "strava_reminder" ? job : undefined;
+  const fields = new URLSearchParams(subject);
+  return reminderJobSchema.safeParse({
+    type: "strava_reminder",
+    athleteId: fields.get("athleteId"),
+    objectId: fields.get("objectId"),
+    aspectType: fields.get("aspectType"),
+    eventTime: Number(fields.get("eventTime")),
+  }).data;
 }

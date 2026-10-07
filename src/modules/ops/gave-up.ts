@@ -113,51 +113,48 @@ export function doingOf(
         : "Read a run file whose import is gone";
     }
     case "reminder": {
-      const athleteId = reminderFromSubject(row.subjectId)?.athleteId ?? "";
-      return `Remind ${who(facts.athletes.get(athleteId))} about a new run on Strava`;
+      const job = reminderFromSubject(row.subjectId);
+      const handle =
+        job === undefined ? undefined : facts.athletes.get(job.athleteId);
+      return `Remind ${who(handle)} about a new run on Strava`;
     }
   }
-}
-
-function subjectsOf(
-  rows: readonly { kind: GaveUpKind; subjectId: string }[],
-  kind: GaveUpKind,
-): string[] {
-  return rows.filter((row) => row.kind === kind).map((row) => row.subjectId);
 }
 
 /**
  * The facts each row's sentence needs, in one round trip: every lookup is
  * by primary key or an index (`product_snapshots_product_fetched`,
- * `strava_connections_athlete`), over the ids on this page only.
+ * `strava_connections_athlete`), over the ids on this page only. Each
+ * lookup is handed every subject on the page, whatever its kind: the ids
+ * are ULIDs, so a run's id finds no product, and one list is fewer things
+ * to get wrong than four filtered ones.
  */
 async function subjectFacts(
   db: Db,
   rows: readonly { kind: GaveUpKind; subjectId: string }[],
 ): Promise<SubjectFacts> {
-  const productIds = subjectsOf(rows, "enrichment");
-  const runIds = subjectsOf(rows, "weather");
-  const importIds = subjectsOf(rows, "import");
-  const athleteIds = subjectsOf(rows, "reminder").flatMap(
-    (subject) => reminderFromSubject(subject)?.athleteId ?? [],
-  );
+  const subjects = rows.map((row) => row.subjectId);
+  const athleteIds = subjects
+    .map((subject) => reminderFromSubject(subject))
+    .filter((job) => job !== undefined)
+    .map((job) => job.athleteId);
   const [productRows, pageRows, runRows, importRows, athleteRows] =
     await db.batch([
       db
         .select({
           id: products.id,
-          name: products.name,
-          // Aliased: D1 returns rows keyed by column name, and both tables
-          // call theirs `name`.
-          brand: sql<string | null>`${brands.name}`.as("brand_name"),
+          // One column, worded in SQL: both tables call theirs `name`, and
+          // D1 hands rows back keyed by column name. A product whose brand
+          // row is gone is named alone.
+          label: sql<string>`coalesce(${brands.name} || ' ', '') || ${products.name}`,
         })
         .from(products)
         .leftJoin(brands, eq(brands.id, products.brandId))
-        .where(inArray(products.id, productIds)),
+        .where(inArray(products.id, subjects)),
       db
         .selectDistinct({ id: productSnapshots.productId })
         .from(productSnapshots)
-        .where(inArray(productSnapshots.productId, productIds)),
+        .where(inArray(productSnapshots.productId, subjects)),
       db
         .select({
           id: runs.id,
@@ -166,12 +163,12 @@ async function subjectFacts(
         })
         .from(runs)
         .leftJoin(userProfiles, eq(userProfiles.userId, runs.userId))
-        .where(inArray(runs.id, runIds)),
+        .where(inArray(runs.id, subjects)),
       db
         .select({ id: imports.id, handle: userProfiles.username })
         .from(imports)
         .leftJoin(userProfiles, eq(userProfiles.userId, imports.userId))
-        .where(inArray(imports.id, importIds)),
+        .where(inArray(imports.id, subjects)),
       db
         .select({
           id: stravaConnections.athleteId,
@@ -185,12 +182,7 @@ async function subjectFacts(
         .where(inArray(stravaConnections.athleteId, athleteIds)),
     ]);
   return {
-    products: new Map(
-      productRows.map((row) => [
-        row.id,
-        row.brand === null ? row.name : `${row.brand} ${row.name}`,
-      ]),
-    ),
+    products: new Map(productRows.map((row) => [row.id, row.label])),
     storedPages: new Set(pageRows.map((row) => row.id)),
     runs: new Map(runRows.map(({ id, ...run }) => [id, run])),
     imports: new Map(importRows.map((row) => [row.id, row.handle])),
@@ -219,7 +211,8 @@ export async function gaveUpJobs(
     tries: row.tries,
     firstFailedAt: row.firstFailedAt,
     lastFailedAt: row.lastFailedAt,
-    hasStoredPage: facts.storedPages.has(row.subjectId),
+    hasStoredPage:
+      row.kind === "enrichment" && facts.storedPages.has(row.subjectId),
   }));
 }
 

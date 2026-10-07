@@ -87,6 +87,17 @@ function rows(): HTMLElement[] {
   return within(section()).queryAllByRole("listitem");
 }
 
+/**
+A server that never answers: the press stays in flight.
+*/
+function never(): Promise<unknown> {
+  return new Promise<unknown>(() => {
+    /*
+    Never settles.
+    */
+  });
+}
+
 describe("Gave up, on Today", () => {
   it("is one line at zero, with no count", () => {
     renderToday([]);
@@ -299,12 +310,7 @@ describe("Gave up, on Today", () => {
 
   it("breathes on the pressed control while it waits, and only that one", () => {
     renderToday([job({ id: "a" }), job({ id: "b" })], {
-      retry: () =>
-        new Promise<unknown>(() => {
-          /*
-          Never answers: the press stays in flight.
-          */
-        }),
+      retry: never,
     });
 
     const [first, second] = rows();
@@ -321,6 +327,38 @@ describe("Gave up, on Today", () => {
     expect(
       within(second ?? document.body).getByRole("button", { name: /^Retry/u }),
     ).not.toHaveAttribute("aria-busy");
+  });
+
+  it.each([
+    ["Drop", /^Drop/u, "drop"],
+    ["Re-run extraction", /^Re-run extraction/u, "retry"],
+  ] as const)(
+    "breathes on %s alone while it waits, unavailable to a second press",
+    (_, name, handler) => {
+      renderToday([job({ id: "a", kind: "enrichment", hasStoredPage: true })], {
+        [handler]: never,
+      });
+
+      const pressed = screen.getByRole("button", { name });
+      fireEvent.click(pressed);
+
+      expect(pressed).toHaveAttribute("aria-busy", "true");
+      expect(pressed).toHaveAttribute("aria-disabled", "true");
+      const others = screen
+        .getAllByRole("button")
+        .filter((button) => button !== pressed);
+      for (const other of others) {
+        expect(other).not.toHaveAttribute("aria-busy");
+      }
+    },
+  );
+
+  it("keeps Drop quiet: bare muted text, never a pill", () => {
+    renderToday([job()]);
+
+    const drop = screen.getByRole("button", { name: /^Drop/u });
+    expect(drop).toHaveClass("text-muted");
+    expect(drop).not.toHaveClass("rounded-pill");
   });
 
   it("says a failed retry under its own row, and Try again repeats it", async () => {

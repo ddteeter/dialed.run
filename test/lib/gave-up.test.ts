@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import {
-  DEAD_LETTER_REASON,
   gaveUpClear,
   gaveUpUpsert,
   giveUpEach,
@@ -154,7 +153,11 @@ describe("giveUpEach", () => {
 
     const gaveUpAs = await gaveUpRow("import", id);
     expect(gaveUpAs?.rawError).toBeNull();
-    expect(gaveUpAs).toMatchObject({ reason: DEAD_LETTER_REASON, tries: 4 });
+    expect(gaveUpAs).toMatchObject({
+      reason:
+        "It failed every try the queue gives a job, so the queue stopped. Each error is in Sentry.",
+      tries: 4,
+    });
     const [row] = await db().select().from(imports).where(eq(imports.id, id));
     expect(row).toBeDefined();
     expect(message.ack).toHaveBeenCalledTimes(1);

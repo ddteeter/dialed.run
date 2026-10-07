@@ -119,7 +119,6 @@ export function DefaultCard(): JSX.Element {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-end",
-          gap: 24 * DEFAULT_SCALE,
         }}
       >
         <span

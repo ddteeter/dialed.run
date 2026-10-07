@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   gaveUp,
@@ -148,6 +148,10 @@ const REMINDER = {
   eventTime: 1_700_000_000,
 } as const;
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 beforeEach(async () => {
   await db().delete(gaveUp);
   await db().delete(userProfiles);
@@ -163,13 +167,11 @@ describe("gaveUpJobs", () => {
     const shoe = await product();
     const runId = await failedRun(sam);
     const upload = await failedImport(sam);
-    await db()
-      .insert(stravaConnections)
-      .values({
-        userId: sam,
-        athleteId: REMINDER.athleteId,
-        refreshToken: "r",
-      });
+    await db().insert(stravaConnections).values({
+      userId: sam,
+      athleteId: REMINDER.athleteId,
+      refreshToken: "r",
+    });
     const now = nowSeconds();
     await gaveUpFor("weather", runId, now - 40);
     await gaveUpFor("enrichment", shoe.id, now - 10);
@@ -516,5 +518,62 @@ describe("dropGaveUp", () => {
 
     await dropGaveUp(id);
     await expect(dropGaveUp(id)).resolves.toBeUndefined();
+  });
+});
+
+describe("retryGaveUp with the Worker's own deps", () => {
+  it("reaches the core database and the queues the Worker binds", async () => {
+    const runId = await failedRun(await runner("live"));
+    const id = await gaveUpFor("weather", runId);
+
+    expect(await retryGaveUp({ id, step: "again" })).toBe("retried");
+
+    expect(await gaveUpRow("weather", runId)).toBeUndefined();
+  });
+
+  it("hands the stored page to enrichment's own extraction, model and all", async () => {
+    // The test pool's model key is a placeholder, so the model refuses:
+    // which proves the stored page reached enrichment's real deps, and
+    // that a failed re-run keeps the row for another press.
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("{}", { status: 401 }),
+    );
+    const shoe = await product();
+    const r2Key = `snapshots/${shoe.id}/live.html`;
+    await env.MEDIA.put(r2Key, "<html><head><title>Tee</title></head></html>");
+    await db().insert(productSnapshots).values({
+      id: newUlid(),
+      productId: shoe.id,
+      url: "https://janji.example/afo",
+      r2Key,
+      rung: "none",
+      fetchedAt: Date.now(),
+    });
+    const id = await gaveUpFor("enrichment", shoe.id);
+
+    await expect(retryGaveUp({ id, step: "extract" })).rejects.toThrow(
+      "Model returned 401",
+    );
+
+    expect(await gaveUpRow("enrichment", shoe.id)).toBeDefined();
+  });
+});
+
+describe("a stored page is enrichment's alone", () => {
+  it("says no stored page for another job whose subject a product shares", async () => {
+    const shoe = await product();
+    await db().insert(productSnapshots).values({
+      id: newUlid(),
+      productId: shoe.id,
+      url: "https://janji.example/afo",
+      r2Key: "snapshots/y",
+      rung: "none",
+      fetchedAt: Date.now(),
+    });
+    await gaveUpFor("weather", shoe.id);
+
+    const [found] = await gaveUpJobs();
+
+    expect(found?.hasStoredPage).toBe(false);
   });
 });

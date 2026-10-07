@@ -179,15 +179,17 @@ function JobControl({
 interface JobRowProps {
   readonly job: GaveUpJob;
   readonly asOf: number;
-  readonly pressed: Press | undefined;
-  readonly pending: boolean;
+  /**
+  The press still waiting on the server, on whichever row: none at rest.
+  */
+  readonly inFlight: Press | undefined;
   readonly band: ReactNode;
   readonly onPress: (control: Press["control"]) => void;
 }
 
-function JobRow({ job, asOf, pressed, pending, band, onPress }: JobRowProps) {
+function JobRow({ job, asOf, inFlight, band, onPress }: JobRowProps) {
   const isPending = (control: Press["control"]) =>
-    pending && pressed?.id === job.id && pressed.control === control;
+    inFlight?.id === job.id && inFlight.control === control;
   const tries = job.tries === 1 ? "1 try" : `${String(job.tries)} tries`;
   const isEnrichment = job.kind === "enrichment";
   return (
@@ -319,8 +321,7 @@ function GaveUp({
               key={job.id}
               job={job}
               asOf={asOf}
-              pressed={pressed}
-              pending={action.pending}
+              inFlight={action.pending ? pressed : undefined}
               band={
                 pressed?.id === job.id ? (
                   <ControlFailureBand

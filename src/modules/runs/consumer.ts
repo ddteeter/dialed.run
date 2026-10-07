@@ -441,29 +441,23 @@ export async function handleImportsDlqBatch(
     tries,
     "dead-lettered dialed-imports message",
     async (job) => {
-      switch (job.type) {
-        case "strava_deauthorize": {
-          await deauthorizeAthlete(
-            deps.db,
-            job.athleteId,
-            job.eventTime,
-            deps.owe,
-          );
-          return;
-        }
-        case "strava_reminder": {
-          return {
-            subject: { kind: "reminder", subjectId: reminderSubject(job) },
-            writes: [],
-          };
-        }
-        case "import": {
-          return deadImportWrites(deps, job.importId);
-        }
-        case "strava_revoke": {
-          return;
-        }
+      if (job.type === "strava_deauthorize") {
+        await deauthorizeAthlete(
+          deps.db,
+          job.athleteId,
+          job.eventTime,
+          deps.owe,
+        );
+        return;
       }
+      if (job.type === "strava_reminder") {
+        return {
+          subject: { kind: "reminder", subjectId: reminderSubject(job) },
+          writes: [],
+        };
+      }
+      if (job.type === "import") return deadImportWrites(deps, job.importId);
+      // A revoke: its `strava_revocations` row is its own record.
     },
   );
 }
