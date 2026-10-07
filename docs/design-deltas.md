@@ -402,7 +402,8 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
 30. **Two feed words round 26 asks for and does not give (task 129).**
     **CLOSED by round 27 (item 25): "Most"/"Some", plus "Split" on a tied
     lead and "All" alone; the bell's name says "more than 9 new" above 9.
-    Not built.**
+    Not built.** **The bar words are built (design PR D, 2026-10-07); the
+    bell's name is not (R-141).**
     - **The consensus bar's word.** Round 26 #9 puts a word on each
       consensus bar so colour is never alone (rule 10). The build reads
       "Most" on the leading bar and "Some" on the rest
@@ -424,7 +425,8 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     **ANSWERED by round 28 (items 5 and 14): W3 stays open until "Use this
     photo"; the photo button's glyph is `remove`, the cells' tick is
     `check`. Not built.** **W3's confirm is built (design PR A, 2026-10-06;
-    round 28 #5 below, R-113 closed).** Each is
+    round 28 #5 below, R-113 closed).** **The deletes, the glyph and the bodies are
+    built (design PR D, 2026-10-07).** Each is
     composed from existing primitives and copy in the system; none adds a
     glyph, colour or motion.
     - **The delete links.** "Delete this entry", "Delete photo {n}" at the
@@ -1061,6 +1063,26 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       deciding a row opens the row that takes its place (the next, or the
       one before when it was the last), and deciding the last row focuses
       the "Nothing waiting" line.
+
+53. **What design PR D built beside the Feed board and rounds 27–29's feed
+    rulings (task 129, 2026-10-07).** Composed from existing primitives,
+    T1 roles and the icon manifest; no new glyph, colour or motion.
+    - **The photo delete button's ground.** Round 27 #26 draws "a 44×44
+      icon button, top-right of each photo" and round 28 #14 names the
+      `remove` glyph; neither draws what it sits on. It is a `--ground`
+      pill with the glyph in ink at 20px, as D's `1 / 2` counter already
+      sits on `--ground`. **The ask:** the fill and inset, if not that.
+    - **The tag's accessible name inside the card's link.** The brackets
+      are hidden from assistive tech and the sentence ("Under review, only
+      you can see this") is said in their place, so the card link reads
+      "@handle, …, Under review, only you can see this". **The ask:** none
+      unless design wants the sentence elsewhere.
+    - **`[UNDER REVIEW]` on G's Recent entries** sits after the entry's
+      label, inside its link — round 28 #6 says G uses the tag but G's row
+      is not drawn with one. **The ask:** its place on the row.
+    - **The card's `1 / N` on a lone photo** reads `1 / 1`, as D's pager
+      does; the board draws only a two-photo card. **The ask:** none
+      unless a lone photo should carry no counter.
 
 ## Answered in round 34 (imported 2026-10-04)
 
@@ -2184,7 +2206,11 @@ JOBS · OLDEST 2D]`. It shows the two newest jobs, then "+ N MORE · SHOW
    unchanged apart from item 1's kicker. _Build:_ 129, S.
    `feed/components/UnderReview.tsx` moves from muted to ink, into the
    SHARED slot, and takes that accessible name. D's band is still round 28
-   #6's unbuilt work, and the closet's run list is 128's.
+   #6's unbuilt work, and the closet's run list is 128's. **Built in design PR D
+   (2026-10-07):** the tag sits in the author row before the badge, ink
+   MONO.xs, its brackets hidden from assistive tech and the sentence said
+   instead (`feed/components/UnderReview.tsx`, `PostCard.tsx`); G's
+   Recent entries carry it too.
 5. **D7's revoked row, from T1 roles (D-92).** _Redrawn without opacity._
    The code is in `--quiet` with a line-through, `REVOKED` is in `--quiet`
    MONO.xs, and "Undo" is ink, semibold and underlined. After 10 seconds
@@ -2405,7 +2431,13 @@ colours are not T1 roles. `#E3E2D8` is `--photo`'s light value, whose job is
 `#1C1C22` and `--photo` is `#24242B`). The contract wins, so the gutter is
 built from a T1 role or waits for design to name one. The desk match block's
 12px radius is `RADIUS.card`. _Build:_ 129, S to M: audit the feed against
-this board, which is now its composition truth.
+this board, which is now its composition truth. **Audited in design PR D
+(2026-10-07):** built to it — the own card's `· YOU` and `[UNDER REVIEW]`,
+ the card photo's `1 / N`, Split and All, and RADIUS.card on the desk match
+block; the rest already matched. Not built: the 10px gutter, which waits
+for design to name a T1 role (posts keep their hairline meanwhile).
+`e2e/conformance/feed-board.conformance.spec.ts` compares the own card
+against the board.
 
 **Conflicts for the owner.** None of these was adopted by the import. Each
 quotes both sides and ends with a recommendation. **All four are resolved
@@ -2620,7 +2652,11 @@ CHECKED` band still says "usually within a day". #28's line is item 6.
    their change. **Left for the hosts (design PRs C and D):** W3 still
    renders inline where the host puts it, not in a sheet. The undrawn
    states this needed are item 50.
-
+   **AttachKit's host, built in design PR D (2026-10-07):** W3 in
+   `ui/Sheet`, named "Check the blur", over A2 (`feed/components/AttachKit.tsx`).
+   Any close of the sheet, Esc included, is Cancel; Use this photo and
+   Cancel return focus to the well. `PhotoBlur` is unchanged. The closet's
+   host is design PR C's.
 6. **Under review, as the author sees it.** _Drawn:_ "Feed own under
    review" and "D own under review". The card carries a hi-viz `UNDER
 REVIEW` tag where its SHARED label would be, with no sentence. D carries a
@@ -2635,7 +2671,10 @@ REVIEW` tag where its SHARED label would be, with no sentence. D carries a
    `[UNDER REVIEW]` in muted bracket notation) becomes the tag on `PostCard`
    and the profile, and the band on `EntryDetail`. The closet's run list is
    128's. **The bracket form is D-67's wording, and it stays (D-90)**: the
-   tag is `[UNDER REVIEW]`, not the board's plain tag.
+   tag is `[UNDER REVIEW]`, not the board's plain tag. **Built in design PR D
+   (2026-10-07):** the tag on the card and on G (round 29 #4's ink form),
+   and `HIDDEN WHILE WE CHECK` at the top of D in safety's `NoticeBand`,
+   which the route hands to `EntryDetail`; D no longer shows the tag.
 7. **Settings › About.** _Drawn:_ "U1 About launch" and "U1 About full". An
    ABOUT group sits after Strava and before Log out, with one row per page
    that exists. **Privacy policy** · "What we keep, and who sees it" ships
@@ -2765,7 +2804,11 @@ COPIED` · "Copying didn't work here. The link is selected: copy it
     apart. _Build:_ 129. `feed/components/RunnerAtHandle.tsx` already matches.
     Check that an unknown handle reaches the same page rather than a 404 or a
     redirect (`feed/redirect.ts`' `orHandlePage`). The back link takes the
-    `back` glyph (#9).
+    `back` glyph (#9). **Built in design PR D (2026-10-07):** it redirected
+    to /feed; `orHandlePage` now shows the page. A runner the viewer may not
+    see (banned, unconfirmed, leaving, blocked or reported) already shares
+    the never-held answer, so it gets the same page, and none can be told
+    apart. The viewer's own handle still goes to G.
 12. **"Keep your account?"** _Confirmed, with the body amended:_ it now ends
     "Keep it and your runs, closet and entries come back as they were.", so
     it no longer promises Strava back. The Strava line stays, in TYPE.small,
@@ -2795,7 +2838,8 @@ COPIED` · "Copying didn't work here. The link is selected: copy it
       again?" (built: "Photo kept"). _Build:_ 128 (`GarmentForm.tsx`,
       `GarmentDetail.tsx`). `feed/components/RetractEntry.tsx` also says
       "Photo kept" when D's photo delete fails. The ruling does not name it,
-      but the same rule makes it `PHOTO STILL ON`.
+      but the same rule makes it `PHOTO STILL ON`. **Built in design PR D
+      (2026-10-07)** for D's photo delete.
 14. **Odds and ends.**
     - **Desk destinations:** _Five, in this order:_ Today, Review, Access,
       Duplicates, Runners. That is the queues that need a person first, then
@@ -2805,7 +2849,9 @@ COPIED` · "Copying didn't work here. The link is selected: copy it
       the owner adopted it (D-87).** _Build:_ 125 (`ops/components/DeskShell.tsx`'s
       order; Gave up moves off the rail and onto `Today.tsx`).
     - **Photo-delete glyph:** `remove` (keywords: delete, trash, bin). The
-      accessible name stays "Delete photo 2". _Build:_ 128.
+      accessible name stays "Delete photo 2". _Build:_ 128. **Built in design PR D
+      (2026-10-07)** on D's photos (`feed/components/RetractEntry.tsx`'s
+      `DeletePhoto`); the closet's photo has no delete button to take it.
     - **Blur cell check:** the pack's `check` at 20px, paper on ink. _Build:_
       128 (`PhotoBlur.tsx`'s `BlurCells`).
 15. **Export states.** _Three confirmed, two redrawn,_ in "U1 export
@@ -3199,7 +3245,11 @@ feed. "ui/shared" means `src/ui`, which 125 holds as the platform lane.
     bar, and a single bar reads "All". The bell reads "Notifications, 3
     new", and above 9, "Notifications, more than 9 new", not "9+". The dot
     never draws a digit. _Build:_ 129 (`BAR_WORD` gains Split and All; the
-    bell's name above 9).
+    bell's name above 9). **The bar words are built in design PR D
+    (2026-10-07)** (`feed/bar-share.ts`): Split on each bar tied for the
+    lead, All on a lone bar, otherwise Most above half and Some; every word
+    but Some is pink. The bell's name above 9 is notifications', and still
+    says "9+" (R-141).
 26. **Deletes.** _Drawn:_ "Delete entry sheet", "Delete run sheet", "Delete
     photo sheet" and the D owner foot. Entry and run deletes are text links
     at the foot under a `YOURS` kicker (with "Edit this entry" above), for
@@ -3215,7 +3265,11 @@ feed. "ui/shared" means `src/ui`, which 125 holds as the platform lane.
 
     _Build:_ 128 (`RetractEntry`, the photo button), 127 (`DeleteRun`), and
     ui/shared (`ConfirmSheet` copy slots). **The board names no glyph for
-    the photo button**; the pack has `remove` and `close`.
+    the photo button**; the pack has `remove` and `close`. **Built in design PR
+    D (2026-10-07):** YOURS over "Delete this entry" at D's foot, `remove`
+    top right on each owner's photo, and the entry and photo bodies and
+    verbs as drawn. "Edit this entry" has no screen to open yet, so it is
+    absent (R-141).
 
 27. **W3's keyboard blur cells.** _Redrawn:_ a 3×3 grid of 44px square
     cells that maps the photo, not a row of pills. A pressed cell is ink
