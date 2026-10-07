@@ -91,6 +91,12 @@ describe("RetractEntry: D's foot (round 27 #26)", () => {
       expect(onRetracted).toHaveBeenCalledTimes(1);
     });
     expect(retract).toHaveBeenCalledWith({ data: { entryId: "01ENTRY" } });
+    // Done, the sheet closes: nothing is left to ask.
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("heading", { name: "Delete this entry?" }),
+      ).toBeNull();
+    });
   });
 
   it("keeps the sheet open with the failure when the delete fails", async () => {
