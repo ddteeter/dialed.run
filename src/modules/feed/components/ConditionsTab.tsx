@@ -20,6 +20,8 @@ import {
 } from "../../../ui";
 import type { Place } from "../../onboarding";
 import type { ConsensusBand, ConsensusResult } from "../consensus";
+import { withShares } from "../bar-share";
+import type { BarShare } from "../bar-share";
 import { uiGroupLabels } from "../groups";
 import type { ConditionsHome } from "../home";
 import { BracketHeadline } from "./BracketHeadline";
@@ -388,15 +390,21 @@ function TooFew({
 
 /**
  * A bar's colour in words (round 26 #9: *"Any bar colour also needs a
- * label in words"*, rule 10). Pink is more than half the runners who
- * matched; the hairline fill is fewer. Placeholder words pending design.
+ * label in words"*, rule 10), in round 27 #25's words: which bar gets
+ * which is `barShares`. Pink is every word but Some.
  */
-const BAR_WORD = { most: "Most", some: "Some" } as const;
-const BAR_FILL = { most: "bg-action", some: "bg-hairline-2" } as const;
-
-function barShare(runners: number, total: number): keyof typeof BAR_WORD {
-  return runners * 2 > total ? "most" : "some";
-}
+const BAR_WORD = {
+  all: "All",
+  split: "Split",
+  most: "Most",
+  some: "Some",
+} as const satisfies Record<BarShare, string>;
+const BAR_FILL = {
+  all: "bg-action",
+  split: "bg-action",
+  most: "bg-action",
+  some: "bg-hairline-2",
+} as const satisfies Record<BarShare, string>;
 
 /**
  * No reading has come in for where the runner is — or all we have is a
@@ -435,6 +443,7 @@ function Matched({
 }>) {
   const isWidened = result.windowDays === 14;
   const conditions = matchedConditions(result.band, units);
+  const bars = withShares(result.groups, result.runners);
   return (
     <div className="flex flex-col">
       <div
@@ -461,8 +470,7 @@ function Matched({
           <>
             <Eyebrow>What they wore</Eyebrow>
             <ul className="m-0 flex list-none flex-col gap-2 p-0">
-              {result.groups.map((row) => {
-                const share = barShare(row.runners, result.runners);
+              {bars.map(({ row, share }) => {
                 return (
                   <li
                     key={row.group}

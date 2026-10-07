@@ -506,6 +506,46 @@ describe("ConditionsTab: matched", () => {
     expect(screen.getByText("What they wore")).toBeVisible();
   });
 
+  it("says Split on a tied lead and All on a bar alone, both in pink (round 27 #25)", async () => {
+    const tied = {
+      ...matched,
+      groups: [
+        { group: "tops", runners: 3 },
+        { group: "bottoms", runners: 3 },
+        { group: "shoes", runners: 2 },
+      ],
+    } as const;
+    const { unmount } = await renderFeedScreen(
+      tab({ conditionsFor: () => Promise.resolve(tied) }),
+    );
+    const rows = await screen.findAllByRole("listitem");
+    expect(rows.map((row) => row.textContent)).toStrictEqual([
+      "TopsSplit3/6",
+      "BottomsSplit3/6",
+      "ShoesSome2/6",
+    ]);
+    const fills = rows.map((row) => row.querySelector(":scope > span > span"));
+    expect(fills[0]).toHaveClass("bg-action");
+    expect(fills[1]).toHaveClass("bg-action");
+    expect(fills[2]).toHaveClass("bg-hairline-2");
+    unmount();
+
+    await renderFeedScreen(
+      tab({
+        conditionsFor: () =>
+          Promise.resolve({
+            ...matched,
+            groups: [{ group: "tops", runners: 2 }] as const,
+          }),
+      }),
+    );
+    const [alone] = await screen.findAllByRole("listitem");
+    expect(alone).toHaveTextContent("TopsAll2/6");
+    expect(alone?.querySelector(":scope > span > span")).toHaveClass(
+      "bg-action",
+    );
+  });
+
   it("credits Visual Crossing beside the conditions it shows (FEED-8)", async () => {
     await renderFeedScreen(
       tab({ conditionsFor: () => Promise.resolve(matched) }),
