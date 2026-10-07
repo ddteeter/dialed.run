@@ -241,12 +241,51 @@ describe("GarmentForm: a picked photo", () => {
       "src",
       "blob:blurred",
     );
+    // Focus was on the step; Use this photo hands it back to the well —
+    // the filled well's Replace, a different input from the one that
+    // opened the step.
+    expect(fileInput()).toHaveFocus();
 
     await user.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => {
       expect(onSaved).toHaveBeenCalled();
     });
     expect(uploadPhoto.mock.calls[0]?.[0].data.get("photo")).toBe(blurred);
+  });
+
+  it("closes W3 on its Cancel and keeps nothing (round 28 #5)", async () => {
+    const user = userEvent.setup();
+    const createObjectURL = vi
+      .spyOn(URL, "createObjectURL")
+      .mockReturnValue("blob:blurred");
+    let cancel: (() => void) | undefined;
+    const { uploadPhoto, onSaved } = renderForm({
+      renderStep: (file, _onReady, _announce, onCancel) => {
+        cancel = onCancel;
+        return <p>Step for {file.name}</p>;
+      },
+    });
+
+    await user.upload(fileInput(), png("face.png"));
+    expect(screen.getByText("Step for face.png")).toBeVisible();
+    // W3 takes focus to its heading when it opens.
+    act(() => {
+      fileInput().blur();
+    });
+    act(() => {
+      cancel?.();
+    });
+
+    expect(screen.queryByText("Step for face.png")).toBeNull();
+    // Cancel (and Esc, which is Cancel) closes back onto the well.
+    expect(fileInput()).toHaveFocus();
+    expect(well()).toHaveAttribute("data-state", "empty");
+    expect(createObjectURL).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalled();
+    });
+    expect(uploadPhoto).not.toHaveBeenCalled();
   });
 
   it("shows the upload in the well while the save carries it, and only then", async () => {

@@ -1,3 +1,28 @@
+<!--
+  Publishing this text (task 126, ACC-13; D-93). /terms shows this file,
+  and the terms prompt asks runners to accept it, only once its first
+  lines are front matter opening with `published: true`, with nothing
+  above them:
+
+  ---
+  published: true
+  ---
+
+  A later version can say what changed, one to three plain lines, beside
+  the mark (round 29 #6). The prompt shows them as WHAT CHANGED to a
+  runner who accepted an earlier version, and leaves the block out when
+  there are none, as for version 1:
+
+  ---
+  published: true
+  changed:
+    - The first thing that changed.
+  ---
+
+  Any other line in the front matter keeps the text unpublished. The page
+  never shows the front matter or this note.
+-->
+
 > **DRAFT: not reviewed by a lawyer.** Written from the code on `main` as of
 > 2026-09-29, and from the owner's decisions, for the owner to edit. Every
 > `[OWNER: …]` note is a decision or a fact the code cannot supply. Every

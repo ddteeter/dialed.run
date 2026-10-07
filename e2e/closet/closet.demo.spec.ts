@@ -3,8 +3,9 @@
  * 17), Y (garment detail, round 22 `#y`: the photo well, Remove, the
  * retire confirm), §AG (what a garment is made of), §AH (colour as a
  * constraint), round 26 #3 (Y · delete with runs), #4 (F · saved, photo
- * refused), #9 (Show retired (N), "← Closet"), #10 (F at the desk) and
- * R-137 (a brand written in any script) —
+ * refused), #9 (Show retired (N), "← Closet"), #10 (F at the desk),
+ * R-137 (a brand written in any script) and round 28 #5 (W3 confirm:
+ * Check the blur, Pick another, Use this photo) —
  * one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
@@ -64,6 +65,17 @@ async function hydrated(page: import("@playwright/test").Page): Promise<void> {
  */
 const PNG_1X1 = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+  "base64",
+);
+
+/**
+ * A real 2x1 PNG, for Pick another: a different shape from `PNG_1X1`, so
+ * the photo that ends up attached can be told apart from the first by its
+ * proportions alone — the blur step redraws both, so neither name nor
+ * bytes survive it.
+ */
+const PNG_2X1 = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAADUlEQVR4nGP4zwAE/wEHAAH/4iOeWQAAAABJRU5ErkJggg==",
   "base64",
 );
 
@@ -153,14 +165,59 @@ test("add garments with product identity -> detail in round 22's order -> retire
   const well = page.locator("[data-part='photo-well']");
   await expect(well).toHaveAttribute("data-state", "empty");
   await page.setInputFiles('[data-part="photo-well"] input[type="file"]', {
-    name: "houdini.png",
+    name: "houdini-first.png",
     mimeType: "image/png",
     buffer: PNG_1X1,
   });
+  // Round 28 #5: W3 stays open once auto-blur paints, and nothing is
+  // attached until Use this photo. Pick another swaps the photo in place.
+  await scene(page, "W3 · check the blur: it waits for your choice");
+  const use = page.getByRole("button", { name: "Use this photo" });
+  await expect(
+    page.getByRole("heading", { name: "Check the blur" }),
+  ).toBeFocused();
+  await expect(use).not.toHaveAttribute("aria-disabled", "true", {
+    timeout: 20_000,
+  });
+  await expect(well).toHaveAttribute("data-state", "uploading");
+  const choosing = page.waitForEvent("filechooser");
+  await page
+    .locator("[data-part='photo-check']")
+    .getByText("Pick another", { exact: true })
+    .click();
+  const chooser = await choosing;
+  await chooser.setFiles({
+    name: "houdini.png",
+    mimeType: "image/png",
+    buffer: PNG_2X1,
+  });
+  await expect(use).not.toHaveAttribute("aria-disabled", "true", {
+    timeout: 20_000,
+  });
+  await use.click();
+  await expect(
+    page.getByRole("heading", { name: "Check the blur" }),
+  ).toHaveCount(0);
   await expect(well).toHaveAttribute("data-state", "filled", {
     timeout: 20_000,
   });
-  await expect(well.locator('img[src^="blob:"]')).toBeVisible();
+  const preview = well.locator('img[src^="blob:"]');
+  await expect(preview).toBeVisible();
+  // The photo attached is the one Pick another chose, not the first: it
+  // is the 2x1 one, twice as wide as it is tall.
+  await expect
+    .poll(() =>
+      preview.evaluate((image: HTMLImageElement) =>
+        image.naturalHeight === 0
+          ? 0
+          : image.naturalWidth / image.naturalHeight,
+      ),
+    )
+    .toBe(2);
+  // Use this photo closes W3 back onto the well — its Replace, now.
+  await expect(
+    page.locator("[data-part='well-actions'] input[type='file']"),
+  ).toBeFocused();
 
   await page.getByRole("button", { name: "Add to closet" }).click();
   await expect(
@@ -333,6 +390,11 @@ test("add garments with product identity -> detail in round 22's order -> retire
     mimeType: "image/png",
     buffer: PNG_1X1,
   });
+  // W3 waits for the runner (round 28 #5): nothing is attached until
+  // Use this photo, which waits behind aria-disabled while it blurs.
+  await page
+    .getByRole("button", { name: "Use this photo" })
+    .click({ timeout: 20_000 });
   await expect(well).toHaveAttribute("data-state", "filled", {
     timeout: 20_000,
   });

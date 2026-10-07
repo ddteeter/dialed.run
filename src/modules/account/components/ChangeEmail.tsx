@@ -37,7 +37,7 @@ class PasswordRefused extends Error {
  * the link went and that nothing has changed yet. Waits for a confirmed
  * address (round 26 #11; D-113): the button draws at full strength, and
  * the server's refusal opens the root's "Confirm your email first" with
- * the address alone. Asks for the current password, as
+ * the email change's own lead. Asks for the current password, as
  * Change password does: an open session alone must not be able to move
  * the account's address.
  */
@@ -68,6 +68,9 @@ export function ChangeEmail({
     },
     successMessage: "Link sent.",
     onSuccess: setOutcome,
+    // Refused for an unconfirmed address, the sheet leads with "Confirm
+    // this address before you change it." (round 29 #11).
+    confirmTrigger: "email-change",
     // Nothing was sent, so nothing is announced as sent: the hour's limit
     // draws its own band (#139's refusal path).
     refusal: {

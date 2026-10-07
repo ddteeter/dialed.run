@@ -43,13 +43,21 @@ export function limitedMessage(until: number): string {
  *
  * It carries the screen's status region, since every screen it sits on has
  * no other.
+ *
+ * **Two looks, one control** (round 29 #12): the text link in the band
+ * and on Au4, and on the "Confirm your email first" sheet an outline pill
+ * at the control height, because there it is the sheet's only real action
+ * — outline rather than ink, since Not now is the default. Both run the
+ * same three states.
  */
 export function ResendLink({
   email,
   resend,
+  isPill = false,
 }: Readonly<{
   email: string;
   resend: (input: { data: { email: string } }) => Promise<ResendResult>;
+  isPill?: boolean | undefined;
 }>): JSX.Element {
   const [isSent, setIsSent] = useState(false);
   const [limitedUntil, setLimitedUntil] = useState<number | undefined>();
@@ -87,7 +95,7 @@ export function ResendLink({
         onClick={() => {
           void control.run();
         }}
-        className="target cursor-pointer border-none bg-transparent p-0 text-body font-semibold text-ink underline underline-offset-4"
+        className={isPill ? RESEND_PILL : RESEND_LINK}
       >
         <PendingLabel
           label="Resend link"
@@ -117,6 +125,16 @@ export function ResendLink({
     </div>
   );
 }
+
+/**
+ * The two looks: the band's text link, and the sheet's outline pill — a
+ * 1px ink rule, no fill, `HEIGHT.control` (48) high and the sheet's width,
+ * as round 29 #12 draws it.
+ */
+export const RESEND_LINK =
+  "target cursor-pointer border-none bg-transparent p-0 text-body font-semibold text-ink underline underline-offset-4";
+export const RESEND_PILL =
+  "target flex h-12 w-full cursor-pointer items-center justify-center rounded-pill border border-ink bg-transparent px-5 text-body font-bold text-ink";
 
 const SENT_SENTENCE = "A new link is on its way. The old one no longer works.";
 

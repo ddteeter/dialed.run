@@ -1,4 +1,4 @@
-import type { JSX } from "react";
+import type { JSX, Ref } from "react";
 
 import { FieldMessage, inFlight, PendingLabel } from "./form";
 import { Mono } from "./Mono";
@@ -110,6 +110,12 @@ export interface FileWellProps {
   preview?: { src: string; alt: string } | undefined;
   onRemove?: (() => void) | undefined;
   onFiles: (files: FileList | null) => void;
+  /**
+   * The input — the well's control, whichever state it is in. For a host
+   * whose well opens a step (W3's blur) and must take focus back when the
+   * step closes (`useReturnFocus`).
+   */
+  inputRef?: Ref<HTMLInputElement> | undefined;
 }
 
 /**
@@ -145,10 +151,12 @@ export function FileWell({
   preview,
   onRemove,
   onFiles,
+  inputRef,
 }: Readonly<FileWellProps>): JSX.Element {
   const drop = useFileDrop(onFiles);
   const input = (
     <input
+      ref={inputRef}
       type="file"
       accept={accept}
       aria-invalid={error === undefined ? undefined : true}

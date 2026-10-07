@@ -5,6 +5,10 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 
+import {
+  AccountUnlessBehindOnTerms,
+  AccountWhileBehind,
+} from "../../modules/account/components/AccountWhileBehind";
 import { ChangeEmail } from "../../modules/account/components/ChangeEmail";
 import { DeleteAccount } from "../../modules/account/components/DeleteAccount";
 import { ConfirmEmailBand } from "../../modules/account/components/ConfirmEmailBand";
@@ -46,7 +50,9 @@ import { PickedSubPage } from "../../modules/onboarding/components/SettingsSubPa
  * The account's settings pages, one route as Settings' own sections are
  * (ACC-7, ACC-8, ACC-11): U1 Account at `sign-in`, its Email and Password,
  * and Notifications — where every email footer's "Email settings" lands.
- * An unknown section is X1.
+ * An unknown section is X1. Behind on the terms, U1 is read only, with
+ * Sign out everywhere, Get a copy and Delete account live (round 30 #4a;
+ * D-95); the root's gate keeps the other sections closed.
  */
 export const Route = createFileRoute("/account/$section")({
   validateSearch: accountSectionSearch,
@@ -79,82 +85,117 @@ function AccountSectionRoute() {
     },
   });
 
-  return (
-    <BelledLayout unreadCount={unreadCount}>
-      <PickedSubPage
-        section={section}
-        titles={ACCOUNT_SECTION_TITLES}
-        pages={{
-          "sign-in": (
-            <AccountIndex
+  // The three U1 keeps live while the runner is behind on the terms, so
+  // both pages get the same ones.
+  const signOutEverywhereButton = (
+    <SignOutButton
+      isEverywhere
+      signOut={async () => {
+        await signOutEverywhere();
+        await router.invalidate();
+        await navigate({ to: "/" });
+      }}
+    />
+  );
+  const exportRow = (
+    <ExportRow
+      state={page.dataExport}
+      isLinkDead={search.export === "expired"}
+      request={requestExportFn}
+      onRequested={() => router.invalidate()}
+    />
+  );
+  const deletion = (
+    <DeleteAccount
+      hasPassword={page.account.hasPassword}
+      request={requestDeletionFn}
+      reauth={<GoogleButton google={google} />}
+      isReturningFromGoogle={search.deleting === true}
+      onScheduled={async (purgeAfter) => {
+        await router.invalidate();
+        await navigate({
+          to: "/account/leaving",
+          search: { on: purgeAfter },
+        });
+      }}
+    />
+  );
+
+  const pages = {
+    "sign-in": (
+      <AccountUnlessBehindOnTerms
+        isBehind={page.isBehindOnTerms}
+        behind={
+          <AccountWhileBehind
+            account={page.account}
+            username={page.username}
+            isStravaConnected={page.isStravaConnected}
+            signOutEverywhere={signOutEverywhereButton}
+            dataExport={exportRow}
+            deletion={deletion}
+          />
+        }
+      >
+        <AccountIndex
+          account={page.account}
+          username={page.username}
+          confirmBand={
+            <ConfirmEmailBand
               account={page.account}
-              username={page.username}
-              confirmBand={
-                <ConfirmEmailBand
-                  account={page.account}
-                  resend={resendConfirmationFn}
-                />
-              }
-              signOutEverywhere={
-                <SignOutButton
-                  isEverywhere
-                  signOut={async () => {
-                    await signOutEverywhere();
-                    await router.invalidate();
-                    await navigate({ to: "/" });
-                  }}
-                />
-              }
-              dataExport={
-                <ExportRow
-                  state={page.dataExport}
-                  isLinkDead={search.export === "expired"}
-                  request={requestExportFn}
-                  onRequested={() => router.invalidate()}
-                />
-              }
-              deletion={
-                <DeleteAccount
-                  hasPassword={page.account.hasPassword}
-                  request={requestDeletionFn}
-                  reauth={<GoogleButton google={google} />}
-                  isReturningFromGoogle={search.deleting === true}
-                  onScheduled={async (purgeAfter) => {
-                    await router.invalidate();
-                    await navigate({
-                      to: "/account/leaving",
-                      search: { on: purgeAfter },
-                    });
-                  }}
-                />
-              }
+              resend={resendConfirmationFn}
             />
-          ),
-          email: (
-            <ChangeEmail
-              current={page.account.email}
-              request={requestEmailChangeFn}
-            />
-          ),
-          password: <ChangePassword change={changePassword} />,
-          notifications: (
-            <NotificationsForm
-              current={page.notifications}
-              save={saveNotificationSettingsFn}
-              changeEmail={
-                <Link
-                  data-target="inline"
-                  to="/account/$section"
-                  params={{ section: "email" }}
-                  className="font-semibold text-ink underline underline-offset-4"
-                >
-                  Change email
-                </Link>
-              }
-            />
-          ),
-        }}
+          }
+          signOutEverywhere={signOutEverywhereButton}
+          dataExport={exportRow}
+          deletion={deletion}
+        />
+      </AccountUnlessBehindOnTerms>
+    ),
+    email: (
+      <ChangeEmail
+        current={page.account.email}
+        request={requestEmailChangeFn}
       />
-    </BelledLayout>
+    ),
+    password: <ChangePassword change={changePassword} />,
+    notifications: (
+      <NotificationsForm
+        current={page.notifications}
+        save={saveNotificationSettingsFn}
+        changeEmail={
+          <Link
+            data-target="inline"
+            to="/account/$section"
+            params={{ section: "email" }}
+            className="font-semibold text-ink underline underline-offset-4"
+          >
+            Change email
+          </Link>
+        }
+      />
+    ),
+  };
+
+  return (
+    <AccountUnlessBehindOnTerms
+      isBehind={page.isBehindOnTerms}
+      behind={
+        // Round 30 #4a: no tab bar, and back goes to the gate.
+        <PickedSubPage
+          section={section}
+          titles={ACCOUNT_SECTION_TITLES}
+          pages={pages}
+          back="terms"
+        />
+      }
+    >
+      <BelledLayout unreadCount={unreadCount}>
+        <PickedSubPage
+          section={section}
+          titles={ACCOUNT_SECTION_TITLES}
+          pages={pages}
+        />
+      </BelledLayout>
+    </AccountUnlessBehindOnTerms>
   );
 }

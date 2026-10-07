@@ -17,3 +17,6 @@ export { pruneStravaIds } from "./strava/prune";
 // Seam 5 (docs/tasks/125-129): account deletion (task 126, ACC-9) revokes
 // a runner's Strava grant through this, never a second copy of it.
 export { disconnectStrava } from "./strava/oauth";
+// The read-only account page (round 30 #4a) shows whether Strava is
+// connected while the runner is behind on the terms.
+export { isStravaConnected } from "./strava/oauth";

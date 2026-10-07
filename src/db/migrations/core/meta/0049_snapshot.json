@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "181dac3f-54b5-48b5-be94-82cf5da6ca42",
-  "prevId": "8a81ed25-11ec-40b8-a699-2701cda71992",
+  "id": "99e794b7-f2a7-48ab-9e34-831322d281e3",
+  "prevId": "2b230fec-8f5d-4538-b0aa-b77bc187ff6d",
   "tables": {
     "access_requests": {
       "name": "access_requests",
@@ -1616,16 +1616,7 @@
           "autoincrement": false
         }
       },
-      "indexes": {
-        "product_snapshots_product_fetched": {
-          "name": "product_snapshots_product_fetched",
-          "columns": [
-            "product_id",
-            "fetched_at"
-          ],
-          "isUnique": false
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -2344,6 +2335,13 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "how": {
+          "name": "how",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         }
       },

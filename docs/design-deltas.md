@@ -75,7 +75,7 @@ from the other side: _"never a sixth type."_
     **BUILT (design-adoption PR B, 2026-10-06):** `gave_up` records them,
     Today draws round 29 B·2's section with D6's rows, the rail is D-87's,
     and the digest adds its one line. What the build had to say that no
-    board draws is item 50.
+    board draws is item 52.
 
 11. **Call epic screens** (B1/B2, O2, O4, O5) — already drawn; revisit when
     Epic 200 opens, incl. multi-part fabric display on garment/product
@@ -427,7 +427,8 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     is open again with a new ask for design round 28 (decision D-76).**
     **ANSWERED by round 28 (items 5 and 14): W3 stays open until "Use this
     photo"; the photo button's glyph is `remove`, the cells' tick is
-    `check`. Not built.** Each is
+    `check`. Not built.** **W3's confirm is built (design PR A, 2026-10-06;
+    round 28 #5 below, R-113 closed).** Each is
     composed from existing primitives and copy in the system; none adds a
     glyph, colour or motion.
     - **The delete links.** "Delete this entry", "Delete photo {n}" at the
@@ -547,7 +548,10 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     **ANSWERED by round 28 (items 2 and 8), except the content-removed
     email, which round 28 was not asked: the review row's decision bar,
     the takedown form, D8's search states, Reopen and the notice band are
-    drawn, and the ban email's foot is D-73's. Not built.**
+    drawn, and the ban email's foot is D-73's. Not built.** **Design PR A
+    (2026-10-06) built three of them: the row opens itself ("Decide this
+    one" is gone), the CSAM second press with round 29 #3's line, and the
+    notice band's takedown sentence. See round 28 #8 for what is left.**
     - **Review queue decisions.** Each row picks a reason from the removal
       list (the sentence the author is sent, round 27 #20) and offers
       Approve · Remove · Remove as suspected CSAM. Only one row carries the
@@ -792,8 +796,10 @@ WHILE WE CHECK`), which offer no fix and are a different case? Either
     and 17): the prompt is a page with two leads and the owner's WHAT
     CHANGED summary; "Back to contents" and the footer labels are
     confirmed; and `terms.csv` is on the board, with a `how` column. Two
-    parts of the prompt are not adopted, because D-95 and D-96 stand. Not
-    built. Round 30 #4 redraws both parts to D-95 and D-96.** Built from
+    parts of the prompt are not adopted, because D-95 and D-96 stand.
+    Round 30 #4 redraws both parts to D-95 and D-96. Built in design PR E:
+    the prompt to rounds 29–30, `terms.csv`'s `how`, and the read-only
+    `/account`; what it built beside the drawings is item 50.** Built from
     existing primitives.
     - **The terms prompt (`/account/terms`) is undrawn.** Once the terms
       are published (D-93; nothing is asked until then), a signed-in
@@ -972,9 +978,95 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     sentence alone, with no address line and no Resend. **The ask:** a
     lead for Follow ("Following runners…"?), and whether the
     no-address-yet state needs drawing or the brackets should breathe in
-    the address's place.
+    the address's place. **Round 29 #11 answered the email change** ("Confirm
+    this address before you change it.", built in design PR E) and struck
+    round 27's list, so each lead names only the refused control; Follow
+    is still undrawn.
 
-50. **Gave up's words and one control no board draws (design-adoption PR
+50. **What design PR E built beside rounds 29–30's drawings (round 29 #6,
+    #11–13, #17; round 30 #4; D-95, D-102).** Built from existing
+    primitives. Each is a reading of a drawing or a contract, not a
+    question that blocks anything.
+    - **Au6's band is not a second `role="status"`.** Round 33's Au6 and
+      round 29's Google frames mark the control failure `role="status"`.
+      The Accessibility Contract's rule 08 allows one status region per
+      screen, and the page's own already speaks the band's words, so the
+      build keeps one and the band is announced through it (the contract
+      outranks the board). Google's refusals are the same `control-failure`
+      region, as round 29 draws them. **The ask:** drop the role from the
+      frames, or say when a band should be its own region.
+    - **D-102's line names every form page, two of them in words of the
+      build's choosing.** Any refused save gets the line: every form's,
+      and Attach's (a control that holds the runner's picks). A route may
+      name itself in the runner's words (`staticData.savedPage`: "Log a
+      run", "Add a piece", as round 30 #4b gives them); any other page is
+      named by its heading, so the edit page is "Edit Harrier". A2's and
+      A3's headings are questions ("What did you wear?", "Did it work?"),
+      so the build names them "Attach the kit" and "The verdict", after
+      product.md's screen names. A refused control or loader gets no line.
+      **The ask:** confirm those two names, or give them.
+    - **Log out in the escape line is a button with a 44px target.** Rule
+      03's inline exception is for links, and Log out is an action, so it
+      keeps `target` and the line is a little taller than the board's.
+      **The ask:** none unless design wants the inline target for buttons.
+    - **The read-only `/account`'s Strava row says "Connected", not
+      "Connected as Maya R."** The athlete's name is Strava data, which
+      the app never stores, so the row says what T3a's status line says:
+      "Connected", or "Not connected". It comes last, after Email,
+      Username and Password (the ordinary page edits all three), where
+      round 30 puts Strava in Settings › Account. The board draws no
+      tokens row, so there is none. **The ask:** confirm the value.
+    - **WHAT CHANGED's kicker is `MONO.xs` in `--muted`** on `--tint`, a
+      plain list with a `·` before each line, under the lead and above
+      "Read the full Terms". The owner writes the lines in the terms' front
+      matter (`changed:` beside `published: true`), and v1 has none, so the
+      block does not show yet. **The ask:** none.
+
+51. **What design PR A built beside round 28's W3 and Review drawings
+    (round 28 #5 and #8).** Composed from existing primitives and copy; no
+    new glyph, colour or motion.
+    - **W3 with blur off also waits for Use this photo.** The board draws
+      W3 with blur on. With blur off the step shows the toggle and its
+      line and still holds the redrawn photo until Use this photo, so the
+      runner can turn blur on before anything is attached.
+    - **Use this photo before the bytes exist** (while checking, or after
+      a redraw that failed): `aria-disabled` and `aria-busy`, with no look
+      of its own; the line above says "Checking this photo…".
+    - **The lines the board does not draw** keep their words: after a tap
+      ("We blurred 2 faces. You blurred 1 more spot. Tap one to undo.")
+      and with no detector ("We couldn't check this photo. Tap anything you
+      want blurred."). The first now sits beside round 28's "Auto-blur
+      covered 2 areas." vocabulary. **The ask:** reword both in Auto-blur's
+      grammar, or confirm them.
+    - **W3 is inline, not a sheet.** The head draws "Check the blur" and
+      Cancel, but the step renders where its host puts it; the sheet is
+      the hosts' work (design PRs C and D).
+    - **An entry, not a photo.** The CSAM question and the takedown
+      sentence take the subject's own noun: "Remove this entry everywhere
+      and keep the evidence for the report?" and "We removed this entry
+      from the feed after a copyright notice." The board draws a photo.
+    - **The review row's opener** is the row's name as a button with
+      `aria-expanded`, and the CSAM question carries the kicker "Remove as
+      suspected CSAM" above it.
+    - **A photo W3 cannot prepare** — the file will not decode, or the
+      blurred canvas makes no file — is the round 23 control-failure band:
+      "PHOTO NOT ADDED · This photo couldn't be prepared. Pick another
+      photo, or cancel." Use this photo is not drawn while it shows (there
+      is nothing behind it); Try again decodes again. A detector that
+      throws is not this band: it is the "couldn't check" line, because the
+      photo can still be blurred by hand. **The ask:** confirm the words,
+      and whether Use this photo should go or stay disabled.
+    - **Pick another refuses what the well refuses** (type and size, the
+      same `photoProblem` sentences), as the field message under it; the
+      photo already checked stays.
+    - **Focus on close.** W3's Cancel, Esc and Use this photo return focus
+      to the photo well's input (Replace, once the well is filled); Cancel
+      in the CSAM question returns it to "Remove as suspected CSAM";
+      deciding a row opens the row that takes its place (the next, or the
+      one before when it was the last), and deciding the last row focuses
+      the "Nothing waiting" line.
+
+52. **Gave up's words and one control no board draws (design-adoption PR
     B; R-119).** Built from D6 and round 29 B·2 with existing primitives
     only, and each is the build's guess:
     - **The reasons.** D6 draws "The shop returned 403 three times. It may
@@ -2114,7 +2206,8 @@ JOBS · OLDEST 2D]`. It shows the two newest jobs, then "+ N MORE · SHOW
    separate action on their Runners page.", followed by Remove and report /
    Cancel. The quiet line is there so the operator doesn't assume the account
    was closed. _Build:_ 128, S (`safety/components/ReviewQueue.tsx`, with
-   the rest of round 28 #8's Review work).
+   the rest of round 28 #8's Review work). **Built in design PR A
+   (2026-10-06)**, with the line said only when the author has a handle.
 4. **`[UNDER REVIEW]` stays bracketed (D-90).** _Redrawn:_ the tag is
    `[UNDER REVIEW]` in MONO.xs ink with no fill, where SHARED would sit on
    the card. It doesn't breathe, because only a pending press breathes, and
@@ -2549,6 +2642,17 @@ CHECKED` band still says "usually within a day". #28's line is item 6.
    hosts it (`closet/components/GarmentForm.tsx`, `photo-pick.ts`).
    AttachKit (`feed/components/AttachKit.tsx`) is 129's, and takes the same
    sheet.
+   **Built in design PR A (2026-10-06).** `PhotoBlur` draws the head
+   ("Check the blur", Cancel), the drawn line, the photo and cells, and the
+   foot (Use this photo, Pick another); focus lands on the heading and Esc
+   is Cancel. It calls `onReady` only on Use this photo, which waits behind
+   `aria-disabled` while the bytes are made; Pick another is its own hidden
+   picker, and a new photo starts the check over. `ui/PhotoStep` gains a
+   fourth argument, `cancel`: closet's `usePhotoPick` and feed's
+   `AttachKit` close the step on it and keep nothing, which is the whole of
+   their change. **Left for the hosts (design PRs C and D):** W3 still
+   renders inline where the host puts it, not in a sheet. The undrawn
+   states this needed are item 51.
 
 6. **Under review, as the author sees it.** _Drawn:_ "Feed own under
    review" and "D own under review". The card carries a hi-viz `UNDER
@@ -2626,6 +2730,20 @@ REVIEW` tag where its SHARED label would be, with no sentence. D carries a
    "close @n8's account" and the new email were owner calls:** a CSAM
    removal does not close the account, so the confirm says only what
    happens (D-88), and the reopen email is added (D-89, 126 and 128).
+   **Built in design PR A (2026-10-06):** "Decide this one" is gone and a
+   row's name is the button that opens it, one row at a time, with focus
+   moving to the next row after a decision; Remove as suspected CSAM asks
+   again in the row, Cancel focused, in round 29 #3's words (the queue's
+   subject read now carries the author's handle for its quiet line); and
+   `ContentRemoved` says "We removed this photo after a copyright notice."
+   for a takedown, from the audit row's action. **Not built here:** the
+   Review page's table (ITEM, BY, WHY IT'S HERE, AGE), the decision bar's
+   item-as-posted and context line, the takedown form's labels and its
+   unknown-ID field message, D8's search states, Reopen, and mounting the
+   notice band on the author's run (feed's). The bell row and email for a
+   takedown still say the moderator's copyright reason
+   (`feed/moderation.ts`'s `notice`, 129's); `takedownSentence` is there
+   for it (R-140).
 
 9. **Invite stage.** _Ruling:_ every refused code gets one sentence, whether
    it was used, never existed or was revoked: "That code doesn't work. Check

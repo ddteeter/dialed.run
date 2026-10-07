@@ -6,12 +6,7 @@
 import { useRef, useState } from "react";
 import type { JSX } from "react";
 
-import {
-  FailureBand,
-  PendingLabel,
-  inFlight,
-  useControlAction,
-} from "../../ui";
+import { PendingLabel, inFlight, useControlAction } from "../../ui";
 import type { ControlAction } from "../../ui";
 import {
   AUTH_COPY,
@@ -20,7 +15,7 @@ import {
   GOOGLE_REFUSALS,
   type AuthBand,
 } from "./auth-copy";
-import { RefusalBand } from "./refusal-band";
+import { GoogleBand } from "./google-band";
 import { googleConsentUrl, type Admission } from "./credentials";
 import { didGoogleFail } from "./sign-in-search";
 
@@ -215,12 +210,12 @@ function GoogleMark(): JSX.Element {
  *
  * In flight the glyph drops for the label, so the width holds (Au5).
  * **Every band Google owns sits directly under this button** (round 29
- * #13, design-deltas item 43): the fault, with Try again, and a refusal
+ * #13, design-deltas item 43), as a control failure (`GoogleBand`; Au6 as
+ * round 33 redrew it): the fault, with Try again, and a refusal
  * (`retry: false`), which offers none — its fix is the field above or the
  * page it links. §4a puts a band under the control it belongs to, and
  * never above Log in, because *"the band belongs to the button that
- * failed"* (Au6). Round 22's Au6 still draws the fault above; round 29
- * supersedes it (item 44 asks for the redraw). No pink anywhere on either.
+ * failed"* (Au6). No pink anywhere on either.
  */
 /**
  * Google's colours, stroke and shape, light then dark. Held in a constant
@@ -233,8 +228,6 @@ export function GoogleButton({
   google,
 }: Readonly<{ google: GoogleSignIn }>): JSX.Element {
   const { failure } = google;
-  const refusal = failure?.retry === false ? failure : undefined;
-  const fault = refusal === undefined ? failure : undefined;
   return (
     <>
       <button
@@ -258,15 +251,13 @@ export function GoogleButton({
           pending={google.pending}
         />
       </button>
-      {fault === undefined ? undefined : (
-        <FailureBand
-          kicker={fault.kicker}
-          message={fault.message}
+      {failure === undefined ? undefined : (
+        <GoogleBand
+          band={failure}
           onRetry={google.retry}
           retryRef={google.retryRef}
         />
       )}
-      {refusal === undefined ? undefined : <RefusalBand band={refusal} />}
     </>
   );
 }

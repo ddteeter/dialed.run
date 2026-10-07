@@ -95,6 +95,7 @@ export async function exportData(db: Db, userId: string) {
       .select({
         version: termsAcceptances.version,
         acceptedAt: termsAcceptances.acceptedAt,
+        how: termsAcceptances.how,
       })
       .from(termsAcceptances)
       .where(eq(termsAcceptances.userId, userId))

@@ -33,7 +33,7 @@ import {
 } from "../../../db/schema-core";
 import type { CoreDb } from "../core-db";
 import { newUlid } from "../../../lib/ids";
-import { firstRowWhere } from "../../../lib/sql/keyed-read";
+import { firstRowWhere, hasRowWhere } from "../../../lib/sql/keyed-read";
 import { StravaApiError } from "./api";
 import type { StravaApi, StravaConfig } from "./api";
 import type { RevokeJob } from "../queue-messages";
@@ -174,6 +174,24 @@ export async function getStravaConnection(
   return firstRowWhere(
     db,
     stravaConnections,
+    eq(stravaConnections.userId, userId),
+  );
+}
+
+/**
+ * Whether this runner is connected, and nothing else — the read-only
+ * account page's Strava row (round 30 #4a), which has no use for the
+ * token. One primary-key seek.
+ */
+export async function isStravaConnected(
+  // `hasRowWhere`'s wider handle, so the account module's spelling fits.
+  db: Parameters<typeof hasRowWhere>[0],
+  userId: string,
+): Promise<boolean> {
+  return hasRowWhere(
+    db,
+    stravaConnections,
+    stravaConnections.userId,
     eq(stravaConnections.userId, userId),
   );
 }

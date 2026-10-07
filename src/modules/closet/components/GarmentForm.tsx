@@ -742,6 +742,7 @@ export function GarmentForm({
         part="photo-well"
         copy={GARMENT_PHOTO_COPY}
         pending={pick.stepping || photoPending}
+        inputRef={pick.wellRef}
         accept={photoAcceptAttribute}
         preview={
           preview === undefined ? undefined : { src: preview, alt: values.name }
@@ -794,6 +795,7 @@ export function GarmentForm({
             part="photo-well"
             copy={GARMENT_PHOTO_COPY}
             pending={pick.stepping || photoPending}
+            inputRef={pick.wellRef}
             accept={photoAcceptAttribute}
             onFiles={pickFrom}
           />

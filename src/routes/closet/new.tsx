@@ -14,6 +14,8 @@ import { searchBrandsFn } from "../../modules/products/functions";
 import { Layout, useIdempotencyKey } from "../../ui";
 
 export const Route = createFileRoute("/closet/new")({
+  // D-102's name for the page, in round 30 #4b's words.
+  staticData: { savedPage: "Add a piece" },
   loader: async ({ location }) => {
     await requireSession(location);
     // F at the desk's rail card (round 26 #10, task 128 · SAF-18).

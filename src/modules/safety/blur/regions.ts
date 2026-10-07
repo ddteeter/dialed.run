@@ -158,12 +158,12 @@ export function toImageCoordinates(
  * The sentence shown above the photo.
  *
  * **The wording is the artboard's and the distinctions in it are
- * deliberate.** "No face found", never "no face" — the app does not claim
- * certainty it has not got. And when there is no detector at all, it says
- * so rather than reporting a clean sweep it never made: "no face found"
- * after looking and "no face found" after not looking are the same
- * sentence describing very different states, and only one of them is
- * honest.
+ * deliberate.** "Auto-blur found nothing to cover" (round 28 #5), never
+ * "no faces" — the app does not claim certainty it has not got. And when
+ * there is no detector at all, it says so rather than reporting a clean
+ * sweep it never made: "found nothing" after looking and after not
+ * looking are the same sentence describing very different states, and
+ * only one of them is honest.
  */
 export function blurSummary(params: {
   detector: "ran" | "unavailable";
@@ -190,9 +190,12 @@ export function blurSummary(params: {
   if (params.detector === "unavailable") {
     return "We couldn't check this photo. Tap anything you want blurred.";
   }
+  // Round 28 #5's two lines under "Check the blur", for a detector that
+  // ran and a runner who has not tapped yet. Nothing is "posting" any
+  // more: W3 waits for Use this photo, so the line says what to do here.
   return detected
-    ? `${detected} Missed something? Tap it to blur it too.`
-    : "No face found. Posting as-is.";
+    ? `Auto-blur covered ${countOf(params.detected, "area")}. Tap the photo or a cell to change it.`
+    : "Auto-blur found nothing to cover. Tap the photo or a cell to blur an area.";
 }
 
 /**

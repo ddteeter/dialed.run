@@ -42,7 +42,7 @@ A runner with an account, confirmed or not, who accepted the current terms.
 async function runner(isConfirmed: boolean): Promise<string> {
   const userId = newUlid();
   await addAccount(userId, isConfirmed);
-  await acceptanceOf(db, userId, PUBLISHED, 100);
+  await acceptanceOf(db, userId, PUBLISHED, 100, "page");
   return userId;
 }
 
@@ -63,7 +63,7 @@ describe("confirmedUserId — verifiedUserId's whole decision", () => {
 
   it("refuses a runner with no account at all, who is gone", async () => {
     const userId = newUlid();
-    await acceptanceOf(db, userId, PUBLISHED, 100);
+    await acceptanceOf(db, userId, PUBLISHED, 100, "page");
     await expect(
       confirmedUserId(db, sessionOf(userId), PUBLISHED),
     ).rejects.toMatchObject(UNCONFIRMED);

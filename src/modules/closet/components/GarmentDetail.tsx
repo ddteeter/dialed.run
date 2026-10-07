@@ -403,6 +403,7 @@ export function GarmentDetail({
             part="photo-well"
             copy={GARMENT_PHOTO_COPY}
             pending={upload.pending || photo.stepping}
+            inputRef={photo.wellRef}
             accept={photoAcceptAttribute}
             error={photoError}
             preview={{ src: photoUrl, alt: label }}

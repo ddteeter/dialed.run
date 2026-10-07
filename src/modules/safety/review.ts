@@ -144,6 +144,13 @@ export interface QueueSubject {
    * Remove (D-97).
    */
   handleFlagged?: boolean | undefined;
+  /**
+   * The handle of the runner who posted a reported entry or photo — what
+   * round 29 #3's quiet line under the CSAM second press names ("@n8's
+   * account stays open"). Absent for a product or a profile, and for an
+   * author with no handle yet.
+   */
+  owner?: string | undefined;
 }
 
 export interface QueueRow {
@@ -227,9 +234,10 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
  *
  * Four reads rather than a chain: a reported photo is looked up by its own
  * id and a reported entry by its entry id, so neither needs the other's
- * row first. Names come from the two tables that have them. Nothing here
- * walks from a photo to its entry to its author — that is a second round
- * trip for a line of text, where the image is the thing being judged.
+ * row first. Names come from the two tables that have them. A photo's or
+ * an entry's author is joined into the same read — primary-key probes,
+ * never a second round trip — because the CSAM question names whose
+ * account stays open (round 29 #3).
  */
 async function subjectsFor(
   rows: readonly { subjectType: ReportSubjectType; subjectId: string }[],
@@ -258,11 +266,22 @@ async function subjectsFor(
   const subjectIds = rows.map((row) => row.subjectId);
   const database = db();
 
-  const [photoRows, entryPhotoRows, profileRows, productRows] =
+  const [photoRows, entryPhotoRows, entryRows, profileRows, productRows] =
     await database.batch([
       database
-        .select({ id: entryPhotos.id, photoKey: entryPhotos.photoKey })
+        .select({
+          id: entryPhotos.id,
+          photoKey: entryPhotos.photoKey,
+          owner: userProfiles.username,
+        })
         .from(entryPhotos)
+        // LEFT, both: the author is a line of text and the photo is the
+        // thing being judged. `entry_photos.entry_id` carries no foreign
+        // key, so a photo whose entry has gone is possible — and an inner
+        // join would hide the very image the reviewer is asked about,
+        // where a left one shows it and simply names nobody.
+        .leftJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
+        .leftJoin(userProfiles, eq(userProfiles.userId, outfitEntries.userId))
         .where(inArray(entryPhotos.id, subjectIds)),
       database
         .select({
@@ -272,6 +291,11 @@ async function subjectsFor(
         .from(entryPhotos)
         .where(inArray(entryPhotos.entryId, subjectIds))
         .orderBy(asc(entryPhotos.position)),
+      database
+        .select({ id: outfitEntries.id, owner: userProfiles.username })
+        .from(outfitEntries)
+        .leftJoin(userProfiles, eq(userProfiles.userId, outfitEntries.userId))
+        .where(inArray(outfitEntries.id, subjectIds)),
       database
         .select({
           userId: userProfiles.userId,
@@ -288,12 +312,21 @@ async function subjectsFor(
 
   const found = new Map<string, QueueSubject>();
   for (const row of photoRows) {
-    found.set(`photo:${row.id}`, { photoKeys: [row.photoKey] });
+    found.set(`photo:${row.id}`, {
+      photoKeys: [row.photoKey],
+      owner: row.owner ?? undefined,
+    });
   }
-  for (const row of entryPhotoRows) {
-    const key = `entry:${row.entryId}`;
-    const already = found.get(key)?.photoKeys ?? [];
-    found.set(key, { photoKeys: [...already, row.photoKey] });
+  // An entry's photos, grouped before its subject is written, so every
+  // reported entry is one row of `entryRows` (the profile join is LEFT, so
+  // an author with no profile row loses nothing) and its photos are a
+  // lookup rather than a second subject to merge into.
+  const photosOf = Map.groupBy(entryPhotoRows, (row) => row.entryId);
+  for (const row of entryRows) {
+    found.set(`entry:${row.id}`, {
+      photoKeys: (photosOf.get(row.id) ?? []).map((photo) => photo.photoKey),
+      owner: row.owner ?? undefined,
+    });
   }
   for (const row of profileRows) {
     found.set(`profile:${row.userId}`, {

@@ -7,6 +7,7 @@ import { z } from "zod";
 import {
   ChoiceField,
   ChoiceList,
+  FailureBand,
   FormElement,
   FormErrorSummary,
   FormFailureBand,
@@ -619,6 +620,47 @@ describe("the details that go missing silently", () => {
     await waitFor(() => {
       expect(button).not.toHaveAttribute("aria-disabled");
     });
+  });
+});
+
+describe("FailureBand's other endings", () => {
+  it("ends in what it is given instead of Try again where pressing again cannot fix it, under the name its board gives it", () => {
+    render(
+      <FailureBand
+        part="control-failure"
+        state="refused"
+        kicker="Not let in"
+        message="That code is spent."
+      >
+        <button type="button">Request access</button>
+      </FailureBand>,
+    );
+    const band = screen.getByText("Not let in").parentElement;
+    expect(band).toHaveAttribute("data-part", "control-failure");
+    expect(band).toHaveAttribute("data-state", "refused");
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(band?.lastElementChild).toBe(
+      screen.getByRole("button", { name: "Request access" }),
+    );
+  });
+
+  it("is round 22's failed failure-band, ending in Try again, by default", async () => {
+    const onRetry = vi.fn();
+    render(
+      <FailureBand
+        kicker="Not marked"
+        message="Our end failed."
+        onRetry={onRetry}
+      />,
+    );
+    const band = screen.getByText("Not marked").parentElement;
+    expect(band).toHaveAttribute("data-part", "failure-band");
+    expect(band).toHaveAttribute("data-state", "failed");
+    expect(band).toHaveClass("border", "border-ink");
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Try again" }));
+    expect(onRetry).toHaveBeenCalledOnce();
   });
 });
 

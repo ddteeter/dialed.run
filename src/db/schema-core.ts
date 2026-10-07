@@ -249,6 +249,11 @@ export const termsAcceptances = /*#__PURE__*/ sqliteTable(
     userId: text("user_id").notNull(),
     version: integer("version").notNull(),
     acceptedAt: integer("accepted_at").notNull(),
+    // How the acceptance happened (round 29 #17): `sign-up` for the one
+    // recorded as the account is made, `page` for the terms prompt's
+    // Accept. Nullable and additive: rows written before the column
+    // existed say nothing, and the export writes them empty.
+    how: text("how", { enum: ["page", "sign-up"] }),
   },
   (t) => [uniqueIndex("terms_acceptances_pk").on(t.userId, t.version)],
 );

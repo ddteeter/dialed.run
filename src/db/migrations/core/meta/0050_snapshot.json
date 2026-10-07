@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "2b230fec-8f5d-4538-b0aa-b77bc187ff6d",
-  "prevId": "d35e6955-7e20-4e6c-a0a9-e8e75a6c4c8d",
+  "id": "751e21b5-754a-46bf-bf26-5dd2237b04e9",
+  "prevId": "99e794b7-f2a7-48ab-9e34-831322d281e3",
   "tables": {
     "access_requests": {
       "name": "access_requests",
@@ -623,6 +623,88 @@
             "followee_id"
           ],
           "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "gave_up": {
+      "name": "gave_up",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "subject_id": {
+          "name": "subject_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "raw_error": {
+          "name": "raw_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "tries": {
+          "name": "tries",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "first_failed_at": {
+          "name": "first_failed_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_failed_at": {
+          "name": "last_failed_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "gave_up_kind_subject": {
+          "name": "gave_up_kind_subject",
+          "columns": [
+            "kind",
+            "subject_id"
+          ],
+          "isUnique": true
+        },
+        "gave_up_last_failed": {
+          "name": "gave_up_last_failed",
+          "columns": [
+            "last_failed_at"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {},
@@ -1534,7 +1616,16 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "product_snapshots_product_fetched": {
+          "name": "product_snapshots_product_fetched",
+          "columns": [
+            "product_id",
+            "fetched_at"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},

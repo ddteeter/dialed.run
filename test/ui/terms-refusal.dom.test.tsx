@@ -66,10 +66,11 @@ beforeEach(() => {
   calls.action = refused;
 });
 
-function Saver() {
+function Saver({ isSave }: Readonly<{ isSave?: boolean }> = {}) {
   const save = useControlAction<[]>({
     action: () => calls.action(),
     kicker: "Not saved",
+    isSave,
   });
   return (
     <>
@@ -114,7 +115,11 @@ function NameForm() {
  * provider the root mounts, the page making the refused call, the prompt,
  * and somewhere else to go.
  */
-async function app(Page: () => JSX.Element, isAnswered = true) {
+async function app(
+  Page: () => JSX.Element,
+  isAnswered = true,
+  start = "/closet?tab=shoes",
+) {
   const gate: { answer: Exclude<HandleGateAnswer["gate"], "signed-out"> } = {
     answer: "has-handle",
   };
@@ -151,6 +156,36 @@ async function app(Page: () => JSX.Element, isAnswered = true) {
     path: "/closet",
     component: () => <h1>Closet</h1>,
   });
+  // A page whose name in the runner's words is not its heading (D-102).
+  const newPiece = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/closet/new",
+    staticData: { savedPage: "Add a piece" },
+    component: () => <h1>Add a garment</h1>,
+  });
+  const edit = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/closet/edit/$itemId",
+    component: () => <h1>Edit Harrier</h1>,
+  });
+  // A layout naming every page under it, as `/runs/new` and
+  // `/runs/manual` could share "Log a run"; and a page with no heading.
+  const logging = createRoute({
+    getParentRoute: () => rootRoute,
+    id: "logging",
+    staticData: { savedPage: "Log a run" },
+    component: () => <Outlet />,
+  });
+  const byHand = createRoute({
+    getParentRoute: () => logging,
+    path: "/runs/manual",
+    component: () => <h1>Enter it by hand</h1>,
+  });
+  const blank = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/blank",
+    component: () => <p>No heading</p>,
+  });
   const feed = createRoute({
     getParentRoute: () => rootRoute,
     path: "/feed",
@@ -162,8 +197,16 @@ async function app(Page: () => JSX.Element, isAnswered = true) {
     component: () => <h1>Accept the terms</h1>,
   });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([closet, feed, prompt]),
-    history: createMemoryHistory({ initialEntries: ["/closet?tab=shoes"] }),
+    routeTree: rootRoute.addChildren([
+      closet,
+      newPiece,
+      edit,
+      logging.addChildren([byHand]),
+      blank,
+      feed,
+      prompt,
+    ]),
+    history: createMemoryHistory({ initialEntries: [start] }),
   });
   await router.load();
   render(<RouterProvider router={router} />);
@@ -185,15 +228,17 @@ describe("a refusal for being behind on the terms (D-96)", () => {
 
     await screen.findByRole("heading", { name: "Accept the terms" });
     expect(router.state.location.pathname).toBe("/account/terms");
+    // A plain control lost nothing typed, so nothing names the page.
     expect(router.state.location.search).toEqual({
       from: "/closet?tab=shoes",
     });
+    expect(router.state.location.searchStr).not.toContain("save");
     expect(screen.getByRole("status")).toHaveTextContent("");
     expect(screen.getByTestId("band")).toHaveTextContent("");
     expect(isRememberedForSession("has-handle")).toBe(false);
   });
 
-  it("opens the prompt from a form, with no failure band and no sentence", async () => {
+  it("opens the prompt from a form, with no failure band and no sentence, naming the page by its heading", async () => {
     const { router, gate } = await app(NameForm);
     gate.answer = "needs-terms";
 
@@ -203,8 +248,61 @@ describe("a refusal for being behind on the terms (D-96)", () => {
 
     await screen.findByRole("heading", { name: "Accept the terms" });
     expect(router.state.location.pathname).toBe("/account/terms");
+    // A form's refusal is a save (D-102): `save` names the page it left.
+    expect(router.state.location.search).toEqual({
+      from: "/closet?tab=shoes",
+      save: "Closet",
+    });
     expect(screen.getByRole("status")).toHaveTextContent("");
     expect(screen.getByTestId("band")).toHaveTextContent("");
+  });
+
+  it.each([
+    ["/closet/edit/01HARRIER", "Edit Harrier"],
+    ["/closet/new", "Add a piece"],
+    ["/runs/manual", "Log a run"],
+  ])(
+    "names the page a refused save left, from %s, as %s: the nearest route's own words before its heading",
+    async (start, name) => {
+      const { router, gate } = await app(NameForm, true, start);
+      gate.answer = "needs-terms";
+
+      await userEvent
+        .setup()
+        .click(screen.getByRole("button", { name: "Submit" }));
+
+      await screen.findByRole("heading", { name: "Accept the terms" });
+      expect(router.state.location.search).toEqual({
+        from: start,
+        save: name,
+      });
+    },
+  );
+
+  it("names no page that has neither words of its own nor a heading", async () => {
+    const { router, gate } = await app(NameForm, true, "/blank");
+    gate.answer = "needs-terms";
+
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Submit" }));
+
+    await screen.findByRole("heading", { name: "Accept the terms" });
+    expect(router.state.location.search).toEqual({ from: "/blank" });
+    expect(router.state.location.searchStr).not.toContain("save");
+  });
+
+  it("names the page from a control that saves, as Attach does", async () => {
+    const { router, gate } = await app(() => <Saver isSave />);
+    gate.answer = "needs-terms";
+
+    await userEvent.setup().click(screen.getByRole("button", { name: "Save" }));
+
+    await screen.findByRole("heading", { name: "Accept the terms" });
+    expect(router.state.location.search).toEqual({
+      from: "/closet?tab=shoes",
+      save: "Closet",
+    });
   });
 
   it("asks the gate again on the next in-app navigation, which comes back to the prompt", async () => {

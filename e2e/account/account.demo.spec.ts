@@ -3,7 +3,8 @@
  * Notifications (ACC-11), the unsubscribe link and its landing (round 26
  * #19), Sign out everywhere, Export your data (ACC-10: Get a copy, Preparing,
  * the queued ZIP, Download, a dead link), Delete account with Keep inside
- * the week (ACC-9; round 27 #14, round 28 #12), and O0's re-pick after a
+ * the week (ACC-9; round 27 #14, round 28 #12), "Confirm your email first"
+ * from Change email while unconfirmed (round 29 #11–12), and O0's re-pick after a
  * moderator's rename (ACC-12; round 27 #16) — one journey, one video.
  *
  * Exactly one test() per demo spec (see e2e/auth/auth.demo.spec.ts).
@@ -23,6 +24,23 @@ async function hydrated(page: Page): Promise<void> {
   await page
     .locator('html[data-hydrated="true"]')
     .waitFor({ state: "attached" });
+}
+
+/**
+ * The demo runner's address, confirmed or not (round 26 #11): flipped for
+ * the unconfirmed beat, and always flipped back, because the rest of the
+ * journey is a confirmed runner's.
+ */
+async function setEmailConfirmed(
+  email: string,
+  isConfirmed: boolean,
+): Promise<void> {
+  await withLocalDb(async ({ core }) => {
+    await core
+      .update(user)
+      .set({ emailVerified: isConfirmed })
+      .where(eq(user.email, email));
+  });
 }
 
 /**
@@ -97,6 +115,40 @@ test("account settings -> change password -> reminder emails off and on -> sign 
     "Password changed. Every other device was signed out.",
     { timeout: 15_000 },
   );
+
+  // Round 29 #11–12: unconfirmed, Change email is refused into "Confirm
+  // your email first", which leads with the email change's own sentence
+  // and offers Resend as its outline pill, Not now focused.
+  await scene(page, "Unconfirmed: Change email asks to confirm this address");
+  await setEmailConfirmed(email, false);
+  try {
+    await page.goto("/account/email");
+    await expect(page.getByRole("heading", { name: "Email" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await hydrated(page);
+    await page.getByLabel("New email").fill(`moved-${email}`);
+    await page.getByLabel("Current password").fill(`${PASSPHRASE}-2`);
+    await page.getByRole("button", { name: "Send link" }).click();
+    const confirmFirst = page.getByRole("dialog", {
+      name: "Confirm your email first",
+    });
+    await expect(confirmFirst).toContainText(
+      "Confirm this address before you change it.",
+      { timeout: 15_000 },
+    );
+    await expect(confirmFirst).toContainText(`We sent a link to ${email}.`);
+    await expect(
+      confirmFirst.getByRole("button", { name: "Resend link" }),
+    ).toHaveClass(/rounded-pill/u);
+    await expect(
+      confirmFirst.getByRole("button", { name: "Not now" }),
+    ).toBeFocused();
+    await confirmFirst.getByRole("button", { name: "Not now" }).click();
+    await expect(confirmFirst).toBeHidden();
+  } finally {
+    await setEmailConfirmed(email, true);
+  }
 
   await scene(page, "Change email: the link goes to the new address");
   await page.goto("/account/email");
@@ -254,7 +306,10 @@ test("account settings -> change password -> reminder emails off and on -> sign 
 
   // ACC-12: a moderator renames the handle from the Desk (written here as
   // `forceRename` writes it), and the runner's next load is O0's re-pick.
-  await scene(page, "Renamed by a moderator: the next load asks for a new name");
+  await scene(
+    page,
+    "Renamed by a moderator: the next load asks for a new name",
+  );
   await withLocalDb(async ({ core }) => {
     const [account] = await core
       .select({ id: user.id })

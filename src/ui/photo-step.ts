@@ -15,9 +15,16 @@ import type { ReactNode } from "react";
  * and hands it in. Here in `ui/` because every screen that takes a photo
  * takes the same slot — the verdict's and the garment's — and a second
  * copy of the type is how one of them would stop reaching the blur.
+ *
+ * **The step decides when it is done** (round 28 #5): `onReady` comes
+ * only once the runner presses "Use this photo", and `cancel` when they
+ * press Cancel or Esc. Either way the host closes the step; on `cancel` it
+ * keeps nothing, and a photo already on the form stays. Pick another is
+ * the step's own business. See `modules/safety/components/PhotoBlur`.
  */
 export type PhotoStep = (
   file: File,
   onReady: (ready: File) => void,
   announce: (sentence: string) => void,
+  cancel: () => void,
 ) => ReactNode;

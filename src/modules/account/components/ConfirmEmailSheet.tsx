@@ -8,18 +8,19 @@ import type { ResendResult } from "../verification";
 import { ResendLink } from "./ResendLink";
 
 /**
- * The sentence that says what waits (round 27 #17): *"The body's first
- * word changes with the trigger: 'Sharing…', 'Marking runs Useful…',
- * 'Reporting…' leads, the rest stays."* Only the triggers a board draws a
- * sentence for are here. Follow waits too (design 133, D-113) and no
- * board gives it one, so it shows the address alone until one is drawn
- * (design-deltas).
+ * The lead: the one control that was refused, by name (round 29 #11). The
+ * sheet names only that one — round 27's list of all three is struck —
+ * and the email change has a sentence of its own. Only the triggers a
+ * board draws a lead for are here. Follow waits too (design 133, D-113)
+ * and no board gives it one, so it shows the address alone until one is
+ * drawn (design-deltas). A3's share switch has a drawn lead ("Sharing
+ * needs a confirmed email. This run saves private."), but the switch
+ * opens no sheet today, so it waits for lane 127 to make it a trigger.
  */
 const WAITS_FOR: Readonly<Partial<Record<ConfirmTrigger, string>>> = {
-  useful:
-    "Marking runs Useful, sharing and reporting need a confirmed address.",
-  report:
-    "Reporting, sharing and marking runs Useful need a confirmed address.",
+  useful: "Marking runs Useful needs a confirmed email.",
+  report: "Reporting needs a confirmed email.",
+  "email-change": "Confirm this address before you change it.",
 };
 
 type Resend = (input: { data: { email: string } }) => Promise<ResendResult>;
@@ -32,10 +33,12 @@ type Resend = (input: { data: { email: string } }) => Promise<ResendResult>;
  * control draws at full strength (rule 07: 'not yet'). Pressing it opens
  * a small sheet."*
  *
- * Resend link, then **Not now**, which has focus (round 27 #17): the
- * runner did not ask for a sheet, so the way out is where they land.
- * Without a sentence for the trigger (an email change or a follow, which
- * no board draws one for) the body is the address alone. Until the address
+ * The lead, then "We sent a link to {email}." on a line of its own
+ * (round 29 #11), then Resend as an outline pill (round 29 #12: the
+ * sheet's only real action, but not filled, because **Not now** has focus
+ * and is the default — the runner did not ask for a sheet, so the way out
+ * is where they land). Without a lead for the trigger (a follow, which no
+ * board draws one for) the body is the address alone. Until the address
  * has arrived there is no address line and nothing to resend.
  */
 export function ConfirmEmailSheet({
@@ -60,8 +63,8 @@ export function ConfirmEmailSheet({
     if (open && notNow !== undefined) notNow.focus();
   }, [open, notNow]);
   const lead = trigger && WAITS_FOR[trigger];
-  // The lead alone while the address is on its way; nothing at all when
-  // there is neither.
+  // The lead, on its own line above the address — or alone while the
+  // address is on its way; nothing at all when there is neither.
   const leadAlone =
     lead === undefined ? undefined : <p className="m-0 text-body">{lead}</p>;
 
@@ -75,11 +78,11 @@ export function ConfirmEmailSheet({
           leadAlone
         ) : (
           <>
+            {leadAlone}
             <p className="m-0 text-body">
-              {lead === undefined ? undefined : `${lead} `}We sent a link to{" "}
-              <strong>{email}</strong>.
+              We sent a link to <strong>{email}</strong>.
             </p>
-            <ResendLink email={email} resend={resend} />
+            <ResendLink email={email} resend={resend} isPill />
           </>
         )}
         <button

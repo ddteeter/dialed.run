@@ -162,27 +162,27 @@ describe("mapping a click back to the photo", () => {
 
 describe("the sentence above the photo", () => {
   it("uses the artboard's wording when nothing was found", () => {
-    // "No face found", never "no face". The app does not claim certainty
-    // it has not got.
+    // Round 28 #5: "found nothing", never "no faces". The app does not
+    // claim certainty it has not got.
     expect(blurSummary({ detector: "ran", detected: 0, tapped: 0 })).toBe(
-      "No face found. Posting as-is.",
+      "Auto-blur found nothing to cover. Tap the photo or a cell to blur an area.",
     );
   });
 
   it("reports what it blurred and invites a correction", () => {
     expect(blurSummary({ detector: "ran", detected: 1, tapped: 0 })).toBe(
-      "We blurred 1 face. Missed something? Tap it to blur it too.",
+      "Auto-blur covered 1 area. Tap the photo or a cell to change it.",
     );
   });
 
   it.each([
-    [1, "1 face."],
-    [2, "2 faces"],
-    [5, "5 faces"],
-    [6, "6 faces"],
+    [1, "1 area."],
+    [2, "2 areas."],
+    [5, "5 areas."],
+    [6, "6 areas."],
   ])("writes %i in digits, always (round 26 #18)", (detected, expected) => {
     expect(blurSummary({ detector: "ran", detected, tapped: 0 })).toContain(
-      `We blurred ${expected}`,
+      `Auto-blur covered ${expected}`,
     );
   });
 
@@ -199,7 +199,7 @@ describe("the sentence above the photo", () => {
     // different states, and only one of them is honest. A detector that
     // is absent must not borrow the sentence of one that ran.
     expect(unavailable).not.toBe(looked);
-    expect(unavailable).not.toContain("No face found");
+    expect(unavailable).not.toContain("found nothing");
     expect(unavailable).toContain("couldn't check");
   });
 
@@ -227,10 +227,10 @@ describe("the sentence above the photo", () => {
 
   it("says each resting outcome in its own words", () => {
     expect(blurSummary({ detector: "ran", detected: 1, tapped: 0 })).toBe(
-      "We blurred 1 face. Missed something? Tap it to blur it too.",
+      "Auto-blur covered 1 area. Tap the photo or a cell to change it.",
     );
     expect(blurSummary({ detector: "ran", detected: 0, tapped: 0 })).toBe(
-      "No face found. Posting as-is.",
+      "Auto-blur found nothing to cover. Tap the photo or a cell to blur an area.",
     );
     expect(
       blurSummary({ detector: "unavailable", detected: 0, tapped: 0 }),

@@ -6,6 +6,7 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -22,7 +23,9 @@ import type { AttachContext } from "../../src/modules/feed/attach-context";
 import { AttachKit } from "../../src/modules/feed/components/AttachKit";
 import type { PickerGroup } from "../../src/modules/feed/picker";
 import type { PrefillCandidate } from "../../src/modules/feed/prefill";
+import { TERMS_NOT_ACCEPTED_CODE } from "../../src/lib/auth-signal";
 import type { PhotoStep } from "../../src/ui";
+import { TermsRefusalAnswer } from "../../src/ui";
 import { expectAvailable, expectBusy } from "../ui/unavailable";
 
 /**
@@ -197,7 +200,7 @@ function photoWell(): HTMLElement {
 
 function photoInput(): HTMLInputElement {
   const input = document.querySelector<HTMLInputElement>(
-    "[data-part='photo-well'] input[type='file']",
+    "[data-part='photo-well'] input[type='file'], [data-part='well-actions'] input[type='file']",
   );
   if (input === null) throw new Error("no photo input");
   return input;
@@ -237,9 +240,9 @@ describe("AttachKit: the header", () => {
     const header = screen.getByRole("banner");
     // Ink on the phone, the title line from `wide` (DS0 bend 4).
     expect(header).toHaveAttribute("data-ground", "ink-until-wide");
-    expect(
-      within(header).getByRole("heading", { level: 1 }),
-    ).toHaveClass("wide:text-title");
+    expect(within(header).getByRole("heading", { level: 1 })).toHaveClass(
+      "wide:text-title",
+    );
     expect(
       within(header).getByRole("heading", {
         level: 1,
@@ -913,6 +916,48 @@ describe("AttachKit: a failed attach (round 23, item 9)", () => {
     pending.resolve({ entryId: "01NEW" });
   });
 
+  it("is a save a terms refusal loses, so the prompt names the page (D-102)", async () => {
+    const user = userEvent.setup();
+    const rootRoute = createRootRoute();
+    const attachRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/",
+      staticData: { savedPage: "Attach the kit" },
+      component: () => (
+        <TermsRefusalAnswer>
+          {attach({
+            attachKit: () =>
+              Promise.reject(
+                Object.assign(new Error("Accept the current terms first."), {
+                  code: TERMS_NOT_ACCEPTED_CODE,
+                }),
+              ),
+          })}
+        </TermsRefusalAnswer>
+      ),
+    });
+    const promptRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/account/terms",
+      component: () => <p>The prompt</p>,
+    });
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([attachRoute, promptRoute]),
+      history: createMemoryHistory({ initialEntries: ["/"] }),
+    });
+    await router.load();
+    render(<RouterProvider router={router} />);
+
+    await user.click(await screen.findByRole("button", { name: "Houdini" }));
+    await user.click(primary());
+
+    await screen.findByText("The prompt");
+    expect(router.state.location.search).toEqual({
+      from: "/",
+      save: "Attach the kit",
+    });
+  });
+
   it("says nothing attached under the button, and tries again with the same kit", async () => {
     const user = userEvent.setup();
     const attachKit = vi
@@ -961,16 +1006,19 @@ function recordingStep() {
   const seen: File[] = [];
   let release: ((ready: File) => void) | undefined;
   let say: ((sentence: string) => void) | undefined;
-  const step: PhotoStep = (file, onReady, announce) => {
+  let back: (() => void) | undefined;
+  const step: PhotoStep = (file, onReady, announce, cancel) => {
     seen.push(file);
     release = onReady;
     say = announce;
+    back = cancel;
     return <p>step for {file.name}</p>;
   };
   return {
     seen,
     step,
     hand: (ready: File) => release?.(ready),
+    cancel: () => back?.(),
     announce: (sentence: string) => {
       say?.(sentence);
     },
@@ -1020,6 +1068,10 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     );
     expect(photoWell()).toHaveTextContent("Adding");
 
+    // W3 takes focus to its heading when it opens.
+    act(() => {
+      photoInput().blur();
+    });
     recording.hand(jpeg("blurred.jpg"));
     await waitFor(() => {
       expect(screen.queryByText("step for raw.jpg")).toBeNull();
@@ -1033,9 +1085,34 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     expect(
       within(document.body).getByRole("img", { name: "Your outfit" }),
     ).toHaveAttribute("src", "blob:preview");
+    // Use this photo closes W3 back onto the well — its Replace, now.
+    expect(photoInput()).toHaveFocus();
     expect(createObjectURL).toHaveBeenCalledWith(
       expect.objectContaining({ name: "blurred.jpg" }),
     );
+  });
+
+  it("closes W3 on its Cancel, keeping nothing and losing nothing (round 28 #5)", async () => {
+    const user = userEvent.setup();
+    const recording = recordingStep();
+    await renderWithRouter(attach({ renderPhotoStep: recording.step }));
+
+    await user.upload(photoInput(), jpeg("first.jpg"));
+    // W3 takes focus to its heading when it opens.
+    act(() => {
+      photoInput().blur();
+    });
+    act(() => {
+      recording.cancel();
+    });
+    expect(screen.queryByText("step for first.jpg")).toBeNull();
+    // Cancel (and Esc, which is Cancel) closes back onto the well.
+    expect(photoInput()).toHaveFocus();
+    expect(document.querySelector("[data-part='photo-well']")).toHaveAttribute(
+      "data-state",
+      "empty",
+    );
+    expect(createObjectURL).not.toHaveBeenCalled();
   });
 
   it("lends the step the screen's one status region", async () => {

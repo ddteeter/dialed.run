@@ -13,7 +13,7 @@ share card still says round 26's line.
 
 ## Approach
 
-- **One table, `gave_up`** (`0048_add_gave_up`): `kind`, `subject_id`,
+- **One table, `gave_up`** (`0049_add_gave_up`): `kind`, `subject_id`,
   `reason`, `raw_error`, `tries`, `first_failed_at`, `last_failed_at`;
   UNIQUE `(kind, subject_id)`, indexed on `last_failed_at`. Writers use
   `src/db/gave-up.ts` (upsert: tries add, first failure stays; clear),
@@ -31,7 +31,7 @@ share card still says round 26's line.
 - **Retry per kind, existing messages only (law 9).** Enrichment: Re-fetch
   is `requestEnrichment` (claims `failed`, sends `enrich`); Re-run extraction
   is `reextract` over the stored page, disabled when there is none
-  (`0049_add_product_snapshots_product_index` makes that read indexed).
+  (`0050_add_product_snapshots_product_index` makes that read indexed).
   Weather: back to `pending`, which the hourly cron re-drives. Import: back
   to `pending` with its owed file expiry cancelled, then `import` is sent
   (the stalled-import sweep covers a lost send). Reminder: the stored job is
@@ -51,7 +51,7 @@ verifiedUserId())`.
 
 ## Contract touches
 
-- Schema: `0048_add_gave_up`, `0049_add_product_snapshots_product_index`,
+- Schema: `0049_add_gave_up`, `0050_add_product_snapshots_product_index`,
   both additive. PR E (account/auth) also adds a migration; whichever merges
   second renumbers (law 11).
 - Routes: `routes/desk/index.tsx` gains a loader (glue).

@@ -6,7 +6,10 @@ import type { Units } from "../../../lib/contracts";
 import { dayLabel } from "../../../lib/dates";
 import { newUlid } from "../../../lib/ids";
 import { distanceNumber } from "../../../lib/contracts/measures";
-import { photoAcceptAttribute } from "../../../lib/photo-constraints";
+import {
+  photoAcceptAttribute,
+  photoProblem,
+} from "../../../lib/photo-constraints";
 import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
 import { toggledIn } from "../../../lib/toggled-in";
 import {
@@ -21,10 +24,11 @@ import {
   PendingLabel,
   RailCard,
   useControlAction,
+  useReturnFocus,
 } from "../../../ui";
 import type { PhotoStep } from "../../../ui";
 import type { AttachContext } from "../attach-context";
-import { kitChoice, PHOTO_NOT_SENT, photoProblem } from "../attach-rules";
+import { kitChoice, PHOTO_NOT_SENT } from "../attach-rules";
 import type { UiGroup } from "../groups";
 import type { PrefillCandidate } from "../prefill";
 import { KitList, KitSheet, conditionsWords } from "./KitPicker";
@@ -149,6 +153,9 @@ export function AttachKit({
     { file: File; step: PhotoStep } | undefined
   >();
   const [said, setSaid] = useState("");
+  // W3 closes back onto the well it opened from: Use this photo, Cancel
+  // and Esc all return focus there rather than dropping it on the page.
+  const wellFocus = useReturnFocus();
   // The entry the attach made, once it has. From then on Next only sends
   // the photo and goes on: attaching again would be answered with this same
   // entry and the kit it already has.
@@ -207,6 +214,8 @@ export function AttachKit({
 
   const attach = useControlAction({
     kicker: "Nothing attached",
+    // The picks are what a terms refusal loses (D-102).
+    isSave: true,
     action: async (itemIds: string[]) => {
       // The entry, and only the entry: this is what "Nothing attached" is
       // about. The photo belongs to an entry and there is none until this
@@ -354,10 +363,24 @@ export function AttachKit({
               setPhoto(undefined);
             }}
             onFiles={onPhotoFiles}
+            inputRef={wellFocus.ref}
           />
           {photoStep === undefined
             ? undefined
-            : photoStep.step(photoStep.file, keep, setSaid)}
+            : photoStep.step(
+                photoStep.file,
+                (ready) => {
+                  wellFocus.restore();
+                  keep(ready);
+                },
+                setSaid,
+                () => {
+                  // Cancel in W3 (round 28 #5): nothing is kept, and a photo
+                  // already held stays held.
+                  setPhotoStep(undefined);
+                  wellFocus.restore();
+                },
+              )}
 
           <div className="flex flex-col gap-3">
             <button

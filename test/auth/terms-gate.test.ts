@@ -71,7 +71,7 @@ describe("agreedUserId — requireUserId's whole decision", () => {
     const never = newUlid();
     const older = newUlid();
     // A real older version, not 0: it reads differently from no row.
-    await acceptanceOf(db, older, PUBLISHED - 1, 100);
+    await acceptanceOf(db, older, PUBLISHED - 1, 100, "page");
     for (const userId of [never, older]) {
       await expect(
         agreedUserId(db, sessionOf(userId), PUBLISHED),
@@ -110,7 +110,7 @@ describe("agreedUserId — requireUserId's whole decision", () => {
       ).rejects.toMatchObject(LEAVING);
     }
     // Leaving with the terms current is still leaving.
-    await acceptanceOf(db, week, PUBLISHED, 100);
+    await acceptanceOf(db, week, PUBLISHED, 100, "page");
     await expect(
       agreedUserId(db, sessionOf(week), PUBLISHED),
     ).rejects.toMatchObject(LEAVING);
@@ -118,12 +118,12 @@ describe("agreedUserId — requireUserId's whole decision", () => {
 
   it("reads only the runner's own rows", async () => {
     const userId = newUlid();
-    await acceptanceOf(db, newUlid(), PUBLISHED, 100);
+    await acceptanceOf(db, newUlid(), PUBLISHED, 100, "page");
     await leaving(newUlid());
     await expect(
       agreedUserId(db, sessionOf(userId), PUBLISHED),
     ).rejects.toMatchObject(REFUSAL);
-    await acceptanceOf(db, userId, PUBLISHED, 100);
+    await acceptanceOf(db, userId, PUBLISHED, 100, "page");
     await expect(agreedUserId(db, sessionOf(userId), PUBLISHED)).resolves.toBe(
       userId,
     );
