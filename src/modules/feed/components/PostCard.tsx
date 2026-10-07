@@ -37,6 +37,13 @@ export interface PostCardProps {
   onStatus: (status: string) => void;
 }
 
+/**
+ * The viewer's own post says so after its time (the Feed board's "E1 Card
+ * states": `SAT · 6:30 AM · YOU`), since Following carries the viewer's
+ * own shared entries among everyone else's.
+ */
+const OWN_SUFFIX = " · You";
+
 export function PostCard(props: Readonly<PostCardProps>) {
   const { item, units, now, setUseful, onStatus } = props;
   const [photo] = item.photoKeys;
@@ -61,11 +68,14 @@ export function PostCard(props: Readonly<PostCardProps>) {
             </span>
             <Mono step="xs" className="text-muted">
               {postedLabel(item.startedAt, now, item.conditions?.timeZone)}
+              {item.isOwn ? OWN_SUFFIX : undefined}
             </Mono>
           </span>
-          <VerdictBadge verdict={item.verdict} />
+          <span className="flex items-center gap-2">
+            {item.underReview ? <UnderReview /> : undefined}
+            <VerdictBadge verdict={item.verdict} />
+          </span>
         </div>
-        {item.underReview ? <UnderReview /> : undefined}
         {photo === undefined ? undefined : (
           <img
             data-part="photo"

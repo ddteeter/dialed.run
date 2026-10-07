@@ -4,6 +4,7 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { EntryDetail } from "../../src/modules/feed/components/EntryDetail";
+import { NoticeBand } from "../../src/modules/safety/components/NoticeBand";
 import type { SetUsefulFn } from "../../src/modules/feed/components/useful-reaction";
 import type { entryDetailForViewer } from "../../src/modules/feed/entries";
 import { pointConditions } from "../feed/conditions-fixture";
@@ -95,6 +96,7 @@ function detail(
 ) {
   return (
     <EntryDetail
+      noticeBand={NoticeBand}
       units={MILES}
       entry={entry(overrides)}
       viewerId={"viewerId" in options ? options.viewerId : "01STRANGER"}

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { EntryDetail } from "../../src/modules/feed/components/EntryDetail";
+import { NoticeBand } from "../../src/modules/safety/components/NoticeBand";
 import { Feed } from "../../src/modules/feed/components/Feed";
 import { OtherProfile } from "../../src/modules/feed/components/OtherProfile";
 import { feedItem, firstPaintOf, MILES, NOW } from "./feed-fixtures";
@@ -46,6 +47,7 @@ describe("the status region on first paint", () => {
   it("is empty on D", async () => {
     const html = await firstPaintOf(
       <EntryDetail
+        noticeBand={NoticeBand}
         units={MILES}
         viewerId="01STRANGER"
         shouldPromptVerdict={false}

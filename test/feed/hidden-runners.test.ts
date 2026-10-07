@@ -415,6 +415,12 @@ describe("the author's own under-review entry on Following (D-67)", () => {
     expect(ids).toContainEqual([shown, false]);
     expect(ids).toContainEqual([theirs, false]);
     expect(ids.map(([id]) => id)).not.toContain(entryId);
+    // Only the viewer's own post says YOU (the Feed board's own card).
+    const page = await followingFeed(follower);
+    expect(page.items.map((item) => [item.entryId, item.isOwn])).toStrictEqual(
+      page.items.map((item) => [item.entryId, item.entryId === theirs]),
+    );
+    expect(page.items.some((item) => item.isOwn)).toBe(true);
   });
 
   it("does not bring back an entry a person removed, or one the author keeps private", async () => {

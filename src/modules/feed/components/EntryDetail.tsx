@@ -4,6 +4,9 @@ import type { ReactNode } from "react";
 
 import { entryTagSchema } from "../../../lib/contracts";
 import type { Units } from "../../../lib/contracts";
+// Type only, so nothing of safety reaches the client bundle: the shape the
+// route hands in is checked against the real component.
+import type { NoticeBand as NoticeBandShape } from "../../safety";
 import { formatDistance, formatPace } from "../../../lib/contracts/measures";
 import { FormStatus, Icon, Mono, WeatherAttribution } from "../../../ui";
 import { tagLabel } from "../chips";
@@ -13,7 +16,7 @@ import { runWhenLabel } from "../posted";
 import { isProvidersReading, stripConditions } from "../strip";
 import { ConditionsCell } from "./ConditionsCell";
 import { Handle } from "./Handle";
-import { UnderReview } from "./UnderReview";
+import { HIDDEN_WHILE_WE_CHECK } from "./UnderReview";
 import { ReportFoot } from "./ReportFoot";
 import { UsefulButton } from "./UsefulButton";
 import type { SetUsefulFn } from "./useful-reaction";
@@ -71,6 +74,13 @@ export interface EntryDetailProps {
    * either opens the root's "Confirm your email first".
    */
   reportAffordance?: ReactNode;
+  /**
+   * The §4a notice band's shape (safety's `NoticeBand`), handed in for the
+   * reason `reportAffordance` is: this module may not import
+   * `modules/safety`. The words are this screen's — D's "HIDDEN WHILE WE
+   * CHECK" (round 28 #6) — so only the frame crosses the boundary.
+   */
+  noticeBand: typeof NoticeBandShape;
 }
 
 export function EntryDetail(props: Readonly<EntryDetailProps>) {
@@ -82,6 +92,7 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
     setUseful,
     units,
     reportAffordance,
+    noticeBand: NoticeBand,
   } = props;
   // `entry.id` rather than an `entryId` prop beside it: two sources for one
   // fact is how a route comes to disagree with itself.
@@ -111,7 +122,11 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
         </h1>
       </div>
 
-      {entry.underReview ? <UnderReview /> : undefined}
+      {/* The author's own entry under review: the band at the top, and
+          no tag here (round 28 #6). Nobody else ever reaches it. */}
+      {entry.underReview ? (
+        <NoticeBand {...HIDDEN_WHILE_WE_CHECK} />
+      ) : undefined}
 
       <PhotoPager photoKeys={entry.photoKeys} />
 

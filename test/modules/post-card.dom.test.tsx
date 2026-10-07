@@ -371,25 +371,67 @@ describe("PostCard: Useful", () => {
   });
 });
 
-describe("PostCard: the author's under-review marker (R-62, D-67)", () => {
-  it("marks the author's own hidden entry, under the author row", async () => {
-    const post = await card({ underReview: true, caption: "Held." });
+describe("PostCard: the author's under-review marker (R-62, D-67; round 29 #4)", () => {
+  it("sits in the author row before the badge, where SHARED would be", async () => {
+    const post = await card({
+      underReview: true,
+      isOwn: true,
+      verdict: 0,
+      caption: "Held.",
+    });
 
-    const marker = post.querySelector('[data-part="under-review"]');
-    expect(marker).toHaveTextContent("[Under review]");
-    expect(partsOf(post).slice(0, 4)).toStrictEqual([
+    expect(partsOf(post).slice(0, 5)).toStrictEqual([
       "author",
-      "under-review",
+      "review-tag",
+      "verdict-badge",
       "caption",
       "run-strip",
     ]);
   });
 
+  it("is bracketed MONO.xs in ink, and says the board's sentence aloud", async () => {
+    const post = await card({ underReview: true, isOwn: true });
+    const tag = post.querySelector<HTMLElement>('[data-part="review-tag"]');
+    if (tag === null) throw new Error("no tag");
+
+    // Ink, not muted: the runner can't fix it, and not pink, so it does
+    // not read as a press (round 29 #4).
+    expect(tag).toHaveClass("text-ink");
+    const drawn = tag.querySelector('[aria-hidden="true"]');
+    expect(drawn).toHaveTextContent("[Under review]");
+    expect(drawn?.firstElementChild).toHaveClass("text-mono-xs");
+    // The card's link is what a screen reader lands on, and it says the
+    // sentence rather than the brackets.
+    const link = within(post).getByRole("link");
+    expect(link).toHaveAccessibleName(
+      /Under review, only you can see this/,
+    );
+    expect(link).not.toHaveAccessibleName(
+      /\[Under review\]/,
+    );
+  });
+
   it("is absent from every other card", async () => {
     const post = await card({ underReview: false });
 
-    expect(post.querySelector('[data-part="under-review"]')).toBeNull();
+    expect(post.querySelector('[data-part="review-tag"]')).toBeNull();
     expect(screen.queryByText(/Under review/u)).toBeNull();
+  });
+});
+
+describe("PostCard: the viewer's own post says so (the Feed board)", () => {
+  it("ends the time line with YOU on the viewer's own post", async () => {
+    const post = await card({ isOwn: true });
+    const author = post.querySelector('[data-part="author"]');
+
+    expect(author?.textContent).toMatch(/^AA runner2h ago · 10:00 AM · You$/u);
+  });
+
+  it("says nothing of the kind on anyone else's", async () => {
+    const post = await card({ isOwn: false });
+    const author = post.querySelector('[data-part="author"]');
+
+    expect(author?.textContent).not.toMatch(/You/u);
   });
 });
 
