@@ -8,6 +8,7 @@ import type { ownProfile } from "../profiles";
 import { BracketHeadline } from "./BracketHeadline";
 import { Avatar } from "./Avatar";
 import { Handle } from "./Handle";
+import { UnderReview } from "./UnderReview";
 
 type Profile = Awaited<ReturnType<typeof ownProfile>>;
 
@@ -123,9 +124,11 @@ export function OwnProfile({
                 <Link
                   to="/feed/entry/$entryId"
                   params={{ entryId: entry.entryId }}
-                  className="target inline-flex items-center text-body font-semibold text-ink no-underline"
+                  className="target inline-flex items-center gap-2 text-body font-semibold text-ink no-underline"
                 >
                   {entry.verdict === null ? "No verdict yet" : "Entry"}
+                  {/* The card's tag, here too (round 28 #6). */}
+                  {entry.underReview ? <UnderReview /> : undefined}
                 </Link>
               </li>
             )}

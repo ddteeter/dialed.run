@@ -27,7 +27,7 @@ import { unitsFor } from "./units";
 import { countWhere } from "./count-where";
 import { followerCount, followingCount, isFollowing } from "./follows";
 import { lookUpHandle } from "../account";
-import { publiclyVisibleEntry } from "../safety";
+import { isUnderReviewForAuthor, publiclyVisibleEntry } from "../safety";
 import { runnersVisibleTo } from "./runner-visibility";
 import { outfitEntriesSelect } from "./entries-query";
 
@@ -56,6 +56,11 @@ export interface OwnProfile {
     entryId: string;
     createdAt: number;
     verdict: number | null;
+    /**
+    Hidden from everyone else pending review: G marks it as the card does
+    (round 28 #6, round 29 #4).
+    */
+    underReview: boolean;
   }[];
 }
 
@@ -124,6 +129,7 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
       entryId: e.id,
       createdAt: e.createdAt,
       verdict: e.verdict,
+      underReview: isUnderReviewForAuthor({ ...e, userId }, userId),
     })),
   };
 }

@@ -29,6 +29,7 @@ export interface OwnEntryRow {
   runId: string;
   verdict: number | null;
   createdAt: number;
+  moderationStatus: string;
 }
 
 export function recentOwnEntries(
@@ -41,6 +42,7 @@ export function recentOwnEntries(
       runId: outfitEntries.runId,
       verdict: outfitEntries.verdict,
       createdAt: outfitEntries.createdAt,
+      moderationStatus: outfitEntries.moderationStatus,
     })
     .from(outfitEntries)
     .where(eq(outfitEntries.userId, userId))
