@@ -5,14 +5,17 @@
  * note, the kit), H (someone else's profile), D-11 (useful reactions), the
  * bell counting a run of any age that still owes a verdict (S2), G's
  * settings button, `@handle` on the author row and `/@old` saying the
- * runner changed their name (FEED-10), the author's own under-review entry
- * marked on the card and on D (FEED-6, D-67), the unconfirmed runner's
+ * runner changed their name (FEED-10) and a never-held `/@handle` saying
+ * "This runner isn't here." (round 28 #11), the author's own under-review
+ * entry marked `[UNDER REVIEW]` on the card and with HIDDEN WHILE WE CHECK
+ * on D (FEED-6, D-67; round 28 #6, round 29 #4), the unconfirmed runner's
  * band on Feed and You and the "Confirm your email first" sheet that the
  * server's refusal of Useful, Report and Follow opens (round 26 #11;
  * FEED-11, SAF-15; design 133, D-113 Q3) while Unfollow goes through, an
  * unconfirmed runner nobody can find in search (D-113 Q2), and a runner
- * taking back their own entry — one photo, then the
- * whole entry (task 128 · SAF-3) — one journey, one video.
+ * taking back their own entry — one photo by the remove glyph on it, then
+ * the whole entry from under YOURS (task 128 · SAF-3; round 27 #26) — one
+ * journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
@@ -650,22 +653,39 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
         .set({ moderationStatus: "hidden_pending_review" })
         .where(eq(outfitEntries.id, ownEntryId));
     });
-    await scene(page, "Under review: still yours to see, and marked");
+    await scene(
+      page,
+      "Under review: [UNDER REVIEW] in ink where SHARED would be",
+    );
     await page.goto("/feed");
     await hydrated(page);
     const ownCard = page.locator('[data-part="post"]').filter({
       hasText: "Two photos, one too many",
     });
-    await expect(ownCard.locator('[data-part="under-review"]')).toHaveText(
+    // Round 29 #4: in the author row, before the badge, in ink — and said
+    // aloud as the board's sentence. The card also says YOU, and its photo
+    // carries 1 / 2.
+    const tag = ownCard.locator(
+      '[data-part="author"] [data-part="review-tag"]',
+    );
+    await expect(tag.locator('[aria-hidden="true"]')).toHaveText(
       "[Under review]",
       { ignoreCase: true },
     );
+    await expect(
+      ownCard.locator('a[href^="/feed/entry/"]'),
+    ).toHaveAccessibleName(/Under review, only you can see this/u);
+    await expect(ownCard.getByText(/· You$/u)).toBeVisible();
+    await expect(ownCard.getByText("1 / 2")).toBeVisible();
+    await scene(page, "D · HIDDEN WHILE WE CHECK, at the top");
     await ownCard.getByText("Two photos, one too many").click();
     await hydrated(page);
-    await expect(page.locator('[data-part="under-review"]')).toHaveText(
-      "[Under review]",
-      { ignoreCase: true },
+    const hiddenBand = page.locator('[data-part="notice-band"]');
+    await expect(hiddenBand).toContainText(
+      "Only you can see this while we look at it.",
     );
+    await expect(hiddenBand).toContainText("You can still edit or delete it.");
+    await expect(page.locator('[data-part="review-tag"]')).toHaveCount(0);
     await withLocalDb(async ({ core }) => {
       await core
         .update(outfitEntries)
@@ -682,6 +702,14 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     ).toBeVisible();
     await expect(page.getByText(otherUsername)).toHaveCount(0);
 
+    // Round 28 #11: a handle nobody ever held gets the same page a deleted
+    // one does, never a redirect, so the two cannot be told apart.
+    await scene(page, "/@nobody · this runner isn't here");
+    await page.goto(`/@never_${String(Date.now()).slice(-8)}`);
+    await hydrated(page);
+    await expect(page).toHaveURL(/\/@never_/u);
+    await expect(page.getByText("This runner isn't here.")).toBeVisible();
+
     await scene(page, "Your own entry: take back one photo");
     await page.goto(`/feed/entry/${ownEntryId}`);
     await hydrated(page);
@@ -689,7 +717,9 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await expect(
       page.getByRole("heading", { name: "Delete photo 2?" }),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Delete photo", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Delete photo", exact: true })
+      .click();
     await expect(
       page.getByRole("button", { name: "Delete photo 2" }),
     ).toHaveCount(0);
@@ -702,7 +732,9 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await expect(
       page.getByRole("heading", { name: "Delete this entry?" }),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Delete entry", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Delete entry", exact: true })
+      .click();
     await expect(page).not.toHaveURL(new RegExp(ownEntryId));
     await page.goto(`/feed/entry/${ownEntryId}`);
     await expect(page).not.toHaveURL(new RegExp(ownEntryId));

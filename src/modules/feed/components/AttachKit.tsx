@@ -385,15 +385,9 @@ export function AttachKit({
             onClose={closePhotoStep}
             label={PHOTO_STEP_LABEL}
           >
-            {photoStep?.step(
-              photoStep.file,
-              (ready) => {
-                wellFocus.restore();
-                keep(ready);
-              },
-              setSaid,
-              closePhotoStep,
-            )}
+            {/* Use this photo keeps the bytes; `keep` ends the step, so the
+                sheet closes and its `onClose` puts focus back on the well. */}
+            {photoStep?.step(photoStep.file, keep, setSaid, closePhotoStep)}
           </Sheet>
 
           <div className="flex flex-col gap-3">

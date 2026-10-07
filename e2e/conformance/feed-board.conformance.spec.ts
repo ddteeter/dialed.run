@@ -78,7 +78,7 @@ test("the author's own entry under review: the tag in the author row on the card
         .locator('[data-part="review-tag"] [aria-hidden="true"]')
         .innerText(),
     ).toBe(drawn.tag);
-    await expect(post.getByRole("link")).toHaveAccessibleName(
+    await expect(post.locator('a[href^="/feed/entry/"]')).toHaveAccessibleName(
       /Under review, only you can see this/u,
     );
     await expect(post.getByText(/· You$/u)).toBeVisible();
