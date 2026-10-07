@@ -198,7 +198,7 @@ function photoWell(): HTMLElement {
 
 function photoInput(): HTMLInputElement {
   const input = document.querySelector<HTMLInputElement>(
-    "[data-part='photo-well'] input[type='file']",
+    "[data-part='photo-well'] input[type='file'], [data-part='well-actions'] input[type='file']",
   );
   if (input === null) throw new Error("no photo input");
   return input;
@@ -1037,6 +1037,8 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     expect(
       within(document.body).getByRole("img", { name: "Your outfit" }),
     ).toHaveAttribute("src", "blob:preview");
+    // Use this photo closes W3 back onto the well — its Replace, now.
+    expect(photoInput()).toHaveFocus();
     expect(createObjectURL).toHaveBeenCalledWith(
       expect.objectContaining({ name: "blurred.jpg" }),
     );
@@ -1048,10 +1050,16 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     await renderWithRouter(attach({ renderPhotoStep: recording.step }));
 
     await user.upload(photoInput(), jpeg("first.jpg"));
+    // W3 takes focus to its heading when it opens.
+    act(() => {
+      photoInput().blur();
+    });
     act(() => {
       recording.cancel();
     });
     expect(screen.queryByText("step for first.jpg")).toBeNull();
+    // Cancel (and Esc, which is Cancel) closes back onto the well.
+    expect(photoInput()).toHaveFocus();
     expect(document.querySelector("[data-part='photo-well']")).toHaveAttribute(
       "data-state",
       "empty",

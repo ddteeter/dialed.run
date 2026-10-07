@@ -1593,6 +1593,303 @@ describe("W3 waits for the runner (round 28 #5)", () => {
   });
 });
 
+const DECODED: LoadedImage = {
+  image: {} as ImageBitmap,
+  width: 1000,
+  height: 1000,
+};
+
+const PREPARE_FAILED =
+  "This photo couldn't be prepared. Pick another photo, or cancel.";
+
+/**
+The control-failure band, if one is on screen.
+*/
+function band(): HTMLElement | null {
+  return document.querySelector<HTMLElement>("[data-part='failure-band']");
+}
+
+describe("Pick another checks a file as the well does", () => {
+  it("refuses a PDF in the field's own words, and keeps the photo it had", async () => {
+    const onReady = vi.fn();
+    const load = vi.fn<BlurPipeline["load"]>().mockResolvedValue(DECODED);
+    const { pipeline } = fakePipeline({ load });
+    const user = userEvent.setup({ applyAccept: false });
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={onReady}
+        onCancel={noop}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+    const use = screen.getByRole("button", { name: "Use this photo" });
+    await waitFor(() => {
+      expect(use).not.toHaveAttribute("aria-disabled");
+    });
+    expect(picker()).not.toHaveAttribute("aria-invalid");
+    expect(picker()).not.toHaveAttribute("aria-describedby");
+
+    await user.upload(
+      picker(),
+      new File(["%PDF"], "kit.pdf", { type: "application/pdf" }),
+    );
+
+    // `photoProblem`'s sentence — the one A2's well says — marked on the
+    // picker, which is where the fix is.
+    const message = screen.getByText("Photos must be JPG, PNG or WebP.");
+    expect(message).toHaveAttribute("id", "pick-another-message");
+    expect(picker()).toHaveAttribute("aria-invalid", "true");
+    expect(picker()).toHaveAttribute(
+      "aria-describedby",
+      "pick-another-message",
+    );
+    // Nothing was decoded for it, and the photo already checked is still
+    // the one Use this photo hands over.
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(use).not.toHaveAttribute("aria-disabled");
+    await user.click(use);
+    expect(onReady).toHaveBeenCalledExactlyOnceWith(BLURRED);
+  });
+
+  it("clears the mark once a photo it takes is picked", async () => {
+    const second = new File([new Uint8Array([8])], "second.jpg", {
+      type: "image/jpeg",
+    });
+    const load = vi.fn<BlurPipeline["load"]>().mockResolvedValue(DECODED);
+    const { pipeline } = fakePipeline({ load });
+    const user = userEvent.setup({ applyAccept: false });
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={vi.fn()}
+        onCancel={noop}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+    await user.upload(
+      picker(),
+      new File(["x"], "kit.heic", { type: "image/heic" }),
+    );
+    expect(screen.getByText("Photos must be JPG, PNG or WebP.")).toBeVisible();
+
+    await user.upload(picker(), second);
+
+    expect(screen.queryByText("Photos must be JPG, PNG or WebP.")).toBeNull();
+    expect(picker()).not.toHaveAttribute("aria-invalid");
+    expect(picker()).not.toHaveAttribute("aria-describedby");
+    expect(load).toHaveBeenLastCalledWith(second);
+  });
+
+  it("says a refusal into the screen's one region", async () => {
+    const onAnnounce = vi.fn();
+    const { pipeline } = fakePipeline();
+    const user = userEvent.setup();
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={vi.fn()}
+        onCancel={noop}
+        onAnnounce={onAnnounce}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+
+    await user.upload(
+      picker(),
+      new File([new Uint8Array(10 * 1024 * 1024 + 1)], "huge.jpg", {
+        type: "image/jpeg",
+      }),
+    );
+
+    expect(onAnnounce).toHaveBeenCalledWith(
+      "That photo is over 10 MB. Pick a smaller one.",
+    );
+  });
+});
+
+describe("when the photo cannot be prepared", () => {
+  it("says so on the band when the file will not decode, and Use this photo goes", async () => {
+    const onAnnounce = vi.fn();
+    const load = vi
+      .fn<BlurPipeline["load"]>()
+      .mockRejectedValueOnce(new Error("undecodable"))
+      .mockResolvedValue(DECODED);
+    const { pipeline } = fakePipeline({ load });
+    const user = userEvent.setup();
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={vi.fn()}
+        onCancel={noop}
+        onAnnounce={onAnnounce}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+
+    // Caught, not an unhandled rejection: the band says what is still
+    // true and the two ways out, and nothing waits forever behind a busy
+    // Use this photo.
+    await waitFor(() => {
+      expect(band()).not.toBeNull();
+    });
+    expect(band()).toHaveTextContent("Photo not added");
+    expect(band()).toHaveTextContent(PREPARE_FAILED);
+    expect(onAnnounce).toHaveBeenCalledWith(PREPARE_FAILED);
+    expect(screen.queryByRole("button", { name: "Use this photo" })).toBeNull();
+    expect(screen.getByLabelText("Pick another")).toBe(picker());
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeVisible();
+
+    // Try again decodes again; a decode that works brings the photo back.
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(load).toHaveBeenCalledTimes(2);
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Use this photo" }),
+      ).not.toHaveAttribute("aria-disabled");
+    });
+    expect(band()).toBeNull();
+  });
+
+  it("starts over with the photo Pick another chose", async () => {
+    const second = new File([new Uint8Array([8])], "second.jpg", {
+      type: "image/jpeg",
+    });
+    const load = vi
+      .fn<BlurPipeline["load"]>()
+      .mockRejectedValueOnce(new Error("undecodable"))
+      .mockResolvedValue(DECODED);
+    const { pipeline } = fakePipeline({ load });
+    const user = userEvent.setup();
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={vi.fn()}
+        onCancel={noop}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+    await waitFor(() => {
+      expect(band()).not.toBeNull();
+    });
+
+    await user.upload(picker(), second);
+
+    expect(band()).toBeNull();
+    expect(load).toHaveBeenLastCalledWith(second);
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Use this photo" }),
+      ).not.toHaveAttribute("aria-disabled");
+    });
+  });
+
+  it("says so when the blurred canvas makes no file, and a tap that paints again clears it", async () => {
+    const onReady = vi.fn();
+    const toFile = vi
+      .fn<BlurPipeline["toFile"]>()
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValue(BLURRED);
+    const { pipeline } = fakePipeline({ toFile });
+    const user = userEvent.setup();
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={onReady}
+        onCancel={noop}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(band()).toHaveTextContent(PREPARE_FAILED);
+    });
+    expect(screen.queryByRole("button", { name: "Use this photo" })).toBeNull();
+    expect(onReady).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Blur top-left" }));
+
+    await useThisPhoto();
+    expect(band()).toBeNull();
+    expect(onReady).toHaveBeenCalledExactlyOnceWith(BLURRED);
+  });
+
+  it("takes a canvas that throws as one that made no file", async () => {
+    const { pipeline } = fakePipeline({
+      toFile: () => Promise.reject(new Error("tainted")),
+    });
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={vi.fn()}
+        onCancel={noop}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(band()).toHaveTextContent(PREPARE_FAILED);
+    });
+  });
+
+  it("takes a blur-off canvas that throws as the redraw failing", async () => {
+    const storage = emptyStorage();
+    storage.setItem("dialed.blurFaces", "off");
+    const { pipeline } = fakePipeline({
+      toFile: () => Promise.reject(new Error("tainted")),
+    });
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={vi.fn()}
+        onCancel={noop}
+        pipeline={pipeline}
+        storage={storage}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(band()).toHaveTextContent(
+        "This photo couldn't be prepared without blur. Turn blur on, or pick another photo.",
+      );
+    });
+  });
+
+  it("takes a detector that throws as one that could not look, not as a failure", async () => {
+    const { pipeline } = fakePipeline({
+      detect: () => Promise.reject(new Error("model")),
+    });
+    render(
+      <PhotoBlur
+        file={PHOTO}
+        onReady={vi.fn()}
+        onCancel={noop}
+        pipeline={pipeline}
+        storage={emptyStorage()}
+      />,
+    );
+
+    // The photo is still one the runner can blur by hand, so this is the
+    // honest "couldn't check" line and the photo stays usable.
+    await waitFor(() => {
+      expect(screen.getByText(/couldn't check this photo/)).toBeInTheDocument();
+    });
+    expect(band()).toBeNull();
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Use this photo" }),
+      ).not.toHaveAttribute("aria-disabled");
+    });
+  });
+});
+
 /**
 The hidden input Pick another opens.
 */

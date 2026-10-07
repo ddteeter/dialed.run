@@ -5,11 +5,6 @@
  * `route-decisions.ts` gives: the component that uses these ships to the
  * browser, and `entries.ts` and `photos.ts` reach `env`.
  */
-import {
-  isAllowedPhotoType,
-  maxPhotoBytes,
-  photoFormatWords,
-} from "../../lib/photo-constraints";
 import type { AttachContext } from "./attach-context";
 import { attachKitInput } from "./inputs";
 import { redirectTo } from "./redirect";
@@ -36,27 +31,6 @@ export const kitChoice = attachKitInput.shape.itemIds.min(
  */
 export const PHOTO_NOT_SENT =
   "The photo didn't upload. Your kit is attached — press Next to try again, or remove the photo to go on.";
-
-const MEGABYTE = 1024 * 1024;
-
-/**
- * What is wrong with a picked photo, or nothing.
- *
- * A field failure — the fix is another file — so the well's field message
- * says it (round 22, "Well states": *"File type and size are field
- * failures"*). The type list and the cap are `lib/photo-constraints`', the
- * same two facts the upload route refuses by, so the screen cannot accept
- * a file the server would turn away.
- */
-export function photoProblem(file: File): string | undefined {
-  if (!isAllowedPhotoType(file.type)) {
-    return `Photos must be ${photoFormatWords}.`;
-  }
-  if (file.size > maxPhotoBytes) {
-    return `That photo is over ${String(maxPhotoBytes / MEGABYTE)} MB. Pick a smaller one.`;
-  }
-  return undefined;
-}
 
 /**
  * A2 for a run that already has a kit is A3 for its entry.

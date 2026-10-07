@@ -275,7 +275,12 @@ async function subjectsFor(
           owner: userProfiles.username,
         })
         .from(entryPhotos)
-        .innerJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
+        // LEFT, both: the author is a line of text and the photo is the
+        // thing being judged. `entry_photos.entry_id` carries no foreign
+        // key, so a photo whose entry has gone is possible — and an inner
+        // join would hide the very image the reviewer is asked about,
+        // where a left one shows it and simply names nobody.
+        .leftJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
         .leftJoin(userProfiles, eq(userProfiles.userId, outfitEntries.userId))
         .where(inArray(entryPhotos.id, subjectIds)),
       database

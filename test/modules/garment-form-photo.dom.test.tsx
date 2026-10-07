@@ -241,6 +241,10 @@ describe("GarmentForm: a picked photo", () => {
       "src",
       "blob:blurred",
     );
+    // Focus was on the step; Use this photo hands it back to the well —
+    // the filled well's Replace, a different input from the one that
+    // opened the step.
+    expect(fileInput()).toHaveFocus();
 
     await user.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => {
@@ -264,11 +268,17 @@ describe("GarmentForm: a picked photo", () => {
 
     await user.upload(fileInput(), png("face.png"));
     expect(screen.getByText("Step for face.png")).toBeVisible();
+    // W3 takes focus to its heading when it opens.
+    act(() => {
+      fileInput().blur();
+    });
     act(() => {
       cancel?.();
     });
 
     expect(screen.queryByText("Step for face.png")).toBeNull();
+    // Cancel (and Esc, which is Cancel) closes back onto the well.
+    expect(fileInput()).toHaveFocus();
     expect(well()).toHaveAttribute("data-state", "empty");
     expect(createObjectURL).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Save" }));

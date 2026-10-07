@@ -476,6 +476,9 @@ describe("GarmentDetail: the photo", () => {
     });
     expect(uploadPhoto.mock.calls[0]?.[0].data.get("photo")).toBe(blurred);
     expect(screen.queryByRole("button", { name: /Step for/ })).toBeNull();
+    // The step had focus; closing it hands focus back to the well it was
+    // opened from, rather than dropping it on the page.
+    expect(fileInput()).toHaveFocus();
   });
 });
 

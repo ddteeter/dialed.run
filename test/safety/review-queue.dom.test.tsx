@@ -48,6 +48,8 @@ describe("an empty queue", () => {
     // from a broken one.
     expect(screen.getByText(/Nothing waiting/)).toBeInTheDocument();
     expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
+    // Arriving on an empty queue moves nothing.
+    expect(document.body).toHaveFocus();
   });
 });
 
@@ -262,6 +264,10 @@ describe("deciding", () => {
     expect(
       screen.queryByRole("button", { name: "Remove and report" }),
     ).not.toBeInTheDocument();
+    // Focus goes back to the press that asked, not to the page.
+    expect(
+      screen.getByRole("button", { name: "Remove as suspected CSAM" }),
+    ).toHaveFocus();
     // The reason picked before the question is still the reason.
     expect(
       screen.getByRole("combobox", { name: /Why it comes down/ }),
@@ -471,6 +477,60 @@ describe("deciding", () => {
     await user.selectOptions(picker, "it's an ad or spam");
 
     expect(picker).toHaveFocus();
+  });
+
+  it("opens the row that takes the decided one's place, not the oldest", async () => {
+    const user = userEvent.setup();
+    renderQueue([
+      row(),
+      row({ id: "01HYYYYYYYYYYYYYYYYYYYYYYY", subjectId: "e-2" }),
+      row({ id: "01HXXXXXXXXXXXXXXXXXXXXXXX", subjectId: "e-3" }),
+    ]);
+    await user.click(screen.getByRole("button", { name: "entry · e-2" }));
+
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+
+    // A reviewer working down from the middle keeps their place.
+    const third = screen.getByRole("button", { name: "entry · e-3" });
+    await waitFor(() => {
+      expect(third).toHaveFocus();
+    });
+    expect(third).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "entry · e-1" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
+  it("opens the row before when the last one was decided", async () => {
+    const user = userEvent.setup();
+    renderQueue([
+      row(),
+      row({ id: "01HYYYYYYYYYYYYYYYYYYYYYYY", subjectId: "e-2" }),
+      row({ id: "01HXXXXXXXXXXXXXXXXXXXXXXX", subjectId: "e-3" }),
+    ]);
+    await user.click(screen.getByRole("button", { name: "entry · e-3" }));
+
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+
+    const second = screen.getByRole("button", { name: "entry · e-2" });
+    await waitFor(() => {
+      expect(second).toHaveFocus();
+    });
+    expect(second).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("lands focus on the empty line once the last row is decided", async () => {
+    const user = userEvent.setup();
+    renderQueue([row()]);
+
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+
+    // The row, and focus with it, are gone: the line that says what is
+    // now true takes it, rather than the page.
+    await waitFor(() => {
+      expect(screen.getByText(/Nothing waiting/)).toHaveFocus();
+    });
   });
 
   it("does not ask the same row twice", async () => {

@@ -722,6 +722,36 @@ describe("the queue itself", () => {
     ]);
   });
 
+  it("still shows a photo whose entry has gone, naming nobody", async () => {
+    // No foreign key holds `entry_photos.entry_id`, so this row is
+    // possible; a classifier flag on it is the queue row that reaches it.
+    const photoId = newUlid();
+    const orphanKey = `entries/${newUlid()}/${newUlid()}/0`;
+    await core().insert(entryPhotos).values({
+      id: photoId,
+      entryId: newUlid(),
+      photoKey: orphanKey,
+      position: 0,
+    });
+    await core().insert(reviewQueue).values({
+      id: newUlid(),
+      subjectType: "photo",
+      subjectId: photoId,
+      source: "classifier",
+      status: "pending",
+      createdAt: nowSeconds(),
+    });
+
+    const [queued] = await pendingReviewQueue();
+
+    // The image is what is being judged; the author is a line of text.
+    // An inner join to the entry dropped both.
+    expect(queued?.subject).toStrictEqual({
+      photoKeys: [orphanKey],
+      owner: undefined,
+    });
+  });
+
   it("names a reported runner and a reported product", async () => {
     const subject = await makeUser();
     await core()

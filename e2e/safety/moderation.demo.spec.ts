@@ -117,6 +117,10 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   await expect(
     row.getByRole("button", { name: "Remove and report" }),
   ).toHaveCount(0);
+  // Cancel puts focus back on the press that asked.
+  await expect(
+    row.getByRole("button", { name: "Remove as suspected CSAM" }),
+  ).toBeFocused();
 
   await scene(page, "Review: Remove deletes, and says why");
   await reason.selectOption("it's an ad or spam");

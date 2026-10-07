@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { JSX, ReactNode } from "react";
+import type { JSX, ReactNode, Ref } from "react";
 
 import {
   Bracketed,
@@ -7,6 +7,7 @@ import {
   Mono,
   SubmitButton,
   useFormSubmit,
+  useReturnFocus,
 } from "../../../ui";
 import type { FormShell } from "../../../ui";
 import {
@@ -143,9 +144,14 @@ A decision that needs no reason: a text button beside the row's submit.
 function QuietAction({
   label,
   onPress,
-}: Readonly<{ label: string; onPress: () => void }>): JSX.Element {
+  buttonRef,
+}: Readonly<{
+  label: string;
+  onPress: () => void;
+  buttonRef?: Ref<HTMLButtonElement> | undefined;
+}>): JSX.Element {
   return (
-    <button className="target" type="button" onClick={onPress}>
+    <button ref={buttonRef} className="target" type="button" onClick={onPress}>
       <Mono step="xs">{label}</Mono>
     </button>
   );
@@ -213,6 +219,9 @@ function Decision({
   // message; the select sees it as the "—" option's value.
   const [reason, setReason] = useState<RemovalReason | undefined>();
   const [isAsking, setIsAsking] = useState(false);
+  // Cancel in the question puts focus back on the press that asked it,
+  // drawn afresh with the decision bar — not on the page.
+  const askedFrom = useReturnFocus();
   const form = useFormSubmit({
     schema: reviewActionInput,
     action: (values) => decide({ data: values }),
@@ -237,6 +246,7 @@ function Decision({
         }}
         onCancel={() => {
           setIsAsking(false);
+          askedFrom.restore();
         }}
       />
     );
@@ -260,6 +270,7 @@ function Decision({
       last={
         <QuietAction
           label="Remove as suspected CSAM"
+          buttonRef={askedFrom.ref}
           onPress={() => {
             // A press with no reason goes to the form, which refuses it
             // with the schema's own sentence on the field — asking a
@@ -464,16 +475,7 @@ function ReviewRow({
   reviewHandle,
   onSettled,
 }: ReviewRowProps): JSX.Element {
-  const shouldFocus = active && focusOnOpen;
-  // A ref callback that changes only with `shouldFocus`: React calls it
-  // with the button when it changes, so focus moves once — when this row
-  // becomes the one to decide — and not on every render after.
-  const opener = useCallback(
-    (node: HTMLButtonElement | null) => {
-      if (shouldFocus && node !== null) node.focus();
-    },
-    [shouldFocus],
-  );
+  const opener = useFocusWhen(active && focusOnOpen);
 
   return (
     <li className="flex flex-col gap-2 border border-hairline p-3">
@@ -525,6 +527,40 @@ function RowDecision(
 }
 
 /**
+ * A ref callback that focuses its element when `shouldFocus` is, and
+ * changes only with it: React calls it with the element when it changes,
+ * so focus moves once — when the element becomes the one to land on — and
+ * not on every render after.
+ */
+function useFocusWhen(
+  shouldFocus: boolean,
+): (node: HTMLElement | null) => void {
+  return useCallback(
+    (node: HTMLElement | null) => {
+      if (shouldFocus && node !== null) node.focus();
+    },
+    [shouldFocus],
+  );
+}
+
+/**
+ * The empty queue's line. Once a decision has emptied it, focus lands
+ * here — the reviewer's last row is gone, and focus with it, so this is
+ * the place that says what is now true. Focusable by script only: it is
+ * a sentence, not a control.
+ */
+function NothingWaiting({
+  hasDecided,
+}: Readonly<{ hasDecided: boolean }>): JSX.Element {
+  const line = useFocusWhen(hasDecided);
+  return (
+    <p ref={line} tabIndex={-1} className="text-small text-quiet">
+      Nothing waiting. The daily digest says so too.
+    </p>
+  );
+}
+
+/**
 A queue row's identity, for `useSettled`.
 */
 function queueRowId(row: QueueRow): string {
@@ -555,11 +591,7 @@ export function ReviewQueue(
         title="waiting"
         items={waiting}
         count
-        whenEmpty={
-          <p className="text-small text-quiet">
-            Nothing waiting. The daily digest says so too.
-          </p>
-        }
+        whenEmpty={<NothingWaiting hasDecided={hasDecided} />}
       >
         {(row) => (
           <ReviewRow
@@ -573,6 +605,12 @@ export function ReviewQueue(
             decide={props.resolve}
             reviewHandle={props.reviewHandle}
             onSettled={(id) => {
+              // The row that takes the decided one's place opens next —
+              // the one after it, or the one before when it was the last
+              // — so a reviewer working down the list keeps their place
+              // rather than being sent back to the top.
+              const at = waiting.findIndex((other) => other.id === id);
+              setChosen((waiting[at + 1] ?? waiting[at - 1])?.id);
               setHasDecided(true);
               settle(id);
             }}

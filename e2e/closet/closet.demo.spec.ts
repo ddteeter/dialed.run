@@ -69,6 +69,17 @@ const PNG_1X1 = Buffer.from(
 );
 
 /**
+ * A real 2x1 PNG, for Pick another: a different shape from `PNG_1X1`, so
+ * the photo that ends up attached can be told apart from the first by its
+ * proportions alone — the blur step redraws both, so neither name nor
+ * bytes survive it.
+ */
+const PNG_2X1 = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAADUlEQVR4nGP4zwAE/wEHAAH/4iOeWQAAAABJRU5ErkJggg==",
+  "base64",
+);
+
+/**
  * Whether a server-function request is the photo's upload: the only one
  * sent as multipart form data, so the demo can drop that one alone.
  */
@@ -178,7 +189,7 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await chooser.setFiles({
     name: "houdini.png",
     mimeType: "image/png",
-    buffer: PNG_1X1,
+    buffer: PNG_2X1,
   });
   await expect(use).not.toHaveAttribute("aria-disabled", "true", {
     timeout: 20_000,
@@ -190,7 +201,23 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await expect(well).toHaveAttribute("data-state", "filled", {
     timeout: 20_000,
   });
-  await expect(well.locator('img[src^="blob:"]')).toBeVisible();
+  const preview = well.locator('img[src^="blob:"]');
+  await expect(preview).toBeVisible();
+  // The photo attached is the one Pick another chose, not the first: it
+  // is the 2x1 one, twice as wide as it is tall.
+  await expect
+    .poll(() =>
+      preview.evaluate((image: HTMLImageElement) =>
+        image.naturalHeight === 0
+          ? 0
+          : image.naturalWidth / image.naturalHeight,
+      ),
+    )
+    .toBe(2);
+  // Use this photo closes W3 back onto the well — its Replace, now.
+  await expect(
+    page.locator("[data-part='well-actions'] input[type='file']"),
+  ).toBeFocused();
 
   await page.getByRole("button", { name: "Add to closet" }).click();
   await expect(

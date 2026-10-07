@@ -1000,6 +1000,23 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     - **The review row's opener** is the row's name as a button with
       `aria-expanded`, and the CSAM question carries the kicker "Remove as
       suspected CSAM" above it.
+    - **A photo W3 cannot prepare** — the file will not decode, or the
+      blurred canvas makes no file — is the round 23 control-failure band:
+      "PHOTO NOT ADDED · This photo couldn't be prepared. Pick another
+      photo, or cancel." Use this photo is not drawn while it shows (there
+      is nothing behind it); Try again decodes again. A detector that
+      throws is not this band: it is the "couldn't check" line, because the
+      photo can still be blurred by hand. **The ask:** confirm the words,
+      and whether Use this photo should go or stay disabled.
+    - **Pick another refuses what the well refuses** (type and size, the
+      same `photoProblem` sentences), as the field message under it; the
+      photo already checked stays.
+    - **Focus on close.** W3's Cancel, Esc and Use this photo return focus
+      to the photo well's input (Replace, once the well is filled); Cancel
+      in the CSAM question returns it to "Remove as suspected CSAM";
+      deciding a row opens the row that takes its place (the next, or the
+      one before when it was the last), and deciding the last row focuses
+      the "Nothing waiting" line.
 
 ## Answered in round 34 (imported 2026-10-04)
 
