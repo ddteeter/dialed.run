@@ -499,28 +499,53 @@ export function FailureBand({
   message,
   onRetry,
   retryRef,
+  part = "failure-band",
+  state = "failed",
+  children,
 }: Readonly<{
   kicker: string;
   message: string;
-  onRetry: () => void;
+  /**
+   * Try again. Left out where pressing again cannot fix it — a refusal, or
+   * a change that already loaded what the next press needs — and the band
+   * ends in `children`, or nothing.
+   */
+  onRetry?: (() => void) | undefined;
   retryRef?: RefObject<HTMLButtonElement | null> | undefined;
+  /**
+   * The name the band's board draws it under. `control-failure` is Au6's,
+   * for Google's band under its button (round 33); everything else is
+   * round 22's `failure-band`.
+   */
+  part?: "failure-band" | "control-failure";
+  /**
+  Which failure this is, for a screen that draws more than one.
+  */
+  state?: string;
+  /**
+  What ends the band besides Try again: the link to the page that fixes it.
+  */
+  children?: ReactNode;
 }>): JSX.Element {
   return (
     <div
-      data-part="failure-band"
-      data-state="failed"
+      data-part={part}
+      data-state={state}
       className="flex flex-col items-start gap-3 border border-ink p-4"
     >
       <Mono step="xs">{kicker}</Mono>
       <span className="text-body">{message}</span>
-      <button
-        ref={retryRef}
-        type="button"
-        onClick={onRetry}
-        className="target cursor-pointer rounded-field border border-ink bg-ink px-4 py-3 text-body font-bold text-ground"
-      >
-        Try again
-      </button>
+      {onRetry === undefined ? undefined : (
+        <button
+          ref={retryRef}
+          type="button"
+          onClick={onRetry}
+          className="target cursor-pointer rounded-field border border-ink bg-ink px-4 py-3 text-body font-bold text-ground"
+        >
+          Try again
+        </button>
+      )}
+      {children}
     </div>
   );
 }

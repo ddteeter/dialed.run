@@ -28,11 +28,16 @@ async function renderWithRouter(element: ReactElement) {
   return render(<RouterProvider router={router} />);
 }
 
-function behindPage(hasPassword: boolean, username?: string) {
+function behindPage(
+  hasPassword: boolean,
+  username?: string,
+  isStravaConnected = true,
+) {
   return (
     <AccountWhileBehind
       account={{ email: "maya@example.com", hasPassword }}
       username={username}
+      isStravaConnected={isStravaConnected}
       signOutEverywhere={<button type="button">Sign out everywhere</button>}
       dataExport={<button type="button">Get a copy</button>}
       deletion={<button type="button">Delete account</button>}
@@ -53,11 +58,13 @@ describe("AccountWhileBehind (round 30 #4a)", () => {
       `Emailmaya@example.com${HINT} Accept`,
       `Username@maya_runs${HINT} Accept`,
       `Password${HINT} Accept`,
+      // Round 30 #4a draws Strava too, last, as Settings › Account keeps it.
+      `StravaConnected${HINT} Accept`,
     ]);
     // Values as text; Password has none to show.
     expect(
       rows.map((row) => row.querySelector("[data-part='value']")?.textContent),
-    ).toStrictEqual(["maya@example.com", "@maya_runs", undefined]);
+    ).toStrictEqual(["maya@example.com", "@maya_runs", undefined, "Connected"]);
     for (const row of rows) {
       const hint = within(row as HTMLElement).getByText(HINT, {
         exact: false,
@@ -80,12 +87,13 @@ describe("AccountWhileBehind (round 30 #4a)", () => {
     }
   });
 
-  it("has no Password row for an account with no password, and says when no handle is picked", async () => {
-    await renderWithRouter(behindPage(false));
+  it("has no Password row for an account with no password, and says when no handle is picked or Strava is not connected", async () => {
+    await renderWithRouter(behindPage(false, undefined, false));
     const rows = [...document.querySelectorAll("[data-part='read-only-row']")];
     expect(rows.map((row) => row.textContent)).toStrictEqual([
       `Emailmaya@example.com${HINT} Accept`,
       `UsernameNot picked${HINT} Accept`,
+      `StravaNot connected${HINT} Accept`,
     ]);
   });
 });

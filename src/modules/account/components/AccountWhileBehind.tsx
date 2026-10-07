@@ -33,10 +33,8 @@ export function AccountUnlessBehindOnTerms({
  * The read-only body of U1, as round 30 draws it ("Account gated r30"),
  * under the sub-page's own heading "Account":
  *
- * - **No tab bar** (the route's shell). The board's back link reads
- *   "‹ Terms"; the build keeps the sub-page's "‹ Settings", which the
- *   root's gate sends to the prompt, because a screen has one heading
- *   source and that frame is it (design-deltas item 50).
+ * - **No tab bar** (the route's shell), and the back link is "‹ Terms":
+ *   "the back link returns to the gate" (`SettingsBack`'s `terms`).
  * - **Values as text, not fields**, each with the hint "Accept the Terms
  *   to change this." in TYPE.small `--muted` and no band, "because nothing
  *   failed", and a link back to the prompt. The editing controls leave the
@@ -45,19 +43,24 @@ export function AccountUnlessBehindOnTerms({
  *   and **Export and Delete run their normal flows** (D-95), so the route
  *   hands in the same three it gives the ordinary page.
  *
- * The board draws Email and Strava. Strava's connect control is on
- * Settings › Strava, not here, so it is not on this page; Username and
- * Password are, because the ordinary page edits them.
+ * The board draws Email and Strava; Username and Password are here too,
+ * because the ordinary page edits them, and Strava comes last, where
+ * Settings › Account keeps it (round 30: tokens sit "below Strava"). The
+ * board's "Connected as Maya R." names the athlete, which is Strava data
+ * this app never stores, so the row says "Connected" as T3a's status line
+ * does, or "Not connected".
  */
 export function AccountWhileBehind({
   account,
   username,
+  isStravaConnected,
   signOutEverywhere,
   dataExport,
   deletion,
 }: Readonly<{
   account: { email: string; hasPassword: boolean };
   username: string | undefined;
+  isStravaConnected: boolean;
   signOutEverywhere: ReactNode;
   dataExport: ReactNode;
   deletion: ReactNode;
@@ -71,6 +74,10 @@ export function AccountWhileBehind({
           value={username === undefined ? "Not picked" : `@${username}`}
         />
         {account.hasPassword ? <ReadOnlyRow label="Password" /> : undefined}
+        <ReadOnlyRow
+          label="Strava"
+          value={isStravaConnected ? "Connected" : "Not connected"}
+        />
       </ul>
       {signOutEverywhere}
       {dataExport}

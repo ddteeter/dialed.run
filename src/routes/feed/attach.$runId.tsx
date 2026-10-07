@@ -16,6 +16,8 @@ import { Layout } from "../../ui";
 
 // fallow-ignore-next-line code-duplication -- two signed-in feed routes are the same route shape by mandate: createFileRoute + beforeLoad gate + a one-call loader + shell is what server-functions-are-glue requires of a route
 export const Route = createFileRoute("/feed/attach/$runId")({
+  // D-102's name for the page: its heading is a question.
+  staticData: { savedPage: "Attach the kit" },
   beforeLoad: async ({ location }) => {
     requireSignedIn(await getSession(), location);
   },

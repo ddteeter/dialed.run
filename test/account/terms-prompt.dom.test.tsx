@@ -18,7 +18,6 @@ import type {
   AcceptResult,
   TermsPromptView,
 } from "../../src/modules/account/terms-acceptance";
-import { returnPageName } from "../../src/modules/account/terms-return";
 
 /**
  * ACC-6's terms prompt, as round 29 #6 and round 30 #4 draw it: the
@@ -41,11 +40,11 @@ function prompt(
   {
     accept = () => Promise.resolve("accepted"),
     logOut = () => Promise.resolve(),
-    from,
+    savedPage,
   }: {
     accept?: (input: { data: { version: number } }) => Promise<AcceptResult>;
     logOut?: () => Promise<unknown>;
-    from?: string;
+    savedPage?: string;
   } = {},
 ) {
   const acceptFn = vi.fn(accept);
@@ -59,7 +58,7 @@ function prompt(
       logOut={logOutFn}
       onAccepted={onAccepted}
       onStale={onStale}
-      from={from}
+      savedPage={savedPage}
     />,
   );
   return {
@@ -209,14 +208,19 @@ describe("TermsPrompt · a version bump (round 29 #6)", () => {
 });
 
 describe("TermsPrompt · where Accept goes back to (D-102)", () => {
+  // Whatever page the refused save left, by the name `ui/terms-refusal`
+  // carried: round 30 #4b's words where a route gives them, and otherwise
+  // the page's own heading — the edit page's is "Edit {name}".
   it.each([
-    ["/runs/new", "Log a run"],
-    ["/runs/manual?from=strava#form", "Log a run"],
-    ["/closet/new", "Add a garment"],
+    ["Log a run"],
+    ["Add a piece"],
+    ["Edit Harrier"],
+    ["Attach the kit"],
+    ["The verdict"],
   ])(
-    "warns, from %s, that Accept goes back to %s and what was typed is gone",
-    async (from, page) => {
-      const { rendered } = prompt(BUMP, { from });
+    "warns that Accept goes back to %s and what was typed is gone",
+    async (page) => {
+      const { rendered } = prompt(BUMP, { savedPage: page });
       await rendered;
       const note = document.querySelector("[data-part='return-note']");
       expect(note).toHaveTextContent(
@@ -227,19 +231,13 @@ describe("TermsPrompt · where Accept goes back to (D-102)", () => {
     },
   );
 
-  it("says nothing when no refused save brought them: from login, or from a page with no form", async () => {
-    const { rendered } = prompt(BUMP, { from: "/feed" });
+  it("says nothing when no refused save brought them: from login, a loader or a control", async () => {
+    const { rendered } = prompt(BUMP);
     await rendered;
     expect(document.querySelector("[data-part='return-note']")).toBeNull();
   });
 
-  it("names only the form pages, by the heading each wears", () => {
-    expect(returnPageName(undefined)).toBeUndefined();
-    expect(returnPageName("/")).toBeUndefined();
-    expect(returnPageName("/runs")).toBeUndefined();
-    expect(returnPageName("/runs/new/extra")).toBeUndefined();
-    expect(returnPageName("/runs/new")).toBe("Log a run");
-    expect(returnPageName("/closet/new?brand=Janji")).toBe("Add a garment");
+  it("says it in round 30's words", () => {
     expect(returnNote("Log a run")).toBe(
       "After you accept, you'll go back to Log a run. What you typed wasn't kept.",
     );
@@ -268,8 +266,17 @@ describe("TermsPrompt · Accept and Log out", () => {
     await rendered;
     await user.click(acceptButton());
     const stale = await screen.findByText(STALE);
-    const band = stale.closest("[data-part='control-failure']");
+    // The screen's one control-failure band, under its one part name.
+    const band = stale.closest("[data-part='failure-band']");
     expect(band).toHaveAttribute("data-state", "stale");
+    expect(
+      document.querySelectorAll("[data-part='failure-band']"),
+    ).toHaveLength(1);
+    // Announced as a failed Accept is, through the one status region
+    // (rule 08).
+    expect(screen.getByRole("status")).toHaveTextContent(
+      `Not accepted. ${STALE}`,
+    );
     expect(band).toHaveClass("border", "border-ink");
     expect(within(band as HTMLElement).getByText("Not accepted")).toHaveClass(
       "text-mono-xs",
@@ -302,14 +309,39 @@ describe("TermsPrompt · Accept and Log out", () => {
     await rendered;
     await user.click(acceptButton());
     const kicker = await screen.findByText("Not accepted");
-    expect(acceptRow()?.nextElementSibling).toBe(
-      kicker.closest("[data-part='failure-band']"),
+    const band = kicker.closest("[data-part='failure-band']");
+    expect(acceptRow()?.nextElementSibling).toBe(band);
+    // Round 29 #6: the cause, then what was not recorded.
+    expect(band).toHaveTextContent(
+      "Not acceptedOur end failed. Nothing was recorded.Try again",
     );
-    expect(screen.getByRole("status")).toHaveTextContent(/^Not accepted\. /u);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Not accepted. Our end failed. Nothing was recorded.",
+    );
     await user.click(screen.getByRole("button", { name: "Try again" }));
     await waitFor(() => {
       expect(onAccepted).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it("clears a stale Accept's band when the next Accept fails, so one band says what is true", async () => {
+    const accept = vi
+      .fn<() => Promise<AcceptResult>>()
+      .mockResolvedValueOnce("stale")
+      .mockRejectedValueOnce(new Error("down"));
+    const { rendered, user } = prompt(BUMP, { accept });
+    await rendered;
+    await user.click(acceptButton());
+    await screen.findByText(STALE);
+    await user.click(acceptButton());
+    await screen.findByRole("button", { name: "Try again" });
+    expect(screen.queryByText(STALE)).toBeNull();
+    expect(
+      document.querySelectorAll("[data-part='failure-band']"),
+    ).toHaveLength(1);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Not accepted. Our end failed. Nothing was recorded.",
+    );
   });
 
   it("puts a failed Log out's band under the line that holds Log out", async () => {

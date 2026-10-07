@@ -21,6 +21,11 @@ import { forgetSession } from "../lib/browser/session-memo";
  * - **`from` is where the runner was**, so Accept returns them there
  *   (`/account/terms` parses it as a path on this site, and goes home
  *   without one).
+ * - **`save` names that page when what was refused was a save** (D-102):
+ *   the prompt then warns that Accept goes back to it and what was typed
+ *   was not kept. Every form's refusal is a save (`useFormSubmit`), and so
+ *   is a control's that holds typed state (`useControlAction`'s `isSave`,
+ *   Attach); a loader's or a plain control's lost nothing, and sends none.
  *
  * **Why a context rather than a hook that navigates.** `useFormSubmit`
  * and `useControlAction` are rendered by dozens of components under tests
@@ -29,7 +34,41 @@ import { forgetSession } from "../lib/browser/session-memo";
  * a hook with no provider above it — a test — has no answer and shows the
  * refusal as the failure `classifyFailure` names.
  */
-const TermsRefusal = createContext<(() => void) | undefined>(undefined);
+const TermsRefusal = createContext<AnswerTermsRefusal | undefined>(undefined);
+
+/**
+ * The root's answer: `isSave` when what was refused was a save, for D-102's
+ * line.
+ */
+export type AnswerTermsRefusal = (isSave?: boolean) => void;
+
+declare module "@tanstack/react-router" {
+  interface StaticDataRouteOption {
+    /**
+     * What D-102's line calls this page, in the runner's words ("Log a
+     * run", "Add a piece"; round 30 #4b), where those are not its heading.
+     */
+    savedPage?: string;
+  }
+}
+
+/**
+ * The page a refused save left, by name: the nearest route's `savedPage`,
+ * or else the page's heading — the words the runner saw on it ("Edit
+ * Harrier"), since a screen has one (rule 04). Read when the refusal
+ * lands, which is after the page drew it. A page with neither gets no
+ * name, and the prompt no line.
+ */
+function savedPageName(
+  matches: readonly { staticData: { savedPage?: string | undefined } }[],
+): string | undefined {
+  const named = matches.findLast(
+    (match) => match.staticData.savedPage !== undefined,
+  );
+  return (
+    named?.staticData.savedPage ?? document.querySelector("h1")?.textContent
+  );
+}
 
 /**
  * The root's provider: everything under it answers a terms refusal by
@@ -42,11 +81,14 @@ export function TermsRefusalAnswer({
   const navigate = useNavigate();
   // Not memoised: the root re-renders only as the route changes, and a
   // `useCallback` here would keep nothing a consumer could notice.
-  const answer = () => {
+  const answer: AnswerTermsRefusal = (isSave = false) => {
     forgetSession();
     void navigate({
       to: "/account/terms",
-      search: { from: router.state.location.href },
+      search: {
+        from: router.state.location.href,
+        save: isSave ? savedPageName(router.state.matches) : undefined,
+      },
     });
   };
   return (
@@ -57,6 +99,6 @@ export function TermsRefusalAnswer({
 /**
  * The answer to a terms refusal, or `undefined` with no provider above.
  */
-export function useTermsRefusal(): (() => void) | undefined {
+export function useTermsRefusal(): AnswerTermsRefusal | undefined {
   return useContext(TermsRefusal);
 }

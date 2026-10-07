@@ -987,33 +987,27 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       outranks the board). Google's refusals are the same `control-failure`
       region, as round 29 draws them. **The ask:** drop the role from the
       frames, or say when a band should be its own region.
-    - **D-102 names "Add a garment", not "Add a piece".** Round 30's note
-      gives "Log a run, Add a piece" as the runner's words. No page in the
-      build is called "Add a piece"; `/closet/new`'s heading is "Add a
-      garment", so the line names the page by the heading the runner saw.
-      `/runs/new` and `/runs/manual` are "Log a run". Any other page,
-      including a refused control's, gets no line, since nothing typed was
-      lost there. **The ask:** confirm, or rename the page.
+    - **D-102's line names every form page, two of them in words of the
+      build's choosing.** Any refused save gets the line: every form's,
+      and Attach's (a control that holds the runner's picks). A route may
+      name itself in the runner's words (`staticData.savedPage`: "Log a
+      run", "Add a piece", as round 30 #4b gives them); any other page is
+      named by its heading, so the edit page is "Edit Harrier". A2's and
+      A3's headings are questions ("What did you wear?", "Did it work?"),
+      so the build names them "Attach the kit" and "The verdict", after
+      product.md's screen names. A refused control or loader gets no line.
+      **The ask:** confirm those two names, or give them.
     - **Log out in the escape line is a button with a 44px target.** Rule
       03's inline exception is for links, and Log out is an action, so it
       keeps `target` and the line is a little taller than the board's.
       **The ask:** none unless design wants the inline target for buttons.
-    - **A failed Accept says the shared cause line.** The board's "Your
-      connection dropped. Nothing was recorded." is round 29's; the build's
-      band reads `NOT ACCEPTED` with `useControlAction`'s one cause line, the
-      same sentence every control uses, under Accept. **The ask:** confirm,
-      or rule that controls may name what was not recorded.
-    - **The read-only `/account` has no Strava row.** Round 30 #4a draws
-      Email and Strava. Settings › Account holds Email, Username and
-      Password; Strava is its own settings page. So the gated page shows
-      those three as text, each with "Accept the Terms to change this." and
-      an Accept link to the prompt, then Sign out everywhere, Get a copy
-      and Delete account, live. There is no tab bar, as drawn, but the
-      back link is the sub-page's "‹ Settings", not "‹ Terms": the root's
-      gate sends Settings to the prompt, so it lands where the board's
-      does, and the page keeps the one heading source every settings
-      sub-page shares (rule 04). **The ask:** confirm both, or move
-      Strava here.
+    - **The read-only `/account`'s Strava row says "Connected", not
+      "Connected as Maya R."** The athlete's name is Strava data, which
+      the app never stores, so the row says what T3a's status line says:
+      "Connected", or "Not connected". It comes last, after Email,
+      Username and Password (the ordinary page edits all three), where
+      round 30 puts Strava in Settings › Account. The board draws no
+      tokens row, so there is none. **The ask:** confirm the value.
     - **WHAT CHANGED's kicker is `MONO.xs` in `--muted`** on `--tint`, a
       plain list with a `·` before each line, under the lead and above
       "Read the full Terms". The owner writes the lines in the terms' front

@@ -116,7 +116,7 @@ function sheet() {
 
 function answers() {
   return {
-    terms: vi.fn<() => void>(),
+    terms: vi.fn<(isSave?: boolean) => void>(),
     unconfirmed: vi.fn<(trigger: ConfirmTrigger | undefined) => void>(),
   };
 }
@@ -284,26 +284,29 @@ describe("an unconfirmed refusal, answered at the root (D-113)", () => {
 describe("didAnswerRefusal, with both answers above", () => {
   it("sends an unconfirmed refusal to the confirm sheet alone, with its trigger", () => {
     const both = answers();
-    expect(didAnswerRefusal("unconfirmed", both, "follow")).toBe(true);
+    expect(didAnswerRefusal("unconfirmed", both, "follow", false)).toBe(true);
     expect(both.unconfirmed).toHaveBeenCalledWith("follow");
     expect(both.terms).not.toHaveBeenCalled();
   });
 
-  it("sends a terms refusal to the terms prompt alone", () => {
+  it("sends a terms refusal to the terms prompt alone, saying whether it was a save", () => {
     const both = answers();
-    expect(didAnswerRefusal("terms", both, "follow")).toBe(true);
-    expect(both.terms).toHaveBeenCalledOnce();
+    expect(didAnswerRefusal("terms", both, "follow", false)).toBe(true);
+    expect(both.terms).toHaveBeenCalledExactlyOnceWith(false);
+    expect(didAnswerRefusal("terms", both, undefined, true)).toBe(true);
+    expect(both.terms).toHaveBeenLastCalledWith(true);
     expect(both.unconfirmed).not.toHaveBeenCalled();
   });
 
   it("answers nothing else, and nothing without its own answer", () => {
     const both = answers();
-    expect(didAnswerRefusal("server", both, undefined)).toBe(false);
+    expect(didAnswerRefusal("server", both, undefined, true)).toBe(false);
     expect(
       didAnswerRefusal(
         "unconfirmed",
         { terms: both.terms, unconfirmed: undefined },
         undefined,
+        true,
       ),
     ).toBe(false);
     expect(
@@ -311,6 +314,7 @@ describe("didAnswerRefusal, with both answers above", () => {
         "terms",
         { terms: undefined, unconfirmed: both.unconfirmed },
         undefined,
+        true,
       ),
     ).toBe(false);
     expect(both.terms).not.toHaveBeenCalled();

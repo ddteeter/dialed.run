@@ -11,6 +11,7 @@ import type { ExportRowState } from "../../lib/contracts/data-export";
 import { firstRowWhere, hasRowWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 import { notificationSettings, type NotificationSettings } from "../email";
+import { isStravaConnected } from "../runs";
 import { exportRowState } from "./data-exports";
 import { currentTermsVersion, termsStanding } from "./terms-acceptance";
 import { usernameOf } from "./username";
@@ -101,9 +102,10 @@ export async function ownAddressView(
 /**
  * Everything the account's settings pages show, in one read for one
  * route: the account, the handle, the email switches, the export row's
- * state (ACC-10), and whether the runner is behind on the terms — the
- * page is read only until they accept (round 30 #4a; D-95), and its
- * loader is one of the reads the terms gate lets through, so it asks.
+ * state (ACC-10), whether Strava is connected, and whether the runner is
+ * behind on the terms — the page is read only until they accept, and shows
+ * Strava's row then (round 30 #4a; D-95), and its loader is one of the
+ * reads the terms gate lets through, so it asks.
  */
 export async function accountPage(
   db: Db,
@@ -115,14 +117,16 @@ export async function accountPage(
   username: string | undefined;
   notifications: NotificationSettings;
   dataExport: ExportRowState;
+  isStravaConnected: boolean;
   isBehindOnTerms: boolean;
 }> {
-  const [account, username, notifications, dataExport, terms] =
+  const [account, username, notifications, dataExport, strava, terms] =
     await Promise.all([
       ownAccountView(db, userId),
       usernameOf(db, userId),
       notificationSettings(db, userId),
       exportRowState(db, userId, now),
+      isStravaConnected(db, userId),
       termsStanding(db, userId, current),
     ]);
   return {
@@ -130,6 +134,7 @@ export async function accountPage(
     username,
     notifications,
     dataExport,
+    isStravaConnected: strava,
     isBehindOnTerms: terms.state === "behind",
   };
 }

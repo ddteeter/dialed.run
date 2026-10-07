@@ -17,6 +17,8 @@ parsed card, a duplicate's receipt, a parse failure, a stall — renders here,
 in place; nothing navigates while a file is read (round 22).
 */
 export const Route = createFileRoute("/runs/new")({
+  // D-102's name for the page, in round 30 #4b's words.
+  staticData: { savedPage: "Log a run" },
   loader: async () => ({
     units: await viewerUnitsQuery(),
     unreadCount: await unreadNotificationCountFn(),

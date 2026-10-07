@@ -327,12 +327,28 @@ export const leavingSearch = z.object({
 });
 
 /**
+ * The longest page name D-102's line carries: "Edit " and the longest
+ * garment name (80), with room to spare.
+ */
+const SAVED_PAGE_MAX = 100;
+
+/**
  * `/account/terms`' search: where the runner was when a stale tab's call
  * was refused (`ui/terms-refusal`, decision D-96), for Accept to return
- * them to — a path on this site, or nothing, and Accept goes home.
+ * them to — a path on this site, or nothing, and Accept goes home — and,
+ * when that call was a save, the page's name, for D-102's line. A name is
+ * a heading's worth of words; anything longer, or empty, is dropped and
+ * the line with it.
  */
 export const termsPromptSearch = z.object({
   from: returnPathSchema.optional().catch(undefined),
+  save: z
+    .string()
+    .trim()
+    .min(1)
+    .max(SAVED_PAGE_MAX)
+    .optional()
+    .catch(undefined),
 });
 
 /**
@@ -340,8 +356,6 @@ export const termsPromptSearch = z.object({
  * with no deletion pending or a signed-out visitor with no date; on
  * `/account/terms`, a runner who is current, or nobody.
  */
-export function homeIfNothingToSay(
-  view: LeavingView | TermsPromptView,
-): void {
+export function homeIfNothingToSay(view: LeavingView | TermsPromptView): void {
   if (view.state === "none") redirect({ to: "/", throw: true });
 }

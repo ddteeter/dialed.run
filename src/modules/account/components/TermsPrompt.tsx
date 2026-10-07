@@ -4,6 +4,7 @@ import type { JSX } from "react";
 
 import {
   ControlFailureBand,
+  FailureBand,
   FormStatus,
   Mono,
   PendingLabel,
@@ -12,8 +13,7 @@ import {
 } from "../../../ui";
 import { SignedOutPanel } from "../../../ui/SignedOutPanel";
 import type { AcceptResult, TermsPromptView } from "../terms-acceptance";
-import { returnPageName } from "../terms-return";
-import { useLogOutAction } from "./ActionCard";
+import { ActionPill, useLogOutAction } from "./ActionCard";
 
 /**
  * The terms prompt's actions, needed identically by `TermsPrompt` and
@@ -34,10 +34,11 @@ type TermsActions = Readonly<{
   */
   onStale: () => Promise<void>;
   /**
-   * Where a refused save left the runner (`ui/terms-refusal`, D-96), for
-   * D-102's line; nothing when they arrived any other way.
+   * The page a refused save left, by name (`ui/terms-refusal`'s `save`,
+   * D-96), for D-102's line; nothing when they arrived any other way — a
+   * refused control or loader lost nothing typed, and log-in sends none.
    */
-  from?: string | undefined;
+  savedPage?: string | undefined;
 }>;
 
 type Ask = Extract<TermsPromptView, { state: "ask" }>;
@@ -98,12 +99,15 @@ export function TermsPrompt({
 
 function AcceptOrLeave({
   view,
-  from,
+  savedPage,
   ...actions
 }: TermsActions & Readonly<{ view: Ask }>): JSX.Element {
   const [isStale, setIsStale] = useState(false);
   const accepting = useControlAction<[]>({
     action: async () => {
+      // Each press answers afresh: a press that fails says so in its own
+      // band, never under the last one's NOT ACCEPTED as well.
+      setIsStale(false);
       const result = await actions.accept({ data: { version: view.version } });
       setIsStale(result === "stale");
       await (result === "accepted" ? actions.onAccepted() : actions.onStale());
@@ -112,11 +116,21 @@ function AcceptOrLeave({
   });
   const leaving = useLogOutAction(actions.logOut);
   const copy = PROMPT_COPY[view.isFirst ? "first" : "update"];
-  const returnsTo = returnPageName(from);
+  // Round 29 #6's failed Accept: "Your connection dropped. Nothing was
+  // recorded." — the shared cause line, then what was not recorded.
+  const acceptFailure = accepting.failure && {
+    kicker: accepting.failure.kicker,
+    message: `${accepting.failure.message} ${NOTHING_RECORDED}`,
+  };
+  const acceptStatus =
+    accepting.status && `${accepting.status} ${NOTHING_RECORDED}`;
+  // A stale Accept is announced like a failed one (rule 08): the band's
+  // words, through the screen's one status region.
+  const staleStatus = isStale ? `${NOT_ACCEPTED}. ${STALE}` : "";
 
   return (
     <div data-part="landing" data-state="ask" className="flex flex-col gap-6">
-      <FormStatus>{accepting.status || leaving.status}</FormStatus>
+      <FormStatus>{acceptStatus || leaving.status || staleStatus}</FormStatus>
       <p className="m-0 text-lead">{copy.lead}</p>
       <WhatChanged lines={view.changed} />
       <Link
@@ -125,32 +139,25 @@ function AcceptOrLeave({
       >
         {copy.read}
       </Link>
-      {returnsTo === undefined ? undefined : (
+      {savedPage === undefined ? undefined : (
         <p data-part="return-note" className="m-0 text-body">
-          {returnNote(returnsTo)}
+          {returnNote(savedPage)}
         </p>
       )}
-      {isStale ? <StaleBand /> : undefined}
+      {isStale ? (
+        <FailureBand state="stale" kicker={NOT_ACCEPTED} message={STALE} />
+      ) : undefined}
       <div data-part="accept" className="flex">
-        <button
-          type="button"
-          {...inFlight(accepting.pending)}
-          className={ACCEPT_PILL}
-          onClick={() => {
-            void accepting.run();
-          }}
-        >
-          <PendingLabel
-            label="Accept"
-            pendingLabel="Accepting"
-            pending={accepting.pending}
-          />
-        </button>
+        <ActionPill
+          action={accepting}
+          label="Accept"
+          pendingLabel="Accepting"
+        />
       </div>
       {/* A failed Accept's band sits under Accept, and a failed Log out's
           under the line that holds Log out (round 29 #6). */}
       <ControlFailureBand
-        failure={accepting.failure}
+        failure={acceptFailure}
         onRetry={accepting.retry}
         retryRef={accepting.retryRef}
       />
@@ -222,27 +229,18 @@ function WhatChanged({
 }
 
 /**
- * Accept pressed after the terms changed again under the page (round 29
- * #6): `NOT ACCEPTED` directly above Accept, with no Try again — the page
- * has already loaded the newer version, and the next Accept records that.
- */
-function StaleBand(): JSX.Element {
-  return (
-    <div
-      data-part="control-failure"
-      data-state="stale"
-      className="flex flex-col items-start gap-3 border border-ink p-4"
-    >
-      <Mono step="xs">{NOT_ACCEPTED}</Mono>
-      <span className="text-body">{STALE}</span>
-    </div>
-  );
-}
-
-/**
- * What a failed or refused Accept leaves true.
+ * What a failed or refused Accept leaves true. Refused because the terms
+ * changed again under the page (round 29 #6), it is `NOT ACCEPTED` directly
+ * above Accept with no Try again — the page has already loaded the newer
+ * version, and the next Accept records that — in the same band, and under
+ * the same part name, as the screen's other control failures.
  */
 const NOT_ACCEPTED = "Not accepted";
+
+/**
+ * What a failed Accept adds to the cause line, as round 29 #6 draws it.
+ */
+const NOTHING_RECORDED = "Nothing was recorded.";
 
 /**
  * D-102: where Accept goes back to, and that what was typed is gone —
@@ -251,15 +249,6 @@ const NOT_ACCEPTED = "Not accepted";
 export function returnNote(page: string): string {
   return `After you accept, you'll go back to ${page}. What you typed wasn't kept.`;
 }
-
-/**
- * Accept, the page's only filled button: an ink pill (round 29 #6). The
- * same pill as "Keep your account?"'s Keep, which `ActionCard` draws with
- * Log out beside it; round 30 #4 took Log out out of this page's row, so
- * Accept is set on its own.
- */
-const ACCEPT_PILL =
-  "target inline-flex cursor-pointer items-center justify-center rounded-pill border-none bg-ink px-5 font-bold text-ground no-underline";
 
 /**
  * The escape line's link colour (`Leaving.tsx` has none of its own): the

@@ -121,72 +121,81 @@ function AccountSectionRoute() {
     />
   );
 
-  const subPage = (
-    <PickedSubPage
-      section={section}
-      titles={ACCOUNT_SECTION_TITLES}
-      pages={{
-        "sign-in": (
-          <AccountUnlessBehindOnTerms
-            isBehind={page.isBehindOnTerms}
-            behind={
-              <AccountWhileBehind
-                account={page.account}
-                username={page.username}
-                signOutEverywhere={signOutEverywhereButton}
-                dataExport={exportRow}
-                deletion={deletion}
-              />
-            }
-          >
-            <AccountIndex
+  const pages = {
+    "sign-in": (
+      <AccountUnlessBehindOnTerms
+        isBehind={page.isBehindOnTerms}
+        behind={
+          <AccountWhileBehind
+            account={page.account}
+            username={page.username}
+            isStravaConnected={page.isStravaConnected}
+            signOutEverywhere={signOutEverywhereButton}
+            dataExport={exportRow}
+            deletion={deletion}
+          />
+        }
+      >
+        <AccountIndex
+          account={page.account}
+          username={page.username}
+          confirmBand={
+            <ConfirmEmailBand
               account={page.account}
-              username={page.username}
-              confirmBand={
-                <ConfirmEmailBand
-                  account={page.account}
-                  resend={resendConfirmationFn}
-                />
-              }
-              signOutEverywhere={signOutEverywhereButton}
-              dataExport={exportRow}
-              deletion={deletion}
+              resend={resendConfirmationFn}
             />
-          </AccountUnlessBehindOnTerms>
-        ),
-        email: (
-          <ChangeEmail
-            current={page.account.email}
-            request={requestEmailChangeFn}
-          />
-        ),
-        password: <ChangePassword change={changePassword} />,
-        notifications: (
-          <NotificationsForm
-            current={page.notifications}
-            save={saveNotificationSettingsFn}
-            changeEmail={
-              <Link
-                data-target="inline"
-                to="/account/$section"
-                params={{ section: "email" }}
-                className="font-semibold text-ink underline underline-offset-4"
-              >
-                Change email
-              </Link>
-            }
-          />
-        ),
-      }}
-    />
-  );
+          }
+          signOutEverywhere={signOutEverywhereButton}
+          dataExport={exportRow}
+          deletion={deletion}
+        />
+      </AccountUnlessBehindOnTerms>
+    ),
+    email: (
+      <ChangeEmail
+        current={page.account.email}
+        request={requestEmailChangeFn}
+      />
+    ),
+    password: <ChangePassword change={changePassword} />,
+    notifications: (
+      <NotificationsForm
+        current={page.notifications}
+        save={saveNotificationSettingsFn}
+        changeEmail={
+          <Link
+            data-target="inline"
+            to="/account/$section"
+            params={{ section: "email" }}
+            className="font-semibold text-ink underline underline-offset-4"
+          >
+            Change email
+          </Link>
+        }
+      />
+    ),
+  };
 
   return (
     <AccountUnlessBehindOnTerms
       isBehind={page.isBehindOnTerms}
-      behind={subPage}
+      behind={
+        // Round 30 #4a: no tab bar, and back goes to the gate.
+        <PickedSubPage
+          section={section}
+          titles={ACCOUNT_SECTION_TITLES}
+          pages={pages}
+          back="terms"
+        />
+      }
     >
-      <BelledLayout unreadCount={unreadCount}>{subPage}</BelledLayout>
+      <BelledLayout unreadCount={unreadCount}>
+        <PickedSubPage
+          section={section}
+          titles={ACCOUNT_SECTION_TITLES}
+          pages={pages}
+        />
+      </BelledLayout>
     </AccountUnlessBehindOnTerms>
   );
 }

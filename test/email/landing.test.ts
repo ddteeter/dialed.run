@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { account } from "../../src/db/schema-auth";
-import { notificationPreferences } from "../../src/db/schema-core";
+import {
+  notificationPreferences,
+  stravaConnections,
+} from "../../src/db/schema-core";
 import { isEmailWanted, notificationSettings } from "../../src/modules/email";
 import {
   maskedAddress,
@@ -236,9 +239,18 @@ describe("the account's settings read", () => {
       username: undefined,
       notifications: { email: google.email, runReminder: true },
       dataExport: { state: "idle" },
+      isStravaConnected: false,
       // The shipped terms are unpublished, so nobody is behind (D-93).
       isBehindOnTerms: false,
     });
+    // Strava's row on the read-only page (round 30 #4a).
+    await db.insert(stravaConnections).values({
+      userId: google.userId,
+      athleteId: "athlete-1",
+      refreshToken: "refresh-1",
+    });
+    const connected = await accountPage(db, google.userId);
+    expect(connected.isStravaConnected).toBe(true);
     // Once terms are published, a runner with no acceptance is behind, and
     // the page is read only (round 30 #4a); accepted, it is not.
     const published = await accountPage(db, google.userId, 1_800_000_000, 1);

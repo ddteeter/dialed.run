@@ -9,6 +9,7 @@ import {
 import type { ConfirmTrigger } from "../lib/auth-signal";
 import { DURATION } from "./motion";
 import { useTermsRefusal } from "./terms-refusal";
+import type { AnswerTermsRefusal } from "./terms-refusal";
 import { useUnconfirmedRefusal } from "./unconfirmed-refusal";
 
 /**
@@ -157,18 +158,20 @@ export function classifyFailure(error: unknown): FormFailure {
  * unconfirmed address opens "Confirm your email first", led by `trigger`
  * (D-113). `true` when it was answered, and the hook then shows nothing
  * of its own — not saved, and not failed. Shared by the form and control
- * hooks, so the two cannot answer a refusal differently.
+ * hooks, so the two cannot answer a refusal differently. `isSave` says the
+ * refused call was a save, which D-102's line warns lost what was typed.
  */
 export function didAnswerRefusal(
   kind: FormFailure["kind"],
   answers: Readonly<{
-    terms: (() => void) | undefined;
+    terms: AnswerTermsRefusal | undefined;
     unconfirmed: ((trigger: ConfirmTrigger | undefined) => void) | undefined;
   }>,
   trigger: ConfirmTrigger | undefined,
+  isSave: boolean,
 ): boolean {
   if (kind === "terms" && answers.terms !== undefined) {
-    answers.terms();
+    answers.terms(isSave);
     return true;
   }
   if (kind === "unconfirmed" && answers.unconfirmed !== undefined) {
@@ -359,12 +362,14 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
           // A stale tab behind on the terms (D-96), or an address not
           // confirmed yet (D-113): the root's answer, with nothing
           // announced and no band. The form stays as it was, ready to send
-          // again.
+          // again. A form's refused call is always a save (D-102).
           const answers = {
             terms: answerTermsRefusal,
             unconfirmed: answerUnconfirmed,
           };
-          if (didAnswerRefusal(classified.kind, answers, confirmTrigger)) {
+          if (
+            didAnswerRefusal(classified.kind, answers, confirmTrigger, true)
+          ) {
             return;
           }
           setFailure(classified);

@@ -16,6 +16,8 @@ import { orBackToFeed, requireSignedIn } from "../../modules/feed/redirect";
 import { Layout } from "../../ui";
 
 export const Route = createFileRoute("/feed/verdict/$entryId")({
+  // D-102's name for the page: its heading is a question.
+  staticData: { savedPage: "The verdict" },
   beforeLoad: async ({ location }) => {
     requireSignedIn(await getSession(), location);
   },

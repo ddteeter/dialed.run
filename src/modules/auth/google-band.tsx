@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX, RefObject } from "react";
 
-import { Mono } from "../../ui";
+import { FailureBand } from "../../ui";
 import type { AuthBand, RefusalLink } from "./auth-copy";
 
 /**
@@ -26,8 +26,9 @@ function RefusalLinkTo({ link }: Readonly<{ link: RefusalLink }>): JSX.Element {
  * Every band Google's button owns, directly under it (round 29 #13; Au6 as
  * round 33 redrew it; register R-128): a **control failure**, not the
  * form's failure band, because the button is a control and the form above
- * it did not fail. The frame is §4a's — kicker, sentence, a 1px ink rule,
- * no fill, no hue (round 29 #1) — and what ends it depends on the band:
+ * it did not fail. The frame is §4a's, `ui/FailureBand` — kicker, sentence,
+ * a 1px ink rule, no fill, no hue (round 29 #1) — under Au6's own part name,
+ * and what ends it depends on the band:
  *
  * - **The fault** ("Google didn't answer"): Try again, which repeats the
  *   attempt, and is the only filled thing in the band.
@@ -52,24 +53,15 @@ export function GoogleBand({
 }>): JSX.Element {
   const isRefusal = band.retry === false;
   return (
-    <div
-      data-part="control-failure"
-      data-state={isRefusal ? "refused" : "google-failed"}
-      className="flex flex-col items-start gap-3 border border-ink p-4"
+    <FailureBand
+      part="control-failure"
+      state={isRefusal ? "refused" : "google-failed"}
+      kicker={band.kicker}
+      message={band.message}
+      onRetry={isRefusal ? undefined : onRetry}
+      retryRef={retryRef}
     >
-      <Mono step="xs">{band.kicker}</Mono>
-      <span className="text-body">{band.message}</span>
-      {isRefusal ? undefined : (
-        <button
-          ref={retryRef}
-          type="button"
-          onClick={onRetry}
-          className="target cursor-pointer rounded-field border border-ink bg-ink px-4 py-3 text-body font-bold text-ground"
-        >
-          Try again
-        </button>
-      )}
       {band.link === undefined ? undefined : <RefusalLinkTo link={band.link} />}
-    </div>
+    </FailureBand>
   );
 }

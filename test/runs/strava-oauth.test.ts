@@ -19,6 +19,7 @@ import {
   disconnectStrava,
   getStravaConnection,
   isCapacityRefusal,
+  isStravaConnected,
   STRAVA_STATE_COOKIE,
   stravaAuthorizeUrl,
   stravaCallbackOutcome,
@@ -126,6 +127,9 @@ describe("completeStravaConnect (102 §6)", () => {
     const connection = await getStravaConnection(db, userId);
     expect(connection?.athleteId).toBe(athleteId);
     expect(connection?.refreshToken).toBe("refresh-1");
+    // The read-only account page's question, for this runner alone.
+    expect(await isStravaConnected(db, userId)).toBe(true);
+    expect(await isStravaConnected(db, newUlid())).toBe(false);
   });
 
   it("reconnecting replaces the existing row rather than erroring", async () => {

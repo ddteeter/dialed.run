@@ -67,6 +67,7 @@ export function useControlAction<TArgs extends unknown[]>({
   kicker,
   onSuccess,
   confirmTrigger,
+  isSave = false,
 }: {
   action: (...args: TArgs) => Promise<unknown>;
   /**
@@ -80,6 +81,12 @@ export function useControlAction<TArgs extends unknown[]>({
    * first" leads with.
    */
   confirmTrigger?: ConfirmTrigger | undefined;
+  /**
+   * The control saves what the runner put together on the page — Attach's
+   * picks — so a terms refusal loses it, as a form's does, and the prompt
+   * says so (D-102). Most controls (Useful, Follow) lose nothing.
+   */
+  isSave?: boolean | undefined;
 }): ControlAction<TArgs> {
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState<ControlFailure | undefined>();
@@ -108,9 +115,8 @@ export function useControlAction<TArgs extends unknown[]>({
         terms: answerTermsRefusal,
         unconfirmed: answerUnconfirmed,
       };
-      if (
-        didAnswerRefusal(classifyFailure(error).kind, answers, confirmTrigger)
-      ) {
+      const { kind } = classifyFailure(error);
+      if (didAnswerRefusal(kind, answers, confirmTrigger, isSave)) {
         return;
       }
       const message = causeLine(error);

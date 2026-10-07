@@ -71,36 +71,56 @@ export function ActionCard({
         retryRef={logOut.retryRef}
       />
       <div className="flex flex-wrap items-center gap-4">
-        <button
-          type="button"
-          {...inFlight(primary.pending)}
-          className={PRIMARY_PILL}
-          onClick={() => {
-            void primary.run();
-          }}
-        >
-          <PendingLabel
-            label={primaryLabel}
-            pendingLabel={primaryPendingLabel}
-            pending={primary.pending}
-          />
-        </button>
-        <button
-          type="button"
-          {...inFlight(logOut.pending)}
-          className={SECONDARY_PILL}
-          onClick={() => {
-            void logOut.run();
-          }}
-        >
-          <PendingLabel
-            label="Log out"
-            pendingLabel="Logging out"
-            pending={logOut.pending}
-          />
-        </button>
+        <ActionPill
+          action={primary}
+          label={primaryLabel}
+          pendingLabel={primaryPendingLabel}
+        />
+        <ActionPill
+          action={logOut}
+          label="Log out"
+          pendingLabel="Logging out"
+          isSecondary
+        />
       </div>
     </div>
+  );
+}
+
+/**
+ * The page's one filled button, an ink pill: Keep on "Keep your account?",
+ * and Accept on the terms prompt, which round 30 #4 set on its own row —
+ * or, `isSecondary`, Log out's outline pill beside Keep. Shared as a
+ * button rather than as its class list, so the pages cannot drift and the
+ * class list stays readable where it is used (the 44px target scan reads
+ * one file at a time).
+ */
+export function ActionPill({
+  action,
+  label,
+  pendingLabel,
+  isSecondary = false,
+}: Readonly<{
+  action: ControlAction<[]>;
+  label: string;
+  pendingLabel: string;
+  isSecondary?: boolean;
+}>): JSX.Element {
+  return (
+    <button
+      type="button"
+      {...inFlight(action.pending)}
+      className={isSecondary ? SECONDARY_PILL : PRIMARY_PILL}
+      onClick={() => {
+        void action.run();
+      }}
+    >
+      <PendingLabel
+        label={label}
+        pendingLabel={pendingLabel}
+        pending={action.pending}
+      />
+    </button>
   );
 }
 

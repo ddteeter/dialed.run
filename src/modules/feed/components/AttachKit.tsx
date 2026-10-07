@@ -207,6 +207,8 @@ export function AttachKit({
 
   const attach = useControlAction({
     kicker: "Nothing attached",
+    // The picks are what a terms refusal loses (D-102).
+    isSave: true,
     action: async (itemIds: string[]) => {
       // The entry, and only the entry: this is what "Nothing attached" is
       // about. The photo belongs to an entry and there is none until this
