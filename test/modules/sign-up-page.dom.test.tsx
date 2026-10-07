@@ -336,9 +336,9 @@ describe("Au2 · Google in the invite stage", () => {
       await signUpPage({ returnedError: error });
       const band = part("control-failure");
       expect(band).toHaveTextContent(`Not created${message}`);
-      expect(within(band ?? document.body).queryByRole("link") !== null).toBe(
-        linksRequestAccess,
-      );
+      expect(
+        within(band ?? document.body).queryByRole("link") !== null,
+      ).toBe(linksRequestAccess);
       expect(AUTH_COPY.googleNoCode).toBe(
         "Enter your invite code above, then continue with Google.",
       );
