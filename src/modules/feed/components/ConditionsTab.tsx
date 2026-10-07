@@ -449,7 +449,7 @@ function Matched({
       <div
         data-part="match-block"
         data-state={isWidened ? "widened" : "matched"}
-        className="flex flex-col gap-2 bg-teal px-5 py-5 text-ink"
+        className="flex flex-col gap-2 bg-teal px-5 py-5 text-ink desk:rounded-card"
       >
         <SameConditionsEyebrow
           band={result.band}

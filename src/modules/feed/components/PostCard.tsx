@@ -77,12 +77,19 @@ export function PostCard(props: Readonly<PostCardProps>) {
           </span>
         </div>
         {photo === undefined ? undefined : (
-          <img
-            data-part="photo"
-            src={`/feed/photo/${photo}`}
-            alt=""
-            className="aspect-video w-full rounded-card object-cover"
-          />
+          // The first photo, carrying only its `1 / N` counter, bottom
+          // right (the Feed board's E1): the rest are D's pager.
+          <span className="relative block">
+            <img
+              data-part="photo"
+              src={`/feed/photo/${photo}`}
+              alt=""
+              className="aspect-video w-full rounded-card object-cover"
+            />
+            <span className="absolute right-3 bottom-3 rounded-tight bg-ground px-2 py-1 text-ink">
+              <Mono step="xs">1 / {String(item.photoKeys.length)}</Mono>
+            </span>
+          </span>
         )}
         {item.caption === undefined ? undefined : (
           <p data-part="caption" className="m-0 text-body">

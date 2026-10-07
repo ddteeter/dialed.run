@@ -75,6 +75,19 @@ describe("PostCard: order and absence", () => {
       "src",
       "/feed/photo/user/01/a.jpg",
     );
+    // It carries only the counter, in mono, saying how many D has.
+    const counter = within(post).getByText("1 / 2");
+    expect(counter).toHaveClass("text-mono-xs");
+    expect(counter.parentElement).toHaveClass(
+      "absolute",
+      "right-3",
+      "bottom-3",
+    );
+  });
+
+  it("counts a lone photo as 1 / 1", async () => {
+    const post = await card({ photoKeys: ["user/01/a.jpg"] });
+    expect(within(post).getByText("1 / 1")).toBeVisible();
   });
 
   it("is a whole post with no photo, caption or verdict: author, strip, Useful", async () => {

@@ -444,6 +444,9 @@ describe("ConditionsTab: matched", () => {
     expect(await screen.findByText("6 runners logged this")).toBeVisible();
     expect(block()).toHaveAttribute("data-state", "matched");
     expect(block()).toHaveClass("bg-teal");
+    // Square on the phone; RADIUS.card at desk, where it no longer runs
+    // edge to edge (the Feed board's E2-lite desk).
+    expect(block()).toHaveClass("desk:rounded-card");
     expect(block()).toHaveTextContent(
       "Same conditions · Feels [41–46°] · damp · 3 days",
     );
