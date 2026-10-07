@@ -1,5 +1,5 @@
-import { useState } from "react";
-import type { JSX, ReactNode } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { JSX, ReactNode, Ref } from "react";
 
 import {
   Bracketed,
@@ -7,6 +7,7 @@ import {
   Mono,
   SubmitButton,
   useFormSubmit,
+  useReturnFocus,
 } from "../../../ui";
 import type { FormShell } from "../../../ui";
 import {
@@ -127,14 +128,30 @@ const REASON_LABELS: Readonly<Record<RemovalReason, string>> =
 type Decide = (input: { data: ReviewActionValues }) => Promise<unknown>;
 
 /**
+ * What every row-level decision form needs, whatever decides it: the row
+ * itself and the callback that takes it off the waiting list. Named once so
+ * `Decision` and `HandleDecision` state the one thing they share instead of
+ * each restating it.
+ */
+type RowSettleProps = Readonly<{
+  row: QueueRow;
+  onSettled: (id: string) => void;
+}>;
+
+/**
 A decision that needs no reason: a text button beside the row's submit.
 */
 function QuietAction({
   label,
   onPress,
-}: Readonly<{ label: string; onPress: () => void }>): JSX.Element {
+  buttonRef,
+}: Readonly<{
+  label: string;
+  onPress: () => void;
+  buttonRef?: Ref<HTMLButtonElement> | undefined;
+}>): JSX.Element {
   return (
-    <button className="target" type="button" onClick={onPress}>
+    <button ref={buttonRef} className="target" type="button" onClick={onPress}>
       <Mono step="xs">{label}</Mono>
     </button>
   );
@@ -185,6 +202,11 @@ function DecisionForm(
  * every route's reach for the preservation period. Both need a reason —
  * it is the statement the author is sent — and Approve does not.
  *
+ * **Suspected CSAM asks again, in the row** (round 28 #8): the decision
+ * bar gives way to the question, with Cancel focused, because there is
+ * no undo afterwards and this is the only check. The question says only
+ * what happens (D-88): a quarantine never closes the uploader's account.
+ *
  * The row leaves the list only once the server has said so: a remove
  * that failed must stay where the reviewer can try it again.
  */
@@ -192,14 +214,14 @@ function Decision({
   row,
   decide,
   onSettled,
-}: Readonly<{
-  row: QueueRow;
-  decide: Decide;
-  onSettled: (id: string) => void;
-}>): JSX.Element {
+}: RowSettleProps & Readonly<{ decide: Decide }>): JSX.Element {
   // Nothing chosen is `undefined`, which the schema refuses with its own
   // message; the select sees it as the "—" option's value.
   const [reason, setReason] = useState<RemovalReason | undefined>();
+  const [isAsking, setIsAsking] = useState(false);
+  // Cancel in the question puts focus back on the press that asked it,
+  // drawn afresh with the decision bar — not on the page.
+  const askedFrom = useReturnFocus();
   const form = useFormSubmit({
     schema: reviewActionInput,
     action: (values) => decide({ data: values }),
@@ -211,6 +233,23 @@ function Decision({
 
   function send(action: "remove" | "quarantine"): void {
     void form.submit({ queueId: row.id, action, reason });
+  }
+
+  if (isAsking) {
+    return (
+      <CsamQuestion
+        form={form}
+        subjectType={row.subjectType}
+        owner={row.subject.owner}
+        onConfirm={() => {
+          send("quarantine");
+        }}
+        onCancel={() => {
+          setIsAsking(false);
+          askedFrom.restore();
+        }}
+      />
+    );
   }
 
   return (
@@ -231,8 +270,16 @@ function Decision({
       last={
         <QuietAction
           label="Remove as suspected CSAM"
+          buttonRef={askedFrom.ref}
           onPress={() => {
-            send("quarantine");
+            // A press with no reason goes to the form, which refuses it
+            // with the schema's own sentence on the field — asking a
+            // question whose answer would only be refused after is worse.
+            if (removalReasonSchema.safeParse(reason).success) {
+              setIsAsking(true);
+            } else {
+              send("quarantine");
+            }
           }}
         />
       }
@@ -252,6 +299,79 @@ function Decision({
   );
 }
 
+/**
+ * Round 28 #8's second press: "Remove this photo everywhere and keep the
+ * evidence for the report?" · Remove and report / Cancel, in place of the
+ * decision bar, **with Cancel focused** — so a reviewer who pressed by
+ * mistake is one Enter from safety, never from the quarantine.
+ *
+ * Round 28's first draft said "close @n8's account"; that is not here
+ * (D-88): removing suspected CSAM does not close the account, and the
+ * question says what happens. Round 29 #3 adds the quiet line under it,
+ * "@n8's account stays open. Closing it is a separate action on their
+ * Runners page.", so the operator does not assume it was closed — said
+ * when the author's handle is known. The same form, so a quarantine that
+ * fails shows its band here, with Try again beside the question.
+ */
+function CsamQuestion({
+  form,
+  subjectType,
+  owner,
+  onConfirm,
+  onCancel,
+}: Readonly<{
+  form: FormShell;
+  subjectType: QueueRow["subjectType"];
+  owner: string | undefined;
+  onConfirm: () => void;
+  onCancel: () => void;
+}>): JSX.Element {
+  // State rather than a ref, so the effect runs once the button exists.
+  const [cancel, setCancel] = useState<HTMLButtonElement | undefined>();
+  useEffect(() => {
+    cancel?.focus();
+  }, [cancel]);
+
+  return (
+    <DeskForm
+      form={form}
+      className="flex flex-col gap-2"
+      onSubmit={onConfirm}
+      action={
+        <div className="flex flex-wrap gap-2">
+          <SubmitButton
+            label="Remove and report"
+            pendingLabel="Removing"
+            pending={form.pending}
+          />
+          <button
+            ref={(node) => {
+              setCancel(node ?? undefined);
+            }}
+            className="target"
+            type="button"
+            onClick={onCancel}
+          >
+            <Mono step="xs">Cancel</Mono>
+          </button>
+        </div>
+      }
+    >
+      <Mono step="xs">Remove as suspected CSAM</Mono>
+      <p className="m-0 text-body">
+        Remove this {subjectType} everywhere and keep the evidence for the
+        report?
+      </p>
+      {owner === undefined ? undefined : (
+        <p className="m-0 text-small text-quiet">
+          @{owner}&apos;s account stays open. Closing it is a separate action on
+          their Runners page.
+        </p>
+      )}
+    </DeskForm>
+  );
+}
+
 export type ReviewHandle = (input: {
   data: HandleReviewValues;
 }) => Promise<{ outcome: HandleReviewOutcome }>;
@@ -268,11 +388,7 @@ function HandleDecision({
   row,
   reviewHandle,
   onSettled,
-}: Readonly<{
-  row: QueueRow;
-  reviewHandle: ReviewHandle;
-  onSettled: (id: string) => void;
-}>): JSX.Element {
+}: RowSettleProps & Readonly<{ reviewHandle: ReviewHandle }>): JSX.Element {
   const [reason, setReason] = useState<RenameReason | undefined>();
   const [said, setSaid] = useState("");
   const form = useFormSubmit({
@@ -325,30 +441,53 @@ function HandleDecision({
 }
 
 /**
+ * `ReviewRow`'s props, named rather than inlined at the call site:
+ * `RowSettleProps` plus the two things round 28 #8 added
+ * (`active`/`focusOnOpen`/`onActivate`) and the two decision callbacks a
+ * row may need.
+ */
+type ReviewRowProps = RowSettleProps &
+  Readonly<{
+    active: boolean;
+    focusOnOpen: boolean;
+    onActivate: () => void;
+    decide: Decide;
+    reviewHandle: ReviewHandle;
+  }>;
+
+/**
  * A waiting row. Only the row being decided carries the decision, so the
  * page holds one reason picker — and a reviewer decides one thing at a
  * time, the oldest first unless they pick another.
+ *
+ * **The row itself opens** (round 28 #8: "one row opens at a time into a
+ * decision bar"): its name is the button, where a separate "Decide this
+ * one" used to sit under every closed row. After a decision, focus moves
+ * to the next row, which opens — `focusOnOpen` is that hand-over, and it
+ * is never set on first paint, so arriving on the page moves nothing.
  */
 function ReviewRow({
   row,
   active,
+  focusOnOpen,
   onActivate,
   decide,
   reviewHandle,
   onSettled,
-}: Readonly<{
-  row: QueueRow;
-  active: boolean;
-  onActivate: () => void;
-  decide: Decide;
-  reviewHandle: ReviewHandle;
-  onSettled: (id: string) => void;
-}>): JSX.Element {
+}: ReviewRowProps): JSX.Element {
+  const opener = useFocusWhen(active && focusOnOpen);
+
   return (
     <li className="flex flex-col gap-2 border border-hairline p-3">
-      <span className="text-body font-semibold">
+      <button
+        ref={opener}
+        type="button"
+        aria-expanded={active}
+        onClick={onActivate}
+        className="target cursor-pointer self-start border-none bg-transparent p-0 text-left text-body font-semibold text-ink"
+      >
         {row.subjectType} · {row.subject.label ?? row.subjectId}
-      </span>
+      </button>
       <ReportedPhotos keys={row.subject.photoKeys} />
       <ReportedFor row={row} />
       <span className="text-micro text-quiet">
@@ -361,15 +500,7 @@ function ReviewRow({
           reviewHandle={reviewHandle}
           onSettled={onSettled}
         />
-      ) : (
-        <button
-          className="target self-start"
-          type="button"
-          onClick={onActivate}
-        >
-          <Mono step="xs">Decide this one</Mono>
-        </button>
-      )}
+      ) : undefined}
     </li>
   );
 }
@@ -379,12 +510,8 @@ function ReviewRow({
  * content decision every other row takes.
  */
 function RowDecision(
-  props: Readonly<{
-    row: QueueRow;
-    decide: Decide;
-    reviewHandle: ReviewHandle;
-    onSettled: (id: string) => void;
-  }>,
+  props: RowSettleProps &
+    Readonly<{ decide: Decide; reviewHandle: ReviewHandle }>,
 ): JSX.Element {
   const { row, onSettled } = props;
   if (row.subject.handleFlagged === true) {
@@ -397,6 +524,40 @@ function RowDecision(
     );
   }
   return <Decision row={row} decide={props.decide} onSettled={onSettled} />;
+}
+
+/**
+ * A ref callback that focuses its element when `shouldFocus` is, and
+ * changes only with it: React calls it with the element when it changes,
+ * so focus moves once — when the element becomes the one to land on — and
+ * not on every render after.
+ */
+function useFocusWhen(
+  shouldFocus: boolean,
+): (node: HTMLElement | null) => void {
+  return useCallback(
+    (node: HTMLElement | null) => {
+      if (shouldFocus && node !== null) node.focus();
+    },
+    [shouldFocus],
+  );
+}
+
+/**
+ * The empty queue's line. Once a decision has emptied it, focus lands
+ * here — the reviewer's last row is gone, and focus with it, so this is
+ * the place that says what is now true. Focusable by script only: it is
+ * a sentence, not a control.
+ */
+function NothingWaiting({
+  hasDecided,
+}: Readonly<{ hasDecided: boolean }>): JSX.Element {
+  const line = useFocusWhen(hasDecided);
+  return (
+    <p ref={line} tabIndex={-1} className="text-small text-quiet">
+      Nothing waiting. The daily digest says so too.
+    </p>
+  );
 }
 
 /**
@@ -417,6 +578,9 @@ export function ReviewQueue(
   // is safe.
   const { remaining: waiting, settle } = useSettled(props.queue, queueRowId);
   const [chosen, setChosen] = useState<string | undefined>();
+  // True once a decision has landed: from then on, the row that opens
+  // next takes focus, as round 28 #8 draws.
+  const [hasDecided, setHasDecided] = useState(false);
   const activeId = waiting.some((row) => row.id === chosen)
     ? chosen
     : waiting[0]?.id;
@@ -427,23 +591,29 @@ export function ReviewQueue(
         title="waiting"
         items={waiting}
         count
-        whenEmpty={
-          <p className="text-small text-quiet">
-            Nothing waiting. The daily digest says so too.
-          </p>
-        }
+        whenEmpty={<NothingWaiting hasDecided={hasDecided} />}
       >
         {(row) => (
           <ReviewRow
             key={row.id}
             row={row}
             active={row.id === activeId}
+            focusOnOpen={hasDecided}
             onActivate={() => {
               setChosen(row.id);
             }}
             decide={props.resolve}
             reviewHandle={props.reviewHandle}
-            onSettled={settle}
+            onSettled={(id) => {
+              // The row that takes the decided one's place opens next —
+              // the one after it, or the one before when it was the last
+              // — so a reviewer working down the list keeps their place
+              // rather than being sent back to the top.
+              const at = waiting.findIndex((other) => other.id === id);
+              setChosen((waiting[at + 1] ?? waiting[at - 1])?.id);
+              setHasDecided(true);
+              settle(id);
+            }}
           />
         )}
       </ListSection>

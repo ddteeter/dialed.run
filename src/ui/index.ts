@@ -48,6 +48,7 @@ export type { ConfirmGate } from "./unconfirmed-refusal";
 export type { FieldProps, FormFailure, FormShell } from "./use-form-submit";
 export type { ControlFailure } from "./form";
 export { useIdempotencyKey } from "./use-idempotency-key";
+export { useReturnFocus } from "./use-return-focus";
 export { useListMotion } from "./use-list-motion";
 export { WeatherAttribution } from "./WeatherAttribution";
 export { verdictHue } from "./verdict-hue";

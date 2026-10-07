@@ -128,9 +128,24 @@ export function removalSentence(
   subjectType: "entry" | "photo",
   reason: RemovalReason,
 ): string {
-  const what =
-    subjectType === "photo" ? "this photo" : "this entry from the feed";
-  return `A moderator removed ${what}: ${removalStatements[reason]}.`;
+  return `A moderator removed ${removedThing(subjectType)}: ${removalStatements[reason]}.`;
+}
+
+/**
+ * What the author is told after a copyright takedown (round 28 #8): "We
+ * removed this photo after a copyright notice." Not a moderator's reason
+ * — the Desk acted on a notice, and the sentence says so. The board draws
+ * the photo; an entry takes the same words with its own noun.
+ */
+export function takedownSentence(subjectType: "entry" | "photo"): string {
+  return `We removed ${removedThing(subjectType)} after a copyright notice.`;
+}
+
+/**
+The thing a removal sentence names, as its author knows it.
+*/
+function removedThing(subjectType: "entry" | "photo"): string {
+  return subjectType === "photo" ? "this photo" : "this entry from the feed";
 }
 
 /**

@@ -31,7 +31,9 @@ describe("PhotoBeingChecked (R-69)", () => {
 
 describe("ContentRemoved (SAF-8)", () => {
   it("names a removed photo, why, and what stays", () => {
-    render(<ContentRemoved subjectType="photo" reason="home" />);
+    render(
+      <ContentRemoved subjectType="photo" action="remove" reason="home" />,
+    );
     expect(screen.getByText("Photo removed")).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -42,10 +44,39 @@ describe("ContentRemoved (SAF-8)", () => {
   });
 
   it("names a removed entry, with nothing said to stay", () => {
-    render(<ContentRemoved subjectType="entry" reason="spam" />);
+    render(
+      <ContentRemoved subjectType="entry" action="remove" reason="spam" />,
+    );
     expect(screen.getByText("Removed from the feed")).toBeInTheDocument();
     expect(band()).toHaveTextContent(
       "A moderator removed this entry from the feed: it's an ad or spam.",
+    );
+    expect(band().children).toHaveLength(2);
+  });
+
+  it("says a takedown answered a copyright notice (round 28 #8)", () => {
+    render(
+      <ContentRemoved
+        subjectType="photo"
+        action="takedown"
+        reason="copyright"
+      />,
+    );
+    expect(band()).toHaveTextContent(
+      "Photo removedWe removed this photo after a copyright notice.Your run and verdict stay.",
+    );
+  });
+
+  it("says the same of an entry taken down, in its own noun", () => {
+    render(
+      <ContentRemoved
+        subjectType="entry"
+        action="takedown"
+        reason="copyright"
+      />,
+    );
+    expect(band()).toHaveTextContent(
+      "Removed from the feedWe removed this entry from the feed after a copyright notice.",
     );
     expect(band().children).toHaveLength(2);
   });

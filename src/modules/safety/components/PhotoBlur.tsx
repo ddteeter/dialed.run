@@ -1,7 +1,19 @@
 import type { JSX } from "react";
 import { useCallback, useEffect, useState } from "react";
 
-import { ControlFailureBand, Icon, Mono, ToggleField } from "../../../ui";
+import { newUlid } from "../../../lib/ids";
+import {
+  photoAcceptAttribute,
+  photoProblem,
+} from "../../../lib/photo-constraints";
+import {
+  ControlFailureBand,
+  FieldMessage,
+  Icon,
+  inFlight,
+  Mono,
+  ToggleField,
+} from "../../../ui";
 import type { ControlFailure, PhotoStep } from "../../../ui";
 import { setBlurPreference, shouldBlurFaces } from "../blur/preference";
 import {
@@ -20,6 +32,7 @@ import {
   toImageCoordinates,
   type BlurRegion,
 } from "../blur/regions";
+import type { DetectionOutcome } from "../blur/detect";
 
 /**
  * W3 · FACES BLURRED, on the web.
@@ -55,8 +68,8 @@ const CHECKING = "Checking this photo";
 /**
  * Blur off, and the canvas could not make a file from the redraw.
  *
- * Said rather than swallowed: with no file there is nothing to hand the
- * uploader, and a step that simply never calls `onReady` leaves the form
+ * Said rather than swallowed: with no file there is nothing behind Use
+ * this photo, and a press that silently does nothing leaves the runner
  * waiting on a photo that is not coming. The kicker names what is still
  * true — the round 23 control-failure pattern (`ui/ControlFailureBand`) —
  * and the body is round 27 #29's, which names the two ways out.
@@ -67,20 +80,83 @@ const REDRAW_FAILED: ControlFailure = {
     "This photo couldn't be prepared without blur. Turn blur on, or pick another photo.",
 };
 
+/**
+ * The photo could not be decoded, or the blurred canvas could not be made
+ * into a file — whichever way blur is set.
+ *
+ * Before this the step simply waited: an undecodable file was an
+ * unhandled rejection and Use this photo stayed busy for good, with
+ * nothing on screen saying why or what to do. The kicker is
+ * `REDRAW_FAILED`'s, because what is still true is the same — nothing was
+ * added — and the body names the two ways out that are on the screen.
+ */
+const PREPARE_FAILED: ControlFailure = {
+  kicker: "Photo not added",
+  message: "This photo couldn't be prepared. Pick another photo, or cancel.",
+};
+
+/**
+ * The detector's own answer for "could not look" (`detectFaces` catches
+ * everything and says this), for a pipeline whose detector throws anyway.
+ * Not a failure band: a photo nobody could check is still a photo the
+ * runner can blur by hand, and the copy for it already exists.
+ */
+const COULD_NOT_LOOK: DetectionOutcome = { status: "unavailable" };
+
+/**
+ * The picker's message, wired to it by `FieldMessage`'s id convention.
+ */
+const PICK_ANOTHER = "pick-another";
+
+/**
+ * W3 · CHECK THE BLUR (round 28 #5, D-76): the step stays open once
+ * auto-blur paints, and **nothing is handed over until the runner presses
+ * Use this photo**. Before round 28 the step called `onReady` the moment
+ * the blur was painted, and every host closed it there, so tap-to-blur and
+ * the keyboard cells were on screen for a beat (R-113).
+ *
+ * The API, for the hosts (closet's `usePhotoPick`, feed's `AttachKit`):
+ *
+ * - **`onReady(file)`** is called once, on Use this photo, with the bytes
+ *   the canvas shows — blurred, or redrawn with blur off. Never the
+ *   original, and never before the runner has said so. Close the step and
+ *   take the file, as before.
+ * - **`onCancel()`** is Cancel in the head, and Esc: close the step and
+ *   add nothing. A photo already on the form stays.
+ * - **Pick another** is the step's own: it opens the picker, and a new
+ *   photo replaces this one here and auto-blur runs again. Dismissing the
+ *   picker leaves the step as it was. The host is not involved, because
+ *   whatever is picked comes back through the canvas and out as a fresh
+ *   file anyway — but it is checked as the host's well checks a file
+ *   (`photoProblem`, the one rule both ask), and one the upload would
+ *   refuse is refused here, in the field's own message, with the photo
+ *   before it left as it was.
+ * - **A photo that cannot be prepared** — undecodable, or a canvas that
+ *   makes no file — is the control-failure band (`PREPARE_FAILED`), and
+ *   Use this photo goes: there is nothing behind it, and a press that
+ *   waits forever is the failure the band replaces.
+ *
+ * Focus lands on the heading when the step opens, so Tab reaches the
+ * cells before the primary.
+ */
 export function PhotoBlur({
   file,
   onReady,
+  onCancel,
   onAnnounce,
   pipeline = browserPipeline,
   storage,
 }: Readonly<{
   file: File;
   /**
-   * The bytes to upload. Called with the blurred file when blur is on and
-   * produced one, and with the original when blur is off — never with the
-   * original as a silent fallback for a blur that failed.
+   * The bytes to upload, on Use this photo. The blurred file when blur is
+   * on, the redrawn one when it is off — never the original.
    */
   onReady: (ready: File) => void;
+  /**
+  Cancel and Esc: the runner adds nothing.
+  */
+  onCancel: () => void;
   /**
    * Puts a sentence in the **screen's** status region.
    *
@@ -101,6 +177,140 @@ export function PhotoBlur({
   Injected in tests; production reads `localStorage`.
   */
   storage?: Storage | undefined;
+}>): JSX.Element {
+  /**
+   * The photo Pick another chose, keyed so the body below starts over for
+   * it — no regions, no decoded image and no bytes carried from the last
+   * one. A ULID rather than a counter: a counter's `+ 1` and `- 1` are
+   * both "a new key", so a mutant flipping one is invisible.
+   */
+  const [another, setAnother] = useState<{ file: File; key: string }>();
+  /**
+   * The bytes the canvas shows right now, or nothing while they are being
+   * made. Use this photo hands over exactly these.
+   */
+  const [prepared, setPrepared] = useState<File>();
+  /**
+   * Why there is nothing to hand over and nothing coming, when that is the
+   * state. Held here rather than in the body because it decides the foot:
+   * with a failure there is no Use this photo.
+   */
+  const [failure, setFailure] = useState<ControlFailure>();
+  /**
+  What was wrong with the last file Pick another was given, if anything.
+  */
+  const [pickProblem, setPickProblem] = useState<string>();
+  const [heading, setHeading] = useState<HTMLHeadingElement>();
+
+  useEffect(() => {
+    heading?.focus();
+  }, [heading]);
+
+  return (
+    <div
+      data-part="photo-check"
+      className="flex flex-col gap-3"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") onCancel();
+      }}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <h2
+          ref={(node) => {
+            setHeading(node ?? undefined);
+          }}
+          tabIndex={-1}
+          className="m-0 font-display text-heading"
+        >
+          Check the blur
+        </h2>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="target cursor-pointer border-none bg-transparent p-0 text-body font-semibold text-label"
+        >
+          Cancel
+        </button>
+      </div>
+      <BlurBody
+        key={another?.key}
+        file={another?.file ?? file}
+        onPrepared={setPrepared}
+        failure={failure}
+        onFailure={setFailure}
+        onAnnounce={onAnnounce}
+        pipeline={pipeline}
+        storage={storage}
+      />
+      {failure === undefined ? (
+        <button
+          type="button"
+          data-part="primary-action"
+          {...inFlight(prepared === undefined)}
+          onClick={() => {
+            if (prepared !== undefined) onReady(prepared);
+          }}
+          className="target w-full cursor-pointer rounded-pill border-none bg-ink px-4 py-4 text-lead font-bold text-ground"
+        >
+          Use this photo
+        </button>
+      ) : undefined}
+      {/* The picker's own input inside its label, as the well's Replace
+          is (`ui/FileWell`): pressing it opens the picker with no script,
+          and the input is what a keyboard reaches. */}
+      <label className="target flex w-full cursor-pointer items-center justify-center rounded-pill border border-hairline bg-transparent px-4 py-4 text-lead font-semibold text-ink has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink">
+        Pick another
+        <input
+          type="file"
+          accept={photoAcceptAttribute}
+          className="sr-only"
+          data-part={PICK_ANOTHER}
+          aria-invalid={pickProblem === undefined ? undefined : true}
+          aria-describedby={
+            pickProblem === undefined ? undefined : `${PICK_ANOTHER}-message`
+          }
+          onChange={(event) => {
+            // Dismissing the picker is an empty list, and changes nothing.
+            const [next] = event.currentTarget.files ?? [];
+            if (next === undefined) return;
+            const problem = photoProblem(next);
+            setPickProblem(problem);
+            if (problem !== undefined) {
+              onAnnounce?.(problem);
+              return;
+            }
+            // The last photo's bytes and band go in the new body's first
+            // effect, the one place every restart clears them (see `run`).
+            setAnother({ file: next, key: newUlid() });
+          }}
+        />
+      </label>
+      <FieldMessage name={PICK_ANOTHER} error={pickProblem} />
+    </div>
+  );
+}
+
+/**
+ * The photo, the toggle, the sentence and the cells: everything W3 shows
+ * between its head and its foot. It reports the bytes it would upload as
+ * they change, and nothing while they are being made.
+ */
+function BlurBody({
+  file,
+  onPrepared,
+  failure,
+  onFailure,
+  onAnnounce,
+  pipeline,
+  storage,
+}: Readonly<{
+  file: File;
+  onPrepared: (ready: File | undefined) => void;
+  failure: ControlFailure | undefined;
+  onFailure: (failure: ControlFailure | undefined) => void;
+  onAnnounce: ((sentence: string) => void) | undefined;
+  pipeline: BlurPipeline;
+  storage: Storage | undefined;
 }>): JSX.Element {
   /**
    * The canvas, held as state through a callback ref rather than in a
@@ -130,9 +340,9 @@ export function PhotoBlur({
    */
   const [loaded, setLoaded] = useState<LoadedImage>();
   /**
-   * Blur off's redraw came back empty (`REDRAW_FAILED`). `attempt` is what
-   * "Try again" changes: the effect depends on it, so a retry reruns the
-   * redraw rather than repeating a hand-off that never happened.
+   * What "Try again" on the failure band changes: the effect depends on
+   * it, so a retry decodes and redraws again rather than repeating a
+   * hand-off that never happened.
    *
    * A fresh object rather than a counter: nothing ever reads the value,
    * only whether it changed, and a counter made that fact a coincidence —
@@ -142,7 +352,6 @@ export function PhotoBlur({
    * construction on every call, with no operator a mutant can flip to
    * make it otherwise.
    */
-  const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState({});
   /**
    * The keyboard cell that has focus, if one does: round 27 #27's "focus
@@ -163,15 +372,41 @@ export function PhotoBlur({
       next: readonly BlurRegion[],
       image: LoadedImage,
       target: HTMLCanvasElement,
+      signal: AbortSignal,
+      hasAnswer: boolean,
     ) => {
+      // The last bytes stop being these the moment the canvas changes: a
+      // press of Use this photo while the new file is being made must not
+      // hand over the one from before the tap.
+      onPrepared(undefined);
+      // And a band from a canvas that failed before stops being true once
+      // a tap makes it paint again.
+      onFailure(undefined);
       pipeline.paint(target, image.image, image.width, image.height, next);
-      const blurred = await pipeline.toFile(target, file.name);
+      // While the detector is still looking, the canvas shows the photo
+      // and takes taps, but nothing is made to hand over: the only regions
+      // it could carry are the runner's, and a face the detector is about
+      // to find would go up unblurred. Use this photo stays busy until the
+      // detector has answered and the paint that carries its answer is a
+      // file.
+      if (!hasAnswer) return;
+      let blurred;
+      try {
+        blurred = await pipeline.toFile(target, file.name);
+      } catch {
+        // A canvas that throws is a canvas with no file: `undefined`, and
+        // the band below.
+      }
+      // A newer paint has started since; its bytes are the ones to keep.
+      if (signal.aborted) return;
       // No fallback to `file`. Handing back the original because the
       // canvas failed would upload exactly the frame this screen promises
-      // never leaves the device, and would do it silently.
-      if (blurred !== undefined) onReady(blurred);
+      // never leaves the device, and would do it silently — so a canvas
+      // with no file says so, rather than leaving Use this photo waiting.
+      if (blurred === undefined) onFailure(PREPARE_FAILED);
+      else onPrepared(blurred);
     },
-    [file.name, onReady, pipeline],
+    [file.name, onFailure, onPrepared, pipeline],
   );
 
   useEffect(() => {
@@ -183,31 +418,69 @@ export function PhotoBlur({
     // problem and says what it means.
     const effect = new AbortController();
     const isStale = (): boolean => effect.signal.aborted;
+    // Whatever was ready is not ready for this photo, this setting or this
+    // attempt: turning blur back on must not leave the unblurred redraw
+    // one press from the upload.
+    //
+    // **The one place a restart clears them**, for every restart: a new
+    // photo from the host or from Pick another (whose new body mounts
+    // here), the toggle, and Try again. A second clear in each handler
+    // was tried (design PR A review) and Stryker measured all five as
+    // equivalent: React flushes a click's passive effects before it
+    // returns from the event, so no press of Use this photo can land
+    // between the handler and this line.
+    onPrepared(undefined);
+    onFailure(undefined);
+    // And whatever the detector said was about the photo, the setting or
+    // the attempt before: this one has not been looked at yet.
+    setPhase("checking");
+    // Every await below is caught where it is made, so nothing this
+    // effect starts can end as an unhandled rejection: a file the browser
+    // cannot decode, or a canvas that throws, becomes the band.
     async function run(): Promise<void> {
       // Decoded either way (task 128 · SAF-2): the canvas step is where a
       // photo is scaled to its long edge and where its metadata — the GPS
       // a phone writes into every frame — is left behind, so blur off goes
       // through it too. What it skips is the detector.
-      const decoded = await pipeline.load(file);
+      let decoded;
+      try {
+        decoded = await pipeline.load(file);
+      } catch {
+        // A file the browser cannot decode: `undefined`, and the band.
+      }
       if (isStale()) return;
+      if (decoded === undefined) {
+        onFailure(PREPARE_FAILED);
+        return;
+      }
       if (!isOn) {
         // Blur off: the photo as it was taken, redrawn onto a canvas no
         // one sees, and nothing looked for. No detector is loaded — that
         // is the whole point of remembering a refusal.
         const flat = globalThis.document.createElement("canvas");
         pipeline.paint(flat, decoded.image, decoded.width, decoded.height, []);
-        const redrawn = await pipeline.toFile(flat, file.name);
+        let redrawn;
+        try {
+          redrawn = await pipeline.toFile(flat, file.name);
+        } catch {
+          // A canvas that throws makes no file: the redraw band below.
+        }
         if (isStale()) return;
         // No fallback to `file` here either: the original is the frame
         // with the metadata in it. Nothing to hand over is a failure the
         // runner is shown, not a silence.
-        if (redrawn === undefined) setFailed(true);
-        else onReady(redrawn);
+        if (redrawn === undefined) onFailure(REDRAW_FAILED);
+        else onPrepared(redrawn);
         return;
       }
       setLoaded(decoded);
 
-      const outcome = await pipeline.detect(decoded.image);
+      let outcome;
+      try {
+        outcome = await pipeline.detect(decoded.image);
+      } catch {
+        outcome = COULD_NOT_LOOK;
+      }
       if (isStale()) return;
       setPhase(outcome.status);
       setRegions(detectedRegions(outcome));
@@ -216,7 +489,7 @@ export function PhotoBlur({
     return () => {
       effect.abort();
     };
-  }, [attempt, file, isOn, onReady, pipeline]);
+  }, [attempt, file, isOn, onFailure, onPrepared, pipeline]);
 
   // Painting follows the regions rather than happening inside the handler
   // that changed them, so a detection and a tap take the same path.
@@ -224,10 +497,15 @@ export function PhotoBlur({
   // two conditions in the effect: the pair was two mutants where the fact
   // is one.
   const ready = isOn ? loaded : undefined;
+  const hasAnswer = phase !== "checking";
   useEffect(() => {
     if (!canvas || !ready) return;
-    void publish(regions, ready, canvas);
-  }, [canvas, publish, ready, regions]);
+    const paint = new AbortController();
+    void publish(regions, ready, canvas, paint.signal, hasAnswer);
+    return () => {
+      paint.abort();
+    };
+  }, [canvas, publish, ready, regions, hasAnswer]);
 
   const detected = regions.filter((r) => r.source === "detected").length;
   const tapped = regions.length - detected;
@@ -273,9 +551,8 @@ export function PhotoBlur({
     if (summary !== undefined) onAnnounce?.(summary);
   }, [summary, onAnnounce]);
 
-  // Blur off has no summary to announce, so its failure is announced on
-  // its own — into the same one region.
-  const failure = failed && !isOn ? REDRAW_FAILED : undefined;
+  // A failure has no summary of its own, so it is announced on its own —
+  // into the same one region.
   useEffect(() => {
     if (failure !== undefined) onAnnounce?.(failure.message);
   }, [failure, onAnnounce]);
@@ -287,7 +564,6 @@ export function PhotoBlur({
         label="Blur faces"
         isOn={isOn}
         onChange={(next) => {
-          setFailed(false);
           setIsOn(next);
           setBlurPreference(next, storage);
         }}
@@ -310,7 +586,6 @@ export function PhotoBlur({
       <ControlFailureBand
         failure={failure}
         onRetry={() => {
-          setFailed(false);
           setAttempt({});
         }}
       />
@@ -488,6 +763,11 @@ function blurFieldProps(name: string) {
  * same arrow. The verdict's photos and the garment's go through the one
  * step.
  */
-export const photoBlurStep: PhotoStep = (file, onReady, announce) => (
-  <PhotoBlur file={file} onReady={onReady} onAnnounce={announce} />
+export const photoBlurStep: PhotoStep = (file, onReady, announce, cancel) => (
+  <PhotoBlur
+    file={file}
+    onReady={onReady}
+    onCancel={cancel}
+    onAnnounce={announce}
+  />
 );

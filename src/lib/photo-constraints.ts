@@ -54,3 +54,28 @@ const PHOTO_TYPE_WORDS = {
 export const photoFormatWords = new Intl.ListFormat("en-GB", {
   type: "disjunction",
 }).format(allowedPhotoTypes.map((type) => PHOTO_TYPE_WORDS[type]));
+
+const MEGABYTE = 1024 * 1024;
+
+/**
+ * What is wrong with a picked photo, or nothing.
+ *
+ * A field failure — the fix is another file — so the well's field message
+ * says it (round 22, "Well states": *"File type and size are field
+ * failures"*). The type list and the cap are the two above, the same two
+ * facts the upload routes refuse by, so the screen cannot accept a file
+ * the server would turn away.
+ *
+ * Here rather than in `modules/feed` because two screens ask it: A2's well
+ * and W3's Pick another (`modules/safety`), which may not reach into the
+ * feed module. A second copy in the step is how a PDF got past it.
+ */
+export function photoProblem(file: File): string | undefined {
+  if (!isAllowedPhotoType(file.type)) {
+    return `Photos must be ${photoFormatWords}.`;
+  }
+  if (file.size > maxPhotoBytes) {
+    return `That photo is over ${String(maxPhotoBytes / MEGABYTE)} MB. Pick a smaller one.`;
+  }
+  return undefined;
+}

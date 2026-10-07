@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ComponentProps, ReactNode } from "react";
 
 import { photoFormatWords } from "../../../lib/photo-constraints";
+import { useReturnFocus } from "../../../ui";
 import type { FileWell, PhotoStep } from "../../../ui";
 
 /**
@@ -53,13 +54,20 @@ export function usePhotoPick({
   The step itself, for the screen to render where it belongs.
   */
   step: (announce: (sentence: string) => void) => ReactNode;
+  /**
+   * For the well's `inputRef`: when the step closes — Use this photo,
+   * Cancel or Esc — focus goes back to the well it was opened from.
+   */
+  wellRef: (node: HTMLElement | null) => void;
 } {
   const [pending, setPending] = useState<
     { file: File; step: PhotoStep } | undefined
   >();
+  const returnFocus = useReturnFocus();
 
   return {
     stepping: pending !== undefined,
+    wellRef: returnFocus.ref,
     pick: (file) => {
       if (renderPhotoStep === undefined) {
         onReady(file);
@@ -72,9 +80,15 @@ export function usePhotoPick({
         pending.file,
         (ready) => {
           setPending(undefined);
+          returnFocus.restore();
           onReady(ready);
         },
         announce,
+        // Cancel in W3 (round 28 #5): the step closes, nothing is kept.
+        () => {
+          setPending(undefined);
+          returnFocus.restore();
+        },
       ),
   };
 }

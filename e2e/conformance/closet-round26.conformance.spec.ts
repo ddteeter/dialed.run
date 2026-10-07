@@ -212,6 +212,11 @@ test("F · saved with its photo refused is round 26's band and Done", async ({
       "base64",
     ),
   });
+  // W3 waits for the runner (round 28 #5): nothing is attached until
+  // Use this photo, which waits behind aria-disabled while it blurs.
+  await page
+    .getByRole("button", { name: "Use this photo" })
+    .click({ timeout: 20_000 });
   await expect(page.locator('[data-part="photo-well"]')).toHaveAttribute(
     "data-state",
     "filled",

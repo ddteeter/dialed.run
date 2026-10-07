@@ -1,6 +1,7 @@
 /**
  * Covers: D8 (Desk · Runners: Rename and Close account), the review
- * queue's Remove that deletes — one journey, one video.
+ * queue's Remove that deletes, and round 28 #8's review row (the row
+ * opens itself; suspected CSAM asks again) — one journey, one video.
  *
  * The journey needs `ADMIN_USER_IDS=e2e-desk-operator` in the dev server's
  * `.dev.vars`, which CI's e2e job writes (register R-72). Locally, put the
@@ -85,15 +86,44 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
 
   await signInAsOperator(page);
 
-  await scene(page, "Review: Remove deletes, and says why");
+  await scene(page, "Review: one row opens at a time");
   await page.goto("/safety/review");
   await hydrated(page);
   const row = page.getByRole("listitem").filter({ hasText: entryId });
-  const pick = row.getByRole("button", { name: "Decide this one" });
-  if (await pick.isVisible()) await pick.click();
-  await row
-    .getByRole("combobox", { name: /Why it comes down/ })
-    .selectOption("it's an ad or spam");
+  // Round 28 #8: the row's name opens it; there is no "Decide this one".
+  const opener = row.locator("button[aria-expanded]");
+  if ((await opener.getAttribute("aria-expanded")) === "false") {
+    await opener.click();
+  }
+  await expect(opener).toHaveAttribute("aria-expanded", "true");
+  const reason = row.getByRole("combobox", { name: /Why it comes down/ });
+
+  await scene(page, "Suspected CSAM asks again, in the row, Cancel focused");
+  await reason.selectOption("it's sexual or explicit");
+  await row.getByRole("button", { name: "Remove as suspected CSAM" }).click();
+  await expect(
+    row.getByText(
+      "Remove this entry everywhere and keep the evidence for the report?",
+    ),
+  ).toBeVisible();
+  // Round 29 #3: the quiet line, so nobody assumes the account closed.
+  await expect(
+    row.getByText(
+      `@${handle}'s account stays open. Closing it is a separate action on their Runners page.`,
+    ),
+  ).toBeVisible();
+  await expect(row.getByRole("button", { name: "Cancel" })).toBeFocused();
+  await row.getByRole("button", { name: "Cancel" }).click();
+  await expect(
+    row.getByRole("button", { name: "Remove and report" }),
+  ).toHaveCount(0);
+  // Cancel puts focus back on the press that asked.
+  await expect(
+    row.getByRole("button", { name: "Remove as suspected CSAM" }),
+  ).toBeFocused();
+
+  await scene(page, "Review: Remove deletes, and says why");
+  await reason.selectOption("it's an ad or spam");
   await row.getByRole("button", { name: "Remove", exact: true }).click();
   await expect(
     page.getByRole("listitem").filter({ hasText: entryId }),
