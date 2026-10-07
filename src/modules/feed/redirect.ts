@@ -80,20 +80,31 @@ export function orBackToFeed<T>(value: T | undefined): T {
 }
 
 /**
-`/@handle`'s two redirects. A handle nobody may be shown goes back to the
-feed, the answer every feed route gives for "not there, or not yours to
-see". The viewer's own handle goes to G — H is for somebody else, and it
-would offer them a Follow on themself.
+`/@handle`'s one redirect: the viewer's own handle goes to G — H is for
+somebody else, and it would offer them a Follow on themself.
 
-What is left is a page to render: the runner, or "changed their name".
+Everything else is a page to render: the runner, "changed their name", or
+"This runner isn't here." **A handle nobody ever held reaches that last
+page, not the feed** (round 28 #11: it "covers purged, deleted and
+never-existed handles on purpose, so no one can tell them apart"). So does
+a runner the viewer may not see — banned, unconfirmed (D-113), leaving, or
+in a block or report with them — because `profileAtHandle` answers those
+with the same `undefined` as a handle nobody held, and sending them
+anywhere different would say a runner is behind the handle.
 */
 export function orHandlePage(
   result: ProfileAtHandle | undefined,
 ): Exclude<ProfileAtHandle, { kind: "own" }> {
-  const found = orBackToFeed(result);
+  const found = result ?? NOBODY_HERE;
   if (found.kind === "own") redirectTo({ to: "/feed/me" });
   return found;
 }
+
+/**
+What `/@handle` shows for a handle with nobody behind it the viewer may
+see: the same page a deleted account's old handle gets.
+*/
+const NOBODY_HERE = { kind: "gone" } as const;
 
 /**
 `/feed/u/$userId`'s answer: the runner's `/@handle`, or back to the feed
