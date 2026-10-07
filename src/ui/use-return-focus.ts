@@ -46,8 +46,8 @@ export function useReturnFocus(): {
       current.current = node;
     },
     restore: () => {
-      owesFocus.current = true;
       current.current?.focus();
+      owesFocus.current = true;
     },
   };
 }

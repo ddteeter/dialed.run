@@ -279,11 +279,8 @@ export function PhotoBlur({
               onAnnounce?.(problem);
               return;
             }
-            // Cleared here, in the handler, rather than left to the new
-            // body's effect: the last photo's bytes must be gone from
-            // behind Use this photo before anything else renders.
-            setPrepared(undefined);
-            setFailure(undefined);
+            // The last photo's bytes and band go in the new body's first
+            // effect, the one place every restart clears them (see `run`).
             setAnother({ file: next, key: newUlid() });
           }}
         />
@@ -416,6 +413,14 @@ function BlurBody({
     // Whatever was ready is not ready for this photo, this setting or this
     // attempt: turning blur back on must not leave the unblurred redraw
     // one press from the upload.
+    //
+    // **The one place a restart clears them**, for every restart: a new
+    // photo from the host or from Pick another (whose new body mounts
+    // here), the toggle, and Try again. A second clear in each handler
+    // was tried (design PR A review) and Stryker measured all five as
+    // equivalent: React flushes a click's passive effects before it
+    // returns from the event, so no press of Use this photo can land
+    // between the handler and this line.
     onPrepared(undefined);
     onFailure(undefined);
     // Every await below is caught where it is made, so nothing this
@@ -547,11 +552,6 @@ function BlurBody({
         label="Blur faces"
         isOn={isOn}
         onChange={(next) => {
-          // Cleared here rather than only by the effect the change starts:
-          // the redraw from before must be gone from behind Use this photo
-          // before anything renders with the new setting.
-          onPrepared(undefined);
-          onFailure(undefined);
           setIsOn(next);
           setBlurPreference(next, storage);
         }}
@@ -574,7 +574,6 @@ function BlurBody({
       <ControlFailureBand
         failure={failure}
         onRetry={() => {
-          onFailure(undefined);
           setAttempt({});
         }}
       />

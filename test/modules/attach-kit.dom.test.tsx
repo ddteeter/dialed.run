@@ -1024,6 +1024,10 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     );
     expect(photoWell()).toHaveTextContent("Adding");
 
+    // W3 takes focus to its heading when it opens.
+    act(() => {
+      photoInput().blur();
+    });
     recording.hand(jpeg("blurred.jpg"));
     await waitFor(() => {
       expect(screen.queryByText("step for raw.jpg")).toBeNull();

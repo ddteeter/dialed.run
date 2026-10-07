@@ -1583,13 +1583,19 @@ describe("W3 waits for the runner (round 28 #5)", () => {
     });
 
     // A dismissed picker is an empty list; one with no list at all is the
-    // same nothing, and neither may throw.
+    // same nothing, and neither may throw. A handler that throws is
+    // reported, not raised: React hands it to the window.
+    const thrown = recordThrown();
     fireEvent.change(picker(), { target: { files: [] } });
     Object.defineProperty(picker(), "files", { value: NOTHING });
     fireEvent.change(picker());
 
+    expect(thrown.stop()).toEqual([]);
     expect(load).toHaveBeenCalledTimes(1);
     expect(use).not.toHaveAttribute("aria-disabled");
+    // Nothing was picked, so nothing was refused either.
+    expect(screen.queryByText(/Photos must be/)).toBeNull();
+    expect(picker()).not.toHaveAttribute("aria-invalid");
   });
 });
 
@@ -1608,6 +1614,73 @@ The control-failure band, if one is on screen.
 function band(): HTMLElement | null {
   return document.querySelector<HTMLElement>("[data-part='failure-band']");
 }
+
+/**
+ * Errors thrown in a React event handler: reported to the window, never
+ * raised into the test, so this is where a crash shows.
+ */
+function recordThrown(): { stop: () => unknown[] } {
+  const thrown: unknown[] = [];
+  const record = (event: ErrorEvent): void => {
+    thrown.push(event.error);
+  };
+  globalThis.addEventListener("error", record);
+  return {
+    stop: () => {
+      globalThis.removeEventListener("error", record);
+      return thrown;
+    },
+  };
+}
+
+describe("a new photo from the host starts clean", () => {
+  it("takes the last photo's bytes from behind Use this photo", async () => {
+    const decoding = Promise.withResolvers<LoadedImage>();
+    const load = vi
+      .fn<BlurPipeline["load"]>()
+      .mockResolvedValueOnce(DECODED)
+      .mockReturnValueOnce(decoding.promise);
+    const { pipeline } = fakePipeline({ load });
+    const props = {
+      onReady: vi.fn(),
+      onCancel: noop,
+      pipeline,
+      storage: emptyStorage(),
+    };
+    const { rerender } = render(<PhotoBlur file={PHOTO} {...props} />);
+    const use = screen.getByRole("button", { name: "Use this photo" });
+    await waitFor(() => {
+      expect(use).not.toHaveAttribute("aria-disabled");
+    });
+
+    rerender(<PhotoBlur file={OTHER} {...props} />);
+
+    expect(use).toHaveAttribute("aria-disabled", "true");
+    decoding.resolve(DECODED);
+  });
+
+  it("takes the last photo's band away", async () => {
+    const load = vi
+      .fn<BlurPipeline["load"]>()
+      .mockRejectedValueOnce(new Error("undecodable"))
+      .mockReturnValueOnce(new Promise<LoadedImage>(noop));
+    const { pipeline } = fakePipeline({ load });
+    const props = {
+      onReady: vi.fn(),
+      onCancel: noop,
+      pipeline,
+      storage: emptyStorage(),
+    };
+    const { rerender } = render(<PhotoBlur file={PHOTO} {...props} />);
+    await waitFor(() => {
+      expect(band()).not.toBeNull();
+    });
+
+    rerender(<PhotoBlur file={OTHER} {...props} />);
+
+    expect(band()).toBeNull();
+  });
+});
 
 describe("Pick another checks a file as the well does", () => {
   it("refuses a PDF in the field's own words, and keeps the photo it had", async () => {
@@ -1631,10 +1704,14 @@ describe("Pick another checks a file as the well does", () => {
     expect(picker()).not.toHaveAttribute("aria-invalid");
     expect(picker()).not.toHaveAttribute("aria-describedby");
 
+    // No `onAnnounce` here: a refusal with no region to say it in must
+    // not throw on the missing callback.
+    const thrown = recordThrown();
     await user.upload(
       picker(),
       new File(["%PDF"], "kit.pdf", { type: "application/pdf" }),
     );
+    expect(thrown.stop()).toEqual([]);
 
     // `photoProblem`'s sentence — the one A2's well says — marked on the
     // picker, which is where the fix is.

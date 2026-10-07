@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -528,9 +528,32 @@ describe("deciding", () => {
 
     // The row, and focus with it, are gone: the line that says what is
     // now true takes it, rather than the page.
+    const line = await screen.findByText(/Nothing waiting/);
     await waitFor(() => {
-      expect(screen.getByText(/Nothing waiting/)).toHaveFocus();
+      expect(line).toHaveFocus();
     });
+    // Focusable by script only: a sentence, not a stop in the tab order.
+    expect(line).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("returns focus on Cancel even when the press that asked never held it", async () => {
+    const user = userEvent.setup();
+    renderQueue([row()]);
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why it comes down/ }),
+      "it's sexual or explicit",
+    );
+
+    // A press that moves no focus (a pointer on some devices, a switch),
+    // so nothing but Cancel's own return can put focus back.
+    fireEvent.click(
+      screen.getByRole("button", { name: "Remove as suspected CSAM" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(
+      screen.getByRole("button", { name: "Remove as suspected CSAM" }),
+    ).toHaveFocus();
   });
 
   it("does not ask the same row twice", async () => {
