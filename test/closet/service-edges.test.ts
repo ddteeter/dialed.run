@@ -182,6 +182,36 @@ describe("withResolvedProduct", () => {
     expect(resolved.type).toBe("halfZip");
   });
 
+  it("keeps the type the runner picked over the product's (D-75)", async () => {
+    // F asks the type now (R-112), and user-entered fields are the floor:
+    // the product lends a type only to a garment that has none.
+    const client = db();
+    const brand = await createOrGetBrand(client, "Picked Brand");
+    const product = await createOrGetProduct(client, {
+      brandId: brand.id,
+      name: "Picked Crew",
+      createdBy: newUlid(),
+    });
+    await client
+      .update(products)
+      .set({ type: "halfZip" })
+      .where(eq(products.id, product.id));
+
+    const resolved = await withResolvedProduct(
+      client,
+      {
+        category: "top",
+        type: "longSleeve",
+        name: "Picked Crew",
+        brand: "Picked Brand",
+      },
+      newUlid(),
+    );
+
+    expect(resolved.type).toBe("longSleeve");
+    expect(resolved.productId).toBe(product.id);
+  });
+
   it("refuses a product type its category does not admit", async () => {
     // Shoes are not half-zips. A product row mistyped by enrichment must
     // not put an impossible type on a garment.

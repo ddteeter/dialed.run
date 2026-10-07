@@ -609,7 +609,10 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     card by category, which round 28 was not asked: ink for the merge
     words, "RETIRED MAR 2026", "middle", the hatch, and both Edit failures
     reuse a band. The hi-viz kicker conflicts with the Form Contract and is
-    sent back to design (D-91, item 40). Not built.** Six the PR shipped, and two its review added. The
+    sent back to design (D-91, item 40). Not built.** **Built in design PR
+    C (2026-10-07), except the kicker:** the ink words, the month-and-year
+    date, the hatch and `PHOTO STILL ON`; F's rail card is titled and
+    matched by type now that F asks one (R-112). Six the PR shipped, and two its review added. The
     first three ship as built by the owner's decision (D-77); each is the
     build's reading of a board against a contract or an existing pattern,
     and nothing waits on the answers.
@@ -1018,7 +1021,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       matter (`changed:` beside `published: true`), and v1 has none, so the
       block does not show yet. **The ask:** none.
 
-50. **What design PR A built beside round 28's W3 and Review drawings
+51. **What design PR A built beside round 28's W3 and Review drawings
     (round 28 #5 and #8).** Composed from existing primitives and copy; no
     new glyph, colour or motion.
     - **W3 with blur off also waits for Use this photo.** The board draws
@@ -1061,6 +1064,47 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       deciding a row opens the row that takes its place (the next, or the
       one before when it was the last), and deciding the last row focuses
       the "Nothing waiting" line.
+
+52. **What design PR C built beside rounds 26 and 28's closet drawings
+    (round 26 #4 and #10, round 28 #5 and #13; D-75, R-112, R-114).**
+    Composed from existing primitives and T1; no new glyph, colour or
+    motion.
+    - **The type names.** Round 26 names four, for tops: Singlet, Tee,
+      L/S crew, Half-zip. The contract has nineteen
+      (`garmentTypesByCategory`), so the build names the rest after the
+      pack's glyphs: Jacket, Vest, Sports bra; Shorts, Half tights,
+      Tights; Cap, Beanie, Headband; Neck gaiter; Gloves; Socks; Shoes;
+      Sunglasses, Arm sleeves. The rail's empty line takes a plural of
+      each ("No half-zips yet.", "No L/S crews yet.", "No shorts yet.").
+      `closet/type-labels.ts` holds both. **The ask:** confirm or give
+      the names.
+    - **No TYPE where a category has one type.** Gloves, socks, shoes and
+      neckwear have a single type each, so F asks nothing there and the
+      rail stays the category's. **The ask:** none unless design wants a
+      one-chip group.
+    - **TYPE sits under CATEGORY**, as drawn, but F still leads with
+      Brand and Name (D-27's identity-first order), where round 26's desk
+      frame puts Category and Type first. CATEGORY is still the build's
+      select, so "before a category: no card" still never happens. A
+      picked chip can be changed but not cleared, which is the radio
+      group's grammar; a new category clears it. **The ask:** the order.
+    - **The product's type yields to the runner's.** A product match used
+      to set the type outright (Z3's "it was never a question"); now it
+      fills in only where TYPE was left unanswered. Y's kicker names the
+      type too, as Z2a draws it (`TOP · HALF-ZIP · M`). **The ask:** none.
+    - **The hatch** is `ink.css`'s `.photo-hatch`: T1's photo fill with
+      `--hairline`, the next step darker on paper and lighter on ink, as
+      Theme's "Photo fill" row says, drawn by the same rule as the ink
+      channel's partial mark — its 135° angle and 2-on, 3-off rhythm,
+      the only hatch the system has, because no contract gives a photo
+      hatch's rhythm. **The ask:** a rhythm, if not that one.
+    - **`PHOTO STILL ON`'s sentence** is the control band's cause line
+      ("Our end failed.", or the connection's), as every control band's
+      is, rather than 02b's "That didn't go through. Try again?"; the
+      band's Try again says the rest. **The ask:** none unless design wants
+      the fixed sentence.
+    - **W3's sheet is named "Check the blur"**, its own head, for the
+      moment before focus lands on the heading. **The ask:** none.
 
 ## Answered in round 34 (imported 2026-10-04)
 
@@ -2620,6 +2664,12 @@ CHECKED` band still says "usually within a day". #28's line is item 6.
    their change. **Left for the hosts (design PRs C and D):** W3 still
    renders inline where the host puts it, not in a sheet. The undrawn
    states this needed are item 50.
+   **The closet's host, built in design PR C (2026-10-07):** F, Edit and
+   Y show W3 in `ui/Sheet` ("the closet form and AttachKit use the same
+   sheet"), named "Check the blur", over whichever view picked the photo
+   (`closet/components/photo-pick.tsx`). The sheet closing, by Esc or
+   otherwise, is Cancel; Use this photo and Cancel close it and return
+   focus to the well. `PhotoBlur` is unchanged. AttachKit's is design PR D's.
 
 6. **Under review, as the author sees it.** _Drawn:_ "Feed own under
    review" and "D own under review". The card carries a hi-viz `UNDER
@@ -2776,26 +2826,35 @@ COPIED` · "Copying didn't work here. The link is selected: copy it
       outcome is not a verdict. GOES, SAME NAME, STAYS and SAVED TO CLOSET
       all go in ink, MONO.xs, and D-77's built hues are reversed. _Build:_
       128 (`closet/components/DeleteWithRuns.tsx`, `AlreadyInCloset.tsx`).
+      **Built in design PR C (2026-10-07):** GOES and STAYS on the delete
+      sheet, SAME NAME (and RETIRED beside it) on the rail, and SAVED TO
+      CLOSET on F, all `text-ink` at MONO.xs.
     - **PHOTO NOT ADDED kicker:** _No, hi-viz:_ "Every §4a kicker sits on
       the hi-viz ground. Put round 26's back." **Not adopted: sent back to
       design (D-91, open item 40).**
     - **Retired date:** _No, month and year:_ "RETIRED MAR 2026" in MONO.sm
       on the rail. Retired gear is read across years, and the day doesn't
       matter. _Build:_ 128 (`AlreadyInCloset.tsx`; `closet/retired-label.ts`
-      keeps the closet's own format).
+      keeps the closet's own format). **Built in design PR C:** the rail's
+      record line is MONO.sm and dates a retirement "Retired Mar 2026"
+      (`retiredMonthLabel`); Y and C keep `retiredLabel`'s day.
     - **Middle cell:** _Yes,_ "Blur middle". The product is in US English,
       and "middle" pairs with top and bottom. The board's "centre" is
       corrected. _Build:_ none.
     - **Photo-less rail thumbnail:** _No, hatch._ The hatch means "no photo"
       everywhere (round 27 #31b), and the photo ground means a photo is
       still loading. _Build:_ 128 (`AlreadyInCloset.tsx`'s `bg-photo`).
+      **Built in design PR C:** the photo fill hatched one T1 step darker
+      (item 51).
     - **Edit's photo failures:** _Yes, reuse._ A saved photo that is refused
       gets #20's `PHOTO REMOVED` band. A removal that fails gets 02b's band
       under the photo: `PHOTO STILL ON` · "That didn't go through. Try
       again?" (built: "Photo kept"). _Build:_ 128 (`GarmentForm.tsx`,
       `GarmentDetail.tsx`). `feed/components/RetractEntry.tsx` also says
       "Photo kept" when D's photo delete fails. The ruling does not name it,
-      but the same rule makes it `PHOTO STILL ON`.
+      but the same rule makes it `PHOTO STILL ON`. **Built in design PR C
+      for the closet** (F's Edit and Y's Remove); `RetractEntry` is design
+      PR D's. The band's sentence stays the control's cause line (item 51).
 14. **Odds and ends.**
     - **Desk destinations:** _Five, in this order:_ Today, Review, Access,
       Duplicates, Runners. That is the queues that need a person first, then
@@ -2805,7 +2864,10 @@ COPIED` · "Copying didn't work here. The link is selected: copy it
       the owner adopted it (D-87).** _Build:_ 125 (`ops/components/DeskShell.tsx`'s
       order; Gave up moves off the rail and onto `Today.tsx`).
     - **Photo-delete glyph:** `remove` (keywords: delete, trash, bin). The
-      accessible name stays "Delete photo 2". _Build:_ 128.
+      accessible name stays "Delete photo 2". _Build:_ 128. **Nowhere in
+      the closet:** round 22 draws the closet's Replace and Remove as text
+      buttons, and the one site round 27 #26 draws the glyph on is an
+      entry's photo (`feed/components/RetractEntry.tsx`), design PR D's.
     - **Blur cell check:** the pack's `check` at 20px, paper on ink. _Build:_
       128 (`PhotoBlur.tsx`'s `BlurCells`).
 15. **Export states.** _Three confirmed, two redrawn,_ in "U1 export

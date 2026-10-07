@@ -48,6 +48,14 @@ function primary(): HTMLElement {
   return element;
 }
 
+/**
+A re-read nothing here should ask for: the rail is only read again after a
+save F keeps (R-114), which these tests do not reach.
+*/
+function neverReread(): Promise<never> {
+  return Promise.reject(new Error("the rail was read again"));
+}
+
 function rail(): HTMLElement | null {
   return document.querySelector<HTMLElement>("[data-part='rail']");
 }
@@ -95,7 +103,12 @@ describe("GarmentForm: its frame", () => {
 
 describe("GarmentForm at the desk (round 26 #10)", () => {
   it("splits, with the category's pieces in the one rail card", () => {
-    renderForm({ nearby: { top: [rover], bottom: [shorts] } });
+    renderForm({
+      rail: {
+        nearby: { byCategory: { top: [rover], bottom: [shorts] }, byType: {} },
+        reread: neverReread,
+      },
+    });
 
     const card = rail();
     if (card === null) throw new Error("no rail");
@@ -112,7 +125,12 @@ describe("GarmentForm at the desk (round 26 #10)", () => {
 
   it("follows the category as it is picked", async () => {
     const user = userEvent.setup();
-    renderForm({ nearby: { top: [rover], bottom: [shorts] } });
+    renderForm({
+      rail: {
+        nearby: { byCategory: { top: [rover], bottom: [shorts] }, byType: {} },
+        reread: neverReread,
+      },
+    });
 
     await user.selectOptions(screen.getByLabelText("Category"), "bottom");
 
@@ -131,7 +149,12 @@ describe("GarmentForm at the desk (round 26 #10)", () => {
 
   it("marks the piece being typed again as SAME NAME", async () => {
     const user = userEvent.setup();
-    renderForm({ nearby: { top: [rover] } });
+    renderForm({
+      rail: {
+        nearby: { byCategory: { top: [rover] }, byType: {} },
+        reread: neverReread,
+      },
+    });
 
     await user.type(screen.getByLabelText("Brand"), "Janji");
     await user.type(screen.getByLabelText(/Model \/ name/), "Rover half-zip");
@@ -139,6 +162,193 @@ describe("GarmentForm at the desk (round 26 #10)", () => {
     const card = rail();
     if (card === null) throw new Error("no rail");
     expect(within(card).getByText("Same name")).toBeInTheDocument();
+  });
+});
+
+const halfZip = itemView({
+  item: wardrobeItem({ id: "01HZ", name: "Old half-zip", type: "halfZip" }),
+});
+
+function railCard(): HTMLElement {
+  const card = rail();
+  if (card === null) throw new Error("no rail");
+  return card;
+}
+
+describe("GarmentForm's TYPE (round 26 #10, D-75, R-112)", () => {
+  it("offers the category's types, from the contract, in its order", () => {
+    renderForm();
+
+    const group = screen.getByRole("group", { name: "Type" });
+    expect(
+      within(group)
+        .getAllByRole("radio")
+        .map((radio) => radio.closest("label")?.textContent),
+    ).toStrictEqual([
+      "Singlet",
+      "Tee",
+      "L/S crew",
+      "Half-zip",
+      "Jacket",
+      "Vest",
+      "Sports bra",
+    ]);
+    expect(within(group).queryByRole("radio", { checked: true })).toBeNull();
+  });
+
+  it("asks nothing where a category has one type", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.selectOptions(screen.getByLabelText("Category"), "shoes");
+
+    expect(screen.queryByRole("group", { name: "Type" })).toBeNull();
+  });
+
+  it("narrows the rail to the picked type, by its name", async () => {
+    const user = userEvent.setup();
+    renderForm({
+      rail: {
+        nearby: {
+          byCategory: { top: [rover] },
+          byType: { halfZip: [halfZip] },
+        },
+        reread: neverReread,
+      },
+    });
+
+    await user.click(screen.getByRole("radio", { name: "Half-zip" }));
+
+    expect(
+      within(railCard()).getByRole("heading", {
+        name: "Already in your closet · Top · Half-zip",
+      }),
+    ).toBeInTheDocument();
+    expect(within(railCard()).getByText("Old half-zip")).toBeInTheDocument();
+    expect(within(railCard()).queryByText("Janji Rover Half-zip")).toBeNull();
+
+    await user.click(screen.getByRole("radio", { name: "Tee" }));
+    expect(within(railCard()).getByText("No tees yet.")).toBeInTheDocument();
+  });
+
+  it("clears the type when the category changes, since a type has one", async () => {
+    const user = userEvent.setup();
+    const save = vi.fn<GarmentFormProps["save"]>(() =>
+      Promise.resolve({ id: "01SAVED" }),
+    );
+    renderForm({
+      save,
+      initial: { name: "Split" },
+      rail: {
+        nearby: { byCategory: { top: [rover] }, byType: {} },
+        reread: neverReread,
+      },
+    });
+
+    await user.click(screen.getByRole("radio", { name: "Half-zip" }));
+    await user.selectOptions(screen.getByLabelText("Category"), "bottom");
+    await user.selectOptions(screen.getByLabelText("Category"), "top");
+
+    expect(
+      within(screen.getByRole("group", { name: "Type" })).queryByRole("radio", {
+        checked: true,
+      }),
+    ).toBeNull();
+    expect(
+      within(railCard()).getByRole("heading", {
+        name: "Already in your closet · Top",
+      }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add to closet" }));
+    await waitFor(() => {
+      expect(save).toHaveBeenCalled();
+    });
+    expect(Object.hasOwn(save.mock.calls[0]?.[0] ?? {}, "type")).toBe(false);
+  });
+
+  it("saves the picked type with the garment", async () => {
+    const user = userEvent.setup();
+    const save = vi.fn<GarmentFormProps["save"]>(() =>
+      Promise.resolve({ id: "01SAVED" }),
+    );
+    renderForm({ save, initial: { name: "Rover" } });
+
+    await user.click(screen.getByRole("radio", { name: "Half-zip" }));
+    await user.click(screen.getByRole("button", { name: "Add to closet" }));
+
+    await waitFor(() => {
+      expect(save).toHaveBeenCalled();
+    });
+    expect(save.mock.calls[0]?.[0]).toMatchObject({
+      category: "top",
+      type: "halfZip",
+    });
+  });
+});
+
+/**
+ * A half-zip saved through F whose photo the server refuses: F stays, as
+ * the saved garment's page (round 26 #4).
+ */
+async function refuseThePhoto(overrides: Partial<GarmentFormProps>) {
+  const user = userEvent.setup();
+  vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");
+  renderForm({
+    initial: { name: "Rover Half-zip", brand: "Janji" },
+    photo: {
+      upload: () => Promise.resolve({ ok: false, error: "Too big." }),
+      remove: () => Promise.resolve(),
+    },
+    ...overrides,
+  });
+  await user.click(screen.getByRole("radio", { name: "Half-zip" }));
+  await user.upload(fileInput(), png("kit.png"));
+  await user.click(screen.getByRole("button", { name: "Add to closet" }));
+  await screen.findByRole("button", { name: "Done" });
+}
+
+describe("GarmentForm, saved with its photo refused: the rail (R-114)", () => {
+  it("reads the rail again, so it lists the piece the save made", async () => {
+    const saved = itemView({
+      item: wardrobeItem({
+        id: "01SAVED",
+        name: "Rover Half-zip",
+        brand: "Janji",
+        type: "halfZip",
+      }),
+      isGeneric: false,
+    });
+    const rereadNearby = vi.fn(() =>
+      Promise.resolve({
+        byCategory: { top: [saved] },
+        byType: { halfZip: [saved] },
+      }),
+    );
+
+    await refuseThePhoto({
+      rail: { nearby: { byCategory: {}, byType: {} }, reread: rereadNearby },
+    });
+
+    expect(
+      await within(railCard()).findByText("Janji Rover Half-zip"),
+    ).toBeInTheDocument();
+    expect(rereadNearby).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Saved to closet · Top · Half-zip")).toBeVisible();
+  });
+
+  it("keeps the rows it had when the re-read fails", async () => {
+    await refuseThePhoto({
+      rail: {
+        nearby: { byCategory: {}, byType: { halfZip: [halfZip] } },
+        reread: () => Promise.reject(new TypeError("Failed to fetch")),
+      },
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(within(railCard()).getByText("Old half-zip")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Done" })).toBeVisible();
   });
 });
 

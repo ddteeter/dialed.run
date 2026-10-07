@@ -43,6 +43,9 @@ const formValues = z.object({
   brand: z.string(),
   name: z.string(),
   category: z.enum(garmentCategories),
+  // Any string here, `""` unanswered: whether it is a type of *this*
+  // category is `garmentSchema`'s question, asked through the pipe.
+  type: z.string(),
   size: z.string(),
   color: z.string(),
   colorName: z.union([colorNameSchema, unanswered]),
@@ -114,6 +117,9 @@ function toGarmentInput(values: z.output<typeof formValues>): unknown {
     }),
     productUrl: optional(values.productUrl),
     category,
+    // F's TYPE chips (D-75): unanswered is absent, so the product may
+    // still lend one.
+    ...(values.type !== "" && { type: values.type }),
     ...attributes,
   };
 }

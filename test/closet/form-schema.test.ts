@@ -35,6 +35,7 @@ const VALID: GarmentFormValues = {
   brand: "Patagonia",
   name: "Houdini Jacket",
   category: "top",
+  type: "",
   size: "M",
   color: "blue",
   colorName: "",
@@ -47,6 +48,27 @@ const VALID: GarmentFormValues = {
   windResistant: true,
   waterResistant: false,
 };
+
+describe("garmentFormSchema: F's TYPE (D-75, R-112)", () => {
+  it("carries a picked type to the garment", () => {
+    expect(garmentFormSchema.parse({ ...VALID, type: "jacket" })).toMatchObject(
+      { category: "top", type: "jacket" },
+    );
+  });
+
+  it("leaves an unanswered type absent, so a product may still lend one", () => {
+    expect(Object.hasOwn(garmentFormSchema.parse(VALID), "type")).toBe(false);
+  });
+
+  it("refuses a type the category does not have, on the type field", () => {
+    const result = garmentFormSchema.safeParse({ ...VALID, type: "shoes" });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map((issue) => issue.path)).toStrictEqual([
+      ["type"],
+    ]);
+  });
+});
 
 describe("garmentFormSchema", () => {
   it("parses form state into a garment", () => {

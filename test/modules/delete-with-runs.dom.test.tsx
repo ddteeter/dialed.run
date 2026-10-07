@@ -1,10 +1,4 @@
-import {
-  act,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createRef, type ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -121,13 +115,13 @@ describe("DeleteWithRuns: what it says", () => {
     ]);
   });
 
-  it("marks what goes in the cold hue and what stays in the dialed one", async () => {
+  it("marks what goes and what stays in ink, never a verdict's hue (round 28 #13)", async () => {
     sheet();
     await afterTheCount();
 
     const [goes, , stays] = document.querySelectorAll("li > span:first-child");
-    expect(goes).toHaveClass("text-cold-text");
-    expect(stays).toHaveClass("text-dialed-text");
+    expect(goes).toHaveClass("text-ink", "text-mono-xs");
+    expect(stays).toHaveClass("text-ink", "text-mono-xs");
   });
 });
 
