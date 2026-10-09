@@ -11,6 +11,7 @@ import {
 import { env } from "../../env";
 import { chunked, IN_LIST_CHUNK } from "../../lib/chunked";
 import { columnWhere } from "../../lib/sql/keyed-read";
+import { abandonedBefore, listAbandonedEnrichments } from "../enrichment";
 import { pruneStravaIds } from "../runs";
 import { retryPendingWeather } from "../weather";
 import { cronNameFor, type CronName } from "./crons";
@@ -195,6 +196,10 @@ async function runCron(
       const anomalies: string[] = [];
       await eachStep([
         () => redispatchStalledEnrichments(anomalies),
+        // What the sweep just stopped re-driving goes on the Desk's Gave
+        // up (R-119): the hour a product's day runs out, not the morning
+        // after.
+        () => listAbandonedEnrichments(drizzle(env.DIALED_CORE)),
         () => drainOwedEmail(anomalies),
       ]);
       return anomalies;
@@ -456,7 +461,8 @@ const ENRICHMENT_STALL_GRACE_S = 15 * 60;
  * 404s — or 403s even through the proxy, at a credit a try — is re-fetched
  * every hour for the life of the row, and a Sentry event with it. A day
  * of hourly retries outlasts any model outage worth waiting out; past it
- * the row is *abandoned*, which the daily digest reports (law 6), and a
+ * the row is *abandoned*, which the daily digest reports and the Desk's
+ * Gave up lists (law 6), and a
  * fresh paste of the same URL is what claims it again.
  *
  * **And the re-drive is a claim, not just a send.** The consumer treats
@@ -465,19 +471,12 @@ const ENRICHMENT_STALL_GRACE_S = 15 * 60;
  * line said "re-dispatched" and nothing happened. Flipped in SQL before the
  * send (law 2): a send that then fails leaves the row `pending`, which the
  * next sweep picks up on its own.
- */
-const ENRICHMENT_RETRY_WINDOW_S = 24 * 60 * 60;
-
-/**
-The instant (epoch seconds) before which a `failed` product is abandoned.
-*/
-function abandonedBefore(): number {
-  return nowSeconds() - ENRICHMENT_RETRY_WINDOW_S;
-}
-
-/**
- * `failed` past the grace window and inside the product's first day: the
- * rows the sweep still owes a retry.
+ *
+ * So: `failed` past the grace window and inside the product's first day,
+ * the rows the sweep still owes a retry. The day itself is enrichment's
+ * (`abandonedBefore`), because the consumer reads it too, to know whether a
+ * failure is one the sweep will retry or one to list on the Desk's Gave up
+ * (R-119).
  */
 function failedAndOwed(): SQL | undefined {
   const staleBefore = nowSeconds() - ENRICHMENT_STALL_GRACE_S;

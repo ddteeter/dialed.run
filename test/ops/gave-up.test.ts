@@ -62,17 +62,20 @@ function depsWith(overrides: Partial<RetryDeps> = {}) {
   const enrichmentQueue = { send: vi.fn(() => Promise.resolve()) };
   const importsQueue = { send: vi.fn(() => Promise.resolve()) };
   const reextract = vi.fn(() => Promise.resolve<unknown>({ filled: [] }));
+  const importFileExists = vi.fn(() => Promise.resolve(true));
   return {
     deps: {
       db: db(),
       enrichmentQueue,
       importsQueue,
       reextract,
+      importFileExists,
       ...overrides,
     },
     enrichmentQueue,
     importsQueue,
     reextract,
+    importFileExists,
   };
 }
 
@@ -437,6 +440,72 @@ describe("retryGaveUp", () => {
     );
   });
 
+  it("forgets an import whose file has gone, and sends nothing", async () => {
+    // Re-sending it would fail at once and tell its runner a second time
+    // that their import failed, for a file nobody can read any more.
+    const userId = await runner();
+    const upload = await failedImport(userId);
+    await outboxInsert(
+      db(),
+      oweOutbox(
+        { kind: "import_file_expire", payload: { userId, key: upload.r2Key } },
+        nowSeconds() + 1000,
+      ),
+    );
+    const id = await gaveUpFor("import", upload.id);
+    const { deps, importsQueue } = depsWith({
+      importFileExists: vi.fn(() => Promise.resolve(false)),
+    });
+
+    expect(await retryGaveUp({ id, step: "again" }, deps)).toBe("gone");
+
+    expect(deps.importFileExists).toHaveBeenCalledWith(upload.r2Key);
+    expect(importsQueue.send).not.toHaveBeenCalled();
+    const [row] = await db()
+      .select({ status: imports.status })
+      .from(imports)
+      .where(eq(imports.id, upload.id));
+    expect(row?.status).toBe("failed");
+    const owed = await db()
+      .select({ key: outbox.dedupeKey })
+      .from(outbox)
+      .where(eq(outbox.dedupeKey, `${userId}:${upload.r2Key}`));
+    expect(owed).toHaveLength(1);
+    expect(await gaveUpRow("import", upload.id)).toBeUndefined();
+  });
+
+  it("asks after the import's own file before re-sending it", async () => {
+    const upload = await failedImport(await runner());
+    const id = await gaveUpFor("import", upload.id);
+    const { deps, importFileExists } = depsWith();
+
+    expect(await retryGaveUp({ id, step: "again" }, deps)).toBe("retried");
+
+    expect(importFileExists).toHaveBeenCalledWith(upload.r2Key);
+  });
+
+  it("forgets a run that is gone, rather than calling it retried", async () => {
+    const runId = newUlid();
+    const id = await gaveUpFor("weather", runId);
+
+    expect(await retryGaveUp({ id, step: "again" }, depsWith().deps)).toBe(
+      "gone",
+    );
+
+    expect(await gaveUpRow("weather", runId)).toBeUndefined();
+  });
+
+  it("forgets a product that is gone, and sends nothing", async () => {
+    const productId = newUlid();
+    const id = await gaveUpFor("enrichment", productId);
+    const { deps, enrichmentQueue } = depsWith();
+
+    expect(await retryGaveUp({ id, step: "again" }, deps)).toBe("gone");
+
+    expect(enrichmentQueue.send).not.toHaveBeenCalled();
+    expect(await gaveUpRow("enrichment", productId)).toBeUndefined();
+  });
+
   it("forgets an import that is gone", async () => {
     const importId = newUlid();
     const id = await gaveUpFor("import", importId);
@@ -529,6 +598,18 @@ describe("retryGaveUp with the Worker's own deps", () => {
     expect(await retryGaveUp({ id, step: "again" })).toBe("retried");
 
     expect(await gaveUpRow("weather", runId)).toBeUndefined();
+  });
+
+  it("reads the run file from the bucket the Worker binds", async () => {
+    const userId = await runner("bucket");
+    const kept = await failedImport(userId);
+    const expired = await failedImport(userId);
+    await env.IMPORTS.put(kept.r2Key, "<TrainingCenterDatabase/>");
+    const keptRow = await gaveUpFor("import", kept.id);
+    const expiredRow = await gaveUpFor("import", expired.id);
+
+    expect(await retryGaveUp({ id: keptRow, step: "again" })).toBe("retried");
+    expect(await retryGaveUp({ id: expiredRow, step: "again" })).toBe("gone");
   });
 
   it("hands the stored page to enrichment's own extraction, model and all", async () => {

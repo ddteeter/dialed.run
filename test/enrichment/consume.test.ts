@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it, vi } from "vitest";
 
-import { products, productSnapshots } from "../../src/db/schema-core";
+import { gaveUp, products, productSnapshots } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
@@ -15,10 +15,9 @@ import {
   createOrGetProduct,
 } from "../../src/modules/products";
 import { DEAD_LETTER_REASON } from "../../src/db/gave-up";
-import {
-  PageFetchError,
-  pageFailureReason,
-} from "../../src/modules/enrichment/bounds";
+import { listAbandonedEnrichments } from "../../src/modules/enrichment/abandon";
+import { pageFailureReason } from "../../src/modules/enrichment/bounds";
+import { nowSeconds } from "../../src/lib/now";
 import samplePhotoBytes from "../fixtures/sample-photo.bin";
 import { gaveUpRow } from "../gave-up-rows";
 import { batchOf, fakeMessage } from "../queue-fakes";
@@ -802,9 +801,63 @@ describe("handleEnrichmentBatch: the model rung", () => {
   });
 });
 
-describe("the Desk's Gave up (R-119)", () => {
-  it("lists a product whose page refused us, with the status in words and the error as detail", async () => {
+/**
+ * A product the sweep has stopped re-driving: created more than a day ago,
+ * so nothing but an operator's Retry or a fresh paste will try it again.
+ */
+const PAST_THE_DAY = { createdAt: nowSeconds() - 25 * 60 * 60 };
+
+/**
+A shop that refuses, and a proxy whose fetch the shop refused too.
+*/
+const refusedThroughProxy: typeof fetch = (input) =>
+  Promise.resolve(
+    urlOf(input).startsWith("https://api.firecrawl.dev/")
+      ? Response.json({
+          success: true,
+          data: { rawHtml: "blocked", metadata: { statusCode: 403 } },
+        })
+      : new Response("blocked", { status: 403 }),
+  );
+
+describe("the Desk's Gave up (R-119): only what the system stopped retrying", () => {
+  it("does not list a refusal inside the product's first day, and keeps it for later", async () => {
     const productId = await pendingProduct();
+
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      depsWith(serving("blocked", 403)),
+    );
+
+    expect(await statusOf(productId)).toBe("failed");
+    expect(await gaveUpRow("enrichment", productId)).toBeUndefined();
+    expect(await rowOf(productId)).toMatchObject({
+      extractionError: "Page returned 403",
+      extractionTries: 1,
+    });
+  });
+
+  it("counts each re-driven refusal inside the day, still unlisted", async () => {
+    const productId = await pendingProduct();
+    const deps = depsWith(serving("blocked", 403));
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      deps,
+    );
+    await repend(productId);
+
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      deps,
+    );
+
+    const row = await rowOf(productId);
+    expect(row.extractionTries).toBe(2);
+    expect(await gaveUpRow("enrichment", productId)).toBeUndefined();
+  });
+
+  it("lists a refusal past the day at once, with the status in words and the error as detail", async () => {
+    const productId = await pendingProduct(PAST_THE_DAY);
 
     await handleEnrichmentBatch(
       batchOf("dialed-enrichment", [jobFor(productId)]),
@@ -816,10 +869,25 @@ describe("the Desk's Gave up (R-119)", () => {
       rawError: "Page returned 403",
       tries: 1,
     });
+    await expectNothingParked(productId);
   });
 
-  it("adds a try each time a re-driven product is refused again", async () => {
-    const productId = await pendingProduct();
+  it("names the 403 when the shop refused the proxy too", async () => {
+    const productId = await pendingProduct(PAST_THE_DAY);
+
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      { ...depsWith(refusedThroughProxy), proxyApiKey: "fc-test" },
+    );
+
+    expect(await gaveUpRow("enrichment", productId)).toMatchObject({
+      reason: "The shop returned 403. It may be blocking us.",
+      rawError: "Page returned 403 through the proxy",
+    });
+  });
+
+  it("adds a try each time a listed product is refused again", async () => {
+    const productId = await pendingProduct(PAST_THE_DAY);
     const deps = depsWith(serving("blocked", 403));
     await handleEnrichmentBatch(
       batchOf("dialed-enrichment", [jobFor(productId)]),
@@ -837,7 +905,7 @@ describe("the Desk's Gave up (R-119)", () => {
   });
 
   it("takes a product off the list once a later try succeeds", async () => {
-    const productId = await pendingProduct();
+    const productId = await pendingProduct(PAST_THE_DAY);
     await handleEnrichmentBatch(
       batchOf("dialed-enrichment", [jobFor(productId)]),
       depsWith(serving("blocked", 403)),
@@ -853,8 +921,46 @@ describe("the Desk's Gave up (R-119)", () => {
     expect(await gaveUpRow("enrichment", productId)).toBeUndefined();
   });
 
-  it("lists a dead-lettered product with the queue's tries, in the batch that fails it", async () => {
+  it("forgets a parked failure once a later try inside the day succeeds", async () => {
     const productId = await pendingProduct();
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      depsWith(serving("blocked", 403)),
+    );
+    await repend(productId);
+
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(productId)]),
+      depsWith(serving(PAGE)),
+    );
+
+    expect(await statusOf(productId)).toBe("done");
+    await expectNothingParked(productId);
+  });
+
+  it("parks a dead letter inside the day: failed, its tries counted, no error, not listed", async () => {
+    const productId = await pendingProduct({
+      extractionError: "Page returned 404",
+      extractionTries: 2,
+    });
+
+    await handleEnrichmentDlqBatch(
+      batchOf("dialed-enrichment-dlq", [jobFor(productId)]),
+      depsWith(serving(PAGE)),
+      4,
+    );
+
+    const row = await rowOf(productId);
+    expect(row).toMatchObject({
+      extractionStatus: "failed",
+      extractionTries: 6,
+    });
+    expect(row.extractionError).toBeNull();
+    expect(await gaveUpRow("enrichment", productId)).toBeUndefined();
+  });
+
+  it("lists a dead letter past the day with the queue's tries, in the batch that fails it", async () => {
+    const productId = await pendingProduct(PAST_THE_DAY);
 
     await handleEnrichmentDlqBatch(
       batchOf("dialed-enrichment-dlq", [jobFor(productId)]),
@@ -870,7 +976,10 @@ describe("the Desk's Gave up (R-119)", () => {
   });
 
   it("does not list a product a late retry finished", async () => {
-    const productId = await pendingProduct({ extractionStatus: "done" });
+    const productId = await pendingProduct({
+      ...PAST_THE_DAY,
+      extractionStatus: "done",
+    });
 
     await handleEnrichmentDlqBatch(
       batchOf("dialed-enrichment-dlq", [jobFor(productId)]),
@@ -879,6 +988,114 @@ describe("the Desk's Gave up (R-119)", () => {
     );
 
     expect(await gaveUpRow("enrichment", productId)).toBeUndefined();
+    const row = await rowOf(productId);
+    expect(row.extractionTries).toBeNull();
+  });
+});
+
+const DAY = 24 * 60 * 60;
+
+/**
+A product failed inside its day with a failure parked, now `age` old.
+*/
+async function parked(
+  age: number,
+  facts: { extractionError?: string; extractionTries: number },
+): Promise<string> {
+  return pendingProduct({
+    extractionStatus: "failed",
+    createdAt: nowSeconds() - age,
+    ...facts,
+  });
+}
+
+/**
+That a product holds no failure waiting to be listed.
+*/
+async function expectNothingParked(productId: string): Promise<void> {
+  const row = await rowOf(productId);
+  expect(row.extractionError).toBeNull();
+  expect(row.extractionTries).toBeNull();
+}
+
+describe("listAbandonedEnrichments: the hour the day runs out", () => {
+  it("lists a parked refusal once the day is past, in words, and clears what it kept", async () => {
+    const productId = await parked(DAY + 60, {
+      extractionError: "Page returned 403 through the proxy",
+      extractionTries: 7,
+    });
+
+    await listAbandonedEnrichments(db());
+
+    expect(await gaveUpRow("enrichment", productId)).toMatchObject({
+      reason: "The shop returned 403. It may be blocking us.",
+      rawError: "Page returned 403 through the proxy",
+      tries: 7,
+    });
+    expect(await statusOf(productId)).toBe("failed");
+    await expectNothingParked(productId);
+  });
+
+  it("lists a parked dead letter with the dead letter's reason and no detail", async () => {
+    const productId = await parked(DAY + 60, { extractionTries: 4 });
+
+    await listAbandonedEnrichments(db());
+
+    const row = await gaveUpRow("enrichment", productId);
+    expect(row).toMatchObject({ reason: DEAD_LETTER_REASON, tries: 4 });
+    expect(row?.rawError).toBeNull();
+  });
+
+  it("lists nothing while the sweep still owns the product", async () => {
+    const productId = await parked(DAY - 60, {
+      extractionError: "Page returned 404",
+      extractionTries: 3,
+    });
+
+    await listAbandonedEnrichments(db());
+
+    expect(await gaveUpRow("enrichment", productId)).toBeUndefined();
+    const row = await rowOf(productId);
+    expect(row.extractionTries).toBe(3);
+  });
+
+  it("lists a product once: a dropped row does not come back the next hour", async () => {
+    const productId = await parked(DAY + 60, {
+      extractionError: "Page returned 404",
+      extractionTries: 3,
+    });
+    await listAbandonedEnrichments(db());
+    await db().delete(gaveUp).where(eq(gaveUp.subjectId, productId));
+
+    await listAbandonedEnrichments(db());
+
+    expect(await gaveUpRow("enrichment", productId)).toBeUndefined();
+  });
+
+  it("lists only a product still failed", async () => {
+    const productId = await pendingProduct({
+      createdAt: nowSeconds() - DAY - 60,
+      extractionTries: 3,
+    });
+
+    await listAbandonedEnrichments(db());
+
+    expect(await gaveUpRow("enrichment", productId)).toBeUndefined();
+  });
+
+  it("dates the row when it was listed", async () => {
+    const productId = await parked(DAY + 60, {
+      extractionError: "Page returned 404",
+      extractionTries: 1,
+    });
+    const at = nowSeconds() + 5;
+
+    await listAbandonedEnrichments(db(), at);
+
+    expect(await gaveUpRow("enrichment", productId)).toMatchObject({
+      firstFailedAt: at,
+      lastFailedAt: at,
+    });
   });
 });
 
@@ -887,12 +1104,22 @@ describe("pageFailureReason", () => {
     ["Page returned 403", "The shop returned 403. It may be blocking us."],
     ["Page returned 401", "The shop returned 401. It may be blocking us."],
     ["Page returned 404", "The shop returned 404."],
+    [
+      "Page returned 403 through the proxy",
+      "The shop returned 403. It may be blocking us.",
+    ],
+    ["Page returned 404 through the proxy", "The shop returned 404."],
+    ["Page returned 403 through", "The shop's page couldn't be read."],
+    [
+      "Page returned 403 through the proxy!",
+      "The shop's page couldn't be read.",
+    ],
     ["Page returned 4035", "The shop's page couldn't be read."],
     ["A Page returned 403", "The shop's page couldn't be read."],
     ["Proxy returned 502", "The shop's page couldn't be read."],
     ["Page had no body", "The shop's page couldn't be read."],
   ])("says %j as %j", (message, reason) => {
-    expect(pageFailureReason(new PageFetchError(message))).toBe(reason);
+    expect(pageFailureReason(message)).toBe(reason);
   });
 });
 

@@ -54,6 +54,11 @@ function nothing(): void {
    */
 }
 
+function urlOf(input: RequestInfo | URL): string {
+  if (typeof input === "string") return input;
+  return input instanceof URL ? input.href : input.url;
+}
+
 function silenceWarn() {
   return vi.spyOn(console, "warn").mockImplementation(nothing);
 }
@@ -259,7 +264,7 @@ describe("the Desk's Gave up (R-119)", () => {
     const runId = await insertPendingRun({
       lat: 63.1,
       lng: 23.1,
-      startedAt: nowSeconds() - 6 * HOUR,
+      startedAt: nowSeconds() - 5.5 * HOUR,
     });
     mockFetchJson({ unexpected: "shape" });
 
@@ -323,5 +328,152 @@ describe("the Desk's Gave up (R-119)", () => {
 
     expect(await statusOf(runId)).toBe("pending");
     expect(await gaveUpRow("weather", runId)).toBeDefined();
+  });
+});
+
+describe("a give-up after the window (R-119): a Retry is one try, not five", () => {
+  const LATE_REASON =
+    "No weather came back for this run on its latest try, made after its five-hour window had closed.";
+
+  it("counts one try for a run failed again after an operator's Retry, and says so", async () => {
+    // The Desk's Retry clears the row and puts the run back to `pending`;
+    // the next pass finds it hours past its window and fails it at once.
+    silenceWarn();
+    const runId = await insertPendingRun({
+      lat: 69.1,
+      lng: 29.1,
+      startedAt: nowSeconds() - 9 * HOUR,
+    });
+    mockFetchJson({ unexpected: "shape" });
+
+    await retryPendingWeather();
+
+    expect(await gaveUpRow("weather", runId)).toMatchObject({
+      reason: LATE_REASON,
+      tries: 1,
+    });
+  });
+
+  it("adds one try to a run still listed when it fails again", async () => {
+    silenceWarn();
+    const runId = await insertPendingRun({
+      lat: 70.1,
+      lng: 30.1,
+      startedAt: nowSeconds() - 9 * HOUR,
+    });
+    await gaveUpUpsert(coreDb(), {
+      kind: "weather",
+      subjectId: runId,
+      reason:
+        "No weather came back for this run in five hours of hourly tries.",
+      tries: 5,
+    });
+    mockFetchJson({ unexpected: "shape" });
+
+    await retryPendingWeather();
+
+    expect(await gaveUpRow("weather", runId)).toMatchObject({
+      reason: LATE_REASON,
+      tries: 6,
+    });
+  });
+
+  it("draws the line at six hours: the window's five tries before it, one after", async () => {
+    const now = nowSeconds();
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    silenceWarn();
+    mockFetchJson({ unexpected: "shape" });
+
+    await clearPendingRuns();
+    const justInside = await insertPendingRun({
+      lat: 71.1,
+      lng: 31.1,
+      startedAt: now - 6 * HOUR + 1,
+    });
+    await retryPendingWeather();
+    const inside = await gaveUpRow("weather", justInside);
+    expect(inside?.tries).toBe(5);
+
+    await clearPendingRuns();
+    const atTheLine = await insertPendingRun({
+      lat: 72.1,
+      lng: 32.1,
+      startedAt: now - 6 * HOUR,
+    });
+    await retryPendingWeather();
+    const atLine = await gaveUpRow("weather", atTheLine);
+    expect(atLine?.tries).toBe(1);
+  });
+});
+
+describe("the cap fails only what is still pending", () => {
+  it("neither fails nor lists a run past the window that this pass attached", async () => {
+    await clearPendingRuns();
+    const runId = await insertPendingRun({
+      lat: 60.2,
+      lng: 20.2,
+      startedAt: nowSeconds() - 9 * HOUR,
+    });
+    mockVisualCrossing();
+    const warn = silenceWarn();
+
+    const result = await retryPendingWeather();
+
+    expect(result.failed).toBe(0);
+    expect(await statusOf(runId)).toBe("attached");
+    expect(await gaveUpRow("weather", runId)).toBeUndefined();
+    expect(warn).not.toHaveBeenCalledWith(
+      expect.stringContaining("exhausted"),
+      expect.anything(),
+    );
+  });
+
+  it("leaves a band saved since the read alone: not failed, not listed", async () => {
+    // The race: the runner saves a band (`manual`) after this pass has
+    // tried their run but before its cap. The pass tries runs oldest
+    // first, so the band lands while it is trying a younger one.
+    await clearPendingRuns();
+    const banded = await insertPendingRun({
+      lat: 60.3,
+      lng: 20.3,
+      startedAt: nowSeconds() - 10 * HOUR,
+    });
+    await insertPendingRun({
+      lat: 60.35,
+      lng: 20.35,
+      startedAt: nowSeconds() - 9 * HOUR,
+    });
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (urlOf(input).includes("60.35")) {
+        await coreDb()
+          .update(runs)
+          .set({ weatherStatus: "manual" })
+          .where(eq(runs.id, banded));
+      }
+      return Response.json({ unexpected: "shape" });
+    });
+    silenceWarn();
+
+    const result = await retryPendingWeather();
+
+    expect(result.failed).toBe(1);
+    expect(await statusOf(banded)).toBe("manual");
+    expect(await gaveUpRow("weather", banded)).toBeUndefined();
+  });
+
+  it("keeps another run's row when it fails one beside it", async () => {
+    await clearPendingRuns();
+    silenceWarn();
+    const failing = await insertPendingRun({
+      lat: 60.4,
+      lng: 20.4,
+      startedAt: nowSeconds() - 5.5 * HOUR,
+    });
+    mockFetchJson({ unexpected: "shape" });
+
+    await retryPendingWeather();
+
+    expect(await statusOf(failing)).toBe("failed");
+    expect(await gaveUpRow("weather", failing)).toBeDefined();
   });
 });

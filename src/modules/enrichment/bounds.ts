@@ -80,9 +80,18 @@ export async function readCapped(
  * page's own status is the one fact an operator can act on — a 403 is a
  * shop refusing us, which no retry changes — so it is named; everything
  * else is the error itself, which the row keeps as its raw detail.
+ *
+ * Takes the message rather than the error, because a failure inside the
+ * sweep's day of retries is listed only when the product is abandoned
+ * (R-119), from the message the product kept.
  */
-export function pageFailureReason(error: PageFetchError): string {
-  const status = /^Page returned (\d{3})$/u.exec(error.message)?.[1];
+export function pageFailureReason(message: string): string {
+  // The proxy path says the same thing with a suffix ("Page returned 403
+  // through the proxy", `firecrawl.ts`): the shop refused the proxy too,
+  // which is the refusal an operator most needs named.
+  const status = /^Page returned (\d{3})(?: through the proxy)?$/u.exec(
+    message,
+  )?.[1];
   if (status === undefined) return "The shop's page couldn't be read.";
   const isRefused = status === "401" || status === "403";
   return isRefused

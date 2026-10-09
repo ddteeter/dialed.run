@@ -18,6 +18,7 @@ import { env } from "../../src/env";
 import { newUlid, type Ulid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { handleScheduled } from "../../src/modules/ops";
+import { gaveUpRow } from "../gave-up-rows";
 import { digestKinds, digestReport } from "../../src/modules/ops/scheduled";
 import type { CronReporter, SentryReport } from "../../src/modules/ops/sentry";
 import {
@@ -1069,6 +1070,23 @@ describe("stalled enrichments are re-dispatched on their own hourly sweep", () =
       .from(products)
       .where(eq(products.id, productId));
     expect(row?.status).toBe("failed");
+  });
+
+  it("lists a product on the Desk's Gave up the hour the sweep stops re-driving it", async () => {
+    // D6 is the jobs the system stopped retrying (R-119): a failure inside
+    // the day is parked on the product, and listed when the day runs out.
+    const productId = await insertProduct("failed", 25 * HOUR);
+    await coreDb()
+      .update(products)
+      .set({ extractionError: "Page returned 404", extractionTries: 9 })
+      .where(eq(products.id, productId));
+
+    await handleScheduled(ENRICHMENT_RETRY);
+
+    expect(await gaveUpRow("enrichment", productId)).toMatchObject({
+      reason: "The shop returned 404.",
+      tries: 9,
+    });
   });
 
   it("re-drives a failed product right up to the day, not one second past it", async () => {

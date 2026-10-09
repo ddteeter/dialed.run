@@ -451,7 +451,8 @@ flowchart LR
     QE[[dialed-enrichment\nmax_retries=3]] -->|exhausted| DLQE[[dialed-enrichment-dlq]]
     DLQE --> DCE[DLQ consumer:\nproduct failed,\nSentry event]
     DC -->|same batch: giveUpEach| GU[(gave_up)]
-    DCE -->|same batch: giveUpEach| GU
+    DCE -->|past the product's first day:\nsame batch, giveUpEach| GU
+    ESWEEP[Hourly enrichment sweep:\nday of retries over] -->|parked failure,\nsame batch as clear| GU
     WCRON[Hourly weather cron:\nfive-hour cap] -->|same batch as failed| GU
     GU -->|count, rows| DESK[Desk · Today · Gave up\nRetry re-arms + re-sends,\nDrop deletes]
     GU -->|one line when above zero| ADMIN
@@ -477,7 +478,11 @@ flowchart LR
   every job the system stops retrying writes a `gave_up` row in the batch
   that marks its own status — the imports and enrichment DLQs through
   `giveUpEach` (`src/db/gave-up.ts`), enrichment's terminal page
-  refusal, and the weather cron's five-hour cap. A later success clears it
+  refusal, and the weather cron's five-hour cap. Enrichment is listed only
+  once the hourly sweep stops re-driving a product (its first day): a
+  failure inside the day is parked on the product (`extraction_error`,
+  `extraction_tries`) and the enrichment sweep lists it, clearing them in
+  the same batch, the hour the day runs out. A later success clears it
   (enrichment's write-back, weather's `setStatus` on resolve). Today lists
   the rows, its rail carries the count, and the digest adds one line when
   it is above zero. Retry re-arms the job's own marker and re-sends an

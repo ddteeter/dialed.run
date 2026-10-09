@@ -454,6 +454,15 @@ export const products = /*#__PURE__*/ sqliteTable(
     })
       .notNull()
       .default("none"),
+    // A failure inside the hourly sweep's day of retries, held here until
+    // the product is abandoned (R-119): the Desk's Gave up lists only jobs
+    // the system stopped retrying (Operator Screens D6), so the row is
+    // written when the sweep stops, from these. `extraction_error` is the
+    // last failure's message (null for a dead letter, whose error is in
+    // Sentry); `extraction_tries` counts the tries, and null means nothing
+    // is waiting to be listed. Both are cleared on success and on listing.
+    extractionError: text("extraction_error"),
+    extractionTries: integer("extraction_tries"),
     status: text("status", { enum: ["active", "hidden"] })
       .notNull()
       .default("active"),

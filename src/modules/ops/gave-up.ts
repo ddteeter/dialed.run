@@ -26,7 +26,7 @@ import {
 import { env } from "../../env";
 import type { GaveUpKind } from "../../lib/contracts/gave-up";
 import { clockLabel, monthDayLabel } from "../../lib/dates";
-import { firstRowWhere } from "../../lib/sql/keyed-read";
+import { firstColumnWhere, firstRowWhere } from "../../lib/sql/keyed-read";
 import { dedupeKeyFor } from "../../lib/sql/outbox";
 import { reextract, requestEnrichment } from "../enrichment";
 import { reminderFromSubject, type ImportJob, type ReminderJob } from "../runs";
@@ -227,6 +227,10 @@ export interface RetryDeps {
     send: (message: ImportJob | ReminderJob) => Promise<unknown>;
   };
   readonly reextract: (productId: string) => Promise<unknown>;
+  /**
+  Whether an import's run file is still in the bucket.
+  */
+  readonly importFileExists: (key: string) => Promise<boolean>;
 }
 
 function liveRetryDeps(): RetryDeps {
@@ -235,13 +239,16 @@ function liveRetryDeps(): RetryDeps {
     enrichmentQueue: env.ENRICHMENT_QUEUE,
     importsQueue: env.IMPORTS_QUEUE,
     reextract: (productId) => reextract(enrichmentDeps(), productId),
+    importFileExists: async (key) => (await env.IMPORTS.head(key)) !== null,
   };
 }
 
 /**
- * What a retry did: sent the job back (`retried`), found the row already
- * gone (`gone` — a second press, or another operator), or found no stored
- * page to re-extract (`no-page`, the row stays).
+ * What a retry did: sent the job back (`retried`), found nothing left to
+ * retry (`gone` — the row already went, to a second press or another
+ * operator, or the job's subject did: its product, run or import, or the
+ * run file an import would read), or found no stored page to re-extract
+ * (`no-page`, the row stays). A `gone` row is cleared, never re-sent.
  */
 export type RetryOutcome = "retried" | "gone" | "no-page";
 
@@ -262,14 +269,23 @@ async function retryEnrichment(
   if (step === "extract") {
     const report = await deps.reextract(row.subjectId);
     if (report === undefined) return "no-page";
-  } else {
+    await gaveUpClear(deps.db, "enrichment", row.subjectId);
+    return "retried";
+  }
+  const product = await firstColumnWhere(
+    deps.db,
+    products,
+    products.id,
+    eq(products.id, row.subjectId),
+  );
+  if (product !== undefined) {
     await requestEnrichment(deps.db, row.subjectId, {
       queue: deps.enrichmentQueue,
       captureException,
     });
   }
   await gaveUpClear(deps.db, "enrichment", row.subjectId);
-  return "retried";
+  return product === undefined ? "gone" : "retried";
 }
 
 /**
@@ -279,6 +295,12 @@ async function retryEnrichment(
  */
 async function retryWeather(row: Row, deps: RetryDeps): Promise<RetryOutcome> {
   const { db } = deps;
+  const run = await firstColumnWhere(
+    db,
+    runs,
+    runs.id,
+    eq(runs.id, row.subjectId),
+  );
   const stillFailed = and(
     eq(runs.id, row.subjectId),
     eq(runs.weatherStatus, "failed"),
@@ -287,7 +309,7 @@ async function retryWeather(row: Row, deps: RetryDeps): Promise<RetryOutcome> {
     db.update(runs).set({ weatherStatus: "pending" }).where(stillFailed),
     gaveUpClear(db, "weather", row.subjectId),
   ]);
-  return "retried";
+  return run === undefined ? "gone" : "retried";
 }
 
 /**
@@ -305,7 +327,14 @@ async function retryImport(row: Row, deps: RetryDeps): Promise<RetryOutcome> {
     imports,
     eq(imports.id, row.subjectId),
   );
-  if (importRow === undefined) {
+  // An import whose file has gone — its 30-day expiry paid, or the
+  // account purged — cannot be read again: re-sending it would fail at
+  // once and send its runner a second, misleading failure notice. So the
+  // row goes, and nothing is sent.
+  if (
+    importRow === undefined ||
+    !(await deps.importFileExists(importRow.r2Key))
+  ) {
     await gaveUpClear(db, "import", row.subjectId);
     return "gone";
   }

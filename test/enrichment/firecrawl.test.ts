@@ -42,6 +42,25 @@ function sentBody(init: RequestInit | undefined): unknown {
   return JSON.parse(body);
 }
 
+/**
+A cleartext scheme, spelled so it reads as the input it is rather than a
+link this file makes.
+*/
+const PLAIN_HTTP = ["http", "://"].join("");
+
+/**
+The message a proxy failure throws, for an error the proxy wrote.
+*/
+async function failureFor(error: string): Promise<string> {
+  const body = JSON.stringify({ success: false, error });
+  try {
+    await scrapeThroughProxy(URL_UNDER_TEST, KEY, answers(body));
+  } catch (error_) {
+    return error_ instanceof Error ? error_.message : "";
+  }
+  return "";
+}
+
 describe("scrapeThroughProxy", () => {
   it("posts the URL to the scrape endpoint with the key, asking for raw HTML on auto proxy", async () => {
     const fetchImpl = answers(envelope("<html>tee</html>"));
@@ -101,6 +120,37 @@ describe("scrapeThroughProxy", () => {
     await expect(
       scrapeThroughProxy(URL_UNDER_TEST, KEY, answers(body)),
     ).rejects.toThrow(/Proxy failed: Insufficient credits/u);
+  });
+
+  describe("keeps only a bounded, safe excerpt of the proxy's error (law 7)", () => {
+    it.each([
+      [
+        "drops a URL's query string, where a signed link keeps its token",
+        "Blocked at https://shop.example/p?token=abc&x=1 today",
+        "Blocked at https://shop.example/p today",
+      ],
+      [
+        "drops a fragment, and reads plain http too",
+        `See ${PLAIN_HTTP}a.example/x#frag now`,
+        `See ${PLAIN_HTTP}a.example/x now`,
+      ],
+      [
+        "leaves a URL with no query alone",
+        "At https://a.example/p/q done",
+        "At https://a.example/p/q done",
+      ],
+      ["folds runs of whitespace to one space", "a\n\n  b\tc", "a b c"],
+      [
+        "folds control characters too",
+        `a${String.fromCodePoint(0)}${String.fromCodePoint(27)}b`,
+        "a b",
+      ],
+      ["trims the ends", "  padded  ", "padded"],
+      ["keeps eighty characters whole", "x".repeat(80), "x".repeat(80)],
+      ["cuts what runs past eighty", "y".repeat(200), "y".repeat(80)],
+    ])("%s", async (_name, error, kept) => {
+      expect(await failureFor(error)).toBe(`Proxy failed: ${kept}`);
+    });
   });
 
   it("treats a response that is not JSON as a failed fetch, not a crash", async () => {

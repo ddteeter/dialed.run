@@ -119,6 +119,8 @@ export function DefaultCard(): JSX.Element {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-end",
+          // The board's 24px between the line and the URL (round 31 #6).
+          gap: 24 * DEFAULT_SCALE,
         }}
       >
         <span

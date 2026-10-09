@@ -123,6 +123,12 @@ describe("the rendered cards", () => {
     );
   });
 
+  it("keeps the board's 24px between the line and the URL, at 2×", () => {
+    // Invisible in the digest above: the line is short enough that the
+    // two never meet, so the gap only shows when a longer line would.
+    expect(renderToStaticMarkup(<DefaultCard />)).toContain("gap:48px");
+  });
+
   it("draws an entry card as it was drawn", async () => {
     const svg = await renderCardSvg(<EntryCard entry={ENTRY} />);
 

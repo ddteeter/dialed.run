@@ -42,6 +42,27 @@ const PROXY_TIMEOUT_MS = 30_000;
 const ENVELOPE_LIMIT = MAX_BYTES + MAX_BYTES / 4;
 
 /**
+ * How much of the proxy's own error a failure keeps. The message becomes
+ * the Desk row's raw detail (`gave_up.raw_error`) and a Sentry event, and
+ * the proxy writes it, not us: law 7 keeps request contents out of both.
+ */
+const ERROR_EXCERPT_LENGTH = 80;
+
+/**
+ * The proxy's error, bounded and made safe to store: any URL loses its
+ * query string and fragment (where a signed link carries its token), runs
+ * of whitespace and control characters become one space, and what is left
+ * is cut to `ERROR_EXCERPT_LENGTH`.
+ */
+function excerpt(error: string): string {
+  return error
+    .replaceAll(/(https?:\/\/[^\s?#]*)[?#]\S*/gu, "$1")
+    .replaceAll(/[\s\p{Cc}]+/gu, " ")
+    .trim()
+    .slice(0, ERROR_EXCERPT_LENGTH);
+}
+
+/**
  * The parts of the response we act on, and nothing else. The metadata block
  * carries forty-odd keys copied off the page's meta tags; `statusCode` is
  * the only one a decision turns on. `url` is where the bytes came from after
@@ -109,7 +130,7 @@ export async function scrapeThroughProxy(
   }
   const result = parsed.data;
   if (!result.success) {
-    throw new PageFetchError(`Proxy failed: ${result.error}`);
+    throw new PageFetchError(`Proxy failed: ${excerpt(result.error)}`);
   }
 
   const { rawHtml, metadata } = result.data;

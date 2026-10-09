@@ -20,9 +20,20 @@ share card still says round 26's line.
   always inside the batch that marks their own status.
 - **Writers.** `giveUpEach` wraps `deadLetterEach` (unchanged, so the export
   DLQ is untouched) and batches a job's writes with its row. Enrichment: DLQ
-  and the terminal `PageFetchError` (status in words). Imports DLQ: imports
+  and the terminal `PageFetchError` (status in words, the proxy's "through
+  the proxy" refusal included), listed only once the product is past the
+  sweep's day of retries — D6 is jobs the system stopped retrying. Inside
+  the day the failure is parked on the product (`extraction_error`,
+  `extraction_tries`, `0051_add_product_extraction_failure`) and
+  `listAbandonedEnrichments` lists it from the hourly enrichment sweep when
+  the day runs out; past the day (a fresh paste, a Desk Retry) the consumer
+  lists it in the batch that fails it. Its first-failed time is then the
+  listing's. Imports DLQ: imports
   and reminders (a reminder is keyed by its job, which Retry re-sends).
-  Weather: the hourly cron's five-hour cap. Photo screening never gives up
+  Weather: the hourly cron's five-hour cap, which re-checks `pending` so a
+  band saved meanwhile is neither failed nor listed. A run failed before
+  six hours old had the window's five tries; one failed later (a Desk
+  Retry, a run entered late) had one, and says so. Photo screening never gives up
   (its sweep retries `pending` forever) and writes nothing. A dead letter's
   tries are its queue's deliveries, `max_retries + 1`, from `queueRegistry`,
   pinned to `wrangler.jsonc` by `bindings-conformance`.
@@ -34,8 +45,10 @@ share card still says round 26's line.
   (`0050_add_product_snapshots_product_index` makes that read indexed).
   Weather: back to `pending`, which the hourly cron re-drives. Import: back
   to `pending` with its owed file expiry cancelled, then `import` is sent
-  (the stalled-import sweep covers a lost send). Reminder: the stored job is
-  sent again, then the row goes.
+  (the stalled-import sweep covers a lost send) — unless its run file has
+  gone from R2 (expired, or purged), when the row goes and nothing is sent.
+  Reminder: the stored job is sent again, then the row goes. A subject that
+  is gone (product, run, import) returns `gone`, never `retried`.
 - **Read.** `ops/gave-up.ts`: the count and oldest for the rail, Today and
   the digest; the rows, newest first, each with what it was doing from a
   keyed lookup of its subject. All Desk functions are `requireAdmin(await
@@ -52,7 +65,8 @@ verifiedUserId())`.
 ## Contract touches
 
 - Schema: `0049_add_gave_up`, `0050_add_product_snapshots_product_index`,
-  both additive. PR E (account/auth) also adds a migration; whichever merges
+  `0051_add_product_extraction_failure` (two nullable `products` columns,
+  from the PR #160 review), all additive. PR E (account/auth) also adds a migration; whichever merges
   second renumbers (law 11).
 - Routes: `routes/desk/index.tsx` gains a loader (glue).
 - Bindings/queues/crons: none.
