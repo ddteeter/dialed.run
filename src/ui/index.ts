@@ -49,6 +49,7 @@ export type { FieldProps, FormFailure, FormShell } from "./use-form-submit";
 export type { ControlFailure } from "./form";
 export { useIdempotencyKey } from "./use-idempotency-key";
 export { useReturnFocus } from "./use-return-focus";
+export { PHOTO_STEP_LABEL, usePhotoPick } from "./use-photo-pick";
 export { useListMotion } from "./use-list-motion";
 export { WeatherAttribution } from "./WeatherAttribution";
 export { verdictHue } from "./verdict-hue";

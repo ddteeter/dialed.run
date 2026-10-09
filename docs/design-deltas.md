@@ -2705,7 +2705,11 @@ CHECKED` band still says "usually within a day". #28's line is item 6.
    **AttachKit's host, built in design PR D (2026-10-07):** W3 in
    `ui/Sheet`, named "Check the blur", over A2 (`feed/components/AttachKit.tsx`).
    Any close of the sheet, Esc included, is Cancel; Use this photo and
-   Cancel return focus to the well. `PhotoBlur` is unchanged.
+   Cancel return focus to the well. `PhotoBlur` is unchanged. Once C had
+   merged, the two hosts became one: the closet's hook moved to
+   `ui/use-photo-pick.tsx` and AttachKit uses it, so A2's step now leaves
+   with its sheet as the closet's does, and the sheet's name is one
+   constant (R-141).
 
 6. **Under review, as the author sees it.** _Drawn:_ "Feed own under
    review" and "D own under review". The card carries a hi-viz `UNDER

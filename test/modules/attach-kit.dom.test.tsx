@@ -1105,7 +1105,11 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     act(() => {
       recording.cancel();
     });
-    expect(screen.queryByText("step for first.jpg")).toBeNull();
+    // The step leaves with the sheet, as the closet's does, then goes.
+    expect(screen.getByText("step for first.jpg")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText("step for first.jpg")).toBeNull();
+    });
     // Cancel (and Esc, which is Cancel) closes back onto the well.
     expect(photoInput()).toHaveFocus();
     expect(document.querySelector("[data-part='photo-well']")).toHaveAttribute(
@@ -1131,8 +1135,11 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     // Esc shuts a modal dialog natively, and the dialog reports `close`.
     fireEvent(sheet, new Event("close"));
 
-    expect(screen.queryByText("step for face.jpg")).toBeNull();
     expect(sheet).not.toHaveAttribute("open");
+    expect(within(sheet).getByText("step for face.jpg")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText("step for face.jpg")).toBeNull();
+    });
     expect(photoInput()).toHaveFocus();
     expect(document.querySelector("[data-part='photo-well']")).toHaveAttribute(
       "data-state",
@@ -1153,7 +1160,11 @@ describe("AttachKit: the outfit photo (moved here from A3 by round 20)", () => {
     });
 
     expect(sheet).not.toHaveAttribute("open");
-    expect(within(sheet).queryByText("step for raw.jpg")).toBeNull();
+    // Use this photo closes back onto the well, as Cancel does.
+    expect(photoInput()).toHaveFocus();
+    await waitFor(() => {
+      expect(within(sheet).queryByText("step for raw.jpg")).toBeNull();
+    });
     expect(createObjectURL).toHaveBeenCalledWith(
       expect.objectContaining({ name: "blurred.jpg" }),
     );

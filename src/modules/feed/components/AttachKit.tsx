@@ -23,9 +23,8 @@ import {
   Mono,
   PendingLabel,
   RailCard,
-  Sheet,
   useControlAction,
-  useReturnFocus,
+  usePhotoPick,
 } from "../../../ui";
 import type { PhotoStep } from "../../../ui";
 import type { AttachContext } from "../attach-context";
@@ -150,13 +149,11 @@ export function AttachKit({
   const [kitError, setKitError] = useState<string | undefined>();
   const [photo, setPhoto] = useState<HeldPhoto | undefined>();
   const [photoError, setPhotoError] = useState<string | undefined>();
-  const [photoStep, setPhotoStep] = useState<
-    { file: File; step: PhotoStep } | undefined
-  >();
   const [said, setSaid] = useState("");
-  // W3 closes back onto the well it opened from: Use this photo, Cancel
-  // and Esc all return focus there rather than dropping it on the page.
-  const wellFocus = useReturnFocus();
+  // W3, in the sheet the closet's photo uses too (round 28 #5). It closes
+  // back onto the well it opened from: Use this photo, Cancel and Esc all
+  // return focus there rather than dropping it on the page.
+  const pick = usePhotoPick({ renderPhotoStep, onReady: keep });
   // The entry the attach made, once it has. From then on Next only sends
   // the photo and goes on: attaching again would be answered with this same
   // entry and the kit it already has.
@@ -254,23 +251,11 @@ export function AttachKit({
   }
 
   function keep(ready: File): void {
-    setPhotoStep(undefined);
     setPhoto({
       file: ready,
       key: newUlid(),
       url: URL.createObjectURL(ready),
     });
-  }
-
-  /**
-   * W3 closing without a photo: Cancel, or Esc or anything else that
-   * shuts the sheet (round 28 #5). Nothing is kept, a photo already held
-   * stays held, and focus goes back to the well. Said twice when Cancel
-   * shuts the sheet, which is harmless: it only lets go and refocuses.
-   */
-  function closePhotoStep(): void {
-    setPhotoStep(undefined);
-    wellFocus.restore();
   }
 
   function onPhotoFiles(files: FileList | null): void {
@@ -280,11 +265,7 @@ export function AttachKit({
     const problem = photoProblem(file);
     setPhotoError(problem);
     if (problem !== undefined) return;
-    if (renderPhotoStep === undefined) {
-      keep(file);
-      return;
-    }
-    setPhotoStep({ file, step: renderPhotoStep });
+    pick.pick(file);
   }
 
   const conditions = context.conditions;
@@ -363,7 +344,7 @@ export function AttachKit({
               pendingLabel: "Adding",
               hint: "Flat on the floor works best.",
             }}
-            pending={photoStep !== undefined || isSendingPhoto}
+            pending={pick.stepping || isSendingPhoto}
             accept={photoAcceptAttribute}
             error={photoError}
             preview={
@@ -375,20 +356,9 @@ export function AttachKit({
               setPhoto(undefined);
             }}
             onFiles={onPhotoFiles}
-            inputRef={wellFocus.ref}
+            inputRef={pick.wellRef}
           />
-          {/* W3 is a sheet over A2 (round 28 #5: "the closet form and
-              AttachKit use the same sheet"), kept mounted so it can travel
-              out as well as in. Its name is the step's own head. */}
-          <Sheet
-            open={photoStep !== undefined}
-            onClose={closePhotoStep}
-            label={PHOTO_STEP_LABEL}
-          >
-            {/* Use this photo keeps the bytes; `keep` ends the step, so the
-                sheet closes and its `onClose` puts focus back on the well. */}
-            {photoStep?.step(photoStep.file, keep, setSaid, closePhotoStep)}
-          </Sheet>
+          {pick.step(setSaid)}
 
           <div className="flex flex-col gap-3">
             <button
@@ -583,10 +553,3 @@ function MostLikely({
     </div>
   );
 }
-
-/**
- * W3's sheet's name, which is the step's own head (round 28 #5): what a
- * screen reader hears as the dialog opens, before focus lands on the
- * heading. The closet's host names its sheet the same (design PR C).
- */
-export const PHOTO_STEP_LABEL = "Check the blur";
