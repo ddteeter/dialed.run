@@ -1,14 +1,15 @@
 import type { JSX } from "react";
 
-import { garmentCategoryLabels } from "../../../lib/contracts";
 import type { garmentCategories } from "../../../lib/contracts";
+import type { GarmentType } from "../../../lib/contracts/garment-fields";
 import { normalizeIdentity } from "../../../lib/normalize";
 import { formatTempRange } from "../../../lib/contracts/thermal";
 import { Mono, RailCard } from "../../../ui";
 import { garmentLabel, runsLabel } from "../label";
 import { photoUrlFor } from "../photo-url";
-import { retiredLabel } from "../retired-label";
+import { retiredMonthLabel } from "../retired-label";
 import type { ClosetItemView } from "../service";
+import { garmentTypePlurals, kindLabel } from "../type-labels";
 import { useRunnerZone } from "./use-runner-zone";
 
 type Category = (typeof garmentCategories)[number];
@@ -31,13 +32,14 @@ const CATEGORY_PLURALS = {
 /**
  * The mono line under a row's name (round 26 #10): how often it has been
  * worn, then its standing — retired, not judged yet, or how often it was
- * dialed and the range it works in.
+ * dialed and the range it works in. A retirement is dated by month and
+ * year here (round 28 #13, "RETIRED MAR 2026"), not the closet's day.
  */
 function recordLine(view: ClosetItemView, zone: string | undefined): string {
   const summary = view.performance?.summary;
   const worn = runsLabel(summary?.runCount ?? 0);
   if (view.item.retired) {
-    return `${worn} · ${retiredLabel(view.item.retiredAt, zone)}`;
+    return `${worn} · ${retiredMonthLabel(view.item.retiredAt, zone)}`;
   }
   // `summary === undefined` folded into this guard (rather than checked
   // via `summary?.verdictCount ?? 0 === 0` as before) narrows `summary` to
@@ -98,10 +100,13 @@ function Row({
   return (
     <li className="flex items-center gap-3 border-t border-hairline pt-3">
       {photo === undefined ? (
+        // The hatch, which means "no photo" everywhere: `ink.css`'s
+        // `.photo-hatch`, the system's one hatch on T1's photo fill.
         <span
           data-part="thumb"
+          data-state="no-photo"
           aria-hidden="true"
-          className="size-12 shrink-0 rounded-field bg-photo"
+          className="photo-hatch size-12 shrink-0 rounded-field"
         />
       ) : (
         <img
@@ -119,12 +124,15 @@ function Row({
             isGeneric: view.isGeneric,
           })}
         </span>
-        <Mono step="xs" className="text-label">
+        {/* MONO.sm, the metadata row's step (round 28 #13). */}
+        <Mono step="sm" className="text-label">
           {recordLine(view, zone)}
         </Mono>
       </span>
       {flags === "" ? undefined : (
-        <Mono step="xs" className="ml-auto shrink-0 text-cold-text">
+        // Ink, not the cold hue (round 28 #13): hue means verdict, and a
+        // match is not one.
+        <Mono step="xs" className="ml-auto shrink-0 text-ink">
           {flags}
         </Mono>
       )}
@@ -138,18 +146,23 @@ function Row({
  * Rover Half-zip sees the first. Read-only, and the rows do not link: a
  * link would lead away from a half-filled form over a glance.
  *
- * **By category alone.** The board titles and matches the card by
- * category and type, and F asks no type (a garment's type comes from its
- * product), so the card is the category's — a design delta.
+ * **By category and type**, as the board titles and matches it (R-112):
+ * "Already in your closet · Top · Half-zip" once a type is picked, and
+ * the category's alone before one is.
  */
 export function AlreadyInCloset({
   category,
+  type,
   pieces,
   typed,
 }: Readonly<{
   category: Category;
   /**
-  This category's pieces, newest first, up to five.
+  The picked type, if one is.
+  */
+  type?: GarmentType | undefined;
+  /**
+  This category's pieces, or this type's, newest first, up to five.
   */
   pieces: readonly ClosetItemView[];
   /**
@@ -159,12 +172,10 @@ export function AlreadyInCloset({
 }>): JSX.Element {
   const zone = useRunnerZone();
   return (
-    <RailCard
-      title={`Already in your closet · ${garmentCategoryLabels[category]}`}
-    >
+    <RailCard title={`Already in your closet · ${kindLabel(category, type)}`}>
       {pieces.length === 0 ? (
         <p className="m-0 text-small text-label">
-          {`No ${CATEGORY_PLURALS[category]} yet.`}
+          {`No ${type === undefined ? CATEGORY_PLURALS[category] : garmentTypePlurals[type]} yet.`}
         </p>
       ) : (
         <ul className="m-0 flex list-none flex-col gap-3 p-0">

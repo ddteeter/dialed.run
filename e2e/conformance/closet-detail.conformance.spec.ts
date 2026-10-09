@@ -23,8 +23,6 @@ import type { SeededGarment } from "./closet-seed";
  *
  * Known gaps, each owed to something not built rather than to drift:
  *
- * - **`HALF-ZIP` in the kicker** is the garment *type* (Z2a), which only a
- *   product match supplies and this closet does not store per garment.
  * - **`· DAMP` after works-at** is the band's moisture, which no garment
  *   record holds yet.
  * - **`←` before "Closet"** is a glyph on the board and `<Icon name="back">`
@@ -60,7 +58,6 @@ const CONTENT_PARTS = new Set([
 
 function withoutKnownGaps(cell: string): string {
   return cell
-    .replace("HALF-ZIP · ", "")
     .replace(" · DAMP", "")
     .replace(/^← /u, "");
 }

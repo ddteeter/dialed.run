@@ -12,6 +12,7 @@ import { z } from "zod";
 
 import { GarmentForm } from "../../src/modules/closet/components/GarmentForm";
 import type { GarmentFormProps } from "../../src/modules/closet/components/GarmentForm";
+import { DURATION } from "../../src/ui";
 
 /**
  * F's photo well (round 22, items 8 and 17): the last thing before the
@@ -276,7 +277,14 @@ describe("GarmentForm: a picked photo", () => {
       cancel?.();
     });
 
-    expect(screen.queryByText("Step for face.png")).toBeNull();
+    // The sheet shuts at once and travels out with its step still in it,
+    // then lets go of the file when the exit is over.
+    expect(document.querySelector("dialog")).not.toHaveAttribute("open");
+    expect(screen.getByText("Step for face.png")).toBeInTheDocument();
+    expect(well()).toHaveAttribute("data-state", "empty");
+    await waitFor(() => {
+      expect(screen.queryByText("Step for face.png")).toBeNull();
+    });
     // Cancel (and Esc, which is Cancel) closes back onto the well.
     expect(fileInput()).toHaveFocus();
     expect(well()).toHaveAttribute("data-state", "empty");
@@ -286,6 +294,85 @@ describe("GarmentForm: a picked photo", () => {
       expect(onSaved).toHaveBeenCalled();
     });
     expect(uploadPhoto).not.toHaveBeenCalled();
+  });
+
+  it("shows W3 as a sheet named for its head, and a close from the sheet keeps nothing (round 28 #5)", async () => {
+    const user = userEvent.setup();
+    const { uploadPhoto, onSaved } = renderForm({
+      renderStep: (file) => <p>Step for {file.name}</p>,
+    });
+    const closed = document.querySelector("dialog");
+    expect(closed).not.toHaveAttribute("open");
+
+    await user.upload(fileInput(), png("face.png"));
+    const sheet = screen.getByRole("dialog", { name: "Check the blur" });
+    expect(sheet).toHaveAttribute("open");
+    expect(within(sheet).getByText("Step for face.png")).toBeVisible();
+    act(() => {
+      fileInput().blur();
+    });
+    // Esc shuts a modal dialog natively, and the dialog reports `close`.
+    fireEvent(sheet, new Event("close"));
+
+    expect(sheet).not.toHaveAttribute("open");
+    expect(within(sheet).getByText("Step for face.png")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText("Step for face.png")).toBeNull();
+    });
+    expect(fileInput()).toHaveFocus();
+    expect(well()).toHaveAttribute("data-state", "empty");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalled();
+    });
+    expect(uploadPhoto).not.toHaveBeenCalled();
+  });
+
+  it("keeps W3's step while it is open, and a new pick's through the last one's exit", () => {
+    vi.useFakeTimers();
+    try {
+      let cancel: (() => void) | undefined;
+      renderForm({
+        renderStep: (file, _onReady, _announce, onCancel) => {
+          cancel = onCancel;
+          return <p>Step for {file.name}</p>;
+        },
+      });
+      // `fireEvent` rather than `userEvent`: the latter moves the clock,
+      // and this test is about what one millisecond either side does.
+      const pickFile = (name: string) => {
+        fireEvent.change(fileInput(), { target: { files: [png(name)] } });
+      };
+
+      pickFile("first.png");
+      act(() => {
+        vi.advanceTimersByTime(DURATION.move * 2);
+      });
+      // Open, it stays as long as the runner takes.
+      expect(screen.getByText("Step for first.png")).toBeVisible();
+      expect(well()).toHaveAttribute("data-state", "uploading");
+
+      act(() => {
+        cancel?.();
+      });
+      // Shut, the well is free at once though the step is still leaving.
+      expect(well()).toHaveAttribute("data-state", "empty");
+      act(() => {
+        vi.advanceTimersByTime(DURATION.quick - 1);
+      });
+      expect(screen.getByText("Step for first.png")).toBeInTheDocument();
+      pickFile("second.png");
+      act(() => {
+        vi.advanceTimersByTime(DURATION.quick * 2);
+      });
+
+      // The first exit's timer went with it: the new step stays.
+      expect(screen.queryByText("Step for first.png")).toBeNull();
+      expect(screen.getByText("Step for second.png")).toBeVisible();
+      expect(document.querySelector("dialog")).toHaveAttribute("open");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("shows the upload in the well while the save carries it, and only then", async () => {
@@ -353,8 +440,10 @@ describe("GarmentForm: a picked photo", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Janji Rover Half-zip" }),
     ).toBeVisible();
+    // Ink, not the dialed hue (round 28 #13): a save is not a verdict.
     expect(screen.getByText("Saved to closet · Top")).toHaveClass(
-      "text-dialed-text",
+      "text-ink",
+      "text-mono-xs",
     );
     // A refusal would refuse the same file again: another file is the fix.
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
@@ -605,15 +694,15 @@ describe("GarmentForm: editing a garment that has a photo", () => {
 
     // Not round 26 #4's state: there is no photo to add and nothing to
     // pick, so the fields stay and the control's band says what is true.
-    const band = await screen.findByText("Photo kept");
+    const band = await screen.findByText("Photo still on");
     expect(band.closest("[data-part='failure-band']")).toHaveTextContent(
-      "Photo keptOur end failed.",
+      "Photo still onOur end failed.",
     );
     expect(screen.queryByText("Photo not added")).toBeNull();
     expect(screen.queryByText("Pick another")).toBeNull();
     expect(screen.getByRole("button", { name: "Save" })).toBeVisible();
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Photo kept. Our end failed.",
+      "Photo still on. Our end failed.",
     );
     expect(onSaved).not.toHaveBeenCalled();
 

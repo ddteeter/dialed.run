@@ -24,16 +24,16 @@ import { closetUserId } from "./closet-seed";
  * compare as words. Known gaps, each named and taken out of the board's
  * side before comparing, never waved through by loosening the reader:
  *
- * - **`· HALF-ZIP`** in F's kicker and the rail's title is the garment
- *   type. F asks no type (a garment's type comes from its product), so the
- *   build names the category alone.
  * - **The photo's reason.** The board's is a type refusal
  *   ("IMG_2231.HEIC isn't…"), which a browser cannot send any more: W3's
  *   canvas re-encodes every photo. The spec reaches the state the way a
  *   runner does, by a dropped connection, so the reason reads "Your
  *   connection dropped." — and Try again is offered, as the board draws.
- * - **`RETIRED MAR 2026`** on the rail is month and year; the build
- *   dates a retirement as the closet does everywhere, month and day.
+ *
+ * Two gaps closed in design PR C: F asks the type now (R-112), so the
+ * kicker and the rail's title say `· HALF-ZIP`; and the rail dates a
+ * retirement by month and year (round 28 #13), so the Rover is seeded
+ * retired in March 2026 and its row reads as drawn.
  *
  * A named piece is linked to a product (any id will do: nothing here reads
  * the product), because that is what makes the closet call it by brand
@@ -42,6 +42,11 @@ import { closetUserId } from "./closet-seed";
 test.use({ storageState: storageStateFor("closet") });
 
 const BOARD = "Round 26 Rulings.dc.html";
+
+/**
+2026-03-15 12:00 UTC: the board's "RETIRED MAR 2026" in any runner's zone.
+*/
+const RETIRED_MARCH_2026 = 1_773_576_000;
 
 function frame(label: string): string {
   return `[data-screen-label="${label}"]`;
@@ -197,13 +202,13 @@ test("F · saved with its photo refused is round 26's band and Done", async ({
     page,
     `${frame("F Photo failed")} > div > div:nth-child(2)`,
   );
-  const withoutType = identity.map((cell) => cell.replace(" · HALF-ZIP", ""));
 
   await page.setViewportSize({ width: 390, height: 900 });
   await page.goto("/closet/new");
   await hydrated(page);
   await page.getByLabel("Brand").fill("Janji");
   await page.getByLabel("Model / name").fill("Rover Half-zip");
+  await page.getByRole("radio", { name: "Half-zip" }).check();
   await page.setInputFiles('[data-part="photo-well"] input[type="file"]', {
     name: "rover.png",
     mimeType: "image/png",
@@ -238,7 +243,7 @@ test("F · saved with its photo refused is round 26's band and Done", async ({
   expect(builtBand.toSpliced(2, 1)).toStrictEqual(band.toSpliced(2, 1));
   expect(builtBand[2]).toBe("YOUR CONNECTION DROPPED.");
   const heading = await cellsOf(page, '[data-part="primary"] > div:has(h1)');
-  expect(heading).toStrictEqual(withoutType);
+  expect(heading).toStrictEqual(identity);
 
   // Done goes to the garment the save made — and names it, so it can be
   // taken back out and the next run starts clean.
@@ -256,6 +261,7 @@ test("F at the desk · the rail card is round 26's, newest first, marked", async
   const now = nowSeconds();
   const uniqlo = await seedPiece({
     category: "top",
+    type: "halfZip",
     name: "Uniqlo quarter-zip",
     createdAt: now + 86_400,
   });
@@ -268,16 +274,18 @@ test("F at the desk · the rail card is round 26's, newest first, marked", async
   });
   const rover = await seedPiece({
     category: "top",
+    type: "halfZip",
     brand: "Janji",
     productId: newUlid(),
     name: "Rover Half-zip",
     retired: true,
-    retiredAt: now - 86_400,
+    retiredAt: RETIRED_MARCH_2026,
     createdAt: now + 2 * 86_400,
   });
   await wear(rover, { count: 12, dialed: 6, bands: 2 });
   const harrier = await seedPiece({
     category: "top",
+    type: "halfZip",
     brand: "Tracksmith",
     productId: newUlid(),
     name: "Harrier",
@@ -303,20 +311,15 @@ test("F at the desk · the rail card is round 26's, newest first, marked", async
   await hydrated(page);
   await page.getByLabel("Brand").fill("Janji");
   await page.getByLabel("Model / name").fill("Rover Half-zip");
+  await page.getByRole("radio", { name: "Half-zip" }).check();
   const card = '[data-part="rail"] section';
   await expect(
     page.locator(card).getByText("Same name · Retired"),
   ).toBeVisible();
 
-  expect(await cellsOf(page, `${card} > h2`)).toStrictEqual([
-    drawnTitle.replace(" · HALF-ZIP", ""),
-  ]);
+  expect(await cellsOf(page, `${card} > h2`)).toStrictEqual([drawnTitle]);
   const rows = await cellsOf(page, `${card} ul`);
-  // The closet may hold other tops from other specs; the board's three
-  // are seeded newest (dated ahead, on purpose), so they lead.
-  expect(
-    rows.slice(0, 3).map((row) => row.replace(/RETIRED [A-Z]{3} \d+ /u, "")),
-  ).toStrictEqual(
-    drawnRows.map((row) => row.replace(/RETIRED [A-Z]{3} \d{4} /u, "")),
-  );
+  // The closet may hold other half-zips from other specs; the board's
+  // three are seeded newest (dated ahead, on purpose), so they lead.
+  expect(rows.slice(0, 3)).toStrictEqual(drawnRows);
 });

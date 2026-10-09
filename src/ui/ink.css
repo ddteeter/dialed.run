@@ -19,12 +19,28 @@
   background-color: var(--night-run);
 }
 
-.ink-partial {
+/* The system's one hatch, written once: design's 135°, and the 2-on,
+ * 3-off rhythm above. Each user names only its ink. */
+.ink-partial,
+.photo-hatch {
   background-image: repeating-linear-gradient(
     135deg,
-    var(--night-run) 0 2px,
+    var(--hatch-ink) 0 2px,
     transparent 2px 5px
   );
+}
+
+.ink-partial {
+  --hatch-ink: var(--night-run);
+}
+
+/* "No photo", wherever a photo would be (round 27 #31b, round 28 #13):
+ * T1's photo fill, hatched one step darker — `--hairline` on paper, one
+ * step lighter on ink, as Theme's "Photo fill" row says. The plain photo
+ * ground means one is still loading. */
+.photo-hatch {
+  --hatch-ink: var(--hairline);
+  background-color: var(--photo);
 }
 
 /* A hairline, not a tint: `text-night/30` is retired for exactly this

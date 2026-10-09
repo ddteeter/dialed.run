@@ -2,7 +2,6 @@ import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import type { JSX, ReactNode } from "react";
 
-import { garmentCategoryLabels } from "../../../lib/contracts";
 import type { GarmentVisibility } from "../../../lib/contracts";
 import { photoAcceptAttribute } from "../../../lib/photo-constraints";
 import { formatTempRange } from "../../../lib/contracts/thermal";
@@ -20,12 +19,13 @@ import type { PhotoStep } from "../../../ui";
 import { garmentLabel } from "../label";
 import { isPhotoBeingChecked, photoUrlFor } from "../photo-url";
 import { retiredLabel } from "../retired-label";
+import { kindLabel, typeOf } from "../type-labels";
 import { useRunnerZone } from "./use-runner-zone";
 import { CompositionBlock } from "./Composition";
 import { BackToCloset } from "./BackToCloset";
 import { DeleteWithRuns, type BandCount } from "./DeleteWithRuns";
 import { GarmentConfirm, type ConfirmKind } from "./GarmentConfirm";
-import { GARMENT_PHOTO_COPY, usePhotoPick } from "./photo-pick";
+import { GARMENT_PHOTO_COPY, PHOTO_STILL_ON, usePhotoPick } from "./photo-pick";
 import type {
   EffectiveAttributes,
   WardrobeItemRow,
@@ -86,7 +86,7 @@ function attributeWords(
 }
 
 /**
- * Z2a's identity kicker: `TOP · M`, and the two tags a piece can wear.
+ * Z2a's identity kicker: `TOP · HALF-ZIP · M`, and the two tags a piece can wear.
  *
  * `[RETIRED SEP 12]` rides the kicker in ink — *"brackets = a statement"*
  * — dated in the runner's zone (`retiredLabel`), and so does `[GENERIC]`,
@@ -97,7 +97,11 @@ function IdentityKicker({
   isGeneric,
 }: Readonly<{ item: WardrobeItemRow; isGeneric: boolean }>): JSX.Element {
   const zone = useRunnerZone();
-  const words = [garmentCategoryLabels[item.category], item.size]
+  // Z2a's `TOP · HALF-ZIP · M`: the type, once a piece has one (D-75).
+  const words = [
+    kindLabel(item.category, typeOf(item.category, item.type)),
+    item.size,
+  ]
     .filter((word) => word !== null && word !== "")
     .join(" · ");
   return (
@@ -323,7 +327,7 @@ export function GarmentDetail({
       await removePhoto({ data: { itemId } });
       await router.invalidate();
     },
-    kicker: "Photo kept",
+    kicker: PHOTO_STILL_ON,
   });
 
   const bringBack = useControlAction({

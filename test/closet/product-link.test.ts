@@ -260,6 +260,63 @@ describe("nameItem for a confirmed runner — the link a confirmation owes, now"
   });
 });
 
+/**
+A product whose type is `longSleeve`, under a brand and model nobody else typed.
+*/
+async function longSleeveProduct() {
+  const brand = unique("Brand");
+  const model = unique("Model");
+  const { product } = await resolveProduct(db(), {
+    brandName: brand,
+    productName: model,
+    createdBy: newUlid(),
+  });
+  await db()
+    .update(products)
+    .set({ type: "longSleeve" })
+    .where(eq(products.id, product.id));
+  return { brand, model, product };
+}
+
+/**
+A tap-list row the runner gave a type on F.
+*/
+async function pickedHalfZip(userId: string): Promise<string> {
+  const itemId = await tapListRow(userId);
+  await db()
+    .update(wardrobeItems)
+    .set({ type: "halfZip" })
+    .where(eq(wardrobeItems.id, itemId));
+  return itemId;
+}
+
+describe("the runner's type wins over the product's (D-75)", () => {
+  it("keeps a confirmed runner's pick when naming links a typed product", async () => {
+    const { brand, model, product } = await longSleeveProduct();
+    const userId = await runner(true);
+    const itemId = await pickedHalfZip(userId);
+
+    const named = await nameItem(db(), userId, itemId, { brand, model });
+
+    expect(named.productId).toBe(product.id);
+    expect(named.type).toBe("halfZip");
+  });
+
+  it("keeps an unconfirmed runner's pick when confirming links a typed product", async () => {
+    const { brand, model, product } = await longSleeveProduct();
+    const userId = await runner(false);
+    const itemId = await pickedHalfZip(userId);
+    await nameItem(db(), userId, itemId, { brand, model });
+
+    await confirm(userId);
+    await linkTypedGarments(db(), userId);
+
+    const linked = await getOwnedItem(db(), userId, itemId);
+    expect(linked.productId).toBe(product.id);
+    expect(linked.type).toBe("halfZip");
+  });
+});
+
 describe("isTapListPlaceholder", () => {
   it("is the tap list's own name, in its own category", () => {
     expect(
