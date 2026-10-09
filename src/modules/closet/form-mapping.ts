@@ -28,6 +28,7 @@ export function formValuesFromItem(
     brand: item.brand ?? "",
     name: item.name,
     category: item.category,
+    type: item.type ?? "",
     size: item.size ?? "",
     color: item.color ?? "",
     colorName: item.colorName ?? "",

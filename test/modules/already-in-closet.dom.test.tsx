@@ -68,6 +68,10 @@ function rows(): HTMLElement[] {
   return screen.getAllByRole("listitem");
 }
 
+function photoOf(row: HTMLElement | undefined): Element | null | undefined {
+  return row?.querySelector("[data-part='thumb']");
+}
+
 describe("AlreadyInCloset", () => {
   it("is titled for the category, and says so when it holds nothing yet", () => {
     card([]);
@@ -139,7 +143,8 @@ describe("AlreadyInCloset", () => {
     const [first, second] = rows();
     const flag = screen.getByText("Same name · Retired");
     expect(second?.contains(flag)).toBe(true);
-    expect(flag).toHaveClass("text-cold-text");
+    // Ink, not the cold hue (round 28 #13): a match is not a verdict.
+    expect(flag).toHaveClass("text-ink", "text-mono-xs");
     expect(first).not.toHaveTextContent("Same name");
   });
 
@@ -181,13 +186,17 @@ describe("AlreadyInCloset", () => {
     expect(screen.queryByText("Same name")).toBeNull();
   });
 
-  it("shows the photo where there is one, and the photo ground where not", () => {
+  it("shows the photo where there is one, and the hatch where not (round 28 #13)", () => {
     card([harrier, rover]);
 
     const [first, second] = rows();
     const plain = first?.querySelector("[data-part='thumb']");
     expect(plain?.tagName).toBe("SPAN");
     expect(plain).toHaveAttribute("aria-hidden", "true");
+    // The hatch means "no photo"; the plain photo ground means loading.
+    expect(plain).toHaveAttribute("data-state", "no-photo");
+    expect(plain).toHaveClass("photo-hatch");
+    expect(photoOf(second)).not.toHaveAttribute("data-state");
     const photo = second?.querySelector("[data-part='thumb']");
     expect(photo).toHaveAttribute("src", "/closet/photo/01ROV/card?v=01V1");
     expect(photo).toHaveAttribute("alt", "");
@@ -200,7 +209,32 @@ describe("AlreadyInCloset", () => {
     card([quarterZip]);
 
     const [row] = rows();
-    expect(row?.querySelector(".text-cold-text")).toBeNull();
+    expect(row?.querySelector(".text-mono-xs")).toBeNull();
+  });
+
+  it("dates a retirement by month and year, in the metadata row's mono (round 28 #13)", () => {
+    card([rover]);
+
+    const line = screen.getByText("12 runs · Retired Mar 2025");
+    expect(line).toHaveClass("text-mono-sm", "text-label");
+  });
+
+  it("is titled for the type once one is picked, and says so in its plural", () => {
+    render(
+      <AlreadyInCloset
+        category="top"
+        type="halfZip"
+        pieces={[]}
+        typed={NOTHING_TYPED}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Already in your closet · Top · Half-zip",
+      }),
+    ).toBeVisible();
+    expect(screen.getByText("No half-zips yet.")).toBeVisible();
   });
 
   it("links nowhere: a link would lead away from a half-filled form", () => {

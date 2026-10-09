@@ -43,12 +43,13 @@ function costRows(
 }
 
 /**
- * The word each row starts with, in the hue round 26 draws it in: what
- * goes in the cold text colour, what stays in the dialed one.
+ * The word each row starts with, **in ink** (round 28 #13): hue means
+ * verdict, and what a delete takes or leaves is not one. Round 26 drew
+ * them cold and dialed, and D-77 built that; round 28 reverses it.
  */
 const ROW_WORD = {
-  goes: { word: "Goes", className: "text-cold-text" },
-  stays: { word: "Stays", className: "text-dialed-text" },
+  goes: "Goes",
+  stays: "Stays",
 } as const;
 
 /**
@@ -181,8 +182,8 @@ export function DeleteWithRuns({
           <ul className="m-0 flex list-none flex-col gap-2 p-0">
             {costRows(runCount, bandCount).map((row) => (
               <li key={row.text} className="flex items-baseline gap-3">
-                <Mono step="xs" className={ROW_WORD[row.kind].className}>
-                  {ROW_WORD[row.kind].word}
+                <Mono step="xs" className="text-ink">
+                  {ROW_WORD[row.kind]}
                 </Mono>
                 <span className="text-small">{row.text}</span>
               </li>

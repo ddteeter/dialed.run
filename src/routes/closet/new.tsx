@@ -38,7 +38,7 @@ function NewGarmentPage() {
       <GarmentForm
         heading="Add a garment"
         back={<BackToCloset />}
-        nearby={nearby}
+        rail={{ nearby, reread: closetNearbyFn }}
         save={async (garment) =>
           createItemFn({ data: { garment, idempotencyKey } })
         }

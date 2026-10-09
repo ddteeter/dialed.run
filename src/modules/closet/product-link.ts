@@ -14,8 +14,8 @@
  * `linkTypedGarments` after a confirmation both write `linkedColumns`, so
  * an answer gives the same row whether the runner had confirmed when they
  * gave it or confirmed later. It is a save's link (`productLinkFor`): the
- * typed spelling stays, the product lends its type, and enrichment is
- * asked for.
+ * typed spelling stays, the product lends its type to a row that has
+ * none, and enrichment is asked for.
  *
  * **Re-runnable from any point** (law 1). It reads only rows still
  * unlinked, and the find-or-create underneath is idempotent on the
@@ -80,7 +80,10 @@ async function linkedColumns(
     return { brand: found.name };
   }
   const link = await productLinkFor(db, row, userId);
-  return { productId: link.productId, type: link.type ?? row.type };
+  // The runner's type wins (D-75, R-112): a type picked on F is what they
+  // said the piece is, and the product only fills a blank — as a save
+  // does (`withResolvedProduct`).
+  return { productId: link.productId, type: row.type ?? link.type };
 }
 
 /**
