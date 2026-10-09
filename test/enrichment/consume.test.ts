@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { gaveUp, products, productSnapshots } from "../../src/db/schema-core";
 import { env } from "../../src/env";
@@ -807,6 +807,8 @@ describe("handleEnrichmentBatch: the model rung", () => {
  */
 const PAST_THE_DAY = { createdAt: nowSeconds() - 25 * 60 * 60 };
 
+const DAY = 24 * 60 * 60;
+
 /**
 A shop that refuses, and a proxy whose fetch the shop refused too.
 */
@@ -821,6 +823,52 @@ const refusedThroughProxy: typeof fetch = (input) =>
   );
 
 describe("the Desk's Gave up (R-119): only what the system stopped retrying", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("lists a product created exactly a day ago at once: the sweep owes it nothing", async () => {
+    // The sweep re-drives a failed product only while it is strictly
+    // younger than a day, so at exactly a day nothing will try it again.
+    const now = nowSeconds();
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const refused = await pendingProduct({ createdAt: now - DAY });
+    const deadLettered = await pendingProduct({ createdAt: now - DAY });
+
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(refused)]),
+      depsWith(serving("blocked", 403)),
+    );
+    await handleEnrichmentDlqBatch(
+      batchOf("dialed-enrichment-dlq", [jobFor(deadLettered)]),
+      depsWith(serving(PAGE)),
+      4,
+    );
+
+    expect(await gaveUpRow("enrichment", refused)).toBeDefined();
+    expect(await gaveUpRow("enrichment", deadLettered)).toBeDefined();
+  });
+
+  it("parks a product one second younger than a day", async () => {
+    const now = nowSeconds();
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const refused = await pendingProduct({ createdAt: now - DAY + 1 });
+    const deadLettered = await pendingProduct({ createdAt: now - DAY + 1 });
+
+    await handleEnrichmentBatch(
+      batchOf("dialed-enrichment", [jobFor(refused)]),
+      depsWith(serving("blocked", 403)),
+    );
+    await handleEnrichmentDlqBatch(
+      batchOf("dialed-enrichment-dlq", [jobFor(deadLettered)]),
+      depsWith(serving(PAGE)),
+      4,
+    );
+
+    expect(await gaveUpRow("enrichment", refused)).toBeUndefined();
+    expect(await gaveUpRow("enrichment", deadLettered)).toBeUndefined();
+  });
+
   it("does not list a refusal inside the product's first day, and keeps it for later", async () => {
     const productId = await pendingProduct();
 
@@ -992,8 +1040,6 @@ describe("the Desk's Gave up (R-119): only what the system stopped retrying", ()
     expect(row.extractionTries).toBeNull();
   });
 });
-
-const DAY = 24 * 60 * 60;
 
 /**
 A product failed inside its day with a failure parked, now `age` old.

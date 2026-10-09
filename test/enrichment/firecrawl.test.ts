@@ -139,6 +139,16 @@ describe("scrapeThroughProxy", () => {
         "At https://a.example/p/q done",
         "At https://a.example/p/q done",
       ],
+      [
+        "keeps no part of a query that holds a second question mark",
+        "At https://a.example/p?x=1?y=2 done",
+        "At https://a.example/p done",
+      ],
+      [
+        "leaves a question mark after the URL's end alone",
+        "See https://a.example/x and ?y",
+        "See https://a.example/x and ?y",
+      ],
       ["folds runs of whitespace to one space", "a\n\n  b\tc", "a b c"],
       [
         "folds control characters too",

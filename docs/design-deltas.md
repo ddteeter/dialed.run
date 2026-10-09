@@ -1120,7 +1120,12 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       Sentry." Enrichment's refusal reads "The shop returned 403. It may be
       blocking us." (401 and 403), "The shop returned 404." (any other
       status), or "The shop's page couldn't be read."; weather's cap "No
-      weather came back for this run in five hours of hourly tries."
+      weather came back for this run in five hours of hourly tries.", and
+      for a run failed again after a Retry (or entered past its window),
+      which had one try, "No weather came back for this run on its latest
+      try, made after its five-hour window had closed." An enrichment row
+      appears only once the hourly sweep stops re-driving the product (its
+      first day), so its tries are that day's.
     - **What each row was doing**, for the two jobs D6 does not draw: "Read
       @sam's run file" (an import) and "Remind @sam about a new run on
       Strava" (a dead-lettered reminder); a subject since deleted reads

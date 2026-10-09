@@ -278,14 +278,16 @@ async function retryEnrichment(
     products.id,
     eq(products.id, row.subjectId),
   );
-  if (product !== undefined) {
-    await requestEnrichment(deps.db, row.subjectId, {
-      queue: deps.enrichmentQueue,
-      captureException,
-    });
+  if (product === undefined) {
+    await gaveUpClear(deps.db, "enrichment", row.subjectId);
+    return "gone";
   }
+  await requestEnrichment(deps.db, row.subjectId, {
+    queue: deps.enrichmentQueue,
+    captureException,
+  });
   await gaveUpClear(deps.db, "enrichment", row.subjectId);
-  return product === undefined ? "gone" : "retried";
+  return "retried";
 }
 
 /**
