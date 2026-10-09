@@ -19,11 +19,3 @@ export const GARMENT_PHOTO_COPY = {
   pendingLabel: "Adding",
   hint: `Flat on the floor works best. ${photoFormatWords}.`,
 } satisfies ComponentProps<typeof FileWell>["copy"];
-
-/**
- * The kicker when removing a garment's photo fails, on Edit and on Y
- * alike: the state still true, in round 28 #13's words (was "Photo
- * kept"). The band's capitals come from its CSS, so this stays in normal
- * case for the status line.
- */
-export const PHOTO_STILL_ON = "Photo still on";

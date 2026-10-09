@@ -1128,6 +1128,21 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       does; the board draws only a two-photo card. **The ask:** none
       unless a lone photo should carry no counter.
 
+54. **The consensus words when groups overlap (round 27 #25, design PR D
+    review).** The ruling reads "Leading bar \"Most\", the rest \"Some\". A
+    tie for the lead reads \"Split\" on each tied bar. A single bar reads
+    \"All\"." — written as if each runner sat in one bar. They do not: a
+    runner counts in every group they wore, and rows under 2 runners drop,
+    so the bars do not sum to the runners and a lone bar can be 3 of 14.
+    The build follows the ruling as written (`feed/bar-share.ts`): the one
+    leading bar is "Most" whatever its share (5 of 14 included), a tie for
+    the lead is "Split", every other bar is "Some" (11 and 9 of 14 read
+    "Most" and "Some"), and a lone bar is "All" — including 3 of 14, which
+    reads as every runner wearing it when most matched runners did not.
+    **The ask:** confirm the words rank the bars rather than claim a share;
+    and say what a lone bar short of every runner reads ("Most"? "Some"?),
+    and whether a bar every runner wore reads "All" beside other bars.
+
 ## Answered in round 34 (imported 2026-10-04)
 
 Design sent round 34 with `Theme.dc.html` as the primary file. It carries
@@ -3312,8 +3327,9 @@ feed. "ui/shared" means `src/ui`, which 125 holds as the platform lane.
     never draws a digit. _Build:_ 129 (`BAR_WORD` gains Split and All; the
     bell's name above 9). **The bar words are built in design PR D
     (2026-10-07)** (`feed/bar-share.ts`): Split on each bar tied for the
-    lead, All on a lone bar, otherwise Most above half and Some; every word
-    but Some is pink. The bell's name above 9 is notifications', and still
+    lead, All on a lone bar, Most on the one leading bar whatever its share
+    and Some on the rest; every word but Some is pink. How the words read
+    when groups overlap is open item 54. The bell's name above 9 is notifications', and still
     says "9+" (R-141).
 26. **Deletes.** _Drawn:_ "Delete entry sheet", "Delete run sheet", "Delete
     photo sheet" and the D owner foot. Entry and run deletes are text links

@@ -9,15 +9,9 @@ import {
   FormStatus,
   Icon,
   Mono,
+  PHOTO_STILL_ON,
   useControlAction,
 } from "../../../ui";
-
-/**
- * The kicker when a photo's delete fails: the state still true, in round
- * 28 #13's words (was "Photo kept"). Normal case, because the band's
- * capitals come from its CSS and the status line reads this too.
- */
-export const PHOTO_STILL_ON = "Photo still on";
 
 /**
  * An entry's owner taking it back (task 128 · SAF-3), as round 27 #26

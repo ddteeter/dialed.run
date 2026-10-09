@@ -443,7 +443,7 @@ function Matched({
 }>) {
   const isWidened = result.windowDays === 14;
   const conditions = matchedConditions(result.band, units);
-  const bars = withShares(result.groups, result.runners);
+  const bars = withShares(result.groups);
   return (
     <div className="flex flex-col">
       <div

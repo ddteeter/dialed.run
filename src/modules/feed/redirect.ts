@@ -88,23 +88,17 @@ Everything else is a page to render: the runner, "changed their name", or
 page, not the feed** (round 28 #11: it "covers purged, deleted and
 never-existed handles on purpose, so no one can tell them apart"). So does
 a runner the viewer may not see — banned, unconfirmed (D-113), leaving, or
-in a block or report with them — because `profileAtHandle` answers those
-with the same `undefined` as a handle nobody held, and sending them
-anywhere different would say a runner is behind the handle.
+in a block or report with them. `profileAtHandle` already answers all of
+those with the `gone` a deleted account gets, so there is nothing to merge
+here, and sending any of them anywhere different would say a runner is
+behind the handle.
 */
 export function orHandlePage(
-  result: ProfileAtHandle | undefined,
+  found: ProfileAtHandle,
 ): Exclude<ProfileAtHandle, { kind: "own" }> {
-  const found = result ?? NOBODY_HERE;
   if (found.kind === "own") redirectTo({ to: "/feed/me" });
   return found;
 }
-
-/**
-What `/@handle` shows for a handle with nobody behind it the viewer may
-see: the same page a deleted account's old handle gets.
-*/
-const NOBODY_HERE = { kind: "gone" } as const;
 
 /**
 `/feed/u/$userId`'s answer: the runner's `/@handle`, or back to the feed

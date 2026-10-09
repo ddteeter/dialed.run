@@ -82,9 +82,13 @@ export interface EntryDetailProps {
   reportAffordance?: ReactNode;
   /**
    * The §4a notice band's shape (safety's `NoticeBand`), handed in for the
-   * reason `reportAffordance` is: this module may not import
-   * `modules/safety`. The words are this screen's — D's "HIDDEN WHILE WE
-   * CHECK" (round 28 #6) — so only the frame crosses the boundary.
+   * client bundle's sake, not because feed may not use safety: the only
+   * way to reach the component from here is `modules/safety`'s barrel,
+   * which reaches D1 and would put the drizzle schema in the client
+   * bundle (docs/architecture.md, "Composing across modules"). The route
+   * imports the component file directly and passes it down; this file
+   * takes its type only. The words are this screen's — D's "HIDDEN WHILE
+   * WE CHECK" (round 28 #6) — so only the frame crosses the boundary.
    */
   noticeBand: typeof NoticeBandShape;
 }

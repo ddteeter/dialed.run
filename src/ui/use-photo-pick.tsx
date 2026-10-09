@@ -118,3 +118,12 @@ export function usePhotoPick({
  * reader hears as the dialog opens, before focus lands on the heading.
  */
 export const PHOTO_STEP_LABEL = "Check the blur";
+
+/**
+ * The kicker when taking a photo off fails — a garment's on Edit and Y,
+ * an entry's on D: the state still true, in round 28 #13's words (was
+ * "Photo kept"). Normal case, because the band's capitals come from its
+ * CSS and the status line reads this too. One constant for the closet and
+ * the feed, so neither can stop saying what the other says.
+ */
+export const PHOTO_STILL_ON = "Photo still on";

@@ -176,13 +176,11 @@ describe("orHandlePage", () => {
     ).toBe("/feed/me");
   });
 
-  it("shows a handle nobody may be shown the page a deleted one gets, never a redirect (round 28 #11)", () => {
-    // `undefined` is a handle nobody held and a runner the viewer may not
-    // see alike; both get "This runner isn't here.", as a purged one does.
-    expect(orHandlePage(undefined)).toStrictEqual({ kind: "gone" });
-    expect(orHandlePage(undefined)).toStrictEqual(
-      orHandlePage({ kind: "gone" }),
-    );
+  it("renders a handle with nobody behind it, never a redirect (round 28 #11)", () => {
+    // `profileAtHandle` answers a never-held handle and a hidden runner
+    // with the deleted account's `gone`; the page gets it as it is.
+    const gone: ProfileAtHandle = { kind: "gone" };
+    expect(orHandlePage(gone)).toBe(gone);
   });
 });
 
