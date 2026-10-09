@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { outbox, products, stravaConnections } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
+import { nowSeconds } from "../../src/lib/now";
 import { handleQueueBatch } from "../../src/modules/ops";
 import {
   createOrGetBrand,
@@ -204,9 +205,14 @@ describe("a dead letter's tries are the queue's deliveries (R-119)", () => {
       sourceUrl: "https://example.com/dead",
       createdBy: newUlid(),
     });
+    // Past its first day, so the sweep will not retry it and the dead
+    // letter is listed at once (inside the day it is parked instead).
     await db
       .update(products)
-      .set({ extractionStatus: "pending" })
+      .set({
+        extractionStatus: "pending",
+        createdAt: nowSeconds() - 25 * 60 * 60,
+      })
       .where(eq(products.id, product.id));
 
     await handleQueueBatch(
