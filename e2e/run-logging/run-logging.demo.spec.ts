@@ -318,10 +318,14 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
       buffer: PNG_1X1,
     });
     // W3 waits for the runner (round 28 #5): nothing is attached until
-    // Use this photo, which waits behind aria-disabled while it blurs.
-    await page
+    // Use this photo, which waits behind aria-disabled while it blurs. It
+    // is a sheet over A2, named for its head, as the closet's is.
+    const blurSheet = page.getByRole("dialog", { name: "Check the blur" });
+    await expect(blurSheet).toBeVisible({ timeout: 20_000 });
+    await blurSheet
       .getByRole("button", { name: "Use this photo" })
       .click({ timeout: 20_000 });
+    await expect(blurSheet).toBeHidden();
     await expect(photo).toHaveAttribute("data-state", "filled", {
       timeout: 20_000,
     });

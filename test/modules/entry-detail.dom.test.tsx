@@ -1,9 +1,10 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { EntryDetail } from "../../src/modules/feed/components/EntryDetail";
+import { NoticeBand } from "../../src/modules/safety/components/NoticeBand";
 import type { SetUsefulFn } from "../../src/modules/feed/components/useful-reaction";
 import type { entryDetailForViewer } from "../../src/modules/feed/entries";
 import { pointConditions } from "../feed/conditions-fixture";
@@ -95,6 +96,8 @@ function detail(
 ) {
   return (
     <EntryDetail
+      noticeBand={NoticeBand}
+      deletePhoto={() => Promise.resolve()}
       units={MILES}
       entry={entry(overrides)}
       viewerId={"viewerId" in options ? options.viewerId : "01STRANGER"}
@@ -344,6 +347,30 @@ describe("EntryDetail: the photos", () => {
     ]);
     expect(screen.getByText("1 / 2")).toHaveClass("font-mono");
     expect(screen.getByText("2 / 2")).toBeVisible();
+  });
+
+  it("puts each photo's delete on that photo, top right, for the owner only (round 27 #26)", async () => {
+    await renderFeedScreen(
+      detail({ photoKeys: ["a.jpg", "b.jpg"] }, { viewerId: OWNER }),
+    );
+
+    const photos = [...document.querySelectorAll("li")];
+    expect(
+      photos.map((photo) =>
+        within(photo).getByRole("button").getAttribute("aria-label"),
+      ),
+    ).toStrictEqual(["Delete photo 1", "Delete photo 2"]);
+    expect(within(photos[0] ?? document.body).getByRole("button")).toHaveClass(
+      "absolute",
+      "top-2",
+      "right-2",
+      "size-11",
+    );
+  });
+
+  it("offers a stranger no photo delete", async () => {
+    await renderFeedScreen(detail({ photoKeys: ["a.jpg", "b.jpg"] }));
+    expect(screen.queryByRole("button", { name: /Delete photo/u })).toBeNull();
   });
 });
 

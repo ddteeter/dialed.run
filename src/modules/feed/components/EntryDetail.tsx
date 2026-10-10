@@ -4,6 +4,9 @@ import type { ReactNode } from "react";
 
 import { entryTagSchema } from "../../../lib/contracts";
 import type { Units } from "../../../lib/contracts";
+// Type only, so nothing of safety reaches the client bundle: the shape the
+// route hands in is checked against the real component.
+import type { NoticeBand as NoticeBandShape } from "../../safety";
 import { formatDistance, formatPace } from "../../../lib/contracts/measures";
 import { FormStatus, Icon, Mono, WeatherAttribution } from "../../../ui";
 import { tagLabel } from "../chips";
@@ -13,8 +16,10 @@ import { runWhenLabel } from "../posted";
 import { isProvidersReading, stripConditions } from "../strip";
 import { ConditionsCell } from "./ConditionsCell";
 import { Handle } from "./Handle";
-import { UnderReview } from "./UnderReview";
+import { HIDDEN_WHILE_WE_CHECK } from "./UnderReview";
 import { ReportFoot } from "./ReportFoot";
+import { DeletePhoto } from "./RetractEntry";
+import type { DeletePhotoProps } from "./RetractEntry";
 import { UsefulButton } from "./UsefulButton";
 import type { SetUsefulFn } from "./useful-reaction";
 import { VerdictBadge } from "./VerdictBadge";
@@ -60,6 +65,10 @@ export interface EntryDetailProps {
   units: Units;
   shouldPromptVerdict: boolean;
   recordPrompted: (input: { data: { entryId: string } }) => Promise<unknown>;
+  /**
+  Each photo's delete, on the photo, for the owner only (round 27 #26).
+  */
+  deletePhoto: DeletePhotoProps["deletePhoto"];
   setUseful: SetUsefulFn;
   /**
    * W1's report control, composed by the route, because this module may
@@ -71,6 +80,17 @@ export interface EntryDetailProps {
    * either opens the root's "Confirm your email first".
    */
   reportAffordance?: ReactNode;
+  /**
+   * The §4a notice band's shape (safety's `NoticeBand`), handed in for the
+   * client bundle's sake, not because feed may not use safety: the only
+   * way to reach the component from here is `modules/safety`'s barrel,
+   * which reaches D1 and would put the drizzle schema in the client
+   * bundle (docs/architecture.md, "Composing across modules"). The route
+   * imports the component file directly and passes it down; this file
+   * takes its type only. The words are this screen's — D's "HIDDEN WHILE
+   * WE CHECK" (round 28 #6) — so only the frame crosses the boundary.
+   */
+  noticeBand: typeof NoticeBandShape;
 }
 
 export function EntryDetail(props: Readonly<EntryDetailProps>) {
@@ -82,6 +102,8 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
     setUseful,
     units,
     reportAffordance,
+    noticeBand: NoticeBand,
+    deletePhoto,
   } = props;
   // `entry.id` rather than an `entryId` prop beside it: two sources for one
   // fact is how a route comes to disagree with itself.
@@ -111,9 +133,16 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
         </h1>
       </div>
 
-      {entry.underReview ? <UnderReview /> : undefined}
+      {/* The author's own entry under review: the band at the top, and
+          no tag here (round 28 #6). Nobody else ever reaches it. */}
+      {entry.underReview ? (
+        <NoticeBand {...HIDDEN_WHILE_WE_CHECK} />
+      ) : undefined}
 
-      <PhotoPager photoKeys={entry.photoKeys} />
+      <PhotoPager
+        photoKeys={entry.photoKeys}
+        deletePhoto={isOwn ? deletePhoto : undefined}
+      />
 
       <RunStrip entry={entry} units={units} showBadge={!shouldPromptVerdict} />
 
@@ -174,9 +203,16 @@ function tagsOf(stored: readonly string[]): EntryTag[] {
 
 /**
  * The photos, one at a time: a scroll-snapping row a thumb swipes, each
- * photo carrying its own `1 / 2`. Absent with no photos.
+ * photo carrying its own `1 / 2`, and its delete top right when the viewer
+ * owns it. Absent with no photos.
  */
-function PhotoPager({ photoKeys }: Readonly<{ photoKeys: readonly string[] }>) {
+function PhotoPager({
+  photoKeys,
+  deletePhoto,
+}: Readonly<{
+  photoKeys: readonly string[];
+  deletePhoto: DeletePhotoProps["deletePhoto"] | undefined;
+}>) {
   if (photoKeys.length === 0) return;
   return (
     <ul
@@ -195,6 +231,13 @@ function PhotoPager({ photoKeys }: Readonly<{ photoKeys: readonly string[] }>) {
               {String(index + 1)} / {String(photoKeys.length)}
             </Mono>
           </span>
+          {deletePhoto === undefined ? undefined : (
+            <DeletePhoto
+              photoKey={key}
+              index={index}
+              deletePhoto={deletePhoto}
+            />
+          )}
         </li>
       ))}
     </ul>

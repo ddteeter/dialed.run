@@ -27,7 +27,7 @@ import { unitsFor } from "./units";
 import { countWhere } from "./count-where";
 import { followerCount, followingCount, isFollowing } from "./follows";
 import { lookUpHandle } from "../account";
-import { publiclyVisibleEntry } from "../safety";
+import { isUnderReviewForAuthor, publiclyVisibleEntry } from "../safety";
 import { runnersVisibleTo } from "./runner-visibility";
 import { outfitEntriesSelect } from "./entries-query";
 
@@ -56,6 +56,11 @@ export interface OwnProfile {
     entryId: string;
     createdAt: number;
     verdict: number | null;
+    /**
+    Hidden from everyone else pending review: G marks it as the card does
+    (round 28 #6, round 29 #4).
+    */
+    underReview: boolean;
   }[];
 }
 
@@ -124,6 +129,7 @@ export async function ownProfile(userId: string): Promise<OwnProfile> {
       entryId: e.id,
       createdAt: e.createdAt,
       verdict: e.verdict,
+      underReview: isUnderReviewForAuthor({ ...e, userId }, userId),
     })),
   };
 }
@@ -257,19 +263,29 @@ export type ProfileAtHandle =
   | { readonly kind: "gone" };
 
 /**
-`undefined` for a handle nobody has held, and for one whose holder the
-viewer may not see (banned, a block either way, or reported by them) — deliberately the same
-answer, for the reason `otherProfile` gives.
+What `/@handle` answers for a handle with nobody behind it the viewer may
+see: the answer a deleted account's old handle gets.
+*/
+const NOBODY_HERE = { kind: "gone" } as const;
+
+/**
+`gone` for a deleted runner's old handle, and the same `gone` for a handle
+nobody has held and for one whose holder the viewer may not see (banned,
+unconfirmed, leaving, a block either way, or reported by them). Round 28
+#11 covers "purged, deleted and never-existed handles on purpose, so no one
+can tell them apart" — and the server function is where a prober reads the
+answer, so they are one answer here, not merged later by the route.
 */
 export async function profileAtHandle(
   viewerId: string,
   handle: string,
-): Promise<ProfileAtHandle | undefined> {
+): Promise<ProfileAtHandle> {
   const found = await lookUpHandle(db(), handle);
-  if (found?.kind !== "current") return found;
+  if (found === undefined) return NOBODY_HERE;
+  if (found.kind !== "current") return found;
   if (found.userId === viewerId) return { kind: "own" };
   const profile = await otherProfile(found.userId, viewerId);
-  if (profile === undefined) return undefined;
+  if (profile === undefined) return NOBODY_HERE;
   return {
     kind: "runner",
     profile,

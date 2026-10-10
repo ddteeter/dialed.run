@@ -12,6 +12,7 @@ import {
   Icon,
   inFlight,
   Mono,
+  PHOTO_STEP_LABEL,
   ToggleField,
 } from "../../../ui";
 import type { ControlFailure, PhotoStep } from "../../../ui";
@@ -222,7 +223,7 @@ export function PhotoBlur({
           tabIndex={-1}
           className="m-0 font-display text-heading"
         >
-          Check the blur
+          {PHOTO_STEP_LABEL}
         </h2>
         <button
           type="button"

@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { EntryDetail } from "../../src/modules/feed/components/EntryDetail";
+import { NoticeBand } from "../../src/modules/safety/components/NoticeBand";
 import { Handle, handleText } from "../../src/modules/feed/components/Handle";
 import { OwnProfile } from "../../src/modules/feed/components/OwnProfile";
 import { RunnerAtHandle } from "../../src/modules/feed/components/RunnerAtHandle";
@@ -200,6 +201,8 @@ function entry(isUnderReview: boolean): Entry {
 async function detailFor(isUnderReview: boolean) {
   await renderFeedScreen(
     <EntryDetail
+      noticeBand={NoticeBand}
+      deletePhoto={() => Promise.resolve()}
       units={MILES}
       entry={entry(isUnderReview)}
       viewerId="01USER"
@@ -212,17 +215,30 @@ async function detailFor(isUnderReview: boolean) {
   );
 }
 
-describe("D's under-review marker (R-62)", () => {
-  it("tells the author their entry is under review, in bracket notation", async () => {
+describe("D's under-review band (R-62; round 28 #6)", () => {
+  it("puts HIDDEN WHILE WE CHECK at the top, in the board's words, and no tag", async () => {
     await detailFor(true);
-    const marker = document.querySelector('[data-part="under-review"]');
-    expect(marker).toHaveTextContent("[Under review]");
-    expect(marker?.querySelector(".font-mono")).not.toBeNull();
+    const band = document.querySelector<HTMLElement>(
+      '[data-part="notice-band"]',
+    );
+    if (band === null) throw new Error("no band");
+
+    expect([...band.children].map((line) => line.textContent)).toStrictEqual([
+      "Hidden while we check",
+      "Only you can see this while we look at it.",
+      "You can still edit or delete it.",
+    ]);
+    // First under the heading row, before the strip: "the band at the top".
+    const heading = screen.getByRole("heading", { name: "Your run" });
+    expect(heading.parentElement?.nextElementSibling).toBe(band);
+    // Nothing to retry, so no button in it.
+    expect(band.querySelector("button")).toBeNull();
+    expect(document.querySelector('[data-part="review-tag"]')).toBeNull();
   });
 
   it("is absent on an entry nobody has hidden", async () => {
     await detailFor(false);
-    expect(document.querySelector('[data-part="under-review"]')).toBeNull();
-    expect(screen.queryByText(/Under review/u)).toBeNull();
+    expect(document.querySelector('[data-part="notice-band"]')).toBeNull();
+    expect(screen.queryByText(/while we check/iu)).toBeNull();
   });
 });

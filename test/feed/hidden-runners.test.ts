@@ -3,7 +3,11 @@ import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { user } from "../../src/db/schema-auth";
-import { outfitEntries, usernameHistory } from "../../src/db/schema-core";
+import {
+  accountDeletions,
+  outfitEntries,
+  usernameHistory,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { entryDetailForViewer } from "../../src/modules/feed/entries";
 import { followingFeed } from "../../src/modules/feed/feed";
@@ -35,6 +39,11 @@ import {
  * own under-review marker on D.
  */
 beforeEach(resetTables);
+
+/**
+The answer a deleted account's old handle gets.
+*/
+const NOBODY_HERE = { kind: "gone" };
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -264,22 +273,63 @@ describe("profileAtHandle", () => {
     });
   });
 
-  it("answers nothing for a handle nobody has held, or one no handle could be", async () => {
+  it("answers `gone` for a handle nobody has held, or one no handle could be", async () => {
     const viewer = await makeVerifiedUser();
 
-    expect(await profileAtHandle(viewer, "tia_nobody")).toBeUndefined();
-    expect(await profileAtHandle(viewer, "_not a handle")).toBeUndefined();
+    expect(await profileAtHandle(viewer, "tia_nobody")).toStrictEqual(
+      NOBODY_HERE,
+    );
+    expect(await profileAtHandle(viewer, "_not a handle")).toStrictEqual(
+      NOBODY_HERE,
+    );
   });
 
-  it("answers nothing for a banned holder or one in a block pair", async () => {
+  it("answers `gone` for a banned holder or one in a block pair", async () => {
     const viewer = await makeVerifiedUser();
     const banned = await makeVerifiedUser({ username: "uma_banned" });
     const blocked = await makeVerifiedUser({ username: "uma_blocked" });
     await banUser({ userId: banned, reason: "spam", bannedBy: viewer });
     await blockRunner(blocked, viewer);
 
-    expect(await profileAtHandle(viewer, "uma_banned")).toBeUndefined();
-    expect(await profileAtHandle(viewer, "uma_blocked")).toBeUndefined();
+    expect(await profileAtHandle(viewer, "uma_banned")).toStrictEqual(
+      NOBODY_HERE,
+    );
+    expect(await profileAtHandle(viewer, "uma_blocked")).toStrictEqual(
+      NOBODY_HERE,
+    );
+  });
+
+  it("gives one answer for every handle with nobody the viewer may see behind it (round 28 #11)", async () => {
+    // "so no one can tell them apart": a prober calling the server
+    // function gets the same value for each, not a `gone` here and an
+    // `undefined` there.
+    const viewer = await makeVerifiedUser();
+    await db()
+      .insert(usernameHistory)
+      .values({ username: "vic_deleted", userId: "01DELETED", retiredAt: NOW });
+    const banned = await makeVerifiedUser({ username: "vic_banned" });
+    await banUser({ userId: banned, reason: "spam", bannedBy: viewer });
+    const waiting = await makeUser({ username: "vic_waiting" });
+    await addAccount(waiting, false);
+    const blocking = await makeVerifiedUser({ username: "vic_blocking" });
+    await blockRunner(blocking, viewer);
+    const leaving = await makeVerifiedUser({ username: "vic_leaving" });
+    await db()
+      .insert(accountDeletions)
+      .values({ userId: leaving, requestedAt: NOW, purgeAfter: NOW + 1 });
+
+    const answers = await Promise.all(
+      [
+        "vic_neverheld",
+        "vic_deleted",
+        "vic_banned",
+        "vic_waiting",
+        "vic_blocking",
+        "vic_leaving",
+      ].map((handle) => profileAtHandle(viewer, handle)),
+    );
+
+    expect(answers).toStrictEqual(Array.from({ length: 6 }, () => NOBODY_HERE));
   });
 });
 
@@ -337,7 +387,9 @@ describe("a runner whose profile the viewer reported (D-68)", () => {
     await reportProfile(reporter, reported);
 
     expect(await otherProfile(reported, reporter)).toBeUndefined();
-    expect(await profileAtHandle(reporter, "xan_reported")).toBeUndefined();
+    expect(await profileAtHandle(reporter, "xan_reported")).toStrictEqual(
+      NOBODY_HERE,
+    );
     expect(await visibleRunnerHandle(reported, reporter)).toBeUndefined();
     const seenByBystander = await otherProfile(reported, bystander);
     expect(seenByBystander?.userId).toBe(reported);
@@ -415,6 +467,12 @@ describe("the author's own under-review entry on Following (D-67)", () => {
     expect(ids).toContainEqual([shown, false]);
     expect(ids).toContainEqual([theirs, false]);
     expect(ids.map(([id]) => id)).not.toContain(entryId);
+    // Only the viewer's own post says YOU (the Feed board's own card).
+    const page = await followingFeed(follower);
+    expect(page.items.map((item) => [item.entryId, item.isOwn])).toStrictEqual(
+      page.items.map((item) => [item.entryId, item.entryId === theirs]),
+    );
+    expect(page.items.some((item) => item.isOwn)).toBe(true);
   });
 
   it("does not bring back an entry a person removed, or one the author keeps private", async () => {
@@ -464,7 +522,9 @@ describe("an unconfirmed runner is not findable (design 133, D-113 Q2)", () => {
     expect(await foundIds(viewer, "nia_")).toStrictEqual([confirmed]);
     expect(await otherProfile(waiting, viewer)).toBeUndefined();
     expect(await visibleRunnerHandle(waiting, viewer)).toBeUndefined();
-    expect(await profileAtHandle(viewer, "nia_waiting")).toBeUndefined();
+    expect(await profileAtHandle(viewer, "nia_waiting")).toStrictEqual(
+      NOBODY_HERE,
+    );
 
     await db()
       .update(user)

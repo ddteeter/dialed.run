@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { getSession } from "../../modules/auth/functions";
 import { EntryDetail } from "../../modules/feed/components/EntryDetail";
 import { RetractEntry } from "../../modules/feed/components/RetractEntry";
+import { NoticeBand } from "../../modules/safety/components/NoticeBand";
 import { ReportAffordance } from "../../modules/safety/components/ReportAffordance";
 import { fileReportAction } from "../../modules/safety/functions";
 import {
@@ -60,6 +61,8 @@ function EntryDetailPage() {
         shouldPromptVerdict={shouldPromptVerdict}
         recordPrompted={recordVerdictPromptedAction}
         setUseful={setUsefulAction}
+        noticeBand={NoticeBand}
+        deletePhoto={deleteEntryPhotoAction}
         reportAffordance={
           <ReportAffordance
             subject={{
@@ -78,7 +81,6 @@ function EntryDetailPage() {
         entry={entry}
         viewerId={viewerId}
         retract={retractEntryAction}
-        deletePhoto={deleteEntryPhotoAction}
         onRetracted={async () => {
           await navigate({ to: "/feed" });
         }}

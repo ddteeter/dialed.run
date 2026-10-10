@@ -1,39 +1,18 @@
 import { useEffect, useState } from "react";
-import type { ComponentProps, ReactNode } from "react";
+import type { ReactNode } from "react";
 
-import { photoFormatWords } from "../../../lib/photo-constraints";
-import { DURATION, Sheet, useReturnFocus } from "../../../ui";
-import type { FileWell, PhotoStep } from "../../../ui";
+import { DURATION } from "./motion";
+import type { PhotoStep } from "./photo-step";
+import { Sheet } from "./Sheet";
+import { useReturnFocus } from "./use-return-focus";
 
 /**
- * The garment photo well's six lines (round 22, item 8), for both places
- * a garment photo is taken: F and Edit, where the well is a field, and
- * garment detail, where it is Replace and Remove under the photo.
+ * A picked photo, on its way through W3's blur, in its sheet — for every
+ * screen that takes a photo: the closet's F, Edit and Y, and the feed's A2.
+ * One hook because round 28 #5 says "the closet form and AttachKit use the
+ * same sheet", and two copies are how one of them would stop doing so.
  *
- * One constant because the two are one well, and a second copy of the
- * words is how one of them would stop saying what the other says.
- */
-export const GARMENT_PHOTO_COPY = {
-  kicker: "Photo · optional",
-  label: "Add a photo",
-  wideLabel: "Drop a photo, or browse",
-  overLabel: "Let go to add it",
-  pendingLabel: "Adding",
-  hint: `Flat on the floor works best. ${photoFormatWords}.`,
-} satisfies ComponentProps<typeof FileWell>["copy"];
-
-/**
- * The kicker when removing a garment's photo fails, on Edit and on Y
- * alike: the state still true, in round 28 #13's words (was "Photo
- * kept"). The band's capitals come from its CSS, so this stays in normal
- * case for the status line.
- */
-export const PHOTO_STILL_ON = "Photo still on";
-
-/**
- * A picked garment photo, on its way through W3's blur.
- *
- * **Every garment photo passes through the step the route hands in**
+ * **Every photo passes through the step the route hands in**
  * (R-102): the picked file and the step answering for it are held
  * together — so a held file always has the step that opened for it, the
  * pair `VerdictForm` holds for the same reason — until the step hands back
@@ -139,3 +118,12 @@ export function usePhotoPick({
  * reader hears as the dialog opens, before focus lands on the heading.
  */
 export const PHOTO_STEP_LABEL = "Check the blur";
+
+/**
+ * The kicker when taking a photo off fails — a garment's on Edit and Y,
+ * an entry's on D: the state still true, in round 28 #13's words (was
+ * "Photo kept"). Normal case, because the band's capitals come from its
+ * CSS and the status line reads this too. One constant for the closet and
+ * the feed, so neither can stop saying what the other says.
+ */
+export const PHOTO_STILL_ON = "Photo still on";

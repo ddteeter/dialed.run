@@ -176,12 +176,11 @@ describe("orHandlePage", () => {
     ).toBe("/feed/me");
   });
 
-  it("sends a handle nobody may be shown back to the feed", () => {
-    expect(
-      redirectFrom(() => {
-        orHandlePage(undefined);
-      }).to,
-    ).toBe("/feed");
+  it("renders a handle with nobody behind it, never a redirect (round 28 #11)", () => {
+    // `profileAtHandle` answers a never-held handle and a hidden runner
+    // with the deleted account's `gone`; the page gets it as it is.
+    const gone: ProfileAtHandle = { kind: "gone" };
+    expect(orHandlePage(gone)).toBe(gone);
   });
 });
 

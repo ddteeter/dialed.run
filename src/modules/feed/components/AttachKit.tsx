@@ -24,7 +24,7 @@ import {
   PendingLabel,
   RailCard,
   useControlAction,
-  useReturnFocus,
+  usePhotoPick,
 } from "../../../ui";
 import type { PhotoStep } from "../../../ui";
 import type { AttachContext } from "../attach-context";
@@ -149,13 +149,11 @@ export function AttachKit({
   const [kitError, setKitError] = useState<string | undefined>();
   const [photo, setPhoto] = useState<HeldPhoto | undefined>();
   const [photoError, setPhotoError] = useState<string | undefined>();
-  const [photoStep, setPhotoStep] = useState<
-    { file: File; step: PhotoStep } | undefined
-  >();
   const [said, setSaid] = useState("");
-  // W3 closes back onto the well it opened from: Use this photo, Cancel
-  // and Esc all return focus there rather than dropping it on the page.
-  const wellFocus = useReturnFocus();
+  // W3, in the sheet the closet's photo uses too (round 28 #5). It closes
+  // back onto the well it opened from: Use this photo, Cancel and Esc all
+  // return focus there rather than dropping it on the page.
+  const pick = usePhotoPick({ renderPhotoStep, onReady: keep });
   // The entry the attach made, once it has. From then on Next only sends
   // the photo and goes on: attaching again would be answered with this same
   // entry and the kit it already has.
@@ -253,7 +251,6 @@ export function AttachKit({
   }
 
   function keep(ready: File): void {
-    setPhotoStep(undefined);
     setPhoto({
       file: ready,
       key: newUlid(),
@@ -268,11 +265,7 @@ export function AttachKit({
     const problem = photoProblem(file);
     setPhotoError(problem);
     if (problem !== undefined) return;
-    if (renderPhotoStep === undefined) {
-      keep(file);
-      return;
-    }
-    setPhotoStep({ file, step: renderPhotoStep });
+    pick.pick(file);
   }
 
   const conditions = context.conditions;
@@ -351,7 +344,7 @@ export function AttachKit({
               pendingLabel: "Adding",
               hint: "Flat on the floor works best.",
             }}
-            pending={photoStep !== undefined || isSendingPhoto}
+            pending={pick.stepping || isSendingPhoto}
             accept={photoAcceptAttribute}
             error={photoError}
             preview={
@@ -363,24 +356,9 @@ export function AttachKit({
               setPhoto(undefined);
             }}
             onFiles={onPhotoFiles}
-            inputRef={wellFocus.ref}
+            inputRef={pick.wellRef}
           />
-          {photoStep === undefined
-            ? undefined
-            : photoStep.step(
-                photoStep.file,
-                (ready) => {
-                  wellFocus.restore();
-                  keep(ready);
-                },
-                setSaid,
-                () => {
-                  // Cancel in W3 (round 28 #5): nothing is kept, and a photo
-                  // already held stays held.
-                  setPhotoStep(undefined);
-                  wellFocus.restore();
-                },
-              )}
+          {pick.step(setSaid)}
 
           <div className="flex flex-col gap-3">
             <button

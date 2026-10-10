@@ -10,12 +10,14 @@ import { OtherProfile } from "./OtherProfile";
 /**
  * `/@handle` (round 26 #7): the runner who holds the handle now, or — for
  * a handle somebody used to hold — "This runner changed their name." and
- * nothing more; for one whose runner's account was deleted, "This runner
- * isn't here." (decision D-82). Never who they are now, and never a redirect: either would
- * link the old handle to the new one (decision D-56).
+ * nothing more; for one whose runner's account was deleted, one nobody
+ * ever held, or one whose runner the viewer may not see, "This runner
+ * isn't here." (decision D-82; round 28 #11), so none can be told apart.
+ * Never who they are now, and never a redirect: either would link the old
+ * handle to the new one (decision D-56).
  *
- * The viewer's own handle and one nobody may be shown never get here; the
- * route's `orHandlePage` sends those to G and back to the feed.
+ * The viewer's own handle never gets here; the route's `orHandlePage`
+ * sends it to G.
  */
 export function RunnerAtHandle({
   found,
@@ -51,15 +53,18 @@ export function RunnerAtHandle({
 }
 
 /**
- * A deleted account's old handle (decision D-82, owner 2026-09-29): neutral — it
- * says neither that the account was deleted, nor renamed, nor removed.
+ * A deleted account's old handle (decision D-82, owner 2026-09-29), and
+ * since round 28 #11 one nobody held or nobody may be shown: neutral — it
+ * says neither that the account was deleted, nor renamed, nor removed,
+ * nor that it never existed.
  */
 const RUNNER_GONE = "This runner isn't here.";
 
 /**
  * A handle with nobody behind it to show: the ruling's sentence, and the
- * way back. Undesigned beyond the sentence (placeholder protocol): H's own
- * column and back link, and the copy set as H's empty-state lead.
+ * way back, as round 28 #11 confirms: "H's column, the back link and the
+ * sentence as the lead are the whole page." The back link is the `back`
+ * glyph (#9).
  */
 function NoRunnerHere({ children }: Readonly<{ children: string }>) {
   return (
