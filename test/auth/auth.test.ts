@@ -81,6 +81,7 @@ describe("auth (better-auth on real D1)", () => {
     expect(
       signUpSchema.safeParse({
         inviteCode: "DIAL-7K3P",
+        birthDate: "1990-04-21",
         email: "floor-9@example.com",
         password: short,
       }).success,
@@ -93,6 +94,7 @@ describe("auth (better-auth on real D1)", () => {
     expect(
       signUpSchema.safeParse({
         inviteCode: "DIAL-7K3P",
+        birthDate: "1990-04-21",
         email: "floor-10@example.com",
         password: enough,
       }).success,

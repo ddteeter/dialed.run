@@ -7,6 +7,7 @@ import {
   AuthCrossLink,
   AuthLegal,
   AuthPage,
+  BirthDateField,
   CredentialFields,
   InviteCodeField,
   RequestAccessLink,
@@ -40,6 +41,7 @@ function SignupPage() {
   const search = Route.useSearch();
   const { siteKey } = Route.useLoaderData();
   const [inviteCode, setInviteCode] = useState(search.code ?? "");
+  const [birthDate, setBirthDate] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   // A Turnstile answer works once: every attempt takes it (ACC-5).
@@ -51,7 +53,11 @@ function SignupPage() {
     leave: (url) => {
       globalThis.location.assign(url);
     },
-    admission: () => ({ inviteCode, turnstileToken: turnstile.take() }),
+    admission: () => ({
+      inviteCode,
+      birthDate,
+      turnstileToken: turnstile.take(),
+    }),
   });
   const { form, cause } = useAuthForm({
     schema: signUpSchema,
@@ -92,7 +98,7 @@ function SignupPage() {
         />
       }
       onSubmit={() => {
-        void form.submit({ inviteCode, email, password });
+        void form.submit({ inviteCode, birthDate, email, password });
       }}
     >
       <InviteCodeField
@@ -100,6 +106,7 @@ function SignupPage() {
         value={inviteCode}
         onChange={setInviteCode}
       />
+      <BirthDateField form={form} value={birthDate} onChange={setBirthDate} />
       <CredentialFields
         form={form}
         email={email}

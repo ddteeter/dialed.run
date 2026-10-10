@@ -57,6 +57,8 @@ export async function ensureInviteCode(): Promise<string> {
 export function admissionHeaders(): Record<string, string> {
   return {
     "x-invite-code": E2E_INVITE_CODE,
+    // Design 134: an adult's date, as Au2 would send it.
+    "x-birth-date": "1990-04-21",
     "x-turnstile-token": TURNSTILE_TEST_TOKEN,
   };
 }

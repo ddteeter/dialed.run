@@ -1,6 +1,7 @@
 /**
  * Covers: Au2 in the invite stage (the code first, a code that doesn't
- * work, the terms line under the form — ACC-6), Au5 (request access and
+ * work, the terms line under the form — ACC-6; the date of birth and an
+ * under-18 refusal — design 134), Au5 (request access and
  * its receipt), D7 (the request, Send invite), `/join` (the invite link
  * fills the code), Au2 (create account), Au4 (check your email, Resend),
  * the confirm link's landing, O0 (pick a handle, a taken one first), Au3
@@ -20,6 +21,7 @@ import { eq } from "drizzle-orm";
 import { user } from "../../src/db/schema-auth";
 import { termsAcceptances } from "../../src/db/schema-core";
 import { INVITE_COPY } from "../../src/lib/contracts/access";
+import { AGE_CODES, AGE_COPY } from "../../src/lib/contracts/age";
 import { signInAsOperator } from "../desk/operator";
 import { expect, scene, test } from "../support/demo";
 import { confirmLinkFor, resetLinkFor } from "../support/email-links";
@@ -68,6 +70,7 @@ test("request access -> an invite from the Desk -> create an account -> sign out
 
   await scene(page, "A code that doesn't work is marked on the code");
   await page.getByLabel("Invite code").fill("DIAL-ZZZZ");
+  await page.getByLabel("Date of birth").fill("1990-04-21");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSPHRASE);
   await turnstileAnswered(page);
@@ -75,6 +78,24 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   await expect(page.getByText(INVITE_COPY.invalid)).toBeVisible({
     timeout: 15_000,
   });
+
+  // Design 134: the date of birth is asked with no word about the
+  // cut-off; under 18 is the server's refusal, in the band. Answered here
+  // rather than for real, so the refusal's day-long cookie does not stop
+  // the sign-up this journey goes on to make.
+  await scene(page, "Under 18: the server says no, in the band");
+  await page.route("**/api/auth/sign-up/email", (route) =>
+    route.fulfill({
+      status: 403,
+      json: { code: AGE_CODES.refused, message: AGE_COPY.refused },
+    }),
+  );
+  await turnstileAnswered(page);
+  await page.getByRole("button", { name: "Create account" }).click();
+  const ageBand = page.locator("[data-part='failure-band']");
+  await expect(ageBand).toContainText("Not created", { timeout: 15_000 });
+  await expect(ageBand).toContainText(AGE_COPY.refused);
+  await page.unroute("**/api/auth/sign-up/email");
 
   // Round 28 #9: Google says the same refusal in a band under its button,
   // NOT CREATED, with Request access and no Try again. The server's
@@ -177,6 +198,7 @@ test("request access -> an invite from the Desk -> create an account -> sign out
       );
   expect(await boxHeight("Password")).toBe(await boxHeight("Email"));
   expect(await boxHeight("Password")).toBe(50);
+  await page.getByLabel("Date of birth").fill("1990-04-21");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSPHRASE);
   await page.getByRole("button", { name: "Show" }).click();

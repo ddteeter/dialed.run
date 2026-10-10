@@ -57,6 +57,8 @@ Questions about this policy or your data: [OWNER: contact email].
   name: on dialed.run you are your username.
 - **The invite code you signed up with**, while sign-up is invite-only, so
   we can see who each code let in.
+- **Not your date of birth.** Sign-up asks for it to check you are 18 or
+  over, and we do not keep it (see [Children](#children)).
 - **A request for access**, if you make one: the email address and the
   note you leave, until we answer it.
 - **Your password, hashed.** We store a scrypt hash, never the password
@@ -287,6 +289,8 @@ it.]
   hijacked.
 - **One browser setting,** saved only if you turn face blur off, so we
   remember not to load the face detector again.
+- **An age-check cookie**, only if sign-up refused a date of birth as
+  under 18, for one day (see [Children](#children)).
 
 No advertising or analytics cookies. No third-party scripts; our fonts and
 the face-blur model are served from our own site.
@@ -348,9 +352,15 @@ claiming it.]
 
 ## Children
 
-[OWNER: minimum age. The app does not ask for or check age today. Common
-choices are 13 (US, COPPA) or 16 (parts of the EU). Say what happens if you
-learn an account belongs to someone under it.]
+dialed.run is for people 18 and over. When you create an account we ask
+for your date of birth, check it on our server, and keep neither the date
+nor your age: an account existing is the record that the check passed. If
+the check fails, your browser keeps a cookie for one day so the form
+cannot simply be tried again with a different date.
+
+We do not knowingly collect data from anyone under 18. If we learn that an
+account belongs to someone under 18, we close it and delete its data. If
+you think one does, email [OWNER: contact email].
 
 ## Changes to this policy
 

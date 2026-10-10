@@ -4,7 +4,14 @@ import {
   createRootRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import type { ReactElement } from "react";
@@ -15,6 +22,7 @@ import { signUpSchema } from "../../src/lib/contracts";
 import { AUTH_COPY } from "../../src/modules/auth/auth-copy";
 import {
   AuthPage,
+  BirthDateField,
   CredentialFields,
   InviteCodeField,
   RequestAccessLink,
@@ -52,6 +60,7 @@ function SignUp({
   isInviteOnly?: boolean;
 }>) {
   const [inviteCode, setInviteCode] = useState("");
+  const [birthDate, setBirthDate] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const google = useGoogleSignIn({
@@ -59,7 +68,7 @@ function SignUp({
     errorCallbackURL: "/auth/signup",
     returnedError,
     leave,
-    admission: () => ({ inviteCode, turnstileToken: TOKEN }),
+    admission: () => ({ inviteCode, birthDate, turnstileToken: TOKEN }),
   });
   const { form, cause } = useAuthForm({
     schema: signUpSchema,
@@ -82,7 +91,7 @@ function SignUp({
       turnstile={<span data-part="turnstile-slot" />}
       requestLink={<RequestAccessLink isInviteOnly={isInviteOnly} />}
       onSubmit={() => {
-        void form.submit({ inviteCode, email, password });
+        void form.submit({ inviteCode, birthDate, email, password });
       }}
     >
       <InviteCodeField
@@ -91,6 +100,7 @@ function SignUp({
         onChange={setInviteCode}
         isInviteOnly={isInviteOnly}
       />
+      <BirthDateField form={form} value={birthDate} onChange={setBirthDate} />
       <CredentialFields
         form={form}
         email={email}
@@ -129,11 +139,25 @@ const part = (name: string) =>
 
 const PASSPHRASE = ["a", "long", "passphrase"].join("-");
 
+const BIRTH_DATE = "1990-04-21";
+
+/**
+ * The date control is the platform's, which takes no typing in happy-dom;
+ * a change event with the value it would produce stands in for the picker.
+ */
+function pickBirthDate(date: string): void {
+  fireEvent.change(screen.getByLabelText("Date of birth"), {
+    target: { value: date },
+  });
+}
+
 async function fill(
   user: ReturnType<typeof userEvent.setup>,
   code: string,
+  birthDate = BIRTH_DATE,
 ): Promise<void> {
   if (code !== "") await user.type(screen.getByLabelText("Invite code"), code);
+  if (birthDate !== "") pickBirthDate(birthDate);
   await user.type(screen.getByLabelText("Email"), "maya@example.com");
   await user.type(screen.getByLabelText("Password"), PASSPHRASE);
 }
@@ -152,8 +176,9 @@ describe("Au2 · invite stage at rest", () => {
     const fields = [...document.querySelectorAll("input")].map(
       (input) => input.name,
     );
-    expect(fields.slice(0, 3)).toStrictEqual([
+    expect(fields.slice(0, 4)).toStrictEqual([
       "inviteCode",
+      "birthDate",
       "email",
       "password",
     ]);
@@ -194,6 +219,7 @@ describe("Au2 · submitting with a code", () => {
       {
         headers: {
           "x-invite-code": "DIAL-7K3P",
+          "x-birth-date": BIRTH_DATE,
           "x-turnstile-token": TOKEN,
         },
       },
@@ -263,7 +289,11 @@ describe("Au2 · Google in the invite stage", () => {
     expect(client.social).toHaveBeenCalledWith(
       expect.objectContaining({ requestSignUp: true }),
       {
-        headers: { "x-invite-code": "DIAL-7K3P", "x-turnstile-token": TOKEN },
+        headers: {
+          "x-invite-code": "DIAL-7K3P",
+          "x-birth-date": "",
+          "x-turnstile-token": TOKEN,
+        },
       },
     );
   });
@@ -336,12 +366,82 @@ describe("Au2 · Google in the invite stage", () => {
       await signUpPage({ returnedError: error });
       const band = part("control-failure");
       expect(band).toHaveTextContent(`Not created${message}`);
-      expect(
-        within(band ?? document.body).queryByRole("link") !== null,
-      ).toBe(linksRequestAccess);
+      expect(within(band ?? document.body).queryByRole("link") !== null).toBe(
+        linksRequestAccess,
+      );
       expect(AUTH_COPY.googleNoCode).toBe(
         "Enter your invite code above, then continue with Google.",
       );
     },
   );
+});
+
+describe("Au2 · date of birth (design 134)", () => {
+  it("asks with the platform's date control, invite-only or not", async () => {
+    await signUpPage({ isInviteOnly: false });
+    const field = screen.getByLabelText("Date of birth");
+    expect(field).toHaveAttribute("type", "date");
+    expect(field).toHaveAttribute("autocomplete", "bday");
+  });
+
+  it("says a missing date on the field, before any round trip", async () => {
+    const { user } = await signUpPage();
+    await fill(user, "DIAL-7K3P", "");
+    await user.click(screen.getByRole("button", { name: "Create account" }));
+    expect(await screen.findByText("Enter your date of birth.")).toBeVisible();
+    expect(screen.getByLabelText("Date of birth")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(client.signUp).not.toHaveBeenCalled();
+  });
+
+  it("puts the server's age refusal in the band as NOT CREATED", async () => {
+    client.signUp.mockResolvedValue({
+      data: undefined,
+      error: { code: "AGE_REFUSED", status: 403 },
+    });
+    const { user } = await signUpPage();
+    await fill(user, "DIAL-7K3P");
+    await user.click(screen.getByRole("button", { name: "Create account" }));
+    const band = await waitFor(() => {
+      const found = part("failure-band");
+      expect(found).not.toBeNull();
+      return found;
+    });
+    expect(band).toHaveTextContent("Not created");
+    expect(band).toHaveTextContent("dialed.run is for runners 18 and over.");
+    expect(band).not.toHaveTextContent("Not signed in");
+  });
+
+  it("carries the date with Google", async () => {
+    client.social.mockResolvedValue({
+      data: { url: "https://accounts.example/consent" },
+      error: undefined,
+    });
+    const { user, leave } = await signUpPage();
+    pickBirthDate(BIRTH_DATE);
+    await user.click(
+      screen.getByRole("button", { name: "Continue with Google" }),
+    );
+    await waitFor(() => {
+      expect(leave).toHaveBeenCalled();
+    });
+    expect(client.social).toHaveBeenCalledWith(expect.anything(), {
+      headers: {
+        "x-invite-code": "",
+        "x-birth-date": BIRTH_DATE,
+        "x-turnstile-token": TOKEN,
+      },
+    });
+  });
+
+  it("says a new Google account's missing date from the round trip, above Google", async () => {
+    await signUpPage({ returnedError: "AGE_MISSING" });
+    const band = part("control-failure");
+    expect(band).toHaveTextContent(
+      "Not createdEnter your date of birth above, then continue with Google.",
+    );
+    expect(within(band ?? document.body).queryByRole("link")).toBeNull();
+  });
 });

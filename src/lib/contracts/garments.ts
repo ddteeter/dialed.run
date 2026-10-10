@@ -9,6 +9,7 @@
 import { z } from "zod";
 
 import { ACCESS_NOTE_MAX, IS_INVITE_ONLY, inviteCodeField } from "./access";
+import { birthDateField } from "./age";
 import { httpsUrlSchema } from "./common";
 
 // ---- Garments: discriminated union on category ----------------------------
@@ -251,11 +252,14 @@ const newPasswordField = z
 /**
  * With invite-only on (D-39), the code is the form's first field; off, it
  * is not asked for and whatever arrives is ignored. A function so both
- * halves of the flag are testable, the schema below its one reading.
+ * halves of the flag are testable, the schema below its one reading. The
+ * date of birth is asked either way (design 134): the form checks its
+ * shape, the server its age.
  */
 export function signUpSchemaFor(isInviteOnly: boolean) {
   return z.object({
     inviteCode: isInviteOnly ? inviteCodeField : z.string().optional(),
+    birthDate: birthDateField,
     email: emailField,
     password: newPasswordField,
   });

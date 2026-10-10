@@ -15,7 +15,7 @@ read.
 
 | Decision                                                                     | Where it is recorded                                                                                    |
 | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| 16 and over                                                                  | `docs/decisions.md` D-71                                                                                |
+| 18 and over                                                                  | `docs/decisions.md` D-114 (replaces D-71's 16)                                                          |
 | Handles never released, even after deletion                                  | D-56; D-72(6)                                                                                           |
 | Appeals have no deadline                                                     | Owner, for this draft (2026-09-29). Not yet in `decisions.md`; **conflicts with the ban email** (below) |
 | Quarantine: silent, preserved 1 year, then purged                            | D-70                                                                                                    |
@@ -31,15 +31,15 @@ read.
 
 ## Terms: who can use it
 
-| Claim                                             | Source                                                                                                                                                                 |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 16 or over; no date of birth asked                | D-71 ("No date of birth is asked or stored: the line is the gate"); the line under Au2 lands with PR 2b-2 (ACC-6)                                                      |
-| Under-16 account closed                           | D-71 ("a report of an under-16 account is handled as any other takedown"); closure is the ban flow, `src/modules/safety/bans.ts` `banUser`                             |
-| Invite code required; codes may be requested      | `src/lib/access.ts` `IS_INVITE_ONLY`; `src/modules/auth/access-hook.ts` (code checked before sign-up, email and Google); `src/routes/account/request-access.tsx` (Au5) |
-| Account email and security email                  | `src/lib/email.ts` `emailTemplateSchema` (verify, reset, email change, account closed, content removed); `src/modules/email/deliver.ts` `EMAIL_FROM`                   |
-| Unconfirmed runner's kits save private            | D-50; `docs/designs/126-accounts.md` ACC-3; `feed/share-default.ts` (`default_audience` read with `isUnconfirmed`)                                                     |
-| Google sign-in                                    | `src/modules/auth/create-auth.ts` `socialProviders.google`                                                                                                             |
-| "One person, one account"; no sharing or transfer | A rule, not a code fact: nothing in the code detects a shared account                                                                                                  |
+| Claim                                              | Source                                                                                                                                                                                           |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 18 or over; date of birth asked, checked, not kept | D-114; `src/lib/contracts/age.ts` (`MINIMUM_AGE`, `isOldEnough`), `src/modules/auth/access-hook.ts` `admitSignUp`/`claimInvite` (email and Google); no column holds it; Au2's line is `AGE_LINE` |
+| Under-18 account closed and its data deleted       | D-114; closure is the ban flow, `src/modules/safety/bans.ts` `banUser`; deletion is the account purge, `src/modules/account/purge.ts`, run by the owner                                          |
+| Invite code required; codes may be requested       | `src/lib/access.ts` `IS_INVITE_ONLY`; `src/modules/auth/access-hook.ts` (code checked before sign-up, email and Google); `src/routes/account/request-access.tsx` (Au5)                           |
+| Account email and security email                   | `src/lib/email.ts` `emailTemplateSchema` (verify, reset, email change, account closed, content removed); `src/modules/email/deliver.ts` `EMAIL_FROM`                                             |
+| Unconfirmed runner's kits save private             | D-50; `docs/designs/126-accounts.md` ACC-3; `feed/share-default.ts` (`default_audience` read with `isUnconfirmed`)                                                                               |
+| Google sign-in                                     | `src/modules/auth/create-auth.ts` `socialProviders.google`                                                                                                                                       |
+| "One person, one account"; no sharing or transfer  | A rule, not a code fact: nothing in the code detects a shared account                                                                                                                            |
 
 ## Terms: username
 

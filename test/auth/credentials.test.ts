@@ -149,26 +149,60 @@ describe("signUp", () => {
     // endpoint requires a `name`, which nothing reads.
     client.signUp.mockResolvedValue({ data: {}, error: undefined });
     await expect(
-      signUp({ ...account, inviteCode: "DIAL-7K3P" }, TOKEN),
+      signUp(
+        { ...account, inviteCode: "DIAL-7K3P", birthDate: "1990-04-21" },
+        TOKEN,
+      ),
     ).resolves.toBeUndefined();
     expect(client.signUp).toHaveBeenCalledWith(
       { ...person, name: "" },
       {
         headers: {
           "x-invite-code": "DIAL-7K3P",
+          "x-birth-date": "1990-04-21",
           "x-turnstile-token": TOKEN,
         },
       },
     );
   });
 
-  it("sends empty headers rather than none when there is no code or token", async () => {
+  it("sends empty headers rather than none when there is no code, date or token", async () => {
     client.signUp.mockResolvedValue({ data: {}, error: undefined });
     await signUp(account, undefined);
     expect(client.signUp).toHaveBeenCalledWith(
       { ...person, name: "" },
-      { headers: { "x-invite-code": "", "x-turnstile-token": "" } },
+      {
+        headers: {
+          "x-invite-code": "",
+          "x-birth-date": "",
+          "x-turnstile-token": "",
+        },
+      },
     );
+  });
+
+  it("lands a missing date on the date field", async () => {
+    client.signUp.mockResolvedValue({
+      data: undefined,
+      error: { code: "AGE_MISSING", status: 400 },
+    });
+    expect(await caught(signUp(account, TOKEN))).toMatchObject({
+      issues: [{ path: ["birthDate"], message: "Enter your date of birth." }],
+    });
+  });
+
+  it("puts an age refusal in the band as NOT CREATED, with no retry (design 134)", async () => {
+    client.signUp.mockResolvedValue({
+      data: undefined,
+      error: { code: "AGE_REFUSED", status: 403 },
+    });
+    const thrown = await caught(signUp(account, TOKEN));
+    expect(thrown).toBeInstanceOf(AccessRefused);
+    expect(thrown).toMatchObject({
+      kicker: "Not created",
+      message: "dialed.run is for runners 18 and over.",
+      retry: false,
+    });
   });
 
   it.each([
@@ -387,6 +421,7 @@ describe("googleConsentUrl", () => {
     });
     await googleConsentUrl("/", "/auth/signup", {
       inviteCode: "DIAL-7K3P",
+      birthDate: "1990-04-21",
       turnstileToken: "t",
     });
     expect(client.social).toHaveBeenCalledWith(
@@ -397,9 +432,41 @@ describe("googleConsentUrl", () => {
         disableRedirect: true,
         requestSignUp: true,
       },
-      { headers: { "x-invite-code": "DIAL-7K3P", "x-turnstile-token": "t" } },
+      {
+        headers: {
+          "x-invite-code": "DIAL-7K3P",
+          "x-birth-date": "1990-04-21",
+          "x-turnstile-token": "t",
+        },
+      },
     );
   });
+
+  it.each([
+    [
+      "AGE_MISSING",
+      "Enter your date of birth above, then continue with Google.",
+    ],
+    ["AGE_REFUSED", "dialed.run is for runners 18 and over."],
+  ])(
+    "says %s in the band as NOT CREATED, with no retry",
+    async (code, message) => {
+      client.social.mockResolvedValue({
+        data: undefined,
+        error: { code, status: 400 },
+      });
+      const thrown = await caught(
+        googleConsentUrl("/", "/auth/signup", { turnstileToken: "t" }),
+      );
+      expect(thrown).toBeInstanceOf(AccessRefused);
+      expect(thrown).toMatchObject({
+        kicker: "Not created",
+        message,
+        retry: false,
+      });
+      expect(thrown).toMatchObject({ link: undefined });
+    },
+  );
 
   it("sends no sign-up request and no headers from the log-in page", async () => {
     client.social.mockResolvedValue({

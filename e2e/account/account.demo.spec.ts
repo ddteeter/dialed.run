@@ -58,6 +58,7 @@ test("account settings -> change password -> reminder emails off and on -> sign 
   await page.goto("/auth/signup");
   await hydrated(page);
   await page.getByLabel("Invite code").fill(await ensureInviteCode());
+  await page.getByLabel("Date of birth").fill("1990-04-21");
   await turnstileAnswered(page);
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSPHRASE);

@@ -15,6 +15,7 @@ import {
 import { SignedOutPanel } from "../../ui/SignedOutPanel";
 import type { ControlFailure, FormShell } from "../../ui";
 import { IS_INVITE_ONLY } from "../../lib/contracts/access";
+import { AGE_LINE } from "../../lib/contracts/age";
 import { authFailure, authStatus } from "./auth-copy";
 import { GoogleButton, type GoogleSignIn } from "./google-button";
 import { PasswordField } from "./password-field";
@@ -261,7 +262,7 @@ export function AuthLegal(): JSX.Element {
         </Link>
         .
       </p>
-      <p className="m-0">dialed.run is for runners 16 and over.</p>
+      <p className="m-0">{AGE_LINE}</p>
     </div>
   );
 }
@@ -308,8 +309,38 @@ Au2's, with the invite code first (ACC-5).
 */
 export const SIGN_UP_LABELS = {
   inviteCode: "Invite code",
+  birthDate: "Date of birth",
   ...CREDENTIAL_LABELS,
 };
+
+/**
+ * Design 134's question, asked of everyone whatever the invite flag says:
+ * a plain date whose age only the server judges (`lib/contracts/age.ts`).
+ * Undesigned — `TextField` as it is, with the platform's date control
+ * (design deltas).
+ */
+export function BirthDateField({
+  form,
+  value,
+  onChange,
+}: Readonly<{
+  form: Pick<ReturnType<typeof useFormSubmit>, "field" | "fieldErrors">;
+  value: string;
+  onChange: (date: string) => void;
+}>): JSX.Element {
+  return (
+    <TextField
+      name="birthDate"
+      label={SIGN_UP_LABELS.birthDate}
+      type="date"
+      autoComplete="bday"
+      value={value}
+      onChange={onChange}
+      field={form.field}
+      error={form.fieldErrors.birthDate}
+    />
+  );
+}
 
 /**
  * Au2's first field, above email and Google (round 26 #20): INVITE CODE,

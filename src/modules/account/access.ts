@@ -49,6 +49,7 @@ export function accessGate(
 ) {
   return {
     isInviteOnly: IS_INVITE_ONLY,
+    checksAge: true,
     passesTurnstile: async (
       token: string | undefined,
       request: Request | undefined,
