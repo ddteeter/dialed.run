@@ -254,6 +254,11 @@ account added it.
   When three different people report the same kit or photo, it is hidden
   from everyone but its owner and a person reviews it. A profile or product
   name reported three times goes to a person for review.
+- One report that a kit or photo is an intimate image shared without
+  consent hides it from everyone but its owner at once, and emails each
+  reviewer that it is waiting and when its 48 hours run out. The email
+  says what kind of thing was reported and when; it does not name you or
+  the runner who posted it.
 - Reviewers are a short list of admins we name in configuration. They can
   see reported and flagged content, including hidden photos, with the
   reports' reasons and notes.

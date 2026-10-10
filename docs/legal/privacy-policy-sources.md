@@ -129,14 +129,15 @@ before publishing.
 
 ## Moderation
 
-| Claim                                                 | Source                                                                                                                        |
-| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Signed-in reporting; threshold of three               | `src/modules/safety/functions.ts` `fileReportAction` (`requireUserId`); `safety/contracts.ts` `autoHideReporterThreshold = 3` |
-| Kits and photos hidden, profiles/products queued only | `src/modules/safety/reports.ts` `hideWritesFor`                                                                               |
-| Admins from config                                    | `src/env/env.d.ts` `ADMIN_USER_IDS`; `src/modules/safety/admin.ts`                                                            |
-| Admins see hidden photos                              | `src/routes/safety/review-photo.$.tsx` → `feed/photos.ts` `reviewerPhotoResponse`                                             |
-| Ban records reason and deletes sessions               | `src/modules/safety/bans.ts` `banUser`                                                                                        |
-| **Ban not enforced**                                  | `banStateOf` / `bannedAmong` are imported by nothing outside `safety/`                                                        |
+| Claim                                                                                                               | Source                                                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Signed-in reporting; threshold of three                                                                             | `src/modules/safety/functions.ts` `fileReportAction` (`requireUserId`); `safety/contracts.ts` `autoHideReporterThreshold = 3`              |
+| One intimate-image report hides at once; reviewers are emailed what kind of thing and when it is due, naming nobody | D-117; `safety/reports.ts` `removalAlerts` (template `removal_due`: `subject`, `dueAt` only); `src/modules/email/content.ts` `removal_due` |
+| Kits and photos hidden, profiles/products queued only                                                               | `src/modules/safety/reports.ts` `hideWritesFor`                                                                                            |
+| Admins from config                                                                                                  | `src/env/env.d.ts` `ADMIN_USER_IDS`; `src/modules/safety/admin.ts`                                                                         |
+| Admins see hidden photos                                                                                            | `src/routes/safety/review-photo.$.tsx` → `feed/photos.ts` `reviewerPhotoResponse`                                                          |
+| Ban records reason and deletes sessions                                                                             | `src/modules/safety/bans.ts` `banUser`                                                                                                     |
+| **Ban not enforced**                                                                                                | `banStateOf` / `bannedAmong` are imported by nothing outside `safety/`                                                                     |
 
 ## Third parties
 

@@ -1212,6 +1212,29 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     entries and photos are in one ZIP." **The ask:** confirm, or give
     words.
 
+58. **The intimate-image removal path (design 136, decision D-117).**
+    Undesigned; built from existing primitives and copy. Placeholder words
+    throughout:
+    - **W1's new reason** reads "It's an intimate image shared without
+      consent", after "The photo shows someone inappropriately". One
+      report of it hides the kit or photo from everyone at once; W1's
+      receipt is unchanged.
+    - **The Review row's clock** is a second bracket under the people
+      count: `[Due in 31h]`, rounded up to the hour, then `[Overdue]`. It
+      shows only on a row an intimate-image report started.
+    - **The removal statement** the author reads: "it's an intimate image
+      shared without consent", after round 27 #20's "A moderator removed
+      this photo:".
+    - **The operators' email**, `removal_due`: subject "Removal due by
+      2026-10-12 13:05 UTC", a body saying what was reported and that it is
+      hidden, the button "Open Review", and the foot "Sent to every
+      operator, once per report that hides something."
+    - **Coming in PR B:** a public page and form at `/takedown`, the
+      requester's receipt email, and a "Removal requests" section on
+      Review.
+      **The ask:** the reason's sentence in W1's voice; whether the clock
+      belongs in the row's brackets or its header; and the email's words.
+
 ## Answered in round 34 (imported 2026-10-04)
 
 Design sent round 34 with `Theme.dc.html` as the primary file. It carries
