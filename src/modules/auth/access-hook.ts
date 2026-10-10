@@ -172,10 +172,26 @@ function refuseAge(): never {
   );
 }
 
-const REFUSED_BEFORE = new RegExp(
-  String.raw`(?:^|;\s*)${AGE_REFUSED_COOKIE}=`,
-  "u",
-);
+function refuseMissingAge(): never {
+  throw new APIError("BAD_REQUEST", {
+    code: AGE_CODES.missing,
+    message: AGE_COPY.missing,
+  });
+}
+
+/**
+ * Whether the request carries the refusal cookie: its own name, not one
+ * that merely ends the same.
+ */
+function wasRefusedBefore(headers: Headers | undefined): boolean {
+  return (
+    headers
+      ?.get("cookie")
+      ?.split(";")
+      .some((cookie) => cookie.trim().startsWith(`${AGE_REFUSED_COOKIE}=`)) ===
+    true
+  );
+}
 
 /**
  * The age half of the before-hook (design 134). A browser refused in the
@@ -189,16 +205,13 @@ async function admitAge(
   kind: "email" | "google",
   headers: Headers | undefined,
 ): Promise<void> {
-  if (REFUSED_BEFORE.test(headers?.get("cookie") ?? "")) refuseAge();
+  if (wasRefusedBefore(headers)) refuseAge();
   const typed = headers?.get(BIRTH_DATE_HEADER) ?? "";
   if (typed === "" && kind === "google") return;
   const parsed = birthDateField.safeParse(typed);
-  if (!parsed.success) {
-    throw new APIError("BAD_REQUEST", {
-      code: AGE_CODES.missing,
-      message: parsed.error.issues[0]?.message ?? AGE_COPY.missing,
-    });
-  }
+  // One sentence for every unusable date: Au2's own schema has already
+  // said which, so only a caller that skipped the form reaches this.
+  if (!parsed.success) refuseMissingAge();
   if (!isOldEnough(parsed.data, isoDayOf(nowSeconds()))) refuseAge();
   if (kind === "google") await addOAuthServerContext({ ageChecked: true });
 }
@@ -291,10 +304,7 @@ export function claimInvite(gate: AccessGate) {
     context: HookRequest | null,
   ) => {
     if (gate.checksAge && !(await isAgeCheckedForCreate(context))) {
-      throw new APIError("BAD_REQUEST", {
-        code: AGE_CODES.missing,
-        message: AGE_COPY.missing,
-      });
+      refuseMissingAge();
     }
     if (!gate.isInviteOnly) return { data: { ...user, name: "" } };
     const code = await codeForCreate(context);

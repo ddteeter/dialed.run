@@ -19,6 +19,7 @@ import {
   admitSignUp,
   claimInvite,
   signUpKind,
+  type HookRequest,
   type AccessGate,
 } from "../../src/modules/auth/access-hook";
 import { createAuth } from "../../src/modules/auth/create-auth";
@@ -701,13 +702,13 @@ describe("the age gate", () => {
     expect(await accountFor(email)).toBeUndefined();
   });
 
-  it("refuses a date that is not one in the field's own words", async () => {
+  it("refuses a date that is not one as it refuses none: the form said which", async () => {
     const { response } = await emailSignUp(accessGate(db, turnstile().verify), {
       "x-birth-date": "1899-12-31",
     });
     expect(await refusal(response)).toEqual({
       code: "AGE_MISSING",
-      message: "Check the year.",
+      message: "Enter your date of birth.",
     });
   });
 
@@ -836,5 +837,79 @@ describe("the age gate", () => {
     await expect(
       claimInvite(OPEN_ACCESS)({ email: "a@example.test" }, NO_CONTEXT),
     ).resolves.toEqual({ data: { email: "a@example.test", name: "" } });
+  });
+});
+
+/**
+An email sign-up's request, as the before-hook reads it, with no headers at all when none are given.
+*/
+function emailHook(headers?: Record<string, string>): HookRequest {
+  return headers === undefined
+    ? { path: "/sign-up/email" }
+    : { path: "/sign-up/email", headers: new Headers(headers) };
+}
+
+/**
+A Google attempt from Au2, as the before-hook reads it.
+*/
+function googleHook(headers: Record<string, string>): HookRequest {
+  return {
+    path: "/sign-in/social",
+    body: { requestSignUp: true },
+    headers: new Headers(headers),
+  };
+}
+
+/**
+ * The age half of `admitSignUp` called directly, outside any request:
+ * what it reads from the headers, and when it touches Google's state.
+ */
+describe("admitSignUp's age check", () => {
+  const ageGate: AccessGate = {
+    ...OPEN_ACCESS,
+    checksAge: true,
+  };
+  const email = emailHook;
+  const google = googleHook;
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("refuses a request with no headers at all as a missing date", async () => {
+    await expect(admitSignUp(ageGate, email())).rejects.toMatchObject({
+      body: { code: "AGE_MISSING", message: "Enter your date of birth." },
+    });
+  });
+
+  it("lets a Google attempt with no headers at all through, as with no date", async () => {
+    await expect(
+      admitSignUp(ageGate, {
+        path: "/sign-in/social",
+        body: { requestSignUp: true },
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  it("refuses on the cookie alone, before reading any date", async () => {
+    await expect(
+      admitSignUp(ageGate, google({ cookie: "dialed_age_refused=1" })),
+    ).rejects.toMatchObject({ body: { code: "AGE_REFUSED" } });
+  });
+
+  it("admits an adult's email sign-up without touching Google's state", async () => {
+    const contextSpy = vi.spyOn(betterAuthApi, "addOAuthServerContext");
+    await expect(
+      admitSignUp(ageGate, email({ "x-birth-date": "1990-04-21" })),
+    ).resolves.toBeUndefined();
+    expect(contextSpy).not.toHaveBeenCalled();
+  });
+
+  it("marks an adult's Google attempt as checked, for the create hook", async () => {
+    const contextSpy = vi
+      .spyOn(betterAuthApi, "addOAuthServerContext")
+      .mockResolvedValue(undefined);
+    await admitSignUp(ageGate, google({ "x-birth-date": "1990-04-21" }));
+    expect(contextSpy).toHaveBeenCalledExactlyOnceWith({ ageChecked: true });
   });
 });
