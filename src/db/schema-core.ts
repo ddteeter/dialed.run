@@ -469,7 +469,21 @@ export const products = /*#__PURE__*/ sqliteTable(
     createdBy: text("created_by").notNull(),
     createdAt: integer("created_at").notNull(),
   },
-  (t) => [uniqueIndex("products_brand_name").on(t.brandId, t.normalizedName)],
+  (t) => [
+    uniqueIndex("products_brand_name").on(t.brandId, t.normalizedName),
+    // The hourly sweeps over failed enrichments — the re-drive inside the
+    // retry day, the Gave up listing past it, and the digest's count — all
+    // read `failed` by `created_at`. Partial, so it holds only the few
+    // failed rows: a product is created `none` or `pending`, so no insert
+    // writes to it, and only a transition into or out of `failed` does.
+    //
+    // Its callers state this predicate as a literal, so the planner can
+    // match it without leaning on bound values (see `extractionFailed` in
+    // `modules/enrichment/abandon.ts`).
+    index("products_extraction_failed")
+      .on(t.createdAt)
+      .where(sql`${t.extractionStatus} = 'failed'`),
+  ],
 );
 
 export const productSnapshots = /*#__PURE__*/ sqliteTable(

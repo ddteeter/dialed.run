@@ -3,7 +3,11 @@
  * fetch are internal; what other modules need is to ask for enrichment, to
  * consume the queue, and to re-run extraction over a stored page.
  */
-export { abandonedBefore, listAbandonedEnrichments } from "./abandon";
+export {
+  abandonedBefore,
+  extractionFailed,
+  listAbandonedEnrichments,
+} from "./abandon";
 export {
   handleEnrichmentBatch,
   handleEnrichmentDlqBatch,

@@ -23,6 +23,28 @@ import { pageFailureReason } from "./bounds";
 export const ENRICHMENT_RETRY_WINDOW_S = 24 * 60 * 60;
 
 /**
+ * `extraction_status = 'failed'`, written as the partial index
+ * `products_extraction_failed` writes it (`schema-core.ts`), for every
+ * sweep that reads failed products by age.
+ *
+ * **A literal, not `eq`.** SQLite uses a partial index only when the
+ * query's WHERE implies the index's condition. drizzle's `eq` binds
+ * `'failed'` as a parameter, and that reaches the index only because
+ * SQLite re-prepares a statement once its parameters are bound and
+ * compares the bound value (measured in workerd's D1); a plan made before
+ * binding scans every product. The literal does not lean on that, and it
+ * is the shape `user_profiles_username_screen_pending`'s callers had to
+ * use, where `inArray` could not match at all. The query-plan test in
+ * `test/enrichment/abandon.test.ts` holds it.
+ *
+ * A function rather than a constant so nothing is built at module scope
+ * (CLAUDE.md: construct on first use).
+ */
+export function extractionFailed(): SQL {
+  return sql`${products.extractionStatus} = 'failed'`;
+}
+
+/**
 The instant (epoch seconds) before which a `failed` product is abandoned.
 */
 export function abandonedBefore(now = nowSeconds()): number {
@@ -45,7 +67,7 @@ export async function listAbandonedEnrichments(
   now = nowSeconds(),
 ): Promise<void> {
   const parked = and(
-    eq(products.extractionStatus, "failed"),
+    extractionFailed(),
     lt(products.createdAt, abandonedBefore(now)),
     isNotNull(products.extractionTries),
   );
