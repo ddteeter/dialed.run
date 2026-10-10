@@ -167,6 +167,34 @@ export const removalDue = emailKind("removal_due", {
 });
 
 /**
+ * Design 136 (D-117): an operator's alert that someone asked, through
+ * `/takedown`, for an intimate image to come down. `isOurs` says whether
+ * the link was one of ours (so Review shows the subject) or the operator
+ * must find it. Placeholder words (design deltas item 58).
+ */
+export const removalRequested = emailKind("removal_requested", {
+  dueAt: z.int().min(0),
+  isOurs: z.boolean(),
+});
+
+/**
+ * Design 136: the requester's receipt — what happens next and by when.
+ * Sent to the address they typed; they may have no account.
+ */
+export const removalRequestReceived = emailKind("removal_request_received", {
+  dueAt: z.int().min(0),
+});
+
+/**
+ * Design 136: the requester is told the outcome. `reason` is the
+ * operator's, for a request that was declined.
+ */
+export const removalRequestDecided = emailKind("removal_request_decided", {
+  outcome: z.enum(["removed", "declined"]),
+  reason: z.string().min(1).optional(),
+});
+
+/**
  * Operator Screens D5, the morning digest (task 125 · OPS-11): the Desk's
  * three numbers, every day, even at zero — so a missing email is a broken
  * pipeline and never a quiet one. `oldestHours` is absent when nothing is

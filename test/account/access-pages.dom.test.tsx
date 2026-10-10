@@ -31,8 +31,8 @@ import {
   NOTE_COUNTER_ID,
   RequestAccess,
   noteAnnouncement,
-  refusalMessage,
 } from "../../src/modules/account/components/RequestAccess";
+import { refusalMessage } from "../../src/lib/contracts/access";
 import type { AccessDesk, DeskCode } from "../../src/modules/account/invites";
 import type { TurnstileApi } from "../../src/ui/Turnstile";
 

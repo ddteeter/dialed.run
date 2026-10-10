@@ -126,6 +126,16 @@ export const reasonsThatHideAtOnce: readonly ReportReason[] = reportReasons
 export const REMOVAL_DUE_SECONDS = 48 * 60 * 60;
 
 /**
+ * Why an operator declined a removal request (design 136): sent to the
+ * person who asked. One field for the form and the server input.
+ */
+export const declineReasonField = z
+  .string()
+  .trim()
+  .min(1, "Say why, for the person who asked.")
+  .max(500, "Keep it under 500 characters.");
+
+/**
  * The Review row's clock (design 136): whole hours left, rounded up so the
  * last minutes still read "Due in 1h", then "Overdue" — DUE IN 31H and
  * OVERDUE in the row's header, uppercase in CSS (round 35 #58b).

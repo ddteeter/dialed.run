@@ -10,10 +10,17 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 
-import { requireUserId, verifiedUserId } from "../auth";
+import { getRequest } from "@tanstack/react-start/server";
 
-import { oweInCore } from "../ops";
+import { turnstileAttempt } from "../account";
+import { deploymentPosture, requireUserId, verifiedUserId } from "../auth";
+
+import { oweInCore, verifyTurnstileToken } from "../ops";
 import { requireAdmin } from "./admin";
+import {
+  fileTakedownRequest,
+  pendingTakedownRequests,
+} from "./takedown-requests";
 import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
@@ -40,6 +47,7 @@ import {
   blockRunnerInput,
   denyDomainInput,
   fileReportInput,
+  takedownRequestInput,
   forceRenameInput,
   handleReviewInput,
   reviewDecisionInput,
@@ -88,9 +96,35 @@ export const blockedRunnersQuery = createServerFn({ method: "GET" }).handler(
 export const reviewQueueQuery = createServerFn({ method: "GET" }).handler(
   async () => {
     requireAdmin(await verifiedUserId());
-    return { queue: await pendingReviewQueue() };
+    return {
+      queue: await pendingReviewQueue(),
+      // Design 136: `/takedown` requests, which hide nothing and so are
+      // not review rows, waiting beside them.
+      requests: await pendingTakedownRequests(drizzle(env.DIALED_CORE)),
+    };
   },
 );
+
+/**
+ * `/takedown`'s request (design 136, D-117). No session: the person asking
+ * may have no account. Limited where Au5's request is — a real, https
+ * deployment.
+ */
+export const takedownRequestFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => takedownRequestInput.parse(data))
+  .handler(async ({ data }) => {
+    const attempt = turnstileAttempt(data.turnstileToken, getRequest());
+    return fileTakedownRequest(
+      drizzle(env.DIALED_CORE),
+      {
+        ...data,
+        attempt,
+        remoteIp: attempt.remoteIp,
+        isLimited: deploymentPosture(env.BETTER_AUTH_URL).rateLimited,
+      },
+      { verify: verifyTurnstileToken, owe: oweInCore },
+    );
+  });
 
 export const claimReviewAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => reviewDecisionInput.parse(input))

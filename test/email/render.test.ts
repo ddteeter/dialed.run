@@ -128,6 +128,68 @@ describe("emailContent", () => {
       },
     ],
     [
+      // Design 136, `/takedown`'s three: the operators' alert, for a link
+      // of ours and one that is not, then the requester's two.
+      { kind: "removal_requested", dueAt: 1_791_810_300, isOurs: true },
+      {
+        subject: "Removal request, due by 2026-10-12 13:05 UTC",
+        body: "Someone asked for an intimate image to come down. The link is one of ours, so Review shows it. Nothing is hidden until you decide. Decide by 2026-10-12 13:05 UTC.",
+        button: { label: "Open Review", href: `${ORIGIN}/safety/review` },
+        foot: "Sent to every operator, once per request.",
+        footer: LEGAL,
+      },
+    ],
+    [
+      { kind: "removal_requested", dueAt: 1_791_810_300, isOurs: false },
+      {
+        subject: "Removal request, due by 2026-10-12 13:05 UTC",
+        body: "Someone asked for an intimate image to come down. The link isn't one of ours: find it from what they wrote. Nothing is hidden until you decide. Decide by 2026-10-12 13:05 UTC.",
+        button: { label: "Open Review", href: `${ORIGIN}/safety/review` },
+        foot: "Sent to every operator, once per request.",
+        footer: LEGAL,
+      },
+    ],
+    [
+      { kind: "removal_request_received", dueAt: 1_791_810_300 },
+      {
+        subject: "We have your removal request",
+        body: "A person will look at it and decide by 2026-10-12 13:05 UTC. If it's what you described, we remove it, and we'll email you either way.",
+        foot: "Didn't send this? Write to hello@dialed.run.",
+        footer: LEGAL,
+      },
+    ],
+    [
+      { kind: "removal_request_decided", outcome: "removed" },
+      {
+        subject: "We removed what you reported",
+        body: "We removed the image you asked about from dialed.run.",
+        foot: "Questions? Reply to this email or write to hello@dialed.run.",
+        footer: LEGAL,
+      },
+    ],
+    [
+      {
+        kind: "removal_request_decided",
+        outcome: "declined",
+        reason: "it is a photo of shoes",
+      },
+      {
+        subject: "We didn't remove what you reported",
+        body: "We looked at your request and didn't remove anything. Reason: it is a photo of shoes.",
+        foot: "Questions? Reply to this email or write to hello@dialed.run.",
+        footer: LEGAL,
+      },
+    ],
+    [
+      { kind: "removal_request_decided", outcome: "declined" },
+      {
+        subject: "We didn't remove what you reported",
+        body: "We looked at your request and didn't remove anything. Reason: it isn't what the request described.",
+        foot: "Questions? Reply to this email or write to hello@dialed.run.",
+        footer: LEGAL,
+      },
+    ],
+    [
       // Design 136: 2026-10-12 13:05 UTC, as epoch seconds.
       { kind: "removal_due", subject: "photo", dueAt: 1_791_810_300 },
       {

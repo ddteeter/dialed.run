@@ -132,6 +132,13 @@ function LegalFooter() {
         <Link to="/copyright" className={FOOTER_LINK}>
           Copyright
         </Link>
+        {/* Design 136: the TAKE IT DOWN Act asks for the way to request a
+            removal to be clear and conspicuous, so it is on every page.
+            Placeholder words, after round 27 #12's three (design deltas
+            item 58). */}
+        <Link to="/takedown" className={FOOTER_LINK}>
+          Report an intimate image
+        </Link>
       </p>
     </footer>
   );

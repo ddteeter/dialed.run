@@ -338,6 +338,40 @@ export function emailContent(
         footer,
       };
     }
+    case "removal_requested": {
+      // Design 136: placeholder words (design deltas item 58).
+      const due = utcMinute(template.dueAt);
+      return {
+        subject: `Removal request, due by ${due}`,
+        body: `Someone asked for an intimate image to come down. ${template.isOurs ? "The link is one of ours, so Review shows it." : "The link isn't one of ours: find it from what they wrote."} Nothing is hidden until you decide. Decide by ${due}.`,
+        button: { label: "Open Review", href: `${origin}/safety/review` },
+        foot: "Sent to every operator, once per request.",
+        footer,
+      };
+    }
+    case "removal_request_received": {
+      const due = utcMinute(template.dueAt);
+      return {
+        subject: "We have your removal request",
+        body: `A person will look at it and decide by ${due}. If it's what you described, we remove it, and we'll email you either way.`,
+        foot: `Didn't send this? Write to ${CONTACT_ADDRESS}.`,
+        footer,
+      };
+    }
+    case "removal_request_decided": {
+      return {
+        subject:
+          template.outcome === "removed"
+            ? "We removed what you reported"
+            : "We didn't remove what you reported",
+        body:
+          template.outcome === "removed"
+            ? "We removed the image you asked about from dialed.run."
+            : `We looked at your request and didn't remove anything. Reason: ${template.reason ?? "it isn't what the request described"}.`,
+        foot: `Questions? Reply to this email or write to ${CONTACT_ADDRESS}.`,
+        footer,
+      };
+    }
     case "run_reminder": {
       return {
         subject: "New run on Strava. Add it here.",
