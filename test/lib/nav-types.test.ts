@@ -229,6 +229,8 @@ describe("which type an edge resolves to", () => {
       ["/auth/signup", "/terms"],
       ["/onboarding/settings", "/terms"],
       ["/onboarding/settings", "/copyright"],
+      // Design 136: the removal request, from the signed-out footer.
+      ["/auth/login", "/takedown"],
       ["/", "/account/terms"],
       ["/account/terms", "/terms"],
       ["/onboarding/name", "/onboarding/calibrate"],
