@@ -106,10 +106,12 @@ visibility), a product link if you paste one, and a photo if you take one.
   it was indoors.
 - **Imported files (GPX, FIT, TCX, up to 25 MB):** we store the file, read
   the start time, duration, distance and **the first GPS point** from it, and
-  save those to the run. The run keeps only that start point, not the route.
-  The file itself sits in separate storage, kept until you delete the run
-  or your account. If we could not read a file, there is no run, so we
-  delete the file 30 days after the import failed. [OWNER: review]
+  save those to the run, with the point rounded to about a kilometre. The
+  run keeps only that rounded start point, not the route. **Once the file
+  has been read, we delete it**, usually within a day; we do not keep your
+  route. If we could not read a file, there is no run, so we keep the file
+  for 30 days after the import failed, in case you ask about it, and then
+  delete it. [OWNER: review]
   [OWNER: confirm the whole-bucket 30-day rule is removed; only the exports/ 8-day rule remains]
 - **Conditions:** the weather for each hour of the run, looked up from its
   start point and time (see [Weather and location](#weather-and-location)).
@@ -300,17 +302,17 @@ sets no cookies and keeps no personal data. [OWNER: review]
 
 ## How long we keep it
 
-| What                                                                                            | How long                                                                                                                                                                                                           |
-| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Imported run files                                                                              | Until you delete the run or your account. A file we could not read: 30 days after the import failed [OWNER: review] [OWNER: confirm the whole-bucket 30-day rule is removed; only the exports/ 8-day rule remains] |
-| Session records                                                                                 | Expire after 7 days. [OWNER: expired rows are not swept today; decide a period]                                                                                                                                    |
-| Strava refresh token                                                                            | Until you disconnect, then until Strava confirms revocation                                                                                                                                                        |
-| Garments you delete (never used in a kit)                                                       | The record is deleted; the photo files are not. [OWNER: launch gap]                                                                                                                                                |
-| Garments used in a kit                                                                          | Kept, marked retired, so old kits still make sense                                                                                                                                                                 |
-| Everything else: account, profile, runs, kits, photos, follows, reports, notifications, weather | Kept with no time limit, until it or your account is deleted [OWNER: review] [OWNER: decide a period for what no one deletes]                                                                                      |
-| Server logs                                                                                     | [OWNER: Cloudflare Workers Logs retention for your plan]                                                                                                                                                           |
-| Error reports                                                                                   | [OWNER: Sentry retention for your plan]                                                                                                                                                                            |
-| Product pages we fetched                                                                        | Kept, to re-read later. Not personal data                                                                                                                                                                          |
+| What                                                                                            | How long                                                                                                                                                                                                               |
+| ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Imported run files                                                                              | Until it has been read, usually within a day. A file we could not read: 30 days after the import failed [OWNER: review] [OWNER: confirm the whole-bucket 30-day rule is removed; only the exports/ 8-day rule remains] |
+| Session records                                                                                 | Expire after 7 days. [OWNER: expired rows are not swept today; decide a period]                                                                                                                                        |
+| Strava refresh token                                                                            | Until you disconnect, then until Strava confirms revocation                                                                                                                                                            |
+| Garments you delete (never used in a kit)                                                       | The record is deleted; the photo files are not. [OWNER: launch gap]                                                                                                                                                    |
+| Garments used in a kit                                                                          | Kept, marked retired, so old kits still make sense                                                                                                                                                                     |
+| Everything else: account, profile, runs, kits, photos, follows, reports, notifications, weather | Kept with no time limit, until it or your account is deleted [OWNER: review] [OWNER: decide a period for what no one deletes]                                                                                          |
+| Server logs                                                                                     | [OWNER: Cloudflare Workers Logs retention for your plan]                                                                                                                                                               |
+| Error reports                                                                                   | [OWNER: Sentry retention for your plan]                                                                                                                                                                                |
+| Product pages we fetched                                                                        | Kept, to re-read later. Not personal data                                                                                                                                                                              |
 
 ## Your choices
 
