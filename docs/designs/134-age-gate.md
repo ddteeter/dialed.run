@@ -19,15 +19,16 @@ and Google from Au2 — pass one gate.
 - **`lib/contracts/age.ts`**: `MINIMUM_AGE = 18`, the `birthDate` field
   (a real calendar date, not in the future — shape only), `isOldEnough`,
   the copy, the header name and refusal codes. Client and server import it.
-- **A neutral question.** Au2 asks "Date of birth" with no hint of the
-  cut-off, and the form checks only the shape. The age decision is the
-  server's, so the form cannot be used to probe for the answer that passes
-  (the FTC's neutral age-screen guidance).
+- **The server judges the age.** Au2 asks "Date of birth" and the form
+  checks only its shape. The cut-off is no secret — D-71's line under Au2
+  becomes "dialed.run is for runners 18 and over." (`AGE_LINE`, also the
+  refusal's words) — so what stops a second try is the cookie below, not
+  a neutral screen.
 - **`admitSignUp`** reads `x-birth-date` after Turnstile, before the code:
   - email: missing → `AGE_MISSING` on the field; under 18 → `AGE_REFUSED`.
   - Google: missing passes (it may be an existing account, the invite
     code's rule); present and old enough → `addOAuthServerContext({
-    ageChecked: true })`; under 18 → `AGE_REFUSED` before the redirect.
+ageChecked: true })`; under 18 → `AGE_REFUSED` before the redirect.
   - **The refusal sets a 24-hour cookie** (`dialed_age_refused`), and the
     gate refuses while it is present whatever date is typed, so Back and a
     different year does not get through.

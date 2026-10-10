@@ -41,7 +41,7 @@ say so.
 
 ## The short version
 
-- You must be 16 or over.
+- You must be 18 or over.
 - What you post stays yours. You let us host it, show it, reformat it and
   work with its links so the app can run.
 - Kits are shared with other signed-in runners by default. You can make any
@@ -62,8 +62,10 @@ and "us" mean that person.
 
 ## Who can use [dialed.run]
 
-- **You must be 16 or over.** We do not ask for your date of birth. If we
-  learn that an account belongs to someone under 16, we close it.
+- **You must be 18 or over.** We ask for your date of birth when you sign
+  up, check it, and do not keep it. Do not give a false one. If we learn
+  that an account belongs to someone under 18, we close it and delete what
+  it holds.
 - **Sign-up is by invite only for now.** You need an invite code to create
   an account, or you can ask for one. A code is for the person it was given
   to; do not sell or publish it.

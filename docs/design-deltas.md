@@ -1181,6 +1181,27 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       "last Sep 15 22:40".
       **The ask:** confirm or redraw each.
 
+56. **Au2's date of birth (design 134, decision D-114).** Nothing draws
+    it; built from existing primitives:
+    - **The field** is a `TextField` labelled "Date of birth" with the
+      platform's date control (`type="date"`, `autocomplete="bday"`),
+      after the invite code and before Email. It shows whether or not
+      invite-only is on.
+    - **Its errors** are the field's, from the schema: "Enter your date of
+      birth.", "Enter a real date.", "Check the year." (a year before 1900
+      or a date after today).
+    - **Under 18** is the server's refusal, said in the form band as
+      `NOT CREATED` · "dialed.run is for runners 18 and over." — the same
+      sentence as round 27 #12's line under the form, which now says 18
+      (D-71 said 16). The form band keeps its Try again; pressing it is
+      refused again for a day.
+    - **Google with the date empty**, for an address with no account,
+      comes back to Au2 with Google's band saying `NOT CREATED` · "Enter
+      your date of birth above, then continue with Google." — the shape of
+      item 37's code sentence. Under 18 on Google is the form's sentence in
+      Google's band, before the redirect.
+      **The ask:** draw the field and confirm the three states, or redraw.
+
 ## Answered in round 34 (imported 2026-10-04)
 
 Design sent round 34 with `Theme.dc.html` as the primary file. It carries
