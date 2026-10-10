@@ -6,7 +6,7 @@ the five lanes that build it. The source is the production-readiness audit
 as §N or finding 0.N), the owner's decisions of 2026-09-25 (decisions
 D-37 to D-52 in `docs/decisions.md`), design round 26 (`docs/design-deltas.md`,
 "Answered in round 26", cited as round 26 #N), and six defects the privacy
-policy's drafter found in the code (PR #109; register R-107 to R-112).
+policy's drafter found in the code (PR #109; register R-107 to R-111 and R-143).
 
 **Numbering.** An `R-N` is a row in `docs/deferred.md`; a `D-NN` is a row
 in `docs/decisions.md`. The register used `D-N` too until 2026-10-02, when
