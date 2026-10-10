@@ -7,6 +7,7 @@ import type { AccessGate } from "../../src/modules/auth/access-hook";
  */
 export const OPEN_ACCESS: AccessGate = {
   isInviteOnly: false,
+  checksAge: false,
   passesTurnstile: () => Promise.resolve(true),
   standing: () => Promise.resolve("open"),
   claim: () => Promise.resolve("redeemed"),

@@ -3,12 +3,18 @@ import {
   ACCESS_HEADERS,
   INVITE_COPY,
 } from "../../lib/contracts/access";
+import {
+  AGE_CODES,
+  AGE_COPY,
+  BIRTH_DATE_HEADER,
+} from "../../lib/contracts/age";
 import { forgetSession } from "../../lib/browser/session-memo";
 import {
   AUTH_COPY,
   AccessRefused,
   AuthRejected,
   GOOGLE_REFUSALS,
+  ageRefused,
   turnstileRefused,
 } from "./auth-copy";
 import { BREACHED_CODE } from "./breached-password";
@@ -105,6 +111,7 @@ const NEW_PASSWORD_REFUSALS: FieldRefusals = new Map([
  */
 const SIGN_UP_REFUSALS: FieldRefusals = new Map([
   [BREACHED_CODE, BREACHED_REFUSAL],
+  [AGE_CODES.missing, { field: "birthDate", message: AGE_COPY.missing }],
   ...(["missing", "invalid"] as const).map(
     (refusal) =>
       [
@@ -160,15 +167,18 @@ export async function signIn(values: SignInValues): Promise<void> {
  */
 export interface Admission {
   readonly inviteCode?: string | undefined;
+  readonly birthDate?: string | undefined;
   readonly turnstileToken: string | undefined;
 }
 
 function admissionHeaders({
   inviteCode,
+  birthDate,
   turnstileToken,
 }: Admission): Record<string, string> {
   return {
     [ACCESS_HEADERS.inviteCode]: inviteCode ?? "",
+    [BIRTH_DATE_HEADER]: birthDate ?? "",
     [ACCESS_HEADERS.turnstileToken]: turnstileToken ?? "",
   };
 }
@@ -183,7 +193,10 @@ function admissionHeaders({
  * code's refusals are the code field's.
  */
 export async function signUp(
-  values: SignInValues & { inviteCode?: string | undefined },
+  values: SignInValues & {
+    inviteCode?: string | undefined;
+    birthDate?: string | undefined;
+  },
   turnstileToken: string | undefined,
 ): Promise<void> {
   const { error } = await authClient.signUp.email(
@@ -191,11 +204,13 @@ export async function signUp(
     {
       headers: admissionHeaders({
         inviteCode: values.inviteCode,
+        birthDate: values.birthDate,
         turnstileToken,
       }),
     },
   );
   if (error?.code === ACCESS_CODES.turnstile) throw turnstileRefused();
+  if (error?.code === AGE_CODES.refused) throw ageRefused();
   throwIfRefused(error, SIGN_UP_REFUSALS);
 }
 

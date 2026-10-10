@@ -3,6 +3,7 @@ import {
   INVITE_COPY,
   TURNSTILE_REFUSED,
 } from "../../lib/contracts/access";
+import { AGE_CODES, AGE_COPY } from "../../lib/contracts/age";
 import { CURRENT_PASSWORD_WRONG } from "../../lib/contracts";
 import type { ControlFailure, FormFailure } from "../../ui";
 
@@ -60,6 +61,13 @@ export const AUTH_COPY = {
   Round 28 #9: Google on Au2 with the code field empty.
   */
   googleNoCode: "Enter your invite code above, then continue with Google.",
+  /**
+   * Design 134: Google on Au2 with the date of birth empty, for an address
+   * with no account. Placeholder copy, `googleNoCode`'s shape (design
+   * deltas).
+   */
+  googleNoBirthDate:
+    "Enter your date of birth above, then continue with Google.",
 } as const;
 
 /**
@@ -117,6 +125,23 @@ export class AccessRefused extends Error implements AuthBand {
 export const SIGNUP_DISABLED = "signup_disabled";
 
 /**
+ * Design 134: under 18, on the form and on Google alike. A band, not the
+ * field's line — no date typed into the field fixes it — and no Try again.
+ */
+const AGE_REFUSED_BAND: AuthBand = {
+  kicker: NOT_CREATED,
+  message: AGE_COPY.refused,
+  retry: false,
+};
+
+/**
+The age refusal, as a band says it.
+*/
+export function ageRefused(): AccessRefused {
+  return new AccessRefused(AGE_REFUSED_BAND);
+}
+
+/**
  * Google's refusals, by the code that names them, as round 28 #9 draws
  * them in a band under the button: no code ("enter it above"), a refused
  * code (the field's sentence, and Request access), and Au1's address with
@@ -137,6 +162,15 @@ export const GOOGLE_REFUSALS: ReadonlyMap<string | undefined, AuthBand> =
         link: "request-access",
       },
     ],
+    [
+      AGE_CODES.missing,
+      {
+        kicker: NOT_CREATED,
+        message: AUTH_COPY.googleNoBirthDate,
+        retry: false,
+      },
+    ],
+    [AGE_CODES.refused, AGE_REFUSED_BAND],
     [
       SIGNUP_DISABLED,
       {

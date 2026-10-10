@@ -89,6 +89,7 @@ describe("signInSchema", () => {
 
 const signUp = {
   inviteCode: "DIAL-7K3P",
+  birthDate: "1990-04-21",
   ...signIn,
   password: "hunter22hunter22",
 };
@@ -115,11 +116,19 @@ describe("signUpSchemaFor (the invite-only flag)", () => {
 
   it("asks for no code when invite-only is off, and ignores one that comes", () => {
     const open = signUpSchemaFor(false);
-    const { email, password } = signUp;
-    expect(open.safeParse({ email, password }).success).toBe(true);
+    const { birthDate, email, password } = signUp;
+    expect(open.safeParse({ birthDate, email, password }).success).toBe(true);
     expect(open.parse({ ...signUp, inviteCode: "anything" })).toMatchObject({
       inviteCode: "anything",
     });
+  });
+
+  it("asks the date of birth whether or not invite-only is on, by its shape alone", () => {
+    for (const schema of [signUpSchemaFor(true), signUpSchemaFor(false)]) {
+      expect(
+        messagesFor(schema, { ...signUp, birthDate: "" }, "birthDate"),
+      ).toStrictEqual(["Enter your date of birth."]);
+    }
   });
 
   it("is invite-only today (D-39)", () => {
@@ -159,10 +168,11 @@ describe("signUpSchema", () => {
     expect(signUpSchema.safeParse(signUp).success).toBe(true);
   });
 
-  it("asks for the invite code, email and password only — the handle is O0's (round 26 #7, #20)", () => {
+  it("asks for the invite code, date of birth, email and password only — the handle is O0's (round 26 #7, #20; design 134)", () => {
     expect(signUpSchema.safeParse({}).success).toBe(false);
     expect(Object.keys(signUpSchema.shape)).toStrictEqual([
       "inviteCode",
+      "birthDate",
       "email",
       "password",
     ]);

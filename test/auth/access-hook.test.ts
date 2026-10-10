@@ -24,6 +24,7 @@ import {
 import { createAuth } from "../../src/modules/auth/create-auth";
 import type { TurnstileAttempt } from "../../src/modules/ops";
 import { recordingMail } from "./mail-recorder";
+import { OPEN_ACCESS } from "./open-access";
 
 /**
  * The way in (task 126, ACC-5), through Better Auth itself on real D1:
@@ -40,6 +41,10 @@ const NO_CONTEXT = z.null().parse(JSON.parse("null"));
 const db = drizzle(env.DIALED_CORE);
 const ORIGIN = "http://localhost";
 const PASSWORD = ["a", "long", "enough", "passphrase"].join("-");
+/**
+A birth date well past the cut-off, which every sign-up here sends unless a test says otherwise.
+*/
+const ADULT = "1990-04-21";
 const CLEAN_SCREEN = {
   verdict: () => Promise.resolve("clean" as const),
   report: () => {
@@ -103,7 +108,12 @@ function signUpRequest(
 ): Request {
   return new Request(`${ORIGIN}/api/auth/sign-up/email`, {
     method: "POST",
-    headers: { "content-type": "application/json", origin: ORIGIN, ...headers },
+    headers: {
+      "content-type": "application/json",
+      origin: ORIGIN,
+      "x-birth-date": ADULT,
+      ...headers,
+    },
     body: JSON.stringify({ email, password: PASSWORD, name: "Maya Runner" }),
   });
 }
@@ -343,6 +353,7 @@ async function googleRoundTrip(
       headers: {
         "content-type": "application/json",
         origin: ORIGIN,
+        "x-birth-date": ADULT,
         ...headers,
       },
       body: JSON.stringify({
@@ -423,7 +434,7 @@ describe("Google sign-up through the gate", () => {
       auth,
       email,
       { requestSignUp: true },
-      { "x-turnstile-token": "token" },
+      { "x-turnstile-token": "token", "x-birth-date": "" },
     );
     expect(started.status).toBe(200);
     expect(landing?.pathname).toBe("/");
@@ -490,6 +501,7 @@ describe("Google sign-up through the gate", () => {
     const claims: unknown[] = [];
     const create = claimInvite({
       isInviteOnly: true,
+      checksAge: false,
       passesTurnstile: () => Promise.resolve(true),
       standing: () => Promise.resolve("open"),
       claim: (claim) => {
@@ -507,6 +519,7 @@ describe("Google sign-up through the gate", () => {
   it("refuses to make an account when the claim itself is refused", async () => {
     const create = claimInvite({
       isInviteOnly: true,
+      checksAge: false,
       passesTurnstile: () => Promise.resolve(true),
       standing: () => Promise.resolve("open"),
       claim: () => Promise.resolve("used"),
@@ -536,6 +549,7 @@ describe("Google sign-up through the gate", () => {
     try {
       const create = claimInvite({
         isInviteOnly: true,
+        checksAge: false,
         passesTurnstile: () => Promise.resolve(true),
         standing: () => Promise.resolve("open"),
         claim: () => Promise.resolve("redeemed"),
@@ -574,6 +588,7 @@ describe("admitSignUp", () => {
     try {
       const gate: AccessGate = {
         isInviteOnly: true,
+        checksAge: false,
         passesTurnstile: () => Promise.resolve(true),
         standing: () => Promise.resolve("open"),
         claim: () => Promise.resolve("redeemed"),
@@ -594,6 +609,7 @@ describe("admitSignUp without a code", () => {
   const standings: string[] = [];
   const gate: AccessGate = {
     isInviteOnly: true,
+    checksAge: false,
     passesTurnstile: () => Promise.resolve(true),
     standing: (code) => {
       standings.push(code);
@@ -637,5 +653,188 @@ describe("admitSignUp without a code", () => {
     ).rejects.toMatchObject({
       body: { code: "INVITE_INVALID", message: INVITE_COPY.invalid },
     });
+  });
+});
+
+/**
+An email sign-up with a fresh code, Turnstile passing, and these headers on top.
+*/
+async function emailSignUp(
+  access: AccessGate,
+  headers: Record<string, string>,
+) {
+  const code = freshCode();
+  await seedCode(code);
+  const email = address();
+  const response = await instance(access).handler(
+    signUpRequest(email, {
+      "x-invite-code": code,
+      "x-turnstile-token": "token",
+      ...headers,
+    }),
+  );
+  return { response, email };
+}
+
+/**
+ * The age gate (design 134, D-114): asked on both ways in, refused on the
+ * server, held by a cookie for a day, and never kept.
+ */
+describe("the age gate", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const UNDER_AGE = `${String(new Date().getUTCFullYear() - 10)}-01-01`;
+
+  it("refuses an email sign-up with no date, and makes no account", async () => {
+    const { response, email } = await emailSignUp(
+      accessGate(db, turnstile().verify),
+      { "x-birth-date": "" },
+    );
+    expect(response.status).toBe(400);
+    expect(await refusal(response)).toEqual({
+      code: "AGE_MISSING",
+      message: "Enter your date of birth.",
+    });
+    expect(response.headers.getSetCookie()).toEqual([]);
+    expect(await accountFor(email)).toBeUndefined();
+  });
+
+  it("refuses a date that is not one in the field's own words", async () => {
+    const { response } = await emailSignUp(accessGate(db, turnstile().verify), {
+      "x-birth-date": "1899-12-31",
+    });
+    expect(await refusal(response)).toEqual({
+      code: "AGE_MISSING",
+      message: "Check the year.",
+    });
+  });
+
+  it("refuses someone under 18, sets the day-long cookie, and makes no account", async () => {
+    const { response, email } = await emailSignUp(
+      accessGate(db, turnstile().verify),
+      { "x-birth-date": UNDER_AGE },
+    );
+    expect(response.status).toBe(403);
+    expect(await refusal(response)).toEqual({
+      code: "AGE_REFUSED",
+      message: "dialed.run is for runners 18 and over.",
+    });
+    expect(response.headers.getSetCookie()).toEqual([
+      "dialed_age_refused=1; Max-Age=86400; Path=/; HttpOnly; Secure; SameSite=Lax",
+    ]);
+    expect(await accountFor(email)).toBeUndefined();
+  });
+
+  it("refuses a browser it refused in the last day, whatever date it sends now", async () => {
+    const { response, email } = await emailSignUp(
+      accessGate(db, turnstile().verify),
+      { cookie: "theme=dark; dialed_age_refused=1" },
+    );
+    expect(response.status).toBe(403);
+    expect(await refusal(response)).toMatchObject({ code: "AGE_REFUSED" });
+    expect(await accountFor(email)).toBeUndefined();
+  });
+
+  it("reads only its own cookie, not one whose name merely ends the same", async () => {
+    const { response, email } = await emailSignUp(
+      accessGate(db, turnstile().verify),
+      { cookie: "not_dialed_age_refused=1" },
+    );
+    expect(response.status).toBe(200);
+    expect(await accountFor(email)).toBeDefined();
+  });
+
+  it("still asks with invite-only off", async () => {
+    const { response } = await emailSignUp(
+      { ...accessGate(db, turnstile().verify), isInviteOnly: false },
+      { "x-birth-date": UNDER_AGE },
+    );
+    expect(response.status).toBe(403);
+  });
+
+  it("asks nothing when the gate does not check age", async () => {
+    const { response, email } = await emailSignUp(
+      { ...accessGate(db, turnstile().verify), checksAge: false },
+      { "x-birth-date": "" },
+    );
+    expect(response.status).toBe(200);
+    expect(await accountFor(email)).toBeDefined();
+  });
+
+  it("refuses Google under 18 before the redirect, with the cookie", async () => {
+    const code = freshCode();
+    await seedCode(code);
+    const auth = instance(accessGate(db, turnstile().verify));
+    const { started } = await googleRoundTrip(
+      auth,
+      address(),
+      { requestSignUp: true },
+      {
+        "x-invite-code": code,
+        "x-turnstile-token": "token",
+        "x-birth-date": UNDER_AGE,
+      },
+    );
+    expect(started.status).toBe(403);
+    expect(await refusal(started)).toMatchObject({ code: "AGE_REFUSED" });
+    expect(started.headers.getSetCookie()[0]).toMatch(
+      /^dialed_age_refused=1;/u,
+    );
+  });
+
+  it("refuses a new Google account made with no date, after the round trip, and spends no code", async () => {
+    const code = freshCode();
+    const codeId = await seedCode(code);
+    const email = address();
+    const auth = instance(accessGate(db, turnstile().verify));
+    const { landing } = await googleRoundTrip(
+      auth,
+      email,
+      { requestSignUp: true },
+      {
+        "x-invite-code": code,
+        "x-turnstile-token": "token",
+        "x-birth-date": "",
+      },
+    );
+    expect(landing?.pathname).toBe("/auth/signup");
+    expect(landing?.searchParams.get("error")).toBe("AGE_MISSING");
+    expect(await accountFor(email)).toBeUndefined();
+    const spent = await db
+      .select()
+      .from(inviteRedemptions)
+      .where(eq(inviteRedemptions.codeId, codeId));
+    expect(spent).toEqual([]);
+  });
+
+  it("refuses that account with invite-only off too", async () => {
+    const email = address();
+    const auth = instance({
+      ...accessGate(db, turnstile().verify),
+      isInviteOnly: false,
+    });
+    const { landing } = await googleRoundTrip(
+      auth,
+      email,
+      { requestSignUp: true },
+      { "x-turnstile-token": "token", "x-birth-date": "" },
+    );
+    expect(landing?.searchParams.get("error")).toBe("AGE_MISSING");
+    expect(await accountFor(email)).toBeUndefined();
+  });
+
+  it("refuses an account made outside a request when the gate checks age", async () => {
+    const create = claimInvite({
+      ...accessGate(db, turnstile().verify),
+      isInviteOnly: false,
+    });
+    await expect(
+      create({ email: address() }, NO_CONTEXT),
+    ).rejects.toMatchObject({ body: { code: "AGE_MISSING" } });
+    await expect(
+      claimInvite(OPEN_ACCESS)({ email: "a@example.test" }, NO_CONTEXT),
+    ).resolves.toEqual({ data: { email: "a@example.test", name: "" } });
   });
 });

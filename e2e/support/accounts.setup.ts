@@ -65,6 +65,7 @@ setup("create the demo accounts", async ({ browser }, testInfo) => {
         .waitFor({ state: "attached" });
       if (path === "/auth/signup") {
         await page.getByLabel("Invite code").fill(inviteCode);
+        await page.getByLabel("Date of birth").fill("1990-04-21");
         await turnstileAnswered(page);
       }
       await page.getByLabel("Email").fill(email);

@@ -871,11 +871,11 @@ describe("AuthCrossLink and AuthLegal", () => {
   it("carries Au2's terms and age lines at micro (round 27 #12; D-52, D-71)", async () => {
     await renderWithRouter(<AuthLegal />);
     const legal = screen.getByText(
-      "dialed.run is for runners 16 and over.",
+      "dialed.run is for runners 18 and over.",
     ).parentElement;
     expect(legal).toHaveClass("text-micro", "text-muted");
     expect(legal).toHaveTextContent(
-      /^By creating an account you agree to the Terms and have read the Privacy policy\.dialed\.run is for runners 16 and over\.$/u,
+      /^By creating an account you agree to the Terms and have read the Privacy policy\.dialed\.run is for runners 18 and over\.$/u,
     );
     const terms = screen.getByRole("link", { name: "Terms" });
     expect(terms).toHaveAttribute("href", "/terms");

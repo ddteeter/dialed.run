@@ -387,7 +387,7 @@ export function TextField({
   field: (name: string) => FieldProps;
   error?: string | undefined;
   hint?: string | undefined;
-  type?: "text" | "email" | "password" | "url";
+  type?: "text" | "email" | "password" | "url" | "date";
   autoComplete?: string | undefined;
   /**
    * The id of a `<datalist>` holding suggestions for this field.
