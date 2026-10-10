@@ -11,7 +11,11 @@ import {
 import { env } from "../../env";
 import { chunked, IN_LIST_CHUNK } from "../../lib/chunked";
 import { columnWhere } from "../../lib/sql/keyed-read";
-import { abandonedBefore, listAbandonedEnrichments } from "../enrichment";
+import {
+  abandonedBefore,
+  extractionFailed,
+  listAbandonedEnrichments,
+} from "../enrichment";
 import { pruneStravaIds } from "../runs";
 import { retryPendingWeather } from "../weather";
 import { cronNameFor, type CronName } from "./crons";
@@ -481,7 +485,7 @@ const ENRICHMENT_STALL_GRACE_S = 15 * 60;
 function failedAndOwed(): SQL | undefined {
   const staleBefore = nowSeconds() - ENRICHMENT_STALL_GRACE_S;
   return and(
-    eq(products.extractionStatus, "failed"),
+    extractionFailed(),
     lt(products.createdAt, staleBefore),
     gt(products.createdAt, abandonedBefore()),
   );
@@ -748,7 +752,7 @@ async function checkAbandonedEnrichments(anomalies: string[]): Promise<void> {
   // out: the ids are what the covering index carries, and the two checks
   // are different backlogs that should not read as one clone.
   const failedPastTheWindow = and(
-    eq(products.extractionStatus, "failed"),
+    extractionFailed(),
     lt(products.createdAt, abandonedBefore()),
   );
   const abandoned = await columnWhere(
