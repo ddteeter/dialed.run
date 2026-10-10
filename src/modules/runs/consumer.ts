@@ -88,10 +88,32 @@ async function didClaimImport(db: CoreDb, importId: string): Promise<boolean> {
 /**
  * How long a file we could not read is kept after its import failed
  * (owner, 2026-10-04): long enough for the runner to ask about it, and
- * for us to re-parse it after a parser fix. A failed import has no run, so
- * "as long as the run" (D-110) cannot apply to it.
+ * for us to re-parse it after a parser fix. A file that was read goes at
+ * once (`fileGoes`, D-116).
  */
 const FAILED_IMPORT_FILE_DAYS = 30;
+
+/**
+ * A read file's deletion, owed now (decision D-116, replacing D-110's
+ * "kept as long as the run"). Once the run row holds what was read, the
+ * file is only a full GPS track — usually starting at a front door — that
+ * nothing reads again. Owed in the batch that concludes the import, so the
+ * conclusion never lands without it (law 8c), and paid by the daily drain:
+ * `import_file_expire` is the scheduled kind, so a debt the drain finds due
+ * is the schedule arriving rather than a fast path that failed.
+ */
+function fileGoes(
+  deps: Pick<ConsumerDeps, "owe">,
+  importRow: { userId: string; r2Key: string },
+) {
+  return deps.owe(
+    {
+      kind: "import_file_expire",
+      payload: { userId: importRow.userId, key: importRow.r2Key },
+    },
+    nowSeconds(),
+  );
+}
 
 /**
  * Mark the import failed, tell its runner, and owe its file's deletion
@@ -197,10 +219,15 @@ async function processImportJob(
     draft.startedAt,
   );
   if (duplicate !== undefined) {
-    await deps.db
-      .update(imports)
-      .set({ status: "duplicate", runId: duplicate.id })
-      .where(eq(imports.id, importRow.id));
+    // The run is already in the log, so this copy of its file is not
+    // needed either.
+    await deps.db.batch([
+      deps.db
+        .update(imports)
+        .set({ status: "duplicate", runId: duplicate.id })
+        .where(eq(imports.id, importRow.id)),
+      fileGoes(deps, importRow),
+    ]);
     return;
   }
 
@@ -234,8 +261,9 @@ async function processImportJob(
   }
 
   // The import is done, and the Strava reminder this file answers — if it
-  // had one — is answered (round 25; one upload clears one reminder). One
-  // batch: all three record the same fact, that this run is now in the log.
+  // had one — is answered (round 25; one upload clears one reminder), and
+  // the file it was read from is owed its deletion (D-116). One batch: all
+  // four follow from the same fact, that this run is now in the log.
   const pairing = pairWithReminder(
     deps.db,
     importRow.userId,
@@ -249,6 +277,7 @@ async function processImportJob(
       .where(eq(imports.id, importRow.id)),
     pairing.pairRun,
     pairing.markRead,
+    fileGoes(deps, importRow),
   ]);
 
   await createNotification(deps.db, {

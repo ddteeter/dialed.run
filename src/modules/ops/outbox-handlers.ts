@@ -290,7 +290,8 @@ export const outboxHandlers: OutboxHandlers = {
     }),
   },
   import_file_delete: importFileDelete,
-  // A failed import's file, 30 days on: the same delete, owed on a date.
+  // A run file owed on a date — read (D-116), or failed 30 days ago: the
+  // same delete.
   import_file_expire: importFileDelete,
   // Task 126 (ACC-2): an owed email (`emailHandler`).
   email: emailHandler(emailDepsFromEnv),

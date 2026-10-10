@@ -106,9 +106,9 @@ export interface PurgeDeps {
   */
   readonly revokeStrava: (userId: string) => Promise<void>;
   /**
-   * `IMPORTS`: the runner's uploaded run files (`imports/`, kept for as
-   * long as the run since D-110) and their data export ZIPs (`exports/`,
-   * ACC-10).
+   * `IMPORTS`: the runner's uploaded run files (`imports/`, kept only
+   * until read since D-116, or 30 days after a failed read) and their data
+   * export ZIPs (`exports/`, ACC-10).
    */
   readonly importsBucket: Pick<R2Bucket, "list" | "delete">;
   readonly report: Report;
@@ -237,7 +237,7 @@ export async function purgeAccount(
  * their data export ZIPs (ACC-10), each found by listing its prefix rather
  * than from rows. So a ZIP a build staged before its row said so goes too,
  * and so does an upload whose row was never written (`startImport` puts
- * the file before the row). Since D-110 no bucket rule expires either
+ * the file before the row). No bucket rule expires either
  * kind of upload, so this listing is the only thing that ever removes one
  * of those.
  *

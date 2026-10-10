@@ -316,7 +316,7 @@ async function retryWeather(row: Row, deps: RetryDeps): Promise<RetryOutcome> {
 
 /**
  * An import goes back to `pending`, its owed file deletion is cancelled —
- * the file is now a run's again, kept as long as the run (D-110) — and
+ * the file is to be read again, and reading it owes its deletion (D-116) — and
  * `import` is sent. A send that fails leaves the import `pending`, which
  * the stalled-import sweep re-dispatches, so the send's failure is
  * reported rather than thrown. A retry that fails again re-owes the
