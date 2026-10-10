@@ -16,6 +16,7 @@
 import { and, eq, sql } from "drizzle-orm";
 
 import { takedownRequests } from "../../db/schema-core";
+import { takedownSubjectOf } from "../../lib/contracts/takedown";
 import { nowSeconds } from "../../lib/now";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { emailDebt } from "../email";
@@ -24,9 +25,14 @@ import { moderateContent } from "./moderation";
 
 type Db = Parameters<typeof moderateContent>[0];
 
-export type RemovalDecision =
-  | { readonly outcome: "removed" }
-  | { readonly outcome: "declined"; readonly reason: string };
+/**
+ * What the operator decided. `reason` is a decline's; the server input
+ * (`removalDecisionInput`) requires it there and allows it nowhere else.
+ */
+export interface RemovalDecision {
+  readonly outcome: "removed" | "declined";
+  readonly reason?: string | undefined;
+}
 
 export type RemovalDecisionResult = "decided" | "already_decided" | "not_found";
 
@@ -44,21 +50,20 @@ export async function decideRemovalRequest(
   );
   if (request === undefined) return "not_found";
   if (request.status !== "pending") return "already_decided";
-  if (
-    decision.outcome === "removed" &&
-    request.subjectType !== null &&
-    request.subjectId !== null
-  ) {
+  // The subject is read from the link as filed, the way Review shows it:
+  // a link that is not ours names nothing to take down.
+  const subject = takedownSubjectOf(request.location);
+  if (subject !== undefined && decision.outcome === "removed") {
     await moderateContent(db, {
       actorId,
       action: "takedown",
-      subjectType: request.subjectType,
-      subjectId: request.subjectId,
+      subjectType: subject.subjectType,
+      subjectId: subject.subjectId,
       reason: "intimate",
       notice: `removal request ${request.id}`,
     });
   }
-  const reason = decision.outcome === "declined" ? decision.reason : undefined;
+  const { reason } = decision;
   // The row as this decision leaves it: only then is the email owed.
   const decided = sql`${takedownRequests.id} = ${request.id} and ${takedownRequests.status} = ${decision.outcome} and ${takedownRequests.resolvedAt} = ${now}`;
   const stillPending = and(

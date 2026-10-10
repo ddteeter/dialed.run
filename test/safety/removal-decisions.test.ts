@@ -43,7 +43,10 @@ async function seedRequest(
       id,
       requesterEmail: "sam@example.com",
       signature: "Sam Runner",
-      location: "https://dialed.run/feed/entry/x",
+      location:
+        subject === undefined
+          ? "a photo on a site that is not ours"
+          : `https://dialed.run/feed/entry/${subject.subjectId}`,
       subjectType: subject?.subjectType,
       subjectId: subject?.subjectId,
       dueAt: NOW + 172_800,

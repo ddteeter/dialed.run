@@ -72,27 +72,30 @@ export type TakedownSubject = Readonly<{
 const ENTRY_PATH = /^\/feed\/entry\/([^/]+)\/?$/u;
 const PHOTO_PATH = /^\/feed\/photo\/entries\/[^/]+\/([^/]+)\/([^/]+)$/u;
 
+/**
+ * A path's match, read as the ids it must hold: the whole match, then each
+ * group a ULID. A match is an array, so the tuple is the parse — and a
+ * missed match (`null`) or a group that is not an id fails it the same way.
+ */
+const entryMatch = z.tuple([z.string(), ulidSchema]);
+const photoMatch = z.tuple([z.string(), ulidSchema, ulidSchema]);
+
 export function takedownSubjectOf(
   location: string,
 ): TakedownSubject | undefined {
-  const path = pathOf(location);
-  const entry = ENTRY_PATH.exec(path)?.[1];
-  if (entry !== undefined && isUlid(entry)) {
-    return { subjectType: "entry", subjectId: entry, entryId: entry };
-  }
-  const [, entryId = "", photoId = ""] = PHOTO_PATH.exec(path) ?? [];
-  return isUlid(entryId) && isUlid(photoId)
-    ? { subjectType: "photo", subjectId: photoId, entryId }
+  return URL.canParse(location)
+    ? subjectAt(new URL(location).pathname)
     : undefined;
 }
 
-function isUlid(value: string): boolean {
-  return ulidSchema.safeParse(value).success;
-}
-
-/**
-The path of a link, or an empty path when the text is not a URL.
-*/
-function pathOf(location: string): string {
-  return URL.canParse(location) ? new URL(location).pathname : "";
+function subjectAt(path: string): TakedownSubject | undefined {
+  const entry = entryMatch.safeParse(ENTRY_PATH.exec(path));
+  if (entry.success) {
+    const [, entryId] = entry.data;
+    return { subjectType: "entry", subjectId: entryId, entryId };
+  }
+  const photo = photoMatch.safeParse(PHOTO_PATH.exec(path));
+  if (!photo.success) return undefined;
+  const [, entryId, photoId] = photo.data;
+  return { subjectType: "photo", subjectId: photoId, entryId };
 }

@@ -6,8 +6,11 @@ import {
   blockRunnerInput,
   denyDomainInput,
   fileReportInput,
+  removalDecisionInput,
   reviewDecisionInput,
+  takedownRequestInput,
 } from "../../src/modules/safety";
+import { declineReasonField } from "../../src/modules/safety/contracts";
 
 /**
  * The trust boundary, and the place this app's error copy lives.
@@ -250,5 +253,109 @@ describe("denying a domain", () => {
         reason: "x".repeat(501),
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("a /takedown request on the wire (design 136)", () => {
+  const request = {
+    email: "sam@example.com",
+    signature: "Sam Runner",
+    location: "https://dialed.run/feed/entry/x",
+    description: "",
+    isAttested: true,
+    idempotencyKey: newUlid(),
+  };
+
+  it("carries the form and Turnstile's answer, up to its length", () => {
+    expect(
+      takedownRequestInput.parse({ ...request, turnstileToken: "t" }),
+    ).toStrictEqual({ ...request, turnstileToken: "t" });
+    expect(takedownRequestInput.parse(request)).toStrictEqual(request);
+    expect(
+      takedownRequestInput.safeParse({
+        ...request,
+        turnstileToken: "t".repeat(2048),
+      }).success,
+    ).toBe(true);
+    expect(
+      takedownRequestInput.safeParse({
+        ...request,
+        turnstileToken: "t".repeat(2049),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("refuses what the form would", () => {
+    expect(
+      takedownRequestInput.safeParse({ ...request, isAttested: false }).success,
+    ).toBe(false);
+  });
+});
+
+describe("an operator's decision on a request (design 136)", () => {
+  const requestId = newUlid();
+
+  it("takes a removal with no reason, and keeps none it is sent", () => {
+    expect(
+      removalDecisionInput.parse({ requestId, outcome: "removed" }),
+    ).toStrictEqual({ requestId, outcome: "removed" });
+    expect(
+      removalDecisionInput.parse({
+        requestId,
+        outcome: "removed",
+        reason: "ignored",
+      }),
+    ).toStrictEqual({ requestId, outcome: "removed" });
+  });
+
+  it("takes a decline only with a reason, trimmed", () => {
+    expect(
+      removalDecisionInput.parse({
+        requestId,
+        outcome: "declined",
+        reason: "  shoes ",
+      }),
+    ).toStrictEqual({ requestId, outcome: "declined", reason: "shoes" });
+    expect(
+      removalDecisionInput.safeParse({ requestId, outcome: "declined" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("refuses an outcome it does not know, or no request", () => {
+    expect(
+      removalDecisionInput.safeParse({ requestId, outcome: "maybe" }).success,
+    ).toBe(false);
+    expect(removalDecisionInput.safeParse({ outcome: "removed" }).success).toBe(
+      false,
+    );
+    expect(
+      removalDecisionInput.safeParse({ requestId: "x", outcome: "removed" })
+        .success,
+    ).toBe(false);
+  });
+});
+
+function reasonMessages(reason: string): string[] | undefined {
+  return declineReasonField
+    .safeParse(reason)
+    .error?.issues.map((issue) => issue.message);
+}
+
+describe("a decline's reason", () => {
+  const messages = reasonMessages;
+
+  it("asks for one, a blank one included", () => {
+    expect(messages("")).toStrictEqual(["Say why, for the person who asked."]);
+    expect(messages(" ".repeat(3))).toStrictEqual([
+      "Say why, for the person who asked.",
+    ]);
+  });
+
+  it("takes 500 characters and refuses 501", () => {
+    expect(messages("a".repeat(500))).toBeUndefined();
+    expect(messages("a".repeat(501))).toStrictEqual([
+      "Keep it under 500 characters.",
+    ]);
   });
 });

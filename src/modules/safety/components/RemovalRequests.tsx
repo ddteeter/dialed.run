@@ -15,6 +15,7 @@ import {
   useFormSubmit,
 } from "../../../ui";
 import type { PendingTakedownRequest } from "../takedown-requests";
+import { useSettled } from "./use-settled";
 
 /**
  * Decline's one field — the decision's server input reads the same one
@@ -36,6 +37,10 @@ type Decide = (input: {
  * Undesigned: Review's row parts and the forms primitives, placeholder
  * words (design deltas item 58).
  */
+function requestId(request: PendingTakedownRequest): string {
+  return request.id;
+}
+
 export function RemovalRequests({
   requests,
   decide,
@@ -43,10 +48,10 @@ export function RemovalRequests({
   requests: readonly PendingTakedownRequest[];
   decide: Decide;
 }>): JSX.Element | undefined {
-  const [decided, setDecided] = useState<readonly string[]>([]);
-  const waiting = requests.filter((request) => !decided.includes(request.id));
+  // A decided request leaves the list, as a decided review row does.
+  const { remaining, settle } = useSettled(requests, requestId);
   return (
-    <ListSection title="to remove" items={waiting} count>
+    <ListSection title="to remove" items={remaining} count>
       {(request) => (
         <li
           key={request.id}
@@ -68,14 +73,14 @@ export function RemovalRequests({
             requestId={request.id}
             decide={decide}
             onDecided={() => {
-              setDecided((ids) => [...ids, request.id]);
+              settle(request.id);
             }}
           />
           <DeclineForm
             requestId={request.id}
             decide={decide}
             onDecided={() => {
-              setDecided((ids) => [...ids, request.id]);
+              settle(request.id);
             }}
           />
         </li>
@@ -123,7 +128,6 @@ function RemoveForm({
     schema: z.object({}),
     action: () => decide({ data: { requestId, outcome: "removed" } }),
     successMessage: "Removed.",
-    labels: {},
     onSuccess: onDecided,
   });
   return (
@@ -163,7 +167,6 @@ function DeclineForm({
     action: (values) =>
       decide({ data: { requestId, outcome: "declined", ...values } }),
     successMessage: "Declined.",
-    labels: { reason: "Why not" },
     onSuccess: onDecided,
   });
   return (

@@ -117,6 +117,7 @@ describe("/takedown", () => {
     await fillIn(user);
     await user.click(screen.getByRole("button", { name: "Send request" }));
 
+    expect(await screen.findByText("Request sent.")).toBeInTheDocument();
     const receipt = await waitFor(() => {
       const found = part("receipt");
       expect(found).not.toBeNull();
@@ -256,6 +257,13 @@ describe("Review · removal requests", () => {
     expect(screen.getByText("[1 to remove]")).toBeInTheDocument();
   });
 
+  it("leaves out the description's line when there is none", async () => {
+    await renderWithRouter(
+      <RemovalRequests requests={[pending()]} decide={vi.fn<DecideFn>()} />,
+    );
+    expect(part("removal-request")?.querySelectorAll("p")).toHaveLength(1);
+  });
+
   it("opens a reported photo's kit, and says when a link is not ours", async () => {
     await renderWithRouter(
       <RemovalRequests
@@ -282,17 +290,36 @@ describe("Review · removal requests", () => {
     ).toBeVisible();
   });
 
-  it("takes it down, and the request leaves the list", async () => {
+  it("takes it down, says so, and only that request leaves the list", async () => {
     const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
     await renderWithRouter(
-      <RemovalRequests requests={[pending()]} decide={decide} />,
+      <RemovalRequests
+        requests={[
+          pending(),
+          pending({
+            id: "01JREQUEST0000000000000009",
+            signature: "Other Asker",
+          }),
+        ]}
+        decide={decide}
+      />,
     );
-    await userEvent
-      .setup()
-      .click(screen.getByRole("button", { name: "Take it down" }));
+    const [first] = document.querySelectorAll<HTMLElement>(
+      "[data-part='removal-request']",
+    );
+    await userEvent.setup().click(
+      within(first ?? document.body).getByRole("button", {
+        name: "Take it down",
+      }),
+    );
+    expect(await screen.findByText("Removed.")).toBeInTheDocument();
     await waitFor(() => {
-      expect(part("removal-request")).toBeNull();
+      expect(
+        document.querySelectorAll("[data-part='removal-request']"),
+      ).toHaveLength(1);
     });
+    expect(part("removal-request")).toHaveTextContent("Other Asker");
+    expect(screen.getByText("[1 to remove]")).toBeInTheDocument();
     expect(decide).toHaveBeenCalledWith({
       data: { requestId: "01JREQUEST0000000000000001", outcome: "removed" },
     });
@@ -304,6 +331,7 @@ describe("Review · removal requests", () => {
       <RemovalRequests requests={[pending()]} decide={decide} />,
     );
     const user = userEvent.setup();
+    expect(screen.getByText("The person who asked is sent this.")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Decline" }));
     expect(
       await screen.findAllByText("Say why, for the person who asked."),
@@ -311,10 +339,8 @@ describe("Review · removal requests", () => {
     expect(decide).not.toHaveBeenCalled();
 
     await user.type(screen.getByLabelText("Why not"), "shoes");
-    expect(
-      screen.getByText("The person who asked is sent this."),
-    ).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Decline" }));
+    expect(await screen.findByText("Declined.")).toBeInTheDocument();
     await waitFor(() => {
       expect(part("removal-request")).toBeNull();
     });
