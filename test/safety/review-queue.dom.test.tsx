@@ -612,6 +612,8 @@ describe("what a row tells the reviewer", () => {
   it("shows no clock on any other row", () => {
     renderQueue([row({ reporterCount: 3 })]);
     expect(screen.queryByText(/Due in|Overdue/u)).toBeNull();
+    // Not even an empty bracket where the clock would be.
+    expect(screen.queryByText("[]")).toBeNull();
   });
 
   it("says nobody reported a row the classifier raised", () => {
