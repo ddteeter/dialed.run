@@ -39,7 +39,7 @@ Two PRs, stacked.
   - PR B: one new table. Additive, so it proceeds and is named in the PR.
 - New route: PR B, `src/routes/takedown.tsx`.
 - New bindings/queues/crons: none.
-- Screens: W1 gains a reason, the Review row gains a deadline, and PR B adds a new page, form and section. All are undesigned and go in `docs/design-deltas.md` item 57 and the round 35 prompt.
+- Screens: W1 gains a reason, the Review row gains a deadline, and PR B adds a new page, form and section. All are undesigned and go in `docs/design-deltas.md` item 58 and the round 35 prompt.
 
 ## Test plan
 

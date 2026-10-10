@@ -24,7 +24,7 @@ import { z } from "zod";
 export const reportReasons = [
   { value: "explicit", label: "The photo shows someone inappropriately" },
   // Design 136 (D-117): placeholder words until design gives them (design
-  // deltas item 57). The one reason that hides at once (`reportersToHide`).
+  // deltas item 58). The one reason that hides at once (`reportersToHide`).
   { value: "intimate", label: "It's an intimate image shared without consent" },
   { value: "harassment", label: "Harassment aimed at someone" },
   { value: "spam", label: "It's an ad, or it's spam" },
@@ -125,7 +125,7 @@ export const REMOVAL_DUE_SECONDS = 48 * 60 * 60;
 /**
  * The Review row's clock (design 136): whole hours left, rounded up so the
  * last minutes still read "Due in 1h", then "Overdue". Placeholder words
- * (design deltas item 57).
+ * (design deltas item 58).
  */
 export function removalDueLabel(dueAt: number, now: number): string {
   const left = dueAt - now;
@@ -142,7 +142,7 @@ export function removalDueLabel(dueAt: number, now: number): string {
 export const removalStatements = {
   home: "it shows where someone lives",
   explicit: "it's sexual or explicit",
-  // Design 136: placeholder words (design deltas item 57).
+  // Design 136: placeholder words (design deltas item 58).
   intimate: "it's an intimate image shared without consent",
   harassment: "it harasses someone",
   spam: "it's an ad or spam",

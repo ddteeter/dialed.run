@@ -159,7 +159,7 @@ export const exportReady = emailKind("export_ready", {
  * Design 136 (D-117): an operator's alert that a report hid something as
  * an intimate image shared without consent, and when its removal is due
  * (`dueAt`, epoch seconds, 48 hours on). Undesigned: placeholder words
- * (design deltas item 57). Operator mail, so always sent.
+ * (design deltas item 58). Operator mail, so always sent.
  */
 export const removalDue = emailKind("removal_due", {
   subject: z.enum(["entry", "photo"]),

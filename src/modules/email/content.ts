@@ -328,7 +328,7 @@ export function emailContent(
       };
     }
     case "removal_due": {
-      // Design 136: placeholder words (design deltas item 57).
+      // Design 136: placeholder words (design deltas item 58).
       const due = utcMinute(template.dueAt);
       return {
         subject: `Removal due by ${due}`,
