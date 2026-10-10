@@ -1202,6 +1202,16 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       Google's band, before the redirect.
       **The ask:** draw the field and confirm the three states, or redraw.
 
+57. **The export no longer promises run files (decision D-116).** Round
+    27 #13 draws the export row's line as "Runs, closet, entries, photos
+    and your run files", and the email as "Your runs, closet, entries,
+    photos and original run files are in one ZIP." Since D-116 a run file
+    is deleted once read, so the ZIP rarely holds one: only a file read in
+    the last day, or one that failed in the last 30. Both now drop the run
+    files: "Runs, closet, entries and photos", and "Your runs, closet,
+    entries and photos are in one ZIP." **The ask:** confirm, or give
+    words.
+
 ## Answered in round 34 (imported 2026-10-04)
 
 Design sent round 34 with `Theme.dc.html` as the primary file. It carries

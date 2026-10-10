@@ -287,10 +287,12 @@ export function emailContent(
       };
     }
     case "export_ready": {
-      // Round 27 #13's "Email export", word for word.
+      // Round 27 #13's "Email export", less "and original run files": since
+      // D-116 a file is deleted once read, so the ZIP rarely has one
+      // (design deltas item 57).
       return {
         subject: "Your dialed.run export is ready",
-        body: "Your runs, closet, entries, photos and original run files are in one ZIP.",
+        body: "Your runs, closet, entries and photos are in one ZIP.",
         button: {
           label: "Download export",
           href: `${origin}/account/export/${template.token}`,
