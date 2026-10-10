@@ -1241,7 +1241,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     - **The footer** gains a fourth link after round 27 #12's three:
       "Report an intimate image".
     - **Review's "removal requests"** section sits above the queue:
-      `[N removal requests]`, then per request its clock bracket, "name ·
+      `[N to remove]`, then per request its clock bracket, "name ·
       email", the link as given, what they wrote, "Open the kit" (or "Not
       one of our links: find it from what they wrote."), Take it down,
       and Decline with a "Why not" field.

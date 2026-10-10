@@ -253,7 +253,7 @@ describe("Review · removal requests", () => {
     const open = screen.getByRole("link", { name: "Open the kit" });
     expect(open).toHaveAttribute("href", `/feed/entry/${ENTRY}`);
     expect(open).toHaveClass("target");
-    expect(screen.getByText("[1 removal requests]")).toBeInTheDocument();
+    expect(screen.getByText("[1 to remove]")).toBeInTheDocument();
   });
 
   it("opens a reported photo's kit, and says when a link is not ours", async () => {
@@ -332,6 +332,6 @@ describe("Review · removal requests", () => {
       <RemovalRequests requests={[]} decide={vi.fn<DecideFn>()} />,
     );
     expect(part("removal-request")).toBeNull();
-    expect(screen.queryByText(/removal requests/u)).toBeNull();
+    expect(screen.queryByText(/to remove/u)).toBeNull();
   });
 });

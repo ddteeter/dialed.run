@@ -46,7 +46,7 @@ export function RemovalRequests({
   const [decided, setDecided] = useState<readonly string[]>([]);
   const waiting = requests.filter((request) => !decided.includes(request.id));
   return (
-    <ListSection title="removal requests" items={waiting} count>
+    <ListSection title="to remove" items={waiting} count>
       {(request) => (
         <li
           key={request.id}
