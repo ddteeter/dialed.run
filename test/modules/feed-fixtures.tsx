@@ -95,6 +95,7 @@ export function feedItem(overrides: Partial<FeedItem> = {}): FeedItem {
     viewerHasReacted: false,
     conditions: undefined,
     underReview: false,
+    isOwn: false,
     ...overrides,
   };
 }

@@ -37,6 +37,13 @@ export interface PostCardProps {
   onStatus: (status: string) => void;
 }
 
+/**
+ * The viewer's own post says so after its time (the Feed board's "E1 Card
+ * states": `SAT · 6:30 AM · YOU`), since Following carries the viewer's
+ * own shared entries among everyone else's.
+ */
+const OWN_SUFFIX = " · You";
+
 export function PostCard(props: Readonly<PostCardProps>) {
   const { item, units, now, setUseful, onStatus } = props;
   const [photo] = item.photoKeys;
@@ -61,18 +68,28 @@ export function PostCard(props: Readonly<PostCardProps>) {
             </span>
             <Mono step="xs" className="text-muted">
               {postedLabel(item.startedAt, now, item.conditions?.timeZone)}
+              {item.isOwn ? OWN_SUFFIX : undefined}
             </Mono>
           </span>
-          <VerdictBadge verdict={item.verdict} />
+          <span className="flex items-center gap-2">
+            {item.underReview ? <UnderReview /> : undefined}
+            <VerdictBadge verdict={item.verdict} />
+          </span>
         </div>
-        {item.underReview ? <UnderReview /> : undefined}
         {photo === undefined ? undefined : (
-          <img
-            data-part="photo"
-            src={`/feed/photo/${photo}`}
-            alt=""
-            className="aspect-video w-full rounded-card object-cover"
-          />
+          // The first photo, carrying only its `1 / N` counter, bottom
+          // right (the Feed board's E1): the rest are D's pager.
+          <span className="relative block">
+            <img
+              data-part="photo"
+              src={`/feed/photo/${photo}`}
+              alt=""
+              className="aspect-video w-full rounded-card object-cover"
+            />
+            <span className="absolute right-3 bottom-3 rounded-tight bg-ground px-2 py-1 text-ink">
+              <Mono step="xs">1 / {String(item.photoKeys.length)}</Mono>
+            </span>
+          </span>
         )}
         {item.caption === undefined ? undefined : (
           <p data-part="caption" className="m-0 text-body">

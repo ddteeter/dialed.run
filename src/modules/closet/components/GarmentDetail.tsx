@@ -14,6 +14,8 @@ import {
   Mono,
   PendingLabel,
   useControlAction,
+  PHOTO_STILL_ON,
+  usePhotoPick,
 } from "../../../ui";
 import type { PhotoStep } from "../../../ui";
 import { garmentLabel } from "../label";
@@ -25,7 +27,7 @@ import { CompositionBlock } from "./Composition";
 import { BackToCloset } from "./BackToCloset";
 import { DeleteWithRuns, type BandCount } from "./DeleteWithRuns";
 import { GarmentConfirm, type ConfirmKind } from "./GarmentConfirm";
-import { GARMENT_PHOTO_COPY, PHOTO_STILL_ON, usePhotoPick } from "./photo-pick";
+import { GARMENT_PHOTO_COPY } from "./photo-pick";
 import type {
   EffectiveAttributes,
   WardrobeItemRow,

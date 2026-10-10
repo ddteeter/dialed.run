@@ -463,4 +463,45 @@ describe("ownProfile: what it leaves out", () => {
       verdict: 0,
     });
   });
+
+  it("marks a recent entry reports have hidden, and only that one (round 28 #6)", async () => {
+    const userId = await makeVerifiedUser();
+    const hidden = await ratedEntry({
+      userId,
+      lat: 54.1,
+      feelsLikeC: 3,
+      verdict: 0,
+      createdAt: NOW,
+    });
+    const removed = await ratedEntry({
+      userId,
+      lat: 54.2,
+      feelsLikeC: 3,
+      verdict: 0,
+      createdAt: NOW - DAY,
+    });
+    await ratedEntry({
+      userId,
+      lat: 54.3,
+      feelsLikeC: 3,
+      verdict: 0,
+      createdAt: NOW - 2 * DAY,
+    });
+    await db()
+      .update(outfitEntries)
+      .set({ moderationStatus: "hidden_pending_review" })
+      .where(eq(outfitEntries.id, hidden));
+    await db()
+      .update(outfitEntries)
+      .set({ moderationStatus: "removed" })
+      .where(eq(outfitEntries.id, removed));
+
+    const profile = await ownProfile(userId);
+
+    expect(profile.recentEntries.map((entry) => entry.underReview)).toEqual([
+      true,
+      false,
+      false,
+    ]);
+  });
 });

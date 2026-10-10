@@ -47,6 +47,8 @@ import {
   ToggleField,
   useControlAction,
   useFormSubmit,
+  PHOTO_STILL_ON,
+  usePhotoPick,
 } from "../../../ui";
 import { photoAcceptAttribute } from "../../../lib/photo-constraints";
 import type { PhotoStep } from "../../../ui";
@@ -54,7 +56,7 @@ import { garmentFormSchema, type GarmentFormValues } from "../form-schema";
 import { garmentLabel } from "../label";
 import type { ClosetNearby } from "../nearby";
 import { AlreadyInCloset } from "./AlreadyInCloset";
-import { GARMENT_PHOTO_COPY, PHOTO_STILL_ON, usePhotoPick } from "./photo-pick";
+import { GARMENT_PHOTO_COPY } from "./photo-pick";
 import {
   PHOTO_NOT_SAVED,
   PhotoRefused,

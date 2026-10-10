@@ -213,6 +213,11 @@ export interface FeedItem {
   is ever shown one.
   */
   underReview: boolean;
+  /**
+  The viewer's own post, which says so after its time (the Feed board's
+  "E1 Card states": `SAT · 6:30 AM · YOU`).
+  */
+  isOwn: boolean;
 }
 
 export interface FeedPage {
@@ -359,6 +364,7 @@ async function hydrateEntries(
       viewerHasReacted: reactedByViewer.has(entry.id),
       conditions: run ? observations.get(run.id) : undefined,
       underReview: isUnderReviewForAuthor(entry, viewerId),
+      isOwn: entry.userId === viewerId,
     };
   });
 }

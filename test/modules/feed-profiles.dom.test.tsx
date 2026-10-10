@@ -346,8 +346,13 @@ describe("OwnProfile (G): past day one", () => {
           runCount: 2,
           mostWornItems: [{ itemId: "01A", name: "Houdini", wearCount: 4 }],
           recentEntries: [
-            { entryId: "01E", createdAt: 1, verdict: NOTHING },
-            { entryId: "01F", createdAt: 2, verdict: 0 },
+            {
+              entryId: "01E",
+              createdAt: 1,
+              verdict: NOTHING,
+              underReview: false,
+            },
+            { entryId: "01F", createdAt: 2, verdict: 0, underReview: false },
           ],
         })}
       />,
@@ -362,6 +367,26 @@ describe("OwnProfile (G): past day one", () => {
       "href",
       "/feed/entry/01F",
     );
+    expect(document.querySelector('[data-part="review-tag"]')).toBeNull();
+  });
+
+  it("marks a recent entry under review with the card's tag (round 28 #6)", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile({
+          runCount: 1,
+          recentEntries: [
+            { entryId: "01E", createdAt: 1, verdict: 0, underReview: true },
+          ],
+        })}
+      />,
+    );
+    expect(
+      screen.getByRole("link", {
+        name: "Entry Under review, only you can see this",
+      }),
+    ).toHaveAttribute("href", "/feed/entry/01E");
   });
 });
 

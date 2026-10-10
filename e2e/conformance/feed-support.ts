@@ -239,6 +239,11 @@ export interface EntrySeed {
   category?: "top" | "bottom" | "gloves";
   itemName?: string;
   tags?: ("hands_cold" | "overheated_late" | "chafed")[];
+  /**
+  `hidden_pending_review` for an entry reports have hidden: its author
+  alone still sees it, marked (D-67).
+  */
+  moderationStatus?: "ok" | "hidden_pending_review";
 }
 
 /**
@@ -282,6 +287,7 @@ export async function seedEntry(
       audience: params.audience ?? "runners",
       caption: params.caption,
       createdAt: params.startedAt,
+      moderationStatus: params.moderationStatus ?? "ok",
     });
     await core.insert(outfitEntryItems).values({ entryId, itemId });
     const tags = params.tags ?? [];
