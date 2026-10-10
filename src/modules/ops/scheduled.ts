@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, lt, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, lt, or, type SQL } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import {
@@ -13,7 +13,9 @@ import { chunked, IN_LIST_CHUNK } from "../../lib/chunked";
 import { columnWhere } from "../../lib/sql/keyed-read";
 import {
   abandonedBefore,
+  extractionDone,
   extractionFailed,
+  extractionPending,
   listAbandonedEnrichments,
 } from "../enrichment";
 import { pruneStravaIds } from "../runs";
@@ -353,14 +355,18 @@ const IMPORT_STALL_GRACE_S = 15 * 60;
  * Rows that have sat `pending` past a grace window — the reconciliation
  * query (law 8c), written once for every table that carries the marker.
  * The columns are passed rather than the table alone because each table
- * names its status column differently, and a union of the two column
- * types is what lets `eq` accept "pending" for both.
+ * names them differently. The marker comes as a predicate rather than a
+ * status column because the two tables state it differently: `products`
+ * reads it through the partial index `products_extraction_pending`, which
+ * the planner matches only against the index's own literal
+ * (`extractionPending`), where `imports` has no index on `status` and a
+ * bound `eq` does.
  */
 async function stalledPending(
   marker: {
     table: typeof imports | typeof products;
     id: typeof imports.id | typeof products.id;
-    status: typeof imports.status | typeof products.extractionStatus;
+    pending: SQL;
     createdAt: typeof imports.createdAt | typeof products.createdAt;
   },
   graceSeconds: number,
@@ -370,7 +376,7 @@ async function stalledPending(
   return db
     .select({ id: marker.id })
     .from(marker.table)
-    .where(and(eq(marker.status, "pending"), lt(marker.createdAt, staleBefore)))
+    .where(and(marker.pending, lt(marker.createdAt, staleBefore)))
     .limit(100);
 }
 
@@ -379,7 +385,7 @@ async function redispatchStalledImports(anomalies: string[]): Promise<void> {
     {
       table: imports,
       id: imports.id,
-      status: imports.status,
+      pending: eq(imports.status, "pending"),
       createdAt: imports.createdAt,
     },
     IMPORT_STALL_GRACE_S,
@@ -538,7 +544,7 @@ async function redispatchStalledEnrichments(
     {
       table: products,
       id: products.id,
-      status: products.extractionStatus,
+      pending: extractionPending(),
       createdAt: products.createdAt,
     },
     ENRICHMENT_STALL_GRACE_S,
@@ -709,6 +715,13 @@ async function runDailyDigest(
  * reaching the spec, a model that got worse, a platform that moved its
  * markup.
  *
+ * So it measures **the most recent 1000** enriched products, by
+ * `created_at`, newest first. Without the order it read whichever 1000
+ * came back first, which was the oldest, and once the catalogue passed
+ * 1000 the share stopped moving at all. The partial index
+ * `products_extraction_done` serves the order, so the read walks about
+ * 1000 index entries rather than scanning and sorting the table.
+ *
  * Reported as a share, because the absolute number grows with the
  * catalogue and would read as a problem when it is just use — and only
  * past a **deliberately loose** bound, because this digest surfaces
@@ -729,7 +742,8 @@ async function checkExtractionYield(anomalies: string[]): Promise<void> {
   const done = await db
     .select({ composition: products.fabricComposition })
     .from(products)
-    .where(eq(products.extractionStatus, "done"))
+    .where(extractionDone())
+    .orderBy(desc(products.createdAt))
     .limit(1000);
   if (done.length === 0) return;
 

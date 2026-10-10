@@ -6,7 +6,9 @@ import { products } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { nowSeconds } from "../../src/lib/now";
 import {
+  extractionDone,
   extractionFailed,
+  extractionPending,
   listAbandonedEnrichments,
 } from "../../src/modules/enrichment/abandon";
 
@@ -55,6 +57,31 @@ describe("the failed-enrichment sweeps are served by the partial index", () => {
       "SEARCH products USING INDEX products_extraction_failed (created_at<?)",
     );
   });
+});
+
+describe("the other status predicates state their index's own literal", () => {
+  // The sweeps that use these are pinned end to end in
+  // `test/ops/scheduled.test.ts`; this holds the literal itself, which is
+  // what lets the planner match each partial index.
+  it.each([
+    ["pending", extractionPending, "products_extraction_pending"],
+    ["done", extractionDone, "products_extraction_done"],
+  ] as const)(
+    "'%s' reaches its own partial index",
+    async (status, predicate, index) => {
+      const now = nowSeconds();
+      const { sql, params } = drizzle(env.DIALED_CORE)
+        .select({ id: products.id })
+        .from(products)
+        .where(and(predicate(), lt(products.createdAt, now)))
+        .toSQL();
+
+      expect(sql).toContain(`"products"."extraction_status" = '${status}'`);
+      expect(await planOf(sql, params)).toStrictEqual([
+        `SEARCH products USING INDEX ${index} (created_at<?)`,
+      ]);
+    },
+  );
 });
 
 async function planOf(sql: string, params: unknown[]): Promise<string[]> {

@@ -5,7 +5,9 @@
  */
 export {
   abandonedBefore,
+  extractionDone,
   extractionFailed,
+  extractionPending,
   listAbandonedEnrichments,
 } from "./abandon";
 export {

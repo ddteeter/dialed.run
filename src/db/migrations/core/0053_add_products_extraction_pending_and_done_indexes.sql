@@ -1,0 +1,2 @@
+CREATE INDEX `products_extraction_pending` ON `products` (`created_at`) WHERE "products"."extraction_status" = 'pending';--> statement-breakpoint
+CREATE INDEX `products_extraction_done` ON `products` (`created_at`) WHERE "products"."extraction_status" = 'done';
