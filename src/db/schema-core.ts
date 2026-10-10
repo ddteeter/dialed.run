@@ -483,6 +483,26 @@ export const products = /*#__PURE__*/ sqliteTable(
     index("products_extraction_failed")
       .on(t.createdAt)
       .where(sql`${t.extractionStatus} = 'failed'`),
+    // The hourly re-drive's other half: `pending` older than a grace
+    // window, read by `created_at`. No insert writes it either — a product
+    // is created `none` — so an entry is written when a row is claimed
+    // into `pending` (a paste's `requestEnrichment`, or the sweep's claim
+    // of a `failed` row) and removed when the consumer moves it on to
+    // `done` or `failed`: in and out once per enrichment attempt.
+    index("products_extraction_pending")
+      .on(t.createdAt)
+      .where(sql`${t.extractionStatus} = 'pending'`),
+    // The digest's extraction yield reads the most recent 1000 `done`
+    // products, newest first, so it walks the tail of this index and stops
+    // instead of scanning and sorting the table. Unlike the two above it
+    // holds most of the catalogue, since `done` is where a product ends
+    // up. Still no insert writes it; an entry is written each time the
+    // extraction writer sets `done` — the first success, and every
+    // re-extraction, which sets it again — and nothing moves a row out of
+    // `done` today.
+    index("products_extraction_done")
+      .on(t.createdAt)
+      .where(sql`${t.extractionStatus} = 'done'`),
   ],
 );
 

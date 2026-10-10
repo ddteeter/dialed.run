@@ -1143,8 +1143,11 @@ describe("stalled enrichments are re-dispatched on their own hourly sweep", () =
   });
 });
 
-async function enriched(composition: string | undefined): Promise<void> {
-  const id = await insertProduct("done", HOUR);
+async function enriched(
+  composition: string | undefined,
+  ageSeconds = HOUR,
+): Promise<void> {
+  const id = await insertProduct("done", ageSeconds);
   if (composition === undefined) return;
   await coreDb()
     .update(products)
@@ -1248,7 +1251,111 @@ describe("the extraction-yield check", () => {
     const outcome = await handleScheduled(DIGEST);
     expect(outcome.anomalies).toStrictEqual([]);
   });
+
+  it("measures the most recent 1000, not the first 1000 it finds", async () => {
+    // The slope is the point of this metric, so it has to read the newest
+    // enrichments. Unordered it read the oldest — first in rowid order,
+    // and first in the index's ascending order too — and once there were
+    // more than 1000 the share froze. One old product with a composition,
+    // written first, then 1000 newer ones without: only the newest 1000
+    // leave the old one out.
+    await enriched("100% merino wool", 30 * 24 * HOUR);
+    await seedEnrichedWithoutComposition(1000, HOUR);
+    vi.spyOn(console, "error").mockImplementation(nothing);
+
+    const outcome = await handleScheduled(DIGEST);
+
+    expect(outcome.anomalies).toStrictEqual([
+      "1000 of 1000 enriched product(s) have no composition (100%)",
+    ]);
+  });
 });
+
+/**
+ * `count` products already `done` with no composition, all `ageSeconds`
+ * old, in one statement: past the yield check's limit is the only way to
+ * see which rows it picked, and a thousand awaited inserts would be most
+ * of the suite's time.
+ */
+async function seedEnrichedWithoutComposition(
+  count: number,
+  ageSeconds: number,
+): Promise<void> {
+  const brand = await createOrGetBrand(coreDb(), `Yield ${newUlid()}`);
+  await env.DIALED_CORE.prepare(
+    `WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < ?1)
+     INSERT INTO products
+       (id, brand_id, name, normalized_name, extraction_status, status, created_by, created_at)
+     SELECT 'yield-' || i, ?2, 'Tee ' || i, 'tee ' || i, 'done', 'active', 'seed', ?3 FROM n`,
+  )
+    .bind(count, brand.id, nowSeconds() - ageSeconds)
+    .run();
+}
+
+/**
+ * The product sweeps run against every product, and D1 bills rows
+ * scanned. Each reads through a partial index, which the planner uses only
+ * when the query states the index's own predicate — results are identical
+ * either way, so the plan of the statement each actually issues is the
+ * assertion.
+ */
+describe("the product sweeps read through their partial indexes", () => {
+  it("finds stalled pending products through products_extraction_pending", async () => {
+    const plans = await plansIssuedBy(ENRICHMENT_RETRY, `= 'pending'`);
+
+    expect(plans).toStrictEqual([
+      [
+        "SEARCH products USING INDEX products_extraction_pending (created_at<?)",
+      ],
+    ]);
+  });
+
+  it("walks the newest end of products_extraction_done for the yield", async () => {
+    // A SCAN of the index, not the table: the ORDER BY is the index's own
+    // order, so there is no sort step, and the LIMIT stops the walk after
+    // 1000 entries.
+    const plans = await plansIssuedBy(DIGEST, `= 'done'`);
+
+    expect(plans).toStrictEqual([
+      ["SCAN products USING INDEX products_extraction_done"],
+    ]);
+  });
+});
+
+/**
+ * The plan of every `products` read a firing issues whose WHERE contains
+ * `predicate`. Placeholders are bound to the current time, which stands in
+ * for the age cutoff and the limit, whose values do not change a plan's
+ * shape. A status bound as a parameter would get the same stand-in and
+ * miss the index, and that is deliberate: the index's own literal in the
+ * SQL is the contract (`extractionFailed` in `modules/enrichment/abandon.ts`
+ * says why).
+ */
+async function plansIssuedBy(
+  controller: ScheduledController,
+  predicate: string,
+): Promise<string[][]> {
+  const prepare = vi.spyOn(env.DIALED_CORE, "prepare");
+  await handleScheduled(controller);
+  const statements = prepare.mock.calls
+    .map(([sql]) => sql)
+    .filter(
+      (sql) =>
+        sql.startsWith("select") &&
+        sql.includes(`from "products"`) &&
+        sql.includes(predicate),
+    );
+  prepare.mockRestore();
+  return Promise.all(
+    statements.map(async (sql) => {
+      const placeholders = sql.split("?").length - 1;
+      const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+        .bind(...Array.from({ length: placeholders }, () => nowSeconds()))
+        .all<{ detail: string }>();
+      return plan.results.map((row) => row.detail);
+    }),
+  );
+}
 
 describe("the digest reports what is waiting on a person (106 §2)", () => {
   beforeEach(async () => {

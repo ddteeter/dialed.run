@@ -45,6 +45,24 @@ export function extractionFailed(): SQL {
 }
 
 /**
+ * `extraction_status = 'pending'`, as `products_extraction_pending` writes
+ * it, for the hourly re-drive of products stuck waiting on the queue. A
+ * literal for the reason `extractionFailed` gives.
+ */
+export function extractionPending(): SQL {
+  return sql`${products.extractionStatus} = 'pending'`;
+}
+
+/**
+ * `extraction_status = 'done'`, as `products_extraction_done` writes it,
+ * for the digest's extraction yield over the most recent enrichments. A
+ * literal for the reason `extractionFailed` gives.
+ */
+export function extractionDone(): SQL {
+  return sql`${products.extractionStatus} = 'done'`;
+}
+
+/**
 The instant (epoch seconds) before which a `failed` product is abandoned.
 */
 export function abandonedBefore(now = nowSeconds()): number {
