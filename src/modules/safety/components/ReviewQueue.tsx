@@ -98,6 +98,9 @@ function ReportedFor({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
           ? "1 person"
           : `${String(row.reporterCount)} people`}
       </Bracketed>
+      {/* Design 136: the TAKE IT DOWN Act's 48 hours, on a row an
+          intimate-image report started (design deltas item 57). */}
+      {row.due === undefined ? undefined : <Bracketed>{row.due}</Bracketed>}
       <ListOfReasons reasons={row.reasons} />
     </span>
   );

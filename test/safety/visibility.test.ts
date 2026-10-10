@@ -37,6 +37,7 @@ import {
   NOW,
   resetSafetyTables,
 } from "./helpers";
+import { oweInCore } from "../queue-fakes";
 
 /**
  * The one visibility rule, observed through the reads that use it (task
@@ -265,12 +266,15 @@ describe("a reporter's own hide (SAF-13)", () => {
     await follow(reporter, posted.author);
     await follow(bystander, posted.author);
 
-    const filed = await fileReport({
-      reporterId: reporter,
-      subjectType: "entry",
-      subjectId: posted.entryId,
-      reason: "spam",
-    });
+    const filed = await fileReport(
+      {
+        reporterId: reporter,
+        subjectType: "entry",
+        subjectId: posted.entryId,
+        reason: "spam",
+      },
+      oweInCore,
+    );
     // One report is far under the threshold: nothing global happened.
     expect(filed).toMatchObject({
       status: "filed",
@@ -291,12 +295,15 @@ describe("a reporter's own hide (SAF-13)", () => {
     await follow(reporter, posted.author);
     // The same id under another subject type must not match the entry's
     // probe — the subject type is part of what was reported.
-    await fileReport({
-      reporterId: reporter,
-      subjectType: "product",
-      subjectId: posted.entryId,
-      reason: "spam",
-    });
+    await fileReport(
+      {
+        reporterId: reporter,
+        subjectType: "product",
+        subjectId: posted.entryId,
+        reason: "spam",
+      },
+      oweInCore,
+    );
     expect(await sightings(reporter, posted.entryId, posted.photoKey)).toEqual(
       SEEN,
     );

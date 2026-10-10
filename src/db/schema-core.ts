@@ -1074,7 +1074,16 @@ export const reports = /*#__PURE__*/ sqliteTable(
     }).notNull(),
     subjectId: text("subject_id").notNull(),
     reason: text("reason", {
-      enum: ["explicit", "harassment", "spam", "not_theirs", "other"],
+      enum: [
+        "explicit",
+        // Design 136 (D-117): one report hides at once. Plain text in
+        // SQLite, so a new value needs no migration.
+        "intimate",
+        "harassment",
+        "spam",
+        "not_theirs",
+        "other",
+      ],
     }).notNull(),
     note: text("note"),
     createdAt: integer("created_at").notNull(),

@@ -8,6 +8,7 @@
  * fact rather than an assumption.
  */
 import { and, asc, eq, inArray, lt, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { SQLWrapper } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
@@ -29,7 +30,12 @@ import { orSqlNull } from "../../lib/sql/sql-null";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 
-import { reportReasonSchema } from "./contracts";
+import {
+  REMOVAL_DUE_SECONDS,
+  reasonsThatHideAtOnce,
+  removalDueLabel,
+  reportReasonSchema,
+} from "./contracts";
 import type { ReportReason, ReportSubjectType } from "./contracts";
 
 function db() {
@@ -170,7 +176,30 @@ export interface QueueRow {
    */
   reporterCount: number;
   reasons: readonly ReportReason[];
+  /**
+   * When the TAKE IT DOWN Act's 48 hours run out (design 136): from the
+   * first report of a reason that hides at once. Absent for any other row.
+   */
+  dueAt?: number | undefined;
+  /**
+   * `dueAt` as the row says it ("Due in 31h", "Overdue"), worked out when
+   * the page is read rather than as it renders, so the server's render and
+   * the browser's agree.
+   */
+  due?: string | undefined;
   subject: QueueSubject;
+}
+
+/**
+ * The first report of a reason that hides at once (design 136), as an
+ * aggregate over a subject's reports; NULL when there is none. Both the
+ * review row's clock and the reconcile sweep's second way over the bar
+ * read it, so it is written once. Built on call, not at module scope.
+ */
+export function firstReportHidingAtOnce(): SQL<number | null> {
+  return sql<
+    number | null
+  >`min(case when ${inArray(reports.reason, [...reasonsThatHideAtOnce])} then ${reports.createdAt} end)`;
 }
 
 /**
@@ -200,6 +229,7 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
       createdAt: reviewQueue.createdAt,
       reporterCount: sql<number>`count(distinct ${reports.reporterId})`,
       reasons: sql<string | null>`group_concat(distinct ${reports.reason})`,
+      firstAtOnce: firstReportHidingAtOnce(),
     })
     .from(reviewQueue)
     .leftJoin(
@@ -215,6 +245,7 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
     .limit(limit);
 
   const subjects = await subjectsFor(rows);
+  const now = nowSeconds();
   return rows.map((row) => ({
     id: row.id,
     subjectType: row.subjectType,
@@ -223,10 +254,24 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
     createdAt: row.createdAt,
     reporterCount: row.reporterCount,
     reasons: reasonsFrom(row.reasons),
+    ...removalClock(row.firstAtOnce, now),
     subject: subjects.get(`${row.subjectType}:${row.subjectId}`) ?? {
       photoKeys: [],
     },
   }));
+}
+
+/**
+ * A row's removal clock (design 136): nothing for a row no at-once report
+ * started, else when it is due and how that reads now.
+ */
+function removalClock(
+  firstAtOnce: number | null,
+  now: number,
+): Pick<QueueRow, "dueAt" | "due"> {
+  if (firstAtOnce === null) return {};
+  const dueAt = firstAtOnce + REMOVAL_DUE_SECONDS;
+  return { dueAt, due: removalDueLabel(dueAt, now) };
 }
 
 /**

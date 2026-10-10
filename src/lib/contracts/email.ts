@@ -23,6 +23,7 @@ import {
   contentRemoved,
   deletionScheduled,
   digest,
+  removalDue,
   emailChange,
   emailChanged,
   existingAccount,
@@ -66,6 +67,7 @@ export const emailTemplateSchema = z.discriminatedUnion("kind", [
   deletionScheduled,
   digest,
   exportReady,
+  removalDue,
 ]);
 
 export type EmailTemplate = z.infer<typeof emailTemplateSchema>;
@@ -113,6 +115,7 @@ const PREFERENCE_OF: Readonly<
   strava_disconnected: undefined,
   deletion_scheduled: undefined,
   digest: undefined,
+  removal_due: undefined,
   export_ready: undefined,
 };
 

@@ -30,6 +30,7 @@ import {
   resetTables,
   NOW,
 } from "./helpers";
+import { oweInCore } from "../queue-fakes";
 
 /**
  * FEED-7 (R-107, R-108): a banned runner, and anyone in a block pair with
@@ -70,12 +71,15 @@ async function entryIn(status: "ok" | "hidden_pending_review" | "removed") {
 }
 
 async function reportProfile(reporter: string, runner: string) {
-  await fileReport({
-    reporterId: reporter,
-    subjectType: "profile",
-    subjectId: runner,
-    reason: "spam",
-  });
+  await fileReport(
+    {
+      reporterId: reporter,
+      subjectType: "profile",
+      subjectId: runner,
+      reason: "spam",
+    },
+    oweInCore,
+  );
 }
 
 async function planOf(statement: {
@@ -212,12 +216,15 @@ describe("H reads as not found for a hidden runner", () => {
     const bystander = await makeVerifiedUser();
     const author = await makeVerifiedUser();
     const reported = await postedBy(author);
-    await fileReport({
-      reporterId: reporter,
-      subjectType: "entry",
-      subjectId: reported,
-      reason: "spam",
-    });
+    await fileReport(
+      {
+        reporterId: reporter,
+        subjectType: "entry",
+        subjectId: reported,
+        reason: "spam",
+      },
+      oweInCore,
+    );
 
     const seenBy = async (viewer: string) => {
       const profile = await otherProfile(author, viewer);
@@ -368,12 +375,15 @@ describe("a runner whose profile the viewer reported (D-68)", () => {
     // the entry's id is not the runner's.
     const reporter = await makeVerifiedUser();
     const runner = await makeVerifiedUser({ username: "wen_runs" });
-    await fileReport({
-      reporterId: reporter,
-      subjectType: "entry",
-      subjectId: await postedBy(runner),
-      reason: "spam",
-    });
+    await fileReport(
+      {
+        reporterId: reporter,
+        subjectType: "entry",
+        subjectId: await postedBy(runner),
+        reason: "spam",
+      },
+      oweInCore,
+    );
 
     expect(await foundIds(reporter, "wen")).toStrictEqual([runner]);
     const profile = await otherProfile(runner, reporter);
@@ -500,12 +510,15 @@ describe("the author's own under-review entry on Following (D-67)", () => {
     const reportedEntry = await postedBy(reported);
     await postedBy(banned);
     await blockRunner(viewer, blocked);
-    await fileReport({
-      reporterId: viewer,
-      subjectType: "entry",
-      subjectId: reportedEntry,
-      reason: "spam",
-    });
+    await fileReport(
+      {
+        reporterId: viewer,
+        subjectType: "entry",
+        subjectId: reportedEntry,
+        reason: "spam",
+      },
+      oweInCore,
+    );
     await banUser({ userId: banned, reason: "spam", bannedBy: viewer });
 
     expect(await followingIds(viewer)).toStrictEqual([]);

@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   autoHideReporterThreshold,
+  REMOVAL_DUE_SECONDS,
+  reasonsThatHideAtOnce,
+  removalDueLabel,
+  removalStatements,
+  reportersToHide,
   reportReasonLabels,
   reportReasonSchema,
   reportReasons,
@@ -96,5 +101,48 @@ describe("the auto-hide threshold", () => {
 
   it("is more than one, or a single reporter could hide anything", () => {
     expect(autoHideReporterThreshold).toBeGreaterThan(1);
+  });
+});
+
+describe("the reporters each reason needs (design 136, D-117)", () => {
+  it("hides an intimate image on the first report and waits for three on every other", () => {
+    expect(reportersToHide).toStrictEqual({
+      explicit: 3,
+      intimate: 1,
+      harassment: 3,
+      spam: 3,
+      not_theirs: 3,
+      other: 3,
+    });
+    expect(reasonsThatHideAtOnce).toStrictEqual(["intimate"]);
+  });
+
+  it("gives the removal the TAKE IT DOWN Act's 48 hours", () => {
+    expect(REMOVAL_DUE_SECONDS).toBe(172_800);
+  });
+
+  it("tells the moderator and the author the intimate-image reason", () => {
+    expect(reportReasonLabels.intimate).toBe(
+      "It's an intimate image shared without consent",
+    );
+    expect(removalStatements.intimate).toBe(
+      "it's an intimate image shared without consent",
+    );
+  });
+});
+
+describe("the removal clock's words", () => {
+  const due = 1_000_000;
+
+  it("rounds the hours left up, so the last minutes still read one hour", () => {
+    expect(removalDueLabel(due, due - 1)).toBe("Due in 1h");
+    expect(removalDueLabel(due, due - 3600)).toBe("Due in 1h");
+    expect(removalDueLabel(due, due - 3601)).toBe("Due in 2h");
+    expect(removalDueLabel(due, due - REMOVAL_DUE_SECONDS)).toBe("Due in 48h");
+  });
+
+  it("reads Overdue from the moment it is due", () => {
+    expect(removalDueLabel(due, due)).toBe("Overdue");
+    expect(removalDueLabel(due, due + 1)).toBe("Overdue");
   });
 });

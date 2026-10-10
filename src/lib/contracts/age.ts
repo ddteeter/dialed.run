@@ -75,8 +75,7 @@ export const birthDateField = z
   .min(1, AGE_COPY.missing)
   .pipe(z.iso.date({ error: AGE_COPY.invalid, abort: true }))
   .refine(
-    (date) =>
-      date >= EARLIEST_BIRTH_DATE && date <= isoDayOf(nowSeconds()),
+    (date) => date >= EARLIEST_BIRTH_DATE && date <= isoDayOf(nowSeconds()),
     AGE_COPY.year,
   );
 

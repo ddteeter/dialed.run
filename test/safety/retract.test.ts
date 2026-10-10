@@ -43,6 +43,7 @@ import {
   NOW,
   resetSafetyTables,
 } from "./helpers";
+import { oweInCore } from "../queue-fakes";
 
 /**
  * SAF-3: a runner deleting what they posted. Every assertion is about what
@@ -235,12 +236,15 @@ describe("deleting an entry", () => {
     const userId = await makeUser();
     const { entryId } = await fullEntry(userId);
     for (let n = 0; n < 3; n += 1) {
-      await fileReport({
-        reporterId: await makeUser(),
-        subjectType: "entry",
-        subjectId: entryId,
-        reason: "spam",
-      });
+      await fileReport(
+        {
+          reporterId: await makeUser(),
+          subjectType: "entry",
+          subjectId: entryId,
+          reason: "spam",
+        },
+        oweInCore,
+      );
     }
 
     await retractEntry(core(), userId, entryId);
@@ -250,7 +254,7 @@ describe("deleting an entry", () => {
       .from(reviewQueue)
       .where(eq(reviewQueue.subjectId, entryId));
     expect(queued).toMatchObject({ status: "removed", resolvedBy: userId });
-    expect(await reconcileUnhiddenReports()).toStrictEqual({
+    expect(await reconcileUnhiddenReports(oweInCore)).toStrictEqual({
       found: 0,
       hidden: 0,
     });
@@ -295,12 +299,15 @@ describe("deleting an entry", () => {
     const [photo] = photos;
     if (photo === undefined) throw new Error("fixture");
     for (let n = 0; n < 3; n += 1) {
-      await fileReport({
-        reporterId: await makeUser(),
-        subjectType: "photo",
-        subjectId: photo.id,
-        reason: "spam",
-      });
+      await fileReport(
+        {
+          reporterId: await makeUser(),
+          subjectType: "photo",
+          subjectId: photo.id,
+          reason: "spam",
+        },
+        oweInCore,
+      );
     }
 
     await retractEntry(core(), userId, entryId);

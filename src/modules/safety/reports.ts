@@ -13,7 +13,16 @@
  *   is removed and nothing is counted against anyone — the artboard's "no
  *   automated takedowns" stance holds, because a person still decides.
  */
-import { and, countDistinct, eq, gte, inArray, isNull } from "drizzle-orm";
+import {
+  and,
+  countDistinct,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  or,
+} from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
@@ -30,13 +39,72 @@ import { columnWhere, hasRowWhere } from "../../lib/sql/keyed-read";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 
+import type { OutboxMessage } from "../../lib/sql/outbox";
 import {
   autoHideReporterThreshold,
+  REMOVAL_DUE_SECONDS,
+  reasonsThatHideAtOnce,
+  reportersToHide,
   type ReportReason,
   type ReportSubjectType,
 } from "./contracts";
+import { adminUserIds } from "./admin";
 import { blockRunner } from "./blocks";
-import { enqueueForReview } from "./review";
+import { enqueueForReview, firstReportHidingAtOnce } from "./review";
+
+/**
+ * Owes an outbox row in the caller's batch — the operators' removal alert
+ * (design 136). `ops`' `outboxInsert`, handed in by the server function and
+ * the hourly firing, since `ops` imports this module and so cannot be
+ * imported by it (the runs consumer's `owe`, for the same reason).
+ */
+export type OweEmail = (message: OutboxMessage) => BatchItem<"sqlite">;
+
+/**
+ * What a removal alert names, per subject type: the two a report can hide.
+ * A profile or a product hides nothing, so a report of one queues for a
+ * person without an alert.
+ */
+const alertSubject: Readonly<
+  Record<ReportSubjectType, "entry" | "photo" | undefined>
+> = {
+  entry: "entry",
+  photo: "photo",
+  profile: undefined,
+  product: undefined,
+};
+
+/**
+ * One alert per operator that `subjectId` was hidden as an intimate image
+ * shared without consent, due 48 hours after `reportedAt` (design 136,
+ * D-117). Nothing for a subject a report cannot hide, or when no operator
+ * is configured.
+ */
+function removalAlerts(
+  owe: OweEmail,
+  subjectType: ReportSubjectType,
+  subjectId: string,
+  reportedAt: number,
+): BatchItem<"sqlite">[] {
+  const subject = alertSubject[subjectType];
+  if (subject === undefined) return [];
+  return adminUserIds().map((userId) =>
+    owe({
+      kind: "email",
+      payload: {
+        dedupeKey: `removal_due:${subjectType}:${subjectId}:${userId}`,
+        email: {
+          to: { userId },
+          template: {
+            kind: "removal_due",
+            subject,
+            dueAt: reportedAt + REMOVAL_DUE_SECONDS,
+          },
+        },
+      },
+    }),
+  );
+}
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -91,8 +159,10 @@ export interface FileReportResult {
  */
 export async function fileReport(
   input: FileReportInput,
+  owe: OweEmail,
 ): Promise<FileReportResult> {
   const database = db();
+  const reportedAt = nowSeconds();
   await database
     .insert(reports)
     .values({
@@ -105,7 +175,7 @@ export async function fileReport(
       // NULL for an absent nullable column, so `?? null` would only be
       // ceremony. (On an UPDATE it would matter — see lib/sql/sql-null.)
       note: input.note,
-      createdAt: nowSeconds(),
+      createdAt: reportedAt,
     })
     // The UNIQUE index is on (reporter, subjectType, subjectId), so this
     // drops a second report of the same thing by the same person. That is
@@ -125,11 +195,16 @@ export async function fileReport(
     input.subjectId,
   );
 
-  if (reporterCount < autoHideReporterThreshold) {
+  // The reason sets the bar (design 136, D-117): one report of an
+  // intimate image hides it, every other reason waits for three people.
+  if (reporterCount < reportersToHide[input.reason]) {
     return { status: "filed", reporterCount, hiddenPendingReview: false };
   }
 
-  await hidePendingReview(input.subjectType, input.subjectId);
+  const alerts = reasonsThatHideAtOnce.includes(input.reason)
+    ? removalAlerts(owe, input.subjectType, input.subjectId, reportedAt)
+    : [];
+  await hidePendingReview(input.subjectType, input.subjectId, alerts);
   return { status: "filed", reporterCount, hiddenPendingReview: true };
 }
 
@@ -169,14 +244,23 @@ export interface ReconcileReport {
  * cleared over several.
  */
 export async function reconcileUnhiddenReports(
+  owe: OweEmail,
   limit = 50,
 ): Promise<ReconcileReport> {
   const database = db();
+  // The first report of a reason that hides at once (design 136), or NULL
+  // when there is none: both the second way over the bar and the time the
+  // removal's 48 hours started.
+  const firstAtOnce = firstReportHidingAtOnce();
+  const enoughReporters = gte(
+    countDistinct(reports.reporterId),
+    autoHideReporterThreshold,
+  );
   const over = await database
     .select({
       subjectType: reports.subjectType,
       subjectId: reports.subjectId,
-      reporters: countDistinct(reports.reporterId),
+      firstAtOnce,
     })
     .from(reports)
     .leftJoin(
@@ -191,12 +275,18 @@ export async function reconcileUnhiddenReports(
     // subject this app will ever accumulate.
     .where(isNull(reviewQueue.id))
     .groupBy(reports.subjectType, reports.subjectId)
-    .having(gte(countDistinct(reports.reporterId), autoHideReporterThreshold))
+    .having(or(enoughReporters, isNotNull(firstAtOnce)))
     .limit(limit);
 
   const outcome: ReconcileReport = { found: over.length, hidden: 0 };
   for (const row of over) {
-    await hidePendingReview(row.subjectType, row.subjectId);
+    // The hide and its alerts are one batch, so a subject found unhidden
+    // was never alerted either: owe both now.
+    const alerts =
+      row.firstAtOnce === null
+        ? []
+        : removalAlerts(owe, row.subjectType, row.subjectId, row.firstAtOnce);
+    await hidePendingReview(row.subjectType, row.subjectId, alerts);
     outcome.hidden += 1;
   }
   return outcome;
@@ -302,6 +392,7 @@ export async function reportedSubjectIdsFor(
 async function hidePendingReview(
   subjectType: ReportSubjectType,
   subjectId: string,
+  alerts: BatchItem<"sqlite">[],
 ): Promise<void> {
   const queueWrite = enqueueForReview(db(), {
     subjectType,
@@ -309,7 +400,13 @@ async function hidePendingReview(
     source: "reports",
   });
 
-  await db().batch([queueWrite, ...hideWritesFor[subjectType](subjectId)]);
+  // The operators' alerts ride in the same batch (design 136): a hide that
+  // starts a 48-hour clock never lands without the email that says so.
+  await db().batch([
+    queueWrite,
+    ...hideWritesFor[subjectType](subjectId),
+    ...alerts,
+  ]);
 }
 
 /**

@@ -599,6 +599,21 @@ describe("what a row tells the reviewer", () => {
     expect(screen.getByText("[1 person]")).toBeInTheDocument();
   });
 
+  it("shows the removal clock on a row an intimate-image report started (design 136)", () => {
+    renderQueue([
+      row({ reporterCount: 1, reasons: ["intimate"], due: "Due in 31h" }),
+    ]);
+    expect(screen.getByText("[Due in 31h]")).toBeInTheDocument();
+    expect(
+      screen.getByText("It's an intimate image shared without consent"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows no clock on any other row", () => {
+    renderQueue([row({ reporterCount: 3 })]);
+    expect(screen.queryByText(/Due in|Overdue/u)).toBeNull();
+  });
+
   it("says nobody reported a row the classifier raised", () => {
     renderQueue([row({ source: "classifier", reporterCount: 0, reasons: [] })]);
 
