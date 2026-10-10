@@ -119,8 +119,14 @@ describe("the rendered cards", () => {
     const svg = await renderCardSvg(<DefaultCard />);
 
     expect(await sha256(svg)).toBe(
-      "6dd8d1f8a3022ddfcb8c46ab2ac0c1cee6fed713d5a099ee963a602f7c32403f",
+      "3175a8b27d563f4d16204242d3d329617da8636c796f2efad2106d152595433a",
     );
+  });
+
+  it("keeps the board's 24px between the line and the URL, at 2×", () => {
+    // Invisible in the digest above: the line is short enough that the
+    // two never meet, so the gap only shows when a longer line would.
+    expect(renderToStaticMarkup(<DefaultCard />)).toContain("gap:48px");
   });
 
   it("draws an entry card as it was drawn", async () => {

@@ -167,4 +167,7 @@ export const digest = emailKind("digest", {
   oldestHours: z.int().min(0).optional(),
   screenerUnfinished: z.int().min(0),
   bansThisWeek: z.int().min(0),
+  // Jobs the system gave up on (R-119): optional, because a digest owed by
+  // the deploy before this one sits in the outbox without it (law 9).
+  gaveUp: z.int().min(0).optional(),
 });

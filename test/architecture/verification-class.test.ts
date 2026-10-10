@@ -226,6 +226,9 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // operator is not shown a Desk that refuses them.
   "ops/functions.ts deskAccessQuery": "verified-viewer",
   "ops/functions.ts deskTodayQuery": "admin",
+  "ops/functions.ts deskGaveUpQuery": "admin",
+  "ops/functions.ts retryGaveUpAction": "admin",
+  "ops/functions.ts dropGaveUpAction": "admin",
   // ---- products
   "products/functions.ts searchBrandsFn": "unconfirmed",
   // ---- runs (never shown to anyone)

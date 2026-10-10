@@ -53,6 +53,7 @@ export function digestTemplate(
         : Math.floor((now - counts.oldestWaitingAt) / HOUR_SECONDS),
     screenerUnfinished: counts.screenerUnfinished,
     bansThisWeek: counts.bansThisWeek,
+    gaveUp: counts.gaveUp,
   };
 }
 

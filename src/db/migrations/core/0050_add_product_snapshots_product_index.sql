@@ -1,0 +1,1 @@
+CREATE INDEX `product_snapshots_product_fetched` ON `product_snapshots` (`product_id`,`fetched_at`);

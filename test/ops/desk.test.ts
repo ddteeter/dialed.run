@@ -54,6 +54,8 @@ describe("todayCounts", () => {
       screenerUnfinished: 0,
       bansThisWeek: 0,
       bansAllTime: 0,
+      gaveUp: 0,
+      oldestGaveUpAt: undefined,
     });
   });
 

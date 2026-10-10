@@ -72,6 +72,10 @@ from the other side: _"never a sixth type."_
     **Still not built (task 125 leftovers, 2026-09-30):** the board's row
     needs a reason, a try count and a time that no dead-letter handler
     records, so the page waits on one additive table (register row R-119).
+    **BUILT (design-adoption PR B, 2026-10-06):** `gave_up` records them,
+    Today draws round 29 B·2's section with D6's rows, the rail is D-87's,
+    and the digest adds its one line. What the build had to say that no
+    board draws is item 55.
 
 11. **Call epic screens** (B1/B2, O2, O4, O5) — already drawn; revisit when
     Epic 200 opens, incl. multi-part fabric display on garment/product
@@ -1142,6 +1146,40 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     **The ask:** confirm the words rank the bars rather than claim a share;
     and say what a lone bar short of every runner reads ("Most"? "Some"?),
     and whether a bar every runner wore reads "All" beside other bars.
+
+55. **Gave up's words and one control no board draws (design-adoption PR
+    B; R-119).** Built from D6 and round 29 B·2 with existing primitives
+    only, and each is the build's guess:
+    - **The reasons.** D6 draws "The shop returned 403 three times. It may
+      be blocking us." A dead letter is handed the job and not its error
+      (each try's error went to Sentry), so its row reads "It failed every
+      try the queue gives a job, so the queue stopped. Each error is in
+      Sentry." Enrichment's refusal reads "The shop returned 403. It may be
+      blocking us." (401 and 403), "The shop returned 404." (any other
+      status), or "The shop's page couldn't be read."; weather's cap "No
+      weather came back for this run in five hours of hourly tries.", and
+      for a run failed again after a Retry (or entered past its window),
+      which had one try, "No weather came back for this run on its latest
+      try, made after its five-hour window had closed." An enrichment row
+      appears only once the hourly sweep stops re-driving the product (its
+      first day), so its tries are that day's.
+    - **What each row was doing**, for the two jobs D6 does not draw: "Read
+      @sam's run file" (an import) and "Remind @sam about a new run on
+      Strava" (a dead-lettered reminder); a subject since deleted reads
+      "Read the page for a product that is gone" and the like. The kind
+      captions are Enrichment, Conditions, Import, Reminder.
+    - **The raw error's "one click away"** is a native disclosure labelled
+      "Raw error" (MONO.xs, muted), the error under it at MONO.md.
+    - **Re-run extraction with no stored page** is the pill at `--hairline`
+      with `--muted` text, `aria-disabled`.
+    - **A retry or a drop that fails** says "Still here" plus the cause in
+      the row's control band (round 23 #9).
+    - **The digest's line**: "N jobs the system gave up on. They're on the
+      Desk's Today." after the three, and the subject adds ", N gave up"
+      when above zero (a zero day's "Nothing failed." would be false).
+    - **Ages and times** are UTC, like Today's date: "2d ago", "last 04:12",
+      "last Sep 15 22:40".
+      **The ask:** confirm or redraw each.
 
 ## Answered in round 34 (imported 2026-10-04)
 
@@ -2710,7 +2748,7 @@ CHECKED` band still says "usually within a day". #28's line is item 6.
    `AttachKit` close the step on it and keep nothing, which is the whole of
    their change. **Left for the hosts (design PRs C and D):** W3 still
    renders inline where the host puts it, not in a sheet. The undrawn
-   states this needed are item 50.
+   states this needed are item 51.
    **The closet's host, built in design PR C (2026-10-07):** F, Edit and
    Y show W3 in `ui/Sheet` ("the closet form and AttachKit use the same
    sheet"), named "Check the blur", over whichever view picked the photo

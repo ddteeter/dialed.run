@@ -40,6 +40,14 @@ describe("emailTemplateSchema", () => {
         screenerUnfinished: 1,
         bansThisWeek: 2,
       },
+      {
+        kind: "digest",
+        day: "Wed Oct 7",
+        waiting: 0,
+        screenerUnfinished: 0,
+        bansThisWeek: 0,
+        gaveUp: 3,
+      },
     ];
     for (const payload of payloads) {
       // Parsed back to exactly itself: every field the kind carries is a

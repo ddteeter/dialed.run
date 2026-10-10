@@ -4,13 +4,20 @@ import {
   createRootRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import type { ReactElement } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { DeskShell } from "../../src/modules/ops/components/DeskShell";
-import { Today } from "../../src/modules/ops/components/Today";
+import { DeskTodayPage, Today } from "../../src/modules/ops/components/Today";
 import type { DeskToday, TodayCounts } from "../../src/modules/ops/desk";
+import type { GaveUpJob } from "../../src/modules/ops/gave-up";
 
 /**
  * The Desk's shell and Today (Operator Screens D0).
@@ -40,9 +47,28 @@ function desk(counts: Partial<TodayCounts> = {}): DeskToday {
       screenerUnfinished: 0,
       bansThisWeek: 0,
       bansAllTime: 0,
+      gaveUp: 0,
+      oldestGaveUpAt: undefined,
       ...counts,
     },
   };
+}
+
+function renderToday(
+  today: DeskToday,
+  gaveUp: readonly GaveUpJob[] = [],
+  handlers: Partial<Parameters<typeof Today>[0]> = {},
+) {
+  return render(
+    <Today
+      today={today}
+      gaveUp={gaveUp}
+      retry={vi.fn(() => Promise.resolve("retried"))}
+      drop={vi.fn(() => Promise.resolve())}
+      onChanged={vi.fn(() => Promise.resolve())}
+      {...handlers}
+    />,
+  );
 }
 
 function rail(): HTMLElement {
@@ -83,13 +109,13 @@ describe("DeskShell", () => {
     const entries = within(rail())
       .getAllByRole("listitem")
       .map((item) => item.textContent);
+    // D-87's five (D0, round 30): Gave up is a section of Today, not here.
     expect(entries).toStrictEqual([
       "Today",
       "Review",
-      "Duplicates",
-      "Gave up",
-      "Runners",
       "Access",
+      "Duplicates",
+      "Runners",
     ]);
   });
 
@@ -106,9 +132,9 @@ describe("DeskShell", () => {
     ).toStrictEqual([
       ["Today", "/desk"],
       ["Review", "/safety/review"],
-      ["Runners", "/desk/runners"],
       // D7, task 126 (ACC-5).
       ["Access", "/desk/access"],
+      ["Runners", "/desk/runners"],
     ]);
     // Not yet built: text, not a link that goes nowhere.
     expect(within(rail()).getByText("Duplicates").closest("li")).toHaveClass(
@@ -142,6 +168,20 @@ describe("DeskShell", () => {
     expect(within(review).getByText("4")).toHaveClass("text-hiviz-text");
   });
 
+  it("counts what the system gave up on on the Today entry, in hi-viz", async () => {
+    await renderWithRouter(
+      <DeskShell current="review" today={desk({ gaveUp: 3, waiting: 4 })}>
+        <p>page</p>
+      </DeskShell>,
+    );
+
+    const today = within(rail()).getByRole("link", { name: "Today 3" });
+    expect(within(today).getByText("3")).toHaveClass("text-hiviz-text");
+    expect(
+      within(rail()).getByRole("link", { name: "Review 4" }),
+    ).toBeVisible();
+  });
+
   it("shows no count at zero, and none on a destination that has none", async () => {
     await renderWithRouter(
       <DeskShell current="today" today={desk()}>
@@ -157,7 +197,7 @@ describe("DeskShell", () => {
 
 describe("Today", () => {
   it("dates the counts, month before day", () => {
-    render(<Today today={desk()} />);
+    renderToday(desk());
 
     expect(
       screen.getByRole("heading", { level: 1, name: "Tuesday, Sep 16" }),
@@ -165,19 +205,17 @@ describe("Today", () => {
   });
 
   it("renders the digest's three numbers, in the digest's order", () => {
-    render(
-      <Today
-        today={desk({
-          waiting: 4,
-          oldestWaitingAt: TUESDAY_NOON - 19 * 3600 - 1200,
-          screenerUnfinished: 1,
-          bansThisWeek: 0,
-          bansAllTime: 3,
-        })}
-      />,
+    renderToday(
+      desk({
+        waiting: 4,
+        oldestWaitingAt: TUESDAY_NOON - 19 * 3600 - 1200,
+        screenerUnfinished: 1,
+        bansThisWeek: 0,
+        bansAllTime: 3,
+      }),
     );
 
-    const stats = screen
+    const stats = within(screen.getByRole("list", { name: "Today" }))
       .getAllByRole("listitem")
       .map((item) => item.textContent);
     expect(stats).toStrictEqual([
@@ -188,19 +226,19 @@ describe("Today", () => {
   });
 
   it("puts what needs a person in hi-viz, and nothing at zero or for bans", () => {
-    render(
-      <Today
-        today={desk({
-          waiting: 2,
-          oldestWaitingAt: TUESDAY_NOON - 3600,
-          screenerUnfinished: 0,
-          bansThisWeek: 1,
-          bansAllTime: 1,
-        })}
-      />,
+    renderToday(
+      desk({
+        waiting: 2,
+        oldestWaitingAt: TUESDAY_NOON - 3600,
+        screenerUnfinished: 0,
+        bansThisWeek: 1,
+        bansAllTime: 1,
+      }),
     );
 
-    const [waiting, screener, bans] = screen.getAllByRole("listitem");
+    const [waiting, screener, bans] = within(
+      screen.getByRole("list", { name: "Today" }),
+    ).getAllByRole("listitem");
     expect(within(waiting ?? document.body).getByText("2")).toHaveClass(
       "text-hiviz-text",
     );
@@ -213,13 +251,13 @@ describe("Today", () => {
   });
 
   it("says nothing is waiting rather than dating an oldest that does not exist", () => {
-    render(<Today today={desk()} />);
+    renderToday(desk());
 
     expect(screen.getByText("Nothing waiting")).toBeInTheDocument();
   });
 
   it("speaks in the plural past one", () => {
-    render(<Today today={desk({ screenerUnfinished: 2, bansThisWeek: 2 })} />);
+    renderToday(desk({ screenerUnfinished: 2, bansThisWeek: 2 }));
 
     expect(
       screen.getByText("photos the screener couldn't finish"),
@@ -228,8 +266,52 @@ describe("Today", () => {
   });
 
   it("speaks in the singular at one", () => {
-    render(<Today today={desk({ bansThisWeek: 1 })} />);
+    renderToday(desk({ bansThisWeek: 1 }));
 
     expect(screen.getByText("ban this week")).toBeInTheDocument();
+  });
+});
+
+describe("DeskTodayPage", () => {
+  it("is Today in the Desk's shell, and reloads the route after a drop", async () => {
+    const drop = vi.fn(() => Promise.resolve());
+    const page = (
+      <DeskTodayPage
+        today={desk({ gaveUp: 1 })}
+        gaveUp={[
+          {
+            id: "g1",
+            kind: "weather",
+            doing: "Fetch weather for @sam's run",
+            reason: "No weather.",
+            rawError: undefined,
+            tries: 5,
+            firstFailedAt: TUESDAY_NOON - 3600,
+            lastFailedAt: TUESDAY_NOON - 3600,
+            hasStoredPage: false,
+          },
+        ]}
+        retry={vi.fn(() => Promise.resolve())}
+        drop={drop}
+      />
+    );
+    const rootRoute = createRootRoute({ component: () => page });
+    const router = createRouter({
+      routeTree: rootRoute,
+      history: createMemoryHistory({ initialEntries: ["/"] }),
+    });
+    await router.load();
+    const invalidate = vi.spyOn(router, "invalidate");
+    render(<RouterProvider router={router} />);
+
+    expect(
+      await within(rail()).findByRole("link", { name: "Today 1" }),
+    ).toHaveAttribute("aria-current", "page");
+    fireEvent.click(screen.getByRole("button", { name: /^Drop/u }));
+
+    await waitFor(() => {
+      expect(invalidate).toHaveBeenCalledTimes(1);
+    });
+    expect(drop).toHaveBeenCalledWith({ data: { id: "g1" } });
   });
 });

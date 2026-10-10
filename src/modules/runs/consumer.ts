@@ -12,6 +12,7 @@
  */
 import { eq } from "drizzle-orm";
 
+import { dlqBatchHandler } from "../../db/gave-up";
 import {
   imports,
   processedWebhookEvents,
@@ -23,12 +24,13 @@ import { didClaim } from "../../lib/sql/claim";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
-import { consumeEach, deadLetterEach } from "../../lib/sql/queue-batch";
+import { consumeEach } from "../../lib/sql/queue-batch";
 import type { CoreDb } from "./core-db";
 import { createNotification, notificationInsert } from "../notifications";
 import { PARSE_FAILURE_MESSAGE, extensionFromKey, sourceFor } from "./parsers";
 import {
   importsQueueMessageSchema,
+  reminderSubject,
   type DeauthorizeJob,
   type ImportJob,
   type ReminderJob,
@@ -97,13 +99,13 @@ const FAILED_IMPORT_FILE_DAYS = 30;
  * recorded without the date its file goes (law 8c: the outbox row is the
  * only thing that will ever remember it). The daily drain deletes it.
  */
-async function failImport(
+function failImportWrites(
   deps: Pick<ConsumerDeps, "db" | "owe">,
   importRow: { id: string; userId: string; r2Key: string },
   reason: string,
-): Promise<void> {
+) {
   const { db } = deps;
-  await db.batch([
+  return [
     db
       .update(imports)
       .set({ status: "failed", failureReason: reason })
@@ -121,7 +123,15 @@ async function failImport(
       },
       nowSeconds() + FAILED_IMPORT_FILE_DAYS * 24 * 60 * 60,
     ),
-  ]);
+  ] as const;
+}
+
+async function failImport(
+  deps: Pick<ConsumerDeps, "db" | "owe">,
+  importRow: { id: string; userId: string; r2Key: string },
+  reason: string,
+): Promise<void> {
+  await deps.db.batch(failImportWrites(deps, importRow, reason));
 }
 
 /**
@@ -406,20 +416,31 @@ export async function handleImportsBatch(
 /**
 DLQ ownership (102 §8): a dead-lettered ImportJob marks the import `failed`
 with a user-facing reason and notifies the user — no import ends in
-silence. A dead-lettered ReminderJob has no user-visible entity to mark, so
-it only reports to Sentry.
+silence. A dead-lettered ReminderJob has no user-visible entity to mark.
+Both land on the Desk's Gave up (R-119), in the batch that marks them, so
+an operator can retry what the runner cannot: the reminder's row is the
+only record it was ever owed, and is keyed by the job itself, which is
+what a Retry sends again.
 
 A dead-lettered deauthorization is different: it is a deletion Strava's
 API Policy §7.4 requires, and nothing else records that it is owed (law 6).
 So the DLQ performs it — the same idempotent delete the consumer would have
-made — rather than only reporting that it did not happen.
+made — rather than only reporting that it did not happen. A revoke's
+`strava_revocations` row is its own record, which the morning checks
+re-drive.
 */
 export async function handleImportsDlqBatch(
   batch: MessageBatch,
   deps: ConsumerDeps,
+  tries: number,
 ): Promise<void> {
-  await deadLetterEach(batch, importsQueueMessageSchema, {
-    onJob: async (job) => {
+  await dlqBatchHandler(
+    batch,
+    importsQueueMessageSchema,
+    deps,
+    tries,
+    "dead-lettered dialed-imports message",
+    async (job) => {
       if (job.type === "strava_deauthorize") {
         await deauthorizeAthlete(
           deps.db,
@@ -429,22 +450,35 @@ export async function handleImportsDlqBatch(
         );
         return;
       }
-      if (job.type !== "import") return;
-      const importRow = await importById(deps.db, job.importId);
-      if (
-        importRow !== undefined &&
-        !(IMPORT_TERMINAL_STATUSES as readonly string[]).includes(
-          importRow.status,
-        )
-      ) {
-        await failImport(
-          deps,
-          importRow,
-          "We couldn't process this import after several tries. Try uploading it again.",
-        );
+      if (job.type === "strava_reminder") {
+        return {
+          subject: { kind: "reminder", subjectId: reminderSubject(job) },
+          writes: [],
+        };
       }
+      if (job.type === "import") return deadImportWrites(deps, job.importId);
+      // A revoke: its `strava_revocations` row is its own record.
     },
-    deadLettered: "dead-lettered dialed-imports message",
-    captureException: deps.captureException,
-  });
+  );
+}
+
+const DEAD_IMPORT_REASON =
+  "We couldn't process this import after several tries. Try uploading it again.";
+
+/**
+ * A dead-lettered import's writes: failed, its runner told, its file's
+ * deletion owed — unless it already ended, when there is nothing to mark.
+ */
+async function deadImportWrites(deps: ConsumerDeps, importId: string) {
+  const importRow = await importById(deps.db, importId);
+  if (
+    importRow === undefined ||
+    (IMPORT_TERMINAL_STATUSES as readonly string[]).includes(importRow.status)
+  ) {
+    return;
+  }
+  return {
+    subject: { kind: "import", subjectId: importId } as const,
+    writes: failImportWrites(deps, importRow, DEAD_IMPORT_REASON),
+  };
 }

@@ -22,12 +22,36 @@ import { captureException } from "./sentry";
  * never binds is a queue that silently fills up and is never drained.
  */
 export const queueRegistry = [
-  { queue: "dialed-imports", deadLetterQueue: "dialed-imports-dlq" },
-  { queue: "dialed-enrichment", deadLetterQueue: "dialed-enrichment-dlq" },
+  {
+    queue: "dialed-imports",
+    deadLetterQueue: "dialed-imports-dlq",
+    maxRetries: 3,
+  },
+  {
+    queue: "dialed-enrichment",
+    deadLetterQueue: "dialed-enrichment-dlq",
+    maxRetries: 3,
+  },
   // Task 126's data export (ACC-10; decision D-86): one ZIP a delivery,
   // on its own queue so a long build never holds up a run file's parse.
-  { queue: "dialed-exports", deadLetterQueue: "dialed-exports-dlq" },
+  {
+    queue: "dialed-exports",
+    deadLetterQueue: "dialed-exports-dlq",
+    maxRetries: 3,
+  },
 ] as const;
+
+/**
+ * How many times a queue delivered a job before dead-lettering it: the
+ * first delivery and its `max_retries` (Cloudflare: "retry delivery three
+ * times before marking the delivery as failed"). The Desk's Gave up row
+ * shows it as the job's tries.
+ */
+function deliveries(entry: { readonly maxRetries: number }): number {
+  return entry.maxRetries + 1;
+}
+
+const [IMPORTS, ENRICHMENT] = queueRegistry;
 
 /**
 Every queue name the handler below switches on, DLQs included.
@@ -40,7 +64,7 @@ export const consumedQueueNames: readonly string[] = queueRegistry.flatMap(
 The enrichment consumer's dependencies, read from bindings here and nowhere
 inside the module — which is what keeps the module importable by a test.
 */
-function enrichmentDeps() {
+export function enrichmentDeps() {
   return {
     db: drizzle(env.DIALED_CORE),
     captureException,
@@ -106,16 +130,24 @@ export async function handleQueueBatch(
       break;
     }
     case "dialed-imports-dlq": {
-      await handleImportsDlqBatch(batch, {
-        db: drizzle(env.DIALED_CORE),
-        importBucket: env.IMPORTS,
-        captureException,
-        owe: oweInCore,
-      });
+      await handleImportsDlqBatch(
+        batch,
+        {
+          db: drizzle(env.DIALED_CORE),
+          importBucket: env.IMPORTS,
+          captureException,
+          owe: oweInCore,
+        },
+        deliveries(IMPORTS),
+      );
       break;
     }
     case "dialed-enrichment-dlq": {
-      await handleEnrichmentDlqBatch(batch, enrichmentDeps());
+      await handleEnrichmentDlqBatch(
+        batch,
+        enrichmentDeps(),
+        deliveries(ENRICHMENT),
+      );
       break;
     }
     case "dialed-exports": {

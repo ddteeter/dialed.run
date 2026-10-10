@@ -99,6 +99,7 @@ function crons(config: unknown): string[] {
 interface BoundConsumer {
   queue: string;
   dlq: string | undefined;
+  maxRetries: number | undefined;
 }
 
 function queueConsumers(config: unknown): BoundConsumer[] {
@@ -123,6 +124,8 @@ function queueConsumers(config: unknown): BoundConsumer[] {
         "dead_letter_queue" in consumer
           ? String(consumer.dead_letter_queue)
           : undefined,
+      maxRetries:
+        "max_retries" in consumer ? Number(consumer.max_retries) : undefined,
     };
   });
 }
@@ -174,6 +177,22 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
         bound.get(entry.queue),
         `dead_letter_queue for ${entry.queue}`,
       ).toBe(entry.deadLetterQueue);
+    }
+  });
+
+  it("retries each queue as often as the Desk's Gave up says it tried", () => {
+    // A dead-lettered job's row reads "N TRIES" from the registry, so a
+    // max_retries changed in the config alone would make the Desk lie.
+    const bound = new Map(
+      queueConsumers(config).map((consumer) => [
+        consumer.queue,
+        consumer.maxRetries,
+      ]),
+    );
+    for (const entry of queueRegistry) {
+      expect(bound.get(entry.queue), `max_retries for ${entry.queue}`).toBe(
+        entry.maxRetries,
+      );
     }
   });
 

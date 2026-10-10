@@ -6,18 +6,14 @@
  * The operator exists only with `ADMIN_USER_IDS=e2e-desk-operator` in the
  * dev server's `.dev.vars`, which CI's e2e job writes (R-72, PR #114).
  *
- * **Known gap, asserted as a gap** (the auth-forms spec's mechanism): round
- * 30 redrew D0's rail to D-87's five destinations, Today, Review, Access,
- * Duplicates, Runners, with Gave up a section on Today rather than a rail
- * item. The build's rail is still round 27's: Today, Review, Duplicates,
- * Gave up, Runners, then Access. So the board side asserts the new rail and
- * the app side asserts the build's own, and both fail the day either moves.
- * The build is queued (lane 125, `ops/components/DeskShell.tsx` and
- * `Today.tsx`; register R-127), and when it lands the two lists become one.
+ * D-87's rail (round 30): Today, Review, Access, Duplicates, Runners, with
+ * Gave up a section on Today rather than a rail item (R-127, closed by
+ * design-adoption PR B). The board and the app are read against the same
+ * list, so a rail either side moves fails here.
  *
  * What it does not compare, on purpose: the board's own values (4, 23, 3,
- * "OLDEST · 19H") are the drawing's data, not the app's, and Today's rail
- * count is the Gave up count, which is the same queued build; "@mara ·
+ * "OLDEST · 19H") are the drawing's data, not the app's — Today's rail
+ * count among them, which is the Gave up count; "@mara ·
  * OPERATOR · SIGN OUT" is a design delta (no handle read before ACC-1, and
  * sign-out is 126's component); and "SCREENING · OK / LAST DIGEST" is
  * undrawn in words the build has anything behind yet.
@@ -41,22 +37,10 @@ const DRAWN_STATS = [
   "bans this week",
 ];
 /**
- * The rail as the build draws it today. Known gap: Gave up is still a
- * destination and Access comes last; D-87's rail is queued (R-127).
+ * Every label a rail has ever named, Gave up included: each side is read
+ * against all of them, so a label that comes back shows up in its list.
  */
-const BUILT_RAIL = [
-  "Today",
-  "Review",
-  "Duplicates",
-  "Gave up",
-  "Runners",
-  "Access",
-];
-/**
- * Every label either rail names. Each side is read against all of them,
- * so a label one side gains or drops shows up in that side's list.
- */
-const RAIL_LABELS = [...new Set([...DRAWN_RAIL, ...BUILT_RAIL])];
+const RAIL_LABELS = [...DRAWN_RAIL, "Gave up"];
 
 test("D0: the rail's destinations and Today's three numbers, as drawn", async ({
   page,
@@ -94,11 +78,13 @@ test("D0: the rail's destinations and Today's three numbers, as drawn", async ({
   const labels = entries.flatMap((entry) =>
     RAIL_LABELS.filter((label) => entry.startsWith(label)),
   );
-  // Known gap: the build's rail is round 27's, not D0's (see the header).
-  // When D-87's rail lands this fails, and BUILT_RAIL goes.
-  expect(labels, "the app's rail, as built").toStrictEqual(BUILT_RAIL);
+  expect(labels, "the app's rail, as D0 draws it").toStrictEqual(DRAWN_RAIL);
 
-  const stats = page.getByRole("main").getByRole("listitem");
+  // Today's three numbers, in their own list: Gave up's rows sit under it.
+  const stats = page
+    .getByRole("main")
+    .getByRole("list", { name: "Today" })
+    .getByRole("listitem");
   await expect(stats).toHaveCount(3);
   // Singular and plural are the same line; the board draws "1 photo".
   const texts = await stats.allTextContents();

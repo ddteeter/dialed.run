@@ -5,10 +5,11 @@
  * the idempotent unit — re-invoking it on an already-resolved run is a
  * no-op (CLAUDE.md resilience law 1).
  */
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
-import { imports, runs } from "../../db/schema-core";
+import { gaveUpClear, gaveUpUpsert } from "../../db/gave-up";
+import { gaveUp, imports, runs } from "../../db/schema-core";
 import { env } from "../../env";
 import type { ManualSky } from "../../lib/contracts";
 import type { Ulid } from "../../lib/ids";
@@ -27,7 +28,44 @@ import { nowSeconds } from "../../lib/now";
 type WeatherStatus = (typeof runs.$inferSelect)["weatherStatus"];
 
 const RETRY_BATCH_SIZE = 50;
-const FAIL_AFTER_SECONDS = 5 * 60 * 60;
+const HOUR_SECONDS = 60 * 60;
+const FAIL_AFTER_SECONDS = 5 * HOUR_SECONDS;
+
+/**
+ * Why a run's conditions gave up, for its Gave up row. The cron keeps no
+ * error — a provider failure is logged and the run left `pending` — so
+ * what it can say is how long it tried; the logs have the rest.
+ */
+const WEATHER_GAVE_UP_REASON =
+  "No weather came back for this run in five hours of hourly tries.";
+
+/**
+ * The same, for a run the cron fails on its first pass already past the
+ * window: an operator's Retry (which puts it back to `pending`), or a run
+ * that entered the system older than five hours. Either way it had one
+ * try, and saying "five hours of hourly tries" again would be untrue.
+ */
+const WEATHER_LATE_TRY_REASON =
+  "No weather came back for this run on its latest try, made after its five-hour window had closed.";
+
+/**
+ * What a give-up says and counts, by the run's age when the cron fails it.
+ *
+ * The cron fails a run on its first pass at or past five hours, so a run
+ * that was pending all along is failed before it is six hours old, having
+ * had about five hourly goes. One failed later than that was not pending
+ * all along — it came back after a give-up, or entered late — and had the
+ * one go this pass made. A run already listed adds that to its tries
+ * (`gaveUpUpsert`), so a retried run counts one more, not five.
+ */
+function giveUpFact(age: number): { reason: string; tries: number } {
+  return age < FAIL_AFTER_SECONDS + HOUR_SECONDS
+    ? {
+        reason: WEATHER_GAVE_UP_REASON,
+        tries: FAIL_AFTER_SECONDS / HOUR_SECONDS,
+      }
+    : { reason: WEATHER_LATE_TRY_REASON, tries: 1 };
+}
 
 function coreDb() {
   return drizzle(env.DIALED_CORE);
@@ -43,11 +81,22 @@ function isResolved(status: WeatherStatus): boolean {
   return status === "attached" || status === "manual";
 }
 
+/**
+ * Write a run's weather status. A run that resolves — fetched, or a band
+ * its runner typed — is off the Desk's Gave up in the same batch (R-119),
+ * whichever path resolved it: the hourly cron, an operator's Retry, R2b.
+ */
 async function setStatus(runId: Ulid, status: WeatherStatus): Promise<void> {
-  await coreDb()
+  const db = coreDb();
+  const update = db
     .update(runs)
     .set({ weatherStatus: status })
     .where(eq(runs.id, runId));
+  if (!isResolved(status)) {
+    await update;
+    return;
+  }
+  await db.batch([update, gaveUpClear(db, "weather", runId)]);
 }
 
 /**
@@ -281,41 +330,57 @@ export async function retryPendingWeather(): Promise<RetryCronResult> {
     }
   }
 
+  const now = nowSeconds();
+  const toFail = candidates
+    .map((c) => ({ id: c.id, age: now - (c.importCreatedAt ?? c.startedAt) }))
+    .filter((c) => c.age >= FAIL_AFTER_SECONDS);
   // Equivalent mutant: skipping this return changes nothing an assertion
-  // can see — an empty `inArray` matches nothing, so the two queries below
-  // return the same zeros. What it saves is the two queries, on a cron
-  // that fires every hour.
+  // can see — an empty `inArray` matches nothing, so the batch below fails
+  // nothing, lists nothing and returns the same zero. What it saves is the
+  // batch, on a cron that fires every hour.
   // Stryker disable next-line ConditionalExpression,EqualityOperator,BlockStatement
-  if (candidates.length === 0) {
-    return { claimed: 0, attached, failed: 0 };
+  if (toFail.length === 0) {
+    return { claimed: candidates.length, attached, failed: 0 };
   }
 
-  const candidateIds = candidates.map((c) => c.id);
-  const stillPending = await db
+  // Failed and on the Desk's Gave up together (R-119), and only what is
+  // still `pending`: a run this pass attached, or one its runner saved a
+  // band for since, is settled and must not be overwritten — nor listed,
+  // so a row this batch wrote for a run it did not fail is taken back in
+  // the same batch. What the update returns is what failed.
+  const toFailIds = toFail.map((c) => c.id);
+  const stillPending = and(
+    inArray(runs.id, toFailIds),
+    eq(runs.weatherStatus, "pending"),
+  );
+  const notFailed = db
     .select({ id: runs.id })
     .from(runs)
-    .where(
-      and(eq(runs.weatherStatus, "pending"), inArray(runs.id, candidateIds)),
-    );
-  const stillPendingIds = new Set(stillPending.map((r) => r.id));
-
-  const now = nowSeconds();
-  const toFailIds = candidates
-    .filter((c) => stillPendingIds.has(c.id))
-    .filter(
-      (c) => now - (c.importCreatedAt ?? c.startedAt) >= FAIL_AFTER_SECONDS,
-    )
-    .map((c) => c.id);
-
-  if (toFailIds.length > 0) {
-    await db
+    .where(and(inArray(runs.id, toFailIds), ne(runs.weatherStatus, "failed")));
+  const listedButNotFailed = and(
+    eq(gaveUp.kind, "weather"),
+    inArray(gaveUp.subjectId, notFailed),
+  );
+  const [failed] = await db.batch([
+    db
       .update(runs)
       .set({ weatherStatus: "failed" })
-      .where(inArray(runs.id, toFailIds));
+      .where(stillPending)
+      .returning({ id: runs.id }),
+    ...toFail.map((c) =>
+      gaveUpUpsert(db, {
+        kind: "weather",
+        subjectId: c.id,
+        ...giveUpFact(c.age),
+      }),
+    ),
+    db.delete(gaveUp).where(listedButNotFailed),
+  ]);
+  const failedIds = failed.map((row) => row.id);
+  if (failedIds.length > 0) {
     console.warn("[weather] retry cron: exhausted, marking failed", {
-      runIds: toFailIds,
+      runIds: failedIds,
     });
   }
-
-  return { claimed: candidates.length, attached, failed: toFailIds.length };
+  return { claimed: candidates.length, attached, failed: failedIds.length };
 }

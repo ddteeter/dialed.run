@@ -28,7 +28,7 @@ describe("SITE_META", () => {
   });
 
   it("titles and describes the site in the default card's words", () => {
-    const line = "What to wear for the run you're about to do.";
+    const line = "Wear what worked.";
 
     expect(content("og:title")).toBe("dialed.run");
     expect(content("og:site_name")).toBe("dialed.run");
