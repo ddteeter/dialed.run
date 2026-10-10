@@ -294,7 +294,13 @@ describe("the Desk's Gave up (R-119)", () => {
   });
 
   it("takes a run off the list once its conditions resolve", async () => {
-    const runId = await insertPendingRun({ lat: 65.1, lng: 25.1 });
+    // Inside the window, so the cap's own clean-up never reaches it: the
+    // resolve is what takes it off.
+    const runId = await insertPendingRun({
+      lat: 65.1,
+      lng: 25.1,
+      startedAt: nowSeconds() - HOUR,
+    });
     await gaveUpUpsert(coreDb(), {
       kind: "weather",
       subjectId: runId,

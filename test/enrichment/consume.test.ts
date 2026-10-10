@@ -912,6 +912,7 @@ describe("the Desk's Gave up (R-119): only what the system stopped retrying", ()
       depsWith(serving("blocked", 403)),
     );
 
+    expect(await statusOf(productId)).toBe("failed");
     expect(await gaveUpRow("enrichment", productId)).toMatchObject({
       reason: "The shop returned 403. It may be blocking us.",
       rawError: "Page returned 403",
@@ -1021,6 +1022,20 @@ describe("the Desk's Gave up (R-119): only what the system stopped retrying", ()
       reason: DEAD_LETTER_REASON,
       tries: 4,
     });
+  });
+
+  it("acks a dead letter for a product that is gone, writing nothing", async () => {
+    const productId = newUlid();
+    const message = jobFor(productId);
+
+    await handleEnrichmentDlqBatch(
+      batchOf("dialed-enrichment-dlq", [message]),
+      depsWith(serving(PAGE)),
+      4,
+    );
+
+    expect(message.ack).toHaveBeenCalledTimes(1);
+    expect(await gaveUpRow("enrichment", productId)).toBeUndefined();
   });
 
   it("does not list a product a late retry finished", async () => {
