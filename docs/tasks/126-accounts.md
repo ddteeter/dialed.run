@@ -7,7 +7,7 @@ shares, the migration protocol and the cross-lane seams.
 **Starts after PR #104 merges.** #104 rebuilds auth, the signed-out shell
 and settings; this lane builds on what it leaves. **HIBP's breached-password
 check was meant to be in #104 and is not on its pushed branch as of
-a7255b2** (R-112): it is yours (ACC-14) unless #104 lands with it.
+a7255b2** (R-143): it is yours (ACC-14) unless #104 lands with it.
 
 Today a runner who forgets a password is locked out for good, nobody can
 leave, and anyone with a script can sign up. This lane gives the app an
@@ -175,7 +175,7 @@ and from every email footer; **not under the log-in form**. The privacy text
 is the owner's review of PR #109's draft (`docs/legal/privacy-policy.md`);
 the terms and copyright text are the owner's. Do not write policy prose.
 
-**ACC-14 · Breached password [F]** (round 26 #17–18; R-112). If #104 lands
+**ACC-14 · Breached password [F]** (round 26 #17–18; R-143). If #104 lands
 without it: the HIBP range check at sign-up and password change, failing
 open when unreachable. Copy: "That password has turned up in a data breach.
 Pick another." (never "your password was breached"); the hint "At least 10
