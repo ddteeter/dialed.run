@@ -1138,6 +1138,22 @@ export const takedownRequests = /*#__PURE__*/ sqliteTable(
     resolvedAt: integer("resolved_at"),
     resolvedBy: text("resolved_by"),
     idempotencyKey: text("idempotency_key").notNull(),
+    // Design 137's abuse limits. Additive and nullable: a request filed
+    // before them has none, and reads as "held" when its subject is set.
+    // Who asked, as one key per inbox (`requesterKey`).
+    requesterKey: text("requester_key"),
+    // HMAC of the visitor's IP under TAKEDOWN_SECRET; NULL without it.
+    ipKey: text("ip_key"),
+    // What filing decided: hid it, waits for the requester's confirm, the
+    // site-wide valve was shut, or the requester is blocked.
+    holdState: text("hold_state", {
+      enum: ["held", "confirm", "valve", "blocked"],
+    }),
+    // When it hid something — at filing, or at the confirm.
+    heldAt: integer("held_at"),
+    // SHA-256 of the confirm link's token, for a request waiting on one.
+    confirmTokenHash: text("confirm_token_hash"),
+    confirmedAt: integer("confirmed_at"),
   },
   (t) => [
     uniqueIndex("takedown_requests_idempotency").on(
@@ -1146,8 +1162,28 @@ export const takedownRequests = /*#__PURE__*/ sqliteTable(
     ),
     // Review's section: pending requests, soonest due first.
     index("takedown_requests_status_due").on(t.status, t.dueAt),
+    // The cap: this requester's open requests, by either key.
+    index("takedown_requests_requester_status").on(t.requesterKey, t.status),
+    index("takedown_requests_ip_status").on(t.ipKey, t.status),
+    // The valve: what hid something in the last hour.
+    index("takedown_requests_held_at").on(t.heldAt),
+    // The confirm link's lookup.
+    uniqueIndex("takedown_requests_confirm_token").on(t.confirmTokenHash),
   ],
 );
+
+/**
+ * Requesters an operator blocked from `/takedown` (design 137): an email
+ * key (`requesterKey`) or an IP key. A blocked request is still recorded
+ * and still gets its receipt, and hides nothing and alerts nobody.
+ * Additive: a new table.
+ */
+export const takedownBlocks = /*#__PURE__*/ sqliteTable("takedown_blocks", {
+  key: text("key").primaryKey(),
+  kind: text("kind", { enum: ["email", "ip"] }).notNull(),
+  createdAt: integer("created_at").notNull(),
+  createdBy: text("created_by").notNull(),
+});
 
 /**
  * One row per thing awaiting a human, not one per report — three reports

@@ -35,9 +35,9 @@ requester.
      mail scanners follow links. Confirming applies the hold through the
      same guards, the valve included.
   4. Otherwise it hides, as today.
-- **Review** shows each request's state: `[hidden]`, `[waiting for
-confirm]`, `[valve]` or `[blocked]`. It shows the requester's other open
-  requests ("2 more from this requester"), and offers **Block and decline
+- **Review** shows each request's state: `[hidden]`,
+  `[waiting for confirm]`, `[valve]` or `[blocked]`. It shows the
+  requester's other open requests ("2 more from this requester"), and offers **Block and decline
   all**. That declines every pending request from either key with no
   outcome emails, gives back what they hid through `releaseHoldWrites`,
   and adds both keys to `takedown_blocks`.
