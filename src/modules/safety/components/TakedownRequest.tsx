@@ -79,14 +79,7 @@ export function TakedownRequest({
   request,
 }: Readonly<{ siteKey: string | undefined; request: Request }>): JSX.Element {
   const [draft, setDraft] = useState(BLANK);
-  const {
-    email,
-    signature,
-    location,
-    posterUsername,
-    description,
-    isAttested,
-  } = draft;
+  const { email, signature, posterUsername, isAttested } = draft;
   const edit =
     <Key extends keyof Draft>(key: Key) =>
     (value: Draft[Key]) => {
@@ -104,6 +97,20 @@ export function TakedownRequest({
       request({ data: { ...values, turnstileToken: turnstile.take() } }),
     onSuccess: setOutcome,
   });
+  const plainField = (
+    key: "location" | "posterUsername" | "description",
+    hint: string,
+  ) => (
+    <TextField
+      name={key}
+      label={LABELS[key]}
+      hint={hint}
+      value={draft[key]}
+      onChange={edit(key)}
+      field={form.field}
+      error={form.fieldErrors[key]}
+    />
+  );
   const submit = () => {
     // An empty username is no username (round 37 #59g), so the schema
     // reads it as absent rather than as a handle too short to be one.
@@ -145,34 +152,11 @@ export function TakedownRequest({
             field={form.field}
             error={form.fieldErrors.signature}
           />
-          <TextField
-            name="location"
-            label={LABELS.location}
-            hint="A dialed.run link, or say where it is."
-            type="url"
-            value={location}
-            onChange={edit("location")}
-            field={form.field}
-            error={form.fieldErrors.location}
-          />
-          <TextField
-            name="posterUsername"
-            label={LABELS.posterUsername}
-            hint="If you know who posted it."
-            value={posterUsername}
-            onChange={edit("posterUsername")}
-            field={form.field}
-            error={form.fieldErrors.posterUsername}
-          />
-          <TextField
-            name="description"
-            label={LABELS.description}
-            hint="One line"
-            value={description}
-            onChange={edit("description")}
-            field={form.field}
-            error={form.fieldErrors.description}
-          />
+          {/* Plain text, not `url`: the hint invites words, and a phone's
+              URL keyboard has no space bar to type them with. */}
+          {plainField("location", "A dialed.run link, or say where it is.")}
+          {plainField("posterUsername", "If you know who posted it.")}
+          {plainField("description", "One line")}
           {/* A checkbox with an error is not `ToggleField`'s job, so its
               sentence goes under it, as O3's tap-list does with a group's. */}
           <div className="flex flex-col gap-2">
