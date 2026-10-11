@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px;">
+  <div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px;">
+
+    <div style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Round 35 &nbsp;/&nbsp; items 45–56 · draw, rule, confirm</span>
+        <span style="color: #FF2D8A;">dialed.run</span>
+      </div>
+      <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 1120px; text-transform: uppercase;">Eighteen and over. Words that claim a share mean it.</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">Amendments are made where they live: Operator Screens D1 (#45), V1 Screens close (#46), Theme T1 notes (#47), Marketing Site M5 legal line (#56). This board draws Au2's date of birth and G's tag, and records every ruling. The text of record is <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">docs/product.md</span> · Round 35.</p>
+    </div>
+
+    <div id="r56" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">56 · Au2 date of birth</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45;"><strong style="color: #F4F3EF;">Drawn. (b) and (d) confirmed; (c) amended: the under-18 band has no Try again.</strong> A retry is refused for a day, so the band offers nothing to press.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <sc-for list="{{ frames }}" as="f" hint-placeholder-count="4">
+          <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ f.label }}</span>
+            <div data-screen-label="{{ f.screen }}" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
+              <div style="background: #0B0B0E; padding: 16px 20px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em; color: #F4F3EF;">dialed<span style="color: #8B8B93;">.run</span></span></div>
+              <div style="padding: 26px 24px 22px; display: flex; flex-direction: column; gap: 16px;">
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 28px; letter-spacing: -0.03em;">Create an account</span>
+                <sc-if value="{{ f.band }}" hint-placeholder-val="{{ false }}">
+                  <div role="status" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">NOT CREATED</span><span style="font-size: 15px; line-height: 1.45;">{{ f.band }}</span></div>
+                </sc-if>
+                <sc-for list="{{ f.fields }}" as="x" hint-placeholder-count="4">
+                  <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #6E6E64;">{{ x.k }}</label>
+                    <div style="min-height: 50px; display: flex; align-items: center; justify-content: space-between; border: {{ x.bd }}; border-radius: 10px; padding: 0 15px; font-size: 16px; color: {{ x.c }}; background: #FFFFFF;"><span>{{ x.v }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6E6E64;">{{ x.ic }}</span></div>
+                    <sc-if value="{{ x.err }}" hint-placeholder-val="{{ false }}"><span style="align-self: flex-start; background: #F5FF3D; color: #0B0B0E; font-size: 14px; font-weight: 600; padding: 4px 8px;">{{ x.err }}</span></sc-if>
+                  </div>
+                </sc-for>
+                <div style="height: 65px; border: 1px solid #DCDBD2; display: flex; align-items: center; padding: 0 14px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6E6E64;">TURNSTILE</div>
+                <span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700;">Create account</span>
+                <div style="display: flex; align-items: center; gap: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6E6E64;"><span style="flex: 1; height: 1px; background: #DCDBD2;"></span>OR<span style="flex: 1; height: 1px; background: #DCDBD2;"></span></div>
+                <sc-if value="{{ f.gband }}" hint-placeholder-val="{{ false }}">
+                  <div role="status" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">NOT CREATED</span><span style="font-size: 15px; line-height: 1.45;">{{ f.gband }}</span></div>
+                </sc-if>
+                <span style="border: 1px solid #0B0B0E; border-radius: 100px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700;">Continue with Google</span>
+                <span style="font-size: 12px; line-height: 1.4; color: #4E4E44;">By creating an account you agree to the <span style="text-decoration: underline;">Terms</span> and have read the <span style="text-decoration: underline;">Privacy policy</span>. dialed.run is for runners 18 and over.</span>
+              </div>
+            </div>
+            <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px; text-wrap: pretty;">{{ f.note }}</p>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div id="r53" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">53b · G's tag, placed</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45;"><strong style="color: #F4F3EF;">The tag moves out of the link onto the row's meta line, first.</strong> The link's name stays the entry's label; the tag is read once, as its own text.</span>
+      </div>
+      <div data-screen-label="G Recent entries r35" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden; padding: 20px; display: flex; flex-direction: column;">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #6E6E64; padding-bottom: 10px;">RECENT ENTRIES</span>
+        <div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 0; border-top: 1px solid #DCDBD2;"><span style="font-size: 16px; font-weight: 600; text-decoration: underline;">Sat, Aug 29 · 8.2 mi</span><div style="display: flex; gap: 10px; flex-wrap: wrap; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #6E6E64;"><span style="color: #0B0B0E; font-weight: 600;">[UNDER REVIEW]</span><span>41° · OVERCAST</span></div></div>
+        <div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 0; border-top: 1px solid #DCDBD2;"><span style="font-size: 16px; font-weight: 600; text-decoration: underline;">Thu, Aug 27 · 5.0 mi</span><div style="display: flex; gap: 10px; flex-wrap: wrap; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #6E6E64;"><span>48° · CLEAR</span></div></div>
+      </div>
+    </div>
+
+    <div id="rulings" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Rulings 45–56</span>
+      <div style="display: flex; flex-direction: column; border: 1px solid #2A2A31;">
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="12">
+          <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 150px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;">
+            <span style="font-size: 15px; font-weight: 600;">{{ r.q }}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: {{ r.vc }};">{{ r.v }}</span>
+            <span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">{{ r.a }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const F = (k, v, o = {}) => ({ k, v, c: o.ph ? '#6E6E64' : '#0B0B0E', bd: o.err ? '2px solid #0B0B0E' : '1px solid #C9C8BE', ic: o.ic || '', err: o.err || '' });
+    const code = F('INVITE CODE', 'DIAL-TR8K');
+    const email = F('EMAIL', 'sam@example.com');
+    const pw = F('PASSWORD', '••••••••••');
+    const frames = [
+      { label: '56 · Au2 · REST · DATE OF BIRTH AFTER INVITE CODE', screen: 'Au2 DOB rest', fields: [code, F('DATE OF BIRTH', 'mm / dd / yyyy', { ph: true, ic: 'DATE' }), F('EMAIL', 'Email', { ph: true }), F('PASSWORD', 'Password', { ph: true })], note: 'The platform date control, as a TextField. Shown whether or not sign-up is invite-only; with no invite stage it is the first field.' },
+      { label: '56b · Au2 · FIELD ERROR FROM THE SCHEMA', screen: 'Au2 DOB error', fields: [code, F('DATE OF BIRTH', '03 / 14 / 1890', { ic: 'DATE', err: 'Check the year.' }), email, pw], note: 'Also "Enter your date of birth." (empty) and "Enter a real date." Before 1900 or after today reads "Check the year."' },
+      { label: '56c · Au2 · UNDER 18 · SERVER REFUSAL', screen: 'Au2 DOB under 18', band: 'dialed.run is for runners 18 and over.', fields: [code, F('DATE OF BIRTH', '06 / 02 / 2010', { ic: 'DATE' }), email, pw], note: 'Form band, no Try again. The same sentence as the legal line. Resubmitting is refused for a day; the date is checked, never kept.' },
+      { label: '56d · Au2 · BACK FROM GOOGLE · DATE EMPTY', screen: 'Au2 DOB Google empty', gband: 'Enter your date of birth above, then continue with Google.', fields: [code, F('DATE OF BIRTH', 'mm / dd / yyyy', { ph: true, ic: 'DATE' }), F('EMAIL', 'Email', { ph: true }), F('PASSWORD', 'Password', { ph: true })], note: 'Google\'s band, the invite-code sentence\'s shape. Under 18 with Google shows the form\'s sentence here, before Google opens.' },
+    ];
+    const C = '#00E0C6', A = '#F5FF3D', D = '#FF2D8A';
+    const R = (q, v, a) => ({ q, v, a, vc: v.startsWith('CONFIRM') ? C : v.startsWith('DRAWN') || v.startsWith('DONE') ? D : A });
+    const rows = [
+      R('45 · Flagged handle row', 'DRAWN · D1', 'Yes, it names why. Kicker HANDLE · RE-CHECK in place of the item kind; the [classifier] tag stays. One line: "The hourly re-check flagged a handle this runner already has. Nothing is hidden while it waits." D8\'s picker, Rename (submit), Keep (text button). The taken-placeholder sentence sits in the row\'s control band under NOT RENAMED. Keep clears the flag until the word list changes.'),
+      R('46 · Onboarding close', 'DONE · QUALIFIED', '"Weather comes with each run, fetched for when and where you ran." Light and dark.'),
+      R('47 · T1 notes erratum', 'DONE', 'Muted: "was #7A7A70 at 3.9:1". Placeholder: "was #9A9A90 / #6E6E74". Values unchanged.'),
+      R('48 · M5 note', 'CONFIRM', 'Drawn on both M5 boards in round 34, Au5\'s order. Nothing more.'),
+      R('49 · Confirm email from Follow', 'RULED', '(a) "Following runners needs a confirmed email." (b) No drawing. While the address loads, or if it can\'t be read, the body is the lead alone; no space is held. The address line and Resend appear together when it arrives, without motion.'),
+      R('50 · Beside rounds 29–30', 'CONFIRM a–e', '(a) Drop the role from the frames. A band is its own status region only on a screen with no page region. (b) "Attach the kit" and "The verdict". (c)–(e) as built.'),
+      R('51 · Beside W3 and Review', 'CONFIRM · c REWORDED', '(c) "Auto-blur covered 2 areas. You covered 1 more. Tap one to undo." and "Auto-blur couldn\'t check this photo. Tap anything you want covered." (d) Words confirmed; Use this photo is hidden, since there is nothing to use. a, b, e, f as built.'),
+      R('52 · Beside the closet', 'CONFIRM · b RULED', '(a) The fifteen names and plurals stand. (b) Category and Type lead, then Brand and Name, at every width: type picks the glyph and defaults. (c)–(e) as built.'),
+      R('53 · Beside the Feed', 'CONFIRM · b DRAWN · c RULED', '(a) As built. (b) Tag first on the row\'s meta line, outside the link (drawn above). (c) A lone photo carries no counter; D\'s pager shows only from 2.'),
+      R('54 · Consensus words', 'RULED · AMENDS R27 #25', 'The words claim a share of matched runners, not a rank. All: every matched runner wore it, whatever sits beside it. Most: more than half. Some: anything less, including a lone bar at 3 of 14 and a leader at 5 of 14. "Split" is dropped; equal bars show a tie. Two bars can both read Most.'),
+      R('55 · Gave up', 'CONFIRM a–g', 'All as built.'),
+      R('56 · Au2 date of birth', 'DRAWN · c AMENDED', 'Field after Invite code, before Email. (b), (d) confirmed. (c) No Try again on the under-18 band. Legal line now says 18 on Au2, M5 and round 27 #12.'),
+    ];
+    return { frames, rows };
+  }
+}
+</script>
+</body>
+</html>

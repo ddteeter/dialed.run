@@ -452,7 +452,7 @@ Drawn in `Round 26 Rulings.dc.html`.
 - **"Public" retired in copy.** "Share with runners on dialed.run"; state labels SHARED · PRIVATE. Default OG card only. Whole site noindex until public launch; afterwards only / is indexable. Signed-out entry URLs go to Au1 "Log in to see this run."
 - **Reset.** Au1 "Forgot it?" → Au6 request → "Check your inbox" (same for any address) → Au7 set password → "Save and log in". Links work once, 1 h; a new request kills the old. Completing confirms the email and signs out other devices. Google-only accounts get "Set a password".
 - **U1 Account.** Email (current password; confirm to new, notice with "This wasn't me" to old; old stays live until confirmed), Password, Sign out everywhere, Export (one a day, emailed ZIP link, 7 days, logged-in), Delete (password or Google re-auth; 7-day pending, signed out, shares hidden, handle reserved; log-in shows "Keep your account?").
-- **Legal.** Au2: "By creating an account you agree to the Terms and have read the Privacy policy." + "dialed.run is for runners 16 and over." No checkbox. Turnstile managed, above the primary on Au2 and Au5. /terms, /copyright in /privacy's layout.
+- **Legal.** Au2: "By creating an account you agree to the Terms and have read the Privacy policy." + "dialed.run is for runners 18 and over." (round 35; was 16) No checkbox. Turnstile managed, above the primary on Au2 and Au5. /terms, /copyright in /privacy's layout.
 - **Emails.** Reset, email change (new/old), Strava disconnected, content removed, ban (no case number, reply to appeal), export ready, delete scheduled. Any state-changing link lands on a page with a button.
 - **Notices.** §4a bands in place: STRAVA IS FULL (build copy), S1 NOT CONNECTED, PHOTO/NOTE REMOVED, garment photo BEING CHECKED ("ONLY YOU" tag), Au1 ACCOUNT CLOSED (Google or password, no case line).
 - **Desk D8 Runners.** Search, list (handle, email, joined, runs, reports, state), right column: Rename (reason list → @runner_NNNN, old handle blocked; runner sees "Pick a new username" once) then D3 ban.
@@ -524,6 +524,9 @@ Drawn in `Round 32 Rulings.dc.html`. **The middle path, with five conditions. If
 - Every audience check (feed, entry page, API visibility, social proof, export) reads `audience`, never a boolean, so groups ship without changing existing data.
 - API `visibility` already returns a word. `"groups"` will be added under /v1 (additive).
 - Export: entries.csv `visibility` column → `audience`.
+- **Launch guard.** A DB check constraint allows only `private` and `runners` in `audience` (on entries, and on the default-visibility and Strava-import-default settings). The API and the app reject `groups` when saving. So no row holds `groups` before Day 2, and `group_ids` stays empty everywhere.
+- **One audience check.** Every read path (feed, entry page, API, social proof, export, notifications) calls a single `canSee(viewer, entry)`. Nothing else compares `audience` to a value. Day 2 changes that one function.
+- **Day 2 migration (planned).** Add `selected`, or rename `groups` to `selected`, and swap the constraint. Rename `group_ids` to `audience_ids`. No data is rewritten. Followers becomes a built-in group per runner, and existing follows become its members, already approved. `private` and `runners` keep their meaning. Nothing is widened automatically. Turning on follower approval keeps existing followers.
 - Day 2 design lives in `Day 2 Groups.dc.html`.
 
 ## Round 33 · Contrast and lint fixes
@@ -545,3 +548,20 @@ Drawn in `Round 32 Rulings.dc.html`. **The middle path, with five conditions. If
 - **b · Region.** Keep it. It's disclosure, not a feature claim. A says the job reads region, so the page must say so even before region slices ship.
 - **c · Shared-only fallback.** Not needed. Before public launch Phase 1 is Home and Invite only (round 33), so M4, the FAQ and #totals publish with the app, after A and B are confirmed. If launch goes shared-only, M4 waits for a copy pass then. No alternate copy is kept in the repo.
 - **d · Models.** The public copy says "brand and model". "Catalogue" stays an internal word.
+- **M5 note field.** Confirmed, with the placement corrected to match Au5. The order is label NOTE · OPTIONAL, then the hint on its own line, then the field, then the counter. The counter goes right under the field, right-aligned, and appears from 120. It doesn't sit beside the hint. The field comes after email and before Turnstile. 140 characters max, the same as the Au5 counter ruling. The older "280-character note" in the Au5 summary is superseded. Past 140: ink and weight 600. On send: a field message. Announced at 120 and 141 only. Drawn on both M5a boards in the resting state.
+- **M5 intro** stays: "One email when yours is ready, and nothing else." It promises what we send, not what we ask for. The legal line changes to "See the Privacy policy for how we use what you send.", because the note is data too.
+
+## Round 35 · Twelve asks from the build (items 45–56)
+Board: `Round 35 Rulings.dc.html`.
+- **45 · Flagged handle row.** Drawn on Operator Screens D1. It names why: kicker HANDLE · RE-CHECK in place of the item kind; the `[classifier]` tag stays. Line: "The hourly re-check flagged a handle this runner already has. Nothing is hidden while it waits." D8's "Why the name has to go" picker, Rename (submit), Keep (text button). No Approve, Remove or CSAM. The taken-placeholder sentence shows in the row's control band under NOT RENAMED. Keep clears the flag until the word list changes.
+- **46 · Onboarding close.** Qualified: "Weather comes with each run, fetched for when and where you ran." Light and dark.
+- **47 · T1 erratum.** Muted note: "was #7A7A70 at 3.9:1". Placeholder note: "was #9A9A90 / #6E6E74". No value changes.
+- **48 · M5 note.** Confirmed. Drawn in round 34 in Au5's order.
+- **49 · Confirm email from Follow.** (a) Lead: "Following runners needs a confirmed email." (b) Not drawn. While the address loads or if it can't be read, the body is the lead alone and no space is reserved. The address line and Resend appear together when it arrives, with no motion.
+- **50 · Beside rounds 29–30.** (a) Drop `role="status"` from the frames. A band is its own status region only on a screen that has no page region. (b) "Attach the kit" (A2) and "The verdict" (A3) confirmed. (c), (d), (e) confirmed.
+- **51 · Beside W3 and Review.** (a), (b), (e), (f) confirmed. (c) Reworded: "Auto-blur covered 2 areas. You covered 1 more. Tap one to undo." / "Auto-blur couldn't check this photo. Tap anything you want covered." (d) Words confirmed; Use this photo is hidden while the band shows.
+- **52 · Beside the closet.** (a) Names and plurals confirmed. (b) Category and Type come first, then Brand and Name, at every width; type picks the glyph and defaults. (c), (d), (e) confirmed.
+- **53 · Beside the Feed.** (a) Confirmed. (b) [UNDER REVIEW] goes first on G's row meta line, outside the link, so the link's name stays the entry label. Drawn. (c) A lone photo has no counter; the pager shows from 2.
+- **54 · Consensus words.** Amends round 27 #25. The words claim a share of matched runners, not a rank. All = every matched runner wore it, even with other bars beside it. Most = more than half. Some = anything less (a lone bar at 3 of 14 and a leader at 5 of 14 both read Some). "Split" is dropped; equal bars show a tie. Two bars can both read Most.
+- **55 · Gave up.** (a)–(g) confirmed as built.
+- **56 · Au2 date of birth.** Drawn. TextField "Date of birth", platform date control, after Invite code and before Email, shown whether or not sign-up is invite-only. (b) Schema errors confirmed. (c) Amended: the under-18 band (NOT CREATED · "dialed.run is for runners 18 and over.") has no Try again, because a retry is refused for a day. (d) Confirmed. Legal line is 18 on Au2, M5 and round 27 #12. The date is checked and never stored.
