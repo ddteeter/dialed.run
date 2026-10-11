@@ -32,17 +32,30 @@ one nobody knows about is not.
 
 ### Never grant yourself an exemption
 
-`guardrails.config.json`'s `sanctionedSuppressions` is the only escape
-hatch from the diff-auditor. **You do not add an entry to it.** Nothing
-downstream will catch it for you — the CI sanctions check reports a new
-grant and exits 0, because a human reviewing the change is the control.
+`guardrails.config.json` has two escape hatches from the diff-auditor —
+`sanctionedSuppressions` (one exact suppression, with a `count` that is
+re-derived and verified every run) and `sanctionedFiles` (a whole `path` +
+`kind`, for GENERATED code, with no count and nothing re-deriving it).
+**You do not add an entry to either.** Nothing downstream will catch it for
+you — the CI sanctions check reports a new grant and exits 0, because a
+human reviewing the change is the control.
 
-Ask the developer directly, and give them what they need to decide:
+Ask the developer directly, and give them what they need to decide.
+`guardrails sanction` derives all of it for you — run it after a block, or
+`guardrails sanction --from=<manifest>` to work from the manifest the gate
+named. It PRINTS the entry and installs nothing, which is the point: the
+key it derives is exact (guessing it is how a stale grant gets written),
+and the decision stays the developer's. Bring them:
 
-- **What** the exemption covers — the exact `file|kind|text` key.
+- **What** the exemption covers — the exact `file|kind|text` key, or the
+  `path` + `kind` pair.
 - **Why** it is unavoidable — for an equivalent mutant, the argument that
   no test can kill it; for anything else, what you tried first.
 - **What it costs** — what stops being checked once it is granted.
+
+Weigh `sanctionedFiles` harder, not less: it exempts EVERY occurrence of
+that kind in that file, for good, and review is its only safeguard. It is
+for suppressions a generator emitted, never for ones a person wrote.
 
 If they approve, put the argument they accepted into `reason`: that text is
 what a reviewer reads later. If they do not, fix the code instead.

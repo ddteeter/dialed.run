@@ -61,8 +61,17 @@
 # still runs, unserialized: a contributor on such a platform should get the
 # checks, not a hook that dies with "command not found" and has that reported
 # as a violation.
+cli="./node_modules/guardrails-core/dist/cli.mjs"
+# See .githooks/pre-commit: an uninstalled checkout is said as such, and still
+# blocks. Checked before the lock, so a fresh worktree is not told to wait an
+# hour for a gate it could never have run.
+[ -f "$cli" ] || {
+  echo "guardrails: push blocked — guardrails-core is not installed in this checkout. Run 'npm ci' here, then push again." >&2
+  exit 1
+}
+
 LOCK="$HOME/.dialed-gate.lock"
-GATE="node ./node_modules/guardrails-core/dist/cli.mjs gate --mode=push"
+GATE="node $cli gate --mode=push"
 WAITING="guardrails: another worktree is running the gate — waiting for the lock (up to 60m)…"
 
 if command -v lockf >/dev/null 2>&1; then
