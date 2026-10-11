@@ -101,9 +101,10 @@ describe("/takedown", () => {
       "name",
     );
     expect(screen.getByText("Typed as your signature.")).toBeVisible();
+    // Words are allowed, so not a URL field (no space bar on a phone's).
     expect(screen.getByLabelText("Link to the image")).toHaveAttribute(
       "type",
-      "url",
+      "text",
     );
     expect(screen.getByLabelText(ATTESTATION)).not.toBeChecked();
     expect(ATTESTATION).toBe(

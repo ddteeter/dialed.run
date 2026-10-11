@@ -136,7 +136,8 @@ export function TakedownRequest({
             name="location"
             label={LABELS.location}
             hint="https://dialed.run/…, or say where it is."
-            type="url"
+            // Plain text, not `url`: the hint invites words, and a phone's
+            // URL keyboard has no space bar to type them with.
             value={location}
             onChange={edit("location")}
             field={form.field}
