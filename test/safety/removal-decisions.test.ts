@@ -4,15 +4,19 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import {
+  entryPhotos,
   moderationActions,
   outbox,
   outfitEntries,
+  reviewQueue,
   takedownRequests,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
 import { decideRemovalRequest } from "../../src/modules/feed/removal-requests";
+import { fileTakedownRequest } from "../../src/modules/safety";
+import { oweInCore } from "../queue-fakes";
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 
@@ -252,5 +256,176 @@ describe("a request already decided, or never made", () => {
         NOW,
       ),
     ).toBe("not_found");
+  });
+});
+
+/**
+ * Round 35 #58e: a request whose link is ours hides it at once, as a W1
+ * report of the reason does; a Decline gives it back.
+ */
+const deps = { verify: () => Promise.resolve({ ok: true }), owe: oweInCore };
+
+async function file(location: string): Promise<string> {
+  await fileTakedownRequest(
+    core(),
+    {
+      email: "sam@example.com",
+      signature: "Sam Runner",
+      location,
+      description: "",
+      isAttested: true,
+      idempotencyKey: newUlid(),
+      attempt: "token",
+      remoteIp: undefined,
+      isLimited: false,
+    },
+    deps,
+    NOW,
+  );
+  const [row] = await core()
+    .select({ id: takedownRequests.id })
+    .from(takedownRequests)
+    .where(eq(takedownRequests.location, location));
+  if (row === undefined) throw new Error("no request filed");
+  return row.id;
+}
+
+async function entryStatus(entryId: string) {
+  const [row] = await core()
+    .select({ status: outfitEntries.moderationStatus })
+    .from(outfitEntries)
+    .where(eq(outfitEntries.id, entryId));
+  return row?.status;
+}
+
+async function photoOn(
+  entryId: string,
+  screenStatus: "pending" | "pass" | "flagged",
+): Promise<string> {
+  const id = newUlid();
+  await core()
+    .insert(entryPhotos)
+    .values({
+      id,
+      entryId,
+      photoKey: `entries/u/${entryId}/${id}`,
+      position: 0,
+      screenStatus,
+    });
+  return id;
+}
+
+async function photoStatus(id: string) {
+  const [row] = await core()
+    .select({ status: entryPhotos.screenStatus })
+    .from(entryPhotos)
+    .where(eq(entryPhotos.id, id));
+  return row?.status;
+}
+
+async function decline(id: string) {
+  return decideRemovalRequest(
+    core(),
+    "op-one",
+    id,
+    { outcome: "declined", reason: "shoes" },
+    NOW,
+  );
+}
+
+const entryLink = (entryId: string) =>
+  `https://dialed.run/feed/entry/${entryId}`;
+const photoLink = (entryId: string, photoId: string) =>
+  `https://dialed.run/feed/photo/entries/u/${entryId}/${photoId}`;
+
+describe("the hold a request puts on what it names", () => {
+  it("hides a public kit at once, and a Decline gives it back", async () => {
+    const entryId = await sharedEntry();
+    const id = await file(entryLink(entryId));
+    expect(await entryStatus(entryId)).toBe("hidden_pending_review");
+
+    await decline(id);
+    expect(await entryStatus(entryId)).toBe("ok");
+  });
+
+  it("hides a photo, screened or not, and gives it back unscreened", async () => {
+    const entryId = await sharedEntry();
+    for (const screened of ["pass", "pending"] as const) {
+      const photoId = await photoOn(entryId, screened);
+      const id = await file(photoLink(entryId, photoId));
+      expect(await photoStatus(photoId)).toBe("hidden_pending_review");
+      await decline(id);
+      // Back to `pending`, never `pass`, as an approval leaves it.
+      expect(await photoStatus(photoId)).toBe("pending");
+    }
+  });
+
+  it("never touches a removed kit or a flagged photo", async () => {
+    const entryId = await sharedEntry();
+    await core()
+      .update(outfitEntries)
+      .set({ moderationStatus: "removed" })
+      .where(eq(outfitEntries.id, entryId));
+    const photoId = await photoOn(entryId, "flagged");
+    await file(entryLink(entryId));
+    await file(photoLink(entryId, photoId));
+    expect(await entryStatus(entryId)).toBe("removed");
+    expect(await photoStatus(photoId)).toBe("flagged");
+  });
+
+  it("keeps it hidden after a Decline while a review row is open on it", async () => {
+    const entryId = await sharedEntry();
+    const id = await file(entryLink(entryId));
+    await core().insert(reviewQueue).values({
+      id: newUlid(),
+      subjectType: "entry",
+      subjectId: entryId,
+      source: "reports",
+      createdAt: NOW,
+    });
+    await decline(id);
+    expect(await entryStatus(entryId)).toBe("hidden_pending_review");
+  });
+
+  it("gives it back once a settled review row is all that is left", async () => {
+    const entryId = await sharedEntry();
+    const id = await file(entryLink(entryId));
+    await core().insert(reviewQueue).values({
+      id: newUlid(),
+      subjectType: "entry",
+      subjectId: entryId,
+      source: "reports",
+      status: "approved",
+      createdAt: NOW,
+    });
+    await decline(id);
+    expect(await entryStatus(entryId)).toBe("ok");
+  });
+
+  it("keeps it hidden after a Decline while another request for it is pending", async () => {
+    const entryId = await sharedEntry();
+    const first = await file(entryLink(entryId));
+    await file(`${entryLink(entryId)}/`);
+    await decline(first);
+    expect(await entryStatus(entryId)).toBe("hidden_pending_review");
+  });
+
+  it("gives back nothing when the Decline's claim did not land", async () => {
+    // Another operator took it down first: the request is no longer the
+    // one this decision declined, so nothing comes back.
+    const entryId = await sharedEntry();
+    const id = await file(entryLink(entryId));
+    await core()
+      .update(takedownRequests)
+      .set({ status: "removed", resolvedAt: NOW })
+      .where(eq(takedownRequests.id, id));
+    expect(await decline(id)).toBe("already_decided");
+    expect(await entryStatus(entryId)).toBe("hidden_pending_review");
+  });
+
+  it("hides nothing for a link that is not ours", async () => {
+    const entryId = await sharedEntry();
+    await file("https://elsewhere.example/img");
+    expect(await entryStatus(entryId)).toBe("ok");
   });
 });

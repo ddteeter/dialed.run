@@ -339,11 +339,13 @@ export function emailContent(
       };
     }
     case "removal_requested": {
-      // Design 136: placeholder words (design deltas item 58).
+      // Design 136. Round 35 #58 gives the report's alert its words and
+      // not this one, so this follows them: what was asked, whether it is
+      // hidden (a link of ours is, #58e), and the deadline.
       const due = utcMinute(template.dueAt);
       return {
         subject: `Removal request, due by ${due}`,
-        body: `Someone asked for an intimate image to come down. ${template.isOurs ? "The link is one of ours, so Review shows it." : "The link isn't one of ours: find it from what they wrote."} Nothing is hidden until you decide. Decide by ${due}.`,
+        body: `Someone asked for an intimate image to come down. ${template.isOurs ? "It's hidden from everyone now." : "The link isn't one of ours, so nothing is hidden: find it from what they wrote."} The law gives us 48 hours to decide.`,
         button: { label: "Open Review", href: `${origin}/safety/review` },
         foot: "Sent to every operator, once per request.",
         footer,
@@ -353,8 +355,9 @@ export function emailContent(
       const due = utcMinute(template.dueAt);
       return {
         subject: "We have your removal request",
-        body: `A person will look at it and decide by ${due}. If it's what you described, we remove it, and we'll email you either way.`,
-        foot: `Didn't send this? Write to ${CONTACT_ADDRESS}.`,
+        // Round 35 #58e. The hidden line is true only of a link of ours.
+        body: `${template.isOurs ? "The image is hidden while we look. " : ""}We'll decide within 48 hours, by ${due}, and email you either way.`,
+        foot: "Sent because someone asked at dialed.run/takedown with this address.",
         footer,
       };
     }

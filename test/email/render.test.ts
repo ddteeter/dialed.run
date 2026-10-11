@@ -133,7 +133,7 @@ describe("emailContent", () => {
       { kind: "removal_requested", dueAt: 1_791_810_300, isOurs: true },
       {
         subject: "Removal request, due by 2026-10-12 13:05 UTC",
-        body: "Someone asked for an intimate image to come down. The link is one of ours, so Review shows it. Nothing is hidden until you decide. Decide by 2026-10-12 13:05 UTC.",
+        body: "Someone asked for an intimate image to come down. It's hidden from everyone now. The law gives us 48 hours to decide.",
         button: { label: "Open Review", href: `${ORIGIN}/safety/review` },
         foot: "Sent to every operator, once per request.",
         footer: LEGAL,
@@ -143,18 +143,37 @@ describe("emailContent", () => {
       { kind: "removal_requested", dueAt: 1_791_810_300, isOurs: false },
       {
         subject: "Removal request, due by 2026-10-12 13:05 UTC",
-        body: "Someone asked for an intimate image to come down. The link isn't one of ours: find it from what they wrote. Nothing is hidden until you decide. Decide by 2026-10-12 13:05 UTC.",
+        body: "Someone asked for an intimate image to come down. The link isn't one of ours, so nothing is hidden: find it from what they wrote. The law gives us 48 hours to decide.",
         button: { label: "Open Review", href: `${ORIGIN}/safety/review` },
         foot: "Sent to every operator, once per request.",
         footer: LEGAL,
       },
     ],
     [
-      { kind: "removal_request_received", dueAt: 1_791_810_300 },
+      {
+        kind: "removal_request_received",
+        dueAt: 1_791_810_300,
+        isOurs: true,
+      },
       {
         subject: "We have your removal request",
-        body: "A person will look at it and decide by 2026-10-12 13:05 UTC. If it's what you described, we remove it, and we'll email you either way.",
-        foot: "Didn't send this? Write to hello@dialed.run.",
+        body: "The image is hidden while we look. We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way.",
+        foot: "Sent because someone asked at dialed.run/takedown with this address.",
+        footer: LEGAL,
+      },
+    ],
+    [
+      // A link that is not ours hides nothing, so the receipt says
+      // nothing about hiding.
+      {
+        kind: "removal_request_received",
+        dueAt: 1_791_810_300,
+        isOurs: false,
+      },
+      {
+        subject: "We have your removal request",
+        body: "We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way.",
+        foot: "Sent because someone asked at dialed.run/takedown with this address.",
         footer: LEGAL,
       },
     ],

@@ -1,7 +1,7 @@
 /**
  * An operator's decision on a `/takedown` request (design 136, decision
  * D-117): take the subject down, or decline with a reason, and tell the
- * requester either way.
+ * requester either way. A Decline gives back what the request hid.
  *
  * Here rather than in `safety`, which records the request, because taking
  * a kit or photo down is `moderateContent`'s, and `feed` owns that.
@@ -21,6 +21,7 @@ import { nowSeconds } from "../../lib/now";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { emailDebt } from "../email";
 import { outboxInsertWhere, oweOutbox } from "../ops";
+import { releaseHoldWrites } from "../safety";
 import { moderateContent } from "./moderation";
 
 type Db = Parameters<typeof moderateContent>[0];
@@ -97,6 +98,11 @@ export async function decideRemovalRequest(
       { table: takedownRequests, where: decided },
       now,
     ),
+    // A Decline gives back what the request hid (round 35 #58e), in the
+    // claim's batch and only where the claim landed.
+    ...(subject !== undefined && decision.outcome === "declined"
+      ? releaseHoldWrites(db, { id: request.id, declinedAt: now }, subject)
+      : []),
   ]);
   return "decided";
 }

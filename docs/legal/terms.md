@@ -239,8 +239,9 @@ decision to a certified out-of-court dispute settlement body, or to a court.
   account. Give your email, your full name as your signature, where the
   image is, and confirm that it was shared without consent. A person
   decides within 48 hours, removes it if it is what you describe, and
-  emails you either way. Nothing is hidden until then. Knowingly making a
-  false request breaks these rules.
+  emails you either way. If the link is to dialed.run, we hide what it
+  points to while we look, and put it back if we decline. Knowingly
+  making a false request breaks these rules.
 - **Copyright and other intellectual property** complaints go through the
   [copyright page](/copyright).
 - **Child sexual abuse material.** Content a moderator suspects of this is

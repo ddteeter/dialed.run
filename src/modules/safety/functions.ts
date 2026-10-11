@@ -98,8 +98,8 @@ export const reviewQueueQuery = createServerFn({ method: "GET" }).handler(
     requireAdmin(await verifiedUserId());
     return {
       queue: await pendingReviewQueue(),
-      // Design 136: `/takedown` requests, which hide nothing and so are
-      // not review rows, waiting beside them.
+      // Design 136: `/takedown` requests, which carry their own decision
+      // and so are not review rows, waiting above them (round 35 #58e).
       requests: await pendingTakedownRequests(drizzle(env.DIALED_CORE)),
     };
   },

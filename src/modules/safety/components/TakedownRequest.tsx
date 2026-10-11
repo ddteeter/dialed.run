@@ -24,15 +24,14 @@ import type { TakedownRequestResult } from "../takedown-requests";
 
 /**
  * The statement the requester confirms: the Act's good-faith statement,
- * in the first person (design 136). Placeholder words (design deltas
- * item 58).
+ * in the first person, in round 35 #58e's words (design 136).
  */
 export const ATTESTATION =
-  "I am the person shown, or I'm allowed to act for them, and this image was shared without their consent.";
+  "I believe in good faith this image was shared without consent, and I'm the person in it or acting for them.";
 
 const LABELS = {
   email: "Email",
-  signature: "Your full name",
+  signature: "Full name",
   location: "Link to the image",
   description: "What it shows · optional",
   isAttested: "Statement",
@@ -69,8 +68,10 @@ type Request = (input: {
 /**
  * `/takedown` (design 136, decision D-117): how to ask for an intimate
  * image shared without consent to come down, for anyone, with or without
- * an account. Undesigned: Au5's composition — Turnstile directly above the
- * primary, one receipt — with placeholder words (design deltas item 58).
+ * an account. Round 35 #58e draws it: Au5's composition — Turnstile
+ * directly above the primary, one receipt. The grey words the board draws
+ * in each field are its hint here, since a field never carries a
+ * placeholder.
  */
 export function TakedownRequest({
   siteKey,
@@ -100,20 +101,20 @@ export function TakedownRequest({
   };
 
   return (
-    <SignedOutPanel heading="Ask us to remove an intimate image">
+    <SignedOutPanel heading="Ask us to remove an image">
       {outcome?.status === "received" ? (
         <Receipt email={email} />
       ) : (
         <FormElement form={form} dataPart="form" onSubmit={submit}>
           <p className="m-0 text-body">
-            If someone posted an intimate image of you without your consent,
-            tell us where it is. You don&apos;t need an account. A person reads
-            every request and decides within 48 hours, and we email you the
-            outcome.
+            For an intimate image of you, or someone you act for, shared
+            without consent. We hide it while we look and decide within 48
+            hours.
           </p>
           <TextField
             name="email"
             label={LABELS.email}
+            hint="Where we'll write back"
             type="email"
             autoComplete="email"
             value={email}
@@ -124,7 +125,7 @@ export function TakedownRequest({
           <TextField
             name="signature"
             label={LABELS.signature}
-            hint="Typing it is your signature."
+            hint="Typed as your signature."
             autoComplete="name"
             value={signature}
             onChange={edit("signature")}
@@ -134,7 +135,7 @@ export function TakedownRequest({
           <TextField
             name="location"
             label={LABELS.location}
-            hint="A dialed.run link, or say where it is."
+            hint="https://dialed.run/…, or say where it is."
             type="url"
             value={location}
             onChange={edit("location")}
@@ -144,6 +145,7 @@ export function TakedownRequest({
           <TextField
             name="description"
             label={LABELS.description}
+            hint="One line"
             value={description}
             onChange={edit("description")}
             field={form.field}
@@ -183,8 +185,8 @@ export function TakedownRequest({
             onToken={turnstile.onToken}
           />
           <SubmitButton
-            label="Send request"
-            pendingLabel="Sending request"
+            label="Send the request"
+            pendingLabel="Sending the request"
             pending={form.pending}
           />
         </FormElement>

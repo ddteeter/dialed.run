@@ -207,6 +207,7 @@ export {
 export {
   fileTakedownRequest,
   pendingTakedownRequests,
+  releaseHoldWrites,
   type PendingTakedownRequest,
   type TakedownRequestResult,
 } from "./takedown-requests";

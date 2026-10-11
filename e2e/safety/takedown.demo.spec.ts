@@ -1,8 +1,9 @@
 /**
- * Covers: `/takedown` (design 136, decision D-117) — the footer's "Report
- * an intimate image", the request form and its receipt, signed out — and
- * Review's removal requests, where an operator takes the kit down. One
- * journey, one video.
+ * Covers: `/takedown` (design 136, decision D-117; drawn in round 35
+ * #58e) — the footer's "Report an intimate image", the request form and
+ * its receipt, signed out, the kit hidden the moment the request lands —
+ * and Review's removal requests, where an operator takes the kit down.
+ * One journey, one video.
  *
  * Needs `ADMIN_USER_IDS=e2e-desk-operator` and Cloudflare's always-pass
  * Turnstile keys in the dev server's `.dev.vars`, which CI's e2e job
@@ -85,20 +86,20 @@ test("someone with no account asks for an intimate image to come down, and an op
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "Ask us to remove an intimate image",
+      name: "Ask us to remove an image",
     }),
   ).toBeVisible();
 
   await scene(page, "The form asks for the Act's four parts");
   await page.getByLabel("Email").fill(requester);
-  await page.getByLabel("Your full name").fill("Sam Asker");
+  await page.getByLabel("Full name").fill("Sam Asker");
   await page
     .getByLabel("Link to the image")
     .fill(`https://dialed.run/feed/entry/${entryId}`);
   await page.getByLabel("What it shows · optional").fill("A photo of me");
   await page.getByRole("checkbox").check();
   await turnstileAnswered(page);
-  await page.getByRole("button", { name: "Send request" }).click();
+  await page.getByRole("button", { name: "Send the request" }).click();
 
   await scene(page, "The receipt: a person decides within 48 hours");
   await expect(
@@ -106,14 +107,15 @@ test("someone with no account asks for an intimate image to come down, and an op
   ).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText(requester)).toBeVisible();
 
-  // The request hides nothing (D-117): the kit is still there.
-  const [stillThere] = await withLocalDb(async ({ core }) =>
+  // A link of ours hides the kit at once (round 35 #58e), as a W1 report
+  // of the reason does: nobody else sees it while an operator decides.
+  const [held] = await withLocalDb(async ({ core }) =>
     core
-      .select({ id: outfitEntries.id })
+      .select({ status: outfitEntries.moderationStatus })
       .from(outfitEntries)
       .where(eq(outfitEntries.id, entryId)),
   );
-  expect(stillThere?.id).toBe(entryId);
+  expect(held?.status).toBe("hidden_pending_review");
 
   await signInAsOperator(page);
 
@@ -123,8 +125,10 @@ test("someone with no account asks for an intimate image to come down, and an op
   const request = page
     .locator("[data-part='removal-request']")
     .filter({ hasText: requester });
-  await expect(request).toContainText("[Due in 48h]");
-  await expect(request).toContainText(`Sam Asker · ${requester}`);
+  await expect(request.locator("[data-part='due']")).toHaveText("Due in 48h");
+  await expect(request).toContainText("[via /takedown]");
+  await expect(request).toContainText("From Sam Asker · signed · good faith");
+  await expect(request).toContainText(requester);
   await expect(
     request.getByRole("link", { name: "Open the kit" }),
   ).toHaveAttribute("href", `/feed/entry/${entryId}`);

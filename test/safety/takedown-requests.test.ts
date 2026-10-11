@@ -19,7 +19,8 @@ import {
 import { oweInCore } from "../queue-fakes";
 
 /**
- * `/takedown`'s request (design 136, D-117): it hides nothing, records the
+ * `/takedown`'s request (design 136, D-117): it hides what our link names
+ * (round 35 #58e; `removal-decisions.test.ts` holds that), records the
  * request, and owes every operator an alert and the requester a receipt —
  * all in one batch.
  */
@@ -84,7 +85,7 @@ afterEach(() => {
 });
 
 describe("filing a request", () => {
-  it("records it, hiding nothing, with the subject our link names and 48 hours to decide", async () => {
+  it("records it with the subject our link names and 48 hours to decide", async () => {
     const input = request({ description: "a photo of me" });
     expect(await fileTakedownRequest(core(), input, deps, NOW)).toStrictEqual({
       status: "received",
@@ -141,7 +142,11 @@ describe("filing a request", () => {
         dedupeKey: `removal_request_received:${id}`,
         email: {
           to: { address: "sam@example.com" },
-          template: { kind: "removal_request_received", dueAt: DUE },
+          template: {
+            kind: "removal_request_received",
+            dueAt: DUE,
+            isOurs: true,
+          },
         },
       },
     ]);
@@ -155,9 +160,15 @@ describe("filing a request", () => {
       deps,
       NOW,
     );
-    const [alert] = await owedEmails();
+    const [alert, receipt] = await owedEmails();
     expect(alert?.email.template).toStrictEqual({
       kind: "removal_requested",
+      dueAt: DUE,
+      isOurs: false,
+    });
+    // Nothing was hidden, so the receipt does not say it was.
+    expect(receipt?.email.template).toStrictEqual({
+      kind: "removal_request_received",
       dueAt: DUE,
       isOurs: false,
     });

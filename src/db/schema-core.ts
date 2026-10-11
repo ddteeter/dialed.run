@@ -1107,8 +1107,9 @@ export const reports = /*#__PURE__*/ sqliteTable(
  * someone who may have no account (design 136, decision D-117): the TAKE
  * IT DOWN Act's signed-out path. Additive: a new table.
  *
- * It hides nothing on its own (D-117: a form anyone can fill must not take
- * any photo down); an operator decides within the 48 hours `dueAt` keeps.
+ * A request whose link is ours hides it at once (round 35 #58e, amending
+ * D-117), and a Decline gives it back; an operator decides within the 48
+ * hours `dueAt` keeps.
  * `subjectType`/`subjectId` are set when `location` is one of our own
  * links, and left NULL when it is not, so the operator still sees it.
  * Kept until the owner deletes it (D-117): the record is the answer if a

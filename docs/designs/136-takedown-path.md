@@ -7,7 +7,7 @@ The TAKE IT DOWN Act has been enforced since 2026-05-19. A platform that hosts u
 Today, reporting needs a signed-in, confirmed account. One report only hides the item from the reporter, and nothing reaches the owner before the daily digest. The owner's calls (2026-10-10):
 
 - an in-app reason that hides at once and alerts the operators;
-- a signed-out page and form whose requests queue with an alert but hide nothing until reviewed;
+- a signed-out page and form whose requests queue with an alert. As first built they hid nothing; round 35 #58e and the owner (2026-10-10) changed that: a request whose link is ours hides it at once, as the in-app reason does, and a Decline gives it back unless a review row or another request still holds it;
 - requests are kept until the owner deletes them.
 
 ## Approach

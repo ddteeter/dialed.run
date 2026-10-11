@@ -3,13 +3,13 @@ import { useState } from "react";
 import type { JSX } from "react";
 import { z } from "zod";
 
-import type { TakedownSubject } from "../../../lib/contracts/takedown";
 import { declineReasonField } from "../contracts";
 import {
   Bracketed,
   FormElement,
   FormFailureBand,
   ListSection,
+  Mono,
   SubmitButton,
   TextField,
   useFormSubmit,
@@ -30,12 +30,12 @@ type Decide = (input: {
 }) => Promise<unknown>;
 
 /**
- * Review's removal requests (design 136, decision D-117): what people
- * asked to come down through `/takedown`, soonest due first. A request
- * hides nothing, so this is the whole of its 48 hours: the clock, what
- * they said, the subject when the link was ours, and the two decisions.
- * Undesigned: Review's row parts and the forms primitives, placeholder
- * words (design deltas item 58).
+ * Review's removal requests (design 136, decision D-117), as round 35
+ * #58e draws them: REMOVAL REQUESTS · N above the queue, soonest due
+ * first, each row the queue row's shape. The header names the subject
+ * with `[via /takedown]` and the clock right, where the age sits (#58b);
+ * then who signed and what they said; then Take it down, and Decline,
+ * a text button that asks for the one line the requester is sent.
  */
 function requestId(request: PendingTakedownRequest): string {
   return request.id;
@@ -51,57 +51,106 @@ export function RemovalRequests({
   // A decided request leaves the list, as a decided review row does.
   const { remaining, settle } = useSettled(requests, requestId);
   return (
-    <ListSection title="to remove" items={remaining} count>
+    <ListSection
+      title={`Removal requests · ${String(remaining.length)}`}
+      items={remaining}
+    >
       {(request) => (
-        <li
+        <RemovalRequestRow
           key={request.id}
-          data-part="removal-request"
-          className="flex flex-col gap-3 border-b border-hairline py-4"
-        >
-          <span className="flex flex-col gap-1 text-micro">
-            <Bracketed>{request.due}</Bracketed>
-            <span>
-              {request.signature} · {request.requesterEmail}
-            </span>
-          </span>
-          <p className="m-0 text-body break-words">{request.location}</p>
-          {request.description === undefined ? undefined : (
-            <p className="m-0 text-body text-quiet">{request.description}</p>
-          )}
-          <SubjectLink subject={request.subject} />
-          <RemoveForm
-            requestId={request.id}
-            decide={decide}
-            onDecided={() => {
-              settle(request.id);
-            }}
-          />
-          <DeclineForm
-            requestId={request.id}
-            decide={decide}
-            onDecided={() => {
-              settle(request.id);
-            }}
-          />
-        </li>
+          request={request}
+          decide={decide}
+          onDecided={() => {
+            settle(request.id);
+          }}
+        />
       )}
     </ListSection>
   );
 }
 
+function RemovalRequestRow({
+  request,
+  decide,
+  onDecided,
+}: Readonly<{
+  request: PendingTakedownRequest;
+  decide: Decide;
+  onDecided: () => void;
+}>): JSX.Element {
+  const [isDeclining, setIsDeclining] = useState(false);
+  return (
+    <li
+      data-part="removal-request"
+      className="flex flex-col gap-3 border-b border-hairline py-4"
+    >
+      <span className="flex items-baseline justify-between gap-3">
+        <span className="flex flex-wrap items-baseline gap-2">
+          <span className="text-body font-semibold text-ink">
+            {request.subject?.subjectType ?? "link"}
+          </span>
+          <span className="text-micro text-quiet">
+            <Bracketed>via /takedown</Bracketed>
+          </span>
+        </span>
+        <span data-part="due" className="text-ink uppercase">
+          <Mono step="xs">{request.due}</Mono>
+        </span>
+      </span>
+      <span className="flex flex-col gap-1">
+        <span className="text-label uppercase">
+          <Mono step="xs">From {request.signature} · signed · good faith</Mono>
+        </span>
+        {request.description === undefined ? undefined : (
+          <q className="text-body">{request.description}</q>
+        )}
+        <span className="text-micro text-quiet">{request.requesterEmail}</span>
+      </span>
+      <SubjectLink request={request} />
+      <RemoveForm
+        requestId={request.id}
+        decide={decide}
+        onDecided={onDecided}
+      />
+      {isDeclining ? (
+        <DeclineForm
+          requestId={request.id}
+          decide={decide}
+          onDecided={onDecided}
+        />
+      ) : (
+        <button
+          type="button"
+          className="target self-start"
+          onClick={() => {
+            setIsDeclining(true);
+          }}
+        >
+          <Mono step="xs">Decline</Mono>
+        </button>
+      )}
+    </li>
+  );
+}
+
 /**
  * The subject, opened where a runner would see it: the shared kit's page,
- * which shows a reported photo among its own. A link that is not ours says
- * so instead. A link on its own line, so a full-size target (rule 03).
+ * which shows a reported photo among its own. A link that is not ours is
+ * shown as given, and says so. A link on its own line, so a full-size
+ * target (rule 03).
  */
 function SubjectLink({
-  subject,
-}: Readonly<{ subject: TakedownSubject | undefined }>): JSX.Element {
+  request,
+}: Readonly<{ request: PendingTakedownRequest }>): JSX.Element {
+  const { subject } = request;
   if (subject === undefined) {
     return (
-      <p className="m-0 text-body text-quiet">
-        Not one of our links: find it from what they wrote.
-      </p>
+      <span className="flex flex-col gap-1">
+        <span className="text-body break-words">{request.location}</span>
+        <span className="text-body text-quiet">
+          Not one of our links: find it from what they wrote.
+        </span>
+      </span>
     );
   }
   return (

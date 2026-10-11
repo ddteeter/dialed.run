@@ -178,11 +178,14 @@ export const removalRequested = emailKind("removal_requested", {
 });
 
 /**
- * Design 136: the requester's receipt — what happens next and by when.
- * Sent to the address they typed; they may have no account.
+ * Design 136: the requester's receipt — what happens next and by when,
+ * and whether the image is hidden (it is when the link is ours, round 35
+ * #58e). Sent to the address they typed; they may have no account. Never
+ * shipped before `isOurs`, so the field is required.
  */
 export const removalRequestReceived = emailKind("removal_request_received", {
   dueAt: z.int().min(0),
+  isOurs: z.boolean(),
 });
 
 /**

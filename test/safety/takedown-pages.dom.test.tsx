@@ -64,7 +64,7 @@ const A_KEY: unknown = expect.stringMatching(/^[0-9A-Z]{26}$/u);
 
 async function fillIn(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("Email"), "sam@example.com");
-  await user.type(screen.getByLabelText("Your full name"), "Sam Runner");
+  await user.type(screen.getByLabelText("Full name"), "Sam Runner");
   await user.type(
     screen.getByLabelText("Link to the image"),
     "https://dialed.run/feed/entry/x",
@@ -81,27 +81,33 @@ describe("/takedown", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: "Ask us to remove an intimate image",
+        name: "Ask us to remove an image",
       }),
     ).toBeVisible();
+    // Round 35 #58e's lead, and its grey field words as hints.
     expect(
       screen.getByText(
-        /A person reads every request and decides within 48 hours/u,
+        "For an intimate image of you, or someone you act for, shared without consent. We hide it while we look and decide within 48 hours.",
       ),
     ).toBeVisible();
+    expect(screen.getByText("Where we'll write back")).toBeVisible();
+    expect(
+      screen.getByText("https://dialed.run/…, or say where it is."),
+    ).toBeVisible();
+    expect(screen.getByText("One line")).toBeVisible();
     expect(screen.getByLabelText("Email")).toHaveAttribute("type", "email");
-    expect(screen.getByLabelText("Your full name")).toHaveAttribute(
+    expect(screen.getByLabelText("Full name")).toHaveAttribute(
       "autocomplete",
       "name",
     );
-    expect(screen.getByText("Typing it is your signature.")).toBeVisible();
+    expect(screen.getByText("Typed as your signature.")).toBeVisible();
     expect(screen.getByLabelText("Link to the image")).toHaveAttribute(
       "type",
       "url",
     );
     expect(screen.getByLabelText(ATTESTATION)).not.toBeChecked();
     expect(ATTESTATION).toBe(
-      "I am the person shown, or I'm allowed to act for them, and this image was shared without their consent.",
+      "I believe in good faith this image was shared without consent, and I'm the person in it or acting for them.",
     );
   });
 
@@ -115,7 +121,7 @@ describe("/takedown", () => {
     );
     const user = userEvent.setup();
     await fillIn(user);
-    await user.click(screen.getByRole("button", { name: "Send request" }));
+    await user.click(screen.getByRole("button", { name: "Send the request" }));
 
     expect(await screen.findByText("Request sent.")).toBeInTheDocument();
     const receipt = await waitFor(() => {
@@ -151,7 +157,7 @@ describe("/takedown", () => {
       <TakedownRequest siteKey={undefined} request={request} />,
     );
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Send request" }));
+    await user.click(screen.getByRole("button", { name: "Send the request" }));
     expect(
       await screen.findByText("Confirm the statement to send the request."),
     ).toBeInTheDocument();
@@ -168,9 +174,9 @@ describe("/takedown", () => {
     );
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("Email"), "sam@example.com");
-    await user.type(screen.getByLabelText("Your full name"), "Sam Runner");
+    await user.type(screen.getByLabelText("Full name"), "Sam Runner");
     await user.type(screen.getByLabelText("Link to the image"), "here");
-    await user.click(screen.getByRole("button", { name: "Send request" }));
+    await user.click(screen.getByRole("button", { name: "Send the request" }));
 
     const message = await screen.findByText(
       "Confirm the statement to send the request.",
@@ -198,7 +204,7 @@ describe("/takedown", () => {
     );
     const user = userEvent.setup();
     await fillIn(user);
-    await user.click(screen.getByRole("button", { name: "Send request" }));
+    await user.click(screen.getByRole("button", { name: "Send the request" }));
 
     const band = await waitFor(() => {
       const found = part("failure-band");
@@ -239,7 +245,7 @@ function pending(
 }
 
 describe("Review · removal requests", () => {
-  it("shows the clock, who asked, what they said, and opens the kit", async () => {
+  it("names the subject, then the clock right, who signed, what they said, and opens the kit (round 35 #58e)", async () => {
     await renderWithRouter(
       <RemovalRequests
         requests={[pending({ description: "a photo of me" })]}
@@ -247,21 +253,26 @@ describe("Review · removal requests", () => {
       />,
     );
     const row = part("removal-request");
-    expect(row).toHaveTextContent("[Due in 31h]");
-    expect(row).toHaveTextContent("Sam Runner · sam@example.com");
-    expect(row).toHaveTextContent(`https://dialed.run/feed/entry/${ENTRY}`);
-    expect(row).toHaveTextContent("a photo of me");
+    expect(row).toHaveTextContent(/^entry\[via \/takedown\]Due in 31h/u);
+    // The clock in the header, uppercase in CSS, as a queue row's.
+    const clock = part("due");
+    expect(clock).toHaveTextContent(/^Due in 31h$/u);
+    expect(clock).toHaveClass("uppercase");
+    expect(clock?.firstElementChild).toHaveClass("font-mono");
+    expect(row).toHaveTextContent("From Sam Runner · signed · good faith");
+    expect(row?.querySelector("q")).toHaveTextContent(/^a photo of me$/u);
+    expect(row).toHaveTextContent("sam@example.com");
     const open = screen.getByRole("link", { name: "Open the kit" });
     expect(open).toHaveAttribute("href", `/feed/entry/${ENTRY}`);
     expect(open).toHaveClass("target");
-    expect(screen.getByText("[1 to remove]")).toBeInTheDocument();
+    expect(screen.getByText("Removal requests · 1")).toBeInTheDocument();
   });
 
   it("leaves out the description's line when there is none", async () => {
     await renderWithRouter(
       <RemovalRequests requests={[pending()]} decide={vi.fn<DecideFn>()} />,
     );
-    expect(part("removal-request")?.querySelectorAll("p")).toHaveLength(1);
+    expect(part("removal-request")?.querySelector("q")).toBeNull();
   });
 
   it("opens a reported photo's kit, and says when a link is not ours", async () => {
@@ -288,6 +299,13 @@ describe("Review · removal requests", () => {
     expect(
       screen.getByText("Not one of our links: find it from what they wrote."),
     ).toBeVisible();
+    // The link as given, and a header that names no subject.
+    const [photo, outside] = document.querySelectorAll<HTMLElement>(
+      "[data-part='removal-request']",
+    );
+    expect(photo).toHaveTextContent(/^photo\[via \/takedown\]/u);
+    expect(outside).toHaveTextContent(/^link\[via \/takedown\]/u);
+    expect(outside).toHaveTextContent("somewhere");
   });
 
   it("takes it down, says so, and only that request leaves the list", async () => {
@@ -319,19 +337,30 @@ describe("Review · removal requests", () => {
       ).toHaveLength(1);
     });
     expect(part("removal-request")).toHaveTextContent("Other Asker");
-    expect(screen.getByText("[1 to remove]")).toBeInTheDocument();
+    expect(screen.getByText("Removal requests · 1")).toBeInTheDocument();
     expect(decide).toHaveBeenCalledWith({
       data: { requestId: "01JREQUEST0000000000000001", outcome: "removed" },
     });
   });
 
-  it("declines only with a reason, and sends it", async () => {
+  it("declines only with a reason, asked for once Decline is pressed, and sends it", async () => {
     const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
     await renderWithRouter(
       <RemovalRequests requests={[pending()]} decide={decide} />,
     );
     const user = userEvent.setup();
-    expect(screen.getByText("The person who asked is sent this.")).toBeVisible();
+    // Decline is a text button until pressed: then it asks for the line.
+    expect(screen.queryByLabelText("Why not")).toBeNull();
+    const ask = screen.getByRole("button", { name: "Decline" });
+    expect(ask).toHaveAttribute("type", "button");
+    await user.click(ask);
+    expect(
+      screen.getByText("The person who asked is sent this."),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "Decline" })).toHaveAttribute(
+      "type",
+      "submit",
+    );
     await user.click(screen.getByRole("button", { name: "Decline" }));
     expect(
       await screen.findAllByText("Say why, for the person who asked."),
@@ -358,6 +387,6 @@ describe("Review · removal requests", () => {
       <RemovalRequests requests={[]} decide={vi.fn<DecideFn>()} />,
     );
     expect(part("removal-request")).toBeNull();
-    expect(screen.queryByText(/to remove/u)).toBeNull();
+    expect(screen.queryByText(/Removal requests/u)).toBeNull();
   });
 });
