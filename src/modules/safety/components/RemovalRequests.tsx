@@ -91,7 +91,11 @@ export function RemovalRequests({
           onBlocked={() => {
             const gone = new Set([request.id, ...request.relatedIds]);
             for (const id of gone) settle(id);
-            setFocusId(remaining.find((row) => !gone.has(row.id))?.id);
+            // The first request left, or none when the block took them all.
+            const [next] = remaining
+              .filter((row) => !gone.has(row.id))
+              .map((row) => row.id);
+            setFocusId(next);
           }}
         />
       )}
@@ -264,19 +268,6 @@ function BlockRequester({
     setIsAsking(false);
     askedFrom.restore();
   }
-  // Esc anywhere in the question is Cancel. On the form element itself:
-  // `FormElement` is the forms primitive and takes no key handler.
-  useEffect(() => {
-    const question = form.formRef.current;
-    if (!isAsking || question === null) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") stopAsking();
-    };
-    question.addEventListener("keydown", onKey);
-    return () => {
-      question.removeEventListener("keydown", onKey);
-    };
-  });
   if (!isAsking) {
     return (
       <button
@@ -291,33 +282,42 @@ function BlockRequester({
       </button>
     );
   }
+  // Esc anywhere in the question is Cancel. On a wrapper, because
+  // `FormElement` is the forms primitive and takes no key handler; a key
+  // pressed inside the form bubbles to it.
   return (
-    <FormElement
-      form={form}
-      dataPart="block"
-      onSubmit={() => {
-        void form.submit({ requestId });
+    <div
+      onKeyDown={(event) => {
+        if (event.key === "Escape") stopAsking();
       }}
     >
-      <p className="m-0 text-body">
-        Block this requester and decline{" "}
-        {count === 1
-          ? "this request"
-          : `all ${String(count)} of their requests`}
-        ? Anything they hid comes back, and nothing is sent to them.
-      </p>
-      <FormFailureBand
-        failure={form.failure}
-        onRetry={form.retry}
-        retryRef={form.retryRef}
-      />
-      <SubmitButton
-        label="Block and decline all"
-        pendingLabel="Blocking"
-        pending={form.pending}
-      />
-      <CancelButton className="target self-start" onCancel={stopAsking} />
-    </FormElement>
+      <FormElement
+        form={form}
+        dataPart="block"
+        onSubmit={() => {
+          void form.submit({ requestId });
+        }}
+      >
+        <p className="m-0 text-body">
+          Block this requester and decline{" "}
+          {count === 1
+            ? "this request"
+            : `all ${String(count)} of their requests`}
+          ? Anything they hid comes back, and nothing is sent to them.
+        </p>
+        <FormFailureBand
+          failure={form.failure}
+          onRetry={form.retry}
+          retryRef={form.retryRef}
+        />
+        <SubmitButton
+          label="Block and decline all"
+          pendingLabel="Blocking"
+          pending={form.pending}
+        />
+        <CancelButton className="target self-start" onCancel={stopAsking} />
+      </FormElement>
+    </div>
   );
 }
 

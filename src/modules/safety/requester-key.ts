@@ -12,6 +12,8 @@
  */
 import normalizeEmail from "validator/lib/normalizeEmail";
 
+import { hmacKey } from "../../lib/hmac-key";
+
 export function requesterKey(email: string): string {
   const typed = email.trim().toLowerCase();
   // Not an address at all: the form never sends one, and the key is
@@ -20,11 +22,19 @@ export function requesterKey(email: string): string {
   // False when Gmail's rules leave nothing before the `@` ("+x@gmail.com").
   const normalized = normalizeEmail(typed) || typed;
   const at = normalized.lastIndexOf("@");
-  const [local = ""] = normalized.slice(0, at).split("+", 1);
+  const local = normalized.slice(0, at).replace(/\+.*/su, "");
   return `${local}${normalized.slice(at)}`;
 }
 
 const encoder = new TextEncoder();
+
+/**
+ * The key `ipKey` signs with: the secret itself, never extractable.
+ * Exported for its own test — nothing else here hands the key out.
+ */
+export async function ipSigningKey(secret: string): Promise<CryptoKey> {
+  return hmacKey(secret, ["sign"]);
+}
 
 /**
  * The visitor's IP as a key (design 137): HMAC-SHA-256 under
@@ -38,13 +48,7 @@ export async function ipKey(
   secret: string | undefined,
 ): Promise<string | undefined> {
   if (ip === undefined || secret === undefined || secret === "") return;
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
+  const key = await ipSigningKey(secret);
   const signed = await crypto.subtle.sign("HMAC", key, encoder.encode(ip));
   return [...new Uint8Array(signed)]
     .map((byte) => byte.toString(16).padStart(2, "0"))

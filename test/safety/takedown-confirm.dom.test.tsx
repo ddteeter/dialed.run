@@ -53,6 +53,8 @@ describe("/takedown/confirm", () => {
     await userEvent
       .setup()
       .click(screen.getByRole("button", { name: "Confirm the request" }));
+    // Announced before the receipt replaces the form.
+    expect(await screen.findByText("Request confirmed.")).toBeInTheDocument();
     await waitFor(() => {
       expect(
         screen.getByRole("heading", { name: "We have your request" }),
@@ -111,7 +113,15 @@ describe("its search", () => {
     expect(takedownConfirmSearch({ token: TOKEN })).toStrictEqual({
       token: TOKEN,
     });
-    for (const token of ["A".repeat(64), "a".repeat(63), 7, undefined]) {
+    // 64 hex characters with anything before or after is not a token.
+    for (const token of [
+      "A".repeat(64),
+      "a".repeat(63),
+      `x${TOKEN}`,
+      `${TOKEN}x`,
+      7,
+      undefined,
+    ]) {
       expect(takedownConfirmSearch({ token })).toStrictEqual({
         token: undefined,
       });

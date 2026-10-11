@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { ipKey, requesterKey } from "../../src/modules/safety/requester-key";
+import {
+  ipKey,
+  ipSigningKey,
+  requesterKey,
+} from "../../src/modules/safety/requester-key";
 
 /**
  * Design 137: two addresses that reach one inbox are one requester.
@@ -27,6 +31,8 @@ describe("requesterKey", () => {
     expect(requesterKey("first.last+abc@example.org")).toBe(
       "first.last@example.org",
     );
+    // Everything from the first `+` on, however many follow it.
+    expect(requesterKey("me+a+b@example.org")).toBe("me@example.org");
   });
 
   it("lowercases and trims, and leaves a plain address alone", () => {
@@ -62,6 +68,12 @@ describe("ipKey", () => {
     const base = await ipKey("203.0.113.9", "secret");
     expect(await ipKey("203.0.113.10", "secret")).not.toBe(base);
     expect(await ipKey("203.0.113.9", "other")).not.toBe(base);
+  });
+
+  it("signs with a key that cannot be read back out", async () => {
+    const key = await ipSigningKey("secret");
+    expect(key.extractable).toBe(false);
+    expect(key.usages).toStrictEqual(["sign"]);
   });
 
   it("is absent without the address or the secret", async () => {

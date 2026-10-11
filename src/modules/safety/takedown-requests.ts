@@ -20,6 +20,7 @@ import {
   isNull,
   ne,
   notExists,
+  or,
   sql,
 } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
@@ -490,10 +491,16 @@ export async function blockAndDeclineAll(
     requesterKey: request.requesterKey ?? requesterKey(request.requesterEmail),
     ipKey: request.ipKey ?? undefined,
   };
+  // The request itself by its id, as well as by its keys: one filed
+  // before migration 0055 has no `requester_key` for the keys to match.
+  const theirs = or(
+    eq(takedownRequests.id, request.id),
+    requesterMatches(keys),
+  );
   const pending = await db
     .select()
     .from(takedownRequests)
-    .where(and(requesterMatches(keys), eq(takedownRequests.status, "pending")));
+    .where(and(theirs, eq(takedownRequests.status, "pending")));
   const declines = pending.map((row) =>
     db
       .update(takedownRequests)

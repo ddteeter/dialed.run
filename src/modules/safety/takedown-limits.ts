@@ -90,9 +90,17 @@ export async function holdStateFor(
     db.select({ n: count() }).from(takedownRequests).where(openWhere),
   ]);
   if (blocked.length > 0) return "blocked";
-  if ((heldThisHour[0]?.n ?? 0) >= TAKEDOWN_VALVE_PER_HOUR) return "valve";
-  if ((open[0]?.n ?? 0) >= TAKEDOWN_CAP) return "confirm";
+  if (counted(heldThisHour) >= TAKEDOWN_VALVE_PER_HOUR) return "valve";
+  if (counted(open) >= TAKEDOWN_CAP) return "confirm";
   return "held";
+}
+
+/**
+ * What a `count()` answered. It always answers with one row; summing the
+ * rows says that without indexing `[0]`, whose fallback no input reaches.
+ */
+function counted(rows: readonly { n: number }[]): number {
+  return rows.reduce((total, row) => total + row.n, 0);
 }
 
 /**
@@ -100,8 +108,7 @@ export async function holdStateFor(
  * long after its request was filed.
  */
 export async function isValveShut(db: Db, now: number): Promise<boolean> {
-  const [row] = await heldInTheHour(db, now);
-  return (row?.n ?? 0) >= TAKEDOWN_VALVE_PER_HOUR;
+  return counted(await heldInTheHour(db, now)) >= TAKEDOWN_VALVE_PER_HOUR;
 }
 
 /**

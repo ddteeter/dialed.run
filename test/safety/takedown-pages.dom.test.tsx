@@ -4,7 +4,13 @@ import {
   createRootRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -175,6 +181,26 @@ describe("/takedown", () => {
       expect(request).toHaveBeenCalled();
     });
     expect(request.mock.calls[0]?.[0].data.posterUsername).toBe("maya_runs");
+  });
+
+  it("reads a username of only spaces as none given", async () => {
+    const request = vi
+      .fn<RequestFn>()
+      .mockResolvedValue({ status: "received" });
+    await renderWithRouter(
+      <TakedownRequest siteKey={undefined} request={request} />,
+    );
+    const user = userEvent.setup();
+    await fillIn(user);
+    await user.type(
+      screen.getByLabelText("Their dialed.run username · optional"),
+      " ".repeat(3),
+    );
+    await user.click(screen.getByRole("button", { name: "Send the request" }));
+    await waitFor(() => {
+      expect(request).toHaveBeenCalled();
+    });
+    expect(request.mock.calls[0]?.[0].data.posterUsername).toBeUndefined();
   });
 
   it("says what is wrong with a username that cannot be one", async () => {
@@ -593,6 +619,81 @@ describe("Review · removal requests", () => {
       expect(ask()).toHaveFocus();
     });
     expect(part("block")).toBeNull();
+  });
+
+  it("keeps the question open for a key that is not Esc", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: "Block and decline all" }),
+    );
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    });
+    await user.keyboard("a");
+    expect(part("block")).not.toBeNull();
+  });
+
+  it("hands focus back on Cancel even when the click that asked did not take it", async () => {
+    // Safari does not focus a button on click, so the button that asked
+    // may not hold focus when it leaves; Cancel still returns there.
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Block and decline all" }),
+    );
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Cancel" }));
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Block and decline all" }),
+      ).toHaveFocus();
+    });
+  });
+
+  it("takes focus only from script: a row is not a tab stop", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    expect(part("removal-request")).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("takes the last request off the list, with nothing left to focus", async () => {
+    const block = vi.fn<BlockFn>().mockResolvedValue({ status: "blocked" });
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" })]}
+        decide={vi.fn<DecideFn>()}
+        block={block}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: "Block and decline all" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Block and decline all" }),
+    );
+    await waitFor(() => {
+      expect(part("removal-request")).toBeNull();
+    });
+    expect(block).toHaveBeenCalledOnce();
   });
 
   it("says one request declined, and moves focus to the next request left", async () => {

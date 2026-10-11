@@ -19,7 +19,7 @@ import {
   fileTakedownRequest,
   pendingTakedownRequests,
 } from "../../src/modules/safety";
-import { requesterKey } from "../../src/modules/safety/requester-key";
+import { ipKey, requesterKey } from "../../src/modules/safety/requester-key";
 import {
   TAKEDOWN_CAP,
   TAKEDOWN_VALVE_PER_HOUR,
@@ -279,6 +279,11 @@ describe("the confirm", () => {
       { userId: "op-one" },
       { userId: "op-two" },
     ]);
+    expect(alerts[0]?.email.template).toStrictEqual({
+      kind: "removal_requested",
+      dueAt: request.dueAt,
+      isOurs: true,
+    });
 
     // A second press is the first: nothing new is owed.
     const before = await owed();
@@ -310,7 +315,8 @@ describe("the confirm", () => {
 
   it("hides nothing while the valve is shut, and owes its alert instead", async () => {
     const { entryId, request } = await pastTheCap();
-    await heldThisHour(TAKEDOWN_VALVE_PER_HOUR, NOW + 60);
+    // The first two requests hid theirs at NOW: with these, exactly ten.
+    await heldThisHour(TAKEDOWN_VALVE_PER_HOUR - 2, NOW + 60);
     await confirmTakedownRequest(
       core(),
       await confirmTokenFor(request.id),
@@ -373,6 +379,10 @@ describe("the valve", () => {
       `takedown_valve:${String(valveHour(NOW))}:op-one`,
       `takedown_valve:${String(valveHour(NOW))}:op-two`,
     ]);
+    expect(valve[0]?.email.template).toStrictEqual({
+      kind: "takedown_valve",
+      perHour: 10,
+    });
     expect(
       await owedWhere(
         (email) => email.email.template.kind === "removal_requested",
@@ -541,5 +551,154 @@ describe("Review's list", () => {
     expect(listed.find((row) => row.id === one.id)?.relatedIds).toStrictEqual([
       two.id,
     ]);
+  });
+});
+
+/**
+`/takedown` rows written before design 137's keys existed: no `requester_key`, no `ip_key`.
+*/
+async function legacyRequest(email: string, location: string) {
+  const id = newUlid();
+  await core()
+    .insert(takedownRequests)
+    .values({
+      id,
+      requesterEmail: email,
+      signature: "x",
+      location,
+      dueAt: NOW + 172_800,
+      createdAt: NOW,
+      idempotencyKey: newUlid(),
+    });
+  return id;
+}
+
+describe("what filing decides, at its edges", () => {
+  it("records a blocked requester's link that is not ours as blocked", async () => {
+    await core().insert(takedownBlocks).values({
+      key: "me@example.com",
+      kind: "email",
+      createdAt: NOW,
+      createdBy: "op-one",
+    });
+    const row = await file("me@example.com", "https://elsewhere.example/x");
+    expect(row.holdState).toBe("blocked");
+  });
+
+  it("blocks by the address alone without the secret", async () => {
+    await core().insert(takedownBlocks).values({
+      key: "me@example.com",
+      kind: "email",
+      createdAt: NOW,
+      createdBy: "op-one",
+    });
+    const a = await sharedEntry();
+    const row = await file("me@example.com", entryLink(a), {
+      secret: undefined,
+    });
+    expect(row.holdState).toBe("blocked");
+  });
+
+  it("blocks by the IP key alone, whatever address it comes from", async () => {
+    await core()
+      .insert(takedownBlocks)
+      .values({
+        key: (await ipKey("203.0.113.9", SECRET)) ?? "",
+        kind: "ip",
+        createdAt: NOW,
+        createdBy: "op-one",
+      });
+    const a = await sharedEntry();
+    const row = await file("fresh@example.com", entryLink(a));
+    expect(row.holdState).toBe("blocked");
+    expect(await entryStatus(a)).toBe("ok");
+  });
+
+  it("names the hour a valve alert is about", () => {
+    expect(valveHour(0)).toBe(0);
+    expect(valveHour(3599)).toBe(0);
+    expect(valveHour(3600)).toBe(1);
+    expect(valveHour(NOW)).toBe(500_000);
+  });
+});
+
+describe("the confirm, at its edges", () => {
+  it("confirms a link that is not ours without hiding anything, and says so to the operators", async () => {
+    const a = await sharedEntry();
+    const b = await sharedEntry();
+    await file("me@example.com", entryLink(a));
+    await file("me@example.com", entryLink(b));
+    const third = await file("me@example.com", "https://elsewhere.example/x");
+    expect(third.holdState).toBe("confirm");
+
+    await confirmTakedownRequest(
+      core(),
+      await confirmTokenFor(third.id),
+      oweInCore,
+      NOW + 60,
+    );
+    const [row] = await core()
+      .select()
+      .from(takedownRequests)
+      .where(eq(takedownRequests.id, third.id));
+    expect(row?.holdState).toBe("held");
+    expect(row?.heldAt).toBeNull();
+    const alerts = await owedWhere((email) =>
+      email.dedupeKey.startsWith(`removal_requested:${third.id}`),
+    );
+    expect(alerts.map((email) => email.email.template)).toStrictEqual([
+      { kind: "removal_requested", dueAt: third.dueAt, isOurs: false },
+      { kind: "removal_requested", dueAt: third.dueAt, isOurs: false },
+    ]);
+  });
+
+  it("does nothing on a second press, even once the valve has shut", async () => {
+    const { request } = await pastTheCap();
+    const token = await confirmTokenFor(request.id);
+    await confirmTakedownRequest(core(), token, oweInCore, NOW + 60);
+    await heldThisHour(TAKEDOWN_VALVE_PER_HOUR, NOW + 120);
+    expect(
+      await confirmTakedownRequest(core(), token, oweInCore, NOW + 120),
+    ).toBe("confirmed");
+    expect(
+      await owedWhere((email) => email.dedupeKey.startsWith("takedown_valve:")),
+    ).toStrictEqual([]);
+  });
+});
+
+describe("requests filed before the keys existed", () => {
+  it("are linked in Review by their address's inbox, and not by their missing IP key", async () => {
+    const first = await legacyRequest("Me+x@example.com", "somewhere-1");
+    const second = await legacyRequest("me@example.com", "somewhere-2");
+    const stranger = await legacyRequest("you@example.com", "somewhere-3");
+    const listed = await pendingTakedownRequests(core(), NOW);
+    const relatedOf = (id: string) =>
+      listed.find((row) => row.id === id)?.relatedIds;
+    expect(relatedOf(first)).toStrictEqual([second]);
+    expect(relatedOf(stranger)).toStrictEqual([]);
+  });
+
+  it("are blocked by their address's inbox", async () => {
+    const id = await legacyRequest("Me+x@example.com", "somewhere");
+    expect(await blockAndDeclineAll(core(), "op-one", id, NOW)).toStrictEqual({
+      status: "blocked",
+      declined: 1,
+    });
+    const blocks = await core().select().from(takedownBlocks);
+    expect(blocks.map((block) => block.key)).toStrictEqual(["me@example.com"]);
+  });
+});
+
+describe("Block and decline all, for a link that is not ours", () => {
+  it("declines it, with nothing to give back", async () => {
+    const row = await file("me@example.com", "https://elsewhere.example/x");
+    expect(
+      await blockAndDeclineAll(core(), "op-one", row.id, NOW),
+    ).toStrictEqual({ status: "blocked", declined: 1 });
+    const [after] = await core()
+      .select({ status: takedownRequests.status })
+      .from(takedownRequests)
+      .where(eq(takedownRequests.id, row.id));
+    expect(after?.status).toBe("declined");
   });
 });
