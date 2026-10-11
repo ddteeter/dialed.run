@@ -930,77 +930,29 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
-45. **The export no longer promises run files (decision D-116).** Asked
-    in round 35, not answered; asked again in round 36. Round
-    27 #13 draws the export row's line as "Runs, closet, entries, photos
-    and your run files", and the email as "Your runs, closet, entries,
-    photos and original run files are in one ZIP." Since D-116 a run file
-    is deleted once read, so the ZIP rarely holds one: only a file read in
-    the last day, or one that failed in the last 30. Both now drop the run
-    files: "Runs, closet, entries and photos", and "Your runs, closet,
-    entries and photos are in one ZIP." **The ask:** confirm, or give
-    words.
-
-46. **The intimate-image removal path (design 136, decision D-117).**
-    Asked in round 35 before `/takedown` was built, not answered; asked
-    again in round 36 with the page and Review's section. Undesigned; built from existing primitives and copy. Placeholder words
-    throughout:
-    - **W1's new reason** reads "It's an intimate image shared without
-      consent", after "The photo shows someone inappropriately". One
-      report of it hides the kit or photo from everyone at once; W1's
-      receipt is unchanged.
-    - **The Review row's clock** is a second bracket under the people
-      count: `[Due in 31h]`, rounded up to the hour, then `[Overdue]`. It
-      shows only on a row an intimate-image report started.
-    - **The removal statement** the author reads: "it's an intimate image
-      shared without consent", after round 27 #20's "A moderator removed
-      this photo:".
-    - **The operators' email**, `removal_due`: subject "Removal due by
-      2026-10-12 13:05 UTC", a body saying what was reported and that it is
-      hidden, the button "Open Review", and the foot "Sent to every
-      operator, once per report that hides something."
-    - **`/takedown`** is Au5's composition (`SignedOutPanel`, Turnstile
-      above the primary, one receipt): the heading "Ask us to remove an
-      intimate image", a lead saying what happens, then Email, "Your full
-      name" ("Typing it is your signature."), "Link to the image" ("A
-      dialed.run link, or say where it is."), "What it shows · optional",
-      and a checkbox with the statement "I am the person shown, or I'm
-      allowed to act for them, and this image was shared without their
-      consent." — its error under it, as O3's group error is. The receipt
-      is Au5's shape: `REQUEST SENT`, "We have your request".
-    - **The footer** gains a fourth link after round 27 #12's three:
-      "Report an intimate image".
-    - **Review's "removal requests"** section sits above the queue:
-      `[N to remove]`, then per request its clock bracket, "name ·
-      email", the link as given, what they wrote, "Open the kit" (or "Not
-      one of our links: find it from what they wrote."), Take it down,
-      and Decline with a "Why not" field.
-    - **Three more emails:** the operators' "Removal request, due by …",
-      the requester's "We have your removal request", and "We removed what
-      you reported" / "We didn't remove what you reported".
-      **The ask:** the reason's sentence in W1's voice; whether the clock
-      belongs in the row's brackets or its header; the page, its receipt,
-      the footer's fourth link, Review's section, and the five emails'
-      words.
-
-## Answered in round 35 (imported 2026-10-10)
+## Answered in rounds 35–36 (imported 2026-10-10)
 
 Design sent round 35 as `Round 35 Rulings.dc.html`, with the text of record
-under "Round 35 · Twelve asks from the build (items 45–56)" in
-`design/docs/product.md`. It answers items 45–56. **Items 57 and 58 were in
-the round's prompt and got no ruling**, so they stay in the open queue and
-go out again in round 36.
+under "Round 35" in `design/docs/product.md`, and answered items 45–56. The
+same day, a second bundle (round 36, asked for items 57–58) added
+those two to the same board and the same section, now titled "Fourteen
+asks from the build (items 45–58)". Both are imported here; nothing is
+left in the open queue from either.
 
-Design changed eight files:
+Design changed thirteen files across the two bundles:
 
 - `Round 35 Rulings.dc.html` (new): Au2's date of birth in four frames
-  (56), G's Recent entries row with the tag placed (53b), and the twelve
-  rulings.
+  (56), G's Recent entries row with the tag placed (53b), `/takedown`, its
+  receipt and the operators' alert, and Review's REMOVAL REQUESTS section
+  (58), and the fourteen rulings.
 - `Operator Screens.dc.html`: D1 gains the flagged-handle row (45).
 - `V1 Screens.dc.html` and `- Dark`: the onboarding close's first line
   (46).
 - `Theme.dc.html`: T1's two "was" notes corrected (47). No value changes.
 - `Marketing Site.dc.html` and `- Dark`: M5 draws the note (48, from round 34) and its legal line says 18 and "what you send".
+- `Remaining Screens.dc.html` and `- Dark`: W1's new reason (58a).
+- `Round 27 Rulings.dc.html` and `Round 28 Rulings.dc.html`: the export
+  row, its email and the ZIP's note drop the run files (57).
 - `design/docs/product.md`: the Round 35 section, the Legal line's 18, and
   three passages earlier rounds wrote that the round 34 bundle did not
   carry: the audience launch guard, the single `canSee` check and the
@@ -1059,6 +1011,35 @@ REVIEW]` comes first on G's row meta line, outside the link, so the
     errors (b) and Google's band (d) are confirmed as built. (c) Amended:
     the under-18 band has no Try again, because a retry is refused for a
     day. The legal line says 18 on Au2, M5 and round 27 #12, as built.
+57. **Export words. Confirmed** as built (D-116): "Runs, closet, entries
+    and photos" and "Your runs, closet, entries and photos are in one
+    ZIP." Rounds 27 and 28 are redrawn to match. **Build work:** the
+    README names run files only when the ZIP holds one; today its
+    `run-files/` sentence is always there.
+58. **Intimate-image removal. Given and drawn; build work, done in
+    #167 and the `/takedown` PR.**
+    - (a) W1's reason: "It's an intimate image of someone, shared without
+      their consent".
+    - (b) The clock goes in the row's header, right, where the age sits:
+      DUE IN 31H, then OVERDUE. The brackets stay about people.
+    - (c) The removal statement is confirmed.
+    - (d) The operators' alert keeps its subject, button and foot; its
+      body is "Someone reported a photo as an intimate image shared
+      without consent. It's hidden from everyone now. The law gives us 48
+      hours to decide."
+    - (e) `/takedown` is drawn: "Ask us to remove an image", the lead, the
+      fields with their grey words, the good-faith statement, "Send the
+      request". The receipt email says the image is hidden and gives the
+      deadline. Review gets REMOVAL REQUESTS · N above the queue, in the
+      queue row's shape: the subject with `[via /takedown]` and the clock,
+      "From NAME · signed · good faith" with what they wrote, Take it
+      down, and Decline as a text button that asks for one line. **The
+      board says a valid request hides the image at once**, as a W1 report
+      of the reason does, which reverses D-117's queue-only answer. The
+      owner took design's (2026-10-10), and D-117 is amended.
+    - **Not built: "Linked … from W1's reason list."** The board gives no
+      words or place for a `/takedown` link inside W1, and a signed-in
+      runner already has the reason itself. This one waits for words.
 
 ## Answered in round 34 (imported 2026-10-04)
 
