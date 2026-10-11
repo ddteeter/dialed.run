@@ -12,6 +12,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireUserId, verifiedUserId } from "../auth";
 
+import { oweInCore } from "../ops";
 import { requireAdmin } from "./admin";
 import { drizzle } from "drizzle-orm/d1";
 
@@ -56,7 +57,9 @@ export const fileReportAction = createServerFn({ method: "POST" })
     // The block rides with the report (W1's checkbox) rather than being a
     // second round trip the reporter could lose; `fileReport` owns that
     // decision, because a route may not branch.
-    return fileReport({ reporterId, ...data });
+    // `oweInCore` owes the removal alert in the report's batch (design
+    // 136); handed in because `ops` imports this module.
+    return fileReport({ reporterId, ...data }, oweInCore);
   });
 
 export const blockRunnerAction = createServerFn({ method: "POST" })

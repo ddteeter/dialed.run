@@ -112,6 +112,23 @@ const STAYS = {
  * The reopen email's first sentence (round 29 #7): the account named by
  * its handle, or — for a reopen owed without one — by the product's name.
  */
+/**
+What a removal alert says was reported.
+*/
+const REPORTED = {
+  entry: "a run's kit",
+  photo: "a photo",
+} as const;
+
+/**
+ * An epoch second as `2026-10-12 13:05 UTC`: operators read the Desk in
+ * UTC, like the digest's day.
+ */
+function utcMinute(epochSeconds: number): string {
+  const iso = new Date(epochSeconds * 1000).toISOString();
+  return `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
+}
+
 function reopened(handle: string | undefined): string {
   return handle === undefined
     ? "Your dialed.run account is open again."
@@ -307,6 +324,17 @@ export function emailContent(
         body: digestBody(template),
         button: { label: "Open the Desk", href: `${origin}/desk` },
         foot: "Sent every morning, even when every number is zero. If it stops arriving, something is broken.",
+        footer,
+      };
+    }
+    case "removal_due": {
+      // Design 136: placeholder words (design deltas item 58).
+      const due = utcMinute(template.dueAt);
+      return {
+        subject: `Removal due by ${due}`,
+        body: `A runner reported ${REPORTED[template.subject]} as an intimate image shared without consent. It's hidden from everyone until you decide. The law allows 48 hours: decide by ${due}.`,
+        button: { label: "Open Review", href: `${origin}/safety/review` },
+        foot: "Sent to every operator, once per report that hides something.",
         footer,
       };
     }

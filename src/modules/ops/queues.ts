@@ -74,11 +74,12 @@ export function enrichmentDeps() {
 }
 
 /**
- * An outbox row for the imports consumer's batches (task 126: the Strava
- * deauthorization's email). Handed in rather than imported there: `runs`
- * is imported by this module, so it cannot import `ops` back.
+ * An outbox row for a module's batch that `ops` imports, and so cannot be
+ * imported by: the imports consumer's (task 126, the Strava
+ * deauthorization's email) and safety's reports (design 136, the removal
+ * alert). Handed in rather than imported there.
  */
-function oweInCore(message: OutboxMessage, notBefore?: number) {
+export function oweInCore(message: OutboxMessage, notBefore?: number) {
   return outboxInsert(drizzle(env.DIALED_CORE), oweOutbox(message, notBefore));
 }
 

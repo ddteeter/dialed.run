@@ -199,6 +199,11 @@ owing you anything.
   a photo, a profile or a product name. A kit you report leaves your feed
   straight away, and a runner you report leaves your search. When three different runners report the same kit or photo,
   it is hidden from everyone but its owner until a person reviews it.
+- **Intimate images shared without consent** are the exception. One report
+  that a kit or photo is an intimate image shared without consent hides it
+  from everyone but its owner at once, and a person reviews it within 48
+  hours. If it is what the report says, we remove it. Reporting something
+  as this when you know it is not breaks these rules.
 - **A person decides.** Removing content and closing accounts are decisions
   a person makes, not the automated screening. We do not watch everything
   posted and are not obliged to, but we act on what we find or are told.

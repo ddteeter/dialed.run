@@ -156,6 +156,17 @@ export const exportReady = emailKind("export_ready", {
 });
 
 /**
+ * Design 136 (D-117): an operator's alert that a report hid something as
+ * an intimate image shared without consent, and when its removal is due
+ * (`dueAt`, epoch seconds, 48 hours on). Undesigned: placeholder words
+ * (design deltas item 58). Operator mail, so always sent.
+ */
+export const removalDue = emailKind("removal_due", {
+  subject: z.enum(["entry", "photo"]),
+  dueAt: z.int().min(0),
+});
+
+/**
  * Operator Screens D5, the morning digest (task 125 · OPS-11): the Desk's
  * three numbers, every day, even at zero — so a missing email is a broken
  * pipeline and never a quiet one. `oldestHours` is absent when nothing is

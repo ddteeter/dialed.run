@@ -23,6 +23,9 @@ import { z } from "zod";
  */
 export const reportReasons = [
   { value: "explicit", label: "The photo shows someone inappropriately" },
+  // Design 136 (D-117): placeholder words until design gives them (design
+  // deltas item 58). The one reason that hides at once (`reportersToHide`).
+  { value: "intimate", label: "It's an intimate image shared without consent" },
   { value: "harassment", label: "Harassment aimed at someone" },
   { value: "spam", label: "It's an ad, or it's spam" },
   { value: "not_theirs", label: "This isn't their run or their gear" },
@@ -90,6 +93,46 @@ export const reportSubjectTypeSchema = z.enum(reportSubjectTypes);
 export const autoHideReporterThreshold = 3;
 
 /**
+ * Distinct reporters a reason needs before the subject is hidden from
+ * everyone (design 136, D-117). An intimate image shared without consent
+ * is hidden on the first report: the TAKE IT DOWN Act gives 48 hours to
+ * remove a valid one, and three reports would be three more people who saw
+ * it. A person still decides, so a false report only hides a thing until
+ * they do. Every other reason waits for `autoHideReporterThreshold`.
+ */
+export const reportersToHide: Readonly<Record<ReportReason, number>> = {
+  explicit: autoHideReporterThreshold,
+  intimate: 1,
+  harassment: autoHideReporterThreshold,
+  spam: autoHideReporterThreshold,
+  not_theirs: autoHideReporterThreshold,
+  other: autoHideReporterThreshold,
+};
+
+/**
+The reasons that hide on the first report, read from the table above.
+*/
+export const reasonsThatHideAtOnce: readonly ReportReason[] = reportReasons
+  .map((reason) => reason.value)
+  .filter((reason) => reportersToHide[reason] === 1);
+
+/**
+ * How long the TAKE IT DOWN Act allows between a valid request and its
+ * removal: the Review row's clock for a subject reported `intimate`.
+ */
+export const REMOVAL_DUE_SECONDS = 48 * 60 * 60;
+
+/**
+ * The Review row's clock (design 136): whole hours left, rounded up so the
+ * last minutes still read "Due in 1h", then "Overdue". Placeholder words
+ * (design deltas item 58).
+ */
+export function removalDueLabel(dueAt: number, now: number): string {
+  const left = dueAt - now;
+  return left > 0 ? `Due in ${String(Math.ceil(left / 3600))}h` : "Overdue";
+}
+
+/**
  * Why a moderator removed something, and the words the runner reads for
  * it — the statement of reasons the EU DSA asks for (task 128 · SAF-8,
  * decision D-40), after "A moderator removed this photo:" (round 27 #20,
@@ -99,6 +142,8 @@ export const autoHideReporterThreshold = 3;
 export const removalStatements = {
   home: "it shows where someone lives",
   explicit: "it's sexual or explicit",
+  // Design 136: placeholder words (design deltas item 58).
+  intimate: "it's an intimate image shared without consent",
   harassment: "it harasses someone",
   spam: "it's an ad or spam",
   copyright: "it uses someone else's work",
