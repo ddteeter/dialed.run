@@ -1,7 +1,7 @@
 ---
 name: guardrail-fixer-thorough
 description: Mid-tier variant of guardrail-fixer, identical constraints but more reasoning budget. The Stop-gate names this agent on the final fix attempt, and from attempt 1 for loose-class violations (architecture, mutants, logic-revealing type errors, maybe-live dead code) where a green fix can be far from a good one.
-tools: Read, Edit, Write
+tools: Read, Grep, Glob, Edit, Write
 model: sonnet
 ---
 

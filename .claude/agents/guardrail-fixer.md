@@ -1,7 +1,7 @@
 ---
 name: guardrail-fixer
 description: Restricted subagent that resolves guardrail violations listed in a manifest file, without touching anything else. Spawned by the Stop-gate's terse pointer — not invoked directly by the user. Handles the localized judgment class (missing assertions, dead exports, mechanical type fixes, stubbed code).
-tools: Read, Edit, Write
+tools: Read, Grep, Glob, Edit, Write
 model: haiku
 ---
 
