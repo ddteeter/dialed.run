@@ -1,39 +1,34 @@
 /**
  * Which word each consensus bar carries (round 26 #9: colour is never
- * alone, rule 10), as round 27 #25 words them — "Leading bar \"Most\", the
- * rest \"Some\". A tie for the lead reads \"Split\" on each tied bar. A
- * single bar reads \"All\"." — and the Feed board repeats ("Most / Some,
- * Split on ties, All alone"):
+ * alone, rule 10), as round 35 #54 words them, amending round 27 #25:
+ * "The words claim a share of matched runners, not a rank."
  *
- * - **All** — the only bar.
- * - **Split** — each bar tied for the lead.
- * - **Most** — the one leading bar.
- * - **Some** — the rest.
+ * - **All** — every matched runner wore it, whatever sits beside it.
+ * - **Most** — more than half of them.
+ * - **Some** — anything less, a lone bar at 3 of 14 and a leader at 5 of
+ *   14 included.
  *
- * The words rank the bars against each other and never claim a share of
- * the runners: groups overlap (one runner counts in every group they
- * wore), so a leading bar can be under half and still lead. Whether a lone
- * bar short of every runner should still read "All" is open with design
- * (`docs/design-deltas.md` open item 54); the ruling says it does.
+ * Each bar is read against the matched runners alone, never against the
+ * other bars: groups overlap (one runner counts in every group they
+ * wore), so two bars can both read Most. Round 27's "Split" is dropped;
+ * equal bars carry the same word and the same width, which is the tie.
  *
  * Pink is every word but Some: the quiet grey is the one that says "not
- * the lead".
+ * most of them".
  */
-export type BarShare = "all" | "split" | "most" | "some";
+export type BarShare = "all" | "most" | "some";
 
 /**
-Each row with its word, in the rows' own order.
+Each row with its word, in the rows' own order, out of `matched` runners.
 */
 export function withShares<Row extends { readonly runners: number }>(
   rows: readonly Row[],
+  matched: number,
 ): { row: Row; share: BarShare }[] {
-  const lead = Math.max(...rows.map((row) => row.runners));
-  const leaders = rows.filter((row) => row.runners === lead).length;
-  return rows.map((row) => ({ row, share: shareOf(row.runners) }));
+  return rows.map((row) => ({ row, share: shareOf(row.runners, matched) }));
+}
 
-  function shareOf(runners: number): BarShare {
-    if (rows.length === 1) return "all";
-    if (runners !== lead) return "some";
-    return leaders > 1 ? "split" : "most";
-  }
+function shareOf(runners: number, matched: number): BarShare {
+  if (runners >= matched) return "all";
+  return runners * 2 > matched ? "most" : "some";
 }
