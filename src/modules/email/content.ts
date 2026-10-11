@@ -328,11 +328,11 @@ export function emailContent(
       };
     }
     case "removal_due": {
-      // Design 136: placeholder words (design deltas item 58).
+      // Round 35 #58d: the words design gave (design 136).
       const due = utcMinute(template.dueAt);
       return {
         subject: `Removal due by ${due}`,
-        body: `A runner reported ${REPORTED[template.subject]} as an intimate image shared without consent. It's hidden from everyone until you decide. The law allows 48 hours: decide by ${due}.`,
+        body: `Someone reported ${REPORTED[template.subject]} as an intimate image shared without consent. It's hidden from everyone now. The law gives us 48 hours to decide.`,
         button: { label: "Open Review", href: `${origin}/safety/review` },
         foot: "Sent to every operator, once per report that hides something.",
         footer,

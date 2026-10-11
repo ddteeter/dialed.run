@@ -98,9 +98,6 @@ function ReportedFor({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
           ? "1 person"
           : `${String(row.reporterCount)} people`}
       </Bracketed>
-      {/* Design 136: the TAKE IT DOWN Act's 48 hours, on a row an
-          intimate-image report started (design deltas item 58). */}
-      {row.due === undefined ? undefined : <Bracketed>{row.due}</Bracketed>}
       <ListOfReasons reasons={row.reasons} />
     </span>
   );
@@ -482,15 +479,25 @@ function ReviewRow({
 
   return (
     <li className="flex flex-col gap-2 border border-hairline p-3">
-      <button
-        ref={opener}
-        type="button"
-        aria-expanded={active}
-        onClick={onActivate}
-        className="target cursor-pointer self-start border-none bg-transparent p-0 text-left text-body font-semibold text-ink"
-      >
-        {row.subjectType} · {row.subject.label ?? row.subjectId}
-      </button>
+      <span className="flex items-baseline justify-between gap-3">
+        <button
+          ref={opener}
+          type="button"
+          aria-expanded={active}
+          onClick={onActivate}
+          className="target cursor-pointer border-none bg-transparent p-0 text-left text-body font-semibold text-ink"
+        >
+          {row.subjectType} · {row.subject.label ?? row.subjectId}
+        </button>
+        {/* The TAKE IT DOWN Act's 48 hours, on a row an intimate-image
+            report started: in the header, right, where the age sits
+            (round 35 #58b). The brackets stay about people. */}
+        {row.due === undefined ? undefined : (
+          <span data-part="due" className="text-ink uppercase">
+            <Mono step="xs">{row.due}</Mono>
+          </span>
+        )}
+      </span>
       <ReportedPhotos keys={row.subject.photoKeys} />
       <ReportedFor row={row} />
       <span className="text-micro text-quiet">

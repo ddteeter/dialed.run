@@ -16,13 +16,13 @@ Two PRs, stacked.
 
 **PR A: the in-app reason.**
 
-- `safety/contracts.ts` gains the reason `intimate` ("It's an intimate image shared without consent", placeholder copy). It also gains a per-reason threshold, `reportersToHide`, which is 1 for `intimate` and `autoHideReporterThreshold` (3) for every other reason, and a removal statement `intimate`.
+- `safety/contracts.ts` gains the reason `intimate` ("It's an intimate image of someone, shared without their consent", round 35 #58a). It also gains a per-reason threshold, `reportersToHide`, which is 1 for `intimate` and `autoHideReporterThreshold` (3) for every other reason, and a removal statement `intimate`.
 - `fileReport` reads the threshold and changes nothing else.
 - `hidePendingReview` takes the extra batch items. For `intimate`, those are one email debt per operator (new kind `removal_due`, with the subject, a link to Review, and the time it is due). They are owed in the same batch as the hide and the queue row, so the hide never lands without its alert (law 8c).
 - Safety cannot import `ops`, so `owe` is handed in from the server function, as the runs consumer's is.
 - The hourly drain sends the email within the hour.
 - The hourly reconcile also re-hides, and re-alerts for, a subject with an `intimate` report.
-- The Review row shows "Due in 31h" / "Overdue" for a subject that has an `intimate` report: 48h from the first one.
+- The Review row shows "Due in 31h" / "Overdue" for a subject that has an `intimate` report: 48h from the first one. Round 35 #58b puts it in the row's header, right, uppercase, in place of the age; the brackets stay about people.
 
 **PR B: the signed-out request.**
 

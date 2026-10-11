@@ -132,7 +132,7 @@ describe("emailContent", () => {
       { kind: "removal_due", subject: "photo", dueAt: 1_791_810_300 },
       {
         subject: "Removal due by 2026-10-12 13:05 UTC",
-        body: "A runner reported a photo as an intimate image shared without consent. It's hidden from everyone until you decide. The law allows 48 hours: decide by 2026-10-12 13:05 UTC.",
+        body: "Someone reported a photo as an intimate image shared without consent. It's hidden from everyone now. The law gives us 48 hours to decide.",
         button: { label: "Open Review", href: `${ORIGIN}/safety/review` },
         foot: "Sent to every operator, once per report that hides something.",
         footer: LEGAL,
@@ -142,7 +142,7 @@ describe("emailContent", () => {
       { kind: "removal_due", subject: "entry", dueAt: 1_791_810_300 },
       {
         subject: "Removal due by 2026-10-12 13:05 UTC",
-        body: "A runner reported a run's kit as an intimate image shared without consent. It's hidden from everyone until you decide. The law allows 48 hours: decide by 2026-10-12 13:05 UTC.",
+        body: "Someone reported a run's kit as an intimate image shared without consent. It's hidden from everyone now. The law gives us 48 hours to decide.",
         button: { label: "Open Review", href: `${ORIGIN}/safety/review` },
         foot: "Sent to every operator, once per report that hides something.",
         footer: LEGAL,

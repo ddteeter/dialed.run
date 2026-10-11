@@ -599,21 +599,32 @@ describe("what a row tells the reviewer", () => {
     expect(screen.getByText("[1 person]")).toBeInTheDocument();
   });
 
-  it("shows the removal clock on a row an intimate-image report started (design 136)", () => {
+  it("shows the removal clock in the row's header, right of its name, on a row an intimate-image report started (round 35 #58b)", () => {
     renderQueue([
       row({ reporterCount: 1, reasons: ["intimate"], due: "Due in 31h" }),
     ]);
-    expect(screen.getByText("[Due in 31h]")).toBeInTheDocument();
+    const clock = document.querySelector('[data-part="due"]');
+    expect(clock).toHaveTextContent(/^Due in 31h$/u);
+    // Uppercase in CSS, so the accessible text stays in normal case.
+    expect(clock).toHaveClass("uppercase");
+    expect(clock?.firstElementChild).toHaveClass("font-mono");
+    // The header: the row's opener, then the clock beside it.
+    const opener = screen.getByRole("button", { expanded: true });
+    expect(opener.nextElementSibling).toBe(clock);
+    // The brackets stay about people.
+    expect(screen.getByText("[1 person]")).toBeInTheDocument();
+    expect(screen.queryByText("[Due in 31h]")).toBeNull();
     expect(
-      screen.getByText("It's an intimate image shared without consent"),
+      screen.getByText(
+        "It's an intimate image of someone, shared without their consent",
+      ),
     ).toBeInTheDocument();
   });
 
   it("shows no clock on any other row", () => {
     renderQueue([row({ reporterCount: 3 })]);
     expect(screen.queryByText(/Due in|Overdue/u)).toBeNull();
-    // Not even an empty bracket where the clock would be.
-    expect(screen.queryByText("[]")).toBeNull();
+    expect(document.querySelector('[data-part="due"]')).toBeNull();
   });
 
   it("says nobody reported a row the classifier raised", () => {
