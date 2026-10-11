@@ -95,6 +95,10 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   const ageBand = page.locator("[data-part='failure-band']");
   await expect(ageBand).toContainText("Not created", { timeout: 15_000 });
   await expect(ageBand).toContainText(AGE_COPY.refused);
+  // Round 35 #56c: a retry is refused for a day, so nothing to press.
+  await expect(ageBand.getByRole("button", { name: "Try again" })).toHaveCount(
+    0,
+  );
   await page.unroute("**/api/auth/sign-up/email");
 
   // Round 28 #9: Google says the same refusal in a band under its button,

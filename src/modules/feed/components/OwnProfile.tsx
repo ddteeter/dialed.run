@@ -120,16 +120,23 @@ export function OwnProfile({
 
           <ListSection title="Recent entries" items={profile.recentEntries}>
             {(entry) => (
-              <li key={entry.entryId}>
+              <li key={entry.entryId} className="flex flex-col">
                 <Link
                   to="/feed/entry/$entryId"
                   params={{ entryId: entry.entryId }}
-                  className="target inline-flex items-center gap-2 text-body font-semibold text-ink no-underline"
+                  className="target inline-flex items-center text-body font-semibold text-ink no-underline"
                 >
                   {entry.verdict === null ? "No verdict yet" : "Entry"}
-                  {/* The card's tag, here too (round 28 #6). */}
-                  {entry.underReview ? <UnderReview /> : undefined}
                 </Link>
+                {/* The card's tag, here too (round 28 #6), first on the
+                    row's meta line and outside the link (round 35 #53b):
+                    the link's name stays the entry's label, and the tag
+                    is read once, as its own text. */}
+                {entry.underReview ? (
+                  <span data-part="entry-meta">
+                    <UnderReview />
+                  </span>
+                ) : undefined}
               </li>
             )}
           </ListSection>

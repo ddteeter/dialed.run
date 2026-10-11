@@ -370,7 +370,7 @@ describe("OwnProfile (G): past day one", () => {
     expect(document.querySelector('[data-part="review-tag"]')).toBeNull();
   });
 
-  it("marks a recent entry under review with the card's tag (round 28 #6)", async () => {
+  it("marks a recent entry under review with the card's tag, first on the meta line and outside the link (round 35 #53b)", async () => {
     await renderFeedScreen(
       <OwnProfile
         confirmBand={undefined}
@@ -382,11 +382,15 @@ describe("OwnProfile (G): past day one", () => {
         })}
       />,
     );
-    expect(
-      screen.getByRole("link", {
-        name: "Entry Under review, only you can see this",
-      }),
-    ).toHaveAttribute("href", "/feed/entry/01E");
+    // The link's name stays the entry's label; the tag is read once.
+    const link = screen.getByRole("link", { name: "Entry" });
+    expect(link).toHaveAttribute("href", "/feed/entry/01E");
+    const tag = part("review-tag");
+    expect(tag).toHaveTextContent("Under review, only you can see this");
+    expect(link).not.toContainElement(tag);
+    const meta = part("entry-meta");
+    expect(meta?.firstElementChild).toBe(tag);
+    expect(link.nextElementSibling).toBe(meta);
   });
 });
 

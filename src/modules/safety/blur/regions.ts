@@ -174,21 +174,24 @@ export function blurSummary(params: {
   // says whether there is a claim to make.
   const detected =
     params.detected > 0
-      ? `We blurred ${countOf(params.detected, "face")}.`
+      ? `Auto-blur covered ${countOf(params.detected, "area")}.`
       : undefined;
-  // Round 22, item 22: once the runner has tapped, the line is theirs —
-  // "You blurred 2 spots. Tap one to undo." — after the detector's claim
-  // when it made one, and in place of "no face found" when it did not.
+  // Round 22, item 22: once the runner has tapped, the line is theirs,
+  // after the detector's claim when it made one, and in place of "found
+  // nothing" when it did not. Round 35 #51c puts it in Auto-blur's
+  // grammar: "Auto-blur covered 2 areas. You covered 1 more. Tap one to
+  // undo." With no claim before it there is nothing to be "more" than,
+  // so the runner's count takes the noun: "You covered 2 areas."
   if (params.tapped > 0) {
     // Digits, as the packet quotes the ruling ("2 spots"): the runner is
     // counting what they did, and the number is what the tap changes.
-    const noun = detected ? "more spot" : "spot";
-    const spots = `${String(params.tapped)} ${noun}${params.tapped === 1 ? "" : "s"}`;
-    const yours = `You blurred ${spots}. Tap one to undo.`;
-    return detected ? `${detected} ${yours}` : yours;
+    const yours = detected
+      ? `You covered ${String(params.tapped)} more.`
+      : `You covered ${countOf(params.tapped, "area")}.`;
+    return [detected, yours, "Tap one to undo."].filter(Boolean).join(" ");
   }
   if (params.detector === "unavailable") {
-    return "We couldn't check this photo. Tap anything you want blurred.";
+    return "Auto-blur couldn't check this photo. Tap anything you want covered.";
   }
   // Round 28 #5's two lines under "Check the blur", for a detector that
   // ran and a runner who has not tapped yet. Nothing is "posting" any
@@ -207,7 +210,7 @@ export const BLUR_OFF_LINE =
 
 /**
  * Digits, always (round 26, #18: "counts are digits, always, including
- * 'You blurred 1 spot.'") — "We blurred 1 face.", never "one face".
+ * 'You blurred 1 spot.'") — "Auto-blur covered 1 area.", never "one area".
  */
 function countOf(count: number, noun: string): string {
   return `${String(count)} ${noun}${count === 1 ? "" : "s"}`;
@@ -281,8 +284,8 @@ export function isCellBlurred(
 
 /**
  * The keyboard's tap: blur the whole cell, or — pressed again — undo it.
- * The runner's region, so the summary credits them ("You blurred 1
- * spot."), exactly as a tap does.
+ * The runner's region, so the summary credits them ("You covered 1
+ * area."), exactly as a tap does.
  */
 export function afterCell(
   regions: readonly BlurRegion[],

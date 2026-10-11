@@ -56,7 +56,7 @@ describe("NowGoRun", () => {
 
     expect(
       screen.getByText(
-        "Weather attaches itself from your GPS and the time — you never type it.",
+        "Weather comes with each run, fetched for when and where you ran.",
       ),
     ).toBeVisible();
     expect(

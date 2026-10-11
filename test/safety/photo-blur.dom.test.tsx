@@ -287,11 +287,11 @@ describe("tapping", () => {
       screen.getByLabelText("Outfit photo. Tap a spot to blur it."),
     );
 
-    // "We blurred" is a claim about detection; a tap is not one, and
+    // "Auto-blur covered" is a claim about detection; a tap is not one, and
     // crediting the model for it would overstate what it found.
     await waitFor(() => {
       expect(
-        screen.getByText("You blurred 1 spot. Tap one to undo."),
+        screen.getByText("You covered 1 area. Tap one to undo."),
       ).toBeInTheDocument();
     });
   });
@@ -315,7 +315,7 @@ describe("tapping", () => {
 
     // The same point twice: the second tap lands inside the first spot.
     await user.click(photo);
-    await screen.findByText("You blurred 1 spot. Tap one to undo.");
+    await screen.findByText("You covered 1 area. Tap one to undo.");
     await user.click(photo);
 
     await waitFor(() => {
@@ -955,7 +955,7 @@ describe("the keyboard path (R-84(b))", () => {
     expect(cell.querySelector("path")).toHaveAttribute("d", "M4 13l5 5L20 6");
     // Digits, always (round 26 #18).
     expect(
-      screen.getByText("You blurred 1 spot. Tap one to undo."),
+      screen.getByText("You covered 1 area. Tap one to undo."),
     ).toBeInTheDocument();
 
     await user.keyboard("{Enter}");

@@ -78,7 +78,8 @@ export function PostCard(props: Readonly<PostCardProps>) {
         </div>
         {photo === undefined ? undefined : (
           // The first photo, carrying only its `1 / N` counter, bottom
-          // right (the Feed board's E1): the rest are D's pager.
+          // right (the Feed board's E1): the rest are D's pager. A lone
+          // photo carries no counter (round 35 #53c).
           <span className="relative block">
             <img
               data-part="photo"
@@ -86,9 +87,11 @@ export function PostCard(props: Readonly<PostCardProps>) {
               alt=""
               className="aspect-video w-full rounded-card object-cover"
             />
-            <span className="absolute right-3 bottom-3 rounded-tight bg-ground px-2 py-1 text-ink">
-              <Mono step="xs">1 / {String(item.photoKeys.length)}</Mono>
-            </span>
+            {item.photoKeys.length > 1 ? (
+              <span className="absolute right-3 bottom-3 rounded-tight bg-ground px-2 py-1 text-ink">
+                <Mono step="xs">1 / {String(item.photoKeys.length)}</Mono>
+              </span>
+            ) : undefined}
           </span>
         )}
         {item.caption === undefined ? undefined : (

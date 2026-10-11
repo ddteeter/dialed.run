@@ -349,6 +349,13 @@ describe("EntryDetail: the photos", () => {
     expect(screen.getByText("2 / 2")).toBeVisible();
   });
 
+  it("gives a lone photo no counter (round 35 #53c)", async () => {
+    await renderFeedScreen(detail({ photoKeys: ["a.jpg"] }));
+
+    expect(document.querySelectorAll("img")).toHaveLength(1);
+    expect(screen.queryByText(/\d \/ \d/u)).toBeNull();
+  });
+
   it("puts each photo's delete on that photo, top right, for the owner only (round 27 #26)", async () => {
     await renderFeedScreen(
       detail({ photoKeys: ["a.jpg", "b.jpg"] }, { viewerId: OWNER }),

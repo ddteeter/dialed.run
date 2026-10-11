@@ -16,7 +16,9 @@ import { Mono, StravaButton } from "../../../ui";
  * screen promising the old one.
  */
 const PROMISES: readonly string[] = [
-  "Weather attaches itself from your GPS and the time — you never type it.",
+  // Round 35 #46: qualified, as M1 step 01 was, because R2b lets a runner
+  // set conditions when the archive has no record for the hour.
+  "Weather comes with each run, fetched for when and where you ran.",
   "Each piece learns the range it actually works in, for you.",
   `After ${String(CALL_VERDICT_THRESHOLD)} verdicts we start making the call for you.`,
 ];

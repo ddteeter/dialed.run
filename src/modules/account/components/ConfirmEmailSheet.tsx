@@ -10,16 +10,16 @@ import { ResendLink } from "./ResendLink";
 /**
  * The lead: the one control that was refused, by name (round 29 #11). The
  * sheet names only that one — round 27's list of all three is struck —
- * and the email change has a sentence of its own. Only the triggers a
- * board draws a lead for are here. Follow waits too (design 133, D-113)
- * and no board gives it one, so it shows the address alone until one is
- * drawn (design-deltas). A3's share switch has a drawn lead ("Sharing
+ * and the email change has a sentence of its own. Follow's is round 35
+ * #49's (it waits too since design 133, D-113), so every trigger has
+ * one. A3's share switch has a drawn lead ("Sharing
  * needs a confirmed email. This run saves private."), but the switch
  * opens no sheet today, so it waits for lane 127 to make it a trigger.
  */
-const WAITS_FOR: Readonly<Partial<Record<ConfirmTrigger, string>>> = {
+const WAITS_FOR: Readonly<Record<ConfirmTrigger, string>> = {
   useful: "Marking runs Useful needs a confirmed email.",
   report: "Reporting needs a confirmed email.",
+  follow: "Following runners needs a confirmed email.",
   "email-change": "Confirm this address before you change it.",
 };
 
@@ -37,9 +37,10 @@ type Resend = (input: { data: { email: string } }) => Promise<ResendResult>;
  * (round 29 #11), then Resend as an outline pill (round 29 #12: the
  * sheet's only real action, but not filled, because **Not now** has focus
  * and is the default — the runner did not ask for a sheet, so the way out
- * is where they land). Without a lead for the trigger (a follow, which no
- * board draws one for) the body is the address alone. Until the address
- * has arrived there is no address line and nothing to resend.
+ * is where they land). Without a trigger the body is the address alone.
+ * Until the address has arrived, or when it can't be read, the body is
+ * the lead alone with no space held for the rest; the address line and
+ * Resend arrive together, without motion (round 35 #49b).
  */
 export function ConfirmEmailSheet({
   open,

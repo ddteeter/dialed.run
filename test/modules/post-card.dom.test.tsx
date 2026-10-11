@@ -85,9 +85,13 @@ describe("PostCard: order and absence", () => {
     );
   });
 
-  it("counts a lone photo as 1 / 1", async () => {
+  it("gives a lone photo no counter (round 35 #53c)", async () => {
     const post = await card({ photoKeys: ["user/01/a.jpg"] });
-    expect(within(post).getByText("1 / 1")).toBeVisible();
+    expect(post.querySelector('[data-part="photo"]')).toHaveAttribute(
+      "src",
+      "/feed/photo/user/01/a.jpg",
+    );
+    expect(within(post).queryByText(/\d \/ \d/u)).toBeNull();
   });
 
   it("is a whole post with no photo, caption or verdict: author, strip, Useful", async () => {
