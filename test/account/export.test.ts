@@ -607,6 +607,10 @@ describe("exportData and exportFiles", () => {
 
     const [, row] = linesOf(texts, "runs.csv");
     expect(row?.endsWith(",")).toBe(true);
+    // The file is still in the ZIP, so the README names its folder.
+    expect(textNamed(texts, "README.txt").split("\n", 5)[4]).toBe(
+      "photos/ holds your kit photos (photos/entries/) and garment photos (photos/closet/), at the size dialed.run keeps. run-files/ holds the GPX, FIT and TCX files you uploaded, as uploaded.",
+    );
   });
 
   it("keeps a kit-less entry's tags and photos as real empty arrays, not the fallback's raw junk", async () => {
@@ -686,7 +690,8 @@ describe("exportData and exportFiles", () => {
         `Made ${iso(NOW)}.`,
         "",
         "Times are UTC. Conditions are the reading dialed.run showed for each run: from Visual Crossing, or the band you set yourself.",
-        "photos/ holds your kit photos (photos/entries/) and garment photos (photos/closet/), at the size dialed.run keeps. run-files/ holds the GPX, FIT and TCX files you uploaded, as uploaded.",
+        // No upload, so no run-files/ sentence (round 35 #57).
+        "photos/ holds your kit photos (photos/entries/) and garment photos (photos/closet/), at the size dialed.run keeps.",
         "",
         readmeSection(profileSheet),
         "",
