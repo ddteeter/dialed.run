@@ -121,11 +121,14 @@ test("add garments with product identity -> detail in round 22's order -> retire
   );
   await page.getByRole("link", { name: "Add garment" }).click();
   await hydrated(page);
+  // The click is a client-side navigation, so the hydrated flag is
+  // already set from the closet page: wait for F itself before reading it.
+  const category = page.getByLabel("Category");
+  await expect(category).toBeVisible();
   await expect(page.getByLabel("Product link")).toHaveCount(0);
   // Round 35 #52b: what it is comes first, at every width.
   const order = await page
-    .locator("form")
-    .first()
+    .locator("form", { has: category })
     .locator("[name='category'], [name='brand'], [name='name']")
     .evaluateAll((controls) =>
       controls.map((control) => control.getAttribute("name")),
