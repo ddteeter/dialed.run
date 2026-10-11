@@ -373,18 +373,32 @@ describe("the hold a request puts on what it names", () => {
     expect(await photoStatus(photoId)).toBe("flagged");
   });
 
-  it("keeps it hidden after a Decline while a review row is open on it", async () => {
-    const entryId = await sharedEntry();
-    const id = await file(entryLink(entryId));
-    await core().insert(reviewQueue).values({
-      id: newUlid(),
-      subjectType: "entry",
-      subjectId: entryId,
-      source: "reports",
-      createdAt: NOW,
-    });
-    await decline(id);
-    expect(await entryStatus(entryId)).toBe("hidden_pending_review");
+  it.each(["pending", "reviewing"] as const)(
+    "keeps it hidden after a Decline while a review row is open on it, %s",
+    async (status) => {
+      const entryId = await sharedEntry();
+      const id = await file(entryLink(entryId));
+      await core().insert(reviewQueue).values({
+        id: newUlid(),
+        subjectType: "entry",
+        subjectId: entryId,
+        source: "reports",
+        status,
+        createdAt: NOW,
+      });
+      await decline(id);
+      expect(await entryStatus(entryId)).toBe("hidden_pending_review");
+    },
+  );
+
+  it("declines a link that is not ours, with nothing to give back", async () => {
+    const id = await file("https://elsewhere.example/img");
+    expect(await decline(id)).toBe("decided");
+    const [row] = await core()
+      .select({ status: takedownRequests.status })
+      .from(takedownRequests)
+      .where(eq(takedownRequests.id, id));
+    expect(row?.status).toBe("declined");
   });
 
   it("gives it back once a settled review row is all that is left", async () => {

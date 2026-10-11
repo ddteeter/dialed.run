@@ -99,10 +99,13 @@ export async function decideRemovalRequest(
       now,
     ),
     // A Decline gives back what the request hid (round 35 #58e), in the
-    // claim's batch and only where the claim landed.
-    ...(subject !== undefined && decision.outcome === "declined"
-      ? releaseHoldWrites(db, { id: request.id, declinedAt: now }, subject)
-      : []),
+    // claim's batch and only where the claim landed. Owed on every
+    // decision about a subject of ours: the give-back moves a subject only
+    // when this request is the one just *declined*, so after a removal it
+    // matches nothing — the outcome needs no second check here.
+    ...(subject === undefined
+      ? []
+      : releaseHoldWrites(db, { id: request.id, declinedAt: now }, subject)),
   ]);
   return "decided";
 }
