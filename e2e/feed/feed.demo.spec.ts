@@ -515,8 +515,8 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       await expect(nag).toBeVisible();
 
       // Follow is a count other runners see, so it waits too; Unfollow
-      // only takes one away, so it does not (D-113 Q3). No board leads the
-      // sheet for Follow yet: the address alone (design-deltas item 49).
+      // only takes one away, so it does not (D-113 Q3). The sheet leads
+      // with round 35 #49's sentence.
       await scene(page, "Unconfirmed · Unfollow goes through, Follow waits");
       await page.goto(`/@${otherUsername}`);
       await hydrated(page);
@@ -526,7 +526,9 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       await follow.click();
       await expect(confirmFirst).toBeVisible();
       await expect(confirmFirst).toContainText("We sent a link to");
-      await expect(confirmFirst).not.toContainText("needs a confirmed email");
+      await expect(confirmFirst).toContainText(
+        "Following runners needs a confirmed email.",
+      );
       await confirmFirst.getByRole("button", { name: "Not now" }).click();
       await expect(confirmFirst).toBeHidden();
       // Nothing changed and nothing failed: the pill is as it was.

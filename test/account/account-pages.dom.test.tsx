@@ -431,6 +431,7 @@ describe("the confirm-first sheet and the nag", () => {
   it.each([
     ["useful", "Marking runs Useful needs a confirmed email."],
     ["report", "Reporting needs a confirmed email."],
+    ["follow", "Following runners needs a confirmed email."],
     ["email-change", "Confirm this address before you change it."],
   ] as const)(
     "leads with the one control that was refused, %s, on its own line above the address (round 29 #11)",
@@ -453,22 +454,6 @@ describe("the confirm-first sheet and the nag", () => {
       expect(leadLine.nextElementSibling).toBe(address);
     },
   );
-
-  it("shows the address alone for a control no board draws a sentence for", () => {
-    // Follow waits too (D-113), and no board leads with it yet.
-    render(
-      <ConfirmEmailSheet
-        open
-        onClose={vi.fn()}
-        email="maya@example.com"
-        resend={resender()}
-        trigger="follow"
-      />,
-    );
-    expect(screen.getByText(/We sent a link to/u)).toHaveTextContent(
-      /^We sent a link to maya@example\.com\.$/u,
-    );
-  });
 
   it("says what waits, and offers no resend, before the address has arrived", () => {
     render(

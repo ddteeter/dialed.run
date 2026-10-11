@@ -412,6 +412,9 @@ describe("Au2 · date of birth (design 134)", () => {
     expect(band).toHaveTextContent("Not created");
     expect(band).toHaveTextContent("dialed.run is for runners 18 and over.");
     expect(band).not.toHaveTextContent("Not signed in");
+    // Round 35 #56c: a retry is refused for a day, so the band offers
+    // nothing to press.
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   });
 
   it("carries the date with Google", async () => {

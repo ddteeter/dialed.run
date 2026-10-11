@@ -122,12 +122,14 @@ export function AuthPage(
           {/* The form band with Auth's two words (round 22): "Not signed
                 in", not "Nothing saved". Same block, same place, same Try
                 again — `FormFailureBand` hard-codes the contract's opener,
-                so this is the band it wraps, given the other kicker. */}
+                so this is the band it wraps, given the other kicker. A
+                refusal no retry can change (under 18, round 35 #56c) has
+                no Try again, as Google's refusals have none. */}
           {band === undefined ? undefined : (
             <FailureBand
               kicker={band.kicker}
               message={band.message}
-              onRetry={form.retry}
+              onRetry={band.retry === false ? undefined : form.retry}
               retryRef={form.retryRef}
             />
           )}
