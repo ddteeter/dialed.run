@@ -14,6 +14,8 @@ import {
   TextField,
   useFormSubmit,
 } from "../../../ui";
+import { blockRequesterInput } from "../inputs";
+import type { HoldState } from "../takedown-limits";
 import type { PendingTakedownRequest } from "../takedown-requests";
 import { useSettled } from "./use-settled";
 
@@ -41,12 +43,27 @@ function requestId(request: PendingTakedownRequest): string {
   return request.id;
 }
 
+type Block = (input: { data: { requestId: string } }) => Promise<unknown>;
+
+/**
+ * What filing decided, as Review says it (design 137). Placeholder words
+ * (design deltas).
+ */
+const HOLD_WORDS: Readonly<Record<HoldState, string>> = {
+  held: "hidden",
+  confirm: "waiting for confirm",
+  valve: "valve",
+  blocked: "blocked",
+};
+
 export function RemovalRequests({
   requests,
   decide,
+  block,
 }: Readonly<{
   requests: readonly PendingTakedownRequest[];
   decide: Decide;
+  block: Block;
 }>): JSX.Element | undefined {
   // A decided request leaves the list, as a decided review row does.
   const { remaining, settle } = useSettled(requests, requestId);
@@ -60,8 +77,12 @@ export function RemovalRequests({
           key={request.id}
           request={request}
           decide={decide}
+          block={block}
           onDecided={() => {
             settle(request.id);
+          }}
+          onBlocked={() => {
+            for (const id of [request.id, ...request.relatedIds]) settle(id);
           }}
         />
       )}
@@ -72,11 +93,15 @@ export function RemovalRequests({
 function RemovalRequestRow({
   request,
   decide,
+  block,
   onDecided,
+  onBlocked,
 }: Readonly<{
   request: PendingTakedownRequest;
   decide: Decide;
+  block: Block;
   onDecided: () => void;
+  onBlocked: () => void;
 }>): JSX.Element {
   const [isDeclining, setIsDeclining] = useState(false);
   return (
@@ -92,6 +117,11 @@ function RemovalRequestRow({
           <span className="text-micro text-quiet">
             <Bracketed>via /takedown</Bracketed>
           </span>
+          {request.holdState === undefined ? undefined : (
+            <span data-part="hold-state" className="text-micro text-ink">
+              <Bracketed>{HOLD_WORDS[request.holdState]}</Bracketed>
+            </span>
+          )}
         </span>
         <span data-part="due" className="text-ink uppercase">
           <Mono step="xs">{request.due}</Mono>
@@ -105,6 +135,11 @@ function RemovalRequestRow({
           <q className="text-body">{request.description}</q>
         )}
         <span className="text-micro text-quiet">{request.requesterEmail}</span>
+        {request.relatedIds.length === 0 ? undefined : (
+          <span data-part="related" className="text-micro text-ink">
+            {String(request.relatedIds.length)} more from this requester
+          </span>
+        )}
       </span>
       <SubjectLink request={request} />
       <RemoveForm
@@ -129,7 +164,88 @@ function RemovalRequestRow({
           <Mono step="xs">Decline</Mono>
         </button>
       )}
+      <BlockRequester
+        requestId={request.id}
+        count={request.relatedIds.length + 1}
+        block={block}
+        onBlocked={onBlocked}
+      />
     </li>
+  );
+}
+
+/**
+ * Block and decline all (design 137): asks in the row first, because it
+ * declines every open request from this requester at once and blocks
+ * them. Nothing is sent to them. Undesigned: the review row's own parts,
+ * placeholder words (design deltas).
+ */
+function BlockRequester({
+  requestId,
+  count,
+  block,
+  onBlocked,
+}: Readonly<{
+  requestId: string;
+  count: number;
+  block: Block;
+  onBlocked: () => void;
+}>): JSX.Element {
+  const [isAsking, setIsAsking] = useState(false);
+  const form = useFormSubmit({
+    schema: blockRequesterInput,
+    action: (values) => block({ data: values }),
+    successMessage: "Blocked.",
+    onSuccess: onBlocked,
+  });
+  if (!isAsking) {
+    return (
+      <button
+        type="button"
+        className="target self-start"
+        onClick={() => {
+          setIsAsking(true);
+        }}
+      >
+        <Mono step="xs">Block and decline all</Mono>
+      </button>
+    );
+  }
+  return (
+    <FormElement
+      form={form}
+      dataPart="block"
+      onSubmit={() => {
+        void form.submit({ requestId });
+      }}
+    >
+      <p className="m-0 text-body">
+        Block this requester and decline{" "}
+        {count === 1
+          ? "this request"
+          : `all ${String(count)} of their requests`}
+        ? Anything they hid comes back, and nothing is sent to them.
+      </p>
+      <FormFailureBand
+        failure={form.failure}
+        onRetry={form.retry}
+        retryRef={form.retryRef}
+      />
+      <SubmitButton
+        label="Block and decline all"
+        pendingLabel="Blocking"
+        pending={form.pending}
+      />
+      <button
+        type="button"
+        className="target self-start"
+        onClick={() => {
+          setIsAsking(false);
+        }}
+      >
+        <Mono step="xs">Cancel</Mono>
+      </button>
+    </FormElement>
   );
 }
 

@@ -266,7 +266,11 @@ account added it.
   We email the address a receipt and the decision, and email each
   reviewer that a request is waiting. We count requests per visitor IP
   address, as we do requests for access, to stop the form being flooded.
-  We keep a request until we delete it, because it is the record of why
+  To stop one person filing many requests, we keep with each request a
+  form of the email address that ignores dots and "+" tags where the
+  provider does, and a one-way keyed code made from the IP address (not
+  the address itself). If someone abuses the form, we may block that
+  email and code from it. We keep a request until we delete it, because it is the record of why
   something was or was not removed. [OWNER: review]
 - Reviewers are a short list of admins we name in configuration. They can
   see reported and flagged content, including hidden photos, with the

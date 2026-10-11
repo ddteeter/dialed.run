@@ -153,7 +153,7 @@ describe("emailContent", () => {
       {
         kind: "removal_request_received",
         dueAt: 1_791_810_300,
-        isOurs: true,
+        isHidden: true,
       },
       {
         subject: "We have your removal request",
@@ -168,12 +168,43 @@ describe("emailContent", () => {
       {
         kind: "removal_request_received",
         dueAt: 1_791_810_300,
-        isOurs: false,
+        isHidden: false,
       },
       {
         subject: "We have your removal request",
         body: "We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way.",
         foot: "Sent because someone asked at dialed.run/takedown with this address.",
+        footer: LEGAL,
+      },
+    ],
+    [
+      // Design 137: past the requester cap, nothing hides until the
+      // requester confirms, and the receipt carries the link.
+      {
+        kind: "removal_request_received",
+        dueAt: 1_791_810_300,
+        isHidden: false,
+        confirmToken: "abc123",
+      },
+      {
+        subject: "We have your removal request",
+        body: "To have it hidden while we look, confirm this request. We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way.",
+        button: {
+          label: "Confirm the request",
+          href: `${ORIGIN}/takedown/confirm?token=abc123`,
+        },
+        foot: "Sent because someone asked at dialed.run/takedown with this address.",
+        footer: LEGAL,
+      },
+    ],
+    [
+      // Design 137: the valve, once an hour while it lasts.
+      { kind: "takedown_valve", perHour: 10 },
+      {
+        subject: "Removal requests paused: possible abuse",
+        body: "10 removal requests hid something in the last hour, so new requests hide nothing until the hour clears. They still wait in Review with their 48 hours.",
+        button: { label: "Open Review", href: `${ORIGIN}/safety/review` },
+        foot: "Sent to every operator, once an hour while it lasts.",
         footer: LEGAL,
       },
     ],

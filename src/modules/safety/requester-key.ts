@@ -23,3 +23,30 @@ export function requesterKey(email: string): string {
   const [local = ""] = normalized.slice(0, at).split("+", 1);
   return `${local}${normalized.slice(at)}`;
 }
+
+const encoder = new TextEncoder();
+
+/**
+ * The visitor's IP as a key (design 137): HMAC-SHA-256 under
+ * `TAKEDOWN_SECRET`, hex. Keyed because a plain hash of an IPv4 address is
+ * undone by trying all four billion; the raw address is never stored.
+ * `undefined` without the secret or the address — the cap then counts the
+ * email key alone.
+ */
+export async function ipKey(
+  ip: string | undefined,
+  secret: string | undefined,
+): Promise<string | undefined> {
+  if (ip === undefined || secret === undefined || secret === "") return;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signed = await crypto.subtle.sign("HMAC", key, encoder.encode(ip));
+  return [...new Uint8Array(signed)]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}

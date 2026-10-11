@@ -1041,6 +1041,27 @@ REVIEW]` comes first on G's row meta line, outside the link, so the
       words or place for a `/takedown` link inside W1, and a signed-in
       runner already has the reason itself. This one waits for words.
 
+59. **`/takedown`'s abuse limits (design 137, decision D-118).**
+    Undesigned; built from existing primitives and copy. Placeholder words
+    throughout:
+    - **`/takedown/confirm`** is the `/takedown` page's panel: the heading
+      "Confirm your request", "Confirm that you asked us to remove an
+      image. Then we hide it while we look.", and "Confirm the request".
+      It asks first and does nothing on arrival, because mail scanners
+      follow links. After the press: Au5's receipt, `REQUEST CONFIRMED` ·
+      "We have your request" (or "We've already decided"). A link that
+      matches nothing says so in one line.
+    - **The receipt email**, past the cap: "To have it hidden while we
+      look, confirm this request." and a "Confirm the request" button.
+    - **The valve email**: "Removal requests paused: possible abuse", with
+      the hour's count and "Open Review", once an hour while it lasts.
+    - **Review's request row** gains a state bracket after `[via
+/takedown]` (`[hidden]`, `[waiting for confirm]`, `[valve]`,
+      `[blocked]`), "N more from this requester" under the address, and
+      **Block and decline all**, a text button that asks in the row first.
+      **The ask:** the words, and where the state belongs: the brackets or
+      the header.
+
 ## Answered in round 34 (imported 2026-10-04)
 
 Design sent round 34 with `Theme.dc.html` as the primary file. It carries

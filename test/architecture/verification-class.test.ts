@@ -264,6 +264,10 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // Design 136: `/takedown` is for anyone, with or without an account —
   // the person pictured is usually not a runner.
   "safety/functions.ts takedownRequestFn": "sessionless",
+  // Design 137: the requester confirms from the receipt's link, with no
+  // account; the token is the proof. Blocking a requester is the Desk's.
+  "safety/functions.ts confirmTakedownFn": "sessionless",
+  "safety/functions.ts blockTakedownRequesterAction": "admin",
 
   // ---- server routes
   // A signed link's token, or the viewer if any.

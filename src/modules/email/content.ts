@@ -355,9 +355,26 @@ export function emailContent(
       const due = utcMinute(template.dueAt);
       return {
         subject: "We have your removal request",
-        // Round 35 #58e. The hidden line is true only of a link of ours.
-        body: `${template.isOurs ? "The image is hidden while we look. " : ""}We'll decide within 48 hours, by ${due}, and email you either way.`,
+        // Round 35 #58e. The hidden line is true only of what was hidden;
+        // design 137's confirm line only of a request past the cap.
+        body: `${template.isHidden ? "The image is hidden while we look. " : ""}${template.confirmToken === undefined ? "" : "To have it hidden while we look, confirm this request. "}We'll decide within 48 hours, by ${due}, and email you either way.`,
+        ...(template.confirmToken !== undefined && {
+          button: {
+            label: "Confirm the request",
+            href: `${origin}/takedown/confirm?token=${template.confirmToken}`,
+          },
+        }),
         foot: "Sent because someone asked at dialed.run/takedown with this address.",
+        footer,
+      };
+    }
+    case "takedown_valve": {
+      // Design 137: placeholder words (design deltas).
+      return {
+        subject: "Removal requests paused: possible abuse",
+        body: `${String(template.perHour)} removal requests hid something in the last hour, so new requests hide nothing until the hour clears. They still wait in Review with their 48 hours.`,
+        button: { label: "Open Review", href: `${origin}/safety/review` },
+        foot: "Sent to every operator, once an hour while it lasts.",
         footer,
       };
     }

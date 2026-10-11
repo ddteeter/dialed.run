@@ -20,7 +20,8 @@ requester.
 - **IP key.** HMAC-SHA-256 of the visitor's IP under a new secret,
   `TAKEDOWN_SECRET` (owner, 2026-10-10). Raw IPs are never stored. With
   the secret missing, the IP key is absent and requests are matched by
-  email alone; `/api/health` names it.
+  email alone. It is optional rather than in `/api/health`'s required
+  list, so a deployment without it, or CI, stays healthy.
 - **Filing decides whether the request hides**, reading before its batch:
   1. **Blocked** (either key is in `takedown_blocks`): recorded, receipt
      as usual, no hide, no operator alert.
@@ -29,7 +30,10 @@ requester.
      sends one "possible abuse" alert per hour, with a dedupe key per
      hour bucket.
   3. **Cap**: if this requester (either key) already has 2 pending
-     requests that hid something, the request waits for a confirm. The
+     requests, hidden or not, the request waits for a confirm before it
+     hides or alerts. Counting every open request, not only hidden ones,
+     also stops a flood of outside links from filling operators' inboxes.
+     The
      receipt email carries a link to `/takedown/confirm?token=…`. That
      page asks first, with a Confirm button and no hide on GET, because
      mail scanners follow links. Confirming applies the hold through the

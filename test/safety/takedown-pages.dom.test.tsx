@@ -224,6 +224,7 @@ describe("/takedown", () => {
 });
 
 type DecideFn = Parameters<typeof RemovalRequests>[0]["decide"];
+type BlockFn = Parameters<typeof RemovalRequests>[0]["block"];
 
 const ENTRY = "01JABCDEFGHJKMNPQRSTVWXYZ0";
 
@@ -240,6 +241,8 @@ function pending(
     createdAt: 1,
     dueAt: 2,
     due: "Due in 31h",
+    holdState: "held",
+    relatedIds: [],
     ...overrides,
   };
 }
@@ -250,10 +253,13 @@ describe("Review · removal requests", () => {
       <RemovalRequests
         requests={[pending({ description: "a photo of me" })]}
         decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
       />,
     );
     const row = part("removal-request");
-    expect(row).toHaveTextContent(/^entry\[via \/takedown\]Due in 31h/u);
+    expect(row).toHaveTextContent(
+      /^entry\[via \/takedown\]\[hidden\]Due in 31h/u,
+    );
     // The clock in the header, uppercase in CSS, as a queue row's.
     const clock = part("due");
     expect(clock).toHaveTextContent(/^Due in 31h$/u);
@@ -270,7 +276,11 @@ describe("Review · removal requests", () => {
 
   it("leaves out the description's line when there is none", async () => {
     await renderWithRouter(
-      <RemovalRequests requests={[pending()]} decide={vi.fn<DecideFn>()} />,
+      <RemovalRequests
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
     );
     expect(part("removal-request")?.querySelector("q")).toBeNull();
   });
@@ -290,6 +300,7 @@ describe("Review · removal requests", () => {
           }),
         ]}
         decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
       />,
     );
     expect(screen.getByRole("link", { name: "Open its kit" })).toHaveAttribute(
@@ -320,6 +331,7 @@ describe("Review · removal requests", () => {
           }),
         ]}
         decide={decide}
+        block={vi.fn<BlockFn>()}
       />,
     );
     const [first] = document.querySelectorAll<HTMLElement>(
@@ -346,7 +358,11 @@ describe("Review · removal requests", () => {
   it("declines only with a reason, asked for once Decline is pressed, and sends it", async () => {
     const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
     await renderWithRouter(
-      <RemovalRequests requests={[pending()]} decide={decide} />,
+      <RemovalRequests
+        requests={[pending()]}
+        decide={decide}
+        block={vi.fn<BlockFn>()}
+      />,
     );
     const user = userEvent.setup();
     // Decline is a text button until pressed: then it asks for the line.
@@ -382,9 +398,131 @@ describe("Review · removal requests", () => {
     });
   });
 
+  it.each([
+    ["held", "[hidden]"],
+    ["confirm", "[waiting for confirm]"],
+    ["valve", "[valve]"],
+    ["blocked", "[blocked]"],
+  ] as const)(
+    "says what filing decided, %s (design 137)",
+    async (holdState, words) => {
+      await renderWithRouter(
+        <RemovalRequests
+          requests={[pending({ holdState })]}
+          decide={vi.fn<DecideFn>()}
+          block={vi.fn<BlockFn>()}
+        />,
+      );
+      expect(part("hold-state")).toHaveTextContent(words);
+    },
+  );
+
+  it("says nothing of a hold for a link that hides nothing, nor of others when there are none", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending({ holdState: undefined })]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    expect(part("hold-state")).toBeNull();
+    expect(part("related")).toBeNull();
+  });
+
+  it("names the requester's other open requests", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending({ relatedIds: ["a", "b"] })]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    expect(part("related")).toHaveTextContent(/^2 more from this requester$/u);
+  });
+
+  it("asks before it blocks, can be cancelled, and takes every request of theirs off the list", async () => {
+    const block = vi.fn<BlockFn>().mockResolvedValue({ status: "blocked" });
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[
+          pending({
+            id: "01JABCDEFGHJKMNPQRSTVWXYZ1",
+            relatedIds: ["01JABCDEFGHJKMNPQRSTVWXYZ2"],
+          }),
+          pending({
+            id: "01JABCDEFGHJKMNPQRSTVWXYZ2",
+            relatedIds: ["01JABCDEFGHJKMNPQRSTVWXYZ1"],
+          }),
+          pending({
+            id: "01JABCDEFGHJKMNPQRSTVWXYZ3",
+            signature: "Someone Else",
+          }),
+        ]}
+        decide={vi.fn<DecideFn>()}
+        block={block}
+      />,
+    );
+    const user = userEvent.setup();
+    const [first] = document.querySelectorAll<HTMLElement>(
+      "[data-part='removal-request']",
+    );
+    const row = within(first ?? document.body);
+
+    await user.click(
+      row.getByRole("button", { name: "Block and decline all" }),
+    );
+    expect(
+      row.getByText(
+        "Block this requester and decline all 2 of their requests? Anything they hid comes back, and nothing is sent to them.",
+      ),
+    ).toBeVisible();
+    await user.click(row.getByRole("button", { name: "Cancel" }));
+    expect(part("block")).toBeNull();
+    expect(block).not.toHaveBeenCalled();
+
+    await user.click(
+      row.getByRole("button", { name: "Block and decline all" }),
+    );
+    const submit = row.getByRole("button", { name: "Block and decline all" });
+    expect(submit).toHaveAttribute("type", "submit");
+    await user.click(submit);
+    expect(await screen.findByText("Blocked.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        document.querySelectorAll("[data-part='removal-request']"),
+      ).toHaveLength(1);
+    });
+    expect(part("removal-request")).toHaveTextContent("Someone Else");
+    expect(block).toHaveBeenCalledWith({
+      data: { requestId: "01JABCDEFGHJKMNPQRSTVWXYZ1" },
+    });
+  });
+
+  it("asks about the one request when the requester has no other", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Block and decline all" }));
+    expect(
+      screen.getByText(
+        "Block this requester and decline this request? Anything they hid comes back, and nothing is sent to them.",
+      ),
+    ).toBeVisible();
+  });
+
   it("renders nothing when nothing is waiting", async () => {
     await renderWithRouter(
-      <RemovalRequests requests={[]} decide={vi.fn<DecideFn>()} />,
+      <RemovalRequests
+        requests={[]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
     );
     expect(part("removal-request")).toBeNull();
     expect(screen.queryByText(/Removal requests/u)).toBeNull();
