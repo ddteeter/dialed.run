@@ -3,7 +3,8 @@
  * (zero follows lands on Your conditions; the typed city's Find and Use
  * this, round 26 #12), runner search, D (post detail — the strip, the
  * note, the kit), H (someone else's profile), D-11 (useful reactions), the
- * bell counting a run of any age that still owes a verdict (S2), G's
+ * bell counting a run of any age that still owes a verdict (S2), the
+ * consensus bars' words as shares of the matched runners (round 35 #54), G's
  * settings button, `@handle` on the author row and `/@old` saying the
  * runner changed their name (FEED-10) and a never-held `/@handle` saying
  * "This runner isn't here." (round 28 #11), the author's own under-review
@@ -57,6 +58,11 @@ import {
   answerFind,
   feedUserId,
   forgetPlace,
+  removeSeeded,
+  seedEntry,
+  seedObservation,
+  seedRunner,
+  seeded,
 } from "../conformance/feed-support";
 
 /**
@@ -296,6 +302,43 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     }),
   );
 
+  // Round 35 #54: five runners who logged Portland's conditions this hour
+  // somewhere else in the last three days. Every one wore a top and three
+  // wore bottoms too, so Tops is All beside another bar and Bottoms is
+  // Most at 3 of 5, where round 27's ranking said Most and Some. A
+  // feels-like no other demo seeds keeps the count to these five.
+  const consensus = seeded();
+  const consensusFeelsC = 47;
+  const now = nowSeconds();
+  await seedObservation(consensus, { lat: latR, lng: lngR }, now, {
+    feelsLikeC: consensusFeelsC,
+  });
+  for (let index = 0; index < 5; index += 1) {
+    const runner = await seedRunner(
+      consensus,
+      `share_${suffix.slice(-6)}_${String(index)}`,
+    );
+    const place = { lat: (3001 + index) / 100, lng: 70.01 };
+    const ranAt = now - (2 + index) * 3600;
+    await seedEntry(consensus, {
+      userId: runner,
+      place,
+      startedAt: ranAt,
+      feelsLikeC: consensusFeelsC,
+      verdict: 0,
+    });
+    if (index < 3) {
+      await seedEntry(consensus, {
+        userId: runner,
+        place: { lat: place.lat, lng: 70.02 },
+        startedAt: ranAt - 3600,
+        feelsLikeC: consensusFeelsC,
+        verdict: 0,
+        category: "bottom",
+      });
+    }
+  }
+
   try {
     // A runner who follows nobody lands on Your conditions (round 22):
     // the one social surface that works on day one. Nothing here grants
@@ -336,6 +379,13 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       { ignoreCase: true },
     );
     await page.unrouteAll({ behavior: "ignoreErrors" });
+
+    // Round 35 #54: each bar's word is its share of the matched runners,
+    // not its rank. Every runner wore a top, so Tops reads All beside
+    // another bar; 3 of 5 is more than half, so Bottoms reads Most.
+    await scene(page, "What they wore: All beside Most, each a share");
+    const bars = page.locator('[data-part="match-block"] + div li');
+    await expect(bars).toHaveText(["TopsAll5/5", "BottomsMost3/5"]);
 
     // Following is a tab away, and its empty state is drawn (E1).
     await scene(page, "E1 · nobody yet, and one way to find someone");
@@ -742,6 +792,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await expect(page).not.toHaveURL(new RegExp(ownEntryId));
   } finally {
     await forgetPlace(viewerId);
+    await removeSeeded(consensus);
     await withLocalDb(async ({ core }) => {
       // Only what the deletes above did not reach, if a beat failed first.
       await core.delete(entryPhotos).where(eq(entryPhotos.entryId, ownEntryId));

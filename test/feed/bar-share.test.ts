@@ -3,47 +3,51 @@ import { describe, expect, it } from "vitest";
 import { withShares } from "../../src/modules/feed/bar-share";
 
 /**
-The words alone, for rows of these runner counts.
+The words alone, for rows of these runner counts out of `matched`.
 */
-function words(counts: readonly number[]): string[] {
-  return withShares(counts.map((runners) => ({ runners }))).map(
-    ({ share }) => share,
-  );
+function words(counts: readonly number[], matched: number): string[] {
+  return withShares(
+    counts.map((runners) => ({ runners })),
+    matched,
+  ).map(({ share }) => share);
 }
 
-describe("withShares: round 27 #25's consensus words", () => {
-  it("says Most on the leading bar and Some on the rest", () => {
-    expect(words([11, 9, 5, 3])).toStrictEqual([
+describe("withShares: round 35 #54's consensus words", () => {
+  it("claims a share of matched runners, not a rank", () => {
+    // 11 and 9 of 14 are both over half, so both are Most.
+    expect(words([11, 9, 5, 3], 14)).toStrictEqual([
       "most",
-      "some",
+      "most",
       "some",
       "some",
     ]);
   });
 
-  it("says Most on a leading bar under half, because groups overlap", () => {
-    // Of 14 runners, 5 is under half — but one runner counts in every
-    // group they wore, so the words rank the bars, not shares of the 14.
-    expect(words([5, 4, 3])).toStrictEqual(["most", "some", "some"]);
+  it("says Some on a leader under half", () => {
+    // "a leader at 5 of 14" reads Some.
+    expect(words([5, 4, 3], 14)).toStrictEqual(["some", "some", "some"]);
   });
 
-  it("says Some on a bar over half that does not lead", () => {
-    // 9 and 11 of 14 are both over half; only the leader is Most.
-    expect(words([9, 11])).toStrictEqual(["some", "most"]);
+  it("says Some on exactly half, and Most from one more", () => {
+    // Most is "more than half".
+    expect(words([7, 8], 14)).toStrictEqual(["some", "most"]);
+    expect(words([2, 3], 5)).toStrictEqual(["some", "most"]);
   });
 
-  it("says Split on each bar tied for the lead", () => {
-    expect(words([9, 9, 3])).toStrictEqual(["split", "split", "some"]);
-    expect(words([4, 4, 4])).toStrictEqual(["split", "split", "split"]);
-    // A tie below the lead is no split.
-    expect(words([9, 3, 3])).toStrictEqual(["most", "some", "some"]);
+  it("says All on a bar every matched runner wore, whatever sits beside it", () => {
+    expect(words([14, 9, 3], 14)).toStrictEqual(["all", "most", "some"]);
+    expect(words([14], 14)).toStrictEqual(["all"]);
   });
 
-  it("says All on a bar that is alone, as the ruling says, whatever its count", () => {
-    // "A single bar reads All." Whether a lone bar short of every runner
-    // should is open with design (design-deltas open item 54).
-    expect(words([3])).toStrictEqual(["all"]);
-    expect(words([14])).toStrictEqual(["all"]);
+  it("says Some on a lone bar short of every runner", () => {
+    // "a lone bar at 3 of 14" reads Some; round 27's lone-bar All is gone.
+    expect(words([3], 14)).toStrictEqual(["some"]);
+    expect(words([13], 14)).toStrictEqual(["most"]);
+  });
+
+  it("shows a tie as the same word on equal bars, with no Split", () => {
+    expect(words([9, 9, 3], 14)).toStrictEqual(["most", "most", "some"]);
+    expect(words([4, 4], 14)).toStrictEqual(["some", "some"]);
   });
 
   it("keeps each row with its own word, in order", () => {
@@ -51,7 +55,7 @@ describe("withShares: round 27 #25's consensus words", () => {
       { group: "tops", runners: 3 },
       { group: "bottoms", runners: 9 },
     ];
-    expect(withShares(rows)).toStrictEqual([
+    expect(withShares(rows, 14)).toStrictEqual([
       { row: rows[0], share: "some" },
       { row: rows[1], share: "most" },
     ]);
