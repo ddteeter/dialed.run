@@ -99,7 +99,23 @@ function brandOptions(): string[] {
   );
 }
 
-describe("GarmentForm: identity leads", () => {
+describe("GarmentForm: what it is leads", () => {
+  it("asks Category and Type first, then Brand and Name (round 35 #52b)", () => {
+    // The type picks the glyph and the defaults, so it comes before the
+    // identity, at every width.
+    renderForm();
+    const controls = [
+      ...document.querySelectorAll<HTMLElement>(
+        "form [name='category'], form [name='type'], form [name='brand'], form [name='name']",
+      ),
+    ].map((control) => control.getAttribute("name"));
+    // Tops have several types, so the chips are there: each chip is a
+    // `type` radio, and the order is what matters.
+    expect(
+      controls.filter((name, index) => name !== controls[index - 1]),
+    ).toStrictEqual(["category", "type", "brand", "name"]);
+  });
+
   it("saves with a category and a name alone — never blocked on a brand", async () => {
     // D-27: a generic entry is one submit away.
     const user = userEvent.setup();

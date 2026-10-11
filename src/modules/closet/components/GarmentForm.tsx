@@ -307,9 +307,10 @@ function useObjectUrl(file: File | undefined): string | undefined {
 }
 
 /**
- * Screen F (v1, identity-first, D-27): brand + model lead; category one tap;
- * attribute fields collapsed below, shown only where the category admits
- * them. A generic entry (category + name only) is still one submit away —
+ * Screen F: category and type lead, then brand + model (round 35 #52b,
+ * which reverses D-27's identity-first order for F: the type picks the
+ * glyph and the defaults); attribute fields collapsed below, shown only
+ * where the category admits them. A generic entry (category + name only) is still one submit away —
  * never blocked on brand/model.
  *
  * **This form had no failure path before R-17.** It was presentational,
@@ -535,43 +536,6 @@ export function GarmentForm({
         summaryRef={form.summaryRef}
       />
 
-      <fieldset className="flex flex-col gap-3">
-        <legend className="font-display text-heading">What is it?</legend>
-        <FormField
-          name="brand"
-          label={LABELS.brand}
-          error={form.fieldErrors.brand}
-        >
-          <input
-            {...form.field("brand")}
-            id="brand"
-            type="text"
-            list="garment-brand-options"
-            value={values.brand}
-            onChange={(event) => {
-              update("brand", event.target.value);
-              onBrandInput?.(event.target.value);
-            }}
-            className="rounded-field border border-hairline bg-panel px-3 py-2 font-normal"
-          />
-        </FormField>
-        <datalist id="garment-brand-options">
-          {(brandOptions ?? []).map((option) => (
-            <option key={option} value={option} />
-          ))}
-        </datalist>
-        <TextField
-          name="name"
-          label={LABELS.name}
-          value={values.name}
-          onChange={(value) => {
-            update("name", value);
-          }}
-          field={form.field}
-          error={form.fieldErrors.name}
-        />
-      </fieldset>
-
       <FormField
         name="category"
         label={LABELS.category}
@@ -609,7 +573,9 @@ export function GarmentForm({
       </FormField>
       {/* Round 26's TYPE chips, under the category (D-75, R-112). Only
           where there is a choice: a category with one type (gloves,
-          socks, shoes, neckwear) asks nothing. */}
+          socks, shoes, neckwear) asks nothing. Category and Type lead,
+          then Brand and Name, at every width (round 35 #52b): the type
+          picks the glyph and the defaults. */}
       {types.length > 1 ? (
         <ChoiceList
           name="type"
@@ -625,6 +591,43 @@ export function GarmentForm({
           }}
         />
       ) : undefined}
+
+      <fieldset className="flex flex-col gap-3">
+        <legend className="font-display text-heading">What is it?</legend>
+        <FormField
+          name="brand"
+          label={LABELS.brand}
+          error={form.fieldErrors.brand}
+        >
+          <input
+            {...form.field("brand")}
+            id="brand"
+            type="text"
+            list="garment-brand-options"
+            value={values.brand}
+            onChange={(event) => {
+              update("brand", event.target.value);
+              onBrandInput?.(event.target.value);
+            }}
+            className="rounded-field border border-hairline bg-panel px-3 py-2 font-normal"
+          />
+        </FormField>
+        <datalist id="garment-brand-options">
+          {(brandOptions ?? []).map((option) => (
+            <option key={option} value={option} />
+          ))}
+        </datalist>
+        <TextField
+          name="name"
+          label={LABELS.name}
+          value={values.name}
+          onChange={(value) => {
+            update("name", value);
+          }}
+          field={form.field}
+          error={form.fieldErrors.name}
+        />
+      </fieldset>
 
       <fieldset className="flex flex-col gap-3 border-t border-hairline pt-4">
         <legend className="sr-only">Attributes</legend>
@@ -696,8 +699,8 @@ export function GarmentForm({
           />
         ) : undefined}
         {/* §AH: the fourth and fifth attributes, inside the group that is
-            already collapsed. F stays identity-first and the tap count on
-            the happy path does not move. Not gated on `fields.*` — every
+            already collapsed. The tap count on the happy path does not
+            move. Not gated on `fields.*` — every
             category has a colour, including the ones with no layer and no
             fabric. */}
         <ChoiceList

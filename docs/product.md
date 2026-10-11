@@ -50,28 +50,28 @@ call-epic screens.
 
 ## Screen inventory → lanes
 
-| ID     | Screen                          | V1?     | Lane      | Notes                                                                                                                       |
-| ------ | ------------------------------- | ------- | --------- | --------------------------------------------------------------------------------------------------------------------------- |
-| O1     | Calibrate the body              | yes     | 105       | writes thermal_level, city/lat/lng, units                                                                                   |
-| O2     | Shoot the closet                | no      | call epic | vision capture                                                                                                              |
-| O3     | Fill the long tail (tap-list)   | yes     | 105       | cohort-frequency list is static-per-climate v1 (curated lists, not learned); product-link extractor deferred                |
-| O4     | Seed the history                | no      | call epic | bulk import cut from v1 (D-13)                                                                                              |
-| O5/O6  | First call / ladder             | partial | 105       | ladder ships as the Call-tab teaser; no call                                                                                |
-| A1     | Upload & auto-conditions        | yes     | 102       | + indoor flag, manual-temp fallback, dupe warning                                                                           |
-| A2/A2b | Attach the kit / category sheet | yes     | 104       | pre-fill from nearest-conditions prior entry                                                                                |
-| A3     | The verdict                     | yes     | 104       | 5-state + tags + per-item flags; share toggle                                                                               |
-| B1/B2  | The call                        | no      | call epic |                                                                                                                             |
-| C      | The closet                      | yes     | 101       | condition filters from real verdict data                                                                                    |
-| D      | Post detail                     | yes¹    | 104       | ¹ no comments (D-04); "try this kit" deferred with kits                                                                     |
-| E1     | Following feed                  | yes     | 104       |                                                                                                                             |
-| E2     | Your conditions                 | lite    | 104       | consensus block only (D-16)                                                                                                 |
-| F      | Add a garment                   | yes¹    | 101       | ¹ identity-first: brand autocomplete + name lead; link paste triggers enrichment (107); optional photo; no vision auto-read |
-| —      | P2.5 upgrade step               | yes     | 105       | new (D-27); needs design                                                                                                    |
-| G      | Your profile                    | yes¹    | 104       | ¹ no kits row, no calls-dialed%                                                                                             |
-| H      | Someone else's profile          | yes¹    | 104       | ¹ no offset-translation block (needs cohort math)                                                                           |
-| I      | Discovery                       | no      | post-MVP  | v1: username search + follow-from-posts                                                                                     |
-| —      | Product enrichment (invisible)  | yes     | 107       | URL → snapshot + extraction ladder; no dedicated screen — results appear as pre-filled, editable fields                     |
-| J      | Gear gaps                       | no      | post-MVP  |                                                                                                                             |
+| ID     | Screen                          | V1?     | Lane      | Notes                                                                                                                                                                         |
+| ------ | ------------------------------- | ------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| O1     | Calibrate the body              | yes     | 105       | writes thermal_level, city/lat/lng, units                                                                                                                                     |
+| O2     | Shoot the closet                | no      | call epic | vision capture                                                                                                                                                                |
+| O3     | Fill the long tail (tap-list)   | yes     | 105       | cohort-frequency list is static-per-climate v1 (curated lists, not learned); product-link extractor deferred                                                                  |
+| O4     | Seed the history                | no      | call epic | bulk import cut from v1 (D-13)                                                                                                                                                |
+| O5/O6  | First call / ladder             | partial | 105       | ladder ships as the Call-tab teaser; no call                                                                                                                                  |
+| A1     | Upload & auto-conditions        | yes     | 102       | + indoor flag, manual-temp fallback, dupe warning                                                                                                                             |
+| A2/A2b | Attach the kit / category sheet | yes     | 104       | pre-fill from nearest-conditions prior entry                                                                                                                                  |
+| A3     | The verdict                     | yes     | 104       | 5-state + tags + per-item flags; share toggle                                                                                                                                 |
+| B1/B2  | The call                        | no      | call epic |                                                                                                                                                                               |
+| C      | The closet                      | yes     | 101       | condition filters from real verdict data                                                                                                                                      |
+| D      | Post detail                     | yes¹    | 104       | ¹ no comments (D-04); "try this kit" deferred with kits                                                                                                                       |
+| E1     | Following feed                  | yes     | 104       |                                                                                                                                                                               |
+| E2     | Your conditions                 | lite    | 104       | consensus block only (D-16)                                                                                                                                                   |
+| F      | Add a garment                   | yes¹    | 101       | ¹ category and type lead, then brand autocomplete + name (round 35 #52b; was identity-first, D-27); link paste triggers enrichment (107); optional photo; no vision auto-read |
+| —      | P2.5 upgrade step               | yes     | 105       | new (D-27); needs design                                                                                                                                                      |
+| G      | Your profile                    | yes¹    | 104       | ¹ no kits row, no calls-dialed%                                                                                                                                               |
+| H      | Someone else's profile          | yes¹    | 104       | ¹ no offset-translation block (needs cohort math)                                                                                                                             |
+| I      | Discovery                       | no      | post-MVP  | v1: username search + follow-from-posts                                                                                                                                       |
+| —      | Product enrichment (invisible)  | yes     | 107       | URL → snapshot + extraction ladder; no dedicated screen — results appear as pre-filled, editable fields                                                                       |
+| J      | Gear gaps                       | no      | post-MVP  |                                                                                                                                                                               |
 
 ## The v1 logging loop (the product)
 
