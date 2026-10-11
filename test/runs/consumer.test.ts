@@ -1240,21 +1240,71 @@ describe("a failed import's file is deleted 30 days after it failed (owner, 2026
       }),
     });
   });
+});
 
-  it("leaves a succeeded import's file alone, however long the drain waits", async () => {
+describe("a read file goes once its run is in the log (D-116)", () => {
+  it("is owed now, in the batch that marks the import done, and the next drain takes it", async () => {
     const deps = makeDeps();
     const userId = newUlid();
     const importId = await seedImport(deps.db, userId, validTcx, "tcx");
     const key = `imports/${userId}/${importId}.tcx`;
+    const before = nowSeconds();
 
     await handleImportsBatch(
       fakeBatch([{ body: { type: "import", importId } }]).batch,
       deps,
     );
-    await drainExpiries([], nowSeconds() + 365 * DAY_S);
 
-    expect(await expiryOf(userId, key)).toBeUndefined();
+    const [done] = await deps.db
+      .select()
+      .from(imports)
+      .where(eq(imports.id, importId));
+    expect(done?.status).toBe("done");
+    const owed = await expiryOf(userId, key);
+    expect(owed?.nextAttemptAt).toBeGreaterThanOrEqual(before);
+    expect(owed?.nextAttemptAt).toBeLessThanOrEqual(nowSeconds());
     expect(await env.IMPORTS.head(key)).not.toBeNull();
+
+    // The drain is the schedule arriving, not a fast path that failed: the
+    // file goes, the digest hears nothing, and the run stays.
+    const anomalies: string[] = [];
+    await drainExpiries(anomalies, nowSeconds());
+    expect(await env.IMPORTS.head(key)).toBeNull();
+    expect(anomalies).toStrictEqual([]);
+    expect(await expiryOf(userId, key)).toBeUndefined();
+    const [run] = await deps.db
+      .select({ id: runs.id })
+      .from(runs)
+      .where(eq(runs.id, done?.runId ?? ""));
+    expect(run?.id).toBe(done?.runId);
+  });
+
+  it("owes a duplicate's file too, since its run is already in the log", async () => {
+    const deps = makeDeps();
+    const userId = newUlid();
+    const firstId = await seedImport(deps.db, userId, validTcx, "tcx");
+    await handleImportsBatch(
+      fakeBatch([{ body: { type: "import", importId: firstId } }]).batch,
+      deps,
+    );
+    const secondId = await seedImport(deps.db, userId, validTcx, "tcx");
+    const key = `imports/${userId}/${secondId}.tcx`;
+
+    await handleImportsBatch(
+      fakeBatch([{ body: { type: "import", importId: secondId } }]).batch,
+      deps,
+    );
+
+    const [second] = await deps.db
+      .select({ status: imports.status })
+      .from(imports)
+      .where(eq(imports.id, secondId));
+    expect(second?.status).toBe("duplicate");
+    expect(await expiryOf(userId, key)).toMatchObject({
+      payload: JSON.stringify({ userId, key }),
+    });
+    await drainExpiries([], nowSeconds());
+    expect(await env.IMPORTS.head(key)).toBeNull();
   });
 });
 

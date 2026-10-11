@@ -64,7 +64,7 @@ describe("ExportRow", () => {
     expect(within(row()).getByText("Export your data")).toBeInTheDocument();
     expect(
       within(row()).getByText(
-        "Runs, closet, entries, photos and your run files",
+        "Runs, closet, entries and photos",
       ),
     ).toBeInTheDocument();
     expect(

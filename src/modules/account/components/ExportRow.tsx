@@ -13,7 +13,8 @@ import {
 } from "../../../ui";
 
 /**
- * The row's sub-line for each state: idle and preparing are round 27 #13's
+ * The row's sub-line for each state: idle (less "and your run files", which
+ * D-116 made rarely true; design deltas item 57) and preparing are round 27 #13's
  * words, ready and failed round 28 #15's. An idle row a refused link
  * opened says the link is dead, the same for an expired link and someone
  * else's (#15).
@@ -23,7 +24,7 @@ function subLine(state: ExportRowState, isLinkDead: boolean): string {
     case "idle": {
       return isLinkDead
         ? "That link doesn't work any more. Get a copy for a new one."
-        : "Runs, closet, entries, photos and your run files";
+        : "Runs, closet, entries and photos";
     }
     case "preparing": {
       return "We'll email a link when it's ready.";

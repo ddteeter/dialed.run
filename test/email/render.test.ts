@@ -195,7 +195,7 @@ describe("emailContent", () => {
       { kind: "export_ready", token: "0123456789abcdef0123456789abcdef" },
       {
         subject: "Your dialed.run export is ready",
-        body: "Your runs, closet, entries, photos and original run files are in one ZIP.",
+        body: "Your runs, closet, entries and photos are in one ZIP.",
         button: {
           label: "Download export",
           href: `${ORIGIN}/account/export/0123456789abcdef0123456789abcdef`,

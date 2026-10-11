@@ -74,7 +74,7 @@ export async function startImport(
   // `pending` past the grace window is re-dispatched by the daily digest,
   // so a failed queue send costs a delay rather than the upload. An R2 put
   // that succeeds where the insert then fails would leave an object no row
-  // names, and since D-110 no bucket rule expires it: so the failed insert
+  // names, and no bucket rule expires it: so the failed insert
   // takes its object back with it, one attempt (law 3). A Worker that dies
   // between the two still leaves one, and account deletion's purge lists
   // the runner's whole prefix rather than reading rows, so it goes then.
