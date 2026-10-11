@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { z } from "zod";
 
@@ -13,6 +13,7 @@ import {
   SubmitButton,
   TextField,
   useFormSubmit,
+  useReturnFocus,
 } from "../../../ui";
 import { blockRequesterInput } from "../inputs";
 import type { HoldState } from "../takedown-limits";
@@ -31,14 +32,6 @@ type Decide = (input: {
     | { requestId: string; outcome: "declined"; reason: string };
 }) => Promise<unknown>;
 
-/**
- * Review's removal requests (design 136, decision D-117), as round 35
- * #58e draws them: REMOVAL REQUESTS · N above the queue, soonest due
- * first, each row the queue row's shape. The header names the subject
- * with `[via /takedown]` and the clock right, where the age sits (#58b);
- * then who signed and what they said; then Take it down, and Decline,
- * a text button that asks for the one line the requester is sent.
- */
 function requestId(request: PendingTakedownRequest): string {
   return request.id;
 }
@@ -51,11 +44,19 @@ type Block = (input: { data: { requestId: string } }) => Promise<unknown>;
  */
 const HOLD_WORDS: Readonly<Record<HoldState, string>> = {
   held: "hidden",
-  confirm: "waiting for confirm",
-  valve: "valve",
+  confirm: "unconfirmed",
+  valve: "valve shut",
   blocked: "blocked",
 };
 
+/**
+ * Review's removal requests (design 136, decision D-117), as round 35
+ * #58e draws them: REMOVAL REQUESTS · N above the queue, soonest due
+ * first, each row the queue row's shape. The header names the subject
+ * with `[via /takedown]` and the clock right, where the age sits (#58b);
+ * then who signed and what they said; then Take it down, and Decline,
+ * a text button that asks for the one line the requester is sent.
+ */
 export function RemovalRequests({
   requests,
   decide,
@@ -67,6 +68,8 @@ export function RemovalRequests({
 }>): JSX.Element | undefined {
   // A decided request leaves the list, as a decided review row does.
   const { remaining, settle } = useSettled(requests, requestId);
+  // Round 37 #59f: after a block, focus goes to the next request left.
+  const [focusId, setFocusId] = useState<string>();
   return (
     <ListSection
       title={`Removal requests · ${String(remaining.length)}`}
@@ -78,11 +81,17 @@ export function RemovalRequests({
           request={request}
           decide={decide}
           block={block}
+          hasFocus={focusId === request.id}
+          onFocused={() => {
+            setFocusId(undefined);
+          }}
           onDecided={() => {
             settle(request.id);
           }}
           onBlocked={() => {
-            for (const id of [request.id, ...request.relatedIds]) settle(id);
+            const gone = new Set([request.id, ...request.relatedIds]);
+            for (const id of gone) settle(id);
+            setFocusId(remaining.find((row) => !gone.has(row.id))?.id);
           }}
         />
       )}
@@ -90,22 +99,72 @@ export function RemovalRequests({
   );
 }
 
+/**
+ * The Cancel of a question asked in place. The question opens on Cancel
+ * (round 37 #59f), so the safe answer is the one under focus.
+ */
+function CancelButton({
+  className,
+  onCancel,
+}: Readonly<{ className: string; onCancel: () => void }>): JSX.Element {
+  // State rather than a ref, so the effect runs once the button exists.
+  const [button, setButton] = useState<HTMLButtonElement | undefined>();
+  useEffect(() => {
+    button?.focus();
+  }, [button]);
+  return (
+    <button
+      ref={(node) => {
+        setButton(node ?? undefined);
+      }}
+      type="button"
+      className={className}
+      onClick={onCancel}
+    >
+      <Mono step="xs">Cancel</Mono>
+    </button>
+  );
+}
+
+/**
+ * A ref callback that focuses its element once: the flag clears as focus
+ * lands, so a later render of the row never takes focus back from a
+ * control inside it.
+ */
+function focusOnce(
+  hasFocus: boolean,
+  onFocused: () => void,
+): (node: HTMLElement | null) => void {
+  return (node) => {
+    if (!hasFocus || node === null) return;
+    node.focus();
+    onFocused();
+  };
+}
+
 function RemovalRequestRow({
   request,
   decide,
   block,
+  hasFocus,
+  onFocused,
   onDecided,
   onBlocked,
 }: Readonly<{
   request: PendingTakedownRequest;
   decide: Decide;
   block: Block;
+  hasFocus: boolean;
+  onFocused: () => void;
   onDecided: () => void;
   onBlocked: () => void;
 }>): JSX.Element {
   const [isDeclining, setIsDeclining] = useState(false);
+  const takeFocus = focusOnce(hasFocus, onFocused);
   return (
     <li
+      ref={takeFocus}
+      tabIndex={-1}
       data-part="removal-request"
       className="flex flex-col gap-3 border-b border-hairline py-4"
     >
@@ -192,15 +251,36 @@ function BlockRequester({
   onBlocked: () => void;
 }>): JSX.Element {
   const [isAsking, setIsAsking] = useState(false);
+  // Round 37 #59f: the question opens on Cancel, as CSAM's does, and
+  // Cancel or Esc hands focus back to the button that asked.
+  const askedFrom = useReturnFocus();
   const form = useFormSubmit({
     schema: blockRequesterInput,
     action: (values) => block({ data: values }),
-    successMessage: "Blocked.",
+    successMessage: `Blocked. ${String(count)} ${count === 1 ? "request" : "requests"} declined.`,
     onSuccess: onBlocked,
+  });
+  function stopAsking(): void {
+    setIsAsking(false);
+    askedFrom.restore();
+  }
+  // Esc anywhere in the question is Cancel. On the form element itself:
+  // `FormElement` is the forms primitive and takes no key handler.
+  useEffect(() => {
+    const question = form.formRef.current;
+    if (!isAsking || question === null) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") stopAsking();
+    };
+    question.addEventListener("keydown", onKey);
+    return () => {
+      question.removeEventListener("keydown", onKey);
+    };
   });
   if (!isAsking) {
     return (
       <button
+        ref={askedFrom.ref}
         type="button"
         className="target self-start"
         onClick={() => {
@@ -236,15 +316,7 @@ function BlockRequester({
         pendingLabel="Blocking"
         pending={form.pending}
       />
-      <button
-        type="button"
-        className="target self-start"
-        onClick={() => {
-          setIsAsking(false);
-        }}
-      >
-        <Mono step="xs">Cancel</Mono>
-      </button>
+      <CancelButton className="target self-start" onCancel={stopAsking} />
     </FormElement>
   );
 }
@@ -264,7 +336,9 @@ function SubjectLink({
       <span className="flex flex-col gap-1">
         <span className="text-body break-words">{request.location}</span>
         <span className="text-body text-quiet">
-          Not one of our links: find it from what they wrote.
+          {request.posterUsername === undefined
+            ? "Not one of our links: find it from what they wrote."
+            : `Not one of our links: find it on @${request.posterUsername}'s entries from what they wrote.`}
         </span>
       </span>
     );

@@ -930,6 +930,42 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
+## Answered in round 37 (imported 2026-10-10)
+
+Design sent round 37 as `Round 37 Rulings.dc.html`, with the text of record
+under "Round 37 · /takedown abuse limits (D-118)" in `design/docs/product.md`.
+It answers item 59 (a–f), 58k left open by round 36, and 59g, which went
+out as a follow-up in the same thread. `Round 35 Rulings.dc.html` gains
+59g's username field on its `/takedown` frame. Nothing is left open.
+
+59. **`/takedown`'s abuse limits (design 137, D-118). Drawn and ruled;
+    built in the abuse-limits PR.**
+    - (a) `/takedown/confirm`: all five states drawn, words as built. A
+      failed press is the form band, NOTHING SAVED · "That didn't go
+      through." with Try again.
+    - (b) The receipt past the cap opens "It isn't hidden yet." before the
+      given words. A blocked requester's receipt is the normal one.
+    - (c) The valve email: confirmed.
+    - (d) The state goes in the brackets after `[via /takedown]`, and the
+      header's right side stays the clock: `[hidden]`, `[unconfirmed]`,
+      `[valve shut]`, `[blocked]`. There is no bracket when the link isn't
+      ours.
+    - (e) "2 more from this requester": confirmed, a mono caption under the
+      address, only when there are others.
+    - (f) Block and decline all: words confirmed, and N counts this
+      request. Focus opens on Cancel; Cancel and Esc return it to Block and
+      decline all. After, the page's status says "Blocked. N requests
+      declined." and focus moves to the next row, or "Nothing waiting".
+    - (g) **A username field** after Link to the image: "Their dialed.run
+      username · optional", hint "If you know who posted it." The link's
+      hint stays "A dialed.run link, or say where it is." An unknown name
+      is kept as written. Review reads "Not one of our links: find it on
+      @name's entries from what they wrote." No uploads.
+    - **58k · W1's way out** (left open by round 36). Given and drawn;
+      built. A hint under the intimate-image reason, shown only once it's
+      picked: "Rather not use your account? Report it without signing
+      in", linking to `/takedown`.
+
 ## Answered in rounds 35–36 (imported 2026-10-10)
 
 Design sent round 35 as `Round 35 Rulings.dc.html`, with the text of record
@@ -1040,27 +1076,6 @@ REVIEW]` comes first on G's row meta line, outside the link, so the
     - **Not built: "Linked … from W1's reason list."** The board gives no
       words or place for a `/takedown` link inside W1, and a signed-in
       runner already has the reason itself. This one waits for words.
-
-59. **`/takedown`'s abuse limits (design 137, decision D-118).**
-    Undesigned; built from existing primitives and copy. Placeholder words
-    throughout:
-    - **`/takedown/confirm`** is the `/takedown` page's panel: the heading
-      "Confirm your request", "Confirm that you asked us to remove an
-      image. Then we hide it while we look.", and "Confirm the request".
-      It asks first and does nothing on arrival, because mail scanners
-      follow links. After the press: Au5's receipt, `REQUEST CONFIRMED` ·
-      "We have your request" (or "We've already decided"). A link that
-      matches nothing says so in one line.
-    - **The receipt email**, past the cap: "To have it hidden while we
-      look, confirm this request." and a "Confirm the request" button.
-    - **The valve email**: "Removal requests paused: possible abuse", with
-      the hour's count and "Open Review", once an hour while it lasts.
-    - **Review's request row** gains a state bracket after `[via
-/takedown]` (`[hidden]`, `[waiting for confirm]`, `[valve]`,
-      `[blocked]`), "N more from this requester" under the address, and
-      **Block and decline all**, a text button that asks in the row first.
-      **The ask:** the words, and where the state belongs: the brackets or
-      the header.
 
 ## Answered in round 34 (imported 2026-10-04)
 

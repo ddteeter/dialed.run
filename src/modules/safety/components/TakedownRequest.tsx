@@ -16,10 +16,7 @@ import {
   useIdempotencyKey,
   useTurnstileToken,
 } from "../../../ui";
-import {
-  SignedOutPanel,
-  SignedOutReceipt,
-} from "../../../ui/SignedOutPanel";
+import { SignedOutPanel, SignedOutReceipt } from "../../../ui/SignedOutPanel";
 import type { TakedownRequestResult } from "../takedown-requests";
 
 /**
@@ -33,6 +30,7 @@ const LABELS = {
   email: "Email",
   signature: "Full name",
   location: "Link to the image",
+  posterUsername: "Their dialed.run username · optional",
   description: "What it shows · optional",
   isAttested: "Statement",
 } as const;
@@ -41,6 +39,7 @@ interface Draft {
   email: string;
   signature: string;
   location: string;
+  posterUsername: string;
   description: string;
   isAttested: boolean;
 }
@@ -49,6 +48,7 @@ const BLANK: Draft = {
   email: "",
   signature: "",
   location: "",
+  posterUsername: "",
   description: "",
   isAttested: false,
 };
@@ -58,6 +58,7 @@ type Request = (input: {
     email: string;
     signature: string;
     location: string;
+    posterUsername?: string | undefined;
     description: string;
     isAttested: true;
     idempotencyKey: string;
@@ -78,7 +79,14 @@ export function TakedownRequest({
   request,
 }: Readonly<{ siteKey: string | undefined; request: Request }>): JSX.Element {
   const [draft, setDraft] = useState(BLANK);
-  const { email, signature, location, description, isAttested } = draft;
+  const {
+    email,
+    signature,
+    location,
+    posterUsername,
+    description,
+    isAttested,
+  } = draft;
   const edit =
     <Key extends keyof Draft>(key: Key) =>
     (value: Draft[Key]) => {
@@ -97,7 +105,13 @@ export function TakedownRequest({
     onSuccess: setOutcome,
   });
   const submit = () => {
-    void form.submit({ ...draft, idempotencyKey });
+    // An empty username is no username (round 37 #59g), so the schema
+    // reads it as absent rather than as a handle too short to be one.
+    void form.submit({
+      ...draft,
+      posterUsername: posterUsername.trim() === "" ? undefined : posterUsername,
+      idempotencyKey,
+    });
   };
 
   return (
@@ -107,9 +121,8 @@ export function TakedownRequest({
       ) : (
         <FormElement form={form} dataPart="form" onSubmit={submit}>
           <p className="m-0 text-body">
-            For an intimate image of you, or someone you act for, shared
-            without consent. We hide it while we look and decide within 48
-            hours.
+            For an intimate image of you, or someone you act for, shared without
+            consent. We hide it while we look and decide within 48 hours.
           </p>
           <TextField
             name="email"
@@ -135,12 +148,21 @@ export function TakedownRequest({
           <TextField
             name="location"
             label={LABELS.location}
-            hint="https://dialed.run/…, or say where it is."
+            hint="A dialed.run link, or say where it is."
             type="url"
             value={location}
             onChange={edit("location")}
             field={form.field}
             error={form.fieldErrors.location}
+          />
+          <TextField
+            name="posterUsername"
+            label={LABELS.posterUsername}
+            hint="If you know who posted it."
+            value={posterUsername}
+            onChange={edit("posterUsername")}
+            field={form.field}
+            error={form.fieldErrors.posterUsername}
           />
           <TextField
             name="description"

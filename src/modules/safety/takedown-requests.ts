@@ -159,6 +159,7 @@ export async function fileTakedownRequest<Attempt>(
           subject === undefined && state === "held" ? undefined : state,
         heldAt: isHeld ? now : undefined,
         confirmTokenHash: confirm?.hash,
+        posterUsername: input.posterUsername,
       })
       .onConflictDoNothing(),
     ...(isHeld ? holdWrites(db, subject) : []),
@@ -400,6 +401,10 @@ export interface PendingTakedownRequest {
   readonly signature: string;
   readonly location: string;
   readonly description: string | undefined;
+  /**
+  Who posted it, as the requester gave it (round 37 #59g).
+  */
+  readonly posterUsername: string | undefined;
   readonly subject: TakedownSubject | undefined;
   readonly createdAt: number;
   readonly dueAt: number;
@@ -440,6 +445,7 @@ export async function pendingTakedownRequests(
     signature: row.signature,
     location: row.location,
     description: row.description ?? undefined,
+    posterUsername: row.posterUsername ?? undefined,
     subject: takedownSubjectOf(row.location),
     createdAt: row.createdAt,
     dueAt: row.dueAt,

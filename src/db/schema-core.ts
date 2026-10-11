@@ -1154,6 +1154,10 @@ export const takedownRequests = /*#__PURE__*/ sqliteTable(
     // SHA-256 of the confirm link's token, for a request waiting on one.
     confirmTokenHash: text("confirm_token_hash"),
     confirmedAt: integer("confirmed_at"),
+    // Round 37 #59g: who posted it, as the requester typed it, normalised
+    // to a handle's shape. Not checked against anyone: it is a lead for
+    // the operator, not a subject.
+    posterUsername: text("poster_username"),
   },
   (t) => [
     uniqueIndex("takedown_requests_idempotency").on(

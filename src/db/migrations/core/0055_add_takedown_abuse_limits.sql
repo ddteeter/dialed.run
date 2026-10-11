@@ -11,6 +11,7 @@ ALTER TABLE `takedown_requests` ADD `hold_state` text;--> statement-breakpoint
 ALTER TABLE `takedown_requests` ADD `held_at` integer;--> statement-breakpoint
 ALTER TABLE `takedown_requests` ADD `confirm_token_hash` text;--> statement-breakpoint
 ALTER TABLE `takedown_requests` ADD `confirmed_at` integer;--> statement-breakpoint
+ALTER TABLE `takedown_requests` ADD `poster_username` text;--> statement-breakpoint
 CREATE INDEX `takedown_requests_requester_status` ON `takedown_requests` (`requester_key`,`status`);--> statement-breakpoint
 CREATE INDEX `takedown_requests_ip_status` ON `takedown_requests` (`ip_key`,`status`);--> statement-breakpoint
 CREATE INDEX `takedown_requests_held_at` ON `takedown_requests` (`held_at`);--> statement-breakpoint

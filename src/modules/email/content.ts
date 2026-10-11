@@ -357,7 +357,7 @@ export function emailContent(
         subject: "We have your removal request",
         // Round 35 #58e. The hidden line is true only of what was hidden;
         // design 137's confirm line only of a request past the cap.
-        body: `${template.isHidden ? "The image is hidden while we look. " : ""}${template.confirmToken === undefined ? "" : "To have it hidden while we look, confirm this request. "}We'll decide within 48 hours, by ${due}, and email you either way.`,
+        body: `${template.isHidden ? "The image is hidden while we look. " : ""}${template.confirmToken === undefined ? "" : "It isn't hidden yet. To have it hidden while we look, confirm this request. "}We'll decide within 48 hours, by ${due}, and email you either way.`,
         ...(template.confirmToken !== undefined && {
           button: {
             label: "Confirm the request",

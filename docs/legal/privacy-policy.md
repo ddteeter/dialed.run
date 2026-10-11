@@ -261,7 +261,8 @@ account added it.
   the runner who posted it.
 - **A removal request** made at [/takedown](/takedown), with or without an
   account: we keep the email address, the name typed as a signature, the
-  link or description of where the image is, anything written about it,
+  link or description of where the image is, the username of whoever
+  posted it if you give one, anything written about it,
   when it was made, and what we decided, with the reason if we declined.
   We email the address a receipt and the decision, and email each
   reviewer that a request is waiting. We count requests per visitor IP

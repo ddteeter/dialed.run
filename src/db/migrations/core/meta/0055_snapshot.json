@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "77aff227-da62-4e9b-bdf4-2021d007d29e",
+  "id": "89bf0d21-26af-4e16-8efe-c200545fec2c",
   "prevId": "7482d124-7203-40be-bb98-d17055b51f62",
   "tables": {
     "access_requests": {
@@ -2538,6 +2538,13 @@
         "confirmed_at": {
           "name": "confirmed_at",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "poster_username": {
+          "name": "poster_username",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false

@@ -13,7 +13,7 @@
  *
  * Exactly one test() per demo spec.
  */
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, like } from "drizzle-orm";
 import { z } from "zod";
 
 import { user } from "../../src/db/schema-auth";
@@ -47,6 +47,15 @@ test("someone with no account asks for an intimate image to come down, and an op
   const extraRequestId = newUlid();
   const requester = `asker-${suffix}@example.com`;
   const now = nowSeconds();
+
+  // Earlier runs' requests, by this demo's own address prefix: each one
+  // that hid something counts toward the hour's valve (design 137), so a
+  // few runs in an hour would otherwise shut it on this one.
+  await withLocalDb(async ({ core }) =>
+    core
+      .delete(takedownRequests)
+      .where(like(takedownRequests.requesterEmail, "asker-%@example.com")),
+  );
 
   // One runner with one public kit. Scoped to ids generated here.
   await withLocalDb(async ({ core }) => {
@@ -167,6 +176,10 @@ test("someone with no account asks for an intimate image to come down, and an op
   await page
     .getByLabel("Link to the image")
     .fill(`https://dialed.run/feed/entry/${secondEntryId}`);
+  // Round 37 #59g: who posted it, when the requester knows.
+  await page
+    .getByLabel("Their dialed.run username · optional")
+    .fill(`@${handle}`);
   await page.getByRole("checkbox").check();
   await turnstileAnswered(page);
   await page.getByRole("button", { name: "Send the request" }).click();

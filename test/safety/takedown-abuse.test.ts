@@ -480,6 +480,36 @@ describe("Block and decline all", () => {
   });
 });
 
+describe("the poster's username (round 37 #59g)", () => {
+  it("is kept as the requester gave it, normalised, and listed for Review", async () => {
+    await fileTakedownRequest(
+      core(),
+      {
+        email: "me@example.com",
+        signature: "Sam Runner",
+        location: "at the finish line",
+        description: "",
+        posterUsername: "maya_runs",
+        isAttested: true,
+        idempotencyKey: newUlid(),
+        attempt: "token",
+        remoteIp: "203.0.113.9",
+        isLimited: false,
+      },
+      deps,
+      NOW,
+    );
+    const [listed] = await pendingTakedownRequests(core(), NOW);
+    expect(listed?.posterUsername).toBe("maya_runs");
+  });
+
+  it("is absent when it was not given", async () => {
+    await file("me@example.com", "somewhere");
+    const [listed] = await pendingTakedownRequests(core(), NOW);
+    expect(listed?.posterUsername).toBeUndefined();
+  });
+});
+
 describe("Review's list", () => {
   it("says what filing decided and links the requester's other requests", async () => {
     const a = await sharedEntry();

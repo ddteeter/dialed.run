@@ -188,7 +188,7 @@ describe("emailContent", () => {
       },
       {
         subject: "We have your removal request",
-        body: "To have it hidden while we look, confirm this request. We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way.",
+        body: "It isn't hidden yet. To have it hidden while we look, confirm this request. We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way.",
         button: {
           label: "Confirm the request",
           href: `${ORIGIN}/takedown/confirm?token=abc123`,
