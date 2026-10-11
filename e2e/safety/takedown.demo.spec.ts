@@ -2,8 +2,10 @@
  * Covers: `/takedown` (design 136, decision D-117; drawn in round 35
  * #58e) — the footer's "Report an intimate image", the request form and
  * its receipt, signed out, the kit hidden the moment the request lands —
- * and Review's removal requests, where an operator takes the kit down.
- * One journey, one video.
+ * and Review's removal requests, where an operator takes the kit down —
+ * then design 137's limits: past two open requests, the next waits for a
+ * confirm from its receipt, and the operator blocks the requester and
+ * declines the rest. One journey, one video.
  *
  * Needs `ADMIN_USER_IDS=e2e-desk-operator` and Cloudflare's always-pass
  * Turnstile keys in the dev server's `.dev.vars`, which CI's e2e job
@@ -11,16 +13,20 @@
  *
  * Exactly one test() per demo spec.
  */
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
+import { z } from "zod";
 
 import { user } from "../../src/db/schema-auth";
 import {
+  outbox,
   outfitEntries,
   runs,
+  takedownBlocks,
   takedownRequests,
   userProfiles,
 } from "../../src/db/schema-core";
 import { newUlid } from "../../src/lib/ids";
+import { readOutboxRow } from "../../src/lib/sql/outbox";
 import { nowSeconds } from "../../src/lib/now";
 import { signInAsOperator } from "../desk/operator";
 import { expect, hydrated, scene, test } from "../support/demo";
@@ -36,6 +42,9 @@ test("someone with no account asks for an intimate image to come down, and an op
   const handle = `poster_${suffix}`;
   const runId = newUlid();
   const entryId = newUlid();
+  const secondRunId = newUlid();
+  const secondEntryId = newUlid();
+  const extraRequestId = newUlid();
   const requester = `asker-${suffix}@example.com`;
   const now = nowSeconds();
 
@@ -71,6 +80,25 @@ test("someone with no account asks for an intimate image to come down, and an op
       verdict: 0,
       audience: "runners",
       createdAt: now - 3600,
+    });
+    // A second kit, for the request past the cap.
+    await core.insert(runs).values({
+      id: secondRunId,
+      userId: runnerId,
+      source: "manual",
+      startedAt: now - 7200,
+      durationS: 1800,
+      distanceM: 5000,
+      indoor: false,
+      title: "Evening loop",
+    });
+    await core.insert(outfitEntries).values({
+      id: secondEntryId,
+      runId: secondRunId,
+      userId: runnerId,
+      verdict: 0,
+      audience: "runners",
+      createdAt: now - 7200,
     });
   });
 
@@ -117,16 +145,61 @@ test("someone with no account asks for an intimate image to come down, and an op
   );
   expect(held?.status).toBe("hidden_pending_review");
 
+  // Design 137: the same requester already has a second open request, so
+  // a third waits for a confirm before it hides anything.
+  await withLocalDb(async ({ core }) =>
+    core.insert(takedownRequests).values({
+      id: extraRequestId,
+      requesterEmail: requester,
+      requesterKey: requester,
+      signature: "Sam Asker",
+      location: "a photo on another site",
+      dueAt: now + 172_800,
+      createdAt: now,
+      idempotencyKey: newUlid(),
+    }),
+  );
+  await scene(page, "A third request from the same person waits for a confirm");
+  await page.goto("/takedown");
+  await hydrated(page);
+  await page.getByLabel("Email").fill(requester.replace("@", "+again@"));
+  await page.getByLabel("Full name").fill("Sam Asker");
+  await page
+    .getByLabel("Link to the image")
+    .fill(`https://dialed.run/feed/entry/${secondEntryId}`);
+  await page.getByRole("checkbox").check();
+  await turnstileAnswered(page);
+  await page.getByRole("button", { name: "Send the request" }).click();
+  await expect(
+    page.getByRole("heading", { name: "We have your request" }),
+  ).toBeVisible({ timeout: 15_000 });
+  expect(await statusOf(secondEntryId)).toBe("ok");
+
+  await scene(page, "The receipt's link asks before it confirms");
+  const token = await confirmTokenFor(secondEntryId);
+  await page.goto(`/takedown/confirm?token=${token}`);
+  await hydrated(page);
+  await page.getByRole("button", { name: "Confirm the request" }).click();
+  await expect(page.getByText("Request confirmed")).toBeVisible({
+    timeout: 15_000,
+  });
+  expect(await statusOf(secondEntryId)).toBe("hidden_pending_review");
+
   await signInAsOperator(page);
 
   await scene(page, "Review: the request, its clock, and the kit");
   await page.goto("/safety/review");
   await hydrated(page);
-  const request = page
-    .locator("[data-part='removal-request']")
-    .filter({ hasText: requester });
+  // The row whose link is the first kit: the requester has three now.
+  const request = page.locator("[data-part='removal-request']").filter({
+    has: page.locator(`a[href="/feed/entry/${entryId}"]`),
+  });
   await expect(request.locator("[data-part='due']")).toHaveText("Due in 48h");
   await expect(request).toContainText("[via /takedown]");
+  await expect(request).toContainText("[hidden]");
+  await expect(request.locator("[data-part='related']")).toHaveText(
+    "2 more from this requester",
+  );
   await expect(request).toContainText("From Sam Asker · signed · good faith");
   await expect(request).toContainText(requester);
   await expect(
@@ -151,4 +224,76 @@ test("someone with no account asks for an intimate image to come down, and an op
       .where(eq(takedownRequests.requesterEmail, requester)),
   );
   expect(decided?.status).toBe("removed");
+
+  await scene(
+    page,
+    "Block and decline all: the rest go, and the kit comes back",
+  );
+  const rest = page
+    .locator("[data-part='removal-request']")
+    .filter({ hasText: "Evening" })
+    .or(
+      page
+        .locator("[data-part='removal-request']")
+        .filter({ hasText: requester.replace("@", "+again@") }),
+    )
+    .first();
+  await rest.getByRole("button", { name: "Block and decline all" }).click();
+  await rest.getByRole("button", { name: "Block and decline all" }).click();
+  await expect(
+    page
+      .locator("[data-part='removal-request']")
+      .filter({ hasText: `asker-${suffix}` }),
+  ).toHaveCount(0, { timeout: 15_000 });
+  expect(await statusOf(secondEntryId)).toBe("ok");
+  await withLocalDb(async ({ core }) => {
+    await core.delete(takedownBlocks).where(eq(takedownBlocks.key, requester));
+  });
 });
+
+async function statusOf(id: string) {
+  const [row] = await withLocalDb(async ({ core }) =>
+    core
+      .select({ status: outfitEntries.moderationStatus })
+      .from(outfitEntries)
+      .where(eq(outfitEntries.id, id)),
+  );
+  return row?.status;
+}
+
+const receiptTemplate = z
+  .object({ confirmToken: z.string().optional() })
+  .loose();
+const receiptPayload = z.object({
+  email: z.object({ template: receiptTemplate }),
+});
+
+/**
+The confirm token the receipt of the request naming `entryId` carries.
+*/
+async function confirmTokenFor(entryId: string): Promise<string> {
+  const rows = await withLocalDb(async ({ core }) =>
+    core
+      .select({ id: takedownRequests.id })
+      .from(takedownRequests)
+      .where(eq(takedownRequests.subjectId, entryId)),
+  );
+  const ids = rows.map((row) => `removal_request_received:${row.id}`);
+  const owed = await withLocalDb(async ({ core }) =>
+    core
+      .select({ payload: outbox.payload, dedupeKey: outbox.dedupeKey })
+      .from(outbox)
+      .where(inArray(outbox.dedupeKey, ids)),
+  );
+  for (const row of owed) {
+    const read = readOutboxRow("email", row.payload);
+    const parsed = receiptPayload.safeParse(
+      read.ok ? read.message.payload : undefined,
+    );
+    const token = parsed.success
+      ? parsed.data.email.template.confirmToken
+      : undefined;
+    if (token !== undefined) return token;
+  }
+  throw new Error("no confirm token owed");
+}
