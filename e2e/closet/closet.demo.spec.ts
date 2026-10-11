@@ -115,13 +115,28 @@ test("add garments with product identity -> detail in round 22's order -> retire
 
   // First piece: real product identity, not a generic placeholder — brand
   // autocomplete + model name lead, per screen F.
-  await scene(page, "F · identity first — and no product-link field (AC2b)");
+  await scene(
+    page,
+    "F · Category and Type lead, then Brand and Name — no product-link field (AC2b)",
+  );
   await page.getByRole("link", { name: "Add garment" }).click();
   await hydrated(page);
+  // The click is a client-side navigation, so the hydrated flag is
+  // already set from the closet page: wait for F itself before reading it.
+  const category = page.getByLabel("Category");
+  await expect(category).toBeVisible();
   await expect(page.getByLabel("Product link")).toHaveCount(0);
+  // Round 35 #52b: what it is comes first, at every width.
+  const order = await page
+    .locator("form", { has: category })
+    .locator("[name='category'], [name='brand'], [name='name']")
+    .evaluateAll((controls) =>
+      controls.map((control) => control.getAttribute("name")),
+    );
+  expect(order).toStrictEqual(["category", "brand", "name"]);
+  await page.getByLabel("Category").selectOption("shoes");
   await page.getByLabel("Brand").fill("Nike");
   await page.getByLabel("Model / name").fill("Pegasus 41");
-  await page.getByLabel("Category").selectOption("shoes");
   await page.getByLabel("Water resistant").check();
   await page.getByRole("button", { name: "Add to closet" }).click();
   await expect(
@@ -130,18 +145,18 @@ test("add garments with product identity -> detail in round 22's order -> retire
   // No photo, so no well: "adding one is Edit's job".
   await expect(page.locator("[data-part='photo-well']")).toHaveCount(0);
 
-  // Second piece, a different category, same identity-first discipline.
+  // Second piece, a different category, in the same order.
   await bar(page).getByRole("link", { name: "Closet" }).click();
   await hydrated(page);
   await scene(page, "A second piece, another category, same discipline");
   await page.getByRole("link", { name: "Add garment" }).click();
   await hydrated(page);
-  await page.getByLabel("Brand").fill("Patagonia");
-  await page.getByLabel("Model / name").fill("Houdini Jacket");
   await page.getByLabel("Category").selectOption("top");
   // D-75: round 26's TYPE, under the category, the contract's types.
   await scene(page, "F · TYPE, under the category: what shape it is");
   await page.getByRole("radio", { name: "Jacket" }).check();
+  await page.getByLabel("Brand").fill("Patagonia");
+  await page.getByLabel("Model / name").fill("Houdini Jacket");
   await page.getByLabel("Layer").selectOption("outer");
   await page.getByLabel("Weight").selectOption("light");
   await page.getByLabel("Wind resistant").check();
@@ -176,7 +191,10 @@ test("add garments with product identity -> detail in round 22's order -> retire
   });
   // Round 28 #5: W3 stays open once auto-blur paints, and nothing is
   // attached until Use this photo. Pick another swaps the photo in place.
-  await scene(page, "W3 · check the blur, in a sheet: it waits for your choice");
+  await scene(
+    page,
+    "W3 · check the blur, in a sheet: it waits for your choice",
+  );
   await expect(
     page.getByRole("dialog", { name: "Check the blur" }),
   ).toBeVisible();
@@ -206,7 +224,9 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await expect(
     page.getByRole("heading", { name: "Check the blur" }),
   ).toHaveCount(0);
-  await expect(page.getByRole("dialog", { name: "Check the blur" })).toBeHidden();
+  await expect(
+    page.getByRole("dialog", { name: "Check the blur" }),
+  ).toBeHidden();
   await expect(well).toHaveAttribute("data-state", "filled", {
     timeout: 20_000,
   });
