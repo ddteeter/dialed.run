@@ -344,7 +344,7 @@ describe("the consumer owes it in the bell row's batch", () => {
     expect(row?.payload).toContain(`"landedAt":"${clockLabel(landed, zone)}"`);
   });
 
-  it("still writes the bell row and the email, in UTC, when the zone cannot be had", async () => {
+  it("still writes the bell row, but owes no email, when the zone lookup fails", async () => {
     const { userId, athleteId } = await connectedRunner();
     const failure = new Error("weather down");
     const consumer = deps({ runnerZone: () => Promise.reject(failure) });
@@ -355,6 +355,15 @@ describe("the consumer owes it in the bell row's batch", () => {
       surface: "runnerZone",
     });
     expect(await reminderRows(userId)).toHaveLength(1);
+    expect(await owedFor(userId)).toStrictEqual([]);
+  });
+
+  it("owes the email in UTC for a runner with no zone at all", async () => {
+    const { userId, athleteId } = await connectedRunner();
+    const consumer = deps({ runnerZone: () => Promise.resolve(undefined) });
+    await deliver(reminderJob(athleteId), consumer);
+
+    expect(consumer.captureException).not.toHaveBeenCalled();
     const [row] = await owedFor(userId);
     const landed = (row?.nextAttemptAt ?? 0) - 1200;
     expect(row?.dedupeKey).toBe(

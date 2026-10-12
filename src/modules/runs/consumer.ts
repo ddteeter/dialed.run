@@ -370,14 +370,20 @@ async function processReminderJob(
   const notificationId = newUlid();
   const [earlier, zone] = await Promise.all([
     earlierReminders(deps.db, connected.userId, landedAt),
-    zoneOrUtc(deps, connected.userId),
+    runnerZoneOf(deps, connected.userId),
   ]);
-  const email = owedReminderEmail(earlier, {
-    userId: connected.userId,
-    notificationId,
-    at: landedAt,
-    zone,
-  });
+  // A failed lookup owes no email for this landing. Reckoned in UTC
+  // instead, the day could differ from the runner's own — and the same day
+  // reckoned both ways is two keys, so two emails.
+  const email =
+    zone === LOOKUP_FAILED
+      ? undefined
+      : owedReminderEmail(earlier, {
+          userId: connected.userId,
+          notificationId,
+          at: landedAt,
+          zone,
+        });
   await deps.db.batch([
     claim,
     // D-33: zero activity data in the body — no distance, no time, no
@@ -411,20 +417,24 @@ async function isClaimed(db: CoreDb, job: ReminderJob): Promise<boolean> {
   );
 }
 
+// No description: nothing reads one, and an unread string is a mutant
+// no test can kill.
+const LOOKUP_FAILED = Symbol();
+
 /**
- * The runner's zone, or UTC when it cannot be had: the email's day and
- * clock are secondary to the bell row, so a failed lookup is reported and
- * never fails the reminder (law 5).
+ * The runner's zone — `undefined` when they have none, which is UTC — or
+ * `LOOKUP_FAILED`. The email is secondary to the bell row, so a failed
+ * lookup is reported and never fails the reminder (law 5).
  */
-async function zoneOrUtc(
+async function runnerZoneOf(
   deps: Pick<ConsumerDeps, "runnerZone" | "captureException">,
   userId: string,
-): Promise<string | undefined> {
+): Promise<string | undefined | typeof LOOKUP_FAILED> {
   try {
     return await deps.runnerZone?.(userId);
   } catch (error) {
     deps.captureException(error, { userId, surface: "runnerZone" });
-    return undefined;
+    return LOOKUP_FAILED;
   }
 }
 
