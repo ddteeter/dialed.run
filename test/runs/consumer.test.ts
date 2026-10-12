@@ -36,7 +36,11 @@ import {
   reminderFromSubject,
   reminderSubject,
 } from "../../src/modules/runs/queue-messages";
-import { gaveUpRow } from "../gave-up-rows";
+import {
+  gaveUpRow,
+  ONLY_THEIRS_GONE,
+  seedAthleteGaveUp,
+} from "../gave-up-rows";
 
 function fakeMessage(body: unknown) {
   let wasAcked = false;
@@ -1023,6 +1027,20 @@ describe("the Strava deauthorize job (STR-3, API Policy §7.4)", () => {
         },
       },
     ]);
+  });
+
+  it("forgets the athlete's dead-lettered reminders and no one else's (R-142)", async () => {
+    const { athleteId } = await seedConnection();
+    const left = await seedAthleteGaveUp(athleteId);
+
+    await handleImportsBatch(
+      fakeBatch([
+        { body: { type: "strava_deauthorize", athleteId, eventTime: 3000 } },
+      ]).batch,
+      makeDeps(),
+    );
+
+    expect(await left()).toStrictEqual(ONLY_THEIRS_GONE);
   });
 
   it("leaves a connection made after the event alone", async () => {

@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, gte, lt, sql } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type { ZodType } from "zod";
 
@@ -85,6 +85,41 @@ export function gaveUpClear(
   return db
     .delete(gaveUp)
     .where(and(eq(gaveUp.kind, kind), eq(gaveUp.subjectId, subjectId)));
+}
+
+/**
+ * Forget every job of a kind whose subject starts with `prefix` — a
+ * runner's own rows, when the subject begins with something of theirs
+ * (R-142: a reminder's subject begins with the Strava athlete id, and a
+ * runner who disconnects or leaves takes it with them). One statement, for
+ * the caller's batch.
+ *
+ * A range rather than `LIKE`, so the `(kind, subject_id)` index answers it
+ * and no character in the prefix is read as a wildcard: every subject that
+ * starts with `prefix` sorts at or after it and before the prefix with its
+ * last character moved one on. Subjects are ASCII (a reminder's is a query
+ * string), so moving a character is moving a byte. An empty prefix is
+ * refused: it would mean "every row of the kind", which this is not for.
+ */
+export function gaveUpClearPrefix(
+  db: DrizzleD1Database,
+  kind: GaveUpKind,
+  prefix: string,
+) {
+  const last = prefix.codePointAt(prefix.length - 1);
+  if (last === undefined) {
+    throw new RangeError("an empty prefix would clear every row of the kind");
+  }
+  const after = prefix.slice(0, -1) + String.fromCodePoint(last + 1);
+  return db
+    .delete(gaveUp)
+    .where(
+      and(
+        eq(gaveUp.kind, kind),
+        gte(gaveUp.subjectId, prefix),
+        lt(gaveUp.subjectId, after),
+      ),
+    );
 }
 
 /**

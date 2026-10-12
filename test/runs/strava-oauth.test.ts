@@ -7,6 +7,7 @@ import {
   stravaRevocations,
 } from "../../src/db/schema-core";
 import { newUlid } from "../../src/lib/ids";
+import { ONLY_THEIRS_GONE, seedAthleteGaveUp } from "../gave-up-rows";
 import { coreDb } from "../../src/modules/runs/core-db";
 import type {
   ExchangedTokens,
@@ -195,6 +196,27 @@ describe("disconnectStrava", () => {
     expect(queue.sent).toEqual([
       { type: "strava_revoke", revocationId: pending?.id },
     ]);
+  });
+
+  it("forgets the athlete's dead-lettered reminders and no one else's (R-142)", async () => {
+    const db = coreDb();
+    const userId = newUlid();
+    const athleteId = newUlid();
+    await db.insert(stravaConnections).values({
+      userId,
+      athleteId,
+      refreshToken: `refresh-${athleteId}`,
+    });
+    const left = await seedAthleteGaveUp(athleteId);
+
+    await disconnectStrava(
+      db,
+      undefined,
+      userId,
+      captureExceptionSpy().captureException,
+    );
+
+    expect(await left()).toStrictEqual(ONLY_THEIRS_GONE);
   });
 
   /**

@@ -33,10 +33,11 @@ import {
 } from "../../../db/schema-core";
 import type { CoreDb } from "../core-db";
 import { newUlid } from "../../../lib/ids";
+import { gaveUpClearPrefix } from "../../../db/gave-up";
 import { firstRowWhere, hasRowWhere } from "../../../lib/sql/keyed-read";
 import { StravaApiError } from "./api";
 import type { StravaApi, StravaConfig } from "./api";
-import type { RevokeJob } from "../queue-messages";
+import { reminderSubjectPrefix, type RevokeJob } from "../queue-messages";
 import { nowSeconds } from "../../../lib/now";
 
 export interface RevokeQueueProducer {
@@ -348,6 +349,13 @@ export async function disconnectStrava(
       refreshToken: connection.refreshToken,
       createdAt: nowSeconds(),
     }),
+    // The athlete's dead-lettered reminders on the Desk hold their Strava
+    // ids (R-142); a runner who disconnects, or leaves, takes them along.
+    gaveUpClearPrefix(
+      db,
+      "reminder",
+      reminderSubjectPrefix(connection.athleteId),
+    ),
   ]);
 
   // Fast path. If it fails the row stays, and the daily digest re-dispatches
