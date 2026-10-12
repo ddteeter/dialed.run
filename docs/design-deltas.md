@@ -1065,6 +1065,20 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       was (D-120), so "where" was untrue.
       **The ask:** fold these into the boards, or reword them.
 
+63. **E1's compact line, composed from the E2 frame (FEED-9; PR #187).**
+    Round 25 rewords "E1's compact line", but no E1 frame draws a
+    conditions line; the sentence is drawn only on `Remaining Screens`'
+    unbuilt "E2 Feed your conditions" frame. Built from that frame's
+    composition, with contract values: a teal band (`bg-teal`, ink text),
+    the SAME CONDITIONS eyebrow without a window (MONO.xs), and the line
+    "{n} runners logged {feels}° and {precip} in the last 3 days." at
+    `text-body` semibold, at the top of Following above the posts. Three
+    things the frame does not say: the match widened to fourteen days reads
+    "in the last 2 weeks"; with no saved place, no fresh reading there, or
+    fewer than five runners, there is no line; Following with no posts
+    keeps its empty state and draws no line. **The ask:** draw E1's line
+    where it sits, and its widened and absent states.
+
 ## Answered in round 37 (imported 2026-10-10)
 
 Design sent round 37 as `Round 37 Rulings.dc.html`, with the text of record
@@ -3837,18 +3851,16 @@ contract values moved.
 FEELS [{lo}–{hi}°] · {PRECIP} · {WINDOW}`; line "In {feels}° and
   {precip}, {window}, wherever they were." Wind leaves the eyebrow; no line
   names a place. E1's compact line and N's privacy card follow. Not built.
-  **Lane D1 (design 140, 2026-10-12) read the boards before building and
-  stopped: neither has a built screen to land on.** The compact line ("18
-  runners logged 44° and damp in the last 3 days.") is drawn only on
-  `Remaining Screens`' "E2 Feed your conditions" frame, marked
-  `data-status="unbuilt"` and "POST-MVP TARGET"; no E1 frame (`Feed`,
-  `Remaining Screens`, `Round 22 Coverage`'s E1v1) carries a conditions
-  line at all, and the built Your conditions tab draws E2-lite's block,
-  already in round 25's words. The privacy card is U2 Privacy's "THE
-  CONDITIONS POOL" card, with a toggle for leaving the in-app pool that no
-  column or setting backs — a product call beside D-108's "Count my runs
-  in anonymous totals", not a wording change. Both are questions for the
-  owner and design, asked in the lane D1 PR.
+  **E1's compact line: built (lane D1, PR #187, 2026-10-12)**, composed
+  from the E2 frame because no E1 frame draws one (owner, 2026-10-12;
+  item 63). **N's privacy card: not built, and stopped at its premise.**
+  It is U2 Privacy's "THE CONDITIONS POOL" card, and its copy describes
+  the in-app pool — "Your verdicts count toward the anonymous '18 runners
+  logged this in 44° and damp' block that other runners see — and that
+  you see", "Turn it off and the block still works for you" — not the
+  published guides and reports that `count_in_totals` governs. Wiring its
+  toggle to that column would label one setting with another's meaning,
+  so the question went back to the owner instead.
 
 **Round 24's asks were still open** (answered in round 26, above) — the time correction on A1, R2b's
 options, the delete-with-runs sheet, "Garment saved, photo didn't", the

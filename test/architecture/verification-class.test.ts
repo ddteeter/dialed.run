@@ -190,6 +190,8 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "feed/functions.ts followStatusQuery": "unconfirmed",
   "feed/functions.ts followingFeedQuery": "unconfirmed",
   "feed/functions.ts yourConditionsQuery": "unconfirmed",
+  // FEED-9: E1's compact line, the same read of the runner's own conditions.
+  "feed/functions.ts compactConditionsQuery": "unconfirmed",
   "feed/functions.ts conditionsHomeQuery": "unconfirmed",
   "feed/functions.ts saveConditionsCityAction": "unconfirmed",
   "feed/functions.ts viewerUnitsQuery": "sessionless",

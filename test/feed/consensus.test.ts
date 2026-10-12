@@ -1,7 +1,10 @@
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { compactConditions } from "../../src/modules/feed/compact-conditions";
 import { pointConditions } from "../feed/conditions-fixture";
 import {
   BAND_HALF_WIDTH_C,
@@ -375,3 +378,75 @@ describe("consensusAt", () => {
     });
   });
 });
+
+describe("compactConditions: E1's line, from the saved place (FEED-9)", () => {
+  beforeEach(resetTables);
+
+  it("is the matched consensus at the profile's place, leaving the viewer out", async () => {
+    await makeObservation({
+      lat: 82,
+      lng: 82,
+      startedAt: NOW,
+      tempC: 8,
+      feelsLikeC: 7,
+    });
+    const viewerId = await viewerAt(82, 82);
+    await runners(5);
+
+    expect(await compactConditions(viewerId, NOW)).toMatchObject({
+      status: "matched",
+      runners: 5,
+      windowDays: 3,
+    });
+  });
+
+  it("is nothing with too few runners, no reading there, or no saved place", async () => {
+    await makeObservation({
+      lat: 83,
+      lng: 83,
+      startedAt: NOW,
+      tempC: 8,
+      feelsLikeC: 7,
+    });
+    await runners(4);
+    expect(
+      await compactConditions(await viewerAt(83, 83), NOW),
+    ).toBeUndefined();
+    await runner();
+    expect(
+      await compactConditions(await viewerAt(84, 84), NOW),
+    ).toBeUndefined();
+    expect(await compactConditions(await viewerAt(), NOW)).toBeUndefined();
+  });
+
+  it("reads the saved place by the profile's primary key", async () => {
+    const { sql, params } = drizzle(env.DIALED_CORE)
+      .select({ lat: userProfiles.lat })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, "01VIEWER"))
+      .limit(1)
+      .toSQL();
+    const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+      .bind(...params)
+      .all<{ detail: string }>();
+    const details = plan.results.map((row) => row.detail).join("\n");
+    expect(details).toMatch(
+      /SEARCH user_profiles USING INDEX sqlite_autoindex_user_profiles_1 \(user_id=\?\)/u,
+    );
+    expect(details).not.toMatch(/SCAN\s+user_profiles/iu);
+  });
+});
+
+/**
+A viewer whose profile saved this place, or none.
+*/
+async function viewerAt(lat?: number, lng?: number): Promise<string> {
+  const viewerId = await makeUser();
+  if (lat !== undefined) {
+    await drizzle(env.DIALED_CORE)
+      .update(userProfiles)
+      .set({ lat, lng })
+      .where(eq(userProfiles.userId, viewerId));
+  }
+  return viewerId;
+}

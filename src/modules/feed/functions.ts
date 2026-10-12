@@ -25,6 +25,7 @@ import {
 } from "./inputs";
 import { attachContext, attachRunInput, prefillForRun } from "./attach-context";
 import { saveBacklogRow, unjudgedRunCount, verdictBacklog } from "./backlog";
+import { compactConditions } from "./compact-conditions";
 import { consensusAt } from "./consensus";
 import {
   attachKit,
@@ -210,6 +211,14 @@ export const yourConditionsQuery = createServerFn({ method: "GET" })
     const userId = await requireUserId();
     return consensusAt(data.lat, data.lng, nowSeconds(), userId);
   });
+
+/**
+ * E1's compact line (FEED-9), for the Following feed's loader: the
+ * viewer's conditions matched at their saved place, or nothing.
+ */
+export const compactConditionsQuery = createServerFn({ method: "GET" }).handler(
+  async () => compactConditions(await requireUserId(), nowSeconds()),
+);
 
 /**
  * Where the tab looks without asking: the profile's saved location, and

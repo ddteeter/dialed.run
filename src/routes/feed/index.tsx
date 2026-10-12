@@ -8,6 +8,7 @@ import {
 import { getSession } from "../../modules/auth/functions";
 import { Feed } from "../../modules/feed/components/Feed";
 import {
+  compactConditionsQuery,
   conditionsHomeQuery,
   followingFeedQuery,
   saveConditionsCityAction,
@@ -28,16 +29,16 @@ export const Route = createFileRoute("/feed/")({
     requireSignedIn(await getSession(), location);
   },
   loader: async () => {
-    const [page, units, unjudgedCount, bell, home, account] = await Promise.all(
-      [
+    const [page, units, unjudgedCount, bell, home, account, compact] =
+      await Promise.all([
         followingFeedQuery({ data: { cursor: undefined } }),
         viewerUnitsQuery(),
         unjudgedRunCountQuery(),
         bellStateFn(),
         conditionsHomeQuery(),
         ownAccountQuery(),
-      ],
-    );
+        compactConditionsQuery(),
+      ]);
     // Read once here, so the server and the browser render the same
     // "2h ago" rather than two clocks disagreeing across an hour.
     return {
@@ -47,6 +48,7 @@ export const Route = createFileRoute("/feed/")({
       bell,
       home,
       account,
+      compact,
       now: nowSeconds(),
     };
   },
@@ -54,7 +56,7 @@ export const Route = createFileRoute("/feed/")({
 });
 
 function FeedPage() {
-  const { page, units, unjudgedCount, bell, home, account, now } =
+  const { page, units, unjudgedCount, bell, home, account, compact, now } =
     Route.useLoaderData();
 
   return (
@@ -65,6 +67,7 @@ function FeedPage() {
         now={now}
         units={units}
         unjudgedCount={unjudgedCount}
+        compact={compact}
         setUseful={setUsefulAction}
         confirmBand={
           <ConfirmEmailBand account={account} resend={resendConfirmationFn} />

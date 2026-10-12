@@ -63,14 +63,14 @@ read `bellState` through `account/legal.ts`; settings sub-pages through
 `settingsSubPageData`. The bell's _name_ says "more than 9 new"; the drawn
 badge keeps "9+".
 
-**FEED-9: stopped, asked (not built).** The boards were read first, and
-neither surface exists to reword. The compact line is drawn only on the
-`unbuilt` post-MVP "E2 Feed your conditions" frame; no E1 frame has a
-conditions line, and the built Your conditions tab already carries round
-25's words in E2-lite's block. N's "privacy card" is U2 Privacy's
-"conditions pool" card, whose toggle (leave the in-app pool) has no
-column or setting behind it: a product call beside D-108, not wording.
-Recorded at the round-25 entry in `design-deltas.md`; open question 4.
+**FEED-9 (owner, 2026-10-12).** E1's compact line is built from the E2
+frame's composition (design deltas item 63): `feed/compact-conditions.ts`
+reads the viewer's saved place (profile primary key) and runs the one
+consensus there (`entries_audience_created`; the cache's key for the
+reading), in the Following feed's loader through `compactConditionsQuery`.
+Matched only; otherwise no line. **The U2 privacy card is not wired**: its
+drawn copy is about the in-app conditions pool, not the published totals
+`count_in_totals` governs, so it went back to the owner (premise check).
 
 **STR-13.** `lib/dates` gains the long-weekday and month-year shapes;
 `ops/components/Today.tsx` and `closet/retired-label.ts` use them.
@@ -82,7 +82,8 @@ Recorded at the round-25 entry in `design-deltas.md`; open question 4.
   approved 2026-10-12). Outbox `email` payload: optional `reminder` (wire
   format, additive).
 - New route files: none. New bindings/queues/crons: **none**.
-- Screens: S2a (bell); Today (D5); C's retired tag. E1/N: not built.
+- Screens: S2a (bell); E1's compact line; Today (D5); C's retired tag.
+  N/U2's pool card: not built (question 4).
 
 ## Test plan
 
@@ -103,6 +104,7 @@ Recorded at the round-25 entry in `design-deltas.md`; open question 4.
    kept as built.
 3. A held reminder the daily digest's drain happens to pick up is counted
    as an "owed" anomaly line, like any email row. Rare; left as is.
-4. **FEED-9 (asking):** should the compact line go on E1 at all (where,
-   with which states), or wait for E2? Does U2's pool toggle ship, and is
-   it a new setting or D-108's `count_in_totals`? Needs design or owner.
+4. **U2's pool card (asking):** its copy describes leaving the in-app
+   conditions pool, which no setting controls; `count_in_totals` governs
+   the published guides. Wire it to a new setting, reword it to the totals,
+   or leave it unbuilt?

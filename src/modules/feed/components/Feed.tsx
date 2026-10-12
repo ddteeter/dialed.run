@@ -6,7 +6,9 @@ import type { Units } from "../../../lib/contracts";
 import { FormStatus, Mono } from "../../../ui";
 import type { FeedItem } from "../feed";
 import { isBacklogWorthOpening } from "../route-decisions";
+import type { CompactConditions as CompactConditionsResult } from "../compact-conditions";
 import { BracketHeadline } from "./BracketHeadline";
+import { CompactConditions } from "./CompactConditions";
 import { ConditionsTab } from "./ConditionsTab";
 import { PostCard } from "./PostCard";
 import type { SetUsefulFn } from "./useful-reaction";
@@ -67,6 +69,11 @@ export interface FeedProps {
   nothing once the address is confirmed. It sits at the top of the screen.
   */
   confirmBand: ReactNode;
+  /**
+  E1's compact line (FEED-9): the viewer's conditions matched, from the
+  loader, or nothing — no saved place, no reading there, too few runners.
+  */
+  compact: CompactConditionsResult | undefined;
 }
 
 export function Feed(props: Readonly<FeedProps>) {
@@ -150,6 +157,7 @@ export function Feed(props: Readonly<FeedProps>) {
       </div>
       {tab === "following" ? (
         <FollowingTab
+          compact={props.compact}
           items={items}
           followeeCount={followeeCount}
           now={now}
@@ -168,6 +176,7 @@ export function Feed(props: Readonly<FeedProps>) {
 
 // fallow-ignore-next-line code-duplication -- a many-prop signature that matches runs/components/ParsedCard.tsx only by destructuring one prop per line; one is the Following tab, the other a parsed run, and they share nothing to extract
 function FollowingTab({
+  compact,
   items,
   followeeCount,
   now,
@@ -175,6 +184,7 @@ function FollowingTab({
   setUseful,
   onConditions,
 }: Readonly<{
+  compact: CompactConditionsResult | undefined;
   items: FeedItem[];
   followeeCount: number;
   now: number;
@@ -197,6 +207,9 @@ function FollowingTab({
   return (
     <div data-part="feed" className="flex flex-col gap-5">
       <FormStatus>{status}</FormStatus>
+      {compact === undefined ? undefined : (
+        <CompactConditions result={compact} units={units} />
+      )}
       {items.map((item) => (
         <PostCard
           key={item.entryId}

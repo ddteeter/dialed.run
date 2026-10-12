@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ConfirmEmailBand } from "../../src/modules/account/components/ConfirmEmailBand";
+import type { CompactConditions as CompactConditionsResult } from "../../src/modules/feed/compact-conditions";
 import { defaultFeedTab, Feed } from "../../src/modules/feed/components/Feed";
 import type { SetUsefulFn } from "../../src/modules/feed/components/useful-reaction";
 import type { FeedItem } from "../../src/modules/feed/feed";
@@ -32,6 +33,7 @@ function feed(
     conditionsFor?: () => Promise<undefined>;
     confirmBand?: ReactNode;
     setUseful?: SetUsefulFn;
+    compact?: CompactConditionsResult;
   } = {},
 ) {
   return (
@@ -43,6 +45,7 @@ function feed(
       unjudgedCount={overrides.unjudgedCount ?? 0}
       setUseful={overrides.setUseful ?? useful}
       confirmBand={overrides.confirmBand}
+      compact={overrides.compact}
       conditions={{
         home: { coords: undefined, cityLabel: undefined },
         locate: () => Promise.resolve(undefined),
@@ -202,6 +205,7 @@ describe("Feed: Following", () => {
         unjudgedCount={0}
         setUseful={() => Promise.reject(new TypeError("offline"))}
         confirmBand={undefined}
+        compact={undefined}
         conditions={{
           home: { coords: undefined, cityLabel: undefined },
           locate: () => Promise.resolve(undefined),
@@ -379,5 +383,47 @@ describe("Feed: an unconfirmed runner (round 26 #11; FEED-11)", () => {
       expect(button).toHaveAttribute("aria-pressed", "true");
     });
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});
+
+/**
+Eighteen runners matched in the viewer's 44° and damp.
+*/
+function matched(windowDays: 3 | 14): CompactConditionsResult {
+  return {
+    status: "matched",
+    runners: 18,
+    groups: [],
+    windowDays,
+    band: { feelsC: 6.7, minC: 3.7, maxC: 9.7, precip: "damp" },
+  };
+}
+
+describe("E1's compact line (FEED-9)", () => {
+  it("tops Following with how many runners logged the viewer's conditions", async () => {
+    await renderFeedScreen(feed({ items: [feedItem()], compact: matched(3) }));
+    const line = document.querySelector("[data-part='compact-conditions']");
+    expect(line).toHaveTextContent(
+      "18 runners logged 44° and damp in the last 3 days.",
+    );
+    expect(line).toHaveTextContent(/^Same conditions · Feels/u);
+    expect(line).toHaveClass("bg-teal");
+    // Above the posts, inside Following.
+    expect(line?.closest("[data-part='feed']")).not.toBeNull();
+    expect(line?.nextElementSibling).toHaveAttribute("data-part", "post");
+  });
+
+  it("says two weeks when the match had to widen", async () => {
+    await renderFeedScreen(feed({ items: [feedItem()], compact: matched(14) }));
+    expect(
+      document.querySelector("[data-part='compact-conditions']"),
+    ).toHaveTextContent("18 runners logged 44° and damp in the last 2 weeks.");
+  });
+
+  it("draws nothing without a match", async () => {
+    await renderFeedScreen(feed({ items: [feedItem()] }));
+    expect(
+      document.querySelector("[data-part='compact-conditions']"),
+    ).toBeNull();
   });
 });

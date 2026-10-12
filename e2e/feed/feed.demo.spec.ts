@@ -442,6 +442,11 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       hasText: publicCaption,
     });
     await expect(card).toBeVisible();
+    // FEED-9: the compact line tops Following — the Portland runners above
+    // matched at the city this runner just saved, in round 25's words.
+    const compact = page.locator('[data-part="compact-conditions"]');
+    await expect(compact).toContainText("runners logged");
+    await expect(compact).toContainText("in the last 3 days.");
     // The author is their handle, "@" and all (FEED-10).
     await expect(card.locator('[data-part="author"]')).toContainText(
       `@${otherUsername}`,
