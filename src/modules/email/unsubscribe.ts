@@ -12,6 +12,7 @@
  */
 import { z } from "zod";
 
+import { hmacKey } from "../../lib/hmac-key";
 import {
   emailPreferenceKindSchema,
   type EmailPreferenceKind,
@@ -29,13 +30,7 @@ const encoder = new TextEncoder();
  * test — nothing else here hands the key out.
  */
 export async function signingKey(secret: string): Promise<CryptoKey> {
-  return crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign", "verify"],
-  );
+  return hmacKey(secret, ["sign", "verify"]);
 }
 
 function toBase64Url(bytes: ArrayBuffer): string {

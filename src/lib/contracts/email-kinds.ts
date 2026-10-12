@@ -179,13 +179,25 @@ export const removalRequested = emailKind("removal_requested", {
 
 /**
  * Design 136: the requester's receipt — what happens next and by when,
- * and whether the image is hidden (it is when the link is ours, round 35
- * #58e). Sent to the address they typed; they may have no account. Never
- * shipped before `isOurs`, so the field is required.
+ * and whether the image is hidden (round 35 #58e). `confirmToken` is
+ * design 137's: a request past the cap waits for its requester to confirm
+ * before it hides anything, and the receipt carries the link. Sent to the
+ * address they typed; they may have no account. Never shipped before
+ * these fields, so `isHidden` is required.
  */
 export const removalRequestReceived = emailKind("removal_request_received", {
   dueAt: z.int().min(0),
-  isOurs: z.boolean(),
+  isHidden: z.boolean(),
+  confirmToken: z.string().min(1).optional(),
+});
+
+/**
+ * Design 137: the site-wide valve shut — enough requests hid something in
+ * the last hour that new ones hide nothing until it clears. One per
+ * operator per hour, whatever trips it. Operator mail, so always sent.
+ */
+export const takedownValve = emailKind("takedown_valve", {
+  perHour: z.int().min(1),
 });
 
 /**

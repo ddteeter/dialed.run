@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "a83043b2-2aa3-4366-97cb-099ac58b91d8",
+  "id": "89bf0d21-26af-4e16-8efe-c200545fec2c",
   "prevId": "7482d124-7203-40be-bb98-d17055b51f62",
   "tables": {
     "access_requests": {
@@ -64,14 +64,6 @@
           "columns": [
             "status",
             "created_at"
-          ],
-          "isUnique": false
-        },
-        "access_requests_status_updated": {
-          "name": "access_requests_status_updated",
-          "columns": [
-            "status",
-            "updated_at"
           ],
           "isUnique": false
         }
@@ -428,15 +420,7 @@
           "autoincrement": false
         }
       },
-      "indexes": {
-        "email_send_limits_window": {
-          "name": "email_send_limits_window",
-          "columns": [
-            "window_started_at"
-          ],
-          "isUnique": false
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -1464,15 +1448,7 @@
           "autoincrement": false
         }
       },
-      "indexes": {
-        "password_attempts_window": {
-          "name": "password_attempts_window",
-          "columns": [
-            "window_started_at"
-          ],
-          "isUnique": false
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -2384,6 +2360,44 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "takedown_blocks": {
+      "name": "takedown_blocks",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "takedown_requests": {
       "name": "takedown_requests",
       "columns": {
@@ -2485,6 +2499,55 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "requester_key": {
+          "name": "requester_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "ip_key": {
+          "name": "ip_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "hold_state": {
+          "name": "hold_state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "held_at": {
+          "name": "held_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "confirm_token_hash": {
+          "name": "confirm_token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "confirmed_at": {
+          "name": "confirmed_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "poster_username": {
+          "name": "poster_username",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -2503,6 +2566,36 @@
             "due_at"
           ],
           "isUnique": false
+        },
+        "takedown_requests_requester_status": {
+          "name": "takedown_requests_requester_status",
+          "columns": [
+            "requester_key",
+            "status"
+          ],
+          "isUnique": false
+        },
+        "takedown_requests_ip_status": {
+          "name": "takedown_requests_ip_status",
+          "columns": [
+            "ip_key",
+            "status"
+          ],
+          "isUnique": false
+        },
+        "takedown_requests_held_at": {
+          "name": "takedown_requests_held_at",
+          "columns": [
+            "held_at"
+          ],
+          "isUnique": false
+        },
+        "takedown_requests_confirm_token": {
+          "name": "takedown_requests_confirm_token",
+          "columns": [
+            "confirm_token_hash"
+          ],
+          "isUnique": true
         }
       },
       "foreignKeys": {},
@@ -3204,13 +3297,6 @@
             "token"
           ],
           "isUnique": true
-        },
-        "session_expires_at": {
-          "name": "session_expires_at",
-          "columns": [
-            "expires_at"
-          ],
-          "isUnique": false
         }
       },
       "foreignKeys": {

@@ -11,6 +11,7 @@ import {
   takedownAction,
 } from "../../modules/feed/functions";
 import {
+  blockTakedownRequesterAction,
   reviewHandleAction,
   reviewQueueQuery,
 } from "../../modules/safety/functions";
@@ -38,6 +39,7 @@ function ReviewPage() {
         <RemovalRequests
           requests={requests}
           decide={decideRemovalRequestAction}
+          block={blockTakedownRequesterAction}
         />
         <ReviewQueue
           queue={queue}
