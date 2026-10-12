@@ -1,8 +1,8 @@
 /**
- * Covers: Settings › Account (ACC-7, ACC-8), Change password, Settings ›
- * Notifications (ACC-11), the unsubscribe link and its landing (round 26
- * #19), Sign out everywhere, Export your data (ACC-10: Get a copy, Preparing,
- * the queued ZIP, Download, a dead link), Delete account with Keep inside
+ * Covers: Settings › Account (ACC-7, ACC-8), Change password and its
+ * lockout (R-124), Settings › Notifications (ACC-11), the unsubscribe link
+ * and its landing (round 26 #19), Sign out everywhere, Export your data
+ * (ACC-10: Get a copy, Preparing, the queued ZIP, Download, a dead link), Delete account with Keep inside
  * the week (ACC-9; round 27 #14, round 28 #12), "Confirm your email first"
  * from Change email while unconfirmed (round 29 #11–12), and O0's re-pick after a
  * moderator's rename (ACC-12; round 27 #16) — one journey, one video.
@@ -13,7 +13,11 @@ import type { Page } from "@playwright/test";
 import { eq } from "drizzle-orm";
 
 import { user } from "../../src/db/schema-auth";
-import { userProfiles, usernameHistory } from "../../src/db/schema-core";
+import {
+  passwordAttempts,
+  userProfiles,
+  usernameHistory,
+} from "../../src/db/schema-core";
 import { nowSeconds } from "../../src/lib/now";
 import { expect, scene, test } from "../support/demo";
 import { confirmLinkFor, unsubscribeLinkFor } from "../support/email-links";
@@ -116,6 +120,39 @@ test("account settings -> change password -> reminder emails off and on -> sign 
     "Password changed. Every other device was signed out.",
     { timeout: 15_000 },
   );
+
+  // R-124: the change is the server's now, so the per-runner count on
+  // tries at the current password reaches it, and the sixth try reads
+  // round 28 #10's field message rather than the band's rate limit.
+  await scene(page, "Change password: five wrong tries, then the wait");
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    await page.getByLabel("Current password").fill(`${PASSPHRASE}-wrong`);
+    await page.getByLabel("New password").fill(`${PASSPHRASE}-3`);
+    await page.getByRole("button", { name: "Change password" }).click();
+    await expect(
+      page.getByText("That's not your current password."),
+    ).toBeVisible({ timeout: 15_000 });
+  }
+  await page.getByLabel("Current password").fill(`${PASSPHRASE}-2`);
+  await page.getByRole("button", { name: "Change password" }).click();
+  await expect(
+    page.getByText(/^That's 5 wrong tries\. You can try again at .+\.$/u),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByLabel("Current password")).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  );
+  // The rest of the journey proves the password again (Delete account),
+  // so the window is closed here rather than waited out.
+  await withLocalDb(async ({ core }) => {
+    const [row] = await core
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, email));
+    await core
+      .delete(passwordAttempts)
+      .where(eq(passwordAttempts.userId, row?.id ?? ""));
+  });
 
   // Round 29 #11–12: unconfirmed, Change email is refused into "Confirm
   // your email first", which leads with the email change's own sentence
