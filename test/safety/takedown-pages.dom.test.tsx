@@ -315,6 +315,7 @@ function pending(
     due: "Due in 31h",
     holdState: "held",
     relatedIds: [],
+    otherPhotos: [],
     ...overrides,
   };
 }

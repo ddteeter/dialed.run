@@ -18,6 +18,7 @@ import {
 import { blockRequesterInput } from "../inputs";
 import type { HoldState } from "../takedown-limits";
 import type { PendingTakedownRequest } from "../takedown-requests";
+import { OtherPhotos } from "./OtherPhotos";
 import { useSettled } from "./use-settled";
 
 /**
@@ -204,6 +205,7 @@ function RemovalRequestRow({
         )}
       </span>
       <SubjectLink request={request} />
+      <OtherPhotos photos={request.otherPhotos} />
       <RemoveForm
         requestId={request.id}
         decide={decide}
