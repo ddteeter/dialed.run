@@ -91,7 +91,12 @@ const importFileExpire = z.object({
  * retries a send that failed.
  *
  * `dedupeKey` is the caller's name for "the same email": a second debt
- * with it is the same row. A row can be held back (ops' `oweOutbox`
+ * with it is the same row, and **the first payload stays**. The second
+ * takes the row over (ops' `outboxInsert`: the id and when it is due) and
+ * never rewrites what it says. That is what makes two of a runner's
+ * reminders landing at once safe: both owe the day's key, one row is
+ * written, and one email goes, saying what the first one owed. A row can
+ * be held back (ops' `oweOutbox`
  * `notBefore`) — task 127's reminder goes out 20 minutes after the run
  * lands — and a held row is left to the drain, never a fast path.
  *
