@@ -18,7 +18,7 @@ import { withoutComments } from "./source-text";
  * product link a confirmation owes (design 133) the fourth.
  */
 describe("the Worker entry hands the firings and the queue their upkeep", () => {
-  it("passes account deletion's purge, the export sweep, the handle re-ask and the product link to handleScheduled", () => {
+  it("passes account deletion's purge, the export sweep, the handle re-ask, the product link and the auth sweep to handleScheduled", () => {
     const code = withoutComments(serverSource);
     expect(code).toContain(
       'import { purgeDueAccounts } from "./modules/account/purge";',
@@ -33,8 +33,13 @@ describe("the Worker entry hands the firings and the queue their upkeep", () => 
     expect(code).toContain(
       'import { linkTypedGarments } from "./modules/closet";',
     );
+    // The daily sweep of expired sessions and password-try counts:
+    // `auth`'s, which imports `ops`.
+    expect(code).toContain(
+      'import { sweepExpiredAuthRows } from "./modules/auth/expired-rows";',
+    );
     expect(code).toMatch(
-      /handleScheduled\(controller, undefined, \{\s*purgeAccounts: purgeDueAccounts,\s*sweepExports,\s*rescreenHandles: rescreenHandlesFromEnv,\s*linkProducts: linkTypedGarments,\s*\}\)/u,
+      /handleScheduled\(controller, undefined, \{\s*purgeAccounts: purgeDueAccounts,\s*sweepExports,\s*rescreenHandles: rescreenHandlesFromEnv,\s*linkProducts: linkTypedGarments,\s*sweepAuthRows: sweepExpiredAuthRows,\s*\}\)/u,
     );
   });
 

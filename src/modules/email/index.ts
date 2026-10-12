@@ -20,6 +20,7 @@ export {
   forgetSendLimits,
   sendAllowed,
   sendClaimOf,
+  sweepSendLimits,
 } from "./send-limit";
 export type { LimitedSend, SendClaim } from "./send-limit";
 export { notificationSettings } from "./settings";
