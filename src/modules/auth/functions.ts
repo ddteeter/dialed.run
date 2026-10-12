@@ -1,8 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 
+import { changePasswordSchema } from "../../lib/contracts";
 import { auth } from "./instance";
 import { sessionOrRedirect } from "./require-session";
+import { changeCurrentPassword, requireUserId } from "./require-user";
 
 /**
 Session for the current request; null when signed out.
@@ -24,6 +26,17 @@ export const signedInQuery = createServerFn({ method: "GET" }).handler(
       (await auth.api.getSession({ headers: getRequestHeaders() })) !== null,
   }),
 );
+
+/**
+ * ACC-7's Change password (R-124): the per-runner count on tries at the
+ * current password, then Better Auth's change. Called from the server, so
+ * the count sees every try.
+ */
+export const changeCredentialFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => changePasswordSchema.parse(data))
+  .handler(async ({ data }) =>
+    changeCurrentPassword(await requireUserId(), data),
+  );
 
 /**
  * Loader-side gate: the session, or a redirect to sign-in that comes back

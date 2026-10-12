@@ -28,7 +28,7 @@ and the later one silently replaces the first (R-121).
   the runner's own password does it call `auth.api.changePassword`. That
   call is server-side: the breach screen's before-hook still runs, and
   `tanstackStartCookies` sets the new session's cookie. The function
-  returns `changed | wrong | limited | breached`. `changePasswordFn` in
+  returns `changed | wrong | limited | breached`. `changeCredentialFn` in
   `auth/functions.ts` is glue. The route passes it to `ChangePassword`,
   which maps each status to a field message the way `ChangeEmail` does.
   The browser-side `changePassword` in `credentials.ts` is deleted.
@@ -62,7 +62,7 @@ and the later one silently replaces the first (R-121).
 - UI: `ChangePassword` shows the limited sentence, and the wrong and
   breached messages, on their fields.
 - Architecture: no source under `src/` calls `authClient.changePassword`;
-  `changePasswordFn` has a row in `verification-class` (`unconfirmed`).
+  `changeCredentialFn` has a row in `verification-class` (`unconfirmed`).
 - Worker: two renames racing from one handle leave the first intact, with
   one history row and one audit row.
 

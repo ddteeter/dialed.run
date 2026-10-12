@@ -2763,7 +2763,9 @@ COPIED` · "Copying didn't work here. The link is selected: copy it
     at 7:42 PM." It is a field message on CURRENT PASSWORD, in local time
     with no seconds. The field stays usable, and pressing before then shows
     the message again. _Build:_ 126 (`currentPasswordLimited`, now in
-    `lib/contracts/`).
+    `lib/contracts/`). **Built on Change password too** (R-124, lane F):
+    the change is a server function now, so the per-runner count reaches
+    it.
 11. **H's two silent states.** _Confirmed, both:_ H's column, the back link
     and the sentence as the lead are the whole page. "This runner changed
     their name." links nowhere. "This runner isn't here." covers purged,

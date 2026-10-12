@@ -12,6 +12,7 @@ import { newUlid } from "../../src/lib/ids";
 import { createAuth } from "../../src/modules/auth/create-auth";
 import { confirmEmail } from "../../src/modules/account";
 import { issueEmailLink } from "../../src/modules/account/email-links";
+import { changeOwnPassword } from "../../src/modules/auth/change-password";
 import {
   checkOwnPassword,
   isOwnPassword,
@@ -361,6 +362,136 @@ describe("checkOwnPassword (tries at the current password, limited)", () => {
         ),
       ).toStrictEqual({ status: "wrong" });
     }
+  });
+});
+
+/**
+Whether this password signs the runner in now.
+*/
+async function canSignInWith(auth: Auth, userId: string, secret: string) {
+  const [row] = await db
+    .select({ email: user.email })
+    .from(user)
+    .where(eq(user.id, userId));
+  const response = await refused("INVALID_EMAIL_OR_PASSWORD", () =>
+    auth.handler(
+      post("sign-in/email", { email: row?.email, password: secret }),
+    ),
+  );
+  return response.status === 200;
+}
+
+describe("changeOwnPassword (ACC-7 within the per-runner limit, R-124)", () => {
+  const NOW = 1_800_000_000;
+  const next = ["a", "fresh", "long", "passphrase"].join("-");
+  const values = (currentPassword: string) => ({
+    currentPassword,
+    password: next,
+  });
+
+  it("changes it through Better Auth under the limit, ends every other session and clears the count", async () => {
+    const check = { ...(await signedIn()), db };
+    const [row] = await db
+      .select({ email: user.email })
+      .from(user)
+      .where(eq(user.id, check.userId));
+    await signIn(check.auth, row?.email ?? "");
+    expect(await sessionsOf(check.userId)).toBe(2);
+    await refused("INVALID_PASSWORD", () =>
+      changeOwnPassword(check, values(`${password}-not`), NOW),
+    );
+
+    expect(await changeOwnPassword(check, values(password), NOW)).toStrictEqual(
+      { status: "changed" },
+    );
+
+    // Better Auth ends them all and makes this request a new one.
+    expect(await sessionsOf(check.userId)).toBe(1);
+    expect(await canSignInWith(check.auth, check.userId, next)).toBe(true);
+    expect(await canSignInWith(check.auth, check.userId, password)).toBe(false);
+    expect(
+      await db
+        .select()
+        .from(passwordAttempts)
+        .where(eq(passwordAttempts.userId, check.userId)),
+    ).toStrictEqual([]);
+  });
+
+  it(`refuses after ${String(PASSWORD_ATTEMPTS_PER_WINDOW)} wrong tries, before Better Auth is asked, even with the right password`, async () => {
+    const check = { ...(await signedIn()), db };
+    for (let n = 0; n < PASSWORD_ATTEMPTS_PER_WINDOW; n += 1) {
+      expect(
+        await refused("INVALID_PASSWORD", () =>
+          changeOwnPassword(check, values(`${password}-not`), NOW + n),
+        ),
+      ).toStrictEqual({ status: "wrong" });
+    }
+    const change = vi.spyOn(check.auth.api, "changePassword");
+
+    expect(
+      await changeOwnPassword(check, values(password), NOW + 10),
+    ).toStrictEqual({
+      status: "limited",
+      until: NOW + PASSWORD_ATTEMPT_WINDOW_S,
+    });
+
+    expect(change).not.toHaveBeenCalled();
+    change.mockRestore();
+    expect(await canSignInWith(check.auth, check.userId, password)).toBe(true);
+  });
+
+  it("lands a breached new password as breached, and changes nothing", async () => {
+    const { auth } = instance({
+      passwordScreen: {
+        verdict: (candidate) =>
+          Promise.resolve(candidate === next ? "breached" : "clean"),
+        report: () => {
+          // a breached verdict is an answer, not a failure
+        },
+      },
+    });
+    const { email, userId } = await signUp(auth);
+    const check = {
+      auth,
+      db,
+      userId,
+      headers: new Headers({ cookie: await signIn(auth, email) }),
+    };
+
+    expect(
+      await refused("PASSWORD_BREACHED", () =>
+        changeOwnPassword(check, values(password), NOW),
+      ),
+    ).toStrictEqual({ status: "breached" });
+    expect(await canSignInWith(auth, userId, password)).toBe(true);
+  });
+
+  it.each([
+    ["a refusal with another code", new APIError("BAD_REQUEST", { code: "X" })],
+    ["a refusal with no body", new APIError("BAD_REQUEST")],
+    [
+      "something that only looks like a breach",
+      Object.assign(new Error("not Better Auth's"), {
+        body: { code: "PASSWORD_BREACHED" },
+      }),
+    ],
+  ])("rethrows %s, rather than answering", async (_, thrown) => {
+    // A fake stands in for `auth`: no real endpoint throws these here.
+    const fakeAuth = {
+      api: {
+        verifyPassword: () => Promise.resolve({ status: true }),
+        changePassword: () => Promise.reject(thrown),
+      },
+    };
+    const check = {
+      auth: fakeAuth,
+      db,
+      userId: newUlid(),
+      headers: new Headers(),
+    };
+    await expect(changeOwnPassword(check, values(password), NOW)).rejects.toBe(
+      thrown,
+    );
   });
 });
 

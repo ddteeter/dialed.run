@@ -4,7 +4,6 @@ import {
   TURNSTILE_REFUSED,
 } from "../../lib/contracts/access";
 import { AGE_CODES, AGE_COPY } from "../../lib/contracts/age";
-import { CURRENT_PASSWORD_WRONG } from "../../lib/contracts";
 import type { ControlFailure, FormFailure } from "../../ui";
 
 /**
@@ -30,11 +29,6 @@ export const AUTH_COPY = {
    */
   passwordBreached:
     "That password has turned up in a data breach. Pick another.",
-  /**
-   * ACC-7: the current password, when it is not the account's. Placeholder
-   * copy, the log-in refusal's shape (design deltas).
-   */
-  currentPasswordWrong: CURRENT_PASSWORD_WRONG,
   /**
   Au4, a server fault.
   */
