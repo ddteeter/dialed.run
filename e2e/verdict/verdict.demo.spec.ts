@@ -5,6 +5,7 @@
  * MORE gone (round 21), seeing the verdict on the entry, and re-opening
  * the verdict to find the flag still there — and DS2, the verdict
  * backlog, which is the same act done from a table instead of six sheets.
+ * Also A3's PRIVATE sub-line and its Change sheet (D-108 E, round 32 2a).
  * One journey, one video.
  *
  * The photo is not here any more: round 20 moved the outfit photo from A3
@@ -21,6 +22,7 @@ import {
   outfitEntries,
   outfitEntryItems,
   runs,
+  userProfiles,
   wardrobeItems,
 } from "../../src/db/schema-core";
 import { user } from "../../src/db/schema-auth";
@@ -86,6 +88,16 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
       .where(eq(user.email, email))
       .limit(1);
     if (!row) throw new Error("signup did not create a user row");
+
+    // Counted, as a new runner is (D-108 D), whatever a previous run of
+    // this spec left behind.
+    await core
+      .insert(userProfiles)
+      .values({ userId: row.id, countInTotals: true })
+      .onConflictDoUpdate({
+        target: userProfiles.userId,
+        set: { countInTotals: true },
+      });
 
     await core.insert(wardrobeItems).values({
       id: itemId,
@@ -241,6 +253,42 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
   await expect(
     page.getByRole("button", { name: "hands cold" }),
   ).toHaveAttribute("aria-pressed", "true");
+
+  // D-108 E (round 32, 2a): private still counts, anonymously, and the
+  // runner is told so at the moment they choose it. Change opens the
+  // totals switch as a sheet over the form, so nothing picked is lost.
+  await scene(page, "Private: told it still counts, anonymously");
+  const share = page.getByRole("checkbox", { name: "Share to feed" });
+  await share.uncheck();
+  await expect(
+    page.getByText(
+      "Only you see this run. Its kit and verdict still count, anonymously, in the guides.",
+    ),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Change" }).click();
+  const sharing = page.getByRole("dialog", { name: "Sharing" });
+  const totals = sharing.getByRole("checkbox", {
+    name: "Count my runs in anonymous totals",
+  });
+  await scene(page, "Change opens the setting in a sheet; it saves on toggle");
+  await totals.uncheck();
+  await expect(
+    sharing.getByText("Off. Your runs leave the guides at tonight's update."),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Only you see this run.", { exact: true }),
+  ).toBeAttached();
+  await totals.check();
+  await expect(
+    sharing.getByText("Shared and private runs add their temperature"),
+  ).toBeVisible();
+  await sharing.getByRole("button", { name: "Done" }).click();
+  await expect(sharing).toBeHidden();
+  await scene(page, "Back on the form, with everything still picked");
+  await expect(
+    page.getByRole("button", { name: "A bit cold" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await share.check();
 
   await scene(page, "Saving reports the wear rate in this temperature band");
   await page.getByRole("button", { name: "Log it" }).click();
