@@ -183,6 +183,7 @@ that has stopped firing altogether.
 | `FIRECRAWL_API_KEY`           | optional   | A shop that refuses a Worker (11 of 14 sampled) is a failed fetch, and its product gets no composition                                                                                                                                                                                            |
 | `TURNSTILE_SECRET_KEY`        | **yes**    | Turnstile fails closed: every sign-up and access request is refused, and Sentry says why                                                                                                                                                                                                          |
 | `UNSUBSCRIBE_SECRET`          | **yes**    | Signs unsubscribe links (its own secret, not the auth one). Fails closed: no optional email goes, every link is refused, and `/api/health` names it                                                                                                                                               |
+| `TAKEDOWN_SECRET`             | optional   | Keys the HMAC of a `/takedown` visitor's IP, so the abuse limits (D-118) match a requester by IP as well as email. Without it they match by email alone; nothing fails. Any long random string                                                                                                    |
 
 **Vars, not secrets** — printed into the page or read as configuration.
 They live in `wrangler.jsonc`'s `vars` block (owner-approved, 2026-09-26),

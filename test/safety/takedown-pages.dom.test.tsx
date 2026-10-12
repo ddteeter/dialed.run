@@ -4,7 +4,13 @@ import {
   createRootRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -92,7 +98,7 @@ describe("/takedown", () => {
     ).toBeVisible();
     expect(screen.getByText("Where we'll write back")).toBeVisible();
     expect(
-      screen.getByText("https://dialed.run/…, or say where it is."),
+      screen.getByText("A dialed.run link, or say where it is."),
     ).toBeVisible();
     expect(screen.getByText("One line")).toBeVisible();
     expect(screen.getByLabelText("Email")).toHaveAttribute("type", "email");
@@ -101,6 +107,11 @@ describe("/takedown", () => {
       "name",
     );
     expect(screen.getByText("Typed as your signature.")).toBeVisible();
+    // Round 37 #59g: who posted it, after the link, optional.
+    expect(
+      screen.getByLabelText("Their dialed.run username · optional"),
+    ).toBeVisible();
+    expect(screen.getByText("If you know who posted it.")).toBeVisible();
     // Words are allowed, so not a URL field (no space bar on a phone's).
     expect(screen.getByLabelText("Link to the image")).toHaveAttribute(
       "type",
@@ -136,6 +147,7 @@ describe("/takedown", () => {
         signature: "Sam Runner",
         location: "https://dialed.run/feed/entry/x",
         description: "me",
+        posterUsername: undefined,
         isAttested: true,
         idempotencyKey: A_KEY,
         turnstileToken: "answer",
@@ -150,6 +162,64 @@ describe("/takedown", () => {
       "A person will look at it and decide within 48 hours. We've emailed a receipt to sam@example.com, and we'll email you the outcome.",
     );
     expect(part("form")).toBeNull();
+  });
+
+  it("sends the poster's username as a handle, its @ and case forgiven (round 37 #59g)", async () => {
+    const request = vi
+      .fn<RequestFn>()
+      .mockResolvedValue({ status: "received" });
+    await renderWithRouter(
+      <TakedownRequest siteKey={undefined} request={request} />,
+    );
+    const user = userEvent.setup();
+    await fillIn(user);
+    await user.type(
+      screen.getByLabelText("Their dialed.run username · optional"),
+      "@Maya_Runs",
+    );
+    await user.click(screen.getByRole("button", { name: "Send the request" }));
+    await waitFor(() => {
+      expect(request).toHaveBeenCalled();
+    });
+    expect(request.mock.calls[0]?.[0].data.posterUsername).toBe("maya_runs");
+  });
+
+  it("reads a username of only spaces as none given", async () => {
+    const request = vi
+      .fn<RequestFn>()
+      .mockResolvedValue({ status: "received" });
+    await renderWithRouter(
+      <TakedownRequest siteKey={undefined} request={request} />,
+    );
+    const user = userEvent.setup();
+    await fillIn(user);
+    await user.type(
+      screen.getByLabelText("Their dialed.run username · optional"),
+      " ".repeat(3),
+    );
+    await user.click(screen.getByRole("button", { name: "Send the request" }));
+    await waitFor(() => {
+      expect(request).toHaveBeenCalled();
+    });
+    expect(request.mock.calls[0]?.[0].data.posterUsername).toBeUndefined();
+  });
+
+  it("says what is wrong with a username that cannot be one", async () => {
+    const request = vi.fn<RequestFn>();
+    await renderWithRouter(
+      <TakedownRequest siteKey={undefined} request={request} />,
+    );
+    const user = userEvent.setup();
+    await fillIn(user);
+    await user.type(
+      screen.getByLabelText("Their dialed.run username · optional"),
+      "no spaces here",
+    );
+    await user.click(screen.getByRole("button", { name: "Send the request" }));
+    expect(
+      await screen.findAllByText("Use 3–20 letters, numbers or _."),
+    ).not.toHaveLength(0);
+    expect(request).not.toHaveBeenCalled();
   });
 
   it("sends nothing until the statement is confirmed", async () => {
@@ -225,6 +295,7 @@ describe("/takedown", () => {
 });
 
 type DecideFn = Parameters<typeof RemovalRequests>[0]["decide"];
+type BlockFn = Parameters<typeof RemovalRequests>[0]["block"];
 
 const ENTRY = "01JABCDEFGHJKMNPQRSTVWXYZ0";
 
@@ -237,10 +308,13 @@ function pending(
     signature: "Sam Runner",
     location: `https://dialed.run/feed/entry/${ENTRY}`,
     description: undefined,
+    posterUsername: undefined,
     subject: { subjectType: "entry", subjectId: ENTRY, entryId: ENTRY },
     createdAt: 1,
     dueAt: 2,
     due: "Due in 31h",
+    holdState: "held",
+    relatedIds: [],
     ...overrides,
   };
 }
@@ -251,10 +325,13 @@ describe("Review · removal requests", () => {
       <RemovalRequests
         requests={[pending({ description: "a photo of me" })]}
         decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
       />,
     );
     const row = part("removal-request");
-    expect(row).toHaveTextContent(/^entry\[via \/takedown\]Due in 31h/u);
+    expect(row).toHaveTextContent(
+      /^entry\[via \/takedown\]\[hidden\]Due in 31h/u,
+    );
     // The clock in the header, uppercase in CSS, as a queue row's.
     const clock = part("due");
     expect(clock).toHaveTextContent(/^Due in 31h$/u);
@@ -271,7 +348,11 @@ describe("Review · removal requests", () => {
 
   it("leaves out the description's line when there is none", async () => {
     await renderWithRouter(
-      <RemovalRequests requests={[pending()]} decide={vi.fn<DecideFn>()} />,
+      <RemovalRequests
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
     );
     expect(part("removal-request")?.querySelector("q")).toBeNull();
   });
@@ -291,6 +372,7 @@ describe("Review · removal requests", () => {
           }),
         ]}
         decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
       />,
     );
     expect(screen.getByRole("link", { name: "Open its kit" })).toHaveAttribute(
@@ -321,6 +403,7 @@ describe("Review · removal requests", () => {
           }),
         ]}
         decide={decide}
+        block={vi.fn<BlockFn>()}
       />,
     );
     const [first] = document.querySelectorAll<HTMLElement>(
@@ -347,7 +430,11 @@ describe("Review · removal requests", () => {
   it("declines only with a reason, asked for once Decline is pressed, and sends it", async () => {
     const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
     await renderWithRouter(
-      <RemovalRequests requests={[pending()]} decide={decide} />,
+      <RemovalRequests
+        requests={[pending()]}
+        decide={decide}
+        block={vi.fn<BlockFn>()}
+      />,
     );
     const user = userEvent.setup();
     // Decline is a text button until pressed: then it asks for the line.
@@ -383,9 +470,300 @@ describe("Review · removal requests", () => {
     });
   });
 
+  it.each([
+    ["held", "[hidden]"],
+    ["confirm", "[unconfirmed]"],
+    ["valve", "[valve shut]"],
+    ["blocked", "[blocked]"],
+  ] as const)(
+    "says what filing decided, %s (design 137)",
+    async (holdState, words) => {
+      await renderWithRouter(
+        <RemovalRequests
+          requests={[pending({ holdState })]}
+          decide={vi.fn<DecideFn>()}
+          block={vi.fn<BlockFn>()}
+        />,
+      );
+      expect(part("hold-state")).toHaveTextContent(words);
+    },
+  );
+
+  it("says nothing of a hold for a link that hides nothing, nor of others when there are none", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending({ holdState: undefined })]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    expect(part("hold-state")).toBeNull();
+    expect(part("related")).toBeNull();
+  });
+
+  it("names the requester's other open requests", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending({ relatedIds: ["a", "b"] })]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    expect(part("related")).toHaveTextContent(/^2 more from this requester$/u);
+  });
+
+  it("asks before it blocks, can be cancelled, and takes every request of theirs off the list", async () => {
+    const block = vi.fn<BlockFn>().mockResolvedValue({ status: "blocked" });
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[
+          pending({
+            id: "01JABCDEFGHJKMNPQRSTVWXYZ1",
+            relatedIds: ["01JABCDEFGHJKMNPQRSTVWXYZ2"],
+          }),
+          pending({
+            id: "01JABCDEFGHJKMNPQRSTVWXYZ2",
+            relatedIds: ["01JABCDEFGHJKMNPQRSTVWXYZ1"],
+          }),
+          pending({
+            id: "01JABCDEFGHJKMNPQRSTVWXYZ3",
+            signature: "Someone Else",
+          }),
+        ]}
+        decide={vi.fn<DecideFn>()}
+        block={block}
+      />,
+    );
+    const user = userEvent.setup();
+    const [first] = document.querySelectorAll<HTMLElement>(
+      "[data-part='removal-request']",
+    );
+    const row = within(first ?? document.body);
+
+    await user.click(
+      row.getByRole("button", { name: "Block and decline all" }),
+    );
+    expect(
+      row.getByText(
+        "Block this requester and decline all 2 of their requests? Anything they hid comes back, and nothing is sent to them.",
+      ),
+    ).toBeVisible();
+    await user.click(row.getByRole("button", { name: "Cancel" }));
+    expect(part("block")).toBeNull();
+    expect(block).not.toHaveBeenCalled();
+
+    await user.click(
+      row.getByRole("button", { name: "Block and decline all" }),
+    );
+    const submit = row.getByRole("button", { name: "Block and decline all" });
+    expect(submit).toHaveAttribute("type", "submit");
+    await user.click(submit);
+    expect(
+      await screen.findByText("Blocked. 2 requests declined."),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        document.querySelectorAll("[data-part='removal-request']"),
+      ).toHaveLength(1);
+    });
+    expect(part("removal-request")).toHaveTextContent("Someone Else");
+    expect(block).toHaveBeenCalledWith({
+      data: { requestId: "01JABCDEFGHJKMNPQRSTVWXYZ1" },
+    });
+  });
+
+  it("asks about the one request when the requester has no other", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Block and decline all" }));
+    expect(
+      screen.getByText(
+        "Block this requester and decline this request? Anything they hid comes back, and nothing is sent to them.",
+      ),
+    ).toBeVisible();
+  });
+
+  it("opens the question on Cancel, and Cancel or Esc hands focus back (round 37 #59f)", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    const user = userEvent.setup();
+    const ask = () =>
+      screen.getByRole("button", { name: "Block and decline all" });
+
+    await user.click(ask());
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    });
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => {
+      expect(ask()).toHaveFocus();
+    });
+
+    await user.click(ask());
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    });
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(ask()).toHaveFocus();
+    });
+    expect(part("block")).toBeNull();
+  });
+
+  it("keeps the question open for a key that is not Esc", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: "Block and decline all" }),
+    );
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    });
+    await user.keyboard("a");
+    expect(part("block")).not.toBeNull();
+  });
+
+  it("hands focus back on Cancel even when the click that asked did not take it", async () => {
+    // Safari does not focus a button on click, so the button that asked
+    // may not hold focus when it leaves; Cancel still returns there.
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Block and decline all" }),
+    );
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Cancel" }));
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Block and decline all" }),
+      ).toHaveFocus();
+    });
+  });
+
+  it("takes focus only from script: a row is not a tab stop", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    expect(part("removal-request")).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("takes the last request off the list, with nothing left to focus", async () => {
+    const block = vi.fn<BlockFn>().mockResolvedValue({ status: "blocked" });
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" })]}
+        decide={vi.fn<DecideFn>()}
+        block={block}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: "Block and decline all" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Block and decline all" }),
+    );
+    await waitFor(() => {
+      expect(part("removal-request")).toBeNull();
+    });
+    expect(block).toHaveBeenCalledOnce();
+  });
+
+  it("says one request declined, and moves focus to the next request left", async () => {
+    const block = vi.fn<BlockFn>().mockResolvedValue({ status: "blocked" });
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[
+          pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" }),
+          pending({
+            id: "01JABCDEFGHJKMNPQRSTVWXYZ2",
+            signature: "Next Asker",
+          }),
+        ]}
+        decide={vi.fn<DecideFn>()}
+        block={block}
+      />,
+    );
+    const user = userEvent.setup();
+    const [first] = document.querySelectorAll<HTMLElement>(
+      "[data-part='removal-request']",
+    );
+    const row = within(first ?? document.body);
+    await user.click(
+      row.getByRole("button", { name: "Block and decline all" }),
+    );
+    await user.click(
+      row.getByRole("button", { name: "Block and decline all" }),
+    );
+    expect(
+      await screen.findByText("Blocked. 1 request declined."),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(part("removal-request")).toHaveFocus();
+    });
+    expect(part("removal-request")).toHaveTextContent("Next Asker");
+    // Focus lands once: a later render of the row leaves it where it is.
+    await user.click(screen.getByRole("button", { name: "Decline" }));
+    expect(screen.getByLabelText("Why not")).not.toBe(document.body);
+    expect(part("removal-request")).not.toHaveFocus();
+  });
+
+  it("names the poster in the line for a link that is not ours (round 37 #59g)", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[
+          pending({
+            subject: undefined,
+            location: "at the finish line",
+            posterUsername: "maya_runs",
+          }),
+        ]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    expect(
+      screen.getByText(
+        "Not one of our links: find it on @maya_runs's entries from what they wrote.",
+      ),
+    ).toBeVisible();
+  });
+
   it("renders nothing when nothing is waiting", async () => {
     await renderWithRouter(
-      <RemovalRequests requests={[]} decide={vi.fn<DecideFn>()} />,
+      <RemovalRequests
+        requests={[]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
     );
     expect(part("removal-request")).toBeNull();
     expect(screen.queryByText(/Removal requests/u)).toBeNull();

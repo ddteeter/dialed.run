@@ -290,15 +290,20 @@ account added it.
   the runner who posted it.
 - **A removal request** made at [/takedown](/takedown), with or without an
   account: we keep the email address, the name typed as a signature, the
-  link or description of where the image is, anything written about it,
+  link or description of where the image is, the username of whoever
+  posted it if you give one, anything written about it,
   when it was made, and what we decided, with the reason if we declined.
   If the link points to a kit or photo on [dialed.run], we hide it from
   everyone but its owner while we look, and put it back if we decline.
   We email the address a receipt and the decision, and email each
   reviewer that a request is waiting. We count requests per visitor IP
   address, as we do requests for access, to stop the form being flooded.
-  We keep a request until we delete it, because it is the record of why
-  something was or was not removed.
+  To stop one person filing many requests, we keep with each request a
+  form of the email address that ignores dots and "+" tags where the
+  provider does, and a one-way keyed code made from the IP address (not
+  the address itself). If someone abuses the form, we may block that
+  email and code from it. We keep a request until we delete it, because
+  it is the record of why something was or was not removed.
 - Reviewers are the people who run [dialed.run], named in our
   configuration; today that is one person. They can see reported and
   flagged content, including hidden photos, with the reports' reasons and

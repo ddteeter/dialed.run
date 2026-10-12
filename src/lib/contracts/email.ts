@@ -27,6 +27,7 @@ import {
   removalRequestDecided,
   removalRequestReceived,
   removalRequested,
+  takedownValve,
   emailChange,
   emailChanged,
   existingAccount,
@@ -74,6 +75,7 @@ export const emailTemplateSchema = z.discriminatedUnion("kind", [
   removalRequested,
   removalRequestReceived,
   removalRequestDecided,
+  takedownValve,
 ]);
 
 export type EmailTemplate = z.infer<typeof emailTemplateSchema>;
@@ -125,6 +127,7 @@ const PREFERENCE_OF: Readonly<
   removal_requested: undefined,
   removal_request_received: undefined,
   removal_request_decided: undefined,
+  takedown_valve: undefined,
   export_ready: undefined,
 };
 
