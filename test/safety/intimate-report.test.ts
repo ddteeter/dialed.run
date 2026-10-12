@@ -344,5 +344,6 @@ describe("the Review row's clock", () => {
     expect(row).toBeDefined();
     expect(row).not.toHaveProperty("dueAt");
     expect(row).not.toHaveProperty("due");
+    expect(row?.otherPhotos).toBeUndefined();
   });
 });
