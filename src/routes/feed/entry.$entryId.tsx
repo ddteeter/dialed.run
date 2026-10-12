@@ -5,7 +5,11 @@ import { EntryDetail } from "../../modules/feed/components/EntryDetail";
 import { RetractEntry } from "../../modules/feed/components/RetractEntry";
 import { NoticeBand } from "../../modules/safety/components/NoticeBand";
 import { ReportAffordance } from "../../modules/safety/components/ReportAffordance";
-import { fileReportAction } from "../../modules/safety/functions";
+import { RunRemovals } from "../../modules/safety/components/RunRemovals";
+import {
+  fileReportAction,
+  runRemovalsQuery,
+} from "../../modules/safety/functions";
 import {
   noindexHead,
   shouldAskForVerdict,
@@ -38,6 +42,9 @@ export const Route = createFileRoute("/feed/entry/$entryId")({
       viewerId,
       units,
       bell,
+      // R-140: a photo the Desk removed from this run, where it was. Only
+      // the author is answered any.
+      removals: await runRemovalsQuery({ data: { runId: entry.runId } }),
       shouldPromptVerdict: await shouldAskForVerdict(entry, viewerId, () =>
         verdictPromptQuery({ data: { entryId: params.entryId } }),
       ),
@@ -48,12 +55,13 @@ export const Route = createFileRoute("/feed/entry/$entryId")({
 
 function EntryDetailPage() {
   const { entryId } = Route.useParams();
-  const { entry, shouldPromptVerdict, units, viewerId, bell } =
+  const { entry, shouldPromptVerdict, units, viewerId, bell, removals } =
     Route.useLoaderData();
   const navigate = useNavigate();
 
   return (
     <BelledLayout {...bell}>
+      <RunRemovals removals={removals} />
       <EntryDetail
         entry={entry}
         viewerId={viewerId}

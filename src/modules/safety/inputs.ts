@@ -140,6 +140,11 @@ export const unbanUserInput = z.object({
 });
 
 /**
+The run whose removals its author's page shows (R-140).
+*/
+export const runRemovalsInput = z.object({ runId: ulidSchema });
+
+/**
  * D8's search and filter (round 27 #22). Both optional: the page opens on
  * everyone.
  */

@@ -102,6 +102,10 @@ What is being taken down: whose it is, which entry, and which objects.
 interface Target {
   ownerId: string;
   entryId: string;
+  /**
+  The entry's run, which the audit row keeps for the author's band (R-140).
+  */
+  runId: string;
   photoKeys: readonly string[];
 }
 
@@ -122,6 +126,7 @@ async function targetOf(
   return {
     ownerId: first.ownerId,
     entryId: first.entryId,
+    runId: first.runId,
     photoKeys: rows.flatMap((row) => row.photoKey ?? []),
   };
 }
@@ -132,6 +137,7 @@ What `targetOf` reads for each row.
 const targetColumns = {
   ownerId: outfitEntries.userId,
   entryId: outfitEntries.id,
+  runId: outfitEntries.runId,
   photoKey: entryPhotos.photoKey,
 };
 
@@ -330,6 +336,9 @@ export async function moderateContent(
         reason:
           input.notice === undefined ? words : `${words} — ${input.notice}`,
         preservedKey: kept?.preservedKey,
+        // Read before the delete, in `targetOf`: once the batch lands the
+        // entry is gone, and this is how its author's run still finds it.
+        runId: target.runId,
       }),
       ...(kept === undefined ? [] : [kept.record]),
       ...(told === undefined ? [] : [told.statement]),

@@ -1372,10 +1372,16 @@ export const moderationActions = /*#__PURE__*/ sqliteTable(
     // Where a quarantined object was moved to; null for everything else.
     preservedKey: text("preserved_key"),
     createdAt: integer("created_at").notNull(),
+    // The run a removed entry or photo was on (R-140), read before the
+    // delete, so the author's run can say where the thing was. Null for a
+    // profile action and for every row written before this column.
+    runId: text("run_id"),
   },
   (t) => [
     index("moderation_actions_subject").on(t.subjectType, t.subjectId),
     index("moderation_actions_owner").on(t.subjectOwnerId, t.createdAt),
+    // The run's removals, for its author's page.
+    index("moderation_actions_run").on(t.runId),
   ],
 );
 

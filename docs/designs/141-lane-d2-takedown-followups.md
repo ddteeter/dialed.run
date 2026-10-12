@@ -50,7 +50,7 @@ takedown form. No new server function.
 
 ## Contract touches
 
-- Schema changes needed: **none**.
+- Schema changes needed: one additive column and index, `moderation_actions.run_id` (0057; owner approved 2026-10-12).
 - New route files: none. New bindings/queues/crons: **none**.
 - Email wire format: `content_removed` gains an optional field (additive).
 - Design deltas (item 63, after #186's 62): the other-photos block on both Review rows; the
@@ -72,10 +72,13 @@ takedown form. No new server function.
 
 ## Open questions
 
-- **Mounting `ContentRemoved` on the author's run needs a column.** A
-  Remove deletes the photo or entry, and `moderation_actions` keeps the
-  subject's id but not its entry or run, so nothing can find "where the
-  thing was". An additive nullable `entry_id` (and `run_id`) on
-  `moderation_actions`, written by `moderateContent`, would do it. Not
-  built: this lane's brief allowed only an index migration. Asked of the
-  owner in the PR; R-140 stays open for that half.
+- **Mounting `ContentRemoved` needed a column. Answered (owner, 2026-10-12):**
+  `moderation_actions.run_id`, nullable, indexed, migration 0057
+  (`add_moderation_action_run_id`: one `ADD COLUMN` and one `CREATE INDEX`).
+  `moderateContent` writes it from the entry read before the delete;
+  `safety/run-removals.ts` reads a run's removals for its author by
+  `moderation_actions_run`; `RunRemovals` draws them on the run page (a
+  removed entry) and on D (a removed photo, since a run with an entry
+  redirects there). Old audit rows have no run and show nothing.
+- **Private kits stay in the other-photos list** (owner, 2026-10-12): the
+  privacy policy is amended in #182 instead; a test pins the inclusion.

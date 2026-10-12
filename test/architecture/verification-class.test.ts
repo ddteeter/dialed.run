@@ -261,6 +261,7 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "safety/functions.ts blockRunnerAction": "unconfirmed",
   "safety/functions.ts unblockRunnerAction": "unconfirmed",
   "safety/functions.ts blockedRunnersQuery": "unconfirmed",
+  "safety/functions.ts runRemovalsQuery": "unconfirmed",
   "safety/functions.ts reviewQueueQuery": "admin",
   "safety/functions.ts claimReviewAction": "admin",
   "safety/functions.ts banUserAction": "admin",
