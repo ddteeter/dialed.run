@@ -60,6 +60,6 @@ computed by the guide job, so nothing is asked of the runner.
 ## Open questions
 
 - "How the guides are made" links to `/privacy` until the marketing site
-  owns `/how-it-works#totals` (design-deltas item 60).
+  owns `/how-it-works#totals` (design-deltas item 61).
 - The Change sheet holds only the totals switch: a form cannot nest inside
-  A3's form. Design is asked before launch (item 60).
+  A3's form. Design is asked before launch (item 61).
