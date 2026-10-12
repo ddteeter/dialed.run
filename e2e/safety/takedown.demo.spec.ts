@@ -249,10 +249,14 @@ test("someone with no account asks for an intimate image to come down, and an op
   await others.scrollIntoViewIfNeeded();
   await scene(page, "The runner's other photos, to check for copies");
   await expect(others).toContainText("Their other photos · 1");
+  // The second kit is hidden by its own confirmed request, so its page
+  // would send an operator away: the photo shows with no link (R-151).
+  await expect(others.getByRole("link")).toHaveCount(0);
   await expect(
-    others.getByRole("link", { name: "Their other photo: open its kit" }),
-  ).toHaveAttribute("href", `/feed/entry/${secondEntryId}`);
-  await expect(others.getByRole("img")).toHaveAttribute(
+    others.getByRole("img", {
+      name: `Photo ${otherPhotoId}, on a kit an operator cannot open`,
+    }),
+  ).toHaveAttribute(
     "src",
     `/safety/review-photo/${otherPhotoKey}`,
   );

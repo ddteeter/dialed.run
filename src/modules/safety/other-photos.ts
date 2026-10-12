@@ -25,6 +25,7 @@ import {
   moderationActions,
   outfitEntries,
 } from "../../db/schema-core";
+import { publiclyVisibleEntry } from "./visibility";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -38,13 +39,21 @@ export const OTHER_PHOTOS_LIMIT = 12;
 
 /**
  * One of the runner's other photos: its id, which the takedown form under
- * Review takes; its kit, which Review opens; and its key, which
- * `/safety/review-photo/` serves to an operator.
+ * Review takes; its kit; and its key, which `/safety/review-photo/` serves
+ * to an operator.
  */
 export interface OtherPhoto {
   readonly id: string;
   readonly entryId: string;
   readonly photoKey: string;
+  /**
+   * Whether the kit's page opens for an operator (review S4). The page is
+   * `/feed/entry/$entryId`, which an operator reaches the same way a runner
+   * does, so a private kit or one hidden pending review sends them away. Read
+   * from safety's one visibility rule, without a viewer: an operator the
+   * runner blocked is the one case it misses, and that link bounces.
+   */
+  readonly canOpen: boolean;
 }
 
 export interface OtherPhotosSubject {
@@ -92,6 +101,7 @@ export function otherPhotosQuery(db: Db, subject: OtherPhotosSubject) {
       id: entryPhotos.id,
       entryId: entryPhotos.entryId,
       photoKey: entryPhotos.photoKey,
+      canOpen: sql<boolean>`${publiclyVisibleEntry()}`.mapWith(Boolean),
     })
     .from(outfitEntries)
     .innerJoin(entryPhotos, eq(entryPhotos.entryId, outfitEntries.id))

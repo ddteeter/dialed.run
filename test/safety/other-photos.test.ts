@@ -92,17 +92,45 @@ describe("otherPhotosOf", () => {
         id: first,
         entryId: newer,
         photoKey: `entries/x/${newer}/${first}.jpg`,
+        canOpen: true,
       },
       {
         id: second,
         entryId: newer,
         photoKey: `entries/x/${newer}/${second}.jpg`,
+        canOpen: true,
       },
       {
         id: sameKit,
         entryId: older,
         photoKey: `entries/x/${older}/${sameKit}.jpg`,
+        canOpen: true,
       },
+    ]);
+  });
+
+  it("says which kits an operator can open: shared and not hidden (review S4)", async () => {
+    const runner = await makeUser();
+    const reported = await photo(await kit(runner, NOW));
+    const shared = await photo(await kit(runner, NOW - 1));
+    const privately = await photo(await kit(runner, NOW - 2, "private"));
+    const hiddenKit = await kit(runner, NOW - 3);
+    const hidden = await photo(hiddenKit);
+    await core()
+      .update(outfitEntries)
+      .set({ moderationStatus: "hidden_pending_review" })
+      .where(eq(outfitEntries.id, hiddenKit));
+
+    const found = await otherPhotosOf(core(), [
+      { subjectType: "photo", subjectId: reported },
+    ]);
+
+    expect(
+      found.get(`photo:${reported}`)?.map((row) => [row.id, row.canOpen]),
+    ).toStrictEqual([
+      [shared, true],
+      [privately, false],
+      [hidden, false],
     ]);
   });
 

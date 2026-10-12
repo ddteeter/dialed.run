@@ -9,11 +9,13 @@ import type { OtherPhoto } from "../other-photos";
  * (D-117, R-145 c): the reasonable effort on copies the TAKE IT DOWN Act
  * asks for, made by a person looking, since nothing hashes photos.
  *
- * **Undesigned** (design deltas item 64): existing primitives and bracket
+ * **Undesigned** (design deltas item 63): existing primitives and bracket
  * text only. Each photo is served from `/safety/review-photo/`, as the
- * row's own are, because a copy may be hidden too; each opens its kit,
- * where the operator can see it in place; and each carries its id, which
- * the takedown form under Review takes.
+ * row's own are, because a copy may be hidden too, and each carries its
+ * id, which the takedown form under Review takes. A photo whose kit's page
+ * an operator can open links to it; a private kit, or one hidden pending
+ * review, has no page an operator can open yet (register R-151), so its
+ * photo is shown without a link.
  *
  * Nothing renders for a row that lists none (`undefined`): a link that is
  * not ours names no runner. An empty list says so in words, because "this
@@ -38,17 +40,7 @@ export function OtherPhotos({
         <ul className="m-0 flex list-none flex-wrap gap-3 p-0">
           {photos.map((photo) => (
             <li key={photo.id} className="flex flex-col gap-1">
-              <Link
-                to="/feed/entry/$entryId"
-                params={{ entryId: photo.entryId }}
-                className="target self-start"
-              >
-                <img
-                  src={`/safety/review-photo/${photo.photoKey}`}
-                  alt="Their other photo: open its kit"
-                  className="h-32 w-auto border border-hairline"
-                />
-              </Link>
+              <Thumbnail photo={photo} />
               <span className="text-quiet">
                 <Mono step="xs">{photo.id}</Mono>
               </span>
@@ -57,5 +49,35 @@ export function OtherPhotos({
         </ul>
       )}
     </div>
+  );
+}
+
+/**
+ * One photo: a link to its kit when the operator can open it, the image
+ * alone when not. The alt names the photo by its id, so a list of them is
+ * not the same name read over and over.
+ */
+function Thumbnail({ photo }: Readonly<{ photo: OtherPhoto }>): JSX.Element {
+  const image = (
+    <img
+      src={`/safety/review-photo/${photo.photoKey}`}
+      alt={
+        photo.canOpen
+          ? `Photo ${photo.id}: open its kit`
+          : `Photo ${photo.id}, on a kit an operator cannot open`
+      }
+      className="h-32 w-auto border border-hairline"
+    />
+  );
+  return photo.canOpen ? (
+    <Link
+      to="/feed/entry/$entryId"
+      params={{ entryId: photo.entryId }}
+      className="target self-start"
+    >
+      {image}
+    </Link>
+  ) : (
+    image
   );
 }

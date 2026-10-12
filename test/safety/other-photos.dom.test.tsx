@@ -15,9 +15,11 @@ import { renderWithRouter } from "../modules/run-fixtures";
  * takedown form takes.
  */
 const KIT = "01JKIT00000000000000000001";
+const PHOTO_1 = "01JPHOTO000000000000000001";
+const PHOTO_2 = "01JPHOTO000000000000000002";
 const PHOTOS: readonly OtherPhoto[] = [
-  { id: "01JPHOTO000000000000000001", entryId: KIT, photoKey: "entries/u/k/1" },
-  { id: "01JPHOTO000000000000000002", entryId: KIT, photoKey: "entries/u/k/2" },
+  { id: PHOTO_1, entryId: KIT, photoKey: "entries/u/k/1", canOpen: true },
+  { id: PHOTO_2, entryId: KIT, photoKey: "entries/u/k/2", canOpen: true },
 ];
 
 const part = (name: string) =>
@@ -29,13 +31,19 @@ describe("OtherPhotos", () => {
 
     const block = part("other-photos");
     expect(block).toHaveTextContent(/^Their other photos · 2/u);
-    const links = within(block ?? document.body).getAllByRole("link", {
-      name: "Their other photo: open its kit",
-    });
+    // Each named by its id, so a screen reader does not hear one name twice.
+    const links = within(block ?? document.body).getAllByRole("link");
     expect(links.map((link) => link.getAttribute("href"))).toStrictEqual([
       `/feed/entry/${KIT}`,
       `/feed/entry/${KIT}`,
     ]);
+    expect(links.map((link) => link.textContent)).toStrictEqual(["", ""]);
+    expect(
+      screen.getByRole("link", { name: `Photo ${PHOTO_1}: open its kit` }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: `Photo ${PHOTO_2}: open its kit` }),
+    ).toBeInTheDocument();
     expect(links[0]).toHaveClass("target");
     expect(
       within(block ?? document.body)
@@ -45,8 +53,30 @@ describe("OtherPhotos", () => {
       "/safety/review-photo/entries/u/k/1",
       "/safety/review-photo/entries/u/k/2",
     ]);
-    const id = screen.getByText("01JPHOTO000000000000000001");
+    const id = screen.getByText(PHOTO_1);
     expect(id).toHaveClass("font-mono");
+  });
+
+  it("shows a kit an operator cannot open as its image and id, with no link (review S4)", async () => {
+    await renderWithRouter(
+      <OtherPhotos
+        photos={[
+          {
+            id: PHOTO_1,
+            entryId: KIT,
+            photoKey: "entries/u/k/1",
+            canOpen: false,
+          },
+        ]}
+      />,
+    );
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(
+      screen.getByRole("img", {
+        name: `Photo ${PHOTO_1}, on a kit an operator cannot open`,
+      }),
+    ).toHaveAttribute("src", "/safety/review-photo/entries/u/k/1");
+    expect(screen.getByText(PHOTO_1)).toHaveClass("font-mono");
   });
 
   it("says when the runner has posted nothing else", async () => {
