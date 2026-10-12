@@ -357,7 +357,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await scene(page, "The bell counts a month-old run still owed a verdict");
     await expect(
       page
-        .getByRole("link", { name: /^Notifications, (\d+|9\+) new$/u })
+        .getByRole("link", { name: /^Notifications, (\d+|more than 9) new$/u })
         .first(),
     ).toBeVisible();
 

@@ -2,7 +2,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 
 import { viewerUnitsQuery } from "../../modules/feed/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
-import { unreadNotificationCountFn } from "../../modules/notifications/functions";
+import { bellStateFn } from "../../modules/notifications/functions";
 import { UploadForm } from "../../modules/runs/components/UploadForm";
 import {
   getImportOutcomeFn,
@@ -21,16 +21,16 @@ export const Route = createFileRoute("/runs/new")({
   staticData: { savedPage: "Log a run" },
   loader: async () => ({
     units: await viewerUnitsQuery(),
-    unreadCount: await unreadNotificationCountFn(),
+    bell: await bellStateFn(),
   }),
   component: NewRunPage,
 });
 
 function NewRunPage() {
-  const { units, unreadCount } = Route.useLoaderData();
+  const { units, bell } = Route.useLoaderData();
 
   return (
-    <BelledLayout unreadCount={unreadCount}>
+    <BelledLayout {...bell}>
       <AddRunShell>
         <UploadForm
           upload={startFileImport}
