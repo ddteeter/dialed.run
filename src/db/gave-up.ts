@@ -1,4 +1,5 @@
-import { and, eq, gte, lt, sql } from "drizzle-orm";
+import { and, eq, lt, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type { ZodType } from "zod";
 
@@ -82,9 +83,14 @@ export function gaveUpClear(
   kind: GaveUpKind,
   subjectId: string,
 ) {
-  return db
-    .delete(gaveUp)
-    .where(and(eq(gaveUp.kind, kind), eq(gaveUp.subjectId, subjectId)));
+  return clearOfKind(db, kind, eq(gaveUp.subjectId, subjectId));
+}
+
+/**
+The delete every clear below is: a kind's rows that `which` picks.
+*/
+function clearOfKind(db: DrizzleD1Database, kind: GaveUpKind, which: SQL) {
+  return db.delete(gaveUp).where(and(eq(gaveUp.kind, kind), which));
 }
 
 /**
@@ -111,15 +117,23 @@ export function gaveUpClearPrefix(
     throw new RangeError("an empty prefix would clear every row of the kind");
   }
   const after = prefix.slice(0, -1) + String.fromCodePoint(last + 1);
-  return db
-    .delete(gaveUp)
-    .where(
-      and(
-        eq(gaveUp.kind, kind),
-        gte(gaveUp.subjectId, prefix),
-        lt(gaveUp.subjectId, after),
-      ),
-    );
+  const startsWith = sql`${gaveUp.subjectId} >= ${prefix} AND ${gaveUp.subjectId} < ${after}`;
+  return clearOfKind(db, kind, startsWith);
+}
+
+/**
+ * Forget every job of a kind whose last failure is older than `cutoff`
+ * (epoch seconds): for a kind whose subject holds something with a shelf
+ * life (a reminder's subject names a Strava activity, which Strava's
+ * API Policy §6.2 gives seven days). One statement, for the caller's
+ * batch.
+ */
+export function gaveUpClearBefore(
+  db: DrizzleD1Database,
+  kind: GaveUpKind,
+  cutoff: number,
+) {
+  return clearOfKind(db, kind, lt(gaveUp.lastFailedAt, cutoff));
 }
 
 /**
