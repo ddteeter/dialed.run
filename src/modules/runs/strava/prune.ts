@@ -22,7 +22,11 @@
 import { and, eq, isNotNull, lt } from "drizzle-orm";
 
 import { gaveUpClearBefore } from "../../../db/gave-up";
-import { notifications, processedWebhookEvents } from "../../../db/schema-core";
+import {
+  notifications,
+  processedWebhookEvents,
+  reminderEmailDays,
+} from "../../../db/schema-core";
 import { nowSeconds } from "../../../lib/now";
 import { orSqlNull } from "../../../lib/sql/sql-null";
 import type { CoreDb } from "../core-db";
@@ -36,7 +40,7 @@ const SEVEN_DAYS_S = 7 * 24 * 60 * 60;
  * A reminder row itself stays: it is the runner's own notification, its
  * body carries no Strava data, and its time is when the run landed. Only
  * the subject goes. So does a dead-lettered reminder's Gave up row
- * (R-142's follow-up). The statements are independent — none records or
+ * (R-142's follow-up), and the record of which days a reminder email went. The statements are independent — none records or
  * authorises another — but they are one policy, so they are one batch,
  * and a failure leaves all of them for tomorrow rather than some.
  *
@@ -63,5 +67,8 @@ export async function pruneStravaIds(db: CoreDb): Promise<void> {
     // A dead-lettered reminder's Gave up row names the activity in its
     // subject, so it goes once its last failure is a week old.
     gaveUpClearBefore(db, "reminder", cutoff),
+    // The days a reminder email went (design 140): nothing reads past
+    // yesterday, so a week-old one is only a record of a runner's runs.
+    db.delete(reminderEmailDays).where(lt(reminderEmailDays.sentAt, cutoff)),
   ]);
 }

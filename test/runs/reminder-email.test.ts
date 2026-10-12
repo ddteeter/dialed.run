@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   notifications,
   outbox,
+  reminderEmailDays,
   runs,
   stravaConnections,
 } from "../../src/db/schema-core";
@@ -34,6 +35,7 @@ import {
   owedReminderEmail,
   runnerZone,
   type EarlierReminder,
+  type EmailedDay,
 } from "../../src/modules/runs/strava/reminder-email";
 import { pairWithReminder } from "../../src/modules/runs/strava/reminder-match";
 import { fakeMail, seedUser } from "../email/helpers";
@@ -70,16 +72,30 @@ function reminder(
   return { createdAt, read: false, ...overrides };
 }
 
-function runsCounted(earlier: readonly EarlierReminder[]): number | undefined {
-  const owed = owedReminderEmail(earlier, landing());
-  if (owed?.message.kind !== "email") return undefined;
-  const { template } = owed.message.payload.email;
+const NONE_SENT: readonly EmailedDay[] = [];
+
+function owed(
+  earlier: readonly EarlierReminder[],
+  emailed: readonly EmailedDay[] = NONE_SENT,
+  at = LANDED,
+) {
+  return owedReminderEmail({ earlier, emailed }, landing({ at }));
+}
+
+function runsCounted(
+  earlier: readonly EarlierReminder[],
+  emailed: readonly EmailedDay[] = NONE_SENT,
+  at = LANDED,
+): number | undefined {
+  const debt = owed(earlier, emailed, at);
+  if (debt?.message.kind !== "email") return undefined;
+  const { template } = debt.message.payload.email;
   return template.kind === "run_reminder" ? template.runs : undefined;
 }
 
 describe("owedReminderEmail: whether a landing owes the email", () => {
-  it("owes the day's first: held 20 minutes, keyed by the runner's day, repeating its bell row", () => {
-    expect(owedReminderEmail([], landing())).toStrictEqual({
+  it("owes it while today's has not gone: held 20 minutes, keyed by the runner's day, naming its bell row", () => {
+    expect(owed([])).toStrictEqual({
       message: {
         kind: "email",
         payload: {
@@ -88,7 +104,7 @@ describe("owedReminderEmail: whether a landing owes the email", () => {
             to: { userId: "u1" },
             template: { kind: "run_reminder", landedAt: "9:00 AM", runs: 1 },
           },
-          unlessRead: "n1",
+          reminder: { notificationId: "n1", userId: "u1", day: "12 Oct 2026" },
         },
       },
       notBefore: LANDED + 20 * 60,
@@ -96,48 +112,68 @@ describe("owedReminderEmail: whether a landing owes the email", () => {
     expect(REMINDER_EMAIL_DELAY_S).toBe(1200);
   });
 
-  it("writes the clock in UTC when the runner's zone is unknown", () => {
-    const owed = owedReminderEmail([], landing({ zone: undefined }));
-    expect(owed?.message).toMatchObject({
-      payload: { email: { template: { landedAt: "2:00 PM" } } },
+  it("writes the clock and the day in UTC when the runner's zone is unknown", () => {
+    const debt = owedReminderEmail(
+      { earlier: [], emailed: [] },
+      landing({ zone: undefined }),
+    );
+    expect(debt?.message).toMatchObject({
+      payload: {
+        email: { template: { landedAt: "2:00 PM" } },
+        reminder: { day: "12 Oct 2026" },
+      },
     });
   });
 
-  it("owes nothing when the runner already had a reminder today, read or not", () => {
+  it("owes nothing once today's email went", () => {
     expect(
-      owedReminderEmail([reminder(LANDED - 3 * HOUR)], landing()),
+      owed([], [{ day: "12 Oct 2026", sentAt: LANDED - HOUR }]),
     ).toBeUndefined();
+  });
+
+  it("still owes it after an earlier reminder today whose email never went", () => {
+    // The first was skipped — its run's file arrived — so the day is open.
+    expect(owed([reminder(LANDED - 3 * HOUR, { read: true })])).toBeDefined();
+  });
+
+  it("reckons the day in the runner's zone, not UTC's", () => {
+    // 03:00 UTC on the 12th is 10 PM on the 11th in Chicago: that email
+    // was yesterday's there, and today's in UTC.
+    const lastNight = [{ day: "11 Oct 2026", sentAt: LANDED - 11 * HOUR }];
+    expect(owed([], lastNight)).toBeDefined();
     expect(
       owedReminderEmail(
-        [reminder(LANDED - 3 * HOUR, { read: true })],
-        landing(),
+        { earlier: [], emailed: [{ day: "12 Oct 2026", sentAt: 1 }] },
+        landing({ zone: undefined }),
       ),
     ).toBeUndefined();
   });
 
-  it("reckons the day in the runner's zone, not UTC's", () => {
-    // 03:00 UTC on the 12th is 10 PM on the 11th in Chicago.
-    const lastNight = [reminder(LANDED - 11 * HOUR)];
-    expect(owedReminderEmail(lastNight, landing())).toBeDefined();
+  it("counts yesterday's unread reminders after yesterday's email went", () => {
+    const yesterday = LANDED - 24 * HOUR;
+    const sentYesterday = [{ day: "11 Oct 2026", sentAt: yesterday + 1 }];
+    // Only the one the email covered.
+    expect(runsCounted([reminder(yesterday)], sentYesterday)).toBe(1);
+    // A later one it did not cover — unless it was read.
     expect(
-      owedReminderEmail(lastNight, landing({ zone: undefined })),
-    ).toBeUndefined();
+      runsCounted(
+        [
+          reminder(yesterday),
+          reminder(yesterday + HOUR),
+          reminder(yesterday + 2 * HOUR, { read: true }),
+          reminder(yesterday + 3 * HOUR),
+        ],
+        sentYesterday,
+      ),
+    ).toBe(3);
   });
 
-  it("counts yesterday's later reminders still unread, never yesterday's first", () => {
+  it("counts every unread reminder of yesterday's when no email went yesterday", () => {
     const yesterday = LANDED - 24 * HOUR;
-    expect(runsCounted([reminder(yesterday)])).toBe(1);
-    expect(runsCounted([reminder(yesterday), reminder(yesterday + HOUR)])).toBe(
-      2,
-    );
+    expect(runsCounted([reminder(yesterday)])).toBe(2);
     expect(
-      runsCounted([
-        reminder(yesterday, { read: true }),
-        reminder(yesterday + HOUR),
-        reminder(yesterday + 2 * HOUR, { read: true }),
-        reminder(yesterday + 3 * HOUR),
-      ]),
-    ).toBe(3);
+      runsCounted([reminder(yesterday, { read: true }), reminder(yesterday)]),
+    ).toBe(2);
   });
 
   it("finds yesterday across a 25-hour day", () => {
@@ -145,15 +181,9 @@ describe("owedReminderEmail: whether a landing owes the email", () => {
     // on the 2nd) yesterday is Oct 31, which began 48.5 hours earlier.
     const lateOnFall = Math.floor(Date.UTC(2026, 10, 2, 5, 30) / 1000);
     const oct31 = Math.floor(Date.UTC(2026, 9, 31, 5, 15) / 1000);
-    const owed = owedReminderEmail(
-      [reminder(oct31), reminder(oct31 + HOUR)],
-      landing({ at: lateOnFall }),
-    );
-    expect(owed?.message).toMatchObject({
-      payload: {
-        dedupeKey: "run_reminder:u1:1 Nov 2026",
-        email: { template: { runs: 2 } },
-      },
+    expect(runsCounted([reminder(oct31)], NONE_SENT, lateOnFall)).toBe(2);
+    expect(owed([], NONE_SENT, lateOnFall)?.message).toMatchObject({
+      payload: { dedupeKey: "run_reminder:u1:1 Nov 2026" },
     });
   });
 
@@ -162,20 +192,13 @@ describe("owedReminderEmail: whether a landing owes the email", () => {
     // UTC) yesterday is the 8th; 24 hours back is the 7th.
     const afterSpring = Math.floor(Date.UTC(2026, 2, 9, 5, 30) / 1000);
     const mar8 = Math.floor(Date.UTC(2026, 2, 8, 15) / 1000);
-    const owed = owedReminderEmail(
-      [reminder(mar8), reminder(mar8 + HOUR)],
-      landing({ at: afterSpring }),
-    );
-    expect(owed?.message).toMatchObject({
-      payload: { email: { template: { runs: 2 } } },
-    });
+    expect(runsCounted([reminder(mar8)], NONE_SENT, afterSpring)).toBe(2);
+    const mar8Sent = [{ day: "8 Mar 2026", sentAt: mar8 + 1 }];
+    expect(runsCounted([reminder(mar8)], mar8Sent, afterSpring)).toBe(1);
   });
 
   it("does not count a reminder from two days back", () => {
-    const twoDaysBack = LANDED - 48 * HOUR;
-    expect(
-      runsCounted([reminder(twoDaysBack), reminder(twoDaysBack + HOUR)]),
-    ).toBe(1);
+    expect(runsCounted([reminder(LANDED - 48 * HOUR)])).toBe(1);
   });
 });
 
@@ -264,7 +287,11 @@ describe("the consumer owes it in the bell row's batch", () => {
               runs: 1,
             },
           },
-          unlessRead: bell?.id,
+          reminder: {
+            notificationId: bell?.id,
+            userId,
+            day: calendarDay(landed),
+          },
         },
       },
     });
@@ -279,10 +306,13 @@ describe("the consumer owes it in the bell row's batch", () => {
     expect(consumer.captureException).not.toHaveBeenCalled();
   });
 
-  it("reads yesterday's reminders from the bell rows: the next day counts both", async () => {
+  it("reads yesterday's reminders and email from the database: the next day counts both", async () => {
     const { userId, athleteId } = await connectedRunner();
     const yesterday = nowSeconds() - 24 * HOUR;
-    // Yesterday's first owed yesterday's email; its second did not.
+    // Yesterday's email went just after the first; the second came later.
+    await core()
+      .insert(reminderEmailDays)
+      .values({ userId, day: calendarDay(yesterday), sentAt: yesterday });
     await core()
       .insert(notifications)
       .values(
@@ -302,14 +332,70 @@ describe("the consumer owes it in the bell row's batch", () => {
     expect(row?.payload).toContain('"runs":2');
   });
 
-  it("owes no second email for a second run the same day", async () => {
-    const { userId, athleteId } = await connectedRunner();
+  it("sends one email for two runs the same day, and owes none after it went", async () => {
+    const { userId, athleteId, email } = await connectedRunner();
     await deliver(reminderJob(athleteId));
     const [first] = await owedFor(userId);
     await deliver(reminderJob(athleteId));
 
+    // One row, saying what the first owed: the second took it over.
     expect(await reminderRows(userId)).toHaveLength(2);
-    expect(await owedFor(userId)).toStrictEqual([first]);
+    const [row, ...rest] = await owedFor(userId);
+    expect(rest).toStrictEqual([]);
+    expect(row?.payload).toBe(first?.payload);
+
+    const mail = fakeMail();
+    await drainLater(mail);
+    expect(sentTo(mail, email)).toHaveLength(1);
+
+    // Today's went: a third run owes nothing.
+    await deliver(reminderJob(athleteId));
+    expect(await owedFor(userId)).toStrictEqual([]);
+  });
+
+  it("emails a later run the same day when the first email was skipped by its upload", async () => {
+    const { userId, athleteId, email } = await connectedRunner();
+    await deliver(reminderJob(athleteId));
+    // The first run's file arrives: its reminder is read.
+    await core()
+      .update(notifications)
+      .set({ read: true })
+      .where(eq(notifications.userId, userId));
+    const mail = fakeMail();
+    await drainLater(mail);
+    expect(sentTo(mail, email)).toStrictEqual([]);
+
+    await deliver(reminderJob(athleteId));
+    await drainLater(mail);
+    expect(sentTo(mail, email)).toHaveLength(1);
+  });
+
+  it("sends one email for two runs landing at once", async () => {
+    const { athleteId, email } = await connectedRunner();
+    await Promise.all([
+      deliver(reminderJob(athleteId)),
+      deliver(reminderJob(athleteId)),
+    ]);
+    const mail = fakeMail();
+    await drainLater(mail);
+    expect(sentTo(mail, email)).toHaveLength(1);
+  });
+
+  it("sends nothing for a second debt of a day whose email already went", async () => {
+    // A debt that raced past the owe-time check — written before the day
+    // was marked — is stopped by the same check when it is due.
+    const { userId, athleteId, email } = await connectedRunner();
+    await deliver(reminderJob(athleteId));
+    const [row] = await owedFor(userId);
+    const read = readOutboxRow(row?.kind ?? "", row?.payload ?? "");
+    const mail = fakeMail();
+    await drainLater(mail);
+    expect(sentTo(mail, email)).toHaveLength(1);
+    if (!read.ok) throw new Error("the owed row did not parse");
+    await core().batch([outboxInsert(core(), oweOutbox(read.message))]);
+    await drainLater(mail);
+    expect(sentTo(mail, email)).toHaveLength(1);
+    expect(await owedFor(userId)).toStrictEqual([]);
   });
 
   it("owes once for a redelivered message, before the send and after it", async () => {
@@ -507,7 +593,10 @@ describe("at send time", () => {
     const plain = `run_reminder:${userId}:plain`;
     const owedGone = emailDebt(
       { to: { userId }, template },
-      { dedupeKey: gone, unlessRead: newUlid() },
+      {
+        dedupeKey: gone,
+        reminder: { notificationId: newUlid(), userId, day: "gone" },
+      },
     );
     const owedPlain = emailDebt(
       { to: { userId }, template },

@@ -38,7 +38,7 @@ import {
 } from "./queue-messages";
 import type { StravaApi } from "./strava/api";
 import { deauthorizeAthlete, type Owe } from "./strava/deauthorize";
-import { earlierReminders, owedReminderEmail } from "./strava/reminder-email";
+import { owedReminderEmail, reminderHistory } from "./strava/reminder-email";
 import {
   pairRunWith,
   pairWithReminder,
@@ -368,22 +368,20 @@ async function processReminderJob(
   // 8c). Whether it is owed at all is read first: a batch cannot branch.
   const landedAt = nowSeconds();
   const notificationId = newUlid();
-  const [earlier, zone] = await Promise.all([
-    earlierReminders(deps.db, connected.userId, landedAt),
-    runnerZoneOf(deps, connected.userId),
-  ]);
+  const zone = await runnerZoneOf(deps, connected.userId);
   // A failed lookup owes no email for this landing. Reckoned in UTC
   // instead, the day could differ from the runner's own — and the same day
   // reckoned both ways is two keys, so two emails.
   const email =
     zone === LOOKUP_FAILED
       ? undefined
-      : owedReminderEmail(earlier, {
-          userId: connected.userId,
-          notificationId,
-          at: landedAt,
-          zone,
-        });
+      : owedReminderEmail(
+          await reminderHistory(deps.db, connected.userId, {
+            at: landedAt,
+            zone,
+          }),
+          { userId: connected.userId, notificationId, at: landedAt, zone },
+        );
   await deps.db.batch([
     claim,
     // D-33: zero activity data in the body — no distance, no time, no

@@ -1,5 +1,5 @@
 import type { EmailPayload } from "../../lib/contracts/email";
-import type { OutboxMessage } from "../../lib/sql/outbox";
+import type { OutboxMessage, ReminderEmailRef } from "../../lib/sql/outbox";
 
 /**
  * An email owed, as an outbox message (law 8c): pass it to ops'
@@ -12,21 +12,19 @@ import type { OutboxMessage } from "../../lib/sql/outbox";
  * say). It takes the row over — its id and when it is due — and the
  * first debt's payload stays.
  * To hold it back, pass `notBefore` to `oweOutbox` alongside it.
- * `unlessRead` names the bell row it repeats: read by send time, and the
- * email is not sent.
+ * `reminder` marks a Strava reminder's email (design 140), checked and
+ * marked when it is sent.
  */
 export function emailDebt(
   payload: EmailPayload,
-  options: Readonly<{ dedupeKey: string; unlessRead?: string }>,
+  options: Readonly<{ dedupeKey: string; reminder?: ReminderEmailRef }>,
 ): OutboxMessage {
   return {
     kind: "email",
     payload: {
       dedupeKey: options.dedupeKey,
       email: payload,
-      ...(options.unlessRead !== undefined && {
-        unlessRead: options.unlessRead,
-      }),
+      ...(options.reminder !== undefined && { reminder: options.reminder }),
     },
   };
 }

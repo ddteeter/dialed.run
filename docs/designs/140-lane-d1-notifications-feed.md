@@ -1,7 +1,7 @@
 # Design: 140 lane D1 · notifications and feed
 
 > Before-public plan, lane D1 (tasks 127 and 129): STR-9, FEED-3, FEED-9,
-> STR-13. No schema change.
+> STR-13. One additive migration (STR-9, owner-approved).
 
 ## Problem
 
@@ -17,31 +17,42 @@ pre-round-25 words. Two screens format dates with private `Intl` calls.
 third statement: an `email` outbox row (`emailDebt` → `owe`), held
 `notBefore` = landed + 20 min, keyed `run_reminder:{userId}:{local day}`.
 
-- **One a day.** Only the runner's _first_ reminder of their local day owes
-  the email; a later one that day owes nothing. Decided by a read before the
-  batch (the batch cannot branch): any `strava_reminder` row of theirs
-  already today, or this event's own row (a redelivery), means no debt. The
-  per-day key alone cannot say "one a day", because the drain deletes a row
-  once sent and a later insert with the same key would be a fresh row; the
-  key is what collapses two _concurrent_ first reminders into one row.
-- **The next day counts both.** The first reminder of a day counts itself
-  plus yesterday's later reminders still unread — the runs yesterday's
-  email did not cover. That is the only way `runs` exceeds 1, which is why
-  the drawn body for it says "yesterday and today".
-- **Skipped by send time.** The outbox `email` payload gains an optional
-  `unlessRead` (law 9: additive) naming the bell row. `emailHandler` skips
-  the send when that row is read or gone. An upload pairs and reads the
-  reminder (`pairWithReminder`), so a matched upload skips the email; so
-  does a runner who already cleared it in the app — the round-26 "or the
-  push was opened" rule, with the bell standing in for the push.
+- **One a day is a record of what was sent** (owner, 2026-10-12): table
+  `reminder_email_days (user_id, day, sent_at)`, UNIQUE on
+  `(user_id, day)`, migration `add_reminder_email_days` (additive; no
+  rebuild). A table rather than a column: the fact is per runner per day,
+  and no existing row has that grain — a column on `notifications` would
+  mark one reminder, not the day, and one on `user_profiles` could hold
+  only the last day. A reminder owes the email unless today's row exists;
+  the email goes only if it still does not, and the row is written in the
+  batch that marks the outbox row sent. So a first email skipped by an
+  upload leaves the day open, a second debt for a sent day sends nothing,
+  and a re-firing drain finds the row. The per-day outbox key still folds
+  two reminders landing at once into one row (a second debt takes the row
+  over; its payload stays).
+- **Redelivery** stops at the event's claim (`processed_webhook_events`),
+  read before any branch: the claim always lands with the bell row or the
+  pairing, so a redelivery after a pairing cannot write a stale reminder.
+- **The next day counts both.** Today's email counts itself plus
+  yesterday's reminders still unread that came after yesterday's email went
+  (all of yesterday's, if none went). "Yesterday" is the calendar day
+  before today in the runner's zone (`previousCalendarDay`), so a 23- or
+  25-hour day does not move it.
+- **Skipped by send time** when the bell row is read (a matched upload
+  reads it), the runner has disconnected Strava, or the day's email went.
+  **Mark all read also skips it** — the owner kept that (2026-10-12): a
+  reminder the runner cleared in the app needs no email.
+- **Pruned** with the Strava ids: the daily prune deletes rows older than a
+  week (`reminder_email_days_sent`); nothing reads past yesterday.
 - **The preference** is the sender's own check (`optionalMail`), at send
   time, as is the confirmed-address rule.
 - **The runner's day and clock.** Nothing stores a runner's zone, so the
   consumer takes `runnerZone(userId)`: the zone of their latest run with an
-  observed zone (weather DB), UTC when none, and UTC — reported — if the
-  lookup fails (law 5: the bell row must still land).
-- **No activity data** (D-33): the payload holds a clock label, a count and
-  our own notification id. No Strava id rides the outbox.
+  observed zone (weather DB), UTC when none. A failed lookup is reported
+  and owes no email for that landing (the bell row still lands, law 5):
+  reckoned in UTC instead, one day could be keyed two ways.
+- **No activity data** (D-33): the payload holds a clock label, a count,
+  our own ids and the runner's day. No Strava id rides the outbox.
 
 **FEED-3.** `bellStateFn` moves to the terms-exempt gate (it is a read of
 the runner's own counts, as `unreadNotificationCountFn` already was), every
@@ -67,8 +78,9 @@ Recorded at the round-25 entry in `design-deltas.md`; open question 4.
 
 ## Contract touches
 
-- Schema changes needed: **none**. Outbox `email` payload: optional
-  `unlessRead` (wire format, additive).
+- Schema: **one additive migration**, `add_reminder_email_days` (owner
+  approved 2026-10-12). Outbox `email` payload: optional `reminder` (wire
+  format, additive).
 - New route files: none. New bindings/queues/crons: **none**.
 - Screens: S2a (bell); Today (D5); C's retired tag. E1/N: not built.
 
@@ -87,8 +99,8 @@ Recorded at the round-25 entry in `design-deltas.md`; open question 4.
 
 1. **Runner's zone** (proceeding): latest observed run's zone, else UTC.
    The owner may prefer storing a zone — that would be a column.
-2. **Cleared in the app skips the email** (proceeding): a read reminder,
-   by upload or by Mark all read, sends nothing.
+2. **Cleared in the app skips the email**: decided (owner, 2026-10-12),
+   kept as built.
 3. A held reminder the daily digest's drain happens to pick up is counted
    as an "owed" anomaly line, like any email row. Rare; left as is.
 4. **FEED-9 (asking):** should the compact line go on E1 at all (where,
