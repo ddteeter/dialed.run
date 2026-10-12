@@ -1196,6 +1196,47 @@ describe("forceRename (round 27 #16), through account's rules", () => {
     expect(locked?.lockedAt).toBeTypeOf("number");
   });
 
+  it("lets a rename that lost a race write nothing, and answer with the winner's handle (R-121)", async () => {
+    const runner = await makeUser({ username: "first" });
+    await claimUsername(core(), runner, "rudename", CLEAR);
+    // Both moderators read "rudename". The other's rename lands between
+    // this one's read and its write.
+    const real = core();
+    const counter = { batches: 0 };
+    const batch: typeof real.batch = async (items) => {
+      counter.batches += 1;
+      if (counter.batches === 2) await rename(runner, "runner_0001");
+      return real.batch(items);
+    };
+    const raced = new Proxy(real, {
+      get(target, property, receiver): unknown {
+        return property === "batch"
+          ? batch
+          : Reflect.get(target, property, receiver);
+      },
+    });
+
+    // This one would have handed back the runner's own old "first".
+    expect(await rename(runner, "first", raced)).toStrictEqual({
+      kind: "renamed",
+      username: "runner_0001",
+    });
+
+    const profile = await profileOf(runner);
+    expect(profile?.username).toBe("runner_0001");
+    const [locked] = await historyOf("rudename");
+    expect(locked).toMatchObject({ userId: runner });
+    expect(locked?.lockedAt).toBeTypeOf("number");
+    expect(await historyOf("rudename")).toHaveLength(1);
+    // The winner's placeholder was not retired, and "first" not taken back.
+    expect(await historyOf("runner_0001")).toStrictEqual([]);
+    const [kept] = await historyOf("first");
+    expect(kept?.userId).toBe(runner);
+    expect(kept?.lockedAt).toBeNull();
+    // One rename happened, so one is recorded.
+    expect(await auditFor(runner)).toHaveLength(1);
+  });
+
   it("locks a handle already in the history rather than failing on it", async () => {
     const runner = await makeUser({ username: "rudename" });
     // A history row for the current handle is not a state a claim leaves,

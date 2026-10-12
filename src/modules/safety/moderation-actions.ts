@@ -7,12 +7,14 @@
  * takedown and the DSA's statement of reasons cannot have, and a record of
  * a removal that did not happen is worse.
  */
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { moderationActions } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
 import { hasRowWhere } from "../../lib/sql/keyed-read";
+import { orSqlNull } from "../../lib/sql/sql-null";
 import { nowSeconds } from "../../lib/now";
 
 type Db = ReturnType<typeof drizzle>;
@@ -50,6 +52,25 @@ export function moderationActionInsert(db: Db, record: ModerationRecord) {
     id: record.id ?? newUlid(),
     createdAt: nowSeconds(),
   });
+}
+
+/**
+ * The row, only where `onlyIf` holds when the batch reaches it — for an
+ * action that may not happen, so that its record does not happen either
+ * (R-121: a force-rename that lost a race to another). Drizzle names every
+ * column, in the table's order, so the select gives each one.
+ */
+export function moderationActionInsertWhere(
+  db: Db,
+  record: ModerationRecord,
+  onlyIf: SQL,
+) {
+  const id = record.id ?? newUlid();
+  return db
+    .insert(moderationActions)
+    .select(
+      sql`SELECT ${id}, ${record.actorId}, ${record.action}, ${record.subjectType}, ${record.subjectId}, ${record.subjectOwnerId}, ${record.reason}, ${orSqlNull(record.preservedKey)}, ${nowSeconds()} WHERE ${onlyIf}`,
+    );
 }
 
 /**
