@@ -390,18 +390,16 @@ function TooFew({
 
 /**
  * A bar's colour in words (round 26 #9: *"Any bar colour also needs a
- * label in words"*, rule 10), in round 27 #25's words: which bar gets
- * which is `barShares`. Pink is every word but Some.
+ * label in words"*, rule 10), in round 35 #54's words: which bar gets
+ * which is `withShares`. Pink is every word but Some.
  */
 const BAR_WORD = {
   all: "All",
-  split: "Split",
   most: "Most",
   some: "Some",
 } as const satisfies Record<BarShare, string>;
 const BAR_FILL = {
   all: "bg-action",
-  split: "bg-action",
   most: "bg-action",
   some: "bg-hairline-2",
 } as const satisfies Record<BarShare, string>;
@@ -443,7 +441,7 @@ function Matched({
 }>) {
   const isWidened = result.windowDays === 14;
   const conditions = matchedConditions(result.band, units);
-  const bars = withShares(result.groups);
+  const bars = withShares(result.groups, result.runners);
   return (
     <div className="flex flex-col">
       <div

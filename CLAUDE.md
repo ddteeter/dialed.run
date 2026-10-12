@@ -453,7 +453,7 @@ wrong: the columns already existed. Check before you defer.
 
 ## Guardrails (the enforcement loop)
 
-This repo runs agentic-guardrails-scaffolding (pinned v0.6.0; CLI bin
+This repo runs agentic-guardrails-scaffolding (pinned v0.7.0; CLI bin
 `guardrails-core` — invoked here via the npm scripts Phase 0 wires up):
 
 - **Stop gate**: when you try to end a turn, the configured stop-gate hook

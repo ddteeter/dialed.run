@@ -129,6 +129,14 @@ function profileRow(data: ExportData): ProfileRow {
 }
 
 /**
+The README's folders: photos always, run files only when the ZIP has one.
+*/
+const PHOTOS_LINE =
+  "photos/ holds your kit photos (photos/entries/) and garment photos (photos/closet/), at the size dialed.run keeps.";
+const RUN_FILES_LINE =
+  "run-files/ holds the GPX, FIT and TCX files you uploaded, as uploaded.";
+
+/**
  * Everything the ZIP holds: the six CSVs and the README as text, and the
  * photos and run files to copy from R2.
  *
@@ -208,7 +216,9 @@ export function exportFiles(
     `Made ${iso(now)}.`,
     "",
     "Times are UTC. Conditions are the reading dialed.run showed for each run: from Visual Crossing, or the band you set yourself.",
-    "photos/ holds your kit photos (photos/entries/) and garment photos (photos/closet/), at the size dialed.run keeps. run-files/ holds the GPX, FIT and TCX files you uploaded, as uploaded.",
+    // Round 35 #57: a run file is deleted once read (D-116), so the ZIP
+    // rarely has one, and the README names `run-files/` only when it does.
+    uploaded.length === 0 ? PHOTOS_LINE : `${PHOTOS_LINE} ${RUN_FILES_LINE}`,
     "",
     readmeSection(profileSheet),
     "",

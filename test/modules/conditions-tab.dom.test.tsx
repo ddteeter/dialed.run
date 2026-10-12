@@ -509,28 +509,29 @@ describe("ConditionsTab: matched", () => {
     expect(screen.getByText("What they wore")).toBeVisible();
   });
 
-  it("says Split on a tied lead and All on a bar alone, both in pink (round 27 #25)", async () => {
-    const tied = {
+  it("reads each bar as a share of the runners: All beside others, a tie as two Mosts, a lone minority as Some (round 35 #54)", async () => {
+    const shares = {
       ...matched,
       groups: [
-        { group: "tops", runners: 3 },
-        { group: "bottoms", runners: 3 },
-        { group: "shoes", runners: 2 },
+        { group: "tops", runners: 6 },
+        { group: "bottoms", runners: 4 },
+        { group: "shoes", runners: 4 },
       ],
     } as const;
     const { unmount } = await renderFeedScreen(
-      tab({ conditionsFor: () => Promise.resolve(tied) }),
+      tab({ conditionsFor: () => Promise.resolve(shares) }),
     );
     const rows = await screen.findAllByRole("listitem");
     expect(rows.map((row) => row.textContent)).toStrictEqual([
-      "TopsSplit3/6",
-      "BottomsSplit3/6",
-      "ShoesSome2/6",
+      "TopsAll6/6",
+      "BottomsMost4/6",
+      "ShoesMost4/6",
     ]);
     const fills = rows.map((row) => row.querySelector(":scope > span > span"));
     expect(fills[0]).toHaveClass("bg-action");
     expect(fills[1]).toHaveClass("bg-action");
-    expect(fills[2]).toHaveClass("bg-hairline-2");
+    expect(fills[2]).toHaveClass("bg-action");
+    expect(screen.queryByText("Split")).toBeNull();
     unmount();
 
     await renderFeedScreen(
@@ -543,9 +544,9 @@ describe("ConditionsTab: matched", () => {
       }),
     );
     const [alone] = await screen.findAllByRole("listitem");
-    expect(alone).toHaveTextContent("TopsAll2/6");
+    expect(alone).toHaveTextContent("TopsSome2/6");
     expect(alone?.querySelector(":scope > span > span")).toHaveClass(
-      "bg-action",
+      "bg-hairline-2",
     );
   });
 
