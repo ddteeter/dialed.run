@@ -70,6 +70,19 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     // When `username_screen` was last written: the claim, the verdict, or
     // the re-ask's claim, whose lease it times.
     usernameScreenedAt: integer("username_screened_at"),
+    // Settings › Sharing › "Count my runs in anonymous totals" (D-108 D).
+    // On by default: published totals count shared and private runs, and
+    // an opted-out runner leaves them at the next nightly build. The guide
+    // job reads it; `onboarding/aggregate-prefs.ts` is the one writer.
+    countInTotals: integer("count_in_totals", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    // Settings › Region (round 30 data requirement (d)): optional, off by
+    // default, used only to group anonymous totals and never shown on a
+    // profile or entry. ISO 3166-1 alpha-2 (`US`) and ISO 3166-2
+    // (`US-MN`), parsed by `lib/contracts/regions.ts`'s `regionInput`.
+    regionCountry: text("region_country"),
+    regionSubdivision: text("region_subdivision"),
   },
   (t) => [
     // The re-ask's sweep reads only the rows it might claim. Partial, so
