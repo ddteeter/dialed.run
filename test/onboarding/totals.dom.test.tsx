@@ -9,7 +9,6 @@ import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { COUNTRIES } from "../../src/lib/contracts/regions";
 import {
   PRIVATE_COUNTED,
   PRIVATE_ONLY_YOU,
@@ -17,21 +16,15 @@ import {
   PrivateRunLine,
 } from "../../src/modules/onboarding/components/PrivateRunLine";
 import {
-  REGION_HINT,
-  RegionForm,
-} from "../../src/modules/onboarding/components/Settings";
-import {
   TOTALS_LABEL,
   TOTALS_OFF,
   TOTALS_ON,
   TotalsSwitch,
 } from "../../src/modules/onboarding/components/TotalsSwitch";
-import type { CurrentSettings } from "../../src/modules/onboarding/profile";
 
 /**
  * D-108's in-app half: Settings › Sharing's "Count my runs in anonymous
- * totals" (D), A3's private line (E) and Settings › Region (round 30
- * (d)). The copy is round 32's and round 30's, quoted, not paraphrased.
+ * totals" (D), A3's private line (E). The copy is round 32's, quoted, not paraphrased.
  */
 async function renderWithRouter(element: ReactElement) {
   const rootRoute = createRootRoute({ component: () => element });
@@ -241,122 +234,5 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     // opens it again.
     await user.click(screen.getByRole("button", { name: "Change" }));
     expect(screen.getByRole("dialog", { name: "Sharing" })).toBeVisible();
-  });
-});
-
-const NO_REGION: CurrentSettings = {
-  thermalLevel: 0,
-  tempUnit: "f",
-  distanceUnit: "mi",
-  defaultAudience: "runners",
-  countInTotals: true,
-  region: {},
-};
-
-function countryField() {
-  return screen.getByRole("combobox", { name: "Country" });
-}
-
-describe("RegionForm (round 30 (d))", () => {
-  it("starts empty, with the drawn hint and no state field", async () => {
-    await renderWithRouter(
-      <RegionForm
-        current={NO_REGION}
-        saveRegion={vi.fn().mockResolvedValue(undefined)}
-      />,
-    );
-    expect(countryField()).toHaveValue("");
-    expect(
-      screen.queryByRole("combobox", { name: "State or province" }),
-    ).toBeNull();
-    expect(REGION_HINT).toBe(
-      "Used only in anonymous totals, like what runners in your state wear. Never shown to anyone.",
-    );
-    expect(screen.getByText(REGION_HINT)).toBeVisible();
-    // Every country is offered, by name, after the empty choice.
-    expect(within(countryField()).getAllByRole("option")).toHaveLength(
-      COUNTRIES.length + 1,
-    );
-  });
-
-  it("saves a country and its state", async () => {
-    const user = userEvent.setup();
-    const saveRegion = vi.fn().mockResolvedValue(undefined);
-    await renderWithRouter(
-      <RegionForm current={NO_REGION} saveRegion={saveRegion} />,
-    );
-
-    await user.selectOptions(countryField(), "United States");
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "State or province" }),
-      "Minnesota",
-    );
-    await user.click(screen.getByRole("button", { name: "Save" }));
-
-    expect(saveRegion).toHaveBeenCalledWith({
-      data: { country: "US", subdivision: "US-MN" },
-    });
-    await waitFor(() => {
-      expect(screen.getByRole("status")).toHaveTextContent("Region saved.");
-    });
-  });
-
-  it("saves a country with no states alone, and offers no state field for it", async () => {
-    const user = userEvent.setup();
-    const saveRegion = vi.fn().mockResolvedValue(undefined);
-    await renderWithRouter(
-      <RegionForm current={NO_REGION} saveRegion={saveRegion} />,
-    );
-
-    await user.selectOptions(countryField(), "Norway");
-    expect(
-      screen.queryByRole("combobox", { name: "State or province" }),
-    ).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Save" }));
-
-    expect(saveRegion).toHaveBeenCalledWith({
-      data: { country: "NO", subdivision: undefined },
-    });
-  });
-
-  it("shows a set region, drops the state with a new country, and clears both", async () => {
-    const user = userEvent.setup();
-    const saveRegion = vi.fn().mockResolvedValue(undefined);
-    await renderWithRouter(
-      <RegionForm
-        current={{
-          ...NO_REGION,
-          region: { country: "US", subdivision: "US-MN" },
-        }}
-        saveRegion={saveRegion}
-      />,
-    );
-    expect(countryField()).toHaveValue("US");
-    expect(
-      screen.getByRole("combobox", { name: "State or province" }),
-    ).toHaveValue("US-MN");
-
-    await user.selectOptions(countryField(), "Canada");
-    expect(
-      screen.getByRole("combobox", { name: "State or province" }),
-    ).toHaveValue("");
-
-    await user.selectOptions(countryField(), "—");
-    await user.click(screen.getByRole("button", { name: "Save" }));
-    expect(saveRegion).toHaveBeenCalledWith({
-      data: { country: undefined, subdivision: undefined },
-    });
-  });
-
-  it("says Nothing saved when the save fails", async () => {
-    const user = userEvent.setup();
-    await renderWithRouter(
-      <RegionForm
-        current={NO_REGION}
-        saveRegion={vi.fn().mockRejectedValue(new Error("D1 down"))}
-      />,
-    );
-    await user.click(screen.getByRole("button", { name: "Save" }));
-    expect(await screen.findByText("Nothing saved")).toBeVisible();
   });
 });

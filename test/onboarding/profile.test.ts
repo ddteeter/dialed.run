@@ -550,7 +550,6 @@ describe("savePreferences and currentSettings", () => {
       distanceUnit: "mi",
       defaultAudience: "runners",
       countInTotals: true,
-      region: {},
     });
   });
 

@@ -30,9 +30,6 @@ const UNDRAWN_ROWS: ReadonlySet<string> = new Set([
   "Privacy policy",
   "Terms",
   "Copyright",
-  // Settings › Region (round 30 (d)): the path and the hint are given, the
-  // row is not drawn on U1 yet (design-deltas item 59).
-  "Region",
 ]);
 
 /**

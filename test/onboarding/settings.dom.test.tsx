@@ -42,7 +42,6 @@ const ANSWERED: CurrentSettings = {
   distanceUnit: "mi",
   defaultAudience: "runners",
   countInTotals: true,
-  region: {},
 };
 
 function row(name: RegExp) {
@@ -106,8 +105,6 @@ describe("the index (U1/N)", () => {
     expect(row(/^Blocked runners/u)).toHaveAttribute("href", "/safety/blocked");
     expect(row(/^Blocked runners/u)).toHaveTextContent("2 blocked");
     expect(row(/^Connections/u)).toHaveAttribute("href", "/runs/strava");
-    // Round 30 (d): off by default, so a runner who never set one reads so.
-    expect(row(/^Region/u)).toHaveTextContent(/^RegionNot set›$/u);
     // A row with nowhere to go is absent, not dead.
     expect(screen.queryByText(/Export|Delete/u)).toBeNull();
   });
@@ -134,7 +131,6 @@ describe("the index (U1/N)", () => {
       "/account/sign-in",
       "/onboarding/calibrate",
       "/onboarding/settings/units",
-      "/onboarding/settings/region",
     ]);
   });
 
@@ -148,7 +144,6 @@ describe("the index (U1/N)", () => {
           distanceUnit: "km",
           defaultAudience: "private",
           countInTotals: false,
-          region: { country: "US", subdivision: "US-MN" },
         }}
         runReminderEmail={false}
         blockedCount={0}
@@ -162,9 +157,6 @@ describe("the index (U1/N)", () => {
     expect(row(/^Privacy New/u)).toHaveTextContent("New runs stay private");
     expect(row(/^How you run/u)).toHaveTextContent("−4° offset");
     expect(row(/^Blocked runners/u)).toHaveTextContent("0 blocked");
-    expect(row(/^Region/u)).toHaveTextContent(
-      /^RegionMinnesota, United States›$/u,
-    );
     // An account that has not reached O0 has no handle to show.
     expect(row(/^Account/u)).toHaveTextContent(/^AccountEmail, password›$/u);
   });
@@ -259,7 +251,6 @@ describe("the sub-pages", () => {
     const saveUnits = vi.fn().mockResolvedValue(undefined);
     const saveSharing = vi.fn().mockResolvedValue(undefined);
     const saveCountInTotals = vi.fn().mockResolvedValue(undefined);
-    const saveRegion = vi.fn().mockResolvedValue(undefined);
     const { unmount } = await renderWithRouter(
       <SettingsSectionPage
         section="units"
@@ -267,7 +258,6 @@ describe("the sub-pages", () => {
         saveUnits={saveUnits}
         saveSharing={saveSharing}
         saveCountInTotals={saveCountInTotals}
-        saveRegion={saveRegion}
       />,
     );
     expect(
@@ -284,7 +274,6 @@ describe("the sub-pages", () => {
         saveUnits={saveUnits}
         saveSharing={saveSharing}
         saveCountInTotals={saveCountInTotals}
-        saveRegion={saveRegion}
       />,
     );
     expect(
@@ -306,25 +295,6 @@ describe("the sub-pages", () => {
       }),
     ).toBeChecked();
     expect(saveCountInTotals).not.toHaveBeenCalled();
-    expect(saveRegion).not.toHaveBeenCalled();
-  });
-
-  it("is Region by its section, with the region form (round 30 (d))", async () => {
-    await renderWithRouter(
-      <SettingsSectionPage
-        section="region"
-        current={ANSWERED}
-        saveUnits={vi.fn()}
-        saveSharing={vi.fn()}
-        saveCountInTotals={vi.fn()}
-        saveRegion={vi.fn()}
-      />,
-    );
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Region" }),
-    ).toBeVisible();
-    expect(screen.getByRole("combobox", { name: "Country" })).toBeVisible();
-    expect(screen.queryByRole("checkbox")).toBeNull();
   });
 
   it("save units, and only units, from their own form", async () => {

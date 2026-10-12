@@ -942,11 +942,14 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     changed before the rename landed. Nothing was renamed." (`renameMessage`
     in `safety/components/DeskRunners.tsx`). **The ask:** word it.
 
-61. **What lane A (design 138) built beside round 32's and round 30's
-    drawings.** D-108 E's three disclosures, Settings › Sharing's totals
-    switch and Settings › Region are built with the boards' copy verbatim.
-    Seven things the boards do not draw. **Four are needed before launch**
-    (owner, 2026-10-11), marked so; the rest can follow:
+61. **What lane A (design 138) built beside round 32's drawings.**
+    D-108 E's three disclosures and Settings › Sharing's totals switch are
+    built with the board's copy verbatim. Five things the board does not
+    draw. **Four are needed before launch** (owner, 2026-10-11), marked so;
+    the other can follow. Round 30 (d)'s Settings › Region is **not** built:
+    totals group by a climate zone the guide job derives from each run's
+    location, not by a region the runner declares (owner, 2026-10-11;
+    D-120), so round 30 (d) needs no screen.
     - **"How the guides are made" opens `/privacy`.** The board's target
       is `dialed.run/how-it-works#totals`, which the marketing site owns
       and which is not live. When it is, the link points there. **The
@@ -960,16 +963,6 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     - **Two names for one place.** The sheet is titled "Sharing", as round
       32 names the group, but the Settings row and sub-page it stands for
       are "Privacy" (U1). **Needed before launch.** **The ask:** one name.
-    - **Settings › Region's screen.** Round 30 (d) gives the path, the
-      hint and "country, plus state or province where it applies". Built
-      as a sub-page titled "Region", reached from a "Region" row under You
-      ("Not set" until set, "Minnesota, United States" after), with two
-      selects ("Country", "State or province") and one Save. The second
-      select appears only for a country with subdivisions in the list,
-      which today is the US (states and DC) and Canada. Choosing "—" and
-      saving clears it. **The ask:** draw the row and the sub-page, and
-      say whether more countries take a subdivision. The owner keeps the
-      US and Canada only (2026-10-11).
     - **Where the totals switch sits.** Round 32 draws one SHARING group
       with "Share new runs" and the totals switch. Built on the Privacy
       sub-page under the sharing default's form and its Save, because the
@@ -980,14 +973,10 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       private runs add their temperature, kit and verdict to the guides
       and reports" is untrue for them: D-108 C counts confirmed accounts
       only. The owner ruled (2026-10-11) that an unconfirmed runner may
-      still turn totals off and set a region, with no confirm sheet, so
+      still turn totals off, with no confirm sheet, so
       they meet this switch. The build keeps the drawn copy until design
       words it. **Needed before launch.** **The ask:** the unconfirmed
       runner's on and off lines.
-    - **Region error copy.** The form only offers the list's choices, so
-      three sentences answer what only a hand-made request can send: "Pick
-      a country from the list.", "Pick a country before a state or
-      province." and "Pick a state or province in that country."
 
 ## Answered in round 37 (imported 2026-10-10)
 

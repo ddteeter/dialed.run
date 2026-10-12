@@ -4,7 +4,7 @@ import type { JSX, ReactNode } from "react";
 import { Icon, Page } from "../../../ui";
 import type { CurrentSettings } from "../profile";
 import type { SettingsSection } from "../route-decisions";
-import { RegionForm, SharingForm, UnitsForm } from "./Settings";
+import { SharingForm, UnitsForm } from "./Settings";
 import { TotalsSwitch } from "./TotalsSwitch";
 
 /*
@@ -80,7 +80,6 @@ export function SettingsSubPage({
 const SECTION_TITLES: Readonly<Record<SettingsSection, string>> = {
   units: "Units",
   sharing: "Privacy",
-  region: "Region",
 };
 
 /**
@@ -95,14 +94,12 @@ export function SettingsSectionPage({
   saveUnits,
   saveSharing,
   saveCountInTotals,
-  saveRegion,
 }: Readonly<{
   section: SettingsSection;
   current: CurrentSettings;
   saveUnits: Parameters<typeof UnitsForm>[0]["saveUnits"];
   saveSharing: Parameters<typeof SharingForm>[0]["saveSharing"];
   saveCountInTotals: Parameters<typeof TotalsSwitch>[0]["save"];
-  saveRegion: Parameters<typeof RegionForm>[0]["saveRegion"];
 }>): JSX.Element {
   return (
     <PickedSubPage
@@ -119,7 +116,6 @@ export function SettingsSectionPage({
             />
           </>
         ),
-        region: <RegionForm current={current} saveRegion={saveRegion} />,
       }}
     />
   );

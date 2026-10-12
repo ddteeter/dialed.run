@@ -52,9 +52,6 @@ count_in_totals  int      -- boolean, NOT NULL DEFAULT 1: Settings › Sharing's
                           --  runner LEFT JOIN user_profiles and counts
                           --  COALESCE(count_in_totals, 1) = 1. A plain join
                           --  would silently drop every runner without a row.
-region_country   text     -- NULLABLE ISO 3166-1 alpha-2 ('US'); region_subdivision
-                          --  NULLABLE ISO 3166-2 ('US-MN'). Round 30 (d): used
-                          --  only to group anonymous totals, never shown.
 ```
 
 ### wardrobe_items

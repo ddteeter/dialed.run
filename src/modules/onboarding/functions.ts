@@ -9,13 +9,12 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
 import { cityLookupInput } from "../../lib/contracts/city-lookup";
-import { regionInput } from "../../lib/contracts/regions";
 import { optionalUserId, requireUserId } from "../auth";
 import { nameItem } from "../closet";
 import { coverageLadder } from "../feed";
 import { captureException } from "../ops";
 import { climateNormals, resolvePlace } from "../weather";
-import { countsInTotals, setCountInTotals, setRegion } from "./aggregate-prefs";
+import { countsInTotals, setCountInTotals } from "./aggregate-prefs";
 import {
   brandPrefixInput,
   calibrationInput,
@@ -104,8 +103,7 @@ export const saveSharingFn = createServerFn({ method: "POST" })
 
 /**
  * The runner's own totals setting alone, for A3's private line: the
- * verdict page reads this rather than `settingsQuery`, so the region
- * never reaches an entry's page (round 30 (d)).
+ * verdict page needs nothing else of the settings.
  */
 export const countInTotalsQuery = createServerFn({ method: "GET" }).handler(
   async () => countsInTotals(db(), await requireUserId()),
@@ -122,14 +120,6 @@ export const setCountInTotalsFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) =>
     setCountInTotals(db(), await requireUserId(), data),
   );
-
-/**
- * Settings › Region (round 30 (d)). Unconfirmed runners too, for the same
- * reason (owner, 2026-10-11): it is never shown to anyone.
- */
-export const setRegionFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => regionInput.parse(data))
-  .handler(async ({ data }) => setRegion(db(), await requireUserId(), data));
 
 /**
  * Find (round 26 #12): resolves a typed city once, when the runner presses

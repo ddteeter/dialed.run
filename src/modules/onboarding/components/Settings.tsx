@@ -11,22 +11,12 @@ import {
   thermalScale,
 } from "../../../lib/contracts";
 import { notificationSettingsSchema } from "../../../lib/contracts/email";
-import {
-  choicesOf,
-  COUNTRIES,
-  regionInput,
-  regionLabel,
-  subdivisionsOf,
-} from "../../../lib/contracts/regions";
-import type { Region } from "../../../lib/contracts/regions";
 import type { DistanceUnit, TempUnit } from "../../../lib/contracts";
 import {
-  ChoiceField,
   FormErrorSummary,
   FormFailureBand,
   FormStatus,
   Mono,
-  NO_CHOICE,
   SubmitButton,
   ToggleField,
   useFormSubmit,
@@ -165,13 +155,6 @@ export function SettingsIndex({
           params={{ section: "units" }}
           label="Units"
           value={`${TEMP_WORDS[current.tempUnit]}, ${DISTANCE_WORDS[current.distanceUnit]}`}
-        />
-        {/* Settings › Profile › Region (round 30 (d)): off by default. */}
-        <SettingsRow
-          to="/onboarding/settings/$section"
-          params={{ section: "region" }}
-          label="Region"
-          value={regionLabel(current.region) ?? "Not set"}
         />
       </SettingsGroup>
       <SettingsGroup title="Who sees what">
@@ -438,86 +421,6 @@ export function SharingForm({
       labels={{}}
     >
       {SharingFields}
-    </SectionForm>
-  );
-}
-
-/**
- * Settings › Region's hint, as round 30 (d) words it.
- */
-export const REGION_HINT =
-  "Used only in anonymous totals, like what runners in your state wear. Never shown to anyone.";
-
-const REGION_LABELS = { country: "Country", subdivision: "State or province" };
-
-const COUNTRY_CHOICES = choicesOf(COUNTRIES);
-
-/**
- * Settings › Region's fields: a country, and a state or province only
- * where the country has some in the list. A new country starts with no
- * subdivision, so the old one can never ride along; "—" for the country
- * clears both.
- */
-function RegionFields({
-  value,
-  onChange,
-  form,
-}: Readonly<SectionFields<Region>>): JSX.Element {
-  const subdivisions = choicesOf(subdivisionsOf(value.country ?? NO_CHOICE));
-  return (
-    <div className="flex flex-col gap-4">
-      <ChoiceField
-        name="country"
-        label={REGION_LABELS.country}
-        field={form.field}
-        error={form.fieldErrors.country}
-        value={value.country ?? NO_CHOICE}
-        options={COUNTRY_CHOICES.codes}
-        optionLabels={COUNTRY_CHOICES.names}
-        onChange={(country) => {
-          onChange({ country, subdivision: undefined });
-        }}
-      />
-      {subdivisions.codes.length === 0 ? undefined : (
-        <ChoiceField
-          name="subdivision"
-          label={REGION_LABELS.subdivision}
-          field={form.field}
-          error={form.fieldErrors.subdivision}
-          value={value.subdivision ?? NO_CHOICE}
-          options={subdivisions.codes}
-          optionLabels={subdivisions.names}
-          onChange={(subdivision) => {
-            onChange({ ...value, subdivision });
-          }}
-        />
-      )}
-      <p className="m-0 text-micro text-muted">{REGION_HINT}</p>
-    </div>
-  );
-}
-
-/**
- * Settings › Region (round 30 (d)): optional, off by default, and used
- * only to group anonymous totals. Nothing renders it anywhere but here —
- * not on a profile, not on an entry.
- */
-export function RegionForm({
-  current,
-  saveRegion,
-}: Readonly<{
-  current: CurrentSettings;
-  saveRegion: (input: { data: Region }) => Promise<unknown>;
-}>): JSX.Element {
-  return (
-    <SectionForm
-      schema={regionInput}
-      initial={current.region}
-      save={saveRegion}
-      successMessage="Region saved."
-      labels={REGION_LABELS}
-    >
-      {RegionFields}
     </SectionForm>
   );
 }

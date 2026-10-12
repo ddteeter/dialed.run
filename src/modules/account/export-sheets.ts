@@ -164,16 +164,6 @@ export function buildSheets(rows: ExportRows): ExportSheets {
           "true if your runs count, without your name, in anonymous totals like the guides.",
         value: (row) => row.countInTotals,
       },
-      {
-        name: "region_country",
-        about: "the country you set for anonymous totals, as an ISO code.",
-        value: (row) => row.profile?.regionCountry,
-      },
-      {
-        name: "region_subdivision",
-        about: "the state or province you set, as an ISO code.",
-        value: (row) => row.profile?.regionSubdivision,
-      },
     ],
   };
 

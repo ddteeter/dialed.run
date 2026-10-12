@@ -225,8 +225,6 @@ describe("exportData and exportFiles", () => {
       distanceUnit: "mi",
       defaultAudience: "private",
       countInTotals: false,
-      regionCountry: "US",
-      regionSubdivision: "US-MN",
     });
 
     const shirtId = newUlid();
@@ -418,8 +416,8 @@ describe("exportData and exportFiles", () => {
       `2,${iso(NOW - 100)},page`,
     ]);
     expect(linesOf(texts, "profile.csv")).toStrictEqual([
-      "email,joined_at,username,place,thermal_level,temp_unit,distance_unit,default_audience,count_in_totals,region_country,region_subdivision",
-      `${email},${iso(JOINED)},${username},"Minneapolis, MN",-1,f,mi,private,false,US,US-MN`,
+      "email,joined_at,username,place,thermal_level,temp_unit,distance_unit,default_audience,count_in_totals",
+      `${email},${iso(JOINED)},${username},"Minneapolis, MN",-1,f,mi,private,false`,
     ]);
     expect(linesOf(texts, "runs.csv")).toStrictEqual([
       "id,title,started_at,duration_seconds,distance_meters,moving_seconds,elevation_gain_meters,indoor,effort,added_from,conditions_from,temp_c,feels_like_c,humidity,wind_kph,precip_mm,condition,sky,run_file",
@@ -728,7 +726,7 @@ describe("exportData and exportFiles", () => {
     // is the effective answer the guide job reads (D-108 D: on by default),
     // not a blank.
     expect(linesOf(empty.texts, "profile.csv")[1]).toBe(
-      `${email},${iso(JOINED)},,,,,,,true,,`,
+      `${email},${iso(JOINED)},,,,,,,true`,
     );
     for (const name of [
       "runs.csv",
@@ -744,7 +742,7 @@ describe("exportData and exportFiles", () => {
       NOTHING_STORED,
       NOW,
     );
-    expect(linesOf(gone.texts, "profile.csv")[1]).toBe(",,,,,,,,,,");
+    expect(linesOf(gone.texts, "profile.csv")[1]).toBe(",,,,,,,,");
   });
 
   it("gives every run its conditions past one chunk of observation reads", async () => {

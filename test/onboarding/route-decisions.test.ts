@@ -64,11 +64,9 @@ describe("skipNamingIfNothingToName (round 22, item 25)", () => {
 });
 
 describe("settingsSectionOrNotFound (round 22, item 20)", () => {
-  it("names the three sub-pages there are", () => {
+  it("names the two sub-pages there are", () => {
     expect(settingsSectionOrNotFound("units")).toBe("units");
     expect(settingsSectionOrNotFound("sharing")).toBe("sharing");
-    // Round 30 (d): Settings › Region.
-    expect(settingsSectionOrNotFound("region")).toBe("region");
   });
 
   it("is the router's not-found for any other path", () => {

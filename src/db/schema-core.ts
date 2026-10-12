@@ -77,12 +77,6 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     countInTotals: integer("count_in_totals", { mode: "boolean" })
       .notNull()
       .default(true),
-    // Settings › Region (round 30 data requirement (d)): optional, off by
-    // default, used only to group anonymous totals and never shown on a
-    // profile or entry. ISO 3166-1 alpha-2 (`US`) and ISO 3166-2
-    // (`US-MN`), parsed by `lib/contracts/regions.ts`'s `regionInput`.
-    regionCountry: text("region_country"),
-    regionSubdivision: text("region_subdivision"),
   },
   (t) => [
     // The re-ask's sweep reads only the rows it might claim. Partial, so
