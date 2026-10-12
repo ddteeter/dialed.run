@@ -16,11 +16,15 @@
  * kit's photos: no scan of either table, which
  * `test/safety/other-photos.test.ts` pins with EXPLAIN.
  */
-import { and, asc, desc, eq, ne } from "drizzle-orm";
+import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 import { alias } from "drizzle-orm/sqlite-core";
 
-import { entryPhotos, outfitEntries } from "../../db/schema-core";
+import {
+  entryPhotos,
+  moderationActions,
+  outfitEntries,
+} from "../../db/schema-core";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -109,10 +113,26 @@ function othersWhere(db: Db, subject: OtherPhotosSubject) {
 }
 
 /**
- * Whose the subject is, as a subquery: a photo's kit's runner, or the
- * kit's. Each is a primary-key probe.
+ * Whose the subject is, as a subquery: the live row's runner, or — once
+ * the subject is gone — the runner the Desk's audit row recorded.
+ *
+ * **A subject can be deleted while its request waits.** A runner can
+ * delete their own kit, or a Remove from the queue can take it down
+ * before the request is decided, and the live read then finds nobody: the
+ * row would say "No other photos from this runner." about a runner who
+ * has some, which is the one thing a copy check must not say falsely. The
+ * audit row (`moderation_actions.subject_owner_id`, read by
+ * `moderation_actions_subject`) outlives the delete. A runner's own
+ * delete leaves no audit row, so that case still finds nobody.
  */
 function runnerOf(db: Db, subject: OtherPhotosSubject) {
+  return sql`coalesce((${liveRunnerOf(db, subject)}), (${recordedRunnerOf(db, subject)}))`;
+}
+
+/**
+The runner of the subject as it stands: a photo's kit's, or the kit's. Each a primary-key probe.
+*/
+function liveRunnerOf(db: Db, subject: OtherPhotosSubject) {
   return subject.subjectType === "photo"
     ? db
         .select({ userId: subjectEntry.userId })
@@ -123,6 +143,24 @@ function runnerOf(db: Db, subject: OtherPhotosSubject) {
         .select({ userId: subjectEntry.userId })
         .from(subjectEntry)
         .where(eq(subjectEntry.id, subject.subjectId));
+}
+
+/**
+ * The runner the Desk recorded for the subject, from any audit row about
+ * it. Every row about an entry or a photo names its owner
+ * (`moderateContent` always has one), so any of them answers.
+ */
+function recordedRunnerOf(db: Db, subject: OtherPhotosSubject) {
+  return db
+    .select({ userId: moderationActions.subjectOwnerId })
+    .from(moderationActions)
+    .where(
+      and(
+        eq(moderationActions.subjectType, subject.subjectType),
+        eq(moderationActions.subjectId, subject.subjectId),
+      ),
+    )
+    .limit(1);
 }
 
 /**

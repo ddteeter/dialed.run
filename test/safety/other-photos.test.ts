@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   entryPhotos,
+  moderationActions,
   outfitEntries,
   reports,
   reviewQueue,
@@ -157,7 +158,7 @@ describe("otherPhotosOf", () => {
     );
   });
 
-  it("answers each subject apart, and an empty list for one with nothing else or no kit", async () => {
+  it("answers each subject apart, and an empty list for one with nothing else or nobody known", async () => {
     const one = await makeUser();
     const lone = await kit(one, NOW);
     await photo(lone);
@@ -175,7 +176,67 @@ describe("otherPhotosOf", () => {
     expect(found.size).toBe(3);
     expect(found.get(`entry:${lone}`)).toStrictEqual([]);
     expect(ids(found.get(`photo:${twosPhoto}`))).toStrictEqual([twosOther]);
+    // No row and no audit row: nobody is known, so nothing is listed.
     expect(found.get(`photo:${missing}`)).toStrictEqual([]);
+  });
+
+  it("still finds the runner of a subject the Desk has deleted, from its audit row", async () => {
+    const runner = await makeUser();
+    const goneKit = await kit(runner, NOW);
+    const gonePhoto = await photo(goneKit);
+    const other = await photo(await kit(runner, NOW - 1));
+    await photo(await kit(await makeUser(), NOW));
+    // What a Remove leaves: the rows gone, the audit row naming the owner.
+    for (const [subjectType, subjectId] of [
+      ["photo", gonePhoto],
+      ["entry", goneKit],
+    ] as const) {
+      await core().insert(moderationActions).values({
+        id: newUlid(),
+        actorId: "desk",
+        action: "remove",
+        subjectType,
+        subjectId,
+        subjectOwnerId: runner,
+        reason: "it's spam",
+        createdAt: NOW,
+      });
+    }
+    await core().delete(entryPhotos).where(eq(entryPhotos.id, gonePhoto));
+    await core().delete(outfitEntries).where(eq(outfitEntries.id, goneKit));
+
+    const found = await otherPhotosOf(core(), [
+      { subjectType: "photo", subjectId: gonePhoto },
+      { subjectType: "entry", subjectId: goneKit },
+    ]);
+
+    expect(ids(found.get(`photo:${gonePhoto}`))).toStrictEqual([other]);
+    expect(ids(found.get(`entry:${goneKit}`))).toStrictEqual([other]);
+  });
+
+  it("reads the live owner first, not an audit row about the subject", async () => {
+    const runner = await makeUser();
+    const reported = await photo(await kit(runner, NOW));
+    const other = await photo(await kit(runner, NOW - 1));
+    const stranger = await makeUser();
+    await photo(await kit(stranger, NOW));
+    // An audit row naming someone else: the live row wins.
+    await core().insert(moderationActions).values({
+      id: newUlid(),
+      actorId: "desk",
+      action: "remove",
+      subjectType: "photo",
+      subjectId: reported,
+      subjectOwnerId: stranger,
+      reason: "it's spam",
+      createdAt: NOW,
+    });
+
+    const found = await otherPhotosOf(core(), [
+      { subjectType: "photo", subjectId: reported },
+    ]);
+
+    expect(ids(found.get(`photo:${reported}`))).toStrictEqual([other]);
   });
 
   it("reads nothing for no subjects", async () => {
@@ -200,7 +261,12 @@ describe("the read's cost", () => {
       expect(details).toMatch(
         /entry_photos USING INDEX entry_photos_idempotency/,
       );
-      expect(details).not.toMatch(/SCAN\s+(outfit_entries|entry_photos)/i);
+      expect(details).toMatch(
+        /moderation_actions USING INDEX moderation_actions_subject/,
+      );
+      expect(details).not.toMatch(
+        /SCAN\s+(outfit_entries|entry_photos|moderation_actions)/i,
+      );
     }
   });
 });
