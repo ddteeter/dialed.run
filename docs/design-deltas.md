@@ -930,7 +930,9 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
-45. **A Rename that lost a race (R-121, PR #184).** A force-rename now
+<!-- Item numbers continue past rounds 35–37 (45–59); this comment keeps the list from being renumbered. -->
+
+60. **A Rename that lost a race (R-121, PR #184).** A force-rename now
     writes nothing when the handle changed between its read and its write,
     whether through another moderator's rename or the runner's own new
     pick. It used to report the rename as done. D8 · Runners and a flagged
@@ -940,10 +942,11 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     changed before the rename landed. Nothing was renamed." (`renameMessage`
     in `safety/components/DeskRunners.tsx`). **The ask:** word it.
 
-45. **What lane A (design 138) built beside round 32's and round 30's
+61. **What lane A (design 138) built beside round 32's and round 30's
     drawings.** D-108 E's three disclosures, Settings › Sharing's totals
     switch and Settings › Region are built with the boards' copy verbatim.
-    Five things the boards do not draw:
+    Seven things the boards do not draw. **Four are needed before launch**
+    (owner, 2026-10-11), marked so; the rest can follow:
     - **"How the guides are made" opens `/privacy`.** The board's target
       is `dialed.run/how-it-works#totals`, which the marketing site owns
       and which is not live. When it is, the link points there. **The
@@ -952,8 +955,11 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       Sharing as a sheet". Built as a `Sheet` titled "Sharing" holding
       the totals switch, its sub-line and the link, and a Done. It does
       not hold "Share new runs": that is a form with its own Save, and a
-      form cannot sit inside A3's form. **The ask:** draw the sheet, or
-      confirm the totals switch alone.
+      form cannot sit inside A3's form. **Needed before launch.** **The
+      ask:** draw the sheet, or confirm the totals switch alone.
+    - **Two names for one place.** The sheet is titled "Sharing", as round
+      32 names the group, but the Settings row and sub-page it stands for
+      are "Privacy" (U1). **Needed before launch.** **The ask:** one name.
     - **Settings › Region's screen.** Round 30 (d) gives the path, the
       hint and "country, plus state or province where it applies". Built
       as a sub-page titled "Region", reached from a "Region" row under You
@@ -962,11 +968,22 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       select appears only for a country with subdivisions in the list,
       which today is the US (states and DC) and Canada. Choosing "—" and
       saving clears it. **The ask:** draw the row and the sub-page, and
-      say whether more countries take a subdivision.
+      say whether more countries take a subdivision. The owner keeps the
+      US and Canada only (2026-10-11).
     - **Where the totals switch sits.** Round 32 draws one SHARING group
       with "Share new runs" and the totals switch. Built on the Privacy
       sub-page under the sharing default's form and its Save, because the
-      totals switch saves on toggle and the default does not.
+      totals switch saves on toggle and the default does not. **Needed
+      before launch.** **The ask:** draw the group as the build has to
+      hold it, two controls that save differently.
+    - **What the totals copy says to an unconfirmed runner.** "Shared and
+      private runs add their temperature, kit and verdict to the guides
+      and reports" is untrue for them: D-108 C counts confirmed accounts
+      only. The owner ruled (2026-10-11) that an unconfirmed runner may
+      still turn totals off and set a region, with no confirm sheet, so
+      they meet this switch. The build keeps the drawn copy until design
+      words it. **Needed before launch.** **The ask:** the unconfirmed
+      runner's on and off lines.
     - **Region error copy.** The form only offers the list's choices, so
       three sentences answer what only a hand-made request can send: "Pick
       a country from the list.", "Pick a country before a state or

@@ -22,10 +22,11 @@ setting (D), the three in-app disclosures (E) and the optional region
   refinements refuse a subdivision without a country or from another
   country. Error copy lives there.
 - **`onboarding/aggregate-prefs.ts`**: the one writer of each,
-  `setCountInTotals` and `setRegion`, exported through onboarding's
-  index. Server functions `setCountInTotalsFn` / `setRegionFn` use
-  `verifiedUserId()` (D-113: they shape what is published).
-  `currentSettings` reads all three.
+  `setCountInTotals` and `setRegion`. Server functions
+  `setCountInTotalsFn` / `setRegionFn` use `requireUserId()`: the
+  owner ruled (2026-10-11) that an unconfirmed runner may opt out and set
+  a region without the confirm sheet. `currentSettings` reads all three;
+  A3 reads `countInTotalsQuery`, which carries nothing else.
 - **Settings › Privacy** (the `sharing` sub-page) gains the totals switch:
   saves on toggle (`useControlAction`, kicker `Not changed`), no confirm,
   drawn on/off sub-lines, and "How the guides are made".

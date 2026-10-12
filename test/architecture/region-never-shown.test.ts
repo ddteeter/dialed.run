@@ -17,8 +17,11 @@ const sources: Record<string, string> = import.meta.glob(
   { query: "?raw", import: "default", eager: true },
 );
 
+// `.region` too: `currentSettings` returns the region under that name, so
+// a route reading the settings object would carry it without naming a
+// column. The behaviour is observed in test/feed/region-never-shown.test.ts.
 const MENTIONS =
-  /\b(?:regionCountry|regionSubdivision|region_country|region_subdivision|regionLabel)\b|lib\/contracts\/regions/u;
+  /\b(?:regionCountry|regionSubdivision|region_country|region_subdivision|regionLabel)\b|\.region\b|lib\/contracts\/regions/u;
 
 const MAY_READ_THE_REGION = [
   "src/db/schema-core.ts",

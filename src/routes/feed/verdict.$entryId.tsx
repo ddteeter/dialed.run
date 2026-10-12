@@ -15,8 +15,8 @@ import {
 import { orBackToFeed, requireSignedIn } from "../../modules/feed/redirect";
 import { PrivateRunLine } from "../../modules/onboarding/components/PrivateRunLine";
 import {
+  countInTotalsQuery,
   setCountInTotalsFn,
-  settingsQuery,
 } from "../../modules/onboarding/functions";
 import { Layout } from "../../ui";
 
@@ -30,13 +30,15 @@ export const Route = createFileRoute("/feed/verdict/$entryId")({
       .emailVerified,
   }),
   loader: async ({ params, context }) => {
-    const entry = orBackToFeed(
-      await entryDetailQuery({ data: { entryId: params.entryId } }),
-    );
-    const { countInTotals } = await settingsQuery();
+    const [found, units, { countInTotals }] = await Promise.all([
+      entryDetailQuery({ data: { entryId: params.entryId } }),
+      viewerUnitsQuery(),
+      countInTotalsQuery(),
+    ]);
+    const entry = orBackToFeed(found);
     return {
       entry,
-      units: await viewerUnitsQuery(),
+      units,
       isVerified: context.isVerified,
       countInTotals,
       ...(await bandContextFor(entry, bandFloorC, async (bandFloor) => {

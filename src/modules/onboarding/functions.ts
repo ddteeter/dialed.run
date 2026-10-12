@@ -10,12 +10,12 @@ import { drizzle } from "drizzle-orm/d1";
 import { env } from "../../env";
 import { cityLookupInput } from "../../lib/contracts/city-lookup";
 import { regionInput } from "../../lib/contracts/regions";
-import { optionalUserId, requireUserId, verifiedUserId } from "../auth";
+import { optionalUserId, requireUserId } from "../auth";
 import { nameItem } from "../closet";
 import { coverageLadder } from "../feed";
 import { captureException } from "../ops";
 import { climateNormals, resolvePlace } from "../weather";
-import { setCountInTotals, setRegion } from "./aggregate-prefs";
+import { countsInTotals, setCountInTotals, setRegion } from "./aggregate-prefs";
 import {
   brandPrefixInput,
   calibrationInput,
@@ -103,23 +103,33 @@ export const saveSharingFn = createServerFn({ method: "POST" })
   );
 
 /**
+ * The runner's own totals setting alone, for A3's private line: the
+ * verdict page reads this rather than `settingsQuery`, so the region
+ * never reaches an entry's page (round 30 (d)).
+ */
+export const countInTotalsQuery = createServerFn({ method: "GET" }).handler(
+  async () => countsInTotals(db(), await requireUserId()),
+);
+
+/**
  * Settings › Sharing's "Count my runs in anonymous totals" (D-108 D),
- * saved on toggle. Confirmed address only (D-113): it changes what is
- * published.
+ * saved on toggle. Unconfirmed runners too (owner, 2026-10-11): it is the
+ * runner's own privacy choice, nobody else sees it, and opting out must
+ * never wait behind the confirm sheet.
  */
 export const setCountInTotalsFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => countInTotalsInput.parse(data))
   .handler(async ({ data }) =>
-    setCountInTotals(db(), await verifiedUserId(), data),
+    setCountInTotals(db(), await requireUserId(), data),
   );
 
 /**
- * Settings › Region (round 30 (d)). Confirmed address only (D-113), for
- * the same reason: a region groups published totals.
+ * Settings › Region (round 30 (d)). Unconfirmed runners too, for the same
+ * reason (owner, 2026-10-11): it is never shown to anyone.
  */
 export const setRegionFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => regionInput.parse(data))
-  .handler(async ({ data }) => setRegion(db(), await verifiedUserId(), data));
+  .handler(async ({ data }) => setRegion(db(), await requireUserId(), data));
 
 /**
  * Find (round 26 #12): resolves a typed city once, when the runner presses

@@ -298,8 +298,10 @@ ZW Zimbabwe
  * District of Columbia, which ISO 3166-2 lists beside the states; Puerto
  * Rico and the other territories are countries of their own in 3166-1.
  */
-const SUBDIVISIONS: Readonly<Record<string, readonly RegionOption[]>> = {
-  US: table(`
+const SUBDIVISIONS: ReadonlyMap<string, readonly RegionOption[]> = new Map([
+  [
+    "US",
+    table(`
 US-AL Alabama
 US-AK Alaska
 US-AZ Arizona
@@ -352,7 +354,10 @@ US-WV West Virginia
 US-WI Wisconsin
 US-WY Wyoming
 `),
-  CA: table(`
+  ],
+  [
+    "CA",
+    table(`
 CA-AB Alberta
 CA-BC British Columbia
 CA-MB Manitoba
@@ -367,7 +372,8 @@ CA-QC Quebec
 CA-SK Saskatchewan
 CA-YT Yukon
 `),
-};
+  ],
+]);
 
 /**
  * A list as a select takes it: the codes in order, and each code's name.
@@ -388,7 +394,10 @@ export function choicesOf(options: readonly RegionOption[]): {
 The subdivisions a country offers, or none.
 */
 export function subdivisionsOf(country: string): readonly RegionOption[] {
-  return SUBDIVISIONS[country] ?? [];
+  // A Map, not an index into the object: `country` can be anything a
+  // request sends, and "constructor" or "__proto__" would read
+  // Object.prototype's members rather than missing (review of PR #183).
+  return SUBDIVISIONS.get(country) ?? [];
 }
 
 function nameIn(

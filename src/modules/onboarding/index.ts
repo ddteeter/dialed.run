@@ -4,9 +4,7 @@
  * Route files import server-fn glue from `./functions` directly (auth's
  * pattern); this barrel is what another module may reach. It holds the one
  * writer of the profile's place (FEED-5), which feed's Your conditions
- * calls, and the schema that writer takes — and the one writer each of
- * the two settings D-108 publishes by.
+ * calls, and the schema that writer takes.
  */
 export { placeInput, type Place } from "./inputs";
 export { savePlace } from "./profile";
-export { setCountInTotals, setRegion } from "./aggregate-prefs";

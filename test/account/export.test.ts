@@ -682,6 +682,7 @@ describe("exportData and exportFiles", () => {
         account: undefined,
         profile: undefined,
         defaultAudience: undefined,
+        countInTotals: undefined,
       },
       runs: [],
       entries: [],
@@ -723,8 +724,11 @@ describe("exportData and exportFiles", () => {
       NOW,
     );
     expect(empty.objects).toStrictEqual([]);
+    // No profile row yet, and nothing at signup makes one, so count_in_totals
+    // is the effective answer the guide job reads (D-108 D: on by default),
+    // not a blank.
     expect(linesOf(empty.texts, "profile.csv")[1]).toBe(
-      `${email},${iso(JOINED)},,,,,,,,,`,
+      `${email},${iso(JOINED)},,,,,,,true,,`,
     );
     for (const name of [
       "runs.csv",

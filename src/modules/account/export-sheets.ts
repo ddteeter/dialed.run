@@ -41,6 +41,10 @@ export interface ProfileRow {
     { readonly email: string; readonly joinedAt: string } | undefined;
   readonly profile: ExportData["profile"];
   readonly defaultAudience: AudienceWord | undefined;
+  /**
+  The effective totals setting: counted when no profile row exists yet.
+  */
+  readonly countInTotals: boolean | undefined;
 }
 
 /**
@@ -158,7 +162,7 @@ export function buildSheets(rows: ExportRows): ExportSheets {
         name: "count_in_totals",
         about:
           "true if your runs count, without your name, in anonymous totals like the guides.",
-        value: (row) => row.profile?.countInTotals,
+        value: (row) => row.countInTotals,
       },
       {
         name: "region_country",

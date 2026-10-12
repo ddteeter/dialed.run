@@ -153,6 +153,17 @@ describe("regionInput", () => {
     );
   });
 
+  it("refuses Object.prototype's names with its own error, never a throw", () => {
+    for (const country of ["constructor", "__proto__", "toString"]) {
+      expect(messagesOf({ country, subdivision: "x" })).toStrictEqual([
+        REGION_COUNTRY_UNKNOWN,
+        REGION_SUBDIVISION_ELSEWHERE,
+      ]);
+      expect(subdivisionsOf(country)).toStrictEqual([]);
+      expect(regionLabel({ country, subdivision: "x" })).toBe(`x, ${country}`);
+    }
+  });
+
   it("refuses anything but text", () => {
     expect(regionInput.safeParse({ country: 1 }).success).toBe(false);
     expect(

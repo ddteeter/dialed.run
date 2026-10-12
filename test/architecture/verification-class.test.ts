@@ -219,9 +219,12 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "onboarding/functions.ts settingsQuery": "unconfirmed",
   "onboarding/functions.ts saveUnitsFn": "unconfirmed",
   "onboarding/functions.ts saveSharingFn": "unconfirmed",
-  // D-108: both change what is published, as anonymous totals.
-  "onboarding/functions.ts setCountInTotalsFn": "verified",
-  "onboarding/functions.ts setRegionFn": "verified",
+  // The runner's own setting, read for A3 — settingsQuery's class.
+  "onboarding/functions.ts countInTotalsQuery": "unconfirmed",
+  // D-108: the runner's own choices, visible to nobody, so an unconfirmed
+  // runner may opt out or set a region (owner, 2026-10-11).
+  "onboarding/functions.ts setCountInTotalsFn": "unconfirmed",
+  "onboarding/functions.ts setRegionFn": "unconfirmed",
   "onboarding/functions.ts lookUpCityFn": "unconfirmed",
   "onboarding/functions.ts onboardingGateQuery": "sessionless",
   "onboarding/functions.ts namingOfferQuery": "unconfirmed",
