@@ -50,6 +50,8 @@ import {
   QUARANTINE_PAGE,
   QUARANTINE_RETENTION_SECONDS,
   quarantinedContentFor,
+  isCopyrightTakedown,
+  removalNotice,
   removalReasons,
   removalReasonSchema,
   removalSentence,
@@ -280,6 +282,26 @@ describe("the removal reasons (SAF-8's statement of reasons)", () => {
     expect(removalSentence("entry", "spam")).toBe(
       "A moderator removed this entry from the feed: it's an ad or spam.",
     );
+  });
+
+  it("says a copyright takedown answered a notice, and nothing else does (R-140)", () => {
+    expect(removalNotice("photo", "takedown", "copyright")).toBe(
+      "We removed this photo after a copyright notice.",
+    );
+    expect(removalNotice("entry", "takedown", "copyright")).toBe(
+      "We removed this entry from the feed after a copyright notice.",
+    );
+    // A removal request's takedown carries `intimate` (design 136): no
+    // copyright notice was ever sent, so the reason is the sentence.
+    expect(removalNotice("photo", "takedown", "intimate")).toBe(
+      "A moderator removed this photo: it's an intimate image shared without consent.",
+    );
+    expect(removalNotice("photo", "remove", "copyright")).toBe(
+      "A moderator removed this photo: it uses someone else's work.",
+    );
+    expect(isCopyrightTakedown("takedown", "copyright")).toBe(true);
+    expect(isCopyrightTakedown("remove", "copyright")).toBe(false);
+    expect(isCopyrightTakedown("takedown", "intimate")).toBe(false);
   });
 });
 
@@ -772,6 +794,87 @@ describe("takedown (SAF-6)", () => {
       actorId: "desk",
       action: "takedown",
       reason: "it uses someone else's work — Acme Photo Co, ref 2026-114",
+    });
+  });
+
+  describe("its notice (R-140)", () => {
+    beforeEach(() => {
+      vi.spyOn(env.EMAIL, "send").mockRejectedValue(new Error("sender down"));
+    });
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("tells the author it answered a notice, in the bell row and the email (R-140)", async () => {
+      const { author, photoId } = await postedPhoto();
+
+      await moderateContent(
+        core(),
+        {
+          actorId: "desk",
+          action: "takedown",
+          subjectType: "photo",
+          subjectId: photoId,
+          reason: "copyright",
+          notice: "Acme Photo Co, ref 2026-114",
+        },
+        quiet,
+      );
+
+      expect(await noticesFor(author)).toStrictEqual([
+        {
+          kind: "content_removed",
+          subjectId: photoId,
+          body: "We removed this photo after a copyright notice.",
+        },
+      ]);
+      const [owed] = await owedEmails();
+      expect(owed?.payload).toMatchObject({
+        email: {
+          template: {
+            kind: "content_removed",
+            subject: "photo",
+            notice: "copyright",
+          },
+        },
+      });
+    });
+
+    it("gives a removal request's takedown its reason, not a copyright notice", async () => {
+      const { author, entryId } = await postedPhoto();
+
+      await moderateContent(
+        core(),
+        {
+          actorId: "desk",
+          action: "takedown",
+          subjectType: "entry",
+          subjectId: entryId,
+          reason: "intimate",
+          notice: "removal request 01REQUEST",
+        },
+        quiet,
+      );
+
+      expect(await noticesFor(author)).toStrictEqual([
+        {
+          kind: "content_removed",
+          subjectId: entryId,
+          body: "A moderator removed this entry from the feed: it's an intimate image shared without consent.",
+        },
+      ]);
+      const [owed] = await owedEmails();
+      expect(owed?.payload).toStrictEqual({
+        dedupeKey: `content_removed:entry:${entryId}`,
+        email: {
+          to: { userId: author },
+          template: {
+            kind: "content_removed",
+            subject: "entry",
+            reason: "it's an intimate image shared without consent",
+          },
+        },
+      });
     });
   });
 

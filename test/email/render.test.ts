@@ -127,6 +127,38 @@ describe("emailContent", () => {
         footer: LEGAL,
       },
     ],
+    // R-140: a copyright takedown says it answered a notice, as its bell
+    // row and band do, and quotes no reason.
+    [
+      {
+        kind: "content_removed",
+        subject: "photo",
+        reason: "it uses someone else's work",
+        notice: "copyright",
+      },
+      {
+        subject: "We removed something from your run",
+        body: "We removed a photo from one of your runs after a copyright notice. Your run and verdict stay.",
+        button: LOG_IN,
+        foot: "Think we got it wrong? Reply to this email.",
+        footer: LEGAL,
+      },
+    ],
+    [
+      {
+        kind: "content_removed",
+        subject: "entry",
+        reason: "it uses someone else's work",
+        notice: "copyright",
+      },
+      {
+        subject: "We removed something from your run",
+        body: "We removed one of your runs from the feed after a copyright notice. The run itself stays.",
+        button: LOG_IN,
+        foot: "Think we got it wrong? Reply to this email.",
+        footer: LEGAL,
+      },
+    ],
     [
       // Design 136, `/takedown`'s three: the operators' alert, for a link
       // of ours and one that is not, then the requester's two.

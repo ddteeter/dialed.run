@@ -8,6 +8,8 @@
  */
 import { z } from "zod";
 
+import { COPYRIGHT_NOTICE_CLAUSE } from "../../lib/contracts/email-kinds";
+
 /**
  * What a runner says is wrong, in the artboard's words.
  *
@@ -195,8 +197,40 @@ export function removalSentence(
  * — the Desk acted on a notice, and the sentence says so. The board draws
  * the photo; an entry takes the same words with its own noun.
  */
-export function takedownSentence(subjectType: "entry" | "photo"): string {
-  return `We removed ${removedThing(subjectType)} after a copyright notice.`;
+function takedownSentence(subjectType: "entry" | "photo"): string {
+  return `We removed ${removedThing(subjectType)} ${COPYRIGHT_NOTICE_CLAUSE}.`;
+}
+
+/**
+ * Whether a removal answered a copyright notice, so its author is told
+ * that rather than a moderator's reason (round 28 #8, R-140).
+ *
+ * **The action alone does not say so.** A removal request from
+ * `/takedown` is also taken down with `action: "takedown"` (design 136),
+ * with the reason `intimate`; telling that runner their photo went "after
+ * a copyright notice" would be false. The SAF-6 form is the only takedown
+ * that carries `copyright`, so the two together are the notice.
+ */
+export function isCopyrightTakedown(
+  action: "remove" | "takedown",
+  reason: RemovalReason,
+): boolean {
+  return action === "takedown" && reason === "copyright";
+}
+
+/**
+ * The one sentence a removal's author is told, in the bell row and in the
+ * band where the thing was (round 27 #20): the copyright notice's, or the
+ * moderator's reason.
+ */
+export function removalNotice(
+  subjectType: "entry" | "photo",
+  action: "remove" | "takedown",
+  reason: RemovalReason,
+): string {
+  return isCopyrightTakedown(action, reason)
+    ? takedownSentence(subjectType)
+    : removalSentence(subjectType, reason);
 }
 
 /**

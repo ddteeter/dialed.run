@@ -13,6 +13,7 @@
  */
 import { CONTACT_ADDRESS } from "../../lib/contracts/contact";
 import { EXPORT_LINK_DAYS } from "../../lib/contracts/data-export";
+import { COPYRIGHT_NOTICE_CLAUSE } from "../../lib/contracts/email-kinds";
 import {
   STRAVA_DISCONNECTED_LINE,
   type EmailTemplate,
@@ -96,9 +97,23 @@ function reminderBody(landedAt: string, runs: number): string {
  * says "one of your runs" (a design delta).
  */
 const REMOVED = {
-  photo: "We removed a photo from one of your runs.",
-  entry: "We removed one of your runs from the feed.",
+  photo: "We removed a photo from one of your runs",
+  entry: "We removed one of your runs from the feed",
 } as const;
+
+/**
+ * What follows what went: the moderator's reason, word for word, or —
+ * for a copyright takedown (R-140) — that it answered a notice, as its
+ * bell row and band say, with no reason quoted.
+ */
+function why(template: {
+  reason: string;
+  notice?: "copyright" | undefined;
+}): string {
+  return template.notice === "copyright"
+    ? ` ${COPYRIGHT_NOTICE_CLAUSE}.`
+    : `. Reason: ${template.reason}.`;
+}
 
 /**
 What is left, after the reason.
@@ -247,7 +262,7 @@ export function emailContent(
     case "content_removed": {
       return {
         subject: "We removed something from your run",
-        body: `${REMOVED[template.subject]} Reason: ${template.reason}. ${STAYS[template.subject]}`,
+        body: `${REMOVED[template.subject]}${why(template)} ${STAYS[template.subject]}`,
         button: logIn(origin),
         foot: "Think we got it wrong? Reply to this email.",
         footer,

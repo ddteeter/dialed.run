@@ -42,6 +42,8 @@ export {
 
 export {
   autoHideReporterThreshold,
+  isCopyrightTakedown,
+  removalNotice,
   removalReasons,
   removalReasonSchema,
   removalSentence,
