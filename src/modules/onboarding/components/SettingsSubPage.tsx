@@ -4,7 +4,8 @@ import type { JSX, ReactNode } from "react";
 import { Icon, Page } from "../../../ui";
 import type { CurrentSettings } from "../profile";
 import type { SettingsSection } from "../route-decisions";
-import { SharingForm, UnitsForm } from "./Settings";
+import { RegionForm, SharingForm, UnitsForm } from "./Settings";
+import { TotalsSwitch } from "./TotalsSwitch";
 
 /*
  * Its own file, apart from `Settings.tsx`, because the index route renders
@@ -76,28 +77,51 @@ export function SettingsSubPage({
   );
 }
 
+const SECTION_TITLES: Readonly<Record<SettingsSection, string>> = {
+  units: "Units",
+  sharing: "Privacy",
+  region: "Region",
+};
+
 /**
- * One sub-page: its title, the way back, and its own small form.
+ * One sub-page: its title, the way back, and its own small form. Privacy
+ * also holds D-108's totals switch, which saves on toggle rather than
+ * with the form's Save (round 32: "one SHARING group beside 'Share new
+ * runs'").
  */
 export function SettingsSectionPage({
   section,
   current,
   saveUnits,
   saveSharing,
+  saveCountInTotals,
+  saveRegion,
 }: Readonly<{
   section: SettingsSection;
   current: CurrentSettings;
   saveUnits: Parameters<typeof UnitsForm>[0]["saveUnits"];
   saveSharing: Parameters<typeof SharingForm>[0]["saveSharing"];
+  saveCountInTotals: Parameters<typeof TotalsSwitch>[0]["save"];
+  saveRegion: Parameters<typeof RegionForm>[0]["saveRegion"];
 }>): JSX.Element {
-  return section === "units" ? (
-    <SettingsSubPage title="Units">
-      <UnitsForm current={current} saveUnits={saveUnits} />
-    </SettingsSubPage>
-  ) : (
-    <SettingsSubPage title="Privacy">
-      <SharingForm current={current} saveSharing={saveSharing} />
-    </SettingsSubPage>
+  return (
+    <PickedSubPage
+      section={section}
+      titles={SECTION_TITLES}
+      pages={{
+        units: <UnitsForm current={current} saveUnits={saveUnits} />,
+        sharing: (
+          <>
+            <SharingForm current={current} saveSharing={saveSharing} />
+            <TotalsSwitch
+              initial={current.countInTotals}
+              save={saveCountInTotals}
+            />
+          </>
+        ),
+        region: <RegionForm current={current} saveRegion={saveRegion} />,
+      }}
+    />
   );
 }
 

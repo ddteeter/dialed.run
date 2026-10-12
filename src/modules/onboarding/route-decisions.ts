@@ -3,10 +3,11 @@ import { redirect } from "@tanstack/react-router";
 /**
  * The settings sub-pages there are, by the path segment that names them
  * (round 22, item 20). `units` is U1's Units; `sharing` is U1's Privacy
- * row, which holds the one privacy setting v1 stores — the share-to-feed
- * default.
+ * row, which holds the share-to-feed default and, since D-108, whether the
+ * runner's runs count in anonymous totals; `region` is round 30 (d)'s
+ * optional region, used only in those totals.
  */
-const SETTINGS_SECTIONS = ["units", "sharing"] as const;
+const SETTINGS_SECTIONS = ["units", "sharing", "region"] as const;
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 
 /**

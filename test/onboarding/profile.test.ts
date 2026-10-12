@@ -549,6 +549,8 @@ describe("savePreferences and currentSettings", () => {
       tempUnit: "f",
       distanceUnit: "mi",
       defaultAudience: "runners",
+      countInTotals: true,
+      region: {},
     });
   });
 

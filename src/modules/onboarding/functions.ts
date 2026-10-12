@@ -9,14 +9,17 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { env } from "../../env";
 import { cityLookupInput } from "../../lib/contracts/city-lookup";
-import { optionalUserId, requireUserId } from "../auth";
+import { regionInput } from "../../lib/contracts/regions";
+import { optionalUserId, requireUserId, verifiedUserId } from "../auth";
 import { nameItem } from "../closet";
 import { coverageLadder } from "../feed";
 import { captureException } from "../ops";
 import { climateNormals, resolvePlace } from "../weather";
+import { setCountInTotals, setRegion } from "./aggregate-prefs";
 import {
   brandPrefixInput,
   calibrationInput,
+  countInTotalsInput,
   nameGarmentInput,
   sharingInput,
   unitsInput,
@@ -98,6 +101,25 @@ export const saveSharingFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) =>
     savePreferences(db(), await requireUserId(), data),
   );
+
+/**
+ * Settings › Sharing's "Count my runs in anonymous totals" (D-108 D),
+ * saved on toggle. Confirmed address only (D-113): it changes what is
+ * published.
+ */
+export const setCountInTotalsFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => countInTotalsInput.parse(data))
+  .handler(async ({ data }) =>
+    setCountInTotals(db(), await verifiedUserId(), data),
+  );
+
+/**
+ * Settings › Region (round 30 (d)). Confirmed address only (D-113), for
+ * the same reason: a region groups published totals.
+ */
+export const setRegionFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => regionInput.parse(data))
+  .handler(async ({ data }) => setRegion(db(), await verifiedUserId(), data));
 
 /**
  * Find (round 26 #12): resolves a typed city once, when the runner presses

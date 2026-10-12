@@ -161,3 +161,11 @@ export const nameGarmentInput = nameIdentityInput.extend({
 What the brand field has been typed so far.
 */
 export const brandPrefixInput = z.object({ brand: z.string().max(60) });
+
+/**
+ * Settings › Sharing's "Count my runs in anonymous totals" (D-108 D): the
+ * switch's one answer, saved on toggle. Its own schema for `sharingInput`'s
+ * reason: it is its own control, and saving it carries nothing else.
+ */
+export const countInTotalsInput = z.object({ countInTotals: z.boolean() });
+export type CountInTotalsChoice = z.infer<typeof countInTotalsInput>;

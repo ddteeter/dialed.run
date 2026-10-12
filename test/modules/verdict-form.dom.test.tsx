@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { entryTags, verdictScale } from "../../src/lib/contracts";
@@ -16,6 +16,7 @@ import type { Units } from "../../src/lib/contracts";
 import { verdictHue } from "../../src/ui/verdict-hue";
 import { VerdictForm } from "../../src/modules/feed/components/VerdictForm";
 import type { entryDetailForViewer } from "../../src/modules/feed/entries";
+import { PrivateRunLine } from "../../src/modules/onboarding/components/PrivateRunLine";
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
 
@@ -137,6 +138,9 @@ async function openSpecifics(
 
 const nothing = () => Promise.resolve();
 const noStat = () => Promise.resolve({ worn: 1, total: 1 });
+const privateLineStub = (hintId: string) => (
+  <span id={hintId}>The private line.</span>
+);
 
 /**
  * Rejects with `reason` exactly as given, never wrapped in an Error.
@@ -171,6 +175,7 @@ function form(
     itemBandWearStat?: (input: {
       data: { itemId: string; bandFloorC: number };
     }) => Promise<{ worn: number; total: number }>;
+    privateLine?: (hintId: string) => ReactNode;
   } = {},
 ) {
   return (
@@ -189,6 +194,7 @@ function form(
       units={overrides.units ?? { temp: "f", distance: "mi" }}
       submitVerdict={overrides.submitVerdict ?? nothing}
       itemBandWearStat={overrides.itemBandWearStat ?? noStat}
+      privateLine={overrides.privateLine ?? privateLineStub}
     />
   );
 }
@@ -1085,6 +1091,83 @@ describe("VerdictForm: tags and sharing", () => {
     expect(share).toHaveAccessibleDescription(
       "Shared runs show your kit, conditions, and your verdict.",
     );
+  });
+
+  it("says the private line beneath the switch once it is off, and the shared line again when it is on (D-108 E)", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(form());
+    const share = screen.getByRole("checkbox", { name: "Share to feed" });
+    expect(screen.queryByText("The private line.")).toBeNull();
+
+    await user.click(share);
+    expect(share).toHaveAccessibleDescription("The private line.");
+    expect(
+      screen.queryByText(
+        "Shared runs show your kit, conditions, and your verdict.",
+      ),
+    ).toBeNull();
+
+    await user.click(share);
+    expect(share).toHaveAccessibleDescription(
+      "Shared runs show your kit, conditions, and your verdict.",
+    );
+  });
+
+  it("opens Change as a sheet and comes back with the form's values kept (round 32, 2a)", async () => {
+    const user = userEvent.setup();
+    const submitVerdict = vi.fn<
+      (input: { data: Record<string, unknown> }) => Promise<unknown>
+    >(() => Promise.resolve());
+    const saveCountInTotals = vi.fn(() => Promise.resolve());
+    await renderWithRouter(
+      form({
+        entry: { audience: "private" },
+        submitVerdict,
+        privateLine: (hintId) => (
+          <PrivateRunLine
+            hintId={hintId}
+            isVerified
+            countInTotals
+            saveCountInTotals={saveCountInTotals}
+          />
+        ),
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("button", { name: "chafed" }));
+
+    await user.click(screen.getByRole("button", { name: "Change" }));
+    const sheet = screen.getByRole("dialog", { name: "Sharing" });
+    await user.click(
+      within(sheet).getByRole("checkbox", {
+        name: "Count my runs in anonymous totals",
+      }),
+    );
+    await waitFor(() => {
+      expect(saveCountInTotals).toHaveBeenCalledWith({
+        data: { countInTotals: false },
+      });
+    });
+    await user.click(within(sheet).getByRole("button", { name: "Done" }));
+
+    // Back on the form: the line follows the saved setting, and nothing
+    // picked before the sheet opened was lost.
+    expect(
+      screen.getByRole("checkbox", { name: "Share to feed" }),
+    ).toHaveAccessibleDescription("Only you see this run.");
+    expect(screen.getByRole("button", { name: "Dialed" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await user.click(screen.getByRole("button", { name: "Log it" }));
+    await waitFor(() => {
+      expect(submitVerdict).toHaveBeenCalledTimes(1);
+    });
+    expect(submitVerdict.mock.calls[0]?.[0]?.data).toMatchObject({
+      verdict: 0,
+      audience: "private",
+      tags: ["chafed"],
+    });
   });
 
   it("is shared by default, and can be made private", async () => {

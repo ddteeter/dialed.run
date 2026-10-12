@@ -219,6 +219,9 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "onboarding/functions.ts settingsQuery": "unconfirmed",
   "onboarding/functions.ts saveUnitsFn": "unconfirmed",
   "onboarding/functions.ts saveSharingFn": "unconfirmed",
+  // D-108: both change what is published, as anonymous totals.
+  "onboarding/functions.ts setCountInTotalsFn": "verified",
+  "onboarding/functions.ts setRegionFn": "verified",
   "onboarding/functions.ts lookUpCityFn": "unconfirmed",
   "onboarding/functions.ts onboardingGateQuery": "sessionless",
   "onboarding/functions.ts namingOfferQuery": "unconfirmed",
