@@ -58,7 +58,7 @@ takedown form. No new server function.
 
 ## Test plan
 
-- `test/safety/contracts.test.ts`: `removalNotice` for remove, copyright
+- `test/safety/moderation-actions.test.ts`: `removalNotice` for remove, copyright
   takedown, intimate takedown, entry and photo.
 - `test/safety/notice-band.dom.test.tsx`: an intimate takedown's band.
 - `test/email/render.test.ts` + `test/lib/email.test.ts`: the takedown
