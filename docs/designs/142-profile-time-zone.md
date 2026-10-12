@@ -42,7 +42,7 @@ the profile. It is derived from the home city and never typed by the runner.
 ## Contract touches
 
 - Schema: **additive**. `user_profiles.time_zone text NULL`, migration
-  `add_profile_time_zone` (0057 here; it renumbers at merge, law 11).
+  `add_profile_time_zone` (0058, past #185's 0057; it renumbers at merge, law 11).
 - Routes, bindings, queues, crons: **none** (an existing firing gains a step).
 - Screens: **none**. No UI change.
 
