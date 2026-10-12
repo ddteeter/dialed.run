@@ -156,6 +156,27 @@ export function proseDayLabel(epochSeconds: number, timeZone?: string): string {
 }
 
 /**
+ * The day with its weekday in full — "Tuesday, Sep 16" — as D5's Today
+ * heads its counts (round 26 #9's order, the weekday spelled out).
+ */
+export function longDayLabel(epochSeconds: number, timeZone?: string): string {
+  const weekday = part(epochSeconds, timeZone, { weekday: "long" });
+  return `${weekday}, ${monthDayLabel(epochSeconds, timeZone)}`;
+}
+
+/**
+ * The month and year — "Mar 2026" — for a date read across years, as F's
+ * rail card dates retired gear (round 28 #13).
+ */
+export function monthYearLabel(
+  epochSeconds: number,
+  timeZone?: string,
+): string {
+  const { month } = dayParts(epochSeconds, timeZone);
+  return `${month} ${part(epochSeconds, timeZone, { year: "numeric" })}`;
+}
+
+/**
  * A day and the time on it — "Mon Sep 2, 14:30".
  *
  * For a notification, where the time of day is the point: two notifications
