@@ -103,6 +103,8 @@ describe("TotalsSwitch (round 32, frames 1a and 1b)", () => {
     await waitFor(() => {
       expect(totalsBox()).toHaveAccessibleDescription(TOTALS_ON);
     });
+    // No `onSaved` here, as on Settings: its absence is not a failure.
+    expect(screen.queryByText("Not changed")).toBeNull();
   });
 
   it("stays as it was under a NOT CHANGED band when the save fails, and Try again resends", async () => {
@@ -175,6 +177,11 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     expect(container.querySelector("#hint")).toHaveTextContent(
       `${PRIVATE_ONLY_YOU} ${PRIVATE_COUNTED} Change`,
     );
+    // Set as A3's shared line is, so the two states read as one line.
+    expect(container.querySelector("#hint")).toHaveClass(
+      "text-small",
+      "text-muted",
+    );
     expect(screen.getByRole("button", { name: "Change" })).toBeVisible();
   });
 
@@ -213,6 +220,27 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
 
     await user.click(within(sheet).getByRole("button", { name: "Done" }));
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("closes from the platform (Escape) and opens again from Change", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(line({ isVerified: true, countInTotals: true }));
+
+    await user.click(screen.getByRole("button", { name: "Change" }));
+    const dialog = screen.getByRole("dialog", { name: "Sharing" });
+    expect(dialog).toBeVisible();
+    // The platform's close, as Escape does it (happy-dom has no Escape
+    // handling; test/ui/sheet.dom.test.tsx closes it the same way).
+    if (!(dialog instanceof HTMLDialogElement)) throw new Error("no dialog");
+    dialog.close();
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+
+    // The closed state is the line's, not only the dialog's, so Change
+    // opens it again.
+    await user.click(screen.getByRole("button", { name: "Change" }));
+    expect(screen.getByRole("dialog", { name: "Sharing" })).toBeVisible();
   });
 });
 

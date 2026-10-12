@@ -168,6 +168,8 @@ describe("regionLabel", () => {
     );
     expect(regionLabel({ country: "NO" })).toBe("Norway");
     expect(regionLabel({})).toBeUndefined();
+    // No country is no region, even with a stray subdivision beside it.
+    expect(regionLabel({ subdivision: "US-MN" })).toBeUndefined();
   });
 
   it("shows a stored code the list no longer holds rather than dropping it", () => {

@@ -309,6 +309,24 @@ describe("the sub-pages", () => {
     expect(saveRegion).not.toHaveBeenCalled();
   });
 
+  it("is Region by its section, with the region form (round 30 (d))", async () => {
+    await renderWithRouter(
+      <SettingsSectionPage
+        section="region"
+        current={ANSWERED}
+        saveUnits={vi.fn()}
+        saveSharing={vi.fn()}
+        saveCountInTotals={vi.fn()}
+        saveRegion={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Region" }),
+    ).toBeVisible();
+    expect(screen.getByRole("combobox", { name: "Country" })).toBeVisible();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+
   it("save units, and only units, from their own form", async () => {
     const user = userEvent.setup();
     const saveUnits = vi.fn().mockResolvedValue(undefined);
