@@ -125,16 +125,25 @@ test("account settings -> change password -> reminder emails off and on -> sign 
   // tries at the current password reaches it, and the sixth try reads
   // round 28 #10's field message rather than the band's rate limit.
   await scene(page, "Change password: five wrong tries, then the wait");
+  // The success clears both fields; filling before it does would be wiped.
+  await expect(page.getByLabel("Current password")).toHaveValue("");
+  const changeButton = page.getByRole("button", { name: "Change password" });
   for (let attempt = 1; attempt <= 5; attempt += 1) {
     await page.getByLabel("Current password").fill(`${PASSPHRASE}-wrong`);
     await page.getByLabel("New password").fill(`${PASSPHRASE}-3`);
-    await page.getByRole("button", { name: "Change password" }).click();
+    // Each try waits for the server's answer: a press while one is in
+    // flight is dropped by the double-submit guard, and is not counted.
+    const answered = page.waitForResponse((response) =>
+      response.url().includes("/_serverFn/"),
+    );
+    await changeButton.click();
+    await answered;
     await expect(
       page.getByText("That's not your current password."),
     ).toBeVisible({ timeout: 15_000 });
   }
   await page.getByLabel("Current password").fill(`${PASSPHRASE}-2`);
-  await page.getByRole("button", { name: "Change password" }).click();
+  await changeButton.click();
   await expect(
     page.getByText(/^That's 5 wrong tries\. You can try again at .+\.$/u),
   ).toBeVisible({ timeout: 15_000 });
