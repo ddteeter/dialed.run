@@ -55,8 +55,11 @@ default only where a default is safe.
 
 1. **The `wrangler.jsonc` change for R-134**: an R2 binding to `dialed-guides`
    and a nightly cron trigger. R-134 records it as owner-approved and
-   "confirmed at build time". This is that confirmation. [No default: lane B
-   does not start without it.]
+   "confirmed at build time". **Approved 2026-10-11.** Lane B itself moves to
+   soon after public (see lane B): the artifact is rebuilt nightly from all
+   history, so nothing is lost by waiting, and at friends scale the
+   thresholds would suppress almost every figure. It comes forward only if
+   the marketing site needs guides at launch.
 2. **When the CSP enforces.** No production traffic has been through the
    report-only header yet. Recommendation: lane C fixes every violation the
    e2e and demo suites produce locally, and the flip ships as its own
@@ -66,12 +69,13 @@ default only where a default is safe.
    harmful.]
 3. **Legal text for D-108 (E).** Au2's sentence links to Terms and Privacy,
    which don't mention aggregates yet. The in-app sentence ships with the
-   drawn copy, and the legal paragraphs stay yours. They must be in Terms v1
+   drawn copy. **The owner asked for the legal paragraphs to be drafted by
+   an agent (2026-10-11)** on `docs/d108-legal-totals`; the owner reviews
+   the wording in that PR. They must be in Terms v1
    (D-93) so they don't trigger a second acceptance prompt. **They are needed
    before friends**, not before public, because every Terms change after
    friends accept is a second prompt. The same applies to #169's edits to
-   `docs/legal/`: settle them before the friends deploy. [The in-app copy
-   ships; the legal text is not written by a lane.]
+   `docs/legal/`: settle them before the friends deploy.
 4. **D-108's fallback.** "If A or B can't be met at launch, ship
    shared-only." Lane B builds A–C in full; if the thresholds leave the
    artifact nearly empty with friends-scale data, that is expected and is
@@ -100,9 +104,10 @@ for strangers. Two things cannot wait for friends:
 
 R-124 rides along because it is cheap. So the slices are:
 
-- **Before friends:** lanes A and F, plus the owner's legal text
+- **Before friends:** lanes A and F, plus the D-108 legal text
   (decision 3).
-- **Before public:** lanes C, D1, B and D2, and the CSP flip.
+- **Before public:** lanes C, D1 and D2, and the CSP flip.
+- **Soon after public:** lane B.
 
 Three things are deliberately **kept out of the friends deploy**:
 
@@ -156,7 +161,7 @@ logging; schema: additive)
    round trip that keeps the form's values.
    _Done:_ the demo is re-recorded (the A3 and Au2 journeys change).
 
-**Lane F · Strava erasure and the password lockout** (126 and 127; no
+**Lane F · Strava erasure, the password lockout and the rename guard** (126 and 127; no
 schema change)
 
 1. **R-142**: delete `gave_up` rows whose subject starts with the athlete
@@ -175,6 +180,13 @@ schema change)
    a `verification-class` row.
    _Done:_ there is no client-side `changePassword` call (an architecture
    test pins it).
+3. **R-121** (owner, 2026-10-11): `forceRename`'s update becomes
+   conditional on the handle the read saw, and the history row is written
+   only when it matched, in the same batch. Plus the comment saying why the
+   history lookups are `COLLATE NOCASE`. In `account/username.ts` and
+   `safety/rename.ts`, clear of the takedown stack.
+   _Test:_ two renames racing from the same previous handle leave one
+   history row and the first rename intact.
 
 ### Stage 2: before public
 
@@ -222,7 +234,8 @@ step 1 proves it needs one)
 4. **STR-13**: the two remaining formatters (`Today.tsx`,
    `retired-label.ts`).
 
-**Lane B · R-134 guide artifact.** Needs decision 1 and lane A merged.
+**Lane B · R-134 guide artifact (soon after public).** Needs lane A merged;
+the binding is approved (decision 1).
 
 1. The binding and the cron, in `wrangler.jsonc` (owner-approved),
    `src/env`, `ops/crons.ts` and `bindings-conformance.test.ts`.
@@ -267,8 +280,8 @@ gate (decision 2).
 
 - **Stage 1** runs lanes A and F in parallel, which is two agents. Both
   merge before the friends deploy.
-- **Stage 2** runs lanes C and D1 next, and lane B once decision 1 is
-  answered and lane A has merged. That is three agents at most.
+- **Stage 2** runs lanes C and D1 next, then D2. That is three agents at
+  most. Lane B follows the public launch.
 - **Lane A merges before lane B starts.** Lane B's reader depends on the
   `count_in_totals` column.
 - **D2 starts when the takedown stack has merged.** Rebasing onto #169 is
@@ -289,6 +302,4 @@ gate (decision 2).
 - The public `/takedown` page and its abuse limits (#169 and #176) and the
   D-117 amendment #169 proposes. Those are that session's, and the
   amendment is yours to sign off there.
-- R-121, the force-rename concurrency guard. It is open but not tagged
-  before-public. Say if you want it in lane C.
 - Flipping `IS_INVITE_ONLY` (open decision 3).
