@@ -53,7 +53,7 @@ takedown form. No new server function.
 - Schema changes needed: **none**.
 - New route files: none. New bindings/queues/crons: **none**.
 - Email wire format: `content_removed` gains an optional field (additive).
-- Design deltas (item 64): the other-photos block on both Review rows; the
+- Design deltas (item 63, after #186's 62): the other-photos block on both Review rows; the
   takedown email's sentence; W1's undrawn link to `/takedown`.
 
 ## Test plan
