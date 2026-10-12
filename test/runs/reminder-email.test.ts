@@ -430,10 +430,13 @@ describe("at send time", () => {
     expect(await owedFor(userId)).toStrictEqual([]);
   });
 
-  it("skips it when the runner switched reminder emails off", async () => {
+  it("skips it when the runner switched reminder emails off after it was owed", async () => {
+    // Owed while the switch was on; turned off inside the 20 minutes. The
+    // switch is read when the email is due, not when it was owed.
     const { userId, athleteId } = await connectedRunner();
-    await setEmailPreference(core(), userId, "run_reminder", false);
     await deliver(reminderJob(athleteId));
+    expect(await owedFor(userId)).toHaveLength(1);
+    await setEmailPreference(core(), userId, "run_reminder", false);
     const mail = fakeMail();
     await drainLater(mail);
     expect(mail.sent).toStrictEqual([]);
