@@ -108,9 +108,8 @@ export function RemovalRequests({
  * (round 37 #59f), so the safe answer is the one under focus.
  */
 function CancelButton({
-  className,
   onCancel,
-}: Readonly<{ className: string; onCancel: () => void }>): JSX.Element {
+}: Readonly<{ onCancel: () => void }>): JSX.Element {
   // State rather than a ref, so the effect runs once the button exists.
   const [button, setButton] = useState<HTMLButtonElement | undefined>();
   useEffect(() => {
@@ -122,7 +121,7 @@ function CancelButton({
         setButton(node ?? undefined);
       }}
       type="button"
-      className={className}
+      className="target self-start"
       onClick={onCancel}
     >
       <Mono step="xs">Cancel</Mono>
@@ -315,7 +314,7 @@ function BlockRequester({
           pendingLabel="Blocking"
           pending={form.pending}
         />
-        <CancelButton className="target self-start" onCancel={stopAsking} />
+        <CancelButton onCancel={stopAsking} />
       </FormElement>
     </div>
   );
