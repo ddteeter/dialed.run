@@ -67,8 +67,8 @@ takedown form. No new server function.
   per action and reason.
 - `test/safety/other-photos.test.ts` (worker): scope, exclusions, order,
   limit, and EXPLAIN (no scan of `outfit_entries` or `entry_photos`).
-- `ReviewQueue.dom` / `RemovalRequests.dom`: the block renders.
-- e2e: the safety demo re-recorded with the other photos on Review.
+- `test/safety/other-photos.dom.test.tsx`: the block alone and on both rows.
+- e2e: `e2e/safety/takedown.demo.spec.ts` (which owns Review's removal requests) re-recorded with the other photos.
 
 ## Open questions
 
