@@ -997,6 +997,11 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       reach the same refusal from Create account. The build puts the same
       band in the same place, first in the form region. **The ask:**
       confirm it for Au2.
+    - **"Over the empty form".** After a password log-in the gate refuses,
+      the build keeps what was typed in Email and Password, as every
+      other Au1 refusal does. A Google return arrives at an empty form
+      anyway. **The ask:** say whether "empty" means the fields are
+      cleared.
 
 ## Answered in round 37 (imported 2026-10-10)
 

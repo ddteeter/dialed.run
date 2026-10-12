@@ -34,7 +34,10 @@ test.use({ storageState: storageStateFor("safety") });
 
 test("report a runner, block them, and take the block back", async ({
   page,
-}) => {
+}, testInfo) => {
+  // Paced for recording, the journey and its closing sign-in run past the
+  // default 30s.
+  testInfo.setTimeout(150_000);
   const suffix = String(Date.now());
   const strangerId = newUlid();
   const strangerName = `stranger_${suffix.slice(-8)}`;
