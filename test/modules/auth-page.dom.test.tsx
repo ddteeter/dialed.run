@@ -502,7 +502,7 @@ describe("Au6 · a refusal Google's round trip brought back", () => {
  */
 describe("item 23 · a closed account", () => {
   const CLOSED_STATUS =
-    "Account closed. This account was closed for breaking the community rules.";
+    "Account closed. This account was closed for breaking the community rules. Think we got it wrong? Reply to the email we sent you.";
 
   it("draws the notice over the form when the ban gate refuses a password log-in", async () => {
     const { user, onSignedIn } = await logIn();
@@ -530,7 +530,7 @@ describe("item 23 · a closed account", () => {
       "aria-invalid",
     );
     expect(document.body).not.toHaveTextContent("spam");
-    expect(screen.getByRole("status")).toHaveTextContent(CLOSED_STATUS);
+    expect(screen.getByRole("status").textContent).toBe(CLOSED_STATUS);
     expect(onSignedIn).not.toHaveBeenCalled();
   });
 
@@ -566,7 +566,7 @@ describe("item 23 · a closed account", () => {
     expect(part("form")?.firstElementChild).toBe(notice);
     expect(part("control-failure")).toBeNull();
     expect(screen.queryByText(AUTH_COPY.google)).toBeNull();
-    expect(screen.getByRole("status")).toHaveTextContent(CLOSED_STATUS);
+    expect(screen.getByRole("status").textContent).toBe(CLOSED_STATUS);
   });
 
   it("clears when the password form is submitted, so a wrong password shows Au3 alone", async () => {

@@ -100,7 +100,7 @@ export function AuthPage(
   // band nor Google's speaks for it — there is nothing to try again — so
   // the status region says the notice's own words.
   const isClosed = google.closed || isAccountClosed(form.failure, cause);
-  const said = band ?? (isClosed ? ACCOUNT_CLOSED_COPY : undefined);
+  const said = band ?? (isClosed ? CLOSED_SAID : undefined);
 
   return (
     <SignedOutPanel heading={heading} notice={props.notice}>
@@ -166,6 +166,15 @@ export function AuthPage(
     </SignedOutPanel>
   );
 }
+
+/**
+ * Item 23's notice as the status region says it: the kicker, the sentence
+ * and the appeal line, so a screen reader hears all the band shows.
+ */
+const CLOSED_SAID = {
+  kicker: ACCOUNT_CLOSED_COPY.kicker,
+  message: `${ACCOUNT_CLOSED_COPY.message} ${ACCOUNT_CLOSED_COPY.detail}`,
+};
 
 /**
  * Which of the board's form states this is, by its own `data-state`

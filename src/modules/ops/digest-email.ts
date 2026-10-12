@@ -18,7 +18,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { user } from "../../db/schema-auth";
-import { dayLabel } from "../../lib/dates";
+import { calendarDay, dayLabel } from "../../lib/dates";
 import type { EmailTemplate } from "../../lib/contracts/email";
 import { columnWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
@@ -88,8 +88,6 @@ const LIVE: DigestMail = {
   settle: settleOutbox,
 };
 
-const DAY_SECONDS = 86_400;
-
 /**
  * Whether this UTC day's digest was already owed — by a firing that ran
  * before this one today, whose emails may long since have been sent and
@@ -97,8 +95,7 @@ const DAY_SECONDS = 86_400;
  */
 async function isOwedToday(db: Db, now: number): Promise<boolean> {
   const last = await markedAt(db, DIGEST_OWED);
-  // Never owed reads as owed at the epoch, which is before any day.
-  return (last ?? 0) >= now - (now % DAY_SECONDS);
+  return last !== undefined && calendarDay(last) === calendarDay(now);
 }
 
 /**
