@@ -271,14 +271,18 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
     name: "Count my runs in anonymous totals",
   });
   await scene(page, "Change opens the setting in a sheet; it saves on toggle");
-  await totals.uncheck();
+  // `click`, not `uncheck`: the switch is not optimistic (§4a), so the box
+  // changes only once the save lands, which `uncheck` reads as a failure.
+  await totals.click();
+  await expect(totals).not.toBeChecked();
   await expect(
     sharing.getByText("Off. Your runs leave the guides at tonight's update."),
   ).toBeVisible();
   await expect(
     page.getByText("Only you see this run.", { exact: true }),
   ).toBeAttached();
-  await totals.check();
+  await totals.click();
+  await expect(totals).toBeChecked();
   await expect(
     sharing.getByText("Shared and private runs add their temperature"),
   ).toBeVisible();
