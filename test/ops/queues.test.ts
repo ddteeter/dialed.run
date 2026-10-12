@@ -234,6 +234,15 @@ describe("a dead letter's tries are the queue's deliveries (R-119)", () => {
       aspectType: "create",
       eventTime: 1,
     } as const;
+    // Written only while the athlete is connected (R-142).
+    await drizzle(env.DIALED_CORE)
+      .insert(stravaConnections)
+      .values({
+        userId: newUlid(),
+        athleteId: job.athleteId,
+        refreshToken: "r",
+      })
+      .onConflictDoNothing();
 
     await handleQueueBatch(
       batchOf("dialed-imports-dlq", [fakeMessage("m9", job)]),

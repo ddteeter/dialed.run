@@ -93,6 +93,13 @@ export async function breachVerdict(
 }
 
 /**
+ * Better Auth's change-password endpoint, as its router and its hooks name
+ * it. The breach screen reads its body. `createAuth` closes the path to
+ * HTTP, because Change password is the server's (R-124).
+ */
+export const CHANGE_PASSWORD_PATH = "/change-password";
+
+/**
  * The body a path that sets a password carries, parsed: sign-up's field
  * is `password`, a change's is `newPassword`. Any other path is not
  * screened.
@@ -108,7 +115,7 @@ const BODY_ON_PATH: ReadonlyMap<
     })),
   ],
   [
-    "/change-password",
+    CHANGE_PASSWORD_PATH,
     z.object({ newPassword: z.string() }).transform((body) => ({
       secret: body.newPassword,
     })),

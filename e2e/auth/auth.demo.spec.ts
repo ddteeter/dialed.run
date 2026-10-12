@@ -64,6 +64,12 @@ test("request access -> an invite from the Desk -> create an account -> sign out
       "By creating an account you agree to the Terms and have read the Privacy policy.",
     ),
   ).toBeVisible();
+  // D-108 E (round 32, 2b): one sentence, no checkbox.
+  await expect(
+    page.getByText(
+      "Your runs count, without your name, in totals like the guides. You can turn that off in Settings.",
+    ),
+  ).toBeVisible();
   await expect(
     page.getByRole("main").getByRole("link", { name: "Terms" }),
   ).toHaveAttribute("href", "/terms");

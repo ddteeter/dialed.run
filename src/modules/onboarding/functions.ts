@@ -14,9 +14,11 @@ import { nameItem } from "../closet";
 import { coverageLadder } from "../feed";
 import { captureException } from "../ops";
 import { climateNormals, resolvePlace } from "../weather";
+import { countsInTotals, setCountInTotals } from "./aggregate-prefs";
 import {
   brandPrefixInput,
   calibrationInput,
+  countInTotalsInput,
   nameGarmentInput,
   sharingInput,
   unitsInput,
@@ -97,6 +99,26 @@ export const saveSharingFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => sharingInput.parse(data))
   .handler(async ({ data }) =>
     savePreferences(db(), await requireUserId(), data),
+  );
+
+/**
+ * The runner's own totals setting alone, for A3's private line: the
+ * verdict page needs nothing else of the settings.
+ */
+export const countInTotalsQuery = createServerFn({ method: "GET" }).handler(
+  async () => countsInTotals(db(), await requireUserId()),
+);
+
+/**
+ * Settings › Sharing's "Count my runs in anonymous totals" (D-108 D),
+ * saved on toggle. Unconfirmed runners too (owner, 2026-10-11): it is the
+ * runner's own privacy choice, nobody else sees it, and opting out must
+ * never wait behind the confirm sheet.
+ */
+export const setCountInTotalsFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => countInTotalsInput.parse(data))
+  .handler(async ({ data }) =>
+    setCountInTotals(db(), await requireUserId(), data),
   );
 
 /**

@@ -13,10 +13,12 @@
  */
 import { z } from "zod";
 
+import { takedownRequestSchema } from "../../lib/contracts/takedown";
 import { rowIdSchema, ulidSchema } from "../../lib/ids";
 
 import {
   removalReasonSchema,
+  declineReasonField,
   renameReasonSchema,
   reportReasonSchema,
   reportSubjectTypeSchema,
@@ -173,3 +175,48 @@ export const denyDomainInput = z.object({
     .refine((value) => !value.includes(" "), "A domain has no spaces in it."),
   reason: z.string().trim().max(500).optional(),
 });
+
+/**
+ * `/takedown`'s request (design 136): the shared form schema, and the
+ * Turnstile answer riding beside it, as Au5's request carries one.
+ */
+export const takedownRequestInput = takedownRequestSchema.extend({
+  turnstileToken: z.string().max(2048).optional(),
+});
+
+/**
+ * An operator's decision on a request (design 136): remove it, or decline
+ * it with the reason the requester is sent. Error copy lives here.
+ */
+const removalRequestRef = z.object({ requestId: ulidSchema });
+
+/**
+Block and decline all (design 137): the request whose requester it is.
+*/
+export const blockRequesterInput = removalRequestRef;
+
+/**
+ * A confirm link's token (design 137): 32 random bytes, hex. Anything
+ * else is a link nobody sent.
+ */
+const confirmTokenSchema = z.string().regex(/^[\da-f]{64}$/u);
+
+export const takedownConfirmInput = z.object({ token: confirmTokenSchema });
+
+/**
+`/takedown/confirm?token=`: the token when it is one, and nothing otherwise.
+*/
+export function takedownConfirmSearch(
+  search: Readonly<Record<string, unknown>>,
+): { token?: string | undefined } {
+  const parsed = confirmTokenSchema.safeParse(search.token);
+  return { token: parsed.success ? parsed.data : undefined };
+}
+
+export const removalDecisionInput = z.discriminatedUnion("outcome", [
+  removalRequestRef.extend({ outcome: z.literal("removed") }),
+  removalRequestRef.extend({
+    outcome: z.literal("declined"),
+    reason: declineReasonField,
+  }),
+]);

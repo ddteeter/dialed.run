@@ -2,13 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { getSession } from "../../modules/auth/functions";
 import { requireSignedIn } from "../../modules/feed/redirect";
+import { RemovalRequests } from "../../modules/safety/components/RemovalRequests";
 import { ReviewQueue } from "../../modules/safety/components/ReviewQueue";
 import { Takedown } from "../../modules/safety/components/Takedown";
 import {
+  decideRemovalRequestAction,
   decideReviewAction,
   takedownAction,
 } from "../../modules/feed/functions";
 import {
+  blockTakedownRequesterAction,
   reviewHandleAction,
   reviewQueueQuery,
 } from "../../modules/safety/functions";
@@ -27,11 +30,17 @@ export const Route = createFileRoute("/safety/review")({
 });
 
 function ReviewPage() {
-  const { queue } = Route.useLoaderData();
+  const { queue, requests } = Route.useLoaderData();
 
   return (
     <Layout>
       <Page title="Review queue" width="column">
+        {/* Design 136: `/takedown` requests, soonest due first. */}
+        <RemovalRequests
+          requests={requests}
+          decide={decideRemovalRequestAction}
+          block={blockTakedownRequesterAction}
+        />
         <ReviewQueue
           queue={queue}
           resolve={decideReviewAction}

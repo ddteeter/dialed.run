@@ -7,7 +7,7 @@ The TAKE IT DOWN Act has been enforced since 2026-05-19. A platform that hosts u
 Today, reporting needs a signed-in, confirmed account. One report only hides the item from the reporter, and nothing reaches the owner before the daily digest. The owner's calls (2026-10-10):
 
 - an in-app reason that hides at once and alerts the operators;
-- a signed-out page and form whose requests queue with an alert but hide nothing until reviewed;
+- a signed-out page and form whose requests queue with an alert. As first built they hid nothing; round 35 #58e and the owner (2026-10-10) changed that: a request whose link is ours hides it at once, as the in-app reason does, and a Decline gives it back unless a review row or another request still holds it;
 - requests are kept until the owner deletes them.
 
 ## Approach
@@ -16,13 +16,13 @@ Two PRs, stacked.
 
 **PR A: the in-app reason.**
 
-- `safety/contracts.ts` gains the reason `intimate` ("It's an intimate image shared without consent", placeholder copy). It also gains a per-reason threshold, `reportersToHide`, which is 1 for `intimate` and `autoHideReporterThreshold` (3) for every other reason, and a removal statement `intimate`.
+- `safety/contracts.ts` gains the reason `intimate` ("It's an intimate image of someone, shared without their consent", round 35 #58a). It also gains a per-reason threshold, `reportersToHide`, which is 1 for `intimate` and `autoHideReporterThreshold` (3) for every other reason, and a removal statement `intimate`.
 - `fileReport` reads the threshold and changes nothing else.
 - `hidePendingReview` takes the extra batch items. For `intimate`, those are one email debt per operator (new kind `removal_due`, with the subject, a link to Review, and the time it is due). They are owed in the same batch as the hide and the queue row, so the hide never lands without its alert (law 8c).
 - Safety cannot import `ops`, so `owe` is handed in from the server function, as the runs consumer's is.
 - The hourly drain sends the email within the hour.
 - The hourly reconcile also re-hides, and re-alerts for, a subject with an `intimate` report.
-- The Review row shows "Due in 31h" / "Overdue" for a subject that has an `intimate` report: 48h from the first one.
+- The Review row shows "Due in 31h" / "Overdue" for a subject that has an `intimate` report: 48h from the first one. Round 35 #58b puts it in the row's header, right, uppercase, in place of the age; the brackets stay about people.
 
 **PR B: the signed-out request.**
 

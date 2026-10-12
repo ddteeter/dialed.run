@@ -125,7 +125,19 @@ function profileRow(data: ExportData): ProfileRow {
     profile,
     defaultAudience:
       profile === undefined ? undefined : audienceWord[profile.defaultAudience],
+    countInTotals: countsInTotals(data),
   };
+}
+
+/**
+ * Whether the runner's runs count in anonymous totals, as the guide job
+ * reads it (D-108 D): the stored answer, or counted for an account that
+ * has no profile row yet — nothing creates one at signup, and the
+ * column's default is on. Nothing for an account that is gone.
+ */
+function countsInTotals({ account, profile }: ExportData): boolean | undefined {
+  if (profile !== undefined) return profile.countInTotals;
+  return account === undefined ? undefined : true;
 }
 
 /**

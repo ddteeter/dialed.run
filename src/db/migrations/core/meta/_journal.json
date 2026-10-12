@@ -379,6 +379,27 @@
       "when": 1791606267772,
       "tag": "0053_add_products_extraction_pending_and_done_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "6",
+      "when": 1791650973361,
+      "tag": "0054_add_takedown_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "6",
+      "when": 1791687878695,
+      "tag": "0055_add_takedown_abuse_limits",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "6",
+      "when": 1791787083919,
+      "tag": "0056_add_profile_count_in_totals",
+      "breakpoints": true
     }
   ]
 }

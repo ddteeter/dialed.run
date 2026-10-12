@@ -1,0 +1,1 @@
+ALTER TABLE `user_profiles` ADD `count_in_totals` integer DEFAULT true NOT NULL;

@@ -5,10 +5,9 @@ import type { JSX } from "react";
 import {
   ACCESS_NOTE_COUNT_FROM,
   ACCESS_NOTE_MAX,
-  TURNSTILE_REFUSED,
+  refusalMessage,
 } from "../../../lib/contracts/access";
 import { requestAccessSchema } from "../../../lib/contracts";
-import { clockLabel, deviceTimeZone } from "../../../lib/dates";
 import {
   FailureBand,
   FormElement,
@@ -22,7 +21,10 @@ import {
   useTurnstileToken,
 } from "../../../ui";
 import type { FieldProps } from "../../../ui";
-import { SignedOutPanel } from "../../../ui/SignedOutPanel";
+import {
+  SignedOutPanel,
+  SignedOutReceipt,
+} from "../../../ui/SignedOutPanel";
 import type { AccessRequestResult } from "../access";
 
 /**
@@ -31,29 +33,12 @@ The board's inline link: ink, bold, underlined — never pink.
 const INLINE_LINK_CLASS = "font-bold text-ink underline underline-offset-4";
 
 /**
- * What the band says when the request was not taken — both are about the
- * browser, never the address: Turnstile's (round 27 #12) and the limit's
- * (round 28 #9, #11's grammar in local time).
- */
-export function refusalMessage(
-  result: Exclude<AccessRequestResult, { status: "received" }>,
-): string {
-  return result.status === "refused"
-    ? TURNSTILE_REFUSED
-    : `Too many requests from here. You can send another at ${clockLabel(result.until, deviceTimeZone())}.`;
-}
-
-/**
  * Au5's receipt (round 26 #20): "You're on the list", the same for a new,
  * a repeated and a registered address — it reveals nothing.
  */
 function Receipt({ email }: Readonly<{ email: string }>): JSX.Element {
   return (
-    <div data-part="receipt" className="flex flex-col gap-5">
-      <Mono step="xs" className="text-muted">
-        On the list
-      </Mono>
-      <h2 className="m-0 text-title font-bold">You&apos;re on the list</h2>
+    <SignedOutReceipt kicker="On the list" title="You&apos;re on the list">
       <p className="m-0 text-body">
         When there&apos;s room, we&apos;ll email a code to{" "}
         <strong>{email}</strong>. There&apos;s nothing else to do until then.
@@ -68,7 +53,7 @@ function Receipt({ email }: Readonly<{ email: string }>): JSX.Element {
           Create an account
         </Link>
       </p>
-    </div>
+    </SignedOutReceipt>
   );
 }
 

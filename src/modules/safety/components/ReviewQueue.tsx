@@ -3,6 +3,7 @@ import type { JSX, ReactNode, Ref } from "react";
 
 import {
   Bracketed,
+  FailureBand,
   ListSection,
   Mono,
   SubmitButton,
@@ -98,9 +99,6 @@ function ReportedFor({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
           ? "1 person"
           : `${String(row.reporterCount)} people`}
       </Bracketed>
-      {/* Design 136: the TAKE IT DOWN Act's 48 hours, on a row an
-          intimate-image report started (design deltas item 58). */}
-      {row.due === undefined ? undefined : <Bracketed>{row.due}</Bracketed>}
       <ListOfReasons reasons={row.reasons} />
     </span>
   );
@@ -398,8 +396,10 @@ function HandleDecision({
     schema: handleReviewInput,
     action: (values) => reviewHandle({ data: values }),
     onSuccess: ({ outcome }) => {
-      if (outcome === "taken") {
-        setSaid(renameMessage({ kind: "taken" }));
+      // Neither settled the row: a taken placeholder, or a handle that
+      // changed before the rename landed (R-121).
+      if (outcome === "taken" || outcome === "moved") {
+        setSaid(renameMessage({ kind: outcome }));
         return;
       }
       onSettled(row.id);
@@ -438,9 +438,32 @@ function HandleDecision({
         field={form.field}
         error={form.fieldErrors.nameReason}
       />
-      {said === "" ? undefined : <p className="text-body">{said}</p>}
+      {/* Round 35 #45: the taken placeholder is the row's control band,
+          under NOT RENAMED. No Try again: the sentence says to press
+          Rename, which is right above it. */}
+      {said === "" ? undefined : (
+        <FailureBand
+          kicker="Not renamed"
+          message={said}
+          part="control-failure"
+        />
+      )}
     </DecisionForm>
   );
+}
+
+/**
+ * A flagged handle's row says why it is there (round 35 #45): the kicker
+ * names the re-check where a content row names its kind, and this line
+ * stands where a content row lists what the reporters said.
+ */
+const HANDLE_FLAGGED_LINE =
+  "The hourly re-check flagged a handle this runner already has. Nothing is hidden while it waits.";
+
+function rowKind(row: QueueRow): string {
+  return row.subject.handleFlagged === true
+    ? "handle · re-check"
+    : row.subjectType;
 }
 
 /**
@@ -482,17 +505,33 @@ function ReviewRow({
 
   return (
     <li className="flex flex-col gap-2 border border-hairline p-3">
-      <button
-        ref={opener}
-        type="button"
-        aria-expanded={active}
-        onClick={onActivate}
-        className="target cursor-pointer self-start border-none bg-transparent p-0 text-left text-body font-semibold text-ink"
-      >
-        {row.subjectType} · {row.subject.label ?? row.subjectId}
-      </button>
+      <span className="flex items-baseline justify-between gap-3">
+        <button
+          ref={opener}
+          type="button"
+          aria-expanded={active}
+          onClick={onActivate}
+          className="target cursor-pointer border-none bg-transparent p-0 text-left text-body font-semibold text-ink"
+        >
+          {rowKind(row)} · {row.subject.label ?? row.subjectId}
+        </button>
+        {/* The TAKE IT DOWN Act's 48 hours, on a row an intimate-image
+            report started: in the header, right, where the age sits
+            (round 35 #58b). The brackets stay about people. */}
+        {row.due === undefined ? undefined : (
+          <span data-part="due" className="text-ink uppercase">
+            <Mono step="xs">{row.due}</Mono>
+          </span>
+        )}
+      </span>
       <ReportedPhotos keys={row.subject.photoKeys} />
-      <ReportedFor row={row} />
+      {row.subject.handleFlagged === true ? (
+        <p data-part="why-here" className="m-0 text-body">
+          {HANDLE_FLAGGED_LINE}
+        </p>
+      ) : (
+        <ReportedFor row={row} />
+      )}
       <span className="text-micro text-quiet">
         <Bracketed>{row.source}</Bracketed>
       </span>

@@ -618,7 +618,7 @@ class Component extends DCLogic {
       row('Email', 'maya@example.com', 'Change', { rule: '0', pending: 'WAITING · maya@newmail.com · Resend · Cancel' }),
       row('Password', 'Changed Aug 12', 'Change'),
       row('Sign out everywhere', 'Every device, including this one', 'Sign out'),
-      row('Export your data', 'Runs, closet, entries, photos and your run files', 'Get a copy'),
+      row('Export your data', 'Runs, closet, entries and photos', 'Get a copy'),
       row('Delete account', 'Deleted after 7 days. Log in before then to keep it.', 'Delete', { c: '#C21A6B', gap: '20px', rule: '2px solid #0B0B0E' }),
     ];
     const accountSheets = [
@@ -649,7 +649,7 @@ class Component extends DCLogic {
       { screen: 'Email Strava disconnected', tag: 'STRAVA', to: 'maya@example.com', subject: 'Strava is disconnected', body: 'You disconnected dialed.run on Strava, so run reminders have stopped. Your runs here haven\'t changed.', button: 'Connect again', foot: 'When Strava ends the connection itself, the first line reads "Strava ended the connection to dialed.run". Sent once per disconnect.' },
       { screen: 'Email content removed', tag: 'MODERATION', to: 'maya@example.com', subject: 'We removed something from your run', body: 'We removed the photo from your Sat, Aug 29 run. Reason: it shows where someone lives. Your run and verdict stay.', button: 'See the community rules', foot: 'Think we got it wrong? Reply to this email.' },
       { screen: 'Email ban', tag: 'MODERATION', to: 'maya@example.com', subject: 'Your dialed.run account is closed', body: 'We closed @maya_runs for breaking the community rules: repeated harassment. You can\'t log in, and your shared runs are gone from the feed.', button: '', foot: 'Think we got it wrong? Reply to this email to appeal and we\'ll look again.' },
-      { screen: 'Email export', tag: 'EXPORT', to: 'maya@example.com', subject: 'Your dialed.run export is ready', body: 'Your runs, closet, entries, photos and original run files are in one ZIP.', button: 'Download export', foot: 'The link works for 7 days, only while you\'re logged in.' },
+      { screen: 'Email export', tag: 'EXPORT', to: 'maya@example.com', subject: 'Your dialed.run export is ready', body: 'Your runs, closet, entries and photos are in one ZIP.', button: 'Download export', foot: 'The link works for 7 days, only while you\'re logged in.' },
       { screen: 'Email delete scheduled', tag: 'DELETE', to: 'maya@example.com', subject: 'Your dialed.run account goes on Sat, Oct 4', body: 'You asked to delete your account. Everything in it goes on Sat, Oct 4.', button: 'Keep my account', foot: 'The button opens Au1. Logging in and choosing Keep cancels it. Didn\'t ask? Log in and keep it, then change your password.' },
     ];
 

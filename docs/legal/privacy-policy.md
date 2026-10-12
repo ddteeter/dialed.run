@@ -259,6 +259,20 @@ account added it.
   reviewer that it is waiting and when its 48 hours run out. The email
   says what kind of thing was reported and when; it does not name you or
   the runner who posted it.
+- **A removal request** made at [/takedown](/takedown), with or without an
+  account: we keep the email address, the name typed as a signature, the
+  link or description of where the image is, the username of whoever
+  posted it if you give one, anything written about it,
+  when it was made, and what we decided, with the reason if we declined.
+  We email the address a receipt and the decision, and email each
+  reviewer that a request is waiting. We count requests per visitor IP
+  address, as we do requests for access, to stop the form being flooded.
+  To stop one person filing many requests, we keep with each request a
+  form of the email address that ignores dots and "+" tags where the
+  provider does, and a one-way keyed code made from the IP address (not
+  the address itself). If someone abuses the form, we may block that
+  email and code from it. We keep a request until we delete it, because it is the record of why
+  something was or was not removed. [OWNER: review]
 - Reviewers are a short list of admins we name in configuration. They can
   see reported and flagged content, including hidden photos, with the
   reports' reasons and notes.
@@ -310,6 +324,7 @@ sets no cookies and keeps no personal data. [OWNER: review]
 | What                                                                                            | How long                                                                                                                                                                                                               |
 | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Imported run files                                                                              | Until it has been read, usually within a day. A file we could not read: 30 days after the import failed [OWNER: review] [OWNER: confirm the whole-bucket 30-day rule is removed; only the exports/ 8-day rule remains] |
+| Removal requests (`/takedown`)                                                                  | Until we delete them (D-117)                                                                                                                                                                                           |
 | Session records                                                                                 | Expire after 7 days. [OWNER: expired rows are not swept today; decide a period]                                                                                                                                        |
 | Strava refresh token                                                                            | Until you disconnect, then until Strava confirms revocation                                                                                                                                                            |
 | Garments you delete (never used in a kit)                                                       | The record is deleted; the photo files are not. [OWNER: launch gap]                                                                                                                                                    |

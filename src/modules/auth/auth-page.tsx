@@ -249,6 +249,10 @@ export function LoginCrossLink({
  * policy, and the age line. Never under Au1 (D-52). No checkbox: creating
  * the account is the acceptance, and the server records the terms'
  * version and when as the account is made (`account/terms-acceptance`).
+ *
+ * The terms line ends with D-108 E's disclosure (round 32, frame 2b): one
+ * sentence, no checkbox and no onboarding step. "Settings" is not a link
+ * on the board, and a visitor without an account has no Settings to open.
  */
 export function AuthLegal(): JSX.Element {
   return (
@@ -262,7 +266,7 @@ export function AuthLegal(): JSX.Element {
         <Link data-target="inline" to="/privacy" className={INLINE_LINK}>
           Privacy policy
         </Link>
-        .
+        . {TOTALS_LINE}
       </p>
       <p className="m-0">{AGE_LINE}</p>
     </div>
@@ -270,6 +274,12 @@ export function AuthLegal(): JSX.Element {
 }
 
 const INLINE_LINK = "text-ink underline underline-offset-4";
+
+/**
+Au2's anonymous-totals sentence (D-108 E), verbatim from round 32.
+*/
+export const TOTALS_LINE =
+  "Your runs count, without your name, in totals like the guides. You can turn that off in Settings.";
 
 /**
  * Au7's notice: *"an ink block (square, --hiviz-text eyebrow on ink only)

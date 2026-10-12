@@ -64,5 +64,10 @@ declare namespace Cloudflare {
      * goes, and every link is refused (fail closed); `/api/health` names
      * it. */
     UNSUBSCRIBE_SECRET?: string;
+    /** Keys a `/takedown` visitor's IP for the abuse limits (design 137;
+     * owner, 2026-10-10) — its own secret, as unsubscribe's is. Absent:
+     * requesters are matched by email alone. Optional, so health does not
+     * fail without it. */
+    TAKEDOWN_SECRET?: string;
   }
 }

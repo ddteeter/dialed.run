@@ -31,7 +31,7 @@ export {
   isUnconfirmed,
   isVerified,
 } from "./email-links";
-export { accessGate } from "./access";
+export { accessGate, turnstileAttempt } from "./access";
 export {
   currentTermsVersion,
   latestAcceptanceOf,

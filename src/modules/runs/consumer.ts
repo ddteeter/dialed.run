@@ -10,7 +10,7 @@
  * (`attachObservation`) so this compiles and tests fully without lane 103
  * — see the pending-integration call-site below.
  */
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { dlqBatchHandler } from "../../db/gave-up";
 import {
@@ -483,6 +483,10 @@ export async function handleImportsDlqBatch(
         return {
           subject: { kind: "reminder", subjectId: reminderSubject(job) },
           writes: [],
+          // Only while the athlete is connected (R-142). A disconnect or a
+          // purge clears these rows, and a dead letter landing after it
+          // would leave a Strava id nothing clears again.
+          onlyIf: sql`EXISTS (SELECT 1 FROM ${stravaConnections} WHERE ${stravaConnections.athleteId} = ${job.athleteId})`,
         };
       }
       if (job.type === "import") return deadImportWrites(deps, job.importId);

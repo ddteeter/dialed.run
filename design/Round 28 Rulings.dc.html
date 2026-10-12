@@ -404,9 +404,9 @@ class Component extends DCLogic {
           { label: '15 · U1 · THE EXPORT ROW, FOUR STATES', screen: 'U1 export states', nav: { back: 'Settings', title: 'Account' }, blocks: [
             { group: 'READY · THE DAY IT WAS ASKED FOR' }, row('Export your data', 'Emailed. The link works until Oct 7.', { action: 'Download', rule: '0' }),
             { group: 'FAILED · THE QUEUE GAVE UP' }, row('Export your data', 'Your export didn\'t finish, and it doesn\'t count as today\'s.', { action: 'Try again', rule: '0' }),
-            { group: 'THE PRESS FAILED' }, row('Export your data', 'Runs, closet, entries, photos and your run files', { action: 'Get a copy', rule: '0' }), band('NOT STARTED', 'That didn\'t go through. Try again?'),
+            { group: 'THE PRESS FAILED' }, row('Export your data', 'Runs, closet, entries and photos', { action: 'Get a copy', rule: '0' }), band('NOT STARTED', 'That didn\'t go through. Try again?'),
             { group: 'FROM AN EXPIRED OR SOMEONE ELSE\'S LINK' }, row('Export your data', 'That link doesn\'t work any more. Get a copy for a new one.', { action: 'Get a copy', rule: '0' }),
-          ], note: 'The ZIP: runs.csv, entries.csv, garments.csv, kit.csv, profile.csv, terms.csv (round 29 #17), your original run files and photos, and a README naming every column. The day after it\'s Ready the row goes back to idle, and the emailed link still works until its date.' },
+          ], note: 'The ZIP: runs.csv, entries.csv, garments.csv, kit.csv, profile.csv, terms.csv (round 29 #17), your photos (and any run file not yet read), and a README naming every column. The day after it\'s Ready the row goes back to idle, and the emailed link still works until its date.' },
           { label: '16 · /TERMS · PHONE · FOOT OF A SECTION', screen: 'Legal phone foot', bar: true, blocks: [K('TERMS'), { h2: '3. What you share' }, { body: 'You own your runs, notes and photos. Sharing one lets signed-in runners on dialed.run see it. Delete it and that stops.' }, { link: 'Back to contents' }, { h2: '4. Community rules' }], note: 'The kicker has no date: the owner\'s text carries its own. At desk the contents column stays in view and the foot link isn\'t drawn.' },
         ] },
     ];

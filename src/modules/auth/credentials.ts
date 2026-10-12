@@ -122,18 +122,6 @@ const SIGN_UP_REFUSALS: FieldRefusals = new Map([
 ]);
 
 /**
- * ACC-7: a wrong current password on its own field, a breached new one on
- * the new one's.
- */
-const CHANGE_PASSWORD_REFUSALS: FieldRefusals = new Map([
-  [
-    "INVALID_PASSWORD",
-    { field: "currentPassword", message: AUTH_COPY.currentPasswordWrong },
-  ],
-  [BREACHED_CODE, BREACHED_REFUSAL],
-]);
-
-/**
  * Better Auth's `{ error }` answer, thrown as the failure the form draws:
  * a known refusal on its field, anything else for the band.
  */
@@ -252,21 +240,6 @@ export async function resetPassword(
   });
   if (error?.code === INVALID_TOKEN) throw new ResetLinkExpired();
   throwIfRefused(error, NEW_PASSWORD_REFUSALS);
-}
-
-/**
- * ACC-7. Every other session ends with the old password: a change is
- * usually a runner who suspects someone else has it.
- */
-export async function changePassword(
-  values: Readonly<{ currentPassword: string; password: string }>,
-): Promise<void> {
-  const { error } = await authClient.changePassword({
-    currentPassword: values.currentPassword,
-    newPassword: values.password,
-    revokeOtherSessions: true,
-  });
-  throwIfRefused(error, CHANGE_PASSWORD_REFUSALS);
 }
 
 /**

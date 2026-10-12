@@ -70,6 +70,13 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     // When `username_screen` was last written: the claim, the verdict, or
     // the re-ask's claim, whose lease it times.
     usernameScreenedAt: integer("username_screened_at"),
+    // Settings › Sharing › "Count my runs in anonymous totals" (D-108 D).
+    // On by default: published totals count shared and private runs, and
+    // an opted-out runner leaves them at the next nightly build. The guide
+    // job reads it; `onboarding/aggregate-prefs.ts` is the one writer.
+    countInTotals: integer("count_in_totals", { mode: "boolean" })
+      .notNull()
+      .default(true),
   },
   (t) => [
     // The re-ask's sweep reads only the rows it might claim. Partial, so
@@ -1101,6 +1108,93 @@ export const reports = /*#__PURE__*/ sqliteTable(
     index("reports_subject").on(t.subjectType, t.subjectId),
   ],
 );
+
+/**
+ * A request to remove an intimate image shared without consent, from
+ * someone who may have no account (design 136, decision D-117): the TAKE
+ * IT DOWN Act's signed-out path. Additive: a new table.
+ *
+ * A request whose link is ours hides it at once (round 35 #58e, amending
+ * D-117), and a Decline gives it back; an operator decides within the 48
+ * hours `dueAt` keeps.
+ * `subjectType`/`subjectId` are set when `location` is one of our own
+ * links, and left NULL when it is not, so the operator still sees it.
+ * Kept until the owner deletes it (D-117): the record is the answer if a
+ * removal or a refusal is ever questioned.
+ *
+ * `idempotencyKey` is law 8b's, minted when the form mounts; with no
+ * account to scope it to, it is scoped to the requester's address.
+ */
+export const takedownRequests = /*#__PURE__*/ sqliteTable(
+  "takedown_requests",
+  {
+    id: text("id").primaryKey(),
+    requesterEmail: text("requester_email").notNull(),
+    // The typed full name the Act accepts as an electronic signature.
+    signature: text("signature").notNull(),
+    location: text("location").notNull(),
+    subjectType: text("subject_type", { enum: ["entry", "photo"] }),
+    subjectId: text("subject_id"),
+    description: text("description"),
+    status: text("status", { enum: ["pending", "removed", "declined"] })
+      .notNull()
+      .default("pending"),
+    declineReason: text("decline_reason"),
+    dueAt: integer("due_at").notNull(),
+    createdAt: integer("created_at").notNull(),
+    resolvedAt: integer("resolved_at"),
+    resolvedBy: text("resolved_by"),
+    idempotencyKey: text("idempotency_key").notNull(),
+    // Design 137's abuse limits. Additive and nullable: a request filed
+    // before them has none, and reads as "held" when its subject is set.
+    // Who asked, as one key per inbox (`requesterKey`).
+    requesterKey: text("requester_key"),
+    // HMAC of the visitor's IP under TAKEDOWN_SECRET; NULL without it.
+    ipKey: text("ip_key"),
+    // What filing decided: hid it, waits for the requester's confirm, the
+    // site-wide valve was shut, or the requester is blocked.
+    holdState: text("hold_state", {
+      enum: ["held", "confirm", "valve", "blocked"],
+    }),
+    // When it hid something — at filing, or at the confirm.
+    heldAt: integer("held_at"),
+    // SHA-256 of the confirm link's token, for a request waiting on one.
+    confirmTokenHash: text("confirm_token_hash"),
+    confirmedAt: integer("confirmed_at"),
+    // Round 37 #59g: who posted it, as the requester typed it, normalised
+    // to a handle's shape. Not checked against anyone: it is a lead for
+    // the operator, not a subject.
+    posterUsername: text("poster_username"),
+  },
+  (t) => [
+    uniqueIndex("takedown_requests_idempotency").on(
+      t.requesterEmail,
+      t.idempotencyKey,
+    ),
+    // Review's section: pending requests, soonest due first.
+    index("takedown_requests_status_due").on(t.status, t.dueAt),
+    // The cap: this requester's open requests, by either key.
+    index("takedown_requests_requester_status").on(t.requesterKey, t.status),
+    index("takedown_requests_ip_status").on(t.ipKey, t.status),
+    // The valve: what hid something in the last hour.
+    index("takedown_requests_held_at").on(t.heldAt),
+    // The confirm link's lookup.
+    uniqueIndex("takedown_requests_confirm_token").on(t.confirmTokenHash),
+  ],
+);
+
+/**
+ * Requesters an operator blocked from `/takedown` (design 137): an email
+ * key (`requesterKey`) or an IP key. A blocked request is still recorded
+ * and still gets its receipt, and hides nothing and alerts nobody.
+ * Additive: a new table.
+ */
+export const takedownBlocks = /*#__PURE__*/ sqliteTable("takedown_blocks", {
+  key: text("key").primaryKey(),
+  kind: text("kind", { enum: ["email", "ip"] }).notNull(),
+  createdAt: integer("created_at").notNull(),
+  createdBy: text("created_by").notNull(),
+});
 
 /**
  * One row per thing awaiting a human, not one per report — three reports

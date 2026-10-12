@@ -190,6 +190,11 @@ export {
   reviewDecisionInput,
   runnersFilterInput,
   takedownInput,
+  removalDecisionInput,
+  takedownRequestInput,
+  blockRequesterInput,
+  takedownConfirmInput,
+  takedownConfirmSearch,
   unbanUserInput,
   type FileReportValues,
   type HandleReviewValues,
@@ -201,3 +206,13 @@ export {
   duplicateProducts,
   type DuplicateCandidate,
 } from "./duplicates";
+
+export {
+  blockAndDeclineAll,
+  confirmTakedownRequest,
+  fileTakedownRequest,
+  pendingTakedownRequests,
+  releaseHoldWrites,
+  type PendingTakedownRequest,
+  type TakedownRequestResult,
+} from "./takedown-requests";

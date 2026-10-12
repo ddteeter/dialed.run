@@ -195,6 +195,50 @@ describe("Rename", () => {
   });
 });
 
+describe("Rename racing the runner's own pick (R-121)", () => {
+  it("says moved, renames nothing, records nothing and leaves the row open", async () => {
+    const { userId, queueId } = await flaggedRunner();
+    // The runner picks a new handle between the rename's read and its
+    // write: the first batch is the read that decides, the second writes.
+    const counter = { batches: 0 };
+    const batch: typeof db.batch = async (items) => {
+      counter.batches += 1;
+      if (counter.batches === 2) {
+        await claimUsername(db, userId, "fresh_pick", () =>
+          Promise.resolve("clear"),
+        );
+      }
+      return db.batch(items);
+    };
+    const raced = new Proxy(db, {
+      get(target, property, receiver): unknown {
+        return property === "batch"
+          ? batch
+          : Reflect.get(target, property, receiver);
+      },
+    });
+
+    expect(
+      await reviewFlaggedHandle(raced, REVIEWER, {
+        queueId,
+        action: "rename",
+        nameReason: "Advertising",
+      }),
+    ).toBe("moved");
+
+    const profile = await profileOf(userId);
+    expect(profile?.username).toBe("fresh_pick");
+    expect(profile?.reason).toBeNull();
+    expect(await queueRow(queueId)).toMatchObject({ status: "pending" });
+    expect(await db.select().from(moderationActions)).toStrictEqual([]);
+    const [locked] = await db
+      .select()
+      .from(usernameHistory)
+      .where(eq(usernameHistory.username, "quadzilla_69"));
+    expect(locked?.lockedAt).toBeNull();
+  });
+});
+
 describe("a row there is nothing to decide on", () => {
   it("answers a settled row as settled, and writes nothing", async () => {
     const { userId, queueId } = await flaggedRunner();

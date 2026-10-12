@@ -1,4 +1,4 @@
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 import { useState } from "react";
 
 import {
@@ -224,6 +224,7 @@ export function VerdictForm({
   itemBandWearStat,
   units,
   history,
+  privateLine,
 }: Readonly<{
   entry: Entry;
   bandFloor: number | undefined;
@@ -250,6 +251,14 @@ export function VerdictForm({
   itemBandWearStat: (input: {
     data: { itemId: string; bandFloorC: number };
   }) => Promise<{ worn: number; total: number }>;
+  /**
+   * The share switch's sub-line in the PRIVATE state (D-108 E, round 32
+   * frame 2a), given the id the switch is described by: onboarding's
+   * `PrivateRunLine`, which reads the runner's totals setting and whether
+   * their address is confirmed. The route's to wire, since a module
+   * reaches another only through its barrel.
+   */
+  privateLine: (hintId: string) => ReactNode;
 }>) {
   const [verdict, setVerdict] = useState<number | undefined>(entry.verdict);
   const [tags, setTags] = useState<Set<string>>(new Set(entry.tags));
@@ -543,9 +552,13 @@ export function VerdictForm({
                   />
                   Share to feed
                 </label>
-                <span id={SHARE_HINT_ID} className="text-small text-muted">
-                  Shared runs show your kit, conditions, and your verdict.
-                </span>
+                {isShared ? (
+                  <span id={SHARE_HINT_ID} className="text-small text-muted">
+                    Shared runs show your kit, conditions, and your verdict.
+                  </span>
+                ) : (
+                  privateLine(SHARE_HINT_ID)
+                )}
               </div>
 
               <FormFailureBand

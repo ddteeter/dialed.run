@@ -930,310 +930,200 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
-45. **A flagged handle's review row: Keep and Rename (decision D-97;
-    task 126 PR B, in lane 128's Review queue).** Undesigned; built from
-    the review row's own parts. A row about a runner whose handle the
-    hourly re-ask flagged (`username_screen = 'flagged'`) offers **Keep**
-    (a text button, as Approve is) and **Rename** (the row's submit),
-    with D8's "Why the name has to go" picker and its four reasons, and
-    no Approve, Remove or Remove as suspected CSAM. A placeholder that is
-    taken keeps the row and says D8's "That placeholder is taken. Press
-    Rename again." The row's header and `[classifier]` tag are the queue's
-    own. **The ask:** draw the flagged-handle row, and say whether it
-    should name why it is there (it reads as any classifier row today).
+<!-- Item numbers continue past rounds 35–37 (45–59); this comment keeps the list from being renumbered. -->
 
-46. **The onboarding close still says "you never type it" (round 34
-    import).** Round 34 qualified that claim on the marketing site, because
-    R2b lets a runner set conditions when the archive has no record for the
-    hour, and kept A1's "Never typed by hand." because it sits on a fetched
-    block. `V1 Screens.dc.html`'s onboarding close ("What happens as you
-    log", built as `onboarding/components/NowGoRun.tsx`) still reads
-    "Weather attaches itself from your GPS and the time — you never type
-    it." It sits on no fetched block, so the reasoning that kept A1's line
-    does not cover it. The build matches the board, which is authoritative
-    for a built screen, so nothing changes until design rules. **The ask:**
-    keep the line as written, or qualify it as M1 step 01 was ("fetched for
-    when and where you ran").
+60. **A Rename that lost a race (R-121, PR #184).** A force-rename now
+    writes nothing when the handle changed between its read and its write,
+    whether through another moderator's rename or the runner's own new
+    pick. It used to report the rename as done. D8 · Runners and a flagged
+    handle's review row both answer it the way they answer a taken
+    placeholder: `NOT RENAMED` in the row's control band, and on the review
+    row, the row stays open. The sentence is placeholder copy: "The handle
+    changed before the rename landed. Nothing was renamed." (`renameMessage`
+    in `safety/components/DeskRunners.tsx`). **The ask:** word it.
 
-47. **Two "was" values in T1's new notes are the new value (round 34
-    import, erratum).** Theme's Muted row says it "was #6E6E64 at 3.9:1"
-    and the Placeholder row says it "was #6E6E64 / #8B8B93, under 3:1 /
-    3.7:1". The old values were #7A7A70 (Muted, paper) and #9A9A90 /
-    #6E6E74 (Placeholder), as round 33's T1 and `design/docs/product.md`'s
-    "Round 33 · Contrast and lint fixes" both say. The board-wide
-    `#7A7A70 → #6E6E64` replacement looks to have reached the history in
-    the notes too. Nothing reads the notes column, so the port is
-    unaffected. **The ask:** correct the two notes.
+61. **What lane A (design 138) built beside round 32's drawings.**
+    D-108 E's three disclosures and Settings › Sharing's totals switch are
+    built with the board's copy verbatim. Five things the board does not
+    draw. **Four are needed before launch** (owner, 2026-10-11), marked so;
+    the other can follow. Round 30 (d)'s Settings › Region is **not** built:
+    totals group by a climate zone the guide job derives from each run's
+    location, not by a region the runner declares (owner, 2026-10-11;
+    D-120), so round 30 (d) needs no screen.
+    - **"How the guides are made" opens `/privacy`.** The board's target
+      is `dialed.run/how-it-works#totals`, which the marketing site owns
+      and which is not live. When it is, the link points there. **The
+      ask:** none for design; a one-line change when the site ships.
+    - **The Change sheet.** Round 32 says Change "opens Settings ›
+      Sharing as a sheet". Built as a `Sheet` titled "Sharing" holding
+      the totals switch, its sub-line and the link, and a Done. It does
+      not hold "Share new runs": that is a form with its own Save, and a
+      form cannot sit inside A3's form. **Needed before launch.** **The
+      ask:** draw the sheet, or confirm the totals switch alone.
+    - **Two names for one place.** The sheet is titled "Sharing", as round
+      32 names the group, but the Settings row and sub-page it stands for
+      are "Privacy" (U1). **Needed before launch.** **The ask:** one name.
+    - **Where the totals switch sits.** Round 32 draws one SHARING group
+      with "Share new runs" and the totals switch. Built on the Privacy
+      sub-page under the sharing default's form and its Save, because the
+      totals switch saves on toggle and the default does not. **Needed
+      before launch.** **The ask:** draw the group as the build has to
+      hold it, two controls that save differently.
+    - **What the totals copy says to an unconfirmed runner.** "Shared and
+      private runs add their temperature, kit and verdict to the guides
+      and reports" is untrue for them: D-108 C counts confirmed accounts
+      only. The owner ruled (2026-10-11) that an unconfirmed runner may
+      still turn totals off, with no confirm sheet, so
+      they meet this switch. The build keeps the drawn copy until design
+      words it. **Needed before launch.** **The ask:** the unconfirmed
+      runner's on and off lines.
 
-48. **M5's optional note: placement, label and hint (decision D-112).**
-    The owner gave M5 Au5's optional note. The marketing site built it to
-    match Au5: "Note · optional", the hint "Where you run, or who sent you.
-    One line.", 140 characters with a counter from 120. M5 draws one
-    field. **The ask:** draw the note on M5, or confirm Au5's placement.
+## Answered in round 37 (imported 2026-10-10)
 
-49. **"Confirm your email first" from Follow, and before the address
-    arrives (design 133, decision D-113).** Follow now waits for a
-    confirmed address, as Useful and report do: a follower count is
-    something other runners see. Round 27 #17 gives the sheet a lead
-    sentence per trigger ("Sharing…", "Marking runs Useful…",
-    "Reporting…") and none for Follow, so a refused Follow opens the sheet
-    with the address alone, as the email change does. The sheet now opens
-    from the root, which asks for the address as it opens; for the moment
-    before it arrives, or if it cannot be read, the body is the lead
-    sentence alone, with no address line and no Resend. **The ask:** a
-    lead for Follow ("Following runners…"?), and whether the
-    no-address-yet state needs drawing or the brackets should breathe in
-    the address's place. **Round 29 #11 answered the email change** ("Confirm
-    this address before you change it.", built in design PR E) and struck
-    round 27's list, so each lead names only the refused control; Follow
-    is still undrawn.
+Design sent round 37 as `Round 37 Rulings.dc.html`, with the text of record
+under "Round 37 · /takedown abuse limits (D-118)" in `design/docs/product.md`.
+It answers item 59 (a–f), 58k left open by round 36, and 59g, which went
+out as a follow-up in the same thread. `Round 35 Rulings.dc.html` gains
+59g's username field on its `/takedown` frame. Nothing is left open.
 
-50. **What design PR E built beside rounds 29–30's drawings (round 29 #6,
-    #11–13, #17; round 30 #4; D-95, D-102).** Built from existing
-    primitives. Each is a reading of a drawing or a contract, not a
-    question that blocks anything.
-    - **Au6's band is not a second `role="status"`.** Round 33's Au6 and
-      round 29's Google frames mark the control failure `role="status"`.
-      The Accessibility Contract's rule 08 allows one status region per
-      screen, and the page's own already speaks the band's words, so the
-      build keeps one and the band is announced through it (the contract
-      outranks the board). Google's refusals are the same `control-failure`
-      region, as round 29 draws them. **The ask:** drop the role from the
-      frames, or say when a band should be its own region.
-    - **D-102's line names every form page, two of them in words of the
-      build's choosing.** Any refused save gets the line: every form's,
-      and Attach's (a control that holds the runner's picks). A route may
-      name itself in the runner's words (`staticData.savedPage`: "Log a
-      run", "Add a piece", as round 30 #4b gives them); any other page is
-      named by its heading, so the edit page is "Edit Harrier". A2's and
-      A3's headings are questions ("What did you wear?", "Did it work?"),
-      so the build names them "Attach the kit" and "The verdict", after
-      product.md's screen names. A refused control or loader gets no line.
-      **The ask:** confirm those two names, or give them.
-    - **Log out in the escape line is a button with a 44px target.** Rule
-      03's inline exception is for links, and Log out is an action, so it
-      keeps `target` and the line is a little taller than the board's.
-      **The ask:** none unless design wants the inline target for buttons.
-    - **The read-only `/account`'s Strava row says "Connected", not
-      "Connected as Maya R."** The athlete's name is Strava data, which
-      the app never stores, so the row says what T3a's status line says:
-      "Connected", or "Not connected". It comes last, after Email,
-      Username and Password (the ordinary page edits all three), where
-      round 30 puts Strava in Settings › Account. The board draws no
-      tokens row, so there is none. **The ask:** confirm the value.
-    - **WHAT CHANGED's kicker is `MONO.xs` in `--muted`** on `--tint`, a
-      plain list with a `·` before each line, under the lead and above
-      "Read the full Terms". The owner writes the lines in the terms' front
-      matter (`changed:` beside `published: true`), and v1 has none, so the
-      block does not show yet. **The ask:** none.
+59. **`/takedown`'s abuse limits (design 137, D-118). Drawn and ruled;
+    built in the abuse-limits PR.**
+    - (a) `/takedown/confirm`: all five states drawn, words as built. A
+      failed press is the form band, NOTHING SAVED · "That didn't go
+      through." with Try again.
+    - (b) The receipt past the cap opens "It isn't hidden yet." before the
+      given words. A blocked requester's receipt is the normal one.
+    - (c) The valve email: confirmed.
+    - (d) The state goes in the brackets after `[via /takedown]`, and the
+      header's right side stays the clock: `[hidden]`, `[unconfirmed]`,
+      `[valve shut]`, `[blocked]`. There is no bracket when the link isn't
+      ours.
+    - (e) "2 more from this requester": confirmed, a mono caption under the
+      address, only when there are others.
+    - (f) Block and decline all: words confirmed, and N counts this
+      request. Focus opens on Cancel; Cancel and Esc return it to Block and
+      decline all. After, the page's status says "Blocked. N requests
+      declined." and focus moves to the next row, or "Nothing waiting".
+    - (g) **A username field** after Link to the image: "Their dialed.run
+      username · optional", hint "If you know who posted it." The link's
+      hint stays "A dialed.run link, or say where it is." An unknown name
+      is kept as written. Review reads "Not one of our links: find it on
+      @name's entries from what they wrote." No uploads.
+    - **58k · W1's way out** (left open by round 36). Given and drawn;
+      built. A hint under the intimate-image reason, shown only once it's
+      picked: "Rather not use your account? Report it without signing
+      in", linking to `/takedown`.
 
-51. **What design PR A built beside round 28's W3 and Review drawings
-    (round 28 #5 and #8).** Composed from existing primitives and copy; no
-    new glyph, colour or motion.
-    - **W3 with blur off also waits for Use this photo.** The board draws
-      W3 with blur on. With blur off the step shows the toggle and its
-      line and still holds the redrawn photo until Use this photo, so the
-      runner can turn blur on before anything is attached.
-    - **Use this photo before the bytes exist** (while checking, or after
-      a redraw that failed): `aria-disabled` and `aria-busy`, with no look
-      of its own; the line above says "Checking this photo…".
-    - **The lines the board does not draw** keep their words: after a tap
-      ("We blurred 2 faces. You blurred 1 more spot. Tap one to undo.")
-      and with no detector ("We couldn't check this photo. Tap anything you
-      want blurred."). The first now sits beside round 28's "Auto-blur
-      covered 2 areas." vocabulary. **The ask:** reword both in Auto-blur's
-      grammar, or confirm them.
-    - **W3 is inline, not a sheet.** The head draws "Check the blur" and
-      Cancel, but the step renders where its host puts it; the sheet is
-      the hosts' work (design PRs C and D).
-    - **An entry, not a photo.** The CSAM question and the takedown
-      sentence take the subject's own noun: "Remove this entry everywhere
-      and keep the evidence for the report?" and "We removed this entry
-      from the feed after a copyright notice." The board draws a photo.
-    - **The review row's opener** is the row's name as a button with
-      `aria-expanded`, and the CSAM question carries the kicker "Remove as
-      suspected CSAM" above it.
-    - **A photo W3 cannot prepare** — the file will not decode, or the
-      blurred canvas makes no file — is the round 23 control-failure band:
-      "PHOTO NOT ADDED · This photo couldn't be prepared. Pick another
-      photo, or cancel." Use this photo is not drawn while it shows (there
-      is nothing behind it); Try again decodes again. A detector that
-      throws is not this band: it is the "couldn't check" line, because the
-      photo can still be blurred by hand. **The ask:** confirm the words,
-      and whether Use this photo should go or stay disabled.
-    - **Pick another refuses what the well refuses** (type and size, the
-      same `photoProblem` sentences), as the field message under it; the
-      photo already checked stays.
-    - **Focus on close.** W3's Cancel, Esc and Use this photo return focus
-      to the photo well's input (Replace, once the well is filled); Cancel
-      in the CSAM question returns it to "Remove as suspected CSAM";
-      deciding a row opens the row that takes its place (the next, or the
-      one before when it was the last), and deciding the last row focuses
-      the "Nothing waiting" line.
+## Answered in rounds 35–36 (imported 2026-10-10)
 
-52. **What design PR C built beside rounds 26 and 28's closet drawings
-    (round 26 #4 and #10, round 28 #5 and #13; D-75, R-112, R-114).**
-    Composed from existing primitives and T1; no new glyph, colour or
-    motion.
-    - **The type names.** Round 26 names four, for tops: Singlet, Tee,
-      L/S crew, Half-zip. The contract has nineteen
-      (`garmentTypesByCategory`), so the build names the rest after the
-      pack's glyphs: Jacket, Vest, Sports bra; Shorts, Half tights,
-      Tights; Cap, Beanie, Headband; Neck gaiter; Gloves; Socks; Shoes;
-      Sunglasses, Arm sleeves. The rail's empty line takes a plural of
-      each ("No half-zips yet.", "No L/S crews yet.", "No shorts yet.").
-      `closet/type-labels.ts` holds both. **The ask:** confirm or give
-      the names.
-    - **No TYPE where a category has one type.** Gloves, socks, shoes and
-      neckwear have a single type each, so F asks nothing there and the
-      rail stays the category's. **The ask:** none unless design wants a
-      one-chip group.
-    - **TYPE sits under CATEGORY**, as drawn, but F still leads with
-      Brand and Name (D-27's identity-first order), where round 26's desk
-      frame puts Category and Type first. CATEGORY is still the build's
-      select, so "before a category: no card" still never happens. A
-      picked chip can be changed but not cleared, which is the radio
-      group's grammar; a new category clears it. **The ask:** the order.
-    - **The product's type yields to the runner's.** A product match used
-      to set the type outright (Z3's "it was never a question"); now it
-      fills in only where TYPE was left unanswered. Y's kicker names the
-      type too, as Z2a draws it (`TOP · HALF-ZIP · M`). **The ask:** none.
-    - **The hatch** is `ink.css`'s `.photo-hatch`: T1's photo fill with
-      `--hairline`, the next step darker on paper and lighter on ink, as
-      Theme's "Photo fill" row says, drawn by the same rule as the ink
-      channel's partial mark — its 135° angle and 2-on, 3-off rhythm,
-      the only hatch the system has, because no contract gives a photo
-      hatch's rhythm. **The ask:** a rhythm, if not that one.
-    - **`PHOTO STILL ON`'s sentence** is the control band's cause line
-      ("Our end failed.", or the connection's), as every control band's
-      is, rather than 02b's "That didn't go through. Try again?"; the
-      band's Try again says the rest. **The ask:** none unless design wants
-      the fixed sentence.
-    - **W3's sheet is named "Check the blur"**, its own head, for the
-      moment before focus lands on the heading. **The ask:** none.
+Design sent round 35 as `Round 35 Rulings.dc.html`, with the text of record
+under "Round 35" in `design/docs/product.md`, and answered items 45–56. The
+same day, a second bundle (round 36, asked for items 57–58) added
+those two to the same board and the same section, now titled "Fourteen
+asks from the build (items 45–58)". Both are imported here; nothing is
+left in the open queue from either.
 
-53. **What design PR D built beside the Feed board and rounds 27–29's feed
-    rulings (task 129, 2026-10-07).** Composed from existing primitives,
-    T1 roles and the icon manifest; no new glyph, colour or motion.
-    - **The photo delete button's ground.** Round 27 #26 draws "a 44×44
-      icon button, top-right of each photo" and round 28 #14 names the
-      `remove` glyph; neither draws what it sits on. It is a `--ground`
-      pill with the glyph in ink at 20px, as D's `1 / 2` counter already
-      sits on `--ground`. **The ask:** the fill and inset, if not that.
-    - **The tag's accessible name inside the card's link.** The brackets
-      are hidden from assistive tech and the sentence ("Under review, only
-      you can see this") is said in their place, so the card link reads
-      "@handle, …, Under review, only you can see this". **The ask:** none
-      unless design wants the sentence elsewhere.
-    - **`[UNDER REVIEW]` on G's Recent entries** sits after the entry's
-      label, inside its link — round 28 #6 says G uses the tag but G's row
-      is not drawn with one. **The ask:** its place on the row.
-    - **The card's `1 / N` on a lone photo** reads `1 / 1`, as D's pager
-      does; the board draws only a two-photo card. **The ask:** none
-      unless a lone photo should carry no counter.
+Design changed thirteen files across the two bundles:
 
-54. **The consensus words when groups overlap (round 27 #25, design PR D
-    review).** The ruling reads "Leading bar \"Most\", the rest \"Some\". A
-    tie for the lead reads \"Split\" on each tied bar. A single bar reads
-    \"All\"." — written as if each runner sat in one bar. They do not: a
-    runner counts in every group they wore, and rows under 2 runners drop,
-    so the bars do not sum to the runners and a lone bar can be 3 of 14.
-    The build follows the ruling as written (`feed/bar-share.ts`): the one
-    leading bar is "Most" whatever its share (5 of 14 included), a tie for
-    the lead is "Split", every other bar is "Some" (11 and 9 of 14 read
-    "Most" and "Some"), and a lone bar is "All" — including 3 of 14, which
-    reads as every runner wearing it when most matched runners did not.
-    **The ask:** confirm the words rank the bars rather than claim a share;
-    and say what a lone bar short of every runner reads ("Most"? "Some"?),
-    and whether a bar every runner wore reads "All" beside other bars.
+- `Round 35 Rulings.dc.html` (new): Au2's date of birth in four frames
+  (56), G's Recent entries row with the tag placed (53b), `/takedown`, its
+  receipt and the operators' alert, and Review's REMOVAL REQUESTS section
+  (58), and the fourteen rulings.
+- `Operator Screens.dc.html`: D1 gains the flagged-handle row (45).
+- `V1 Screens.dc.html` and `- Dark`: the onboarding close's first line
+  (46).
+- `Theme.dc.html`: T1's two "was" notes corrected (47). No value changes.
+- `Marketing Site.dc.html` and `- Dark`: M5 draws the note (48, from round 34) and its legal line says 18 and "what you send".
+- `Remaining Screens.dc.html` and `- Dark`: W1's new reason (58a).
+- `Round 27 Rulings.dc.html` and `Round 28 Rulings.dc.html`: the export
+  row, its email and the ZIP's note drop the run files (57).
+- `design/docs/product.md`: the Round 35 section, the Legal line's 18, and
+  three passages earlier rounds wrote that the round 34 bundle did not
+  carry: the audience launch guard, the single `canSee` check and the
+  planned Day 2 migration (round 33's D-109 work), and the M5 note's
+  placement (round 34).
 
-55. **Gave up's words and one control no board draws (design-adoption PR
-    B; R-119).** Built from D6 and round 29 B·2 with existing primitives
-    only, and each is the build's guess:
-    - **The reasons.** D6 draws "The shop returned 403 three times. It may
-      be blocking us." A dead letter is handed the job and not its error
-      (each try's error went to Sentry), so its row reads "It failed every
-      try the queue gives a job, so the queue stopped. Each error is in
-      Sentry." Enrichment's refusal reads "The shop returned 403. It may be
-      blocking us." (401 and 403), "The shop returned 404." (any other
-      status), or "The shop's page couldn't be read."; weather's cap "No
-      weather came back for this run in five hours of hourly tries.", and
-      for a run failed again after a Retry (or entered past its window),
-      which had one try, "No weather came back for this run on its latest
-      try, made after its five-hour window had closed." An enrichment row
-      appears only once the hourly sweep stops re-driving the product (its
-      first day), so its tries are that day's.
-    - **What each row was doing**, for the two jobs D6 does not draw: "Read
-      @sam's run file" (an import) and "Remind @sam about a new run on
-      Strava" (a dead-lettered reminder); a subject since deleted reads
-      "Read the page for a product that is gone" and the like. The kind
-      captions are Enrichment, Conditions, Import, Reminder.
-    - **The raw error's "one click away"** is a native disclosure labelled
-      "Raw error" (MONO.xs, muted), the error under it at MONO.md.
-    - **Re-run extraction with no stored page** is the pill at `--hairline`
-      with `--muted` text, `aria-disabled`.
-    - **A retry or a drop that fails** says "Still here" plus the cause in
-      the row's control band (round 23 #9).
-    - **The digest's line**: "N jobs the system gave up on. They're on the
-      Desk's Today." after the three, and the subject adds ", N gave up"
-      when above zero (a zero day's "Nothing failed." would be false).
-    - **Ages and times** are UTC, like Today's date: "2d ago", "last 04:12",
-      "last Sep 15 22:40".
-      **The ask:** confirm or redraw each.
+### What changes in the build
 
-56. **Au2's date of birth (design 134, decision D-114).** Nothing draws
-    it; built from existing primitives:
-    - **The field** is a `TextField` labelled "Date of birth" with the
-      platform's date control (`type="date"`, `autocomplete="bday"`),
-      after the invite code and before Email. It shows whether or not
-      invite-only is on.
-    - **Its errors** are the field's, from the schema: "Enter your date of
-      birth.", "Enter a real date.", "Check the year." (a year before 1900
-      or a date after today).
-    - **Under 18** is the server's refusal, said in the form band as
-      `NOT CREATED` · "dialed.run is for runners 18 and over." — the same
-      sentence as round 27 #12's line under the form, which now says 18
-      (D-71 said 16). The form band keeps its Try again; pressing it is
-      refused again for a day.
-    - **Google with the date empty**, for an address with no account,
-      comes back to Au2 with Google's band saying `NOT CREATED` · "Enter
-      your date of birth above, then continue with Google." — the shape of
-      item 37's code sentence. Under 18 on Google is the form's sentence in
-      Google's band, before the redirect.
-      **The ask:** draw the field and confirm the three states, or redraw.
+Each item below names what the ruling asks of the code. "As built" means
+nothing to do.
 
-57. **The export no longer promises run files (decision D-116).** Round
-    27 #13 draws the export row's line as "Runs, closet, entries, photos
-    and your run files", and the email as "Your runs, closet, entries,
-    photos and original run files are in one ZIP." Since D-116 a run file
-    is deleted once read, so the ZIP rarely holds one: only a file read in
-    the last day, or one that failed in the last 30. Both now drop the run
-    files: "Runs, closet, entries and photos", and "Your runs, closet,
-    entries and photos are in one ZIP." **The ask:** confirm, or give
-    words.
-
-58. **The intimate-image removal path (design 136, decision D-117).**
-    Undesigned; built from existing primitives and copy. Placeholder words
-    throughout:
-    - **W1's new reason** reads "It's an intimate image shared without
-      consent", after "The photo shows someone inappropriately". One
-      report of it hides the kit or photo from everyone at once; W1's
-      receipt is unchanged.
-    - **The Review row's clock** is a second bracket under the people
-      count: `[Due in 31h]`, rounded up to the hour, then `[Overdue]`. It
-      shows only on a row an intimate-image report started.
-    - **The removal statement** the author reads: "it's an intimate image
-      shared without consent", after round 27 #20's "A moderator removed
-      this photo:".
-    - **The operators' email**, `removal_due`: subject "Removal due by
-      2026-10-12 13:05 UTC", a body saying what was reported and that it is
-      hidden, the button "Open Review", and the foot "Sent to every
-      operator, once per report that hides something."
-    - **Coming in PR B:** a public page and form at `/takedown`, the
-      requester's receipt email, and a "Removal requests" section on
-      Review.
-      **The ask:** the reason's sentence in W1's voice; whether the clock
-      belongs in the row's brackets or its header; and the email's words.
+45. **Flagged handle row. Drawn on D1; build work.** It names why: the
+    kicker reads `HANDLE · RE-CHECK` where a content row names the item
+    kind, and the `[classifier]` tag stays. The row's line: "The hourly
+    re-check flagged a handle this runner already has. Nothing is hidden
+    while it waits." Then D8's "Why the name has to go" picker, Rename
+    (submit) and Keep (text button), as built. The taken-placeholder
+    sentence sits in the row's control band under `NOT RENAMED`. Keep
+    clears the flag until the word list changes.
+46. **Onboarding close. Build work.** "Weather comes with each run, fetched
+    for when and where you ran." Light and dark.
+47. **T1 notes erratum. Done in design.** The notes column is not ported.
+48. **M5 note. Confirmed** as built (round 34's drawing, Au5's order). The
+    marketing site's legal line now reads "See the Privacy policy for how
+    we use what you send. dialed.run is for runners 18 and over." That is
+    `dialed.run-site`'s copy, not this repo's.
+49. **Confirm email from Follow. Build work (the lead).** (a) "Following
+    runners needs a confirmed email." (b) Not drawn, ruled as built: while
+    the address loads, or if it can't be read, the body is the lead alone
+    with no space held; the address line and Resend appear together, with
+    no motion.
+50. **Beside rounds 29–30. Confirmed (a–e).** (a) The frames drop the role:
+    a band is its own status region only on a screen with no page region,
+    which is what the build does. (b) "Attach the kit" and "The verdict"
+    stand. (c)–(e) as built.
+51. **Beside W3 and Review. Build work (c).** (c) "Auto-blur covered 2
+    areas. You covered 1 more. Tap one to undo." and "Auto-blur couldn't
+    check this photo. Tap anything you want covered." (d) The words stand,
+    and Use this photo is hidden while the band shows, as built. (a), (b),
+    (e), (f) as built.
+52. **Beside the closet. Build work (b).** (a) The fifteen names and
+    plurals stand. (b) Category and Type lead, then Brand and Name, at
+    every width: the type picks the glyph and the defaults. This reverses
+    D-27's identity-first order for F. (c)–(e) as built.
+53. **Beside the Feed. Build work (b, c).** (a) As built. (b) `[UNDER
+REVIEW]` comes first on G's row meta line, outside the link, so the
+    link's name stays the entry's label and the tag is read once. (c) A
+    lone photo carries no counter; D's pager shows from two.
+54. **Consensus words. Build work. Amends round 27 #25.** The words claim
+    a share of matched runners, not a rank. All: every matched runner wore
+    it, whatever sits beside it. Most: more than half. Some: anything less,
+    including a lone bar at 3 of 14 and a leader at 5 of 14. "Split" is
+    dropped, and equal bars show a tie. Two bars can both read Most.
+55. **Gave up. Confirmed (a–g)** as built.
+56. **Au2 date of birth. Drawn; build work (c).** The field, its schema
+    errors (b) and Google's band (d) are confirmed as built. (c) Amended:
+    the under-18 band has no Try again, because a retry is refused for a
+    day. The legal line says 18 on Au2, M5 and round 27 #12, as built.
+57. **Export words. Confirmed** as built (D-116): "Runs, closet, entries
+    and photos" and "Your runs, closet, entries and photos are in one
+    ZIP." Rounds 27 and 28 are redrawn to match. **Build work:** the
+    README names run files only when the ZIP holds one; today its
+    `run-files/` sentence is always there.
+58. **Intimate-image removal. Given and drawn; build work, done in
+    #167 and the `/takedown` PR.**
+    - (a) W1's reason: "It's an intimate image of someone, shared without
+      their consent".
+    - (b) The clock goes in the row's header, right, where the age sits:
+      DUE IN 31H, then OVERDUE. The brackets stay about people.
+    - (c) The removal statement is confirmed.
+    - (d) The operators' alert keeps its subject, button and foot; its
+      body is "Someone reported a photo as an intimate image shared
+      without consent. It's hidden from everyone now. The law gives us 48
+      hours to decide."
+    - (e) `/takedown` is drawn: "Ask us to remove an image", the lead, the
+      fields with their grey words, the good-faith statement, "Send the
+      request". The receipt email says the image is hidden and gives the
+      deadline. Review gets REMOVAL REQUESTS · N above the queue, in the
+      queue row's shape: the subject with `[via /takedown]` and the clock,
+      "From NAME · signed · good faith" with what they wrote, Take it
+      down, and Decline as a text button that asks for one line. **The
+      board says a valid request hides the image at once**, as a W1 report
+      of the reason does, which reverses D-117's queue-only answer. The
+      owner took design's (2026-10-10), and D-117 is amended.
+    - **Not built: "Linked … from W1's reason list."** The board gives no
+      words or place for a `/takedown` link inside W1, and a signed-in
+      runner already has the reason itself. This one waits for words.
 
 ## Answered in round 34 (imported 2026-10-04)
 
@@ -2957,7 +2847,9 @@ COPIED` · "Copying didn't work here. The link is selected: copy it
     at 7:42 PM." It is a field message on CURRENT PASSWORD, in local time
     with no seconds. The field stays usable, and pressing before then shows
     the message again. _Build:_ 126 (`currentPasswordLimited`, now in
-    `lib/contracts/`).
+    `lib/contracts/`). **Built on Change password too** (R-124, lane F):
+    the change is a server function now, so the per-runner count reaches
+    it.
 11. **H's two silent states.** _Confirmed, both:_ H's column, the back link
     and the sentence as the lead are the whole page. "This runner changed
     their name." links nowhere. "This runner isn't here." covers purged,

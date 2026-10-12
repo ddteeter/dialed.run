@@ -158,12 +158,55 @@ export const exportReady = emailKind("export_ready", {
 /**
  * Design 136 (D-117): an operator's alert that a report hid something as
  * an intimate image shared without consent, and when its removal is due
- * (`dueAt`, epoch seconds, 48 hours on). Undesigned: placeholder words
- * (design deltas item 58). Operator mail, so always sent.
+ * (`dueAt`, epoch seconds, 48 hours on), in round 35 #58d's words.
+ * Operator mail, so always sent.
  */
 export const removalDue = emailKind("removal_due", {
   subject: z.enum(["entry", "photo"]),
   dueAt: z.int().min(0),
+});
+
+/**
+ * Design 136 (D-117): an operator's alert that someone asked, through
+ * `/takedown`, for an intimate image to come down. `isOurs` says whether
+ * the link was one of ours (so Review shows the subject) or the operator
+ * must find it. Placeholder words (design deltas item 58).
+ */
+export const removalRequested = emailKind("removal_requested", {
+  dueAt: z.int().min(0),
+  isOurs: z.boolean(),
+});
+
+/**
+ * Design 136: the requester's receipt — what happens next and by when,
+ * and whether the image is hidden (round 35 #58e). `confirmToken` is
+ * design 137's: a request past the cap waits for its requester to confirm
+ * before it hides anything, and the receipt carries the link. Sent to the
+ * address they typed; they may have no account. Never shipped before
+ * these fields, so `isHidden` is required.
+ */
+export const removalRequestReceived = emailKind("removal_request_received", {
+  dueAt: z.int().min(0),
+  isHidden: z.boolean(),
+  confirmToken: z.string().min(1).optional(),
+});
+
+/**
+ * Design 137: the site-wide valve shut — enough requests hid something in
+ * the last hour that new ones hide nothing until it clears. One per
+ * operator per hour, whatever trips it. Operator mail, so always sent.
+ */
+export const takedownValve = emailKind("takedown_valve", {
+  perHour: z.int().min(1),
+});
+
+/**
+ * Design 136: the requester is told the outcome. `reason` is the
+ * operator's, for a request that was declined.
+ */
+export const removalRequestDecided = emailKind("removal_request_decided", {
+  outcome: z.enum(["removed", "declined"]),
+  reason: z.string().min(1).optional(),
 });
 
 /**

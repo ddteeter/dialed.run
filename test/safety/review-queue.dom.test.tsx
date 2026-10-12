@@ -599,21 +599,32 @@ describe("what a row tells the reviewer", () => {
     expect(screen.getByText("[1 person]")).toBeInTheDocument();
   });
 
-  it("shows the removal clock on a row an intimate-image report started (design 136)", () => {
+  it("shows the removal clock in the row's header, right of its name, on a row an intimate-image report started (round 35 #58b)", () => {
     renderQueue([
       row({ reporterCount: 1, reasons: ["intimate"], due: "Due in 31h" }),
     ]);
-    expect(screen.getByText("[Due in 31h]")).toBeInTheDocument();
+    const clock = document.querySelector('[data-part="due"]');
+    expect(clock).toHaveTextContent(/^Due in 31h$/u);
+    // Uppercase in CSS, so the accessible text stays in normal case.
+    expect(clock).toHaveClass("uppercase");
+    expect(clock?.firstElementChild).toHaveClass("font-mono");
+    // The header: the row's opener, then the clock beside it.
+    const opener = screen.getByRole("button", { expanded: true });
+    expect(opener.nextElementSibling).toBe(clock);
+    // The brackets stay about people.
+    expect(screen.getByText("[1 person]")).toBeInTheDocument();
+    expect(screen.queryByText("[Due in 31h]")).toBeNull();
     expect(
-      screen.getByText("It's an intimate image shared without consent"),
+      screen.getByText(
+        "It's an intimate image of someone, shared without their consent",
+      ),
     ).toBeInTheDocument();
   });
 
   it("shows no clock on any other row", () => {
     renderQueue([row({ reporterCount: 3 })]);
     expect(screen.queryByText(/Due in|Overdue/u)).toBeNull();
-    // Not even an empty bracket where the clock would be.
-    expect(screen.queryByText("[]")).toBeNull();
+    expect(document.querySelector('[data-part="due"]')).toBeNull();
   });
 
   it("says nobody reported a row the classifier raised", () => {
@@ -736,10 +747,20 @@ describe("a handle the re-ask flagged (D-97)", () => {
   it("offers Keep and Rename with D8's reasons, and never Remove", () => {
     renderQueue([flagged()]);
 
-    // Nothing said yet: the row's own line is for a taken placeholder.
-    expect(document.querySelector("li p.text-body")).toBeNull();
+    // Nothing said yet: the band is for a taken placeholder.
+    expect(document.querySelector("[data-part='control-failure']")).toBeNull();
 
-    expect(screen.getByText(/profile · quadzilla_69/)).toBeInTheDocument();
+    // Round 35 #45: it names why it is there — the re-check's kicker where
+    // a content row names its kind, and the re-check's line where a
+    // content row lists what the reporters said.
+    expect(
+      screen.getByRole("button", { name: "handle · re-check · quadzilla_69" }),
+    ).toBeInTheDocument();
+    expect(document.querySelector("[data-part='why-here']")).toHaveTextContent(
+      /^The hourly re-check flagged a handle this runner already has\. Nothing is hidden while it waits\.$/u,
+    );
+    expect(screen.queryByText("Nobody reported this.")).toBeNull();
+    expect(screen.getByText("[classifier]")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Keep" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Rename" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
@@ -874,6 +895,35 @@ describe("a handle the re-ask flagged (D-97)", () => {
     expect(
       await screen.findByText("That placeholder is taken. Press Rename again."),
     ).toBeInTheDocument();
+    // In the row's control band, under NOT RENAMED, with no Try again:
+    // the sentence says to press Rename (round 35 #45).
+    const band = document.querySelector("[data-part='control-failure']");
+    expect(band).toHaveTextContent(
+      /^Not renamed.*That placeholder is taken\. Press Rename again\.$/u,
+    );
+    expect(band?.querySelector("button")).toBeNull();
+    expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
+  });
+
+  it("keeps the row when the handle changed before the rename landed (R-121)", async () => {
+    const user = userEvent.setup();
+    renderQueue(
+      [flagged()],
+      vi.fn<Props["reviewHandle"]>().mockResolvedValue({ outcome: "moved" }),
+    );
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why the name has to go/ }),
+      "Advertising",
+    );
+    await user.click(screen.getByRole("button", { name: "Rename" }));
+
+    const band = await screen.findByText(
+      "The handle changed before the rename landed. Nothing was renamed.",
+    );
+    expect(band.closest("[data-part='control-failure']")).toHaveTextContent(
+      /^Not renamed/u,
+    );
     expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
   });
 
@@ -887,5 +937,10 @@ describe("a handle the re-ask flagged (D-97)", () => {
 
     expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Keep" })).toBeNull();
+    // Its kind is its own, and the reporters speak for it.
+    expect(
+      screen.getByRole("button", { name: "profile · dee" }),
+    ).toBeInTheDocument();
+    expect(document.querySelector("[data-part='why-here']")).toBeNull();
   });
 });

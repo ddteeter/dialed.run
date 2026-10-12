@@ -1,7 +1,8 @@
 /**
  * Covers: D8 (Desk · Runners: Rename and Close account), the review
  * queue's Remove that deletes, and round 28 #8's review row (the row
- * opens itself; suspected CSAM asks again) — one journey, one video.
+ * opens itself; suspected CSAM asks again), and a flagged handle's row
+ * with its Keep (round 35 #45) — one journey, one video.
  *
  * The journey needs `ADMIN_USER_IDS=e2e-desk-operator` in the dev server's
  * `.dev.vars`, which CI's e2e job writes (register R-72). Locally, put the
@@ -36,6 +37,8 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   const runId = newUlid();
   const entryId = newUlid();
   const queueId = newUlid();
+  const flaggedId = newUlid();
+  const flaggedHandle = `edgy_${suffix}`;
   const now = nowSeconds();
 
   // One runner with one reported public entry. Scoped to ids generated
@@ -82,6 +85,30 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
       status: "pending",
       createdAt: now - 600,
     });
+    // A handle the hourly re-check flagged after it was claimed (D-97),
+    // waiting behind the reported entry.
+    await core.insert(user).values({
+      id: flaggedId,
+      name: flaggedHandle,
+      email: `${flaggedHandle}@example.com`,
+      emailVerified: true,
+      createdAt: new Date(now * 1000),
+      updatedAt: new Date(now * 1000),
+    });
+    await core.insert(userProfiles).values({
+      userId: flaggedId,
+      username: flaggedHandle,
+      usernameScreen: "flagged",
+      usernameScreenedAt: now - 300,
+    });
+    await core.insert(reviewQueue).values({
+      id: newUlid(),
+      subjectType: "profile",
+      subjectId: flaggedId,
+      source: "classifier",
+      status: "pending",
+      createdAt: now - 300,
+    });
   });
 
   await signInAsOperator(page);
@@ -127,6 +154,31 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   await row.getByRole("button", { name: "Remove", exact: true }).click();
   await expect(
     page.getByRole("listitem").filter({ hasText: entryId }),
+  ).toHaveCount(0);
+
+  // Round 35 #45: a flagged handle's row says why it is there, and offers
+  // Keep and Rename rather than Approve and Remove.
+  await scene(page, "Review: a handle the hourly re-check flagged");
+  const handleRow = page
+    .getByRole("listitem")
+    .filter({ hasText: flaggedHandle });
+  const handleOpener = handleRow.locator("button[aria-expanded]");
+  await expect(handleOpener).toHaveText(`handle · re-check · ${flaggedHandle}`);
+  if ((await handleOpener.getAttribute("aria-expanded")) === "false") {
+    await handleOpener.click();
+  }
+  await expect(
+    handleRow.getByText(
+      "The hourly re-check flagged a handle this runner already has. Nothing is hidden while it waits.",
+    ),
+  ).toBeVisible();
+  await expect(handleRow.getByText("[classifier]")).toBeVisible();
+  await expect(handleRow.getByRole("button", { name: "Approve" })).toHaveCount(
+    0,
+  );
+  await handleRow.getByRole("button", { name: "Keep" }).click();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: flaggedHandle }),
   ).toHaveCount(0);
 
   await scene(page, "D8: find the runner by email");

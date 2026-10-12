@@ -1,4 +1,5 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, lt, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type { ZodType } from "zod";
 
@@ -44,24 +45,24 @@ export {
  * error become this failure's, and `first_failed_at` stays when it first
  * went wrong — so a sweep that re-drives a failure all day reads as one
  * row whose count climbs, not a row per hour.
+ *
+ * With `onlyIf`, neither the row nor its update is written unless the
+ * condition holds as the statement runs. It is a select rather than
+ * values for that reason: the condition sits inside the insert, with no
+ * read before it to go stale. Drizzle names every column in the table's
+ * order, so the select gives each one.
  */
 export function gaveUpUpsert(
   db: DrizzleD1Database,
   fact: GaveUpFact,
   now = nowSeconds(),
+  onlyIf: SQL = sql`1`,
 ) {
   return db
     .insert(gaveUp)
-    .values({
-      id: newUlid(),
-      kind: fact.kind,
-      subjectId: fact.subjectId,
-      reason: fact.reason,
-      rawError: fact.rawError,
-      tries: fact.tries,
-      firstFailedAt: now,
-      lastFailedAt: now,
-    })
+    .select(
+      sql`SELECT ${newUlid()}, ${fact.kind}, ${fact.subjectId}, ${fact.reason}, ${orSqlNull(fact.rawError)}, ${fact.tries}, ${now}, ${now} WHERE ${onlyIf}`,
+    )
     .onConflictDoUpdate({
       target: [gaveUp.kind, gaveUp.subjectId],
       set: {
@@ -82,9 +83,57 @@ export function gaveUpClear(
   kind: GaveUpKind,
   subjectId: string,
 ) {
-  return db
-    .delete(gaveUp)
-    .where(and(eq(gaveUp.kind, kind), eq(gaveUp.subjectId, subjectId)));
+  return clearOfKind(db, kind, eq(gaveUp.subjectId, subjectId));
+}
+
+/**
+The delete every clear below is: a kind's rows that `which` picks.
+*/
+function clearOfKind(db: DrizzleD1Database, kind: GaveUpKind, which: SQL) {
+  return db.delete(gaveUp).where(and(eq(gaveUp.kind, kind), which));
+}
+
+/**
+ * Forget every job of a kind whose subject starts with `prefix` — a
+ * runner's own rows, when the subject begins with something of theirs
+ * (R-142: a reminder's subject begins with the Strava athlete id, and a
+ * runner who disconnects or leaves takes it with them). One statement, for
+ * the caller's batch.
+ *
+ * A range rather than `LIKE`, so the `(kind, subject_id)` index answers it
+ * and no character in the prefix is read as a wildcard: every subject that
+ * starts with `prefix` sorts at or after it and before the prefix with its
+ * last character moved one on. Subjects are ASCII (a reminder's is a query
+ * string), so moving a character is moving a byte. An empty prefix is
+ * refused: it would mean "every row of the kind", which this is not for.
+ */
+export function gaveUpClearPrefix(
+  db: DrizzleD1Database,
+  kind: GaveUpKind,
+  prefix: string,
+) {
+  const last = prefix.codePointAt(prefix.length - 1);
+  if (last === undefined) {
+    throw new RangeError("an empty prefix would clear every row of the kind");
+  }
+  const after = prefix.slice(0, -1) + String.fromCodePoint(last + 1);
+  const startsWith = sql`${gaveUp.subjectId} >= ${prefix} AND ${gaveUp.subjectId} < ${after}`;
+  return clearOfKind(db, kind, startsWith);
+}
+
+/**
+ * Forget every job of a kind whose last failure is older than `cutoff`
+ * (epoch seconds): for a kind whose subject holds something with a shelf
+ * life (a reminder's subject names a Strava activity, which Strava's
+ * API Policy §6.2 gives seven days). One statement, for the caller's
+ * batch.
+ */
+export function gaveUpClearBefore(
+  db: DrizzleD1Database,
+  kind: GaveUpKind,
+  cutoff: number,
+) {
+  return clearOfKind(db, kind, lt(gaveUp.lastFailedAt, cutoff));
 }
 
 /**
@@ -104,7 +153,10 @@ export function giveUpEach<Job>(
       const owed = await handlers.onJob(job);
       if (owed === undefined) return;
       const fact = { ...owed.subject, reason: DEAD_LETTER_REASON, tries };
-      await db.batch([gaveUpUpsert(db, fact), ...owed.writes]);
+      await db.batch([
+        gaveUpUpsert(db, fact, nowSeconds(), owed.onlyIf),
+        ...owed.writes,
+      ]);
     },
     deadLettered: handlers.deadLettered,
     captureException: handlers.captureException,

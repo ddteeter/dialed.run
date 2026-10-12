@@ -23,9 +23,12 @@ import { z } from "zod";
  */
 export const reportReasons = [
   { value: "explicit", label: "The photo shows someone inappropriately" },
-  // Design 136 (D-117): placeholder words until design gives them (design
-  // deltas item 58). The one reason that hides at once (`reportersToHide`).
-  { value: "intimate", label: "It's an intimate image shared without consent" },
+  // Design 136 (D-117), in round 35 #58a's words. The one reason that
+  // hides at once (`reportersToHide`).
+  {
+    value: "intimate",
+    label: "It's an intimate image of someone, shared without their consent",
+  },
   { value: "harassment", label: "Harassment aimed at someone" },
   { value: "spam", label: "It's an ad, or it's spam" },
   { value: "not_theirs", label: "This isn't their run or their gear" },
@@ -123,9 +126,19 @@ export const reasonsThatHideAtOnce: readonly ReportReason[] = reportReasons
 export const REMOVAL_DUE_SECONDS = 48 * 60 * 60;
 
 /**
+ * Why an operator declined a removal request (design 136): sent to the
+ * person who asked. One field for the form and the server input.
+ */
+export const declineReasonField = z
+  .string()
+  .trim()
+  .min(1, "Say why, for the person who asked.")
+  .max(500, "Keep it under 500 characters.");
+
+/**
  * The Review row's clock (design 136): whole hours left, rounded up so the
- * last minutes still read "Due in 1h", then "Overdue". Placeholder words
- * (design deltas item 58).
+ * last minutes still read "Due in 1h", then "Overdue" — DUE IN 31H and
+ * OVERDUE in the row's header, uppercase in CSS (round 35 #58b).
  */
 export function removalDueLabel(dueAt: number, now: number): string {
   const left = dueAt - now;
@@ -142,7 +155,7 @@ export function removalDueLabel(dueAt: number, now: number): string {
 export const removalStatements = {
   home: "it shows where someone lives",
   explicit: "it's sexual or explicit",
-  // Design 136: placeholder words (design deltas item 58).
+  // Design 136; confirmed by round 35 #58c.
   intimate: "it's an intimate image shared without consent",
   harassment: "it harasses someone",
   spam: "it's an ad or spam",

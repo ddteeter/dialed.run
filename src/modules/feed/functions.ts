@@ -43,7 +43,13 @@ import { photoUploadFrom, uploadPhoto } from "./photos";
 import { deleteEntryPhoto, photoIdInput, retractEntry } from "./retract";
 import { garmentBandCountOrNone, garmentBandsInput } from "./garment-bands";
 import { decideReview, moderateContent } from "./moderation";
-import { requireAdmin, reviewActionInput, takedownInput } from "../safety";
+import {
+  removalDecisionInput,
+  requireAdmin,
+  reviewActionInput,
+  takedownInput,
+} from "../safety";
+import { decideRemovalRequest } from "./removal-requests";
 import { ownProfile, profileAtHandle, visibleRunnerHandle } from "./profiles";
 import { unitsFor } from "./units";
 import { setUsefulReaction } from "./reactions";
@@ -361,5 +367,22 @@ export const takedownAction = createServerFn({ method: "POST" })
         reason: "copyright",
         notice: data.notice,
       }),
+    };
+  });
+
+/**
+An operator's decision on a `/takedown` request (design 136, D-117).
+*/
+export const decideRemovalRequestAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => removalDecisionInput.parse(input))
+  .handler(async ({ data }) => {
+    const actorId = requireAdmin(await verifiedUserId());
+    return {
+      outcome: await decideRemovalRequest(
+        drizzle(env.DIALED_CORE),
+        actorId,
+        data.requestId,
+        data,
+      ),
     };
   });

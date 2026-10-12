@@ -22,6 +22,7 @@ import {
 import { AUTH_COPY } from "./auth-copy";
 import {
   BREACHED_CODE,
+  CHANGE_PASSWORD_PATH,
   newPasswordIn,
   type BreachVerdict,
 } from "./breached-password";
@@ -168,6 +169,12 @@ export function createAuth({
   return betterAuth({
     secret,
     telemetry: { enabled: false },
+    // Change password is ours (`./change-password`, R-124): the per-runner
+    // count on tries at the current password runs before Better Auth's
+    // endpoint is called. Over HTTP the endpoint would skip that count, so
+    // the router answers it 404. Only the router reads this list, so the
+    // server-side `auth.api.changePassword` still works.
+    disabledPaths: [CHANGE_PASSWORD_PATH],
     ...(baseUrl !== undefined && { baseURL: baseUrl }),
     // Better Auth's own limits for its sensitive paths (sign-in and
     // sign-up: 3 per 10 s per address) and 100 per minute elsewhere, with

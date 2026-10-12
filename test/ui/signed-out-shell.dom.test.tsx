@@ -104,7 +104,7 @@ describe("SignedOutLayout", () => {
     });
   });
 
-  it("ends with the legal footer: Privacy · Terms · Copyright (ACC-13, round 27 #12)", async () => {
+  it("ends with the legal footer: Privacy · Terms · Copyright (ACC-13, round 27 #12), then the removal request (design 136)", async () => {
     await renderAt(<SignedOutLayout action="none">page</SignedOutLayout>);
 
     const footer = document.querySelector("[data-part='legal-footer']");
@@ -119,6 +119,7 @@ describe("SignedOutLayout", () => {
       ["Privacy", "/privacy"],
       ["Terms", "/terms"],
       ["Copyright", "/copyright"],
+      ["Report an intimate image", "/takedown"],
     ]);
     for (const link of links) {
       expect(link).toHaveClass("target", "text-muted", "underline");
