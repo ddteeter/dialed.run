@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -90,6 +90,21 @@ describe("gaveUpUpsert", () => {
     await gaveUpUpsert(db(), { ...fact, kind: "weather" });
 
     expect(await db().select().from(gaveUp)).toHaveLength(2);
+  });
+});
+
+describe("gaveUpUpsert under a condition (R-142)", () => {
+  it("writes neither the row nor its update unless the condition holds", async () => {
+    const fact = { kind: "reminder", reason: "No.", tries: 2 } as const;
+    await gaveUpUpsert(db(), { ...fact, subjectId: "held" }, 100, sql`1 = 0`);
+    expect(await gaveUpRow("reminder", "held")).toBeUndefined();
+
+    await gaveUpUpsert(db(), { ...fact, subjectId: "kept" }, 100, sql`1 = 1`);
+    await gaveUpUpsert(db(), { ...fact, subjectId: "kept" }, 200, sql`1 = 0`);
+    expect(await gaveUpRow("reminder", "kept")).toMatchObject({
+      tries: 2,
+      lastFailedAt: 100,
+    });
   });
 });
 

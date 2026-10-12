@@ -45,24 +45,24 @@ export {
  * error become this failure's, and `first_failed_at` stays when it first
  * went wrong — so a sweep that re-drives a failure all day reads as one
  * row whose count climbs, not a row per hour.
+ *
+ * With `onlyIf`, neither the row nor its update is written unless the
+ * condition holds as the statement runs. It is a select rather than
+ * values for that reason: the condition sits inside the insert, with no
+ * read before it to go stale. Drizzle names every column in the table's
+ * order, so the select gives each one.
  */
 export function gaveUpUpsert(
   db: DrizzleD1Database,
   fact: GaveUpFact,
   now = nowSeconds(),
+  onlyIf: SQL = sql`1`,
 ) {
   return db
     .insert(gaveUp)
-    .values({
-      id: newUlid(),
-      kind: fact.kind,
-      subjectId: fact.subjectId,
-      reason: fact.reason,
-      rawError: fact.rawError,
-      tries: fact.tries,
-      firstFailedAt: now,
-      lastFailedAt: now,
-    })
+    .select(
+      sql`SELECT ${newUlid()}, ${fact.kind}, ${fact.subjectId}, ${fact.reason}, ${orSqlNull(fact.rawError)}, ${fact.tries}, ${now}, ${now} WHERE ${onlyIf}`,
+    )
     .onConflictDoUpdate({
       target: [gaveUp.kind, gaveUp.subjectId],
       set: {
@@ -153,7 +153,10 @@ export function giveUpEach<Job>(
       const owed = await handlers.onJob(job);
       if (owed === undefined) return;
       const fact = { ...owed.subject, reason: DEAD_LETTER_REASON, tries };
-      await db.batch([gaveUpUpsert(db, fact), ...owed.writes]);
+      await db.batch([
+        gaveUpUpsert(db, fact, nowSeconds(), owed.onlyIf),
+        ...owed.writes,
+      ]);
     },
     deadLettered: handlers.deadLettered,
     captureException: handlers.captureException,

@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   gaveUp,
@@ -1335,6 +1335,15 @@ describe("the Desk's Gave up (R-119)", () => {
     eventTime: 1_700_000_042,
   } as const;
 
+  // A reminder's row is written only while its athlete is connected
+  // (R-142), so the reminders here have one.
+  beforeEach(async () => {
+    await coreDb()
+      .insert(stravaConnections)
+      .values({ userId: "runner-41", athleteId: "41", refreshToken: "r-41" })
+      .onConflictDoNothing();
+  });
+
   it("lists a dead-lettered import with the queue's tries", async () => {
     const deps = makeDeps();
     const importId = await seedImport(deps.db, newUlid(), validTcx, "tcx");
@@ -1378,6 +1387,18 @@ describe("the Desk's Gave up (R-119)", () => {
     const row = await gaveUpRow("reminder", reminderSubject(reminder));
     expect(row?.tries).toBe(4);
     expect(reminderFromSubject(row?.subjectId ?? "")).toStrictEqual(reminder);
+  });
+
+  it("does not list a reminder whose athlete has disconnected, so nothing outlives the disconnect (R-142)", async () => {
+    const gone = { ...reminder, athleteId: "4100", objectId: "44" };
+
+    await handleImportsDlqBatch(
+      fakeBatch([{ body: gone }]).batch,
+      makeDeps(),
+      4,
+    );
+
+    expect(await gaveUpRow("reminder", reminderSubject(gone))).toBeUndefined();
   });
 
   it("lists a reminder dead-lettered twice once, with both rounds of tries", async () => {
