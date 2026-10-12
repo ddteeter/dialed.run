@@ -1229,11 +1229,29 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       2026-10-12 13:05 UTC", a body saying what was reported and that it is
       hidden, the button "Open Review", and the foot "Sent to every
       operator, once per report that hides something."
-    - **Coming in PR B:** a public page and form at `/takedown`, the
-      requester's receipt email, and a "Removal requests" section on
-      Review.
+    - **`/takedown`** is Au5's composition (`SignedOutPanel`, Turnstile
+      above the primary, one receipt): the heading "Ask us to remove an
+      intimate image", a lead saying what happens, then Email, "Your full
+      name" ("Typing it is your signature."), "Link to the image" ("A
+      dialed.run link, or say where it is."), "What it shows · optional",
+      and a checkbox with the statement "I am the person shown, or I'm
+      allowed to act for them, and this image was shared without their
+      consent." — its error under it, as O3's group error is. The receipt
+      is Au5's shape: `REQUEST SENT`, "We have your request".
+    - **The footer** gains a fourth link after round 27 #12's three:
+      "Report an intimate image".
+    - **Review's "removal requests"** section sits above the queue:
+      `[N to remove]`, then per request its clock bracket, "name ·
+      email", the link as given, what they wrote, "Open the kit" (or "Not
+      one of our links: find it from what they wrote."), Take it down,
+      and Decline with a "Why not" field.
+    - **Three more emails:** the operators' "Removal request, due by …",
+      the requester's "We have your removal request", and "We removed what
+      you reported" / "We didn't remove what you reported".
       **The ask:** the reason's sentence in W1's voice; whether the clock
-      belongs in the row's brackets or its header; and the email's words.
+      belongs in the row's brackets or its header; the page, its receipt,
+      the footer's fourth link, Review's section, and the five emails'
+      words.
 
 ## Answered in round 34 (imported 2026-10-04)
 

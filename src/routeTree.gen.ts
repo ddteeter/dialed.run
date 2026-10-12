@@ -15,6 +15,7 @@ import { Route as CopyrightRouteImport } from './routes/copyright'
 import { Route as DeskRouteRouteImport } from './routes/desk/route'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as TakedownRouteImport } from './routes/takedown'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AccountSectionRouteImport } from './routes/account/$section'
 import { Route as AccountCheckEmailRouteImport } from './routes/account/check-email'
@@ -99,6 +100,11 @@ const JoinRoute = JoinRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TakedownRoute = TakedownRouteImport.update({
+  id: '/takedown',
+  path: '/takedown',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsRoute = TermsRouteImport.update({
@@ -385,6 +391,7 @@ export interface FileRoutesByFullPath {
   '/copyright': typeof CopyrightRoute
   '/join': typeof JoinRoute
   '/privacy': typeof PrivacyRoute
+  '/takedown': typeof TakedownRoute
   '/terms': typeof TermsRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
@@ -447,6 +454,7 @@ export interface FileRoutesByTo {
   '/copyright': typeof CopyrightRoute
   '/join': typeof JoinRoute
   '/privacy': typeof PrivacyRoute
+  '/takedown': typeof TakedownRoute
   '/terms': typeof TermsRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
@@ -511,6 +519,7 @@ export interface FileRoutesById {
   '/copyright': typeof CopyrightRoute
   '/join': typeof JoinRoute
   '/privacy': typeof PrivacyRoute
+  '/takedown': typeof TakedownRoute
   '/terms': typeof TermsRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
@@ -576,6 +585,7 @@ export interface FileRouteTypes {
     | '/copyright'
     | '/join'
     | '/privacy'
+    | '/takedown'
     | '/terms'
     | '/account/$section'
     | '/account/check-email'
@@ -638,6 +648,7 @@ export interface FileRouteTypes {
     | '/copyright'
     | '/join'
     | '/privacy'
+    | '/takedown'
     | '/terms'
     | '/account/$section'
     | '/account/check-email'
@@ -701,6 +712,7 @@ export interface FileRouteTypes {
     | '/copyright'
     | '/join'
     | '/privacy'
+    | '/takedown'
     | '/terms'
     | '/account/$section'
     | '/account/check-email'
@@ -765,6 +777,7 @@ export interface RootRouteChildren {
   CopyrightRoute: typeof CopyrightRoute
   JoinRoute: typeof JoinRoute
   PrivacyRoute: typeof PrivacyRoute
+  TakedownRoute: typeof TakedownRoute
   TermsRoute: typeof TermsRoute
   AccountSectionRoute: typeof AccountSectionRoute
   AccountCheckEmailRoute: typeof AccountCheckEmailRoute
@@ -861,6 +874,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/takedown': {
+      id: '/takedown'
+      path: '/takedown'
+      fullPath: '/takedown'
+      preLoaderRoute: typeof TakedownRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms': {
@@ -1274,6 +1294,7 @@ const rootRouteChildren: RootRouteChildren = {
   CopyrightRoute: CopyrightRoute,
   JoinRoute: JoinRoute,
   PrivacyRoute: PrivacyRoute,
+  TakedownRoute: TakedownRoute,
   TermsRoute: TermsRoute,
   AccountSectionRoute: AccountSectionRoute,
   AccountCheckEmailRoute: AccountCheckEmailRoute,

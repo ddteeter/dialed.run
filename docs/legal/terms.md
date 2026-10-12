@@ -234,6 +234,14 @@ decision to a certified out-of-court dispute settlement body, or to a court.
 - **Report it in the app** if you can, or write to desk@dialed.run if you
   can't (for example, if you have no account). Say what it is, where it is
   (a link or the runner's username), and why you think it is illegal.
+- **An intimate image of you shared without your consent:** ask for it to
+  come down at [dialed.run/takedown](/takedown), with or without an
+  account. Give your email, your full name as your signature, where the
+  image is, and confirm that it was shared without consent. A person
+  decides within 48 hours, removes it if it is what you describe, and
+  emails you either way. If the link is to dialed.run, we hide what it
+  points to while we look, and put it back if we decline. Knowingly
+  making a false request breaks these rules.
 - **Copyright and other intellectual property** complaints go through the
   [copyright page](/copyright).
 - **Child sexual abuse material.** Content a moderator suspects of this is

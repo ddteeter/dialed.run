@@ -1103,6 +1103,53 @@ export const reports = /*#__PURE__*/ sqliteTable(
 );
 
 /**
+ * A request to remove an intimate image shared without consent, from
+ * someone who may have no account (design 136, decision D-117): the TAKE
+ * IT DOWN Act's signed-out path. Additive: a new table.
+ *
+ * A request whose link is ours hides it at once (round 35 #58e, amending
+ * D-117), and a Decline gives it back; an operator decides within the 48
+ * hours `dueAt` keeps.
+ * `subjectType`/`subjectId` are set when `location` is one of our own
+ * links, and left NULL when it is not, so the operator still sees it.
+ * Kept until the owner deletes it (D-117): the record is the answer if a
+ * removal or a refusal is ever questioned.
+ *
+ * `idempotencyKey` is law 8b's, minted when the form mounts; with no
+ * account to scope it to, it is scoped to the requester's address.
+ */
+export const takedownRequests = /*#__PURE__*/ sqliteTable(
+  "takedown_requests",
+  {
+    id: text("id").primaryKey(),
+    requesterEmail: text("requester_email").notNull(),
+    // The typed full name the Act accepts as an electronic signature.
+    signature: text("signature").notNull(),
+    location: text("location").notNull(),
+    subjectType: text("subject_type", { enum: ["entry", "photo"] }),
+    subjectId: text("subject_id"),
+    description: text("description"),
+    status: text("status", { enum: ["pending", "removed", "declined"] })
+      .notNull()
+      .default("pending"),
+    declineReason: text("decline_reason"),
+    dueAt: integer("due_at").notNull(),
+    createdAt: integer("created_at").notNull(),
+    resolvedAt: integer("resolved_at"),
+    resolvedBy: text("resolved_by"),
+    idempotencyKey: text("idempotency_key").notNull(),
+  },
+  (t) => [
+    uniqueIndex("takedown_requests_idempotency").on(
+      t.requesterEmail,
+      t.idempotencyKey,
+    ),
+    // Review's section: pending requests, soonest due first.
+    index("takedown_requests_status_due").on(t.status, t.dueAt),
+  ],
+);
+
+/**
  * One row per thing awaiting a human, not one per report — three reports
  * about the same entry are one decision. `status` is the claim column
  * (law 2): the review UI claims a row before acting on it, so two open

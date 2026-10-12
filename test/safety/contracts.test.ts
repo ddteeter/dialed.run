@@ -123,7 +123,7 @@ describe("the reporters each reason needs (design 136, D-117)", () => {
 
   it("tells the moderator and the author the intimate-image reason", () => {
     expect(reportReasonLabels.intimate).toBe(
-      "It's an intimate image shared without consent",
+      "It's an intimate image of someone, shared without their consent",
     );
     expect(removalStatements.intimate).toBe(
       "it's an intimate image shared without consent",

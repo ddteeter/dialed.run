@@ -200,6 +200,8 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "feed/functions.ts garmentBandCountQuery": "unconfirmed",
   "feed/functions.ts decideReviewAction": "admin",
   "feed/functions.ts takedownAction": "admin",
+  // Design 136: an operator decides a `/takedown` request.
+  "feed/functions.ts decideRemovalRequestAction": "admin",
   // ---- notifications
   "notifications/functions.ts listNotificationsFn": "unconfirmed",
   "notifications/functions.ts unreadNotificationCountFn": "unconfirmed",
@@ -259,6 +261,9 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "safety/functions.ts reviewHandleAction": "admin",
   "safety/functions.ts forceRenameAction": "admin",
   "safety/functions.ts deskRunnersQuery": "admin",
+  // Design 136: `/takedown` is for anyone, with or without an account —
+  // the person pictured is usually not a runner.
+  "safety/functions.ts takedownRequestFn": "sessionless",
 
   // ---- server routes
   // A signed link's token, or the viewer if any.

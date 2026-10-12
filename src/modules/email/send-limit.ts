@@ -30,8 +30,10 @@ export const SEND_WINDOW_S = 60 * 60;
  * `access` is Au5's request (ACC-5), which sends no email: it borrows the
  * same hourly window keyed by the visitor's address rather than an email
  * one, so a script cannot fill Desk D7 (the key is `access:{ip}`).
+ * `takedown` is `/takedown`'s request (design 136), counted the same way
+ * and for the same reason: it is a form anyone can fill.
  */
-export type LimitedSend = "verify" | "reset" | "change" | "access";
+export type LimitedSend = "verify" | "reset" | "change" | "access" | "takedown";
 
 /**
 The sends counted by email address; `access` is counted by IP.

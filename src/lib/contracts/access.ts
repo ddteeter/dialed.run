@@ -6,6 +6,8 @@
  */
 import { z } from "zod";
 
+import { clockLabel, deviceTimeZone } from "../dates";
+
 /**
  * **The one flag.** On, sign-up needs a code (email and Google alike),
  * Au2 shows the INVITE CODE field and the "No code? Request access" link.
@@ -94,6 +96,25 @@ export const ACCESS_NOTE_COUNT_FROM = 120;
  */
 export const TURNSTILE_REFUSED =
   "We couldn't check this browser. Reload the page and try again.";
+
+/**
+ * A signed-out form's request that was not taken — Au5's, and `/takedown`'s
+ * (design 136), which share Turnstile and the per-visitor limit.
+ */
+export type FormRefusal =
+  | { readonly status: "refused" }
+  | { readonly status: "limited"; readonly until: number };
+
+/**
+ * What the band says when the request was not taken — both are about the
+ * browser, never the address: Turnstile's (round 27 #12) and the limit's
+ * (round 28 #9, #11's grammar in local time).
+ */
+export function refusalMessage(result: FormRefusal): string {
+  return result.status === "refused"
+    ? TURNSTILE_REFUSED
+    : `Too many requests from here. You can send another at ${clockLabel(result.until, deviceTimeZone())}.`;
+}
 
 /**
  * The headers sign-up carries its code and Turnstile token in. Better

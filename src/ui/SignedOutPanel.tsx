@@ -1,7 +1,32 @@
 import type { JSX, ReactNode } from "react";
 
 import { SignedOutLayout } from "./Layout";
+import { Mono } from "./Mono";
 import { Wordmark } from "./Wordmark";
+
+/**
+ * A signed-out receipt (Au5's, and `/takedown`'s): a mono kicker, a title,
+ * and the words of what happens next, in the one stack both draw.
+ */
+export function SignedOutReceipt({
+  kicker,
+  title,
+  children,
+}: Readonly<{
+  kicker: string;
+  title: ReactNode;
+  children: ReactNode;
+}>): JSX.Element {
+  return (
+    <div data-part="receipt" className="flex flex-col gap-5">
+      <Mono step="xs" className="text-muted">
+        {kicker}
+      </Mono>
+      <h2 className="m-0 text-title font-bold">{title}</h2>
+      {children}
+    </div>
+  );
+}
 
 /**
  * The signed-out panel: the Auth board's frame (round 22), which the
