@@ -28,7 +28,11 @@ const NOON = Date.UTC(2025, 8, 16, 12) / 1000;
 const HOUR = 3600;
 const DAY = 24 * HOUR;
 
-function desk(gaveUp: number, oldestGaveUpAt?: number): DeskToday {
+function desk(
+  gaveUp: number,
+  oldestGaveUpAt?: number,
+  digestUnconfirmedAt?: number,
+): DeskToday {
   return {
     asOf: NOON,
     counts: {
@@ -39,6 +43,7 @@ function desk(gaveUp: number, oldestGaveUpAt?: number): DeskToday {
       bansAllTime: 0,
       gaveUp,
       oldestGaveUpAt,
+      digestUnconfirmedAt,
     },
   };
 }
@@ -424,7 +429,7 @@ describe("lastTryOf", () => {
 An empty Today whose digest mark is `digestUnconfirmedAt`.
 */
 function withMark(digestUnconfirmedAt: number | undefined): DeskToday {
-  return { ...desk(0), digestUnconfirmedAt };
+  return desk(0, undefined, digestUnconfirmedAt);
 }
 
 /**

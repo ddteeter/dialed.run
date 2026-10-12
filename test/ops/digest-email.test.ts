@@ -33,6 +33,7 @@ const COUNTS: TodayCounts = {
   bansAllTime: 3,
   gaveUp: 2,
   oldestGaveUpAt: 900_000,
+  digestUnconfirmedAt: undefined,
 };
 
 /**
@@ -299,7 +300,7 @@ describe("only to a confirmed address (OPS-11)", () => {
     expect(settled).toHaveLength(1);
     expect(await unconfirmedMark()).toStrictEqual([]);
     const today = await deskToday();
-    expect(today.digestUnconfirmedAt).toBeUndefined();
+    expect(today.counts.digestUnconfirmedAt).toBeUndefined();
   });
 
   it("mails an unconfirmed operator nothing from the daily firing, and records it on the Desk", async () => {
@@ -316,7 +317,7 @@ describe("only to a confirmed address (OPS-11)", () => {
     const [mark] = await unconfirmedMark();
     expect(mark?.lastRunAt).toBeGreaterThanOrEqual(before);
     const today = await deskToday();
-    expect(today.digestUnconfirmedAt).toBe(mark?.lastRunAt);
+    expect(today.counts.digestUnconfirmedAt).toBe(mark?.lastRunAt);
   });
 
   it("mails the confirmed ones and records the skip when only some are", async () => {

@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 
 import type { GaveUpKind } from "../../../lib/contracts/gave-up";
-import { monthDayLabel, timeOfDay } from "../../../lib/dates";
+import { calendarDay, monthDayLabel, timeOfDay } from "../../../lib/dates";
 import {
   ControlFailureBand,
   FormStatus,
@@ -356,11 +356,11 @@ function GaveUp({
 }
 
 /**
-Whether `at` fell on `asOf`'s UTC day; never, for no `at`.
-*/
+ * Whether `at` fell on `asOf`'s UTC day, read the way the digest reads its
+ * own mark (`calendarDay`); never, for no `at`.
+ */
 function isSameUtcDay(at: number | undefined, asOf: number): boolean {
-  // No mark reads as one at the epoch, a day the Desk never opens on.
-  return Math.floor((at ?? 0) / DAY_SECONDS) === Math.floor(asOf / DAY_SECONDS);
+  return at !== undefined && calendarDay(at) === calendarDay(asOf);
 }
 
 /**
@@ -435,7 +435,7 @@ export function Today({
             {counts.bansThisWeek === 1 ? "ban" : "bans"} this week
           </Stat>
         </ul>
-        {isSameUtcDay(today.digestUnconfirmedAt, asOf) ? (
+        {isSameUtcDay(counts.digestUnconfirmedAt, asOf) ? (
           <DigestUnconfirmed />
         ) : undefined}
       </section>
