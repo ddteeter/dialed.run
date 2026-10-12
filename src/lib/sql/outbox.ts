@@ -94,12 +94,18 @@ const importFileExpire = z.object({
  * with it is the same row. A row can be held back (ops' `oweOutbox`
  * `notBefore`) — task 127's reminder goes out 20 minutes after the run
  * lands — and a held row is left to the drain, never a fast path.
+ *
+ * `unlessRead` names a bell row the email repeats (task 127's reminder,
+ * design 140): read by send time — the runner uploaded the run, or saw it
+ * in the app — or gone, and the email is not sent. Optional, so a row an
+ * earlier deploy wrote still parses (law 9).
  */
 const email = z.object({
   kind: z.literal("email"),
   payload: z.object({
     dedupeKey: z.string().min(1),
     email: emailPayloadSchema,
+    unlessRead: z.string().min(1).optional(),
   }),
 });
 

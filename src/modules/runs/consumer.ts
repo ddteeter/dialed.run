@@ -38,6 +38,7 @@ import {
 } from "./queue-messages";
 import type { StravaApi } from "./strava/api";
 import { deauthorizeAthlete, type Owe } from "./strava/deauthorize";
+import { earlierReminders, owedReminderEmail } from "./strava/reminder-email";
 import {
   pairRunWith,
   pairWithReminder,
@@ -70,6 +71,12 @@ export interface ConsumerDeps {
    * `ops` imports this module and so cannot be imported by it.
    */
   owe: Owe;
+  /**
+   * The runner's zone, for the reminder email's day and clock (design
+   * 140): `runnerZone`, handed in by the queue entry so a test can make it
+   * fail. Absent, or failing, the email is reckoned in UTC.
+   */
+  runnerZone?: ((userId: string) => Promise<string | undefined>) | undefined;
 }
 
 const IMPORT_TERMINAL_STATUSES = ["done", "failed", "duplicate"] as const;
@@ -348,22 +355,53 @@ async function processReminderJob(
     return;
   }
 
-  // STR-9's call site: the reminder email (decision D-43; round 26 #19) is
-  // scheduled here, after the batch, once task 126 publishes `modules/email`
-  // and the runner's switch (ACC-11) — 20 minutes after the run landed,
-  // with the skip rule checked when it is due.
+  // The reminder email (STR-9; D-43; round 26 #19), owed in the same batch
+  // as the bell row it repeats, so neither lands without the other (law
+  // 8c). Whether it is owed at all is read first: a batch cannot branch.
+  const landedAt = nowSeconds();
+  const notificationId = newUlid();
+  const [earlier, zone] = await Promise.all([
+    earlierReminders(deps.db, connected.userId, landedAt),
+    zoneOrUtc(deps, connected.userId),
+  ]);
+  const email = owedReminderEmail(earlier, {
+    userId: connected.userId,
+    objectId: job.objectId,
+    notificationId,
+    at: landedAt,
+    zone,
+  });
   await deps.db.batch([
     claim,
     // D-33: zero activity data in the body — no distance, no time, no
     // name. Round 25's words: Strava tells us a run happened, we remind,
     // the runner adds the file.
     notificationInsert(deps.db, {
+      id: notificationId,
       userId: connected.userId,
       kind: "strava_reminder",
       subjectId: job.objectId,
       body: STRAVA_REMINDER_BODY,
     }),
+    ...(email === undefined ? [] : [deps.owe(email.message, email.notBefore)]),
   ]);
+}
+
+/**
+ * The runner's zone, or UTC when it cannot be had: the email's day and
+ * clock are secondary to the bell row, so a failed lookup is reported and
+ * never fails the reminder (law 5).
+ */
+async function zoneOrUtc(
+  deps: Pick<ConsumerDeps, "runnerZone" | "captureException">,
+  userId: string,
+): Promise<string | undefined> {
+  try {
+    return await deps.runnerZone?.(userId);
+  } catch (error) {
+    deps.captureException(error, { userId, surface: "runnerZone" });
+    return undefined;
+  }
 }
 
 /**
