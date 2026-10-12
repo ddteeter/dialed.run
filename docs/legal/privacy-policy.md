@@ -48,10 +48,8 @@ Questions about this policy or your data: hello@dialed.run.
   the camera's metadata.
 - From Strava we keep your athlete id and one token used only to revoke our
   access. Never your activity data.
-- No ads. The app runs no analytics; the marketing site counts page views
-  without cookies (see [Cookies](#cookies-and-browser-storage)). No selling
-  or renting your data. [OWNER: confirm "no ads" and "no selling or
-  renting" are commitments you will keep; the code makes them true today.]
+- The app runs no analytics; the marketing site counts page views without
+  cookies (see [Cookies](#cookies-and-browser-storage)).
 - You can export your data and delete your account in Settings › Account.
 
 ## What we keep, and why
@@ -338,11 +336,13 @@ to anyone.
 | Sentry                   | Error reports                                                           | The error and internal ids (account, run, import, product), never tokens, request bodies or file contents |
 | Have I Been Pwned        | Leaked-password check                                                   | The first five characters of your password's SHA-1 hash                                                   |
 
-[OWNER: where Cloudflare stores the databases and buckets. The code sets no
-location hint or jurisdiction, so Cloudflare picks one. Decide whether to
-pin one, and, since sign-up stays open to the EU and UK (D-115), whether to
-add a transfer statement (for example, "your data is stored and processed
-in the United States") and which safeguard it relies on.]
+We are in the United States, and your data is stored in North America.
+The app itself runs on Cloudflare's network, so a request may be handled in
+the Cloudflare data centre nearest you before it reaches our storage.
+[OWNER: for counsel, since sign-up is open to the EU and UK (D-115): which
+safeguard covers the processors above when they receive EU or UK data, for
+example each one's Data Privacy Framework certification or standard
+contractual clauses in its terms.]
 
 ## Cookies and browser storage
 
@@ -368,24 +368,24 @@ sets no cookies and keeps no personal data.
 
 ## How long we keep it
 
-| What                                                                                            | How long                                                                                                                                                   |
-| ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Imported run files                                                                              | Until it has been read, usually within a day. A file we could not read: 30 days after the import failed                                                    |
-| Your data export                                                                                | The file: 7 days from when it is ready. The record that you asked for one: deleted with the file, or 7 days after a failed export                          |
-| Removal requests (`/takedown`)                                                                  | Until we delete them                                                                                                                                       |
-| Requests for access                                                                             | Until we delete them [OWNER: see "A request for access" above]                                                                                             |
-| Session records                                                                                 | Expire after 7 days; the record is kept until sign-out, a ban or account deletion [OWNER: see "Sessions" above]                                            |
-| Strava refresh token                                                                            | Until you disconnect, then until Strava confirms revocation                                                                                                |
-| Strava activity ids                                                                             | 7 days                                                                                                                                                     |
-| Garments you delete                                                                             | Deleted with their photo files. A garment you wore leaves those kits                                                                                       |
-| Runs, kits and kit photos you delete                                                            | Deleted with their files                                                                                                                                   |
-| Your account, when you delete it                                                                | Hidden at once; everything below deleted 7 days later (see [Your choices](#your-choices))                                                                  |
-| Suspected child sexual abuse material we removed                                                | One year, then deleted                                                                                                                                     |
-| Usernames you have used                                                                         | For good, so nobody else can take them                                                                                                                     |
-| Everything else: account, profile, runs, kits, photos, follows, reports, notifications, weather | Until you delete it or your account [OWNER: no period is set for an account nobody deletes, or for the weather cache. Decide one, or keep "no time limit"] |
-| Server logs                                                                                     | [OWNER: Cloudflare Workers Logs keep 3 days on Workers Free and 7 on Workers Paid; say which plan]                                                         |
-| Error reports                                                                                   | [OWNER: Sentry's retention for your plan]                                                                                                                  |
-| Product pages we fetched                                                                        | Kept, to re-read later. Not personal data                                                                                                                  |
+| What                                                                                            | How long                                                                                                                          |
+| ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Imported run files                                                                              | Until it has been read, usually within a day. A file we could not read: 30 days after the import failed                           |
+| Your data export                                                                                | The file: 7 days from when it is ready. The record that you asked for one: deleted with the file, or 7 days after a failed export |
+| Removal requests (`/takedown`)                                                                  | Until we delete them                                                                                                              |
+| Requests for access                                                                             | Until we delete them [OWNER: see "A request for access" above]                                                                    |
+| Session records                                                                                 | Expire after 7 days; the record is kept until sign-out, a ban or account deletion [OWNER: see "Sessions" above]                   |
+| Strava refresh token                                                                            | Until you disconnect, then until Strava confirms revocation                                                                       |
+| Strava activity ids                                                                             | 7 days                                                                                                                            |
+| Garments you delete                                                                             | Deleted with their photo files. A garment you wore leaves those kits                                                              |
+| Runs, kits and kit photos you delete                                                            | Deleted with their files                                                                                                          |
+| Your account, when you delete it                                                                | Hidden at once; everything below deleted 7 days later (see [Your choices](#your-choices))                                         |
+| Suspected child sexual abuse material we removed                                                | One year, then deleted                                                                                                            |
+| Usernames you have used                                                                         | For good, so nobody else can take them                                                                                            |
+| Everything else: account, profile, runs, kits, photos, follows, reports, notifications, weather | Until you delete it or your account                                                                                               |
+| Server logs                                                                                     | 7 days                                                                                                                            |
+| Error reports                                                                                   | 30 days                                                                                                                           |
+| Product pages we fetched                                                                        | Kept, to re-read later. Not personal data                                                                                         |
 
 ## Your choices
 
@@ -429,8 +429,8 @@ browser location and Strava; legal obligation for reports to NCMEC.]
 ## Security
 
 Everything travels over HTTPS, and the app tells browsers to use only
-HTTPS for a year. [OWNER: confirm "Always Use HTTPS" is on for the zone;
-the app's header does not cover a browser's very first visit.] Passwords
+HTTPS for a year. A plain `http://` address is always redirected to
+HTTPS. Passwords
 are hashed. Only the account that owns a garment photo can load it, and a
 private kit returns nothing to anyone else. Cloudflare encrypts our
 databases and stored files at rest. Google tokens are stored in our
