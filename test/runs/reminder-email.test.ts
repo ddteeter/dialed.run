@@ -56,7 +56,6 @@ function landing(
 ) {
   return {
     userId: "u1",
-    objectId: "strava-1",
     notificationId: "n1",
     at: LANDED,
     zone: CHICAGO,
@@ -68,7 +67,7 @@ function reminder(
   createdAt: number,
   overrides: Partial<EarlierReminder> = {},
 ): EarlierReminder {
-  return { subjectId: newUlid(), createdAt, read: false, ...overrides };
+  return { createdAt, read: false, ...overrides };
 }
 
 function runsCounted(earlier: readonly EarlierReminder[]): number | undefined {
@@ -123,14 +122,6 @@ describe("owedReminderEmail: whether a landing owes the email", () => {
     expect(
       owedReminderEmail(lastNight, landing({ zone: undefined })),
     ).toBeUndefined();
-  });
-
-  it("owes nothing for a redelivered event, even one that first landed yesterday", () => {
-    const own = reminder(LANDED - 20 * HOUR, { subjectId: "strava-1" });
-    expect(owedReminderEmail([own], landing())).toBeUndefined();
-    expect(
-      owedReminderEmail([reminder(LANDED - 20 * HOUR)], landing()),
-    ).toBeDefined();
   });
 
   it("counts yesterday's later reminders still unread, never yesterday's first", () => {
@@ -305,6 +296,36 @@ describe("the consumer owes it in the bell row's batch", () => {
     await deliver(job);
     expect(await owedFor(userId)).toStrictEqual([]);
     expect(await reminderRows(userId)).toHaveLength(1);
+  });
+
+  it("owes nothing for an event redelivered after it paired an upload", async () => {
+    // Delivery 1 pairs the run already uploaded and loses its ack. The run
+    // is now paired, so a redelivery that re-asked "is there an unpaired
+    // upload?" would hear no, and write a stale reminder with an email.
+    const { userId, athleteId } = await connectedRunner();
+    const runId = newUlid();
+    await core()
+      .insert(runs)
+      .values({
+        id: runId,
+        userId,
+        source: "file",
+        startedAt: nowSeconds() - 2000,
+        durationS: 1800,
+        distanceM: 5000,
+        title: "Already uploaded",
+      });
+    const job = reminderJob(athleteId);
+    await deliver(job);
+    const [paired] = await core()
+      .select({ at: runs.reminderMatchedAt })
+      .from(runs)
+      .where(eq(runs.id, runId));
+    expect(paired?.at).toBe(job.eventTime);
+
+    await deliver(job);
+    expect(await reminderRows(userId)).toStrictEqual([]);
+    expect(await owedFor(userId)).toStrictEqual([]);
   });
 
   it("reckons the runner's day and clock in their zone", async () => {

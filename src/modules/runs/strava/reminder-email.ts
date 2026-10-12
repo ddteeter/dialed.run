@@ -46,7 +46,6 @@ const DAY_S = 24 * 60 * 60;
  * reminders.
  */
 export interface EarlierReminder {
-  readonly subjectId: string | null;
   readonly createdAt: number;
   readonly read: boolean;
 }
@@ -64,7 +63,6 @@ export async function earlierReminders(
 ): Promise<EarlierReminder[]> {
   return db
     .select({
-      subjectId: notifications.subjectId,
       createdAt: notifications.createdAt,
       read: notifications.read,
     })
@@ -85,10 +83,6 @@ What the decision is told about the reminder now landing.
 export interface Landing {
   readonly userId: string;
   /**
-  The Strava event this reminder is for, to spot a redelivery.
-  */
-  readonly objectId: string;
-  /**
   The bell row being written for it, which the email repeats.
   */
   readonly notificationId: string;
@@ -100,10 +94,9 @@ export interface Landing {
 }
 
 /**
- * The email this reminder owes, or none: none when the runner already had
- * a reminder today (that one owed today's email), and none for a
- * redelivered event, whose first delivery wrote its bell row — and owed
- * its email then, if it was owed at all.
+ * The email this reminder owes, or none when the runner already had a
+ * reminder today: that one owed today's email. A redelivered event never
+ * gets here — the consumer stops at its claim.
  */
 export function owedReminderEmail(
   earlier: readonly EarlierReminder[],
@@ -111,12 +104,7 @@ export function owedReminderEmail(
 ): { readonly message: OutboxMessage; readonly notBefore: number } | undefined {
   const dayOf = (at: number) => calendarDay(at, landing.zone);
   const today = dayOf(landing.at);
-  const isRedelivery = earlier.some(
-    (row) => row.subjectId === landing.objectId,
-  );
-  if (isRedelivery || earlier.some((row) => dayOf(row.createdAt) === today)) {
-    return undefined;
-  }
+  if (earlier.some((row) => dayOf(row.createdAt) === today)) return undefined;
   const yesterday = dayOf(landing.at - DAY_S);
   // The first of yesterday's owed yesterday's email; the rest owed none.
   const [, ...uncovered] = earlier.filter(

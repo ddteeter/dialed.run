@@ -10,7 +10,7 @@
  * (`attachObservation`) so this compiles and tests fully without lane 103
  * — see the pending-integration call-site below.
  */
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { dlqBatchHandler } from "../../db/gave-up";
 import {
@@ -23,7 +23,7 @@ import {
 import { didClaim } from "../../lib/sql/claim";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
-import { firstRowWhere } from "../../lib/sql/keyed-read";
+import { firstRowWhere, hasRowWhere } from "../../lib/sql/keyed-read";
 import { consumeEach } from "../../lib/sql/queue-batch";
 import type { CoreDb } from "./core-db";
 import { createNotification, notificationInsert } from "../notifications";
@@ -321,6 +321,14 @@ async function processReminderJob(
   // repeat anyway (INSERT OR IGNORE on the event key; the notification is
   // UNIQUE on user+kind+subject), which is what makes at-least-once
   // delivery harmless here.
+  //
+  // A claimed event is done, whatever it did: the claim lands in the same
+  // batch as the bell row (and the email it owes) or as the pairing with
+  // an upload. Stop before branching — a redelivery after a pairing would
+  // otherwise find the run paired, so no longer "unpaired", and write a
+  // stale reminder and owe an email for a run already in the log.
+  if (await isClaimed(deps.db, job)) return;
+
   const [connected] = await deps.db
     .select({ userId: stravaConnections.userId })
     .from(stravaConnections)
@@ -366,7 +374,6 @@ async function processReminderJob(
   ]);
   const email = owedReminderEmail(earlier, {
     userId: connected.userId,
-    objectId: job.objectId,
     notificationId,
     at: landedAt,
     zone,
@@ -385,6 +392,23 @@ async function processReminderJob(
     }),
     ...(email === undefined ? [] : [deps.owe(email.message, email.notBefore)]),
   ]);
+}
+
+/**
+ * Whether this event's claim has landed — on `webhook_events_pk`, the
+ * claim's own UNIQUE key.
+ */
+async function isClaimed(db: CoreDb, job: ReminderJob): Promise<boolean> {
+  return await hasRowWhere(
+    db,
+    processedWebhookEvents,
+    processedWebhookEvents.objectId,
+    and(
+      eq(processedWebhookEvents.objectId, job.objectId),
+      eq(processedWebhookEvents.aspectType, job.aspectType),
+      eq(processedWebhookEvents.eventTime, job.eventTime),
+    ),
+  );
 }
 
 /**
