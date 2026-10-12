@@ -224,6 +224,7 @@ describe("exportData and exportFiles", () => {
       tempUnit: "f",
       distanceUnit: "mi",
       defaultAudience: "private",
+      countInTotals: false,
     });
 
     const shirtId = newUlid();
@@ -268,6 +269,8 @@ describe("exportData and exportFiles", () => {
       effort: "easy",
       durationS: 2400,
       distanceM: 8046.7,
+      movingS: 2350,
+      elevationGainM: 42.5,
     });
     const bandRun = await seedRun(userId, bandAt, {
       source: "file",
@@ -413,14 +416,14 @@ describe("exportData and exportFiles", () => {
       `2,${iso(NOW - 100)},page`,
     ]);
     expect(linesOf(texts, "profile.csv")).toStrictEqual([
-      "email,joined_at,username,place,thermal_level,temp_unit,distance_unit,default_audience",
-      `${email},${iso(JOINED)},${username},"Minneapolis, MN",-1,f,mi,private`,
+      "email,joined_at,username,place,thermal_level,temp_unit,distance_unit,default_audience,count_in_totals",
+      `${email},${iso(JOINED)},${username},"Minneapolis, MN",-1,f,mi,private,false`,
     ]);
     expect(linesOf(texts, "runs.csv")).toStrictEqual([
-      "id,title,started_at,duration_seconds,distance_meters,indoor,effort,added_from,conditions_from,temp_c,feels_like_c,humidity,wind_kph,precip_mm,condition,sky,run_file",
-      `${observedRun},Morning run,${iso(observedAt)},2400,8046.7,false,easy,manual,visualcrossing,2.5,-0.5,71,14,0.4,overcast,,`,
-      `${bandRun},Parkrun,${iso(bandAt)},1800,5000,false,race,file,manual,-4,-4,0,0,0,manual,rain,run-files/${doneUpload}.fit`,
-      `${indoorRun},Treadmill,${iso(indoorAt)},1800,5000,true,,manual,,,,,,,,,`,
+      "id,title,started_at,duration_seconds,distance_meters,moving_seconds,elevation_gain_meters,indoor,effort,added_from,conditions_from,temp_c,feels_like_c,humidity,wind_kph,precip_mm,condition,sky,run_file",
+      `${observedRun},Morning run,${iso(observedAt)},2400,8046.7,2350,42.5,false,easy,manual,visualcrossing,2.5,-0.5,71,14,0.4,overcast,,`,
+      `${bandRun},Parkrun,${iso(bandAt)},1800,5000,,,false,race,file,manual,-4,-4,0,0,0,manual,rain,run-files/${doneUpload}.fit`,
+      `${indoorRun},Treadmill,${iso(indoorAt)},1800,5000,,,true,,manual,,,,,,,,,`,
     ]);
     expect(linesOf(texts, "entries.csv")).toStrictEqual([
       "id,run_id,verdict,audience,caption,tags,photos,created_at",
@@ -677,6 +680,7 @@ describe("exportData and exportFiles", () => {
         account: undefined,
         profile: undefined,
         defaultAudience: undefined,
+        countInTotals: undefined,
       },
       runs: [],
       entries: [],
@@ -718,8 +722,11 @@ describe("exportData and exportFiles", () => {
       NOW,
     );
     expect(empty.objects).toStrictEqual([]);
+    // No profile row yet, and nothing at signup makes one, so count_in_totals
+    // is the effective answer the guide job reads (D-108 D: on by default),
+    // not a blank.
     expect(linesOf(empty.texts, "profile.csv")[1]).toBe(
-      `${email},${iso(JOINED)},,,,,,`,
+      `${email},${iso(JOINED)},,,,,,,true`,
     );
     for (const name of [
       "runs.csv",
@@ -735,7 +742,7 @@ describe("exportData and exportFiles", () => {
       NOTHING_STORED,
       NOW,
     );
-    expect(linesOf(gone.texts, "profile.csv")[1]).toBe(",,,,,,,");
+    expect(linesOf(gone.texts, "profile.csv")[1]).toBe(",,,,,,,,");
   });
 
   it("gives every run its conditions past one chunk of observation reads", async () => {

@@ -393,6 +393,13 @@
       "when": 1791687878695,
       "tag": "0055_add_takedown_abuse_limits",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "6",
+      "when": 1791787083919,
+      "tag": "0056_add_profile_count_in_totals",
+      "breakpoints": true
     }
   ]
 }

@@ -45,6 +45,13 @@ temp_unit        text     -- 'f' | 'c'; distance_unit 'mi' | 'km'; from locale
 default_audience text     -- 'runners' (default) | 'private' | 'groups': who new entries are
                           --  for (D-109, design 131). Writers store only
                           --  runners | private until groups ship.
+count_in_totals  int      -- boolean, NOT NULL DEFAULT 1: Settings › Sharing's
+                          --  "Count my runs in anonymous totals" (D-108 D).
+                          --  Nothing creates a profile row at signup, so a
+                          --  runner may have none: the guide job reads the
+                          --  runner LEFT JOIN user_profiles and counts
+                          --  COALESCE(count_in_totals, 1) = 1. A plain join
+                          --  would silently drop every runner without a row.
 ```
 
 ### wardrobe_items

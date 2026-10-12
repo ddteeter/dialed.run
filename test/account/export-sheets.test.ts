@@ -16,6 +16,7 @@ const NO_ROWS = {
     account: undefined,
     profile: undefined,
     defaultAudience: undefined,
+    countInTotals: undefined,
   },
   runs: [],
   entries: [],
@@ -90,6 +91,7 @@ describe("buildSheets", () => {
       account: undefined,
       profile: undefined,
       defaultAudience: undefined,
+      countInTotals: undefined,
     };
     expect(
       buildSheets({ ...NO_ROWS, profile }).profileSheet.rows,

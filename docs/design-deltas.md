@@ -930,7 +930,9 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
-45. **A Rename that lost a race (R-121, PR #184).** A force-rename now
+<!-- Item numbers continue past rounds 35–37 (45–59); this comment keeps the list from being renumbered. -->
+
+60. **A Rename that lost a race (R-121, PR #184).** A force-rename now
     writes nothing when the handle changed between its read and its write,
     whether through another moderator's rename or the runner's own new
     pick. It used to report the rename as done. D8 · Runners and a flagged
@@ -939,6 +941,42 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     row, the row stays open. The sentence is placeholder copy: "The handle
     changed before the rename landed. Nothing was renamed." (`renameMessage`
     in `safety/components/DeskRunners.tsx`). **The ask:** word it.
+
+61. **What lane A (design 138) built beside round 32's drawings.**
+    D-108 E's three disclosures and Settings › Sharing's totals switch are
+    built with the board's copy verbatim. Five things the board does not
+    draw. **Four are needed before launch** (owner, 2026-10-11), marked so;
+    the other can follow. Round 30 (d)'s Settings › Region is **not** built:
+    totals group by a climate zone the guide job derives from each run's
+    location, not by a region the runner declares (owner, 2026-10-11;
+    D-120), so round 30 (d) needs no screen.
+    - **"How the guides are made" opens `/privacy`.** The board's target
+      is `dialed.run/how-it-works#totals`, which the marketing site owns
+      and which is not live. When it is, the link points there. **The
+      ask:** none for design; a one-line change when the site ships.
+    - **The Change sheet.** Round 32 says Change "opens Settings ›
+      Sharing as a sheet". Built as a `Sheet` titled "Sharing" holding
+      the totals switch, its sub-line and the link, and a Done. It does
+      not hold "Share new runs": that is a form with its own Save, and a
+      form cannot sit inside A3's form. **Needed before launch.** **The
+      ask:** draw the sheet, or confirm the totals switch alone.
+    - **Two names for one place.** The sheet is titled "Sharing", as round
+      32 names the group, but the Settings row and sub-page it stands for
+      are "Privacy" (U1). **Needed before launch.** **The ask:** one name.
+    - **Where the totals switch sits.** Round 32 draws one SHARING group
+      with "Share new runs" and the totals switch. Built on the Privacy
+      sub-page under the sharing default's form and its Save, because the
+      totals switch saves on toggle and the default does not. **Needed
+      before launch.** **The ask:** draw the group as the build has to
+      hold it, two controls that save differently.
+    - **What the totals copy says to an unconfirmed runner.** "Shared and
+      private runs add their temperature, kit and verdict to the guides
+      and reports" is untrue for them: D-108 C counts confirmed accounts
+      only. The owner ruled (2026-10-11) that an unconfirmed runner may
+      still turn totals off, with no confirm sheet, so
+      they meet this switch. The build keeps the drawn copy until design
+      words it. **Needed before launch.** **The ask:** the unconfirmed
+      runner's on and off lines.
 
 ## Answered in round 37 (imported 2026-10-10)
 

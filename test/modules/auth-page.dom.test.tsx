@@ -22,6 +22,7 @@ import {
   CredentialFields,
   LoginCrossLink,
   SessionNotice,
+  TOTALS_LINE,
   useAuthForm,
 } from "../../src/modules/auth/auth-page";
 import { PasswordField } from "../../src/modules/auth/password-field";
@@ -875,8 +876,14 @@ describe("AuthCrossLink and AuthLegal", () => {
     ).parentElement;
     expect(legal).toHaveClass("text-micro", "text-muted");
     expect(legal).toHaveTextContent(
-      /^By creating an account you agree to the Terms and have read the Privacy policy\.dialed\.run is for runners 18 and over\.$/u,
+      /^By creating an account you agree to the Terms and have read the Privacy policy\. Your runs count, without your name, in totals like the guides\. You can turn that off in Settings\.dialed\.run is for runners 18 and over\.$/u,
     );
+    // D-108 E, round 32 frame 2b: one sentence, verbatim, and no checkbox.
+    expect(TOTALS_LINE).toBe(
+      "Your runs count, without your name, in totals like the guides. You can turn that off in Settings.",
+    );
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Settings" })).toBeNull();
     const terms = screen.getByRole("link", { name: "Terms" });
     expect(terms).toHaveAttribute("href", "/terms");
     expect(terms).toHaveClass("text-ink", "underline", "underline-offset-4");
