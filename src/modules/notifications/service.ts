@@ -20,6 +20,7 @@ import { notifications, outfitEntries, runs } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
 import { hasRowWhere } from "../../lib/sql/keyed-read";
 import { BELL_NUMBER_CAP } from "./bell-cap";
+import type { BellState } from "./bell-state";
 import type { NotificationsDb } from "./db";
 import { nowSeconds } from "../../lib/now";
 
@@ -193,16 +194,6 @@ This runner's unread rows — what the dot counts and what mark-all clears.
 */
 function unreadOf(userId: string) {
   return and(eq(notifications.userId, userId), eq(notifications.read, false));
-}
-
-/**
- * What the bell shows (round 22, item 13): a **number** when there are
- * runs waiting for a verdict, because each one is a thing to do, and
- * otherwise a **dot** for anything unread.
- */
-export interface BellState {
-  unreadCount: number;
-  verdictsWaiting: number;
 }
 
 /**

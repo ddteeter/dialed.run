@@ -39,7 +39,7 @@ import {
 } from "../../modules/auth/google-button";
 import { saveNotificationSettingsFn } from "../../modules/email/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
-import { unreadNotificationCountFn } from "../../modules/notifications/functions";
+import { bellStateFn } from "../../modules/notifications/functions";
 import {
   AccountIndex,
   NotificationsForm,
@@ -63,14 +63,14 @@ export const Route = createFileRoute("/account/$section")({
     return {
       section: accountSectionOrNotFound(params.section),
       page: await accountPageQuery(),
-      unreadCount: await unreadNotificationCountFn(),
+      bell: await bellStateFn(),
     };
   },
   component: AccountSectionRoute,
 });
 
 function AccountSectionRoute() {
-  const { section, page, unreadCount } = Route.useLoaderData();
+  const { section, page, bell } = Route.useLoaderData();
   const search = Route.useSearch();
   const router = useRouter();
   const navigate = useNavigate();
@@ -189,7 +189,7 @@ function AccountSectionRoute() {
         />
       }
     >
-      <BelledLayout unreadCount={unreadCount}>
+      <BelledLayout {...bell}>
         <PickedSubPage
           section={section}
           titles={ACCOUNT_SECTION_TITLES}

@@ -10,7 +10,7 @@ import { SignOutButton } from "../../../modules/auth/components/SignOutButton";
 import { signOut } from "../../../modules/auth/credentials";
 import { requireSession } from "../../../modules/auth/functions";
 import { BelledLayout } from "../../../modules/notifications/components/BelledLayout";
-import { unreadNotificationCountFn } from "../../../modules/notifications/functions";
+import { bellStateFn } from "../../../modules/notifications/functions";
 import { SettingsIndex } from "../../../modules/onboarding/components/Settings";
 import { settingsQuery } from "../../../modules/onboarding/functions";
 import { blockedRunnersQuery } from "../../../modules/safety/functions";
@@ -23,18 +23,18 @@ import { Page } from "../../../ui";
 export const Route = createFileRoute("/onboarding/settings/")({
   loader: async ({ location }) => {
     await requireSession(location);
-    const [current, { blocked }, unreadCount, { username }, notifications] =
+    const [current, { blocked }, bell, { username }, notifications] =
       await Promise.all([
         settingsQuery(),
         blockedRunnersQuery(),
-        unreadNotificationCountFn(),
+        bellStateFn(),
         usernameQuery(),
         notificationSettingsQuery(),
       ]);
     return {
       current,
       blockedCount: blocked.length,
-      unreadCount,
+      bell,
       username,
       runReminderEmail: notifications.runReminder,
     };
@@ -43,13 +43,13 @@ export const Route = createFileRoute("/onboarding/settings/")({
 });
 
 function SettingsPage() {
-  const { current, blockedCount, unreadCount, username, runReminderEmail } =
+  const { current, blockedCount, bell, username, runReminderEmail } =
     Route.useLoaderData();
   const router = useRouter();
   const navigate = useNavigate();
 
   return (
-    <BelledLayout unreadCount={unreadCount}>
+    <BelledLayout {...bell}>
       <Page title="Settings" width="column">
         <SettingsIndex
           current={current}

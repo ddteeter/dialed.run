@@ -36,7 +36,9 @@ function bell(): HTMLElement {
 
 describe("NotificationBell", () => {
   it("is a link to the notifications screen", async () => {
-    await renderWithRouter(<NotificationBell unreadCount={0} />);
+    await renderWithRouter(
+      <NotificationBell unreadCount={0} verdictsWaiting={0} />,
+    );
     expect(bell()).toHaveAttribute("href", "/notifications");
   });
 
@@ -53,7 +55,9 @@ describe("NotificationBell", () => {
 
   it("shows a dot, not a number, for unread notifications", async () => {
     // A follow or a useful is news, not a to-do — so it is never counted.
-    await renderWithRouter(<NotificationBell unreadCount={4} />);
+    await renderWithRouter(
+      <NotificationBell unreadCount={4} verdictsWaiting={0} />,
+    );
     expect(bell()).toHaveAccessibleName("Notifications, 4 new");
     expect(bell()).toHaveTextContent("");
     expect(bell()).toHaveAttribute("data-state", "dot");
@@ -64,13 +68,24 @@ describe("NotificationBell", () => {
 
   it("shows the dot for a single unread notification", async () => {
     // The boundary the `> 0` turns on.
-    await renderWithRouter(<NotificationBell unreadCount={1} />);
+    await renderWithRouter(
+      <NotificationBell unreadCount={1} verdictsWaiting={0} />,
+    );
     expect(bell()).toHaveAttribute("data-state", "dot");
   });
 
-  it("names the dot's count in digits, and caps it where the number caps", async () => {
-    await renderWithRouter(<NotificationBell unreadCount={12} />);
-    expect(bell()).toHaveAccessibleName("Notifications, 9+ new");
+  it("names the dot's count in digits, and in words past where the number caps", async () => {
+    // Round 27 #25 (R-141(1)): "9+" read aloud is "nine plus".
+    const { unmount } = await renderWithRouter(
+      <NotificationBell unreadCount={9} verdictsWaiting={0} />,
+    );
+    expect(bell()).toHaveAccessibleName("Notifications, 9 new");
+    unmount();
+
+    await renderWithRouter(
+      <NotificationBell unreadCount={12} verdictsWaiting={0} />,
+    );
+    expect(bell()).toHaveAccessibleName("Notifications, more than 9 new");
   });
 
   it("counts the runs waiting for a verdict, and the number wins over the dot", async () => {
@@ -94,18 +109,19 @@ describe("NotificationBell", () => {
     expect(bell()).toHaveTextContent(/^1$/u);
   });
 
-  it("counts up to nine, and caps past it at 9+", async () => {
+  it("counts up to nine, and caps past it: 9+ drawn, more than 9 said", async () => {
     const { unmount } = await renderWithRouter(
       <NotificationBell unreadCount={0} verdictsWaiting={9} />,
     );
     expect(bell()).toHaveTextContent(/^9$/u);
+    expect(bell()).toHaveAccessibleName("Notifications, 9 new");
     unmount();
 
     await renderWithRouter(
       <NotificationBell unreadCount={0} verdictsWaiting={10} />,
     );
     expect(bell()).toHaveTextContent(/^9\+$/u);
-    expect(bell()).toHaveAccessibleName("Notifications, 9+ new");
+    expect(bell()).toHaveAccessibleName("Notifications, more than 9 new");
   });
 
   it("draws the pack's bell glyph, never an emoji, and never animates", async () => {

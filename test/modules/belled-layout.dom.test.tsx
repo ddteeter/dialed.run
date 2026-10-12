@@ -50,9 +50,12 @@ describe("BelledLayout", () => {
     for (const bell of bells()) expect(bell).toHaveTextContent(/^3$/u);
   });
 
-  it("gives a route that only knows its unread count the dot", async () => {
-    // The routes still loading `unreadNotificationCountFn` keep working.
-    await renderWithRouter(<BelledLayout unreadCount={3}>page</BelledLayout>);
+  it("gives the dot when only unread rows are waiting", async () => {
+    await renderWithRouter(
+      <BelledLayout unreadCount={3} verdictsWaiting={0}>
+        page
+      </BelledLayout>,
+    );
 
     for (const bell of bells()) {
       expect(bell).toHaveAttribute("data-state", "dot");
@@ -62,7 +65,11 @@ describe("BelledLayout", () => {
   it("still renders the bell when there is nothing new", async () => {
     // The bell is the link to /notifications whatever it shows — a route
     // with nothing new must not lose its way back.
-    await renderWithRouter(<BelledLayout unreadCount={0}>page</BelledLayout>);
+    await renderWithRouter(
+      <BelledLayout unreadCount={0} verdictsWaiting={0}>
+        page
+      </BelledLayout>,
+    );
 
     for (const bell of bells()) {
       expect(bell).toHaveAttribute("href", "/notifications");
@@ -71,7 +78,7 @@ describe("BelledLayout", () => {
 
   it("renders the page it wraps", async () => {
     await renderWithRouter(
-      <BelledLayout unreadCount={1}>
+      <BelledLayout unreadCount={1} verdictsWaiting={0}>
         <p>the page</p>
       </BelledLayout>,
     );

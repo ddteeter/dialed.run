@@ -2,6 +2,7 @@ import type { ComponentType, JSX } from "react";
 
 import { Layout, Mono, SignedOutLayout } from "../../../ui";
 import type { Block, Inline, LegalDoc } from "../legal-markdown";
+import type { BellState } from "../../notifications";
 
 /**
  * A legal text as a reading page (task 126, ACC-13; round 26 #14, round
@@ -19,25 +20,25 @@ import type { Block, Inline, LegalDoc } from "../legal-markdown";
  */
 export function LegalPage({
   doc,
-  unreadCount,
+  bellState,
   bell,
 }: Readonly<{
   doc: LegalDoc;
   /**
-  The bell's count for a signed-in reader; absent for a signed-out one.
+  The bell's counts for a signed-in reader; absent for a signed-out one.
   */
-  unreadCount: number | undefined;
+  bellState: BellState | undefined;
   /**
-  The bell for the signed-in shell, given its count (the route's to wire).
+  The bell for the signed-in shell, given its counts (the route's to wire).
   */
-  bell: ComponentType<{ unreadCount: number }>;
+  bell: ComponentType<BellState>;
 }>): JSX.Element {
   const page = <ReadingPage doc={doc} />;
   const Bell = bell;
-  return unreadCount === undefined ? (
+  return bellState === undefined ? (
     <SignedOutLayout action="log-in">{page}</SignedOutLayout>
   ) : (
-    <Layout bell={<Bell unreadCount={unreadCount} />}>{page}</Layout>
+    <Layout bell={<Bell {...bellState} />}>{page}</Layout>
   );
 }
 

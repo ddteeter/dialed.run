@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { requireSession } from "../../modules/auth/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
-import { unreadNotificationCountFn } from "../../modules/notifications/functions";
+import { bellStateFn } from "../../modules/notifications/functions";
 import { CallLadder } from "../../modules/onboarding/components/CallLadder";
 import { callLadderQuery } from "../../modules/onboarding/functions";
 import { Page } from "../../ui";
@@ -15,20 +15,20 @@ export const Route = createFileRoute("/call/")({
   loader: async ({ location }) => {
     await requireSession(location);
     // fallow-ignore-next-line code-duplication -- two signed-in routes with a two-call loader are the same route shape by mandate: createFileRoute + Promise.all + shell is what server-functions-are-glue requires of a route
-    const [ladder, unreadCount] = await Promise.all([
+    const [ladder, bell] = await Promise.all([
       callLadderQuery(),
-      unreadNotificationCountFn(),
+      bellStateFn(),
     ]);
-    return { ladder, unreadCount };
+    return { ladder, bell };
   },
   component: CallPage,
 });
 
 function CallPage() {
-  const { ladder, unreadCount } = Route.useLoaderData();
+  const { ladder, bell } = Route.useLoaderData();
 
   return (
-    <BelledLayout unreadCount={unreadCount}>
+    <BelledLayout {...bell}>
       <Page width="panel">
         <CallLadder ladder={ladder} />
       </Page>

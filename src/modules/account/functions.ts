@@ -294,8 +294,8 @@ export const revokeInviteCodeFn = createServerFn({ method: "POST" })
   });
 
 /**
- * A legal page (ACC-13): its text if it is finished, and the bell's count
- * for a signed-in reader. No session needed — the policy is for anyone.
+ * A legal page (ACC-13): its text if it is finished, and the bell for a
+ * signed-in reader. No session needed — the policy is for anyone.
  */
 const legalPageQuery = createServerFn({ method: "GET" })
   .validator((data: unknown) => legalPageInput.parse(data))
@@ -373,8 +373,8 @@ export const leavingQuery = createServerFn({ method: "GET" })
  * What `/account/terms` shows this visitor (ACC-6): the prompt, for a
  * signed-in runner behind on the terms.
  */
-const termsPromptQuery = createServerFn({ method: "GET" }).handler(
-  async () => termsPromptView(db(), await optionalUserId()),
+const termsPromptQuery = createServerFn({ method: "GET" }).handler(async () =>
+  termsPromptView(db(), await optionalUserId()),
 );
 
 /**
@@ -389,11 +389,11 @@ export const acceptTermsFn = createServerFn({ method: "POST" })
 
 /**
  * `/privacy`, `/terms` and `/copyright`'s loader (ACC-13): the page's
- * text, or X1 while it is unpublished, and the bell's count.
+ * text, or X1 while it is unpublished, and the bell.
  */
 export async function legalPageLoader(slug: LegalSlug) {
   const page = await legalPageQuery({ data: { slug } });
-  return { doc: legalDocOrNotFound(page.doc), unreadCount: page.unreadCount };
+  return { doc: legalDocOrNotFound(page.doc), bellState: page.bellState };
 }
 
 /**

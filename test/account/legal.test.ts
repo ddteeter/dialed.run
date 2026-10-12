@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
 
-import { notifications } from "../../src/db/schema-core";
+import { notifications, runs } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
@@ -62,17 +62,26 @@ describe("legalDoc", () => {
 });
 
 describe("legalPage", () => {
-  it("gives a signed-out reader no count, so the page wears the signed-out shell", async () => {
+  it("gives a signed-out reader no bell, so the page wears the signed-out shell", async () => {
     await expect(
       legalPage(db, "privacy", undefined, FINISHED),
     ).resolves.toMatchObject({
-      unreadCount: undefined,
+      bellState: undefined,
       doc: { title: "Privacy policy" },
     });
   });
 
-  it("gives a signed-in reader their unread count", async () => {
+  it("gives a signed-in reader the whole bell: unread rows and runs awaiting a verdict", async () => {
     const userId = newUlid();
+    await db.insert(runs).values({
+      id: newUlid(),
+      userId,
+      source: "manual",
+      startedAt: nowSeconds() - 30 * 24 * 60 * 60,
+      durationS: 1800,
+      distanceM: 5000,
+      title: "Old run, no verdict",
+    });
     await db.insert(notifications).values([
       {
         id: newUlid(),
@@ -92,6 +101,9 @@ describe("legalPage", () => {
       },
     ]);
     const page = await legalPage(db, "privacy", userId);
-    expect(page).toStrictEqual({ doc: undefined, unreadCount: 2 });
+    expect(page).toStrictEqual({
+      doc: undefined,
+      bellState: { unreadCount: 2, verdictsWaiting: 1 },
+    });
   });
 });
