@@ -9,20 +9,28 @@
  * checks found goes to Sentry, as before; D5 draws "no list of items —
  * the Desk has those".
  *
- * To every operator (`ADMIN_USER_IDS`), looked up at send time like any
- * runner, so the address is the one their account holds.
+ * To every operator (`ADMIN_USER_IDS`) whose address is confirmed, looked
+ * up at send time like any runner, so the address is the one their
+ * account holds (OPS-11). An operator whose address is not confirmed is
+ * skipped, and Today says so (`DIGEST_UNCONFIRMED`).
  */
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
-import { cronCheckpoints } from "../../db/schema-core";
+import { user } from "../../db/schema-auth";
 import { dayLabel } from "../../lib/dates";
 import type { EmailTemplate } from "../../lib/contracts/email";
-import { firstColumnWhere } from "../../lib/sql/keyed-read";
+import { columnWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 import { emailDebt } from "../email";
 import { adminUserIds } from "../safety";
 import { todayCounts, type TodayCounts } from "./desk";
+import {
+  DIGEST_OWED,
+  DIGEST_UNCONFIRMED,
+  markStatement,
+  markedAt,
+} from "./digest-marks";
 import {
   outboxInsert,
   oweOutbox,
@@ -80,13 +88,6 @@ const LIVE: DigestMail = {
   settle: settleOutbox,
 };
 
-/**
- * The row that says the morning's digest was owed: `cron_checkpoints`'
- * "when did this last run", for the email as the daily firing's own row is
- * for the firing.
- */
-const DIGEST_OWED = "digest-email";
-
 const DAY_SECONDS = 86_400;
 
 /**
@@ -95,19 +96,39 @@ const DAY_SECONDS = 86_400;
  * their outbox rows deleted.
  */
 async function isOwedToday(db: Db, now: number): Promise<boolean> {
-  const last = await firstColumnWhere(
-    db,
-    cronCheckpoints,
-    cronCheckpoints.lastRunAt,
-    eq(cronCheckpoints.cronName, DIGEST_OWED),
-  );
+  const last = await markedAt(db, DIGEST_OWED);
   // Never owed reads as owed at the epoch, which is before any day.
   return (last ?? 0) >= now - (now % DAY_SECONDS);
 }
 
 /**
- * Owe each operator this morning's digest, in one batch, then send it by
- * the fast path; the drain retries a send that fails.
+ * Which of `userIds` have a confirmed address, by primary key. The send
+ * looks the address up again (`modules/email`), so this decides only who
+ * is owed one.
+ */
+async function confirmedOf(
+  db: Db,
+  userIds: readonly string[],
+): Promise<ReadonlySet<string>> {
+  const ids = await columnWhere(
+    db,
+    user,
+    user.id,
+    and(inArray(user.id, [...userIds]), eq(user.emailVerified, true)),
+  );
+  return new Set(ids);
+}
+
+/**
+ * Owe each operator with a confirmed address this morning's digest, in
+ * one batch, then send it by the fast path; the drain retries a send that
+ * fails.
+ *
+ * **Only to a confirmed address** (OPS-11). The digest tells its reader
+ * what is waiting at the Desk, and an address nobody has proved is the
+ * operator's may be somebody else's. An operator skipped for that is
+ * recorded on the Desk instead (`DIGEST_UNCONFIRMED`, in the same batch),
+ * which is where they will look when the email does not come.
  *
  * **Once a day, however often the firing runs.** The outbox's key (the
  * day and the operator) collapses two firings that overlap, but the fast
@@ -123,9 +144,13 @@ export async function oweDigestEmail(
   now = nowSeconds(),
 ): Promise<void> {
   if (await isOwedToday(db, now)) return;
+  const admins = mail.admins();
+  // No operator, nothing to mark: one added later that day is still owed.
+  if (admins.length === 0) return;
+  const confirmed = await confirmedOf(db, admins);
   const template = digestTemplate(await mail.counts(), now);
-  const debts = mail
-    .admins()
+  const debts = admins
+    .filter((userId) => confirmed.has(userId))
     .map((userId) =>
       oweOutbox(
         emailDebt(
@@ -134,18 +159,11 @@ export async function oweDigestEmail(
         ),
       ),
     );
-  const [first, ...rest] = debts.map((debt) => outboxInsert(db, debt, now));
-  if (first === undefined) return;
+  const hasSkipped = debts.length < admins.length;
   await db.batch([
-    first,
-    ...rest,
-    db
-      .insert(cronCheckpoints)
-      .values({ cronName: DIGEST_OWED, lastRunAt: now })
-      .onConflictDoUpdate({
-        target: cronCheckpoints.cronName,
-        set: { lastRunAt: now },
-      }),
+    markStatement(db, DIGEST_OWED, now),
+    ...(hasSkipped ? [markStatement(db, DIGEST_UNCONFIRMED, now)] : []),
+    ...debts.map((debt) => outboxInsert(db, debt, now)),
   ]);
   for (const debt of debts) await mail.settle(db, debt, captureException);
 }

@@ -1,13 +1,14 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { user } from "../../src/db/schema-auth";
 import { cronCheckpoints, outbox } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { dayLabel } from "../../src/lib/dates";
 import { nowSeconds } from "../../src/lib/now";
 import { handleScheduled } from "../../src/modules/ops";
-import type { TodayCounts } from "../../src/modules/ops/desk";
+import { deskToday, type TodayCounts } from "../../src/modules/ops/desk";
 import {
   digestTemplate,
   oweDigestEmail,
@@ -34,9 +35,28 @@ const COUNTS: TodayCounts = {
   oldestGaveUpAt: 900_000,
 };
 
+/**
+An operator's account, with its address confirmed or not.
+*/
+async function seedOperator(id: string, isVerified = true): Promise<void> {
+  const now = new Date();
+  await db.insert(user).values({
+    id,
+    name: "",
+    email: `${id}@example.test`,
+    emailVerified: isVerified,
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
 beforeEach(async () => {
   await db.delete(outbox);
   await db.delete(cronCheckpoints);
+  await db.delete(user).where(inArray(user.id, ["op-a", "op-b", "op-c"]));
+  await seedOperator("op-a");
+  await seedOperator("op-b");
+  await seedOperator("op-c", false);
 });
 
 describe("digestTemplate", () => {
@@ -247,5 +267,105 @@ describe("the daily firing sends it (D5)", () => {
       },
     );
     expect(await owedDigests()).toStrictEqual([]);
+  });
+});
+
+/**
+The Desk's record that a morning's digest skipped an operator (OPS-11).
+*/
+async function unconfirmedMark() {
+  return db
+    .select({ lastRunAt: cronCheckpoints.lastRunAt })
+    .from(cronCheckpoints)
+    .where(eq(cronCheckpoints.cronName, "digest-unconfirmed"));
+}
+
+/**
+ * OPS-11: the digest goes only to a confirmed address. An operator whose
+ * address is not confirmed is skipped, and the Desk records it.
+ */
+describe("only to a confirmed address (OPS-11)", () => {
+  it("mails a confirmed operator from the daily firing, and records no skip", async () => {
+    const settled: OutboxDebt[] = [];
+    await handleScheduled(DIGEST, undefined, {
+      digestMail: digestMail(["op-a"], (_db, debt) => {
+        settled.push(debt);
+        return Promise.resolve();
+      }),
+    });
+    expect(await owedDigests()).toStrictEqual([
+      `digest:${dayLabel(nowSeconds())}:op-a`,
+    ]);
+    expect(settled).toHaveLength(1);
+    expect(await unconfirmedMark()).toStrictEqual([]);
+    const today = await deskToday();
+    expect(today.digestUnconfirmedAt).toBeUndefined();
+  });
+
+  it("mails an unconfirmed operator nothing from the daily firing, and records it on the Desk", async () => {
+    let settles = 0;
+    const before = nowSeconds();
+    await handleScheduled(DIGEST, undefined, {
+      digestMail: digestMail(["op-c"], () => {
+        settles += 1;
+        return Promise.resolve();
+      }),
+    });
+    expect(await owedDigests()).toStrictEqual([]);
+    expect(settles).toBe(0);
+    const [mark] = await unconfirmedMark();
+    expect(mark?.lastRunAt).toBeGreaterThanOrEqual(before);
+    const today = await deskToday();
+    expect(today.digestUnconfirmedAt).toBe(mark?.lastRunAt);
+  });
+
+  it("mails the confirmed ones and records the skip when only some are", async () => {
+    const now = nowSeconds();
+    await oweDigestEmail(
+      db,
+      digestMail(["op-a", "op-c", "op-b"], () => Promise.resolve()),
+      now,
+    );
+    const day = dayLabel(now);
+    expect(await owedDigests()).toStrictEqual([
+      `digest:${day}:op-a`,
+      `digest:${day}:op-b`,
+    ]);
+    expect(await unconfirmedMark()).toStrictEqual([{ lastRunAt: now }]);
+  });
+
+  it("treats an operator id with no account as unconfirmed", async () => {
+    const now = nowSeconds();
+    await oweDigestEmail(
+      db,
+      digestMail(["op-gone"], () => Promise.resolve()),
+      now,
+    );
+    expect(await owedDigests()).toStrictEqual([]);
+    expect(await unconfirmedMark()).toStrictEqual([{ lastRunAt: now }]);
+  });
+
+  it("marks the day owed even when nobody was mailed, so a re-fire owes nothing", async () => {
+    const midnight = 20_000 * 86_400;
+    await oweDigestEmail(
+      db,
+      digestMail(["op-c"], () => Promise.resolve()),
+      midnight,
+    );
+    await db
+      .update(user)
+      .set({ emailVerified: true })
+      .where(eq(user.id, "op-c"));
+    let sends = 0;
+    const counting = digestMail(["op-c"], () => {
+      sends += 1;
+      return Promise.resolve();
+    });
+    await oweDigestEmail(db, counting, midnight + 3600);
+    expect(sends).toBe(0);
+    // The next morning, confirmed, it goes.
+    await oweDigestEmail(db, counting, midnight + 86_400);
+    expect(sends).toBe(1);
+    expect(await unconfirmedMark()).toStrictEqual([{ lastRunAt: midnight }]);
   });
 });

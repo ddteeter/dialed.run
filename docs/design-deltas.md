@@ -981,6 +981,23 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       words it. **Needed before launch.** **The ask:** the unconfirmed
       runner's on and off lines.
 
+62. **What lane C (design 139) built beside a drawing.**
+    - **Today's line for a digest that skipped an operator (OPS-11).** The
+      morning digest now goes only to a confirmed address. An operator
+      whose address is not confirmed is skipped, and on that UTC day
+      Today prints one line under its three numbers. The kicker is
+      `DIGEST NOT EMAILED`, in hi-viz because confirming needs a person,
+      and the sentence is "An operator's email address isn't confirmed, so
+      today's digest wasn't sent to them." Both are existing type, with
+      placeholder copy (`DigestUnconfirmed` in `ops/components/Today.tsx`).
+      D5 does not draw a skipped digest. **The ask:** word it, and say
+      where on Today it sits.
+    - **Item 23's notice on Au2.** Round 27 draws the band on Au1 only.
+      Google on Au2 signs in an existing account, so a banned runner can
+      reach the same refusal from Create account. The build puts the same
+      band in the same place, first in the form region. **The ask:**
+      confirm it for Au2.
+
 ## Answered in round 37 (imported 2026-10-10)
 
 Design sent round 37 as `Round 37 Rulings.dc.html`, with the text of record

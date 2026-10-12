@@ -419,3 +419,47 @@ describe("lastTryOf", () => {
     expect(lastTryOf(NOON - 13 * HOUR - 20 * 60, NOON)).toBe("Sep 15 22:40");
   });
 });
+
+/**
+An empty Today whose digest mark is `digestUnconfirmedAt`.
+*/
+function withMark(digestUnconfirmedAt: number | undefined): DeskToday {
+  return { ...desk(0), digestUnconfirmedAt };
+}
+
+/**
+ * OPS-11: a morning's digest that skipped an operator whose address is not
+ * confirmed is said on Today, on that UTC day only (design-deltas item 62).
+ */
+describe("a digest that skipped an operator, on Today", () => {
+  const LINE =
+    "An operator's email address isn't confirmed, so today's digest wasn't sent to them.";
+
+  it("says so under the three numbers, in hi-viz, on the day it happened", () => {
+    // The digest fires at 12:00 UTC; the Desk is opened at 23:59.
+    renderToday([], {}, { ...withMark(NOON), asOf: NOON + 12 * HOUR - 1 });
+    const line = document.querySelector("[data-part='digest-unconfirmed']");
+    expect(line?.textContent).toBe(`Digest not emailed${LINE}`);
+    expect(screen.getByText("Digest not emailed")).toHaveClass(
+      "text-hiviz-text",
+    );
+    expect(line?.previousElementSibling).toBe(
+      screen.getByRole("list", { name: "Today" }),
+    );
+  });
+
+  it("says it from the first second of that UTC day", () => {
+    const midnight = NOON - 12 * HOUR;
+    renderToday([], {}, { ...withMark(midnight), asOf: midnight + 1 });
+    expect(screen.getByText(LINE)).toBeInTheDocument();
+  });
+
+  it("says nothing once the day has turned, or when no digest skipped anyone", () => {
+    renderToday([], {}, { ...withMark(NOON), asOf: NOON + 12 * HOUR });
+    expect(screen.queryByText(LINE)).toBeNull();
+    renderToday([], {}, withMark(undefined));
+    expect(screen.queryByText(LINE)).toBeNull();
+    renderToday([], {}, withMark(NOON - 12 * HOUR - 1));
+    expect(screen.queryByText(LINE)).toBeNull();
+  });
+});

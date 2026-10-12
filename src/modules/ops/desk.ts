@@ -14,6 +14,7 @@ import { gaveUp, reviewQueue, userProfiles } from "../../db/schema-core";
 import { env } from "../../env";
 import { nowSeconds } from "../../lib/now";
 import { adminUserIds, pendingReviewCount } from "../safety";
+import { DIGEST_UNCONFIRMED, markedAt } from "./digest-marks";
 
 /**
 Today's three numbers, and the two facts printed under them.
@@ -136,8 +137,18 @@ export interface DeskToday {
   /** Epoch seconds the counts were read at, so an age renders the same
    * on the server and after hydration. */
   readonly asOf: number;
+  /**
+   * When a morning's digest last skipped an operator whose address is not
+   * confirmed (OPS-11, `DIGEST_UNCONFIRMED`); absent if one never has.
+   * Today says so while it is today's.
+   */
+  readonly digestUnconfirmedAt?: number | undefined;
 }
 
 export async function deskToday(): Promise<DeskToday> {
-  return { counts: await todayCounts(), asOf: nowSeconds() };
+  const [counts, digestUnconfirmedAt] = await Promise.all([
+    todayCounts(),
+    markedAt(drizzle(env.DIALED_CORE), DIGEST_UNCONFIRMED),
+  ]);
+  return { counts, asOf: nowSeconds(), digestUnconfirmedAt };
 }

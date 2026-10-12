@@ -355,6 +355,39 @@ function GaveUp({
   );
 }
 
+/**
+Whether `at` fell on `asOf`'s UTC day; never, for no `at`.
+*/
+function isSameUtcDay(at: number | undefined, asOf: number): boolean {
+  // No mark reads as one at the epoch, a day the Desk never opens on.
+  return Math.floor((at ?? 0) / DAY_SECONDS) === Math.floor(asOf / DAY_SECONDS);
+}
+
+/**
+ * OPS-11: this morning's digest skipped an operator whose address is not
+ * confirmed (`DIGEST_UNCONFIRMED`), said where they will look when the
+ * email does not come. Only on the day it happened, in UTC like the date
+ * above it: tomorrow's digest tries again. Hi-viz, because confirming the
+ * address needs a person.
+ *
+ * Undrawn (design-deltas item 62): a line under the three numbers, in
+ * existing type, with placeholder copy.
+ */
+function DigestUnconfirmed() {
+  return (
+    <p data-part="digest-unconfirmed" className="m-0 flex flex-col gap-1">
+      <Mono step="xs" className="text-hiviz-text">
+        Digest not emailed
+      </Mono>
+      <span className="text-body">
+        {
+          "An operator's email address isn't confirmed, so today's digest wasn't sent to them."
+        }
+      </span>
+    </p>
+  );
+}
+
 export function Today({
   today,
   gaveUp,
@@ -402,6 +435,9 @@ export function Today({
             {counts.bansThisWeek === 1 ? "ban" : "bans"} this week
           </Stat>
         </ul>
+        {isSameUtcDay(today.digestUnconfirmedAt, asOf) ? (
+          <DigestUnconfirmed />
+        ) : undefined}
       </section>
       <GaveUp
         jobs={gaveUp}
