@@ -37,6 +37,7 @@ import {
   reportReasonSchema,
 } from "./contracts";
 import type { ReportReason, ReportSubjectType } from "./contracts";
+import { otherPhotosOf, type OtherPhoto } from "./other-photos";
 
 function db() {
   return drizzle(env.DIALED_CORE);
@@ -187,6 +188,12 @@ export interface QueueRow {
    * the browser's agree.
    */
   due?: string | undefined;
+  /**
+   * The same runner's other photos (D-117, R-145 c), on a row an
+   * intimate-image report started — the reasonable effort on copies.
+   * Absent on every other row.
+   */
+  otherPhotos?: readonly OtherPhoto[] | undefined;
   subject: QueueSubject;
 }
 
@@ -245,6 +252,10 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
     .limit(limit);
 
   const subjects = await subjectsFor(rows);
+  const others = await otherPhotosOf(
+    db(),
+    rows.flatMap((row) => withRemovalClock(row)),
+  );
   const now = nowSeconds();
   return rows.map((row) => ({
     id: row.id,
@@ -255,10 +266,28 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
     reporterCount: row.reporterCount,
     reasons: reasonsFrom(row.reasons),
     ...removalClock(row.firstAtOnce, now),
+    otherPhotos: others.get(`${row.subjectType}:${row.subjectId}`),
     subject: subjects.get(`${row.subjectType}:${row.subjectId}`) ?? {
       photoKeys: [],
     },
   }));
+}
+
+/**
+ * A row an intimate-image report started, as the subject whose runner's
+ * other photos it lists (D-117); nothing for any other row. Only an entry
+ * or a photo can carry that report.
+ */
+function withRemovalClock(row: {
+  subjectType: ReportSubjectType;
+  subjectId: string;
+  firstAtOnce: number | null;
+}) {
+  const { subjectType, subjectId } = row;
+  return row.firstAtOnce !== null &&
+    (subjectType === "entry" || subjectType === "photo")
+    ? [{ subjectType, subjectId }]
+    : [];
 }
 
 /**
