@@ -24,6 +24,10 @@ suites against an enforced policy. `entryCardResponse` has no caller
   on the module's `NoticeBand`. Its private Intl formatter goes with the
   date (STR-13). A banned runner has no session, so they can never open
   the full-page notice, and the band is the only place D4 can appear.
+  The owner (2026-10-12) added one line under the drawn copy, "Or write
+  to desk@dialed.run.", from `APPEAL_ADDRESS`. The notice shows only
+  after a correct password, so it does confirm the password; the owner
+  accepted that, because the account cannot be used.
   - The code moves to `lib/contracts/access.ts`, beside the other refusal
     codes, so that the client can read it without importing the
     server-only ban gate. The band's words live there too.
@@ -76,7 +80,6 @@ suites against an enforced policy. `entryCardResponse` has no caller
 
 ## Open questions
 
-- Item 23's copy replaces D4's "the reason, word for word" and its date.
-  I build to the board, which is the newer ruling. The reason still
-  reaches the runner in the ban email.
-- The Desk line's wording is a placeholder until design words it.
+- **Answered by the owner (2026-10-12).** Item 23's copy stands, plus
+  the fallback appeal line. The Desk line, the notice on Au2 and the
+  kept typed fields ship as placeholders (design-deltas item 62).

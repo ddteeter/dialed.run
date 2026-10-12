@@ -7,6 +7,7 @@
 import { z } from "zod";
 
 import { clockLabel, deviceTimeZone } from "../dates";
+import { APPEAL_ADDRESS } from "./contact";
 
 /**
  * **The one flag.** On, sign-up needs a code (email and Google alike),
@@ -147,13 +148,21 @@ export const ACCOUNT_CLOSED_CODE = "ACCOUNT_CLOSED";
 
 /**
  * Design-deltas item 23 (round 27, "Au1 account closed Google"): D4's
- * band on Au1, word for word. The same for a password log-in, and it
- * never says whether the password was right. No date, no reason and no
- * case line (round 27 #30): the ban email carries the reason, and an
- * appeal is a reply to it (D-73).
+ * band on Au1, word for word, the same for a password log-in. No date, no
+ * reason and no case line (round 27 #30): the ban email carries the
+ * reason, and an appeal is a reply to it (D-73).
+ *
+ * **It does confirm the password was right**: the gate refuses only once
+ * the credentials check out, so a wrong password still reads Au3. The
+ * owner accepted that (2026-10-12) — the account cannot be used, so the
+ * confirmation opens nothing.
+ *
+ * `appeal` is the owner's addition to the drawn copy (2026-10-12; design
+ * deltas item 62): a fallback for a runner who no longer has the email.
  */
 export const ACCOUNT_CLOSED_COPY = {
   kicker: "Account closed",
   message: "This account was closed for breaking the community rules.",
   detail: "Think we got it wrong? Reply to the email we sent you.",
+  appeal: `Or write to ${APPEAL_ADDRESS}.`,
 } as const;

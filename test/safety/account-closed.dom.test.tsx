@@ -10,7 +10,7 @@ import { AccountClosed } from "../../src/modules/safety/components/AccountClosed
  * date and no reason.
  */
 describe("D4 · the notice, on Au1 (item 23)", () => {
-  it("says the board's three lines, word for word", () => {
+  it("says the board's three lines word for word, then the owner's fallback", () => {
     render(<AccountClosed />);
     const band = document.querySelector("[data-part='account-closed']");
     expect(band?.textContent).toBe(
@@ -18,11 +18,12 @@ describe("D4 · the notice, on Au1 (item 23)", () => {
         "Account closed",
         "This account was closed for breaking the community rules.",
         "Think we got it wrong? Reply to the email we sent you.",
+        "Or write to desk@dialed.run.",
       ].join(""),
     );
   });
 
-  it("is a notice band, with the appeal line quiet", () => {
+  it("is a notice band, with both appeal lines quiet", () => {
     render(<AccountClosed />);
     const notice = document.querySelector(
       "[data-part='account-closed'] [data-part='notice-band']",
@@ -33,6 +34,9 @@ describe("D4 · the notice, on Au1 (item 23)", () => {
         "Think we got it wrong? Reply to the email we sent you.",
       ),
     ).toHaveClass("text-quiet");
+    expect(screen.getByText("Or write to desk@dialed.run.")).toHaveClass(
+      "text-quiet",
+    );
   });
 
   it("offers nothing to press, and promises no time to an answer (D-73)", () => {

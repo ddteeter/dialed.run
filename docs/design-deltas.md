@@ -981,8 +981,16 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       words it. **Needed before launch.** **The ask:** the unconfirmed
       runner's on and off lines.
 
-62. **What lane C (design 139) built beside a drawing.**
-    - **Today's line for a digest that skipped an operator (OPS-11).** The
+62. **What lane C (design 139) built beside a drawing.** The owner ruled
+    on all four on 2026-10-12: the first is an addition to drawn copy, and
+    the other three **ship as placeholders** until design draws them.
+    - **An addition to item 23's drawn copy (owner, 2026-10-12).** Under
+      "Think we got it wrong? Reply to the email we sent you." the notice
+      adds a fallback line for a runner who no longer has that email: "Or
+      write to desk@dialed.run.", in the same quiet type. The address is
+      `APPEAL_ADDRESS` (`lib/contracts/contact.ts`), not retyped. The
+      status region says it with the rest. **The ask:** draw it on Au1.
+    - **Placeholder: today's line for a digest that skipped an operator (OPS-11).** The
       morning digest now goes only to a confirmed address. An operator
       whose address is not confirmed is skipped, and on that UTC day
       Today prints one line under its three numbers. The kicker is
@@ -990,18 +998,18 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and the sentence is "An operator's email address isn't confirmed, so
       today's digest wasn't sent to them." Both are existing type, with
       placeholder copy (`DigestUnconfirmed` in `ops/components/Today.tsx`).
-      D5 does not draw a skipped digest. **The ask:** word it, and say
-      where on Today it sits.
-    - **Item 23's notice on Au2.** Round 27 draws the band on Au1 only.
+      D5 does not draw a skipped digest. **Ships as a placeholder.** **The
+      ask:** word it, and say where on Today it sits.
+    - **Placeholder: item 23's notice on Au2.** Round 27 draws the band on Au1 only.
       Google on Au2 signs in an existing account, so a banned runner can
       reach the same refusal from Create account. The build puts the same
-      band in the same place, first in the form region. **The ask:**
-      confirm it for Au2.
-    - **"Over the empty form".** After a password log-in the gate refuses,
+      band in the same place, first in the form region. **Ships as a
+      placeholder.** **The ask:** confirm it for Au2.
+    - **Placeholder: "over the empty form".** After a password log-in the gate refuses,
       the build keeps what was typed in Email and Password, as every
       other Au1 refusal does. A Google return arrives at an empty form
-      anyway. **The ask:** say whether "empty" means the fields are
-      cleared.
+      anyway. **Ships as a placeholder, fields kept.** **The ask:** say
+      whether "empty" means the fields are cleared.
 
 ## Answered in round 37 (imported 2026-10-10)
 
@@ -3326,7 +3334,12 @@ feed. "ui/shared" means `src/ui`, which 125 holds as the platform lane.
     (design 139):** neither sign-in path mapped `ACCOUNT_CLOSED` before
     then. The band sits first in Au1's form region, and on Au2 too, where
     Google can sign in an existing account. It is `safety`'s
-    `NoticeBand`.
+    `NoticeBand`. **One correction to the ruling's note:** the band does
+    confirm the password was right, because the gate refuses only after
+    the credentials check out (a wrong password still reads Au3). The
+    owner accepted that (2026-10-12): the account cannot be used, so the
+    confirmation opens nothing. The copy itself never claimed otherwise.
+    The owner also added a fallback line to the drawn copy (item 62).
 
 **C · Placeholders confirmed or redrawn**
 

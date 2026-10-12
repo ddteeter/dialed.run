@@ -169,11 +169,11 @@ export function AuthPage(
 
 /**
  * Item 23's notice as the status region says it: the kicker, the sentence
- * and the appeal line, so a screen reader hears all the band shows.
+ * and both appeal lines, so a screen reader hears all the band shows.
  */
 const CLOSED_SAID = {
   kicker: ACCOUNT_CLOSED_COPY.kicker,
-  message: `${ACCOUNT_CLOSED_COPY.message} ${ACCOUNT_CLOSED_COPY.detail}`,
+  message: `${ACCOUNT_CLOSED_COPY.message} ${ACCOUNT_CLOSED_COPY.detail} ${ACCOUNT_CLOSED_COPY.appeal}`,
 };
 
 /**

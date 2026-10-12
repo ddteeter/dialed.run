@@ -146,7 +146,9 @@ interface SignInValues {
 /**
  * A refusal from the ban gate (`ACCOUNT_CLOSED`) is neither a field nor
  * the band: it is design-deltas item 23's notice, which the page draws
- * above the form — and which never says whether the password was right.
+ * above the form. The gate refuses only after the password checks out,
+ * so the notice does confirm it was right; the owner accepted that,
+ * because the account cannot be used (2026-10-12).
  */
 export async function signIn(values: SignInValues): Promise<void> {
   const { error } = await authClient.signIn.email(values);

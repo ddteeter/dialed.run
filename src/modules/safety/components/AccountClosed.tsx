@@ -9,8 +9,10 @@ import { NoticeBand } from "./NoticeBand";
  * to sign in.
  *
  * *"D4's band on Au1, over the empty form, no case line. Same for a
- * password log-in. It never says whether the password was right."* So it
- * is a notice band — round 27's ruling for every notice: "each notice
+ * password log-in."* The board's note adds that it never says whether
+ * the password was right; it does, since the gate refuses only after the
+ * credentials check out, and the owner accepted that (2026-10-12): the
+ * account cannot be used. It is a notice band — round 27's ruling for every notice: "each notice
  * lives on the thing it's about, as a §4a band sized to it", and "the
  * kicker is the state that's still true". One ink rule, no hi-viz and no
  * pink, because nothing here is the runner's to fix, and nothing to press.
@@ -23,6 +25,8 @@ import { NoticeBand } from "./NoticeBand";
  * No date and no reason. The board's sentence is a statement of the rule,
  * and the operator's own words reach the runner in the ban email, which
  * is also where an appeal goes (D-73): "Reply to the email we sent you."
+ * The owner added a fallback line under it, the appeal address
+ * (2026-10-12), for a runner who no longer has that email.
  */
 export function AccountClosed(): JSX.Element {
   return (
@@ -31,6 +35,7 @@ export function AccountClosed(): JSX.Element {
         kicker={ACCOUNT_CLOSED_COPY.kicker}
         message={ACCOUNT_CLOSED_COPY.message}
         detail={ACCOUNT_CLOSED_COPY.detail}
+        more={ACCOUNT_CLOSED_COPY.appeal}
       />
     </div>
   );

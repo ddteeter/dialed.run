@@ -498,11 +498,12 @@ describe("Au6 · a refusal Google's round trip brought back", () => {
 /**
  * Design-deltas item 23 (round 27, "Au1 account closed Google"): *"D4's
  * band on Au1, over the empty form, no case line. Same for a password
- * log-in. It never says whether the password was right."*
+ * log-in."* Shown only once the password checks out, so it does confirm
+ * the password — accepted by the owner, as the account cannot be used.
  */
 describe("item 23 · a closed account", () => {
   const CLOSED_STATUS =
-    "Account closed. This account was closed for breaking the community rules. Think we got it wrong? Reply to the email we sent you.";
+    "Account closed. This account was closed for breaking the community rules. Think we got it wrong? Reply to the email we sent you. Or write to desk@dialed.run.";
 
   it("draws the notice over the form when the ban gate refuses a password log-in", async () => {
     const { user, onSignedIn } = await logIn();

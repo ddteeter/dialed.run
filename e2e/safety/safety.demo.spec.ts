@@ -241,6 +241,7 @@ test("report a runner, block them, and take the block back", async ({
   await expect(notice).toContainText(
     "Think we got it wrong? Reply to the email we sent you.",
   );
+  await expect(notice).toContainText("Or write to desk@dialed.run.");
   // Not Au4's band, and not the operator's own words.
   await expect(page.locator("[data-part='failure-band']")).toHaveCount(0);
   await expect(page.getByText("Spam accounts")).toHaveCount(0);
