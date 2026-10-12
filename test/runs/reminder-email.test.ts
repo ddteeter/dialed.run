@@ -140,6 +140,37 @@ describe("owedReminderEmail: whether a landing owes the email", () => {
     ).toBe(3);
   });
 
+  it("finds yesterday across a 25-hour day", () => {
+    // Chicago fell back on Sun 1 Nov 2026. At 23:30 that night (05:30 UTC
+    // on the 2nd) yesterday is Oct 31, which began 48.5 hours earlier.
+    const lateOnFall = Math.floor(Date.UTC(2026, 10, 2, 5, 30) / 1000);
+    const oct31 = Math.floor(Date.UTC(2026, 9, 31, 5, 15) / 1000);
+    const owed = owedReminderEmail(
+      [reminder(oct31), reminder(oct31 + HOUR)],
+      landing({ at: lateOnFall }),
+    );
+    expect(owed?.message).toMatchObject({
+      payload: {
+        dedupeKey: "run_reminder:u1:1 Nov 2026",
+        email: { template: { runs: 2 } },
+      },
+    });
+  });
+
+  it("finds yesterday in the first hour after a 23-hour day", () => {
+    // Chicago sprang forward on Sun 8 Mar 2026. At 00:30 on the 9th (05:30
+    // UTC) yesterday is the 8th; 24 hours back is the 7th.
+    const afterSpring = Math.floor(Date.UTC(2026, 2, 9, 5, 30) / 1000);
+    const mar8 = Math.floor(Date.UTC(2026, 2, 8, 15) / 1000);
+    const owed = owedReminderEmail(
+      [reminder(mar8), reminder(mar8 + HOUR)],
+      landing({ at: afterSpring }),
+    );
+    expect(owed?.message).toMatchObject({
+      payload: { email: { template: { runs: 2 } } },
+    });
+  });
+
   it("does not count a reminder from two days back", () => {
     const twoDaysBack = LANDED - 48 * HOUR;
     expect(

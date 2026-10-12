@@ -241,6 +241,29 @@ export function calendarDay(epochSeconds: number, timeZone?: string): string {
   });
 }
 
+const HOUR_S = 60 * 60;
+
+/**
+ * The calendar day before the one an instant falls on, in a zone — the
+ * runner's "yesterday" (design 140).
+ *
+ * Not `calendarDay(epochSeconds - 24h)`: a zone's day is 23 hours long the
+ * day the clocks go forward and 25 the day they go back, so a fixed 24
+ * hours lands two days back in the first hour after a short day, and
+ * still today late on a long one. Stepping back an hour at a time until
+ * the day changes cannot skip a day, since no day is shorter than an hour
+ * — and the first instant found is yesterday's, whatever its length.
+ */
+export function previousCalendarDay(
+  epochSeconds: number,
+  timeZone?: string,
+): string {
+  const today = calendarDay(epochSeconds, timeZone);
+  let before = epochSeconds - HOUR_S;
+  while (calendarDay(before, timeZone) === today) before -= HOUR_S;
+  return calendarDay(before, timeZone);
+}
+
 function minutesOf(hhmm: string): number {
   const [hours = 0, minutes = 0] = hhmm.split(":").map(Number);
   return hours * 60 + minutes;

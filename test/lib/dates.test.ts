@@ -9,6 +9,7 @@ import {
   isTimeZone,
   longDayLabel,
   monthYearLabel,
+  previousCalendarDay,
   proseDayLabel,
   deviceTimeZone,
   startAtTimeOfDay,
@@ -275,5 +276,37 @@ describe("monthYearLabel (the closet rail, round 28 #13; STR-13)", () => {
     const lastOf2025 = Math.floor(Date.UTC(2025, 11, 31, 23, 30) / 1000);
     expect(monthYearLabel(lastOf2025)).toBe("Dec 2025");
     expect(monthYearLabel(lastOf2025, "Pacific/Auckland")).toBe("Jan 2026");
+  });
+});
+
+describe("previousCalendarDay (the runner's yesterday, design 140)", () => {
+  const NEW_YORK = "America/New_York";
+
+  it("is the day before, in the zone it is given", () => {
+    expect(previousCalendarDay(LATE_ON_THE_21ST)).toBe("20 Sept 2026");
+    expect(previousCalendarDay(LATE_ON_THE_21ST, "Pacific/Auckland")).toBe(
+      "21 Sept 2026",
+    );
+  });
+
+  it("is still yesterday at midnight exactly", () => {
+    const midnight = Math.floor(Date.UTC(2026, 8, 22) / 1000);
+    expect(previousCalendarDay(midnight)).toBe("21 Sept 2026");
+  });
+
+  it("is yesterday in the first hour after a 23-hour day", () => {
+    // New York sprang forward on Sun 8 Mar 2026, a 23-hour day. 00:30 on
+    // the 9th (04:30 UTC) less 24 hours is 23:30 on the 7th.
+    const afterSpring = Math.floor(Date.UTC(2026, 2, 9, 4, 30) / 1000);
+    expect(calendarDay(afterSpring, NEW_YORK)).toBe("9 Mar 2026");
+    expect(previousCalendarDay(afterSpring, NEW_YORK)).toBe("8 Mar 2026");
+  });
+
+  it("is yesterday late on a 25-hour day", () => {
+    // New York fell back on Sun 1 Nov 2026, a 25-hour day. 23:30 that day
+    // (04:30 UTC on the 2nd) less 24 hours is still the 1st.
+    const lateOnFall = Math.floor(Date.UTC(2026, 10, 2, 4, 30) / 1000);
+    expect(calendarDay(lateOnFall, NEW_YORK)).toBe("1 Nov 2026");
+    expect(previousCalendarDay(lateOnFall, NEW_YORK)).toBe("31 Oct 2026");
   });
 });

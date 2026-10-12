@@ -27,7 +27,11 @@
 import { and, asc, desc, eq, gte, isNotNull } from "drizzle-orm";
 
 import { notifications, runs } from "../../../db/schema-core";
-import { calendarDay, clockLabel } from "../../../lib/dates";
+import {
+  calendarDay,
+  clockLabel,
+  previousCalendarDay,
+} from "../../../lib/dates";
 import { ulidSchema } from "../../../lib/ids";
 import type { OutboxMessage } from "../../../lib/sql/outbox";
 import { emailDebt } from "../../email";
@@ -52,7 +56,8 @@ export interface EarlierReminder {
 
 /**
  * The runner's Strava reminders since the start of yesterday, oldest
- * first. Two days back covers all of yesterday in any zone. Grouped by
+ * first. Three days back covers all of yesterday in any zone, even late on
+ * a 25-hour day after a 25-hour day. Grouped by
  * day in code, because the day is the runner's and SQLite has no zones.
  * On `notifications_dedupe`, which leads with the runner and the kind.
  */
@@ -71,7 +76,7 @@ export async function earlierReminders(
       and(
         eq(notifications.userId, userId),
         eq(notifications.kind, "strava_reminder"),
-        gte(notifications.createdAt, landedAt - 2 * DAY_S),
+        gte(notifications.createdAt, landedAt - 3 * DAY_S),
       ),
     )
     .orderBy(asc(notifications.createdAt), asc(notifications.id));
@@ -105,7 +110,7 @@ export function owedReminderEmail(
   const dayOf = (at: number) => calendarDay(at, landing.zone);
   const today = dayOf(landing.at);
   if (earlier.some((row) => dayOf(row.createdAt) === today)) return undefined;
-  const yesterday = dayOf(landing.at - DAY_S);
+  const yesterday = previousCalendarDay(landing.at, landing.zone);
   // The first of yesterday's owed yesterday's email; the rest owed none.
   const [, ...uncovered] = earlier.filter(
     (row) => dayOf(row.createdAt) === yesterday,
