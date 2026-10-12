@@ -474,6 +474,19 @@ describe("at send time", () => {
     expect(await owedFor(userId)).toStrictEqual([]);
   });
 
+  it("skips it when the runner disconnected Strava inside the 20 minutes", async () => {
+    const { userId, athleteId } = await connectedRunner();
+    await deliver(reminderJob(athleteId));
+    expect(await owedFor(userId)).toHaveLength(1);
+    await core()
+      .delete(stravaConnections)
+      .where(eq(stravaConnections.userId, userId));
+    const mail = fakeMail();
+    await drainLater(mail);
+    expect(mail.sent).toStrictEqual([]);
+    expect(await owedFor(userId)).toStrictEqual([]);
+  });
+
   it("skips it for an address not yet confirmed", async () => {
     const { userId, athleteId } = await connectedRunner({ isVerified: false });
     await deliver(reminderJob(athleteId));

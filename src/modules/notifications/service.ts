@@ -18,7 +18,6 @@ import {
 
 import { notifications, outfitEntries, runs } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
-import { hasRowWhere } from "../../lib/sql/keyed-read";
 import { BELL_NUMBER_CAP } from "./bell-cap";
 import type { BellState } from "./bell-state";
 import type { NotificationsDb } from "./db";
@@ -102,24 +101,6 @@ export async function createNotification(
   draft: NotificationDraft,
 ): Promise<void> {
   await notificationInsert(db, draft);
-}
-
-/**
- * Whether this row is still there and unread — what an email that repeats
- * it asks at send time (design 140): a row read, or gone with its account,
- * has nothing left to say by email.
- */
-export async function isNotificationUnread(
-  // Any dialed-core handle: the outbox's drain asks with its own.
-  db: Parameters<typeof hasRowWhere>[0],
-  id: string,
-): Promise<boolean> {
-  return hasRowWhere(
-    db,
-    notifications,
-    notifications.id,
-    and(eq(notifications.id, id), eq(notifications.read, false)),
-  );
 }
 
 /**

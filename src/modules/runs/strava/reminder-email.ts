@@ -24,15 +24,20 @@
  * **No activity data** (D-33): a clock label, a count and our own
  * notification id. No Strava id rides the outbox.
  */
-import { and, asc, desc, eq, gte, isNotNull } from "drizzle-orm";
+import { and, asc, desc, eq, exists, gte, isNotNull } from "drizzle-orm";
 
-import { notifications, runs } from "../../../db/schema-core";
+import {
+  notifications,
+  runs,
+  stravaConnections,
+} from "../../../db/schema-core";
 import {
   calendarDay,
   clockLabel,
   previousCalendarDay,
 } from "../../../lib/dates";
 import { ulidSchema } from "../../../lib/ids";
+import { hasRowWhere } from "../../../lib/sql/keyed-read";
 import type { OutboxMessage } from "../../../lib/sql/outbox";
 import { emailDebt } from "../../email";
 import { observationsForRuns } from "../../weather";
@@ -173,4 +178,32 @@ function latestLocatedRuns(db: CoreDb, userId: string) {
     .where(and(eq(runs.userId, userId), isNotNull(runs.lat)))
     .orderBy(desc(runs.startedAt))
     .limit(ZONE_RUNS);
+}
+
+/**
+ * Whether a reminder's email may still go, asked when it is due (design
+ * 140): its bell row is there and unread — an upload pairs and reads it —
+ * and the runner is still connected to Strava, so a disconnect inside the
+ * 20 minutes stops it as it stops the reminders themselves. One read, on
+ * the bell row's primary key and `strava_connections`'.
+ */
+export async function isReminderStillOwed(
+  // Any dialed-core handle: the outbox's drain asks with its own.
+  db: Parameters<typeof hasRowWhere>[0],
+  notificationId: string,
+): Promise<boolean> {
+  const stillConnected = db
+    .select({ userId: stravaConnections.userId })
+    .from(stravaConnections)
+    .where(eq(stravaConnections.userId, notifications.userId));
+  return await hasRowWhere(
+    db,
+    notifications,
+    notifications.id,
+    and(
+      eq(notifications.id, notificationId),
+      eq(notifications.read, false),
+      exists(stillConnected),
+    ),
+  );
 }

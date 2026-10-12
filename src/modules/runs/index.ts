@@ -14,7 +14,7 @@ export { stravaApiFromEnv } from "./strava/api-from-env";
 export { runsAwaitingVerdict } from "./awaiting-verdict";
 export { runCountsOf } from "./counts";
 export { pruneStravaIds } from "./strava/prune";
-export { runnerZone } from "./strava/reminder-email";
+export { isReminderStillOwed, runnerZone } from "./strava/reminder-email";
 // Seam 5 (docs/tasks/125-129): account deletion (task 126, ACC-9) revokes
 // a runner's Strava grant through this, never a second copy of it.
 export { disconnectStrava } from "./strava/oauth";

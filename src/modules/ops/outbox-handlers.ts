@@ -17,7 +17,7 @@ import { photoKeyFor } from "../../lib/garment-photo-key";
 import type { OutboxKind, OutboxMessage } from "../../lib/sql/outbox";
 import { nowSeconds } from "../../lib/now";
 import { deliverOwedEmail, emailDepsFromEnv, type EmailDeps } from "../email";
-import { isNotificationUnread } from "../notifications";
+import { isReminderStillOwed } from "../runs";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -186,12 +186,13 @@ export function emailHandler(deps: () => EmailDeps): OutboxHandlers["email"] {
   return {
     run: async (db, payload, rowId) => {
       // A reminder the runner has answered — the upload paired it, or they
-      // cleared it in the app — has nothing left to say (design 140).
+      // cleared it in the app — or one whose runner has since disconnected
+      // Strava has nothing left to say (design 140).
       // Settled like a skipped send: the row goes, nothing is marked.
       const { unlessRead } = payload;
       if (
         unlessRead !== undefined &&
-        !(await isNotificationUnread(db, unlessRead))
+        !(await isReminderStillOwed(db, unlessRead))
       ) {
         return;
       }

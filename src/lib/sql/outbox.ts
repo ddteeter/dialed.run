@@ -97,7 +97,8 @@ const importFileExpire = z.object({
  *
  * `unlessRead` names a bell row the email repeats (task 127's reminder,
  * design 140): read by send time — the runner uploaded the run, or saw it
- * in the app — or gone, and the email is not sent. Optional, so a row an
+ * in the app — or gone, or its runner no longer connected to Strava, and
+ * the email is not sent. Optional, so a row an
  * earlier deploy wrote still parses (law 9).
  */
 const email = z.object({

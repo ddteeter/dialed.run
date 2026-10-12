@@ -13,7 +13,6 @@
 export {
   bellState,
   createNotification,
-  isNotificationUnread,
   notificationInsert,
   listNotifications,
   markAllNotificationsRead,
