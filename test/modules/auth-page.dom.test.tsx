@@ -569,6 +569,35 @@ describe("item 23 · a closed account", () => {
     expect(screen.getByRole("status")).toHaveTextContent(CLOSED_STATUS);
   });
 
+  it("clears when the password form is submitted, so a wrong password shows Au3 alone", async () => {
+    const { user } = await logIn({ returnedError: "ACCOUNT_CLOSED" });
+    expect(part("account-closed")).not.toBeNull();
+    client.email.mockResolvedValue({
+      data: undefined,
+      error: { code: "INVALID_EMAIL_OR_PASSWORD", status: 401 },
+    });
+    await fillAndSubmit(user);
+
+    expect(await screen.findByText(AUTH_COPY.wrongPassword)).toBeVisible();
+    expect(part("account-closed")).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /^Not signed in\. One field needs a fix\.$/u,
+    );
+  });
+
+  it("clears on a submit even before the form's answer is back", async () => {
+    const { user } = await logIn({ returnedError: "ACCOUNT_CLOSED" });
+    client.email.mockReturnValue(
+      new Promise(() => {
+        // Never answers: only the press is under test.
+      }),
+    );
+    await fillAndSubmit(user);
+    await waitFor(() => {
+      expect(part("account-closed")).toBeNull();
+    });
+  });
+
   it("clears once the runner tries Google again", async () => {
     const { user } = await logIn({ returnedError: "ACCOUNT_CLOSED" });
     client.social.mockResolvedValue({

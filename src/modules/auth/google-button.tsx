@@ -39,7 +39,8 @@ export interface GoogleSignIn extends ControlAction<[]> {
   /**
    * Au5: *"The other form stays live: tapping Log in cancels the Google
    * attempt."* An answer for a cancelled attempt is dropped rather than
-   * followed, so the runner is not carried off to Google mid-submit.
+   * followed, so the runner is not carried off to Google mid-submit, and
+   * a refusal Google's round trip brought back is cleared with it.
    */
   cancel: () => void;
 }
@@ -172,6 +173,10 @@ export function useGoogleSignIn({
     cancel: () => {
       wanted.current = undefined;
       setLive(undefined);
+      // What Google's last round trip brought back is old news once the
+      // runner submits the form: a closed account's notice beside the
+      // form's own Au4 band would be two answers to one press.
+      setShowsReturned(false);
     },
   };
 }
