@@ -15,11 +15,17 @@
  * it makes — a person reads it, the entry goes from your feed straight
  * away, the author is never told who reported them — rather than infer
  * them from a diff.
+ *
+ * It ends on SAF-4 (design-deltas item 23): once the account is closed,
+ * its runner signing in again sees the drawn notice over the form, not a
+ * failure band.
  */
+import { eq } from "drizzle-orm";
+
 import { user } from "../../src/db/schema-auth";
 import { newUlid } from "../../src/lib/ids";
 import { outfitEntries, runs, userProfiles } from "../../src/db/schema-core";
-import { storageStateFor } from "../support/accounts";
+import { accountEmail, storageStateFor } from "../support/accounts";
 import { expect, hydrated, scene, test } from "../support/demo";
 import { withLocalDb } from "../support/local-db";
 import { nowSeconds } from "../../src/lib/now";
@@ -202,4 +208,38 @@ test("report a runner, block them, and take the block back", async ({
   await expect(
     page.getByRole("button", { name: "Report this entry" }),
   ).toBeVisible();
+
+  // SAF-4: close this runner's account the way the Desk's Close account
+  // leaves it (the moderation demo drives that screen), then sign in again.
+  const email = accountEmail("safety");
+  await withLocalDb(async ({ core }) => {
+    const [me] = await core
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, email));
+    await core
+      .update(userProfiles)
+      .set({ bannedAt: nowSeconds(), banReason: "Spam accounts" })
+      .where(eq(userProfiles.userId, me?.id ?? ""));
+  });
+  await page.context().clearCookies();
+  await page.goto("/auth/login");
+  await hydrated(page);
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill("a-long-enough-password");
+  await page.getByRole("button", { name: "Log in" }).click();
+
+  await scene(page, "Closed: signing in again says why, never an error");
+  const notice = page.locator("[data-part='account-closed']");
+  await expect(notice).toContainText("Account closed");
+  await expect(notice).toContainText(
+    "This account was closed for breaking the community rules.",
+  );
+  await expect(notice).toContainText(
+    "Think we got it wrong? Reply to the email we sent you.",
+  );
+  // Not Au4's band, and not the operator's own words.
+  await expect(page.locator("[data-part='failure-band']")).toHaveCount(0);
+  await expect(page.getByText("Spam accounts")).toHaveCount(0);
+  await expect(page).toHaveURL(/\/auth\/login/);
 });
