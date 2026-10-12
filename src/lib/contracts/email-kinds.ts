@@ -92,16 +92,16 @@ export const COPYRIGHT_NOTICE_CLAUSE = "after a copyright notice";
  * the reason from the removal list, word for word. Account mail, so always
  * sent. A suspected-CSAM quarantine sends nothing (decision D-70).
  *
- * `notice: "copyright"` marks a copyright takedown (round 28 #8, R-140):
+ * `cause: "copyright_notice"` marks a copyright takedown (round 28 #8, R-140):
  * the email then says it answered a notice, as the bell row and the band
  * do, and gives no moderator's reason. Optional, and it must stay so
- * (law 9): a row the build before this wrote has no `notice` and is a
+ * (law 9): a row the build before this wrote has no `cause` and is a
  * moderator's Remove as it always was.
  */
 export const contentRemoved = emailKind("content_removed", {
   subject: z.enum(["entry", "photo"]),
   reason: z.string().min(1),
-  notice: z.literal("copyright").optional(),
+  cause: z.literal("copyright_notice").optional(),
 });
 
 /**

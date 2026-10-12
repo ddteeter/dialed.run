@@ -251,11 +251,14 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
     .orderBy(asc(reviewQueue.createdAt))
     .limit(limit);
 
-  const subjects = await subjectsFor(rows);
-  const others = await otherPhotosOf(
-    db(),
-    rows.flatMap((row) => withRemovalClock(row)),
-  );
+  // Neither read needs the other's answer, so they go together.
+  const [subjects, others] = await Promise.all([
+    subjectsFor(rows),
+    otherPhotosOf(
+      db(),
+      rows.flatMap((row) => copiesSubjectOf(row)),
+    ),
+  ]);
   const now = nowSeconds();
   return rows.map((row) => ({
     id: row.id,
@@ -278,7 +281,7 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
  * other photos it lists (D-117); nothing for any other row. Only an entry
  * or a photo can carry that report.
  */
-function withRemovalClock(row: {
+function copiesSubjectOf(row: {
   subjectType: ReportSubjectType;
   subjectId: string;
   firstAtOnce: number | null;

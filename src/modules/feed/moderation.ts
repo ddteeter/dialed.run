@@ -256,7 +256,7 @@ function deletions(db: Db, input: ModerateInput, target: Target): Statements {
  * reason (`isCopyrightTakedown`): a removal request's takedown carries
  * `intimate` and answered no copyright notice.
  */
-function notice(
+function authorNotice(
   db: Db,
   input: ModerateInput,
   action: "remove" | "takedown",
@@ -271,7 +271,7 @@ function notice(
           subject: input.subjectType,
           reason: removalStatements[input.reason],
           ...(isCopyrightTakedown(action, input.reason) && {
-            notice: "copyright" as const,
+            cause: "copyright_notice" as const,
           }),
         },
       },
@@ -312,7 +312,9 @@ export async function moderateContent(
       ? await preservation(db, target, input, actionId)
       : undefined;
   const told =
-    action === "quarantine" ? undefined : notice(db, input, action, target);
+    action === "quarantine"
+      ? undefined
+      : authorNotice(db, input, action, target);
   const words = removalStatements[input.reason];
   await commit(
     db,

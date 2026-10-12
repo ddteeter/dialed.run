@@ -134,7 +134,7 @@ describe("emailContent", () => {
         kind: "content_removed",
         subject: "photo",
         reason: "it uses someone else's work",
-        notice: "copyright",
+        cause: "copyright_notice",
       },
       {
         subject: "We removed something from your run",
@@ -149,7 +149,7 @@ describe("emailContent", () => {
         kind: "content_removed",
         subject: "entry",
         reason: "it uses someone else's work",
-        notice: "copyright",
+        cause: "copyright_notice",
       },
       {
         subject: "We removed something from your run",

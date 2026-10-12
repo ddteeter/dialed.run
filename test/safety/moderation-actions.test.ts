@@ -834,7 +834,7 @@ describe("takedown (SAF-6)", () => {
           template: {
             kind: "content_removed",
             subject: "photo",
-            notice: "copyright",
+            cause: "copyright_notice",
           },
         },
       });

@@ -28,7 +28,7 @@ the takedown sentence is chosen by `action` _and_ reason:
 - The barrel exports both (not `takedownSentence` itself, which only the
   chooser calls; knip would flag a barrel export nobody reads).
 - `email-kinds.ts`' `content_removed` gains an optional
-  `notice: "copyright"` (optional: law 9, the outbox holds old rows).
+  `cause: "copyright_notice"` (optional: law 9, the outbox holds old rows).
   `email/content.ts` writes "We removed a photo from one of your runs
   after a copyright notice. Your run and verdict stay." for it.
 - `feed/moderation.ts`' `notice` takes `input.action`: the bell body is

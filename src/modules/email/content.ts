@@ -106,11 +106,10 @@ const REMOVED = {
  * for a copyright takedown (R-140) — that it answered a notice, as its
  * bell row and band say, with no reason quoted.
  */
-function why(template: {
-  reason: string;
-  notice?: "copyright" | undefined;
-}): string {
-  return template.notice === "copyright"
+function why(
+  template: Extract<EmailTemplate, { kind: "content_removed" }>,
+): string {
+  return template.cause === "copyright_notice"
     ? ` ${COPYRIGHT_NOTICE_CLAUSE}.`
     : `. Reason: ${template.reason}.`;
 }
