@@ -19,26 +19,23 @@
 import type { BetterAuthPlugin } from "better-auth";
 import { APIError } from "better-auth/api";
 
+import { ACCOUNT_CLOSED_CODE } from "../../lib/contracts/access";
 import { banStateOf, type BanState } from "./bans";
-
-/**
- * The refusal's code — what a sign-in form reads to put D4 on screen
- * instead of a failure band. A code rather than the status, because 403
- * alone says "forbidden" and a runner whose account is closed is owed the
- * reason, not a fault.
- */
-export const ACCOUNT_CLOSED_CODE = "ACCOUNT_CLOSED";
 
 /**
  * The plugin. `stateOf` is injectable so a test can refuse without a
  * profile row; production reads the ban column through `banStateOf`.
  *
- * The refusal carries the operator's reason, word for word (D3: "They read
- * your reason, word for word, the next time they open the app"), and when
- * the ban was made, which D4 dates. Nobody reaches this hook without having
- * proved they are the account's owner — a session is created only after
- * the credentials or the OAuth callback check out — so the reason goes to
- * the person it was written to and to nobody else.
+ * The refusal's code (`ACCOUNT_CLOSED_CODE`) is what a sign-in form reads
+ * to put D4's band on screen instead of a failure band: a code rather than
+ * the status, because 403 alone says "forbidden" and a runner whose
+ * account is closed is owed a statement, not a fault.
+ *
+ * **The code and nothing else.** Not the operator's reason and not the
+ * ban's date: design-deltas item 23's band prints neither (the ban email
+ * carries the reason), and Better Auth forwards a refusal's message into
+ * Google's error redirect as `error_description` — a URL, which lands in
+ * browser history and the edge's request logs.
  */
 export function banGate(
   stateOf: (userId: string) => Promise<BanState> = banStateOf,
@@ -53,11 +50,7 @@ export function banGate(
               before: async (session: { userId: string }) => {
                 const state = await stateOf(session.userId);
                 if (!state.banned) return;
-                throw new APIError("FORBIDDEN", {
-                  code: ACCOUNT_CLOSED_CODE,
-                  message: state.reason ?? "",
-                  closedAt: state.bannedAt,
-                });
+                throw new APIError("FORBIDDEN", { code: ACCOUNT_CLOSED_CODE });
               },
             },
           },

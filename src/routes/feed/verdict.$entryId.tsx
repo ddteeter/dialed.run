@@ -13,21 +13,34 @@ import {
   viewerUnitsQuery,
 } from "../../modules/feed/functions";
 import { orBackToFeed, requireSignedIn } from "../../modules/feed/redirect";
+import { PrivateRunLine } from "../../modules/onboarding/components/PrivateRunLine";
+import {
+  countInTotalsQuery,
+  setCountInTotalsFn,
+} from "../../modules/onboarding/functions";
 import { Layout } from "../../ui";
 
 export const Route = createFileRoute("/feed/verdict/$entryId")({
   // D-102's name for the page: its heading is a question.
   staticData: { savedPage: "The verdict" },
-  beforeLoad: async ({ location }) => {
-    requireSignedIn(await getSession(), location);
-  },
-  loader: async ({ params }) => {
-    const entry = orBackToFeed(
-      await entryDetailQuery({ data: { entryId: params.entryId } }),
-    );
+  // The session it already reads also says whether the address is
+  // confirmed, which picks A3's private line (D-108 E, round 27 first).
+  beforeLoad: async ({ location }) => ({
+    isVerified: requireSignedIn(await getSession(), location).user
+      .emailVerified,
+  }),
+  loader: async ({ params, context }) => {
+    const [found, units, { countInTotals }] = await Promise.all([
+      entryDetailQuery({ data: { entryId: params.entryId } }),
+      viewerUnitsQuery(),
+      countInTotalsQuery(),
+    ]);
+    const entry = orBackToFeed(found);
     return {
       entry,
-      units: await viewerUnitsQuery(),
+      units,
+      isVerified: context.isVerified,
+      countInTotals,
       ...(await bandContextFor(entry, bandFloorC, async (bandFloor) => {
         const [counts, signals] = await Promise.all([
           verdictBandCountsQuery({
@@ -45,7 +58,8 @@ export const Route = createFileRoute("/feed/verdict/$entryId")({
 });
 
 function VerdictPage() {
-  const { entry, bandFloor, history, units } = Route.useLoaderData();
+  const { entry, bandFloor, history, units, isVerified, countInTotals } =
+    Route.useLoaderData();
 
   return (
     <Layout>
@@ -56,6 +70,14 @@ function VerdictPage() {
         units={units}
         submitVerdict={submitVerdictAction}
         itemBandWearStat={itemBandWearStatQuery}
+        privateLine={(hintId) => (
+          <PrivateRunLine
+            hintId={hintId}
+            isVerified={isVerified}
+            countInTotals={countInTotals}
+            saveCountInTotals={setCountInTotalsFn}
+          />
+        )}
       />
     </Layout>
   );

@@ -1,7 +1,9 @@
 import { and, eq, isNotNull, lt } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { gaveUpUpsert } from "../../src/db/gave-up";
 import {
+  gaveUp,
   notifications,
   processedWebhookEvents,
 } from "../../src/db/schema-core";
@@ -10,7 +12,8 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { handleScheduled } from "../../src/modules/ops";
 import { coreDb } from "../../src/modules/runs/core-db";
-import { pruneStravaIds } from "../../src/modules/runs";
+import { pruneStravaIds } from "../../src/modules/runs/strava/prune";
+import { gaveUpRow } from "../gave-up-rows";
 
 /**
  * STR-10: Strava's seven-day cache rule (API Policy §6.2), on the activity
@@ -104,6 +107,45 @@ describe("pruneStravaIds", () => {
     ).toHaveLength(1);
   });
 
+  it("forgets a dead-lettered reminder's Gave up row once its last failure is a week old, and nothing else", async () => {
+    const now = nowSeconds();
+    const old = `athleteId=${newUlid()}&objectId=1`;
+    const edge = `athleteId=${newUlid()}&objectId=2`;
+    const recent = `athleteId=${newUlid()}&objectId=3`;
+    const otherKind = newUlid();
+    const fact = { reason: "Gave up.", tries: 3 } as const;
+    const db = coreDb();
+    await db.batch([
+      gaveUpUpsert(
+        db,
+        { kind: "reminder", subjectId: old, ...fact },
+        now - 8 * DAY,
+      ),
+      gaveUpUpsert(
+        db,
+        { kind: "reminder", subjectId: edge, ...fact },
+        now - 7 * DAY + 60,
+      ),
+      gaveUpUpsert(
+        db,
+        { kind: "reminder", subjectId: recent, ...fact },
+        now - DAY,
+      ),
+      gaveUpUpsert(
+        db,
+        { kind: "import", subjectId: otherKind, ...fact },
+        now - 30 * DAY,
+      ),
+    ]);
+
+    await pruneStravaIds(coreDb());
+
+    expect(await gaveUpRow("reminder", old)).toBeUndefined();
+    expect(await gaveUpRow("reminder", edge)).toBeDefined();
+    expect(await gaveUpRow("reminder", recent)).toBeDefined();
+    expect(await gaveUpRow("import", otherKind)).toBeDefined();
+  });
+
   it("touches no other kind's subject, however old", async () => {
     const now = nowSeconds();
     const userId = newUlid();
@@ -139,7 +181,7 @@ async function planOf(sql: string, params: unknown[]): Promise<string> {
 }
 
 describe("the prune reads by index, not by scanning (D1 bills rows scanned)", () => {
-  it("finds old dedupe keys and old reminders through their indexes", async () => {
+  it("finds old dedupe keys, old reminders and old dead letters through their indexes", async () => {
     const db = coreDb();
     const cutoff = 1_700_000_000;
     const keys = db
@@ -158,12 +200,25 @@ describe("the prune reads by index, not by scanning (D1 bills rows scanned)", ()
       )
       .toSQL();
 
+    const deadLetters = db
+      .delete(gaveUp)
+      .where(and(eq(gaveUp.kind, "reminder"), lt(gaveUp.lastFailedAt, cutoff)))
+      .toSQL();
+
     const keysPlan = await planOf(keys.sql, keys.params);
+    const deadLettersPlan = await planOf(deadLetters.sql, deadLetters.params);
     const remindersPlan = await planOf(reminders.sql, reminders.params);
 
     expect(keysPlan).toMatch(/webhook_events_time/u);
     expect(keysPlan).not.toMatch(/SCAN\s+processed_webhook_events/iu);
     expect(remindersPlan).toMatch(/notifications_kind_created/u);
     expect(remindersPlan).not.toMatch(/SCAN\s+notifications/iu);
+    // Either index serves it. Without ANALYZE statistics SQLite takes
+    // (kind, subject_id) and reads only the reminder rows, which are only
+    // dead letters.
+    expect(deadLettersPlan).toMatch(
+      /SEARCH gave_up USING (COVERING )?INDEX gave_up_(kind_subject|last_failed)/u,
+    );
+    expect(deadLettersPlan).not.toMatch(/SCAN\s+gave_up/iu);
   });
 });

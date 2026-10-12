@@ -6,17 +6,13 @@ import { z } from "zod";
 import { session, user } from "../../src/db/schema-auth";
 import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { ACCOUNT_CLOSED_CODE } from "../../src/lib/contracts/access";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { createAuth } from "../../src/modules/auth/create-auth";
 import { recordingMail } from "../auth/mail-recorder";
 import { OPEN_ACCESS } from "../auth/open-access";
-import {
-  ACCOUNT_CLOSED_CODE,
-  banGate,
-  banUser,
-  unbanUser,
-} from "../../src/modules/safety";
+import { banGate, banUser, unbanUser } from "../../src/modules/safety";
 
 /**
  * SAF-4's sign-in block, through Better Auth itself on real D1: the gate
@@ -92,16 +88,11 @@ describe("a banned runner signing in (SAF-4)", () => {
 
     expect(refused.status).toBe(403);
     const body: unknown = await refused.json();
-    expect(body).toMatchObject({
-      code: ACCOUNT_CLOSED_CODE,
-      message: "Adverts for a supplement store.",
-    });
-    const [profile] = await core()
-      .select({ bannedAt: userProfiles.bannedAt })
-      .from(userProfiles)
-      .where(eq(userProfiles.userId, userId));
-    // D4 dates the notice from this, so it is the ban's own moment.
-    expect(body).toMatchObject({ closedAt: profile?.bannedAt });
+    expect(body).toMatchObject({ code: ACCOUNT_CLOSED_CODE });
+    // The code alone: neither the operator's reason nor the ban's date
+    // leaves the server (item 23's band prints neither).
+    expect(JSON.stringify(body)).not.toContain("supplement");
+    expect(body).not.toHaveProperty("closedAt");
     const sessions = await core()
       .select({ id: session.id })
       .from(session)
@@ -135,9 +126,9 @@ describe("a banned runner signing in (SAF-4)", () => {
     expect(signedIn.status).toBe(200);
   });
 
-  it("says the reason is empty rather than inventing one", async () => {
+  it("throws the code alone, never the reason or the date, which a Google redirect would put in its URL", async () => {
     const gate = banGate(() =>
-      Promise.resolve({ banned: true, reason: undefined, bannedAt: 1 }),
+      Promise.resolve({ banned: true, reason: "Spam accounts", bannedAt: 1 }),
     );
     const gated = createAuth({
       db: core(),
@@ -150,7 +141,16 @@ describe("a banned runner signing in (SAF-4)", () => {
     const context = await gated.$context;
     await expect(
       context.internalAdapter.createSession(newUlid()),
-    ).rejects.toMatchObject({ body: { message: "", closedAt: 1 } });
+    ).rejects.toMatchObject({
+      status: "FORBIDDEN",
+      body: { code: ACCOUNT_CLOSED_CODE },
+    });
+    // Exactly the code — no `message`, which Better Auth's redirect would
+    // forward as `error_description`. `toHaveProperty` compares the whole
+    // body.
+    await expect(
+      context.internalAdapter.createSession(newUlid()),
+    ).rejects.toHaveProperty("body", { code: ACCOUNT_CLOSED_CODE });
   });
 });
 
@@ -212,7 +212,7 @@ describe("a banned runner signing in with Google (SAF-4)", () => {
     ],
   });
 
-  it("redirects to the error callback with the closed code and the reason, and sets no session", async () => {
+  it("redirects to the error callback with the closed code alone, and sets no session", async () => {
     const email = `${newUlid().toLowerCase()}@example.test`;
     const started = await google.handler(
       new Request("http://localhost/api/auth/sign-in/social", {
@@ -263,7 +263,11 @@ describe("a banned runner signing in with Google (SAF-4)", () => {
     );
     expect(landing.pathname).toBe("/auth/login");
     expect(landing.searchParams.get("error")).toBe(ACCOUNT_CLOSED_CODE);
-    expect(landing.searchParams.get("error_description")).toBe(REASON);
+    // Never the reason: a URL lands in browser history and edge logs.
+    expect(landing.href).not.toContain("supplement");
+    expect(landing.searchParams.get("error_description") ?? "").not.toContain(
+      REASON,
+    );
     expect(
       callback.headers
         .getSetCookie()

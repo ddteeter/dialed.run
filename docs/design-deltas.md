@@ -467,7 +467,10 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       `ACCOUNT_CLOSED` — and a refused Google sign-in reaches that form as
       a redirect carrying the reason but not the date D4 prints. **The
       ask:** drop the case line or say what it names; and what D4 says
-      when it has the reason but no date.
+      when it has the reason but no date. **ANSWERED by round 27 (#23,
+      #30) and built by lane C (design 139):** D4 is a notice band on Au1
+      and Au2 with the board's fixed copy: no case line, no date and no
+      reason. `AccountClosed` is that band now.
 
 32. **Two sizes the contracts do not give, found in the owner's UI review
     (PR "UI polish: fields beside buttons, the closet's rows, A2/A3 at
@@ -929,6 +932,84 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       byte-identical to round 28's bundle, so D0 still draws the old rail
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
+
+<!-- Item numbers continue past rounds 35–37 (45–59); this comment keeps the list from being renumbered. -->
+
+60. **A Rename that lost a race (R-121, PR #184).** A force-rename now
+    writes nothing when the handle changed between its read and its write,
+    whether through another moderator's rename or the runner's own new
+    pick. It used to report the rename as done. D8 · Runners and a flagged
+    handle's review row both answer it the way they answer a taken
+    placeholder: `NOT RENAMED` in the row's control band, and on the review
+    row, the row stays open. The sentence is placeholder copy: "The handle
+    changed before the rename landed. Nothing was renamed." (`renameMessage`
+    in `safety/components/DeskRunners.tsx`). **The ask:** word it.
+
+61. **What lane A (design 138) built beside round 32's drawings.**
+    D-108 E's three disclosures and Settings › Sharing's totals switch are
+    built with the board's copy verbatim. Five things the board does not
+    draw. **Four are needed before launch** (owner, 2026-10-11), marked so;
+    the other can follow. Round 30 (d)'s Settings › Region is **not** built:
+    totals group by a climate zone the guide job derives from each run's
+    location, not by a region the runner declares (owner, 2026-10-11;
+    D-120), so round 30 (d) needs no screen.
+    - **"How the guides are made" opens `/privacy`.** The board's target
+      is `dialed.run/how-it-works#totals`, which the marketing site owns
+      and which is not live. When it is, the link points there. **The
+      ask:** none for design; a one-line change when the site ships.
+    - **The Change sheet.** Round 32 says Change "opens Settings ›
+      Sharing as a sheet". Built as a `Sheet` titled "Sharing" holding
+      the totals switch, its sub-line and the link, and a Done. It does
+      not hold "Share new runs": that is a form with its own Save, and a
+      form cannot sit inside A3's form. **Needed before launch.** **The
+      ask:** draw the sheet, or confirm the totals switch alone.
+    - **Two names for one place.** The sheet is titled "Sharing", as round
+      32 names the group, but the Settings row and sub-page it stands for
+      are "Privacy" (U1). **Needed before launch.** **The ask:** one name.
+    - **Where the totals switch sits.** Round 32 draws one SHARING group
+      with "Share new runs" and the totals switch. Built on the Privacy
+      sub-page under the sharing default's form and its Save, because the
+      totals switch saves on toggle and the default does not. **Needed
+      before launch.** **The ask:** draw the group as the build has to
+      hold it, two controls that save differently.
+    - **What the totals copy says to an unconfirmed runner.** "Shared and
+      private runs add their temperature, kit and verdict to the guides
+      and reports" is untrue for them: D-108 C counts confirmed accounts
+      only. The owner ruled (2026-10-11) that an unconfirmed runner may
+      still turn totals off, with no confirm sheet, so
+      they meet this switch. The build keeps the drawn copy until design
+      words it. **Needed before launch.** **The ask:** the unconfirmed
+      runner's on and off lines.
+
+62. **What lane C (design 139) built beside a drawing.** The owner ruled
+    on all four on 2026-10-12: the first is an addition to drawn copy, and
+    the other three **ship as placeholders** until design draws them.
+    - **An addition to item 23's drawn copy (owner, 2026-10-12).** Under
+      "Think we got it wrong? Reply to the email we sent you." the notice
+      adds a fallback line for a runner who no longer has that email: "Or
+      write to desk@dialed.run.", in the same quiet type. The address is
+      `APPEAL_ADDRESS` (`lib/contracts/contact.ts`), not retyped. The
+      status region says it with the rest. **The ask:** draw it on Au1.
+    - **Placeholder: today's line for a digest that skipped an operator (OPS-11).** The
+      morning digest now goes only to a confirmed address. An operator
+      whose address is not confirmed is skipped, and on that UTC day
+      Today prints one line under its three numbers. The kicker is
+      `DIGEST NOT EMAILED`, in hi-viz because confirming needs a person,
+      and the sentence is "An operator's email address isn't confirmed, so
+      today's digest wasn't sent to them." Both are existing type, with
+      placeholder copy (`DigestUnconfirmed` in `ops/components/Today.tsx`).
+      D5 does not draw a skipped digest. **Ships as a placeholder.** **The
+      ask:** word it, and say where on Today it sits.
+    - **Placeholder: item 23's notice on Au2.** Round 27 draws the band on Au1 only.
+      Google on Au2 signs in an existing account, so a banned runner can
+      reach the same refusal from Create account. The build puts the same
+      band in the same place, first in the form region. **Ships as a
+      placeholder.** **The ask:** confirm it for Au2.
+    - **Placeholder: "over the empty form".** After a password log-in the gate refuses,
+      the build keeps what was typed in Email and Password, as every
+      other Au1 refusal does. A Google return arrives at an empty form
+      anyway. **Ships as a placeholder, fields kept.** **The ask:** say
+      whether "empty" means the fields are cleared.
 
 ## Answered in round 37 (imported 2026-10-10)
 
@@ -2799,7 +2880,9 @@ COPIED` · "Copying didn't work here. The link is selected: copy it
     at 7:42 PM." It is a field message on CURRENT PASSWORD, in local time
     with no seconds. The field stays usable, and pressing before then shows
     the message again. _Build:_ 126 (`currentPasswordLimited`, now in
-    `lib/contracts/`).
+    `lib/contracts/`). **Built on Change password too** (R-124, lane F):
+    the change is a server function now, so the per-runner count reaches
+    it.
 11. **H's two silent states.** _Confirmed, both:_ H's column, the back link
     and the sentence as the lead are the whole page. "This runner changed
     their name." links nowhere. "This runner isn't here." covers purged,
@@ -3247,7 +3330,16 @@ feed. "ui/shared" means `src/ui`, which 125 holds as the platform lane.
     "This account was closed for breaking the community rules." · "Think we
     got it wrong? Reply to the email we sent you." There is no case line.
     The same applies to a password log-in, and it never says whether the
-    password was right. _Build:_ 126, as built.
+    password was right. _Build:_ 126, as built. **Not built until lane C
+    (design 139):** neither sign-in path mapped `ACCOUNT_CLOSED` before
+    then. The band sits first in Au1's form region, and on Au2 too, where
+    Google can sign in an existing account. It is `safety`'s
+    `NoticeBand`. **One correction to the ruling's note:** the band does
+    confirm the password was right, because the gate refuses only after
+    the credentials check out (a wrong password still reads Au3). The
+    owner accepted that (2026-10-12): the account cannot be used, so the
+    confirmation opens nothing. The copy itself never claimed otherwise.
+    The owner also added a fallback line to the drawn copy (item 62).
 
 **C · Placeholders confirmed or redrawn**
 

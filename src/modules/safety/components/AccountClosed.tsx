@@ -1,83 +1,42 @@
 import type { JSX } from "react";
 
-import { APPEAL_ADDRESS } from "../../../lib/contracts/contact";
-import { Page, Wordmark } from "../../../ui";
+import { ACCOUNT_CLOSED_COPY } from "../../../lib/contracts/access";
+import { NoticeBand } from "./NoticeBand";
 
 /**
- * "16 September" on the board; the month goes first for en-US (round 26
- * #9, "Date order is US"). UTC, because a signed-out runner has no zone we
- * know, and a ban is a date, not a moment.
+ * Operator Screens D4, as design-deltas item 23 redrew it (round 27,
+ * "Au1 account closed Google"): what a banned runner sees when they try
+ * to sign in.
+ *
+ * *"D4's band on Au1, over the empty form, no case line. Same for a
+ * password log-in."* The board's note adds that it never says whether
+ * the password was right; it does, since the gate refuses only after the
+ * credentials check out, and the owner accepted that (2026-10-12): the
+ * account cannot be used. It is a notice band — round 27's ruling for every notice: "each notice
+ * lives on the thing it's about, as a §4a band sized to it", and "the
+ * kicker is the state that's still true". One ink rule, no hi-viz and no
+ * pink, because nothing here is the runner's to fix, and nothing to press.
+ *
+ * Not the full page D4 first drew: a banned runner's sessions are deleted
+ * with the ban (`banUser`) and the gate refuses every new one
+ * (`ban-gate.ts`), so there is no signed-in screen for a notice to
+ * replace. The sign-in page is the only place they can be told.
+ *
+ * No date and no reason. The board's sentence is a statement of the rule,
+ * and the operator's own words reach the runner in the ban email, which
+ * is also where an appeal goes (D-73): "Reply to the email we sent you."
+ * The owner added a fallback line under it, the appeal address
+ * (2026-10-12), for a runner who no longer has that email.
  */
-function closedOn(epochSeconds: number): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(epochSeconds * 1000));
-}
-
-/**
- * Operator Screens D4 · "The notice": what a banned runner opens to.
- *
- * *"It replaces the app. Declarative, complete, and it gives the reason in
- * the operator's words because a paraphrase would be the one hedge
- * available."* No button — *"there is nothing to do inside the app"* — no
- * pink and no hi-viz, and nothing animates. "Closed", not "banned": the
- * heading names the state the runner is in.
- *
- * The board's `CASE [B-0031]` is not drawn here: bans carry no case
- * number in the schema, and inventing one would be a reference nobody at
- * the desk could look up. Listed as a design delta.
- *
- * Nor is the board's "answers within a week": an appeal promises no
- * timeframe (decision D-73 — the service has one operator), so the line
- * says a person reads every message and stops there.
- */
-export function AccountClosed({
-  reason,
-  closedAt,
-}: Readonly<{
-  /**
-  The operator's own sentence, word for word.
-  */
-  reason: string;
-  closedAt: number;
-}>): JSX.Element {
+export function AccountClosed(): JSX.Element {
   return (
-    <Page width="panel">
-      <section
-        data-part="account-closed"
-        className="flex flex-col items-start gap-4"
-      >
-        {/* The plain lockup: its brackets are the only pink in it, and
-            D4 is "ink on paper only". */}
-        <Wordmark brackets={false} />
-        <h1 className="m-0 font-display text-display">
-          Your account is closed.
-        </h1>
-        <p className="m-0 text-body">
-          A person at dialed.run closed it on {closedOn(closedAt)}. This is the
-          reason they wrote down:
-        </p>
-        <blockquote className="m-0 border-l-2 border-ink pl-4 text-body">
-          {reason}
-        </blockquote>
-        <p className="m-0 text-body">
-          Your entries and photos are no longer public. Your sign-in no longer
-          works.
-        </p>
-        <p className="m-0 text-body text-quiet">
-          If you think this is wrong, write to{" "}
-          <a
-            data-target="inline"
-            className="text-ink underline"
-            href={`mailto:${APPEAL_ADDRESS}`}
-          >
-            {APPEAL_ADDRESS}
-          </a>
-          . A person reads every message.
-        </p>
-      </section>
-    </Page>
+    <div data-part="account-closed">
+      <NoticeBand
+        kicker={ACCOUNT_CLOSED_COPY.kicker}
+        message={ACCOUNT_CLOSED_COPY.message}
+        detail={ACCOUNT_CLOSED_COPY.detail}
+        more={ACCOUNT_CLOSED_COPY.appeal}
+      />
+    </div>
   );
 }

@@ -521,10 +521,12 @@ export type ResolveOutcome = "resolved" | "already_resolved" | "not_found";
 
 /**
  * A decision on a flagged handle (D-97, made in `account/handle-review`):
- * the queue's own outcomes, or `taken` — the placeholder Rename drew is
- * held by someone, and the operator presses Rename again.
+ * the queue's own outcomes; `taken`, where the placeholder Rename drew is
+ * held by someone, and the operator presses Rename again; or `moved`,
+ * where the handle changed before the rename landed, so nothing was done
+ * and the row stays open (R-121).
  */
-export type HandleReviewOutcome = ResolveOutcome | "taken";
+export type HandleReviewOutcome = ResolveOutcome | "taken" | "moved";
 
 /**
  * What `openRow` hands back: the subject to act on, or the reason there is
@@ -635,12 +637,15 @@ export async function resolveReview(
  * The queue row settled as `status`, as a statement for the caller's
  * batch — `resolveReview`'s own, and account's for a flagged handle's
  * Keep or Rename (D-97), whose subject writes are account's to make.
+ * `onlyIf` holds it back unless the change it records happens in the same
+ * batch: a force-rename that lost a race settles nothing (R-121).
  */
 export function reviewResolution(
   database: ReturnType<typeof drizzle>,
   queueId: string,
   reviewerId: string,
   status: "approved" | "removed",
+  onlyIf: SQL = sql`1`,
 ) {
   return database
     .update(reviewQueue)
@@ -652,7 +657,7 @@ export function reviewResolution(
       // look claimed to anything reading the lease.
       claimedAt: orSqlNull(undefined),
     })
-    .where(eq(reviewQueue.id, queueId));
+    .where(and(eq(reviewQueue.id, queueId), onlyIf));
 }
 
 /**

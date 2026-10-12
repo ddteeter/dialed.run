@@ -143,6 +143,9 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // ---- auth
   "auth/functions.ts getSession": "sessionless",
   "auth/functions.ts signedInQuery": "sessionless",
+  // R-124: changing the password is the runner's own, and it trusts no
+  // address — as Better Auth's endpoint, which it replaced, did not ask.
+  "auth/functions.ts changeCredentialFn": "unconfirmed",
   // ---- closet
   "closet/functions.ts listItemsFn": "unconfirmed",
   "closet/functions.ts closetNearbyFn": "unconfirmed",
@@ -216,6 +219,11 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "onboarding/functions.ts settingsQuery": "unconfirmed",
   "onboarding/functions.ts saveUnitsFn": "unconfirmed",
   "onboarding/functions.ts saveSharingFn": "unconfirmed",
+  // The runner's own setting, read for A3 — settingsQuery's class.
+  "onboarding/functions.ts countInTotalsQuery": "unconfirmed",
+  // D-108: the runner's own choice, visible to nobody, so an unconfirmed
+  // runner may opt out (owner, 2026-10-11).
+  "onboarding/functions.ts setCountInTotalsFn": "unconfirmed",
   "onboarding/functions.ts lookUpCityFn": "unconfirmed",
   "onboarding/functions.ts onboardingGateQuery": "sessionless",
   "onboarding/functions.ts namingOfferQuery": "unconfirmed",

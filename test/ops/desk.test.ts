@@ -56,6 +56,7 @@ describe("todayCounts", () => {
       bansAllTime: 0,
       gaveUp: 0,
       oldestGaveUpAt: undefined,
+      digestUnconfirmedAt: undefined,
     });
   });
 

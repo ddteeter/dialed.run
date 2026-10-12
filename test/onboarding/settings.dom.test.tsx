@@ -41,6 +41,7 @@ const ANSWERED: CurrentSettings = {
   tempUnit: "f",
   distanceUnit: "mi",
   defaultAudience: "runners",
+  countInTotals: true,
 };
 
 function row(name: RegExp) {
@@ -142,6 +143,7 @@ describe("the index (U1/N)", () => {
           tempUnit: "c",
           distanceUnit: "km",
           defaultAudience: "private",
+          countInTotals: false,
         }}
         runReminderEmail={false}
         blockedCount={0}
@@ -248,12 +250,14 @@ describe("the sub-pages", () => {
   it("are Units and Privacy by their section, each with its own form", async () => {
     const saveUnits = vi.fn().mockResolvedValue(undefined);
     const saveSharing = vi.fn().mockResolvedValue(undefined);
+    const saveCountInTotals = vi.fn().mockResolvedValue(undefined);
     const { unmount } = await renderWithRouter(
       <SettingsSectionPage
         section="units"
         current={ANSWERED}
         saveUnits={saveUnits}
         saveSharing={saveSharing}
+        saveCountInTotals={saveCountInTotals}
       />,
     );
     expect(
@@ -269,6 +273,7 @@ describe("the sub-pages", () => {
         current={ANSWERED}
         saveUnits={saveUnits}
         saveSharing={saveSharing}
+        saveCountInTotals={saveCountInTotals}
       />,
     );
     expect(
@@ -283,6 +288,13 @@ describe("the sub-pages", () => {
       data: { defaultAudience: "runners" },
     });
     expect(saveUnits).not.toHaveBeenCalled();
+    // D-108's switch sits beside the default and saves on its own.
+    expect(
+      screen.getByRole("checkbox", {
+        name: "Count my runs in anonymous totals",
+      }),
+    ).toBeChecked();
+    expect(saveCountInTotals).not.toHaveBeenCalled();
   });
 
   it("save units, and only units, from their own form", async () => {

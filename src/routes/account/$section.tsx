@@ -28,11 +28,11 @@ import {
 } from "../../modules/account/route-decisions";
 import { ChangePassword } from "../../modules/auth/components/ChangePassword";
 import { SignOutButton } from "../../modules/auth/components/SignOutButton";
+import { signOutEverywhere } from "../../modules/auth/credentials";
 import {
-  changePassword,
-  signOutEverywhere,
-} from "../../modules/auth/credentials";
-import { requireSession } from "../../modules/auth/functions";
+  changeCredentialFn,
+  requireSession,
+} from "../../modules/auth/functions";
 import {
   GoogleButton,
   useGoogleSignIn,
@@ -157,7 +157,7 @@ function AccountSectionRoute() {
         request={requestEmailChangeFn}
       />
     ),
-    password: <ChangePassword change={changePassword} />,
+    password: <ChangePassword change={changeCredentialFn} />,
     notifications: (
       <NotificationsForm
         current={page.notifications}

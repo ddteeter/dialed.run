@@ -22,6 +22,7 @@ import {
   CredentialFields,
   LoginCrossLink,
   SessionNotice,
+  TOTALS_LINE,
   useAuthForm,
 } from "../../src/modules/auth/auth-page";
 import { PasswordField } from "../../src/modules/auth/password-field";
@@ -32,6 +33,7 @@ import {
   useCarriedEmail,
 } from "../../src/modules/auth/carried-email";
 import type { CarriedForm } from "../../src/modules/auth/sign-in-search";
+import { AccountClosed } from "../../src/modules/safety/components/AccountClosed";
 
 /**
  * Au1–Au7 (round 22, `design/Auth.dc.html`), through the page both auth
@@ -101,6 +103,7 @@ function LogIn({
       form={form}
       cause={cause}
       google={google}
+      closed={<AccountClosed />}
       notice={<SessionNotice carried={carried} />}
       crossLink={<LoginCrossLink carried={carried} />}
       legal={<AuthLegal />}
@@ -492,6 +495,125 @@ describe("Au6 · a refusal Google's round trip brought back", () => {
   });
 });
 
+/**
+ * Design-deltas item 23 (round 27, "Au1 account closed Google"): *"D4's
+ * band on Au1, over the empty form, no case line. Same for a password
+ * log-in."* Shown only once the password checks out, so it does confirm
+ * the password — accepted by the owner, as the account cannot be used.
+ */
+describe("item 23 · a closed account", () => {
+  const CLOSED_STATUS =
+    "Account closed. This account was closed for breaking the community rules. Think we got it wrong? Reply to the email we sent you. Or write to desk@dialed.run.";
+
+  it("draws the notice over the form when the ban gate refuses a password log-in", async () => {
+    const { user, onSignedIn } = await logIn();
+    expect(part("account-closed")).toBeNull();
+    client.email.mockResolvedValue({
+      data: undefined,
+      error: { code: "ACCOUNT_CLOSED", status: 403, message: "spam" },
+    });
+    await fillAndSubmit(user);
+
+    const notice = await waitFor(() => {
+      const found = part("account-closed");
+      expect(found).not.toBeNull();
+      return found;
+    });
+    // Over the form: the first thing in the form's region.
+    expect(part("form")?.firstElementChild).toBe(notice);
+    expect(notice).toHaveTextContent(
+      "Think we got it wrong? Reply to the email we sent you.",
+    );
+    // Not Au4's band, not Au3's field, and not the operator's reason.
+    expect(part("failure-band")).toBeNull();
+    expect(part("form")).not.toHaveAttribute("data-state");
+    expect(screen.getByLabelText("Password")).not.toHaveAttribute(
+      "aria-invalid",
+    );
+    expect(document.body).not.toHaveTextContent("spam");
+    expect(screen.getByRole("status").textContent).toBe(CLOSED_STATUS);
+    expect(onSignedIn).not.toHaveBeenCalled();
+  });
+
+  it("goes when the next log-in is refused for another reason", async () => {
+    const { user } = await logIn();
+    client.email.mockResolvedValue({
+      data: undefined,
+      error: { code: "ACCOUNT_CLOSED", status: 403 },
+    });
+    await fillAndSubmit(user);
+    await screen.findByText(
+      "This account was closed for breaking the community rules.",
+    );
+
+    client.email.mockResolvedValue({
+      data: undefined,
+      error: { code: "INTERNAL", status: 500 },
+    });
+    await user.click(screen.getByRole("button", { name: "Log in" }));
+
+    await waitFor(() => {
+      expect(part("failure-band")).not.toBeNull();
+    });
+    expect(part("account-closed")).toBeNull();
+  });
+
+  it("draws the notice, and no Au6 band, when Google's round trip comes back closed", async () => {
+    await logIn({ returnedError: "ACCOUNT_CLOSED" });
+    const notice = part("account-closed");
+    expect(notice).toHaveTextContent(
+      "Account closedThis account was closed for breaking the community rules.",
+    );
+    expect(part("form")?.firstElementChild).toBe(notice);
+    expect(part("control-failure")).toBeNull();
+    expect(screen.queryByText(AUTH_COPY.google)).toBeNull();
+    expect(screen.getByRole("status").textContent).toBe(CLOSED_STATUS);
+  });
+
+  it("clears when the password form is submitted, so a wrong password shows Au3 alone", async () => {
+    const { user } = await logIn({ returnedError: "ACCOUNT_CLOSED" });
+    expect(part("account-closed")).not.toBeNull();
+    client.email.mockResolvedValue({
+      data: undefined,
+      error: { code: "INVALID_EMAIL_OR_PASSWORD", status: 401 },
+    });
+    await fillAndSubmit(user);
+
+    expect(await screen.findByText(AUTH_COPY.wrongPassword)).toBeVisible();
+    expect(part("account-closed")).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /^Not signed in\. One field needs a fix\.$/u,
+    );
+  });
+
+  it("clears on a submit even before the form's answer is back", async () => {
+    const { user } = await logIn({ returnedError: "ACCOUNT_CLOSED" });
+    client.email.mockReturnValue(
+      new Promise(() => {
+        // Never answers: only the press is under test.
+      }),
+    );
+    await fillAndSubmit(user);
+    await waitFor(() => {
+      expect(part("account-closed")).toBeNull();
+    });
+  });
+
+  it("clears once the runner tries Google again", async () => {
+    const { user } = await logIn({ returnedError: "ACCOUNT_CLOSED" });
+    client.social.mockResolvedValue({
+      data: { url: "https://accounts.example/consent" },
+      error: undefined,
+    });
+    await user.click(
+      screen.getByRole("button", { name: "Continue with Google" }),
+    );
+    await waitFor(() => {
+      expect(part("account-closed")).toBeNull();
+    });
+  });
+});
+
 describe("Au6 · Google failed", () => {
   it("puts the band under Google, not above Log in, and says so once", async () => {
     const { user, leave } = await logIn();
@@ -875,8 +997,14 @@ describe("AuthCrossLink and AuthLegal", () => {
     ).parentElement;
     expect(legal).toHaveClass("text-micro", "text-muted");
     expect(legal).toHaveTextContent(
-      /^By creating an account you agree to the Terms and have read the Privacy policy\.dialed\.run is for runners 18 and over\.$/u,
+      /^By creating an account you agree to the Terms and have read the Privacy policy\. Your runs count, without your name, in totals like the guides\. You can turn that off in Settings\.dialed\.run is for runners 18 and over\.$/u,
     );
+    // D-108 E, round 32 frame 2b: one sentence, verbatim, and no checkbox.
+    expect(TOTALS_LINE).toBe(
+      "Your runs count, without your name, in totals like the guides. You can turn that off in Settings.",
+    );
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Settings" })).toBeNull();
     const terms = screen.getByRole("link", { name: "Terms" });
     expect(terms).toHaveAttribute("href", "/terms");
     expect(terms).toHaveClass("text-ink", "underline", "underline-offset-4");

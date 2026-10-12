@@ -76,7 +76,9 @@ async function rename(
       actorId: input.reviewerId,
       reason: input.nameReason,
     }),
-    also: [reviewResolution(db, input.queueId, input.reviewerId, "removed")],
+    also: (onlyIf) => [
+      reviewResolution(db, input.queueId, input.reviewerId, "removed", onlyIf),
+    ],
   });
   return RENAMED[renamed.kind];
 }
@@ -85,6 +87,7 @@ const RENAMED = {
   renamed: "resolved",
   taken: "taken",
   not_found: "not_found",
+  moved: "moved",
 } as const satisfies Record<string, HandleReviewOutcome>;
 
 /**

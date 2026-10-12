@@ -40,7 +40,6 @@ describe("contact addresses", () => {
         CONTACT_FILE,
         "src/modules/email/deliver.ts",
         "src/modules/email/content.ts",
-        "src/modules/safety/components/AccountClosed.tsx",
       ]),
     );
     const offenders = Object.entries(production)

@@ -12,10 +12,11 @@
  * batch. The server function wires the two, because account reaches `ops`,
  * which reaches safety — an import from here would be a cycle.
  */
+import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import type { RenameReason } from "./contracts";
-import { moderationActionInsert } from "./moderation-actions";
+import { moderationActionInsertWhere } from "./moderation-actions";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -23,12 +24,15 @@ type Db = ReturnType<typeof drizzle>;
  * What a rename came to, as the Desk reads it — account's `ForcedRename`.
  * `taken` is a placeholder somebody holds, or held: rare at four digits,
  * and the operator presses Rename again (a request handler does one
- * attempt, law 3).
+ * attempt, law 3). `moved` is a handle that changed before the rename
+ * landed (another rename, or the runner's own pick), so nothing was done
+ * (R-121).
  */
 export type RenameOutcome =
   | { kind: "renamed"; username: string }
   | { kind: "not_found" }
-  | { kind: "taken" };
+  | { kind: "taken" }
+  | { kind: "moved" };
 
 /**
  * The placeholder handle: `runner_` and four digits. `digits` is a
@@ -53,16 +57,22 @@ export interface RenameRecordInput {
 }
 
 /**
- * The audit row for account's batch, given the handle that was taken away.
+ * The audit row for account's batch, given the handle that was taken away
+ * and account's condition that the rename still happens (R-121): a rename
+ * that lost a race records nothing.
  */
 export function renameRecord(db: Db, input: RenameRecordInput) {
-  return (previous: string) =>
-    moderationActionInsert(db, {
-      actorId: input.actorId,
-      action: "rename",
-      subjectType: "profile",
-      subjectId: input.userId,
-      subjectOwnerId: input.userId,
-      reason: `${input.reason} (was @${previous})`,
-    });
+  return (previous: string, onlyIf: SQL) =>
+    moderationActionInsertWhere(
+      db,
+      {
+        actorId: input.actorId,
+        action: "rename",
+        subjectType: "profile",
+        subjectId: input.userId,
+        subjectOwnerId: input.userId,
+        reason: `${input.reason} (was @${previous})`,
+      },
+      onlyIf,
+    );
 }

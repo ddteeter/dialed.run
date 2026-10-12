@@ -16,6 +16,7 @@ import {
 } from "../../modules/auth/auth-page";
 import { signUp } from "../../modules/auth/credentials";
 import { useGoogleSignIn } from "../../modules/auth/google-button";
+import { AccountClosed } from "../../modules/safety/components/AccountClosed";
 import {
   googleReturn,
   parseSignInSearch,
@@ -79,6 +80,7 @@ function SignupPage() {
       form={form}
       cause={cause}
       google={google}
+      closed={<AccountClosed />}
       legal={<AuthLegal />}
       turnstile={
         <Turnstile

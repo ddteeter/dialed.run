@@ -47,6 +47,7 @@ import {
 } from "../../src/modules/account/purge";
 import type { PurgeDeps } from "../../src/modules/account/purge";
 import { drainOutbox } from "../../src/modules/ops/outbox";
+import { ONLY_THEIRS_GONE, seedAthleteGaveUp } from "../gave-up-rows";
 
 /**
  * ACC-9: the purge at the end of a deletion's week. Every assertion is
@@ -1333,6 +1334,20 @@ describe("purgeDueAccounts — the Worker's own wiring", () => {
       revocationId: owed[0]?.id,
     });
     expect(anomalies).toStrictEqual([]);
+  });
+
+  it("forgets the athlete's dead-lettered reminders and no one else's (R-142)", async () => {
+    const runner = await seedAccount();
+    const [connection] = await core
+      .select({ athleteId: stravaConnections.athleteId })
+      .from(stravaConnections)
+      .where(eq(stravaConnections.userId, runner.userId));
+    const left = await seedAthleteGaveUp(connection?.athleteId ?? "");
+    await claim(runner.userId, nowSeconds() - 1);
+
+    await purgeDueAccounts([]);
+
+    expect(await left()).toStrictEqual(ONLY_THEIRS_GONE);
   });
 });
 

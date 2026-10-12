@@ -14,9 +14,12 @@ import {
 } from "../../ui";
 import { SignedOutPanel } from "../../ui/SignedOutPanel";
 import type { ControlFailure, FormShell } from "../../ui";
-import { IS_INVITE_ONLY } from "../../lib/contracts/access";
+import {
+  ACCOUNT_CLOSED_COPY,
+  IS_INVITE_ONLY,
+} from "../../lib/contracts/access";
 import { AGE_LINE } from "../../lib/contracts/age";
-import { authFailure, authStatus } from "./auth-copy";
+import { authFailure, authStatus, isAccountClosed } from "./auth-copy";
 import { GoogleButton, type GoogleSignIn } from "./google-button";
 import { PasswordField } from "./password-field";
 import type { CarriedForm } from "./sign-in-search";
@@ -56,6 +59,14 @@ export function AuthPage(
     onSubmit: () => void;
     google: GoogleSignIn;
     /**
+     * Design-deltas item 23's notice for a banned runner (safety's
+     * `AccountClosed`), drawn above the form only when the ban gate
+     * refused — a password log-in or Google's round trip alike. Passed
+     * in rather than imported, because it is another module's component
+     * and a route may pass it but not choose when it shows.
+     */
+    closed: ReactNode;
+    /**
   Au7's notice, above the heading. Absent on every ordinary visit.
   */
     notice?: ReactNode;
@@ -85,6 +96,11 @@ export function AuthPage(
   // off `props` where they are placed; the rest are the page's own.
   const { heading, submitLabel, pendingLabel, form, cause, google } = props;
   const band = authFailure(form.failure, cause);
+  // Item 23: "D4's band on Au1, over the empty form". Neither the form's
+  // band nor Google's speaks for it — there is nothing to try again — so
+  // the status region says the notice's own words.
+  const isClosed = google.closed || isAccountClosed(form.failure, cause);
+  const said = band ?? (isClosed ? CLOSED_SAID : undefined);
 
   return (
     <SignedOutPanel heading={heading} notice={props.notice}>
@@ -93,6 +109,7 @@ export function AuthPage(
         data-state={formState(band, form.summaryRows.length)}
         className="flex flex-col gap-4"
       >
+        {isClosed ? props.closed : undefined}
         {/* noValidate: the browser's own bubbles are a second, unstyled
               error system that fires before ours and says "Please fill in
               this field" — banned copy, and it would pre-empt the schema. */}
@@ -109,7 +126,7 @@ export function AuthPage(
           <FormStatus>
             {authStatus({
               status: form.status,
-              band,
+              band: said,
               google: google.failure,
             })}
           </FormStatus>
@@ -149,6 +166,15 @@ export function AuthPage(
     </SignedOutPanel>
   );
 }
+
+/**
+ * Item 23's notice as the status region says it: the kicker, the sentence
+ * and both appeal lines, so a screen reader hears all the band shows.
+ */
+const CLOSED_SAID = {
+  kicker: ACCOUNT_CLOSED_COPY.kicker,
+  message: `${ACCOUNT_CLOSED_COPY.message} ${ACCOUNT_CLOSED_COPY.detail} ${ACCOUNT_CLOSED_COPY.appeal}`,
+};
 
 /**
  * Which of the board's form states this is, by its own `data-state`
@@ -249,6 +275,10 @@ export function LoginCrossLink({
  * policy, and the age line. Never under Au1 (D-52). No checkbox: creating
  * the account is the acceptance, and the server records the terms'
  * version and when as the account is made (`account/terms-acceptance`).
+ *
+ * The terms line ends with D-108 E's disclosure (round 32, frame 2b): one
+ * sentence, no checkbox and no onboarding step. "Settings" is not a link
+ * on the board, and a visitor without an account has no Settings to open.
  */
 export function AuthLegal(): JSX.Element {
   return (
@@ -262,7 +292,7 @@ export function AuthLegal(): JSX.Element {
         <Link data-target="inline" to="/privacy" className={INLINE_LINK}>
           Privacy policy
         </Link>
-        .
+        . {TOTALS_LINE}
       </p>
       <p className="m-0">{AGE_LINE}</p>
     </div>
@@ -270,6 +300,12 @@ export function AuthLegal(): JSX.Element {
 }
 
 const INLINE_LINK = "text-ink underline underline-offset-4";
+
+/**
+Au2's anonymous-totals sentence (D-108 E), verbatim from round 32.
+*/
+export const TOTALS_LINE =
+  "Your runs count, without your name, in totals like the guides. You can turn that off in Settings.";
 
 /**
  * Au7's notice: *"an ink block (square, --hiviz-text eyebrow on ink only)

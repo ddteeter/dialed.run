@@ -16,6 +16,7 @@ import {
 } from "../../modules/auth/auth-page";
 import { signIn } from "../../modules/auth/credentials";
 import { useGoogleSignIn } from "../../modules/auth/google-button";
+import { AccountClosed } from "../../modules/safety/components/AccountClosed";
 import { useCarriedEmail } from "../../modules/auth/carried-email";
 import {
   googleReturn,
@@ -69,6 +70,7 @@ function LoginPage() {
       form={form}
       cause={cause}
       google={google}
+      closed={<AccountClosed />}
       notice={<SessionNotice carried={search.carried} />}
       crossLink={
         <LoginCrossLink carried={search.carried} redirect={search.redirect} />

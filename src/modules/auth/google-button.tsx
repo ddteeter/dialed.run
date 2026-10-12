@@ -6,6 +6,7 @@
 import { useRef, useState } from "react";
 import type { JSX } from "react";
 
+import { ACCOUNT_CLOSED_CODE } from "../../lib/contracts/access";
 import { PendingLabel, inFlight, useControlAction } from "../../ui";
 import type { ControlAction } from "../../ui";
 import {
@@ -29,9 +30,17 @@ export interface GoogleSignIn extends ControlAction<[]> {
    */
   failure: AuthBand | undefined;
   /**
+   * Google's round trip came back refused by the ban gate
+   * (`?error=ACCOUNT_CLOSED`, task 128 · SAF-4). Not a band under this
+   * button: design-deltas item 23's notice, which the page draws above
+   * the form.
+   */
+  closed: boolean;
+  /**
    * Au5: *"The other form stays live: tapping Log in cancels the Google
    * attempt."* An answer for a cancelled attempt is dropped rather than
-   * followed, so the runner is not carried off to Google mid-submit.
+   * followed, so the runner is not carried off to Google mid-submit, and
+   * a refusal Google's round trip brought back is cleared with it.
    */
   cancel: () => void;
 }
@@ -143,13 +152,17 @@ export function useGoogleSignIn({
   });
   const failed =
     control.failure === undefined ? undefined : (refusal ?? FAILED);
+  // A closed account's return is the page's notice, not this button's band.
+  const isClosed = showsReturned && returnedError === ACCOUNT_CLOSED_CODE;
   const failure =
-    failed ?? (showsReturned ? returnedFailure(returnedError) : undefined);
+    failed ??
+    (showsReturned && !isClosed ? returnedFailure(returnedError) : undefined);
 
   return {
     ...control,
     pending: control.pending && live !== undefined,
     failure,
+    closed: isClosed,
     // Always a fresh attempt: Google's takes no arguments, so repeating
     // the failed one and starting anew are the same call — and a failure
     // Google's round trip brought back has no attempt of this page's to
@@ -160,6 +173,10 @@ export function useGoogleSignIn({
     cancel: () => {
       wanted.current = undefined;
       setLive(undefined);
+      // What Google's last round trip brought back is old news once the
+      // runner submits the form: a closed account's notice beside the
+      // form's own Au4 band would be two answers to one press.
+      setShowsReturned(false);
     },
   };
 }

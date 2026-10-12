@@ -9,6 +9,7 @@ import {
   AUTH_COPY,
   AUTH_KICKER,
   AccessRefused,
+  AccountClosedRefusal,
   AuthRejected,
   GOOGLE_REFUSALS,
   NOT_CREATED,
@@ -17,6 +18,7 @@ import {
   SIGNUP_DISABLED,
   authFailure,
   authStatus,
+  isAccountClosed,
   turnstileRefused,
 } from "../../src/modules/auth/auth-copy";
 
@@ -39,6 +41,15 @@ describe("authFailure", () => {
     expect(
       authFailure({ kind: "server", message: "x" }, new AuthRejected(500)),
     ).toStrictEqual({ kicker: AUTH_KICKER, message: AUTH_COPY.server });
+  });
+
+  it("has no band for a closed account, whose notice sits above the form (item 23)", () => {
+    const failure = { kind: "server", message: "x" } as const;
+    expect(authFailure(failure, new AccountClosedRefusal())).toBeUndefined();
+    expect(isAccountClosed(failure, new AccountClosedRefusal())).toBe(true);
+    // Only while that submit's failure stands, and only for that refusal.
+    expect(isAccountClosed(undefined, new AccountClosedRefusal())).toBe(false);
+    expect(isAccountClosed(failure, new AuthRejected(403))).toBe(false);
   });
 
   it("lets a refusal of the way in say its own kicker and words", () => {

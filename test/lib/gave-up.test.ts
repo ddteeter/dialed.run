@@ -1,10 +1,11 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import {
   gaveUpClear,
+  gaveUpClearPrefix,
   gaveUpUpsert,
   giveUpEach,
   type GaveUpWrites,
@@ -92,6 +93,21 @@ describe("gaveUpUpsert", () => {
   });
 });
 
+describe("gaveUpUpsert under a condition (R-142)", () => {
+  it("writes neither the row nor its update unless the condition holds", async () => {
+    const fact = { kind: "reminder", reason: "No.", tries: 2 } as const;
+    await gaveUpUpsert(db(), { ...fact, subjectId: "held" }, 100, sql`1 = 0`);
+    expect(await gaveUpRow("reminder", "held")).toBeUndefined();
+
+    await gaveUpUpsert(db(), { ...fact, subjectId: "kept" }, 100, sql`1 = 1`);
+    await gaveUpUpsert(db(), { ...fact, subjectId: "kept" }, 200, sql`1 = 0`);
+    expect(await gaveUpRow("reminder", "kept")).toMatchObject({
+      tries: 2,
+      lastFailedAt: 100,
+    });
+  });
+});
+
 describe("gaveUpClear", () => {
   it("forgets one job and only that one", async () => {
     const fact = { reason: "x", tries: 1 };
@@ -108,6 +124,51 @@ describe("gaveUpClear", () => {
 
   it("is a no-op for a job with no row", async () => {
     await expect(gaveUpClear(db(), "import", "none")).resolves.toBeDefined();
+  });
+});
+
+describe("gaveUpClearPrefix (R-142)", () => {
+  it("forgets every job of the kind whose subject starts with the prefix, and nothing either side", async () => {
+    const fact = { reason: "x", tries: 1 };
+    // "&" is 0x26: "%" sorts just below it and "'" just above, so the
+    // range's two ends are each tried by a subject sitting on them.
+    const subjects = ["a=1%", "a=1&", "a=1&b=2", "a=1'", "a=12&b=2"];
+    for (const subjectId of subjects) {
+      await gaveUpUpsert(db(), { ...fact, kind: "reminder", subjectId });
+    }
+    await gaveUpUpsert(db(), { ...fact, kind: "import", subjectId: "a=1&b" });
+
+    await gaveUpClearPrefix(db(), "reminder", "a=1&");
+
+    const left = await db()
+      .select({ kind: gaveUp.kind, subjectId: gaveUp.subjectId })
+      .from(gaveUp)
+      .orderBy(gaveUp.kind, gaveUp.subjectId);
+    expect(left).toStrictEqual([
+      { kind: "import", subjectId: "a=1&b" },
+      { kind: "reminder", subjectId: "a=1%" },
+      { kind: "reminder", subjectId: "a=1'" },
+      { kind: "reminder", subjectId: "a=12&b=2" },
+    ]);
+  });
+
+  it("finds the rows through the (kind, subject) index, not a scan", async () => {
+    const query = gaveUpClearPrefix(db(), "reminder", "a=1&").toSQL();
+    const { results } = await env.DIALED_CORE.prepare(
+      `EXPLAIN QUERY PLAN ${query.sql}`,
+    )
+      .bind(...query.params)
+      .all<{ detail: string }>();
+
+    expect(results.map((row) => row.detail).join("\n")).toMatch(
+      /USING (COVERING )?INDEX gave_up_kind_subject \(kind=\? AND subject_id>\? AND subject_id<\?\)/u,
+    );
+  });
+
+  it("refuses an empty prefix, which would be every row of the kind", () => {
+    expect(() => gaveUpClearPrefix(db(), "reminder", "")).toThrow(
+      new RangeError("an empty prefix would clear every row of the kind"),
+    );
   });
 });
 

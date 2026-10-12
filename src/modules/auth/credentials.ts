@@ -1,6 +1,7 @@
 import {
   ACCESS_CODES,
   ACCESS_HEADERS,
+  ACCOUNT_CLOSED_CODE,
   INVITE_COPY,
 } from "../../lib/contracts/access";
 import {
@@ -12,6 +13,7 @@ import { forgetSession } from "../../lib/browser/session-memo";
 import {
   AUTH_COPY,
   AccessRefused,
+  AccountClosedRefusal,
   AuthRejected,
   GOOGLE_REFUSALS,
   ageRefused,
@@ -122,18 +124,6 @@ const SIGN_UP_REFUSALS: FieldRefusals = new Map([
 ]);
 
 /**
- * ACC-7: a wrong current password on its own field, a breached new one on
- * the new one's.
- */
-const CHANGE_PASSWORD_REFUSALS: FieldRefusals = new Map([
-  [
-    "INVALID_PASSWORD",
-    { field: "currentPassword", message: AUTH_COPY.currentPasswordWrong },
-  ],
-  [BREACHED_CODE, BREACHED_REFUSAL],
-]);
-
-/**
  * Better Auth's `{ error }` answer, thrown as the failure the form draws:
  * a known refusal on its field, anything else for the band.
  */
@@ -153,8 +143,16 @@ interface SignInValues {
   password: string;
 }
 
+/**
+ * A refusal from the ban gate (`ACCOUNT_CLOSED`) is neither a field nor
+ * the band: it is design-deltas item 23's notice, which the page draws
+ * above the form. The gate refuses only after the password checks out,
+ * so the notice does confirm it was right; the owner accepted that,
+ * because the account cannot be used (2026-10-12).
+ */
 export async function signIn(values: SignInValues): Promise<void> {
   const { error } = await authClient.signIn.email(values);
+  if (error?.code === ACCOUNT_CLOSED_CODE) throw new AccountClosedRefusal();
   throwIfRefused(error, SIGN_IN_REFUSALS);
   // A different runner may be signed in now: what the browser remembered
   // about the last one (`lib/browser/session-memo`) is not about them.
@@ -252,21 +250,6 @@ export async function resetPassword(
   });
   if (error?.code === INVALID_TOKEN) throw new ResetLinkExpired();
   throwIfRefused(error, NEW_PASSWORD_REFUSALS);
-}
-
-/**
- * ACC-7. Every other session ends with the old password: a change is
- * usually a runner who suspects someone else has it.
- */
-export async function changePassword(
-  values: Readonly<{ currentPassword: string; password: string }>,
-): Promise<void> {
-  const { error } = await authClient.changePassword({
-    currentPassword: values.currentPassword,
-    newPassword: values.password,
-    revokeOtherSessions: true,
-  });
-  throwIfRefused(error, CHANGE_PASSWORD_REFUSALS);
 }
 
 /**
