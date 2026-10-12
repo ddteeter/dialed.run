@@ -24,12 +24,15 @@ type Db = ReturnType<typeof drizzle>;
  * What a rename came to, as the Desk reads it — account's `ForcedRename`.
  * `taken` is a placeholder somebody holds, or held: rare at four digits,
  * and the operator presses Rename again (a request handler does one
- * attempt, law 3).
+ * attempt, law 3). `moved` is a handle that changed before the rename
+ * landed (another rename, or the runner's own pick), so nothing was done
+ * (R-121).
  */
 export type RenameOutcome =
   | { kind: "renamed"; username: string }
   | { kind: "not_found" }
-  | { kind: "taken" };
+  | { kind: "taken" }
+  | { kind: "moved" };
 
 /**
  * The placeholder handle: `runner_` and four digits. `digits` is a

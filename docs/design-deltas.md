@@ -930,6 +930,16 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
+45. **A Rename that lost a race (R-121, PR #184).** A force-rename now
+    writes nothing when the handle changed between its read and its write,
+    whether through another moderator's rename or the runner's own new
+    pick. It used to report the rename as done. D8 · Runners and a flagged
+    handle's review row both answer it the way they answer a taken
+    placeholder: `NOT RENAMED` in the row's control band, and on the review
+    row, the row stays open. The sentence is placeholder copy: "The handle
+    changed before the rename landed. Nothing was renamed." (`renameMessage`
+    in `safety/components/DeskRunners.tsx`). **The ask:** word it.
+
 ## Answered in rounds 35–36 (imported 2026-10-10)
 
 Design sent round 35 as `Round 35 Rulings.dc.html`, with the text of record

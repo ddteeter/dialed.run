@@ -1232,7 +1232,7 @@ describe("forceRename (round 27 #16), through account's rules", () => {
     expect(kept?.createdAt).toBeTypeOf("number");
   });
 
-  it("answers with the handle it gave when the profile is gone by the time it looks", async () => {
+  it("answers not_found when the profile is gone by the time it looks", async () => {
     const runner = await makeUser({ username: "rudename" });
     const real = core();
     const counter = { batches: 0 };
@@ -1254,12 +1254,11 @@ describe("forceRename (round 27 #16), through account's rules", () => {
     });
 
     expect(await rename(runner, "runner_0002", purged)).toStrictEqual({
-      kind: "renamed",
-      username: "runner_0002",
+      kind: "not_found",
     });
   });
 
-  it("lets a rename that lost a race write nothing, and answer with the winner's handle (R-121)", async () => {
+  it("lets a rename that lost a race write nothing, and say so rather than renamed (R-121)", async () => {
     const runner = await makeUser({ username: "first" });
     await claimUsername(core(), runner, "rudename", CLEAR);
     // Both moderators read "rudename". The other's rename lands between
@@ -1281,8 +1280,7 @@ describe("forceRename (round 27 #16), through account's rules", () => {
 
     // This one would have handed back the runner's own old "first".
     expect(await rename(runner, "first", raced)).toStrictEqual({
-      kind: "renamed",
-      username: "runner_0001",
+      kind: "moved",
     });
 
     const profile = await profileOf(runner);

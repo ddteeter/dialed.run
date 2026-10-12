@@ -398,7 +398,13 @@ export async function claimUsername(
 export type ForcedRename =
   | { readonly kind: "renamed"; readonly username: string }
   | { readonly kind: "not_found" }
-  | { readonly kind: "taken" };
+  | { readonly kind: "taken" }
+  /**
+   * The handle changed between the read that decided and the batch (a
+   * racing rename, or the runner's own new pick), so nothing was written
+   * (R-121).
+   */
+  | { readonly kind: "moved" };
 
 export interface ForceRenameRequest {
   readonly userId: string;
@@ -418,11 +424,11 @@ export interface ForceRenameRequest {
   readonly recordedAs: (previous: string, onlyIf: SQL) => BatchItem<"sqlite">;
   /**
    * Anything else the rename settles, in its batch — the Desk's review
-   * row when the rename answers a flagged handle (D-97). Not conditional:
-   * if a racing rename took the handle first, it is gone all the same,
-   * which is all a settled review says.
+   * row when the rename answers a flagged handle (D-97). It is given the
+   * same condition as the audit row, so a rename that did not happen
+   * settles nothing.
    */
-  readonly also?: readonly BatchItem<"sqlite">[] | undefined;
+  readonly also?: ((onlyIf: SQL) => readonly BatchItem<"sqlite">[]) | undefined;
 }
 
 /**
@@ -460,10 +466,11 @@ function ownUnlocked(userId: string, handle: string) {
  * the user id alone, both batches wrote, and the later silently replaced
  * the first rename: its placeholder went into nobody's history, and the
  * audit said two renames happened. So every write carries "the profile
- * still holds `previous`". The history row, the clean-up and the audit row
- * test it; the profile update is keyed on it and runs last. A rename that
- * lost writes nothing, and answers with the handle the profile holds now,
- * the way a repeated submission does (law 8b).
+ * still holds `previous`". The history row, the clean-up, the audit row
+ * and whatever the caller settles with it (`also`) test it; the profile
+ * update is keyed on it and runs last. A rename that lost writes nothing
+ * and answers `moved`, never `renamed`, so the Desk does not report a
+ * rename that did not happen.
  */
 export async function forceRename(
   db: Db,
@@ -499,7 +506,7 @@ export async function forceRename(
         }),
       db.delete(usernameHistory).where(ownUnlockedWhile),
       request.recordedAs(previous, held),
-      ...(request.also ?? []),
+      ...(request.also?.(held) ?? []),
       // Last, so every statement above reads the handle before it changes.
       db
         .update(userProfiles)
@@ -517,9 +524,13 @@ export async function forceRename(
     if (isHandleIndexViolation(error)) return { kind: "taken" };
     throw error;
   }
-  // Whichever rename won, this is the handle the runner holds now.
+  // The batch cannot say whether its guarded writes ran, so the profile
+  // does: holding the new handle means this rename landed.
   const after = await profileOf(db, userId);
-  return { kind: "renamed", username: after?.username ?? username };
+  if (after === undefined) return { kind: "not_found" };
+  return after.username === username
+    ? { kind: "renamed", username }
+    : { kind: "moved" };
 }
 
 /**
