@@ -1232,6 +1232,33 @@ describe("forceRename (round 27 #16), through account's rules", () => {
     expect(kept?.createdAt).toBeTypeOf("number");
   });
 
+  it("answers with the handle it gave when the profile is gone by the time it looks", async () => {
+    const runner = await makeUser({ username: "rudename" });
+    const real = core();
+    const counter = { batches: 0 };
+    // The account's purge lands between the rename's write and its read.
+    const batch: typeof real.batch = async (items) => {
+      counter.batches += 1;
+      const results = await real.batch(items);
+      if (counter.batches === 2) {
+        await real.delete(userProfiles).where(eq(userProfiles.userId, runner));
+      }
+      return results;
+    };
+    const purged = new Proxy(real, {
+      get(target, property, receiver): unknown {
+        return property === "batch"
+          ? batch
+          : Reflect.get(target, property, receiver);
+      },
+    });
+
+    expect(await rename(runner, "runner_0002", purged)).toStrictEqual({
+      kind: "renamed",
+      username: "runner_0002",
+    });
+  });
+
   it("lets a rename that lost a race write nothing, and answer with the winner's handle (R-121)", async () => {
     const runner = await makeUser({ username: "first" });
     await claimUsername(core(), runner, "rudename", CLEAR);
