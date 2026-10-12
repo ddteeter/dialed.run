@@ -35,6 +35,13 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     cityLabel: text("city_label"),
     lat: real("lat"),
     lng: real("lng"),
+    // The IANA zone the place above is in (design 142), looked up from
+    // Visual Crossing when the place is saved and never typed by the
+    // runner. `onboarding/profile.ts`'s place writer is its one writer and
+    // writes it with the place, so it cannot describe a city the row no
+    // longer holds. NULL beside coordinates means the lookup has not
+    // succeeded yet, and the hourly fill re-drives it.
+    timeZone: text("time_zone"),
     thermalLevel: integer("thermal_level"),
     tempUnit: text("temp_unit", { enum: ["f", "c"] }),
     distanceUnit: text("distance_unit", { enum: ["mi", "km"] }),
