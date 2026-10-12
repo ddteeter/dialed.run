@@ -17,8 +17,8 @@ the profile. It is derived from the home city and never typed by the runner.
   NULL, so the zone can never describe a city the profile no longer holds.
 - **Lookup before the write** (`onboarding/time-zone.ts`, `zoneForPlace`).
   This is a read that decides what to write, so it goes first, and the place
-  and zone land in one upsert. The lookup is weather's new `timeZoneAt(lat,
-  lng)`, exported through its index. It is `forecast(lat, lng, now).timeZone`:
+  and zone land in one upsert. The lookup is weather's new `timeZoneAt`,
+  exported through its index. It is `forecast(lat, lng, now).timeZone`:
   the same Visual Crossing client, timeout, zod parse and `isTimeZone` check,
   and the same observation cache, so there is no second way to call Visual
   Crossing. It is handed in (`ZoneDeps`), as `lookUpCity`'s resolver is.
@@ -28,8 +28,8 @@ the profile. It is derived from the home city and never typed by the runner.
 - **Reconciliation, not an outbox.** A NULL zone on a row with coordinates is
   the "not finished" marker. The hourly `weather-retry` (`:00`) firing gains
   a last step, `fillMissingTimeZones`: up to 10 such rows, looked up in
-  parallel. Each is written with a compare-and-set (`WHERE lat = ? AND lng = ?
-  AND time_zone IS NULL`), so a place changed mid-lookup is never given the
+  parallel. Each is written with a compare-and-set on the same coordinates and a
+  still-NULL zone, so a place changed mid-lookup is never given the
   old zone, and overlapping firings write once. No new cron. `ops` imports
   `onboarding`'s index directly, because onboarding's barrel does not reach
   `ops`, so there is no cycle and no `DailyUpkeep` field is needed.
@@ -61,8 +61,8 @@ the profile. It is derived from the home city and never typed by the runner.
 ## Open questions
 
 - The fill's query has no index. `user_profiles` is one row per runner, and
-  the scan runs hourly. A partial index `WHERE time_zone IS NULL AND lat IS
-  NOT NULL` would make it free, but the owner asked for a single ADD COLUMN.
+  the scan runs hourly. A partial index on rows with coordinates and no
+  zone would make it free, but the owner asked for a single ADD COLUMN.
   Proceeding without it; the index can be added in a later migration.
 - A row that Visual Crossing answers with no usable zone is asked again
   every hour, 10 rows at most. Proceeding; Visual Crossing names a zone for

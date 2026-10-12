@@ -79,6 +79,17 @@ Key decisions embedded here:
   `user_profiles.username_screen = 'unknown'`, and the `screening-retry`
   firing re-drives it through `DailyUpkeep.rescreenHandles`, handed in by
   `src/server.ts` because `ops` cannot import `account`. No new cron.
+- **The runner's time zone is cached on the profile and derived, never
+  typed** (design 142). `user_profiles.time_zone` is written only by
+  onboarding's place writer, in the same statement as the place, from
+  weather's `timeZoneAt`. That is `forecast` for now, read for its zone, so
+  there is no second way to call Visual Crossing. A failed lookup saves the
+  place with a NULL zone, and that NULL beside coordinates is the marker the
+  `:00` firing's last step, `fillMissingTimeZones`, re-drives (law 8c,
+  reconciliation). `ops` imports onboarding's index for it directly, because
+  onboarding's barrel never reaches `ops`. No new cron. The one read is
+  onboarding's `runnerTimeZone`: the profile, then the latest observed run,
+  then UTC.
 - **Weather is an adapter** (`modules/weather/provider/`). Visual Crossing is
   the first implementation; swapping providers is a one-directory change.
   (The design artboards label the forecast "NWS" — that's a design delta, not
@@ -166,6 +177,8 @@ flowchart TD
     CLOSET -->|index.ts only| PROD
     FEED -->|index.ts only| PROD
     OPS[modules/ops] -->|index.ts only| WX
+    ONB -->|index.ts only: the city lookup and the zone| WX
+    OPS -->|index.ts only: the :00 zone fill| ONB
     SAFE[modules/safety] --> DB
     FEED -->|index.ts only| SAFE
     CLOSET -->|index.ts only| AUTH
