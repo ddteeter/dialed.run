@@ -31,13 +31,11 @@ import { banStateOf, type BanState } from "./bans";
  * the status, because 403 alone says "forbidden" and a runner whose
  * account is closed is owed a statement, not a fault.
  *
- * It also carries the operator's reason, word for word, and when the ban
- * was made. Design-deltas item 23's band prints neither — the ban email
- * carries the reason — but Google's error redirect forwards the message
- * as `error_description`, and nothing reads it. Nobody reaches this hook without having
- * proved they are the account's owner — a session is created only after
- * the credentials or the OAuth callback check out — so the reason goes to
- * the person it was written to and to nobody else.
+ * **The code and nothing else.** Not the operator's reason and not the
+ * ban's date: design-deltas item 23's band prints neither (the ban email
+ * carries the reason), and Better Auth forwards a refusal's message into
+ * Google's error redirect as `error_description` — a URL, which lands in
+ * browser history and the edge's request logs.
  */
 export function banGate(
   stateOf: (userId: string) => Promise<BanState> = banStateOf,
@@ -52,11 +50,7 @@ export function banGate(
               before: async (session: { userId: string }) => {
                 const state = await stateOf(session.userId);
                 if (!state.banned) return;
-                throw new APIError("FORBIDDEN", {
-                  code: ACCOUNT_CLOSED_CODE,
-                  message: state.reason ?? "",
-                  closedAt: state.bannedAt,
-                });
+                throw new APIError("FORBIDDEN", { code: ACCOUNT_CLOSED_CODE });
               },
             },
           },
