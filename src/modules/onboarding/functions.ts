@@ -13,7 +13,7 @@ import { optionalUserId, requireUserId } from "../auth";
 import { nameItem } from "../closet";
 import { coverageLadder } from "../feed";
 import { captureException } from "../ops";
-import { climateNormals, resolvePlace } from "../weather";
+import { climateNormals, resolvePlace, timeZoneAt } from "../weather";
 import { countsInTotals, setCountInTotals } from "./aggregate-prefs";
 import {
   brandPrefixInput,
@@ -40,6 +40,11 @@ function db() {
   return drizzle(env.DIALED_CORE);
 }
 
+/**
+The place writer's zone lookup and where its failures go (design 142).
+*/
+const zones = { zoneAt: timeZoneAt, report: captureException };
+
 export const callLadderQuery = createServerFn({ method: "GET" }).handler(
   async () => ladderFrom(await coverageLadder(await requireUserId())),
 );
@@ -51,7 +56,7 @@ export const localeUnitsQuery = createServerFn({ method: "GET" }).handler(() =>
 export const saveCalibrationFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => calibrationInput.parse(data))
   .handler(async ({ data }) =>
-    saveCalibration(db(), await requireUserId(), data),
+    saveCalibration(db(), await requireUserId(), data, zones),
   );
 
 export const starterListQuery = createServerFn({ method: "GET" }).handler(

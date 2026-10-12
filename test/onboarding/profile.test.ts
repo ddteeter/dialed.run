@@ -20,6 +20,7 @@ import {
   savePreferences,
 } from "../../src/modules/onboarding/profile";
 import { makeUser, resetTables } from "../feed/helpers";
+import { NO_ZONE } from "./zone-deps";
 
 function coreDb() {
   return drizzle(env.DIALED_CORE);
@@ -45,14 +46,19 @@ describe("saveCalibration", () => {
     // an UPDATE would affect nothing while reporting success.
     const userId = newUlid();
 
-    await saveCalibration(coreDb(), userId, {
-      thermalLevel: 2,
-      cityLabel: "Minneapolis, MN",
-      lat: 44.98,
-      lng: -93.27,
-      tempUnit: "f",
-      distanceUnit: "mi",
-    });
+    await saveCalibration(
+      coreDb(),
+      userId,
+      {
+        thermalLevel: 2,
+        cityLabel: "Minneapolis, MN",
+        lat: 44.98,
+        lng: -93.27,
+        tempUnit: "f",
+        distanceUnit: "mi",
+      },
+      NO_ZONE,
+    );
 
     expect(await profileOf(userId)).toMatchObject({
       thermalLevel: 2,
@@ -71,7 +77,7 @@ describe("saveCalibration", () => {
     });
     await completeOnboarding(coreDb(), userId);
 
-    await saveCalibration(coreDb(), userId, { thermalLevel: -1 });
+    await saveCalibration(coreDb(), userId, { thermalLevel: -1 }, NO_ZONE);
 
     expect(await profileOf(userId)).toMatchObject({
       username: "Ada",
@@ -83,17 +89,27 @@ describe("saveCalibration", () => {
 
   it("replaces a place whole: a new label never keeps the old coordinates", async () => {
     const userId = newUlid();
-    await saveCalibration(coreDb(), userId, {
-      thermalLevel: 0,
-      cityLabel: "Minneapolis, MN",
-      lat: 44.98,
-      lng: -93.27,
-    });
+    await saveCalibration(
+      coreDb(),
+      userId,
+      {
+        thermalLevel: 0,
+        cityLabel: "Minneapolis, MN",
+        lat: 44.98,
+        lng: -93.27,
+      },
+      NO_ZONE,
+    );
 
-    await saveCalibration(coreDb(), userId, {
-      thermalLevel: 0,
-      cityLabel: "Austin, TX",
-    });
+    await saveCalibration(
+      coreDb(),
+      userId,
+      {
+        thermalLevel: 0,
+        cityLabel: "Austin, TX",
+      },
+      NO_ZONE,
+    );
 
     const row = await profileOf(userId);
     expect(row?.cityLabel).toBe("Austin, TX");
@@ -103,18 +119,28 @@ describe("saveCalibration", () => {
 
   it("replaces a place whole: located coordinates never keep the old label", async () => {
     const userId = newUlid();
-    await saveCalibration(coreDb(), userId, {
-      thermalLevel: 0,
-      cityLabel: "Minneapolis, MN",
-      lat: 44.98,
-      lng: -93.27,
-    });
+    await saveCalibration(
+      coreDb(),
+      userId,
+      {
+        thermalLevel: 0,
+        cityLabel: "Minneapolis, MN",
+        lat: 44.98,
+        lng: -93.27,
+      },
+      NO_ZONE,
+    );
 
-    await saveCalibration(coreDb(), userId, {
-      thermalLevel: 0,
-      lat: 30.27,
-      lng: -97.74,
-    });
+    await saveCalibration(
+      coreDb(),
+      userId,
+      {
+        thermalLevel: 0,
+        lat: 30.27,
+        lng: -97.74,
+      },
+      NO_ZONE,
+    );
 
     const row = await profileOf(userId);
     expect(row?.cityLabel).toBeNull();
@@ -123,14 +149,19 @@ describe("saveCalibration", () => {
 
   it("keeps the stored place when a recalibration names none", async () => {
     const userId = newUlid();
-    await saveCalibration(coreDb(), userId, {
-      thermalLevel: 0,
-      cityLabel: "Minneapolis, MN",
-      lat: 44.98,
-      lng: -93.27,
-    });
+    await saveCalibration(
+      coreDb(),
+      userId,
+      {
+        thermalLevel: 0,
+        cityLabel: "Minneapolis, MN",
+        lat: 44.98,
+        lng: -93.27,
+      },
+      NO_ZONE,
+    );
 
-    await saveCalibration(coreDb(), userId, { thermalLevel: 2 });
+    await saveCalibration(coreDb(), userId, { thermalLevel: 2 }, NO_ZONE);
 
     expect(await profileOf(userId)).toMatchObject({
       thermalLevel: 2,
@@ -145,7 +176,7 @@ describe("saveCalibration", () => {
     // except the thermal level is optional.
     const userId = newUlid();
 
-    await saveCalibration(coreDb(), userId, { thermalLevel: 0 });
+    await saveCalibration(coreDb(), userId, { thermalLevel: 0 }, NO_ZONE);
 
     const row = await profileOf(userId);
     expect(row?.thermalLevel).toBe(0);
@@ -174,7 +205,9 @@ describe("savePlace — the one writer of the profile's place (FEED-5)", () => {
   it("creates the profile row with all three columns, and answers with them", async () => {
     const userId = newUlid();
 
-    expect(await savePlace(coreDb(), userId, PORTLAND)).toStrictEqual(PORTLAND);
+    expect(await savePlace(coreDb(), userId, PORTLAND, NO_ZONE)).toStrictEqual(
+      PORTLAND,
+    );
 
     expect(await profileOf(userId)).toMatchObject(PORTLAND);
   });
@@ -184,16 +217,21 @@ describe("savePlace — the one writer of the profile's place (FEED-5)", () => {
       username: "Ada",
       defaultAudience: "private",
     });
-    await saveCalibration(coreDb(), userId, {
-      thermalLevel: 1,
-      cityLabel: "Minneapolis, MN, United States",
-      lat: 44.98,
-      lng: -93.27,
-      tempUnit: "c",
-      distanceUnit: "km",
-    });
+    await saveCalibration(
+      coreDb(),
+      userId,
+      {
+        thermalLevel: 1,
+        cityLabel: "Minneapolis, MN, United States",
+        lat: 44.98,
+        lng: -93.27,
+        tempUnit: "c",
+        distanceUnit: "km",
+      },
+      NO_ZONE,
+    );
 
-    await savePlace(coreDb(), userId, PORTLAND);
+    await savePlace(coreDb(), userId, PORTLAND, NO_ZONE);
 
     expect(await profileOf(userId)).toMatchObject({
       ...PORTLAND,
@@ -209,8 +247,13 @@ describe("savePlace — the one writer of the profile's place (FEED-5)", () => {
     const fromConditions = newUlid();
     const fromO1 = newUlid();
 
-    await savePlace(coreDb(), fromConditions, PORTLAND);
-    await saveCalibration(coreDb(), fromO1, { thermalLevel: 0, ...PORTLAND });
+    await savePlace(coreDb(), fromConditions, PORTLAND, NO_ZONE);
+    await saveCalibration(
+      coreDb(),
+      fromO1,
+      { thermalLevel: 0, ...PORTLAND },
+      NO_ZONE,
+    );
 
     const [a, b] = [await profileOf(fromConditions), await profileOf(fromO1)];
     const place = (row: typeof a) => ({
@@ -278,7 +321,7 @@ describe("completeOnboarding and hasOnboarded", () => {
     // The flag flips at P3, not at O1 — someone who bails halfway is
     // offered the rest again.
     const userId = newUlid();
-    await saveCalibration(coreDb(), userId, { thermalLevel: 1 });
+    await saveCalibration(coreDb(), userId, { thermalLevel: 1 }, NO_ZONE);
 
     expect(await hasOnboarded(coreDb(), userId)).toBe(false);
   });
@@ -424,10 +467,15 @@ describe("savePreferences and currentSettings", () => {
     // The two screens write disjoint column sets on purpose. Saving units
     // must not silently un-answer the one question O1 asks.
     const userId = newUlid();
-    await saveCalibration(coreDb(), userId, {
-      thermalLevel: 2,
-      cityLabel: "Minneapolis",
-    });
+    await saveCalibration(
+      coreDb(),
+      userId,
+      {
+        thermalLevel: 2,
+        cityLabel: "Minneapolis",
+      },
+      NO_ZONE,
+    );
 
     await savePreferences(coreDb(), userId, {
       tempUnit: "c",
@@ -455,11 +503,16 @@ describe("savePreferences and currentSettings", () => {
       defaultAudience: "private",
     });
 
-    await saveCalibration(coreDb(), userId, {
-      thermalLevel: -1,
-      tempUnit: "c",
-      distanceUnit: "km",
-    });
+    await saveCalibration(
+      coreDb(),
+      userId,
+      {
+        thermalLevel: -1,
+        tempUnit: "c",
+        distanceUnit: "km",
+      },
+      NO_ZONE,
+    );
 
     expect(await currentSettings(coreDb(), userId)).toMatchObject({
       thermalLevel: -1,
@@ -572,7 +625,7 @@ describe("savePreferences and currentSettings", () => {
     // per-user default preference." The default half of that is a column
     // default, and this is what reads it.
     const userId = newUlid();
-    await saveCalibration(coreDb(), userId, { thermalLevel: 0 });
+    await saveCalibration(coreDb(), userId, { thermalLevel: 0 }, NO_ZONE);
 
     const settings = await currentSettings(coreDb(), userId);
     expect(settings.defaultAudience).toBe("runners");
@@ -611,7 +664,7 @@ describe("requiresOnboarding", () => {
     // strands: O1 answered, tab closed, `onboarding_complete` still false.
     // Every step past O1 is skippable, so bailing has to be recoverable.
     const userId = newUlid();
-    await saveCalibration(coreDb(), userId, { thermalLevel: 1 });
+    await saveCalibration(coreDb(), userId, { thermalLevel: 1 }, NO_ZONE);
 
     expect(await requiresOnboarding(coreDb(), userId)).toBe(true);
   });

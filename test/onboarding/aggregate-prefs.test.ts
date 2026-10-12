@@ -16,6 +16,7 @@ import {
   saveCalibration,
 } from "../../src/modules/onboarding/profile";
 import { addAccount, makeUser, resetTables } from "../feed/helpers";
+import { NO_ZONE } from "./zone-deps";
 
 /**
  * D-108 D's per-runner setting: whether the runner's runs count in
@@ -62,7 +63,7 @@ describe("setCountInTotals", () => {
       username: "ada",
       defaultAudience: "private",
     });
-    await saveCalibration(coreDb(), userId, { thermalLevel: 1 });
+    await saveCalibration(coreDb(), userId, { thermalLevel: 1 }, NO_ZONE);
     await completeOnboarding(coreDb(), userId);
 
     await setCountInTotals(coreDb(), userId, { countInTotals: false });

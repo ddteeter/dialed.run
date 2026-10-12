@@ -8,6 +8,7 @@ import { newUlid } from "../../src/lib/ids";
 import { conditionsHome } from "../../src/modules/feed/home";
 import { savePlace } from "../../src/modules/onboarding";
 import { makeUser } from "./helpers";
+import { NO_ZONE } from "../onboarding/zone-deps";
 
 /**
  * Where Your conditions looks without asking (round 22). A typed city
@@ -35,10 +36,15 @@ describe("conditionsHome", () => {
 
   it("reads back a saved place and its label", async () => {
     const userId = await makeUser();
-    await savePlace(drizzle(env.DIALED_CORE), userId, {
-      ...PORTLAND,
-      cityLabel: "Portland, OR, United States",
-    });
+    await savePlace(
+      drizzle(env.DIALED_CORE),
+      userId,
+      {
+        ...PORTLAND,
+        cityLabel: "Portland, OR, United States",
+      },
+      NO_ZONE,
+    );
     expect(await conditionsHome(userId)).toStrictEqual({
       coords: PORTLAND,
       cityLabel: "Portland, OR, United States",
