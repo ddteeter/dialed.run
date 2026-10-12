@@ -13,7 +13,9 @@ import { TotalsSwitch } from "./TotalsSwitch";
  *   applies": an unconfirmed runner's run saves private (D-50), and it
  *   counts in no total either (D-108 C).
  * - **Counted**, the disclosure, with Change.
- * - **Opted out**, "just 'Only you see this run.'"
+ * - **Opted out**, the board's "just 'Only you see this run.'", now
+ *   "Other runners won't see this run." (owner, D-121: private means not
+ *   shown to other runners or the public; design deltas item 62).
  *
  * **Change opens Settings › Sharing as a sheet**, over the form rather
  * than in place of it, so the verdict, chips and tags being picked are
@@ -23,7 +25,7 @@ import { TotalsSwitch } from "./TotalsSwitch";
  */
 export const PRIVATE_UNCONFIRMED =
   "Confirm your email to share. This run saves private.";
-export const PRIVATE_ONLY_YOU = "Only you see this run.";
+export const PRIVATE_ONLY_YOU = "Other runners won't see this run.";
 export const PRIVATE_COUNTED =
   "Its kit and verdict still count, anonymously, in the guides.";
 

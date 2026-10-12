@@ -44,7 +44,7 @@ describe("TotalsSwitch (round 32, frames 1a and 1b)", () => {
   it("says the drawn copy, verbatim", () => {
     expect(TOTALS_LABEL).toBe("Count my runs in anonymous totals");
     expect(TOTALS_ON).toBe(
-      "Shared and private runs add their temperature, kit and verdict to the guides and reports. Never your name, notes, photos, or where and when you ran.",
+      "Shared and private runs add their temperature, kit and verdict to the guides and reports. Never your name, notes, photos, when you ran, or any place more precise than a broad climate zone.",
     );
     expect(TOTALS_OFF).toBe(
       "Off. Your runs leave the guides at tonight's update. Reports already published stay as they are.",
@@ -157,7 +157,7 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     expect(PRIVATE_UNCONFIRMED).toBe(
       "Confirm your email to share. This run saves private.",
     );
-    expect(PRIVATE_ONLY_YOU).toBe("Only you see this run.");
+    expect(PRIVATE_ONLY_YOU).toBe("Other runners won't see this run.");
     expect(PRIVATE_COUNTED).toBe(
       "Its kit and verdict still count, anonymously, in the guides.",
     );

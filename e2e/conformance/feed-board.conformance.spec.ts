@@ -79,7 +79,7 @@ test("the author's own entry under review: the tag in the author row on the card
         .innerText(),
     ).toBe(drawn.tag);
     await expect(post.locator('a[href^="/feed/entry/"]')).toHaveAccessibleName(
-      /Under review, only you can see this/u,
+      /Under review, other runners can't see this/u,
     );
     await expect(post.getByText(/· You$/u)).toBeVisible();
 
@@ -87,7 +87,7 @@ test("the author's own entry under review: the tag in the author row on the card
     await hydrated(page);
     const band = page.locator('[data-part="notice-band"]');
     await expect(band).toContainText(
-      "Only you can see this while we look at it.",
+      "Other runners can't see this while we look at it.",
     );
     await expect(band).toContainText("You can still edit or delete it.");
     expect(await band.locator("span").first().innerText()).toBe(

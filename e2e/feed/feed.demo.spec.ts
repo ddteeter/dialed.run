@@ -726,7 +726,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     );
     await expect(
       ownCard.locator('a[href^="/feed/entry/"]'),
-    ).toHaveAccessibleName(/Under review, only you can see this/u);
+    ).toHaveAccessibleName(/Under review, other runners can't see this/u);
     await expect(ownCard.getByText(/· You$/u)).toBeVisible();
     await expect(ownCard.getByText("1 / 2")).toBeVisible();
     await scene(page, "D · HIDDEN WHILE WE CHECK, at the top");
@@ -734,7 +734,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await hydrated(page);
     const hiddenBand = page.locator('[data-part="notice-band"]');
     await expect(hiddenBand).toContainText(
-      "Only you can see this while we look at it.",
+      "Other runners can't see this while we look at it.",
     );
     await expect(hiddenBand).toContainText("You can still edit or delete it.");
     await expect(page.locator('[data-part="review-tag"]')).toHaveCount(0);

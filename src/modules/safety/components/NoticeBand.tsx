@@ -48,7 +48,7 @@ export function PhotoBeingChecked(): JSX.Element {
   return (
     <NoticeBand
       kicker="Being checked"
-      message="Only you can see this photo until it's checked, usually within a day."
+      message="Other runners can't see this photo until it's checked, usually within a day."
     />
   );
 }

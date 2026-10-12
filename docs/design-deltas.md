@@ -1035,6 +1035,36 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       neither words nor a place; a signed-in runner already has the reason
       itself. Not built. **The ask:** the words and where they sit in W1.
 
+64. **"Private" no longer says "only you" (owner, 2026-10-12; D-121, PR
+    #182).** The policy now says private means not shown to other runners
+    or the public; operators may see content for named reasons. Lane D1
+    (PR #187) rewrote the drawn copy that promised more, against the
+    boards' words:
+    - A3/PrivateRunLine: "Only you see this run." → "Other runners won't
+      see this run."
+    - The UNDER REVIEW tag's spoken name (round 29 #4): "Under review,
+      only you can see this" → "Under review, other runners can't see
+      this".
+    - D's "Hidden while we check" band (round 28 #6): "Only you can see
+      this while we look at it." → "Other runners can't see this while we
+      look at it."
+    - The garment photo's "Being checked" band (round 27 #21): "Only you
+      can see this photo until it's checked, usually within a day." →
+      "Other runners can't see this photo until it's checked, usually
+      within a day."
+    - The export's `audience` column note: "private means only you" →
+      "private means other runners don't see it".
+    - **Kept:** the closet tile's `[ONLY YOU]` tag on a photo being
+      checked. It is a MONO.xs tag in a tile's kicker, where "other runners
+      can't see this" does not fit, and the band on the garment's own page
+      says the full sentence.
+    - Settings › Sharing's totals line (round 32, 1a): "Never your name,
+      notes, photos, or where and when you ran." → "Never your name,
+      notes, photos, when you ran, or any place more precise than a broad
+      climate zone." Totals count a climate zone derived from where a run
+      was (D-120), so "where" was untrue.
+      **The ask:** fold these into the boards, or reword them.
+
 ## Answered in round 37 (imported 2026-10-10)
 
 Design sent round 37 as `Round 37 Rulings.dc.html`, with the text of record

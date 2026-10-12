@@ -8,11 +8,14 @@ import type { CountInTotalsChoice } from "../inputs";
 
 /**
  * Settings › Sharing's "Count my runs in anonymous totals" (D-108 D;
- * round 32, frames 1a and 1b). The copy is the board's, verbatim.
+ * round 32, frames 1a and 1b). The copy is the board's, but for `TOTALS_ON`'s
+ * last sentence: totals count a broad climate zone derived from where a run
+ * was (D-120), so the board's "where and when you ran" became untrue
+ * (owner, 2026-10-12; a design delta).
  */
 export const TOTALS_LABEL = "Count my runs in anonymous totals";
 export const TOTALS_ON =
-  "Shared and private runs add their temperature, kit and verdict to the guides and reports. Never your name, notes, photos, or where and when you ran.";
+  "Shared and private runs add their temperature, kit and verdict to the guides and reports. Never your name, notes, photos, when you ran, or any place more precise than a broad climate zone.";
 export const TOTALS_OFF =
   "Off. Your runs leave the guides at tonight's update. Reports already published stay as they are.";
 
