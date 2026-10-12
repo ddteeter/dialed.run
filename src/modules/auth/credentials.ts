@@ -1,6 +1,7 @@
 import {
   ACCESS_CODES,
   ACCESS_HEADERS,
+  ACCOUNT_CLOSED_CODE,
   INVITE_COPY,
 } from "../../lib/contracts/access";
 import {
@@ -12,6 +13,7 @@ import { forgetSession } from "../../lib/browser/session-memo";
 import {
   AUTH_COPY,
   AccessRefused,
+  AccountClosedRefusal,
   AuthRejected,
   GOOGLE_REFUSALS,
   ageRefused,
@@ -141,8 +143,14 @@ interface SignInValues {
   password: string;
 }
 
+/**
+ * A refusal from the ban gate (`ACCOUNT_CLOSED`) is neither a field nor
+ * the band: it is design-deltas item 23's notice, which the page draws
+ * above the form — and which never says whether the password was right.
+ */
 export async function signIn(values: SignInValues): Promise<void> {
   const { error } = await authClient.signIn.email(values);
+  if (error?.code === ACCOUNT_CLOSED_CODE) throw new AccountClosedRefusal();
   throwIfRefused(error, SIGN_IN_REFUSALS);
   // A different runner may be signed in now: what the browser remembered
   // about the last one (`lib/browser/session-memo`) is not about them.

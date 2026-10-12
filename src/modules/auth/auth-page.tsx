@@ -14,9 +14,12 @@ import {
 } from "../../ui";
 import { SignedOutPanel } from "../../ui/SignedOutPanel";
 import type { ControlFailure, FormShell } from "../../ui";
-import { IS_INVITE_ONLY } from "../../lib/contracts/access";
+import {
+  ACCOUNT_CLOSED_COPY,
+  IS_INVITE_ONLY,
+} from "../../lib/contracts/access";
 import { AGE_LINE } from "../../lib/contracts/age";
-import { authFailure, authStatus } from "./auth-copy";
+import { authFailure, authStatus, isAccountClosed } from "./auth-copy";
 import { GoogleButton, type GoogleSignIn } from "./google-button";
 import { PasswordField } from "./password-field";
 import type { CarriedForm } from "./sign-in-search";
@@ -56,6 +59,14 @@ export function AuthPage(
     onSubmit: () => void;
     google: GoogleSignIn;
     /**
+     * Design-deltas item 23's notice for a banned runner (safety's
+     * `AccountClosed`), drawn above the form only when the ban gate
+     * refused — a password log-in or Google's round trip alike. Passed
+     * in rather than imported, because it is another module's component
+     * and a route may pass it but not choose when it shows.
+     */
+    closed: ReactNode;
+    /**
   Au7's notice, above the heading. Absent on every ordinary visit.
   */
     notice?: ReactNode;
@@ -85,6 +96,11 @@ export function AuthPage(
   // off `props` where they are placed; the rest are the page's own.
   const { heading, submitLabel, pendingLabel, form, cause, google } = props;
   const band = authFailure(form.failure, cause);
+  // Item 23: "D4's band on Au1, over the empty form". Neither the form's
+  // band nor Google's speaks for it — there is nothing to try again — so
+  // the status region says the notice's own words.
+  const isClosed = google.closed || isAccountClosed(form.failure, cause);
+  const said = band ?? (isClosed ? ACCOUNT_CLOSED_COPY : undefined);
 
   return (
     <SignedOutPanel heading={heading} notice={props.notice}>
@@ -93,6 +109,7 @@ export function AuthPage(
         data-state={formState(band, form.summaryRows.length)}
         className="flex flex-col gap-4"
       >
+        {isClosed ? props.closed : undefined}
         {/* noValidate: the browser's own bubbles are a second, unstyled
               error system that fires before ours and says "Please fill in
               this field" — banned copy, and it would pre-empt the schema. */}
@@ -109,7 +126,7 @@ export function AuthPage(
           <FormStatus>
             {authStatus({
               status: form.status,
-              band,
+              band: said,
               google: google.failure,
             })}
           </FormStatus>

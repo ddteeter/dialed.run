@@ -16,8 +16,8 @@ suites against an enforced policy. `entryCardResponse` has no caller
 
 - **SAF-4, built to the board.** Design-deltas item 23 (Round 27 Rulings,
   "Au1 account closed Google") is newer than Operator Screens D4. It
-  draws D4 as a notice band on Au1, over the form at rest: `ACCOUNT
-  CLOSED` · "This account was closed for breaking the community rules."
+  draws D4 as a notice band on Au1, over the form at rest:
+  `ACCOUNT CLOSED` · "This account was closed for breaking the community rules."
   · "Think we got it wrong? Reply to the email we sent you." There is no
   date, no reason and no case line, and the same band serves a password
   log-in. So `safety/components/AccountClosed` becomes that band, built

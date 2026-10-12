@@ -209,14 +209,39 @@ export class AuthRejected extends Error {
 }
 
 /**
+ * The ban gate refused the sign-in (task 128 · SAF-4): the credentials
+ * were right and the account is closed. Not a failure the form's band
+ * says — there is nothing to try again — but design-deltas item 23's
+ * notice, drawn above the form (`AuthPage`'s `closed`).
+ */
+export class AccountClosedRefusal extends Error {
+  constructor() {
+    super("account closed");
+    this.name = "AccountClosedRefusal";
+  }
+}
+
+/**
+Whether the last submit was refused because the account is closed.
+*/
+export function isAccountClosed(
+  failure: FormFailure | undefined,
+  cause: unknown,
+): boolean {
+  return failure !== undefined && cause instanceof AccountClosedRefusal;
+}
+
+/**
  * The band for a failed submit — its kicker and its sentence — or nothing
- * when there is no band to show.
+ * when there is no band to show. A closed account has none: its notice
+ * sits above the form instead (design-deltas item 23).
  */
 export function authFailure(
   failure: FormFailure | undefined,
   cause: unknown,
 ): AuthBand | undefined {
   if (failure === undefined) return undefined;
+  if (cause instanceof AccountClosedRefusal) return undefined;
   if (cause instanceof AccessRefused) return cause;
   return { kicker: AUTH_KICKER, message: authFailureMessage(failure, cause) };
 }

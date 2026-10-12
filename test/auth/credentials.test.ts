@@ -9,6 +9,7 @@ import { INVITE_COPY, TURNSTILE_REFUSED } from "../../src/lib/contracts/access";
 import {
   AUTH_COPY,
   AccessRefused,
+  AccountClosedRefusal,
   AuthRejected,
 } from "../../src/modules/auth/auth-copy";
 import {
@@ -112,6 +113,22 @@ describe("signIn", () => {
       message: AUTH_COPY.wrongPassword,
       issues: [{ path: ["password"], message: AUTH_COPY.wrongPassword }],
     });
+  });
+
+  it("throws the ban gate's refusal as a closed account, neither a field nor the band (SAF-4)", async () => {
+    rememberForSession("u1", "has-handle");
+    client.email.mockResolvedValue({
+      data: undefined,
+      error: { code: "ACCOUNT_CLOSED", status: 403 },
+    });
+    const thrown = await caught(signIn(person));
+    expect(thrown).toBeInstanceOf(AccountClosedRefusal);
+    expect(thrown).toMatchObject({
+      name: "AccountClosedRefusal",
+      message: "account closed",
+    });
+    // Nobody was signed in.
+    expect(isRememberedForSession("has-handle")).toBe(true);
   });
 
   it("keeps any other refusal's status for the band", async () => {

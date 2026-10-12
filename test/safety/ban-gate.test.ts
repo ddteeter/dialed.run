@@ -6,17 +6,13 @@ import { z } from "zod";
 import { session, user } from "../../src/db/schema-auth";
 import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { ACCOUNT_CLOSED_CODE } from "../../src/lib/contracts/access";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { createAuth } from "../../src/modules/auth/create-auth";
 import { recordingMail } from "../auth/mail-recorder";
 import { OPEN_ACCESS } from "../auth/open-access";
-import {
-  ACCOUNT_CLOSED_CODE,
-  banGate,
-  banUser,
-  unbanUser,
-} from "../../src/modules/safety";
+import { banGate, banUser, unbanUser } from "../../src/modules/safety";
 
 /**
  * SAF-4's sign-in block, through Better Auth itself on real D1: the gate

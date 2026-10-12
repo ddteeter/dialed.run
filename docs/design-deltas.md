@@ -467,7 +467,10 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
       `ACCOUNT_CLOSED` — and a refused Google sign-in reaches that form as
       a redirect carrying the reason but not the date D4 prints. **The
       ask:** drop the case line or say what it names; and what D4 says
-      when it has the reason but no date.
+      when it has the reason but no date. **ANSWERED by round 27 (#23,
+      #30) and built by lane C (design 139):** D4 is a notice band on Au1
+      and Au2 with the board's fixed copy: no case line, no date and no
+      reason. `AccountClosed` is that band now.
 
 32. **Two sizes the contracts do not give, found in the owner's UI review
     (PR "UI polish: fields beside buttons, the closet's rows, A2/A3 at
@@ -3297,7 +3300,11 @@ feed. "ui/shared" means `src/ui`, which 125 holds as the platform lane.
     "This account was closed for breaking the community rules." · "Think we
     got it wrong? Reply to the email we sent you." There is no case line.
     The same applies to a password log-in, and it never says whether the
-    password was right. _Build:_ 126, as built.
+    password was right. _Build:_ 126, as built. **Not built until lane C
+    (design 139):** neither sign-in path mapped `ACCOUNT_CLOSED` before
+    then. The band sits first in Au1's form region, and on Au2 too, where
+    Google can sign in an existing account. It is `safety`'s
+    `NoticeBand`.
 
 **C · Placeholders confirmed or redrawn**
 

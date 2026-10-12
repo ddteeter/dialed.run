@@ -33,6 +33,7 @@ import {
   useCarriedEmail,
 } from "../../src/modules/auth/carried-email";
 import type { CarriedForm } from "../../src/modules/auth/sign-in-search";
+import { AccountClosed } from "../../src/modules/safety/components/AccountClosed";
 
 /**
  * Au1–Au7 (round 22, `design/Auth.dc.html`), through the page both auth
@@ -102,6 +103,7 @@ function LogIn({
       form={form}
       cause={cause}
       google={google}
+      closed={<AccountClosed />}
       notice={<SessionNotice carried={carried} />}
       crossLink={<LoginCrossLink carried={carried} />}
       legal={<AuthLegal />}
@@ -490,6 +492,95 @@ describe("Au6 · a refusal Google's round trip brought back", () => {
     });
     expect(client.social).toHaveBeenCalledTimes(1);
     expect(part("control-failure")).toBeNull();
+  });
+});
+
+/**
+ * Design-deltas item 23 (round 27, "Au1 account closed Google"): *"D4's
+ * band on Au1, over the empty form, no case line. Same for a password
+ * log-in. It never says whether the password was right."*
+ */
+describe("item 23 · a closed account", () => {
+  const CLOSED_STATUS =
+    "Account closed. This account was closed for breaking the community rules.";
+
+  it("draws the notice over the form when the ban gate refuses a password log-in", async () => {
+    const { user, onSignedIn } = await logIn();
+    expect(part("account-closed")).toBeNull();
+    client.email.mockResolvedValue({
+      data: undefined,
+      error: { code: "ACCOUNT_CLOSED", status: 403, message: "spam" },
+    });
+    await fillAndSubmit(user);
+
+    const notice = await waitFor(() => {
+      const found = part("account-closed");
+      expect(found).not.toBeNull();
+      return found;
+    });
+    // Over the form: the first thing in the form's region.
+    expect(part("form")?.firstElementChild).toBe(notice);
+    expect(notice).toHaveTextContent(
+      "Think we got it wrong? Reply to the email we sent you.",
+    );
+    // Not Au4's band, not Au3's field, and not the operator's reason.
+    expect(part("failure-band")).toBeNull();
+    expect(part("form")).not.toHaveAttribute("data-state");
+    expect(screen.getByLabelText("Password")).not.toHaveAttribute(
+      "aria-invalid",
+    );
+    expect(document.body).not.toHaveTextContent("spam");
+    expect(screen.getByRole("status")).toHaveTextContent(CLOSED_STATUS);
+    expect(onSignedIn).not.toHaveBeenCalled();
+  });
+
+  it("goes when the next log-in is refused for another reason", async () => {
+    const { user } = await logIn();
+    client.email.mockResolvedValue({
+      data: undefined,
+      error: { code: "ACCOUNT_CLOSED", status: 403 },
+    });
+    await fillAndSubmit(user);
+    await screen.findByText(
+      "This account was closed for breaking the community rules.",
+    );
+
+    client.email.mockResolvedValue({
+      data: undefined,
+      error: { code: "INTERNAL", status: 500 },
+    });
+    await user.click(screen.getByRole("button", { name: "Log in" }));
+
+    await waitFor(() => {
+      expect(part("failure-band")).not.toBeNull();
+    });
+    expect(part("account-closed")).toBeNull();
+  });
+
+  it("draws the notice, and no Au6 band, when Google's round trip comes back closed", async () => {
+    await logIn({ returnedError: "ACCOUNT_CLOSED" });
+    const notice = part("account-closed");
+    expect(notice).toHaveTextContent(
+      "Account closedThis account was closed for breaking the community rules.",
+    );
+    expect(part("form")?.firstElementChild).toBe(notice);
+    expect(part("control-failure")).toBeNull();
+    expect(screen.queryByText(AUTH_COPY.google)).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent(CLOSED_STATUS);
+  });
+
+  it("clears once the runner tries Google again", async () => {
+    const { user } = await logIn({ returnedError: "ACCOUNT_CLOSED" });
+    client.social.mockResolvedValue({
+      data: { url: "https://accounts.example/consent" },
+      error: undefined,
+    });
+    await user.click(
+      screen.getByRole("button", { name: "Continue with Google" }),
+    );
+    await waitFor(() => {
+      expect(part("account-closed")).toBeNull();
+    });
   });
 });
 

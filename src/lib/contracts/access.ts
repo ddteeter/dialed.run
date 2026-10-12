@@ -136,3 +136,24 @@ export const ACCESS_CODES = {
   missing: "INVITE_MISSING",
   invalid: "INVITE_INVALID",
 } as const;
+
+/**
+ * The ban gate's refusal (task 128 · SAF-4, `safety/ban-gate.ts`): the
+ * code a refused sign-in carries, here rather than beside the gate so the
+ * sign-in forms can read it without importing the server's auth plugin.
+ * Google's round trip brings it back as `?error=ACCOUNT_CLOSED`.
+ */
+export const ACCOUNT_CLOSED_CODE = "ACCOUNT_CLOSED";
+
+/**
+ * Design-deltas item 23 (round 27, "Au1 account closed Google"): D4's
+ * band on Au1, word for word. The same for a password log-in, and it
+ * never says whether the password was right. No date, no reason and no
+ * case line (round 27 #30): the ban email carries the reason, and an
+ * appeal is a reply to it (D-73).
+ */
+export const ACCOUNT_CLOSED_COPY = {
+  kicker: "Account closed",
+  message: "This account was closed for breaking the community rules.",
+  detail: "Think we got it wrong? Reply to the email we sent you.",
+} as const;
