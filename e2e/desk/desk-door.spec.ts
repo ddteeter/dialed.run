@@ -7,6 +7,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { z } from "zod";
 
+import { CSP_HEADER } from "../../src/modules/ops/security-headers";
 import { storageStateFor } from "../support/accounts";
 
 test.describe("anyone who is not an operator", () => {
@@ -37,7 +38,7 @@ test.describe("anyone who is not an operator", () => {
 The script nonce a response's CSP names, or "" for none.
 */
 function nonceIn(headers: Record<string, string>): string {
-  const policy = headers["content-security-policy-report-only"] ?? "";
+  const policy = headers[CSP_HEADER.toLowerCase()] ?? "";
   return /'nonce-([^']+)'/.exec(policy)?.[1] ?? "";
 }
 
@@ -122,7 +123,7 @@ test.describe("security headers (OPS-8)", () => {
     const headers = response.headers();
 
     expect(response.status()).toBe(200);
-    expect(headers["content-security-policy-report-only"]).toContain(
+    expect(headers[CSP_HEADER.toLowerCase()]).toContain(
       "frame-ancestors 'none'",
     );
     expect(headers["x-frame-options"]).toBe("DENY");
