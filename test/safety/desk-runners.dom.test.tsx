@@ -219,6 +219,9 @@ describe("Rename (round 27 #16)", () => {
     expect(renameMessage({ kind: "taken" })).toBe(
       "That placeholder is taken. Press Rename again.",
     );
+    expect(renameMessage({ kind: "moved" })).toBe(
+      "The handle changed before the rename landed. Nothing was renamed.",
+    );
     expect(renameMessage({ kind: "not_found" })).toBe(
       "This runner has no handle to take away.",
     );

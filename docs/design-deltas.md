@@ -930,6 +930,16 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
+45. **A Rename that lost a race (R-121, PR #184).** A force-rename now
+    writes nothing when the handle changed between its read and its write,
+    whether through another moderator's rename or the runner's own new
+    pick. It used to report the rename as done. D8 · Runners and a flagged
+    handle's review row both answer it the way they answer a taken
+    placeholder: `NOT RENAMED` in the row's control band, and on the review
+    row, the row stays open. The sentence is placeholder copy: "The handle
+    changed before the rename landed. Nothing was renamed." (`renameMessage`
+    in `safety/components/DeskRunners.tsx`). **The ask:** word it.
+
 ## Answered in round 37 (imported 2026-10-10)
 
 Design sent round 37 as `Round 37 Rulings.dc.html`, with the text of record
@@ -2799,7 +2809,9 @@ COPIED` · "Copying didn't work here. The link is selected: copy it
     at 7:42 PM." It is a field message on CURRENT PASSWORD, in local time
     with no seconds. The field stays usable, and pressing before then shows
     the message again. _Build:_ 126 (`currentPasswordLimited`, now in
-    `lib/contracts/`).
+    `lib/contracts/`). **Built on Change password too** (R-124, lane F):
+    the change is a server function now, so the per-runner count reaches
+    it.
 11. **H's two silent states.** _Confirmed, both:_ H's column, the back link
     and the sentence as the lead are the whole page. "This runner changed
     their name." links nowhere. "This runner isn't here." covers purged,

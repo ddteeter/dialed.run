@@ -21,6 +21,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { env } from "../../env";
 import { auth } from "./instance";
 import { activeUserId, keepableUserId } from "./leaving-gate";
+import { changeOwnPassword, type PasswordChange } from "./change-password";
 import { checkOwnPassword, type PasswordCheck } from "./password-check";
 import {
   optionalUserIdFrom,
@@ -171,4 +172,20 @@ export async function requireSignedInSince(): Promise<{
   );
   await activeUserId(db(), signedIn.userId);
   return signedIn;
+}
+
+/**
+ * ACC-7's Change password for `userId`, the signed-in runner, within the
+ * per-runner limit on tries (R-124). The decision is `changeOwnPassword`'s;
+ * this only hands it the request. The caller names the gate, so
+ * `verification-class` can read it.
+ */
+export async function changeCurrentPassword(
+  userId: string,
+  values: Readonly<{ currentPassword: string; password: string }>,
+): Promise<PasswordChange> {
+  return changeOwnPassword(
+    { auth, db: db(), userId, headers: getRequestHeaders() },
+    values,
+  );
 }

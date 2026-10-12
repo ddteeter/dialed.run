@@ -29,7 +29,7 @@ type Db = ReturnType<typeof drizzle>;
  * double stand in for `auth` without implementing the rest of that shape.
  * The real instance satisfies this structurally — it does strictly more.
  */
-interface Auth {
+export interface PasswordAuth {
   readonly api: {
     readonly verifyPassword: (input: {
       body: { password: string };
@@ -50,7 +50,7 @@ const NOT_THEIRS_CODE = "INVALID_PASSWORD";
  * thrown, not answered.
  */
 export async function isOwnPassword(
-  auth: Auth,
+  auth: PasswordAuth,
   headers: Headers,
   password: string,
 ): Promise<boolean> {
@@ -128,7 +128,12 @@ export type PasswordCheck =
  * checked at all, and the right one clears the count.
  */
 export async function checkOwnPassword(
-  check: Readonly<{ auth: Auth; db: Db; userId: string; headers: Headers }>,
+  check: Readonly<{
+    auth: PasswordAuth;
+    db: Db;
+    userId: string;
+    headers: Headers;
+  }>,
   password: string,
   now = nowSeconds(),
 ): Promise<PasswordCheck> {

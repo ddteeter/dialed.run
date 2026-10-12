@@ -905,6 +905,28 @@ describe("a handle the re-ask flagged (D-97)", () => {
     expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
   });
 
+  it("keeps the row when the handle changed before the rename landed (R-121)", async () => {
+    const user = userEvent.setup();
+    renderQueue(
+      [flagged()],
+      vi.fn<Props["reviewHandle"]>().mockResolvedValue({ outcome: "moved" }),
+    );
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why the name has to go/ }),
+      "Advertising",
+    );
+    await user.click(screen.getByRole("button", { name: "Rename" }));
+
+    const band = await screen.findByText(
+      "The handle changed before the rename landed. Nothing was renamed.",
+    );
+    expect(band.closest("[data-part='control-failure']")).toHaveTextContent(
+      /^Not renamed/u,
+    );
+    expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
+  });
+
   it("decides a reported profile, whose handle nobody flagged, as any other row", () => {
     renderQueue([
       flagged({

@@ -6,12 +6,14 @@ import {
 } from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactElement } from "react";
+import type { ComponentProps, ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { CredentialFields } from "../../src/modules/auth/auth-page";
 import type { FieldProps } from "../../src/ui";
+import { clockLabel, deviceTimeZone } from "../../src/lib/dates";
 import { AUTH_COPY } from "../../src/modules/auth/auth-copy";
+import type { PasswordChange } from "../../src/modules/auth/change-password";
 import { ChangePassword } from "../../src/modules/auth/components/ChangePassword";
 import { ForgotPassword } from "../../src/modules/auth/components/ForgotPassword";
 import { ResetPassword } from "../../src/modules/auth/components/ResetPassword";
@@ -64,6 +66,15 @@ const RESTING_FORM = { field: atRest, fieldErrors: {} };
 const passwordField = () => screen.getByLabelText("New password");
 const current = () => screen.getByLabelText("Current password");
 const next = passwordField;
+
+/**
+`changeCredentialFn` as the route hands it down, answering with `result`.
+*/
+function answering(result: PasswordChange) {
+  return vi.fn<ComponentProps<typeof ChangePassword>["change"]>(() =>
+    Promise.resolve(result),
+  );
+}
 
 describe("Au1's Forgot it?", () => {
   it("sits under Password on log-in only, and opens the request", async () => {
@@ -272,9 +283,20 @@ describe("ResetPassword", () => {
   });
 });
 
+/**
+Fill both fields and press Change password, answered with `result`.
+*/
+async function changeAnswered(result: PasswordChange): Promise<void> {
+  const user = userEvent.setup();
+  render(<ChangePassword change={answering(result)} />);
+  await user.type(current(), LONG);
+  await user.type(next(), OTHER);
+  await user.click(screen.getByRole("button", { name: "Change password" }));
+}
+
 describe("ChangePassword (ACC-7)", () => {
   it("changes it, says every other device was signed out, and clears both fields", async () => {
-    const change = vi.fn(() => Promise.resolve());
+    const change = answering({ status: "changed" });
     const user = userEvent.setup();
     render(<ChangePassword change={change} />);
 
@@ -286,8 +308,7 @@ describe("ChangePassword (ACC-7)", () => {
     await user.click(screen.getByRole("button", { name: "Change password" }));
 
     expect(change).toHaveBeenCalledWith({
-      currentPassword: LONG,
-      password: OTHER,
+      data: { currentPassword: LONG, password: OTHER },
     });
     await waitFor(() => {
       expect(screen.getByRole("status")).toHaveTextContent(
@@ -301,20 +322,32 @@ describe("ChangePassword (ACC-7)", () => {
   });
 
   it("lands a wrong current password on its own field", async () => {
-    const change = vi.fn(() =>
-      Promise.reject(
-        new AuthFieldError("currentPassword", AUTH_COPY.currentPasswordWrong),
-      ),
-    );
-    const user = userEvent.setup();
-    render(<ChangePassword change={change} />);
-    await user.type(current(), LONG);
-    await user.type(next(), OTHER);
-    await user.click(screen.getByRole("button", { name: "Change password" }));
+    await changeAnswered({ status: "wrong" });
     expect(
       await screen.findByText("That's not your current password."),
     ).toBeVisible();
     expect(current()).toHaveAttribute("aria-invalid", "true");
+    expect(next()).not.toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("says when the next try may go once the tries are used up (round 28 #10, R-124)", async () => {
+    const until = 1_800_000_000;
+    await changeAnswered({ status: "limited", until });
+    const clock = clockLabel(until, deviceTimeZone());
+    expect(
+      await screen.findByText(
+        `That's 5 wrong tries. You can try again at ${clock}.`,
+      ),
+    ).toBeVisible();
+    expect(current()).toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByText(/Password changed/u)).toBeNull();
+  });
+
+  it("lands a breached new password on the new one's field", async () => {
+    await changeAnswered({ status: "breached" });
+    expect(await screen.findByText(AUTH_COPY.passwordBreached)).toBeVisible();
+    expect(next()).toHaveAttribute("aria-invalid", "true");
+    expect(current()).not.toHaveAttribute("aria-invalid", "true");
   });
 
   it("lists both fields when both are missing, by their labels", async () => {

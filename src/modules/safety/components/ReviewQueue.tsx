@@ -396,8 +396,10 @@ function HandleDecision({
     schema: handleReviewInput,
     action: (values) => reviewHandle({ data: values }),
     onSuccess: ({ outcome }) => {
-      if (outcome === "taken") {
-        setSaid(renameMessage({ kind: "taken" }));
+      // Neither settled the row: a taken placeholder, or a handle that
+      // changed before the rename landed (R-121).
+      if (outcome === "taken" || outcome === "moved") {
+        setSaid(renameMessage({ kind: outcome }));
         return;
       }
       onSettled(row.id);

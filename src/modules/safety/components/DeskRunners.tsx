@@ -57,6 +57,9 @@ export function renameMessage(outcome: RenameOutcome): string {
   if (outcome.kind === "taken") {
     return "That placeholder is taken. Press Rename again.";
   }
+  if (outcome.kind === "moved") {
+    return "The handle changed before the rename landed. Nothing was renamed.";
+  }
   return "This runner has no handle to take away.";
 }
 

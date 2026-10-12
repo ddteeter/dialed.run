@@ -143,6 +143,9 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // ---- auth
   "auth/functions.ts getSession": "sessionless",
   "auth/functions.ts signedInQuery": "sessionless",
+  // R-124: changing the password is the runner's own, and it trusts no
+  // address — as Better Auth's endpoint, which it replaced, did not ask.
+  "auth/functions.ts changeCredentialFn": "unconfirmed",
   // ---- closet
   "closet/functions.ts listItemsFn": "unconfirmed",
   "closet/functions.ts closetNearbyFn": "unconfirmed",
