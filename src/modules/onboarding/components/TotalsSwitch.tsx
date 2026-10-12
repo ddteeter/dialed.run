@@ -31,7 +31,7 @@ export const TOTALS_OFF =
  *
  * "How the guides are made" belongs to the marketing site
  * (`dialed.run/how-it-works#totals`), which is not live, so it opens the
- * privacy policy until it is (design-deltas open queue item 59).
+ * privacy policy until it is (design-deltas open queue item 60).
  */
 export function TotalsSwitch({
   initial,
