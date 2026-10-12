@@ -5,7 +5,7 @@
  * Counted per address whatever the address is: see `email_send_limits`
  * for why an unknown address is counted too.
  */
-import { inArray, sql } from "drizzle-orm";
+import { inArray, lt, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
@@ -76,6 +76,38 @@ export function forgetSendLimits(
       ADDRESS_SENDS.map((kind) => sendLimitKey(kind, address)),
     ),
   );
+}
+
+/**
+ * How long a count is kept after its window ends: a day, then the daily
+ * sweep deletes it (`sweepSendLimits`).
+ */
+const SEND_LIMIT_KEPT_S = 24 * 60 * 60;
+
+/**
+ * Delete the counts whose window ended more than a day ago — keys that
+ * are an email address or a visitor's IP, kept for nothing once the hour
+ * is over.
+ *
+ * **Nothing reads such a row but to start it over.** Every write is
+ * `countSend`'s upsert, whose `windowedCountSet` restarts a window an hour
+ * old at one — exactly the row an insert makes once this one is gone.
+ * `sendAllowed` reads the row `countSend` just wrote in the same batch,
+ * never an old one; `forgetSendLimits` only deletes. So the sweep cannot
+ * change a verdict, and the day's margin is there only so a row is never
+ * deleted near the moment it could still count.
+ *
+ * Re-runnable (law 1): a second pass finds nothing past the cutoff. Reads
+ * through `email_send_limits_window`, not a scan.
+ */
+export async function sweepSendLimits(
+  db: Db,
+  now = nowSeconds(),
+): Promise<void> {
+  const cutoff = now - SEND_WINDOW_S - SEND_LIMIT_KEPT_S;
+  await db
+    .delete(emailSendLimits)
+    .where(lt(emailSendLimits.windowStartedAt, cutoff));
 }
 
 /**

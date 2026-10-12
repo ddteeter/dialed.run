@@ -18,7 +18,7 @@ import { withoutComments } from "./source-text";
  * product link a confirmation owes (design 133) the fourth.
  */
 describe("the Worker entry hands the firings and the queue their upkeep", () => {
-  it("passes account deletion's purge, the export sweep, the handle re-ask and the product link to handleScheduled", () => {
+  it("passes account deletion's purge, the export sweep, the handle re-ask, the product link and the expired-row sweeps to handleScheduled", () => {
     const code = withoutComments(serverSource);
     expect(code).toContain(
       'import { purgeDueAccounts } from "./modules/account/purge";',
@@ -33,8 +33,17 @@ describe("the Worker entry hands the firings and the queue their upkeep", () => 
     expect(code).toContain(
       'import { linkTypedGarments } from "./modules/closet";',
     );
+    // The daily sweeps of expired sessions and password-try counts
+    // (`auth`'s) and of answered access requests (`account`'s): both
+    // modules import `ops`.
+    expect(code).toContain(
+      'import { forgetAnsweredRequests } from "./modules/account/answered-requests";',
+    );
+    expect(code).toContain(
+      'import { sweepExpiredAuthRows } from "./modules/auth/expired-rows";',
+    );
     expect(code).toMatch(
-      /handleScheduled\(controller, undefined, \{\s*purgeAccounts: purgeDueAccounts,\s*sweepExports,\s*rescreenHandles: rescreenHandlesFromEnv,\s*linkProducts: linkTypedGarments,\s*\}\)/u,
+      /handleScheduled\(controller, undefined, \{\s*purgeAccounts: purgeDueAccounts,\s*sweepExports,\s*rescreenHandles: rescreenHandlesFromEnv,\s*linkProducts: linkTypedGarments,\s*sweepAuthRows: sweepExpiredAuthRows,\s*forgetAnsweredRequests,\s*\}\)/u,
     );
   });
 
