@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px;">
+  <div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px;">
+
+    <div style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Round 37 &nbsp;/&nbsp; items 59a–59f, 58k · /takedown abuse limits</span>
+        <span style="color: #FF2D8A;">dialed.run</span>
+      </div>
+      <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 1120px; text-transform: uppercase;">Ask before it hides. Say why it didn't.</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">Every value here is already in T1. The requester never learns about cap, valve or block from anything but the receipt they would get anyway. Text of record: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">docs/product.md</span> · Round 37.</p>
+    </div>
+
+    <div id="r59a" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">59a · /takedown/confirm</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45;"><strong style="color: #F4F3EF;">Drawn, all five. Words confirmed.</strong> SignedOutPanel, nothing on arrival. Done and Already decided are Au5's receipt; Bad link has no button.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <sc-for list="{{ confirm }}" as="f" hint-placeholder-count="5">
+          <div style="flex: 0 0 330px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ f.label }}</span>
+            <div data-screen-label="{{ f.screen }}" style="width: 330px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
+              <div style="background: #0B0B0E; padding: 16px 20px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em; color: #F4F3EF;">dialed<span style="color: #8B8B93;">.run</span></span></div>
+              <div style="padding: 26px 24px 24px; display: flex; flex-direction: column; gap: 14px;">
+                <sc-if value="{{ f.kicker }}" hint-placeholder-val="{{ false }}"><span style="align-self: flex-start; background: #0B0B0E; color: #F5FF3D; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; padding: 4px 8px;">{{ f.kicker }}</span></sc-if>
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 26px; line-height: 1; letter-spacing: -0.03em;">{{ f.head }}</span>
+                <sc-if value="{{ f.band }}" hint-placeholder-val="{{ false }}">
+                  <div role="status" style="background: #0B0B0E; color: #F4F3EF; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #F5FF3D;">NOTHING SAVED</span><span style="font-size: 15px; line-height: 1.45;">{{ f.band }}</span><span style="align-self: flex-start; font-size: 14px; font-weight: 700; text-decoration: underline; min-height: 44px; display: flex; align-items: center;">Try again</span></div>
+                </sc-if>
+                <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #4E4E44; text-wrap: pretty;">{{ f.body }}</p>
+                <sc-if value="{{ f.btn }}" hint-placeholder-val="{{ true }}"><span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700;">{{ f.btn }}</span></sc-if>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div id="r59bc" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">59b · 59c · The two emails</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45;"><strong style="color: #F4F3EF;">Both confirmed; (b) gains a lead so the runner knows nothing is hidden yet.</strong></span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <div data-screen-label="Email takedown receipt past cap" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 22px 24px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #6E6E64;">59b · TO jo@example.com · PAST THE CAP</span>
+          <span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.02em;">We have your removal request</span>
+          <p style="margin: 0; font-size: 15px; line-height: 1.5;">It isn't hidden yet. To have it hidden while we look, confirm this request. We'll decide within 48 hours, by 2026-10-12 13:05 UTC, and email you either way.</p>
+          <span style="align-self: flex-start; background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 12px 22px; font-size: 15px; font-weight: 700;">Confirm the request</span>
+          <span style="font-size: 12px; color: #4E4E44;">Sent because someone asked at dialed.run/takedown with this address.</span>
+        </div>
+        <div data-screen-label="Email takedown valve" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 22px 24px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #6E6E64;">59c · TO EVERY OPERATOR · HOURLY</span>
+          <span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.02em;">Removal requests paused: possible abuse</span>
+          <p style="margin: 0; font-size: 15px; line-height: 1.5;">10 removal requests hid something in the last hour, so new requests hide nothing until the hour clears. They still wait in Review with their 48 hours.</p>
+          <span style="align-self: flex-start; background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 12px 22px; font-size: 15px; font-weight: 700;">Open Review</span>
+          <span style="font-size: 12px; color: #4E4E44;">Sent to every operator, once an hour while it lasts.</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="r59df" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">59d · 59e · 59f · The request row</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45;"><strong style="color: #F4F3EF;">State goes in the brackets; the header's right side stays the clock.</strong> Words: [hidden], [unconfirmed], [valve shut], [blocked]. Focus opens on Cancel, as CSAM's does.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <sc-for list="{{ rowsDrawn }}" as="w" hint-placeholder-count="3">
+          <div style="flex: 1 1 440px; max-width: 560px; display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ w.label }}</span>
+            <div data-screen-label="{{ w.screen }}" style="background: #0B0B0E; border: 1px solid #24242B; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">{{ w.count }}</span>
+              <sc-for list="{{ w.items }}" as="r" hint-placeholder-count="2">
+                <div style="background: #16161B; border: 1px solid #24242B;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; border-bottom: 1px solid #24242B; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; gap: 12px; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 14px; flex-wrap: wrap;"><span style="color: #F5FF3D;">{{ r.subj }}</span><span style="color: #8B8B93;">[via /takedown]</span><sc-if value="{{ r.state }}" hint-placeholder-val="{{ true }}"><span style="color: #DEDDD6;">{{ r.state }}</span></sc-if></div>
+                    <span style="color: #F5FF3D; font-weight: 600;">{{ r.due }}</span>
+                  </div>
+                  <div style="padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #8B8B93;">{{ r.from }}</span>
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #DEDDD6;">{{ r.addr }}</span>
+                      <sc-if value="{{ r.more }}" hint-placeholder-val="{{ false }}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8B8B93;">{{ r.more }}</span></sc-if>
+                      <span style="font-size: 14px; line-height: 1.45; color: #DEDDD6; padding-top: 4px;"><em>{{ r.quote }}</em></span>
+                    </div>
+                    <sc-if value="{{ r.ask }}" hint-placeholder-val="{{ false }}">
+                      <div style="border-top: 1px solid #24242B; padding-top: 14px; display: flex; flex-direction: column; gap: 12px;">
+                        <span style="font-size: 15px; line-height: 1.45; color: #F4F3EF; text-wrap: pretty;">{{ r.ask }}</span>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                          <span style="background: #F4F3EF; color: #0B0B0E; padding: 11px 20px; font-size: 14px; font-weight: 700; border-radius: 100px;">Block and decline all</span>
+                          <span style="color: #F4F3EF; padding: 11px 12px; font-size: 14px; font-weight: 700; text-decoration: underline; outline: 2px solid #F5FF3D; outline-offset: 2px;">Cancel</span>
+                        </div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ r.rest }}" hint-placeholder-val="{{ true }}">
+                      <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                        <span style="background: #F4F3EF; color: #0B0B0E; padding: 11px 20px; font-size: 14px; font-weight: 700; border-radius: 100px;">Take it down</span>
+                        <span style="border: 1px solid #DEDDD6; color: #F4F3EF; padding: 11px 20px; font-size: 14px; font-weight: 700; border-radius: 100px;">Decline</span>
+                        <span style="color: #F4F3EF; padding: 11px 12px; font-size: 14px; font-weight: 700; text-decoration: underline;">Block and decline all</span>
+                      </div>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ w.status }}" hint-placeholder-val="{{ false }}"><span role="status" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #DEDDD6;">{{ w.status }}</span></sc-if>
+            </div>
+            <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">{{ w.note }}</p>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div id="r58k" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">58k · W1's way out</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 820px; line-height: 1.45;"><strong style="color: #F4F3EF;">Kept, as a hint under the reason, shown only once it's picked.</strong> It is for the runner who'd rather not report from their account; an image off dialed.run isn't W1's business.</span>
+      </div>
+      <div data-screen-label="W1 intimate reason hint" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 22px 24px; display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">WHAT'S WRONG WITH IT</span>
+        <div style="border: 1px solid #DCDBD2; border-radius: 12px; background: #FFFFFF; overflow: hidden;">
+          <div style="padding: 13px 14px; border-bottom: 1px solid #DCDBD2; font-size: 14px;">The photo shows someone inappropriately</div>
+          <div style="padding: 13px 14px; background: #0B0B0E; color: #F4F3EF; display: flex; flex-direction: column; gap: 6px;"><span style="font-size: 14px;">It's an intimate image of someone, shared without their consent</span><span style="font-size: 13px; line-height: 1.45; color: #DEDDD6;">Rather not use your account? <span style="text-decoration: underline; color: #F4F3EF;">Report it without signing in</span></span></div>
+          <div style="padding: 13px 14px; font-size: 14px;">Harassment aimed at someone</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="rulings" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Rulings 59a–59f, 58k</span>
+      <div style="display: flex; flex-direction: column; border: 1px solid #2A2A31;">
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="7">
+          <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 150px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;">
+            <span style="font-size: 15px; font-weight: 600;">{{ r.q }}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: {{ r.vc }};">{{ r.v }}</span>
+            <span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">{{ r.a }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const confirm = [
+      { label: '59a · ASKING', screen: 'Takedown confirm asking', head: 'Confirm your request', body: 'Confirm that you asked us to remove an image. Then we hide it while we look.', btn: 'Confirm the request' },
+      { label: '59a · DONE', screen: 'Takedown confirm done', kicker: 'REQUEST CONFIRMED', head: 'We have your request', body: 'We\'ll decide within 48 hours and email you either way.' },
+      { label: '59a · ALREADY DECIDED', screen: 'Takedown confirm decided', kicker: 'REQUEST CONFIRMED', head: 'We\'ve already decided', body: 'We\'ve emailed you what we decided.' },
+      { label: '59a · BAD LINK · NO BUTTON', screen: 'Takedown confirm bad link', head: 'Confirm your request', body: 'This link doesn\'t match a request. Use the link in the email we sent, or make the request again.' },
+      { label: '59a · FAILED PRESS', screen: 'Takedown confirm failed', head: 'Confirm your request', band: 'That didn\'t go through.', body: 'Confirm that you asked us to remove an image. Then we hide it while we look.', btn: 'Confirm the request' },
+    ];
+    const jo = { from: 'FROM JO REYES · SIGNED · GOOD FAITH', addr: 'jo@example.com', quote: '"Me, at the finish. I never agreed to this."' };
+    const rowsDrawn = [
+      { label: '59d · 59e · 59f · RESTING', screen: 'D1 Removal requests r37 rest', count: 'REMOVAL REQUESTS · 3', items: [
+        { ...jo, subj: 'PHOTO · @maya_runs', state: '[hidden]', due: 'DUE IN 31H', more: '2 more from this requester', rest: true },
+        { ...jo, subj: 'PHOTO · @dunkfresh_88', state: '[unconfirmed]', due: 'DUE IN 44H', more: '2 more from this requester', rest: true },
+      ], note: 'Second bracket after [via /takedown]; none when the link isn\'t ours. "N more" sits under the address, mono caption, only when N ≥ 1. The third request is below the fold.' },
+      { label: '59f · QUESTION OPEN · FOCUS ON CANCEL', screen: 'D1 Removal requests r37 ask', count: 'REMOVAL REQUESTS · 3', items: [
+        { ...jo, subj: 'PHOTO · @maya_runs', state: '[hidden]', due: 'DUE IN 31H', more: '2 more from this requester', ask: 'Block this requester and decline all 3 of their requests? Anything they hid comes back, and nothing is sent to them.' },
+      ], note: 'The count is every open request including this one. Asks in the row; the row\'s own buttons give way to the question. Esc and Cancel return focus to Block and decline all.' },
+      { label: '59f · AFTER', screen: 'D1 Removal requests r37 after', count: 'REMOVAL REQUESTS · 1', items: [
+        { from: 'FROM SAM OKAFOR · SIGNED · GOOD FAITH', addr: 'sam@example.com', quote: '"My sister. Please take it down."', subj: 'PHOTO · @tempo_tess', state: '[valve shut]', due: 'DUE IN 12H', rest: true },
+      ], status: 'Blocked. 3 requests declined.', note: 'All three leave at once. The page\'s status region says what happened; focus moves to the next row, or "Nothing waiting".' },
+    ];
+    const C = '#00E0C6', A = '#F5FF3D', D = '#FF2D8A';
+    const R = (q, v, a) => ({ q, v, a, vc: v.startsWith('CONFIRM') ? C : v.startsWith('DRAWN') ? D : A });
+    const rows = [
+      R('59a · /takedown/confirm', 'DRAWN · CONFIRM', 'Five states drawn, words as built. Failed press reads "That didn\'t go through." under NOTHING SAVED.'),
+      R('59b · Receipt past the cap', 'CONFIRM · ONE LEAD', 'Body opens "It isn\'t hidden yet." then the given words. Button and foot as given. A blocked requester\'s receipt is the normal one, never this.'),
+      R('59c · Valve email', 'CONFIRM', 'As given.'),
+      R('59d · State bracket', 'DRAWN · RULED', 'In the brackets; the header\'s right side is the clock. [hidden], [unconfirmed], [valve shut], [blocked]. Confirming later re-files: the bracket becomes what that decided.'),
+      R('59e · N more', 'CONFIRM', '"2 more from this requester", under the address, only when there are others.'),
+      R('59f · Block and decline all', 'DRAWN · RULED', 'Words confirmed; the count includes this request. Focus opens on Cancel. Status line after: "Blocked. N requests declined."'),
+      R('58k · W1 link', 'GIVEN · DRAWN', 'Hint under the intimate-image reason, only once picked: "Rather not use your account? Report it without signing in" → /takedown. The footer link stays the way in for images off dialed.run.'),
+      R('59g · Which image, signed out', 'GIVEN · FIELD · DRAWN', 'A field, not a hint: a username is something Review can act on, and the schema can check it exists. "Their dialed.run username · optional", hint "If you know who posted it.", after Link to the image; the link\'s hint stays "A dialed.run link, or say where it is." Drawn on round 35\'s /takedown frame. A request in words with a username goes to Review as "Not one of our links: find it on @name\'s entries from what they wrote." No uploads, as ruled.'),
+    ];
+    return { confirm, rowsDrawn, rows };
+  }
+}
+</script>
+</body>
+</html>

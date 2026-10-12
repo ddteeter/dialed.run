@@ -192,6 +192,9 @@ export {
   takedownInput,
   removalDecisionInput,
   takedownRequestInput,
+  blockRequesterInput,
+  takedownConfirmInput,
+  takedownConfirmSearch,
   unbanUserInput,
   type FileReportValues,
   type HandleReviewValues,
@@ -205,6 +208,8 @@ export {
 } from "./duplicates";
 
 export {
+  blockAndDeclineAll,
+  confirmTakedownRequest,
   fileTakedownRequest,
   pendingTakedownRequests,
   releaseHoldWrites,

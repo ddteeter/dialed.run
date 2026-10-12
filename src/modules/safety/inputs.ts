@@ -190,6 +190,29 @@ export const takedownRequestInput = takedownRequestSchema.extend({
  */
 const removalRequestRef = z.object({ requestId: ulidSchema });
 
+/**
+Block and decline all (design 137): the request whose requester it is.
+*/
+export const blockRequesterInput = removalRequestRef;
+
+/**
+ * A confirm link's token (design 137): 32 random bytes, hex. Anything
+ * else is a link nobody sent.
+ */
+const confirmTokenSchema = z.string().regex(/^[\da-f]{64}$/u);
+
+export const takedownConfirmInput = z.object({ token: confirmTokenSchema });
+
+/**
+`/takedown/confirm?token=`: the token when it is one, and nothing otherwise.
+*/
+export function takedownConfirmSearch(
+  search: Readonly<Record<string, unknown>>,
+): { token?: string | undefined } {
+  const parsed = confirmTokenSchema.safeParse(search.token);
+  return { token: parsed.success ? parsed.data : undefined };
+}
+
 export const removalDecisionInput = z.discriminatedUnion("outcome", [
   removalRequestRef.extend({ outcome: z.literal("removed") }),
   removalRequestRef.extend({

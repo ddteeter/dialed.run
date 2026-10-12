@@ -145,7 +145,7 @@ describe("filing a request", () => {
           template: {
             kind: "removal_request_received",
             dueAt: DUE,
-            isOurs: true,
+            isHidden: true,
           },
         },
       },
@@ -170,7 +170,7 @@ describe("filing a request", () => {
     expect(receipt?.email.template).toStrictEqual({
       kind: "removal_request_received",
       dueAt: DUE,
-      isOurs: false,
+      isHidden: false,
     });
   });
 
