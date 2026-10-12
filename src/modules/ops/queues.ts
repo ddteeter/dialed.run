@@ -10,6 +10,7 @@ import {
 import {
   handleImportsBatch,
   handleImportsDlqBatch,
+  runnerZone,
   stravaApiFromEnv,
 } from "../runs";
 import { outboxInsert, oweOutbox } from "./outbox";
@@ -123,6 +124,7 @@ export async function handleQueueBatch(
         captureException,
         stravaApi: stravaApiFromEnv(),
         owe: oweInCore,
+        runnerZone: (userId) => runnerZone(drizzle(env.DIALED_CORE), userId),
       });
       break;
     }

@@ -6,7 +6,7 @@ import {
   viewerUnitsQuery,
 } from "../../modules/feed/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
-import { unreadNotificationCountFn } from "../../modules/notifications/functions";
+import { bellStateFn } from "../../modules/notifications/functions";
 import { VerdictBacklog } from "../../modules/runs/components/VerdictBacklog";
 
 /**
@@ -23,16 +23,16 @@ export const Route = createFileRoute("/runs/backlog")({
   loader: async () => ({
     backlog: await verdictBacklogQuery(),
     units: await viewerUnitsQuery(),
-    unreadCount: await unreadNotificationCountFn(),
+    bell: await bellStateFn(),
   }),
   component: VerdictBacklogPage,
 });
 
 function VerdictBacklogPage() {
-  const { backlog, units, unreadCount } = Route.useLoaderData();
+  const { backlog, units, bell } = Route.useLoaderData();
 
   return (
-    <BelledLayout unreadCount={unreadCount}>
+    <BelledLayout {...bell}>
       <VerdictBacklog
         rows={backlog.rows}
         units={units}

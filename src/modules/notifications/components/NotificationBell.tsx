@@ -2,14 +2,26 @@ import { Link } from "@tanstack/react-router";
 
 import { Icon, Mono } from "../../../ui";
 import { BELL_NUMBER_CAP } from "../bell-cap";
+import type { BellState } from "../bell-state";
 
 /**
- * A count as the bell says it: digits, and `9+` past the cap (round 22,
+ * A count as the bell draws it: digits, and `9+` past the cap (round 22,
  * item 13; round 26 #9: "The count is in digits").
  */
 function capped(count: number): string {
   return count > BELL_NUMBER_CAP
     ? `${String(BELL_NUMBER_CAP)}+`
+    : String(count);
+}
+
+/**
+ * A count as the bell's name says it: the digits, and past the cap the
+ * words round 27 #25 gives — "more than 9" — since "9+" read aloud is
+ * "nine plus" (R-141(1)).
+ */
+function spoken(count: number): string {
+  return count > BELL_NUMBER_CAP
+    ? `more than ${String(BELL_NUMBER_CAP)}`
     : String(count);
 }
 
@@ -37,14 +49,13 @@ function markOf(unreadCount: number, verdictsWaiting: number): BellMark {
  * animates: *"the bell never rings, shakes or bounces. It changes state and
  * stops."*
  *
- * `verdictsWaiting` is optional because a route that has not moved to
- * `bellStateFn` yet only knows its unread count — it gets the dot, which is
- * what an unread count honestly is.
+ * Both counts are required (FEED-3): every route loads `bellStateFn`, so
+ * no bell is left able to draw only the dot.
  */
 export function NotificationBell({
   unreadCount,
-  verdictsWaiting = 0,
-}: Readonly<{ unreadCount: number; verdictsWaiting?: number | undefined }>) {
+  verdictsWaiting,
+}: Readonly<BellState>) {
   const mark = markOf(unreadCount, verdictsWaiting);
   const number = capped(verdictsWaiting);
   // The mark is drawn, so the name has to say it: a sighted runner reads
@@ -53,8 +64,8 @@ export function NotificationBell({
   // "Notifications, 3 new". The dot has no drawn name; it says how many
   // unread rows it stands for, in the same words.
   const name: Readonly<Record<BellMark, string>> = {
-    number: `Notifications, ${number} new`,
-    dot: `Notifications, ${capped(unreadCount)} new`,
+    number: `Notifications, ${spoken(verdictsWaiting)} new`,
+    dot: `Notifications, ${spoken(unreadCount)} new`,
     quiet: "Notifications",
   };
 

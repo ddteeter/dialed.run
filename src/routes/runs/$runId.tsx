@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { viewerUnitsQuery } from "../../modules/feed/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
-import { unreadNotificationCountFn } from "../../modules/notifications/functions";
+import { bellStateFn } from "../../modules/notifications/functions";
 import { DeleteRun } from "../../modules/runs/components/DeleteRun";
 import { RunDetail } from "../../modules/runs/components/RunDetail";
 import {
@@ -16,22 +16,22 @@ import { Page } from "../../ui";
 
 export const Route = createFileRoute("/runs/$runId")({
   loader: async ({ params }) => {
-    const [run, units, unreadCount] = await Promise.all([
+    const [run, units, bell] = await Promise.all([
       getRunSummaryFn({ data: { runId: params.runId } }),
       viewerUnitsQuery(),
-      unreadNotificationCountFn(),
+      bellStateFn(),
     ]);
-    return { run: beforeItsEntry(runOrNotFound(run)), units, unreadCount };
+    return { run: beforeItsEntry(runOrNotFound(run)), units, bell };
   },
   component: RunDetailPage,
 });
 
 function RunDetailPage() {
-  const { run, units, unreadCount } = Route.useLoaderData();
+  const { run, units, bell } = Route.useLoaderData();
   const navigate = useNavigate();
 
   return (
-    <BelledLayout unreadCount={unreadCount}>
+    <BelledLayout {...bell}>
       <Page title="Run" width="panel">
         <RunDetail
           run={run}

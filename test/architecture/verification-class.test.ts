@@ -207,7 +207,6 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "feed/functions.ts decideRemovalRequestAction": "admin",
   // ---- notifications
   "notifications/functions.ts listNotificationsFn": "unconfirmed",
-  "notifications/functions.ts unreadNotificationCountFn": "unconfirmed",
   "notifications/functions.ts markAllNotificationsReadFn": "unconfirmed",
   "notifications/functions.ts bellStateFn": "unconfirmed",
   // ---- onboarding

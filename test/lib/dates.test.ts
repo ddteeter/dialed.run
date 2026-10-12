@@ -7,6 +7,8 @@ import {
   monthDayLabel,
   dayTimeLabel,
   isTimeZone,
+  longDayLabel,
+  monthYearLabel,
   proseDayLabel,
   deviceTimeZone,
   startAtTimeOfDay,
@@ -249,5 +251,29 @@ describe("calendarDay", () => {
     const lateChicago = Math.floor(Date.UTC(2026, 8, 22, 3, 30) / 1000);
     expect(calendarDay(lateChicago)).toBe("22 Sept 2026");
     expect(calendarDay(lateChicago, "America/Chicago")).toBe("21 Sept 2026");
+  });
+});
+
+describe("longDayLabel (the Desk's Today heading, STR-13)", () => {
+  it("spells the weekday out, then month and day, in US order", () => {
+    expect(longDayLabel(LATE_ON_THE_21ST)).toBe("Monday, Sep 21");
+  });
+
+  it("reads the day in the zone it is given", () => {
+    expect(longDayLabel(LATE_ON_THE_21ST, "Pacific/Auckland")).toBe(
+      "Tuesday, Sep 22",
+    );
+  });
+});
+
+describe("monthYearLabel (the closet rail, round 28 #13; STR-13)", () => {
+  it("is the three-letter month and the year, with no day", () => {
+    expect(monthYearLabel(LATE_ON_THE_21ST)).toBe("Sep 2026");
+  });
+
+  it("turns the year in the zone it is given", () => {
+    const lastOf2025 = Math.floor(Date.UTC(2025, 11, 31, 23, 30) / 1000);
+    expect(monthYearLabel(lastOf2025)).toBe("Dec 2025");
+    expect(monthYearLabel(lastOf2025, "Pacific/Auckland")).toBe("Jan 2026");
   });
 });

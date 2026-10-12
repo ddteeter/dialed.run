@@ -1,6 +1,7 @@
 import type { JSX, ReactNode } from "react";
 
 import { Layout } from "../../../ui";
+import type { BellState } from "../bell-state";
 import { NotificationBell } from "./NotificationBell";
 
 /**
@@ -13,10 +14,10 @@ import { NotificationBell } from "./NotificationBell";
  * component may not make one (CLAUDE.md); what moves here is only the
  * wiring.
  *
- * Round 22 gave the bell a number as well as a dot, so a route now loads
- * `bellStateFn` and spreads it here. `verdictsWaiting` is optional so the
- * routes still loading only `unreadNotificationCountFn` keep compiling and
- * show the dot until they move over.
+ * Round 22 gave the bell a number as well as a dot, so every route loads
+ * `bellStateFn` and spreads it here. Both counts are required (FEED-3): a
+ * route that passed only its unread count drew a dot where the number
+ * belonged, and now does not compile.
  *
  * It lives in `modules/notifications` rather than in `ui/` for the reason
  * `Layout` takes `bell` as a prop at all: `ui/` is foundation and may not
@@ -26,11 +27,7 @@ export function BelledLayout({
   unreadCount,
   verdictsWaiting,
   children,
-}: Readonly<{
-  unreadCount: number;
-  verdictsWaiting?: number | undefined;
-  children: ReactNode;
-}>): JSX.Element {
+}: Readonly<BellState & { children: ReactNode }>): JSX.Element {
   return (
     <Layout
       bell={

@@ -18,7 +18,9 @@ import {
 
 import { notifications, outfitEntries, runs } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
+import { hasRowWhere } from "../../lib/sql/keyed-read";
 import { BELL_NUMBER_CAP } from "./bell-cap";
+import type { BellState } from "./bell-state";
 import type { NotificationsDb } from "./db";
 import { nowSeconds } from "../../lib/now";
 
@@ -47,6 +49,12 @@ export type NotificationKind =
  * would have to live at the call site.
  */
 export interface NotificationDraft {
+  /**
+   * The row's id, when the caller must name it in the same batch — the
+   * reminder email that is skipped once this row is read (design 140).
+   * Minted here otherwise.
+   */
+  id?: string;
   userId: string;
   kind: NotificationKind;
   /**
@@ -75,7 +83,7 @@ export function notificationInsert(
   return db
     .insert(notifications)
     .values({
-      id: newUlid(),
+      id: draft.id ?? newUlid(),
       userId: draft.userId,
       kind: draft.kind,
       subjectId: draft.subjectId,
@@ -94,6 +102,24 @@ export async function createNotification(
   draft: NotificationDraft,
 ): Promise<void> {
   await notificationInsert(db, draft);
+}
+
+/**
+ * Whether this row is still there and unread — what an email that repeats
+ * it asks at send time (design 140): a row read, or gone with its account,
+ * has nothing left to say by email.
+ */
+export async function isNotificationUnread(
+  // Any dialed-core handle: the outbox's drain asks with its own.
+  db: Parameters<typeof hasRowWhere>[0],
+  id: string,
+): Promise<boolean> {
+  return hasRowWhere(
+    db,
+    notifications,
+    notifications.id,
+    and(eq(notifications.id, id), eq(notifications.read, false)),
+  );
 }
 
 /**
@@ -168,16 +194,6 @@ This runner's unread rows — what the dot counts and what mark-all clears.
 */
 function unreadOf(userId: string) {
   return and(eq(notifications.userId, userId), eq(notifications.read, false));
-}
-
-/**
- * What the bell shows (round 22, item 13): a **number** when there are
- * runs waiting for a verdict, because each one is a thing to do, and
- * otherwise a **dot** for anything unread.
- */
-export interface BellState {
-  unreadCount: number;
-  verdictsWaiting: number;
 }
 
 /**

@@ -17,6 +17,7 @@ import { photoKeyFor } from "../../lib/garment-photo-key";
 import type { OutboxKind, OutboxMessage } from "../../lib/sql/outbox";
 import { nowSeconds } from "../../lib/now";
 import { deliverOwedEmail, emailDepsFromEnv, type EmailDeps } from "../email";
+import { isNotificationUnread } from "../notifications";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -176,10 +177,24 @@ async function liveEntryPhotoKeys(
  * deletes rather than sends again. What no mark can cover is a Worker
  * that dies between the send and the mark: that email goes twice.
  * `deps` is a parameter so a test hands in a fake sender.
+ *
+ * An email that repeats a bell row (`unlessRead`) is checked against it
+ * here, at send time rather than when it was owed: task 127's reminder is
+ * skipped if its run's file arrived in the meantime.
  */
 export function emailHandler(deps: () => EmailDeps): OutboxHandlers["email"] {
   return {
     run: async (db, payload, rowId) => {
+      // A reminder the runner has answered — the upload paired it, or they
+      // cleared it in the app — has nothing left to say (design 140).
+      // Settled like a skipped send: the row goes, nothing is marked.
+      const { unlessRead } = payload;
+      if (
+        unlessRead !== undefined &&
+        !(await isNotificationUnread(db, unlessRead))
+      ) {
+        return;
+      }
       const sent = await deliverOwedEmail(db, payload.email, deps());
       if (sent.status === "skipped") return;
       const sentAt = nowSeconds();

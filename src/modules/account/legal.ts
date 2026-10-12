@@ -15,11 +15,12 @@
 import copyright from "../../../docs/legal/copyright.md?raw";
 import privacyPolicy from "../../../docs/legal/privacy-policy.md?raw";
 import terms from "../../../docs/legal/terms.md?raw";
-import { unreadNotificationCount } from "../notifications";
+import { bellState, type BellState } from "../notifications";
+import { runsAwaitingVerdict } from "../runs";
 import type { LegalSlug } from "./inputs";
 import { parseLegalDoc, publishedText, type LegalDoc } from "./legal-markdown";
 
-type Db = Parameters<typeof unreadNotificationCount>[0];
+type Db = Parameters<typeof bellState>[0];
 
 const LEGAL_TEXTS: Readonly<Record<LegalSlug, string>> = {
   privacy: privacyPolicy,
@@ -41,10 +42,10 @@ export function legalDoc(
 export interface LegalPage {
   readonly doc: LegalDoc | undefined;
   /**
-   * The bell's count for a signed-in reader, who reads in the signed-in
-   * shell; `undefined` for a signed-out one.
+   * The bell for a signed-in reader, who reads in the signed-in shell;
+   * `undefined` for a signed-out one.
    */
-  readonly unreadCount: number | undefined;
+  readonly bellState: BellState | undefined;
 }
 
 export async function legalPage(
@@ -55,9 +56,11 @@ export async function legalPage(
 ): Promise<LegalPage> {
   return {
     doc: legalDoc(slug, texts),
-    unreadCount:
+    bellState:
       userId === undefined
         ? undefined
-        : await unreadNotificationCount(db, userId),
+        : await bellState(db, userId, (limit) =>
+            runsAwaitingVerdict(db, userId, limit),
+          ),
   };
 }

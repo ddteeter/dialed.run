@@ -1,9 +1,16 @@
-import { eq } from "drizzle-orm";
+import { eq, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { outbox, products, stravaConnections } from "../../src/db/schema-core";
+import {
+  outbox,
+  products,
+  runs,
+  stravaConnections,
+} from "../../src/db/schema-core";
+import { weatherObservations } from "../../src/db/schema-weather";
 import { env } from "../../src/env";
+import { clockLabel } from "../../src/lib/dates";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { handleQueueBatch } from "../../src/modules/ops";
@@ -12,6 +19,7 @@ import {
   createOrGetProduct,
 } from "../../src/modules/products";
 import { reminderSubject } from "../../src/modules/runs/queue-messages";
+import { cacheKeyFor } from "../../src/modules/weather";
 import { gaveUpRow } from "../gave-up-rows";
 import { batchOf, fakeMessage } from "../queue-fakes";
 
@@ -97,6 +105,63 @@ describe("handleQueueBatch routes by queue name", () => {
         dedupeKey: `strava_disconnected:${userId}:1516126040`,
       },
     ]);
+  });
+
+  it("hands the imports consumer the runner's zone, for the reminder email's clock", async () => {
+    // Design 140: the zone of the runner's latest observed run. Kolkata is
+    // UTC+5:30, so its clock never reads the same as UTC's.
+    const db = drizzle(env.DIALED_CORE);
+    const userId = newUlid();
+    const athleteId = newUlid();
+    const zone = "Asia/Kolkata";
+    const startedAt = nowSeconds() - 24 * 60 * 60;
+    const place = { lat: 12.97, lng: 77.59 };
+    await db.insert(stravaConnections).values({
+      userId,
+      athleteId,
+      refreshToken: "refresh",
+    });
+    await db.insert(runs).values({
+      id: newUlid(),
+      userId,
+      source: "file",
+      startedAt,
+      durationS: 1800,
+      distanceM: 5000,
+      title: "Run",
+      ...place,
+    });
+    await drizzle(env.DIALED_WEATHER)
+      .insert(weatherObservations)
+      .values({
+        id: newUlid(),
+        ...cacheKeyFor(place.lat, place.lng, new Date(startedAt * 1000)),
+        tempC: 25,
+        feelsLikeC: 27,
+        humidity: 70,
+        windKph: 5,
+        precipMm: 0,
+        condition: "Clear",
+        source: "visualcrossing",
+        fetchedAt: startedAt,
+        timeZone: zone,
+      });
+    const message = fakeMessage("m9", {
+      type: "strava_reminder",
+      athleteId,
+      objectId: newUlid(),
+      aspectType: "create",
+      eventTime: nowSeconds(),
+    });
+
+    await handleQueueBatch(batchOf("dialed-imports", [message]));
+
+    const [owed] = await db
+      .select({ nextAttemptAt: outbox.nextAttemptAt, payload: outbox.payload })
+      .from(outbox)
+      .where(like(outbox.dedupeKey, `run_reminder:${userId}:%`));
+    const landed = (owed?.nextAttemptAt ?? 0) - 20 * 60;
+    expect(owed?.payload).toContain(`"landedAt":"${clockLabel(landed, zone)}"`);
   });
 
   it("hands a dialed-imports-dlq batch to the DLQ consumer", async () => {

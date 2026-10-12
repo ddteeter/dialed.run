@@ -10,16 +10,21 @@ import type { OutboxMessage } from "../../lib/sql/outbox";
  * `dedupeKey` names "the same email": a second debt with it replaces the
  * first rather than sending twice (a reminder per runner per day, say).
  * To hold it back, pass `notBefore` to `oweOutbox` alongside it.
+ * `unlessRead` names the bell row it repeats: read by send time, and the
+ * email is not sent.
  */
 export function emailDebt(
   payload: EmailPayload,
-  options: Readonly<{ dedupeKey: string }>,
+  options: Readonly<{ dedupeKey: string; unlessRead?: string }>,
 ): OutboxMessage {
   return {
     kind: "email",
     payload: {
       dedupeKey: options.dedupeKey,
       email: payload,
+      ...(options.unlessRead !== undefined && {
+        unlessRead: options.unlessRead,
+      }),
     },
   };
 }
