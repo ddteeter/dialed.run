@@ -1,11 +1,7 @@
 import type { JSX } from "react";
 
 import { Mono } from "../../../ui";
-import {
-  removalSentence,
-  takedownSentence,
-  type RemovalReason,
-} from "../contracts";
+import { removalNotice, type RemovalReason } from "../contracts";
 
 /**
  * A notice where the thing was: a kicker naming the state that is true,
@@ -66,7 +62,9 @@ const REMOVED_KICKER = {
  * · "We removed this photo after a copyright notice." · "Your run and
  * verdict stay." A moderator's Remove names their reason instead. Which
  * one happened is the audit row's `action`, so the host passes it through
- * rather than inferring it from a reason a Remove can also carry.
+ * rather than inferring it from a reason a Remove can also carry — and
+ * the reason as well, because a removal request's takedown carries
+ * `intimate` and answered no copyright notice (`removalNotice`).
  */
 export function ContentRemoved({
   subjectType,
@@ -80,11 +78,7 @@ export function ContentRemoved({
   return (
     <NoticeBand
       kicker={REMOVED_KICKER[subjectType]}
-      message={
-        action === "takedown"
-          ? takedownSentence(subjectType)
-          : removalSentence(subjectType, reason)
-      }
+      message={removalNotice(subjectType, action, reason)}
       detail={
         subjectType === "photo" ? "Your run and verdict stay." : undefined
       }

@@ -67,6 +67,19 @@ describe("ContentRemoved (SAF-8)", () => {
     );
   });
 
+  it("gives a removal request's takedown its reason: no copyright notice was sent", () => {
+    render(
+      <ContentRemoved
+        subjectType="photo"
+        action="takedown"
+        reason="intimate"
+      />,
+    );
+    expect(band()).toHaveTextContent(
+      "Photo removedA moderator removed this photo: it's an intimate image shared without consent.Your run and verdict stay.",
+    );
+  });
+
   it("says the same of an entry taken down, in its own noun", () => {
     render(
       <ContentRemoved

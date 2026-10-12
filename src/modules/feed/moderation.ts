@@ -48,8 +48,9 @@ import { captureException, oweOutbox } from "../ops";
 import {
   moderationActionInsert,
   openSubject,
+  isCopyrightTakedown,
   quarantineInsert,
-  removalSentence,
+  removalNotice,
   removalStatements,
   resolveReview,
   settleOpenReviews,
@@ -247,8 +248,20 @@ function deletions(db: Db, input: ModerateInput, target: Target): Statements {
  * What a Remove or takedown tells its author: the bell row and the email,
  * both in the batch. The email rides the outbox; its debt is returned so
  * the fast path can settle it after the batch.
+ *
+ * **One sentence in all three** (round 27 #20, R-140): a copyright
+ * takedown's bell row says "We removed this photo after a copyright
+ * notice.", as its band does, and its email says the same rather than
+ * quoting the moderator's reason. `action` is what decides, with the
+ * reason (`isCopyrightTakedown`): a removal request's takedown carries
+ * `intimate` and answered no copyright notice.
  */
-function notice(db: Db, input: ModerateInput, target: Target) {
+function notice(
+  db: Db,
+  input: ModerateInput,
+  action: "remove" | "takedown",
+  target: Target,
+) {
   const debt = oweOutbox(
     emailDebt(
       {
@@ -257,6 +270,9 @@ function notice(db: Db, input: ModerateInput, target: Target) {
           kind: "content_removed",
           subject: input.subjectType,
           reason: removalStatements[input.reason],
+          ...(isCopyrightTakedown(action, input.reason) && {
+            notice: "copyright" as const,
+          }),
         },
       },
       { dedupeKey: `content_removed:${input.subjectType}:${input.subjectId}` },
@@ -267,7 +283,7 @@ function notice(db: Db, input: ModerateInput, target: Target) {
       userId: target.ownerId,
       kind: "content_removed",
       subjectId: input.subjectId,
-      body: removalSentence(input.subjectType, input.reason),
+      body: removalNotice(input.subjectType, action, input.reason),
     }),
     debt,
   };
@@ -290,11 +306,13 @@ export async function moderateContent(
       : "not_found";
   }
   const actionId = newUlid();
+  const { action } = input;
   const kept =
-    input.action === "quarantine"
+    action === "quarantine"
       ? await preservation(db, target, input, actionId)
       : undefined;
-  const told = kept === undefined ? notice(db, input, target) : undefined;
+  const told =
+    action === "quarantine" ? undefined : notice(db, input, action, target);
   const words = removalStatements[input.reason];
   await commit(
     db,
