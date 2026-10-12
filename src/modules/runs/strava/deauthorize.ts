@@ -19,6 +19,7 @@
 import { and, eq, isNull, lte, or } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 
+import { gaveUpClearPrefix } from "../../../db/gave-up";
 import { stravaConnections, stravaRevocations } from "../../../db/schema-core";
 import { firstRowWhere } from "../../../lib/sql/keyed-read";
 import { newUlid } from "../../../lib/ids";
@@ -28,6 +29,7 @@ import type { OutboxMessage } from "../../../lib/sql/outbox";
 import { emailDebt } from "../../email";
 import { notificationInsert } from "../../notifications";
 import type { CoreDb } from "../core-db";
+import { reminderSubjectPrefix } from "../queue-messages";
 
 /**
  * What S1 says when a deauthorization arrives. Strava's word for what
@@ -69,7 +71,9 @@ export type Owe = (
  *
  * One batch (CLAUDE.md, D1 discipline): the row is the only record the
  * runner gets that reminders stopped, and the revocation the only record
- * that Strava is owed a call, so neither may miss the delete.
+ * that Strava is owed a call, so neither may miss the delete. The Desk's
+ * Gave up rows for the athlete's reminders go in it too (R-142): a delete
+ * plus whatever cleans up after it.
  *
  * An athlete nobody here has connected is acknowledged and ignored.
  */
@@ -114,5 +118,8 @@ export async function deauthorizeAthlete(
       body: STRAVA_REVOKED_BODY,
     }),
     owe(told),
+    // A dead-lettered reminder's Gave up row holds this athlete's Strava
+    // ids (R-142), and they go with the grant.
+    gaveUpClearPrefix(db, "reminder", reminderSubjectPrefix(athleteId)),
   ]);
 }

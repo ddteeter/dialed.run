@@ -181,6 +181,11 @@ export interface CurrentSettings extends Preferences {
    * the back button.
    */
   thermalLevel: number | undefined;
+  /**
+   * Settings › Sharing's "Count my runs in anonymous totals" (D-108 D).
+   * On for a runner with no row, as the column's default is.
+   */
+  countInTotals: boolean;
 }
 
 /**
@@ -210,6 +215,7 @@ export async function currentSettings(
       tempUnit: userProfiles.tempUnit,
       distanceUnit: userProfiles.distanceUnit,
       defaultAudience: userProfiles.defaultAudience,
+      countInTotals: userProfiles.countInTotals,
     })
     .from(userProfiles)
     .where(eq(userProfiles.userId, userId))
@@ -221,6 +227,7 @@ export async function currentSettings(
     defaultAudience: audienceOfShareToggle(
       isSharedAudience(row?.defaultAudience ?? SHARED_AUDIENCE),
     ),
+    countInTotals: row?.countInTotals ?? true,
   };
 }
 

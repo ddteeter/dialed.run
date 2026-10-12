@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -63,6 +63,7 @@ import {
   unbanUserInput,
 } from "../../src/modules/safety";
 
+import { moderationActionInsertWhere } from "../../src/modules/safety/moderation-actions";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 
 // The handle screen (D-72) answers "clear": these tests are about retirement.
@@ -1194,6 +1195,107 @@ describe("forceRename (round 27 #16), through account's rules", () => {
     expect(await historyOf("first")).toStrictEqual([]);
     const [locked] = await historyOf("rudename");
     expect(locked?.lockedAt).toBeTypeOf("number");
+  });
+
+  it("records an action only where its condition holds, every column as given (R-121)", async () => {
+    const db = core();
+    const record = {
+      id: newUlid(),
+      actorId: "op",
+      action: "quarantine",
+      subjectType: "photo",
+      subjectId: newUlid(),
+      subjectOwnerId: "owner",
+      reason: "Held",
+      preservedKey: "quarantine/key",
+    } as const;
+    await db.batch([
+      moderationActionInsertWhere(db, record, sql`1 = 0`),
+      moderationActionInsertWhere(
+        db,
+        { ...record, id: undefined, subjectId: `${record.subjectId}-kept` },
+        sql`1 = 1`,
+      ),
+    ]);
+
+    expect(await auditFor(record.subjectId)).toStrictEqual([]);
+    const [kept] = await auditFor(`${record.subjectId}-kept`);
+    expect(kept).toMatchObject({
+      actorId: "op",
+      action: "quarantine",
+      subjectType: "photo",
+      subjectOwnerId: "owner",
+      reason: "Held",
+      preservedKey: "quarantine/key",
+    });
+    expect(kept?.id).toMatch(/^[0-9A-Z]{26}$/u);
+    expect(kept?.createdAt).toBeTypeOf("number");
+  });
+
+  it("answers not_found when the profile is gone by the time it looks", async () => {
+    const runner = await makeUser({ username: "rudename" });
+    const real = core();
+    const counter = { batches: 0 };
+    // The account's purge lands between the rename's write and its read.
+    const batch: typeof real.batch = async (items) => {
+      counter.batches += 1;
+      const results = await real.batch(items);
+      if (counter.batches === 2) {
+        await real.delete(userProfiles).where(eq(userProfiles.userId, runner));
+      }
+      return results;
+    };
+    const purged = new Proxy(real, {
+      get(target, property, receiver): unknown {
+        return property === "batch"
+          ? batch
+          : Reflect.get(target, property, receiver);
+      },
+    });
+
+    expect(await rename(runner, "runner_0002", purged)).toStrictEqual({
+      kind: "not_found",
+    });
+  });
+
+  it("lets a rename that lost a race write nothing, and say so rather than renamed (R-121)", async () => {
+    const runner = await makeUser({ username: "first" });
+    await claimUsername(core(), runner, "rudename", CLEAR);
+    // Both moderators read "rudename". The other's rename lands between
+    // this one's read and its write.
+    const real = core();
+    const counter = { batches: 0 };
+    const batch: typeof real.batch = async (items) => {
+      counter.batches += 1;
+      if (counter.batches === 2) await rename(runner, "runner_0001");
+      return real.batch(items);
+    };
+    const raced = new Proxy(real, {
+      get(target, property, receiver): unknown {
+        return property === "batch"
+          ? batch
+          : Reflect.get(target, property, receiver);
+      },
+    });
+
+    // This one would have handed back the runner's own old "first".
+    expect(await rename(runner, "first", raced)).toStrictEqual({
+      kind: "moved",
+    });
+
+    const profile = await profileOf(runner);
+    expect(profile?.username).toBe("runner_0001");
+    const [locked] = await historyOf("rudename");
+    expect(locked).toMatchObject({ userId: runner });
+    expect(locked?.lockedAt).toBeTypeOf("number");
+    expect(await historyOf("rudename")).toHaveLength(1);
+    // The winner's placeholder was not retired, and "first" not taken back.
+    expect(await historyOf("runner_0001")).toStrictEqual([]);
+    const [kept] = await historyOf("first");
+    expect(kept?.userId).toBe(runner);
+    expect(kept?.lockedAt).toBeNull();
+    // One rename happened, so one is recorded.
+    expect(await auditFor(runner)).toHaveLength(1);
   });
 
   it("locks a handle already in the history rather than failing on it", async () => {

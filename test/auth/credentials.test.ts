@@ -13,7 +13,6 @@ import {
 } from "../../src/modules/auth/auth-copy";
 import {
   AuthFieldError,
-  changePassword,
   googleConsentUrl,
   requestPasswordReset,
   resetPassword,
@@ -36,7 +35,6 @@ const client = vi.hoisted(() => ({
   signOut: vi.fn(),
   requestPasswordReset: vi.fn(),
   resetPassword: vi.fn(),
-  changePassword: vi.fn(),
   revokeSessions: vi.fn(),
 }));
 vi.mock("../../src/modules/auth/client", () => ({
@@ -46,7 +44,6 @@ vi.mock("../../src/modules/auth/client", () => ({
     signOut: client.signOut,
     requestPasswordReset: client.requestPasswordReset,
     resetPassword: client.resetPassword,
-    changePassword: client.changePassword,
     revokeSessions: client.revokeSessions,
   },
 }));
@@ -70,7 +67,6 @@ beforeEach(() => {
   client.signOut.mockReset();
   client.requestPasswordReset.mockReset();
   client.resetPassword.mockReset();
-  client.changePassword.mockReset();
   client.revokeSessions.mockReset();
   forgetSession();
 });
@@ -329,45 +325,6 @@ describe("resetPassword (ACC-4)", () => {
     });
     expect(await caught(resetPassword("t", { password: "x" }))).toBeInstanceOf(
       AuthRejected,
-    );
-  });
-});
-
-describe("changePassword (ACC-7)", () => {
-  // Not secrets: fixtures handed to a mocked client.
-  const OLD = ["old", "pass", "phrase"].join("-");
-  const NEW = ["new", "pass", "phrase"].join("-");
-  const values = { currentPassword: OLD, password: NEW };
-
-  it("changes it and signs every other session out", async () => {
-    client.changePassword.mockResolvedValue({ data: {}, error: undefined });
-    await expect(changePassword(values)).resolves.toBeUndefined();
-    expect(client.changePassword).toHaveBeenCalledWith({
-      currentPassword: OLD,
-      newPassword: NEW,
-      revokeOtherSessions: true,
-    });
-  });
-
-  it("lands a wrong current password on its own field, and a breached new one on the other", async () => {
-    client.changePassword.mockResolvedValue({
-      data: undefined,
-      error: { code: "INVALID_PASSWORD", status: 400 },
-    });
-    expect(await caught(changePassword(values))).toMatchObject({
-      issues: [
-        { path: ["currentPassword"], message: AUTH_COPY.currentPasswordWrong },
-      ],
-    });
-    client.changePassword.mockResolvedValue({
-      data: undefined,
-      error: { code: "PASSWORD_BREACHED", status: 400 },
-    });
-    expect(await caught(changePassword(values))).toMatchObject({
-      issues: [{ path: ["password"], message: AUTH_COPY.passwordBreached }],
-    });
-    expect(AUTH_COPY.currentPasswordWrong).toBe(
-      "That's not your current password.",
     );
   });
 });

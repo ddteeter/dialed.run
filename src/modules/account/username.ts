@@ -98,8 +98,17 @@ export function isReservedHandle(handle: string): boolean {
  * Whether `handle` is held by someone other than `userId`: as a current
  * handle, or as one they gave up (an old handle is never reclaimable by
  * anyone else — the design doc's reason) — or as one a moderator locked,
- * which nobody may take, its former holder included. Both reads compare as
- * the unique index does, NOCASE.
+ * which nobody may take, its former holder included.
+ *
+ * **Why only the profile read says NOCASE** (R-121). `user_profiles` keeps
+ * its handle under a NOCASE expression index, so its reads use
+ * `sameHandle` to agree with that index and be served by it. The history's
+ * `username` is a plain primary key, which compares bytes, and every
+ * lookup on it in this file is `=`. That is the same answer, not a gap:
+ * every handle reaching either table has been through `usernameSchema`,
+ * which lowercases it, so two spellings that NOCASE would call equal are
+ * already the same bytes. A NOCASE lookup on the history would also stop
+ * its primary key serving the read.
  */
 async function isHeldByAnother(
   db: Db,
@@ -389,7 +398,13 @@ export async function claimUsername(
 export type ForcedRename =
   | { readonly kind: "renamed"; readonly username: string }
   | { readonly kind: "not_found" }
-  | { readonly kind: "taken" };
+  | { readonly kind: "taken" }
+  /**
+   * The handle changed between the read that decided and the batch (a
+   * racing rename, or the runner's own new pick), so nothing was written
+   * (R-121).
+   */
+  | { readonly kind: "moved" };
 
 export interface ForceRenameRequest {
   readonly userId: string;
@@ -403,14 +418,26 @@ export interface ForceRenameRequest {
   readonly reason: string;
   /**
    * The caller's record of it (safety's audit row), given the handle that
-   * was taken away, so it lands in the same batch as the rename.
+   * was taken away and the condition the rename still happens on (R-121),
+   * so it lands in the same batch as the rename, and only if it does.
    */
-  readonly recordedAs: (previous: string) => BatchItem<"sqlite">;
+  readonly recordedAs: (previous: string, onlyIf: SQL) => BatchItem<"sqlite">;
   /**
    * Anything else the rename settles, in its batch — the Desk's review
-   * row when the rename answers a flagged handle (D-97).
+   * row when the rename answers a flagged handle (D-97). It is given the
+   * same condition as the audit row, so a rename that did not happen
+   * settles nothing.
    */
-  readonly also?: readonly BatchItem<"sqlite">[] | undefined;
+  readonly also?: ((onlyIf: SQL) => readonly BatchItem<"sqlite">[]) | undefined;
+}
+
+/**
+ * The profile still holds `previous` when the batch reaches the statement
+ * (R-121). An exact match, not NOCASE: `previous` was read from this very
+ * column, so it is the stored spelling, and the row is found by its key.
+ */
+function stillHolds(userId: string, previous: string): SQL {
+  return sql`EXISTS (SELECT 1 FROM ${userProfiles} WHERE ${userProfiles.userId} = ${userId} AND ${userProfiles.username} = ${previous})`;
 }
 
 /**
@@ -433,6 +460,17 @@ function ownUnlocked(userId: string, handle: string) {
  *
  * One batch with the caller's audit row. The read decides; the unique
  * index settles a race with a runner claiming the same handle now.
+ *
+ * **A race with another rename is settled in the database too** (R-121).
+ * Two moderators, or one double submit, read the same `previous`. Keyed on
+ * the user id alone, both batches wrote, and the later silently replaced
+ * the first rename: its placeholder went into nobody's history, and the
+ * audit said two renames happened. So every write carries "the profile
+ * still holds `previous`". The history row, the clean-up, the audit row
+ * and whatever the caller settles with it (`also`) test it; the profile
+ * update is keyed on it and runs last. A rename that lost writes nothing
+ * and answers `moved`, never `renamed`, so the Desk does not report a
+ * rename that did not happen.
  */
 export async function forceRename(
   db: Db,
@@ -449,15 +487,27 @@ export async function forceRename(
     return { kind: "taken" };
   }
   const now = nowSeconds();
+  const held = stillHolds(userId, previous);
+  const ownUnlockedWhile = and(ownUnlocked(userId, username), held);
+  const holdingPrevious = and(
+    eq(userProfiles.userId, userId),
+    eq(userProfiles.username, previous),
+  );
   try {
     await db.batch([
       db
         .insert(usernameHistory)
-        .values({ username: previous, userId, retiredAt: now, lockedAt: now })
+        .select(
+          sql`SELECT ${previous}, ${userId}, ${now}, ${now} WHERE ${held}`,
+        )
         .onConflictDoUpdate({
           target: usernameHistory.username,
           set: { lockedAt: now },
         }),
+      db.delete(usernameHistory).where(ownUnlockedWhile),
+      request.recordedAs(previous, held),
+      ...(request.also?.(held) ?? []),
+      // Last, so every statement above reads the handle before it changes.
       db
         .update(userProfiles)
         // The placeholder is ours, not the runner's words: nothing for the
@@ -468,16 +518,19 @@ export async function forceRename(
           usernameScreen: CLEARED,
           usernameScreenedAt: CLEARED,
         })
-        .where(eq(userProfiles.userId, userId)),
-      db.delete(usernameHistory).where(ownUnlocked(userId, username)),
-      request.recordedAs(previous),
-      ...(request.also ?? []),
+        .where(holdingPrevious),
     ]);
   } catch (error: unknown) {
     if (isHandleIndexViolation(error)) return { kind: "taken" };
     throw error;
   }
-  return { kind: "renamed", username };
+  // The batch cannot say whether its guarded writes ran, so the profile
+  // does: holding the new handle means this rename landed.
+  const after = await profileOf(db, userId);
+  if (after === undefined) return { kind: "not_found" };
+  return after.username === username
+    ? { kind: "renamed", username }
+    : { kind: "moved" };
 }
 
 /**
@@ -602,7 +655,8 @@ export async function handleGate(
   ]);
   if (isLeaving) return { gate: "leaving", userId };
   if (terms.state === "behind") return { gate: "needs-terms", userId };
-  if (profile?.usernameResetReason != undefined) return { gate: "renamed", userId };
+  if (profile?.usernameResetReason != undefined)
+    return { gate: "renamed", userId };
   return {
     gate: profile?.username == undefined ? "needs-handle" : "has-handle",
     userId,
@@ -651,7 +705,8 @@ export async function renameNoticeOf(
       .orderBy(desc(usernameHistory.lockedAt))
       .limit(1),
   ]);
-  if (profile?.current == undefined || profile.reason == undefined) return undefined;
+  if (profile?.current == undefined || profile.reason == undefined)
+    return undefined;
   if (locked === undefined) return undefined;
   return {
     previous: locked.previous,

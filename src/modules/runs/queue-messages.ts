@@ -106,6 +106,16 @@ export function reminderSubject(job: ReminderJob): string {
 }
 
 /**
+ * What every reminder subject for one athlete starts with (R-142): the
+ * first field `reminderSubject` writes, and the separator after it, so
+ * athlete 12's prefix is not athlete 123's. Built by the same encoder as
+ * the subject, never restated.
+ */
+export function reminderSubjectPrefix(athleteId: string): string {
+  return `${new URLSearchParams({ athleteId }).toString()}&`;
+}
+
+/**
  * The reminder a Gave up row keys, read back through the queue's own
  * schema — the row is stored data, parsed, never trusted — or nothing for
  * a key that is not one.

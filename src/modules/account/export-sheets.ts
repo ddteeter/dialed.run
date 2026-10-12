@@ -41,6 +41,10 @@ export interface ProfileRow {
     { readonly email: string; readonly joinedAt: string } | undefined;
   readonly profile: ExportData["profile"];
   readonly defaultAudience: AudienceWord | undefined;
+  /**
+  The effective totals setting: counted when no profile row exists yet.
+  */
+  readonly countInTotals: boolean | undefined;
 }
 
 /**
@@ -154,6 +158,12 @@ export function buildSheets(rows: ExportRows): ExportSheets {
           "what a new run starts as when you log it, shared or private. You can change any run afterwards.",
         value: (row) => row.defaultAudience,
       },
+      {
+        name: "count_in_totals",
+        about:
+          "true if your runs count, without your name, in anonymous totals like the guides.",
+        value: (row) => row.countInTotals,
+      },
     ],
   };
 
@@ -182,6 +192,16 @@ export function buildSheets(rows: ExportRows): ExportSheets {
         name: "distance_meters",
         about: "how far.",
         value: (run) => run.distanceM,
+      },
+      {
+        name: "moving_seconds",
+        about: "how long you were moving, from the file.",
+        value: (run) => run.movingS,
+      },
+      {
+        name: "elevation_gain_meters",
+        about: "how much you climbed, from the file.",
+        value: (run) => run.elevationGainM,
       },
       {
         name: "indoor",

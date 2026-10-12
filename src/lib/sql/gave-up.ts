@@ -1,3 +1,4 @@
+import type { SQL } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
@@ -52,6 +53,13 @@ export const DEAD_LETTER_REASON =
 export interface GaveUpWrites {
   readonly writes: readonly BatchItem<"sqlite">[];
   readonly subject: { readonly kind: GaveUpKind; readonly subjectId: string };
+  /**
+   * The condition the row is written under. The insert tests it when the
+   * batch reaches it, for a row that must not outlive what it names
+   * (R-142: a reminder's row is written only while its athlete is
+   * connected).
+   */
+  readonly onlyIf?: SQL | undefined;
 }
 
 export interface GiveUpHandlers<Job> extends Reporter {

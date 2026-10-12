@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "edbf8e6b-fc3c-4f8c-9cc1-305e056bbefe",
+  "id": "4d11d617-7b6b-45a4-b6d3-3e7cd35df6da",
   "prevId": "89bf0d21-26af-4e16-8efe-c200545fec2c",
   "tables": {
     "access_requests": {
@@ -64,14 +64,6 @@
           "columns": [
             "status",
             "created_at"
-          ],
-          "isUnique": false
-        },
-        "access_requests_status_updated": {
-          "name": "access_requests_status_updated",
-          "columns": [
-            "status",
-            "updated_at"
           ],
           "isUnique": false
         }
@@ -428,15 +420,7 @@
           "autoincrement": false
         }
       },
-      "indexes": {
-        "email_send_limits_window": {
-          "name": "email_send_limits_window",
-          "columns": [
-            "window_started_at"
-          ],
-          "isUnique": false
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -1464,15 +1448,7 @@
           "autoincrement": false
         }
       },
-      "indexes": {
-        "password_attempts_window": {
-          "name": "password_attempts_window",
-          "columns": [
-            "window_started_at"
-          ],
-          "isUnique": false
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -2783,6 +2759,14 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "count_in_totals": {
+          "name": "count_in_totals",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
         }
       },
       "indexes": {
@@ -3321,13 +3305,6 @@
             "token"
           ],
           "isUnique": true
-        },
-        "session_expires_at": {
-          "name": "session_expires_at",
-          "columns": [
-            "expires_at"
-          ],
-          "isUnique": false
         }
       },
       "foreignKeys": {
