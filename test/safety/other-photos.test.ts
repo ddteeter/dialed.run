@@ -38,9 +38,13 @@ function core() {
 
 const NOW = 1_800_000_000;
 
-async function kit(userId: string, createdAt: number): Promise<string> {
+async function kit(
+  userId: string,
+  createdAt: number,
+  audience: "runners" | "private" = "runners",
+): Promise<string> {
   const runId = await makeRun({ userId });
-  return makeEntry({ userId, runId, createdAt });
+  return makeEntry({ userId, runId, createdAt, audience });
 }
 
 async function photo(entryId: string, position = 0): Promise<string> {
@@ -100,6 +104,20 @@ describe("otherPhotosOf", () => {
         photoKey: `entries/x/${older}/${sameKit}.jpg`,
       },
     ]);
+  });
+
+  it("lists a private kit's photos too: the owner's call on PR #188", async () => {
+    const runner = await makeUser();
+    const reported = await photo(await kit(runner, NOW));
+    const privately = await photo(await kit(runner, NOW - 1, "private"));
+
+    const found = await otherPhotosOf(core(), [
+      { subjectType: "photo", subjectId: reported },
+    ]);
+
+    // A copy posted privately is still a copy; the privacy policy says an
+    // operator may see it for this check (PR #182).
+    expect(ids(found.get(`photo:${reported}`))).toStrictEqual([privately]);
   });
 
   it("leaves out a reported kit's own photos, which its row already shows", async () => {

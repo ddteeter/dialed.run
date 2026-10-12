@@ -102,6 +102,13 @@ export function otherPhotosQuery(db: Db, subject: OtherPhotosSubject) {
 
 /**
  * The runner's photos, less the subject's own and any on a removed kit.
+ *
+ * **Private kits are listed too, on purpose** (owner, 2026-10-12, on
+ * PR #188's review): there is no `audience` filter here. A copy of an
+ * intimate image is no less a copy for being posted privately, and the
+ * operator checking copies has to see it. The privacy policy is amended
+ * to say operators may see private photos for this check (PR #182);
+ * `test/safety/other-photos.test.ts` pins the inclusion.
  */
 function othersWhere(db: Db, subject: OtherPhotosSubject) {
   const runnersOwn = eq(outfitEntries.userId, runnerOf(db, subject));
