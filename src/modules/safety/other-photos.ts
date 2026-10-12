@@ -62,7 +62,7 @@ const subjectEntry = alias(outfitEntries, "subject_entry");
 export async function otherPhotosOf(
   db: Db,
   subjects: readonly OtherPhotosSubject[],
-): Promise<Map<string, readonly OtherPhoto[]>> {
+): Promise<Map<string, readonly OtherPhoto[] | undefined>> {
   const [first, ...rest] = subjects.map((subject) =>
     otherPhotosQuery(db, subject),
   );
@@ -71,7 +71,9 @@ export async function otherPhotosOf(
   return new Map(
     subjects.map((subject, index) => [
       `${subject.subjectType}:${subject.subjectId}`,
-      found[index] ?? [],
+      // The batch answers each query in order, so every index is there;
+      // the type says `undefined` because an index read always may.
+      found[index],
     ]),
   );
 }
