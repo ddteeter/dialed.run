@@ -13,6 +13,7 @@
 import { z } from "zod";
 
 import { ulidSchema } from "../ids";
+import { usernameSchema } from "./garments";
 
 export const SIGNATURE_MAX = 120;
 export const LOCATION_MAX = 2000;
@@ -48,6 +49,11 @@ export const takedownRequestSchema = z.object({
     .min(1, TAKEDOWN_COPY.location)
     .max(LOCATION_MAX, TAKEDOWN_COPY.locationLong),
   description: z.string().max(DESCRIPTION_MAX, TAKEDOWN_COPY.descriptionLong),
+  // Round 37 #59g: who posted it, when the requester knows. A handle's
+  // shape, with its "@" and case forgiven; one nobody holds is kept as
+  // written, since the requester may have it slightly wrong. Absent when
+  // the field is left empty; the form sends nothing then.
+  posterUsername: usernameSchema.optional(),
   isAttested: z.literal(true, TAKEDOWN_COPY.attest),
   idempotencyKey: ulidSchema,
 });

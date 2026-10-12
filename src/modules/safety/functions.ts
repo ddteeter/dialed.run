@@ -18,6 +18,8 @@ import { deploymentPosture, requireUserId, verifiedUserId } from "../auth";
 import { oweInCore, verifyTurnstileToken } from "../ops";
 import { requireAdmin } from "./admin";
 import {
+  blockAndDeclineAll,
+  confirmTakedownRequest,
   fileTakedownRequest,
   pendingTakedownRequests,
 } from "./takedown-requests";
@@ -48,6 +50,8 @@ import {
   denyDomainInput,
   fileReportInput,
   takedownRequestInput,
+  takedownConfirmInput,
+  blockRequesterInput,
   forceRenameInput,
   handleReviewInput,
   reviewDecisionInput,
@@ -122,7 +126,42 @@ export const takedownRequestFn = createServerFn({ method: "POST" })
         remoteIp: attempt.remoteIp,
         isLimited: deploymentPosture(env.BETTER_AUTH_URL).rateLimited,
       },
-      { verify: verifyTurnstileToken, owe: oweInCore },
+      {
+        verify: verifyTurnstileToken,
+        owe: oweInCore,
+        secret: env.TAKEDOWN_SECRET,
+      },
+    );
+  });
+
+/**
+ * `/takedown/confirm` (design 137): a requester past the cap confirms
+ * their request. No session, as the request had none; the token is the
+ * proof, and only its hash is stored.
+ */
+export const confirmTakedownFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => takedownConfirmInput.parse(data))
+  .handler(async ({ data }) => ({
+    outcome: await confirmTakedownRequest(
+      drizzle(env.DIALED_CORE),
+      data.token,
+      oweInCore,
+    ),
+  }));
+
+/**
+ * Review's Block and decline all (design 137): every open request from
+ * this requester declined, what they hid given back, and their keys
+ * blocked. Admin-only.
+ */
+export const blockTakedownRequesterAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => blockRequesterInput.parse(input))
+  .handler(async ({ data }) => {
+    const actorId = requireAdmin(await verifiedUserId());
+    return blockAndDeclineAll(
+      drizzle(env.DIALED_CORE),
+      actorId,
+      data.requestId,
     );
   });
 

@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 import { useState } from "react";
 
@@ -211,6 +212,22 @@ export function ReportSheet({
           field={form.field}
           error={form.fieldErrors.reason}
         />
+        {/* Round 37 #58k: W1's way out, shown only once the reason is
+            picked — for a runner who'd rather not report from their
+            account. Under the list, since a choice takes no hint of its
+            own. */}
+        {reason === "intimate" ? (
+          <p data-part="takedown-way-out" className="m-0 text-small">
+            Rather not use your account?{" "}
+            <Link
+              to="/takedown"
+              data-target="inline"
+              className="font-bold text-ink underline underline-offset-4"
+            >
+              Report it without signing in
+            </Link>
+          </p>
+        ) : undefined}
 
         <TextField
           name="note"

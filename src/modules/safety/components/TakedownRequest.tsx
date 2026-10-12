@@ -16,10 +16,7 @@ import {
   useIdempotencyKey,
   useTurnstileToken,
 } from "../../../ui";
-import {
-  SignedOutPanel,
-  SignedOutReceipt,
-} from "../../../ui/SignedOutPanel";
+import { SignedOutPanel, SignedOutReceipt } from "../../../ui/SignedOutPanel";
 import type { TakedownRequestResult } from "../takedown-requests";
 
 /**
@@ -33,6 +30,7 @@ const LABELS = {
   email: "Email",
   signature: "Full name",
   location: "Link to the image",
+  posterUsername: "Their dialed.run username · optional",
   description: "What it shows · optional",
   isAttested: "Statement",
 } as const;
@@ -41,6 +39,7 @@ interface Draft {
   email: string;
   signature: string;
   location: string;
+  posterUsername: string;
   description: string;
   isAttested: boolean;
 }
@@ -49,6 +48,7 @@ const BLANK: Draft = {
   email: "",
   signature: "",
   location: "",
+  posterUsername: "",
   description: "",
   isAttested: false,
 };
@@ -58,6 +58,7 @@ type Request = (input: {
     email: string;
     signature: string;
     location: string;
+    posterUsername?: string | undefined;
     description: string;
     isAttested: true;
     idempotencyKey: string;
@@ -78,7 +79,7 @@ export function TakedownRequest({
   request,
 }: Readonly<{ siteKey: string | undefined; request: Request }>): JSX.Element {
   const [draft, setDraft] = useState(BLANK);
-  const { email, signature, location, description, isAttested } = draft;
+  const { email, signature, posterUsername, isAttested } = draft;
   const edit =
     <Key extends keyof Draft>(key: Key) =>
     (value: Draft[Key]) => {
@@ -96,8 +97,28 @@ export function TakedownRequest({
       request({ data: { ...values, turnstileToken: turnstile.take() } }),
     onSuccess: setOutcome,
   });
+  const plainField = (
+    key: "location" | "posterUsername" | "description",
+    hint: string,
+  ) => (
+    <TextField
+      name={key}
+      label={LABELS[key]}
+      hint={hint}
+      value={draft[key]}
+      onChange={edit(key)}
+      field={form.field}
+      error={form.fieldErrors[key]}
+    />
+  );
   const submit = () => {
-    void form.submit({ ...draft, idempotencyKey });
+    // An empty username is no username (round 37 #59g), so the schema
+    // reads it as absent rather than as a handle too short to be one.
+    void form.submit({
+      ...draft,
+      posterUsername: posterUsername.trim() === "" ? undefined : posterUsername,
+      idempotencyKey,
+    });
   };
 
   return (
@@ -107,9 +128,8 @@ export function TakedownRequest({
       ) : (
         <FormElement form={form} dataPart="form" onSubmit={submit}>
           <p className="m-0 text-body">
-            For an intimate image of you, or someone you act for, shared
-            without consent. We hide it while we look and decide within 48
-            hours.
+            For an intimate image of you, or someone you act for, shared without
+            consent. We hide it while we look and decide within 48 hours.
           </p>
           <TextField
             name="email"
@@ -132,26 +152,11 @@ export function TakedownRequest({
             field={form.field}
             error={form.fieldErrors.signature}
           />
-          <TextField
-            name="location"
-            label={LABELS.location}
-            hint="https://dialed.run/…, or say where it is."
-            // Plain text, not `url`: the hint invites words, and a phone's
-            // URL keyboard has no space bar to type them with.
-            value={location}
-            onChange={edit("location")}
-            field={form.field}
-            error={form.fieldErrors.location}
-          />
-          <TextField
-            name="description"
-            label={LABELS.description}
-            hint="One line"
-            value={description}
-            onChange={edit("description")}
-            field={form.field}
-            error={form.fieldErrors.description}
-          />
+          {/* Plain text, not `url`: the hint invites words, and a phone's
+              URL keyboard has no space bar to type them with. */}
+          {plainField("location", "A dialed.run link, or say where it is.")}
+          {plainField("posterUsername", "If you know who posted it.")}
+          {plainField("description", "One line")}
           {/* A checkbox with an error is not `ToggleField`'s job, so its
               sentence goes under it, as O3's tap-list does with a group's. */}
           <div className="flex flex-col gap-2">

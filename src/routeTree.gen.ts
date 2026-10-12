@@ -15,7 +15,6 @@ import { Route as CopyrightRouteImport } from './routes/copyright'
 import { Route as DeskRouteRouteImport } from './routes/desk/route'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as TakedownRouteImport } from './routes/takedown'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AccountSectionRouteImport } from './routes/account/$section'
 import { Route as AccountCheckEmailRouteImport } from './routes/account/check-email'
@@ -58,6 +57,8 @@ import { Route as RunsStravaCallbackRouteImport } from './routes/runs/strava-cal
 import { Route as RunsStravaConnectRouteImport } from './routes/runs/strava-connect'
 import { Route as SafetyBlockedRouteImport } from './routes/safety/blocked'
 import { Route as SafetyReviewRouteImport } from './routes/safety/review'
+import { Route as TakedownIndexRouteImport } from './routes/takedown/index'
+import { Route as TakedownConfirmRouteImport } from './routes/takedown/confirm'
 import { Route as AccountExportTokenRouteImport } from './routes/account/export.$token'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ClosetEditItemIdRouteImport } from './routes/closet/edit.$itemId'
@@ -100,11 +101,6 @@ const JoinRoute = JoinRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TakedownRoute = TakedownRouteImport.update({
-  id: '/takedown',
-  path: '/takedown',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsRoute = TermsRouteImport.update({
@@ -317,6 +313,16 @@ const SafetyReviewRoute = SafetyReviewRouteImport.update({
   path: '/safety/review',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TakedownIndexRoute = TakedownIndexRouteImport.update({
+  id: '/takedown/',
+  path: '/takedown/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TakedownConfirmRoute = TakedownConfirmRouteImport.update({
+  id: '/takedown/confirm',
+  path: '/takedown/confirm',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountExportTokenRoute = AccountExportTokenRouteImport.update({
   id: '/account/export/$token',
   path: '/account/export/$token',
@@ -391,7 +397,6 @@ export interface FileRoutesByFullPath {
   '/copyright': typeof CopyrightRoute
   '/join': typeof JoinRoute
   '/privacy': typeof PrivacyRoute
-  '/takedown': typeof TakedownRoute
   '/terms': typeof TermsRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
@@ -428,12 +433,14 @@ export interface FileRoutesByFullPath {
   '/runs/strava-connect': typeof RunsStravaConnectRoute
   '/safety/blocked': typeof SafetyBlockedRoute
   '/safety/review': typeof SafetyReviewRoute
+  '/takedown/confirm': typeof TakedownConfirmRoute
   '/call/': typeof CallIndexRoute
   '/closet/': typeof ClosetIndexRoute
   '/desk/': typeof DeskIndexRoute
   '/feed/': typeof FeedIndexRoute
   '/notifications/': typeof NotificationsIndexRoute
   '/runs/': typeof RunsIndexRoute
+  '/takedown/': typeof TakedownIndexRoute
   '/account/export/$token': typeof AccountExportTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
@@ -454,7 +461,6 @@ export interface FileRoutesByTo {
   '/copyright': typeof CopyrightRoute
   '/join': typeof JoinRoute
   '/privacy': typeof PrivacyRoute
-  '/takedown': typeof TakedownRoute
   '/terms': typeof TermsRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
@@ -491,12 +497,14 @@ export interface FileRoutesByTo {
   '/runs/strava-connect': typeof RunsStravaConnectRoute
   '/safety/blocked': typeof SafetyBlockedRoute
   '/safety/review': typeof SafetyReviewRoute
+  '/takedown/confirm': typeof TakedownConfirmRoute
   '/call': typeof CallIndexRoute
   '/closet': typeof ClosetIndexRoute
   '/desk': typeof DeskIndexRoute
   '/feed': typeof FeedIndexRoute
   '/notifications': typeof NotificationsIndexRoute
   '/runs': typeof RunsIndexRoute
+  '/takedown': typeof TakedownIndexRoute
   '/account/export/$token': typeof AccountExportTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
@@ -519,7 +527,6 @@ export interface FileRoutesById {
   '/copyright': typeof CopyrightRoute
   '/join': typeof JoinRoute
   '/privacy': typeof PrivacyRoute
-  '/takedown': typeof TakedownRoute
   '/terms': typeof TermsRoute
   '/account/$section': typeof AccountSectionRoute
   '/account/check-email': typeof AccountCheckEmailRoute
@@ -556,12 +563,14 @@ export interface FileRoutesById {
   '/runs/strava-connect': typeof RunsStravaConnectRoute
   '/safety/blocked': typeof SafetyBlockedRoute
   '/safety/review': typeof SafetyReviewRoute
+  '/takedown/confirm': typeof TakedownConfirmRoute
   '/call/': typeof CallIndexRoute
   '/closet/': typeof ClosetIndexRoute
   '/desk/': typeof DeskIndexRoute
   '/feed/': typeof FeedIndexRoute
   '/notifications/': typeof NotificationsIndexRoute
   '/runs/': typeof RunsIndexRoute
+  '/takedown/': typeof TakedownIndexRoute
   '/account/export/$token': typeof AccountExportTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
@@ -585,7 +594,6 @@ export interface FileRouteTypes {
     | '/copyright'
     | '/join'
     | '/privacy'
-    | '/takedown'
     | '/terms'
     | '/account/$section'
     | '/account/check-email'
@@ -622,12 +630,14 @@ export interface FileRouteTypes {
     | '/runs/strava-connect'
     | '/safety/blocked'
     | '/safety/review'
+    | '/takedown/confirm'
     | '/call/'
     | '/closet/'
     | '/desk/'
     | '/feed/'
     | '/notifications/'
     | '/runs/'
+    | '/takedown/'
     | '/account/export/$token'
     | '/api/auth/$'
     | '/closet/edit/$itemId'
@@ -648,7 +658,6 @@ export interface FileRouteTypes {
     | '/copyright'
     | '/join'
     | '/privacy'
-    | '/takedown'
     | '/terms'
     | '/account/$section'
     | '/account/check-email'
@@ -685,12 +694,14 @@ export interface FileRouteTypes {
     | '/runs/strava-connect'
     | '/safety/blocked'
     | '/safety/review'
+    | '/takedown/confirm'
     | '/call'
     | '/closet'
     | '/desk'
     | '/feed'
     | '/notifications'
     | '/runs'
+    | '/takedown'
     | '/account/export/$token'
     | '/api/auth/$'
     | '/closet/edit/$itemId'
@@ -712,7 +723,6 @@ export interface FileRouteTypes {
     | '/copyright'
     | '/join'
     | '/privacy'
-    | '/takedown'
     | '/terms'
     | '/account/$section'
     | '/account/check-email'
@@ -749,12 +759,14 @@ export interface FileRouteTypes {
     | '/runs/strava-connect'
     | '/safety/blocked'
     | '/safety/review'
+    | '/takedown/confirm'
     | '/call/'
     | '/closet/'
     | '/desk/'
     | '/feed/'
     | '/notifications/'
     | '/runs/'
+    | '/takedown/'
     | '/account/export/$token'
     | '/api/auth/$'
     | '/closet/edit/$itemId'
@@ -777,7 +789,6 @@ export interface RootRouteChildren {
   CopyrightRoute: typeof CopyrightRoute
   JoinRoute: typeof JoinRoute
   PrivacyRoute: typeof PrivacyRoute
-  TakedownRoute: typeof TakedownRoute
   TermsRoute: typeof TermsRoute
   AccountSectionRoute: typeof AccountSectionRoute
   AccountCheckEmailRoute: typeof AccountCheckEmailRoute
@@ -812,11 +823,13 @@ export interface RootRouteChildren {
   RunsStravaConnectRoute: typeof RunsStravaConnectRoute
   SafetyBlockedRoute: typeof SafetyBlockedRoute
   SafetyReviewRoute: typeof SafetyReviewRoute
+  TakedownConfirmRoute: typeof TakedownConfirmRoute
   CallIndexRoute: typeof CallIndexRoute
   ClosetIndexRoute: typeof ClosetIndexRoute
   FeedIndexRoute: typeof FeedIndexRoute
   NotificationsIndexRoute: typeof NotificationsIndexRoute
   RunsIndexRoute: typeof RunsIndexRoute
+  TakedownIndexRoute: typeof TakedownIndexRoute
   AccountExportTokenRoute: typeof AccountExportTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ClosetEditItemIdRoute: typeof ClosetEditItemIdRoute
@@ -874,13 +887,6 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/takedown': {
-      id: '/takedown'
-      path: '/takedown'
-      fullPath: '/takedown'
-      preLoaderRoute: typeof TakedownRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms': {
@@ -1177,6 +1183,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SafetyReviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/takedown/': {
+      id: '/takedown/'
+      path: '/takedown'
+      fullPath: '/takedown/'
+      preLoaderRoute: typeof TakedownIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/takedown/confirm': {
+      id: '/takedown/confirm'
+      path: '/takedown/confirm'
+      fullPath: '/takedown/confirm'
+      preLoaderRoute: typeof TakedownConfirmRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/account/export/$token': {
       id: '/account/export/$token'
       path: '/account/export/$token'
@@ -1294,7 +1314,6 @@ const rootRouteChildren: RootRouteChildren = {
   CopyrightRoute: CopyrightRoute,
   JoinRoute: JoinRoute,
   PrivacyRoute: PrivacyRoute,
-  TakedownRoute: TakedownRoute,
   TermsRoute: TermsRoute,
   AccountSectionRoute: AccountSectionRoute,
   AccountCheckEmailRoute: AccountCheckEmailRoute,
@@ -1329,11 +1348,13 @@ const rootRouteChildren: RootRouteChildren = {
   RunsStravaConnectRoute: RunsStravaConnectRoute,
   SafetyBlockedRoute: SafetyBlockedRoute,
   SafetyReviewRoute: SafetyReviewRoute,
+  TakedownConfirmRoute: TakedownConfirmRoute,
   CallIndexRoute: CallIndexRoute,
   ClosetIndexRoute: ClosetIndexRoute,
   FeedIndexRoute: FeedIndexRoute,
   NotificationsIndexRoute: NotificationsIndexRoute,
   RunsIndexRoute: RunsIndexRoute,
+  TakedownIndexRoute: TakedownIndexRoute,
   AccountExportTokenRoute: AccountExportTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ClosetEditItemIdRoute: ClosetEditItemIdRoute,
