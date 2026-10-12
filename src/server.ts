@@ -14,6 +14,7 @@ import {
   handleScheduled,
   secureResponse,
 } from "./modules/ops";
+import { forgetAnsweredRequests } from "./modules/account/answered-requests";
 import { exportConsumersFromEnv } from "./modules/account/export-build";
 import { sweepExpiredAuthRows } from "./modules/auth/expired-rows";
 import { rescreenHandlesFromEnv } from "./modules/account/handle-rescreen";
@@ -62,13 +63,15 @@ export default {
       // does the handle re-ask, on the `:15` one (task 126 PR B), and the
       // product link a confirmation owes (design 133, D-113 Q1), which is
       // `closet`'s, on the `:00` one and the daily drain. And the daily
-      // sweep of expired sessions and password-try counts, `auth`'s.
+      // sweep of expired sessions and password-try counts, `auth`'s, and
+      // of answered access requests, `account`'s.
       await handleScheduled(controller, undefined, {
         purgeAccounts: purgeDueAccounts,
         sweepExports,
         rescreenHandles: rescreenHandlesFromEnv,
         linkProducts: linkTypedGarments,
         sweepAuthRows: sweepExpiredAuthRows,
+        forgetAnsweredRequests,
       });
     } catch (error) {
       captureException(error, { surface: "scheduled", cron: controller.cron });

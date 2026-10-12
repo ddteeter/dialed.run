@@ -413,6 +413,9 @@ export const accessRequests = /*#__PURE__*/ sqliteTable(
   (t) => [
     uniqueIndex("access_requests_email").on(t.email),
     index("access_requests_status_created").on(t.status, t.createdAt),
+    // The daily sweep of requests answered 90 days ago
+    // (`forgetAnsweredRequests`) reads by status and answer time.
+    index("access_requests_status_updated").on(t.status, t.updatedAt),
   ],
 );
 

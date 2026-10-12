@@ -1538,53 +1538,62 @@ async function isCountKept(key: string): Promise<boolean> {
 }
 
 describe("the daily firing sweeps rows kept past any use", () => {
-  it("sweeps the send limits and runs the auth sweep it is handed, once", async () => {
+  it("sweeps the send limits and runs each sweep it is handed, once", async () => {
     const key = await staleCount();
-    let swept = 0;
+    const swept: string[] = [];
 
     await handleScheduled(DIGEST, recordingReporter().reporter, {
       sweepAuthRows: () => {
-        swept += 1;
+        swept.push("auth");
+        return Promise.resolve();
+      },
+      forgetAnsweredRequests: () => {
+        swept.push("requests");
         return Promise.resolve();
       },
     });
 
     expect(await isCountKept(key)).toBe(false);
-    expect(swept).toBe(1);
+    expect(swept).toStrictEqual(["auth", "requests"]);
   });
 
   it("sweeps only on the daily firing", async () => {
     const key = await staleCount();
     let swept = 0;
+    const sweep = () => {
+      swept += 1;
+      return Promise.resolve();
+    };
 
     await handleScheduled(
       { cron: "0 * * * *" } as ScheduledController,
       recordingReporter().reporter,
-      {
-        sweepAuthRows: () => {
-          swept += 1;
-          return Promise.resolve();
-        },
-      },
+      { sweepAuthRows: sweep, forgetAnsweredRequests: sweep },
     );
 
     expect(await isCountKept(key)).toBe(true);
     expect(swept).toBe(0);
   });
 
-  it("sweeps the send limits when the auth sweep throws, then throws what it did", async () => {
+  it("runs every sweep when one throws, then throws what it did", async () => {
     vi.spyOn(console, "error").mockImplementation(nothing);
     const key = await staleCount();
     const boom = new Error("auth sweep fell over");
     const { reporter, checkIns } = recordingReporter();
+    let forgot = 0;
 
     await expect(
       handleScheduled(DIGEST, reporter, {
         sweepAuthRows: () => Promise.reject(boom),
+        forgetAnsweredRequests: () => {
+          forgot += 1;
+          return Promise.resolve();
+        },
       }),
     ).rejects.toBe(boom);
 
     expect(await isCountKept(key)).toBe(false);
+    expect(forgot).toBe(1);
     expect(checkIns.map((checkIn) => checkIn.status)).toStrictEqual([
       "in_progress",
       "error",

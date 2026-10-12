@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "b38bc4b0-27cb-48a4-8540-fb6e157b16df",
+  "id": "a83043b2-2aa3-4366-97cb-099ac58b91d8",
   "prevId": "7482d124-7203-40be-bb98-d17055b51f62",
   "tables": {
     "access_requests": {
@@ -64,6 +64,14 @@
           "columns": [
             "status",
             "created_at"
+          ],
+          "isUnique": false
+        },
+        "access_requests_status_updated": {
+          "name": "access_requests_status_updated",
+          "columns": [
+            "status",
+            "updated_at"
           ],
           "isUnique": false
         }
