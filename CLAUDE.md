@@ -744,10 +744,20 @@ stryker run --mutate "src/ui/form.tsx,src/ui/Mono.tsx"` is 27 seconds
    directory.
 6. If you change module boundaries or add a queue/cron/binding, update the
    relevant diagram in `docs/architecture.md` in the same PR.
-7. **A push is not done until its checks are green.** After every push to a
-   PR branch, watch the checks (`gh pr checks <n> --watch`) and fix failures
-   before ending your turn. CI covers ground the local gates don't (the
-   client-bundle build, browser e2e) — local green is not proof.
+7. **A push is not done until its checks are green.** CI covers ground the
+   local gates don't (the client-bundle build, browser e2e), so local green is
+   not proof. **But never wait for it in the foreground.** Run the push and
+   the watch (`gh pr checks <n> --watch`) with `run_in_background`, then end
+   your turn. You are woken once when the background command exits, and then
+   you fix any failures. A foreground wait loop (`until kill -0`, a re-run of
+   a timed-out `--watch`) wakes a subagent every ten minutes, and a subagent's
+   prompt cache lasts five. So each wake re-pays the whole context. In the
+   week of 2026-10-09, lanes waiting behind the push-gate lock this way used
+   about a quarter of a weekly usage limit
+   (`docs/proposals/2026-10-12-agent-wait-cost.md`). A lane dispatched by a
+   coordinator stops at "ready to ship" and does not push at all: the
+   coordinator ships it in the background and hands a red result to a fresh
+   fixer.
 8. Before ending your final turn: run `npm run verify && npm test && npm run
 build`, then
    summarize what you built, what you did not do, and any open questions —
