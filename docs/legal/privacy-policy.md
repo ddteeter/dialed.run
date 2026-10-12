@@ -63,10 +63,8 @@ Questions about this policy or your data: hello@dialed.run.
 - **Not your date of birth.** Sign-up asks for it to check you are 18 or
   over, and we do not keep it (see [Children](#children)).
 - **A request for access**, if you make one: the email address, the note
-  you leave, and whether we invited you or declined. We keep it after we
-  answer. [OWNER: no period is set; nothing deletes a request unless the
-  address later makes an account and deletes it. Choose one, for example
-  "deleted 90 days after we answer", or keep "until we delete it".]
+  you leave, and whether we invited you or declined. We delete it 90 days after we
+  answer; a request we have not answered yet is kept until we do.
 - **Your password, hashed.** We store a scrypt hash, never the password
   itself. When you set a password we check it against Have I Been Pwned's
   list of leaked passwords. Only the first five characters of the
@@ -373,7 +371,7 @@ sets no cookies and keeps no personal data.
 | Imported run files                                                                              | Until it has been read, usually within a day. A file we could not read: 30 days after the import failed                           |
 | Your data export                                                                                | The file: 7 days from when it is ready. The record that you asked for one: deleted with the file, or 7 days after a failed export |
 | Removal requests (`/takedown`)                                                                  | Until we delete them                                                                                                              |
-| Requests for access                                                                             | Until we delete them [OWNER: see "A request for access" above]                                                                    |
+| Requests for access                                                                             | 90 days after we answer them                                                                                                      |
 | Session records                                                                                 | Expire after 7 days; the record is kept until sign-out, a ban or account deletion [OWNER: see "Sessions" above]                   |
 | Strava refresh token                                                                            | Until you disconnect, then until Strava confirms revocation                                                                       |
 | Strava activity ids                                                                             | 7 days                                                                                                                            |
@@ -418,7 +416,7 @@ What you can do in the app:
 
 For anything else, such as correcting something you cannot edit, or a
 question about what we hold, email hello@dialed.run and we will answer
-within [OWNER: a number of days; GDPR allows one month]. [OWNER: name the
+within 30 days. [OWNER: name the
 laws you answer to and, for GDPR, the legal basis for each use. Sign-up
 stays open to the EU and UK (D-115), so GDPR and UK GDPR probably apply.
 A starting point for counsel: contract for the account, closet, runs and
@@ -451,10 +449,9 @@ you think one does, email hello@dialed.run.
 
 ## Changes to this policy
 
-When this policy changes we will update the date at the top. [OWNER: how
-you will tell people about a material change. The code has no prompt for
-policy changes. Recommended: match the terms ("in the app or by email, at
-least 30 days ahead").]
+When this policy changes we will update the date at the top. Before a
+change that matters takes effect, we will tell you in the app or by email,
+at least 30 days ahead, unless the change is required by law.
 
 ## Governing law
 
