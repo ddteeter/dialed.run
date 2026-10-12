@@ -747,10 +747,20 @@ describe("a handle the re-ask flagged (D-97)", () => {
   it("offers Keep and Rename with D8's reasons, and never Remove", () => {
     renderQueue([flagged()]);
 
-    // Nothing said yet: the row's own line is for a taken placeholder.
-    expect(document.querySelector("li p.text-body")).toBeNull();
+    // Nothing said yet: the band is for a taken placeholder.
+    expect(document.querySelector("[data-part='control-failure']")).toBeNull();
 
-    expect(screen.getByText(/profile · quadzilla_69/)).toBeInTheDocument();
+    // Round 35 #45: it names why it is there — the re-check's kicker where
+    // a content row names its kind, and the re-check's line where a
+    // content row lists what the reporters said.
+    expect(
+      screen.getByRole("button", { name: "handle · re-check · quadzilla_69" }),
+    ).toBeInTheDocument();
+    expect(document.querySelector("[data-part='why-here']")).toHaveTextContent(
+      /^The hourly re-check flagged a handle this runner already has\. Nothing is hidden while it waits\.$/u,
+    );
+    expect(screen.queryByText("Nobody reported this.")).toBeNull();
+    expect(screen.getByText("[classifier]")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Keep" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Rename" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
@@ -885,6 +895,13 @@ describe("a handle the re-ask flagged (D-97)", () => {
     expect(
       await screen.findByText("That placeholder is taken. Press Rename again."),
     ).toBeInTheDocument();
+    // In the row's control band, under NOT RENAMED, with no Try again:
+    // the sentence says to press Rename (round 35 #45).
+    const band = document.querySelector("[data-part='control-failure']");
+    expect(band).toHaveTextContent(
+      /^Not renamed.*That placeholder is taken\. Press Rename again\.$/u,
+    );
+    expect(band?.querySelector("button")).toBeNull();
     expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
   });
 
@@ -898,5 +915,10 @@ describe("a handle the re-ask flagged (D-97)", () => {
 
     expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Keep" })).toBeNull();
+    // Its kind is its own, and the reporters speak for it.
+    expect(
+      screen.getByRole("button", { name: "profile · dee" }),
+    ).toBeInTheDocument();
+    expect(document.querySelector("[data-part='why-here']")).toBeNull();
   });
 });

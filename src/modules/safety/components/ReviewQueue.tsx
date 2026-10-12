@@ -3,6 +3,7 @@ import type { JSX, ReactNode, Ref } from "react";
 
 import {
   Bracketed,
+  FailureBand,
   ListSection,
   Mono,
   SubmitButton,
@@ -435,9 +436,32 @@ function HandleDecision({
         field={form.field}
         error={form.fieldErrors.nameReason}
       />
-      {said === "" ? undefined : <p className="text-body">{said}</p>}
+      {/* Round 35 #45: the taken placeholder is the row's control band,
+          under NOT RENAMED. No Try again: the sentence says to press
+          Rename, which is right above it. */}
+      {said === "" ? undefined : (
+        <FailureBand
+          kicker="Not renamed"
+          message={said}
+          part="control-failure"
+        />
+      )}
     </DecisionForm>
   );
+}
+
+/**
+ * A flagged handle's row says why it is there (round 35 #45): the kicker
+ * names the re-check where a content row names its kind, and this line
+ * stands where a content row lists what the reporters said.
+ */
+const HANDLE_FLAGGED_LINE =
+  "The hourly re-check flagged a handle this runner already has. Nothing is hidden while it waits.";
+
+function rowKind(row: QueueRow): string {
+  return row.subject.handleFlagged === true
+    ? "handle · re-check"
+    : row.subjectType;
 }
 
 /**
@@ -487,7 +511,7 @@ function ReviewRow({
           onClick={onActivate}
           className="target cursor-pointer border-none bg-transparent p-0 text-left text-body font-semibold text-ink"
         >
-          {row.subjectType} · {row.subject.label ?? row.subjectId}
+          {rowKind(row)} · {row.subject.label ?? row.subjectId}
         </button>
         {/* The TAKE IT DOWN Act's 48 hours, on a row an intimate-image
             report started: in the header, right, where the age sits
@@ -499,7 +523,13 @@ function ReviewRow({
         )}
       </span>
       <ReportedPhotos keys={row.subject.photoKeys} />
-      <ReportedFor row={row} />
+      {row.subject.handleFlagged === true ? (
+        <p data-part="why-here" className="m-0 text-body">
+          {HANDLE_FLAGGED_LINE}
+        </p>
+      ) : (
+        <ReportedFor row={row} />
+      )}
       <span className="text-micro text-quiet">
         <Bracketed>{row.source}</Bracketed>
       </span>
