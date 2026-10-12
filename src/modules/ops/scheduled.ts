@@ -18,6 +18,7 @@ import {
   extractionPending,
   listAbandonedEnrichments,
 } from "../enrichment";
+import { sweepSendLimits } from "../email";
 import { pruneStravaIds } from "../runs";
 import { retryPendingWeather } from "../weather";
 import { cronNameFor, type CronName } from "./crons";
@@ -141,6 +142,12 @@ export async function handleScheduled(
  * `:00` firing with it, so a newly confirmed runner's garments link within
  * the hour, and on the daily firing's full drain.
  *
+ * **The auth rows' sweep** is `auth`'s, which imports `ops`: expired
+ * sessions and spent password-try counts, deleted on the daily firing
+ * beside the send limits' own sweep (`auth/expired-rows.ts`). **The
+ * answered access requests' sweep** is `account`'s, for the same reason:
+ * requests invited or declined 90 days ago (`account/answered-requests.ts`).
+ *
  * All are optional: a firing handed none purges and sweeps nothing and
  * mails the digest the live way (`oweDigestEmail`'s default). A product
  * link drained with no linker stays owed and is reported.
@@ -152,6 +159,8 @@ export interface DailyUpkeep {
   readonly rescreenHandles?:
     ((anomalies: string[]) => Promise<void>) | undefined;
   readonly linkProducts?: ProductLinker | undefined;
+  readonly sweepAuthRows?: (() => Promise<void>) | undefined;
+  readonly forgetAnsweredRequests?: (() => Promise<void>) | undefined;
 }
 
 /**
@@ -695,6 +704,15 @@ async function runDailyDigest(
   // D5: the morning email, every day, even when every number is zero
   // (task 125 · OPS-11, through task 126's email module).
   await oweDigestEmail(db, upkeep.digestMail);
+  // Rows kept past any use: counts whose window ended a day ago, sessions
+  // expired a month ago, access requests answered 90 days ago. After the
+  // email, so a sweep that throws costs only itself, and each runs whether
+  // the others fail (law 5).
+  await eachStep([
+    () => sweepSendLimits(db),
+    () => upkeep.sweepAuthRows?.(),
+    () => upkeep.forgetAnsweredRequests?.(),
+  ]);
   return everything;
 }
 

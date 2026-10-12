@@ -400,6 +400,13 @@
       "when": 1791787083919,
       "tag": "0056_add_profile_count_in_totals",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "6",
+      "when": 1791845547128,
+      "tag": "0057_add_expired_row_sweep_indexes",
+      "breakpoints": true
     }
   ]
 }

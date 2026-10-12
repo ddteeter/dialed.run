@@ -41,7 +41,12 @@ export const session = /*#__PURE__*/ sqliteTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
   },
-  (t) => [uniqueIndex("session_token").on(t.token)],
+  (t) => [
+    uniqueIndex("session_token").on(t.token),
+    // Better Auth deletes an expired row only when someone presents it;
+    // the daily sweep of the rest (`sweepExpiredAuthRows`) reads by this.
+    index("session_expires_at").on(t.expiresAt),
+  ],
 );
 
 export const account = /*#__PURE__*/ sqliteTable("account", {

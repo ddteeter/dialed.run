@@ -188,11 +188,19 @@ export const emailVerifications = /*#__PURE__*/ sqliteTable(
  * would tell whoever hit it that the account exists — the thing Au4 is
  * drawn to never reveal. The key is `{kind}:{address}`.
  */
-export const emailSendLimits = /*#__PURE__*/ sqliteTable("email_send_limits", {
-  key: text("key").primaryKey(),
-  windowStartedAt: integer("window_started_at").notNull(),
-  sends: integer("sends").notNull(),
-});
+export const emailSendLimits = /*#__PURE__*/ sqliteTable(
+  "email_send_limits",
+  {
+    key: text("key").primaryKey(),
+    windowStartedAt: integer("window_started_at").notNull(),
+    sends: integer("sends").notNull(),
+  },
+  (t) => [
+    // The daily sweep of counts whose hour is long over
+    // (`sweepSendLimits`) reads by this; without it the sweep scans.
+    index("email_send_limits_window").on(t.windowStartedAt),
+  ],
+);
 
 /**
  * How many times a signed-in runner has tried their current password this
@@ -201,11 +209,19 @@ export const emailSendLimits = /*#__PURE__*/ sqliteTable("email_send_limits", {
  * through it, so without this a session holder could guess the password
  * without limit. One row per runner, cleared by a right answer.
  */
-export const passwordAttempts = /*#__PURE__*/ sqliteTable("password_attempts", {
-  userId: text("user_id").primaryKey(),
-  windowStartedAt: integer("window_started_at").notNull(),
-  attempts: integer("attempts").notNull(),
-});
+export const passwordAttempts = /*#__PURE__*/ sqliteTable(
+  "password_attempts",
+  {
+    userId: text("user_id").primaryKey(),
+    windowStartedAt: integer("window_started_at").notNull(),
+    attempts: integer("attempts").notNull(),
+  },
+  (t) => [
+    // The daily sweep of counts whose window is long over
+    // (`sweepExpiredAuthRows`) reads by this; without it the sweep scans.
+    index("password_attempts_window").on(t.windowStartedAt),
+  ],
+);
 
 /**
  * An account its runner asked to delete (task 126, ACC-9; round 27 #14):
@@ -404,6 +420,9 @@ export const accessRequests = /*#__PURE__*/ sqliteTable(
   (t) => [
     uniqueIndex("access_requests_email").on(t.email),
     index("access_requests_status_created").on(t.status, t.createdAt),
+    // The daily sweep of requests answered 90 days ago
+    // (`forgetAnsweredRequests`) reads by status and answer time.
+    index("access_requests_status_updated").on(t.status, t.updatedAt),
   ],
 );
 

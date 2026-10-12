@@ -77,18 +77,14 @@ Questions about this policy or your data: hello@dialed.run.
   the tokens Google issues at sign-in.
 - **Sessions.** When you sign in we record a session token, when it expires
   (7 days), the browser that signed in, and its IP address (as Cloudflare
-  reports it). [OWNER: launch gap, still real. Nothing deletes a session
-  row once it expires; it goes only on sign-out, a ban or account
-  deletion. Decide a sweep (for example, delete rows 30 days past expiry)
-  or say here that they are kept until the account is deleted.]
+  reports it). The record is deleted 30 days after the session expires.
 - **Counts that stop abuse.** We count sign-in and sign-up attempts per IP
   address; those counts are kept for about a minute and then deleted. We
   count how many sign-in links, password resets and email changes each
   address asked for in the last hour, and how many wrong passwords you
-  typed when changing your email. Requests for access and removal requests
-  are counted per visitor IP address the same way. [OWNER: the per-IP rows
-  for requests for access and removal requests are never deleted; each
-  holds one IP address and a count. Decide a sweep or accept and say so.]
+  typed when changing your email or password. Requests for access and
+  removal requests are counted per visitor IP address the same way. Each
+  of these counts is deleted a day after its window ends.
 - **Terms you accepted:** each version and when.
 - **Account email.** We send email from hello@dialed.run through
   **Cloudflare's** email service: confirming your address, a notice when
@@ -297,8 +293,9 @@ account added it.
   everyone but its owner while we look, and put it back if we decline.
   We email the address a receipt and the decision, and email each
   reviewer that a request is waiting. We count requests per visitor IP
-  address, as we do requests for access, to stop the form being flooded.
-  To stop one person filing many requests, we keep with each request a
+  address, as we do requests for access, to stop the form being flooded,
+  and delete each count a day after its hour ends. To stop one person
+  filing many requests, we keep with each request a
   form of the email address that ignores dots and "+" tags where the
   provider does, and a one-way keyed code made from the IP address (not
   the address itself). If someone abuses the form, we may block that
@@ -377,7 +374,7 @@ sets no cookies and keeps no personal data.
 | Your data export                                                                                | The file: 7 days from when it is ready. The record that you asked for one: deleted with the file, or 7 days after a failed export |
 | Removal requests (`/takedown`)                                                                  | Until we delete them                                                                                                              |
 | Requests for access                                                                             | 90 days after we answer them                                                                                                      |
-| Session records                                                                                 | Expire after 7 days; the record is kept until sign-out, a ban or account deletion [OWNER: see "Sessions" above]                   |
+| Session records                                                                                 | Expire after 7 days, and are deleted 30 days after they expire                                                                    |
 | Strava refresh token                                                                            | Until you disconnect, then until Strava confirms revocation                                                                       |
 | Strava activity ids                                                                             | 7 days                                                                                                                            |
 | Garments you delete                                                                             | Deleted with their photo files. A garment you wore leaves those kits                                                              |
