@@ -940,6 +940,38 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     changed before the rename landed. Nothing was renamed." (`renameMessage`
     in `safety/components/DeskRunners.tsx`). **The ask:** word it.
 
+45. **What lane A (design 138) built beside round 32's and round 30's
+    drawings.** D-108 E's three disclosures, Settings › Sharing's totals
+    switch and Settings › Region are built with the boards' copy verbatim.
+    Five things the boards do not draw:
+    - **"How the guides are made" opens `/privacy`.** The board's target
+      is `dialed.run/how-it-works#totals`, which the marketing site owns
+      and which is not live. When it is, the link points there. **The
+      ask:** none for design; a one-line change when the site ships.
+    - **The Change sheet.** Round 32 says Change "opens Settings ›
+      Sharing as a sheet". Built as a `Sheet` titled "Sharing" holding
+      the totals switch, its sub-line and the link, and a Done. It does
+      not hold "Share new runs": that is a form with its own Save, and a
+      form cannot sit inside A3's form. **The ask:** draw the sheet, or
+      confirm the totals switch alone.
+    - **Settings › Region's screen.** Round 30 (d) gives the path, the
+      hint and "country, plus state or province where it applies". Built
+      as a sub-page titled "Region", reached from a "Region" row under You
+      ("Not set" until set, "Minnesota, United States" after), with two
+      selects ("Country", "State or province") and one Save. The second
+      select appears only for a country with subdivisions in the list,
+      which today is the US (states and DC) and Canada. Choosing "—" and
+      saving clears it. **The ask:** draw the row and the sub-page, and
+      say whether more countries take a subdivision.
+    - **Where the totals switch sits.** Round 32 draws one SHARING group
+      with "Share new runs" and the totals switch. Built on the Privacy
+      sub-page under the sharing default's form and its Save, because the
+      totals switch saves on toggle and the default does not.
+    - **Region error copy.** The form only offers the list's choices, so
+      three sentences answer what only a hand-made request can send: "Pick
+      a country from the list.", "Pick a country before a state or
+      province." and "Pick a state or province in that country."
+
 ## Answered in round 37 (imported 2026-10-10)
 
 Design sent round 37 as `Round 37 Rulings.dc.html`, with the text of record

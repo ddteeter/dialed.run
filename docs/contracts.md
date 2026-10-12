@@ -45,6 +45,12 @@ temp_unit        text     -- 'f' | 'c'; distance_unit 'mi' | 'km'; from locale
 default_audience text     -- 'runners' (default) | 'private' | 'groups': who new entries are
                           --  for (D-109, design 131). Writers store only
                           --  runners | private until groups ship.
+count_in_totals  int      -- boolean, NOT NULL DEFAULT 1: Settings › Sharing's
+                          --  "Count my runs in anonymous totals" (D-108 D).
+                          --  The guide job reads only runners with 1.
+region_country   text     -- NULLABLE ISO 3166-1 alpha-2 ('US'); region_subdivision
+                          --  NULLABLE ISO 3166-2 ('US-MN'). Round 30 (d): used
+                          --  only to group anonymous totals, never shown.
 ```
 
 ### wardrobe_items
