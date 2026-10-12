@@ -250,6 +250,36 @@ describe("the consumer owes it in the bell row's batch", () => {
     expect(row?.payload).not.toContain(athleteId);
   });
 
+  it("reckons in UTC, quietly, when no zone lookup is wired", async () => {
+    const { athleteId } = await connectedRunner();
+    const consumer = deps();
+    await deliver(reminderJob(athleteId), consumer);
+    expect(consumer.captureException).not.toHaveBeenCalled();
+  });
+
+  it("reads yesterday's reminders from the bell rows: the next day counts both", async () => {
+    const { userId, athleteId } = await connectedRunner();
+    const yesterday = nowSeconds() - 24 * HOUR;
+    // Yesterday's first owed yesterday's email; its second did not.
+    await core()
+      .insert(notifications)
+      .values(
+        [yesterday, yesterday + 1].map((createdAt) => ({
+          id: newUlid(),
+          userId,
+          kind: "strava_reminder",
+          subjectId: newUlid(),
+          body: "New run on Strava",
+          read: false,
+          createdAt,
+        })),
+      );
+    await deliver(reminderJob(athleteId));
+
+    const [row] = await owedFor(userId);
+    expect(row?.payload).toContain('"runs":2');
+  });
+
   it("owes no second email for a second run the same day", async () => {
     const { userId, athleteId } = await connectedRunner();
     await deliver(reminderJob(athleteId));
