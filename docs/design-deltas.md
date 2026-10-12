@@ -3741,6 +3741,18 @@ contract values moved.
 FEELS [{lo}–{hi}°] · {PRECIP} · {WINDOW}`; line "In {feels}° and
   {precip}, {window}, wherever they were." Wind leaves the eyebrow; no line
   names a place. E1's compact line and N's privacy card follow. Not built.
+  **Lane D1 (design 140, 2026-10-12) read the boards before building and
+  stopped: neither has a built screen to land on.** The compact line ("18
+  runners logged 44° and damp in the last 3 days.") is drawn only on
+  `Remaining Screens`' "E2 Feed your conditions" frame, marked
+  `data-status="unbuilt"` and "POST-MVP TARGET"; no E1 frame (`Feed`,
+  `Remaining Screens`, `Round 22 Coverage`'s E1v1) carries a conditions
+  line at all, and the built Your conditions tab draws E2-lite's block,
+  already in round 25's words. The privacy card is U2 Privacy's "THE
+  CONDITIONS POOL" card, with a toggle for leaving the in-app pool that no
+  column or setting backs — a product call beside D-108's "Count my runs
+  in anonymous totals", not a wording change. Both are questions for the
+  owner and design, asked in the lane D1 PR.
 
 **Round 24's asks were still open** (answered in round 26, above) — the time correction on A1, R2b's
 options, the delete-with-runs sheet, "Garment saved, photo didn't", the
