@@ -1,74 +1,48 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { APPEAL_ADDRESS } from "../../src/lib/contracts/contact";
 import { AccountClosed } from "../../src/modules/safety/components/AccountClosed";
 
 /**
- * Operator Screens D4: what a banned runner opens to. Its promises are
- * copy, so the copy is what is asserted — the reason word for word, the
- * date, the way to appeal, and nothing to press.
+ * Operator Screens D4 as design-deltas item 23 redrew it: a notice band on
+ * Au1 (round 27, "Au1 account closed Google"). Its promises are copy, so
+ * the copy is what is asserted — the board's words, nothing to press, no
+ * date and no reason.
  */
-describe("D4 · the notice", () => {
-  // 16 September 2026, 08:06 UTC.
-  const closedAt = Date.UTC(2026, 8, 16, 8, 6) / 1000;
-  const reason =
-    "Three separate entries this week were adverts for a supplement store.";
-
-  it("says the account is closed, when, and why, in the operator's words", () => {
-    render(<AccountClosed reason={reason} closedAt={closedAt} />);
-    expect(
-      screen.getByRole("heading", {
-        level: 1,
-        name: "Your account is closed.",
-      }),
-    ).toBeTruthy();
-    expect(
-      screen.getByText(
-        "A person at dialed.run closed it on September 16. This is the reason they wrote down:",
-      ),
-    ).toBeTruthy();
-    expect(screen.getByText(reason).tagName).toBe("BLOCKQUOTE");
-    expect(
-      screen.getByText(
-        "Your entries and photos are no longer public. Your sign-in no longer works.",
-      ),
-    ).toBeTruthy();
+describe("D4 · the notice, on Au1 (item 23)", () => {
+  it("says the board's three lines word for word, then the owner's fallback", () => {
+    render(<AccountClosed />);
+    const band = document.querySelector("[data-part='account-closed']");
+    expect(band?.textContent).toBe(
+      [
+        "Account closed",
+        "This account was closed for breaking the community rules.",
+        "Think we got it wrong? Reply to the email we sent you.",
+        "Or write to desk@dialed.run.",
+      ].join(""),
+    );
   });
 
-  it("dates the ban in UTC, whatever the hour", () => {
-    // 23:30 UTC on the 16th is still the 16th — not the 17th somewhere
-    // east, which is where a device zone would put it.
-    const late = Date.UTC(2026, 8, 16, 23, 30) / 1000;
-    render(<AccountClosed reason={reason} closedAt={late} />);
-    expect(screen.getByText(/closed it on September 16\./)).toBeTruthy();
+  it("is a notice band, with both appeal lines quiet", () => {
+    render(<AccountClosed />);
+    const notice = document.querySelector(
+      "[data-part='account-closed'] [data-part='notice-band']",
+    );
+    expect(notice).not.toBeNull();
+    expect(
+      screen.getByText(
+        "Think we got it wrong? Reply to the email we sent you.",
+      ),
+    ).toHaveClass("text-quiet");
+    expect(screen.getByText("Or write to desk@dialed.run.")).toHaveClass(
+      "text-quiet",
+    );
   });
 
-  it("gives the appeal address as a link and offers nothing to press", () => {
-    render(<AccountClosed reason={reason} closedAt={closedAt} />);
-    const link = screen.getByRole("link", { name: APPEAL_ADDRESS });
-    expect(link.getAttribute("href")).toBe("mailto:desk@dialed.run");
+  it("offers nothing to press, and promises no time to an answer (D-73)", () => {
+    const { container } = render(<AccountClosed />);
     expect(screen.queryByRole("button")).toBeNull();
-    expect(screen.getByText(/A person reads every message\./)).toBeTruthy();
-    // The word before the link and the address itself are separate text
-    // nodes either side of the `<a>`, so a missing space between them reads
-    // fine as two `getByText` matches and wrong as continuous prose.
-    expect(link.parentElement?.textContent).toBe(
-      `If you think this is wrong, write to ${APPEAL_ADDRESS}. A person reads every message.`,
-    );
-  });
-
-  it("promises no time to an answer (D-73)", () => {
-    render(<AccountClosed reason={reason} closedAt={closedAt} />);
-    const appeal = screen.getByRole("link", { name: APPEAL_ADDRESS })
-      .parentElement?.textContent;
-    expect(appeal).not.toMatch(/within|week|\bdays?\b/u);
-  });
-
-  it("draws the plain lockup, with no pink brackets", () => {
-    const { container } = render(
-      <AccountClosed reason={reason} closedAt={closedAt} />,
-    );
-    expect(container.textContent).not.toContain("[dialed");
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(container.textContent).not.toMatch(/within|week|\bdays?\b/u);
   });
 });

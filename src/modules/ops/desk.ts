@@ -10,10 +10,16 @@
 import { count, eq, isNotNull, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
-import { gaveUp, reviewQueue, userProfiles } from "../../db/schema-core";
+import {
+  cronCheckpoints,
+  gaveUp,
+  reviewQueue,
+  userProfiles,
+} from "../../db/schema-core";
 import { env } from "../../env";
 import { nowSeconds } from "../../lib/now";
 import { adminUserIds, pendingReviewCount } from "../safety";
+import { DIGEST_UNCONFIRMED } from "./digest-marks";
 
 /**
 Today's three numbers, and the two facts printed under them.
@@ -44,6 +50,12 @@ export interface TodayCounts {
   When the longest-standing of those first failed; absent at zero.
   */
   readonly oldestGaveUpAt: number | undefined;
+  /**
+   * When a morning's digest last skipped an operator whose address is not
+   * confirmed (OPS-11, `DIGEST_UNCONFIRMED`); absent if one never has.
+   * Today says so while it is today's.
+   */
+  readonly digestUnconfirmedAt: number | undefined;
 }
 
 const WEEK_SECONDS = 7 * 24 * 60 * 60;
@@ -66,7 +78,7 @@ export async function todayCounts(): Promise<TodayCounts> {
   const db = drizzle(env.DIALED_CORE);
   const weekAgo = nowSeconds() - WEEK_SECONDS;
   const waiting = await pendingReviewCount();
-  const [review, bans, gave] = await db.batch([
+  const [review, bans, gave, unconfirmed] = await db.batch([
     db
       .select({
         source: reviewQueue.source,
@@ -95,6 +107,11 @@ export async function todayCounts(): Promise<TodayCounts> {
       })
       .from(gaveUp)
       .groupBy(sql`'gave_up'`),
+    // The digest's skip mark, by its primary key (OPS-11).
+    db
+      .select({ at: cronCheckpoints.lastRunAt })
+      .from(cronCheckpoints)
+      .where(eq(cronCheckpoints.cronName, DIGEST_UNCONFIRMED)),
   ]);
   const [gaveUpGroup] = gave;
   return {
@@ -109,6 +126,7 @@ export async function todayCounts(): Promise<TodayCounts> {
     bansAllTime: sumOf(bans),
     gaveUp: gaveUpGroup?.rows ?? 0,
     oldestGaveUpAt: gaveUpGroup?.oldest,
+    digestUnconfirmedAt: unconfirmed[0]?.at,
   };
 }
 

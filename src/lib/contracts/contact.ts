@@ -18,9 +18,9 @@
 export const CONTACT_ADDRESS = "hello@dialed.run";
 
 /**
- * Where a moderation decision is appealed: Operator Screens D4's notice
- * and the terms' "Moderation and appeals" line (decision D-73). The
- * moderation emails take it as their Reply-To, so replying to one — the
- * appeal the ban email offers — lands in the same inbox.
+ * Where a moderation decision is appealed: the terms' "Moderation and
+ * appeals" line (decision D-73). The moderation emails take it as their
+ * Reply-To, so replying to one — the appeal the ban email offers — lands
+ * in the same inbox.
  */
 export const APPEAL_ADDRESS = "desk@dialed.run";

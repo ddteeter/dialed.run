@@ -459,7 +459,8 @@ flowchart LR
     QX[[dialed-exports\nmax_batch_size=1, max_retries=3]] -->|exhausted| DLQX[[dialed-exports-dlq]]
     DLQX --> DCX[DLQ consumer:\nexport failed,\nshown on Settings,\nSentry event]
     CRON2[Daily digest cron] -->|only if anomalies:\none event per kind| SENTRY
-    CRON2 -.->|OPS-11, after 126's email| ADMIN[Admin digest email]
+    CRON2 -->|every day, confirmed\naddresses only (OPS-11)| ADMIN[Admin digest email]
+    CRON2 -->|operator unconfirmed:\nmark, same batch| DESK
     CRONS[Every cron] -->|check-in: in_progress, ok / error| CRONMON[Sentry Crons]
     REQ[Request: D1 change +\noutbox row, one batch] -->|fast path| R2[(R2)]
     REQ -->|fast path failed| OB[(outbox table)]
@@ -551,10 +552,12 @@ flowchart LR
   and day and tagged `digest_kind`, so every day's anomalies are a new issue
   an alert rule can fire on (OPS-2; the rule itself is a deployment step).
   Every Sentry send is registered with `waitUntil`, so it outlives the
-  invocation that made it — fetch, queue or cron (OPS-1). **Email is not
-  built yet**: the digest by email (Operator Screens D5) is OPS-11, and it
-  waits on task 126's email module. The Desk's Today (`/desk`) renders the
-  same counts from the same query.
+  invocation that made it — fetch, queue or cron (OPS-1). The digest also goes
+  by email every day (Operator Screens D5, OPS-11), only to operators
+  whose address is confirmed. A skipped operator is marked in
+  `cron_checkpoints` (`digest-unconfirmed`) in the same batch, and Today
+  says so that day. The Desk's Today (`/desk`) renders the same counts
+  from the same query.
 - **A cron that stops firing is noticed**: each of the four crons opens and
   closes a Sentry Crons check-in, and the monitor config rides on the
   opening one, so a monitor creates itself (OPS-3). The digest cannot be its

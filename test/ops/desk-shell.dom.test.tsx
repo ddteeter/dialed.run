@@ -49,6 +49,7 @@ function desk(counts: Partial<TodayCounts> = {}): DeskToday {
       bansAllTime: 0,
       gaveUp: 0,
       oldestGaveUpAt: undefined,
+      digestUnconfirmedAt: undefined,
       ...counts,
     },
   };

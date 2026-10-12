@@ -17,10 +17,15 @@ export function NoticeBand({
   kicker,
   message,
   detail,
+  more,
 }: Readonly<{
   kicker: string;
   message: string;
   detail?: string | undefined;
+  /**
+  A second quiet line under `detail`, when there is one more thing to say.
+  */
+  more?: string | undefined;
 }>): JSX.Element {
   return (
     <div
@@ -31,6 +36,9 @@ export function NoticeBand({
       <span className="text-body">{message}</span>
       {detail === undefined ? undefined : (
         <span className="text-small text-quiet">{detail}</span>
+      )}
+      {more === undefined ? undefined : (
+        <span className="text-small text-quiet">{more}</span>
       )}
     </div>
   );

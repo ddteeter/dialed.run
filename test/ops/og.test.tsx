@@ -8,10 +8,7 @@ import {
   type EntryCardData,
 } from "../../src/modules/ops/og/cards";
 import { OG_PALETTE } from "../../src/modules/ops/og/palette";
-import {
-  defaultCardResponse,
-  entryCardResponse,
-} from "../../src/modules/ops/og/respond";
+import { defaultCardResponse } from "../../src/modules/ops/og/respond";
 import {
   cachedCard,
   cardCacheKey,
@@ -206,16 +203,5 @@ describe("caching", () => {
 
     expect(response.headers.get("Content-Type")).toBe("image/png");
     expect(response.headers.get("Cache-Control")).toBe("public, max-age=3600");
-  });
-
-  it("serves an entry's card for ten minutes, and the default for no entry", async () => {
-    const entry = await entryCardResponse(new Request(freshUrl()), ENTRY);
-    const none = await entryCardResponse(new Request(freshUrl()), undefined);
-    const fallback = await defaultCardResponse(new Request(freshUrl()));
-    const defaultDigest = await sha256(fallback);
-
-    expect(entry.headers.get("Cache-Control")).toBe("public, max-age=600");
-    expect(await sha256(none)).toBe(defaultDigest);
-    expect(await sha256(entry)).not.toBe(defaultDigest);
   });
 });

@@ -4,6 +4,7 @@ import { env } from "../../src/env";
 
 import { secureResponse } from "../../src/modules/ops/secure-response";
 import {
+  CSP_HEADER,
   contentSecurityPolicy,
   sentryReportUri,
   withSecurityHeaders,
@@ -35,10 +36,7 @@ describe("withSecurityHeaders", () => {
 
     expect(Object.fromEntries(secured.headers)).toStrictEqual({
       "content-type": "text/html; charset=utf-8",
-      "content-security-policy-report-only": contentSecurityPolicy(
-        REPORT,
-        "n0nce",
-      ),
+      [CSP_HEADER.toLowerCase()]: contentSecurityPolicy(REPORT, "n0nce"),
       "x-frame-options": "DENY",
       "x-content-type-options": "nosniff",
       "referrer-policy": "strict-origin-when-cross-origin",
@@ -165,7 +163,7 @@ describe("secureResponse, as server.ts calls it", () => {
 
     const secured = secureResponse(new Response("<p>page</p>"), "n0nce");
 
-    const policy = secured.headers.get("Content-Security-Policy-Report-Only");
+    const policy = secured.headers.get(CSP_HEADER);
     expect(policy).toBe(contentSecurityPolicy(REPORT, "n0nce"));
   });
 
@@ -174,7 +172,7 @@ describe("secureResponse, as server.ts calls it", () => {
 
     const secured = secureResponse(new Response("<p>page</p>"), "n0nce");
 
-    expect(secured.headers.get("Content-Security-Policy-Report-Only")).toBe(
+    expect(secured.headers.get(CSP_HEADER)).toBe(
       contentSecurityPolicy(undefined, "n0nce"),
     );
     expect(secured.headers.get("X-Frame-Options")).toBe("DENY");
@@ -183,9 +181,7 @@ describe("secureResponse, as server.ts calls it", () => {
   it("admits inline script by this request's nonce and no other way", () => {
     const secured = secureResponse(new Response("<p>page</p>"), "r3quest");
 
-    const policy = directives(
-      secured.headers.get("Content-Security-Policy-Report-Only") ?? "",
-    );
+    const policy = directives(secured.headers.get(CSP_HEADER) ?? "");
     expect(policy.get("script-src")).toBe(
       "'self' 'nonce-r3quest' 'wasm-unsafe-eval' https://challenges.cloudflare.com",
     );

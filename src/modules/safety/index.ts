@@ -27,7 +27,7 @@ export {
   type Reopening,
 } from "./bans";
 
-export { ACCOUNT_CLOSED_CODE, banGate } from "./ban-gate";
+export { banGate } from "./ban-gate";
 
 export {
   blockRunner,

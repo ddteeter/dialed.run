@@ -31,6 +31,7 @@ import {
 } from "../../src/modules/auth/auth-page";
 import { signUp } from "../../src/modules/auth/credentials";
 import { useGoogleSignIn } from "../../src/modules/auth/google-button";
+import { AccountClosed } from "../../src/modules/safety/components/AccountClosed";
 
 /**
  * Au2 in the invite stage (task 126, ACC-5; round 26 #20, round 27 #12),
@@ -88,6 +89,7 @@ function SignUp({
       form={form}
       cause={cause}
       google={google}
+      closed={<AccountClosed />}
       turnstile={<span data-part="turnstile-slot" />}
       requestLink={<RequestAccessLink isInviteOnly={isInviteOnly} />}
       onSubmit={() => {
@@ -340,6 +342,14 @@ describe("Au2 · Google in the invite stage", () => {
     expect(
       screen.getByRole("button", { name: "Try again" }),
     ).toBeInTheDocument();
+  });
+
+  it("puts item 23's notice over the form when Google signed in a closed account from Au2", async () => {
+    await signUpPage({ returnedError: "ACCOUNT_CLOSED" });
+    expect(part("account-closed")).toHaveTextContent(
+      "This account was closed for breaking the community rules.",
+    );
+    expect(part("control-failure")).toBeNull();
   });
 
   it("tells a Google address with no account where accounts are made, as NOT LOGGED IN (round 28 #9)", async () => {
