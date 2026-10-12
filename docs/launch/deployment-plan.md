@@ -260,6 +260,12 @@ items each gate depends on if that ever slips.
   set; connect, disconnect and a revoke that **succeeds on Strava's side**
   (127's STR-1/2).
 - Spend caps set; Visual Crossing plan chosen.
+- **Change password's CPU time measured** on the deployed Worker (D-98,
+  R-124): it checks the current password twice, once for the per-runner
+  count and once inside Better Auth's endpoint, so it is the most
+  expensive request the app serves. Change a password a few times and
+  read the request's CPU time in the Worker's logs. If it is near the
+  plan's per-request CPU limit, raise it with the owner before friends.
 - A Time Travel restore drill done once.
 - **The owner's account, through the invite gate** (126 · ACC-5). Sign-up
   needs a code from the start, and there is no Desk before there is an

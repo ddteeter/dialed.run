@@ -381,6 +381,33 @@ async function canSignInWith(auth: Auth, userId: string, secret: string) {
   return response.status === 200;
 }
 
+describe("Better Auth's change-password endpoint over HTTP (R-124)", () => {
+  it("is not there, so the per-runner count cannot be gone round, while the server's own call still changes it", async () => {
+    const { auth } = instance();
+    const { email, userId } = await signUp(auth);
+    const cookie = await signIn(auth, email);
+    const next = ["an", "http", "long", "passphrase"].join("-");
+
+    const response = await auth.handler(
+      post(
+        "change-password",
+        { currentPassword: password, newPassword: next },
+        cookie,
+      ),
+    );
+
+    expect(response.status).toBe(404);
+    expect(await canSignInWith(auth, userId, password)).toBe(true);
+    expect(await canSignInWith(auth, userId, next)).toBe(false);
+
+    await auth.api.changePassword({
+      body: { currentPassword: password, newPassword: next },
+      headers: new Headers({ cookie }),
+    });
+    expect(await canSignInWith(auth, userId, next)).toBe(true);
+  });
+});
+
 describe("changeOwnPassword (ACC-7 within the per-runner limit, R-124)", () => {
   const NOW = 1_800_000_000;
   const next = ["a", "fresh", "long", "passphrase"].join("-");
