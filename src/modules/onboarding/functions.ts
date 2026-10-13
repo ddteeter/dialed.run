@@ -7,7 +7,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { drizzle } from "drizzle-orm/d1";
 
-import { env } from "../../env";
+import { env, waitUntil } from "../../env";
 import { cityLookupInput } from "../../lib/contracts/city-lookup";
 import { optionalUserId, requireUserId } from "../auth";
 import { nameItem } from "../closet";
@@ -41,9 +41,14 @@ function db() {
 }
 
 /**
-The place writer's zone lookup and where its failures go (design 142).
+The place writer's zone lookup, where its failures go, and what keeps the
+Worker alive while it finishes after the answer (design 142).
 */
-const zones = { zoneAt: timeZoneAt, report: captureException };
+const zones = {
+  zoneAt: timeZoneAt,
+  report: captureException,
+  keepAlive: waitUntil,
+};
 
 export const callLadderQuery = createServerFn({ method: "GET" }).handler(
   async () => ladderFrom(await coverageLadder(await requireUserId())),

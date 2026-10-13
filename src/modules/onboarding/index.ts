@@ -12,5 +12,6 @@ export { savePlace } from "./profile";
 export {
   fillMissingTimeZones,
   runnerTimeZone,
+  type SaveZoneDeps,
   type ZoneDeps,
 } from "./time-zone";

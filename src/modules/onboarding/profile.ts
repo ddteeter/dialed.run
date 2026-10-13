@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../db/schema-core";
@@ -16,7 +16,7 @@ import type {
   SharingChoice,
   UnitsChoice,
 } from "./inputs";
-import { zoneForPlace, type ZoneDeps } from "./time-zone";
+import { fillZoneInBackground, type SaveZoneDeps } from "./time-zone";
 
 /**
  * O1's write, and the first thing in the app to create a `user_profiles`
@@ -33,16 +33,16 @@ import { zoneForPlace, type ZoneDeps } from "./time-zone";
  *
  * **The place goes through `placeWrite`, the one writer of it** (FEED-5),
  * in the same batch as the rest: one answer, so it lands whole or not at
- * all. Its zone is looked up first (design 142), because a read that
- * decides what to write goes before the batch. A calibration that
- * answered no place has nothing for it to write, asks for no zone, and
- * the stored place and zone are left alone.
+ * all. Its zone is not waited for (design 142): the place is saved with
+ * no zone, and the lookup runs after, in the background. A calibration
+ * that answered no place has nothing for it to write, asks for no zone,
+ * and the stored place and zone are left alone.
  */
 export async function saveCalibration(
   db: DrizzleD1Database,
   userId: string,
   input: Calibration,
-  zones: ZoneDeps,
+  zones: SaveZoneDeps,
 ): Promise<void> {
   const calibrated = {
     thermalLevel: input.thermalLevel,
@@ -57,17 +57,14 @@ export async function saveCalibration(
     await calibration;
     return;
   }
-  const place = placeWrite(
-    db,
-    userId,
-    await placeColumns(input, zones, userId),
-  );
-  await db.batch([calibration, place]);
+  await db.batch([calibration, placeWrite(db, userId, placeColumns(input))]);
+  fillZoneInBackground(db, userId, input, zones);
 }
 
 /**
  * Your conditions' Use this: a place the runner found and confirmed,
- * written through `placeWrite` with the zone it is in (design 142).
+ * written through `placeWrite`, its zone filled in after the answer
+ * (design 142).
  *
  * Answers with what it saved, so the screen shows the stored place rather
  * than its own copy of what it sent.
@@ -76,9 +73,10 @@ export async function savePlace(
   db: DrizzleD1Database,
   userId: string,
   place: Place,
-  zones: ZoneDeps,
+  zones: SaveZoneDeps,
 ): Promise<Place> {
-  await placeWrite(db, userId, await placeColumns(place, zones, userId));
+  await placeWrite(db, userId, placeColumns(place));
+  fillZoneInBackground(db, userId, place, zones);
   return place;
 }
 
@@ -95,7 +93,7 @@ function hasPlace({ cityLabel, lat, lng }: PlaceParts): boolean {
 
 /**
  * What the place writer writes: the three columns `user_profiles` keeps a
- * place in, and the zone that place is in (design 142).
+ * place in, and a NULL zone (design 142).
  *
  * **Drizzle drops an `undefined` key from `set`**, so writing a new place
  * as `{ cityLabel, lat: undefined, lng: undefined }` left the *old*
@@ -105,28 +103,25 @@ function hasPlace({ cityLabel, lat, lng }: PlaceParts): boolean {
  * browser's location, say, arrives as coordinates with no label.
  *
  * **The zone follows the same rule, and that is what keeps it derived.**
- * Every place written carries the zone looked up for it, or NULL when
- * there are no coordinates or the lookup failed. A changed place replaces
- * the zone; it can never keep the old city's.
+ * Every place written clears the zone, which `fillZoneInBackground` then
+ * fills for the new coordinates. A changed place can never keep the old
+ * city's zone, and a lookup that fails or never runs leaves the NULL the
+ * hourly fill re-drives.
  */
-async function placeColumns(
-  place: PlaceParts,
-  zones: ZoneDeps,
-  userId: string,
-) {
+function placeColumns(place: PlaceParts) {
   const { cityLabel, lat, lng } = place;
   return {
     cityLabel: orSqlNull(cityLabel),
     lat: orSqlNull(lat),
     lng: orSqlNull(lng),
-    timeZone: orSqlNull(await zoneForPlace(place, zones, userId)),
+    timeZone: sql`NULL`,
   };
 }
 
 /**
- * **The one writer of the profile's place and its zone** (FEED-5, design
- * 142): `placeColumns`, written together, as a statement not yet sent —
- * `savePlace` awaits it, `saveCalibration` batches it. Not `async` on
+ * **The one writer of the profile's place** (FEED-5, design 142): it
+ * writes `placeColumns`, which clear the zone with the place, as a
+ * statement not yet sent — `savePlace` awaits it, `saveCalibration` batches it. Not `async` on
  * purpose: an async function returning a drizzle builder would resolve it,
  * which runs it, and the batch would get a result instead of a statement.
  *
@@ -137,7 +132,7 @@ async function placeColumns(
 function placeWrite(
   db: DrizzleD1Database,
   userId: string,
-  columns: Awaited<ReturnType<typeof placeColumns>>,
+  columns: ReturnType<typeof placeColumns>,
 ) {
   return db
     .insert(userProfiles)

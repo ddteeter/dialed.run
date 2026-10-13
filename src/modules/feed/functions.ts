@@ -6,7 +6,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { drizzle } from "drizzle-orm/d1";
 
-import { env } from "../../env";
+import { env, waitUntil } from "../../env";
 import { optionalUserId, requireUserId, verifiedUserId } from "../auth";
 import {
   attachKitInput,
@@ -231,6 +231,7 @@ export const saveConditionsCityAction = createServerFn({ method: "POST" })
     savePlace(drizzle(env.DIALED_CORE), await requireUserId(), data, {
       zoneAt: timeZoneAt,
       report: captureException,
+      keepAlive: waitUntil,
     }),
   );
 

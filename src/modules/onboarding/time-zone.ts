@@ -4,9 +4,10 @@
  *
  * Three parts, all here:
  *
- * - `zoneForPlace`, which the place writer (`./profile.ts`) calls before it
- *   writes, so the place and its zone land in one statement;
- * - `fillMissingTimeZones`, the hourly re-drive for a lookup that failed;
+ * - `fillZoneInBackground`, which the place writer (`./profile.ts`) calls
+ *   after it has saved a place, so the runner never waits on the lookup;
+ * - `fillMissingTimeZones`, the hourly re-drive for a lookup that failed
+ *   or never ran;
  * - `runnerTimeZone`, the one read.
  *
  * The lookup itself is `modules/weather`'s `timeZoneAt`, handed in as
@@ -30,6 +31,15 @@ export interface ZoneDeps {
 }
 
 /**
+ * What the place writer needs on top of the lookup: `keepAlive`, which
+ * keeps the Worker running past the response while the lookup finishes
+ * (`waitUntil`, from `src/env`).
+ */
+export interface SaveZoneDeps extends ZoneDeps {
+  readonly keepAlive: (work: Promise<unknown>) => void;
+}
+
+/**
  * The zone of a place, or `undefined` when there is none to have.
  *
  * Nothing is asked for a place without both coordinates: the zone is a
@@ -42,7 +52,7 @@ export interface ZoneDeps {
  * reported the same way (law 6), because the marker would otherwise be
  * re-driven forever in silence.
  */
-export async function zoneForPlace(
+async function zoneForPlace(
   place: Readonly<{
     lat?: number | null | undefined;
     lng?: number | null | undefined;
@@ -67,6 +77,39 @@ export async function zoneForPlace(
     deps.report(error, { surface: "onboarding.zoneForPlace", userId });
     return undefined;
   }
+}
+
+/**
+ * After a place is saved: look its zone up without making the runner wait
+ * for it, and write it with the same compare-and-set the hourly fill uses.
+ *
+ * The save has already stored the place with a NULL zone, and that marker
+ * is what makes this safe to lose: a Worker that dies before the lookup
+ * lands leaves a row the next `fillMissingTimeZones` firing picks up. A
+ * place without both coordinates has no zone to look for.
+ *
+ * Never rejects (law 5): a failed write is reported, and the marker stays.
+ */
+export function fillZoneInBackground(
+  db: DrizzleD1Database,
+  userId: string,
+  place: Readonly<{
+    lat?: number | null | undefined;
+    lng?: number | null | undefined;
+  }>,
+  deps: SaveZoneDeps,
+): void {
+  const { lat, lng } = place;
+  if (typeof lat !== "number" || typeof lng !== "number") return;
+  deps.keepAlive(
+    (async () => {
+      try {
+        await fillOne(db, { userId, lat, lng }, deps);
+      } catch (error: unknown) {
+        deps.report(error, { surface: "onboarding.zoneForPlace", userId });
+      }
+    })(),
+  );
 }
 
 /**

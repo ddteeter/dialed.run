@@ -12,7 +12,6 @@ import {
   type ZoneDeps,
 } from "../../src/modules/onboarding";
 import { saveCalibration } from "../../src/modules/onboarding/profile";
-import { zoneForPlace } from "../../src/modules/onboarding/time-zone";
 import {
   NOW,
   makeObservation,
@@ -51,67 +50,102 @@ A lookup that fails as an unavailable provider does.
 */
 function zonesFailing() {
   const outage = new Error("Visual Crossing place request failed");
-  return {
-    outage,
-    zoneAt: vi.fn<ZoneDeps["zoneAt"]>(() => Promise.reject(outage)),
-    report: vi.fn<ZoneDeps["report"]>(),
-  };
+  const zones = zonesAnswering(undefined);
+  zones.zoneAt.mockRejectedValue(outage);
+  return { ...zones, outage };
 }
 
 beforeEach(async () => {
   await resetTables();
 });
 
-describe("saving a place stores the zone it is in (design 142)", () => {
-  it("stores the zone looked up for Your conditions' place, asking for its coordinates", async () => {
+/**
+Saves a place and waits for the background lookup the save leaves behind.
+*/
+async function savedAt(
+  userId: string,
+  place: { cityLabel: string; lat: number; lng: number },
+  zones: ReturnType<typeof zonesAnswering>,
+) {
+  await savePlace(coreDb(), userId, place, zones);
+  await zones.settled();
+}
+
+describe("saving a place fills the zone it is in, after the answer (design 142)", () => {
+  it("fills Your conditions' place zone in the background, asking for its coordinates", async () => {
     const userId = newUlid();
     const zones = zonesAnswering("America/Los_Angeles");
 
-    await savePlace(coreDb(), userId, PORTLAND, zones);
+    await savedAt(userId, PORTLAND, zones);
 
     expect(zones.zoneAt).toHaveBeenCalledExactlyOnceWith(45.52, -122.68);
+    expect(zones.keepAlive).toHaveBeenCalledOnce();
     expect(await zoneOf(userId)).toBe("America/Los_Angeles");
   });
 
-  it("stores the zone with O1's place, in the calibration's batch", async () => {
+  it("answers without waiting for the lookup, which finishes afterwards", async () => {
     const userId = newUlid();
+    const zones = zonesAnswering(undefined);
+    const lookup = Promise.withResolvers<string>();
+    zones.zoneAt.mockReturnValue(lookup.promise);
+
+    // Resolves with the lookup still pending: the save did not wait on it.
+    expect(await savePlace(coreDb(), userId, PORTLAND, zones)).toStrictEqual(
+      PORTLAND,
+    );
+
+    const [row] = await coreDb()
+      .select()
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, userId));
+    expect(row).toMatchObject(PORTLAND);
+    expect(row?.timeZone).toBeNull();
+
+    lookup.resolve("America/Los_Angeles");
+    await zones.settled();
+    expect(await zoneOf(userId)).toBe("America/Los_Angeles");
+  });
+
+  it("fills the zone with O1's place, after the calibration's batch", async () => {
+    const userId = newUlid();
+    const zones = zonesAnswering("America/Los_Angeles");
 
     await saveCalibration(
       coreDb(),
       userId,
       { thermalLevel: 0, ...PORTLAND },
-      zonesAnswering("America/Los_Angeles"),
+      zones,
     );
+    await zones.settled();
 
     expect(await zoneOf(userId)).toBe("America/Los_Angeles");
   });
 
-  it("stores a zone for the browser's location alone, which has no label", async () => {
+  it("fills a zone for the browser's location alone, which has no label", async () => {
     const userId = newUlid();
+    const zones = zonesAnswering("America/Los_Angeles");
 
     await saveCalibration(
       coreDb(),
       userId,
       { thermalLevel: 0, lat: 45.52, lng: -122.68 },
-      zonesAnswering("America/Los_Angeles"),
+      zones,
     );
+    await zones.settled();
 
     expect(await zoneOf(userId)).toBe("America/Los_Angeles");
   });
 
   it("asks nothing for a calibration that names no place, and keeps the stored zone", async () => {
     const userId = newUlid();
-    await savePlace(
-      coreDb(),
-      userId,
-      PORTLAND,
-      zonesAnswering("America/Los_Angeles"),
-    );
+    await savedAt(userId, PORTLAND, zonesAnswering("America/Los_Angeles"));
     const zones = zonesAnswering("Europe/London");
 
     await saveCalibration(coreDb(), userId, { thermalLevel: 1 }, zones);
+    await zones.settled();
 
     expect(zones.zoneAt).not.toHaveBeenCalled();
+    expect(zones.keepAlive).not.toHaveBeenCalled();
     expect(await zoneOf(userId)).toBe("America/Los_Angeles");
   });
 });
@@ -124,6 +158,7 @@ describe("a failed lookup still saves the place (law 5)", () => {
     expect(await savePlace(coreDb(), userId, PORTLAND, zones)).toStrictEqual(
       PORTLAND,
     );
+    await zones.settled();
 
     const [row] = await coreDb()
       .select()
@@ -139,13 +174,15 @@ describe("a failed lookup still saves the place (law 5)", () => {
 
   it("saves O1's calibration and place with no zone", async () => {
     const userId = newUlid();
+    const zones = zonesFailing();
 
     await saveCalibration(
       coreDb(),
       userId,
       { thermalLevel: 2, ...PORTLAND },
-      zonesFailing(),
+      zones,
     );
+    await zones.settled();
 
     const [row] = await coreDb()
       .select()
@@ -154,50 +191,63 @@ describe("a failed lookup still saves the place (law 5)", () => {
     expect(row).toMatchObject({ thermalLevel: 2, ...PORTLAND });
     expect(row?.timeZone).toBeNull();
   });
+
+  it("reports a zone write that fails rather than rejecting the kept-alive work", async () => {
+    const userId = newUlid();
+    const zones = zonesAnswering("America/Los_Angeles");
+    const broken = new Error("D1 unavailable");
+    // A database whose UPDATE cannot be prepared; everything else is real.
+    const failing = drizzle(
+      new Proxy(env.DIALED_CORE, {
+        get(target, key) {
+          if (key === "prepare") {
+            return (query: string) => {
+              if (query.startsWith("update")) throw broken;
+              return target.prepare(query);
+            };
+          }
+          const value: unknown = Reflect.get(target, key);
+          return typeof value === "function"
+            ? (...args: unknown[]): unknown =>
+                Reflect.apply(value, target, args)
+            : value;
+        },
+      }),
+    );
+
+    await savePlace(failing, userId, PORTLAND, zones);
+    await zones.settled();
+
+    expect(zones.report).toHaveBeenCalledExactlyOnceWith(broken, {
+      surface: "onboarding.zoneForPlace",
+      userId,
+    });
+  });
 });
 
 describe("changing the place replaces or clears its zone", () => {
   it("replaces the zone when the place changes", async () => {
     const userId = newUlid();
-    await savePlace(
-      coreDb(),
-      userId,
-      PORTLAND,
-      zonesAnswering("America/Los_Angeles"),
-    );
+    await savedAt(userId, PORTLAND, zonesAnswering("America/Los_Angeles"));
 
-    await savePlace(
-      coreDb(),
-      userId,
-      AUSTIN,
-      zonesAnswering("America/Chicago"),
-    );
+    await savedAt(userId, AUSTIN, zonesAnswering("America/Chicago"));
 
     expect(await zoneOf(userId)).toBe("America/Chicago");
   });
 
   it("clears the old zone when the new place's lookup fails, rather than keeping the old city's", async () => {
     const userId = newUlid();
-    await savePlace(
-      coreDb(),
-      userId,
-      PORTLAND,
-      zonesAnswering("America/Los_Angeles"),
-    );
+    await savedAt(userId, PORTLAND, zonesAnswering("America/Los_Angeles"));
 
-    await savePlace(coreDb(), userId, AUSTIN, zonesFailing());
+    await savedAt(userId, AUSTIN, zonesFailing());
 
     expect(await zoneOf(userId)).toBeNull();
   });
 
-  it("clears the zone when the new place has no coordinates", async () => {
+  it("clears the zone when the new place has no coordinates, asking nothing", async () => {
     const userId = newUlid();
-    await savePlace(
-      coreDb(),
-      userId,
-      PORTLAND,
-      zonesAnswering("America/Los_Angeles"),
-    );
+    await savedAt(userId, PORTLAND, zonesAnswering("America/Los_Angeles"));
+    const zones = zonesAnswering("America/Chicago");
 
     // Half a coordinate is all calibrationInput lets through without a
     // label: written whole, as a place with no where.
@@ -205,26 +255,22 @@ describe("changing the place replaces or clears its zone", () => {
       coreDb(),
       userId,
       { thermalLevel: 0, lat: 30.27 },
-      zonesAnswering("America/Chicago"),
+      zones,
     );
+    await zones.settled();
 
-    expect(await zoneOf(userId)).toBeNull();
-  });
-});
-
-describe("zoneForPlace", () => {
-  it("asks nothing for a place missing either coordinate", async () => {
-    const zones = zonesAnswering("America/Chicago");
-
-    expect(await zoneForPlace({ lat: 30.27 }, zones, "u")).toBeUndefined();
-    expect(await zoneForPlace({ lng: -97.74 }, zones, "u")).toBeUndefined();
     expect(zones.zoneAt).not.toHaveBeenCalled();
+    expect(await zoneOf(userId)).toBeNull();
   });
 
   it("asks for a place at zero, zero, which is a place", async () => {
+    const userId = newUlid();
     const zones = zonesAnswering("Etc/GMT");
 
-    expect(await zoneForPlace({ lat: 0, lng: 0 }, zones, "u")).toBe("Etc/GMT");
+    await savedAt(userId, { cityLabel: "Null Island", lat: 0, lng: 0 }, zones);
+
+    expect(zones.zoneAt).toHaveBeenCalledExactlyOnceWith(0, 0);
+    expect(await zoneOf(userId)).toBe("Etc/GMT");
   });
 });
 
@@ -253,12 +299,7 @@ describe("fillMissingTimeZones, the hourly re-drive", () => {
 
   it("asks nothing for a profile that already has its zone", async () => {
     const userId = newUlid();
-    await savePlace(
-      coreDb(),
-      userId,
-      PORTLAND,
-      zonesAnswering("America/Los_Angeles"),
-    );
+    await savedAt(userId, PORTLAND, zonesAnswering("America/Los_Angeles"));
     const zones = zonesAnswering("Europe/London");
 
     await fillMissingTimeZones(coreDb(), zones);
@@ -339,8 +380,7 @@ describe("fillMissingTimeZones, the hourly re-drive", () => {
       // the old one, and the new place's own lookup fails.
       const zones = {
         zoneAt: vi.fn<ZoneDeps["zoneAt"]>(async () => {
-          await savePlace(
-            coreDb(),
+          await savedAt(
             userId,
             { cityLabel: "Elsewhere", ...moved },
             zonesFailing(),
@@ -461,12 +501,7 @@ async function indoorRun(userId: string, startedAt: number) {
 describe("runnerTimeZone: the profile, then the latest observed run, then UTC", () => {
   it("answers the profile's zone first, over any run's", async () => {
     const userId = newUlid();
-    await savePlace(
-      coreDb(),
-      userId,
-      PORTLAND,
-      zonesAnswering("America/Los_Angeles"),
-    );
+    await savedAt(userId, PORTLAND, zonesAnswering("America/Los_Angeles"));
     await observedRun(userId, NOW, "America/Chicago");
 
     expect(await runnerTimeZone(coreDb(), userId)).toBe("America/Los_Angeles");
