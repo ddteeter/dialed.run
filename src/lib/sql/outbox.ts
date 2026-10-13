@@ -85,12 +85,15 @@ const importFileExpire = z.object({
 });
 
 /**
- * Which Strava reminder an owed email is (design 140): the bell row it
- * repeats, the runner, and the runner's calendar day.
+ * Which Strava reminder an owed email is (design 140): the runner, when
+ * the reminder that owed it landed — its bell row's `created_at` — and the
+ * runner's calendar day. A second reminder that day takes the row over and
+ * leaves this as it was, so the email stands for every reminder from that
+ * landing on, not for one bell row.
  */
 const reminderEmailRefSchema = z.object({
-  notificationId: z.string().min(1),
   userId: z.string().min(1),
+  landedAt: z.number().int(),
   day: z.string().min(1),
 });
 
@@ -112,12 +115,12 @@ export type ReminderEmailRef = z.infer<typeof reminderEmailRefSchema>;
  * `notBefore`) — task 127's reminder goes out 20 minutes after the run
  * lands — and a held row is left to the drain, never a fast path.
  *
- * `reminder` marks task 127's Strava reminder (design 140): the bell row
- * it repeats, the runner, and the runner's day it is that day's email
- * for. Checked when it is due — the bell row read (an upload pairs and
- * reads it) or gone, the runner no longer connected, or the day's email
- * already sent, and nothing goes — and the day is marked sent in the batch
- * that marks the row sent. Optional, so a row an earlier deploy wrote still
+ * `reminder` marks task 127's Strava reminder (design 140): the runner,
+ * when the reminder that owed it landed, and the runner's day it is that
+ * day's email for. Checked when it is due — no reminder from that landing
+ * on still unread (an upload pairs and reads its own), the runner no
+ * longer connected, or the day's email already sent, and nothing goes —
+ * and the day is marked sent in the batch that marks the row sent. Optional, so a row an earlier deploy wrote still
  * parses (law 9).
  */
 const email = z.object({

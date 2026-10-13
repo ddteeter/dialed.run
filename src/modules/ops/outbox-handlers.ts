@@ -179,10 +179,11 @@ async function liveEntryPhotoKeys(
  * `deps` is a parameter so a test hands in a fake sender.
  *
  * A Strava reminder's email (`reminder`) is checked here, when it is due
- * rather than when it was owed — skipped if its run's file arrived, the
- * runner disconnected, or the day's email already went — and its day is
- * marked sent in the same batch as the row (design 140), so neither a
- * re-firing drain nor a second debt for the day can send it again.
+ * rather than when it was owed — skipped if no reminder from its landing
+ * on is still unread, the runner disconnected, or the day's email already
+ * went — and its day is marked sent in the same batch as the row (design
+ * 140), so neither a re-firing drain nor a second debt for the day can
+ * send it again.
  */
 export function emailHandler(deps: () => EmailDeps): OutboxHandlers["email"] {
   return {
@@ -208,9 +209,7 @@ export function emailHandler(deps: () => EmailDeps): OutboxHandlers["email"] {
         .where(eq(outbox.id, rowId));
       await db.batch([
         markSent,
-        ...(reminder === undefined
-          ? []
-          : [reminderEmailSent(db, reminder, sentAt)]),
+        ...(reminder === undefined ? [] : [reminderEmailSent(db, reminder)]),
       ]);
     },
     // Ids only (law 7): never the address, which is what a report would

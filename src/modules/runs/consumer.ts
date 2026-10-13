@@ -367,7 +367,6 @@ async function processReminderJob(
   // as the bell row it repeats, so neither lands without the other (law
   // 8c). Whether it is owed at all is read first: a batch cannot branch.
   const landedAt = nowSeconds();
-  const notificationId = newUlid();
   const zone = await runnerZoneOf(deps, connected.userId);
   // A failed lookup owes no email for this landing. Reckoned in UTC
   // instead, the day could differ from the runner's own — and the same day
@@ -380,7 +379,7 @@ async function processReminderJob(
             at: landedAt,
             zone,
           }),
-          { userId: connected.userId, notificationId, at: landedAt, zone },
+          { userId: connected.userId, at: landedAt, zone },
         );
   await deps.db.batch([
     claim,
@@ -388,7 +387,7 @@ async function processReminderJob(
     // name. Round 25's words: Strava tells us a run happened, we remind,
     // the runner adds the file.
     notificationInsert(deps.db, {
-      id: notificationId,
+      createdAt: landedAt,
       userId: connected.userId,
       kind: "strava_reminder",
       subjectId: job.objectId,

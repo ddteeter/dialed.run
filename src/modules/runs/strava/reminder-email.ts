@@ -11,15 +11,19 @@
  * cannot both send. The outbox key is per runner per day too, which folds
  * two reminders landing at once into one row.
  *
- * **The next day's email counts both.** Yesterday's email covered the
- * reminders that landed before it went; today's counts itself and
- * yesterday's later ones still unread — all of yesterday's unread, if
- * none went — which is why the drawn body for more than one run says
- * "yesterday and today".
+ * **The next day's email counts both.** Yesterday's email covered what it
+ * said: the reminders up to the landing that owed it, because a second
+ * debt that day takes the row over and leaves its payload as it was.
+ * Today's counts itself and yesterday's later ones still unread — all of
+ * yesterday's unread, if none went — which is why the drawn body for more
+ * than one run says "yesterday and today".
  *
- * **Skipped by send time** when the bell row is read (an upload pairs and
- * reads it — and so does Mark all read, which the owner kept, 2026-10-12),
- * when the runner has disconnected Strava, or when the day's email went.
+ * **Skipped by send time** when no reminder from that landing on is still
+ * unread (an upload pairs and reads its own — and so does Mark all read,
+ * which the owner kept, 2026-10-12), when the runner has disconnected
+ * Strava, or when the day's email went. Any of them, not the first: an
+ * upload for the first run must not silence the email a second run that
+ * day still owes.
  * The runner's switch and a confirmed address are the sender's own checks,
  * also at send time.
  *
@@ -32,7 +36,6 @@ import {
   desc,
   eq,
   exists,
-  gte,
   inArray,
   isNotNull,
   notExists,
@@ -74,11 +77,14 @@ export interface EarlierReminder {
 }
 
 /**
-A day a reminder email went, and when.
-*/
+ * A day a reminder email went, and what it covered: the landing of the
+ * reminder that owed it. The column is `sent_at`, and holds that landing
+ * rather than the send, because the next day's count needs what the email
+ * said and the send happens 20 minutes or more later.
+ */
 export interface EmailedDay {
   readonly day: string;
-  readonly sentAt: number;
+  readonly coveredUntil: number;
 }
 
 /**
@@ -93,6 +99,24 @@ function emailedOn(userId: string, days: readonly string[]) {
 }
 
 /**
+ * The runner's Strava reminders from `at` on, on `notifications_dedupe`
+ * (runner, kind).
+ *
+ * The time is compared through a unary `+`, which keeps its value and
+ * stops SQLite from serving it from an index: left bare, the planner takes
+ * the prune's `notifications_kind_created` (kind, created_at) instead,
+ * which reads every runner's reminders since `at` to find this one's
+ * (`test/runs/reminder-email.test.ts` holds the plan).
+ */
+export function remindersSince(userId: string, at: number) {
+  return and(
+    eq(notifications.userId, userId),
+    eq(notifications.kind, "strava_reminder"),
+    sql`+${notifications.createdAt} >= ${at}`,
+  );
+}
+
+/**
  * What the decision reads, before the batch (a batch cannot branch): the
  * runner's Strava reminders since the start of yesterday, oldest first —
  * three days back covers all of yesterday in any zone, even late on a
@@ -100,8 +124,8 @@ function emailedOn(userId: string, days: readonly string[]) {
  * that already had their email.
  *
  * Grouped by day in code, because the day is the runner's and SQLite has
- * no zones. The reminders on `notifications_dedupe`, which leads with the
- * runner and the kind; the days on `reminder_email_days_user_day`.
+ * no zones. The reminders on `notifications_dedupe` (`remindersSince`);
+ * the days on `reminder_email_days_user_day`.
  */
 export async function reminderHistory(
   db: CoreDb,
@@ -112,11 +136,7 @@ export async function reminderHistory(
     calendarDay(landing.at, landing.zone),
     previousCalendarDay(landing.at, landing.zone),
   ];
-  const recentReminders = and(
-    eq(notifications.userId, userId),
-    eq(notifications.kind, "strava_reminder"),
-    gte(notifications.createdAt, landing.at - 3 * DAY_S),
-  );
+  const recentReminders = remindersSince(userId, landing.at - 3 * DAY_S);
   const [earlier, emailed] = await db.batch([
     db
       .select({ createdAt: notifications.createdAt, read: notifications.read })
@@ -124,7 +144,10 @@ export async function reminderHistory(
       .where(recentReminders)
       .orderBy(asc(notifications.createdAt), asc(notifications.id)),
     db
-      .select({ day: reminderEmailDays.day, sentAt: reminderEmailDays.sentAt })
+      .select({
+        day: reminderEmailDays.day,
+        coveredUntil: reminderEmailDays.sentAt,
+      })
       .from(reminderEmailDays)
       .where(emailedOn(userId, days)),
   ]);
@@ -137,9 +160,8 @@ What the decision is told about the reminder now landing.
 export interface Landing {
   readonly userId: string;
   /**
-  The bell row being written for it, which the email repeats.
+  When it lands: its bell row's `created_at`, which the email names.
   */
-  readonly notificationId: string;
   readonly at: number;
   /**
   The runner's zone, for their day and their clock; UTC when unknown.
@@ -160,12 +182,12 @@ export function owedReminderEmail(
 ): { readonly message: OutboxMessage; readonly notBefore: number } | undefined {
   const today = calendarDay(landing.at, landing.zone);
   const yesterday = previousCalendarDay(landing.at, landing.zone);
-  const sentOn = (day: string) =>
-    history.emailed.find((row) => row.day === day)?.sentAt;
-  if (sentOn(today) !== undefined) return undefined;
-  // What yesterday's email covered: the reminders before it went. With no
-  // email yesterday, none of them.
-  const coveredUntil = sentOn(yesterday) ?? 0;
+  const coveredOn = (day: string) =>
+    history.emailed.find((row) => row.day === day)?.coveredUntil;
+  if (coveredOn(today) !== undefined) return undefined;
+  // What yesterday's email covered: the reminders up to the landing that
+  // owed it. With no email yesterday, none of them.
+  const coveredUntil = coveredOn(yesterday) ?? 0;
   const carried = history.earlier.filter(
     (row) =>
       !row.read &&
@@ -185,8 +207,8 @@ export function owedReminderEmail(
       {
         dedupeKey: `run_reminder:${landing.userId}:${today}`,
         reminder: {
-          notificationId: landing.notificationId,
           userId: landing.userId,
+          landedAt: landing.at,
           day: today,
         },
       },
@@ -237,18 +259,39 @@ function latestLocatedRuns(db: CoreDb, userId: string) {
 
 /**
  * Whether a reminder's email may still go, asked when it is due (design
- * 140): its bell row is there and unread — an upload pairs and reads it —
- * the runner is still connected to Strava, so a disconnect inside the 20
- * minutes stops it as it stops the reminders themselves, and the day's
- * email has not gone. One read: the bell row's primary key, and an
- * EXISTS on each of `strava_connections` and `reminder_email_days`.
+ * 140): some reminder of the runner's from the landing that owed it on is
+ * still unread — an upload pairs and reads its own, so the first run's
+ * file arriving leaves the email a second run owes — the runner is still
+ * connected to Strava, so a disconnect inside the 20 minutes stops it as
+ * it stops the reminders themselves, and the day's email has not gone.
+ *
+ * One read: the runner's unread reminders on a runner-led index (SQLite
+ * takes `notifications_user_read` for the unread ones; see
+ * `remindersSince`), and an EXISTS on each of `strava_connections` and
+ * `reminder_email_days` (`test/runs/reminder-email.test.ts` holds the
+ * plan).
  */
 export async function isReminderStillOwed(
   // Any dialed-core handle: the outbox's drain asks with its own.
   db: Parameters<typeof hasRowWhere>[0],
   reminder: ReminderEmailRef,
 ): Promise<boolean> {
-  const { userId, day, notificationId } = reminder;
+  return await hasRowWhere(
+    db,
+    notifications,
+    notifications.id,
+    stillOwedWhere(db, reminder),
+  );
+}
+
+/**
+ * `isReminderStillOwed`'s condition on `notifications`, apart so its plan
+ * can be read.
+ */
+export function stillOwedWhere(
+  db: Parameters<typeof hasRowWhere>[0],
+  { userId, day, landedAt }: ReminderEmailRef,
+) {
   const connected = db
     .select({ one: sql`1` })
     .from(stravaConnections)
@@ -257,31 +300,31 @@ export async function isReminderStillOwed(
     .select({ one: sql`1` })
     .from(reminderEmailDays)
     .where(emailedOn(userId, [day]));
-  return await hasRowWhere(
-    db,
-    notifications,
-    notifications.id,
-    and(
-      eq(notifications.id, notificationId),
-      eq(notifications.read, false),
-      exists(connected),
-      notExists(dayEmailed),
-    ),
+  return and(
+    remindersSince(userId, landedAt),
+    eq(notifications.read, false),
+    exists(connected),
+    notExists(dayEmailed),
   );
 }
 
 /**
  * The day's email marked sent, as a statement for the batch that marks
- * the outbox row sent — so the two land together. A second mark for the
- * same day (a send that raced past the check) changes nothing.
+ * the outbox row sent — so the two land together. It records what the
+ * email covered, the landing that owed it (`EmailedDay`), not when it
+ * went. A second mark for the same day (a send that raced past the
+ * check) changes nothing.
  */
 export function reminderEmailSent(
   db: Parameters<typeof hasRowWhere>[0],
   reminder: ReminderEmailRef,
-  sentAt: number,
 ) {
   return db
     .insert(reminderEmailDays)
-    .values({ userId: reminder.userId, day: reminder.day, sentAt })
+    .values({
+      userId: reminder.userId,
+      day: reminder.day,
+      sentAt: reminder.landedAt,
+    })
     .onConflictDoNothing();
 }

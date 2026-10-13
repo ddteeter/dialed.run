@@ -32,8 +32,11 @@ import { emailDebt } from "../../src/modules/email";
 import { cacheKeyFor } from "../../src/modules/weather";
 import {
   REMINDER_EMAIL_DELAY_S,
+  isReminderStillOwed,
   owedReminderEmail,
+  remindersSince,
   runnerZone,
+  stillOwedWhere,
   type EarlierReminder,
   type EmailedDay,
 } from "../../src/modules/runs/strava/reminder-email";
@@ -58,7 +61,6 @@ function landing(
 ) {
   return {
     userId: "u1",
-    notificationId: "n1",
     at: LANDED,
     zone: CHICAGO,
     ...overrides,
@@ -94,7 +96,7 @@ function runsCounted(
 }
 
 describe("owedReminderEmail: whether a landing owes the email", () => {
-  it("owes it while today's has not gone: held 20 minutes, keyed by the runner's day, naming its bell row", () => {
+  it("owes it while today's has not gone: held 20 minutes, keyed by the runner's day, naming its landing", () => {
     expect(owed([])).toStrictEqual({
       message: {
         kind: "email",
@@ -104,7 +106,7 @@ describe("owedReminderEmail: whether a landing owes the email", () => {
             to: { userId: "u1" },
             template: { kind: "run_reminder", landedAt: "9:00 AM", runs: 1 },
           },
-          reminder: { notificationId: "n1", userId: "u1", day: "12 Oct 2026" },
+          reminder: { userId: "u1", landedAt: LANDED, day: "12 Oct 2026" },
         },
       },
       notBefore: LANDED + 20 * 60,
@@ -127,7 +129,7 @@ describe("owedReminderEmail: whether a landing owes the email", () => {
 
   it("owes nothing once today's email went", () => {
     expect(
-      owed([], [{ day: "12 Oct 2026", sentAt: LANDED - HOUR }]),
+      owed([], [{ day: "12 Oct 2026", coveredUntil: LANDED - HOUR }]),
     ).toBeUndefined();
   });
 
@@ -139,11 +141,13 @@ describe("owedReminderEmail: whether a landing owes the email", () => {
   it("reckons the day in the runner's zone, not UTC's", () => {
     // 03:00 UTC on the 12th is 10 PM on the 11th in Chicago: that email
     // was yesterday's there, and today's in UTC.
-    const lastNight = [{ day: "11 Oct 2026", sentAt: LANDED - 11 * HOUR }];
+    const lastNight = [
+      { day: "11 Oct 2026", coveredUntil: LANDED - 11 * HOUR },
+    ];
     expect(owed([], lastNight)).toBeDefined();
     expect(
       owedReminderEmail(
-        { earlier: [], emailed: [{ day: "12 Oct 2026", sentAt: 1 }] },
+        { earlier: [], emailed: [{ day: "12 Oct 2026", coveredUntil: 1 }] },
         landing({ zone: undefined }),
       ),
     ).toBeUndefined();
@@ -151,7 +155,9 @@ describe("owedReminderEmail: whether a landing owes the email", () => {
 
   it("counts yesterday's unread reminders after yesterday's email went", () => {
     const yesterday = LANDED - 24 * HOUR;
-    const sentYesterday = [{ day: "11 Oct 2026", sentAt: yesterday + 1 }];
+    // Yesterday's email covered up to the landing that owed it — that
+    // reminder's own time, so the reminder itself is covered.
+    const sentYesterday = [{ day: "11 Oct 2026", coveredUntil: yesterday }];
     // Only the one the email covered.
     expect(runsCounted([reminder(yesterday)], sentYesterday)).toBe(1);
     // A later one it did not cover — unless it was read.
@@ -193,7 +199,7 @@ describe("owedReminderEmail: whether a landing owes the email", () => {
     const afterSpring = Math.floor(Date.UTC(2026, 2, 9, 5, 30) / 1000);
     const mar8 = Math.floor(Date.UTC(2026, 2, 8, 15) / 1000);
     expect(runsCounted([reminder(mar8)], NONE_SENT, afterSpring)).toBe(2);
-    const mar8Sent = [{ day: "8 Mar 2026", sentAt: mar8 + 1 }];
+    const mar8Sent = [{ day: "8 Mar 2026", coveredUntil: mar8 + 1 }];
     expect(runsCounted([reminder(mar8)], mar8Sent, afterSpring)).toBe(1);
   });
 
@@ -260,7 +266,7 @@ async function reminderRows(userId: string) {
 }
 
 describe("the consumer owes it in the bell row's batch", () => {
-  it("owes one email, 20 minutes after the run landed, naming the bell row", async () => {
+  it("owes one email, 20 minutes after the run landed, naming the bell row's landing", async () => {
     const { userId, athleteId } = await connectedRunner();
     const before = nowSeconds();
     await deliver(reminderJob(athleteId));
@@ -272,6 +278,8 @@ describe("the consumer owes it in the bell row's batch", () => {
     expect(row?.nextAttemptAt).toBeLessThanOrEqual(after + 1200);
     const landed = (row?.nextAttemptAt ?? 0) - 1200;
     const [bell] = await reminderRows(userId);
+    // The bell row lands at the landing the email names, to the second.
+    expect(bell?.createdAt).toBe(landed);
     const read = readOutboxRow(row?.kind ?? "", row?.payload ?? "");
     expect(read).toStrictEqual({
       ok: true,
@@ -288,8 +296,8 @@ describe("the consumer owes it in the bell row's batch", () => {
             },
           },
           reminder: {
-            notificationId: bell?.id,
             userId,
+            landedAt: landed,
             day: calendarDay(landed),
           },
         },
@@ -309,7 +317,7 @@ describe("the consumer owes it in the bell row's batch", () => {
   it("reads yesterday's reminders and email from the database: the next day counts both", async () => {
     const { userId, athleteId } = await connectedRunner();
     const yesterday = nowSeconds() - 24 * HOUR;
-    // Yesterday's email went just after the first; the second came later.
+    // Yesterday's email was owed by the first; the second came later.
     await core()
       .insert(reminderEmailDays)
       .values({ userId, day: calendarDay(yesterday), sentAt: yesterday });
@@ -368,6 +376,41 @@ describe("the consumer owes it in the bell row's batch", () => {
     await deliver(reminderJob(athleteId));
     await drainLater(mail);
     expect(sentTo(mail, email)).toHaveLength(1);
+  });
+
+  it("emails a second run the same day when only the first run's file arrived", async () => {
+    // The second debt took the row over and left the first's payload, so
+    // the check is every reminder from that landing on, not the first one.
+    const { userId, athleteId, email } = await connectedRunner();
+    const first = reminderJob(athleteId);
+    await deliver(first);
+    await deliver(reminderJob(athleteId));
+    await core()
+      .update(notifications)
+      .set({ read: true })
+      .where(eq(notifications.subjectId, first.objectId));
+
+    const mail = fakeMail();
+    await drainLater(mail);
+    expect(sentTo(mail, email)).toHaveLength(1);
+    expect(await owedFor(userId)).toStrictEqual([]);
+  });
+
+  it("marks the day covered up to the landing that owed it, not the send", async () => {
+    const { userId } = await connectedRunner();
+    // Owed two hours ago, so a mark at the send would be two hours later.
+    const landedAt = nowSeconds() - 2 * HOUR;
+    await bellRow(userId, landedAt);
+    const day = calendarDay(landedAt);
+    await owe(debtFor(userId, landedAt, day));
+    await drainLater(fakeMail());
+
+    expect(
+      await core()
+        .select({ day: reminderEmailDays.day, at: reminderEmailDays.sentAt })
+        .from(reminderEmailDays)
+        .where(eq(reminderEmailDays.userId, userId)),
+    ).toStrictEqual([{ day, at: landedAt }]);
   });
 
   it("sends one email for two runs landing at once", async () => {
@@ -490,6 +533,48 @@ describe("the consumer owes it in the bell row's batch", () => {
 });
 
 /**
+A Strava reminder bell row of the runner's, unread unless told otherwise.
+*/
+async function bellRow(
+  userId: string,
+  createdAt: number,
+  overrides: Partial<typeof notifications.$inferInsert> = {},
+): Promise<void> {
+  await core()
+    .insert(notifications)
+    .values({
+      id: newUlid(),
+      userId,
+      kind: "strava_reminder",
+      subjectId: newUlid(),
+      body: "New run on Strava",
+      read: false,
+      createdAt,
+      ...overrides,
+    });
+}
+
+/**
+A reminder email owed by a landing, as the consumer writes it.
+*/
+function debtFor(userId: string, landedAt: number, day = "the day") {
+  return emailDebt(
+    {
+      to: { userId },
+      template: { kind: "run_reminder", landedAt: "6:58 AM", runs: 1 },
+    },
+    {
+      dedupeKey: `run_reminder:${userId}:${day}`,
+      reminder: { userId, landedAt, day },
+    },
+  );
+}
+
+async function owe(message: ReturnType<typeof emailDebt>): Promise<void> {
+  await core().batch([outboxInsert(core(), oweOutbox(message))]);
+}
+
+/**
 The hourly drain, past the hold, sending through a fake binding.
 */
 async function drainLater(mail: ReturnType<typeof fakeMail>): Promise<void> {
@@ -595,7 +680,7 @@ describe("at send time", () => {
       { to: { userId }, template },
       {
         dedupeKey: gone,
-        reminder: { notificationId: newUlid(), userId, day: "gone" },
+        reminder: { userId, landedAt: nowSeconds(), day: "gone" },
       },
     );
     const owedPlain = emailDebt(
@@ -682,5 +767,82 @@ describe("runnerZone: the zone of the runner's latest observed run", () => {
     const other = newUlid();
     await seedRun(other, nowSeconds() - HOUR, place(), CHICAGO);
     expect(await runnerZone(core(), newUlid())).toBeUndefined();
+  });
+});
+
+describe("isReminderStillOwed: some reminder from the landing on is unread", () => {
+  const landedAt = Math.floor(Date.UTC(2026, 9, 12, 14) / 1000);
+  const ref = (userId: string) => ({ userId, landedAt, day: "12 Oct 2026" });
+
+  it("is owed for an unread reminder at the landing or after it", async () => {
+    const { userId } = await connectedRunner();
+    await bellRow(userId, landedAt, { read: true });
+    expect(await isReminderStillOwed(core(), ref(userId))).toBe(false);
+    await bellRow(userId, landedAt + HOUR);
+    expect(await isReminderStillOwed(core(), ref(userId))).toBe(true);
+  });
+
+  it("is owed for the landing's own reminder, to the second", async () => {
+    const { userId } = await connectedRunner();
+    await bellRow(userId, landedAt);
+    expect(await isReminderStillOwed(core(), ref(userId))).toBe(true);
+  });
+
+  it("is not owed for an unread reminder from before the landing, another kind, or another runner", async () => {
+    const { userId } = await connectedRunner();
+    const other = await connectedRunner();
+    await bellRow(userId, landedAt - 1);
+    await bellRow(userId, landedAt, { kind: "kit_reminder" });
+    await bellRow(other.userId, landedAt);
+    expect(await isReminderStillOwed(core(), ref(userId))).toBe(false);
+  });
+
+  it("is not owed once the runner disconnects or the day's email went", async () => {
+    const { userId } = await connectedRunner();
+    await bellRow(userId, landedAt);
+    await core()
+      .insert(reminderEmailDays)
+      .values({ userId, day: "12 Oct 2026", sentAt: landedAt });
+    expect(await isReminderStillOwed(core(), ref(userId))).toBe(false);
+    expect(
+      await isReminderStillOwed(core(), { ...ref(userId), day: "13 Oct 2026" }),
+    ).toBe(true);
+    await core()
+      .delete(stravaConnections)
+      .where(eq(stravaConnections.userId, userId));
+    expect(
+      await isReminderStillOwed(core(), { ...ref(userId), day: "13 Oct 2026" }),
+    ).toBe(false);
+  });
+
+  it("reads the runner's reminders on an index that leads with the runner, never the prune's", async () => {
+    const db = core();
+    // The send-time check, and the owe-time history read it shares the
+    // reminders' condition with.
+    const plans = [
+      db
+        .select({ id: notifications.id })
+        .from(notifications)
+        .where(stillOwedWhere(db, ref("u1")))
+        .limit(1),
+      db
+        .select({ at: notifications.createdAt })
+        .from(notifications)
+        .where(remindersSince("u1", landedAt)),
+    ].map(async (query) => {
+      const { sql, params } = query.toSQL();
+      const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+        .bind(...params)
+        .all<{ detail: string }>();
+      return plan.results.map((row) => row.detail).join("\n");
+    });
+    const allDetails = await Promise.all(plans);
+    expect(allDetails).toHaveLength(2);
+    for (const details of allDetails) {
+      expect(details).toMatch(
+        /SEARCH notifications USING INDEX notifications_(?:dedupe|user_read) \(user_id=\? AND (?:kind|read)=\?\)/u,
+      );
+      expect(details).not.toMatch(/notifications_kind_created|SCAN/iu);
+    }
   });
 });

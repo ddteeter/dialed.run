@@ -49,11 +49,11 @@ export type NotificationKind =
  */
 export interface NotificationDraft {
   /**
-   * The row's id, when the caller must name it in the same batch — the
-   * reminder email that is skipped once this row is read (design 140).
-   * Minted here otherwise.
+   * When the row lands, when the caller must name that time in the same
+   * batch — the reminder email, whose send-time check reads the runner's
+   * reminders from its landing on (design 140). Now otherwise.
    */
-  id?: string;
+  createdAt?: number;
   userId: string;
   kind: NotificationKind;
   /**
@@ -82,13 +82,13 @@ export function notificationInsert(
   return db
     .insert(notifications)
     .values({
-      id: draft.id ?? newUlid(),
+      id: newUlid(),
       userId: draft.userId,
       kind: draft.kind,
       subjectId: draft.subjectId,
       body: draft.body,
       read: false,
-      createdAt: nowSeconds(),
+      createdAt: draft.createdAt ?? nowSeconds(),
     })
     .onConflictDoNothing();
 }

@@ -37,9 +37,15 @@ third statement: an `email` outbox row (`emailDebt` → `owe`), held
   yesterday's reminders still unread that came after yesterday's email went
   (all of yesterday's, if none went). "Yesterday" is the calendar day
   before today in the runner's zone (`previousCalendarDay`), so a 23- or
-  25-hour day does not move it.
-- **Skipped by send time** when the bell row is read (a matched upload
-  reads it), the runner has disconnected Strava, or the day's email went.
+  25-hour day does not move it. What yesterday's email covered is the
+  landing that owed it, not its send: a second reminder that day took the
+  row over and left the first payload, so the email never mentioned it.
+  The day's row records that landing (its `sent_at` column holds it).
+- **Skipped by send time** when no reminder of the runner's from the
+  owing landing on is still unread (a matched upload reads its own), the
+  runner has disconnected Strava, or the day's email went. Any reminder,
+  not the first: an upload for the first run must not silence the email a
+  second run that day still owes (PR #187 review).
   **Mark all read also skips it** — the owner kept that (2026-10-12): a
   reminder the runner cleared in the app needs no email.
 - **Pruned** with the Strava ids: the daily prune deletes rows older than a
