@@ -13,22 +13,39 @@
  * weather cache's key, and the entries on `entries_audience_created`
  * (`test/feed/compact-conditions.test.ts` holds the plans).
  */
+import { captureException } from "../ops";
 import { consensusAt, type ConsensusResult } from "./consensus";
 import { conditionsHome } from "./home";
 
 export type CompactConditions = Extract<ConsensusResult, { status: "matched" }>;
 
+/**
+ * The line, or none. **Degrades rather than fails** (law 5): the count
+ * reads the weather cache — another database — in the Following feed's
+ * loader, so a weather read that throws would otherwise take the whole
+ * feed down with it. The failure goes to Sentry with the runner, and the
+ * feed draws no line, which is what an absent line already says.
+ * `consensus` and `report` are parameters so a test can make the read
+ * fail and see the report.
+ */
 export async function compactConditions(
   userId: string,
   nowEpochSeconds: number,
+  consensus: typeof consensusAt = consensusAt,
+  report: typeof captureException = captureException,
 ): Promise<CompactConditions | undefined> {
   const { coords } = await conditionsHome(userId);
   if (coords === undefined) return undefined;
-  const result = await consensusAt(
-    coords.lat,
-    coords.lng,
-    nowEpochSeconds,
-    userId,
-  );
-  return result?.status === "matched" ? result : undefined;
+  try {
+    const result = await consensus(
+      coords.lat,
+      coords.lng,
+      nowEpochSeconds,
+      userId,
+    );
+    return result?.status === "matched" ? result : undefined;
+  } catch (error) {
+    report(error, { userId, surface: "compact-conditions" });
+    return undefined;
+  }
 }

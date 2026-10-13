@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
@@ -417,6 +417,25 @@ describe("compactConditions: E1's line, from the saved place (FEED-9)", () => {
       await compactConditions(await viewerAt(84, 84), NOW),
     ).toBeUndefined();
     expect(await compactConditions(await viewerAt(), NOW)).toBeUndefined();
+  });
+
+  it("draws no line, and reports, when the conditions read fails", async () => {
+    const viewerId = await viewerAt(85, 85);
+    const failure = new Error("weather down");
+    const report = vi.fn();
+
+    expect(
+      await compactConditions(
+        viewerId,
+        NOW,
+        () => Promise.reject(failure),
+        report,
+      ),
+    ).toBeUndefined();
+    expect(report).toHaveBeenCalledExactlyOnceWith(failure, {
+      userId: viewerId,
+      surface: "compact-conditions",
+    });
   });
 
   it("reads the saved place by the profile's primary key", async () => {
