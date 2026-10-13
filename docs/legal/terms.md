@@ -24,7 +24,7 @@
 -->
 
 > **DRAFT: not reviewed by a lawyer.** Written from the code on `main` as of
-> 2026-09-29, and from the owner's decisions, for the owner to edit. Every
+> 2026-10-11, and from the owner's decisions, for the owner to edit. Every
 > `[OWNER: …]` note is a decision or a fact the code cannot supply. Every
 > factual claim is mapped to the code, decision or outside terms that make it
 > true in `terms-sources.md`; change one, change both.
@@ -57,8 +57,12 @@ say so.
 ## Who we are
 
 [dialed.run] is run by one person, [OWNER: your legal name], not by a
-company. [OWNER: postal address, if you publish one.] In these terms "we"
-and "us" mean that person.
+company. [OWNER: postal address, if you publish one; the code has none.]
+In these terms "we" and "us" mean that person. [OWNER: once Big Long Run
+Labs LLC is formed (not yet), it becomes the operator. Then rewrite this
+paragraph to name the LLC and its address, make "we" and "us" mean the
+LLC, change the privacy policy's "Who we are" line to match, and publish
+the change as a new version under "Changes to these terms".]
 
 ## Who can use [dialed.run]
 
@@ -98,7 +102,8 @@ and "us" mean that person.
   will tell you why.
 - **Usernames are never released.** When you change your username, or
   delete your account, the old one stays reserved for good. Nobody else can
-  take it, and a link to it says the runner changed their name.
+  take it. A link to an old username says the runner changed their name,
+  or, once the account is deleted, that the runner isn't here.
 
 ## The rules
 
@@ -334,7 +339,9 @@ To the extent the law allows:
   outside our reasonable control.
 - Our total liability to you for anything to do with [dialed.run] is
   limited to the greater of what you paid us in the 12 months before the
-  claim and [OWNER: a fixed amount, for example US$100].
+  claim and [OWNER: a fixed amount. Nothing is charged today, so this
+  number is the whole cap; US$100 is the common choice for a free
+  service].
 
 **Nothing in these terms limits liability** that the law does not allow us
 to limit, including for death or personal injury caused by negligence, or
@@ -354,8 +361,10 @@ don't accept them, you can delete your account.
 
 ## The law that applies
 
-These terms are governed by [OWNER: governing law, for example the laws of
-a US state], and disputes go to the courts of [OWNER: jurisdiction].
+These terms are governed by [OWNER: governing law: the laws of the US
+state you live in now, or of the LLC's state of formation once it
+exists], and disputes go to the courts of [OWNER: the county and state
+whose courts hear disputes; usually the same state].
 
 If you are a consumer in the European Union or the United Kingdom, you also
 keep the protection of the mandatory laws of the country where you live, and
@@ -378,4 +387,4 @@ you can bring a claim in the courts there.
 - Moderation decisions and appeals, and reporting illegal content:
   desk@dialed.run
 - Copyright: copyright@dialed.run (see the [copyright page](/copyright))
-- By post: [OWNER: postal address, if you publish one]
+- By post: [OWNER: postal address, if you publish one; or delete this line]

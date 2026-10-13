@@ -19,9 +19,15 @@ Two, and the code cannot join across them — that separation is load-bearing
 (CLAUDE.md §D1 query discipline), not an accident to be tidied up later.
 
 ```sh
-wrangler d1 create dialed-core
-wrangler d1 create dialed-weather
+wrangler d1 create dialed-core --location enam
+wrangler d1 create dialed-weather --location enam
 ```
+
+`--location` is the data-region hint, and the privacy policy depends on it:
+the policy says data is stored in North America. Use `enam` or `wnam`,
+whichever is nearer; never leave it off, because Cloudflare then places the
+database near whoever runs the command. A database's location cannot be
+changed after it is created.
 
 Both `database_id` values in `wrangler.jsonc` are placeholder zeros
 (`00000000-…-0001`/`-0002`). Replace them with the real ids from the output.
@@ -61,10 +67,12 @@ losing them silently breaks brand autocomplete rather than failing a test.
 Two buckets, split by **retention**, not by cost.
 
 ```sh
-wrangler r2 bucket create dialed-media
-wrangler r2 bucket create dialed-imports
-wrangler r2 bucket create dialed-guides
+wrangler r2 bucket create dialed-media --location enam
+wrangler r2 bucket create dialed-imports --location enam
+wrangler r2 bucket create dialed-guides --location enam
 ```
+
+The same region hint as the databases (§1), for the same reason.
 
 | Bucket           | Binding                | Holds                                                  | Retention                                                                                                                             |
 | ---------------- | ---------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |

@@ -12,7 +12,7 @@
 -->
 
 > **DRAFT: not reviewed by a lawyer.** Written from the code on `main` as of
-> 2026-09-25 for the owner to edit. Every `[OWNER: …]` note is a decision or
+> 2026-10-11 for the owner to edit. Every `[OWNER: …]` note is a decision or
 > a fact the code cannot supply. Every factual claim is mapped to the code
 > that makes it true in `privacy-policy-sources.md`; change one, change both.
 
@@ -26,46 +26,50 @@ it. Where something is not built yet, it says so.
 
 ## Who we are
 
-[dialed.run] is run by [OWNER: legal entity name, or your own name if there
-is no entity], [OWNER: postal address, if you publish one].
+[dialed.run] is run by one person, [OWNER: your legal name, while there is
+no company. Once Big Long Run Labs LLC is formed, it becomes the operator:
+replace this line with the LLC's name, and change the terms' "Who we are"
+paragraph and their definition of "we" in the same edit], [OWNER: a postal
+address, if you publish one; none is in the code].
 
-Questions about this policy or your data: [OWNER: contact email].
+Questions about this policy or your data: hello@dialed.run.
 
 ## The short version
 
 - We keep your account, your closet, your runs and your kits. That is the
   product.
-- Kits you share are public, and shared is the default. You can make any
-  kit private, or make private your default.
-- Your run's start point is never shown to anyone. It is used to look up the
-  weather.
+- Kits you share are seen by other signed-in runners, and shared is the
+  default. You can make any kit private, or make private your default.
+  Nothing is shown to people who are not signed in.
+- Locations are kept to about a kilometre, and no run's location is shown
+  to anyone. We do not keep your route.
 - Faces in your photos are blurred on your phone before upload, unless you
-  turn that off.
-- From Strava we keep your athlete id, one token used only to revoke our
-  access, and an activity id per reminder. Never your activity data.
-- No ads. The app runs no analytics; the marketing site counts page views
-  without cookies (see [Cookies](#cookies-and-browser-storage)). No selling
-  or renting your data. [OWNER: review]
-- You cannot yet delete your account or export your data from the app. See
-  [Your choices](#your-choices).
+  turn that off. Every photo is re-encoded on our servers, so none keeps
+  the camera's metadata.
+- From Strava we keep your athlete id and one token used only to revoke our
+  access. Never your activity data.
+- The app runs no analytics; the marketing site counts page views without
+  cookies (see [Cookies](#cookies-and-browser-storage)).
+- You can export your data and delete your account in Settings › Account.
 
 ## What we keep, and why
 
 ### Your account
 
-- **Email address.** To sign you in and to tell accounts apart. We keep no
-  name: on dialed.run you are your username.
-- **The invite code you signed up with**, while sign-up is invite-only, so
-  we can see who each code let in.
+- **Email address.** To sign you in, to tell accounts apart and to send
+  you account email. We keep no name: on dialed.run you are your username.
+- **The invite code you signed up with**, and the address that used it,
+  while sign-up is invite-only, so we can see who each code let in.
 - **Not your date of birth.** Sign-up asks for it to check you are 18 or
   over, and we do not keep it (see [Children](#children)).
-- **A request for access**, if you make one: the email address and the
-  note you leave, until we answer it.
+- **A request for access**, if you make one: the email address, the note
+  you leave, and whether we invited you or declined. We delete it 90 days after we
+  answer; a request we have not answered yet is kept until we do.
 - **Your password, hashed.** We store a scrypt hash, never the password
-  itself. [OWNER: pending PR #104] When you set a password we check it
-  against Have I Been Pwned's list of leaked passwords. Only the first five
-  characters of the password's SHA-1 hash leave our servers; the password and
-  the full hash never do.
+  itself. When you set a password we check it against Have I Been Pwned's
+  list of leaked passwords. Only the first five characters of the
+  password's SHA-1 hash leave our servers; the password and the full hash
+  never do. If that check cannot answer, your password is accepted.
 - **If you sign in with Google:** Google gives us your name, email address,
   profile picture link and Google account id. We keep the email address,
   the picture link and the account id; we do not keep your name. We ask
@@ -73,26 +77,41 @@ Questions about this policy or your data: [OWNER: contact email].
   the tokens Google issues at sign-in.
 - **Sessions.** When you sign in we record a session token, when it expires
   (7 days), the browser that signed in, and its IP address (as Cloudflare
-  reports it). To slow down password guessing we also count sign-in and
-  sign-up attempts per IP address; those counts are kept for about a
-  minute and then deleted. [OWNER: confirm the wording; task 125 OPS-4.]
-- **Email.** [OWNER: pending. The app sends no email today. If email
-  verification or password reset ships, name the provider here and what it
-  receives.]
+  reports it). The record is deleted 30 days after the session expires.
+- **Counts that stop abuse.** We count sign-in and sign-up attempts per IP
+  address; those counts are kept for about a minute and then deleted. We
+  count how many sign-in links, password resets and email changes each
+  address asked for in the last hour, and how many wrong passwords you
+  typed when changing your email or password. Requests for access and
+  removal requests are counted per visitor IP address the same way. Each
+  of these counts is deleted a day after its window ends.
+- **Terms you accepted:** each version and when.
+- **Account email.** We send email from hello@dialed.run through
+  **Cloudflare's** email service: confirming your address, a notice when
+  someone tries to sign up with it, password reset, email change (to both
+  addresses), invites, run reminders, your export link, notices that we
+  removed something of yours or closed or reopened your account, that
+  your account is due to be deleted, and that Strava reminders stopped.
+  Run reminders can be turned off; the rest are about your account and
+  always send. We send nothing commercial. An email we owe but have not
+  sent yet waits in a queue with its address until it goes.
 
 ### Your profile
 
 - **Username** and **the place you run**, if you set it. Both show on
-  your public profile.
+  your profile to other signed-in runners.
 - **Username screening.** When you pick a username we check it against a
   list of offensive words and send it, alone, to **OpenAI's** moderation
   service. Nothing else about you goes with it.
+- **Usernames you have used.** When you change your username, or delete
+  your account, the old one is kept for good so nobody else can take it.
 - **Coordinates for that place**, if you let your browser share your
-  location during setup. These are stored as your browser reports them, at
-  full precision, and are never shown to anyone. They stand in for a run's
+  location, rounded to two decimal places (about a kilometre) before they
+  are stored. They are never shown to anyone. They stand in for a run's
   location when a manual run has none.
-- **How warm or cold you run** (your thermal level), your units, and whether
-  your kits are shared by default. Your thermal level is never public.
+- **How warm or cold you run** (your thermal level), your units, whether
+  your kits are shared by default, and which emails you have switched off.
+  Your thermal level is never shown to anyone else.
 
 ### Your closet
 
@@ -111,8 +130,7 @@ visibility), a product link if you paste one, and a photo if you take one.
   has been read, we delete it**, usually within a day; we do not keep your
   route. If we could not read a file, there is no run, so we keep the file
   for 30 days after the import failed, in case you ask about it, and then
-  delete it. [OWNER: review]
-  [OWNER: confirm the whole-bucket 30-day rule is removed; only the exports/ 8-day rule remains]
+  delete it.
 - **Conditions:** the weather for each hour of the run, looked up from its
   start point and time (see [Weather and location](#weather-and-location)).
   If the weather cannot be found, you can set a temperature yourself; that
@@ -135,21 +153,23 @@ ever shown to you.
 ## Weather and location
 
 - **Run weather.** To find the conditions for a run, our servers send the
-  run's start coordinates and date to **Visual Crossing**, our weather
-  provider. Your name, email and account id are not sent. The answer is kept
-  in a shared weather cache keyed by the location rounded to two decimal
-  places (about 1 km) and the hour, alongside a reference to the run that
-  first fetched it.
-- **Setup.** To suggest a starter closet, the place you typed or the
-  coordinates your browser shared are sent to Visual Crossing to look up
-  typical winter and summer temperatures there.
+  run's start point, rounded to about a kilometre, and its date to
+  **Visual Crossing**, our weather provider. Your name, email and account
+  id are not sent. The answer is kept in a shared weather cache keyed by
+  that rounded location and the hour, alongside a reference to the run
+  that first fetched it.
+- **Setup.** To suggest a starter closet, the place you typed or your
+  rounded coordinates are sent to Visual Crossing to look up typical
+  winter and summer temperatures there.
 - **"Your conditions" on the feed.** If you allow it, your browser sends
   your current location to our server to look up recent weather near you
-  from the cache. It is not stored, and it is not sent to Visual Crossing.
+  from the cache. It is not stored, and it is not sent to Visual Crossing,
+  unless you choose to save it as the place you run, when it is rounded
+  and stored as above.
 - **Time zone.** A run's local time comes from the time zone Visual Crossing
   reports for the place.
 - **Never shown.** No run's coordinates are shown to anyone, including on
-  public kits.
+  shared kits.
 
 ## Photos
 
@@ -157,32 +177,30 @@ ever shown to you.
   your browser; the model is loaded from our own site and your photo does not
   leave your device for it. Blurred areas are pixelated, not softened, so
   they cannot be recovered. You can also tap to blur anything else.
-- **Blurring also strips photo metadata.** With blur on, the photo is redrawn
-  in your browser, and the uploaded copy carries none of the camera's
-  metadata, including any GPS location the camera wrote.
-- **With blur off, the file is uploaded as it is.** We do not strip metadata
-  on our servers. If your camera records location, a photo uploaded with blur
-  off can carry it, and for kit photos that file is what other people
-  download. [OWNER: launch gap. Either strip metadata on upload or keep this
-  warning.] Turning blur off is remembered in your browser only.
+  Turning blur off is remembered in your browser only.
+- **No photo keeps its metadata.** Every photo, kit or garment, blur on or
+  off, is decoded and saved again as a new JPEG on our servers, so nothing
+  the camera wrote, including any GPS location, is kept or shown.
 - **Garment photos** are only ever shown to you. We keep the photo you
-  uploaded and three resized copies.
-- **Kit photos** are shown to anyone who can see the kit, once screened.
+  uploaded, re-encoded, and three resized copies.
+- **Kit photos** are shown to signed-in runners who can see the kit, once
+  screened.
 - **Screening.** Every photo is sent to **OpenAI's** moderation service to
   check for sexual, violent and self-harm content. We keep the scores it
   returns. A photo that scores high is hidden from everyone but you until a
   person reviews it. Until a photo is screened, only you can see it.
-  [OWNER: confirm Cloudflare's CSAM scanning tool is enabled, then say so
-  here.]
+  [OWNER: decide CSAM coverage before public launch (D-69, deployment plan
+  §8): a cached public bucket that Cloudflare's CSAM Scanning Tool can see,
+  or PhotoDNA. Cloudflare's tool cannot see photos as they are served
+  today. Once one is on, name it here and in the processor table.]
 
 ## What other people can see
 
-**Treat a shared kit as public.** Today the pages that show kits and
-profiles ask you to sign in, but a shared kit's photos can be loaded by
-anyone with their address, and we may open these pages to signed-out
-visitors. [OWNER: decide whether shared means "any runner on [dialed.run]"
-or "anyone on the web", and say which. The data behind the kit and profile
-pages is also served to signed-out requests today.]
+**Only signed-in runners.** "Shared" means other signed-in runners on
+[dialed.run], not the open web. Kits, profiles and their photos are not
+shown to anyone who is not signed in, and are not indexed by search
+engines. A link to a kit shared elsewhere previews as a generic
+[dialed.run] card, with nothing from the kit on it.
 
 **A shared kit** shows your username, the run's title, date and start time, distance,
 duration, whether it was indoors, its conditions, the garments you wore
@@ -198,6 +216,7 @@ level, your verdict history and coverage, and any run's coordinates.
 
 **Sharing is on by default.** You choose shared or private for each kit when
 you give the verdict, and you can make private your default in settings.
+Until you confirm your email address, the kits you log are saved private.
 Private kits never appear in feeds or in anyone's conditions numbers.
 
 **Conditions numbers.** Shared kits are counted, without names, in numbers
@@ -205,10 +224,9 @@ like "15 of 18 wore long sleeves" for runners in similar weather. Blocking
 someone does not remove their kits from these counts, because the counts
 name no one.
 
-**Blocking** records that you blocked someone. It does not notify them.
-[OWNER: launch gap. The block is stored but no feed, profile or kit page
-reads it yet, so it does not hide anything today. Once it does, this line
-can say "hides the two of you from each other".]
+**Blocking** hides the two of you from each other: each other's kits in
+feeds and on kit pages, each other's profiles, and each other in search.
+It does not notify them.
 
 ## Strava
 
@@ -218,14 +236,21 @@ your kit when you post a new run there.
 - **What we keep:** your Strava athlete id and a refresh token, which we
   use for one thing only: revoking our access. We do not keep the access
   token Strava issues, or when it expires.
-- **Permission:** we ask for `activity:read`. [OWNER: confirm this is the
-  minimum scope Strava requires to send new-activity events, and say so.] We
-  never use it to read an activity: our code calls Strava only to connect
+- **Permission:** we ask for `activity:read`, the narrowest permission for
+  which Strava tells us about new runs. Runs you post on Strava as visible
+  to "Only You" do not reach us and get no reminder. We never use the
+  permission to read an activity: our code calls Strava only to connect
   and to revoke our access.
 - **When you post a run on Strava,** Strava tells us an activity id, your
   athlete id and a time. We keep the activity id, the event type and that
   time so we never remind you twice, and we create a notification that
-  points at that activity id.
+  points at that activity id. **After 7 days we delete the activity id**
+  from both, whether you are still connected or not; the reminder itself
+  stays, with no Strava data in it. [OWNER: launch gap, still real
+  (register R-142). If a reminder fails every retry, the failure record
+  keeps your athlete id and the activity id until we retry or drop it,
+  even after you disconnect or delete your account. Fix before public
+  launch, or say so here.]
 - **Never:** distance, pace, route, title, photos, heart rate or any other
   activity data. We do not store, show or use it.
 - **Disconnecting** deletes the connection immediately. We keep the refresh
@@ -234,8 +259,6 @@ your kit when you post a new run there.
 - **If you revoke us from Strava's side,** Strava tells us, and we delete
   the connection straight away, revoke with the refresh token in the same
   way, and tell you that reminders have stopped.
-- Reminder notifications and the activity ids behind them are kept after you
-  disconnect. [OWNER: decide whether disconnecting should delete them.]
 
 ## Product lookups
 
@@ -250,10 +273,12 @@ account added it.
 
 ## Moderation
 
-- Signed-in runners can report a kit, a photo, a profile or a product name.
-  When three different people report the same kit or photo, it is hidden
-  from everyone but its owner and a person reviews it. A profile or product
-  name reported three times goes to a person for review.
+- Signed-in runners with a confirmed email can report a kit, a photo, a
+  profile or a product name. A kit you report leaves your feed straight
+  away, and a runner you report leaves your search. When three different
+  people report the same kit or photo, it is hidden from everyone but its
+  owner and a person reviews it. A profile or product name reported three
+  times goes to a person for review.
 - One report that a kit or photo is an intimate image shared without
   consent hides it from everyone but its owner at once, and emails each
   reviewer that it is waiting and when its 48 hours run out. The email
@@ -264,44 +289,60 @@ account added it.
   link or description of where the image is, the username of whoever
   posted it if you give one, anything written about it,
   when it was made, and what we decided, with the reason if we declined.
+  If the link points to a kit or photo on [dialed.run], we hide it from
+  everyone but its owner while we look, and put it back if we decline.
   We email the address a receipt and the decision, and email each
   reviewer that a request is waiting. We count requests per visitor IP
   address, as we do requests for access, to stop the form being flooded,
   and delete each count a day after its hour ends. To stop one person
-  filing many requests, we keep with each request a form of the email
-  address that ignores dots and "+" tags where the provider does, and a
-  one-way keyed code made from the IP address (not the address itself). If
-  someone abuses the form, we may block that email and code from it. We
-  keep a request until we delete it, because it is the record of why
-  something was or was not removed. [OWNER: review]
-- Reviewers are a short list of admins we name in configuration. They can
-  see reported and flagged content, including hidden photos, with the
-  reports' reasons and notes.
-- We can ban an account, which records the reason and signs it out
-  everywhere. [OWNER: nothing yet stops a banned account signing back in
-  or hides its content; the ban is recorded only.]
-- [OWNER: say who the admins are, or "the people who run [dialed.run]".]
+  filing many requests, we keep with each request a
+  form of the email address that ignores dots and "+" tags where the
+  provider does, and a one-way keyed code made from the IP address (not
+  the address itself). If someone abuses the form, we may block that
+  email and code from it. We keep a request until we delete it, because
+  it is the record of why something was or was not removed.
+- Reviewers are the people who run [dialed.run], named in our
+  configuration; today that is one person. They can see reported and
+  flagged content, including hidden photos, with the reports' reasons and
+  notes.
+- **When we remove a kit or photo,** we delete it and its files, keep a
+  record of what was removed, by whom and why, and tell its owner in the
+  app and by email. A moderator can also change a username that breaks the
+  rules, and the runner is told why the next time they open the app.
+- **Suspected child sexual abuse material** is the exception: it is
+  removed at once, and its owner is not told. We keep a locked copy that
+  only reviewers can see, with who uploaded it and when, for one year so
+  it can be reported to the National Center for Missing & Exploited
+  Children, and then delete it.
+- **We can close an account.** We record the reason, sign it out
+  everywhere, refuse it sign-in, hide its kits, photos and profile from
+  everyone else, and email the reason. Reopening it brings them back.
 
 ## Who else handles your data
 
 We use these services to run [dialed.run]. We do not sell or rent your data
 to anyone.
 
-| Service                            | What it does for us                                                     | What it receives                                                                                          |
-| ---------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Cloudflare                         | Hosts the app: servers, databases, photo and file storage, queues, logs | Everything above, stored on its platform                                                                  |
-| Google                             | "Sign in with Google", if you use it                                    | The sign-in request; returns your name, email and picture                                                 |
-| Strava                             | Run reminders, if you connect                                           | The connect and revoke requests                                                                           |
-| Visual Crossing                    | Weather                                                                 | Run start coordinates and date; the place you set during setup                                            |
-| OpenAI                             | Photo screening; username screening; reading product pages              | Your photos; the username you pick; the text and address of product pages                                 |
-| Firecrawl                          | Fetching product pages that block us                                    | The product link                                                                                          |
-| Sentry                             | Error reports                                                           | The error and internal ids (account, run, import, product), never tokens, request bodies or file contents |
-| Have I Been Pwned [OWNER: PR #104] | Leaked-password check                                                   | The first five characters of your password's SHA-1 hash                                                   |
-| [OWNER: email provider, pending]   | [OWNER: pending]                                                        | [OWNER: pending]                                                                                          |
+| Service                  | What it does for us                                                     | What it receives                                                                                          |
+| ------------------------ | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Cloudflare               | Hosts the app: servers, databases, photo and file storage, queues, logs | Everything above, stored on its platform                                                                  |
+| Cloudflare Email Service | Sends our email                                                         | Each email's address, subject and body                                                                    |
+| Cloudflare Turnstile     | Tells people from bots on sign-up, request access and removal requests  | The check your browser runs, and your IP address from our server                                          |
+| Google                   | "Sign in with Google", if you use it                                    | The sign-in request; returns your name, email and picture                                                 |
+| Strava                   | Run reminders, if you connect                                           | The connect and revoke requests                                                                           |
+| Visual Crossing          | Weather                                                                 | Rounded run start points and dates; the place you set                                                     |
+| OpenAI                   | Photo screening; username screening; reading product pages              | Your photos; the username you pick; the text and address of product pages                                 |
+| Firecrawl                | Fetching product pages that block us                                    | The product link                                                                                          |
+| Sentry                   | Error reports                                                           | The error and internal ids (account, run, import, product), never tokens, request bodies or file contents |
+| Have I Been Pwned        | Leaked-password check                                                   | The first five characters of your password's SHA-1 hash                                                   |
 
-[OWNER: where Cloudflare stores the databases and buckets (region or
-jurisdiction), and whether you need a transfer statement for users outside
-it.]
+We are in the United States, and your data is stored in North America.
+The app itself runs on Cloudflare's network, so a request may be handled in
+the Cloudflare data centre nearest you before it reaches our storage.
+[OWNER: for counsel, since sign-up is open to the EU and UK (D-115): which
+safeguard covers the processors above when they receive EU or UK data, for
+example each one's Data Privacy Framework certification or standard
+contractual clauses in its terms.]
 
 ## Cookies and browser storage
 
@@ -309,69 +350,92 @@ it.]
 - **Short-lived cookies during sign-in**, including one that lasts 10
   minutes while you connect Strava, stop the sign-in or connection being
   hijacked.
-- **One browser setting,** saved only if you turn face blur off, so we
-  remember not to load the face detector again.
 - **An age-check cookie**, only if sign-up refused a date of birth as
   under 18, for one day (see [Children](#children)).
+- **In your browser's storage:** whether you turned face blur off, so we
+  do not load the face detector again; your account id, so a tab knows
+  when you have signed in as someone else; and, for one tab and only
+  until you close it, your email address if you were signed out mid-form,
+  so the sign-in form can fill it in.
 
-No advertising or analytics cookies. No third-party scripts; our fonts and
-the face-blur model are served from our own site.
+No advertising or analytics cookies. Our fonts and the face-blur model are
+served from our own site. The one third-party script is Cloudflare
+Turnstile's, loaded only on sign-up, request access and the removal
+request form.
 
 dialed.run (the marketing site) counts page views with GoatCounter, which
-sets no cookies and keeps no personal data. [OWNER: review]
+sets no cookies and keeps no personal data.
 
 ## How long we keep it
 
-| What                                                                                            | How long                                                                                                                                                                                                               |
-| ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Imported run files                                                                              | Until it has been read, usually within a day. A file we could not read: 30 days after the import failed [OWNER: review] [OWNER: confirm the whole-bucket 30-day rule is removed; only the exports/ 8-day rule remains] |
-| Removal requests (`/takedown`)                                                                  | Until we delete them (D-117)                                                                                                                                                                                           |
-| Session records                                                                                 | Expire after 7 days, and are deleted 30 days after they expire                                                                                                                                                         |
-| Strava refresh token                                                                            | Until you disconnect, then until Strava confirms revocation                                                                                                                                                            |
-| Garments you delete (never used in a kit)                                                       | The record is deleted; the photo files are not. [OWNER: launch gap]                                                                                                                                                    |
-| Garments used in a kit                                                                          | Kept, marked retired, so old kits still make sense                                                                                                                                                                     |
-| Everything else: account, profile, runs, kits, photos, follows, reports, notifications, weather | Kept with no time limit, until it or your account is deleted [OWNER: review] [OWNER: decide a period for what no one deletes]                                                                                          |
-| Server logs                                                                                     | [OWNER: Cloudflare Workers Logs retention for your plan]                                                                                                                                                               |
-| Error reports                                                                                   | [OWNER: Sentry retention for your plan]                                                                                                                                                                                |
-| Product pages we fetched                                                                        | Kept, to re-read later. Not personal data                                                                                                                                                                              |
+| What                                                                                            | How long                                                                                                                          |
+| ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Imported run files                                                                              | Until it has been read, usually within a day. A file we could not read: 30 days after the import failed                           |
+| Your data export                                                                                | The file: 7 days from when it is ready. The record that you asked for one: deleted with the file, or 7 days after a failed export |
+| Removal requests (`/takedown`)                                                                  | Until we delete them                                                                                                              |
+| Requests for access                                                                             | 90 days after we answer them                                                                                                      |
+| Session records                                                                                 | Expire after 7 days, and are deleted 30 days after they expire                                                                    |
+| Strava refresh token                                                                            | Until you disconnect, then until Strava confirms revocation                                                                       |
+| Strava activity ids                                                                             | 7 days                                                                                                                            |
+| Garments you delete                                                                             | Deleted with their photo files. A garment you wore leaves those kits                                                              |
+| Runs, kits and kit photos you delete                                                            | Deleted with their files                                                                                                          |
+| Your account, when you delete it                                                                | Hidden at once; everything below deleted 7 days later (see [Your choices](#your-choices))                                         |
+| Suspected child sexual abuse material we removed                                                | One year, then deleted                                                                                                            |
+| Usernames you have used                                                                         | For good, so nobody else can take them                                                                                            |
+| Everything else: account, profile, runs, kits, photos, follows, reports, notifications, weather | Until you delete it or your account                                                                                               |
+| Server logs                                                                                     | 7 days                                                                                                                            |
+| Error reports                                                                                   | 30 days                                                                                                                           |
+| Product pages we fetched                                                                        | Kept, to re-read later. Not personal data                                                                                         |
 
 ## Your choices
 
-What you can do in the app today:
+What you can do in the app:
 
+- **Export your data.** Settings › Account › Export your data emails you a
+  link to one ZIP: your profile, runs (with the conditions we showed),
+  kits, closet, the terms you accepted, and your photos at the size we
+  keep. One a day; the link works for 7 days, and only for you, signed in.
+- **Delete your account.** Settings › Account › Delete account. You are
+  hidden from everyone at once, and you have 7 days to change your mind by
+  signing in and keeping it. After that we delete your account, profile,
+  closet, runs, kits, photos, files, follows, blocks, notifications and
+  Strava connection. What stays: your username, reserved for good; reports
+  you filed, without your name; records of moderation decisions and any
+  quarantined material; and products you added to the shared catalogue,
+  no longer linked to you.
+- **Delete a run, a kit or a kit photo**, and **delete or retire a
+  garment.**
+- **Change your email address** (confirmed from the new address, with a
+  notice to the old) and **reset a forgotten password** by email.
+- **Switch off run reminder emails** in Settings › Notifications, or from
+  the unsubscribe link in any of them.
 - Make any kit private, and make private your default.
-- Edit your garments. Delete one you have never worn in a kit; retire one
-  you have.
 - Turn face blur off or on, per device, and blur anything by tapping it.
 - Disconnect Strava.
 - Unfollow, remove a "useful", block, unblock, and report.
 - Allow or refuse location in your browser. Everything works without it; a
   run without a location gets no automatic weather.
 
-What you cannot do in the app yet:
-
-- **Delete your account.** [OWNER: not built]
-- **Export your data.** [OWNER: not built]
-- **Delete a run, a kit, or a kit photo.** [OWNER: not built]
-- **Change your email address or reset a forgotten password.** [OWNER: not
-  built; depends on email sending]
-
-Until these exist, email [OWNER: contact email] and we will do it by hand
-within [OWNER: days]. [OWNER: confirm you will honour access, correction and
-deletion requests by hand, and name the laws you are answering to (GDPR, UK
-GDPR, CCPA/CPRA, or none), with the legal bases for processing if GDPR
-applies.]
+For anything else, such as correcting something you cannot edit, or a
+question about what we hold, email hello@dialed.run and we will answer
+within 30 days. [OWNER: name the
+laws you answer to and, for GDPR, the legal basis for each use. Sign-up
+stays open to the EU and UK (D-115), so GDPR and UK GDPR probably apply.
+A starting point for counsel: contract for the account, closet, runs and
+kits; legitimate interests for screening, moderation, security, the
+leaked-password check and the anonymous conditions numbers; consent for
+browser location and Strava; legal obligation for reports to NCMEC.]
 
 ## Security
 
-Everything travels over HTTPS. [OWNER: confirm "Always Use HTTPS" is on
-for the zone; the code does not enforce it.] Passwords are hashed. Only the account that
-owns a garment photo can load it, and a private kit returns nothing to
-anyone else. Google tokens are stored in our database so the connection
-keeps working, and a Strava refresh token so we can revoke our access; they
-are not separately encrypted by us.
-[OWNER: confirm Cloudflare's encryption at rest for D1 and R2 before
-claiming it.]
+Everything travels over HTTPS, and the app tells browsers to use only
+HTTPS for a year. A plain `http://` address is always redirected to
+HTTPS. Passwords
+are hashed. Only the account that owns a garment photo can load it, and a
+private kit returns nothing to anyone else. Cloudflare encrypts our
+databases and stored files at rest. Google tokens are stored in our
+database so the connection keeps working, and a Strava refresh token so we
+can revoke our access; we do not encrypt them separately.
 
 ## Children
 
@@ -383,18 +447,18 @@ cannot simply be tried again with a different date.
 
 We do not knowingly collect data from anyone under 18. If we learn that an
 account belongs to someone under 18, we close it and delete its data. If
-you think one does, email [OWNER: contact email].
+you think one does, email hello@dialed.run.
 
 ## Changes to this policy
 
-When this policy changes we will update the date at the top. [OWNER: how
-you will tell people about a material change, e.g. a notification in the
-app.]
+When this policy changes we will update the date at the top. Before a
+change that matters takes effect, we will tell you in the app or by email,
+at least 30 days ahead, unless the change is required by law.
 
 ## Governing law
 
-[OWNER: jurisdiction and governing law.]
+[OWNER: governing law and jurisdiction, the same as the terms.]
 
 ## Contact
 
-[OWNER: contact email]
+hello@dialed.run
