@@ -9,6 +9,8 @@ import {
   feedConditions,
 } from "../../src/modules/feed/compact-conditions";
 import { conditionsHomeStatement } from "../../src/modules/feed/home";
+import { setCountInTotals } from "../../src/modules/onboarding/aggregate-prefs";
+import { newUlid } from "../../src/lib/ids";
 import { pointConditions } from "../feed/conditions-fixture";
 import {
   BAND_HALF_WIDTH_C,
@@ -333,6 +335,72 @@ describe("yourConditionsConsensus: the floor and the window", () => {
     expect(await yourConditionsConsensus(VIEWER, NOW, viewerId)).toMatchObject({
       status: "too-few",
     });
+  });
+});
+
+/**
+Turned off through Settings › Privacy's one writer.
+*/
+async function optOut(userId: string): Promise<void> {
+  await setCountInTotals(drizzle(env.DIALED_CORE), userId, {
+    countInTotals: false,
+  });
+}
+
+describe("the totals switch covers the block (U2 folded into count_in_totals)", () => {
+  beforeEach(resetTables);
+
+  it("leaves out a runner who turned totals off, and the floor counts without them", async () => {
+    const optedOut = await runner();
+    await runners(4);
+    expect(await runnersIn(VIEWER, THREE_DAYS_AGO)).toBe(5);
+
+    await optOut(optedOut);
+    expect(await matchTally(VIEWER, THREE_DAYS_AGO)).toStrictEqual({
+      runners: 4,
+      groups: { tops: 4 },
+    });
+    expect(await yourConditionsConsensus(VIEWER, NOW)).toMatchObject({
+      status: "too-few",
+    });
+  });
+
+  it("counts a runner who turned totals back on, and one with no profile row", async () => {
+    const back = await runner();
+    await optOut(back);
+    await setCountInTotals(drizzle(env.DIALED_CORE), back, {
+      countInTotals: true,
+    });
+    // Nothing creates a profile at signup: no row is counted, as the
+    // column's default says.
+    await runner({ userId: newUlid() });
+    expect(await runnersIn(VIEWER, THREE_DAYS_AGO)).toBe(2);
+  });
+
+  it("still shows the block to a viewer who turned totals off", async () => {
+    const viewerId = await runner();
+    await optOut(viewerId);
+    await runners(5);
+    expect(await yourConditionsConsensus(VIEWER, NOW, viewerId)).toMatchObject({
+      status: "matched",
+      runners: 5,
+    });
+  });
+
+  it("looks each entry's runner up by the profile's primary key, never a scan", async () => {
+    const { sql, params } = recentPublicEntriesStatement(
+      drizzle(env.DIALED_CORE),
+      THREE_DAYS_AGO,
+      "01VIEWER",
+    ).toSQL();
+    const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+      .bind(...params)
+      .all<{ detail: string }>();
+    const details = plan.results.map((row) => row.detail).join("\n");
+    expect(details).toMatch(
+      /SEARCH user_profiles USING INDEX sqlite_autoindex_user_profiles_1 \(user_id=\?\)/u,
+    );
+    expect(details).not.toMatch(/SCAN\s+user_profiles/iu);
   });
 });
 

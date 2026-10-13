@@ -58,6 +58,10 @@ count_in_totals  int      -- boolean, NOT NULL DEFAULT 1: Settings › Sharing's
                           --  runner LEFT JOIN user_profiles and counts
                           --  COALESCE(count_in_totals, 1) = 1. A plain join
                           --  would silently drop every runner without a row.
+                          --  The in-app consensus block reads it too (U2's
+                          --  pool folded in, owner 2026-10-12): an entry
+                          --  counts unless its runner's row says 0 (NOT
+                          --  EXISTS on the profile's primary key).
 ```
 
 ### wardrobe_items

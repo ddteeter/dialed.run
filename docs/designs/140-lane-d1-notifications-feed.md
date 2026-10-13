@@ -76,9 +76,23 @@ consensus there (`entries_audience_created`; the cache's key for the
 reading), in the Following feed's loader through `feedConditionsQuery`, which
 reads the profile once for both the Conditions tab's home and the line.
 A failed conditions read is reported and draws no line (law 5).
-Matched only; otherwise no line. **The U2 privacy card is not wired**: its
-drawn copy is about the in-app conditions pool, not the published totals
-`count_in_totals` governs, so it went back to the owner (premise check).
+Matched only; otherwise no line.
+
+**U2 folds into `count_in_totals` (owner, 2026-10-12).** U2's conditions
+pool card described the in-app block, which no setting controlled; the
+owner made the totals switch cover both rather than add a second setting.
+
+- `feed/consensus.ts`'s window leaves out entries whose runner turned
+  totals off: `NOT EXISTS` on `user_profiles` by its primary key, so a
+  runner with no profile row is counted (the column's default). That
+  reaches every consumer of the one consensus — Your conditions and E1's
+  line. The viewer's own view is untouched (they are never counted).
+- No second writer and no schema change: Settings › Privacy's
+  `TotalsSwitch` is `setCountInTotals`, as before. U2's card is not drawn
+  separately.
+- The switch's on and off lines say it covers the block too — proposed
+  wording, asked of the owner (design deltas item 62).
+- Not touched: "worn by N" social proof, which the fold did not name.
 
 **STR-13.** `lib/dates` gains the long-weekday and month-year shapes;
 `ops/components/Today.tsx` and `closet/retired-label.ts` use them.
@@ -90,8 +104,10 @@ drawn copy is about the in-app conditions pool, not the published totals
   approved 2026-10-12). Outbox `email` payload: optional `reminder` (wire
   format, additive).
 - New route files: none. New bindings/queues/crons: **none**.
-- Screens: S2a (bell); E1's compact line; Today (D5); C's retired tag.
-  N/U2's pool card: not built (question 4).
+- Screens: S2a (bell); E1's compact line; Today (D5); C's retired tag;
+  Settings › Privacy's totals lines (U2 folded in).
+- Contract: `count_in_totals` now also governs the in-app consensus
+  (`docs/contracts.md`, `docs/product.md`).
 
 ## Test plan
 
@@ -103,6 +119,9 @@ drawn copy is about the in-app conditions pool, not the published totals
 - ui `belled-layout.dom.test.tsx`/bell: "more than 9 new"; arch test: every
   `BelledLayout` route spreads `bellStateFn`'s state.
 - `lib/dates` unit tests for the two new shapes.
+- worker `test/feed/consensus.test.ts`: an opted-out runner leaves the
+  tally and the floor; turned back on, or with no profile row, counted;
+  an opted-out viewer still sees the block; the profile lookup's plan.
 
 ## Open questions
 
@@ -112,7 +131,6 @@ drawn copy is about the in-app conditions pool, not the published totals
    kept as built.
 3. A held reminder the daily digest's drain happens to pick up is counted
    as an "owed" anomaly line, like any email row. Rare; left as is.
-4. **U2's pool card (asking):** its copy describes leaving the in-app
-   conditions pool, which no setting controls; `count_in_totals` governs
-   the published guides. Wire it to a new setting, reword it to the totals,
-   or leave it unbuilt?
+4. **U2's pool card: decided** (owner, 2026-10-12) — folded into
+   `count_in_totals`. The switch's reworded lines are proposed and await
+   the owner's wording.

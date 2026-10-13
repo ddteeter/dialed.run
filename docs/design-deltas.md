@@ -1067,6 +1067,16 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       notes, photos, when you ran, or any place more precise than a broad
       climate zone." Totals count a climate zone derived from where a run
       was (D-120), so "where" was untrue.
+    - **U2's conditions pool folds into that switch** (owner, 2026-10-12).
+      U2's "THE CONDITIONS POOL" card is not drawn separately: Settings ›
+      Privacy's one totals switch (one writer, `setCountInTotals`) now also
+      leaves a runner's shared runs out of the in-app Same conditions block,
+      and its lines say so — on: "…to the guides and reports, and shared
+      runs count in the Same conditions block other runners see. Never…";
+      off: "Off. Your runs leave the guides at tonight's update. They leave
+      the Same conditions block now, and it still works for you. Reports
+      already published stay as they are." **Proposed wording, awaiting
+      the owner's.** U2's SHARED/NEVER table is not built.
       **The ask:** fold these into the boards, or reword them.
 
 63. **E1's compact line, composed from the E2 frame (FEED-9; PR #187).**
@@ -3857,14 +3867,12 @@ FEELS [{lo}–{hi}°] · {PRECIP} · {WINDOW}`; line "In {feels}° and
   names a place. E1's compact line and N's privacy card follow. Not built.
   **E1's compact line: built (lane D1, PR #187, 2026-10-12)**, composed
   from the E2 frame because no E1 frame draws one (owner, 2026-10-12;
-  item 63). **N's privacy card: not built, and stopped at its premise.**
-  It is U2 Privacy's "THE CONDITIONS POOL" card, and its copy describes
-  the in-app pool — "Your verdicts count toward the anonymous '18 runners
-  logged this in 44° and damp' block that other runners see — and that
-  you see", "Turn it off and the block still works for you" — not the
-  published guides and reports that `count_in_totals` governs. Wiring its
-  toggle to that column would label one setting with another's meaning,
-  so the question went back to the owner instead.
+  item 63). **N's privacy card: folded into the totals switch** (owner,
+  2026-10-12). It is U2 Privacy's "THE CONDITIONS POOL" card, whose copy
+  describes the in-app pool, not the published totals `count_in_totals`
+  governed. The owner made one switch cover both: an opted-out runner's
+  shared runs leave the in-app block, and the totals switch's lines say
+  so (item 62).
 
 **Round 24's asks were still open** (answered in round 26, above) — the time correction on A1, R2b's
 options, the delete-with-runs sheet, "Garment saved, photo didn't", the

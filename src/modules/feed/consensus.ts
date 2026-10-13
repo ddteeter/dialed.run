@@ -30,14 +30,22 @@
  * The viewer's own entries are left out: "what other runners wore" is the
  * question, and counting the viewer as one of the five would leave four
  * strangers behind a floor meant to be five.
+ *
+ * **A runner who turned off "Count my runs in anonymous totals" is left
+ * out too** (owner, 2026-10-12: U2's conditions pool folded into
+ * `count_in_totals`). One switch covers the published totals and this
+ * block, so their shared runs stop counting here at once. Their own view
+ * is untouched: the block still works for them, since the viewer is never
+ * counted anyway.
  */
-import { and, eq, gte, inArray, ne } from "drizzle-orm";
+import { and, eq, gte, inArray, ne, notExists, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import {
   outfitEntries,
   outfitEntryItems,
+  userProfiles,
   wardrobeItems,
 } from "../../db/schema-core";
 import { env } from "../../env";
@@ -106,7 +114,28 @@ export function recentPublicEntriesStatement(
       publiclyVisibleEntry(),
       gte(outfitEntries.createdAt, sinceEpochSeconds),
       viewerId === undefined ? undefined : ne(outfitEntries.userId, viewerId),
+      countsInTotals(database),
     ),
+  );
+}
+
+/**
+ * The entry's runner has not turned totals off — a correlated lookup by
+ * the profile's primary key, once per entry in the window. NOT EXISTS
+ * rather than a join on `count_in_totals = 1`, because nothing creates a
+ * profile row at signup: a runner without one is counted, as the column's
+ * default says (`docs/contracts.md`).
+ */
+function countsInTotals(database: DrizzleD1Database) {
+  const thisRunnerOptedOut = and(
+    eq(userProfiles.userId, outfitEntries.userId),
+    eq(userProfiles.countInTotals, false),
+  );
+  return notExists(
+    database
+      .select({ one: sql`1` })
+      .from(userProfiles)
+      .where(thisRunnerOptedOut),
   );
 }
 

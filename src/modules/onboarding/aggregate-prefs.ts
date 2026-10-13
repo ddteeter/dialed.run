@@ -5,9 +5,10 @@ import { userProfiles } from "../../db/schema-core";
 import type { CountInTotalsChoice } from "./inputs";
 
 /**
- * Whether a runner's runs count in published anonymous totals (D-108 D):
- * the one reader A3 needs, and the one writer, Settings › Sharing's
- * switch. The writer is reached through `requireUserId()`, not the
+ * Whether a runner's runs count in published anonymous totals (D-108 D)
+ * and in the in-app Same conditions block (U2's pool, folded in by the
+ * owner, 2026-10-12; `feed/consensus.ts` reads the column itself): the one
+ * reader A3 needs, and the one writer, Settings › Sharing's switch. The writer is reached through `requireUserId()`, not the
  * confirmed gate (owner, 2026-10-11): it is the runner's own choice,
  * visible to nobody, and turning totals off must never wait on a confirm.
  */

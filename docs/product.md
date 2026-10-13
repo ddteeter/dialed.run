@@ -89,7 +89,10 @@ call-epic screens.
 4. **Share**: on by default (per-entry toggle; global default in settings).
    Public entries feed E1/E2 and the in-app consensus aggregates. Published
    anonymous totals (the marketing guides and reports) count private runs too,
-   under D-108's conditions, unless the runner opts out.
+   under D-108's conditions, unless the runner opts out. The one opt-out
+   covers both: a runner who turns totals off leaves the in-app consensus
+   block as well (U2's pool folded in, owner 2026-10-12), and the block
+   still works for them.
 
 Target: under 15 seconds from file to logged verdict. Any added step must
 justify itself against that number.

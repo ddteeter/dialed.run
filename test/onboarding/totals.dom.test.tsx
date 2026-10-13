@@ -44,10 +44,10 @@ describe("TotalsSwitch (round 32, frames 1a and 1b)", () => {
   it("says the drawn copy, verbatim", () => {
     expect(TOTALS_LABEL).toBe("Count my runs in anonymous totals");
     expect(TOTALS_ON).toBe(
-      "Shared and private runs add their temperature, kit and verdict to the guides and reports. Never your name, notes, photos, when you ran, or any place more precise than a broad climate zone.",
+      "Shared and private runs add their temperature, kit and verdict to the guides and reports, and shared runs count in the Same conditions block other runners see. Never your name, notes, photos, when you ran, or any place more precise than a broad climate zone.",
     );
     expect(TOTALS_OFF).toBe(
-      "Off. Your runs leave the guides at tonight's update. Reports already published stay as they are.",
+      "Off. Your runs leave the guides at tonight's update. They leave the Same conditions block now, and it still works for you. Reports already published stay as they are.",
     );
   });
 
