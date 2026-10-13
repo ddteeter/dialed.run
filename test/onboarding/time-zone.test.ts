@@ -20,7 +20,7 @@ import {
   makeUser,
   resetTables,
 } from "../feed/helpers";
-import { NO_ZONE, zonesAnswering } from "./zone-deps";
+import { zonesAnswering } from "./zone-deps";
 
 function coreDb() {
   return drizzle(env.DIALED_CORE);
@@ -295,12 +295,37 @@ describe("fillMissingTimeZones, the hourly re-drive", () => {
     });
   });
 
-  it("leaves the marker when the provider names no zone", async () => {
+  it("leaves the marker when the provider names no zone, and reports it (law 6)", async () => {
     const userId = await owedAt({ lat: 45.52, lng: -122.68 });
+    const zones = zonesAnswering(undefined);
 
-    await fillMissingTimeZones(coreDb(), NO_ZONE);
+    await fillMissingTimeZones(coreDb(), zones);
 
     expect(await zoneOf(userId)).toBeNull();
+    expect(zones.report).toHaveBeenCalledOnce();
+    const [reported, context] = zones.report.mock.calls[0] ?? [];
+    expect(reported).toBeInstanceOf(Error);
+    expect(String(reported)).toContain("no time zone");
+    expect(context).toStrictEqual({
+      surface: "onboarding.zoneForPlace",
+      userId,
+    });
+  });
+
+  it("reaches every owed row over successive firings, however many never resolve", async () => {
+    // Thirty owed rows and a batch of ten: with no order the same ten were
+    // asked every hour and the other twenty never were.
+    for (let index = 0; index < 30; index += 1) {
+      await owedAt({ lat: 10 + index, lng: 20 });
+    }
+    const zones = zonesAnswering(undefined);
+
+    for (let firing = 0; firing < 40; firing += 1) {
+      await fillMissingTimeZones(coreDb(), zones);
+    }
+
+    const asked = new Set(zones.zoneAt.mock.calls.map(([lat]) => lat));
+    expect(asked.size).toBe(30);
   });
 
   it.each([
@@ -352,14 +377,17 @@ describe("fillMissingTimeZones, the hourly re-drive", () => {
   it("fills only its own row, even beside a runner at the same place", async () => {
     const first = await owedAt({ lat: 45.52, lng: -122.68 });
     const second = await owedAt({ lat: 45.52, lng: -122.68 });
-    // The first lookup answers and the second does not.
+    // One lookup answers and the other does not; which row is asked first
+    // is random.
     const zones = zonesAnswering(undefined);
     zones.zoneAt.mockResolvedValueOnce("America/Los_Angeles");
 
     await fillMissingTimeZones(coreDb(), zones);
 
-    expect(await zoneOf(first)).toBe("America/Los_Angeles");
-    expect(await zoneOf(second)).toBeNull();
+    const filled = [await zoneOf(first), await zoneOf(second)].filter(
+      (zone) => zone === "America/Los_Angeles",
+    );
+    expect(filled).toHaveLength(1);
   });
 });
 

@@ -38,7 +38,9 @@ export interface ZoneDeps {
  * **Degrade, don't fail** (law 5). A lookup that throws is reported, with
  * the user id and never the place, and answers `undefined`, so the place
  * is still saved. A NULL zone beside coordinates is the marker
- * `fillMissingTimeZones` re-drives.
+ * `fillMissingTimeZones` re-drives. A provider that answers with no zone is
+ * reported the same way (law 6), because the marker would otherwise be
+ * re-driven forever in silence.
  */
 export async function zoneForPlace(
   place: Readonly<{
@@ -51,7 +53,16 @@ export async function zoneForPlace(
   const { lat, lng } = place;
   if (typeof lat !== "number" || typeof lng !== "number") return undefined;
   try {
-    return await deps.zoneAt(lat, lng);
+    const zone = await deps.zoneAt(lat, lng);
+    if (zone === undefined) {
+      // Law 6: a place the provider cannot name a zone for is asked again
+      // every firing until someone knows, so it must be seen.
+      deps.report(new Error("Provider named no time zone for the place"), {
+        surface: "onboarding.zoneForPlace",
+        userId,
+      });
+    }
+    return zone;
   } catch (error: unknown) {
     deps.report(error, { surface: "onboarding.zoneForPlace", userId });
     return undefined;
@@ -100,6 +111,10 @@ export async function fillMissingTimeZones(
         isNotNull(userProfiles.lng),
       ),
     )
+    // Random, so rows whose lookup never succeeds cannot hold the batch:
+    // without an order the same ten came back every hour and the rest of
+    // the owed rows were never reached. The owed set is small (design 142).
+    .orderBy(sql`random()`)
     .limit(FILL_BATCH);
   await Promise.all(owed.map((row) => fillOne(db, row, deps)));
 }
