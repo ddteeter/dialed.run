@@ -12,21 +12,22 @@ read.
 
 ## Owner decisions these texts carry
 
-| Decision                                                                     | Where it is recorded                                                                                  |
-| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| 18 and over                                                                  | `docs/decisions.md` D-114 (replaces D-71's 16)                                                        |
-| Handles never released, even after deletion                                  | D-56; D-72(6)                                                                                         |
-| Appeals have no deadline, no timeframe, no "different moderator"             | D-73; the ban email and D4 now match (below)                                                          |
-| Quarantine: silent, preserved 1 year, then purged                            | D-70                                                                                                  |
-| Public by default, per-entry toggle; "public" means signed-in runners        | D-19, D-58                                                                                            |
-| Link previews show a generic card                                            | Owner, for this draft; see "Who sees what" below                                                      |
-| Retire, don't delete garments referenced by entries                          | `CLAUDE.md` "Product rules"; see the garment row below for what the code now also allows              |
-| Strava activity data never stored, displayed or used                         | D-14, D-33, D-54; `CLAUDE.md` "Product rules"                                                         |
-| Weather from Visual Crossing                                                 | D-24                                                                                                  |
-| Invite-only sign-up                                                          | D-39 (via task 126 ACC-5); `src/lib/access.ts` `IS_INVITE_ONLY`                                       |
-| Email through Cloudflare                                                     | D-42, D-61; `wrangler.jsonc` `send_email` `EMAIL`                                                     |
-| Every `@dialed.run` address reaches the owner                                | D-62                                                                                                  |
-| Run by one individual; name, law, jurisdiction and address left to the owner | Owner, for this draft. The LLC will be Big Long Run Labs LLC once formed (owner, 2026-10-11); not yet |
+| Decision                                                                     | Where it is recorded                                                                                   |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 18 and over                                                                  | `docs/decisions.md` D-114 (replaces D-71's 16)                                                         |
+| Handles never released, even after deletion                                  | D-56; D-72(6)                                                                                          |
+| Appeals have no deadline, no timeframe, no "different moderator"             | D-73; the ban email and D4 now match (below)                                                           |
+| Quarantine: silent, preserved 1 year, then purged                            | D-70                                                                                                   |
+| Public by default, per-entry toggle; "public" means signed-in runners        | D-19, D-58                                                                                             |
+| Link previews show a generic card                                            | Owner, for this draft; see "Who sees what" below                                                       |
+| Retire, don't delete garments referenced by entries                          | `CLAUDE.md` "Product rules"; see the garment row below for what the code now also allows               |
+| Runs, shared and private, count in published anonymous totals; opt-out       | D-108 (closes D-29 for totals); D-101; data requirement (a) in `docs/design-deltas.md` (must be in v1) |
+| Strava activity data never stored, displayed or used                         | D-14, D-33, D-54; `CLAUDE.md` "Product rules"                                                          |
+| Weather from Visual Crossing                                                 | D-24                                                                                                   |
+| Invite-only sign-up                                                          | D-39 (via task 126 ACC-5); `src/lib/access.ts` `IS_INVITE_ONLY`                                        |
+| Email through Cloudflare                                                     | D-42, D-61; `wrangler.jsonc` `send_email` `EMAIL`                                                      |
+| Every `@dialed.run` address reaches the owner                                | D-62                                                                                                   |
+| Run by one individual; name, law, jurisdiction and address left to the owner | Owner, for this draft. The LLC will be Big Long Run Labs LLC once formed (owner, 2026-10-11); not yet  |
 
 ## Terms: who can use it
 
@@ -63,16 +64,19 @@ read.
 
 ## Terms: your content
 
-| Claim                                             | Source                                                                                                                                                                     |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| What content is                                   | `schema-core.ts` `wardrobe_items`, `runs`, `outfit_entries`, `outfit_entry_items` (`flag`, `note`), `entry_tags`, `entry_photos`, `products`, `user_profiles`              |
-| Resize, re-encode, remove metadata                | `src/modules/feed/photos.ts` `reencoded` (SAF-1); `src/modules/closet/photos.ts` (original re-encoded, three sizes); `src/lib/photo-pipeline.ts` `fitWithin`               |
-| Shown in feeds, profiles, the Call                | `src/modules/feed/`; the Call is post-MVP (`docs/product.md` Thesis; `docs/post-mvp.md`); today it is the ACC-16 teaser                                                    |
-| Links in content: display, reformat, modify       | Product links are stored on garments and products (`wardrobe_items`, `products`); a licence term, not a code fact                                                          |
-| Service providers act on our behalf               | Processor table in `privacy-policy.md` "Who else handles your data"                                                                                                        |
-| Counted content is anonymous and not undone       | `src/modules/feed/consensus.ts` (`publiclyVisibleEntry`); D-19; counts are computed at read time, so a deleted kit stops counting — the clause covers counts already shown |
-| Shared product catalogue outlives the account     | D-26; `schema-core.ts` `products.createdBy`; `src/modules/account/purge.ts` header ("Kept, on purpose: shared `products`")                                                 |
-| Moderation records and quarantine outlive content | D-70; `schema-core.ts` `moderation_actions`, `quarantined_content`; `purge.ts` header (kept on purpose)                                                                    |
+| Claim                                             | Source                                                                                                                                                                                                        |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| What content is                                   | `schema-core.ts` `wardrobe_items`, `runs`, `outfit_entries`, `outfit_entry_items` (`flag`, `note`), `entry_tags`, `entry_photos`, `products`, `user_profiles`                                                 |
+| Resize, re-encode, remove metadata                | `src/modules/feed/photos.ts` `reencoded` (SAF-1); `src/modules/closet/photos.ts` (original re-encoded, three sizes); `src/lib/photo-pipeline.ts` `fitWithin`                                                  |
+| Shown in feeds, profiles, the Call                | `src/modules/feed/`; the Call is post-MVP (`docs/product.md` Thesis; `docs/post-mvp.md`); today it is the ACC-16 teaser                                                                                       |
+| Links in content: display, reformat, modify       | Product links are stored on garments and products (`wardrobe_items`, `products`); a licence term, not a code fact                                                                                             |
+| Service providers act on our behalf               | Processor table in `privacy-policy.md` "Who else handles your data"                                                                                                                                           |
+| Counted content is anonymous and not undone       | `src/modules/feed/consensus.ts` (`publiclyVisibleEntry`); D-19; counts are computed at read time, so a deleted kit stops counting — the clause covers counts already shown                                    |
+| Anonymous totals licence                          | D-108 A (fields, amended by D-120: climate zone and conditions grouping, no region), B (5 runners, 20 for a brand), D (Settings › Privacy opt-out); D-101; see `privacy-policy-sources.md` "Anonymous totals" |
+| Reuse as open data, CC BY 4.0                     | D-119 (owner, 2026-10-11); Marketing M8's CSV under CC BY 4.0                                                                                                                                                 |
+| Published reports are not undone                  | D-108 D ("published reports stay as they are")                                                                                                                                                                |
+| Shared product catalogue outlives the account     | D-26; `schema-core.ts` `products.createdBy`; `src/modules/account/purge.ts` header ("Kept, on purpose: shared `products`")                                                                                    |
+| Moderation records and quarantine outlive content | D-70; `schema-core.ts` `moderation_actions`, `quarantined_content`; `purge.ts` header (kept on purpose)                                                                                                       |
 
 ## Terms: who sees what
 
@@ -80,9 +84,10 @@ read.
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Shared by default, per kit, default setting                | D-19; `schema-core.ts` (`defaultAudience` default `'runners'`; each entry's `audience`, D-109); `privacy-policy-sources.md` "What others see"                                                           |
 | Private kits never in feeds or counts                      | `src/modules/safety/visibility.ts` `publiclyVisibleEntry`; `feed/consensus.ts`                                                                                                                          |
+| …but they count in anonymous totals unless turned off      | D-108                                                                                                                                                                                                   |
 | Shown only to signed-in viewers, photos included           | D-58; `src/modules/feed/functions.ts` `entryDetailQuery` (`requireUserId`, SAF-14); `feed/photos.ts` `isPhotoVisible` (`viewerId === undefined` refused); D-69                                          |
 | Link preview is a generic card                             | `src/routes/og/default.ts` is the only card route; `src/modules/ops/og/site-head.ts` default `og:image`. **D-51's per-entry card and 129's FEED-14 are not built**; if they ship, this line must change |
-| Owner-only fields                                          | `privacy-policy.md` "Never shown to anyone else"; `feed/entries.ts` `getEntryDetail` (`flag`/`note` only for the owner)                                                                                 |
+| Owner-only fields                                          | `privacy-policy.md` "Never shown to other runners or the public" and "Our access to your content" (D-121); `feed/entries.ts` `getEntryDetail` (`flag`/`note` only for the owner)                        |
 | Garments: retired by default, or deleted with their record | `src/modules/closet/service.ts` `retireItem`, and `deleteItem`, which now deletes a worn garment and its `outfit_entry_items` rows on the runner's choice (SAF-16, round 26 #3)                         |
 
 ## Terms: screening, reports, moderation
