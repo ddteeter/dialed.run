@@ -90,8 +90,8 @@ const FILL_BATCH = 10;
  * independent of every other's, and a write that fails leaves only its
  * own row NULL for the next firing.
  *
- * No index serves the filter (design 142, open question): it reads
- * `user_profiles`, one row per runner, once an hour.
+ * `user_profiles_zone_owed`, a partial index on exactly these rows, serves
+ * the filter, so the hourly read costs the rows owed and not the table.
  */
 export async function fillMissingTimeZones(
   db: DrizzleD1Database,

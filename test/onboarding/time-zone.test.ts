@@ -391,6 +391,35 @@ describe("fillMissingTimeZones, the hourly re-drive", () => {
   });
 });
 
+describe("the fill reads by index, not by scanning (D1 bills rows scanned)", () => {
+  it("finds the owed profiles through the partial index", async () => {
+    await owedAt({ lat: 45.52, lng: -122.68 });
+    const queries: { sql: string; params: unknown[] }[] = [];
+    const logged = drizzle(env.DIALED_CORE, {
+      logger: {
+        logQuery: (sql, params) => {
+          queries.push({ sql, params });
+        },
+      },
+    });
+
+    await fillMissingTimeZones(logged, zonesAnswering(undefined));
+
+    const owed = queries.find(({ sql }) => sql.startsWith("select"));
+    expect(owed).toBeDefined();
+    const plan = await env.DIALED_CORE.prepare(
+      `EXPLAIN QUERY PLAN ${owed?.sql ?? ""}`,
+    )
+      .bind(...(owed?.params ?? []))
+      .all<{ detail: string }>();
+    const detail = plan.results.map((row) => row.detail).join("\n");
+    expect(detail).toContain(
+      "SCAN user_profiles USING INDEX user_profiles_zone_owed",
+    );
+    expect(detail).not.toMatch(/SCAN user_profiles$/m);
+  });
+});
+
 /**
 A located run of the runner's, observed in `timeZone` (or unobserved).
 */

@@ -91,6 +91,13 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     index("user_profiles_username_screen_pending")
       .on(t.usernameScreen)
       .where(sql`${t.usernameScreen} IN ('unknown', 'checking')`),
+    // The zone fill's sweep (design 142): profiles with coordinates and no
+    // zone yet. Partial, so it holds only the rows still owed.
+    index("user_profiles_zone_owed")
+      .on(t.userId)
+      .where(
+        sql`${t.timeZone} IS NULL AND ${t.lat} IS NOT NULL AND ${t.lng} IS NOT NULL`,
+      ),
     // One index, two jobs. **Uniqueness regardless of case**: a handle is
     // stored lowercased, and NOCASE makes the index refuse "Maya" beside
     // "maya" even from a writer that forgot to lowercase. **Search's prefix

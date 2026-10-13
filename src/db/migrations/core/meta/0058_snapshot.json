@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "ee5223ed-89c8-490b-9b22-71d9b400bb1f",
+  "id": "7d162704-d9a8-4834-8df7-2c1d76d7ff26",
   "prevId": "9c4f158c-f230-4b2a-a475-82d46bddf722",
   "tables": {
     "access_requests": {
@@ -2808,6 +2808,14 @@
           ],
           "isUnique": false,
           "where": "\"user_profiles\".\"username_screen\" IN ('unknown', 'checking')"
+        },
+        "user_profiles_zone_owed": {
+          "name": "user_profiles_zone_owed",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false,
+          "where": "\"user_profiles\".\"time_zone\" IS NULL AND \"user_profiles\".\"lat\" IS NOT NULL AND \"user_profiles\".\"lng\" IS NOT NULL"
         },
         "user_profiles_username_nocase": {
           "name": "user_profiles_username_nocase",
