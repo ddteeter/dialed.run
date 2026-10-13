@@ -73,7 +73,9 @@ badge keeps "9+".
 frame's composition (design deltas item 63): `feed/compact-conditions.ts`
 reads the viewer's saved place (profile primary key) and runs the one
 consensus there (`entries_audience_created`; the cache's key for the
-reading), in the Following feed's loader through `compactConditionsQuery`.
+reading), in the Following feed's loader through `feedConditionsQuery`, which
+reads the profile once for both the Conditions tab's home and the line.
+A failed conditions read is reported and draws no line (law 5).
 Matched only; otherwise no line. **The U2 privacy card is not wired**: its
 drawn copy is about the in-app conditions pool, not the published totals
 `count_in_totals` governs, so it went back to the owner (premise check).

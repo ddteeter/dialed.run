@@ -16,7 +16,7 @@
  */
 import { captureException } from "../ops";
 import { consensusAt, type ConsensusResult } from "./consensus";
-import { conditionsHome } from "./home";
+import { conditionsHome, type ConditionsHome } from "./home";
 
 export type CompactConditions = Extract<ConsensusResult, { status: "matched" }>;
 
@@ -31,11 +31,11 @@ export type CompactConditions = Extract<ConsensusResult, { status: "matched" }>;
  */
 export async function compactConditions(
   userId: string,
+  coords: ConditionsHome["coords"],
   nowEpochSeconds: number,
   consensus: typeof consensusAt = consensusAt,
   report: typeof captureException = captureException,
 ): Promise<CompactConditions | undefined> {
-  const { coords } = await conditionsHome(userId);
   if (coords === undefined) return undefined;
   try {
     const result = await consensus(
@@ -49,4 +49,23 @@ export async function compactConditions(
     report(error, { userId, surface: "compact-conditions" });
     return undefined;
   }
+}
+
+/**
+ * What the Following feed's loader needs of the viewer's place: where the
+ * Conditions tab looks, and E1's line from the same place — one profile
+ * read for both.
+ */
+export async function feedConditions(
+  userId: string,
+  nowEpochSeconds: number,
+): Promise<{
+  home: ConditionsHome;
+  compact: CompactConditions | undefined;
+}> {
+  const home = await conditionsHome(userId);
+  return {
+    home,
+    compact: await compactConditions(userId, home.coords, nowEpochSeconds),
+  };
 }

@@ -25,7 +25,7 @@ import {
 } from "./inputs";
 import { attachContext, attachRunInput, prefillForRun } from "./attach-context";
 import { saveBacklogRow, unjudgedRunCount, verdictBacklog } from "./backlog";
-import { compactConditions } from "./compact-conditions";
+import { feedConditions } from "./compact-conditions";
 import { consensusAt } from "./consensus";
 import {
   attachKit,
@@ -38,7 +38,6 @@ import {
 } from "./entries";
 import { bandSignalsForEntry } from "./band-signals";
 import { followingFeed } from "./feed";
-import { conditionsHome } from "./home";
 import { follow, isFollowing, unfollow } from "./follows";
 import { photoUploadFrom, uploadPhoto } from "./photos";
 import { deleteEntryPhoto, photoIdInput, retractEntry } from "./retract";
@@ -213,19 +212,13 @@ export const yourConditionsQuery = createServerFn({ method: "GET" })
   });
 
 /**
- * E1's compact line (FEED-9), for the Following feed's loader: the
- * viewer's conditions matched at their saved place, or nothing.
+ * For the Following feed's loader, from one profile read: where the
+ * Conditions tab looks without asking — the saved location, and the city
+ * label if one was typed (round 22, E2-lite) — and E1's compact line
+ * (FEED-9), the viewer's conditions matched there, or nothing.
  */
-export const compactConditionsQuery = createServerFn({ method: "GET" }).handler(
-  async () => compactConditions(await requireUserId(), nowSeconds()),
-);
-
-/**
- * Where the tab looks without asking: the profile's saved location, and
- * the city label if one was typed (round 22, E2-lite).
- */
-export const conditionsHomeQuery = createServerFn({ method: "GET" }).handler(
-  async () => conditionsHome(await requireUserId()),
+export const feedConditionsQuery = createServerFn({ method: "GET" }).handler(
+  async () => feedConditions(await requireUserId(), nowSeconds()),
 );
 
 /**

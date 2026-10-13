@@ -4,7 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import { compactConditions } from "../../src/modules/feed/compact-conditions";
+import {
+  compactConditions,
+  feedConditions,
+} from "../../src/modules/feed/compact-conditions";
 import { conditionsHomeStatement } from "../../src/modules/feed/home";
 import { pointConditions } from "../feed/conditions-fixture";
 import {
@@ -380,7 +383,7 @@ describe("consensusAt", () => {
   });
 });
 
-describe("compactConditions: E1's line, from the saved place (FEED-9)", () => {
+describe("feedConditions: the saved place, and E1's line from it (FEED-9)", () => {
   beforeEach(resetTables);
 
   it("is the matched consensus at the profile's place, leaving the viewer out", async () => {
@@ -394,10 +397,9 @@ describe("compactConditions: E1's line, from the saved place (FEED-9)", () => {
     const viewerId = await viewerAt(82, 82);
     await runners(5);
 
-    expect(await compactConditions(viewerId, NOW)).toMatchObject({
-      status: "matched",
-      runners: 5,
-      windowDays: 3,
+    expect(await feedConditions(viewerId, NOW)).toMatchObject({
+      home: { coords: { lat: 82, lng: 82 } },
+      compact: { status: "matched", runners: 5, windowDays: 3 },
     });
   });
 
@@ -410,24 +412,28 @@ describe("compactConditions: E1's line, from the saved place (FEED-9)", () => {
       feelsLikeC: 7,
     });
     await runners(4);
-    expect(
-      await compactConditions(await viewerAt(83, 83), NOW),
-    ).toBeUndefined();
+    const lineFor = async (viewerId: string) => {
+      const { compact } = await feedConditions(viewerId, NOW);
+      return compact;
+    };
+    expect(await lineFor(await viewerAt(83, 83))).toBeUndefined();
     await runner();
-    expect(
-      await compactConditions(await viewerAt(84, 84), NOW),
-    ).toBeUndefined();
-    expect(await compactConditions(await viewerAt(), NOW)).toBeUndefined();
+    expect(await lineFor(await viewerAt(84, 84))).toBeUndefined();
+    expect(await feedConditions(await viewerAt(), NOW)).toStrictEqual({
+      home: { coords: undefined, cityLabel: undefined },
+      compact: undefined,
+    });
   });
 
   it("draws no line, and reports, when the conditions read fails", async () => {
-    const viewerId = await viewerAt(85, 85);
+    const viewerId = await viewerAt();
     const failure = new Error("weather down");
     const report = vi.fn();
 
     expect(
       await compactConditions(
         viewerId,
+        { lat: 85, lng: 85 },
         NOW,
         () => Promise.reject(failure),
         report,
