@@ -68,13 +68,13 @@ async function zoneForPlace(
       // Law 6: a place the provider cannot name a zone for is asked again
       // every firing until someone knows, so it must be seen.
       deps.report(new Error("Provider named no time zone for the place"), {
-        surface: "onboarding.zoneForPlace",
+        surface: "onboarding.fillMissingTimeZones",
         userId,
       });
     }
     return zone;
   } catch (error: unknown) {
-    deps.report(error, { surface: "onboarding.zoneForPlace", userId });
+    deps.report(error, { surface: "onboarding.fillMissingTimeZones", userId });
     return undefined;
   }
 }
@@ -106,7 +106,10 @@ export function fillZoneInBackground(
       try {
         await fillOne(db, { userId, lat, lng }, deps);
       } catch (error: unknown) {
-        deps.report(error, { surface: "onboarding.zoneForPlace", userId });
+        deps.report(error, {
+          surface: "onboarding.fillMissingTimeZones",
+          userId,
+        });
       }
     })(),
   );

@@ -167,7 +167,7 @@ describe("a failed lookup still saves the place (law 5)", () => {
     expect(row).toMatchObject(PORTLAND);
     expect(row?.timeZone).toBeNull();
     expect(zones.report).toHaveBeenCalledExactlyOnceWith(zones.outage, {
-      surface: "onboarding.zoneForPlace",
+      surface: "onboarding.fillMissingTimeZones",
       userId,
     });
   });
@@ -219,7 +219,7 @@ describe("a failed lookup still saves the place (law 5)", () => {
     await zones.settled();
 
     expect(zones.report).toHaveBeenCalledExactlyOnceWith(broken, {
-      surface: "onboarding.zoneForPlace",
+      surface: "onboarding.fillMissingTimeZones",
       userId,
     });
   });
@@ -331,7 +331,7 @@ describe("fillMissingTimeZones, the hourly re-drive", () => {
 
     expect(await zoneOf(userId)).toBeNull();
     expect(zones.report).toHaveBeenCalledExactlyOnceWith(zones.outage, {
-      surface: "onboarding.zoneForPlace",
+      surface: "onboarding.fillMissingTimeZones",
       userId,
     });
   });
@@ -348,7 +348,7 @@ describe("fillMissingTimeZones, the hourly re-drive", () => {
     expect(reported).toBeInstanceOf(Error);
     expect(String(reported)).toContain("no time zone");
     expect(context).toStrictEqual({
-      surface: "onboarding.zoneForPlace",
+      surface: "onboarding.fillMissingTimeZones",
       userId,
     });
   });
