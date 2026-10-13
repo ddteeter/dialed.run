@@ -155,12 +155,28 @@ displaying, reformatting and modifying the links in your content, including
 outbound product links. We may let the services we use to run [dialed.run]
 do these things on our behalf, and only for that.
 
+**Anonymous totals.** You also let us count your runs, shared and private,
+in anonymous totals that we publish, such as the guides and seasonal
+reports on dialed.run, and to publish those totals as data that others may
+reuse under the Creative Commons Attribution 4.0 licence (CC BY 4.0). A
+total uses only a run's feels-like temperature band, sky and month, the
+broad climate zone the run was in (worked out from its location, never
+anything more precise), the type and catalogue model of what you wore, and
+your verdict, and it may group runners by the conditions they usually run
+in. It never includes your name, username, notes, photos, route, when you
+ran, or any place more precise than that zone. We publish a
+figure only when at least 5 different runners are behind it, or 20 if it is
+about a brand. You can stop your runs counting at any time in Settings ›
+Privacy, which also takes your shared kits out of conditions numbers. The [privacy policy](/privacy#anonymous-totals) says who is
+counted and what turning it off does.
+
 **How long the licence lasts.** It ends for a piece of content when you
 delete it, or when your account is deleted, with these exceptions:
 
 - **Counted content.** Shared kits are counted, without names, in
-  conditions numbers like "15 of 18 wore long sleeves". A count already
-  made does not name you and is not undone.
+  conditions numbers like "15 of 18 wore long sleeves", and your runs in
+  the anonymous totals above. A count already made does not name you and is
+  not undone, and reports already published stay as they are.
 - **Product names and links you add to the shared catalogue.** Products are
   shared between runners, so a product you add, its name as you typed it and
   its link stay in the catalogue after you delete your garment or your
@@ -180,14 +196,16 @@ owing you anything.
 - **Kits are shared by default.** You choose shared or private for each kit
   when you give the verdict, and you can make private your default in
   settings. Private kits never appear in feeds or in anyone's conditions
-  numbers.
+  numbers. They do count, without your name, in
+  [anonymous totals](#your-content), unless you turn that off.
 - **"Shared" means other signed-in runners on [dialed.run]**, not the open
   web. A shared kit, a profile and their photos are shown only to someone
   signed in. A link to a kit shared elsewhere previews as a generic
   [dialed.run] card, with nothing from the kit on it.
-- **Some things are only ever shown to you**, such as your closet as a
-  whole, your garment photos, notes and flags on garments, and your run's
-  location. The privacy policy has the full list.
+- **Some things are never shown to other runners**, such as your closet as
+  a whole, your garment photos, notes and flags on garments, and your run's
+  location. The privacy policy has the full list, and says when the people
+  who run [dialed.run] may see them.
 - **Garments you have worn are retired, not deleted.** When you remove a
   garment that is in one of your kits, we retire it so your old kits still
   make sense. You can choose instead to delete it and take it out of those

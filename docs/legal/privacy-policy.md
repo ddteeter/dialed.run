@@ -41,8 +41,13 @@ Questions about this policy or your data: hello@dialed.run.
 - Kits you share are seen by other signed-in runners, and shared is the
   default. You can make any kit private, or make private your default.
   Nothing is shown to people who are not signed in.
+- Your runs, shared and private, count without your name in public totals
+  like the guides, and only where at least 5 runners are behind a figure.
+  You can turn that off in Settings. See
+  [Anonymous totals](#anonymous-totals).
 - Locations are kept to about a kilometre, and no run's location is shown
-  to anyone. We do not keep your route.
+  to other runners or the public (see [Our access to your content](#our-access-to-your-content)). We do not keep your
+  route.
 - Faces in your photos are blurred on your phone before upload, unless you
   turn that off. Every photo is re-encoded on our servers, so none keeps
   the camera's metadata.
@@ -107,11 +112,15 @@ Questions about this policy or your data: hello@dialed.run.
   your account, the old one is kept for good so nobody else can take it.
 - **Coordinates for that place**, if you let your browser share your
   location, rounded to two decimal places (about a kilometre) before they
-  are stored. They are never shown to anyone. They stand in for a run's
-  location when a manual run has none.
+  are stored, and the time zone that place is in, which we use to time
+  your emails and to tell when your day starts. The coordinates are never
+  shown to other runners or the public (see [Our access to your content](#our-access-to-your-content)). They stand in
+  for a run's location when a manual run has none.
 - **How warm or cold you run** (your thermal level), your units, whether
   your kits are shared by default, and which emails you have switched off.
-  Your thermal level is never shown to anyone else.
+  Your thermal level is never shown to other runners.
+- **Whether your runs count in anonymous totals**, on unless you turn it
+  off (see [Anonymous totals](#anonymous-totals)).
 
 ### Your closet
 
@@ -140,8 +149,8 @@ visibility), a product link if you paste one, and a photo if you take one.
 
 For each run you log a kit on: the garments you wore, your verdict (way cold
 to way warm), an optional caption, tags, up to four photos, and optional
-notes and flags on individual garments. Notes and flags on garments are only
-ever shown to you.
+notes and flags on individual garments. Notes and flags on garments are
+never shown to other runners.
 
 ### The social side
 
@@ -161,15 +170,19 @@ ever shown to you.
 - **Setup.** To suggest a starter closet, the place you typed or your
   rounded coordinates are sent to Visual Crossing to look up typical
   winter and summer temperatures there.
+- **The place you run.** When you save it, its rounded coordinates are sent
+  to Visual Crossing once, to find its time zone. If that fails, we try
+  again each hour until a time zone is found. The answer is kept in the
+  same shared weather cache, keyed by that rounded location.
 - **"Your conditions" on the feed.** If you allow it, your browser sends
   your current location to our server to look up recent weather near you
   from the cache. It is not stored, and it is not sent to Visual Crossing,
-  unless you choose to save it as the place you run, when it is rounded
-  and stored as above.
+  unless you choose to save it as the place you run, when it is rounded,
+  stored and sent as above.
 - **Time zone.** A run's local time comes from the time zone Visual Crossing
   reports for the place.
-- **Never shown.** No run's coordinates are shown to anyone, including on
-  shared kits.
+- **Never shown.** No run's coordinates are shown to other runners or the
+  public, including on shared kits (see [Our access to your content](#our-access-to-your-content)).
 
 ## Photos
 
@@ -181,14 +194,14 @@ ever shown to you.
 - **No photo keeps its metadata.** Every photo, kit or garment, blur on or
   off, is decoded and saved again as a new JPEG on our servers, so nothing
   the camera wrote, including any GPS location, is kept or shown.
-- **Garment photos** are only ever shown to you. We keep the photo you
+- **Garment photos** are never shown to other runners. We keep the photo you
   uploaded, re-encoded, and three resized copies.
 - **Kit photos** are shown to signed-in runners who can see the kit, once
   screened.
 - **Screening.** Every photo is sent to **OpenAI's** moderation service to
   check for sexual, violent and self-harm content. We keep the scores it
   returns. A photo that scores high is hidden from everyone but you until a
-  person reviews it. Until a photo is screened, only you can see it.
+  person reviews it. Until a photo is screened, no other runner can see it.
   [OWNER: decide CSAM coverage before public launch (D-69, deployment plan
   §8): a cached public bucket that Cloudflare's CSAM Scanning Tool can see,
   or PhotoDNA. Cloudflare's tool cannot see photos as they are served
@@ -210,23 +223,100 @@ and how many people marked it useful.
 **Your profile** shows your username, the place you run, and your recent
 shared kits.
 
-**Never shown to anyone else:** your email, your closet as a whole, your
-garment photos, your private kits, notes and flags on garments, your thermal
-level, your verdict history and coverage, and any run's coordinates.
+**Never shown to other runners or the public:** your email, your closet as
+a whole, your garment photos, your private kits, notes and flags on
+garments, your thermal level, your verdict history and coverage, and any
+run's coordinates. The people who run [dialed.run] can see them only for
+the reasons under
+[Our access to your content](#our-access-to-your-content).
 
 **Sharing is on by default.** You choose shared or private for each kit when
 you give the verdict, and you can make private your default in settings.
 Until you confirm your email address, the kits you log are saved private.
-Private kits never appear in feeds or in anyone's conditions numbers.
+Private kits never appear in feeds or in anyone's conditions numbers. They
+do count, without your name, in anonymous totals unless you turn that off
+(see [Anonymous totals](#anonymous-totals)).
 
 **Conditions numbers.** Shared kits are counted, without names, in numbers
-like "15 of 18 wore long sleeves" for runners in similar weather. Blocking
+like "15 of 18 wore long sleeves" for runners in similar weather, unless
+their runner has turned off "Count my runs in anonymous totals" (see
+[Anonymous totals](#anonymous-totals)). Blocking
 someone does not remove their kits from these counts, because the counts
 name no one.
 
 **Blocking** hides the two of you from each other: each other's kits in
 feeds and on kit pages, each other's profiles, and each other in search.
 It does not notify them.
+
+## Our access to your content
+
+"Private" means not shown to other runners or to the public. The people
+who run [dialed.run] can see any content in it, private kits, garment
+photos and notes included, when they need to for one of these reasons:
+
+- **Running and securing the service:** fixing faults, keeping it working
+  and stopping abuse.
+- **Reports, removal requests and moderation,** including looking through
+  a runner's other photos, private ones included, for copies of an image
+  that was reported.
+- **Meeting legal obligations,** and answering lawful requests from the
+  authorities.
+- **Support you ask for,** when you write to us about your account.
+
+We do not otherwise look at your private content, and only the people who
+run [dialed.run] have this access.
+
+## Anonymous totals
+
+We publish, or may publish, guides and reports, such as what runners wear
+at a given feels-like temperature, made by adding up a few details of many
+runners' runs. **Private runs are counted too.** Private means no other
+runner can see the run, not that it is never counted. You can turn this off.
+
+- **What is counted:** for each run, the feels-like temperature band, the
+  sky, the month, the broad climate zone the run was in, worked out from
+  its location and never anything more precise, the type and catalogue
+  model of each garment you wore, and your verdict. Totals may also group
+  runners by the conditions they usually run in, worked out from their own
+  counted runs. A garment in your closet counts only when you wore it on a
+  counted run.
+- **What is never counted:** your name, username or email, your notes,
+  captions, photos or route, when your run started, its start point or any
+  place more precise than its climate zone, or anything else you typed. Totals are made from the fields above alone.
+- **Who is counted:** only accounts with a confirmed email address. Left
+  out: kits we removed or quarantined, accounts we closed, accounts being
+  deleted, and runs whose conditions you set yourself because no weather
+  was found.
+- **When a figure is published:** only when at least 5 different runners
+  are behind it, or 20 if it is about a brand. That holds for every row and
+  every slice, including a climate zone or a group of runners. A figure below the line is left out, not
+  shown as "fewer than 5", so no total can point to one runner.
+- **Anyone may reuse them.** We publish totals under the Creative Commons
+  Attribution 4.0 licence (CC BY 4.0), so others may copy and reuse them
+  with credit to [dialed.run]. A total names no one, whoever reuses it.
+- **Climate zones, not places.** A run's location is used only to work out
+  which broad climate zone (a Köppen-Geiger zone) it was in, when the totals
+  are made. Nothing new is stored with your run, and no place more precise
+  than the zone is counted. A guide about a state, such as "runners in
+  climates like Minnesota's", is made by matching the state to the climate
+  zones it contains, and uses no runner's data to do it.
+- **Turning it off:** in Settings › Privacy, "Count my runs in anonymous
+  totals" is on by default. Turn it off and your runs leave the guides the
+  next time we update them, and are left out of any report made after that.
+  Reports already published stay as they are; they name no one, so your
+  runs cannot be taken out of them. Turning it off also takes your shared
+  kits out of the conditions numbers other runners see in the app; you
+  still see those numbers yourself. Turning it back on counts your runs
+  again. Deleting your account turns it off too.
+- **The numbers in the app.** Conditions numbers and counts like "worn by
+  N runners" in the app come from shared kits only, never private ones.
+- **Why we may do this.** Where the GDPR or UK GDPR applies, the legal
+  basis is our legitimate interest in guides that reflect every run, not
+  only the ones people chose to share. We have weighed that against your
+  interests: only the fields above are counted, no figure stands for fewer
+  than 5 runners (20 for a brand), no total holds your name or anything
+  else that identifies you, only confirmed accounts count, and you can
+  object at any time by turning the setting off.
 
 ## Strava
 
@@ -371,6 +461,7 @@ sets no cookies and keeps no personal data.
 | What                                                                                            | How long                                                                                                                          |
 | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | Imported run files                                                                              | Until it has been read, usually within a day. A file we could not read: 30 days after the import failed                           |
+| Anonymous totals                                                                                | A published report stays as published; it names no one. A guide is remade from current data each time we update it                |
 | Your data export                                                                                | The file: 7 days from when it is ready. The record that you asked for one: deleted with the file, or 7 days after a failed export |
 | Removal requests (`/takedown`)                                                                  | Until we delete them                                                                                                              |
 | Requests for access                                                                             | 90 days after we answer them                                                                                                      |
@@ -410,6 +501,7 @@ What you can do in the app:
 - **Switch off run reminder emails** in Settings › Notifications, or from
   the unsubscribe link in any of them.
 - Make any kit private, and make private your default.
+- Stop your runs counting in anonymous totals.
 - Turn face blur off or on, per device, and blur anything by tapping it.
 - Disconnect Strava.
 - Unfollow, remove a "useful", block, unblock, and report.
@@ -431,8 +523,10 @@ browser location and Strava; legal obligation for reports to NCMEC.]
 Everything travels over HTTPS, and the app tells browsers to use only
 HTTPS for a year. A plain `http://` address is always redirected to
 HTTPS. Passwords
-are hashed. Only the account that owns a garment photo can load it, and a
-private kit returns nothing to anyone else. Cloudflare encrypts our
+are hashed. Only the account that owns a garment photo can load it in the
+app, and a private kit returns nothing to other runners. The people who run
+[dialed.run] reach either only for the reasons under
+[Our access to your content](#our-access-to-your-content). Cloudflare encrypts our
 databases and stored files at rest. Google tokens are stored in our
 database so the connection keeps working, and a Strava refresh token so we
 can revoke our access; we do not encrypt them separately.
