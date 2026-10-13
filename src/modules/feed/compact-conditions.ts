@@ -9,9 +9,10 @@
  * a runner with no saved place, no fresh observation there, or too few
  * runners gets no line, which is what an absent line already says.
  *
- * Index-backed: the profile by its primary key, the observation by the
- * weather cache's key, and the entries on `entries_audience_created`
- * (`test/feed/compact-conditions.test.ts` holds the plans).
+ * Index-backed: the profile by its primary key (`conditionsHomeStatement`),
+ * the observation by the weather cache's key, and the entries on
+ * `entries_audience_created` (`test/feed/consensus.test.ts` holds the
+ * profile's plan and the entries').
  */
 import { captureException } from "../ops";
 import { consensusAt, type ConsensusResult } from "./consensus";

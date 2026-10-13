@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { compactConditions } from "../../src/modules/feed/compact-conditions";
+import { conditionsHomeStatement } from "../../src/modules/feed/home";
 import { pointConditions } from "../feed/conditions-fixture";
 import {
   BAND_HALF_WIDTH_C,
@@ -439,12 +440,10 @@ describe("compactConditions: E1's line, from the saved place (FEED-9)", () => {
   });
 
   it("reads the saved place by the profile's primary key", async () => {
-    const { sql, params } = drizzle(env.DIALED_CORE)
-      .select({ lat: userProfiles.lat })
-      .from(userProfiles)
-      .where(eq(userProfiles.userId, "01VIEWER"))
-      .limit(1)
-      .toSQL();
+    const { sql, params } = conditionsHomeStatement(
+      drizzle(env.DIALED_CORE),
+      "01VIEWER",
+    ).toSQL();
     const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
       .bind(...params)
       .all<{ detail: string }>();
