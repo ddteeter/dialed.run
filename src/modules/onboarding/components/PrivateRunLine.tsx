@@ -15,7 +15,11 @@ import { TotalsSwitch } from "./TotalsSwitch";
  * - **Counted**, the disclosure, with Change.
  * - **Opted out**, the board's "just 'Only you see this run.'", now
  *   "Other runners won't see this run." (owner, D-121: private means not
- *   shown to other runners or the public; design deltas item 62).
+ *   shown to other runners or the public; design deltas item 62). "Won't"
+ *   because the run is not saved yet: the line is a promise about what
+ *   happens to it. The review bands say "can't" of something already
+ *   there and hidden, and the export "don't" of the rule; all three name
+ *   the same audience, other runners.
  *
  * **Change opens Settings › Sharing as a sheet**, over the form rather
  * than in place of it, so the verdict, chips and tags being picked are
@@ -25,7 +29,7 @@ import { TotalsSwitch } from "./TotalsSwitch";
  */
 export const PRIVATE_UNCONFIRMED =
   "Confirm your email to share. This run saves private.";
-export const PRIVATE_ONLY_YOU = "Other runners won't see this run.";
+export const PRIVATE_NOT_SHOWN = "Other runners won't see this run.";
 export const PRIVATE_COUNTED =
   "Its kit and verdict still count, anonymously, in the guides.";
 
@@ -63,7 +67,7 @@ export function PrivateRunLine({
   return (
     <>
       <span id={hintId} className={LINE}>
-        {PRIVATE_ONLY_YOU}
+        {PRIVATE_NOT_SHOWN}
         {isCounted ? (
           <>
             {` ${PRIVATE_COUNTED} `}

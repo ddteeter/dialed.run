@@ -1054,6 +1054,10 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       within a day."
     - The export's `audience` column note: "private means only you" →
       "private means other runners don't see it".
+    - **The verbs differ by tense, on purpose:** A3's "won't" is said
+      before the run is saved, a promise; the review tag and bands' "can't"
+      describe something already there and hidden; the export's "don't"
+      states the rule. All of them name the same audience, other runners.
     - **Kept:** the closet tile's `[ONLY YOU]` tag on a photo being
       checked. It is a MONO.xs tag in a tile's kicker, where "other runners
       can't see this" does not fit, and the band on the garment's own page

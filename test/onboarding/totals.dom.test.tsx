@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   PRIVATE_COUNTED,
-  PRIVATE_ONLY_YOU,
+  PRIVATE_NOT_SHOWN,
   PRIVATE_UNCONFIRMED,
   PrivateRunLine,
 } from "../../src/modules/onboarding/components/PrivateRunLine";
@@ -157,7 +157,7 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     expect(PRIVATE_UNCONFIRMED).toBe(
       "Confirm your email to share. This run saves private.",
     );
-    expect(PRIVATE_ONLY_YOU).toBe("Other runners won't see this run.");
+    expect(PRIVATE_NOT_SHOWN).toBe("Other runners won't see this run.");
     expect(PRIVATE_COUNTED).toBe(
       "Its kit and verdict still count, anonymously, in the guides.",
     );
@@ -168,7 +168,7 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
       line({ isVerified: true, countInTotals: true }),
     );
     expect(container.querySelector("#hint")).toHaveTextContent(
-      `${PRIVATE_ONLY_YOU} ${PRIVATE_COUNTED} Change`,
+      `${PRIVATE_NOT_SHOWN} ${PRIVATE_COUNTED} Change`,
     );
     // Set as A3's shared line is, so the two states read as one line.
     expect(container.querySelector("#hint")).toHaveClass(
@@ -183,7 +183,7 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
       line({ isVerified: true, countInTotals: false }),
     );
     expect(container.querySelector("#hint")?.textContent).toBe(
-      PRIVATE_ONLY_YOU,
+      PRIVATE_NOT_SHOWN,
     );
     expect(screen.queryByRole("button", { name: "Change" })).toBeNull();
   });
