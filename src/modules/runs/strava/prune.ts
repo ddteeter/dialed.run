@@ -40,14 +40,17 @@ const SEVEN_DAYS_S = 7 * 24 * 60 * 60;
  * A reminder row itself stays: it is the runner's own notification, its
  * body carries no Strava data, and its time is when the run landed. Only
  * the subject goes. So does a dead-lettered reminder's Gave up row
- * (R-142's follow-up), and the record of which days a reminder email went. The statements are independent — none records or
- * authorises another — but they are one policy, so they are one batch,
- * and a failure leaves all of them for tomorrow rather than some.
+ * (R-142's follow-up), and the record of which days a reminder email
+ * went. The statements are independent — none records or authorises
+ * another — but they are one policy, so they are one batch, and a failure
+ * leaves all of them for tomorrow rather than some.
  *
  * Every filter is index-backed (`add_strava_prune_indexes`, owner
  * approved 2026-09-26): `notifications_kind_created`,
- * `webhook_events_time` and Gave up's own index, so the prune reads what
- * it changes rather than whole tables. `test/runs/strava-prune.test.ts` holds the query plans.
+ * `webhook_events_time`, Gave up's own index and
+ * `reminder_email_days_sent`, so the prune reads what it changes rather
+ * than whole tables. `test/runs/strava-prune.test.ts` holds the query
+ * plans.
  */
 export async function pruneStravaIds(db: CoreDb): Promise<void> {
   const cutoff = nowSeconds() - SEVEN_DAYS_S;
