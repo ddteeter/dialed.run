@@ -18,9 +18,10 @@ the profile. It is derived from the home city and never typed by the runner.
   nothing else sets those columns). It now writes `time_zone` in the same
   statement. A new place gets a new zone, and a place with no coordinates gets
   NULL, so the zone can never describe a city the profile no longer holds.
-- **Lookup before the write** (`onboarding/time-zone.ts`, `zoneForPlace`).
-  This is a read that decides what to write, so it goes first, and the place
-  and zone land in one upsert. The lookup is weather's new `timeZoneAt`,
+- **Lookup after the write** (`onboarding/time-zone.ts`). The place is saved
+  with a NULL zone, and the lookup runs afterwards under `waitUntil`, writing
+  the zone with the fill's compare-and-set, so the runner never waits on
+  Visual Crossing (PR #190 review). The lookup is weather's new `timeZoneAt`,
   exported through its index. It is `forecast(lat, lng, now).timeZone`:
   the same Visual Crossing client, timeout, zod parse and `isTimeZone` check,
   and the same observation cache, so there is no second way to call Visual
