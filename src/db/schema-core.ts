@@ -37,9 +37,10 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     lng: real("lng"),
     // The IANA zone the place above is in (design 142), looked up from
     // Visual Crossing when the place is saved and never typed by the
-    // runner. `onboarding/profile.ts`'s place writer is its one writer and
-    // writes it with the place, so it cannot describe a city the row no
-    // longer holds. NULL beside coordinates means the lookup has not
+    // runner. Two writers, both in onboarding: the place writer saves
+    // the place with a NULL zone and fills it via `waitUntil`, and the hourly
+    // fill does a compare-and-set. Each only fills or replaces the zone for
+    // the current place, so it cannot describe a city the row no longer holds. NULL beside coordinates means the lookup has not
     // succeeded yet, and the hourly fill re-drives it.
     timeZone: text("time_zone"),
     thermalLevel: integer("thermal_level"),

@@ -9,7 +9,10 @@ the profile. It is derived from the home city and never typed by the runner.
 
 ## Approach
 
-- **One writer.** `onboarding/profile.ts`'s `placeWrite` is the only writer of
+- **Two zone writers.** The place writer (`onboarding/profile.ts`'s
+  `placeWrite`) saves the place with a NULL zone and fills it via `waitUntil`;
+  the hourly fill's compare-and-set is the other. Each only fills or replaces
+  the zone for the current place. `placeWrite` is the only writer of
   `city_label`/`lat`/`lng` (FEED-5). It is the only caller that sends one
   (`saveCalibration` for O1, `savePlace` for Your conditions; grep confirms
   nothing else sets those columns). It now writes `time_zone` in the same
@@ -60,10 +63,9 @@ the profile. It is derived from the home city and never typed by the runner.
 
 ## Open questions
 
-- The fill's query has no index. `user_profiles` is one row per runner, and
-  the scan runs hourly. A partial index on rows with coordinates and no
-  zone would make it free, but the owner asked for a single ADD COLUMN.
-  Proceeding without it; the index can be added in a later migration.
+- Closed: the fill's query is covered by the partial index
+  `user_profiles_zone_owed` (rows with coordinates and no zone), added in
+  this PR.
 - A row that Visual Crossing answers with no usable zone is asked again
   every hour, 10 rows at most. Proceeding; Visual Crossing names a zone for
   every coordinate we have seen.

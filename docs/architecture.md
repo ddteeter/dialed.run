@@ -80,9 +80,11 @@ Key decisions embedded here:
   firing re-drives it through `DailyUpkeep.rescreenHandles`, handed in by
   `src/server.ts` because `ops` cannot import `account`. No new cron.
 - **The runner's time zone is cached on the profile and derived, never
-  typed** (design 142). `user_profiles.time_zone` is written only by
-  onboarding's place writer, in the same statement as the place, from
-  weather's `timeZoneAt`. That is `forecast` for now, read for its zone, so
+  typed** (design 142). `user_profiles.time_zone` has two writers, both in
+  onboarding and both from weather's `timeZoneAt`: the place writer, which
+  saves the place with a NULL zone and fills it afterwards via `waitUntil`,
+  and the hourly fill's compare-and-set. Each only fills or replaces the zone
+  for the current place. That is `forecast` for now, read for its zone, so
   there is no second way to call Visual Crossing. A failed lookup saves the
   place with a NULL zone, and that NULL beside coordinates is the marker the
   `:00` firing's last step, `fillMissingTimeZones`, re-drives (law 8c,
