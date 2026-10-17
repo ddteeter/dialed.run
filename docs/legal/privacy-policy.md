@@ -426,13 +426,23 @@ to anyone.
 | Sentry                   | Error reports                                                           | The error and internal ids (account, run, import, product), never tokens, request bodies or file contents |
 | Have I Been Pwned        | Leaked-password check                                                   | The first five characters of your password's SHA-1 hash                                                   |
 
-We are in the United States, and your data is stored in North America.
+We are in the United States, and your data is stored in North America. To
+keep the app fast wherever you open it, Cloudflare also keeps read-only
+copies of our databases in its data centres in Europe, Asia-Pacific and
+Oceania. Your photos and files are not copied; they stay in North America.
 The app itself runs on Cloudflare's network, so a request may be handled in
 the Cloudflare data centre nearest you before it reaches our storage.
-[OWNER: for counsel, since sign-up is open to the EU and UK (D-115): which
-safeguard covers the processors above when they receive EU or UK data, for
-example each one's Data Privacy Framework certification or standard
-contractual clauses in its terms.]
+
+If you are in the EU, the EEA, the UK or Switzerland, using [dialed.run]
+sends your data to the United States and to those other regions. Cloudflare
+covers this under the EU-U.S. Data Privacy Framework and the standard
+contractual clauses in its data processing terms, which apply wherever it
+holds the data. OpenAI is covered by the standard contractual clauses in
+its data processing terms, and Sentry by the Data Privacy Framework. Google
+and Strava act for themselves when you sign in with Google or connect
+Strava, under their own privacy policies. Visual Crossing, Firecrawl and
+Have I Been Pwned receive nothing that identifies you: rounded places and
+dates, product links, and five characters of a password hash.
 
 ## Cookies and browser storage
 
@@ -510,13 +520,24 @@ What you can do in the app:
 
 For anything else, such as correcting something you cannot edit, or a
 question about what we hold, email hello@dialed.run and we will answer
-within 30 days. [OWNER: name the
-laws you answer to and, for GDPR, the legal basis for each use. Sign-up
-stays open to the EU and UK (D-115), so GDPR and UK GDPR probably apply.
-A starting point for counsel: contract for the account, closet, runs and
-kits; legitimate interests for screening, moderation, security, the
-leaked-password check and the anonymous conditions numbers; consent for
-browser location and Strava; legal obligation for reports to NCMEC.]
+within 30 days.
+
+**If you are in the EU, the EEA, the UK or Switzerland,** the GDPR or the
+UK GDPR gives you the right to see, correct, delete and get a copy of your
+data, to restrict or object to how we use it, and to withdraw consent at
+any time. You can also complain to your local data protection authority.
+The legal basis for each use is:
+
+- **Our contract with you:** your account, closet, runs and kits, and what
+  you choose to share.
+- **Our legitimate interests:** screening, moderation, security, the
+  leaked-password check, and the anonymous totals (see
+  [Anonymous totals](#anonymous-totals)). You can object to any of these
+  by email; for the anonymous totals there is also a switch in Settings.
+- **Your consent:** browser location and connecting Strava.
+- **A legal obligation under US law, and our legitimate interest in
+  protecting children:** reports to the National Center for Missing &
+  Exploited Children.
 
 ## Security
 
