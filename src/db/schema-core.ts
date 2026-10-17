@@ -35,6 +35,14 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     cityLabel: text("city_label"),
     lat: real("lat"),
     lng: real("lng"),
+    // The IANA zone the place above is in (design 142), looked up from
+    // Visual Crossing when the place is saved and never typed by the
+    // runner. Two writers, both in onboarding: the place writer saves
+    // the place with a NULL zone and fills it via `waitUntil`, and the hourly
+    // fill does a compare-and-set. Each only fills or replaces the zone for
+    // the current place, so it cannot describe a city the row no longer holds. NULL beside coordinates means the lookup has not
+    // succeeded yet, and the hourly fill re-drives it.
+    timeZone: text("time_zone"),
     thermalLevel: integer("thermal_level"),
     tempUnit: text("temp_unit", { enum: ["f", "c"] }),
     distanceUnit: text("distance_unit", { enum: ["mi", "km"] }),
@@ -84,6 +92,13 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     index("user_profiles_username_screen_pending")
       .on(t.usernameScreen)
       .where(sql`${t.usernameScreen} IN ('unknown', 'checking')`),
+    // The zone fill's sweep (design 142): profiles with coordinates and no
+    // zone yet. Partial, so it holds only the rows still owed.
+    index("user_profiles_zone_owed")
+      .on(t.userId)
+      .where(
+        sql`${t.timeZone} IS NULL AND ${t.lat} IS NOT NULL AND ${t.lng} IS NOT NULL`,
+      ),
     // One index, two jobs. **Uniqueness regardless of case**: a handle is
     // stored lowercased, and NOCASE makes the index refuse "Maya" beside
     // "maya" even from a writer that forgot to lowercase. **Search's prefix

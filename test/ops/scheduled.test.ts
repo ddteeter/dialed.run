@@ -14,12 +14,14 @@ import {
   reviewQueue,
   runs,
   stravaRevocations,
+  userProfiles,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid, type Ulid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { handleScheduled } from "../../src/modules/ops";
 import { gaveUpRow } from "../gave-up-rows";
+import { mockVisualCrossing } from "../weather/fixtures/visual-crossing-observation";
 import { digestKinds, digestReport } from "../../src/modules/ops/scheduled";
 import type { CronReporter, SentryReport } from "../../src/modules/ops/sentry";
 import {
@@ -852,11 +854,11 @@ describe("every hourly step runs, whichever fail (law 5)", () => {
     );
 
     await expect(firing).rejects.toBeInstanceOf(AggregateError);
-    // The weather retry, the sweep, the email drain and the product-link
-    // drain (D-113 Q1), in that order.
+    // The weather retry, the sweep, the email drain, the product-link
+    // drain (D-113 Q1) and the zone fill (design 142), in that order.
     await expect(firing).rejects.toMatchObject({
       message: "several upkeep steps failed",
-      errors: [boom, sweep, boom, boom],
+      errors: [boom, sweep, boom, boom, boom],
     });
     expect(swept).toBe(1);
   });
@@ -1598,5 +1600,23 @@ describe("the daily firing sweeps rows kept past any use", () => {
       "in_progress",
       "error",
     ]);
+  });
+});
+
+describe("the profile zones a failed lookup owes (design 142)", () => {
+  it("are filled on the :00 firing, through the weather module's lookup", async () => {
+    mockVisualCrossing();
+    const userId = newUlid();
+    await coreDb()
+      .insert(userProfiles)
+      .values({ userId, cityLabel: "Minneapolis", lat: 44.98, lng: -93.27 });
+
+    await handleScheduled({ cron: "0 * * * *" } as ScheduledController);
+
+    const [row] = await coreDb()
+      .select({ timeZone: userProfiles.timeZone })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, userId));
+    expect(row?.timeZone).toBe("America/Chicago");
   });
 });

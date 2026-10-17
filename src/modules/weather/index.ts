@@ -23,6 +23,8 @@ export { forecast } from "./forecast";
 export { climateNormals } from "./normals";
 // A typed place, as coordinates — E2-lite's typed city. See ./place.
 export { resolvePlace } from "./place";
+// The zone a place is in, for the profile's cached zone (design 142).
+export { timeZoneAt } from "./zone";
 // The cache key itself, so no other module has to restate its rounding.
 export { cacheKeyFor, matchesKey, runHourKeys } from "./store";
 export type { CacheKey } from "./store";

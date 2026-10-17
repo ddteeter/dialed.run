@@ -6,7 +6,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { drizzle } from "drizzle-orm/d1";
 
-import { env } from "../../env";
+import { env, waitUntil } from "../../env";
 import { optionalUserId, requireUserId, verifiedUserId } from "../auth";
 import {
   attachKitInput,
@@ -56,6 +56,8 @@ import { setUsefulReaction } from "./reactions";
 import { searchRunners } from "./search";
 import { nowSeconds } from "../../lib/now";
 import { placeInput, savePlace } from "../onboarding";
+import { captureException } from "../ops";
+import { timeZoneAt } from "../weather";
 
 export const attachKitAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => attachKitInput.parse(input))
@@ -220,12 +222,17 @@ export const conditionsHomeQuery = createServerFn({ method: "GET" }).handler(
 /**
  * Location denied: Use this on the place Find came back with (round 26
  * #12) saves it as the profile's place, through the one writer of those
- * columns (FEED-5), and the tab never asks again.
+ * columns (FEED-5), with the zone it is in (design 142), and the tab never
+ * asks again.
  */
 export const saveConditionsCityAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => placeInput.parse(input))
   .handler(async ({ data }) =>
-    savePlace(drizzle(env.DIALED_CORE), await requireUserId(), data),
+    savePlace(drizzle(env.DIALED_CORE), await requireUserId(), data, {
+      zoneAt: timeZoneAt,
+      report: captureException,
+      keepAlive: waitUntil,
+    }),
   );
 
 // ---- Units (R-6) --------------------------------------------------------------

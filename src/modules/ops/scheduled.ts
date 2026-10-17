@@ -19,8 +19,9 @@ import {
   listAbandonedEnrichments,
 } from "../enrichment";
 import { sweepSendLimits } from "../email";
+import { fillMissingTimeZones } from "../onboarding";
 import { pruneStravaIds } from "../runs";
-import { retryPendingWeather } from "../weather";
+import { retryPendingWeather, timeZoneAt } from "../weather";
 import { cronNameFor, type CronName } from "./crons";
 import { oweDigestEmail, type DigestMail } from "./digest-email";
 import { checkOutboxBacklog, drainOutbox } from "./outbox";
@@ -205,6 +206,14 @@ async function runCron(
         () => upkeep.sweepExports?.(anomalies),
         () => drainOwedEmail(anomalies),
         () => drainProductLinks(anomalies, upkeep),
+        // Profiles whose zone lookup failed when the place was saved
+        // (design 142): a NULL zone beside coordinates is the marker.
+        // Last, because its lookups can wait on Visual Crossing.
+        () =>
+          fillMissingTimeZones(drizzle(env.DIALED_CORE), {
+            zoneAt: timeZoneAt,
+            report: captureException,
+          }),
       ]);
       return anomalies;
     }

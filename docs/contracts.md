@@ -39,6 +39,12 @@ documents, and the choice is invisible behind `modules/auth`):
 display_name     text
 city_label       text     -- "Minneapolis, MN"; user-editable
 lat, lng         real     -- geocoded home location, nullable
+time_zone        text     -- IANA zone of lat/lng (design 142), nullable. Looked up
+                          --  from Visual Crossing by the place writer, never
+                          --  typed; replaced or cleared with every place
+                          --  written. NULL beside lat/lng = lookup owed, which
+                          --  the :00 firing re-drives. Read through
+                          --  onboarding's runnerTimeZone.
 thermal_level    int      -- -2..+2 from onboarding O1 (-2 = runs warm,
                           --  +2 = always freezing); °C mapping lives in code
 temp_unit        text     -- 'f' | 'c'; distance_unit 'mi' | 'km'; from locale
