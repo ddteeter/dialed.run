@@ -14,7 +14,7 @@
  * is silent (D-70) and a profile action is no thing on a run, so neither
  * is read.
  */
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { moderationActions } from "../../db/schema-core";
@@ -40,7 +40,12 @@ export interface RunRemoval {
  * lets through are only those values, so the select says so rather than
  * re-checking in memory what SQL already decided.
  */
-export function runRemovalsQuery(db: Db, ownerId: string, runId: string) {
+export function runRemovalsSelect(
+  db: Db,
+  ownerId: string,
+  runId: string,
+  since: number,
+) {
   return db
     .select({
       id: moderationActions.id,
@@ -54,6 +59,7 @@ export function runRemovalsQuery(db: Db, ownerId: string, runId: string) {
     .where(
       and(
         eq(moderationActions.runId, runId),
+        gte(moderationActions.createdAt, since),
         // Unary `+` keeps SQLite off `moderation_actions_owner` for this
         // term (its documented way to disqualify an index): without it the
         // planner picks the owner index, since it also serves the ORDER
@@ -82,14 +88,21 @@ function reasonOf(stored: string): RemovalReason | undefined {
 }
 
 /**
-The run's removals, newest first, each with the reason its band states.
-*/
+ * The run's removals, newest first, each with the reason its band states.
+ *
+ * **`since` is a kit's own page asking for its own removals.** A run can
+ * carry more than one kit (entry), and a removed kit leaves only its audit
+ * row, which names the run and not the kit. A kit's page passes its own
+ * `createdAt`, so a removal from before it existed is not drawn on it. The
+ * run's page passes nothing and reads them all.
+ */
 export async function removalsOnRun(
   db: Db,
   ownerId: string,
   runId: string,
+  since = 0,
 ): Promise<RunRemoval[]> {
-  const rows = await runRemovalsQuery(db, ownerId, runId);
+  const rows = await runRemovalsSelect(db, ownerId, runId, since);
   return rows.flatMap((row) => {
     const reason = reasonOf(row.reason);
     return reason === undefined ? [] : [{ ...row, reason }];

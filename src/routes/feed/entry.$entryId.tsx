@@ -37,18 +37,18 @@ export const Route = createFileRoute("/feed/entry/$entryId")({
       bellStateFn(),
     ]);
     const entry = orBackToFeed(found);
-    return {
-      entry,
-      viewerId,
-      units,
-      bell,
+    const [removals, shouldPromptVerdict] = await Promise.all([
       // R-140: a photo the Desk removed from this run, where it was. Only
-      // the author is answered any.
-      removals: await runRemovalsQuery({ data: { runId: entry.runId } }),
-      shouldPromptVerdict: await shouldAskForVerdict(entry, viewerId, () =>
+      // the author is answered any, and only from when this kit existed:
+      // the run may carry another.
+      runRemovalsQuery({
+        data: { runId: entry.runId, since: entry.createdAt },
+      }),
+      shouldAskForVerdict(entry, viewerId, () =>
         verdictPromptQuery({ data: { entryId: params.entryId } }),
       ),
-    };
+    ]);
+    return { entry, viewerId, units, bell, removals, shouldPromptVerdict };
   },
   component: EntryDetailPage,
 });

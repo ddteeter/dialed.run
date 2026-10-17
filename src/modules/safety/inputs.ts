@@ -140,9 +140,14 @@ export const unbanUserInput = z.object({
 });
 
 /**
-The run whose removals its author's page shows (R-140).
+The run whose removals its author's page shows (R-140). `runId` is bounded,
+not a ULID: a malformed `/runs/abc` must reach the page's own not-found and
+not fail here first. `since` is a kit page's own `createdAt`.
 */
-export const runRemovalsInput = z.object({ runId: ulidSchema });
+export const runRemovalsInput = z.object({
+  runId: rowIdSchema,
+  since: z.number().int().nonnegative().optional(),
+});
 
 /**
  * D8's search and filter (round 27 #22). Both optional: the page opens on

@@ -7,7 +7,7 @@ import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { moderateContent } from "../../src/modules/feed/moderation";
 import { removalsOnRun } from "../../src/modules/safety";
-import { runRemovalsQuery } from "../../src/modules/safety/run-removals";
+import { runRemovalsSelect } from "../../src/modules/safety/run-removals";
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 
@@ -165,6 +165,30 @@ describe("removalsOnRun", () => {
     ]);
   });
 
+  it("shows a kit only the removals from when it existed (two kits, one run)", async () => {
+    const author = await makeUser();
+    const runId = newUlid();
+    // The first kit's photo came off at NOW; the second kit was made at
+    // NOW + 10. Its page must not wear the first kit's band.
+    const first = await audit({ ownerId: author, runId, createdAt: NOW });
+    const second = await audit({ ownerId: author, runId, createdAt: NOW + 20 });
+
+    const onSecond = await removalsOnRun(core(), author, runId, NOW + 10);
+    expect(onSecond.map((row) => row.id)).toStrictEqual([second]);
+    // The run's own page passes no `since` and reads both.
+    const onRun = await removalsOnRun(core(), author, runId);
+    expect(onRun.map((row) => row.id)).toStrictEqual([second, first]);
+  });
+
+  it("counts a removal at the very second the kit was made", async () => {
+    const author = await makeUser();
+    const runId = newUlid();
+    const id = await audit({ ownerId: author, runId, createdAt: NOW });
+
+    const rows = await removalsOnRun(core(), author, runId, NOW);
+    expect(rows.map((row) => row.id)).toStrictEqual([id]);
+  });
+
   it("answers only the run's author, and only for that run", async () => {
     const author = await makeUser();
     const runId = newUlid();
@@ -212,10 +236,11 @@ describe("removalsOnRun", () => {
 
 describe("the read's cost", () => {
   it("is keyed by moderation_actions_run, never a scan", async () => {
-    const { sql, params } = runRemovalsQuery(
+    const { sql, params } = runRemovalsSelect(
       core(),
       newUlid(),
       newUlid(),
+      0,
     ).toSQL();
     const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
       .bind(...params)

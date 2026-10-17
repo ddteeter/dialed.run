@@ -108,7 +108,12 @@ export const runRemovalsQuery = createServerFn({ method: "GET" })
   .validator((data: unknown) => runRemovalsInput.parse(data))
   .handler(async ({ data }) => {
     const ownerId = await requireUserId();
-    return removalsOnRun(drizzle(env.DIALED_CORE), ownerId, data.runId);
+    return removalsOnRun(
+      drizzle(env.DIALED_CORE),
+      ownerId,
+      data.runId,
+      data.since,
+    );
   });
 
 export const reviewQueueQuery = createServerFn({ method: "GET" }).handler(
