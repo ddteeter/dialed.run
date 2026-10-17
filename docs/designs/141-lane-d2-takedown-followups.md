@@ -73,7 +73,7 @@ takedown form. No new server function.
 ## Open questions
 
 - **Mounting `ContentRemoved` needed a column. Answered (owner, 2026-10-12):**
-  `moderation_actions.run_id`, nullable, indexed, migration 0057
+  `moderation_actions.run_id`, nullable, indexed, migration 0059
   (`add_moderation_action_run_id`: one `ADD COLUMN` and one `CREATE INDEX`).
   `moderateContent` writes it from the entry read before the delete;
   `safety/run-removals.ts` reads a run's removals for its author by
