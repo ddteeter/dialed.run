@@ -138,6 +138,12 @@ export function buildSheets(rows: ExportRows): ExportSheets {
         value: (row) => row.profile?.cityLabel,
       },
       {
+        name: "time_zone",
+        about:
+          "the time zone your place is in, looked up from the place, never typed. We use it to time your emails and to tell when your day starts.",
+        value: (row) => row.profile?.timeZone,
+      },
+      {
         name: "thermal_level",
         about: "your calibration: how warm or cold you run, from -2 to +2.",
         value: (row) => row.profile?.thermalLevel,
