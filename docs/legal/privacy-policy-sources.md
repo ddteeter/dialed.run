@@ -233,14 +233,15 @@ production), plus whatever product URL a runner pastes.
 
 ## Cookies and storage
 
-| Claim                       | Source                                                                                                                                                                               |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Session cookie, 7 days      | `better-auth/dist/cookies/index.mjs` (`session_token`, default `maxAge` 7 days); `src/modules/auth/instance.ts` (`tanstackStartCookies`)                                             |
-| Short-lived sign-in cookies | `better-auth/dist/state.mjs` (`state` 300 s / `oauth_state` 600 s); `runs/strava/oauth.ts`                                                                                           |
-| Age-check cookie, one day   | `src/lib/contracts/age.ts` `AGE_REFUSED_COOKIE`; `auth/access-hook.ts` (`Max-Age` `AGE_REFUSED_SECONDS`)                                                                             |
-| Browser storage             | `safety/blur/preference.ts` (`localStorage`); `src/lib/browser/session-memo.ts` (`dialed.run:session-owner`, `localStorage`); `src/modules/auth/carried-email.ts` (`sessionStorage`) |
-| One third-party script      | `src/ui/Turnstile.tsx`; `security-headers.ts` (`TURNSTILE_ORIGIN`)                                                                                                                   |
-| GoatCounter on dialed.run   | **Not in this repo**: the marketing site (`dialed.run-site`). The sentence is the owner's, approved 2026-10-04 with R-131                                                            |
+| Claim                             | Source                                                                                                                                                                               |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Session cookie, 7 days            | `better-auth/dist/cookies/index.mjs` (`session_token`, default `maxAge` 7 days); `src/modules/auth/instance.ts` (`tanstackStartCookies`)                                             |
+| Short-lived sign-in cookies       | `better-auth/dist/state.mjs` (`state` 300 s / `oauth_state` 600 s); `runs/strava/oauth.ts`                                                                                           |
+| Age-check cookie, one day         | `src/lib/contracts/age.ts` `AGE_REFUSED_COOKIE`; `auth/access-hook.ts` (`Max-Age` `AGE_REFUSED_SECONDS`)                                                                             |
+| Database position cookie, one day | `src/lib/sql/d1-session.ts` `DEVICE_BOOKMARK_COOKIE` (`d1b`, `Max-Age` 86400, a D1 bookmark), set by `auth/d1-request.ts`; design 143                                                |
+| Browser storage                   | `safety/blur/preference.ts` (`localStorage`); `src/lib/browser/session-memo.ts` (`dialed.run:session-owner`, `localStorage`); `src/modules/auth/carried-email.ts` (`sessionStorage`) |
+| One third-party script            | `src/ui/Turnstile.tsx`; `security-headers.ts` (`TURNSTILE_ORIGIN`)                                                                                                                   |
+| GoatCounter on dialed.run         | **Not in this repo**: the marketing site (`dialed.run-site`). The sentence is the owner's, approved 2026-10-04 with R-131                                                            |
 
 ## Retention and your choices
 

@@ -39,7 +39,6 @@
  * counted anyway.
  */
 import { and, eq, gte, inArray, ne, notExists, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import {
@@ -48,7 +47,7 @@ import {
   userProfiles,
   wardrobeItems,
 } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import { readInChunks } from "../../lib/chunked";
 import { precipClassOf } from "../../lib/contracts/temperature";
 import type { PrecipClass } from "../../lib/contracts/temperature";
@@ -214,7 +213,7 @@ export async function matchTally(
   sinceEpochSeconds: number,
   viewerId?: string,
 ): Promise<MatchTally> {
-  const database = drizzle(env.DIALED_CORE);
+  const database = coreDb();
   const entries = await recentPublicEntriesStatement(
     database,
     sinceEpochSeconds,

@@ -6,12 +6,11 @@
  * handle could live that both modules may reach without one deep-importing
  * the other. It is one call.
  */
-import { drizzle } from "drizzle-orm/d1";
 
-import { env } from "../../env";
+import { coreDb } from "../../env";
 
 export function notificationsDb() {
-  return drizzle(env.DIALED_CORE);
+  return coreDb();
 }
 
 export type NotificationsDb = ReturnType<typeof notificationsDb>;

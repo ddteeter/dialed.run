@@ -21,9 +21,10 @@ never reads a replica.
   call, which also tightens "only `src/env` touches bindings".
 - **The session opens lazily**, on the first query. Core opens from the
   newest bookmark known: the `d1b` cookie (this device), and for a signed-in
-  runner `user_profiles.d1_bookmark` (every device, plus queue and cron
-  writes made for them). The auth gate reads that column in a primary query
-  it already makes, so it costs no extra round trip. Weather opens
+  runner `user_profiles.d1_bookmark` (every device). `requireUserId()` and
+  `verifiedUserId()` read that column in the batch they already send, so it
+  costs no round trip; signed-out and `optionalUserId()` pages use the
+  cookie alone. Weather opens
   `first-unconstrained`, because cron is its only writer.
 - **Write-class gates pin the primary.** `verifiedUserId()` is already the
   one gate for writes other runners can see (D-113), and
@@ -33,13 +34,20 @@ never reads a replica.
   loader calls POST functions inside the page's GET (`terms-gate.ts`, PR
   #140). A `requireUserId()` write that reads _another_ runner's state takes
   an explicit `primaryCoreDb()` instead; the audit below lists them.
-- **Auth stays on the primary.** Better Auth's instance keeps the bare
-  binding.
+- **Auth stays on the primary.** `primaryCoreDb()` is, inside a request,
+  a `first-primary` session of its own, so Better Auth's writes leave a
+  bookmark that the replica session starts from and the cookie carries.
+  **Handles decide per query, not when made**: Better Auth's instance is
+  built at module load, outside any request.
 - **Bookmarks out.** After the response, `server.ts` sets `d1b` from the
   core session's `getBookmark()` (HttpOnly, Secure, SameSite=Lax, 1 day).
   For a signed-in runner whose request wrote, it stores the bookmark under
-  `waitUntil`. The import and export consumers store it for their runner
-  after the batch that marks the job done.
+  `waitUntil`. A write is seen at `prepare` (`insert`/`update`/`delete`/
+  `replace`), because locally every query, read or write, advances the
+  bookmark. Queue and cron writes made for a runner are **not** stored
+  (changed in implementation): the replica catches up in tens of
+  milliseconds, far sooner than a runner opens the finished import or
+  export.
 - **Drizzle typing:** `drizzle()` accepts `D1Database`, not
   `D1DatabaseSession`. A typed object adapter delegates `prepare` and
   `batch` to the session and rejects `exec`, `dump` and `withSession`. No
@@ -60,24 +68,29 @@ never reads a replica.
 - worker: opening constraint from (cookie, stored, both, neither).
 - worker: `verifiedUserId()` pins `first-primary`; a pinned request stays
   pinned.
-- worker: a write stores the bookmark and a read-only request does not; the
-  import and export consumers store it.
+- worker: a write stores the bookmark and a read-only request does not.
 - worker: adapter delegates `prepare` and `batch` and rejects the rest.
-- architecture: no `drizzle(env.` outside `src/env`.
-- production check: log `served_by_primary` / `served_by_region` by request
-  kind for the first week of friends use.
+- architecture (`d1-access.test.ts`): no `drizzle(env.` or `.withSession(`
+  outside `src/env/d1.ts` and the session module.
+- production check: the D1 dashboard's per-region metrics during the
+  friends launch, to confirm replicas serve reads.
 
-## Open questions
+## Resolved before implementation
 
-1. **Picking the newer of two bookmarks.** Cloudflare says bookmarks are
-   ordered but does not document the format. If string comparison is not
-   safe, a signed-in runner uses only the stored one. That gives up
-   monotonic reads across a device's own requests (rare flicker), not
-   read-your-own-writes. To verify in a first spike, along with the adapter.
-2. **Audit:** which `requireUserId()` writes read other runners' state
-   (handle availability, sharing to `runners`), and whether any GET
-   function writes. The list goes here before implementation.
+1. **Bookmark order (spike).** Local bookmarks are four fixed-width,
+   zero-padded hex groups (`00000000-0000003d-00000000-<32 hex>`), so
+   string order is issue order. `newerBookmark` compares strings, and
+   `parseBookmark` rejects anything that is not hex, so a production
+   format change degrades to "no bookmark", never a thrown request. The
+   adapter type-checks with no cast and runs `batch`.
+2. **Audit.** Primary for: the closet's link denylist (`safety/denylist`),
+   the takedown and request-access abuse limits, and the weather-cache
+   reads in attach and manual bands (`pinPrimary("weather")`). Already
+   safe: the username claim (re-checked inside its write batch), products
+   (read after the session's own write). No GET server function writes.
+   The loader-called POST writers are own-row writes.
 3. **Schema-lag race** (seen in the wild): right after a migration, a
    lagging replica can answer "no such table". Expand→contract covers
-   columns. A brand-new table read in its first deploy needs the reader to
-   tolerate that, or deploy waits a few seconds after migrating.
+   columns; a brand-new table read in its first deploy must tolerate it, or
+   the deploy waits a few seconds after migrating. Open, for the deploy
+   runbook.

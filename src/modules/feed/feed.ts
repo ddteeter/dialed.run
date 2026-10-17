@@ -15,7 +15,6 @@ import {
   or,
   sql,
 } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { alias } from "drizzle-orm/sqlite-core";
 
@@ -29,7 +28,7 @@ import {
   runs,
   userProfiles,
 } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import { SHARED_AUDIENCE } from "../../lib/contracts";
 import { garmentNamesByIds } from "./garment-names";
 import { observationsForRuns } from "./conditions";
@@ -374,7 +373,7 @@ export async function followingFeed(
   cursor?: FeedCursor,
   limit = PAGE_SIZE,
 ): Promise<FeedPage> {
-  const database = drizzle(env.DIALED_CORE);
+  const database = coreDb();
   const [rows, followeeCount] = await Promise.all([
     followingFeedStatement(database, viewerId, cursor, limit + 1),
     followingCount(viewerId),

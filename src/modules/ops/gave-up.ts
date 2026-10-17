@@ -8,7 +8,7 @@
  * acts on it; it never writes a failure.
  */
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { drizzle, type DrizzleD1Database } from "drizzle-orm/d1";
+import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { sql } from "drizzle-orm";
 
 import { gaveUpClear } from "../../db/gave-up";
@@ -23,7 +23,7 @@ import {
   stravaConnections,
   userProfiles,
 } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb, env } from "../../env";
 import type { GaveUpKind } from "../../lib/contracts/gave-up";
 import { clockLabel, monthDayLabel } from "../../lib/dates";
 import { firstColumnWhere, firstRowWhere } from "../../lib/sql/keyed-read";
@@ -194,7 +194,7 @@ async function subjectFacts(
  * Today's Gave up rows, newest failure first, on `gave_up_last_failed`.
  */
 export async function gaveUpJobs(
-  db: Db = drizzle(env.DIALED_CORE),
+  db: Db = coreDb(),
 ): Promise<readonly GaveUpJob[]> {
   const rows = await db
     .select()
@@ -235,7 +235,7 @@ export interface RetryDeps {
 
 function liveRetryDeps(): RetryDeps {
   return {
-    db: drizzle(env.DIALED_CORE),
+    db: coreDb(),
     enrichmentQueue: env.ENRICHMENT_QUEUE,
     importsQueue: env.IMPORTS_QUEUE,
     reextract: (productId) => reextract(enrichmentDeps(), productId),
@@ -419,7 +419,7 @@ export async function retryGaveUp(
  */
 export async function dropGaveUp(
   id: string,
-  db: Db = drizzle(env.DIALED_CORE),
+  db: Db = coreDb(),
 ): Promise<void> {
   await db.delete(gaveUp).where(eq(gaveUp.id, id));
 }

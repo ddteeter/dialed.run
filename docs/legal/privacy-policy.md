@@ -452,6 +452,9 @@ dates, product links, and five characters of a password hash.
   hijacked.
 - **An age-check cookie**, only if sign-up refused a date of birth as
   under 18, for one day (see [Children](#children)).
+- **A database position cookie**, for one day, so the next page you open
+  shows at least what you last saw or saved. It holds a position in our
+  database's history, not anything about you.
 - **In your browser's storage:** whether you turned face blur off, so we
   do not load the face detector again; your account id, so a tab knows
   when you have signed in as someone else; and, for one tab and only

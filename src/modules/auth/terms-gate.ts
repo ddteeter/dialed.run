@@ -45,11 +45,13 @@ import {
   latestAcceptanceOf,
   termsStandingOf,
 } from "../account";
+import { offerRunnerBookmark, pinPrimary } from "../../lib/sql/d1-session";
 import {
   AccountLeavingError,
   EmailUnconfirmedError,
   TermsNotAcceptedError,
 } from "./auth-error";
+import { storedBookmarkOf } from "./d1-bookmark";
 import { deletionClaimOf, standingFrom } from "./leaving-gate";
 import {
   optionalUserIdFrom,
@@ -97,10 +99,12 @@ export async function agreedUserId(
   current: number | undefined = currentTermsVersion(),
 ): Promise<string> {
   const userId = userIdOrThrow(session);
-  const [[claim], [latest]] = await db.batch([
+  const [[claim], [latest], [stored]] = await db.batch([
     deletionClaimOf(db, userId),
     latestAcceptanceOf(db, userId),
+    storedBookmarkOf(db, userId),
   ]);
+  offerRunnerBookmark(userId, stored?.value);
   refuseUnlessAgreed(claim, latest?.version, current);
   return userId;
 }
@@ -109,19 +113,21 @@ export async function agreedUserId(
  * What the verification gate refuses this runner with, or `undefined`
  * when it lets them through: leaving, behind on the terms, and then an
  * address not confirmed — or no account row, which is a runner who is
- * gone (`account`'s `isVerified` reads it the same way). Three seeks, one
- * batch.
+ * gone (`account`'s `isVerified` reads it the same way). Four seeks, one
+ * batch: the fourth is the runner's stored D1 bookmark (design 143).
  */
 async function confirmationRefusal(
   db: Db,
   userId: string,
   current: number | undefined,
 ): Promise<Error | undefined> {
-  const [[claim], [latest], [confirmation]] = await db.batch([
+  const [[claim], [latest], [confirmation], [stored]] = await db.batch([
     deletionClaimOf(db, userId),
     latestAcceptanceOf(db, userId),
     emailConfirmationRead(db, userId),
+    storedBookmarkOf(db, userId),
   ]);
+  offerRunnerBookmark(userId, stored?.value);
   return (
     agreedRefusal(claim, latest?.version, current) ??
     (confirmation?.isConfirmed === true
@@ -141,6 +147,10 @@ export async function confirmedUserId(
   current: number | undefined = currentTermsVersion(),
 ): Promise<string> {
   const userId = userIdOrThrow(session);
+  // The gate for writes other runners can see (D-113) is also the one
+  // whose writes depend on other runners' state: a block, an audience, a
+  // ban. From here the request reads the primary (D-123, design 143).
+  pinPrimary("core");
   const refusal = await confirmationRefusal(db, userId, current);
   if (refusal !== undefined) throw refusal;
   return userId;

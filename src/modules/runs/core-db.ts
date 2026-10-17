@@ -1,19 +1,11 @@
-import { drizzle } from "drizzle-orm/d1";
-
-import { env } from "../../env";
+import type { coreDb as handle } from "../../env";
 
 /**
-Stays inside this module rather than moving to db/: `src/db/` may not
-import `env` (dependency-cruiser "db-imports-lib-only", and only `src/env/`
-touches bindings at all), so a shared handle has nowhere to live that every
-module can reach. Each module makes its own — it is one call, and lane 104
-already does the same.
+ * This module's dialed-core handle: the request's D1 session, or the bare
+ * binding outside a request (design 143). `src/db/` may not import `env`
+ * (dependency-cruiser "db-imports-lib-only"), so the handle comes from
+ * `src/env` and the type is named here for the module's own signatures.
+ */
+export { coreDb } from "../../env";
 
-Drizzle handle for dialed-core, constructed per call (bindings are
-request-scoped in Workers; the handle itself is cheap).
-*/
-export function coreDb() {
-  return drizzle(env.DIALED_CORE);
-}
-
-export type CoreDb = ReturnType<typeof coreDb>;
+export type CoreDb = ReturnType<typeof handle>;

@@ -20,11 +20,10 @@
  * shares with another; the two reads here are A2's and only A2's.
  */
 import { and, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
 
 import { outfitEntries, runs } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import { ulidSchema } from "../../lib/ids";
 import type { Conditions } from "./conditions";
 import { observationsForRuns } from "./conditions";
@@ -60,7 +59,7 @@ export interface AttachContext {
  * deserve on a screen that only ever shows your own.
  */
 async function ownRun(userId: string, runId: string) {
-  const [run] = await drizzle(env.DIALED_CORE)
+  const [run] = await coreDb()
     .select({
       id: runs.id,
       lat: runs.lat,

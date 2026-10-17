@@ -23,9 +23,8 @@ import {
   fileTakedownRequest,
   pendingTakedownRequests,
 } from "./takedown-requests";
-import { drizzle } from "drizzle-orm/d1";
 
-import { env } from "../../env";
+import { coreDb, env, primaryCoreDb } from "../../env";
 import {
   outboxInsert,
   outboxInsertWhere,
@@ -123,7 +122,7 @@ export const reviewQueueQuery = createServerFn({ method: "GET" }).handler(
       queue: await pendingReviewQueue(),
       // Design 136: `/takedown` requests, which carry their own decision
       // and so are not review rows, waiting above them (round 35 #58e).
-      requests: await pendingTakedownRequests(drizzle(env.DIALED_CORE)),
+      requests: await pendingTakedownRequests(coreDb()),
     };
   },
 );
@@ -137,8 +136,10 @@ export const takedownRequestFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => takedownRequestInput.parse(data))
   .handler(async ({ data }) => {
     const attempt = turnstileAttempt(data.turnstileToken, getRequest());
+    // Primary: the abuse limits and holds it checks gate the write
+    // (D-123, design 143).
     return fileTakedownRequest(
-      drizzle(env.DIALED_CORE),
+      primaryCoreDb(),
       {
         ...data,
         attempt,
@@ -162,7 +163,7 @@ export const confirmTakedownFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => takedownConfirmInput.parse(data))
   .handler(async ({ data }) => ({
     outcome: await confirmTakedownRequest(
-      drizzle(env.DIALED_CORE),
+      primaryCoreDb(),
       data.token,
       oweInCore,
     ),
@@ -178,7 +179,7 @@ export const blockTakedownRequesterAction = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const actorId = requireAdmin(await verifiedUserId());
     return blockAndDeclineAll(
-      drizzle(env.DIALED_CORE),
+      coreDb(),
       actorId,
       data.requestId,
     );
@@ -199,7 +200,7 @@ export const banUserAction = createServerFn({ method: "POST" })
     // The ban's email, owed in the ban's batch, then the fast path.
     const debt = oweOutbox(banEmail(ban));
     await banUser(ban, (database) => [outboxInsert(database, debt)]);
-    await settleOutbox(drizzle(env.DIALED_CORE), debt);
+    await settleOutbox(coreDb(), debt);
     return { banned: true };
   });
 
@@ -222,7 +223,7 @@ export const unbanUserAction = createServerFn({ method: "POST" })
     await unbanUser(data.userId, unbannedBy, {
       owe: (database, stillBanned) =>
         outboxInsertWhere(database, debt, stillBanned),
-      settle: () => settleOutbox(drizzle(env.DIALED_CORE), debt),
+      settle: () => settleOutbox(coreDb(), debt),
     });
     return { banned: false };
   });
@@ -238,7 +239,7 @@ export const reviewHandleAction = createServerFn({ method: "POST" })
     const reviewerId = requireAdmin(await verifiedUserId());
     return {
       outcome: await reviewFlaggedHandle(
-        drizzle(env.DIALED_CORE),
+        coreDb(),
         reviewerId,
         data,
       ),
@@ -252,7 +253,7 @@ export const forceRenameAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => forceRenameInput.parse(input))
   .handler(async ({ data }) => {
     const actorId = requireAdmin(await verifiedUserId());
-    const db = drizzle(env.DIALED_CORE);
+    const db = coreDb();
     return forceRename(db, {
       userId: data.userId,
       typed: placeholderHandle(),
@@ -272,7 +273,7 @@ export const deskRunnersQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => runnersFilterInput.parse(input))
   .handler(async ({ data }) => {
     requireAdmin(await verifiedUserId());
-    const db = drizzle(env.DIALED_CORE);
+    const db = coreDb();
     const accounts = await listAccounts(db, {
       query: data.query,
       only: runnersWhere(data.filter),

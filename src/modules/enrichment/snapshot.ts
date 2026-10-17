@@ -1,4 +1,4 @@
-import { drizzle } from "drizzle-orm/d1";
+import type { drizzle } from "drizzle-orm/d1";
 
 import { productSnapshots } from "../../db/schema-core";
 import { env } from "../../env";

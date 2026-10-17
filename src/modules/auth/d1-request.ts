@@ -1,0 +1,52 @@
+import type { drizzle } from "drizzle-orm/d1";
+
+import { primaryCoreDb, waitUntil } from "../../env";
+import {
+  deviceBookmarkCookie,
+  deviceBookmarkFrom,
+  runInD1Scope,
+  scopeOutcome,
+} from "../../lib/sql/d1-session";
+import { storeRunnerBookmark } from "./d1-bookmark";
+
+type Db = ReturnType<typeof drizzle>;
+
+export interface D1RequestDeps {
+  readonly db: Db;
+  /**
+  Work that outlives the response: `waitUntil`.
+  */
+  readonly defer: (work: Promise<void>) => void;
+}
+
+export function d1RequestDepsFromEnv(): D1RequestDeps {
+  return { db: primaryCoreDb(), defer: waitUntil };
+}
+
+/**
+ * One request as one D1 scope (design 143): its reads share a session
+ * started from the device's bookmark, the device gets back the newest
+ * bookmark the request reached, and a signed-in runner who wrote has it
+ * stored, after the response, for their other devices.
+ *
+ * The cookie is only sent when the bookmark moved, so a request that read
+ * nothing, or read nothing newer, adds no header.
+ */
+export async function respondInD1Scope(
+  request: Request,
+  handle: () => Response | Promise<Response>,
+  deps: D1RequestDeps,
+): Promise<Response> {
+  const device = deviceBookmarkFrom(request.headers.get("cookie"));
+  return runInD1Scope(device, async () => {
+    const response = await handle();
+    const { bookmark, writerId } = scopeOutcome();
+    if (bookmark === undefined || bookmark === device) return response;
+    if (writerId !== undefined) {
+      deps.defer(storeRunnerBookmark(deps.db, writerId, bookmark));
+    }
+    const sent = new Response(response.body, response);
+    sent.headers.append("set-cookie", deviceBookmarkCookie(bookmark));
+    return sent;
+  });
+}

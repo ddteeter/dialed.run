@@ -55,6 +55,17 @@ Key decisions embedded here:
 - **Two D1 databases**: `dialed-core` (users, closet, runs, feed) and
   `dialed-weather` (observations cache). Weather grows unbounded; isolating
   it protects the core DB from the 10 GB per-database cap.
+- **Reads may come from a D1 read replica; writes' checks never do**
+  (design 143, D-123). Replication is on for both databases. Every query
+  goes through `src/env/d1.ts`: `coreDb()`/`weatherDb()` read through the
+  request's D1 session, opened lazily in `lib/sql/d1-session.ts` from the
+  newest of the device's `d1b` cookie and the runner's stored
+  `user_profiles.d1_bookmark`, so nobody reads older than their own last
+  write. `primaryCoreDb()` (Better Auth, the auth gates, the denylist, the
+  abuse limits) and `verifiedUserId()`'s pin read the primary. Queue
+  consumers and crons have no request scope, so they read the primary.
+  `test/architecture/d1-access.test.ts` keeps everything else off the bare
+  bindings.
 - **One rule decides public visibility** (106). `modules/safety` owns
   `publiclyVisibleEntry()`, and `modules/feed` imports it rather than
   writing `audience = 'runners'` at each of its five read sites. The arrow

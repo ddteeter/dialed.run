@@ -15,11 +15,10 @@
  * Nor, for the viewer alone, a runner whose profile they reported (D-68).
  */
 import { and, eq, inArray, ne, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { follows, userProfiles } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import { normalizeUsername } from "../../lib/contracts";
 import { columnWhere } from "../../lib/sql/keyed-read";
 import { runnersVisibleTo } from "./runner-visibility";
@@ -73,7 +72,7 @@ export async function searchRunners(
   // shows "@" before a handle, so a runner may well type one.
   const typed = normalizeUsername(prefix);
   if (typed.length === 0) return [];
-  const database = drizzle(env.DIALED_CORE);
+  const database = coreDb();
   const rows = await searchStatement(database, viewerId, typed);
   const found = rows.map((row) => row.userId);
   const followedAmongFound = and(

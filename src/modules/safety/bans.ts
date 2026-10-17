@@ -17,12 +17,11 @@
 import { eq, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
-import { drizzle } from "drizzle-orm/d1";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import { session } from "../../db/schema-auth";
 import { userProfiles } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
 import type { OutboxMessage } from "../../lib/sql/outbox";
 import { orSqlNull } from "../../lib/sql/sql-null";
@@ -32,7 +31,7 @@ import { emailDebt } from "../email";
 import { moderationActionInsert } from "./moderation-actions";
 
 function db() {
-  return drizzle(env.DIALED_CORE);
+  return coreDb();
 }
 
 export interface BanInput {

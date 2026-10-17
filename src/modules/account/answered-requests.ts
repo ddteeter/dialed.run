@@ -8,10 +8,10 @@
  * import it back.
  */
 import { and, inArray, lt } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
+import type { drizzle } from "drizzle-orm/d1";
 
 import { accessRequests } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import { nowSeconds } from "../../lib/now";
 
 type Db = ReturnType<typeof drizzle>;
@@ -41,7 +41,7 @@ const ANSWERED_KEPT_S = 90 * 24 * 60 * 60;
  * through `access_requests_status_updated`, not a scan.
  */
 export async function forgetAnsweredRequests(
-  db: Db = drizzle(env.DIALED_CORE),
+  db: Db = coreDb(),
   now = nowSeconds(),
 ): Promise<void> {
   await db

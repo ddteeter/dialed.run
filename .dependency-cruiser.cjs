@@ -63,6 +63,22 @@ module.exports = {
       to: { path: "^src/(modules|routes|db|env)/" },
     },
     {
+      name: "d1-handles-come-from-env",
+      severity: "error",
+      comment:
+        "Only src/env/ and src/lib/sql/ may import drizzle-orm/d1 as a value. A query " +
+        "reaches D1 through src/env/d1.ts (coreDb, weatherDb, primaryCoreDb), which " +
+        "decides per query whether it reads the request's D1 session (maybe a read " +
+        "replica) or the primary (design 143, D-123). A handle built straight on a " +
+        "binding goes around that decision silently: it works, it just reads the " +
+        "primary, or a replica nobody chose. `import type { drizzle }` for " +
+        "`ReturnType<typeof drizzle>` stays allowed. test/architecture/d1-access.test.ts " +
+        "covers what an import rule cannot see: raw binding access. Added with design " +
+        "143 (owner-approved, 2026-10-17).",
+      from: { path: "^src/", pathNot: "^src/(env|lib/sql)/" },
+      to: { path: "drizzle-orm/d1", dependencyTypesNot: ["type-only"] },
+    },
+    {
       name: "lib-sql-is-server-only",
       severity: "error",
       comment:
@@ -135,8 +151,13 @@ module.exports = {
     // planting a sandbox copy and watching the gate flip. Reported upstream
     // as agentic-guardrails-scaffolding#55, since `guardrails init` seeds
     // both this config and stryker's.
+    // `node_modules` is not excluded, only not followed (above): excluding
+    // it drops every edge to a package, so a rule about an npm import
+    // (d1-handles-come-from-env) silently never fires. Measured when it was
+    // removed (design 143): the whole-repo cruise went 7.9s -> 8.5s, and a
+    // planted `import { drizzle } from "drizzle-orm/d1"` in a module failed.
     exclude: {
-      path: "(^|/)(dist|build|coverage|node_modules)/|^\\.claude/worktrees/|^\\.stryker-tmp/",
+      path: "(^|/)(dist|build|coverage)/|^\\.claude/worktrees/|^\\.stryker-tmp/",
     },
   },
 };

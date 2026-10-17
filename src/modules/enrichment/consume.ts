@@ -17,7 +17,7 @@ import { enrichJobSchema } from "./queue-messages";
 import { putSnapshot, readSnapshot, recordSnapshot } from "./snapshot";
 
 /**
- * The concrete handle `drizzle(env.DIALED_CORE)` returns, spelled out:
+ * The concrete handle `coreDb()` returns, spelled out:
  * `lib/sql/keyed-read` takes the un-parameterised `DrizzleD1Database`, and the
  * generic `ReturnType<typeof drizzle>` other modules use is wider than it —
  * so this names the one type both sides accept.

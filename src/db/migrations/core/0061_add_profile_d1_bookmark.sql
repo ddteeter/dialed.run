@@ -1,0 +1,1 @@
+ALTER TABLE `user_profiles` ADD `d1_bookmark` text;

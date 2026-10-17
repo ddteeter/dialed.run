@@ -4,15 +4,14 @@
  * TanStack virtual entries.
  */
 import { createServerFn } from "@tanstack/react-start";
-import { drizzle } from "drizzle-orm/d1";
 
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import { requireUserId } from "../auth";
 import { brandSearchInput } from "./inputs";
 import { searchBrands } from "./service";
 
 function db() {
-  return drizzle(env.DIALED_CORE);
+  return coreDb();
 }
 
 export const searchBrandsFn = createServerFn({ method: "GET" })

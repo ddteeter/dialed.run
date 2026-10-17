@@ -34,13 +34,12 @@
  * distance with a length-bucketed candidate set, not a phonetic key.
  */
 import { asc, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 
 import { brands, products } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 
 function db() {
-  return drizzle(env.DIALED_CORE);
+  return coreDb();
 }
 
 export interface DuplicateCandidate {
