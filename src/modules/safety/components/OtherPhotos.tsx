@@ -14,7 +14,7 @@ import type { OtherPhoto } from "../other-photos";
  * row's own are, because a copy may be hidden too, and each carries its
  * id, which the takedown form under Review takes. A photo whose kit's page
  * an operator can open links to it; a private kit, or one hidden pending
- * review, has no page an operator can open yet (register R-151), so its
+ * review, has no page an operator can open yet (register R-154), so its
  * photo is shown without a link.
  *
  * Nothing renders for a row that lists none (`undefined`): a link that is

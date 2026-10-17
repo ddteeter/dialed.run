@@ -250,7 +250,7 @@ test("someone with no account asks for an intimate image to come down, and an op
   await scene(page, "The runner's other photos, to check for copies");
   await expect(others).toContainText("Their other photos · 1");
   // The second kit is hidden by its own confirmed request, so its page
-  // would send an operator away: the photo shows with no link (R-151).
+  // would send an operator away: the photo shows with no link (R-154).
   await expect(others.getByRole("link")).toHaveCount(0);
   await expect(
     others.getByRole("img", {
