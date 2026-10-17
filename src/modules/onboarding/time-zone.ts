@@ -86,7 +86,9 @@ async function zoneForPlace(
  * The save has already stored the place with a NULL zone, and that marker
  * is what makes this safe to lose: a Worker that dies before the lookup
  * lands leaves a row the next `fillMissingTimeZones` firing picks up. A
- * place without both coordinates has no zone to look for.
+ * place without both coordinates has no zone to look for, and
+ * `zoneForPlace`'s guard is the one place that says so: a second copy here
+ * made each guard mask the other, so neither could be tested.
  *
  * Never rejects (law 5): a failed write is reported, and the marker stays.
  */
@@ -99,12 +101,10 @@ export function fillZoneInBackground(
   }>,
   deps: SaveZoneDeps,
 ): void {
-  const { lat, lng } = place;
-  if (typeof lat !== "number" || typeof lng !== "number") return;
   deps.keepAlive(
     (async () => {
       try {
-        await fillOne(db, { userId, lat, lng }, deps);
+        await fillOne(db, { userId, lat: place.lat, lng: place.lng }, deps);
       } catch (error: unknown) {
         deps.report(error, {
           surface: "onboarding.fillMissingTimeZones",
@@ -167,7 +167,11 @@ export async function fillMissingTimeZones(
 
 async function fillOne(
   db: DrizzleD1Database,
-  row: Readonly<{ userId: string; lat: number | null; lng: number | null }>,
+  row: Readonly<{
+    userId: string;
+    lat?: number | null | undefined;
+    lng?: number | null | undefined;
+  }>,
   deps: ZoneDeps,
 ): Promise<void> {
   const zone = await zoneForPlace(row, deps, row.userId);

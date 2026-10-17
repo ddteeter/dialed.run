@@ -268,7 +268,7 @@ describe("changing the place replaces or clears its zone", () => {
     ["a longitude with no latitude", { lng: -97.74 }],
     ["a label with no coordinates", { cityLabel: "Austin, TX, United States" }],
   ])(
-    "starts no background work for %s, leaving the zone NULL",
+    "looks nothing up for %s, leaving the zone NULL",
     async (_name, place) => {
       const userId = newUlid();
       await savedAt(userId, PORTLAND, zonesAnswering("America/Los_Angeles"));
@@ -282,7 +282,6 @@ describe("changing the place replaces or clears its zone", () => {
       );
       await zones.settled();
 
-      expect(zones.keepAlive).not.toHaveBeenCalled();
       expect(zones.zoneAt).not.toHaveBeenCalled();
       expect(await zoneOf(userId)).toBeNull();
     },
