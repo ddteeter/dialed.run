@@ -322,7 +322,9 @@ explicitly says the migration is yours — or the owner has said yes.
   audience. Strangers see only `runners` entries, and every check reads the
   audience, never the legacy booleans. Only `runners` entries appear in feeds
   or in in-app consensus and social-proof counts (the conditions consensus,
-  "worn by N"). **Published anonymous totals** — the marketing site's guides
+  "worn by N"), and the conditions consensus also drops the runs of anyone
+  who has turned off "Count my runs in anonymous totals"; it still shows
+  them the block. That one switch (`count_in_totals`) governs both. **Published anonymous totals** — the marketing site's guides
   and reports — **do count private runs**, under D-108's conditions: counted fields
   only (feels-like band, sky, month, garment type and model, verdict, region if
   set; never notes, photos, times, places or handles), 5+ distinct runners per
