@@ -108,7 +108,7 @@ export const runRemovalsQuery = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const ownerId = await requireUserId();
     return removalsOnRun(
-      drizzle(env.DIALED_CORE),
+      coreDb(),
       ownerId,
       data.runId,
       data.since,
