@@ -9,6 +9,7 @@
  */
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
+import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../db/schema-core";
 import { env } from "../../env";
@@ -26,8 +27,12 @@ export interface ConditionsHome {
   cityLabel: string | undefined;
 }
 
-export async function conditionsHome(userId: string): Promise<ConditionsHome> {
-  const [row] = await drizzle(env.DIALED_CORE)
+/**
+ * The read, by the profile's primary key, apart so a test can read its
+ * plan.
+ */
+export function conditionsHomeStatement(db: DrizzleD1Database, userId: string) {
+  return db
     .select({
       lat: userProfiles.lat,
       lng: userProfiles.lng,
@@ -36,6 +41,10 @@ export async function conditionsHome(userId: string): Promise<ConditionsHome> {
     .from(userProfiles)
     .where(eq(userProfiles.userId, userId))
     .limit(1);
+}
+
+export async function conditionsHome(userId: string): Promise<ConditionsHome> {
+  const [row] = await conditionsHomeStatement(drizzle(env.DIALED_CORE), userId);
   const lat = row?.lat ?? undefined;
   const lng = row?.lng ?? undefined;
   return {

@@ -19,6 +19,7 @@ import {
 import { notifications, outfitEntries, runs } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
 import { BELL_NUMBER_CAP } from "./bell-cap";
+import type { BellState } from "./bell-state";
 import type { NotificationsDb } from "./db";
 import { nowSeconds } from "../../lib/now";
 
@@ -47,6 +48,12 @@ export type NotificationKind =
  * would have to live at the call site.
  */
 export interface NotificationDraft {
+  /**
+   * When the row lands, when the caller must name that time in the same
+   * batch — the reminder email, whose send-time check reads the runner's
+   * reminders from its landing on (design 140). Now otherwise.
+   */
+  createdAt?: number;
   userId: string;
   kind: NotificationKind;
   /**
@@ -81,7 +88,7 @@ export function notificationInsert(
       subjectId: draft.subjectId,
       body: draft.body,
       read: false,
-      createdAt: nowSeconds(),
+      createdAt: draft.createdAt ?? nowSeconds(),
     })
     .onConflictDoNothing();
 }
@@ -168,16 +175,6 @@ This runner's unread rows — what the dot counts and what mark-all clears.
 */
 function unreadOf(userId: string) {
   return and(eq(notifications.userId, userId), eq(notifications.read, false));
-}
-
-/**
- * What the bell shows (round 22, item 13): a **number** when there are
- * runs waiting for a verdict, because each one is a thing to do, and
- * otherwise a **dot** for anything unread.
- */
-export interface BellState {
-  unreadCount: number;
-  verdictsWaiting: number;
 }
 
 /**

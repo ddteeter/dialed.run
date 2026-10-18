@@ -85,21 +85,50 @@ const importFileExpire = z.object({
 });
 
 /**
+ * Which Strava reminder an owed email is (design 140): the runner, when
+ * the reminder that owed it landed — its bell row's `created_at` — and the
+ * runner's calendar day. A second reminder that day takes the row over and
+ * leaves this as it was, so the email stands for every reminder from that
+ * landing on, not for one bell row.
+ */
+const reminderEmailRefSchema = z.object({
+  userId: z.string().min(1),
+  landedAt: z.number().int(),
+  day: z.string().min(1),
+});
+
+export type ReminderEmailRef = z.infer<typeof reminderEmailRefSchema>;
+
+/**
  * An email owed (task 126, ACC-2): anything secondary to the write that
  * owes it — an invite, a notice, the run reminder — so the event and the
  * intent to tell someone about it commit together (law 8c) and the drain
  * retries a send that failed.
  *
  * `dedupeKey` is the caller's name for "the same email": a second debt
- * with it is the same row. A row can be held back (ops' `oweOutbox`
+ * with it is the same row, and **the first payload stays**. The second
+ * takes the row over (ops' `outboxInsert`: the id and when it is due) and
+ * never rewrites what it says. That is what makes two of a runner's
+ * reminders landing at once safe: both owe the day's key, one row is
+ * written, and one email goes, saying what the first one owed. A row can
+ * be held back (ops' `oweOutbox`
  * `notBefore`) — task 127's reminder goes out 20 minutes after the run
  * lands — and a held row is left to the drain, never a fast path.
+ *
+ * `reminder` marks task 127's Strava reminder (design 140): the runner,
+ * when the reminder that owed it landed, and the runner's day it is that
+ * day's email for. Checked when it is due — no reminder from that landing
+ * on still unread (an upload pairs and reads its own), the runner no
+ * longer connected, or the day's email already sent, and nothing goes —
+ * and the day is marked sent in the batch that marks the row sent. Optional, so a row an earlier deploy wrote still
+ * parses (law 9).
  */
 const email = z.object({
   kind: z.literal("email"),
   payload: z.object({
     dedupeKey: z.string().min(1),
     email: emailPayloadSchema,
+    reminder: reminderEmailRefSchema.optional(),
   }),
 });
 

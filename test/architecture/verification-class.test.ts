@@ -190,7 +190,9 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "feed/functions.ts followStatusQuery": "unconfirmed",
   "feed/functions.ts followingFeedQuery": "unconfirmed",
   "feed/functions.ts yourConditionsQuery": "unconfirmed",
-  "feed/functions.ts conditionsHomeQuery": "unconfirmed",
+  // The runner's own saved place, and E1's compact line from it (FEED-9):
+  // the same read of their own conditions.
+  "feed/functions.ts feedConditionsQuery": "unconfirmed",
   "feed/functions.ts saveConditionsCityAction": "unconfirmed",
   "feed/functions.ts viewerUnitsQuery": "sessionless",
   "feed/functions.ts ownProfileQuery": "unconfirmed",
@@ -207,7 +209,6 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "feed/functions.ts decideRemovalRequestAction": "admin",
   // ---- notifications
   "notifications/functions.ts listNotificationsFn": "unconfirmed",
-  "notifications/functions.ts unreadNotificationCountFn": "unconfirmed",
   "notifications/functions.ts markAllNotificationsReadFn": "unconfirmed",
   "notifications/functions.ts bellStateFn": "unconfirmed",
   // ---- onboarding

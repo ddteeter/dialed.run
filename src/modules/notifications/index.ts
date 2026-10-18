@@ -18,6 +18,6 @@ export {
   markAllNotificationsRead,
   unreadNotificationCount,
   type AwaitingVerdict,
-  type BellState,
   type NotificationKind,
 } from "./service";
+export type { BellState } from "./bell-state";

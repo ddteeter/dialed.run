@@ -225,7 +225,7 @@ describe("D's under-review band (R-62; round 28 #6)", () => {
 
     expect([...band.children].map((line) => line.textContent)).toStrictEqual([
       "Hidden while we check",
-      "Only you can see this while we look at it.",
+      "Other runners can't see this while we look at it.",
       "You can still edit or delete it.",
     ]);
     // First under the heading row, before the strip: "the band at the top".

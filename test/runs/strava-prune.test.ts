@@ -6,6 +6,7 @@ import {
   gaveUp,
   notifications,
   processedWebhookEvents,
+  reminderEmailDays,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
@@ -146,6 +147,25 @@ describe("pruneStravaIds", () => {
     expect(await gaveUpRow("import", otherKind)).toBeDefined();
   });
 
+  it("forgets which days a reminder email went once they are a week old", async () => {
+    const now = nowSeconds();
+    const userId = newUlid();
+    await coreDb()
+      .insert(reminderEmailDays)
+      .values([
+        { userId, day: "old", coveredUntil: now - 8 * DAY },
+        { userId, day: "recent", coveredUntil: now - 6 * DAY },
+      ]);
+
+    await pruneStravaIds(coreDb());
+
+    const left = await coreDb()
+      .select({ day: reminderEmailDays.day })
+      .from(reminderEmailDays)
+      .where(eq(reminderEmailDays.userId, userId));
+    expect(left).toStrictEqual([{ day: "recent" }]);
+  });
+
   it("touches no other kind's subject, however old", async () => {
     const now = nowSeconds();
     const userId = newUlid();
@@ -205,6 +225,14 @@ describe("the prune reads by index, not by scanning (D1 bills rows scanned)", ()
       .where(and(eq(gaveUp.kind, "reminder"), lt(gaveUp.lastFailedAt, cutoff)))
       .toSQL();
 
+    const emailDays = db
+      .delete(reminderEmailDays)
+      .where(lt(reminderEmailDays.coveredUntil, cutoff))
+      .toSQL();
+
+    const emailDaysPlan = await planOf(emailDays.sql, emailDays.params);
+    expect(emailDaysPlan).toMatch(/reminder_email_days_covered_until/u);
+    expect(emailDaysPlan).not.toMatch(/SCAN\s+reminder_email_days/iu);
     const keysPlan = await planOf(keys.sql, keys.params);
     const deadLettersPlan = await planOf(deadLetters.sql, deadLetters.params);
     const remindersPlan = await planOf(reminders.sql, reminders.params);

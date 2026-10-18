@@ -1035,6 +1035,64 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       neither words nor a place; a signed-in runner already has the reason
       itself. Not built. **The ask:** the words and where they sit in W1.
 
+64. **"Private" no longer says "only you" (owner, 2026-10-12; D-121, PR
+    #182).** The policy now says private means not shown to other runners
+    or the public; operators may see content for named reasons. Lane D1
+    (PR #187) rewrote the drawn copy that promised more, against the
+    boards' words:
+    - A3/PrivateRunLine: "Only you see this run." → "Other runners won't
+      see this run."
+    - The UNDER REVIEW tag's spoken name (round 29 #4): "Under review,
+      only you can see this" → "Under review, other runners can't see
+      this".
+    - D's "Hidden while we check" band (round 28 #6): "Only you can see
+      this while we look at it." → "Other runners can't see this while we
+      look at it."
+    - The garment photo's "Being checked" band (round 27 #21): "Only you
+      can see this photo until it's checked, usually within a day." →
+      "Other runners can't see this photo until it's checked, usually
+      within a day."
+    - The export's `audience` column note: "private means only you" →
+      "private means other runners don't see it".
+    - **The verbs differ by tense, on purpose:** A3's "won't" is said
+      before the run is saved, a promise; the review tag and bands' "can't"
+      describe something already there and hidden; the export's "don't"
+      states the rule. All of them name the same audience, other runners.
+    - **Kept:** the closet tile's `[ONLY YOU]` tag on a photo being
+      checked. It is a MONO.xs tag in a tile's kicker, where "other runners
+      can't see this" does not fit, and the band on the garment's own page
+      says the full sentence.
+    - Settings › Sharing's totals line (round 32, 1a): "Never your name,
+      notes, photos, or where and when you ran." → "Never your name,
+      notes, photos, when you ran, or any place more precise than a broad
+      climate zone." Totals count a climate zone derived from where a run
+      was (D-120), so "where" was untrue.
+    - **U2's conditions pool folds into that switch** (owner, 2026-10-12).
+      U2's "THE CONDITIONS POOL" card is not drawn separately: Settings ›
+      Privacy's one totals switch (one writer, `setCountInTotals`) now also
+      leaves a runner's shared runs out of the in-app Same conditions block,
+      and its lines say so — on: "…to the guides and reports, and shared
+      runs count in the Same conditions block other runners see. Never…";
+      off: "Off. Your runs leave the guides at tonight's update. They leave
+      the Same conditions block now, and it still works for you. Reports
+      already published stay as they are." **Proposed wording, awaiting
+      the owner's.** U2's SHARED/NEVER table is not built.
+      **The ask:** fold these into the boards, or reword them.
+
+65. **E1's compact line, composed from the E2 frame (FEED-9; PR #187).**
+    Round 25 rewords "E1's compact line", but no E1 frame draws a
+    conditions line; the sentence is drawn only on `Remaining Screens`'
+    unbuilt "E2 Feed your conditions" frame. Built from that frame's
+    composition, with contract values: a teal band (`bg-teal`, ink text),
+    the SAME CONDITIONS eyebrow without a window (MONO.xs), and the line
+    "{n} runners logged {feels}° and {precip} in the last 3 days." at
+    `text-body` semibold, at the top of Following above the posts. Three
+    things the frame does not say: the match widened to fourteen days reads
+    "in the last 2 weeks"; with no saved place, no fresh reading there, or
+    fewer than five runners, there is no line; Following with no posts
+    keeps its empty state and draws no line. **The ask:** draw E1's line
+    where it sits, and its widened and absent states.
+
 ## Answered in round 37 (imported 2026-10-10)
 
 Design sent round 37 as `Round 37 Rulings.dc.html`, with the text of record
@@ -3807,6 +3865,14 @@ contract values moved.
 FEELS [{lo}–{hi}°] · {PRECIP} · {WINDOW}`; line "In {feels}° and
   {precip}, {window}, wherever they were." Wind leaves the eyebrow; no line
   names a place. E1's compact line and N's privacy card follow. Not built.
+  **E1's compact line: built (lane D1, PR #187, 2026-10-12)**, composed
+  from the E2 frame because no E1 frame draws one (owner, 2026-10-12;
+  item 65). **N's privacy card: folded into the totals switch** (owner,
+  2026-10-12). It is U2 Privacy's "THE CONDITIONS POOL" card, whose copy
+  describes the in-app pool, not the published totals `count_in_totals`
+  governed. The owner made one switch cover both: an opted-out runner's
+  shared runs leave the in-app block, and the totals switch's lines say
+  so (item 64).
 
 **Round 24's asks were still open** (answered in round 26, above) — the time correction on A1, R2b's
 options, the delete-with-runs sheet, "Garment saved, photo didn't", the

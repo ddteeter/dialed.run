@@ -925,6 +925,32 @@ export const notifications = /*#__PURE__*/ sqliteTable(
   ],
 );
 
+/**
+ * The days a runner was sent a Strava reminder email (task 127 · STR-9,
+ * design 140): one row per runner per day of theirs, written in the batch
+ * that marks the email sent. "At most one a day" reads it twice — when a
+ * reminder lands (owe nothing if today's went) and when the email is due
+ * (send nothing if today's went) — so a first email skipped by an upload
+ * no longer silences the rest of the day, and a second debt racing the
+ * first cannot send twice. `day` is the runner's calendar day as
+ * `lib/dates`' `calendarDay` writes it; `covered_until` is what yesterday's
+ * email covered, for the next day's count. Deleted after a week by the
+ * daily Strava prune: nothing reads past yesterday.
+ */
+export const reminderEmailDays = /*#__PURE__*/ sqliteTable(
+  "reminder_email_days",
+  {
+    userId: text("user_id").notNull(),
+    day: text("day").notNull(),
+    coveredUntil: integer("covered_until").notNull(),
+  },
+  (t) => [
+    uniqueIndex("reminder_email_days_user_day").on(t.userId, t.day),
+    // The prune's read: rows older than a cutoff.
+    index("reminder_email_days_covered_until").on(t.coveredUntil),
+  ],
+);
+
 export const stravaConnections = /*#__PURE__*/ sqliteTable(
   "strava_connections",
   {

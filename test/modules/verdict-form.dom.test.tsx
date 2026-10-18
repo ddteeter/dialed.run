@@ -1154,7 +1154,7 @@ describe("VerdictForm: tags and sharing", () => {
     // picked before the sheet opened was lost.
     expect(
       screen.getByRole("checkbox", { name: "Share to feed" }),
-    ).toHaveAccessibleDescription("Only you see this run.");
+    ).toHaveAccessibleDescription("Other runners won't see this run.");
     expect(screen.getByRole("button", { name: "Dialed" })).toHaveAttribute(
       "aria-pressed",
       "true",

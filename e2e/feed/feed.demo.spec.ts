@@ -357,7 +357,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await scene(page, "The bell counts a month-old run still owed a verdict");
     await expect(
       page
-        .getByRole("link", { name: /^Notifications, (\d+|9\+) new$/u })
+        .getByRole("link", { name: /^Notifications, (\d+|more than 9) new$/u })
         .first(),
     ).toBeVisible();
 
@@ -442,6 +442,11 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       hasText: publicCaption,
     });
     await expect(card).toBeVisible();
+    // FEED-9: the compact line tops Following — the Portland runners above
+    // matched at the city this runner just saved, in round 25's words.
+    const compact = page.locator('[data-part="compact-conditions"]');
+    await expect(compact).toContainText("runners logged");
+    await expect(compact).toContainText("in the last 3 days.");
     // The author is their handle, "@" and all (FEED-10).
     await expect(card.locator('[data-part="author"]')).toContainText(
       `@${otherUsername}`,
@@ -726,7 +731,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     );
     await expect(
       ownCard.locator('a[href^="/feed/entry/"]'),
-    ).toHaveAccessibleName(/Under review, only you can see this/u);
+    ).toHaveAccessibleName(/Under review, other runners can't see this/u);
     await expect(ownCard.getByText(/· You$/u)).toBeVisible();
     await expect(ownCard.getByText("1 / 2")).toBeVisible();
     await scene(page, "D · HIDDEN WHILE WE CHECK, at the top");
@@ -734,7 +739,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await hydrated(page);
     const hiddenBand = page.locator('[data-part="notice-band"]');
     await expect(hiddenBand).toContainText(
-      "Only you can see this while we look at it.",
+      "Other runners can't see this while we look at it.",
     );
     await expect(hiddenBand).toContainText("You can still edit or delete it.");
     await expect(page.locator('[data-part="review-tag"]')).toHaveCount(0);

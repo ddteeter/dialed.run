@@ -3,6 +3,7 @@
  * pattern) — keeps this module's other files loadable in the vitest
  * workers pool with no TanStack virtual entries.
  */
+import type { BellState } from "../notifications";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { drizzle } from "drizzle-orm/d1";
@@ -78,25 +79,20 @@ export const settingsQuery = createServerFn({ method: "GET" }).handler(
 
 /**
  * What every settings sub-page loader needs: the current settings and the
- * bell's unread count, resolved together. Takes the unread-count promise
- * already in flight, rather than importing modules/notifications' functions
+ * bell's state, resolved together. Takes the bell's promise already in
+ * flight, rather than importing modules/notifications' functions
  * here — this file is onboarding's own server-fn glue, and reaching into
  * another module's `functions.ts` would be the deep-import
  * `no-cross-module-deep-imports` forbids. The two settings sub-page routes
  * (units, sharing) call this instead of each hand-rolling the same
  * `Promise.all`.
  */
-export async function settingsSubPageData(
-  unreadCount: Promise<number>,
-): Promise<{
+export async function settingsSubPageData(bell: Promise<BellState>): Promise<{
   current: Awaited<ReturnType<typeof settingsQuery>>;
-  unreadCount: number;
+  bell: BellState;
 }> {
-  const [current, resolvedUnreadCount] = await Promise.all([
-    settingsQuery(),
-    unreadCount,
-  ]);
-  return { current, unreadCount: resolvedUnreadCount };
+  const [current, resolvedBell] = await Promise.all([settingsQuery(), bell]);
+  return { current, bell: resolvedBell };
 }
 
 export const saveUnitsFn = createServerFn({ method: "POST" })

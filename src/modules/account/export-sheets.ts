@@ -295,7 +295,7 @@ export function buildSheets(rows: ExportRows): ExportSheets {
       {
         name: "audience",
         about:
-          "who can see this run's kit and verdict: shared means any runner on dialed.run, private means only you.",
+          "who can see this run's kit and verdict: shared means any runner on dialed.run, private means other runners don't see it.",
         value: (entry) => entry.audience,
       },
       {

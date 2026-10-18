@@ -262,7 +262,7 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
   await share.uncheck();
   await expect(
     page.getByText(
-      "Only you see this run. Its kit and verdict still count, anonymously, in the guides.",
+      "Other runners won't see this run. Its kit and verdict still count, anonymously, in the guides.",
     ),
   ).toBeVisible();
   await page.getByRole("button", { name: "Change" }).click();
@@ -279,7 +279,7 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
     sharing.getByText("Off. Your runs leave the guides at tonight's update."),
   ).toBeVisible();
   await expect(
-    page.getByText("Only you see this run.", { exact: true }),
+    page.getByText("Other runners won't see this run.", { exact: true }),
   ).toBeAttached();
   await totals.click();
   await expect(totals).toBeChecked();

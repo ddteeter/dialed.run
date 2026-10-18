@@ -1,7 +1,16 @@
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import {
+  compactConditions,
+  feedConditions,
+} from "../../src/modules/feed/compact-conditions";
+import { conditionsHomeStatement } from "../../src/modules/feed/home";
+import { setCountInTotals } from "../../src/modules/onboarding/aggregate-prefs";
+import { newUlid } from "../../src/lib/ids";
 import { pointConditions } from "../feed/conditions-fixture";
 import {
   BAND_HALF_WIDTH_C,
@@ -329,6 +338,72 @@ describe("yourConditionsConsensus: the floor and the window", () => {
   });
 });
 
+/**
+Turned off through Settings › Privacy's one writer.
+*/
+async function optOut(userId: string): Promise<void> {
+  await setCountInTotals(drizzle(env.DIALED_CORE), userId, {
+    countInTotals: false,
+  });
+}
+
+describe("the totals switch covers the block (U2 folded into count_in_totals)", () => {
+  beforeEach(resetTables);
+
+  it("leaves out a runner who turned totals off, and the floor counts without them", async () => {
+    const optedOut = await runner();
+    await runners(4);
+    expect(await runnersIn(VIEWER, THREE_DAYS_AGO)).toBe(5);
+
+    await optOut(optedOut);
+    expect(await matchTally(VIEWER, THREE_DAYS_AGO)).toStrictEqual({
+      runners: 4,
+      groups: { tops: 4 },
+    });
+    expect(await yourConditionsConsensus(VIEWER, NOW)).toMatchObject({
+      status: "too-few",
+    });
+  });
+
+  it("counts a runner who turned totals back on, and one with no profile row", async () => {
+    const back = await runner();
+    await optOut(back);
+    await setCountInTotals(drizzle(env.DIALED_CORE), back, {
+      countInTotals: true,
+    });
+    // Nothing creates a profile at signup: no row is counted, as the
+    // column's default says.
+    await runner({ userId: newUlid() });
+    expect(await runnersIn(VIEWER, THREE_DAYS_AGO)).toBe(2);
+  });
+
+  it("still shows the block to a viewer who turned totals off", async () => {
+    const viewerId = await runner();
+    await optOut(viewerId);
+    await runners(5);
+    expect(await yourConditionsConsensus(VIEWER, NOW, viewerId)).toMatchObject({
+      status: "matched",
+      runners: 5,
+    });
+  });
+
+  it("looks each entry's runner up by the profile's primary key, never a scan", async () => {
+    const { sql, params } = recentPublicEntriesStatement(
+      drizzle(env.DIALED_CORE),
+      THREE_DAYS_AGO,
+      "01VIEWER",
+    ).toSQL();
+    const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+      .bind(...params)
+      .all<{ detail: string }>();
+    const details = plan.results.map((row) => row.detail).join("\n");
+    expect(details).toMatch(
+      /SEARCH user_profiles USING INDEX sqlite_autoindex_user_profiles_1 \(user_id=\?\)/u,
+    );
+    expect(details).not.toMatch(/SCAN\s+user_profiles/iu);
+  });
+});
+
 describe("shownGroups", () => {
   it("drops a group worn by fewer than two, and puts the most-worn first", () => {
     expect(
@@ -375,3 +450,121 @@ describe("consensusAt", () => {
     });
   });
 });
+
+describe("feedConditions: the saved place, and E1's line from it (FEED-9)", () => {
+  beforeEach(resetTables);
+
+  it("is the matched consensus at the profile's place, leaving the viewer out", async () => {
+    await makeObservation({
+      lat: 82,
+      lng: 82,
+      startedAt: NOW,
+      tempC: 8,
+      feelsLikeC: 7,
+    });
+    const viewerId = await viewerAt(82, 82);
+    await runners(5);
+
+    expect(await feedConditions(viewerId, NOW)).toMatchObject({
+      home: { coords: { lat: 82, lng: 82 } },
+      compact: { status: "matched", runners: 5, windowDays: 3 },
+    });
+  });
+
+  it("is nothing with too few runners, no reading there, or no saved place", async () => {
+    await makeObservation({
+      lat: 83,
+      lng: 83,
+      startedAt: NOW,
+      tempC: 8,
+      feelsLikeC: 7,
+    });
+    await runners(4);
+    const lineFor = async (viewerId: string) => {
+      const { compact } = await feedConditions(viewerId, NOW);
+      return compact;
+    };
+    expect(await lineFor(await viewerAt(83, 83))).toBeUndefined();
+    await runner();
+    expect(await lineFor(await viewerAt(84, 84))).toBeUndefined();
+    expect(await feedConditions(await viewerAt(), NOW)).toStrictEqual({
+      home: { coords: undefined, cityLabel: undefined },
+      compact: undefined,
+    });
+  });
+
+  it("draws no line, and reports, when the conditions read fails", async () => {
+    const viewerId = await viewerAt();
+    const failure = new Error("weather down");
+    const report = vi.fn();
+
+    expect(
+      await compactConditions(
+        viewerId,
+        { lat: 85, lng: 85 },
+        NOW,
+        () => Promise.reject(failure),
+        report,
+      ),
+    ).toBeUndefined();
+    expect(report).toHaveBeenCalledExactlyOnceWith(failure, {
+      userId: viewerId,
+      surface: "compact-conditions",
+    });
+  });
+
+  it("asks nothing and reports nothing when there is no saved place", async () => {
+    const consensus = vi.fn();
+    const report = vi.fn();
+
+    expect(
+      await compactConditions("01VIEWER", undefined, NOW, consensus, report),
+    ).toBeUndefined();
+    expect(consensus).not.toHaveBeenCalled();
+    expect(report).not.toHaveBeenCalled();
+  });
+
+  it("draws no line, and does not report, when there is no reading at the place", async () => {
+    const report = vi.fn();
+
+    expect(
+      await compactConditions(
+        "01VIEWER",
+        { lat: 86, lng: 86 },
+        NOW,
+        () => Promise.resolve(undefined),
+        report,
+      ),
+    ).toBeUndefined();
+    expect(report).not.toHaveBeenCalled();
+  });
+
+  it("reads the saved place by the profile's primary key", async () => {
+    const { sql, params } = conditionsHomeStatement(
+      drizzle(env.DIALED_CORE),
+      "01VIEWER",
+    ).toSQL();
+    const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+      .bind(...params)
+      .all<{ detail: string }>();
+    const details = plan.results.map((row) => row.detail).join("\n");
+    expect(details).toMatch(
+      /SEARCH user_profiles USING INDEX sqlite_autoindex_user_profiles_1 \(user_id=\?\)/u,
+    );
+    expect(details).not.toMatch(/SCAN\s+user_profiles/iu);
+  });
+});
+
+/**
+A viewer whose profile saved this place, or none.
+*/
+async function viewerAt(lat?: number, lng?: number): Promise<string> {
+  const viewerId = await makeUser();
+  if (lat !== undefined) {
+    await drizzle(env.DIALED_CORE)
+      .update(userProfiles)
+      .set({ lat, lng })
+      .where(eq(userProfiles.userId, viewerId));
+  }
+  return viewerId;
+}

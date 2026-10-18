@@ -379,6 +379,13 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
     await page.goto("/runs");
     await hydrated(page);
     await expect(page.locator('[data-slot="run-row"]').first()).toBeVisible();
+    // FEED-3: the runs pages' bell counts the runs still owed a verdict,
+    // where it used to show only a dot.
+    await expect(
+      page
+        .getByRole("link", { name: /^Notifications, (\d+|more than 9) new$/u })
+        .first(),
+    ).toHaveAttribute("data-state", "number");
 
     await scene(page, "No weather came back — set it by picking, never typing");
     const stale = page.locator('[data-slot="run-row"]').filter({

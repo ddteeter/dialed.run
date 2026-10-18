@@ -1,9 +1,15 @@
-import { eq } from "drizzle-orm";
+import { eq, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { outbox, products, stravaConnections } from "../../src/db/schema-core";
+import {
+  outbox,
+  products,
+  stravaConnections,
+  userProfiles,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { clockLabel } from "../../src/lib/dates";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { handleQueueBatch } from "../../src/modules/ops";
@@ -97,6 +103,38 @@ describe("handleQueueBatch routes by queue name", () => {
         dedupeKey: `strava_disconnected:${userId}:1516126040`,
       },
     ]);
+  });
+
+  it("hands the imports consumer the runner's zone, for the reminder email's clock", async () => {
+    // R-152: onboarding's `runnerTimeZone`, so the profile's zone, with no
+    // run to fall back on. Kolkata is UTC+5:30, so its clock never reads
+    // the same as UTC's.
+    const db = drizzle(env.DIALED_CORE);
+    const userId = newUlid();
+    const athleteId = newUlid();
+    const zone = "Asia/Kolkata";
+    await db.insert(stravaConnections).values({
+      userId,
+      athleteId,
+      refreshToken: "refresh",
+    });
+    await db.insert(userProfiles).values({ userId, timeZone: zone });
+    const message = fakeMessage("m9", {
+      type: "strava_reminder",
+      athleteId,
+      objectId: newUlid(),
+      aspectType: "create",
+      eventTime: nowSeconds(),
+    });
+
+    await handleQueueBatch(batchOf("dialed-imports", [message]));
+
+    const [owed] = await db
+      .select({ nextAttemptAt: outbox.nextAttemptAt, payload: outbox.payload })
+      .from(outbox)
+      .where(like(outbox.dedupeKey, `run_reminder:${userId}:%`));
+    const landed = (owed?.nextAttemptAt ?? 0) - 20 * 60;
+    expect(owed?.payload).toContain(`"landedAt":"${clockLabel(landed, zone)}"`);
   });
 
   it("hands a dialed-imports-dlq batch to the DLQ consumer", async () => {

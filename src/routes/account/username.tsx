@@ -7,7 +7,7 @@ import {
 } from "../../modules/account/functions";
 import { requireSession } from "../../modules/auth/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
-import { unreadNotificationCountFn } from "../../modules/notifications/functions";
+import { bellStateFn } from "../../modules/notifications/functions";
 import { SettingsSubPage } from "../../modules/onboarding/components/SettingsSubPage";
 
 /**
@@ -18,20 +18,17 @@ import { SettingsSubPage } from "../../modules/onboarding/components/SettingsSub
 export const Route = createFileRoute("/account/username")({
   loader: async ({ location }) => {
     await requireSession(location);
-    const [{ username }, unreadCount] = await Promise.all([
-      usernameQuery(),
-      unreadNotificationCountFn(),
-    ]);
-    return { username, unreadCount };
+    const [account, bell] = await Promise.all([usernameQuery(), bellStateFn()]);
+    return { username: account.username, bell };
   },
   component: UsernamePage,
 });
 
 function UsernamePage() {
-  const { username, unreadCount } = Route.useLoaderData();
+  const { username, bell } = Route.useLoaderData();
 
   return (
-    <BelledLayout unreadCount={unreadCount}>
+    <BelledLayout {...bell}>
       <SettingsSubPage title="Username">
         <HandleForm
           initial={username}
