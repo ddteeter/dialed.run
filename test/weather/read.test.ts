@@ -87,18 +87,14 @@ describe("observationsForRuns (103, consensus batch read for 104)", () => {
 
     const realRun = await insertRun({ lat: 75.1, lng: 35.1 });
     const key = cacheKeyFor(75.1, 35.1, new Date(1_768_500_000 * 1000));
-    await upsertRealObservation(
-      key,
-      {
-        tempC: 4,
-        feelsLikeC: 2,
-        humidity: 60,
-        windKph: 8,
-        precipMm: 0,
-        condition: "clear",
-      },
-      realRun,
-    );
+    await upsertRealObservation(key, {
+      tempC: 4,
+      feelsLikeC: 2,
+      humidity: 60,
+      windKph: 8,
+      precipMm: 0,
+      condition: "clear",
+    });
 
     const results = await observationsForRuns([manualRun, realRun]);
     expect(results.has(manualRun)).toBe(false);
@@ -139,7 +135,6 @@ async function plantAt(lat: number, lng: number): Promise<void> {
   await upsertRealObservation(
     cacheKeyFor(lat, lng, new Date(1_768_500_000 * 1000)),
     ELSEWHERE,
-    undefined,
   );
 }
 
@@ -158,7 +153,7 @@ describe("observationsForRuns answers about exactly the runs it was asked about"
     // No chunks, so no query, rather than the query returning nothing: an
     // `or()` of no conditions is no `WHERE` at all, which matches every
     // run in the table.
-    const cached = await insertRun({ lat: 76.1, lng: 36.1 });
+    await insertRun({ lat: 76.1, lng: 36.1 });
     await upsertRealObservation(
       cacheKeyFor(76.1, 36.1, new Date(1_768_500_000 * 1000)),
       {
@@ -169,7 +164,6 @@ describe("observationsForRuns answers about exactly the runs it was asked about"
         precipMm: 0,
         condition: "clear",
       },
-      cached,
     );
 
     const results = await observationsForRuns([]);
@@ -178,10 +172,11 @@ describe("observationsForRuns answers about exactly the runs it was asked about"
 
   it("does not answer about a run it was not asked about", async () => {
     const asked = await insertRun({ lat: 77.1, lng: 37.1 });
-    const notAsked = await insertRun({ lat: 78.1, lng: 38.1 });
-    for (const [runId, lat, lng] of [
-      [asked, 77.1, 37.1],
-      [notAsked, 78.1, 38.1],
+    // Both runs exist and both cells are cached: only the ask decides.
+    await insertRun({ lat: 78.1, lng: 38.1 });
+    for (const [lat, lng] of [
+      [77.1, 37.1],
+      [78.1, 38.1],
     ] as const) {
       await upsertRealObservation(
         cacheKeyFor(lat, lng, new Date(1_768_500_000 * 1000)),
@@ -193,7 +188,6 @@ describe("observationsForRuns answers about exactly the runs it was asked about"
           precipMm: 0,
           condition: "clear",
         },
-        runId,
       );
     }
 
@@ -214,18 +208,14 @@ describe("observationsForRuns takes any number of runs (R-117)", () => {
     for (let index = 0; index < 120; index += 1) {
       const lat = 10.1 + index / 10;
       const runId = await insertRun({ lat, lng: -60.1 });
-      await upsertRealObservation(
-        cacheKeyFor(lat, -60.1, at),
-        {
-          tempC: index,
-          feelsLikeC: index,
-          humidity: 50,
-          windKph: 5,
-          precipMm: 0,
-          condition: "clear",
-        },
-        runId,
-      );
+      await upsertRealObservation(cacheKeyFor(lat, -60.1, at), {
+        tempC: index,
+        feelsLikeC: index,
+        humidity: 50,
+        windKph: 5,
+        precipMm: 0,
+        condition: "clear",
+      });
       planted.set(runId, index);
       asked.push(runId);
     }

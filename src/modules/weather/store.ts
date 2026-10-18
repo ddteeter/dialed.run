@@ -116,12 +116,10 @@ async function upsertObservation(
 export async function upsertRealObservation(
   key: CacheKey,
   observation: WeatherObservation,
-  runId: Ulid | undefined,
 ): Promise<ObservationRow> {
   const fetchedAt = nowSeconds();
   const values = {
     id: newUlid(),
-    runId,
     latR: key.latR,
     lngR: key.lngR,
     hourBucket: key.hourBucket,

@@ -14,7 +14,7 @@ import {
 
 /**
  * Public API: forecast conditions at a future time+place. Not tied to any
- * run — `run_id` is informational only, so cache writes leave it unset.
+ * run, as no cache row is.
  */
 export async function forecast(
   lat: number,
@@ -28,6 +28,6 @@ export async function forecast(
   }
   const provider = weatherProvider();
   const observation = await provider.forecast(lat, lng, at);
-  const row = await upsertRealObservation(key, observation, undefined);
+  const row = await upsertRealObservation(key, observation);
   return toWeatherObservation(row);
 }

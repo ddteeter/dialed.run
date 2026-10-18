@@ -131,18 +131,14 @@ describe("attachObservation (103)", () => {
       12.5,
       new Date(OBSERVATION_HOUR_EPOCH * 1000),
     );
-    await upsertRealObservation(
-      key,
-      {
-        tempC: 1,
-        feelsLikeC: -1,
-        humidity: 90,
-        windKph: 5,
-        precipMm: 0,
-        condition: "fog",
-      },
-      newUlid(),
-    );
+    await upsertRealObservation(key, {
+      tempC: 1,
+      feelsLikeC: -1,
+      humidity: 90,
+      windKph: 5,
+      precipMm: 0,
+      condition: "fog",
+    });
     const fetchSpy = mockVisualCrossing();
     expect(await attachObservation(runId)).toBe("attached");
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -261,7 +257,6 @@ describe("attachObservation samples every hour a run spans", () => {
         precipMm: 0,
         condition: "clear",
       },
-      undefined,
     );
     const fetchSpy = mockVisualCrossing();
     const runId = await insertRun({ durationS: 3600, lat: 42.33, lng: -72.33 });
@@ -401,7 +396,6 @@ describe("a band set for one run is never another run's weather (B1)", () => {
     const stored = await observationsAt(lat);
     const cell = stored.get(Math.floor(OBSERVATION_HOUR_EPOCH / 3600));
     expect(cell?.tempC).toBeCloseTo(-4.8, 5);
-    expect(cell?.runId).toBe(second);
     // And the first runner's band is still theirs, untouched.
     expect(await statusOf(first)).toBe("manual");
     expect(await bandOf(first)).toBe(-7);
@@ -424,14 +418,12 @@ Every observation row stored for this rounded latitude, by hour bucket.
 */
 async function observationsAt(
   lat: number,
-): Promise<Map<number, { tempC: number; runId: string | null }>> {
+): Promise<Map<number, { tempC: number }>> {
   const rows = await drizzle(env.DIALED_WEATHER)
     .select()
     .from(weatherObservations)
     .where(eq(weatherObservations.latR, lat));
-  return new Map(
-    rows.map((row) => [row.hourBucket, { tempC: row.tempC, runId: row.runId }]),
-  );
+  return new Map(rows.map((row) => [row.hourBucket, { tempC: row.tempC }]));
 }
 
 describe("each sampled hour gets that hour's weather", () => {
@@ -461,10 +453,10 @@ describe("each sampled hour gets that hour's weather", () => {
     expect(stored.get(startBucket + 1)?.tempC).toBeCloseTo(-3.9, 5);
   });
 
-  it("links only the starting hour to the run", async () => {
-    // The row is a shared cache cell — a later hour belongs to everyone
-    // who runs through it. Linking every sampled hour to this run would
-    // make one run look like several to anything reading `run_id`.
+  it("names the run in no hour it stores (C1)", async () => {
+    // The row is a shared cache cell, found by place and hour. One that
+    // named a run outlived that run's deletion, so none does — read raw,
+    // as the migrated database holds it, not through the drizzle shape.
     mockVisualCrossing();
     const lat = 43.55;
     const lng = -73.55;
@@ -472,10 +464,16 @@ describe("each sampled hour gets that hour's weather", () => {
 
     await attachObservation(runId);
 
-    const startBucket = Math.floor(OBSERVATION_HOUR_EPOCH / 3600);
-    const stored = await observationsAt(lat);
-    expect(stored.get(startBucket)?.runId).toBe(runId);
-    expect(stored.get(startBucket + 1)?.runId).toBeNull();
+    const { results } = await env.DIALED_WEATHER.prepare(
+      "SELECT * FROM weather_observations WHERE lat_r = ?",
+    )
+      .bind(lat)
+      .all();
+    expect(results).toHaveLength(2);
+    for (const row of results) {
+      expect(Object.keys(row)).not.toContain("run_id");
+      expect(Object.values(row)).not.toContain(runId);
+    }
   });
 });
 
@@ -536,7 +534,6 @@ describe("recordManualObservation refuses what it cannot key", () => {
         precipMm: 0,
         condition: "clear",
       },
-      undefined,
     );
 
     await recordManualObservation(runId, -20);
@@ -628,7 +625,6 @@ async function plantAt(lat: number, lng: number): Promise<void> {
       precipMm: 0,
       condition: "somewhere else",
     },
-    undefined,
   );
 }
 

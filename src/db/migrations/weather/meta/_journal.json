@@ -29,6 +29,13 @@
       "when": 1790400149149,
       "tag": "0003_add_manual_conditions_sky",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1792355264647,
+      "tag": "0004_drop_observation_run_id",
+      "breakpoints": true
     }
   ]
 }

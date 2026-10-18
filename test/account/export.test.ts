@@ -115,7 +115,6 @@ function observationAt(startedAt: number, tempC: number) {
   const key = cacheKeyFor(LAT, LNG, new Date(startedAt * 1000));
   return weather.insert(weatherObservations).values({
     id: newUlid(),
-    runId: newUlid(),
     latR: key.latR,
     lngR: key.lngR,
     hourBucket: key.hourBucket,
