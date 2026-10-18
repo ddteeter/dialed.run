@@ -24,17 +24,19 @@
 -->
 
 > **DRAFT: not reviewed by a lawyer.** Written from the code on `main` as of
-> 2026-10-11, and from the owner's decisions, for the owner to edit. Every
+> 2026-10-11, revised 2026-10-18 from the pre-launch legal review (rev. 2)
+> and decisions D-122 to D-136, for the owner to edit. Every
 > `[OWNER: …]` note is a decision or a fact the code cannot supply. Every
 > factual claim is mapped to the code, decision or outside terms that make it
 > true in `terms-sources.md`; change one, change both.
 
 # [dialed.run] terms of service
 
-**Version 1.** Effective: [OWNER: date this is published]
+**Version 1.** Effective: [OWNER: the day the first invite is sent]
 
 These terms are the agreement between you and us when you use [dialed.run].
-Creating an account means you accept them. How we handle your data is in the
+You accept them when you agree to them on the sign-up screen and create your
+account. How we handle your data is in the
 [privacy policy](/privacy), and copyright complaints are handled on the
 [copyright page](/copyright). Where something is not built yet, these terms
 say so.
@@ -52,17 +54,17 @@ say so.
   you can appeal any decision, with no deadline.
 - The Call, the conditions numbers and product details are information, not
   advice. Running carries risk, and what you wear is your decision.
-- We never store, show or use your Strava activity data.
+- We never store, show or use your Strava activity data. If you connect
+  Strava, we keep only what we need to remind you to log a kit, including
+  the id of each new activity for no more than 7 days.
 
 ## Who we are
 
-[dialed.run] is run by one person, [OWNER: your legal name], not by a
-company. [OWNER: postal address, if you publish one; the code has none.]
-In these terms "we" and "us" mean that person. [OWNER: once Big Long Run
-Labs LLC is formed (not yet), it becomes the operator. Then rewrite this
-paragraph to name the LLC and its address, make "we" and "us" mean the
-LLC, change the privacy policy's "Who we are" line to match, and publish
-the change as a new version under "Changes to these terms".]
+[dialed.run] is run by Big Long Run Labs LLC, a Nebraska limited liability
+company. In these terms "we", "us" and "our" mean Big Long Run Labs LLC.
+Our postal address is [OWNER: the LLC's registered address (D-123); fill it
+in when the LLC is approved, not before, because this repository is
+public], and our email is hello@dialed.run.
 
 ## Who can use [dialed.run]
 
@@ -128,7 +130,8 @@ When you use [dialed.run], do not:
 - **Post photos of other people** without their permission. Faces are
   blurred by default; leaving them unblurred is your call and your
   responsibility.
-- **Post spam or ads**, or misleading product names or links.
+- **Post spam, advertising or promotion we have not allowed**, or misleading
+  product names or links.
 - **Post someone else's work** without the right to, such as a photo you
   did not take. See the [copyright page](/copyright).
 - **Get round the system.** Do not scrape, crawl or copy [dialed.run] with
@@ -146,7 +149,8 @@ username and the place you run.
 
 **It stays yours.** We claim no ownership of it.
 
-**You give us a licence to it.** So that we can run [dialed.run], you give
+**You give us a licence to it.** So that we can operate and develop
+[dialed.run], you give
 us a worldwide, non-exclusive, royalty-free licence to host, store, copy,
 process, display and distribute your content, and to adapt and reformat it:
 for example to resize and re-encode photos, remove their metadata, and
@@ -156,7 +160,8 @@ outbound product links. We may let the services we use to run [dialed.run]
 do these things on our behalf, and only for that.
 
 **Anonymous totals.** You also let us count your runs, shared and private,
-in anonymous totals that we publish, such as the guides and seasonal
+in anonymous totals that we publish or may publish, such as the guides and
+seasonal
 reports on dialed.run, and to publish those totals as data that others may
 reuse under the Creative Commons Attribution 4.0 licence (CC BY 4.0). A
 total uses only a run's feels-like temperature band, sky and month, the
@@ -166,7 +171,8 @@ your verdict, and it may group runners by the conditions they usually run
 in. It never includes your name, username, notes, photos, route, when you
 ran, or any place more precise than that zone. We publish a
 figure only when at least 5 different runners are behind it, or 20 if it is
-about a brand. You can stop your runs counting at any time in Settings ›
+about a brand, and we round published counts and leave out any figure that
+could be worked out by subtracting others. You can stop your runs counting at any time in Settings ›
 Privacy, which also takes your shared kits out of conditions numbers. The [privacy policy](/privacy#anonymous-totals) says who is
 counted and what turning it off does.
 
@@ -214,14 +220,19 @@ owing you anything.
 ## Screening, reports and moderation
 
 - **Automated screening.** Every photo is checked by an automated moderation
-  service before anyone else can see it. A photo it scores high on sexual,
-  violent or self-harm content is held back from everyone but you until a
-  person looks at it. New usernames are screened too (see
-  [Your username](#your-username)).
+  service (OpenAI's) before anyone else can see it. A photo it scores high
+  on sexual, violent or self-harm content is held back from everyone but you
+  until a person looks at it. New usernames are screened too (see
+  [Your username](#your-username)). Automated screening only holds things
+  back; it never removes content or closes accounts.
 - **Reports.** Any signed-in runner with a confirmed email can report a kit,
   a photo, a profile or a product name. A kit you report leaves your feed
   straight away, and a runner you report leaves your search. When three different runners report the same kit or photo,
   it is hidden from everyone but its owner until a person reviews it.
+- **We tell you what happened to your report.** When a person has dealt
+  with a report you filed, the app tells you whether we removed what you
+  reported or left it up. [OWNER: true once plan step C8 ships (D-129),
+  before public; delete this bullet if friends launch first.]
 - **Intimate images shared without consent** are the exception. One report
   that a kit or photo is an intimate image shared without consent hides it
   from everyone but its owner at once, and a person reviews it within 48
@@ -259,8 +270,9 @@ decision to a certified out-of-court dispute settlement body, or to a court.
   (a link or the runner's username), and why you think it is illegal.
 - **An intimate image of you shared without your consent:** ask for it to
   come down at [dialed.run/takedown](/takedown), with or without an
-  account. Give your email, your full name as your signature, where the
-  image is, and confirm that it was shared without consent. A person
+  account. You, or someone authorised to act for you, give an email
+  address, a full name as a signature, where the image is, and a statement
+  that you believe in good faith it was shared without consent. A person
   decides within 48 hours, removes it if it is what you describe, and
   emails you either way. If the link is to dialed.run, we hide what it
   points to while we look, and put it back if we decline. Knowingly
@@ -268,13 +280,16 @@ decision to a certified out-of-court dispute settlement body, or to a court.
 - **Copyright and other intellectual property** complaints go through the
   [copyright page](/copyright).
 - **Child sexual abuse material.** Content a moderator suspects of this is
-  taken down at once. We do not tell the person who posted it. We keep a
-  locked copy, which only we can see, for one year so that it can be
-  reported to the National Center for Missing & Exploited Children (NCMEC)
-  and made available to law enforcement, and then it is deleted. We report
-  it to NCMEC.
+  taken down at once. We do not tell the person who posted it. We report it
+  to the National Center for Missing & Exploited Children (NCMEC), as US law
+  requires, and keep a locked copy, which only the people who run
+  [dialed.run] can see, for one year after we report it so that it is
+  available to law enforcement. Then we delete it, unless the law or law
+  enforcement requires us to keep it longer.
 - We may share information with the police or other authorities when the
   law requires it, or when someone's life or safety is at risk.
+- **Authorities** in the European Union can contact us about illegal
+  content at desk@dialed.run, in English.
 
 ## Other services
 
@@ -292,6 +307,12 @@ decision to a certified out-of-court dispute settlement body, or to a court.
   wrong.
 - **Links to other sites** are there for convenience. We don't control
   those sites and are not responsible for them.
+- **Services we rely on are provided as they are.** Strava, Google, Visual
+  Crossing, OpenAI and the other services we use to run [dialed.run] give
+  you no warranties through [dialed.run], including any implied warranties
+  of merchantability, fitness for a particular purpose or non-infringement,
+  and, to the extent the law allows, they are not liable to you for any
+  indirect, special, consequential or punitive damages.
 
 ## Not advice. Run at your own risk
 
@@ -357,9 +378,7 @@ To the extent the law allows:
   outside our reasonable control.
 - Our total liability to you for anything to do with [dialed.run] is
   limited to the greater of what you paid us in the 12 months before the
-  claim and [OWNER: a fixed amount. Nothing is charged today, so this
-  number is the whole cap; US$100 is the common choice for a free
-  service].
+  claim and US$100.
 
 **Nothing in these terms limits liability** that the law does not allow us
 to limit, including for death or personal injury caused by negligence, or
@@ -373,16 +392,29 @@ are not responsible for loss that was not foreseeable.
 The version and date at the top change whenever these terms do, and we
 record which version you accepted. **Before a change that matters takes
 effect, we will tell you** in the app or by email, at least 30 days ahead
-unless the change is required by law or is needed to deal with abuse. If
-you keep using [dialed.run] after that, you accept the new terms. If you
-don't accept them, you can delete your account.
+unless the change is required by law or is needed to deal with abuse. When
+a new version takes effect, the app asks you to accept it before you carry
+on. If you don't want to accept it, you can delete your account instead,
+and you can still export your data first.
+
+We may correct spelling, broken links and similar mistakes that do not
+change what these terms mean without making a new version.
 
 ## The law that applies
 
-These terms are governed by [OWNER: governing law: the laws of the US
-state you live in now, or of the LLC's state of formation once it
-exists], and disputes go to the courts of [OWNER: the county and state
-whose courts hear disputes; usually the same state].
+These terms, and any dispute about them or about [dialed.run], are governed
+by the laws of the State of Nebraska, USA, and applicable US federal law,
+without regard to rules that would apply another place's law. A dispute
+that goes to court will be heard in the District Court of Sarpy County,
+Nebraska, or the United States District Court for the District of
+Nebraska, and you and we agree to those courts' jurisdiction. Either of us
+may instead bring an individual claim in a small claims court that can hear
+it.
+
+Before either of us starts a court case, the one with the complaint will
+write to the other (to hello@dialed.run, or to your account email)
+describing it, and we will both try in good faith to settle it within 30
+days.
 
 If you are a consumer in the European Union or the United Kingdom, you also
 keep the protection of the mandatory laws of the country where you live, and
@@ -405,4 +437,5 @@ you can bring a claim in the courts there.
 - Moderation decisions and appeals, and reporting illegal content:
   desk@dialed.run
 - Copyright: copyright@dialed.run (see the [copyright page](/copyright))
-- By post: [OWNER: postal address, if you publish one; or delete this line]
+- By post: [OWNER: the LLC's registered address (D-123), filled in at
+  publication]

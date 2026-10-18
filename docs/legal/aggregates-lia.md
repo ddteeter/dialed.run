@@ -43,22 +43,34 @@ are not sold.
 What a runner might reasonably expect, and the risks to them, against the
 safeguards:
 
-| Risk or expectation                                   | Safeguard                                                                                                                      |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| "Private" read as "never used"                        | Disclosed where the choice is made: A3's PRIVATE line, Settings › Privacy and the sign-up legal line (D-108 E); privacy policy |
-| A figure small enough to point at one person          | 5 or more distinct runners per figure, 20 for a brand, for every row and slice; a cell below the line is left out (D-108 B)    |
-| Re-identification from the fields                     | Only the counted fields; no names, handles, notes, photos, times or places, and no row-level output (D-108 A)                  |
-| Location narrowing a figure                           | Only a Köppen-Geiger zone, coarser than a state; nothing new stored; a zone or group slice meets the same threshold (D-120)    |
-| Accounts that are not real, or that are leaving       | Confirmed accounts only; closed and leaving accounts, removed or quarantined kits and runner-set conditions left out (D-108 C) |
-| Wanting out                                           | One switch, on by default, off at any time; off leaves future guides and reports, and deleting the account is an opt-out (D)   |
-| Reuse under CC BY 4.0 by others                       | Only the published totals are licensed, and they hold nothing about any one runner                                             |
-| A report already published cannot drop someone's runs | It names no one and cannot be unpicked; the setting stops future ones                                                          |
+| Risk or expectation                                                               | Safeguard                                                                                                                                                                                                                                                                                                     |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Private" read as "never used"                                                    | Disclosed where the choice is made: A3's PRIVATE line, Settings › Privacy and the sign-up legal line (D-108 E); privacy policy                                                                                                                                                                                |
+| A figure small enough to point at one person                                      | 5 or more distinct runners per figure, 20 for a brand, for every row and slice; a cell below the line is left out (D-108 B). Where leaving one cell out would let it be worked out by subtracting published figures, a second cell is left out too, and published counts are rounded to the nearest 5 (D-130) |
+| Comparing two releases to find one runner's change (for example after an opt-out) | Guides are rebuilt no more often than monthly; rounding and the thresholds apply to every release; a log records what was published and when (D-130)                                                                                                                                                          |
+| Weather data rights                                                               | Feels-like bands derive from Visual Crossing data; each published guide carries Visual Crossing's attribution [OWNER: exact wording from research rev. 3 item 7]                                                                                                                                              |
+| Re-identification from the fields                                                 | Only the counted fields; no names, handles, notes, photos, times or places, and no row-level output (D-108 A)                                                                                                                                                                                                 |
+| Location narrowing a figure                                                       | Only a Köppen-Geiger zone, coarser than a state; nothing new stored; a zone or group slice meets the same threshold (D-120)                                                                                                                                                                                   |
+| Accounts that are not real, or that are leaving                                   | Confirmed accounts only; closed and leaving accounts, removed or quarantined kits and runner-set conditions left out (D-108 C)                                                                                                                                                                                |
+| Wanting out                                                                       | One switch, on by default, off at any time; off leaves the guides at the next monthly rebuild and every later report (D-130), and deleting the account is an opt-out (D)                                                                                                                                      |
+| Reuse under CC BY 4.0 by others                                                   | Only the published totals are licensed, and they hold nothing about any one runner                                                                                                                                                                                                                            |
+| A report already published cannot drop someone's runs                             | It names no one and cannot be unpicked; the setting stops future ones                                                                                                                                                                                                                                         |
 
 Replacing a self-declared state with a climate zone strengthens this
 balance: a zone usually spans several states, so a slice by zone holds more
 runners than a slice by state would, and the runner discloses nothing new.
 A state guide on the marketing site maps the state to its zones without
 any runner data.
+
+## 3a. Reasonable expectations
+
+A runner who marks a kit private expects no other runner to see it, not that
+it is never counted. The privacy policy, the PRIVATE line where the choice
+is made, Settings › Privacy and the sign-up legal line all say private runs
+are counted without names. No runner is a child (18+ gate, D-114). The data
+counted is not special-category data: a comfort verdict is a preference
+about clothing, not a health symptom, and no figure is used to infer
+anything about health.
 
 The data is not sensitive (no health data: a verdict is comfort, not a
 symptom), runners are adults (D-114), and the output is anonymous. The
@@ -73,3 +85,7 @@ runner objects (Art. 21), and it takes effect without the runner having to
 give a reason. Revisit if the counted fields, the thresholds or the opt-out
 default change, or if totals start including anything about closets beyond
 pieces worn on counted runs.
+
+Next review: 12 months after the first published guide, or before any
+change to the counted fields, thresholds, rounding, release frequency or
+opt-out default. Available to any runner or authority on request.

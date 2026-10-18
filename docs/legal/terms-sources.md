@@ -259,3 +259,26 @@ same set.
     Accept stays). The wording is the owner's, to fix in the pre-launch
     legal review; this file records the mismatch, and `terms.md` is left as
     written.
+
+## Revision of 2026-10-18 (legal review rev. 2, D-122 to D-136)
+
+The continued-use mismatch recorded above is fixed: "Changes to these
+terms" now says the app asks for acceptance before you carry on, which is
+what `account/terms-acceptance.ts` and `/account/terms` do.
+
+| Claim                                                                                 | Source                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Operator is Big Long Run Labs LLC, a Nebraska LLC; "we" means the LLC                 | D-122. The address is filled at publication (D-123); this repository is public                                                                                                    |
+| You accept on the sign-up screen; a new version is accepted before you carry on       | `account/terms-acceptance.ts` (`signUpAcceptances`, `termsStanding`, `acceptTerms`); `routes/account/terms.tsx`                                                                   |
+| Export and delete stay available while behind on terms                                | D-95; `AccountWhileBehind` ("Export and Delete run their normal flows")                                                                                                           |
+| Corrections without a new version                                                     | Owner, 2026-10-18 (legal review rev. 2, 1d)                                                                                                                                       |
+| Licence: "operate and develop"; links modified; "advertising we have not allowed"     | D-132                                                                                                                                                                             |
+| Published counts rounded and differenced cells left out                               | D-130. Built by the totals cron (plan C10), before the first guide                                                                                                                |
+| Strava activity ids kept no more than 7 days                                          | `runs/strava/prune.ts` (the 7-day prune)                                                                                                                                          |
+| Screening is OpenAI's, and only holds back                                            | `safety/screening.ts`; removals and closures are operator actions in `safety/moderation-actions.ts` and `safety/bans.ts`                                                          |
+| Reporters are told the outcome                                                        | D-129; plan C8. **Not built**: the bullet carries an `[OWNER: …]` marker until it ships                                                                                           |
+| Takedown requests may be made by someone authorised; good-faith statement             | TAKE IT DOWN Act notice elements (legal review rev. 2, 3d); `/takedown` form fields in `safety/inputs.ts`                                                                         |
+| CSAM held one year after the NCMEC report                                             | 18 U.S.C. §2258A(h)(1) as amended by Pub. L. 118-59; D-128. **The code counts the year from quarantine** (`safety/quarantine.ts` `retain_until`): plan C12 moves it to the report |
+| EU authorities contact desk@dialed.run in English                                     | DSA Art. 11; `lib/contracts/contact.ts`                                                                                                                                           |
+| Third-party services give no warranties                                               | Strava API Policy §9.2 (1 June 2026), per legal review rev. 2                                                                                                                     |
+| US$100 cap; Nebraska law; Sarpy County or D. Neb.; 30-day informal step; small claims | D-133                                                                                                                                                                             |

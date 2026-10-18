@@ -277,3 +277,27 @@ production), plus whatever product URL a runner pastes.
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Answer within 30 days                | Owner, 2026-10-11 (GDPR Art. 12(3) allows one month)                                                                                                                |
 | A change that matters: 30 days ahead | Owner, 2026-10-11, matching `terms.md` "Changes to these terms". No code does this: the owner emails runners before deploying a new version. Automating it is R-149 |
+
+## Revision of 2026-10-18 (legal review rev. 2, D-122 to D-136)
+
+Claims added or changed in this revision. Several are true only once a
+plan step lands (`docs/launch/legal-readiness-plan.md`); those rows name
+the step, and the policy is not published before it merges.
+
+| Claim                                                                      | Source                                                                                                                                           |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Controller is Big Long Run Labs LLC                                        | D-122; address filled at publication (D-123)                                                                                                     |
+| Google tokens are not kept                                                 | **Plan C4.** Today Better Auth stores them in `account` (`schema-auth.ts` `accessToken`, `refreshToken`, `idToken`); nothing in `src` reads them |
+| Weather cache linked to no one; a set temperature is deleted with its run  | **Plan C1**: drops `weather_observations.run_id`, and deleting a run deletes its `manual_conditions` row                                         |
+| OpenAI may keep inputs up to 30 days, no training                          | OpenAI API data controls, per legal review rev. 2; research rev. 3 item 6 confirms the moderation endpoint                                       |
+| Only processors and the operators reach private content                    | Corrects "only the people who run dialed.run": every photo goes to OpenAI (`safety/screening.ts`)                                                |
+| Totals: secondary suppression, rounding to 5, monthly rebuilds             | D-130; plan C10, before the first guide                                                                                                          |
+| A failed reminder's record keeps no Strava id after 7 days or a disconnect | **Plan C2** (closes register R-142)                                                                                                              |
+| Disconnecting sends a confirmation email                                   | **Plan C3** (D-131). Today only the deauthorize webhook sends it (`runs/strava/deauthorize.ts`)                                                  |
+| Strava is a separate controller; it may use API usage data                 | Strava API Policy §6.5 and §7.6 (1 June 2026), per legal review rev. 2                                                                           |
+| CSAM held one year after the NCMEC report                                  | §2258A(h)(1) as amended; D-128. **Plan C12** moves `retain_until` from quarantine time to report time                                            |
+| Processor table: companies, roles, locations                               | Legal review rev. 2 §3.3; safeguards from research rev. 3 item 6                                                                                 |
+| Transfers: DPF where certified, otherwise SCCs                             | Legal review rev. 2 5d; per-service status from research rev. 3 item 6                                                                           |
+| No cross-site tracking; DNT and GPC not treated differently                | No analytics or ad scripts in the app (see "Cookies"); CalOPPA disclosure                                                                        |
+| Rights, legal bases, complaint right, one month                            | GDPR Arts. 6, 12(3), 13, 15–22, 77; legal bases per legal review rev. 2 5a                                                                       |
+| Laws we follow                                                             | D-133                                                                                                                                            |
