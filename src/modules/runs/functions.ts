@@ -39,11 +39,11 @@ import {
   listRunSummaries,
 } from "./service";
 import { env } from "../../env";
-import { captureException } from "../ops";
+import { captureException, oweInCore } from "../ops";
 import { stravaApiFromEnv, stravaConfigFromEnv } from "./strava/api-from-env";
 import {
   connectFromCallback,
-  disconnectStrava,
+  disconnectStravaAndTell,
   STRAVA_STATE_COOKIE,
   stravaStatusOf,
 } from "./strava/oauth";
@@ -162,12 +162,14 @@ export const disconnectStravaFn = createServerFn({ method: "POST" }).handler(
   async () => {
     const userId = await requireUserId();
     // The revoke goes on the queue, so this returns as soon as the local
-    // row is gone rather than waiting on Strava.
-    await disconnectStrava(
+    // row is gone rather than waiting on Strava. The confirmation email is
+    // owed in the delete's batch (legal-readiness C3).
+    await disconnectStravaAndTell(
       coreDb(),
       stravaConfigFromEnv() === undefined ? undefined : env.IMPORTS_QUEUE,
       userId,
       captureException,
+      oweInCore,
     );
   },
 );

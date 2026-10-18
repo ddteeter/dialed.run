@@ -37,6 +37,7 @@ import { gaveUpClearPrefix } from "../../../db/gave-up";
 import { firstRowWhere, hasRowWhere } from "../../../lib/sql/keyed-read";
 import { StravaApiError } from "./api";
 import type { StravaApi, StravaConfig } from "./api";
+import { disconnectedEmail, type Owe } from "./deauthorize";
 import { reminderSubjectPrefix, type RevokeJob } from "../queue-messages";
 import { nowSeconds } from "../../../lib/now";
 
@@ -331,12 +332,53 @@ export async function connectFromCallback(
  * access token, which Strava kills six hours after issue — so a
  * revocation drained any later than that was refused, retried and
  * re-dispatched every day, forever, while the grant stayed live.
+ *
+ * **Silent: no email.** This is the account deletion's disconnect (the
+ * request and the purge), and a runner leaving gets the deletion's own
+ * mail, not a Strava one. The runner's own disconnect is
+ * `disconnectStravaAndTell`.
  */
 export async function disconnectStrava(
   db: CoreDb,
   queue: RevokeQueueProducer | undefined,
   userId: string,
   captureException: (error: unknown, context: Record<string, string>) => void,
+): Promise<void> {
+  await disconnect(db, queue, userId, captureException, () => []);
+}
+
+/**
+ * The runner's own disconnect, from T1 (legal-readiness C3): everything
+ * `disconnectStrava` does, and the same "Strava disconnected" email a
+ * disconnect from Strava's side sends, owed in the same batch as the
+ * delete (a write plus the mail recording it), keyed by this moment.
+ *
+ * **Exactly one email, from either side.** Our revoke makes Strava send
+ * a deauthorization event for this grant, and `deauthorizeAthlete` finds
+ * its grant by the connection row — which this batch has deleted — so it
+ * stops before owing anything. A second press finds no row either.
+ *
+ * `owe` is the queue entry's outbox seam, as the consumer's is: `ops`
+ * imports this module, so this module cannot import `ops`.
+ */
+export async function disconnectStravaAndTell(
+  db: CoreDb,
+  queue: RevokeQueueProducer | undefined,
+  userId: string,
+  captureException: (error: unknown, context: Record<string, string>) => void,
+  owe: Owe,
+): Promise<void> {
+  await disconnect(db, queue, userId, captureException, () => [
+    owe(disconnectedEmail(userId, nowSeconds())),
+  ]);
+}
+
+async function disconnect(
+  db: CoreDb,
+  queue: RevokeQueueProducer | undefined,
+  userId: string,
+  captureException: (error: unknown, context: Record<string, string>) => void,
+  told: () => ReturnType<Owe>[],
 ): Promise<void> {
   const connection = await getStravaConnection(db, userId);
   if (connection === undefined) return;
@@ -356,6 +398,7 @@ export async function disconnectStrava(
       "reminder",
       reminderSubjectPrefix(connection.athleteId),
     ),
+    ...told(),
   ]);
 
   // Fast path. If it fails the row stays, and the daily digest re-dispatches

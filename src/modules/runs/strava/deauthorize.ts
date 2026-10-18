@@ -42,6 +42,20 @@ import { reminderSubjectPrefix } from "../queue-messages";
 export const STRAVA_REVOKED_BODY = STRAVA_DISCONNECTED_LINE;
 
 /**
+ * The "Strava disconnected" account mail (D-43, round 27 #19): the one
+ * email both ways of disconnecting send — this event, and the runner's
+ * own disconnect in the app (`oauth.ts`'s `disconnectStravaAndTell`,
+ * legal-readiness C3). Keyed by the runner and the moment of the
+ * disconnect, so a repeat of the same one owes the same outbox row.
+ */
+export function disconnectedEmail(userId: string, at: number): OutboxMessage {
+  return emailDebt(
+    { to: { userId }, template: { kind: "strava_disconnected" } },
+    { dedupeKey: `strava_disconnected:${userId}:${String(at)}` },
+  );
+}
+
+/**
  * An outbox row owed, as a statement for the caller's batch — ops'
  * `outboxInsert(db, oweOutbox(message, notBefore))`, handed in by the
  * queue entry: `ops` imports this module for its consumer, so this module
@@ -93,17 +107,9 @@ export async function deauthorizeAthlete(
   const connection = await firstRowWhere(db, stravaConnections, aboutThisGrant);
   if (connection === undefined) return;
 
-  // Account mail (D-43), once per disconnect: keyed by the event, as the
-  // notification is, so a redelivery owes the same row.
-  const told = emailDebt(
-    {
-      to: { userId: connection.userId },
-      template: { kind: "strava_disconnected" },
-    },
-    {
-      dedupeKey: `strava_disconnected:${connection.userId}:${String(eventTime)}`,
-    },
-  );
+  // Keyed by the event, as the notification is, so a redelivery owes the
+  // same row.
+  const told = disconnectedEmail(connection.userId, eventTime);
   await db.batch([
     db.delete(stravaConnections).where(aboutThisGrant),
     db.insert(stravaRevocations).values({
