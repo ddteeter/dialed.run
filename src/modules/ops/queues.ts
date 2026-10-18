@@ -1,4 +1,3 @@
-
 import { coreDb, env } from "../../env";
 import type { OutboxMessage } from "../../lib/sql/outbox";
 import {
@@ -123,8 +122,7 @@ export async function handleQueueBatch(
         captureException,
         stravaApi: stravaApiFromEnv(),
         owe: oweInCore,
-        runnerTimeZone: (userId) =>
-          runnerTimeZone(drizzle(env.DIALED_CORE), userId),
+        runnerTimeZone: (userId) => runnerTimeZone(coreDb(), userId),
       });
       break;
     }
