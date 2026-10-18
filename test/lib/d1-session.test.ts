@@ -16,7 +16,6 @@ import {
   runInD1Scope,
   scopedDb,
   scopeOutcome,
-  SESSION_ONLY_MESSAGE,
   weatherDbOver,
 } from "../../src/lib/sql/d1-session";
 import { spiedBinding } from "../d1-spy";
@@ -110,7 +109,7 @@ describe("scopedDb outside a request", () => {
   });
 
   it("leaves nothing behind", () => {
-    expect(scopeOutcome()).toEqual({
+    expect(scopeOutcome()).toStrictEqual({
       bookmark: undefined,
       writerId: undefined,
     });
@@ -181,8 +180,12 @@ describe("scopedDb in a request", () => {
     const spy = spiedBinding();
     await runInD1Scope(undefined, () => {
       const client = scopedDb(spy.binding, "core").$client;
-      expect(() => client.exec("select 1")).toThrow(SESSION_ONLY_MESSAGE);
-      expect(() => client.withSession()).toThrow(SESSION_ONLY_MESSAGE);
+      expect(() => client.exec("select 1")).toThrow(
+        "a D1 session offers only prepare and batch",
+      );
+      expect(() => client.withSession()).toThrow(
+        "a D1 session offers only prepare and batch",
+      );
       return Promise.resolve();
     });
     expect(spy.opened).toEqual([]);
@@ -434,5 +437,17 @@ describe("the handles src/env hands out", () => {
       weatherDbOver(spy.binding).all(sql`select 1`),
     );
     expect(spy.opened).toEqual(["first-unconstrained"]);
+  });
+});
+
+describe("weather and the primary session", () => {
+  it("never starts from core's primary bookmark: another database", async () => {
+    const core = spiedBinding();
+    const weather = spiedBinding(env.DIALED_WEATHER);
+    await runInD1Scope(undefined, async () => {
+      await primaryDb(core.binding).all(sql`select 1`);
+      await scopedDb(weather.binding, "weather").all(sql`select 1`);
+    });
+    expect(weather.opened).toEqual(["first-unconstrained"]);
   });
 });

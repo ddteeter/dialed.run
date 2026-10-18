@@ -41,12 +41,15 @@ export async function respondInD1Scope(
   return runInD1Scope(device, async () => {
     const response = await handle();
     const { bookmark, writerId } = scopeOutcome();
-    if (bookmark === undefined || bookmark === device) return response;
+    // Never older than the device's own bookmark, so "unchanged" is the
+    // only way it can be absent.
+    const moved = bookmark === device ? undefined : bookmark;
+    if (moved === undefined) return response;
     if (writerId !== undefined) {
-      deps.defer(storeRunnerBookmark(deps.db, writerId, bookmark));
+      deps.defer(storeRunnerBookmark(deps.db, writerId, moved));
     }
     const sent = new Response(response.body, response);
-    sent.headers.append("set-cookie", deviceBookmarkCookie(bookmark));
+    sent.headers.append("set-cookie", deviceBookmarkCookie(moved));
     return sent;
   });
 }

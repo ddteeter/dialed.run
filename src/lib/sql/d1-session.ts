@@ -31,18 +31,29 @@ import { z } from "zod";
 
 export type DbKey = "core" | "weather";
 
-type SlotKey = DbKey | "corePrimary";
+/**
+A slot's session, and the binding that opened it, which reopens it.
+*/
+interface Open {
+  readonly binding: D1Database;
+  session: D1DatabaseSession;
+}
 
 interface Slot {
-  binding: D1Database | undefined;
-  session: D1DatabaseSession | undefined;
+  open: Open | undefined;
   pinned: boolean;
   bookmark: string | undefined;
   wrote: boolean;
 }
 
+/**
+ * One request's sessions: core and weather for `scopedDb`, and core's
+ * primary for `primaryDb`, which is pinned from the start.
+ */
 interface Scope {
-  readonly slots: Map<SlotKey, Slot>;
+  readonly core: Slot;
+  readonly weather: Slot;
+  readonly primary: Slot;
   runnerId: string | undefined;
 }
 
@@ -50,20 +61,11 @@ const scopes = /*#__PURE__*/ new AsyncLocalStorage<Scope>();
 
 function newSlot(isPinned: boolean): Slot {
   return {
-    binding: undefined,
-    session: undefined,
+    open: undefined,
     pinned: isPinned,
     bookmark: undefined,
     wrote: false,
   };
-}
-
-function slotOf(scope: Scope, key: SlotKey): Slot {
-  const existing = scope.slots.get(key);
-  if (existing !== undefined) return existing;
-  const slot = newSlot(key === "corePrimary");
-  scope.slots.set(key, slot);
-  return slot;
 }
 
 /**
@@ -96,7 +98,12 @@ export function newerBookmark(
 ): string | undefined {
   if (a === undefined) return b;
   if (b === undefined) return a;
-  return b > a ? b : a;
+  // Sorted rather than compared: with `b > a ? b : a`, equal bookmarks make
+  // `>=` an equivalent mutant, since either one is the answer. Bookmarks
+  // are same-width lowercase hex with hyphens in the same places, where
+  // `localeCompare` order is code-point order, the order SQL's `<` uses in
+  // `storeRunnerBookmark`.
+  return [a, b].toSorted((x, y) => x.localeCompare(y))[1];
 }
 
 const WRITE_STATEMENT = /^\s*(?:insert|update|delete|replace)\b/i;
@@ -109,24 +116,29 @@ export function isWriteStatement(sql: string): boolean {
 }
 
 function primaryBookmarkOf(scope: Scope): string | undefined {
-  return parseBookmark(scope.slots.get("corePrimary")?.session?.getBookmark());
+  return parseBookmark(scope.primary.open?.session.getBookmark());
 }
 
-function constraintOf(scope: Scope, key: SlotKey, slot: Slot): string {
+/**
+ * Only core follows the primary session: they are one database. Weather is
+ * another, and a core bookmark means nothing to it.
+ */
+function constraintOf(scope: Scope, slot: Slot): string {
   if (slot.pinned) return "first-primary";
-  const own = key === "core" ? primaryBookmarkOf(scope) : undefined;
+  const own = slot === scope.core ? primaryBookmarkOf(scope) : undefined;
   return newerBookmark(slot.bookmark, own) ?? "first-unconstrained";
 }
 
 function sessionOf(
   scope: Scope,
-  key: SlotKey,
+  slot: Slot,
   binding: D1Database,
 ): D1DatabaseSession {
-  const slot = slotOf(scope, key);
-  slot.binding = binding;
-  slot.session ??= binding.withSession(constraintOf(scope, key, slot));
-  return slot.session;
+  slot.open ??= {
+    binding,
+    session: binding.withSession(constraintOf(scope, slot)),
+  };
+  return slot.open.session;
 }
 
 export const SESSION_ONLY_MESSAGE =
@@ -142,26 +154,31 @@ function sessionOnly(): never {
  * query path; a session has nothing else, so in a request the rest refuse
  * rather than quietly reaching the primary.
  */
-function routedDatabase(binding: D1Database, key: SlotKey): D1Database {
+function routedDatabase(
+  binding: D1Database,
+  slotIn: (scope: Scope) => Slot,
+): D1Database {
   return {
     prepare(query) {
       const scope = scopes.getStore();
       if (scope === undefined) return binding.prepare(query);
-      if (isWriteStatement(query)) slotOf(scope, key).wrote = true;
-      return sessionOf(scope, key, binding).prepare(query);
+      const slot = slotIn(scope);
+      if (isWriteStatement(query)) slot.wrote = true;
+      return sessionOf(scope, slot, binding).prepare(query);
     },
     batch(statements) {
       const scope = scopes.getStore();
       if (scope === undefined) return binding.batch(statements);
-      return sessionOf(scope, key, binding).batch(statements);
+      return sessionOf(scope, slotIn(scope), binding).batch(statements);
     },
     exec(query) {
       if (scopes.getStore() === undefined) return binding.exec(query);
       return sessionOnly();
     },
     withSession(constraint) {
-      if (scopes.getStore() === undefined)
+      if (scopes.getStore() === undefined) {
         return binding.withSession(constraint);
+      }
       return sessionOnly();
     },
     dump: sessionOnly,
@@ -173,7 +190,7 @@ function routedDatabase(binding: D1Database, key: SlotKey): D1Database {
  * bare binding outside a request.
  */
 export function scopedDb(binding: D1Database, key: DbKey) {
-  return drizzle(routedDatabase(binding, key));
+  return drizzle(routedDatabase(binding, (scope) => scope[key]));
 }
 
 /**
@@ -196,7 +213,7 @@ export function weatherDbOver(binding: D1Database) {
  * leave a bookmark the request's replica reads and its cookie start from.
  */
 export function primaryDb(binding: D1Database) {
-  return drizzle(routedDatabase(binding, "corePrimary"));
+  return drizzle(routedDatabase(binding, (scope) => scope.primary));
 }
 
 /**
@@ -211,7 +228,9 @@ export function runInD1Scope<T>(
   const core = newSlot(false);
   core.bookmark = parseBookmark(deviceBookmark);
   const scope: Scope = {
-    slots: new Map([["core", core]]),
+    core,
+    weather: newSlot(false),
+    primary: newSlot(true),
     runnerId: undefined,
   };
   // Awaited inside the scope: a drizzle builder is lazy (CLAUDE.md, D1
@@ -223,9 +242,9 @@ export function runInD1Scope<T>(
   });
 }
 
-function reopen(scope: Scope, key: SlotKey, slot: Slot): void {
-  if (slot.session === undefined || slot.binding === undefined) return;
-  slot.session = slot.binding.withSession(constraintOf(scope, key, slot));
+function reopen(scope: Scope, slot: Slot): void {
+  if (slot.open === undefined) return;
+  slot.open.session = slot.open.binding.withSession(constraintOf(scope, slot));
 }
 
 /**
@@ -236,10 +255,10 @@ function reopen(scope: Scope, key: SlotKey, slot: Slot): void {
 export function pinPrimary(key: DbKey): void {
   const scope = scopes.getStore();
   if (scope === undefined) return;
-  const slot = slotOf(scope, key);
+  const slot = scope[key];
   if (slot.pinned) return;
   slot.pinned = true;
-  reopen(scope, key, slot);
+  reopen(scope, slot);
 }
 
 /**
@@ -253,11 +272,11 @@ export function offerRunnerBookmark(
   const scope = scopes.getStore();
   if (scope === undefined) return;
   scope.runnerId = runnerId;
-  const slot = slotOf(scope, "core");
+  const slot = scope.core;
   const next = newerBookmark(slot.bookmark, parseBookmark(stored));
   if (next === slot.bookmark) return;
   slot.bookmark = next;
-  if (!slot.pinned) reopen(scope, "core", slot);
+  if (!slot.pinned) reopen(scope, slot);
 }
 
 export interface ScopeOutcome {
@@ -277,13 +296,11 @@ What `runInD1Scope`'s request leaves behind, read before it returns.
 export function scopeOutcome(): ScopeOutcome {
   const scope = scopes.getStore();
   if (scope === undefined) return { bookmark: undefined, writerId: undefined };
-  const core = slotOf(scope, "core");
-  const primary = scope.slots.get("corePrimary");
-  const reached = parseBookmark(core.session?.getBookmark());
-  const replicaSide = newerBookmark(core.bookmark, reached);
+  const reached = parseBookmark(scope.core.open?.session.getBookmark());
+  const replicaSide = newerBookmark(scope.core.bookmark, reached);
   const bookmark = newerBookmark(replicaSide, primaryBookmarkOf(scope));
-  const isWrote = core.wrote || primary?.wrote === true;
-  return { bookmark, writerId: isWrote ? scope.runnerId : undefined };
+  const didWrite = scope.core.wrote || scope.primary.wrote;
+  return { bookmark, writerId: didWrite ? scope.runnerId : undefined };
 }
 
 /**
@@ -301,7 +318,8 @@ The device's bookmark from a `Cookie` header, parsed (trust boundary).
 export function deviceBookmarkFrom(
   cookieHeader: string | null,
 ): string | undefined {
-  const parts = (cookieHeader ?? "").split(";");
+  if (cookieHeader === null) return undefined;
+  const parts = cookieHeader.split(";");
   for (const part of parts) {
     const [name, value] = part.trim().split("=", 2);
     if (name === DEVICE_BOOKMARK_COOKIE) return parseBookmark(value);

@@ -3,11 +3,17 @@ import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
 
 import { userProfiles } from "../../src/db/schema-core";
-import { env } from "../../src/env";
+import { env, waitUntil } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { scopedDb } from "../../src/lib/sql/d1-session";
-import { storedBookmarkOf } from "../../src/modules/auth/d1-bookmark";
-import { respondInD1Scope } from "../../src/modules/auth/d1-request";
+import {
+  storedBookmarkOf,
+  storeRunnerBookmark,
+} from "../../src/modules/auth/d1-bookmark";
+import {
+  d1RequestDepsFromEnv,
+  respondInD1Scope,
+} from "../../src/modules/auth/d1-request";
 import { agreedUserId } from "../../src/modules/auth/terms-gate";
 import { spiedBinding } from "../d1-spy";
 
@@ -124,5 +130,17 @@ describe("respondInD1Scope", () => {
       deps,
     );
     expect(deferred).toEqual([]);
+  });
+});
+
+describe("d1RequestDepsFromEnv", () => {
+  it("stores through the primary and defers with waitUntil", async () => {
+    const deps = d1RequestDepsFromEnv();
+    expect(deps.defer).toBe(waitUntil);
+    const userId = newUlid();
+    await db.insert(userProfiles).values({ userId });
+    await storeRunnerBookmark(deps.db, userId, DEVICE);
+    const [row] = await storedBookmarkOf(db, userId);
+    expect(row?.value).toBe(DEVICE);
   });
 });

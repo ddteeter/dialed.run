@@ -14,7 +14,10 @@ export function spiedBinding(real: D1Database = env.DIALED_CORE) {
       bare.push(query);
       return real.prepare(query);
     },
-    batch: (statements) => real.batch(statements),
+    batch(statements) {
+      bare.push("batch");
+      return real.batch(statements);
+    },
     exec: (query) => real.exec(query),
     dump: () => Promise.reject(new Error("not used")),
     withSession(constraint) {
