@@ -48,8 +48,9 @@ import { captureException, oweOutbox } from "../ops";
 import {
   moderationActionInsert,
   openSubject,
+  isCopyrightTakedown,
   quarantineInsert,
-  removalSentence,
+  removalNotice,
   removalStatements,
   resolveReview,
   settleOpenReviews,
@@ -101,6 +102,10 @@ What is being taken down: whose it is, which entry, and which objects.
 interface Target {
   ownerId: string;
   entryId: string;
+  /**
+  The entry's run, which the audit row keeps for the author's band (R-140).
+  */
+  runId: string;
   photoKeys: readonly string[];
 }
 
@@ -121,6 +126,7 @@ async function targetOf(
   return {
     ownerId: first.ownerId,
     entryId: first.entryId,
+    runId: first.runId,
     photoKeys: rows.flatMap((row) => row.photoKey ?? []),
   };
 }
@@ -131,6 +137,7 @@ What `targetOf` reads for each row.
 const targetColumns = {
   ownerId: outfitEntries.userId,
   entryId: outfitEntries.id,
+  runId: outfitEntries.runId,
   photoKey: entryPhotos.photoKey,
 };
 
@@ -247,8 +254,20 @@ function deletions(db: Db, input: ModerateInput, target: Target): Statements {
  * What a Remove or takedown tells its author: the bell row and the email,
  * both in the batch. The email rides the outbox; its debt is returned so
  * the fast path can settle it after the batch.
+ *
+ * **One sentence in all three** (round 27 #20, R-140): a copyright
+ * takedown's bell row says "We removed this photo after a copyright
+ * notice.", as its band does, and its email says the same rather than
+ * quoting the moderator's reason. `action` is what decides, with the
+ * reason (`isCopyrightTakedown`): a removal request's takedown carries
+ * `intimate` and answered no copyright notice.
  */
-function notice(db: Db, input: ModerateInput, target: Target) {
+function authorNotice(
+  db: Db,
+  input: ModerateInput,
+  action: "remove" | "takedown",
+  target: Target,
+) {
   const debt = oweOutbox(
     emailDebt(
       {
@@ -257,6 +276,9 @@ function notice(db: Db, input: ModerateInput, target: Target) {
           kind: "content_removed",
           subject: input.subjectType,
           reason: removalStatements[input.reason],
+          ...(isCopyrightTakedown(action, input.reason) && {
+            cause: "copyright_notice" as const,
+          }),
         },
       },
       { dedupeKey: `content_removed:${input.subjectType}:${input.subjectId}` },
@@ -267,7 +289,7 @@ function notice(db: Db, input: ModerateInput, target: Target) {
       userId: target.ownerId,
       kind: "content_removed",
       subjectId: input.subjectId,
-      body: removalSentence(input.subjectType, input.reason),
+      body: removalNotice(input.subjectType, action, input.reason),
     }),
     debt,
   };
@@ -290,11 +312,15 @@ export async function moderateContent(
       : "not_found";
   }
   const actionId = newUlid();
+  const { action } = input;
   const kept =
-    input.action === "quarantine"
+    action === "quarantine"
       ? await preservation(db, target, input, actionId)
       : undefined;
-  const told = kept === undefined ? notice(db, input, target) : undefined;
+  const told =
+    action === "quarantine"
+      ? undefined
+      : authorNotice(db, input, action, target);
   const words = removalStatements[input.reason];
   await commit(
     db,
@@ -310,6 +336,9 @@ export async function moderateContent(
         reason:
           input.notice === undefined ? words : `${words} — ${input.notice}`,
         preservedKey: kept?.preservedKey,
+        // Read before the delete, in `targetOf`: once the batch lands the
+        // entry is gone, and this is how its author's run still finds it.
+        runId: target.runId,
       }),
       ...(kept === undefined ? [] : [kept.record]),
       ...(told === undefined ? [] : [told.statement]),

@@ -10,6 +10,7 @@ import {
   reviewDecisionInput,
   takedownRequestInput,
 } from "../../src/modules/safety";
+import { runRemovalsInput } from "../../src/modules/safety/inputs";
 import { declineReasonField } from "../../src/modules/safety/contracts";
 
 /**
@@ -357,5 +358,26 @@ describe("a decline's reason", () => {
     expect(messages("a".repeat(501))).toStrictEqual([
       "Keep it under 500 characters.",
     ]);
+  });
+});
+
+describe("the run a page asks the removals of (R-140)", () => {
+  it("takes the id of a run that does not exist, so the page can say so", () => {
+    // `/runs/abc` is malformed and must reach `runOrNotFound`, not die here
+    // in the loader's Promise.all beside it.
+    expect(runRemovalsInput.parse({ runId: "abc" })).toStrictEqual({
+      runId: "abc",
+    });
+  });
+
+  it("refuses no id, and a `since` that is no time", () => {
+    expect(runRemovalsInput.safeParse({ runId: "" }).success).toBe(false);
+    expect(
+      runRemovalsInput.safeParse({ runId: "abc", since: -1 }).success,
+    ).toBe(false);
+    expect(
+      runRemovalsInput.safeParse({ runId: "abc", since: 1.5 }).success,
+    ).toBe(false);
+    expect(runRemovalsInput.parse({ runId: "abc", since: 7 }).since).toBe(7);
   });
 });

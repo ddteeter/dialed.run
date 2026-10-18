@@ -1011,6 +1011,30 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       anyway. **Ships as a placeholder, fields kept.** **The ask:** say
       whether "empty" means the fields are cleared.
 
+63. **What lane D2 (design 141) built beside the takedown boards.** Two
+    placeholders from existing primitives and bracket text, no new glyph,
+    and one link still waiting for words.
+    - **Their other photos on Review** (D-117, R-145 c). A queue row an
+      intimate-image report started, and a removal request whose link is
+      ours, list the same runner's other photos under the row's own:
+      `THEIR OTHER PHOTOS · 3` in mono, then each photo at the row's photo
+      height, opening its kit, with its id in mono under it (the id the
+      takedown form under Review takes). None reads "No other photos from
+      this runner." Newest kit first, at most 12. **The ask:** draw the
+      block, and say whether 12 and the id line are right.
+    - **The copyright takedown's email** (R-140). The bell row and band
+      say "We removed this photo after a copyright notice." (round 28 #8);
+      the email now says the same in its own first sentence: "We removed a
+      photo from one of your runs after a copyright notice. Your run and
+      verdict stay." (an entry: "…one of your runs from the feed after a
+      copyright notice. The run itself stays."). No reason is quoted. A
+      removal request's takedown is not a copyright notice and keeps the
+      moderator's reason, `intimate`'s statement. **The ask:** confirm.
+    - **W1's link to `/takedown` is still undrawn** (item 58's "Not
+      built"). The board says "Linked … from W1's reason list" and gives
+      neither words nor a place; a signed-in runner already has the reason
+      itself. Not built. **The ask:** the words and where they sit in W1.
+
 ## Answered in round 37 (imported 2026-10-10)
 
 Design sent round 37 as `Round 37 Rulings.dc.html`, with the text of record

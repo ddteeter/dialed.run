@@ -90,6 +90,17 @@ describe("emailTemplateSchema", () => {
     ).toBe(false);
   });
 
+  it("reads a copyright notice as a removal's cause, and an old row without one (law 9)", () => {
+    const removal = { kind: "content_removed", subject: "photo", reason: "x" };
+    expect(
+      emailTemplateSchema.parse({ ...removal, cause: "copyright_notice" }),
+    ).toStrictEqual({ ...removal, cause: "copyright_notice" });
+    expect(emailTemplateSchema.parse(removal)).toStrictEqual(removal);
+    expect(
+      emailTemplateSchema.safeParse({ ...removal, cause: "intimate" }).success,
+    ).toBe(false);
+  });
+
   it("accepts both http and https, never a look-alike scheme", () => {
     const isOk = isLinkAccepted;
     expect(isOk("https://dialed.run/account/verify")).toBe(true);

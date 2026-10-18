@@ -2,7 +2,8 @@
  * Covers: `/takedown` (design 136, decision D-117; drawn in round 35
  * #58e) — the footer's "Report an intimate image", the request form and
  * its receipt, signed out, the kit hidden the moment the request lands —
- * and Review's removal requests, where an operator takes the kit down —
+ * and Review's removal requests, where an operator sees the runner's
+ * other photos (D-117, R-145 c) and takes the kit down —
  * then design 137's limits: past two open requests, the next waits for a
  * confirm from its receipt, and the operator blocks the requester and
  * declines the rest. One journey, one video.
@@ -13,11 +14,15 @@
  *
  * Exactly one test() per demo spec.
  */
+import { readFile } from "node:fs/promises";
+
 import { eq, inArray, like } from "drizzle-orm";
+import { getPlatformProxy } from "wrangler";
 import { z } from "zod";
 
 import { user } from "../../src/db/schema-auth";
 import {
+  entryPhotos,
   outbox,
   outfitEntries,
   runs,
@@ -45,6 +50,8 @@ test("someone with no account asks for an intimate image to come down, and an op
   const secondRunId = newUlid();
   const secondEntryId = newUlid();
   const extraRequestId = newUlid();
+  const otherPhotoId = newUlid();
+  const otherPhotoKey = `entries/${runnerId}/${secondEntryId}/${otherPhotoId}`;
   const requester = `asker-${suffix}@example.com`;
   const now = nowSeconds();
 
@@ -109,7 +116,26 @@ test("someone with no account asks for an intimate image to come down, and an op
       audience: "runners",
       createdAt: now - 7200,
     });
+    // A photo on the second kit: the copy candidate Review lists beside
+    // the first kit's request (D-117).
+    await core.insert(entryPhotos).values({
+      id: otherPhotoId,
+      entryId: secondEntryId,
+      photoKey: otherPhotoKey,
+      position: 0,
+      screenStatus: "pass",
+    });
   });
+  const media = await getPlatformProxy<Env>();
+  try {
+    await media.env.MEDIA.put(
+      otherPhotoKey,
+      await readFile("test/fixtures/sample-photo.bin"),
+      { httpMetadata: { contentType: "image/jpeg" } },
+    );
+  } finally {
+    await media.dispose();
+  }
 
   await scene(page, "Signed out: every page's footer says where to ask");
   await page.goto("/auth/login");
@@ -218,6 +244,23 @@ test("someone with no account asks for an intimate image to come down, and an op
   await expect(
     request.getByRole("link", { name: "Open the kit" }),
   ).toHaveAttribute("href", `/feed/entry/${entryId}`);
+
+  const others = request.locator("[data-part='other-photos']");
+  await others.scrollIntoViewIfNeeded();
+  await scene(page, "The runner's other photos, to check for copies");
+  await expect(others).toContainText("Their other photos · 1");
+  // The second kit is hidden by its own confirmed request, so its page
+  // would send an operator away: the photo shows with no link (R-154).
+  await expect(others.getByRole("link")).toHaveCount(0);
+  await expect(
+    others.getByRole("img", {
+      name: `Photo ${otherPhotoId}, on a kit an operator cannot open`,
+    }),
+  ).toHaveAttribute(
+    "src",
+    `/safety/review-photo/${otherPhotoKey}`,
+  );
+  await expect(others).toContainText(otherPhotoId);
 
   await scene(page, "Take it down: the kit goes, and the requester is told");
   await request.getByRole("button", { name: "Take it down" }).click();

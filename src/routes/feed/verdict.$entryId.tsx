@@ -18,6 +18,8 @@ import {
   countInTotalsQuery,
   setCountInTotalsFn,
 } from "../../modules/onboarding/functions";
+import { RunRemovals } from "../../modules/safety/components/RunRemovals";
+import { runRemovalsQuery } from "../../modules/safety/functions";
 import { Layout } from "../../ui";
 
 export const Route = createFileRoute("/feed/verdict/$entryId")({
@@ -36,8 +38,15 @@ export const Route = createFileRoute("/feed/verdict/$entryId")({
       countInTotalsQuery(),
     ]);
     const entry = orBackToFeed(found);
+    // R-140: the band where it was, as on the entry page — a runner is sent
+    // here straight after logging, which is when a removal is likeliest to
+    // have just landed.
+    const removals = await runRemovalsQuery({
+      data: { runId: entry.runId, since: entry.createdAt },
+    });
     return {
       entry,
+      removals,
       units,
       isVerified: context.isVerified,
       countInTotals,
@@ -58,11 +67,19 @@ export const Route = createFileRoute("/feed/verdict/$entryId")({
 });
 
 function VerdictPage() {
-  const { entry, bandFloor, history, units, isVerified, countInTotals } =
-    Route.useLoaderData();
+  const {
+    entry,
+    bandFloor,
+    history,
+    units,
+    isVerified,
+    countInTotals,
+    removals,
+  } = Route.useLoaderData();
 
   return (
     <Layout>
+      <RunRemovals removals={removals} />
       <VerdictForm
         entry={entry}
         bandFloor={bandFloor}

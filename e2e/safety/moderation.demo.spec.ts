@@ -2,7 +2,9 @@
  * Covers: D8 (Desk · Runners: Rename and Close account), the review
  * queue's Remove that deletes, and round 28 #8's review row (the row
  * opens itself; suspected CSAM asks again), and a flagged handle's row
- * with its Keep (round 35 #45) — one journey, one video.
+ * with its Keep (round 35 #45), then the author's run after a Remove
+ * (round 27 #20, R-140: the band in place of the entry) — one journey,
+ * one video.
  *
  * The journey needs `ADMIN_USER_IDS=e2e-desk-operator` in the dev server's
  * `.dev.vars`, which CI's e2e job writes (register R-72). Locally, put the
@@ -10,7 +12,10 @@
  *
  * Exactly one test() per demo spec.
  */
+import { readFile } from "node:fs/promises";
+
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 
 import { user } from "../../src/db/schema-auth";
 import {
@@ -23,7 +28,9 @@ import {
 } from "../../src/db/schema-core";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
+import { userIdOf } from "../conformance/logging-fixtures";
 import { signInAsOperator } from "../desk/operator";
+import { storageStateFor } from "../support/accounts";
 import { expect, hydrated, scene, test } from "../support/demo";
 import { withLocalDb } from "../support/local-db";
 
@@ -228,4 +235,73 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
     "A moderator removed this entry from the feed: it's an ad or spam.",
   );
   expect(left.profile[0]?.bannedAt).toEqual(expect.any(Number));
+
+  // R-140: the author's side of a Remove. The demo runner above has no
+  // login, so the band is shown on the safety account's own run: a run
+  // whose entry the Desk removed, with the audit row exactly as
+  // moderateContent writes it, run_id read before the delete.
+  const authorId = await userIdOf("safety");
+  const removedRunId = newUlid();
+  await withLocalDb(async ({ core }) => {
+    await core.insert(runs).values({
+      id: removedRunId,
+      userId: authorId,
+      source: "manual",
+      startedAt: now - 7200,
+      durationS: 1800,
+      distanceM: 5000,
+      lat: 45.52,
+      lng: -122.68,
+      indoor: false,
+      title: "Evening loop",
+    });
+    await core.insert(moderationActions).values({
+      id: newUlid(),
+      actorId: "e2e-desk-operator",
+      action: "remove",
+      subjectType: "entry",
+      subjectId: newUlid(),
+      subjectOwnerId: authorId,
+      reason: "it's an ad or spam",
+      createdAt: now,
+      runId: removedRunId,
+    });
+  });
+  // The same browser, signed in as the author instead, so the journey
+  // stays one video.
+  const saved: unknown = JSON.parse(
+    await readFile(storageStateFor("safety"), "utf8"),
+  );
+  const authorState = storageState.parse(saved);
+  await page.context().clearCookies();
+  await page.context().addCookies(authorState.cookies);
+  await page.goto(`/runs/${removedRunId}`);
+  await hydrated(page);
+  // After the navigation, so the caption holds on the page it describes.
+  await scene(page, "The author's run: the band where the entry was");
+  const band = page.locator(
+    "[data-part='run-removals'] [data-part='notice-band']",
+  );
+  await expect(band).toHaveText(
+    "Removed from the feedA moderator removed this entry from the feed: it's an ad or spam.",
+  );
 });
+
+/**
+One cookie of a saved Playwright session.
+*/
+const savedCookie = z.object({
+  name: z.string(),
+  value: z.string(),
+  domain: z.string(),
+  path: z.string(),
+  expires: z.number(),
+  httpOnly: z.boolean(),
+  secure: z.boolean(),
+  sameSite: z.enum(["Strict", "Lax", "None"]),
+});
+
+/**
+The cookies of a saved Playwright session, parsed rather than trusted.
+*/
+const storageState = z.object({ cookies: z.array(savedCookie) });

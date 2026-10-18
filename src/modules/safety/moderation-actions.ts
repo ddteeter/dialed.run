@@ -40,6 +40,10 @@ export interface ModerationRecord {
   Where a quarantined object was moved to; absent for everything else.
   */
   preservedKey?: string | undefined;
+  /**
+  The run a removed entry or photo was on (R-140); absent for a profile.
+  */
+  runId?: string | undefined;
 }
 
 /**
@@ -69,7 +73,7 @@ export function moderationActionInsertWhere(
   return db
     .insert(moderationActions)
     .select(
-      sql`SELECT ${id}, ${record.actorId}, ${record.action}, ${record.subjectType}, ${record.subjectId}, ${record.subjectOwnerId}, ${record.reason}, ${orSqlNull(record.preservedKey)}, ${nowSeconds()} WHERE ${onlyIf}`,
+      sql`SELECT ${id}, ${record.actorId}, ${record.action}, ${record.subjectType}, ${record.subjectId}, ${record.subjectOwnerId}, ${record.reason}, ${orSqlNull(record.preservedKey)}, ${nowSeconds()}, ${orSqlNull(record.runId)} WHERE ${onlyIf}`,
     );
 }
 

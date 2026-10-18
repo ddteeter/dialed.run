@@ -45,6 +45,7 @@ import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { countSend, emailDebt, sendClaimOf } from "../email";
 import { adminUserIds } from "./admin";
 import { REMOVAL_DUE_SECONDS, removalDueLabel } from "./contracts";
+import { otherPhotosOf, type OtherPhoto } from "./other-photos";
 import type { OweEmail } from "./reports";
 import { ipKey, requesterKey } from "./requester-key";
 import type { HoldState } from "./takedown-limits";
@@ -418,6 +419,11 @@ export interface PendingTakedownRequest {
   The requester's other open requests among those listed, by either key.
   */
   readonly relatedIds: readonly string[];
+  /**
+   * The posting runner's other photos (D-117, R-145 c), when the link is
+   * ours; `undefined` when it is not, since then nobody is known.
+   */
+  readonly otherPhotos: readonly OtherPhoto[] | undefined;
 }
 
 /**
@@ -440,14 +446,24 @@ export async function pendingTakedownRequests(
   // one whose other requests show once these are decided.
   const keyOf = (row: (typeof rows)[number]) =>
     row.requesterKey ?? requesterKey(row.requesterEmail);
-  return rows.map((row) => ({
+  const listed = rows.map((row) => ({
+    row,
+    subject: takedownSubjectOf(row.location),
+  }));
+  const others = await otherPhotosOf(
+    db,
+    listed.flatMap(({ subject }) => subject ?? []),
+  );
+  return listed.map(({ row, subject }) => ({
     id: row.id,
     requesterEmail: row.requesterEmail,
     signature: row.signature,
     location: row.location,
     description: row.description ?? undefined,
     posterUsername: row.posterUsername ?? undefined,
-    subject: takedownSubjectOf(row.location),
+    subject,
+    otherPhotos:
+      subject && others.get(`${subject.subjectType}:${subject.subjectId}`),
     createdAt: row.createdAt,
     dueAt: row.dueAt,
     due: removalDueLabel(row.dueAt, now),

@@ -271,12 +271,16 @@ describe("the open requests, as Review lists them", () => {
       subject: { subjectType: "entry", subjectId: ENTRY, entryId: ENTRY },
       dueAt: NOW - 10 + 48 * 3600,
       due: "Due in 47h",
+      // D-117: our link names a runner, so their other photos are listed
+      // — none here, since no kit stands behind this id.
+      otherPhotos: [],
     });
     expect(listed[1]).toMatchObject({
       location: "words only",
       description: "my photo",
       subject: undefined,
       due: "Due in 47h",
+      otherPhotos: undefined,
     });
   });
 

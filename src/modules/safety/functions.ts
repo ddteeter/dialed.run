@@ -56,8 +56,10 @@ import {
   handleReviewInput,
   reviewDecisionInput,
   runnersFilterInput,
+  runRemovalsInput,
   unbanUserInput,
 } from "./inputs";
+import { removalsOnRun } from "./run-removals";
 import { fileReport } from "./reports";
 import { claimForReview, pendingReviewQueue } from "./review";
 
@@ -96,6 +98,23 @@ export const blockedRunnersQuery = createServerFn({ method: "GET" }).handler(
     return { blocked: await blockedRunners(blockerId) };
   },
 );
+
+/**
+ * What the Desk took off the viewer's own run (R-140), for the band where
+ * it was. The read is scoped to the viewer as the run's author, so another
+ * runner's run answers nothing.
+ */
+export const runRemovalsQuery = createServerFn({ method: "GET" })
+  .validator((data: unknown) => runRemovalsInput.parse(data))
+  .handler(async ({ data }) => {
+    const ownerId = await requireUserId();
+    return removalsOnRun(
+      drizzle(env.DIALED_CORE),
+      ownerId,
+      data.runId,
+      data.since,
+    );
+  });
 
 export const reviewQueueQuery = createServerFn({ method: "GET" }).handler(
   async () => {
