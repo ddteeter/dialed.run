@@ -316,14 +316,18 @@ export async function deleteEntryPhoto(
  * is a kit attached to a run, and a verdict with no conditions and no date
  * answers nothing. **So does the uploaded file**: a run imported from a GPX
  * or FIT file left the track in `IMPORTS`, and a track is the route a
- * runner ran from their door. The one thing left behind is a runner-set
- * band in `DIALED_WEATHER` (`manual_conditions`, keyed by run id): a second
- * database no batch here can reach, holding one temperature and no person.
- * Account deletion's purge (126 · ACC-9) sweeps that database.
+ * runner ran from their door. **So does a runner-set band** (C1): its
+ * `manual_conditions` row, keyed by run id, is in `DIALED_WEATHER`, a
+ * second database no batch here can reach (law 8c), so each run named is
+ * owed a `manual_conditions_delete` in the batch that deletes it. "All"
+ * owes none: only account deletion's purge (126 · ACC-9) asks for all, and
+ * it sweeps that database itself, before the runs that name the bands go.
  *
- * Two reads go first, because a batch cannot branch on its own results:
- * the entries (each is owed its prefix) and the uploads (each is owed its
- * object, and the row that names it is deleted in the batch).
+ * Reads go first, because a batch cannot branch on its own results: the
+ * entries (each is owed its prefix), the uploads (each is owed its object,
+ * and the row that names it is deleted in the batch) and the runs named
+ * that are the runner's (each is owed its band — a band is found by run id
+ * alone, so an id of someone else's must never be owed one).
  */
 export async function deleteRuns(
   db: Db,
@@ -354,6 +358,7 @@ export async function deleteRuns(
     // where a list of every id would pass D1's hundred-parameter cap for
     // anyone who has logged a hundred runs.
     const entryScope: Scope = scope === "all" ? "all" : entryIds;
+    const bandRuns = scope === "all" ? [] : await ownedRuns;
     return {
       statements: [
         ...entryStatements(
@@ -371,6 +376,12 @@ export async function deleteRuns(
           oweOutbox({
             kind: "import_file_delete",
             payload: { userId, key: upload.key },
+          }),
+        ),
+        ...bandRuns.map((run) =>
+          oweOutbox({
+            kind: "manual_conditions_delete",
+            payload: { userId, runId: run.id },
           }),
         ),
       ],

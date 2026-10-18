@@ -18,6 +18,7 @@ import type { OutboxKind, OutboxMessage } from "../../lib/sql/outbox";
 import { nowSeconds } from "../../lib/now";
 import { deliverOwedEmail, emailDepsFromEnv, type EmailDeps } from "../email";
 import { isReminderStillOwed, reminderEmailSent } from "../runs";
+import { forgetManualBand } from "../weather";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -320,4 +321,10 @@ export const outboxHandlers: OutboxHandlers = {
   // Design 133 (D-113 Q1): unwired here, and wired by the firings that
   // are handed the linker (`scheduled.ts`).
   product_link: productLinkHandler(undefined),
+  // C1: a deleted run's band, in the weather database. Not the core `db`
+  // the drain hands in — `weather` owns that database's connection.
+  manual_conditions_delete: {
+    run: (_db, payload) => forgetManualBand(payload.runId),
+    context: (payload) => ({ userId: payload.userId, runId: payload.runId }),
+  },
 };
