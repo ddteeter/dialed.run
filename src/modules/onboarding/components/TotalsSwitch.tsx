@@ -9,7 +9,7 @@ import type { CountInTotalsChoice } from "../inputs";
 /**
  * Settings › Sharing's "Count my runs in anonymous totals" (D-108 D;
  * round 32, frames 1a and 1b). The copy is the board's, but for two
- * changes, both design deltas (item 62):
+ * changes, both design deltas (item 64):
  *
  * - `TOTALS_ON`'s last sentence: totals count a broad climate zone derived
  *   from where a run was (D-120), so the board's "where and when you ran"

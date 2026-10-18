@@ -1079,7 +1079,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       the owner's.** U2's SHARED/NEVER table is not built.
       **The ask:** fold these into the boards, or reword them.
 
-63. **E1's compact line, composed from the E2 frame (FEED-9; PR #187).**
+65. **E1's compact line, composed from the E2 frame (FEED-9; PR #187).**
     Round 25 rewords "E1's compact line", but no E1 frame draws a
     conditions line; the sentence is drawn only on `Remaining Screens`'
     unbuilt "E2 Feed your conditions" frame. Built from that frame's
@@ -3867,12 +3867,12 @@ FEELS [{lo}–{hi}°] · {PRECIP} · {WINDOW}`; line "In {feels}° and
   names a place. E1's compact line and N's privacy card follow. Not built.
   **E1's compact line: built (lane D1, PR #187, 2026-10-12)**, composed
   from the E2 frame because no E1 frame draws one (owner, 2026-10-12;
-  item 63). **N's privacy card: folded into the totals switch** (owner,
+  item 65). **N's privacy card: folded into the totals switch** (owner,
   2026-10-12). It is U2 Privacy's "THE CONDITIONS POOL" card, whose copy
   describes the in-app pool, not the published totals `count_in_totals`
   governed. The owner made one switch cover both: an opted-out runner's
   shared runs leave the in-app block, and the totals switch's lines say
-  so (item 62).
+  so (item 64).
 
 **Round 24's asks were still open** (answered in round 26, above) — the time correction on A1, R2b's
 options, the delete-with-runs sheet, "Garment saved, photo didn't", the

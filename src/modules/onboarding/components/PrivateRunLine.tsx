@@ -15,7 +15,7 @@ import { TotalsSwitch } from "./TotalsSwitch";
  * - **Counted**, the disclosure, with Change.
  * - **Opted out**, the board's "just 'Only you see this run.'", now
  *   "Other runners won't see this run." (owner, D-121: private means not
- *   shown to other runners or the public; design deltas item 62). "Won't"
+ *   shown to other runners or the public; design deltas item 64). "Won't"
  *   because the run is not saved yet: the line is a promise about what
  *   happens to it. The review bands say "can't" of something already
  *   there and hidden, and the export "don't" of the rule; all three name

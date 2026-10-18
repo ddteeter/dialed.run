@@ -70,7 +70,7 @@ read `bellState` through `account/legal.ts`; settings sub-pages through
 badge keeps "9+".
 
 **FEED-9 (owner, 2026-10-12).** E1's compact line is built from the E2
-frame's composition (design deltas item 63): `feed/compact-conditions.ts`
+frame's composition (design deltas item 65): `feed/compact-conditions.ts`
 reads the viewer's saved place (profile primary key) and runs the one
 consensus there (`entries_audience_created`; the cache's key for the
 reading), in the Following feed's loader through `feedConditionsQuery`, which
@@ -91,7 +91,7 @@ owner made the totals switch cover both rather than add a second setting.
   `TotalsSwitch` is `setCountInTotals`, as before. U2's card is not drawn
   separately.
 - The switch's on and off lines say it covers the block too — proposed
-  wording, asked of the owner (design deltas item 62).
+  wording, asked of the owner (design deltas item 64).
 - Not touched: "worn by N" social proof, which the fold did not name.
 
 **STR-13.** `lib/dates` gains the long-weekday and month-year shapes;
