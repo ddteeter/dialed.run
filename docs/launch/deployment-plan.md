@@ -177,8 +177,8 @@ as a var, secret as a secret. Free.
   and a response a Worker builds never enters it, so turning the tool on
   today scans nothing of ours. What every photo has is upload-time
   screening (task 106) and the quarantine below.
-- **Open item, before the public launch: decide CSAM coverage.** Two
-  candidates:
+- **Decided (D-126): PhotoDNA, with Thorn's Safer as the fallback.** The
+  two candidates were:
   - **A separate public R2 bucket on a custom domain, with caching on**
     ([R2 public buckets](https://developers.cloudflare.com/r2/buckets/public-buckets/)),
     so public-entry photos are served from Cloudflare's cache where the
@@ -212,6 +212,15 @@ as a var, secret as a secret. Free.
   - that the account is banned (SAF-4).
 
 ## 9. Legal
+
+The owner's legal-readiness items (LLC publication, EIN and bank account,
+the Google Voice number, NCMEC ESP registration, the DMCA designation in
+the LLC's name, PhotoDNA, the Sentry DPA, the Strava 9,999 request, Google
+brand verification, the trademark knockout search, the UK OSA
+assessments) are listed by stage in
+[`legal-readiness-plan.md`](legal-readiness-plan.md) step 4, with the
+decisions behind them (D-122 to D-136). The table below is the earlier
+audit's list; where the two differ, the plan is current.
 
 | item                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | stage   | cites            |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------- |
@@ -286,8 +295,9 @@ Everything in stage 0, plus:
   records acceptance.
 - Invite codes issued from the Desk; request access reachable and
   Turnstile-guarded. The owner's own account is seeded (126 · ACC-5).
-- Strava capacity raised to 10, and **no more than 10 friends connect
-  Strava** (the eleventh sees 127's STR-6 message).
+- Strava capacity raised to 10, and **no more than 9 friends connect
+  Strava**: the owner's own connection is the tenth (D-125), and the next
+  sees 127's STR-6 message.
 - Google: each friend added as a test user, or the consent screen switched
   to In production.
 - A photo uploaded from a phone has **no GPS in the served bytes** (128's
