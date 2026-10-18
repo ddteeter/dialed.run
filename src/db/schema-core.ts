@@ -933,7 +933,7 @@ export const notifications = /*#__PURE__*/ sqliteTable(
  * (send nothing if today's went) — so a first email skipped by an upload
  * no longer silences the rest of the day, and a second debt racing the
  * first cannot send twice. `day` is the runner's calendar day as
- * `lib/dates`' `calendarDay` writes it; `sent_at` is what yesterday's
+ * `lib/dates`' `calendarDay` writes it; `covered_until` is what yesterday's
  * email covered, for the next day's count. Deleted after a week by the
  * daily Strava prune: nothing reads past yesterday.
  */
@@ -942,12 +942,12 @@ export const reminderEmailDays = /*#__PURE__*/ sqliteTable(
   {
     userId: text("user_id").notNull(),
     day: text("day").notNull(),
-    sentAt: integer("sent_at").notNull(),
+    coveredUntil: integer("covered_until").notNull(),
   },
   (t) => [
     uniqueIndex("reminder_email_days_user_day").on(t.userId, t.day),
     // The prune's read: rows older than a cutoff.
-    index("reminder_email_days_sent").on(t.sentAt),
+    index("reminder_email_days_covered_until").on(t.coveredUntil),
   ],
 );
 

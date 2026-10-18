@@ -78,9 +78,9 @@ export interface EarlierReminder {
 
 /**
  * A day a reminder email went, and what it covered: the landing of the
- * reminder that owed it. The column is `sent_at`, and holds that landing
- * rather than the send, because the next day's count needs what the email
- * said and the send happens 20 minutes or more later.
+ * reminder that owed it. The column is `covered_until`, and holds that
+ * landing rather than the send, because the next day's count needs what
+ * the email said and the send happens 20 minutes or more later.
  */
 export interface EmailedDay {
   readonly day: string;
@@ -146,7 +146,7 @@ export async function reminderHistory(
     db
       .select({
         day: reminderEmailDays.day,
-        coveredUntil: reminderEmailDays.sentAt,
+        coveredUntil: reminderEmailDays.coveredUntil,
       })
       .from(reminderEmailDays)
       .where(emailedOn(userId, days)),
@@ -324,7 +324,7 @@ export function reminderEmailSent(
     .values({
       userId: reminder.userId,
       day: reminder.day,
-      sentAt: reminder.landedAt,
+      coveredUntil: reminder.landedAt,
     })
     .onConflictDoNothing();
 }

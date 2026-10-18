@@ -153,8 +153,8 @@ describe("pruneStravaIds", () => {
     await coreDb()
       .insert(reminderEmailDays)
       .values([
-        { userId, day: "old", sentAt: now - 8 * DAY },
-        { userId, day: "recent", sentAt: now - 6 * DAY },
+        { userId, day: "old", coveredUntil: now - 8 * DAY },
+        { userId, day: "recent", coveredUntil: now - 6 * DAY },
       ]);
 
     await pruneStravaIds(coreDb());
@@ -227,11 +227,11 @@ describe("the prune reads by index, not by scanning (D1 bills rows scanned)", ()
 
     const emailDays = db
       .delete(reminderEmailDays)
-      .where(lt(reminderEmailDays.sentAt, cutoff))
+      .where(lt(reminderEmailDays.coveredUntil, cutoff))
       .toSQL();
 
     const emailDaysPlan = await planOf(emailDays.sql, emailDays.params);
-    expect(emailDaysPlan).toMatch(/reminder_email_days_sent/u);
+    expect(emailDaysPlan).toMatch(/reminder_email_days_covered_until/u);
     expect(emailDaysPlan).not.toMatch(/SCAN\s+reminder_email_days/iu);
     const keysPlan = await planOf(keys.sql, keys.params);
     const deadLettersPlan = await planOf(deadLetters.sql, deadLetters.params);

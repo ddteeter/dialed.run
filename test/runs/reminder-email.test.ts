@@ -320,7 +320,7 @@ describe("the consumer owes it in the bell row's batch", () => {
     // Yesterday's email was owed by the first; the second came later.
     await core()
       .insert(reminderEmailDays)
-      .values({ userId, day: calendarDay(yesterday), sentAt: yesterday });
+      .values({ userId, day: calendarDay(yesterday), coveredUntil: yesterday });
     await core()
       .insert(notifications)
       .values(
@@ -407,7 +407,7 @@ describe("the consumer owes it in the bell row's batch", () => {
 
     expect(
       await core()
-        .select({ day: reminderEmailDays.day, at: reminderEmailDays.sentAt })
+        .select({ day: reminderEmailDays.day, at: reminderEmailDays.coveredUntil })
         .from(reminderEmailDays)
         .where(eq(reminderEmailDays.userId, userId)),
     ).toStrictEqual([{ day, at: landedAt }]);
@@ -802,7 +802,7 @@ describe("isReminderStillOwed: some reminder from the landing on is unread", () 
     await bellRow(userId, landedAt);
     await core()
       .insert(reminderEmailDays)
-      .values({ userId, day: "12 Oct 2026", sentAt: landedAt });
+      .values({ userId, day: "12 Oct 2026", coveredUntil: landedAt });
     expect(await isReminderStillOwed(core(), ref(userId))).toBe(false);
     expect(
       await isReminderStillOwed(core(), { ...ref(userId), day: "13 Oct 2026" }),

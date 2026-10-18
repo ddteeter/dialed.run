@@ -18,8 +18,8 @@ third statement: an `email` outbox row (`emailDebt` → `owe`), held
 `notBefore` = landed + 20 min, keyed `run_reminder:{userId}:{local day}`.
 
 - **One a day is a record of what was sent** (owner, 2026-10-12): table
-  `reminder_email_days (user_id, day, sent_at)`, UNIQUE on
-  `(user_id, day)`, migration `add_reminder_email_days` (additive; no
+  `reminder_email_days (user_id, day, covered_until)`, UNIQUE on
+  `(user_id, day)`, migration `0060_add_reminder_email_days` (additive; no
   rebuild). A table rather than a column: the fact is per runner per day,
   and no existing row has that grain — a column on `notifications` would
   mark one reminder, not the day, and one on `user_profiles` could hold
@@ -40,7 +40,7 @@ third statement: an `email` outbox row (`emailDebt` → `owe`), held
   25-hour day does not move it. What yesterday's email covered is the
   landing that owed it, not its send: a second reminder that day took the
   row over and left the first payload, so the email never mentioned it.
-  The day's row records that landing (its `sent_at` column holds it).
+  The day's row records that landing (its `covered_until` column holds it).
 - **Skipped by send time** when no reminder of the runner's from the
   owing landing on is still unread (a matched upload reads its own), the
   runner has disconnected Strava, or the day's email went. Any reminder,
@@ -49,7 +49,7 @@ third statement: an `email` outbox row (`emailDebt` → `owe`), held
   **Mark all read also skips it** — the owner kept that (2026-10-12): a
   reminder the runner cleared in the app needs no email.
 - **Pruned** with the Strava ids: the daily prune deletes rows older than a
-  week (`reminder_email_days_sent`); nothing reads past yesterday.
+  week (`reminder_email_days_covered_until`); nothing reads past yesterday.
 - **The preference** is the sender's own check (`optionalMail`), at send
   time, as is the confirmed-address rule.
 - **The runner's day and clock.** Nothing stores a runner's zone, so the

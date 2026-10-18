@@ -48,9 +48,9 @@ const SEVEN_DAYS_S = 7 * 24 * 60 * 60;
  * Every filter is index-backed (`add_strava_prune_indexes`, owner
  * approved 2026-09-26): `notifications_kind_created`,
  * `webhook_events_time`, Gave up's own index and
- * `reminder_email_days_sent`, so the prune reads what it changes rather
- * than whole tables. `test/runs/strava-prune.test.ts` holds the query
- * plans.
+ * `reminder_email_days_covered_until`, so the prune reads what it changes
+ * rather than whole tables. `test/runs/strava-prune.test.ts` holds the
+ * query plans.
  */
 export async function pruneStravaIds(db: CoreDb): Promise<void> {
   const cutoff = nowSeconds() - SEVEN_DAYS_S;
@@ -72,6 +72,8 @@ export async function pruneStravaIds(db: CoreDb): Promise<void> {
     gaveUpClearBefore(db, "reminder", cutoff),
     // The days a reminder email went (design 140): nothing reads past
     // yesterday, so a week-old one is only a record of a runner's runs.
-    db.delete(reminderEmailDays).where(lt(reminderEmailDays.sentAt, cutoff)),
+    db
+      .delete(reminderEmailDays)
+      .where(lt(reminderEmailDays.coveredUntil, cutoff)),
   ]);
 }
