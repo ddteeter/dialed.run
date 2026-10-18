@@ -92,5 +92,5 @@ never reads a replica.
 3. **Schema-lag race** (seen in the wild): right after a migration, a
    lagging replica can answer "no such table". Expand→contract covers
    columns; a brand-new table read in its first deploy must tolerate it, or
-   the deploy waits a few seconds after migrating. Open, for the deploy
-   runbook.
+   the deploy waits a few seconds after migrating. Written into
+   `deployment.md` §1; a CI wait is R-156, an owner call.

@@ -1,6 +1,7 @@
 import type { drizzle } from "drizzle-orm/d1";
 
 import { primaryCoreDb, waitUntil } from "../../env";
+import { captureException } from "../ops";
 import {
   deviceBookmarkCookie,
   deviceBookmarkFrom,
@@ -17,10 +18,26 @@ export interface D1RequestDeps {
   Work that outlives the response: `waitUntil`.
   */
   readonly defer: (work: Promise<void>) => void;
+  /**
+  Where a failed store goes (law 7): it never fails the response.
+  */
+  readonly capture: (error: unknown, context: Record<string, string>) => void;
 }
 
 export function d1RequestDepsFromEnv(): D1RequestDeps {
-  return { db: primaryCoreDb(), defer: waitUntil };
+  return { db: primaryCoreDb(), defer: waitUntil, capture: captureException };
+}
+
+async function storeReported(
+  deps: D1RequestDeps,
+  userId: string,
+  bookmark: string,
+): Promise<void> {
+  try {
+    await storeRunnerBookmark(deps.db, userId, bookmark);
+  } catch (error) {
+    deps.capture(error, { userId, job: "d1-bookmark-store" });
+  }
 }
 
 /**
@@ -46,7 +63,9 @@ export async function respondInD1Scope(
     const moved = bookmark === device ? undefined : bookmark;
     if (moved === undefined) return response;
     if (writerId !== undefined) {
-      deps.defer(storeRunnerBookmark(deps.db, writerId, moved));
+      // Degrade, don't fail (law 5): a lost store costs the runner's other
+      // devices one stale read, so it is reported and nothing more.
+      deps.defer(storeReported(deps, writerId, moved));
     }
     const sent = new Response(response.body, response);
     sent.headers.append("set-cookie", deviceBookmarkCookie(moved));

@@ -37,9 +37,10 @@ endpoint (`/accounts/<account>/d1/database/<id>`, a token with `D1:Edit`).
 `wrangler.jsonc` cannot set it. D1 then places read-only replicas in every
 one of its regions (ENAM, WNAM, WEUR, EEUR, APAC, OC), which is what the
 privacy policy's "read-only copies … in Europe, Asia-Pacific and Oceania"
-describes. Until the code opens D1 sessions (design 143), every query still
-goes to the primary, so turning it on early changes nothing. Turning it off
-takes up to 24 hours to stop replicas serving.
+describes. The code reads through D1 sessions (design 143), so turning
+replication on is what moves request reads onto the replicas; with it off,
+every session simply reads the primary. Turning it off takes up to 24 hours
+to stop replicas serving.
 
 Both `database_id` values in `wrangler.jsonc` are placeholder zeros
 (`00000000-…-0001`/`-0002`). Replace them with the real ids from the output.
@@ -59,6 +60,16 @@ wrangler d1 migrations apply dialed-weather --remote
 
 Once `docs/proposals/125-ci-migrate-before-deploy.md` is applied, CI runs
 exactly these two before every deploy and this step is only for the first.
+
+**With replication on, a replica can be behind the migration for a moment**
+(design 143, R-156). The primary has the new schema as soon as `apply`
+returns, and a replica gets it when it catches up, so a version deployed
+straight after can briefly read a replica that has no such column or
+table yet. Expand→contract keeps the version still serving safe; it does
+not cover the new version's first requests. By hand, wait a minute between
+`apply` and `wrangler deploy`. In CI the upload is the only gap, so watch
+Sentry for "no such column" or "no such table" right after a deploy that
+carried a migration.
 
 **Squashing to one baseline is optional, and the reason to do it is
 readability, not correctness.** The eleven core migrations are what four
