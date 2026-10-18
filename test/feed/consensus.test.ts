@@ -513,6 +513,32 @@ describe("feedConditions: the saved place, and E1's line from it (FEED-9)", () =
     });
   });
 
+  it("asks nothing and reports nothing when there is no saved place", async () => {
+    const consensus = vi.fn();
+    const report = vi.fn();
+
+    expect(
+      await compactConditions("01VIEWER", undefined, NOW, consensus, report),
+    ).toBeUndefined();
+    expect(consensus).not.toHaveBeenCalled();
+    expect(report).not.toHaveBeenCalled();
+  });
+
+  it("draws no line, and does not report, when there is no reading at the place", async () => {
+    const report = vi.fn();
+
+    expect(
+      await compactConditions(
+        "01VIEWER",
+        { lat: 86, lng: 86 },
+        NOW,
+        () => Promise.resolve(undefined),
+        report,
+      ),
+    ).toBeUndefined();
+    expect(report).not.toHaveBeenCalled();
+  });
+
   it("reads the saved place by the profile's primary key", async () => {
     const { sql, params } = conditionsHomeStatement(
       drizzle(env.DIALED_CORE),
