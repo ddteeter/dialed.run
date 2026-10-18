@@ -30,22 +30,11 @@
  * **No activity data** (D-33): a clock label, a count, our own ids and the
  * runner's day. No Strava id rides the outbox.
  */
-import {
-  and,
-  asc,
-  desc,
-  eq,
-  exists,
-  inArray,
-  isNotNull,
-  notExists,
-  sql,
-} from "drizzle-orm";
+import { and, asc, eq, exists, inArray, notExists, sql } from "drizzle-orm";
 
 import {
   notifications,
   reminderEmailDays,
-  runs,
   stravaConnections,
 } from "../../../db/schema-core";
 import {
@@ -53,11 +42,9 @@ import {
   clockLabel,
   previousCalendarDay,
 } from "../../../lib/dates";
-import { ulidSchema } from "../../../lib/ids";
 import { hasRowWhere } from "../../../lib/sql/keyed-read";
 import type { OutboxMessage, ReminderEmailRef } from "../../../lib/sql/outbox";
 import { emailDebt } from "../../email";
-import { observationsForRuns } from "../../weather";
 import type { CoreDb } from "../core-db";
 
 /**
@@ -215,46 +202,6 @@ export function owedReminderEmail(
     ),
     notBefore: landing.at + REMINDER_EMAIL_DELAY_S,
   };
-}
-
-/**
- * How many of the runner's latest located runs are asked for a zone. A
- * run's zone comes from its observation, which an indoor run or one whose
- * weather never arrived lacks, so one run is not always enough.
- */
-const ZONE_RUNS = 5;
-
-/**
- * The runner's zone, as best the app knows it: nothing stores one (see
- * `closet/components/use-runner-zone.ts`), so it is the zone of their
- * latest run whose observation named one, or `undefined` (UTC).
- *
- * Two databases, so assembled in code: the runs are core's, the zones the
- * weather cache's (CLAUDE.md's one exception to filtering in SQL). On
- * `runs_user_started`.
- */
-export async function runnerZone(
-  db: CoreDb,
-  userId: string,
-): Promise<string | undefined> {
-  const located = await latestLocatedRuns(db, userId);
-  const ids = located.map((run) => ulidSchema.parse(run.id));
-  const observed = await observationsForRuns(ids);
-  return ids
-    .map((id) => observed.get(id)?.timeZone)
-    .find((zone) => zone !== undefined);
-}
-
-/**
-The runner's latest runs that have a place, newest first.
-*/
-function latestLocatedRuns(db: CoreDb, userId: string) {
-  return db
-    .select({ id: runs.id })
-    .from(runs)
-    .where(and(eq(runs.userId, userId), isNotNull(runs.lat)))
-    .orderBy(desc(runs.startedAt))
-    .limit(ZONE_RUNS);
 }
 
 /**

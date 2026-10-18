@@ -9,7 +9,6 @@ import {
   runs,
   stravaConnections,
 } from "../../src/db/schema-core";
-import { weatherObservations } from "../../src/db/schema-weather";
 import { env } from "../../src/env";
 import { calendarDay, clockLabel } from "../../src/lib/dates";
 import { newUlid } from "../../src/lib/ids";
@@ -29,13 +28,11 @@ import { handleImportsBatch } from "../../src/modules/runs/consumer";
 import type { ConsumerDeps } from "../../src/modules/runs/consumer";
 import { coreDb } from "../../src/modules/runs/core-db";
 import { emailDebt } from "../../src/modules/email";
-import { cacheKeyFor } from "../../src/modules/weather";
 import {
   REMINDER_EMAIL_DELAY_S,
   isReminderStillOwed,
   owedReminderEmail,
   remindersSince,
-  runnerZone,
   stillOwedWhere,
   type EarlierReminder,
   type EmailedDay,
@@ -407,7 +404,10 @@ describe("the consumer owes it in the bell row's batch", () => {
 
     expect(
       await core()
-        .select({ day: reminderEmailDays.day, at: reminderEmailDays.coveredUntil })
+        .select({
+          day: reminderEmailDays.day,
+          at: reminderEmailDays.coveredUntil,
+        })
         .from(reminderEmailDays)
         .where(eq(reminderEmailDays.userId, userId)),
     ).toStrictEqual([{ day, at: landedAt }]);
@@ -493,7 +493,7 @@ describe("the consumer owes it in the bell row's batch", () => {
     const zone = "Pacific/Kiritimati";
     await deliver(
       reminderJob(athleteId),
-      deps({ runnerZone: () => Promise.resolve(zone) }),
+      deps({ runnerTimeZone: () => Promise.resolve(zone) }),
     );
 
     const [row] = await owedFor(userId);
@@ -507,20 +507,20 @@ describe("the consumer owes it in the bell row's batch", () => {
   it("still writes the bell row, but owes no email, when the zone lookup fails", async () => {
     const { userId, athleteId } = await connectedRunner();
     const failure = new Error("weather down");
-    const consumer = deps({ runnerZone: () => Promise.reject(failure) });
+    const consumer = deps({ runnerTimeZone: () => Promise.reject(failure) });
     await deliver(reminderJob(athleteId), consumer);
 
     expect(consumer.captureException).toHaveBeenCalledWith(failure, {
       userId,
-      surface: "runnerZone",
+      surface: "runnerTimeZone",
     });
     expect(await reminderRows(userId)).toHaveLength(1);
     expect(await owedFor(userId)).toStrictEqual([]);
   });
 
-  it("owes the email in UTC for a runner with no zone at all", async () => {
+  it("owes the email in UTC when no zone lookup is handed in", async () => {
     const { userId, athleteId } = await connectedRunner();
-    const consumer = deps({ runnerZone: () => Promise.resolve(undefined) });
+    const consumer = deps();
     await deliver(reminderJob(athleteId), consumer);
 
     expect(consumer.captureException).not.toHaveBeenCalled();
@@ -695,78 +695,6 @@ describe("at send time", () => {
     await drainLater(mail);
     expect(mail.sent).toHaveLength(1);
     expect(await owedFor(userId)).toStrictEqual([]);
-  });
-});
-
-async function seedRun(
-  userId: string,
-  startedAt: number,
-  place: { lat: number; lng: number } | undefined,
-  // "unnamed" stores an observation with no zone; omitted, none at all.
-  timeZone?: string,
-): Promise<void> {
-  await core().insert(runs).values({
-    id: newUlid(),
-    userId,
-    source: "file",
-    startedAt,
-    durationS: 1800,
-    distanceM: 5000,
-    title: "Run",
-    lat: place?.lat,
-    lng: place?.lng,
-  });
-  if (place === undefined || timeZone === undefined) return;
-  await drizzle(env.DIALED_WEATHER)
-    .insert(weatherObservations)
-    .values({
-      id: newUlid(),
-      ...cacheKeyFor(place.lat, place.lng, new Date(startedAt * 1000)),
-      tempC: 7,
-      feelsLikeC: 5,
-      humidity: 80,
-      windKph: 10,
-      precipMm: 0,
-      condition: "Clear",
-      source: "visualcrossing",
-      fetchedAt: startedAt,
-      timeZone,
-    });
-}
-
-const seeded = { places: 0 };
-
-/**
-A new place per seeded run, so no two seed the same cache cell.
-*/
-function place(): { lat: number; lng: number } {
-  seeded.places += 1;
-  return { lat: 10 + seeded.places * 0.5, lng: -100 - seeded.places * 0.5 };
-}
-
-describe("runnerZone: the zone of the runner's latest observed run", () => {
-  it("is undefined for a runner with no runs", async () => {
-    expect(await runnerZone(core(), newUlid())).toBeUndefined();
-  });
-
-  it("takes the latest run that names a zone, past indoor runs and unobserved ones", async () => {
-    const userId = newUlid();
-    const day = 24 * HOUR;
-    const base = nowSeconds() - 30 * day;
-    await seedRun(userId, base, place(), "Europe/Berlin");
-    await seedRun(userId, base + day, place(), CHICAGO);
-    await seedRun(userId, base + 2 * day, place(), "unnamed");
-    await seedRun(userId, base + 3 * day, place());
-    for (let index = 0; index < 5; index += 1) {
-      await seedRun(userId, base + (4 + index) * day, undefined);
-    }
-    expect(await runnerZone(core(), userId)).toBe(CHICAGO);
-  });
-
-  it("never reads another runner's runs", async () => {
-    const other = newUlid();
-    await seedRun(other, nowSeconds() - HOUR, place(), CHICAGO);
-    expect(await runnerZone(core(), newUlid())).toBeUndefined();
   });
 });
 

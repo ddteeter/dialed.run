@@ -73,10 +73,13 @@ export interface ConsumerDeps {
   owe: Owe;
   /**
    * The runner's zone, for the reminder email's day and clock (design
-   * 140): `runnerZone`, handed in by the queue entry so a test can make it
-   * fail. Absent, or failing, the email is reckoned in UTC.
+   * 140): onboarding's `runnerTimeZone` (R-152), the app's one answer,
+   * handed in by the queue entry — `ops` imports this module and onboarding
+   * reaches it through `ops`, so this module cannot import onboarding — and
+   * so a test can make it fail. Absent, the email is reckoned in UTC;
+   * failing, it is not owed.
    */
-  runnerZone?: ((userId: string) => Promise<string | undefined>) | undefined;
+  runnerTimeZone?: ((userId: string) => Promise<string>) | undefined;
 }
 
 const IMPORT_TERMINAL_STATUSES = ["done", "failed", "duplicate"] as const;
@@ -367,7 +370,7 @@ async function processReminderJob(
   // as the bell row it repeats, so neither lands without the other (law
   // 8c). Whether it is owed at all is read first: a batch cannot branch.
   const landedAt = nowSeconds();
-  const zone = await runnerZoneOf(deps, connected.userId);
+  const zone = await runnerTimeZoneOf(deps, connected.userId);
   // A failed lookup owes no email for this landing. Reckoned in UTC
   // instead, the day could differ from the runner's own — and the same day
   // reckoned both ways is two keys, so two emails.
@@ -419,18 +422,18 @@ async function isClaimed(db: CoreDb, job: ReminderJob): Promise<boolean> {
 const LOOKUP_FAILED = Symbol();
 
 /**
- * The runner's zone — `undefined` when they have none, which is UTC — or
- * `LOOKUP_FAILED`. The email is secondary to the bell row, so a failed
+ * The runner's zone — `undefined` when no lookup was handed in, which is
+ * UTC — or `LOOKUP_FAILED`. The email is secondary to the bell row, so a failed
  * lookup is reported and never fails the reminder (law 5).
  */
-async function runnerZoneOf(
-  deps: Pick<ConsumerDeps, "runnerZone" | "captureException">,
+async function runnerTimeZoneOf(
+  deps: Pick<ConsumerDeps, "runnerTimeZone" | "captureException">,
   userId: string,
 ): Promise<string | undefined | typeof LOOKUP_FAILED> {
   try {
-    return await deps.runnerZone?.(userId);
+    return await deps.runnerTimeZone?.(userId);
   } catch (error) {
-    deps.captureException(error, { userId, surface: "runnerZone" });
+    deps.captureException(error, { userId, surface: "runnerTimeZone" });
     return LOOKUP_FAILED;
   }
 }

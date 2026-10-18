@@ -52,9 +52,9 @@ third statement: an `email` outbox row (`emailDebt` → `owe`), held
   week (`reminder_email_days_covered_until`); nothing reads past yesterday.
 - **The preference** is the sender's own check (`optionalMail`), at send
   time, as is the confirmed-address rule.
-- **The runner's day and clock.** Nothing stores a runner's zone, so the
-  consumer takes `runnerZone(userId)`: the zone of their latest run with an
-  observed zone (weather DB), UTC when none. A failed lookup is reported
+- **The runner's day and clock.** The consumer is handed onboarding's
+  `runnerTimeZone(db, userId)` (design 142; R-152): the profile's zone,
+  else their latest run's observed zone, else UTC. A failed lookup is reported
   and owes no email for that landing (the bell row still lands, law 5):
   reckoned in UTC instead, one day could be keyed two ways.
 - **No activity data** (D-33): the payload holds a clock label, a count,

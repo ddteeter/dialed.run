@@ -17,7 +17,6 @@ export { pruneStravaIds } from "./strava/prune";
 export {
   isReminderStillOwed,
   reminderEmailSent,
-  runnerZone,
 } from "./strava/reminder-email";
 // Seam 5 (docs/tasks/125-129): account deletion (task 126, ACC-9) revokes
 // a runner's Strava grant through this, never a second copy of it.

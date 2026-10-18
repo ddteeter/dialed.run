@@ -7,10 +7,10 @@ import {
   handleEnrichmentBatch,
   handleEnrichmentDlqBatch,
 } from "../enrichment";
+import { runnerTimeZone } from "../onboarding";
 import {
   handleImportsBatch,
   handleImportsDlqBatch,
-  runnerZone,
   stravaApiFromEnv,
 } from "../runs";
 import { outboxInsert, oweOutbox } from "./outbox";
@@ -124,7 +124,8 @@ export async function handleQueueBatch(
         captureException,
         stravaApi: stravaApiFromEnv(),
         owe: oweInCore,
-        runnerZone: (userId) => runnerZone(drizzle(env.DIALED_CORE), userId),
+        runnerTimeZone: (userId) =>
+          runnerTimeZone(drizzle(env.DIALED_CORE), userId),
       });
       break;
     }
