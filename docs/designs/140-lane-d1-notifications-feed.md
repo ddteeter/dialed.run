@@ -114,7 +114,7 @@ owner made the totals switch cover both rather than add a second setting.
 - worker `test/runs/reminder-email.test.ts`: owed (row, key, 20 min hold,
   payload); same day deduped; redelivered message owes once, also after the
   row was sent; next day counts yesterday's later unread reminders; zone
-  day boundary; zone lookup failure → UTC, reported; skipped by upload;
+  day boundary; zone lookup failure → reported, no email; skipped by upload;
   opted out; unconfirmed; `unlessRead` read/missing/unread.
 - ui `belled-layout.dom.test.tsx`/bell: "more than 9 new"; arch test: every
   `BelledLayout` route spreads `bellStateFn`'s state.
@@ -125,8 +125,8 @@ owner made the totals switch cover both rather than add a second setting.
 
 ## Open questions
 
-1. **Runner's zone** (proceeding): latest observed run's zone, else UTC.
-   The owner may prefer storing a zone — that would be a column.
+1. **Runner's zone**: decided — design 142 stores it on the profile, and
+   the reminder reads `runnerTimeZone` (R-152, closed).
 2. **Cleared in the app skips the email**: decided (owner, 2026-10-12),
    kept as built.
 3. A held reminder the daily digest's drain happens to pick up is counted
