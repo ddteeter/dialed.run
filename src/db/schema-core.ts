@@ -80,8 +80,11 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     usernameScreenedAt: integer("username_screened_at"),
     // Settings › Sharing › "Count my runs in anonymous totals" (D-108 D).
     // On by default: published totals count shared and private runs, and
-    // an opted-out runner leaves them at the next nightly build. The guide
-    // job reads it; `onboarding/aggregate-prefs.ts` is the one writer.
+    // an opted-out runner leaves them at the next nightly build. It is also
+    // U2's conditions pool (owner, 2026-10-12): off leaves their shared runs
+    // out of the in-app Same conditions block at once (`feed/consensus.ts`),
+    // while the block still works for them. The guide job and consensus read
+    // it; `onboarding/aggregate-prefs.ts` is the one writer.
     countInTotals: integer("count_in_totals", { mode: "boolean" })
       .notNull()
       .default(true),
