@@ -69,7 +69,9 @@ Questions about this policy or your data: hello@dialed.run.
 - **Not your date of birth.** Sign-up asks for it to check you are 18 or
   over, and we do not keep it (see [Children](#children)).
 - **A request for access**, if you make one: the email address, the note
-  you leave, and whether we invited you or declined. We delete it 90 days after we
+  you leave, and whether we invited you or declined. If you ask from Mississippi
+  or Tennessee, we also note that, because we cannot open sign-up there yet
+  (see the [terms](/terms)). We delete it 90 days after we
   answer; a request we have not answered yet is kept until we do.
 - **Your password, hashed.** We store a scrypt hash, never the password
   itself. When you set a password we check it against Have I Been Pwned's
