@@ -143,6 +143,41 @@ export function googleCredentials(
 }
 
 /**
+ * What Better Auth would keep of an OAuth grant, kept as nothing (legal C4).
+ *
+ * After "Sign in with Google" Better Auth writes Google's access, refresh
+ * and ID tokens to the `account` row, and refreshes them on every later
+ * sign-in. Nothing here reads them: Google only proves who the runner is,
+ * at the callback, which has already used the tokens by the time the row
+ * is written. Google's OAuth 2.0 Policies say to delete tokens you do not
+ * need, so they are never stored.
+ *
+ * Every account write, not only Google's: the token-refresh paths update
+ * a row without saying whose provider it is, and the only other accounts
+ * Better Auth holds are email/password ones, which carry no tokens.
+ * Strava's grant is not one of them; it lives in our own tables.
+ *
+ * `undefined`, not NULL: the hook's data is spread over Better Auth's, and
+ * its adapter skips an `undefined` field, so these columns are simply
+ * never written. A new row leaves them NULL; an update leaves them as
+ * they are, which is NULL, because no write ever filled them. (The app has
+ * never been deployed, so no row from before this exists to clear.)
+ */
+const NO_PROVIDER_TOKENS = {
+  accessToken: undefined,
+  refreshToken: undefined,
+  idToken: undefined,
+  accessTokenExpiresAt: undefined,
+  refreshTokenExpiresAt: undefined,
+};
+
+function withoutProviderTokens(): Promise<{
+  data: typeof NO_PROVIDER_TOKENS;
+}> {
+  return Promise.resolve({ data: NO_PROVIDER_TOKENS });
+}
+
+/**
  * A reset link's life: an hour (ACC-4). Shorter than a confirm link's day
  * because this one hands over the account.
  */
@@ -274,12 +309,25 @@ export function createAuth({
           },
         },
       },
+      account: {
+        create: { before: withoutProviderTokens },
+        update: { before: withoutProviderTokens },
+      },
     },
     // Google makes an account only when Au2 asks it to (`requestSignUp`),
     // which is where Turnstile and the code are checked; from the log-in
     // page an unknown Google address is refused, not signed up.
     ...(google !== undefined && {
-      socialProviders: { google: { ...google, disableImplicitSignUp: true } },
+      socialProviders: {
+        google: {
+          ...google,
+          disableImplicitSignUp: true,
+          // No refresh token is asked for (legal C4). Better Auth sends no
+          // `access_type` by default, which Google reads as online; saying
+          // so keeps a later default from asking for offline access.
+          accessType: "online",
+        },
+      },
     }),
     hooks: {
       before: createAuthMiddleware(async (ctx) => {

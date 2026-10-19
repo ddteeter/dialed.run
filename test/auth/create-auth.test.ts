@@ -124,10 +124,12 @@ describe("createAuth", () => {
 
   it("configures Google only when credentials exist", () => {
     // Law 5: no credentials is a degraded deployment, not a broken one.
-    // And Google never makes an account unless sign-up asks (ACC-5).
+    // And Google never makes an account unless sign-up asks (ACC-5), and
+    // is never asked for offline access, so never sends a refresh token
+    // (legal C4).
     const google = { clientId: "id", clientSecret: "secret" };
     expect(auth({ ...BASE, google }).options.socialProviders).toStrictEqual({
-      google: { ...google, disableImplicitSignUp: true },
+      google: { ...google, disableImplicitSignUp: true, accessType: "online" },
     });
     expect(auth(BASE).options.socialProviders).toBeUndefined();
   });
