@@ -364,9 +364,12 @@ describe("the sub-pages", () => {
     const totalsGroup = totals?.closest("section");
     expect(newRunsGroup).toContainElement(share);
     expect(newRunsGroup).toContainElement(save);
-    expect(newRunsGroup).not.toHaveClass("border-t");
     expect(totalsGroup).toContainElement(counted);
-    expect(totalsGroup).toHaveClass("border-t", "border-hairline-2");
+    // One --hairline-2 rule, between the two groups.
+    const rule = screen.getByRole("separator");
+    expect(rule).toHaveClass("border-t", "border-hairline-2");
+    expect(newRunsGroup?.nextElementSibling).toBe(rule);
+    expect(rule.nextElementSibling).toBe(totalsGroup);
     expect(counted.closest("form")).toBeNull();
     expect(share.closest("form")).toBe(save.closest("form"));
 

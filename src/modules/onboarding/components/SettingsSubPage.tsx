@@ -1,10 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX, ReactNode } from "react";
 
-import { Icon, Mono, Page } from "../../../ui";
+import { Icon, Page } from "../../../ui";
 import type { CurrentSettings } from "../profile";
 import type { SettingsSection } from "../route-decisions";
-import { SharingForm, UnitsForm } from "./Settings";
+import { GroupSection, SharingForm, UnitsForm } from "./Settings";
 import { TotalsSwitch } from "./TotalsSwitch";
 
 /*
@@ -84,31 +84,19 @@ const SECTION_TITLES: Readonly<Record<SettingsSection, string>> = {
 
 /**
  * One of a sub-page's groups: a mono kicker over what it holds, as U1's
- * groups are headed. `ruled` draws the `--hairline-2` rule above it that
- * parts it from the group before.
+ * groups are headed.
  */
 function SubPageGroup({
   title,
-  ruled = false,
   children,
 }: Readonly<{
   title: string;
-  ruled?: boolean;
   children: ReactNode;
 }>): JSX.Element {
   return (
-    <section
-      className={
-        ruled
-          ? "flex flex-col gap-3 border-t border-hairline-2 pt-4"
-          : "flex flex-col gap-3"
-      }
-    >
-      <h2 className="m-0 text-muted">
-        <Mono step="xs">{title}</Mono>
-      </h2>
+    <GroupSection title={title} className="flex flex-col gap-3">
       {children}
-    </section>
+    </GroupSection>
   );
 }
 
@@ -154,7 +142,9 @@ export function SettingsSectionPage(props: SectionPageProps): JSX.Element {
             <SubPageGroup title="New runs">
               <SharingForm current={current} saveSharing={saveSharing} />
             </SubPageGroup>
-            <SubPageGroup title="Anonymous totals · Saves as you switch" ruled>
+            {/* Round 38 #61c's rule between the groups, in --hairline-2. */}
+            <hr className="m-0 border-0 border-t border-hairline-2" />
+            <SubPageGroup title="Anonymous totals · Saves as you switch">
               <TotalsSwitch
                 initial={current.countInTotals}
                 isVerified={isVerified}

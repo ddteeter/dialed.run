@@ -264,12 +264,11 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     expect(screen.getByText("Asked for share")).toBeVisible();
   });
 
-  it("unconfirmed with nothing to answer, does nothing when pressed", async () => {
-    const user = userEvent.setup();
+  it("unconfirmed with no sheet to open, says its words as text, not a press", async () => {
     const { container } = await renderWithRouter(
       line({ isVerified: false, countInTotals: true }),
     );
-    await user.click(screen.getByRole("button", { name: CONFIRM_LINK }));
+    expect(screen.queryByRole("button", { name: CONFIRM_LINK })).toBeNull();
     expect(container.querySelector("#hint")?.textContent).toBe(
       PRIVATE_UNCONFIRMED,
     );

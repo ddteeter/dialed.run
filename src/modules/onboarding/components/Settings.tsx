@@ -104,6 +104,29 @@ function SettingsRow({
 }
 
 /**
+ * A settings group's frame: a mono heading over what it holds. U1's index
+ * groups and the sub-pages' groups share it and differ only in the gap.
+ */
+export function GroupSection({
+  title,
+  className,
+  children,
+}: Readonly<{
+  title: string;
+  className: string;
+  children: ReactNode;
+}>): JSX.Element {
+  return (
+    <section className={className}>
+      <h2 className="m-0 text-muted">
+        <Mono step="xs">{title}</Mono>
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+/**
  * One of U1's groups: a mono heading over its rows.
  */
 function SettingsGroup({
@@ -111,12 +134,9 @@ function SettingsGroup({
   children,
 }: Readonly<{ title: string; children: ReactNode }>): JSX.Element {
   return (
-    <section className="flex flex-col gap-1">
-      <h2 className="m-0 text-muted">
-        <Mono step="xs">{title}</Mono>
-      </h2>
+    <GroupSection title={title} className="flex flex-col gap-1">
       <ul className="m-0 flex list-none flex-col p-0">{children}</ul>
-    </section>
+    </GroupSection>
   );
 }
 

@@ -70,18 +70,24 @@ export function PrivateRunLine({
   const askToConfirm = useUnconfirmedRefusal();
 
   if (!isVerified) {
+    // With no answer above (a render without the root) there is no sheet
+    // to open, so the words stand as text rather than a press that does
+    // nothing.
     return (
       <span id={hintId} className={LINE}>
-        <button
-          type="button"
-          onClick={() => {
-            // No answer above (a test without the root): nothing to open.
-            askToConfirm?.("share");
-          }}
-          className={IN_LINE_BUTTON}
-        >
-          {CONFIRM_LINK}
-        </button>
+        {askToConfirm === undefined ? (
+          CONFIRM_LINK
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              askToConfirm("share");
+            }}
+            className={IN_LINE_BUTTON}
+          >
+            {CONFIRM_LINK}
+          </button>
+        )}
         {PRIVATE_UNCONFIRMED_REST}
       </span>
     );
