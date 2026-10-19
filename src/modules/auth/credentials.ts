@@ -3,6 +3,7 @@ import {
   ACCESS_HEADERS,
   ACCOUNT_CLOSED_CODE,
   INVITE_COPY,
+  REGION_BLOCKED_CODE,
 } from "../../lib/contracts/access";
 import {
   AGE_CODES,
@@ -17,6 +18,7 @@ import {
   AuthRejected,
   GOOGLE_REFUSALS,
   ageRefused,
+  regionRefused,
   turnstileRefused,
 } from "./auth-copy";
 import { BREACHED_CODE } from "./breached-password";
@@ -209,6 +211,7 @@ export async function signUp(
   );
   if (error?.code === ACCESS_CODES.turnstile) throw turnstileRefused();
   if (error?.code === AGE_CODES.refused) throw ageRefused();
+  if (error?.code === REGION_BLOCKED_CODE) throw regionRefused();
   throwIfRefused(error, SIGN_UP_REFUSALS);
 }
 

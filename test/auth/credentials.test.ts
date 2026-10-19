@@ -5,7 +5,11 @@ import {
   isRememberedForSession,
   rememberForSession,
 } from "../../src/lib/browser/session-memo";
-import { INVITE_COPY, TURNSTILE_REFUSED } from "../../src/lib/contracts/access";
+import {
+  INVITE_COPY,
+  REGION_BLOCKED_COPY,
+  TURNSTILE_REFUSED,
+} from "../../src/lib/contracts/access";
 import {
   AUTH_COPY,
   AccessRefused,
@@ -218,6 +222,20 @@ describe("signUp", () => {
     });
   });
 
+  it("puts a blocked state's refusal in the band as NOT CREATED, with no retry", async () => {
+    client.signUp.mockResolvedValue({
+      data: undefined,
+      error: { code: "REGION_BLOCKED", status: 403 },
+    });
+    const thrown = await caught(signUp(account, TOKEN));
+    expect(thrown).toBeInstanceOf(AccessRefused);
+    expect(thrown).toMatchObject({
+      kicker: "Not created",
+      message: REGION_BLOCKED_COPY,
+      retry: false,
+    });
+  });
+
   it.each([
     ["INVITE_MISSING", INVITE_COPY.missing],
     ["INVITE_INVALID", INVITE_COPY.invalid],
@@ -422,6 +440,7 @@ describe("googleConsentUrl", () => {
       "Enter your date of birth above, then continue with Google.",
     ],
     ["AGE_REFUSED", "dialed.run is for runners 18 and over."],
+    ["REGION_BLOCKED", REGION_BLOCKED_COPY],
   ])(
     "says %s in the band as NOT CREATED, with no retry",
     async (code, message) => {

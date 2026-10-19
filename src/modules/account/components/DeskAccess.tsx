@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
+import {
+  isBlockedRegion,
+  regionInviteRefusal,
+  regionTag,
+} from "../../../lib/contracts/access";
 import { monthDayLabel } from "../../../lib/dates";
 import {
   FailureBand,
@@ -197,6 +202,33 @@ One row action, as a row uses it: press it on a row, and read that row's band.
 */
 type RowActionHandle = Pick<ReturnType<typeof useRowAction>, "run" | "bandFor">;
 
+/**
+ * A request's Send invite — or, for one from a state that is blocked now
+ * (`BLOCKED_US_REGIONS`; design-deltas item 66), the reason there is
+ * none. The server refuses it too (`inviteFromRequest`); this is where
+ * the operator reads why.
+ */
+function InviteAction({
+  region,
+  onInvite,
+}: Readonly<{
+  region: string;
+  onInvite: () => void;
+}>): JSX.Element {
+  if (isBlockedRegion(region)) {
+    return <span className="text-quiet">{regionInviteRefusal(region)}</span>;
+  }
+  return (
+    <button
+      type="button"
+      className="target font-semibold underline"
+      onClick={onInvite}
+    >
+      Send invite
+    </button>
+  );
+}
+
 function RequestRow({
   request,
   asOf,
@@ -211,10 +243,16 @@ function RequestRow({
   invite: RowActionHandle;
   decline: RowActionHandle;
 }>): JSX.Element {
+  const region = request.blockedRegion;
   return (
     <li className="flex flex-col gap-2 border-b border-hairline py-4">
       <span className="flex items-baseline justify-between gap-4">
-        <span className="font-semibold">{request.email}</span>
+        <span className="flex items-baseline gap-2">
+          <span className="font-semibold">{request.email}</span>
+          {region === "" ? undefined : (
+            <Mono step="sm">{regionTag(region)}</Mono>
+          )}
+        </span>
         <Mono step="sm" className="text-muted">
           {ageLabel(request.createdAt, asOf)}
         </Mono>
@@ -223,15 +261,12 @@ function RequestRow({
         {request.note ?? "No note."}
       </span>
       <span className="flex gap-4">
-        <button
-          type="button"
-          className="target font-semibold underline"
-          onClick={() => {
+        <InviteAction
+          region={region}
+          onInvite={() => {
             invite.run(request.id);
           }}
-        >
-          Send invite
-        </button>
+        />
         <button
           type="button"
           className="target text-quiet underline"

@@ -8,6 +8,7 @@ import { getRequest } from "@tanstack/react-start/server";
 
 import { coreDb, env, primaryCoreDb, waitUntil } from "../../env";
 import { accountDeletionInput, usernameInput } from "../../lib/contracts";
+import { blockedRegionOf } from "../../lib/contracts/access";
 import {
   checkCurrentPassword,
   currentSessionId,
@@ -228,6 +229,7 @@ export const requestAccessFn = createServerFn({ method: "POST" })
         note: data.note,
         attempt: turnstileAttempt(data.turnstileToken, getRequest()),
         isLimited: deploymentPosture(env.BETTER_AUTH_URL).rateLimited,
+        blockedRegion: blockedRegionOf(getRequest()),
       },
       verifyTurnstileToken,
     ),

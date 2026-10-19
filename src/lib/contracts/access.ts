@@ -99,6 +99,114 @@ export const TURNSTILE_REFUSED =
   "We couldn't check this browser. Reload the page and try again.";
 
 /**
+ * **The blocked US states** (owner, 2026-10-18): no new account from a
+ * request Cloudflare places in these states. Both states' laws require
+ * the age of every account creator to be verified and are in force
+ * against every provider: Mississippi's HB 1126 (2024) and Tennessee's
+ * Protecting Children from Social Media Act, Tenn. Code Ann. §47-18-5701
+ * et seq. dialed.run asks for a date of birth and checks no ID, so it
+ * stays closed to new accounts there instead. Existing accounts and
+ * signing in are untouched, and so is asking for access: a waitlist entry
+ * is not an account, so Au5 takes the request and records the state on it
+ * (`access_requests.blocked_region`), and D7 will not invite it.
+ *
+ * **Lifting a state is deleting its line.** Do that only on a court order
+ * enjoining the law as to non-parties: an injunction that protects only
+ * the plaintiffs (a trade group's members) does not cover dialed.run. The
+ * requests already tagged with it become invitable at once, because D7
+ * reads this list, not the tag, to decide.
+ *
+ * Keyed by Cloudflare's `request.cf.regionCode` (ISO 3166-2 without the
+ * `US-`); the name is what the copy says, so every sentence follows the
+ * list rather than restating it.
+ */
+export const BLOCKED_US_REGIONS = {
+  MS: "Mississippi",
+  TN: "Tennessee",
+} as const;
+
+export type BlockedRegion = keyof typeof BLOCKED_US_REGIONS;
+
+/**
+The listed states' names, as one sentence says them.
+*/
+const BLOCKED_NAMES = Object.values(BLOCKED_US_REGIONS).join(" or ");
+
+/**
+ * Whether a state code is one of `BLOCKED_US_REGIONS` now — its own key,
+ * not an inherited one.
+ */
+export function isBlockedRegion(code: string): code is BlockedRegion {
+  return Object.hasOwn(BLOCKED_US_REGIONS, code);
+}
+
+/**
+ * The words (owner, 2026-10-18; placeholder until design words them —
+ * design-deltas item 66). `signUp` is Au2's refusal, on the form and on
+ * Google's band alike; `waitlist` is Au5's receipt for a request from a
+ * blocked state, which is taken.
+ */
+export const REGION_COPY = {
+  signUp: `dialed.run isn't open to new sign-ups from ${BLOCKED_NAMES}. State laws there require ID age checks for every new account, which we don't do.`,
+  waitlist: `Thanks. Sign-up isn't open in ${BLOCKED_NAMES} yet, because state laws there require ID age checks for every new account. We'll email you if that changes.`,
+} as const;
+
+/**
+Au2's refusal, as the server's hook and both bands say it.
+*/
+export const REGION_BLOCKED_COPY = REGION_COPY.signUp;
+
+/**
+ * D7's tag on a request recorded from a state: its code in brackets, the
+ * bracket notation measured values wear (`[TN]`).
+ */
+export function regionTag(code: string): string {
+  return `[${code}]`;
+}
+
+/**
+ * Why D7 has no Send invite on a request from a state that is blocked
+ * now: the operator's reason, the state named.
+ */
+export function regionInviteRefusal(code: BlockedRegion): string {
+  return `No invite while sign-up is closed in ${BLOCKED_US_REGIONS[code]}.`;
+}
+
+/**
+ * The code the server's refusal carries, which Au2 reads to say it in a
+ * band, and Google's round trip brings back as `?error=REGION_BLOCKED`.
+ */
+export const REGION_BLOCKED_CODE = "REGION_BLOCKED";
+
+/**
+ * The slice of a Workers request the gate reads: Cloudflare's `cf`, which
+ * the edge writes and a client cannot, parsed rather than trusted. A
+ * request with none (local dev, a test, Better Auth called from the
+ * server) or with one of another shape is not placed anywhere.
+ */
+const placedRequestSchema = z.object({
+  cf: z.object({ country: z.string(), regionCode: z.string() }),
+});
+
+/**
+ * **The one gate** on where a new account may come from: the blocked US
+ * state (`BLOCKED_US_REGIONS`) this request comes from, or nothing.
+ * Anything that cannot be placed is not blocked.
+ */
+export function blockedRegionOf(request: unknown): BlockedRegion | undefined {
+  const placed = placedRequestSchema.safeParse(request).data?.cf;
+  if (placed?.country !== "US") return undefined;
+  return isBlockedRegion(placed.regionCode) ? placed.regionCode : undefined;
+}
+
+/**
+The same gate, as a yes or no.
+*/
+export function isFromBlockedRegion(request: unknown): boolean {
+  return blockedRegionOf(request) !== undefined;
+}
+
+/**
  * A signed-out form's request that was not taken — Au5's, and `/takedown`'s
  * (design 136), which share Turnstile and the per-visitor limit.
  */

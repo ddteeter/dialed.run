@@ -34,8 +34,16 @@ import {
   restoreInviteCode,
   revokeInviteCode,
 } from "../../src/modules/account/invites";
+import type { InviteAnswer } from "../../src/modules/account/invites";
 import type { TurnstileAttempt } from "../../src/modules/ops";
 import { fakeMail, owedTo } from "../email/helpers";
+
+/**
+Send invite's code, parsed out of its answer: a refusal or nothing fails the test here.
+*/
+function codeOf(answer: InviteAnswer): string {
+  return z.object({ code: z.string() }).parse(answer).code;
+}
 
 /**
  * Invite codes and access requests (task 126, ACC-5) on real D1: a code's
@@ -328,8 +336,20 @@ describe("Desk D7", () => {
 
     const desk = await accessDesk(db);
     expect(desk.requests).toStrictEqual([
-      { id: ANY_STRING, email: "old@x.test", note: "Hi", createdAt: 10 },
-      { id: ANY_STRING, email: "new@x.test", note: NOTHING, createdAt: 30 },
+      {
+        id: ANY_STRING,
+        email: "old@x.test",
+        note: "Hi",
+        blockedRegion: "",
+        createdAt: 10,
+      },
+      {
+        id: ANY_STRING,
+        email: "new@x.test",
+        note: NOTHING,
+        blockedRegion: "",
+        createdAt: 30,
+      },
     ]);
     expect(desk.codes).toStrictEqual([
       {
@@ -441,7 +461,7 @@ describe("Desk D7", () => {
     // Owed in the same batch, sent after the answer.
     expect(mail.sent).toHaveLength(0);
     expect(await db.select().from(outbox)).toMatchObject([
-      { kind: "email", dedupeKey: `invite:${first?.code ?? ""}` },
+      { kind: "email", dedupeKey: `invite:${codeOf(first)}` },
     ]);
     await later.settled();
     expect(mail.sent).toHaveLength(1);
@@ -450,7 +470,7 @@ describe("Desk D7", () => {
       subject: "Your dialed.run invite",
     });
     expect(mail.sent[0]?.text).toContain(
-      `Here's your code: ${first?.code ?? ""}. It works once.`,
+      `Here's your code: ${codeOf(first)}. It works once.`,
     );
     expect(await db.select().from(outbox)).toStrictEqual([]);
     const again = owedTo(mail);
@@ -467,7 +487,7 @@ describe("Desk D7", () => {
     expect(await db.select().from(outbox)).toStrictEqual([]);
     expect(await db.select().from(inviteCodes)).toMatchObject([
       {
-        code: first?.code,
+        code: codeOf(first),
         // No address is copied onto the code: D7 reads it from the request.
         label: NOTHING,
         maxUses: 1,
@@ -699,11 +719,12 @@ describe("requestAccess (Au5)", () => {
           note: "Winter runner.",
           attempt: ATTEMPT,
           isLimited: false,
+          blockedRegion: undefined,
         },
         verify,
         5,
       ),
-    ).toStrictEqual({ status: "received" });
+    ).toStrictEqual({ status: "received", isFromBlockedRegion: false });
     expect(await db.select().from(accessRequests)).toMatchObject([
       {
         email: "sam@x.test",
@@ -720,7 +741,13 @@ describe("requestAccess (Au5)", () => {
     const ask = (note: string, now: number) =>
       requestAccess(
         db,
-        { email: "sam@x.test", note, attempt: ATTEMPT, isLimited: false },
+        {
+          email: "sam@x.test",
+          note,
+          attempt: ATTEMPT,
+          isLimited: false,
+          blockedRegion: undefined,
+        },
         verify,
         now,
       );
@@ -756,7 +783,13 @@ describe("requestAccess (Au5)", () => {
     for (const email of ["no@x.test", "yes@x.test"]) {
       await requestAccess(
         db,
-        { email, note: "", attempt: ATTEMPT, isLimited: false },
+        {
+          email,
+          note: "",
+          attempt: ATTEMPT,
+          isLimited: false,
+          blockedRegion: undefined,
+        },
         verify,
       );
     }
@@ -770,12 +803,114 @@ describe("requestAccess (Au5)", () => {
     ]);
   });
 
+  it.each([true, false])(
+    "takes a request from a blocked state and tags it (limited: %s)",
+    async (isLimited) => {
+      const { seen, verify } = verifyAs(true);
+      expect(
+        await requestAccess(
+          db,
+          {
+            email: "sam@x.test",
+            note: "",
+            attempt: ATTEMPT,
+            isLimited,
+            blockedRegion: "TN",
+          },
+          verify,
+        ),
+      ).toStrictEqual({ status: "received", isFromBlockedRegion: true });
+      expect(seen).toStrictEqual([ATTEMPT]);
+      expect(await db.select().from(accessRequests)).toMatchObject([
+        { email: "sam@x.test", status: "pending", blockedRegion: "TN" },
+      ]);
+    },
+  );
+
+  it("keeps the latest ask's place: a repeat from elsewhere clears the tag", async () => {
+    const { verify } = verifyAs(true);
+    const ask = (blockedRegion: "MS" | undefined) =>
+      requestAccess(
+        db,
+        {
+          email: "sam@x.test",
+          note: "",
+          attempt: ATTEMPT,
+          isLimited: false,
+          blockedRegion,
+        },
+        verify,
+      );
+    await ask(undefined);
+    await ask("MS");
+    expect(await db.select().from(accessRequests)).toMatchObject([
+      { blockedRegion: "MS" },
+    ]);
+    await ask(undefined);
+    expect(await db.select().from(accessRequests)).toMatchObject([
+      { blockedRegion: NOTHING },
+    ]);
+  });
+
+  it("shows D7 the tag, and refuses Send invite for it, minting and sending nothing", async () => {
+    const requestId = newUlid();
+    await db.insert(accessRequests).values({
+      id: requestId,
+      email: "sam@x.test",
+      blockedRegion: "MS",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    expect((await accessDesk(db)).requests).toMatchObject([
+      { id: requestId, blockedRegion: "MS" },
+    ]);
+    const mail = fakeMail();
+    const later = owedTo(mail);
+    expect(
+      await inviteFromRequest(db, { operatorId: "op", requestId }, later.owed),
+    ).toStrictEqual({
+      refused: "No invite while sign-up is closed in Mississippi.",
+    });
+    await later.settled();
+    expect(mail.sent).toStrictEqual([]);
+    expect(await db.select().from(inviteCodes)).toStrictEqual([]);
+    expect(await db.select().from(outbox)).toStrictEqual([]);
+    expect(await db.select().from(accessRequests)).toMatchObject([
+      { status: "pending" },
+    ]);
+  });
+
+  it("invites a request tagged with a state no longer listed", async () => {
+    const requestId = newUlid();
+    await db.insert(accessRequests).values({
+      id: requestId,
+      email: "sam@x.test",
+      blockedRegion: "AL",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const later = owedTo(fakeMail());
+    const answer = await inviteFromRequest(
+      db,
+      { operatorId: "op", requestId },
+      later.owed,
+    );
+    await later.settled();
+    expect(codeOf(answer)).toMatch(/^DIAL-/u);
+  });
+
   it("refuses what Turnstile refuses, keeping nothing", async () => {
     const { seen, verify } = verifyAs(false);
     expect(
       await requestAccess(
         db,
-        { email: "sam@x.test", note: "", attempt: ATTEMPT, isLimited: false },
+        {
+          email: "sam@x.test",
+          note: "",
+          attempt: ATTEMPT,
+          isLimited: false,
+          blockedRegion: undefined,
+        },
         verify,
       ),
     ).toStrictEqual({ status: "refused" });
@@ -788,13 +923,20 @@ describe("requestAccess (Au5)", () => {
     const ask = (email: string, attempt: TurnstileAttempt) =>
       requestAccess(
         db,
-        { email, note: "", attempt, isLimited: true },
+        {
+          email,
+          note: "",
+          attempt,
+          isLimited: true,
+          blockedRegion: undefined,
+        },
         verify,
         1000,
       );
     for (const n of [1, 2, 3, 4, 5]) {
       expect(await ask(`${String(n)}@x.test`, ATTEMPT)).toStrictEqual({
         status: "received",
+        isFromBlockedRegion: false,
       });
     }
     expect(await ask("6@x.test", ATTEMPT)).toStrictEqual({
@@ -809,7 +951,7 @@ describe("requestAccess (Au5)", () => {
     // Another visitor is not held up by the first.
     expect(
       await ask("7@x.test", { ...ATTEMPT, remoteIp: undefined }),
-    ).toStrictEqual({ status: "received" });
+    ).toStrictEqual({ status: "received", isFromBlockedRegion: false });
     const keys = await db
       .select({ key: emailSendLimits.key })
       .from(emailSendLimits);
@@ -828,6 +970,7 @@ describe("requestAccess (Au5)", () => {
           note: "",
           attempt: ATTEMPT,
           isLimited: false,
+          blockedRegion: undefined,
         },
         verify,
       );

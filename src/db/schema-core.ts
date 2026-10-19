@@ -440,6 +440,10 @@ export const accessRequests = /*#__PURE__*/ sqliteTable(
     status: text("status", { enum: ["pending", "invited", "declined"] })
       .notNull()
       .default("pending"),
+    // The blocked US state the request came from (`BLOCKED_US_REGIONS`:
+    // "MS", "TN"), as its latest ask was placed; null anywhere else. D7
+    // shows it and will not invite while the state is still listed.
+    blockedRegion: text("blocked_region"),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
   },

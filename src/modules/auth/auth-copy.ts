@@ -1,6 +1,8 @@
 import {
   ACCESS_CODES,
   INVITE_COPY,
+  REGION_BLOCKED_CODE,
+  REGION_BLOCKED_COPY,
   TURNSTILE_REFUSED,
 } from "../../lib/contracts/access";
 import { AGE_CODES, AGE_COPY } from "../../lib/contracts/age";
@@ -136,6 +138,24 @@ export function ageRefused(): AccessRefused {
 }
 
 /**
+ * A blocked state's refusal (owner, 2026-10-18; design-deltas item 66): a
+ * band on the form and on Google alike, and no Try again — nothing typed
+ * or pressed here fixes where the request came from.
+ */
+const REGION_BLOCKED_BAND: AuthBand = {
+  kicker: NOT_CREATED,
+  message: REGION_BLOCKED_COPY,
+  retry: false,
+};
+
+/**
+The blocked state's refusal, as a band says it.
+*/
+export function regionRefused(): AccessRefused {
+  return new AccessRefused(REGION_BLOCKED_BAND);
+}
+
+/**
  * Google's refusals, by the code that names them, as round 28 #9 draws
  * them in a band under the button: no code ("enter it above"), a refused
  * code (the field's sentence, and Request access), and Au1's address with
@@ -165,6 +185,7 @@ export const GOOGLE_REFUSALS: ReadonlyMap<string | undefined, AuthBand> =
       },
     ],
     [AGE_CODES.refused, AGE_REFUSED_BAND],
+    [REGION_BLOCKED_CODE, REGION_BLOCKED_BAND],
     [
       SIGNUP_DISABLED,
       {

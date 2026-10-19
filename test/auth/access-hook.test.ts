@@ -9,6 +9,8 @@ import { inviteCodes, inviteRedemptions } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import {
   INVITE_COPY,
+  REGION_BLOCKED_CODE,
+  REGION_BLOCKED_COPY,
   TURNSTILE_REFUSED,
   mintInviteCode,
 } from "../../src/lib/contracts/access";
@@ -103,11 +105,22 @@ function address(): string {
   return `${newUlid().toLowerCase()}@example.test`;
 }
 
+/**
+Where Cloudflare's edge placed a request: `request.cf`'s two fields the region gate reads.
+*/
+type Placed = Readonly<{ country: string; regionCode: string }>;
+
+const TENNESSEE: Placed = { country: "US", regionCode: "TN" };
+const MISSISSIPPI: Placed = { country: "US", regionCode: "MS" };
+const OREGON: Placed = { country: "US", regionCode: "OR" };
+
 function signUpRequest(
   email: string,
   headers: Record<string, string>,
+  cf: Partial<Placed> = {},
 ): Request {
   return new Request(`${ORIGIN}/api/auth/sign-up/email`, {
+    cf,
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -347,9 +360,11 @@ async function googleRoundTrip(
   email: string,
   body: Record<string, unknown>,
   headers: Record<string, string> = {},
+  cf: Partial<Placed> = {},
 ): Promise<{ started: Response; landing?: URL }> {
   const started = await auth.handler(
     new Request(`${ORIGIN}/api/auth/sign-in/social`, {
+      cf,
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -388,7 +403,7 @@ async function googleRoundTrip(
   const callback = await auth.handler(
     new Request(
       `${ORIGIN}/api/auth/callback/google?code=granted&state=${encodeURIComponent(state)}`,
-      { headers: { cookie } },
+      { cf, headers: { cookie } },
     ),
   );
   return {
@@ -628,6 +643,140 @@ describe("Google's tokens (legal C4)", () => {
     expect(landing?.pathname).toBe("/");
     expect(landing?.searchParams.get("error")).toBeNull();
     expect(await googleGrantFor(email)).toStrictEqual(created);
+  });
+});
+
+/**
+ * The blocked states (owner, 2026-10-18): no new account from Mississippi
+ * or Tennessee, by email or Google; an account that exists still signs in.
+ */
+describe("the region gate", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it.each([
+    ["Mississippi", MISSISSIPPI],
+    ["Tennessee", TENNESSEE],
+  ])(
+    "refuses an email sign-up from %s before Turnstile, and makes no account",
+    async (_, cf) => {
+      const { attempts, verify } = turnstile();
+      const auth = instance(accessGate(db, verify));
+      const code = freshCode();
+      await seedCode(code);
+      const email = address();
+      const response = await auth.handler(
+        signUpRequest(
+          email,
+          { "x-invite-code": code, "x-turnstile-token": "token" },
+          cf,
+        ),
+      );
+      expect(response.status).toBe(403);
+      expect(await refusal(response)).toStrictEqual({
+        code: REGION_BLOCKED_CODE,
+        message: REGION_BLOCKED_COPY,
+      });
+      expect(attempts).toStrictEqual([]);
+      expect(await accountFor(email)).toBeUndefined();
+      // The code is not spent: it still opens an account from elsewhere.
+      expect(
+        (
+          await auth.handler(
+            signUpRequest(
+              address(),
+              { "x-invite-code": code, "x-turnstile-token": "token" },
+              OREGON,
+            ),
+          )
+        ).status,
+      ).toBe(200);
+    },
+  );
+
+  it("refuses a new Google account from Tennessee on the callback, and makes none", async () => {
+    const auth = instance(accessGate(db, turnstile().verify));
+    const code = freshCode();
+    await seedCode(code);
+    const email = address();
+    const { started, landing } = await googleRoundTrip(
+      auth,
+      email,
+      { requestSignUp: true },
+      { "x-invite-code": code, "x-turnstile-token": "token" },
+      TENNESSEE,
+    );
+    expect(started.status).toBe(200);
+    expect(landing?.pathname).toBe("/auth/signup");
+    expect(landing?.searchParams.get("error")).toBe(REGION_BLOCKED_CODE);
+    expect(await accountFor(email)).toBeUndefined();
+  });
+
+  it("makes a Google account from another state", async () => {
+    const auth = instance(accessGate(db, turnstile().verify));
+    const code = freshCode();
+    await seedCode(code);
+    const email = address();
+    const { landing } = await googleRoundTrip(
+      auth,
+      email,
+      { requestSignUp: true },
+      { "x-invite-code": code, "x-turnstile-token": "token" },
+      OREGON,
+    );
+    expect(landing?.pathname).toBe("/");
+    expect(await accountFor(email)).toBeDefined();
+  });
+
+  it("signs an existing account in with Google from Au2 in Mississippi", async () => {
+    const auth = instance(accessGate(db, turnstile().verify));
+    const code = freshCode();
+    await seedCode(code);
+    const email = address();
+    await googleRoundTrip(
+      auth,
+      email,
+      { requestSignUp: true },
+      { "x-invite-code": code, "x-turnstile-token": "token" },
+    );
+    vi.restoreAllMocks();
+    const { started, landing } = await googleRoundTrip(
+      auth,
+      email,
+      { requestSignUp: true },
+      { "x-turnstile-token": "token" },
+      MISSISSIPPI,
+    );
+    expect(started.status).toBe(200);
+    expect(landing?.pathname).toBe("/");
+    expect(landing?.searchParams.get("error")).toBeNull();
+  });
+
+  it("signs an existing account in with a password from Tennessee", async () => {
+    const auth = instance(accessGate(db, turnstile().verify));
+    const code = freshCode();
+    await seedCode(code);
+    const email = address();
+    await auth.handler(
+      signUpRequest(email, {
+        "x-invite-code": code,
+        "x-turnstile-token": "token",
+      }),
+    );
+    await db
+      .update(user)
+      .set({ emailVerified: true })
+      .where(eq(user.email, email));
+    const response = await auth.handler(
+      new Request(`${ORIGIN}/api/auth/sign-in/email`, {
+        cf: TENNESSEE,
+        method: "POST",
+        headers: { "content-type": "application/json", origin: ORIGIN },
+        body: JSON.stringify({ email, password: PASSWORD }),
+      }),
+    );
+    expect(response.status).toBe(200);
   });
 });
 

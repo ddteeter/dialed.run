@@ -1,15 +1,25 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import {
   ACCESS_CODES,
   ACCESS_HEADERS,
+  BLOCKED_US_REGIONS,
   INVITE_ALPHABET,
   INVITE_COPY,
   INVITE_PREFIX,
+  REGION_BLOCKED_CODE,
+  REGION_BLOCKED_COPY,
+  REGION_COPY,
   TURNSTILE_REFUSED,
+  blockedRegionOf,
   inviteCodeField,
+  isBlockedRegion,
+  isFromBlockedRegion,
   mintInviteCode,
   normalizeInviteCode,
+  regionInviteRefusal,
+  regionTag,
 } from "../../src/lib/contracts/access";
 
 /**
@@ -84,5 +94,74 @@ describe("the words", () => {
       missing: "INVITE_MISSING",
       invalid: "INVITE_INVALID",
     });
+  });
+});
+
+/**
+ * The blocked states (owner, 2026-10-18): Cloudflare's placing of the
+ * request, parsed as untrusted, and anything unplaced let through.
+ */
+describe("isFromBlockedRegion", () => {
+  function placed(cf: unknown): Request {
+    return new Request("https://app.dialed.run/", {
+      cf: z.record(z.string(), z.unknown()).parse(cf),
+    });
+  }
+
+  it.each(["MS", "TN"])("blocks a request from %s", (regionCode) => {
+    const request = placed({ country: "US", regionCode });
+    expect(isFromBlockedRegion(request)).toBe(true);
+    expect(blockedRegionOf(request)).toBe(regionCode);
+  });
+
+  it.each([
+    ["another state", { country: "US", regionCode: "CA" }],
+    ["the same code in another country", { country: "CA", regionCode: "TN" }],
+    ["a region with no country", { regionCode: "MS" }],
+    ["a country with no region", { country: "US" }],
+    ["a region that is not a string", { country: "US", regionCode: 12 }],
+    [
+      "an inherited key, not a listed one",
+      { country: "US", regionCode: "toString" },
+    ],
+  ])("lets through %s", (_, cf) => {
+    expect(isFromBlockedRegion(placed(cf))).toBe(false);
+    expect(blockedRegionOf(placed(cf))).toBeUndefined();
+  });
+
+  it("lets through a request Cloudflare did not place, and no request at all", () => {
+    expect(isFromBlockedRegion(new Request("https://app.dialed.run/"))).toBe(
+      false,
+    );
+    expect(isFromBlockedRegion(undefined)).toBe(false);
+    expect(isFromBlockedRegion({ cf: "MS" })).toBe(false);
+  });
+
+  it("reads the same slice off a plain object as off a request", () => {
+    expect(
+      isFromBlockedRegion({ cf: { country: "US", regionCode: "TN" } }),
+    ).toBe(true);
+  });
+
+  it("names every blocked state in the copy, from the list", () => {
+    expect(Object.keys(BLOCKED_US_REGIONS)).toStrictEqual(["MS", "TN"]);
+    expect(REGION_COPY).toStrictEqual({
+      signUp:
+        "dialed.run isn't open to new sign-ups from Mississippi or Tennessee. State laws there require ID age checks for every new account, which we don't do.",
+      waitlist:
+        "Thanks. Sign-up isn't open in Mississippi or Tennessee yet, because state laws there require ID age checks for every new account. We'll email you if that changes.",
+    });
+    expect(REGION_BLOCKED_COPY).toBe(REGION_COPY.signUp);
+    expect(REGION_BLOCKED_CODE).toBe("REGION_BLOCKED");
+  });
+
+  it("tells D7 which state, and why there is no invite", () => {
+    expect(regionTag("TN")).toBe("[TN]");
+    expect(regionInviteRefusal("TN")).toBe(
+      "No invite while sign-up is closed in Tennessee.",
+    );
+    expect(isBlockedRegion("MS")).toBe(true);
+    expect(isBlockedRegion("")).toBe(false);
+    expect(isBlockedRegion("toString")).toBe(false);
   });
 });
