@@ -294,7 +294,7 @@ describe("the sub-pages", () => {
       screen.getByRole("heading", { level: 1, name: "Privacy" }),
     ).toBeVisible();
     expect(
-      screen.getByRole("checkbox", { name: "Share to feed by default" }),
+      screen.getByRole("checkbox", { name: "Share new runs" }),
     ).toBeChecked();
     expect(screen.queryByRole("radio")).toBeNull();
     await userEvent.setup().click(screen.getByRole("button", { name: "Save" }));
@@ -332,6 +332,48 @@ describe("the sub-pages", () => {
     });
   });
 
+  it("hold Privacy's two controls in two groups, the totals switch outside the form and last (round 38 #61c)", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(
+      <SettingsSectionPage
+        section="sharing"
+        current={ANSWERED}
+        saveUnits={vi.fn()}
+        saveSharing={vi.fn()}
+        saveCountInTotals={vi.fn()}
+      />,
+    );
+    const [newRuns, totals] = screen.getAllByRole("heading", { level: 2 });
+    expect(newRuns).toHaveTextContent(/^New runs$/u);
+    expect(totals).toHaveTextContent(
+      /^Anonymous totals · Saves as you switch$/u,
+    );
+    // The kicker is mono, in the muted role U1's group headings use.
+    expect(newRuns).toHaveClass("text-muted");
+    expect(newRuns?.firstElementChild).toHaveClass("text-mono-xs");
+
+    const share = screen.getByRole("checkbox", { name: "Share new runs" });
+    const counted = screen.getByRole("checkbox", {
+      name: "Count my runs in anonymous totals",
+    });
+    const save = screen.getByRole("button", { name: "Save" });
+    const newRunsGroup = newRuns?.closest("section");
+    const totalsGroup = totals?.closest("section");
+    expect(newRunsGroup).toContainElement(share);
+    expect(newRunsGroup).toContainElement(save);
+    expect(newRunsGroup).not.toHaveClass("border-t");
+    expect(totalsGroup).toContainElement(counted);
+    expect(totalsGroup).toHaveClass("border-t", "border-hairline-2");
+    expect(counted.closest("form")).toBeNull();
+    expect(share.closest("form")).toBe(save.closest("form"));
+
+    share.focus();
+    await user.tab();
+    expect(save).toHaveFocus();
+    await user.tab();
+    expect(counted).toHaveFocus();
+  });
+
   it("say Nothing saved when the units save fails", async () => {
     const user = userEvent.setup();
     const saveUnits = vi.fn().mockRejectedValue(new Error("D1 down"));
@@ -350,10 +392,14 @@ describe("the sub-pages", () => {
     );
 
     const toggle = screen.getByRole("checkbox", {
-      name: "Share to feed by default",
+      name: "Share new runs",
     });
     expect(toggle).toBeChecked();
-    expect(screen.getByText("You can flip it per run.")).toBeVisible();
+    expect(
+      screen.getByText(
+        "Runners on dialed.run see their kit, conditions and verdict. You can change any run.",
+      ),
+    ).toBeVisible();
     await user.click(toggle);
     await user.click(screen.getByRole("button", { name: "Save" }));
 

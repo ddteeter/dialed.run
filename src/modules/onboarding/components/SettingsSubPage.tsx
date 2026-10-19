@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX, ReactNode } from "react";
 
-import { Icon, Page } from "../../../ui";
+import { Icon, Mono, Page } from "../../../ui";
 import type { CurrentSettings } from "../profile";
 import type { SettingsSection } from "../route-decisions";
 import { SharingForm, UnitsForm } from "./Settings";
@@ -83,10 +83,44 @@ const SECTION_TITLES: Readonly<Record<SettingsSection, string>> = {
 };
 
 /**
- * One sub-page: its title, the way back, and its own small form. Privacy
- * also holds D-108's totals switch, which saves on toggle rather than
- * with the form's Save (round 32: "one SHARING group beside 'Share new
- * runs'").
+ * One of a sub-page's groups: a mono kicker over what it holds, as U1's
+ * groups are headed. `ruled` draws the `--hairline-2` rule above it that
+ * parts it from the group before.
+ */
+function SubPageGroup({
+  title,
+  ruled = false,
+  children,
+}: Readonly<{
+  title: string;
+  ruled?: boolean;
+  children: ReactNode;
+}>): JSX.Element {
+  return (
+    <section
+      className={
+        ruled
+          ? "flex flex-col gap-3 border-t border-hairline-2 pt-4"
+          : "flex flex-col gap-3"
+      }
+    >
+      <h2 className="m-0 text-muted">
+        <Mono step="xs">{title}</Mono>
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+/**
+ * One sub-page: its title, the way back, and its own small form.
+ *
+ * **Privacy holds two controls that save differently** (round 38 #61c):
+ * NEW RUNS is a form with its Save, and ANONYMOUS TOTALS saves on toggle,
+ * so it sits after the form's end, outside it, under a rule and a kicker
+ * that says so. A failure there is §4a's NOT CHANGED in its own group.
+ * The totals switch comes last, so Tab never passes it between the form's
+ * field and its Save.
  */
 export function SettingsSectionPage({
   section,
@@ -109,11 +143,15 @@ export function SettingsSectionPage({
         units: <UnitsForm current={current} saveUnits={saveUnits} />,
         sharing: (
           <>
-            <SharingForm current={current} saveSharing={saveSharing} />
-            <TotalsSwitch
-              initial={current.countInTotals}
-              save={saveCountInTotals}
-            />
+            <SubPageGroup title="New runs">
+              <SharingForm current={current} saveSharing={saveSharing} />
+            </SubPageGroup>
+            <SubPageGroup title="Anonymous totals · Saves as you switch" ruled>
+              <TotalsSwitch
+                initial={current.countInTotals}
+                save={saveCountInTotals}
+              />
+            </SubPageGroup>
           </>
         ),
       }}

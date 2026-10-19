@@ -382,7 +382,14 @@ export function UnitsForm({
   );
 }
 
-const SHARE_DEFAULT_LABEL = "Share to feed by default";
+/**
+ * Round 38 #61c's NEW RUNS frame, which retires the build's older "Share
+ * to feed by default" and "You can flip it per run." (round 27 #7 retired
+ * the feed-and-public wording for this default).
+ */
+const SHARE_DEFAULT_LABEL = "Share new runs";
+const SHARE_DEFAULT_HINT =
+  "Runners on dialed.run see their kit, conditions and verdict. You can change any run.";
 
 /**
  * The privacy sub-page's one field, and what it means per run.
@@ -403,7 +410,7 @@ function SharingFields({
           onChange({ defaultAudience: audienceOfShareToggle(isOn) });
         }}
       />
-      <p className="m-0 text-micro text-muted">You can flip it per run.</p>
+      <p className="m-0 text-micro text-muted">{SHARE_DEFAULT_HINT}</p>
     </div>
   );
 }
