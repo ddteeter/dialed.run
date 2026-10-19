@@ -12,7 +12,6 @@ import {
   storeRunnerBookmark,
 } from "../../src/modules/auth/d1-bookmark";
 import {
-  BOOKMARK_ORDER_MESSAGE,
   d1RequestDepsFromEnv,
   respondInD1Scope,
 } from "../../src/modules/auth/d1-request";
@@ -177,7 +176,9 @@ describe("respondInD1Scope", () => {
     expect(response.status).toBe(200);
     expect(captured).toEqual([
       {
-        error: new Error(BOOKMARK_ORDER_MESSAGE),
+        error: new Error(
+          "a D1 session ended at a bookmark sorting before the one it started from",
+        ),
         context: { job: "d1-bookmark-order", from: LATER, reached: DEVICE },
       },
     ]);

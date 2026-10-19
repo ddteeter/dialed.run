@@ -524,7 +524,12 @@
     },
     {
       "key": "src/lib/sql/d1-session.ts|mutation-suppress|// Stryker disable next-line EqualityOperator",
-      "reason": "Equivalent mutant, proof at the site: newerBookmark's `a < b ? b : a` and its `<=` mutant differ only when a === b, and then both operands are the same string. Plain `<` is the comparison D1's docs promise (\"Bookmarks are lexicographically sortable\"), where the earlier localeCompare only agreed by coincidence of width and case. Owner's call, 2026-10-18, PR #195 review.",
+      "reason": "Equivalent mutant, proof at the site: newerBookmark's `b < a ? a : b` and its `<=` mutant differ only when a === b, and then both operands are the same string. Plain `<` is the comparison D1's docs promise (\"Bookmarks are lexicographically sortable\"), where the earlier localeCompare only agreed by coincidence of width and case. Owner's call, 2026-10-18, PR #195 review.",
+      "count": 1
+    },
+    {
+      "key": "src/lib/sql/d1-session.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
+      "reason": "Equivalent mutant, proof at the site: newerBookmark's `if (a === undefined) return b` replaced by `if (false)` falls through to `b < a ? a : b`, where `b < undefined` is false and `b` is returned, the same answer. TypeScript needs the guard; the runtime does not. Whichever of the two undefined guards the comparison does not lean on is always equivalent; the other is killed. Owner's call, 2026-10-18, PR #195 review (accept newerBookmark's equivalent mutants with a grant).",
       "count": 1
     }
   ]

@@ -40,7 +40,7 @@ async function storeReported(
   }
 }
 
-export const BOOKMARK_ORDER_MESSAGE =
+const BOOKMARK_ORDER_MESSAGE =
   "a D1 session ended at a bookmark sorting before the one it started from";
 
 /**

@@ -100,6 +100,11 @@ export function newerBookmark(
   a: string | undefined,
   b: string | undefined,
 ): string | undefined {
+  // Equivalent mutant: with this guard dropped, `b < undefined` is false
+  // and the comparison below returns `b`, the same answer. TypeScript
+  // needs the guard; the runtime does not. (`b`'s guard is the observable
+  // one: without it, `undefined < a` is false and `b` would be returned.)
+  // Stryker disable next-line ConditionalExpression
   if (a === undefined) return b;
   if (b === undefined) return a;
   // `<` on strings is UTF-16 code-unit order: lexicographic, as the docs
@@ -109,7 +114,7 @@ export function newerBookmark(
   // Equivalent mutant: `<=` differs from `<` only when `a === b`, and then
   // either operand is the same string.
   // Stryker disable next-line EqualityOperator
-  return a < b ? b : a;
+  return b < a ? a : b;
 }
 
 const READ_STATEMENT = /^\s*select\b/i;
@@ -323,9 +328,9 @@ function backwardsIn(slot: Slot): ScopeOutcome["backwards"] {
   const from = slot.open?.from;
   const reached = parseBookmark(slot.open?.session.getBookmark());
   if (from === undefined || reached === undefined) return undefined;
-  return newerBookmark(from, reached) === reached
-    ? undefined
-    : { from, reached };
+  // `<=` rather than `newerBookmark`, so each guard above is observable:
+  // with either side undefined, `<=` is false and the alarm would fire.
+  return from <= reached ? undefined : { from, reached };
 }
 
 /**
