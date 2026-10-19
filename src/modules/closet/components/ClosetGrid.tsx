@@ -81,6 +81,16 @@ function AddTile(): JSX.Element {
  * in the markup (`order-first`), so the link's accessible name still
  * starts with what the piece is called.
  */
+/**
+ * A tile whose photo is being checked (R-69, round 27 #21) is tagged
+ * `[CHECKING]`, as round 38 #64 amends `[ONLY YOU]`: it names a state, not
+ * an audience, now that private means other runners (D-121). The brackets
+ * are hidden from assistive tech and this sentence is said instead, as
+ * `[UNDER REVIEW]` does. The garment's own page says who can't see it.
+ */
+export const CHECKING_NAME =
+  "Being checked, other runners can't see this photo";
+
 function Tile({ view }: Readonly<{ view: ClosetItemView }>): JSX.Element {
   return (
     <Link
@@ -102,9 +112,12 @@ function Tile({ view }: Readonly<{ view: ClosetItemView }>): JSX.Element {
             </Bracketed>
           ) : undefined}
           {isPhotoBeingChecked(view.item) ? (
-            <Bracketed step="xs" className="text-muted">
-              Only you
-            </Bracketed>
+            <span data-part="checking-tag" className="text-muted">
+              <span aria-hidden="true">
+                <Bracketed step="xs">Checking</Bracketed>
+              </span>
+              <span className="sr-only">{CHECKING_NAME}</span>
+            </span>
           ) : undefined}
         </span>
       ) : undefined}
