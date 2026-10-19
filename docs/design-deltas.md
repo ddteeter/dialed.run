@@ -1093,7 +1093,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     keeps its empty state and draws no line. **The ask:** draw E1's line
     where it sits, and its widened and absent states.
 
-66. **The Strava consent before the Connect button (owner, 2026-10-18).**
+66. **The Strava consent before the Connect button (owner, 2026-10-18; D-143).**
     Strava's API Policy §2.1 (1 June 2026) requires consent before the
     OAuth redirect that says what is collected, how, how to withdraw, how
     to ask for deletion, and that deletion is confirmed. Built as

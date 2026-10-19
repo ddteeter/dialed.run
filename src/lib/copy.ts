@@ -27,7 +27,7 @@ export const RETRY_SAVE = "That didn't save. Try again.";
 
 /**
  * What a runner reads before the Connect with Strava button, on every
- * screen that draws it (owner, 2026-10-18). Strava's API Policy §2.1
+ * screen that draws it (owner, 2026-10-18; D-143). Strava's API Policy §2.1
  * (1 June 2026) asks for consent, before the OAuth redirect, that says
  * what is collected, how, how to withdraw, how to ask for deletion, and
  * that the deletion is confirmed. Each entry is one paragraph, in order.
