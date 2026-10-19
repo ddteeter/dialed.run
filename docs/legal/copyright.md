@@ -1,6 +1,6 @@
 > **DRAFT: not reviewed by a lawyer.** Written from the code on `main` as of
 > 2026-09-29, revised 2026-10-18 from the pre-launch legal review (rev. 2)
-> and decisions D-122 to D-136, for the owner to edit. Every
+> and decisions D-125 to D-139, for the owner to edit. Every
 > `[OWNER: …]` note is a decision or a fact the code cannot supply. Every
 > factual claim is mapped to the code, decision or law that makes it true in
 > `terms-sources.md`; change one, change both.
@@ -24,9 +24,9 @@ Our designated agent for copyright notices:
 - **Name:** Copyright Agent, Big Long Run Labs LLC
 - **Service:** [dialed.run]
 - **Email:** copyright@dialed.run
-- **Post:** [OWNER: the LLC's registered address (D-123), filled in at
+- **Post:** [OWNER: the LLC's registered address (D-126), filled in at
   publication]
-- **Phone:** [OWNER: the Google Voice number (D-123)]
+- **Phone:** [OWNER: the Google Voice number (D-126)]
 
 Email is fastest.
 

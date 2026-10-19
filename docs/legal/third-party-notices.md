@@ -27,7 +27,7 @@ what we copied.
 - **Attribution:** "Weather data provided by Visual Crossing", linked to
   https://www.visualcrossing.com/, beside the conditions in the app
   (`src/ui/WeatherAttribution.tsx`) and under every guide or report built
-  from them, as Visual Crossing's licence requires (D-141). This list is not
+  from them, as Visual Crossing's licence requires (D-144). This list is not
   its primary location.
 
 ## Face detection model

@@ -13,7 +13,7 @@
 
 > **DRAFT: not reviewed by a lawyer.** Written from the code on `main` as of
 > 2026-10-11, revised 2026-10-18 from the pre-launch legal review (rev. 2)
-> and decisions D-122 to D-136, for the owner to edit. Every `[OWNER: …]` note is a decision or
+> and decisions D-125 to D-139, for the owner to edit. Every `[OWNER: …]` note is a decision or
 > a fact the code cannot supply. Every factual claim is mapped to the code
 > that makes it true in `privacy-policy-sources.md`; change one, change both.
 
@@ -29,7 +29,7 @@ it. Where something is not built yet, it says so.
 
 [dialed.run] is run by Big Long Run Labs LLC, a Nebraska limited liability
 company ("we"), which decides how your data is used (the "controller").
-Postal address: [OWNER: the LLC's registered address (D-123), filled in at
+Postal address: [OWNER: the LLC's registered address (D-126), filled in at
 publication].
 
 Questions about this policy or your data: hello@dialed.run.
@@ -617,4 +617,4 @@ privacy laws of the US state where you live.
 ## Contact
 
 hello@dialed.run, or by post to [OWNER: the LLC's registered address
-(D-123), filled in at publication].
+(D-126), filled in at publication].

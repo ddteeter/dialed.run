@@ -25,7 +25,7 @@
 
 > **DRAFT: not reviewed by a lawyer.** Written from the code on `main` as of
 > 2026-10-11, revised 2026-10-18 from the pre-launch legal review (rev. 2)
-> and decisions D-122 to D-136, for the owner to edit. Every
+> and decisions D-125 to D-139, for the owner to edit. Every
 > `[OWNER: …]` note is a decision or a fact the code cannot supply. Every
 > factual claim is mapped to the code, decision or outside terms that make it
 > true in `terms-sources.md`; change one, change both.
@@ -62,7 +62,7 @@ say so.
 
 [dialed.run] is run by Big Long Run Labs LLC, a Nebraska limited liability
 company. In these terms "we", "us" and "our" mean Big Long Run Labs LLC.
-Our postal address is [OWNER: the LLC's registered address (D-123); fill it
+Our postal address is [OWNER: the LLC's registered address (D-126); fill it
 in when the LLC is approved, not before, because this repository is
 public], and our email is hello@dialed.run.
 
@@ -443,5 +443,5 @@ you can bring a claim in the courts there.
 - Moderation decisions and appeals, and reporting illegal content:
   desk@dialed.run
 - Copyright: copyright@dialed.run (see the [copyright page](/copyright))
-- By post: [OWNER: the LLC's registered address (D-123), filled in at
+- By post: [OWNER: the LLC's registered address (D-126), filled in at
   publication]

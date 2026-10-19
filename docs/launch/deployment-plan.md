@@ -177,7 +177,7 @@ as a var, secret as a secret. Free.
   and a response a Worker builds never enters it, so turning the tool on
   today scans nothing of ours. What every photo has is upload-time
   screening (task 106) and the quarantine below.
-- **Decided (D-126): PhotoDNA, with Thorn's Safer as the fallback.** The
+- **Decided (D-129): PhotoDNA, with Thorn's Safer as the fallback.** The
   two candidates were:
   - **A separate public R2 bucket on a custom domain, with caching on**
     ([R2 public buckets](https://developers.cloudflare.com/r2/buckets/public-buckets/)),
@@ -219,7 +219,7 @@ the LLC's name, PhotoDNA, the Sentry DPA, the Strava 9,999 request, Google
 brand verification, the trademark knockout search, the UK OSA
 assessments) are listed by stage in
 [`legal-readiness-plan.md`](legal-readiness-plan.md) step 4, with the
-decisions behind them (D-122 to D-136). The table below is the earlier
+decisions behind them (D-125 to D-139). The table below is the earlier
 audit's list; where the two differ, the plan is current.
 
 | item                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | stage   | cites            |
@@ -296,7 +296,7 @@ Everything in stage 0, plus:
 - Invite codes issued from the Desk; request access reachable and
   Turnstile-guarded. The owner's own account is seeded (126 · ACC-5).
 - Strava capacity raised to 10, and **no more than 9 friends connect
-  Strava**: the owner's own connection is the tenth (D-125), and the next
+  Strava**: the owner's own connection is the tenth (D-128), and the next
   sees 127's STR-6 message.
 - Google: each friend added as a test user, or the consent screen switched
   to In production.
