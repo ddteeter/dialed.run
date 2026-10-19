@@ -99,7 +99,8 @@ export const TURNSTILE_REFUSED =
   "We couldn't check this browser. Reload the page and try again.";
 
 /**
- * **The blocked US states** (owner, 2026-10-18): no new account from a
+ * **The blocked US states** (owner, 2026-10-18; decision D-141, its
+ * docket check register R-159): no new account from a
  * request Cloudflare places in these states. Both states' laws require
  * the age of every account creator to be verified and are in force
  * against every provider: Mississippi's HB 1126 (2024) and Tennessee's

@@ -1110,7 +1110,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     / "Never" / "To stop" lead-ins become mono labels, and whether P3's
     two existing captions stay beside it), and the receipt's Try again.
 67. **No new accounts from Mississippi or Tennessee (owner, 2026-10-18;
-    design 144).** Both states' age-verification laws are in force against
+    D-141; design 144).** Both states' age-verification laws are in force against
     every provider, so a request Cloudflare places there cannot make an
     account. It can still ask for access, because a waitlist entry is not
     an account. Nothing is drawn. Built with existing primitives, text

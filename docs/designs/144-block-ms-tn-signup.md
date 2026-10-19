@@ -2,7 +2,8 @@
 
 ## Problem
 
-Owner decision, 2026-10-18. Mississippi's HB 1126 and Tennessee's Protecting
+Owner decision, 2026-10-18 (D-141; the docket check that would lift it is
+register row R-159). Mississippi's HB 1126 and Tennessee's Protecting
 Children from Social Media Act (Tenn. Code Ann. §47-18-5701 et seq.) are in
 force against every provider, and both require verifying the age of every
 account creator. dialed.run asks for a date of birth and checks no ID, so
