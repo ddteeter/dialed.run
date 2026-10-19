@@ -20,10 +20,13 @@ export const Route = createFileRoute("/onboarding/settings/$section")({
   loader: async ({ params, location }) => {
     // Signed in first: a signed-out visitor to a bad section is sent to
     // log in, not told the page does not exist.
-    await requireSession(location);
+    const session = await requireSession(location);
     const section = settingsSectionOrNotFound(params.section);
     return {
       section,
+      // Whether the address is confirmed picks the totals switch's lines
+      // (round 38 #61d); the session it already read says so.
+      isVerified: session.user.emailVerified,
       ...(await settingsSubPageData(bellStateFn())),
     };
   },
@@ -31,13 +34,14 @@ export const Route = createFileRoute("/onboarding/settings/$section")({
 });
 
 function SectionPage() {
-  const { section, current, bell } = Route.useLoaderData();
+  const { section, current, isVerified, bell } = Route.useLoaderData();
 
   return (
     <BelledLayout {...bell}>
       <SettingsSectionPage
         section={section}
         current={current}
+        isVerified={isVerified}
         saveUnits={saveUnitsFn}
         saveSharing={saveSharingFn}
         saveCountInTotals={setCountInTotalsFn}

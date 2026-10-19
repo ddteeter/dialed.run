@@ -45,6 +45,10 @@ export { TermsRefusalAnswer, useTermsRefusal } from "./terms-refusal";
 export { causeLine, useControlAction } from "./use-control-action";
 export type { ControlAction } from "./use-control-action";
 export type { ConfirmGate } from "./unconfirmed-refusal";
+export {
+  UnconfirmedRefusalAnswer,
+  useUnconfirmedRefusal,
+} from "./unconfirmed-refusal";
 export type { FieldProps, FormFailure, FormShell } from "./use-form-submit";
 export type { ControlFailure } from "./form";
 export { useIdempotencyKey } from "./use-idempotency-key";

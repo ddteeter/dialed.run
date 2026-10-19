@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { JSX } from "react";
 
-import { Sheet } from "../../../ui";
+import { Sheet, useUnconfirmedRefusal } from "../../../ui";
 import type { CountInTotalsChoice } from "../inputs";
 import { TotalsSwitch } from "./TotalsSwitch";
 
@@ -11,7 +11,9 @@ import { TotalsSwitch } from "./TotalsSwitch";
  *
  * - **Unconfirmed**, round 27's line, which "takes precedence when it
  *   applies": an unconfirmed runner's run saves private (D-50), and it
- *   counts in no total either (D-108 C).
+ *   counts in no total either (D-108 C), so no totals sentence and no
+ *   Change (round 38 #64, follow-up (a)). "Confirm your email" opens the
+ *   app's one confirm-email sheet, led by the share switch's sentence.
  * - **Counted**, the disclosure, with Change.
  * - **Opted out**, the board's "just 'Only you see this run.'", now
  *   "Other runners won't see this run." (owner, D-121: private means not
@@ -28,8 +30,9 @@ import { TotalsSwitch } from "./TotalsSwitch";
  * holds the totals switch alone: the sharing default is a form of its own,
  * and a form cannot sit inside A3's.
  */
-export const PRIVATE_UNCONFIRMED =
-  "Confirm your email to share. This run saves private.";
+export const CONFIRM_LINK = "Confirm your email";
+const PRIVATE_UNCONFIRMED_REST = " to share. This run saves private.";
+export const PRIVATE_UNCONFIRMED = `${CONFIRM_LINK}${PRIVATE_UNCONFIRMED_REST}`;
 export const PRIVATE_NOT_SHOWN = "Other runners won't see this run.";
 export const PRIVATE_COUNTED =
   "Its kit and verdict still count, anonymously, in the guides.";
@@ -38,6 +41,13 @@ export const PRIVATE_COUNTED =
 The share switch's sub-line, set as A3's shared line is.
 */
 const LINE = "text-small text-muted";
+
+/**
+ * A press inside the line, Change or "Confirm your email": ink, semibold
+ * and underlined, a button set as running text.
+ */
+const IN_LINE_BUTTON =
+  "target cursor-pointer border-none bg-transparent p-0 text-small font-semibold text-ink underline underline-offset-4";
 
 export function PrivateRunLine({
   hintId,
@@ -57,11 +67,22 @@ export function PrivateRunLine({
 }>): JSX.Element {
   const [isCounted, setIsCounted] = useState(countInTotals);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const askToConfirm = useUnconfirmedRefusal();
 
   if (!isVerified) {
     return (
       <span id={hintId} className={LINE}>
-        {PRIVATE_UNCONFIRMED}
+        <button
+          type="button"
+          onClick={() => {
+            // No answer above (a test without the root): nothing to open.
+            askToConfirm?.("share");
+          }}
+          className={IN_LINE_BUTTON}
+        >
+          {CONFIRM_LINK}
+        </button>
+        {PRIVATE_UNCONFIRMED_REST}
       </span>
     );
   }
@@ -77,7 +98,7 @@ export function PrivateRunLine({
               onClick={() => {
                 setIsSheetOpen(true);
               }}
-              className="target cursor-pointer border-none bg-transparent p-0 text-small font-semibold text-ink underline underline-offset-4"
+              className={IN_LINE_BUTTON}
             >
               Change
             </button>
@@ -95,6 +116,9 @@ export function PrivateRunLine({
           <h2 className="m-0 font-display text-heading">Privacy</h2>
           <TotalsSwitch
             initial={isCounted}
+            // The sheet opens only from Change, which only a confirmed
+            // runner's line has.
+            isVerified
             save={saveCountInTotals}
             onSaved={setIsCounted}
           />

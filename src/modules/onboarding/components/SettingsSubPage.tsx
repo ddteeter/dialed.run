@@ -112,6 +112,18 @@ function SubPageGroup({
   );
 }
 
+type SectionPageProps = Readonly<{
+  section: SettingsSection;
+  current: CurrentSettings;
+  /**
+  Whether the runner's address is confirmed: the totals switch's lines.
+  */
+  isVerified: boolean;
+  saveUnits: Parameters<typeof UnitsForm>[0]["saveUnits"];
+  saveSharing: Parameters<typeof SharingForm>[0]["saveSharing"];
+  saveCountInTotals: Parameters<typeof TotalsSwitch>[0]["save"];
+}>;
+
 /**
  * One sub-page: its title, the way back, and its own small form.
  *
@@ -122,19 +134,15 @@ function SubPageGroup({
  * The totals switch comes last, so Tab never passes it between the form's
  * field and its Save.
  */
-export function SettingsSectionPage({
-  section,
-  current,
-  saveUnits,
-  saveSharing,
-  saveCountInTotals,
-}: Readonly<{
-  section: SettingsSection;
-  current: CurrentSettings;
-  saveUnits: Parameters<typeof UnitsForm>[0]["saveUnits"];
-  saveSharing: Parameters<typeof SharingForm>[0]["saveSharing"];
-  saveCountInTotals: Parameters<typeof TotalsSwitch>[0]["save"];
-}>): JSX.Element {
+export function SettingsSectionPage(props: SectionPageProps): JSX.Element {
+  const {
+    section,
+    current,
+    isVerified,
+    saveUnits,
+    saveSharing,
+    saveCountInTotals,
+  } = props;
   return (
     <PickedSubPage
       section={section}
@@ -149,6 +157,7 @@ export function SettingsSectionPage({
             <SubPageGroup title="Anonymous totals · Saves as you switch" ruled>
               <TotalsSwitch
                 initial={current.countInTotals}
+                isVerified={isVerified}
                 save={saveCountInTotals}
               />
             </SubPageGroup>

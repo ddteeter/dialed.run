@@ -269,6 +269,7 @@ describe("the sub-pages", () => {
       <SettingsSectionPage
         section="units"
         current={ANSWERED}
+        isVerified
         saveUnits={saveUnits}
         saveSharing={saveSharing}
         saveCountInTotals={saveCountInTotals}
@@ -285,6 +286,7 @@ describe("the sub-pages", () => {
       <SettingsSectionPage
         section="sharing"
         current={ANSWERED}
+        isVerified
         saveUnits={saveUnits}
         saveSharing={saveSharing}
         saveCountInTotals={saveCountInTotals}
@@ -338,6 +340,7 @@ describe("the sub-pages", () => {
       <SettingsSectionPage
         section="sharing"
         current={ANSWERED}
+        isVerified
         saveUnits={vi.fn()}
         saveSharing={vi.fn()}
         saveCountInTotals={vi.fn()}
@@ -372,6 +375,24 @@ describe("the sub-pages", () => {
     expect(save).toHaveFocus();
     await user.tab();
     expect(counted).toHaveFocus();
+  });
+
+  it("give the totals switch an unconfirmed runner's lines on Privacy (round 38 #61d)", async () => {
+    await renderWithRouter(
+      <SettingsSectionPage
+        section="sharing"
+        current={ANSWERED}
+        isVerified={false}
+        saveUnits={vi.fn()}
+        saveSharing={vi.fn()}
+        saveCountInTotals={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("checkbox", {
+        name: "Count my runs in anonymous totals",
+      }),
+    ).toHaveAccessibleDescription(/^Once you confirm your email/u);
   });
 
   it("say Nothing saved when the units save fails", async () => {

@@ -27,6 +27,18 @@ export const TOTALS_OFF =
   "Off. Your runs leave the guides at tonight's update. They leave the Same conditions block now, and it still works for you. Reports already published stay as they are.";
 
 /**
+ * An unconfirmed runner's lines (round 38 #61d). D-108 C counts confirmed
+ * accounts only, so the confirmed ON line's claim would be untrue: the
+ * same sentence, led by the condition, and an OFF with nothing leaving,
+ * so no "tonight" or "now". They may still turn totals off, with no
+ * confirm sheet (owner, 2026-10-11).
+ */
+export const TOTALS_ON_UNCONFIRMED =
+  "Once you confirm your email, your runs add their temperature, kit and verdict to the guides and reports, and shared runs count in Same conditions. Never your name, notes, photos, when you ran, or anywhere more precise than a broad climate zone.";
+export const TOTALS_OFF_UNCONFIRMED =
+  "Off. Your runs won't count, even after you confirm your email.";
+
+/**
  * The switch itself: the same `ToggleField` the sharing default uses
  * (round 32: "the switch uses the same component as Share new runs"),
  * saved on toggle with no confirm ("off is a normal choice, not a loss").
@@ -45,10 +57,15 @@ export const TOTALS_OFF =
  */
 export function TotalsSwitch({
   initial,
+  isVerified,
   save,
   onSaved,
 }: Readonly<{
   initial: boolean;
+  /**
+  Whether the runner's address is confirmed, which picks the lines.
+  */
+  isVerified: boolean;
   save: (input: { data: CountInTotalsChoice }) => Promise<unknown>;
   onSaved?: ((isCounted: boolean) => void) | undefined;
 }>): JSX.Element {
@@ -82,7 +99,7 @@ export function TotalsSwitch({
         }}
       />
       <p id={hintId} className="m-0 text-small text-muted">
-        {isOn ? TOTALS_ON : TOTALS_OFF}
+        {totalsLine(isOn, isVerified)}
       </p>
       <ControlFailureBand
         failure={control.failure}
@@ -97,6 +114,14 @@ export function TotalsSwitch({
       </Link>
     </div>
   );
+}
+
+/**
+The sub-line for the saved state, in the confirmed or unconfirmed words.
+*/
+function totalsLine(isOn: boolean, isVerified: boolean): string {
+  if (isVerified) return isOn ? TOTALS_ON : TOTALS_OFF;
+  return isOn ? TOTALS_ON_UNCONFIRMED : TOTALS_OFF_UNCONFIRMED;
 }
 
 /**
