@@ -91,9 +91,6 @@ cannot put it back ourselves. If, 10 business days after we sent the copy,
 they have not told us that they have filed a court action to stop you, we
 tell you, and you are free to post the material again. A notice answered
 this way does not count against your account.
-[OWNER: when plan step C5 ships (D-127), replace this paragraph and the
-"Removal deletes it" sentence above with the hide-for-30-days text in the
-legal readiness plan.]
 
 ## Repeat infringers
 

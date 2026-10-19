@@ -77,6 +77,10 @@ public], and our email is hello@dialed.run.
   to; do not sell or publish it.
 - **One person, one account.** Your account is for you alone. Do not share
   your sign-in, or sell or hand over your account.
+- **Where sign-up is open.** New accounts cannot be created from Mississippi
+  or Tennessee, because state laws there require ID age checks for every
+  new account, which we don't do. If you already have an account, these
+  terms still apply to you wherever you are.
 - You may not use [dialed.run] if we have closed an account of yours, unless
   we have reopened it.
 
@@ -229,10 +233,6 @@ owing you anything.
   a photo, a profile or a product name. A kit you report leaves your feed
   straight away, and a runner you report leaves your search. When three different runners report the same kit or photo,
   it is hidden from everyone but its owner until a person reviews it.
-- **We tell you what happened to your report.** When a person has dealt
-  with a report you filed, the app tells you whether we removed what you
-  reported or left it up. [OWNER: true once plan step C8 ships (D-129),
-  before public; delete this bullet if friends launch first.]
 - **Intimate images shared without consent** are the exception. One report
   that a kit or photo is an intimate image shared without consent hides it
   from everyone but its owner at once, and a person reviews it within 48
@@ -288,8 +288,11 @@ decision to a certified out-of-court dispute settlement body, or to a court.
   enforcement requires us to keep it longer.
 - We may share information with the police or other authorities when the
   law requires it, or when someone's life or safety is at risk.
-- **Authorities** in the European Union can contact us about illegal
-  content at desk@dialed.run, in English.
+- **Point of contact.** Authorities in EU Member States, the European
+  Commission and the European Board for Digital Services can contact us at
+  desk@dialed.run. You can contact us at the same address; a person reads
+  it, not an automated system. We can correspond in English. We do not
+  currently have a legal representative in the European Union.
 
 ## Other services
 
@@ -300,8 +303,11 @@ decision to a certified out-of-court dispute settlement body, or to a court.
   Strava. We do not charge for the Strava connection. You can disconnect in
   settings, or revoke our access from Strava's side, at any time.
 - **Google sign-in** is provided by Google, under Google's terms.
-- **Weather** comes from Visual Crossing. It can be missing, late or wrong,
-  and we cannot promise it is accurate for where you ran.
+- **Weather** comes from Visual Crossing. It is a historical estimate: it
+  can be missing, late, incomplete, estimated, interpolated or modelled, and
+  it is provided as it is, with no guarantee that it is accurate or suitable
+  for any purpose. It is not a substitute for official weather warnings, and
+  it should never be the only thing you rely on for a safety decision.
 - **Product pages.** When you paste a product link, we fetch that page and
   read details such as fabric from it automatically. What we read can be
   wrong.

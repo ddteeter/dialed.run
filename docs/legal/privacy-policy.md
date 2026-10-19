@@ -204,12 +204,8 @@ never shown to other runners.
   check for sexual, violent and self-harm content. We keep the scores it
   returns. A photo that scores high is hidden from everyone but you until a
   person reviews it. Until a photo is screened, no other runner can see it.
-  OpenAI may keep what it is sent for up to 30 days to watch for abuse of
-  its service, and does not use it to train its models.
-  [OWNER: research rev. 3 item 6 confirms the moderation endpoint's
-  retention. When PhotoDNA is live (D-126, plan C11), add: "Every photo is
-  also compared with lists of known child sexual abuse material using
-  Microsoft's PhotoDNA service." and a processor-table row.]
+  OpenAI keeps nothing it is sent for screening, and does not use it to
+  train its models.
 
 ## What other people can see
 
@@ -432,18 +428,19 @@ you choose to sign in with Google or connect Strava, each is also a separate
 controller of what it holds about you, under its own privacy policy. We do
 not sell or rent your data to anyone.
 
-| Service                  | Company                         | Role                | What it does for us                                                     | What it receives                                                                                          | Where                           | Safeguard for EU and UK data    |
-| ------------------------ | ------------------------------- | ------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------- | ------------------------------- |
-| Cloudflare               | Cloudflare, Inc.                | Processor           | Hosts the app: servers, databases, photo and file storage, queues, logs | Everything above, stored on its platform                                                                  | North America                   | [OWNER: research rev. 3 item 6] |
-| Cloudflare Email Service | Cloudflare, Inc.                | Processor           | Sends our email                                                         | Each email's address, subject and body                                                                    | North America                   | [OWNER: research rev. 3 item 6] |
-| Cloudflare Turnstile     | Cloudflare, Inc.                | Processor           | Tells people from bots on sign-up, request access and removal requests  | The check your browser runs, and your IP address from our server                                          | Worldwide                       | [OWNER: research rev. 3 item 6] |
-| Google                   | Google LLC                      | Separate controller | "Sign in with Google", if you use it                                    | The sign-in request; Google returns your name, email, picture and account id                              | US                              | [OWNER: research rev. 3 item 6] |
-| Strava                   | Strava, Inc.                    | Separate controller | Run reminders, if you connect                                           | The connect and revoke requests                                                                           | US                              | [OWNER: research rev. 3 item 6] |
-| Visual Crossing          | Visual Crossing Corporation     | Service provider    | Weather, and time zones for places                                      | Rounded run start points and dates; the place you set. Nothing that names you                             | US                              | [OWNER: research rev. 3 item 6] |
-| OpenAI                   | OpenAI OpCo, LLC                | Processor           | Photo screening; username screening; reading product pages              | Your photos; the username you pick; the text and address of product pages                                 | US                              | [OWNER: research rev. 3 item 6] |
-| Firecrawl                | SideGuide Technologies, Inc.    | Service provider    | Fetching product pages that block us                                    | The product link. Nothing that names you                                                                  | US                              | [OWNER: research rev. 3 item 6] |
-| Sentry                   | Functional Software, Inc.       | Processor           | Error reports                                                           | The error and internal ids (account, run, import, product), never tokens, request bodies or file contents | US                              | [OWNER: research rev. 3 item 6] |
-| Have I Been Pwned        | [OWNER: research rev. 3 item 6] | Processor           | Leaked-password check                                                   | The first five characters of your password's SHA-1 hash                                                   | [OWNER: research rev. 3 item 6] | [OWNER: research rev. 3 item 6] |
+| Service                           | Company                         | Role                      | What it does for us                                                     | What it receives                                                                                           | Where                    | Safeguard for EU and UK data                                                                                            |
+| --------------------------------- | ------------------------------- | ------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| Cloudflare                        | Cloudflare, Inc.                | Processor                 | Hosts the app: servers, databases, photo and file storage, queues, logs | Everything above, stored on its platform                                                                   | North America            | EU-U.S. Data Privacy Framework and its UK and Swiss extensions; standard contractual clauses in its DPA as the fallback |
+| Cloudflare Email Service          | Cloudflare, Inc.                | Processor                 | Sends our email                                                         | Each email's address, subject and body                                                                     | North America            | EU-U.S. Data Privacy Framework and its UK and Swiss extensions; standard contractual clauses in its DPA as the fallback |
+| Cloudflare Turnstile              | Cloudflare, Inc.                | Processor                 | Tells people from bots on sign-up, request access and removal requests  | The check your browser runs, and your IP address from our server                                           | Worldwide                | EU-U.S. Data Privacy Framework and its UK and Swiss extensions; standard contractual clauses in its DPA as the fallback |
+| Google                            | Google LLC                      | Separate controller       | "Sign in with Google", if you use it                                    | The sign-in request; Google returns your name, email, picture and account id                               | US                       | Google's own Data Privacy Framework certification                                                                       |
+| Strava                            | Strava, Inc.                    | Separate controller       | Run reminders, if you connect                                           | The connect and revoke requests                                                                            | US                       | Standard contractual clauses under Strava's API terms                                                                   |
+| Visual Crossing                   | Visual Crossing Corporation     | Service provider          | Weather, and time zones for places                                      | Rounded run start points and dates; the place you set. Nothing that names you                              | US                       | None needed: nothing that names you is sent                                                                             |
+| OpenAI                            | OpenAI OpCo, LLC                | Processor                 | Photo screening; username screening; reading product pages              | Your photos; the username you pick; the text and address of product pages                                  | US                       | Standard contractual clauses with the UK addendum, in OpenAI's data processing addendum                                 |
+| Firecrawl                         | SideGuide Technologies, Inc.    | Service provider          | Fetching product pages that block us                                    | The product link. Nothing that names you                                                                   | US                       | None needed: nothing that names you is sent                                                                             |
+| Sentry                            | Functional Software, Inc.       | Processor                 | Error reports                                                           | The error and internal ids (account, run, import, product), never tokens, request bodies or file contents  | US                       | EU-U.S. Data Privacy Framework and its UK and Swiss extensions; standard contractual clauses as the fallback            |
+| Have I Been Pwned                 | Superlative Enterprises Pty Ltd | Receives no personal data | Leaked-password check                                                   | The first five characters of your password's SHA-1 hash, from our server, with nothing that identifies you | Australia                | None needed: what it receives is not personal data                                                                      |
+| GoatCounter (marketing site only) | Martin Tournoij (Ireland)       | Processor                 | Counts page views on dialed.run                                         | Your IP address and browser, held in memory for up to 8 hours and not stored                               | Finland and Germany (EU) | None needed: no transfer out of the EU                                                                                  |
 
 We are in the United States, and your data is stored in North America. The
 app runs on Cloudflare's network, so a request may be handled in the
@@ -478,8 +475,9 @@ request form; Cloudflare's Turnstile Privacy Addendum explains what it
 collects and how Cloudflare uses it.
 
 dialed.run (the marketing site) counts page views with GoatCounter, which
-sets no cookies. [OWNER: research rev. 3 item 6: what GoatCounter keeps,
-where, and whether it belongs in the table above.]
+sets no cookies and stores nothing in your browser. It is hosted in the
+European Union, keeps aggregate page counts only, and does not store your
+IP address.
 
 We do not track you across other websites, and no one else tracks you
 through [dialed.run]. Because there is nothing of that kind to switch off,

@@ -24,9 +24,11 @@ what we copied.
 ## Weather data
 
 - **Source:** Visual Crossing Corporation.
-- **Attribution:** shown next to conditions in the app
-  (`src/ui/WeatherAttribution.tsx`) and on every guide or report built from
-  them. [OWNER: exact wording from research rev. 3 item 7.]
+- **Attribution:** "Weather data provided by Visual Crossing", linked to
+  https://www.visualcrossing.com/, beside the conditions in the app
+  (`src/ui/WeatherAttribution.tsx`) and under every guide or report built
+  from them, as Visual Crossing's licence requires (D-141). This list is not
+  its primary location.
 
 ## Face detection model
 
@@ -34,12 +36,20 @@ what we copied.
   own site to run in your browser.
 - **Licence:** the `@mediapipe/tasks-vision` package is Apache License 2.0
   and ships no separate NOTICE file. The BlazeFace short-range model
-  (`blaze_face_short_range.tflite`): [OWNER: confirm its licence from
-  Google's model card, research rev. 3 item 8.]
+  (`blaze_face_short_range.tflite`) is Apache License 2.0, per Google's
+  MediaPipe BlazeFace model card (short range), read 2026-10-18.
 
 ## Climate zones
 
 - **What:** Köppen-Geiger climate classification maps, used to place runs
   in broad climate zones when anonymous totals are built (D-120).
-- **Source and licence:** [OWNER: the dataset, its authors and year, its
-  licence and credit line, from research rev. 3 item 8.]
+- **Source:** the 1991–2020, 0.01° (about 1 km) map from Beck, H. E.,
+  McVicar, T. R., Vergopolan, N., Berg, A., Lutsko, N. J., Dufour, A., Zeng,
+  Z., Jiang, X., van Dijk, A. I. J. M., and Miralles, D. G. (2023).
+  High-resolution (1 km) Köppen-Geiger maps for 1901–2099 based on
+  constrained CMIP6 projections. Scientific Data 10, 724.
+  https://doi.org/10.1038/s41597-023-02549-6. Data:
+  https://doi.org/10.6084/m9.figshare.21789074.
+- **Licence:** Creative Commons Attribution 4.0 International (CC BY 4.0),
+  https://creativecommons.org/licenses/by/4.0/. We use the map unmodified as
+  a point lookup; the zone labels on dialed.run are derived from it.

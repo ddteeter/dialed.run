@@ -35,7 +35,7 @@ Desk D7. The CSP (OPS-8) is built but still **report-only**.
 | D-108 (d) region  | not started | Settings › Profile › Region: no columns, no setting, not in `profile.csv`.                                                                                         |
 | R-134             | not started | The nightly guide artifact. **It needs a `wrangler.jsonc` binding.**                                                                                               |
 | R-135             | not started | Export's runs sheet lacks `moving_s` and `elevation_gain_m`. The columns have existed since 0047.                                                                  |
-| R-142             | not started | `gave_up` rows keep Strava athlete ids after a deauthorize or a purge.                                                                                             |
+| R-142             | done (C2)   | Deletes on disconnect, deauthorize and purge were already built; C2 made the 7-day prune count from the first failure.                                             |
 | R-140             | not started | Takedown wording: the barrel export, the `content_removed` email variant, and `notice` passing `input.action`.                                                     |
 | R-145 (c) / D-117 | not started | The Review row should list the runner's other photos. (a) and (d) ride #169.                                                                                       |
 | OPS-8             | report-only | Enforcing it means flipping `CSP_HEADER` in `ops/security-headers.ts` and the copy in `public/_headers`.                                                           |
