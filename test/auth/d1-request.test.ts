@@ -12,6 +12,7 @@ import {
   storeRunnerBookmark,
 } from "../../src/modules/auth/d1-bookmark";
 import {
+  BOOKMARK_ORDER_MESSAGE,
   d1RequestDepsFromEnv,
   respondInD1Scope,
 } from "../../src/modules/auth/d1-request";
@@ -25,6 +26,7 @@ import { spiedBinding } from "../d1-spy";
 const db = drizzle(env.DIALED_CORE);
 
 const DEVICE = "00000000-00000001-00000000-" + "0".repeat(32);
+const LATER = "00000000-00000002-00000000-" + "0".repeat(32);
 
 function harness() {
   const deferred: Promise<void>[] = [];
@@ -157,6 +159,44 @@ describe("respondInD1Scope", () => {
         context: { userId, job: "d1-bookmark-store" },
       },
     ]);
+  });
+
+  it("reports a session whose bookmark went backwards", async () => {
+    const { deps, captured } = harness();
+    const response = await respondInD1Scope(
+      requestWith(`d1b=${LATER}`),
+      async () => {
+        await scopedDb(
+          spiedBinding(env.DIALED_CORE, DEVICE).binding,
+          "core",
+        ).all(sql`select 1`);
+        return new Response("ok");
+      },
+      deps,
+    );
+    expect(response.status).toBe(200);
+    expect(captured).toEqual([
+      {
+        error: new Error(BOOKMARK_ORDER_MESSAGE),
+        context: { job: "d1-bookmark-order", from: LATER, reached: DEVICE },
+      },
+    ]);
+  });
+
+  it("reports nothing for a session that moved forward", async () => {
+    const { deps, captured } = harness();
+    await respondInD1Scope(
+      requestWith(`d1b=${DEVICE}`),
+      async () => {
+        await scopedDb(
+          spiedBinding(env.DIALED_CORE, LATER).binding,
+          "core",
+        ).all(sql`select 1`);
+        return new Response("ok");
+      },
+      deps,
+    );
+    expect(captured).toEqual([]);
   });
 
   it("stores nothing for a read", async () => {

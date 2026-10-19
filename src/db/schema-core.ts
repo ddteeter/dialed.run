@@ -45,9 +45,12 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     timeZone: text("time_zone"),
     // The newest D1 bookmark this runner's writes reached (design 143,
     // D-123): a request opens its read session from it, so no device reads
-    // older than the runner's own last write. Opaque; NULL until a first
-    // write. `auth/d1-bookmark.ts` is the one reader and writer.
+    // older than the runner's own last write. Lexicographically sortable,
+    // per D1's docs; NULL until a first write. `d1_bookmark_at` is when it
+    // was stored, in seconds, and one older than a day is ignored.
+    // `auth/d1-bookmark.ts` is the one reader and writer of both.
     d1Bookmark: text("d1_bookmark"),
+    d1BookmarkAt: integer("d1_bookmark_at"),
     thermalLevel: integer("thermal_level"),
     tempUnit: text("temp_unit", { enum: ["f", "c"] }),
     distanceUnit: text("distance_unit", { enum: ["mi", "km"] }),

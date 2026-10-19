@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "8a0d4976-8ea1-4fa6-aa4c-e75b9adf7a27",
+  "id": "5331ff47-cef0-4854-846c-7f5a07666da6",
   "prevId": "31621aeb-526f-4f24-85e2-b3c0c81e6994",
   "tables": {
     "access_requests": {
@@ -2783,6 +2783,13 @@
         "d1_bookmark": {
           "name": "d1_bookmark",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "d1_bookmark_at": {
+          "name": "d1_bookmark_at",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false

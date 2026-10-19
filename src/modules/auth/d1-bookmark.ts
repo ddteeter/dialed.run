@@ -1,7 +1,9 @@
-import { and, eq, isNull, lt, or } from "drizzle-orm";
+import { and, eq, gte, isNull, lt, or } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../db/schema-core";
+import { nowSeconds } from "../../lib/now";
+import { BOOKMARK_MAX_AGE_S } from "../../lib/sql/d1-session";
 import { columnQuery } from "../../lib/sql/keyed-read";
 
 type Db = ReturnType<typeof drizzle>;
@@ -11,13 +13,20 @@ type Db = ReturnType<typeof drizzle>;
  * own writes reached, from any device. Built unexecuted, so the auth gate
  * sends it in the batch it already makes and it costs no round trip. A
  * seek on the primary key: at most one row.
+ *
+ * Only one stored in the last `BOOKMARK_MAX_AGE_S`: an older write is on
+ * every replica already, and a very old bookmark is one D1 does not
+ * document accepting. Filtered in SQL, so a stale one is simply no row.
  */
-export function storedBookmarkOf(db: Db, userId: string) {
+export function storedBookmarkOf(db: Db, userId: string, now = nowSeconds()) {
   return columnQuery(
     db,
     userProfiles,
     userProfiles.d1Bookmark,
-    eq(userProfiles.userId, userId),
+    and(
+      eq(userProfiles.userId, userId),
+      gte(userProfiles.d1BookmarkAt, now - BOOKMARK_MAX_AGE_S),
+    ),
   );
 }
 
@@ -32,6 +41,7 @@ export async function storeRunnerBookmark(
   db: Db,
   userId: string,
   bookmark: string,
+  now = nowSeconds(),
 ): Promise<void> {
   const notNewer = or(
     isNull(userProfiles.d1Bookmark),
@@ -39,6 +49,6 @@ export async function storeRunnerBookmark(
   );
   await db
     .update(userProfiles)
-    .set({ d1Bookmark: bookmark })
+    .set({ d1Bookmark: bookmark, d1BookmarkAt: now })
     .where(and(eq(userProfiles.userId, userId), notNewer));
 }

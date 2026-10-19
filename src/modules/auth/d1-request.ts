@@ -40,6 +40,9 @@ async function storeReported(
   }
 }
 
+export const BOOKMARK_ORDER_MESSAGE =
+  "a D1 session ended at a bookmark sorting before the one it started from";
+
 /**
  * One request as one D1 scope (design 143): its reads share a session
  * started from the device's bookmark, the device gets back the newest
@@ -57,7 +60,15 @@ export async function respondInD1Scope(
   const device = deviceBookmarkFrom(request.headers.get("cookie"));
   return runInD1Scope(device, async () => {
     const response = await handle();
-    const { bookmark, writerId } = scopeOutcome();
+    const { bookmark, writerId, backwards } = scopeOutcome();
+    if (backwards !== undefined) {
+      // D1 documents bookmarks as sorting oldest to newest, and every
+      // choice this module makes rests on it; this is the alarm if not.
+      deps.capture(new Error(BOOKMARK_ORDER_MESSAGE), {
+        job: "d1-bookmark-order",
+        ...backwards,
+      });
+    }
     // Never older than the device's own bookmark, so "unchanged" is the
     // only way it can be absent.
     const moved = bookmark === device ? undefined : bookmark;

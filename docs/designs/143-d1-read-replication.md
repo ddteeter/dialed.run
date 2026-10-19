@@ -77,19 +77,34 @@ never reads a replica.
 
 ## Resolved before implementation
 
-1. **Bookmark order (spike).** Local bookmarks are four fixed-width,
-   zero-padded hex groups (`00000000-0000003d-00000000-<32 hex>`), so
-   string order is issue order. `newerBookmark` compares strings, and
-   `parseBookmark` rejects anything that is not hex, so a production
-   format change degrades to "no bookmark", never a thrown request. The
-   adapter type-checks with no cast and runs `batch`.
-2. **Audit.** Primary for: the closet's link denylist (`safety/denylist`),
+1. **Bookmark order (spike, then the docs).** D1's Time Travel reference
+   documents it: "Bookmarks are lexicographically sortable. Sorting orders
+   a list of bookmarks from oldest-to-newest", and the Sessions API uses
+   the same bookmarks. Locally they are four fixed-width hex groups
+   (`00000000-0000003d-00000000-<32 hex>`). `newerBookmark` compares with
+   plain `<`, the documented order and SQLite's. `parseBookmark` rejects
+   anything that is not hex, so a format change degrades to "no
+   bookmark", never a thrown request; a session whose bookmark sorts
+   before its start goes to Sentry, so a change in the order shows too.
+   Broken ordering costs stale reads, never writes: writes and the checks
+   that authorize them never go through a bookmark (PR #195 review).
+   A stored bookmark older than a day is ignored (`d1_bookmark_at`), like
+   the cookie, since Time Travel calls one over 30 days "invalid" and the
+   docs do not say what `withSession` does with one. The adapter
+   type-checks with no cast and runs `batch`.
+2. **What counts as a write.** Only whether the runner's bookmark is
+   stored rides on it. A statement starting with `SELECT` is a read, by
+   SQLite's grammar; everything else counts as a write, so a miss costs
+   one idempotent UPDATE rather than a lost store. D1's `meta.changed_db`
+   cannot replace it: drizzle reads `.returning()` through `raw()`, which
+   has no meta.
+3. **Audit.** Primary for: the closet's link denylist (`safety/denylist`),
    the takedown and request-access abuse limits, and the weather-cache
    reads in attach and manual bands (`pinPrimary("weather")`). Already
    safe: the username claim (re-checked inside its write batch), products
    (read after the session's own write). No GET server function writes.
    The loader-called POST writers are own-row writes.
-3. **Schema-lag race** (seen in the wild): right after a migration, a
+4. **Schema-lag race** (seen in the wild): right after a migration, a
    lagging replica can answer "no such table". Expand→contract covers
    columns; a brand-new table read in its first deploy must tolerate it, or
    the deploy waits a few seconds after migrating. Written into

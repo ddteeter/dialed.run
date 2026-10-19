@@ -32,11 +32,13 @@ import { z } from "zod";
 export type DbKey = "core" | "weather";
 
 /**
-A slot's session, and the binding that opened it, which reopens it.
-*/
+ * A slot's session, the binding that opened it (which reopens it), and the
+ * bookmark it was opened from, if it was opened from one.
+ */
 interface Open {
   readonly binding: D1Database;
   session: D1DatabaseSession;
+  from: string | undefined;
 }
 
 interface Slot {
@@ -88,9 +90,11 @@ export function parseBookmark(value: unknown): string | undefined {
 }
 
 /**
- * The later of two bookmarks. Cloudflare documents bookmarks as ordered
- * within a database and leaves the format opaque; the format observed is
- * fixed-width hex, where string order is that order (design 143, Q1).
+ * The later of two bookmarks. Cloudflare documents the order: "Bookmarks
+ * are lexicographically sortable. Sorting orders a list of bookmarks from
+ * oldest-to-newest", and the Sessions API uses the same bookmarks (D1
+ * Time Travel reference; design 143, Q1). `scopeOutcome` reports a request
+ * whose bookmark went backwards, which is how a change to that would show.
  */
 export function newerBookmark(
   a: string | undefined,
@@ -98,21 +102,35 @@ export function newerBookmark(
 ): string | undefined {
   if (a === undefined) return b;
   if (b === undefined) return a;
-  // Sorted rather than compared: with `b > a ? b : a`, equal bookmarks make
-  // `>=` an equivalent mutant, since either one is the answer. Bookmarks
-  // are same-width lowercase hex with hyphens in the same places, where
-  // `localeCompare` order is code-point order, the order SQL's `<` uses in
-  // `storeRunnerBookmark`.
-  return [a, b].toSorted((x, y) => x.localeCompare(y))[1];
+  // `<` on strings is UTF-16 code-unit order: lexicographic, as the docs
+  // promise, and the order SQLite's BINARY `<` gives ASCII in
+  // `storeRunnerBookmark`. Not `localeCompare`, whose collation only
+  // agrees while every bookmark is the same width and case.
+  // Equivalent mutant: `<=` differs from `<` only when `a === b`, and then
+  // either operand is the same string.
+  // Stryker disable next-line EqualityOperator
+  return a < b ? b : a;
 }
 
-const WRITE_STATEMENT = /^\s*(?:insert|update|delete|replace)\b/i;
+const READ_STATEMENT = /^\s*select\b/i;
 
 /**
-Whether a statement drizzle prepared changes rows.
-*/
+ * Whether a statement may change rows, so the request's bookmark is worth
+ * storing for the runner's other devices.
+ *
+ * The test is one-sided on purpose. A statement whose first word is
+ * `SELECT` is a SQLite select-stmt, and that grammar cannot write: a CTE
+ * inside it is a select too, `RETURNING` belongs only to
+ * INSERT/UPDATE/DELETE, and D1 has no user functions. Everything else
+ * counts as a write — a leading comment, `WITH … SELECT`, a `PRAGMA`,
+ * whatever drizzle emits next — and the cost of being wrong that way is
+ * one idempotent UPDATE. Listing the write verbs instead would fail the
+ * other way, silently. D1's own `meta.changed_db` cannot replace this:
+ * drizzle reads every query with fields, `.returning()` included, through
+ * `raw()`, which carries no meta.
+ */
 export function isWriteStatement(sql: string): boolean {
-  return WRITE_STATEMENT.test(sql);
+  return !READ_STATEMENT.test(sql);
 }
 
 function primaryBookmarkOf(scope: Scope): string | undefined {
@@ -129,15 +147,20 @@ function constraintOf(scope: Scope, slot: Slot): string {
   return newerBookmark(slot.bookmark, own) ?? "first-unconstrained";
 }
 
+function opened(binding: D1Database, constraint: string): Open {
+  return {
+    binding,
+    session: binding.withSession(constraint),
+    from: parseBookmark(constraint),
+  };
+}
+
 function sessionOf(
   scope: Scope,
   slot: Slot,
   binding: D1Database,
 ): D1DatabaseSession {
-  slot.open ??= {
-    binding,
-    session: binding.withSession(constraintOf(scope, slot)),
-  };
+  slot.open ??= opened(binding, constraintOf(scope, slot));
   return slot.open.session;
 }
 
@@ -244,7 +267,7 @@ export function runInD1Scope<T>(
 
 function reopen(scope: Scope, slot: Slot): void {
   if (slot.open === undefined) return;
-  slot.open.session = slot.open.binding.withSession(constraintOf(scope, slot));
+  slot.open = opened(slot.open.binding, constraintOf(scope, slot));
 }
 
 /**
@@ -288,6 +311,21 @@ export interface ScopeOutcome {
   The runner to store it for, when this request wrote to core.
   */
   readonly writerId: string | undefined;
+  /**
+   * A session that ended at a bookmark sorting before the one it started
+   * from. D1 promises that cannot happen, so this is the alarm for the
+   * ordering `newerBookmark` relies on.
+   */
+  readonly backwards: { from: string; reached: string } | undefined;
+}
+
+function backwardsIn(slot: Slot): ScopeOutcome["backwards"] {
+  const from = slot.open?.from;
+  const reached = parseBookmark(slot.open?.session.getBookmark());
+  if (from === undefined || reached === undefined) return undefined;
+  return newerBookmark(from, reached) === reached
+    ? undefined
+    : { from, reached };
 }
 
 /**
@@ -295,12 +333,20 @@ What `runInD1Scope`'s request leaves behind, read before it returns.
 */
 export function scopeOutcome(): ScopeOutcome {
   const scope = scopes.getStore();
-  if (scope === undefined) return { bookmark: undefined, writerId: undefined };
+  if (scope === undefined) {
+    return { bookmark: undefined, writerId: undefined, backwards: undefined };
+  }
   const reached = parseBookmark(scope.core.open?.session.getBookmark());
   const replicaSide = newerBookmark(scope.core.bookmark, reached);
   const bookmark = newerBookmark(replicaSide, primaryBookmarkOf(scope));
   const didWrite = scope.core.wrote || scope.primary.wrote;
-  return { bookmark, writerId: didWrite ? scope.runnerId : undefined };
+  return {
+    bookmark,
+    writerId: didWrite ? scope.runnerId : undefined,
+    // Core only: weather and the primary session never open from a
+    // bookmark, so they have nothing to go backwards from.
+    backwards: backwardsIn(scope.core),
+  };
 }
 
 /**
@@ -310,7 +356,14 @@ export function scopeOutcome(): ScopeOutcome {
  */
 export const DEVICE_BOOKMARK_COOKIE = "d1b";
 
-const DEVICE_BOOKMARK_MAX_AGE_S = 86_400;
+/**
+ * How long a bookmark is worth anything: the cookie's lifetime, and the
+ * age past which `auth/d1-bookmark.ts` ignores a stored one. A write a day
+ * old is on every replica, and D1 does not document how it treats a very
+ * old bookmark (Time Travel calls one over 30 days "invalid"), so nothing
+ * older is ever handed to `withSession`.
+ */
+export const BOOKMARK_MAX_AGE_S = 86_400;
 
 /**
 The device's bookmark from a `Cookie` header, parsed (trust boundary).
@@ -331,5 +384,5 @@ export function deviceBookmarkFrom(
 The `Set-Cookie` value that hands the device its new bookmark.
 */
 export function deviceBookmarkCookie(bookmark: string): string {
-  return `${DEVICE_BOOKMARK_COOKIE}=${bookmark}; Path=/; Max-Age=${String(DEVICE_BOOKMARK_MAX_AGE_S)}; HttpOnly; Secure; SameSite=Lax`;
+  return `${DEVICE_BOOKMARK_COOKIE}=${bookmark}; Path=/; Max-Age=${String(BOOKMARK_MAX_AGE_S)}; HttpOnly; Secure; SameSite=Lax`;
 }

@@ -5,7 +5,9 @@ import { describe, expect, it } from "vitest";
 import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
+import { nowSeconds } from "../../src/lib/now";
 import {
+  BOOKMARK_MAX_AGE_S,
   runInD1Scope,
   scopedDb,
   scopeOutcome,
@@ -30,9 +32,16 @@ const db = drizzle(env.DIALED_CORE);
 const EARLY = "00000000-00000010-00000000-" + "0".repeat(32);
 const LATE = "00000000-00000020-00000000-" + "0".repeat(32);
 
-async function runner(bookmark?: string): Promise<string> {
+async function runner(
+  bookmark?: string,
+  storedAt = nowSeconds(),
+): Promise<string> {
   const userId = newUlid();
-  await db.insert(userProfiles).values({ userId, d1Bookmark: bookmark });
+  await db.insert(userProfiles).values({
+    userId,
+    d1Bookmark: bookmark,
+    d1BookmarkAt: bookmark === undefined ? undefined : storedAt,
+  });
   return userId;
 }
 
@@ -41,7 +50,54 @@ async function storedFor(userId: string): Promise<string | null | undefined> {
   return row?.value;
 }
 
+describe("storedBookmarkOf", () => {
+  const NOW = 2_000_000_000;
+
+  async function storedAt(userId: string): Promise<string | null | undefined> {
+    const [row] = await storedBookmarkOf(db, userId, NOW);
+    return row?.value;
+  }
+
+  it("reads one stored up to a day ago", async () => {
+    const userId = await runner(EARLY, NOW - BOOKMARK_MAX_AGE_S);
+    expect(await storedAt(userId)).toBe(EARLY);
+  });
+
+  it("ignores one stored longer ago than that", async () => {
+    const userId = await runner(EARLY, NOW - BOOKMARK_MAX_AGE_S - 1);
+    expect(await storedAt(userId)).toBeUndefined();
+  });
+
+  it("reads by the clock when not told the time", async () => {
+    expect(await storedFor(await runner(EARLY))).toBe(EARLY);
+    const stale = await runner(EARLY, nowSeconds() - BOOKMARK_MAX_AGE_S - 60);
+    expect(await storedFor(stale)).toBeUndefined();
+  });
+});
+
 describe("storeRunnerBookmark", () => {
+  it("records when it stored the bookmark", async () => {
+    const userId = await runner();
+    await storeRunnerBookmark(db, userId, EARLY, 1234);
+    const [row] = await db
+      .select({ at: userProfiles.d1BookmarkAt })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, userId));
+    expect(row?.at).toBe(1234);
+  });
+
+  it("records the clock's time when not told it", async () => {
+    const userId = await runner();
+    const before = nowSeconds();
+    await storeRunnerBookmark(db, userId, EARLY);
+    const [row] = await db
+      .select({ at: userProfiles.d1BookmarkAt })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, userId));
+    expect(row?.at).toBeGreaterThanOrEqual(before);
+    expect(row?.at).toBeLessThanOrEqual(nowSeconds());
+  });
+
   it("records a first bookmark", async () => {
     const userId = await runner();
     await storeRunnerBookmark(db, userId, EARLY);

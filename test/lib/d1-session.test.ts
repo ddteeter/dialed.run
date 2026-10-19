@@ -86,17 +86,26 @@ describe("newerBookmark", () => {
 });
 
 describe("isWriteStatement", () => {
-  it("sees the statements drizzle writes with", () => {
-    expect(isWriteStatement("insert into t values (1)")).toBe(true);
-    expect(isWriteStatement("  UPDATE t set x = 1")).toBe(true);
-    expect(isWriteStatement("delete from t")).toBe(true);
-    expect(isWriteStatement("replace into t values (1)")).toBe(true);
+  it("passes a statement that starts with SELECT as a read, in any case", () => {
+    expect(isWriteStatement("select * from t")).toBe(false);
+    expect(isWriteStatement("  SELECT 1 -- insert")).toBe(false);
+    expect(isWriteStatement("\n\tSelect x from t")).toBe(false);
   });
 
-  it("leaves reads alone, and a word that only starts like one", () => {
-    expect(isWriteStatement("select * from t")).toBe(false);
-    expect(isWriteStatement("select 1 -- insert")).toBe(false);
-    expect(isWriteStatement("inserted")).toBe(false);
+  it("counts every other statement as a write", () => {
+    expect(isWriteStatement("insert into t values (1)")).toBe(true);
+    expect(isWriteStatement("update t set x = 1 returning x")).toBe(true);
+    expect(isWriteStatement("delete from t")).toBe(true);
+    expect(isWriteStatement("replace into t values (1)")).toBe(true);
+    expect(
+      isWriteStatement("with x as (select 1) insert into t select * from x"),
+    ).toBe(true);
+    expect(isWriteStatement("/* a */ select 1")).toBe(true);
+    expect(isWriteStatement("pragma table_info(t)")).toBe(true);
+  });
+
+  it("does not take a word that only starts like select for one", () => {
+    expect(isWriteStatement("selected")).toBe(true);
   });
 });
 
@@ -112,6 +121,7 @@ describe("scopedDb outside a request", () => {
     expect(scopeOutcome()).toStrictEqual({
       bookmark: undefined,
       writerId: undefined,
+      backwards: undefined,
     });
   });
 
@@ -343,7 +353,81 @@ describe("scopeOutcome", () => {
     const outcome = await runInD1Scope(known.earlier, () =>
       Promise.resolve(scopeOutcome()),
     );
-    expect(outcome).toEqual({ bookmark: known.earlier, writerId: undefined });
+    expect(outcome).toEqual({
+      bookmark: known.earlier,
+      writerId: undefined,
+      backwards: undefined,
+    });
+  });
+});
+
+function reporting(reached: string): D1Database {
+  return spiedBinding(env.DIALED_CORE, reached).binding;
+}
+
+describe("scopeOutcome's ordering alarm", () => {
+  it("is quiet when the session moved forward", async () => {
+    const outcome = await runInD1Scope(known.earlier, async () => {
+      await selectOne(reporting(known.later));
+      return scopeOutcome();
+    });
+    expect(outcome.backwards).toBeUndefined();
+  });
+
+  it("is quiet when the session stayed where it started", async () => {
+    const outcome = await runInD1Scope(known.later, async () => {
+      await selectOne(reporting(known.later));
+      return scopeOutcome();
+    });
+    expect(outcome.backwards).toBeUndefined();
+  });
+
+  it("names both bookmarks when the session ended before it started", async () => {
+    const outcome = await runInD1Scope(known.later, async () => {
+      await selectOne(reporting(known.earlier));
+      return scopeOutcome();
+    });
+    expect(outcome.backwards).toEqual({
+      from: known.later,
+      reached: known.earlier,
+    });
+  });
+
+  it("checks against the bookmark a reopened session started from", async () => {
+    const outcome = await runInD1Scope(undefined, async () => {
+      await selectOne(reporting(known.earlier));
+      offerRunnerBookmark("runner-1", known.later);
+      return scopeOutcome();
+    });
+    expect(outcome.backwards).toEqual({
+      from: known.later,
+      reached: known.earlier,
+    });
+  });
+
+  it("has nothing to check for a session opened from no bookmark", async () => {
+    const outcome = await runInD1Scope(undefined, async () => {
+      await selectOne(reporting(known.earlier));
+      return scopeOutcome();
+    });
+    expect(outcome.backwards).toBeUndefined();
+  });
+
+  it("has nothing to check when the session reports no usable bookmark", async () => {
+    const outcome = await runInD1Scope(known.later, async () => {
+      await selectOne(reporting("not a bookmark"));
+      return scopeOutcome();
+    });
+    expect(outcome.backwards).toBeUndefined();
+  });
+
+  it("has nothing to check for a session pinned to the primary", async () => {
+    const outcome = await runInD1Scope(known.later, async () => {
+      pinPrimary("core");
+      await selectOne(reporting(known.earlier));
+      return scopeOutcome();
+    });
+    expect(outcome.backwards).toBeUndefined();
   });
 });
 
