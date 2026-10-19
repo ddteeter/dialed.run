@@ -68,7 +68,8 @@ export async function pruneStravaIds(db: CoreDb): Promise<void> {
       .set({ subjectId: orSqlNull(undefined) })
       .where(agedReminder),
     // A dead-lettered reminder's Gave up row names the activity in its
-    // subject, so it goes once its last failure is a week old.
+    // subject, so it goes a week after it was first written. The Desk has
+    // listed it, and the digest counted it, every day of that week (law 6).
     gaveUpClearBefore(db, "reminder", cutoff),
     // The days a reminder email went (design 140): nothing reads past
     // yesterday, so a week-old one is only a record of a runner's runs.
