@@ -266,7 +266,7 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
     ),
   ).toBeVisible();
   await page.getByRole("button", { name: "Change" }).click();
-  const sharing = page.getByRole("dialog", { name: "Sharing" });
+  const sharing = page.getByRole("dialog", { name: "Privacy" });
   const totals = sharing.getByRole("checkbox", {
     name: "Count my runs in anonymous totals",
   });

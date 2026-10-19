@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   SettingsIndex,
+  privacyRowValue,
   SharingForm,
   UnitsForm,
 } from "../../src/modules/onboarding/components/Settings";
@@ -88,7 +89,9 @@ describe("the index (U1/N)", () => {
       "href",
       "/onboarding/settings/sharing",
     );
-    expect(row(/^Privacy New/u)).toHaveTextContent("New runs go to the feed");
+    expect(row(/^Privacy New/u)).toHaveTextContent(
+      /^PrivacyNew runs shared · Counted in totals›$/u,
+    );
     // Settings › About (ACC-13, D-52; round 28 #7): the legal texts.
     expect(row(/^Privacy policy/u)).toHaveAttribute("href", "/privacy");
     expect(row(/^Privacy policy/u)).toHaveTextContent(
@@ -154,11 +157,22 @@ describe("the index (U1/N)", () => {
     expect(row(/^Notifications/u)).toHaveTextContent(
       "Run reminders in the app only",
     );
-    expect(row(/^Privacy New/u)).toHaveTextContent("New runs stay private");
+    expect(row(/^Privacy New/u)).toHaveTextContent(
+      /^PrivacyNew runs private · Not counted›$/u,
+    );
     expect(row(/^How you run/u)).toHaveTextContent("−4° offset");
     expect(row(/^Blocked runners/u)).toHaveTextContent("0 blocked");
     // An account that has not reached O0 has no handle to show.
     expect(row(/^Account/u)).toHaveTextContent(/^AccountEmail, password›$/u);
+  });
+
+  it("states both Privacy settings on its row, each its own way (round 38 #61b)", () => {
+    expect(
+      privacyRowValue({ defaultAudience: "runners", countInTotals: false }),
+    ).toBe("New runs shared · Not counted");
+    expect(
+      privacyRowValue({ defaultAudience: "private", countInTotals: true }),
+    ).toBe("New runs private · Counted in totals");
   });
 
   it("asks the unanswered calibration as the ruling words it", async () => {

@@ -48,6 +48,21 @@ const DISTANCE_WORDS: Readonly<Record<DistanceUnit, string>> = {
 };
 
 /**
+ * U1's Privacy row states both of its settings as they stand, so a runner
+ * reads them without opening it (round 38 #61b): "New runs shared ·
+ * Counted in totals", with "private" and "Not counted" when those apply.
+ */
+export function privacyRowValue(
+  current: Pick<CurrentSettings, "defaultAudience" | "countInTotals">,
+): string {
+  const share = isSharedAudience(current.defaultAudience)
+    ? "shared"
+    : "private";
+  const totals = current.countInTotals ? "Counted in totals" : "Not counted";
+  return `New runs ${share} · ${totals}`;
+}
+
+/**
  * One tap-through row: the setting, what it is now, and the way in.
  */
 function SettingsRow({
@@ -162,11 +177,7 @@ export function SettingsIndex({
           to="/onboarding/settings/$section"
           params={{ section: "sharing" }}
           label="Privacy"
-          value={
-            isSharedAudience(current.defaultAudience)
-              ? "New runs go to the feed"
-              : "New runs stay private"
-          }
+          value={privacyRowValue(current)}
         />
       </SettingsGroup>
       <SettingsGroup title="Review">

@@ -21,7 +21,8 @@ import { TotalsSwitch } from "./TotalsSwitch";
  *   there and hidden, and the export "don't" of the rule; all three name
  *   the same audience, other runners.
  *
- * **Change opens Settings › Sharing as a sheet**, over the form rather
+ * **Change opens Settings › Privacy as a sheet** (round 38 #61a/b: one
+ * name for the place, on U1's row, the sub-page and this sheet), over the form rather
  * than in place of it, so the verdict, chips and tags being picked are
  * never unmounted — "returns to the form with its values kept". The sheet
  * holds the totals switch alone: the sharing default is a form of its own,
@@ -88,10 +89,10 @@ export function PrivateRunLine({
         onClose={() => {
           setIsSheetOpen(false);
         }}
-        label="Sharing"
+        label="Privacy"
       >
         <div className="flex flex-col gap-6">
-          <h2 className="m-0 font-display text-heading">Sharing</h2>
+          <h2 className="m-0 font-display text-heading">Privacy</h2>
           <TotalsSwitch
             initial={isCounted}
             save={saveCountInTotals}

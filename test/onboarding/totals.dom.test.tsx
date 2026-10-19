@@ -23,7 +23,7 @@ import {
 } from "../../src/modules/onboarding/components/TotalsSwitch";
 
 /**
- * D-108's in-app half: Settings › Sharing's "Count my runs in anonymous
+ * D-108's in-app half: Settings › Privacy's "Count my runs in anonymous
  * totals" (D), A3's private line (E). The copy is round 32's, quoted, not paraphrased.
  */
 async function renderWithRouter(element: ReactElement) {
@@ -205,9 +205,9 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Change" }));
-    const sheet = screen.getByRole("dialog", { name: "Sharing" });
+    const sheet = screen.getByRole("dialog", { name: "Privacy" });
     expect(
-      within(sheet).getByRole("heading", { level: 2, name: "Sharing" }),
+      within(sheet).getByRole("heading", { level: 2, name: "Privacy" }),
     ).toBeVisible();
     expect(within(sheet).getByRole("checkbox")).toBeChecked();
 
@@ -220,7 +220,7 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     await renderWithRouter(line({ isVerified: true, countInTotals: true }));
 
     await user.click(screen.getByRole("button", { name: "Change" }));
-    const dialog = screen.getByRole("dialog", { name: "Sharing" });
+    const dialog = screen.getByRole("dialog", { name: "Privacy" });
     expect(dialog).toBeVisible();
     // The platform's close, as Escape does it (happy-dom has no Escape
     // handling; test/ui/sheet.dom.test.tsx closes it the same way).
@@ -233,6 +233,6 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     // The closed state is the line's, not only the dialog's, so Change
     // opens it again.
     await user.click(screen.getByRole("button", { name: "Change" }));
-    expect(screen.getByRole("dialog", { name: "Sharing" })).toBeVisible();
+    expect(screen.getByRole("dialog", { name: "Privacy" })).toBeVisible();
   });
 });
