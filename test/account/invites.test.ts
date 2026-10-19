@@ -861,7 +861,8 @@ describe("requestAccess (Au5)", () => {
       createdAt: 1,
       updatedAt: 1,
     });
-    expect((await accessDesk(db)).requests).toMatchObject([
+    const desk = await accessDesk(db);
+    expect(desk.requests).toMatchObject([
       { id: requestId, blockedRegion: "MS" },
     ]);
     const mail = fakeMail();

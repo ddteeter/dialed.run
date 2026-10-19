@@ -97,17 +97,17 @@ describe("the words", () => {
   });
 });
 
+function placed(cf: unknown): Request {
+  return new Request("https://app.dialed.run/", {
+    cf: z.record(z.string(), z.unknown()).parse(cf),
+  });
+}
+
 /**
  * The blocked states (owner, 2026-10-18): Cloudflare's placing of the
  * request, parsed as untrusted, and anything unplaced let through.
  */
 describe("isFromBlockedRegion", () => {
-  function placed(cf: unknown): Request {
-    return new Request("https://app.dialed.run/", {
-      cf: z.record(z.string(), z.unknown()).parse(cf),
-    });
-  }
-
   it.each(["MS", "TN"])("blocks a request from %s", (regionCode) => {
     const request = placed({ country: "US", regionCode });
     expect(isFromBlockedRegion(request)).toBe(true);

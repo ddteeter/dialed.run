@@ -681,17 +681,13 @@ describe("the region gate", () => {
       expect(attempts).toStrictEqual([]);
       expect(await accountFor(email)).toBeUndefined();
       // The code is not spent: it still opens an account from elsewhere.
-      expect(
-        (
-          await auth.handler(
-            signUpRequest(
-              address(),
-              { "x-invite-code": code, "x-turnstile-token": "token" },
-              OREGON,
-            ),
-          )
-        ).status,
-      ).toBe(200);
+      const retry = signUpRequest(
+        address(),
+        { "x-invite-code": code, "x-turnstile-token": "token" },
+        OREGON,
+      );
+      const retried = await auth.handler(retry);
+      expect(retried.status).toBe(200);
     },
   );
 
