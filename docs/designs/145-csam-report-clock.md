@@ -39,7 +39,7 @@ year would be purged before the report's year was up, and the policy's
   columns). Numbering: see open questions.
 - Routes: `src/routes/safety/review.tsx` wires the component.
 - Bindings, queues, crons: none.
-- Undesigned surface: the Quarantine section (design-deltas item 67).
+- Undesigned surface: the Quarantine section (design-deltas item 68).
 
 ## Test plan
 
