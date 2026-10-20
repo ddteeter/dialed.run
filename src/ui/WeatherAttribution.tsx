@@ -1,6 +1,14 @@
 /**
- * Visual Crossing's free tier requires attribution wherever conditions are
- * shown (docs/tasks/103-weather.md).
+ * Visual Crossing's licence requires attribution wherever its data, or
+ * anything derived from it, is shown: *"prominently display the message
+ * 'Weather Data Provided by Visual Crossing' in a legible manner near the
+ * data … with a clickable link to https://www.visualcrossing.com/"*, and
+ * not on a separate credits page. The owner chose the sentence-case
+ * wording below (D-144); the link is the licence's own address.
+ *
+ * External, so a plain anchor rather than the router's `Link` (which only
+ * takes the typed route tree), opened in a new tab so the conditions the
+ * runner was reading stay where they were.
  *
  * **In `ui/` rather than in `modules/weather/`, for a structural reason
  * rather than a taste one.** It imports nothing from that module — it is
@@ -21,12 +29,12 @@ export function WeatherAttribution() {
   return (
     <a
       data-target="inline"
-      href="https://www.visualcrossing.com/weather-data"
+      href="https://www.visualcrossing.com/"
       target="_blank"
-      rel="noreferrer"
+      rel="noopener noreferrer"
       className="text-micro text-muted no-underline"
     >
-      Weather by Visual Crossing
+      Weather data provided by Visual Crossing
     </a>
   );
 }

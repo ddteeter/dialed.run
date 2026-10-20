@@ -228,6 +228,9 @@ export function exportFiles(
     `Made ${iso(now)}.`,
     "",
     "Times are UTC. Conditions are the reading dialed.run showed for each run: from Visual Crossing, or the band you set yourself.",
+    // D-144: the licence asks for its credit, linked, near the data or
+    // anything derived from it; temp_c and feels_like_c are its readings.
+    "Weather data provided by Visual Crossing: https://www.visualcrossing.com/",
     // Round 35 #57: a run file is deleted once read (D-116), so the ZIP
     // rarely has one, and the README names `run-files/` only when it does.
     uploaded.length === 0 ? PHOTOS_LINE : `${PHOTOS_LINE} ${RUN_FILES_LINE}`,

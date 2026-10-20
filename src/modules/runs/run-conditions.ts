@@ -85,6 +85,17 @@ export function setBandLabel(storedC: number, unit: TempUnit): string {
 }
 
 /**
+ * Whether a run shows the provider's reading — what Visual Crossing's
+ * licence asks to be credited beside (D-144). A band the runner set in R2b
+ * is theirs and owes nobody; no conditions carry nothing to credit.
+ */
+export function hasProvidersReading(run: {
+  conditions: { isSetByYou: boolean } | undefined;
+}): boolean {
+  return run.conditions !== undefined && !run.conditions.isSetByYou;
+}
+
+/**
  * The bands as the sheet's radios carry them, coldest first.
  */
 export const BAND_OPTIONS: readonly string[] = SET_CONDITION_BANDS.map(String);

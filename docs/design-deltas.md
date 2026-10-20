@@ -1110,6 +1110,42 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     / "Never" / "To stop" lead-ins become mono labels, and whether P3's
     two existing captions stay beside it), and the receipt's Try again.
 
+67. **Visual Crossing's credit, reworded and placed on every conditions
+    surface (D-144).** The licence asks for "Weather Data Provided by
+    Visual Crossing", legible, near the data or anything derived from it,
+    linked to https://www.visualcrossing.com/, and not on a credits page.
+    The owner chose **"Weather data provided by Visual Crossing"**, linked
+    there, in a new tab. Round 1's line ("Weather by Visual Crossing") is
+    reworded everywhere it was already drawn: run detail's and A1's
+    conditions block, D's strip, the E1 card, Your conditions, A3's desk
+    rail and the backlog's rail. It is the same `WeatherAttribution` line
+    (`text-micro`, `text-muted`, no underline), and it shows only beside
+    the provider's reading, never beside a band the runner set. No board
+    draws it in these places, built with nothing new:
+    - **A2's header**, under the "6.2 MI · 41°F DAMP · 0 PIECES" sub-line,
+      on ink below `wide`; once for the screen, since the filter chip and
+      MOST LIKELY repeat the same reading.
+    - **A3's header**, closing it at every width, because below the desk the
+      rail that credits the reading is not drawn and the headline ("6.2 AT
+      41°") is the reading.
+    - **R, the runs list**: once under the list when any row shows a
+      reading, never on a row.
+    - **A1's duplicate receipt**, under its facts, and **A1's "Weather for"
+      block** while a corrected time is fetched, under WAS.
+    - **E1's compact line**: under the teal band rather than on it, because
+      `--muted` on teal is not a text pairing T1 gives.
+    - **H's "How you call it, by band"** and **K's "Your coverage"**: under
+      the list, since a feels-like band is derived from the reading.
+
+    Not credited, and why: the closet's "Works at" range is the runner's
+    own or the category estimate, never a reading. **The share card**
+    (OPS-16's entry card, 1200×630) prints the temperature in 150px type
+    and has no line for the credit; it is not served yet (every link gets
+    the default card), so nothing ships uncredited today. **The ask:**
+    draw the credit on the boards where it now sits, say whether A3's
+    header should drop it at the desk where the rail carries it, and
+    give the entry card a place for it before that card is wired.
+
 ## Answered in round 37 (imported 2026-10-10)
 
 Design sent round 37 as `Round 37 Rulings.dc.html`, with the text of record

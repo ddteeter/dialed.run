@@ -15,6 +15,7 @@ import {
   LogThisNext,
 } from "../../src/modules/onboarding/components/CallLadder";
 import { ladderFrom } from "../../src/modules/onboarding/ladder";
+import { queryWeatherCredit, WEATHER_CREDIT } from "../ui/weather-credit";
 
 /**
  * The Call tab's teaser — K, as round 22's item 24 rules it.
@@ -118,6 +119,8 @@ describe("zero verdicts (round 26 #15)", () => {
     ).toBeVisible();
     // No ladder at all rather than an empty frame, and nothing to ask for.
     expect(screen.queryByRole("list")).toBeNull();
+    // No bands, so nothing of Visual Crossing's to credit (D-144).
+    expect(queryWeatherCredit(document.body)).toBeNull();
     expect(screen.queryByText("Log this next")).toBeNull();
     // The one thing that moves the meter.
     expect(screen.getByRole("link", { name: "Log a run" })).toHaveAttribute(
@@ -203,8 +206,11 @@ describe("threshold met (round 22, item 24)", () => {
       screen.getByText("The Call arrives in the next release."),
     ).toBeVisible();
     expect(screen.queryByText(/and the Call starts/u)).toBeNull();
-    // "No button — there's no B1 to hand off to."
-    expect(screen.queryByRole("link")).toBeNull();
+    // "No button — there's no B1 to hand off to." The one link left is
+    // Visual Crossing's credit under the coverage (D-144), not a way on.
+    expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual(
+      [WEATHER_CREDIT],
+    );
     expect(screen.queryByRole("button")).toBeNull();
     expect(screen.queryByText("Log this next")).toBeNull();
   });
@@ -219,6 +225,15 @@ describe("coverage", () => {
     );
     expect(screen.getByText("Your coverage")).toBeVisible();
     expect(screen.getByText("[5 verdicts]")).toBeVisible();
+  });
+
+  it("credits Visual Crossing inside the coverage, whose bands are feels-like bands (D-144)", async () => {
+    await renderLadder(
+      <CallLadder ladder={ladderFrom([band(0, { dialed: 3 })])} />,
+    );
+    const coverage = screen.getByText("Your coverage").closest("section");
+    if (coverage === null) throw new Error("no coverage");
+    expect(queryWeatherCredit(coverage)).not.toBeNull();
   });
 
   it("renders every band it was given, gaps included", async () => {

@@ -693,7 +693,9 @@ describe("VerdictBacklog: the rail", () => {
     const rail = document.querySelector("[data-slot='backlog-rail']");
     // Visual Crossing's free tier requires attribution wherever conditions
     // are shown, and the rail shows them.
-    expect(rail?.textContent).toContain("Weather by Visual Crossing");
+    expect(rail?.textContent).toContain(
+      "Weather data provided by Visual Crossing",
+    );
     // This test used to assert the opposite — that the rail said
     // "Verdicts saved here count exactly like verdicts from the phone".
     // That sentence is a `data-annotation` on the Desktop Contract: design
@@ -715,7 +717,9 @@ describe("VerdictBacklog: the rail", () => {
       screen.getByRole("button", { name: /^Dialed —/ }),
     ).not.toHaveAttribute("aria-disabled");
     // The note and the attribution are not conditional on it.
-    expect(rail?.textContent).toContain("Weather by Visual Crossing");
+    expect(rail?.textContent).toContain(
+      "Weather data provided by Visual Crossing",
+    );
   });
 });
 
