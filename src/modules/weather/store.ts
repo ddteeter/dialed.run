@@ -13,10 +13,9 @@
  * no longer step around them.
  */
 import { and, eq, inArray } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 
 import { manualConditions, weatherObservations } from "../../db/schema-weather";
-import { env } from "../../env";
+import { weatherDb } from "../../env";
 import type { Ulid } from "../../lib/ids";
 import { newUlid } from "../../lib/ids";
 import type { ManualSky, WeatherObservation } from "../../lib/contracts";
@@ -47,10 +46,6 @@ export function cacheKeyFor(lat: number, lng: number, at: Date): CacheKey {
     lngR: roundCoord(lng),
     hourBucket: hourBucketFor(at),
   };
-}
-
-function weatherDb() {
-  return drizzle(env.DIALED_WEATHER);
 }
 
 /**

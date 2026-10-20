@@ -24,10 +24,10 @@
  */
 import { and, asc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
-import { drizzle, type DrizzleD1Database } from "drizzle-orm/d1";
+import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { accountDeletions, userProfiles } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb, env } from "../../env";
 import { nowSeconds } from "../../lib/now";
 import { captureException } from "../ops";
 import { enqueueForReview } from "../safety";
@@ -250,7 +250,7 @@ The re-ask against the deployed key, for the Worker entry.
 */
 export function rescreenHandlesFromEnv(anomalies: string[]): Promise<void> {
   return rescreenWithKey(
-    drizzle(env.DIALED_CORE),
+    coreDb(),
     env.OPENAI_API_KEY,
     anomalies,
   );

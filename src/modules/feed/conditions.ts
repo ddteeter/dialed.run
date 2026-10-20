@@ -15,7 +15,6 @@
  * `cloudflare:workers` even for bindings the component never uses).
  */
 import { desc, inArray, or } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { runs } from "../../db/schema-core";
@@ -26,7 +25,7 @@ import { pointSpan } from "./conditions-shape";
 import type { Conditions } from "./conditions-shape";
 
 type ObservationRow = typeof weatherObservations.$inferSelect;
-import { env } from "../../env";
+import { weatherDb } from "../../env";
 // The cache key and its predicate come from the module that owns the table
 // (docs/architecture.md: only modules/weather touches dialed-weather).
 import {
@@ -142,7 +141,7 @@ export async function observationsForRuns(
   const keyed = spans.flatMap(({ runId, keys }) =>
     keys.map((key) => ({ runId, key })),
   );
-  const db = drizzle(env.DIALED_WEATHER);
+  const db = weatherDb();
   // Keyed by cache cell rather than collected into a list: a run spans up
   // to six hours and a page holds two hundred runs, so a linear scan per
   // key is twelve hundred passes over the rows for an answer a lookup
@@ -271,7 +270,7 @@ export async function currentConditions(
   const atBucket = (bucket: number) =>
     matchesKey({ ...cacheKeyFor(lat, lng, new Date()), hourBucket: bucket });
   const scope = or(...buckets.map((bucket) => atBucket(bucket)));
-  const db = drizzle(env.DIALED_WEATHER);
+  const db = weatherDb();
   const [best] = await db
     .select()
     .from(weatherObservations)

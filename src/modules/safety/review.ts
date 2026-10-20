@@ -14,7 +14,7 @@ import type { BatchItem } from "drizzle-orm/batch";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import type { SQLiteUpdateSetSource } from "drizzle-orm/sqlite-core/query-builders/update";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
-import { drizzle } from "drizzle-orm/d1";
+import type { drizzle } from "drizzle-orm/d1";
 
 import {
   entryPhotos,
@@ -24,7 +24,7 @@ import {
   reviewQueue,
   userProfiles,
 } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import { columnWhere, firstRowWhere } from "../../lib/sql/keyed-read";
 import { orSqlNull } from "../../lib/sql/sql-null";
 import { newUlid } from "../../lib/ids";
@@ -40,7 +40,7 @@ import type { ReportReason, ReportSubjectType } from "./contracts";
 import { otherPhotosOf, type OtherPhoto } from "./other-photos";
 
 function db() {
-  return drizzle(env.DIALED_CORE);
+  return coreDb();
 }
 
 export interface EnqueueInput {

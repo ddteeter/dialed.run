@@ -7,10 +7,9 @@
  * hidden, per the packet.
  */
 import { and, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 
 import { wardrobeItems } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import type { Conditions } from "./conditions";
 import type { UiGroup } from "./groups";
 import { uiGroupFor } from "./groups";
@@ -36,7 +35,7 @@ export async function pickerGroups(
   userId: string,
   conditions: Conditions | undefined,
 ): Promise<PickerGroup[]> {
-  const database = drizzle(env.DIALED_CORE);
+  const database = coreDb();
   const items = await database
     .select()
     .from(wardrobeItems)

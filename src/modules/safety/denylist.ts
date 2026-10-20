@@ -10,16 +10,17 @@
  * knowing about HTML attributes.
  */
 import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 
 import { domainDenylist } from "../../db/schema-core";
-import { env } from "../../env";
+import { primaryCoreDb } from "../../env";
 import { domainOf } from "../../lib/domain";
 import { hasRowWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 
+// Primary: the denylist is read to refuse a save, and an operator's new
+// entry must hold at once (D-123, design 143).
 function db() {
-  return drizzle(env.DIALED_CORE);
+  return primaryCoreDb();
 }
 
 /**

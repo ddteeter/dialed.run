@@ -1,8 +1,7 @@
 import { desc, eq, inArray, or } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 
 import { outfitEntries, outfitEntryItems, runs } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import type { Conditions } from "./conditions";
 import { observationsForEntries, observationsForRuns } from "./conditions";
 import { attachKit } from "./entries";
@@ -109,7 +108,7 @@ async function unjudgedRuns(userId: string) {
   // the bell count the same runs) — no entry, or an entry with no verdict,
   // at any age. A row that already has a kit saves through `attachKit`'s
   // existing-entry path, which writes the verdict and leaves the kit.
-  return runsAwaitingVerdict(drizzle(env.DIALED_CORE), userId, BACKLOG_LIMIT);
+  return runsAwaitingVerdict(coreDb(), userId, BACKLOG_LIMIT);
 }
 
 /**
@@ -124,7 +123,7 @@ async function ownHistory(userId: string): Promise<
     wornAt: number;
   })[]
 > {
-  return drizzle(env.DIALED_CORE)
+  return coreDb()
     .select({
       id: outfitEntries.id,
       runId: outfitEntries.runId,
@@ -156,7 +155,7 @@ async function kitsFor(ask: {
   entryIds: readonly string[];
   runIds: readonly string[];
 }): Promise<Map<string, Kit>> {
-  const database = drizzle(env.DIALED_CORE);
+  const database = coreDb();
   const rows = await forIds([...ask.entryIds, ...ask.runIds], () =>
     database
       .select({
@@ -208,7 +207,7 @@ export async function unjudgedRunCount(userId: string): Promise<number> {
 }
 
 export async function verdictBacklog(userId: string): Promise<Backlog> {
-  const database = drizzle(env.DIALED_CORE);
+  const database = coreDb();
   const unjudged = await unjudgedRuns(userId);
 
   // **No early return for an empty backlog**, deliberately. One would

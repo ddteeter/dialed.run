@@ -8,11 +8,10 @@
  * writer of those columns, onboarding's `savePlace` (FEED-5).
  */
 import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 
 export interface ConditionsHome {
   /**
@@ -44,7 +43,7 @@ export function conditionsHomeStatement(db: DrizzleD1Database, userId: string) {
 }
 
 export async function conditionsHome(userId: string): Promise<ConditionsHome> {
-  const [row] = await conditionsHomeStatement(drizzle(env.DIALED_CORE), userId);
+  const [row] = await conditionsHomeStatement(coreDb(), userId);
   const lat = row?.lat ?? undefined;
   const lng = row?.lng ?? undefined;
   return {

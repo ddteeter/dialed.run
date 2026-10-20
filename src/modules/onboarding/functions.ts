@@ -6,9 +6,8 @@
 import type { BellState } from "../notifications";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { drizzle } from "drizzle-orm/d1";
 
-import { env, waitUntil } from "../../env";
+import { coreDb, waitUntil } from "../../env";
 import { cityLookupInput } from "../../lib/contracts/city-lookup";
 import { optionalUserId, requireUserId } from "../auth";
 import { nameItem } from "../closet";
@@ -38,7 +37,7 @@ import { starterList } from "./starter-list";
 import { unitsFromLocale } from "./units-from-locale";
 
 function db() {
-  return drizzle(env.DIALED_CORE);
+  return coreDb();
 }
 
 /**

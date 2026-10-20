@@ -11,7 +11,6 @@
  * stays in this module regardless.
  */
 import { and, desc, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 import type { z } from "zod";
 
 import {
@@ -25,7 +24,7 @@ import {
   userProfiles,
   wardrobeItems,
 } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import type {
   Audience,
   WritableAudience,
@@ -55,7 +54,7 @@ type EntryTag = (typeof entryTags)[number];
 type ItemFlag = z.infer<typeof itemFlagSchema>;
 
 function db() {
-  return drizzle(env.DIALED_CORE);
+  return coreDb();
 }
 
 /**

@@ -5,9 +5,8 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { drizzle } from "drizzle-orm/d1";
 
-import { env, waitUntil } from "../../env";
+import { coreDb, env, primaryCoreDb, waitUntil } from "../../env";
 import { accountDeletionInput, usernameInput } from "../../lib/contracts";
 import {
   checkCurrentPassword,
@@ -80,7 +79,7 @@ import {
 } from "./verification";
 
 function db() {
-  return drizzle(env.DIALED_CORE);
+  return coreDb();
 }
 
 /**
@@ -221,8 +220,9 @@ export const turnstileSiteKeyQuery = createServerFn({ method: "GET" }).handler(
 export const requestAccessFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => requestAccessInput.parse(data))
   .handler(async ({ data }) =>
+    // Primary: its abuse limits gate the write (D-123, design 143).
     requestAccess(
-      db(),
+      primaryCoreDb(),
       {
         email: data.email,
         note: data.note,

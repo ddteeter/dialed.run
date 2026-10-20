@@ -135,6 +135,13 @@ src/
   bundle.
 - No circular imports.
 - Only `src/env/` touches Workers bindings directly.
+- **Every D1 query goes through `coreDb()`, `weatherDb()` or
+  `primaryCoreDb()` from `src/env`** (design 143, D-123). Reads in a request
+  may come from a read replica, so a check that authorizes a write reads the
+  primary: `primaryCoreDb()`, `verifiedUserId()`'s pin, or `pinPrimary()`.
+  dependency-cruiser's `d1-handles-come-from-env` rejects a value import of
+  `drizzle-orm/d1` elsewhere (`import type` is fine), and
+  `test/architecture/d1-access.test.ts` rejects naming a binding.
 - Each lane owns its `src/routes/<lane>/` directory exclusively — route merges
   are structurally conflict-free.
 

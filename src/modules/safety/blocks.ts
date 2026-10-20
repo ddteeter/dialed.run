@@ -17,15 +17,14 @@
  *   the outside so the carve-out cannot rot.
  */
 import { and, eq, or } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 
 import { blocks, userProfiles } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import { columnSetAmong } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 
 function db() {
-  return drizzle(env.DIALED_CORE);
+  return coreDb();
 }
 
 export class SelfBlockError extends Error {

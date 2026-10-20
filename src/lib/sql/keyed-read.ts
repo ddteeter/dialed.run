@@ -45,11 +45,23 @@ export async function columnWhere<TColumn extends SQLiteColumn>(
   column: TColumn,
   where: SQL | undefined,
 ): Promise<TColumn["_"]["data"][]> {
-  const rows = await database
-    .select({ value: column })
-    .from(table)
-    .where(where);
+  const rows = await columnQuery(database, table, column, where);
   return rows.map((row) => row.value);
+}
+
+/**
+ * `columnWhere`'s query, unsent: rows of `{ value }`. For a caller that
+ * puts the read in a `db.batch()` beside others, as the auth gate does
+ * with the runner's stored D1 bookmark (design 143), so it costs no round
+ * trip of its own.
+ */
+export function columnQuery<TColumn extends SQLiteColumn>(
+  database: Handle,
+  table: SQLiteTable,
+  column: TColumn,
+  where: SQL | undefined,
+) {
+  return database.select({ value: column }).from(table).where(where);
 }
 
 /**

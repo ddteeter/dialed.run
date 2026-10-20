@@ -16,10 +16,9 @@
  * `entries_user_created`).
  */
 import { desc, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 
 import { outfitEntries, outfitEntryItems } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import { precipClassOf } from "../../lib/contracts/temperature";
 import type { Conditions } from "./conditions";
 import { conditionsAt, observationsForEntries } from "./conditions";
@@ -97,7 +96,7 @@ export async function nearestPriorEntry(
   userId: string,
   currentConditions: Conditions,
 ): Promise<PrefillCandidate | undefined> {
-  const database = drizzle(env.DIALED_CORE);
+  const database = coreDb();
   const own = await database
     .select({
       id: outfitEntries.id,

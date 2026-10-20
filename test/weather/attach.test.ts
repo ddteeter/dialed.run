@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -9,6 +9,7 @@ import {
 } from "../../src/db/schema-weather";
 import { env } from "../../src/env";
 import { newUlid, type Ulid } from "../../src/lib/ids";
+import { runInD1Scope, scopedDb } from "../../src/lib/sql/d1-session";
 import {
   attachObservation,
   recordManualObservation,
@@ -23,6 +24,7 @@ import {
   mockVisualCrossing,
   requestUrl,
 } from "./fixtures/visual-crossing-observation";
+import { spiedBinding } from "../d1-spy";
 
 const OBSERVATION_HOUR_EPOCH = 1_768_485_600; // 07:00 fixture hour
 
@@ -653,5 +655,32 @@ describe("half a location is no location, in every direction", () => {
     await expect(recordManualObservation(runId, 5)).rejects.toThrow(
       /no location/,
     );
+  });
+});
+
+async function constraintsAround(work: () => Promise<unknown>) {
+  const spy = spiedBinding(env.DIALED_WEATHER);
+  await runInD1Scope(undefined, async () => {
+    await scopedDb(spy.binding, "weather").all(sql`select 1`);
+    await work();
+  });
+  return spy.opened;
+}
+
+describe("weather cache reads that decide a write read the primary (design 143)", () => {
+  it("pins weather for an attach", async () => {
+    expect(await constraintsAround(() => attachObservation(newUlid()))).toEqual(
+      ["first-unconstrained", "first-primary"],
+    );
+  });
+
+  it("pins weather for a manual band", async () => {
+    expect(
+      await constraintsAround(() =>
+        expect(recordManualObservation(newUlid(), 4)).rejects.toThrow(
+          "not found",
+        ),
+      ),
+    ).toEqual(["first-unconstrained", "first-primary"]);
   });
 });

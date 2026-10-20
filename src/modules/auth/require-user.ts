@@ -16,9 +16,8 @@
  * loadable in the workers pool.
  */
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { drizzle } from "drizzle-orm/d1";
 
-import { env } from "../../env";
+import { primaryCoreDb } from "../../env";
 import { auth } from "./instance";
 import { activeUserId, keepableUserId } from "./leaving-gate";
 import { changeOwnPassword, type PasswordChange } from "./change-password";
@@ -32,7 +31,7 @@ import {
 import { agreedUserId, confirmedUserId, confirmedViewerId } from "./terms-gate";
 
 function db() {
-  return drizzle(env.DIALED_CORE);
+  return primaryCoreDb();
 }
 
 /**

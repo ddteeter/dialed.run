@@ -1,6 +1,5 @@
-import { drizzle } from "drizzle-orm/d1";
 
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import { bandLabel } from "../../lib/contracts/temperature";
 import { observationsForEntries } from "./conditions";
 import { bandsAscendingWithGaps, tallyCoverage } from "./coverage";
@@ -18,7 +17,7 @@ import { unitsFor } from "./units";
  * reads differ, and they differ because the screens need different things.
  */
 export async function coverageLadder(userId: string): Promise<CoverageBand[]> {
-  const database = drizzle(env.DIALED_CORE);
+  const database = coreDb();
   const entries = await recentOwnEntries(database, userId);
   // Equivalent mutant: with no entries the walk answers an empty ladder
   // anyway — `observationsForEntries` guards its own empty case, and a

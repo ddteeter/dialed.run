@@ -6,10 +6,9 @@
  * photon-wasm benchmark rather than duplicating a wasm pipeline here.
  */
 import { and, eq, or } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 
 import { entryPhotos, outfitEntries } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb, env } from "../../env";
 import { firstColumnWhere } from "../../lib/sql/keyed-read";
 import { newUlid } from "../../lib/ids";
 import { isAllowedPhotoType } from "../../lib/photo-constraints";
@@ -28,7 +27,7 @@ export const MAX_PHOTOS_PER_ENTRY = 4;
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 
 function db() {
-  return drizzle(env.DIALED_CORE);
+  return coreDb();
 }
 
 export class InvalidPhotoError extends Error {}

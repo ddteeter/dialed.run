@@ -5,11 +5,10 @@
  * needs a read path through here.
  */
 import { and, eq, inArray, or } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 
 import { runs } from "../../db/schema-core";
 import { weatherObservations } from "../../db/schema-weather";
-import { env } from "../../env";
+import { coreDb, weatherDb } from "../../env";
 import { readInChunks } from "../../lib/chunked";
 import type { ManualSky, WeatherObservation } from "../../lib/contracts";
 import type { Ulid } from "../../lib/ids";
@@ -84,7 +83,7 @@ export async function observationsForRuns(
   runIds: readonly Ulid[],
 ): Promise<Map<Ulid, WeatherObservation>> {
   const result = new Map<Ulid, WeatherObservation>();
-  const core = drizzle(env.DIALED_CORE);
+  const core = coreDb();
   const runRows = await readInChunks(runIds, (chunk) =>
     core
       .select({
@@ -112,7 +111,7 @@ export async function observationsForRuns(
         ],
   );
 
-  const weather = drizzle(env.DIALED_WEATHER);
+  const weather = weatherDb();
   const rows = await readInChunks(
     keyed,
     (chunk) =>

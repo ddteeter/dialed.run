@@ -1,6 +1,4 @@
-import { drizzle } from "drizzle-orm/d1";
-
-import { env } from "../../env";
+import { coreDb, env } from "../../env";
 import type { OutboxMessage } from "../../lib/sql/outbox";
 import {
   extractionModelFromEnv,
@@ -67,7 +65,7 @@ inside the module — which is what keeps the module importable by a test.
 */
 export function enrichmentDeps() {
   return {
-    db: drizzle(env.DIALED_CORE),
+    db: coreDb(),
     captureException,
     proxyApiKey: env.FIRECRAWL_API_KEY,
     model: extractionModelFromEnv(),
@@ -81,7 +79,7 @@ export function enrichmentDeps() {
  * alert). Handed in rather than imported there.
  */
 export function oweInCore(message: OutboxMessage, notBefore?: number) {
-  return outboxInsert(drizzle(env.DIALED_CORE), oweOutbox(message, notBefore));
+  return outboxInsert(coreDb(), oweOutbox(message, notBefore));
 }
 
 /**
@@ -119,13 +117,12 @@ export async function handleQueueBatch(
   switch (batch.queue) {
     case "dialed-imports": {
       await handleImportsBatch(batch, {
-        db: drizzle(env.DIALED_CORE),
+        db: coreDb(),
         importBucket: env.IMPORTS,
         captureException,
         stravaApi: stravaApiFromEnv(),
         owe: oweInCore,
-        runnerTimeZone: (userId) =>
-          runnerTimeZone(drizzle(env.DIALED_CORE), userId),
+        runnerTimeZone: (userId) => runnerTimeZone(coreDb(), userId),
       });
       break;
     }
@@ -137,7 +134,7 @@ export async function handleQueueBatch(
       await handleImportsDlqBatch(
         batch,
         {
-          db: drizzle(env.DIALED_CORE),
+          db: coreDb(),
           importBucket: env.IMPORTS,
           captureException,
           owe: oweInCore,

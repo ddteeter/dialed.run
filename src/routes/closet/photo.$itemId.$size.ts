@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { drizzle } from "drizzle-orm/d1";
 
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import { sessionFromRequest } from "../../modules/auth";
 import { getItemPhotoObject } from "../../modules/closet/photos";
 import { NotFoundError } from "../../modules/closet/service";
@@ -18,7 +17,7 @@ export const Route = createFileRoute("/closet/photo/$itemId/$size")({
         const session = await sessionFromRequest(request);
         if (!session) return new Response("Unauthorized", { status: 401 });
 
-        const db = drizzle(env.DIALED_CORE);
+        const db = coreDb();
         try {
           const object = await getItemPhotoObject(
             db,
