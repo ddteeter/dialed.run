@@ -15,7 +15,8 @@ export const weatherObservations = /*#__PURE__*/ sqliteTable(
   "weather_observations",
   {
     id: text("id").primaryKey(),
-    runId: text("run_id"),
+    // No run id (C1, decision 16): a cache row answers for everyone who
+    // ran in its cell that hour, and one naming a run outlived the run.
     latR: real("lat_r").notNull(),
     lngR: real("lng_r").notNull(),
     hourBucket: integer("hour_bucket").notNull(),

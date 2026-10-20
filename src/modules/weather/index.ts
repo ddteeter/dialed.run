@@ -27,6 +27,9 @@ export { resolvePlace } from "./place";
 export { timeZoneAt } from "./zone";
 // The cache key itself, so no other module has to restate its rounding.
 export { cacheKeyFor, matchesKey, runHourKeys } from "./store";
+// A deleted run's band, for the outbox handler `feed`'s run delete owes
+// (C1): this module is the only one that writes `dialed-weather`.
+export { forgetManualBand } from "./store";
 export type { CacheKey } from "./store";
 export { manualReadingsForRuns, observationsForRuns } from "./read";
 export type { WeatherReading } from "./read";

@@ -233,12 +233,11 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     // for a real run, and what the feed now reads back. Warming 6 -> 14
     // across the two hours: a chilly first mile that settles in.
     //
-    // Only the starting hour carries `runId`; the others are shared cache
-    // cells, exactly as the attach path writes them.
+    // No row names the run: each is a shared cache cell, found by place
+    // and hour, exactly as the attach path writes them.
     await weather.insert(weatherObservations).values([
       {
         id: observationId,
-        runId: publicRunId,
         latR,
         lngR,
         hourBucket,

@@ -1,0 +1,1 @@
+ALTER TABLE `weather_observations` DROP COLUMN `run_id`;

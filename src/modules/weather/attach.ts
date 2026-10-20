@@ -181,14 +181,7 @@ async function resolveAndAttach(runId: Ulid): Promise<AttachOutcome> {
     // from started_at + duration_s. What was missing was resolving the
     // later hours at all. The run still links to its starting hour, so
     // every existing reader is unaffected.
-    await sampleRunHours(
-      provider,
-      keys,
-      run.lat,
-      run.lng,
-      run.startedAt,
-      runId,
-    );
+    await sampleRunHours(provider, keys, run.lat, run.lng, run.startedAt);
     await setStatus(runId, "attached");
     return "attached";
   } catch (error) {
@@ -207,7 +200,6 @@ async function sampleRunHours(
   lat: number,
   lng: number,
   startedAt: number,
-  runId: Ulid,
 ): Promise<void> {
   for (const [index, hourKey] of keys.entries()) {
     // A later hour already cached by someone else's run at the same place
@@ -224,13 +216,9 @@ async function sampleRunHours(
     }
     const at = new Date((startedAt + index * 3600) * 1000);
     const observation = await provider.observation(lat, lng, at);
-    // Only the starting hour carries the run id: the row is a shared cache
-    // cell, and the run's own conditions are its start.
-    await upsertRealObservation(
-      hourKey,
-      observation,
-      index === 0 ? runId : undefined,
-    );
+    // No hour names the run (C1): the row is a shared cache cell, found
+    // by place and hour, and a run id on it would outlive the run.
+    await upsertRealObservation(hourKey, observation);
   }
 }
 

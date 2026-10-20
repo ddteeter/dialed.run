@@ -17,17 +17,24 @@ import { emailPayloadSchema } from "../contracts/email";
 import { importFilePrefix } from "../import-file-key";
 
 /**
+One kind's wire shape: its literal `kind` and the fields of its payload.
+*/
+function outboxKind<K extends string, S extends z.ZodRawShape>(
+  kind: K,
+  payload: S,
+) {
+  return z.object({ kind: z.literal(kind), payload: z.object(payload) });
+}
+
+/**
  * Clear what a garment's photo prefix holds beyond the photo its row names
  * (nothing, once the photo is removed or the garment deleted). The runner's
  * id is part of the payload because it is part of the prefix — a drain can
  * only ever touch that runner's own objects.
  */
-const photoDelete = z.object({
-  kind: z.literal("photo_delete"),
-  payload: z.object({
-    userId: z.string().min(1),
-    itemId: z.string().min(1),
-  }),
+const photoDelete = outboxKind("photo_delete", {
+  userId: z.string().min(1),
+  itemId: z.string().min(1),
 });
 
 /**
@@ -145,6 +152,19 @@ const productLink = z.object({
   payload: z.object({ userId: z.string().min(1) }),
 });
 
+/**
+ * Delete a deleted run's band (C1): its `manual_conditions` row, which is
+ * in `DIALED_WEATHER`, so no batch that deletes the run can reach it (law
+ * 8c). The run's delete owes this in its own batch, and only for a run
+ * that was the runner's — the run id is the whole of what it deletes, so
+ * the writer is what keeps it to the runner's own. The runner's id rides
+ * along for the report a failure files, nothing else.
+ */
+const manualConditionsDelete = outboxKind("manual_conditions_delete", {
+  userId: z.string().min(1),
+  runId: z.string().min(1),
+});
+
 export const outboxMessageSchema = z.discriminatedUnion("kind", [
   photoDelete,
   entryMediaDelete,
@@ -152,6 +172,7 @@ export const outboxMessageSchema = z.discriminatedUnion("kind", [
   importFileExpire,
   email,
   productLink,
+  manualConditionsDelete,
 ]);
 
 export type OutboxMessage = z.infer<typeof outboxMessageSchema>;
@@ -184,7 +205,8 @@ export const scheduledOutboxKinds: readonly OutboxKind[] = [
  * per entry, and one `*` for "every entry of this runner's". One
  * `import_file_delete` or `import_file_expire` per object. One
  * `product_link` per runner, because one run links all of their garments.
- * An email's is its writer's to name.
+ * One `manual_conditions_delete` per run. An email's is its writer's to
+ * name.
  */
 export function dedupeKeyFor(message: OutboxMessage): string {
   switch (message.kind) {
@@ -203,6 +225,9 @@ export function dedupeKeyFor(message: OutboxMessage): string {
     }
     case "product_link": {
       return message.payload.userId;
+    }
+    case "manual_conditions_delete": {
+      return `${message.payload.userId}:${message.payload.runId}`;
     }
   }
 }

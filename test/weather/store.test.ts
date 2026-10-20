@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
+import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
   bandObservation,
@@ -37,8 +39,7 @@ describe("weather cache (103)", () => {
     const key = cacheKeyFor(44.98, -93.27, at);
     expect(await findObservationRow(key)).toBeUndefined();
 
-    const runId = newUlid();
-    await upsertRealObservation(key, OBSERVATION, runId);
+    await upsertRealObservation(key, OBSERVATION);
 
     const row = await findObservationRow(key);
     expect(row?.tempC).toBe(5);
@@ -52,8 +53,8 @@ describe("weather cache (103)", () => {
     expect(keyA).toEqual(keyB);
 
     await Promise.all([
-      upsertRealObservation(keyA, OBSERVATION, newUlid()),
-      upsertRealObservation(keyB, { ...OBSERVATION, tempC: 6 }, newUlid()),
+      upsertRealObservation(keyA, OBSERVATION),
+      upsertRealObservation(keyB, { ...OBSERVATION, tempC: 6 }),
     ]);
 
     const row = await findObservationRow(keyA);
@@ -63,9 +64,9 @@ describe("weather cache (103)", () => {
   it("a real row is never overwritten by a later fetch", async () => {
     const at = new Date("2026-04-01T09:00:00Z");
     const key = cacheKeyFor(41.1, -81.2, at);
-    await upsertRealObservation(key, OBSERVATION, newUlid());
+    await upsertRealObservation(key, OBSERVATION);
 
-    await upsertRealObservation(key, { ...OBSERVATION, tempC: 99 }, newUlid());
+    await upsertRealObservation(key, { ...OBSERVATION, tempC: 99 });
     const row = await findObservationRow(key);
     expect(row?.tempC).toBe(5);
   });
@@ -118,7 +119,7 @@ describe("what a stored observation records about itself", () => {
     const now = nowSeconds();
     const key = cacheKeyFor(38.5, -85.5, new Date("2026-05-01T09:00:00Z"));
 
-    await upsertRealObservation(key, OBSERVATION, newUlid());
+    await upsertRealObservation(key, OBSERVATION);
 
     const row = await findObservationRow(key);
     expect(row?.fetchedAt).toBeGreaterThanOrEqual(now - 5);
@@ -159,11 +160,10 @@ describe("the observation's zone (R-96)", () => {
     // On the observation, not the run, because a run whose hour is cached
     // never fetches — the row is the only place its zone can come from.
     const key = cacheKeyFor(41.88, -87.63, new Date("2026-04-01T11:00:00Z"));
-    await upsertRealObservation(
-      key,
-      { ...OBSERVATION, timeZone: "America/Chicago" },
-      newUlid(),
-    );
+    await upsertRealObservation(key, {
+      ...OBSERVATION,
+      timeZone: "America/Chicago",
+    });
 
     const row = await findObservationRow(key);
     expect(row?.timeZone).toBe("America/Chicago");
@@ -177,7 +177,7 @@ describe("the observation's zone (R-96)", () => {
     // one, and the observation read back carries none.
     const at = new Date("2026-04-02T11:00:00Z");
     const key = cacheKeyFor(41.89, -87.64, at);
-    await upsertRealObservation(key, OBSERVATION, newUlid());
+    await upsertRealObservation(key, OBSERVATION);
 
     const row = await findObservationRow(key);
     expect(row?.timeZone).toBeNull();
@@ -188,12 +188,52 @@ describe("the observation's zone (R-96)", () => {
     // The column is text. A zone valid when written can be one this ICU
     // does not know; it must not reach `Intl` at render time.
     const key = cacheKeyFor(41.91, -87.66, new Date("2026-04-04T11:00:00Z"));
-    await upsertRealObservation(key, OBSERVATION, newUlid());
+    await upsertRealObservation(key, OBSERVATION);
     const row = await findObservationRow(key);
     if (!row) throw new Error("no row");
 
     expect(
       toWeatherObservation({ ...row, timeZone: "Mars/Olympus_Mons" }),
     ).not.toHaveProperty("timeZone");
+  });
+});
+
+/**
+ * C1 (`0004_drop_observation_run_id`): the cache names no run. Read from
+ * the migrated database rather than the drizzle table, which is the thing
+ * the migration has to agree with — and with the cache key's UNIQUE index
+ * checked too, since a column drop SQLite answers with a table rebuild
+ * recreates the indexes and can lose one.
+ */
+describe("the migrated observation table (C1)", () => {
+  const names = z.array(z.object({ name: z.string() }));
+
+  it("has no run_id column", async () => {
+    const { results } = await env.DIALED_WEATHER.prepare(
+      "SELECT name FROM pragma_table_info('weather_observations')",
+    ).all();
+    const columns = names.parse(results).map((row) => row.name);
+    expect(columns).toContain("hour_bucket");
+    expect(columns).not.toContain("run_id");
+  });
+
+  it("keeps the cache key unique on place and hour", async () => {
+    const { results } = await env.DIALED_WEATHER.prepare(
+      "SELECT name FROM pragma_index_info('observations_cache_key')",
+    ).all();
+    expect(names.parse(results).map((row) => row.name)).toStrictEqual([
+      "lat_r",
+      "lng_r",
+      "hour_bucket",
+    ]);
+    const key = cacheKeyFor(12.34, 56.78, new Date("2026-05-01T06:00:00Z"));
+    await upsertRealObservation(key, OBSERVATION);
+    await expect(
+      env.DIALED_WEATHER.prepare(
+        "INSERT INTO weather_observations (id, lat_r, lng_r, hour_bucket, temp_c, feels_like_c, humidity, wind_kph, precip_mm, condition, source, fetched_at) VALUES (?, ?, ?, ?, 1, 1, 1, 1, 0, 'clear', 'visualcrossing', 0)",
+      )
+        .bind(newUlid(), key.latR, key.lngR, key.hourBucket)
+        .run(),
+    ).rejects.toThrow(/UNIQUE/);
   });
 });

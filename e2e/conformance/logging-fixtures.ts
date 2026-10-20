@@ -111,7 +111,6 @@ export async function seedRun(
       .insert(weatherObservations)
       .values({
         id: newUlid(),
-        runId,
         latR: LAT,
         lngR: LNG,
         hourBucket,

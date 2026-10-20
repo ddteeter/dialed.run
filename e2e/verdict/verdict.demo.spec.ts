@@ -165,17 +165,14 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
   // Every run, each at its own hour: the earlier ones have to land in the
   // same band for their verdicts to count as history here.
   await withLocalDb(async ({ weather }) => {
-    for (const [id, run, at] of [
-      [observationId, runId, startedAt],
-      ...priors.map(
-        (prior) => [newUlid(), prior.runId, priorStart(prior.daysAgo)] as const,
-      ),
+    for (const [id, at] of [
+      [observationId, startedAt],
+      ...priors.map((prior) => [newUlid(), priorStart(prior.daysAgo)] as const),
     ] as const) {
       await weather
         .insert(weatherObservations)
         .values({
           id,
-          runId: run,
           latR,
           lngR,
           hourBucket: Math.floor(at / 3600),
@@ -199,7 +196,6 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
             weatherObservations.hourBucket,
           ],
           set: {
-            runId: run,
             tempC: 6,
             feelsLikeC: 4,
             source: "visualcrossing",
@@ -388,7 +384,6 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
         .insert(weatherObservations)
         .values({
           id: newUlid(),
-          runId: id,
           latR,
           lngR,
           hourBucket: Math.floor(at / 3600),
@@ -407,7 +402,7 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
             weatherObservations.lngR,
             weatherObservations.hourBucket,
           ],
-          set: { runId: id, tempC: 6, feelsLikeC: 4 },
+          set: { tempC: 6, feelsLikeC: 4 },
         });
     }
   });
