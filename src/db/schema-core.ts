@@ -1430,9 +1430,10 @@ export const moderationActions = /*#__PURE__*/ sqliteTable(
  * stood, the uploader, and where the bytes were copied to.
  *
  * **Locked and admin-only.** Nothing updates or deletes a row, no runner-
- * facing read joins this table, and its one read (`quarantinedContent` in
- * `modules/safety`) refuses anyone but an admin. `retainUntil` is a year
- * after the quarantine; nothing purges on it yet (deployment plan §8).
+ * facing read joins this table, and its reads (`modules/safety`) refuse
+ * anyone but an admin. The one update is recording the NCMEC report.
+ * `retainUntil` is a year after the quarantine, or a year after that
+ * report when later; the daily digest purges on it.
  * No foreign keys, on purpose: deleting the account must not take the
  * evidence with it.
  */
@@ -1453,6 +1454,13 @@ export const quarantinedContent = /*#__PURE__*/ sqliteTable(
     photosSnapshot: text("photos_snapshot").notNull(),
     quarantinedAt: integer("quarantined_at").notNull(),
     retainUntil: integer("retain_until").notNull(),
+    // When the operator recorded the CyberTipline report (C12). A report
+    // is a request to preserve for a year after it (18 U.S.C.
+    // §2258A(h)(1)), so recording one moves `retainUntil` to at least a
+    // year past this. Null until reported.
+    ncmecReportedAt: integer("ncmec_reported_at"),
+    // CyberTipline's id for that report, when the operator gives it.
+    ncmecReportId: text("ncmec_report_id"),
   },
   (t) => [
     // The admin read, newest first; and a purge, when one exists, by date.

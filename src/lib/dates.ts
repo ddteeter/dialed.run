@@ -177,6 +177,16 @@ export function monthYearLabel(
 }
 
 /**
+ * The day and its year — "Sep 10 2026" — for a date a year either side
+ * of today, as Review's quarantine says when a record was held and how
+ * long it is kept (C12). No comma, as a mono label is a row of cells.
+ */
+export function yearDayLabel(epochSeconds: number, timeZone?: string): string {
+  const year = part(epochSeconds, timeZone, { year: "numeric" });
+  return `${monthDayLabel(epochSeconds, timeZone)} ${year}`;
+}
+
+/**
  * A day and the time on it — "Mon Sep 2, 14:30".
  *
  * For a notification, where the time of day is the point: two notifications
