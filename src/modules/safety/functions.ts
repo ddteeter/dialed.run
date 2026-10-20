@@ -53,6 +53,7 @@ import {
   blockRequesterInput,
   forceRenameInput,
   handleReviewInput,
+  ncmecReportInput,
   reviewDecisionInput,
   runnersFilterInput,
   runRemovalsInput,
@@ -61,6 +62,7 @@ import {
 import { removalsOnRun } from "./run-removals";
 import { fileReport } from "./reports";
 import { claimForReview, pendingReviewQueue } from "./review";
+import { quarantinedContentFor, recordNcmecReport } from "./quarantine";
 
 export const fileReportAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => fileReportInput.parse(input))
@@ -117,12 +119,14 @@ export const runRemovalsQuery = createServerFn({ method: "GET" })
 
 export const reviewQueueQuery = createServerFn({ method: "GET" }).handler(
   async () => {
-    requireAdmin(await verifiedUserId());
+    const adminId = requireAdmin(await verifiedUserId());
     return {
       queue: await pendingReviewQueue(),
       // Design 136: `/takedown` requests, which carry their own decision
       // and so are not review rows, waiting above them (round 35 #58e).
       requests: await pendingTakedownRequests(coreDb()),
+      // C12: what is held for NCMEC, and whether it has been reported.
+      quarantine: await quarantinedContentFor(coreDb(), adminId),
     };
   },
 );
@@ -183,6 +187,17 @@ export const blockTakedownRequesterAction = createServerFn({ method: "POST" })
       actorId,
       data.requestId,
     );
+  });
+
+/**
+ * Review's "Record the NCMEC report" (C12): the report's year is set from
+ * now. Admin-only; the clock lives in `quarantine.ts`.
+ */
+export const recordNcmecReportAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => ncmecReportInput.parse(input))
+  .handler(async ({ data }) => {
+    const adminId = requireAdmin(await verifiedUserId());
+    return recordNcmecReport(coreDb(), adminId, data);
   });
 
 export const claimReviewAction = createServerFn({ method: "POST" })

@@ -1146,6 +1146,22 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     header should drop it at the desk where the rail carries it, and
     give the entry card a place for it before that card is wired.
 
+68. **Review's quarantine, and recording its NCMEC report (legal
+    readiness C12; design 145).** A report to NCMEC's CyberTipline must be
+    kept a year from the report, so Review now lists what quarantine holds
+    and lets the operator record that it was reported. Built at the foot of
+    Review from the removal-request row's parts, with placeholder words: a
+    section headed "Quarantine · N"; each row's subject type, `HELD {date}`
+    right, `UPLOADER {id}`, `KEPT UNTIL {date}`, and `[NOT REPORTED TO
+NCMEC]` or `[REPORTED TO NCMEC {date}] · {number}`; then an optional
+    "CyberTipline report number" field (hint: "Optional. Record it once the
+    report is filed; it is then kept a year from now.") and "Record the
+    NCMEC report". A record purged meanwhile reads "This record is gone:
+    its year was up." Dates are a new mono shape, `SEP 10 2026`, since a
+    year-long clock needs the year. Operator-only, so not blocking launch.
+    **The ask:** draw the section on Review, its reported and gone states,
+    and word them.
+
 ## Answered in round 37 (imported 2026-10-10)
 
 Design sent round 37 as `Round 37 Rulings.dc.html`, with the text of record

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { getSession } from "../../modules/auth/functions";
 import { requireSignedIn } from "../../modules/feed/redirect";
+import { QuarantineRecords } from "../../modules/safety/components/QuarantineRecords";
 import { RemovalRequests } from "../../modules/safety/components/RemovalRequests";
 import { ReviewQueue } from "../../modules/safety/components/ReviewQueue";
 import { Takedown } from "../../modules/safety/components/Takedown";
@@ -12,6 +13,7 @@ import {
 } from "../../modules/feed/functions";
 import {
   blockTakedownRequesterAction,
+  recordNcmecReportAction,
   reviewHandleAction,
   reviewQueueQuery,
 } from "../../modules/safety/functions";
@@ -30,7 +32,7 @@ export const Route = createFileRoute("/safety/review")({
 });
 
 function ReviewPage() {
-  const { queue, requests } = Route.useLoaderData();
+  const { queue, requests, quarantine } = Route.useLoaderData();
 
   return (
     <Layout>
@@ -49,6 +51,11 @@ function ReviewPage() {
         {/* SAF-6: a removal the queue did not raise — a copyright notice
             naming a photo or an entry. */}
         <Takedown takeDown={takedownAction} />
+        {/* C12: what is held for NCMEC, and recording its report. */}
+        <QuarantineRecords
+          records={quarantine}
+          recordReport={recordNcmecReportAction}
+        />
       </Page>
     </Layout>
   );
