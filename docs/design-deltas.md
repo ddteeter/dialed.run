@@ -1189,6 +1189,16 @@ NCMEC]` or `[REPORTED TO NCMEC {date}] · {number}`; then an optional
       **The ask:** word the sentences and confirm the four places, or draw
       a notice on Au2 shown before the form is filled.
 
+70. **The 40-hour removal reminder email (C6; `removal_reminder`).** An
+    operator email with placeholder words, in the shape of round 35's
+    removal alerts: subject "Removal still undecided, due by {UTC
+    minute}", body "An intimate-image removal is still waiting for a
+    decision. Nothing changes until someone decides it in Review.", the
+    Open Review button, and the foot "Sent to every operator, once per
+    removal, 8 hours before it's due." Sent once per removal (a
+    `/takedown` request or an intimate-image report) when 8 of its 48
+    hours are left, from the hourly firing. **The ask:** confirm or reword.
+
 ## Answered in round 37 (imported 2026-10-10)
 
 Design sent round 37 as `Round 37 Rulings.dc.html`, with the text of record

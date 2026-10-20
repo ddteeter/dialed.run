@@ -241,6 +241,17 @@ describe("emailContent", () => {
       },
     ],
     [
+      // C6: the 40-hour reminder, once per removal.
+      { kind: "removal_reminder", dueAt: 1_791_810_300 },
+      {
+        subject: "Removal still undecided, due by 2026-10-12 13:05 UTC",
+        body: "An intimate-image removal is still waiting for a decision. Nothing changes until someone decides it in Review.",
+        button: { label: "Open Review", href: `${ORIGIN}/safety/review` },
+        foot: "Sent to every operator, once per removal, 8 hours before it's due.",
+        footer: LEGAL,
+      },
+    ],
+    [
       { kind: "removal_request_decided", outcome: "removed" },
       {
         subject: "We removed what you reported",

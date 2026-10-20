@@ -1,8 +1,8 @@
 /**
  * The morning digest's two marks in `cron_checkpoints`, the table's
- * "when did this last happen", one row per name. Apart from the digest
- * itself so the Desk can read one without importing the email, which
- * imports the Desk's counts.
+ * "when did this last happen", one row per name, and the removal
+ * reminders' one. Apart from the digest itself so the Desk can read one
+ * without importing the email, which imports the Desk's counts.
  */
 import { eq } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
@@ -28,11 +28,20 @@ export const DIGEST_OWED = "digest-email";
 export const DIGEST_UNCONFIRMED = "digest-unconfirmed";
 
 /**
+ * The removal reminders' high-water mark (C6): every undecided removal
+ * due within 8 hours of this moment has been reminded of, so the next
+ * firing owes only those that have come within 8 hours since. Claimed in
+ * the reminders' own batch (`oweRemovalReminders`).
+ */
+export const REMOVAL_REMINDERS = "removal-reminders";
+
+/**
 When `name` was last marked (epoch seconds), or `undefined` for never.
 */
 export async function markedAt(
   db: Db,
-  name: typeof DIGEST_OWED | typeof DIGEST_UNCONFIRMED,
+  name:
+    typeof DIGEST_OWED | typeof DIGEST_UNCONFIRMED | typeof REMOVAL_REMINDERS,
 ): Promise<number | undefined> {
   return firstColumnWhere(
     db,

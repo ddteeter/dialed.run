@@ -365,6 +365,18 @@ export function emailContent(
         footer,
       };
     }
+    case "removal_reminder": {
+      // C6: placeholder words (design deltas). Nothing comes back by
+      // itself, so the email says the decision is still the operator's.
+      const due = utcMinute(template.dueAt);
+      return {
+        subject: `Removal still undecided, due by ${due}`,
+        body: "An intimate-image removal is still waiting for a decision. Nothing changes until someone decides it in Review.",
+        button: { label: "Open Review", href: `${origin}/safety/review` },
+        foot: "Sent to every operator, once per removal, 8 hours before it's due.",
+        footer,
+      };
+    }
     case "removal_request_received": {
       const due = utcMinute(template.dueAt);
       return {

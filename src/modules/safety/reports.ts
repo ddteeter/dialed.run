@@ -262,13 +262,7 @@ export async function reconcileUnhiddenReports(
       firstAtOnce,
     })
     .from(reports)
-    .leftJoin(
-      reviewQueue,
-      and(
-        eq(reviewQueue.subjectType, reports.subjectType),
-        eq(reviewQueue.subjectId, reports.subjectId),
-      ),
-    )
+    .leftJoin(reviewQueue, reportsOnQueueRow())
     // Only subjects nothing has decided on. Filtered in SQL rather than
     // after the fact, so D1 is not billed for scanning every settled
     // subject this app will ever accumulate.
@@ -289,6 +283,19 @@ export async function reconcileUnhiddenReports(
     outcome.hidden += 1;
   }
   return outcome;
+}
+
+/**
+ * The join condition between a queue row and the reports filed on its
+ * subject: same type, same id. The reconcile sweep and the removal reminder
+ * each join the two this way; the join kind (left or inner) stays the
+ * caller's, because it decides which rows survive.
+ */
+export function reportsOnQueueRow(): SQL | undefined {
+  return and(
+    eq(reviewQueue.subjectType, reports.subjectType),
+    eq(reviewQueue.subjectId, reports.subjectId),
+  );
 }
 
 /**

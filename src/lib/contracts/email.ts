@@ -24,6 +24,7 @@ import {
   deletionScheduled,
   digest,
   removalDue,
+  removalReminder,
   removalRequestDecided,
   removalRequestReceived,
   removalRequested,
@@ -75,6 +76,7 @@ export const emailTemplateSchema = z.discriminatedUnion("kind", [
   removalRequested,
   removalRequestReceived,
   removalRequestDecided,
+  removalReminder,
   takedownValve,
 ]);
 
@@ -127,6 +129,7 @@ const PREFERENCE_OF: Readonly<
   removal_requested: undefined,
   removal_request_received: undefined,
   removal_request_decided: undefined,
+  removal_reminder: undefined,
   takedown_valve: undefined,
   export_ready: undefined,
 };
