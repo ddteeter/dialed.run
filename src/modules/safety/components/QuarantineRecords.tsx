@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { JSX } from "react";
 
-import { yearDayLabel } from "../../../lib/dates";
+import { monthDayLabel } from "../../../lib/dates";
 import {
   Bracketed,
   ListSection,
@@ -16,6 +16,21 @@ import { DeskForm } from "./DeskForm";
 type RecordReport = (input: {
   data: { recordId: string; reportId?: string | undefined };
 }) => ReturnType<typeof recordNcmecReport>;
+
+/**
+ * The day and its year, "Sep 10 2026": the quarantine's dates sit a year
+ * either side of today. No comma, as a mono label is a row of cells.
+ *
+ * Built here rather than in `lib/dates.ts` on purpose. That file is
+ * imported across the suite, so any edit to it puts all 87 of its mutants
+ * on the push gate: measured at 9.4 GB peak and 16 minutes for this one
+ * helper, which OOMs the CI runner. Both halves are UTC, which is `monthDayLabel`'s default with no
+ * zone and what the Desk shows.
+ */
+function yearDayLabel(epochSeconds: number): string {
+  const year = new Date(epochSeconds * 1000).getUTCFullYear();
+  return `${monthDayLabel(epochSeconds)} ${String(year)}`;
+}
 
 /**
  * Review's quarantine (C12): what is held for NCMEC, newest first, and
