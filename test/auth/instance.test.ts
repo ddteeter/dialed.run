@@ -61,6 +61,11 @@ describe("the app auth instance", () => {
     expect(auth.options.databaseHooks).toStrictEqual({
       // `before`: no name kept, and the invite code spent (ACC-5).
       user: { create: { before: A_FUNCTION, after: A_FUNCTION } },
+      // No OAuth token is ever written to an account row (legal C4).
+      account: {
+        create: { before: A_FUNCTION },
+        update: { before: A_FUNCTION },
+      },
     });
     expect(auth.options.verification).toStrictEqual({
       storeIdentifier: "hashed",

@@ -1,10 +1,10 @@
 import * as betterAuthApi from "better-auth/api";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { user } from "../../src/db/schema-auth";
+import { account as authAccount, user } from "../../src/db/schema-auth";
 import { inviteCodes, inviteRedemptions } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import {
@@ -373,11 +373,16 @@ async function googleRoundTrip(
     .map((line) => line.split(";", 1)[0])
     .join("; ");
   vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    // Everything Google could send, a refresh token included, though
+    // online access is never given one: what is kept of it is asserted
+    // under "Google's tokens".
     Response.json({
       access_token: "google-access-token",
+      refresh_token: "google-refresh-token",
       id_token: googleIdToken(email),
       token_type: "Bearer",
       expires_in: 3600,
+      refresh_token_expires_in: 7200,
     }),
   );
   const callback = await auth.handler(
@@ -564,6 +569,65 @@ describe("Google sign-up through the gate", () => {
     } finally {
       stateSpy.mockRestore();
     }
+  });
+});
+
+/**
+ * The runner's Google account row: its link to Google, and the names of
+ * the token columns that hold anything — which should be none.
+ */
+async function googleGrantFor(email: string) {
+  const [row] = await db
+    .select({
+      accountId: authAccount.accountId,
+      accessToken: authAccount.accessToken,
+      refreshToken: authAccount.refreshToken,
+      idToken: authAccount.idToken,
+      accessTokenExpiresAt: authAccount.accessTokenExpiresAt,
+      refreshTokenExpiresAt: authAccount.refreshTokenExpiresAt,
+    })
+    .from(authAccount)
+    .innerJoin(user, eq(user.id, authAccount.userId))
+    .where(and(eq(user.email, email), eq(authAccount.providerId, "google")));
+  if (row === undefined) return;
+  const { accountId, ...tokens } = row;
+  const held = Object.entries(tokens)
+    .filter(([, value]) => value !== null)
+    .map(([column]) => column);
+  return { accountId, held };
+}
+
+describe("Google's tokens (legal C4)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("keeps none of them on sign-up, or on a later sign-in, which still works", async () => {
+    // Google's OAuth 2.0 Policies: delete the tokens you do not need. The
+    // callback has used them by the time the row is written, and nothing
+    // reads them after; the link to Google is the account id alone.
+    const auth = instance(accessGate(db, turnstile().verify));
+    const code = freshCode();
+    await seedCode(code);
+    const email = address();
+    await googleRoundTrip(
+      auth,
+      email,
+      { requestSignUp: true },
+      { "x-invite-code": code, "x-turnstile-token": "token" },
+    );
+    const created = await googleGrantFor(email);
+    expect(created?.accountId).toMatch(/\S/u);
+    expect(created?.held).toStrictEqual([]);
+
+    vi.restoreAllMocks();
+    // A sign-in refreshes the row's tokens from the new grant: still none.
+    const { landing } = await googleRoundTrip(auth, email, {
+      errorCallbackURL: "/auth/login",
+    });
+    expect(landing?.pathname).toBe("/");
+    expect(landing?.searchParams.get("error")).toBeNull();
+    expect(await googleGrantFor(email)).toStrictEqual(created);
   });
 });
 
