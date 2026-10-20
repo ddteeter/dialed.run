@@ -1,15 +1,19 @@
 /**
  * Covers: T1 (connect, with Strava's official button — round 26 #21), T3a
  * (connected, "LAST RUN SEEN" — round 25), T3b (disconnect: kept and
- * stops), S1 (the reminder a run landing on Strava leaves — round 25) and
- * O3's Strava slot (the same button on onboarding's close).
+ * stops), S1 (the reminder a run landing on Strava leaves — round 25),
+ * the callback receipt's refused state, and P3's Strava slot (the same
+ * consent and button on onboarding's close). The consent Strava's API
+ * Policy §2.1 asks for (D-143) sits above the button on T1 and P3.
  *
- * Journey: T1 not connected -> press the official button and see our
- * brackets beside it -> the connect redirect heads for Strava's authorize
- * screen -> (connected, seeded: Strava's consent screen is off-app) -> a
+ * Journey: T1 not connected, the consent above the button -> press the
+ * official button and see our brackets beside it -> the connect redirect
+ * heads for Strava's authorize screen -> a refused connect's Try again
+ * returns to T1 and its consent -> (connected, seeded: Strava's consent
+ * screen is off-app) -> a
  * run lands on Strava, posted to our webhook -> S1 shows the reminder ->
  * T3a says when the last run was seen -> disconnect through T3b -> T1 again
- * -> O3's slot carries the same button.
+ * -> P3's slot carries the same consent and button.
  *
  * **It needs Strava configured**: `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`
  * and `STRAVA_SUBSCRIPTION_ID` in `.dev.vars` (placeholders are enough —
@@ -26,10 +30,13 @@ import {
   stravaConnections,
   stravaRevocations,
 } from "../../src/db/schema-core";
+import { STRAVA_CONSENT } from "../../src/lib/copy";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { hydrated, userIdOf } from "../conformance/logging-fixtures";
 import { storageStateFor } from "../support/accounts";
+import type { Page } from "@playwright/test";
+
 import { expect, scene, test } from "../support/demo";
 import { withLocalDb } from "../support/local-db";
 
@@ -40,6 +47,15 @@ test.use({ storageState: storageStateFor("run-logging") });
  */
 const SUBSCRIPTION_ID = 1;
 
+/**
+ * Every paragraph of the consent, in order, above the Connect button.
+ */
+async function expectConsent(page: Page): Promise<void> {
+  const consent = page.locator('[data-slot="strava-consent"]');
+  await expect(consent).toBeVisible();
+  await expect(consent.locator("p")).toHaveText([...STRAVA_CONSENT]);
+}
+
 test("Strava: connect with the official button, a reminder lands, disconnect", async ({
   page,
 }, testInfo) => {
@@ -49,10 +65,11 @@ test("Strava: connect with the official button, a reminder lands, disconnect", a
   const refreshToken = `demo-refresh-${newUlid()}`;
 
   try {
-    // ---- T1 · the official button -------------------------------------
-    await scene(page, "T1 · Strava's own Connect button, in our link");
+    // ---- T1 · the consent, then the official button --------------------
+    await scene(page, "T1 · what we collect, then Strava's own button");
     await page.goto("/runs/strava");
     await hydrated(page);
+    await expectConsent(page);
     const button = page.getByRole("link", { name: "Connect with Strava" });
     await expect(button).toBeVisible();
     await expect(button).toHaveAttribute("data-part", "strava-button");
@@ -78,6 +95,17 @@ test("Strava: connect with the official button, a reminder lands, disconnect", a
     expect(redirect.headers().location).toMatch(
       /^https:\/\/www\.strava\.com\/oauth\/authorize\?/u,
     );
+
+    // ---- Refused on Strava: Try again comes back to the consent --------
+    await scene(page, "Refused on Strava: Try again returns to T1's consent");
+    await page.goto("/runs/strava-callback?error=access_denied");
+    await hydrated(page);
+    await expect(
+      page.getByText("Strava isn\u{2019}t connected. Nothing changed."),
+    ).toBeVisible();
+    await page.getByRole("link", { name: "Try again" }).click();
+    await expect(page).toHaveURL(/\/runs\/strava$/u);
+    await expectConsent(page);
 
     // ---- Connected (seeded: the consent screen is Strava's) -----------
     await withLocalDb(async ({ core }) => {
@@ -136,10 +164,11 @@ test("Strava: connect with the official button, a reminder lands, disconnect", a
       page.getByRole("link", { name: "Connect with Strava" }),
     ).toBeVisible({ timeout: 15_000 });
 
-    // ---- O3 · the same button on onboarding's close --------------------
-    await scene(page, "O3 · the same button where our pill was");
+    // ---- P3 · the same consent and button on onboarding's close ---------
+    await scene(page, "P3 · the same consent and button where our pill was");
     await page.goto("/onboarding/done");
     await hydrated(page);
+    await expectConsent(page);
     await expect(
       page.getByRole("link", { name: "Connect with Strava" }),
     ).toBeVisible();

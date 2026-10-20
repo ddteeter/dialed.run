@@ -8,7 +8,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { StravaButton } from "../../src/ui";
+import { StravaButton } from "../../src/ui/StravaButton";
 
 /**
  * Strava's official Connect button (round 26, item 21; task 127, STR-7).

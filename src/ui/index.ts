@@ -17,7 +17,7 @@ export { Sheet } from "./Sheet";
 export { ConfirmLink, ConfirmSheet } from "./ConfirmSheet";
 export { SignedOutPanel } from "./SignedOutPanel";
 export { Skeleton } from "./Skeleton";
-export { StravaButton } from "./StravaButton";
+export { StravaConsent } from "./StravaConsent";
 export {
   ChoiceField,
   ChoiceList,

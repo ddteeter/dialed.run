@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import { CALL_VERDICT_THRESHOLD } from "../../src/lib/contracts";
 import { NowGoRun } from "../../src/modules/onboarding/components/NowGoRun";
+import { expectConsentBeforeButton } from "../ui/strava-consent";
 
 /**
  * Screen P3, the close.
@@ -110,9 +111,8 @@ describe("NowGoRun", () => {
 
     // Strava's official button in the slot (round 26, item 21), which
     // leaves straight for Strava's consent screen.
-    expect(
-      screen.getByRole("link", { name: "Connect with Strava" }),
-    ).toHaveAttribute("href", "/runs/strava-connect");
+    // The Strava consent (API Policy §2.1) is read before the button.
+    expectConsentBeforeButton();
     expect(
       screen.getByText("We read that a run happened. Nothing else."),
     ).toBeVisible();

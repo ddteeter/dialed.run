@@ -1093,6 +1093,23 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     keeps its empty state and draws no line. **The ask:** draw E1's line
     where it sits, and its widened and absent states.
 
+66. **The Strava consent before the Connect button (owner, 2026-10-18; D-143).**
+    Strava's API Policy §2.1 (1 June 2026) requires consent before the
+    OAuth redirect that says what is collected, how, how to withdraw, how
+    to ask for deletion, and that deletion is confirmed. Built as
+    `ui/StravaConsent`: the owner's three approved paragraphs
+    (`STRAVA_CONSENT` in `lib/copy.ts`) at `text-small`, inheriting the
+    surrounding colour, directly above Strava's unchanged official button.
+    It is the only way the button is drawn, so it sits on T1 (not
+    connected) and in P3's Strava offer (on ink, between "So we can
+    remind you. Optional." and "We read that a run happened. Nothing
+    else."). The callback receipt's "Try again" after a refused connect now returns to T1
+    instead of going straight to the redirect, so the consent is read on
+    every trip. Text only, no glyph or colour. **The ask:** draw the block
+    on T1 and in P3's offer (hierarchy, whether "What we collect" / "How"
+    / "Never" / "To stop" lead-ins become mono labels, and whether P3's
+    two existing captions stay beside it), and the receipt's Try again.
+
 ## Answered in round 37 (imported 2026-10-10)
 
 Design sent round 37 as `Round 37 Rulings.dc.html`, with the text of record
