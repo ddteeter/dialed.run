@@ -12,6 +12,7 @@ import {
   renderWithRouter,
   runSummary,
 } from "./run-fixtures";
+import { queryWeatherCredit, WEATHER_CREDIT } from "../ui/weather-credit";
 
 /**
  * The runs list (round 22, "R Runs list"): four badges and one breath, a
@@ -349,5 +350,49 @@ describe("R: R2b from the list", () => {
     // The first step, not the last run's picks.
     expect(sheet).toHaveAccessibleName("No weather saved");
     expect(within(sheet).queryByRole("radio")).toBeNull();
+  });
+});
+
+describe("R: Visual Crossing's credit (D-144)", () => {
+  it("credits the provider once, under the list, when any row shows its reading", async () => {
+    await renderWithRouter(
+      list([
+        runSummary({
+          id: "01A",
+          weatherStatus: "manual",
+          conditions: SET_BY_YOU,
+        }),
+        runSummary({
+          id: "01B",
+          weatherStatus: "pending",
+          conditions: undefined,
+        }),
+        runSummary({ id: "01C" }),
+      ]),
+    );
+
+    expect(screen.getAllByRole("link", { name: WEATHER_CREDIT })).toHaveLength(
+      1,
+    );
+    for (const row of rows()) expect(queryWeatherCredit(row)).toBeNull();
+  });
+
+  it("credits nobody when no row shows the provider's reading", async () => {
+    await renderWithRouter(
+      list([
+        runSummary({
+          id: "01A",
+          weatherStatus: "manual",
+          conditions: SET_BY_YOU,
+        }),
+        runSummary({
+          id: "01B",
+          weatherStatus: "pending",
+          conditions: undefined,
+        }),
+      ]),
+    );
+
+    expect(queryWeatherCredit(document.body)).toBeNull();
   });
 });

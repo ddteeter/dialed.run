@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
 import { CALL_VERDICT_THRESHOLD } from "../../../lib/contracts";
-import { Bracketed, CoverageMark, Mono } from "../../../ui";
+import { Bracketed, CoverageMark, Mono, WeatherAttribution } from "../../../ui";
 import type { CoverageLevel } from "../../../ui";
 import type { Ladder } from "../ladder";
 
@@ -180,6 +180,10 @@ function Coverage({ ladder }: Readonly<{ ladder: Ladder }>): JSX.Element {
         ))}
       </ul>
       <CoverageLegend levels={ladder.bands.map((row) => row.coverage)} />
+      {/* Feels-like bands, read from the provider's observations: data
+          derived from Visual Crossing, credited beside it (D-144). Log
+          this next names one of these bands, directly below. */}
+      <WeatherAttribution />
     </section>
   );
 }

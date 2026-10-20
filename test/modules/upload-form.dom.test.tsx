@@ -29,6 +29,7 @@ import {
 } from "../../src/modules/runs/upload-limits";
 import { DURATION } from "../../src/ui/motion";
 import { expectBusy } from "../ui/unavailable";
+import { queryWeatherCredit } from "../ui/weather-credit";
 import {
   RUN_ID,
   SAT_MORNING,
@@ -1011,6 +1012,8 @@ describe("A1: the parsed card", () => {
     expect(block).toHaveTextContent("Weather for 6:34 AM");
     expect(block).toHaveTextContent("[Getting it]");
     expect(block).toHaveTextContent("Was 41°F damp · feels 36° · at 6:04 AM");
+    // WAS is still the provider's reading, so it keeps its credit (D-144).
+    expect(queryWeatherCredit(block)).not.toBeNull();
     // The block is read-only, and at the desk it is the rail.
     expect(block.closest("[data-part='rail']")).not.toBeNull();
     expectBusy(screen.getByRole("button", { name: "Getting" }));
@@ -1204,6 +1207,8 @@ describe("A1: the parsed card", () => {
       return found;
     });
     expect(block).toHaveTextContent(/Was no weather · at /u);
+    // Nothing of the provider's on show, so nothing to credit.
+    expect(queryWeatherCredit(block)).toBeNull();
     pending.resolve("moved");
   });
 
@@ -1335,6 +1340,8 @@ describe("A1: a run already logged", () => {
     expect(within(card).getByText("Sat Aug 29")).toBeVisible();
     expect(within(card).getByText("6:04 AM")).toBeVisible();
     expect(within(card).getByText("41°F damp")).toHaveClass("text-dialed-text");
+    // The provider's reading, so its credit is on the card (D-144).
+    expect(queryWeatherCredit(card)).not.toBeNull();
     expect(
       within(card).getByText(
         "This run is already in your log. Nothing new was added.",
@@ -1380,6 +1387,7 @@ describe("A1: a run already logged", () => {
     expect(open).toHaveClass("bg-ink");
     // With no conditions the facts are the day and the time alone.
     expect(screen.queryByText(/°F/u)).toBeNull();
+    expect(queryWeatherCredit(document.body)).toBeNull();
   });
 
   it("goes back to the drop zone on REPLACE", async () => {

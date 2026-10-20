@@ -16,6 +16,7 @@ import {
   renderFeedScreen,
   unconfirmed,
 } from "./feed-fixtures";
+import { WEATHER_CREDIT } from "../ui/weather-credit";
 
 /**
  * The feed's shell (E1 and E2-lite): which tab it opens on, the queue
@@ -410,7 +411,15 @@ describe("E1's compact line (FEED-9)", () => {
     expect(line).toHaveClass("bg-teal");
     // Above the posts, inside Following.
     expect(line?.closest("[data-part='feed']")).not.toBeNull();
-    expect(line?.nextElementSibling).toHaveAttribute("data-part", "post");
+    // Visual Crossing's credit directly under the band, on the page's
+    // ground rather than the teal (D-144), then the posts.
+    const credit = line?.nextElementSibling;
+    expect(credit).toHaveAccessibleName(WEATHER_CREDIT);
+    expect(credit?.nextElementSibling).toBeNull();
+    expect(line?.parentElement?.nextElementSibling).toHaveAttribute(
+      "data-part",
+      "post",
+    );
   });
 
   it("says two weeks when the match had to widen", async () => {

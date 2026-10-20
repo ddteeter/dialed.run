@@ -26,7 +26,9 @@ import {
   PendingLabel,
   SubmitButton,
   useFormSubmit,
+  WeatherAttribution,
 } from "../../../ui";
+import { hasProvidersReading } from "../run-conditions";
 import type { RunSummary } from "../service";
 import { ConditionsRow } from "./ConditionsBlock";
 
@@ -139,7 +141,16 @@ function WeatherFor({
   time,
   was,
   at,
-}: Readonly<{ time: string; was: string; at: string }>): JSX.Element {
+  isProviders,
+}: Readonly<{
+  time: string;
+  was: string;
+  at: string;
+  /**
+  Whether WAS is the provider's reading, which keeps its credit (D-144).
+  */
+  isProviders: boolean;
+}>): JSX.Element {
   return (
     <div
       data-slot="conditions"
@@ -156,6 +167,7 @@ function WeatherFor({
       <Mono step="xs" className="text-quiet">
         {`Was ${was} · at ${at}`}
       </Mono>
+      {isProviders ? <WeatherAttribution /> : undefined}
     </div>
   );
 }
@@ -403,6 +415,7 @@ export function ParsedCard({
             time={clockLabel(startAtTimeOfDay(run.startedAt, zone, time), zone)}
             was={conditionsWords(run, units)}
             at={clockLabel(run.startedAt, zone)}
+            isProviders={hasProvidersReading(run)}
           />
         ) : (
           <ConditionsRow
@@ -513,6 +526,7 @@ export function DuplicateCard({
           </Mono>
           <Headline run={run} units={units} />
           <Facts>{facts}</Facts>
+          {hasProvidersReading(run) ? <WeatherAttribution /> : undefined}
           <p className="m-0 text-body">
             This run is already in your log. Nothing new was added.
           </p>

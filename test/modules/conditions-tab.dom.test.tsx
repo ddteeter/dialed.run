@@ -75,7 +75,9 @@ async function findAndUse(
 }
 
 const attribution = () =>
-  screen.queryByRole("link", { name: "Weather by Visual Crossing" });
+  screen.queryByRole("link", {
+    name: "Weather data provided by Visual Crossing",
+  });
 
 function block(): HTMLElement {
   const element = document.querySelector<HTMLElement>(
@@ -558,7 +560,7 @@ describe("ConditionsTab: matched", () => {
     expect(await screen.findByText("6 runners logged this")).toBeVisible();
     expect(attribution()).toHaveAttribute(
       "href",
-      "https://www.visualcrossing.com/weather-data",
+      "https://www.visualcrossing.com/",
     );
   });
 

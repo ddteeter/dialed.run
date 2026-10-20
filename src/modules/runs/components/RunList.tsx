@@ -6,8 +6,12 @@ import type { Units } from "../../../lib/contracts";
 import { dayLabel } from "../../../lib/dates";
 import { distanceNumber } from "../../../lib/contracts/measures";
 import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
-import { Bracketed, Mono } from "../../../ui";
-import { setBandLabel, SKY_WORDS } from "../run-conditions";
+import { Bracketed, Mono, WeatherAttribution } from "../../../ui";
+import {
+  setBandLabel,
+  hasProvidersReading,
+  SKY_WORDS,
+} from "../run-conditions";
 import type { RunConditions, RunSummary } from "../service";
 import { FetchingWeather } from "./ConditionsBlock";
 import { SetConditionsSheet } from "./SetConditionsSheet";
@@ -79,6 +83,12 @@ export function RunList({
           </li>
         ))}
       </ul>
+      {/* One credit under the list, rather than one per row, when any row
+          shows the provider's reading — a band the runner set is theirs
+          and needs none (D-144). */}
+      {runs.some((run) => hasProvidersReading(run)) ? (
+        <WeatherAttribution />
+      ) : undefined}
       {/* Mounted only while a run is asking, so every run's sheet starts
           at its own first step rather than the last one's band list. */}
       {settingFor === undefined ? undefined : (

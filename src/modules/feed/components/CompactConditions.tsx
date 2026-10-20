@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 
 import type { Units } from "../../../lib/contracts";
+import { WeatherAttribution } from "../../../ui";
 import type { CompactConditions as Matched } from "../compact-conditions";
 import { matchedConditions, SameConditionsEyebrow } from "./ConditionsTab";
 
@@ -19,15 +20,21 @@ export function CompactConditions({
   // as Your conditions says it ("looks back two weeks").
   const when =
     result.windowDays === 14 ? "in the last 2 weeks" : "in the last 3 days";
+  // The credit sits under the band rather than on it: the band and its
+  // sentence are the provider's readings, and `--muted` on teal is not a
+  // pairing T1 clears for text (D-144).
   return (
-    <div
-      data-part="compact-conditions"
-      className="flex flex-col gap-1 bg-teal px-5 py-4 text-ink desk:rounded-card"
-    >
-      <SameConditionsEyebrow band={result.band} units={units} />
-      <p className="m-0 text-body font-semibold">
-        {`${String(result.runners)} runners logged ${matchedConditions(result.band, units)} ${when}.`}
-      </p>
+    <div className="flex flex-col gap-2">
+      <div
+        data-part="compact-conditions"
+        className="flex flex-col gap-1 bg-teal px-5 py-4 text-ink desk:rounded-card"
+      >
+        <SameConditionsEyebrow band={result.band} units={units} />
+        <p className="m-0 text-body font-semibold">
+          {`${String(result.runners)} runners logged ${matchedConditions(result.band, units)} ${when}.`}
+        </p>
+      </div>
+      <WeatherAttribution />
     </div>
   );
 }

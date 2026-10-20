@@ -17,6 +17,7 @@ import { verdictHue } from "../../src/ui/verdict-hue";
 import { VerdictForm } from "../../src/modules/feed/components/VerdictForm";
 import type { entryDetailForViewer } from "../../src/modules/feed/entries";
 import { PrivateRunLine } from "../../src/modules/onboarding/components/PrivateRunLine";
+import { queryWeatherCredit } from "../ui/weather-credit";
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
 
@@ -1639,13 +1640,32 @@ describe("VerdictForm: the run header (round 21)", () => {
       "Sat Aug 29 · 6:04 AM · 6.2 at 41°",
     );
     expect(deskLine).toHaveClass("hidden", "wide:block", "text-dialed-text");
+    // Visual Crossing's credit closes the header at every width (D-144):
+    // the headline is its reading, and below the desk the rail that also
+    // credits it is not drawn.
+    const credit = queryWeatherCredit(header);
     expect([...header.children]).toEqual([
       phoneWhen,
       phoneHeadline,
       question,
       deskLine,
+      credit,
     ]);
     expect(header.outerHTML).not.toMatch(/\border-/u);
+  });
+
+  it("credits nobody in the header for conditions the runner set", async () => {
+    await renderWithRouter(
+      form({
+        entry: {
+          startedAt: SAT_MORNING,
+          distanceM: 9978,
+          conditions: { ...conditions, source: "manual" },
+        },
+      }),
+    );
+
+    expect(queryWeatherCredit(screen.getByRole("banner"))).toBeNull();
   });
 
   it("names the unit instead of a temperature when the run has none", async () => {

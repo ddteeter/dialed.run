@@ -25,12 +25,14 @@ import {
   RailCard,
   useControlAction,
   usePhotoPick,
+  WeatherAttribution,
 } from "../../../ui";
 import type { PhotoStep } from "../../../ui";
 import type { AttachContext } from "../attach-context";
 import { kitChoice, PHOTO_NOT_SENT } from "../attach-rules";
 import type { UiGroup } from "../groups";
 import type { PrefillCandidate } from "../prefill";
+import { isProvidersReading } from "../strip";
 import { KitList, KitSheet, conditionsWords } from "./KitPicker";
 
 /**
@@ -295,6 +297,12 @@ export function AttachKit({
             <Mono step="xs" className="text-dialed-text">
               {subLine(context, units, selected.size)}
             </Mono>
+            {/* The sub-line carries the provider's reading, and the
+                picker's filter and MOST LIKELY repeat it below: one credit
+                under the first place it shows (D-144). */}
+            {isProvidersReading(conditions) ? (
+              <WeatherAttribution />
+            ) : undefined}
           </header>
           <FormStatus>{attach.status === "" ? said : attach.status}</FormStatus>
 

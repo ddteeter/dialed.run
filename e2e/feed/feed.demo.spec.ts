@@ -446,6 +446,10 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     const compact = page.locator('[data-part="compact-conditions"]');
     await expect(compact).toContainText("runners logged");
     await expect(compact).toContainText("in the last 3 days.");
+    // Its band is Visual Crossing's data, credited right under it (D-144).
+    await expect(
+      compact.locator("xpath=following-sibling::*[1]"),
+    ).toHaveAccessibleName("Weather data provided by Visual Crossing");
     // The author is their handle, "@" and all (FEED-10).
     await expect(card.locator('[data-part="author"]')).toContainText(
       `@${otherUsername}`,
@@ -460,7 +464,9 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     );
     // Visual Crossing's reading, credited beside it (FEED-8).
     await expect(
-      card.getByRole("link", { name: "Weather by Visual Crossing" }),
+      card.getByRole("link", {
+        name: "Weather data provided by Visual Crossing",
+      }),
     ).toBeVisible();
     // ...their private entry never does (CLAUDE.md: private entries never
     // appear in feeds or consensus aggregates).
@@ -481,7 +487,9 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await expect(
       page
         .locator('[data-part="run-strip"]')
-        .getByRole("link", { name: "Weather by Visual Crossing" }),
+        .getByRole("link", {
+          name: "Weather data provided by Visual Crossing",
+        }),
     ).toBeVisible();
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
       "content",

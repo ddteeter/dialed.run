@@ -178,7 +178,9 @@ function useful(): HTMLElement {
 }
 
 const credit = () =>
-  screen.queryByRole("link", { name: "Weather by Visual Crossing" });
+  screen.queryByRole("link", {
+    name: "Weather data provided by Visual Crossing",
+  });
 
 describe("PostCard: the strip", () => {
   it("reads DIST | TEMP · CONDITION, the conditions in teal", async () => {
@@ -213,10 +215,7 @@ describe("PostCard: the strip", () => {
     });
 
     const link = credit();
-    expect(link).toHaveAttribute(
-      "href",
-      "https://www.visualcrossing.com/weather-data",
-    );
+    expect(link).toHaveAttribute("href", "https://www.visualcrossing.com/");
     expect(post).toContainElement(link);
     // A link inside a link is not a link: it sits between the strip's
     // link and Useful.
