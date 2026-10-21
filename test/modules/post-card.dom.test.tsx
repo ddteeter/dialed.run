@@ -178,7 +178,9 @@ function useful(): HTMLElement {
 }
 
 const credit = () =>
-  screen.queryByRole("link", { name: "Weather by Visual Crossing" });
+  screen.queryByRole("link", {
+    name: "Weather data provided by Visual Crossing",
+  });
 
 describe("PostCard: the strip", () => {
   it("reads DIST | TEMP · CONDITION, the conditions in teal", async () => {
@@ -213,10 +215,7 @@ describe("PostCard: the strip", () => {
     });
 
     const link = credit();
-    expect(link).toHaveAttribute(
-      "href",
-      "https://www.visualcrossing.com/weather-data",
-    );
+    expect(link).toHaveAttribute("href", "https://www.visualcrossing.com/");
     expect(post).toContainElement(link);
     // A link inside a link is not a link: it sits between the strip's
     // link and Useful.
@@ -420,7 +419,9 @@ describe("PostCard: the author's under-review marker (R-62, D-67; round 29 #4)",
     // The card's link is what a screen reader lands on, and it says the
     // sentence rather than the brackets.
     const link = within(post).getByRole("link");
-    expect(link).toHaveAccessibleName(/Under review, only you can see this/);
+    expect(link).toHaveAccessibleName(
+      /Under review, other runners can't see this/,
+    );
     expect(link).not.toHaveAccessibleName(/\[Under review\]/);
   });
 

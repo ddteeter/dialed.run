@@ -1,14 +1,16 @@
 import * as betterAuthApi from "better-auth/api";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { user } from "../../src/db/schema-auth";
+import { account as authAccount, user } from "../../src/db/schema-auth";
 import { inviteCodes, inviteRedemptions } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import {
   INVITE_COPY,
+  REGION_BLOCKED_CODE,
+  REGION_BLOCKED_COPY,
   TURNSTILE_REFUSED,
   mintInviteCode,
 } from "../../src/lib/contracts/access";
@@ -103,11 +105,22 @@ function address(): string {
   return `${newUlid().toLowerCase()}@example.test`;
 }
 
+/**
+Where Cloudflare's edge placed a request: `request.cf`'s two fields the region gate reads.
+*/
+type Placed = Readonly<{ country: string; regionCode: string }>;
+
+const TENNESSEE: Placed = { country: "US", regionCode: "TN" };
+const MISSISSIPPI: Placed = { country: "US", regionCode: "MS" };
+const OREGON: Placed = { country: "US", regionCode: "OR" };
+
 function signUpRequest(
   email: string,
   headers: Record<string, string>,
+  cf: Partial<Placed> = {},
 ): Request {
   return new Request(`${ORIGIN}/api/auth/sign-up/email`, {
+    cf,
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -347,9 +360,11 @@ async function googleRoundTrip(
   email: string,
   body: Record<string, unknown>,
   headers: Record<string, string> = {},
+  cf: Partial<Placed> = {},
 ): Promise<{ started: Response; landing?: URL }> {
   const started = await auth.handler(
     new Request(`${ORIGIN}/api/auth/sign-in/social`, {
+      cf,
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -373,17 +388,22 @@ async function googleRoundTrip(
     .map((line) => line.split(";", 1)[0])
     .join("; ");
   vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    // Everything Google could send, a refresh token included, though
+    // online access is never given one: what is kept of it is asserted
+    // under "Google's tokens".
     Response.json({
       access_token: "google-access-token",
+      refresh_token: "google-refresh-token",
       id_token: googleIdToken(email),
       token_type: "Bearer",
       expires_in: 3600,
+      refresh_token_expires_in: 7200,
     }),
   );
   const callback = await auth.handler(
     new Request(
       `${ORIGIN}/api/auth/callback/google?code=granted&state=${encodeURIComponent(state)}`,
-      { headers: { cookie } },
+      { cf, headers: { cookie } },
     ),
   );
   return {
@@ -564,6 +584,195 @@ describe("Google sign-up through the gate", () => {
     } finally {
       stateSpy.mockRestore();
     }
+  });
+});
+
+/**
+ * The runner's Google account row: its link to Google, and the names of
+ * the token columns that hold anything — which should be none.
+ */
+async function googleGrantFor(email: string) {
+  const [row] = await db
+    .select({
+      accountId: authAccount.accountId,
+      accessToken: authAccount.accessToken,
+      refreshToken: authAccount.refreshToken,
+      idToken: authAccount.idToken,
+      accessTokenExpiresAt: authAccount.accessTokenExpiresAt,
+      refreshTokenExpiresAt: authAccount.refreshTokenExpiresAt,
+    })
+    .from(authAccount)
+    .innerJoin(user, eq(user.id, authAccount.userId))
+    .where(and(eq(user.email, email), eq(authAccount.providerId, "google")));
+  if (row === undefined) return;
+  const { accountId, ...tokens } = row;
+  const held = Object.entries(tokens)
+    .filter(([, value]) => value !== null)
+    .map(([column]) => column);
+  return { accountId, held };
+}
+
+describe("Google's tokens (legal C4)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("keeps none of them on sign-up, or on a later sign-in, which still works", async () => {
+    // Google's OAuth 2.0 Policies: delete the tokens you do not need. The
+    // callback has used them by the time the row is written, and nothing
+    // reads them after; the link to Google is the account id alone.
+    const auth = instance(accessGate(db, turnstile().verify));
+    const code = freshCode();
+    await seedCode(code);
+    const email = address();
+    await googleRoundTrip(
+      auth,
+      email,
+      { requestSignUp: true },
+      { "x-invite-code": code, "x-turnstile-token": "token" },
+    );
+    const created = await googleGrantFor(email);
+    expect(created?.accountId).toMatch(/\S/u);
+    expect(created?.held).toStrictEqual([]);
+
+    vi.restoreAllMocks();
+    // A sign-in refreshes the row's tokens from the new grant: still none.
+    const { landing } = await googleRoundTrip(auth, email, {
+      errorCallbackURL: "/auth/login",
+    });
+    expect(landing?.pathname).toBe("/");
+    expect(landing?.searchParams.get("error")).toBeNull();
+    expect(await googleGrantFor(email)).toStrictEqual(created);
+  });
+});
+
+/**
+ * The blocked states (owner, 2026-10-18): no new account from Mississippi
+ * or Tennessee, by email or Google; an account that exists still signs in.
+ */
+describe("the region gate", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it.each([
+    ["Mississippi", MISSISSIPPI],
+    ["Tennessee", TENNESSEE],
+  ])(
+    "refuses an email sign-up from %s before Turnstile, and makes no account",
+    async (_, cf) => {
+      const { attempts, verify } = turnstile();
+      const auth = instance(accessGate(db, verify));
+      const code = freshCode();
+      await seedCode(code);
+      const email = address();
+      const response = await auth.handler(
+        signUpRequest(
+          email,
+          { "x-invite-code": code, "x-turnstile-token": "token" },
+          cf,
+        ),
+      );
+      expect(response.status).toBe(403);
+      expect(await refusal(response)).toStrictEqual({
+        code: REGION_BLOCKED_CODE,
+        message: REGION_BLOCKED_COPY,
+      });
+      expect(attempts).toStrictEqual([]);
+      expect(await accountFor(email)).toBeUndefined();
+      // The code is not spent: it still opens an account from elsewhere.
+      const retry = signUpRequest(
+        address(),
+        { "x-invite-code": code, "x-turnstile-token": "token" },
+        OREGON,
+      );
+      const retried = await auth.handler(retry);
+      expect(retried.status).toBe(200);
+    },
+  );
+
+  it("refuses a new Google account from Tennessee on the callback, and makes none", async () => {
+    const auth = instance(accessGate(db, turnstile().verify));
+    const code = freshCode();
+    await seedCode(code);
+    const email = address();
+    const { started, landing } = await googleRoundTrip(
+      auth,
+      email,
+      { requestSignUp: true },
+      { "x-invite-code": code, "x-turnstile-token": "token" },
+      TENNESSEE,
+    );
+    expect(started.status).toBe(200);
+    expect(landing?.pathname).toBe("/auth/signup");
+    expect(landing?.searchParams.get("error")).toBe(REGION_BLOCKED_CODE);
+    expect(await accountFor(email)).toBeUndefined();
+  });
+
+  it("makes a Google account from another state", async () => {
+    const auth = instance(accessGate(db, turnstile().verify));
+    const code = freshCode();
+    await seedCode(code);
+    const email = address();
+    const { landing } = await googleRoundTrip(
+      auth,
+      email,
+      { requestSignUp: true },
+      { "x-invite-code": code, "x-turnstile-token": "token" },
+      OREGON,
+    );
+    expect(landing?.pathname).toBe("/");
+    expect(await accountFor(email)).toBeDefined();
+  });
+
+  it("signs an existing account in with Google from Au2 in Mississippi", async () => {
+    const auth = instance(accessGate(db, turnstile().verify));
+    const code = freshCode();
+    await seedCode(code);
+    const email = address();
+    await googleRoundTrip(
+      auth,
+      email,
+      { requestSignUp: true },
+      { "x-invite-code": code, "x-turnstile-token": "token" },
+    );
+    vi.restoreAllMocks();
+    const { started, landing } = await googleRoundTrip(
+      auth,
+      email,
+      { requestSignUp: true },
+      { "x-turnstile-token": "token" },
+      MISSISSIPPI,
+    );
+    expect(started.status).toBe(200);
+    expect(landing?.pathname).toBe("/");
+    expect(landing?.searchParams.get("error")).toBeNull();
+  });
+
+  it("signs an existing account in with a password from Tennessee", async () => {
+    const auth = instance(accessGate(db, turnstile().verify));
+    const code = freshCode();
+    await seedCode(code);
+    const email = address();
+    await auth.handler(
+      signUpRequest(email, {
+        "x-invite-code": code,
+        "x-turnstile-token": "token",
+      }),
+    );
+    await db
+      .update(user)
+      .set({ emailVerified: true })
+      .where(eq(user.email, email));
+    const response = await auth.handler(
+      new Request(`${ORIGIN}/api/auth/sign-in/email`, {
+        cf: TENNESSEE,
+        method: "POST",
+        headers: { "content-type": "application/json", origin: ORIGIN },
+        body: JSON.stringify({ email, password: PASSWORD }),
+      }),
+    );
+    expect(response.status).toBe(200);
   });
 });
 

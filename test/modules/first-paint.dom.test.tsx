@@ -23,6 +23,7 @@ describe("the status region on first paint", () => {
     const html = await firstPaintOf(
       <Feed
         confirmBand={undefined}
+        compact={undefined}
         items={[feedItem()]}
         followeeCount={1}
         now={NOW}

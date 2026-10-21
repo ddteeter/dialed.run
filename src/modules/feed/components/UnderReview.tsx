@@ -6,7 +6,7 @@ import { Bracketed } from "../../../ui";
  * What a screen reader hears for the tag (round 29 #4): the board's own
  * sentence, since the brackets alone say nothing about who can see it.
  */
-export const UNDER_REVIEW_NAME = "Under review, only you can see this";
+export const UNDER_REVIEW_NAME = "Under review, other runners can't see this";
 
 /**
  * The author's own entry that reports have hidden pending review (R-62,
@@ -21,8 +21,8 @@ export const UNDER_REVIEW_NAME = "Under review, only you can see this";
  * instead (`HIDDEN_WHILE_WE_CHECK`), never this tag.
  *
  * The visible brackets are hidden from assistive tech and the sentence is
- * said instead, so the card's link reads "…, Under review, only you can
- * see this" rather than "left bracket under review right bracket".
+ * said instead, so the card's link reads "…, Under review, other runners
+ * can't see this" rather than "left bracket under review right bracket".
  */
 export function UnderReview(): JSX.Element {
   return (
@@ -43,6 +43,6 @@ export function UnderReview(): JSX.Element {
  */
 export const HIDDEN_WHILE_WE_CHECK = {
   kicker: "Hidden while we check",
-  message: "Only you can see this while we look at it.",
+  message: "Other runners can't see this while we look at it.",
   detail: "You can still edit or delete it.",
 } as const;

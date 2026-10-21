@@ -22,14 +22,13 @@
  * most important to get right.
  */
 import { and, eq, isNotNull } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 
 import {
   entryPhotos,
   photoScreenings,
   wardrobeItems,
 } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 
@@ -42,7 +41,7 @@ import {
 import { enqueueForReview } from "./review";
 
 function db() {
-  return drizzle(env.DIALED_CORE);
+  return coreDb();
 }
 
 /** Which table the photo hangs off. Entry photos and garment photos are

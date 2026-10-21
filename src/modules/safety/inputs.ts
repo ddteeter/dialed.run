@@ -206,6 +206,25 @@ Block and decline all (design 137): the request whose requester it is.
 export const blockRequesterInput = removalRequestRef;
 
 /**
+ * Review's "Record the NCMEC report" (C12): which quarantine, and
+ * CyberTipline's id for the report when the operator has it. The field
+ * is optional, so an empty one means none; bounded and plain, because it
+ * is copied from NCMEC's confirmation rather than written.
+ */
+export const ncmecReportInput = z.object({
+  recordId: ulidSchema,
+  reportId: z
+    .string()
+    .trim()
+    .regex(
+      /^[\w-]{0,40}$/u,
+      "Paste the report number as NCMEC gave it: letters, digits and dashes, 40 at most.",
+    )
+    .optional()
+    .transform((id) => (id === "" ? undefined : id)),
+});
+
+/**
  * A confirm link's token (design 137): 32 random bytes, hex. Anything
  * else is a link nobody sent.
  */

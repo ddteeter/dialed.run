@@ -122,18 +122,24 @@ export function gaveUpClearPrefix(
 }
 
 /**
- * Forget every job of a kind whose last failure is older than `cutoff`
+ * Forget every job of a kind whose row was first written before `cutoff`
  * (epoch seconds): for a kind whose subject holds something with a shelf
  * life (a reminder's subject names a Strava activity, which Strava's
  * API Policy §6.2 gives seven days). One statement, for the caller's
  * batch.
+ *
+ * By `first_failed_at`, not `last_failed_at` (R-142): the subject has been
+ * held since the row was written, and a later failure of the same job (a
+ * redelivered dead letter) moves only `last_failed_at`, so measuring from
+ * that would keep the id past its week. The `(kind, subject_id)` index
+ * answers it: a kind's rows here are only its dead letters.
  */
 export function gaveUpClearBefore(
   db: DrizzleD1Database,
   kind: GaveUpKind,
   cutoff: number,
 ) {
-  return clearOfKind(db, kind, lt(gaveUp.lastFailedAt, cutoff));
+  return clearOfKind(db, kind, lt(gaveUp.firstFailedAt, cutoff));
 }
 
 /**

@@ -13,11 +13,11 @@
  * that outlived a failure here.
  */
 import { and, eq, isNull } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
+import type { drizzle } from "drizzle-orm/d1";
 
 import { session } from "../../db/schema-auth";
 import { accountDeletions } from "../../db/schema-core";
-import { env, waitUntil } from "../../env";
+import { coreDb, env, waitUntil } from "../../env";
 import { DELETION_GRACE_S } from "../../lib/contracts";
 import { proseDayLabel } from "../../lib/dates";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
@@ -85,7 +85,7 @@ export function deletionEffectsFromEnv(): DeletionEffects {
     settle: settleOutbox,
     disconnectStrava: (userId) =>
       disconnectStrava(
-        drizzle(env.DIALED_CORE),
+        coreDb(),
         env.IMPORTS_QUEUE,
         userId,
         captureException,

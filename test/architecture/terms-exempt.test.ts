@@ -33,7 +33,7 @@ const EXEMPT: Readonly<Record<string, readonly string[]>> = {
     "account/functions.ts acceptTermsFn",
     "account/functions.ts accountPageQuery",
     "account/functions.ts requestExportFn",
-    "notifications/functions.ts unreadNotificationCountFn",
+    "notifications/functions.ts bellStateFn",
   ],
   // Delete account, by a fresh Google sign-in or the password.
   requireSignedInSince: ["account/functions.ts requestDeletionFn"],

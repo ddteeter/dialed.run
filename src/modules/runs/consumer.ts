@@ -10,7 +10,7 @@
  * (`attachObservation`) so this compiles and tests fully without lane 103
  * — see the pending-integration call-site below.
  */
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { dlqBatchHandler } from "../../db/gave-up";
 import {
@@ -23,7 +23,7 @@ import {
 import { didClaim } from "../../lib/sql/claim";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
-import { firstRowWhere } from "../../lib/sql/keyed-read";
+import { firstRowWhere, hasRowWhere } from "../../lib/sql/keyed-read";
 import { consumeEach } from "../../lib/sql/queue-batch";
 import type { CoreDb } from "./core-db";
 import { createNotification, notificationInsert } from "../notifications";
@@ -38,6 +38,7 @@ import {
 } from "./queue-messages";
 import type { StravaApi } from "./strava/api";
 import { deauthorizeAthlete, type Owe } from "./strava/deauthorize";
+import { owedReminderEmail, reminderHistory } from "./strava/reminder-email";
 import {
   pairRunWith,
   pairWithReminder,
@@ -70,6 +71,15 @@ export interface ConsumerDeps {
    * `ops` imports this module and so cannot be imported by it.
    */
   owe: Owe;
+  /**
+   * The runner's zone, for the reminder email's day and clock (design
+   * 140): onboarding's `runnerTimeZone` (R-152), the app's one answer,
+   * handed in by the queue entry — `ops` imports this module and onboarding
+   * reaches it through `ops`, so this module cannot import onboarding — and
+   * so a test can make it fail. Absent, the email is reckoned in UTC;
+   * failing, it is not owed.
+   */
+  runnerTimeZone?: ((userId: string) => Promise<string>) | undefined;
 }
 
 const IMPORT_TERMINAL_STATUSES = ["done", "failed", "duplicate"] as const;
@@ -314,6 +324,14 @@ async function processReminderJob(
   // repeat anyway (INSERT OR IGNORE on the event key; the notification is
   // UNIQUE on user+kind+subject), which is what makes at-least-once
   // delivery harmless here.
+  //
+  // A claimed event is done, whatever it did: the claim lands in the same
+  // batch as the bell row (and the email it owes) or as the pairing with
+  // an upload. Stop before branching — a redelivery after a pairing would
+  // otherwise find the run paired, so no longer "unpaired", and write a
+  // stale reminder and owe an email for a run already in the log.
+  if (await isClaimed(deps.db, job)) return;
+
   const [connected] = await deps.db
     .select({ userId: stravaConnections.userId })
     .from(stravaConnections)
@@ -348,22 +366,76 @@ async function processReminderJob(
     return;
   }
 
-  // STR-9's call site: the reminder email (decision D-43; round 26 #19) is
-  // scheduled here, after the batch, once task 126 publishes `modules/email`
-  // and the runner's switch (ACC-11) — 20 minutes after the run landed,
-  // with the skip rule checked when it is due.
+  // The reminder email (STR-9; D-43; round 26 #19), owed in the same batch
+  // as the bell row it repeats, so neither lands without the other (law
+  // 8c). Whether it is owed at all is read first: a batch cannot branch.
+  const landedAt = nowSeconds();
+  const zone = await runnerTimeZoneOf(deps, connected.userId);
+  // A failed lookup owes no email for this landing. Reckoned in UTC
+  // instead, the day could differ from the runner's own — and the same day
+  // reckoned both ways is two keys, so two emails.
+  const email =
+    zone === LOOKUP_FAILED
+      ? undefined
+      : owedReminderEmail(
+          await reminderHistory(deps.db, connected.userId, {
+            at: landedAt,
+            zone,
+          }),
+          { userId: connected.userId, at: landedAt, zone },
+        );
   await deps.db.batch([
     claim,
     // D-33: zero activity data in the body — no distance, no time, no
     // name. Round 25's words: Strava tells us a run happened, we remind,
     // the runner adds the file.
     notificationInsert(deps.db, {
+      createdAt: landedAt,
       userId: connected.userId,
       kind: "strava_reminder",
       subjectId: job.objectId,
       body: STRAVA_REMINDER_BODY,
     }),
+    ...(email === undefined ? [] : [deps.owe(email.message, email.notBefore)]),
   ]);
+}
+
+/**
+ * Whether this event's claim has landed — on `webhook_events_pk`, the
+ * claim's own UNIQUE key.
+ */
+async function isClaimed(db: CoreDb, job: ReminderJob): Promise<boolean> {
+  return await hasRowWhere(
+    db,
+    processedWebhookEvents,
+    processedWebhookEvents.objectId,
+    and(
+      eq(processedWebhookEvents.objectId, job.objectId),
+      eq(processedWebhookEvents.aspectType, job.aspectType),
+      eq(processedWebhookEvents.eventTime, job.eventTime),
+    ),
+  );
+}
+
+// No description: nothing reads one, and an unread string is a mutant
+// no test can kill.
+const LOOKUP_FAILED = Symbol();
+
+/**
+ * The runner's zone — `undefined` when no lookup was handed in, which is
+ * UTC — or `LOOKUP_FAILED`. The email is secondary to the bell row, so a failed
+ * lookup is reported and never fails the reminder (law 5).
+ */
+async function runnerTimeZoneOf(
+  deps: Pick<ConsumerDeps, "runnerTimeZone" | "captureException">,
+  userId: string,
+): Promise<string | undefined | typeof LOOKUP_FAILED> {
+  try {
+    return await deps.runnerTimeZone?.(userId);
+  } catch (error) {
+    deps.captureException(error, { userId, surface: "runnerTimeZone" });
+    return LOOKUP_FAILED;
+  }
 }
 
 /**

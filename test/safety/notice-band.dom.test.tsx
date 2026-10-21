@@ -23,7 +23,7 @@ describe("PhotoBeingChecked (R-69)", () => {
   it("says who can see it, and for how long", () => {
     render(<PhotoBeingChecked />);
     expect(band()).toHaveTextContent(
-      "Being checkedOnly you can see this photo until it's checked, usually within a day.",
+      "Being checkedOther runners can't see this photo until it's checked, usually within a day.",
     );
     expect(band().children).toHaveLength(2);
   });

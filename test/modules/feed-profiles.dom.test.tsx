@@ -14,6 +14,7 @@ import type {
 } from "../../src/modules/feed/profiles";
 import type { SearchResult } from "../../src/modules/feed/search";
 import { renderFeedScreen } from "./feed-fixtures";
+import { queryWeatherCredit } from "../ui/weather-credit";
 
 /**
  * G, H and runner search, as round 22 draws them with only what v1
@@ -293,6 +294,8 @@ describe("OwnProfile (G): past day one", () => {
     expect(screen.queryByText("How you call it, by band")).toBeNull();
     expect(screen.queryByText("Most worn")).toBeNull();
     expect(screen.queryByText("Recent entries")).toBeNull();
+    // No bands, so nothing of Visual Crossing's to credit (D-144).
+    expect(queryWeatherCredit(document.body)).toBeNull();
   });
 
   it("names how each band was called", async () => {
@@ -304,6 +307,20 @@ describe("OwnProfile (G): past day one", () => {
     );
     const row = screen.getByText("Dialed").closest("li");
     expect(row).toHaveTextContent("[41–50°]Dialed3 runs");
+  });
+
+  it("credits Visual Crossing directly under the bands, which are feels-like bands (D-144)", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile({ runCount: 3, coverage: [band] })}
+      />,
+    );
+    const section = screen.getByText("Dialed").closest("ul")?.parentElement;
+    if (section === null || section === undefined) throw new Error("no bands");
+    const credit = queryWeatherCredit(document.body);
+    expect(credit).not.toBeNull();
+    expect(section.nextElementSibling).toBe(credit);
   });
 
   it("counts every run in a band, whichever way it went", async () => {
@@ -386,7 +403,7 @@ describe("OwnProfile (G): past day one", () => {
     const link = screen.getByRole("link", { name: "Entry" });
     expect(link).toHaveAttribute("href", "/feed/entry/01E");
     const tag = part("review-tag");
-    expect(tag).toHaveTextContent("Under review, only you can see this");
+    expect(tag).toHaveTextContent("Under review, other runners can't see this");
     expect(link).not.toContainElement(tag);
     const meta = part("entry-meta");
     expect(meta?.firstElementChild).toBe(tag);

@@ -8,7 +8,6 @@
  * alone rather than all of Today.
  */
 import { count, eq, isNotNull, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 
 import {
   cronCheckpoints,
@@ -16,7 +15,7 @@ import {
   reviewQueue,
   userProfiles,
 } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import { nowSeconds } from "../../lib/now";
 import { adminUserIds, pendingReviewCount } from "../safety";
 import { DIGEST_UNCONFIRMED } from "./digest-marks";
@@ -75,7 +74,7 @@ const WEEK_SECONDS = 7 * 24 * 60 * 60;
  * listed for, so it is a register item rather than a change here.
  */
 export async function todayCounts(): Promise<TodayCounts> {
-  const db = drizzle(env.DIALED_CORE);
+  const db = coreDb();
   const weekAgo = nowSeconds() - WEEK_SECONDS;
   const waiting = await pendingReviewCount();
   const [review, bans, gave, unconfirmed] = await db.batch([

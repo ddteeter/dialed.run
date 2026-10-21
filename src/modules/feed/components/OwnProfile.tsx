@@ -1,7 +1,14 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
-import { Bracketed, Icon, ListSection, Mono, VerdictMark } from "../../../ui";
+import {
+  Bracketed,
+  Icon,
+  ListSection,
+  Mono,
+  VerdictMark,
+  WeatherAttribution,
+} from "../../../ui";
 import type { VerdictKind } from "../../../ui";
 import { bandVerdict } from "../coverage";
 import type { ownProfile } from "../profiles";
@@ -105,6 +112,9 @@ export function OwnProfile({
               </li>
             )}
           </ListSection>
+          {/* The bands are feels-like bands, read from the provider's
+              observations: derived data, credited beside it (D-144). */}
+          {profile.coverage.length > 0 ? <WeatherAttribution /> : undefined}
 
           <ListSection title="Most worn" items={profile.mostWornItems}>
             {(item) => (

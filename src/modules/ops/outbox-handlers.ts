@@ -17,6 +17,8 @@ import { photoKeyFor } from "../../lib/garment-photo-key";
 import type { OutboxKind, OutboxMessage } from "../../lib/sql/outbox";
 import { nowSeconds } from "../../lib/now";
 import { deliverOwedEmail, emailDepsFromEnv, type EmailDeps } from "../email";
+import { isReminderStillOwed, reminderEmailSent } from "../runs";
+import { forgetManualBand } from "../weather";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -176,19 +178,40 @@ async function liveEntryPhotoKeys(
  * deletes rather than sends again. What no mark can cover is a Worker
  * that dies between the send and the mark: that email goes twice.
  * `deps` is a parameter so a test hands in a fake sender.
+ *
+ * A Strava reminder's email (`reminder`) is checked here, when it is due
+ * rather than when it was owed — skipped if no reminder from its landing
+ * on is still unread, the runner disconnected, or the day's email already
+ * went — and its day is marked sent in the same batch as the row (design
+ * 140), so neither a re-firing drain nor a second debt for the day can
+ * send it again.
  */
 export function emailHandler(deps: () => EmailDeps): OutboxHandlers["email"] {
   return {
     run: async (db, payload, rowId) => {
+      // A reminder with nothing left to say — answered, disconnected, or
+      // the day's already sent — settles like a skipped send: the row
+      // goes, nothing is marked.
+      const { reminder } = payload;
+      if (
+        reminder !== undefined &&
+        !(await isReminderStillOwed(db, reminder))
+      ) {
+        return;
+      }
       const sent = await deliverOwedEmail(db, payload.email, deps());
       if (sent.status === "skipped") return;
       const sentAt = nowSeconds();
       // Due at once, too: the drain's one index range then finds a row
       // whose delete never landed, and deletes it rather than sending.
-      await db
+      const markSent = db
         .update(outbox)
         .set({ sentAt, nextAttemptAt: sentAt, messageId: sent.messageId })
         .where(eq(outbox.id, rowId));
+      await db.batch([
+        markSent,
+        ...(reminder === undefined ? [] : [reminderEmailSent(db, reminder)]),
+      ]);
     },
     // Ids only (law 7): never the address, which is what a report would
     // otherwise carry.
@@ -298,4 +321,10 @@ export const outboxHandlers: OutboxHandlers = {
   // Design 133 (D-113 Q1): unwired here, and wired by the firings that
   // are handed the linker (`scheduled.ts`).
   product_link: productLinkHandler(undefined),
+  // C1: a deleted run's band, in the weather database. Not the core `db`
+  // the drain hands in — `weather` owns that database's connection.
+  manual_conditions_delete: {
+    run: (_db, payload) => forgetManualBand(payload.runId),
+    context: (payload) => ({ userId: payload.userId, runId: payload.runId }),
+  },
 };

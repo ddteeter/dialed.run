@@ -2,7 +2,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 
 import { viewerUnitsQuery } from "../../modules/feed/functions";
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
-import { unreadNotificationCountFn } from "../../modules/notifications/functions";
+import { bellStateFn } from "../../modules/notifications/functions";
 import { RunList } from "../../modules/runs/components/RunList";
 import {
   listRunSummariesFn,
@@ -13,21 +13,21 @@ import { Page } from "../../ui";
 
 export const Route = createFileRoute("/runs/")({
   loader: async () => {
-    const [runs, units, unreadCount] = await Promise.all([
+    const [runs, units, bell] = await Promise.all([
       listRunSummariesFn(),
       viewerUnitsQuery(),
-      unreadNotificationCountFn(),
+      bellStateFn(),
     ]);
-    return { runs, units, unreadCount };
+    return { runs, units, bell };
   },
   component: RunsIndexPage,
 });
 
 function RunsIndexPage() {
-  const { runs, units, unreadCount } = Route.useLoaderData();
+  const { runs, units, bell } = Route.useLoaderData();
 
   return (
-    <BelledLayout unreadCount={unreadCount}>
+    <BelledLayout {...bell}>
       <Page title="Runs">
         <RunList
           runs={runs}

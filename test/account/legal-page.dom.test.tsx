@@ -54,14 +54,19 @@ const DOC = parseLegalDoc(
   ].join("\n"),
 );
 
-function bell({ unreadCount }: Readonly<{ unreadCount: number }>) {
-  return <span data-testid="bell">{unreadCount}</span>;
+function bell({
+  unreadCount,
+  verdictsWaiting,
+}: Readonly<{ unreadCount: number; verdictsWaiting: number }>) {
+  return (
+    <span data-testid="bell">{`${String(unreadCount)}/${String(verdictsWaiting)}`}</span>
+  );
 }
 
 describe("LegalPage", () => {
   it("reads in the signed-out shell for a signed-out reader", async () => {
     await renderWithRouter(
-      <LegalPage doc={DOC} unreadCount={undefined} bell={bell} />,
+      <LegalPage doc={DOC} bellState={undefined} bell={bell} />,
     );
     expect(document.querySelector("[data-slot='landing-bar']")).not.toBeNull();
     expect(screen.getByRole("link", { name: "Log in" })).toBeInTheDocument();
@@ -69,16 +74,22 @@ describe("LegalPage", () => {
     expect(screen.queryByTestId("bell")).toBeNull();
   });
 
-  it("reads in the signed-in shell, with the bell's count, for a signed-in reader", async () => {
-    await renderWithRouter(<LegalPage doc={DOC} unreadCount={3} bell={bell} />);
+  it("reads in the signed-in shell, with the bell's counts, for a signed-in reader", async () => {
+    await renderWithRouter(
+      <LegalPage
+        doc={DOC}
+        bellState={{ unreadCount: 3, verdictsWaiting: 2 }}
+        bell={bell}
+      />,
+    );
     expect(document.querySelector("[data-slot='tab-bar']")).not.toBeNull();
     expect(document.querySelector("[data-slot='landing-bar']")).toBeNull();
-    expect(screen.getAllByTestId("bell")[0]).toHaveTextContent("3");
+    expect(screen.getAllByTestId("bell")[0]).toHaveTextContent(/^3\/2$/u);
   });
 
   it("titles the page and lists every H2 in the contents, linked to its id", async () => {
     await renderWithRouter(
-      <LegalPage doc={DOC} unreadCount={undefined} bell={bell} />,
+      <LegalPage doc={DOC} bellState={undefined} bell={bell} />,
     );
     expect(
       screen.getByRole("heading", { level: 1, name: "Privacy policy" }),
@@ -101,7 +112,7 @@ describe("LegalPage", () => {
 
   it("gives every H2 its id and closes its section with Back to contents", async () => {
     await renderWithRouter(
-      <LegalPage doc={DOC} unreadCount={undefined} bell={bell} />,
+      <LegalPage doc={DOC} bellState={undefined} bell={bell} />,
     );
     const heading = screen.getByRole("heading", {
       level: 2,
@@ -119,12 +130,14 @@ describe("LegalPage", () => {
     expect(back[0]).toHaveClass("text-small", "underline", "desk:hidden");
     // The last thing in the section.
     expect(section?.lastElementChild).toBe(back[0]);
-    expect(screen.getAllByRole("link", { name: "Back to contents" })).toHaveLength(2);
+    expect(
+      screen.getAllByRole("link", { name: "Back to contents" }),
+    ).toHaveLength(2);
   });
 
   it("keeps what comes before the first H2 out of any section", async () => {
     await renderWithRouter(
-      <LegalPage doc={DOC} unreadCount={undefined} bell={bell} />,
+      <LegalPage doc={DOC} bellState={undefined} bell={bell} />,
     );
     const before = screen.getByText("Before any section.");
     expect(before.tagName).toBe("P");
@@ -134,7 +147,7 @@ describe("LegalPage", () => {
 
   it("puts each H2's blocks in its own section, and no other", async () => {
     await renderWithRouter(
-      <LegalPage doc={DOC} unreadCount={undefined} bell={bell} />,
+      <LegalPage doc={DOC} bellState={undefined} bell={bell} />,
     );
     const sectionOf = (name: string) =>
       screen.getByRole("heading", { level: 2, name }).closest("section");
@@ -149,7 +162,7 @@ describe("LegalPage", () => {
 
   it("renders bold, code, links, the H3, lists, quotes and tables", async () => {
     await renderWithRouter(
-      <LegalPage doc={DOC} unreadCount={undefined} bell={bell} />,
+      <LegalPage doc={DOC} bellState={undefined} bell={bell} />,
     );
     expect(screen.getByText("dialed.run").tagName).toBe("STRONG");
     expect(screen.getByText("hello@dialed.run")).toHaveClass("text-mono-md");

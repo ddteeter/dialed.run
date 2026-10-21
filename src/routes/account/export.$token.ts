@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { drizzle } from "drizzle-orm/d1";
 
-import { env } from "../../env";
+import { coreDb, env } from "../../env";
 import { nowSeconds } from "../../lib/now";
 import { exportFileResponse } from "../../modules/account/data-exports";
 import { sessionFromRequest } from "../../modules/auth";
@@ -17,7 +16,7 @@ export const Route = createFileRoute("/account/export/$token")({
     handlers: {
       GET: async ({ request, params }) =>
         exportFileResponse(
-          drizzle(env.DIALED_CORE),
+          coreDb(),
           {
             token: params.token,
             userId: optionalUserIdFrom(await sessionFromRequest(request)),

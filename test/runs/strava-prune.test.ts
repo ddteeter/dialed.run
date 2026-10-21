@@ -6,6 +6,7 @@ import {
   gaveUp,
   notifications,
   processedWebhookEvents,
+  reminderEmailDays,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
@@ -107,7 +108,7 @@ describe("pruneStravaIds", () => {
     ).toHaveLength(1);
   });
 
-  it("forgets a dead-lettered reminder's Gave up row once its last failure is a week old, and nothing else", async () => {
+  it("forgets a dead-lettered reminder's Gave up row a week after it was first written, and nothing else", async () => {
     const now = nowSeconds();
     const old = `athleteId=${newUlid()}&objectId=1`;
     const edge = `athleteId=${newUlid()}&objectId=2`;
@@ -144,6 +145,88 @@ describe("pruneStravaIds", () => {
     expect(await gaveUpRow("reminder", edge)).toBeDefined();
     expect(await gaveUpRow("reminder", recent)).toBeDefined();
     expect(await gaveUpRow("import", otherKind)).toBeDefined();
+  });
+
+  it("forgets which days a reminder email went once they are a week old", async () => {
+    const now = nowSeconds();
+    const userId = newUlid();
+    await coreDb()
+      .insert(reminderEmailDays)
+      .values([
+        { userId, day: "old", coveredUntil: now - 8 * DAY },
+        { userId, day: "recent", coveredUntil: now - 6 * DAY },
+      ]);
+
+    await pruneStravaIds(coreDb());
+
+    const left = await coreDb()
+      .select({ day: reminderEmailDays.day })
+      .from(reminderEmailDays)
+      .where(eq(reminderEmailDays.userId, userId));
+    expect(left).toStrictEqual([{ day: "recent" }]);
+  });
+
+  it("measures the week from the row's first failure, so a later one does not keep the ids (R-142)", async () => {
+    const now = nowSeconds();
+    const refailed = `athleteId=${newUlid()}&objectId=4`;
+    const fact = {
+      kind: "reminder",
+      subjectId: refailed,
+      reason: "Gave up.",
+      tries: 3,
+    } as const;
+    const db = coreDb();
+    // First written eight days ago; the same job dead-lettered again
+    // yesterday, which moves only its last failure.
+    await gaveUpUpsert(db, fact, now - 8 * DAY);
+    await gaveUpUpsert(db, fact, now - DAY);
+    expect(await gaveUpRow("reminder", refailed)).toMatchObject({
+      firstFailedAt: now - 8 * DAY,
+      lastFailedAt: now - DAY,
+    });
+
+    await pruneStravaIds(coreDb());
+
+    expect(await gaveUpRow("reminder", refailed)).toBeUndefined();
+  });
+
+  it("is re-runnable: a second pass changes nothing the first left (law 1)", async () => {
+    const now = nowSeconds();
+    const userId = newUlid();
+    const oldKey = newUlid();
+    const newKey = newUlid();
+    const old = `athleteId=${newUlid()}&objectId=5`;
+    const recent = `athleteId=${newUlid()}&objectId=6`;
+    const fact = { reason: "Gave up.", tries: 3 } as const;
+    const db = coreDb();
+    await seedEvent(oldKey, now - 8 * DAY);
+    await seedEvent(newKey, now - DAY);
+    await seedNotification(userId, "strava_reminder", "333", now - 8 * DAY);
+    await seedNotification(userId, "strava_reminder", "444", now - DAY);
+    await db.batch([
+      gaveUpUpsert(
+        db,
+        { kind: "reminder", subjectId: old, ...fact },
+        now - 8 * DAY,
+      ),
+      gaveUpUpsert(
+        db,
+        { kind: "reminder", subjectId: recent, ...fact },
+        now - DAY,
+      ),
+    ]);
+
+    await pruneStravaIds(coreDb());
+    await pruneStravaIds(coreDb());
+
+    expect(await eventsFor(oldKey)).toStrictEqual([]);
+    expect(await eventsFor(newKey)).toHaveLength(1);
+    const subjects = await subjectsOf(userId, "strava_reminder");
+    expect(subjects).toHaveLength(2);
+    expect(subjects).toContain("444");
+    expect(subjects).not.toContain("333");
+    expect(await gaveUpRow("reminder", old)).toBeUndefined();
+    expect(await gaveUpRow("reminder", recent)).toMatchObject({ tries: 3 });
   });
 
   it("touches no other kind's subject, however old", async () => {
@@ -202,9 +285,17 @@ describe("the prune reads by index, not by scanning (D1 bills rows scanned)", ()
 
     const deadLetters = db
       .delete(gaveUp)
-      .where(and(eq(gaveUp.kind, "reminder"), lt(gaveUp.lastFailedAt, cutoff)))
+      .where(and(eq(gaveUp.kind, "reminder"), lt(gaveUp.firstFailedAt, cutoff)))
       .toSQL();
 
+    const emailDays = db
+      .delete(reminderEmailDays)
+      .where(lt(reminderEmailDays.coveredUntil, cutoff))
+      .toSQL();
+
+    const emailDaysPlan = await planOf(emailDays.sql, emailDays.params);
+    expect(emailDaysPlan).toMatch(/reminder_email_days_covered_until/u);
+    expect(emailDaysPlan).not.toMatch(/SCAN\s+reminder_email_days/iu);
     const keysPlan = await planOf(keys.sql, keys.params);
     const deadLettersPlan = await planOf(deadLetters.sql, deadLetters.params);
     const remindersPlan = await planOf(reminders.sql, reminders.params);
@@ -213,11 +304,10 @@ describe("the prune reads by index, not by scanning (D1 bills rows scanned)", ()
     expect(keysPlan).not.toMatch(/SCAN\s+processed_webhook_events/iu);
     expect(remindersPlan).toMatch(/notifications_kind_created/u);
     expect(remindersPlan).not.toMatch(/SCAN\s+notifications/iu);
-    // Either index serves it. Without ANALYZE statistics SQLite takes
-    // (kind, subject_id) and reads only the reminder rows, which are only
-    // dead letters.
+    // (kind, subject_id) serves it, reading only the reminder rows, which
+    // are only dead letters and themselves go within the week.
     expect(deadLettersPlan).toMatch(
-      /SEARCH gave_up USING (COVERING )?INDEX gave_up_(kind_subject|last_failed)/u,
+      /SEARCH gave_up USING (COVERING )?INDEX gave_up_kind_subject/u,
     );
     expect(deadLettersPlan).not.toMatch(/SCAN\s+gave_up/iu);
   });

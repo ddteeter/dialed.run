@@ -4,16 +4,15 @@
  * covering index (docs/contracts.md) — no denormalized counters.
  */
 import { and, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 
 import { follows } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import { hasRowWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 import { countWhere } from "./count-where";
 
 function db() {
-  return drizzle(env.DIALED_CORE);
+  return coreDb();
 }
 
 export async function follow(

@@ -152,13 +152,22 @@ test.describe("A1 · upload", () => {
     // facts line, the sentence. The headline and the sentence are the
     // board's words; the facts line is the run's day and time, which the
     // app writes month first ("Sat Aug 29", round 26 item 9) everywhere.
-    expect(built).toHaveLength(drawnCard.length);
-    expect(built[0]).toEqual(drawnCard[0]);
-    expect(built[1]).toEqual(drawnCard[1]);
-    expect(built[2]).toEqual(drawnCard[2]);
-    expect(built[3]?.length).toBe(drawnCard[3]?.length);
-    expect(built[3]?.at(-1)).toBe(drawnCard[3]?.at(-1));
-    expect(built[4]).toEqual(drawnCard[4]);
+    //
+    // **One row beyond the board, under the facts line.** That line ends in
+    // the provider's reading, and Visual Crossing's licence asks for its
+    // credit near it (D-144). Round 22 predates the decision, so the row is
+    // a recorded deviation (docs/design-deltas.md #67, "A1's duplicate
+    // receipt"), pinned here by its place; every drawn row is still the
+    // board's.
+    expect(built[4]).toEqual(["WEATHER DATA PROVIDED BY VISUAL CROSSING"]);
+    const drawnRows = built.toSpliced(4, 1);
+    expect(drawnRows).toHaveLength(drawnCard.length);
+    expect(drawnRows[0]).toEqual(drawnCard[0]);
+    expect(drawnRows[1]).toEqual(drawnCard[1]);
+    expect(drawnRows[2]).toEqual(drawnCard[2]);
+    expect(drawnRows[3]?.length).toBe(drawnCard[3]?.length);
+    expect(drawnRows[3]?.at(-1)).toBe(drawnCard[3]?.at(-1));
+    expect(drawnRows[4]).toEqual(drawnCard[4]);
 
     // The primary is ink, not the log verb's pink.
     const primary = page.getByRole("link", { name: "Open that run" });

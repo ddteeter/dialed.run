@@ -25,6 +25,7 @@ import {
   termsAcceptances,
   photoScreenings,
   reactions,
+  reminderEmailDays,
   reports,
   reviewQueue,
   runs,
@@ -379,6 +380,10 @@ async function seedAccount(): Promise<Seeded> {
     { userId, version: 1, acceptedAt: NOW - 120 },
     { userId, version: 2, acceptedAt: NOW - 60 },
   ]);
+  // A day the Strava reminder email covered (STR-9).
+  await core
+    .insert(reminderEmailDays)
+    .values({ userId, day: "2026-10-01", coveredUntil: NOW });
   // A data export (ACC-10): one ready, with its ZIP, and one ZIP a build
   // staged with no row to name it — the purge lists the prefix for both.
   const exportId = newUlid();
@@ -621,6 +626,10 @@ async function footprint(seeded: Seeded) {
       .select()
       .from(termsAcceptances)
       .where(eq(termsAcceptances.userId, userId)),
+    reminderDays: await core
+      .select()
+      .from(reminderEmailDays)
+      .where(eq(reminderEmailDays.userId, userId)),
     claim: await claimOf(userId),
   };
 }
@@ -653,6 +662,7 @@ const GONE = {
   strava: [],
   exports: [],
   terms: [],
+  reminderDays: [],
   claim: [],
 };
 

@@ -17,7 +17,7 @@ import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { TURNSTILE_REFUSED } from "../../src/lib/contracts/access";
+import { REGION_COPY, TURNSTILE_REFUSED } from "../../src/lib/contracts/access";
 import type { AccessRequestResult } from "../../src/modules/account/access";
 import {
   DeskAccess,
@@ -208,7 +208,7 @@ describe("Au5 · Request access", () => {
     answeringTurnstile("answer");
     const request = vi
       .fn<RequestFn>()
-      .mockResolvedValue({ status: "received" });
+      .mockResolvedValue({ status: "received", isFromBlockedRegion: false });
     await renderWithRouter(<RequestAccess siteKey="site" request={request} />);
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("Email"), "sam@example.com");
@@ -269,7 +269,7 @@ describe("Au5 · Request access", () => {
     vi.useFakeTimers();
     const request = vi
       .fn<RequestFn>()
-      .mockResolvedValue({ status: "received" });
+      .mockResolvedValue({ status: "received", isFromBlockedRegion: false });
     await renderWithRouter(
       <RequestAccess siteKey={undefined} request={request} />,
     );
@@ -291,7 +291,10 @@ describe("Au5 · Request access", () => {
     const request = vi
       .fn<RequestFn>()
       .mockResolvedValueOnce({ status: "refused" })
-      .mockResolvedValueOnce({ status: "received" });
+      .mockResolvedValueOnce({
+        status: "received",
+        isFromBlockedRegion: false,
+      });
     await renderWithRouter(
       <RequestAccess siteKey={undefined} request={request} />,
     );
@@ -315,6 +318,32 @@ describe("Au5 · Request access", () => {
     expect(request).toHaveBeenCalledTimes(2);
   });
 
+  it("takes a request from a blocked state, and says sign-up isn't open there yet", async () => {
+    const request = vi
+      .fn<RequestFn>()
+      .mockResolvedValue({ status: "received", isFromBlockedRegion: true });
+    await renderWithRouter(
+      <RequestAccess siteKey={undefined} request={request} />,
+    );
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Email"), "sam@example.com");
+    await user.click(screen.getByRole("button", { name: "Send request" }));
+    const receipt = await waitFor(() => {
+      const found = part("receipt");
+      expect(found).not.toBeNull();
+      return found;
+    });
+    expect(receipt).toHaveTextContent("You're on the list");
+    expect(receipt).toHaveTextContent(REGION_COPY.waitlist);
+    // No way on to an account that would be refused, and no promise of a
+    // code by email.
+    expect(
+      screen.queryByRole("link", { name: "Create an account" }),
+    ).toBeNull();
+    expect(receipt).not.toHaveTextContent("sam@example.com");
+    expect(part("failure-band")).toBeNull();
+  });
+
   it("refuses a bad address on its field, before any round trip", async () => {
     const request = vi.fn<RequestFn>();
     await renderWithRouter(
@@ -332,7 +361,7 @@ describe("Au5 · Request access", () => {
   it("leaves the back link off the receipt", async () => {
     const request = vi
       .fn<RequestFn>()
-      .mockResolvedValue({ status: "received" });
+      .mockResolvedValue({ status: "received", isFromBlockedRegion: false });
     await renderWithRouter(
       <RequestAccess siteKey={undefined} request={request} />,
     );
@@ -375,9 +404,16 @@ const DESK: AccessDesk = {
       id: "r1",
       email: "sam@example.com",
       note: "Winter runner.",
+      blockedRegion: "",
       createdAt: 0,
     },
-    { id: "r2", email: "j@example.com", note: NOTHING, createdAt: 3600 * 20 },
+    {
+      id: "r2",
+      email: "j@example.com",
+      note: NOTHING,
+      blockedRegion: "",
+      createdAt: 3600 * 20,
+    },
   ],
   codes: [
     code(),
@@ -432,6 +468,44 @@ describe("D7 · Access", () => {
     const j = within(rowOf("j@example.com"));
     expect(j.getByText("No note.")).toHaveClass("text-muted");
     expect(j.getByText("2d")).toBeVisible();
+  });
+
+  it("tags a request from a blocked state, and has no Send invite for it, only why", () => {
+    desk({
+      desk: {
+        ...DESK,
+        requests: [
+          ...DESK.requests,
+          {
+            id: "r3",
+            email: "tn@example.com",
+            note: NOTHING,
+            blockedRegion: "TN",
+            createdAt: 0,
+          },
+          {
+            id: "r4",
+            email: "al@example.com",
+            note: NOTHING,
+            blockedRegion: "AL",
+            createdAt: 0,
+          },
+        ],
+      },
+    });
+    const tn = within(rowOf("tn@example.com"));
+    expect(tn.getByText("[TN]")).toBeVisible();
+    expect(
+      tn.getByText("No invite while sign-up is closed in Tennessee."),
+    ).toBeVisible();
+    expect(tn.queryByRole("button", { name: "Send invite" })).toBeNull();
+    expect(tn.getByRole("button", { name: "Decline" })).toBeVisible();
+    // A state no longer listed keeps its tag and can be invited.
+    const al = within(rowOf("al@example.com"));
+    expect(al.getByText("[AL]")).toBeVisible();
+    expect(al.getByRole("button", { name: "Send invite" })).toBeVisible();
+    // A request from anywhere else wears no tag at all.
+    expect(rowOf("sam@example.com")).not.toHaveTextContent("[");
   });
 
   it("shows nothing in its own status line until something happens", () => {

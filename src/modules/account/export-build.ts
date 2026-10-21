@@ -14,11 +14,11 @@
  * piped through a `FixedLengthStream` of exactly that length.
  */
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
+import type { drizzle } from "drizzle-orm/d1";
 import { makeZip, predictLength } from "client-zip";
 
 import { dataExports } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb, env } from "../../env";
 import { EXPORT_LINK_TTL_S } from "../../lib/contracts/data-export";
 import { entryPhotoPrefix } from "../../lib/entry-photo-key";
 import { garmentPhotoPrefix } from "../../lib/garment-photo-key";
@@ -257,7 +257,7 @@ export async function buildExport(
 
 function liveBuildDeps(): BuildDeps {
   return {
-    db: drizzle(env.DIALED_CORE),
+    db: coreDb(),
     media: env.MEDIA,
     imports: env.IMPORTS,
     report: captureException,
@@ -275,7 +275,7 @@ export function exportConsumersFromEnv(): ExportConsumers {
     {
       build: (exportId) => buildExport(liveBuildDeps(), exportId),
       fail: (exportId) =>
-        failExport(drizzle(env.DIALED_CORE), exportId, captureException),
+        failExport(coreDb(), exportId, captureException),
     },
     captureException,
   );

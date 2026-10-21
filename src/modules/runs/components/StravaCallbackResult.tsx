@@ -88,8 +88,10 @@ function NotConnected({
   result: { full: boolean };
   configured: boolean;
 }>): JSX.Element {
-  // Try again is another trip to Strava's consent screen, through the
-  // same server redirect the official button uses.
+  // Try again goes back to T1 rather than straight to the redirect: the
+  // consent Strava's API Policy §2.1 asks for is read before every trip
+  // to Strava's authorize screen, and T1 is where it is drawn, in front
+  // of Strava's own button (owner, 2026-10-18).
   const canTryAgain = configured && !result.full;
   return (
     <>
@@ -118,8 +120,7 @@ function NotConnected({
       <div className="flex flex-wrap gap-2">
         {canTryAgain ? (
           <Link
-            to="/runs/strava-connect"
-            reloadDocument
+            to="/runs/strava"
             className="target inline-flex items-center justify-center rounded-field bg-ink px-4 font-bold text-ground no-underline"
           >
             Try again

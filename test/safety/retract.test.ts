@@ -14,6 +14,7 @@ import {
   reviewQueue,
   runs,
 } from "../../src/db/schema-core";
+import { manualConditions } from "../../src/db/schema-weather";
 import { env } from "../../src/env";
 import {
   entryPhotoKeyFor,
@@ -569,5 +570,144 @@ describe("deleting a run", () => {
     expect(
       await core().select().from(runs).where(eq(runs.id, sibling.runId)),
     ).toHaveLength(1);
+  });
+});
+
+function weather() {
+  return drizzle(env.DIALED_WEATHER);
+}
+
+/**
+A band set on this run, as `recordManualObservation` leaves one.
+*/
+async function bandOn(runId: string): Promise<void> {
+  await weather()
+    .insert(manualConditions)
+    .values({ runId, tempC: -3, setAt: NOW, sky: "snow" });
+}
+
+async function bandsOf(runId: string) {
+  return weather()
+    .select({ runId: manualConditions.runId })
+    .from(manualConditions)
+    .where(eq(manualConditions.runId, runId));
+}
+
+/**
+ * C1: deleting a run leaves nothing keyed by its id in either database.
+ * The band is in `DIALED_WEATHER`, which the core batch cannot reach, so
+ * it is owed through the outbox — and every assertion here is about the
+ * row being gone, or still owed, afterwards.
+ */
+describe("a deleted run's band (C1)", () => {
+  it("goes with the run, and nothing is left owed", async () => {
+    const userId = await makeUser();
+    const { runId } = await fullEntry(userId);
+    const kept = await makeRun({ userId });
+    await bandOn(runId);
+    await bandOn(kept);
+
+    await deleteRun(core(), userId, runId);
+
+    expect(await bandsOf(runId)).toStrictEqual([]);
+    // The runner's other run keeps its band: one run's delete is that run's.
+    expect(await bandsOf(kept)).toStrictEqual([{ runId: kept }]);
+    expect(await core().select().from(outbox)).toStrictEqual([]);
+  });
+
+  it("is owed when the weather database fails, and the drain deletes it", async () => {
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    await bandOn(runId);
+    const report = vi.fn(quiet);
+    vi.spyOn(env.DIALED_WEATHER, "prepare").mockImplementationOnce(() => {
+      throw new Error("weather down");
+    });
+
+    await deleteRun(core(), userId, runId, report);
+
+    // The runner's delete happened; the band is what is owed.
+    expect(
+      await core().select().from(runs).where(eq(runs.id, runId)),
+    ).toStrictEqual([]);
+    expect(report).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        kind: "manual_conditions_delete",
+        userId,
+        runId,
+      }),
+    );
+    expect(await bandsOf(runId)).toHaveLength(1);
+    expect(
+      await core()
+        .select({ kind: outbox.kind, dedupeKey: outbox.dedupeKey })
+        .from(outbox),
+    ).toStrictEqual([
+      { kind: "manual_conditions_delete", dedupeKey: `${userId}:${runId}` },
+    ]);
+
+    await drainOutbox(core(), [], { now: NOW * 10 });
+
+    expect(await bandsOf(runId)).toStrictEqual([]);
+    expect(await core().select().from(outbox)).toStrictEqual([]);
+  });
+
+  it("settles a redelivered debt whose band is already gone", async () => {
+    // At least once (law 1): a fast path that deleted the band and died
+    // before its outbox delete leaves the row, and the drain runs it again.
+    const userId = await makeUser();
+    const runId = newUlid();
+    await oweInCore({
+      kind: "manual_conditions_delete",
+      payload: { userId, runId },
+    });
+    const report = vi.fn(quiet);
+    const anomalies: string[] = [];
+
+    await drainOutbox(core(), anomalies, { now: NOW * 10, report });
+
+    expect(report).not.toHaveBeenCalled();
+    expect(anomalies).toStrictEqual([
+      "1 manual_conditions_delete outbox row(s) were owed; 1 settled",
+    ]);
+    expect(await core().select().from(outbox)).toStrictEqual([]);
+  });
+
+  it("owes nothing for another runner's run named in the list, and leaves their band", async () => {
+    const userId = await makeUser();
+    const mine = await makeRun({ userId });
+    const other = await makeUser();
+    const theirs = await makeRun({ userId: other });
+    await bandOn(mine);
+    await bandOn(theirs);
+    const report = vi.fn(quiet);
+    // Every weather write fails, so each debt the delete owed stays owed
+    // and can be read back: the one for `theirs` must never have existed.
+    vi.spyOn(env.DIALED_WEATHER, "prepare").mockImplementation(() => {
+      throw new Error("weather down");
+    });
+
+    await deleteRuns(core(), userId, [mine, theirs], report);
+
+    expect(
+      await core().select({ dedupeKey: outbox.dedupeKey }).from(outbox),
+    ).toStrictEqual([{ dedupeKey: `${userId}:${mine}` }]);
+    vi.restoreAllMocks();
+    expect(await bandsOf(theirs)).toStrictEqual([{ runId: theirs }]);
+  });
+
+  it("leaves the bands to the purge when every run goes", async () => {
+    // Only account deletion asks for "all", and its purge has already
+    // swept the runner's bands by then (`purge.ts` forgetManualConditions)
+    // — so "all" reads no run ids and owes no band, however many runs.
+    const userId = await makeUser();
+    const runId = await makeRun({ userId });
+    await bandOn(runId);
+
+    await deleteRuns(core(), userId, "all");
+
+    expect(await bandsOf(runId)).toStrictEqual([{ runId }]);
+    expect(await core().select().from(outbox)).toStrictEqual([]);
   });
 });

@@ -7,11 +7,11 @@
  * (`create-auth.ts` imports `ops`).
  */
 import { lt } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
+import type { drizzle } from "drizzle-orm/d1";
 
 import { session } from "../../db/schema-auth";
 import { passwordAttempts } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import { nowSeconds } from "../../lib/now";
 import { PASSWORD_ATTEMPT_WINDOW_S } from "./password-check";
 
@@ -59,7 +59,7 @@ const ATTEMPTS_KEPT_S = DAY_S;
  * (`session_expires_at`, `password_attempts_window`), not a scan.
  */
 export async function sweepExpiredAuthRows(
-  db: Db = drizzle(env.DIALED_CORE),
+  db: Db = coreDb(),
   now = nowSeconds(),
 ): Promise<void> {
   // `expires_at` is a timestamp column: drizzle stores the Date in seconds.

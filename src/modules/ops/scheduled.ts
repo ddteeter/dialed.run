@@ -1,5 +1,4 @@
 import { and, desc, eq, gt, inArray, lt, or, type SQL } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 
 import {
   cronCheckpoints,
@@ -8,7 +7,7 @@ import {
   runs,
   stravaRevocations,
 } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb, env } from "../../env";
 import { chunked, IN_LIST_CHUNK } from "../../lib/chunked";
 import { columnWhere } from "../../lib/sql/keyed-read";
 import {
@@ -79,7 +78,7 @@ export async function handleScheduled(
   reporter: CronReporter = sentryCronReporter,
   upkeep: DailyUpkeep = {},
 ): Promise<ScheduledOutcome> {
-  const db = drizzle(env.DIALED_CORE);
+  const db = coreDb();
   const cronName = cronNameFor(controller.cron);
   await db
     .insert(cronCheckpoints)
@@ -182,7 +181,7 @@ async function drainProductLinks(
   anomalies: string[],
   upkeep: DailyUpkeep,
 ): Promise<void> {
-  await drainOutbox(drizzle(env.DIALED_CORE), anomalies, {
+  await drainOutbox(coreDb(), anomalies, {
     kinds: ["product_link"],
     handlers: handlersFor(upkeep),
   });
@@ -210,7 +209,7 @@ async function runCron(
         // (design 142): a NULL zone beside coordinates is the marker.
         // Last, because its lookups can wait on Visual Crossing.
         () =>
-          fillMissingTimeZones(drizzle(env.DIALED_CORE), {
+          fillMissingTimeZones(coreDb(), {
             zoneAt: timeZoneAt,
             report: captureException,
           }),
@@ -224,7 +223,7 @@ async function runCron(
         // What the sweep just stopped re-driving goes on the Desk's Gave
         // up (R-119): the hour a product's day runs out, not the morning
         // after.
-        () => listAbandonedEnrichments(drizzle(env.DIALED_CORE)),
+        () => listAbandonedEnrichments(coreDb()),
         () => drainOwedEmail(anomalies),
       ]);
       return anomalies;
@@ -278,7 +277,7 @@ async function eachStep(
  * firings never send one row twice.
  */
 async function drainOwedEmail(anomalies: string[]): Promise<void> {
-  await drainOutbox(drizzle(env.DIALED_CORE), anomalies, { kinds: ["email"] });
+  await drainOutbox(coreDb(), anomalies, { kinds: ["email"] });
 }
 
 async function runScreeningRetry(anomalies: string[]): Promise<void> {
@@ -390,7 +389,7 @@ async function stalledPending(
   },
   graceSeconds: number,
 ): Promise<{ id: string }[]> {
-  const db = drizzle(env.DIALED_CORE);
+  const db = coreDb();
   const staleBefore = secondsAgo(graceSeconds);
   return db
     .select({ id: marker.id })
@@ -437,7 +436,7 @@ async function redispatchStalledImports(anomalies: string[]): Promise<void> {
 async function redispatchStrandedRevocations(
   anomalies: string[],
 ): Promise<void> {
-  const db = drizzle(env.DIALED_CORE);
+  const db = coreDb();
   const stranded = await db
     .select({ id: stravaRevocations.id })
     .from(stravaRevocations)
@@ -558,7 +557,7 @@ async function redispatchStalledEnrichments(
   // a bound it does not — so each is asked of the helper that fits, and
   // the failed half goes unlimited, since a day's failed pastes is small
   // where a stuck-pending backlog is not.
-  const db = drizzle(env.DIALED_CORE);
+  const db = coreDb();
   const pending = await stalledPending(
     {
       table: products,
@@ -657,7 +656,7 @@ async function runDailyDigest(
   reporter: CronReporter,
   upkeep: DailyUpkeep,
 ): Promise<string[]> {
-  const db = drizzle(env.DIALED_CORE);
+  const db = coreDb();
   // The generic outbox rides the same firing as the Strava one: drain
   // first, so the backlog check counts only what is still owed.
   // Keyed by kind and walked in `digestKinds` order, so the table cannot
@@ -766,7 +765,7 @@ async function runDailyDigest(
 const EMPTY_COMPOSITION_ALERT = 50;
 
 async function checkExtractionYield(anomalies: string[]): Promise<void> {
-  const db = drizzle(env.DIALED_CORE);
+  const db = coreDb();
   const done = await db
     .select({ composition: products.fabricComposition })
     .from(products)
@@ -798,7 +797,7 @@ async function checkAbandonedEnrichments(anomalies: string[]): Promise<void> {
     lt(products.createdAt, abandonedBefore()),
   );
   const abandoned = await columnWhere(
-    drizzle(env.DIALED_CORE),
+    coreDb(),
     products,
     products.id,
     failedPastTheWindow,
@@ -817,7 +816,7 @@ async function checkAbandonedEnrichments(anomalies: string[]): Promise<void> {
  * the staleness proxy here — same approximation `retryPendingWeather` uses.
  */
 async function checkWeatherBacklog(anomalies: string[]): Promise<void> {
-  const db = drizzle(env.DIALED_CORE);
+  const db = coreDb();
   const staleBefore = secondsAgo(WEATHER_PENDING_STALE_SECONDS);
   const stuckPending = and(
     eq(runs.weatherStatus, "pending"),

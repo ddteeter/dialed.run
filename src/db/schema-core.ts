@@ -43,6 +43,14 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     // the current place, so it cannot describe a city the row no longer holds. NULL beside coordinates means the lookup has not
     // succeeded yet, and the hourly fill re-drives it.
     timeZone: text("time_zone"),
+    // The newest D1 bookmark this runner's writes reached (design 143,
+    // D-123): a request opens its read session from it, so no device reads
+    // older than the runner's own last write. Lexicographically sortable,
+    // per D1's docs; NULL until a first write. `d1_bookmark_at` is when it
+    // was stored, in seconds, and one older than a day is ignored.
+    // `auth/d1-bookmark.ts` is the one reader and writer of both.
+    d1Bookmark: text("d1_bookmark"),
+    d1BookmarkAt: integer("d1_bookmark_at"),
     thermalLevel: integer("thermal_level"),
     tempUnit: text("temp_unit", { enum: ["f", "c"] }),
     distanceUnit: text("distance_unit", { enum: ["mi", "km"] }),
@@ -80,8 +88,11 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     usernameScreenedAt: integer("username_screened_at"),
     // Settings › Sharing › "Count my runs in anonymous totals" (D-108 D).
     // On by default: published totals count shared and private runs, and
-    // an opted-out runner leaves them at the next nightly build. The guide
-    // job reads it; `onboarding/aggregate-prefs.ts` is the one writer.
+    // an opted-out runner leaves them at the next nightly build. It is also
+    // U2's conditions pool (owner, 2026-10-12): off leaves their shared runs
+    // out of the in-app Same conditions block at once (`feed/consensus.ts`),
+    // while the block still works for them. The guide job and consensus read
+    // it; `onboarding/aggregate-prefs.ts` is the one writer.
     countInTotals: integer("count_in_totals", { mode: "boolean" })
       .notNull()
       .default(true),
@@ -429,6 +440,10 @@ export const accessRequests = /*#__PURE__*/ sqliteTable(
     status: text("status", { enum: ["pending", "invited", "declined"] })
       .notNull()
       .default("pending"),
+    // The blocked US state the request came from (`BLOCKED_US_REGIONS`:
+    // "MS", "TN"), as its latest ask was placed; null anywhere else. D7
+    // shows it and will not invite while the state is still listed.
+    blockedRegion: text("blocked_region"),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
   },
@@ -925,6 +940,32 @@ export const notifications = /*#__PURE__*/ sqliteTable(
   ],
 );
 
+/**
+ * The days a runner was sent a Strava reminder email (task 127 · STR-9,
+ * design 140): one row per runner per day of theirs, written in the batch
+ * that marks the email sent. "At most one a day" reads it twice — when a
+ * reminder lands (owe nothing if today's went) and when the email is due
+ * (send nothing if today's went) — so a first email skipped by an upload
+ * no longer silences the rest of the day, and a second debt racing the
+ * first cannot send twice. `day` is the runner's calendar day as
+ * `lib/dates`' `calendarDay` writes it; `covered_until` is what yesterday's
+ * email covered, for the next day's count. Deleted after a week by the
+ * daily Strava prune: nothing reads past yesterday.
+ */
+export const reminderEmailDays = /*#__PURE__*/ sqliteTable(
+  "reminder_email_days",
+  {
+    userId: text("user_id").notNull(),
+    day: text("day").notNull(),
+    coveredUntil: integer("covered_until").notNull(),
+  },
+  (t) => [
+    uniqueIndex("reminder_email_days_user_day").on(t.userId, t.day),
+    // The prune's read: rows older than a cutoff.
+    index("reminder_email_days_covered_until").on(t.coveredUntil),
+  ],
+);
+
 export const stravaConnections = /*#__PURE__*/ sqliteTable(
   "strava_connections",
   {
@@ -1393,9 +1434,10 @@ export const moderationActions = /*#__PURE__*/ sqliteTable(
  * stood, the uploader, and where the bytes were copied to.
  *
  * **Locked and admin-only.** Nothing updates or deletes a row, no runner-
- * facing read joins this table, and its one read (`quarantinedContent` in
- * `modules/safety`) refuses anyone but an admin. `retainUntil` is a year
- * after the quarantine; nothing purges on it yet (deployment plan §8).
+ * facing read joins this table, and its reads (`modules/safety`) refuse
+ * anyone but an admin. The one update is recording the NCMEC report.
+ * `retainUntil` is a year after the quarantine, or a year after that
+ * report when later; the daily digest purges on it.
  * No foreign keys, on purpose: deleting the account must not take the
  * evidence with it.
  */
@@ -1416,6 +1458,13 @@ export const quarantinedContent = /*#__PURE__*/ sqliteTable(
     photosSnapshot: text("photos_snapshot").notNull(),
     quarantinedAt: integer("quarantined_at").notNull(),
     retainUntil: integer("retain_until").notNull(),
+    // When the operator recorded the CyberTipline report (C12). A report
+    // is a request to preserve for a year after it (18 U.S.C.
+    // §2258A(h)(1)), so recording one moves `retainUntil` to at least a
+    // year past this. Null until reported.
+    ncmecReportedAt: integer("ncmec_reported_at"),
+    // CyberTipline's id for that report, when the operator gives it.
+    ncmecReportId: text("ncmec_report_id"),
   },
   (t) => [
     // The admin read, newest first; and a purge, when one exists, by date.

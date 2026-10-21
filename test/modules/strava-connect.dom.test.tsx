@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { clockLabel, dayLabel, deviceTimeZone } from "../../src/lib/dates";
 import { StravaConnect } from "../../src/modules/runs/components/StravaConnect";
 import { expectBusy } from "../ui/unavailable";
+import { expectConsentBeforeButton } from "../ui/strava-consent";
 
 /**
  * Connect and disconnect (Remaining Screens T1, T3; round 22, item 23;
@@ -97,8 +98,9 @@ describe("StravaConnect: not yet connected", () => {
   it("offers Strava's own button, and says where approval happens", async () => {
     await screenFor(false);
 
+    // The Strava consent (API Policy §2.1) is read before the button.
+    expectConsentBeforeButton();
     const button = screen.getByRole("link", { name: "Connect with Strava" });
-    expect(button).toHaveAttribute("href", "/runs/strava-connect");
     expect(button).toHaveAttribute("data-part", "strava-button");
     expect(
       screen.getByText("You’ll approve this on Strava’s own screen."),

@@ -38,7 +38,7 @@ import {
   sql,
 } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
+import type { drizzle } from "drizzle-orm/d1";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import { account, session, user, verification } from "../../db/schema-auth";
@@ -59,6 +59,7 @@ import {
   passwordAttempts,
   photoScreenings,
   reactions,
+  reminderEmailDays,
   reports,
   runs,
   stravaConnections,
@@ -68,7 +69,7 @@ import {
   wardrobeItems,
 } from "../../db/schema-core";
 import { manualConditions } from "../../db/schema-weather";
-import { env } from "../../env";
+import { coreDb, env, weatherDb } from "../../env";
 import { chunked, IN_LIST_CHUNK } from "../../lib/chunked";
 import { importFilePrefix } from "../../lib/import-file-key";
 import { columnWhere, firstRowWhere } from "../../lib/sql/keyed-read";
@@ -116,10 +117,10 @@ export interface PurgeDeps {
 }
 
 function liveDeps(): PurgeDeps {
-  const core = drizzle(env.DIALED_CORE);
+  const core = coreDb();
   return {
     core,
-    weather: drizzle(env.DIALED_WEATHER),
+    weather: weatherDb(),
     revokeStrava: (userId) =>
       disconnectStrava(core, env.IMPORTS_QUEUE, userId, captureException),
     importsBucket: env.IMPORTS,
@@ -463,6 +464,7 @@ async function deleteAccountRows(
     stravaConnections,
     dataExports,
     termsAcceptances,
+    reminderEmailDays,
   ] as const;
   // The trailing rows below share the same "found by nothing but the
   // runner's id" shape as `byUserId`, just on a column that is not always

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { requireSession } from "../../../modules/auth/functions";
 import { BelledLayout } from "../../../modules/notifications/components/BelledLayout";
-import { unreadNotificationCountFn } from "../../../modules/notifications/functions";
+import { bellStateFn } from "../../../modules/notifications/functions";
 import { SettingsSectionPage } from "../../../modules/onboarding/components/SettingsSubPage";
 import {
   saveSharingFn,
@@ -24,17 +24,17 @@ export const Route = createFileRoute("/onboarding/settings/$section")({
     const section = settingsSectionOrNotFound(params.section);
     return {
       section,
-      ...(await settingsSubPageData(unreadNotificationCountFn())),
+      ...(await settingsSubPageData(bellStateFn())),
     };
   },
   component: SectionPage,
 });
 
 function SectionPage() {
-  const { section, current, unreadCount } = Route.useLoaderData();
+  const { section, current, bell } = Route.useLoaderData();
 
   return (
-    <BelledLayout unreadCount={unreadCount}>
+    <BelledLayout {...bell}>
       <SettingsSectionPage
         section={section}
         current={current}

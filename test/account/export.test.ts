@@ -115,7 +115,6 @@ function observationAt(startedAt: number, tempC: number) {
   const key = cacheKeyFor(LAT, LNG, new Date(startedAt * 1000));
   return weather.insert(weatherObservations).values({
     id: newUlid(),
-    runId: newUlid(),
     latR: key.latR,
     lngR: key.lngR,
     hourBucket: key.hourBucket,
@@ -612,7 +611,7 @@ describe("exportData and exportFiles", () => {
     const [, row] = linesOf(texts, "runs.csv");
     expect(row?.endsWith(",")).toBe(true);
     // The file is still in the ZIP, so the README names its folder.
-    expect(textNamed(texts, "README.txt").split("\n", 5)[4]).toBe(
+    expect(textNamed(texts, "README.txt").split("\n", 6)[5]).toBe(
       "photos/ holds your kit photos (photos/entries/) and garment photos (photos/closet/), at the size dialed.run keeps. run-files/ holds the GPX, FIT and TCX files you uploaded, as uploaded.",
     );
   });
@@ -650,7 +649,7 @@ describe("exportData and exportFiles", () => {
       true,
     );
     expect(readme).toContain(
-      "Times are UTC. Conditions are the reading dialed.run showed for each run: from Visual Crossing, or the band you set yourself.",
+      "Times are UTC. Conditions are the reading dialed.run showed for each run: from Visual Crossing, or the band you set yourself.\nWeather data provided by Visual Crossing: https://www.visualcrossing.com/\n",
     );
     for (const text of texts.slice(1)) {
       const [header = ""] = linesOf(texts, text.name);
@@ -695,6 +694,8 @@ describe("exportData and exportFiles", () => {
         `Made ${iso(NOW)}.`,
         "",
         "Times are UTC. Conditions are the reading dialed.run showed for each run: from Visual Crossing, or the band you set yourself.",
+        // D-144: the provider's credit, with the link its licence asks for.
+        "Weather data provided by Visual Crossing: https://www.visualcrossing.com/",
         // No upload, so no run-files/ sentence (round 35 #57).
         "photos/ holds your kit photos (photos/entries/) and garment photos (photos/closet/), at the size dialed.run keeps.",
         "",

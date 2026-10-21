@@ -108,9 +108,15 @@ test.describe("A2 · before a suggestion", () => {
     await page.goto(`/feed/attach/${runId}`);
     await hydrated(page);
 
-    // The header's sub-line: "6.2 MI · 41°F DAMP · 0 PIECES".
+    // The header's sub-line: "6.2 MI · 41°F DAMP · 0 PIECES", and under it
+    // Visual Crossing's credit, which closes the header. The sub-line is
+    // the provider's reading and the licence asks for the credit near it
+    // (D-144); round 22 predates that, so the credit is a recorded
+    // deviation beyond the board (docs/design-deltas.md #67, "A2's
+    // header"). The sub-line above it is still the board's.
     const header = await signatureOf(page, '[data-slot="header"]');
-    expect(header.at(-1)).toEqual(drawnHeader.at(-1));
+    expect(header.at(-1)).toEqual(["WEATHER DATA PROVIDED BY VISUAL CROSSING"]);
+    expect(header.at(-2)).toEqual(drawnHeader.at(-1));
 
     const waiting = page.locator(MOST_LIKELY);
     await expect(waiting).toHaveAttribute("data-state", "waiting");

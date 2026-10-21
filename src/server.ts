@@ -16,6 +16,7 @@ import {
 } from "./modules/ops";
 import { forgetAnsweredRequests } from "./modules/account/answered-requests";
 import { exportConsumersFromEnv } from "./modules/account/export-build";
+import { d1RequestDepsFromEnv, respondInD1Scope } from "./modules/auth";
 import { sweepExpiredAuthRows } from "./modules/auth/expired-rows";
 import { rescreenHandlesFromEnv } from "./modules/account/handle-rescreen";
 import { sweepExports } from "./modules/account/export-sweep";
@@ -35,9 +36,18 @@ export default {
       // The nonce goes to the framework as request context, where
       // router.tsx reads it onto every inline script, and to the CSP that
       // admits exactly those scripts.
+      //
+      // Design 143: the request is one D1 scope, so its reads share a
+      // session that may be a read replica, started from the device's and
+      // the runner's bookmarks; the newest one goes back in the `d1b`
+      // cookie.
       const nonce = mintNonce();
       return secureResponse(
-        await startFetch(request, { context: { nonce } }),
+        await respondInD1Scope(
+          request,
+          () => startFetch(request, { context: { nonce } }),
+          d1RequestDepsFromEnv(),
+        ),
         nonce,
       );
     } catch (error) {

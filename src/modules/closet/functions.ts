@@ -4,9 +4,8 @@
  * TanStack virtual entries.
  */
 import { createServerFn } from "@tanstack/react-start";
-import { drizzle } from "drizzle-orm/d1";
 
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import { requireUserId } from "../auth";
 import {
   closetFiltersInput,
@@ -30,7 +29,7 @@ import {
 import { addFromTapList, tapListSelectionSchema } from "./tap-list";
 
 function db() {
-  return drizzle(env.DIALED_CORE);
+  return coreDb();
 }
 
 export const listItemsFn = createServerFn({ method: "GET" })

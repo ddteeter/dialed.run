@@ -6,16 +6,15 @@
  * in ./functions stays in the client copy of that file, and takes the
  * bindings with it.
  */
-import { drizzle } from "drizzle-orm/d1";
 
-import { env } from "../../env";
+import { coreDb, env } from "../../env";
 import { oneClickUnsubscribe } from "./landing";
 
 export function oneClickUnsubscribeResponse(
   request: Request,
 ): Promise<Response> {
   return oneClickUnsubscribe(
-    drizzle(env.DIALED_CORE),
+    coreDb(),
     env.UNSUBSCRIBE_SECRET,
     request,
   );

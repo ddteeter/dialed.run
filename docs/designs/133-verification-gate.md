@@ -157,7 +157,7 @@ refusal read as nobody, for a door that answers "no" as not-found).
 | feed/followStatusQuery                   | GET  | following?                                   | no                                                | R      | U                        |
 | feed/followingFeedQuery                  | GET  | E1                                           | no                                                | R      | U                        |
 | feed/yourConditionsQuery                 | GET  | E2 consensus                                 | no                                                | R      | U                        |
-| feed/conditionsHomeQuery                 | GET  | saved place                                  | no                                                | R      | U                        |
+| feed/feedConditionsQuery                 | GET  | saved place                                  | no                                                | R      | U                        |
 | feed/saveConditionsCityAction            | POST | save place                                   | no                                                | R      | U                        |
 | feed/viewerUnitsQuery                    | GET  | units                                        | no                                                | O      | S                        |
 | feed/ownProfileQuery                     | GET  | G                                            | no                                                | R      | U                        |

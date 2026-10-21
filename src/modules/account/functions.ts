@@ -5,10 +5,10 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { drizzle } from "drizzle-orm/d1";
 
-import { env, waitUntil } from "../../env";
+import { coreDb, env, primaryCoreDb, waitUntil } from "../../env";
 import { accountDeletionInput, usernameInput } from "../../lib/contracts";
+import { blockedRegionOf } from "../../lib/contracts/access";
 import {
   checkCurrentPassword,
   currentSessionId,
@@ -80,7 +80,7 @@ import {
 } from "./verification";
 
 function db() {
-  return drizzle(env.DIALED_CORE);
+  return coreDb();
 }
 
 /**
@@ -221,13 +221,15 @@ export const turnstileSiteKeyQuery = createServerFn({ method: "GET" }).handler(
 export const requestAccessFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => requestAccessInput.parse(data))
   .handler(async ({ data }) =>
+    // Primary: its abuse limits gate the write (D-123, design 143).
     requestAccess(
-      db(),
+      primaryCoreDb(),
       {
         email: data.email,
         note: data.note,
         attempt: turnstileAttempt(data.turnstileToken, getRequest()),
         isLimited: deploymentPosture(env.BETTER_AUTH_URL).rateLimited,
+        blockedRegion: blockedRegionOf(getRequest()),
       },
       verifyTurnstileToken,
     ),
@@ -294,8 +296,8 @@ export const revokeInviteCodeFn = createServerFn({ method: "POST" })
   });
 
 /**
- * A legal page (ACC-13): its text if it is finished, and the bell's count
- * for a signed-in reader. No session needed — the policy is for anyone.
+ * A legal page (ACC-13): its text if it is finished, and the bell for a
+ * signed-in reader. No session needed — the policy is for anyone.
  */
 const legalPageQuery = createServerFn({ method: "GET" })
   .validator((data: unknown) => legalPageInput.parse(data))
@@ -373,8 +375,8 @@ export const leavingQuery = createServerFn({ method: "GET" })
  * What `/account/terms` shows this visitor (ACC-6): the prompt, for a
  * signed-in runner behind on the terms.
  */
-const termsPromptQuery = createServerFn({ method: "GET" }).handler(
-  async () => termsPromptView(db(), await optionalUserId()),
+const termsPromptQuery = createServerFn({ method: "GET" }).handler(async () =>
+  termsPromptView(db(), await optionalUserId()),
 );
 
 /**
@@ -389,11 +391,11 @@ export const acceptTermsFn = createServerFn({ method: "POST" })
 
 /**
  * `/privacy`, `/terms` and `/copyright`'s loader (ACC-13): the page's
- * text, or X1 while it is unpublished, and the bell's count.
+ * text, or X1 while it is unpublished, and the bell.
  */
 export async function legalPageLoader(slug: LegalSlug) {
   const page = await legalPageQuery({ data: { slug } });
-  return { doc: legalDocOrNotFound(page.doc), unreadCount: page.unreadCount };
+  return { doc: legalDocOrNotFound(page.doc), bellState: page.bellState };
 }
 
 /**

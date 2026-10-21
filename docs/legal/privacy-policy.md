@@ -444,17 +444,25 @@ not sell or rent your data to anyone.
 | Have I Been Pwned                 | Superlative Enterprises Pty Ltd | Receives no personal data | Leaked-password check                                                   | The first five characters of your password's SHA-1 hash, from our server, with nothing that identifies you | Australia                | None needed: what it receives is not personal data                                                                      |
 | GoatCounter (marketing site only) | Martin Tournoij (Ireland)       | Processor                 | Counts page views on dialed.run                                         | Your IP address and browser, held in memory for up to 8 hours and not stored                               | Finland and Germany (EU) | None needed: no transfer out of the EU                                                                                  |
 
-We are in the United States, and your data is stored in North America. The
-app runs on Cloudflare's network, so a request may be handled in the
-Cloudflare data centre nearest you before it reaches our storage. If you are
-in the European Economic Area, the United Kingdom or Switzerland, your data
-is transferred to the United States. Where a service is certified under the
-EU-U.S. Data Privacy Framework (and its UK and Swiss extensions), we rely on
-that certification; otherwise we rely on the European Commission's standard
-contractual clauses, with the UK addendum, included in that service's data
-processing terms. Visual Crossing and Firecrawl receive only rounded
-locations and dates, or product links, with nothing that names you. You can
-ask us for a copy of the safeguards at hello@dialed.run.
+We are in the United States, and your data is stored in North America. To
+keep the app fast wherever you open it, Cloudflare also keeps read-only
+copies of our databases in its data centres in Europe, Asia-Pacific and
+Oceania. Your photos and files are not copied; they stay in North America.
+The app itself runs on Cloudflare's network, so a request may be handled in
+the Cloudflare data centre nearest you before it reaches our storage.
+
+If you are in the European Economic Area, the United Kingdom or
+Switzerland, your data is transferred to the United States and to those
+other regions. Where a service is certified under the EU-U.S. Data Privacy
+Framework (and its UK and Swiss extensions), we rely on that certification;
+otherwise we rely on the European Commission's standard contractual
+clauses, with the UK addendum, included in that service's data processing
+terms. Cloudflare's terms apply wherever it holds the data. Google and
+Strava act for themselves when you sign in with Google or connect Strava,
+under their own privacy policies. Visual Crossing, Firecrawl and Have I
+Been Pwned receive nothing that names you: rounded places and dates,
+product links, and five characters of a password hash. You can ask us for a
+copy of the safeguards at hello@dialed.run.
 
 ## Cookies and browser storage
 
@@ -464,6 +472,9 @@ ask us for a copy of the safeguards at hello@dialed.run.
   hijacked.
 - **An age-check cookie**, only if sign-up refused a date of birth as
   under 18, for one day (see [Children](#children)).
+- **A database position cookie**, for one day, so the next page you open
+  shows at least what you last saw or saved. It holds a position in our
+  database's history, not anything about you.
 - **In your browser's storage:** whether you turned face blur off, so we
   do not load the face detector again; your account id, so a tab knows
   when you have signed in as someone else; and, for one tab and only

@@ -17,7 +17,11 @@ import { useState } from "react";
 import type { ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { INVITE_COPY, TURNSTILE_REFUSED } from "../../src/lib/contracts/access";
+import {
+  INVITE_COPY,
+  REGION_BLOCKED_COPY,
+  TURNSTILE_REFUSED,
+} from "../../src/lib/contracts/access";
 import { signUpSchema } from "../../src/lib/contracts";
 import { AUTH_COPY } from "../../src/modules/auth/auth-copy";
 import {
@@ -370,6 +374,7 @@ describe("Au2 · Google in the invite stage", () => {
   it.each([
     ["INVITE_MISSING", AUTH_COPY.googleNoCode, false],
     ["INVITE_INVALID", INVITE_COPY.invalid, true],
+    ["REGION_BLOCKED", REGION_BLOCKED_COPY, false],
   ])(
     "says a new Google account's %s from the round trip as round 28 #9 draws it",
     async (error, message, linksRequestAccess) => {
@@ -425,6 +430,26 @@ describe("Au2 · date of birth (design 134)", () => {
     // Round 35 #56c: a retry is refused for a day, so the band offers
     // nothing to press.
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
+  it("puts a blocked state's refusal in the band as NOT CREATED, with nothing to press", async () => {
+    client.signUp.mockResolvedValue({
+      data: undefined,
+      error: { code: "REGION_BLOCKED", status: 403 },
+    });
+    const { user } = await signUpPage();
+    await fill(user, "DIAL-7K3P");
+    await user.click(screen.getByRole("button", { name: "Create account" }));
+    const band = await waitFor(() => {
+      const found = part("failure-band");
+      expect(found).not.toBeNull();
+      return found;
+    });
+    expect(band).toHaveTextContent(`Not created${REGION_BLOCKED_COPY}`);
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      `Not created. ${REGION_BLOCKED_COPY}`,
+    );
   });
 
   it("carries the date with Google", async () => {

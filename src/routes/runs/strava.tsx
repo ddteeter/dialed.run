@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
-import { unreadNotificationCountFn } from "../../modules/notifications/functions";
+import { bellStateFn } from "../../modules/notifications/functions";
 import { StravaConnect } from "../../modules/runs/components/StravaConnect";
 import {
   disconnectStravaFn,
@@ -11,20 +11,20 @@ import { Page } from "../../ui";
 
 export const Route = createFileRoute("/runs/strava")({
   loader: async () => {
-    const [strava, unreadCount] = await Promise.all([
+    const [strava, bell] = await Promise.all([
       getStravaStatusFn(),
-      unreadNotificationCountFn(),
+      bellStateFn(),
     ]);
-    return { strava, unreadCount };
+    return { strava, bell };
   },
   component: StravaPage,
 });
 
 function StravaPage() {
-  const { strava, unreadCount } = Route.useLoaderData();
+  const { strava, bell } = Route.useLoaderData();
 
   return (
-    <BelledLayout unreadCount={unreadCount}>
+    <BelledLayout {...bell}>
       <Page title="Strava" width="column">
         <p className="text-small text-muted">
           We never store your Strava activity data — connecting only turns on a

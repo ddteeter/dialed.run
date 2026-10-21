@@ -13,10 +13,9 @@
  * no longer step around them.
  */
 import { and, eq, inArray } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 
 import { manualConditions, weatherObservations } from "../../db/schema-weather";
-import { env } from "../../env";
+import { weatherDb } from "../../env";
 import type { Ulid } from "../../lib/ids";
 import { newUlid } from "../../lib/ids";
 import type { ManualSky, WeatherObservation } from "../../lib/contracts";
@@ -47,10 +46,6 @@ export function cacheKeyFor(lat: number, lng: number, at: Date): CacheKey {
     lngR: roundCoord(lng),
     hourBucket: hourBucketFor(at),
   };
-}
-
-function weatherDb() {
-  return drizzle(env.DIALED_WEATHER);
 }
 
 /**
@@ -121,12 +116,10 @@ async function upsertObservation(
 export async function upsertRealObservation(
   key: CacheKey,
   observation: WeatherObservation,
-  runId: Ulid | undefined,
 ): Promise<ObservationRow> {
   const fetchedAt = nowSeconds();
   const values = {
     id: newUlid(),
-    runId,
     latR: key.latR,
     lngR: key.lngR,
     hourBucket: key.hourBucket,
@@ -166,6 +159,19 @@ export async function upsertManualBand(
       target: manualConditions.runId,
       set: { tempC, setAt: stampedAt, sky: orSqlNull(sky) },
     });
+}
+
+/**
+ * A deleted run's band, gone (C1). Owed through the outbox by the run's
+ * delete, because this database is not the one the run lived in (law 8c),
+ * so it runs at least once: deleting a row already gone deletes nothing.
+ * Only a run's delete calls it, and a deleted run cannot be given a band
+ * again — `recordManualObservation` reads the run first.
+ */
+export async function forgetManualBand(runId: string): Promise<void> {
+  await weatherDb()
+    .delete(manualConditions)
+    .where(eq(manualConditions.runId, runId));
 }
 
 export type ManualBandRow = typeof manualConditions.$inferSelect;

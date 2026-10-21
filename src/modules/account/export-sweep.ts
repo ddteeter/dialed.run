@@ -8,10 +8,10 @@
  * purge documents): the Worker entry hands it to `handleScheduled`.
  */
 import { and, asc, eq, inArray, lt, lte, or } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
+import type { drizzle } from "drizzle-orm/d1";
 
 import { dataExports } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb, env } from "../../env";
 import { EXPORT_LINK_TTL_S } from "../../lib/contracts/data-export";
 import { nowSeconds } from "../../lib/now";
 import { captureException } from "../ops";
@@ -51,7 +51,7 @@ export interface SweepDeps {
 
 function liveSweepDeps(): SweepDeps {
   return {
-    db: drizzle(env.DIALED_CORE),
+    db: coreDb(),
     bucket: env.IMPORTS,
     queue: env.EXPORTS_QUEUE,
     report: captureException,

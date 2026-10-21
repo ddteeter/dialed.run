@@ -60,10 +60,11 @@ describe("StravaCallbackResult", () => {
     ).toBeVisible();
     // The reason is the server's diagnostic, not the runner's sentence.
     expect(screen.queryByText("The user declined.")).toBeNull();
-    // Try again is another trip through the connect redirect.
+    // Try again goes back to T1, where the Strava consent is read before
+    // the official button — never straight to the OAuth redirect.
     expect(screen.getByRole("link", { name: "Try again" })).toHaveAttribute(
       "href",
-      "/runs/strava-connect",
+      "/runs/strava",
     );
     expect(screen.getByRole("link", { name: "Not now" })).toHaveAttribute(
       "href",

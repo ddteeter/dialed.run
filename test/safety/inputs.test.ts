@@ -10,7 +10,10 @@ import {
   reviewDecisionInput,
   takedownRequestInput,
 } from "../../src/modules/safety";
-import { runRemovalsInput } from "../../src/modules/safety/inputs";
+import {
+  ncmecReportInput,
+  runRemovalsInput,
+} from "../../src/modules/safety/inputs";
 import { declineReasonField } from "../../src/modules/safety/contracts";
 
 /**
@@ -379,5 +382,43 @@ describe("the run a page asks the removals of (R-140)", () => {
       runRemovalsInput.safeParse({ runId: "abc", since: 1.5 }).success,
     ).toBe(false);
     expect(runRemovalsInput.parse({ runId: "abc", since: 7 }).since).toBe(7);
+  });
+});
+
+describe("the NCMEC report a quarantine records (C12)", () => {
+  const recordId = newUlid();
+
+  it("takes no report number as none, and an empty one the same", () => {
+    expect(ncmecReportInput.parse({ recordId })).toStrictEqual({ recordId });
+    expect(ncmecReportInput.parse({ recordId, reportId: "  " })).toStrictEqual(
+      { recordId, reportId: undefined },
+    );
+  });
+
+  it("keeps a number as NCMEC gave it, trimmed, up to 40 characters", () => {
+    expect(
+      ncmecReportInput.parse({ recordId, reportId: " 123-abc_9 " }),
+    ).toStrictEqual({ recordId, reportId: "123-abc_9" });
+    const longest = "9".repeat(40);
+    expect(
+      ncmecReportInput.parse({ recordId, reportId: longest }).reportId,
+    ).toBe(longest);
+  });
+
+  it("refuses anything else, in words the operator reads", () => {
+    for (const reportId of ["9".repeat(41), "12 34", "<b>"]) {
+      const result = ncmecReportInput.safeParse({ recordId, reportId });
+      expect(result.error?.issues.map((issue) => issue.message)).toStrictEqual(
+        [
+          "Paste the report number as NCMEC gave it: letters, digits and dashes, 40 at most.",
+        ],
+      );
+    }
+  });
+
+  it("refuses a record id that is not one", () => {
+    expect(
+      ncmecReportInput.safeParse({ recordId: "not-a-ulid" }).success,
+    ).toBe(false);
   });
 });

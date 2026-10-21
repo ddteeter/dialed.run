@@ -4,9 +4,8 @@
  * (and only from here) — no business logic lives in `src/routes/feed/`.
  */
 import { createServerFn } from "@tanstack/react-start";
-import { drizzle } from "drizzle-orm/d1";
 
-import { env, waitUntil } from "../../env";
+import { coreDb, waitUntil } from "../../env";
 import { optionalUserId, requireUserId, verifiedUserId } from "../auth";
 import {
   attachKitInput,
@@ -25,6 +24,7 @@ import {
 } from "./inputs";
 import { attachContext, attachRunInput, prefillForRun } from "./attach-context";
 import { saveBacklogRow, unjudgedRunCount, verdictBacklog } from "./backlog";
+import { feedConditions } from "./compact-conditions";
 import { consensusAt } from "./consensus";
 import {
   attachKit,
@@ -37,7 +37,6 @@ import {
 } from "./entries";
 import { bandSignalsForEntry } from "./band-signals";
 import { followingFeed } from "./feed";
-import { conditionsHome } from "./home";
 import { follow, isFollowing, unfollow } from "./follows";
 import { photoUploadFrom, uploadPhoto } from "./photos";
 import { deleteEntryPhoto, photoIdInput, retractEntry } from "./retract";
@@ -212,11 +211,13 @@ export const yourConditionsQuery = createServerFn({ method: "GET" })
   });
 
 /**
- * Where the tab looks without asking: the profile's saved location, and
- * the city label if one was typed (round 22, E2-lite).
+ * For the Following feed's loader, from one profile read: where the
+ * Conditions tab looks without asking — the saved location, and the city
+ * label if one was typed (round 22, E2-lite) — and E1's compact line
+ * (FEED-9), the viewer's conditions matched there, or nothing.
  */
-export const conditionsHomeQuery = createServerFn({ method: "GET" }).handler(
-  async () => conditionsHome(await requireUserId()),
+export const feedConditionsQuery = createServerFn({ method: "GET" }).handler(
+  async () => feedConditions(await requireUserId(), nowSeconds()),
 );
 
 /**
@@ -228,7 +229,7 @@ export const conditionsHomeQuery = createServerFn({ method: "GET" }).handler(
 export const saveConditionsCityAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => placeInput.parse(input))
   .handler(async ({ data }) =>
-    savePlace(drizzle(env.DIALED_CORE), await requireUserId(), data, {
+    savePlace(coreDb(), await requireUserId(), data, {
       zoneAt: timeZoneAt,
       report: captureException,
       keepAlive: waitUntil,
@@ -245,7 +246,7 @@ export const saveConditionsCityAction = createServerFn({ method: "POST" })
  * unit preference an auth gate on the feed.
  */
 export const viewerUnitsQuery = createServerFn({ method: "GET" }).handler(
-  async () => unitsFor(drizzle(env.DIALED_CORE), await optionalUserId()),
+  async () => unitsFor(coreDb(), await optionalUserId()),
 );
 
 // ---- Profiles (G/H) -----------------------------------------------------------
@@ -318,14 +319,14 @@ export const retractEntryAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => entryIdInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    await retractEntry(drizzle(env.DIALED_CORE), userId, data.entryId);
+    await retractEntry(coreDb(), userId, data.entryId);
   });
 
 export const deleteEntryPhotoAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => photoIdInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    await deleteEntryPhoto(drizzle(env.DIALED_CORE), userId, data.photoId);
+    await deleteEntryPhoto(coreDb(), userId, data.photoId);
   });
 
 /**
@@ -339,7 +340,7 @@ export const garmentBandCountQuery = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     return garmentBandCountOrNone(
-      drizzle(env.DIALED_CORE),
+      coreDb(),
       userId,
       data.itemId,
     );
@@ -354,7 +355,7 @@ export const decideReviewAction = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const reviewerId = requireAdmin(await verifiedUserId());
     return {
-      outcome: await decideReview(drizzle(env.DIALED_CORE), reviewerId, data),
+      outcome: await decideReview(coreDb(), reviewerId, data),
     };
   });
 
@@ -366,7 +367,7 @@ export const takedownAction = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const actorId = requireAdmin(await verifiedUserId());
     return {
-      outcome: await moderateContent(drizzle(env.DIALED_CORE), {
+      outcome: await moderateContent(coreDb(), {
         actorId,
         action: "takedown",
         subjectType: data.subjectType,
@@ -386,7 +387,7 @@ export const decideRemovalRequestAction = createServerFn({ method: "POST" })
     const actorId = requireAdmin(await verifiedUserId());
     return {
       outcome: await decideRemovalRequest(
-        drizzle(env.DIALED_CORE),
+        coreDb(),
         actorId,
         data.requestId,
         data,

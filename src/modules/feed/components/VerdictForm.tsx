@@ -103,6 +103,7 @@ function verdictChosen(value: VerdictValue): string {
 const VERDICT_RESTING = `${VERDICT_BASE} border border-hairline`;
 import { submitVerdictInput } from "../inputs";
 import { BandHistory } from "./BandHistory";
+import { isProvidersReading } from "../strip";
 import { NotedReceipt } from "./NotedReceipt";
 import { SpecificsSheet } from "./SpecificsSheet";
 import { VerdictChips } from "./VerdictChips";
@@ -201,6 +202,11 @@ function RunHeader({
       <Mono step="xs" className="hidden text-dialed-text wide:block">
         {when} · {headline}
       </Mono>
+      {/* The headline is the provider's reading at every width, and below
+          the desk the rail that also credits it is not drawn (D-144). */}
+      {isProvidersReading(entry.conditions) ? (
+        <WeatherAttribution />
+      ) : undefined}
     </header>
   );
 }

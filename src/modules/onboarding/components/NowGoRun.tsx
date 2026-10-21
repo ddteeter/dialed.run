@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
 import { CALL_VERDICT_THRESHOLD } from "../../../lib/contracts";
-import { Mono, StravaButton } from "../../../ui";
+import { Mono, StravaConsent } from "../../../ui";
 
 /**
  * What the loop does with what a runner logs — P3's numbered list.
@@ -131,7 +131,7 @@ function StravaOffer(): JSX.Element {
       </div>
       {/* Strava's own button in our pill's place, left-aligned (round 26,
           item 21; task 127, STR-7). */}
-      <StravaButton />
+      <StravaConsent />
       <p className="m-0 text-micro text-muted">
         We read that a run happened. Nothing else.
       </p>

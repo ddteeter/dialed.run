@@ -26,7 +26,6 @@ import {
 import type { SQL } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
-import { drizzle } from "drizzle-orm/d1";
 
 import {
   entryPhotos,
@@ -34,7 +33,7 @@ import {
   reports,
   reviewQueue,
 } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import { columnWhere, hasRowWhere } from "../../lib/sql/keyed-read";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
@@ -107,7 +106,7 @@ function removalAlerts(
 }
 
 function db() {
-  return drizzle(env.DIALED_CORE);
+  return coreDb();
 }
 
 export interface FileReportInput {

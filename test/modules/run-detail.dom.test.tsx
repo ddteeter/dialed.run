@@ -116,7 +116,9 @@ describe("R: the conditions row", () => {
     expect(block).toHaveTextContent("damp");
     expect(block).toHaveTextContent("Feels 36° · 88% hum · 9mph · Light rain");
     expect(
-      within(block).getByRole("link", { name: "Weather by Visual Crossing" }),
+      within(block).getByRole("link", {
+        name: "Weather data provided by Visual Crossing",
+      }),
     ).toBeVisible();
     // No correction note here: only A1's card can move the time.
     expect(block).not.toHaveTextContent("Never typed by hand");

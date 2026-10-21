@@ -5,7 +5,6 @@
  * entries (no aggregates, no offset translation).
  */
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import {
@@ -14,7 +13,7 @@ import {
   runs,
   userProfiles,
 } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import { garmentNamesByIds } from "./garment-names";
 import { readInChunks } from "../../lib/chunked";
 import { bandLabel } from "../../lib/contracts/temperature";
@@ -32,7 +31,7 @@ import { runnersVisibleTo } from "./runner-visibility";
 import { outfitEntriesSelect } from "./entries-query";
 
 function db() {
-  return drizzle(env.DIALED_CORE);
+  return coreDb();
 }
 
 const RECENT_LIMIT = 20;

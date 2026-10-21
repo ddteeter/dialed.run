@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 
 import type { GaveUpKind } from "../../../lib/contracts/gave-up";
-import { calendarDay, monthDayLabel, timeOfDay } from "../../../lib/dates";
+import { calendarDay, longDayLabel, monthDayLabel, timeOfDay } from "../../../lib/dates";
 import {
   ControlFailureBand,
   FormStatus,
@@ -38,20 +38,6 @@ const DAY_SECONDS = 86_400;
 How many Gave up rows show before "Show all" (round 29 B·2: "the two newest").
 */
 const FIRST_SHOWN = 2;
-
-/**
- * The date the counts were read on, US order (round 26 #9): "Tuesday,
- * Sep 16". In UTC, the digest's own day, so the server's render and the
- * hydrated one agree whatever the operator's zone.
- */
-function dayOf(asOf: number): string {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(asOf * 1000));
-}
 
 function Stat({
   count,
@@ -413,7 +399,7 @@ export function Today({
     <div className="flex flex-col gap-10">
       <section aria-labelledby="desk-today" className="flex flex-col gap-8">
         <h1 id="desk-today" className="font-display text-title uppercase">
-          {dayOf(asOf)}
+          {longDayLabel(asOf)}
         </h1>
         <ul aria-label="Today" className="flex flex-col gap-6">
           <Stat count={counts.waiting} needsPerson note={oldest}>

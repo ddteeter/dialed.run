@@ -27,6 +27,7 @@ import { TERMS_NOT_ACCEPTED_CODE } from "../../src/lib/auth-signal";
 import type { PhotoStep } from "../../src/ui";
 import { TermsRefusalAnswer } from "../../src/ui";
 import { expectAvailable, expectBusy } from "../ui/unavailable";
+import { queryWeatherCredit, WEATHER_CREDIT } from "../ui/weather-credit";
 
 /**
  * Attach the kit (screen A2), to round 22's two frames and round 20's
@@ -281,6 +282,25 @@ describe("AttachKit: the header", () => {
     await renderWithRouter(attach({ units: { temp: "c", distance: "km" } }));
 
     expect(screen.getByText("10.0 km · 5°C damp · 0 pieces")).toBeVisible();
+  });
+
+  it("credits Visual Crossing under the sub-line that carries its reading (D-144)", async () => {
+    await renderWithRouter(attach());
+
+    expect(queryWeatherCredit(screen.getByRole("banner"))).not.toBeNull();
+    // Once for the screen: the filter and MOST LIKELY repeat the reading.
+    expect(screen.getAllByRole("link", { name: WEATHER_CREDIT })).toHaveLength(
+      1,
+    );
+  });
+
+  it("credits nobody for conditions that are not the provider's", async () => {
+    await renderWithRouter(
+      attach({
+        context: context({ conditions: { ...conditions, source: "manual" } }),
+      }),
+    );
+    expect(queryWeatherCredit(document.body)).toBeNull();
   });
 });
 

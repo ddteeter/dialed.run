@@ -2,7 +2,8 @@
  * Covers: D8 (Desk · Runners: Rename and Close account), the review
  * queue's Remove that deletes, and round 28 #8's review row (the row
  * opens itself; suspected CSAM asks again), and a flagged handle's row
- * with its Keep (round 35 #45), then the author's run after a Remove
+ * with its Keep (round 35 #45), the quarantine with its NCMEC report
+ * recorded (C12, design 145), then the author's run after a Remove
  * (round 27 #20, R-140: the band in place of the entry) — one journey,
  * one video.
  *
@@ -22,6 +23,7 @@ import {
   moderationActions,
   notifications,
   outfitEntries,
+  quarantinedContent,
   reviewQueue,
   runs,
   userProfiles,
@@ -46,6 +48,8 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   const queueId = newUlid();
   const flaggedId = newUlid();
   const flaggedHandle = `edgy_${suffix}`;
+  const quarantineId = newUlid();
+  const reportNumber = `E2E-${suffix}`;
   const now = nowSeconds();
 
   // One runner with one reported public entry. Scoped to ids generated
@@ -115,6 +119,20 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
       source: "classifier",
       status: "pending",
       createdAt: now - 300,
+    });
+    // A quarantined record not yet reported to NCMEC (C12). Synthetic: no
+    // content and no photos, only the record's own columns.
+    await core.insert(quarantinedContent).values({
+      id: quarantineId,
+      moderationActionId: newUlid(),
+      subjectType: "entry",
+      subjectId: newUlid(),
+      uploaderId: runnerId,
+      entryId: newUlid(),
+      entrySnapshot: "{}",
+      photosSnapshot: "[]",
+      quarantinedAt: now,
+      retainUntil: now + 365 * 86_400,
     });
   });
 
@@ -188,6 +206,24 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
     page.getByRole("listitem").filter({ hasText: flaggedHandle }),
   ).toHaveCount(0);
 
+  // C12: recording the CyberTipline report keeps the record a year from
+  // the report, and the row says so at once.
+  await scene(page, "Quarantine: record the NCMEC report");
+  const held = page
+    .locator("[data-part='quarantine-record']")
+    .filter({ hasText: runnerId });
+  await held.scrollIntoViewIfNeeded();
+  await expect(held.getByText("[not reported to NCMEC]")).toBeVisible();
+  await held
+    .getByRole("textbox", { name: /CyberTipline report number/ })
+    .fill(reportNumber);
+  await held.getByRole("button", { name: "Record the NCMEC report" }).click();
+  await expect(held.getByText("Report recorded.")).toBeVisible();
+  await expect(held.locator("[data-part='ncmec']")).toContainText(
+    /\[reported to NCMEC .+\]/,
+  );
+  await expect(held.locator("[data-part='ncmec']")).toContainText(reportNumber);
+
   await scene(page, "D8: find the runner by email");
   await page.goto("/desk/runners");
   await hydrated(page);
@@ -224,6 +260,14 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
       .select({ bannedAt: userProfiles.bannedAt })
       .from(userProfiles)
       .where(eq(userProfiles.userId, runnerId)),
+    quarantine: await core
+      .select({
+        reportedAt: quarantinedContent.ncmecReportedAt,
+        reportId: quarantinedContent.ncmecReportId,
+        retainUntil: quarantinedContent.retainUntil,
+      })
+      .from(quarantinedContent)
+      .where(eq(quarantinedContent.id, quarantineId)),
   }));
   expect(left.entries).toStrictEqual([]);
   expect(
@@ -235,6 +279,11 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
     "A moderator removed this entry from the feed: it's an ad or spam.",
   );
   expect(left.profile[0]?.bannedAt).toEqual(expect.any(Number));
+  const report = left.quarantine[0];
+  expect(report?.reportId).toBe(reportNumber);
+  expect(report?.reportedAt).toBeGreaterThanOrEqual(now);
+  // A year from the report, which is later than the quarantine's own year.
+  expect(report?.retainUntil).toBe((report?.reportedAt ?? 0) + 365 * 86_400);
 
   // R-140: the author's side of a Remove. The demo runner above has no
   // login, so the band is shown on the safety account's own run: a run

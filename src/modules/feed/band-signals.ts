@@ -1,12 +1,11 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 
 import {
   entryTags,
   outfitEntries,
   outfitEntryItems,
 } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb } from "../../env";
 import { chunked, IN_LIST_CHUNK } from "../../lib/chunked";
 import { verdictedEntriesInBand } from "./entries";
 
@@ -42,7 +41,7 @@ export interface BandSignals {
 }
 
 function db() {
-  return drizzle(env.DIALED_CORE);
+  return coreDb();
 }
 
 /**

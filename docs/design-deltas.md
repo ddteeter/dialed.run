@@ -1035,6 +1035,160 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       neither words nor a place; a signed-in runner already has the reason
       itself. Not built. **The ask:** the words and where they sit in W1.
 
+64. **"Private" no longer says "only you" (owner, 2026-10-12; D-121, PR
+    #182).** The policy now says private means not shown to other runners
+    or the public; operators may see content for named reasons. Lane D1
+    (PR #187) rewrote the drawn copy that promised more, against the
+    boards' words:
+    - A3/PrivateRunLine: "Only you see this run." → "Other runners won't
+      see this run."
+    - The UNDER REVIEW tag's spoken name (round 29 #4): "Under review,
+      only you can see this" → "Under review, other runners can't see
+      this".
+    - D's "Hidden while we check" band (round 28 #6): "Only you can see
+      this while we look at it." → "Other runners can't see this while we
+      look at it."
+    - The garment photo's "Being checked" band (round 27 #21): "Only you
+      can see this photo until it's checked, usually within a day." →
+      "Other runners can't see this photo until it's checked, usually
+      within a day."
+    - The export's `audience` column note: "private means only you" →
+      "private means other runners don't see it".
+    - **The verbs differ by tense, on purpose:** A3's "won't" is said
+      before the run is saved, a promise; the review tag and bands' "can't"
+      describe something already there and hidden; the export's "don't"
+      states the rule. All of them name the same audience, other runners.
+    - **Kept:** the closet tile's `[ONLY YOU]` tag on a photo being
+      checked. It is a MONO.xs tag in a tile's kicker, where "other runners
+      can't see this" does not fit, and the band on the garment's own page
+      says the full sentence.
+    - Settings › Sharing's totals line (round 32, 1a): "Never your name,
+      notes, photos, or where and when you ran." → "Never your name,
+      notes, photos, when you ran, or any place more precise than a broad
+      climate zone." Totals count a climate zone derived from where a run
+      was (D-120), so "where" was untrue.
+    - **U2's conditions pool folds into that switch** (owner, 2026-10-12).
+      U2's "THE CONDITIONS POOL" card is not drawn separately: Settings ›
+      Privacy's one totals switch (one writer, `setCountInTotals`) now also
+      leaves a runner's shared runs out of the in-app Same conditions block,
+      and its lines say so — on: "…to the guides and reports, and shared
+      runs count in the Same conditions block other runners see. Never…";
+      off: "Off. Your runs leave the guides at tonight's update. They leave
+      the Same conditions block now, and it still works for you. Reports
+      already published stay as they are." **Proposed wording, awaiting
+      the owner's.** U2's SHARED/NEVER table is not built.
+      **The ask:** fold these into the boards, or reword them.
+
+65. **E1's compact line, composed from the E2 frame (FEED-9; PR #187).**
+    Round 25 rewords "E1's compact line", but no E1 frame draws a
+    conditions line; the sentence is drawn only on `Remaining Screens`'
+    unbuilt "E2 Feed your conditions" frame. Built from that frame's
+    composition, with contract values: a teal band (`bg-teal`, ink text),
+    the SAME CONDITIONS eyebrow without a window (MONO.xs), and the line
+    "{n} runners logged {feels}° and {precip} in the last 3 days." at
+    `text-body` semibold, at the top of Following above the posts. Three
+    things the frame does not say: the match widened to fourteen days reads
+    "in the last 2 weeks"; with no saved place, no fresh reading there, or
+    fewer than five runners, there is no line; Following with no posts
+    keeps its empty state and draws no line. **The ask:** draw E1's line
+    where it sits, and its widened and absent states.
+
+66. **The Strava consent before the Connect button (owner, 2026-10-18; D-143).**
+    Strava's API Policy §2.1 (1 June 2026) requires consent before the
+    OAuth redirect that says what is collected, how, how to withdraw, how
+    to ask for deletion, and that deletion is confirmed. Built as
+    `ui/StravaConsent`: the owner's three approved paragraphs
+    (`STRAVA_CONSENT` in `lib/copy.ts`) at `text-small`, inheriting the
+    surrounding colour, directly above Strava's unchanged official button.
+    It is the only way the button is drawn, so it sits on T1 (not
+    connected) and in P3's Strava offer (on ink, between "So we can
+    remind you. Optional." and "We read that a run happened. Nothing
+    else."). The callback receipt's "Try again" after a refused connect now returns to T1
+    instead of going straight to the redirect, so the consent is read on
+    every trip. Text only, no glyph or colour. **The ask:** draw the block
+    on T1 and in P3's offer (hierarchy, whether "What we collect" / "How"
+    / "Never" / "To stop" lead-ins become mono labels, and whether P3's
+    two existing captions stay beside it), and the receipt's Try again.
+67. **Visual Crossing's credit, reworded and placed on every conditions
+    surface (D-144).** The licence asks for "Weather Data Provided by
+    Visual Crossing", legible, near the data or anything derived from it,
+    linked to https://www.visualcrossing.com/, and not on a credits page.
+    The owner chose **"Weather data provided by Visual Crossing"**, linked
+    there, in a new tab. Round 1's line ("Weather by Visual Crossing") is
+    reworded everywhere it was already drawn: run detail's and A1's
+    conditions block, D's strip, the E1 card, Your conditions, A3's desk
+    rail and the backlog's rail. It is the same `WeatherAttribution` line
+    (`text-micro`, `text-muted`, no underline), and it shows only beside
+    the provider's reading, never beside a band the runner set. No board
+    draws it in these places, built with nothing new:
+    - **A2's header**, under the "6.2 MI · 41°F DAMP · 0 PIECES" sub-line,
+      on ink below `wide`; once for the screen, since the filter chip and
+      MOST LIKELY repeat the same reading.
+    - **A3's header**, closing it at every width, because below the desk the
+      rail that credits the reading is not drawn and the headline ("6.2 AT
+      41°") is the reading.
+    - **R, the runs list**: once under the list when any row shows a
+      reading, never on a row.
+    - **A1's duplicate receipt**, under its facts, and **A1's "Weather for"
+      block** while a corrected time is fetched, under WAS.
+    - **E1's compact line**: under the teal band rather than on it, because
+      `--muted` on teal is not a text pairing T1 gives.
+    - **H's "How you call it, by band"** and **K's "Your coverage"**: under
+      the list, since a feels-like band is derived from the reading.
+
+    Not credited, and why: the closet's "Works at" range is the runner's
+    own or the category estimate, never a reading. **The share card**
+    (OPS-16's entry card, 1200×630) prints the temperature in 150px type
+    and has no line for the credit; it is not served yet (every link gets
+    the default card), so nothing ships uncredited today. **The ask:**
+    draw the credit on the boards where it now sits, say whether A3's
+    header should drop it at the desk where the rail carries it, and
+    give the entry card a place for it before that card is wired.
+
+68. **Review's quarantine, and recording its NCMEC report (legal
+    readiness C12; design 145).** A report to NCMEC's CyberTipline must be
+    kept a year from the report, so Review now lists what quarantine holds
+    and lets the operator record that it was reported. Built at the foot of
+    Review from the removal-request row's parts, with placeholder words: a
+    section headed "Quarantine · N"; each row's subject type, `HELD {date}`
+    right, `UPLOADER {id}`, `KEPT UNTIL {date}`, and `[NOT REPORTED TO
+NCMEC]` or `[REPORTED TO NCMEC {date}] · {number}`; then an optional
+    "CyberTipline report number" field (hint: "Optional. Record it once the
+    report is filed; it is then kept a year from now.") and "Record the
+    NCMEC report". A record purged meanwhile reads "This record is gone:
+    its year was up." Dates are a new mono shape, `SEP 10 2026`, since a
+    year-long clock needs the year. Operator-only, so not blocking launch.
+    **The ask:** draw the section on Review, its reported and gone states,
+    and word them.
+
+69. **No new accounts from Mississippi or Tennessee (owner, 2026-10-18;
+    D-141; design 144).** Both states' age-verification laws are in force against
+    every provider, so a request Cloudflare places there cannot make an
+    account. It can still ask for access, because a waitlist entry is not
+    an account. Nothing is drawn. Built with existing primitives, text
+    only, in the owner's words:
+    - **Au2, email:** the form's failure band, kicker `NOT CREATED`, with no
+      Try again (the age refusal's shape): "dialed.run isn't open to new
+      sign-ups from Mississippi or Tennessee. State laws there require ID
+      age checks for every new account, which we don't do."
+    - **Au2, Google:** the same sentence in the control-failure band under
+      the button, `NOT CREATED`, with no link. It shows after the round trip
+      (`?error=REGION_BLOCKED`), because an existing Google account still
+      signs in from there.
+    - **Au5:** the request is taken, and the receipt ("You're on the list")
+      says, in place of its usual lines and its Create an account link:
+      "Thanks. Sign-up isn't open in Mississippi or Tennessee yet, because
+      state laws there require ID age checks for every new account. We'll
+      email you if that changes."
+    - **D7:** the request's row carries the state as a mono tag after the
+      address (`[TN]`). Where Send invite would be, it reads "No invite
+      while sign-up is closed in Tennessee." in `--quiet`, and Decline
+      stays.
+    - **Not drawn either:** nothing on Au2 warns in advance. The refusal is
+      the first a runner in those states hears of it.
+      **The ask:** word the sentences and confirm the four places, or draw
+      a notice on Au2 shown before the form is filled.
+
 ## Answered in round 37 (imported 2026-10-10)
 
 Design sent round 37 as `Round 37 Rulings.dc.html`, with the text of record
@@ -3807,6 +3961,14 @@ contract values moved.
 FEELS [{lo}–{hi}°] · {PRECIP} · {WINDOW}`; line "In {feels}° and
   {precip}, {window}, wherever they were." Wind leaves the eyebrow; no line
   names a place. E1's compact line and N's privacy card follow. Not built.
+  **E1's compact line: built (lane D1, PR #187, 2026-10-12)**, composed
+  from the E2 frame because no E1 frame draws one (owner, 2026-10-12;
+  item 65). **N's privacy card: folded into the totals switch** (owner,
+  2026-10-12). It is U2 Privacy's "THE CONDITIONS POOL" card, whose copy
+  describes the in-app pool, not the published totals `count_in_totals`
+  governed. The owner made one switch cover both: an opted-out runner's
+  shared runs leave the in-app block, and the totals switch's lines say
+  so (item 64).
 
 **Round 24's asks were still open** (answered in round 26, above) — the time correction on A1, R2b's
 options, the delete-with-runs sheet, "Garment saved, photo didn't", the

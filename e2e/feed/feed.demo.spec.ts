@@ -233,12 +233,11 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     // for a real run, and what the feed now reads back. Warming 6 -> 14
     // across the two hours: a chilly first mile that settles in.
     //
-    // Only the starting hour carries `runId`; the others are shared cache
-    // cells, exactly as the attach path writes them.
+    // No row names the run: each is a shared cache cell, found by place
+    // and hour, exactly as the attach path writes them.
     await weather.insert(weatherObservations).values([
       {
         id: observationId,
-        runId: publicRunId,
         latR,
         lngR,
         hourBucket,
@@ -357,7 +356,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await scene(page, "The bell counts a month-old run still owed a verdict");
     await expect(
       page
-        .getByRole("link", { name: /^Notifications, (\d+|9\+) new$/u })
+        .getByRole("link", { name: /^Notifications, (\d+|more than 9) new$/u })
         .first(),
     ).toBeVisible();
 
@@ -442,6 +441,15 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       hasText: publicCaption,
     });
     await expect(card).toBeVisible();
+    // FEED-9: the compact line tops Following — the Portland runners above
+    // matched at the city this runner just saved, in round 25's words.
+    const compact = page.locator('[data-part="compact-conditions"]');
+    await expect(compact).toContainText("runners logged");
+    await expect(compact).toContainText("in the last 3 days.");
+    // Its band is Visual Crossing's data, credited right under it (D-144).
+    await expect(
+      compact.locator("xpath=following-sibling::*[1]"),
+    ).toHaveAccessibleName("Weather data provided by Visual Crossing");
     // The author is their handle, "@" and all (FEED-10).
     await expect(card.locator('[data-part="author"]')).toContainText(
       `@${otherUsername}`,
@@ -456,7 +464,9 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     );
     // Visual Crossing's reading, credited beside it (FEED-8).
     await expect(
-      card.getByRole("link", { name: "Weather by Visual Crossing" }),
+      card.getByRole("link", {
+        name: "Weather data provided by Visual Crossing",
+      }),
     ).toBeVisible();
     // ...their private entry never does (CLAUDE.md: private entries never
     // appear in feeds or consensus aggregates).
@@ -477,7 +487,9 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await expect(
       page
         .locator('[data-part="run-strip"]')
-        .getByRole("link", { name: "Weather by Visual Crossing" }),
+        .getByRole("link", {
+          name: "Weather data provided by Visual Crossing",
+        }),
     ).toBeVisible();
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
       "content",
@@ -726,7 +738,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     );
     await expect(
       ownCard.locator('a[href^="/feed/entry/"]'),
-    ).toHaveAccessibleName(/Under review, only you can see this/u);
+    ).toHaveAccessibleName(/Under review, other runners can't see this/u);
     await expect(ownCard.getByText(/· You$/u)).toBeVisible();
     await expect(ownCard.getByText("1 / 2")).toBeVisible();
     await scene(page, "D · HIDDEN WHILE WE CHECK, at the top");
@@ -734,7 +746,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await hydrated(page);
     const hiddenBand = page.locator('[data-part="notice-band"]');
     await expect(hiddenBand).toContainText(
-      "Only you can see this while we look at it.",
+      "Other runners can't see this while we look at it.",
     );
     await expect(hiddenBand).toContainText("You can still edit or delete it.");
     await expect(page.locator('[data-part="review-tag"]')).toHaveCount(0);

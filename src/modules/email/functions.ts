@@ -4,9 +4,8 @@
  * in the vitest workers pool with no TanStack virtual entries.
  */
 import { createServerFn } from "@tanstack/react-start";
-import { drizzle } from "drizzle-orm/d1";
 
-import { env } from "../../env";
+import { coreDb, env } from "../../env";
 import { requireUserId } from "../auth";
 import { linkSearchInput, notificationSettingsInput } from "./inputs";
 import { readByLink, switchByLink } from "./landing";
@@ -14,7 +13,7 @@ import { setEmailPreference } from "./preferences";
 import { notificationSettings } from "./settings";
 
 function db() {
-  return drizzle(env.DIALED_CORE);
+  return coreDb();
 }
 
 /**

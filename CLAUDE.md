@@ -135,6 +135,13 @@ src/
   bundle.
 - No circular imports.
 - Only `src/env/` touches Workers bindings directly.
+- **Every D1 query goes through `coreDb()`, `weatherDb()` or
+  `primaryCoreDb()` from `src/env`** (design 143, D-123). Reads in a request
+  may come from a read replica, so a check that authorizes a write reads the
+  primary: `primaryCoreDb()`, `verifiedUserId()`'s pin, or `pinPrimary()`.
+  dependency-cruiser's `d1-handles-come-from-env` rejects a value import of
+  `drizzle-orm/d1` elsewhere (`import type` is fine), and
+  `test/architecture/d1-access.test.ts` rejects naming a binding.
 - Each lane owns its `src/routes/<lane>/` directory exclusively — route merges
   are structurally conflict-free.
 
@@ -322,7 +329,9 @@ explicitly says the migration is yours — or the owner has said yes.
   audience. Strangers see only `runners` entries, and every check reads the
   audience, never the legacy booleans. Only `runners` entries appear in feeds
   or in in-app consensus and social-proof counts (the conditions consensus,
-  "worn by N"). **Published anonymous totals** — the marketing site's guides
+  "worn by N"), and the conditions consensus also drops the runs of anyone
+  who has turned off "Count my runs in anonymous totals"; it still shows
+  them the block. That one switch (`count_in_totals`) governs both. **Published anonymous totals** — the marketing site's guides
   and reports — **do count private runs**, under D-108's conditions: counted fields
   only (feels-like band, sky, month, garment type and model, verdict, region if
   set; never notes, photos, times, places or handles), 5+ distinct runners per

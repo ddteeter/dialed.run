@@ -244,10 +244,7 @@ describe("EntryDetail: the run strip", () => {
     );
 
     expect(part("run-strip")).toContainElement(credit());
-    expect(credit()).toHaveAttribute(
-      "href",
-      "https://www.visualcrossing.com/weather-data",
-    );
+    expect(credit()).toHaveAttribute("href", "https://www.visualcrossing.com/");
   });
 
   it("credits nobody for a band the runner set", async () => {
@@ -265,7 +262,9 @@ describe("EntryDetail: the run strip", () => {
 });
 
 const credit = () =>
-  screen.queryByRole("link", { name: "Weather by Visual Crossing" });
+  screen.queryByRole("link", {
+    name: "Weather data provided by Visual Crossing",
+  });
 
 describe("EntryDetail: the owner's verdict prompt", () => {
   it("takes the badge's place, directly under the strip, and opens A3", async () => {

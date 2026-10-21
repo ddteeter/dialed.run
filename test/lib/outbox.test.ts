@@ -16,6 +16,7 @@ describe("outboxKinds", () => {
       "import_file_expire",
       "email",
       "product_link",
+      "manual_conditions_delete",
     ]);
   });
 });
@@ -71,6 +72,15 @@ describe("dedupeKeyFor", () => {
         payload: { userId: "u1", key: "imports/u1/i1.gpx" },
       }),
     ).toBe("u1:imports/u1/i1.gpx");
+  });
+
+  it("makes one band debt per runner and run (C1)", () => {
+    expect(
+      dedupeKeyFor({
+        kind: "manual_conditions_delete",
+        payload: { userId: "u1", runId: "r1" },
+      }),
+    ).toBe("u1:r1");
   });
 });
 
@@ -176,6 +186,32 @@ describe("readOutboxRow", () => {
         JSON.stringify({ userId: "u1", key: "imports/u2/a.fit" }),
       ),
     ).toStrictEqual(UNKNOWN);
+  });
+
+  it("reads a band debt only with both its ids (C1)", () => {
+    expect(
+      readOutboxRow(
+        "manual_conditions_delete",
+        JSON.stringify({ userId: "u1", runId: "r1" }),
+      ),
+    ).toStrictEqual({
+      ok: true,
+      message: {
+        kind: "manual_conditions_delete",
+        payload: { userId: "u1", runId: "r1" },
+      },
+    });
+    // The run id is the whole of what it deletes, so an empty one is
+    // refused rather than handed to a delete.
+    for (const payload of [
+      { userId: "u1", runId: "" },
+      { userId: "", runId: "r1" },
+      { userId: "u1" },
+    ]) {
+      expect(
+        readOutboxRow("manual_conditions_delete", JSON.stringify(payload)),
+      ).toStrictEqual(UNKNOWN);
+    }
   });
 
   it("refuses a payload of the wrong shape, including empty ids", () => {

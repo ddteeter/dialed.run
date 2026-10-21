@@ -6,9 +6,10 @@
  * so they are hidden from every read at once — no read anywhere has to
  * remember a filter — and still exist, with who uploaded them and when,
  * for the owner's report to NCMEC's CyberTipline. Kept a year
- * (`QUARANTINE_RETENTION_SECONDS`).
+ * (`QUARANTINE_RETENTION_SECONDS`) after the quarantine, or a year after
+ * that report when it is later (`recordNcmecReport`, C12).
  */
-import { and, asc, desc, eq, lte } from "drizzle-orm";
+import { and, asc, desc, eq, lte, sql } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
 
@@ -52,14 +53,93 @@ export const QUARANTINE_PAGE = 100;
 /**
  * What is in quarantine, newest first — for an admin only. Anyone else
  * is refused with `AdminRequiredError`, before anything is read.
+ *
+ * The record's columns without its two snapshots: this is what Review
+ * lists, and the snapshots are the content itself, which has no business
+ * in a page's loader data.
  */
 export async function quarantinedContentFor(db: Db, viewerId: string) {
   requireAdmin(viewerId);
   return db
-    .select()
+    .select({
+      id: quarantinedContent.id,
+      subjectType: quarantinedContent.subjectType,
+      subjectId: quarantinedContent.subjectId,
+      uploaderId: quarantinedContent.uploaderId,
+      entryId: quarantinedContent.entryId,
+      quarantinedAt: quarantinedContent.quarantinedAt,
+      retainUntil: quarantinedContent.retainUntil,
+      ncmecReportedAt: quarantinedContent.ncmecReportedAt,
+      ncmecReportId: quarantinedContent.ncmecReportId,
+    })
     .from(quarantinedContent)
     .orderBy(desc(quarantinedContent.quarantinedAt))
     .limit(QUARANTINE_PAGE);
+}
+
+export type QuarantineSummary = Awaited<
+  ReturnType<typeof quarantinedContentFor>
+>[number];
+
+/**
+ * The operator's record that a quarantine was reported to NCMEC (C12).
+ * `reportId` is CyberTipline's id for the report, when they have it.
+ */
+export interface NcmecReport {
+  readonly recordId: string;
+  readonly reportId?: string | undefined;
+}
+
+/**
+ * Record that a quarantined record was reported to NCMEC, now.
+ *
+ * A completed CyberTipline report is a request to preserve its contents
+ * for a year after the report (18 U.S.C. §2258A(h)(1), as the REPORT Act
+ * amended it), so `retain_until` becomes the later of what it was and a
+ * year past the report. It never moves earlier: the quarantine's own year
+ * stays the floor, and so does a purge's lease.
+ *
+ * **The first recording is the report time.** Recording again — a
+ * double-click, a retry, or adding the report id afterwards — keeps the
+ * time it first recorded and so moves nothing, which is what makes it
+ * safe to repeat. One statement, so the time and the clock it sets can
+ * never disagree: SQLite reads every column in `SET` as it stood before
+ * the update.
+ *
+ * The time is when the operator records it, not a time they type: the
+ * record is made after the report is filed, so its year ends no earlier
+ * than the report's would. Admin-only, refused before anything is
+ * written. Says `gone` when there is no record by that id (already
+ * purged, or never), and otherwise the record's report and clock as they
+ * now stand.
+ */
+export async function recordNcmecReport(
+  db: Db,
+  viewerId: string,
+  report: NcmecReport,
+  now = nowSeconds(),
+) {
+  requireAdmin(viewerId);
+  const reportedAt = sql<number>`coalesce(${quarantinedContent.ncmecReportedAt}, ${now})`;
+  const [recorded] = await db
+    .update(quarantinedContent)
+    .set({
+      ncmecReportedAt: reportedAt,
+      retainUntil: sql<number>`max(${quarantinedContent.retainUntil}, ${reportedAt} + ${QUARANTINE_RETENTION_SECONDS})`,
+      // Given, it replaces what was there, so a mistyped id can be
+      // corrected; omitted, it leaves it, as drizzle sets no column whose
+      // value is `undefined`.
+      ncmecReportId: report.reportId,
+    })
+    .where(eq(quarantinedContent.id, report.recordId))
+    .returning({
+      ncmecReportedAt: quarantinedContent.ncmecReportedAt,
+      ncmecReportId: quarantinedContent.ncmecReportId,
+      retainUntil: quarantinedContent.retainUntil,
+    });
+  return recorded === undefined
+    ? ({ outcome: "gone" } as const)
+    : ({ outcome: "recorded", ...recorded } as const);
 }
 
 /**

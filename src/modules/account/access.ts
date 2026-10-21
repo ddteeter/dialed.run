@@ -9,6 +9,7 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import { accessRequests } from "../../db/schema-core";
 import { IS_INVITE_ONLY } from "../../lib/contracts/access";
+import type { BlockedRegion, FormRefusal } from "../../lib/contracts/access";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import { orSqlNull } from "../../lib/sql/sql-null";
@@ -82,11 +83,15 @@ export function accessGate(
  * for a new, a repeated and a registered address alike, so the form
  * cannot be used to learn who has an account. `limited` and `refused`
  * (Turnstile) are about the browser, never the address.
+ *
+ * `isFromBlockedRegion` marks a receipt for a request placed in a blocked
+ * state (`BLOCKED_US_REGIONS`, owner 2026-10-18): taken, since a waitlist
+ * entry is not an account, and told that sign-up is not open there yet.
+ * It says where the browser is, never anything about the address.
  */
 export type AccessRequestResult =
-  | { readonly status: "received" }
-  | { readonly status: "limited"; readonly until: number }
-  | { readonly status: "refused" };
+  | FormRefusal
+  | { readonly status: "received"; readonly isFromBlockedRegion: boolean };
 
 /**
  * Au5 · Request access. Turnstile first; then, on a real deployment, a
@@ -95,6 +100,11 @@ export type AccessRequestResult =
  * with one conditional upsert — a repeat updates the note and leaves the
  * request where it was in the queue. A declined address that asks again
  * is pending again.
+ *
+ * `blockedRegion` is the gate's answer for the request
+ * (`blockedRegionOf`), read by the caller and required here, so no caller
+ * can leave it out. It is recorded on the request, the latest ask's
+ * place, for D7.
  *
  * Idempotent without a key (law 8b): the address is the row's identity,
  * so a double submit is the same upsert twice.
@@ -106,6 +116,7 @@ export async function requestAccess(
     note: string;
     attempt: TurnstileAttempt;
     isLimited: boolean;
+    blockedRegion: BlockedRegion | undefined;
   }>,
   verify: (attempt: TurnstileAttempt) => Promise<TurnstileVerdict>,
   now = nowSeconds(),
@@ -113,9 +124,13 @@ export async function requestAccess(
   const verdict = await verify(input.attempt);
   if (!verdict.ok) return { status: "refused" };
   const email = input.email.toLowerCase();
+  const received = {
+    status: "received",
+    isFromBlockedRegion: input.blockedRegion !== undefined,
+  } as const;
   if (!input.isLimited) {
     await upsertRequest(db, { ...input, email }, sql`1`, now);
-    return { status: "received" };
+    return received;
   }
   // One batch (law 2's "a claim plus the work it authorises"): the count
   // and the request land together, and the request only if the count it
@@ -126,33 +141,39 @@ export async function requestAccess(
     upsertRequest(db, { ...input, email }, sendAllowed("access", visitor), now),
   ]);
   const claim = sendClaimOf(counted);
-  return claim.isAllowed
-    ? { status: "received" }
-    : { status: "limited", until: claim.until };
+  return claim.isAllowed ? received : { status: "limited", until: claim.until };
 }
 
 /**
  * The request's upsert, written only where `allowed` holds: a repeat
- * updates the note, and a declined address is pending again.
+ * updates the note and the place, and a declined address is pending
+ * again.
  */
 function upsertRequest(
   db: Db,
-  input: Readonly<{ email: string; note: string }>,
+  input: Readonly<{
+    email: string;
+    note: string;
+    blockedRegion: BlockedRegion | undefined;
+  }>,
   allowed: SQL,
   now: number,
 ) {
   // `orSqlNull`: drizzle drops an undefined value from the update's SET,
-  // and a repeat with no note must clear the old one, not keep it.
+  // and a repeat with no note must clear the old one, not keep it — and a
+  // repeat from elsewhere must clear an old state the same way.
   const note = orSqlNull(input.note === "" ? undefined : input.note);
+  const blockedRegion = orSqlNull(input.blockedRegion);
   return db
     .insert(accessRequests)
     .select(
-      sql`SELECT ${newUlid()}, ${input.email}, ${note}, 'pending', ${now}, ${now} WHERE ${allowed}`,
+      sql`SELECT ${newUlid()}, ${input.email}, ${note}, 'pending', ${blockedRegion}, ${now}, ${now} WHERE ${allowed}`,
     )
     .onConflictDoUpdate({
       target: accessRequests.email,
       set: {
         note,
+        blockedRegion,
         updatedAt: now,
         status: sql`CASE WHEN ${accessRequests.status} = 'declined' THEN 'pending' ELSE ${accessRequests.status} END`,
       },

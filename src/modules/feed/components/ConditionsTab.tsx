@@ -247,7 +247,7 @@ const PRECIP_WORD: Readonly<Record<PrecipClass, string>> = {
  * What was matched, in words: `44° and damp`. The viewer's own feels-like,
  * because the eyebrow already says FEELS and gives the band.
  */
-function matchedConditions(band: ConsensusBand, units: Units): string {
+export function matchedConditions(band: ConsensusBand, units: Units): string {
   return `${formatTemp(band.feelsC, units.temp)} and ${PRECIP_WORD[band.precip]}`;
 }
 
@@ -257,7 +257,7 @@ function matchedConditions(band: ConsensusBand, units: Units): string {
  * ignores where a run was (owner, 2026-09-24). The empty state draws it
  * without the window.
  */
-function SameConditionsEyebrow({
+export function SameConditionsEyebrow({
   band,
   windowDays,
   units,

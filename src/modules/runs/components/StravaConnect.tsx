@@ -8,7 +8,7 @@ import {
   inFlight,
   Mono,
   PendingLabel,
-  StravaButton,
+  StravaConsent,
   useControlAction,
 } from "../../../ui";
 
@@ -97,7 +97,7 @@ export function StravaConnect({
   if (!connected) {
     return (
       <div className="flex flex-col gap-3">
-        <StravaButton />
+        <StravaConsent />
         <p className="m-0 text-small text-muted">
           You&rsquo;ll approve this on Strava&rsquo;s own screen.
         </p>

@@ -152,8 +152,9 @@ test.describe("with the location granted", () => {
       );
       // Visual Crossing's credit closes the body (FEED-8): the licence asks
       // for it near the data, and round 22 predates the audit that found it
-      // missing. Everything above it is still the board's.
-      expect(body.at(-1)).toBe("WEATHER BY VISUAL CROSSING");
+      // missing. Everything above it is still the board's. The words are
+      // D-144's, the licence's sentence in sentence case.
+      expect(body.at(-1)).toBe("WEATHER DATA PROVIDED BY VISUAL CROSSING");
       expect(body.slice(1, -1)).toEqual(folded(drawnBody).slice(1));
       // Teal means matched, so an empty answer sits on the paper.
       expect(await fillOf(page, built)).toBe("transparent");

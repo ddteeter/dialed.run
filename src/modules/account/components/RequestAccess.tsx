@@ -5,6 +5,7 @@ import type { JSX } from "react";
 import {
   ACCESS_NOTE_COUNT_FROM,
   ACCESS_NOTE_MAX,
+  REGION_COPY,
   refusalMessage,
 } from "../../../lib/contracts/access";
 import { requestAccessSchema } from "../../../lib/contracts";
@@ -21,10 +22,7 @@ import {
   useTurnstileToken,
 } from "../../../ui";
 import type { FieldProps } from "../../../ui";
-import {
-  SignedOutPanel,
-  SignedOutReceipt,
-} from "../../../ui/SignedOutPanel";
+import { SignedOutPanel, SignedOutReceipt } from "../../../ui/SignedOutPanel";
 import type { AccessRequestResult } from "../access";
 
 /**
@@ -35,10 +33,24 @@ const INLINE_LINK_CLASS = "font-bold text-ink underline underline-offset-4";
 /**
  * Au5's receipt (round 26 #20): "You're on the list", the same for a new,
  * a repeated and a registered address — it reveals nothing.
+ *
+ * From a blocked state (owner, 2026-10-18; design-deltas item 66) the
+ * request is kept all the same, and the receipt says only that sign-up is
+ * not open there yet: no "Create an account", which would be refused.
  */
-function Receipt({ email }: Readonly<{ email: string }>): JSX.Element {
+function Receipt({
+  email,
+  isFromBlockedRegion,
+}: Readonly<{ email: string; isFromBlockedRegion: boolean }>): JSX.Element {
+  if (isFromBlockedRegion) {
+    return (
+      <SignedOutReceipt kicker="On the list" title="You're on the list">
+        <p className="m-0 text-body">{REGION_COPY.waitlist}</p>
+      </SignedOutReceipt>
+    );
+  }
   return (
-    <SignedOutReceipt kicker="On the list" title="You&apos;re on the list">
+    <SignedOutReceipt kicker="On the list" title="You're on the list">
       <p className="m-0 text-body">
         When there&apos;s room, we&apos;ll email a code to{" "}
         <strong>{email}</strong>. There&apos;s nothing else to do until then.
@@ -174,7 +186,10 @@ export function RequestAccess({
       notice={outcome?.status === "received" ? undefined : <BackToSignUp />}
     >
       {outcome?.status === "received" ? (
-        <Receipt email={email} />
+        <Receipt
+          email={email}
+          isFromBlockedRegion={outcome.isFromBlockedRegion}
+        />
       ) : (
         <FormElement
           form={form}
