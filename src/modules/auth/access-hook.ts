@@ -39,8 +39,11 @@ import {
   ACCESS_CODES,
   ACCESS_HEADERS,
   INVITE_COPY,
+  REGION_BLOCKED_CODE,
+  REGION_BLOCKED_COPY,
   TURNSTILE_REFUSED,
   inviteCodeField,
+  isFromBlockedRegion,
 } from "../../lib/contracts/access";
 import {
   AGE_CODES,
@@ -172,6 +175,18 @@ function refuseAge(): never {
   );
 }
 
+/**
+ * A blocked state's refusal (`BLOCKED_US_REGIONS`, owner 2026-10-18). Not
+ * held by a cookie as the age's is: where a request comes from is read
+ * afresh off every one.
+ */
+function refuseRegion(): never {
+  throw new APIError("FORBIDDEN", {
+    code: REGION_BLOCKED_CODE,
+    message: REGION_BLOCKED_COPY,
+  });
+}
+
 function refuseMissingAge(): never {
   throw new APIError("BAD_REQUEST", {
     code: AGE_CODES.missing,
@@ -217,9 +232,14 @@ async function admitAge(
 }
 
 /**
- * The before-hook's half: Turnstile first (it runs whether or not
- * invite-only is on, and after the public gate too), then the age, then
- * the code.
+ * The before-hook's half: an email sign-up from a blocked state first,
+ * then Turnstile (it runs whether or not invite-only is on, and after the
+ * public gate too), then the age, then the code.
+ *
+ * **Google from a blocked state goes on to Google**, as Google with no
+ * code does: the press cannot know yet whether the address already has an
+ * account, and one that does signs in wherever it is. A new one is refused
+ * at the create hook, on the callback's own request.
  */
 export async function admitSignUp(
   gate: AccessGate,
@@ -227,6 +247,7 @@ export async function admitSignUp(
 ): Promise<void> {
   const kind = signUpKind(ctx.path, ctx.body);
   if (kind === undefined) return;
+  if (kind === "email" && isFromBlockedRegion(ctx.request)) refuseRegion();
   const token = ctx.headers?.get(ACCESS_HEADERS.turnstileToken) ?? undefined;
   if (!(await gate.passesTurnstile(token, ctx.request))) refuse("turnstile");
   if (gate.checksAge) await admitAge(kind, ctx.headers);
@@ -303,6 +324,9 @@ export function claimInvite(gate: AccessGate) {
     user: { email: string } & Record<string, unknown>,
     context: HookRequest | null,
   ) => {
+    // Every account, before anything else: an email sign-up from a
+    // blocked state never gets here, Google's callback is read here.
+    if (isFromBlockedRegion(context?.request)) refuseRegion();
     if (gate.checksAge && !(await isAgeCheckedForCreate(context))) {
       refuseMissingAge();
     }

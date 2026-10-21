@@ -19,9 +19,12 @@ import {
   outbox,
   userProfiles,
 } from "../../db/schema-core";
-import { mintInviteCode } from "../../lib/contracts/access";
+import {
+  isBlockedRegion,
+  mintInviteCode,
+  regionInviteRefusal,
+} from "../../lib/contracts/access";
 import { newUlid } from "../../lib/ids";
-import { firstColumnWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 import { orSqlNull } from "../../lib/sql/sql-null";
 import { emailDebt } from "../email";
@@ -206,7 +209,20 @@ export interface DeskRequest {
   readonly id: string;
   readonly email: string;
   readonly note: string | null;
+  /**
+  The blocked state its latest ask came from (`BLOCKED_US_REGIONS`), or `""`.
+  */
+  readonly blockedRegion: string;
   readonly createdAt: number;
+}
+
+/**
+ * A request's recorded state, `""` for none: a string either way, so
+ * whether it is blocked now is one lookup (`isBlockedRegion`) and never a
+ * null check beside it.
+ */
+function regionOrEmpty() {
+  return sql<string>`coalesce(${accessRequests.blockedRegion}, '')`;
 }
 
 export interface AccessDesk {
@@ -266,6 +282,7 @@ export async function accessDesk(db: Db): Promise<AccessDesk> {
         id: accessRequests.id,
         email: accessRequests.email,
         note: accessRequests.note,
+        blockedRegion: regionOrEmpty(),
         createdAt: accessRequests.createdAt,
       })
       .from(accessRequests)
@@ -362,6 +379,14 @@ export async function createInviteCode(
 }
 
 /**
+ * What Send invite came to: the request's code, a refusal the operator
+ * reads (a request from a blocked state), or nothing — a request that is
+ * neither pending nor answered with a code.
+ */
+export type InviteAnswer =
+  { readonly code: string } | { readonly refused: string } | undefined;
+
+/**
  * D7's Send invite: mints a single-use code for a pending request —
  * which D7 labels "{address} (request)", as the board draws it — and
  * moves the request to invited — one batch, and a second press returns the code the first one minted
@@ -379,21 +404,35 @@ export async function inviteFromRequest(
   input: Readonly<{ operatorId: string; requestId: string }>,
   owed: OwedMail,
   now = nowSeconds(),
-): Promise<{ code: string } | undefined> {
-  const requested = await firstColumnWhere(
-    db,
-    accessRequests,
-    accessRequests.email,
-    and(
-      eq(accessRequests.id, input.requestId),
-      eq(accessRequests.status, "pending"),
-    ),
-  );
+): Promise<InviteAnswer> {
+  const [requested] = await db
+    .select({
+      email: accessRequests.email,
+      blockedRegion: regionOrEmpty(),
+    })
+    .from(accessRequests)
+    .where(
+      and(
+        eq(accessRequests.id, input.requestId),
+        eq(accessRequests.status, "pending"),
+      ),
+    )
+    .limit(1);
   if (requested === undefined) return codeOfRequest(db, input.requestId);
+  // A request from a state that is blocked now gets no code: one would be
+  // refused at sign-up anyway, and the email would promise an account
+  // that cannot be made. The tag stays, so lifting the state is enough.
+  const region = requested.blockedRegion;
+  if (isBlockedRegion(region)) {
+    return { refused: regionInviteRefusal(region) };
+  }
   const code = mintInviteCode();
   const debt = oweOutbox(
     emailDebt(
-      { to: { address: requested }, template: { kind: "invite", code } },
+      {
+        to: { address: requested.email },
+        template: { kind: "invite", code },
+      },
       { dedupeKey: `invite:${code}` },
     ),
   );
