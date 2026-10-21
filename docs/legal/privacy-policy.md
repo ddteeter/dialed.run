@@ -69,9 +69,10 @@ Questions about this policy or your data: hello@dialed.run.
 - **Not your date of birth.** Sign-up asks for it to check you are 18 or
   over, and we do not keep it (see [Children](#children)).
 - **A request for access**, if you make one: the email address, the note
-  you leave, and whether we invited you or declined. If you ask from Mississippi
-  or Tennessee, we also note that, because we cannot open sign-up there yet
-  (see the [terms](/terms)). We delete it 90 days after we
+  you leave, and whether we invited you or declined. If Cloudflare places
+  your connection in Mississippi or Tennessee, we also note that state,
+  because we cannot open sign-up there yet (see the [terms](/terms)).
+  Signing up makes the same check and keeps nothing. We delete it 90 days after we
   answer; a request we have not answered yet is kept until we do.
 - **Your password, hashed.** We store a scrypt hash, never the password
   itself. When you set a password we check it against Have I Been Pwned's
@@ -88,7 +89,7 @@ Questions about this policy or your data: hello@dialed.run.
   reports it). The record is deleted 30 days after the session expires.
 - **Counts that stop abuse.** We count sign-in and sign-up attempts per IP
   address; those counts are kept for about a minute and then deleted. We
-  count how many sign-in links, password resets and email changes each
+  count how many confirmation links, password resets and email changes each
   address asked for in the last hour, and how many wrong passwords you
   typed when changing your email or password. Requests for access and
   removal requests are counted per visitor IP address the same way. Each
@@ -393,16 +394,20 @@ account added it.
   posted it if you give one, anything written about it,
   when it was made, and what we decided, with the reason if we declined.
   If the link points to a kit or photo on [dialed.run], we hide it from
-  everyone but its owner while we look, and put it back if we decline.
-  We email the address a receipt and the decision, and email each
+  everyone but its owner while we look, except under the limits below,
+  and put it back if we decline. We email the address a receipt and the decision, and email each
   reviewer that a request is waiting. We count requests per visitor IP
   address, as we do requests for access, to stop the form being flooded,
   and delete each count a day after its hour ends. To stop one person
   filing many requests, we keep with each request a
   form of the email address that ignores dots and "+" tags where the
   provider does, and a one-way keyed code made from the IP address (not
-  the address itself). If someone abuses the form, we may block that
-  email and code from it. We keep a request until we delete it, because
+  the address itself). Someone who already has two requests open must
+  confirm a third from the link in its receipt before it hides anything,
+  and while ten requests in the past hour have hidden something, new ones
+  hide nothing (a person still reviews them). If someone abuses the form, we may
+  block that email and code from it: their requests are still recorded
+  and they still get a receipt, but nothing is hidden. We keep a request until we delete it, because
   it is the record of why something was or was not removed.
 - Reviewers are the people who run [dialed.run], named in our
   configuration; today that is one person. They can see reported and
@@ -499,26 +504,28 @@ any differently.
 
 ## How long we keep it
 
-| What                                                                                   | How long                                                                                                                          |
-| -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Imported run files                                                                     | Until it has been read, usually within a day. A file we could not read: 30 days after the import failed                           |
-| Anonymous totals                                                                       | A published report stays as published; it names no one. A guide is remade from current data each time we update it                |
-| Your data export                                                                       | The file: 7 days from when it is ready. The record that you asked for one: deleted with the file, or 7 days after a failed export |
-| Removal requests (`/takedown`)                                                         | Until we delete them                                                                                                              |
-| Requests for access                                                                    | 90 days after we answer them                                                                                                      |
-| Session records                                                                        | Expire after 7 days, and are deleted 30 days after they expire                                                                    |
-| Strava refresh token                                                                   | Until you disconnect, then until Strava confirms revocation                                                                       |
-| Strava activity ids                                                                    | 7 days                                                                                                                            |
-| Garments you delete                                                                    | Deleted with their photo files. A garment you wore leaves those kits                                                              |
-| Runs, kits and kit photos you delete                                                   | Deleted with their files                                                                                                          |
-| Your account, when you delete it                                                       | Hidden at once; everything below deleted 7 days later (see [Your choices](#your-choices))                                         |
-| Suspected child sexual abuse material we removed                                       | One year after we report it to NCMEC, then deleted, unless the law or law enforcement requires longer                             |
-| Usernames you have used                                                                | For good, so nobody else can take them                                                                                            |
-| Weather                                                                                | Kept in the shared cache, linked to no one                                                                                        |
-| Everything else: account, profile, runs, kits, photos, follows, reports, notifications | Until you delete it or your account                                                                                               |
-| Server logs                                                                            | 7 days                                                                                                                            |
-| Error reports                                                                          | 30 days                                                                                                                           |
-| Product pages we fetched                                                               | Kept, to re-read later. They hold the retailer's page, not information about you                                                  |
+| What                                                                          | How long                                                                                                                          |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Imported run files                                                            | Until it has been read, usually within a day. A file we could not read: 30 days after the import failed                           |
+| Anonymous totals                                                              | A published report stays as published; it names no one. A guide is remade from current data each time we update it                |
+| Your data export                                                              | The file: 7 days from when it is ready. The record that you asked for one: deleted with the file, or 7 days after a failed export |
+| Removal requests (`/takedown`)                                                | Until we delete them                                                                                                              |
+| Requests for access                                                           | 90 days after we answer them                                                                                                      |
+| Session records                                                               | Expire after 7 days, and are deleted 30 days after they expire                                                                    |
+| Strava refresh token                                                          | Until you disconnect, then until Strava confirms revocation                                                                       |
+| Strava activity ids                                                           | 7 days                                                                                                                            |
+| Garments you delete                                                           | Deleted with their photo files. A garment you wore leaves those kits                                                              |
+| Runs, kits and kit photos you delete                                          | Deleted with their files                                                                                                          |
+| Your account, when you delete it                                              | Hidden at once; everything below deleted 7 days later (see [Your choices](#your-choices))                                         |
+| Suspected child sexual abuse material we removed                              | One year after we report it to NCMEC, then deleted, unless the law or law enforcement requires longer                             |
+| Usernames you have used                                                       | For good, so nobody else can take them                                                                                            |
+| Weather                                                                       | Kept in the shared cache, linked to no one                                                                                        |
+| Reports you filed                                                             | Kept; when your account is deleted they stay, without your name                                                                   |
+| Records of moderation decisions                                               | Kept, including after the account they concern is deleted                                                                         |
+| Everything else: account, profile, runs, kits, photos, follows, notifications | Until you delete it or your account                                                                                               |
+| Server logs                                                                   | 7 days                                                                                                                            |
+| Error reports                                                                 | 30 days                                                                                                                           |
+| Product pages we fetched                                                      | Kept, to re-read later. They hold the retailer's page, not information about you                                                  |
 
 ## Your choices
 

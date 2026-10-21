@@ -275,7 +275,9 @@ decision to a certified out-of-court dispute settlement body, or to a court.
   that you believe in good faith it was shared without consent. A person
   decides within 48 hours, removes it if it is what you describe, and
   emails you either way. If the link is to dialed.run, we hide what it
-  points to while we look, and put it back if we decline. Knowingly
+  points to while we look, and put it back if we decline; limits that stop
+  the form being used to hide things in bulk are in the
+  [privacy policy](/privacy#moderation). Knowingly
   making a false request breaks these rules.
 - **Copyright and other intellectual property** complaints go through the
   [copyright page](/copyright).
