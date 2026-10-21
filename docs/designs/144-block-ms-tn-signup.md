@@ -47,10 +47,10 @@ state, and shown on the Desk (owner's scope change, same day).
 ## Contract touches
 
 - Schema: **additive**. `access_requests.blocked_region` is a nullable text
-  column, added by migration `0062_add_access_request_blocked_region`
+  column, added by migration `0063_add_access_request_blocked_region`
   (core).
 - New route files: none. New bindings/queues/crons: **none**.
-- Screens: Au2, Au5 and D7, covered by design-deltas item 67 (undesigned
+- Screens: Au2, Au5 and D7, covered by design-deltas item 69 (undesigned
   copy).
 
 ## Test plan
@@ -72,6 +72,6 @@ state, and shown on the Desk (owner's scope change, same day).
 
 ## Open questions
 
-- All the copy is the owner's wording or a placeholder (item 67).
+- All the copy is the owner's wording or a placeholder (item 69).
 - Cloudflare places a request by its IP address, so a VPN gets past the
   gate. That is the usual standard for geoblocking.

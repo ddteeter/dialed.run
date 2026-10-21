@@ -1109,34 +1109,6 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     on T1 and in P3's offer (hierarchy, whether "What we collect" / "How"
     / "Never" / "To stop" lead-ins become mono labels, and whether P3's
     two existing captions stay beside it), and the receipt's Try again.
-67. **No new accounts from Mississippi or Tennessee (owner, 2026-10-18;
-    D-141; design 144).** Both states' age-verification laws are in force against
-    every provider, so a request Cloudflare places there cannot make an
-    account. It can still ask for access, because a waitlist entry is not
-    an account. Nothing is drawn. Built with existing primitives, text
-    only, in the owner's words:
-    - **Au2, email:** the form's failure band, kicker `NOT CREATED`, with no
-      Try again (the age refusal's shape): "dialed.run isn't open to new
-      sign-ups from Mississippi or Tennessee. State laws there require ID
-      age checks for every new account, which we don't do."
-    - **Au2, Google:** the same sentence in the control-failure band under
-      the button, `NOT CREATED`, with no link. It shows after the round trip
-      (`?error=REGION_BLOCKED`), because an existing Google account still
-      signs in from there.
-    - **Au5:** the request is taken, and the receipt ("You're on the list")
-      says, in place of its usual lines and its Create an account link:
-      "Thanks. Sign-up isn't open in Mississippi or Tennessee yet, because
-      state laws there require ID age checks for every new account. We'll
-      email you if that changes."
-    - **D7:** the request's row carries the state as a mono tag after the
-      address (`[TN]`). Where Send invite would be, it reads "No invite
-      while sign-up is closed in Tennessee." in `--quiet`, and Decline
-      stays.
-    - **Not drawn either:** nothing on Au2 warns in advance. The refusal is
-      the first a runner in those states hears of it.
-      **The ask:** word the sentences and confirm the four places, or draw
-      a notice on Au2 shown before the form is filled.
-
 67. **Visual Crossing's credit, reworded and placed on every conditions
     surface (D-144).** The licence asks for "Weather Data Provided by
     Visual Crossing", legible, near the data or anything derived from it,
@@ -1188,6 +1160,34 @@ NCMEC]` or `[REPORTED TO NCMEC {date}] · {number}`; then an optional
     year-long clock needs the year. Operator-only, so not blocking launch.
     **The ask:** draw the section on Review, its reported and gone states,
     and word them.
+
+69. **No new accounts from Mississippi or Tennessee (owner, 2026-10-18;
+    D-141; design 144).** Both states' age-verification laws are in force against
+    every provider, so a request Cloudflare places there cannot make an
+    account. It can still ask for access, because a waitlist entry is not
+    an account. Nothing is drawn. Built with existing primitives, text
+    only, in the owner's words:
+    - **Au2, email:** the form's failure band, kicker `NOT CREATED`, with no
+      Try again (the age refusal's shape): "dialed.run isn't open to new
+      sign-ups from Mississippi or Tennessee. State laws there require ID
+      age checks for every new account, which we don't do."
+    - **Au2, Google:** the same sentence in the control-failure band under
+      the button, `NOT CREATED`, with no link. It shows after the round trip
+      (`?error=REGION_BLOCKED`), because an existing Google account still
+      signs in from there.
+    - **Au5:** the request is taken, and the receipt ("You're on the list")
+      says, in place of its usual lines and its Create an account link:
+      "Thanks. Sign-up isn't open in Mississippi or Tennessee yet, because
+      state laws there require ID age checks for every new account. We'll
+      email you if that changes."
+    - **D7:** the request's row carries the state as a mono tag after the
+      address (`[TN]`). Where Send invite would be, it reads "No invite
+      while sign-up is closed in Tennessee." in `--quiet`, and Decline
+      stays.
+    - **Not drawn either:** nothing on Au2 warns in advance. The refusal is
+      the first a runner in those states hears of it.
+      **The ask:** word the sentences and confirm the four places, or draw
+      a notice on Au2 shown before the form is filled.
 
 ## Answered in round 37 (imported 2026-10-10)
 
