@@ -25,6 +25,7 @@ import { cronNameFor, type CronName } from "./crons";
 import { oweDigestEmail, type DigestMail } from "./digest-email";
 import { checkOutboxBacklog, drainOutbox } from "./outbox";
 import { oweInCore } from "./queues";
+import { oweRemovalReminders } from "./removal-reminders";
 import {
   outboxHandlers,
   productLinkHandler,
@@ -203,6 +204,9 @@ async function runCron(
         // pending-observation retry, claim-then-work at the module level.
         () => retryPendingWeather(),
         () => upkeep.sweepExports?.(anomalies),
+        // C6's 40-hour reminder: hourly, so it lands before the deadline
+        // the daily digest could miss (`removal-reminders.ts`).
+        () => oweRemovalReminders(coreDb()),
         () => drainOwedEmail(anomalies),
         () => drainProductLinks(anomalies, upkeep),
         // Profiles whose zone lookup failed when the place was saved

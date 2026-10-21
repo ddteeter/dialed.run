@@ -191,6 +191,16 @@ export const removalRequested = emailKind("removal_requested", {
 });
 
 /**
+ * C6: an operator's reminder that a removal (a `/takedown` request or an
+ * intimate-image report) is still undecided 8 hours before its 48 are
+ * up. Once per removal per operator. Operator mail, so always sent.
+ * Placeholder words (design deltas).
+ */
+export const removalReminder = emailKind("removal_reminder", {
+  dueAt: z.int().min(0),
+});
+
+/**
  * Design 136: the requester's receipt — what happens next and by when,
  * and whether the image is hidden (round 35 #58e). `confirmToken` is
  * design 137's: a request past the cap waits for its requester to confirm

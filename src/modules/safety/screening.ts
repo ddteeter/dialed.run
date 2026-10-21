@@ -199,10 +199,20 @@ function visibilityWrite(
   // already live rather than at one being held for them.
   const status = decision === "flag" ? "hidden_pending_review" : "pass";
   if (scope === "entry") {
+    // Only over `pending`, the state a verdict is owed for. A report or a
+    // removal request can hide a photo while the classifier is still
+    // answering, and a `pass` landing after it would put the photo back
+    // with nobody having decided (C6: a removal is never undone by
+    // itself). Hidden already, a `flag` has nothing left to hide.
     return db()
       .update(entryPhotos)
       .set({ screenStatus: status })
-      .where(eq(entryPhotos.id, photoId));
+      .where(
+        and(
+          eq(entryPhotos.id, photoId),
+          eq(entryPhotos.screenStatus, "pending"),
+        ),
+      );
   }
   return db()
     .update(wardrobeItems)
