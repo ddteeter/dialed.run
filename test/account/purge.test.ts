@@ -301,19 +301,21 @@ async function seedAccount(): Promise<Seeded> {
         updatedAt: NOW,
       })),
     ),
-    // Invite codes whose label names them: one written before D7 stopped
+    // Invite codes whose label names them (each code carries the whole id:
+    // four characters of it collided across runners in one isolate): one
+    // written before D7 stopped
     // copying a request's address onto its code, and one an operator
     // typed, in the address's own mixed case.
     core.insert(inviteCodes).values([
       {
         id: newUlid(),
-        code: `DIAL-${tail.slice(-4)}`,
+        code: `DIAL-${tail}-A`,
         label: `${redeemedAs} (request)`,
         createdAt: NOW,
       },
       {
         id: newUlid(),
-        code: `DIAL-${tail.slice(-8, -4)}`,
+        code: `DIAL-${tail}-B`,
         label: `Club night, ${email}`,
         createdAt: NOW,
       },
@@ -914,8 +916,8 @@ describe("purgeDueAccounts — a full purge", () => {
       .from(inviteCodes)
       .where(
         inArray(inviteCodes.code, [
-          `DIAL-${runner.userId.toLowerCase().slice(-4)}`,
-          `DIAL-${runner.userId.toLowerCase().slice(-8, -4)}`,
+          `DIAL-${runner.userId.toLowerCase()}-A`,
+          `DIAL-${runner.userId.toLowerCase()}-B`,
         ]),
       );
     expect(codes).toHaveLength(2);
