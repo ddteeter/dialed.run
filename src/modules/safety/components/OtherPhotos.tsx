@@ -7,7 +7,8 @@ import type { OtherPhoto } from "../other-photos";
 /**
  * The same runner's other photos, on a Review row about an intimate image
  * (D-117, R-145 c): the reasonable effort on copies the TAKE IT DOWN Act
- * asks for, made by a person looking, since nothing hashes photos.
+ * asks for, made by a person looking. `PhotoMatches` beside it is the
+ * fingerprint search across every runner (D-142).
  *
  * **Undesigned** (design deltas item 63): existing primitives and bracket
  * text only. Each photo is served from `/safety/review-photo/`, as the

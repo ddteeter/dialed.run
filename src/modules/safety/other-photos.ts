@@ -3,9 +3,9 @@
  * image (design 136, decision D-117; R-145 c).
  *
  * The TAKE IT DOWN Act asks for reasonable efforts on known identical
- * copies. Nothing here hashes photos — blur re-encodes every upload, so
- * an exact hash would rarely match — so the effort is a person's: the row
- * shows what else this runner has posted, and the operator looks.
+ * copies. This is the person's half: the row shows what else this runner
+ * has posted, and the operator looks. The hashed half, every runner's
+ * photos by fingerprint, is `photo-matches.ts` (D-142).
  *
  * **One select per subject, all in one batch, every filter in SQL.** The
  * runner is a subquery on the subject (a photo's kit, or the kit), so no
