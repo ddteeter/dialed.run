@@ -24,12 +24,16 @@ test.use({ storageState: storageStateFor("closet") });
  * placeholder and go to design round 28 (design-deltas item 38; drawn
  * there as #7 on a board this comparison cannot read yet). Left out of the
  * comparison by name — the rest of the index is still held to U1.
+ * "Open source" joins it after Copyright by round 29 #9's ruling
+ * (`design/docs/product.md`: "Linked from … Settings › About"; plan C9,
+ * design 147), which U1 predates.
  */
 const UNDRAWN_GROUP = "About";
 const UNDRAWN_ROWS: ReadonlySet<string> = new Set([
   "Privacy policy",
   "Terms",
   "Copyright",
+  "Open source",
 ]);
 
 /**

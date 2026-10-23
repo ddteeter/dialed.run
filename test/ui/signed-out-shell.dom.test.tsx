@@ -119,6 +119,7 @@ describe("SignedOutLayout", () => {
       ["Privacy", "/privacy"],
       ["Terms", "/terms"],
       ["Copyright", "/copyright"],
+      ["Open source", "/open-source"],
       ["Report an intimate image", "/takedown"],
     ]);
     for (const link of links) {

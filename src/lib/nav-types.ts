@@ -228,6 +228,7 @@ const NAV: readonly Edge[] = [
       "/privacy",
       "/terms",
       "/copyright",
+      "/open-source",
       // Design 136: the removal request, from the signed-out footer.
       "/takedown",
       "/onboarding/calibrate",

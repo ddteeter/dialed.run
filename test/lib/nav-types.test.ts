@@ -229,6 +229,8 @@ describe("which type an edge resolves to", () => {
       ["/auth/signup", "/terms"],
       ["/onboarding/settings", "/terms"],
       ["/onboarding/settings", "/copyright"],
+      // Plan C9 (round 29 #9): the open-source page, from Settings › About.
+      ["/onboarding/settings", "/open-source"],
       // Design 136: the removal request, from the signed-out footer.
       ["/auth/login", "/takedown"],
       ["/", "/account/terms"],

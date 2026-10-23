@@ -105,6 +105,11 @@ describe("the index (U1/N)", () => {
     expect(row(/^Copyright/u)).toHaveTextContent(
       /^CopyrightReport something of yours posted here›$/u,
     );
+    // Round 29 #9 (plan C9): after Copyright.
+    expect(row(/^Open source/u)).toHaveAttribute("href", "/open-source");
+    expect(row(/^Open source/u)).toHaveTextContent(
+      /^Open sourceWhat dialed\.run is built on›$/u,
+    );
     expect(row(/^Blocked runners/u)).toHaveAttribute("href", "/safety/blocked");
     expect(row(/^Blocked runners/u)).toHaveTextContent("2 blocked");
     expect(row(/^Connections/u)).toHaveAttribute("href", "/runs/strava");
