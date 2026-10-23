@@ -28,7 +28,8 @@ import {
 import type { HandleReview, QueueRow } from "../review";
 import { DeskForm, PickOne } from "./DeskForm";
 import { OtherPhotos } from "./OtherPhotos";
-import { NotRenamedBand, RENAME_LABELS, renameMessage } from "./DeskRunners";
+import { RENAME_LABELS, renameMessage } from "./DeskRunners";
+import { NotRenamedBand } from "./NotRenamedBand";
 import { useSettled } from "./use-settled";
 
 /**

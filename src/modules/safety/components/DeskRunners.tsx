@@ -5,7 +5,6 @@ import type { JSX } from "react";
 import {
   Bracketed,
   ControlFailureBand,
-  FailureBand,
   FormStatus,
   Mono,
   TextField,
@@ -22,6 +21,7 @@ import { banUserInput, forceRenameInput } from "../inputs";
 import type { RenameOutcome } from "../rename";
 import type { DeskRunner, RunnersFilter } from "../runners";
 import { DeskForm, PickOne } from "./DeskForm";
+import { NotRenamedBand } from "./NotRenamedBand";
 
 /**
  * Desk · Runners, "D8" (round 27 #22). A search and three filters over a
@@ -64,23 +64,6 @@ export function renameMessage(outcome: RenameOutcome): string {
     return `The handle changed to @${outcome.username} before the rename landed. Nothing was renamed. Look at it, then press Rename again if it still has to go.`;
   }
   return "This runner has no handle to take away.";
-}
-
-/**
- * NOT RENAMED, the rename's control band (round 35 #45 on D1, round 38
- * #60 on D8). No Try again: the sentence says to press Rename, which is
- * right above it.
- */
-export function NotRenamedBand({
-  message,
-}: Readonly<{ message: string }>): JSX.Element {
-  return (
-    <FailureBand
-      kicker="Not renamed"
-      message={message}
-      part="control-failure"
-    />
-  );
 }
 
 /**
