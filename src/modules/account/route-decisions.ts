@@ -28,6 +28,7 @@ const OPEN_WITHOUT_HANDLE: ReadonlySet<string> = new Set([
   "/privacy",
   "/terms",
   "/copyright",
+  "/open-source",
 ]);
 
 /**
@@ -120,6 +121,7 @@ const OPEN_WHILE_LEAVING: ReadonlySet<string> = new Set([
   "/privacy",
   "/terms",
   "/copyright",
+  "/open-source",
 ]);
 
 /**
@@ -153,6 +155,7 @@ const OPEN_WHILE_BEHIND: ReadonlySet<string> = new Set([
   "/terms",
   "/privacy",
   "/copyright",
+  "/open-source",
   "/account/sign-in",
   "/account/check-email",
   "/account/verify",

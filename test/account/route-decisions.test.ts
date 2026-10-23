@@ -64,6 +64,7 @@ describe("startHandleIfNeeded (round 26 #7)", () => {
       "/privacy",
       "/terms",
       "/copyright",
+      "/open-source",
     ]) {
       expect(gateAt(true, pathname), pathname).toBeUndefined();
     }
@@ -139,6 +140,7 @@ describe("the leaving gate (ACC-9; round 27 #14)", () => {
       "/privacy",
       "/terms",
       "/copyright",
+      "/open-source",
     ]) {
       const { thrown } = await gateOnce("leaving", true, pathname);
       expect(thrown).toBeUndefined();
@@ -191,6 +193,7 @@ describe("the terms gate (ACC-6)", () => {
       "/terms",
       "/privacy",
       "/copyright",
+      "/open-source",
       "/account/sign-in",
       "/account/check-email",
       "/account/verify",
