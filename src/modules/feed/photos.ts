@@ -5,7 +5,7 @@
  * this branch yet). Originals only for now; derived sizes follow 101's
  * photon-wasm benchmark rather than duplicating a wasm pipeline here.
  */
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, ne, or } from "drizzle-orm";
 
 import { entryPhotos, outfitEntries } from "../../db/schema-core";
 import { coreDb, env } from "../../env";
@@ -21,7 +21,12 @@ import { entryPhotoIdOf, entryPhotoKeyFor } from "../../lib/entry-photo-key";
 import { requireOwned } from "../../lib/sql/owned";
 import { filePartFrom } from "../../lib/file-part";
 import type { FilePartProblem } from "../../lib/file-part";
-import { isAdmin, publicPhotoStatus, publiclyVisibleEntry } from "../safety";
+import {
+  heldPhotoStatus,
+  isAdmin,
+  publicPhotoStatus,
+  publiclyVisibleEntry,
+} from "../safety";
 import { classifierFromEnv, screenPhoto, type Classify } from "../safety";
 
 export const MAX_PHOTOS_PER_ENTRY = 4;
@@ -221,7 +226,12 @@ export async function isPhotoVisible(
     publiclyVisibleEntry(viewerId),
     eq(entryPhotos.screenStatus, publicPhotoStatus),
   );
-  const allowed = or(eq(outfitEntries.userId, viewerId), shownToOthers);
+  // The author's own, but not one a copyright takedown holds (D-130).
+  const ownedByViewer = and(
+    eq(outfitEntries.userId, viewerId),
+    ne(entryPhotos.screenStatus, heldPhotoStatus),
+  );
+  const allowed = or(ownedByViewer, shownToOthers);
   const rows = await db()
     .select({ id: entryPhotos.id })
     .from(entryPhotos)

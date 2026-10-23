@@ -24,7 +24,7 @@
  * cycle dependency-cruiser refuses. The feed already reads `runs` for every
  * card it draws, and a run's deletion is mostly its entry's.
  */
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { drizzle } from "drizzle-orm/d1";
@@ -127,14 +127,16 @@ function deleteNotificationsAbout(
   userId: string,
   subjects: ReturnType<typeof owned>,
 ) {
-  return db
-    .delete(notifications)
-    .where(
-      and(
-        eq(notifications.userId, userId),
-        inArray(notifications.subjectId, subjects),
-      ),
-    );
+  return db.delete(notifications).where(
+    and(
+      eq(notifications.userId, userId),
+      inArray(notifications.subjectId, subjects),
+      // The Desk's notice that it took this down stays: a copyright
+      // hold's purge deletes the entry 30 days after telling its author
+      // (D-130), and the telling is not undone by it.
+      ne(notifications.kind, "content_removed"),
+    ),
+  );
 }
 
 /**

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { getSession } from "../../modules/auth/functions";
 import { requireSignedIn } from "../../modules/feed/redirect";
+import { CopyrightHolds } from "../../modules/safety/components/CopyrightHolds";
 import { QuarantineRecords } from "../../modules/safety/components/QuarantineRecords";
 import { RemovalRequests } from "../../modules/safety/components/RemovalRequests";
 import { ReviewQueue } from "../../modules/safety/components/ReviewQueue";
@@ -13,6 +14,8 @@ import {
 } from "../../modules/feed/functions";
 import {
   blockTakedownRequesterAction,
+  counterNoticeAction,
+  courtActionAction,
   recordNcmecReportAction,
   reviewHandleAction,
   reviewQueueQuery,
@@ -32,7 +35,7 @@ export const Route = createFileRoute("/safety/review")({
 });
 
 function ReviewPage() {
-  const { queue, requests, quarantine } = Route.useLoaderData();
+  const { queue, requests, quarantine, holds } = Route.useLoaderData();
 
   return (
     <Layout>
@@ -51,6 +54,12 @@ function ReviewPage() {
         {/* SAF-6: a removal the queue did not raise — a copyright notice
             naming a photo or an entry. */}
         <Takedown takeDown={takedownAction} />
+        {/* D-130: what a copyright takedown holds for its 30 days. */}
+        <CopyrightHolds
+          holds={holds}
+          counterNotice={counterNoticeAction}
+          courtAction={courtActionAction}
+        />
         {/* C12: what is held for NCMEC, and recording its report. */}
         <QuarantineRecords
           records={quarantine}

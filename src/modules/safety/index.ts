@@ -71,6 +71,16 @@ export {
   purgeExpiredQuarantine,
 } from "./quarantine";
 
+// D-130: a copyright takedown's 30-day hide, its restore and its purge.
+export {
+  claimDuePurges,
+  copyrightHoldWrites,
+  isCopyrightHeld,
+  purgedWrite,
+  restoreDueHolds,
+  type ClaimedPurge,
+} from "./copyright-holds";
+
 export {
   moderationActionInsert,
   wasModerated,
@@ -133,6 +143,7 @@ export {
   isUnderReviewForAuthor,
   notBlockedEitherWay,
   profileNotReportedBy,
+  heldPhotoStatus,
   publicPhotoStatus,
   publiclyVisibleEntry,
   runnerNotLeaving,

@@ -772,7 +772,7 @@ describe("quarantine: silent, preserved, admin-only (SAF-5, D-70)", () => {
 describe("takedown (SAF-6)", () => {
   beforeEach(freshState);
 
-  it("deletes the object and records the notice it answers", async () => {
+  it("hides the object for 30 days and records the notice it answers (D-130)", async () => {
     const { photoId, key } = await postedPhoto();
 
     await moderateContent(
@@ -788,7 +788,8 @@ describe("takedown (SAF-6)", () => {
       quiet,
     );
 
-    expect(await stored(key)).toStrictEqual([]);
+    // Kept, so a counter-notice can put it back (copyright-holds.test.ts).
+    expect(await stored(key)).toStrictEqual([key]);
     const [audit] = await auditFor(photoId);
     expect(audit).toMatchObject({
       actorId: "desk",

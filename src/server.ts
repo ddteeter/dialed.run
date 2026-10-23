@@ -22,6 +22,7 @@ import { rescreenHandlesFromEnv } from "./modules/account/handle-rescreen";
 import { sweepExports } from "./modules/account/export-sweep";
 import { purgeDueAccounts } from "./modules/account/purge";
 import { linkTypedGarments } from "./modules/closet";
+import { sweepCopyrightHolds } from "./modules/feed/moderation";
 import { mintNonce } from "./lib/csp-nonce";
 
 const startFetch = createStartHandler(defaultStreamHandler);
@@ -74,7 +75,8 @@ export default {
       // product link a confirmation owes (design 133, D-113 Q1), which is
       // `closet`'s, on the `:00` one and the daily drain. And the daily
       // sweep of expired sessions and password-try counts, `auth`'s, and
-      // of answered access requests, `account`'s.
+      // of answered access requests, `account`'s; and the copyright holds'
+      // restore and purge (D-130), `feed`'s.
       await handleScheduled(controller, undefined, {
         purgeAccounts: purgeDueAccounts,
         sweepExports,
@@ -82,6 +84,7 @@ export default {
         linkProducts: linkTypedGarments,
         sweepAuthRows: sweepExpiredAuthRows,
         forgetAnsweredRequests,
+        sweepCopyrightHolds,
       });
     } catch (error) {
       captureException(error, { surface: "scheduled", cron: controller.cron });

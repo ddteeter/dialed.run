@@ -5,7 +5,9 @@
  *
  * **Read from the audit row, because the thing itself is gone.** A Remove
  * deletes (`feed/moderation.ts`), so only `moderation_actions` still knows
- * it happened; its `run_id`, read before the delete, says which run. Rows
+ * it happened; its `run_id`, read before the delete, says which run. A
+ * copyright takedown hides instead (D-130), and its band goes once a
+ * counter-notice puts the thing back (`notRestored`). Rows
  * written before that column have none and match no run: they are not
  * shown, and nothing else changes for them.
  *
@@ -18,6 +20,7 @@ import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { moderationActions } from "../../db/schema-core";
+import { notRestored } from "./copyright-holds";
 import {
   removalReasons,
   removalStatements,
@@ -68,6 +71,9 @@ export function runRemovalsSelect(
         sql`+${moderationActions.subjectOwnerId} = ${ownerId}`,
         inArray(moderationActions.action, ["remove", "takedown"]),
         inArray(moderationActions.subjectType, ["entry", "photo"]),
+        // A copyright takedown a counter-notice put back is not on the
+        // run any more (D-130), so its band goes.
+        notRestored(moderationActions.id),
       ),
     )
     .orderBy(desc(moderationActions.createdAt));

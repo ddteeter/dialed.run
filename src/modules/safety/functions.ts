@@ -46,6 +46,7 @@ import { denyDomain } from "./denylist";
 import {
   banUserInput,
   blockRunnerInput,
+  copyrightHoldInput,
   denyDomainInput,
   fileReportInput,
   takedownRequestInput,
@@ -63,6 +64,11 @@ import { removalsOnRun } from "./run-removals";
 import { fileReport } from "./reports";
 import { claimForReview, pendingReviewQueue } from "./review";
 import { quarantinedContentFor, recordNcmecReport } from "./quarantine";
+import {
+  heldCopyrightContent,
+  recordCounterNotice,
+  recordCourtAction,
+} from "./copyright-holds";
 
 export const fileReportAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => fileReportInput.parse(input))
@@ -127,6 +133,8 @@ export const reviewQueueQuery = createServerFn({ method: "GET" }).handler(
       requests: await pendingTakedownRequests(coreDb()),
       // C12: what is held for NCMEC, and whether it has been reported.
       quarantine: await quarantinedContentFor(coreDb(), adminId),
+      // D-130: what a copyright takedown is holding, and its counter-notice.
+      holds: await heldCopyrightContent(coreDb()),
     };
   },
 );
@@ -297,4 +305,26 @@ export const deskRunnersQuery = createServerFn({ method: "GET" })
       runners: await deskRunners(db, accounts),
       total: await accountCount(db),
     };
+  });
+
+/**
+ * The Desk's "Counter-notice received" on a copyright hold (D-130): the
+ * date, and the 12th weekday after it, when the sweep puts it back.
+ */
+export const counterNoticeAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => copyrightHoldInput.parse(input))
+  .handler(async ({ data }) => {
+    const adminId = requireAdmin(await verifiedUserId());
+    return recordCounterNotice(coreDb(), adminId, data.holdId);
+  });
+
+/**
+ * The Desk's "Court action filed" (D-130): the notice's sender has gone
+ * to court, so the restore is cancelled.
+ */
+export const courtActionAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => copyrightHoldInput.parse(input))
+  .handler(async ({ data }) => {
+    const adminId = requireAdmin(await verifiedUserId());
+    return recordCourtAction(coreDb(), adminId, data.holdId);
   });
