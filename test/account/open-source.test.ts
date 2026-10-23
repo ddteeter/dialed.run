@@ -85,6 +85,28 @@ describe("openSourceList", () => {
     expect(() => openSourceList(list)).toThrow();
   });
 
+  it("reads a row's notice and own text whole", () => {
+    const list = openSourceList(
+      JSON.stringify({
+        ...LIST,
+        packages: [
+          {
+            name: "photon",
+            licence: "Apache-2.0",
+            notice: "This product includes software by Silvia.",
+            text: "Apache, with a clause of its own.",
+          },
+        ],
+      }),
+    );
+    expect(list.packages[0]).toEqual({
+      name: "photon",
+      licence: "Apache-2.0",
+      notice: "This product includes software by Silvia.",
+      text: "Apache, with a clause of its own.",
+    });
+  });
+
   it("refuses a row with no name or no licence", () => {
     for (const piece of [
       { licence: "MIT" },
@@ -99,9 +121,8 @@ describe("openSourceList", () => {
 });
 
 describe("licenceGroups", () => {
-  const groups = licenceGroups(LIST);
-
   it("puts the type first, then the packages' licences, largest first and by name at a tie", () => {
+    const groups = licenceGroups(LIST);
     expect(groups.map((group) => [group.name, group.isType])).toEqual([
       ["SIL Open Font License 1.1", true],
       ["MIT", false],
@@ -113,7 +134,7 @@ describe("licenceGroups", () => {
   });
 
   it("gives each group an id from its name, its licence's text, and its pieces in order", () => {
-    const [type, mit, apache] = groups;
+    const [type, mit, apache] = licenceGroups(LIST);
     expect(type).toMatchObject({
       id: "sil-open-font-license-11",
       text: "SIL OFL",

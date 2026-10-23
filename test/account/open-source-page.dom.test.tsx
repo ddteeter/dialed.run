@@ -7,7 +7,7 @@ import {
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { OpenSourcePage } from "../../src/modules/account/components/OpenSourcePage";
 import { parseLegalDoc } from "../../src/modules/account/legal-markdown";
@@ -237,7 +237,7 @@ describe("OpenSourcePage", () => {
       within(react).getByText("© Meta Platforms, Inc. and affiliates"),
     ).toHaveClass("text-small", "text-muted");
     // Nothing on record, nothing drawn.
-    expect(within(clsx).queryByRole("link")).toBeNull();
+    expect(within(clsx).queryByText("Project")).toBeNull();
     expect(within(clsx).queryByText(/^©/u)).toBeNull();
     expect(clsx.querySelector("details")).toBeNull();
     const plex = within(section("SIL Open Font License 1.1")).getAllByRole(
@@ -254,7 +254,11 @@ describe("OpenSourcePage", () => {
       name: "Show all 5",
     });
     expect(showAll).toHaveClass("target", "underline");
+    // Every row keyed by its own name and version: React says nothing.
+    const errors = vi.spyOn(console, "error");
     await user.click(showAll);
+    expect(errors).not.toHaveBeenCalled();
+    errors.mockRestore();
     expect(rowNames("MIT")).toEqual([
       "react",
       "zod",
