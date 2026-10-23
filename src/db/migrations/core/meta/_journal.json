@@ -456,6 +456,13 @@
       "when": 1792728968061,
       "tag": "0064_add_photo_fingerprints",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "6",
+      "when": 1792773994640,
+      "tag": "0065_add_copyright_holds",
+      "breakpoints": true
     }
   ]
 }

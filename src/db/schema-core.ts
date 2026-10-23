@@ -887,9 +887,11 @@ export const entryPhotos = /*#__PURE__*/ sqliteTable(
     // path needs no queue. The owner's own reads ignore this column; every
     // public read requires 'pass'. So a classifier outage degrades to
     // "nobody else sees it yet" and never to a wrong answer or a failed
-    // save (law 5).
+    // save (law 5). 'removed' is a copyright takedown's hide (D-130,
+    // design 148): the one state the owner's reads skip too, until a
+    // counter-notice puts it back or the 30-day purge deletes it.
     screenStatus: text("screen_status", {
-      enum: ["pending", "pass", "flagged", "hidden_pending_review"],
+      enum: ["pending", "pass", "flagged", "hidden_pending_review", "removed"],
     })
       .notNull()
       .default("pending"),
@@ -1436,6 +1438,56 @@ export const moderationActions = /*#__PURE__*/ sqliteTable(
     index("moderation_actions_owner").on(t.subjectOwnerId, t.createdAt),
     // The run's removals, for its author's page.
     index("moderation_actions_run").on(t.runId),
+  ],
+);
+
+/**
+ * A copyright takedown's 30 days (D-130, design 148): the material is
+ * hidden, not deleted, so a valid counter-notice can put it back 10 to 14
+ * business days later (17 U.S.C. §512(g)(2)(C)). A daily sweep restores
+ * on `restore_at` unless a court action was recorded, and deletes on
+ * `purge_at` unless a counter-notice is pending.
+ *
+ * `status` is the claim: `hidden`, then `restored`, or `purging` (the
+ * delete is owed, and re-driven) then `purged`. One row per takedown; the
+ * partial unique index keeps a subject to one live hold. No foreign keys:
+ * the row is the record a strike count reads after the subject is gone.
+ */
+export const copyrightHolds = /*#__PURE__*/ sqliteTable(
+  "copyright_holds",
+  {
+    id: text("id").primaryKey(),
+    // The takedown's audit row: who, what, and the notice.
+    moderationActionId: text("moderation_action_id").notNull(),
+    subjectType: text("subject_type", { enum: ["entry", "photo"] }).notNull(),
+    subjectId: text("subject_id").notNull(),
+    ownerId: text("owner_id").notNull(),
+    entryId: text("entry_id").notNull(),
+    status: text("status", {
+      enum: ["hidden", "restored", "purging", "purged"],
+    }).notNull(),
+    hiddenAt: integer("hidden_at").notNull(),
+    purgeAt: integer("purge_at").notNull(),
+    // The Desk's "Counter-notice received", and the 12th weekday after it.
+    counterNoticeAt: integer("counter_notice_at"),
+    counterNoticeBy: text("counter_notice_by"),
+    restoreAt: integer("restore_at"),
+    // The Desk's "Court action filed", which cancels the restore.
+    courtActionAt: integer("court_action_at"),
+    courtActionBy: text("court_action_by"),
+    // When the sweep restored or purged it.
+    settledAt: integer("settled_at"),
+  },
+  (t) => [
+    uniqueIndex("copyright_holds_action").on(t.moderationActionId),
+    uniqueIndex("copyright_holds_live_subject")
+      .on(t.subjectType, t.subjectId)
+      .where(sql`${t.status} IN ('hidden', 'purging')`),
+    // The Desk's list and the purge, by date; the restore, by its day.
+    index("copyright_holds_status_purge").on(t.status, t.purgeAt),
+    index("copyright_holds_status_restore").on(t.status, t.restoreAt),
+    // A runner's strikes.
+    index("copyright_holds_owner").on(t.ownerId),
   ],
 );
 
