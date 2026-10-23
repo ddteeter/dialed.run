@@ -121,6 +121,7 @@ export {
   reviewResolution,
   settleOpenReviews,
   type ClaimOutcome,
+  type HandleReview,
   type HandleReviewOutcome,
   type QueueRow,
   type ReleaseReport,

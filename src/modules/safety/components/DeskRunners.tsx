@@ -5,6 +5,7 @@ import type { JSX } from "react";
 import {
   Bracketed,
   ControlFailureBand,
+  FailureBand,
   FormStatus,
   Mono,
   TextField,
@@ -50,17 +51,53 @@ export const RENAME_LABELS: Readonly<Record<RenameReason, string>> =
   >;
 
 /**
-What the operator is told after a Rename.
-*/
+ * What the operator is told after a Rename. A rename that lost a race
+ * names the handle as it is now, so the operator can look at it before
+ * pressing again (round 38 #60).
+ */
 export function renameMessage(outcome: RenameOutcome): string {
   if (outcome.kind === "renamed") return `Renamed to @${outcome.username}.`;
   if (outcome.kind === "taken") {
     return "That placeholder is taken. Press Rename again.";
   }
   if (outcome.kind === "moved") {
-    return "The handle changed before the rename landed. Nothing was renamed.";
+    return `The handle changed to @${outcome.username} before the rename landed. Nothing was renamed. Look at it, then press Rename again if it still has to go.`;
   }
   return "This runner has no handle to take away.";
+}
+
+/**
+ * NOT RENAMED, the rename's control band (round 35 #45 on D1, round 38
+ * #60 on D8). No Try again: the sentence says to press Rename, which is
+ * right above it.
+ */
+export function NotRenamedBand({
+  message,
+}: Readonly<{ message: string }>): JSX.Element {
+  return (
+    <FailureBand
+      kicker="Not renamed"
+      message={message}
+      part="control-failure"
+    />
+  );
+}
+
+/**
+ * What D8 says after a Rename: a rename that did not happen and can be
+ * pressed again, a taken placeholder or a handle that moved, in the
+ * control band; anything else as a line.
+ */
+function RenameSaid({
+  outcome,
+}: Readonly<{ outcome: RenameOutcome | undefined }>): JSX.Element | undefined {
+  if (outcome === undefined) return undefined;
+  const said = renameMessage(outcome);
+  return outcome.kind === "taken" || outcome.kind === "moved" ? (
+    <NotRenamedBand message={said} />
+  ) : (
+    <p className="text-body">{said}</p>
+  );
 }
 
 function joinedLabel(joinedAt: number): string {
@@ -167,12 +204,12 @@ function RenamePanel({
   // Nothing chosen is `undefined`, which the schema refuses with its own
   // message; the select sees it as the "—" option's value.
   const [reason, setReason] = useState<RenameReason | undefined>();
-  const [said, setSaid] = useState("");
+  const [said, setSaid] = useState<RenameOutcome | undefined>();
   const form = useFormSubmit({
     schema: forceRenameInput,
     action: (values) => rename({ data: values }),
     onSuccess: (outcome) => {
-      setSaid(renameMessage(outcome));
+      setSaid(outcome);
       onDone();
     },
     successMessage: "Rename sent.",
@@ -205,7 +242,7 @@ function RenamePanel({
         The handle becomes @runner_ and four digits, and the old one is never
         given to anyone else. They pick a new one on their next visit.
       </p>
-      {said === "" ? undefined : <p className="text-body">{said}</p>}
+      <RenameSaid outcome={said} />
     </DeskForm>
   );
 }

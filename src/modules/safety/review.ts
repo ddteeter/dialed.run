@@ -561,6 +561,15 @@ export type ResolveOutcome = "resolved" | "already_resolved" | "not_found";
 export type HandleReviewOutcome = ResolveOutcome | "taken" | "moved";
 
 /**
+ * What a flagged handle's decision answers the Desk: its outcome, and for
+ * `moved` the handle as it is now, which D1's sentence names and its row
+ * header re-reads to (round 38 #60).
+ */
+export type HandleReview =
+  | { readonly outcome: Exclude<HandleReviewOutcome, "moved"> }
+  | { readonly outcome: "moved"; readonly username: string };
+
+/**
  * What `openRow` hands back: the subject to act on, or the reason there is
  * nothing to act on. Named rather than written inline so the signature is
  * one line — a multi-line return type put the function's body and its own

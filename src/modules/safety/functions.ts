@@ -109,12 +109,7 @@ export const runRemovalsQuery = createServerFn({ method: "GET" })
   .validator((data: unknown) => runRemovalsInput.parse(data))
   .handler(async ({ data }) => {
     const ownerId = await requireUserId();
-    return removalsOnRun(
-      coreDb(),
-      ownerId,
-      data.runId,
-      data.since,
-    );
+    return removalsOnRun(coreDb(), ownerId, data.runId, data.since);
   });
 
 export const reviewQueueQuery = createServerFn({ method: "GET" }).handler(
@@ -182,11 +177,7 @@ export const blockTakedownRequesterAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => blockRequesterInput.parse(input))
   .handler(async ({ data }) => {
     const actorId = requireAdmin(await verifiedUserId());
-    return blockAndDeclineAll(
-      coreDb(),
-      actorId,
-      data.requestId,
-    );
+    return blockAndDeclineAll(coreDb(), actorId, data.requestId);
   });
 
 /**
@@ -252,13 +243,7 @@ export const reviewHandleAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => handleReviewInput.parse(input))
   .handler(async ({ data }) => {
     const reviewerId = requireAdmin(await verifiedUserId());
-    return {
-      outcome: await reviewFlaggedHandle(
-        coreDb(),
-        reviewerId,
-        data,
-      ),
-    };
+    return reviewFlaggedHandle(coreDb(), reviewerId, data);
   });
 
 /**

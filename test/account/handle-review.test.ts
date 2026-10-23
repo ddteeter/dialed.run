@@ -102,7 +102,7 @@ describe("Keep", () => {
 
     expect(
       await reviewFlaggedHandle(db, REVIEWER, { queueId, action: "keep" }),
-    ).toBe("resolved");
+    ).toStrictEqual({ outcome: "resolved" });
 
     expect(await profileOf(userId)).toMatchObject({
       username: "quadzilla_69",
@@ -138,7 +138,7 @@ describe("Rename", () => {
         action: "rename",
         nameReason: "Offensive or sexual",
       }),
-    ).toBe("resolved");
+    ).toStrictEqual({ outcome: "resolved" });
 
     const profile = await profileOf(userId);
     expect(profile?.username).toMatch(/^runner_\d{4}$/u);
@@ -185,7 +185,7 @@ describe("Rename", () => {
         action: "rename",
         nameReason: "Advertising",
       }),
-    ).toBe("taken");
+    ).toStrictEqual({ outcome: "taken" });
 
     expect(await profileOf(userId)).toMatchObject({
       username: "quadzilla_69",
@@ -224,7 +224,7 @@ describe("Rename racing the runner's own pick (R-121)", () => {
         action: "rename",
         nameReason: "Advertising",
       }),
-    ).toBe("moved");
+    ).toStrictEqual({ outcome: "moved", username: "fresh_pick" });
 
     const profile = await profileOf(userId);
     expect(profile?.username).toBe("fresh_pick");
@@ -250,7 +250,7 @@ describe("a row there is nothing to decide on", () => {
         action: "rename",
         nameReason: "Advertising",
       }),
-    ).toBe("already_resolved");
+    ).toStrictEqual({ outcome: "already_resolved" });
     expect(await profileOf(userId)).toMatchObject({ username: "quadzilla_69" });
     expect(await queueRow(queueId)).toMatchObject({ resolvedBy: REVIEWER });
   });
@@ -261,7 +261,7 @@ describe("a row there is nothing to decide on", () => {
         queueId: newUlid(),
         action: "keep",
       }),
-    ).toBe("not_found");
+    ).toStrictEqual({ outcome: "not_found" });
   });
 
   it("answers not found for a runner with no handle to rename", async () => {
@@ -283,7 +283,7 @@ describe("a row there is nothing to decide on", () => {
         action: "rename",
         nameReason: "Advertising",
       }),
-    ).toBe("not_found");
+    ).toStrictEqual({ outcome: "not_found" });
     expect(await queueRow(queueId)).toMatchObject({ status: "pending" });
   });
 
@@ -300,7 +300,7 @@ describe("a row there is nothing to decide on", () => {
 
     expect(
       await reviewFlaggedHandle(db, REVIEWER, { queueId, action: "keep" }),
-    ).toBe("not_found");
+    ).toStrictEqual({ outcome: "not_found" });
     expect(await queueRow(queueId)).toMatchObject({ status: "pending" });
   });
 });
