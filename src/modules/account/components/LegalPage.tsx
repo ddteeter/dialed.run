@@ -1,22 +1,14 @@
-import type { ComponentType, JSX } from "react";
+import { Fragment, type ComponentType, type JSX } from "react";
 
-import { Layout, Mono, SignedOutLayout } from "../../../ui";
+import { Mono } from "../../../ui";
 import type { Block, Inline, LegalDoc } from "../legal-markdown";
 import type { BellState } from "../../notifications";
+import { ReadingFrame, ReadingSection, ReadingShell } from "./ReadingFrame";
 
 /**
  * A legal text as a reading page (task 126, ACC-13; round 26 #14, round
  * 27 #5 and #12, round 28 #16; D-52): `/privacy`, `/terms` and
- * `/copyright`.
- *
- * **Contract values, not the board's**: the 620 document measure
- * (`max-w-column`) and the `lead` step. At the desk the contents sit in a
- * sticky column to the left; on the phone they are a plain list under the
- * heading. Every H2 has an id and, below the desk, ends with "Back to
- * contents" (round 28 #16: no arrow, which is not a product glyph; at the
- * desk the column is in view, so the link is not drawn). No accordions;
- * inline links are underlined. A signed-in reader reads in the signed-in
- * shell, anyone else in the signed-out one.
+ * `/copyright`, on the frame `./ReadingFrame` describes.
  */
 export function LegalPage({
   doc,
@@ -33,69 +25,50 @@ export function LegalPage({
   */
   bell: ComponentType<BellState>;
 }>): JSX.Element {
-  const page = <ReadingPage doc={doc} />;
-  const Bell = bell;
-  return bellState === undefined ? (
-    <SignedOutLayout action="log-in">{page}</SignedOutLayout>
-  ) : (
-    <Layout bell={<Bell {...bellState} />}>{page}</Layout>
-  );
-}
-
-function ReadingPage({ doc }: Readonly<{ doc: LegalDoc }>): JSX.Element {
   const { preamble, sections } = sectionsOf(doc.blocks);
   return (
-    <main className="px-5 pt-8 pb-16 desk:grid desk:grid-cols-[auto_1fr] desk:gap-x-12">
-      <h1 className="m-0 font-display text-display uppercase desk:col-start-2 desk:row-start-1">
-        {doc.title}
-      </h1>
-      <nav
-        id="contents"
-        aria-label="Contents"
-        className="mt-6 desk:sticky desk:top-8 desk:col-start-1 desk:row-span-2 desk:row-start-1 desk:mt-0 desk:self-start"
-      >
-        <h2 className="m-0 text-muted">
-          <Mono step="xs">Contents</Mono>
-        </h2>
-        <ol className="m-0 mt-2 flex list-none flex-col gap-2 p-0 text-body">
-          {doc.contents.map((entry) => (
-            <li key={entry.id}>
-              <a
-                href={`#${entry.id}`}
-                className="target text-ink underline underline-offset-4"
-              >
-                {entry.title}
-              </a>
-            </li>
-          ))}
-        </ol>
-      </nav>
-      <article className="mt-8 flex max-w-column flex-col gap-4 text-lead desk:col-start-2">
+    <ReadingShell bellState={bellState} bell={bell}>
+      <ReadingFrame title={doc.title} contents={doc.contents}>
         {preamble.map((block, index) => (
           <BlockView key={index} block={block} />
         ))}
         {sections.map((section) => (
-          <section
+          <ReadingSection
             key={section.id}
-            aria-labelledby={section.id}
-            className="flex flex-col gap-4 pt-4"
+            id={section.id}
+            heading={<Inlines inlines={section.heading} />}
           >
-            <h2 id={section.id} className="m-0 text-heading font-semibold">
-              <Inlines inlines={section.heading} />
-            </h2>
             {section.blocks.map((block, index) => (
               <BlockView key={index} block={block} />
             ))}
-            <a
-              href="#contents"
-              className="target self-start text-small text-ink underline underline-offset-4 desk:hidden"
-            >
-              Back to contents
-            </a>
-          </section>
+          </ReadingSection>
         ))}
-      </article>
-    </main>
+      </ReadingFrame>
+    </ReadingShell>
+  );
+}
+
+/**
+ * A text's sections one level down, inside another page's section: each
+ * H2 drawn as an H3, with its blocks, and nothing before the first one.
+ * `/open-source` reads the third-party notices this way (D-137).
+ */
+export function LegalSubsections({
+  doc,
+}: Readonly<{ doc: LegalDoc }>): JSX.Element {
+  return (
+    <>
+      {sectionsOf(doc.blocks).sections.map((section) => (
+        <Fragment key={section.id}>
+          <h3 id={section.id} className="m-0 pt-2 text-lead font-semibold">
+            <Inlines inlines={section.heading} />
+          </h3>
+          {section.blocks.map((block, index) => (
+            <BlockView key={index} block={block} />
+          ))}
+        </Fragment>
+      ))}
+    </>
   );
 }
 

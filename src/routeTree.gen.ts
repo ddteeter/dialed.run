@@ -14,6 +14,7 @@ import { Route as AtChar123handleChar125RouteImport } from './routes/@{$handle}'
 import { Route as CopyrightRouteImport } from './routes/copyright'
 import { Route as DeskRouteRouteImport } from './routes/desk/route'
 import { Route as JoinRouteImport } from './routes/join'
+import { Route as OpenSourceRouteImport } from './routes/open-source'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AccountSectionRouteImport } from './routes/account/$section'
@@ -96,6 +97,11 @@ const DeskRouteRoute = DeskRouteRouteImport.update({
 const JoinRoute = JoinRouteImport.update({
   id: '/join',
   path: '/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OpenSourceRoute = OpenSourceRouteImport.update({
+  id: '/open-source',
+  path: '/open-source',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -396,6 +402,7 @@ export interface FileRoutesByFullPath {
   '/@{$handle}': typeof AtChar123handleChar125Route
   '/copyright': typeof CopyrightRoute
   '/join': typeof JoinRoute
+  '/open-source': typeof OpenSourceRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/account/$section': typeof AccountSectionRoute
@@ -460,6 +467,7 @@ export interface FileRoutesByTo {
   '/@{$handle}': typeof AtChar123handleChar125Route
   '/copyright': typeof CopyrightRoute
   '/join': typeof JoinRoute
+  '/open-source': typeof OpenSourceRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/account/$section': typeof AccountSectionRoute
@@ -526,6 +534,7 @@ export interface FileRoutesById {
   '/@{$handle}': typeof AtChar123handleChar125Route
   '/copyright': typeof CopyrightRoute
   '/join': typeof JoinRoute
+  '/open-source': typeof OpenSourceRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/account/$section': typeof AccountSectionRoute
@@ -593,6 +602,7 @@ export interface FileRouteTypes {
     | '/@{$handle}'
     | '/copyright'
     | '/join'
+    | '/open-source'
     | '/privacy'
     | '/terms'
     | '/account/$section'
@@ -657,6 +667,7 @@ export interface FileRouteTypes {
     | '/@{$handle}'
     | '/copyright'
     | '/join'
+    | '/open-source'
     | '/privacy'
     | '/terms'
     | '/account/$section'
@@ -722,6 +733,7 @@ export interface FileRouteTypes {
     | '/@{$handle}'
     | '/copyright'
     | '/join'
+    | '/open-source'
     | '/privacy'
     | '/terms'
     | '/account/$section'
@@ -788,6 +800,7 @@ export interface RootRouteChildren {
   AtChar123handleChar125Route: typeof AtChar123handleChar125Route
   CopyrightRoute: typeof CopyrightRoute
   JoinRoute: typeof JoinRoute
+  OpenSourceRoute: typeof OpenSourceRoute
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
   AccountSectionRoute: typeof AccountSectionRoute
@@ -880,6 +893,13 @@ declare module '@tanstack/react-router' {
       path: '/join'
       fullPath: '/join'
       preLoaderRoute: typeof JoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/open-source': {
+      id: '/open-source'
+      path: '/open-source'
+      fullPath: '/open-source'
+      preLoaderRoute: typeof OpenSourceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -1313,6 +1333,7 @@ const rootRouteChildren: RootRouteChildren = {
   AtChar123handleChar125Route: AtChar123handleChar125Route,
   CopyrightRoute: CopyrightRoute,
   JoinRoute: JoinRoute,
+  OpenSourceRoute: OpenSourceRoute,
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
   AccountSectionRoute: AccountSectionRoute,
