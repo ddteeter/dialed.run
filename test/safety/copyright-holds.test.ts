@@ -252,6 +252,10 @@ describe("a copyright takedown hides (D-130)", () => {
     const { photoId, key } = await posted();
 
     expect(await takeDown("photo", photoId, "intimate")).toBe("removed");
+    // Gone, so a repeat is answered from the audit row.
+    expect(await takeDown("photo", photoId, "intimate")).toBe(
+      "already_removed",
+    );
 
     expect(await photoRow(photoId)).toBeUndefined();
     expect(await isStored(key)).toBe(false);

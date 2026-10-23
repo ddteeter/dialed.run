@@ -102,6 +102,7 @@ describe("CopyrightHolds", () => {
     expect(
       screen.queryByRole("button", { name: "Court action filed" }),
     ).toBeNull();
+    expect(part("hold-said")).toBeNull();
   });
 
   it("renders nothing when nothing is held", () => {

@@ -20,7 +20,6 @@ import {
   and,
   asc,
   eq,
-  exists,
   inArray,
   isNotNull,
   isNull,
@@ -101,53 +100,27 @@ export function copyrightHoldWrites(
       hiddenAt: now,
       purgeAt: now + COPYRIGHT_HOLD_SECONDS,
     }),
-    subjectWriters[record.subjectType](db, record.subjectId, {
-      to: "removed",
-      when: undefined,
-    }),
+    hideWriters[record.subjectType](db, record.subjectId),
   ];
 }
 
 /**
- * The subject's own column, set — on a restore only from `removed`, and
- * only `when` holds. A restore gives an entry back as `ok` and a photo as
- * `pending`, never `pass`: screening looks at it again, as it does after
- * every give-back (`releaseHoldWrites`).
- */
-const subjectWriters: Record<
+The subject's own column moved to `removed`, from whatever it was.
+*/
+const hideWriters: Record<
   HeldSubjectType,
-  (
-    db: Db,
-    subjectId: string,
-    change: { readonly to: "removed" | "back"; readonly when: SQL | undefined },
-  ) => BatchItem<"sqlite">
+  (db: Db, subjectId: string) => BatchItem<"sqlite">
 > = {
-  entry: (db, subjectId, { to, when }) =>
+  entry: (db, subjectId) =>
     db
       .update(outfitEntries)
-      .set({ moderationStatus: to === "removed" ? "removed" : "ok" })
-      .where(
-        and(
-          eq(outfitEntries.id, subjectId),
-          to === "removed"
-            ? undefined
-            : eq(outfitEntries.moderationStatus, "removed"),
-          when,
-        ),
-      ),
-  photo: (db, subjectId, { to, when }) =>
+      .set({ moderationStatus: "removed" })
+      .where(eq(outfitEntries.id, subjectId)),
+  photo: (db, subjectId) =>
     db
       .update(entryPhotos)
-      .set({ screenStatus: to === "removed" ? heldPhotoStatus : "pending" })
-      .where(
-        and(
-          eq(entryPhotos.id, subjectId),
-          to === "removed"
-            ? undefined
-            : eq(entryPhotos.screenStatus, heldPhotoStatus),
-          when,
-        ),
-      ),
+      .set({ screenStatus: heldPhotoStatus })
+      .where(eq(entryPhotos.id, subjectId)),
 };
 
 /**
@@ -273,58 +246,52 @@ async function hiddenHold(db: Db, holdId: string) {
 }
 
 /**
- * The sweep's restore: every hidden hold whose day has come and has no
- * court action, put back in one batch. Each hold's claim goes first, and
- * its give-back is conditional on that claim being this sweep's
- * (`settled_at` is this firing's moment), so a sweep that runs twice, or
- * a claim that lost to a court action, restores nothing more.
+ * The sweep's restore, one batch with no read before it: every hidden
+ * hold whose day has come and has no court action is claimed `restored`
+ * with this firing's moment as `settled_at`, then the subjects those
+ * claims name — and only those — go back from `removed`: an entry as
+ * `ok`, a photo as `pending`, never `pass`, so screening looks at it
+ * again as after every give-back (`releaseHoldWrites`). A sweep that runs
+ * twice claims nothing the second time, so it gives nothing back.
  */
 export async function restoreDueHolds(
   db: Db,
   now = nowSeconds(),
 ): Promise<void> {
-  const due = await db
-    .select({
-      id: copyrightHolds.id,
-      subjectType: copyrightHolds.subjectType,
-      subjectId: copyrightHolds.subjectId,
-    })
-    .from(copyrightHolds)
-    .where(and(stillRestorable(), lte(copyrightHolds.restoreAt, now)));
-  const [first, ...rest] = due.flatMap((hold) => [
+  const due = and(
+    eq(copyrightHolds.status, "hidden"),
+    isNull(copyrightHolds.courtActionAt),
+    lte(copyrightHolds.restoreAt, now),
+  );
+  const entriesBack = and(
+    eq(outfitEntries.moderationStatus, "removed"),
+    inArray(outfitEntries.id, restoredBy(db, "entry", now)),
+  );
+  const photosBack = and(
+    eq(entryPhotos.screenStatus, heldPhotoStatus),
+    inArray(entryPhotos.id, restoredBy(db, "photo", now)),
+  );
+  await db.batch([
     db
       .update(copyrightHolds)
       .set({ status: "restored", settledAt: now })
-      .where(and(eq(copyrightHolds.id, hold.id), stillRestorable())),
-    subjectWriters[hold.subjectType](db, hold.subjectId, {
-      to: "back",
-      when: exists(restoredBy(db, hold.id, now)),
-    }),
+      .where(due),
+    db.update(outfitEntries).set({ moderationStatus: "ok" }).where(entriesBack),
+    db.update(entryPhotos).set({ screenStatus: "pending" }).where(photosBack),
   ]);
-  if (first !== undefined) await db.batch([first, ...rest]);
 }
 
 /**
-A hold the restore may still claim: hidden, and no court action since.
+The subjects of one type this firing's claim restored.
 */
-function stillRestorable() {
-  return and(
-    eq(copyrightHolds.status, "hidden"),
-    isNull(copyrightHolds.courtActionAt),
-  );
-}
-
-/**
-The hold, if this sweep's claim restored it — what a give-back waits on.
-*/
-function restoredBy(db: Db, holdId: string, now: number) {
+function restoredBy(db: Db, subjectType: HeldSubjectType, now: number) {
   const thisClaim = and(
-    eq(copyrightHolds.id, holdId),
+    eq(copyrightHolds.subjectType, subjectType),
     eq(copyrightHolds.status, "restored"),
     eq(copyrightHolds.settledAt, now),
   );
   return db
-    .select({ one: sql`1` })
+    .select({ id: copyrightHolds.subjectId })
     .from(copyrightHolds)
     .where(thisClaim);
 }
