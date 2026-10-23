@@ -60,6 +60,7 @@ import {
 import { handleScreenFromEnv } from "./handle-screen";
 import type { LegalSlug } from "./inputs";
 import { legalPage } from "./legal";
+import { openSourcePage } from "./open-source";
 import {
   homeIfNothingToSay,
   legalDocOrNotFound,
@@ -306,6 +307,15 @@ const legalPageQuery = createServerFn({ method: "GET" })
   );
 
 /**
+ * `/open-source` (plan C9): the licence groups, the third-party notices,
+ * and the bell for a signed-in reader. No session needed, as for the
+ * legal texts.
+ */
+const openSourcePageQuery = createServerFn({ method: "GET" }).handler(
+  async () => openSourcePage(db(), await optionalUserId()),
+);
+
+/**
 Revoke's undo.
 */
 export const restoreInviteCodeFn = createServerFn({ method: "POST" })
@@ -388,6 +398,13 @@ export const acceptTermsFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) =>
     acceptTerms(db(), await requireUserIdBeforeTerms(), data.version),
   );
+
+/**
+`/open-source`'s loader.
+*/
+export async function openSourcePageLoader() {
+  return openSourcePageQuery();
+}
 
 /**
  * `/privacy`, `/terms` and `/copyright`'s loader (ACC-13): the page's
