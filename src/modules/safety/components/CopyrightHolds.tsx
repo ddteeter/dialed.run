@@ -86,6 +86,7 @@ function HoldRow({
 }>): JSX.Element {
   // The row as the last action left it, so a recording shows at once.
   const [held, setHeld] = useState(hold);
+  const [said, setSaid] = useState("");
   return (
     <li
       data-part="copyright-hold"
@@ -122,6 +123,7 @@ function HoldRow({
             onRecorded={(result) => {
               setHeld({ ...held, ...result });
             }}
+            onSaid={setSaid}
           />
         ),
         court: (
@@ -133,9 +135,15 @@ function HoldRow({
             onRecorded={(result) => {
               setHeld({ ...held, ...result });
             }}
+            onSaid={setSaid}
           />
         ),
       })}
+      {said === "" ? undefined : (
+        <p data-part="hold-said" className="text-body">
+          {said}
+        </p>
+      )}
     </li>
   );
 }
@@ -155,8 +163,9 @@ function nextAction(
 
 /**
  * One Desk action on a hold: a form with no fields but the hold, so it
- * fails, retries and announces as every Desk form does. An answer other
- * than `recorded` is said under it, and changes nothing.
+ * fails, retries and announces as every Desk form does. Whatever it
+ * answered is `said` to the row, which keeps the sentence after a
+ * recording has moved the row on to its next action, or to none.
  */
 function HoldAction<
   K extends string,
@@ -167,14 +176,15 @@ function HoldAction<
   sentences,
   act,
   onRecorded,
+  onSaid,
 }: Readonly<{
   holdId: string;
   label: string;
   sentences: Readonly<Record<K | "recorded", string>>;
   act: HoldAct<R>;
   onRecorded: (result: R) => void;
+  onSaid: (sentence: string) => void;
 }>): JSX.Element {
-  const [said, setSaid] = useState("");
   const form = useFormSubmit({
     schema: copyrightHoldInput,
     action: (values) => act({ data: values }),
@@ -182,10 +192,13 @@ function HoldAction<
     refusal: {
       matches: (result) => result.outcome !== "recorded",
       answer: (result) => {
-        setSaid(sentences[result.outcome]);
+        onSaid(sentences[result.outcome]);
       },
     },
-    onSuccess: onRecorded,
+    onSuccess: (result) => {
+      onSaid(sentences.recorded);
+      onRecorded(result);
+    },
   });
   return (
     <DeskForm
@@ -196,7 +209,7 @@ function HoldAction<
       }}
       submit={{ label, pendingLabel: "Recording" }}
     >
-      {said === "" ? undefined : <p className="text-body">{said}</p>}
+      {undefined}
     </DeskForm>
   );
 }

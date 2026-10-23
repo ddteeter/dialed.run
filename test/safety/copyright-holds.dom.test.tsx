@@ -140,6 +140,7 @@ describe("CopyrightHolds", () => {
     expect(
       screen.getByRole("button", { name: "Court action filed" }),
     ).toBeVisible();
+    expect(part("hold-said")?.textContent).toBe("Counter-notice recorded.");
   });
 
   it("records a court action, and then offers nothing more", async () => {
@@ -167,6 +168,10 @@ describe("CopyrightHolds", () => {
       );
     });
     expect(screen.queryByRole("button")).toBeNull();
+    // The form is gone; the row keeps what it answered.
+    expect(part("hold-said")?.textContent).toBe(
+      "Court action recorded. It stays hidden.",
+    );
   });
 
   it("says why a counter-notice did not land, and changes nothing", async () => {
