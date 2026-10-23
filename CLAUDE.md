@@ -702,7 +702,7 @@ stryker run --mutate "src/ui/form.tsx,src/ui/Mono.tsx"` is 27 seconds
   fix is a real seam — a custom hook that owns one concern's state, a
   sub-component that owns one block of markup — not a `fallow-ignore`.
   Keep the extraction in the same file: Stryker grants are keyed by path
-  and directive text. Design 146 has the measurements and nine worked
+  and directive text. Design 148 has the measurements and nine worked
   examples.
 - **Do not wrap `createServerFn` in a generic helper.** The five-line
   `createServerFn().validator().handler(… requireUserId() …)` shape repeats
