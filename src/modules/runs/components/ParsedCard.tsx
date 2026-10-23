@@ -18,6 +18,7 @@ import {
 } from "../../../lib/contracts/measures";
 import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
 import {
+  type ControlFailure,
   ControlFailureBand,
   FormFailureBand,
   FormField,
@@ -335,12 +336,10 @@ export function ParsedCard({
   // a Chicago evening run at the next morning. The card is drawn only after
   // a drop, in the browser, so the device's zone cannot split hydration.
   const zone = run.conditions?.timeZone ?? deviceTimeZone();
-  const navigate = useNavigate();
   const [isRetiming, setIsRetiming] = useState(false);
   const [time, setTime] = useState(timeOfDay(run.startedAt, zone));
   const [movedTo, setMovedTo] = useState<number | undefined>();
   const [noWeatherFor, setNoWeatherFor] = useState<string | undefined>();
-  const [isWaitingToGo, setIsWaitingToGo] = useState(false);
   const form = useRetimeForm({
     run,
     zone,
@@ -354,15 +353,6 @@ export function ParsedCard({
     onNoWeather: setNoWeatherFor,
   });
   const clock = clockLabel(movedTo ?? run.startedAt, zone);
-
-  // The primary action pressed mid-fetch goes once the fetch has settled,
-  // whichever way it went: the run is right either way — the new time with
-  // its weather, or the old time with the old.
-  useEffect(() => {
-    if (isWaitingToGo && !form.pending) {
-      void navigate({ to: "/feed/attach/$runId", params: { runId: run.id } });
-    }
-  }, [isWaitingToGo, form.pending, navigate, run.id]);
 
   return (
     <div className="flex flex-col gap-3 desk:grid desk:grid-cols-[minmax(0,var(--container-column))_minmax(0,1fr)] desk:items-start desk:gap-x-6">
@@ -410,74 +400,131 @@ export function ParsedCard({
         data-part="rail"
         className="flex flex-col gap-3 desk:col-start-2 desk:row-start-1 desk:row-span-3"
       >
-        {form.pending ? (
-          <WeatherFor
-            time={clockLabel(startAtTimeOfDay(run.startedAt, zone, time), zone)}
-            was={conditionsWords(run, units)}
-            at={clockLabel(run.startedAt, zone)}
-            isProviders={hasProvidersReading(run)}
-          />
-        ) : (
-          <ConditionsRow
-            run={run}
-            units={units}
-            note={
-              <p className="m-0 text-small text-quiet">
-                Never typed by hand. Wrong time? Change it on the run card and
-                we&rsquo;ll get the weather for it.
-              </p>
-            }
-          />
-        )}
+        <RailConditions
+          run={run}
+          units={units}
+          zone={zone}
+          time={time}
+          pending={form.pending}
+        />
       </div>
       {/* The band says what is still true under the block, and holds Try
           again — a control, so in the primary column and never the rail. */}
       <div className="flex flex-col desk:col-start-1 desk:row-start-2">
         <ControlFailureBand
-          failure={
-            noWeatherFor === undefined
-              ? undefined
-              : {
-                  kicker: `Still ${clockLabel(run.startedAt, zone)}`,
-                  message: `Couldn't get weather for ${noWeatherFor}. Try again?`,
-                }
-          }
+          failure={noWeatherFailure(noWeatherFor, run.startedAt, zone)}
           onRetry={() => {
             void form.submit({ time });
           }}
         />
       </div>
-      {/* While the weather is fetched the primary action is a button that
-          holds the runner's press, and a link again once it has settled —
-          so a press mid-fetch waits in brackets and then goes, and is
-          never disabled (round 26, item 1). */}
-      {form.pending ? (
-        <button
-          type="button"
-          data-slot="primary-action"
-          onClick={() => {
-            setIsWaitingToGo(true);
-          }}
-          className={`border-none ${PRIMARY_ACTION}`}
-        >
-          <PendingLabel
-            label={LOOKS_RIGHT}
-            pendingLabel={LOOKS_RIGHT}
-            pending={isWaitingToGo}
-          />
-        </button>
-      ) : (
-        <Link
-          to="/feed/attach/$runId"
-          params={{ runId: run.id }}
-          data-slot="primary-action"
-          className={`no-underline ${PRIMARY_ACTION}`}
-        >
-          {LOOKS_RIGHT}
-        </Link>
-      )}
+      <LooksRightAction runId={run.id} pending={form.pending} />
     </div>
   );
+}
+
+/**
+ * While the weather is fetched the primary action is a button that
+ * holds the runner's press, and a link again once it has settled —
+ * so a press mid-fetch waits in brackets and then goes, and is
+ * never disabled (round 26, item 1).
+ *
+ * The primary action pressed mid-fetch goes once the fetch has settled,
+ * whichever way it went: the run is right either way — the new time with
+ * its weather, or the old time with the old.
+ */
+function LooksRightAction({
+  runId,
+  pending,
+}: Readonly<{ runId: string; pending: boolean }>): JSX.Element {
+  const navigate = useNavigate();
+  const [isWaitingToGo, setIsWaitingToGo] = useState(false);
+  useEffect(() => {
+    if (isWaitingToGo && !pending) {
+      void navigate({ to: "/feed/attach/$runId", params: { runId } });
+    }
+  }, [isWaitingToGo, pending, navigate, runId]);
+  return pending ? (
+    <button
+      type="button"
+      data-slot="primary-action"
+      onClick={() => {
+        setIsWaitingToGo(true);
+      }}
+      className={`border-none ${PRIMARY_ACTION}`}
+    >
+      <PendingLabel
+        label={LOOKS_RIGHT}
+        pendingLabel={LOOKS_RIGHT}
+        pending={isWaitingToGo}
+      />
+    </button>
+  ) : (
+    <Link
+      to="/feed/attach/$runId"
+      params={{ runId }}
+      data-slot="primary-action"
+      className={`no-underline ${PRIMARY_ACTION}`}
+    >
+      {LOOKS_RIGHT}
+    </Link>
+  );
+}
+
+/**
+ * The conditions block, in the rail at the desk: while the weather for a
+ * new start is fetched it says so, with what it was; otherwise the run's
+ * conditions, never typed by hand.
+ */
+function RailConditions({
+  run,
+  units,
+  zone,
+  time,
+  pending,
+}: Readonly<{
+  run: RunSummary;
+  units: Units;
+  zone: string | undefined;
+  time: string;
+  pending: boolean;
+}>): JSX.Element {
+  return pending ? (
+    <WeatherFor
+      time={clockLabel(startAtTimeOfDay(run.startedAt, zone, time), zone)}
+      was={conditionsWords(run, units)}
+      at={clockLabel(run.startedAt, zone)}
+      isProviders={hasProvidersReading(run)}
+    />
+  ) : (
+    <ConditionsRow
+      run={run}
+      units={units}
+      note={
+        <p className="m-0 text-small text-quiet">
+          Never typed by hand. Wrong time? Change it on the run card and
+          we&rsquo;ll get the weather for it.
+        </p>
+      }
+    />
+  );
+}
+
+/**
+ * The band under the block when the new start had no weather: the time
+ * still true, and what could not be fetched. None while nothing failed.
+ */
+function noWeatherFailure(
+  noWeatherFor: string | undefined,
+  startedAt: number,
+  zone: string | undefined,
+): ControlFailure | undefined {
+  return noWeatherFor === undefined
+    ? undefined
+    : {
+        kicker: `Still ${clockLabel(startedAt, zone)}`,
+        message: `Couldn't get weather for ${noWeatherFor}. Try again?`,
+      };
 }
 
 /**
