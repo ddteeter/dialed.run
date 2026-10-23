@@ -7,8 +7,9 @@
  * definition of it. The digest needs only that number, so it calls that
  * alone rather than all of Today.
  */
-import { count, eq, isNotNull, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNotNull, sql } from "drizzle-orm";
 
+import { user } from "../../db/schema-auth";
 import {
   cronCheckpoints,
   gaveUp,
@@ -16,7 +17,9 @@ import {
   userProfiles,
 } from "../../db/schema-core";
 import { coreDb } from "../../env";
+import { calendarDay } from "../../lib/dates";
 import { nowSeconds } from "../../lib/now";
+import { maskedAddress } from "../email";
 import { adminUserIds, pendingReviewCount } from "../safety";
 import { DIGEST_UNCONFIRMED } from "./digest-marks";
 
@@ -146,6 +149,17 @@ export function isOperator(userId: string | undefined): boolean {
 }
 
 /**
+ * An operator today's digest skipped (round 38 #62b): their runner handle,
+ * as the Desk names every account, and their address masked as round 27
+ * masks one, so they know which inbox to confirm.
+ */
+export interface SkippedOperator {
+  readonly userId: string;
+  readonly handle: string | undefined;
+  readonly address: string;
+}
+
+/**
 What the Desk's shell and Today render: the counts, as of when.
 */
 export interface DeskToday {
@@ -153,8 +167,49 @@ export interface DeskToday {
   /** Epoch seconds the counts were read at, so an age renders the same
    * on the server and after hydration. */
   readonly asOf: number;
+  /**
+   * Who today's digest skipped, one line each on Today; empty on a day it
+   * skipped nobody, in UTC like the date above it.
+   */
+  readonly skipped: readonly SkippedOperator[];
+}
+
+/**
+ * The operators whose address is still not confirmed: who the digest
+ * skipped, read the way it decided (`confirmedOf`), with no record of its
+ * own. One who confirms later that day drops off the line early, which is
+ * what the line asks of them.
+ */
+async function unconfirmedOperators(): Promise<readonly SkippedOperator[]> {
+  const operatorIds = [...adminUserIds()];
+  const unconfirmed = and(
+    inArray(user.id, operatorIds),
+    eq(user.emailVerified, false),
+  );
+  // The handle is a scalar subquery rather than a join: an operator with no
+  // profile row still appears, with a null handle, either way.
+  const handleOf = sql<string | null>`(select ${userProfiles.username} from ${userProfiles} where ${userProfiles.userId} = ${user.id})`;
+  const rows = await coreDb()
+    .select({ userId: user.id, handle: handleOf, email: user.email })
+    .from(user)
+    .where(unconfirmed)
+    .orderBy(asc(user.id));
+  return rows.map((row) => ({
+    userId: row.userId,
+    handle: row.handle ?? undefined,
+    address: maskedAddress(row.email),
+  }));
 }
 
 export async function deskToday(): Promise<DeskToday> {
-  return { counts: await todayCounts(), asOf: nowSeconds() };
+  const counts = await todayCounts();
+  const asOf = nowSeconds();
+  const at = counts.digestUnconfirmedAt;
+  // Only on the day the digest skipped someone: tomorrow's tries again.
+  const isToday = at !== undefined && calendarDay(at) === calendarDay(asOf);
+  return {
+    counts,
+    asOf,
+    skipped: isToday ? await unconfirmedOperators() : [],
+  };
 }
