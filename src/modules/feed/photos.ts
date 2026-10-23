@@ -13,6 +13,7 @@ import { firstColumnWhere } from "../../lib/sql/keyed-read";
 import { newUlid } from "../../lib/ids";
 import { isAllowedPhotoType } from "../../lib/photo-constraints";
 import { photoRefusal, withReleased } from "../../lib/photo-pipeline";
+import { fingerprintOf } from "../../lib/photo-fingerprint";
 import type { z } from "zod";
 
 import { uploadPhotoFields } from "./inputs";
@@ -117,7 +118,7 @@ export async function uploadPhoto(
   // between two calls and the cost is storage, not correctness.
   const photoId = newUlid();
   const key = entryPhotoKeyFor(input.userId, input.entryId, photoId);
-  const stored = await reencoded(uploaded);
+  const { stored, fingerprint } = await reencoded(uploaded);
   await env.MEDIA.put(key, stored, {
     httpMetadata: { contentType: "image/jpeg" },
   });
@@ -127,6 +128,7 @@ export async function uploadPhoto(
     photoKey: key,
     position: existing.length,
     idempotencyKey: input.idempotencyKey,
+    fingerprint,
   });
 
   // Screened inline rather than after responding, because the packet's
@@ -159,14 +161,23 @@ export async function uploadPhoto(
  * client at all.
  *
  * Screening classifies these bytes, not the upload's: they are the ones a
- * stranger will be served.
+ * stranger will be served. The fingerprint is the other way round, taken
+ * from the decoded upload (D-142, design 146).
  */
-async function reencoded(bytes: Uint8Array): Promise<Uint8Array> {
+async function reencoded(
+  bytes: Uint8Array,
+): Promise<{ stored: Uint8Array; fingerprint: string }> {
   // Lazily, as the closet does: a static import would instantiate the WASM
   // at worker startup, for every request, photo or not.
-  const { PhotonImage } = await import("@cf-wasm/photon/workerd");
-  return withReleased(PhotonImage.new_from_byteslice(bytes), (image) =>
-    Promise.resolve(image.get_bytes_jpeg(ENTRY_PHOTO_QUALITY)),
+  const photon = await import("@cf-wasm/photon/workerd");
+  return withReleased(
+    photon.PhotonImage.new_from_byteslice(bytes),
+    async (image) => ({
+      // From the upload as decoded, before the encode below (D-142): the
+      // hash describes what the runner sent, not our copy of it.
+      fingerprint: await fingerprintOf(image, photon),
+      stored: image.get_bytes_jpeg(ENTRY_PHOTO_QUALITY),
+    }),
   );
 }
 

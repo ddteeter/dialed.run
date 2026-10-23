@@ -683,6 +683,13 @@ export const wardrobeItems = /*#__PURE__*/ sqliteTable(
     // base colour is still what shows.
     visibilityLevel: text("visibility_level", { enum: garmentVisibilities }),
     photoKey: text("photo_key"),
+    // The photo's perceptual hash (D-142, design 146): 16 hex chars of
+    // dHash, taken from the upload before it is re-encoded. Written and
+    // cleared in the same statement as `photo_key`, so it never outlives
+    // the photo it describes. Read only by the takedown review's copy
+    // search (`safety/photo-matches.ts`). NULL for a photo uploaded before
+    // it existed, which then matches nothing.
+    photoFingerprint: text("photo_fingerprint"),
     productUrl: text("product_url"),
     productId: text("product_id"),
     origin: text("origin", { enum: ["manual", "taplist"] })
@@ -718,6 +725,9 @@ export const wardrobeItems = /*#__PURE__*/ sqliteTable(
   (t) => [
     index("wardrobe_user_category").on(t.userId, t.category),
     index("wardrobe_product").on(t.productId),
+    // The copy search's range: only garments with a fingerprint, so the
+    // scan it does is over photos, not over every garment (design 146).
+    index("wardrobe_photo_fingerprint").on(t.photoFingerprint),
     // Scoped to the user, like runs': keys come from the client, so one
     // account's key must never return another's row.
     uniqueIndex("wardrobe_idempotency").on(t.userId, t.idempotencyKey),
@@ -869,6 +879,12 @@ export const entryPhotos = /*#__PURE__*/ sqliteTable(
     // anything other than a form have no key and must not be forced to
     // invent one.
     idempotencyKey: text("idempotency_key"),
+    // The photo's perceptual hash (D-142, design 146): 16 hex chars of
+    // dHash, taken from the upload before it is re-encoded. A column of
+    // the photo's own row, so every path that deletes the photo deletes
+    // it. Read only by the takedown review's copy search. NULL for a photo
+    // uploaded before it existed, which then matches nothing.
+    fingerprint: text("fingerprint"),
     // Task 106 photo screening. 'pending' is the durable marker the
     // screening-retry cron reconciles against (law 8c) — the reason this
     // path needs no queue. The owner's own reads ignore this column; every
