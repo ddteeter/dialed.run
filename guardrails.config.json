@@ -12,7 +12,9 @@
       "mode": "required",
       "rung": "push"
     },
-    "dupes": "required"
+    "dupes": "required",
+    "//complexity": "guardrails 0.10.0 (upstream #133): fallow health --complexity on the changed files, at commit and every rung above. 0.11.0 defaults it to auto where fallow is declared; set explicitly so a missing fallow blocks rather than skips. fallow's limits (cyclomatic 20, cognitive 15, strict >) and its React terms (+1 per hook call, +1 per destructured prop over 4) are in docs/designs/146-guardrails-0.11-complexity.md.",
+    "complexity": "required"
   },
   "sanctionedFiles": [
     {
