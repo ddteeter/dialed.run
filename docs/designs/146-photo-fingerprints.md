@@ -58,7 +58,7 @@ $0.0001). If that grows, banded exact-match columns are the upgrade.
 - Schema: additive (above). Not destructive, not contract-shaped.
 - New route files: none. New bindings/queues/crons: none.
 - Screens: Review and removal requests gain a **Matching photos** block
-  under "Their other photos" — undesigned, design-deltas item 66.
+  under "Their other photos" — undesigned, design-deltas item 71.
 
 ## Test plan
 

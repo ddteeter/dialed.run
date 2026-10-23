@@ -10,7 +10,7 @@ import { PhotoSection } from "./OtherPhotos";
  * fingerprint (D-142, design 146), on the Review rows that list the
  * runner's other photos: the hashed half of the effort on copies.
  *
- * **Undesigned** (design deltas item 66): existing primitives and text
+ * **Undesigned** (design deltas item 71): existing primitives and text
  * only, laid out as "Their other photos" is. Each photo is served from
  * `/safety/review-photo/`, as the row's own are. A kit photo carries its
  * id, which the takedown form under Review takes, and links its kit when
