@@ -433,6 +433,7 @@ describe("the confirm-first sheet and the nag", () => {
     ["report", "Reporting needs a confirmed email."],
     ["follow", "Following runners needs a confirmed email."],
     ["email-change", "Confirm this address before you change it."],
+    ["share", "Sharing needs a confirmed email. This run saves private."],
   ] as const)(
     "leads with the one control that was refused, %s, on its own line above the address (round 29 #11)",
     (trigger, lead) => {

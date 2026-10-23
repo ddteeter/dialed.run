@@ -9,7 +9,10 @@ import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { UnconfirmedRefusalAnswer } from "../../src/ui";
+
 import {
+  CONFIRM_LINK,
   PRIVATE_COUNTED,
   PRIVATE_NOT_SHOWN,
   PRIVATE_UNCONFIRMED,
@@ -18,12 +21,14 @@ import {
 import {
   TOTALS_LABEL,
   TOTALS_OFF,
+  TOTALS_OFF_UNCONFIRMED,
   TOTALS_ON,
+  TOTALS_ON_UNCONFIRMED,
   TotalsSwitch,
 } from "../../src/modules/onboarding/components/TotalsSwitch";
 
 /**
- * D-108's in-app half: Settings › Sharing's "Count my runs in anonymous
+ * D-108's in-app half: Settings › Privacy's "Count my runs in anonymous
  * totals" (D), A3's private line (E). The copy is round 32's, quoted, not paraphrased.
  */
 async function renderWithRouter(element: ReactElement) {
@@ -44,16 +49,20 @@ describe("TotalsSwitch (round 32, frames 1a and 1b)", () => {
   it("says the drawn copy, verbatim", () => {
     expect(TOTALS_LABEL).toBe("Count my runs in anonymous totals");
     expect(TOTALS_ON).toBe(
-      "Shared and private runs add their temperature, kit and verdict to the guides and reports, and shared runs count in the Same conditions block other runners see. Never your name, notes, photos, when you ran, or any place more precise than a broad climate zone.",
+      "Shared and private runs add their temperature, kit and verdict to the guides and reports. Shared runs also count in Same conditions, which other runners see. Never your name, notes, photos, when you ran, or anywhere more precise than a broad climate zone.",
     );
     expect(TOTALS_OFF).toBe(
-      "Off. Your runs leave the guides at tonight's update. They leave the Same conditions block now, and it still works for you. Reports already published stay as they are.",
+      "Off. Your runs leave the guides at tonight's update. They leave Same conditions now, and it still works for you. Reports already published stay as they are.",
     );
   });
 
   it("is on by default with the on line, and links how the guides are made", async () => {
     await renderWithRouter(
-      <TotalsSwitch initial save={vi.fn().mockResolvedValue(undefined)} />,
+      <TotalsSwitch
+        isVerified
+        initial
+        save={vi.fn().mockResolvedValue(undefined)}
+      />,
     );
     expect(totalsBox()).toBeChecked();
     expect(totalsBox()).toHaveAccessibleDescription(TOTALS_ON);
@@ -69,7 +78,7 @@ describe("TotalsSwitch (round 32, frames 1a and 1b)", () => {
     const save = vi.fn().mockResolvedValue(undefined);
     const onSaved = vi.fn();
     await renderWithRouter(
-      <TotalsSwitch initial save={save} onSaved={onSaved} />,
+      <TotalsSwitch isVerified initial save={save} onSaved={onSaved} />,
     );
 
     await user.click(totalsBox());
@@ -86,7 +95,9 @@ describe("TotalsSwitch (round 32, frames 1a and 1b)", () => {
   it("saves back on from off", async () => {
     const user = userEvent.setup();
     const save = vi.fn().mockResolvedValue(undefined);
-    await renderWithRouter(<TotalsSwitch initial={false} save={save} />);
+    await renderWithRouter(
+      <TotalsSwitch isVerified initial={false} save={save} />,
+    );
     expect(totalsBox()).not.toBeChecked();
     expect(totalsBox()).toHaveAccessibleDescription(TOTALS_OFF);
 
@@ -108,7 +119,7 @@ describe("TotalsSwitch (round 32, frames 1a and 1b)", () => {
       .mockResolvedValue(undefined);
     const onSaved = vi.fn();
     await renderWithRouter(
-      <TotalsSwitch initial save={save} onSaved={onSaved} />,
+      <TotalsSwitch isVerified initial save={save} onSaved={onSaved} />,
     );
 
     await user.click(totalsBox());
@@ -127,11 +138,37 @@ describe("TotalsSwitch (round 32, frames 1a and 1b)", () => {
     expect(screen.queryByText("Not changed")).toBeNull();
   });
 
+  it("says the unconfirmed runner's drawn lines, verbatim (round 38 #61d)", () => {
+    expect(TOTALS_ON_UNCONFIRMED).toBe(
+      "Once you confirm your email, your runs add their temperature, kit and verdict to the guides and reports, and shared runs count in Same conditions. Never your name, notes, photos, when you ran, or anywhere more precise than a broad climate zone.",
+    );
+    expect(TOTALS_OFF_UNCONFIRMED).toBe(
+      "Off. Your runs won't count, even after you confirm your email.",
+    );
+  });
+
+  it("tells an unconfirmed runner what will count, and saves off with no confirm sheet", async () => {
+    const user = userEvent.setup();
+    const save = vi.fn().mockResolvedValue(undefined);
+    await renderWithRouter(
+      <TotalsSwitch initial isVerified={false} save={save} />,
+    );
+    expect(totalsBox()).toHaveAccessibleDescription(TOTALS_ON_UNCONFIRMED);
+
+    await user.click(totalsBox());
+
+    expect(save).toHaveBeenCalledWith({ data: { countInTotals: false } });
+    await waitFor(() => {
+      expect(totalsBox()).toHaveAccessibleDescription(TOTALS_OFF_UNCONFIRMED);
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
   it("holds the box read-only while the save is in flight", async () => {
     const user = userEvent.setup();
     const pending = Promise.withResolvers<undefined>();
     const save = vi.fn(() => pending.promise);
-    await renderWithRouter(<TotalsSwitch initial save={save} />);
+    await renderWithRouter(<TotalsSwitch isVerified initial save={save} />);
 
     await user.click(totalsBox());
     expect(totalsBox()).toHaveAttribute("readonly");
@@ -199,15 +236,66 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     expect(screen.queryByRole("dialog", { hidden: true })).toBeNull();
   });
 
+  it("unconfirmed, opens the confirm-email sheet from its first words, led by sharing (round 38 #64)", async () => {
+    const user = userEvent.setup();
+    const sheet = vi.fn(
+      (state: { open: boolean; trigger: string | undefined }) =>
+        state.open ? <p>Asked for {state.trigger}</p> : undefined,
+    );
+    const { container } = await renderWithRouter(
+      <UnconfirmedRefusalAnswer gate={{ sheet }}>
+        {line({ isVerified: false, countInTotals: true })}
+      </UnconfirmedRefusalAnswer>,
+    );
+    const confirm = screen.getByRole("button", { name: CONFIRM_LINK });
+    expect(container.querySelector("#hint")).toContainElement(confirm);
+    // Set as Change is: a press in running text.
+    expect(confirm).toHaveClass(
+      "target",
+      "text-small",
+      "font-semibold",
+      "text-ink",
+      "underline",
+    );
+    expect(screen.queryByText("Asked for share")).toBeNull();
+
+    await user.click(confirm);
+
+    expect(screen.getByText("Asked for share")).toBeVisible();
+  });
+
+  it("unconfirmed with no sheet to open, says its words as text, not a press", async () => {
+    const { container } = await renderWithRouter(
+      line({ isVerified: false, countInTotals: true }),
+    );
+    expect(screen.queryByRole("button", { name: CONFIRM_LINK })).toBeNull();
+    expect(container.querySelector("#hint")?.textContent).toBe(
+      PRIVATE_UNCONFIRMED,
+    );
+  });
+
+  it("sets Change as running text, and its sheet says the confirmed lines", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(line({ isVerified: true, countInTotals: true }));
+    const change = screen.getByRole("button", { name: "Change" });
+    expect(change).toHaveClass("target", "text-small", "underline");
+    await user.click(change);
+    expect(
+      within(screen.getByRole("dialog", { name: "Privacy" })).getByRole(
+        "checkbox",
+      ),
+    ).toHaveAccessibleDescription(TOTALS_ON);
+  });
+
   it("opens the totals switch in a sheet that Done closes", async () => {
     const user = userEvent.setup();
     await renderWithRouter(line({ isVerified: true, countInTotals: true }));
     expect(screen.queryByRole("dialog")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Change" }));
-    const sheet = screen.getByRole("dialog", { name: "Sharing" });
+    const sheet = screen.getByRole("dialog", { name: "Privacy" });
     expect(
-      within(sheet).getByRole("heading", { level: 2, name: "Sharing" }),
+      within(sheet).getByRole("heading", { level: 2, name: "Privacy" }),
     ).toBeVisible();
     expect(within(sheet).getByRole("checkbox")).toBeChecked();
 
@@ -220,7 +308,7 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     await renderWithRouter(line({ isVerified: true, countInTotals: true }));
 
     await user.click(screen.getByRole("button", { name: "Change" }));
-    const dialog = screen.getByRole("dialog", { name: "Sharing" });
+    const dialog = screen.getByRole("dialog", { name: "Privacy" });
     expect(dialog).toBeVisible();
     // The platform's close, as Escape does it (happy-dom has no Escape
     // handling; test/ui/sheet.dom.test.tsx closes it the same way).
@@ -233,6 +321,6 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     // The closed state is the line's, not only the dialog's, so Change
     // opens it again.
     await user.click(screen.getByRole("button", { name: "Change" }));
-    expect(screen.getByRole("dialog", { name: "Sharing" })).toBeVisible();
+    expect(screen.getByRole("dialog", { name: "Privacy" })).toBeVisible();
   });
 });

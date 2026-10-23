@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { JSX } from "react";
 
-import { Sheet } from "../../../ui";
+import { Sheet, useUnconfirmedRefusal } from "../../../ui";
 import type { CountInTotalsChoice } from "../inputs";
 import { TotalsSwitch } from "./TotalsSwitch";
 
@@ -11,7 +11,9 @@ import { TotalsSwitch } from "./TotalsSwitch";
  *
  * - **Unconfirmed**, round 27's line, which "takes precedence when it
  *   applies": an unconfirmed runner's run saves private (D-50), and it
- *   counts in no total either (D-108 C).
+ *   counts in no total either (D-108 C), so no totals sentence and no
+ *   Change (round 38 #64, follow-up (a)). "Confirm your email" opens the
+ *   app's one confirm-email sheet, led by the share switch's sentence.
  * - **Counted**, the disclosure, with Change.
  * - **Opted out**, the board's "just 'Only you see this run.'", now
  *   "Other runners won't see this run." (owner, D-121: private means not
@@ -21,14 +23,16 @@ import { TotalsSwitch } from "./TotalsSwitch";
  *   there and hidden, and the export "don't" of the rule; all three name
  *   the same audience, other runners.
  *
- * **Change opens Settings › Sharing as a sheet**, over the form rather
+ * **Change opens Settings › Privacy as a sheet** (round 38 #61a/b: one
+ * name for the place, on U1's row, the sub-page and this sheet), over the form rather
  * than in place of it, so the verdict, chips and tags being picked are
  * never unmounted — "returns to the form with its values kept". The sheet
  * holds the totals switch alone: the sharing default is a form of its own,
  * and a form cannot sit inside A3's.
  */
-export const PRIVATE_UNCONFIRMED =
-  "Confirm your email to share. This run saves private.";
+export const CONFIRM_LINK = "Confirm your email";
+const PRIVATE_UNCONFIRMED_REST = " to share. This run saves private.";
+export const PRIVATE_UNCONFIRMED = `${CONFIRM_LINK}${PRIVATE_UNCONFIRMED_REST}`;
 export const PRIVATE_NOT_SHOWN = "Other runners won't see this run.";
 export const PRIVATE_COUNTED =
   "Its kit and verdict still count, anonymously, in the guides.";
@@ -37,6 +41,13 @@ export const PRIVATE_COUNTED =
 The share switch's sub-line, set as A3's shared line is.
 */
 const LINE = "text-small text-muted";
+
+/**
+ * A press inside the line, Change or "Confirm your email": ink, semibold
+ * and underlined, a button set as running text.
+ */
+const IN_LINE_BUTTON =
+  "target cursor-pointer border-none bg-transparent p-0 text-small font-semibold text-ink underline underline-offset-4";
 
 export function PrivateRunLine({
   hintId,
@@ -56,11 +67,28 @@ export function PrivateRunLine({
 }>): JSX.Element {
   const [isCounted, setIsCounted] = useState(countInTotals);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const askToConfirm = useUnconfirmedRefusal();
 
   if (!isVerified) {
+    // With no answer above (a render without the root) there is no sheet
+    // to open, so the words stand as text rather than a press that does
+    // nothing.
     return (
       <span id={hintId} className={LINE}>
-        {PRIVATE_UNCONFIRMED}
+        {askToConfirm === undefined ? (
+          CONFIRM_LINK
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              askToConfirm("share");
+            }}
+            className={IN_LINE_BUTTON}
+          >
+            {CONFIRM_LINK}
+          </button>
+        )}
+        {PRIVATE_UNCONFIRMED_REST}
       </span>
     );
   }
@@ -76,7 +104,7 @@ export function PrivateRunLine({
               onClick={() => {
                 setIsSheetOpen(true);
               }}
-              className="target cursor-pointer border-none bg-transparent p-0 text-small font-semibold text-ink underline underline-offset-4"
+              className={IN_LINE_BUTTON}
             >
               Change
             </button>
@@ -88,12 +116,15 @@ export function PrivateRunLine({
         onClose={() => {
           setIsSheetOpen(false);
         }}
-        label="Sharing"
+        label="Privacy"
       >
         <div className="flex flex-col gap-6">
-          <h2 className="m-0 font-display text-heading">Sharing</h2>
+          <h2 className="m-0 font-display text-heading">Privacy</h2>
           <TotalsSwitch
             initial={isCounted}
+            // The sheet opens only from Change, which only a confirmed
+            // runner's line has.
+            isVerified
             save={saveCountInTotals}
             onSaved={setIsCounted}
           />

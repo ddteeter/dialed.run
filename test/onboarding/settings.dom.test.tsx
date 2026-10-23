@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   SettingsIndex,
+  privacyRowValue,
   SharingForm,
   UnitsForm,
 } from "../../src/modules/onboarding/components/Settings";
@@ -88,7 +89,9 @@ describe("the index (U1/N)", () => {
       "href",
       "/onboarding/settings/sharing",
     );
-    expect(row(/^Privacy New/u)).toHaveTextContent("New runs go to the feed");
+    expect(row(/^Privacy New/u)).toHaveTextContent(
+      /^PrivacyNew runs shared · Counted in totals›$/u,
+    );
     // Settings › About (ACC-13, D-52; round 28 #7): the legal texts.
     expect(row(/^Privacy policy/u)).toHaveAttribute("href", "/privacy");
     expect(row(/^Privacy policy/u)).toHaveTextContent(
@@ -154,11 +157,22 @@ describe("the index (U1/N)", () => {
     expect(row(/^Notifications/u)).toHaveTextContent(
       "Run reminders in the app only",
     );
-    expect(row(/^Privacy New/u)).toHaveTextContent("New runs stay private");
+    expect(row(/^Privacy New/u)).toHaveTextContent(
+      /^PrivacyNew runs private · Not counted›$/u,
+    );
     expect(row(/^How you run/u)).toHaveTextContent("−4° offset");
     expect(row(/^Blocked runners/u)).toHaveTextContent("0 blocked");
     // An account that has not reached O0 has no handle to show.
     expect(row(/^Account/u)).toHaveTextContent(/^AccountEmail, password›$/u);
+  });
+
+  it("states both Privacy settings on its row, each its own way (round 38 #61b)", () => {
+    expect(
+      privacyRowValue({ defaultAudience: "runners", countInTotals: false }),
+    ).toBe("New runs shared · Not counted");
+    expect(
+      privacyRowValue({ defaultAudience: "private", countInTotals: true }),
+    ).toBe("New runs private · Counted in totals");
   });
 
   it("asks the unanswered calibration as the ruling words it", async () => {
@@ -255,6 +269,7 @@ describe("the sub-pages", () => {
       <SettingsSectionPage
         section="units"
         current={ANSWERED}
+        isVerified
         saveUnits={saveUnits}
         saveSharing={saveSharing}
         saveCountInTotals={saveCountInTotals}
@@ -271,6 +286,7 @@ describe("the sub-pages", () => {
       <SettingsSectionPage
         section="sharing"
         current={ANSWERED}
+        isVerified
         saveUnits={saveUnits}
         saveSharing={saveSharing}
         saveCountInTotals={saveCountInTotals}
@@ -280,7 +296,7 @@ describe("the sub-pages", () => {
       screen.getByRole("heading", { level: 1, name: "Privacy" }),
     ).toBeVisible();
     expect(
-      screen.getByRole("checkbox", { name: "Share to feed by default" }),
+      screen.getByRole("checkbox", { name: "Share new runs" }),
     ).toBeChecked();
     expect(screen.queryByRole("radio")).toBeNull();
     await userEvent.setup().click(screen.getByRole("button", { name: "Save" }));
@@ -318,6 +334,70 @@ describe("the sub-pages", () => {
     });
   });
 
+  it("hold Privacy's two controls in two groups, the totals switch outside the form and last (round 38 #61c)", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(
+      <SettingsSectionPage
+        section="sharing"
+        current={ANSWERED}
+        isVerified
+        saveUnits={vi.fn()}
+        saveSharing={vi.fn()}
+        saveCountInTotals={vi.fn()}
+      />,
+    );
+    const [newRuns, totals] = screen.getAllByRole("heading", { level: 2 });
+    expect(newRuns).toHaveTextContent(/^New runs$/u);
+    expect(totals).toHaveTextContent(
+      /^Anonymous totals · Saves as you switch$/u,
+    );
+    // The kicker is mono, in the muted role U1's group headings use.
+    expect(newRuns).toHaveClass("text-muted");
+    expect(newRuns?.firstElementChild).toHaveClass("text-mono-xs");
+
+    const share = screen.getByRole("checkbox", { name: "Share new runs" });
+    const counted = screen.getByRole("checkbox", {
+      name: "Count my runs in anonymous totals",
+    });
+    const save = screen.getByRole("button", { name: "Save" });
+    const newRunsGroup = newRuns?.closest("section");
+    const totalsGroup = totals?.closest("section");
+    expect(newRunsGroup).toContainElement(share);
+    expect(newRunsGroup).toContainElement(save);
+    expect(totalsGroup).toContainElement(counted);
+    // One --hairline-2 rule, between the two groups.
+    const rule = screen.getByRole("separator");
+    expect(rule).toHaveClass("border-t", "border-hairline-2");
+    expect(newRunsGroup?.nextElementSibling).toBe(rule);
+    expect(rule.nextElementSibling).toBe(totalsGroup);
+    expect(counted.closest("form")).toBeNull();
+    expect(share.closest("form")).toBe(save.closest("form"));
+
+    share.focus();
+    await user.tab();
+    expect(save).toHaveFocus();
+    await user.tab();
+    expect(counted).toHaveFocus();
+  });
+
+  it("give the totals switch an unconfirmed runner's lines on Privacy (round 38 #61d)", async () => {
+    await renderWithRouter(
+      <SettingsSectionPage
+        section="sharing"
+        current={ANSWERED}
+        isVerified={false}
+        saveUnits={vi.fn()}
+        saveSharing={vi.fn()}
+        saveCountInTotals={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("checkbox", {
+        name: "Count my runs in anonymous totals",
+      }),
+    ).toHaveAccessibleDescription(/^Once you confirm your email/u);
+  });
+
   it("say Nothing saved when the units save fails", async () => {
     const user = userEvent.setup();
     const saveUnits = vi.fn().mockRejectedValue(new Error("D1 down"));
@@ -336,10 +416,14 @@ describe("the sub-pages", () => {
     );
 
     const toggle = screen.getByRole("checkbox", {
-      name: "Share to feed by default",
+      name: "Share new runs",
     });
     expect(toggle).toBeChecked();
-    expect(screen.getByText("You can flip it per run.")).toBeVisible();
+    expect(
+      screen.getByText(
+        "Runners on dialed.run see their kit, conditions and verdict. You can change any run.",
+      ),
+    ).toBeVisible();
     await user.click(toggle);
     await user.click(screen.getByRole("button", { name: "Save" }));
 

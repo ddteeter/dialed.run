@@ -1138,7 +1138,7 @@ describe("VerdictForm: tags and sharing", () => {
     await user.click(screen.getByRole("button", { name: "chafed" }));
 
     await user.click(screen.getByRole("button", { name: "Change" }));
-    const sheet = screen.getByRole("dialog", { name: "Sharing" });
+    const sheet = screen.getByRole("dialog", { name: "Privacy" });
     await user.click(
       within(sheet).getByRole("checkbox", {
         name: "Count my runs in anonymous totals",

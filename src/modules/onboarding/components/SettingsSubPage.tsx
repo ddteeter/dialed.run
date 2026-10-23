@@ -4,7 +4,7 @@ import type { JSX, ReactNode } from "react";
 import { Icon, Page } from "../../../ui";
 import type { CurrentSettings } from "../profile";
 import type { SettingsSection } from "../route-decisions";
-import { SharingForm, UnitsForm } from "./Settings";
+import { GroupSection, SharingForm, UnitsForm } from "./Settings";
 import { TotalsSwitch } from "./TotalsSwitch";
 
 /*
@@ -83,24 +83,54 @@ const SECTION_TITLES: Readonly<Record<SettingsSection, string>> = {
 };
 
 /**
- * One sub-page: its title, the way back, and its own small form. Privacy
- * also holds D-108's totals switch, which saves on toggle rather than
- * with the form's Save (round 32: "one SHARING group beside 'Share new
- * runs'").
+ * One of a sub-page's groups: a mono kicker over what it holds, as U1's
+ * groups are headed.
  */
-export function SettingsSectionPage({
-  section,
-  current,
-  saveUnits,
-  saveSharing,
-  saveCountInTotals,
+function SubPageGroup({
+  title,
+  children,
 }: Readonly<{
+  title: string;
+  children: ReactNode;
+}>): JSX.Element {
+  return (
+    <GroupSection title={title} className="flex flex-col gap-3">
+      {children}
+    </GroupSection>
+  );
+}
+
+type SectionPageProps = Readonly<{
   section: SettingsSection;
   current: CurrentSettings;
+  /**
+  Whether the runner's address is confirmed: the totals switch's lines.
+  */
+  isVerified: boolean;
   saveUnits: Parameters<typeof UnitsForm>[0]["saveUnits"];
   saveSharing: Parameters<typeof SharingForm>[0]["saveSharing"];
   saveCountInTotals: Parameters<typeof TotalsSwitch>[0]["save"];
-}>): JSX.Element {
+}>;
+
+/**
+ * One sub-page: its title, the way back, and its own small form.
+ *
+ * **Privacy holds two controls that save differently** (round 38 #61c):
+ * NEW RUNS is a form with its Save, and ANONYMOUS TOTALS saves on toggle,
+ * so it sits after the form's end, outside it, under a rule and a kicker
+ * that says so. A failure there is §4a's NOT CHANGED in its own group.
+ * The totals switch comes last, so Tab never passes it between the form's
+ * field and its Save.
+ */
+export function SettingsSectionPage(props: SectionPageProps): JSX.Element {
+  const {
+    section,
+    current,
+    isVerified,
+    saveUnits,
+    saveSharing,
+    saveCountInTotals,
+  } = props;
   return (
     <PickedSubPage
       section={section}
@@ -109,11 +139,18 @@ export function SettingsSectionPage({
         units: <UnitsForm current={current} saveUnits={saveUnits} />,
         sharing: (
           <>
-            <SharingForm current={current} saveSharing={saveSharing} />
-            <TotalsSwitch
-              initial={current.countInTotals}
-              save={saveCountInTotals}
-            />
+            <SubPageGroup title="New runs">
+              <SharingForm current={current} saveSharing={saveSharing} />
+            </SubPageGroup>
+            {/* Round 38 #61c's rule between the groups, in --hairline-2. */}
+            <hr className="m-0 border-0 border-t border-hairline-2" />
+            <SubPageGroup title="Anonymous totals · Saves as you switch">
+              <TotalsSwitch
+                initial={current.countInTotals}
+                isVerified={isVerified}
+                save={saveCountInTotals}
+              />
+            </SubPageGroup>
           </>
         ),
       }}

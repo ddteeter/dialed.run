@@ -48,6 +48,21 @@ const DISTANCE_WORDS: Readonly<Record<DistanceUnit, string>> = {
 };
 
 /**
+ * U1's Privacy row states both of its settings as they stand, so a runner
+ * reads them without opening it (round 38 #61b): "New runs shared ·
+ * Counted in totals", with "private" and "Not counted" when those apply.
+ */
+export function privacyRowValue(
+  current: Pick<CurrentSettings, "defaultAudience" | "countInTotals">,
+): string {
+  const share = isSharedAudience(current.defaultAudience)
+    ? "shared"
+    : "private";
+  const totals = current.countInTotals ? "Counted in totals" : "Not counted";
+  return `New runs ${share} · ${totals}`;
+}
+
+/**
  * One tap-through row: the setting, what it is now, and the way in.
  */
 function SettingsRow({
@@ -89,6 +104,29 @@ function SettingsRow({
 }
 
 /**
+ * A settings group's frame: a mono heading over what it holds. U1's index
+ * groups and the sub-pages' groups share it and differ only in the gap.
+ */
+export function GroupSection({
+  title,
+  className,
+  children,
+}: Readonly<{
+  title: string;
+  className: string;
+  children: ReactNode;
+}>): JSX.Element {
+  return (
+    <section className={className}>
+      <h2 className="m-0 text-muted">
+        <Mono step="xs">{title}</Mono>
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+/**
  * One of U1's groups: a mono heading over its rows.
  */
 function SettingsGroup({
@@ -96,12 +134,9 @@ function SettingsGroup({
   children,
 }: Readonly<{ title: string; children: ReactNode }>): JSX.Element {
   return (
-    <section className="flex flex-col gap-1">
-      <h2 className="m-0 text-muted">
-        <Mono step="xs">{title}</Mono>
-      </h2>
+    <GroupSection title={title} className="flex flex-col gap-1">
       <ul className="m-0 flex list-none flex-col p-0">{children}</ul>
-    </section>
+    </GroupSection>
   );
 }
 
@@ -162,11 +197,7 @@ export function SettingsIndex({
           to="/onboarding/settings/$section"
           params={{ section: "sharing" }}
           label="Privacy"
-          value={
-            isSharedAudience(current.defaultAudience)
-              ? "New runs go to the feed"
-              : "New runs stay private"
-          }
+          value={privacyRowValue(current)}
         />
       </SettingsGroup>
       <SettingsGroup title="Review">
@@ -371,7 +402,14 @@ export function UnitsForm({
   );
 }
 
-const SHARE_DEFAULT_LABEL = "Share to feed by default";
+/**
+ * Round 38 #61c's NEW RUNS frame, which retires the build's older "Share
+ * to feed by default" and "You can flip it per run." (round 27 #7 retired
+ * the feed-and-public wording for this default).
+ */
+const SHARE_DEFAULT_LABEL = "Share new runs";
+const SHARE_DEFAULT_HINT =
+  "Runners on dialed.run see their kit, conditions and verdict. You can change any run.";
 
 /**
  * The privacy sub-page's one field, and what it means per run.
@@ -392,7 +430,7 @@ function SharingFields({
           onChange({ defaultAudience: audienceOfShareToggle(isOn) });
         }}
       />
-      <p className="m-0 text-micro text-muted">You can flip it per run.</p>
+      <p className="m-0 text-micro text-muted">{SHARE_DEFAULT_HINT}</p>
     </div>
   );
 }

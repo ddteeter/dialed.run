@@ -12,15 +12,15 @@ import { ResendLink } from "./ResendLink";
  * sheet names only that one — round 27's list of all three is struck —
  * and the email change has a sentence of its own. Follow's is round 35
  * #49's (it waits too since design 133, D-113), so every trigger has
- * one. A3's share switch has a drawn lead ("Sharing
- * needs a confirmed email. This run saves private."), but the switch
- * opens no sheet today, so it waits for lane 127 to make it a trigger.
+ * one. A3's is the share switch's drawn lead, and the sheet opens from the
+ * "Confirm your email" in A3's private line (round 38 #64, follow-up (a)).
  */
 const WAITS_FOR: Readonly<Record<ConfirmTrigger, string>> = {
   useful: "Marking runs Useful needs a confirmed email.",
   report: "Reporting needs a confirmed email.",
   follow: "Following runners needs a confirmed email.",
   "email-change": "Confirm this address before you change it.",
+  share: "Sharing needs a confirmed email. This run saves private.",
 };
 
 type Resend = (input: { data: { email: string } }) => Promise<ResendResult>;

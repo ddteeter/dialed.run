@@ -239,4 +239,48 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   await expect(
     page.getByRole("link", { name: /^Units.*Celsius, miles/u }),
   ).toBeVisible({ timeout: 15_000 });
+
+  // Privacy (round 38 #61): one name, a row that states both settings, and
+  // a sub-page whose two controls save two ways — the default with its
+  // Save, the totals switch as it is switched, after the form and last.
+  await scene(page, "Privacy · the row states both settings");
+  const privacyRow = page.getByRole("link", { name: /^Privacy New runs/u });
+  await expect(privacyRow).toContainText("New runs shared · Counted in totals");
+  await privacyRow.click();
+  await hydrated(page);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Privacy" }),
+  ).toBeVisible();
+  await scene(
+    page,
+    "Two groups: a form with its Save, and a switch that saves",
+  );
+  await expect(
+    page.getByRole("heading", { level: 2, name: "New runs" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      level: 2,
+      name: "Anonymous totals · Saves as you switch",
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("checkbox", { name: "Share new runs" }),
+  ).toBeChecked();
+  const totals = page.getByRole("checkbox", {
+    name: "Count my runs in anonymous totals",
+  });
+  await expect(totals).toHaveAccessibleDescription(
+    /Shared runs also count in Same conditions, which other runners see\./u,
+  );
+  await scene(page, "Off saves at once, and says what leaves when");
+  await totals.click();
+  await expect(totals).not.toBeChecked();
+  await expect(totals).toHaveAccessibleDescription(
+    /^Off\. Your runs leave the guides at tonight's update\. They leave Same conditions now/u,
+  );
+  await page.getByRole("link", { name: "Settings" }).first().click();
+  await expect(
+    page.getByRole("link", { name: /^Privacy New runs/u }),
+  ).toContainText("New runs shared · Not counted", { timeout: 15_000 });
 });

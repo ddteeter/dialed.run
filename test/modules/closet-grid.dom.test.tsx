@@ -271,7 +271,7 @@ describe("ClosetGrid: one flat grid (§6c.10)", () => {
 });
 
 describe("ClosetGrid: a photo being checked (R-69, round 27 #21)", () => {
-  it("tags the tile ONLY YOU, alone in the kicker", async () => {
+  it("tags the tile CHECKING, alone in the kicker, and says who can't see it (round 38 #64)", async () => {
     const checking = itemView({
       item: wardrobeItem({
         id: "01CHK",
@@ -286,7 +286,19 @@ describe("ClosetGrid: a photo being checked (R-69, round 27 #21)", () => {
 
     const link = screen.getByRole("link", { name: /New jacket/ });
     const kicker = link.querySelector(".order-first");
-    expect(kicker).toHaveTextContent(/^\[Only you\]$/);
+    const tag = kicker?.querySelector("[data-part='checking-tag']");
+    expect(tag).toHaveClass("text-muted");
+    expect(tag?.querySelector("[aria-hidden='true']")).toHaveTextContent(
+      /^\[Checking\]$/u,
+    );
+    expect(tag?.querySelector(".sr-only")).toHaveTextContent(
+      /^Being checked, other runners can't see this photo$/u,
+    );
+    expect(kicker?.children).toHaveLength(1);
+    expect(link).toHaveAccessibleName(
+      /Being checked, other runners can't see this photo/u,
+    );
+    expect(link).not.toHaveAccessibleName(/Checking\]/u);
   });
 
   it("says nothing once the photo is cleared, or when there is no photo", async () => {
