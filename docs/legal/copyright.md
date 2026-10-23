@@ -86,8 +86,10 @@ send a counter-notice to the same agent. It must contain, in writing:
    sent the original notice, or their agent.
 
 When we receive a valid counter-notice, we send a copy to the person who
-sent the original notice. We removed the material by deleting it, so we
-cannot put it back ourselves. If, 10 business days after we sent the copy,
+sent the original notice. We keep removed material hidden for 30 days. If
+a valid counter-notice reaches us in that time, we put it back 10 to 14
+business days later unless the sender tells us they have gone to court.
+After 30 days with no counter-notice, it is deleted. If, 10 business days after we sent the copy,
 they have not told us that they have filed a court action to stop you, we
 tell you, and you are free to post the material again. A notice answered
 this way does not count against your account.

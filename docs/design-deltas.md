@@ -1184,6 +1184,24 @@ NCMEC]` or `[REPORTED TO NCMEC {date}] · {number}`; then an optional
     what a garment match offers an operator, since the takedown form
     takes kit photos only.
 
+73. **Copyright holds on Review (C5, D-130, design 148). Undesigned;
+    built as a placeholder.** Below the Takedown form, a list titled
+    `Copyright holds · N`, built from Quarantine's row (item C12) with no
+    new glyph or colour: the subject type and id, "Hidden {day}" in
+    MONO.xs, "Owner {id} · strikes {n}" in MONO.xs, the notice as the
+    audit row keeps it, and a bracketed line saying what happens next —
+    `[no counter-notice: deleted {day}]`, `[counter-notice received: back
+    {day}]` or `[court action {day}: stays hidden, deleted {day}]`. One
+    action under it: **Counter-notice received** until one is recorded,
+    then **Court action filed**, then none; each a Desk form with no
+    field ("Recording" while out). Answers in the live region:
+    "Counter-notice recorded.", "Court action recorded. It stays
+    hidden.", and under the button "A counter-notice is already
+    recorded.", "A court action is already recorded.", "Record the
+    counter-notice first.", "This hold is settled: put back or deleted."
+    **The ask:** draw the list beside Quarantine's, and say whether the
+    counter-notice should take a typed date rather than today's.
+
 ## Answered in round 37 (imported 2026-10-10)
 
 Design sent round 37 as `Round 37 Rulings.dc.html`, with the text of record

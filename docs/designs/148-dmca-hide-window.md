@@ -16,10 +16,10 @@ sender goes to court.
   `restore_at` and `court_action_at` with who recorded each. `status` is
   `hidden` → `restored`, or `hidden` → `purging` → `purged`.
 - **Hide** (`feed/moderation.ts`): a takedown whose reason is `copyright`
-  writes, in one batch, the hold, the hide (entry `moderation_status =
-  'removed'`; photo `screen_status = 'removed'`, a new value), the open
-  reviews settled, the audit row and the author's notice, which are
-  unchanged. No bytes are owed to R2, so the photo's fingerprint stays
+  writes, in one batch, the hold, the hide (entry
+  `moderation_status = 'removed'`; photo `screen_status = 'removed'`, a
+  new value), the audit row and the author's notice, which are unchanged.
+  Open reviews stay open: a reviewer can still Remove or quarantine it. No bytes are owed to R2, so the photo's fingerprint stays
   until purge (C16). A removal request's `intimate` takedown still deletes.
 - **Who sees a hidden subject.** Nobody but the Desk sees a hidden photo,
   its author included (`entries.ts`, `photos.ts`): the band says "PHOTO
