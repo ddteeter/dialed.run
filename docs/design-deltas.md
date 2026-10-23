@@ -933,165 +933,130 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
-<!-- Item numbers continue past rounds 35–37 (45–59); this comment keeps the list from being renumbered. -->
+<!-- Item numbers continue past rounds 35–38 (45–65); this comment keeps the list from being renumbered. -->
 
-60. **A Rename that lost a race (R-121, PR #184).** A force-rename now
-    writes nothing when the handle changed between its read and its write,
-    whether through another moderator's rename or the runner's own new
-    pick. It used to report the rename as done. D8 · Runners and a flagged
-    handle's review row both answer it the way they answer a taken
-    placeholder: `NOT RENAMED` in the row's control band, and on the review
-    row, the row stays open. The sentence is placeholder copy: "The handle
-    changed before the rename landed. Nothing was renamed." (`renameMessage`
-    in `safety/components/DeskRunners.tsx`). **The ask:** word it.
+## Answered in round 38 (imported 2026-10-18)
 
-61. **What lane A (design 138) built beside round 32's drawings.**
-    D-108 E's three disclosures and Settings › Sharing's totals switch are
-    built with the board's copy verbatim. Five things the board does not
-    draw. **Four are needed before launch** (owner, 2026-10-11), marked so;
-    the other can follow. Round 30 (d)'s Settings › Region is **not** built:
-    totals group by a climate zone the guide job derives from each run's
-    location, not by a region the runner declares (owner, 2026-10-11;
-    D-120), so round 30 (d) needs no screen.
-    - **"How the guides are made" opens `/privacy`.** The board's target
-      is `dialed.run/how-it-works#totals`, which the marketing site owns
-      and which is not live. When it is, the link points there. **The
-      ask:** none for design; a one-line change when the site ships.
-    - **The Change sheet.** Round 32 says Change "opens Settings ›
-      Sharing as a sheet". Built as a `Sheet` titled "Sharing" holding
-      the totals switch, its sub-line and the link, and a Done. It does
-      not hold "Share new runs": that is a form with its own Save, and a
-      form cannot sit inside A3's form. **Needed before launch.** **The
-      ask:** draw the sheet, or confirm the totals switch alone.
-    - **Two names for one place.** The sheet is titled "Sharing", as round
-      32 names the group, but the Settings row and sub-page it stands for
-      are "Privacy" (U1). **Needed before launch.** **The ask:** one name.
-    - **Where the totals switch sits.** Round 32 draws one SHARING group
-      with "Share new runs" and the totals switch. Built on the Privacy
-      sub-page under the sharing default's form and its Save, because the
-      totals switch saves on toggle and the default does not. **Needed
-      before launch.** **The ask:** draw the group as the build has to
-      hold it, two controls that save differently.
-    - **What the totals copy says to an unconfirmed runner.** "Shared and
-      private runs add their temperature, kit and verdict to the guides
-      and reports" is untrue for them: D-108 C counts confirmed accounts
-      only. The owner ruled (2026-10-11) that an unconfirmed runner may
-      still turn totals off, with no confirm sheet, so
-      they meet this switch. The build keeps the drawn copy until design
-      words it. **Needed before launch.** **The ask:** the unconfirmed
-      runner's on and off lines.
+Sent on 2026-10-18 for items 60–65; design answered the same day as
+`Round 38 Rulings.dc.html`, with the text of record under "Round 38 ·
+Built beside or without a drawing (items 60–65)" in
+`design/docs/product.md`. Two follow-ups went back that evening (64's
+unconfirmed runner and 62b's name) and are answered on the same board, so
+nothing is left open. Every ask is drawn, and most of the answers change
+the build: each item says what is **not built yet**. Item 61 is the one
+that blocks public launch.
 
-62. **What lane C (design 139) built beside a drawing.** The owner ruled
-    on all four on 2026-10-12: the first is an addition to drawn copy, and
-    the other three **ship as placeholders** until design draws them.
-    - **An addition to item 23's drawn copy (owner, 2026-10-12).** Under
-      "Think we got it wrong? Reply to the email we sent you." the notice
-      adds a fallback line for a runner who no longer has that email: "Or
-      write to desk@dialed.run.", in the same quiet type. The address is
-      `APPEAL_ADDRESS` (`lib/contracts/contact.ts`), not retyped. The
-      status region says it with the rest. **The ask:** draw it on Au1.
-    - **Placeholder: today's line for a digest that skipped an operator (OPS-11).** The
-      morning digest now goes only to a confirmed address. An operator
-      whose address is not confirmed is skipped, and on that UTC day
-      Today prints one line under its three numbers. The kicker is
-      `DIGEST NOT EMAILED`, in hi-viz because confirming needs a person,
-      and the sentence is "An operator's email address isn't confirmed, so
-      today's digest wasn't sent to them." Both are existing type, with
-      placeholder copy (`DigestUnconfirmed` in `ops/components/Today.tsx`).
-      D5 does not draw a skipped digest. **Ships as a placeholder.** **The
-      ask:** word it, and say where on Today it sits.
-    - **Placeholder: item 23's notice on Au2.** Round 27 draws the band on Au1 only.
-      Google on Au2 signs in an existing account, so a banned runner can
-      reach the same refusal from Create account. The build puts the same
-      band in the same place, first in the form region. **Ships as a
-      placeholder.** **The ask:** confirm it for Au2.
-    - **Placeholder: "over the empty form".** After a password log-in the gate refuses,
-      the build keeps what was typed in Email and Password, as every
-      other Au1 refusal does. A Google return arrives at an empty form
-      anyway. **Ships as a placeholder, fields kept.** **The ask:** say
-      whether "empty" means the fields are cleared.
+Design changed eight files:
 
-63. **What lane D2 (design 141) built beside the takedown boards.** Two
-    placeholders from existing primitives and bracket text, no new glyph,
-    and one link still waiting for words.
-    - **Their other photos on Review** (D-117, R-145 c). A queue row an
-      intimate-image report started, and a removal request whose link is
-      ours, list the same runner's other photos under the row's own:
-      `THEIR OTHER PHOTOS · 3` in mono, then each photo at the row's photo
-      height, opening its kit, with its id in mono under it (the id the
-      takedown form under Review takes). None reads "No other photos from
-      this runner." Newest kit first, at most 12. **The ask:** draw the
-      block, and say whether 12 and the id line are right.
-    - **The copyright takedown's email** (R-140). The bell row and band
-      say "We removed this photo after a copyright notice." (round 28 #8);
-      the email now says the same in its own first sentence: "We removed a
-      photo from one of your runs after a copyright notice. Your run and
-      verdict stay." (an entry: "…one of your runs from the feed after a
-      copyright notice. The run itself stays."). No reason is quoted. A
-      removal request's takedown is not a copyright notice and keeps the
-      moderator's reason, `intimate`'s statement. **The ask:** confirm.
-    - **W1's link to `/takedown` is still undrawn** (item 58's "Not
-      built"). The board says "Linked … from W1's reason list" and gives
-      neither words nor a place; a signed-in runner already has the reason
-      itself. Not built. **The ask:** the words and where they sit in W1.
+- `Round 38 Rulings.dc.html` (new): every frame below.
+- `Round 27 Rulings.dc.html`, `Round 28 Rulings.dc.html` (#6),
+  `Round 29 Rulings.dc.html` (#4): item 64's "Other runners can't see…"
+  rewrites, in place.
+- `Round 32 Rulings.dc.html`: 1a/1b relabelled ANONYMOUS TOTALS, with the
+  confirmed ON and OFF lines. 2a's private line is rewritten, and its note
+  now says Settings › Privacy and keeps round 27's line for an unconfirmed
+  runner.
+- `Remaining Screens.dc.html` and `- Dark`: U2's conditions-pool card
+  marked `RETIRED · ROUND 38 #64 · THE ONE SWITCH IS ON PRIVACY`.
+- `design/docs/product.md`: the Round 38 section, with both follow-ups.
 
-64. **"Private" no longer says "only you" (owner, 2026-10-12; D-121, PR
-    #182).** The policy now says private means not shown to other runners
-    or the public; operators may see content for named reasons. Lane D1
-    (PR #187) rewrote the drawn copy that promised more, against the
-    boards' words:
-    - A3/PrivateRunLine: "Only you see this run." → "Other runners won't
-      see this run."
-    - The UNDER REVIEW tag's spoken name (round 29 #4): "Under review,
-      only you can see this" → "Under review, other runners can't see
-      this".
-    - D's "Hidden while we check" band (round 28 #6): "Only you can see
-      this while we look at it." → "Other runners can't see this while we
-      look at it."
-    - The garment photo's "Being checked" band (round 27 #21): "Only you
-      can see this photo until it's checked, usually within a day." →
-      "Other runners can't see this photo until it's checked, usually
-      within a day."
-    - The export's `audience` column note: "private means only you" →
-      "private means other runners don't see it".
-    - **The verbs differ by tense, on purpose:** A3's "won't" is said
-      before the run is saved, a promise; the review tag and bands' "can't"
-      describe something already there and hidden; the export's "don't"
-      states the rule. All of them name the same audience, other runners.
-    - **Kept:** the closet tile's `[ONLY YOU]` tag on a photo being
-      checked. It is a MONO.xs tag in a tile's kicker, where "other runners
-      can't see this" does not fit, and the band on the garment's own page
-      says the full sentence.
-    - Settings › Sharing's totals line (round 32, 1a): "Never your name,
-      notes, photos, or where and when you ran." → "Never your name,
-      notes, photos, when you ran, or any place more precise than a broad
-      climate zone." Totals count a climate zone derived from where a run
-      was (D-120), so "where" was untrue.
-    - **U2's conditions pool folds into that switch** (owner, 2026-10-12).
-      U2's "THE CONDITIONS POOL" card is not drawn separately: Settings ›
-      Privacy's one totals switch (one writer, `setCountInTotals`) now also
-      leaves a runner's shared runs out of the in-app Same conditions block,
-      and its lines say so — on: "…to the guides and reports, and shared
-      runs count in the Same conditions block other runners see. Never…";
-      off: "Off. Your runs leave the guides at tonight's update. They leave
-      the Same conditions block now, and it still works for you. Reports
-      already published stay as they are." **Proposed wording, awaiting
-      the owner's.** U2's SHARED/NEVER table is not built.
-      **The ask:** fold these into the boards, or reword them.
+60. **A Rename that lost a race (R-121). Worded and drawn.** NOT RENAMED ·
+    "The handle changed to @{now} before the rename landed. Nothing was
+    renamed. Look at it, then press Rename again if it still has to go." In
+    D8's control band and on D1's flagged-handle row. D1's row stays open
+    and its header re-reads to the new handle. Keep is left to the operator.
+    **Not built yet:** the sentence needs the handle as it is now, which
+    the rename outcome does not carry today, and D1's header re-read.
 
-65. **E1's compact line, composed from the E2 frame (FEED-9; PR #187).**
-    Round 25 rewords "E1's compact line", but no E1 frame draws a
-    conditions line; the sentence is drawn only on `Remaining Screens`'
-    unbuilt "E2 Feed your conditions" frame. Built from that frame's
-    composition, with contract values: a teal band (`bg-teal`, ink text),
-    the SAME CONDITIONS eyebrow without a window (MONO.xs), and the line
-    "{n} runners logged {feels}° and {precip} in the last 3 days." at
-    `text-body` semibold, at the top of Following above the posts. Three
-    things the frame does not say: the match widened to fourteen days reads
-    "in the last 2 weeks"; with no saved place, no fresh reading there, or
-    fewer than five runners, there is no line; Following with no posts
-    keeps its empty state and draws no line. **The ask:** draw E1's line
-    where it sits, and its widened and absent states.
+61. **Settings › Privacy (lane A, design 138). Blocks public launch.**
+    - (a) **The Change sheet: confirmed as built.** It holds only the totals
+      group: title, switch, sub-line, "How the guides are made", Done. Done
+      returns focus to Change, and A3's private line re-reads the switch.
+      Share new runs stays on the sub-page.
+    - (b) **One name: Privacy**, on U1's row, the sub-page title and the
+      sheet title. "Sharing" retires as a name. U1's row gains a sub-line
+      that states both settings: "New runs shared · Counted in totals", with
+      "private" and "Not counted" when those apply.
+    - (c) **Two groups.** The Privacy sub-page holds NEW RUNS (Share new runs
+      and its Save; the Form Contract's bands under it), then a
+      `--hairline-2` rule, then ANONYMOUS TOTALS · SAVES AS YOU SWITCH
+      outside the form (the switch and the link; a failure shows §4a NOT
+      CHANGED inside this group). The totals switch is last in tab order, so
+      Tab never passes it between the form and its Save.
+    - (d) **The unconfirmed runner's lines.** ON: "Once you confirm your
+      email, your runs add their temperature, kit and verdict to the guides
+      and reports, and shared runs count in Same conditions. Never your
+      name, notes, photos, when you ran, or anywhere more precise than a
+      broad climate zone." OFF: "Off. Your runs won't count, even after you
+      confirm your email." No confirm sheet.
+    - The link opens `/privacy` until `#totals` is live, and there is no
+      Settings › Region (D-120): both as built.
+    - **Not built yet:** the sheet's title (b), U1's sub-line (b), the two
+      kickers, the rule and the tab order (c), and the unconfirmed lines (d).
+
+62. **Lane C (design 139). Worded, confirmed and drawn.**
+    - (a) "Or write to desk@dialed.run." is drawn on Au1 as built, but as a
+      `mailto:` link. **Not built yet:** today the address is plain text.
+    - (b) **The skipped digest names the operator:** DIGEST NOT EMAILED
+      (MONO.xs, hi-viz) · "Today's digest wasn't sent to @{handle}. Their
+      email address, {masked}, isn't confirmed." One line per skipped
+      operator, under Today's three numbers and above Gave up, dropping on
+      the next UTC day the digest goes out. **Follow-up:** the name is the
+      operator's runner @handle, as the Desk names every account, and no
+      Desk name is added. The address is masked the way round 27 masks
+      addresses (`je•••@gmail.com`, as `email/landing.ts` does), so the
+      operator knows which inbox to confirm. No button: confirming happens
+      in the operator's own Settings › Account. **Not built yet:** today
+      the build records only when a digest skipped someone, not who, and
+      shows one unnamed line.
+    - (c) Au2's ban band: confirmed as built.
+    - (d) Nothing is cleared. A password refusal keeps Email and Password,
+      and "empty" was the Google return only. Confirmed as built.
+
+63. **Lane D2 (design 141). Confirmed and drawn.**
+    - (a) **Their other photos:** 12 and the id line are right. The kicker
+      counts the **total**, so it reads `THEIR OTHER PHOTOS · 14` with 12
+      shown. Past 12, the block ends in "+ N MORE · OPEN @name IN RUNNERS",
+      which opens the runner in D8. The id is MONO.sm and selectable. With
+      none, "No other photos from this runner." replaces the grid and the
+      kicker has no count. **Not built yet:** the build counts the photos
+      shown, has no "+ N MORE" link, sets the id in MONO.xs and keeps the
+      count when there are none.
+    - (b) The copyright email's two sentences: confirmed as built, and
+      drawn on round 28 #8's email.
+    - W1's link to `/takedown` was answered in round 37 as 58k and is
+      built ("Rather not use your account? Report it without signing in"),
+      so it was not sent again.
+
+64. **Private means other runners (D-121). Confirmed, with amendments.**
+    - The five rewrites and their tenses (won't / can't / don't) are
+      confirmed, and made in place on rounds 27, 28, 29 and 32.
+    - **The ON line is reworded into two sentences:** "Shared and private
+      runs add their temperature, kit and verdict to the guides and
+      reports. Shared runs also count in Same conditions, which other
+      runners see. Never your name, notes, photos, when you ran, or
+      anywhere more precise than a broad climate zone."
+    - **OFF confirmed, without "block":** "Off. Your runs leave the guides
+      at tonight's update. They leave Same conditions now, and it still
+      works for you. Reports already published stay as they are."
+    - **A3's private line, three frames.** Opted out: just "Other runners
+      won't see this run.", with no second sentence and no Change.
+      **Follow-up, unconfirmed:** round 27's line stays, "Confirm your
+      email to share. This run saves private.", with the switch held at
+      PRIVATE (D-50), no totals sentence and no Change. "Confirm your
+      email" opens the confirm-email sheet.
+    - **Amended: the closet tile's `[ONLY YOU]` becomes `[CHECKING]`**,
+      because it names a state rather than an audience. Spoken name: "Being
+      checked, other runners can't see this photo".
+    - U2's THE CONDITIONS POOL card and SHARED/NEVER table are retired. The
+      one switch lives on Privacy.
+    - **Not built yet:** the ON and OFF wording, `[CHECKING]` with its
+      spoken name, and "Confirm your email" as a link (today the whole
+      line is plain text). The opted-out line is already built.
+
+65. **E1's compact line (FEED-9). Confirmed as built** at the top of
+    Following, above the posts. Widened: "in the last 2 weeks". Absent, and
+    Following with no posts: no band and no gap.
 
 66. **The Strava consent before the Connect button (owner, 2026-10-18; D-143).**
     Strava's API Policy §2.1 (1 June 2026) requires consent before the

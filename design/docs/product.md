@@ -583,3 +583,37 @@ Board: `Round 37 Rulings.dc.html`.
 - **59f · Block and decline all.** Drawn: resting, question open, after. Words confirmed; N counts every open request including this one. Focus opens on Cancel, as CSAM's does; Cancel and Esc return it to Block and decline all. After: the requests leave at once, the page status region says "Blocked. N requests declined.", and focus moves to the next row or "Nothing waiting".
 - **58k · W1 link.** Kept. A hint under the intimate-image reason, shown only once it's picked: "Rather not use your account? Report it without signing in", linking to /takedown. Images not on dialed.run go through the footer link.
 - **59g · Which image, signed out.** A field, not a hint. "Their dialed.run username · optional", hint "If you know who posted it.", after Link to the image (whose hint stays "A dialed.run link, or say where it is."). It's a TextField with the handle schema; an unknown username is kept as written and not refused, because the requester may have it slightly wrong. In Review, a request in words with a username reads "Not one of our links: find it on @name's entries from what they wrote." Drawn on round 35's /takedown frame. No screenshot uploads.
+
+## Round 38 · Built beside or without a drawing (items 60–65)
+Board: `Round 38 Rulings.dc.html`. In-place rewrites: Round 27 #21, Round 28 #6, Round 29 #4, Round 32 1a/1b/2a; U2's conditions-pool card marked retired on Remaining Screens (light and dark).
+
+**Blocking public launch (61)**
+- **61a · Change sheet.** Confirmed as built: it holds only the totals group (title Privacy, switch, sub-line, "How the guides are made", Done). Done returns focus to Change, and A3's private line re-reads the switch.
+- **61b · One name.** Privacy, on U1's row, the sub-page title and the sheet title. "Sharing" is no longer a name. U1 sub-line: "New runs shared · Counted in totals", with "private" / "Not counted" when those apply.
+- **61c · Two groups.** Privacy sub-page: NEW RUNS (Share new runs + Save; it's a form) then, after a --hairline-2 rule and outside the form, ANONYMOUS TOTALS · SAVES AS YOU SWITCH (the switch + link; a failure shows §4a NOT CHANGED in this group). The totals switch comes last in tab order. Round 32 1a/1b relabelled.
+- **61d · Unconfirmed runner.** ON: "Once you confirm your email, your runs add their temperature, kit and verdict to the guides and reports, and shared runs count in Same conditions. Never your name, notes, photos, when you ran, or anywhere more precise than a broad climate zone." OFF: "Off. Your runs won't count, even after you confirm your email." No confirm sheet.
+- For information: the link opens /privacy until #totals is live. There's no Settings › Region (D-120).
+
+**64 · Private**
+- The five rewrites are confirmed, along with their tenses (won't / can't / don't).
+- Confirmed ON reworded: "Shared and private runs add their temperature, kit and verdict to the guides and reports. Shared runs also count in Same conditions, which other runners see. Never your name, notes, photos, when you ran, or anywhere more precise than a broad climate zone."
+- OFF confirmed: "Off. Your runs leave the guides at tonight's update. They leave Same conditions now, and it still works for you. Reports already published stay as they are."
+- A3 private line for an opted-out runner: "Other runners won't see this run." only, with no Change.
+- **Follow-up · unconfirmed runner (a).** Round 27's line stays: "Confirm your email to share. This run saves private." The switch is held at PRIVATE (D-50), and "Confirm your email" opens the confirm-email sheet. There's no totals sentence and no Change, because an unconfirmed runner's runs count nowhere yet (61d). Round 32 2a's note updated, with Settings › Privacy in place of Sharing.
+- Amended: the closet tile tag [ONLY YOU] becomes [CHECKING] (spoken: "Being checked, other runners can't see this photo").
+- U2's THE CONDITIONS POOL card and the SHARED/NEVER table are retired; the one switch lives on Privacy.
+
+**60 · Rename race.** NOT RENAMED · "The handle changed to @{now} before the rename landed. Nothing was renamed. Look at it, then press Rename again if it still has to go." In D8's control band and on D1's flagged-handle row; the row stays open and its header re-reads to the new handle.
+
+**62 · Lane C**
+- (a) Under "Think we got it wrong? Reply to the email we sent you.", in the same quiet type: "Or write to desk@dialed.run." (mailto).
+- (b) Under Today's three numbers, above Gave up: DIGEST NOT EMAILED (MONO.xs, hi-viz) · "Today's digest wasn't sent to @{handle}. Their email address, {masked}, isn't confirmed." One line per skipped operator, gone on the next UTC day the digest goes out.
+- **Follow-up · 62b name (a, with the address).** {handle} is the operator's runner @handle, which is how the Desk names every account. There is no Desk name and none is added. The address follows, masked the way round 27 masks addresses (je•••@gmail.com), so the operator can tell which inbox to confirm. The sentence leads with the handle to avoid the possessive. There's no button: confirming happens in the operator's own Settings › Account.
+- (c) Confirmed: the same band first in Au2's form region.
+- (d) Nothing is cleared. A password refusal keeps Email and Password; "empty" was the Google return only.
+
+**63 · Lane D2**
+- (a) Confirmed: THEIR OTHER PHOTOS · {total}, newest kit first, at most 12, each at the row's photo height, opening its kit, with its id in mono under it. Past 12: "+ N MORE · OPEN @name IN RUNNERS" (D8). None: "No other photos from this runner."
+- (b) Confirmed and drawn: "We removed a photo from one of your runs after a copyright notice. Your run and verdict stay." / "We removed one of your runs from the feed after a copyright notice. The run itself stays." No reason is quoted. A removal request's takedown keeps the moderator's reason.
+
+**65 · E1 compact line.** Confirmed as built at the top of Following, above the posts. Widened: "…in the last 2 weeks." With no saved place, no fresh reading or fewer than five runners: no band and no gap. Following with no posts shows its empty state and no line.
