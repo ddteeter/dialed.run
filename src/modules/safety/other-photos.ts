@@ -102,13 +102,14 @@ export async function otherPhotosOf(
     otherPhotosQuery(db, subject),
   );
   if (first === undefined) return new Map();
-  const found = await db.batch([first, ...rest]);
+  const batched = await db.batch([first, ...rest]);
+  const found = batched.map((rows) => shown(rows));
   return new Map(
     subjects.map((subject, index) => [
       `${subject.subjectType}:${subject.subjectId}`,
       // The batch answers each query in order, so every index is there;
-      // `?? []` because an index read always may say `undefined`.
-      shown(found[index] ?? []),
+      // the type says `undefined` because an index read always may.
+      found[index],
     ]),
   );
 }
