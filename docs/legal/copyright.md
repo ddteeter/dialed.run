@@ -1,12 +1,13 @@
 > **DRAFT: not reviewed by a lawyer.** Written from the code on `main` as of
-> 2026-09-29, and from the owner's decisions, for the owner to edit. Every
+> 2026-09-29, revised 2026-10-18 from the pre-launch legal review (rev. 2)
+> and decisions D-125 to D-139, for the owner to edit. Every
 > `[OWNER: …]` note is a decision or a fact the code cannot supply. Every
 > factual claim is mapped to the code, decision or law that makes it true in
 > `terms-sources.md`; change one, change both.
 
 # [dialed.run] copyright and DMCA notice
 
-**Version 1.** Effective: [OWNER: date this is published]
+**Version 1.** Effective: [OWNER: the day the first invite is sent]
 
 Runners post photos, product names and links on [dialed.run]. If you think
 something here uses your work without permission, this page says how to tell
@@ -20,11 +21,12 @@ or write to desk@dialed.run (see the [terms](/terms)).
 
 Our designated agent for copyright notices:
 
-- **Name:** [OWNER: your legal name]
+- **Name:** Copyright Agent, Big Long Run Labs LLC
 - **Service:** [dialed.run]
 - **Email:** copyright@dialed.run
-- **Post:** [OWNER: mailing address for the agent]
-- **Phone:** [OWNER: phone number]
+- **Post:** [OWNER: the LLC's registered address (D-126), filled in at
+  publication]
+- **Phone:** [OWNER: the Google Voice number (D-126)]
 
 Email is fastest.
 
@@ -60,7 +62,8 @@ causes.
   removed because it uses someone else's work. We may send them a copy of
   your notice, including your name and contact details, so that they can
   respond.
-- If a notice is missing elements, we may write back to ask for them.
+- If a notice is missing elements but tells us how to reach you, we will
+  write back to ask for them.
 
 ## Counter-notice
 
@@ -83,11 +86,11 @@ send a counter-notice to the same agent. It must contain, in writing:
    sent the original notice, or their agent.
 
 When we receive a valid counter-notice, we send a copy to the person who
-sent the original notice and tell them that the material may return in 10
-business days. If, after 10 business days, they have not told us that they
-have filed a court action to stop you, we tell you, and you may post the
-material again. We removed it by deleting it, so we cannot put it back for
-you.
+sent the original notice. We removed the material by deleting it, so we
+cannot put it back ourselves. If, 10 business days after we sent the copy,
+they have not told us that they have filed a court action to stop you, we
+tell you, and you are free to post the material again. A notice answered
+this way does not count against your account.
 
 ## Repeat infringers
 
