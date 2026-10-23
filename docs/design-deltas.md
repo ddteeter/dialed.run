@@ -1164,6 +1164,34 @@ NCMEC]` or `[REPORTED TO NCMEC {date}] · {number}`; then an optional
     `/takedown` request or an intimate-image report) when 8 of its 48
     hours are left, from the hourly firing. **The ask:** confirm or reword.
 
+71. **`/open-source`, as built beside round 29 #9 (plan C9, design 146).**
+    Built to the ruling: the kicker, "Built with thanks", the lead with the
+    generated count, the type group first, a group's licence text once
+    behind "Read the MIT licence", three rows then "Show all {N}", the
+    FIND A PACKAGE search and its "Nothing we ship is called “xyz”.", the
+    reading layout with the groups and their counts in the contents, and
+    the links in the signed-out footer and Settings › About. Four things
+    the board does not settle:
+    - **"The two typefaces".** The ruling's build note says three families
+      ship. The list reads `public/fonts/OFL.txt`, which names two entries
+      (Archivo with Archivo Black, under one copyright, and IBM Plex Mono),
+      so the type group has two rows and the board's line is true as
+      drawn. **The ask:** confirm, or give the line for three.
+    - **The smallest groups' shared line** ("ISC · 14 · BSD-3-CLAUSE · 9 ·
+      …") is not built: every group is drawn in full, as the contents
+      column already lists them all. **The ask:** confirm, or say what the
+      line does when tapped.
+    - **A row's own licence** (undesigned). 18 packages ship a licence text
+      that says something their group's does not (an extra clause, another
+      wording). Each gets "Licence" beside "Project" and "Notice", opening
+      its own text the same way. **The ask:** confirm the word and place.
+    - **The third-party notices** (D-137: the vendored word list, the
+      climate map, the face model and Visual Crossing's credit) render
+      after the groups as one section, "Third-party notices", with the
+      file's `##` headings under it and its preamble, which speaks to repo
+      readers, left out. Undesigned. **The ask:** a place for them, or
+      confirm this one.
+
 ## Answered in round 37 (imported 2026-10-10)
 
 Design sent round 37 as `Round 37 Rulings.dc.html`, with the text of record
