@@ -55,7 +55,7 @@ describe("STRAVA_CONSENT", () => {
     expect(STRAVA_CONSENT).toEqual([
       "Connecting Strava lets us remind you to log a kit after each run.",
       "What we collect: your Strava athlete id, a token we use only to disconnect, and, for 7 days, the id, type and time of each new activity so we remind you once. How: through Strava's sign-in and its activity notifications. Never: your activity details, route, pace or anything else about the run.",
-      "To stop: Disconnect in Settings, or remove dialed.run under Strava › Settings › My Apps. Either deletes what we hold at once, and we email you to confirm it.",
+      "To stop: Disconnect in Settings, or remove dialed.run under Strava › Settings › My Apps. Either deletes what we hold from Strava, apart from what we need to finish disconnecting, and we email you to confirm it.",
     ]);
   });
 });
