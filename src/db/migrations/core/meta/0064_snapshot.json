@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "9cc427f8-3c18-49f6-918b-55a0d6906f86",
+  "id": "95de485a-caa0-46dd-8f4d-7e5a994483bf",
   "prevId": "cea31ef9-872e-48a4-b806-a409fd57b390",
   "tables": {
     "access_requests": {
@@ -3195,13 +3195,6 @@
           "name": "wardrobe_product",
           "columns": [
             "product_id"
-          ],
-          "isUnique": false
-        },
-        "wardrobe_photo_fingerprint": {
-          "name": "wardrobe_photo_fingerprint",
-          "columns": [
-            "photo_fingerprint"
           ],
           "isUnique": false
         },

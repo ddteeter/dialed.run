@@ -14,6 +14,7 @@
  * module here would instantiate it for every importer.
  */
 import type * as Photon from "@cf-wasm/photon/workerd";
+import { z } from "zod";
 
 import { withReleased } from "./photo-pipeline";
 
@@ -109,9 +110,8 @@ export function digitDistances(digit: string): string {
 }
 
 /**
- * Whether a string is a fingerprint this module wrote: exactly 16
- * lowercase hex digits. The search builds SQL from one, digit by digit.
+ * A fingerprint as this module writes it: exactly 16 lowercase hex
+ * digits. The copy search spells one into SQL digit by digit, so it reads
+ * them back through this.
  */
-export function isFingerprint(value: string): boolean {
-  return /^[0-9a-f]{16}$/.test(value);
-}
+export const fingerprintSchema = z.string().regex(/^[0-9a-f]{16}$/);

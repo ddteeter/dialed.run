@@ -8,7 +8,7 @@ import {
   fingerprintOf,
   fingerprintOfGrid,
   HEX_DIGITS,
-  isFingerprint,
+  fingerprintSchema,
 } from "../../src/lib/photo-fingerprint";
 import {
   bitsApart,
@@ -132,9 +132,9 @@ describe("digitDistances", () => {
   });
 });
 
-describe("isFingerprint", () => {
+describe("fingerprintSchema", () => {
   it("takes 16 lowercase hex digits", () => {
-    expect(isFingerprint("0123456789abcdef")).toBe(true);
+    expect(fingerprintSchema.safeParse("0123456789abcdef").success).toBe(true);
   });
 
   it.each([
@@ -146,7 +146,7 @@ describe("isFingerprint", () => {
     ["a trailing extra", "0123456789abcdefx"],
     ["SQL", "0' OR 1=1 --abcd"],
   ])("refuses %s", (_, value) => {
-    expect(isFingerprint(value)).toBe(false);
+    expect(fingerprintSchema.safeParse(value).success).toBe(false);
   });
 });
 
@@ -154,7 +154,7 @@ describe("fingerprintOf", () => {
   it("is the same for the same bytes", async () => {
     const bytes = await sceneJpeg(1);
     const fingerprint = await fingerprintOfBytes(bytes);
-    expect(isFingerprint(fingerprint)).toBe(true);
+    expect(fingerprintSchema.safeParse(fingerprint).success).toBe(true);
     expect(await fingerprintOfBytes(bytes)).toBe(fingerprint);
   });
 

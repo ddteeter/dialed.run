@@ -725,9 +725,6 @@ export const wardrobeItems = /*#__PURE__*/ sqliteTable(
   (t) => [
     index("wardrobe_user_category").on(t.userId, t.category),
     index("wardrobe_product").on(t.productId),
-    // The copy search's range: only garments with a fingerprint, so the
-    // scan it does is over photos, not over every garment (design 146).
-    index("wardrobe_photo_fingerprint").on(t.photoFingerprint),
     // Scoped to the user, like runs': keys come from the client, so one
     // account's key must never return another's row.
     uniqueIndex("wardrobe_idempotency").on(t.userId, t.idempotencyKey),

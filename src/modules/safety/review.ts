@@ -38,6 +38,7 @@ import {
 } from "./contracts";
 import type { ReportReason, ReportSubjectType } from "./contracts";
 import { otherPhotosOf, type OtherPhoto } from "./other-photos";
+import { photoMatchesOf, type PhotoMatches } from "./photo-matches";
 
 function db() {
   return coreDb();
@@ -194,6 +195,11 @@ export interface QueueRow {
    * Absent on every other row.
    */
   otherPhotos?: readonly OtherPhoto[] | undefined;
+  /**
+   * Photos from any runner, private included, that match the subject's by
+   * fingerprint (D-142, design 146), on the same rows as `otherPhotos`.
+   */
+  photoMatches?: PhotoMatches | undefined;
   subject: QueueSubject;
 }
 
@@ -251,10 +257,14 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
     .orderBy(asc(reviewQueue.createdAt))
     .limit(limit);
 
-  // Neither read needs the other's answer, so they go together.
-  const [subjects, others] = await Promise.all([
+  // No read needs another's answer, so they go together.
+  const [subjects, others, matches] = await Promise.all([
     subjectsFor(rows),
     otherPhotosOf(
+      db(),
+      rows.flatMap((row) => copiesSubjectOf(row)),
+    ),
+    photoMatchesOf(
       db(),
       rows.flatMap((row) => copiesSubjectOf(row)),
     ),
@@ -270,6 +280,7 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
     reasons: reasonsFrom(row.reasons),
     ...removalClock(row.firstAtOnce, now),
     otherPhotos: others.get(`${row.subjectType}:${row.subjectId}`),
+    photoMatches: matches.get(`${row.subjectType}:${row.subjectId}`),
     subject: subjects.get(`${row.subjectType}:${row.subjectId}`) ?? {
       photoKeys: [],
     },

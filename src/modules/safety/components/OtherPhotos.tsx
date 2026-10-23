@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 
 import { Mono } from "../../../ui";
 import type { OtherPhoto } from "../other-photos";
@@ -28,10 +28,10 @@ export function OtherPhotos({
 }>): JSX.Element | undefined {
   if (photos === undefined) return undefined;
   return (
-    <div data-part="other-photos" className="flex flex-col gap-2">
-      <span className="text-label uppercase">
-        <Mono step="xs">Their other photos · {String(photos.length)}</Mono>
-      </span>
+    <PhotoSection
+      part="other-photos"
+      title={`Their other photos · ${String(photos.length)}`}
+    >
       {photos.length === 0 ? (
         <span className="text-micro text-quiet">
           No other photos from this runner.
@@ -48,6 +48,30 @@ export function OtherPhotos({
           ))}
         </ul>
       )}
+    </PhotoSection>
+  );
+}
+
+/**
+ * The frame both photo lists on a Review row share (this and
+ * `PhotoMatches`): a mono label carrying the count, then the list or the
+ * sentence standing in for it.
+ */
+export function PhotoSection({
+  part,
+  title,
+  children,
+}: Readonly<{
+  part: string;
+  title: string;
+  children: ReactNode;
+}>): JSX.Element {
+  return (
+    <div data-part={part} className="flex flex-col gap-2">
+      <span className="text-label uppercase">
+        <Mono step="xs">{title}</Mono>
+      </span>
+      {children}
     </div>
   );
 }

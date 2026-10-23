@@ -14,9 +14,9 @@ only to find copies of a reported or removed image, private included.
 **Where it is computed: the Worker, from the uploaded bytes.** The server
 already decodes every upload with Photon to strip EXIF (SAF-1) —
 `feed/photos.ts`' `reencoded` and `closet/photos.ts`' `uploadItemPhoto` —
-so the hash is taken from that decoded image *before* `get_bytes_jpeg`.
+so the hash is taken from that decoded image _before_ `get_bytes_jpeg`.
 No new dependency, no binding, nothing in the client bundle. The browser's
-blur/scale canvas step does re-encode first, but its output *is* the upload:
+blur/scale canvas step does re-encode first, but its output _is_ the upload:
 a client-computed hash of the pre-blur original would be a claim we cannot
 check (a client can send any 16 hex chars), and would hash a picture we
 never host, so it could not match a copy of what we do host.
@@ -28,9 +28,10 @@ copy, a WebP and a PNG of the same image differ by 0–5 bits; different
 scenes by 12 or more. A match is **≤ 8 bits** (`FINGERPRINT_MATCH_DISTANCE`).
 
 **Schema (additive, proceeds):** core migration `0064_add_photo_fingerprints`:
-nullable `entry_photos.fingerprint`, nullable
-`wardrobe_items.photo_fingerprint`, and an index on the latter. Old rows stay
-NULL and never match. No other PR in flight touches migrations.
+nullable `entry_photos.fingerprint` and nullable
+`wardrobe_items.photo_fingerprint`. No index: no query seeks on them (below).
+Old rows stay NULL and never match. No other PR in flight touches
+migrations.
 
 **Deleted with the photo** because it is a column of the photo's row: every
 path that deletes an `entry_photos` row (retract, Remove/takedown,
@@ -42,11 +43,12 @@ whole row, so the CSAM record keeps the hash for its own year, then goes.
 **The search** (`safety/photo-matches.ts`): for each Review row about an
 intimate image and each removal request whose link is ours, the subject's
 fingerprints are read, then every entry and garment photo within 8 bits is
-listed — any runner, private included — capped at 12 per kind.
+listed — any runner, private included — capped at 12 per kind. A subject
+with no fingerprint says so, rather than "no matches".
 Hamming distance cannot use an index (SQLite has no popcount and no XOR of
 text), so it is **filtered in SQL** by a 16-term expression: per hex digit,
 a lookup string precomputed from the subject's digit. That keeps `LIMIT`
-honest. The cost is a scan of `entry_photos` and of garments with a photo,
+honest. The cost is a scan of `entry_photos` and `wardrobe_items`,
 **only when an operator opens Review with such a row** — never on a
 runner's page. At 100k photos that is 100k rows read per open row (about
 $0.0001). If that grows, banded exact-match columns are the upgrade.
@@ -61,15 +63,16 @@ $0.0001). If that grows, banded exact-match columns are the upgrade.
 ## Test plan
 
 - `test/lib/photo-fingerprint.test.ts` (unit): bit order, luma weights,
-  hex padding, distance, match threshold.
+  hex padding, per-digit distances, the schema; copies within 8 bits.
 - `test/feed/photo-fingerprint.test.ts` (worker): stored on upload; a
   re-upload matches; a re-encoded copy matches; gone with retract, Remove
   and purge.
 - `test/closet/photo-fingerprint.test.ts` (worker): stored, replaced,
   cleared by Remove photo, gone with delete.
 - `test/safety/photo-matches.test.ts` (worker): finds a copy on another
-  runner's private kit and garment; ignores a different picture and the
-  subject itself; caps; nothing for a subject with no fingerprint.
+  runner's private kit and garment; 8 bits in, 9 out; the subject left
+  out; caps; nothing to search by; a malformed stored value refused; on
+  the Review queue and removal-request reads.
 - `test/safety/photo-matches.dom.test.tsx` (ui): list, empty state.
 
 ## Open questions
