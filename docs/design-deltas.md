@@ -1164,6 +1164,26 @@ NCMEC]` or `[REPORTED TO NCMEC {date}] · {number}`; then an optional
     `/takedown` request or an intimate-image report) when 8 of its 48
     hours are left, from the hourly firing. **The ask:** confirm or reword.
 
+71. **Matching photos on Review (D-142, design 146). Undesigned; built
+    as a placeholder.** A Review row about an intimate image, and a
+    removal request whose link is ours, now carry a second block under
+    "Their other photos": photos from **any** runner, private included,
+    whose fingerprint is within 8 bits of the reported photo's, nearest
+    first, at most 12 kit photos and 12 garment photos. Built from item
+    63a's grid as it stands today (kicker `MATCHING PHOTOS · N` in
+    MONO.xs, `h-32` thumbnails, the id under each in MONO.xs), with no new
+    glyph or colour. Each image's alt says how many bits apart it is; a
+    kit photo an operator can open links its kit, a garment photo is
+    labelled `Garment <id>` and links nothing (no page exists for it).
+    Two empty states: "No matching photos from any runner." and, for a
+    photo with no fingerprint (gone already, or older than fingerprints),
+    "No fingerprint to match by: the photo is gone, or older than
+    fingerprints." **The ask:** draw the block beside 63a's —
+    whether matches and the runner's own photos should be one grid or
+    two, whether the distance is shown (it is only in the alt today), and
+    what a garment match offers an operator, since the takedown form
+    takes kit photos only.
+
 ## Answered in round 37 (imported 2026-10-10)
 
 Design sent round 37 as `Round 37 Rulings.dc.html`, with the text of record

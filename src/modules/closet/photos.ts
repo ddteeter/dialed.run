@@ -21,6 +21,7 @@ import {
   withReleased,
 } from "../../lib/photo-pipeline";
 import { photoKeyFor } from "../../lib/garment-photo-key";
+import { fingerprintOf } from "../../lib/photo-fingerprint";
 import { ownedBy } from "../../lib/sql/owned";
 import { getOwnedItem } from "./service";
 import {
@@ -99,8 +100,8 @@ export async function uploadItemPhoto(
   // every request, including the ones that never touch a photo, and
   // charged against the separate startup CPU limit. Deferring it means the
   // module compiles once per isolate, on a request that was always slow.
-  const { PhotonImage, SamplingFilter, resize } =
-    await import("@cf-wasm/photon/workerd");
+  const photon = await import("@cf-wasm/photon/workerd");
+  const { PhotonImage, SamplingFilter, resize } = photon;
   // A new version under the item's prefix for every upload. The URL a
   // photo is served from carries the version (`photoUrlFor`), and the GET
   // route caches it as immutable — so a replaced photo must live at a new
@@ -112,9 +113,12 @@ export async function uploadItemPhoto(
   // the GPS a phone writes into every frame — survives into storage. That
   // puts the decode before the first write, which is why a photo that will
   // not decode now stores nothing at all rather than a raw original.
-  const original = await withReleased(
+  const { original, fingerprint } = await withReleased(
     PhotonImage.new_from_byteslice(bytes),
     async (input) => {
+      // Before the re-encode (D-142, design 146): the hash describes what
+      // the runner sent, not our copy of it.
+      const taken = await fingerprintOf(input, photon);
       const reencoded = input.get_bytes_jpeg(ORIGINAL_QUALITY);
       await env.MEDIA.put(`${keyPrefix}/original.jpg`, reencoded, {
         httpMetadata: { contentType: "image/jpeg" },
@@ -136,7 +140,7 @@ export async function uploadItemPhoto(
           },
         );
       }
-      return reencoded;
+      return { original: reencoded, fingerprint: taken };
     },
   );
 
@@ -156,7 +160,14 @@ export async function uploadItemPhoto(
     // unclassified. Setting it here rather than in the column default is
     // deliberate: most wardrobe rows have no photo at all and should stay
     // `ok` rather than queue for a sweep that has nothing to fetch.
-    .set({ photoKey: keyPrefix, visibility: "pending" })
+    //
+    // The fingerprint rides the same write, so a replaced photo's hash is
+    // overwritten with the photo, never left describing it.
+    .set({
+      photoKey: keyPrefix,
+      photoFingerprint: fingerprint,
+      visibility: "pending",
+    })
     .where(ownedBy(wardrobeItems, { id: itemId, userId }));
   await db.batch([pointAtNewVersion, outboxInsert(db, debt)]);
   await settleOutbox(db, debt, report);
@@ -218,7 +229,9 @@ export async function removeItemPhoto(
   const clearPhoto = db
     .update(wardrobeItems)
     // `sql\`NULL\`` rather than the literal — see lib/sql/sql-null.
-    .set({ photoKey: sql`NULL`, visibility: "ok" })
+    // The fingerprint goes with the key (D-142): it describes the photo,
+    // and the photo is gone.
+    .set({ photoKey: sql`NULL`, photoFingerprint: sql`NULL`, visibility: "ok" })
     .where(stillNamesAPhoto);
   await db.batch([clearPhoto, outboxInsert(db, debt)]);
   await settleOutbox(db, debt, report);
