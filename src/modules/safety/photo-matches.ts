@@ -73,62 +73,53 @@ export interface PhotoMatches {
 }
 
 /**
-Each subject's matches, by `subjectType:subjectId`.
-*/
+ * Each subject's matches, by `subjectType:subjectId`.
+ *
+ * **One subject at a time, the subjects side by side.** A subject's
+ * search needs its fingerprints first, and a batch cannot branch on its
+ * own results, so each is a read and then one batch of its two searches.
+ * A page has a handful of such rows, so that is a handful of parallel
+ * round trips, against one batch whose results would have to be told
+ * apart by index.
+ */
 export async function photoMatchesOf(
   db: Db,
   subjects: readonly OtherPhotosSubject[],
 ): Promise<Map<string, PhotoMatches>> {
-  const fingerprints = await subjectFingerprints(db, subjects);
-  const found = await search(
-    db,
-    subjects.flatMap((subject, index) => {
-      const own = fingerprints[index] ?? [];
-      return own.length === 0 ? [] : [{ subject, own }];
+  const answers = await Promise.all(
+    subjects.map(async (subject) => {
+      const own = await fingerprintsOf(db, subject);
+      return [keyOf(subject), await search(db, subject, own)] as const;
     }),
   );
-  return new Map(
-    subjects.map((subject) => {
-      const matches = found.get(keyOf(subject));
-      return [
-        keyOf(subject),
-        { fingerprinted: matches !== undefined, matches: matches ?? [] },
-      ];
-    }),
-  );
+  return new Map(answers);
 }
 
 /**
- * The matches of every subject that has fingerprints, by its key. Two
- * batches rather than one, so each keeps its own row type; neither needs
- * the other's answer.
+ * One subject's search, or the answer that there was nothing to search
+ * by. Its two reads go in one batch; neither needs the other's answer.
  */
 async function search(
   db: Db,
-  searched: readonly { subject: OtherPhotosSubject; own: string[] }[],
-): Promise<Map<string, PhotoMatch[]>> {
-  const [first, ...rest] = searched.map(
-    ({ subject, own }) =>
-      [kitMatches(db, subject, own), garmentMatches(db, own)] as const,
-  );
-  if (first === undefined) return new Map();
-  const [kits, garments] = await Promise.all([
-    db.batch([first[0], ...rest.map(([kit]) => kit)]),
-    db.batch([first[1], ...rest.map(([, garment]) => garment)]),
+  subject: OtherPhotosSubject,
+  own: readonly string[],
+): Promise<PhotoMatches> {
+  if (own.length === 0) return { fingerprinted: false, matches: [] };
+  const [kits, garments] = await db.batch([
+    kitMatches(db, subject, own),
+    garmentMatches(db, own),
   ]);
-  return new Map(
-    searched.map(({ subject }, index) => [
-      keyOf(subject),
-      [
-        ...(kits[index] ?? []).map((row) => ({ kind: "kit" as const, ...row })),
-        ...(garments[index] ?? []).map((row) => ({
-          kind: "garment" as const,
-          canOpen: false as const,
-          ...row,
-        })),
-      ],
-    ]),
-  );
+  return {
+    fingerprinted: true,
+    matches: [
+      ...kits.map((row) => ({ kind: "kit" as const, ...row })),
+      ...garments.map((row) => ({
+        kind: "garment" as const,
+        canOpen: false as const,
+        ...row,
+      })),
+    ],
+  };
 }
 
 function keyOf(subject: OtherPhotosSubject): string {
@@ -136,33 +127,27 @@ function keyOf(subject: OtherPhotosSubject): string {
 }
 
 /**
- * The fingerprints a subject is searched by, in subject order: the
- * photo's own, or every photo's on the kit. One batch, each read a
- * primary-key probe or the `entry_photos_idempotency` prefix.
+ * The fingerprints a subject is searched by: the photo's own, or every
+ * photo's on the kit. A primary-key probe, or the
+ * `entry_photos_idempotency` prefix.
  */
-async function subjectFingerprints(
+async function fingerprintsOf(
   db: Db,
-  subjects: readonly OtherPhotosSubject[],
-): Promise<string[][]> {
-  const [first, ...rest] = subjects.map((subject) =>
-    db
-      .select({ fingerprint: entryPhotos.fingerprint })
-      .from(entryPhotos)
-      .where(
-        and(
-          OWN[subject.subjectType](subject.subjectId),
-          isNotNull(entryPhotos.fingerprint),
-        ),
+  subject: OtherPhotosSubject,
+): Promise<string[]> {
+  const rows = await db
+    .select({ fingerprint: entryPhotos.fingerprint })
+    .from(entryPhotos)
+    .where(
+      and(
+        OWN[subject.subjectType](subject.subjectId),
+        isNotNull(entryPhotos.fingerprint),
       ),
-  );
-  if (first === undefined) return [];
-  const read = await db.batch([first, ...rest]);
+    );
   // Parsed, not trusted: these are spelt into SQL (`distanceSql`), and
   // only a fingerprint this repo wrote may be. A malformed one is a bug,
   // so it throws rather than quietly searching for nothing.
-  return read.map((rows) =>
-    rows.map(({ fingerprint }) => fingerprintSchema.parse(fingerprint)),
-  );
+  return rows.map(({ fingerprint }) => fingerprintSchema.parse(fingerprint));
 }
 
 /**

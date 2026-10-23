@@ -57,7 +57,7 @@ function Matches({ found }: Readonly<{ found: Found }>): JSX.Element {
   return (
     <ul className="m-0 flex list-none flex-wrap gap-3 p-0">
       {found.matches.map((match) => (
-        <li key={`${match.kind}:${match.id}`} className="flex flex-col gap-1">
+        <li key={match.photoKey} className="flex flex-col gap-1">
           <Thumbnail match={match} />
           <span className="text-quiet">
             <Mono step="xs">{nameOf(match)}</Mono>
