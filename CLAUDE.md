@@ -693,6 +693,17 @@ stryker run --mutate "src/ui/form.tsx,src/ui/Mono.tsx"` is 27 seconds
   It does **not** see restated sets — the same list written once as a TS
   union and once as a zod enum. Those stay a human finding; see
   "Derive, don't mirror".
+- **`complexity` blocks a commit on any function in a touched file over
+  fallow's limits** (cyclomatic 20, cognitive 15, strict `>`; guardrails
+  ≥ 0.10). Fallow's cognitive score is not only branching: it adds **+1 per
+  hook call** in the body and **+1 per destructured prop over four** on a
+  component, and scores an inner arrow on its own rather than adding it to
+  the parent. So a React component goes over by accumulating hooks, and the
+  fix is a real seam — a custom hook that owns one concern's state, a
+  sub-component that owns one block of markup — not a `fallow-ignore`.
+  Keep the extraction in the same file: Stryker grants are keyed by path
+  and directive text. Design 146 has the measurements and nine worked
+  examples.
 - **Do not wrap `createServerFn` in a generic helper.** The five-line
   `createServerFn().validator().handler(… requireUserId() …)` shape repeats
   in every module and looks extractable. It is not: `ServerFnReturnType`
