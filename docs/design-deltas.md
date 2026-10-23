@@ -1184,14 +1184,14 @@ NCMEC]` or `[REPORTED TO NCMEC {date}] · {number}`; then an optional
     what a garment match offers an operator, since the takedown form
     takes kit photos only.
 
-73. **Copyright holds on Review (C5, D-130, design 148). Undesigned;
+72. **Copyright holds on Review (C5, D-130, design 148). Undesigned;
     built as a placeholder.** Below the Takedown form, a list titled
     `Copyright holds · N`, built from Quarantine's row (item C12) with no
     new glyph or colour: the subject type and id, "Hidden {day}" in
     MONO.xs, "Owner {id} · strikes {n}" in MONO.xs, the notice as the
     audit row keeps it, and a bracketed line saying what happens next —
     `[no counter-notice: deleted {day}]`, `[counter-notice received: back
-    {day}]` or `[court action {day}: stays hidden, deleted {day}]`. One
+{day}]` or `[court action {day}: stays hidden, deleted {day}]`. One
     action under it: **Counter-notice received** until one is recorded,
     then **Court action filed**, then none; each a Desk form with no
     field ("Recording" while out). Answers in the live region:
