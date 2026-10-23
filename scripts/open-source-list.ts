@@ -11,7 +11,7 @@
  * build-time packages (the router generator, Babel) sit in `dependencies`
  * too — and over-attribution is the safe direction. Reading exactly what
  * the bundles hold needs a licence plugin in `vite.config.ts`, a
- * human-managed file; see design 146.
+ * human-managed file; see design 147.
  *
  * Then the type: `public/fonts/OFL.txt`'s header names each family the app
  * serves, and `src/ui/fonts.css` must declare nothing it does not name.

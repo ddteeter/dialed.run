@@ -1164,7 +1164,7 @@ NCMEC]` or `[REPORTED TO NCMEC {date}] · {number}`; then an optional
     `/takedown` request or an intimate-image report) when 8 of its 48
     hours are left, from the hourly firing. **The ask:** confirm or reword.
 
-71. **`/open-source`, as built beside round 29 #9 (plan C9, design 146).**
+72. **`/open-source`, as built beside round 29 #9 (plan C9, design 147).**
     Built to the ruling: the kicker, "Built with thanks", the lead with the
     generated count, the type group first, a group's licence text once
     behind "Read the MIT licence", three rows then "Show all {N}", the
