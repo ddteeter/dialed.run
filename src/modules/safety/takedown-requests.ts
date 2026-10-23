@@ -46,6 +46,7 @@ import { countSend, emailDebt, sendClaimOf } from "../email";
 import { adminUserIds } from "./admin";
 import { REMOVAL_DUE_SECONDS, removalDueLabel } from "./contracts";
 import { otherPhotosOf, type OtherPhoto } from "./other-photos";
+import { photoMatchesOf, type PhotoMatches } from "./photo-matches";
 import type { OweEmail } from "./reports";
 import { ipKey, requesterKey } from "./requester-key";
 import type { HoldState } from "./takedown-limits";
@@ -424,6 +425,11 @@ export interface PendingTakedownRequest {
    * ours; `undefined` when it is not, since then nobody is known.
    */
   readonly otherPhotos: readonly OtherPhoto[] | undefined;
+  /**
+   * Photos from any runner, private included, that match the linked one by
+   * fingerprint (D-142, design 146); `undefined` when the link is not ours.
+   */
+  readonly photoMatches?: PhotoMatches | undefined;
 }
 
 /**
@@ -454,6 +460,10 @@ export async function pendingTakedownRequests(
     db,
     listed.flatMap(({ subject }) => subject ?? []),
   );
+  const matches = await photoMatchesOf(
+    db,
+    listed.flatMap(({ subject }) => subject ?? []),
+  );
   return listed.map(({ row, subject }) => ({
     id: row.id,
     requesterEmail: row.requesterEmail,
@@ -464,6 +474,8 @@ export async function pendingTakedownRequests(
     subject,
     otherPhotos:
       subject && others.get(`${subject.subjectType}:${subject.subjectId}`),
+    photoMatches:
+      subject && matches.get(`${subject.subjectType}:${subject.subjectId}`),
     createdAt: row.createdAt,
     dueAt: row.dueAt,
     due: removalDueLabel(row.dueAt, now),

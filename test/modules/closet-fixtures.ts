@@ -42,6 +42,7 @@ export function wardrobeItem(
     colorHex: NOTHING,
     visibilityLevel: NOTHING,
     photoKey: NOTHING,
+    photoFingerprint: NOTHING,
     productUrl: NOTHING,
     productId: NOTHING,
     origin: "manual",

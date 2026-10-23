@@ -19,6 +19,7 @@ import { blockRequesterInput } from "../inputs";
 import type { HoldState } from "../takedown-limits";
 import type { PendingTakedownRequest } from "../takedown-requests";
 import { OtherPhotos } from "./OtherPhotos";
+import { PhotoMatches } from "./PhotoMatches";
 import { useSettled } from "./use-settled";
 
 /**
@@ -206,6 +207,7 @@ function RemovalRequestRow({
       </span>
       <SubjectLink request={request} />
       <OtherPhotos photos={request.otherPhotos} />
+      <PhotoMatches found={request.photoMatches} />
       <RemoveForm
         requestId={request.id}
         decide={decide}

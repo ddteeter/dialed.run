@@ -209,6 +209,12 @@ never shown to other runners.
   person reviews it. Until a photo is screened, no other runner can see it.
   OpenAI keeps nothing it is sent for screening, and does not use it to
   train its models.
+- **Fingerprints.** For every photo, we work out a fingerprint from the
+  photo as you uploaded it: a 16-character code describing its broad
+  pattern of light and dark, from which the photo cannot be rebuilt. It is
+  kept with the photo and deleted with it. We use it only to find copies
+  of a photo that was reported or that someone asked us to remove, across
+  every runner's photos, private ones included.
 
 ## What other people can see
 
@@ -261,7 +267,8 @@ photos and notes included, when they need to for one of these reasons:
   and stopping abuse.
 - **Reports, removal requests and moderation,** including looking through
   a runner's other photos, private ones included, for copies of an image
-  that was reported.
+  that was reported, and searching every runner's photos, private ones
+  included, by their [fingerprints](#photos) for copies of it.
 - **Meeting legal obligations,** and answering lawful requests from the
   authorities.
 - **Support you ask for,** when you write to us about your account.
@@ -516,6 +523,7 @@ any differently.
 | Strava activity ids                                                           | 7 days                                                                                                                            |
 | Garments you delete                                                           | Deleted with their photo files. A garment you wore leaves those kits                                                              |
 | Runs, kits and kit photos you delete                                          | Deleted with their files                                                                                                          |
+| Photo fingerprints                                                            | Deleted with the photo. A locked copy of suspected child sexual abuse material keeps its own, as long as the copy                 |
 | Your account, when you delete it                                              | Hidden at once; everything below deleted 7 days later (see [Your choices](#your-choices))                                         |
 | Suspected child sexual abuse material we removed                              | One year after we report it to NCMEC, then deleted, unless the law or law enforcement requires longer                             |
 | Usernames you have used                                                       | For good, so nobody else can take them                                                                                            |
@@ -587,7 +595,7 @@ Where the GDPR or UK GDPR applies, these are our legal bases:
 | ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | Your account, profile, closet, runs, kits, photos, weather lookups, the feed, follows, "useful" marks, blocks, notifications and account email | Performing our agreement with you (the terms)                                                 |
 | Showing your shared kits to other signed-in runners                                                                                            | Performing our agreement with you; you choose shared or private for every kit                 |
-| Screening photos and usernames, reports, moderation, removal requests, bans and records of them                                                | Our legitimate interest in keeping [dialed.run] safe and lawful                               |
+| Screening photos and usernames, photo fingerprints, reports, moderation, removal requests, bans and records of them                            | Our legitimate interest in keeping [dialed.run] safe and lawful                               |
 | Sessions, sign-in protection, counts that stop abuse, Turnstile, the leaked-password check, error reports and server logs                      | Our legitimate interest in keeping accounts and the service secure                            |
 | Conditions numbers in the app, and anonymous totals                                                                                            | Our legitimate interest in useful guides and numbers; you can object with the Settings switch |
 | Keeping past usernames                                                                                                                         | Our legitimate interest in stopping impersonation                                             |
