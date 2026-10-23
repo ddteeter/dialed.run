@@ -240,6 +240,9 @@ are numbered past `main` and the open PRs (law 11).
   - the NCMEC and TAKE IT DOWN procedures;
   - the breach runbook;
   - the record of processing (ROPA).
+
+  Drafts of all four are in [`compliance/`](compliance/README.md).
+
 - **EU/UK fallback.** Write the Cloudflare rule that blocks EU/UK sign-up,
   but leave it disabled. Shortlist one EU/UK representative provider.
 - **Court dockets.** The monthly check in R-159.
