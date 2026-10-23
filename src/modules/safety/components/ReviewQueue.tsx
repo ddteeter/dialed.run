@@ -532,7 +532,7 @@ function ReviewRow({
         )}
       </span>
       <ReportedPhotos keys={row.subject.photoKeys} />
-      <OtherPhotos photos={row.otherPhotos} />
+      <OtherPhotos others={row.otherPhotos} />
       {row.subject.handleFlagged === true ? (
         <p data-part="why-here" className="m-0 text-body">
           {HANDLE_FLAGGED_LINE}

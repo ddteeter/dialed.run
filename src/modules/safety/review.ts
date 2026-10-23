@@ -37,7 +37,7 @@ import {
   reportReasonSchema,
 } from "./contracts";
 import type { ReportReason, ReportSubjectType } from "./contracts";
-import { otherPhotosOf, type OtherPhoto } from "./other-photos";
+import { otherPhotosOf, type OtherPhotos } from "./other-photos";
 
 function db() {
   return coreDb();
@@ -193,7 +193,7 @@ export interface QueueRow {
    * intimate-image report started — the reasonable effort on copies.
    * Absent on every other row.
    */
-  otherPhotos?: readonly OtherPhoto[] | undefined;
+  otherPhotos?: OtherPhotos | undefined;
   subject: QueueSubject;
 }
 
