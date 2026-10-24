@@ -4,7 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 import { OtherPhotos } from "../../src/modules/safety/components/OtherPhotos";
 import { RemovalRequests } from "../../src/modules/safety/components/RemovalRequests";
 import { ReviewQueue } from "../../src/modules/safety/components/ReviewQueue";
-import type { OtherPhoto } from "../../src/modules/safety/other-photos";
+import type {
+  OtherPhoto,
+  OtherPhotos as Others,
+} from "../../src/modules/safety/other-photos";
 import type { QueueRow } from "../../src/modules/safety/review";
 import type { PendingTakedownRequest } from "../../src/modules/safety/takedown-requests";
 import { renderWithRouter } from "../modules/run-fixtures";
@@ -22,12 +25,22 @@ const PHOTOS: readonly OtherPhoto[] = [
   { id: PHOTO_2, entryId: KIT, photoKey: "entries/u/k/2", canOpen: true },
 ];
 
+/**
+The runner's other photos as a row carries them: all of them shown.
+*/
+function others(
+  photos: readonly OtherPhoto[],
+  overrides: Partial<Others> = {},
+): Others {
+  return { photos, total: photos.length, handle: "maya_runs", ...overrides };
+}
+
 const part = (name: string) =>
   document.querySelector<HTMLElement>(`[data-part='${CSS.escape(name)}']`);
 
 describe("OtherPhotos", () => {
   it("lists each photo as an operator's image, opening its kit, with its id", async () => {
-    await renderWithRouter(<OtherPhotos photos={PHOTOS} />);
+    await renderWithRouter(<OtherPhotos others={others(PHOTOS)} />);
 
     const block = part("other-photos");
     expect(block).toHaveTextContent(/^Their other photos · 2/u);
@@ -53,21 +66,52 @@ describe("OtherPhotos", () => {
       "/safety/review-photo/entries/u/k/1",
       "/safety/review-photo/entries/u/k/2",
     ]);
+    // MONO.sm, and one click selects it whole (round 38 #63a).
     const id = screen.getByText(PHOTO_1);
-    expect(id).toHaveClass("font-mono");
+    expect(id).toHaveClass("font-mono", "text-mono-sm");
+    expect(id.parentElement).toHaveClass("select-all");
+    // All of them shown: nothing more to open.
+    expect(part("more-photos")).toBeNull();
+  });
+
+  it("counts them all in the kicker, and opens the rest in Runners (round 38 #63a)", async () => {
+    await renderWithRouter(
+      <OtherPhotos others={others(PHOTOS, { total: 14 })} />,
+    );
+
+    expect(part("other-photos")).toHaveTextContent(/^Their other photos · 14/u);
+    const more = screen.getByRole("link", {
+      name: "+ 12 more · Open @maya_runs in Runners",
+    });
+    expect(more).toHaveAttribute(
+      "href",
+      "/desk/runners?query=maya_runs&filter=all",
+    );
+    expect(more.parentElement).toHaveAttribute("data-part", "more-photos");
+    expect(more.parentElement?.previousElementSibling?.tagName).toBe("UL");
+  });
+
+  it("counts the rest without a link for a runner with no handle", async () => {
+    await renderWithRouter(
+      <OtherPhotos others={others(PHOTOS, { total: 3, handle: undefined })} />,
+    );
+    expect(part("more-photos")).toHaveTextContent(/^\+ 1 more$/u);
+    expect(
+      within(part("more-photos") ?? document.body).queryByRole("link"),
+    ).toBeNull();
   });
 
   it("shows a kit an operator cannot open as its image and id, with no link (review S4)", async () => {
     await renderWithRouter(
       <OtherPhotos
-        photos={[
+        others={others([
           {
             id: PHOTO_1,
             entryId: KIT,
             photoKey: "entries/u/k/1",
             canOpen: false,
           },
-        ]}
+        ])}
       />,
     );
     expect(screen.queryByRole("link")).toBeNull();
@@ -79,16 +123,16 @@ describe("OtherPhotos", () => {
     expect(screen.getByText(PHOTO_1)).toHaveClass("font-mono");
   });
 
-  it("says when the runner has posted nothing else", async () => {
-    await renderWithRouter(<OtherPhotos photos={[]} />);
+  it("says when the runner has posted nothing else, with no count", async () => {
+    await renderWithRouter(<OtherPhotos others={others([])} />);
     expect(part("other-photos")).toHaveTextContent(
-      "Their other photos · 0No other photos from this runner.",
+      /^Their other photosNo other photos from this runner\.$/u,
     );
     expect(screen.queryByRole("link")).toBeNull();
   });
 
   it("renders nothing when no runner is known", async () => {
-    await renderWithRouter(<OtherPhotos photos={undefined} />);
+    await renderWithRouter(<OtherPhotos others={undefined} />);
     expect(part("other-photos")).toBeNull();
   });
 });
@@ -104,7 +148,7 @@ describe("on Review's rows", () => {
       reporterCount: 1,
       reasons: ["intimate"],
       due: "Due in 31h",
-      otherPhotos: PHOTOS,
+      otherPhotos: others(PHOTOS),
       subject: { photoKeys: [] },
     };
     await renderWithRouter(
@@ -127,7 +171,7 @@ describe("on Review's rows", () => {
       due: "Due in 31h",
       holdState: "held",
       relatedIds: [],
-      otherPhotos: PHOTOS.slice(0, 1),
+      otherPhotos: others(PHOTOS.slice(0, 1)),
     };
     await renderWithRouter(
       <RemovalRequests requests={[request]} decide={vi.fn()} block={vi.fn()} />,

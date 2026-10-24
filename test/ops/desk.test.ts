@@ -1,7 +1,14 @@
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { reviewQueue, userProfiles } from "../../src/db/schema-core";
+import { inArray } from "drizzle-orm";
+
+import { user } from "../../src/db/schema-auth";
+import {
+  cronCheckpoints,
+  reviewQueue,
+  userProfiles,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
@@ -193,6 +200,78 @@ describe("deskToday", () => {
     expect(today.counts.waiting).toBe(1);
     expect(today.asOf).toBeGreaterThanOrEqual(before);
     expect(today.asOf).toBeLessThanOrEqual(nowSeconds());
+  });
+});
+
+/**
+ * Round 38 #62b: the operators today's digest skipped, named on Today by
+ * @handle with the address masked, read as the digest decided them.
+ */
+async function account(
+  id: string,
+  email: string,
+  isVerified: boolean,
+  handle?: string,
+): Promise<void> {
+  const now = new Date();
+  await coreDb().insert(user).values({
+    id,
+    name: "",
+    email,
+    emailVerified: isVerified,
+    createdAt: now,
+    updatedAt: now,
+  });
+  if (handle !== undefined) {
+    await coreDb()
+      .insert(userProfiles)
+      .values({ userId: id, username: handle });
+  }
+}
+
+async function markSkip(at: number): Promise<void> {
+  await coreDb()
+    .insert(cronCheckpoints)
+    .values({ cronName: "digest-unconfirmed", lastRunAt: at });
+}
+
+describe("deskToday's skipped operators", () => {
+  const ORIGINAL: unknown = env.ADMIN_USER_IDS;
+  const OPERATORS = ["op-jess", "op-noname", "op-sam", "not-an-op"];
+
+  beforeEach(async () => {
+    Reflect.set(env, "ADMIN_USER_IDS", "op-sam,op-jess,op-noname");
+    await coreDb().delete(cronCheckpoints);
+    await coreDb().delete(user).where(inArray(user.id, OPERATORS));
+    await account("op-jess", "jessica@gmail.com", false, "jess");
+    await account("op-noname", "x@example.com", false);
+    await account("op-sam", "sam@example.com", true, "sam");
+    await account("not-an-op", "nope@example.com", false, "nope");
+  });
+
+  afterEach(() => {
+    Reflect.set(env, "ADMIN_USER_IDS", ORIGINAL);
+  });
+
+  it("names each unconfirmed operator, masked, on the day the digest skipped them", async () => {
+    const startOfDay = Math.floor(nowSeconds() / DAY) * DAY;
+    await markSkip(startOfDay);
+
+    const { skipped } = await deskToday();
+
+    expect(skipped).toStrictEqual([
+      { userId: "op-jess", handle: "jess", address: "je•••@gmail.com" },
+      { userId: "op-noname", handle: undefined, address: "x•••@example.com" },
+    ]);
+  });
+
+  it("names nobody once the day has turned, or when no digest skipped anyone", async () => {
+    const { skipped: beforeAnySkip } = await deskToday();
+    await markSkip(Math.floor(nowSeconds() / DAY) * DAY - 1);
+    const { skipped: yesterdays } = await deskToday();
+
+    expect(beforeAnySkip).toStrictEqual([]);
+    expect(yesterdays).toStrictEqual([]);
   });
 });
 

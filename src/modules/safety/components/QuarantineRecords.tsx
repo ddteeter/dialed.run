@@ -120,9 +120,7 @@ function QuarantineRow({
         </span>
       </span>
       {isGone ? (
-        <span className="text-body">
-          This record is gone: its year was up.
-        </span>
+        <span className="text-body">This record is gone: its year was up.</span>
       ) : (
         <DeskForm
           form={form}

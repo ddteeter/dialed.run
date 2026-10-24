@@ -20,7 +20,7 @@ import {
   placeholderHandle,
   renameRecord,
   reviewResolution,
-  type HandleReviewOutcome,
+  type HandleReview,
   type HandleReviewValues,
 } from "../safety";
 import { forceRename } from "./username";
@@ -37,7 +37,7 @@ async function keep(
   queueId: string,
   userId: string,
   reviewerId: string,
-): Promise<HandleReviewOutcome> {
+): Promise<HandleReview> {
   const cleared = db
     .update(userProfiles)
     .set({ usernameScreen: "clear", usernameScreenedAt: nowSeconds() })
@@ -51,7 +51,7 @@ async function keep(
     cleared,
     reviewResolution(db, queueId, reviewerId, "approved"),
   ]);
-  return "resolved";
+  return { outcome: "resolved" };
 }
 
 /**
@@ -66,7 +66,7 @@ async function rename(
     reviewerId: string;
     nameReason: Extract<HandleReviewValues, { action: "rename" }>["nameReason"];
   }>,
-): Promise<HandleReviewOutcome> {
+): Promise<HandleReview> {
   const renamed = await forceRename(db, {
     userId: input.userId,
     typed: placeholderHandle(),
@@ -80,15 +80,17 @@ async function rename(
       reviewResolution(db, input.queueId, input.reviewerId, "removed", onlyIf),
     ],
   });
-  return RENAMED[renamed.kind];
+  // A rename that lost the race names the handle it lost to (round 38 #60).
+  return renamed.kind === "moved"
+    ? { outcome: "moved", username: renamed.username }
+    : { outcome: RENAMED[renamed.kind] };
 }
 
 const RENAMED = {
   renamed: "resolved",
   taken: "taken",
   not_found: "not_found",
-  moved: "moved",
-} as const satisfies Record<string, HandleReviewOutcome>;
+} as const satisfies Record<string, HandleReview["outcome"]>;
 
 /**
  * Keep or Rename on a review row. Only a row still open, about a runner,
@@ -100,11 +102,11 @@ export async function reviewFlaggedHandle(
   db: Db,
   reviewerId: string,
   decision: HandleReviewValues,
-): Promise<HandleReviewOutcome> {
+): Promise<HandleReview> {
   const { queueId } = decision;
   const subject = await openReviewRow(queueId);
-  if (typeof subject === "string") return subject;
-  if (subject.subjectType !== "profile") return "not_found";
+  if (typeof subject === "string") return { outcome: subject };
+  if (subject.subjectType !== "profile") return { outcome: "not_found" };
   const userId = subject.subjectId;
   return decision.action === "keep"
     ? keep(db, queueId, userId, reviewerId)

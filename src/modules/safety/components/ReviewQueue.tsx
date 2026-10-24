@@ -3,7 +3,6 @@ import type { JSX, ReactNode, Ref } from "react";
 
 import {
   Bracketed,
-  FailureBand,
   ListSection,
   Mono,
   SubmitButton,
@@ -26,11 +25,12 @@ import {
   type HandleReviewValues,
   type ReviewActionValues,
 } from "../inputs";
-import type { HandleReviewOutcome, QueueRow } from "../review";
+import type { HandleReview, QueueRow } from "../review";
 import { DeskForm, PickOne } from "./DeskForm";
 import { OtherPhotos } from "./OtherPhotos";
 import { PhotoMatches } from "./PhotoMatches";
 import { RENAME_LABELS, renameMessage } from "./DeskRunners";
+import { NotRenamedBand } from "./NotRenamedBand";
 import { useSettled } from "./use-settled";
 
 /**
@@ -140,6 +140,11 @@ type RowSettleProps = Readonly<{
   row: QueueRow;
   onSettled: (id: string) => void;
 }>;
+
+/**
+A flagged handle's rename lost a race: the handle as it is now.
+*/
+type Moved = (username: string) => void;
 
 /**
 A decision that needs no reason: a text button beside the row's submit.
@@ -377,7 +382,7 @@ function CsamQuestion({
 
 export type ReviewHandle = (input: {
   data: HandleReviewValues;
-}) => Promise<{ outcome: HandleReviewOutcome }>;
+}) => Promise<HandleReview>;
 
 /**
  * A handle the re-ask flagged (D-97): **Keep** — the handle is fine, and
@@ -391,17 +396,25 @@ function HandleDecision({
   row,
   reviewHandle,
   onSettled,
-}: RowSettleProps & Readonly<{ reviewHandle: ReviewHandle }>): JSX.Element {
+  onMoved,
+}: RowSettleProps &
+  Readonly<{ reviewHandle: ReviewHandle; onMoved: Moved }>): JSX.Element {
   const [reason, setReason] = useState<RenameReason | undefined>();
   const [said, setSaid] = useState("");
   const form = useFormSubmit({
     schema: handleReviewInput,
     action: (values) => reviewHandle({ data: values }),
-    onSuccess: ({ outcome }) => {
+    onSuccess: (review) => {
       // Neither settled the row: a taken placeholder, or a handle that
-      // changed before the rename landed (R-121).
-      if (outcome === "taken" || outcome === "moved") {
-        setSaid(renameMessage({ kind: outcome }));
+      // changed before the rename landed (R-121), which the row's header
+      // re-reads to (round 38 #60).
+      if (review.outcome === "moved") {
+        setSaid(renameMessage({ kind: "moved", username: review.username }));
+        onMoved(review.username);
+        return;
+      }
+      if (review.outcome === "taken") {
+        setSaid(renameMessage({ kind: "taken" }));
         return;
       }
       onSettled(row.id);
@@ -440,16 +453,7 @@ function HandleDecision({
         field={form.field}
         error={form.fieldErrors.nameReason}
       />
-      {/* Round 35 #45: the taken placeholder is the row's control band,
-          under NOT RENAMED. No Try again: the sentence says to press
-          Rename, which is right above it. */}
-      {said === "" ? undefined : (
-        <FailureBand
-          kicker="Not renamed"
-          message={said}
-          part="control-failure"
-        />
-      )}
+      {said === "" ? undefined : <NotRenamedBand message={said} />}
     </DecisionForm>
   );
 }
@@ -504,6 +508,9 @@ function ReviewRow({
   onSettled,
 }: ReviewRowProps): JSX.Element {
   const opener = useFocusWhen(active && focusOnOpen);
+  // A flagged handle's header re-reads to the handle a rename lost to
+  // (round 38 #60); the row stays open.
+  const [label, setLabel] = useState(row.subject.label ?? row.subjectId);
 
   return (
     <li className="flex flex-col gap-2 border border-hairline p-3">
@@ -515,7 +522,7 @@ function ReviewRow({
           onClick={onActivate}
           className="target cursor-pointer border-none bg-transparent p-0 text-left text-body font-semibold text-ink"
         >
-          {rowKind(row)} · {row.subject.label ?? row.subjectId}
+          {rowKind(row)} · {label}
         </button>
         {/* The TAKE IT DOWN Act's 48 hours, on a row an intimate-image
             report started: in the header, right, where the age sits
@@ -527,7 +534,7 @@ function ReviewRow({
         )}
       </span>
       <ReportedPhotos keys={row.subject.photoKeys} />
-      <OtherPhotos photos={row.otherPhotos} />
+      <OtherPhotos others={row.otherPhotos} />
       <PhotoMatches found={row.photoMatches} />
       {row.subject.handleFlagged === true ? (
         <p data-part="why-here" className="m-0 text-body">
@@ -545,6 +552,7 @@ function ReviewRow({
           decide={decide}
           reviewHandle={reviewHandle}
           onSettled={onSettled}
+          onMoved={setLabel}
         />
       ) : undefined}
     </li>
@@ -557,7 +565,7 @@ function ReviewRow({
  */
 function RowDecision(
   props: RowSettleProps &
-    Readonly<{ decide: Decide; reviewHandle: ReviewHandle }>,
+    Readonly<{ decide: Decide; reviewHandle: ReviewHandle; onMoved: Moved }>,
 ): JSX.Element {
   const { row, onSettled } = props;
   if (row.subject.handleFlagged === true) {
@@ -566,6 +574,7 @@ function RowDecision(
         row={row}
         reviewHandle={props.reviewHandle}
         onSettled={onSettled}
+        onMoved={props.onMoved}
       />
     );
   }

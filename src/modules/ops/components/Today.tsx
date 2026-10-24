@@ -1,9 +1,9 @@
 import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
-import type { ReactNode } from "react";
+import type { JSX, ReactNode } from "react";
 
 import type { GaveUpKind } from "../../../lib/contracts/gave-up";
-import { calendarDay, longDayLabel, monthDayLabel, timeOfDay } from "../../../lib/dates";
+import { longDayLabel, monthDayLabel, timeOfDay } from "../../../lib/dates";
 import {
   ControlFailureBand,
   FormStatus,
@@ -12,7 +12,7 @@ import {
   inFlight,
   useControlAction,
 } from "../../../ui";
-import type { DeskToday } from "../desk";
+import type { DeskToday, SkippedOperator } from "../desk";
 import { DeskShell } from "./DeskShell";
 import type { GaveUpJob } from "../gave-up";
 
@@ -342,33 +342,27 @@ function GaveUp({
 }
 
 /**
- * Whether `at` fell on `asOf`'s UTC day, read the way the digest reads its
- * own mark (`calendarDay`); never, for no `at`.
- */
-function isSameUtcDay(at: number | undefined, asOf: number): boolean {
-  return at !== undefined && calendarDay(at) === calendarDay(asOf);
-}
-
-/**
  * OPS-11: this morning's digest skipped an operator whose address is not
- * confirmed (`DIGEST_UNCONFIRMED`), said where they will look when the
- * email does not come. Only on the day it happened, in UTC like the date
- * above it: tomorrow's digest tries again. Hi-viz, because confirming the
- * address needs a person.
- *
- * Undrawn (design-deltas item 62): a line under the three numbers, in
- * existing type, with placeholder copy.
+ * confirmed, said where they will look when the email does not come. One
+ * line per operator, named by @handle with the address masked (round 38
+ * #62b), between the three numbers and Gave up, on the day it happened
+ * (`deskToday` decides). Hi-viz kicker, because confirming the address
+ * needs a person; no button, because that happens in the operator's own
+ * Settings › Account.
  */
-function DigestUnconfirmed() {
+function DigestUnconfirmed({
+  operator,
+}: Readonly<{ operator: SkippedOperator }>): JSX.Element {
+  // An operator with no runner profile has no handle to be named by.
+  const whom =
+    operator.handle === undefined ? "an operator" : `@${operator.handle}`;
   return (
     <p data-part="digest-unconfirmed" className="m-0 flex flex-col gap-1">
       <Mono step="xs" className="text-hiviz-text">
         Digest not emailed
       </Mono>
       <span className="text-body">
-        {
-          "An operator's email address isn't confirmed, so today's digest wasn't sent to them."
-        }
+        {`Today's digest wasn't sent to ${whom}. Their email address, ${operator.address}, isn't confirmed.`}
       </span>
     </p>
   );
@@ -421,9 +415,9 @@ export function Today({
             {counts.bansThisWeek === 1 ? "ban" : "bans"} this week
           </Stat>
         </ul>
-        {isSameUtcDay(counts.digestUnconfirmedAt, asOf) ? (
-          <DigestUnconfirmed />
-        ) : undefined}
+        {today.skipped.map((operator) => (
+          <DigestUnconfirmed key={operator.userId} operator={operator} />
+        ))}
       </section>
       <GaveUp
         jobs={gaveUp}

@@ -249,9 +249,5 @@ export async function rescreenWithKey(
 The re-ask against the deployed key, for the Worker entry.
 */
 export function rescreenHandlesFromEnv(anomalies: string[]): Promise<void> {
-  return rescreenWithKey(
-    coreDb(),
-    env.OPENAI_API_KEY,
-    anomalies,
-  );
+  return rescreenWithKey(coreDb(), env.OPENAI_API_KEY, anomalies);
 }

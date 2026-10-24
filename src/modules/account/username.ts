@@ -402,9 +402,10 @@ export type ForcedRename =
   /**
    * The handle changed between the read that decided and the batch (a
    * racing rename, or the runner's own new pick), so nothing was written
-   * (R-121).
+   * (R-121). `username` is the handle as it is now, which the Desk names
+   * (round 38 #60).
    */
-  | { readonly kind: "moved" };
+  | { readonly kind: "moved"; readonly username: string };
 
 export interface ForceRenameRequest {
   readonly userId: string;
@@ -525,12 +526,14 @@ export async function forceRename(
     throw error;
   }
   // The batch cannot say whether its guarded writes ran, so the profile
-  // does: holding the new handle means this rename landed.
+  // does: holding the new handle means this rename landed. A profile with
+  // no handle left has none to take away, like no profile at all.
   const after = await profileOf(db, userId);
-  if (after === undefined) return { kind: "not_found" };
-  return after.username === username
+  const current = after?.username ?? undefined;
+  if (current === undefined) return { kind: "not_found" };
+  return current === username
     ? { kind: "renamed", username }
-    : { kind: "moved" };
+    : { kind: "moved", username: current };
 }
 
 /**

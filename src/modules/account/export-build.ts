@@ -274,8 +274,7 @@ export function exportConsumersFromEnv(): ExportConsumers {
   return exportConsumers(
     {
       build: (exportId) => buildExport(liveBuildDeps(), exportId),
-      fail: (exportId) =>
-        failExport(coreDb(), exportId, captureException),
+      fail: (exportId) => failExport(coreDb(), exportId, captureException),
     },
     captureException,
   );

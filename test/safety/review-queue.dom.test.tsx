@@ -3,10 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { ReviewQueue } from "../../src/modules/safety/components/ReviewQueue";
-import type {
-  HandleReviewOutcome,
-  QueueRow,
-} from "../../src/modules/safety/review";
+import type { HandleReview, QueueRow } from "../../src/modules/safety/review";
 
 type Props = Parameters<typeof ReviewQueue>[0];
 
@@ -833,9 +830,7 @@ describe("a handle the re-ask flagged (D-97)", () => {
 
   it("shows the in-flight label while a rename is pending", async () => {
     const user = userEvent.setup();
-    const { promise, resolve: settle } = Promise.withResolvers<{
-      outcome: HandleReviewOutcome;
-    }>();
+    const { promise, resolve: settle } = Promise.withResolvers<HandleReview>();
     const reviewHandle: Props["reviewHandle"] = vi
       .fn<Props["reviewHandle"]>()
       .mockReturnValue(promise);
@@ -905,12 +900,17 @@ describe("a handle the re-ask flagged (D-97)", () => {
     expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
   });
 
-  it("keeps the row when the handle changed before the rename landed (R-121)", async () => {
+  it("keeps the row when the handle changed before the rename landed, and re-reads its header (R-121; round 38 #60)", async () => {
     const user = userEvent.setup();
     renderQueue(
       [flagged()],
-      vi.fn<Props["reviewHandle"]>().mockResolvedValue({ outcome: "moved" }),
+      vi
+        .fn<Props["reviewHandle"]>()
+        .mockResolvedValue({ outcome: "moved", username: "dunk_runs" }),
     );
+    expect(
+      screen.getByRole("button", { name: "handle · re-check · quadzilla_69" }),
+    ).toBeInTheDocument();
 
     await user.selectOptions(
       screen.getByRole("combobox", { name: /Why the name has to go/ }),
@@ -919,12 +919,29 @@ describe("a handle the re-ask flagged (D-97)", () => {
     await user.click(screen.getByRole("button", { name: "Rename" }));
 
     const band = await screen.findByText(
-      "The handle changed before the rename landed. Nothing was renamed.",
+      "The handle changed to @dunk_runs before the rename landed. Nothing was renamed. Look at it, then press Rename again if it still has to go.",
     );
     expect(band.closest("[data-part='control-failure']")).toHaveTextContent(
       /^Not renamed/u,
     );
     expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "handle · re-check · dunk_runs" }),
+    ).toBeInTheDocument();
+    // Still open, with its decision, for Keep or another Rename.
+    expect(screen.getByRole("button", { name: "Keep" })).toBeInTheDocument();
+  });
+
+  it("names a row with no label by its subject id", () => {
+    renderQueue([
+      flagged({
+        subject: { label: undefined, photoKeys: [], handleFlagged: true },
+      }),
+    ]);
+
+    expect(
+      screen.getByRole("button", { name: "handle · re-check · u-1" }),
+    ).toBeInTheDocument();
   });
 
   it("decides a reported profile, whose handle nobody flagged, as any other row", () => {

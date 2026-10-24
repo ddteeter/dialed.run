@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -9,6 +9,7 @@ import {
   reports,
   reviewQueue,
   takedownRequests,
+  userProfiles,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
@@ -61,8 +62,8 @@ async function photo(entryId: string, position = 0): Promise<string> {
   return id;
 }
 
-function ids(photos: readonly { id: string }[] | undefined) {
-  return photos?.map((row) => row.id);
+function ids(others: { photos: readonly { id: string }[] } | undefined) {
+  return others?.photos.map((row) => row.id);
 }
 
 beforeEach(async () => {
@@ -87,7 +88,7 @@ describe("otherPhotosOf", () => {
 
     // The reported photo is left out; its kit's other photo is a copy
     // candidate like any other.
-    expect(found.get(`photo:${reported}`)).toStrictEqual([
+    expect(found.get(`photo:${reported}`)?.photos).toStrictEqual([
       {
         id: first,
         entryId: newer,
@@ -126,7 +127,9 @@ describe("otherPhotosOf", () => {
     ]);
 
     expect(
-      found.get(`photo:${reported}`)?.map((row) => [row.id, row.canOpen]),
+      found
+        .get(`photo:${reported}`)
+        ?.photos.map((row) => [row.id, row.canOpen]),
     ).toStrictEqual([
       [shared, true],
       [privately, false],
@@ -186,8 +189,8 @@ describe("otherPhotosOf", () => {
     expect(ids(found.get(`photo:${reported}`))).toStrictEqual([hidden]);
   });
 
-  it(`stops at ${String(OTHER_PHOTOS_LIMIT)}, keeping the newest`, async () => {
-    const runner = await makeUser();
+  it(`stops at ${String(OTHER_PHOTOS_LIMIT)}, keeping the newest, and counts them all with the runner's handle (round 38 #63a)`, async () => {
+    const runner = await makeUser({ username: "maya_runs" });
     const reported = await photo(await kit(runner, NOW + 1000));
     const posted: string[] = [];
     for (let n = 0; n <= OTHER_PHOTOS_LIMIT; n += 1) {
@@ -202,6 +205,29 @@ describe("otherPhotosOf", () => {
     expect(ids(found.get(`photo:${reported}`))).toStrictEqual(
       posted.toReversed().slice(0, OTHER_PHOTOS_LIMIT),
     );
+    expect(found.get(`photo:${reported}`)).toMatchObject({
+      total: OTHER_PHOTOS_LIMIT + 1,
+      handle: "maya_runs",
+    });
+  });
+
+  it("names no handle for a runner who has none", async () => {
+    const runner = await makeUser();
+    await core()
+      .update(userProfiles)
+      .set({ username: sql`NULL` })
+      .where(eq(userProfiles.userId, runner));
+    const reported = await photo(await kit(runner, NOW));
+    await photo(await kit(runner, NOW - 1));
+
+    const found = await otherPhotosOf(core(), [
+      { subjectType: "photo", subjectId: reported },
+    ]);
+
+    expect(found.get(`photo:${reported}`)).toMatchObject({
+      total: 1,
+      handle: undefined,
+    });
   });
 
   it("answers each subject apart, and an empty list for one with nothing else or nobody known", async () => {
@@ -220,10 +246,18 @@ describe("otherPhotosOf", () => {
     ]);
 
     expect(found.size).toBe(3);
-    expect(found.get(`entry:${lone}`)).toStrictEqual([]);
+    expect(found.get(`entry:${lone}`)).toStrictEqual({
+      photos: [],
+      total: 0,
+      handle: undefined,
+    });
     expect(ids(found.get(`photo:${twosPhoto}`))).toStrictEqual([twosOther]);
     // No row and no audit row: nobody is known, so nothing is listed.
-    expect(found.get(`photo:${missing}`)).toStrictEqual([]);
+    expect(found.get(`photo:${missing}`)).toStrictEqual({
+      photos: [],
+      total: 0,
+      handle: undefined,
+    });
   });
 
   it("still finds the runner of a subject the Desk has deleted, from its audit row", async () => {
@@ -301,8 +335,10 @@ describe("the read's cost", () => {
         .bind(...params)
         .all<{ detail: string }>();
       const details = plan.results.map((row) => row.detail).join("\n");
+      // The runner's kits by an index on user_id: the window count reads
+      // every one of them before the limit, so the planner may take either.
       expect(details).toMatch(
-        /outfit_entries USING INDEX entries_user_created/,
+        /outfit_entries USING INDEX entries_user_(audience_)?created \(user_id=\?\)/,
       );
       expect(details).toMatch(
         /entry_photos USING INDEX entry_photos_idempotency/,
@@ -310,8 +346,12 @@ describe("the read's cost", () => {
       expect(details).toMatch(
         /moderation_actions USING INDEX moderation_actions_subject/,
       );
+      // The handle, for the link to D8, by primary key.
+      expect(details).toMatch(
+        /SEARCH user_profiles USING (INTEGER )?PRIMARY KEY|user_profiles USING INDEX sqlite_autoindex_user_profiles/,
+      );
       expect(details).not.toMatch(
-        /SCAN\s+(outfit_entries|entry_photos|moderation_actions)/i,
+        /SCAN\s+(outfit_entries|entry_photos|moderation_actions|user_profiles)/i,
       );
     }
   });

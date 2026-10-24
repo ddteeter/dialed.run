@@ -7,6 +7,7 @@
  * so this barrel stays importable in the vitest workers pool.
  */
 export { emailDebt } from "./debt";
+export { maskedAddress } from "./landing";
 export { deliverEmail, deliverOwedEmail, emailDepsFromEnv } from "./deliver";
 export type { EmailDeps } from "./deliver";
 export {
