@@ -125,7 +125,7 @@ describe("on Review's rows", () => {
       reporterCount: 1,
       reasons: ["intimate"],
       due: "Due in 31h",
-      otherPhotos: [],
+      otherPhotos: { photos: [], total: 0, handle: undefined },
       photoMatches: found,
       subject: { photoKeys: [] },
     };
@@ -149,7 +149,7 @@ describe("on Review's rows", () => {
       due: "Due in 31h",
       holdState: "held",
       relatedIds: [],
-      otherPhotos: [],
+      otherPhotos: { photos: [], total: 0, handle: undefined },
       photoMatches: found,
     };
     await renderWithRouter(

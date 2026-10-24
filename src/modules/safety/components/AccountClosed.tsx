@@ -1,7 +1,15 @@
 import type { JSX } from "react";
 
 import { ACCOUNT_CLOSED_COPY } from "../../../lib/contracts/access";
+import { APPEAL_ADDRESS } from "../../../lib/contracts/contact";
 import { NoticeBand } from "./NoticeBand";
+
+/**
+ * The appeal line around its address, read from the copy rather than
+ * written again, so the band and the status region say the same words.
+ */
+const [BEFORE_ADDRESS, AFTER_ADDRESS] =
+  ACCOUNT_CLOSED_COPY.appeal.split(APPEAL_ADDRESS);
 
 /**
  * Operator Screens D4, as design-deltas item 23 redrew it (round 27,
@@ -26,7 +34,8 @@ import { NoticeBand } from "./NoticeBand";
  * and the operator's own words reach the runner in the ban email, which
  * is also where an appeal goes (D-73): "Reply to the email we sent you."
  * The owner added a fallback line under it, the appeal address
- * (2026-10-12), for a runner who no longer has that email.
+ * (2026-10-12), for a runner who no longer has that email. The address is
+ * a `mailto:` link (round 38 #62a); the status region's text is the same.
  */
 export function AccountClosed(): JSX.Element {
   return (
@@ -35,7 +44,19 @@ export function AccountClosed(): JSX.Element {
         kicker={ACCOUNT_CLOSED_COPY.kicker}
         message={ACCOUNT_CLOSED_COPY.message}
         detail={ACCOUNT_CLOSED_COPY.detail}
-        more={ACCOUNT_CLOSED_COPY.appeal}
+        more={
+          <>
+            {BEFORE_ADDRESS}
+            <a
+              data-target="inline"
+              href={`mailto:${APPEAL_ADDRESS}`}
+              className="text-ink underline underline-offset-4"
+            >
+              {APPEAL_ADDRESS}
+            </a>
+            {AFTER_ADDRESS}
+          </>
+        }
       />
     </div>
   );

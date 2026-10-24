@@ -52,6 +52,7 @@ function desk(counts: Partial<TodayCounts> = {}): DeskToday {
       digestUnconfirmedAt: undefined,
       ...counts,
     },
+    skipped: [],
   };
 }
 

@@ -84,12 +84,7 @@ export function deletionEffectsFromEnv(): DeletionEffects {
     report: captureException,
     settle: settleOutbox,
     disconnectStrava: (userId) =>
-      disconnectStrava(
-        coreDb(),
-        env.IMPORTS_QUEUE,
-        userId,
-        captureException,
-      ),
+      disconnectStrava(coreDb(), env.IMPORTS_QUEUE, userId, captureException),
   };
 }
 

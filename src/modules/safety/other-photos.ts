@@ -11,10 +11,13 @@
  * runner is a subquery on the subject (a photo's kit, or the kit), so no
  * read decides what the next one asks. The subject itself is left out —
  * the row already shows it, or links its kit — and so is a kit already
- * removed. Served by `entries_user_created` for the runner's kits, newest
- * first, and by `entry_photos_idempotency`'s `entry_id` prefix for each
+ * removed. Served by an index on `outfit_entries.user_id` for the runner's
+ * kits (`entries_user_created`, or `entries_user_audience_created` since
+ * the window count reads them all), and by `entry_photos_idempotency`'s `entry_id` prefix for each
  * kit's photos: no scan of either table, which
- * `test/safety/other-photos.test.ts` pins with EXPLAIN.
+ * `test/safety/other-photos.test.ts` pins with EXPLAIN. The total and the
+ * runner's handle (round 38 #63a) ride on the same rows: a window count
+ * taken before the limit, and a primary-key probe of `user_profiles`.
  */
 import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
@@ -24,6 +27,7 @@ import {
   entryPhotos,
   moderationActions,
   outfitEntries,
+  userProfiles,
 } from "../../db/schema-core";
 import { publiclyVisibleEntry } from "./visibility";
 
@@ -56,6 +60,24 @@ export interface OtherPhoto {
   readonly canOpen: boolean;
 }
 
+/**
+ * What a row shows of the runner's other photos (round 38 #63a): the
+ * newest `OTHER_PHOTOS_LIMIT`, how many there are in all, which the
+ * kicker counts, and the runner's handle, for "+ N more · Open @name in
+ * Runners" past the limit; absent for a runner with no handle.
+ */
+export interface OtherPhotos {
+  readonly photos: readonly OtherPhoto[];
+  readonly total: number;
+  readonly handle: string | undefined;
+}
+
+/**
+One row of the read: a photo, and what every row repeats.
+*/
+type OtherPhotoRow = OtherPhoto &
+  Readonly<{ total: number; handle: string | null }>;
+
 export interface OtherPhotosSubject {
   readonly subjectType: "entry" | "photo";
   readonly subjectId: string;
@@ -75,12 +97,13 @@ const subjectEntry = alias(outfitEntries, "subject_entry");
 export async function otherPhotosOf(
   db: Db,
   subjects: readonly OtherPhotosSubject[],
-): Promise<Map<string, readonly OtherPhoto[] | undefined>> {
+): Promise<Map<string, OtherPhotos | undefined>> {
   const [first, ...rest] = subjects.map((subject) =>
     otherPhotosQuery(db, subject),
   );
   if (first === undefined) return new Map();
-  const found = await db.batch([first, ...rest]);
+  const batched = await db.batch([first, ...rest]);
+  const found = batched.map((rows) => shown(rows));
   return new Map(
     subjects.map((subject, index) => [
       `${subject.subjectType}:${subject.subjectId}`,
@@ -89,6 +112,24 @@ export async function otherPhotosOf(
       found[index],
     ]),
   );
+}
+
+/**
+ * A subject's rows as the row shows them. Every row carries the total and
+ * the handle, so none means none in all.
+ */
+function shown(rows: readonly OtherPhotoRow[]): OtherPhotos {
+  const [first] = rows;
+  return {
+    photos: rows.map(({ id, entryId, photoKey, canOpen }) => ({
+      id,
+      entryId,
+      photoKey,
+      canOpen,
+    })),
+    total: first?.total ?? 0,
+    handle: first?.handle ?? undefined,
+  };
 }
 
 /**
@@ -102,6 +143,13 @@ export function otherPhotosQuery(db: Db, subject: OtherPhotosSubject) {
       entryId: entryPhotos.entryId,
       photoKey: entryPhotos.photoKey,
       canOpen: sql<boolean>`${publiclyVisibleEntry()}`.mapWith(Boolean),
+      // Counted before LIMIT, over every row the filter keeps: the total
+      // the kicker says, from the same read (round 38 #63a).
+      total: sql<number>`count(*) over ()`.mapWith(Number),
+      // The runner's handle, by primary key, for the link to D8.
+      handle: sql<
+        string | null
+      >`(SELECT ${userProfiles.username} FROM ${userProfiles} WHERE ${userProfiles.userId} = ${runnerOf(db, subject)})`,
     })
     .from(outfitEntries)
     .innerJoin(entryPhotos, eq(entryPhotos.entryId, outfitEntries.id))
