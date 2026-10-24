@@ -164,10 +164,27 @@ describe("banning", () => {
     );
   });
 
-  it("accepts one", () => {
+  it("accepts one, with the rule it breaks", () => {
     expect(
-      banUserInput.parse({ userId: "u-1", reason: "harassment" }),
-    ).toMatchObject({ reason: "harassment" });
+      banUserInput.parse({
+        userId: "u-1",
+        reason: "harassment",
+        rule: "harassment",
+      }),
+    ).toStrictEqual({
+      userId: "u-1",
+      reason: "harassment",
+      rule: "harassment",
+    });
+  });
+
+  it("requires the rule, or suspected CSAM (C8, D-145)", () => {
+    const result = banUserInput.safeParse({ userId: "u-1", reason: "x" });
+    expect(result.error?.issues[0]?.message).toBe("Pick the rule it breaks.");
+    expect(
+      banUserInput.parse({ userId: "u-1", reason: "x", rule: "suspected_csam" })
+        .rule,
+    ).toBe("suspected_csam");
   });
 
   it("caps it, in the reviewer's own words", () => {
@@ -390,9 +407,10 @@ describe("the NCMEC report a quarantine records (C12)", () => {
 
   it("takes no report number as none, and an empty one the same", () => {
     expect(ncmecReportInput.parse({ recordId })).toStrictEqual({ recordId });
-    expect(ncmecReportInput.parse({ recordId, reportId: "  " })).toStrictEqual(
-      { recordId, reportId: undefined },
-    );
+    expect(ncmecReportInput.parse({ recordId, reportId: "  " })).toStrictEqual({
+      recordId,
+      reportId: undefined,
+    });
   });
 
   it("keeps a number as NCMEC gave it, trimmed, up to 40 characters", () => {
@@ -408,17 +426,15 @@ describe("the NCMEC report a quarantine records (C12)", () => {
   it("refuses anything else, in words the operator reads", () => {
     for (const reportId of ["9".repeat(41), "12 34", "<b>"]) {
       const result = ncmecReportInput.safeParse({ recordId, reportId });
-      expect(result.error?.issues.map((issue) => issue.message)).toStrictEqual(
-        [
-          "Paste the report number as NCMEC gave it: letters, digits and dashes, 40 at most.",
-        ],
-      );
+      expect(result.error?.issues.map((issue) => issue.message)).toStrictEqual([
+        "Paste the report number as NCMEC gave it: letters, digits and dashes, 40 at most.",
+      ]);
     }
   });
 
   it("refuses a record id that is not one", () => {
-    expect(
-      ncmecReportInput.safeParse({ recordId: "not-a-ulid" }).success,
-    ).toBe(false);
+    expect(ncmecReportInput.safeParse({ recordId: "not-a-ulid" }).success).toBe(
+      false,
+    );
   });
 });

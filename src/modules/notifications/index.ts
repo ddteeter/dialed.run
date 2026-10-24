@@ -14,6 +14,7 @@ export {
   bellState,
   createNotification,
   notificationInsert,
+  notificationRaise,
   listNotifications,
   markAllNotificationsRead,
   unreadNotificationCount,

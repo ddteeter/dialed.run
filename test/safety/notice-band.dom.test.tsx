@@ -41,15 +41,26 @@ describe("ContentRemoved (SAF-8)", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Your run and verdict stay.")).toBeInTheDocument();
+    // C8 (D-145): and the rule it broke, last.
+    expect(band().lastElementChild).toHaveTextContent(
+      /^That breaks our community rules: don't show where someone lives\.$/u,
+    );
   });
 
-  it("names a removed entry, with nothing said to stay", () => {
+  it("names a removed entry and its rule, with nothing said to stay", () => {
     render(
       <ContentRemoved subjectType="entry" action="remove" reason="spam" />,
     );
     expect(screen.getByText("Removed from the feed")).toBeInTheDocument();
     expect(band()).toHaveTextContent(
-      "A moderator removed this entry from the feed: it's an ad or spam.",
+      /^Removed from the feedA moderator removed this entry from the feed: it's an ad or spam\.That breaks our community rules: don't post spam, advertising or promotion we have not allowed\.$/u,
+    );
+    expect(band().children).toHaveLength(3);
+  });
+
+  it("names no rule for the Desk's catch-all reason", () => {
+    render(
+      <ContentRemoved subjectType="entry" action="remove" reason="rules" />,
     );
     expect(band().children).toHaveLength(2);
   });
@@ -62,8 +73,9 @@ describe("ContentRemoved (SAF-8)", () => {
         reason="copyright"
       />,
     );
+    // A notice is why, so no rule is named (C8).
     expect(band()).toHaveTextContent(
-      "Photo removedWe removed this photo after a copyright notice.Your run and verdict stay.",
+      /^Photo removedWe removed this photo after a copyright notice\.Your run and verdict stay\.$/u,
     );
   });
 
@@ -76,7 +88,7 @@ describe("ContentRemoved (SAF-8)", () => {
       />,
     );
     expect(band()).toHaveTextContent(
-      "Photo removedA moderator removed this photo: it's an intimate image shared without consent.Your run and verdict stay.",
+      /^Photo removedA moderator removed this photo: it's an intimate image shared without consent\.Your run and verdict stay\.That breaks our community rules: don't post sexual or explicit content\.$/u,
     );
   });
 

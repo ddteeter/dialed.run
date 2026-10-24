@@ -13,8 +13,12 @@ import {
   useFormSubmit,
 } from "../../../ui";
 import {
+  closureRuleLabels,
+  closureRuleSchema,
+  closureRules,
   renameReasonSchema,
   renameReasons,
+  type ClosureRule,
   type RenameReason,
 } from "../contracts";
 import { banUserInput, forceRenameInput } from "../inputs";
@@ -33,7 +37,7 @@ type Rename = (input: {
   data: { userId: string; nameReason: RenameReason };
 }) => Promise<RenameOutcome>;
 type Ban = (input: {
-  data: { userId: string; reason: string };
+  data: { userId: string; reason: string; rule: ClosureRule };
 }) => Promise<unknown>;
 type Unban = (input: { data: { userId: string } }) => Promise<unknown>;
 
@@ -216,6 +220,7 @@ function CloseAccountPanel({
   onDone,
 }: Readonly<PanelProps<Ban>>): JSX.Element {
   const [reason, setReason] = useState("");
+  const [rule, setRule] = useState<ClosureRule | undefined>();
   const form = useFormSubmit({
     schema: banUserInput,
     action: (values) => ban({ data: values }),
@@ -228,7 +233,7 @@ function CloseAccountPanel({
       title="Close account"
       className="flex flex-col gap-3 border border-hairline p-4"
       onSubmit={() => {
-        void form.submit({ userId: runner.userId, reason });
+        void form.submit({ userId: runner.userId, reason, rule });
       }}
       submit={{ label: "Close account", pendingLabel: "Closing" }}
     >
@@ -241,6 +246,19 @@ function CloseAccountPanel({
         error={form.fieldErrors.reason}
         hint="Their notice quotes this back to them."
         autoComplete="off"
+      />
+      {/* C8 (D-145): the notice names the rule, or none for suspected
+          CSAM, which stays silent. */}
+      <PickOne<ClosureRule>
+        name="rule"
+        label="Which rule it breaks"
+        options={closureRules}
+        optionLabels={closureRuleLabels}
+        schema={closureRuleSchema}
+        value={rule}
+        onChange={setRule}
+        field={form.field}
+        error={form.fieldErrors.rule}
       />
     </DeskForm>
   );

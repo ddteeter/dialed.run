@@ -116,12 +116,7 @@ export const runRemovalsQuery = createServerFn({ method: "GET" })
   .validator((data: unknown) => runRemovalsInput.parse(data))
   .handler(async ({ data }) => {
     const ownerId = await requireUserId();
-    return removalsOnRun(
-      coreDb(),
-      ownerId,
-      data.runId,
-      data.since,
-    );
+    return removalsOnRun(coreDb(), ownerId, data.runId, data.since);
   });
 
 export const reviewQueueQuery = createServerFn({ method: "GET" }).handler(
@@ -191,11 +186,7 @@ export const blockTakedownRequesterAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => blockRequesterInput.parse(input))
   .handler(async ({ data }) => {
     const actorId = requireAdmin(await verifiedUserId());
-    return blockAndDeclineAll(
-      coreDb(),
-      actorId,
-      data.requestId,
-    );
+    return blockAndDeclineAll(coreDb(), actorId, data.requestId);
   });
 
 /**
@@ -220,7 +211,7 @@ export const banUserAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => banUserInput.parse(input))
   .handler(async ({ data }) => {
     const bannedBy = requireAdmin(await verifiedUserId());
-    const ban = { userId: data.userId, reason: data.reason, bannedBy };
+    const ban = { ...data, bannedBy };
     // The ban's email, owed in the ban's batch, then the fast path.
     const debt = oweOutbox(banEmail(ban));
     await banUser(ban, (database) => [outboxInsert(database, debt)]);
@@ -262,11 +253,7 @@ export const reviewHandleAction = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const reviewerId = requireAdmin(await verifiedUserId());
     return {
-      outcome: await reviewFlaggedHandle(
-        coreDb(),
-        reviewerId,
-        data,
-      ),
+      outcome: await reviewFlaggedHandle(coreDb(), reviewerId, data),
     };
   });
 

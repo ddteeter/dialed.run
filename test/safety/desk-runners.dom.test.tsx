@@ -229,7 +229,41 @@ describe("Rename (round 27 #16)", () => {
 });
 
 describe("Close account (D3)", () => {
-  it("closes with the reason their notice quotes", async () => {
+  it("closes with the reason their notice quotes, and the rule it names", async () => {
+    const user = userEvent.setup();
+    const { ban } = await renderDesk();
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+
+    await user.type(screen.getByRole("textbox", { name: /Why/ }), "Spam");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Which rule it breaks/ }),
+      "Post spam, advertising or promotion we have not allowed",
+    );
+    await user.click(screen.getByRole("button", { name: "Close account" }));
+
+    expect(ban).toHaveBeenCalledWith({
+      data: { userId: "u-ada", reason: "Spam", rule: "spam" },
+    });
+  });
+
+  it("closes over suspected CSAM naming no rule (C8)", async () => {
+    const user = userEvent.setup();
+    const { ban } = await renderDesk();
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+
+    await user.type(screen.getByRole("textbox", { name: /Why/ }), "Closed");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Which rule it breaks/ }),
+      "Suspected CSAM: name no rule",
+    );
+    await user.click(screen.getByRole("button", { name: "Close account" }));
+
+    expect(ban).toHaveBeenCalledWith({
+      data: { userId: "u-ada", reason: "Closed", rule: "suspected_csam" },
+    });
+  });
+
+  it("refuses to close without a rule, in the schema's words", async () => {
     const user = userEvent.setup();
     const { ban } = await renderDesk();
     await user.click(screen.getByRole("button", { name: "@ada" }));
@@ -237,9 +271,23 @@ describe("Close account (D3)", () => {
     await user.type(screen.getByRole("textbox", { name: /Why/ }), "Spam");
     await user.click(screen.getByRole("button", { name: "Close account" }));
 
-    expect(ban).toHaveBeenCalledWith({
-      data: { userId: "u-ada", reason: "Spam" },
-    });
+    expect(ban).not.toHaveBeenCalled();
+    const said = await screen.findAllByText("Pick the rule it breaks.");
+    expect(said.length).toBeGreaterThan(0);
+  });
+
+  it("treats a rule taken back as nothing chosen", async () => {
+    const user = userEvent.setup();
+    const { ban } = await renderDesk();
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+    const rule = screen.getByRole("combobox", { name: /Which rule it breaks/ });
+
+    await user.type(screen.getByRole("textbox", { name: /Why/ }), "Spam");
+    await user.selectOptions(rule, "Harass anyone");
+    await user.selectOptions(rule, "—");
+    await user.click(screen.getByRole("button", { name: "Close account" }));
+
+    expect(ban).not.toHaveBeenCalled();
   });
 
   it("refuses to close without a reason", async () => {
@@ -348,6 +396,10 @@ describe("after an action", () => {
     await user.click(screen.getByRole("button", { name: "@ada" }));
 
     await user.type(screen.getByRole("textbox", { name: /Why/ }), "Spam");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Which rule it breaks/ }),
+      "Harass anyone",
+    );
     await user.click(screen.getByRole("button", { name: "Close account" }));
 
     expect(await screen.findByText("Account closed.")).toBeInTheDocument();
@@ -396,6 +448,10 @@ describe("while an action is in flight", () => {
     );
     await user.click(screen.getByRole("button", { name: "Rename" }));
     await user.type(screen.getByRole("textbox", { name: /Why/ }), "Spam");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Which rule it breaks/ }),
+      "Harass anyone",
+    );
     await user.click(screen.getByRole("button", { name: "Close account" }));
 
     expect(await screen.findByText("Renaming")).toBeInTheDocument();

@@ -63,9 +63,12 @@ import {
   isCopyrightTakedown,
   quarantineInsert,
   removalNotice,
+  removalRuleOf,
   removalStatements,
+  reporterNotices,
   resolveReview,
   settleOpenReviews,
+  wasFlaggedAutomatically,
   wasModerated,
   type CaseOverOutcome,
   type ClaimedPurge,
@@ -279,13 +282,23 @@ function deletions(
  * quoting the moderator's reason. `action` is what decides, with the
  * reason (`isCopyrightTakedown`): a removal request's takedown carries
  * `intimate` and answered no copyright notice.
+ *
+ * **The email is the full statement of reasons** (C8, D-145): the rule
+ * it broke, unless a copyright notice is why, and whether the automatic
+ * check flagged it before a person decided.
  */
-function authorNotice(
+async function authorNotice(
   db: Db,
   input: ModerateInput,
   action: "remove" | "takedown",
   target: Target,
 ) {
+  const rule = removalRuleOf(action, input.reason);
+  const isFlagged = await wasFlaggedAutomatically(
+    db,
+    input.subjectType,
+    input.subjectId,
+  );
   const debt = oweOutbox(
     emailDebt(
       {
@@ -297,6 +310,8 @@ function authorNotice(
           ...(isCopyrightTakedown(action, input.reason) && {
             cause: "copyright_notice" as const,
           }),
+          ...(rule !== undefined && { rule }),
+          flagged: isFlagged,
         },
       },
       { dedupeKey: `content_removed:${input.subjectType}:${input.subjectId}` },
@@ -344,10 +359,20 @@ export async function moderateContent(
     action === "quarantine"
       ? await preservation(db, target, input, actionId)
       : undefined;
+  // A quarantine tells nobody: not its author, and not whoever reported
+  // it (D-70). A Remove or takedown tells both (C8, D-132).
   const told =
     action === "quarantine"
       ? undefined
-      : authorNotice(db, input, action, target);
+      : {
+          ...(await authorNotice(db, input, action, target)),
+          reporters: await reporterNotices(
+            db,
+            input.subjectType,
+            input.subjectId,
+            "removed",
+          ),
+        };
   const words = removalStatements[input.reason];
   const takenDown: Statements = isHold
     ? copyrightHoldWrites(db, {
@@ -377,7 +402,7 @@ export async function moderateContent(
         runId: target.runId,
       }),
       ...(kept === undefined ? [] : [kept.record]),
-      ...(told === undefined ? [] : [told.statement]),
+      ...(told === undefined ? [] : [told.statement, ...told.reporters]),
     ],
     [
       // A hold keeps the bytes, and with them the photo's fingerprint

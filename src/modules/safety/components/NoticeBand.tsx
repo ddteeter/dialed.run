@@ -1,7 +1,11 @@
 import type { JSX } from "react";
 
 import { Mono } from "../../../ui";
-import { removalNotice, type RemovalReason } from "../contracts";
+import {
+  removalNotice,
+  removalRuleLine,
+  type RemovalReason,
+} from "../contracts";
 
 /**
  * A notice where the thing was: a kicker naming the state that is true,
@@ -73,6 +77,9 @@ const REMOVED_KICKER = {
  * rather than inferring it from a reason a Remove can also carry — and
  * the reason as well, because a removal request's takedown carries
  * `intimate` and answered no copyright notice (`removalNotice`).
+ *
+ * **It names the rule** (C8, D-145) under the rest, as the email does —
+ * except after a copyright notice, which names none.
  */
 export function ContentRemoved({
   subjectType,
@@ -90,6 +97,7 @@ export function ContentRemoved({
       detail={
         subjectType === "photo" ? "Your run and verdict stay." : undefined
       }
+      more={removalRuleLine(action, reason)}
     />
   );
 }

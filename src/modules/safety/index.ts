@@ -46,6 +46,7 @@ export {
   removalNotice,
   removalReasons,
   removalReasonSchema,
+  removalRuleOf,
   removalSentence,
   removalStatements,
   renameReasons,
@@ -122,6 +123,9 @@ export {
   type ReconcileReport,
 } from "./reports";
 
+// C8 (D-132, D-145): the notices a report's life owes.
+export { reporterNotices } from "./notices";
+
 export {
   claimForReview,
   claimLeaseSeconds,
@@ -135,6 +139,7 @@ export {
   resolveReview,
   reviewResolution,
   settleOpenReviews,
+  wasFlaggedAutomatically,
   type ClaimOutcome,
   type HandleReviewOutcome,
   type QueueRow,

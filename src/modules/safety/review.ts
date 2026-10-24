@@ -25,7 +25,11 @@ import {
   userProfiles,
 } from "../../db/schema-core";
 import { coreDb } from "../../env";
-import { columnWhere, firstRowWhere } from "../../lib/sql/keyed-read";
+import {
+  columnWhere,
+  firstRowWhere,
+  hasRowWhere,
+} from "../../lib/sql/keyed-read";
 import { orSqlNull } from "../../lib/sql/sql-null";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
@@ -37,6 +41,7 @@ import {
   reportReasonSchema,
 } from "./contracts";
 import type { ReportReason, ReportSubjectType } from "./contracts";
+import { keptNotice, reporterNotices } from "./notices";
 import { otherPhotosOf, type OtherPhoto } from "./other-photos";
 import { photoMatchesOf, type PhotoMatches } from "./photo-matches";
 import { heldPhotoStatus } from "./visibility";
@@ -582,7 +587,11 @@ export type HandleReviewOutcome = ResolveOutcome | "taken" | "moved";
 type OpenRow =
   | "not_found"
   | "already_resolved"
-  | { subjectType: ReportSubjectType; subjectId: string };
+  | {
+      subjectType: ReportSubjectType;
+      subjectId: string;
+      source: "reports" | "classifier";
+    };
 
 /**
  * The row this decision is about, or the reason there isn't one.
@@ -605,6 +614,7 @@ export async function openRow(queueId: string): Promise<OpenRow> {
       subjectType: reviewQueue.subjectType,
       subjectId: reviewQueue.subjectId,
       status: reviewQueue.status,
+      source: reviewQueue.source,
     })
     .from(reviewQueue)
     .where(eq(reviewQueue.id, queueId))
@@ -614,7 +624,11 @@ export async function openRow(queueId: string): Promise<OpenRow> {
   if (row.status === "approved" || row.status === "removed") {
     return "already_resolved";
   }
-  return { subjectType: row.subjectType, subjectId: row.subjectId };
+  return {
+    subjectType: row.subjectType,
+    subjectId: row.subjectId,
+    source: row.source,
+  };
 }
 
 /**
@@ -663,6 +677,7 @@ export async function resolveReview(
   // helper here any more — the one that was here threw on an empty array
   // that could not happen, and an unreachable throw is a branch no test
   // can reach.
+  const told = await decisionNotices(row, decision);
   const writes = [
     reviewResolution(
       db(),
@@ -671,10 +686,69 @@ export async function resolveReview(
       decision === "approve" ? "approved" : "removed",
     ),
     ...subjectWritesFor(row.subjectType, row.subjectId, decision),
+    ...told,
   ] as const;
 
   await db().batch(writes);
   return "resolved";
+}
+
+/**
+ * Who a decision here tells (C8; D-132, D-145), read before its batch.
+ *
+ * - **Approve** tells each reporter it stayed up, and — when reports hid
+ *   it — its author, whose hide notice promised to say.
+ * - **Remove of a product** tells its reporters it went. An entry or a
+ *   photo reaches here only when `moderateContent` found it gone (its
+ *   author deleted it, and we removed nothing), and a profile's Remove
+ *   changes nothing about the profile (a ban is separate, and tells them
+ *   itself), so neither is told "we removed it".
+ * - **A quarantine** tells nobody: suspected CSAM is silent (D-70).
+ */
+async function decisionNotices(
+  row: Exclude<OpenRow, string>,
+  decision: ReviewDecision,
+): Promise<BatchItem<"sqlite">[]> {
+  const { subjectType, subjectId } = row;
+  if (decision === "approve") {
+    const reporters = await reporterNotices(
+      db(),
+      subjectType,
+      subjectId,
+      "kept",
+    );
+    const author =
+      row.source === "reports"
+        ? await keptNotice(db(), subjectType, subjectId)
+        : [];
+    return [...reporters, ...author];
+  }
+  return decision === "remove" && subjectType === "product"
+    ? reporterNotices(db(), subjectType, subjectId, "removed")
+    : [];
+}
+
+/**
+ * Whether the automatic check is what brought this subject to a person:
+ * its review row came from the classifier (C8, Art. 17(3)(c)). A row
+ * re-opened by reports says `reports`, because reports are then what
+ * brought it.
+ */
+export async function wasFlaggedAutomatically(
+  database: ReturnType<typeof drizzle>,
+  subjectType: ReportSubjectType,
+  subjectId: string,
+): Promise<boolean> {
+  return hasRowWhere(
+    database,
+    reviewQueue,
+    reviewQueue.id,
+    and(
+      eq(reviewQueue.subjectType, subjectType),
+      eq(reviewQueue.subjectId, subjectId),
+      eq(reviewQueue.source, "classifier"),
+    ),
+  );
 }
 
 /**
