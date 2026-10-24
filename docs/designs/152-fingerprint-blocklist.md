@@ -1,4 +1,4 @@
-# Design: 151 Keeping a removed intimate image's fingerprint (D-147)
+# Design: 152 Keeping a removed intimate image's fingerprint (D-147)
 
 ## Problem
 
@@ -37,9 +37,11 @@ how to stop it spreading elsewhere.
    classifier pass cannot publish it. **Kit photos only.** A garment photo
    is never shown to anyone else, so a copy in a closet harms nobody we
    could protect, and queueing it would show an operator a private photo.
-3. **Review row:** the existing Matching photos block shows which removal
-   it matched and the distance. The author sees D-145's "hidden while a
-   person reviews it" notice (PR #220).
+3. **Review row:** source `[fingerprint]`, a line saying when the image it
+   matched was removed and how many bits apart, and the existing Matching
+   photos block for any live copies. No author notice: PR #220's D-145
+   notice fires on report hides only, and a classifier hide (the closest
+   precedent) sends none either.
 4. **Sweep:** `safety/retention.ts` gains a sixth delete: rows past the
    1096-day line.
 5. **Copy:** a pointer to StopNCII.org (18+) and Take It Down (under 18)
@@ -80,5 +82,8 @@ how to stop it spreading elsewhere.
   (18 and over) or Take It Down (under 18) can help stop it spreading there.
   They fingerprint the image on your own device; the image never leaves
   it." I'm proceeding with this unless vetoed.
-- **The notice tips off a deliberate re-uploader.** D-145 requires it for
-  any hide, so it stays. I'm flagging it, not asking for a change.
+- **Should automatic holds tell the author?** D-145's reason cites DSA
+  Art. 17, which covers any restriction of visibility. After #220, neither
+  a classifier hide nor this hold sends a notice. Telling a deliberate
+  re-uploader they were caught is the cost. Owner's call; this PR matches
+  the classifier.
