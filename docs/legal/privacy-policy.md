@@ -388,11 +388,16 @@ account added it.
   profile or a product name. A kit you report leaves your feed straight
   away, and a runner you report leaves your search. When three different
   people report the same kit or photo, it is hidden from everyone but its
-  owner and a person reviews it. A profile or product name reported three
-  times goes to a person for review.
+  owner and a person reviews it, and we tell its owner in the app that it
+  is hidden. A profile or product name reported three times goes to a
+  person for review.
+- **When a person decides on a report,** we tell each runner who filed it,
+  in the app, whether we removed what they reported or left it up. If
+  reports hid a kit or photo and we leave it up, we tell its owner. The
+  notice does not name who reported it.
 - One report that a kit or photo is an intimate image shared without
-  consent hides it from everyone but its owner at once, and emails each
-  reviewer that it is waiting and when its 48 hours run out. The email
+  consent hides it from everyone but its owner at once, tells its owner in
+  the app, and emails each reviewer that it is waiting and when its 48 hours run out. The email
   says what kind of thing was reported and when; it does not name you or
   the runner who posted it.
 - **A removal request** made at [/takedown](/takedown), with or without an
@@ -434,7 +439,8 @@ account added it.
   keep it longer.
 - **We can close an account.** We record the reason, sign it out
   everywhere, refuse it sign-in, hide its kits, photos and profile from
-  everyone else, and email the reason. Reopening it brings them back.
+  everyone else, and email the reason and the rule it broke. Reopening it
+  brings them back.
 
 ## Who else handles your data
 
@@ -593,18 +599,24 @@ more.
 
 Where the GDPR or UK GDPR applies, these are our legal bases:
 
-| What                                                                                                                                           | Legal basis                                                                                   |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Your account, profile, closet, runs, kits, photos, weather lookups, the feed, follows, "useful" marks, blocks, notifications and account email | Performing our agreement with you (the terms)                                                 |
-| Showing your shared kits to other signed-in runners                                                                                            | Performing our agreement with you; you choose shared or private for every kit                 |
-| Screening photos and usernames, photo fingerprints, reports, moderation, removal requests, bans and records of them                            | Our legitimate interest in keeping [dialed.run] safe and lawful                               |
-| Sessions, sign-in protection, counts that stop abuse, Turnstile, the leaked-password check, error reports and server logs                      | Our legitimate interest in keeping accounts and the service secure                            |
-| Conditions numbers in the app, and anonymous totals                                                                                            | Our legitimate interest in useful guides and numbers; you can object with the Settings switch |
-| Keeping past usernames                                                                                                                         | Our legitimate interest in stopping impersonation                                             |
-| Reporting suspected child sexual abuse material to NCMEC, and answering lawful requests from authorities                                       | Our legitimate interest in protecting children and meeting the US law that applies to us      |
-| Your browser's location                                                                                                                        | Your consent, given in your browser; you can withdraw it there                                |
-| Strava reminders                                                                                                                               | Your consent, given when you connect; you withdraw it by disconnecting                        |
-| Run reminder emails                                                                                                                            | Our legitimate interest in reminding you to log; you can switch them off at any time          |
+| What                                                                                                                                           | Legal basis                                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Your account, profile, closet, runs, kits, photos, weather lookups, the feed, follows, "useful" marks, blocks, notifications and account email | Performing our agreement with you (the terms)                                                                                                   |
+| Showing your shared kits to other signed-in runners                                                                                            | Performing our agreement with you; you choose shared or private for every kit                                                                   |
+| Screening photos and usernames, photo fingerprints, reports, moderation, removal requests, bans and records of them                            | Our legitimate interest in keeping [dialed.run] safe and lawful                                                                                 |
+| Sessions, sign-in protection, counts that stop abuse, Turnstile, the leaked-password check, error reports and server logs                      | Our legitimate interest in keeping accounts and the service secure                                                                              |
+| Conditions numbers in the app, and anonymous totals                                                                                            | Our legitimate interest in useful guides and numbers; you can object with the Settings switch                                                   |
+| Keeping past usernames                                                                                                                         | Our legitimate interest in stopping impersonation                                                                                               |
+| Reporting suspected child sexual abuse material to NCMEC, and answering lawful requests from authorities                                       | Our legitimate interest in protecting children and meeting the US law that applies to us                                                        |
+| Your browser's location                                                                                                                        | Your consent, given in your browser; you can withdraw it there                                                                                  |
+| Strava reminders                                                                                                                               | Your consent, given when you connect; you withdraw it by disconnecting                                                                          |
+| Run reminder emails                                                                                                                            | Our legitimate interest in reminding you to log; you can switch them off at any time                                                            |
+| Checking your age when you sign up                                                                                                             | Our legitimate interest in keeping [dialed.run] to adults, as the terms and US state law require                                                |
+| Requests for an invite                                                                                                                         | Steps you ask us to take before an agreement with you                                                                                           |
+| Product lookups and the shared catalogue                                                                                                       | Performing our agreement with you (the terms)                                                                                                   |
+| Exporting your data and deleting your account                                                                                                  | Meeting our legal obligations under the GDPR or UK GDPR                                                                                         |
+| Email you send us: questions, appeals, reports, copyright notices and counter-notices, and requests about your data                            | Our legitimate interest in answering you and keeping [dialed.run] safe and lawful; for a request about your data, meeting our legal obligations |
+| Counting page views on dialed.run (GoatCounter)                                                                                                | Our legitimate interest in knowing which pages people read                                                                                      |
 
 ## Security
 

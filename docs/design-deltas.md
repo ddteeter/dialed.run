@@ -1237,6 +1237,35 @@ NCMEC]` or `[REPORTED TO NCMEC {date}] · {number}`; then an optional
     whether the two ways a case ends want a confirm step, since both are
     final.
 
+74. **Moderation notices in the bell (C8, D-132, D-145, design 151).
+    Undesigned; built as plain S2c rows.** Four new notification rows, each
+    one paragraph in the existing row (no kicker, no glyph, no link):
+    the author's "Photo hidden while we review it. Someone reported a
+    photo on your run, …" (and a kit's version), the author's "We
+    reviewed your reported kit and left it up." (and a photo's), and the
+    reporter's "We removed what you reported." / "We reviewed what you
+    reported and left it up. We didn't find that it breaks our community
+    rules. Disagree? Write to desk@dialed.run." The owner's hide notice
+    has a heading and a body; the row has no heading slot, so the heading
+    leads the paragraph with a full stop. **The ask:** whether a notice
+    with a heading wants one (a MONO.xs kicker, as the band has), and
+    whether any of the four should link somewhere (the reporter's has no
+    page to open: the thing is someone else's, or gone).
+
+75. **The rule line on the removal band (C8).** `ContentRemoved` (round
+    27 #20) gains a third quiet line under the rest: "That breaks our
+    community rules: don't post spam, advertising or promotion we have not
+    allowed." — the band's existing `more` slot, `text-small text-quiet`.
+    None after a copyright notice, and none for the Desk's catch-all
+    reason. **The ask:** confirm the line and its place.
+
+76. **D8's Close account names a rule (C8).** Under "Why", a required pick
+    "Which rule it breaks": the terms' ten rules by their bold names, then
+    "Suspected CSAM: name no rule", built from the Rename pick (`PickOne`)
+    with its "—" start and "Pick the rule it breaks." refusal.
+    Operator-only words. **The ask:** draw it into D8's panel, and confirm
+    the CSAM option's wording.
+
 ## Answered in round 37 (imported 2026-10-10)
 
 Design sent round 37 as `Round 37 Rulings.dc.html`, with the text of record
