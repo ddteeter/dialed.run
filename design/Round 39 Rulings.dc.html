@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px;">
+  <div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px;">
+
+    <div style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Round 39 &nbsp;/&nbsp; items 66–76 · built since round 38, and in review</span>
+        <span style="color: #FF2D8A;">dialed.run</span>
+      </div>
+      <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 1120px; text-transform: uppercase;">Say where it came from, next to what it says.</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">No new step, colour, glyph or motion: every value is from tokens.js / T1. Text of record: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">docs/product.md</span> · Round 39.</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em;">
+        <a href="#r66" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">66 · Strava consent</a>
+        <a href="#r67" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">67 · Weather credit</a>
+        <a href="#r68" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">68 · 73 · Quarantine, holds</a>
+        <a href="#r71" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">71 · Matches</a>
+        <a href="#r69" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">69 · MS / TN</a>
+        <a href="#r74" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">70 · 74–76 · Notices</a>
+        <a href="#r72" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">72 · Open source</a>
+        <a href="#rulings" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">Rulings</a>
+      </div>
+    </div>
+
+    <div id="r66" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #F5FF3D;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">66 · Strava consent</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 860px; line-height: 1.45;"><strong style="color: #F4F3EF;">Lead-ins stay run-in, semibold, at the paragraph's own size, not mono labels.</strong> Consent is read as sentences; four kickers over three paragraphs would read as a form. On P3, "So we can remind you. Optional." stays as the offer's line; "We read that a run happened. Nothing else." retires there, because the consent now says it in full and two versions can drift.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <sc-for list="{{ strava }}" as="f" hint-placeholder-count="2">
+          <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ f.label }}</span>
+            <div data-screen-label="{{ f.screen }}" style="width: 390px; max-width: 100%; background: {{ f.bg }}; color: {{ f.fg }}; border-radius: 12px; padding: 24px 20px; display: flex; flex-direction: column; gap: 14px;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 26px; letter-spacing: -0.03em; line-height: 1;">{{ f.head }}</span>
+              <span style="font-size: 15px; line-height: 1.45;">{{ f.sub }}</span>
+              <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px; line-height: 1.5;">
+                <sc-for list="{{ stravaConsent }}" as="p" hint-placeholder-count="3">
+                  <p style="margin: 0;"><strong style="font-weight: 600;">{{ p.k }}</strong> {{ p.v }}</p>
+                </sc-for>
+              </div>
+              <div style="height: 48px; background: #FC4C02; color: #FFFFFF; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; letter-spacing: 0.04em;">Strava's official button · unchanged</div>
+              <sc-if value="{{ f.notnow }}" hint-placeholder-val="{{ false }}"><span style="font-size: 14px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; min-height: 44px; display: flex; align-items: center;">Not now</span></sc-if>
+            </div>
+            <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px; text-wrap: pretty;">{{ f.note }}</p>
+          </div>
+        </sc-for>
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">66 · T3 · CALLBACK RECEIPT · REFUSED</span>
+          <div data-screen-label="T3 strava refused try again r39" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 26px; letter-spacing: -0.03em;">Strava</span>
+            <div role="status" style="border: 1px solid #0B0B0E; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em;">NOT CONNECTED</span><span style="font-size: 15px; line-height: 1.45;">{receipt sentence as built}</span></div>
+            <span style="background: #0B0B0E; color: #F4F3EF; border-radius: 100px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700;">Try again</span>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px; text-wrap: pretty;">Label unchanged. It goes to T1 with focus on T1's heading, so the consent is the next thing read. From P3, it returns to P3's offer instead.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="r67" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">67 · Weather data provided by Visual Crossing</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 860px; line-height: 1.45;"><strong style="color: #F4F3EF;">All eight places confirmed as built. A3's header keeps it at the desk too.</strong> The headline is the reading and the rail is another column, so "near" is met only by the header's own line. Two credits on one desk screen are fine. The entry card's place is drawn last.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
+        <sc-for list="{{ credits }}" as="f" hint-placeholder-count="8">
+          <div style="flex: 0 0 330px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ f.label }}</span>
+            <div data-screen-label="{{ f.screen }}" style="width: 330px; max-width: 100%; background: {{ f.bg }}; color: {{ f.fg }}; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
+              <div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;">
+                <sc-if value="{{ f.kicker }}" hint-placeholder-val="{{ false }}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: {{ f.mc }};">{{ f.kicker }}</span></sc-if>
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.02em; line-height: 1.05;">{{ f.title }}</span>
+                <sc-for list="{{ f.lines }}" as="l" hint-placeholder-count="1">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: {{ f.mc }};">{{ l }}</span>
+                </sc-for>
+              </div>
+              <sc-if value="{{ f.teal }}" hint-placeholder-val="{{ false }}"><div style="background: #00E0C6; color: #0B0B0E; padding: 12px 20px; display: flex; flex-direction: column; gap: 4px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em;">SAME CONDITIONS</span><span style="font-size: 14px; font-weight: 600;">{{ f.teal }}</span></div></sc-if>
+              <span style="padding: 8px 20px 16px; font-size: 11px; color: {{ f.cc }};">Weather data provided by Visual Crossing</span>
+            </div>
+            <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 330px; text-wrap: pretty;">{{ f.note }}</p>
+          </div>
+        </sc-for>
+
+        <div style="flex: 1 1 640px; max-width: 660px; display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">67 · SHARE / OG ENTRY CARD · 1200×630 AT HALF</span>
+          <div data-screen-label="OG entry card credit r39" style="width: 600px; max-width: 100%; aspect-ratio: 1200 / 630; background: #0B0B0E; color: #F4F3EF; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid #2A2A31;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em;">dialed<span style="color: #8B8B93;">.run</span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #8B8B93;">@tempo_tess · 6.2 MI</span></div>
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 75px; line-height: 0.9; letter-spacing: -0.04em;">41°</span>
+            <div style="display: flex; justify-content: space-between; gap: 16px; align-items: baseline; border-top: 1px solid #2A2A31; padding-top: 10px;"><span style="font-size: 13px; font-weight: 600;">Dialed · 3 pieces</span><span style="font-size: 11px; color: #DEDDD6;">Weather data provided by Visual Crossing</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">The credit sits at the foot's right, opposite the verdict: 22px at full size, #DEDDD6 on ink (12.9:1). A band the runner set prints no credit. Wire the card only once it carries the line.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="r68" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">68 · 73 · Quarantine and copyright holds</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 860px; line-height: 1.45;"><strong style="color: #F4F3EF;">Two lists at Review's foot, one row shape: Takedown form, Copyright holds, then Quarantine.</strong> <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">SEP 10 2026</span> is confirmed as the year-long date. The counter-notice takes a typed date (default today). Both "Case over" presses confirm in place, because neither can be undone.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <div style="flex: 1 1 560px; max-width: 680px; display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">73 · D1 · REVIEW · COPYRIGHT HOLDS</span>
+          <div data-screen-label="D1 copyright holds r39" style="background: #0B0B0E; border: 1px solid #2A2A31; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">COPYRIGHT HOLDS · 3</span>
+            <sc-for list="{{ holds }}" as="h" hint-placeholder-count="3">
+              <div style="background: #16161B; border: 1px solid #24242B; display: flex; flex-direction: column;">
+                <div style="display: flex; justify-content: space-between; padding: 12px 18px; border-bottom: 1px solid #24242B; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; gap: 12px; flex-wrap: wrap;"><span style="color: #F5FF3D;">{{ h.subj }}</span><span style="color: #8B8B93;">HIDDEN {{ h.hidden }}</span></div>
+                <div style="padding: 14px 18px; display: flex; flex-direction: column; gap: 10px;">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #8B8B93;">{{ h.owner }}</span>
+                  <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #DEDDD6;">{{ h.notice }}</p>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; color: #F4F3EF;">{{ h.next }}</span>
+                  <sc-if value="{{ h.date }}" hint-placeholder-val="{{ false }}"><div style="display: flex; flex-direction: column; gap: 6px;"><label style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">RECEIVED ON</label><div style="min-height: 44px; max-width: 220px; display: flex; align-items: center; border: 1px solid #3A3A42; border-radius: 10px; padding: 0 14px; font-size: 15px;">{{ h.date }}</div></div></sc-if>
+                  <sc-if value="{{ h.btns }}" hint-placeholder-val="{{ true }}"><div style="display: flex; gap: 10px; flex-wrap: wrap;"><sc-for list="{{ h.btns }}" as="b" hint-placeholder-count="1"><span style="background: #F4F3EF; color: #0B0B0E; padding: 11px 20px; font-size: 14px; font-weight: 700; border-radius: 100px;">{{ b }}</span></sc-for></div></sc-if>
+                  <sc-if value="{{ h.confirm }}" hint-placeholder-val="{{ false }}"><div role="alertdialog" style="border-top: 1px solid #24242B; padding-top: 12px; display: flex; flex-direction: column; gap: 10px;"><span style="font-size: 14px; line-height: 1.5; color: #F4F3EF;">{{ h.confirm }}</span><div style="display: flex; gap: 10px;"><span style="background: #F4F3EF; color: #0B0B0E; padding: 11px 20px; font-size: 14px; font-weight: 700; border-radius: 100px;">{{ h.yes }}</span><span style="border: 1px solid #DEDDD6; padding: 11px 20px; font-size: 14px; font-weight: 700; border-radius: 100px;">Not yet</span></div></div></sc-if>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">Date refusals: "Pick a date on or after it was hidden." / "Pick today or an earlier day." The confirm replaces the pair in the row; Not yet puts the pair back with focus on the pressed one. Answers and refusals as built. "Case over: delete" and "Case over: restore" are approved by the owner, with these confirms. Settled rows leave the list.</p>
+        </div>
+
+        <div style="flex: 1 1 520px; max-width: 640px; display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">68 · D1 · REVIEW · QUARANTINE · THREE STATES</span>
+          <div data-screen-label="D1 quarantine r39" style="background: #0B0B0E; border: 1px solid #2A2A31; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">QUARANTINE · 2</span>
+            <sc-for list="{{ quar }}" as="q" hint-placeholder-count="3">
+              <div style="background: #16161B; border: 1px solid #24242B; display: flex; flex-direction: column;">
+                <div style="display: flex; justify-content: space-between; padding: 12px 18px; border-bottom: 1px solid #24242B; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; gap: 12px; flex-wrap: wrap;"><span style="color: #F5FF3D;">{{ q.subj }}</span><span style="color: #8B8B93;">HELD {{ q.held }}</span></div>
+                <div style="padding: 14px 18px; display: flex; flex-direction: column; gap: 10px;">
+                  <sc-for list="{{ q.lines }}" as="l" hint-placeholder-count="2"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.04em; color: #DEDDD6;">{{ l }}</span></sc-for>
+                  <sc-if value="{{ q.form }}" hint-placeholder-val="{{ false }}"><div style="display: flex; flex-direction: column; gap: 6px;"><label style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">CYBERTIPLINE REPORT NUMBER</label><div style="min-height: 44px; display: flex; align-items: center; border: 1px solid #3A3A42; border-radius: 10px; padding: 0 14px; font-size: 15px; color: #8B8B93;"></div><span style="font-size: 13px; line-height: 1.45; color: #8B8B93;">Optional. Record it once the report is filed; it is then kept a year from now.</span><span style="align-self: flex-start; background: #F4F3EF; color: #0B0B0E; padding: 11px 20px; font-size: 14px; font-weight: 700; border-radius: 100px; margin-top: 4px;">Record the NCMEC report</span></div></sc-if>
+                  <sc-if value="{{ q.said }}" hint-placeholder-val="{{ false }}"><span role="status" style="font-size: 14px; line-height: 1.5; color: #F4F3EF; border-top: 1px solid #24242B; padding-top: 10px;">{{ q.said }}</span></sc-if>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">Words confirmed. Recorded: the live region says "Reported to NCMEC. Kept until {date}." and the row's KEPT UNTIL re-reads; the form leaves the row. Without a number the tag ends at the date. Gone: the row stays until reload, its lines replaced by the sentence. None: "Nothing is in quarantine." under QUARANTINE · 0.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="r71" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">71 · Matching photos</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 860px; line-height: 1.45;"><strong style="color: #F4F3EF;">Two grids. A match says something different: the same image, maybe from someone else.</strong> Each match shows whose it is and its distance in mono under the id. A garment match offers its runner in D8. The takedown form stays kit-only.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <div style="flex: 1 1 640px; max-width: 760px; display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">71 · D1 · REVIEW ROW · UNDER THEIR OTHER PHOTOS</span>
+          <div data-screen-label="D1 matching photos r39" style="background: #16161B; border: 1px solid #24242B;">
+            <div style="display: flex; justify-content: space-between; padding: 12px 18px; border-bottom: 1px solid #24242B; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; gap: 12px; flex-wrap: wrap;"><span style="color: #F5FF3D;">REMOVAL REQUEST · INTIMATE IMAGE · ph_8k2m</span><span style="color: #F5FF3D; font-weight: 600;">DUE IN 31H</span></div>
+            <div style="padding: 18px; display: flex; flex-direction: column; gap: 16px;">
+              <div style="display: flex; flex-direction: column; gap: 10px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">THEIR OTHER PHOTOS · 4</span><div style="display: flex; gap: 12px;"><div style="width: 64px; height: 64px; background: #24242B;"></div><div style="width: 64px; height: 64px; background: #24242B;"></div><div style="width: 64px; height: 64px; background: #24242B;"></div><div style="width: 64px; height: 64px; background: #24242B;"></div></div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #8B8B93;">(63a, drawn small here)</span></div>
+              <div style="display: flex; flex-direction: column; gap: 10px; border-top: 1px solid #24242B; padding-top: 14px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">MATCHING PHOTOS · ANY RUNNER · 4</span>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                  <sc-for list="{{ matches }}" as="m" hint-placeholder-count="4">
+                    <div style="display: flex; flex-direction: column; gap: 3px; width: 128px;"><div style="width: 128px; height: 128px; background: #24242B;"></div><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #DEDDD6;">{{ m.id }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #8B8B93;">{{ m.meta }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: #F4F3EF; text-decoration: underline; min-height: 24px; display: flex; align-items: center;">{{ m.who }}</span></div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">Nearest first; kit then garment at each distance. Under each: id; "{N} BITS" ("SAME" at 0), plus [PRIVATE] where it applies; the owner's @handle, opening D8. A kit photo opens its kit; a garment's tile opens nothing. The alt keeps the distance. Empty states as built, in place of the grid, kicker without a count. A garment that has to go goes by D8's tools, which already reach the closet.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="r69" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">69 · Mississippi and Tennessee</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 860px; line-height: 1.45;"><strong style="color: #F4F3EF;">The words and the four places are confirmed. Add one: Au2 says so before the form.</strong> We know the place when the page loads, so letting someone type their birth date, email and password only to be refused costs them and buys nothing. The two refusals stay for the case where the place changes between load and submit.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <sc-for list="{{ region }}" as="f" hint-placeholder-count="3">
+          <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ f.label }}</span>
+            <div data-screen-label="{{ f.screen }}" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
+              <div style="background: #0B0B0E; padding: 16px 20px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 20px; letter-spacing: -0.03em; color: #F4F3EF;">dialed<span style="color: #8B8B93;">.run</span></span></div>
+              <div style="padding: 26px 24px 22px; display: flex; flex-direction: column; gap: 16px;">
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 28px; letter-spacing: -0.03em;">{{ f.head }}</span>
+                <div role="status" style="border: 1px solid #0B0B0E; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em;">{{ f.kicker }}</span><span style="font-size: 15px; line-height: 1.45;">{{ f.body }}</span></div>
+                <sc-for list="{{ f.acts }}" as="a" hint-placeholder-count="1">
+                  <span style="border: 1px solid #0B0B0E; border-radius: 100px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; background: {{ a.bg }}; color: {{ a.fg }};">{{ a.t }}</span>
+                </sc-for>
+                <sc-if value="{{ f.foot }}" hint-placeholder-val="{{ false }}"><span style="font-size: 14px; color: #4E4E44;">{{ f.foot }}</span></sc-if>
+              </div>
+            </div>
+            <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px; text-wrap: pretty;">{{ f.note }}</p>
+          </div>
+        </sc-for>
+        <div style="flex: 1 1 520px; max-width: 640px; display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">69 · D7 · ACCESS · REQUEST ROW</span>
+          <div data-screen-label="D7 region row r39" style="background: #16161B; border: 1px solid #24242B; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; gap: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; flex-wrap: wrap;"><span style="color: #F4F3EF;">sam.k@example.com</span><span style="color: #8B8B93;">[TN]</span><span style="color: #8B8B93;">2D AGO</span></div>
+            <div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap;"><span style="font-size: 14px; color: #8B8B93;">No invite while sign-up is closed in Tennessee.</span><span style="border: 1px solid #DEDDD6; padding: 11px 20px; font-size: 14px; font-weight: 700; border-radius: 100px;">Decline</span></div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">Confirmed as built. The tag is the request's place at the time it was made. If a state reopens, its rows get Send invite back without a re-request.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="r74" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">70 · 74–76 · Notices</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 860px; line-height: 1.45;"><strong style="color: #F4F3EF;">Bell rows keep one shape: no kicker.</strong> The heading-led paragraph reads as built. The author's rows open the thing they name; the reporter's open nothing. 70 and 75 are confirmed. 76's CSAM option is reworded to say what it does.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">74 · S2c · BELL · FOUR ROWS</span>
+          <div data-screen-label="S2c moderation rows r39" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 8px 20px; display: flex; flex-direction: column;">
+            <sc-for list="{{ bell }}" as="b" hint-placeholder-count="4">
+              <div style="min-height: 64px; border-top: 1px solid #DCDBD2; padding: 12px 0; display: flex; justify-content: space-between; gap: 12px; align-items: center;"><div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 15px; line-height: 1.45;">{{ b.t }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #6E6E64;">{{ b.who }}</span></div><sc-if value="{{ b.link }}" hint-placeholder-val="{{ true }}"><span style="font-family: 'IBM Plex Mono', monospace; color: #6E6E64;">›</span></sc-if></div>
+            </sc-for>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px; text-wrap: pretty;">A kicker would make these the only bell rows with one, and the row is already the one place they're read. The author's notices open their own run or kit, where the band explains the rest. The reporter's has no ›: the email address is the next step and sits in the sentence.</p>
+        </div>
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">75 · CONTENTREMOVED · RULE LINE · CONFIRMED</span>
+          <div data-screen-label="ContentRemoved rule line r39" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 20px;">
+            <div style="border: 1px solid #0B0B0E; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em;">REMOVED</span><span style="font-size: 15px; line-height: 1.45;">{band's sentence as built}</span><span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">That breaks our community rules: don't post spam, advertising or promotion we have not allowed.</span></div>
+          </div>
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93; padding-top: 12px;">70 · REMOVAL REMINDER · CONFIRMED</span>
+          <div data-screen-label="Email removal reminder r39" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 22px 24px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #6E6E64;">DESK · TO EVERY OPERATOR</span>
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.02em;">Removal still undecided, due by OCT 26 14:20 UTC</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5;">An intimate-image removal is still waiting for a decision. Nothing changes until someone decides it in Review.</p>
+            <span style="align-self: flex-start; background: #0B0B0E; color: #F4F3EF; border-radius: 100px; padding: 12px 22px; font-size: 15px; font-weight: 700;">Open Review</span>
+            <span style="font-size: 13px; color: #4E4E44;">Sent to every operator, once per removal, 8 hours before it's due.</span>
+          </div>
+        </div>
+        <div style="flex: 1 1 480px; max-width: 600px; display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">76 · D8 · CLOSE ACCOUNT · WHICH RULE</span>
+          <div data-screen-label="D8 close which rule r39" style="background: #16161B; border: 1px solid #24242B; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; gap: 14px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em;"><span style="color: #F5FF3D;">@dunkfresh_88</span><span style="color: #8B8B93;">CLOSE ACCOUNT</span></div>
+            <div style="display: flex; flex-direction: column; gap: 6px;"><label style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">WHY</label><div style="min-height: 50px; display: flex; align-items: center; justify-content: space-between; border: 1px solid #3A3A42; border-radius: 10px; padding: 0 15px; font-size: 16px;"><span>Broke the community rules</span><span style="color: #8B8B93;">▾</span></div></div>
+            <div style="display: flex; flex-direction: column; gap: 6px;"><label style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">WHICH RULE IT BREAKS</label><div style="min-height: 50px; display: flex; align-items: center; justify-content: space-between; border: 2px solid #F5FF3D; border-radius: 10px; padding: 0 14px; font-size: 16px;"><span>—</span><span style="color: #8B8B93;">▾</span></div><span style="font-size: 13px; color: #F5FF3D;">Pick the rule it breaks.</span></div>
+            <div style="border-top: 1px solid #24242B; padding-top: 12px; display: flex; flex-direction: column; gap: 4px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">THE LIST'S LAST OPTION</span><span style="font-size: 14px; color: #DEDDD6;">Suspected CSAM (the notice names no rule)</span></div>
+            <span style="align-self: flex-start; background: #F4F3EF; color: #0B0B0E; padding: 11px 20px; font-size: 14px; font-weight: 700; border-radius: 100px;">Close account</span>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">Directly under Why, drawn here refused. The ten options are the terms' bold names verbatim; after them a hairline, then the CSAM option. Its words say what picking it does, which "name no rule" left to the operator to work out.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="r72" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">72 · /open-source</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 860px; line-height: 1.45;"><strong style="color: #F4F3EF;">All four confirmed as built.</strong> Two typefaces (the build note was wrong: Archivo Black is Archivo's family). The shared small-group line is retired, because the contents already list every group. A row's own text is "Licence", after Notice. Third-party notices follow the groups and are the last entry in the contents.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <div style="flex: 1 1 560px; max-width: 700px; display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">72 · A ROW WITH ITS OWN LICENCE · THE NOTICES SECTION</span>
+          <div data-screen-label="Open source row and notices r39" style="background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 12px;">
+            <div style="border-top: 1px solid #DCDBD2; padding-top: 12px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: baseline;"><span style="font-size: 15px; font-weight: 600;">some-package <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6E6E64; font-weight: 400;">2.1.0</span></span><div style="display: flex; gap: 16px; font-size: 14px; font-weight: 600; color: #C21A6B;"><span style="text-decoration: underline; text-underline-offset: 3px;">Project</span><span style="text-decoration: underline; text-underline-offset: 3px;">Notice</span><span style="text-decoration: underline; text-underline-offset: 3px;">Licence</span></div></div>
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 24px; letter-spacing: -0.02em; padding-top: 18px;">Third-party notices</span>
+            <sc-for list="{{ notices }}" as="n" hint-placeholder-count="4">
+              <span style="font-size: 16px; font-weight: 700; border-top: 1px solid #DCDBD2; padding-top: 10px;">{{ n }}</span>
+            </sc-for>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">The headings show the file's own headings; each section shows its text as written. Visual Crossing's entry here doesn't stand in for the line next to the data (67).</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="rulings" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Rulings 66–76</span>
+      <div style="display: flex; flex-direction: column; border: 1px solid #2A2A31;">
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="11">
+          <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 170px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;">
+            <span style="font-size: 15px; font-weight: 600;">{{ r.q }}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: {{ r.vc }};">{{ r.v }}</span>
+            <span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">{{ r.a }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const stravaConsent = [
+      { k: 'What we collect.', v: '{paragraph 1 of STRAVA_CONSENT} How: {…}' },
+      { k: 'Never.', v: '{paragraph 2}' },
+      { k: 'To stop.', v: '{paragraph 3: withdraw, ask for deletion, and that deletion is confirmed}' },
+    ];
+    const strava = [
+      { label: '66 · T1 · STRAVA · NOT CONNECTED', screen: 'T1 strava consent r39', bg: '#F4F3EF', fg: '#0B0B0E', head: 'Strava', sub: 'So we can remind you to add your kit.', notnow: false, note: 'Paragraphs are lib/copy.ts verbatim; the frame shows their shape only. text-small, inherits ink; 10px between paragraphs, 14px above the button.' },
+      { label: '66 · P3 · STRAVA OFFER · ON INK', screen: 'P3 strava consent r39', bg: '#0B0B0E', fg: '#F4F3EF', head: 'Remind me after a run', sub: 'So we can remind you. Optional.', notnow: true, note: 'Inherits paper on ink (15.9:1). "We read that a run happened. Nothing else." retires here only.' },
+    ];
+    const cr = (label, screen, title, lines, note, o = {}) => ({ label, screen, title, lines, note, bg: o.ink ? '#0B0B0E' : '#F4F3EF', fg: o.ink ? '#F4F3EF' : '#0B0B0E', mc: o.ink ? '#DEDDD6' : '#6E6E64', cc: o.ink ? '#DEDDD6' : '#6E6E64', kicker: o.kicker || '', teal: o.teal || '' });
+    const credits = [
+      cr('67 · A2 · HEADER · ON INK', 'A2 header credit r39', 'What did you wear?', ['6.2 MI · 41°F DAMP · 0 PIECES'], 'Once for the screen, directly under the sub-line. On ink it takes #DEDDD6, the --muted equivalent T1 gives for ink.', { ink: true }),
+      cr('67 · A3 · HEADER · EVERY WIDTH', 'A3 header credit r39', '6.2 at 41°', ['TUE 6:42 AM · DAMP'], 'Closes the header. At the desk it stays, and the rail keeps its own.'),
+      cr('67 · A1 · DUPLICATE RECEIPT', 'A1 duplicate credit r39', 'Already logged', ['TUE OCT 20 · 6.2 MI', '41°F · DAMP'], 'Under the receipt\'s facts, before its actions.', { kicker: 'ALREADY HERE' }),
+      cr('67 · A1 · WEATHER FOR · FETCHING', 'A1 weather for credit r39', 'Weather for 6:42 AM', ['WAS 44°F · DRY'], 'Under WAS, while the corrected reading is fetched. A band the runner set has none.'),
+      cr('67 · E1 · COMPACT LINE', 'E1 compact credit r39', 'Following', [], 'Under the teal band, on paper, never on teal.', { teal: '18 runners logged 44° and damp in the last 3 days.' }),
+      cr('67 · R · RUNS LIST FOOT', 'R list credit r39', 'Runs', ['TUE · 41° DAMP', 'FRI · 39° WIND'], 'Once under the list when any row shows a reading, never on a row.'),
+      cr('67 · H · HOW YOU CALL IT, BY BAND', 'H by band credit r39', 'How you call it, by band', ['36–40° · DIALED 7 OF 9', '41–45° · DIALED 5 OF 6'], 'Under the list: a feels-like band comes from the reading.'),
+      cr('67 · K · YOUR COVERAGE', 'K coverage credit r39', 'Your coverage', ['BELOW 30° · 2 RUNS', '30–45° · 14 RUNS'], 'Under the list, same reason.'),
+    ];
+    const holds = [
+      { subj: 'PHOTO · ph_3c0a', hidden: 'OCT 02', owner: 'OWNER u_41f9 · STRIKES 1', notice: '"The photo is my own work, published without permission at…" (as the audit row keeps it)', next: '[no counter-notice: deleted OCT 16]', date: 'Oct 24, 2026', btns: ['Counter-notice received'], confirm: '' },
+      { subj: 'ENTRY · en_9z1d', hidden: 'SEP 28', owner: 'OWNER u_07bb · STRIKES 2', notice: '"…"', next: '[counter-notice received: back OCT 22]', btns: ['Court action filed'], confirm: '' },
+      { subj: 'PHOTO · ph_1hh4', hidden: 'AUG 30', owner: 'OWNER u_5kd2 · STRIKES 1', notice: '"…"', next: '[court action SEP 12: held until the case is over]', btns: '', confirm: 'Delete it for good? It can\'t be put back.', yes: 'Delete it' },
+    ];
+    const quar = [
+      { subj: 'PHOTO · ph_x1q8', held: 'SEP 10 2026', lines: ['UPLOADER u_93ma · KEPT UNTIL SEP 10 2027', '[NOT REPORTED TO NCMEC]'], form: true, said: '' },
+      { subj: 'PHOTO · ph_x0r2', held: 'AUG 03 2026', lines: ['UPLOADER u_11fe · KEPT UNTIL AUG 05 2027', '[REPORTED TO NCMEC AUG 05 2026] · 184402917'], form: false, said: '' },
+      { subj: 'PHOTO · ph_w7k5', held: 'OCT 20 2025', lines: [], form: false, said: 'This record is gone: its year was up.' },
+    ];
+    const matches = [
+      { id: 'ph_8k2m', meta: 'SAME', who: '@maya_runs' },
+      { id: 'ph_q4t0', meta: '3 BITS · [PRIVATE]', who: '@k_lopes' },
+      { id: 'Garment g_19ap', meta: '5 BITS', who: '@k_lopes' },
+      { id: 'ph_m2v9', meta: '8 BITS', who: '@trailjen' },
+    ];
+    const msg1 = 'dialed.run isn\'t open to new sign-ups from Mississippi or Tennessee. State laws there require ID age checks for every new account, which we don\'t do.';
+    const ink = { bg: '#0B0B0E', fg: '#F4F3EF' }, out = { bg: 'transparent', fg: '#0B0B0E' };
+    const region = [
+      { label: '69 · Au2 · ON LOAD · ADDED', screen: 'Au2 region notice r39', head: 'Create an account', kicker: 'SIGN-UP CLOSED HERE', body: msg1, acts: [{ t: 'Ask for access', ...ink }], foot: 'Have an account? Log in', note: 'Shown in place of the form and the Google button when the request is placed there. Same sentence, so the refusal later never says something new. Ask for access opens Au5.' },
+      { label: '69 · Au2 · EMAIL · REFUSED · AS BUILT', screen: 'Au2 region refused r39', head: 'Create an account', kicker: 'NOT CREATED', body: msg1, acts: [{ t: 'Create account', ...ink }, { t: 'Continue with Google', ...out }], foot: '', note: 'Kept for a place that changed after load. No Try again. Google\'s version sits under its button after ?error=REGION_BLOCKED, as built.' },
+      { label: '69 · Au5 · RECEIPT · CONFIRMED', screen: 'Au5 region receipt r39', head: 'You\'re on the list', kicker: 'REQUEST TAKEN', body: 'Thanks. Sign-up isn\'t open in Mississippi or Tennessee yet, because state laws there require ID age checks for every new account. We\'ll email you if that changes.', acts: [], foot: '', note: 'Replaces the usual lines and the Create an account link, as built.' },
+    ];
+    const bell = [
+      { t: 'Photo hidden while we review it. Someone reported a photo on your run, …', who: 'TO THE AUTHOR · OPENS THE RUN', link: true },
+      { t: 'We reviewed your reported kit and left it up.', who: 'TO THE AUTHOR · OPENS THE KIT', link: true },
+      { t: 'We removed what you reported.', who: 'TO THE REPORTER', link: false },
+      { t: 'We reviewed what you reported and left it up. We didn\'t find that it breaks our community rules. Disagree? Write to desk@dialed.run.', who: 'TO THE REPORTER', link: false },
+    ];
+    const notices = ['The word list', 'The climate map', 'The face model', 'Visual Crossing'];
+    const C = '#00E0C6', A = '#F5FF3D', D = '#FF2D8A';
+    const R = (q, v, a) => ({ q, v, a, vc: v.startsWith('CONFIRM') ? C : v.startsWith('DRAWN') ? D : A });
+    const rows = [
+      R('66 · Strava consent', 'RULED · DRAWN', 'Lead-ins run-in semibold, same size; no mono labels. T1 and P3. P3 keeps "So we can remind you. Optional."; "We read that a run happened. Nothing else." retires from P3. Refused receipt\'s Try again → T1 (or P3), focus on the heading.'),
+      R('67 · Weather credit', 'CONFIRM · DRAWN', 'All eight placements confirmed. A3\'s header keeps it at every width, desk included. Entry card drawn: foot right, 22px at 1200, #DEDDD6; wire the card only with it. Closet "Works at" uncredited, as built.'),
+      R('68 · Quarantine', 'CONFIRM · DRAWN', 'Words confirmed. SEP 10 2026 date shape confirmed. Recorded: "Reported to NCMEC. Kept until {date}." KEPT UNTIL re-reads; no number = tag ends at date. Empty: "Nothing is in quarantine." Order at Review\'s foot: Takedown, Copyright holds, Quarantine.'),
+      R('73 · Copyright holds', 'RULED · APPROVED', 'Counter-notice takes a typed RECEIVED ON date, default today ("Pick a date on or after it was hidden." / "Pick today or an earlier day."). Both Case over presses confirm in place: "Delete it for good? It can\'t be put back." [Delete it] / "Put it back where it was?" [Put it back], each with Not yet. "Case over: delete" / "Case over: restore" approved.'),
+      R('71 · Matching photos', 'RULED · DRAWN', 'Two grids: MATCHING PHOTOS · ANY RUNNER · N under THEIR OTHER PHOTOS. Distance shown: "{N} BITS", "SAME" at 0; [PRIVATE] tag; owner @handle → D8. Garment tile opens nothing; its owner link is the offer. Takedown stays kit-only.'),
+      R('69 · MS / TN', 'CONFIRM · ONE ADDED', 'Sentences and four places confirmed. Added: Au2 on load shows SIGN-UP CLOSED HERE + the same sentence in place of the form and Google, with Ask for access (Au5) and Log in. Refusals stay for a place that changes after load.'),
+      R('70 · Removal reminder', 'CONFIRM', 'As built. {UTC minute} renders "OCT 26 14:20 UTC" so a reminder near midnight names its day.'),
+      R('74 · Bell notices', 'RULED', 'No kicker; heading-led paragraph as built. Author\'s rows open their run or kit; reporter\'s open nothing.'),
+      R('75 · Rule line', 'CONFIRM · DRAWN', 'As built, in the band\'s more slot. None after copyright or the catch-all reason.'),
+      R('76 · D8 which rule', 'RULED · DRAWN', 'Under Why, PickOne, "—" start, "Pick the rule it breaks." Ten bold names verbatim, a hairline, then "Suspected CSAM (the notice names no rule)".'),
+      R('72 · /open-source', 'CONFIRM', 'Two typefaces is true. Shared small-group line retired. "Licence" after Project · Notice. Third-party notices after the groups and last in the contents, preamble left out.'),
+    ];
+    return { stravaConsent, strava, credits, holds, quar, matches, region, bell, notices, rows };
+  }
+}
+</script>
+</body>
+</html>
