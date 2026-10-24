@@ -20,6 +20,7 @@ import { env } from "../../src/env";
 import { newUlid, type Ulid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { handleScheduled } from "../../src/modules/ops";
+import { MODERATION_RECORD_KEPT_SECONDS } from "../../src/modules/safety/retention";
 import { gaveUpRow } from "../gave-up-rows";
 import { mockVisualCrossing } from "../weather/fixtures/visual-crossing-observation";
 import { digestKinds, digestReport } from "../../src/modules/ops/scheduled";
@@ -1540,9 +1541,36 @@ async function isCountKept(key: string): Promise<boolean> {
   return rows.length === 1;
 }
 
+/**
+A report filed more than D-131's 3 years ago, about nothing anyone decided.
+*/
+async function expiredReport(): Promise<string> {
+  const id = newUlid();
+  await coreDb()
+    .insert(reports)
+    .values({
+      id,
+      reporterId: newUlid(),
+      subjectType: "entry",
+      subjectId: newUlid(),
+      reason: "spam",
+      createdAt: nowSeconds() - MODERATION_RECORD_KEPT_SECONDS - HOUR,
+    });
+  return id;
+}
+
+async function isReportKept(id: string): Promise<boolean> {
+  const rows = await coreDb()
+    .select({ id: reports.id })
+    .from(reports)
+    .where(eq(reports.id, id));
+  return rows.length === 1;
+}
+
 describe("the daily firing sweeps rows kept past any use", () => {
   it("sweeps the send limits and runs each sweep it is handed, once", async () => {
     const key = await staleCount();
+    const report = await expiredReport();
     const swept: string[] = [];
 
     await handleScheduled(DIGEST, recordingReporter().reporter, {
@@ -1561,11 +1589,14 @@ describe("the daily firing sweeps rows kept past any use", () => {
     });
 
     expect(await isCountKept(key)).toBe(false);
+    // The 3-year sweep is safety's own, imported rather than handed in.
+    expect(await isReportKept(report)).toBe(false);
     expect(swept).toStrictEqual(["auth", "requests", "copyright holds"]);
   });
 
   it("sweeps only on the daily firing", async () => {
     const key = await staleCount();
+    const report = await expiredReport();
     let swept = 0;
     const sweep = () => {
       swept += 1;
@@ -1579,12 +1610,14 @@ describe("the daily firing sweeps rows kept past any use", () => {
     );
 
     expect(await isCountKept(key)).toBe(true);
+    expect(await isReportKept(report)).toBe(true);
     expect(swept).toBe(0);
   });
 
   it("runs every sweep when one throws, then throws what it did", async () => {
     vi.spyOn(console, "error").mockImplementation(nothing);
     const key = await staleCount();
+    const report = await expiredReport();
     const boom = new Error("auth sweep fell over");
     const { reporter, checkIns } = recordingReporter();
     let forgot = 0;
@@ -1600,6 +1633,7 @@ describe("the daily firing sweeps rows kept past any use", () => {
     ).rejects.toBe(boom);
 
     expect(await isCountKept(key)).toBe(false);
+    expect(await isReportKept(report)).toBe(false);
     expect(forgot).toBe(1);
     expect(checkIns.map((checkIn) => checkIn.status)).toStrictEqual([
       "in_progress",

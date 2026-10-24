@@ -71,6 +71,9 @@ export {
   purgeExpiredQuarantine,
 } from "./quarantine";
 
+// D-131: the 3-year sweep, which rides the daily digest's firing too.
+export { sweepModerationRecords } from "./retention";
+
 // D-130: a copyright takedown's 30-day hide, its restore and its purge.
 export {
   claimDuePurges,
