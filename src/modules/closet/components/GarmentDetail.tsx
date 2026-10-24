@@ -234,35 +234,7 @@ function PairsWith({
   );
 }
 
-/**
- * One garment, in full — round 22's Y, whole.
- *
- * *"Order is fixed; a section with nothing in it is absent"*: identity,
- * photo, stats, composition, pairs with, actions. Every action is
- * secondary — *"nothing on this screen is the day's task"* — and Delete
- * is a text link apart from the other two.
- *
- * **No photo means no well here.** *"Adding one is Edit's job, so detail
- * never shows an empty Add box."* With a photo, the well is the photo:
- * Replace takes a new one through W3's blur, Remove takes it away.
- *
- * **Retire, don't delete** is a product rule, and where retiring lands the
- * runner is how the rule becomes visible: on the closet *with retired
- * pieces shown*, so the piece is plainly there and marked. Un-retiring
- * stays put and needs no confirm, because the tag going is the whole
- * confirmation.
- */
-export function GarmentDetail({
-  detail,
-  retire,
-  unretire,
-  remove,
-  uploadPhoto,
-  removePhoto,
-  renderPhotoStep,
-  photoChecking,
-  bandCount = noBandCount,
-}: Readonly<{
+type GarmentDetailProps = Readonly<{
   detail: Detail;
   retire: (input: { data: { itemId: string } }) => Promise<unknown>;
   unretire: (input: { data: { itemId: string } }) => Promise<unknown>;
@@ -289,19 +261,23 @@ export function GarmentDetail({
    * it or fails with it.
    */
   bandCount?: BandCount | undefined;
-}>) {
-  const navigate = useNavigate();
+}>;
+
+/**
+ * The photo well's actions: Replace (through W3's step) and Remove, with
+ * the field failure a refused file leaves and the status sentences the
+ * three of them say.
+ */
+function usePhotoActions({
+  itemId,
+  uploadPhoto,
+  removePhoto,
+  renderPhotoStep,
+}: Pick<GarmentDetailProps, "uploadPhoto" | "removePhoto" | "renderPhotoStep"> &
+  Readonly<{ itemId: string }>) {
   const router = useRouter();
   const [photoError, setPhotoError] = useState<string | undefined>();
   const [status, setStatus] = useState("");
-  const [confirming, setConfirming] = useState<ConfirmKind | undefined>();
-
-  const { item, isGeneric, composition } = detail;
-  const itemId = item.id;
-  const { runCount } = summaryOf(detail);
-  const photoUrl = photoUrlFor(item);
-  // Same name for the heading and the photo's accessible name.
-  const label = garmentLabel({ name: item.name, brand: item.brand, isGeneric });
 
   /**
    * A replacement photo, once the bytes are the ones to send. A wrong type
@@ -332,19 +308,44 @@ export function GarmentDetail({
     kicker: PHOTO_STILL_ON,
   });
 
+  const photo = usePhotoPick({
+    renderPhotoStep,
+    onReady: (file) => {
+      void upload.run(file);
+    },
+  });
+
+  return {
+    upload,
+    removal,
+    photo,
+    photoError,
+    status: status || upload.status || removal.status,
+    step: photo.step(setStatus),
+  };
+}
+
+/**
+ * Retire, Unretire and Delete, and which of the confirm sheets is open.
+ */
+function useGarmentLifecycle({
+  itemId,
+  name,
+  retire,
+  unretire,
+  remove,
+}: Pick<GarmentDetailProps, "retire" | "unretire" | "remove"> &
+  Readonly<{ itemId: string; name: string }>) {
+  const navigate = useNavigate();
+  const router = useRouter();
+  const [confirming, setConfirming] = useState<ConfirmKind | undefined>();
+
   const bringBack = useControlAction({
     action: async () => {
       await unretire({ data: { itemId } });
       await router.invalidate();
     },
     kicker: "Still retired",
-  });
-
-  const photo = usePhotoPick({
-    renderPhotoStep,
-    onReady: (file) => {
-      void upload.run(file);
-    },
   });
 
   /**
@@ -376,25 +377,208 @@ export function GarmentDetail({
     action: async () => {
       await remove({ data: { itemId } });
       // Round 26 #3: "On success: C, with a status line '{name} deleted.'"
-      await navigate({ to: "/closet", state: { deletedGarment: item.name } });
+      await navigate({ to: "/closet", state: { deletedGarment: name } });
     },
     kicker: "Not deleted",
   });
 
-  // Round 26 #3: a piece with runs is asked whether to retire it instead,
-  // in its own sheet; round 22's plain confirm stays for one with none.
+  return {
+    confirming,
+    setConfirming,
+    bringBack,
+    retiring,
+    deleting,
+    status: bringBack.status || retiring.status || deleting.status,
+  };
+}
+
+/**
+ * The photo, when there is one: the well is the photo, Replace and Remove
+ * act on it, and their failures sit under it.
+ */
+function GarmentPhoto({
+  item,
+  label,
+  photo,
+  photoChecking,
+}: Readonly<{
+  item: WardrobeItemRow;
+  label: string;
+  photo: ReturnType<typeof usePhotoActions>;
+  photoChecking: ReactNode;
+}>): JSX.Element | undefined {
+  const photoUrl = photoUrlFor(item);
+  const { upload, removal } = photo;
+  if (photoUrl === undefined) return undefined;
+  return (
+    <div className="flex flex-col gap-2">
+      <FileWell
+        part="photo-well"
+        copy={GARMENT_PHOTO_COPY}
+        pending={upload.pending || photo.photo.stepping}
+        inputRef={photo.photo.wellRef}
+        accept={photoAcceptAttribute}
+        error={photo.photoError}
+        preview={{ src: photoUrl, alt: label }}
+        onRemove={() => {
+          void removal.run();
+        }}
+        onFiles={(files) => {
+          // Equivalent mutant on the optional index: a `change` from a
+          // file input always carries a `FileList`, empty when the
+          // picker was dismissed. The `?.` is the compiler's, because
+          // the DOM types the property as nullable for inputs that are
+          // not files at all.
+          // Stryker disable next-line OptionalChaining
+          const file = files?.[0];
+          if (file) photo.photo.pick(file);
+        }}
+      />
+      <ControlFailureBand
+        failure={upload.failure}
+        onRetry={upload.retry}
+        retryRef={upload.retryRef}
+      />
+      <ControlFailureBand
+        failure={removal.failure}
+        onRetry={removal.retry}
+        retryRef={removal.retryRef}
+      />
+      {photo.step}
+      {isPhotoBeingChecked(item) ? photoChecking : undefined}
+    </div>
+  );
+}
+
+/**
+ * §AG's composition and the words beside it; empty, the block hides.
+ */
+function CompositionSection({
+  detail,
+}: Readonly<{ detail: Detail }>): JSX.Element {
+  const { item, composition } = detail;
+  const words = attributeWords(detail.effective, item);
+  return (
+    <div data-part="composition" className="flex flex-col gap-2 empty:hidden">
+      {/* §AG: the brand's own label. `brand` is the garment's, which is
+          what the runner sees on the label in their hand; a piece with
+          no brand gets no "as labelled by" line rather than an invented
+          one. */}
+      {composition === undefined ? undefined : (
+        <CompositionBlock
+          composition={{
+            verbatim: composition.verbatim,
+            parts: composition.parts,
+            brand: item.brand ?? undefined,
+          }}
+        />
+      )}
+      {words.length > 0 ? (
+        <p className="m-0 text-body">{words.join(" · ")}</p>
+      ) : undefined}
+    </div>
+  );
+}
+
+/**
+ * The confirm sheets. Round 26 #3: a piece with runs is asked whether to
+ * retire it instead, in its own sheet; round 22's plain confirm stays for
+ * one with none.
+ */
+function ConfirmSheets({
+  item,
+  runCount,
+  bandCount,
+  lifecycle,
+}: Readonly<{
+  item: WardrobeItemRow;
+  runCount: number;
+  bandCount: BandCount;
+  lifecycle: ReturnType<typeof useGarmentLifecycle>;
+}>): JSX.Element {
+  const { confirming, setConfirming, retiring, deleting } = lifecycle;
   const isDeletingWorn = confirming === "delete" && runCount > 0;
+  return (
+    <>
+      <GarmentConfirm
+        kind={isDeletingWorn ? undefined : confirming}
+        name={item.name}
+        runCount={runCount}
+        action={confirming === "delete" ? deleting : retiring}
+        onClose={() => {
+          setConfirming(undefined);
+        }}
+      />
+      {runCount > 0 ? (
+        <DeleteWithRuns
+          open={isDeletingWorn}
+          itemId={item.id}
+          name={item.name}
+          runCount={runCount}
+          countBands={bandCount}
+          retire={retiring}
+          remove={deleting}
+          onClose={() => {
+            setConfirming(undefined);
+          }}
+        />
+      ) : undefined}
+    </>
+  );
+}
+
+/**
+ * One garment, in full — round 22's Y, whole.
+ *
+ * *"Order is fixed; a section with nothing in it is absent"*: identity,
+ * photo, stats, composition, pairs with, actions. Every action is
+ * secondary — *"nothing on this screen is the day's task"* — and Delete
+ * is a text link apart from the other two.
+ *
+ * **No photo means no well here.** *"Adding one is Edit's job, so detail
+ * never shows an empty Add box."* With a photo, the well is the photo:
+ * Replace takes a new one through W3's blur, Remove takes it away.
+ *
+ * **Retire, don't delete** is a product rule, and where retiring lands the
+ * runner is how the rule becomes visible: on the closet *with retired
+ * pieces shown*, so the piece is plainly there and marked. Un-retiring
+ * stays put and needs no confirm, because the tag going is the whole
+ * confirmation.
+ */
+export function GarmentDetail({
+  detail,
+  retire,
+  unretire,
+  remove,
+  uploadPhoto,
+  removePhoto,
+  renderPhotoStep,
+  photoChecking,
+  bandCount = noBandCount,
+}: GarmentDetailProps) {
+  const { item, isGeneric } = detail;
+  const itemId = item.id;
+  const { runCount } = summaryOf(detail);
+  // Same name for the heading and the photo's accessible name.
+  const label = garmentLabel({ name: item.name, brand: item.brand, isGeneric });
+  const photo = usePhotoActions({
+    itemId,
+    uploadPhoto,
+    removePhoto,
+    renderPhotoStep,
+  });
+  const lifecycle = useGarmentLifecycle({
+    itemId,
+    name: item.name,
+    retire,
+    unretire,
+    remove,
+  });
+  const { bringBack, setConfirming } = lifecycle;
 
   return (
     <div className="mx-auto flex w-full max-w-column wide:mx-0 flex-col gap-5 px-4 py-8 wide:px-6">
-      <FormStatus>
-        {status ||
-          upload.status ||
-          removal.status ||
-          bringBack.status ||
-          retiring.status ||
-          deleting.status}
-      </FormStatus>
+      <FormStatus>{photo.status || lifecycle.status}</FormStatus>
 
       <div data-part="identity" className="flex flex-col gap-1">
         <BackToCloset />
@@ -403,67 +587,16 @@ export function GarmentDetail({
         <Colorway item={item} />
       </div>
 
-      {photoUrl === undefined ? undefined : (
-        <div className="flex flex-col gap-2">
-          <FileWell
-            part="photo-well"
-            copy={GARMENT_PHOTO_COPY}
-            pending={upload.pending || photo.stepping}
-            inputRef={photo.wellRef}
-            accept={photoAcceptAttribute}
-            error={photoError}
-            preview={{ src: photoUrl, alt: label }}
-            onRemove={() => {
-              void removal.run();
-            }}
-            onFiles={(files) => {
-              // Equivalent mutant on the optional index: a `change` from a
-              // file input always carries a `FileList`, empty when the
-              // picker was dismissed. The `?.` is the compiler's, because
-              // the DOM types the property as nullable for inputs that are
-              // not files at all.
-              // Stryker disable next-line OptionalChaining
-              const file = files?.[0];
-              if (file) photo.pick(file);
-            }}
-          />
-          <ControlFailureBand
-            failure={upload.failure}
-            onRetry={upload.retry}
-            retryRef={upload.retryRef}
-          />
-          <ControlFailureBand
-            failure={removal.failure}
-            onRetry={removal.retry}
-            retryRef={removal.retryRef}
-          />
-          {photo.step(setStatus)}
-          {isPhotoBeingChecked(item) ? photoChecking : undefined}
-        </div>
-      )}
+      <GarmentPhoto
+        item={item}
+        label={label}
+        photo={photo}
+        photoChecking={photoChecking}
+      />
 
       <Stats detail={detail} />
 
-      <div data-part="composition" className="flex flex-col gap-2 empty:hidden">
-        {/* §AG: the brand's own label. `brand` is the garment's, which is
-            what the runner sees on the label in their hand; a piece with
-            no brand gets no "as labelled by" line rather than an invented
-            one. */}
-        {composition === undefined ? undefined : (
-          <CompositionBlock
-            composition={{
-              verbatim: composition.verbatim,
-              parts: composition.parts,
-              brand: item.brand ?? undefined,
-            }}
-          />
-        )}
-        {attributeWords(detail.effective, item).length > 0 ? (
-          <p className="m-0 text-body">
-            {attributeWords(detail.effective, item).join(" · ")}
-          </p>
-        ) : undefined}
-      </div>
+      <CompositionSection detail={detail} />
 
       <PairsWith detail={detail} />
 
@@ -527,29 +660,12 @@ export function GarmentDetail({
         retryRef={bringBack.retryRef}
       />
 
-      <GarmentConfirm
-        kind={isDeletingWorn ? undefined : confirming}
-        name={item.name}
+      <ConfirmSheets
+        item={item}
         runCount={runCount}
-        action={confirming === "delete" ? deleting : retiring}
-        onClose={() => {
-          setConfirming(undefined);
-        }}
+        bandCount={bandCount}
+        lifecycle={lifecycle}
       />
-      {runCount > 0 ? (
-        <DeleteWithRuns
-          open={isDeletingWorn}
-          itemId={itemId}
-          name={item.name}
-          runCount={runCount}
-          countBands={bandCount}
-          retire={retiring}
-          remove={deleting}
-          onClose={() => {
-            setConfirming(undefined);
-          }}
-        />
-      ) : undefined}
     </div>
   );
 }

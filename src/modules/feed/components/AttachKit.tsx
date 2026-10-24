@@ -131,36 +131,14 @@ interface AttachKitProps {
   renderPhotoStep?: PhotoStep | undefined;
 }
 
-export function AttachKit({
-  runId,
-  units,
-  context,
-  prefillFor,
-  attachKit,
-  uploadPhoto,
-  renderPhotoStep,
-}: Readonly<AttachKitProps>): JSX.Element {
-  const navigate = useNavigate();
+/**
+The most-likely read, fetched after the route has drawn the screen.
+*/
+function useSuggestion(
+  prefillFor: AttachKitProps["prefillFor"],
+  runId: string,
+): Suggestion {
   const [suggestion, setSuggestion] = useState<Suggestion>();
-  const [isCardOpen, setIsCardOpen] = useState(true);
-  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
-  const [isFiltered, setIsFiltered] = useState(
-    context.conditions !== undefined,
-  );
-  const [sheetGroup, setSheetGroup] = useState<UiGroup | undefined>();
-  const [kitError, setKitError] = useState<string | undefined>();
-  const [photo, setPhoto] = useState<HeldPhoto | undefined>();
-  const [photoError, setPhotoError] = useState<string | undefined>();
-  const [said, setSaid] = useState("");
-  // W3, in the sheet the closet's photo uses too (round 28 #5). It closes
-  // back onto the well it opened from: Use this photo, Cancel and Esc all
-  // return focus there rather than dropping it on the page.
-  const pick = usePhotoPick({ renderPhotoStep, onReady: keep });
-  // The entry the attach made, once it has. From then on Next only sends
-  // the photo and goes on: attaching again would be answered with this same
-  // entry and the kit it already has.
-  const [attached, setAttached] = useState<string | undefined>();
-  const [isSendingPhoto, setIsSendingPhoto] = useState(false);
 
   // The one read the screen waits on. A failure is no suggestion: the
   // picker is already there, and a suggestion is never the only way on.
@@ -175,6 +153,25 @@ export function AttachKit({
     void load();
   }, [prefillFor, runId]);
 
+  return suggestion;
+}
+
+/**
+ * The photo well's half of the screen: the held photo and its preview, W3's
+ * step between picking and keeping, and the upload once the entry exists.
+ */
+function useHeldPhoto({
+  renderPhotoStep,
+  uploadPhoto,
+}: Pick<AttachKitProps, "renderPhotoStep" | "uploadPhoto">) {
+  const [photo, setPhoto] = useState<HeldPhoto | undefined>();
+  const [photoError, setPhotoError] = useState<string | undefined>();
+  const [isSendingPhoto, setIsSendingPhoto] = useState(false);
+  // W3, in the sheet the closet's photo uses too (round 28 #5). It closes
+  // back onto the well it opened from: Use this photo, Cancel and Esc all
+  // return focus there rather than dropping it on the page.
+  const pick = usePhotoPick({ renderPhotoStep, onReady: keep });
+
   // The preview is the held file's own bytes, released when it goes.
   useEffect(() => {
     if (photo === undefined) return;
@@ -185,14 +182,14 @@ export function AttachKit({
   }, [photo]);
 
   /**
-   * The held photo, sent to the entry the attach made — then on to A3.
+   * The held photo, sent to the entry the attach made. `false` when it
+   * failed, and the screen then goes nowhere.
    *
-   * A failure stays on the well, with the photo still held, and goes
-   * nowhere: the runner either presses Next again, which sends it under the
-   * same key (law 8b — one photo, however many tries), or removes it and
-   * goes on without it.
+   * A failure stays on the well, with the photo still held: the runner
+   * either presses Next again, which sends it under the same key (law 8b —
+   * one photo, however many tries), or removes it and goes on without it.
    */
-  async function sendPhotoThenGo(entryId: string): Promise<void> {
+  async function didSend(entryId: string): Promise<boolean> {
     if (photo !== undefined) {
       setIsSendingPhoto(true);
       setPhotoError(undefined);
@@ -204,11 +201,74 @@ export function AttachKit({
         await uploadPhoto({ data: upload });
       } catch {
         setPhotoError(PHOTO_NOT_SENT);
-        return;
+        return false;
       } finally {
         setIsSendingPhoto(false);
       }
     }
+    return true;
+  }
+
+  function keep(ready: File): void {
+    setPhoto({
+      file: ready,
+      key: newUlid(),
+      url: URL.createObjectURL(ready),
+    });
+  }
+
+  function onPhotoFiles(files: FileList | null): void {
+    // No list, or an empty one — the picker was dismissed: nothing to keep.
+    const file = files?.[0];
+    if (file === undefined) return;
+    const problem = photoProblem(file);
+    setPhotoError(problem);
+    if (problem !== undefined) return;
+    pick.pick(file);
+  }
+
+  return {
+    pick,
+    photoError,
+    isSendingPhoto,
+    isBusy: pick.stepping || isSendingPhoto,
+    preview:
+      photo === undefined ? undefined : { src: photo.url, alt: "Your outfit" },
+    remove: () => {
+      setPhoto(undefined);
+    },
+    didSend,
+    onPhotoFiles,
+  };
+}
+
+export function AttachKit({
+  runId,
+  units,
+  context,
+  prefillFor,
+  attachKit,
+  uploadPhoto,
+  renderPhotoStep,
+}: Readonly<AttachKitProps>): JSX.Element {
+  const navigate = useNavigate();
+  const suggestion = useSuggestion(prefillFor, runId);
+  const [isCardOpen, setIsCardOpen] = useState(true);
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [kitError, setKitError] = useState<string | undefined>();
+  const [said, setSaid] = useState("");
+  const held = useHeldPhoto({ renderPhotoStep, uploadPhoto });
+  // The entry the attach made, once it has. From then on Next only sends
+  // the photo and goes on: attaching again would be answered with this same
+  // entry and the kit it already has.
+  const [attached, setAttached] = useState<string | undefined>();
+
+  /**
+   * The held photo, sent to the entry the attach made — then on to A3.
+   * A failed upload goes nowhere; see `useHeldPhoto`'s `didSend`.
+   */
+  async function sendPhotoThenGo(entryId: string): Promise<void> {
+    if (!(await held.didSend(entryId))) return;
     await navigate({ to: "/feed/verdict/$entryId", params: { entryId } });
   }
 
@@ -232,7 +292,7 @@ export function AttachKit({
    */
   function next(itemIds: readonly string[]): void {
     if (attached !== undefined) {
-      if (!isSendingPhoto) void sendPhotoThenGo(attached);
+      if (!held.isSendingPhoto) void sendPhotoThenGo(attached);
       return;
     }
     const parsed = kitChoice.safeParse(itemIds);
@@ -252,58 +312,18 @@ export function AttachKit({
     setKitError(undefined);
   }
 
-  function keep(ready: File): void {
-    setPhoto({
-      file: ready,
-      key: newUlid(),
-      url: URL.createObjectURL(ready),
-    });
-  }
-
-  function onPhotoFiles(files: FileList | null): void {
-    // No list, or an empty one — the picker was dismissed: nothing to keep.
-    const file = files?.[0];
-    if (file === undefined) return;
-    const problem = photoProblem(file);
-    setPhotoError(problem);
-    if (problem !== undefined) return;
-    pick.pick(file);
-  }
-
   const conditions = context.conditions;
   const names = new Map(
     context.groups.flatMap((group) =>
       group.items.map((item) => [item.id, item.name] as const),
     ),
   );
-  const openGroup = context.groups.find((group) => group.group === sheetGroup);
 
   return (
     <FlowStep step={LOG_FLOW.attach}>
       <DeskSplit rail={<AttachRail context={context} units={units} />}>
         <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 pb-8 wide:mx-0 wide:max-w-column">
-          <header
-            data-slot="header"
-            // Ink on the phone, the title line from `wide` (DS0 bend 4) —
-            // see `ground-ink` in ui/tokens.css. `--dialed-text` rather
-            // than `teal`: it is teal on ink and the paper teal on paper,
-            // where the surface teal would not clear as text.
-            data-ground="ink-until-wide"
-            className="-mx-5 -mt-6 flex flex-col gap-1 bg-ground px-5 py-5 text-ink wide:mx-0 wide:mt-0 wide:px-0 wide:py-0"
-          >
-            <h1 className="m-0 font-display text-heading wide:text-title">
-              What did you wear?
-            </h1>
-            <Mono step="xs" className="text-dialed-text">
-              {subLine(context, units, selected.size)}
-            </Mono>
-            {/* The sub-line carries the provider's reading, and the
-                picker's filter and MOST LIKELY repeat it below: one credit
-                under the first place it shows (D-144). */}
-            {isProvidersReading(conditions) ? (
-              <WeatherAttribution />
-            ) : undefined}
-          </header>
+          <AttachHeader context={context} units={units} count={selected.size} />
           <FormStatus>{attach.status === "" ? said : attach.status}</FormStatus>
 
           <MostLikely
@@ -319,27 +339,11 @@ export function AttachKit({
             }}
           />
 
-          <KitList
-            groups={context.groups}
-            conditions={conditions}
+          <KitChooser
+            context={context}
             units={units}
-            isFiltered={isFiltered}
-            onFilter={setIsFiltered}
             isOr={suggestion !== "none"}
-            selected={selected}
-            onToggle={toggle}
-            onOpen={setSheetGroup}
-            error={kitError}
-          />
-          <KitSheet
-            group={openGroup}
-            conditions={conditions}
-            units={units}
-            selected={selected}
-            onToggle={toggle}
-            onClose={() => {
-              setSheetGroup(undefined);
-            }}
+            picks={{ selected, onToggle: toggle, error: kitError }}
           />
 
           <FileWell
@@ -352,21 +356,15 @@ export function AttachKit({
               pendingLabel: "Adding",
               hint: "Flat on the floor works best.",
             }}
-            pending={pick.stepping || isSendingPhoto}
+            pending={held.isBusy}
             accept={photoAcceptAttribute}
-            error={photoError}
-            preview={
-              photo === undefined
-                ? undefined
-                : { src: photo.url, alt: "Your outfit" }
-            }
-            onRemove={() => {
-              setPhoto(undefined);
-            }}
-            onFiles={onPhotoFiles}
-            inputRef={pick.wellRef}
+            error={held.photoError}
+            preview={held.preview}
+            onRemove={held.remove}
+            onFiles={held.onPhotoFiles}
+            inputRef={held.pick.wellRef}
           />
-          {pick.step(setSaid)}
+          {held.pick.step(setSaid)}
 
           <div className="flex flex-col gap-3">
             <button
@@ -404,6 +402,96 @@ export function AttachKit({
         </div>
       </DeskSplit>
     </FlowStep>
+  );
+}
+
+/**
+ * A2's header: the question, and the sub-line counting the kit so far.
+ */
+function AttachHeader({
+  context,
+  units,
+  count,
+}: Readonly<{
+  context: AttachContext;
+  units: Units;
+  count: number;
+}>): JSX.Element {
+  return (
+    <header
+      data-slot="header"
+      // Ink on the phone, the title line from `wide` (DS0 bend 4) —
+      // see `ground-ink` in ui/tokens.css. `--dialed-text` rather
+      // than `teal`: it is teal on ink and the paper teal on paper,
+      // where the surface teal would not clear as text.
+      data-ground="ink-until-wide"
+      className="-mx-5 -mt-6 flex flex-col gap-1 bg-ground px-5 py-5 text-ink wide:mx-0 wide:mt-0 wide:px-0 wide:py-0"
+    >
+      <h1 className="m-0 font-display text-heading wide:text-title">
+        What did you wear?
+      </h1>
+      <Mono step="xs" className="text-dialed-text">
+        {subLine(context, units, count)}
+      </Mono>
+      {/* The sub-line carries the provider's reading, and the
+          picker's filter and MOST LIKELY repeat it below: one credit
+          under the first place it shows (D-144). */}
+      {isProvidersReading(context.conditions) ? (
+        <WeatherAttribution />
+      ) : undefined}
+    </header>
+  );
+}
+
+/**
+ * The picker and the sheet a group opens into, with the filter and the
+ * open group they share. What is picked is the screen's, so it comes in.
+ */
+function KitChooser({
+  context,
+  units,
+  isOr,
+  picks,
+}: Readonly<{
+  context: AttachContext;
+  units: Units;
+  isOr: boolean;
+  picks: {
+    selected: ReadonlySet<string>;
+    onToggle: (itemId: string) => void;
+    error: string | undefined;
+  };
+}>): JSX.Element {
+  const { conditions } = context;
+  const [isFiltered, setIsFiltered] = useState(conditions !== undefined);
+  const [sheetGroup, setSheetGroup] = useState<UiGroup | undefined>();
+  const openGroup = context.groups.find((group) => group.group === sheetGroup);
+
+  return (
+    <>
+      <KitList
+        groups={context.groups}
+        conditions={conditions}
+        units={units}
+        isFiltered={isFiltered}
+        onFilter={setIsFiltered}
+        isOr={isOr}
+        selected={picks.selected}
+        onToggle={picks.onToggle}
+        onOpen={setSheetGroup}
+        error={picks.error}
+      />
+      <KitSheet
+        group={openGroup}
+        conditions={conditions}
+        units={units}
+        selected={picks.selected}
+        onToggle={picks.onToggle}
+        onClose={() => {
+          setSheetGroup(undefined);
+        }}
+      />
+    </>
   );
 }
 

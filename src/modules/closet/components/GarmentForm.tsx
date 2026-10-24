@@ -307,48 +307,24 @@ function useObjectUrl(file: File | undefined): string | undefined {
 }
 
 /**
- * Screen F: category and type lead, then brand + model (round 35 #52b,
- * which reverses D-27's identity-first order for F: the type picks the
- * glyph and the defaults); attribute fields collapsed below, shown only
- * where the category admits them. A generic entry (category + name only) is still one submit away —
- * never blocked on brand/model.
+ * The well's half of F: the held or removed photo and its preview, W3's
+ * step, Edit's Remove, and what happens to the photo once the row exists —
+ * including round 26 #4's saved state when it did not go up.
  *
- * **This form had no failure path before R-17.** It was presentational,
- * and the route called `garmentFromFormValues` — which ended in
- * `garmentSchema.parse` — inside a `void`-ed async handler. An invalid
- * garment threw into an unhandled rejection: no message, no mark, the
- * button simply did nothing. An `http://` product link and any over-long
- * value both reached it, since `type="url"` accepts the scheme and no
- * input carried a `maxLength`.
- *
- * The form is `noValidate` on purpose now. The browser's own checks are
- * not the contract's — they cannot produce the summary, the live-region
- * sentence or the failure band — so the schema is the single gate and
- * `useFormSubmit` renders what it says.
+ * `announce` is the form's live region; the form is made after this, so the
+ * caller hands in a sentence-forwarder rather than the form itself.
  */
-// fallow-ignore-next-line code-duplication -- a ten-prop signature that matches feed/components/KitPicker.tsx KitList only by destructuring one prop per line; one edits a garment, the other picks a kit, and they share nothing to extract
-export function GarmentForm({
-  heading,
-  back,
-  initial,
-  brandOptions,
-  onBrandInput,
-  save,
-  onSaved,
-  submitLabel,
-  pendingLabel,
-  successMessage,
+function useGarmentPhoto({
   photo,
   rail,
-}: Readonly<GarmentFormProps>) {
-  const [values, setValues] = useState<GarmentFormValues>({
-    ...EMPTY_VALUES,
-    ...initial,
-  });
-  const fields = fieldsForCategory(values.category);
-  const types = garmentTypesFor(values.category);
-  const pickedType = typeOf(values.category, values.type);
-  const [shadeOpen, setShadeOpen] = useState(false);
+  onSaved,
+  announce,
+}: Readonly<{
+  photo: GarmentPhoto;
+  rail: GarmentRail | undefined;
+  onSaved: GarmentFormProps["onSaved"];
+  announce: (sentence: string) => void;
+}>) {
   /**
    * The photo is part of the form, so nothing about it is written until
    * the save: a picked photo is held (after W3's blur) and previewed from
@@ -373,7 +349,6 @@ export function GarmentForm({
   const [reread, setReread] = useState<ClosetNearby | undefined>();
   const photoInFlight = useRef(false);
   const heldUrl = useObjectUrl(held);
-  const preview = heldUrl ?? (removed ? undefined : photo.url);
   const pick = usePhotoPick({
     renderPhotoStep: photo.renderStep,
     onReady: (file) => {
@@ -381,16 +356,6 @@ export function GarmentForm({
       // Once saved, a new photo has no form to wait for: it goes to the
       // saved garment as soon as it is ready.
       if (refused !== undefined) void finishWithPhoto(refused.itemId, file);
-    },
-  });
-
-  const form = useFormSubmit({
-    schema: garmentFormSchema,
-    action: save,
-    successMessage,
-    labels: LABELS,
-    onSuccess: async (saved) => {
-      await finishWithPhoto(saved.id, held);
     },
   });
 
@@ -451,7 +416,7 @@ export function GarmentForm({
    */
   function keepSaved(refusal: PhotoRefusal & { itemId: string }): void {
     setRefused(refusal);
-    form.announce(PHOTO_NOT_SAVED);
+    announce(PHOTO_NOT_SAVED);
     void rail?.reread().then(setReread, () => {
       // The rows F loaded with stay: the rail is secondary to the save
       // beside it, and must not fail it (law 5).
@@ -493,25 +458,95 @@ export function GarmentForm({
     pick.pick(file);
   }
 
-  const estimate = useMemo(
-    () =>
-      estimateTempRange({
-        category: values.category,
-        // Equivalent mutants on both conversions, and the same class as
-        // `estimateTempRange`'s own weight guard: the estimator reads
-        // `layer === "outer"` and indexes its tables by weight, so an
-        // empty string and an absent value already behave identically
-        // there. These exist because `GarmentFormValues` types an
-        // unanswered select as `""` and `ThermalInput` types it as
-        // absent — the conversion is for the compiler, not the runtime.
-        // Stryker disable next-line ConditionalExpression,StringLiteral
-        layer: values.layer === "" ? undefined : values.layer,
-        // Stryker disable next-line ConditionalExpression,StringLiteral
-        weight: values.weight === "" ? undefined : values.weight,
-        windResistant: values.windResistant,
-      }),
-    [values.category, values.layer, values.weight, values.windResistant],
-  );
+  return {
+    preview: heldUrl ?? (removed ? undefined : photo.url),
+    pending: pick.stepping || photoPending,
+    wellRef: pick.wellRef,
+    nearby: reread ?? rail?.nearby,
+    refused,
+    removal: photoRemoval,
+    step: pick.step,
+    onFiles: pickFrom,
+    /**
+    The photo's half of a save, against the row it made.
+    */
+    finish: (itemId: string) => finishWithPhoto(itemId, held),
+    remove: () => {
+      setHeld(undefined);
+      setRemoved(true);
+    },
+  };
+}
+
+type HeldGarmentPhoto = ReturnType<typeof useGarmentPhoto>;
+type GarmentFormSubmit = ReturnType<
+  typeof useFormSubmit<typeof garmentFormSchema, { id: string }>
+>;
+type FieldsForm = Pick<GarmentFormSubmit, "field" | "fieldErrors">;
+type UpdateValue = <K extends keyof GarmentFormValues>(
+  key: K,
+  value: GarmentFormValues[K],
+) => void;
+
+/**
+ * Screen F: category and type lead, then brand + model (round 35 #52b,
+ * which reverses D-27's identity-first order for F: the type picks the
+ * glyph and the defaults); attribute fields collapsed below, shown only
+ * where the category admits them. A generic entry (category + name only) is still one submit away —
+ * never blocked on brand/model.
+ *
+ * **This form had no failure path before R-17.** It was presentational,
+ * and the route called `garmentFromFormValues` — which ended in
+ * `garmentSchema.parse` — inside a `void`-ed async handler. An invalid
+ * garment threw into an unhandled rejection: no message, no mark, the
+ * button simply did nothing. An `http://` product link and any over-long
+ * value both reached it, since `type="url"` accepts the scheme and no
+ * input carried a `maxLength`.
+ *
+ * The form is `noValidate` on purpose now. The browser's own checks are
+ * not the contract's — they cannot produce the summary, the live-region
+ * sentence or the failure band — so the schema is the single gate and
+ * `useFormSubmit` renders what it says.
+ */
+// fallow-ignore-next-line code-duplication -- a ten-prop signature that matches feed/components/KitPicker.tsx KitList only by destructuring one prop per line; one edits a garment, the other picks a kit, and they share nothing to extract
+export function GarmentForm({
+  heading,
+  back,
+  initial,
+  brandOptions,
+  onBrandInput,
+  save,
+  onSaved,
+  submitLabel,
+  pendingLabel,
+  successMessage,
+  photo,
+  rail,
+}: Readonly<GarmentFormProps>) {
+  const [values, setValues] = useState<GarmentFormValues>({
+    ...EMPTY_VALUES,
+    ...initial,
+  });
+  const pickedType = typeOf(values.category, values.type);
+  const well = useGarmentPhoto({
+    photo,
+    rail,
+    onSaved,
+    announce: (sentence) => {
+      form.announce(sentence);
+    },
+  });
+  const { refused } = well;
+
+  const form = useFormSubmit({
+    schema: garmentFormSchema,
+    action: save,
+    successMessage,
+    labels: LABELS,
+    onSuccess: async (saved) => {
+      await well.finish(saved.id);
+    },
+  });
 
   function update<K extends keyof GarmentFormValues>(
     key: K,
@@ -536,6 +571,130 @@ export function GarmentForm({
         summaryRef={form.summaryRef}
       />
 
+      <IdentityFields
+        values={values}
+        setValues={setValues}
+        update={update}
+        form={form}
+        brand={{ options: brandOptions, onInput: onBrandInput }}
+      />
+
+      <AttributeFields
+        values={values}
+        update={update}
+        form={form}
+        preview={well.preview}
+      />
+
+      <EstimatedRange values={values} />
+
+      <TextField
+        name="size"
+        label={LABELS.size}
+        value={values.size}
+        onChange={(value) => {
+          update("size", value);
+        }}
+        field={form.field}
+        error={form.fieldErrors.size}
+      />
+      <TextField
+        name="color"
+        label={LABELS.color}
+        value={values.color}
+        onChange={(value) => {
+          update("color", value);
+        }}
+        field={form.field}
+        error={form.fieldErrors.color}
+      />
+      <PhotoField well={well} name={values.name} />
+
+      <FormFailureBand
+        failure={form.failure}
+        onRetry={form.retry}
+        retryRef={form.retryRef}
+      />
+      <SubmitButton
+        label={submitLabel}
+        pendingLabel={pendingLabel}
+        pending={form.pending}
+      />
+    </form>
+  );
+
+  const primary = (
+    <>
+      {/* The one status region, outside both views: the sentence that
+          says the photo did not go up is written as the fields leave. */}
+      <FormStatus>{well.removal.status || form.status}</FormStatus>
+      {back}
+      <FormHeading
+        heading={heading}
+        saved={refused === undefined ? undefined : values}
+        savedType={pickedType}
+      />
+      {refused === undefined ? (
+        fieldsView
+      ) : (
+        <SavedPhotoRefused
+          onDone={() => {
+            void onSaved({ id: refused.itemId });
+          }}
+        >
+          <FileWell
+            part="photo-well"
+            copy={GARMENT_PHOTO_COPY}
+            pending={well.pending}
+            inputRef={well.wellRef}
+            accept={photoAcceptAttribute}
+            onFiles={well.onFiles}
+          />
+          <PhotoRefused
+            refusal={refused}
+            onRetry={() => {
+              void well.finish(refused.itemId);
+            }}
+            onFiles={well.onFiles}
+          />
+        </SavedPhotoRefused>
+      )}
+      {/* W3, as a sheet over whichever view picked the photo (round 28
+          #5: "the closet form and AttachKit use the same sheet"). */}
+      {well.step(form.announce)}
+    </>
+  );
+
+  return (
+    <FormFrame nearby={well.nearby} values={values} type={pickedType}>
+      {primary}
+    </FormFrame>
+  );
+}
+
+/**
+ * Category and type, then brand and name: what the piece is.
+ */
+function IdentityFields({
+  values,
+  setValues,
+  update,
+  form,
+  brand,
+}: Readonly<{
+  values: GarmentFormValues;
+  setValues: (next: (current: GarmentFormValues) => GarmentFormValues) => void;
+  update: UpdateValue;
+  form: FieldsForm;
+  brand: Readonly<{
+    options: readonly string[] | undefined;
+    onInput: ((value: string) => void) | undefined;
+  }>;
+}>): JSX.Element {
+  const types = garmentTypesFor(values.category);
+  const pickedType = typeOf(values.category, values.type);
+  return (
+    <>
       <FormField
         name="category"
         label={LABELS.category}
@@ -607,13 +766,13 @@ export function GarmentForm({
             value={values.brand}
             onChange={(event) => {
               update("brand", event.target.value);
-              onBrandInput?.(event.target.value);
+              brand.onInput?.(event.target.value);
             }}
             className="rounded-field border border-hairline bg-panel px-3 py-2 font-normal"
           />
         </FormField>
         <datalist id="garment-brand-options">
-          {(brandOptions ?? []).map((option) => (
+          {(brand.options ?? []).map((option) => (
             <option key={option} value={option} />
           ))}
         </datalist>
@@ -628,266 +787,260 @@ export function GarmentForm({
           error={form.fieldErrors.name}
         />
       </fieldset>
+    </>
+  );
+}
 
-      <fieldset className="flex flex-col gap-3 border-t border-hairline pt-4">
-        <legend className="sr-only">Attributes</legend>
-        {
-          // fallow-ignore-next-line code-duplication -- three optional attributes rendered explicitly so the form reads as a form; the shared body is already ChoiceField
-          fields.layer ? (
-            <ChoiceField
-              name="layer"
-              label={LABELS.layer}
-              error={form.fieldErrors.layer}
-              field={form.field}
-              value={values.layer}
-              options={layerSchema.options}
-              optionLabels={LAYER_LABELS}
-              onChange={(picked) => {
-                update("layer", picked);
-              }}
-            />
-          ) : undefined
-        }
-        {fields.weight ? (
+/**
+ * The attributes the category admits, then visibility, colour and §AH's
+ * exact shade, which every category has.
+ */
+function AttributeFields({
+  values,
+  update,
+  form,
+  preview,
+}: Readonly<{
+  values: GarmentFormValues;
+  update: UpdateValue;
+  form: FieldsForm;
+  /**
+  The well's preview, which the shade sampler reads a pixel out of.
+  */
+  preview: string | undefined;
+}>): JSX.Element {
+  const fields = fieldsForCategory(values.category);
+  return (
+    <fieldset className="flex flex-col gap-3 border-t border-hairline pt-4">
+      <legend className="sr-only">Attributes</legend>
+      {
+        // fallow-ignore-next-line code-duplication -- three optional attributes rendered explicitly so the form reads as a form; the shared body is already ChoiceField
+        fields.layer ? (
           <ChoiceField
-            name="weight"
-            label={LABELS.weight}
-            error={form.fieldErrors.weight}
+            name="layer"
+            label={LABELS.layer}
+            error={form.fieldErrors.layer}
             field={form.field}
-            value={values.weight}
-            options={weightSchema.options}
-            optionLabels={WEIGHT_LABELS}
+            value={values.layer}
+            options={layerSchema.options}
+            optionLabels={LAYER_LABELS}
             onChange={(picked) => {
-              update("weight", picked);
+              update("layer", picked);
             }}
           />
-        ) : undefined}
-        {fields.fabric ? (
-          <ChoiceField
-            name="fabric"
-            label={LABELS.fabric}
-            error={form.fieldErrors.fabric}
-            field={form.field}
-            value={values.fabric}
-            options={fabricSchema.options}
-            optionLabels={FABRIC_LABELS}
-            onChange={(picked) => {
-              update("fabric", picked);
-            }}
-          />
-        ) : undefined}
-        {fields.windResistant ? (
-          <ToggleField
-            name="windResistant"
-            label="Wind resistant"
-            field={form.field}
-            isOn={values.windResistant}
-            onChange={(next) => {
-              update("windResistant", next);
-            }}
-          />
-        ) : undefined}
-        {fields.waterResistant ? (
-          <ToggleField
-            name="waterResistant"
-            label="Water resistant"
-            field={form.field}
-            isOn={values.waterResistant}
-            onChange={(next) => {
-              update("waterResistant", next);
-            }}
-          />
-        ) : undefined}
-        {/* §AH: the fourth and fifth attributes, inside the group that is
-            already collapsed. The tap count on the happy path does not
-            move. Not gated on `fields.*` — every
-            category has a colour, including the ones with no layer and no
-            fabric. */}
-        <ChoiceList
-          name="visibilityLevel"
-          legend={LABELS.visibilityLevel}
-          layout="chips"
-          options={garmentVisibilitySchema.options}
-          optionLabels={VISIBILITY_LABELS}
-          value={values.visibilityLevel}
+        ) : undefined
+      }
+      {fields.weight ? (
+        <ChoiceField
+          name="weight"
+          label={LABELS.weight}
+          error={form.fieldErrors.weight}
           field={form.field}
-          error={form.fieldErrors.visibilityLevel}
+          value={values.weight}
+          options={weightSchema.options}
+          optionLabels={WEIGHT_LABELS}
           onChange={(picked) => {
-            update("visibilityLevel", picked);
+            update("weight", picked);
           }}
         />
-        <ChoiceList
-          name="colorName"
-          legend={LABELS.colorName}
-          hint="Pick the nearest. A print is its main color."
-          layout="chips"
-          options={colorNameSchema.options}
-          optionLabels={COLOR_LABELS}
-          value={values.colorName}
-          field={form.field}
-          error={form.fieldErrors.colorName}
-          onChange={(picked) => {
-            update("colorName", picked);
-          }}
-        />
-        {/* §AH: "Level 2 without level 1 isn't possible — the sheet is
-            reached from a chosen name." So the affordance does not exist
-            until a name does, rather than existing and refusing. */}
-        {values.colorName === "" ? undefined : (
-          <>
-            <button
-              type="button"
-              onClick={() => {
-                setShadeOpen(true);
-              }}
-              className="target cursor-pointer self-start border-none bg-transparent p-0 text-quiet underline underline-offset-4"
-            >
-              <Mono step="sm">
-                Exact shade
-                {values.colorHex === "" ? "" : ` · ${values.colorHex}`}
-              </Mono>
-            </button>
-            <ShadeSheet
-              open={shadeOpen}
-              colorName={COLOR_LABELS[values.colorName]}
-              value={values.colorHex}
-              photoUrl={preview}
-              onUse={(picked) => {
-                update("colorHex", picked);
-                setShadeOpen(false);
-              }}
-              onClear={() => {
-                update("colorHex", "");
-                setShadeOpen(false);
-              }}
-              onClose={() => {
-                setShadeOpen(false);
-              }}
-            />
-          </>
-        )}
-      </fieldset>
-
-      {estimate ? (
-        <p className="text-small text-quiet">
-          Estimated{" "}
-          <Bracketed className="text-dialed-text">
-            {formatTempRange(estimate)}
-          </Bracketed>
-        </p>
       ) : undefined}
+      {fields.fabric ? (
+        <ChoiceField
+          name="fabric"
+          label={LABELS.fabric}
+          error={form.fieldErrors.fabric}
+          field={form.field}
+          value={values.fabric}
+          options={fabricSchema.options}
+          optionLabels={FABRIC_LABELS}
+          onChange={(picked) => {
+            update("fabric", picked);
+          }}
+        />
+      ) : undefined}
+      {fields.windResistant ? (
+        <ToggleField
+          name="windResistant"
+          label="Wind resistant"
+          field={form.field}
+          isOn={values.windResistant}
+          onChange={(next) => {
+            update("windResistant", next);
+          }}
+        />
+      ) : undefined}
+      {fields.waterResistant ? (
+        <ToggleField
+          name="waterResistant"
+          label="Water resistant"
+          field={form.field}
+          isOn={values.waterResistant}
+          onChange={(next) => {
+            update("waterResistant", next);
+          }}
+        />
+      ) : undefined}
+      {/* §AH: the fourth and fifth attributes, inside the group that is
+          already collapsed. The tap count on the happy path does not
+          move. Not gated on `fields.*` — every
+          category has a colour, including the ones with no layer and no
+          fabric. */}
+      <ChoiceList
+        name="visibilityLevel"
+        legend={LABELS.visibilityLevel}
+        layout="chips"
+        options={garmentVisibilitySchema.options}
+        optionLabels={VISIBILITY_LABELS}
+        value={values.visibilityLevel}
+        field={form.field}
+        error={form.fieldErrors.visibilityLevel}
+        onChange={(picked) => {
+          update("visibilityLevel", picked);
+        }}
+      />
+      <ChoiceList
+        name="colorName"
+        legend={LABELS.colorName}
+        hint="Pick the nearest. A print is its main color."
+        layout="chips"
+        options={colorNameSchema.options}
+        optionLabels={COLOR_LABELS}
+        value={values.colorName}
+        field={form.field}
+        error={form.fieldErrors.colorName}
+        onChange={(picked) => {
+          update("colorName", picked);
+        }}
+      />
+      <ExactShade values={values} update={update} preview={preview} />
+    </fieldset>
+  );
+}
 
-      <TextField
-        name="size"
-        label={LABELS.size}
-        value={values.size}
-        onChange={(value) => {
-          update("size", value);
+/**
+ * §AH's level 2: the exact shade, through the sheet. Mounted whatever the
+ * colour, so the sheet's open state outlives a name being changed.
+ */
+function ExactShade({
+  values,
+  update,
+  preview,
+}: Readonly<{
+  values: GarmentFormValues;
+  update: UpdateValue;
+  preview: string | undefined;
+}>): JSX.Element | undefined {
+  const [shadeOpen, setShadeOpen] = useState(false);
+  /* §AH: "Level 2 without level 1 isn't possible — the sheet is
+     reached from a chosen name." So the affordance does not exist
+     until a name does, rather than existing and refusing. */
+  if (values.colorName === "") return undefined;
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setShadeOpen(true);
         }}
-        field={form.field}
-        error={form.fieldErrors.size}
-      />
-      <TextField
-        name="color"
-        label={LABELS.color}
-        value={values.color}
-        onChange={(value) => {
-          update("color", value);
+        className="target cursor-pointer self-start border-none bg-transparent p-0 text-quiet underline underline-offset-4"
+      >
+        <Mono step="sm">
+          Exact shade
+          {values.colorHex === "" ? "" : ` · ${values.colorHex}`}
+        </Mono>
+      </button>
+      <ShadeSheet
+        open={shadeOpen}
+        colorName={COLOR_LABELS[values.colorName]}
+        value={values.colorHex}
+        photoUrl={preview}
+        onUse={(picked) => {
+          update("colorHex", picked);
+          setShadeOpen(false);
         }}
-        field={form.field}
-        error={form.fieldErrors.color}
+        onClear={() => {
+          update("colorHex", "");
+          setShadeOpen(false);
+        }}
+        onClose={() => {
+          setShadeOpen(false);
+        }}
       />
-      {/* Round 22, item 17: the well is the last thing before the save —
-          identity, Size, Colorway, photo, Add to closet. The product-link
-          field that sat here is gone for v1 (AC2b: a field that can only
-          say "pending" is a promise the build can't keep); F2a/F2b return
-          with enrichment. A stored link still round-trips untouched,
-          because the value rides in the form state the field no longer
-          draws. */}
+    </>
+  );
+}
+
+/**
+ * The estimated range, once the answers so far give one.
+ */
+function EstimatedRange({
+  values,
+}: Readonly<{ values: GarmentFormValues }>): JSX.Element | undefined {
+  const estimate = useMemo(
+    () =>
+      estimateTempRange({
+        category: values.category,
+        // Equivalent mutants on both conversions, and the same class as
+        // `estimateTempRange`'s own weight guard: the estimator reads
+        // `layer === "outer"` and indexes its tables by weight, so an
+        // empty string and an absent value already behave identically
+        // there. These exist because `GarmentFormValues` types an
+        // unanswered select as `""` and `ThermalInput` types it as
+        // absent — the conversion is for the compiler, not the runtime.
+        // Stryker disable next-line ConditionalExpression,StringLiteral
+        layer: values.layer === "" ? undefined : values.layer,
+        // Stryker disable next-line ConditionalExpression,StringLiteral
+        weight: values.weight === "" ? undefined : values.weight,
+        windResistant: values.windResistant,
+      }),
+    [values.category, values.layer, values.weight, values.windResistant],
+  );
+  if (!estimate) return undefined;
+  return (
+    <p className="text-small text-quiet">
+      Estimated{" "}
+      <Bracketed className="text-dialed-text">
+        {formatTempRange(estimate)}
+      </Bracketed>
+    </p>
+  );
+}
+
+/**
+ * The well, and the band under it for Edit's Remove.
+ *
+ * Round 22, item 17: the well is the last thing before the save —
+ * identity, Size, Colorway, photo, Add to closet. The product-link field
+ * that sat here is gone for v1 (AC2b: a field that can only say "pending"
+ * is a promise the build can't keep); F2a/F2b return with enrichment. A
+ * stored link still round-trips untouched, because the value rides in the
+ * form state the field no longer draws.
+ */
+function PhotoField({
+  well,
+  name,
+}: Readonly<{ well: HeldGarmentPhoto; name: string }>): JSX.Element {
+  const { preview, removal } = well;
+  return (
+    <>
       <FileWell
         part="photo-well"
         copy={GARMENT_PHOTO_COPY}
-        pending={pick.stepping || photoPending}
-        inputRef={pick.wellRef}
+        pending={well.pending}
+        inputRef={well.wellRef}
         accept={photoAcceptAttribute}
         preview={
-          preview === undefined ? undefined : { src: preview, alt: values.name }
+          preview === undefined ? undefined : { src: preview, alt: name }
         }
-        onRemove={() => {
-          setHeld(undefined);
-          setRemoved(true);
-        }}
-        onFiles={pickFrom}
+        onRemove={well.remove}
+        onFiles={well.onFiles}
       />
       <ControlFailureBand
-        failure={photoRemoval.failure}
-        onRetry={photoRemoval.retry}
-        retryRef={photoRemoval.retryRef}
+        failure={removal.failure}
+        onRetry={removal.retry}
+        retryRef={removal.retryRef}
       />
-
-      <FormFailureBand
-        failure={form.failure}
-        onRetry={form.retry}
-        retryRef={form.retryRef}
-      />
-      <SubmitButton
-        label={submitLabel}
-        pendingLabel={pendingLabel}
-        pending={form.pending}
-      />
-    </form>
-  );
-
-  const primary = (
-    <>
-      {/* The one status region, outside both views: the sentence that
-          says the photo did not go up is written as the fields leave. */}
-      <FormStatus>{photoRemoval.status || form.status}</FormStatus>
-      {back}
-      <FormHeading
-        heading={heading}
-        saved={refused === undefined ? undefined : values}
-        savedType={pickedType}
-      />
-      {refused === undefined ? (
-        fieldsView
-      ) : (
-        <SavedPhotoRefused
-          onDone={() => {
-            void onSaved({ id: refused.itemId });
-          }}
-        >
-          <FileWell
-            part="photo-well"
-            copy={GARMENT_PHOTO_COPY}
-            pending={pick.stepping || photoPending}
-            inputRef={pick.wellRef}
-            accept={photoAcceptAttribute}
-            onFiles={pickFrom}
-          />
-          <PhotoRefused
-            refusal={refused}
-            onRetry={() => {
-              void finishWithPhoto(refused.itemId, held);
-            }}
-            onFiles={pickFrom}
-          />
-        </SavedPhotoRefused>
-      )}
-      {/* W3, as a sheet over whichever view picked the photo (round 28
-          #5: "the closet form and AttachKit use the same sheet"). */}
-      {pick.step(form.announce)}
     </>
-  );
-
-  return (
-    <FormFrame
-      nearby={reread ?? rail?.nearby}
-      values={values}
-      type={pickedType}
-    >
-      {primary}
-    </FormFrame>
   );
 }
 

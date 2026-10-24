@@ -3,9 +3,11 @@ import type { RefObject } from "react";
 
 import type { ConfirmTrigger } from "../lib/auth-signal";
 import type { ControlFailure } from "./form";
-import { useTermsRefusal } from "./terms-refusal";
-import { useUnconfirmedRefusal } from "./unconfirmed-refusal";
-import { classifyFailure, didAnswerRefusal } from "./use-form-submit";
+import {
+  classifyFailure,
+  didAnswerRefusal,
+  useRefusalAnswers,
+} from "./use-form-submit";
 
 /**
  * An action a control takes outside a form — Useful, Follow, Unblock,
@@ -94,8 +96,7 @@ export function useControlAction<TArgs extends unknown[]>({
   const inFlight = useRef(false);
   const lastArgs = useRef<TArgs | undefined>(undefined);
   const retryRef = useRef<HTMLButtonElement>(null);
-  const answerTermsRefusal = useTermsRefusal();
-  const answerUnconfirmed = useUnconfirmedRefusal();
+  const answers = useRefusalAnswers();
 
   async function run(...args: TArgs): Promise<void> {
     if (inFlight.current) return;
@@ -111,10 +112,6 @@ export function useControlAction<TArgs extends unknown[]>({
       // Behind on the terms (D-96), or not confirmed yet (D-113): the
       // root's answer, not a band, and the control stays as it was,
       // because nothing changed.
-      const answers = {
-        terms: answerTermsRefusal,
-        unconfirmed: answerUnconfirmed,
-      };
       const { kind } = classifyFailure(error);
       if (didAnswerRefusal(kind, answers, confirmTrigger, isSave)) {
         return;

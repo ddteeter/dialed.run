@@ -364,17 +364,11 @@ export function VerdictForm({
   // answer stays on screen, read-only, and Noted takes the submit's place.
   const isLocked = noted !== undefined;
 
-  // The answer as the chip rule reads it: Fine is the default and is never
-  // a chip, so "none" is simply not a choice here.
-  const chosenFlags: Record<string, Flag> = {};
-  for (const [itemId, flag] of Object.entries(flags)) {
-    if (flag !== "none") chosenFlags[itemId] = flag;
-  }
+  const chosenFlags = chosenFlagsOf(flags);
   const chips = suggestChips({
     verdict,
     kit: entry.items,
-    records: history?.signals.garments ?? {},
-    tagUse: history?.signals.tagUse ?? {},
+    ...chipHistory(history?.signals),
     chosenFlags,
     chosenTags: tags,
   });
@@ -546,26 +540,11 @@ export function VerdictForm({
               accessible name stays the three words and the sentence is read
               as its description. It was "Share this — the verdict label
               shows on the post", one line inside the label. */}
-              <div className="flex flex-col gap-1">
-                <label className="target flex items-center gap-2 text-body">
-                  <input
-                    type="checkbox"
-                    checked={isShared}
-                    aria-describedby={SHARE_HINT_ID}
-                    onChange={(event) => {
-                      setIsShared(event.target.checked);
-                    }}
-                  />
-                  Share to feed
-                </label>
-                {isShared ? (
-                  <span id={SHARE_HINT_ID} className="text-small text-muted">
-                    Shared runs show your kit, conditions, and your verdict.
-                  </span>
-                ) : (
-                  privateLine(SHARE_HINT_ID)
-                )}
-              </div>
+              <ShareToggle
+                isShared={isShared}
+                onChange={setIsShared}
+                privateLine={privateLine}
+              />
 
               <FormFailureBand
                 failure={form.failure}
@@ -582,6 +561,70 @@ export function VerdictForm({
         </form>
       </DeskSplit>
     </FlowStep>
+  );
+}
+
+/**
+ * The answer as the chip rule reads it: Fine is the default and is never
+ * a chip, so "none" is simply not a choice here.
+ */
+function chosenFlagsOf(
+  flags: Readonly<Record<string, ItemFlagChoice>>,
+): Record<string, Flag> {
+  const chosenFlags: Record<string, Flag> = {};
+  for (const [itemId, flag] of Object.entries(flags)) {
+    if (flag !== "none") chosenFlags[itemId] = flag;
+  }
+  return chosenFlags;
+}
+
+/**
+ * What the chips read of this runner's history in the band: nothing, when
+ * the run has no band — then the chips suggest no garment.
+ */
+function chipHistory(
+  signals: BandSignals | undefined,
+): Pick<Parameters<typeof suggestChips>[0], "records" | "tagUse"> {
+  return {
+    records: signals?.garments ?? {},
+    tagUse: signals?.tagUse ?? {},
+  };
+}
+
+/**
+ * A3's "Share to feed" switch, and the line beneath it: what sharing
+ * means when it is on, the route's `privateLine` when it is off.
+ */
+function ShareToggle({
+  isShared,
+  onChange,
+  privateLine,
+}: Readonly<{
+  isShared: boolean;
+  onChange: (isShared: boolean) => void;
+  privateLine: (hintId: string) => ReactNode;
+}>): JSX.Element {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="target flex items-center gap-2 text-body">
+        <input
+          type="checkbox"
+          checked={isShared}
+          aria-describedby={SHARE_HINT_ID}
+          onChange={(event) => {
+            onChange(event.target.checked);
+          }}
+        />
+        Share to feed
+      </label>
+      {isShared ? (
+        <span id={SHARE_HINT_ID} className="text-small text-muted">
+          Shared runs show your kit, conditions, and your verdict.
+        </span>
+      ) : (
+        privateLine(SHARE_HINT_ID)
+      )}
+    </div>
   );
 }
 
