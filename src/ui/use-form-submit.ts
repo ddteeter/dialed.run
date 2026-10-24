@@ -239,6 +239,59 @@ export interface UseFormSubmitOptions<TSchema extends z.ZodType, TResult> {
   confirmTrigger?: ConfirmTrigger | undefined;
 }
 
+/**
+ * The root's answers to the two refusals that are not failures — behind on
+ * the terms, and an address not confirmed yet — read together, because the
+ * form and control hooks both hand the pair to `didAnswerRefusal`.
+ */
+export function useRefusalAnswers() {
+  return { terms: useTermsRefusal(), unconfirmed: useUnconfirmedRefusal() };
+}
+
+/**
+ * A form's field errors, and the per-field props that show and clear them.
+ * `isPending` makes every control read-only while a submit is in flight.
+ */
+function useFieldErrors(isPending: boolean) {
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  /**
+  Clears on input, never on blur, and never re-validates while typing.
+  */
+  // Equivalent, same constant-array case as the others. A block pair
+  // rather than `next-line`, because the mutant's line begins with `}` and
+  // a `next-line` directive does not attach to one.
+  // Stryker disable ArrayDeclaration
+  const clearField = useCallback((name: string) => {
+    setFieldErrors((previous) => {
+      if (previous[name] === undefined) return previous;
+      return Object.fromEntries(
+        Object.entries(previous).filter(([key]) => key !== name),
+      );
+    });
+  }, []);
+  // Stryker restore ArrayDeclaration
+
+  /**
+  Spread onto the control: invalid state, description, and readOnly.
+  */
+  const field = useCallback(
+    (name: string): FieldProps => ({
+      name,
+      readOnly: isPending,
+      "aria-invalid": fieldErrors[name] === undefined ? undefined : true,
+      "aria-describedby":
+        fieldErrors[name] === undefined ? undefined : `${name}-message`,
+      onInput: () => {
+        clearField(name);
+      },
+    }),
+    [isPending, fieldErrors, clearField],
+  );
+
+  return { fieldErrors, setFieldErrors, field };
+}
+
 export function useFormSubmit<TSchema extends z.ZodType, TResult>({
   schema,
   action,
@@ -249,7 +302,7 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
   confirmTrigger,
 }: UseFormSubmitOptions<TSchema, TResult>) {
   const [pending, setPending] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const { fieldErrors, setFieldErrors, field } = useFieldErrors(pending);
   const [failure, setFailure] = useState<FormFailure | undefined>();
   const [status, setStatus] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
@@ -257,8 +310,8 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
   const retryRef = useRef<HTMLButtonElement>(null);
   const inFlight = useRef(false);
   const lastValues = useRef<unknown>(undefined);
-  const answerTermsRefusal = useTermsRefusal();
-  const answerUnconfirmed = useUnconfirmedRefusal();
+  const { terms: answerTermsRefusal, unconfirmed: answerUnconfirmed } =
+    useRefusalAnswers();
 
   // Two equivalent mutants in here. `formRef.current` is null only before
   // the form has mounted, and nothing can call `focusField` until it has —
@@ -399,40 +452,6 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
       answerUnconfirmed,
       confirmTrigger,
     ],
-  );
-
-  /**
-  Clears on input, never on blur, and never re-validates while typing.
-  */
-  // Equivalent, same constant-array case as the others. A block pair
-  // rather than `next-line`, because the mutant's line begins with `}` and
-  // a `next-line` directive does not attach to one.
-  // Stryker disable ArrayDeclaration
-  const clearField = useCallback((name: string) => {
-    setFieldErrors((previous) => {
-      if (previous[name] === undefined) return previous;
-      return Object.fromEntries(
-        Object.entries(previous).filter(([key]) => key !== name),
-      );
-    });
-  }, []);
-  // Stryker restore ArrayDeclaration
-
-  /**
-  Spread onto the control: invalid state, description, and readOnly.
-  */
-  const field = useCallback(
-    (name: string): FieldProps => ({
-      name,
-      readOnly: pending,
-      "aria-invalid": fieldErrors[name] === undefined ? undefined : true,
-      "aria-describedby":
-        fieldErrors[name] === undefined ? undefined : `${name}-message`,
-      onInput: () => {
-        clearField(name);
-      },
-    }),
-    [pending, fieldErrors, clearField],
   );
 
   const summaryRows: SummaryRow[] = Object.entries(fieldErrors).map(

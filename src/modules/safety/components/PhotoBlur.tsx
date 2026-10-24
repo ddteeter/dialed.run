@@ -1,4 +1,4 @@
-import type { JSX } from "react";
+import type { Dispatch, JSX, SetStateAction } from "react";
 import { useCallback, useEffect, useState } from "react";
 
 import { newUlid } from "../../../lib/ids";
@@ -292,27 +292,23 @@ export function PhotoBlur({
 }
 
 /**
- * The photo, the toggle, the sentence and the cells: everything W3 shows
- * between its head and its foot. It reports the bytes it would upload as
- * they change, and nothing while they are being made.
+ * The decoded photo, what the detector made of it, and the canvas that
+ * shows it: the decode-and-detect effect, the paint that follows the
+ * regions, and the bytes handed to the caller as they change.
  */
-function BlurBody({
+function useBlurredPhoto({
   file,
-  onPrepared,
-  failure,
-  onFailure,
-  onAnnounce,
+  isOn,
   pipeline,
-  storage,
+  onPrepared,
+  onFailure,
 }: Readonly<{
   file: File;
-  onPrepared: (ready: File | undefined) => void;
-  failure: ControlFailure | undefined;
-  onFailure: (failure: ControlFailure | undefined) => void;
-  onAnnounce: ((sentence: string) => void) | undefined;
+  isOn: boolean;
   pipeline: BlurPipeline;
-  storage: Storage | undefined;
-}>): JSX.Element {
+  onPrepared: (ready: File | undefined) => void;
+  onFailure: (failure: ControlFailure | undefined) => void;
+}>) {
   /**
    * The canvas, held as state through a callback ref rather than in a
    * `useRef`.
@@ -325,7 +321,6 @@ function BlurBody({
    */
   const [canvas, setCanvas] = useState<HTMLCanvasElement>();
 
-  const [isOn, setIsOn] = useState(() => shouldBlurFaces(storage));
   const [phase, setPhase] = useState<"checking" | "ran" | "unavailable">(
     "checking",
   );
@@ -354,12 +349,6 @@ function BlurBody({
    * make it otherwise.
    */
   const [attempt, setAttempt] = useState({});
-  /**
-   * The keyboard cell that has focus, if one does: round 27 #27's "focus
-   * outlines the matching ninth on the canvas", so a runner tabbing
-   * through the cells can see which part of the photo each one means.
-   */
-  const [focusedCell, setFocusedCell] = useState<number | undefined>();
 
   /**
    * Repaints and hands the caller the bytes that should be uploaded.
@@ -508,6 +497,30 @@ function BlurBody({
     };
   }, [canvas, publish, ready, regions, hasAnswer]);
 
+  return {
+    phase,
+    regions,
+    setRegions,
+    ready,
+    setCanvas,
+    /**
+    "Try again" on the failure band: see `attempt`.
+    */
+    retry: () => {
+      setAttempt({});
+    },
+  };
+}
+
+/**
+ * What the screen says about this photo: `summary` to announce, `shown` to
+ * draw — the same sentence, so a reader hears what the screen says.
+ */
+function blurSentence(
+  isOn: boolean,
+  phase: "checking" | "ran" | "unavailable",
+  regions: readonly BlurRegion[],
+): { summary: string | undefined; shown: string | undefined } {
   const detected = regions.filter((r) => r.source === "detected").length;
   const tapped = regions.length - detected;
 
@@ -544,6 +557,17 @@ function BlurBody({
    */
   const shown = summary === CHECKING ? `${CHECKING}…` : summary;
 
+  return { summary, shown };
+}
+
+/**
+The summary and the failure, each into the screen's one status region.
+*/
+function useAnnounced(
+  summary: string | undefined,
+  failure: ControlFailure | undefined,
+  onAnnounce: ((sentence: string) => void) | undefined,
+): void {
   // Announced from an effect rather than during render: setting state in
   // another component while this one renders is the one thing React will
   // not have. The sentence is the dependency, so the region is written
@@ -557,6 +581,35 @@ function BlurBody({
   useEffect(() => {
     if (failure !== undefined) onAnnounce?.(failure.message);
   }, [failure, onAnnounce]);
+}
+
+/**
+ * The photo, the toggle, the sentence and the cells: everything W3 shows
+ * between its head and its foot. It reports the bytes it would upload as
+ * they change, and nothing while they are being made.
+ */
+function BlurBody({
+  file,
+  onPrepared,
+  failure,
+  onFailure,
+  onAnnounce,
+  pipeline,
+  storage,
+}: Readonly<{
+  file: File;
+  onPrepared: (ready: File | undefined) => void;
+  failure: ControlFailure | undefined;
+  onFailure: (failure: ControlFailure | undefined) => void;
+  onAnnounce: ((sentence: string) => void) | undefined;
+  pipeline: BlurPipeline;
+  storage: Storage | undefined;
+}>): JSX.Element {
+  const [isOn, setIsOn] = useState(() => shouldBlurFaces(storage));
+  const { phase, regions, setRegions, ready, setCanvas, retry } =
+    useBlurredPhoto({ file, isOn, pipeline, onPrepared, onFailure });
+  const { summary, shown } = blurSentence(isOn, phase, regions);
+  useAnnounced(summary, failure, onAnnounce);
 
   return (
     <div className="flex flex-col gap-3">
@@ -584,69 +637,91 @@ function BlurBody({
           that means, in the same place and weight — "not a warning colour;
           the sentence does the work". */}
       <p className="text-small">{isOn ? shown : BLUR_OFF_LINE}</p>
-      <ControlFailureBand
-        failure={failure}
-        onRetry={() => {
-          setAttempt({});
-        }}
-      />
+      <ControlFailureBand failure={failure} onRetry={retry} />
 
       {isOn ? (
-        <>
-          {/* Rendered only once there is a decoded photo. A canvas on
-              screen while the copy still says "checking" is a blank
-              rectangle that accepts taps it cannot place — and the guard
-              that used to catch that lived inside the handler, where a
-              throw is swallowed and no test can see it. */}
-          {ready === undefined ? undefined : (
-            <div className="relative">
-              <canvas
-                ref={(node) => {
-                  setCanvas(node ?? undefined);
-                }}
-                aria-label="Outfit photo. Tap a spot to blur it."
-                className="block h-auto w-full cursor-crosshair"
-                onClick={(event) => {
-                  const point = toImageCoordinates(
-                    event.clientX,
-                    event.clientY,
-                    event.currentTarget.getBoundingClientRect(),
-                    ready.width,
-                    ready.height,
-                  );
-                  setRegions((current) =>
-                    afterTap(
-                      current,
-                      point.x,
-                      point.y,
-                      ready.width,
-                      ready.height,
-                    ),
-                  );
-                }}
-              />
-              <Ninths focused={focusedCell} />
-            </div>
-          )}
-          <p className="m-0 text-muted">
-            <Mono step="sm">Tap to blur</Mono>
-          </p>
-          {ready === undefined ? undefined : (
-            <BlurCells
-              regions={regions}
-              width={ready.width}
-              height={ready.height}
-              onToggle={(cell) => {
-                setRegions((current) =>
-                  afterCell(current, cell, ready.width, ready.height),
-                );
-              }}
-              onFocusCell={setFocusedCell}
-            />
-          )}
-        </>
+        <BlurSurface
+          ready={ready}
+          regions={regions}
+          onRegions={setRegions}
+          onCanvas={setCanvas}
+        />
       ) : undefined}
     </div>
+  );
+}
+
+/**
+ * The photo itself, with blur on: the canvas a tap blurs, the ninths that
+ * show where the focused cell means, and the cells that are the keyboard's
+ * way to do the same.
+ */
+function BlurSurface({
+  ready,
+  regions,
+  onRegions,
+  onCanvas,
+}: Readonly<{
+  ready: LoadedImage | undefined;
+  regions: readonly BlurRegion[];
+  onRegions: Dispatch<SetStateAction<readonly BlurRegion[]>>;
+  onCanvas: (canvas: HTMLCanvasElement | undefined) => void;
+}>): JSX.Element {
+  /**
+   * The keyboard cell that has focus, if one does: round 27 #27's "focus
+   * outlines the matching ninth on the canvas", so a runner tabbing
+   * through the cells can see which part of the photo each one means.
+   */
+  const [focusedCell, setFocusedCell] = useState<number | undefined>();
+
+  return (
+    <>
+      {/* Rendered only once there is a decoded photo. A canvas on
+          screen while the copy still says "checking" is a blank
+          rectangle that accepts taps it cannot place — and the guard
+          that used to catch that lived inside the handler, where a
+          throw is swallowed and no test can see it. */}
+      {ready === undefined ? undefined : (
+        <div className="relative">
+          <canvas
+            ref={(node) => {
+              onCanvas(node ?? undefined);
+            }}
+            aria-label="Outfit photo. Tap a spot to blur it."
+            className="block h-auto w-full cursor-crosshair"
+            onClick={(event) => {
+              const point = toImageCoordinates(
+                event.clientX,
+                event.clientY,
+                event.currentTarget.getBoundingClientRect(),
+                ready.width,
+                ready.height,
+              );
+              onRegions((current) =>
+                afterTap(current, point.x, point.y, ready.width, ready.height),
+              );
+            }}
+          />
+          <Ninths focused={focusedCell} />
+        </div>
+      )}
+      <p className="m-0 text-muted">
+        <Mono step="sm">Tap to blur</Mono>
+      </p>
+      {ready === undefined ? undefined : (
+        <BlurCells
+          regions={regions}
+          width={ready.width}
+          height={ready.height}
+          onToggle={(cell) => {
+            onRegions((current) =>
+              afterCell(current, cell, ready.width, ready.height),
+            );
+          }}
+          onFocusCell={setFocusedCell}
+        />
+      )}
+    </>
   );
 }
 

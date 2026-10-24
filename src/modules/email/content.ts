@@ -16,6 +16,7 @@ import { EXPORT_LINK_DAYS } from "../../lib/contracts/data-export";
 import { COPYRIGHT_NOTICE_CLAUSE } from "../../lib/contracts/email-kinds";
 import {
   STRAVA_DISCONNECTED_LINE,
+  type EmailKind,
   type EmailTemplate,
 } from "../../lib/contracts/email";
 
@@ -206,234 +207,251 @@ function digestBody(
   ].join(" ");
 }
 
+/**
+ * Each template as its own variant, keyed by kind: what lets `CONTENT`
+ * give every entry the one template it serves, and `contentOf` call it
+ * with no cast.
+ */
+type TemplateOf = { [T in EmailTemplate as T["kind"]]: T };
+
+/**
+ * What an entry in `CONTENT` returns: everything but the footer, which
+ * `emailContent` adds — unless the entry brings its own (the run
+ * reminder's, which leads with its unsubscribe links).
+ */
+type Body = Omit<EmailContent, "footer"> & {
+  readonly footer?: readonly EmailLink[];
+};
+
+/**
+ * What each kind says. Keyed by `EmailKind`, so a new kind without words
+ * fails to compile, as `PREFERENCE_OF` does.
+ */
+const CONTENT: {
+  readonly [K in EmailKind]: (
+    template: TemplateOf[K],
+    links: EmailLinks,
+  ) => Body;
+} = {
+  verify_email: (template) => {
+    return {
+      subject: "Confirm your email for dialed.run",
+      body: "Tap below to confirm this is your address. Then your runs can go on the feed.",
+      button: { label: "Confirm email", href: template.url },
+      foot: `${ONCE_FOR_A_DAY} Didn't sign up? Ignore this and nothing happens.`,
+    };
+  },
+  existing_account: (_template, { origin }) => {
+    return {
+      subject: "You already have a dialed.run account",
+      body: "Someone, probably you, tried to create an account with this address. It already has one.",
+      button: logIn(origin),
+      foot: "Forgot the password? Reset it from the log-in page. Didn't try to sign up? Ignore this; nothing changed.",
+    };
+  },
+  reset_password: (template) => {
+    return {
+      subject: "Set a new password for dialed.run",
+      body: "Tap below to set a new password for your account.",
+      button: { label: "Set a new password", href: template.url },
+      foot: "The link works once, for 1 hour. Didn't ask for it? Ignore this and nothing changes.",
+    };
+  },
+  email_change: (template) => {
+    return {
+      subject: "Confirm your new email for dialed.run",
+      body: `Tap below to move your dialed.run account to ${template.newEmail}.`,
+      button: { label: "Confirm email", href: template.url },
+      foot: `${ONCE_FOR_A_DAY} Didn't ask for it? Ignore this and nothing changes.`,
+    };
+  },
+  email_changed: (template, { origin }) => {
+    return {
+      subject: "Your dialed.run email changed",
+      body: `Your account's email is now ${template.newEmail}. Emails go there from now on.`,
+      button: logIn(origin),
+      foot: `Didn't change it? Write to ${CONTACT_ADDRESS}.`,
+    };
+  },
+  content_removed: (template, { origin }) => {
+    return {
+      subject: "We removed something from your run",
+      body: `${REMOVED[template.subject]}${why(template)} ${STAYS[template.subject]}`,
+      button: logIn(origin),
+      foot: "Think we got it wrong? Reply to this email.",
+    };
+  },
+  account_closed: (template) => {
+    return {
+      subject: "Your dialed.run account is closed",
+      body: `We closed your account for breaking the community rules: ${template.reason}. You can't log in, and your shared runs are gone from the feed.`,
+      foot: "Think we got it wrong? Reply to this email to appeal and we'll look again.",
+    };
+  },
+  account_reopened: (template, { origin }) => {
+    // D-89, as round 29 #7 draws it: the account named by its handle.
+    // A reopen owed before the handle was carried (law 9), or for a
+    // runner closed before they picked one, says the account instead.
+    return {
+      subject: "Your dialed.run account is open again",
+      body: `${reopened(template.handle)} You can log in, and your runs are back as you shared them.`,
+      button: logIn(origin),
+      foot: "Your handle is still yours.",
+    };
+  },
+  invite: (template, { origin }) => {
+    return {
+      subject: "Your dialed.run invite",
+      body: `Here's your code: ${template.code}. It works once.`,
+      button: {
+        label: "Create your account",
+        href: `${origin}/join?code=${encodeURIComponent(template.code)}`,
+      },
+      foot: "You asked for an invite. Didn't? Ignore this and nothing happens.",
+    };
+  },
+  strava_disconnected: (_template, { origin }) => {
+    return {
+      subject: "Strava is disconnected",
+      body: `${STRAVA_DISCONNECTED_LINE} Your runs here haven't changed.`,
+      button: { label: "Connect again", href: `${origin}/runs/strava` },
+      foot: "Runs you already added stay.",
+    };
+  },
+  deletion_scheduled: (template, { origin }) => {
+    return {
+      subject: `Your dialed.run account goes on ${template.day}`,
+      body: `You asked to delete your account. Everything in it goes on ${template.day}.`,
+      button: { label: "Keep my account", href: `${origin}/auth/login` },
+      foot: "Didn't ask? Log in and keep it, then change your password.",
+    };
+  },
+  export_ready: (template, { origin }) => {
+    // Round 27 #13's "Email export", less "and original run files": since
+    // D-116 a file is deleted once read, so the ZIP rarely has one
+    // (design deltas item 57).
+    return {
+      subject: "Your dialed.run export is ready",
+      body: "Your runs, closet, entries and photos are in one ZIP.",
+      button: {
+        label: "Download export",
+        href: `${origin}/account/export/${template.token}`,
+      },
+      foot: `The link works for ${String(EXPORT_LINK_DAYS)} days, only while you're logged in.`,
+    };
+  },
+  digest: (template, { origin }) => {
+    return {
+      subject: digestSubject(template),
+      body: digestBody(template),
+      button: { label: "Open the Desk", href: `${origin}/desk` },
+      foot: "Sent every morning, even when every number is zero. If it stops arriving, something is broken.",
+    };
+  },
+  removal_due: (template, { origin }) => {
+    // Round 35 #58d: the words design gave (design 136).
+    const due = utcMinute(template.dueAt);
+    return {
+      subject: `Removal due by ${due}`,
+      body: `Someone reported ${REPORTED[template.subject]} as an intimate image shared without consent. It's hidden from everyone now. The law gives us 48 hours to decide.`,
+      button: { label: "Open Review", href: `${origin}/safety/review` },
+      foot: "Sent to every operator, once per report that hides something.",
+    };
+  },
+  removal_requested: (template, { origin }) => {
+    // Design 136. Round 35 #58 gives the report's alert its words and
+    // not this one, so this follows them: what was asked, whether it is
+    // hidden (a link of ours is, #58e), and the deadline.
+    const due = utcMinute(template.dueAt);
+    return {
+      subject: `Removal request, due by ${due}`,
+      body: `Someone asked for an intimate image to come down. ${template.isOurs ? "It's hidden from everyone now." : "The link isn't one of ours, so nothing is hidden: find it from what they wrote."} The law gives us 48 hours to decide.`,
+      button: { label: "Open Review", href: `${origin}/safety/review` },
+      foot: "Sent to every operator, once per request.",
+    };
+  },
+  removal_reminder: (template, { origin }) => {
+    // C6: placeholder words (design deltas). Nothing comes back by
+    // itself, so the email says the decision is still the operator's.
+    const due = utcMinute(template.dueAt);
+    return {
+      subject: `Removal still undecided, due by ${due}`,
+      body: "An intimate-image removal is still waiting for a decision. Nothing changes until someone decides it in Review.",
+      button: { label: "Open Review", href: `${origin}/safety/review` },
+      foot: "Sent to every operator, once per removal, 8 hours before it's due.",
+    };
+  },
+  removal_request_received: (template, { origin }) => {
+    const due = utcMinute(template.dueAt);
+    return {
+      subject: "We have your removal request",
+      // Round 35 #58e. The hidden line is true only of what was hidden;
+      // design 137's confirm line only of a request past the cap.
+      body: `${template.isHidden ? "The image is hidden while we look. " : ""}${template.confirmToken === undefined ? "" : "It isn't hidden yet. To have it hidden while we look, confirm this request. "}We'll decide within 48 hours, by ${due}, and email you either way.`,
+      ...(template.confirmToken !== undefined && {
+        button: {
+          label: "Confirm the request",
+          href: `${origin}/takedown/confirm?token=${template.confirmToken}`,
+        },
+      }),
+      foot: "Sent because someone asked at dialed.run/takedown with this address.",
+    };
+  },
+  takedown_valve: (template, { origin }) => {
+    // Design 137: placeholder words (design deltas).
+    return {
+      subject: "Removal requests paused: possible abuse",
+      body: `${String(template.perHour)} removal requests hid something in the last hour, so new requests hide nothing until the hour clears. They still wait in Review with their 48 hours.`,
+      button: { label: "Open Review", href: `${origin}/safety/review` },
+      foot: "Sent to every operator, once an hour while it lasts.",
+    };
+  },
+  removal_request_decided: (template) => {
+    return {
+      subject:
+        template.outcome === "removed"
+          ? "We removed what you reported"
+          : "We didn't remove what you reported",
+      body:
+        template.outcome === "removed"
+          ? "We removed the image you asked about from dialed.run."
+          : `We looked at your request and didn't remove anything. Reason: ${template.reason ?? "it isn't what the request described"}.`,
+      foot: `Questions? Reply to this email or write to ${CONTACT_ADDRESS}.`,
+    };
+  },
+  run_reminder: (template, { origin, unsubscribe }) => {
+    return {
+      subject: "New run on Strava. Add it here.",
+      body: reminderBody(template.landedAt, template.runs),
+      button: { label: "Add it", href: `${origin}/runs/new` },
+      foot: "We don't copy runs from Strava. The file comes from your watch or a Strava export.",
+      reason: "You get this because Strava is connected.",
+      footer: [
+        {
+          label: "Stop run reminder emails",
+          href: unsubscribe ?? `${origin}/account/notifications`,
+        },
+        { label: "Email settings", href: `${origin}/account/notifications` },
+        ...legal(origin),
+      ],
+    };
+  },
+};
+
+function contentOf<K extends EmailKind>(
+  kind: K,
+  template: TemplateOf[K],
+  links: EmailLinks,
+): Body {
+  return CONTENT[kind](template, links);
+}
+
 export function emailContent(
   template: EmailTemplate,
   links: EmailLinks,
 ): EmailContent {
-  const { origin } = links;
-  const footer = legal(origin);
-  switch (template.kind) {
-    case "verify_email": {
-      return {
-        subject: "Confirm your email for dialed.run",
-        body: "Tap below to confirm this is your address. Then your runs can go on the feed.",
-        button: { label: "Confirm email", href: template.url },
-        foot: `${ONCE_FOR_A_DAY} Didn't sign up? Ignore this and nothing happens.`,
-        footer,
-      };
-    }
-    case "existing_account": {
-      return {
-        subject: "You already have a dialed.run account",
-        body: "Someone, probably you, tried to create an account with this address. It already has one.",
-        button: logIn(origin),
-        foot: "Forgot the password? Reset it from the log-in page. Didn't try to sign up? Ignore this; nothing changed.",
-        footer,
-      };
-    }
-    case "reset_password": {
-      return {
-        subject: "Set a new password for dialed.run",
-        body: "Tap below to set a new password for your account.",
-        button: { label: "Set a new password", href: template.url },
-        foot: "The link works once, for 1 hour. Didn't ask for it? Ignore this and nothing changes.",
-        footer,
-      };
-    }
-    case "email_change": {
-      return {
-        subject: "Confirm your new email for dialed.run",
-        body: `Tap below to move your dialed.run account to ${template.newEmail}.`,
-        button: { label: "Confirm email", href: template.url },
-        foot: `${ONCE_FOR_A_DAY} Didn't ask for it? Ignore this and nothing changes.`,
-        footer,
-      };
-    }
-    case "email_changed": {
-      return {
-        subject: "Your dialed.run email changed",
-        body: `Your account's email is now ${template.newEmail}. Emails go there from now on.`,
-        button: logIn(origin),
-        foot: `Didn't change it? Write to ${CONTACT_ADDRESS}.`,
-        footer,
-      };
-    }
-    case "content_removed": {
-      return {
-        subject: "We removed something from your run",
-        body: `${REMOVED[template.subject]}${why(template)} ${STAYS[template.subject]}`,
-        button: logIn(origin),
-        foot: "Think we got it wrong? Reply to this email.",
-        footer,
-      };
-    }
-    case "account_closed": {
-      return {
-        subject: "Your dialed.run account is closed",
-        body: `We closed your account for breaking the community rules: ${template.reason}. You can't log in, and your shared runs are gone from the feed.`,
-        foot: "Think we got it wrong? Reply to this email to appeal and we'll look again.",
-        footer,
-      };
-    }
-    case "account_reopened": {
-      // D-89, as round 29 #7 draws it: the account named by its handle.
-      // A reopen owed before the handle was carried (law 9), or for a
-      // runner closed before they picked one, says the account instead.
-      return {
-        subject: "Your dialed.run account is open again",
-        body: `${reopened(template.handle)} You can log in, and your runs are back as you shared them.`,
-        button: logIn(origin),
-        foot: "Your handle is still yours.",
-        footer,
-      };
-    }
-    case "invite": {
-      return {
-        subject: "Your dialed.run invite",
-        body: `Here's your code: ${template.code}. It works once.`,
-        button: {
-          label: "Create your account",
-          href: `${origin}/join?code=${encodeURIComponent(template.code)}`,
-        },
-        foot: "You asked for an invite. Didn't? Ignore this and nothing happens.",
-        footer,
-      };
-    }
-    case "strava_disconnected": {
-      return {
-        subject: "Strava is disconnected",
-        body: `${STRAVA_DISCONNECTED_LINE} Your runs here haven't changed.`,
-        button: { label: "Connect again", href: `${origin}/runs/strava` },
-        foot: "Runs you already added stay.",
-        footer,
-      };
-    }
-    case "deletion_scheduled": {
-      return {
-        subject: `Your dialed.run account goes on ${template.day}`,
-        body: `You asked to delete your account. Everything in it goes on ${template.day}.`,
-        button: { label: "Keep my account", href: `${origin}/auth/login` },
-        foot: "Didn't ask? Log in and keep it, then change your password.",
-        footer,
-      };
-    }
-    case "export_ready": {
-      // Round 27 #13's "Email export", less "and original run files": since
-      // D-116 a file is deleted once read, so the ZIP rarely has one
-      // (design deltas item 57).
-      return {
-        subject: "Your dialed.run export is ready",
-        body: "Your runs, closet, entries and photos are in one ZIP.",
-        button: {
-          label: "Download export",
-          href: `${origin}/account/export/${template.token}`,
-        },
-        foot: `The link works for ${String(EXPORT_LINK_DAYS)} days, only while you're logged in.`,
-        footer,
-      };
-    }
-    case "digest": {
-      return {
-        subject: digestSubject(template),
-        body: digestBody(template),
-        button: { label: "Open the Desk", href: `${origin}/desk` },
-        foot: "Sent every morning, even when every number is zero. If it stops arriving, something is broken.",
-        footer,
-      };
-    }
-    case "removal_due": {
-      // Round 35 #58d: the words design gave (design 136).
-      const due = utcMinute(template.dueAt);
-      return {
-        subject: `Removal due by ${due}`,
-        body: `Someone reported ${REPORTED[template.subject]} as an intimate image shared without consent. It's hidden from everyone now. The law gives us 48 hours to decide.`,
-        button: { label: "Open Review", href: `${origin}/safety/review` },
-        foot: "Sent to every operator, once per report that hides something.",
-        footer,
-      };
-    }
-    case "removal_requested": {
-      // Design 136. Round 35 #58 gives the report's alert its words and
-      // not this one, so this follows them: what was asked, whether it is
-      // hidden (a link of ours is, #58e), and the deadline.
-      const due = utcMinute(template.dueAt);
-      return {
-        subject: `Removal request, due by ${due}`,
-        body: `Someone asked for an intimate image to come down. ${template.isOurs ? "It's hidden from everyone now." : "The link isn't one of ours, so nothing is hidden: find it from what they wrote."} The law gives us 48 hours to decide.`,
-        button: { label: "Open Review", href: `${origin}/safety/review` },
-        foot: "Sent to every operator, once per request.",
-        footer,
-      };
-    }
-    case "removal_reminder": {
-      // C6: placeholder words (design deltas). Nothing comes back by
-      // itself, so the email says the decision is still the operator's.
-      const due = utcMinute(template.dueAt);
-      return {
-        subject: `Removal still undecided, due by ${due}`,
-        body: "An intimate-image removal is still waiting for a decision. Nothing changes until someone decides it in Review.",
-        button: { label: "Open Review", href: `${origin}/safety/review` },
-        foot: "Sent to every operator, once per removal, 8 hours before it's due.",
-        footer,
-      };
-    }
-    case "removal_request_received": {
-      const due = utcMinute(template.dueAt);
-      return {
-        subject: "We have your removal request",
-        // Round 35 #58e. The hidden line is true only of what was hidden;
-        // design 137's confirm line only of a request past the cap.
-        body: `${template.isHidden ? "The image is hidden while we look. " : ""}${template.confirmToken === undefined ? "" : "It isn't hidden yet. To have it hidden while we look, confirm this request. "}We'll decide within 48 hours, by ${due}, and email you either way.`,
-        ...(template.confirmToken !== undefined && {
-          button: {
-            label: "Confirm the request",
-            href: `${origin}/takedown/confirm?token=${template.confirmToken}`,
-          },
-        }),
-        foot: "Sent because someone asked at dialed.run/takedown with this address.",
-        footer,
-      };
-    }
-    case "takedown_valve": {
-      // Design 137: placeholder words (design deltas).
-      return {
-        subject: "Removal requests paused: possible abuse",
-        body: `${String(template.perHour)} removal requests hid something in the last hour, so new requests hide nothing until the hour clears. They still wait in Review with their 48 hours.`,
-        button: { label: "Open Review", href: `${origin}/safety/review` },
-        foot: "Sent to every operator, once an hour while it lasts.",
-        footer,
-      };
-    }
-    case "removal_request_decided": {
-      return {
-        subject:
-          template.outcome === "removed"
-            ? "We removed what you reported"
-            : "We didn't remove what you reported",
-        body:
-          template.outcome === "removed"
-            ? "We removed the image you asked about from dialed.run."
-            : `We looked at your request and didn't remove anything. Reason: ${template.reason ?? "it isn't what the request described"}.`,
-        foot: `Questions? Reply to this email or write to ${CONTACT_ADDRESS}.`,
-        footer,
-      };
-    }
-    case "run_reminder": {
-      return {
-        subject: "New run on Strava. Add it here.",
-        body: reminderBody(template.landedAt, template.runs),
-        button: { label: "Add it", href: `${origin}/runs/new` },
-        foot: "We don't copy runs from Strava. The file comes from your watch or a Strava export.",
-        reason: "You get this because Strava is connected.",
-        footer: [
-          {
-            label: "Stop run reminder emails",
-            href: links.unsubscribe ?? `${origin}/account/notifications`,
-          },
-          { label: "Email settings", href: `${origin}/account/notifications` },
-          ...legal(origin),
-        ],
-      };
-    }
-  }
+  return {
+    footer: legal(links.origin),
+    ...contentOf(template.kind, template, links),
+  };
 }

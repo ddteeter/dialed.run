@@ -569,31 +569,72 @@ export function DeskAccess({
   restore: RowAction;
 }>): JSX.Element {
   const [said, setSaid] = useState("");
-  const inviting = useRowAction({
-    kind: "invite",
-    act: sendInvite,
-    onChanged,
-    announce: setSaid,
-  });
-  const declining = useRowAction({
-    kind: "decline",
-    act: decline,
-    onChanged,
-    announce: setSaid,
-  });
+  return (
+    <div className="flex flex-col gap-10">
+      <FormStatus>{said}</FormStatus>
+      <RequestsSection
+        requests={desk.requests}
+        asOf={asOf}
+        actions={{ sendInvite, decline }}
+        onChanged={onChanged}
+        announce={setSaid}
+      />
+      <CodesSection
+        codes={desk.codes}
+        asOf={asOf}
+        link={{ linkFor, copy }}
+        actions={{ createCode, revoke, restore }}
+        onChanged={onChanged}
+        announce={setSaid}
+      />
+    </div>
+  );
+}
+
+/**
+ * D7's Codes: the form that makes one (its link copied as it is made),
+ * each code's uses, Copy link, and Revoke with ten seconds of Undo on the
+ * row. Copy's outcome goes to `DeskAccess`'s status region through
+ * `announce`; a made code's line is this section's own.
+ */
+function CodesSection({
+  codes,
+  asOf,
+  link,
+  actions,
+  onChanged,
+  announce,
+}: Readonly<{
+  codes: AccessDesk["codes"];
+  asOf: number;
+  link: {
+    linkFor: (code: string) => string;
+    copy: (text: string) => Promise<void>;
+  };
+  actions: {
+    createCode: (input: {
+      data: { label: string; maxUses: number; idempotencyKey: string };
+    }) => Promise<{ code: string }>;
+    revoke: RowAction;
+    restore: RowAction;
+  };
+  onChanged: () => Promise<void>;
+  announce: (said: string) => void;
+}>): JSX.Element {
+  const { linkFor, copy } = link;
   const revoking = useRowAction({
     kind: "revoke",
-    act: revoke,
+    act: actions.revoke,
     onChanged,
-    announce: setSaid,
+    announce,
   });
   const isRevokeFailed = revoking.isFailed;
   const [holding, setHolding] = useState<string>();
   const undoing = useRowAction({
     kind: "undo",
-    act: restore,
+    act: actions.restore,
     onChanged,
-    announce: setSaid,
+    announce,
     // Not optimistic: the row stays held until the code is back.
     onSuccess: () => {
       setHolding(undefined);
@@ -621,77 +662,105 @@ export function DeskAccess({
     }
   };
   return (
-    <div className="flex flex-col gap-10">
-      <FormStatus>{said}</FormStatus>
-      <section aria-labelledby="desk-requests" className="flex flex-col gap-4">
-        <h1
-          id="desk-requests"
-          className="m-0 font-display text-title uppercase"
-        >
-          Requests
-        </h1>
-        <Mono step="xs" className="text-muted">
-          {`${String(desk.requests.length)} waiting · oldest first`}
-        </Mono>
-        <ul className="m-0 flex list-none flex-col p-0">
-          {desk.requests.map((request) => (
-            <RequestRow
-              key={request.id}
-              request={request}
-              asOf={asOf}
-              invite={inviting}
-              decline={declining}
-            />
-          ))}
-        </ul>
-      </section>
-      <section aria-labelledby="desk-codes" className="flex flex-col gap-4">
-        <h2 id="desk-codes" className="m-0 font-display text-title uppercase">
-          Codes
-        </h2>
-        <Mono step="xs" className="text-muted">
-          {codeCounts(desk.codes)}
-        </Mono>
-        <NewCodeForm
-          createCode={createCode}
-          onCreated={async (code) => {
-            setMade((codes) => [...codes, code]);
-            setMadeStatus(madeLine(code, await wasCopied(code)));
-            await onChanged();
-          }}
-        />
-        <p role="status" data-part="status-line" className="m-0">
-          <Mono step="xs">{madeStatus}</Mono>
-        </p>
-        <ul className="m-0 flex list-none flex-col p-0">
-          {orderedCodes(desk.codes, holding).map((code) => (
-            <CodeRow
-              key={code.id}
-              code={code}
-              state={{
-                asOf,
-                isNew: made.includes(code.code),
-                isHeld: code.id === holding && !isRevokeFailed,
-                uncopiedLink:
-                  uncopied === code.code ? linkFor(code.code) : undefined,
-              }}
-              onCopy={() => {
-                void wasCopied(code.code).then((isCopied) => {
-                  setSaid(isCopied ? "Link copied." : "Link not copied.");
-                });
-              }}
-              onRevoke={() => {
-                setHolding(code.id);
-                revoking.run(code.id);
-              }}
-              onUndo={() => {
-                undoing.run(code.id);
-              }}
-              band={revoking.bandFor(code.id) ?? undoing.bandFor(code.id)}
-            />
-          ))}
-        </ul>
-      </section>
-    </div>
+    <section aria-labelledby="desk-codes" className="flex flex-col gap-4">
+      <h2 id="desk-codes" className="m-0 font-display text-title uppercase">
+        Codes
+      </h2>
+      <Mono step="xs" className="text-muted">
+        {codeCounts(codes)}
+      </Mono>
+      <NewCodeForm
+        createCode={actions.createCode}
+        onCreated={async (code) => {
+          setMade((previous) => [...previous, code]);
+          setMadeStatus(madeLine(code, await wasCopied(code)));
+          await onChanged();
+        }}
+      />
+      <p role="status" data-part="status-line" className="m-0">
+        <Mono step="xs">{madeStatus}</Mono>
+      </p>
+      <ul className="m-0 flex list-none flex-col p-0">
+        {orderedCodes(codes, holding).map((code) => (
+          <CodeRow
+            key={code.id}
+            code={code}
+            state={{
+              asOf,
+              isNew: made.includes(code.code),
+              isHeld: code.id === holding && !isRevokeFailed,
+              uncopiedLink:
+                uncopied === code.code ? linkFor(code.code) : undefined,
+            }}
+            onCopy={() => {
+              void wasCopied(code.code).then((isCopied) => {
+                announce(isCopied ? "Link copied." : "Link not copied.");
+              });
+            }}
+            onRevoke={() => {
+              setHolding(code.id);
+              revoking.run(code.id);
+            }}
+            onUndo={() => {
+              undoing.run(code.id);
+            }}
+            band={revoking.bandFor(code.id) ?? undoing.bandFor(code.id)}
+          />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * D7's Requests: who asked, oldest first, each with Send invite and a
+ * silent Decline. What either says goes to `DeskAccess`'s one status
+ * region, through `announce`.
+ */
+function RequestsSection({
+  requests,
+  asOf,
+  actions,
+  onChanged,
+  announce,
+}: Readonly<{
+  requests: AccessDesk["requests"];
+  asOf: number;
+  actions: { sendInvite: RowAction; decline: RowAction };
+  onChanged: () => Promise<void>;
+  announce: (said: string) => void;
+}>): JSX.Element {
+  const inviting = useRowAction({
+    kind: "invite",
+    act: actions.sendInvite,
+    onChanged,
+    announce,
+  });
+  const declining = useRowAction({
+    kind: "decline",
+    act: actions.decline,
+    onChanged,
+    announce,
+  });
+  return (
+    <section aria-labelledby="desk-requests" className="flex flex-col gap-4">
+      <h1 id="desk-requests" className="m-0 font-display text-title uppercase">
+        Requests
+      </h1>
+      <Mono step="xs" className="text-muted">
+        {`${String(requests.length)} waiting · oldest first`}
+      </Mono>
+      <ul className="m-0 flex list-none flex-col p-0">
+        {requests.map((request) => (
+          <RequestRow
+            key={request.id}
+            request={request}
+            asOf={asOf}
+            invite={inviting}
+            decline={declining}
+          />
+        ))}
+      </ul>
+    </section>
   );
 }
