@@ -935,6 +935,24 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
 
 <!-- Item numbers continue past rounds 35–38 (45–65); this comment keeps the list from being renumbered. -->
 
+82. **`/open-source`'s "Built with" tier (design 151). Undesigned; built
+    as a placeholder.** The list is now what the two bundles hold (136
+    packages, not the lockfile's 272), and the owner asked that the tools
+    which build the app without shipping in it be credited too. They get
+    one more section after the licence groups and before the third-party
+    notices, built from a group's parts with nothing new: the heading
+    "Built with", its count in MONO.xs, the line "The tools we build and
+    test dialed.run with. None of them ships to you, so each is credited
+    by name and licence.", and a row per tool — name, version, its
+    licence id in MONO.xs, "Project" — with three rows then "Show all
+    {N}", in the contents with its count, and found by FIND A PACKAGE.
+    No licence text and no copyright line: a licence asks for those only
+    on a copy distributed. The lead's {N} still counts only what ships.
+    The bundle-derived list also changes item 72's numbers: 5 rows carry
+    their own "Licence", not 18, and the AGPL group is gone (nothing
+    bundled is AGPL). **The ask:** draw the tier, and give the line its
+    words — they are placeholder words the owner has not yet seen.
+
 ## Answered in round 38 (imported 2026-10-18)
 
 Sent on 2026-10-18 for items 60–65; design answered the same day as
@@ -1236,24 +1254,6 @@ NCMEC]` or `[REPORTED TO NCMEC {date}] · {number}`; then an optional
     counter-notice should take a typed date rather than today's, and
     whether the two ways a case ends want a confirm step, since both are
     final.
-
-77. **`/open-source`'s "Built with" tier (design 151). Undesigned; built
-    as a placeholder.** The list is now what the two bundles hold (136
-    packages, not the lockfile's 272), and the owner asked that the tools
-    which build the app without shipping in it be credited too. They get
-    one more section after the licence groups and before the third-party
-    notices, built from a group's parts with nothing new: the heading
-    "Built with", its count in MONO.xs, the line "The tools we build and
-    test dialed.run with. None of them ships to you, so each is credited
-    by name and licence.", and a row per tool — name, version, its
-    licence id in MONO.xs, "Project" — with three rows then "Show all
-    {N}", in the contents with its count, and found by FIND A PACKAGE.
-    No licence text and no copyright line: a licence asks for those only
-    on a copy distributed. The lead's {N} still counts only what ships.
-    The bundle-derived list also changes item 72's numbers: 5 rows carry
-    their own "Licence", not 18, and the AGPL group is gone (nothing
-    bundled is AGPL). **The ask:** draw the tier, and give the line its
-    words — they are placeholder words the owner has not yet seen.
 
 ## Answered in round 37 (imported 2026-10-10)
 
