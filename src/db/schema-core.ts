@@ -1196,6 +1196,8 @@ export const reports = /*#__PURE__*/ sqliteTable(
     // The auto-hide count, and the reviewer's "what else was said about
     // this" read. Both filter on the subject, so the subject leads.
     index("reports_subject").on(t.subjectType, t.subjectId),
+    // The 3-year sweep (D-131, design 150): reports filed before its line.
+    index("reports_created").on(t.createdAt),
   ],
 );
 
@@ -1270,6 +1272,9 @@ export const takedownRequests = /*#__PURE__*/ sqliteTable(
     index("takedown_requests_held_at").on(t.heldAt),
     // The confirm link's lookup.
     uniqueIndex("takedown_requests_confirm_token").on(t.confirmTokenHash),
+    // The 3-year sweep (D-131, design 150): requests decided before its
+    // line. A pending request has no `resolved_at`.
+    index("takedown_requests_resolved").on(t.resolvedAt),
   ],
 );
 
@@ -1329,6 +1334,9 @@ export const reviewQueue = /*#__PURE__*/ sqliteTable(
     // The queue page and the digest's depth count both read
     // "pending, oldest first" — a covering index for the only query.
     index("review_queue_status_created").on(t.status, t.createdAt),
+    // The 3-year sweep (D-131, design 150): decisions made before its
+    // line. An open row has no `resolved_at`.
+    index("review_queue_resolved").on(t.resolvedAt),
   ],
 );
 
@@ -1438,6 +1446,8 @@ export const moderationActions = /*#__PURE__*/ sqliteTable(
     index("moderation_actions_owner").on(t.subjectOwnerId, t.createdAt),
     // The run's removals, for its author's page.
     index("moderation_actions_run").on(t.runId),
+    // The 3-year sweep (D-131, design 150): actions taken before its line.
+    index("moderation_actions_created").on(t.createdAt),
   ],
 );
 
@@ -1493,6 +1503,8 @@ export const copyrightHolds = /*#__PURE__*/ sqliteTable(
     index("copyright_holds_status_restore").on(t.status, t.restoreAt),
     // A runner's strikes.
     index("copyright_holds_owner").on(t.ownerId),
+    // The 3-year sweep (D-131, design 150): holds settled before its line.
+    index("copyright_holds_status_settled").on(t.status, t.settledAt),
   ],
 );
 
@@ -1540,5 +1552,8 @@ export const quarantinedContent = /*#__PURE__*/ sqliteTable(
     // The admin read, newest first; and a purge, when one exists, by date.
     index("quarantined_content_quarantined").on(t.quarantinedAt),
     index("quarantined_content_retain").on(t.retainUntil),
+    // The 3-year sweep (D-131, design 150) keeps an audit row while a
+    // record still names it.
+    index("quarantined_content_action").on(t.moderationActionId),
   ],
 );
