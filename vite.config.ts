@@ -9,6 +9,16 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
+  build: {
+    /**
+     * Each environment's output gets `.vite/license.json`: every package an
+     * emitted chunk holds a module of, with its licence file's text. It is
+     * what `/open-source` lists (design 151), read by
+     * `scripts/open-source-list.ts` at `postbuild` — what the bundles hold,
+     * which the lockfile could only over-approximate.
+     */
+    license: { fileName: ".vite/license.json" },
+  },
   server: {
     watch: {
       /**

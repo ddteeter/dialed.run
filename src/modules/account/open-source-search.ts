@@ -6,10 +6,14 @@
  */
 
 /**
-One row: a package, or a typeface.
+One row: a package, a typeface, or a tool.
 */
 export interface OpenSourcePiece {
   readonly name: string;
+  /**
+  The licence's id; a tool's row prints it, a group's heading names the rest.
+  */
+  readonly licence?: string | undefined;
   /**
   The shipped version; a typeface has none on record.
   */
@@ -42,9 +46,11 @@ export interface LicenceGroup {
   */
   readonly name: string;
   /**
-  The typefaces' group, which comes first.
-  */
-  readonly isType: boolean;
+   * `type`: the typefaces, which come first. `licence`: the packages that
+   * ship under one licence. `tools`: "Built with", the tools that build the
+   * app and do not ship in it (design 151), each row naming its licence.
+   */
+  readonly kind: "type" | "licence" | "tools";
   /**
   The licence's words, printed once for the group.
   */

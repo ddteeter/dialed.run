@@ -61,7 +61,7 @@ forbidden zone. The owner has approved that edit (2026-10-24).
 - Schema / bindings / queues / crons: **none**.
 - Forbidden zone: `vite.config.ts` (one `build.license` line), owner-approved.
 - `open-source-list.json` gains `tools`; `open-source.ts` and the page gain
-  the "Built with" tier and nothing else changes shape. Counts drop 272 → ~135 and the AGPL group goes (nothing
+  the "Built with" tier and nothing else changes shape. Counts drop 272 → 136 and the AGPL group goes (nothing
   bundled is AGPL).
 - R-161 closes in `docs/deferred.md`; design 147 gets a pointer here.
 

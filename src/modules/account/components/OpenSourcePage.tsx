@@ -28,6 +28,9 @@ import { ReadingFrame, ReadingSection, ReadingShell } from "./ReadingFrame";
  *   where the package ships an Apache NOTICE, and "Licence" where its own
  *   licence text says something the group's does not (an undesigned
  *   addition: design deltas).
+ * - **"Built with"** follows the groups (design 151, undesigned): the
+ *   tools that build the app and do not ship in it, each row naming its
+ *   licence. The lead counts only what ships.
  * - **Search** is a FormField filtering every group by package name as
  *   you type. Empty groups hide, an opened group stays open, and no match
  *   reads "Nothing we ship is called “xyz”."
@@ -36,11 +39,16 @@ import { ReadingFrame, ReadingSection, ReadingShell } from "./ReadingFrame";
  */
 export function OpenSourcePage({
   groups,
+  tools,
   notices,
   bellState,
   bell,
 }: Readonly<{
   groups: readonly LicenceGroup[];
+  /**
+  "Built with": the tools that build the app and do not ship in it.
+  */
+  tools: LicenceGroup;
   /**
   The third-party notices: vendored material and credits.
   */
@@ -50,7 +58,8 @@ export function OpenSourcePage({
 }>): JSX.Element {
   const [query, setQuery] = useState("");
   const [opened, setOpened] = useState<ReadonlySet<string>>(new Set());
-  const shown = matchingGroups(groups, query);
+  const all = [...groups, tools];
+  const shown = matchingGroups(all, query);
   const noticesId = "third-party-notices";
   return (
     <ReadingShell bellState={bellState} bell={bell}>
@@ -58,7 +67,7 @@ export function OpenSourcePage({
         kicker="Open source"
         title="Built with thanks"
         contents={[
-          ...groups.map((group) => ({
+          ...all.map((group) => ({
             id: group.id,
             title: group.name,
             count: group.pieces.length,
@@ -116,13 +125,11 @@ function GroupSection({
   return (
     <ReadingSection id={group.id} heading={group.name}>
       <Mono step="xs" className="text-muted">
-        {group.isType ? `${count} · Type` : count}
+        {group.kind === "type" ? `${count} · Type` : count}
       </Mono>
-      {group.isType ? (
-        <p className="m-0 text-body">
-          The two typefaces you read everything in.
-        </p>
-      ) : undefined}
+      {group.kind === "licence" ? undefined : (
+        <p className="m-0 text-body">{GROUP_LINES[group.kind]}</p>
+      )}
       {group.text === undefined ? undefined : (
         <TextDisclosure label={readLabel(group)} text={group.text} />
       )}
@@ -131,6 +138,7 @@ function GroupSection({
           <PieceRow
             key={`${piece.name}@${String(piece.version)}`}
             piece={piece}
+            showsLicence={group.kind === "tools"}
           />
         ))}
       </ul>
@@ -147,9 +155,19 @@ function GroupSection({
   );
 }
 
+/**
+The line under a heading that is not a licence's.
+*/
+const GROUP_LINES = {
+  type: "The two typefaces you read everything in.",
+  tools:
+    "The tools we build and test dialed.run with. None of them ships to you, so each is credited by name and licence.",
+} as const;
+
 function PieceRow({
   piece,
-}: Readonly<{ piece: OpenSourcePiece }>): JSX.Element {
+  showsLicence,
+}: Readonly<{ piece: OpenSourcePiece; showsLicence: boolean }>): JSX.Element {
   return (
     <li className="flex flex-col gap-1 border-t border-hairline py-3">
       <div className="flex flex-wrap items-center gap-x-4">
@@ -159,6 +177,11 @@ function PieceRow({
             {piece.version}
           </Mono>
         )}
+        {showsLicence && piece.licence !== undefined ? (
+          <Mono step="xs" className="text-muted">
+            {piece.licence}
+          </Mono>
+        ) : undefined}
         {piece.project === undefined ? undefined : (
           <a
             href={piece.project}

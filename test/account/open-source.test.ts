@@ -8,6 +8,7 @@ import {
   licenceGroups,
   openSourceList,
   openSourcePage,
+  toolsGroup,
   type OpenSourceList,
 } from "../../src/modules/account/open-source";
 import {
@@ -40,6 +41,14 @@ const LIST: OpenSourceList = {
     { name: "caniuse-lite", version: "1.0.0", licence: "CC-BY-4.0" },
     { name: "argparse", version: "2.0.1", licence: "Python-2.0" },
   ],
+  tools: [
+    {
+      name: "vitest",
+      version: "4.1.0",
+      licence: "MIT",
+      project: "https://vitest.dev",
+    },
+  ],
   licences: { MIT: "Permission is hereby granted", "OFL-1.1": "SIL OFL" },
 };
 
@@ -53,15 +62,28 @@ describe("openSourceList", () => {
     ]);
   });
 
-  it("holds every package the app depends on, so a new one cannot ship unlisted", () => {
-    const listed = new Set(
-      openSourceList().packages.map((piece) => piece.name),
+  it("credits every direct dependency, as shipped or as built with, so a new one cannot go unlisted", () => {
+    const list = openSourceList();
+    const credited = new Set(
+      [...list.packages, ...list.tools].map((piece) => piece.name),
     );
-    const missing = Object.keys(packageJson.dependencies).filter(
-      (name) => !listed.has(name),
-    );
-    // Run `npm run generate:open-source` and commit the list.
+    const missing = [
+      ...Object.keys(packageJson.dependencies),
+      ...Object.keys(packageJson.devDependencies),
+    ].filter((name) => !credited.has(name));
+    // Run `npm run build` and commit the list.
     expect(missing).toEqual([]);
+  });
+
+  it("lists what the bundles hold as shipped, and only build tools as built with", () => {
+    const list = openSourceList();
+    const shipped = list.packages.map((piece) => piece.name);
+    const tools = list.tools.map((piece) => piece.name);
+    expect(shipped).toEqual(
+      expect.arrayContaining(["react", "better-auth", "tailwindcss"]),
+    );
+    expect(tools).toEqual(expect.arrayContaining(["vite", "vitest"]));
+    expect(tools.filter((name) => shipped.includes(name))).toEqual([]);
   });
 
   it("has every licence's text, so no group's 'Read the licence' is missing", () => {
@@ -123,13 +145,13 @@ describe("openSourceList", () => {
 describe("licenceGroups", () => {
   it("puts the type first, then the packages' licences, largest first and by name at a tie", () => {
     const groups = licenceGroups(LIST);
-    expect(groups.map((group) => [group.name, group.isType])).toEqual([
-      ["SIL Open Font License 1.1", true],
-      ["MIT", false],
-      ["Apache 2.0", false],
-      ["CC BY 4.0", false],
-      ["Python-2.0", false],
-      ["Unlicense", false],
+    expect(groups.map((group) => [group.name, group.kind])).toEqual([
+      ["SIL Open Font License 1.1", "type"],
+      ["MIT", "licence"],
+      ["Apache 2.0", "licence"],
+      ["CC BY 4.0", "licence"],
+      ["Python-2.0", "licence"],
+      ["Unlicense", "licence"],
     ]);
   });
 
@@ -149,7 +171,21 @@ describe("licenceGroups", () => {
   });
 
   it("draws nothing for an empty list", () => {
-    expect(licenceGroups({ type: [], packages: [], licences: {} })).toEqual([]);
+    expect(
+      licenceGroups({ type: [], packages: [], tools: [], licences: {} }),
+    ).toEqual([]);
+  });
+});
+
+describe("toolsGroup", () => {
+  it("puts the tools under Built with, with no licence text, each row keeping its licence", () => {
+    expect(toolsGroup(LIST)).toEqual({
+      id: "built-with",
+      name: "Built with",
+      kind: "tools",
+      text: undefined,
+      pieces: LIST.tools,
+    });
   });
 });
 
@@ -160,6 +196,7 @@ describe("openSourcePage", () => {
       notices: "# Third-party notices\n\nIntro.\n\n## Weather data\n\nVC.",
     });
     expect(page.bellState).toBeUndefined();
+    expect(page.tools.pieces.map((piece) => piece.name)).toEqual(["vitest"]);
     expect(page.groups.map((group) => group.name)[0]).toBe(
       "SIL Open Font License 1.1",
     );
@@ -176,6 +213,7 @@ describe("openSourcePage", () => {
     expect(pieceCount(page.groups)).toBe(
       openSourceList().packages.length + openSourceList().type.length,
     );
+    expect(page.tools.pieces).toEqual(openSourceList().tools);
   });
 });
 
@@ -187,7 +225,7 @@ function group(
   return {
     id,
     name: id.toUpperCase(),
-    isType: false,
+    kind: "licence",
     text: undefined,
     pieces: names.map((name) => ({ name })),
     ...extra,
@@ -220,13 +258,13 @@ describe("matchingGroups", () => {
 
   it("keeps the rest of a group as it was", () => {
     const [mit] = matchingGroups(
-      [group("mit", ["react", "zod"], { text: "T", isType: true })],
+      [group("mit", ["react", "zod"], { text: "T", kind: "type" })],
       "react",
     );
     expect(mit).toEqual({
       id: "mit",
       name: "MIT",
-      isType: true,
+      kind: "type",
       text: "T",
       pieces: [{ name: "react" }],
     });

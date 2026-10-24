@@ -31,7 +31,7 @@ async function renderWithRouter(element: ReactElement) {
 const TYPE: LicenceGroup = {
   id: "sil-open-font-license-11",
   name: "SIL Open Font License 1.1",
-  isType: true,
+  kind: "type",
   text: "SIL OPEN FONT LICENSE Version 1.1",
   pieces: [
     {
@@ -46,12 +46,13 @@ const TYPE: LicenceGroup = {
 const MIT: LicenceGroup = {
   id: "mit",
   name: "MIT",
-  isType: false,
+  kind: "licence",
   text: "Permission is hereby granted, free of charge",
   pieces: [
     {
       name: "react",
       version: "19.2.0",
+      licence: "MIT",
       copyright: "Meta Platforms, Inc. and affiliates",
       project: "https://react.dev/",
     },
@@ -69,12 +70,28 @@ const MIT: LicenceGroup = {
 const APACHE: LicenceGroup = {
   id: "apache-20",
   name: "Apache 2.0",
-  isType: false,
+  kind: "licence",
   text: undefined,
   pieces: [
     { name: "photon", version: "0.4.0", notice: "This product includes…" },
     { name: "detect-libc", version: "2.0.0" },
     { name: "typescript", version: "6.0.0" },
+  ],
+};
+
+const TOOLS: LicenceGroup = {
+  id: "built-with",
+  name: "Built with",
+  kind: "tools",
+  text: undefined,
+  pieces: [
+    {
+      name: "vitest",
+      version: "4.1.0",
+      licence: "MIT",
+      project: "https://vitest.dev",
+    },
+    { name: "drizzle-kit", version: "0.31.0", licence: "MIT" },
   ],
 };
 
@@ -103,10 +120,14 @@ function bell({
   );
 }
 
-function renderPage(groups: readonly LicenceGroup[] = [TYPE, MIT, APACHE]) {
+function renderPage(
+  groups: readonly LicenceGroup[] = [TYPE, MIT, APACHE],
+  tools: LicenceGroup = TOOLS,
+) {
   return renderWithRouter(
     <OpenSourcePage
       groups={groups}
+      tools={tools}
       notices={NOTICES}
       bellState={undefined}
       bell={bell}
@@ -138,6 +159,7 @@ describe("OpenSourcePage", () => {
     await renderWithRouter(
       <OpenSourcePage
         groups={[MIT]}
+        tools={TOOLS}
         notices={NOTICES}
         bellState={{ unreadCount: 4, verdictsWaiting: 1 }}
         bell={bell}
@@ -175,6 +197,7 @@ describe("OpenSourcePage", () => {
       ["SIL Open Font License 1.1", "#sil-open-font-license-11", "2"],
       ["MIT", "#mit", "5"],
       ["Apache 2.0", "#apache-20", "3"],
+      ["Built with", "#built-with", "2"],
       ["Third-party notices", "#third-party-notices", undefined],
     ]);
   });
@@ -189,6 +212,7 @@ describe("OpenSourcePage", () => {
       "SIL Open Font License 1.1",
       "MIT",
       "Apache 2.0",
+      "Built with",
       "Third-party notices",
     ]);
     const type = section("SIL Open Font License 1.1");
@@ -201,6 +225,8 @@ describe("OpenSourcePage", () => {
     expect(
       within(mit).queryByText("The two typefaces you read everything in."),
     ).toBeNull();
+    // A licence group has no line of its own, not even an empty one.
+    expect(mit.querySelector("p")).toBeNull();
   });
 
   it("prints each group's licence once, closed until asked for, and offers none where there is no text", async () => {
@@ -230,6 +256,8 @@ describe("OpenSourcePage", () => {
     if (react === undefined || clsx === undefined) throw new Error("no rows");
     expect(within(react).getByText("react")).toHaveClass("font-semibold");
     expect(within(react).getByText("19.2.0")).toHaveClass("text-mono-md");
+    // Its group's heading names the licence; the row does not repeat it.
+    expect(within(react).queryByText("MIT")).toBeNull();
     const project = within(react).getByRole("link", { name: "Project" });
     expect(project).toHaveAttribute("href", "https://react.dev/");
     expect(project).toHaveClass("target", "underline");
@@ -288,6 +316,48 @@ describe("OpenSourcePage", () => {
     expect(own.closest("details")?.querySelector("pre")).toHaveTextContent(
       "MIT, with a clause of its own",
     );
+  });
+
+  it("credits the tools under Built with, after the groups: its line, and each row's licence, with no licence text or copyright", async () => {
+    await renderPage();
+    const tools = section("Built with");
+    expect(within(tools).getByText("2")).toHaveClass("text-mono-xs");
+    expect(
+      within(tools).getByText(
+        "The tools we build and test dialed.run with. None of them ships to you, so each is credited by name and licence.",
+      ),
+    ).toHaveClass("text-body");
+    const [vitest, drizzleKit] = within(tools).getAllByRole("listitem");
+    if (vitest === undefined || drizzleKit === undefined) {
+      throw new Error("no rows");
+    }
+    expect(within(vitest).getByText("vitest")).toHaveClass("font-semibold");
+    expect(within(vitest).getByText("MIT")).toHaveClass(
+      "text-mono-xs",
+      "text-muted",
+    );
+    expect(
+      within(vitest).getByRole("link", { name: "Project" }),
+    ).toHaveAttribute("href", "https://vitest.dev");
+    expect(within(drizzleKit).getByText("MIT")).toBeInTheDocument();
+    expect(within(tools).queryByText(/^Read the/u)).toBeNull();
+    expect(within(tools).queryByText(/^©/u)).toBeNull();
+    expect(
+      within(section("MIT")).queryByText(/^The tools we build/u),
+    ).toBeNull();
+  });
+
+  it("finds a tool by name, and leaves out a row whose licence is unknown", async () => {
+    const user = userEvent.setup();
+    await renderPage([TYPE, MIT, APACHE], {
+      ...TOOLS,
+      pieces: [...TOOLS.pieces, { name: "vite-unlicensed" }],
+    });
+    await user.type(search(), "vit");
+    expect(rowNames("Built with")).toEqual(["vitest", "vite-unlicensed"]);
+    expect(screen.queryByRole("heading", { name: "MIT" })).toBeNull();
+    const [, bare] = within(section("Built with")).getAllByRole("listitem");
+    expect(bare?.querySelector(".text-mono-xs")).toBeNull();
   });
 
   it("filters every group by package name as you type, hiding the groups it empties", async () => {
