@@ -95,10 +95,18 @@ async function seedCode(
 }
 
 /**
-A fresh code for each test: the app's own minting, 32^4 to one.
+A fresh code for each test: the app's own minting. The shape allows only
+32^4 codes and every test's codes share one table, so a draw that is already
+taken is drawn again rather than failing the insert on UNIQUE.
 */
-function freshCode(): string {
-  return mintInviteCode();
+async function freshCode(): Promise<string> {
+  const code = mintInviteCode();
+  const taken = await db
+    .select({ id: inviteCodes.id })
+    .from(inviteCodes)
+    .where(eq(inviteCodes.code, code))
+    .limit(1);
+  return taken.length === 0 ? code : freshCode();
 }
 
 function address(): string {
@@ -150,7 +158,7 @@ describe("email sign-up through the gate", () => {
   it("makes the account with a valid code, spends it on that account, and keeps no name", async () => {
     const { verify } = turnstile();
     const auth = instance(accessGate(db, verify));
-    const code = freshCode();
+    const code = await freshCode();
     const codeId = await seedCode(code);
     const email = address();
     const response = await auth.handler(
@@ -175,7 +183,7 @@ describe("email sign-up through the gate", () => {
 
   it("keeps a single-use code spent after its account is deleted", async () => {
     const auth = instance(accessGate(db, turnstile().verify));
-    const code = freshCode();
+    const code = await freshCode();
     await seedCode(code);
     const email = address();
     await auth.handler(
@@ -217,7 +225,7 @@ describe("email sign-up through the gate", () => {
 
   it("refuses a revoked code as it refuses one nobody made", async () => {
     const auth = instance(accessGate(db, turnstile().verify));
-    const code = freshCode();
+    const code = await freshCode();
     await seedCode(code, { revokedAt: nowSeconds() });
     const response = await auth.handler(
       signUpRequest(address(), {
@@ -230,7 +238,7 @@ describe("email sign-up through the gate", () => {
 
   it("refuses a used code the second time, in the words of an invalid one", async () => {
     const auth = instance(accessGate(db, turnstile().verify));
-    const code = freshCode();
+    const code = await freshCode();
     await seedCode(code);
     const headers = { "x-invite-code": code, "x-turnstile-token": "token" };
     const first = await auth.handler(signUpRequest(address(), headers));
@@ -246,7 +254,7 @@ describe("email sign-up through the gate", () => {
 
   it("does not spend a code on an address that already has an account, and answers alike", async () => {
     const auth = instance(accessGate(db, turnstile().verify));
-    const first = freshCode();
+    const first = await freshCode();
     await seedCode(first);
     const email = address();
     await auth.handler(
@@ -255,7 +263,7 @@ describe("email sign-up through the gate", () => {
         "x-turnstile-token": "t",
       }),
     );
-    const second = freshCode();
+    const second = await freshCode();
     const secondId = await seedCode(second);
     const again = await auth.handler(
       signUpRequest(email, {
@@ -419,7 +427,7 @@ describe("Google sign-up through the gate", () => {
 
   it("carries a checked code through the round trip and spends it on the new account", async () => {
     const auth = instance(accessGate(db, turnstile().verify));
-    const code = freshCode();
+    const code = await freshCode();
     const codeId = await seedCode(code);
     const email = address();
     const { landing } = await googleRoundTrip(
@@ -441,7 +449,7 @@ describe("Google sign-up through the gate", () => {
 
   it("signs an existing account in from Au2 with no code", async () => {
     const auth = instance(accessGate(db, turnstile().verify));
-    const code = freshCode();
+    const code = await freshCode();
     await seedCode(code);
     const email = address();
     await googleRoundTrip(
@@ -491,7 +499,7 @@ describe("Google sign-up through the gate", () => {
 
   it("refuses before the redirect when Turnstile refuses", async () => {
     const auth = instance(accessGate(db, turnstile(false).verify));
-    const code = freshCode();
+    const code = await freshCode();
     await seedCode(code);
     const { started } = await googleRoundTrip(
       auth,
@@ -622,7 +630,7 @@ describe("Google's tokens (legal C4)", () => {
     // callback has used them by the time the row is written, and nothing
     // reads them after; the link to Google is the account id alone.
     const auth = instance(accessGate(db, turnstile().verify));
-    const code = freshCode();
+    const code = await freshCode();
     await seedCode(code);
     const email = address();
     await googleRoundTrip(
@@ -663,7 +671,7 @@ describe("the region gate", () => {
     async (_, cf) => {
       const { attempts, verify } = turnstile();
       const auth = instance(accessGate(db, verify));
-      const code = freshCode();
+      const code = await freshCode();
       await seedCode(code);
       const email = address();
       const response = await auth.handler(
@@ -693,7 +701,7 @@ describe("the region gate", () => {
 
   it("refuses a new Google account from Tennessee on the callback, and makes none", async () => {
     const auth = instance(accessGate(db, turnstile().verify));
-    const code = freshCode();
+    const code = await freshCode();
     await seedCode(code);
     const email = address();
     const { started, landing } = await googleRoundTrip(
@@ -711,7 +719,7 @@ describe("the region gate", () => {
 
   it("makes a Google account from another state", async () => {
     const auth = instance(accessGate(db, turnstile().verify));
-    const code = freshCode();
+    const code = await freshCode();
     await seedCode(code);
     const email = address();
     const { landing } = await googleRoundTrip(
@@ -727,7 +735,7 @@ describe("the region gate", () => {
 
   it("signs an existing account in with Google from Au2 in Mississippi", async () => {
     const auth = instance(accessGate(db, turnstile().verify));
-    const code = freshCode();
+    const code = await freshCode();
     await seedCode(code);
     const email = address();
     await googleRoundTrip(
@@ -751,7 +759,7 @@ describe("the region gate", () => {
 
   it("signs an existing account in with a password from Tennessee", async () => {
     const auth = instance(accessGate(db, turnstile().verify));
-    const code = freshCode();
+    const code = await freshCode();
     await seedCode(code);
     const email = address();
     await auth.handler(
@@ -873,7 +881,7 @@ async function emailSignUp(
   access: AccessGate,
   headers: Record<string, string>,
 ) {
-  const code = freshCode();
+  const code = await freshCode();
   await seedCode(code);
   const email = address();
   const response = await instance(access).handler(
@@ -974,7 +982,7 @@ describe("the age gate", () => {
   });
 
   it("refuses Google under 18 before the redirect, with the cookie", async () => {
-    const code = freshCode();
+    const code = await freshCode();
     await seedCode(code);
     const auth = instance(accessGate(db, turnstile().verify));
     const { started } = await googleRoundTrip(
@@ -995,7 +1003,7 @@ describe("the age gate", () => {
   });
 
   it("refuses a new Google account made with no date, after the round trip, and spends no code", async () => {
-    const code = freshCode();
+    const code = await freshCode();
     const codeId = await seedCode(code);
     const email = address();
     const auth = instance(accessGate(db, turnstile().verify));

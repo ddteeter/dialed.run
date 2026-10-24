@@ -236,8 +236,9 @@ owing you anything.
 - **Intimate images shared without consent** are the exception. One report
   that a kit or photo is an intimate image shared without consent hides it
   from everyone but its owner at once, and a person reviews it within 48
-  hours. If it is what the report says, we remove it. Reporting something
-  as this when you know it is not breaks these rules.
+  hours. If it is what the report says, we remove it, and identical copies
+  we find. Reporting something as this when you know it is not breaks
+  these rules.
 - **A person decides.** Removing content and closing accounts are decisions
   a person makes, not the automated screening. We do not watch everything
   posted and are not obliged to, but we act on what we find or are told.
@@ -273,9 +274,10 @@ decision to a certified out-of-court dispute settlement body, or to a court.
   account. You, or someone authorised to act for you, give an email
   address, a full name as a signature, where the image is, and a statement
   that you believe in good faith it was shared without consent. A person
-  decides within 48 hours, removes it if it is what you describe, and
-  emails you either way. If the link is to dialed.run, we hide what it
-  points to while we look, and put it back if we decline; limits that stop
+  decides within 48 hours, removes it and identical copies we find if it
+  is what you describe, and emails you either way. If the link is to
+  dialed.run, we hide what it points to while we look, and put it back if
+  we decline; limits that stop
   the form being used to hide things in bulk are in the
   [privacy policy](/privacy#moderation). Knowingly
   making a false request breaks these rules.

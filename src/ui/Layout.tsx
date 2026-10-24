@@ -132,6 +132,10 @@ function LegalFooter() {
         <Link to="/copyright" className={FOOTER_LINK}>
           Copyright
         </Link>
+        {/* Round 29 #9: after Copyright, as "Open source" (plan C9). */}
+        <Link to="/open-source" className={FOOTER_LINK}>
+          Open source
+        </Link>
         {/* Design 136: the TAKE IT DOWN Act asks for the way to request a
             removal to be clear and conspicuous, so it is on every page.
             Placeholder words, after round 27 #12's three (design deltas

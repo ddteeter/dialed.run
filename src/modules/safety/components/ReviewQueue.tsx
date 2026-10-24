@@ -28,6 +28,7 @@ import {
 import type { HandleReview, QueueRow } from "../review";
 import { DeskForm, PickOne } from "./DeskForm";
 import { OtherPhotos } from "./OtherPhotos";
+import { PhotoMatches } from "./PhotoMatches";
 import { RENAME_LABELS, renameMessage } from "./DeskRunners";
 import { NotRenamedBand } from "./NotRenamedBand";
 import { useSettled } from "./use-settled";
@@ -534,6 +535,7 @@ function ReviewRow({
       </span>
       <ReportedPhotos keys={row.subject.photoKeys} />
       <OtherPhotos others={row.otherPhotos} />
+      <PhotoMatches found={row.photoMatches} />
       {row.subject.handleFlagged === true ? (
         <p data-part="why-here" className="m-0 text-body">
           {HANDLE_FLAGGED_LINE}

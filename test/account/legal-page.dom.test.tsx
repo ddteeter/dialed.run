@@ -94,6 +94,10 @@ describe("LegalPage", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Privacy policy" }),
     ).toHaveClass("font-display", "text-display", "uppercase");
+    // No kicker above it: `/open-source`'s is its own.
+    expect(
+      screen.getByRole("heading", { level: 1 }).parentElement?.children,
+    ).toHaveLength(1);
     const contents = screen.getByRole("navigation", { name: "Contents" });
     expect(contents).toHaveAttribute("id", "contents");
     // Sticky only at the desk; on the phone it is a plain list.

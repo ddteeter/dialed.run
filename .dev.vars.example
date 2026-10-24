@@ -11,6 +11,14 @@ TAKEDOWN_SECRET=generate-a-third-long-random-string
 # sign-in and sign-up from localhost (403 INVALID_ORIGIN), and the https
 # posture turns its rate limiter on. Match the port the dev server runs on.
 BETTER_AUTH_URL=http://localhost:3000
+# Required to sign up locally (125, OPS-5): wrangler.jsonc sets the site key
+# to "", and with no key the widget renders nothing and the server refuses
+# every sign-up. These are Cloudflare's published always-pass test keys —
+# public, the same pair CI writes — not secrets. Missing either one makes
+# `npm run demo` time out in `turnstileAnswered` with nothing in the
+# console, which looks like a blocked network and is not one.
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+TURNSTILE_SITE_KEY=1x00000000000000000000AA
 # Optional locally; set in prod:
 # SENTRY_DSN=
 # Google OAuth (both or neither — the Google button 500s without them):

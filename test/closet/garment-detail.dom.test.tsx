@@ -35,6 +35,7 @@ const item: WardrobeItemRow = {
   colorHex: "#8b8b93",
   visibilityLevel: "plain",
   photoKey: "items/user-1/item-1/original",
+  photoFingerprint: "0f10c00309a0810f",
   productUrl: "https://janji.com/p/rover-half-zip",
   productId: "prod-1",
   origin: "manual",

@@ -119,6 +119,21 @@ assertions on every push and has no use for a 52-second recording of a
 7.7-second test. If a run finishes suspiciously fast and leaves no
 `video.webm`, that is what happened.
 
+**A fresh worktree needs three things first**, which CI's `e2e` job does
+for itself (`.github/workflows/ci.yml`) and nothing does for you:
+
+1. `npm run db:migrate:local:core && npm run db:migrate:local:weather`.
+2. A `.dev.vars` with `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` set to
+   Cloudflare's public test keys. `.dev.vars.example` has them. Without
+   the site key, the widget renders nothing, and every demo that signs up
+   fails in `turnstileAnswered` on `waitForFunction: Timeout 15000ms`
+   with no console error and no network request. That looks like a
+   blocked `challenges.cloudflare.com`, and it was misread that way once.
+   The browser reaches it fine.
+3. `BETTER_AUTH_URL` on the port the demo actually uses. A `lane/<N>-*`
+   branch, a `dialed-<N>` directory or `DIALED_E2E_PORT` moves it off
+   3000, and Better Auth then refuses the sign-up as `Invalid origin`.
+
 If a run fails because the port is in use, that is `reuseExistingServer:
 false` doing its job — another worktree's dev server is up, or the previous
 run has not released the port. Wait for it rather than working around it.
