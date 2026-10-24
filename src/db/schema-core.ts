@@ -888,7 +888,7 @@ export const entryPhotos = /*#__PURE__*/ sqliteTable(
     // public read requires 'pass'. So a classifier outage degrades to
     // "nobody else sees it yet" and never to a wrong answer or a failed
     // save (law 5). 'removed' is a copyright takedown's hide (D-130,
-    // design 148): the one state the owner's reads skip too, until a
+    // design 149): the one state the owner's reads skip too, until a
     // counter-notice puts it back or the 30-day purge deletes it.
     screenStatus: text("screen_status", {
       enum: ["pending", "pass", "flagged", "hidden_pending_review", "removed"],
@@ -1442,7 +1442,7 @@ export const moderationActions = /*#__PURE__*/ sqliteTable(
 );
 
 /**
- * A copyright takedown's 30 days (D-130, design 148): the material is
+ * A copyright takedown's 30 days (D-130, design 149): the material is
  * hidden, not deleted, so a valid counter-notice can put it back 10 to 14
  * business days later (17 U.S.C. §512(g)(2)(C)). A daily sweep restores
  * on `restore_at` unless a court action was recorded, and deletes on

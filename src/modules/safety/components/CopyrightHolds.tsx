@@ -25,7 +25,7 @@ interface HoldActs {
 }
 
 /**
- * Review's copyright holds (D-130, design 148): what a copyright takedown
+ * Review's copyright holds (D-130, design 149): what a copyright takedown
  * is keeping hidden, soonest deletion first, with the runner's strikes
  * and the notice it answered. "Counter-notice received" records today
  * and the day the material comes back; once it is recorded, "Court action

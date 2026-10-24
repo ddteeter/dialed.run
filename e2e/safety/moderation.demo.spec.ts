@@ -139,7 +139,7 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
       quarantinedAt: now,
       retainUntil: now + 365 * 86_400,
     });
-    // A copyright takedown's hold (D-130, design 148), hidden today with
+    // A copyright takedown's hold (D-130, design 149), hidden today with
     // no counter-notice yet. Synthetic: the audit row and the hold only.
     await core.insert(moderationActions).values({
       id: holdActionId,

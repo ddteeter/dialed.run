@@ -9,7 +9,7 @@
  * (`retract.ts`): every row in one `db.batch()` with the audit row, the
  * notice and an outbox debt owing R2 a reconcile, then the fast path.
  *
- * **A copyright takedown hides instead** (D-130, design 148): the rows
+ * **A copyright takedown hides instead** (D-130, design 149): the rows
  * and bytes stay, a `copyright_holds` row is written with the hide, and
  * the author is told exactly as before. `sweepCopyrightHolds` puts it
  * back after a counter-notice, or deletes it here 30 days on, with the
@@ -437,7 +437,7 @@ export async function decideReview(
 }
 
 /**
- * The copyright holds' daily sweep (D-130, design 148), handed to the
+ * The copyright holds' daily sweep (D-130, design 149), handed to the
  * daily firing (`DailyUpkeep.sweepCopyrightHolds`) because `ops` cannot
  * import feed. Restores first — a hold due both ways is one a
  * counter-notice saved, and the purge's claim skips it — then deletes

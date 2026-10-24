@@ -538,7 +538,7 @@ flowchart LR
   `closet`'s, which `ops` cannot import — so the Worker entry hands
   `linkTypedGarments` to the `:00` firing and the digest (`DailyUpkeep`),
   which drain it as a scheduled kind.
-- **A copyright hold** (D-130, design 148) is **reconciliation**: the
+- **A copyright hold** (D-130, design 149) is **reconciliation**: the
   `copyright_holds` row is the marker. A takedown hides and writes it in
   one batch; the daily firing (`DailyUpkeep.sweepCopyrightHolds`, `feed`'s)
   restores on its day, or claims it `purging` and deletes it with the R2

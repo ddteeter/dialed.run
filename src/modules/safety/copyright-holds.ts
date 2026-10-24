@@ -1,5 +1,5 @@
 /**
- * A copyright takedown's 30 days (D-130, design 148): `copyright_holds`.
+ * A copyright takedown's 30 days (D-130, design 149): `copyright_holds`.
  *
  * **The material is hidden, not deleted**, so a valid counter-notice can
  * put it back, which 17 U.S.C. §512(g)(2)(C) expects 10 to 14 business

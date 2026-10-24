@@ -40,7 +40,7 @@ import { removalsOnRun } from "../../src/modules/safety/run-removals";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 
 /**
- * D-130, design 148: a copyright takedown hides for 30 days; a counter-
+ * D-130, design 149: a copyright takedown hides for 30 days; a counter-
  * notice restores it on the 12th weekday after, unless a court action is
  * recorded; with none pending, the sweep deletes it.
  */
