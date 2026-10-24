@@ -543,7 +543,9 @@ flowchart LR
   one batch; the daily firing (`DailyUpkeep.sweepCopyrightHolds`, `feed`'s)
   restores on its day, or claims it `purging` and deletes it with the R2
   debt and `purged` in one batch — a claim whose batch failed is taken
-  over by the next sweep.
+  over by the next sweep. A court action holds it from both (D-146) until
+  the Desk's "Case over: delete", which claims it `purging` the same way,
+  or "Case over: restore".
 - **Account deletion** (task 126, ACC-9) is **reconciliation**, not an
   outbox: the claim row in `account_deletions` is the durable "not
   finished" marker. A request writes it with every session's deletion and

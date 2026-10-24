@@ -420,10 +420,12 @@ account added it.
   configuration; today that is one person. They can see reported and
   flagged content, including hidden photos, with the reports' reasons and
   notes.
-- **When we remove a kit or photo,** we delete it and its files, keep a
-  record of what was removed, by whom and why, and tell its owner in the
-  app and by email. A moderator can also change a username that breaks the
-  rules, and the runner is told why the next time they open the app.
+- **When we remove a kit or photo,** we delete it and its files, except
+  that material removed after a copyright notice is hidden for 30 days
+  first, so a counter-notice can restore it. We keep a record of what was
+  removed, by whom and why, and tell its owner in the app and by email. A
+  moderator can also change a username that breaks the rules, and the
+  runner is told why the next time they open the app.
 - **Suspected child sexual abuse material** is the exception: it is
   removed at once, and its owner is not told. We report it to the National
   Center for Missing & Exploited Children and keep a locked copy that only

@@ -354,9 +354,11 @@ entry_photos:    + screen_status ('pending'|'pass'|'flagged'|
 copyright_holds: subject (entry|photo), owner, entry, the takedown's
                  moderation_actions row; status hidden|restored|purging|
                  purged; hidden_at, purge_at (+30d); counter_notice_at,
-                 restore_at (12th weekday after), court_action_at.
+                 restore_at (12th weekday after), court_action_at,
+                 case_closed_by.
                    -- D-130, design 148. Strikes = an owner's holds that
-                   -- were not restored.
+                   -- were not restored. A court action is a litigation
+                   -- hold (D-146): no purge until the Desk's "Case over".
 ```
 
 **One rule for "visible to a stranger".** `audience = 'runners' AND

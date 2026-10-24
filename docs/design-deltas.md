@@ -1191,16 +1191,23 @@ NCMEC]` or `[REPORTED TO NCMEC {date}] · {number}`; then an optional
     MONO.xs, "Owner {id} · strikes {n}" in MONO.xs, the notice as the
     audit row keeps it, and a bracketed line saying what happens next —
     `[no counter-notice: deleted {day}]`, `[counter-notice received: back
-{day}]` or `[court action {day}: stays hidden, deleted {day}]`. One
-    action under it: **Counter-notice received** until one is recorded,
-    then **Court action filed**, then none; each a Desk form with no
-    field ("Recording" while out). Answers in the live region:
-    "Counter-notice recorded.", "Court action recorded. It stays
-    hidden.", and under the button "A counter-notice is already
+{day}]` or `[court action {day}: held until the case is over]`. The
+    actions under it: **Counter-notice received** until one is recorded,
+    then **Court action filed**, then — a litigation hold (D-146) — the
+    pair **Case over: delete** and **Case over: restore**, side by side,
+    until one has landed, then none; each a Desk form with no field
+    ("Recording" while out). Answers in the live region:
+    "Counter-notice recorded.", "Court action recorded. It stays hidden
+    until the case is over.", "Case over. It is deleted.", "Case over. It
+    is back.", and under the button "A counter-notice is already
     recorded.", "A court action is already recorded.", "Record the
-    counter-notice first.", "This hold is settled: put back or deleted."
-    **The ask:** draw the list beside Quarantine's, and say whether the
-    counter-notice should take a typed date rather than today's.
+    counter-notice first.", "Record the court action first.", "This hold
+    is settled: put back or deleted." The two "Case over" labels are
+    operator-only placeholder words the owner has not yet seen.
+    **The ask:** draw the list beside Quarantine's, say whether the
+    counter-notice should take a typed date rather than today's, and
+    whether the two ways a case ends want a confirm step, since both are
+    final.
 
 ## Answered in round 37 (imported 2026-10-10)
 
