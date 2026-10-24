@@ -56,16 +56,17 @@ export function ChipToggle({
 }
 
 /**
- * The chips' group: wrapping, with round 21's `12px 7px` gap — the row gap
- * is the one that makes two rows' 44px targets meet at the seam rather
- * than overlap. A3's row and A3b's tags both sit in one.
+ * The chips' group: wrapping, with round 21's `12px 7px` gap collapsed to
+ * the 4px step (`12px 8px`, design/tokens.js SPACE) — the row gap is the
+ * one that makes two rows' 44px targets meet at the seam rather than
+ * overlap. A3's row and A3b's tags both sit in one.
  */
 export function ChipRow({
   slot,
   children,
 }: Readonly<{ slot?: string | undefined; children: ReactNode }>) {
   return (
-    <div data-slot={slot} className="flex flex-wrap gap-x-[7px] gap-y-3">
+    <div data-slot={slot} className="flex flex-wrap gap-x-2 gap-y-3">
       {children}
     </div>
   );

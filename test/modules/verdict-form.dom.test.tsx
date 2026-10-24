@@ -1775,7 +1775,7 @@ describe("VerdictChips and A3b: the 32px chip (round 21)", () => {
     await renderWithRouter(form());
 
     const chips = document.querySelector("[data-slot='flag-chips']");
-    expect(chips).toHaveClass("gap-x-[7px]", "gap-y-3");
+    expect(chips).toHaveClass("gap-x-2", "gap-y-3");
     const cells = [...(chips?.children ?? [])];
     expect(cells).toHaveLength(6);
     for (const chip of cells) {
@@ -1807,7 +1807,7 @@ describe("VerdictChips and A3b: the 32px chip (round 21)", () => {
     // A3b's tags are the same 32px chips, in the same seam-gapped row.
     const tag = within(sheet).getByRole("button", { name: "chafed" });
     expect(tag).toHaveClass("target-seam", "h-8");
-    expect(tag.parentElement).toHaveClass("gap-x-[7px]", "gap-y-3");
+    expect(tag.parentElement).toHaveClass("gap-x-2", "gap-y-3");
   });
 });
 
