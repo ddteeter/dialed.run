@@ -13,6 +13,7 @@ CREATE TABLE `copyright_holds` (
 	`restore_at` integer,
 	`court_action_at` integer,
 	`court_action_by` text,
+	`case_closed_by` text,
 	`settled_at` integer
 );
 --> statement-breakpoint

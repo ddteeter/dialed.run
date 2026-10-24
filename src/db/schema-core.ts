@@ -1446,7 +1446,8 @@ export const moderationActions = /*#__PURE__*/ sqliteTable(
  * hidden, not deleted, so a valid counter-notice can put it back 10 to 14
  * business days later (17 U.S.C. §512(g)(2)(C)). A daily sweep restores
  * on `restore_at` unless a court action was recorded, and deletes on
- * `purge_at` unless a counter-notice is pending.
+ * `purge_at` unless a counter-notice was recorded. A court action is a
+ * litigation hold (D-146): neither happens until the Desk ends the case.
  *
  * `status` is the claim: `hidden`, then `restored`, or `purging` (the
  * delete is owed, and re-driven) then `purged`. One row per takedown; the
@@ -1472,9 +1473,13 @@ export const copyrightHolds = /*#__PURE__*/ sqliteTable(
     counterNoticeAt: integer("counter_notice_at"),
     counterNoticeBy: text("counter_notice_by"),
     restoreAt: integer("restore_at"),
-    // The Desk's "Court action filed", which cancels the restore.
+    // The Desk's "Court action filed", which cancels the restore and holds
+    // the material past `purge_at` until the case ends (D-146).
     courtActionAt: integer("court_action_at"),
     courtActionBy: text("court_action_by"),
+    // Who ended that hold with "Case over: delete" or "Case over: restore";
+    // `status` says which, `settled_at` when.
+    caseClosedBy: text("case_closed_by"),
     // When the sweep restored or purged it.
     settledAt: integer("settled_at"),
   },

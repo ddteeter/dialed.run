@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "c6e3ec62-ad1b-4ff6-8231-6c9651ae70d2",
+  "id": "22e23aa1-0a84-4257-bfac-9189f9d91d6f",
   "prevId": "95de485a-caa0-46dd-8f4d-7e5a994483bf",
   "tables": {
     "access_requests": {
@@ -324,6 +324,13 @@
         },
         "court_action_by": {
           "name": "court_action_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "case_closed_by": {
+          "name": "case_closed_by",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
