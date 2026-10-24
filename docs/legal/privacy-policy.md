@@ -414,7 +414,7 @@ account added it.
   and while ten requests in the past hour have hidden something, new ones
   hide nothing (a person still reviews them). If someone abuses the form, we may
   block that email and code from it: their requests are still recorded
-  and they still get a receipt, but nothing is hidden. We keep a request until we delete it, because
+  and they still get a receipt, but nothing is hidden. We keep a request for 3 years after we decide it, because
   it is the record of why something was or was not removed.
 - Reviewers are the people who run [dialed.run], named in our
   configuration; today that is one person. They can see reported and
@@ -423,7 +423,7 @@ account added it.
 - **When we remove a kit or photo,** we delete it and its files, except
   that material removed after a copyright notice is hidden for 30 days
   first, so a counter-notice can restore it. We keep a record of what was
-  removed, by whom and why, and tell its owner in the app and by email. A
+  removed, by whom and why, for 3 years, and tell its owner in the app and by email. A
   moderator can also change a username that breaks the rules, and the
   runner is told why the next time they open the app.
 - **Suspected child sexual abuse material** is the exception: it is
@@ -518,7 +518,7 @@ any differently.
 | Imported run files                                                            | Until it has been read, usually within a day. A file we could not read: 30 days after the import failed                           |
 | Anonymous totals                                                              | A published report stays as published; it names no one. A guide is remade from current data each time we update it                |
 | Your data export                                                              | The file: 7 days from when it is ready. The record that you asked for one: deleted with the file, or 7 days after a failed export |
-| Removal requests (`/takedown`)                                                | Until we delete them                                                                                                              |
+| Removal requests (`/takedown`)                                                | 3 years after we decide them                                                                                                      |
 | Requests for access                                                           | 90 days after we answer them                                                                                                      |
 | Session records                                                               | Expire after 7 days, and are deleted 30 days after they expire                                                                    |
 | Strava refresh token                                                          | Until you disconnect, then until Strava confirms revocation                                                                       |
@@ -530,8 +530,8 @@ any differently.
 | Suspected child sexual abuse material we removed                              | One year after we report it to NCMEC, then deleted, unless the law or law enforcement requires longer                             |
 | Usernames you have used                                                       | For good, so nobody else can take them                                                                                            |
 | Weather                                                                       | Kept in the shared cache, linked to no one                                                                                        |
-| Reports you filed                                                             | Kept; when your account is deleted they stay, without your name                                                                   |
-| Records of moderation decisions                                               | Kept, including after the account they concern is deleted                                                                         |
+| Reports you filed                                                             | 3 years after the decision on what you reported, or after filing if none was needed. Kept without your name if you leave          |
+| Records of moderation decisions                                               | 3 years after the decision, even after the account it concerns is deleted, and while the material is still hidden or quarantined  |
 | Everything else: account, profile, runs, kits, photos, follows, notifications | Until you delete it or your account                                                                                               |
 | Server logs                                                                   | 7 days                                                                                                                            |
 | Error reports                                                                 | 30 days                                                                                                                           |

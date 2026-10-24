@@ -45,6 +45,7 @@ import {
   reconcileUnhiddenReports,
   releaseStaleClaims,
   retryPendingScreenings,
+  sweepModerationRecords,
 } from "../safety";
 
 import { nowSeconds } from "../../lib/now";
@@ -721,7 +722,8 @@ async function runDailyDigest(
   // (task 125 · OPS-11, through task 126's email module).
   await oweDigestEmail(db, upkeep.digestMail);
   // Rows kept past any use: counts whose window ended a day ago, sessions
-  // expired a month ago, access requests answered 90 days ago. After the
+  // expired a month ago, access requests answered 90 days ago, moderation
+  // records whose 3 years are up (D-131). After the
   // email, so a sweep that throws costs only itself, and each runs whether
   // the others fail (law 5).
   await eachStep([
@@ -729,6 +731,9 @@ async function runDailyDigest(
     () => upkeep.sweepAuthRows?.(),
     () => upkeep.forgetAnsweredRequests?.(),
     () => upkeep.sweepCopyrightHolds?.(),
+    // After the holds' own sweep, so a hold it settles today is not
+    // judged on yesterday's status.
+    () => sweepModerationRecords(db),
   ]);
   return everything;
 }
