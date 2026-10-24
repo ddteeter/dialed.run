@@ -48,6 +48,20 @@ export interface LegalPage {
   readonly bellState: BellState | undefined;
 }
 
+/**
+ * The bell for whoever reads a page anyone may open: its counts for a
+ * signed-in reader, who reads in the signed-in shell, and nothing for a
+ * signed-out one. The legal texts and `/open-source` share it.
+ */
+export async function readerBellState(
+  db: Db,
+  userId: string | undefined,
+): Promise<BellState | undefined> {
+  return userId === undefined
+    ? undefined
+    : bellState(db, userId, (limit) => runsAwaitingVerdict(db, userId, limit));
+}
+
 export async function legalPage(
   db: Db,
   slug: LegalSlug,
@@ -56,11 +70,6 @@ export async function legalPage(
 ): Promise<LegalPage> {
   return {
     doc: legalDoc(slug, texts),
-    bellState:
-      userId === undefined
-        ? undefined
-        : await bellState(db, userId, (limit) =>
-            runsAwaitingVerdict(db, userId, limit),
-          ),
+    bellState: await readerBellState(db, userId),
   };
 }

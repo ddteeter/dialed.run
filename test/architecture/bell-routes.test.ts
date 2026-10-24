@@ -24,11 +24,14 @@ const routeSources: Record<string, string> = import.meta.glob(
  * The loaders that fetch the bell for a route, each reaching
  * `bellStateFn` or `bellState` itself.
  */
-const BELL_SOURCES = /\bbellStateFn\(\)|\blegalPageLoader\(/u;
+const BELL_SOURCES =
+  /\bbellStateFn\(\)|\blegalPageLoader\(|\bopenSourcePageLoader\(/u;
 
 const bellRoutes = Object.entries(routeSources)
   .map(([path, source]) => [path, withoutComments(source)] as const)
-  .filter(([, source]) => /<BelledLayout\b|<LegalPage\b/u.test(source));
+  .filter(([, source]) =>
+    /<BelledLayout\b|<LegalPage\b|<OpenSourcePage\b/u.test(source),
+  );
 
 describe("every bell-bearing route passes the bell's counts", () => {
   it("finds the routes that draw the bell", () => {

@@ -249,6 +249,13 @@ export function SettingsIndex({
           label="Copyright"
           value="Report something of yours posted here"
         />
+        {/* Round 29 #9: after Copyright (plan C9). */}
+        <SettingsRow
+          to="/open-source"
+          params={{}}
+          label="Open source"
+          value="What dialed.run is built on"
+        />
       </SettingsGroup>
       {signOut}
     </div>

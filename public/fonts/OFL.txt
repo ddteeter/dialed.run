@@ -7,6 +7,7 @@ with the font software.
                             https://github.com/Omnibus-Type/Archivo
   IBM Plex Mono           — Copyright © 2017 IBM Corp.
                             with Reserved Font Name "Plex"
+                            https://github.com/IBM/plex
 
 The files themselves are Google Fonts' latin and latin-ext woff2 subsets,
 fetched from fonts.gstatic.com. Archivo is the variable face (wght
