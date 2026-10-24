@@ -191,6 +191,7 @@ describe("banning", () => {
     const result = banUserInput.safeParse({
       userId: "u-1",
       reason: "x".repeat(501),
+      rule: "spam",
     });
     expect(result.success).toBe(false);
     // Error copy lives in the schema, so the sentence is part of the
@@ -202,8 +203,16 @@ describe("banning", () => {
 
   it("trims it, so whitespace is not a reason", () => {
     expect(
-      banUserInput.safeParse({ userId: "u-1", reason: " ".repeat(3) }).success,
+      banUserInput.safeParse({
+        userId: "u-1",
+        reason: " ".repeat(3),
+        rule: "spam",
+      }).success,
     ).toBe(false);
+    expect(
+      banUserInput.parse({ userId: "u-1", reason: " Spam ", rule: "spam" })
+        .reason,
+    ).toBe("Spam");
   });
 });
 

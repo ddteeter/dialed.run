@@ -18,7 +18,7 @@
  */
 import { readFile } from "node:fs/promises";
 
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { user } from "../../src/db/schema-auth";
@@ -109,6 +109,16 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
       status: "pending",
       createdAt: now - 600,
     });
+    // The bell's C8 rows from an earlier run of this demo go first, so the
+    // ones it shows are this run's. Scoped to the account and the kinds.
+    await core
+      .delete(notifications)
+      .where(
+        and(
+          eq(notifications.userId, authorId),
+          inArray(notifications.kind, ["content_hidden", "report_removed"]),
+        ),
+      );
     // Its report, by the safety account, which is told the outcome (C8).
     await core.insert(reports).values({
       id: newUlid(),
