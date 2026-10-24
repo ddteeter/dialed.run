@@ -107,7 +107,7 @@ export function banEmail(input: BanInput): OutboxMessage {
       template: {
         kind: "account_closed",
         reason: input.reason,
-        ...(rule !== undefined && { rule }),
+        rule,
       },
     },
     { dedupeKey: `account_closed:${input.userId}` },

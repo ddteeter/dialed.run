@@ -24,7 +24,6 @@ import {
 } from "../../src/modules/safety";
 import {
   HIDDEN_NOTICE,
-  KEPT_NOTICE,
   REPORT_OUTCOME,
 } from "../../src/modules/safety/notice-copy";
 
@@ -348,7 +347,7 @@ describe("what a decision tells (D-132)", () => {
       {
         kind: "content_kept",
         subjectId: photoId,
-        body: KEPT_NOTICE.photo,
+        body: "We reviewed the reported photo on your run and left it up.",
         read: false,
       },
     ]);

@@ -310,7 +310,7 @@ async function authorNotice(
           ...(isCopyrightTakedown(action, input.reason) && {
             cause: "copyright_notice" as const,
           }),
-          ...(rule !== undefined && { rule }),
+          rule,
           flagged: isFlagged,
         },
       },
