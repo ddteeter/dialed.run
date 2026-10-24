@@ -107,6 +107,12 @@ export const handleReviewInput = z.discriminatedUnion("action", [
 export type HandleReviewValues = z.infer<typeof handleReviewInput>;
 
 /**
+ * A copyright hold the Desk acts on (D-130, design 149): "Counter-notice
+ * received" or "Court action filed", each naming only the hold.
+ */
+export const copyrightHoldInput = z.object({ holdId: ulidSchema });
+
+/**
  * A copyright takedown from the Desk (SAF-6): a named photo or entry, and
  * the notice it answers — kept on the audit row, "who, what and why".
  */

@@ -21,6 +21,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  ne,
   or,
 } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
@@ -50,6 +51,7 @@ import {
 import { adminUserIds } from "./admin";
 import { blockRunner } from "./blocks";
 import { enqueueForReview, firstReportHidingAtOnce } from "./review";
+import { heldPhotoStatus } from "./visibility";
 
 /**
  * Owes an outbox row in the caller's batch — the operators' removal alert
@@ -429,11 +431,18 @@ const hideWritesFor: Record<
   ReportSubjectType,
   (subjectId: string) => BatchItem<"sqlite">[]
 > = {
+  // Never over `removed`, a copyright takedown's hide (D-130): it is
+  // hidden already, and a review's Approve must not be what ends it.
   entry: (subjectId) => [
     db()
       .update(outfitEntries)
       .set({ moderationStatus: "hidden_pending_review" })
-      .where(eq(outfitEntries.id, subjectId)),
+      .where(
+        and(
+          eq(outfitEntries.id, subjectId),
+          ne(outfitEntries.moderationStatus, "removed"),
+        ),
+      ),
   ],
   // A photo hides the way the classifier hides one, and into the same
   // state for the same reason: `hidden_pending_review` is exactly "not
@@ -445,7 +454,12 @@ const hideWritesFor: Record<
     db()
       .update(entryPhotos)
       .set({ screenStatus: "hidden_pending_review" })
-      .where(eq(entryPhotos.id, subjectId)),
+      .where(
+        and(
+          eq(entryPhotos.id, subjectId),
+          ne(entryPhotos.screenStatus, heldPhotoStatus),
+        ),
+      ),
   ],
   // The two that hide nothing, each for its own reason. A profile is a
   // ban decision, which is a person's call with its own path and its own

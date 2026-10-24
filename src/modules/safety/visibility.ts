@@ -178,3 +178,10 @@ export function isUnderReviewForAuthor(
  * with its own spelling is how a gate stops gating.
  */
 export const publicPhotoStatus = "pass";
+
+/**
+ * The `screen_status` of a photo a copyright takedown is holding (D-130):
+ * the one state its owner's reads skip too, since the owner was told it
+ * was removed. The Desk's own route still serves it.
+ */
+export const heldPhotoStatus = "removed";

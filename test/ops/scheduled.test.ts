@@ -1554,10 +1554,14 @@ describe("the daily firing sweeps rows kept past any use", () => {
         swept.push("requests");
         return Promise.resolve();
       },
+      sweepCopyrightHolds: () => {
+        swept.push("copyright holds");
+        return Promise.resolve();
+      },
     });
 
     expect(await isCountKept(key)).toBe(false);
-    expect(swept).toStrictEqual(["auth", "requests"]);
+    expect(swept).toStrictEqual(["auth", "requests", "copyright holds"]);
   });
 
   it("sweeps only on the daily firing", async () => {

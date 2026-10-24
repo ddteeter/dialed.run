@@ -9,6 +9,12 @@
  * (`retract.ts`): every row in one `db.batch()` with the audit row, the
  * notice and an outbox debt owing R2 a reconcile, then the fast path.
  *
+ * **A copyright takedown hides instead** (D-130, design 149): the rows
+ * and bytes stay, a `copyright_holds` row is written with the hide, and
+ * the author is told exactly as before. `sweepCopyrightHolds` puts it
+ * back after a counter-notice, or deletes it here 30 days on, with the
+ * statements a Remove uses. A removal request's takedown still deletes.
+ *
  * **Quarantine is silent and keeps everything** (decision D-70). Before
  * the batch, each photo's bytes are copied to `quarantine/…`
  * (`quarantineKeyFor`), outside the `entries/` prefix a runner's photo
@@ -34,7 +40,7 @@ import {
   outfitEntries,
   outfitEntryItems,
 } from "../../db/schema-core";
-import { env } from "../../env";
+import { coreDb, env } from "../../env";
 import {
   entryPhotoKeyFor,
   entryPhotoPrefix,
@@ -47,7 +53,13 @@ import { notificationInsert } from "../notifications";
 import { captureException, oweOutbox } from "../ops";
 import {
   moderationActionInsert,
+  claimDuePurges,
+  claimPurgeAfterCase,
+  copyrightHoldWrites,
+  isCopyrightHeld,
   openSubject,
+  purgedWrite,
+  restoreDueHolds,
   isCopyrightTakedown,
   quarantineInsert,
   removalNotice,
@@ -55,6 +67,8 @@ import {
   resolveReview,
   settleOpenReviews,
   wasModerated,
+  type CaseOverOutcome,
+  type ClaimedPurge,
   type RemovalReason,
   type ResolveOutcome,
   type ReviewActionValues,
@@ -236,7 +250,11 @@ async function preservation(
  * The row statements for the subject: the photo and its open review, or
  * the entry and everything hung on it — settled by the moderator.
  */
-function deletions(db: Db, input: ModerateInput, target: Target): Statements {
+function deletions(
+  db: Db,
+  input: Pick<ModerateInput, "actorId" | "subjectType" | "subjectId">,
+  target: Pick<Target, "ownerId">,
+): Statements {
   return input.subjectType === "photo"
     ? [
         settleOpenReviews(db, "photo", [input.subjectId], input.actorId),
@@ -311,8 +329,17 @@ export async function moderateContent(
       ? "already_removed"
       : "not_found";
   }
-  const actionId = newUlid();
   const { action } = input;
+  // D-130: a copyright takedown hides for 30 days rather than deleting,
+  // and one already hidden is answered as a repeat.
+  const isHold = isCopyrightTakedown(action, input.reason);
+  if (
+    isHold &&
+    (await isCopyrightHeld(db, input.subjectType, input.subjectId))
+  ) {
+    return "already_removed";
+  }
+  const actionId = newUlid();
   const kept =
     action === "quarantine"
       ? await preservation(db, target, input, actionId)
@@ -322,10 +349,19 @@ export async function moderateContent(
       ? undefined
       : authorNotice(db, input, action, target);
   const words = removalStatements[input.reason];
+  const takenDown: Statements = isHold
+    ? copyrightHoldWrites(db, {
+        moderationActionId: actionId,
+        subjectType: input.subjectType,
+        subjectId: input.subjectId,
+        ownerId: target.ownerId,
+        entryId: target.entryId,
+      })
+    : deletions(db, input, target);
   await commit(
     db,
     [
-      ...deletions(db, input, target),
+      ...takenDown,
       moderationActionInsert(db, {
         id: actionId,
         actorId: input.actorId,
@@ -344,7 +380,9 @@ export async function moderateContent(
       ...(told === undefined ? [] : [told.statement]),
     ],
     [
-      ...mediaDebts(target.ownerId, [target.entryId]),
+      // A hold keeps the bytes, and with them the photo's fingerprint
+      // (C16), until its purge owes them.
+      ...(isHold ? [] : mediaDebts(target.ownerId, [target.entryId])),
       ...(told === undefined ? [] : [told.debt]),
     ],
     report,
@@ -396,4 +434,62 @@ export async function decideReview(
   return isTakenDown
     ? "resolved"
     : resolveReview(queueId, reviewerId, decision.action);
+}
+
+/**
+ * The copyright holds' daily sweep (D-130, design 149), handed to the
+ * daily firing (`DailyUpkeep.sweepCopyrightHolds`) because `ops` cannot
+ * import feed. Restores first — a hold due both ways is one a
+ * counter-notice saved, and the purge's claim skips it — then deletes
+ * each hold the purge claimed with the same statements a Remove uses,
+ * marking it `purged` in the same batch. A purge whose batch fails stays
+ * `purging`, and the next sweep takes it over.
+ */
+export async function sweepCopyrightHolds(
+  db: Db = coreDb(),
+  now = nowSeconds(),
+  report: Report = captureException,
+): Promise<void> {
+  await restoreDueHolds(db, now);
+  const claimed = await claimDuePurges(db, now);
+  for (const hold of claimed) await purgeHeld(db, hold, now, report);
+}
+
+/**
+ * A claimed hold deleted with the statements a Remove uses, the R2 debt
+ * and `purged` in one batch — the bytes and the photo's fingerprint (C16)
+ * go with it.
+ */
+async function purgeHeld(
+  db: Db,
+  hold: ClaimedPurge,
+  now: number,
+  report: Report,
+): Promise<void> {
+  await commit(
+    db,
+    [...deletions(db, hold, hold), purgedWrite(db, hold.id, now)],
+    mediaDebts(hold.ownerId, [hold.entryId]),
+    report,
+  );
+}
+
+/**
+ * The Desk's "Case over: delete" (D-146): a litigation hold ends with the
+ * material deleted now, as its purge would have. The claim is
+ * `safety`'s; a delete whose batch fails stays `purging` for the sweep
+ * to take over, so a second click answers `gone` and never deletes
+ * twice.
+ */
+export async function deleteAfterCase(
+  db: Db,
+  actorId: string,
+  holdId: string,
+  now = nowSeconds(),
+  report: Report = captureException,
+): Promise<CaseOverOutcome> {
+  const claim = await claimPurgeAfterCase(db, actorId, holdId, now);
+  if (claim.outcome !== "claimed") return claim;
+  await purgeHeld(db, claim.hold, now, report);
+  return { outcome: "recorded" };
 }

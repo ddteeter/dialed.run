@@ -344,9 +344,21 @@ outfit_entries:  + moderation_status ('ok'|'hidden_pending_review'|'removed')
                    -- silently rewrite a preference they set, and approving
                    -- could never restore it correctly.
 entry_photos:    + screen_status ('pending'|'pass'|'flagged'|
-                 'hidden_pending_review'), default 'pending'
+                 'hidden_pending_review'|'removed'), default 'pending'
                    -- the durable "not finished" marker that lets screening
                    -- retry be a cron rather than a queue (law 8c).
+                   -- 'removed' (D-130): a copyright hold's hide, the one
+                   -- state the owner's reads skip too. An entry's hold is
+                   -- moderation_status 'removed'. Only the hold's restore
+                   -- moves either out of it; a report and Approve do not.
+copyright_holds: subject (entry|photo), owner, entry, the takedown's
+                 moderation_actions row; status hidden|restored|purging|
+                 purged; hidden_at, purge_at (+30d); counter_notice_at,
+                 restore_at (12th weekday after), court_action_at,
+                 case_closed_by.
+                   -- D-130, design 149. Strikes = an owner's holds that
+                   -- were not restored. A court action is a litigation
+                   -- hold (D-146): no purge until the Desk's "Case over".
 ```
 
 **One rule for "visible to a stranger".** `audience = 'runners' AND

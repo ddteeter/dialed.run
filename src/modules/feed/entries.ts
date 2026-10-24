@@ -36,6 +36,7 @@ import { readInChunks } from "../../lib/chunked";
 import { forIds } from "../../lib/for-ids";
 import {
   entryVisibleTo,
+  heldPhotoStatus,
   isUnderReviewForAuthor,
   publicPhotoStatus,
   publiclyVisibleEntry,
@@ -637,8 +638,9 @@ export async function getEntryDetail(
     .where(
       and(
         eq(entryPhotos.entryId, entryId),
+        // The author sees all but a photo a copyright takedown holds.
         ...(entry.userId === viewerId
-          ? []
+          ? [ne(entryPhotos.screenStatus, heldPhotoStatus)]
           : [eq(entryPhotos.screenStatus, publicPhotoStatus)]),
       ),
     )

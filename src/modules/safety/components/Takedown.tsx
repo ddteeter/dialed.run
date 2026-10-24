@@ -33,8 +33,9 @@ const MESSAGES: Readonly<Record<Outcome, string>> = {
 
 /**
  * A copyright takedown (task 128 · SAF-6; §1.2): a named photo or entry,
- * and the notice it answers. The object is deleted, the row with it, and
- * the audit row keeps who did it, what came down and the notice — the
+ * and the notice it answers. The object is hidden for 30 days (D-130:
+ * a counter-notice can put it back, see Copyright holds), and the audit
+ * row keeps who did it, what came down and the notice — the
  * record a DMCA counter-notice is answered from.
  */
 export function Takedown({

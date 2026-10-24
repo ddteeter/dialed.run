@@ -148,6 +148,9 @@ export async function handleScheduled(
  * beside the send limits' own sweep (`auth/expired-rows.ts`). **The
  * answered access requests' sweep** is `account`'s, for the same reason:
  * requests invited or declined 90 days ago (`account/answered-requests.ts`).
+ * **The copyright holds' sweep** (D-130) is `feed`'s, which imports `ops`:
+ * it restores what a counter-notice saved on its 12th weekday and deletes
+ * what was held 30 days with none pending (`feed/moderation.ts`).
  *
  * All are optional: a firing handed none purges and sweeps nothing and
  * mails the digest the live way (`oweDigestEmail`'s default). A product
@@ -162,6 +165,7 @@ export interface DailyUpkeep {
   readonly linkProducts?: ProductLinker | undefined;
   readonly sweepAuthRows?: (() => Promise<void>) | undefined;
   readonly forgetAnsweredRequests?: (() => Promise<void>) | undefined;
+  readonly sweepCopyrightHolds?: (() => Promise<void>) | undefined;
 }
 
 /**
@@ -724,6 +728,7 @@ async function runDailyDigest(
     () => sweepSendLimits(db),
     () => upkeep.sweepAuthRows?.(),
     () => upkeep.forgetAnsweredRequests?.(),
+    () => upkeep.sweepCopyrightHolds?.(),
   ]);
   return everything;
 }

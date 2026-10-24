@@ -212,7 +212,7 @@ function takedownSentence(subjectType: "entry" | "photo"): string {
  * that carries `copyright`, so the two together are the notice.
  */
 export function isCopyrightTakedown(
-  action: "remove" | "takedown",
+  action: "remove" | "quarantine" | "takedown",
   reason: RemovalReason,
 ): boolean {
   return action === "takedown" && reason === "copyright";

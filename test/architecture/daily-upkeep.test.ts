@@ -42,8 +42,12 @@ describe("the Worker entry hands the firings and the queue their upkeep", () => 
     expect(code).toContain(
       'import { sweepExpiredAuthRows } from "./modules/auth/expired-rows";',
     );
+    // The copyright holds' restore and purge (D-130): `feed`'s.
+    expect(code).toContain(
+      'import { sweepCopyrightHolds } from "./modules/feed/moderation";',
+    );
     expect(code).toMatch(
-      /handleScheduled\(controller, undefined, \{\s*purgeAccounts: purgeDueAccounts,\s*sweepExports,\s*rescreenHandles: rescreenHandlesFromEnv,\s*linkProducts: linkTypedGarments,\s*sweepAuthRows: sweepExpiredAuthRows,\s*forgetAnsweredRequests,\s*\}\)/u,
+      /handleScheduled\(controller, undefined, \{\s*purgeAccounts: purgeDueAccounts,\s*sweepExports,\s*rescreenHandles: rescreenHandlesFromEnv,\s*linkProducts: linkTypedGarments,\s*sweepAuthRows: sweepExpiredAuthRows,\s*forgetAnsweredRequests,\s*sweepCopyrightHolds,\s*\}\)/u,
     );
   });
 

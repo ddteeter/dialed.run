@@ -41,8 +41,9 @@ import { follow, isFollowing, unfollow } from "./follows";
 import { photoUploadFrom, uploadPhoto } from "./photos";
 import { deleteEntryPhoto, photoIdInput, retractEntry } from "./retract";
 import { garmentBandCountOrNone, garmentBandsInput } from "./garment-bands";
-import { decideReview, moderateContent } from "./moderation";
+import { decideReview, deleteAfterCase, moderateContent } from "./moderation";
 import {
+  copyrightHoldInput,
   removalDecisionInput,
   requireAdmin,
   reviewActionInput,
@@ -339,11 +340,7 @@ export const garmentBandCountQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => garmentBandsInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    return garmentBandCountOrNone(
-      coreDb(),
-      userId,
-      data.itemId,
-    );
+    return garmentBandCountOrNone(coreDb(), userId, data.itemId);
   });
 
 /**
@@ -376,6 +373,17 @@ export const takedownAction = createServerFn({ method: "POST" })
         notice: data.notice,
       }),
     };
+  });
+
+/**
+ * The Desk's "Case over: delete" on a copyright hold under a litigation
+ * hold (D-146): the case ended against the runner, so it is deleted now.
+ */
+export const caseOverDeleteAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => copyrightHoldInput.parse(input))
+  .handler(async ({ data }) => {
+    const actorId = requireAdmin(await verifiedUserId());
+    return deleteAfterCase(coreDb(), actorId, data.holdId);
   });
 
 /**

@@ -207,6 +207,7 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "feed/functions.ts garmentBandCountQuery": "unconfirmed",
   "feed/functions.ts decideReviewAction": "admin",
   "feed/functions.ts takedownAction": "admin",
+  "feed/functions.ts caseOverDeleteAction": "admin",
   // Design 136: an operator decides a `/takedown` request.
   "feed/functions.ts decideRemovalRequestAction": "admin",
   // ---- notifications
@@ -268,6 +269,9 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "safety/functions.ts reviewQueueQuery": "admin",
   "safety/functions.ts claimReviewAction": "admin",
   "safety/functions.ts recordNcmecReportAction": "admin",
+  "safety/functions.ts counterNoticeAction": "admin",
+  "safety/functions.ts courtActionAction": "admin",
+  "safety/functions.ts caseOverRestoreAction": "admin",
   "safety/functions.ts banUserAction": "admin",
   "safety/functions.ts denyDomainAction": "admin",
   "safety/functions.ts unbanUserAction": "admin",

@@ -7,7 +7,7 @@
  * human, and the daily digest reports how deep it is so an empty queue is a
  * fact rather than an assumption.
  */
-import { and, asc, eq, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, lt, ne, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { SQLWrapper } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
@@ -39,6 +39,7 @@ import {
 import type { ReportReason, ReportSubjectType } from "./contracts";
 import { otherPhotosOf, type OtherPhoto } from "./other-photos";
 import { photoMatchesOf, type PhotoMatches } from "./photo-matches";
+import { heldPhotoStatus } from "./visibility";
 
 function db() {
   return coreDb();
@@ -732,10 +733,15 @@ const subjectWriters: Record<
   ReportSubjectType,
   (subjectId: string, decision: ReviewDecision) => BatchItem<"sqlite">[]
 > = {
+  // Neither entry nor photo moves out of `removed`: that is a copyright
+  // takedown's hide (D-130), and only its counter-notice puts it back.
   entry: (subjectId, decision) => [
-    setOnSubject(outfitEntries, subjectId, {
-      moderationStatus: onDecision(decision, "ok", "removed"),
-    }),
+    setOnSubject(
+      outfitEntries,
+      subjectId,
+      { moderationStatus: onDecision(decision, "ok", "removed") },
+      ne(outfitEntries.moderationStatus, "removed"),
+    ),
   ],
   // Hidden products drop out of autocomplete and linked garments fall
   // back to their own text fields (packet §2) — the column 000 reserved
@@ -756,9 +762,12 @@ const subjectWriters: Record<
   // report it. Owner's call, 2026-09-15; the reasoning is in
   // docs/designs/106-trust-safety.md.
   photo: (subjectId, decision) => [
-    setOnSubject(entryPhotos, subjectId, {
-      screenStatus: onDecision(decision, "pending", "flagged"),
-    }),
+    setOnSubject(
+      entryPhotos,
+      subjectId,
+      { screenStatus: onDecision(decision, "pending", "flagged") },
+      ne(entryPhotos.screenStatus, heldPhotoStatus),
+    ),
   ],
 };
 
@@ -781,8 +790,12 @@ function setOnSubject<T extends SQLiteTable & { id: SQLiteColumn }>(
   table: T,
   subjectId: string,
   values: SQLiteUpdateSetSource<T>,
+  onlyIf?: SQL,
 ): BatchItem<"sqlite"> {
-  return db().update(table).set(values).where(eq(table.id, subjectId));
+  return db()
+    .update(table)
+    .set(values)
+    .where(and(eq(table.id, subjectId), onlyIf));
 }
 
 /**
