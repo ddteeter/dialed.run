@@ -34,15 +34,21 @@ describe("D4 · the notice, on Au1 (item 23)", () => {
         "Think we got it wrong? Reply to the email we sent you.",
       ),
     ).toHaveClass("text-quiet");
-    expect(screen.getByText("Or write to desk@dialed.run.")).toHaveClass(
-      "text-quiet",
-    );
+    const appeal = screen.getByRole("link").parentElement;
+    expect(appeal).toHaveTextContent(/^Or write to desk@dialed\.run\.$/u);
+    expect(appeal).toHaveClass("text-quiet");
   });
 
-  it("offers nothing to press, and promises no time to an answer (D-73)", () => {
+  it("links the appeal address to an email to it (round 38 #62a)", () => {
+    render(<AccountClosed />);
+    const link = screen.getByRole("link", { name: "desk@dialed.run" });
+    expect(link).toHaveAttribute("href", "mailto:desk@dialed.run");
+  });
+
+  it("offers nothing to press but the address, and promises no time to an answer (D-73)", () => {
     const { container } = render(<AccountClosed />);
     expect(screen.queryByRole("button")).toBeNull();
-    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.getAllByRole("link")).toHaveLength(1);
     expect(container.textContent).not.toMatch(/within|week|\bdays?\b/u);
   });
 });

@@ -1,4 +1,4 @@
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 
 import { Mono } from "../../../ui";
 import {
@@ -25,7 +25,7 @@ export function NoticeBand({
   /**
   A second quiet line under `detail`, when there is one more thing to say.
   */
-  more?: string | undefined;
+  more?: ReactNode;
 }>): JSX.Element {
   return (
     <div

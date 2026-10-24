@@ -1351,31 +1351,41 @@ describe("forceRename (round 27 #16), through account's rules", () => {
     expect(kept?.createdAt).toBeTypeOf("number");
   });
 
-  it("answers not_found when the profile is gone by the time it looks", async () => {
-    const runner = await makeUser({ username: "rudename" });
-    const real = core();
-    const counter = { batches: 0 };
-    // The account's purge lands between the rename's write and its read.
-    const batch: typeof real.batch = async (items) => {
-      counter.batches += 1;
-      const results = await real.batch(items);
-      if (counter.batches === 2) {
-        await real.delete(userProfiles).where(eq(userProfiles.userId, runner));
-      }
-      return results;
-    };
-    const purged = new Proxy(real, {
-      get(target, property, receiver): unknown {
-        return property === "batch"
-          ? batch
-          : Reflect.get(target, property, receiver);
-      },
-    });
+  it.each([
+    ["the profile is gone", "gone"],
+    ["the profile holds no handle", "unnamed"],
+  ] as const)(
+    "answers not_found when %s by the time it looks",
+    async (_, after) => {
+      const runner = await makeUser({ username: "rudename" });
+      const real = core();
+      const counter = { batches: 0 };
+      // The account's purge, or a handle cleared, lands between the rename's
+      // write and its read.
+      const batch: typeof real.batch = async (items) => {
+        counter.batches += 1;
+        const results = await real.batch(items);
+        if (counter.batches === 2) {
+          const whose = eq(userProfiles.userId, runner);
+          await (after === "gone"
+            ? real.delete(userProfiles).where(whose)
+            : real.update(userProfiles).set({ username: sql`NULL` }).where(whose));
+        }
+        return results;
+      };
+      const purged = new Proxy(real, {
+        get(target, property, receiver): unknown {
+          return property === "batch"
+            ? batch
+            : Reflect.get(target, property, receiver);
+        },
+      });
 
-    expect(await rename(runner, "runner_0002", purged)).toStrictEqual({
-      kind: "not_found",
-    });
-  });
+      expect(await rename(runner, "runner_0002", purged)).toStrictEqual({
+        kind: "not_found",
+      });
+    },
+  );
 
   it("lets a rename that lost a race write nothing, and say so rather than renamed (R-121)", async () => {
     const runner = await makeUser({ username: "first" });
@@ -1398,8 +1408,10 @@ describe("forceRename (round 27 #16), through account's rules", () => {
     });
 
     // This one would have handed back the runner's own old "first".
+    // It names the handle it lost to (round 38 #60).
     expect(await rename(runner, "first", raced)).toStrictEqual({
       kind: "moved",
+      username: "runner_0001",
     });
 
     const profile = await profileOf(runner);

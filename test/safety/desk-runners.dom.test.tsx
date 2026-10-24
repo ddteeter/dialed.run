@@ -219,8 +219,8 @@ describe("Rename (round 27 #16)", () => {
     expect(renameMessage({ kind: "taken" })).toBe(
       "That placeholder is taken. Press Rename again.",
     );
-    expect(renameMessage({ kind: "moved" })).toBe(
-      "The handle changed before the rename landed. Nothing was renamed.",
+    expect(renameMessage({ kind: "moved", username: "dunk_runs" })).toBe(
+      "The handle changed to @dunk_runs before the rename landed. Nothing was renamed. Look at it, then press Rename again if it still has to go.",
     );
     expect(renameMessage({ kind: "not_found" })).toBe(
       "This runner has no handle to take away.",
@@ -339,6 +339,55 @@ describe("after an action", () => {
     username: "cy",
     email: "cy@example.com",
   };
+
+  it.each([
+    [{ kind: "moved", username: "dunk_runs" }, /changed to @dunk_runs/u],
+    [{ kind: "taken" }, /That placeholder is taken/u],
+  ] as const)(
+    "says a rename that did not happen in the control band, under NOT RENAMED (round 38 #60)",
+    async (outcome, sentence) => {
+      const user = userEvent.setup();
+      await renderDesk({
+        rename: vi.fn<Props["rename"]>().mockResolvedValue(outcome),
+      });
+      await user.click(screen.getByRole("button", { name: "@ada" }));
+
+      await user.selectOptions(
+        screen.getByRole("combobox", { name: /Why the name has to go/ }),
+        "Advertising",
+      );
+      await user.click(screen.getByRole("button", { name: "Rename" }));
+
+      const band = await waitFor(() => {
+        const found = document.querySelector("[data-part='control-failure']");
+        expect(found).not.toBeNull();
+        return found;
+      });
+      expect(band).toHaveTextContent(/^Not renamed/u);
+      expect(band).toHaveTextContent(sentence);
+      // No Try again: the sentence says to press Rename.
+      expect(band?.querySelector("button")).toBeNull();
+    },
+  );
+
+  it("says a runner with no handle as a line, not a band", async () => {
+    const user = userEvent.setup();
+    await renderDesk({
+      rename: vi.fn<Props["rename"]>().mockResolvedValue({ kind: "not_found" }),
+    });
+    await user.click(screen.getByRole("button", { name: "@ada" }));
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why the name has to go/ }),
+      "Advertising",
+    );
+    await user.click(screen.getByRole("button", { name: "Rename" }));
+
+    expect(
+      await screen.findByText("This runner has no handle to take away."),
+    ).toBeInTheDocument();
+    expect(document.querySelector("[data-part='control-failure']")).toBeNull();
+  });
 
   it("keeps the search in the page rather than submitting the form", async () => {
     await renderDesk();

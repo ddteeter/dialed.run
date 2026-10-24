@@ -141,6 +141,7 @@ export {
   settleOpenReviews,
   wasFlaggedAutomatically,
   type ClaimOutcome,
+  type HandleReview,
   type HandleReviewOutcome,
   type QueueRow,
   type ReleaseReport,

@@ -45,7 +45,7 @@ import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { countSend, emailDebt, sendClaimOf } from "../email";
 import { adminUserIds } from "./admin";
 import { REMOVAL_DUE_SECONDS, removalDueLabel } from "./contracts";
-import { otherPhotosOf, type OtherPhoto } from "./other-photos";
+import { otherPhotosOf, type OtherPhotos } from "./other-photos";
 import { photoMatchesOf, type PhotoMatches } from "./photo-matches";
 import type { OweEmail } from "./reports";
 import { ipKey, requesterKey } from "./requester-key";
@@ -424,7 +424,7 @@ export interface PendingTakedownRequest {
    * The posting runner's other photos (D-117, R-145 c), when the link is
    * ours; `undefined` when it is not, since then nobody is known.
    */
-  readonly otherPhotos: readonly OtherPhoto[] | undefined;
+  readonly otherPhotos: OtherPhotos | undefined;
   /**
    * Photos from any runner, private included, that match the linked one by
    * fingerprint (D-142, design 146); `undefined` when the link is not ours.

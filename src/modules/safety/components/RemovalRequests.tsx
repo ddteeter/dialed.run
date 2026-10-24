@@ -206,7 +206,7 @@ function RemovalRequestRow({
         )}
       </span>
       <SubjectLink request={request} />
-      <OtherPhotos photos={request.otherPhotos} />
+      <OtherPhotos others={request.otherPhotos} />
       <PhotoMatches found={request.photoMatches} />
       <RemoveForm
         requestId={request.id}

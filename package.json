@@ -29,8 +29,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "guardrails-core install-hooks",
-    "db:generate:core": "drizzle-kit generate --config drizzle-core.config.ts",
-    "db:generate:weather": "drizzle-kit generate --config drizzle-weather.config.ts",
+    "db:generate:core": "node -e \"const a=process.argv.slice(1);if(!a.some((x,i)=>/^--name=[a-z0-9_]+$/.test(x)||(x==='--name'&&/^[a-z0-9_]+$/.test(a[i+1]||'')))){console.error('Name the migration for what it does to the schema: npm run db:generate:core -- --name=add_run_idempotency_key (see CLAUDE.md, Schema changes).');process.exit(1);}require('node:child_process').execFileSync('npx',['drizzle-kit','generate','--config','drizzle-core.config.ts',...a],{stdio:'inherit'});\" --",
+    "db:generate:weather": "node -e \"const a=process.argv.slice(1);if(!a.some((x,i)=>/^--name=[a-z0-9_]+$/.test(x)||(x==='--name'&&/^[a-z0-9_]+$/.test(a[i+1]||'')))){console.error('Name the migration for what it does to the schema: npm run db:generate:weather -- --name=add_run_idempotency_key (see CLAUDE.md, Schema changes).');process.exit(1);}require('node:child_process').execFileSync('npx',['drizzle-kit','generate','--config','drizzle-weather.config.ts',...a],{stdio:'inherit'});\" --",
     "db:migrate:local:core": "wrangler d1 migrations apply dialed-core --local",
     "db:migrate:local:weather": "wrangler d1 migrations apply dialed-weather --local",
     "check:bundle": "tsx scripts/check-bundle.ts",
@@ -106,10 +106,11 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-better-tailwindcss": "4.9.1",
     "eslint-plugin-sonarjs": "^4.2.0",
     "eslint-plugin-unicorn": "^74.0.0",
     "fallow": "^3.23.0",
-    "guardrails-core": "https://github.com/ddteeter/agentic-guardrails-scaffolding/releases/download/v0.11.0/guardrails-core-0.11.0.tgz",
+    "guardrails-core": "https://github.com/ddteeter/agentic-guardrails-scaffolding/releases/download/v0.11.1/guardrails-core-0.11.1.tgz",
     "happy-dom": "^20.14.0",
     "knip": "^6.34.0",
     "prettier": "^3.9.6",
@@ -136,5 +137,10 @@
   },
   "engines": {
     "node": "^24 || >=26"
+  },
+  "overrides": {
+    "vite-plus": {
+      "@vitest/browser-playwright": "$@vitest/browser-playwright"
+    }
   }
 }

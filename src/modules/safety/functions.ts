@@ -252,9 +252,7 @@ export const reviewHandleAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => handleReviewInput.parse(input))
   .handler(async ({ data }) => {
     const reviewerId = requireAdmin(await verifiedUserId());
-    return {
-      outcome: await reviewFlaggedHandle(coreDb(), reviewerId, data),
-    };
+    return reviewFlaggedHandle(coreDb(), reviewerId, data);
   });
 
 /**

@@ -45,6 +45,7 @@ function desk(
       oldestGaveUpAt,
       digestUnconfirmedAt,
     },
+    skipped: [],
   };
 }
 
@@ -426,45 +427,59 @@ describe("lastTryOf", () => {
 });
 
 /**
-An empty Today whose digest mark is `digestUnconfirmedAt`.
+An empty Today whose digest skipped `skipped`.
 */
-function withMark(digestUnconfirmedAt: number | undefined): DeskToday {
-  return desk(0, undefined, digestUnconfirmedAt);
+function withSkipped(skipped: DeskToday["skipped"]): DeskToday {
+  return { ...desk(0), skipped };
 }
 
 /**
  * OPS-11: a morning's digest that skipped an operator whose address is not
- * confirmed is said on Today, on that UTC day only (design-deltas item 62).
+ * confirmed is said on Today, one named line per operator (round 38 #62b).
+ * Which day it shows on is `deskToday`'s to decide (test/ops/desk.test.ts).
  */
 describe("a digest that skipped an operator, on Today", () => {
-  const LINE =
-    "An operator's email address isn't confirmed, so today's digest wasn't sent to them.";
+  const JESS = {
+    userId: "op-jess",
+    handle: "jess",
+    address: "je•••@gmail.com",
+  };
 
-  it("says so under the three numbers, in hi-viz, on the day it happened", () => {
-    // The digest fires at 12:00 UTC; the Desk is opened at 23:59.
-    renderToday([], {}, { ...withMark(NOON), asOf: NOON + 12 * HOUR - 1 });
+  it("names them under the three numbers, in hi-viz, with no button", () => {
+    renderToday([], {}, withSkipped([JESS]));
     const line = document.querySelector("[data-part='digest-unconfirmed']");
-    expect(line?.textContent).toBe(`Digest not emailed${LINE}`);
+    expect(line?.textContent).toBe(
+      "Digest not emailedToday's digest wasn't sent to @jess. Their email address, je•••@gmail.com, isn't confirmed.",
+    );
     expect(screen.getByText("Digest not emailed")).toHaveClass(
       "text-hiviz-text",
     );
     expect(line?.previousElementSibling).toBe(
       screen.getByRole("list", { name: "Today" }),
     );
+    expect(line?.querySelector("button")).toBeNull();
   });
 
-  it("says it from the first second of that UTC day", () => {
-    const midnight = NOON - 12 * HOUR;
-    renderToday([], {}, { ...withMark(midnight), asOf: midnight + 1 });
-    expect(screen.getByText(LINE)).toBeInTheDocument();
+  it("says one line per operator, and an operator with no handle as one", () => {
+    renderToday(
+      [],
+      {},
+      withSkipped([
+        JESS,
+        { userId: "op-x", handle: undefined, address: "x•••@example.com" },
+      ]),
+    );
+    const lines = document.querySelectorAll("[data-part='digest-unconfirmed']");
+    expect(lines).toHaveLength(2);
+    expect(lines[1]?.textContent).toContain(
+      "Today's digest wasn't sent to an operator. Their email address, x•••@example.com, isn't confirmed.",
+    );
   });
 
-  it("says nothing once the day has turned, or when no digest skipped anyone", () => {
-    renderToday([], {}, { ...withMark(NOON), asOf: NOON + 12 * HOUR });
-    expect(screen.queryByText(LINE)).toBeNull();
-    renderToday([], {}, withMark(undefined));
-    expect(screen.queryByText(LINE)).toBeNull();
-    renderToday([], {}, withMark(NOON - 12 * HOUR - 1));
-    expect(screen.queryByText(LINE)).toBeNull();
+  it("says nothing when the digest skipped nobody", () => {
+    renderToday([], {}, withSkipped([]));
+    expect(
+      document.querySelector("[data-part='digest-unconfirmed']"),
+    ).toBeNull();
   });
 });

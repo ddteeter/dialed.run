@@ -273,7 +273,7 @@ describe("the open requests, as Review lists them", () => {
       due: "Due in 47h",
       // D-117: our link names a runner, so their other photos are listed
       // — none here, since no kit stands behind this id.
-      otherPhotos: [],
+      otherPhotos: { photos: [], total: 0, handle: undefined },
     });
     expect(listed[1]).toMatchObject({
       location: "words only",

@@ -943,8 +943,8 @@ Built beside or without a drawing (items 60–65)" in
 `design/docs/product.md`. Two follow-ups went back that evening (64's
 unconfirmed runner and 62b's name) and are answered on the same board, so
 nothing is left open. Every ask is drawn, and most of the answers change
-the build: each item says what is **not built yet**. Item 61 is the one
-that blocks public launch.
+the build: each item said what was **not built yet**, and now says when
+it was built. Item 61 was the one that blocked public launch.
 
 Design changed eight files:
 
@@ -965,7 +965,7 @@ Design changed eight files:
     renamed. Look at it, then press Rename again if it still has to go." In
     D8's control band and on D1's flagged-handle row. D1's row stays open
     and its header re-reads to the new handle. Keep is left to the operator.
-    **Not built yet:** the sentence needs the handle as it is now, which
+    **Built 2026-10-22 (round 38 PR 2).** Before: the sentence needs the handle as it is now, which
     the rename outcome does not carry today, and D1's header re-read.
 
 61. **Settings › Privacy (lane A, design 138). Blocks public launch.**
@@ -991,12 +991,12 @@ Design changed eight files:
       confirm your email." No confirm sheet.
     - The link opens `/privacy` until `#totals` is live, and there is no
       Settings › Region (D-120): both as built.
-    - **Not built yet:** the sheet's title (b), U1's sub-line (b), the two
+    - **Built 2026-10-22 (#201).** Before: the sheet's title (b), U1's sub-line (b), the two
       kickers, the rule and the tab order (c), and the unconfirmed lines (d).
 
 62. **Lane C (design 139). Worded, confirmed and drawn.**
     - (a) "Or write to desk@dialed.run." is drawn on Au1 as built, but as a
-      `mailto:` link. **Not built yet:** today the address is plain text.
+      `mailto:` link. **Built 2026-10-22 (round 38 PR 2).** Before: today the address is plain text.
     - (b) **The skipped digest names the operator:** DIGEST NOT EMAILED
       (MONO.xs, hi-viz) · "Today's digest wasn't sent to @{handle}. Their
       email address, {masked}, isn't confirmed." One line per skipped
@@ -1006,7 +1006,7 @@ Design changed eight files:
       Desk name is added. The address is masked the way round 27 masks
       addresses (`je•••@gmail.com`, as `email/landing.ts` does), so the
       operator knows which inbox to confirm. No button: confirming happens
-      in the operator's own Settings › Account. **Not built yet:** today
+      in the operator's own Settings › Account. **Built 2026-10-22 (round 38 PR 2).** Before: today
       the build records only when a digest skipped someone, not who, and
       shows one unnamed line.
     - (c) Au2's ban band: confirmed as built.
@@ -1019,7 +1019,7 @@ Design changed eight files:
       shown. Past 12, the block ends in "+ N MORE · OPEN @name IN RUNNERS",
       which opens the runner in D8. The id is MONO.sm and selectable. With
       none, "No other photos from this runner." replaces the grid and the
-      kicker has no count. **Not built yet:** the build counts the photos
+      kicker has no count. **Built 2026-10-22 (round 38 PR 2).** Before: the build counts the photos
       shown, has no "+ N MORE" link, sets the id in MONO.xs and keeps the
       count when there are none.
     - (b) The copyright email's two sentences: confirmed as built, and
@@ -1050,7 +1050,7 @@ Design changed eight files:
       checked, other runners can't see this photo".
     - U2's THE CONDITIONS POOL card and SHARED/NEVER table are retired. The
       one switch lives on Privacy.
-    - **Not built yet:** the ON and OFF wording, `[CHECKING]` with its
+    - **Built 2026-10-22 (#201).** Before: the ON and OFF wording, `[CHECKING]` with its
       spoken name, and "Confirm your email" as a link (today the whole
       line is plain text). The opted-out line is already built.
 

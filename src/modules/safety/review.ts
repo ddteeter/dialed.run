@@ -42,7 +42,7 @@ import {
 } from "./contracts";
 import type { ReportReason, ReportSubjectType } from "./contracts";
 import { keptNotice, reporterNotices } from "./notices";
-import { otherPhotosOf, type OtherPhoto } from "./other-photos";
+import { otherPhotosOf, type OtherPhotos } from "./other-photos";
 import { photoMatchesOf, type PhotoMatches } from "./photo-matches";
 import { heldPhotoStatus } from "./visibility";
 
@@ -200,7 +200,7 @@ export interface QueueRow {
    * intimate-image report started — the reasonable effort on copies.
    * Absent on every other row.
    */
-  otherPhotos?: readonly OtherPhoto[] | undefined;
+  otherPhotos?: OtherPhotos | undefined;
   /**
    * Photos from any runner, private included, that match the subject's by
    * fingerprint (D-142, design 146), on the same rows as `otherPhotos`.
@@ -576,6 +576,15 @@ export type ResolveOutcome = "resolved" | "already_resolved" | "not_found";
  * and the row stays open (R-121).
  */
 export type HandleReviewOutcome = ResolveOutcome | "taken" | "moved";
+
+/**
+ * What a flagged handle's decision answers the Desk: its outcome, and for
+ * `moved` the handle as it is now, which D1's sentence names and its row
+ * header re-reads to (round 38 #60).
+ */
+export type HandleReview =
+  | { readonly outcome: Exclude<HandleReviewOutcome, "moved"> }
+  | { readonly outcome: "moved"; readonly username: string };
 
 /**
  * What `openRow` hands back: the subject to act on, or the reason there is

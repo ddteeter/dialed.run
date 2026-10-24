@@ -26,13 +26,13 @@ type Db = ReturnType<typeof drizzle>;
  * and the operator presses Rename again (a request handler does one
  * attempt, law 3). `moved` is a handle that changed before the rename
  * landed (another rename, or the runner's own pick), so nothing was done
- * (R-121).
+ * (R-121); it carries the handle as it is now (round 38 #60).
  */
 export type RenameOutcome =
   | { kind: "renamed"; username: string }
   | { kind: "not_found" }
   | { kind: "taken" }
-  | { kind: "moved" };
+  | { kind: "moved"; username: string };
 
 /**
  * The placeholder handle: `runner_` and four digits. `digits` is a

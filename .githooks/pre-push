@@ -80,3 +80,13 @@ if [ "$status" -ne 0 ]; then
   echo "guardrails: push blocked — resolve violations or run 'guardrails verify'." >&2
   exit 1
 fi
+
+# The sanction budget: every `Stryker disable` / exemption in the diff must
+# match a keyed grant in guardrails.config.json. CI runs this as its own step
+# after `gate --mode=ci`, and nothing local did, so a copied directive passed
+# every local gate and failed CI an hour later. It takes a tenth of a second,
+# so it runs after the gate rather than inside the lock.
+node "$cli" sanctions-check || {
+  echo "guardrails: push blocked — a sanction in this diff has no grant in guardrails.config.json." >&2
+  exit 1
+}

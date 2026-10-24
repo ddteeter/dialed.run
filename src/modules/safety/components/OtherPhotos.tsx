@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { JSX, ReactNode } from "react";
 
 import { Mono } from "../../../ui";
-import type { OtherPhoto } from "../other-photos";
+import type { OtherPhoto, OtherPhotos as Others } from "../other-photos";
 
 /**
  * The same runner's other photos, on a Review row about an intimate image
@@ -20,18 +20,30 @@ import type { OtherPhoto } from "../other-photos";
  *
  * Nothing renders for a row that lists none (`undefined`): a link that is
  * not ours names no runner. An empty list says so in words, because "this
- * runner has posted nothing else" is an answer the operator needs.
+ * runner has posted nothing else" is an answer the operator needs, and its
+ * kicker has no count (round 38 #63a).
+ *
+ * **The kicker counts them all** (round 38 #63a), so it reads
+ * `THEIR OTHER PHOTOS · 14` with 12 shown. Past the 12, the block ends in
+ * "+ 2 more · Open @name in Runners", which opens the runner in D8. Each
+ * id is MONO.sm and selects whole on a click, since it is what the
+ * takedown form takes.
  */
 export function OtherPhotos({
-  photos,
+  others,
 }: Readonly<{
-  photos: readonly OtherPhoto[] | undefined;
+  others: Others | undefined;
 }>): JSX.Element | undefined {
-  if (photos === undefined) return undefined;
+  if (others === undefined) return undefined;
+  const { photos, total } = others;
   return (
     <PhotoSection
       part="other-photos"
-      title={`Their other photos · ${String(photos.length)}`}
+      title={
+        total === 0
+          ? "Their other photos"
+          : `Their other photos · ${String(total)}`
+      }
     >
       {photos.length === 0 ? (
         <span className="text-micro text-quiet">
@@ -42,13 +54,14 @@ export function OtherPhotos({
           {photos.map((photo) => (
             <li key={photo.id} className="flex flex-col gap-1">
               <Thumbnail photo={photo} />
-              <span className="text-quiet">
-                <Mono step="xs">{photo.id}</Mono>
+              <span className="text-quiet select-all">
+                <Mono step="sm">{photo.id}</Mono>
               </span>
             </li>
           ))}
         </ul>
       )}
+      <MorePhotos more={total - photos.length} handle={others.handle} />
     </PhotoSection>
   );
 }
@@ -74,6 +87,35 @@ export function PhotoSection({
       </span>
       {children}
     </div>
+  );
+}
+
+/**
+ * What the 12 leave out: a count, and D8 filtered to the runner, where
+ * the rest of them can be looked at. A runner with no handle cannot be
+ * searched for, so the count stands alone.
+ */
+function MorePhotos({
+  more,
+  handle,
+}: Readonly<{ more: number; handle: string | undefined }>):
+  JSX.Element | undefined {
+  if (more <= 0) return undefined;
+  const count = `+ ${String(more)} more`;
+  return (
+    <span data-part="more-photos" className="self-start uppercase">
+      {handle === undefined ? (
+        <Mono step="sm">{count}</Mono>
+      ) : (
+        <Link
+          to="/desk/runners"
+          search={{ query: handle, filter: "all" }}
+          className="target text-ink"
+        >
+          <Mono step="sm">{`${count} · Open @${handle} in Runners`}</Mono>
+        </Link>
+      )}
+    </span>
   );
 }
 
