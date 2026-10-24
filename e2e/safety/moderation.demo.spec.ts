@@ -3,8 +3,8 @@
  * queue's Remove that deletes, and round 28 #8's review row (the row
  * opens itself; suspected CSAM asks again), and a flagged handle's row
  * with its Keep (round 35 #45), the quarantine with its NCMEC report
- * recorded (C12, design 145), a copyright hold's counter-notice and court
- * action (C5, D-130), then the author's run after a Remove
+ * recorded (C12, design 145), a copyright hold's counter-notice, court
+ * action and the case's end (C5, D-130, D-146), then the author's run after a Remove
  * (round 27 #20, R-140: the band in place of the entry) — one journey,
  * one video.
  *
@@ -253,8 +253,12 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   await expect(held.locator("[data-part='ncmec']")).toContainText(reportNumber);
 
   // D-130: a copyright hold — the counter-notice sets the day it comes
-  // back, and a court action cancels that.
-  await scene(page, "Copyright holds: counter-notice, then court action");
+  // back, and a court action cancels that and holds it until the case
+  // ends (D-146), when the Desk restores or deletes it.
+  await scene(
+    page,
+    "Copyright holds: counter-notice, court action, then the case's end",
+  );
   const copyrightHold = page
     .locator("[data-part='copyright-hold']")
     .filter({ hasText: heldPhotoId });
@@ -278,11 +282,21 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
     .getByRole("button", { name: "Court action filed" })
     .click();
   await expect(copyrightHold.locator("[data-part='hold-said']")).toHaveText(
-    "Court action recorded. It stays hidden.",
+    "Court action recorded. It stays hidden until the case is over.",
   );
   await expect(copyrightHold.locator("[data-part='hold-state']")).toHaveText(
-    /^\[court action .+: stays hidden, deleted .+\]$/u,
+    /^\[court action .+: held until the case is over\]$/u,
   );
+  await expect(
+    copyrightHold.getByRole("button", { name: "Case over: delete" }),
+  ).toBeVisible();
+  await copyrightHold
+    .getByRole("button", { name: "Case over: restore" })
+    .click();
+  await expect(copyrightHold.locator("[data-part='hold-said']")).toHaveText(
+    "Case over. It is back.",
+  );
+  await expect(copyrightHold.getByRole("button")).toHaveCount(0);
 
   await scene(page, "D8: find the runner by email");
   await page.goto("/desk/runners");

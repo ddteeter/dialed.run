@@ -10,12 +10,14 @@ import {
 import type { CopyrightHoldSummary } from "../../src/modules/safety/copyright-holds";
 
 /**
- * D-130: Review's copyright holds, and the two Desk actions on one —
- * "Counter-notice received", then "Court action filed".
+ * D-130: Review's copyright holds, and the Desk actions on one —
+ * "Counter-notice received", then "Court action filed", then, once the
+ * case is over (D-146), "Case over: delete" or "Case over: restore".
  */
 type Props = Parameters<typeof CopyrightHolds>[0];
 type CounterFn = Props["counterNotice"];
 type CourtFn = Props["courtAction"];
+type CaseOverFn = Props["caseOverDelete"];
 
 const OCT_23 = Date.UTC(2026, 9, 23) / 1000;
 const NOV_10 = Date.UTC(2026, 10, 10) / 1000;
@@ -52,15 +54,24 @@ function renderHolds(
   hold: CopyrightHoldSummary,
   counterNotice: CounterFn = vi.fn<CounterFn>(),
   courtAction: CourtFn = vi.fn<CourtFn>(),
+  caseOver: Readonly<{ remove?: CaseOverFn; restore?: CaseOverFn }> = {},
 ) {
   render(
     <CopyrightHolds
       holds={[hold]}
       counterNotice={counterNotice}
       courtAction={courtAction}
+      caseOverDelete={caseOver.remove ?? vi.fn<CaseOverFn>()}
+      caseOverRestore={caseOver.restore ?? vi.fn<CaseOverFn>()}
     />,
   );
 }
+
+/**
+A hold under a litigation hold: counter-notice, then court action.
+*/
+const inCourt = () =>
+  held({ counterNoticeAt: OCT_23, restoreAt: NOV_10, courtActionAt: NOV_10 });
 
 describe("holdState", () => {
   it("says what the sweep will do, and when", () => {
@@ -76,7 +87,7 @@ describe("holdState", () => {
           courtActionAt: NOV_10,
         }),
       ),
-    ).toBe("court action Nov 10: stays hidden, deleted Nov 22");
+    ).toBe("court action Nov 10: held until the case is over");
   });
 });
 
@@ -111,6 +122,8 @@ describe("CopyrightHolds", () => {
         holds={[]}
         counterNotice={vi.fn()}
         courtAction={vi.fn()}
+        caseOverDelete={vi.fn()}
+        caseOverRestore={vi.fn()}
       />,
     );
 
@@ -144,7 +157,7 @@ describe("CopyrightHolds", () => {
     expect(part("hold-said")?.textContent).toBe("Counter-notice recorded.");
   });
 
-  it("records a court action, and then offers nothing more", async () => {
+  it("records a court action, and then offers only the case's end", async () => {
     const courtAction = vi.fn<CourtFn>().mockResolvedValue({
       outcome: "recorded",
       courtActionAt: NOV_10,
@@ -160,18 +173,26 @@ describe("CopyrightHolds", () => {
       .click(screen.getByRole("button", { name: "Court action filed" }));
 
     expect(
-      await screen.findByText("Court action recorded. It stays hidden."),
+      await screen.findByText(
+        "Court action recorded. It stays hidden until the case is over.",
+      ),
     ).toBeInTheDocument();
     expect(courtAction).toHaveBeenCalledWith({ data: { holdId: HOLD_ID } });
     await waitFor(() => {
       expect(part("hold-state")?.textContent).toBe(
-        "[court action Nov 10: stays hidden, deleted Nov 22]",
+        "[court action Nov 10: held until the case is over]",
       );
     });
-    expect(screen.queryByRole("button")).toBeNull();
-    // The form is gone; the row keeps what it answered.
+    expect(screen.getAllByRole("button")).toHaveLength(2);
+    expect(
+      screen.getByRole("button", { name: "Case over: delete" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Case over: restore" }),
+    ).toBeVisible();
+    // The court action's form is gone; the row keeps what it answered.
     expect(part("hold-said")?.textContent).toBe(
-      "Court action recorded. It stays hidden.",
+      "Court action recorded. It stays hidden until the case is over.",
     );
   });
 
@@ -227,6 +248,61 @@ describe("CopyrightHolds", () => {
       await screen.findByText("This hold is settled: put back or deleted."),
     ).toBeVisible();
   });
+
+  it.each([
+    ["delete", "Case over: delete", "Case over. It is deleted."],
+    ["restore", "Case over: restore", "Case over. It is back."],
+  ] as const)(
+    "ends the case with %s, then offers nothing more",
+    async (which, label, sentence) => {
+      const act = vi
+        .fn<CaseOverFn>()
+        .mockResolvedValue({ outcome: "recorded" });
+      renderHolds(inCourt(), vi.fn<CounterFn>(), vi.fn<CourtFn>(), {
+        [which === "delete" ? "remove" : "restore"]: act,
+      });
+
+      await userEvent
+        .setup()
+        .click(screen.getByRole("button", { name: label }));
+
+      expect(await screen.findByText(sentence)).toBeInTheDocument();
+      expect(act).toHaveBeenCalledWith({ data: { holdId: HOLD_ID } });
+      await waitFor(() => {
+        expect(screen.queryByRole("button")).toBeNull();
+      });
+      expect(part("hold-said")?.textContent).toBe(sentence);
+      expect(part("hold-state")?.textContent).toBe(
+        "[court action Nov 10: held until the case is over]",
+      );
+    },
+  );
+
+  it.each(["Case over: delete", "Case over: restore"])(
+    "says why %s did not land, and keeps both actions",
+    async (label) => {
+      const act = vi
+        .fn<CaseOverFn>()
+        .mockResolvedValueOnce({ outcome: "not_held" })
+        .mockResolvedValueOnce({ outcome: "gone" });
+      renderHolds(inCourt(), vi.fn<CounterFn>(), vi.fn<CourtFn>(), {
+        remove: act,
+        restore: act,
+      });
+      const user = userEvent.setup();
+      const button = screen.getByRole("button", { name: label });
+
+      await user.click(button);
+      expect(
+        await screen.findByText("Record the court action first."),
+      ).toBeVisible();
+      await user.click(button);
+      expect(
+        await screen.findByText("This hold is settled: put back or deleted."),
+      ).toBeVisible();
+      expect(screen.getAllByRole("button")).toHaveLength(2);
+    },
+  );
 
   it("says it is recording while the call is out", async () => {
     const counterNotice = vi.fn<CounterFn>().mockReturnValue(

@@ -54,6 +54,7 @@ import { captureException, oweOutbox } from "../ops";
 import {
   moderationActionInsert,
   claimDuePurges,
+  claimPurgeAfterCase,
   copyrightHoldWrites,
   isCopyrightHeld,
   openSubject,
@@ -66,6 +67,8 @@ import {
   resolveReview,
   settleOpenReviews,
   wasModerated,
+  type CaseOverOutcome,
+  type ClaimedPurge,
   type RemovalReason,
   type ResolveOutcome,
   type ReviewActionValues,
@@ -449,12 +452,44 @@ export async function sweepCopyrightHolds(
 ): Promise<void> {
   await restoreDueHolds(db, now);
   const claimed = await claimDuePurges(db, now);
-  for (const hold of claimed) {
-    await commit(
-      db,
-      [...deletions(db, hold, hold), purgedWrite(db, hold.id, now)],
-      mediaDebts(hold.ownerId, [hold.entryId]),
-      report,
-    );
-  }
+  for (const hold of claimed) await purgeHeld(db, hold, now, report);
+}
+
+/**
+ * A claimed hold deleted with the statements a Remove uses, the R2 debt
+ * and `purged` in one batch — the bytes and the photo's fingerprint (C16)
+ * go with it.
+ */
+async function purgeHeld(
+  db: Db,
+  hold: ClaimedPurge,
+  now: number,
+  report: Report,
+): Promise<void> {
+  await commit(
+    db,
+    [...deletions(db, hold, hold), purgedWrite(db, hold.id, now)],
+    mediaDebts(hold.ownerId, [hold.entryId]),
+    report,
+  );
+}
+
+/**
+ * The Desk's "Case over: delete" (D-146): a litigation hold ends with the
+ * material deleted now, as its purge would have. The claim is
+ * `safety`'s; a delete whose batch fails stays `purging` for the sweep
+ * to take over, so a second click answers `gone` and never deletes
+ * twice.
+ */
+export async function deleteAfterCase(
+  db: Db,
+  actorId: string,
+  holdId: string,
+  now = nowSeconds(),
+  report: Report = captureException,
+): Promise<CaseOverOutcome> {
+  const claim = await claimPurgeAfterCase(db, actorId, holdId, now);
+  if (claim.outcome !== "claimed") return claim;
+  await purgeHeld(db, claim.hold, now, report);
+  return { outcome: "recorded" };
 }

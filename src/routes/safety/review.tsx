@@ -8,12 +8,14 @@ import { RemovalRequests } from "../../modules/safety/components/RemovalRequests
 import { ReviewQueue } from "../../modules/safety/components/ReviewQueue";
 import { Takedown } from "../../modules/safety/components/Takedown";
 import {
+  caseOverDeleteAction,
   decideRemovalRequestAction,
   decideReviewAction,
   takedownAction,
 } from "../../modules/feed/functions";
 import {
   blockTakedownRequesterAction,
+  caseOverRestoreAction,
   counterNoticeAction,
   courtActionAction,
   recordNcmecReportAction,
@@ -59,6 +61,8 @@ function ReviewPage() {
           holds={holds}
           counterNotice={counterNoticeAction}
           courtAction={courtActionAction}
+          caseOverDelete={caseOverDeleteAction}
+          caseOverRestore={caseOverRestoreAction}
         />
         {/* C12: what is held for NCMEC, and recording its report. */}
         <QuarantineRecords

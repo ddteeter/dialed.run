@@ -18,6 +18,7 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { getEntryDetail } from "../../src/modules/feed/entries";
 import {
+  deleteAfterCase,
   moderateContent,
   sweepCopyrightHolds,
 } from "../../src/modules/feed/moderation";
@@ -31,6 +32,7 @@ import {
   heldCopyrightContent,
   recordCounterNotice,
   recordCourtAction,
+  restoreAfterCase,
   restoreDayAfter,
 } from "../../src/modules/safety/copyright-holds";
 import { removalsOnRun } from "../../src/modules/safety/run-removals";
@@ -481,7 +483,7 @@ describe("the daily sweep's purge", () => {
     expect(told).toStrictEqual([{ kind: "content_removed" }]);
   });
 
-  it("waits while a counter-notice is pending, and goes once a court action answers it", async () => {
+  it("waits while a counter-notice is pending", async () => {
     const { photoId } = await posted();
     await takeDown("photo", photoId);
     const { id, purgeAt } = await holdOf(photoId);
@@ -490,10 +492,6 @@ describe("the daily sweep's purge", () => {
     await sweepCopyrightHolds(core(), purgeAt + DAY, quiet);
     expect(await holdStatus(photoId)).toBe("hidden");
     expect(await photoRow(photoId)).toBeDefined();
-
-    await recordCourtAction(core(), "desk", id);
-    await sweepCopyrightHolds(core(), purgeAt + 2 * DAY, quiet);
-    expect(await holdStatus(photoId)).toBe("purged");
   });
 
   it("never restores what it purged", async () => {
@@ -536,6 +534,158 @@ describe("the daily sweep's purge", () => {
     await sweepCopyrightHolds(core(), purgeAt, quiet);
 
     expect(await holdStatus(entryId)).toBe("purged");
+  });
+});
+
+describe("the litigation hold after a court action (D-146)", () => {
+  it("keeps the material hidden past its 30 days, however long the case runs", async () => {
+    const { photoId, key } = await posted();
+    await takeDown("photo", photoId);
+    const { id, purgeAt } = await inCourt(photoId);
+
+    await sweepCopyrightHolds(core(), purgeAt, quiet);
+    await sweepCopyrightHolds(core(), purgeAt + 400 * DAY, quiet);
+
+    expect(await holdStatus(photoId)).toBe("hidden");
+    expect(await photoRow(photoId)).toStrictEqual({
+      screenStatus: "removed",
+      fingerprint: "00ff00ff00ff00ff",
+    });
+    expect(await isStored(key)).toBe(true);
+    const listed = await heldCopyrightContent(core());
+    expect(listed.map((hold) => hold.id)).toStrictEqual([id]);
+  });
+
+  it("Case over: delete deletes it now, bytes and fingerprint with it, and counts", async () => {
+    const { author, photoId, key } = await posted();
+    await takeDown("photo", photoId);
+    const { id } = await inCourt(photoId);
+
+    expect(await deleteAfterCase(core(), "op", id, 5000, quiet)).toStrictEqual({
+      outcome: "recorded",
+    });
+
+    expect(await photoRow(photoId)).toBeUndefined();
+    expect(await isStored(key)).toBe(false);
+    expect(await holdOf(photoId)).toMatchObject({
+      status: "purged",
+      settledAt: 5000,
+      caseClosedBy: "op",
+    });
+    // This one and the fresh one.
+    expect(await strikesWithOneMore(author)).toBe(2);
+  });
+
+  it("Case over: delete deletes an entry, and a repeat deletes nothing more", async () => {
+    const { author, entryId } = await posted();
+    await takeDown("entry", entryId);
+    const { id } = await inCourt(entryId);
+    await deleteAfterCase(core(), "op", id, 5000, quiet);
+    const debts = await mediaDebts();
+
+    expect(await deleteAfterCase(core(), "op", id, 6000, quiet)).toStrictEqual({
+      outcome: "gone",
+    });
+
+    expect(await entryStatus(entryId)).toBeUndefined();
+    expect(await mediaDebts()).toBe(debts);
+    expect(await holdOf(entryId)).toMatchObject({
+      status: "purged",
+      settledAt: 5000,
+    });
+    const told = await core()
+      .select({ kind: notifications.kind })
+      .from(notifications)
+      .where(eq(notifications.userId, author));
+    expect(told).toStrictEqual([{ kind: "content_removed" }]);
+  });
+
+  it("Case over: restore puts a photo back for screening, and is no strike", async () => {
+    const { author, runId, photoId } = await posted();
+    await takeDown("photo", photoId);
+    const { id } = await inCourt(photoId);
+
+    expect(await restoreAfterCase(core(), "op", id, 5000)).toStrictEqual({
+      outcome: "recorded",
+    });
+
+    expect(await screenOf(photoId)).toBe("pending");
+    expect(await holdOf(photoId)).toMatchObject({
+      status: "restored",
+      settledAt: 5000,
+      caseClosedBy: "op",
+    });
+    // Only the fresh one.
+    expect(await strikesWithOneMore(author)).toBe(1);
+    expect(await removalsOnRun(core(), author, runId)).toStrictEqual([]);
+  });
+
+  it("Case over: restore puts an entry back, once, and the sweep leaves it", async () => {
+    const { entryId } = await posted();
+    await takeDown("entry", entryId);
+    const { id, purgeAt } = await inCourt(entryId);
+    await restoreAfterCase(core(), "op", id, 5000);
+    await core()
+      .update(outfitEntries)
+      .set({ moderationStatus: "hidden_pending_review" })
+      .where(eq(outfitEntries.id, entryId));
+
+    expect(await restoreAfterCase(core(), "op", id, 5000)).toStrictEqual({
+      outcome: "gone",
+    });
+    await sweepCopyrightHolds(core(), purgeAt + DAY, quiet);
+
+    expect(await entryStatus(entryId)).toBe("hidden_pending_review");
+    expect(await holdStatus(entryId)).toBe("restored");
+  });
+
+  it("acts only on the hold named, and only once a court action holds it", async () => {
+    const one = await posted();
+    const two = await posted();
+    await takeDown("photo", one.photoId);
+    await takeDown("photo", two.photoId);
+    const first = await inCourt(one.photoId);
+    await inCourt(two.photoId);
+    const noCase = await posted();
+    await takeDown("photo", noCase.photoId);
+    const pending = await holdIdOf(noCase.photoId);
+    await counterNotice(pending);
+
+    await restoreAfterCase(core(), "op", first.id, 5000);
+
+    expect(await screenOf(two.photoId)).toBe("removed");
+    expect(await holdStatus(two.photoId)).toBe("hidden");
+    for (const act of [restoreAfterCase, caseOverDelete]) {
+      expect(await act(core(), "op", pending, 6000)).toStrictEqual({
+        outcome: "not_held",
+      });
+      expect(await act(core(), "op", newUlid(), 6000)).toStrictEqual({
+        outcome: "gone",
+      });
+    }
+    expect(await holdOf(noCase.photoId)).toMatchObject({
+      status: "hidden",
+      caseClosedBy: NOT_SET,
+    });
+    expect(await screenOf(noCase.photoId)).toBe("removed");
+  });
+
+  it("leaves a case-over delete that failed for the sweep to finish", async () => {
+    const { photoId } = await posted();
+    await takeDown("photo", photoId);
+    const { id } = await inCourt(photoId);
+    await core()
+      .update(copyrightHolds)
+      .set({ status: "purging", settledAt: 5000, caseClosedBy: "op" })
+      .where(eq(copyrightHolds.id, id));
+
+    expect(await deleteAfterCase(core(), "op", id, 5001, quiet)).toStrictEqual({
+      outcome: "gone",
+    });
+    await sweepCopyrightHolds(core(), 5000 + 60 * 60 + 1, quiet);
+
+    expect(await photoRow(photoId)).toBeUndefined();
+    expect(await holdStatus(photoId)).toBe("purged");
   });
 });
 
@@ -606,4 +756,36 @@ async function counterNotice(holdId: string) {
   const answer = await recordCounterNotice(core(), "desk", holdId);
   if (answer.outcome !== "recorded") throw new Error(answer.outcome);
   return answer;
+}
+
+/**
+A hold the Desk has recorded a counter-notice and then a court action on.
+*/
+async function inCourt(subjectId: string) {
+  const hold = await holdOf(subjectId);
+  await counterNotice(hold.id);
+  const answer = await recordCourtAction(core(), "desk", hold.id);
+  if (answer.outcome !== "recorded") throw new Error(answer.outcome);
+  return hold;
+}
+
+function caseOverDelete(
+  db: ReturnType<typeof core>,
+  actorId: string,
+  holdId: string,
+  now: number,
+) {
+  return deleteAfterCase(db, actorId, holdId, now, quiet);
+}
+
+/**
+ * A runner's strikes as Review shows them: on a fresh takedown of theirs,
+ * which is itself one.
+ */
+async function strikesWithOneMore(author: string) {
+  const runId = await makeRun({ userId: author });
+  const entryId = await makeEntry({ userId: author, runId });
+  await takeDown("entry", entryId);
+  const listed = await heldCopyrightContent(core());
+  return listed.find((hold) => hold.subjectId === entryId)?.strikes;
 }

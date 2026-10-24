@@ -4,6 +4,7 @@ import type { JSX } from "react";
 import { monthDayLabel } from "../../../lib/dates";
 import { Bracketed, ListSection, Mono, useFormSubmit } from "../../../ui";
 import type {
+  CaseOverOutcome,
   CopyrightHoldSummary,
   CounterNoticeOutcome,
   CourtActionOutcome,
@@ -14,35 +15,35 @@ import { DeskForm } from "./DeskForm";
 type HoldAct<R> = (input: { data: { holdId: string } }) => Promise<R>;
 
 /**
+The Desk's four actions on a hold, each a server function the route wires.
+*/
+interface HoldActs {
+  readonly counterNotice: HoldAct<CounterNoticeOutcome>;
+  readonly courtAction: HoldAct<CourtActionOutcome>;
+  readonly caseOverDelete: HoldAct<CaseOverOutcome>;
+  readonly caseOverRestore: HoldAct<CaseOverOutcome>;
+}
+
+/**
  * Review's copyright holds (D-130, design 148): what a copyright takedown
  * is keeping hidden, soonest deletion first, with the runner's strikes
  * and the notice it answered. "Counter-notice received" records today
  * and the day the material comes back; once it is recorded, "Court action
- * filed" cancels that. Undesigned: existing parts and placeholder words
- * (design deltas).
+ * filed" cancels that and holds it until the case ends (D-146), when
+ * "Case over: delete" or "Case over: restore" settles it. Undesigned:
+ * existing parts and placeholder words (design deltas).
  */
 export function CopyrightHolds({
   holds,
-  counterNotice,
-  courtAction,
-}: Readonly<{
-  holds: readonly CopyrightHoldSummary[];
-  counterNotice: HoldAct<CounterNoticeOutcome>;
-  courtAction: HoldAct<CourtActionOutcome>;
-}>): JSX.Element | undefined {
+  ...acts
+}: Readonly<{ holds: readonly CopyrightHoldSummary[] } & HoldActs>):
+  JSX.Element | undefined {
   return (
     <ListSection
       title={`Copyright holds · ${String(holds.length)}`}
       items={holds}
     >
-      {(hold) => (
-        <HoldRow
-          key={hold.id}
-          hold={hold}
-          counterNotice={counterNotice}
-          courtAction={courtAction}
-        />
-      )}
+      {(hold) => <HoldRow key={hold.id} hold={hold} {...acts} />}
     </ListSection>
   );
 }
@@ -52,7 +53,7 @@ Where the hold stands, in a line: what the sweep will do, and when.
 */
 export function holdState(hold: CopyrightHoldSummary): string {
   if (hold.courtActionAt !== null) {
-    return `court action ${monthDayLabel(hold.courtActionAt)}: stays hidden, deleted ${monthDayLabel(hold.purgeAt)}`;
+    return `court action ${monthDayLabel(hold.courtActionAt)}: held until the case is over`;
   }
   if (hold.restoreAt !== null) {
     return `counter-notice received: back ${monthDayLabel(hold.restoreAt)}`;
@@ -69,24 +70,40 @@ const COUNTER_NOTICE: Readonly<
 };
 
 const COURT_ACTION: Readonly<Record<CourtActionOutcome["outcome"], string>> = {
-  recorded: "Court action recorded. It stays hidden.",
+  recorded: "Court action recorded. It stays hidden until the case is over.",
   already: "A court action is already recorded.",
   no_counter_notice: "Record the counter-notice first.",
   gone: "This hold is settled: put back or deleted.",
 };
 
+const CASE_OVER_DELETE: Readonly<Record<CaseOverOutcome["outcome"], string>> = {
+  recorded: "Case over. It is deleted.",
+  not_held: "Record the court action first.",
+  gone: "This hold is settled: put back or deleted.",
+};
+
+const CASE_OVER_RESTORE: Readonly<Record<CaseOverOutcome["outcome"], string>> =
+  {
+    recorded: "Case over. It is back.",
+    not_held: "Record the court action first.",
+    gone: "This hold is settled: put back or deleted.",
+  };
+
 function HoldRow({
   hold,
   counterNotice,
   courtAction,
-}: Readonly<{
-  hold: CopyrightHoldSummary;
-  counterNotice: HoldAct<CounterNoticeOutcome>;
-  courtAction: HoldAct<CourtActionOutcome>;
-}>): JSX.Element {
+  caseOverDelete,
+  caseOverRestore,
+}: Readonly<{ hold: CopyrightHoldSummary } & HoldActs>): JSX.Element {
   // The row as the last action left it, so a recording shows at once.
   const [held, setHeld] = useState(hold);
   const [said, setSaid] = useState("");
+  // A case over settles the hold: the row keeps its sentence, no action.
+  const [isSettled, setIsSettled] = useState(false);
+  const settle = (): void => {
+    setIsSettled(true);
+  };
   return (
     <li
       data-part="copyright-hold"
@@ -113,7 +130,7 @@ function HoldRow({
           <Bracketed>{holdState(held)}</Bracketed>
         </span>
       </span>
-      {nextAction(held, {
+      {nextAction(held, isSettled, {
         counter: (
           <HoldAction
             holdId={held.id}
@@ -138,6 +155,26 @@ function HoldRow({
             onSaid={setSaid}
           />
         ),
+        caseOver: (
+          <span data-part="case-over" className="flex flex-wrap gap-4">
+            <HoldAction
+              holdId={held.id}
+              label="Case over: delete"
+              sentences={CASE_OVER_DELETE}
+              act={caseOverDelete}
+              onRecorded={settle}
+              onSaid={setSaid}
+            />
+            <HoldAction
+              holdId={held.id}
+              label="Case over: restore"
+              sentences={CASE_OVER_RESTORE}
+              act={caseOverRestore}
+              onRecorded={settle}
+              onSaid={setSaid}
+            />
+          </span>
+        ),
       })}
       {said === "" ? undefined : (
         <p data-part="hold-said" className="text-body">
@@ -149,16 +186,22 @@ function HoldRow({
 }
 
 /**
- * The one action a hold still takes: the counter-notice until there is
- * one, then the court action until there is one, then none.
+ * What a hold still takes: the counter-notice until there is one, then
+ * the court action until there is one, then the two ways a case ends
+ * until one of them has (D-146).
  */
 function nextAction(
   held: CopyrightHoldSummary,
-  actions: Readonly<{ counter: JSX.Element; court: JSX.Element }>,
+  isSettled: boolean,
+  actions: Readonly<{
+    counter: JSX.Element;
+    court: JSX.Element;
+    caseOver: JSX.Element;
+  }>,
 ): JSX.Element | undefined {
   if (held.counterNoticeAt === null) return actions.counter;
   if (held.courtActionAt === null) return actions.court;
-  return undefined;
+  return isSettled ? undefined : actions.caseOver;
 }
 
 /**

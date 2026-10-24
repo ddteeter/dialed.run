@@ -68,6 +68,7 @@ import {
   heldCopyrightContent,
   recordCounterNotice,
   recordCourtAction,
+  restoreAfterCase,
 } from "./copyright-holds";
 
 export const fileReportAction = createServerFn({ method: "POST" })
@@ -327,4 +328,16 @@ export const courtActionAction = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const adminId = requireAdmin(await verifiedUserId());
     return recordCourtAction(coreDb(), adminId, data.holdId);
+  });
+
+/**
+ * The Desk's "Case over: restore" on a hold under a litigation hold
+ * (D-146): the case ended for the runner, so the material comes back now
+ * and is not a strike.
+ */
+export const caseOverRestoreAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => copyrightHoldInput.parse(input))
+  .handler(async ({ data }) => {
+    const adminId = requireAdmin(await verifiedUserId());
+    return restoreAfterCase(coreDb(), adminId, data.holdId);
   });

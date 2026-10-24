@@ -6,9 +6,15 @@
  * days after it arrives. The Desk records the counter-notice; the daily
  * sweep restores on the 12th weekday after it — inside the window even
  * with two federal holidays in it — unless the Desk records that the
- * sender has gone to court. With no counter-notice pending, the sweep
+ * sender has gone to court. With no counter-notice recorded, the sweep
  * deletes the material 30 days after the takedown (`feed/moderation.ts`,
  * whose delete statements those are).
+ *
+ * **A court action is a litigation hold** (D-146): the material stays
+ * hidden past its 30 days, because deleting the subject of a pending suit
+ * risks a spoliation claim. Only the Desk ends it, when the case does:
+ * "Case over: restore" (the claimant lost, so no strike) or "Case over:
+ * delete" (a strike, as every purge is).
  *
  * **The hide is a status no other writer moves.** An entry goes to
  * `moderation_status = 'removed'` and a photo to `screen_status =
@@ -203,8 +209,9 @@ export type CourtActionOutcome =
 
 /**
  * The Desk's "Court action filed": the sender says they have gone to
- * court, so the restore is cancelled. Only once a counter-notice is
- * recorded, and only before the sweep has restored it.
+ * court, so the restore is cancelled and the purge with it — a litigation
+ * hold until the Desk ends the case (D-146). Only once a counter-notice
+ * is recorded, and only before the sweep has restored it.
  */
 export async function recordCourtAction(
   db: Db,
@@ -263,37 +270,126 @@ export async function restoreDueHolds(
     isNull(copyrightHolds.courtActionAt),
     lte(copyrightHolds.restoreAt, now),
   );
-  const entriesBack = and(
-    eq(outfitEntries.moderationStatus, "removed"),
-    inArray(outfitEntries.id, restoredBy(db, "entry", now)),
-  );
-  const photosBack = and(
-    eq(entryPhotos.screenStatus, heldPhotoStatus),
-    inArray(entryPhotos.id, restoredBy(db, "photo", now)),
-  );
-  await db.batch([
-    db
-      .update(copyrightHolds)
-      .set({ status: "restored", settledAt: now })
-      .where(due),
-    db.update(outfitEntries).set({ moderationStatus: "ok" }).where(entriesBack),
-    db.update(entryPhotos).set({ screenStatus: "pending" }).where(photosBack),
-  ]);
+  await db.batch(restoreWrites(db, due, { settledAt: now }));
 }
 
 /**
-The subjects of one type this firing's claim restored.
-*/
-function restoredBy(db: Db, subjectType: HeldSubjectType, now: number) {
+ * A restore's three statements: the claim `where` names, then the give-
+ * back of what a claim at this moment restored.
+ */
+function restoreWrites(
+  db: Db,
+  where: SQL | undefined,
+  settle: { readonly settledAt: number; readonly caseClosedBy?: string },
+) {
   const thisClaim = and(
-    eq(copyrightHolds.subjectType, subjectType),
     eq(copyrightHolds.status, "restored"),
-    eq(copyrightHolds.settledAt, now),
+    eq(copyrightHolds.settledAt, settle.settledAt),
   );
+  const entriesBack = and(
+    eq(outfitEntries.moderationStatus, "removed"),
+    inArray(outfitEntries.id, restoredBy(db, "entry", thisClaim)),
+  );
+  const photosBack = and(
+    eq(entryPhotos.screenStatus, heldPhotoStatus),
+    inArray(entryPhotos.id, restoredBy(db, "photo", thisClaim)),
+  );
+  return [
+    db
+      .update(copyrightHolds)
+      .set({ status: "restored", ...settle })
+      .where(where)
+      .returning({ id: copyrightHolds.id }),
+    db.update(outfitEntries).set({ moderationStatus: "ok" }).where(entriesBack),
+    db.update(entryPhotos).set({ screenStatus: "pending" }).where(photosBack),
+  ] as const;
+}
+
+/**
+The subjects of one type a restore's claim restored.
+*/
+function restoredBy(
+  db: Db,
+  subjectType: HeldSubjectType,
+  claim: SQL | undefined,
+) {
   return db
     .select({ id: copyrightHolds.subjectId })
     .from(copyrightHolds)
-    .where(thisClaim);
+    .where(and(eq(copyrightHolds.subjectType, subjectType), claim));
+}
+
+interface NotHeld {
+  readonly outcome: "not_held" | "gone";
+}
+
+export type CaseOverOutcome = NotHeld | { readonly outcome: "recorded" };
+
+/**
+ * A hold the litigation hold still keeps (D-146): hidden, with a court
+ * action recorded — the only holds "Case over" acts on.
+ */
+function heldForCase(holdId: string): SQL | undefined {
+  return and(
+    eq(copyrightHolds.id, holdId),
+    eq(copyrightHolds.status, "hidden"),
+    isNotNull(copyrightHolds.courtActionAt),
+  );
+}
+
+/**
+Why a "Case over" did not land: no court action, or no hold to act on.
+*/
+async function whyNotHeld(db: Db, holdId: string): Promise<NotHeld> {
+  const hold = await hiddenHold(db, holdId);
+  return { outcome: hold === undefined ? "gone" : "not_held" };
+}
+
+/**
+ * The Desk's "Case over: restore" (D-146): the court found for the
+ * runner, so the material comes back at once, as the sweep's restore
+ * would have — claim and give-back in one batch. A restored hold is not
+ * a strike. Once only: a second click claims nothing and answers `gone`.
+ */
+export async function restoreAfterCase(
+  db: Db,
+  actorId: string,
+  holdId: string,
+  now = nowSeconds(),
+): Promise<CaseOverOutcome> {
+  const [claimed] = await db.batch(
+    restoreWrites(db, heldForCase(holdId), {
+      settledAt: now,
+      caseClosedBy: actorId,
+    }),
+  );
+  if (claimed.length > 0) return { outcome: "recorded" };
+  return whyNotHeld(db, holdId);
+}
+
+export type CaseOverClaim =
+  NotHeld | { readonly outcome: "claimed"; readonly hold: ClaimedPurge };
+
+/**
+ * The Desk's "Case over: delete" (D-146), its claim: the hold moves to
+ * `purging` as the sweep's purge claim does, so `feed` deletes it with
+ * the same statements, and a delete whose batch fails is the next
+ * sweep's stale purge to take over. A purged hold is a strike.
+ */
+export async function claimPurgeAfterCase(
+  db: Db,
+  actorId: string,
+  holdId: string,
+  now = nowSeconds(),
+): Promise<CaseOverClaim> {
+  const claimed = await db
+    .update(copyrightHolds)
+    .set({ status: "purging", settledAt: now, caseClosedBy: actorId })
+    .where(heldForCase(holdId))
+    .returning({ id: copyrightHolds.id });
+  const [hold] = await claimedPurges(db, claimed);
+  if (hold !== undefined) return { outcome: "claimed", hold };
+  return whyNotHeld(db, holdId);
 }
 
 /**
@@ -315,23 +411,21 @@ export interface ClaimedPurge {
 
 /**
  * The sweep's purge claim: holds 30 days old with no counter-notice
- * pending — none recorded, or one a court action answered — move to
- * `purging`, and so do purges an earlier sweep claimed and did not
- * finish. One statement, so two sweeps never claim the same hold; the
- * claim's moment is `settled_at`, which is how a stale one is told apart.
+ * recorded move to `purging`, and so do purges an earlier sweep claimed
+ * and did not finish. A counter-notice keeps a hold from the purge either
+ * way: until its restore, or, once a court action follows it, until the
+ * Desk ends the case (D-146). One statement, so two sweeps never claim
+ * the same hold; the claim's moment is `settled_at`, which is how a stale
+ * one is told apart.
  */
 export async function claimDuePurges(
   db: Db,
   now = nowSeconds(),
 ): Promise<ClaimedPurge[]> {
-  const noCounterNoticePending = or(
-    isNull(copyrightHolds.counterNoticeAt),
-    isNotNull(copyrightHolds.courtActionAt),
-  );
   const due = and(
     eq(copyrightHolds.status, "hidden"),
     lte(copyrightHolds.purgeAt, now),
-    noCounterNoticePending,
+    isNull(copyrightHolds.counterNoticeAt),
   );
   const stale = and(
     eq(copyrightHolds.status, "purging"),
@@ -342,15 +436,32 @@ export async function claimDuePurges(
     .set({ status: "purging", settledAt: now })
     .where(or(due, stale))
     .returning({ id: copyrightHolds.id });
+  return claimedPurges(db, claimed);
+}
+
+/**
+A claimed purge's columns: the hold's subject, and who took it down.
+*/
+function purgeColumns() {
+  return {
+    id: copyrightHolds.id,
+    subjectType: copyrightHolds.subjectType,
+    subjectId: copyrightHolds.subjectId,
+    ownerId: copyrightHolds.ownerId,
+    entryId: copyrightHolds.entryId,
+    actorId: moderationActions.actorId,
+  };
+}
+
+/**
+What a purge claim took, with who took each down.
+*/
+function claimedPurges(
+  db: Db,
+  claimed: readonly { readonly id: string }[],
+): Promise<ClaimedPurge[]> {
   return db
-    .select({
-      id: copyrightHolds.id,
-      subjectType: copyrightHolds.subjectType,
-      subjectId: copyrightHolds.subjectId,
-      ownerId: copyrightHolds.ownerId,
-      entryId: copyrightHolds.entryId,
-      actorId: moderationActions.actorId,
-    })
+    .select(purgeColumns())
     .from(copyrightHolds)
     .innerJoin(
       moderationActions,
