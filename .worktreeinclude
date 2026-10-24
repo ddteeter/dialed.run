@@ -1,0 +1,4 @@
+# Untracked files a new worktree needs, copied from the primary checkout by
+# scripts/worktrees.ts (the WorktreeCreate hook). Plain paths, one per line.
+.dev.vars
+.claude/settings.local.json
