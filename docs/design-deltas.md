@@ -1256,8 +1256,8 @@ NCMEC]` or `[REPORTED TO NCMEC {date}] · {number}`; then an optional
     27 #20) gains a third quiet line under the rest: "That breaks our
     community rules: don't post spam, advertising or promotion we have not
     allowed." — the band's existing `more` slot, `text-small text-quiet`.
-    None after a copyright notice, and none for the Desk's catch-all
-    reason. **The ask:** confirm the line and its place.
+    None after a copyright notice (the Desk's catch-all reason, which
+    named no rule, was retired on 2026-10-24). **The ask:** confirm the line and its place.
 
 76. **D8's Close account names a rule (C8).** Under "Why", a required pick
     "Which rule it breaks": the terms' ten rules by their bold names, then

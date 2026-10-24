@@ -158,7 +158,10 @@ export function removalDueLabel(dueAt: number, now: number): string {
  * it — the statement of reasons the EU DSA asks for (task 128 · SAF-8,
  * decision D-40), after "A moderator removed this photo:" (round 27 #20,
  * whose one drawn example is `home`). A fixed list rather than free text,
- * so the runner is told a rule and not an operator's mood.
+ * so the runner is told a rule and not an operator's mood. Every reason
+ * names one of the terms' rules (`removalRule`): the Desk's catch-all
+ * `rules` was retired (owner, 2026-10-24) because a statement of reasons
+ * must name the ground it rests on (DSA Art. 17(3)(e)).
  */
 export const removalStatements = {
   home: "it shows where someone lives",
@@ -168,7 +171,6 @@ export const removalStatements = {
   harassment: "it harasses someone",
   spam: "it's an ad or spam",
   copyright: "it uses someone else's work",
-  rules: "it breaks the community rules",
 } as const;
 
 export type RemovalReason = keyof typeof removalStatements;
@@ -176,18 +178,15 @@ export type RemovalReason = keyof typeof removalStatements;
 /**
  * The terms' rule each removal reason breaks, for the statement of reasons
  * (C8, D-145). An intimate image shared without consent is sexual
- * content. `rules`, the Desk's catch-all, names none: it is no one rule.
+ * content. Every reason names one, so the type admits no gap.
  */
-export const removalRule: Readonly<
-  Record<RemovalReason, CommunityRule | undefined>
-> = {
+export const removalRule: Readonly<Record<RemovalReason, CommunityRule>> = {
   home: "home",
   explicit: "explicit",
   intimate: "explicit",
   harassment: "harassment",
   spam: "spam",
   copyright: "othersWork",
-  rules: undefined,
 };
 
 /**

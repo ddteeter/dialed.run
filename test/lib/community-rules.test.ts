@@ -15,6 +15,7 @@ import {
   closureRules,
   closureRuleSchema,
   removalReasons,
+  removalReasonSchema,
   removalRule,
   removalRuleLine,
   removalRuleOf,
@@ -77,7 +78,7 @@ describe("the community rules (C8)", () => {
 });
 
 describe("the rule a removal names", () => {
-  it("maps every reason the Desk offers, and only the catch-all to none", () => {
+  it("maps every reason the Desk offers to a rule", () => {
     expect(Object.keys(removalRule)).toStrictEqual(removalReasons);
     expect(removalRule).toStrictEqual({
       home: "home",
@@ -86,8 +87,14 @@ describe("the rule a removal names", () => {
       harassment: "harassment",
       spam: "spam",
       copyright: "othersWork",
-      rules: undefined,
     });
+  });
+
+  it("no longer offers the catch-all `rules` (owner, 2026-10-24)", () => {
+    expect(removalReasons).not.toContain("rules");
+    expect(
+      removalReasonSchema.safeParse("rules").error?.issues[0]?.message,
+    ).toBe("Pick why it's coming down.");
   });
 
   it("names none after a copyright notice, and the rule after a Remove", () => {
@@ -95,7 +102,7 @@ describe("the rule a removal names", () => {
     expect(removalRuleOf("remove", "copyright")).toBe("othersWork");
     expect(removalRuleOf("takedown", "intimate")).toBe("explicit");
     expect(removalRuleLine("takedown", "copyright")).toBeUndefined();
-    expect(removalRuleLine("remove", "rules")).toBeUndefined();
+    expect(removalRuleLine("remove", "copyright")).toBe(ruleLine("othersWork"));
     expect(removalRuleLine("remove", "home")).toBe(ruleLine("home"));
   });
 });

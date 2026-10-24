@@ -428,7 +428,7 @@ describe("moderateContent: Remove deletes (SAF-5)", () => {
         action: "remove",
         subjectType: "entry",
         subjectId: missing,
-        reason: "rules",
+        reason: "spam",
       },
       quiet,
     );
@@ -441,7 +441,7 @@ describe("moderateContent: Remove deletes (SAF-5)", () => {
         action: "remove",
         subjectType: "photo",
         subjectId: missing,
-        reason: "rules",
+        reason: "spam",
       },
       quiet,
     );
@@ -979,14 +979,14 @@ describe("decideReview: the queue's Remove really deletes", () => {
       await decideReview(core(), "rev", {
         queueId: productRow,
         action: "remove",
-        reason: "rules",
+        reason: "spam",
       }),
     ).toBe("resolved");
     expect(
       await decideReview(core(), "rev", {
         queueId: goneRow,
         action: "remove",
-        reason: "rules",
+        reason: "spam",
       }),
     ).toBe("resolved");
     const settled = await queueStatus(goneRow);
@@ -1015,7 +1015,7 @@ describe("decideReview: the queue's Remove really deletes", () => {
     await decideReview(core(), "rev", {
       queueId,
       action: "remove",
-      reason: "rules",
+      reason: "spam",
     });
 
     expect(
@@ -1035,7 +1035,7 @@ describe("decideReview: the queue's Remove really deletes", () => {
       await decideReview(core(), "rev", {
         queueId,
         action: "remove",
-        reason: "rules",
+        reason: "spam",
       }),
     ).toBe("already_resolved");
     expect(
@@ -1052,7 +1052,7 @@ describe("decideReview: the queue's Remove really deletes", () => {
     await decideReview(core(), "rev", {
       queueId: queueId,
       action: "remove",
-      reason: "rules",
+      reason: "spam",
     });
 
     expect(
@@ -1065,14 +1065,14 @@ describe("decideReview: the queue's Remove really deletes", () => {
       await decideReview(core(), "rev", {
         queueId: queueId,
         action: "remove",
-        reason: "rules",
+        reason: "spam",
       }),
     ).toBe("already_resolved");
     expect(
       await decideReview(core(), "rev", {
         queueId: newUlid(),
         action: "quarantine",
-        reason: "rules",
+        reason: "spam",
       }),
     ).toBe("not_found");
   });
@@ -1642,7 +1642,7 @@ describe("the reviewer's row read is shared (runs untouched)", () => {
         action: "remove",
         subjectType: "entry",
         subjectId: entryId,
-        reason: "rules",
+        reason: "spam",
       },
       quiet,
     );

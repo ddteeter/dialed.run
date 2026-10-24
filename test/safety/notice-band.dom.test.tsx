@@ -1,10 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { ruleLine } from "../../src/lib/contracts/community-rules";
 import {
   ContentRemoved,
   PhotoBeingChecked,
 } from "../../src/modules/safety/components/NoticeBand";
+import {
+  removalReasons,
+  removalRule,
+} from "../../src/modules/safety/contracts";
 
 /**
  * Round 27 #20 and #21: the bands that stand where a photo or an entry
@@ -58,11 +63,15 @@ describe("ContentRemoved (SAF-8)", () => {
     expect(band().children).toHaveLength(3);
   });
 
-  it("names no rule for the Desk's catch-all reason", () => {
-    render(
-      <ContentRemoved subjectType="entry" action="remove" reason="rules" />,
-    );
-    expect(band().children).toHaveLength(2);
+  it("names a rule for every reason the Desk offers (catch-all retired)", () => {
+    for (const reason of removalReasons) {
+      const { unmount } = render(
+        <ContentRemoved subjectType="entry" action="remove" reason={reason} />,
+      );
+      expect(band().children).toHaveLength(3);
+      expect(band()).toHaveTextContent(ruleLine(removalRule[reason]));
+      unmount();
+    }
   });
 
   it("says a takedown answered a copyright notice (round 28 #8)", () => {

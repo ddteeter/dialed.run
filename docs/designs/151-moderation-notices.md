@@ -72,7 +72,13 @@ already uses, written **in the batch** of the change it reports.
 - Wording beyond the approved copy: the kit hide notice (photos cannot be
   reported from the app today, so the kit is the one runners will see),
   the author's "left it up", the rule names' phrasing, the closure body.
-- Mapping: intimate image → "sexual or explicit"; the Desk's catch-all
-  `rules` reason names no rule (recommend retiring it).
+  **Approved (owner, 2026-10-24)**, with every item of PR_BODY's
+  "Wording for owner approval" list.
+- Mapping: intimate image → "sexual or explicit". **Resolved (owner,
+  2026-10-24):** the Desk's catch-all `rules` reason ("it breaks the
+  community rules") is retired, so every removal names one of the terms'
+  rules (Art. 17(3)(e)); `removalRule` is total, and only a copyright
+  notice's takedown names none. No schema change: the audit row stores
+  the statement's words as free text, and nothing is deployed (D-139).
 - A hide notice goes out before anyone knows a kit is suspected CSAM; a
   later quarantine then says nothing (D-70).
