@@ -15,6 +15,7 @@
  */
 import { z } from "zod";
 
+import { communityRuleSchema } from "./community-rules";
 import { exportTokenSchema } from "./data-export";
 
 export const address = z.email();
@@ -102,6 +103,17 @@ export const contentRemoved = emailKind("content_removed", {
   subject: z.enum(["entry", "photo"]),
   reason: z.string().min(1),
   cause: z.literal("copyright_notice").optional(),
+  /**
+   * The rule it broke, from the terms (C8, D-145): absent for a copyright
+   * notice, for the Desk's catch-all reason, and on a row owed before it
+   * existed (law 9).
+   */
+  rule: communityRuleSchema.optional(),
+  /**
+   * The automatic check flagged it before a person decided (C8). Absent
+   * is a person's own find, as every row owed before it was.
+   */
+  flagged: z.boolean().optional(),
 });
 
 /**
@@ -111,6 +123,11 @@ export const contentRemoved = emailKind("content_removed", {
  */
 export const accountClosed = emailKind("account_closed", {
   reason: z.string().min(1),
+  /**
+   * The rule it broke (C8, D-145). Absent for a closure over suspected
+   * CSAM, which names none, and on a row owed before it existed (law 9).
+   */
+  rule: communityRuleSchema.optional(),
 });
 
 /**

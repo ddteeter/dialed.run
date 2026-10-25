@@ -5,8 +5,10 @@
  * with its Keep (round 35 #45), the quarantine with its NCMEC report
  * recorded (C12, design 145), a copyright hold's counter-notice, court
  * action and the case's end (C5, D-130, D-146), then the author's run after a Remove
- * (round 27 #20, R-140: the band in place of the entry) — one journey,
- * one video.
+ * (round 27 #20, R-140: the band in place of the entry, naming the rule,
+ * C8), and the bell's moderation notices (C8, D-132, D-145): the author's
+ * when a report hides their kit, and the reporter's when a person removes
+ * what they reported — one journey, one video.
  *
  * The journey needs `ADMIN_USER_IDS=e2e-desk-operator` in the dev server's
  * `.dev.vars`, which CI's e2e job writes (register R-72). Locally, put the
@@ -16,7 +18,7 @@
  */
 import { readFile } from "node:fs/promises";
 
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { user } from "../../src/db/schema-auth";
@@ -26,6 +28,7 @@ import {
   notifications,
   outfitEntries,
   quarantinedContent,
+  reports,
   reviewQueue,
   runs,
   userProfiles,
@@ -56,6 +59,11 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   const heldPhotoId = newUlid();
   const holdOwnerId = newUlid();
   const now = nowSeconds();
+  // The safety account: it reported the entry the Desk removes, and owns
+  // the kit the operator reports (C8).
+  const authorId = await userIdOf("safety");
+  const sharedRunId = newUlid();
+  const sharedEntryId = newUlid();
 
   // One runner with one reported public entry. Scoped to ids generated
   // here — never a bare delete of these tables.
@@ -100,6 +108,46 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
       source: "reports",
       status: "pending",
       createdAt: now - 600,
+    });
+    // The bell's C8 rows from an earlier run of this demo go first, so the
+    // ones it shows are this run's. Scoped to the account and the kinds.
+    await core
+      .delete(notifications)
+      .where(
+        and(
+          eq(notifications.userId, authorId),
+          inArray(notifications.kind, ["content_hidden", "report_removed"]),
+        ),
+      );
+    // Its report, by the safety account, which is told the outcome (C8).
+    await core.insert(reports).values({
+      id: newUlid(),
+      reporterId: authorId,
+      subjectType: "entry",
+      subjectId: entryId,
+      reason: "spam",
+      createdAt: now - 900,
+    });
+    // A kit the safety account shared, which the operator reports below.
+    await core.insert(runs).values({
+      id: sharedRunId,
+      userId: authorId,
+      source: "manual",
+      startedAt: now - 10_800,
+      durationS: 1800,
+      distanceM: 5000,
+      lat: 45.52,
+      lng: -122.68,
+      indoor: false,
+      title: "Lunch loop",
+    });
+    await core.insert(outfitEntries).values({
+      id: sharedEntryId,
+      runId: sharedRunId,
+      userId: authorId,
+      verdict: 0,
+      audience: "runners",
+      createdAt: now - 10_800,
     });
     // A handle the hourly re-check flagged after it was claimed (D-97),
     // waiting behind the reported entry.
@@ -165,6 +213,20 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   });
 
   await signInAsOperator(page);
+
+  // C8 (D-145): one report of an intimate image hides a kit at once, and
+  // its author is told in the bell. Shown on the author's side at the end.
+  await page.goto(`/feed/entry/${sharedEntryId}`);
+  await hydrated(page);
+  await scene(page, "A report hides a kit at once, and its author is told");
+  await page.getByRole("button", { name: "Report this entry" }).click();
+  await page
+    .getByRole("radio", {
+      name: "It's an intimate image of someone, shared without their consent",
+    })
+    .click();
+  await page.getByRole("button", { name: "Send report" }).click();
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
 
   await scene(page, "Review: one row opens at a time");
   await page.goto("/safety/review");
@@ -312,8 +374,11 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   await page.getByRole("button", { name: "Rename" }).click();
   await expect(page.getByText(/^Renamed to @runner_\d{4}\.$/)).toBeVisible();
 
-  await scene(page, "Close account: the reason their notice quotes");
+  await scene(page, "Close account: the reason, and the rule it names (C8)");
   await page.getByRole("textbox", { name: /Why/ }).fill("Spam accounts");
+  await page
+    .getByRole("combobox", { name: /Which rule it breaks/ })
+    .selectOption("Post spam, advertising or promotion we have not allowed");
   await page.getByRole("button", { name: "Close account" }).click();
   await expect(page.getByText("[CLOSED]")).toBeVisible();
 
@@ -363,7 +428,6 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   // login, so the band is shown on the safety account's own run: a run
   // whose entry the Desk removed, with the audit row exactly as
   // moderateContent writes it, run_id read before the delete.
-  const authorId = await userIdOf("safety");
   const removedRunId = newUlid();
   await withLocalDb(async ({ core }) => {
     await core.insert(runs).values({
@@ -401,13 +465,34 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   await page.goto(`/runs/${removedRunId}`);
   await hydrated(page);
   // After the navigation, so the caption holds on the page it describes.
-  await scene(page, "The author's run: the band where the entry was");
+  await scene(
+    page,
+    "The author's run: the band where the entry was, and the rule",
+  );
   const band = page.locator(
     "[data-part='run-removals'] [data-part='notice-band']",
   );
   await expect(band).toHaveText(
-    "Removed from the feedA moderator removed this entry from the feed: it's an ad or spam.",
+    "Removed from the feedA moderator removed this entry from the feed: it's an ad or spam.That breaks our community rules: don't post spam, advertising or promotion we have not allowed.",
   );
+
+  // C8: the bell. The hide's notice to the kit's author, and the outcome
+  // to the runner who reported the entry the Desk removed above.
+  await page.goto("/notifications");
+  await hydrated(page);
+  await scene(
+    page,
+    "The bell: the author told of the hide, the reporter of the outcome",
+  );
+  const rows = page.locator("[data-part='notification-row']");
+  await expect(
+    rows.filter({ hasText: "Kit hidden while we review it." }),
+  ).toHaveText(
+    /Kit hidden while we review it\. Someone reported a kit you shared, so other runners can't see it until a person reviews it, usually within a day\. It was hidden automatically\. We'll tell you what we decide\./u,
+  );
+  await expect(
+    rows.filter({ hasText: "We removed what you reported." }),
+  ).toHaveCount(1);
 });
 
 /**

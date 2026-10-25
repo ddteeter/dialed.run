@@ -110,7 +110,12 @@ describe("a banned author (SAF-4)", () => {
     await follow(viewer, author);
     expect(await sightings(viewer, entryId, photoKey)).toEqual(SEEN);
 
-    await banUser({ userId: author, reason: "spam", bannedBy: viewer });
+    await banUser({
+      userId: author,
+      reason: "spam",
+      rule: "spam",
+      bannedBy: viewer,
+    });
     expect(await sightings(viewer, entryId, photoKey)).toEqual(UNSEEN);
     const refused = await photoResponse(photoKey, viewer);
     expect(refused.status).toBe(404);
@@ -123,14 +128,24 @@ describe("a banned author (SAF-4)", () => {
     const { author, entryId } = await postedEntry();
     expect(await countable(core())).toContain(entryId);
 
-    await banUser({ userId: author, reason: "spam", bannedBy: author });
+    await banUser({
+      userId: author,
+      reason: "spam",
+      rule: "spam",
+      bannedBy: author,
+    });
     expect(await countable(core())).not.toContain(entryId);
   });
 
   it("cannot be marked Useful", async () => {
     const { author, entryId } = await postedEntry();
     const viewer = await makeVerifiedUser();
-    await banUser({ userId: author, reason: "spam", bannedBy: viewer });
+    await banUser({
+      userId: author,
+      reason: "spam",
+      rule: "spam",
+      bannedBy: viewer,
+    });
     await expect(setUsefulReaction(entryId, viewer, true)).rejects.toThrow(
       "entry is not visible to this viewer",
     );

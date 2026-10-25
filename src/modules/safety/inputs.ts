@@ -17,6 +17,7 @@ import { takedownRequestSchema } from "../../lib/contracts/takedown";
 import { rowIdSchema, ulidSchema } from "../../lib/ids";
 
 import {
+  closureRuleSchema,
   removalReasonSchema,
   declineReasonField,
   renameReasonSchema,
@@ -176,6 +177,11 @@ export const banUserInput = z.object({
     .trim()
     .min(1, "Say why — the ban notice quotes this back to them.")
     .max(500, "Keep it under 500 characters."),
+  /**
+   * The rule it breaks, which the notice names (C8, D-145), or suspected
+   * CSAM, whose notice names none.
+   */
+  rule: closureRuleSchema,
 });
 
 export const denyDomainInput = z.object({

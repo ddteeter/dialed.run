@@ -34,7 +34,7 @@ describe("RunRemovals", () => {
       "[data-part='notice-band']",
     );
     expect([...(bands ?? [])].map((band) => band.textContent)).toStrictEqual([
-      "Removed from the feedA moderator removed this entry from the feed: it's an ad or spam.",
+      "Removed from the feedA moderator removed this entry from the feed: it's an ad or spam.That breaks our community rules: don't post spam, advertising or promotion we have not allowed.",
       "Photo removedWe removed this photo after a copyright notice.Your run and verdict stay.",
     ]);
   });

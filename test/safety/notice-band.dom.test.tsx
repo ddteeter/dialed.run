@@ -1,10 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { ruleLine } from "../../src/lib/contracts/community-rules";
 import {
   ContentRemoved,
   PhotoBeingChecked,
 } from "../../src/modules/safety/components/NoticeBand";
+import {
+  removalReasons,
+  removalRule,
+} from "../../src/modules/safety/contracts";
 
 /**
  * Round 27 #20 and #21: the bands that stand where a photo or an entry
@@ -41,17 +46,32 @@ describe("ContentRemoved (SAF-8)", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Your run and verdict stay.")).toBeInTheDocument();
+    // C8 (D-145): and the rule it broke, last.
+    expect(band().lastElementChild).toHaveTextContent(
+      /^That breaks our community rules: don't show where someone lives\.$/u,
+    );
   });
 
-  it("names a removed entry, with nothing said to stay", () => {
+  it("names a removed entry and its rule, with nothing said to stay", () => {
     render(
       <ContentRemoved subjectType="entry" action="remove" reason="spam" />,
     );
     expect(screen.getByText("Removed from the feed")).toBeInTheDocument();
     expect(band()).toHaveTextContent(
-      "A moderator removed this entry from the feed: it's an ad or spam.",
+      /^Removed from the feedA moderator removed this entry from the feed: it's an ad or spam\.That breaks our community rules: don't post spam, advertising or promotion we have not allowed\.$/u,
     );
-    expect(band().children).toHaveLength(2);
+    expect(band().children).toHaveLength(3);
+  });
+
+  it("names a rule for every reason the Desk offers (catch-all retired)", () => {
+    for (const reason of removalReasons) {
+      const { unmount } = render(
+        <ContentRemoved subjectType="entry" action="remove" reason={reason} />,
+      );
+      expect(band().children).toHaveLength(3);
+      expect(band()).toHaveTextContent(ruleLine(removalRule[reason]));
+      unmount();
+    }
   });
 
   it("says a takedown answered a copyright notice (round 28 #8)", () => {
@@ -62,8 +82,9 @@ describe("ContentRemoved (SAF-8)", () => {
         reason="copyright"
       />,
     );
+    // A notice is why, so no rule is named (C8).
     expect(band()).toHaveTextContent(
-      "Photo removedWe removed this photo after a copyright notice.Your run and verdict stay.",
+      /^Photo removedWe removed this photo after a copyright notice\.Your run and verdict stay\.$/u,
     );
   });
 
@@ -76,7 +97,7 @@ describe("ContentRemoved (SAF-8)", () => {
       />,
     );
     expect(band()).toHaveTextContent(
-      "Photo removedA moderator removed this photo: it's an intimate image shared without consent.Your run and verdict stay.",
+      /^Photo removedA moderator removed this photo: it's an intimate image shared without consent\.Your run and verdict stay\.That breaks our community rules: don't post sexual or explicit content\.$/u,
     );
   });
 

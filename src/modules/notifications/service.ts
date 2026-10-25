@@ -28,7 +28,11 @@ export type NotificationKind =
   | "import_failed"
   | "strava_reminder"
   | "strava_broken"
-  | "content_removed";
+  | "content_removed"
+  | "content_hidden"
+  | "content_kept"
+  | "report_removed"
+  | "report_kept";
 
 /**
  * What this notification is *about* — the thing it links to, and the key
@@ -42,6 +46,10 @@ export type NotificationKind =
  * | strava_reminder | the Strava activity id (`event.object_id`)       |
  * | strava_broken   | the deauthorization event's time                 |
  * | content_removed | the removed entry or photo's id (128 · SAF-8)    |
+ * | content_hidden  | the entry or photo a report hid (C8, D-145)      |
+ * | content_kept    | the reported entry or photo a person left up     |
+ * | report_removed  | what the reporter reported, once removed (C8)    |
+ * | report_kept     | what the reporter reported, once left up (C8)    |
  *
  * A kind with no subject would pass `null`, and SQLite treats NULLs as
  * distinct in a UNIQUE index, so this key would not dedupe it — its guard
@@ -79,18 +87,47 @@ export function notificationInsert(
   db: NotificationsDb,
   draft: NotificationDraft,
 ) {
+  return db.insert(notifications).values(rowOf(draft)).onConflictDoNothing();
+}
+
+/**
+The row a draft lands as: new, unread, timed now unless it says otherwise.
+*/
+function rowOf(draft: NotificationDraft) {
+  return {
+    id: newUlid(),
+    userId: draft.userId,
+    kind: draft.kind,
+    subjectId: draft.subjectId,
+    body: draft.body,
+    read: false,
+    createdAt: draft.createdAt ?? nowSeconds(),
+  };
+}
+
+/**
+ * The insert as a statement that **re-raises** a row already there:
+ * unread again, with this body and time. For a notice that can be owed
+ * again about the same subject, where `notificationInsert` would swallow
+ * the second (C8: a kit approved, reported again and hidden again is told
+ * again). Re-runnable all the same: a retry raises the one row again.
+ */
+export function notificationRaise(
+  db: NotificationsDb,
+  draft: NotificationDraft,
+) {
+  const row = rowOf(draft);
   return db
     .insert(notifications)
-    .values({
-      id: newUlid(),
-      userId: draft.userId,
-      kind: draft.kind,
-      subjectId: draft.subjectId,
-      body: draft.body,
-      read: false,
-      createdAt: draft.createdAt ?? nowSeconds(),
-    })
-    .onConflictDoNothing();
+    .values(row)
+    .onConflictDoUpdate({
+      target: [
+        notifications.userId,
+        notifications.kind,
+        notifications.subjectId,
+      ],
+      set: { body: row.body, read: false, createdAt: row.createdAt },
+    });
 }
 
 /**

@@ -8,6 +8,12 @@
  */
 import { z } from "zod";
 
+import {
+  communityRuleKeys,
+  communityRules,
+  ruleLine,
+  type CommunityRule,
+} from "../../lib/contracts/community-rules";
 import { COPYRIGHT_NOTICE_CLAUSE } from "../../lib/contracts/email-kinds";
 
 /**
@@ -152,7 +158,10 @@ export function removalDueLabel(dueAt: number, now: number): string {
  * it — the statement of reasons the EU DSA asks for (task 128 · SAF-8,
  * decision D-40), after "A moderator removed this photo:" (round 27 #20,
  * whose one drawn example is `home`). A fixed list rather than free text,
- * so the runner is told a rule and not an operator's mood.
+ * so the runner is told a rule and not an operator's mood. Every reason
+ * names one of the terms' rules (`removalRule`): the Desk's catch-all
+ * `rules` was retired (owner, 2026-10-24) because a statement of reasons
+ * must name the ground it rests on (DSA Art. 17(3)(e)).
  */
 export const removalStatements = {
   home: "it shows where someone lives",
@@ -162,10 +171,73 @@ export const removalStatements = {
   harassment: "it harasses someone",
   spam: "it's an ad or spam",
   copyright: "it uses someone else's work",
-  rules: "it breaks the community rules",
 } as const;
 
 export type RemovalReason = keyof typeof removalStatements;
+
+/**
+ * The terms' rule each removal reason breaks, for the statement of reasons
+ * (C8, D-145). An intimate image shared without consent is sexual
+ * content. Every reason names one, so the type admits no gap.
+ */
+export const removalRule: Readonly<Record<RemovalReason, CommunityRule>> = {
+  home: "home",
+  explicit: "explicit",
+  intimate: "explicit",
+  harassment: "harassment",
+  spam: "spam",
+  copyright: "othersWork",
+};
+
+/**
+ * The rule a removal names, or none: a copyright notice's takedown names
+ * no rule (the Desk acted on a notice, and found nothing itself).
+ */
+export function removalRuleOf(
+  action: "remove" | "quarantine" | "takedown",
+  reason: RemovalReason,
+): CommunityRule | undefined {
+  return isCopyrightTakedown(action, reason) ? undefined : removalRule[reason];
+}
+
+/**
+ * The band's line naming that rule, or nothing (C8): the same sentence the
+ * removal email carries.
+ */
+export function removalRuleLine(
+  action: "remove" | "takedown",
+  reason: RemovalReason,
+): string | undefined {
+  const rule = removalRuleOf(action, reason);
+  return rule === undefined ? undefined : ruleLine(rule);
+}
+
+/**
+ * What Close account asks for beside the reason (C8, D-145): the rule it
+ * breaks, or that it is suspected CSAM, whose closure names no rule.
+ */
+export const closureRules = [...communityRuleKeys, "suspected_csam"] as const;
+
+export type ClosureRule = (typeof closureRules)[number];
+
+export const closureRuleSchema = z.enum(closureRules, {
+  message: "Pick the rule it breaks.",
+});
+
+/**
+The pick's labels: each rule's name, and the CSAM option saying what it does.
+*/
+export const closureRuleLabels: Readonly<Record<ClosureRule, string>> = {
+  ...communityRules,
+  suspected_csam: "Suspected CSAM: name no rule",
+};
+
+/**
+The rule a closure's email names: none for suspected CSAM.
+*/
+export function closureRuleOf(rule: ClosureRule): CommunityRule | undefined {
+  return rule === "suspected_csam" ? undefined : rule;
+}
 
 /**
 The reasons in the Desk's order, read from the table above.
