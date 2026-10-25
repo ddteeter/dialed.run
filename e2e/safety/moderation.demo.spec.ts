@@ -331,8 +331,11 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   await expect(copyrightHold.locator("[data-part='hold-state']")).toHaveText(
     /^\[no counter-notice: deleted .+\]$/u,
   );
-  // RECEIVED ON defaults to today (round 39 #73).
-  await expect(copyrightHold.getByLabel("Received on")).toBeVisible();
+  // RECEIVED ON defaults to today (round 39 #73). By its name, not its
+  // label: with two holds listed the label's id is shared (R-165).
+  await expect(copyrightHold.locator("input[name='receivedOn']")).toHaveValue(
+    /^\d{4}-\d{2}-\d{2}$/u,
+  );
   await copyrightHold
     .getByRole("button", { name: "Counter-notice received" })
     .click();
