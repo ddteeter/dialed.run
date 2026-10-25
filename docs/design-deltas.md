@@ -1208,6 +1208,40 @@ numbers since. Design's board and `docs/garmin.md` call them 77–81.
   records `effort_source = runner`. It never re-prefills. No rating:
   nothing is picked and there is no source line. **The owner adopted this mapping and `effort_source`** (2026-10-24), replacing plan 152's first draft. Garmin's own race flag is not used: a race can be run at any effort.
 
+**Built by phase 1 (`152-garmin-phase-1.md`, 2026-10-25):** G3 on A1;
+G5 on A3; G1's line on A1's card, D, E1 and each runs-list row, and the
+word "Garmin" on R's run strip. Not built yet: G1 on the share/OG card and
+in `runs.csv` (phase 3), G2 (phase 3) and G4 (phase 3).
+
+Asked back from the phase 1 build (open):
+
+- **G6. A3 had no effort field to prefill.** G5's no-rating frame says
+  "the field is as it is today", but A3 never had one: effort was set on
+  the manual form only. Built as G5 draws it (EFFORT, the source line,
+  four chips that fill the row), using A3's own chip, without its ✕,
+  because a second tap keeps the pick. **Placed after the "Anything
+  specific?" chips and before the share switch**, since the frames show
+  only the header, the field and Log it. The line under the chips, "Effort
+  matters more than distance — you run 8° warmer in a workout.", is the
+  Call's B1 copy with a figure A3 does not have, so it is not drawn.
+  Confirm the placement, and whether A3 wants a line of its own there.
+- **G7. GarminAttribution's weight.** G1 says weight 500; the type
+  contract has no 500 in text (`tokens.js` WEIGHT), so it is built at 400
+  (`text-small`, `--quiet`, which is G1's `--ink-2` #4E4E44). Confirm, or
+  say if it should be 600.
+- **G8. The import's own failure.** G3 draws Garmin not answering for the
+  list, not for a tap. Built as the same §4a band: NOT IMPORTED · "Garmin
+  didn't answer." · Try again (the same tap, under its key), under the
+  rows.
+- **G9. A Garmin import's file strip.** A1's parsed card names the file it
+  read ("Parsed · morning.gpx"); a Garmin import has no file the runner
+  chose, so it reads "Parsed · Garmin · Sat Aug 29 · 6.2 mi · 51:38",
+  the row the runner tapped. Draw what it should say.
+- **G10. D's line.** G1 puts the credit "under D's headline", which on the
+  board is "6.2 at 41°"; the built D has no such headline (its title is
+  "Your run" or the handle, then the strip), so the credit is the first
+  line under the title. Confirm.
+
 ## Answered in round 39 (imported 2026-10-24)
 
 Sent on 2026-10-24 for items 66–76; design answered the same day as

@@ -46,6 +46,7 @@ flowchart LR
     STRAVA[Strava webhook] -->|activity event\nreminder only| W
     W -->|historical + forecast| WX[Weather provider\nVisual Crossing behind adapter]
     W -->|OAuth| IDP[Google / Strava auth]
+    W -->|owner only: list runs,\nfetch one .FIT, D-148| GARMIN[Garmin Connect\nPersonal API]
 ```
 
 Key decisions embedded here:
@@ -103,6 +104,11 @@ Key decisions embedded here:
   onboarding's barrel never reaches `ops`. No new cron. The one read is
   onboarding's `runnerTimeZone`: the profile, then the latest observed run,
   then UTC.
+- **Import from Garmin** (`modules/runs/garmin/`, plan 152) is a second
+  front door on the import pipeline, for the owner alone: the request lists
+  their recent runs and fetches the picked one's `.FIT` (one attempt, 10 s),
+  then hands it to `startImport` like an upload. Nothing new is bound: two
+  secrets, and the existing `IMPORTS` bucket and queue.
 - **Weather is an adapter** (`modules/weather/provider/`). Visual Crossing is
   the first implementation; swapping providers is a one-directory change.
   (The design artboards label the forecast "NWS" — that's a design delta, not
