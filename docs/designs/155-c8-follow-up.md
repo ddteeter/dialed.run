@@ -66,4 +66,10 @@ the generic one. All wording is the owner's (2026-10-22, 2026-10-24).
 
 ## Open questions
 
-None open; the fallback wording choice above is recorded here for review.
+- The dateless fallback above reuses approved sentences (proceeding).
+- #76's hairline between the rules and the CSAM option is not built: the
+  shared `ChoiceField` select draws none (design-deltas 76 says so).
+- #71 writes "1 bit" at one, not "1 BITS", as the removed-match line does.
+- The privacy policy's `/takedown` bullet gains "tell its owner in the
+  app that it is hidden", the approved words of the report bullet above
+  it, so the text stays true after R-163 (for the owner's approval).

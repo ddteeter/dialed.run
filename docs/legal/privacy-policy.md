@@ -410,7 +410,8 @@ account added it.
   when it was made, and what we decided, with the reason if we declined.
   If the link points to a kit or photo on [dialed.run], we hide it from
   everyone but its owner while we look, except under the limits below,
-  and put it back if we decline. We email the address a receipt and the decision, and email each
+  tell its owner in the app that it is hidden, and put it back if we
+  decline. We email the address a receipt and the decision, and email each
   reviewer that a request is waiting. We count requests per visitor IP
   address, as we do requests for access, to stop the form being flooded,
   and delete each count a day after its hour ends. To stop one person
