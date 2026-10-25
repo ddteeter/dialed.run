@@ -35,19 +35,30 @@ export function DeskSplit({
 }
 
 /**
- * One read-only card in the rail: a mono title and what it holds.
+ * One read-only card in the rail: a mono title and what it holds — or,
+ * `isHeading`, a title in TYPE.heading and sentence case, as round 40 C4
+ * draws F's "Already in your closet · Top".
  */
 export function RailCard({
   title,
+  isHeading = false,
   children,
-}: Readonly<{ title: string; children: ReactNode }>): JSX.Element {
+}: Readonly<{
+  title: string;
+  isHeading?: boolean;
+  children: ReactNode;
+}>): JSX.Element {
   return (
     <section className="flex flex-col gap-2 rounded-card border border-hairline p-4">
-      <h2 className="m-0">
-        <Mono step="xs" className="text-label">
-          {title}
-        </Mono>
-      </h2>
+      {isHeading ? (
+        <h2 className="m-0 font-display text-heading">{title}</h2>
+      ) : (
+        <h2 className="m-0">
+          <Mono step="xs" className="text-label">
+            {title}
+          </Mono>
+        </h2>
+      )}
       {children}
     </section>
   );
