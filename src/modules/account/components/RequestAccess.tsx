@@ -34,7 +34,7 @@ const INLINE_LINK_CLASS = "font-bold text-ink underline underline-offset-4";
  * Au5's receipt (round 26 #20): "You're on the list", the same for a new,
  * a repeated and a registered address — it reveals nothing.
  *
- * From a blocked state (owner, 2026-10-18; design-deltas item 66) the
+ * From a blocked state (owner, 2026-10-18; design-deltas item 69) the
  * request is kept all the same, and the receipt says only that sign-up is
  * not open there yet: no "Create an account", which would be refused.
  */

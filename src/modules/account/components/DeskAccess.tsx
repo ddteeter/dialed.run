@@ -204,7 +204,7 @@ type RowActionHandle = Pick<ReturnType<typeof useRowAction>, "run" | "bandFor">;
 
 /**
  * A request's Send invite — or, for one from a state that is blocked now
- * (`BLOCKED_US_REGIONS`; design-deltas item 66), the reason there is
+ * (`BLOCKED_US_REGIONS`; design-deltas item 69), the reason there is
  * none. The server refuses it too (`inviteFromRequest`); this is where
  * the operator reads why.
  */
