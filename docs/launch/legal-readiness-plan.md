@@ -216,6 +216,8 @@ are numbered past `main` and the open PRs (law 11).
   Testing mode needs no test-user list and sign-ins don't expire (A11).
 - **NCMEC.** Email espteam@ncmec.org as the LLC to register as an ESP and
   get CyberTipline credentials; test on exttest.cybertip.org (A9, B7).
+- **Evidence store.** Create the `dialed-evidence` R2 bucket, its locks
+  and its owner-only token (D-148; `docs/deployment.md` §2).
 - **Cloudflare.** Turn on the free CSAM Scanning Tool, and note that it
   sees only cached responses, so it doesn't cover our photos (B6a).
 - **Read and publish.** A final read of the step 2 PR, then mark each

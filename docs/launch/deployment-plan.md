@@ -60,6 +60,7 @@ them twice:
 | Create the `dialed-exports` queue and its `dialed-exports-dlq` before the first deploy that binds them (any deploy of PR #132 or later).                                                                                                                                                     | owner, per `docs/deployment.md` §3                                                                                                                | decision D-86 |
 | Add the one lifecycle rule on `dialed-imports`: prefix `exports/`, delete after 8 days, the net behind the hourly export sweep.                                                                                                                                                              | owner, per `docs/deployment.md` §2                                                                                                                | decision D-85 |
 | Create the `dialed-guides` bucket, and an R2 API token with read-only access to that bucket alone. Add it to the `dialed.run-site` repo as `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`.                                                                                                      | owner, per `docs/deployment.md` §2                                                                                                                | R-134         |
+| To create, before friends: the `dialed-evidence` bucket and its three bucket locks (`ncmec/` and `takedown/` 400 days, `register/` indefinite), and an R2 API token with Object Read & Write on that bucket alone, kept by the owner, never bound to the Worker.                             | owner, per `docs/deployment.md` §2                                                                                                                | D-148         |
 | Observability: tracing **off** (billable); logs at full sample (`head_sampling_rate: 1` is fine at launch volume). Carried over from the old launch-gate checklist.                                                                                                                          | owner                                                                                                                                             | workflow.md   |
 | Usage notifications for Workers, D1, R2 and Email.                                                                                                                                                                                                                                           | owner                                                                                                                                             | §3.7          |
 
@@ -85,6 +86,10 @@ is written by the named lane.
 | `GOOGLE_CLIENT_ID` / `_SECRET`                           | secret | optional       | auth                  | No Google sign-in; set both or neither.                                                                          |
 | `SENTRY_DSN`                                             | secret | strongly       | ops                   | Terminal failures go nowhere.                                                                                    |
 | `FIRECRAWL_API_KEY`                                      | secret | optional       | enrichment            | Shops that refuse a Worker (11 of 14) enrich from nothing.                                                       |
+
+**Owner only, not a Worker secret**: the `dialed-evidence` R2 API token
+(§1, D-148), to create before friends and kept in the owner's password
+manager.
 
 **GitHub**: secret `CLOUDFLARE_API_TOKEN` (Workers, D1, R2 edit), secret
 **`CLOUDFLARE_ACCOUNT_ID`** (the deploy step reads it; missing from the

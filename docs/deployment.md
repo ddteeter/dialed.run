@@ -135,6 +135,38 @@ prefix-scoped, so one bucket would work. Two makes retention a property of
 where an object lives rather than a rule someone can misconfigure, and it
 stops a photo ever being written to a path that expires.
 
+### The evidence bucket (to create; no binding)
+
+`dialed-evidence` holds what the compliance procedures keep outside the app
+(D-148): the context captured for an NCMEC report (`ncmec/`), takedown
+notes (`takedown/`), and the breach register (`register/`). **It is never
+bound to the Worker**: it does not go in `wrangler.jsonc`, so no app bug or
+leaked Worker secret can reach it, and `test/bindings-conformance.test.ts`
+has nothing to assert. Before friends:
+
+```sh
+wrangler r2 bucket create dialed-evidence --location enam
+wrangler r2 bucket lock add dialed-evidence ncmec ncmec/ --retention-days 400
+wrangler r2 bucket lock add dialed-evidence takedown takedown/ --retention-days 400
+wrangler r2 bucket lock add dialed-evidence register register/ --retention-indefinite
+```
+
+Then, in the dashboard, an R2 API token with **Object Read & Write on
+`dialed-evidence` only**. The owner keeps its credentials in their password
+manager: never in this repository, `.dev.vars` or a Worker secret.
+
+- A lock refuses deleting or overwriting an object under its prefix until
+  the period passes, and it **overrides lifecycle rules**: a rule cannot
+  delete a locked object. 400 days is the year §2258A(h) asks for, from the
+  report, with margin: the context is uploaded before the report is filed.
+- **An account admin can remove a lock rule.** The scoped token cannot, so
+  the lock guards against a mistake or a leaked token, not against the
+  account.
+- Nothing deletes an object when its lock passes. The owner deletes it by
+  hand when the record it backs is swept; `register/` is kept for good.
+- Objects may be encrypted with `age` before upload (optional). If so, the
+  private key is kept apart from the token.
+
 ## 3. Queues
 
 Six: three work queues and their dead-letter queues. `wrangler.jsonc` already
@@ -238,6 +270,10 @@ to workers.dev"; its target changes with the domain step.
 
 `NODE_ENV` is not needed: OPS-4 sets Better Auth's rate limiter and secure
 cookies explicitly from `BETTER_AUTH_URL`'s scheme (audit finding 0.7).
+
+**Not a Worker secret**: the `dialed-evidence` R2 API token (§2, D-148)
+is to create before friends and is held by the owner alone, outside
+Cloudflare's secret store and outside this repository.
 
 Locally and in CI, Cloudflare's documented test keys stand in for
 Turnstile: site key `1x00000000000000000000AA` and secret
