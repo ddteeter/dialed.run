@@ -45,10 +45,19 @@ design screens B1/B2, O2, O4, O5/O6 and the Onboarding artboard's
   than the other. That is a product decision (accept the split? ask Strava
   users to self-report effort? ignore intensity entirely for parity?) and
   it should be made before the engine depends on it.
-  Note also that imported files are kept for as long as their run (D-110,
-  `docs/deployment.md`), so a field wanted later — intensity included — can
-  be re-parsed from the stored file rather than having to be extracted at
-  parse time. Only a file whose import failed is deleted, 30 days on.
+  **Files are no longer kept, so this cannot wait for the epic.** D-116
+  replaced D-110: an imported file is deleted once it has been read. A
+  field not extracted at import is gone, short of the runner uploading the
+  file again (R-146).
+  **Decided (owner, 2026-10-24): capture the runner's own perceived
+  effort, not heart rate.** Many watches ask for a 1–10 rating after a
+  run and write it into the FIT session as `workout_rpe` (stored ×10).
+  Read it at import, keep it on the run, and prefill `runs.effort` from
+  it as a suggestion the runner can change. Heart rate is neither read
+  nor stored. It is health data under Washington's My Health My Data Act,
+  so storing it needs its own consent. Revisit it here, with that consent.
+  Even then, the engine wants an effort-like summary (time in each zone,
+  mapped to an effort), not the stream.
 - **Cohort model**: aggregates by climate zone, offset, effort. Geographic
   density matters — city-by-city launch argument lives here.
 - **Forecast**: `WeatherProvider.forecast()` is already in the contract.

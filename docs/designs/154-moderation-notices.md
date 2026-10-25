@@ -1,4 +1,4 @@
-# Design: 151 Moderation notices (C8, D-132, D-145)
+# Design: 154 Moderation notices (C8, D-132, D-145)
 
 ## Problem
 

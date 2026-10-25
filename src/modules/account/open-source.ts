@@ -4,8 +4,8 @@
  *
  * **Both texts are files, bundled as strings and read here on the
  * server**, as the legal pages' are (`./legal`): `open-source-list.json`,
- * which `scripts/open-source-list.ts` writes from the lockfile and the
- * font licence at every build, and `docs/legal/third-party-notices.md`.
+ * which `scripts/open-source-list.ts` writes from the bundles' licence
+ * reports and the font licence at every build (design 151), and `docs/legal/third-party-notices.md`.
  * The page receives rows, never the files, so neither rides in the client
  * bundle.
  *
@@ -37,6 +37,7 @@ const pieceSchema = z.object({
 const listSchema = z.object({
   type: z.array(pieceSchema),
   packages: z.array(pieceSchema),
+  tools: z.array(pieceSchema),
   licences: z.record(z.string(), z.string()),
 });
 
@@ -63,7 +64,7 @@ const LICENCE_NAMES: Readonly<Record<string, string>> = {
 function groupsOf(
   pieces: readonly Piece[],
   licences: Readonly<Record<string, string>>,
-  isType: boolean,
+  kind: LicenceGroup["kind"],
 ): LicenceGroup[] {
   const byLicence = new Map<string, Piece[]>();
   for (const piece of pieces) {
@@ -77,7 +78,7 @@ function groupsOf(
     return {
       id: headingId(name),
       name,
-      isType,
+      kind,
       text: licences[licence],
       pieces: members,
     };
@@ -90,14 +91,29 @@ function groupsOf(
  * where two are the same size.
  */
 export function licenceGroups(list: OpenSourceList): readonly LicenceGroup[] {
-  const packages = groupsOf(list.packages, list.licences, false).toSorted(
+  const packages = groupsOf(list.packages, list.licences, "licence").toSorted(
     (a, b) => b.pieces.length - a.pieces.length || a.name.localeCompare(b.name),
   );
-  return [...groupsOf(list.type, list.licences, true), ...packages];
+  return [...groupsOf(list.type, list.licences, "type"), ...packages];
+}
+
+/**
+ * "Tools we build with" (design 151; round 40 #82): the tools that build the app and do not ship
+ * in it, under one heading, each row naming its licence.
+ */
+export function toolsGroup(list: OpenSourceList): LicenceGroup {
+  return {
+    id: "tools-we-build-with",
+    name: "Tools we build with",
+    kind: "tools",
+    text: undefined,
+    pieces: list.tools,
+  };
 }
 
 export interface OpenSourcePage {
   readonly groups: readonly LicenceGroup[];
+  readonly tools: LicenceGroup;
   /**
   The vendored material and the credits (D-137).
   */
@@ -114,8 +130,10 @@ export async function openSourcePage(
   userId: string | undefined,
   source: { readonly list?: string; readonly notices?: string } = {},
 ): Promise<OpenSourcePage> {
+  const list = openSourceList(source.list);
   return {
-    groups: licenceGroups(openSourceList(source.list)),
+    groups: licenceGroups(list),
+    tools: toolsGroup(list),
     notices: parseLegalDoc(source.notices ?? notices),
     bellState: await readerBellState(db, userId),
   };
