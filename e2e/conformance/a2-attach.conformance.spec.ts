@@ -2,6 +2,7 @@ import type { Page, Route } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 import { storageStateFor } from "../support/accounts";
+import { isServerFnCall } from "../support/server-fn";
 import {
   colorRole,
   openBoard,
@@ -35,14 +36,10 @@ test.use({ storageState: storageStateFor("run-logging") });
 const ROUND_22 = "Round 22 Coverage.dc.html";
 
 /**
- * The server function A2 waits on, by name. TanStack Start addresses a
- * server function by an id that encodes where it was declared, so the
- * name is in the URL once the last segment is decoded.
+ * The server function A2 waits on, by name (`support/server-fn`).
  */
 function isPrefill(url: string): boolean {
-  const segment = new URL(url).pathname.split("/").pop() ?? "";
-  const decoded = Buffer.from(segment, "base64url").toString("utf8");
-  return `${url} ${decoded}`.includes("prefillForRun");
+  return isServerFnCall(url, "prefillForRun");
 }
 
 /**

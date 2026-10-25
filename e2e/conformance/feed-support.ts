@@ -20,6 +20,7 @@ import { weatherObservations } from "../../src/db/schema-weather";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { withLocalDb } from "../support/local-db";
+import { isServerFnCall } from "../support/server-fn";
 import { userIdOf } from "./logging-fixtures";
 import type { Audience } from "../../src/lib/contracts";
 
@@ -406,9 +407,9 @@ export function holdForever(): Promise<void> {
  * the provider, and nothing past Find is faked — Use this still saves
  * through the real server function.
  *
- * A server function's URL ends in its id, base64url-encoded with the
- * function's name inside, the same reading `a2-attach`'s `isPrefill`
- * makes. A plain JSON body, not the serialized framing, is read as it stands:
+ * The lookup is found by its server function's name (`support/server-fn`),
+ * the same reading `a2-attach`'s `isPrefill` makes. A plain JSON body, not
+ * the serialized framing, is read as it stands:
  * the client unwraps its `result`, as it does a real server function's.
  */
 export async function answerFind(
@@ -419,10 +420,7 @@ export async function answerFind(
     | { kind: "unavailable" },
 ): Promise<void> {
   await page.route("**/_serverFn/**", async (route) => {
-    const url = route.request().url();
-    const segment = new URL(url).pathname.split("/").pop() ?? "";
-    const decoded = Buffer.from(segment, "base64url").toString("utf8");
-    if (!`${url} ${decoded}`.includes("lookUpCity")) {
+    if (!isServerFnCall(route.request().url(), "lookUpCity")) {
       await route.fallback();
       return;
     }

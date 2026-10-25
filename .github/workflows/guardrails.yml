@@ -1,13 +1,10 @@
 # Consumer-facing CI template, written into a target repo by `guardrails init`.
-# Uses floating major tags (@v6), not the pinned commit SHAs this repo's own
-# workflows use: a SHA pinned into a consumer's repository would rot silently
-# under THEIR Dependabot policy, and we cannot update it for them. This repo
-# pins because it controls its own supply chain; a consumer controls theirs.
-#
-# The MAJOR still has to be kept current, which floating does not do for us:
-# @v4 rides the node20 runner GitHub is retiring, so every repo scaffolded
-# with it inherits deprecation warnings fixable only by editing an OWNED
-# file. Keep this in step with the majors `.github/workflows/ci.yml` pins.
+# The template floats major tags (@v6), because a SHA pinned into a
+# consumer's repository would rot under THEIR Dependabot policy. This repo
+# now has that policy (.github/dependabot.yml, design 156) and requires SHA
+# pins (a repository setting), so here the tags are pinned to commits like
+# every other workflow, and Dependabot keeps them current. Re-running
+# `guardrails init` would write the floating tags back: re-pin them.
 name: Guardrails
 
 on:
@@ -42,12 +39,12 @@ jobs:
   guardrails:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           # The commit gate diffs against the merge-base, which needs history.
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: "24"
           cache: npm
