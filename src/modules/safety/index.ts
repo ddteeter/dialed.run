@@ -125,7 +125,7 @@ export {
 } from "./reports";
 
 // C8 (D-132, D-145): the notices a report's life owes.
-export { reporterNotices } from "./notices";
+export { photoReporterNotices, reporterNotices } from "./notices";
 
 export {
   claimForReview,

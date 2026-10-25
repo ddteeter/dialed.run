@@ -66,3 +66,11 @@ export function decidedBy(isFlagged: boolean): string {
  */
 export const REDRESS_FOOT =
   "Think we got it wrong? Reply to this email and a person will look again. You can also take it to a court.";
+
+/**
+ * Where the rules are read: the terms' "## The rules", by the id the
+ * terms page gives that heading (GitHub's, `account/legal-markdown.ts`).
+ * The removal email's button opens it (round 40 C3); a test pins the id
+ * to `terms.md`.
+ */
+export const COMMUNITY_RULES_PATH = "/terms#the-rules";

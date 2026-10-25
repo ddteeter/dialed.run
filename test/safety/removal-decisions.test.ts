@@ -6,6 +6,7 @@ import { z } from "zod";
 import {
   entryPhotos,
   moderationActions,
+  notifications,
   outbox,
   outfitEntries,
   reviewQueue,
@@ -16,6 +17,7 @@ import { newUlid } from "../../src/lib/ids";
 import { readOutboxRow } from "../../src/lib/sql/outbox";
 import { decideRemovalRequest } from "../../src/modules/feed/removal-requests";
 import { fileTakedownRequest } from "../../src/modules/safety";
+import { HIDDEN_NOTICE } from "../../src/modules/safety/notice-copy";
 import { oweInCore } from "../queue-fakes";
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
@@ -441,5 +443,100 @@ describe("the hold a request puts on what it names", () => {
     const entryId = await sharedEntry();
     await file("https://elsewhere.example/img");
     expect(await entryStatus(entryId)).toBe("ok");
+  });
+});
+
+/**
+The author of a kit, and the hide notices they hold: kind, subject, body, read.
+*/
+async function authorOf(entryId: string): Promise<string> {
+  const [row] = await core()
+    .select({ userId: outfitEntries.userId })
+    .from(outfitEntries)
+    .where(eq(outfitEntries.id, entryId));
+  if (row === undefined) throw new Error("no kit");
+  return row.userId;
+}
+
+async function hideNoticesFor(userId: string) {
+  return core()
+    .select({
+      kind: notifications.kind,
+      subjectId: notifications.subjectId,
+      body: notifications.body,
+      read: notifications.read,
+    })
+    .from(notifications)
+    .where(eq(notifications.userId, userId));
+}
+
+const byId = (one: string, other: string) => one.localeCompare(other);
+
+describe("the author's notice of a request's hold (R-163)", () => {
+  beforeEach(async () => {
+    await core().delete(notifications);
+  });
+
+  it("tells the author of a kit it holds, in the hide notice's words", async () => {
+    const entryId = await sharedEntry();
+    await file(entryLink(entryId));
+    expect(await hideNoticesFor(await authorOf(entryId))).toStrictEqual([
+      {
+        kind: "content_hidden",
+        subjectId: entryId,
+        body: HIDDEN_NOTICE.entry,
+        read: false,
+      },
+    ]);
+  });
+
+  it("tells the author of a photo it holds, screened or not", async () => {
+    const entryId = await sharedEntry();
+    const author = await authorOf(entryId);
+    const photos = [
+      await photoOn(entryId, "pass"),
+      await photoOn(entryId, "pending"),
+    ];
+    for (const photoId of photos) await file(photoLink(entryId, photoId));
+    const notices = await hideNoticesFor(author);
+    expect(
+      notices.map((notice) => notice.subjectId ?? "").toSorted(byId),
+    ).toStrictEqual(photos.toSorted(byId));
+    for (const notice of notices) {
+      expect(notice).toMatchObject({
+        kind: "content_hidden",
+        body: HIDDEN_NOTICE.photo,
+      });
+    }
+  });
+
+  it("tells nobody of a removed kit or a flagged photo, which it does not move", async () => {
+    const entryId = await sharedEntry();
+    await core()
+      .update(outfitEntries)
+      .set({ moderationStatus: "removed" })
+      .where(eq(outfitEntries.id, entryId));
+    const photoId = await photoOn(entryId, "flagged");
+    await file(entryLink(entryId));
+    await file(photoLink(entryId, photoId));
+    expect(await hideNoticesFor(await authorOf(entryId))).toStrictEqual([]);
+  });
+
+  it("does not tell them again when a second request finds it already hidden", async () => {
+    const entryId = await sharedEntry();
+    const author = await authorOf(entryId);
+    await file(entryLink(entryId));
+    await core()
+      .update(notifications)
+      .set({ read: true })
+      .where(eq(notifications.userId, author));
+    await file(`${entryLink(entryId)}/`);
+    expect(await hideNoticesFor(author)).toMatchObject([{ read: true }]);
+  });
+
+  it("tells nobody for a link that is not ours", async () => {
+    await sharedEntry();
+    await file("https://elsewhere.example/img");
+    expect(await core().select().from(notifications)).toStrictEqual([]);
   });
 });

@@ -172,8 +172,16 @@ describe("banning", () => {
       rule: "suspected_csam",
       bannedBy: "op",
     });
+    // The generic email (owner, 2026-10-24): no reason and no rule said,
+    // though the reason is still carried for the build before (law 9).
     expect(message.payload).toMatchObject({
-      email: { template: { kind: "account_closed", reason: "Closed" } },
+      email: {
+        template: {
+          kind: "account_closed",
+          reason: "Closed",
+          namesNoReason: true,
+        },
+      },
     });
     expect(JSON.stringify(message)).not.toContain("rule");
   });

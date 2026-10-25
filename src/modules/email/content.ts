@@ -12,6 +12,7 @@
  * same voice, listed under the PR's "Design deltas".
  */
 import {
+  COMMUNITY_RULES_PATH,
   decidedBy,
   REDRESS_FOOT,
   ruleLine,
@@ -99,14 +100,48 @@ function reminderBody(landedAt: string, runs: number): string {
 }
 
 /**
- * "Email content removed"'s first sentence (round 27 #15), for what went.
- * The board names the run's date; the email does not know it yet, so it
- * says "one of your runs" (a design delta).
+ * "Email content removed"'s first sentence, for what went: the run named
+ * by its day (round 40 C3), or "one of your runs" — round 38 #63b's words,
+ * which a copyright notice's email always uses, and a row owed before the
+ * day was carried does too (law 9).
  */
-const REMOVED = {
-  photo: "We removed a photo from one of your runs",
-  entry: "We removed one of your runs from the feed",
-} as const;
+function removed(
+  template: Extract<EmailTemplate, { kind: "content_removed" }>,
+): string {
+  const day =
+    template.cause === "copyright_notice" ? undefined : template.runDay;
+  if (day === undefined) {
+    return template.subject === "photo"
+      ? "We removed a photo from one of your runs"
+      : "We removed one of your runs from the feed";
+  }
+  return template.subject === "photo"
+    ? `We removed the photo from your ${day} run`
+    : `We removed your ${day} run from the feed`;
+}
+
+/**
+The removal email's one button (round 40 C3): the rules it names.
+*/
+function communityRules(origin: string): EmailLink {
+  return {
+    label: "See the community rules",
+    href: `${origin}${COMMUNITY_RULES_PATH}`,
+  };
+}
+
+/**
+ * The closure email's first sentences: the reason, the rule and who
+ * decided (C8, D-145) — or, for suspected CSAM, only that the account
+ * broke the rules (owner, 2026-10-24).
+ */
+function closedFor(
+  template: Extract<EmailTemplate, { kind: "account_closed" }>,
+): string {
+  return template.namesNoReason === true
+    ? "We closed your account for breaking the community rules."
+    : `We closed your account. Reason: ${template.reason}. ${brokeRule(template.rule)}${decidedBy(false)}`;
+}
 
 /**
  * What follows what went: the moderator's reason, word for word, or —
@@ -291,16 +326,15 @@ const CONTENT: {
     return {
       subject: "We removed something from your run",
       // C8 (D-145): what, why, the rule, who decided, then what stays.
-      body: `${REMOVED[template.subject]}${why(template)} ${brokeRule(template.rule)}${decidedBy(template.flagged === true)} ${STAYS[template.subject]}`,
-      button: logIn(origin),
+      body: `${removed(template)}${why(template)} ${brokeRule(template.rule)}${decidedBy(template.flagged === true)} ${STAYS[template.subject]}`,
+      button: communityRules(origin),
       foot: REDRESS_FOOT,
     };
   },
   account_closed: (template) => {
     return {
       subject: "Your dialed.run account is closed",
-      // C8 (D-145): the reason, the rule, and that a person decided.
-      body: `We closed your account. Reason: ${template.reason}. ${brokeRule(template.rule)}${decidedBy(false)} You can't log in, and your shared runs are gone from the feed.`,
+      body: `${closedFor(template)} You can't log in, and your shared runs are gone from the feed.`,
       foot: REDRESS_FOOT,
     };
   },

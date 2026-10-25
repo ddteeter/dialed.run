@@ -114,6 +114,12 @@ export const contentRemoved = emailKind("content_removed", {
    * is a person's own find, as every row owed before it was.
    */
   flagged: z.boolean().optional(),
+  /**
+   * The run's day as prose says it, "Sat, Aug 29" (round 40 C3), in the
+   * run's own zone, formatted when the debt is owed. Optional, and it must
+   * stay so (law 9): a row owed before it existed says "one of your runs".
+   */
+  runDay: z.string().min(1).optional(),
 });
 
 /**
@@ -128,6 +134,13 @@ export const accountClosed = emailKind("account_closed", {
    * CSAM, which names none, and on a row owed before it existed (law 9).
    */
   rule: communityRuleSchema.optional(),
+  /**
+   * A closure over suspected CSAM (owner, 2026-10-24): the email says only
+   * that the account broke the community rules, with no reason and no
+   * rule. Optional (law 9); `reason` is still written for the build
+   * before this one, which requires it.
+   */
+  namesNoReason: z.literal(true).optional(),
 });
 
 /**

@@ -254,7 +254,7 @@ describe("Close account (D3)", () => {
     await user.type(screen.getByRole("textbox", { name: /Why/ }), "Closed");
     await user.selectOptions(
       screen.getByRole("combobox", { name: /Which rule it breaks/ }),
-      "Suspected CSAM: name no rule",
+      "Suspected CSAM (the notice names no rule)",
     );
     await user.click(screen.getByRole("button", { name: "Close account" }));
 
