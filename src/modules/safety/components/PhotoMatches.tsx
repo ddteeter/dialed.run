@@ -127,7 +127,14 @@ export function RemovedMatchLine({
     <p data-part="removed-match" className="m-0 text-body">
       A copy of an image removed as intimate on{" "}
       <Mono step="xs">{monthDayLabel(match.removedAt)}</Mono>,{" "}
-      <Mono step="xs">{`${String(match.distance)} bits`}</Mono> apart.
+      <Mono step="xs">{bitsLabel(match.distance)}</Mono> apart.
     </p>
   );
+}
+
+/**
+A distance as the line says it: "1 bit", "0 bits", "3 bits".
+*/
+function bitsLabel(distance: number): string {
+  return distance === 1 ? "1 bit" : `${String(distance)} bits`;
 }

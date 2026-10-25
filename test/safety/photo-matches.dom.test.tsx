@@ -182,6 +182,13 @@ describe("RemovedMatchLine", () => {
     expect(screen.getByText("3 bits")).toHaveClass("font-mono");
   });
 
+  it("says one bit in the singular", async () => {
+    await renderWithRouter(
+      <RemovedMatchLine match={{ distance: 1, removedAt: REMOVED_AT }} />,
+    );
+    expect(part("removed-match")).toHaveTextContent(/, 1 bit apart\.$/u);
+  });
+
   it("renders nothing on any other row", async () => {
     await renderWithRouter(<RemovedMatchLine match={undefined} />);
     expect(part("removed-match")).toBeNull();
