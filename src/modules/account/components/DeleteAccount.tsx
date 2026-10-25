@@ -62,11 +62,11 @@ export function DeleteAccount({
     isReturningFromGoogle: boolean;
   }
 >): JSX.Element {
-  // How the sheet is open, if it is: from the row, or back from Google —
-  // which focuses a different button (round 40 C1).
-  const [opened, setOpened] = useState<"closed" | "pressed" | "returned">(
-    isReturningFromGoogle ? "returned" : "closed",
-  );
+  const [isOpen, setIsOpen] = useState(isReturningFromGoogle);
+  // Back from Google focuses a different button (round 40 C1) — but only
+  // the first time: closed and opened again from the row, it is the
+  // ordinary confirm.
+  const [hasClosed, setHasClosed] = useState(false);
   return (
     <section
       data-part="delete-account"
@@ -75,7 +75,7 @@ export function DeleteAccount({
       <button
         type="button"
         onClick={() => {
-          setOpened("pressed");
+          setIsOpen(true);
         }}
         className="target flex cursor-pointer items-center justify-between gap-3 border-none bg-transparent p-0 py-3 text-left"
       >
@@ -89,18 +89,19 @@ export function DeleteAccount({
         </span>
         <span className="shrink-0 text-body text-ink">Delete</span>
       </button>
-      {opened === "closed" ? undefined : (
+      {isOpen ? (
         <DeleteSheet
           hasPassword={hasPassword}
           request={request}
           reauth={reauth}
           onScheduled={onScheduled}
-          isReturningFromGoogle={opened === "returned"}
+          isReturningFromGoogle={isReturningFromGoogle && !hasClosed}
           onClose={() => {
-            setOpened("closed");
+            setIsOpen(false);
+            setHasClosed(true);
           }}
         />
-      )}
+      ) : undefined}
     </section>
   );
 }

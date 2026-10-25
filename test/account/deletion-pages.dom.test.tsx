@@ -341,8 +341,10 @@ describe("Leaving (round 27 #14)", () => {
         "Strava is disconnected, and stays that way until you connect it again.",
       ),
     ).toHaveClass("text-small", "text-muted");
-    // Nothing is too late until Keep has been pressed and said so.
+    // Nothing is too late until Keep has been pressed and said so, and
+    // the status region has nothing to say.
     expect(screen.queryByText(TOO_LATE.message)).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent(/^$/u);
     // Keep is the primary answer, Log out the secondary one.
     expect(screen.getByRole("button", { name: "Keep my account" })).toHaveClass(
       "target",
