@@ -123,7 +123,12 @@ describe("recordNcmecReport", () => {
   it("is the first recording's time: recording again moves nothing", async () => {
     const now = nowSeconds();
     const id = await quarantinedAtTime(now - 100 * DAY);
-    await recordNcmecReport(core(), ADMIN, { recordId: id, reportId: "1" }, now);
+    await recordNcmecReport(
+      core(),
+      ADMIN,
+      { recordId: id, reportId: "1" },
+      now,
+    );
 
     // A double-click, a retry, the same form ten days on.
     const again = await recordNcmecReport(
@@ -144,7 +149,12 @@ describe("recordNcmecReport", () => {
   it("takes a corrected report number without moving the clock", async () => {
     const now = nowSeconds();
     const id = await quarantinedAtTime(now - DAY);
-    await recordNcmecReport(core(), ADMIN, { recordId: id, reportId: "1" }, now);
+    await recordNcmecReport(
+      core(),
+      ADMIN,
+      { recordId: id, reportId: "1" },
+      now,
+    );
 
     await recordNcmecReport(
       core(),
@@ -226,7 +236,12 @@ describe("Review's read of the quarantine", () => {
   it("carries the report and the clock, and none of the content", async () => {
     const now = nowSeconds();
     const id = await quarantinedAtTime(now);
-    await recordNcmecReport(core(), ADMIN, { recordId: id, reportId: "7" }, now);
+    await recordNcmecReport(
+      core(),
+      ADMIN,
+      { recordId: id, reportId: "7" },
+      now,
+    );
 
     const [record] = await quarantinedContentFor(core(), ADMIN);
 

@@ -244,10 +244,17 @@ owing you anything.
   posted and are not obliged to, but we act on what we find or are told.
 - **What we can do** when something breaks these terms or the law: remove
   it, change a username, or close the account.
-- **We tell you why.** When we remove your kit or photo, we tell you in the
-  app and by email what was removed and which rule it broke. When we close
-  your account, we email you the reason, and the app shows it when you try to
-  sign in. The one exception is suspected child sexual abuse material, below.
+- **We tell you why.** When reports hide your kit or photo, we tell you in
+  the app, and tell you again if a person leaves it up. When we remove your
+  kit or photo, we tell you in the app and by email what was removed and
+  which rule it broke, and the email says whether our automatic screening
+  flagged it before a person decided. When we close your account, we email
+  you the reason and the rule it broke, and the app shows it when you try
+  to sign in. The one exception is suspected child sexual abuse material,
+  below.
+- **We tell you what we decided about your report.** When a person decides
+  on something you reported, we tell you in the app whether we removed it
+  or left it up, except for suspected child sexual abuse material.
 - **A closed account** cannot sign in, and its kits, photos and profile are
   hidden from everyone else. We may close an account without warning when
   the breach is serious, or when the law or someone's safety requires it.

@@ -109,7 +109,12 @@ describe("runner search leaves out hidden runners", () => {
     const viewer = await makeVerifiedUser();
     const banned = await makeVerifiedUser({ username: "kai_banned" });
     const kept = await makeVerifiedUser({ username: "kai_kept" });
-    await banUser({ userId: banned, reason: "spam", bannedBy: viewer });
+    await banUser({
+      userId: banned,
+      reason: "spam",
+      rule: "spam",
+      bannedBy: viewer,
+    });
 
     const found = await searchRunners(viewer, "kai");
 
@@ -185,7 +190,12 @@ describe("H reads as not found for a hidden runner", () => {
   it("answers nothing for a banned runner", async () => {
     const viewer = await makeVerifiedUser();
     const banned = await makeVerifiedUser();
-    await banUser({ userId: banned, reason: "spam", bannedBy: viewer });
+    await banUser({
+      userId: banned,
+      reason: "spam",
+      rule: "spam",
+      bannedBy: viewer,
+    });
 
     expect(await otherProfile(banned, viewer)).toBeUndefined();
   });
@@ -295,7 +305,12 @@ describe("profileAtHandle", () => {
     const viewer = await makeVerifiedUser();
     const banned = await makeVerifiedUser({ username: "uma_banned" });
     const blocked = await makeVerifiedUser({ username: "uma_blocked" });
-    await banUser({ userId: banned, reason: "spam", bannedBy: viewer });
+    await banUser({
+      userId: banned,
+      reason: "spam",
+      rule: "spam",
+      bannedBy: viewer,
+    });
     await blockRunner(blocked, viewer);
 
     expect(await profileAtHandle(viewer, "uma_banned")).toStrictEqual(
@@ -315,7 +330,12 @@ describe("profileAtHandle", () => {
       .insert(usernameHistory)
       .values({ username: "vic_deleted", userId: "01DELETED", retiredAt: NOW });
     const banned = await makeVerifiedUser({ username: "vic_banned" });
-    await banUser({ userId: banned, reason: "spam", bannedBy: viewer });
+    await banUser({
+      userId: banned,
+      reason: "spam",
+      rule: "spam",
+      bannedBy: viewer,
+    });
     const waiting = await makeUser({ username: "vic_waiting" });
     await addAccount(waiting, false);
     const blocking = await makeVerifiedUser({ username: "vic_blocking" });
@@ -519,7 +539,12 @@ describe("the author's own under-review entry on Following (D-67)", () => {
       },
       oweInCore,
     );
-    await banUser({ userId: banned, reason: "spam", bannedBy: viewer });
+    await banUser({
+      userId: banned,
+      reason: "spam",
+      rule: "spam",
+      bannedBy: viewer,
+    });
 
     expect(await followingIds(viewer)).toStrictEqual([]);
   });

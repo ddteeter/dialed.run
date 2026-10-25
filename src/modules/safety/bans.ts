@@ -28,7 +28,9 @@ import { orSqlNull } from "../../lib/sql/sql-null";
 import { nowSeconds } from "../../lib/now";
 import { emailDebt } from "../email";
 
+import { closureRuleOf, type ClosureRule } from "./contracts";
 import { moderationActionInsert } from "./moderation-actions";
+import { reporterNotices } from "./notices";
 
 function db() {
   return coreDb();
@@ -37,6 +39,10 @@ function db() {
 export interface BanInput {
   userId: string;
   reason: string;
+  /**
+  The rule it breaks, or suspected CSAM, which names none (C8, D-145).
+  */
+  rule: ClosureRule;
   bannedBy: string;
 }
 
@@ -57,6 +63,12 @@ export async function banUser(
   also: (database: ReturnType<typeof db>) => BatchItem<"sqlite">[] = () => [],
 ): Promise<void> {
   const bannedAt = nowSeconds();
+  // The runner's reporters are told it went (C8, D-132), read before the
+  // batch — unless it is suspected CSAM, which tells nobody (D-70).
+  const told =
+    closureRuleOf(input.rule) === undefined
+      ? []
+      : await reporterNotices(db(), "profile", input.userId, "removed");
   await db().batch([
     db()
       .update(userProfiles)
@@ -75,6 +87,7 @@ export async function banUser(
       reason: input.reason,
     }),
     ...also(db()),
+    ...told,
   ]);
 }
 
@@ -86,10 +99,16 @@ export async function banUser(
  * on Close account replaces the debt rather than sending twice.
  */
 export function banEmail(input: BanInput): OutboxMessage {
+  // The rule it broke, unless suspected CSAM, which names none (C8).
+  const rule = closureRuleOf(input.rule);
   return emailDebt(
     {
       to: { userId: input.userId },
-      template: { kind: "account_closed", reason: input.reason },
+      template: {
+        kind: "account_closed",
+        reason: input.reason,
+        rule,
+      },
     },
     { dedupeKey: `account_closed:${input.userId}` },
   );

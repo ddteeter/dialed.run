@@ -208,6 +208,7 @@ flowchart TD
     FEED -->|index.ts only| ACCT
     FEED -->|index.ts only: the removal email| MAIL
     SAFE -->|index.ts only: D8's run counts| RUNS
+    SAFE -->|index.ts only: report and review notices, C8| NOTE[modules/notifications]
     ACCT -->|index.ts only: Strava revoked on deletion| RUNS
     ACCT -->|index.ts only: the one visibility rule| SAFE
     PURGE[account/purge.ts] -->|index.ts only: SAF-3's deletes| FEED

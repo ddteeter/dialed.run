@@ -81,6 +81,7 @@ describe("a banned runner signing in (SAF-4)", () => {
     await banUser({
       userId,
       reason: "Adverts for a supplement store.",
+      rule: "spam",
       bannedBy: newUlid(),
     });
 
@@ -104,7 +105,12 @@ describe("a banned runner signing in (SAF-4)", () => {
     // Google's callback and every other provider end in createSession, so
     // the hook on it is the one gate they all pass through.
     const { userId } = await runner();
-    await banUser({ userId, reason: "spam", bannedBy: newUlid() });
+    await banUser({
+      userId,
+      reason: "spam",
+      rule: "spam",
+      bannedBy: newUlid(),
+    });
     const context = await auth.$context;
     await expect(
       context.internalAdapter.createSession(userId),
@@ -113,7 +119,12 @@ describe("a banned runner signing in (SAF-4)", () => {
 
   it("signs in again once unbanned", async () => {
     const { userId, email } = await runner();
-    await banUser({ userId, reason: "mistake", bannedBy: newUlid() });
+    await banUser({
+      userId,
+      reason: "mistake",
+      rule: "spam",
+      bannedBy: newUlid(),
+    });
     await unbanUser(userId, "desk-operator");
 
     const signedIn = await signIn(email);

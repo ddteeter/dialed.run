@@ -3,7 +3,12 @@ import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { session, user } from "../../src/db/schema-auth";
-import { outbox, userProfiles } from "../../src/db/schema-core";
+import {
+  notifications,
+  outbox,
+  reports,
+  userProfiles,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import {
@@ -98,7 +103,12 @@ describe("banning", () => {
     const userId = await signedInUser(3);
     expect(await sessionCountOf(userId)).toBe(3);
 
-    await banUser({ userId, reason: "spam", bannedBy: await makeUser() });
+    await banUser({
+      userId,
+      reason: "spam",
+      rule: "spam",
+      bannedBy: await makeUser(),
+    });
 
     // All three effects, because any two of them looks like it works: a
     // banned account with live sessions is still posting.
@@ -122,16 +132,26 @@ describe("banning", () => {
 
   it("owes the ban email in the ban's own batch", async () => {
     const userId = await signedInUser();
-    const ban = { userId, reason: "Spam accounts", bannedBy: "op" };
+    const ban = {
+      userId,
+      reason: "Spam accounts",
+      rule: "spam" as const,
+      bannedBy: "op",
+    };
     const message = banEmail(ban);
 
+    // The rule rides with the reason (C8, D-145).
     expect(message).toStrictEqual({
       kind: "email",
       payload: {
         dedupeKey: `account_closed:${userId}`,
         email: {
           to: { userId },
-          template: { kind: "account_closed", reason: "Spam accounts" },
+          template: {
+            kind: "account_closed",
+            reason: "Spam accounts",
+            rule: "spam",
+          },
         },
       },
     });
@@ -145,6 +165,86 @@ describe("banning", () => {
     expect(owed).toStrictEqual([{ dedupeKey: `account_closed:${userId}` }]);
   });
 
+  it("names no rule for a closure over suspected CSAM (C8)", () => {
+    const message = banEmail({
+      userId: "u1",
+      reason: "Closed",
+      rule: "suspected_csam",
+      bannedBy: "op",
+    });
+    expect(message.payload).toMatchObject({
+      email: { template: { kind: "account_closed", reason: "Closed" } },
+    });
+    expect(JSON.stringify(message)).not.toContain("rule");
+  });
+
+  it("tells each runner who reported the profile that it went (C8, D-132)", async () => {
+    const userId = await signedInUser(1);
+    const [first, second] = [await makeUser(), await makeUser()];
+    for (const reporterId of [first, second]) {
+      await core().insert(reports).values({
+        id: newUlid(),
+        reporterId,
+        subjectType: "profile",
+        subjectId: userId,
+        reason: "harassment",
+        createdAt: NOW,
+      });
+    }
+
+    await banUser({ userId, reason: "spam", rule: "spam", bannedBy: "op" });
+    await banUser({ userId, reason: "spam", rule: "spam", bannedBy: "op" });
+
+    const told = await core()
+      .select({
+        userId: notifications.userId,
+        kind: notifications.kind,
+        subjectId: notifications.subjectId,
+        body: notifications.body,
+        read: notifications.read,
+      })
+      .from(notifications);
+    // Once each, however many clicks.
+    expect(
+      told.toSorted((a, b) => a.userId.localeCompare(b.userId)),
+    ).toStrictEqual(
+      [first, second]
+        .toSorted((a, b) => a.localeCompare(b))
+        .map((reporter) => ({
+          userId: reporter,
+          kind: "report_removed",
+          subjectId: userId,
+          body: "We removed what you reported.",
+          read: false,
+        })),
+    );
+  });
+
+  it("tells no reporter of a closure over suspected CSAM (D-70)", async () => {
+    const userId = await signedInUser(1);
+    await core()
+      .insert(reports)
+      .values({
+        id: newUlid(),
+        reporterId: await makeUser(),
+        subjectType: "profile",
+        subjectId: userId,
+        reason: "other",
+        createdAt: NOW,
+      });
+
+    await banUser({
+      userId,
+      reason: "Closed",
+      rule: "suspected_csam",
+      bannedBy: "op",
+    });
+
+    const state = await banStateOf(userId);
+    expect(state.banned).toBe(true);
+    expect(await core().select().from(notifications)).toStrictEqual([]);
+  });
+
   it("leaves other people's sessions alone", async () => {
     const banned = await signedInUser(2);
     const bystander = await signedInUser(2);
@@ -152,6 +252,7 @@ describe("banning", () => {
     await banUser({
       userId: banned,
       reason: "spam",
+      rule: "spam",
       bannedBy: await makeUser(),
     });
 
@@ -164,8 +265,8 @@ describe("banning", () => {
     const userId = await signedInUser(1);
     const bannedBy = await makeUser();
 
-    await banUser({ userId, reason: "harassment", bannedBy });
-    await banUser({ userId, reason: "harassment", bannedBy });
+    await banUser({ userId, reason: "harassment", rule: "spam", bannedBy });
+    await banUser({ userId, reason: "harassment", rule: "spam", bannedBy });
 
     const userState = await banStateOf(userId);
     expect(userState.banned).toBe(true);
@@ -178,7 +279,12 @@ describe("unbanning", () => {
 
   it("actually clears the ban", async () => {
     const userId = await signedInUser(1);
-    await banUser({ userId, reason: "mistake", bannedBy: await makeUser() });
+    await banUser({
+      userId,
+      reason: "mistake",
+      rule: "spam",
+      bannedBy: await makeUser(),
+    });
     const banState = await banStateOf(userId);
     expect(banState.banned).toBe(true);
 
@@ -239,7 +345,12 @@ describe("unbanning", () => {
 
   it("owes the reopen email in the lift's own batch, and sends it (D-89)", async () => {
     const userId = await signedInUser(1);
-    await banUser({ userId, reason: "mistake", bannedBy: await makeUser() });
+    await banUser({
+      userId,
+      reason: "mistake",
+      rule: "spam",
+      bannedBy: await makeUser(),
+    });
     await core().delete(outbox);
     const settle = vi.fn(() => Promise.resolve());
 
@@ -262,7 +373,12 @@ describe("unbanning", () => {
 
   it("owes and sends nothing for a second Reopen once the first email went out", async () => {
     const userId = await signedInUser(1);
-    await banUser({ userId, reason: "mistake", bannedBy: await makeUser() });
+    await banUser({
+      userId,
+      reason: "mistake",
+      rule: "spam",
+      bannedBy: await makeUser(),
+    });
     await core().delete(outbox);
     const reopening = () => {
       const debt = oweOutbox(reopenEmail(userId, undefined));
@@ -306,7 +422,12 @@ describe("unbanning", () => {
 
   it("does not restore the revoked sessions", async () => {
     const userId = await signedInUser(2);
-    await banUser({ userId, reason: "mistake", bannedBy: await makeUser() });
+    await banUser({
+      userId,
+      reason: "mistake",
+      rule: "spam",
+      bannedBy: await makeUser(),
+    });
     await unbanUser(userId, "desk-operator");
 
     // They sign in again, which is correct — the rows were deleted, not

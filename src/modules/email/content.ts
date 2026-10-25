@@ -11,6 +11,12 @@
  * change, the changed notice) have no drawing and are placeholders in the
  * same voice, listed under the PR's "Design deltas".
  */
+import {
+  decidedBy,
+  REDRESS_FOOT,
+  ruleLine,
+  type CommunityRule,
+} from "../../lib/contracts/community-rules";
 import { CONTACT_ADDRESS } from "../../lib/contracts/contact";
 import { EXPORT_LINK_DAYS } from "../../lib/contracts/data-export";
 import { COPYRIGHT_NOTICE_CLAUSE } from "../../lib/contracts/email-kinds";
@@ -113,6 +119,14 @@ function why(
   return template.cause === "copyright_notice"
     ? ` ${COPYRIGHT_NOTICE_CLAUSE}.`
     : `. Reason: ${template.reason}.`;
+}
+
+/**
+ * The rule it broke, as a sentence and its trailing space, or nothing when
+ * the email names none (C8, D-145).
+ */
+function brokeRule(rule: CommunityRule | undefined): string {
+  return rule === undefined ? "" : `${ruleLine(rule)} `;
 }
 
 /**
@@ -276,16 +290,18 @@ const CONTENT: {
   content_removed: (template, { origin }) => {
     return {
       subject: "We removed something from your run",
-      body: `${REMOVED[template.subject]}${why(template)} ${STAYS[template.subject]}`,
+      // C8 (D-145): what, why, the rule, who decided, then what stays.
+      body: `${REMOVED[template.subject]}${why(template)} ${brokeRule(template.rule)}${decidedBy(template.flagged === true)} ${STAYS[template.subject]}`,
       button: logIn(origin),
-      foot: "Think we got it wrong? Reply to this email.",
+      foot: REDRESS_FOOT,
     };
   },
   account_closed: (template) => {
     return {
       subject: "Your dialed.run account is closed",
-      body: `We closed your account for breaking the community rules: ${template.reason}. You can't log in, and your shared runs are gone from the feed.`,
-      foot: "Think we got it wrong? Reply to this email to appeal and we'll look again.",
+      // C8 (D-145): the reason, the rule, and that a person decided.
+      body: `We closed your account. Reason: ${template.reason}. ${brokeRule(template.rule)}${decidedBy(false)} You can't log in, and your shared runs are gone from the feed.`,
+      foot: REDRESS_FOOT,
     };
   },
   account_reopened: (template, { origin }) => {

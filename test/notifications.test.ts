@@ -8,6 +8,7 @@ import {
   createNotification,
   listNotifications,
   markAllNotificationsRead,
+  notificationRaise,
   unreadNotificationCount,
 } from "../src/modules/notifications";
 import { runsAwaitingVerdict } from "../src/modules/runs";
@@ -86,6 +87,59 @@ describe("notifications (102 §7, resilience law 1)", () => {
 
     const rows = await listNotifications(db, userId);
     expect(rows.map((row) => row.body)).toEqual(["Yours."]);
+  });
+});
+
+describe("raising a notice again (C8)", () => {
+  it("re-raises the one row: unread, with the new words and time", async () => {
+    const db = notificationsDb();
+    const userId = newUlid();
+    const subjectId = newUlid();
+    const draft = { userId, kind: "content_hidden" as const, subjectId };
+
+    await db.batch([
+      notificationRaise(db, { ...draft, body: "First.", createdAt: NOW }),
+    ]);
+    await markAllNotificationsRead(db, userId);
+    await db.batch([
+      notificationRaise(db, { ...draft, body: "Again.", createdAt: NOW + 60 }),
+    ]);
+
+    const rows = await listNotifications(db, userId);
+    expect(
+      rows.map(({ kind, body, read, createdAt }) => ({
+        kind,
+        body,
+        read,
+        createdAt,
+      })),
+    ).toStrictEqual([
+      {
+        kind: "content_hidden",
+        body: "Again.",
+        read: false,
+        createdAt: NOW + 60,
+      },
+    ]);
+  });
+
+  it("times a raise now when the caller names no time", async () => {
+    const db = notificationsDb();
+    const userId = newUlid();
+    const before = nowSeconds();
+
+    await db.batch([
+      notificationRaise(db, {
+        userId,
+        kind: "content_kept",
+        subjectId: newUlid(),
+        body: "Kept.",
+      }),
+    ]);
+
+    const [row] = await listNotifications(db, userId);
+    expect(row?.createdAt).toBeGreaterThanOrEqual(before);
+    expect(row?.read).toBe(false);
   });
 });
 

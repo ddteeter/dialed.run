@@ -88,7 +88,9 @@ describe("QuarantineRecords", () => {
       ncmecReportId: "123456",
       retainUntil: SEP_10_2026 + YEAR,
     });
-    render(<QuarantineRecords records={[held()]} recordReport={recordReport} />);
+    render(
+      <QuarantineRecords records={[held()]} recordReport={recordReport} />,
+    );
     const user = userEvent.setup();
 
     await user.type(
@@ -116,7 +118,9 @@ describe("QuarantineRecords", () => {
     const recordReport = vi
       .fn<RecordFn>()
       .mockReturnValue(new Promise(neverSettles));
-    render(<QuarantineRecords records={[held()]} recordReport={recordReport} />);
+    render(
+      <QuarantineRecords records={[held()]} recordReport={recordReport} />,
+    );
 
     await userEvent
       .setup()
@@ -134,7 +138,9 @@ describe("QuarantineRecords", () => {
       ncmecReportId: NOT_SET,
       retainUntil: SEP_10_2026 + YEAR,
     });
-    render(<QuarantineRecords records={[held()]} recordReport={recordReport} />);
+    render(
+      <QuarantineRecords records={[held()]} recordReport={recordReport} />,
+    );
 
     await userEvent
       .setup()
@@ -152,7 +158,9 @@ describe("QuarantineRecords", () => {
 
   it("refuses a number that is not one, before the round trip", async () => {
     const recordReport = vi.fn<RecordFn>();
-    render(<QuarantineRecords records={[held()]} recordReport={recordReport} />);
+    render(
+      <QuarantineRecords records={[held()]} recordReport={recordReport} />,
+    );
     const user = userEvent.setup();
 
     await user.type(
@@ -176,7 +184,9 @@ describe("QuarantineRecords", () => {
     const recordReport = vi
       .fn<RecordFn>()
       .mockResolvedValue({ outcome: "gone" });
-    render(<QuarantineRecords records={[held()]} recordReport={recordReport} />);
+    render(
+      <QuarantineRecords records={[held()]} recordReport={recordReport} />,
+    );
 
     await userEvent
       .setup()

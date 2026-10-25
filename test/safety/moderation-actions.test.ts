@@ -373,6 +373,9 @@ describe("moderateContent: Remove deletes (SAF-5)", () => {
               kind: "content_removed",
               subject: "photo",
               reason: "it shows where someone lives",
+              // C8 (D-145): the rule, and that a person found it.
+              rule: "home",
+              flagged: false,
             },
           },
         },
@@ -425,7 +428,7 @@ describe("moderateContent: Remove deletes (SAF-5)", () => {
         action: "remove",
         subjectType: "entry",
         subjectId: missing,
-        reason: "rules",
+        reason: "spam",
       },
       quiet,
     );
@@ -438,7 +441,7 @@ describe("moderateContent: Remove deletes (SAF-5)", () => {
         action: "remove",
         subjectType: "photo",
         subjectId: missing,
-        reason: "rules",
+        reason: "spam",
       },
       quiet,
     );
@@ -830,12 +833,17 @@ describe("takedown (SAF-6)", () => {
         },
       ]);
       const [owed] = await owedEmails();
-      expect(owed?.payload).toMatchObject({
+      // A notice is why, so no rule is named (C8).
+      expect(owed?.payload).toStrictEqual({
+        dedupeKey: `content_removed:photo:${photoId}`,
         email: {
+          to: { userId: author },
           template: {
             kind: "content_removed",
             subject: "photo",
+            reason: "it uses someone else's work",
             cause: "copyright_notice",
+            flagged: false,
           },
         },
       });
@@ -873,6 +881,8 @@ describe("takedown (SAF-6)", () => {
             kind: "content_removed",
             subject: "entry",
             reason: "it's an intimate image shared without consent",
+            rule: "explicit",
+            flagged: false,
           },
         },
       });
@@ -969,14 +979,14 @@ describe("decideReview: the queue's Remove really deletes", () => {
       await decideReview(core(), "rev", {
         queueId: productRow,
         action: "remove",
-        reason: "rules",
+        reason: "spam",
       }),
     ).toBe("resolved");
     expect(
       await decideReview(core(), "rev", {
         queueId: goneRow,
         action: "remove",
-        reason: "rules",
+        reason: "spam",
       }),
     ).toBe("resolved");
     const settled = await queueStatus(goneRow);
@@ -1005,7 +1015,7 @@ describe("decideReview: the queue's Remove really deletes", () => {
     await decideReview(core(), "rev", {
       queueId,
       action: "remove",
-      reason: "rules",
+      reason: "spam",
     });
 
     expect(
@@ -1025,7 +1035,7 @@ describe("decideReview: the queue's Remove really deletes", () => {
       await decideReview(core(), "rev", {
         queueId,
         action: "remove",
-        reason: "rules",
+        reason: "spam",
       }),
     ).toBe("already_resolved");
     expect(
@@ -1042,7 +1052,7 @@ describe("decideReview: the queue's Remove really deletes", () => {
     await decideReview(core(), "rev", {
       queueId: queueId,
       action: "remove",
-      reason: "rules",
+      reason: "spam",
     });
 
     expect(
@@ -1055,14 +1065,14 @@ describe("decideReview: the queue's Remove really deletes", () => {
       await decideReview(core(), "rev", {
         queueId: queueId,
         action: "remove",
-        reason: "rules",
+        reason: "spam",
       }),
     ).toBe("already_resolved");
     expect(
       await decideReview(core(), "rev", {
         queueId: newUlid(),
         action: "quarantine",
-        reason: "rules",
+        reason: "spam",
       }),
     ).toBe("not_found");
   });
@@ -1074,7 +1084,12 @@ describe("bans are audited", () => {
   it("records the ban with its reason, and the lift beside it", async () => {
     const runner = await makeUser();
 
-    await banUser({ userId: runner, reason: "Spam accounts", bannedBy: "op" });
+    await banUser({
+      userId: runner,
+      reason: "Spam accounts",
+      rule: "spam",
+      bannedBy: "op",
+    });
     await unbanUser(runner, "op2");
 
     const audit = await auditFor(runner);
@@ -1510,7 +1525,12 @@ describe("deskRunners, D8 (round 27 #22)", () => {
           createdAt: 1,
         },
       ]);
-    await banUser({ userId: newer, reason: "Spam", bannedBy: "op" });
+    await banUser({
+      userId: newer,
+      reason: "Spam",
+      rule: "spam",
+      bannedBy: "op",
+    });
 
     const listed = await deskList({ filter: "all" });
 
@@ -1634,7 +1654,7 @@ describe("the reviewer's row read is shared (runs untouched)", () => {
         action: "remove",
         subjectType: "entry",
         subjectId: entryId,
-        reason: "rules",
+        reason: "spam",
       },
       quiet,
     );

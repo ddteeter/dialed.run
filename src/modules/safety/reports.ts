@@ -50,6 +50,7 @@ import {
 } from "./contracts";
 import { adminUserIds } from "./admin";
 import { blockRunner } from "./blocks";
+import { hiddenNotice, reporterIdsOf } from "./notices";
 import { enqueueForReview, firstReportHidingAtOnce } from "./review";
 import { heldPhotoStatus } from "./visibility";
 
@@ -331,17 +332,7 @@ export async function distinctReporterCount(
   subjectType: ReportSubjectType,
   subjectId: string,
 ): Promise<number> {
-  const reporters = await columnWhere(
-    db(),
-    reports,
-    reports.reporterId,
-    subjectMatches(
-      reports.subjectType,
-      reports.subjectId,
-      subjectType,
-      subjectId,
-    ),
-  );
+  const reporters = await reporterIdsOf(db(), subjectType, subjectId);
   // The UNIQUE index already guarantees one row per reporter, so the row
   // count *is* the distinct count. Deduplicating here as well would be a
   // second answer to a question the schema has already settled.
@@ -408,12 +399,19 @@ async function hidePendingReview(
     source: "reports",
   });
 
+  // Read before the batch, which cannot branch: whose it is, for the
+  // author's notice that it was hidden (C8, D-145).
+  const told = await hiddenNotice(db(), subjectType, subjectId);
+
   // The operators' alerts ride in the same batch (design 136): a hide that
-  // starts a 48-hour clock never lands without the email that says so.
+  // starts a 48-hour clock never lands without the email that says so. So
+  // does the author's notice: a hide nobody was told of is the silent
+  // restriction DSA Art. 17 forbids.
   await db().batch([
     queueWrite,
     ...hideWritesFor[subjectType](subjectId),
     ...alerts,
+    ...told,
   ]);
 }
 

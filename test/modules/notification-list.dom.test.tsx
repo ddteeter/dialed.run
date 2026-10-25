@@ -12,6 +12,10 @@ import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { NotificationList } from "../../src/modules/notifications/components/NotificationList";
+import {
+  HIDDEN_NOTICE,
+  REPORT_OUTCOME,
+} from "../../src/modules/safety/notice-copy";
 
 /**
  * Screen M, redrawn to S2c (round 22, item 13), with Mark all read on the
@@ -162,6 +166,30 @@ describe("NotificationList · the rows", () => {
       "unread",
     );
     expect(screen.queryByRole("button", { name: "Mark all read" })).toBeNull();
+  });
+});
+
+describe("NotificationList · moderation notices (C8, D-132, D-145)", () => {
+  it("reads both outcomes to the reporter, and the hide to the author", async () => {
+    await renderWithRouter(
+      <NotificationList
+        notifications={[
+          notification({ id: "01A", body: REPORT_OUTCOME.removed }),
+          notification({ id: "01B", body: REPORT_OUTCOME.kept }),
+          notification({ id: "01C", body: HIDDEN_NOTICE.photo }),
+        ]}
+        markAllRead={nothing}
+      />,
+    );
+
+    const rows = screen.getAllByRole("listitem");
+    expect(
+      rows.map((row) => row.querySelector("p")?.textContent),
+    ).toStrictEqual([
+      "We removed what you reported.",
+      "We reviewed what you reported and left it up. We didn't find that it breaks our community rules. Disagree? Write to desk@dialed.run.",
+      "Photo hidden while we review it. Someone reported a photo on your run, so other runners can't see it until a person reviews it, usually within a day. It was hidden automatically. We'll tell you what we decide.",
+    ]);
   });
 });
 

@@ -211,7 +211,7 @@ export const banUserAction = createServerFn({ method: "POST" })
   .validator((input: unknown) => banUserInput.parse(input))
   .handler(async ({ data }) => {
     const bannedBy = requireAdmin(await verifiedUserId());
-    const ban = { userId: data.userId, reason: data.reason, bannedBy };
+    const ban = { ...data, bannedBy };
     // The ban's email, owed in the ban's batch, then the fast path.
     const debt = oweOutbox(banEmail(ban));
     await banUser(ban, (database) => [outboxInsert(database, debt)]);

@@ -107,9 +107,9 @@ describe("emailContent", () => {
       },
       {
         subject: "We removed something from your run",
-        body: "We removed a photo from one of your runs. Reason: it shows where someone lives. Your run and verdict stay.",
+        body: "We removed a photo from one of your runs. Reason: it shows where someone lives. A person made this decision. Your run and verdict stay.",
         button: LOG_IN,
-        foot: "Think we got it wrong? Reply to this email.",
+        foot: "Think we got it wrong? Reply to this email and a person will look again. You can also take it to a court.",
         footer: LEGAL,
       },
     ],
@@ -121,9 +121,43 @@ describe("emailContent", () => {
       },
       {
         subject: "We removed something from your run",
-        body: "We removed one of your runs from the feed. Reason: it's an ad or spam. The run itself stays.",
+        body: "We removed one of your runs from the feed. Reason: it's an ad or spam. A person made this decision. The run itself stays.",
         button: LOG_IN,
-        foot: "Think we got it wrong? Reply to this email.",
+        foot: "Think we got it wrong? Reply to this email and a person will look again. You can also take it to a court.",
+        footer: LEGAL,
+      },
+    ],
+    // C8 (D-145): the rule it broke, and the automatic check that flagged
+    // it before a person decided.
+    [
+      {
+        kind: "content_removed",
+        subject: "photo",
+        reason: "it shows where someone lives",
+        rule: "home",
+        flagged: true,
+      },
+      {
+        subject: "We removed something from your run",
+        body: "We removed a photo from one of your runs. Reason: it shows where someone lives. That breaks our community rules: don't show where someone lives. Our automatic check flagged it; a person made the decision. Your run and verdict stay.",
+        button: LOG_IN,
+        foot: "Think we got it wrong? Reply to this email and a person will look again. You can also take it to a court.",
+        footer: LEGAL,
+      },
+    ],
+    [
+      {
+        kind: "content_removed",
+        subject: "entry",
+        reason: "it's an ad or spam",
+        rule: "spam",
+        flagged: false,
+      },
+      {
+        subject: "We removed something from your run",
+        body: "We removed one of your runs from the feed. Reason: it's an ad or spam. That breaks our community rules: don't post spam, advertising or promotion we have not allowed. A person made this decision. The run itself stays.",
+        button: LOG_IN,
+        foot: "Think we got it wrong? Reply to this email and a person will look again. You can also take it to a court.",
         footer: LEGAL,
       },
     ],
@@ -138,9 +172,9 @@ describe("emailContent", () => {
       },
       {
         subject: "We removed something from your run",
-        body: "We removed a photo from one of your runs after a copyright notice. Your run and verdict stay.",
+        body: "We removed a photo from one of your runs after a copyright notice. A person made this decision. Your run and verdict stay.",
         button: LOG_IN,
-        foot: "Think we got it wrong? Reply to this email.",
+        foot: "Think we got it wrong? Reply to this email and a person will look again. You can also take it to a court.",
         footer: LEGAL,
       },
     ],
@@ -153,9 +187,9 @@ describe("emailContent", () => {
       },
       {
         subject: "We removed something from your run",
-        body: "We removed one of your runs from the feed after a copyright notice. The run itself stays.",
+        body: "We removed one of your runs from the feed after a copyright notice. A person made this decision. The run itself stays.",
         button: LOG_IN,
-        foot: "Think we got it wrong? Reply to this email.",
+        foot: "Think we got it wrong? Reply to this email and a person will look again. You can also take it to a court.",
         footer: LEGAL,
       },
     ],
@@ -307,8 +341,21 @@ describe("emailContent", () => {
       { kind: "account_closed", reason: "repeated harassment" },
       {
         subject: "Your dialed.run account is closed",
-        body: "We closed your account for breaking the community rules: repeated harassment. You can't log in, and your shared runs are gone from the feed.",
-        foot: "Think we got it wrong? Reply to this email to appeal and we'll look again.",
+        body: "We closed your account. Reason: repeated harassment. A person made this decision. You can't log in, and your shared runs are gone from the feed.",
+        foot: "Think we got it wrong? Reply to this email and a person will look again. You can also take it to a court.",
+        footer: LEGAL,
+      },
+    ],
+    [
+      {
+        kind: "account_closed",
+        reason: "repeated harassment",
+        rule: "harassment",
+      },
+      {
+        subject: "Your dialed.run account is closed",
+        body: "We closed your account. Reason: repeated harassment. That breaks our community rules: don't harass anyone. A person made this decision. You can't log in, and your shared runs are gone from the feed.",
+        foot: "Think we got it wrong? Reply to this email and a person will look again. You can also take it to a court.",
         footer: LEGAL,
       },
     ],

@@ -100,7 +100,8 @@ We close the accounts of runners who repeatedly infringe copyright.
   material.
 - **An account that has had material removed for infringement three times**
   is closed. A notice that was withdrawn, or that a counter-notice answered
-  without a court action following, does not count.
+  without a court action following, does not count. A removal counts for 3
+  years after the material is deleted.
 - **We may close an account sooner** where the infringement is plain and
   deliberate.
 - **Closing works as any other account closure** under the [terms](/terms):
