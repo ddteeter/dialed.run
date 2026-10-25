@@ -35,6 +35,10 @@ import { closetUserId } from "./closet-seed";
  * retirement by month and year (round 28 #13), so the Rover is seeded
  * retired in March 2026 and its row reads as drawn.
  *
+ * **The rail's title is round 40's, not round 26's** (C4): the same words,
+ * set as a heading in sentence case rather than the board's mono capitals.
+ * The words are still compared against the board; the case is round 40's.
+ *
  * A named piece is linked to a product (any id will do: nothing here reads
  * the product), because that is what makes the closet call it by brand
  * and name — as a save through F does.
@@ -253,7 +257,7 @@ test("F · saved with its photo refused is round 26's band and Done", async ({
   created.itemIds.push(new URL(page.url()).pathname.split("/").at(-1) ?? "");
 });
 
-test("F at the desk · the rail card is round 26's, newest first, marked", async ({
+test("F at the desk · the rail card is round 26's rows, newest first, marked, under round 40's heading", async ({
   page,
   baseURL,
 }) => {
@@ -317,7 +321,11 @@ test("F at the desk · the rail card is round 26's, newest first, marked", async
     page.locator(card).getByText("Same name · Retired"),
   ).toBeVisible();
 
-  expect(await cellsOf(page, `${card} > h2`)).toStrictEqual([drawnTitle]);
+  // Round 40 C4 sets the title as a heading in sentence case: the board's
+  // words, no longer its mono capitals.
+  const title = "Already in your closet · Top · Half-zip";
+  expect(title.toUpperCase()).toBe(drawnTitle);
+  await expect(page.locator(`${card} > h2`)).toHaveText(title);
   const rows = await cellsOf(page, `${card} ul`);
   // The closet may hold other half-zips from other specs; the board's
   // three are seeded newest (dated ahead, on purpose), so they lead.
