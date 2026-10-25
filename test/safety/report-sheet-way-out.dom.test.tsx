@@ -43,17 +43,20 @@ async function renderSheet() {
 }
 
 const wayOut = () => document.querySelector("[data-part='takedown-way-out']");
+const elsewhere = () => document.querySelector("[data-part='elsewhere-help']");
 
 describe("W1's way out to /takedown", () => {
   it("shows only once the intimate-image reason is picked", async () => {
     await renderSheet();
     const user = userEvent.setup();
     expect(wayOut()).toBeNull();
+    expect(elsewhere()).toBeNull();
 
     await user.click(
       screen.getByRole("radio", { name: reportReasonLabels.harassment }),
     );
     expect(wayOut()).toBeNull();
+    expect(elsewhere()).toBeNull();
 
     await user.click(
       screen.getByRole("radio", { name: reportReasonLabels.intimate }),
@@ -64,5 +67,7 @@ describe("W1's way out to /takedown", () => {
     expect(
       screen.getByRole("link", { name: "Report it without signing in" }),
     ).toHaveAttribute("href", "/takedown");
+    // D-147: and where else to go for the other sites it may be on.
+    expect(elsewhere()).toBeVisible();
   });
 });

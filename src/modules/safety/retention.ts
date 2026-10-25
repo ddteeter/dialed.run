@@ -1,7 +1,8 @@
 /**
  * The 3-year sweep (D-131, plan C7, design 150): takedown requests,
- * reports and the records of moderation decisions are kept for 3 years
- * after the decision, then deleted. Quarantined material keeps its own
+ * reports, the records of moderation decisions and the fingerprints a
+ * Remove kept (D-147) are kept for 3 years after the decision, then
+ * deleted. Quarantined material keeps its own
  * clock (`retain_until`, `quarantine.ts`), which this never touches.
  *
  * Run by the daily firing (`ops/scheduled.ts`), beside the other sweeps.
@@ -25,6 +26,7 @@ import {
   copyrightHolds,
   moderationActions,
   quarantinedContent,
+  removedFingerprints,
   reports,
   reviewQueue,
   takedownRequests,
@@ -117,7 +119,7 @@ function expiredActions(db: Db, cutoff: number) {
 }
 
 /**
- * The five deletes, in the order they must run, for one batch. Exported so
+ * The six deletes, in the order they must run, for one batch. Exported so
  * each plan can be asked of SQLite (D1 bills rows scanned).
  *
  * Order matters twice: the review rows go only once their subject has no
@@ -133,6 +135,11 @@ export function moderationRecordDeletes(db: Db, cutoff: number) {
     db.delete(reports).where(expiredReports(db, cutoff)),
     db.delete(reviewQueue).where(expiredReviews(db, cutoff)),
     db.delete(copyrightHolds).where(expiredHolds(cutoff)),
+    // A removed image's kept fingerprint (D-147, design 152), on its
+    // Remove's clock: kept and swept with the audit row that names it.
+    db
+      .delete(removedFingerprints)
+      .where(lt(removedFingerprints.createdAt, cutoff)),
     db.delete(moderationActions).where(expiredActions(db, cutoff)),
   ] as const;
 }

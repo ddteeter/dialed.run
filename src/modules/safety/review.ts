@@ -39,17 +39,25 @@ import {
 import type { ReportReason, ReportSubjectType } from "./contracts";
 import { otherPhotosOf, type OtherPhotos } from "./other-photos";
 import { photoMatchesOf, type PhotoMatches } from "./photo-matches";
+import { removedMatchesOf, type RemovedMatch } from "./removed-fingerprints";
 import { heldPhotoStatus } from "./visibility";
 
 function db() {
   return coreDb();
 }
 
-export interface EnqueueInput {
-  subjectType: ReportSubjectType;
-  subjectId: string;
-  source: "reports" | "classifier";
-}
+/**
+Why a row is in the queue, read from the column so a new source is one edit.
+*/
+export type ReviewSource = (typeof reviewQueue.$inferSelect)["source"];
+
+/**
+What a queue row is about and why, read from the table's own columns.
+*/
+export type EnqueueInput = Pick<
+  typeof reviewQueue.$inferInsert,
+  "subjectType" | "subjectId" | "source"
+>;
 
 /**
  * Builds the queue write **without executing it**, so a caller can put it
@@ -166,7 +174,7 @@ export interface QueueRow {
   id: string;
   subjectType: ReportSubjectType;
   subjectId: string;
-  source: "reports" | "classifier";
+  source: ReviewSource;
   createdAt: number;
   /**
    * How many distinct people reported this subject, and what they said was
@@ -201,6 +209,12 @@ export interface QueueRow {
    * fingerprint (D-142, design 146), on the same rows as `otherPhotos`.
    */
   photoMatches?: PhotoMatches | undefined;
+  /**
+   * On a row a fingerprint match started (D-147, design 152): the removed
+   * image the photo is a copy of — when it was removed and how many bits
+   * apart. Absent on every other row, and on one whose photo is gone.
+   */
+  removedMatch?: RemovedMatch | undefined;
   subject: QueueSubject;
 }
 
@@ -259,7 +273,7 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
     .limit(limit);
 
   // No read needs another's answer, so they go together.
-  const [subjects, others, matches] = await Promise.all([
+  const [subjects, others, matches, removed] = await Promise.all([
     subjectsFor(rows),
     otherPhotosOf(
       db(),
@@ -268,6 +282,12 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
     photoMatchesOf(
       db(),
       rows.flatMap((row) => copiesSubjectOf(row)),
+    ),
+    removedMatchesOf(
+      db(),
+      rows
+        .filter((row) => row.source === "fingerprint")
+        .map((row) => row.subjectId),
     ),
   ]);
   const now = nowSeconds();
@@ -282,6 +302,7 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
     ...removalClock(row.firstAtOnce, now),
     otherPhotos: others.get(`${row.subjectType}:${row.subjectId}`),
     photoMatches: matches.get(`${row.subjectType}:${row.subjectId}`),
+    removedMatch: removed.get(row.subjectId),
     subject: subjects.get(`${row.subjectType}:${row.subjectId}`) ?? {
       photoKeys: [],
     },
@@ -289,18 +310,19 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
 }
 
 /**
- * A row an intimate-image report started, as the subject whose runner's
- * other photos it lists (D-117); nothing for any other row. Only an entry
- * or a photo can carry that report.
+ * A row an intimate-image report or a fingerprint match (D-147) started,
+ * as the subject whose copies it lists (D-117); nothing for any other row.
+ * Only an entry or a photo can carry either.
  */
 function copiesSubjectOf(row: {
   subjectType: ReportSubjectType;
   subjectId: string;
+  source: ReviewSource;
   firstAtOnce: number | null;
 }) {
   const { subjectType, subjectId } = row;
-  return row.firstAtOnce !== null &&
-    (subjectType === "entry" || subjectType === "photo")
+  const isAboutCopies = row.firstAtOnce !== null || row.source === "fingerprint";
+  return isAboutCopies && (subjectType === "entry" || subjectType === "photo")
     ? [{ subjectType, subjectId }]
     : [];
 }

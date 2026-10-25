@@ -10,6 +10,7 @@ import {
 import { SignedOutPanel, SignedOutReceipt } from "../../../ui/SignedOutPanel";
 import { takedownConfirmInput } from "../inputs";
 import type { TakedownConfirmResult } from "../takedown-requests";
+import { ElsewhereHelp } from "./ElsewhereHelp";
 
 type Confirm = (input: {
   data: { token: string };
@@ -62,6 +63,7 @@ export function TakedownConfirm({
               ? "We've emailed you what we decided."
               : "We'll decide within 48 hours and email you either way."}
           </p>
+          <ElsewhereHelp />
         </SignedOutReceipt>
       </SignedOutPanel>
     );

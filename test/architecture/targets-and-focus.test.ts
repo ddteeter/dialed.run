@@ -282,6 +282,10 @@ describe("03 · every tappable thing has a 44×44 hit area", () => {
       // The ban band's "Or write to desk@dialed.run.", whose address is a
       // mailto link (round 38 #62a).
       "src/modules/safety/components/AccountClosed.tsx",
+      // "If it may be on other sites too, StopNCII.org (18 and over) or
+      // Take It Down (under 18) can help…" (D-147, design 152): one anchor,
+      // rendered for each service in the sentence.
+      "src/modules/safety/components/ElsewhereHelp.tsx",
       // W1's way out, "Rather not use your account? Report it without
       // signing in" (round 37 #58k).
       "src/modules/safety/components/ReportSheet.tsx",

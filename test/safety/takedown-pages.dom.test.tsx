@@ -161,6 +161,9 @@ describe("/takedown", () => {
     expect(receipt).toHaveTextContent(
       "A person will look at it and decide within 48 hours. We've emailed a receipt to sam@example.com, and we'll email you the outcome.",
     );
+    expect(
+      receipt?.querySelector("[data-part='elsewhere-help']"),
+    ).toBeVisible();
     expect(part("form")).toBeNull();
   });
 

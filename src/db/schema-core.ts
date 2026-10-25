@@ -1308,7 +1308,11 @@ export const reviewQueue = /*#__PURE__*/ sqliteTable(
     // Why it is here: reports crossed the threshold, or the classifier
     // flagged it. The reviewer reads a photo flagged by a model
     // differently from one three people objected to.
-    source: text("source", { enum: ["reports", "classifier"] }).notNull(),
+    // `fingerprint`: a new photo matched one removed as an intimate image
+    // (D-147, design 152).
+    source: text("source", {
+      enum: ["reports", "classifier", "fingerprint"],
+    }).notNull(),
     status: text("status", {
       enum: ["pending", "reviewing", "approved", "removed"],
     })
@@ -1448,6 +1452,32 @@ export const moderationActions = /*#__PURE__*/ sqliteTable(
     index("moderation_actions_run").on(t.runId),
     // The 3-year sweep (D-131, design 150): actions taken before its line.
     index("moderation_actions_created").on(t.createdAt),
+  ],
+);
+
+/**
+ * The fingerprints of photos removed as intimate images shared without
+ * consent (D-147, design 152), kept after the photo so a re-upload is
+ * caught. Written in the Remove's own batch, read by every kit-photo
+ * upload, swept 3 years on with the Remove's audit row (D-131).
+ *
+ * No unique key on the fingerprint: two removals of one picture are two
+ * records, and each goes on its own clock. No foreign key either, as with
+ * `copyright_holds`: the audit row is swept in the same batch, after this.
+ */
+export const removedFingerprints = /*#__PURE__*/ sqliteTable(
+  "removed_fingerprints",
+  {
+    id: text("id").primaryKey(),
+    fingerprint: text("fingerprint").notNull(),
+    // The Remove or takedown that kept it.
+    moderationActionId: text("moderation_action_id").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [
+    // The 3-year sweep. The upload check reads every row (no index seeks
+    // on a distance), and the table holds only removed images.
+    index("removed_fingerprints_created").on(t.createdAt),
   ],
 );
 

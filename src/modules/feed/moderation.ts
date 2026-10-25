@@ -61,6 +61,7 @@ import {
   purgedWrite,
   restoreDueHolds,
   isCopyrightTakedown,
+  keptFingerprints,
   quarantineInsert,
   removalNotice,
   removalStatements,
@@ -192,11 +193,37 @@ async function copyBytes(photoKeys: readonly string[]) {
  * The rows a quarantine is about to delete, as they stand: the entry, its
  * items and tags, and the photos in scope — one batch of reads.
  */
+/**
+The subject's photos: the one photo, or every photo on the entry.
+*/
+function photosInScope(input: ModerateInput, target: Target) {
+  return input.subjectType === "photo"
+    ? eq(entryPhotos.id, input.subjectId)
+    : eq(entryPhotos.entryId, target.entryId);
+}
+
+/**
+ * What a Remove or takedown for `intimate` keeps of its photos (D-147,
+ * design 152): their fingerprints, so a re-upload is caught. A quarantine
+ * keeps its own snapshot (D-70), and a copyright hold keeps the photos.
+ */
+function fingerprintWrites(
+  db: Db,
+  input: ModerateInput,
+  target: Target,
+  actionId: string,
+) {
+  return input.action === "quarantine"
+    ? []
+    : keptFingerprints(
+        db,
+        input.reason,
+        photosInScope(input, target),
+        actionId,
+      );
+}
+
 async function rowsOf(db: Db, target: Target, input: ModerateInput) {
-  const photosInScope =
-    input.subjectType === "photo"
-      ? eq(entryPhotos.id, input.subjectId)
-      : eq(entryPhotos.entryId, target.entryId);
   const [entry, items, tags, photos] = await db.batch([
     db.select().from(outfitEntries).where(eq(outfitEntries.id, target.entryId)),
     db
@@ -204,7 +231,7 @@ async function rowsOf(db: Db, target: Target, input: ModerateInput) {
       .from(outfitEntryItems)
       .where(eq(outfitEntryItems.entryId, target.entryId)),
     db.select().from(entryTags).where(eq(entryTags.entryId, target.entryId)),
-    db.select().from(entryPhotos).where(photosInScope),
+    db.select().from(entryPhotos).where(photosInScope(input, target)),
   ]);
   return { entry: { entry, items, tags }, photos };
 }
@@ -361,7 +388,6 @@ export async function moderateContent(
   await commit(
     db,
     [
-      ...takenDown,
       moderationActionInsert(db, {
         id: actionId,
         actorId: input.actorId,
@@ -376,6 +402,9 @@ export async function moderateContent(
         // entry is gone, and this is how its author's run still finds it.
         runId: target.runId,
       }),
+      // Before the delete in `takenDown`, which they read.
+      ...fingerprintWrites(db, input, target, actionId),
+      ...takenDown,
       ...(kept === undefined ? [] : [kept.record]),
       ...(told === undefined ? [] : [told.statement]),
     ],
