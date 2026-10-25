@@ -86,9 +86,12 @@ is written by the named lane.
 | `SENTRY_DSN`                                             | secret | strongly       | ops                   | Terminal failures go nowhere.                                                                                    |
 | `FIRECRAWL_API_KEY`                                      | secret | optional       | enrichment            | Shops that refuse a Worker (11 of 14) enrich from nothing.                                                       |
 
-**GitHub**: secret `CLOUDFLARE_API_TOKEN` (Workers, D1, R2 edit), secret
-**`CLOUDFLARE_ACCOUNT_ID`** (the deploy step reads it; missing from the
-runbook, §3.1), variable `DEPLOY_ENABLED=true` when ready.
+**GitHub**: secrets `CLOUDFLARE_API_TOKEN` (Workers Scripts and D1 edit,
+nothing more; `docs/deployment.md` §7) and **`CLOUDFLARE_ACCOUNT_ID`**,
+both in the `production` environment rather than the repository, and
+variable `DEPLOY_ENABLED=true` when ready. The dependency automation's App
+key and Anthropic key go in their own environments
+(`docs/dependencies.md` §Setup).
 
 ## 3. CI
 
@@ -158,6 +161,7 @@ as a var, secret as a secret. Free.
 | Visual Crossing | Choose the plan. Free is 1,000 records a day. **Do not move to Metered until 125's OPS-6 has landed**; there is no documented daily spend cap, so the digest's backlog count is the only brake. | 0.6, §1.8  |
 | Firecrawl       | The plan's credit cap is the limit; pick the plan.                                                                                                                                              | §3.7       |
 | Cloudflare      | Usage notifications (§1 above). Email Sending: 3,000 included a month, then $0.35 per 1,000.                                                                                                    | §3.7, §2.3 |
+| Anthropic       | Monthly spend limit on the workspace whose key reviews dependency majors (`docs/dependencies.md` §Setup). About $1–3 a review.                                                                  | design 156 |
 
 ## 7. Abuse controls at the zone
 

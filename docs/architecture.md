@@ -460,11 +460,15 @@ re-derive it.
 
 ## Rungs of verification
 
-| Rung                       | Runs                          | Tools                                                                  |
-| -------------------------- | ----------------------------- | ---------------------------------------------------------------------- |
-| Stop gate (per agent turn) | diff-scoped                   | eslint, tsc                                                            |
-| Commit gate                | merge-base diff + whole graph | + knip, dependency-cruiser                                             |
-| CI (authoritative)         | whole repo                    | + vitest (workers pool), Playwright smoke, `wrangler deploy --dry-run` |
+| Rung                       | Runs                          | Tools                                                                                    |
+| -------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------- |
+| Stop gate (per agent turn) | diff-scoped                   | eslint, tsc                                                                              |
+| Commit gate                | merge-base diff + whole graph | + knip, dependency-cruiser                                                               |
+| CI (authoritative)         | whole repo                    | + vitest (workers pool), Playwright on dev and on the build, `wrangler deploy --dry-run` |
+
+Dependency updates merge themselves on CI's required checks when semver
+calls them compatible; the rest wait for a person, with a Claude impact
+review (`docs/dependencies.md`, design 156).
 
 ## Runtime resilience & solo-ops posture
 
@@ -605,12 +609,11 @@ flowchart LR
   databases restore independently; the steps are `docs/deployment.md` §9.
   R2 originals are the photo source of truth; derived sizes are
   regenerable.
-- **Deploys**: **CI does not apply migrations yet.** The deploy job builds
-  and runs `wrangler deploy`, and needs only the unit job. The fix —
-  migrations before deploy, deploy after e2e — is written as an exact diff
-  for the owner in `docs/proposals/125-ci-migrate-before-deploy.md`, because
-  `.github/workflows/` is human-managed. `wrangler rollback` rolls code back
-  and never a migration, which is why migrations stay expand→contract.
+- **Deploys**: on a push to `main` with `DEPLOY_ENABLED`, after the unit
+  job and both e2e legs, the deploy job applies both databases' migrations
+  and then runs `wrangler deploy`, in the `production` environment that
+  holds the Cloudflare secrets. `wrangler rollback` rolls code back and
+  never a migration, which is why migrations stay expand→contract.
 - **Abuse without moderators**, built and not:
   - **Built**: Turnstile's verification (`ops/turnstile.ts`, fail closed) and
     widget (`ui/Turnstile.tsx`), which task 126 places on sign-up and request
