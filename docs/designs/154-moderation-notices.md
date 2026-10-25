@@ -40,7 +40,7 @@ already uses, written **in the batch** of the change it reports.
   optional under law 9. The body adds "That breaks our community rules:
   don't …" and "A person made this decision" / "Our automatic check
   flagged it; a person made the decision" (from the subject's review row:
-  `source = 'classifier'`); the foot becomes the approved redress line.
+  `source` is `classifier` or, since #225, `fingerprint`); the foot becomes the approved redress line.
   A copyright-notice takedown names no rule (we acted on a notice, not a
   finding). The removal band in the app gains the same rule line.
 - **Closures pick a rule.** D8's Close account gains a required "Which

@@ -760,8 +760,9 @@ async function decisionNotices(
 }
 
 /**
- * Whether the automatic check is what brought this subject to a person:
- * its review row came from the classifier (C8, Art. 17(3)(c)). A row
+ * Whether an automatic check is what brought this subject to a person:
+ * its review row came from the classifier, or from a removed image's
+ * fingerprint matching a re-upload (D-147) (C8, Art. 17(3)(c)). A row
  * re-opened by reports says `reports`, because reports are then what
  * brought it.
  */
@@ -777,7 +778,7 @@ export async function wasFlaggedAutomatically(
     and(
       eq(reviewQueue.subjectType, subjectType),
       eq(reviewQueue.subjectId, subjectId),
-      eq(reviewQueue.source, "classifier"),
+      inArray(reviewQueue.source, ["classifier", "fingerprint"]),
     ),
   );
 }

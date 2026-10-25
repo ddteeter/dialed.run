@@ -26,6 +26,7 @@ import {
   HIDDEN_NOTICE,
   REPORT_OUTCOME,
 } from "../../src/modules/safety/notice-copy";
+import type { ReviewSource } from "../../src/modules/safety/review";
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 import { oweInCore } from "../queue-fakes";
@@ -125,7 +126,7 @@ async function queueRowOf(subjectId: string): Promise<Ulid> {
 async function queued(
   subjectType: ReportSubjectType,
   subjectId: string,
-  source: "reports" | "classifier",
+  source: ReviewSource,
 ): Promise<Ulid> {
   const id = newUlid();
   await core().insert(reviewQueue).values({
@@ -406,6 +407,20 @@ describe("what a decision tells (D-132)", () => {
       rule: "explicit",
       flagged: true,
     });
+  });
+
+  it("says the automatic check flagged it when a removed image's fingerprint queued it (D-147)", async () => {
+    const author = await addressed();
+    const photoId = await photoOn(await entryOf(author));
+    const queueId = await queued("photo", photoId, "fingerprint");
+
+    await decideReview(core(), "op", {
+      queueId,
+      action: "remove",
+      reason: "intimate",
+    });
+
+    expect(await owedTemplate()).toMatchObject({ flagged: true });
   });
 
   it("says a person found it when another subject was the one the check flagged", async () => {
