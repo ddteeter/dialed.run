@@ -20,7 +20,7 @@ const SERVICES = [
  * only, and a person asking for one may have the image on others. Shown on
  * the `/takedown` receipts and on the report sheet's intimate-image branch.
  *
- * **Undesigned copy** (design deltas item 78): one quiet line, the names
+ * **Undesigned copy** (design deltas item 84): one quiet line, the names
  * as plain links. External, so anchors rather than the router's `Link`,
  * opened in a new tab so the receipt stays where it was.
  */

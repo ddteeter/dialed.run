@@ -115,7 +115,7 @@ function Thumbnail({ match }: Readonly<{ match: PhotoMatch }>): JSX.Element {
  * apart. The removed image itself is gone, so there is nothing to show
  * beside it but the facts.
  *
- * **Undesigned** (design deltas item 77): one line of text and mono, as
+ * **Undesigned** (design deltas item 83): one line of text and mono, as
  * the handle-flagged row's "why here" line is. Nothing renders on any
  * other row.
  */

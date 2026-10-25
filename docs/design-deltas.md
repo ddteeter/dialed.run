@@ -933,7 +933,140 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
-<!-- Item numbers continue past rounds 35–38 (45–65); this comment keeps the list from being renumbered. -->
+83. **"A copy of an image removed as intimate" on Review (D-147, design
+    152). Undesigned; built as a placeholder.** A kit photo whose
+    fingerprint is within 8 bits of one removed as intimate is held and
+    lands on Review with the source `[fingerprint]`. Under the photo, one
+    line in BODY: "A copy of an image removed as intimate on `OCT 3`, `3
+bits` apart.", the date and distance in MONO.xs. The row also carries
+    "Their other photos" and "Matching photos" (items 63a and 71). No new
+    glyph or colour. **The ask:** draw the line, and say whether the
+    source tag should read something kinder than `[fingerprint]`.
+
+84. **Where else to go, on the removal receipts (D-147, design 152).
+    Undesigned copy on drawn screens.** The `/takedown` receipt ("We have
+    your request"), its confirm page, and the report sheet's intimate-image
+    branch gain one quiet line: "If it may be on other sites too,
+    StopNCII.org (18 and over) or Take It Down (under 18) can help stop it
+    spreading there. They fingerprint the image on your own device; the
+    image never leaves it." The two names are plain links, opening in a new
+    tab. **The ask:** confirm or reword, and place it on the boards.
+
+<!-- Item numbers continue past rounds 35–39 (45–76); this comment keeps the list from being renumbered. -->
+
+## Answered in round 39 (imported 2026-10-24)
+
+Sent on 2026-10-24 for items 66–76; design answered the same day as
+`Round 39 Rulings.dc.html`, with the text of record under "Round 39 ·
+Built since round 38, and in review (items 66–76)" in
+`design/docs/product.md`. Design changed two files: the new board, and
+product.md's Round 39 section. Nothing is left open. Each item says what
+the ruling changes in the build; "confirmed" means the build already
+matches.
+
+Items 74–76 belong to PR #220 (C8), which was still in review when this
+round went out. Their rulings are recorded here, and #220 drops its open
+entries for them when it merges.
+
+66. **The Strava consent before the Connect button (D-143). Ruled and
+    drawn; build work.** The lead-ins ("What we collect", "How", "Never",
+    "To stop") are run-in semibold at the paragraph's own size, not mono
+    labels. On P3, "So we can remind you. Optional." stays and "We read
+    that a run happened. Nothing else." retires. The refused receipt's Try
+    again returns to T1, or to P3 when it came from there, with focus on
+    the heading. The board's frames show placeholder text: the owner's
+    three paragraphs in `STRAVA_CONSENT` are the words. **Not built yet:**
+    the semibold lead-ins, the retired P3 line, the return to P3 and the
+    focus.
+
+67. **Visual Crossing's credit on every conditions surface. Confirmed as
+    built**, all eight placements. A3's header keeps the credit at every
+    width, desk included. The share/OG entry card carries it at the foot,
+    right, 22px at 1200, #DEDDD6, opposite the verdict, drawn on the
+    board. **Not built yet:** the card's credit, and the card is wired only
+    once it carries it (R-160).
+
+68. **Review's quarantine and its NCMEC report. Confirmed, with an empty
+    state and an order.** The words and the "SEP 10 2026" date shape stand.
+    On recording: the live region says "Reported to NCMEC. Kept until
+    {date}.", KEPT UNTIL re-reads, and the form leaves the row; with no
+    report number the tag ends at the date. **Not built yet:** the empty
+    state, "Nothing is in quarantine.", and Review's foot in the order
+    Takedown, Copyright holds, Quarantine.
+
+69. **No new accounts from Mississippi or Tennessee. Confirmed, plus a
+    notice on load.** The sentences and the four places stand. **Not built
+    yet:** on load, Au2 shows SIGN-UP CLOSED HERE and the NOT CREATED
+    sentence in place of the form and Google, with Ask for access (to Au5)
+    and "Have an account? Log in". The refusals stay, for a place that
+    changes after the page loads.
+
+70. **The 40-hour removal reminder email. Confirmed.** `{UTC minute}`
+    renders as "OCT 26 14:20 UTC". **Check:** the build's format matches.
+
+71. **Matching photos on Review. Ruled and drawn; build work.** A
+    separate grid under THEIR OTHER PHOTOS, headed MATCHING PHOTOS · ANY
+    RUNNER · N. Under each: the id; "{N} BITS", or "SAME" at 0, plus
+    [PRIVATE] where it applies; and the owner's @handle, linking to D8. A
+    garment tile opens nothing, and its owner link is what it offers. The
+    takedown form stays kit-only. **Not built yet:** the kicker, the
+    visible distance (today it is only in the alt), [PRIVATE], and the
+    owner link.
+
+72. **`/open-source`. Confirmed.** Two typefaces; the shared line for the
+    smallest groups is retired (it was never built); "Licence" after
+    Project · Notice; Third-party notices after the groups and last in
+    the contents, without the preamble. Nothing to build.
+
+73. **Copyright holds on Review. Ruled and drawn; build work.** Counter-
+    notice received takes a RECEIVED ON date, defaulting to today, with
+    two refusals: "Pick a date on or after it was hidden." and "Pick today
+    or an earlier day." Both Case over presses confirm in place: "Delete
+    it for good? It can't be put back." [Delete it] and "Put it back where
+    it was?" [Put it back], each with Not yet, which puts the pair back
+    with focus on the pressed one. Settled rows leave the list. **The
+    owner approved** "Case over: delete" and "Case over: restore", with
+    these confirms (2026-10-24). **Not built yet:** the date, its
+    refusals, and the confirm step.
+
+74. **Moderation notices in the bell (PR #220). Confirmed as built.** No
+    kicker; the heading-led paragraph stands. The author's rows open their
+    run or kit; the reporter's open nothing.
+
+75. **The rule line on the removal band (PR #220). Confirmed as built.**
+
+76. **D8's Close account names a rule (PR #220). Ruled; build work in
+    #220.** Under Why, `PickOne` with the "—" start and "Pick the rule it
+    breaks."; the ten rule names verbatim, a hairline, then "Suspected
+    CSAM (the notice names no rule)".
+
+82. **`/open-source`'s "Built with" tier (design 151).** **ANSWERED by
+    round 40 (#82) and built:** "Tools we build with" (the old heading
+    collided with the page title), last on the page after Third-party
+    notices and last in the contents; the count "44 · NOT SHIPPED" in
+    MONO.sm; the line "We build and test dialed.run with these. None of
+    them ships in the app, so each is credited by name and licence." in
+    TYPE.small, --quiet; a row's licence id in MONO.xs in the copyright
+    line's slot; and the empty search "Nothing we ship or build with is
+    called “xyz”." Round 40 also names MONO.sm for a group's count and a
+    row's version "as a group's" and "as shipped rows"; the built groups
+    drew them at MONO.xs and MONO.md, so they moved to MONO.sm with it.
+    What follows is the ask as sent. The list is now what the two bundles hold (136
+    packages, not the lockfile's 272), and the owner asked that the tools
+    which build the app without shipping in it be credited too. They get
+    one more section after the licence groups and before the third-party
+    notices, built from a group's parts with nothing new: the heading
+    "Built with", its count in MONO.xs, the line "The tools we build and
+    test dialed.run with. None of them ships to you, so each is credited
+    by name and licence.", and a row per tool — name, version, its
+    licence id in MONO.xs, "Project" — with three rows then "Show all
+    {N}", in the contents with its count, and found by FIND A PACKAGE.
+    No licence text and no copyright line: a licence asks for those only
+    on a copy distributed. The lead's {N} still counts only what ships.
+    The bundle-derived list also changes item 72's numbers: 5 rows carry
+    their own "Licence", not 18, and the AGPL group is gone (nothing
+    bundled is AGPL). **The ask:** draw the tier, and give the line its
+    words — they are placeholder words the owner has not yet seen.
 
 ## Answered in round 38 (imported 2026-10-18)
 
@@ -1057,204 +1190,6 @@ Design changed eight files:
 65. **E1's compact line (FEED-9). Confirmed as built** at the top of
     Following, above the posts. Widened: "in the last 2 weeks". Absent, and
     Following with no posts: no band and no gap.
-
-66. **The Strava consent before the Connect button (owner, 2026-10-18; D-143).**
-    Strava's API Policy §2.1 (1 June 2026) requires consent before the
-    OAuth redirect that says what is collected, how, how to withdraw, how
-    to ask for deletion, and that deletion is confirmed. Built as
-    `ui/StravaConsent`: the owner's three approved paragraphs
-    (`STRAVA_CONSENT` in `lib/copy.ts`) at `text-small`, inheriting the
-    surrounding colour, directly above Strava's unchanged official button.
-    It is the only way the button is drawn, so it sits on T1 (not
-    connected) and in P3's Strava offer (on ink, between "So we can
-    remind you. Optional." and "We read that a run happened. Nothing
-    else."). The callback receipt's "Try again" after a refused connect now returns to T1
-    instead of going straight to the redirect, so the consent is read on
-    every trip. Text only, no glyph or colour. **The ask:** draw the block
-    on T1 and in P3's offer (hierarchy, whether "What we collect" / "How"
-    / "Never" / "To stop" lead-ins become mono labels, and whether P3's
-    two existing captions stay beside it), and the receipt's Try again.
-67. **Visual Crossing's credit, reworded and placed on every conditions
-    surface (D-144).** The licence asks for "Weather Data Provided by
-    Visual Crossing", legible, near the data or anything derived from it,
-    linked to https://www.visualcrossing.com/, and not on a credits page.
-    The owner chose **"Weather data provided by Visual Crossing"**, linked
-    there, in a new tab. Round 1's line ("Weather by Visual Crossing") is
-    reworded everywhere it was already drawn: run detail's and A1's
-    conditions block, D's strip, the E1 card, Your conditions, A3's desk
-    rail and the backlog's rail. It is the same `WeatherAttribution` line
-    (`text-micro`, `text-muted`, no underline), and it shows only beside
-    the provider's reading, never beside a band the runner set. No board
-    draws it in these places, built with nothing new:
-    - **A2's header**, under the "6.2 MI · 41°F DAMP · 0 PIECES" sub-line,
-      on ink below `wide`; once for the screen, since the filter chip and
-      MOST LIKELY repeat the same reading.
-    - **A3's header**, closing it at every width, because below the desk the
-      rail that credits the reading is not drawn and the headline ("6.2 AT
-      41°") is the reading.
-    - **R, the runs list**: once under the list when any row shows a
-      reading, never on a row.
-    - **A1's duplicate receipt**, under its facts, and **A1's "Weather for"
-      block** while a corrected time is fetched, under WAS.
-    - **E1's compact line**: under the teal band rather than on it, because
-      `--muted` on teal is not a text pairing T1 gives.
-    - **H's "How you call it, by band"** and **K's "Your coverage"**: under
-      the list, since a feels-like band is derived from the reading.
-
-    Not credited, and why: the closet's "Works at" range is the runner's
-    own or the category estimate, never a reading. **The share card**
-    (OPS-16's entry card, 1200×630) prints the temperature in 150px type
-    and has no line for the credit; it is not served yet (every link gets
-    the default card), so nothing ships uncredited today. **The ask:**
-    draw the credit on the boards where it now sits, say whether A3's
-    header should drop it at the desk where the rail carries it, and
-    give the entry card a place for it before that card is wired.
-
-68. **Review's quarantine, and recording its NCMEC report (legal
-    readiness C12; design 145).** A report to NCMEC's CyberTipline must be
-    kept a year from the report, so Review now lists what quarantine holds
-    and lets the operator record that it was reported. Built at the foot of
-    Review from the removal-request row's parts, with placeholder words: a
-    section headed "Quarantine · N"; each row's subject type, `HELD {date}`
-    right, `UPLOADER {id}`, `KEPT UNTIL {date}`, and `[NOT REPORTED TO
-NCMEC]` or `[REPORTED TO NCMEC {date}] · {number}`; then an optional
-    "CyberTipline report number" field (hint: "Optional. Record it once the
-    report is filed; it is then kept a year from now.") and "Record the
-    NCMEC report". A record purged meanwhile reads "This record is gone:
-    its year was up." Dates are a new mono shape, `SEP 10 2026`, since a
-    year-long clock needs the year. Operator-only, so not blocking launch.
-    **The ask:** draw the section on Review, its reported and gone states,
-    and word them.
-
-69. **No new accounts from Mississippi or Tennessee (owner, 2026-10-18;
-    D-141; design 144).** Both states' age-verification laws are in force against
-    every provider, so a request Cloudflare places there cannot make an
-    account. It can still ask for access, because a waitlist entry is not
-    an account. Nothing is drawn. Built with existing primitives, text
-    only, in the owner's words:
-    - **Au2, email:** the form's failure band, kicker `NOT CREATED`, with no
-      Try again (the age refusal's shape): "dialed.run isn't open to new
-      sign-ups from Mississippi or Tennessee. State laws there require ID
-      age checks for every new account, which we don't do."
-    - **Au2, Google:** the same sentence in the control-failure band under
-      the button, `NOT CREATED`, with no link. It shows after the round trip
-      (`?error=REGION_BLOCKED`), because an existing Google account still
-      signs in from there.
-    - **Au5:** the request is taken, and the receipt ("You're on the list")
-      says, in place of its usual lines and its Create an account link:
-      "Thanks. Sign-up isn't open in Mississippi or Tennessee yet, because
-      state laws there require ID age checks for every new account. We'll
-      email you if that changes."
-    - **D7:** the request's row carries the state as a mono tag after the
-      address (`[TN]`). Where Send invite would be, it reads "No invite
-      while sign-up is closed in Tennessee." in `--quiet`, and Decline
-      stays.
-    - **Not drawn either:** nothing on Au2 warns in advance. The refusal is
-      the first a runner in those states hears of it.
-      **The ask:** word the sentences and confirm the four places, or draw
-      a notice on Au2 shown before the form is filled.
-
-70. **The 40-hour removal reminder email (C6; `removal_reminder`).** An
-    operator email with placeholder words, in the shape of round 35's
-    removal alerts: subject "Removal still undecided, due by {UTC
-    minute}", body "An intimate-image removal is still waiting for a
-    decision. Nothing changes until someone decides it in Review.", the
-    Open Review button, and the foot "Sent to every operator, once per
-    removal, 8 hours before it's due." Sent once per removal (a
-    `/takedown` request or an intimate-image report) when 8 of its 48
-    hours are left, from the hourly firing. **The ask:** confirm or reword.
-
-71. **Matching photos on Review (D-142, design 146). Undesigned; built
-    as a placeholder.** A Review row about an intimate image, and a
-    removal request whose link is ours, now carry a second block under
-    "Their other photos": photos from **any** runner, private included,
-    whose fingerprint is within 8 bits of the reported photo's, nearest
-    first, at most 12 kit photos and 12 garment photos. Built from item
-    63a's grid as it stands today (kicker `MATCHING PHOTOS · N` in
-    MONO.xs, `h-32` thumbnails, the id under each in MONO.xs), with no new
-    glyph or colour. Each image's alt says how many bits apart it is; a
-    kit photo an operator can open links its kit, a garment photo is
-    labelled `Garment <id>` and links nothing (no page exists for it).
-    Two empty states: "No matching photos from any runner." and, for a
-    photo with no fingerprint (gone already, or older than fingerprints),
-    "No fingerprint to match by: the photo is gone, or older than
-    fingerprints." **The ask:** draw the block beside 63a's —
-    whether matches and the runner's own photos should be one grid or
-    two, whether the distance is shown (it is only in the alt today), and
-    what a garment match offers an operator, since the takedown form
-    takes kit photos only.
-
-72. **`/open-source`, as built beside round 29 #9 (plan C9, design 147).**
-    Built to the ruling: the kicker, "Built with thanks", the lead with the
-    generated count, the type group first, a group's licence text once
-    behind "Read the MIT licence", three rows then "Show all {N}", the
-    FIND A PACKAGE search and its "Nothing we ship is called “xyz”.", the
-    reading layout with the groups and their counts in the contents, and
-    the links in the signed-out footer and Settings › About. Four things
-    the board does not settle:
-    - **"The two typefaces".** The ruling's build note says three families
-      ship. The list reads `public/fonts/OFL.txt`, which names two entries
-      (Archivo with Archivo Black, under one copyright, and IBM Plex Mono),
-      so the type group has two rows and the board's line is true as
-      drawn. **The ask:** confirm, or give the line for three.
-    - **The smallest groups' shared line** ("ISC · 14 · BSD-3-CLAUSE · 9 ·
-      …") is not built: every group is drawn in full, as the contents
-      column already lists them all. **The ask:** confirm, or say what the
-      line does when tapped.
-    - **A row's own licence** (undesigned). 18 packages ship a licence text
-      that says something their group's does not (an extra clause, another
-      wording). Each gets "Licence" beside "Project" and "Notice", opening
-      its own text the same way. **The ask:** confirm the word and place.
-    - **The third-party notices** (D-137: the vendored word list, the
-      climate map, the face model and Visual Crossing's credit) render
-      after the groups as one section, "Third-party notices", with the
-      file's `##` headings under it and its preamble, which speaks to repo
-      readers, left out. Undesigned. **The ask:** a place for them, or
-      confirm this one.
-
-73. **Copyright holds on Review (C5, D-130, design 149). Undesigned;
-    built as a placeholder.** Below the Takedown form, a list titled
-    `Copyright holds · N`, built from Quarantine's row (item C12) with no
-    new glyph or colour: the subject type and id, "Hidden {day}" in
-    MONO.xs, "Owner {id} · strikes {n}" in MONO.xs, the notice as the
-    audit row keeps it, and a bracketed line saying what happens next —
-    `[no counter-notice: deleted {day}]`, `[counter-notice received: back
-{day}]` or `[court action {day}: held until the case is over]`. The
-    actions under it: **Counter-notice received** until one is recorded,
-    then **Court action filed**, then — a litigation hold (D-146) — the
-    pair **Case over: delete** and **Case over: restore**, side by side,
-    until one has landed, then none; each a Desk form with no field
-    ("Recording" while out). Answers in the live region:
-    "Counter-notice recorded.", "Court action recorded. It stays hidden
-    until the case is over.", "Case over. It is deleted.", "Case over. It
-    is back.", and under the button "A counter-notice is already
-    recorded.", "A court action is already recorded.", "Record the
-    counter-notice first.", "Record the court action first.", "This hold
-    is settled: put back or deleted." The two "Case over" labels are
-    operator-only placeholder words the owner has not yet seen.
-    **The ask:** draw the list beside Quarantine's, say whether the
-    counter-notice should take a typed date rather than today's, and
-    whether the two ways a case ends want a confirm step, since both are
-    final.
-
-74. **"A copy of an image removed as intimate" on Review (D-147, design
-    152). Undesigned; built as a placeholder.** A kit photo whose
-    fingerprint is within 8 bits of one removed as intimate is held and
-    lands on Review with the source `[fingerprint]`. Under the photo, one
-    line in BODY: "A copy of an image removed as intimate on `OCT 3`, `3
-bits` apart.", the date and distance in MONO.xs. The row also carries
-    "Their other photos" and "Matching photos" (items 63a and 71). No new
-    glyph or colour. **The ask:** draw the line, and say whether the
-    source tag should read something kinder than `[fingerprint]`.
-
-75. **Where else to go, on the removal receipts (D-147, design 152).
-    Undesigned copy on drawn screens.** The `/takedown` receipt ("We have
-    your request"), its confirm page, and the report sheet's intimate-image
-    branch gain one quiet line: "If it may be on other sites too,
-    StopNCII.org (18 and over) or Take It Down (under 18) can help stop it
-    spreading there. They fingerprint the image on your own device; the
-    image never leaves it." The two names are plain links, opening in a new
-    tab. **The ask:** confirm or reword, and place it on the boards.
 
 ## Answered in round 37 (imported 2026-10-10)
 

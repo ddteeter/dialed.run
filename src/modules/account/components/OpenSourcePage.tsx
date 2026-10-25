@@ -28,19 +28,28 @@ import { ReadingFrame, ReadingSection, ReadingShell } from "./ReadingFrame";
  *   where the package ships an Apache NOTICE, and "Licence" where its own
  *   licence text says something the group's does not (an undesigned
  *   addition: design deltas).
+ * - **"Tools we build with"** comes last, after the notices (design 151;
+ *   round 40 #82): the tools that build the app and do not ship in it,
+ *   each row naming its licence where a copyright line would sit. The
+ *   lead counts only what ships.
  * - **Search** is a FormField filtering every group by package name as
  *   you type. Empty groups hide, an opened group stays open, and no match
- *   reads "Nothing we ship is called “xyz”."
+ *   reads "Nothing we ship or build with is called “xyz”."
  *
  * The rows are generated, never written: `scripts/open-source-list.ts`.
  */
 export function OpenSourcePage({
   groups,
+  tools,
   notices,
   bellState,
   bell,
 }: Readonly<{
   groups: readonly LicenceGroup[];
+  /**
+  "Tools we build with": the tools that build the app and do not ship in it.
+  */
+  tools: LicenceGroup;
   /**
   The third-party notices: vendored material and credits.
   */
@@ -50,20 +59,20 @@ export function OpenSourcePage({
 }>): JSX.Element {
   const [query, setQuery] = useState("");
   const [opened, setOpened] = useState<ReadonlySet<string>>(new Set());
-  const shown = matchingGroups(groups, query);
+  const shown = matchingGroups([...groups, tools], query);
   const noticesId = "third-party-notices";
+  const open = (id: string) => {
+    setOpened(new Set([...opened, id]));
+  };
   return (
     <ReadingShell bellState={bellState} bell={bell}>
       <ReadingFrame
         kicker="Open source"
         title="Built with thanks"
         contents={[
-          ...groups.map((group) => ({
-            id: group.id,
-            title: group.name,
-            count: group.pieces.length,
-          })),
+          ...groups.map((group) => contentsEntry(group)),
           { id: noticesId, title: notices.title },
+          contentsEntry(tools),
         ]}
       >
         <p className="m-0">
@@ -82,21 +91,31 @@ export function OpenSourcePage({
           />
         </FormField>
         {shown.length === 0 ? (
-          <p className="m-0">{`Nothing we ship is called “${query.trim()}”.`}</p>
+          <p className="m-0">{`Nothing we ship or build with is called “${query.trim()}”.`}</p>
         ) : undefined}
-        {shown.map((group) => (
-          <GroupSection
-            key={group.id}
-            group={group}
-            isOpen={opened.has(group.id)}
-            onOpen={() => {
-              setOpened(new Set([...opened, group.id]));
-            }}
-          />
-        ))}
+        {shown
+          .filter((group) => group.kind !== "tools")
+          .map((group) => (
+            <GroupSection
+              key={group.id}
+              group={group}
+              isOpen={opened.has(group.id)}
+              onOpen={open}
+            />
+          ))}
         <ReadingSection id={noticesId} heading={notices.title}>
           <LegalSubsections doc={notices} />
         </ReadingSection>
+        {shown
+          .filter((group) => group.kind === "tools")
+          .map((group) => (
+            <GroupSection
+              key={group.id}
+              group={group}
+              isOpen={opened.has(group.id)}
+              onOpen={open}
+            />
+          ))}
       </ReadingFrame>
     </ReadingShell>
   );
@@ -109,20 +128,20 @@ function GroupSection({
 }: Readonly<{
   group: LicenceGroup;
   isOpen: boolean;
-  onOpen: () => void;
+  onOpen: (id: string) => void;
 }>): JSX.Element {
   const rows = isOpen ? group.pieces : group.pieces.slice(0, COLLAPSED_ROWS);
   const count = String(group.pieces.length);
   return (
     <ReadingSection id={group.id} heading={group.name}>
-      <Mono step="xs" className="text-muted">
-        {group.isType ? `${count} · Type` : count}
+      <Mono step="sm" className="text-muted">
+        {`${count}${COUNT_SUFFIX[group.kind]}`}
       </Mono>
-      {group.isType ? (
-        <p className="m-0 text-body">
-          The two typefaces you read everything in.
+      {group.kind === "licence" ? undefined : (
+        <p className={`m-0 ${GROUP_LINES[group.kind].className}`}>
+          {GROUP_LINES[group.kind].text}
         </p>
-      ) : undefined}
+      )}
       {group.text === undefined ? undefined : (
         <TextDisclosure label={readLabel(group)} text={group.text} />
       )}
@@ -131,13 +150,16 @@ function GroupSection({
           <PieceRow
             key={`${piece.name}@${String(piece.version)}`}
             piece={piece}
+            showsLicence={group.kind === "tools"}
           />
         ))}
       </ul>
       {rows.length < group.pieces.length ? (
         <button
           type="button"
-          onClick={onOpen}
+          onClick={() => {
+            onOpen(group.id);
+          }}
           className="target self-start text-small text-ink underline underline-offset-4"
         >
           {`Show all ${count}`}
@@ -147,15 +169,48 @@ function GroupSection({
   );
 }
 
+/**
+The line under a heading that is not a licence's.
+*/
+const GROUP_LINES = {
+  type: {
+    text: "The two typefaces you read everything in.",
+    className: "text-body",
+  },
+  // Round 40 #82: TYPE.small in --quiet.
+  tools: {
+    text: "We build and test dialed.run with these. None of them ships in the app, so each is credited by name and licence.",
+    className: "text-small text-quiet",
+  },
+} as const;
+
+/**
+ * What a group's count says after the number (round 40 #82: "44 · NOT
+ * SHIPPED"); uppercase lives in the type, so it is written in normal case.
+ */
+const COUNT_SUFFIX = {
+  type: " · Type",
+  licence: "",
+  tools: " · Not shipped",
+} as const;
+
+/**
+A group's entry in the contents column, with its count.
+*/
+function contentsEntry(group: LicenceGroup) {
+  return { id: group.id, title: group.name, count: group.pieces.length };
+}
+
 function PieceRow({
   piece,
-}: Readonly<{ piece: OpenSourcePiece }>): JSX.Element {
+  showsLicence,
+}: Readonly<{ piece: OpenSourcePiece; showsLicence: boolean }>): JSX.Element {
   return (
     <li className="flex flex-col gap-1 border-t border-hairline py-3">
       <div className="flex flex-wrap items-center gap-x-4">
         <span className="font-semibold">{piece.name}</span>
         {piece.version === undefined ? undefined : (
-          <Mono step="md" className="text-muted">
+          <Mono step="sm" className="text-muted">
             {piece.version}
           </Mono>
         )}
@@ -168,6 +223,12 @@ function PieceRow({
           </a>
         )}
       </div>
+      {showsLicence && piece.licence !== undefined ? (
+        // Round 40 #82: a tool's licence id sits in the copyright line's slot.
+        <Mono step="xs" className="text-muted">
+          {piece.licence}
+        </Mono>
+      ) : undefined}
       {piece.copyright === undefined ? undefined : (
         <span className="text-small text-muted">{`© ${piece.copyright}`}</span>
       )}
