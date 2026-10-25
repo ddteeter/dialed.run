@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { JSX } from "react";
 
+import { isAuthRequired } from "../../../lib/auth-signal";
 import { Mono, useControlAction } from "../../../ui";
 import type { ControlFailure } from "../../../ui";
 import { SignedOutPanel } from "../../../ui/SignedOutPanel";
@@ -76,7 +77,7 @@ function KeepOrLeave({
   const [isTooLate, setIsTooLate] = useState(false);
   const keeping = useControlAction<[]>({
     action: async () => {
-      const kept = await keep();
+      const kept = await keepAnswer(keep);
       setIsTooLate(kept === "too-late");
       if (kept === "kept") await onKept();
     },
@@ -100,6 +101,25 @@ function KeepOrLeave({
       <p className="m-0 text-small text-muted">{STRAVA_STAYS_DISCONNECTED}</p>
     </ActionCard>
   );
+}
+
+/**
+ * Keep's answer, with "signed out" read as too late (owner, 2026-10-25).
+ * The purge's claim deletes the runner's sessions in the batch that starts
+ * it, and Keep's gate refuses a runner it has claimed as nobody, so on
+ * this page a signed-out refusal means the purge has begun. Try again
+ * cannot work then, so it says NOT KEPT rather than "You were signed out."
+ * Any other failure is still a failure to keep, with its band and retry.
+ */
+async function keepAnswer(
+  keep: () => Promise<KeepResult>,
+): Promise<KeepResult> {
+  try {
+    return await keep();
+  } catch (error: unknown) {
+    if (isAuthRequired(error)) return "too-late";
+    throw error;
+  }
 }
 
 /**

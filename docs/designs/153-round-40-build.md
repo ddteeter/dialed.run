@@ -64,10 +64,12 @@ PR #220. This lane imports the round and builds the rest.
   screen-edge gutter. Proceeding on the column.
 - C1's band removes the focused Keep button; focus is left to the status
   announcement (the ruling names no target).
-- C1's NOT KEPT is reachable only in a race: the purge's claim deletes the
-  runner's sessions, so Keep pressed after it is refused as signed out
-  ("Still scheduled. You were signed out." with Try again). Whether that
-  common case should also read NOT KEPT is a product call, not taken here.
+- C1's NOT KEPT was reachable only in a race: the purge's claim deletes the
+  runner's sessions, so Keep pressed after it was refused as signed out
+  ("Still scheduled. You were signed out." with Try again). **Owner,
+  2026-10-25: NOT KEPT for both.** `Leaving.tsx` reads a signed-out Keep
+  as too late.
+- C4's face and C5b's column reading: kept as built (owner, 2026-10-25).
 - Found while demoing: the Google return never reopened the sheet
   (`?deleting=1` is rewritten to `?deleting=true`, which the search schema
   refused). Fixed in `route-decisions.ts`.

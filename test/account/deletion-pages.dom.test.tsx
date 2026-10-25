@@ -408,6 +408,41 @@ describe("Leaving (round 27 #14)", () => {
     });
   });
 
+  it("says NOT KEPT, not signed out, when the purge's claim has ended the session", async () => {
+    // The purge deletes the runner's sessions as it claims the row, and
+    // Keep's gate refuses a claimed runner as nobody: either way Keep
+    // comes back AUTH_REQUIRED, and retrying cannot help (owner, 2026-10-25).
+    const keep = vi.fn<() => Promise<KeepResult>>(() =>
+      Promise.reject(
+        Object.assign(new Error("Sign in first."), { code: "AUTH_REQUIRED" }),
+      ),
+    );
+    const onKept = vi.fn(() => Promise.resolve());
+    await renderWithRouter(
+      <Leaving
+        view={{ state: "ask", day: "Sat, Oct 4" }}
+        keep={keep}
+        logOut={() => Promise.resolve()}
+        onKept={onKept}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Keep my account" }));
+    expect(await screen.findByText(TOO_LATE.message)).toBeInTheDocument();
+    expect(screen.getByText("Not kept")).toBeInTheDocument();
+    expect(screen.queryByText("Still scheduled")).toBeNull();
+    expect(screen.queryByText("You were signed out.")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Keep my account" }),
+    ).toBeNull();
+    expect(screen.getByRole("button", { name: "Log out" })).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      `Not kept. ${TOO_LATE.message}`,
+    );
+    expect(onKept).not.toHaveBeenCalled();
+  });
+
   it("says a failed Log out after NOT KEPT, not the refusal again", async () => {
     await renderWithRouter(
       <Leaving

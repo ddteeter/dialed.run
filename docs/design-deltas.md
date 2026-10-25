@@ -1031,9 +1031,13 @@ C1. **Item 39 · the delete sheet's Google flow. Confirmed, with two
     built. Building it found the way back broken: the router rewrites
     `?deleting=1` to `?deleting=true` before the page renders, and the
     search schema refused `true`, so the sheet never reopened; it now
-    does. NOT KEPT is the answer to a race (the purge's claim also ends
-    the runner's sessions, so Keep after it is signed out), so the demo
-    stands the server's answer in for it.
+    does. And NOT KEPT was first reachable only in a race: the purge's
+    claim also ends the runner's sessions, and Keep's gate refuses a
+    claimed runner as nobody, so Keep after it said "Still scheduled. You
+    were signed out." with a Try again that could not work. **The owner
+    ruled NOT KEPT for both (2026-10-25):** on this page a signed-out
+    refusal of Keep reads NOT KEPT, with no Try again; any other failure
+    keeps its band and retry.
 
 C2. **Item 39 · five emails, four of them here. Three confirmed, one
     reworded; built.**

@@ -11,10 +11,11 @@
  * Exactly one test() per demo spec (see e2e/auth/auth.demo.spec.ts).
  */
 import type { Page } from "@playwright/test";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { user } from "../../src/db/schema-auth";
 import {
+  accountDeletions,
   passwordAttempts,
   userProfiles,
   usernameHistory,
@@ -26,40 +27,25 @@ import { ensureInviteCode, turnstileAnswered } from "../support/invites";
 import { withLocalDb } from "../support/local-db";
 
 /**
- * Keep's answer once the purge has begun, as the server sends it. The
- * state is a race on the server — the purge's claim also deletes the
- * runner's sessions, so it lands only between Keep's gate and its batch —
- * which a demo cannot time, so this stands the answer in for it.
+ * The purge's claim on the demo runner's deletion, as the daily firing
+ * writes it (`purge_started_at`), or cleared (undefined writes NULL:
+ * drizzle would skip an undefined column).
  */
-async function keepAnswersTooLate(page: Page): Promise<void> {
-  await page.route(
-    (url) =>
-      url.pathname.startsWith("/_serverFn/") &&
-      Buffer.from(url.pathname.slice("/_serverFn/".length), "base64url")
-        .toString()
-        .includes("keepAccountFn"),
-    (route) =>
-      route.fulfill({
-        contentType: "application/json",
-        // What tells TanStack Start's client the body is its own serialized
-        // result rather than a raw Response.
-        headers: { "x-tss-serialized": "true" },
-        body: JSON.stringify({
-          t: 10,
-          i: 0,
-          p: {
-            k: ["result", "error", "context"],
-            v: [
-              { t: 1, s: "too-late" },
-              { t: 2, s: 1 },
-              { t: 11, i: 1, p: { k: [], v: [] }, o: 0 },
-            ],
-          },
-          o: 0,
-        }),
-      }),
-    { times: 1 },
-  );
+async function setPurgeStarted(
+  email: string,
+  startedAt: number | undefined,
+): Promise<void> {
+  await withLocalDb(async ({ core }) => {
+    const [account] = await core
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, email));
+    if (account === undefined) throw new Error("no account for the demo");
+    await core
+      .update(accountDeletions)
+      .set({ purgeStartedAt: startedAt ?? sql`NULL` })
+      .where(eq(accountDeletions.userId, account.id));
+  });
 }
 
 async function hydrated(page: Page): Promise<void> {
@@ -399,7 +385,7 @@ test("account settings -> change password -> reminder emails off and on -> sign 
   // Round 40 C1: Keep pressed once the purge has begun is NOT KEPT in
   // Keep's place, with no Try again; Log out stays.
   await scene(page, "Keep after the purge has begun: NOT KEPT, Log out stays");
-  await keepAnswersTooLate(page);
+  await setPurgeStarted(email, nowSeconds());
   await page.getByRole("button", { name: "Keep my account" }).click();
   const notKept = page.locator(
     "[data-part='failure-band'][data-state='refused']",
@@ -414,7 +400,10 @@ test("account settings -> change password -> reminder emails off and on -> sign 
   ).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Log out" })).toBeVisible();
   await expect(page.getByText("Deletion scheduled")).toBeVisible();
+  // Not "You were signed out." with a Try again that cannot work.
+  await expect(page.getByText("You were signed out.")).toHaveCount(0);
   // The rest of the journey is a purge that never started.
+  await setPurgeStarted(email, undefined);
   await page.reload();
   await hydrated(page);
 
