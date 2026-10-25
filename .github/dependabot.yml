@@ -1,0 +1,77 @@
+# Dependency updates (design 156; operating notes in docs/dependencies.md).
+#
+# Weekly, and seven days behind every release: most malicious versions are
+# found and pulled within days, and the cooldown keeps this repo out of that
+# window. Security updates skip the cooldown, so a fix for a known
+# vulnerability is not held back.
+#
+# Packages that must move together share a group, majors included, so a
+# family is never split across PRs that each fail without the others.
+# Dependabot puts a dependency in the FIRST group it matches, so the
+# families come before the catch-alls. Everything else is grouped by
+# production/development for minor and patch only; a major outside a
+# family gets a PR of its own, so one the tree can't take yet fails alone.
+#
+# What merges itself is decided in .github/workflows/dependabot-pr.yml, not
+# here: minor and patch, except a minor on a 0.x version (breaking under
+# semver) and except GitHub Actions bumps, which run with this repo's
+# secrets.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    ignore:
+      # Node is pinned to 24 (`engines`, and CI's setup-node); its types
+      # move with that pin, by hand.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+    groups:
+      tanstack:
+        patterns: ["@tanstack/*"]
+      cloudflare:
+        # vitest-pool-workers and the Vite plugin each pin a workerd that
+        # must match wrangler's.
+        patterns: ["@cloudflare/*", "wrangler"]
+      vitest:
+        patterns: ["vitest", "@vitest/*"]
+      stryker:
+        patterns: ["@stryker-mutator/*"]
+      react:
+        patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
+      tailwind:
+        patterns: ["tailwindcss", "@tailwindcss/*"]
+      drizzle:
+        patterns: ["drizzle-orm", "drizzle-kit"]
+      eslint:
+        patterns: ["eslint", "@eslint/js", "typescript-eslint"]
+      react-email:
+        patterns: ["@react-email/*"]
+      production:
+        dependency-type: production
+        patterns: ["*"]
+        update-types: [minor, patch]
+      development:
+        dependency-type: development
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "ci(deps)"
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: [minor, patch]

@@ -43,6 +43,20 @@ function resolvePort(): number {
 const port = resolvePort();
 
 /**
+ * What the suite drives. The dev server by default, which is what a lane
+ * iterates against. `E2E_SERVER=preview` serves the production build
+ * instead: the Worker bundle `npm run build` wrote, run by workerd. Dev
+ * never runs that bundle, so a dependency update that breaks the build's
+ * server rendering but not dev's is invisible to the default run, and
+ * CI's `e2e (build)` job exists to see it (design 156). It serves `dist/`,
+ * so build first.
+ */
+const serverCommand =
+  process.env.E2E_SERVER === "preview"
+    ? `npx vite preview --port ${String(port)} --strictPort`
+    : "npm run dev";
+
+/**
  * Milliseconds of pacing between demo actions, and the switch that decides
  * whether a video is recorded at all. 0 (the default, and what CI gets)
  * means full speed and no video. `npm run demo` sets it.
@@ -143,7 +157,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev",
+    command: serverCommand,
     // VITE_DEVTOOLS=off keeps the floating devtools button out of demo
     // recordings (it covers the tab bar's last item at 1280×720).
     env: { PORT: String(port), VITE_DEVTOOLS: "off" },

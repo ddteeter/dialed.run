@@ -301,11 +301,30 @@ needs its own Strava app, not a second subscription.
 
 ## 7. GitHub
 
-- **Secret `CLOUDFLARE_API_TOKEN`** — the deploy job needs it. Scope: Edit
-  Cloudflare Workers, plus D1 and R2 read/write on this account. Once the
-  CI proposal lands it also applies migrations, which needs D1 edit.
-- **Secret `CLOUDFLARE_ACCOUNT_ID`** — `ci.yml`'s deploy step passes it to
-  Wrangler alongside the token. Workers → Overview shows it.
+- **Environment `production`** — `ci.yml`'s deploy job runs in it. Set
+  its deployment branches to `main` only, and put the two Cloudflare
+  secrets below **in the environment, not in the repository's secrets**, so
+  no other job can read them. Dependency updates merge themselves
+  (`docs/dependencies.md`), and the deploy job installs and builds them, so
+  what this token can do is what a compromised package that survived the
+  cooldown could do.
+- **Secret `CLOUDFLARE_API_TOKEN`** (environment `production`) — the
+  deploy job needs it to deploy and to apply migrations. Scope it to this
+  account, with **Workers Scripts: Edit** and **D1: Edit**, and nothing
+  else: no DNS, no zone settings, no other account. Deploy binds the R2
+  buckets but writes nothing to them, so try without R2 permissions first,
+  and add **Workers R2 Storage: Read** only if `wrangler deploy` refuses
+  without it. Set an expiry and rotate it when it lapses.
+- **Secret `CLOUDFLARE_ACCOUNT_ID`** (environment `production`) —
+  `ci.yml`'s deploy step passes it to Wrangler alongside the token.
+  Workers → Overview shows it.
+- **The dependency automation** — an App, two environments
+  (`dependabot-merge`, `dependabot-review`) with the App's key and a
+  spend-capped Anthropic key, and the repository settings that go with
+  them: auto-merge on, Dependabot alerts and security updates on, fork PRs
+  approved for every outside contributor, allowed actions limited, SHA pins
+  required. The steps are `docs/dependencies.md` §Setup. None of it blocks
+  the first deploy, and all of it should be in place before friends are.
 - **Variable `DEPLOY_ENABLED=true`** — `ci.yml`'s deploy job is gated on it
   and skips otherwise. It is deliberately opt-in so the first deploy is a
   decision rather than a side effect of a merge. The job is also gated on
@@ -313,8 +332,10 @@ needs its own Strava app, not a second subscription.
   pull request can reach it however it is targeted.
 - **Branch protection on `main`** — already configured (ruleset "main
   protection"): no deletion, no force-push, PR required, and
-  `Lint, typecheck, test, build` + `e2e` + `guardrails` must pass. There are
-  no bypass actors, including the owner.
+  `Lint, typecheck, test, build`, `e2e`, `e2e (build)`, `guardrails` and
+  `Mutation` must pass (`e2e (build)` is added by design 156's setup).
+  There are no bypass actors, including the owner, and the automation App
+  must never become one.
 
 ## 8. After the first deploy
 
