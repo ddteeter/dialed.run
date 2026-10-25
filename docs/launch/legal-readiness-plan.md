@@ -173,7 +173,7 @@ Each lane:
 - has its own worktree and PR;
 - has tests that observe the behaviour, since every touched module is in
   the mutation ratchet;
-- passes `npm run verify && npm test && npm run build`;
+- passes the `pr-ready` skill's final checks (step 6);
 - stops at "ready to ship", and is pushed in the background.
 
 | Step | Builds                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Tested by                                                                                                                                                                                 | Done when                                                                                                                                              | Stage   |
