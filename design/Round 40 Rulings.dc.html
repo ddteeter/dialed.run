@@ -30,6 +30,7 @@
       <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">No new step, colour, glyph or motion: every value is from tokens.js / T1. Text of record: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">docs/product.md</span> · Round 40. Form Contract §02b redrawn in place (C5a).</p>
       <div style="display: flex; flex-wrap: wrap; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em;">
         <a href="#r82" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">82 · Tools we build with</a>
+        <a href="#r83" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">83 · Site /open-source</a>
         <a href="#c1" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">C1 · Google delete</a>
         <a href="#c2" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">C2 · C3 · Emails</a>
         <a href="#c4" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">C4 · F rail card</a>
@@ -88,6 +89,49 @@
             </sc-for>
           </div>
           <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">Last entry, with its count, after Third-party notices. The lead's {N} still counts only what ships: it says "pieces" dialed.run runs on, and these aren't. 136 is right. AGPL leaving the contents, Tailwind and unenv joining, and 5 own-licence rows are noted; nothing to draw.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="r83" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #F5FF3D;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">83 · dialed.run/open-source</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 860px; line-height: 1.45;"><strong style="color: #F4F3EF;">Structure approved as built, with two changes: the contents carry counts, and the site's wording says "the website". Type stays three rows (corrected).</strong> The legal reading layout, the no-script page and the tools last are right. One list of 26 rows, no disclosure.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">83 · PHONE · TOP OF THE PAGE</span>
+          <div data-screen-label="Site open source top r40" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 28px 20px 24px; display: flex; flex-direction: column; gap: 16px;">
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 34px; line-height: 1; letter-spacing: -0.03em; text-transform: uppercase;">Open source</span>
+            <p style="margin: 0; font-size: 18px; line-height: 1.45; text-wrap: pretty;">This page covers the dialed.run website. The app keeps its own list, at <span style="color: #C21A6B; text-decoration: underline; text-underline-offset: 3px;">app.dialed.run/open-source</span>. The website runs on code and type that people chose to give away. Here are all 4 pieces it ships, grouped by licence, with a link to each project.</p>
+            <div style="display: flex; flex-direction: column;">
+              <sc-for list="{{ siteToc }}" as="c" hint-placeholder-count="3">
+                <div style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid #DCDBD2; font-size: 15px;"><span>{{ c.t }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #6E6E64;">{{ c.n }}</span></div>
+              </sc-for>
+            </div>
+            <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-top: 12px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">SIL Open Font License 1.1</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #6E6E64;">3 · TYPE</span></div>
+            <span style="font-size: 13px; line-height: 1.45; color: #4E4E44;">The typefaces you read everything in.</span>
+            <div style="display: flex; flex-direction: column;">
+              <sc-for list="{{ siteType }}" as="t" hint-placeholder-count="3">
+                <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 0; border-top: 1px solid #DCDBD2; align-items: baseline;"><span style="font-size: 15px; font-weight: 600;">{{ t.name }}</span><span style="font-size: 15px; font-weight: 600; color: #C21A6B; text-decoration: underline; text-underline-offset: 3px;">Project</span><span style="grid-column: 1 / -1; font-size: 13px; line-height: 1.45; color: #4E4E44;">{{ t.c }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px; text-wrap: pretty;">Lead kept, scope first, the URL itself is the link. {N} = 4. One row per family as Google Fonts ships it: Archivo Black and Archivo are two projects with two holders and two links, so two rows. Holder lines print the licence files' own words. The line drops "two", since three rows sit under it. "Read the licence text" stays where it was, under the line (not drawn).</p>
+        </div>
+
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">83 · PHONE · TOOLS, ALL 26</span>
+          <div data-screen-label="Site open source tools r40" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 20px 20px 24px; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 19px; letter-spacing: -0.025em;">Tools we build with</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #6E6E64;">26 · NOT SHIPPED</span></div>
+            <span style="font-size: 13px; line-height: 1.45; color: #4E4E44; padding-bottom: 8px; text-wrap: pretty;">We build and test the website with these. None of them ships in it, so each is credited by name and licence.</span>
+            <sc-for list="{{ tools }}" as="t" hint-placeholder-count="3">
+              <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 0; border-top: 1px solid #DCDBD2; align-items: baseline;"><span style="font-size: 15px; font-weight: 600;">{{ t.name }} <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 400; color: #6E6E64;">{{ t.v }}</span></span><span style="font-size: 15px; font-weight: 600; color: #C21A6B; text-decoration: underline; text-underline-offset: 3px;">Project</span><span style="grid-column: 1 / -1; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">{{ t.lic }}</span></div>
+            </sc-for>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; color: #6E6E64; border-top: 1px solid #DCDBD2; padding-top: 12px;">… 23 MORE ROWS, THEN THE FOOTER</span>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px; text-wrap: pretty;">"The website", as the lead names it; "this site" would be a second name for one thing. 26 rows run about 1,300px on a phone, last on the page, pushing nothing down, and find-in-page reaches every one. A collapse would be the only interactive part of a page with no script; skip it. Revisit past ~60.</p>
         </div>
       </div>
     </div>
@@ -254,6 +298,12 @@ class Component extends DCLogic {
       R('82b · Words', 'RULED', 'Heading "Tools we build with" (not "Built with": the page is titled "Built with thanks"). Count "44 · NOT SHIPPED", MONO.sm like a group. Line: "We build and test dialed.run with these. None of them ships in the app, so each is credited by name and licence." The lead\'s {N} counts only what ships.'),
       R('82c · Empty search', 'RULED', '"Nothing we ship or build with is called “xyz”." A tool match keeps its section heading.'),
       R('82d · Tool row', 'RULED · DRAWN', 'Nothing added. Name + version (MONO.sm, as shipped rows), Project, licence id MONO.xs in the copyright line\'s slot. No copyright, no licence text, no Notice.'),
+      R('83a · Site structure', 'CONFIRM · DRAWN', 'Approved as built: legal reading layout, 620 measure, sticky Contents at desk, groups largest first, tools last, no script.'),
+      R('83b · Lead', 'CONFIRM', 'Kept, scope sentence first, URL as the inline link. {N} = 4.'),
+      R('83c · Type rows', 'CORRECTED · DRAWN', 'Three rows, one per family: Archivo, Archivo Black, IBM Plex Mono (two projects, two holders for Archivo/Archivo Black). Holder lines verbatim from the licence files. Count "3 · TYPE"; line "The typefaces you read everything in." The app follows (amends round 39 #72).'),
+      R('83d · Tools line', 'RULED', '"We build and test the website with these. None of them ships in it, so each is credited by name and licence."'),
+      R('83e · 26 tools', 'CONFIRM', 'One list, every row. No disclosure. Revisit past about 60.'),
+      R('83f · Contents counts', 'RULED · DRAWN', 'Yes, as the app\'s: 3 · 1 · 26, MONO.sm, right-aligned.'),
       R('C1 · Google delete', 'CONFIRM · CORRECTED', 'As described, plus: back from Google, the sheet reopens with focus on Delete my account (no auto-delete). Purge begun: band NOT KEPT · "Your account is already being deleted. It can\'t be kept now." in Keep\'s place; Keep leaves, Log out stays.'),
       R('C2 · Emails', 'CONFIRM · ONE REWORDED', 'Deletion, Strava and digest confirmed. The deletion date is UTC everywhere it appears. Invite foot: "Sent because this address asked for access. Didn\'t ask? Ignore this; nothing happens."'),
       R('C3 · Content removed', 'CORRECTED', 'Round 27\'s frame is the text of record: names the run by date and the reason, "Your run and verdict stay.", See the community rules, reply foot. Copyright removals use 63b. Not covered by 74–76.'),
@@ -261,7 +311,17 @@ class Component extends DCLogic {
       R('C5a · §02b kicker', 'DRAWN', 'Form Contract samples redrawn to MONO.xs. The two contracts agree.'),
       R('C5b · Feed gutter', 'RULED · RETIRED', 'No new role. Posts divided by 1px --hairline; posts keep SPACE[4] top and bottom. #1C1C22 leaves the feed.'),
     ];
-    return { toolLine, tools, notices, toc, emails, rail, rows };
+    const siteToc = [
+      { t: 'SIL Open Font License 1.1', n: '3' },
+      { t: 'MIT', n: '1' },
+      { t: 'Tools we build with', n: '26' },
+    ];
+    const siteType = [
+      { name: 'Archivo', c: '© 2020 The Archivo Project Authors' },
+      { name: 'Archivo Black', c: '© 2017 The Archivo Black Project Authors' },
+      { name: 'IBM Plex Mono', c: '© 2017 IBM Corp. with Reserved Font Name "Plex"' },
+    ];
+    return { toolLine, tools, notices, toc, emails, rail, rows, siteToc, siteType };
   }
 }
 </script>

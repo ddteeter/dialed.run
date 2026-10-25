@@ -940,7 +940,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
-<!-- Item numbers continue past rounds 35–40 (45–76, 82); this comment keeps the list from being renumbered. -->
+<!-- Item numbers continue past rounds 35–40 (45–76, 82–83); this comment keeps the list from being renumbered. -->
 
 ## Answered in round 40 (imported 2026-10-24)
 
@@ -955,8 +955,10 @@ and the Feed gutter's T1 role (C5). Design answered the same day as
 three files: the new board, Form Contract §02b's two samples (redrawn in
 place), and product.md's Round 40 section. The same export carries
 `Garmin Rulings.dc.html` and `docs/garmin.md`; they are not this round and
-were not imported. Nothing is left open. Built by design 153 except where
-an item says otherwise.
+were not imported. A re-export at 21:59 the same day added item 83, the
+marketing site's `/open-source`, to the board and to product.md; this
+import is that export. Nothing is left open. Built by design 153 except
+where an item says otherwise.
 
 82. **`/open-source` · Tools we build with. Ruled and drawn; built in
     PR #224** (design 151). "Tools we build with" (the ask's "Built with"
@@ -990,6 +992,27 @@ an item says otherwise.
     own "Licence", not 18, and the AGPL group is gone (nothing bundled is
     AGPL). **The ask:** draw the tier, and give the line its words — they
     are placeholder words the owner has not yet seen.
+
+83. **dialed.run/open-source on the marketing site. Confirmed with one
+    correction; (a), (b), (d), (e) and (f) are the site's, built in
+    dialed.run-site.** (a) The structure is approved as built: the legal
+    reading layout (620 measure, sticky Contents at desk), the type group,
+    licence groups largest first, Tools we build with last; no search, no
+    "Show all", no client script. (b) The lead stands, the URL text its
+    link, {N} = 4 today. (d) The tools line: "We build and test the
+    website with these. None of them ships in it, so each is credited by
+    name and licence." (e) All 26 tools in one list, no disclosure;
+    revisit past about 60. (f) Contents counts as the app's, MONO.sm,
+    right-aligned (3 · 1 · 26).
+    **(c) The type group, corrected, and the app follows.** One row per
+    family as Google Fonts ships them: Archivo, Archivo Black, IBM Plex
+    Mono, Archivo Black its own project and holder with its own link. The
+    holder lines are the licence files' own: "© 2020 The Archivo Project
+    Authors", "© 2017 The Archivo Black Project Authors", "© 2017 IBM
+    Corp. with Reserved Font Name "Plex"". Count "3 · TYPE"; line "The
+    typefaces you read everything in." This amends round 39 #72's "two
+    typefaces" for the app too. **Not built here: built in the app's
+    OFL.txt PR, after #226.** Design 153 does not touch the app's list.
 
 C1. **Item 39 · the delete sheet's Google flow. Confirmed, with two
     corrections; built.** As described (a sign-in over ten minutes old is
@@ -1128,7 +1151,9 @@ entries for them when it merges.
 72. **`/open-source`. Confirmed.** Two typefaces; the shared line for the
     smallest groups is retired (it was never built); "Licence" after
     Project · Notice; Third-party notices after the groups and last in
-    the contents, without the preamble. Nothing to build.
+    the contents, without the preamble. Nothing to build. **Amended by
+    round 40:** Tools we build with now comes after the notices (#82), and
+    the type group is three rows, not two typefaces (#83c).
 
 73. **Copyright holds on Review. Ruled and drawn; build work.** Counter-
     notice received takes a RECEIVED ON date, defaulting to today, with

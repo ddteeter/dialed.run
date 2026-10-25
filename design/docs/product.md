@@ -653,6 +653,14 @@ Board: `Round 40 Rulings.dc.html`. In-place: Form Contract §02b samples (C5a). 
 - (d) **Tool row.** Nothing added. Name, version (MONO.sm, as shipped rows), Project; the licence id in MONO.xs in the copyright line's slot. No copyright, no licence text, no Notice. Three rows, then "Show all 44"; sorted by name.
 - Noted, nothing to draw: 136 shipped, AGPL group gone, Tailwind and unenv joined, 5 own-licence rows.
 
+**83 · dialed.run/open-source (marketing site)**
+- (a) **Structure.** Approved as built: the site's legal reading layout (620 measure, sticky Contents at desk), type group, licence groups largest first, Tools we build with last. No search, no "Show all", no client script.
+- (b) **Lead.** Kept: "This page covers the dialed.run website. The app keeps its own list, at app.dialed.run/open-source. The website runs on code and type that people chose to give away. Here are all {N} pieces it ships, grouped by licence, with a link to each project." The URL text is the link. {N} = 4 today.
+- (c) **Type (corrected).** One row per family, as Google Fonts ships them: Archivo, Archivo Black, IBM Plex Mono. Archivo Black is its own project and holder, with its own link. Holder lines are the licence files' own: "© 2020 The Archivo Project Authors", "© 2017 The Archivo Black Project Authors", "© 2017 IBM Corp. with Reserved Font Name "Plex"". Count "3 · TYPE"; line "The typefaces you read everything in." The app's list follows: three rows, the same line (amends round 39 #72 "two typefaces").
+- (d) **Tools line.** "We build and test the website with these. None of them ships in it, so each is credited by name and licence." "The website", as the lead names it.
+- (e) **26 tools.** One list, every row; no disclosure. Revisit past about 60.
+- (f) **Contents.** Counts, as the app's: MONO.sm, right-aligned (3 · 1 · 26).
+
 **C1 · Item 39, Google delete.** Confirmed as described, with two corrections. Back from Google, the sheet reopens with no message and focus on "Delete my account"; it never deletes on return. Keep pressed after the purge has begun: §4a band NOT KEPT · "Your account is already being deleted. It can't be kept now." in Keep's place; Keep my account leaves, Log out stays. Both pages keep the signed-out panel and DELETION SCHEDULED.
 
 **C2 · Item 39, emails.**
