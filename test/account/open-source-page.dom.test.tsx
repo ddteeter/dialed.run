@@ -218,12 +218,12 @@ describe("OpenSourcePage", () => {
     const type = section("SIL Open Font License 1.1");
     expect(within(type).getByText("2 · Type")).toHaveClass("text-mono-sm");
     expect(
-      within(type).getByText("The two typefaces you read everything in."),
+      within(type).getByText("The typefaces you read everything in."),
     ).toBeInTheDocument();
     const mit = section("MIT");
     expect(within(mit).getByText("5")).toHaveClass("text-mono-sm");
     expect(
-      within(mit).queryByText("The two typefaces you read everything in."),
+      within(mit).queryByText("The typefaces you read everything in."),
     ).toBeNull();
     // A licence group has no line of its own, not even an empty one.
     expect(mit.querySelector("p")).toBeNull();

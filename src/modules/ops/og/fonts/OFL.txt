@@ -1,10 +1,12 @@
 The three families here (static latin WOFF, for the OG card renderer) and in public/fonts/ are self-hosted under the SIL Open
-Font License, Version 1.1. Both copyright notices and the full licence
+Font License, Version 1.1. Each family's copyright notice and the full licence
 text follow, which is what the OFL's clause 2 requires be distributed
 with the font software.
 
-  Archivo, Archivo Black  — Copyright 2020 The Archivo Project Authors
+  Archivo                 — Copyright 2020 The Archivo Project Authors
                             https://github.com/Omnibus-Type/Archivo
+  Archivo Black           — Copyright 2017 The Archivo Black Project Authors
+                            https://github.com/Omnibus-Type/ArchivoBlack
   IBM Plex Mono           — Copyright © 2017 IBM Corp.
                             with Reserved Font Name "Plex"
 
