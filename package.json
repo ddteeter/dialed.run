@@ -107,7 +107,7 @@
     "canvas": "^3.2.3",
     "dependency-cruiser": "^18.2.0",
     "drizzle-kit": "^0.31.10",
-    "eslint": "^10.10.0",
+    "eslint": "^10.13.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-better-tailwindcss": "4.9.1",
     "eslint-plugin-sonarjs": "^4.2.0",
@@ -121,7 +121,7 @@
     "prettier": "^3.9.6",
     "tsx": "4.23.13",
     "typescript": "^6.0.2",
-    "typescript-eslint": "^8.69.0",
+    "typescript-eslint": "^8.71.2",
     "vite": "^8.0.0",
     "vitest": "^4.1.11",
     "wrangler": "^4.129.0"
