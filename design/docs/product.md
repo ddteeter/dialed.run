@@ -617,3 +617,28 @@ Board: `Round 38 Rulings.dc.html`. In-place rewrites: Round 27 #21, Round 28 #6,
 - (b) Confirmed and drawn: "We removed a photo from one of your runs after a copyright notice. Your run and verdict stay." / "We removed one of your runs from the feed after a copyright notice. The run itself stays." No reason is quoted. A removal request's takedown keeps the moderator's reason.
 
 **65 · E1 compact line.** Confirmed as built at the top of Following, above the posts. Widened: "…in the last 2 weeks." With no saved place, no fresh reading or fewer than five runners: no band and no gap. Following with no posts shows its empty state and no line.
+
+## Round 39 · Built since round 38, and in review (items 66–76)
+Board: `Round 39 Rulings.dc.html`.
+
+**66 · Strava consent.** Lead-ins are run-in semibold at the paragraph's size, not mono labels. On P3, "So we can remind you. Optional." stays; "We read that a run happened. Nothing else." retires from P3. The refused receipt's Try again goes to T1 (or back to P3), with focus on the heading.
+
+**67 · Weather credit.** All eight placements confirmed as built. A3's header keeps the credit at every width, including the desk. Entry card: foot right, 22px at 1200, #DEDDD6, opposite the verdict; drawn on the board. The card is wired only once it carries the credit.
+
+**68 · Quarantine.** Words and the SEP 10 2026 date shape are confirmed. Recorded: live region "Reported to NCMEC. Kept until {date}.", KEPT UNTIL re-reads, and the form leaves the row; with no number the tag ends at the date. Empty: "Nothing is in quarantine." Review's foot order: Takedown, Copyright holds, Quarantine.
+
+**73 · Copyright holds.** Counter-notice received takes RECEIVED ON (date, default today). Refusals: "Pick a date on or after it was hidden." / "Pick today or an earlier day." Both Case over presses confirm in place: "Delete it for good? It can't be put back." [Delete it] / "Put it back where it was?" [Put it back], each with Not yet. The owner approved "Case over: delete" and "Case over: restore", with these confirms.
+
+**71 · Matching photos.** A separate grid under THEIR OTHER PHOTOS: MATCHING PHOTOS · ANY RUNNER · N. Under each: id; "{N} BITS" ("SAME" at 0) plus [PRIVATE] where it applies; the owner's @handle → D8. A garment tile opens nothing; its owner link is what it offers. The takedown form stays kit-only.
+
+**69 · Mississippi and Tennessee.** The sentences and four places are confirmed. Added: on load, Au2 shows SIGN-UP CLOSED HERE + the NOT CREATED sentence in place of the form and Google, with Ask for access (→ Au5) and "Have an account? Log in". The refusals stay for a place that changes after load.
+
+**70 · Removal reminder.** Confirmed. {UTC minute} renders as "OCT 26 14:20 UTC".
+
+**74 · Bell notices.** No kicker; the heading-led paragraph is as built. The author's rows open their run or kit; the reporter's open nothing.
+
+**75 · Rule line.** Confirmed as built.
+
+**76 · D8 Which rule it breaks.** Under Why, PickOne, "—" start, "Pick the rule it breaks." The ten bold names verbatim, a hairline, then "Suspected CSAM (the notice names no rule)".
+
+**72 · /open-source.** Confirmed: two typefaces; the shared small-group line is retired; "Licence" after Project · Notice; Third-party notices after the groups and last in the contents, with the preamble left out.
