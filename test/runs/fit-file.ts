@@ -1,7 +1,7 @@
 /**
  * FIT files built to order with the SDK's own encoder, for the parser's
  * tests and the import consumer's. Synthetic on purpose: no real watch's
- * file is ever committed (plan 152).
+ * file is ever committed (plan 157).
  */
 import { Encoder } from "@garmin/fitsdk";
 import type {

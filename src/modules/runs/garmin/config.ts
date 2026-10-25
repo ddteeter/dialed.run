@@ -1,6 +1,6 @@
 /**
  * Whether "Import from Garmin" exists on this deployment, and for whom
- * (plan 152, phase 1).
+ * (plan 157, phase 1).
  *
  * The Personal API key is personal to the one runner it was issued to and
  * may be used only in tools they run for their own use, so the feature is

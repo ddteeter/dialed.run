@@ -14,7 +14,7 @@ import type { ImportOutcome } from "../../src/modules/runs/imports";
 import { SAT_MORNING, renderWithRouter, runSummary } from "./run-fixtures";
 
 /**
- * Import from Garmin on A1 (plan 152; design G3): the owner's last ten
+ * Import from Garmin on A1 (plan 157; design G3): the owner's last ten
  * runs on Garmin, and a tap that hands one to A1's own card. Rows are
  * synthetic.
  */

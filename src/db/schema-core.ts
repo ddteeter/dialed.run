@@ -780,14 +780,14 @@ export const runs = /*#__PURE__*/ sqliteTable(
     // and for a file with no altitude in it.
     elevationGainM: real("elevation_gain_m"),
     // The runner's own perceived effort, 1–10, as the watch asked it after
-    // the run (FIT `session.workout_rpe`, stored there ×10; plan 152).
+    // the run (FIT `session.workout_rpe`, stored there ×10; plan 157).
     // NULL for a manual run and for a file whose watch did not ask.
     rpe: integer("rpe"),
     // Who chose `effort` (G5): `watch` while it is the prefill from `rpe`,
     // `runner` once they tap. NULL when nothing has chosen it.
     effortSource: text("effort_source", { enum: effortSources }),
     // The device Garmin's API names for the run, for the attribution line
-    // (G1): "Garmin" alone until the API gives a model (plan 152). NULL for
+    // (G1): "Garmin" alone until the API gives a model (plan 157). NULL for
     // any run that did not come through that API.
     deviceName: text("device_name"),
   },
@@ -1153,7 +1153,7 @@ export const imports = /*#__PURE__*/ sqliteTable(
     // anything other than a form have no key and must not be forced to
     // invent one.
     idempotencyKey: text("idempotency_key"),
-    // The Garmin activity this import fetched (plan 152). NULL for a file
+    // The Garmin activity this import fetched (plan 157). NULL for a file
     // the runner uploaded. The run it lands is `source = 'garmin'`.
     garminActivityId: text("garmin_activity_id"),
   },

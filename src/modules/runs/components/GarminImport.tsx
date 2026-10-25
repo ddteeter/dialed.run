@@ -68,7 +68,7 @@ function rowLabel(row: GarminPickerRow, units: Units): string {
 }
 
 /**
- * Import from Garmin (plan 152, phase 1; design G3): a section of A1 under
+ * Import from Garmin (plan 157, phase 1; design G3): a section of A1 under
  * the file well, for the one runner the Personal API key is for.
  *
  * IMPORT FROM GARMIN · LAST 10, a row per run — date · distance · time,

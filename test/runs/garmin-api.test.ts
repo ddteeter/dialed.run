@@ -10,7 +10,7 @@ import { zipOf } from "./zip-file";
 
 /**
  * The Personal API client against a stubbed `fetch`. Every payload here is
- * synthetic, shaped like the spike's answers (plan 152); nothing recorded
+ * synthetic, shaped like the spike's answers (plan 157); nothing recorded
  * from a real account is committed.
  */
 

@@ -21,7 +21,7 @@ import { zipOf } from "./zip-file";
 
 /**
  * "Import from Garmin" against a stubbed Personal API. Synthetic
- * activities and a synthetic FIT; nothing from a real account (plan 152).
+ * activities and a synthetic FIT; nothing from a real account (plan 157).
  */
 
 const ORIGIN = "https://garmin.test";

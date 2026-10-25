@@ -1,9 +1,9 @@
-# Plan: 152 Garmin integration
+# Plan: 157 Garmin integration
 
 Status: **phase 1 approved** (owner, 2026-10-24). This is a plan, not a lane
 design doc: it sequences the work across the owner-only pre-launch, the
 Starter tier and Enterprise. Each phase that writes code gets its own short
-design doc when it starts; phase 1's is `152-garmin-phase-1.md`.
+design doc when it starts; phase 1's is `157-garmin-phase-1.md`.
 
 ## Why
 
@@ -52,7 +52,7 @@ Rejected: letting any runner paste their own Personal key. The key is
 personal to its holder, and it would mean collecting a runner's Garmin
 credentials.
 
-Steps, tests and done-when are in `152-garmin-phase-1.md`. In short:
+Steps, tests and done-when are in `157-garmin-phase-1.md`. In short:
 
 - **Config**: `GARMIN_API_KEY` and `GARMIN_OWNER_USER_ID`, both Worker
   secrets read only in `src/env`; either one absent hides the feature.

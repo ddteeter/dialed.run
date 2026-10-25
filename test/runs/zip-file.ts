@@ -1,6 +1,6 @@
 /**
  * Zips built to order for the Garmin download's reader: synthetic, never a
- * real download (plan 152). Only the fields the reader looks at are
+ * real download (plan 157). Only the fields the reader looks at are
  * filled; the CRCs are zero, because it checks none.
  */
 

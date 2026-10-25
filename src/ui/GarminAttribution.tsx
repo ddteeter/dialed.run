@@ -1,6 +1,6 @@
 /**
  * The credit a run's data owes Garmin when it came through Garmin's API
- * (plan 152; design G1): "Garmin {device model}", or "Garmin" alone while
+ * (plan 157; design G1): "Garmin {device model}", or "Garmin" alone while
  * the model is unknown, which is always so in phase 1. Text, never the
  * tag logo; sentence case, never caps or mono.
  *

@@ -1,8 +1,8 @@
 /**
- * Garmin Connect's Personal API, as phase 1 of plan 152 calls it: an
+ * Garmin Connect's Personal API, as phase 1 of plan 157 calls it: an
  * access token from the key, the runner's recent runs, and one run's
  * original `.FIT` (shapes from Garmin's published OpenAPI spec and the
- * 2026-10-24 spike; see plan 152's open questions).
+ * 2026-10-24 spike; see plan 157's open questions).
  *
  * One attempt per call, ten seconds each, and every answer parsed (laws 3
  * and 4). Every way a call can fail is one `GarminUnavailable`: the runner

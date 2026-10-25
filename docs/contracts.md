@@ -221,7 +221,7 @@ to save space (they are the un-refetchable archive — D-31).
 id           text PK   -- ULID
 user_id      text FK
 source       text      -- enum: manual | file | garmin   (Strava is NOT a source;
-                       -- garmin = fetched through Garmin's API, plan 152)
+                       -- garmin = fetched through Garmin's API, plan 157)
 started_at   int       -- epoch seconds
 duration_s   int       -- elapsed: keeps running through a pause (D-111)
 distance_m   real
@@ -308,7 +308,7 @@ strava_revocations: id, refresh_token, created_at
 cron_checkpoints: cron_name PK, last_run_at
 imports:        id, user_id, r2_key, status ('pending'|'processing'|'done'|'failed'),
                 failure_reason, run_id NULLABLE, created_at,
-                garmin_activity_id NULLABLE  -- plan 152; UNIQUE(user_id, garmin_activity_id)
+                garmin_activity_id NULLABLE  -- plan 157; UNIQUE(user_id, garmin_activity_id)
 ```
 
 Task 106 added (migration `0015_trust_and_safety_floor`):

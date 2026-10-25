@@ -85,7 +85,7 @@ export const startFileImport = createServerFn({ method: "POST" })
     );
   });
 
-// ---- Import from Garmin (plan 152, phase 1) ---------------------------
+// ---- Import from Garmin (plan 157, phase 1) ---------------------------
 //
 // The owner's alone: `garminConfigFor` answers undefined for anyone else,
 // and for everyone until a human sets both secrets (law 5).

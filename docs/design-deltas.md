@@ -1135,10 +1135,10 @@ each.
 
 ## Answered in the Garmin round (imported 2026-10-24)
 
-Plan 152. Asked with round 39 and answered on its own board,
+Plan 157. Asked with round 39 and answered on its own board,
 `Garmin Rulings.dc.html`, with the text of record in `design/docs/garmin.md`.
 Frames marked GARMIN SUBMISSION are the attribution mockups for the Starter
-application. Phase 1 (`152-garmin-phase-1.md`) builds G3 and G5 and G1's
+application. Phase 1 (`157-garmin-phase-1.md`) builds G3 and G5 and G1's
 lines; G2 and G4 are phase 3.
 
 The items are numbered G1–G5 rather than 77–81, because they were imported
@@ -1206,9 +1206,9 @@ numbers since. Design's board and `docs/garmin.md` call them 77–81.
   "Effort, Steady, from your watch, rated 6 of 10". Any tap, even on the
   same chip, makes it the runner's pick, drops the source line and
   records `effort_source = runner`. It never re-prefills. No rating:
-  nothing is picked and there is no source line. **The owner adopted this mapping and `effort_source`** (2026-10-24), replacing plan 152's first draft. Garmin's own race flag is not used: a race can be run at any effort.
+  nothing is picked and there is no source line. **The owner adopted this mapping and `effort_source`** (2026-10-24), replacing plan 157's first draft. Garmin's own race flag is not used: a race can be run at any effort.
 
-**Built by phase 1 (`152-garmin-phase-1.md`, 2026-10-25):** G3 on A1;
+**Built by phase 1 (`157-garmin-phase-1.md`, 2026-10-25):** G3 on A1;
 G5 on A3; G1's line on A1's card, D, E1 and each runs-list row, and the
 word "Garmin" on R's run strip. Not built yet: G1 on the share/OG card and
 in `runs.csv` (phase 3), G2 (phase 3) and G4 (phase 3).

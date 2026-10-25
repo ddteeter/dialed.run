@@ -18,7 +18,7 @@ import type { ConditionsActions } from "./SetConditionsSheet";
 const SOURCE_WORDS: Readonly<Record<RunSummary["source"], string>> = {
   file: "File",
   manual: "By hand",
-  // Plan 152: fetched through Garmin's API, so Garmin is credited (G1).
+  // Plan 157: fetched through Garmin's API, so Garmin is credited (G1).
   garmin: "Garmin",
 };
 

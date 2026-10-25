@@ -104,7 +104,7 @@ Key decisions embedded here:
   onboarding's barrel never reaches `ops`. No new cron. The one read is
   onboarding's `runnerTimeZone`: the profile, then the latest observed run,
   then UTC.
-- **Import from Garmin** (`modules/runs/garmin/`, plan 152) is a second
+- **Import from Garmin** (`modules/runs/garmin/`, plan 157) is a second
   front door on the import pipeline, for the owner alone: the request lists
   their recent runs and fetches the picked one's `.FIT` (one attempt, 10 s),
   then hands it to `startImport` like an upload. Nothing new is bound: two
