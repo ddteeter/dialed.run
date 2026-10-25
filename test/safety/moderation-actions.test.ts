@@ -1550,7 +1550,10 @@ describe("forceRename (round 27 #16), through account's rules", () => {
           const whose = eq(userProfiles.userId, runner);
           await (after === "gone"
             ? real.delete(userProfiles).where(whose)
-            : real.update(userProfiles).set({ username: sql`NULL` }).where(whose));
+            : real
+                .update(userProfiles)
+                .set({ username: sql`NULL` })
+                .where(whose));
         }
         return results;
       };

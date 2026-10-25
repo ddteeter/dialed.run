@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -8,6 +8,8 @@ import {
   holdState,
 } from "../../src/modules/safety/components/CopyrightHolds";
 import type { CopyrightHoldSummary } from "../../src/modules/safety/copyright-holds";
+import { isoDayOf } from "../../src/lib/contracts/age";
+import { nowSeconds } from "../../src/lib/now";
 
 /**
  * D-130: Review's copyright holds, and the Desk actions on one —
@@ -145,7 +147,10 @@ describe("CopyrightHolds", () => {
     expect(
       await screen.findByText("Counter-notice recorded."),
     ).toBeInTheDocument();
-    expect(counterNotice).toHaveBeenCalledWith({ data: { holdId: HOLD_ID } });
+    // RECEIVED ON defaults to today, by the Desk's UTC clock (round 39 #73).
+    expect(counterNotice).toHaveBeenCalledWith({
+      data: { holdId: HOLD_ID, receivedOn: isoDayOf(nowSeconds()) },
+    });
     await waitFor(() => {
       expect(part("hold-state")?.textContent).toBe(
         "[counter-notice received: back Nov 10]",
@@ -250,59 +255,146 @@ describe("CopyrightHolds", () => {
   });
 
   it.each([
-    ["delete", "Case over: delete", "Case over. It is deleted."],
-    ["restore", "Case over: restore", "Case over. It is back."],
+    [
+      "delete",
+      "Case over: delete",
+      "Delete it for good? It can't be put back.",
+      "Delete it",
+      "Case over. It is deleted.",
+    ],
+    [
+      "restore",
+      "Case over: restore",
+      "Put it back where it was?",
+      "Put it back",
+      "Case over. It is back.",
+    ],
   ] as const)(
-    "ends the case with %s, then offers nothing more",
-    async (which, label, sentence) => {
+    "confirms %s in place, then the row leaves the list (round 39 #73)",
+    async (which, label, question, yes, sentence) => {
       const act = vi
         .fn<CaseOverFn>()
         .mockResolvedValue({ outcome: "recorded" });
       renderHolds(inCourt(), vi.fn<CounterFn>(), vi.fn<CourtFn>(), {
         [which === "delete" ? "remove" : "restore"]: act,
       });
+      const user = userEvent.setup();
 
-      await userEvent
-        .setup()
-        .click(screen.getByRole("button", { name: label }));
+      await user.click(screen.getByRole("button", { name: label }));
+      // The confirm replaces the pair; nothing is sent until it is answered.
+      const confirm = screen.getByRole("alertdialog", { name: question });
+      expect(confirm).toHaveTextContent(question);
+      expect(screen.queryByRole("button", { name: label })).toBeNull();
+      expect(act).not.toHaveBeenCalled();
 
-      expect(await screen.findByText(sentence)).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: yes }));
+
       expect(act).toHaveBeenCalledWith({ data: { holdId: HOLD_ID } });
       await waitFor(() => {
-        expect(screen.queryByRole("button")).toBeNull();
+        expect(part("copyright-hold")).toBeNull();
       });
-      expect(part("hold-said")?.textContent).toBe(sentence);
-      expect(part("hold-state")?.textContent).toBe(
-        "[court action Nov 10: held until the case is over]",
-      );
+      expect(part("holds-said")?.textContent).toBe(sentence);
+      expect(screen.getByRole("status")).toHaveTextContent(sentence);
+      // The last hold settled: the list goes, its answer stays.
+      expect(screen.queryByRole("heading")).toBeNull();
     },
   );
 
-  it.each(["Case over: delete", "Case over: restore"])(
-    "says why %s did not land, and keeps both actions",
-    async (label) => {
-      const act = vi
-        .fn<CaseOverFn>()
-        .mockResolvedValueOnce({ outcome: "not_held" })
-        .mockResolvedValueOnce({ outcome: "gone" });
+  it.each([
+    ["Case over: delete", "Delete it for good? It can't be put back."],
+    ["Case over: restore", "Put it back where it was?"],
+  ])(
+    "puts the pair back on Not yet, with focus on %s",
+    async (label, question) => {
+      const act = vi.fn<CaseOverFn>();
       renderHolds(inCourt(), vi.fn<CounterFn>(), vi.fn<CourtFn>(), {
         remove: act,
         restore: act,
       });
       const user = userEvent.setup();
-      const button = screen.getByRole("button", { name: label });
 
-      await user.click(button);
-      expect(
-        await screen.findByText("Record the court action first."),
-      ).toBeVisible();
-      await user.click(button);
-      expect(
-        await screen.findByText("This hold is settled: put back or deleted."),
-      ).toBeVisible();
+      await user.click(screen.getByRole("button", { name: label }));
+      expect(screen.getByRole("alertdialog", { name: question })).toBeVisible();
+      await user.click(screen.getByRole("button", { name: "Not yet" }));
+
+      expect(screen.queryByRole("alertdialog")).toBeNull();
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: label })).toHaveFocus();
+      });
       expect(screen.getAllByRole("button")).toHaveLength(2);
+      expect(act).not.toHaveBeenCalled();
     },
   );
+
+  it.each([
+    ["Case over: delete", "Delete it"],
+    ["Case over: restore", "Put it back"],
+  ])("says why %s did not land, and keeps the row", async (label, yes) => {
+    const act = vi
+      .fn<CaseOverFn>()
+      .mockResolvedValueOnce({ outcome: "not_held" })
+      .mockResolvedValueOnce({ outcome: "gone" });
+    renderHolds(inCourt(), vi.fn<CounterFn>(), vi.fn<CourtFn>(), {
+      remove: act,
+      restore: act,
+    });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: label }));
+    const button = screen.getByRole("button", { name: yes });
+
+    await user.click(button);
+    expect(
+      await screen.findByText("Record the court action first."),
+    ).toBeVisible();
+    await user.click(button);
+    expect(
+      await screen.findByText("This hold is settled: put back or deleted."),
+    ).toBeVisible();
+    expect(part("copyright-hold")).not.toBeNull();
+    expect(part("holds-said")).toBeNull();
+  });
+
+  it("takes RECEIVED ON, today by default, and sends the day picked", async () => {
+    const counterNotice = vi
+      .fn<CounterFn>()
+      .mockResolvedValue({ outcome: "before_hidden" });
+    renderHolds(held(), counterNotice);
+    const field = screen.getByLabelText<HTMLInputElement>("Received on");
+    expect(field).toHaveAttribute("type", "date");
+    expect(field.value).toBe(isoDayOf(nowSeconds()));
+
+    fireEvent.change(field, { target: { value: "2026-10-24" } });
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Counter-notice received" }));
+
+    expect(counterNotice).toHaveBeenCalledWith({
+      data: { holdId: HOLD_ID, receivedOn: "2026-10-24" },
+    });
+    // The server holds the hide's line too, and says so in the same words.
+    expect(
+      await screen.findByText("Pick a date on or after it was hidden."),
+    ).toBeVisible();
+  });
+
+  it.each([
+    ["2026-10-22", "Pick a date on or after it was hidden."],
+    [isoDayOf(nowSeconds() + 24 * 60 * 60), "Pick today or an earlier day."],
+  ])("refuses RECEIVED ON %s, sending nothing", async (day, sentence) => {
+    const counterNotice = vi.fn<CounterFn>();
+    renderHolds(held(), counterNotice);
+
+    fireEvent.change(screen.getByLabelText("Received on"), {
+      target: { value: day },
+    });
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Counter-notice received" }));
+
+    const said = await screen.findAllByText(sentence);
+    expect(said.length).toBeGreaterThan(0);
+    expect(counterNotice).not.toHaveBeenCalled();
+  });
 
   it("says it is recording while the call is out", async () => {
     const counterNotice = vi.fn<CounterFn>().mockReturnValue(

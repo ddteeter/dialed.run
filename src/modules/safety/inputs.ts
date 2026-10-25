@@ -13,8 +13,10 @@
  */
 import { z } from "zod";
 
+import { isoDayOf } from "../../lib/contracts/age";
 import { takedownRequestSchema } from "../../lib/contracts/takedown";
 import { rowIdSchema, ulidSchema } from "../../lib/ids";
+import { nowSeconds } from "../../lib/now";
 
 import {
   closureRuleSchema,
@@ -112,6 +114,39 @@ export type HandleReviewValues = z.infer<typeof handleReviewInput>;
  * received" or "Court action filed", each naming only the hold.
  */
 export const copyrightHoldInput = z.object({ holdId: ulidSchema });
+
+/**
+ * RECEIVED ON's two refusals (round 39 #73), in design's words. An empty
+ * or unreadable day is asked for as a future one is: pick a day.
+ */
+export const RECEIVED_ON_COPY = {
+  future: "Pick today or an earlier day.",
+  beforeHidden: "Pick a date on or after it was hidden.",
+} as const;
+
+/**
+ * "Counter-notice received" (round 39 #73): the hold, and the day the
+ * counter-notice arrived, `YYYY-MM-DD` as a date field writes it — today
+ * or earlier, by the Desk's clock, which is UTC.
+ */
+export const counterNoticeInput = z.object({
+  holdId: ulidSchema,
+  receivedOn: z.iso
+    .date({ error: RECEIVED_ON_COPY.future })
+    .refine((day) => day <= isoDayOf(nowSeconds()), RECEIVED_ON_COPY.future),
+});
+
+/**
+ * The form's schema for one hold: the day may not come before the hide.
+ * The server holds the same line in its update, since it is not told when
+ * the hold began.
+ */
+export function counterNoticeInputFor(hiddenAt: number) {
+  return counterNoticeInput.refine(
+    (values) => values.receivedOn >= isoDayOf(hiddenAt),
+    { path: ["receivedOn"], message: RECEIVED_ON_COPY.beforeHidden },
+  );
+}
 
 /**
  * A copyright takedown from the Desk (SAF-6): a named photo or entry, and

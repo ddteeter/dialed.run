@@ -47,6 +47,7 @@ import {
   banUserInput,
   blockRunnerInput,
   copyrightHoldInput,
+  counterNoticeInput,
   denyDomainInput,
   fileReportInput,
   takedownRequestInput,
@@ -298,10 +299,10 @@ export const deskRunnersQuery = createServerFn({ method: "GET" })
  * date, and the 12th weekday after it, when the sweep puts it back.
  */
 export const counterNoticeAction = createServerFn({ method: "POST" })
-  .validator((input: unknown) => copyrightHoldInput.parse(input))
+  .validator((input: unknown) => counterNoticeInput.parse(input))
   .handler(async ({ data }) => {
     const adminId = requireAdmin(await verifiedUserId());
-    return recordCounterNotice(coreDb(), adminId, data.holdId);
+    return recordCounterNotice(coreDb(), adminId, data.holdId, data.receivedOn);
   });
 
 /**

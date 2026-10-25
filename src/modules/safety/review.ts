@@ -326,7 +326,8 @@ function copiesSubjectOf(row: {
   firstAtOnce: number | null;
 }) {
   const { subjectType, subjectId } = row;
-  const isAboutCopies = row.firstAtOnce !== null || row.source === "fingerprint";
+  const isAboutCopies =
+    row.firstAtOnce !== null || row.source === "fingerprint";
   return isAboutCopies && (subjectType === "entry" || subjectType === "photo")
     ? [{ subjectType, subjectId }]
     : [];
