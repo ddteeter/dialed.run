@@ -1070,7 +1070,7 @@
     },
     {
       "name": "@types/node",
-      "version": "22.20.1",
+      "version": "24.19.2",
       "licence": "MIT",
       "project": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node"
     },
@@ -1192,6 +1192,12 @@
       "version": "6.34.0",
       "licence": "ISC",
       "project": "https://knip.dev"
+    },
+    {
+      "name": "lockfile-lint",
+      "version": "5.1.0",
+      "licence": "Apache-2.0",
+      "project": "https://github.com/lirantal/lockfile-lint/tree/master/packages/lockfile-lint"
     },
     {
       "name": "normalize-package-data",
