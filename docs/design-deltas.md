@@ -1028,7 +1028,12 @@ C1. **Item 39 · the delete sheet's Google flow. Confirmed, with two
     this again, and Log out stays. The build said only "Your account is
     already being deleted." as a line under the body, with Keep still
     there. Both pages keep the signed-out panel and DELETION SCHEDULED, as
-    built.
+    built. Building it found the way back broken: the router rewrites
+    `?deleting=1` to `?deleting=true` before the page renders, and the
+    search schema refused `true`, so the sheet never reopened; it now
+    does. NOT KEPT is the answer to a race (the purge's claim also ends
+    the runner's sessions, so Keep after it is signed out), so the demo
+    stands the server's answer in for it.
 
 C2. **Item 39 · five emails, four of them here. Three confirmed, one
     reworded; built.**
