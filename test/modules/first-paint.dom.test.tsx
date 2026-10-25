@@ -67,6 +67,7 @@ describe("the status region on first paint", () => {
           durationS: 2600,
           startedAt: NOW,
           indoor: false,
+          deviceName: undefined,
           verdict: undefined,
           audience: "runners",
           caption: undefined,
@@ -77,6 +78,7 @@ describe("the status region on first paint", () => {
           usefulCount: 0,
           conditions: undefined,
           underReview: false,
+          effort: undefined,
           viewerHasReacted: false,
         }}
       />,

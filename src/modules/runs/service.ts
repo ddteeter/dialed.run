@@ -226,6 +226,10 @@ export interface RunSummary {
   conditions: RunConditions | undefined;
   entryId: string | undefined;
   hasVerdict: boolean;
+  /**
+  Who to credit for the run's data (G1); only a Garmin run has one.
+  */
+  deviceName: string | undefined;
 }
 
 function summaryOf(
@@ -241,6 +245,7 @@ function summaryOf(
     distanceM: run.distanceM,
     indoor: run.indoor,
     weatherStatus: run.weatherStatus,
+    deviceName: run.deviceName ?? undefined,
     canSetConditions: canSetConditions(run),
     conditions,
     entryId: entry?.id,

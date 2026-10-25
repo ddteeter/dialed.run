@@ -52,6 +52,22 @@ function partsOf(post: HTMLElement): string[] {
   );
 }
 
+describe("PostCard: Garmin's credit (G1)", () => {
+  it("is the line under the byline on a Garmin run", async () => {
+    const post = await card({ deviceName: "Garmin" });
+    const credit = post.querySelector("[data-part='garmin-attribution']");
+    expect(credit).toHaveTextContent(/^Garmin$/u);
+    // In the byline's own column, after the handle and the time.
+    expect(credit?.parentElement?.firstElementChild).toHaveClass("text-body");
+    expect(credit?.previousElementSibling).toHaveClass("text-muted");
+  });
+
+  it("is not there for any other run", async () => {
+    const post = await card();
+    expect(post.querySelector("[data-part='garmin-attribution']")).toBeNull();
+  });
+});
+
 describe("PostCard: order and absence", () => {
   it("puts every part in the drawn order", async () => {
     const post = await card({

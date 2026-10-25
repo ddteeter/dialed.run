@@ -23,6 +23,8 @@ import {
 } from "../import-polling";
 import type { ImportOutcome } from "../imports";
 import { checkUpload, parseFailureSentence } from "../upload-limits";
+import { GarminImport } from "./GarminImport";
+import type { GarminImportActions } from "./GarminImport";
 import { DuplicateCard, ParsedCard } from "./ParsedCard";
 import type { Retime } from "./ParsedCard";
 
@@ -42,6 +44,10 @@ export interface UploadFormProps {
   }) => Promise<ImportOutcome | undefined>;
   retime: Retime;
   units: Units;
+  /**
+  The owner's "Import from Garmin" (plan 152), when it is on.
+  */
+  garmin?: GarminImportActions | undefined;
 }
 
 /**
@@ -78,11 +84,14 @@ function freshAttempt(file: File): Attempt {
 }
 
 /**
-An upload the server accepted: the import it made, and the attempt behind it.
-*/
+ * An import A1 is watching: the one it made, what its card calls it, and
+ * how to send the same thing again — the same upload under the same key,
+ * or the same Garmin tap under its key (law 8b).
+ */
 interface Watched {
   importId: string;
-  attempt: Attempt;
+  label: string;
+  resend: () => void;
 }
 
 /**
@@ -171,6 +180,7 @@ function UploadFlow({
   getOutcome,
   retime,
   units,
+  garmin,
 }: Readonly<UploadFormProps>): JSX.Element {
   const [sending, setSending] = useState<Attempt | undefined>();
   const [watching, setWatching] = useState<Watched | undefined>();
@@ -216,7 +226,17 @@ function UploadFlow({
       form.set("file", attempt.file);
       form.set("idempotencyKey", attempt.key);
       const { importId } = await upload({ data: form });
-      setWatching({ importId, attempt });
+      setWatching({
+        importId,
+        label: attempt.file.name,
+        // The same attempt, key and all (law 8b). The first import is
+        // still in the queue: a new key would start a second parse of the
+        // same file, and whichever landed second would come back "Already
+        // logged" about the runner's own retry.
+        resend: () => {
+          void send(attempt);
+        },
+      });
     } catch (error: unknown) {
       setFailed({ failure: classifyFailure(error), attempt });
     } finally {
@@ -248,13 +268,7 @@ function UploadFlow({
         config={{ getOutcome, retime, units }}
         actions={{
           onFiles,
-          onResend: () => {
-            // The same attempt, key and all (law 8b). The first import is
-            // still in the queue: a new key would start a second parse of
-            // the same file, and whichever landed second would come back
-            // "Already logged" about the runner's own retry.
-            void send(watching.attempt);
-          },
+          onResend: watching.resend,
           onReplace: () => {
             setWatching(undefined);
           },
@@ -278,6 +292,18 @@ function UploadFlow({
             // The same key: a send that may have landed before the
             // connection dropped cannot become two uploads.
             void send(failed.attempt);
+          }}
+        />
+      )}
+      {garmin === undefined ? undefined : (
+        <GarminImport
+          actions={garmin}
+          units={units}
+          onImport={(started) => {
+            setStalledId(undefined);
+            setRefusal(undefined);
+            setFailed(undefined);
+            setWatching(started);
           }}
         />
       )}
@@ -318,8 +344,7 @@ function ImportWatch({
   config: WatchConfig;
   actions: WatchActions;
 }>): JSX.Element {
-  const { importId } = watched;
-  const { file } = watched.attempt;
+  const { importId, label } = watched;
   const { getOutcome, retime, units } = config;
   const { onFiles, onResend, onReplace } = actions;
   const outcome = useQuery({
@@ -342,7 +367,7 @@ function ImportWatch({
   if (data?.run !== undefined && data.status === "done") {
     return (
       <ParsedCard
-        filename={file.name}
+        filename={label}
         run={data.run}
         units={units}
         retime={retime}
@@ -356,7 +381,7 @@ function ImportWatch({
   if (data?.run !== undefined && data.status === "duplicate") {
     return (
       <DuplicateCard
-        filename={file.name}
+        filename={label}
         run={data.run}
         units={units}
         onReplace={onReplace}
@@ -370,11 +395,11 @@ function ImportWatch({
   return (
     <div className={BEFORE_THE_RUN}>
       <DropZone
-        filename={file.name}
+        filename={label}
         pending={isWaiting && !isStalled}
         error={
           data?.status === "failed"
-            ? parseFailureSentence(data.failureReason, file.name)
+            ? parseFailureSentence(data.failureReason, label)
             : undefined
         }
         onFiles={onFiles}

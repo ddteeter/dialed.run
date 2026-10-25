@@ -7,7 +7,7 @@
  */
 import { Decoder, Stream, Utils } from "@garmin/fitsdk";
 
-import { runDraftSchema } from "../../../lib/contracts";
+import { rpeSchema, runDraftSchema } from "../../../lib/contracts";
 import type { RunDraft, RunSource } from "../../../lib/contracts";
 import { RunParseError, fileMetrics } from "./shared";
 
@@ -23,6 +23,18 @@ export function toDate(value: unknown): Date {
   if (value instanceof Date) return value;
   if (typeof value === "number") return Utils.convertDateTimeToDate(value);
   throw new RunParseError("fit: timestamp field was neither Date nor number");
+}
+
+/**
+The runner's own perceived-effort rating, 1–10, from the session's
+`workout_rpe`, which the watch stores ×10 (plan 152). A watch that did not
+ask leaves the field out; a value off the scale is dropped rather than
+failing a file that is otherwise a good run.
+*/
+export function rpeFrom(workoutRpe: unknown): number | undefined {
+  if (typeof workoutRpe !== "number") return undefined;
+  const rating = rpeSchema.safeParse(Math.round(workoutRpe / 10));
+  return rating.success ? rating.data : undefined;
 }
 
 export const fitSource: RunSource = {
@@ -91,6 +103,7 @@ export const fitSource: RunSource = {
       distanceM: session.totalDistance,
       indoor: isIndoor,
       title: "Imported run",
+      rpe: rpeFrom(session.workoutRpe),
       ...startPosition,
       // The watch's own moving time where it writes a real one; otherwise
       // its timer time, which stops when the runner pauses it. A zero or

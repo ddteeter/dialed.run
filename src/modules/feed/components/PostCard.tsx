@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 
 import type { Units } from "../../../lib/contracts";
 import { formatDistance } from "../../../lib/contracts/measures";
-import { Mono, WeatherAttribution } from "../../../ui";
+import { GarminAttribution, Mono, WeatherAttribution } from "../../../ui";
 import type { FeedItem } from "../feed";
 import { postedLabel } from "../posted";
 import { isProvidersReading, stripConditions } from "../strip";
@@ -70,6 +70,7 @@ export function PostCard(props: Readonly<PostCardProps>) {
               {postedLabel(item.startedAt, now, item.conditions?.timeZone)}
               {item.isOwn ? OWN_SUFFIX : undefined}
             </Mono>
+            <GarminAttribution deviceName={item.deviceName} />
           </span>
           <span className="flex items-center gap-2">
             {item.underReview ? <UnderReview /> : undefined}

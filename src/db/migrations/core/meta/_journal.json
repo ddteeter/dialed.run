@@ -498,6 +498,13 @@
       "when": 1793040485609,
       "tag": "0070_drop_account_issuer",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "6",
+      "when": 1793188756202,
+      "tag": "0071_add_garmin_import_columns",
+      "breakpoints": true
     }
   ]
 }

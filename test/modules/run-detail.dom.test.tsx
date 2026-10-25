@@ -83,6 +83,14 @@ describe("R: a run before its kit", () => {
     );
   });
 
+  it("credits Garmin on a run that came through Garmin's API (G1)", async () => {
+    await renderWithRouter(detail(runSummary({ source: "garmin" })));
+
+    expect(region("run-strip")).toHaveTextContent(
+      "Sat Aug 29 · 6:04 AM · Garmin",
+    );
+  });
+
   it("says the kit is what it is waiting for, and asks for it in the log verb", async () => {
     await renderWithRouter(detail(runSummary()));
 

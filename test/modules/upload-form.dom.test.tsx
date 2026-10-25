@@ -22,6 +22,7 @@ import { z } from "zod";
 import { importPollIntervalMs } from "../../src/modules/runs/import-polling";
 import type { ImportOutcome } from "../../src/modules/runs/imports";
 import { UploadForm } from "../../src/modules/runs/components/UploadForm";
+import type { GarminImportActions } from "../../src/modules/runs/components/GarminImport";
 import type { Retime } from "../../src/modules/runs/components/ParsedCard";
 import {
   NO_TRACK_MESSAGE,
@@ -133,6 +134,7 @@ function form(
     getOutcome?: GetOutcome;
     retime?: Retime;
     units?: { temp: "f" | "c"; distance: "mi" | "km" };
+    garmin?: GarminImportActions;
   } = {},
 ) {
   return (
@@ -143,6 +145,7 @@ function form(
       getOutcome={overrides.getOutcome ?? (() => Promise.resolve(outcome()))}
       retime={overrides.retime ?? (() => Promise.resolve("moved"))}
       units={overrides.units ?? { temp: "f", distance: "mi" }}
+      garmin={overrides.garmin}
     />
   );
 }
@@ -828,6 +831,122 @@ describe("A1: a file that would not parse", () => {
   });
 });
 
+/**
+ * Import from Garmin's hand-off to A1's own watch (plan 152; G3): the
+ * picker's own states are `garmin-import.dom.test.tsx`'s.
+ */
+function garmin(
+  importActivity: GarminImportActions["importActivity"] = () =>
+    Promise.resolve({ status: "started", importId: "01GARMIN" }),
+): GarminImportActions {
+  return {
+    picker: () =>
+      Promise.resolve({
+        status: "ready",
+        rows: [
+          {
+            activityId: "101",
+            startedAt: SAT_MORNING,
+            distanceM: 9978,
+            durationS: 3098,
+            runId: undefined,
+          },
+        ],
+      }),
+    importActivity,
+  };
+}
+
+async function tapImport(user: ReturnType<typeof setupUser>): Promise<void> {
+  await user.click(await screen.findByRole("button", { name: /^Import / }));
+}
+
+describe("A1: a run imported from Garmin is watched like an upload", () => {
+  it("leaves a refused file's sentence behind it", async () => {
+    const user = setupUser({ applyAccept: false });
+    await renderWithRouter(form({ garmin: garmin(), getOutcome: parsed() }));
+    await user.upload(dropInput(), new File([], "run.gpx"));
+    expect(screen.getByText("That file is empty.")).toBeVisible();
+
+    await tapImport(user);
+    await screen.findByText(/^Parsed · Garmin · /u);
+    await user.click(screen.getByRole("button", { name: "Replace" }));
+
+    expect(screen.queryByText("That file is empty.")).toBeNull();
+    expect(well()).toHaveAttribute("data-state", "empty");
+  });
+
+  it("leaves a failed send's band behind it", async () => {
+    const user = setupUser();
+    const upload = vi
+      .fn<Upload>()
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    await renderWithRouter(
+      form({ upload, garmin: garmin(), getOutcome: parsed() }),
+    );
+    await user.upload(dropInput(), gpx());
+    expect(await screen.findByText("Your connection dropped.")).toBeVisible();
+
+    await tapImport(user);
+    await screen.findByText(/^Parsed · Garmin · /u);
+    await user.click(screen.getByRole("button", { name: "Replace" }));
+
+    expect(screen.queryByText("Your connection dropped.")).toBeNull();
+  });
+
+  it("calls a slow read slow, and tries the same tap again under its key", async () => {
+    const user = setupUser();
+    const importActivity = vi.fn<GarminImportActions["importActivity"]>(() =>
+      Promise.resolve({ status: "started", importId: "01GARMIN" }),
+    );
+    const getOutcome = vi.fn<GetOutcome>(() => Promise.resolve(outcome()));
+    await renderWithRouter(
+      form({ garmin: garmin(importActivity), getOutcome }),
+    );
+
+    await tapImport(user);
+    await firstPoll(getOutcome);
+    await elapse(20_000);
+    expect(
+      screen.getByText("Our end is slow. Your file is fine."),
+    ).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    await waitFor(() => {
+      expect(importActivity).toHaveBeenCalledTimes(2);
+    });
+    const [first, second] = importActivity.mock.calls.map(
+      (call) => call[0].data,
+    );
+    expect(second).toEqual(first);
+    // The same import comes back, and gets twenty seconds of its own.
+    await waitFor(() => {
+      expect(
+        screen.queryByText("Our end is slow. Your file is fine."),
+      ).toBeNull();
+    });
+  });
+});
+
+describe("A1: Garmin's credit on the card (G1)", () => {
+  it("credits Garmin first under the run's title, and nothing for a file", async () => {
+    const user = setupUser();
+    await renderWithRouter(
+      form({ getOutcome: parsed({ deviceName: "Garmin" }) }),
+    );
+    await user.upload(dropInput(), gpx("morning.gpx"));
+    await screen.findByText("Parsed · morning.gpx");
+
+    const credit = region("parsed-card").querySelector(
+      "[data-part='garmin-attribution']",
+    );
+    expect(credit).toHaveTextContent(/^Garmin$/u);
+    expect(credit).toHaveClass("text-small", "text-quiet");
+    // The line straight after the headline.
+    expect(credit?.previousElementSibling).toHaveTextContent("6.2 mi · 51:38");
+  });
+});
+
 describe("A1: the parsed card", () => {
   it("lands in place: the file, the run, and its conditions", async () => {
     const user = setupUser();
@@ -840,6 +959,7 @@ describe("A1: the parsed card", () => {
     expect(card).toContainElement(strip);
     expect(card).toHaveAttribute("data-state", "parsed");
     expect(within(card).getByText("6.2 mi · 51:38")).toBeVisible();
+    expect(card.querySelector("[data-part='garmin-attribution']")).toBeNull();
     expect(within(card).getByText("8:20 /mi")).toBeVisible();
     expect(within(card).getByText("Sat Aug 29")).toBeVisible();
     expect(

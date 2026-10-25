@@ -85,6 +85,7 @@ export function feedItem(overrides: Partial<FeedItem> = {}): FeedItem {
     durationS: 1830,
     startedAt: NOW - 2 * 3600,
     indoor: false,
+    deviceName: undefined,
     verdict: undefined,
     caption: undefined,
     createdAt: NOW,

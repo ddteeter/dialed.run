@@ -21,16 +21,22 @@ import type { Chip } from "../chips";
  *
  * A3's row and A3b's tag list are the same control, so they share this
  * rather than each drawing a pill.
+ *
+ * **`pick`: one of a set, as A3's effort row draws it (G5).** No ✕,
+ * because a second tap on the chosen effort keeps it chosen rather than
+ * un-choosing it, and the label is centred in a chip that fills its cell.
  */
 export function ChipToggle({
   pressed,
   readOnly,
   onToggle,
+  pick = false,
   children,
 }: Readonly<{
   pressed: boolean;
   readOnly: boolean;
   onToggle: () => void;
+  pick?: boolean;
   children: ReactNode;
 }>) {
   return (
@@ -43,14 +49,16 @@ export function ChipToggle({
       onClick={() => {
         if (!readOnly) onToggle();
       }}
-      className={
+      className={`${
         pressed
           ? "target-seam flex h-8 items-center gap-1 rounded-pill border border-ink bg-ink px-3 text-ground"
           : "target-seam flex h-8 items-center gap-1 rounded-pill border border-hairline px-3 text-quiet"
-      }
+      }${pick ? " justify-center" : ""}`}
     >
       <Mono step="sm">{children}</Mono>
-      {pressed && !readOnly ? <Icon name="close" size={12} /> : undefined}
+      {pressed && !readOnly && !pick ? (
+        <Icon name="close" size={12} />
+      ) : undefined}
     </button>
   );
 }

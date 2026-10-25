@@ -250,6 +250,10 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // ---- runs (never shown to anyone)
   "runs/functions.ts submitManualRun": "unconfirmed",
   "runs/functions.ts startFileImport": "unconfirmed",
+  // Plan 152: the owner's own runs, private to them until they share one.
+  "runs/functions.ts garminImportEnabledFn": "unconfirmed",
+  "runs/functions.ts getGarminPickerFn": "unconfirmed",
+  "runs/functions.ts importGarminActivityFn": "unconfirmed",
   "runs/functions.ts getImportOutcomeFn": "unconfirmed",
   "runs/functions.ts getRunSummaryFn": "unconfirmed",
   "runs/functions.ts listRunSummariesFn": "unconfirmed",

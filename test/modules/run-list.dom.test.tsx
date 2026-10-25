@@ -78,6 +78,24 @@ describe("R: a row", () => {
     expect(within(onlyRow()).getByText("6.2 mi · Sat Aug 29")).toBeVisible();
   });
 
+  it("credits Garmin once on each Garmin row, and on no other (G1)", async () => {
+    await renderWithRouter(
+      list([
+        runSummary({ id: "g", deviceName: "Garmin" }),
+        runSummary({ id: "f", startedAt: 1_700_000_000 }),
+      ]),
+    );
+
+    const rows = [...document.querySelectorAll("[data-slot='run-row']")];
+    expect(
+      rows.map(
+        (row) =>
+          row.querySelectorAll("[data-part='garmin-attribution']").length,
+      ),
+    ).toEqual([1, 0]);
+    expect(rows[0]).toHaveTextContent("Garmin");
+  });
+
   it("opens run detail for a run with no entry", async () => {
     await renderWithRouter(list([runSummary()]));
 

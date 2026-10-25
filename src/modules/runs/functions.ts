@@ -21,6 +21,7 @@ import { attachObservation, recordManualObservation } from "../weather";
 import { coreDb } from "./core-db";
 import { getImportOutcome, startImport } from "./imports";
 import {
+  garminImportInput,
   importIdInput,
   importUploadFrom,
   manualRunInput,
@@ -41,6 +42,8 @@ import {
 import { env } from "../../env";
 import { captureException, oweInCore } from "../ops";
 import { stravaApiFromEnv, stravaConfigFromEnv } from "./strava/api-from-env";
+import { garminConfigFor, garminConfigFrom } from "./garmin/config";
+import { garminPicker, importGarminActivity } from "./garmin/service";
 import {
   connectFromCallback,
   disconnectStravaAndTell,
@@ -79,6 +82,64 @@ export const startFileImport = createServerFn({ method: "POST" })
         idempotencyKey: data.idempotencyKey,
       },
       captureException,
+    );
+  });
+
+// ---- Import from Garmin (plan 152, phase 1) ---------------------------
+//
+// The owner's alone: `garminConfigFor` answers undefined for anyone else,
+// and for everyone until a human sets both secrets (law 5).
+
+export const garminImportEnabledFn = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const userId = await requireUserId();
+    const config = garminConfigFrom(
+      env.GARMIN_API_KEY,
+      env.GARMIN_OWNER_USER_ID,
+      env.GARMIN_API_ORIGIN,
+    );
+    return garminConfigFor(config, userId) !== undefined;
+  },
+);
+
+export const getGarminPickerFn = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const userId = await requireUserId();
+    const config = garminConfigFrom(
+      env.GARMIN_API_KEY,
+      env.GARMIN_OWNER_USER_ID,
+      env.GARMIN_API_ORIGIN,
+    );
+    return garminPicker(
+      {
+        db: coreDb(),
+        config: garminConfigFor(config, userId),
+        report: captureException,
+      },
+      userId,
+    );
+  },
+);
+
+export const importGarminActivityFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => garminImportInput.parse(data))
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    const config = garminConfigFrom(
+      env.GARMIN_API_KEY,
+      env.GARMIN_OWNER_USER_ID,
+      env.GARMIN_API_ORIGIN,
+    );
+    return importGarminActivity(
+      {
+        db: coreDb(),
+        config: garminConfigFor(config, userId),
+        report: captureException,
+        importBucket: env.IMPORTS,
+        queue: env.IMPORTS_QUEUE,
+      },
+      userId,
+      data,
     );
   });
 

@@ -10,8 +10,10 @@ import { sql } from "drizzle-orm";
 import {
   audiences,
   colorNames,
+  effortSources,
   garmentVisibilities,
   HANDLE_SCREEN_STATES,
+  runSources,
 } from "../lib/contracts";
 import { EMAIL_PREFERENCE_KINDS } from "../lib/contracts/email";
 import { GAVE_UP_KINDS } from "../lib/contracts/gave-up";
@@ -736,7 +738,7 @@ export const runs = /*#__PURE__*/ sqliteTable(
   {
     id: text("id").primaryKey(),
     userId: text("user_id").notNull(),
-    source: text("source", { enum: ["manual", "file"] }).notNull(),
+    source: text("source", { enum: runSources }).notNull(),
     startedAt: integer("started_at").notNull(),
     durationS: integer("duration_s").notNull(),
     distanceM: real("distance_m").notNull(),
@@ -777,6 +779,17 @@ export const runs = /*#__PURE__*/ sqliteTable(
     // the file's altitudes (TCX, GPX). NULL on the same terms as moving_s,
     // and for a file with no altitude in it.
     elevationGainM: real("elevation_gain_m"),
+    // The runner's own perceived effort, 1–10, as the watch asked it after
+    // the run (FIT `session.workout_rpe`, stored there ×10; plan 152).
+    // NULL for a manual run and for a file whose watch did not ask.
+    rpe: integer("rpe"),
+    // Who chose `effort` (G5): `watch` while it is the prefill from `rpe`,
+    // `runner` once they tap. NULL when nothing has chosen it.
+    effortSource: text("effort_source", { enum: effortSources }),
+    // The device Garmin's API names for the run, for the attribution line
+    // (G1): "Garmin" alone until the API gives a model (plan 152). NULL for
+    // any run that did not come through that API.
+    deviceName: text("device_name"),
   },
   (t) => [
     index("runs_user_started").on(t.userId, t.startedAt),
@@ -1140,8 +1153,17 @@ export const imports = /*#__PURE__*/ sqliteTable(
     // anything other than a form have no key and must not be forced to
     // invent one.
     idempotencyKey: text("idempotency_key"),
+    // The Garmin activity this import fetched (plan 152). NULL for a file
+    // the runner uploaded. The run it lands is `source = 'garmin'`.
+    garminActivityId: text("garmin_activity_id"),
   },
-  (t) => [uniqueIndex("imports_idempotency").on(t.userId, t.idempotencyKey)],
+  (t) => [
+    uniqueIndex("imports_idempotency").on(t.userId, t.idempotencyKey),
+    // One import per Garmin activity per runner: an activity picked twice,
+    // or pushed after it was picked, finds the first and does not fetch it
+    // again.
+    uniqueIndex("imports_garmin_activity").on(t.userId, t.garminActivityId),
+  ],
 );
 
 /**

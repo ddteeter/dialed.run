@@ -6,7 +6,12 @@ import type { Units } from "../../../lib/contracts";
 import { dayLabel } from "../../../lib/dates";
 import { distanceNumber } from "../../../lib/contracts/measures";
 import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
-import { Bracketed, Mono, WeatherAttribution } from "../../../ui";
+import {
+  Bracketed,
+  GarminAttribution,
+  Mono,
+  WeatherAttribution,
+} from "../../../ui";
 import {
   setBandLabel,
   hasProvidersReading,
@@ -71,6 +76,9 @@ export function RunList({
               <span className="text-body font-semibold">
                 {`${distanceNumber(run.distanceM, units.distance)} ${units.distance} · ${dayLabel(run.startedAt, run.conditions?.timeZone)}`}
               </span>
+              {/* Once per row: a header line would claim the whole of a
+                  mixed list (G1). */}
+              <GarminAttribution deviceName={run.deviceName} />
               <MetaLine run={run} units={units} />
             </RunLink>
             <RunBadge
