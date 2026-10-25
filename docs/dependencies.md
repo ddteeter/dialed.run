@@ -24,6 +24,8 @@ file explains them and does not restate them.
    secrets). Claude posts an impact review on the PR: a verdict, the
    breaking changes, whether each touches this repo (with file and line),
    and its sources. It is advisory. Read the sources before trusting it.
+   It runs Claude Code's `opus` alias, so a new Opus model arrives with the
+   claude-code-action bump that ships it, as a PR you review.
 
 The checks that carry an unattended merge are the required set:
 `Lint, typecheck, test, build`, `e2e`, `e2e (build)`, `guardrails` and
