@@ -1,7 +1,10 @@
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { PhotoMatches } from "../../src/modules/safety/components/PhotoMatches";
+import {
+  PhotoMatches,
+  RemovedMatchLine,
+} from "../../src/modules/safety/components/PhotoMatches";
 import { RemovalRequests } from "../../src/modules/safety/components/RemovalRequests";
 import { ReviewQueue } from "../../src/modules/safety/components/ReviewQueue";
 import type { PhotoMatch } from "../../src/modules/safety/photo-matches";
@@ -156,5 +159,53 @@ describe("on Review's rows", () => {
       <RemovalRequests requests={[request]} decide={vi.fn()} block={vi.fn()} />,
     );
     expect(part("photo-matches")).toHaveTextContent(/^Matching photos · 1/u);
+  });
+});
+
+/**
+ * D-147 (design 152): a row a fingerprint match started says what the
+ * photo is a copy of — the day the image was removed and how near it is.
+ */
+describe("RemovedMatchLine", () => {
+  // Midday UTC, so the day is the same in every zone a test runs in.
+  const REMOVED_AT = Date.UTC(2025, 9, 9, 12) / 1000;
+
+  it("says when the image it copies was removed, and how many bits apart", async () => {
+    await renderWithRouter(
+      <RemovedMatchLine match={{ distance: 3, removedAt: REMOVED_AT }} />,
+    );
+    const line = part("removed-match");
+    expect(line).toHaveTextContent(
+      /^A copy of an image removed as intimate on Oct 9, 3 bits apart\.$/u,
+    );
+    expect(screen.getByText("Oct 9")).toHaveClass("font-mono");
+    expect(screen.getByText("3 bits")).toHaveClass("font-mono");
+  });
+
+  it("renders nothing on any other row", async () => {
+    await renderWithRouter(<RemovedMatchLine match={undefined} />);
+    expect(part("removed-match")).toBeNull();
+  });
+
+  it("sits on a fingerprint row on Review, beside the search for copies", async () => {
+    const row: QueueRow = {
+      id: "01HZZZZZZZZZZZZZZZZZZZZZZY",
+      subjectType: "photo",
+      subjectId: PHOTO,
+      source: "fingerprint",
+      createdAt: 1_755_000_000,
+      reporterCount: 0,
+      reasons: [],
+      otherPhotos: { photos: [], total: 0, handle: undefined },
+      photoMatches: { fingerprinted: true, matches: [] },
+      removedMatch: { distance: 0, removedAt: REMOVED_AT },
+      subject: { photoKeys: [] },
+    };
+    await renderWithRouter(
+      <ReviewQueue queue={[row]} resolve={vi.fn()} reviewHandle={vi.fn()} />,
+    );
+    expect(part("removed-match")).toHaveTextContent("0 bits apart");
+    expect(part("photo-matches")).not.toBeNull();
+    expect(screen.getByText("[fingerprint]")).toBeVisible();
   });
 });

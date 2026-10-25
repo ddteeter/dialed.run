@@ -1,8 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
+import { monthDayLabel } from "../../../lib/dates";
 import { Mono } from "../../../ui";
 import type { PhotoMatch, PhotoMatches as Found } from "../photo-matches";
+import type { RemovedMatch } from "../removed-fingerprints";
 import { PhotoSection } from "./OtherPhotos";
 
 /**
@@ -104,5 +106,28 @@ function Thumbnail({ match }: Readonly<{ match: PhotoMatch }>): JSX.Element {
     >
       {image}
     </Link>
+  );
+}
+
+/**
+ * Why a fingerprint row is here (D-147, design 152): the photo is a copy
+ * of an image removed as intimate, removed on this day, this many bits
+ * apart. The removed image itself is gone, so there is nothing to show
+ * beside it but the facts.
+ *
+ * **Undesigned** (design deltas item 77): one line of text and mono, as
+ * the handle-flagged row's "why here" line is. Nothing renders on any
+ * other row.
+ */
+export function RemovedMatchLine({
+  match,
+}: Readonly<{ match: RemovedMatch | undefined }>): JSX.Element | undefined {
+  if (match === undefined) return undefined;
+  return (
+    <p data-part="removed-match" className="m-0 text-body">
+      A copy of an image removed as intimate on{" "}
+      <Mono step="xs">{monthDayLabel(match.removedAt)}</Mono>,{" "}
+      <Mono step="xs">{`${String(match.distance)} bits`}</Mono> apart.
+    </p>
   );
 }

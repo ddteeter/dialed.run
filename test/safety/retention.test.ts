@@ -7,6 +7,7 @@ import {
   copyrightHolds,
   moderationActions,
   quarantinedContent,
+  removedFingerprints,
   reports,
   reviewQueue,
   takedownRequests,
@@ -43,6 +44,7 @@ beforeEach(async () => {
     db.delete(copyrightHolds),
     db.delete(moderationActions),
     db.delete(quarantinedContent),
+    db.delete(removedFingerprints),
   ]);
 });
 
@@ -61,6 +63,7 @@ const kept = {
   reviews: () => idsIn(reviewQueue, reviewQueue.id),
   holds: () => idsIn(copyrightHolds, copyrightHolds.id),
   actions: () => idsIn(moderationActions, moderationActions.id),
+  fingerprints: () => idsIn(removedFingerprints, removedFingerprints.id),
 };
 
 function sorted(...ids: string[]): string[] {
@@ -330,6 +333,29 @@ describe("moderation actions", () => {
   });
 });
 
+async function aFingerprint(createdAt: number): Promise<string> {
+  const id = newUlid();
+  await db.insert(removedFingerprints).values({
+    id,
+    fingerprint: "0123456789abcdef",
+    moderationActionId: newUlid(),
+    createdAt,
+  });
+  return id;
+}
+
+describe("removed images' fingerprints (D-147)", () => {
+  it("go a second past 3 years after the removal, and stay on the line", async () => {
+    const past = await aFingerprint(LINE - 1);
+    const onLine = await aFingerprint(LINE);
+
+    await sweepModerationRecords(db, NOW);
+
+    expect(await kept.fingerprints()).toStrictEqual([onLine]);
+    expect(await kept.fingerprints()).not.toContain(past);
+  });
+});
+
 describe("the sweep is re-runnable (law 1)", () => {
   it("changes nothing on a second pass", async () => {
     await aRequest(LINE - DAY);
@@ -396,12 +422,13 @@ describe("the sweep reads by index, not by scanning (D1 bills rows scanned)", ()
       }),
     );
 
-    expect(plans).toHaveLength(5);
+    expect(plans).toHaveLength(6);
     const expected = [
       /takedown_requests_resolved/u,
       /reports_created[\s\S]*review_queue_subject/u,
       /review_queue_resolved[\s\S]*reports_subject/u,
       /copyright_holds_status_settled/u,
+      /removed_fingerprints_created/u,
       /moderation_actions_created[\s\S]*copyright_holds_action[\s\S]*quarantined_content_action/u,
     ];
     for (const [index, plan] of plans.entries()) {

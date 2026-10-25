@@ -27,7 +27,13 @@ import {
   publicPhotoStatus,
   publiclyVisibleEntry,
 } from "../safety";
-import { classifierFromEnv, screenPhoto, type Classify } from "../safety";
+import {
+  classifierFromEnv,
+  enqueueForReview,
+  removedMatchOf,
+  screenPhoto,
+  type Classify,
+} from "../safety";
 
 export const MAX_PHOTOS_PER_ENTRY = 4;
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
@@ -127,7 +133,7 @@ export async function uploadPhoto(
   await env.MEDIA.put(key, stored, {
     httpMetadata: { contentType: "image/jpeg" },
   });
-  await database.insert(entryPhotos).values({
+  const wasHeld = await wasStoredHeld(database, {
     id: photoId,
     entryId: input.entryId,
     photoKey: key,
@@ -135,6 +141,9 @@ export async function uploadPhoto(
     idempotencyKey: input.idempotencyKey,
     fingerprint,
   });
+  // A held photo waits for a person, not the classifier: Approve sends it
+  // back to `pending`, and the screening-retry sweep screens it then.
+  if (wasHeld) return key;
 
   // Screened inline rather than after responding, because the packet's
   // common path is "pass -> visible immediately" and a photo that appears
@@ -154,6 +163,35 @@ export async function uploadPhoto(
   );
 
   return key;
+}
+
+/**
+ * Writes the photo's row, held for review when it is a copy of an image
+ * removed as intimate (D-147, design 152): hidden from everyone but its
+ * owner, as a classifier flag is, with a Review row in the same batch.
+ * Returns whether it was held. The match is read first, since a batch
+ * cannot branch on its own results.
+ */
+async function wasStoredHeld(
+  database: ReturnType<typeof db>,
+  row: typeof entryPhotos.$inferInsert & { fingerprint: string },
+): Promise<boolean> {
+  const match = await removedMatchOf(database, row.fingerprint);
+  if (match === undefined) {
+    await database.insert(entryPhotos).values(row);
+    return false;
+  }
+  await database.batch([
+    database
+      .insert(entryPhotos)
+      .values({ ...row, screenStatus: "hidden_pending_review" }),
+    enqueueForReview(database, {
+      subjectType: "photo",
+      subjectId: row.id,
+      source: "fingerprint",
+    }),
+  ]);
+  return true;
 }
 
 /**
