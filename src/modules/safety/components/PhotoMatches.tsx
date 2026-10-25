@@ -73,7 +73,7 @@ function Matches({ found }: Readonly<{ found: Found }>): JSX.Element {
           </span>
           <span data-part="match-distance" className="text-quiet uppercase">
             <Mono step="xs">{distanceLabel(match.distance)}</Mono>
-            {isPrivate(match) ? (
+            {match.isPrivate ? (
               <>
                 {" · "}
                 <Bracketed>private</Bracketed>
@@ -92,13 +92,6 @@ How near, as the tile says it: "same" at 0, the bits otherwise.
 */
 function distanceLabel(distance: number): string {
   return distance === 0 ? "same" : bitsLabel(distance);
-}
-
-/**
-A kit not shared with runners — which a garment, never shown, is not asked.
-*/
-function isPrivate(match: PhotoMatch): boolean {
-  return match.kind === "kit" && match.isPrivate;
 }
 
 /**

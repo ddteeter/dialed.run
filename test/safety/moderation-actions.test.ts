@@ -609,10 +609,19 @@ describe("a kit's removal tells its photos' reporters (R-162 b)", () => {
     ]);
   });
 
-  it("tells a photo's reporter nothing when only another photo goes", async () => {
-    const { photoId } = await postedPhoto();
-    const other = await postedPhoto();
-    const reporterId = await reportedPhoto(other.photoId);
+  it("tells a photo's reporter nothing when only another photo on the kit goes", async () => {
+    const { entryId, photoId } = await postedPhoto();
+    const otherId = newUlid();
+    await core()
+      .insert(entryPhotos)
+      .values({
+        id: otherId,
+        entryId,
+        photoKey: `entries/x/${entryId}/${otherId}`,
+        position: 1,
+        screenStatus: "pass",
+      });
+    const reporterId = await reportedPhoto(otherId);
 
     await moderateContent(
       core(),

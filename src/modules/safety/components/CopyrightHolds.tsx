@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { JSX, ReactNode } from "react";
 
 import type { z } from "zod";
@@ -342,14 +342,15 @@ function CaseOver({
   onSaid: (sentence: string) => void;
 }>): JSX.Element {
   const [asking, setAsking] = useState<CaseEnd | undefined>();
-  const returnTo = useReturnFocus(asking);
+  // The press Not yet came back from, which takes focus when drawn.
+  const [back, setBack] = useState<CaseEnd | undefined>();
   if (asking === undefined) {
     return (
       <span data-part="case-over" className="flex flex-wrap gap-4">
         {CASE_ENDS.map((end) => (
           <button
             key={end}
-            ref={returnTo.refFor(end)}
+            ref={end === back ? focusOn : undefined}
             type="button"
             className={PRESS_CLASS}
             onClick={() => {
@@ -386,7 +387,7 @@ function CaseOver({
             type="button"
             className={NOT_YET_CLASS}
             onClick={() => {
-              returnTo.mark(asking);
+              setBack(asking);
               setAsking(undefined);
             }}
           >
@@ -399,26 +400,11 @@ function CaseOver({
 }
 
 /**
- * Focus back on the press that asked, once Not yet has put the pair
- * back: marked when Not yet is pressed, then moved when the pair is drawn.
+ * Focus on the press Not yet returned to (round 39 #73), as the pair is
+ * drawn again: the ref is attached to that one press only.
  */
-function useReturnFocus(asking: CaseEnd | undefined): {
-  refFor: (end: CaseEnd) => (element: HTMLButtonElement | null) => void;
-  mark: (end: CaseEnd) => void;
-} {
-  const presses = useRef(new Map<CaseEnd, HTMLButtonElement>());
-  const [back, setBack] = useState<CaseEnd | undefined>();
-  useEffect(() => {
-    if (asking !== undefined || back === undefined) return;
-    presses.current.get(back)?.focus();
-    setBack(undefined);
-  }, [asking, back]);
-  return {
-    refFor: (end) => (element) => {
-      if (element !== null) presses.current.set(end, element);
-    },
-    mark: setBack,
-  };
+function focusOn(element: HTMLButtonElement | null): void {
+  element?.focus();
 }
 
 /**

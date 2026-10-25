@@ -127,10 +127,6 @@ interface Target {
   */
   runId: string;
   photoKeys: readonly string[];
-  /**
-  The photos on the entry in scope, whose reporters a kit's removal tells.
-  */
-  photoIds: readonly string[];
 }
 
 async function targetOf(
@@ -152,7 +148,6 @@ async function targetOf(
     entryId: first.entryId,
     runId: first.runId,
     photoKeys: rows.flatMap((row) => row.photoKey ?? []),
-    photoIds: rows.flatMap((row) => row.photoId ?? []),
   };
 }
 
@@ -164,7 +159,6 @@ const targetColumns = {
   entryId: outfitEntries.id,
   runId: outfitEntries.runId,
   photoKey: entryPhotos.photoKey,
-  photoId: entryPhotos.id,
 };
 
 /**
@@ -413,7 +407,7 @@ export async function moderateContent(
               "removed",
             )),
             ...(input.subjectType === "entry"
-              ? await photoReporterNotices(db, target.photoIds)
+              ? await photoReporterNotices(db, target.entryId)
               : []),
           ],
         };

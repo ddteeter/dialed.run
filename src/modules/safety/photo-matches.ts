@@ -61,8 +61,12 @@ export type PhotoMatch = Readonly<
     distance: number;
     ownerId: string;
     handle: string | undefined;
+    /**
+    A kit not shared with runners; a garment, never shown to anyone, is not tagged.
+    */
+    isPrivate: boolean;
   } & (
-    | { kind: "kit"; entryId: string; canOpen: boolean; isPrivate: boolean }
+    | { kind: "kit"; entryId: string; canOpen: boolean }
     | { kind: "garment"; canOpen: false }
   )
 >;
@@ -126,6 +130,7 @@ async function search(
     ...garments.map((row) => ({
       kind: "garment" as const,
       canOpen: false as const,
+      isPrivate: false,
       ...row,
       handle: row.handle ?? undefined,
     })),

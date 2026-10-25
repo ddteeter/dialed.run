@@ -9,7 +9,7 @@
  * **Suspected CSAM is silent** (D-70): a quarantine owes none of these,
  * which its callers decide by never asking for one.
  */
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { drizzle } from "drizzle-orm/d1";
 
@@ -167,24 +167,26 @@ export async function reporterNotices(
 /**
  * The reporters of the photos on a kit the Desk removed (R-162 b; owner,
  * 2026-10-24): what they reported went with the kit, so each is told
- * "We removed what you reported." of the photo they reported. One read
- * on `reports_subject`, and once per reporter and photo, as above.
+ * "We removed what you reported." of the photo they reported. Read before
+ * the batch deletes the photos: the kit's photos (`entry_photos_idempotency`
+ * prefix), each joined to its reports (`reports_subject`). Once per
+ * reporter and photo, as above.
  */
 export async function photoReporterNotices(
   db: Db,
-  photoIds: readonly string[],
+  entryId: string,
 ): Promise<BatchItem<"sqlite">[]> {
-  // A kit with no photos asks for none: drizzle's `inArray` of nothing is
-  // `false`, so the read matches nothing rather than failing.
   const reported = await db
     .select({ userId: reports.reporterId, subjectId: reports.subjectId })
     .from(reports)
-    .where(
+    .innerJoin(
+      entryPhotos,
       and(
         eq(reports.subjectType, "photo"),
-        inArray(reports.subjectId, [...photoIds]),
+        eq(reports.subjectId, entryPhotos.id),
       ),
-    );
+    )
+    .where(eq(entryPhotos.entryId, entryId));
   return reported.map(({ userId, subjectId }) =>
     notificationInsert(db, {
       userId,

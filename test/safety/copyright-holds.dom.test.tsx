@@ -130,6 +130,7 @@ describe("CopyrightHolds", () => {
     );
 
     expect(screen.queryByRole("heading")).toBeNull();
+    expect(part("copyright-holds")).toBeNull();
   });
 
   it("records a counter-notice, then offers the court action", async () => {
@@ -323,8 +324,25 @@ describe("CopyrightHolds", () => {
       });
       expect(screen.getAllByRole("button")).toHaveLength(2);
       expect(act).not.toHaveBeenCalled();
+      // Asked again, it confirms again: the pair is the same press.
+      await user.click(screen.getByRole("button", { name: label }));
+      expect(screen.getByRole("alertdialog", { name: question })).toBeVisible();
+      expect(screen.getByRole("button", { name: "Not yet" })).toHaveClass(
+        "target",
+        "border-hairline",
+      );
     },
   );
+
+  it("draws the pair as the Desk's presses, focusing neither until asked", () => {
+    renderHolds(inCourt());
+    for (const label of ["Case over: delete", "Case over: restore"]) {
+      const press = screen.getByRole("button", { name: label });
+      expect(press).toHaveClass("target", "bg-action");
+      expect(press).toHaveAttribute("type", "button");
+      expect(press).not.toHaveFocus();
+    }
+  });
 
   it.each([
     ["Case over: delete", "Delete it"],

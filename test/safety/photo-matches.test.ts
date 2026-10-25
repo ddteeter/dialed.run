@@ -162,6 +162,7 @@ describe("photoMatchesOf", () => {
         distance: 3,
         ownerId: closetOwner,
         handle: undefined,
+        isPrivate: false,
       },
       {
         kind: "kit",

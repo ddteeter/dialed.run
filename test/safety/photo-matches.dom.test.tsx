@@ -53,6 +53,7 @@ const MATCHES: readonly PhotoMatch[] = [
     distance: 5,
     ownerId: "u-kim",
     handle: undefined,
+    isPrivate: false,
   },
 ];
 
@@ -143,6 +144,7 @@ describe("PhotoMatches", () => {
               distance: 1,
               ownerId: "u-kim",
               handle: undefined,
+              isPrivate: false,
             },
           ],
         }}
