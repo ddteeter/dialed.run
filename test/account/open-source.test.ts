@@ -56,9 +56,25 @@ describe("openSourceList", () => {
   it("reads the list the build wrote", () => {
     const list = openSourceList();
     expect(list.packages.length).toBeGreaterThan(100);
-    expect(list.type.map((piece) => piece.name)).toEqual([
-      "Archivo, Archivo Black",
-      "IBM Plex Mono",
+    expect(list.type).toEqual([
+      {
+        name: "Archivo",
+        licence: "OFL-1.1",
+        copyright: "2020 The Archivo Project Authors",
+        project: "https://github.com/Omnibus-Type/Archivo",
+      },
+      {
+        name: "Archivo Black",
+        licence: "OFL-1.1",
+        copyright: "2017 The Archivo Black Project Authors",
+        project: "https://github.com/Omnibus-Type/ArchivoBlack",
+      },
+      {
+        name: "IBM Plex Mono",
+        licence: "OFL-1.1",
+        copyright: '2017 IBM Corp. with Reserved Font Name "Plex"',
+        project: "https://github.com/IBM/plex",
+      },
     ]);
   });
 

@@ -1,10 +1,16 @@
 {
   "type": [
     {
-      "name": "Archivo, Archivo Black",
+      "name": "Archivo",
       "licence": "OFL-1.1",
       "copyright": "2020 The Archivo Project Authors",
       "project": "https://github.com/Omnibus-Type/Archivo"
+    },
+    {
+      "name": "Archivo Black",
+      "licence": "OFL-1.1",
+      "copyright": "2017 The Archivo Black Project Authors",
+      "project": "https://github.com/Omnibus-Type/ArchivoBlack"
     },
     {
       "name": "IBM Plex Mono",
@@ -1070,7 +1076,7 @@
     },
     {
       "name": "@types/node",
-      "version": "22.20.1",
+      "version": "24.19.2",
       "licence": "MIT",
       "project": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node"
     },
@@ -1192,6 +1198,12 @@
       "version": "6.34.0",
       "licence": "ISC",
       "project": "https://knip.dev"
+    },
+    {
+      "name": "lockfile-lint",
+      "version": "5.1.0",
+      "licence": "Apache-2.0",
+      "project": "https://github.com/lirantal/lockfile-lint/tree/master/packages/lockfile-lint"
     },
     {
       "name": "normalize-package-data",
