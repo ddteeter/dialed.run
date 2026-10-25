@@ -174,7 +174,7 @@ The line under a heading that is not a licence's.
 */
 const GROUP_LINES = {
   type: {
-    text: "The two typefaces you read everything in.",
+    text: "The typefaces you read everything in.",
     className: "text-body",
   },
   // Round 40 #82: TYPE.small in --quiet.
