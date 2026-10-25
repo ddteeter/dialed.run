@@ -3,12 +3,13 @@ import type { JSX, ReactNode } from "react";
 
 import {
   ControlFailureBand,
+  FailureBand,
   FormStatus,
   PendingLabel,
   inFlight,
   useControlAction,
 } from "../../../ui";
-import type { ControlAction } from "../../../ui";
+import type { ControlAction, ControlFailure } from "../../../ui";
 
 /**
  * "Keep your account?" (ACC-9) and "Accept the terms" (ACC-6) are the same
@@ -36,30 +37,48 @@ export function useLogOutAction(
   return useControlAction<[]>({ action: logOut, kicker: "Still logged in" });
 }
 
+type ActionCardProps = Readonly<{
+  primary: ControlAction<[]>;
+  primaryLabel: string;
+  primaryPendingLabel: string;
+  logOut: ControlAction<[]>;
+  refusal?: ControlFailure | undefined;
+  children: ReactNode;
+}>;
+
 /**
  * The ask-state card: one status region for both actions, the page's own
  * lead copy as `children`, a failure band for each action, then the primary
  * button and Log out. `primary` and `logOut` are each a `ControlAction`, so
  * neither page hand-rolls the pending label, the failure band or the
  * re-entry guard twice.
+ *
+ * `refusal` is the primary action answered for good: the §4a band in its
+ * place with no Try again, because pressing it again can only say the
+ * same, and the button leaves (round 40 C1, Keep after the purge began).
+ * Log out stays.
  */
 export function ActionCard({
   primary,
   primaryLabel,
   primaryPendingLabel,
   logOut,
+  refusal,
   children,
-}: Readonly<{
-  primary: ControlAction<[]>;
-  primaryLabel: string;
-  primaryPendingLabel: string;
-  logOut: ControlAction<[]>;
-  children: ReactNode;
-}>): JSX.Element {
+}: ActionCardProps): JSX.Element {
+  const refused =
+    refusal === undefined ? "" : `${refusal.kicker}. ${refusal.message}`;
   return (
     <div data-part="landing" data-state="ask" className="flex flex-col gap-6">
-      <FormStatus>{primary.status || logOut.status}</FormStatus>
+      <FormStatus>{primary.status || logOut.status || refused}</FormStatus>
       {children}
+      {refusal === undefined ? undefined : (
+        <FailureBand
+          kicker={refusal.kicker}
+          message={refusal.message}
+          state="refused"
+        />
+      )}
       <ControlFailureBand
         failure={primary.failure}
         onRetry={primary.retry}
@@ -71,11 +90,13 @@ export function ActionCard({
         retryRef={logOut.retryRef}
       />
       <div className="flex flex-wrap items-center gap-4">
-        <ActionPill
-          action={primary}
-          label={primaryLabel}
-          pendingLabel={primaryPendingLabel}
-        />
+        {refusal === undefined ? (
+          <ActionPill
+            action={primary}
+            label={primaryLabel}
+            pendingLabel={primaryPendingLabel}
+          />
+        ) : undefined}
         <ActionPill
           action={logOut}
           label="Log out"

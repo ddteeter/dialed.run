@@ -231,15 +231,36 @@ describe("DeleteAccount (U1's last row)", () => {
     expect(onScheduled).not.toHaveBeenCalled();
   });
 
-  it("opens the sheet again on the way back from Google", async () => {
-    const { view } = deleteRow({
+  it("opens the sheet again on the way back from Google, quiet, on Delete my account", async () => {
+    const { view, user, request, onScheduled } = deleteRow({
       hasPassword: false,
       isReturningFromGoogle: true,
     });
     await view;
+    const sheet = screen.getByRole("dialog", { name: "Delete your account?" });
+    // Round 40 C1: a fresh sign-in proves who you are, not that you still
+    // mean it — so the press is the runner's to make, and nothing is said.
+    await waitFor(() => {
+      expect(
+        within(sheet).getByRole("button", { name: "Delete my account" }),
+      ).toHaveFocus();
+    });
+    expect(within(sheet).getByRole("status")).toHaveTextContent(/^$/u);
+    expect(within(sheet).queryByText(DELETION_NEEDS_GOOGLE)).toBeNull();
     expect(
-      screen.getByRole("dialog", { name: "Delete your account?" }),
-    ).toBeInTheDocument();
+      within(sheet).queryByRole("button", { name: "Continue with Google" }),
+    ).toBeNull();
+    expect(request).not.toHaveBeenCalled();
+    expect(onScheduled).not.toHaveBeenCalled();
+    // Closed and opened again from the row, it is the ordinary confirm.
+    await user.click(within(sheet).getByRole("button", { name: "Keep it" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    const again = await openSheet(user);
+    await waitFor(() => {
+      expect(
+        within(again).getByRole("button", { name: "Keep it" }),
+      ).toHaveFocus();
+    });
   });
 });
 
@@ -321,7 +342,7 @@ describe("Leaving (round 27 #14)", () => {
       ),
     ).toHaveClass("text-small", "text-muted");
     // Nothing is too late until Keep has been pressed and said so.
-    expect(screen.queryByText(TOO_LATE)).toBeNull();
+    expect(screen.queryByText(TOO_LATE.message)).toBeNull();
     // Keep is the primary answer, Log out the secondary one.
     expect(screen.getByRole("button", { name: "Keep my account" })).toHaveClass(
       "target",
@@ -342,22 +363,68 @@ describe("Leaving (round 27 #14)", () => {
     });
     expect(keep).toHaveBeenCalledTimes(1);
     expect(logOut).not.toHaveBeenCalled();
-    expect(screen.queryByText(TOO_LATE)).toBeNull();
+    expect(screen.queryByText(TOO_LATE.message)).toBeNull();
   });
 
-  it("says so when the purge has already begun, and stays", async () => {
-    const { rendered, user, onKept } = leaving(
+  it("says NOT KEPT in Keep's place when the purge has already begun, and Log out stays", async () => {
+    const { rendered, user, onKept, keep, logOut } = leaving(
       { state: "ask", day: "Sat, Oct 4" },
       "too-late",
     );
     await rendered;
     await user.click(screen.getByRole("button", { name: "Keep my account" }));
-    expect(await screen.findByText(TOO_LATE)).toHaveAttribute(
-      "data-state",
-      "too-late",
+    // Round 40 C1: the §4a band, with no Try again — pressing again can
+    // only say this again — and Keep leaves.
+    const message = await screen.findByText(
+      "Your account is already being deleted. It can't be kept now.",
     );
-    expect(TOO_LATE).toBe("Your account is already being deleted.");
+    const band = message.closest("[data-part='failure-band']");
+    expect(band).toHaveAttribute("data-state", "refused");
+    expect(band).toContainElement(screen.getByText("Not kept"));
+    expect(screen.getByText("Not kept")).toHaveClass("text-mono-xs");
+    expect(TOO_LATE).toEqual({
+      kicker: "Not kept",
+      message: "Your account is already being deleted. It can't be kept now.",
+    });
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Keep my account" }),
+    ).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Not kept. Your account is already being deleted. It can't be kept now.",
+    );
+    // Both pages keep the signed-out panel and DELETION SCHEDULED.
+    expect(screen.getByText("Deletion scheduled")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Keep your account?" }),
+    ).toBeInTheDocument();
     expect(onKept).not.toHaveBeenCalled();
+    expect(keep).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("button", { name: "Log out" }));
+    await waitFor(() => {
+      expect(logOut).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("says a failed Log out after NOT KEPT, not the refusal again", async () => {
+    await renderWithRouter(
+      <Leaving
+        view={{ state: "ask", day: "Sat, Oct 4" }}
+        keep={() => Promise.resolve("too-late")}
+        logOut={() => Promise.reject(new Error("down"))}
+        onKept={() => Promise.resolve()}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Keep my account" }));
+    await screen.findByText("Not kept");
+    await user.click(screen.getByRole("button", { name: "Log out" }));
+    expect(await screen.findByText("Still logged in")).toBeInTheDocument();
+    // The newest failure is the one the status says; the band stays.
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /^Still logged in\. /u,
+    );
+    expect(screen.getByText("Not kept")).toBeInTheDocument();
   });
 
   it("logs out and leaves the date as it was", async () => {
