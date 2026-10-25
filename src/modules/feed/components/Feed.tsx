@@ -210,16 +210,21 @@ function FollowingTab({
       {compact === undefined ? undefined : (
         <CompactConditions result={compact} units={units} />
       )}
-      {items.map((item) => (
-        <PostCard
-          key={item.entryId}
-          item={item}
-          units={units}
-          now={now}
-          setUseful={setUseful}
-          onStatus={setStatus}
-        />
-      ))}
+      {/* Round 40 C5b: posts are divided by a 1px hairline across the
+          column, never a gutter, and each keeps SPACE[4] above and below
+          (PostCard's own `py-4`). */}
+      <div data-part="posts" className="flex flex-col divide-y divide-hairline">
+        {items.map((item) => (
+          <PostCard
+            key={item.entryId}
+            item={item}
+            units={units}
+            now={now}
+            setUseful={setUseful}
+            onStatus={setStatus}
+          />
+        ))}
+      </div>
     </div>
   );
 }

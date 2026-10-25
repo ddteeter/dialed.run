@@ -53,7 +53,7 @@ export function PostCard(props: Readonly<PostCardProps>) {
     <article
       data-part="post"
       data-state={photo === undefined ? "no-photo" : "with-photo"}
-      className="flex flex-col gap-3 border-b border-hairline pb-5"
+      className="flex flex-col gap-3 py-4"
     >
       <Link
         to="/feed/entry/$entryId"
