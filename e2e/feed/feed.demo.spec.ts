@@ -16,7 +16,8 @@
  * unconfirmed runner nobody can find in search (D-113 Q2), and a runner
  * taking back their own entry — one photo by the remove glyph on it, then
  * the whole entry from under YOURS (task 128 · SAF-3; round 27 #26) — one
- * journey, one video.
+ * journey, one video. Posts are divided by a hairline, not a gutter
+ * (round 40 C5b).
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
@@ -485,11 +486,9 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     ).toHaveText("Dialed");
     await expect(page.getByText("43–57° · light rain")).toBeVisible();
     await expect(
-      page
-        .locator('[data-part="run-strip"]')
-        .getByRole("link", {
-          name: "Weather data provided by Visual Crossing",
-        }),
+      page.locator('[data-part="run-strip"]').getByRole("link", {
+        name: "Weather data provided by Visual Crossing",
+      }),
     ).toBeVisible();
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
       "content",
@@ -723,6 +722,21 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     );
     await page.goto("/feed");
     await hydrated(page);
+    // Round 40 C5b: no gutter between posts — a 1px hairline, and each
+    // post keeps SPACE[4] above and below. Read as the browser drew it,
+    // so a class Tailwind did not generate fails here.
+    const posts = page.locator('[data-part="posts"] > [data-part="post"]');
+    await expect(posts.nth(1)).toBeVisible();
+    await posts.nth(1).scrollIntoViewIfNeeded();
+    // The rule is drawn under every post but the last (`divide-y`).
+    const drawn = await posts.first().evaluate((post) => {
+      const style = getComputedStyle(post);
+      return {
+        rule: `${style.borderBottomWidth} ${style.borderBottomStyle}`,
+        padding: `${style.paddingTop} ${style.paddingBottom}`,
+      };
+    });
+    expect(drawn).toEqual({ rule: "1px solid", padding: "16px 16px" });
     const ownCard = page.locator('[data-part="post"]').filter({
       hasText: "Two photos, one too many",
     });
