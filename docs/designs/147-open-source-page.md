@@ -1,3 +1,6 @@
+> **Superseded in part by design 151:** the list is now read from the
+> bundles' licence reports, not the lockfile, and gains a "Tools we build with" tier.
+
 # Design: 147 The app's `/open-source` page (plan C9)
 
 ## Problem

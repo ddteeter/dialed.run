@@ -1021,6 +1021,34 @@ entries for them when it merges.
     breaks."; the ten rule names verbatim, a hairline, then "Suspected
     CSAM (the notice names no rule)".
 
+82. **`/open-source`'s "Built with" tier (design 151).** **ANSWERED by
+    round 40 (#82) and built:** "Tools we build with" (the old heading
+    collided with the page title), last on the page after Third-party
+    notices and last in the contents; the count "44 · NOT SHIPPED" in
+    MONO.sm; the line "We build and test dialed.run with these. None of
+    them ships in the app, so each is credited by name and licence." in
+    TYPE.small, --quiet; a row's licence id in MONO.xs in the copyright
+    line's slot; and the empty search "Nothing we ship or build with is
+    called “xyz”." Round 40 also names MONO.sm for a group's count and a
+    row's version "as a group's" and "as shipped rows"; the built groups
+    drew them at MONO.xs and MONO.md, so they moved to MONO.sm with it.
+    What follows is the ask as sent. The list is now what the two bundles hold (136
+    packages, not the lockfile's 272), and the owner asked that the tools
+    which build the app without shipping in it be credited too. They get
+    one more section after the licence groups and before the third-party
+    notices, built from a group's parts with nothing new: the heading
+    "Built with", its count in MONO.xs, the line "The tools we build and
+    test dialed.run with. None of them ships to you, so each is credited
+    by name and licence.", and a row per tool — name, version, its
+    licence id in MONO.xs, "Project" — with three rows then "Show all
+    {N}", in the contents with its count, and found by FIND A PACKAGE.
+    No licence text and no copyright line: a licence asks for those only
+    on a copy distributed. The lead's {N} still counts only what ships.
+    The bundle-derived list also changes item 72's numbers: 5 rows carry
+    their own "Licence", not 18, and the AGPL group is gone (nothing
+    bundled is AGPL). **The ask:** draw the tier, and give the line its
+    words — they are placeholder words the owner has not yet seen.
+
 ## Answered in round 38 (imported 2026-10-18)
 
 Sent on 2026-10-18 for items 60–65; design answered the same day as
