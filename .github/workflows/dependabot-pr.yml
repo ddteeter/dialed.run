@@ -164,7 +164,7 @@ jobs:
       # The answer leaves as structured output, which `post` screens.
       # `show_full_output` stays off: these logs are public.
       - id: claude
-        uses: anthropics/claude-code-action@f27be6b65a4652f08a2ba3cff79114829b588967 # v1.0.252
+        uses: anthropics/claude-code-action@5eb090f3c3afd701a0672cd32981197ca27688f6 # v1.0.253
         env:
           GH_TOKEN: ${{ github.token }}
           CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
