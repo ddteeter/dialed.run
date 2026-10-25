@@ -933,7 +933,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
-45. **"A copy of an image removed as intimate" on Review (D-147, design
+83. **"A copy of an image removed as intimate" on Review (D-147, design
     152). Undesigned; built as a placeholder.** A kit photo whose
     fingerprint is within 8 bits of one removed as intimate is held and
     lands on Review with the source `[fingerprint]`. Under the photo, one
@@ -943,7 +943,7 @@ bits` apart.", the date and distance in MONO.xs. The row also carries
     glyph or colour. **The ask:** draw the line, and say whether the
     source tag should read something kinder than `[fingerprint]`.
 
-46. **Where else to go, on the removal receipts (D-147, design 152).
+84. **Where else to go, on the removal receipts (D-147, design 152).
     Undesigned copy on drawn screens.** The `/takedown` receipt ("We have
     your request"), its confirm page, and the report sheet's intimate-image
     branch gain one quiet line: "If it may be on other sites too,
@@ -1046,7 +1046,7 @@ entries for them when it merges.
     option's words. **Not built yet:** the hairline, which the shared
     `ChoiceField` select does not draw.
 
-77. **`/open-source`'s "Built with" tier (design 151).** **ANSWERED by
+82. **`/open-source`'s "Built with" tier (design 151).** **ANSWERED by
     round 40 (#82) and built:** "Tools we build with" (the old heading
     collided with the page title), last on the page after Third-party
     notices and last in the contents; the count "44 · NOT SHIPPED" in
