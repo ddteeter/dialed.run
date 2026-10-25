@@ -30,7 +30,9 @@ how to stop it spreading elsewhere.
    no photo goes without its hash being kept.
 2. **Check:** `feed/photos.ts` `uploadPhoto`, after the row insert and
    before screening: a read of `removed_fingerprints` within
-   `FINGERPRINT_MATCH_DISTANCE`, using design 146's `distanceSql` (moved to
+   `FINGERPRINT_MATCH_DISTANCE`, **read from the primary** (an operator's
+   write, which the uploader's bookmark does not cover), using design
+   146's `distanceSql` (moved to
    `lib/sql/` so feed and safety share it). On a match, one batch sets
    `screen_status = 'hidden_pending_review'` and enqueues a Review row with
    `source: 'fingerprint'`. Screening only writes over `pending`, so a

@@ -8,7 +8,7 @@
 import { and, eq, ne, or } from "drizzle-orm";
 
 import { entryPhotos, outfitEntries } from "../../db/schema-core";
-import { coreDb, env } from "../../env";
+import { coreDb, env, primaryCoreDb } from "../../env";
 import { firstColumnWhere } from "../../lib/sql/keyed-read";
 import { newUlid } from "../../lib/ids";
 import { isAllowedPhotoType } from "../../lib/photo-constraints";
@@ -176,7 +176,11 @@ async function wasStoredHeld(
   database: ReturnType<typeof db>,
   row: typeof entryPhotos.$inferInsert & { fingerprint: string },
 ): Promise<boolean> {
-  const match = await removedMatchOf(database, row.fingerprint);
+  // From the primary (design 143): what was kept is an operator's write,
+  // not this runner's, so the session's bookmark does not promise a replica
+  // has it. Read from one, a copy posted seconds after its takedown would
+  // miss the check and go to the classifier as any photo does.
+  const match = await removedMatchOf(primaryCoreDb(), row.fingerprint);
   if (match === undefined) {
     await database.insert(entryPhotos).values(row);
     return false;
