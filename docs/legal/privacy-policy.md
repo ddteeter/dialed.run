@@ -214,7 +214,10 @@ never shown to other runners.
   pattern of light and dark, from which the photo cannot be rebuilt. It is
   kept with the photo and deleted with it. We use it only to find copies
   of a photo that was reported or that someone asked us to remove, across
-  every runner's photos, private ones included.
+  every runner's photos, private ones included. One exception: when we
+  remove a photo as an intimate image shared without consent, we keep its
+  fingerprint for 3 years, so that if the same image is uploaded again it
+  is hidden until a person reviews it.
 
 ## What other people can see
 
@@ -526,6 +529,7 @@ any differently.
 | Garments you delete                                                           | Deleted with their photo files. A garment you wore leaves those kits                                                              |
 | Runs, kits and kit photos you delete                                          | Deleted with their files                                                                                                          |
 | Photo fingerprints                                                            | Deleted with the photo. A locked copy of suspected child sexual abuse material keeps its own, as long as the copy                 |
+| Fingerprints of photos we removed as intimate images shared without consent   | 3 years after the removal, then deleted                                                                                           |
 | Your account, when you delete it                                              | Hidden at once; everything below deleted 7 days later (see [Your choices](#your-choices))                                         |
 | Suspected child sexual abuse material we removed                              | One year after we report it to NCMEC, then deleted, unless the law or law enforcement requires longer                             |
 | Usernames you have used                                                       | For good, so nobody else can take them                                                                                            |

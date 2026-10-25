@@ -8,7 +8,7 @@
 import { and, eq, ne, or } from "drizzle-orm";
 
 import { entryPhotos, outfitEntries } from "../../db/schema-core";
-import { coreDb, env } from "../../env";
+import { coreDb, env, primaryCoreDb } from "../../env";
 import { firstColumnWhere } from "../../lib/sql/keyed-read";
 import { newUlid } from "../../lib/ids";
 import { isAllowedPhotoType } from "../../lib/photo-constraints";
@@ -27,7 +27,13 @@ import {
   publicPhotoStatus,
   publiclyVisibleEntry,
 } from "../safety";
-import { classifierFromEnv, screenPhoto, type Classify } from "../safety";
+import {
+  classifierFromEnv,
+  enqueueForReview,
+  removedMatchOf,
+  screenPhoto,
+  type Classify,
+} from "../safety";
 
 export const MAX_PHOTOS_PER_ENTRY = 4;
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
@@ -127,7 +133,7 @@ export async function uploadPhoto(
   await env.MEDIA.put(key, stored, {
     httpMetadata: { contentType: "image/jpeg" },
   });
-  await database.insert(entryPhotos).values({
+  const wasHeld = await wasStoredHeld(database, {
     id: photoId,
     entryId: input.entryId,
     photoKey: key,
@@ -135,6 +141,9 @@ export async function uploadPhoto(
     idempotencyKey: input.idempotencyKey,
     fingerprint,
   });
+  // A held photo waits for a person, not the classifier: Approve sends it
+  // back to `pending`, and the screening-retry sweep screens it then.
+  if (wasHeld) return key;
 
   // Screened inline rather than after responding, because the packet's
   // common path is "pass -> visible immediately" and a photo that appears
@@ -154,6 +163,39 @@ export async function uploadPhoto(
   );
 
   return key;
+}
+
+/**
+ * Writes the photo's row, held for review when it is a copy of an image
+ * removed as intimate (D-147, design 152): hidden from everyone but its
+ * owner, as a classifier flag is, with a Review row in the same batch.
+ * Returns whether it was held. The match is read first, since a batch
+ * cannot branch on its own results.
+ */
+async function wasStoredHeld(
+  database: ReturnType<typeof db>,
+  row: typeof entryPhotos.$inferInsert & { fingerprint: string },
+): Promise<boolean> {
+  // From the primary (design 143): what was kept is an operator's write,
+  // not this runner's, so the session's bookmark does not promise a replica
+  // has it. Read from one, a copy posted seconds after its takedown would
+  // miss the check and go to the classifier as any photo does.
+  const match = await removedMatchOf(primaryCoreDb(), row.fingerprint);
+  if (match === undefined) {
+    await database.insert(entryPhotos).values(row);
+    return false;
+  }
+  await database.batch([
+    database
+      .insert(entryPhotos)
+      .values({ ...row, screenStatus: "hidden_pending_review" }),
+    enqueueForReview(database, {
+      subjectType: "photo",
+      subjectId: row.id,
+      source: "fingerprint",
+    }),
+  ]);
+  return true;
 }
 
 /**

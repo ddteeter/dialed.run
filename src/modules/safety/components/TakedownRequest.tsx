@@ -18,6 +18,7 @@ import {
 } from "../../../ui";
 import { SignedOutPanel, SignedOutReceipt } from "../../../ui/SignedOutPanel";
 import type { TakedownRequestResult } from "../takedown-requests";
+import { ElsewhereHelp } from "./ElsewhereHelp";
 
 /**
  * The statement the requester confirms: the Act's good-faith statement,
@@ -212,6 +213,7 @@ function Receipt({ email }: Readonly<{ email: string }>): JSX.Element {
         a receipt to <strong>{email}</strong>, and we&apos;ll email you the
         outcome.
       </p>
+      <ElsewhereHelp />
     </SignedOutReceipt>
   );
 }

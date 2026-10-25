@@ -19,6 +19,7 @@ import { reportReasonLabels, reportReasons } from "../contracts";
 import type { ReportReason, ReportSubjectType } from "../contracts";
 import { fileReportInput } from "../inputs";
 import type { FileReportResult } from "../reports";
+import { ElsewhereHelp } from "./ElsewhereHelp";
 
 /**
  * W1 · REPORT AN ENTRY.
@@ -216,18 +217,7 @@ export function ReportSheet({
             picked — for a runner who'd rather not report from their
             account. Under the list, since a choice takes no hint of its
             own. */}
-        {reason === "intimate" ? (
-          <p data-part="takedown-way-out" className="m-0 text-small">
-            Rather not use your account?{" "}
-            <Link
-              to="/takedown"
-              data-target="inline"
-              className="font-bold text-ink underline underline-offset-4"
-            >
-              Report it without signing in
-            </Link>
-          </p>
-        ) : undefined}
+        {reason === "intimate" ? <IntimateHelp /> : undefined}
 
         <TextField
           name="note"
@@ -273,5 +263,27 @@ export function ReportSheet({
         )}
       </form>
     </Sheet>
+  );
+}
+
+/**
+ * Under the intimate-image reason: W1's way out (round 37 #58k), and where
+ * else to go for the other sites it may be on (D-147, design 152).
+ */
+function IntimateHelp(): JSX.Element {
+  return (
+    <>
+      <p data-part="takedown-way-out" className="m-0 text-small">
+        Rather not use your account?{" "}
+        <Link
+          to="/takedown"
+          data-target="inline"
+          className="font-bold text-ink underline underline-offset-4"
+        >
+          Report it without signing in
+        </Link>
+      </p>
+      <ElsewhereHelp />
+    </>
   );
 }

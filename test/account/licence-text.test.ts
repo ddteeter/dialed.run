@@ -1,14 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  authorOf,
   bodyOf,
   commonBody,
   cssBanners,
   holderOf,
   holdersOf,
   licenceOf,
-  projectOf,
   sameWords,
   shippedList,
   toolList,
@@ -217,71 +215,6 @@ describe("commonBody", () => {
   });
 });
 
-describe("authorOf", () => {
-  it.each([
-    ["Sindre Sorhus <s@x.y> (https://sindresorhus.com)", "Sindre Sorhus"],
-    [`TJ (${insecure("tj.io")})`, "TJ"],
-    ["Ana <a@x.y> (site) <b@x.y>", "Ana"],
-    [{ name: "Colin McDonnell", email: "c@x.y" }, "Colin McDonnell"],
-    ["  Spaced  ", "Spaced"],
-  ])("reads %j as %j", (author, name) => {
-    expect(authorOf(author)).toBe(name);
-  });
-
-  it.each([
-    ["an address alone", "someone@example.com"],
-    ["an address in brackets alone", "<someone@example.com>"],
-    ["nothing", undefined],
-    ["an object with no name", { email: "a@b.c" }],
-    ["a name that is not text", { name: 3 }],
-    ["null", NULL],
-  ])("finds no name in %s", (_, author) => {
-    expect(authorOf(author)).toBeUndefined();
-  });
-
-  it("keeps a name with an @ in it when it has a space too", () => {
-    expect(authorOf("Team @ Acme")).toBe("Team @ Acme");
-  });
-});
-
-describe("projectOf", () => {
-  it("prefers an https homepage", () => {
-    expect(projectOf("https://react.dev/", "facebook/react")).toBe(
-      "https://react.dev/",
-    );
-  });
-
-  it.each([
-    ["git+https://github.com/a/b.git", "https://github.com/a/b"],
-    ["git://github.com/a/b.git", "https://github.com/a/b"],
-    ["ssh://git@github.com/a/b.git", "https://github.com/a/b"],
-    ["owner/repo", "https://github.com/owner/repo"],
-    ["github:owner/re.po", "https://github.com/owner/re.po"],
-    [{ type: "git", url: "https://gitlab.com/a/b" }, "https://gitlab.com/a/b"],
-  ])("reads a repository %j as %j", (repository, url) => {
-    expect(projectOf(insecure("insecure.example"), repository)).toBe(url);
-  });
-
-  it.each([
-    ["no repository", undefined],
-    ["an http one", insecure("example.com/a")],
-    ["a path deeper than owner/repo", "a/b/c"],
-    ["a file path", "file:../local"],
-    ["an object without a url", { type: "git" }],
-    ["null", NULL],
-    ["a url that is not text", { url: 4 }],
-  ])("gives no link for %s", (_, repository) => {
-    expect(projectOf(undefined, repository)).toBeUndefined();
-  });
-});
-
-describe("projectOf's rewrites", () => {
-  it("rewrites a git prefix or suffix only where it is one", () => {
-    const url = "https://example.com/git+x/git://y/ssh://git@z.git/w";
-    expect(projectOf(undefined, url)).toBe(url);
-  });
-});
-
 describe("licenceOf", () => {
   it("reads an SPDX id as it is", () => {
     expect(licenceOf("react", "MIT")).toBe("MIT");
@@ -320,7 +253,7 @@ describe("shippedList", () => {
         identifier: "Apache-2.0",
         text: "Apache words",
         notice: "  This product includes…\n",
-        author: "Photon Folk <p@x.y>",
+        author: "Photon Folk",
       },
     ]);
     expect(packages).toStrictEqual([
@@ -371,7 +304,7 @@ describe("shippedList", () => {
 
   it("falls back to the author for a file that names no holder, and leaves out an empty notice", () => {
     const [row] = shippedList([
-      { ...MIT("x", PERMISSION), author: { name: "X Person" }, notice: " \n" },
+      { ...MIT("x", PERMISSION), author: "X Person", notice: " \n" },
     ]).packages;
     expect(row).toStrictEqual({
       name: "x",
@@ -379,6 +312,34 @@ describe("shippedList", () => {
       licence: "MIT",
       copyright: "X Person",
     });
+  });
+
+  it.each([
+    ["a bare address", "someone@example.com"],
+    ["an empty name", ""],
+  ])("takes no holder from an author that is %s", (_, author) => {
+    const [row] = shippedList([{ ...MIT("x", PERMISSION), author }]).packages;
+    expect(row).toStrictEqual({ name: "x", version: "1.0.0", licence: "MIT" });
+  });
+
+  it.each([
+    ["with an @ in it when it has a space too", "Team @ Acme"],
+    ["of one word with no @", "Sindresorhus"],
+  ])("keeps an author %s", (_, author) => {
+    const [row] = shippedList([{ ...MIT("x", PERMISSION), author }]).packages;
+    expect(row?.copyright).toBe(author);
+  });
+
+  it.each([
+    ["an http one", insecure("example.com")],
+    ["none", undefined],
+  ])("links no project for a homepage that is %s", (_, homepage) => {
+    const [row] = shippedList([{ ...MIT("x", PERMISSION), homepage }]).packages;
+    expect(row).not.toHaveProperty("project");
+    const [tool] = toolList([
+      { name: "t", version: "1", license: "MIT", homepage },
+    ]);
+    expect(tool).not.toHaveProperty("project");
   });
 
   it("gives a licence no text when no package of it ships one", () => {
@@ -447,7 +408,7 @@ describe("toolList", () => {
           name: "eslint",
           version: "10.0.0",
           license: { type: "MIT" },
-          repository: "eslint/eslint",
+          homepage: "https://eslint.org",
         },
         { name: "tsx", version: "4.0.0", license: "MIT" },
       ]),
@@ -456,7 +417,7 @@ describe("toolList", () => {
         name: "eslint",
         version: "10.0.0",
         licence: "MIT",
-        project: "https://github.com/eslint/eslint",
+        project: "https://eslint.org",
       },
       { name: "tsx", version: "4.0.0", licence: "MIT" },
       {

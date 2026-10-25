@@ -940,7 +940,26 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
-<!-- Item numbers continue past rounds 35–40 (45–76, 82–83); this comment keeps the list from being renumbered. -->
+84. **"A copy of an image removed as intimate" on Review (D-147, design
+    152). Undesigned; built as a placeholder.** A kit photo whose
+    fingerprint is within 8 bits of one removed as intimate is held and
+    lands on Review with the source `[fingerprint]`. Under the photo, one
+    line in BODY: "A copy of an image removed as intimate on `OCT 3`, `3
+bits` apart.", the date and distance in MONO.xs. The row also carries
+    "Their other photos" and "Matching photos" (items 63a and 71). No new
+    glyph or colour. **The ask:** draw the line, and say whether the
+    source tag should read something kinder than `[fingerprint]`.
+
+85. **Where else to go, on the removal receipts (D-147, design 152).
+    Undesigned copy on drawn screens.** The `/takedown` receipt ("We have
+    your request"), its confirm page, and the report sheet's intimate-image
+    branch gain one quiet line: "If it may be on other sites too,
+    StopNCII.org (18 and over) or Take It Down (under 18) can help stop it
+    spreading there. They fingerprint the image on your own device; the
+    image never leaves it." The two names are plain links, opening in a new
+    tab. **The ask:** confirm or reword, and place it on the boards.
+
+<!-- Item numbers continue past rounds 35–40 (45–76, 82–85). Design numbered the Garmin asks 77–81 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
 
 ## Answered in round 40 (imported 2026-10-24)
 

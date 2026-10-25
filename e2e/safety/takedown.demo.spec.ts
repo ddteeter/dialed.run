@@ -4,7 +4,9 @@
  * its receipt, signed out, the kit hidden the moment the request lands —
  * and Review's removal requests, where an operator sees the runner's
  * other photos (D-117, R-145 c) and takes the kit down —
- * then design 137's limits: past two open requests, the next waits for a
+ * then D-147 (design 152): the receipt points to StopNCII and Take It
+ * Down, the takedown keeps the photo's fingerprint, and a copy uploaded
+ * again waits on Review saying what it matched — then design 137's limits: past two open requests, the next waits for a
  * confirm from its receipt, and the operator blocks the requester and
  * declines the rest. One journey, one video.
  *
@@ -25,6 +27,8 @@ import {
   entryPhotos,
   outbox,
   outfitEntries,
+  removedFingerprints,
+  reviewQueue,
   runs,
   takedownBlocks,
   takedownRequests,
@@ -54,6 +58,15 @@ test("someone with no account asks for an intimate image to come down, and an op
   const otherPhotoKey = `entries/${runnerId}/${secondEntryId}/${otherPhotoId}`;
   const requester = `asker-${suffix}@example.com`;
   const now = nowSeconds();
+  // D-147: the first kit's photo, by a fingerprint this run owns, and the
+  // copy of it a runner posts again — one bit apart, as a re-encode is.
+  const firstPhotoId = newUlid();
+  const fingerprint = `${suffix}0f0f0f0f`;
+  const copyFingerprint = `${suffix}0f0f0f0e`;
+  const copyRunId = newUlid();
+  const copyEntryId = newUlid();
+  const copyPhotoId = newUlid();
+  const copyPhotoKey = `entries/${runnerId}/${copyEntryId}/${copyPhotoId}`;
 
   // Earlier runs' requests, by this demo's own address prefix: each one
   // that hid something counts toward the hour's valve (design 137), so a
@@ -96,6 +109,15 @@ test("someone with no account asks for an intimate image to come down, and an op
       verdict: 0,
       audience: "runners",
       createdAt: now - 3600,
+    });
+    // The reported photo on the first kit, fingerprinted at upload.
+    await core.insert(entryPhotos).values({
+      id: firstPhotoId,
+      entryId,
+      photoKey: `entries/${runnerId}/${entryId}/${firstPhotoId}`,
+      position: 0,
+      screenStatus: "pass",
+      fingerprint,
     });
     // A second kit, for the request past the cap.
     await core.insert(runs).values({
@@ -164,11 +186,22 @@ test("someone with no account asks for an intimate image to come down, and an op
   await turnstileAnswered(page);
   await page.getByRole("button", { name: "Send the request" }).click();
 
-  await scene(page, "The receipt: a person decides within 48 hours");
+  await scene(
+    page,
+    "The receipt: a person decides within 48 hours, and where else to go",
+  );
   await expect(
     page.getByRole("heading", { name: "We have your request" }),
   ).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText(requester)).toBeVisible();
+  // D-147: the two services that reach other sites.
+  const elsewhere = page.locator("[data-part='elsewhere-help']");
+  await expect(
+    elsewhere.getByRole("link", { name: "StopNCII.org" }),
+  ).toHaveAttribute("href", "https://stopncii.org/");
+  await expect(
+    elsewhere.getByRole("link", { name: "Take It Down" }),
+  ).toHaveAttribute("href", "https://takeitdown.ncmec.org/");
 
   // A link of ours hides the kit at once (round 35 #58e), as a W1 report
   // of the reason does: nobody else sees it while an operator decides.
@@ -256,10 +289,7 @@ test("someone with no account asks for an intimate image to come down, and an op
     others.getByRole("img", {
       name: `Photo ${otherPhotoId}, on a kit an operator cannot open`,
     }),
-  ).toHaveAttribute(
-    "src",
-    `/safety/review-photo/${otherPhotoKey}`,
-  );
+  ).toHaveAttribute("src", `/safety/review-photo/${otherPhotoKey}`);
   await expect(others).toContainText(otherPhotoId);
 
   await scene(page, "Take it down: the kit goes, and the requester is told");
@@ -280,6 +310,96 @@ test("someone with no account asks for an intimate image to come down, and an op
       .where(eq(takedownRequests.requesterEmail, requester)),
   );
   expect(decided?.status).toBe("removed");
+  // D-147: the photo is gone, and its fingerprint is kept.
+  const kept = await withLocalDb(async ({ core }) =>
+    core
+      .select({ id: removedFingerprints.id })
+      .from(removedFingerprints)
+      .where(eq(removedFingerprints.fingerprint, fingerprint)),
+  );
+  expect(kept).toHaveLength(1);
+
+  // The runner posts the same picture again. The upload's check (proved in
+  // test/safety/removed-fingerprints.test.ts) leaves it as seeded here:
+  // held from everyone but its owner, with a fingerprint row on Review.
+  await withLocalDb(async ({ core }) => {
+    await core.insert(runs).values({
+      id: copyRunId,
+      userId: runnerId,
+      source: "manual",
+      startedAt: now - 600,
+      durationS: 1800,
+      distanceM: 5000,
+      indoor: false,
+      title: "Lunch loop",
+    });
+    await core.insert(outfitEntries).values({
+      id: copyEntryId,
+      runId: copyRunId,
+      userId: runnerId,
+      verdict: 0,
+      audience: "runners",
+      createdAt: now - 600,
+    });
+    await core.insert(entryPhotos).values({
+      id: copyPhotoId,
+      entryId: copyEntryId,
+      photoKey: copyPhotoKey,
+      position: 0,
+      screenStatus: "hidden_pending_review",
+      fingerprint: copyFingerprint,
+    });
+    await core.insert(reviewQueue).values({
+      id: newUlid(),
+      subjectType: "photo",
+      subjectId: copyPhotoId,
+      source: "fingerprint",
+      status: "pending",
+      createdAt: now,
+    });
+  });
+  const copyMedia = await getPlatformProxy<Env>();
+  try {
+    await copyMedia.env.MEDIA.put(
+      copyPhotoKey,
+      await readFile("test/fixtures/sample-photo.bin"),
+      { httpMetadata: { contentType: "image/jpeg" } },
+    );
+  } finally {
+    await copyMedia.dispose();
+  }
+
+  await scene(
+    page,
+    "A copy posted again waits on Review, saying what it matched",
+  );
+  await page.reload();
+  await hydrated(page);
+  // Its Review row, by the row's own label: the photo also shows under
+  // the open request's "Their other photos", and in an earlier run's
+  // "Matching photos".
+  const copy = page
+    .getByRole("listitem")
+    .filter({ has: page.locator("[data-part='removed-match']") })
+    .filter({ hasText: `photo · ${copyPhotoId}` });
+  await copy.scrollIntoViewIfNeeded();
+  await expect(copy.locator("[data-part='removed-match']")).toContainText(
+    "A copy of an image removed as intimate on",
+  );
+  await expect(copy.locator("[data-part='removed-match']")).toContainText(
+    "1 bit apart.",
+  );
+  await expect(copy).toContainText("[fingerprint]");
+  // Scoped to this run's ids, so a rerun starts from the same queue.
+  await withLocalDb(async ({ core }) => {
+    await core
+      .delete(reviewQueue)
+      .where(eq(reviewQueue.subjectId, copyPhotoId));
+    await core.delete(entryPhotos).where(eq(entryPhotos.id, copyPhotoId));
+    await core
+      .delete(removedFingerprints)
+      .where(eq(removedFingerprints.fingerprint, fingerprint));
+  });
 
   await scene(
     page,

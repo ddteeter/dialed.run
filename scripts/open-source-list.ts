@@ -7,8 +7,8 @@
  * environment's output, listing every package an emitted chunk holds a
  * module of, with its licence file's text. Both environments count —
  * the browser's and the Worker's. `npm query` (npm's own tree) adds what
- * Vite leaves out: each package's homepage, repository, author and
- * directory, where a NOTICE file is read. The text work — copyright
+ * Vite leaves out, read through npm's `normalize-package-data`: each
+ * package's homepage, author and directory, where a NOTICE file is read. The text work — copyright
  * holders, each licence's wording once — is `account/licence-text.ts`,
  * where it is tested; this file only reads and writes.
  *
@@ -32,6 +32,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import normalize from "normalize-package-data";
 import { z } from "zod";
 
 import {
@@ -63,21 +64,23 @@ const reportSchema = z.array(
 );
 
 /**
-What `npm query '*'` says of each installed package that this file reads.
-*/
-const nodeSchema = z.array(
-  z.object({
-    name: z.string().optional(),
-    version: z.string().optional(),
-    location: z.string(),
-    path: z.string(),
-    license: z.unknown().optional(),
-    author: z.unknown().optional(),
-    homepage: z.unknown().optional(),
-    repository: z.unknown().optional(),
-  }),
-);
-type InstalledNode = z.infer<typeof nodeSchema>[number];
+ * What this file reads of each installed package, once npm's own
+ * `normalize-package-data` has read its package.json: the author cut to a
+ * name, and a homepage — derived from the repository where the package is
+ * on a known git host. Parsed after normalising, not trusted.
+ */
+const personSchema = z.object({ name: z.string().optional() });
+const nodeSchema = z.object({
+  name: z.string().optional(),
+  version: z.string().optional(),
+  location: z.string(),
+  path: z.string(),
+  license: z.unknown().optional(),
+  // An empty author ("") is left as it is.
+  author: z.union([personSchema, z.literal("")]).optional(),
+  homepage: z.string().optional(),
+});
+type InstalledNode = z.infer<typeof nodeSchema>;
 
 const manifestSchema = z.object({
   dependencies: z.record(z.string(), z.string()).default({}),
@@ -98,7 +101,13 @@ function installed(): InstalledNode[] {
     encoding: "utf8",
     maxBuffer: 256 * 1024 * 1024,
   });
-  return nodeSchema.parse(JSON.parse(out));
+  return z
+    .array(z.record(z.string(), z.unknown()))
+    .parse(JSON.parse(out))
+    .map((manifest) => {
+      normalize(manifest);
+      return nodeSchema.parse(manifest);
+    });
 }
 
 /**
@@ -152,9 +161,8 @@ function bundled(nodes: readonly InstalledNode[]): Bundled[] {
         entry.identifier ??
         (typeof node.license === "string" ? node.license : undefined),
       text: entry.text ?? fileIn(node.path, LICENCE_FILE)?.trim(),
-      author: node.author,
+      author: node.author === "" ? undefined : node.author?.name,
       homepage: node.homepage,
-      repository: node.repository,
       notice: fileIn(node.path, NOTICE),
     };
   });
