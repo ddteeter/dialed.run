@@ -1,12 +1,13 @@
 /**
  * Covers: `/open-source` (round 29 #9; plan C9; D-137) — reached from the
  * signed-out footer, the thank-you, the type group first, a licence's text
- * opened once, Show all, the search and its empty line, and the
- * third-party notices. One journey, one video.
+ * opened once, Show all, the search and its empty line, the
+ * third-party notices, and the tools we build with, last (round 40 #82;
+ * design 151). One journey, one video.
  */
 import { expect, hydrated, scene, test } from "../support/demo";
 
-test("the open-source page: groups by licence, search, and the notices", async ({
+test("the open-source page: groups by licence, search, the notices and the tools", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1040, height: 760 });
@@ -57,11 +58,11 @@ test("the open-source page: groups by licence, search, and the notices", async (
   await scene(page, "Nothing matches · it says so");
   await search.fill("xyz");
   await expect(
-    page.getByText("Nothing we ship is called “xyz”."),
+    page.getByText("Nothing we ship or build with is called “xyz”."),
   ).toBeVisible();
   await search.fill("");
 
-  await scene(page, "The third-party notices close the page");
+  await scene(page, "Then the third-party notices");
   const notices = page.getByRole("heading", {
     level: 2,
     name: "Third-party notices",
@@ -70,5 +71,17 @@ test("the open-source page: groups by licence, search, and the notices", async (
   await expect(notices).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 3, name: "Weather data" }),
+  ).toBeVisible();
+
+  await scene(page, "The tools we build with close the page, not shipped");
+  const tools = page.getByRole("heading", {
+    level: 2,
+    name: "Tools we build with",
+  });
+  await tools.scrollIntoViewIfNeeded();
+  await expect(tools).toBeVisible();
+  await expect(page.getByText(/^\d+ · Not shipped$/u)).toBeVisible();
+  await expect(
+    page.getByText("@cloudflare/vite-plugin", { exact: true }),
   ).toBeVisible();
 });

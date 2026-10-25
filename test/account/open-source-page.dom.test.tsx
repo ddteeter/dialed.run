@@ -80,8 +80,8 @@ const APACHE: LicenceGroup = {
 };
 
 const TOOLS: LicenceGroup = {
-  id: "built-with",
-  name: "Built with",
+  id: "tools-we-build-with",
+  name: "Tools we build with",
   kind: "tools",
   text: undefined,
   pieces: [
@@ -197,8 +197,8 @@ describe("OpenSourcePage", () => {
       ["SIL Open Font License 1.1", "#sil-open-font-license-11", "2"],
       ["MIT", "#mit", "5"],
       ["Apache 2.0", "#apache-20", "3"],
-      ["Built with", "#built-with", "2"],
       ["Third-party notices", "#third-party-notices", undefined],
+      ["Tools we build with", "#tools-we-build-with", "2"],
     ]);
   });
 
@@ -212,16 +212,16 @@ describe("OpenSourcePage", () => {
       "SIL Open Font License 1.1",
       "MIT",
       "Apache 2.0",
-      "Built with",
       "Third-party notices",
+      "Tools we build with",
     ]);
     const type = section("SIL Open Font License 1.1");
-    expect(within(type).getByText("2 · Type")).toHaveClass("text-mono-xs");
+    expect(within(type).getByText("2 · Type")).toHaveClass("text-mono-sm");
     expect(
       within(type).getByText("The two typefaces you read everything in."),
     ).toBeInTheDocument();
     const mit = section("MIT");
-    expect(within(mit).getByText("5")).toHaveClass("text-mono-xs");
+    expect(within(mit).getByText("5")).toHaveClass("text-mono-sm");
     expect(
       within(mit).queryByText("The two typefaces you read everything in."),
     ).toBeNull();
@@ -255,7 +255,7 @@ describe("OpenSourcePage", () => {
     const [react, , clsx] = within(section("MIT")).getAllByRole("listitem");
     if (react === undefined || clsx === undefined) throw new Error("no rows");
     expect(within(react).getByText("react")).toHaveClass("font-semibold");
-    expect(within(react).getByText("19.2.0")).toHaveClass("text-mono-md");
+    expect(within(react).getByText("19.2.0")).toHaveClass("text-mono-sm");
     // Its group's heading names the licence; the row does not repeat it.
     expect(within(react).queryByText("MIT")).toBeNull();
     const project = within(react).getByRole("link", { name: "Project" });
@@ -271,7 +271,7 @@ describe("OpenSourcePage", () => {
     const plex = within(section("SIL Open Font License 1.1")).getAllByRole(
       "listitem",
     )[1];
-    expect(plex?.querySelector(".text-mono-md")).toBeNull();
+    expect(plex?.querySelector(".text-mono-sm")).toBeNull();
   });
 
   it("shows a group's first three rows, and all of them after Show all", async () => {
@@ -318,24 +318,28 @@ describe("OpenSourcePage", () => {
     );
   });
 
-  it("credits the tools under Built with, after the groups: its line, and each row's licence, with no licence text or copyright", async () => {
+  it("credits the tools last, under Tools we build with, after the notices: its line, and each row's licence, with no licence text or copyright", async () => {
     await renderPage();
-    const tools = section("Built with");
-    expect(within(tools).getByText("2")).toHaveClass("text-mono-xs");
+    const tools = section("Tools we build with");
+    expect(within(tools).getByText("2 · Not shipped")).toHaveClass(
+      "text-mono-sm",
+      "text-muted",
+    );
+    expect(section("Third-party notices").nextElementSibling).toBe(tools);
     expect(
       within(tools).getByText(
-        "The tools we build and test dialed.run with. None of them ships to you, so each is credited by name and licence.",
+        "We build and test dialed.run with these. None of them ships in the app, so each is credited by name and licence.",
       ),
-    ).toHaveClass("text-body");
+    ).toHaveClass("m-0", "text-small", "text-quiet");
     const [vitest, drizzleKit] = within(tools).getAllByRole("listitem");
     if (vitest === undefined || drizzleKit === undefined) {
       throw new Error("no rows");
     }
     expect(within(vitest).getByText("vitest")).toHaveClass("font-semibold");
-    expect(within(vitest).getByText("MIT")).toHaveClass(
-      "text-mono-xs",
-      "text-muted",
-    );
+    // The licence id sits where a copyright line would: under the name line.
+    const licence = within(vitest).getByText("MIT");
+    expect(licence).toHaveClass("text-mono-xs", "text-muted");
+    expect(licence.parentElement).toBe(vitest);
     expect(
       within(vitest).getByRole("link", { name: "Project" }),
     ).toHaveAttribute("href", "https://vitest.dev");
@@ -343,7 +347,7 @@ describe("OpenSourcePage", () => {
     expect(within(tools).queryByText(/^Read the/u)).toBeNull();
     expect(within(tools).queryByText(/^©/u)).toBeNull();
     expect(
-      within(section("MIT")).queryByText(/^The tools we build/u),
+      within(section("MIT")).queryByText(/^We build and test/u),
     ).toBeNull();
   });
 
@@ -354,9 +358,14 @@ describe("OpenSourcePage", () => {
       pieces: [...TOOLS.pieces, { name: "vite-unlicensed" }],
     });
     await user.type(search(), "vit");
-    expect(rowNames("Built with")).toEqual(["vitest", "vite-unlicensed"]);
+    expect(rowNames("Tools we build with")).toEqual([
+      "vitest",
+      "vite-unlicensed",
+    ]);
     expect(screen.queryByRole("heading", { name: "MIT" })).toBeNull();
-    const [, bare] = within(section("Built with")).getAllByRole("listitem");
+    const [, bare] = within(section("Tools we build with")).getAllByRole(
+      "listitem",
+    );
     expect(bare?.querySelector(".text-mono-xs")).toBeNull();
   });
 
@@ -403,9 +412,10 @@ describe("OpenSourcePage", () => {
     await renderPage();
     expect(screen.queryByText(/^Nothing we ship/u)).toBeNull();
     await user.type(search(), " xyz ");
-    expect(screen.getByText("Nothing we ship is called “xyz”.").tagName).toBe(
-      "P",
-    );
+    expect(
+      screen.getByText("Nothing we ship or build with is called “xyz”.")
+        .tagName,
+    ).toBe("P");
     expect(screen.queryByRole("heading", { name: "MIT" })).toBeNull();
   });
 

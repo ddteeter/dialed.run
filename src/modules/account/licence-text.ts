@@ -304,7 +304,7 @@ function declaredLicence(name: string, license: unknown): string {
 }
 
 /**
- * "Built with" (design 151): the tools that build the app and do not ship
+ * "Tools we build with" (design 151; round 40 #82): the tools that build the app and do not ship
  * in it, one row each with its licence and project — no licence text and
  * no copyright line, which a licence asks for only on a copy distributed.
  */

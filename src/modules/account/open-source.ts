@@ -98,13 +98,13 @@ export function licenceGroups(list: OpenSourceList): readonly LicenceGroup[] {
 }
 
 /**
- * "Built with" (design 151): the tools that build the app and do not ship
+ * "Tools we build with" (design 151; round 40 #82): the tools that build the app and do not ship
  * in it, under one heading, each row naming its licence.
  */
 export function toolsGroup(list: OpenSourceList): LicenceGroup {
   return {
-    id: "built-with",
-    name: "Built with",
+    id: "tools-we-build-with",
+    name: "Tools we build with",
     kind: "tools",
     text: undefined,
     pieces: list.tools,

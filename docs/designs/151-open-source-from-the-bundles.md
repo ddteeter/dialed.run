@@ -54,7 +54,8 @@ forbidden zone. The owner has approved that edit (2026-10-24).
    direct tools are what we chose. The old lockfile list credited none of
    them (it skipped `devDependencies`). The JSON gains a `tools` array;
    the page renders it after the licence groups, searchable like them.
-   It is an undesigned surface: design-deltas item 82, in the same PR.
+   Design answered it in round 40 (#82): "Tools we build with", last on
+   the page after the notices; design-deltas item 82 records the ruling.
 
 ## Contract touches
 

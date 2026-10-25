@@ -178,10 +178,10 @@ describe("licenceGroups", () => {
 });
 
 describe("toolsGroup", () => {
-  it("puts the tools under Built with, with no licence text, each row keeping its licence", () => {
+  it("puts the tools under Tools we build with, with no licence text, each row keeping its licence", () => {
     expect(toolsGroup(LIST)).toEqual({
-      id: "built-with",
-      name: "Built with",
+      id: "tools-we-build-with",
+      name: "Tools we build with",
       kind: "tools",
       text: undefined,
       pieces: LIST.tools,

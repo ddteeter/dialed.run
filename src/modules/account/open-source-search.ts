@@ -47,7 +47,7 @@ export interface LicenceGroup {
   readonly name: string;
   /**
    * `type`: the typefaces, which come first. `licence`: the packages that
-   * ship under one licence. `tools`: "Built with", the tools that build the
+   * ship under one licence. `tools`: "Tools we build with", the tools that build the
    * app and do not ship in it (design 151), each row naming its licence.
    */
   readonly kind: "type" | "licence" | "tools";

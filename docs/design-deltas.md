@@ -935,8 +935,18 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
 
 <!-- Item numbers continue past rounds 35–38 (45–65); this comment keeps the list from being renumbered. -->
 
-82. **`/open-source`'s "Built with" tier (design 151). Undesigned; built
-    as a placeholder.** The list is now what the two bundles hold (136
+82. **`/open-source`'s "Built with" tier (design 151).** **ANSWERED by
+    round 40 (#82) and built:** "Tools we build with" (the old heading
+    collided with the page title), last on the page after Third-party
+    notices and last in the contents; the count "44 · NOT SHIPPED" in
+    MONO.sm; the line "We build and test dialed.run with these. None of
+    them ships in the app, so each is credited by name and licence." in
+    TYPE.small, --quiet; a row's licence id in MONO.xs in the copyright
+    line's slot; and the empty search "Nothing we ship or build with is
+    called “xyz”." Round 40 also names MONO.sm for a group's count and a
+    row's version "as a group's" and "as shipped rows"; the built groups
+    drew them at MONO.xs and MONO.md, so they moved to MONO.sm with it.
+    What follows is the ask as sent. The list is now what the two bundles hold (136
     packages, not the lockfile's 272), and the owner asked that the tools
     which build the app without shipping in it be credited too. They get
     one more section after the licence groups and before the third-party
