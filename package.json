@@ -37,7 +37,8 @@
     "verify": "node ./node_modules/guardrails-core/dist/cli.mjs verify",
     "eval": "tsx eval/run.ts",
     "eval:photos": "tsx eval/photos/run.ts",
-    "pretest": "npm run stage:mediapipe"
+    "pretest": "npm run stage:mediapipe",
+    "worktrees:prune": "sh scripts/worktrees-prune.sh"
   },
   "dependencies": {
     "@cf-wasm/og": "^0.5.0",

@@ -40,17 +40,38 @@ engaged — every decision made here is one agents inherit. Budget an evening
 or two. Done criteria include deliberately breaking a branch to watch the
 Stop gate + fixer fire on dialed itself.
 
+## Worktrees
+
+Every worktree lives in `.claude/worktrees/<name>`, which is where Claude
+Code puts its own (`isolation: "worktree"` agents, `EnterWorktree`,
+`claude --worktree`). Make yours there too, as the recipes below do, rather
+than beside the checkout: one `git worktree list` and one directory then
+hold all of them, and `~/dev/projects` holds only repos.
+
+- **Tools must skip it.** Each worktree is a full second copy of the
+  project inside the checkout, so anything that globs from the root sees
+  it. It is gitignored, and dependency-cruiser and eslint exclude it by
+  name (flat config does not read `.gitignore`: before the ignore,
+  `npm run lint` in the primary checkout linted ~2,200 extra files per
+  worktree). A new root-globbing tool needs the same entry.
+- **Cleanup**: a worktree stays on disk after its PR merges, and each holds
+  about 1 GB of `node_modules`. `npm run worktrees:prune` lists every
+  worktree and local branch whose PR has merged or closed; add `-- --yes`
+  to remove them. It keeps anything with uncommitted changes (a leftover
+  `PR_BODY.md` aside), and any branch without a PR that holds commits no
+  remote has.
+
 ## Fan-out
 
 ```bash
-git worktree add ../dialed-101 -b lane/101-closet
-git worktree add ../dialed-102 -b lane/102-runs
-git worktree add ../dialed-103 -b lane/103-weather
-git worktree add ../dialed-104 -b lane/104-feed
+git worktree add .claude/worktrees/lane-101 -b lane/101-closet
+git worktree add .claude/worktrees/lane-102 -b lane/102-runs
+git worktree add .claude/worktrees/lane-103 -b lane/103-weather
+git worktree add .claude/worktrees/lane-104 -b lane/104-feed
 # each worktree: npm install, then open Claude Code in it
 # lanes 105 (onboarding) and 107 (product intelligence) start after 101 merges:
-git worktree add ../dialed-105 -b lane/105-onboarding
-git worktree add ../dialed-107 -b lane/107-product-intel
+git worktree add .claude/worktrees/lane-105 -b lane/105-onboarding
+git worktree add .claude/worktrees/lane-107 -b lane/107-product-intel
 ```
 
 Session-start prompt (paste into each Claude Code instance):
@@ -166,13 +187,13 @@ from them, which is what this section used to do.
 Fan-out for the five lanes:
 
 ```bash
-git worktree add ../dialed-125 -b lane/125-ops-platform
-git worktree add ../dialed-127 -b lane/127-strava-logging
-git worktree add ../dialed-128 -b lane/128-content-safety
+git worktree add .claude/worktrees/lane-125 -b lane/125-ops-platform
+git worktree add .claude/worktrees/lane-127 -b lane/127-strava-logging
+git worktree add .claude/worktrees/lane-128 -b lane/128-content-safety
 # after PR #104 merges:
-git worktree add ../dialed-126 -b lane/126-accounts
+git worktree add .claude/worktrees/lane-126 -b lane/126-accounts
 # after PR #102 merges:
-git worktree add ../dialed-129 -b lane/129-feed
+git worktree add .claude/worktrees/lane-129 -b lane/129-feed
 ```
 
 Where the old checklist's items went:
