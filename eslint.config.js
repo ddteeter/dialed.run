@@ -121,6 +121,11 @@ export default tseslint.config(
       // OOMs the eslint process rather than failing cleanly. Gitignored,
       // but flat config does not read .gitignore.
       ".stryker-tmp/",
+      // Claude Code's git worktrees, each a full checkout of another
+      // branch: `npm run lint` in the primary checkout linted ~2,200 extra
+      // files per worktree (measured 2026-10-24) and reported other
+      // branches' errors as this one's. Gitignored — the same trap.
+      ".claude/worktrees/",
       // `stage:mediapipe` copies four files out of node_modules so the
       // browser can fetch them from our own origin, and two are minified
       // dependency glue: ~2,900 errors between them, which buries every

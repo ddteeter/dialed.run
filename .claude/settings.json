@@ -66,28 +66,6 @@
           }
         ]
       }
-    ],
-    "WorktreeCreate": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"$CLAUDE_PROJECT_DIR/scripts/worktrees.sh\" create",
-            "timeout": 120
-          }
-        ]
-      }
-    ],
-    "WorktreeRemove": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"$CLAUDE_PROJECT_DIR/scripts/worktrees.sh\" remove",
-            "timeout": 120
-          }
-        ]
-      }
     ]
   }
 }
