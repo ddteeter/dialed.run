@@ -74,6 +74,7 @@ export {
 
 // D-131: the 3-year sweep, which rides the daily digest's firing too.
 export { sweepModerationRecords } from "./retention";
+export { keptFingerprints, removedMatchOf } from "./removed-fingerprints";
 
 // D-130: a copyright takedown's 30-day hide, its restore and its purge.
 export {

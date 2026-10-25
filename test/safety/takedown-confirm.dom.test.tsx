@@ -66,6 +66,9 @@ describe("/takedown/confirm", () => {
         "We'll decide within 48 hours and email you either way.",
       ),
     ).toBeVisible();
+    expect(
+      document.querySelector("[data-part='elsewhere-help']"),
+    ).toBeVisible();
     expect(confirm).toHaveBeenCalledWith({ data: { token: TOKEN } });
   });
 
@@ -84,6 +87,9 @@ describe("/takedown/confirm", () => {
     });
     expect(
       screen.getByText("We've emailed you what we decided."),
+    ).toBeVisible();
+    expect(
+      document.querySelector("[data-part='elsewhere-help']"),
     ).toBeVisible();
   });
 

@@ -28,7 +28,7 @@ import {
 import type { HandleReview, QueueRow } from "../review";
 import { DeskForm, PickOne } from "./DeskForm";
 import { OtherPhotos } from "./OtherPhotos";
-import { PhotoMatches } from "./PhotoMatches";
+import { PhotoMatches, RemovedMatchLine } from "./PhotoMatches";
 import { RENAME_LABELS, renameMessage } from "./DeskRunners";
 import { NotRenamedBand } from "./NotRenamedBand";
 import { useSettled } from "./use-settled";
@@ -534,6 +534,7 @@ function ReviewRow({
         )}
       </span>
       <ReportedPhotos keys={row.subject.photoKeys} />
+      <RemovedMatchLine match={row.removedMatch} />
       <OtherPhotos others={row.otherPhotos} />
       <PhotoMatches found={row.photoMatches} />
       {row.subject.handleFlagged === true ? (

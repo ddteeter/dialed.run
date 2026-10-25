@@ -54,21 +54,21 @@
       "version": "0.4.2",
       "licence": "MIT",
       "copyright": "Bereket Engida",
-      "project": "https://github.com/better-auth/utils"
+      "project": "https://github.com/better-auth/utils#readme"
     },
     {
       "name": "@better-auth/utils",
       "version": "0.5.0",
       "licence": "MIT",
       "copyright": "Bereket Engida",
-      "project": "https://github.com/better-auth/utils"
+      "project": "https://github.com/better-auth/utils#readme"
     },
     {
       "name": "@better-fetch/fetch",
       "version": "1.3.1",
       "licence": "MIT",
       "copyright": "Bereket Engida",
-      "project": "https://github.com/better-auth/better-fetch"
+      "project": "https://github.com/better-auth/better-fetch#readme"
     },
     {
       "name": "@cf-wasm/internals",
@@ -117,7 +117,7 @@
       "version": "21.214.0",
       "licence": "@garmin/fitsdk licence",
       "copyright": "Modifications or Licensee's services, designs and/or; Licensee shall delete all copies of the",
-      "project": "https://github.com/garmin/fit-javascript-sdk"
+      "project": "https://github.com/garmin/fit-javascript-sdk#readme"
     },
     {
       "name": "@mediapipe/tasks-vision",
@@ -143,7 +143,7 @@
       "version": "3.0.0",
       "licence": "MIT",
       "copyright": "Amit Gupta",
-      "project": "https://github.com/nodable/val-parsers"
+      "project": "https://github.com/nodable/val-parsers#readme"
     },
     {
       "name": "@opentelemetry/semantic-conventions",
@@ -157,68 +157,69 @@
       "version": "0.3.0",
       "licence": "MIT",
       "copyright": "2024 Plus Five Five, Inc",
-      "project": "https://github.com/resend/react-email"
+      "project": "https://github.com/resend/react-email#readme"
     },
     {
       "name": "@react-email/button",
       "version": "0.2.1",
       "licence": "MIT",
       "copyright": "2024 Plus Five Five, Inc",
-      "project": "https://github.com/resend/react-email"
+      "project": "https://github.com/resend/react-email#readme"
     },
     {
       "name": "@react-email/container",
       "version": "0.0.16",
       "licence": "MIT",
       "copyright": "2024 Plus Five Five, Inc",
-      "project": "https://github.com/resend/react-email"
+      "project": "https://github.com/resend/react-email#readme"
     },
     {
       "name": "@react-email/head",
       "version": "0.0.13",
       "licence": "MIT",
       "copyright": "2024 Plus Five Five, Inc",
-      "project": "https://github.com/resend/react-email"
+      "project": "https://github.com/resend/react-email#readme"
     },
     {
       "name": "@react-email/hr",
       "version": "0.0.12",
       "licence": "MIT",
       "copyright": "2024 Plus Five Five, Inc",
-      "project": "https://github.com/resend/react-email"
+      "project": "https://github.com/resend/react-email#readme"
     },
     {
       "name": "@react-email/html",
       "version": "0.0.12",
       "licence": "MIT",
       "copyright": "2024 Plus Five Five, Inc",
-      "project": "https://github.com/resend/react-email"
+      "project": "https://github.com/resend/react-email#readme"
     },
     {
       "name": "@react-email/link",
       "version": "0.0.13",
       "licence": "MIT",
       "copyright": "2024 Plus Five Five, Inc",
-      "project": "https://github.com/resend/react-email"
+      "project": "https://github.com/resend/react-email#readme"
     },
     {
       "name": "@react-email/preview",
       "version": "0.0.14",
       "licence": "MIT",
       "copyright": "2024 Plus Five Five, Inc",
-      "project": "https://github.com/resend/react-email"
+      "project": "https://github.com/resend/react-email#readme"
     },
     {
       "name": "@react-email/text",
       "version": "0.1.6",
       "licence": "MIT",
       "copyright": "2024 Plus Five Five, Inc",
-      "project": "https://github.com/resend/react-email"
+      "project": "https://github.com/resend/react-email#readme"
     },
     {
       "name": "@resvg/resvg-wasm",
       "version": "2.4.1",
-      "licence": "MPL-2.0"
+      "licence": "MPL-2.0",
+      "project": "https://github.com/yisibl/resvg-js#readme"
     },
     {
       "name": "@selderee/plugin-htmlparser2",
@@ -246,7 +247,7 @@
       "version": "1.4.0-beta.0",
       "licence": "MIT",
       "copyright": "2020 Frederik De Bleser",
-      "project": "https://github.com/opentypejs/opentype.js"
+      "project": "https://github.com/opentypejs/opentype.js#readme"
     },
     {
       "name": "@tanstack/history",
@@ -344,14 +345,14 @@
       "version": "1.0.1",
       "licence": "MIT",
       "copyright": "2026 Natural Intelligence",
-      "project": "https://github.com/NaturalIntelligence/anynum"
+      "project": "https://github.com/NaturalIntelligence/anynum#readme"
     },
     {
       "name": "base64-js",
       "version": "0.0.8",
       "licence": "MIT",
       "copyright": "2014",
-      "project": "https://github.com/beatgammit/base64-js"
+      "project": "https://github.com/beatgammit/base64-js#readme"
     },
     {
       "name": "better-auth",
@@ -365,7 +366,7 @@
       "version": "1.4.0",
       "licence": "MIT",
       "copyright": "2025 Bereket Engida",
-      "project": "https://github.com/better-auth/better-call"
+      "project": "https://github.com/better-auth/better-call#readme"
     },
     {
       "name": "camelize",
@@ -379,14 +380,14 @@
       "version": "2.0.2",
       "licence": "MIT",
       "copyright": "2015 Titus Wormer",
-      "project": "https://github.com/wooorm/character-entities"
+      "project": "https://github.com/wooorm/character-entities#readme"
     },
     {
       "name": "client-zip",
       "version": "2.5.1",
       "licence": "MIT",
       "copyright": "2020 David Junger",
-      "project": "https://github.com/Touffy/client-zip"
+      "project": "https://github.com/Touffy/client-zip#readme"
     },
     {
       "name": "color-name",
@@ -400,7 +401,7 @@
       "version": "3.1.1",
       "licence": "MIT",
       "copyright": "2012-2014 Roman Shtylman; 2015 Douglas Christopher Wilson; 2015 Nathan Friedly",
-      "project": "https://github.com/unjs/cookie-es",
+      "project": "https://github.com/unjs/cookie-es#readme",
       "text": "Cookie-es copyright (c) Pooya Parsa <pooya@pi0.io>\n\nCookie parsing based on https://github.com/jshttp/cookie\n\nSet-Cookie parsing based on https://github.com/nfriedly/set-cookie-parser\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE."
     },
     {
@@ -421,7 +422,7 @@
       "version": "1.0.0",
       "licence": "ISC",
       "copyright": "2017, Jakob Krigovsky",
-      "project": "https://github.com/sonicdoe/css-color-keywords"
+      "project": "https://github.com/sonicdoe/css-color-keywords#readme"
     },
     {
       "name": "css-gradient-parser",
@@ -441,7 +442,7 @@
       "version": "1.3.0",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/wooorm/decode-named-character-reference"
+      "project": "https://github.com/wooorm/decode-named-character-reference#readme"
     },
     {
       "name": "deepmerge",
@@ -455,35 +456,35 @@
       "version": "6.1.7",
       "licence": "MIT",
       "copyright": "Pooya Parsa",
-      "project": "https://github.com/unjs/defu"
+      "project": "https://github.com/unjs/defu#readme"
     },
     {
       "name": "devlop",
       "version": "1.1.0",
       "licence": "MIT",
       "copyright": "2023 Titus Wormer",
-      "project": "https://github.com/wooorm/devlop"
+      "project": "https://github.com/wooorm/devlop#readme"
     },
     {
       "name": "dom-serializer",
       "version": "2.0.0",
       "licence": "MIT",
       "copyright": "2014 The cheeriojs contributors",
-      "project": "https://github.com/cheeriojs/dom-serializer"
+      "project": "https://github.com/cheeriojs/dom-serializer#readme"
     },
     {
       "name": "domelementtype",
       "version": "2.3.0",
       "licence": "BSD-2-Clause",
       "copyright": "Felix Böhm",
-      "project": "https://github.com/fb55/domelementtype"
+      "project": "https://github.com/fb55/domelementtype#readme"
     },
     {
       "name": "domhandler",
       "version": "5.0.3",
       "licence": "BSD-2-Clause",
       "copyright": "Felix Böhm",
-      "project": "https://github.com/fb55/domhandler"
+      "project": "https://github.com/fb55/domhandler#readme"
     },
     {
       "name": "drizzle-orm",
@@ -497,28 +498,28 @@
       "version": "4.5.0",
       "licence": "BSD-2-Clause",
       "copyright": "Felix Böhm",
-      "project": "https://github.com/fb55/entities"
+      "project": "https://github.com/fb55/entities#readme"
     },
     {
       "name": "entities",
       "version": "8.1.0",
       "licence": "BSD-2-Clause",
       "copyright": "Felix Böhm",
-      "project": "https://github.com/fb55/entities"
+      "project": "https://github.com/fb55/entities#readme"
     },
     {
       "name": "escape-html",
       "version": "1.0.3",
       "licence": "MIT",
       "copyright": "2012-2013 TJ Holowaychuk; 2015 Andreas Lubbe; 2015 Tiancheng \"Timothy\" Gu",
-      "project": "https://github.com/component/escape-html"
+      "project": "https://github.com/component/escape-html#readme"
     },
     {
       "name": "fast-xml-parser",
       "version": "5.11.1",
       "licence": "MIT",
       "copyright": "2017 Amit Kumar Gupta",
-      "project": "https://github.com/NaturalIntelligence/fast-xml-parser"
+      "project": "https://github.com/NaturalIntelligence/fast-xml-parser#readme"
     },
     {
       "name": "h3",
@@ -532,7 +533,7 @@
       "version": "4.3.0",
       "licence": "MIT",
       "copyright": "Sindre Sorhus",
-      "project": "https://github.com/sindresorhus/hex-rgb"
+      "project": "https://github.com/sindresorhus/hex-rgb#readme"
     },
     {
       "name": "html-to-text",
@@ -547,28 +548,28 @@
       "version": "12.0.0",
       "licence": "MIT",
       "copyright": "2010, 2011, Chris Winberry . All rights reserved",
-      "project": "https://github.com/fb55/htmlparser2"
+      "project": "https://github.com/fb55/htmlparser2#readme"
     },
     {
       "name": "htmlparser2",
       "version": "8.0.2",
       "licence": "MIT",
       "copyright": "2010, 2011, Chris Winberry . All rights reserved",
-      "project": "https://github.com/fb55/htmlparser2"
+      "project": "https://github.com/fb55/htmlparser2#readme"
     },
     {
       "name": "ipaddr.js",
       "version": "2.5.0",
       "licence": "MIT",
       "copyright": "2011-2017 whitequark",
-      "project": "https://github.com/whitequark/ipaddr.js"
+      "project": "https://github.com/whitequark/ipaddr.js#readme"
     },
     {
       "name": "is-unsafe",
       "version": "2.0.2",
       "licence": "MIT",
       "copyright": "2026 Natural Intelligence",
-      "project": "https://github.com/NaturalIntelligence/is-unsafe"
+      "project": "https://github.com/NaturalIntelligence/is-unsafe#readme"
     },
     {
       "name": "isbot",
@@ -616,168 +617,168 @@
       "version": "2.0.3",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/syntax-tree/mdast-util-from-markdown"
+      "project": "https://github.com/syntax-tree/mdast-util-from-markdown#readme"
     },
     {
       "name": "mdast-util-gfm-table",
       "version": "2.0.0",
       "licence": "MIT",
       "copyright": "2020 Titus Wormer",
-      "project": "https://github.com/syntax-tree/mdast-util-gfm-table"
+      "project": "https://github.com/syntax-tree/mdast-util-gfm-table#readme"
     },
     {
       "name": "mdast-util-to-string",
       "version": "4.0.0",
       "licence": "MIT",
       "copyright": "2015 Titus Wormer",
-      "project": "https://github.com/syntax-tree/mdast-util-to-string"
+      "project": "https://github.com/syntax-tree/mdast-util-to-string#readme"
     },
     {
       "name": "micromark",
       "version": "4.0.3",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/micromark/micromark/tree/main/packages/micromark"
+      "project": "https://github.com/micromark/micromark/tree/main#readme"
     },
     {
       "name": "micromark-core-commonmark",
       "version": "2.0.4",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/micromark/micromark/tree/main/packages/micromark-core-commonmark"
+      "project": "https://github.com/micromark/micromark/tree/main#readme"
     },
     {
       "name": "micromark-extension-gfm-table",
       "version": "2.1.2",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/micromark/micromark-extension-gfm-table"
+      "project": "https://github.com/micromark/micromark-extension-gfm-table#readme"
     },
     {
       "name": "micromark-factory-destination",
       "version": "2.0.1",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/micromark/micromark/tree/main/packages/micromark-factory-destination"
+      "project": "https://github.com/micromark/micromark/tree/main#readme"
     },
     {
       "name": "micromark-factory-label",
       "version": "2.0.1",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/micromark/micromark/tree/main/packages/micromark-factory-label"
+      "project": "https://github.com/micromark/micromark/tree/main#readme"
     },
     {
       "name": "micromark-factory-space",
       "version": "2.1.0",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/micromark/micromark/tree/main/packages/micromark-factory-space"
+      "project": "https://github.com/micromark/micromark/tree/main#readme"
     },
     {
       "name": "micromark-factory-title",
       "version": "2.0.1",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/micromark/micromark/tree/main/packages/micromark-factory-title"
+      "project": "https://github.com/micromark/micromark/tree/main#readme"
     },
     {
       "name": "micromark-factory-whitespace",
       "version": "2.0.1",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/micromark/micromark/tree/main/packages/micromark-factory-whitespace"
+      "project": "https://github.com/micromark/micromark/tree/main#readme"
     },
     {
       "name": "micromark-util-character",
       "version": "2.1.1",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-character"
+      "project": "https://github.com/micromark/micromark/tree/main#readme"
     },
     {
       "name": "micromark-util-chunked",
       "version": "2.0.1",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-chunked"
+      "project": "https://github.com/micromark/micromark/tree/main#readme"
     },
     {
       "name": "micromark-util-classify-character",
       "version": "2.0.1",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-classify-character"
+      "project": "https://github.com/micromark/micromark/tree/main#readme"
     },
     {
       "name": "micromark-util-combine-extensions",
       "version": "2.0.1",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-combine-extensions"
+      "project": "https://github.com/micromark/micromark/tree/main#readme"
     },
     {
       "name": "micromark-util-decode-numeric-character-reference",
       "version": "2.0.2",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-decode-numeric-character-reference"
+      "project": "https://github.com/micromark/micromark/tree/main#readme"
     },
     {
       "name": "micromark-util-decode-string",
       "version": "2.0.1",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-decode-string"
+      "project": "https://github.com/micromark/micromark/tree/main#readme"
     },
     {
       "name": "micromark-util-edit-map",
       "version": "1.0.0",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-edit-map"
+      "project": "https://github.com/micromark/micromark/tree/main#readme"
     },
     {
       "name": "micromark-util-html-tag-name",
       "version": "2.0.1",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-html-tag-name"
+      "project": "https://github.com/micromark/micromark/tree/main#readme"
     },
     {
       "name": "micromark-util-normalize-identifier",
       "version": "2.0.1",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-normalize-identifier"
+      "project": "https://github.com/micromark/micromark/tree/main#readme"
     },
     {
       "name": "micromark-util-resolve-all",
       "version": "2.0.1",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-resolve-all"
+      "project": "https://github.com/micromark/micromark/tree/main#readme"
     },
     {
       "name": "micromark-util-subtokenize",
       "version": "2.1.0",
       "licence": "MIT",
       "copyright": "Titus Wormer",
-      "project": "https://github.com/micromark/micromark/tree/main/packages/micromark-util-subtokenize"
+      "project": "https://github.com/micromark/micromark/tree/main#readme"
     },
     {
       "name": "nanostores",
       "version": "1.5.3",
       "licence": "MIT",
       "copyright": "2020 Andrey Sitnik",
-      "project": "https://github.com/nanostores/nanostores"
+      "project": "https://github.com/nanostores/nanostores#readme"
     },
     {
       "name": "parse-css-color",
       "version": "0.2.1",
       "licence": "MIT",
       "copyright": "Noel Delgado (pixelia.me)",
-      "project": "https://github.com/noeldelgado/parse-css-color"
+      "project": "https://github.com/noeldelgado/parse-css-color#readme"
     },
     {
       "name": "parseley",
@@ -826,14 +827,14 @@
       "version": "0.8.1",
       "licence": "MIT",
       "copyright": "Pooya Parsa",
-      "project": "https://github.com/h3js/rou3"
+      "project": "https://github.com/h3js/rou3#readme"
     },
     {
       "name": "rou3",
       "version": "0.9.2",
       "licence": "MIT",
       "copyright": "Pooya Parsa",
-      "project": "https://github.com/h3js/rou3"
+      "project": "https://github.com/h3js/rou3#readme"
     },
     {
       "name": "satori",
@@ -884,7 +885,7 @@
       "version": "2.4.2",
       "licence": "MIT",
       "copyright": "2021 Natural Intelligence",
-      "project": "https://github.com/NaturalIntelligence/strnum"
+      "project": "https://github.com/NaturalIntelligence/strnum#readme"
     },
     {
       "name": "tailwindcss",
@@ -919,7 +920,7 @@
       "version": "2.0.0-rc.24",
       "licence": "MIT",
       "copyright": "Pooya Parsa",
-      "project": "https://github.com/unjs/unenv"
+      "project": "https://github.com/unjs/unenv#readme"
     },
     {
       "name": "unicode-trie",
@@ -933,14 +934,14 @@
       "version": "4.0.0",
       "licence": "MIT",
       "copyright": "2016 Titus Wormer",
-      "project": "https://github.com/syntax-tree/unist-util-stringify-position"
+      "project": "https://github.com/syntax-tree/unist-util-stringify-position#readme"
     },
     {
       "name": "use-sync-external-store",
       "version": "1.6.0",
       "licence": "MIT",
       "copyright": "Meta Platforms, Inc. and affiliates",
-      "project": "https://github.com/facebook/react"
+      "project": "https://github.com/facebook/react#readme"
     },
     {
       "name": "validator",
@@ -954,7 +955,7 @@
       "version": "0.3.0",
       "licence": "MIT",
       "copyright": "2026 Natural Intelligence",
-      "project": "https://github.com/NaturalIntelligence/xml-naming"
+      "project": "https://github.com/NaturalIntelligence/xml-naming#readme"
     },
     {
       "name": "zod",
@@ -1005,7 +1006,7 @@
       "name": "@tailwindcss/typography",
       "version": "0.5.20",
       "licence": "MIT",
-      "project": "https://github.com/tailwindlabs/tailwindcss-typography"
+      "project": "https://github.com/tailwindlabs/tailwindcss-typography#readme"
     },
     {
       "name": "@tailwindcss/vite",
@@ -1072,6 +1073,12 @@
       "version": "22.20.1",
       "licence": "MIT",
       "project": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node"
+    },
+    {
+      "name": "@types/normalize-package-data",
+      "version": "2.4.4",
+      "licence": "MIT",
+      "project": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/normalize-package-data"
     },
     {
       "name": "@types/react",
@@ -1149,7 +1156,7 @@
       "name": "eslint-plugin-better-tailwindcss",
       "version": "4.9.1",
       "licence": "MIT",
-      "project": "https://github.com/schoero/eslint-plugin-better-tailwindcss"
+      "project": "https://github.com/schoero/eslint-plugin-better-tailwindcss#readme"
     },
     {
       "name": "eslint-plugin-sonarjs",
@@ -1161,7 +1168,7 @@
       "name": "eslint-plugin-unicorn",
       "version": "74.0.0",
       "licence": "MIT",
-      "project": "https://github.com/sindresorhus/eslint-plugin-unicorn"
+      "project": "https://github.com/sindresorhus/eslint-plugin-unicorn#readme"
     },
     {
       "name": "fallow",
@@ -1185,6 +1192,12 @@
       "version": "6.34.0",
       "licence": "ISC",
       "project": "https://knip.dev"
+    },
+    {
+      "name": "normalize-package-data",
+      "version": "9.0.0",
+      "licence": "BSD-2-Clause",
+      "project": "https://github.com/npm/normalize-package-data#readme"
     },
     {
       "name": "prettier",

@@ -470,6 +470,13 @@
       "when": 1792813871498,
       "tag": "0066_add_retention_sweep_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "6",
+      "when": 1792883709276,
+      "tag": "0067_add_removed_fingerprints",
+      "breakpoints": true
     }
   ]
 }

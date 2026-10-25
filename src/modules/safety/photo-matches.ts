@@ -20,9 +20,7 @@
  * runner opens reaches it.
  */
 import { and, asc, eq, isNotNull, lte, not, sql } from "drizzle-orm";
-import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
-import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import {
   entryPhotos,
@@ -31,10 +29,9 @@ import {
 } from "../../db/schema-core";
 import {
   FINGERPRINT_MATCH_DISTANCE,
-  HEX_DIGITS,
-  digitDistances,
   fingerprintSchema,
 } from "../../lib/photo-fingerprint";
+import { nearestOf } from "../../lib/sql/fingerprint-distance";
 import type { OtherPhotosSubject } from "./other-photos";
 import { publiclyVisibleEntry } from "./visibility";
 
@@ -144,7 +141,7 @@ async function fingerprintsOf(
         isNotNull(entryPhotos.fingerprint),
       ),
     );
-  // Parsed, not trusted: these are spelt into SQL (`distanceSql`), and
+  // Parsed, not trusted: these are spelt into SQL (`lib/sql/fingerprint-distance`), and
   // only a fingerprint this repo wrote may be. A malformed one is a bug,
   // so it throws rather than quietly searching for nothing.
   return rows.map(({ fingerprint }) => fingerprintSchema.parse(fingerprint));
@@ -208,49 +205,4 @@ function garmentMatches(db: Db, own: readonly string[]) {
     .where(lte(distance, FINGERPRINT_MATCH_DISTANCE))
     .orderBy(asc(distance), asc(wardrobeItems.id))
     .limit(PHOTO_MATCHES_LIMIT);
-}
-
-/**
- * The distance from a stored fingerprint to the nearest of the subject's.
- *
- * `min` with one argument is SQLite's aggregate, which would fold every
- * row into one; the trailing 64 — more bits than a fingerprint has, so
- * never the answer — keeps it the scalar `min` however many there are.
- */
-function nearestOf(column: SQLiteColumn, own: readonly string[]): SQL {
-  const each = own.map((fingerprint) => distanceSql(column, fingerprint));
-  return sql`min(${sql.join(each, COMMA)}, 64)`;
-}
-
-const COMMA = sql`, `;
-const PLUS = sql` + `;
-
-/**
- * A string literal, inlined. Only ever given digits (see `distanceSql`),
- * so there is no quote in it to escape.
- */
-function quoted(digits: string): SQL {
-  return sql.raw(`'${digits}'`);
-}
-
-const HEX = quoted(HEX_DIGITS);
-
-/**
- * The bits between `column` and `fingerprint`, as SQL: per digit, the
- * stored digit's entry in that digit's `digitDistances` string. `instr`
- * finds the stored digit's place in `HEX_DIGITS`, 1-based as `substr`
- * counts.
- *
- * **Inlined, not bound**, because D1 allows 100 bound parameters a query
- * and a four-photo kit would need 192. What is inlined is digits only:
- * `fingerprint` was parsed by `fingerprintSchema` on the way in,
- * `digitDistances` returns 16 of 0–4, and `HEX_DIGITS` is a constant.
- */
-function distanceSql(column: SQLiteColumn, fingerprint: string): SQL {
-  const digits = Array.from({ length: fingerprint.length }, (_, index) => {
-    const lookup = quoted(digitDistances(fingerprint.charAt(index)));
-    const place = sql.raw(String(index + 1));
-    return sql`substr(${lookup}, instr(${HEX}, substr(${column}, ${place}, 1)), 1)`;
-  });
-  return sql`(${sql.join(digits, PLUS)})`;
 }

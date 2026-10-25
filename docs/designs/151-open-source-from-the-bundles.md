@@ -21,7 +21,9 @@ forbidden zone. The owner has approved that edit (2026-10-24).
    its licence file's text. Both environments: `dist/client` (27) and
    `dist/server` (133, including `unenv`, which the Cloudflare plugin injects
    and the lockfile walk never saw). No new dependency.
-2. **npm describes each package.** `npm query '*'` (npm's own arborist)
+2. **npm describes each package**, read through npm's own
+   `normalize-package-data` (follow-up PR): it cuts an author to a name and
+   derives a homepage from a hosted repository, so neither is parsed here. `npm query '*'` (npm's own arborist)
    gives each installed package's location, `homepage`, `repository` and
    `author`, joined on `name@version`. That replaces the hand-written
    resolver; the script reads only a NOTICE file and, for the 8 packages
