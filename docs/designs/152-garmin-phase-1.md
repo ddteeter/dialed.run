@@ -1,0 +1,78 @@
+# Design: 152 · Garmin phase 1 — "Import from Garmin" (owner only)
+
+Status: **proposed** (owner review). Implements plan 152 steps 1.2–1.7 and
+design items G1 (partly), G3 and G5.
+
+## Problem
+
+Logging a Garmin run takes a desktop today. Phase 1 lets the owner pick one of
+their last 10 Garmin runs on A1 and import it through the Personal API; from the
+`.FIT` on, it is an ordinary upload. Separately, every FIT upload starts reading
+the runner's own perceived-effort rating from the watch and prefills A3's effort.
+
+## Ship path
+
+Ordinary code on `main`, deployed from `main`, with the feature hidden unless
+both Garmin secrets are set and the viewer is the configured owner. The
+Personal API key is personal to its holder and for tools they run for their
+own use, which is exactly this gate.
+
+## Approach
+
+```
+A1 ─ GarminImport (owner only) ─► listGarminActivitiesFn ─► Personal API: token, list
+   └ tap IMPORT ─► importGarminActivityFn ─► download zip ─► unzip ─► startImport()
+                                                  └► imports queue ─► FIT parser ─► run (source 'garmin')
+```
+
+- `src/modules/runs/garmin/`: `config.ts` (pure decision plus a two-line env
+  shell, as `strava/api-from-env.ts` does), `api.ts` (token, list, download;
+  `AbortSignal.timeout(10_000)`, one attempt, zod on the fields we read),
+  `unzip.ts` (single-entry reader over `DecompressionStream("deflate-raw")`, so
+  no new dependency), `service.ts` (list with imported marks, import).
+- `startImport` gains an optional `garminActivityId`. The consumer writes
+  `source: 'garmin'` and `device_name: 'Garmin'` when the import has one.
+- Config: `GARMIN_API_KEY` (the name already in `.dev.vars`; plan 152 is renamed
+  to match) and `GARMIN_OWNER_USER_ID`, **both secrets**, so `wrangler.jsonc` does
+  not change. If either is absent, the feature is hidden.
+
+## Contract touches
+
+- Schema (additive, pre-launch, D-139): migration `0067_add_garmin_import_columns`
+  adds `runs.rpe` (int 1–10), `runs.effort_source` (`watch` | `runner`),
+  `runs.device_name` (text), and `imports.garmin_activity_id` (text) with UNIQUE
+  `(user_id, garmin_activity_id)`. `runs.source` gains `"garmin"`, which is a
+  TS-only change because a drizzle text enum emits no CHECK (R-77).
+- Routes: `runs/new.tsx` (wires the picker). A3's route wires the effort write.
+- Bindings: none. Two new secrets, added to the deploy checklists.
+- Screens: A1 (G3), A3 (G5), attribution (G1) on A1's card, D, E1 and the runs list.
+
+## Steps
+
+Every step ends with the commit gate, touched-file stryker at 100%
+(`--mutate "<file>"`, never a bare `stryker run`), and one commit.
+
+| #   | builds | tested by | done when |
+| --- | ------ | --------- | --------- |
+| 0   | **Split plan 152.** The repo keeps phases, steps and the API findings (endpoints, zip, RPE). The agreement notes (what it asks, the triggers, the application) move to `private/garmin-agreement-notes.md` at the primary checkout, untracked and listed in `.git/info/exclude` (local to this clone, never committed); memory `garmin-api-terms` points at it. Plan 152 and this doc say `GARMIN_API_KEY`. The branch's three inherited commits carry the notes, so they're squashed into one commit made after the split; `docs/garmin-integration-plan` stays local as the notes' history. | grep: no agreement section number in `docs/` or `design/`, at the tip **or in any commit since `main`** | `git log -p main..` has no agreement notes |
+| 1   | **Schema**: the migration above, `contracts.md` rows, `effortSourceSchema` in `lib/contracts`, with the column reading it (R-77's pattern). | `migration-chain`; a fresh-D1 apply; a pin of enum ↔ column | the migration applies to a fresh local D1 |
+| 2   | **RPE from any FIT**: `runDraftSchema.rpe` (optional int 1–10); `fit.ts` reads `session.workoutRpe` ÷ 10, and drops values out of range; `effortFromRpe` table in `lib/contracts` (1–4 easy, 5–6 steady, 7–8 workout, 9–10 race); the consumer stores `rpe`, `effort` and `effort_source='watch'`. | parser tests on synthetic FITs built in the test with the SDK's `Encoder` (with, without, 0, 255); mapping pinned at each boundary; consumer worker test | an uploaded FIT with RPE 20 lands as RPE 2, easy, `watch` |
+| 3   | **A3 effort row (G5)**. A3 has **no effort control today** (effort is set only on the manual form), so this adds one: four chips, prefilled and selected when `effort_source='watch'`, with the line FROM YOUR WATCH · RATED {n} OF 10 and the spoken label. Any tap makes it the runner's pick. It saves with the verdict, in the verdict's batch, writing `effort` and `effort_source='runner'` only when the runner tapped. | `VerdictForm.dom.test.tsx`: prefilled, tapped (even the same chip), none; worker test on the write | the mutation ratchet holds; a11y label matches G5 |
+| 4   | **Config**: `garminConfigFrom(key, ownerId)` plus the env shell; `env.d.ts`; rows in `deployment.md` §5, `deployment-plan.md` §2 and `.dev.vars.example`, including a reminder to rotate the key by its expiry date. | unit tests of the decision (absent, blank, both present); `isGarminOwner` | absent config hides the feature |
+| 5   | **API client + unzip**: token (plain-text JWT → Bearer), list (`activityType=running`, limit 10), download. One attempt each, 10 s, zod parse, typed failure. | worker tests on a stubbed `fetch` with **synthetic** payloads; unzip on a deflated zip built in the test, a stored entry, a corrupt one and a two-entry one | every failure maps to "unreachable", never a 500 |
+| 6   | **Service + server functions** `listGarminActivitiesFn` (GET) and `importGarminActivityFn({ activityId, idempotencyKey })` (POST), owner-gated after `requireUserId`. Import: an existing `imports` row for the activity returns its id with no download; otherwise download, then `startImport`; a UNIQUE race returns the winner's id. The consumer sets source and device. Rows in `verification-class.test.ts` (`unconfirmed`). | worker tests: not owner → refused; list marks imported; second import returns the first; race; consumer writes `garmin` | a stubbed import lands a run with `source='garmin'` |
+| 7   | **Attribution (G1)**: `GarminAttribution` (text-small, 500, `--ink-2`) as the first line under the title on A1's card, D, E1 and each runs-list row, when `device_name` is set. | dom tests per surface; none for a file run | renders "Garmin" on all four |
+| 8   | **Picker (G3)** on A1, under the file well: IMPORT FROM GARMIN · LAST 10, rows, IMPORT › / [IMPORTED] ›, loading, none, unreachable with Try again. A tap hands the import id to UploadForm's existing poll (UploadForm takes an externally started import). Loaded on mount, so A1 never waits on Garmin. `design-deltas.md`: G3, G5 and G1 marked built. | `GarminImport.dom.test.tsx`: each state; the hand-off to the poll | `npm run build` passes `check:bundle` (entry chunk has ~2.5 KB headroom) |
+| 9   | **Demo**: e2e under `e2e/garmin-import/` against a stub. Needs an optional `GARMIN_API_ORIGIN` var (default: Garmin's), set only by e2e; see question 3. Recorded per `pr-demo-video`. | the e2e spec | video recorded |
+| 10  | **Live check** (owner + me, local only): `wrangler dev` with `.dev.vars`, importing the Oct 23 run. Nothing recorded is committed. | manual | RPE 2, easy, FROM YOUR WATCH, "Garmin" |
+| 11  | **Ship**: decision row (a Garmin run is first-party and may be shared, unlike Strava's D-14); `architecture.md` diagram gains the outbound Garmin fetch; `pr-ready`; push in the background. | `npm run verify && npm test && npm run build` | green on `main`; deploy from `main` |
+
+## Open questions
+
+1. **A3's effort row is new for every run**, not only Garmin's, because G5's "no
+   rating: nothing is picked" implies the row is always there. Proceeding on that.
+2. **The e2e stub needs `GARMIN_API_ORIGIN`.** Env-only, defaulting to Garmin's origin (owner, 2026-10-24).
+3. **Deferred to phase 3**: G2's derived line on E2,
+   and `runs.csv`'s `source` column. Proceeding on that.
+4. The token is fetched per call, not cached: two calls per action, because rate
+   limits are unknown and nothing polls.

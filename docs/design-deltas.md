@@ -1133,6 +1133,81 @@ under it with a 20px gap between posts; it is now the hairline
 between posts, across the column, with SPACE[4] above and below
 each.
 
+## Answered in the Garmin round (imported 2026-10-24)
+
+Plan 152. Asked with round 39 and answered on its own board,
+`Garmin Rulings.dc.html`, with the text of record in `design/docs/garmin.md`.
+Frames marked GARMIN SUBMISSION are the attribution mockups for the Starter
+application. Phase 1 (`152-garmin-phase-1.md`) builds G3 and G5 and G1's
+lines; G2 and G4 are phase 3.
+
+The items are numbered G1–G5 rather than 77–81, because they were imported
+apart from the public sequence and a public item may have taken those
+numbers since. Design's board and `docs/garmin.md` call them 77–81.
+
+- **G1 (design's 77).** **Garmin attribution on a run's data. Ruled and drawn.** Text, never
+  the tag logo: "Garmin {device model}", or "Garmin" alone when the model
+  is unknown, which is always so in phase 1. `GarminAttribution`:
+  text-small, weight 500, `--ink-2`, sentence case, never caps or mono.
+  It is the first line under the view's title: A1's imported-run card,
+  under D's headline, under E1's byline, once per row on the runs list
+  (a header line would claim the whole of a mixed list), and under the
+  temperature on the share/OG entry card (26px at 1200×630), with the
+  weather credit at the card's foot. The weather credit stays with the
+  conditions, a step smaller, and never shares a line with Garmin's.
+  `runs.csv` gets a `source` column per row: "Garmin {model}", "Strava"
+  or "File". A run uploaded as a file draws nothing.
+
+- **G2 (design's 78).** **The derived line. Ruled.** "Derived in part from Garmin
+  device-sourced data.", the same step, directly under the figure's
+  heading, shown only when at least one Garmin run is in that figure (a
+  server flag). E2 now; B1/B2 and M2–M4 later.
+
+- **G3 (design's 79).** **Import from Garmin (owner only, phase 1). Ruled and drawn.** A
+  section of A1 under the file well, not a sheet: IMPORT FROM GARMIN ·
+  LAST 10. Row: date · distance · time, then "Garmin"; IMPORT › or
+  [IMPORTED] ›, which opens the run. Loading: three rows with breathing
+  brackets. None: "No runs on Garmin yet." Unreachable: §4a NOT LOADED ·
+  "Garmin didn't answer." · Try again. Already here: A1's duplicate
+  receipt. Retired when push arrives.
+
+- **G4 (design's 80).** **Connecting Garmin. Ruled and drawn; consent approved by the owner
+  (2026-10-24).** T1: Garmin's tile (their file, unaltered) and "Garmin
+  Connect™" on one line, the consent, then our own primary button,
+  "Connect Garmin Connect™". The consent:
+  - **What we receive.** Each run's time, duration, distance, start
+    point rounded to about a kilometre, the device, and the effort you
+    rated it on your watch. No heart rate, sleep or any other health
+    data.
+  - **How.** Garmin sends each new run once you connect. We read the
+    file, keep those facts and delete the file.
+  - **To stop.** Disconnect here or in Garmin Connect. Runs already here
+    stay until you delete them.
+  - **To delete.** Delete a run from the run itself, or your whole
+    account under Settings › Account, or write to hello@dialed.run. We
+    email you when it's done.
+
+  Settings rows: not connected, "Your runs arrive on their own." ·
+  Connect; "Connected as {name}" · Disconnect; "Disconnected. Runs
+  already here stay." · Connect; "Garmin Connect ended the connection.
+  New runs won't arrive." · Connect again; full, approved by the owner:
+  "Garmin connections are full for now. Strava still works.", with no
+  action. Bell: "New run from Garmin: add your kit", opening A2. P3
+  offers both, Garmin Connect™ first ("Your runs arrive on their
+  own."), then Strava ("So we can remind you. Optional."); the Garmin
+  row is not drawn while Garmin is full or unshipped. A Garmin import
+  clears the matching Strava reminder, silently.
+
+- **G5 (design's 81).** **Effort from the watch. Ruled and drawn.** The watch's 1–10
+  perceived-effort rating, never heart rate, prefills A3's effort chip:
+  1–4 Easy, 5–6 Steady, 7–8 Workout, 9–10 Race. It is drawn selected
+  exactly like a runner's pick, and saved if left alone. Beside EFFORT:
+  FROM YOUR WATCH · RATED {n} OF 10 (MONO.xs, `--muted`), spoken
+  "Effort, Steady, from your watch, rated 6 of 10". Any tap, even on the
+  same chip, makes it the runner's pick, drops the source line and
+  records `effort_source = runner`. It never re-prefills. No rating:
+  nothing is picked and there is no source line. **The owner adopted this mapping and `effort_source`** (2026-10-24), replacing plan 152's first draft. Garmin's own race flag is not used: a race can be run at any effort.
+
 ## Answered in round 39 (imported 2026-10-24)
 
 Sent on 2026-10-24 for items 66–76; design answered the same day as
