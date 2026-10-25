@@ -1,5 +1,6 @@
 import js from "@eslint/js";
 import prettier from "eslint-config-prettier";
+import betterTailwind from "eslint-plugin-better-tailwindcss";
 import sonarjs from "eslint-plugin-sonarjs";
 import unicorn from "eslint-plugin-unicorn";
 import tseslint from "typescript-eslint";
@@ -67,7 +68,42 @@ const baseRestrictions = [
  * duplication four parallel lanes actually produced, not one they might.
  *
  */
+/**
+ * Arbitrary values on a scale property (docs/proposals/113): `text-[11px]`,
+ * `rounded-[10px]`, `duration-[250ms]`. The scale is design/tokens.js,
+ * ported in src/styles.css; 93 of these accumulated because nothing said no.
+ * The scale properties only, not a catch-all for `-[`: `[grid-area:1/1]` is
+ * an arbitrary *property* and `has-[:focus-visible]` a variant, and neither
+ * is a value on a scale, and neither is a grid track template
+ * (`grid-cols-[auto_1fr]`), which is composition. `env(…)` is the device
+ * telling us a number; `var(…)`, or a `calc(…)` over one, is a token.
+ * Raw hex is `test/architecture/palette-only.test.ts`'s, which also reads
+ * inline styles, so it is not repeated here.
+ */
+const arbitraryValue = String.raw`(?<![\w-])(text|tracking|leading|font|rounded|p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr|space-x|space-y|gap|gap-x|gap-y|w|h|min-w|min-h|max-w|max-h|size|basis|inset|inset-x|inset-y|top|bottom|left|right|border|border-t|border-b|border-l|border-r|bg|fill|stroke|outline|outline-offset|ring|shadow|decoration|underline-offset|col-span|row-span|aspect|translate-x|translate-y|scale|rotate|duration|delay|ease|z|opacity)-\[(?!env\(|var\(|calc\([^\]]*var\()`;
+const noArbitrary =
+  "No arbitrary values. The scale is design/tokens.js, ported in src/styles.css — pick a step (text-body, rounded-card, px-4), or raise a design delta if none fits.";
+
 const crossLaneRestrictions = [
+  // A class string reaches the DOM as an attribute literal, an attribute
+  // template, or a const — `SubmitButton`'s worst offenders were a template
+  // literal, which a `Literal` selector does not see at all.
+  {
+    selector: `JSXAttribute[name.name='className'] Literal[value=/${arbitraryValue}/]`,
+    message: noArbitrary,
+  },
+  {
+    selector: `JSXAttribute[name.name='className'] TemplateElement[value.raw=/${arbitraryValue}/]`,
+    message: noArbitrary,
+  },
+  {
+    selector: `VariableDeclarator > Literal[value=/${arbitraryValue}/]`,
+    message: noArbitrary,
+  },
+  {
+    selector: `VariableDeclarator > TemplateLiteral > TemplateElement[value.raw=/${arbitraryValue}/]`,
+    message: noArbitrary,
+  },
   {
     // Four copies across three lanes had already become three different
     // error types (Error / UnauthenticatedError / AuthRequiredError), so
@@ -155,6 +191,14 @@ export default tseslint.config(
     },
     rules: {
       "no-restricted-syntax": ["error", ...baseRestrictions],
+      // A drizzle builder is a thenable, not a Promise, and typescript-eslint
+      // v8 skips thenables by default — so `db.insert(t).values(v);` with no
+      // `await` and no `batch()` sent nothing and linted clean. Measured: 0
+      // existing violations when this was turned on.
+      "@typescript-eslint/no-floating-promises": [
+        "error",
+        { checkThenables: true },
+      ],
       // Workers/React codebase adjustments to unicorn defaults:
       "unicorn/prevent-abbreviations": "off",
       "unicorn/name-replacements": "off",
@@ -190,6 +234,42 @@ export default tseslint.config(
           (restriction) => restriction !== nowSecondsRestriction,
         ),
         ...crossLaneRestrictions,
+      ],
+    },
+  },
+  {
+    /**
+     * Tailwind drops a class it does not know in silence — no error, an
+     * unstyled element and a green suite (docs/proposals/082). This asks
+     * Tailwind v4's own `candidatesToCss` against our compiled theme, so
+     * `text-sm` (cleared by task 113) is reported, not just typos.
+     */
+    files: ["src/**/*.ts", "src/**/*.tsx"],
+    plugins: { "better-tailwindcss": betterTailwind },
+    settings: {
+      "better-tailwindcss": {
+        entryPoint: "src/styles.css",
+        detectComponentClasses: true,
+        // Fully anchored, or the pattern matches nothing and fails open:
+        // the const is never linted and the run is green.
+        variables: [
+          ["^classNames?$", [{ match: "strings" }]],
+          ["^.*CLASS(ES)?$", [{ match: "strings" }]],
+          ["^.*[Cc]lass(es)?$", [{ match: "strings" }]],
+        ],
+      },
+    },
+    rules: {
+      "better-tailwindcss/no-unknown-classes": [
+        "error",
+        {
+          // Hand-written CSS hooks, not utilities, and they must stay
+          // unlayered: `.field-box` was an `@utility` once, and the layer
+          // let `input:focus-visible` win and draw a second ring on every
+          // field (PR #104; src/ui/a11y.css). `.photo-hatch` shares the
+          // hatch rule with `.ink-partial` (src/ui/ink.css).
+          ignore: ["^field-box$", "^photo-hatch$"],
+        },
       ],
     },
   },

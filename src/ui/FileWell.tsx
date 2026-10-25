@@ -177,8 +177,8 @@ export function FileWell({
           data-state={drop.isOver ? "drag-over" : "filled"}
           className={
             drop.isOver
-              ? "aspect-[4/3] w-full wide:max-h-80 rounded-field border-2 border-ink bg-panel"
-              : "aspect-[4/3] w-full wide:max-h-80 rounded-field border border-hairline bg-photo"
+              ? "aspect-4/3 w-full wide:max-h-80 rounded-field border-2 border-ink bg-panel"
+              : "aspect-4/3 w-full wide:max-h-80 rounded-field border border-hairline bg-photo"
           }
         >
           <img
