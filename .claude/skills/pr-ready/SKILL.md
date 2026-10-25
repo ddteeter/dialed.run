@@ -32,6 +32,15 @@ If you answer anything with "flagging it", "next schema batch" or "worth
 doing later", add the row to `docs/deferred.md` in the same commit and say
 which item it is. A thread scrolls away; the register does not.
 
+## Never put a closing keyword before another PR's number
+
+GitHub closes `#N` when a PR whose body or commit message says "closes",
+"fixes" or "resolves" (in any tense) before `#N` merges to `main`. That
+includes another open PR, not only issues. On 2026-10-25 #229's
+"This resolves #228's R-165" closed #228 as #229 merged. To mention a PR
+or an issue, write "addresses #N", "relates to #N" or "after #N". Use a
+closing keyword only for an issue this PR is meant to close.
+
 ## Pushing
 
 The push gate takes ~26 minutes and Guardrails CI 40–45. **Never wait in the
