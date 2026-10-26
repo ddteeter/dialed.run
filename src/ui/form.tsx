@@ -229,7 +229,7 @@ function FieldShell({
  * one thing that genuinely differs — chips wrap, the verdict is five
  * columns that must not.
  */
-export function FieldGroup({
+function FieldGroup({
   name,
   legend,
   hint,

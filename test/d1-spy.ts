@@ -11,31 +11,54 @@ export function spiedBinding(
   real: D1Database = env.DIALED_CORE,
   reporting?: string,
 ) {
-  const opened: string[] = [];
-  const bare: string[] = [];
-  const binding: D1Database = {
-    prepare(query) {
-      bare.push(query);
-      return real.prepare(query);
-    },
-    batch(statements) {
-      bare.push("batch");
-      return real.batch(statements);
-    },
-    exec: (query) => real.exec(query),
-    dump: () => Promise.reject(new Error("not used")),
-    withSession(constraint) {
-      opened.push(String(constraint));
-      const session = real.withSession(constraint);
-      if (reporting === undefined) return session;
-      // D1 breaking its own ordering, on demand: every session reports
-      // `reporting` as its bookmark, whatever it was opened from.
-      return {
-        prepare: (query) => session.prepare(query),
-        batch: (statements) => session.batch(statements),
-        getBookmark: () => reporting,
-      };
-    },
-  };
-  return { binding, opened, bare };
+  const binding = new SpiedBinding(real, reporting);
+  return { binding, opened: binding.opened, bare: binding.bare };
+}
+
+// A class, not an object literal: D1Database still requires the deprecated
+// `dump`, and only a class method implements it without reading as a use.
+class SpiedBinding implements D1Database {
+  readonly opened: string[] = [];
+  readonly bare: string[] = [];
+
+  constructor(
+    private readonly real: D1Database,
+    private readonly reporting: string | undefined,
+  ) {}
+
+  prepare(query: string): D1PreparedStatement {
+    this.bare.push(query);
+    return this.real.prepare(query);
+  }
+
+  batch<T = unknown>(
+    statements: D1PreparedStatement[],
+  ): Promise<D1Result<T>[]> {
+    this.bare.push("batch");
+    return this.real.batch<T>(statements);
+  }
+
+  exec(query: string): Promise<D1ExecResult> {
+    return this.real.exec(query);
+  }
+
+  dump(): Promise<ArrayBuffer> {
+    return Promise.reject(new Error("not used"));
+  }
+
+  withSession(
+    constraint?: Parameters<D1Database["withSession"]>[0],
+  ): D1DatabaseSession {
+    this.opened.push(String(constraint));
+    const session = this.real.withSession(constraint);
+    const { reporting } = this;
+    if (reporting === undefined) return session;
+    // D1 breaking its own ordering, on demand: every session reports
+    // `reporting` as its bookmark, whatever it was opened from.
+    return {
+      prepare: (query) => session.prepare(query),
+      batch: (statements) => session.batch(statements),
+      getBookmark: () => reporting,
+    };
+  }
 }

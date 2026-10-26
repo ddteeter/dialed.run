@@ -12,10 +12,8 @@ export type { CoverageLevel, VerdictKind } from "./Marks";
 export { Mono } from "./Mono";
 export { Page } from "./Page";
 export type { PhotoStep } from "./photo-step";
-export { ProductLink } from "./ProductLink";
 export { Sheet } from "./Sheet";
 export { ConfirmLink, ConfirmSheet } from "./ConfirmSheet";
-export { SignedOutPanel } from "./SignedOutPanel";
 export { Skeleton } from "./Skeleton";
 export { StravaConsent } from "./StravaConsent";
 export {
@@ -23,7 +21,6 @@ export {
   ChoiceList,
   ControlFailureBand,
   FailureBand,
-  FieldGroup,
   FieldMessage,
   FormElement,
   FormErrorSummary,

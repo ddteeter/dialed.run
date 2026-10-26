@@ -147,7 +147,7 @@ export function departedKeys<TItem>(
  * grid re-rendered the pre-retire copy and the `[Retired]` badge never
  * appeared.
  */
-export function refreshed<TItem>(
+function refreshed<TItem>(
   held: readonly TItem[],
   items: readonly TItem[],
   keyOf: (item: TItem) => string,

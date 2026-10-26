@@ -165,7 +165,7 @@ const manualConditionsDelete = outboxKind("manual_conditions_delete", {
   runId: z.string().min(1),
 });
 
-export const outboxMessageSchema = z.discriminatedUnion("kind", [
+const outboxMessageSchema = z.discriminatedUnion("kind", [
   photoDelete,
   entryMediaDelete,
   importFileDelete,
