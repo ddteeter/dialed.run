@@ -14,7 +14,10 @@ import {
   ruleLine,
   type CommunityRule,
 } from "../../lib/contracts/community-rules";
-import { COPYRIGHT_NOTICE_CLAUSE } from "../../lib/contracts/email-kinds";
+import {
+  COPYRIGHT_NOTICE_CLAUSE,
+  GARMENT_PHOTO_REMOVED,
+} from "../../lib/contracts/email-kinds";
 
 /**
  * What a runner says is wrong, in the artboard's words.
@@ -303,6 +306,16 @@ export function removalNotice(
   return isCopyrightTakedown(action, reason)
     ? takedownSentence(subjectType)
     : removalSentence(subjectType, reason);
+}
+
+/**
+ * What a garment photo's owner is told in the bell when a person removes
+ * it (owner, 2026-10-26; R-167): the email's first sentence and the
+ * reason. A garment's photo is never taken down over a copyright notice,
+ * so there is no takedown sentence for it.
+ */
+export function garmentRemovalNotice(reason: RemovalReason): string {
+  return `${GARMENT_PHOTO_REMOVED}. Reason: ${removalStatements[reason]}.`;
 }
 
 /**

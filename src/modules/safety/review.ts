@@ -404,58 +404,58 @@ async function subjectsFor(
     productRows,
     garmentRows,
   ] = await database.batch([
-      database
-        .select({
-          id: entryPhotos.id,
-          photoKey: entryPhotos.photoKey,
-          owner: userProfiles.username,
-        })
-        .from(entryPhotos)
-        // LEFT, both: the author is a line of text and the photo is the
-        // thing being judged. `entry_photos.entry_id` carries no foreign
-        // key, so a photo whose entry has gone is possible — and an inner
-        // join would hide the very image the reviewer is asked about,
-        // where a left one shows it and simply names nobody.
-        .leftJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
-        .leftJoin(userProfiles, eq(userProfiles.userId, outfitEntries.userId))
-        .where(inArray(entryPhotos.id, subjectIds)),
-      database
-        .select({
-          entryId: entryPhotos.entryId,
-          photoKey: entryPhotos.photoKey,
-        })
-        .from(entryPhotos)
-        .where(inArray(entryPhotos.entryId, subjectIds))
-        .orderBy(asc(entryPhotos.position)),
-      database
-        .select({ id: outfitEntries.id, owner: userProfiles.username })
-        .from(outfitEntries)
-        .leftJoin(userProfiles, eq(userProfiles.userId, outfitEntries.userId))
-        .where(inArray(outfitEntries.id, subjectIds)),
-      database
-        .select({
-          userId: userProfiles.userId,
-          username: userProfiles.username,
-          screen: userProfiles.usernameScreen,
-        })
-        .from(userProfiles)
-        .where(inArray(userProfiles.userId, subjectIds)),
-      database
-        .select({ id: products.id, name: products.name })
-        .from(products)
-        .where(inArray(products.id, subjectIds)),
-      // A garment's photo (design 157): the card size its owner sees,
-      // under the version the row names now.
-      database
-        .select({
-          id: wardrobeItems.id,
-          photoKey: sql<string>`${wardrobeItems.photoKey} || '/card.webp'`,
-          owner: userProfiles.username,
-        })
-        .from(wardrobeItems)
-        .leftJoin(userProfiles, eq(userProfiles.userId, wardrobeItems.userId))
-        .where(garmentsWithPhoto),
-    ]);
+    database
+      .select({
+        id: entryPhotos.id,
+        photoKey: entryPhotos.photoKey,
+        owner: userProfiles.username,
+      })
+      .from(entryPhotos)
+      // LEFT, both: the author is a line of text and the photo is the
+      // thing being judged. `entry_photos.entry_id` carries no foreign
+      // key, so a photo whose entry has gone is possible — and an inner
+      // join would hide the very image the reviewer is asked about,
+      // where a left one shows it and simply names nobody.
+      .leftJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
+      .leftJoin(userProfiles, eq(userProfiles.userId, outfitEntries.userId))
+      .where(inArray(entryPhotos.id, subjectIds)),
+    database
+      .select({
+        entryId: entryPhotos.entryId,
+        photoKey: entryPhotos.photoKey,
+      })
+      .from(entryPhotos)
+      .where(inArray(entryPhotos.entryId, subjectIds))
+      .orderBy(asc(entryPhotos.position)),
+    database
+      .select({ id: outfitEntries.id, owner: userProfiles.username })
+      .from(outfitEntries)
+      .leftJoin(userProfiles, eq(userProfiles.userId, outfitEntries.userId))
+      .where(inArray(outfitEntries.id, subjectIds)),
+    database
+      .select({
+        userId: userProfiles.userId,
+        username: userProfiles.username,
+        screen: userProfiles.usernameScreen,
+      })
+      .from(userProfiles)
+      .where(inArray(userProfiles.userId, subjectIds)),
+    database
+      .select({ id: products.id, name: products.name })
+      .from(products)
+      .where(inArray(products.id, subjectIds)),
+    // A garment's photo (design 157): the card size its owner sees,
+    // under the version the row names now.
+    database
+      .select({
+        id: wardrobeItems.id,
+        photoKey: sql<string>`${wardrobeItems.photoKey} || '/card.webp'`,
+        owner: userProfiles.username,
+      })
+      .from(wardrobeItems)
+      .leftJoin(userProfiles, eq(userProfiles.userId, wardrobeItems.userId))
+      .where(garmentsWithPhoto),
+  ]);
 
   const found = new Map<string, QueueSubject>();
   for (const row of photoRows) {
@@ -772,8 +772,9 @@ export async function resolveReview(
  *   changes nothing about the profile (a ban is separate, and tells them
  *   itself), so neither is told "we removed it".
  * - **A quarantine** tells nobody: suspected CSAM is silent (D-70).
- * - **A garment's photo** tells nobody either way: nobody reports one,
- *   and its author's notice of a Remove waits on the owner (design 157).
+ * - **A garment's photo** tells nobody here: nobody reports one, and its
+ *   Remove reaches here only once the photo is gone — the owner's notice
+ *   is `feed/garment-moderation.ts`'s, with the Remove (design 159).
  */
 async function decisionNotices(
   row: Exclude<OpenRow, string>,
@@ -917,10 +918,10 @@ const subjectWriters: Record<
   ],
   // A garment's photo (design 157). Approve clears it: nobody but its
   // owner ever sees it, so `pass` publishes nothing, and it ends the
-  // owner's "being checked" band. Remove keeps it hidden (`flagged`) and
-  // tells nobody until the owner settles what its author is told. A
-  // quarantine is `feed/garment-moderation.ts`'s, and reaches here only
-  // once the photo is gone. Only a garment that still has a photo.
+  // owner's "being checked" band. A Remove or a quarantine is
+  // `feed/garment-moderation.ts`'s (designs 157, 159), and reaches here
+  // only once the photo is gone, so `flagged` lands on nothing: only a
+  // garment that still has a photo.
   garment: (subjectId, decision) => [
     setOnSubject(
       wardrobeItems,

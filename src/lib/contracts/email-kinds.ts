@@ -88,6 +88,13 @@ export const runReminder = emailKind("run_reminder", {
 export const COPYRIGHT_NOTICE_CLAUSE = "after a copyright notice";
 
 /**
+ * What a garment photo's owner is told went (owner, 2026-10-26; R-167):
+ * the sentence the bell row and the email both open with, written once.
+ */
+export const GARMENT_PHOTO_REMOVED =
+  "We removed the photo of one of your garments";
+
+/**
  * Round 27 #15/#20's "Email content removed": a moderator's Remove or a
  * copyright takedown (task 128 · SAF-8), telling the author what went and
  * the reason from the removal list, word for word. Account mail, so always
@@ -100,7 +107,12 @@ export const COPYRIGHT_NOTICE_CLAUSE = "after a copyright notice";
  * moderator's Remove as it always was.
  */
 export const contentRemoved = emailKind("content_removed", {
-  subject: z.enum(["entry", "photo"]),
+  /**
+   * What went: a kit, a kit photo, or a garment's photo (R-167, design
+   * 159), whose email says "your closet" where the others say "your run".
+   * Widened, never narrowed (law 9).
+   */
+  subject: z.enum(["entry", "photo", "garment"]),
   reason: z.string().min(1),
   cause: z.literal("copyright_notice").optional(),
   /**

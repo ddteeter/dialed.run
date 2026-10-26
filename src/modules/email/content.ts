@@ -20,7 +20,10 @@ import {
 } from "../../lib/contracts/community-rules";
 import { CONTACT_ADDRESS } from "../../lib/contracts/contact";
 import { EXPORT_LINK_DAYS } from "../../lib/contracts/data-export";
-import { COPYRIGHT_NOTICE_CLAUSE } from "../../lib/contracts/email-kinds";
+import {
+  COPYRIGHT_NOTICE_CLAUSE,
+  GARMENT_PHOTO_REMOVED,
+} from "../../lib/contracts/email-kinds";
 import {
   STRAVA_DISCONNECTED_LINE,
   type EmailKind,
@@ -108,6 +111,8 @@ function reminderBody(landedAt: string, runs: number): string {
 function removed(
   template: Extract<EmailTemplate, { kind: "content_removed" }>,
 ): string {
+  // A garment's photo has no run to name (owner, 2026-10-26; R-167).
+  if (template.subject === "garment") return GARMENT_PHOTO_REMOVED;
   const day =
     template.cause === "copyright_notice" ? undefined : template.runDay;
   if (day === undefined) {
@@ -170,6 +175,17 @@ What is left, after the reason.
 const STAYS = {
   photo: "Your run and verdict stay.",
   entry: "The run itself stays.",
+  garment: "The garment stays in your closet.",
+} as const;
+
+/**
+ * The removal email's subject: a run's, or — for a garment's photo
+ * (owner, 2026-10-26; R-167) — the closet's.
+ */
+const REMOVED_SUBJECT = {
+  photo: "We removed something from your run",
+  entry: "We removed something from your run",
+  garment: "We removed a photo from your closet",
 } as const;
 
 /**
@@ -324,7 +340,7 @@ const CONTENT: {
   },
   content_removed: (template, { origin }) => {
     return {
-      subject: "We removed something from your run",
+      subject: REMOVED_SUBJECT[template.subject],
       // C8 (D-145): what, why, the rule, who decided, then what stays.
       body: `${removed(template)}${why(template)} ${brokeRule(template.rule)}${decidedBy(template.flagged === true)} ${STAYS[template.subject]}`,
       button: communityRules(origin),
