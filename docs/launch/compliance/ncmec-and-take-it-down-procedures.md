@@ -67,13 +67,13 @@ is decided, and the 48-hour clock still runs (see
 Actual knowledge that an image or kit on [dialed.run] is apparent CSAM.
 Today that knowledge can only come from a person looking at it:
 
-| Route in                                       | What the code does                                                                                                                                                                                           | Where                                                              |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| A runner reports a kit or photo                | Queued for review. Three distinct reporters hide it from everyone but its owner; one `intimate` report hides it at once.                                                                                     | `safety/reports.ts`; `safety/contracts.ts` `reportersToHide`       |
-| The photo classifier flags a kit photo         | Hidden and queued (`flag`), or queued and left visible (`review` band). **The classifier does not detect CSAM**: OpenAI's `sexual/minors` category is text-only, so an image scores 0 on it by construction. | `safety/screening.ts` `queueWritesFor`; `classifier/moderation.ts` |
-| A `/takedown` request whose link is ours       | Hidden at once (within the limits of D-118) and queued.                                                                                                                                                      | `safety/takedown-requests.ts` `fileTakedownRequest`                |
-| Email to desk@ or hello@, or a law-enforcement | Nothing automatic. The operator finds the content by hand.                                                                                                                                                   | —                                                                  |
-| A garment (closet) photo                       | Screened, and hidden on `flag`, but **never queued** and **cannot be quarantined** (see [Gaps](#gaps-this-procedure-cannot-close)).                                                                          | `safety/screening.ts:158`                                          |
+| Route in                                       | What the code does                                                                                                                                                                                           | Where                                                                        |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| A runner reports a kit or photo                | Queued for review. Three distinct reporters hide it from everyone but its owner; one `intimate` report hides it at once.                                                                                     | `safety/reports.ts`; `safety/contracts.ts` `reportersToHide`                 |
+| The photo classifier flags a kit photo         | Hidden and queued (`flag`), or queued and left visible (`review` band). **The classifier does not detect CSAM**: OpenAI's `sexual/minors` category is text-only, so an image scores 0 on it by construction. | `safety/screening.ts` `queueWritesFor`; `classifier/moderation.ts`           |
+| A `/takedown` request whose link is ours       | Hidden at once (within the limits of D-118) and queued.                                                                                                                                                      | `safety/takedown-requests.ts` `fileTakedownRequest`                          |
+| Email to desk@ or hello@, or a law-enforcement | Nothing automatic. The operator finds the content by hand.                                                                                                                                                   | —                                                                            |
+| A garment (closet) photo                       | Screened like a kit photo: hidden and queued on `flag`, queued on `review`, and held and queued when it copies a removed intimate image (D-147). It reaches Review as a `garment photo` row (design 157).    | `safety/screening.ts` `queueWritesFor`; `closet/photos.ts` `uploadItemPhoto` |
 
 **What changes when C11 (PhotoDNA, D-129) lands:** every upload is also
 matched against known-CSAM hashes beside the classifier. A match is a
@@ -86,8 +86,9 @@ only cached responses and none of ours are cached (D-69).
 
 1. Open **Review** (`/safety/review`, admin only). Look at the item only
    through the review photo route (`src/routes/safety/review-photo.$.tsx`
-   → `feed/photos.ts` `reviewerPhotoResponse`). Do not save, screenshot,
-   forward or download it.
+   → `feed/photos.ts` `reviewerPhotoResponse`), which tells the browser to
+   keep no copy (`Cache-Control: private, no-store`). Do not save,
+   screenshot, forward or download it.
 2. Choose **Remove as suspected CSAM** and confirm (the row asks again;
    `safety/components/ReviewQueue.tsx` `Decision`).
 3. What the code does, in this order (`feed/moderation.ts`
@@ -100,31 +101,41 @@ only cached responses and none of ours are cached (D-69).
      `quarantined_content` row with the entry snapshot, the photo snapshot
      (each photo's preserved key and R2 upload time), the uploader's id,
      `quarantined_at`, and `retain_until` = quarantine time + 1 year
-     (`safety/quarantine.ts:40-46` `quarantineInsert`);
+     (`safety/quarantine.ts` `quarantineInsert`);
+   - in the same row, `uploader_snapshot`: the uploader's email, account
+     creation time, username, and every `session` row's times, IP address
+     and browser as they stood (never the token), read just before the
+     batch (`safety/quarantine.ts` `uploaderContextOf`, design 157). It has
+     the record's clock, so a ban, the session sweep or the account purge
+     cannot take it;
    - sends the uploader nothing: no bell row, no email (D-70).
+
+   **A garment photo** (a `garment photo` row) quarantines the same way
+   (`feed/garment-moderation.ts` `quarantineGarmentPhoto`): every size of
+   the photo is copied to `quarantine/items/…`, the photo is taken off the
+   garment (the garment stays), and the record holds the garment row, its
+   screenings, the copies and the uploader snapshot, with no entry id.
+
 4. Quarantine **does not close the account** (D-88). That is a separate
    decision, in Step 3, and it must come **after** Step 2.
 
 ### Step 2: capture the context, then report (by hand)
 
-The quarantine record holds the content and the uploader's id. It does
-**not** hold the uploader's email, IP addresses, or sign-in history. Those
-live in tables other paths delete:
-
-- `session` rows hold IP and browser, and are deleted 30 days after expiry
-  (`auth/expired-rows.ts` `sweepExpiredAuthRows`) and **at once on a ban**
-  (`safety/bans.ts` `banUser`).
-- The `user` row (email) is deleted by the account purge 7 days after the
-  uploader asks to delete their account (`account/purge.ts`).
+The quarantine record holds the content, the uploader's id, and (design 157) the uploader's email, username and session records (IP addresses,
+browsers, times) as of the quarantine, in `uploader_snapshot`. The same
+`session` rows are still deleted from `session` 30 days after expiry and
+at once on a ban, and the `user` row by the account purge; the copy in the
+record is not. No upload records an IP address of its own: the session
+records are the IPs we hold. The record does **not** hold anything after
+the quarantine (a later sign-in), nor the rest of the context below.
 
 So, before anything else:
 
 1. **Read the context** from the remote core database with
-   `wrangler d1 execute dialed-core --remote`, by the uploader id on the quarantine
-   row: the `user` row (email, `created_at`, `email_verified`), their
-   `user_profiles` row (username, place), `username_history`, their
-   `session` rows (IP addresses, user agents, times), and the
-   `invite_redemptions` row (which code let them in).
+   `wrangler d1 execute dialed-core --remote`: the record's
+   `uploader_snapshot` by its id; and, by the uploader id, their
+   `user_profiles` row (place), `username_history`, any `session` rows
+   made since, and the `invite_redemptions` row (which code let them in).
    [CHECK: the exact column names against `src/db/schema-auth.ts` and
    `schema-core.ts` before first use.]
 2. **Keep that context** with the report, in the evidence store, under
@@ -170,7 +181,8 @@ So, before anything else:
 Decide whether to close the uploader's account (`safety/bans.ts`
 `banUser`: records the reason, deletes every session, refuses sign-in,
 hides their content, sends `account_closed`). **Close it only after Step 2's
-capture**, because the ban deletes the session rows. For suspected CSAM, choose
+capture**: the ban deletes the session rows, and while the record keeps
+them as of the quarantine, any sign-in since exists only in `session`. For suspected CSAM, choose
 that rule on Close account: the email then names no reason and no rule.
 It says only "We closed your account for breaking the community rules.",
 then "You can't log in, and your shared runs are gone from the feed."
@@ -198,11 +210,11 @@ covers the quarantine; this keeps the ban from tipping off the uploader.
 
 For each report, two places:
 
-| Where                                | What                                                                                           |
-| ------------------------------------ | ---------------------------------------------------------------------------------------------- |
-| `quarantined_content` (in the app)   | Content snapshot, uploader id, `quarantined_at`, `ncmec_reported_at`, `ncmec_report_id`, clock |
-| `moderation_actions` (in the app)    | Who acted, when, which reason                                                                  |
-| The evidence store, `ncmec/` (D-148) | The captured context (Step 2), NCMEC's acknowledgement, any law-enforcement request, any hold  |
+| Where                                | What                                                                                                                                               |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `quarantined_content` (in the app)   | Content snapshot, uploader id and `uploader_snapshot` (email, username, sessions), `quarantined_at`, `ncmec_reported_at`, `ncmec_report_id`, clock |
+| `moderation_actions` (in the app)    | Who acted, when, which reason                                                                                                                      |
+| The evidence store, `ncmec/` (D-148) | The captured context (Step 2), NCMEC's acknowledgement, any law-enforcement request, any hold                                                      |
 
 ## Part 2: TAKE IT DOWN Act removals
 
@@ -318,18 +330,18 @@ a day:
 
 ## Gaps this procedure cannot close
 
-These are code facts, listed so the owner can decide. None is fixed here.
+These are code facts, listed so the owner can decide.
 
-1. **The quarantine does not preserve the uploader's context.** Email, IP
-   addresses and sign-in history are deleted by a ban, the session sweep or
-   the account purge. Step 2 captures them by hand; §2258A(h)(2) may expect
-   the provider to preserve them. A code fix would copy them into the
-   quarantine record.
-2. **The reviewer photo route lets the browser cache the image for an
-   hour** (`feed/photos.ts` `bytesResponse` sets
-   `cache-control: private, max-age=3600`). For suspected CSAM, the operator's own browser then holds
-   a copy. `no-store` on the reviewer route would stop that.
-3. **Garment photos cannot be quarantined or queued.** A flagged closet
-   photo stays hidden, and nothing puts it in front of a person.
-4. **No automated CSAM detection** until C11.
-5. **Copy search covers only the same runner's 12 newest photos** until C16.
+Closed by design 157 (C17): the quarantine now keeps the uploader's email,
+username and session records; the reviewer photo route sends `no-store`;
+and garment photos are queued and can be quarantined.
+
+1. **A garment photo's Remove tells its owner nothing yet.** Remove on a
+   `garment photo` row keeps the photo hidden (`flagged`) and writes the
+   decision, but no notice exists for it (design 157's open question).
+   Suspected CSAM is unaffected: it is a quarantine, silent by design.
+2. **A garment found only by copy search cannot be acted on from Review.**
+   Its tile opens nothing; it reaches the queue only through the
+   classifier or the D-147 hold.
+3. **No automated CSAM detection** until C11.
+4. **Copy search covers only the same runner's 12 newest photos** until C16.

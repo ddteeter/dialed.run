@@ -21,7 +21,9 @@
  * demand, which is the path least likely to be exercised in real life and
  * most important to get right.
  */
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import type { SQLWrapper } from "drizzle-orm";
+import type { drizzle } from "drizzle-orm/d1";
 
 import {
   entryPhotos,
@@ -38,7 +40,7 @@ import {
   type CategoryScores,
   type ScreenDecision,
 } from "./classifier/moderation";
-import { enqueueForReview } from "./review";
+import { enqueueForReview, settleOpenReviews } from "./review";
 
 function db() {
   return coreDb();
@@ -122,24 +124,97 @@ export async function screenPhoto(
   // why), or — the one this lane shipped and had to come back for —
   // hidden with nobody told.
   await db().batch([
-    db()
-      .insert(photoScreenings)
-      .values({
-        id: newUlid(),
-        photoScope: photo.scope,
-        photoId: photo.photoId,
-        model: MODERATION_MODEL,
-        // The raw scores, kept so a threshold can be re-tuned against real
-        // numbers after launch without re-classifying anything.
-        scores: JSON.stringify(result.scores),
-        decision,
-        createdAt: now,
-      }),
+    screeningInsert(photo, result.scores, decision, now),
     visibilityWrite(photo.scope, photo.photoId, decision),
     ...queueWritesFor(photo, decision),
   ]);
 
   return outcomeOf[decision];
+}
+
+/**
+ * The verdict's row, written only while the photo it describes still
+ * exists (design 157): an `INSERT … SELECT` from the photo's own row, so a
+ * classifier answer that lands after its runner deleted the photo writes
+ * nothing, and no screening outlives its photo. Every delete of a photo
+ * takes its screenings in the same batch (`screeningDeletes`); in D1's
+ * serialised batches the two cannot interleave.
+ *
+ * `scores` are the raw ones, kept so a threshold can be re-tuned against
+ * real numbers after launch without re-classifying anything.
+ */
+function screeningInsert(
+  photo: PhotoToScreen,
+  scores: CategoryScores,
+  decision: ScreenDecision,
+  now: number,
+) {
+  // Each field is named for the column it fills, read from the table.
+  const into = photoScreenings;
+  const row = {
+    id: sql<string>`${newUlid()}`.as(into.id.name),
+    photoScope: sql<PhotoScope>`${photo.scope}`.as(into.photoScope.name),
+    photoId: sql<string>`${photo.photoId}`.as(into.photoId.name),
+    model: sql<string>`${MODERATION_MODEL}`.as(into.model.name),
+    scores: sql<string>`${JSON.stringify(scores)}`.as(into.scores.name),
+    decision: sql<ScreenDecision>`${decision}`.as(into.decision.name),
+    createdAt: sql<number>`${now}`.as(into.createdAt.name),
+  };
+  const stillThere =
+    photo.scope === "entry"
+      ? db()
+          .select(row)
+          .from(entryPhotos)
+          .where(eq(entryPhotos.id, photo.photoId))
+      : db()
+          .select(row)
+          .from(wardrobeItems)
+          .where(
+            and(
+              eq(wardrobeItems.id, photo.photoId),
+              isNotNull(wardrobeItems.photoKey),
+            ),
+          );
+  return db().insert(photoScreenings).select(stillThere);
+}
+
+/**
+ * What goes when a garment's photo does — replaced, removed by its owner,
+ * or the garment deleted (design 157): what the screener said of it, and
+ * any review still open on it, settled as removed by its owner, as a kit
+ * photo's is when its runner deletes it. Statements for the caller's
+ * batch, ahead of the write that takes the photo.
+ */
+export function garmentPhotoForgotten(
+  database: ReturnType<typeof drizzle>,
+  ownerId: string,
+  itemId: string,
+) {
+  return [
+    screeningDeletes(database, "garment", [itemId]),
+    settleOpenReviews(database, "garment", [itemId], ownerId),
+  ] as const;
+}
+
+/**
+ * What the screener said about these photos, deleted — a statement for
+ * the batch that deletes the photos themselves (design 157), placed before
+ * that delete when `photoIds` is a subquery over the photos. `photoIds` are
+ * `entry_photos` ids, or garment ids for a garment's photo.
+ */
+export function screeningDeletes(
+  database: ReturnType<typeof drizzle>,
+  scope: PhotoScope,
+  photoIds: SQLWrapper | readonly string[],
+) {
+  return database
+    .delete(photoScreenings)
+    .where(
+      and(
+        eq(photoScreenings.photoScope, scope),
+        inArray(photoScreenings.photoId, photoIds),
+      ),
+    );
 }
 
 /**
@@ -155,22 +230,30 @@ export async function screenPhoto(
  * borderline score is the only calibration signal that comes from real
  * photos rather than from ones we picked for the eval.
  *
- * **Entry photos only.** A garment photo lives in a closet, which nobody
- * but its owner can see, so queueing one would put a private photo in front
- * of an operator to settle a question nobody asked. It still hides on
- * `flag`, and stays hidden until the owner replaces it — see R-69.
+ * **Garment photos too** (design 157, reversing R-69's first shape). A
+ * garment photo nobody but its owner sees still has to reach a person: a
+ * flagged one otherwise stayed hidden for good with nobody deciding, and
+ * suspected CSAM in a closet must be quarantinable like any other. It
+ * queues by the garment's id, as a `garment` subject.
  */
 function queueWritesFor(photo: PhotoToScreen, decision: ScreenDecision) {
   if (decision === "pass") return [];
-  if (photo.scope !== "entry") return [];
   return [
     enqueueForReview(db(), {
-      subjectType: "photo",
+      subjectType: queueSubjectOf[photo.scope],
       subjectId: photo.photoId,
       source: "classifier",
     }),
   ];
 }
+
+/**
+Which queue subject a photo of each scope is.
+*/
+const queueSubjectOf = {
+  entry: "photo",
+  garment: "garment",
+} as const satisfies Record<PhotoScope, string>;
 
 /**
 Which outcome each decision reports to the caller.
@@ -214,10 +297,18 @@ function visibilityWrite(
         ),
       );
   }
+  // Over `pending` only, as above (design 157): a garment photo held as a
+  // copy of a removed image (D-147) waits for a person, and a verdict
+  // landing late must not clear it.
   return db()
     .update(wardrobeItems)
     .set({ visibility: status })
-    .where(eq(wardrobeItems.id, photoId));
+    .where(
+      and(
+        eq(wardrobeItems.id, photoId),
+        eq(wardrobeItems.visibility, "pending"),
+      ),
+    );
 }
 
 export interface PendingPhoto {

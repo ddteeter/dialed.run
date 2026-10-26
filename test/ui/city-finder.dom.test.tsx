@@ -179,7 +179,7 @@ describe("CityFinder", () => {
 
     expect(screen.getByText("Type the city you run in.")).toBeVisible();
     expect(field()).toHaveAttribute("aria-invalid", "true");
-    expect(field()).toHaveAttribute("aria-describedby", "cityLabel-message");
+    expect(field()).toHaveAccessibleDescription("Type the city you run in.");
     expect(announce).toHaveBeenCalledWith("Type the city you run in.");
     expect(lookUp).not.toHaveBeenCalled();
   });

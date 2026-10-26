@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -1198,11 +1204,12 @@ describe("the state a submit leaves behind", () => {
     await user.type(screen.getByLabelText("Name"), "Houdini");
     await user.click(screen.getByRole("button", { name: /save/i }));
 
-    await screen.findByText("Which brand?");
-    expect(screen.getByLabelText("Brand")).toHaveAttribute(
-      "aria-describedby",
-      "brand-message",
-    );
+    const message = await screen.findByText("Which brand?");
+    // The message is named after the control's own id, not its `name`, so
+    // the pointer and the message agree per instance (R-165).
+    const brand = screen.getByLabelText("Brand");
+    expect(message).toHaveAttribute("id", `${brand.id}-message`);
+    expect(brand).toHaveAttribute("aria-describedby", message.id);
     expect(screen.getByLabelText("Name")).not.toHaveAttribute(
       "aria-describedby",
     );
@@ -1235,6 +1242,113 @@ describe("the summary names a field", () => {
 
     expect(await screen.findByRole("button", { name: /^name/ })).toBeVisible();
     expect(screen.getByRole("button", { name: /^brand/ })).toBeVisible();
+  });
+});
+
+/**
+ * R-165: a form repeated on every row of a list — the Desk's copyright
+ * holds and quarantine records — gave its field the same id on every row,
+ * so every later row's label pointed at the first row's control and a
+ * screen reader heard it unlabelled. Each row here is its own form, as on
+ * the Desk, and each label must name its own row's control.
+ */
+const rowSchema = z.object({ day: z.string().min(1, "Which day?") });
+
+function Row({ title }: Readonly<{ title: string }>) {
+  const [day, setDay] = useState("");
+  const [layer, setLayer] = useState<"base" | "mid" | "">("");
+  const form = useFormSubmit({
+    schema: rowSchema,
+    action: () => Promise.resolve(undefined),
+    successMessage: "Saved.",
+  });
+  return (
+    <section aria-label={title}>
+      <form
+        ref={form.formRef}
+        onSubmit={(event) => {
+          event.preventDefault();
+          void form.submit({ day });
+        }}
+      >
+        <TextField
+          name="day"
+          label="Received on"
+          value={day}
+          onChange={setDay}
+          field={form.field}
+          error={form.fieldErrors.day}
+        />
+        <ChoiceField
+          name="layer"
+          label="Layer"
+          value={layer}
+          options={["base", "mid"] as const}
+          optionLabels={{ base: "Base", mid: "Mid" }}
+          onChange={setLayer}
+          field={form.field}
+        />
+        <SubmitButton label="Save" pendingLabel="Saving" pending={false} />
+      </form>
+    </section>
+  );
+}
+
+function renderRows() {
+  render(
+    <>
+      <Row title="First" />
+      <Row title="Second" />
+    </>,
+  );
+  return {
+    first: within(screen.getByRole("region", { name: "First" })),
+    second: within(screen.getByRole("region", { name: "Second" })),
+  };
+}
+
+describe("a field repeated on every row (R-165)", () => {
+  it("labels each row's text field with its own label", async () => {
+    const user = userEvent.setup();
+    const { first, second } = renderRows();
+
+    // Typed into through the second row's label, the value lands in the
+    // second row's input — not the first's, which a shared id would reach.
+    await user.type(second.getByLabelText("Received on"), "Tuesday");
+
+    expect(second.getByRole("textbox", { name: "Received on" })).toHaveValue(
+      "Tuesday",
+    );
+    expect(first.getByRole("textbox", { name: "Received on" })).toHaveValue(
+      "",
+    );
+  });
+
+  it("labels each row's select with its own label", () => {
+    const { first, second } = renderRows();
+
+    const mine = second.getByRole("combobox", { name: "Layer" });
+    expect(second.getByLabelText("Layer")).toBe(mine);
+    expect(first.getByLabelText("Layer")).not.toBe(mine);
+  });
+
+  it("points each failing row at its own message", async () => {
+    const user = userEvent.setup();
+    const { first, second } = renderRows();
+
+    await user.click(first.getByRole("button", { name: /save/i }));
+    await user.click(second.getByRole("button", { name: /save/i }));
+
+    for (const row of [first, second]) {
+      const message = await row.findByText("Which day?");
+      expect(row.getByLabelText("Received on")).toHaveAttribute(
+        "aria-describedby",
+        message.id,
+      );
+    }
+    expect(first.getByText("Which day?").id).not.toBe(
+      second.getByText("Which day?").id,
+    );
   });
 });
 
@@ -1325,11 +1439,11 @@ describe("ChoiceField", () => {
         name="layer"
         label="Layer"
         error="Pick a layer."
-        field={(name) => ({
+        field={(name, id) => ({
           name,
           readOnly: false,
           "aria-invalid": true,
-          "aria-describedby": `${name}-message`,
+          "aria-describedby": `${id}-message`,
           onInput: () => {
             // not what this case is about
           },
@@ -1341,11 +1455,11 @@ describe("ChoiceField", () => {
       />,
     );
 
-    expect(screen.getByText("Pick a layer.")).toBeVisible();
-    expect(screen.getByLabelText("Layer")).toHaveAttribute(
-      "aria-describedby",
-      "layer-message",
-    );
+    const message = screen.getByText("Pick a layer.");
+    expect(message).toBeVisible();
+    const select = screen.getByLabelText("Layer");
+    expect(message).toHaveAttribute("id", `${select.id}-message`);
+    expect(select).toHaveAttribute("aria-describedby", message.id);
   });
 });
 

@@ -244,6 +244,28 @@ describe("deciding", () => {
     expect(screen.queryByText(/account stays open/)).not.toBeInTheDocument();
   });
 
+  it("names a garment's photo as the photo, not the garment (design 157)", async () => {
+    const user = userEvent.setup();
+    renderQueue([
+      row({ subjectType: "garment", subjectId: "g-1", source: "classifier" }),
+    ]);
+
+    // The kicker, and the second press: the garment stays in its closet.
+    expect(screen.getByText(/garment photo · g-1/)).toBeInTheDocument();
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why it comes down/ }),
+      "it's sexual or explicit",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Remove as suspected CSAM" }),
+    );
+    expect(
+      screen.getByText(
+        "Remove this garment photo everywhere and keep the evidence for the report?",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("goes back to the decision bar on Cancel, deciding nothing", async () => {
     const user = userEvent.setup();
     const { resolve } = renderQueue([row()]);

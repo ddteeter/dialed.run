@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "ad83759b-279a-4acf-aaf6-f4f555e8b2f5",
+  "id": "ade9e89d-5a1e-435d-ab2f-be5c53d8da7b",
   "prevId": "bbd5ceed-0005-4577-b76e-99d97cf29e16",
   "tables": {
     "access_requests": {
@@ -2138,6 +2138,13 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "uploader_snapshot": {
+          "name": "uploader_snapshot",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -3470,6 +3477,13 @@
           "name": "id",
           "type": "text",
           "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "issuer": {
+          "name": "issuer",
+          "type": "text",
+          "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },

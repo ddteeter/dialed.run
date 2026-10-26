@@ -58,7 +58,7 @@ import {
 } from "../products";
 import type { ProductAttributeDefaults, ProductComposition } from "../products";
 import { ownedBy } from "../../lib/sql/owned";
-import { isDeniedDomain } from "../safety";
+import { garmentPhotoForgotten, isDeniedDomain } from "../safety";
 import { nowSeconds } from "../../lib/now";
 
 type Db = ReturnType<typeof drizzle>;
@@ -390,6 +390,7 @@ export async function deleteItem(
   );
   await db.batch([
     db.delete(outfitEntryItems).where(inOwnKits),
+    ...garmentPhotoForgotten(db, userId, itemId),
     db.delete(wardrobeItems).where(ownedItemWhere(userId, itemId)),
     outboxInsert(db, debt),
   ]);
