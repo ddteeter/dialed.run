@@ -8,7 +8,8 @@
  * (round 27 #20, R-140: the band in place of the entry, naming the rule,
  * C8), and the bell's moderation notices (C8, D-132, D-145): the author's
  * when a report hides their kit, and the reporter's when a person removes
- * what they reported — one journey, one video.
+ * what they reported, and a garment photo's owner when a person removes it
+ * (R-167, design 159) — one journey, one video.
  *
  * The journey needs `ADMIN_USER_IDS=e2e-desk-operator` in the dev server's
  * `.dev.vars`, which CI's e2e job writes (register R-72). Locally, put the
@@ -32,6 +33,7 @@ import {
   reviewQueue,
   runs,
   userProfiles,
+  wardrobeItems,
 } from "../../src/db/schema-core";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
@@ -64,6 +66,7 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   const authorId = await userIdOf("safety");
   const sharedRunId = newUlid();
   const sharedEntryId = newUlid();
+  const garmentId = newUlid();
 
   // One runner with one reported public entry. Scoped to ids generated
   // here — never a bare delete of these tables.
@@ -148,6 +151,27 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
       verdict: 0,
       audience: "runners",
       createdAt: now - 10_800,
+    });
+    // A garment of the safety account's whose photo the classifier
+    // flagged (design 157), which the Desk removes and its owner is told
+    // of (R-167, design 159). No bytes: the row's image is not the point.
+    await core.insert(wardrobeItems).values({
+      id: garmentId,
+      userId: authorId,
+      category: "top",
+      name: "Flagged tee",
+      origin: "manual",
+      photoKey: `items/${authorId}/${garmentId}/${newUlid()}`,
+      visibility: "hidden_pending_review",
+      createdAt: now - 1200,
+    });
+    await core.insert(reviewQueue).values({
+      id: newUlid(),
+      subjectType: "garment",
+      subjectId: garmentId,
+      source: "classifier",
+      status: "pending",
+      createdAt: now - 1200,
     });
     // A handle the hourly re-check flagged after it was claimed (D-97),
     // waiting behind the reported entry.
@@ -269,6 +293,24 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   await row.getByRole("button", { name: "Remove", exact: true }).click();
   await expect(
     page.getByRole("listitem").filter({ hasText: entryId }),
+  ).toHaveCount(0);
+
+  // R-167 (design 159): a garment photo's Remove takes it off the garment
+  // and tells its owner, shown in the bell at the end.
+  await scene(page, "Review: Remove a garment's photo, and its owner is told");
+  const garmentRow = page
+    .getByRole("listitem")
+    .filter({ hasText: `garment photo · ${garmentId}` });
+  const garmentOpener = garmentRow.locator("button[aria-expanded]");
+  if ((await garmentOpener.getAttribute("aria-expanded")) === "false") {
+    await garmentOpener.click();
+  }
+  await garmentRow
+    .getByRole("combobox", { name: /Why it comes down/ })
+    .selectOption("it's sexual or explicit");
+  await garmentRow.getByRole("button", { name: "Remove", exact: true }).click();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: garmentId }),
   ).toHaveCount(0);
 
   // Round 35 #45: a flagged handle's row says why it is there, and offers
@@ -512,6 +554,14 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   await expect(
     rows.filter({ hasText: "We removed what you reported." }),
   ).toHaveCount(1);
+  // R-167: the garment photo's owner, in the owner's approved words.
+  await expect(
+    rows
+      .filter({ hasText: "We removed the photo of one of your garments." })
+      .locator("p"),
+  ).toHaveText(
+    "We removed the photo of one of your garments. Reason: it's sexual or explicit.",
+  );
 });
 
 /**
