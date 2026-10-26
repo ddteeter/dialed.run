@@ -183,9 +183,11 @@ function sessionOnly(): never {
  *
  * A class, not an object literal: the interface still requires the
  * deprecated `dump`, and an object literal's `dump` key reads as a use of
- * it, where a class method that implements it does not.
+ * it, where a class member that implements it does not.
  */
 class RoutedDatabase implements D1Database {
+  readonly dump = sessionOnly;
+
   constructor(
     private readonly binding: D1Database,
     private readonly slotIn: (scope: Scope) => Slot,
@@ -220,10 +222,6 @@ class RoutedDatabase implements D1Database {
     if (scopes.getStore() === undefined) {
       return this.binding.withSession(constraint);
     }
-    return sessionOnly();
-  }
-
-  dump(): Promise<ArrayBuffer> {
     return sessionOnly();
   }
 }
