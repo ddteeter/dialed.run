@@ -1,8 +1,8 @@
 /**
  * The fingerprints of photos removed as intimate images shared without
  * consent, kept after the photo (D-147, design 152), and what reads them:
- * a kit-photo upload, which holds a copy for review, and the Review row
- * that copy lands on.
+ * a kit or garment photo upload (design 157), which holds a copy for
+ * review, and the Review row that copy lands on.
  *
  * **Only `intimate` removals keep one.** A quarantine keeps its own
  * snapshot for its own year (D-70), and known CSAM is PhotoDNA's to match
@@ -16,7 +16,11 @@
 import { and, asc, inArray, isNotNull, lte, sql, type SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
-import { entryPhotos, removedFingerprints } from "../../db/schema-core";
+import {
+  entryPhotos,
+  removedFingerprints,
+  wardrobeItems,
+} from "../../db/schema-core";
 import { nowSeconds } from "../../lib/now";
 import {
   FINGERPRINT_MATCH_DISTANCE,
@@ -99,19 +103,25 @@ export async function removedMatchesOf(
   db: Db,
   photoIds: readonly string[],
 ): Promise<Map<string, RemovedMatch | undefined>> {
-  const photos = await db
-    .select({
-      id: entryPhotos.id,
-      // Typed as present: the `WHERE` below keeps no row without one.
-      fingerprint: sql<string>`${entryPhotos.fingerprint}`,
-    })
-    .from(entryPhotos)
-    .where(
-      and(
-        inArray(entryPhotos.id, [...photoIds]),
-        isNotNull(entryPhotos.fingerprint),
-      ),
-    );
+  // A kit photo by its id, or a garment's photo by the garment's (design
+  // 157): ids are ULIDs, so one list serves both tables. Each fingerprint
+  // is typed as present: its `WHERE` keeps no row without one.
+  const ids = [...photoIds];
+  const kitPrint = entryPhotos.fingerprint;
+  const garmentPrint = wardrobeItems.photoFingerprint;
+  const kits = and(inArray(entryPhotos.id, ids), isNotNull(kitPrint));
+  const garments = and(inArray(wardrobeItems.id, ids), isNotNull(garmentPrint));
+  const [kitPhotos, garmentPhotos] = await db.batch([
+    db
+      .select({ id: entryPhotos.id, fingerprint: sql<string>`${kitPrint}` })
+      .from(entryPhotos)
+      .where(kits),
+    db
+      .select({ id: wardrobeItems.id, fingerprint: sql<string>`${garmentPrint}` })
+      .from(wardrobeItems)
+      .where(garments),
+  ]);
+  const photos = [...kitPhotos, ...garmentPhotos];
   const answers = await Promise.all(
     photos.map(
       async (photo) =>

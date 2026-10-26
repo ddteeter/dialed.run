@@ -1301,8 +1301,11 @@ export const reviewQueue = /*#__PURE__*/ sqliteTable(
   "review_queue",
   {
     id: text("id").primaryKey(),
+    // `garment`: a garment's photo, named by the garment's id (design
+    // 157). Never reported — nobody but its owner sees it — so only the
+    // classifier and the D-147 fingerprint hold put one here.
     subjectType: text("subject_type", {
-      enum: ["entry", "photo", "profile", "product"],
+      enum: ["entry", "photo", "profile", "product", "garment"],
     }).notNull(),
     subjectId: text("subject_id").notNull(),
     // Why it is here: reports crossed the threshold, or the classifier
@@ -1430,8 +1433,9 @@ export const moderationActions = /*#__PURE__*/ sqliteTable(
     action: text("action", {
       enum: ["remove", "quarantine", "takedown", "ban", "unban", "rename"],
     }).notNull(),
+    // `garment`: a garment's photo, by the garment's id (design 157).
     subjectType: text("subject_type", {
-      enum: ["entry", "photo", "profile"],
+      enum: ["entry", "photo", "profile", "garment"],
     }).notNull(),
     subjectId: text("subject_id").notNull(),
     subjectOwnerId: text("subject_owner_id"),
@@ -1559,11 +1563,17 @@ export const quarantinedContent = /*#__PURE__*/ sqliteTable(
     id: text("id").primaryKey(),
     // The audit row that records who quarantined it and why.
     moderationActionId: text("moderation_action_id").notNull(),
-    subjectType: text("subject_type", { enum: ["entry", "photo"] }).notNull(),
+    // `garment`: a garment's photo, by the garment's id (design 157).
+    subjectType: text("subject_type", {
+      enum: ["entry", "photo", "garment"],
+    }).notNull(),
     subjectId: text("subject_id").notNull(),
     uploaderId: text("uploader_id").notNull(),
-    entryId: text("entry_id").notNull(),
-    // JSON: the entry row, its items and its tags, as they stood.
+    // Null for a garment's photo, which is on no entry.
+    entryId: text("entry_id"),
+    // JSON: the entry row, its items, its tags and its photos' screenings,
+    // as they stood — or, for a garment's photo, the garment's row and its
+    // screenings.
     entrySnapshot: text("entry_snapshot").notNull(),
     // JSON: each photo row, where its bytes were copied to, and when R2
     // says they were uploaded.
@@ -1577,6 +1587,14 @@ export const quarantinedContent = /*#__PURE__*/ sqliteTable(
     ncmecReportedAt: integer("ncmec_reported_at"),
     // CyberTipline's id for that report, when the operator gives it.
     ncmecReportId: text("ncmec_report_id"),
+    // JSON: who uploaded it, as the account stood at the quarantine — the
+    // email, when the account was made, the username, and every session's
+    // times, IP address and browser (never its token). The context
+    // 18 U.S.C. §2258A(h)(2) asks to be preserved with the report, kept
+    // here so a ban, the session sweep or the account purge cannot take
+    // it, and gone with the record (design 157). Null on a record from
+    // before it, and where the account was already gone.
+    uploaderSnapshot: text("uploader_snapshot"),
   },
   (t) => [
     // The admin read, newest first; and a purge, when one exists, by date.

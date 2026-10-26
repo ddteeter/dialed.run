@@ -86,7 +86,9 @@ Questions about this policy or your data: hello@dialed.run.
   the tokens Google issues at sign-in.
 - **Sessions.** When you sign in we record a session token, when it expires
   (7 days), the browser that signed in, and its IP address (as Cloudflare
-  reports it). The record is deleted 30 days after the session expires.
+  reports it). The record is deleted 30 days after the session expires,
+  except as kept with
+  [suspected child sexual abuse material](#moderation).
 - **Counts that stop abuse.** We count sign-in and sign-up attempts per IP
   address; those counts are kept for about a minute and then deleted. We
   count how many confirmation links, password resets and email changes each
@@ -205,8 +207,9 @@ never shown to other runners.
   screened.
 - **Screening.** Every photo is sent to **OpenAI's** moderation service to
   check for sexual, violent and self-harm content. We keep the scores it
-  returns. A photo that scores high is hidden from everyone but you until a
-  person reviews it. Until a photo is screened, no other runner can see it.
+  returns until the photo is deleted. A photo that scores high, kit or
+  garment, is hidden from everyone but you until a person reviews it.
+  Until a photo is screened, no other runner can see it.
   OpenAI keeps nothing it is sent for screening, and does not use it to
   train its models.
 - **Fingerprints.** For every photo, we work out a fingerprint from the
@@ -440,7 +443,11 @@ account added it.
   Center for Missing & Exploited Children and keep a locked copy that only
   reviewers can see, with who uploaded it and when, for one year after the
   report, then delete it unless the law or law enforcement requires us to
-  keep it longer.
+  keep it longer. With it we keep, for the same time, the uploader's email
+  address, username and session records (each sign-in's times, browser and
+  IP address) as they stood when we removed it, even if the account is
+  later closed or deleted, because US law asks us to preserve them with the
+  report. This applies to garment photos as well as kits.
 - **We can close an account.** We record the reason, sign it out
   everywhere, refuse it sign-in, hide its kits, photos and profile from
   everyone else, and email the reason and the rule it broke. Reopening it
@@ -530,15 +537,16 @@ any differently.
 | Your data export                                                              | The file: 7 days from when it is ready. The record that you asked for one: deleted with the file, or 7 days after a failed export |
 | Removal requests (`/takedown`)                                                | 3 years after we decide them                                                                                                      |
 | Requests for access                                                           | 90 days after we answer them                                                                                                      |
-| Session records                                                               | Expire after 7 days, and are deleted 30 days after they expire                                                                    |
+| Session records                                                               | Expire after 7 days, and are deleted 30 days after they expire. A copy kept with suspected child sexual abuse material: as below  |
 | Strava refresh token                                                          | Until you disconnect, then until Strava confirms revocation                                                                       |
 | Strava activity ids                                                           | 7 days                                                                                                                            |
 | Garments you delete                                                           | Deleted with their photo files. A garment you wore leaves those kits                                                              |
 | Runs, kits and kit photos you delete                                          | Deleted with their files                                                                                                          |
 | Photo fingerprints                                                            | Deleted with the photo. A locked copy of suspected child sexual abuse material keeps its own, as long as the copy                 |
+| Photo screening scores                                                        | Deleted with the photo. A locked copy of suspected child sexual abuse material keeps its own, as long as the copy                 |
 | Fingerprints of photos we removed as intimate images shared without consent   | 3 years after the removal, then deleted                                                                                           |
 | Your account, when you delete it                                              | Hidden at once; everything below deleted 7 days later (see [Your choices](#your-choices))                                         |
-| Suspected child sexual abuse material we removed                              | One year after we report it to NCMEC, then deleted, unless the law or law enforcement requires longer                             |
+| Suspected child sexual abuse material we removed, and its uploader's details  | One year after we report it to NCMEC, then deleted, unless the law or law enforcement requires longer                             |
 | Usernames you have used                                                       | For good, so nobody else can take them                                                                                            |
 | Weather                                                                       | Kept in the shared cache, linked to no one                                                                                        |
 | Reports you filed                                                             | 3 years after the decision on what you reported, or after filing if none was needed. Kept without your name if you leave          |

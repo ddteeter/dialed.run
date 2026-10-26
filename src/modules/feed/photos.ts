@@ -342,7 +342,7 @@ export async function photoResponse(
   // query.
   if (!key) return notFound();
   if (!(await isPhotoVisible(key, viewerId))) return notFound();
-  return bytesResponse(key);
+  return bytesResponse(key, RUNNER_CACHE);
 }
 
 /**
@@ -381,22 +381,36 @@ export async function reviewerPhotoResponse(
   // of what they wanted to know. A throw would also surface as a 500 on a
   // media URL, which says the same thing louder.
   if (!isAdmin(viewerId)) return notFound();
-  return bytesResponse(key);
+  return bytesResponse(key, REVIEW_CACHE);
 }
+
+/**
+ * A runner's photo: private, because it is only ever visible to people
+ * the entry is shared with, so a shared cache must not hold it.
+ */
+const RUNNER_CACHE = "private, max-age=3600";
+
+/**
+ * What a reviewer is shown (design 157): held, reported or quarantined
+ * material — suspected CSAM among it — which no cache may keep, the
+ * operator's own browser included. Every request asks R2 again.
+ */
+export const REVIEW_CACHE = "private, no-store";
 
 /**
 The bytes and their headers, once, for both rules above.
 */
-async function bytesResponse(key: string): Promise<Response> {
+async function bytesResponse(
+  key: string,
+  cacheControl: string,
+): Promise<Response> {
   const object = await getPhotoObject(key);
   if (object === null) return notFound();
 
   const headers = new Headers();
   object.writeHttpMetadata(headers);
   headers.set("etag", object.httpEtag);
-  // Private: a photo is only ever visible to people the entry is shared
-  // with, so a shared cache must not hold it.
-  headers.set("cache-control", "private, max-age=3600");
+  headers.set("cache-control", cacheControl);
   return new Response(object.body, { headers });
 }
 

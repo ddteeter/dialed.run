@@ -13,7 +13,8 @@ import { and, asc, desc, eq, lte, sql } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
 
-import { quarantinedContent } from "../../db/schema-core";
+import { session, user } from "../../db/schema-auth";
+import { quarantinedContent, userProfiles } from "../../db/schema-core";
 import { env } from "../../env";
 import { quarantineKeyFor } from "../../lib/entry-photo-key";
 import { newUlid } from "../../lib/ids";
@@ -42,6 +43,59 @@ export function quarantineInsert(db: Db, record: QuarantineRecord) {
     id: newUlid(),
     ...record,
     retainUntil: record.quarantinedAt + QUARANTINE_RETENTION_SECONDS,
+  });
+}
+
+/**
+ * Who uploaded it, as their account stands now, as JSON for the record's
+ * `uploader_snapshot` (design 157): the context 18 U.S.C. §2258A(h)(2)
+ * asks a provider to preserve with a report — "data … that may provide
+ * context or additional information about the reported material or
+ * person" — copied into the record so it keeps the record's clock.
+ *
+ * Without it, a ban deletes every session at once, the daily sweep
+ * deletes an expired one 30 days on, and the account purge deletes the
+ * email: each would take the context before the report's year was out.
+ * In the record it has no foreign key, is touched by none of them, and
+ * goes with the record's own purge.
+ *
+ * The email, when the account was made, the username, and each session's
+ * times, IP address and browser — the only IP addresses we hold; no
+ * upload records one. **Never a session's token**, which is a credential.
+ * Read before the quarantine's batch, which cannot read for itself; an
+ * account already gone gives no email or username and no sessions.
+ */
+export async function uploaderContextOf(
+  db: Db,
+  uploaderId: string,
+): Promise<string> {
+  const [account, profile, sessions] = await db.batch([
+    db
+      .select({ email: user.email, createdAt: user.createdAt })
+      .from(user)
+      .where(eq(user.id, uploaderId)),
+    db
+      .select({ username: userProfiles.username })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, uploaderId)),
+    db
+      .select({
+        createdAt: session.createdAt,
+        updatedAt: session.updatedAt,
+        expiresAt: session.expiresAt,
+        ipAddress: session.ipAddress,
+        userAgent: session.userAgent,
+      })
+      .from(session)
+      .where(eq(session.userId, uploaderId))
+      .orderBy(asc(session.createdAt)),
+  ]);
+  // An absent field is left out of the JSON, which says "not found".
+  return JSON.stringify({
+    email: account[0]?.email,
+    accountCreatedAt: account[0]?.createdAt,
+    username: profile[0]?.username,
+    sessions,
   });
 }
 

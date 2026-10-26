@@ -48,7 +48,7 @@ import {
   oweOutbox,
   settleOutbox,
 } from "../ops";
-import { settleOpenReviews } from "../safety";
+import { screeningDeletes, settleOpenReviews } from "../safety";
 
 type Db = ReturnType<typeof drizzle>;
 export type Report = typeof captureException;
@@ -114,6 +114,8 @@ export function entryStatements(
       .where(inArray(outfitEntryItems.entryId, entries)),
     db.delete(entryTags).where(inArray(entryTags.entryId, entries)),
     db.delete(reactions).where(inArray(reactions.entryId, entries)),
+    // Before the photos, which are how they are found (design 157).
+    screeningDeletes(db, "entry", photos),
     db.delete(entryPhotos).where(inArray(entryPhotos.entryId, entries)),
     // The verdict prompt's row names the entry, the kit reminder's names
     // the run; nothing else of the runner's names either.
@@ -303,6 +305,7 @@ export async function deleteEntryPhoto(
     db,
     [
       settleOpenReviews(db, "photo", [photoId], userId),
+      screeningDeletes(db, "entry", [photoId]),
       db.delete(entryPhotos).where(eq(entryPhotos.id, photoId)),
     ],
     mediaDebts(userId, [photo.entryId]),
