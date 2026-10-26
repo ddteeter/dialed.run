@@ -78,7 +78,7 @@
     "toucan-js": "^4.1.1",
     "ulidx": "^2.4.1",
     "validator": "13.15.35",
-    "zod": "^4.5.4"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.26.0",
