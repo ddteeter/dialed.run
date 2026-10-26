@@ -30,7 +30,7 @@
  * (`docs/architecture.md`): the deletion statements are feed's, and safety
  * imports nothing from feed.
  */
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { drizzle } from "drizzle-orm/d1";
 
@@ -39,8 +39,9 @@ import {
   entryTags,
   outfitEntries,
   outfitEntryItems,
+  photoScreenings,
 } from "../../db/schema-core";
-import { coreDb, env } from "../../env";
+import { coreDb } from "../../env";
 import {
   entryPhotoKeyFor,
   entryPhotoPrefix,
@@ -69,7 +70,9 @@ import {
   removalStatements,
   reporterNotices,
   resolveReview,
+  screeningDeletes,
   settleOpenReviews,
+  uploaderContextOf,
   wasFlaggedAutomatically,
   wasModerated,
   type CaseOverOutcome,
@@ -77,7 +80,10 @@ import {
   type RemovalReason,
   type ResolveOutcome,
   type ReviewActionValues,
+  type ReviewSubjectType,
 } from "../safety";
+
+import { preserveObject, quarantineGarmentPhoto } from "./garment-moderation";
 
 import {
   commit,
@@ -175,21 +181,14 @@ const subjectColumn = {
  * whose object is already gone has nothing to copy and no entry here.
  */
 async function copyBytes(photoKeys: readonly string[]) {
+  // A photo with no object maps to nothing, which its snapshot's spread
+  // reads the same as no entry at all.
   const copies = new Map<
     string,
-    { preservedKey: string; uploadedAt: number }
+    Awaited<ReturnType<typeof preserveObject>>
   >();
   for (const photoKey of photoKeys) {
-    const object = await env.MEDIA.get(photoKey);
-    if (object === null) continue;
-    const preservedKey = quarantineKeyFor(photoKey);
-    await env.MEDIA.put(preservedKey, object.body, {
-      httpMetadata: object.httpMetadata ?? {},
-    });
-    copies.set(photoKey, {
-      preservedKey,
-      uploadedAt: Math.floor(object.uploaded.getTime() / 1000),
-    });
+    copies.set(photoKey, await preserveObject(photoKey));
   }
   return copies;
 }
@@ -229,16 +228,28 @@ function fingerprintWrites(
 }
 
 async function rowsOf(db: Db, target: Target, input: ModerateInput) {
-  const [entry, items, tags, photos] = await db.batch([
+  const scope = photosInScope(input, target);
+  // What the screener said of them, which the delete takes with the
+  // photos (design 157): kept in the record instead.
+  const photoIds = db
+    .select({ id: entryPhotos.id })
+    .from(entryPhotos)
+    .where(scope);
+  const theirScreenings = and(
+    eq(photoScreenings.photoScope, "entry"),
+    inArray(photoScreenings.photoId, photoIds),
+  );
+  const [entry, items, tags, photos, screenings] = await db.batch([
     db.select().from(outfitEntries).where(eq(outfitEntries.id, target.entryId)),
     db
       .select()
       .from(outfitEntryItems)
       .where(eq(outfitEntryItems.entryId, target.entryId)),
     db.select().from(entryTags).where(eq(entryTags.entryId, target.entryId)),
-    db.select().from(entryPhotos).where(photosInScope(input, target)),
+    db.select().from(entryPhotos).where(scope),
+    db.select().from(photoScreenings).where(theirScreenings),
   ]);
-  return { entry: { entry, items, tags }, photos };
+  return { entry: { entry, items, tags, screenings }, photos };
 }
 
 /**
@@ -273,6 +284,7 @@ async function preservation(
       entryId: target.entryId,
       entrySnapshot: JSON.stringify(rows.entry),
       photosSnapshot: JSON.stringify(photos),
+      uploaderSnapshot: await uploaderContextOf(db, target.ownerId),
       quarantinedAt: nowSeconds(),
     }),
   };
@@ -290,6 +302,7 @@ function deletions(
   return input.subjectType === "photo"
     ? [
         settleOpenReviews(db, "photo", [input.subjectId], input.actorId),
+        screeningDeletes(db, "entry", [input.subjectId]),
         db.delete(entryPhotos).where(eq(entryPhotos.id, input.subjectId)),
       ]
     : entryStatements(
@@ -485,20 +498,48 @@ export async function decideReview(
   const subject = await openSubject(queueId);
   const isTakenDown =
     subject !== undefined &&
-    isModerated(subject) &&
-    (await moderateContent(db, {
+    (await wasTakenDown(db, reviewerId, decision, subject));
+  // Anything not taken down here — a product, a profile, an entry already
+  // gone, or a garment photo's Remove — is settled by safety's own writer,
+  // so the row never stays open on a subject nobody can act on.
+  return isTakenDown
+    ? "resolved"
+    : resolveReview(queueId, reviewerId, decision.action);
+}
+
+/**
+ * The takedown a decision owes its subject, where feed makes it: a kit or
+ * a kit photo's Remove or quarantine, or a garment photo's quarantine
+ * (design 157). A garment photo's Remove is safety's hide until its
+ * author's notice exists, and anything else is safety's too. Says
+ * whether it took the subject down now.
+ */
+async function wasTakenDown(
+  db: Db,
+  reviewerId: string,
+  decision: Exclude<ReviewActionValues, { action: "approve" }>,
+  subject: { subjectType: ReviewSubjectType; subjectId: string },
+): Promise<boolean> {
+  if (isModerated(subject)) {
+    const outcome = await moderateContent(db, {
       actorId: reviewerId,
       action: decision.action,
       subjectType: subject.subjectType,
       subjectId: subject.subjectId,
       reason: decision.reason,
-    })) === "removed";
-  // Anything moderateContent did not take down — a product, a profile, or
-  // an entry already gone — is settled by safety's own writer, so the row
-  // never stays open on a subject nobody can act on.
-  return isTakenDown
-    ? "resolved"
-    : resolveReview(queueId, reviewerId, decision.action);
+    });
+    return outcome === "removed";
+  }
+  const isGarmentQuarantine =
+    subject.subjectType === "garment" && decision.action === "quarantine";
+  return (
+    isGarmentQuarantine &&
+    (await quarantineGarmentPhoto(db, {
+      actorId: reviewerId,
+      itemId: subject.subjectId,
+      reason: decision.reason,
+    })) === "removed"
+  );
 }
 
 /**

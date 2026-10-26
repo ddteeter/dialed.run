@@ -7,7 +7,7 @@
  * human, and the daily digest reports how deep it is so an empty queue is a
  * fact rather than an assumption.
  */
-import { and, asc, eq, inArray, lt, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, lt, ne, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { SQLWrapper } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
@@ -23,6 +23,7 @@ import {
   reports,
   reviewQueue,
   userProfiles,
+  wardrobeItems,
 } from "../../db/schema-core";
 import { coreDb } from "../../env";
 import {
@@ -40,7 +41,7 @@ import {
   removalDueLabel,
   reportReasonSchema,
 } from "./contracts";
-import type { ReportReason, ReportSubjectType } from "./contracts";
+import type { ReportReason } from "./contracts";
 import { keptNotice, reporterNotices } from "./notices";
 import { otherPhotosOf, type OtherPhotos } from "./other-photos";
 import { photoMatchesOf, type PhotoMatches } from "./photo-matches";
@@ -55,6 +56,14 @@ function db() {
 Why a row is in the queue, read from the column so a new source is one edit.
 */
 export type ReviewSource = (typeof reviewQueue.$inferSelect)["source"];
+
+/**
+ * What a queue row can be about, read from the column: everything a runner
+ * can report, and a garment's photo, which nobody but its owner sees and
+ * so only a check puts here (design 157).
+ */
+export type ReviewSubjectType =
+  (typeof reviewQueue.$inferSelect)["subjectType"];
 
 /**
 What a queue row is about and why, read from the table's own columns.
@@ -74,8 +83,8 @@ export type EnqueueInput = Pick<
  * batch; the return type is what stops someone calling this and walking
  * away.
  */
-export function enqueueForReview(
-  database: DrizzleD1Database,
+export function enqueueForReview<TSchema extends Record<string, unknown>>(
+  database: DrizzleD1Database<TSchema>,
   input: EnqueueInput,
 ) {
   return (
@@ -128,7 +137,7 @@ export function enqueueForReview(
  */
 export function settleOpenReviews(
   database: ReturnType<typeof drizzle>,
-  subjectType: ReportSubjectType,
+  subjectType: ReviewSubjectType,
   subjectIds: SQLWrapper | readonly string[],
   settledBy: string,
 ) {
@@ -177,7 +186,7 @@ export interface QueueSubject {
 
 export interface QueueRow {
   id: string;
-  subjectType: ReportSubjectType;
+  subjectType: ReviewSubjectType;
   subjectId: string;
   source: ReviewSource;
   createdAt: number;
@@ -320,7 +329,7 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
  * Only an entry or a photo can carry either.
  */
 function copiesSubjectOf(row: {
-  subjectType: ReportSubjectType;
+  subjectType: ReviewSubjectType;
   subjectId: string;
   source: ReviewSource;
   firstAtOnce: number | null;
@@ -357,7 +366,7 @@ function removalClock(
  * account stays open (round 29 #3).
  */
 async function subjectsFor(
-  rows: readonly { subjectType: ReportSubjectType; subjectId: string }[],
+  rows: readonly { subjectType: ReviewSubjectType; subjectId: string }[],
 ): Promise<Map<string, QueueSubject>> {
   // **Every id is offered to every table, and the keys sort it out.** The
   // four lookups used to be filtered by subject type first, which read as
@@ -382,9 +391,19 @@ async function subjectsFor(
   // the only thing a UNION would have bought.
   const subjectIds = rows.map((row) => row.subjectId);
   const database = db();
+  const garmentsWithPhoto = and(
+    inArray(wardrobeItems.id, subjectIds),
+    isNotNull(wardrobeItems.photoKey),
+  );
 
-  const [photoRows, entryPhotoRows, entryRows, profileRows, productRows] =
-    await database.batch([
+  const [
+    photoRows,
+    entryPhotoRows,
+    entryRows,
+    profileRows,
+    productRows,
+    garmentRows,
+  ] = await database.batch([
       database
         .select({
           id: entryPhotos.id,
@@ -425,6 +444,17 @@ async function subjectsFor(
         .select({ id: products.id, name: products.name })
         .from(products)
         .where(inArray(products.id, subjectIds)),
+      // A garment's photo (design 157): the card size its owner sees,
+      // under the version the row names now.
+      database
+        .select({
+          id: wardrobeItems.id,
+          photoKey: sql<string>`${wardrobeItems.photoKey} || '/card.webp'`,
+          owner: userProfiles.username,
+        })
+        .from(wardrobeItems)
+        .leftJoin(userProfiles, eq(userProfiles.userId, wardrobeItems.userId))
+        .where(garmentsWithPhoto),
     ]);
 
   const found = new Map<string, QueueSubject>();
@@ -454,6 +484,12 @@ async function subjectsFor(
   }
   for (const row of productRows) {
     found.set(`product:${row.id}`, { label: row.name, photoKeys: [] });
+  }
+  for (const row of garmentRows) {
+    found.set(`garment:${row.id}`, {
+      photoKeys: [row.photoKey],
+      owner: row.owner ?? undefined,
+    });
   }
   return found;
 }
@@ -620,7 +656,7 @@ type OpenRow =
   | "not_found"
   | "already_resolved"
   | {
-      subjectType: ReportSubjectType;
+      subjectType: ReviewSubjectType;
       subjectId: string;
       source: ReviewSource;
     };
@@ -670,7 +706,7 @@ export async function openRow(queueId: string): Promise<OpenRow> {
  */
 export async function openSubject(
   queueId: string,
-): Promise<{ subjectType: ReportSubjectType; subjectId: string } | undefined> {
+): Promise<{ subjectType: ReviewSubjectType; subjectId: string } | undefined> {
   return firstRowWhere(
     db(),
     reviewQueue,
@@ -736,12 +772,15 @@ export async function resolveReview(
  *   changes nothing about the profile (a ban is separate, and tells them
  *   itself), so neither is told "we removed it".
  * - **A quarantine** tells nobody: suspected CSAM is silent (D-70).
+ * - **A garment's photo** tells nobody either way: nobody reports one,
+ *   and its author's notice of a Remove waits on the owner (design 157).
  */
 async function decisionNotices(
   row: Exclude<OpenRow, string>,
   decision: ReviewDecision,
 ): Promise<BatchItem<"sqlite">[]> {
   const { subjectType, subjectId } = row;
+  if (subjectType === "garment") return [];
   if (decision === "approve") {
     const reporters = await reporterNotices(
       db(),
@@ -769,7 +808,7 @@ async function decisionNotices(
  */
 export async function wasFlaggedAutomatically(
   database: ReturnType<typeof drizzle>,
-  subjectType: ReportSubjectType,
+  subjectType: ReviewSubjectType,
   subjectId: string,
 ): Promise<boolean> {
   return hasRowWhere(
@@ -819,7 +858,7 @@ export function reviewResolution(
  * mean two very different things depending on what was reported.
  */
 function subjectWritesFor(
-  subjectType: ReportSubjectType,
+  subjectType: ReviewSubjectType,
   subjectId: string,
   decision: ReviewDecision,
 ) {
@@ -837,7 +876,7 @@ function subjectWritesFor(
  * mutation. A lookup has no branch to get wrong.
  */
 const subjectWriters: Record<
-  ReportSubjectType,
+  ReviewSubjectType,
   (subjectId: string, decision: ReviewDecision) => BatchItem<"sqlite">[]
 > = {
   // Neither entry nor photo moves out of `removed`: that is a copyright
@@ -874,6 +913,20 @@ const subjectWriters: Record<
       subjectId,
       { screenStatus: onDecision(decision, "pending", "flagged") },
       ne(entryPhotos.screenStatus, heldPhotoStatus),
+    ),
+  ],
+  // A garment's photo (design 157). Approve clears it: nobody but its
+  // owner ever sees it, so `pass` publishes nothing, and it ends the
+  // owner's "being checked" band. Remove keeps it hidden (`flagged`) and
+  // tells nobody until the owner settles what its author is told. A
+  // quarantine is `feed/garment-moderation.ts`'s, and reaches here only
+  // once the photo is gone. Only a garment that still has a photo.
+  garment: (subjectId, decision) => [
+    setOnSubject(
+      wardrobeItems,
+      subjectId,
+      { visibility: onDecision(decision, "pass", "flagged") },
+      isNotNull(wardrobeItems.photoKey),
     ),
   ],
 };

@@ -367,8 +367,8 @@ function CsamQuestion({
     >
       <Mono step="xs">Remove as suspected CSAM</Mono>
       <p className="m-0 text-body">
-        Remove this {subjectType} everywhere and keep the evidence for the
-        report?
+        Remove this {subjectWord(subjectType)} everywhere and keep the
+        evidence for the report?
       </p>
       {owner === undefined ? undefined : (
         <p className="m-0 text-small text-quiet">
@@ -469,7 +469,16 @@ const HANDLE_FLAGGED_LINE =
 function rowKind(row: QueueRow): string {
   return row.subject.handleFlagged === true
     ? "handle · re-check"
-    : row.subjectType;
+    : subjectWord(row.subjectType);
+}
+
+/**
+ * What a row's subject is called on the Desk: its type, except a garment's
+ * photo (design 157), which the row is about rather than the garment —
+ * the garment stays in its owner's closet whatever is decided.
+ */
+function subjectWord(subjectType: QueueRow["subjectType"]): string {
+  return subjectType === "garment" ? "garment photo" : subjectType;
 }
 
 /**

@@ -204,7 +204,7 @@ export default tseslint.config(
       // type over T's columns that has no members until T is known, so the
       // rule calls it `{}`. Every caller passes a real table, where the type
       // checks column names and values (`setOnSubject`, `didClaim`). Back on
-      // when upstream skips deferred mapped types (R-167).
+      // when upstream skips deferred mapped types (R-168).
       "@typescript-eslint/no-generated-empty-object-type": "off",
       // Workers/React codebase adjustments to unicorn defaults:
       "unicorn/prevent-abbreviations": "off",
