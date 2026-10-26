@@ -24,7 +24,12 @@ description: Use before opening a pull request in dialed.run, before pushing a b
    queue/cron/binding, the diagram in `docs/architecture.md` changes in the
    same PR.
 6. **Run** `npm run verify && npm test && npm run build`. `build` is a gate:
-   `postbuild` runs `check:bundle`.
+   `postbuild` runs `check:bundle`. **A lane dispatched by a coordinator
+   skips `verify`** (owner, 2026-10-24): it has no flag to drop its Stryker
+   analyzer, the push gate runs that pass in full, and the commit gate has
+   run the other analyzers on each commit. The lane runs
+   `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, and
+   `npx stryker run --mutate "<the changed production files>"` to 100%.
 
 ## Deferring is a write
 

@@ -127,10 +127,21 @@ So, before anything else:
    `invite_redemptions` row (which code let them in).
    [CHECK: the exact column names against `src/db/schema-auth.ts` and
    `schema-core.ts` before first use.]
-2. **Keep that context** with the report, in the owner's private evidence
-   store, not in this repository (it is public) and not in email.
-   [OWNER: where the evidence store is. It must be encrypted and reachable
-   only by the owner. NIST CSF applies (above).]
+2. **Keep that context** with the report, in the evidence store, under
+   `ncmec/<quarantine id>/`: not in this repository (it is public) and not
+   in email. NIST CSF applies (above). The evidence store (D-148) is a
+   private R2 bucket, `dialed-evidence`, that the Worker cannot reach: it
+   has no binding, and the owner reads and writes it with an R2 API token
+   scoped to that bucket alone (`docs/deployment.md` §2). Bucket locks
+   refuse any delete or overwrite under `ncmec/` and `takedown/` for 400
+   days from upload (a year from the report, with margin, since the context
+   is captured before the report is filed), and under `register/` for good.
+   A lock also overrides a lifecycle rule, but an account admin can remove
+   the lock rule itself, so it guards against a mistake or a leaked token,
+   not against the account. Encrypting each object with `age` before upload
+   is optional; if used, the private key never sits beside the token.
+   Nothing deletes an object when its lock passes: delete it by hand when
+   the record it backs is swept.
 3. **File the CyberTipline report** through NCMEC's ESP reporting
    ([CyberTipline](https://report.cybertip.org/); ESP registration via
    espteam@ncmec.org, `legal-readiness-plan.md` step 4). Include what
@@ -159,11 +170,12 @@ So, before anything else:
 Decide whether to close the uploader's account (`safety/bans.ts`
 `banUser`: records the reason, deletes every session, refuses sign-in,
 hides their content, sends `account_closed`). **Close it only after Step 2's
-capture**, because the ban deletes the session rows. The ban email states
-the reason the operator types: for suspected CSAM, use a reason that does
-not say so. [OWNER: the reason wording to use, so a ban does not tip off
-the uploader. D-70's silence covers the quarantine; the ban email is not
-silent.]
+capture**, because the ban deletes the session rows. For suspected CSAM, choose
+that rule on Close account: the email then names no reason and no rule.
+It says only "We closed your account for breaking the community rules.",
+then "You can't log in, and your shared runs are gone from the feed."
+(owner, 2026-10-24; D-148; built in the C8 follow-up). D-70's silence
+covers the quarantine; this keeps the ban from tipping off the uploader.
 
 ### Step 4: keep, hold, delete
 
@@ -186,11 +198,11 @@ silent.]
 
 For each report, two places:
 
-| Where                                             | What                                                                                           |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `quarantined_content` (in the app)                | Content snapshot, uploader id, `quarantined_at`, `ncmec_reported_at`, `ncmec_report_id`, clock |
-| `moderation_actions` (in the app)                 | Who acted, when, which reason                                                                  |
-| The owner's evidence store (outside the app/repo) | The captured context (Step 2), NCMEC's acknowledgement, any law-enforcement request, any hold  |
+| Where                                | What                                                                                           |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `quarantined_content` (in the app)   | Content snapshot, uploader id, `quarantined_at`, `ncmec_reported_at`, `ncmec_report_id`, clock |
+| `moderation_actions` (in the app)    | Who acted, when, which reason                                                                  |
+| The evidence store, `ncmec/` (D-148) | The captured context (Step 2), NCMEC's acknowledgement, any law-enforcement request, any hold  |
 
 ## Part 2: TAKE IT DOWN Act removals
 
@@ -282,13 +294,13 @@ may then say "identical copies we find", and this section is rewritten.
 
 ### Step 3: the record
 
-| Record                            | Kept                                                                                                   |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `takedown_requests` row           | Requester email, signature, location, statement, `dueAt`, decision, reason, `resolvedAt`               |
-| `moderation_actions` row          | Who removed what, when, and the request id                                                             |
-| `takedown_blocks`                 | A blocked requester's keys (D-118)                                                                     |
-| How long                          | **Until deleted today.** D-131's 3 years after the decision arrives with C7 (before public).           |
-| The copies search, and its limits | [OWNER: where. Today there is no field for it; a note in the evidence store, keyed by the request id.] |
+| Record                            | Kept                                                                                             |
+| --------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `takedown_requests` row           | Requester email, signature, location, statement, `dueAt`, decision, reason, `resolvedAt`         |
+| `moderation_actions` row          | Who removed what, when, and the request id                                                       |
+| `takedown_blocks`                 | A blocked requester's keys (D-118)                                                               |
+| How long                          | **Until deleted today.** D-131's 3 years after the decision arrives with C7 (before public).     |
+| The copies search, and its limits | A note in the evidence store under `takedown/<request id>/` (D-148); the app has no field for it |
 
 ## When the owner is away
 
@@ -297,10 +309,12 @@ a day:
 
 - Requests and reports still hide what they name at once, so a request is
   never exposed by the owner's absence. It stays hidden until decided.
-- The 48-hour clock is still missed. [OWNER: decide whether to name a
-  backup admin, or to accept the risk. Recommendation: accept it for
-  friends; before public, add a second id to `ADMIN_USER_IDS` for someone
-  trusted, or set an auto-reply on desk@ that says when the owner is back.]
+- The 48-hour clock is still missed. **There is no backup admin: an
+  accepted risk** (owner, 2026-10-24; D-148). TAKE IT DOWN's 48-hour
+  removal is the obligation most at risk while the only admin is away;
+  NCMEC reporting ("as soon as reasonably possible") and the breach
+  clocks have more room. An auto-reply on desk@ that says when the owner
+  is back costs nothing and is worth setting for any planned absence.
 
 ## Gaps this procedure cannot close
 

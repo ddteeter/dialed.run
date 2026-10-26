@@ -45,16 +45,16 @@ assumes it is in scope; this record follows that.]
 
 ## Record details
 
-| Field                   | Value                                                                                                    |
-| ----------------------- | -------------------------------------------------------------------------------------------------------- |
-| Service                 | [dialed.run], `app.dialed.run`                                                                           |
-| Provider                | Big Long Run Labs LLC, Nebraska, USA (D-125)                                                             |
-| Person accountable      | [OWNER: name. Ofcom's Codes expect one named person accountable for illegal-content duties.]             |
-| Date of this assessment | [OWNER: date signed]                                                                                     |
-| Next review             | 12 months after that date, or before a significant change, whichever is first (D-140)                    |
-| Previous assessment     | None. First record                                                                                       |
-| Assessed by             | The owner, from this draft                                                                               |
-| Size                    | Pre-launch: invite-only, a handful of accounts. Far below Ofcom's 7 million UK user "large service" line |
+| Field                   | Value                                                                                                     |
+| ----------------------- | --------------------------------------------------------------------------------------------------------- |
+| Service                 | [dialed.run], `app.dialed.run`                                                                            |
+| Provider                | Big Long Run Labs LLC, Nebraska, USA (D-125)                                                              |
+| Person accountable      | The owner, the LLC's sole member and only operator (owner, 2026-10-24; D-148). The signed copy names them |
+| Date of this assessment | [OWNER: date signed]                                                                                      |
+| Next review             | 12 months after that date, or before a significant change, whichever is first (D-140)                     |
+| Previous assessment     | None. First record                                                                                        |
+| Assessed by             | The owner, from this draft                                                                                |
+| Size                    | Pre-launch: invite-only, a handful of accounts. Far below Ofcom's 7 million UK user "large service" line  |
 
 ## The service
 
@@ -151,15 +151,15 @@ user-to-user service, whatever its size or risk, and more for larger or
 riskier ones. [CHECK: the exact list and numbering in the current Codes.]
 Mapped against what exists:
 
-| Measure (as this draft understands the Codes)                                                    | Status                                                                                                       |
-| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| A named person accountable for illegal-content duties                                            | [OWNER: name, above]                                                                                         |
-| A content moderation function that reviews and swiftly takes down illegal content it is aware of | Review queue, Remove, quarantine, takedown (`safety/review.ts`, `feed/moderation.ts`). One person, no deputy |
-| Terms that say how users are protected, clear and accessible                                     | `docs/legal/terms.md` "The rules", "Screening, reports and moderation", "Suspected illegal content"          |
-| Easy reporting of illegal content, including by non-users                                        | In-app reports; `/takedown`; desk@dialed.run (terms "Suspected illegal content")                             |
-| A complaints procedure, including appeals                                                        | desk@dialed.run; reply to the notice; no deadline (D-73; terms "Appeals")                                    |
-| Act on complaints and tell the complainant                                                       | Removal and closure notices exist; reporter outcome notice is C8 (D-132), before public                      |
-| Remove accounts of proscribed organisations                                                      | Bans exist; no list check. Negligible terrorism risk                                                         |
+| Measure (as this draft understands the Codes)                                                    | Status                                                                                                                                 |
+| ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| A named person accountable for illegal-content duties                                            | The owner (above)                                                                                                                      |
+| A content moderation function that reviews and swiftly takes down illegal content it is aware of | Review queue, Remove, quarantine, takedown (`safety/review.ts`, `feed/moderation.ts`). One person, no deputy (an accepted risk, D-148) |
+| Terms that say how users are protected, clear and accessible                                     | `docs/legal/terms.md` "The rules", "Screening, reports and moderation", "Suspected illegal content"                                    |
+| Easy reporting of illegal content, including by non-users                                        | In-app reports; `/takedown`; desk@dialed.run (terms "Suspected illegal content")                                                       |
+| A complaints procedure, including appeals                                                        | desk@dialed.run; reply to the notice; no deadline (D-73; terms "Appeals")                                                              |
+| Act on complaints and tell the complainant                                                       | Removal and closure notices exist; reporter outcome notice is C8 (D-132), before public                                                |
+| Remove accounts of proscribed organisations                                                      | Bans exist; no list check. Negligible terrorism risk                                                                                   |
 
 Measures not taken, and why:
 

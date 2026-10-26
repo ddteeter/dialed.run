@@ -138,7 +138,7 @@ export function ageRefused(): AccessRefused {
 }
 
 /**
- * A blocked state's refusal (owner, 2026-10-18; design-deltas item 66): a
+ * A blocked state's refusal (owner, 2026-10-18; design-deltas item 69): a
  * band on the form and on Google alike, and no Try again — nothing typed
  * or pressed here fixes where the request came from.
  */

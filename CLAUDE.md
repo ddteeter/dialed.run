@@ -269,8 +269,8 @@ are stable because code cites them.
 5. If you change module boundaries or add a queue/cron/binding, update the
    diagram in `docs/architecture.md` in the same PR.
 6. Before opening a PR, use the `pr-ready` skill: self-review, demo video,
-   design deltas, deferred register, `npm run verify && npm test && npm run
-build`, and a five-sentence summary.
+   design deltas, deferred register, the final checks, and a five-sentence
+   summary.
 7. **A push is not done until its checks are green — and you never wait for
    them in the foreground.** A lane dispatched by a coordinator stops at
    "ready to ship" and does not push.

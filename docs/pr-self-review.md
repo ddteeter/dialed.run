@@ -1,6 +1,7 @@
 # Pre-PR self-review
 
-Run this before opening a PR, after `npm run verify && npm test` are green.
+Run this before opening a PR, after the `pr-ready` skill's final checks
+are green.
 
 (For comments _received_ on a PR, see CLAUDE.md §"Review comments are change
 requests" — the default response to a review comment is a commit, not a

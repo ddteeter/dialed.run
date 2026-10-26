@@ -143,7 +143,7 @@ export function isBlockedRegion(code: string): code is BlockedRegion {
 
 /**
  * The words (owner, 2026-10-18; placeholder until design words them —
- * design-deltas item 66). `signUp` is Au2's refusal, on the form and on
+ * design-deltas item 69). `signUp` is Au2's refusal, on the form and on
  * Google's band alike; `waitlist` is Au5's receipt for a request from a
  * blocked state, which is taken.
  */

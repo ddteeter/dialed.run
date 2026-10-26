@@ -41,15 +41,15 @@ Sources: Ofcom,
 
 ## Record details
 
-| Field              | Value                                                                         |
-| ------------------ | ----------------------------------------------------------------------------- |
-| Service            | [dialed.run], `app.dialed.run`                                                |
-| Provider           | Big Long Run Labs LLC (D-125)                                                 |
-| Person accountable | [OWNER: name]                                                                 |
-| Date               | [OWNER: date signed]                                                          |
-| Next review        | 12 months, or before a significant change (D-140)                             |
-| Children on it     | Not allowed by the terms (18+); not measured. Assessed as if some are present |
-| Assessed by        | The owner, from this draft                                                    |
+| Field              | Value                                                                                                     |
+| ------------------ | --------------------------------------------------------------------------------------------------------- |
+| Service            | [dialed.run], `app.dialed.run`                                                                            |
+| Provider           | Big Long Run Labs LLC (D-125)                                                                             |
+| Person accountable | The owner, the LLC's sole member and only operator (owner, 2026-10-24; D-148). The signed copy names them |
+| Date               | [OWNER: date signed]                                                                                      |
+| Next review        | 12 months, or before a significant change (D-140)                                                         |
+| Children on it     | Not allowed by the terms (18+); not measured. Assessed as if some are present                             |
+| Assessed by        | The owner, from this draft                                                                                |
 
 ## The service, for children
 
@@ -103,7 +103,7 @@ to be accessed by children, and more for higher risk.
 
 | Measure                                                                  | Status                                                                                                                                                                                                                                                                               |
 | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| A named person accountable for children's safety duties                  | [OWNER: name]                                                                                                                                                                                                                                                                        |
+| A named person accountable for children's safety duties                  | The owner (above)                                                                                                                                                                                                                                                                    |
 | Terms that explain how children are protected                            | Partly: the terms set 18+ and close under-18 accounts (`terms.md` "Who can use [dialed.run]"); they do not describe children's protections as such. [OWNER: decide whether to add a sentence]                                                                                        |
 | Content moderation that acts on content harmful to children              | The same review queue and Remove as for illegal content                                                                                                                                                                                                                              |
 | Reporting and complaints for content harmful to children                 | Reports cover it under "The photo shows someone inappropriately", "Harassment aimed at someone" and "Something else"; desk@ for complaints. There is no report reason naming self-harm, eating disorders or a child. [OWNER: decide whether to add one; a reason is a design change] |

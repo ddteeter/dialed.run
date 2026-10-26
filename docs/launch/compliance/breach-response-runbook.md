@@ -13,8 +13,10 @@ person runs the service, so every role below is the owner's.
 Sign-off: [OWNER: name, and the date this runbook was adopted]
 
 **This repository is public.** The breach register and every incident's
-notes live in the owner's private storage, never here.
-[OWNER: where the register is kept.]
+notes live in the evidence store, never here: under `register/` in the
+private `dialed-evidence` R2 bucket, locked against deletion indefinitely,
+with no Worker binding (D-148; `ncmec-and-take-it-down-procedures.md`
+Part 1 Step 2 has the details).
 
 ## The clocks, first
 
@@ -267,7 +269,8 @@ form, and the Nebraska AG's breach notice page.]
 
 GDPR Art. 33(5) requires a record of **every** breach, notified or not:
 the facts, its effects and what was done. Keep one entry per incident in
-the private register:
+the private register (`register/<incident id>`). The lock means an entry
+cannot be corrected in place: add a dated follow-up object instead.
 
 | Field            | What                                                  |
 | ---------------- | ----------------------------------------------------- |

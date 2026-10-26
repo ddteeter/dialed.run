@@ -107,6 +107,11 @@ what the policy does not say:
   (`docs/deployment.md` §5).
 - D1 has 30 days of point-in-time restore; R2 has no backup
   (`docs/deployment.md` §9–§10).
+- Evidence outside the app (NCMEC report context, takedown notes, the
+  breach register) is in a private R2 bucket with no Worker binding,
+  reached by an owner-only token scoped to it, and locked against deletion
+  (D-148). Its objects are deleted by hand when the record they back is
+  swept; the breach register is kept indefinitely.
 - Session tokens and Strava refresh tokens are stored in plain text
   (policy "Security").
 - What to do when something goes wrong: the
