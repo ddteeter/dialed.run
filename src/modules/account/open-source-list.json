@@ -971,7 +971,7 @@
     },
     {
       "name": "@playwright/test",
-      "version": "1.64.1",
+      "version": "1.63.0",
       "licence": "Apache-2.0",
       "project": "https://playwright.dev"
     },
