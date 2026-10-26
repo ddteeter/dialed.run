@@ -8,7 +8,9 @@ file explains them and does not restate them.
 ## What happens to an update
 
 1. **Dependabot opens a PR**, weekly and seven days behind each release.
-   Security updates skip the wait.
+   Security updates skip the wait, and their minor and patch fixes share
+   one PR. Every PR costs a full CI and mutation run, which is why
+   `dependabot.yml` keeps the groups few.
 2. **If it moves a package the bundles ship**, CI's build fails on the
    stale open-source list. `oss-list.yml` rebuilds the list, read-only, and
    `oss-list-commit.yml` commits it to the PR as the automation App. CI
@@ -18,7 +20,9 @@ file explains them and does not restate them.
    anywhere but 0.0.x) and was published by the same maintainers, auto-merge
    is armed. GitHub merges it once every required check passes on the head
    commit, with a merge commit, as the App, so main's deploy and its cold
-   mutation run start as they would after any merge.
+   mutation run start as they would after any merge. If the checks have
+   already passed (GitHub only arms auto-merge while one is pending), the
+   job merges it at once, still only at the commit it classified.
 4. **Anything else waits for you**: majors, 0.x minors, 0.0.x updates, new
    maintainers, and every GitHub Actions bump (Actions run with this repo's
    secrets). Claude posts an impact review on the PR: a verdict, the

@@ -14,6 +14,11 @@ someone remembering to update.
 - **`.github/dependabot.yml`**: weekly, 7-day cooldown, packages that move
   together grouped (majors included), the rest grouped prod/dev for minor
   and patch. Majors outside a family get their own PR.
+  _Revised after the first run (2026-10-26):_ 20 version PRs plus one per
+  vulnerable package swamped the runners (each PR is ~30 jobs with
+  mutation). Security fixes now share a group, and only TanStack and
+  Cloudflare, which pin each other at every version, group their minors
+  apart from the prod/dev catch-alls; the other families group majors only.
 - **`.github/workflows/dependabot-pr.yml`**: `classify` reads
   fetch-metadata and decides; `auto-merge` arms GitHub auto-merge with an
   App token for compatible npm updates (minor at ≥1.0, patch outside 0.0.x,
