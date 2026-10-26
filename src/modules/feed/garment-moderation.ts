@@ -227,7 +227,7 @@ async function removalWrites(db: Db, input: GarmentModeration, found: Found) {
         kind: "content_removed",
         subject: "garment",
         reason: removalStatements[input.reason],
-        rule: removalRuleOf("remove", input.reason),
+        rule: removalRuleOf(input.action, input.reason),
         flagged: isFlagged,
       },
     },

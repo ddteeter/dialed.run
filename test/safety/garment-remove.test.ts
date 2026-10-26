@@ -15,7 +15,7 @@ import { env } from "../../src/env";
 import { newUlid, ulidSchema } from "../../src/lib/ids";
 import { moderateGarmentPhoto } from "../../src/modules/feed/garment-moderation";
 import { decideReview } from "../../src/modules/feed/moderation";
-import { enqueueForReview } from "../../src/modules/safety";
+import { enqueueForReview, resolveReview } from "../../src/modules/safety";
 import { addAccount } from "../feed/helpers";
 import { makeItem, makeUser, resetSafetyTables } from "./helpers";
 
@@ -314,6 +314,18 @@ describe("a garment photo's Remove tells its owner (R-167, design 159)", () => {
     const keys = owed.map((one) => one.dedupeKey);
     expect(keys).toContain(`content_removed:garment:${secondKey}`);
     expect(keys).toHaveLength(2);
+  });
+
+  it("keeps a photo hidden when safety's own Remove is reached without the takedown", async () => {
+    const { owner, itemId, photoKey } = await heldGarment();
+    const queueId = await queueRow(itemId, "classifier");
+
+    expect(await resolveReview(queueId, "rev", "remove")).toBe("resolved");
+
+    const garment = await garmentOf(itemId);
+    expect(garment?.visibility).toBe("flagged");
+    expect(garment?.photoKey).toBe(photoKey);
+    expect(await bellOf(owner)).toStrictEqual([]);
   });
 
   it("still tells nobody of a quarantine (D-70)", async () => {
