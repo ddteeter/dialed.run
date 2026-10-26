@@ -965,12 +965,23 @@ bits` apart.", the date and distance in MONO.xs. The row also carries
     kicker reads `garment photo · {id}`, the photo is the garment's card
     size, and the suspected-CSAM question reads "Remove this garment photo
     everywhere and keep the evidence for the report?". No new glyph or
-    colour. Remove on such a row keeps the photo hidden and tells its owner
-    nothing until the notice's words are settled (register R-167).
-    **The ask:** draw the row, and the owner's notice once its words are
-    approved.
+    colour. **Amended by design 159 (R-167):** Remove now deletes the photo
+    and tells its owner, in words the owner approved on 2026-10-26: the
+    bell row "We removed the photo of one of your garments. Reason:
+    {reason}." and the email "We removed a photo from your closet" (the
+    content-removed email's layout, "The garment stays in your closet.").
+    **The ask:** draw the row, and confirm the bell row and email in the
+    existing notice styles.
 
-<!-- Item numbers continue past rounds 35–40 (45–76, 82–85). Design numbered the Garmin asks 77–81 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
+48. **A garment match's takedown on Review (R-167, design 159).
+    Undesigned; built as a placeholder.** Under Matching photos, a garment
+    tile now carries the garment row's own decision bar, without Approve:
+    "Why it comes down", Remove, and Remove as suspected CSAM with its
+    in-place question. Existing parts and words only; a decided tile
+    leaves the list. Kit tiles are unchanged. **The ask:** draw the bar
+    on a match tile, or say where a match's takedown should sit instead.
+
+<!-- Item numbers continue past rounds 35–40 (45–76, 82–87). Design numbered the Garmin asks 77–81 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
 
 ## Answered in round 40 (imported 2026-10-24)
 
