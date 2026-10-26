@@ -247,13 +247,18 @@ export const DELETE_REAUTH_RETURN = "/account/sign-in?deleting=1";
 export const accountSectionSearch = z.object({
   // `true` or absent, never `false`: the router writes a parsed search
   // back into the URL, and a `deleting=false` there would read as present
-  // on the next load and open the sheet on every visit.
+  // on the next load and open the sheet on every visit. And the `true` it
+  // writes back must parse as `true` again: `deleting=1` is rewritten to
+  // `deleting=true` before the page renders, and a schema that refused
+  // that dropped the parameter, so the sheet never reopened (found by
+  // round 40 C1's demo).
   deleting: z
     .unknown()
     .optional()
-    .transform((value) =>
-      value === 1 || value === "1" ? (true as const) : undefined,
-    ),
+    .transform((value) => {
+      const deletingValues: readonly unknown[] = [true, 1, "1"];
+      return deletingValues.includes(value) ? (true as const) : undefined;
+    }),
   // A refused export link lands here (round 28 #15): `expired` or absent,
   // whatever else the URL says, so the row reads "That link doesn't work
   // any more." only when a download sent it.

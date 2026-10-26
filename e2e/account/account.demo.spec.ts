@@ -3,17 +3,19 @@
  * lockout (R-124), Settings › Notifications (ACC-11), the unsubscribe link
  * and its landing (round 26 #19), Sign out everywhere, Export your data
  * (ACC-10: Get a copy, Preparing, the queued ZIP, Download, a dead link), Delete account with Keep inside
- * the week (ACC-9; round 27 #14, round 28 #12), "Confirm your email first"
+ * the week (ACC-9; round 27 #14, round 28 #12), the way back from Google
+ * and NOT KEPT once the purge has begun (round 40 C1), "Confirm your email first"
  * from Change email while unconfirmed (round 29 #11–12), and O0's re-pick after a
  * moderator's rename (ACC-12; round 27 #16) — one journey, one video.
  *
  * Exactly one test() per demo spec (see e2e/auth/auth.demo.spec.ts).
  */
 import type { Page } from "@playwright/test";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { user } from "../../src/db/schema-auth";
 import {
+  accountDeletions,
   passwordAttempts,
   userProfiles,
   usernameHistory,
@@ -23,6 +25,28 @@ import { expect, scene, test } from "../support/demo";
 import { confirmLinkFor, unsubscribeLinkFor } from "../support/email-links";
 import { ensureInviteCode, turnstileAnswered } from "../support/invites";
 import { withLocalDb } from "../support/local-db";
+
+/**
+ * The purge's claim on the demo runner's deletion, as the daily firing
+ * writes it (`purge_started_at`), or cleared (undefined writes NULL:
+ * drizzle would skip an undefined column).
+ */
+async function setPurgeStarted(
+  email: string,
+  startedAt: number | undefined,
+): Promise<void> {
+  await withLocalDb(async ({ core }) => {
+    const [account] = await core
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, email));
+    if (account === undefined) throw new Error("no account for the demo");
+    await core
+      .update(accountDeletions)
+      .set({ purgeStartedAt: startedAt ?? sql`NULL` })
+      .where(eq(accountDeletions.userId, account.id));
+  });
+}
 
 async function hydrated(page: Page): Promise<void> {
   await page
@@ -303,6 +327,24 @@ test("account settings -> change password -> reminder emails off and on -> sign 
     /^dialed-run-export-\d{4}-\d{2}-\d{2}\.zip$/u,
   );
 
+  // Round 40 C1: the way back from a Google re-sign-in (the URL Google
+  // returns to) reopens the sheet with no message and focus on Delete my
+  // account. It sends nothing on its own; the press is the runner's.
+  await scene(
+    page,
+    "Back from Google: the sheet reopens, quiet, on Delete my account",
+  );
+  await page.goto("/account/sign-in?deleting=1");
+  await hydrated(page);
+  const returned = page.getByRole("dialog", { name: "Delete your account?" });
+  await expect(returned).toBeVisible({ timeout: 15_000 });
+  await expect(
+    returned.getByRole("button", { name: "Delete my account" }),
+  ).toBeFocused();
+  await expect(returned.getByRole("status")).toHaveText("");
+  await returned.getByRole("button", { name: "Keep it" }).click();
+  await expect(returned).toBeHidden();
+
   await scene(page, "Delete account: the password once more, then 7 days");
   await page.getByRole("button", { name: /^Delete account/u }).click();
   const sheet = page.getByRole("dialog", { name: "Delete your account?" });
@@ -340,6 +382,32 @@ test("account settings -> change password -> reminder emails off and on -> sign 
       "Strava is disconnected, and stays that way until you connect it again.",
     ),
   ).toBeVisible();
+  // Round 40 C1: Keep pressed once the purge has begun is NOT KEPT in
+  // Keep's place, with no Try again; Log out stays.
+  await scene(page, "Keep after the purge has begun: NOT KEPT, Log out stays");
+  await setPurgeStarted(email, nowSeconds());
+  await page.getByRole("button", { name: "Keep my account" }).click();
+  const notKept = page.locator(
+    "[data-part='failure-band'][data-state='refused']",
+  );
+  await expect(notKept).toContainText("Not kept", { timeout: 15_000 });
+  await expect(notKept).toContainText(
+    "Your account is already being deleted. It can't be kept now.",
+  );
+  await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Keep my account" }),
+  ).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Log out" })).toBeVisible();
+  await expect(page.getByText("Deletion scheduled")).toBeVisible();
+  // Not "You were signed out." with a Try again that cannot work.
+  await expect(page.getByText("You were signed out.")).toHaveCount(0);
+  // The rest of the journey is a purge that never started.
+  await setPurgeStarted(email, undefined);
+  await page.reload();
+  await hydrated(page);
+
+  await scene(page, "Inside the week, Keep brings it back");
   await page.getByRole("button", { name: "Keep my account" }).click();
   // Kept: back into the app (this runner lands on onboarding, which the
   // demo skipped), and never asked again.

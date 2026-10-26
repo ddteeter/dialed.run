@@ -390,7 +390,7 @@ describe("emailContent", () => {
           label: "Create your account",
           href: `${ORIGIN}/join?code=DIAL-7K3P`,
         },
-        foot: "You asked for an invite. Didn't? Ignore this and nothing happens.",
+        foot: "Sent because this address asked for access. Didn't ask? Ignore this; nothing happens.",
         footer: LEGAL,
       },
     ],
@@ -398,7 +398,7 @@ describe("emailContent", () => {
       { kind: "strava_disconnected" },
       {
         subject: "Strava is disconnected",
-        body: "Strava says dialed.run was disconnected, so run reminders have stopped. Your runs here haven't changed.",
+        body: "Strava says dialed.run was disconnected, so run reminders have stopped.",
         button: { label: "Connect again", href: `${ORIGIN}/runs/strava` },
         foot: "Runs you already added stay.",
         footer: LEGAL,

@@ -1792,3 +1792,22 @@ describe("ChoiceList's chip layout (§AH)", () => {
     );
   });
 });
+
+describe("SubmitButton's ref", () => {
+  it("is the submit button itself, for a form that must focus it", () => {
+    const ref = createRef<HTMLButtonElement>();
+    render(
+      <form>
+        <SubmitButton
+          label="Delete my account"
+          pendingLabel="Deleting"
+          pending={false}
+          ref={ref}
+        />
+      </form>,
+    );
+    expect(ref.current).toBe(
+      screen.getByRole("button", { name: "Delete my account" }),
+    );
+  });
+});

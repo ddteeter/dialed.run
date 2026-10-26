@@ -148,7 +148,8 @@ function Row({
  *
  * **By category and type**, as the board titles and matches it (R-112):
  * "Already in your closet · Top · Half-zip" once a type is picked, and
- * the category's alone before one is.
+ * the category's alone before one is. Round 40 C4 confirms both and
+ * draws the title as a heading, in sentence case, not the rail's mono.
  */
 export function AlreadyInCloset({
   category,
@@ -172,9 +173,13 @@ export function AlreadyInCloset({
 }>): JSX.Element {
   const zone = useRunnerZone();
   return (
-    <RailCard title={`Already in your closet · ${kindLabel(category, type)}`}>
+    <RailCard
+      title={`Already in your closet · ${kindLabel(category, type)}`}
+      isHeading
+    >
       {pieces.length === 0 ? (
-        <p className="m-0 text-small text-label">
+        // Round 40 C4: the heading stays; this line replaces the rows.
+        <p className="m-0 text-body text-quiet">
           {`No ${type === undefined ? CATEGORY_PLURALS[category] : garmentTypePlurals[type]} yet.`}
         </p>
       ) : (

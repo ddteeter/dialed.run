@@ -195,6 +195,28 @@ describe("Feed: Following", () => {
     expect(screen.getAllByRole("status")).toHaveLength(1);
   });
 
+  it("divides posts by a hairline, each keeping SPACE[4] above and below (round 40 C5b)", async () => {
+    await renderFeedScreen(
+      feed({
+        items: [
+          feedItem({ entryId: "01A", authorUsername: "Dana" }),
+          feedItem({ entryId: "01B", authorUsername: "Mark" }),
+        ],
+      }),
+    );
+
+    const posts = document.querySelectorAll('[data-part="post"]');
+    const list = document.querySelector('[data-part="posts"]');
+    // The divider is the list's, between posts: no gutter, no new role.
+    expect(list).toHaveClass("divide-y", "divide-hairline");
+    expect(list).not.toHaveClass("gap-5");
+    for (const post of posts) {
+      expect(post.parentElement).toBe(list);
+      expect(post).toHaveClass("py-4");
+      expect(post).not.toHaveClass("border-b");
+    }
+  });
+
   it("announces a card's failed Useful in the screen's one region", async () => {
     const user = userEvent.setup();
     await renderFeedScreen(
@@ -416,10 +438,9 @@ describe("E1's compact line (FEED-9)", () => {
     const credit = line?.nextElementSibling;
     expect(credit).toHaveAccessibleName(WEATHER_CREDIT);
     expect(credit?.nextElementSibling).toBeNull();
-    expect(line?.parentElement?.nextElementSibling).toHaveAttribute(
-      "data-part",
-      "post",
-    );
+    const posts = line?.parentElement?.nextElementSibling;
+    expect(posts).toHaveAttribute("data-part", "posts");
+    expect(posts?.firstElementChild).toHaveAttribute("data-part", "post");
   });
 
   it("says two weeks when the match had to widen", async () => {

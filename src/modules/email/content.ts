@@ -323,13 +323,13 @@ const CONTENT: {
         label: "Create your account",
         href: `${origin}/join?code=${encodeURIComponent(template.code)}`,
       },
-      foot: "You asked for an invite. Didn't? Ignore this and nothing happens.",
+      foot: "Sent because this address asked for access. Didn't ask? Ignore this; nothing happens.",
     };
   },
   strava_disconnected: (_template, { origin }) => {
     return {
       subject: "Strava is disconnected",
-      body: `${STRAVA_DISCONNECTED_LINE} Your runs here haven't changed.`,
+      body: STRAVA_DISCONNECTED_LINE,
       button: { label: "Connect again", href: `${origin}/runs/strava` },
       foot: "Runs you already added stay.",
     };

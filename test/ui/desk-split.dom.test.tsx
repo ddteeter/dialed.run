@@ -46,5 +46,28 @@ describe("RailCard", () => {
     const card = heading.closest("section");
     expect(card).toHaveClass("border-hairline");
     expect(within(card ?? document.body).getByText("6.2 mi")).toBeVisible();
+    // The mono title: MONO.xs, caps by CSS so the name stays as written.
+    expect(within(heading).getByText("This run")).toHaveClass(
+      "text-mono-xs",
+      "uppercase",
+    );
+    expect(heading).not.toHaveClass("text-heading");
+  });
+
+  it("titles a card as a heading in sentence case when asked (round 40 C4)", () => {
+    render(
+      <RailCard title="Already in your closet · Top" isHeading>
+        <p>No tops yet.</p>
+      </RailCard>,
+    );
+
+    const heading = screen.getByRole("heading", {
+      level: 2,
+      name: "Already in your closet · Top",
+    });
+    expect(heading).toHaveClass("font-display", "text-heading");
+    expect(heading).not.toHaveClass("uppercase");
+    expect(heading.querySelector(".text-mono-xs")).toBeNull();
+    expect(heading.closest("section")).toHaveClass("border-hairline");
   });
 });

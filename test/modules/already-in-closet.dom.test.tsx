@@ -76,10 +76,17 @@ describe("AlreadyInCloset", () => {
   it("is titled for the category, and says so when it holds nothing yet", () => {
     card([]);
 
-    expect(
-      screen.getByRole("heading", { name: "Already in your closet · Top" }),
-    ).toBeVisible();
+    const heading = screen.getByRole("heading", {
+      name: "Already in your closet · Top",
+    });
+    expect(heading).toBeVisible();
+    // Round 40 C4: sentence case, as the heading it is — not mono caps.
+    expect(heading).toHaveClass("font-display", "text-heading");
     expect(screen.getByText("No tops yet.")).toBeVisible();
+    expect(screen.getByText("No tops yet.")).toHaveClass(
+      "text-body",
+      "text-quiet",
+    );
     expect(screen.queryByRole("list")).toBeNull();
   });
 

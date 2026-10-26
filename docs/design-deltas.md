@@ -557,6 +557,9 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     (2026-10-06) built three of them: the row opens itself ("Decide this
     one" is gone), the CSAM second press with round 29 #3's line, and the
     notice band's takedown sentence. See round 28 #8 for what is left.**
+    **The content-removed email: ANSWERED by round 40 (C3).** Round 27's
+    frame is the text, not the round 26 build below; built by the C8
+    follow-up after PR #220.
     - **Review queue decisions.** Each row picks a reason from the removal
       list (the sentence the author is sent, round 27 #20) and offers
       Approve · Remove · Remove as suspected CSAM. Only one row carries the
@@ -621,7 +624,9 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     sent back to design (D-91, item 40). Not built.** **Built in design PR
     C (2026-10-07), except the kicker:** the ink words, the month-and-year
     date, the hatch and `PHOTO STILL ON`; F's rail card is titled and
-    matched by type now that F asks one (R-112). Six the PR shipped, and two its review added. The
+    matched by type now that F asks one (R-112). **F's rail card: ANSWERED
+    by round 40 (C4), confirmed and drawn in sentence case; built in
+    design 153.** Six the PR shipped, and two its review added. The
     first three ship as built by the owner's decision (D-77); each is the
     build's reading of a board against a contract or an existing pattern,
     and nothing waits on the answers.
@@ -659,7 +664,9 @@ launcher)` row rules that _"+ Add is a launcher, not a tab: the
     page (item 16), "Keep your account?" (item 12), the deleted handle and
     its `/@handle` (items 4 and 11), and the export states PR #132 adds to
     this item (item 15). The delete sheet's Google flow and the five emails
-    below were not asked, and stay open. Legal
+    below were not asked, and stay open. **Both ANSWERED by round 40 (C1,
+    C2): the Google flow confirmed with two corrections, the emails
+    confirmed with the invite's foot reworded; built in design 153.** Legal
     pages, export, deletion and the email hookups, from existing
     primitives and the register's copy:
     - **The legal footer** on the signed-out shell reads only "Privacy":
@@ -933,7 +940,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
-83. **"A copy of an image removed as intimate" on Review (D-147, design
+84. **"A copy of an image removed as intimate" on Review (D-147, design
     152). Undesigned; built as a placeholder.** A kit photo whose
     fingerprint is within 8 bits of one removed as intimate is held and
     lands on Review with the source `[fingerprint]`. Under the photo, one
@@ -943,7 +950,7 @@ bits` apart.", the date and distance in MONO.xs. The row also carries
     glyph or colour. **The ask:** draw the line, and say whether the
     source tag should read something kinder than `[fingerprint]`.
 
-84. **Where else to go, on the removal receipts (D-147, design 152).
+85. **Where else to go, on the removal receipts (D-147, design 152).
     Undesigned copy on drawn screens.** The `/takedown` receipt ("We have
     your request"), its confirm page, and the report sheet's intimate-image
     branch gain one quiet line: "If it may be on other sites too,
@@ -952,7 +959,163 @@ bits` apart.", the date and distance in MONO.xs. The row also carries
     image never leaves it." The two names are plain links, opening in a new
     tab. **The ask:** confirm or reword, and place it on the boards.
 
-<!-- Item numbers continue past rounds 35–39 (45–76); this comment keeps the list from being renumbered. -->
+<!-- Item numbers continue past rounds 35–40 (45–76, 82–85). Design numbered the Garmin asks 77–81 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
+
+## Answered in round 40 (imported 2026-10-24)
+
+Sent on 2026-10-24: item 82 (the `/open-source` tools tier) and five asks
+carried from earlier items that no round had answered: the delete sheet's
+Google flow (C1) and the five emails (C2) from item 39, the content-removed
+email from item 36 (C3), F's rail card by category from item 38 (C4), and
+round 30's two errata still open, the Form Contract's §02b kicker samples
+and the Feed gutter's T1 role (C5). Design answered the same day as
+`Round 40 Rulings.dc.html`, with the text of record under "Round 40 · Item
+82 and five carried asks" in `design/docs/product.md`. Design changed
+three files: the new board, Form Contract §02b's two samples (redrawn in
+place), and product.md's Round 40 section. The same export carries
+`Garmin Rulings.dc.html` and `docs/garmin.md`; they are not this round and
+were not imported. A re-export at 21:59 the same day added item 83, the
+marketing site's `/open-source`, to the board and to product.md; this
+import is that export. Nothing is left open. Built by design 153 except
+where an item says otherwise.
+
+82. **`/open-source` · Tools we build with. Ruled and drawn; built in
+    PR #224** (design 151). "Tools we build with" (the ask's "Built with"
+    collided with the page title "Built with thanks"), last on the page
+    after Third-party notices and last in the contents with its count,
+    which amends round 39 #72 (notices are no longer last). The count
+    "44 · NOT SHIPPED" in MONO.sm, as a group's; the line "We build and
+    test dialed.run with these. None of them ships in the app, so each is
+    credited by name and licence." in TYPE.small, `--quiet`; a row is a
+    shipped row with the licence id in MONO.xs in the copyright line's
+    slot, three rows then "Show all 44", sorted by name. The empty search
+    reads "Nothing we ship or build with is called “xyz”.", and a tool
+    match keeps its section heading. The lead's {N} counts only what
+    ships. Round 40 names MONO.sm for a group's count and a row's version;
+    the built groups drew them at MONO.xs and MONO.md, and moved with it.
+    Noted, nothing to draw: 136 shipped, the AGPL group gone, Tailwind and
+    unenv joining, 5 own-licence rows.
+    What follows is the ask as sent. The list is now what the two bundles
+    hold (136 packages, not the lockfile's 272), and the owner asked that
+    the tools which build the app without shipping in it be credited too.
+    They get one more section after the licence groups and before the
+    third-party notices, built from a group's parts with nothing new: the
+    heading "Built with", its count in MONO.xs, the line "The tools we
+    build and test dialed.run with. None of them ships to you, so each is
+    credited by name and licence.", and a row per tool — name, version,
+    its licence id in MONO.xs, "Project" — with three rows then "Show all
+    {N}", in the contents with its count, and found by FIND A PACKAGE. No
+    licence text and no copyright line: a licence asks for those only on a
+    copy distributed. The lead's {N} still counts only what ships. The
+    bundle-derived list also changes item 72's numbers: 5 rows carry their
+    own "Licence", not 18, and the AGPL group is gone (nothing bundled is
+    AGPL). **The ask:** draw the tier, and give the line its words — they
+    are placeholder words the owner has not yet seen.
+
+83. **dialed.run/open-source on the marketing site. Confirmed with one
+    correction; (a), (b), (d), (e) and (f) are the site's, built in
+    dialed.run-site.** (a) The structure is approved as built: the legal
+    reading layout (620 measure, sticky Contents at desk), the type group,
+    licence groups largest first, Tools we build with last; no search, no
+    "Show all", no client script. (b) The lead stands, the URL text its
+    link, {N} = 4 today. (d) The tools line: "We build and test the
+    website with these. None of them ships in it, so each is credited by
+    name and licence." (e) All 26 tools in one list, no disclosure;
+    revisit past about 60. (f) Contents counts as the app's, MONO.sm,
+    right-aligned (3 · 1 · 26).
+    **(c) The type group, corrected, and the app follows.** One row per
+    family as Google Fonts ships them: Archivo, Archivo Black, IBM Plex
+    Mono, Archivo Black its own project and holder with its own link. The
+    holder lines are the licence files' own: "© 2020 The Archivo Project
+    Authors", "© 2017 The Archivo Black Project Authors", "© 2017 IBM
+    Corp. with Reserved Font Name "Plex"". Count "3 · TYPE"; line "The
+    typefaces you read everything in." This amends round 39 #72's "two
+    typefaces" for the app too. **Not built here: built in the app's
+    OFL.txt PR, after #226.** Design 153 does not touch the app's list.
+
+C1. **Item 39 · the delete sheet's Google flow. Confirmed, with two
+    corrections; built.** As described (a sign-in over ten minutes old is
+    a refused field, "Sign in with Google again to confirm it's you." above
+    the button, which takes focus), plus: back from Google, the sheet
+    reopens with no message and focus on "Delete my account" — a fresh
+    sign-in proves who you are, not that you still mean it — and it never
+    deletes on return. The build focused "Keep it" on the way back; it now
+    focuses Delete my account. And Keep pressed after the purge has begun
+    is the §4a band in Keep's place: kicker NOT KEPT, as O0's, "Your
+    account is already being deleted. It can't be kept now.", no Try
+    again; Keep my account leaves, because pressing it again can only say
+    this again, and Log out stays. The build said only "Your account is
+    already being deleted." as a line under the body, with Keep still
+    there. Both pages keep the signed-out panel and DELETION SCHEDULED, as
+    built. Building it found the way back broken: the router rewrites
+    `?deleting=1` to `?deleting=true` before the page renders, and the
+    search schema refused `true`, so the sheet never reopened; it now
+    does. And NOT KEPT was first reachable only in a race: the purge's
+    claim also ends the runner's sessions, and Keep's gate refuses a
+    claimed runner as nobody, so Keep after it said "Still scheduled. You
+    were signed out." with a Try again that could not work. **The owner
+    ruled NOT KEPT for both (2026-10-25):** on this page a signed-out
+    refusal of Keep reads NOT KEPT, with no Try again; any other failure
+    keeps its band and retry.
+
+C2. **Item 39 · five emails, four of them here. Three confirmed, one
+    reworded; built.**
+    - **Deletion: confirmed as built.** The date is the UTC day the week
+      ends, and the sheet and both DELETION SCHEDULED pages print the same
+      UTC date. They do: all four read `proseDayLabel` with no zone, the
+      email and both pages through `deletion.ts`' `deletionDay`.
+    - **Invite: the foot is reworded.** "Sent because this address asked
+      for access. Didn't ask? Ignore this; nothing happens.", in the reset
+      email's grammar ("You asked" reads as an accusation to someone who
+      didn't). Replaces the build's "You asked for an invite. Didn't?
+      Ignore this and nothing happens."
+    - **Strava disconnected: confirmed, and round 27's lines retire.** One
+      neutral opening for both causes, "Strava says dialed.run was
+      disconnected, so run reminders have stopped.", foot "Runs you
+      already added stay." The build's body still ended in round 27's
+      "Your runs here haven't changed."; that sentence is gone.
+    - **Daily digest: confirmed as built.** From `hello@dialed.run`
+      (desk@ is where runners write to us, not where we write from); D5's
+      rows as sentences in one paragraph; the third number is Today's
+      "bans this week". The board's sentences show their shape, not new
+      words.
+
+C3. **Item 36 · the content-removed email. Corrected; built by the C8
+    follow-up after PR #220**, which merges it with C8's DSA lines (owner
+    approved). Not covered by 74–76, which are bell rows. Round 27's frame
+    is the text of record and replaces the round 26 build: "We removed the
+    {photo} from your {Sat, Aug 29} run. Reason: {reason}. Your run and
+    verdict stay.", the button "See the community rules", the foot "Think
+    we got it wrong? Reply to this email." Copyright removals use round 38
+    #63b's sentences, with no reason. Design 153 does not touch it.
+
+C4. **Item 38 · F's rail card by category. Confirmed, and drawn in
+    sentence case; built.** "Already in your closet · Top", empty "No tops
+    yet."; round 25's "no card before a category" is retired, since the
+    select always holds one. With TYPE (built in design PR C, R-112):
+    "Already in your closet · Top · Half-zip" once a type is picked, empty
+    "No half-zips yet.", and the category alone when the type is cleared
+    (in the build, a new category clears it). The words, the narrowing and
+    the empty lines already matched, and there was no "no card before a
+    category" code to delete. What changed is the face the board draws:
+    the heading in TYPE.heading, sentence case, where the build had the
+    rail's MONO.xs caps title, and the empty line in TYPE.body, `--quiet`,
+    where it had TYPE.small, `--label`. The other rail cards (A2, A3) keep
+    their mono titles.
+
+C5. **Round 30's two errata. Both settled.**
+    - **(a) Form Contract §02b's kicker samples: redrawn.** Both samples
+      (the summary and the failure band) now draw the kicker in MONO.xs,
+      Plex Mono 10 / 0.10em, caps, so the two contracts agree (item 44).
+      The 8px button radius is round 10's COLLAPSE, not redrawn. Nothing
+      to build: `FailureBand` already draws `<Mono step="xs">`.
+    - **(b) The feed gutter: retired, and no T1 role added.** `#1C1C22` is
+      dark's `--tint`, which means a recessed block, not a gap. Posts are
+      divided by a 1px `--hairline`, full width, and each post keeps
+      SPACE[4] top and bottom. The build had each post's own hairline
+      under it with a 20px gap between posts; it is now the hairline
+      between posts, across the column, with SPACE[4] above and below
+      each.
 
 ## Answered in round 39 (imported 2026-10-24)
 
@@ -1016,7 +1179,9 @@ entries for them when it merges.
 72. **`/open-source`. Confirmed.** Two typefaces; the shared line for the
     smallest groups is retired (it was never built); "Licence" after
     Project · Notice; Third-party notices after the groups and last in
-    the contents, without the preamble. Nothing to build.
+    the contents, without the preamble. Nothing to build. **Amended by
+    round 40:** Tools we build with now comes after the notices (#82), and
+    the type group is three rows, not two typefaces (#83c).
 
 73. **Copyright holds on Review. Ruled and drawn; build work.** Counter-
     notice received takes a RECEIVED ON date, defaulting to today, with
@@ -1039,34 +1204,6 @@ entries for them when it merges.
     #220.** Under Why, `PickOne` with the "—" start and "Pick the rule it
     breaks."; the ten rule names verbatim, a hairline, then "Suspected
     CSAM (the notice names no rule)".
-
-82. **`/open-source`'s "Built with" tier (design 151).** **ANSWERED by
-    round 40 (#82) and built:** "Tools we build with" (the old heading
-    collided with the page title), last on the page after Third-party
-    notices and last in the contents; the count "44 · NOT SHIPPED" in
-    MONO.sm; the line "We build and test dialed.run with these. None of
-    them ships in the app, so each is credited by name and licence." in
-    TYPE.small, --quiet; a row's licence id in MONO.xs in the copyright
-    line's slot; and the empty search "Nothing we ship or build with is
-    called “xyz”." Round 40 also names MONO.sm for a group's count and a
-    row's version "as a group's" and "as shipped rows"; the built groups
-    drew them at MONO.xs and MONO.md, so they moved to MONO.sm with it.
-    What follows is the ask as sent. The list is now what the two bundles hold (136
-    packages, not the lockfile's 272), and the owner asked that the tools
-    which build the app without shipping in it be credited too. They get
-    one more section after the licence groups and before the third-party
-    notices, built from a group's parts with nothing new: the heading
-    "Built with", its count in MONO.xs, the line "The tools we build and
-    test dialed.run with. None of them ships to you, so each is credited
-    by name and licence.", and a row per tool — name, version, its
-    licence id in MONO.xs, "Project" — with three rows then "Show all
-    {N}", in the contents with its count, and found by FIND A PACKAGE.
-    No licence text and no copyright line: a licence asks for those only
-    on a copy distributed. The lead's {N} still counts only what ships.
-    The bundle-derived list also changes item 72's numbers: 5 rows carry
-    their own "Licence", not 18, and the AGPL group is gone (nothing
-    bundled is AGPL). **The ask:** draw the tier, and give the line its
-    words — they are placeholder words the owner has not yet seen.
 
 ## Answered in round 38 (imported 2026-10-18)
 

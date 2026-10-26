@@ -299,6 +299,10 @@ describe("accountSectionSearch and the way back from Google (ACC-9)", () => {
     expect(accountSectionSearch.parse({ deleting: "1" })).toStrictEqual({
       deleting: true,
     });
+    // The router's own write-back of that `true`, parsed again.
+    expect(accountSectionSearch.parse({ deleting: true })).toStrictEqual({
+      deleting: true,
+    });
     // Whatever else lands in the URL — the router's own write-back of a
     // `false` included — is not the way back from Google.
     for (const deleting of [false, "false", 0, "0", "yes"]) {

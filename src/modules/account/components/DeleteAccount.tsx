@@ -63,6 +63,10 @@ export function DeleteAccount({
   }
 >): JSX.Element {
   const [isOpen, setIsOpen] = useState(isReturningFromGoogle);
+  // Back from Google focuses a different button (round 40 C1) — but only
+  // the first time: closed and opened again from the row, it is the
+  // ordinary confirm.
+  const [hasClosed, setHasClosed] = useState(false);
   return (
     <section
       data-part="delete-account"
@@ -91,8 +95,10 @@ export function DeleteAccount({
           request={request}
           reauth={reauth}
           onScheduled={onScheduled}
+          isReturningFromGoogle={isReturningFromGoogle && !hasClosed}
           onClose={() => {
             setIsOpen(false);
+            setHasClosed(true);
           }}
         />
       ) : undefined}
@@ -127,14 +133,17 @@ function DeleteSheet({
   request,
   reauth,
   onScheduled,
+  isReturningFromGoogle,
   onClose,
 }: Readonly<
   DeleteAccountSeams & {
+    isReturningFromGoogle: boolean;
     onClose: () => void;
   }
 >): JSX.Element {
   const [currentPassword, setCurrentPassword] = useState("");
   const [keep, setKeep] = useState<HTMLButtonElement | undefined>();
+  const [confirm, setConfirm] = useState<HTMLButtonElement | undefined>();
   // In UTC, as every other place that names this day does (`deletion.ts`'
   // `deletionDay`): the sheet and the email must not name different days.
   const day = proseDayLabel(nowSeconds() + DELETION_GRACE_S);
@@ -164,9 +173,13 @@ function DeleteSheet({
 
   // "Keep it" is focused, as every destructive confirm's safe answer is
   // (ConfirmSheet's pattern: state, so this runs once the button exists).
+  // Except back from Google (round 40 C1): the runner pressed Delete my
+  // account, was sent to sign in again, and came back to finish — so the
+  // focus is on the press they came back to make, with no message, and
+  // nothing is sent until they make it.
   useEffect(() => {
-    keep?.focus();
-  }, [keep]);
+    (isReturningFromGoogle ? confirm : keep)?.focus();
+  }, [confirm, keep, isReturningFromGoogle]);
 
   return (
     <Sheet open onClose={onClose} label="Delete your account?">
@@ -221,6 +234,9 @@ function DeleteSheet({
           label="Delete my account"
           pendingLabel="Deleting"
           pending={form.pending}
+          ref={(node) => {
+            setConfirm(node ?? undefined);
+          }}
         />
         <button
           type="button"

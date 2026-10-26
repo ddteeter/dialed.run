@@ -641,4 +641,38 @@ Board: `Round 39 Rulings.dc.html`.
 
 **76 · D8 Which rule it breaks.** Under Why, PickOne, "—" start, "Pick the rule it breaks." The ten bold names verbatim, a hairline, then "Suspected CSAM (the notice names no rule)".
 
-**72 · /open-source.** Confirmed: two typefaces; the shared small-group line is retired; "Licence" after Project · Notice; Third-party notices after the groups and last in the contents, with the preamble left out.
+**72 · /open-source.** Confirmed: two typefaces; the shared small-group line is retired; "Licence" after Project · Notice; Third-party notices after the groups, with the preamble left out. (Round 40 #82: notices are no longer last; Tools we build with follows them.)
+
+## Round 40 · Item 82 and five carried asks
+Board: `Round 40 Rulings.dc.html`. In-place: Form Contract §02b samples (C5a). Amends Round 39 #72, Round 25 F desk ("no card before a category"), Round 27 Strava email first line.
+
+**82 · /open-source · Tools we build with**
+- (a) **Where.** The last section, after Third-party notices, and the last entry in the contents, with its count. The page reads: what ships, what its licences ask of us, then the tools.
+- (b) **Words.** Heading "Tools we build with" ("Built with" collides with the page title "Built with thanks"). Count as a group's: MONO.sm, "44 · NOT SHIPPED". Line (TYPE.small, --quiet): "We build and test dialed.run with these. None of them ships in the app, so each is credited by name and licence." The lead's {N} keeps counting only what ships.
+- (c) **Empty search.** "Nothing we ship or build with is called “xyz”." A tool match shows under its own heading, so it never reads as shipped.
+- (d) **Tool row.** Nothing added. Name, version (MONO.sm, as shipped rows), Project; the licence id in MONO.xs in the copyright line's slot. No copyright, no licence text, no Notice. Three rows, then "Show all 44"; sorted by name.
+- Noted, nothing to draw: 136 shipped, AGPL group gone, Tailwind and unenv joined, 5 own-licence rows.
+
+**83 · dialed.run/open-source (marketing site)**
+- (a) **Structure.** Approved as built: the site's legal reading layout (620 measure, sticky Contents at desk), type group, licence groups largest first, Tools we build with last. No search, no "Show all", no client script.
+- (b) **Lead.** Kept: "This page covers the dialed.run website. The app keeps its own list, at app.dialed.run/open-source. The website runs on code and type that people chose to give away. Here are all {N} pieces it ships, grouped by licence, with a link to each project." The URL text is the link. {N} = 4 today.
+- (c) **Type (corrected).** One row per family, as Google Fonts ships them: Archivo, Archivo Black, IBM Plex Mono. Archivo Black is its own project and holder, with its own link. Holder lines are the licence files' own: "© 2020 The Archivo Project Authors", "© 2017 The Archivo Black Project Authors", "© 2017 IBM Corp. with Reserved Font Name "Plex"". Count "3 · TYPE"; line "The typefaces you read everything in." The app's list follows: three rows, the same line (amends round 39 #72 "two typefaces").
+- (d) **Tools line.** "We build and test the website with these. None of them ships in it, so each is credited by name and licence." "The website", as the lead names it.
+- (e) **26 tools.** One list, every row; no disclosure. Revisit past about 60.
+- (f) **Contents.** Counts, as the app's: MONO.sm, right-aligned (3 · 1 · 26).
+
+**C1 · Item 39, Google delete.** Confirmed as described, with two corrections. Back from Google, the sheet reopens with no message and focus on "Delete my account"; it never deletes on return. Keep pressed after the purge has begun: §4a band NOT KEPT · "Your account is already being deleted. It can't be kept now." in Keep's place; Keep my account leaves, Log out stays. Both pages keep the signed-out panel and DELETION SCHEDULED.
+
+**C2 · Item 39, emails.**
+- Deletion: confirmed. The date is the UTC day the week ends, and the sheet and both DELETION SCHEDULED pages print the same UTC date.
+- Invite foot reworded: "Sent because this address asked for access. Didn't ask? Ignore this; nothing happens."
+- Strava disconnected: confirmed. "Strava says dialed.run was disconnected, so run reminders have stopped." Foot: "Runs you already added stay." Round 27's two openings and "Your runs here haven't changed." retire.
+- Daily digest: confirmed. From hello@dialed.run; three sentences in one paragraph; the third number is Today's "bans this week".
+
+**C3 · Item 36, content-removed email.** Not covered by 74–76 (bell rows). Round 27's frame is the text of record and replaces the round 26 build: "We removed the {photo} from your {Sat, Aug 29} run. Reason: {reason}. Your run and verdict stay." Button "See the community rules". Foot "Think we got it wrong? Reply to this email." Copyright removals use round 38 #63b's sentences, with no reason.
+
+**C4 · Item 38, F's rail card.** Confirmed: "Already in your closet · Top", sentence case; empty "No tops yet." The "no card before a category" state is retired. Once TYPE lands: "Already in your closet · Top · Half-zip" when a type is picked (empty "No half-zips yet."); clearing the type returns to category alone.
+
+**C5 · Contract errata.**
+- (a) Form Contract §02b's two kicker samples are redrawn in MONO.xs (Plex Mono 10 / 0.10em, caps). The contracts agree.
+- (b) The feed gutter is retired; no T1 role is added. Posts are divided by a 1px --hairline, full width, and each post keeps SPACE[4] top and bottom.

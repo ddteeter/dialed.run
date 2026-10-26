@@ -1,4 +1,4 @@
-import type { JSX, ReactNode, RefObject } from "react";
+import type { JSX, ReactNode, Ref, RefObject } from "react";
 
 import { Mono } from "./Mono";
 import type {
@@ -699,13 +699,19 @@ export function SubmitButton({
   label,
   pendingLabel,
   pending,
+  ref,
 }: Readonly<{
   label: string;
   pendingLabel: string;
   pending: boolean;
+  /**
+  For a form that must focus its submit: the delete sheet, back from Google.
+  */
+  ref?: Ref<HTMLButtonElement> | undefined;
 }>): JSX.Element {
   return (
     <button
+      ref={ref}
       type="submit"
       {...inFlight(pending)}
       className={`target grid min-h-13 place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase  text-ink ${
