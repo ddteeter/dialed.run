@@ -14,7 +14,7 @@ import type { drizzle } from "drizzle-orm/d1";
 import { wardrobeItems } from "../../db/schema-core";
 import { newUlid, ulidSchema } from "../../lib/ids";
 import { isAllowedPhotoType, maxPhotoBytes } from "../../lib/photo-constraints";
-import { env } from "../../env";
+import { env, primaryCoreDb } from "../../env";
 import {
   fitWithin,
   photoRefusal,
@@ -30,7 +30,14 @@ import {
   outboxInsert,
   settleOutbox,
 } from "../ops";
-import { classifierFromEnv, screenPhoto, type Classify } from "../safety";
+import {
+  classifierFromEnv,
+  enqueueForReview,
+  garmentPhotoForgotten,
+  removedMatchOf,
+  screenPhoto,
+  type Classify,
+} from "../safety";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -152,6 +159,11 @@ export async function uploadItemPhoto(
   // names. A failed fast path never fails the upload (law 5) — the photo
   // the runner asked for is saved — and the outbox drainer finishes it.
   const debt = oweOutbox({ kind: "photo_delete", payload: { userId, itemId } });
+  // A copy of an image removed as intimate (D-147, design 157) is held for
+  // a person, as a kit photo's is: from the primary, since what was kept
+  // is an operator's write and a replica may not have it yet.
+  const isCopyOfRemoved =
+    (await removedMatchOf(primaryCoreDb(), fingerprint)) !== undefined;
   const pointAtNewVersion = db
     .update(wardrobeItems)
     // `visibility: "pending"` in the same write as the key. A garment with
@@ -166,11 +178,28 @@ export async function uploadItemPhoto(
     .set({
       photoKey: keyPrefix,
       photoFingerprint: fingerprint,
-      visibility: "pending",
+      visibility: isCopyOfRemoved ? "hidden_pending_review" : "pending",
     })
     .where(ownedBy(wardrobeItems, { id: itemId, userId }));
-  await db.batch([pointAtNewVersion, outboxInsert(db, debt)]);
+  await db.batch([
+    // The replaced photo's verdicts and open review go with it (design
+    // 157), before the new photo's hold, if any, opens a review again.
+    ...garmentPhotoForgotten(db, userId, itemId),
+    pointAtNewVersion,
+    ...(isCopyOfRemoved
+      ? [
+          enqueueForReview(db, {
+            subjectType: "garment",
+            subjectId: itemId,
+            source: "fingerprint",
+          }),
+        ]
+      : []),
+    outboxInsert(db, debt),
+  ]);
   await settleOutbox(db, debt, report);
+  // A held photo waits for a person, not the classifier.
+  if (isCopyOfRemoved) return { photoKey: keyPrefix };
 
   // Same shape as the entry path: bounded, never throws, and a failure
   // leaves the row `pending` for the screening-retry cron. The ORIGINAL
@@ -233,7 +262,11 @@ export async function removeItemPhoto(
     // and the photo is gone.
     .set({ photoKey: sql`NULL`, photoFingerprint: sql`NULL`, visibility: "ok" })
     .where(stillNamesAPhoto);
-  await db.batch([clearPhoto, outboxInsert(db, debt)]);
+  await db.batch([
+    ...garmentPhotoForgotten(db, userId, itemId),
+    clearPhoto,
+    outboxInsert(db, debt),
+  ]);
   await settleOutbox(db, debt, report);
 }
 

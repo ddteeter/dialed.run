@@ -67,6 +67,7 @@ export {
   QUARANTINE_RETENTION_SECONDS,
   quarantinedContentFor,
   quarantineInsert,
+  uploaderContextOf,
   type QuarantineRecord,
   // The year-end purge (D-70), which rides the daily digest's firing.
   purgeExpiredQuarantine,
@@ -148,6 +149,7 @@ export {
   type ReleaseReport,
   type ResolveOutcome,
   type ReviewDecision,
+  type ReviewSubjectType,
 } from "./review";
 
 export {
@@ -179,6 +181,8 @@ export {
   pendingEntryPhotos,
   pendingGarmentFrom,
   pendingGarmentPhotos,
+  garmentPhotoForgotten,
+  screeningDeletes,
   screenPhoto,
   type Classify,
   type PendingPhoto,

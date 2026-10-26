@@ -732,6 +732,8 @@ describe("quarantine: silent, preserved, admin-only (SAF-5, D-70)", () => {
       entry: [entryRow],
       items: [],
       tags: [],
+      // The photo was never screened (design 157 keeps any that were).
+      screenings: [],
     });
     const [photo] = z
       .array(

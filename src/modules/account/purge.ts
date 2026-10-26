@@ -341,6 +341,8 @@ async function forgetScreenings(db: Db, userId: string): Promise<void> {
   await db.batch([
     db.delete(photoScreenings).where(or(ofEntryPhotos, ofGarments)),
     settleOpenReviews(db, "profile", [userId], userId),
+    // A garment's photo is queued by the garment's id (design 157).
+    settleOpenReviews(db, "garment", theirGarments, userId),
   ]);
 }
 

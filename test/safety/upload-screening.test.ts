@@ -421,6 +421,9 @@ describe("the bytes behind a reported photo", () => {
     Reflect.set(env, "ADMIN_USER_IDS", reviewer);
     const served = await reviewerPhotoResponse(key, reviewer);
     expect(served.status).toBe(200);
+    // Design 157: material under review is cached nowhere, the operator's
+    // own browser included — not the hour a runner's photo is kept.
+    expect(served.headers.get("cache-control")).toBe("private, no-store");
 
     // The point of the separate route: `photoResponse` refuses this photo
     // to everyone but its owner, and being reported is what hid it. A
