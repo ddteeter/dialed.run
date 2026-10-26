@@ -1172,9 +1172,11 @@ entries for them when it merges.
     RUNNER · N. Under each: the id; "{N} BITS", or "SAME" at 0, plus
     [PRIVATE] where it applies; and the owner's @handle, linking to D8. A
     garment tile opens nothing, and its owner link is what it offers. The
-    takedown form stays kit-only. **Not built yet:** the kicker, the
-    visible distance (today it is only in the alt), [PRIVATE], and the
-    owner link.
+    takedown form stays kit-only. **Built (design 155):** the kicker
+    (no count on an empty state), the visible distance, [PRIVATE] for a
+    kit not shared, the owner link, and nearest-first order with a kit
+    before a garment at a distance. "{N} BITS" says "1 BIT" at one, as
+    the removed-match line does.
 
 72. **`/open-source`. Confirmed.** Two typefaces; the shared line for the
     smallest groups is retired (it was never built); "Licence" after
@@ -1191,8 +1193,10 @@ entries for them when it merges.
     it was?" [Put it back], each with Not yet, which puts the pair back
     with focus on the pressed one. Settled rows leave the list. **The
     owner approved** "Case over: delete" and "Case over: restore", with
-    these confirms (2026-10-24). **Not built yet:** the date, its
-    refusals, and the confirm step.
+    these confirms (2026-10-24). **Built (design 155):** the date
+    (stored as `counter_notice_at`, the restore counted from it), its
+    refusals, the confirm step, and settled rows leaving the list, whose
+    answer the list then says.
 
 74. **Moderation notices in the bell (PR #220). Confirmed as built.** No
     kicker; the heading-led paragraph stands. The author's rows open their
@@ -1203,7 +1207,9 @@ entries for them when it merges.
 76. **D8's Close account names a rule (PR #220). Ruled; build work in
     #220.** Under Why, `PickOne` with the "—" start and "Pick the rule it
     breaks."; the ten rule names verbatim, a hairline, then "Suspected
-    CSAM (the notice names no rule)".
+    CSAM (the notice names no rule)". **Built (design 155):** the CSAM
+    option's words. **Not built yet:** the hairline, which the shared
+    `ChoiceField` select does not draw.
 
 ## Answered in round 38 (imported 2026-10-18)
 

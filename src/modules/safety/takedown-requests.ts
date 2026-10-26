@@ -45,6 +45,7 @@ import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { countSend, emailDebt, sendClaimOf } from "../email";
 import { adminUserIds } from "./admin";
 import { REMOVAL_DUE_SECONDS, removalDueLabel } from "./contracts";
+import { hiddenNotice } from "./notices";
 import { otherPhotosOf, type OtherPhotos } from "./other-photos";
 import { photoMatchesOf, type PhotoMatches } from "./photo-matches";
 import type { OweEmail } from "./reports";
@@ -60,7 +61,7 @@ import {
   valveHour,
 } from "./takedown-limits";
 
-type Db = ReturnType<typeof drizzle>;
+type Db = ReturnType<typeof drizzle<Record<string, never>>>;
 
 export type TakedownRequestResult =
   | { readonly status: "received" }
@@ -121,16 +122,8 @@ export async function fileTakedownRequest<Attempt>(
     ),
   );
   if (earlier !== undefined) return { status: "received" };
-  if (input.isLimited) {
-    const counted = await countSend(
-      db,
-      "takedown",
-      input.remoteIp ?? "unknown",
-      now,
-    );
-    const claim = sendClaimOf(counted);
-    if (!claim.isAllowed) return { status: "limited", until: claim.until };
-  }
+  const until = await limitedUntil(db, input, now);
+  if (until !== undefined) return { status: "limited", until };
   const id = newUlid();
   const dueAt = now + REMOVAL_DUE_SECONDS;
   const subject = takedownSubjectOf(input.location);
@@ -142,6 +135,7 @@ export async function fileTakedownRequest<Attempt>(
   const state = await holdStateFor(db, keys, now);
   const isHeld = state === "held" && subject !== undefined;
   const confirm = state === "confirm" ? await newConfirmToken() : undefined;
+  const told = isHeld ? await holdNotice(db, subject) : [];
   await db.batch([
     db
       .insert(takedownRequests)
@@ -166,6 +160,7 @@ export async function fileTakedownRequest<Attempt>(
       })
       .onConflictDoNothing(),
     ...(isHeld ? holdWrites(db, subject) : []),
+    ...told,
     ...(state === "held"
       ? operatorAlerts(deps.owe, id, dueAt, subject !== undefined)
       : []),
@@ -186,6 +181,27 @@ export async function fileTakedownRequest<Attempt>(
     ),
   ]);
   return { status: "received" };
+}
+
+/**
+ * When the visitor's hourly sends run out, the moment they return; nothing
+ * when this deployment does not limit or the send is allowed. Counting is
+ * the write that spends a send.
+ */
+async function limitedUntil(
+  db: Db,
+  input: { readonly isLimited: boolean; readonly remoteIp: string | undefined },
+  now: number,
+): Promise<number | undefined> {
+  if (!input.isLimited) return undefined;
+  const counted = await countSend(
+    db,
+    "takedown",
+    input.remoteIp ?? "unknown",
+    now,
+  );
+  const claim = sendClaimOf(counted);
+  return claim.isAllowed ? undefined : claim.until;
 }
 
 /**
@@ -251,6 +267,51 @@ function holdWrites(db: Db, subject: TakedownSubject): BatchItem<"sqlite">[] {
 }
 
 /**
+ * The author's notice that a request hid their kit or photo (R-163; owner,
+ * 2026-10-24): the hide notice a report's hide sends (D-145), unchanged.
+ * Read before the batch, which cannot branch, and only while the subject
+ * is in a state the hold moves — so a subject a report already hid, or a
+ * removal already took, is not told it was hidden again. Suspected CSAM
+ * is not known yet when a request lands; the quarantine that may follow
+ * tells nobody anything more (D-70).
+ */
+async function holdNotice(
+  db: Db,
+  subject: TakedownSubject,
+): Promise<BatchItem<"sqlite">[]> {
+  const { table, where } = holdable[subject.subjectType](subject.subjectId);
+  const [row] = await db
+    .select({ one: sql`1` })
+    .from(table)
+    .where(where);
+  return row === undefined
+    ? []
+    : hiddenNotice(db, subject.subjectType, subject.subjectId);
+}
+
+/**
+ * A subject a hold would move: public, and the row it names. The hold's
+ * own `where` (`visibilityWrites`), so the notice and the hide cannot
+ * disagree about what "public" is.
+ */
+const holdable: Record<
+  TakedownSubject["subjectType"],
+  (subjectId: string) => {
+    readonly table: typeof outfitEntries | typeof entryPhotos;
+    readonly where: SQL | undefined;
+  }
+> = {
+  entry: (subjectId) => ({
+    table: outfitEntries,
+    where: and(eq(outfitEntries.id, subjectId), HOLD_FROM.entry),
+  }),
+  photo: (subjectId) => ({
+    table: entryPhotos,
+    where: and(eq(entryPhotos.id, subjectId), HOLD_FROM.photo),
+  }),
+};
+
+/**
  * A Decline's give-back, for the decision's batch: the subject the
  * request hid goes back to what an approval leaves (`ok`, and a photo to
  * `pending`, never `pass`, as `resolveReview` does) — but only when
@@ -308,6 +369,17 @@ function rowsWhere(
 }
 
 /**
+ * The states a hold may start from: public, never a removal, and never a
+ * photo the classifier flagged.
+ */
+const HOLD_FROM_STATUS = { entry: "ok" } as const;
+
+const HOLD_FROM = {
+  entry: eq(outfitEntries.moderationStatus, HOLD_FROM_STATUS.entry),
+  photo: inArray(entryPhotos.screenStatus, ["pending", "pass"]),
+} as const;
+
+/**
  * One subject's visibility, held or given back, per subject type: the
  * column, the state a hold leaves, the states it may start from, and
  * what a give-back restores. `when` is the give-back's extra condition.
@@ -321,9 +393,11 @@ const visibilityWrites: Record<
   ) => BatchItem<"sqlite">
 > = {
   entry: (db, subjectId, { hold, when }) => {
+    // The hold's start is `HOLD_FROM.entry`'s one state, so a ternary
+    // inside the comparison says both directions.
     const from = eq(
       outfitEntries.moderationStatus,
-      hold ? "ok" : "hidden_pending_review",
+      hold ? HOLD_FROM_STATUS.entry : "hidden_pending_review",
     );
     return db
       .update(outfitEntries)
@@ -332,7 +406,7 @@ const visibilityWrites: Record<
   },
   photo: (db, subjectId, { hold, when }) => {
     const from = hold
-      ? inArray(entryPhotos.screenStatus, ["pending", "pass"])
+      ? HOLD_FROM.photo
       : eq(entryPhotos.screenStatus, "hidden_pending_review");
     return db
       .update(entryPhotos)
@@ -372,6 +446,7 @@ export async function confirmTakedownRequest(
   const subject = takedownSubjectOf(request.location);
   const isShut = await isValveShut(db, now);
   const isHeld = !isShut && subject !== undefined;
+  const told = isHeld ? await holdNotice(db, subject) : [];
   const unconfirmed = and(
     eq(takedownRequests.id, request.id),
     isNull(takedownRequests.confirmedAt),
@@ -386,6 +461,7 @@ export async function confirmTakedownRequest(
       })
       .where(unconfirmed),
     ...(isHeld ? holdWrites(db, subject) : []),
+    ...told,
     ...(isShut
       ? valveAlerts(owe, now)
       : operatorAlerts(owe, request.id, request.dueAt, subject !== undefined)),

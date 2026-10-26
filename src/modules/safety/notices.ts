@@ -163,3 +163,36 @@ export async function reporterNotices(
     }),
   );
 }
+
+/**
+ * The reporters of the photos on a kit the Desk removed (R-162 b; owner,
+ * 2026-10-24): what they reported went with the kit, so each is told
+ * "We removed what you reported." of the photo they reported. Read before
+ * the batch deletes the photos: the kit's photos (`entry_photos_idempotency`
+ * prefix), each joined to its reports (`reports_subject`). Once per
+ * reporter and photo, as above.
+ */
+export async function photoReporterNotices(
+  db: Db,
+  entryId: string,
+): Promise<BatchItem<"sqlite">[]> {
+  const reported = await db
+    .select({ userId: reports.reporterId, subjectId: reports.subjectId })
+    .from(reports)
+    .innerJoin(
+      entryPhotos,
+      and(
+        eq(reports.subjectType, "photo"),
+        eq(reports.subjectId, entryPhotos.id),
+      ),
+    )
+    .where(eq(entryPhotos.entryId, entryId));
+  return reported.map(({ userId, subjectId }) =>
+    notificationInsert(db, {
+      userId,
+      kind: OUTCOME_KIND.removed,
+      subjectId,
+      body: REPORT_OUTCOME.removed,
+    }),
+  );
+}

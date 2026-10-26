@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
 import { monthDayLabel } from "../../../lib/dates";
-import { Mono } from "../../../ui";
+import { Bracketed, Mono } from "../../../ui";
 import type { PhotoMatch, PhotoMatches as Found } from "../photo-matches";
 import type { RemovedMatch } from "../removed-fingerprints";
 import { PhotoSection } from "./OtherPhotos";
@@ -12,25 +12,32 @@ import { PhotoSection } from "./OtherPhotos";
  * fingerprint (D-142, design 146), on the Review rows that list the
  * runner's other photos: the hashed half of the effort on copies.
  *
- * **Undesigned** (design deltas item 71): existing primitives and text
- * only, laid out as "Their other photos" is. Each photo is served from
- * `/safety/review-photo/`, as the row's own are. A kit photo carries its
- * id, which the takedown form under Review takes, and links its kit when
- * an operator can open it; a garment photo is never shown to another
- * runner, so it has no page and is named as a garment.
+ * **As round 39 #71 rules**: a grid of its own under THEIR OTHER PHOTOS,
+ * headed MATCHING PHOTOS · ANY RUNNER · N, nearest first. Under each
+ * photo: its id, which the takedown form under Review takes (a garment's
+ * named as one); its distance, "{N} bits" or "same", with [private] for a
+ * kit not shared; and its owner's @handle, opening them in D8. A kit photo
+ * links its kit when an operator can open it; a garment photo is never
+ * shown to another runner, so its tile opens nothing and its owner link
+ * is what it offers. Each photo is served from `/safety/review-photo/`.
  *
  * Nothing renders on a row that does not search (`undefined`). A subject
  * with no fingerprint says so rather than "no matches", which would be a
- * claim the search never made.
+ * claim the search never made; an empty state's kicker has no count.
  */
 export function PhotoMatches({
   found,
 }: Readonly<{ found: Found | undefined }>): JSX.Element | undefined {
   if (found === undefined) return undefined;
+  const count = found.matches.length;
   return (
     <PhotoSection
       part="photo-matches"
-      title={`Matching photos · ${String(found.matches.length)}`}
+      title={
+        count === 0
+          ? "Matching photos · any runner"
+          : `Matching photos · any runner · ${String(count)}`
+      }
     >
       <Matches found={found} />
     </PhotoSection>
@@ -64,9 +71,47 @@ function Matches({ found }: Readonly<{ found: Found }>): JSX.Element {
           <span className="text-quiet">
             <Mono step="xs">{nameOf(match)}</Mono>
           </span>
+          <span data-part="match-distance" className="text-quiet uppercase">
+            <Mono step="xs">{distanceLabel(match.distance)}</Mono>
+            {match.isPrivate ? (
+              <>
+                {" · "}
+                <Bracketed>private</Bracketed>
+              </>
+            ) : undefined}
+          </span>
+          <Owner handle={match.handle} />
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+How near, as the tile says it: "same" at 0, the bits otherwise.
+*/
+function distanceLabel(distance: number): string {
+  return distance === 0 ? "same" : bitsLabel(distance);
+}
+
+/**
+ * Whose the photo is: their @handle, opening them in D8, where a garment
+ * that has to go is reached too. A runner with no handle cannot be
+ * searched for there, so nothing is offered.
+ */
+function Owner({
+  handle,
+}: Readonly<{ handle: string | undefined }>): JSX.Element | undefined {
+  if (handle === undefined) return undefined;
+  return (
+    <Link
+      data-part="match-owner"
+      to="/desk/runners"
+      search={{ query: handle, filter: "all" }}
+      className="target self-start text-ink"
+    >
+      <Mono step="xs">{`@${handle}`}</Mono>
+    </Link>
   );
 }
 

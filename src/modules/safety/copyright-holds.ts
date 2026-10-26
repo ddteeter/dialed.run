@@ -172,35 +172,44 @@ export type CounterNoticeOutcome =
       readonly counterNoticeAt: number;
       readonly restoreAt: number;
     }
-  | { readonly outcome: "already" | "gone" };
+  | { readonly outcome: "already" | "before_hidden" | "gone" };
 
 /**
- * The Desk's "Counter-notice received": the date, who recorded it, and
- * the day the sweep restores. Only on a hold still hidden, and once.
+ * The Desk's "Counter-notice received": the day it arrived (round 39 #73,
+ * RECEIVED ON, `YYYY-MM-DD`), who recorded it, and the day the sweep
+ * restores, counted from that day. Only on a hold still hidden, once, and
+ * never for a day before the hide (`before_hidden`): the form refuses
+ * that too, but only this `WHERE` knows when the hold began. The day is
+ * kept as its 00:00 UTC, the Desk's clock.
  */
 export async function recordCounterNotice(
   db: Db,
   actorId: string,
   holdId: string,
-  now = nowSeconds(),
+  receivedOn: string,
 ): Promise<CounterNoticeOutcome> {
-  const restoreAt = restoreDayAfter(now);
+  const counterNoticeAt = Date.parse(`${receivedOn}T00:00:00Z`) / 1000;
+  const restoreAt = restoreDayAfter(counterNoticeAt);
   const landed = await db
     .update(copyrightHolds)
-    .set({ counterNoticeAt: now, counterNoticeBy: actorId, restoreAt })
+    .set({ counterNoticeAt, counterNoticeBy: actorId, restoreAt })
     .where(
       and(
         eq(copyrightHolds.id, holdId),
         eq(copyrightHolds.status, "hidden"),
         isNull(copyrightHolds.counterNoticeAt),
+        lt(copyrightHolds.hiddenAt, counterNoticeAt + DAY_SECONDS),
       ),
     )
     .returning({ id: copyrightHolds.id });
   if (landed.length > 0) {
-    return { outcome: "recorded", counterNoticeAt: now, restoreAt };
+    return { outcome: "recorded", counterNoticeAt, restoreAt };
   }
   const hold = await hiddenHold(db, holdId);
-  return { outcome: hold === undefined ? "gone" : "already" };
+  if (hold === undefined) return { outcome: "gone" };
+  return {
+    outcome: hold.counterNoticeAt === null ? "before_hidden" : "already",
+  };
 }
 
 export type CourtActionOutcome =

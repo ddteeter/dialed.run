@@ -25,8 +25,10 @@ import type { drizzle } from "drizzle-orm/d1";
 import {
   entryPhotos,
   outfitEntries,
+  userProfiles,
   wardrobeItems,
 } from "../../db/schema-core";
+import { SHARED_AUDIENCE } from "../../lib/contracts";
 import {
   FINGERPRINT_MATCH_DISTANCE,
   fingerprintSchema,
@@ -47,12 +49,23 @@ export const PHOTO_MATCHES_LIMIT = 12;
 /**
  * One matching photo. `photoKey` is the object `/safety/review-photo/`
  * serves; `distance` is how many bits apart it is, 0 for the same
- * picture. A kit photo carries its kit, for the link to its page; a
- * garment photo is never shown to another runner, so it has no page an
- * operator can open.
+ * picture. Whose it is — the owner, and their handle when they have one,
+ * for the link to D8 (round 39 #71). A kit photo carries its kit, for the
+ * link to its page, and whether that kit is shared; a garment photo is
+ * never shown to another runner, so it has no page an operator can open.
  */
 export type PhotoMatch = Readonly<
-  { id: string; photoKey: string; distance: number } & (
+  {
+    id: string;
+    photoKey: string;
+    distance: number;
+    ownerId: string;
+    handle: string | undefined;
+    /**
+    A kit not shared with runners; a garment, never shown to anyone, is not tagged.
+    */
+    isPrivate: boolean;
+  } & (
     | { kind: "kit"; entryId: string; canOpen: boolean }
     | { kind: "garment"; canOpen: false }
   )
@@ -106,16 +119,25 @@ async function search(
     kitMatches(db, subject, own),
     garmentMatches(db, own),
   ]);
+  // Nearest first, a kit before a garment at the same distance (round 39
+  // #71): each list is nearest first already, and the sort is stable.
+  const matches: PhotoMatch[] = [
+    ...kits.map((row) => ({
+      kind: "kit" as const,
+      ...row,
+      handle: row.handle ?? undefined,
+    })),
+    ...garments.map((row) => ({
+      kind: "garment" as const,
+      canOpen: false as const,
+      isPrivate: false,
+      ...row,
+      handle: row.handle ?? undefined,
+    })),
+  ];
   return {
     fingerprinted: true,
-    matches: [
-      ...kits.map((row) => ({ kind: "kit" as const, ...row })),
-      ...garments.map((row) => ({
-        kind: "garment" as const,
-        canOpen: false as const,
-        ...row,
-      })),
-    ],
+    matches: matches.toSorted((one, other) => one.distance - other.distance),
   };
 }
 
@@ -173,10 +195,17 @@ function kitMatches(
       photoKey: entryPhotos.photoKey,
       entryId: entryPhotos.entryId,
       canOpen: sql<boolean>`${publiclyVisibleEntry()}`.mapWith(Boolean),
+      isPrivate:
+        sql<boolean>`${outfitEntries.audience} <> ${SHARED_AUDIENCE}`.mapWith(
+          Boolean,
+        ),
       distance: sql<number>`${distance}`.mapWith(Number),
+      ownerId: outfitEntries.userId,
+      handle: userProfiles.username,
     })
     .from(entryPhotos)
     .innerJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
+    .leftJoin(userProfiles, eq(userProfiles.userId, outfitEntries.userId))
     .where(
       // No `IS NOT NULL`: a photo with no fingerprint has a NULL
       // distance, which no comparison keeps.
@@ -200,8 +229,11 @@ function garmentMatches(db: Db, own: readonly string[]) {
       id: wardrobeItems.id,
       photoKey: sql<string>`${wardrobeItems.photoKey} || '/card.webp'`,
       distance: sql<number>`${distance}`.mapWith(Number),
+      ownerId: wardrobeItems.userId,
+      handle: userProfiles.username,
     })
     .from(wardrobeItems)
+    .leftJoin(userProfiles, eq(userProfiles.userId, wardrobeItems.userId))
     .where(lte(distance, FINGERPRINT_MATCH_DISTANCE))
     .orderBy(asc(distance), asc(wardrobeItems.id))
     .limit(PHOTO_MATCHES_LIMIT);

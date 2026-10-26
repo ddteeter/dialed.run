@@ -29,7 +29,10 @@ const MATCHES: readonly PhotoMatch[] = [
     entryId: KIT,
     photoKey: "entries/u/k/1",
     canOpen: true,
+    isPrivate: false,
     distance: 0,
+    ownerId: "u-maya",
+    handle: "maya_runs",
   },
   {
     kind: "kit",
@@ -37,7 +40,10 @@ const MATCHES: readonly PhotoMatch[] = [
     entryId: KIT,
     photoKey: "entries/u/k/2",
     canOpen: false,
+    isPrivate: true,
     distance: 2,
+    ownerId: "u-kim",
+    handle: "k_lopes",
   },
   {
     kind: "garment",
@@ -45,6 +51,9 @@ const MATCHES: readonly PhotoMatch[] = [
     photoKey: "items/u/i/v1/card.webp",
     canOpen: false,
     distance: 5,
+    ownerId: "u-kim",
+    handle: undefined,
+    isPrivate: false,
   },
 ];
 
@@ -58,8 +67,10 @@ describe("PhotoMatches", () => {
     );
 
     const block = part("photo-matches");
-    expect(block).toHaveTextContent(/^Matching photos · 3/u);
-    const links = within(block ?? document.body).getAllByRole("link");
+    expect(block).toHaveTextContent(/^Matching photos · any runner · 3/u);
+    const links = within(block ?? document.body)
+      .getAllByRole("link")
+      .filter((link) => link.dataset.part !== "match-owner");
     expect(links.map((link) => link.getAttribute("href"))).toStrictEqual([
       `/feed/entry/${KIT}`,
     ]);
@@ -91,12 +102,63 @@ describe("PhotoMatches", () => {
     expect(screen.getByText(`Garment ${GARMENT}`)).toHaveClass("font-mono");
   });
 
+  it("says under each how near it is, whether it is private, and whose (round 39 #71)", async () => {
+    await renderWithRouter(
+      <PhotoMatches found={{ fingerprinted: true, matches: MATCHES }} />,
+    );
+
+    const distances = [
+      ...document.querySelectorAll<HTMLElement>("[data-part='match-distance']"),
+    ];
+    expect(distances.map((line) => line.textContent)).toStrictEqual([
+      "same",
+      "2 bits · [private]",
+      "5 bits",
+    ]);
+    for (const line of distances) expect(line).toHaveClass("uppercase");
+    const owners = [
+      ...document.querySelectorAll<HTMLElement>("[data-part='match-owner']"),
+    ];
+    expect(owners.map((owner) => owner.textContent)).toStrictEqual([
+      "@maya_runs",
+      "@k_lopes",
+    ]);
+    expect(owners.map((owner) => owner.getAttribute("href"))).toStrictEqual([
+      "/desk/runners?query=maya_runs&filter=all",
+      "/desk/runners?query=k_lopes&filter=all",
+    ]);
+    expect(owners[0]).toHaveClass("target");
+  });
+
+  it("says a bit in the singular", async () => {
+    await renderWithRouter(
+      <PhotoMatches
+        found={{
+          fingerprinted: true,
+          matches: [
+            {
+              kind: "garment",
+              id: GARMENT,
+              photoKey: "items/u/i/v1/card.webp",
+              canOpen: false,
+              distance: 1,
+              ownerId: "u-kim",
+              handle: undefined,
+              isPrivate: false,
+            },
+          ],
+        }}
+      />,
+    );
+    expect(part("match-distance")?.textContent).toBe("1 bit");
+  });
+
   it("says when nothing matches", async () => {
     await renderWithRouter(
       <PhotoMatches found={{ fingerprinted: true, matches: [] }} />,
     );
     expect(part("photo-matches")).toHaveTextContent(
-      "Matching photos · 0No matching photos from any runner.",
+      "Matching photos · any runnerNo matching photos from any runner.",
     );
   });
 
@@ -105,7 +167,7 @@ describe("PhotoMatches", () => {
       <PhotoMatches found={{ fingerprinted: false, matches: [] }} />,
     );
     expect(part("photo-matches")).toHaveTextContent(
-      "Matching photos · 0No fingerprint to match by: the photo is gone, or older than fingerprints.",
+      "Matching photos · any runnerNo fingerprint to match by: the photo is gone, or older than fingerprints.",
     );
   });
 
@@ -135,7 +197,9 @@ describe("on Review's rows", () => {
     await renderWithRouter(
       <ReviewQueue queue={[row]} resolve={vi.fn()} reviewHandle={vi.fn()} />,
     );
-    expect(part("photo-matches")).toHaveTextContent(/^Matching photos · 1/u);
+    expect(part("photo-matches")).toHaveTextContent(
+      /^Matching photos · any runner · 1/u,
+    );
   });
 
   it("sits on a removal request whose link is ours", async () => {
@@ -158,7 +222,9 @@ describe("on Review's rows", () => {
     await renderWithRouter(
       <RemovalRequests requests={[request]} decide={vi.fn()} block={vi.fn()} />,
     );
-    expect(part("photo-matches")).toHaveTextContent(/^Matching photos · 1/u);
+    expect(part("photo-matches")).toHaveTextContent(
+      /^Matching photos · any runner · 1/u,
+    );
   });
 });
 

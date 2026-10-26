@@ -99,7 +99,8 @@ export async function banUser(
  * on Close account replaces the debt rather than sending twice.
  */
 export function banEmail(input: BanInput): OutboxMessage {
-  // The rule it broke, unless suspected CSAM, which names none (C8).
+  // The rule it broke, unless suspected CSAM, whose email names no rule
+  // and no reason either (C8; owner, 2026-10-24).
   const rule = closureRuleOf(input.rule);
   return emailDebt(
     {
@@ -108,6 +109,7 @@ export function banEmail(input: BanInput): OutboxMessage {
         kind: "account_closed",
         reason: input.reason,
         rule,
+        ...(rule === undefined && { namesNoReason: true as const }),
       },
     },
     { dedupeKey: `account_closed:${input.userId}` },

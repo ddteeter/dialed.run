@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import {
+  notifications,
   outbox,
   outfitEntries,
   takedownBlocks,
@@ -291,6 +292,26 @@ describe("the confirm", () => {
       await confirmTakedownRequest(core(), token, oweInCore, NOW + 120),
     ).toBe("confirmed");
     expect(await owed()).toHaveLength(before.length);
+  });
+
+  it("tells the author of what it hides only once it hides it (R-163)", async () => {
+    const { entryId, request } = await pastTheCap();
+    const hidden = () =>
+      core()
+        .select({ subjectId: notifications.subjectId })
+        .from(notifications)
+        .where(eq(notifications.subjectId, entryId));
+    // The two before it were held at filing; this one waited.
+    expect(await hidden()).toStrictEqual([]);
+
+    await confirmTakedownRequest(
+      core(),
+      await confirmTokenFor(request.id),
+      oweInCore,
+      NOW + 60,
+    );
+
+    expect(await hidden()).toStrictEqual([{ subjectId: entryId }]);
   });
 
   it("refuses a token nobody was sent, and leaves a decided request decided", async () => {

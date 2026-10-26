@@ -331,6 +331,11 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   await expect(copyrightHold.locator("[data-part='hold-state']")).toHaveText(
     /^\[no counter-notice: deleted .+\]$/u,
   );
+  // RECEIVED ON defaults to today (round 39 #73). By its name, not its
+  // label: with two holds listed the label's id is shared (R-165).
+  await expect(copyrightHold.locator("input[name='receivedOn']")).toHaveValue(
+    /^\d{4}-\d{2}-\d{2}$/u,
+  );
   await copyrightHold
     .getByRole("button", { name: "Counter-notice received" })
     .click();
@@ -352,13 +357,28 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   await expect(
     copyrightHold.getByRole("button", { name: "Case over: delete" }),
   ).toBeVisible();
+  // Both ends confirm in place (round 39 #73); Not yet puts the pair back.
+  await copyrightHold
+    .getByRole("button", { name: "Case over: delete" })
+    .click();
+  await expect(
+    copyrightHold.getByRole("alertdialog", {
+      name: "Delete it for good? It can't be put back.",
+    }),
+  ).toBeVisible();
+  await copyrightHold.getByRole("button", { name: "Not yet" }).click();
+  await expect(
+    copyrightHold.getByRole("button", { name: "Case over: delete" }),
+  ).toBeFocused();
   await copyrightHold
     .getByRole("button", { name: "Case over: restore" })
     .click();
-  await expect(copyrightHold.locator("[data-part='hold-said']")).toHaveText(
+  await copyrightHold.getByRole("button", { name: "Put it back" }).click();
+  // A settled row leaves the list; the list says what it did.
+  await expect(page.locator("[data-part='holds-said']")).toHaveText(
     "Case over. It is back.",
   );
-  await expect(copyrightHold.getByRole("button")).toHaveCount(0);
+  await expect(copyrightHold).toHaveCount(0);
 
   await scene(page, "D8: find the runner by email");
   await page.goto("/desk/runners");

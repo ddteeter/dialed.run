@@ -11,9 +11,13 @@ import {
   takedownRequestInput,
 } from "../../src/modules/safety";
 import {
+  counterNoticeInput,
+  counterNoticeInputFor,
   ncmecReportInput,
   runRemovalsInput,
 } from "../../src/modules/safety/inputs";
+import { isoDayOf } from "../../src/lib/contracts/age";
+import { nowSeconds } from "../../src/lib/now";
 import { declineReasonField } from "../../src/modules/safety/contracts";
 
 /**
@@ -445,5 +449,38 @@ describe("the NCMEC report a quarantine records (C12)", () => {
     expect(ncmecReportInput.safeParse({ recordId: "not-a-ulid" }).success).toBe(
       false,
     );
+  });
+});
+
+describe("RECEIVED ON (round 39 #73)", () => {
+  const holdId = newUlid();
+  const today = isoDayOf(nowSeconds());
+  const tomorrow = isoDayOf(nowSeconds() + 24 * 60 * 60);
+
+  it("takes today, and refuses a later day or none, asking for a day", () => {
+    expect(
+      counterNoticeInput.parse({ holdId, receivedOn: today }),
+    ).toStrictEqual({ holdId, receivedOn: today });
+    for (const receivedOn of [tomorrow, "", "2026-13-40"]) {
+      expect(
+        counterNoticeInput.safeParse({ holdId, receivedOn }).error?.issues[0]
+          ?.message,
+      ).toBe("Pick today or an earlier day.");
+    }
+  });
+
+  it("refuses a day before the hide, and takes the hide's own day", () => {
+    const hiddenAt = Date.UTC(2026, 9, 21, 18) / 1000;
+    const form = counterNoticeInputFor(hiddenAt);
+    expect(form.safeParse({ holdId, receivedOn: "2026-10-21" }).success).toBe(
+      true,
+    );
+    const refused = form.safeParse({ holdId, receivedOn: "2026-10-20" });
+    expect(refused.error?.issues).toMatchObject([
+      {
+        path: ["receivedOn"],
+        message: "Pick a date on or after it was hidden.",
+      },
+    ]);
   });
 });

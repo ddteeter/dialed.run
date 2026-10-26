@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import terms from "../../docs/legal/terms.md?raw";
+import { parseLegalDoc } from "../../src/modules/account/legal-markdown";
 import {
+  COMMUNITY_RULES_PATH,
   communityRuleKeys,
   communityRules,
   communityRuleSchema,
@@ -77,6 +79,19 @@ describe("the community rules (C8)", () => {
   });
 });
 
+describe("where the rules are read (round 40 C3)", () => {
+  it("points at the terms page's own id for The rules", () => {
+    const [path, id] = COMMUNITY_RULES_PATH.split("#", 2);
+    expect(path).toBe("/terms");
+    // The source's notes-to-self comment is dropped, as the page drops it.
+    const shown = terms.replaceAll(/<!--[\s\S]*?-->/gu, "");
+    expect(parseLegalDoc(shown).contents).toContainEqual({
+      id,
+      title: "The rules",
+    });
+  });
+});
+
 describe("the rule a removal names", () => {
   it("maps every reason the Desk offers to a rule", () => {
     expect(Object.keys(removalRule)).toStrictEqual(removalReasons);
@@ -117,7 +132,7 @@ describe("the rule a closure names", () => {
     expect(closureRuleOf("harassment")).toBe("harassment");
     expect(closureRuleLabels).toStrictEqual({
       ...communityRules,
-      suspected_csam: "Suspected CSAM: name no rule",
+      suspected_csam: "Suspected CSAM (the notice names no rule)",
     });
     expect(
       closureRuleSchema.safeParse(undefined).error?.issues[0]?.message,

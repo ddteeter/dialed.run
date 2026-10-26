@@ -62,6 +62,7 @@ import {
   restoreDueHolds,
   isCopyrightTakedown,
   keptFingerprints,
+  photoReporterNotices,
   quarantineInsert,
   removalNotice,
   removalRuleOf,
@@ -86,6 +87,7 @@ import {
   type Report,
   type Statements,
 } from "./retract";
+import { runDayOf } from "./run-day";
 
 /**
  * The handle every writer here shares: drizzle's own default schema type,
@@ -312,13 +314,15 @@ function deletions(
  *
  * **The email is the full statement of reasons** (C8, D-145): the rule
  * it broke, unless a copyright notice is why, and whether the automatic
- * check flagged it before a person decided.
+ * check flagged it before a person decided. It names the run by its day
+ * (round 40 C3).
  */
 async function authorNotice(
   db: Db,
   input: ModerateInput,
   action: "remove" | "takedown",
   target: Target,
+  report: Report,
 ) {
   const rule = removalRuleOf(action, input.reason);
   const isFlagged = await wasFlaggedAutomatically(
@@ -339,6 +343,7 @@ async function authorNotice(
           }),
           rule,
           flagged: isFlagged,
+          runDay: await runDayOf(db, target.runId, report),
         },
       },
       { dedupeKey: `content_removed:${input.subjectType}:${input.subjectId}` },
@@ -387,18 +392,24 @@ export async function moderateContent(
       ? await preservation(db, target, input, actionId)
       : undefined;
   // A quarantine tells nobody: not its author, and not whoever reported
-  // it (D-70). A Remove or takedown tells both (C8, D-132).
+  // it (D-70). A Remove or takedown tells both (C8, D-132) — and, for a
+  // kit, whoever reported a photo on it, which went with it (R-162).
   const told =
     action === "quarantine"
       ? undefined
       : {
-          ...(await authorNotice(db, input, action, target)),
-          reporters: await reporterNotices(
-            db,
-            input.subjectType,
-            input.subjectId,
-            "removed",
-          ),
+          ...(await authorNotice(db, input, action, target, report)),
+          reporters: [
+            ...(await reporterNotices(
+              db,
+              input.subjectType,
+              input.subjectId,
+              "removed",
+            )),
+            ...(input.subjectType === "entry"
+              ? await photoReporterNotices(db, target.entryId)
+              : []),
+          ],
         };
   const words = removalStatements[input.reason];
   const takenDown: Statements = isHold

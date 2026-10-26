@@ -229,7 +229,7 @@ The pick's labels: each rule's name, and the CSAM option saying what it does.
 */
 export const closureRuleLabels: Readonly<Record<ClosureRule, string>> = {
   ...communityRules,
-  suspected_csam: "Suspected CSAM: name no rule",
+  suspected_csam: "Suspected CSAM (the notice names no rule)",
 };
 
 /**

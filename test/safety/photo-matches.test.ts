@@ -1,8 +1,10 @@
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   entryPhotos,
+  outfitEntries,
   reports,
   reviewQueue,
   takedownRequests,
@@ -58,10 +60,22 @@ Nine: one more than a match may be.
 */
 const NINE_APART = flipped(SUBJECT, 0x01_02_04_08_10_20_40_81n);
 
-async function kit(audience: Audience = "runners") {
-  const userId = await makeUser();
+async function kit(audience: Audience = "runners", username?: string) {
+  const userId = await makeUser(username === undefined ? {} : { username });
   const runId = await makeRun({ userId });
   return makeEntry({ userId, runId, audience });
+}
+
+/**
+Whose a kit is, as a match names its owner.
+*/
+async function ownerOf(entryId: string): Promise<string> {
+  const [row] = await core
+    .select({ userId: outfitEntries.userId })
+    .from(outfitEntries)
+    .where(eq(outfitEntries.id, entryId));
+  if (row === undefined) throw new Error("no kit");
+  return row.userId;
 }
 
 async function photo(
@@ -81,11 +95,14 @@ async function photo(
   return id;
 }
 
-async function garment(fingerprint: string | undefined): Promise<string> {
+async function garment(
+  fingerprint: string | undefined,
+  userId: string = newUlid(),
+): Promise<string> {
   const id = newUlid();
   await core.insert(wardrobeItems).values({
     id,
-    userId: newUlid(),
+    userId,
     category: "top",
     name: "Shirt",
     photoKey: fingerprint === undefined ? undefined : `items/x/${id}/v1`,
@@ -108,13 +125,15 @@ describe("photoMatchesOf", () => {
   it("finds kit and garment photos within the distance, private included, nearest first", async () => {
     const subjectKit = await kit();
     const subject = await photo(subjectKit, SUBJECT);
-    const privateKit = await kit("private");
+    const privateKit = await kit("private", "k_lopes");
     const exact = await photo(privateKit, SUBJECT);
-    const sharedKit = await kit();
+    const sharedKit = await kit("runners", "trailjen");
     const farthest = await photo(sharedKit, EIGHT_APART);
     await photo(sharedKit, NINE_APART, 1);
     await photo(sharedKit, undefined, 2);
-    const nearGarment = await garment(flipped(SUBJECT, 0b111n));
+    // A runner with no profile row has no handle to offer.
+    const closetOwner = newUlid();
+    const nearGarment = await garment(flipped(SUBJECT, 0b111n), closetOwner);
     await garment(NINE_APART);
     await garment(undefined);
 
@@ -122,6 +141,7 @@ describe("photoMatchesOf", () => {
       { subjectType: "photo", subjectId: subject },
     ]);
 
+    // Nearest first across both kinds (round 39 #71), each saying whose.
     expect(found.get(`photo:${subject}`)?.matches).toStrictEqual([
       {
         kind: "kit",
@@ -129,15 +149,10 @@ describe("photoMatchesOf", () => {
         photoKey: `entries/x/${privateKit}/${exact}`,
         entryId: privateKit,
         canOpen: false,
+        isPrivate: true,
         distance: 0,
-      },
-      {
-        kind: "kit",
-        id: farthest,
-        photoKey: `entries/x/${sharedKit}/${farthest}`,
-        entryId: sharedKit,
-        canOpen: true,
-        distance: 8,
+        ownerId: await ownerOf(privateKit),
+        handle: "k_lopes",
       },
       {
         kind: "garment",
@@ -145,8 +160,49 @@ describe("photoMatchesOf", () => {
         photoKey: `items/x/${nearGarment}/v1/card.webp`,
         canOpen: false,
         distance: 3,
+        ownerId: closetOwner,
+        handle: undefined,
+        isPrivate: false,
+      },
+      {
+        kind: "kit",
+        id: farthest,
+        photoKey: `entries/x/${sharedKit}/${farthest}`,
+        entryId: sharedKit,
+        canOpen: true,
+        isPrivate: false,
+        distance: 8,
+        ownerId: await ownerOf(sharedKit),
+        handle: "trailjen",
       },
     ]);
+  });
+
+  it("puts a kit before a garment at the same distance, and names a closet's owner", async () => {
+    const subject = await photo(await kit(), SUBJECT);
+    const wearer = await makeUser({ username: "maya_runs" });
+    const shirt = await garment(flipped(SUBJECT, 1n), wearer);
+    const copy = await photo(await kit(), flipped(SUBJECT, 0b11n));
+
+    const found = await photoMatchesOf(core, [
+      { subjectType: "photo", subjectId: subject },
+    ]);
+
+    expect(
+      found
+        .get(`photo:${subject}`)
+        ?.matches.map((match) => [match.id, match.handle]),
+    ).toStrictEqual([
+      [shirt, "maya_runs"],
+      [copy, expect.stringMatching(/^runner_/u)],
+    ]);
+    const tied = await photo(await kit(), flipped(SUBJECT, 4n));
+    const again = await photoMatchesOf(core, [
+      { subjectType: "photo", subjectId: subject },
+    ]);
+    expect(
+      again.get(`photo:${subject}`)?.matches.map((match) => match.id),
+    ).toStrictEqual([tied, shirt, copy]);
   });
 
   it("measures the distance in every digit", async () => {

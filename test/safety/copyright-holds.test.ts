@@ -13,6 +13,7 @@ import {
   reviewQueue,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { isoDayOf } from "../../src/lib/contracts/age";
 import { entryPhotoKeyFor } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
@@ -126,6 +127,16 @@ async function holdOf(subjectId: string) {
     .where(eq(copyrightHolds.subjectId, subjectId));
   if (hold === undefined) throw new Error("no hold");
   return hold;
+}
+
+/**
+Moves a hold's hide to a known moment, so its day can be reasoned about.
+*/
+async function hiddenOn(holdId: string, hiddenAt: number): Promise<void> {
+  await core()
+    .update(copyrightHolds)
+    .set({ hiddenAt })
+    .where(eq(copyrightHolds.id, holdId));
 }
 
 async function holdStatus(subjectId: string) {
@@ -303,21 +314,54 @@ describe("the Desk's counter-notice and court action", () => {
     const { photoId } = await posted();
     await takeDown("photo", photoId);
     const { id } = await holdOf(photoId);
-    const at = utc(2026, 10, 23, 15);
+    await hiddenOn(id, utc(2026, 10, 20, 9));
+    // RECEIVED ON (round 39 #73): the day it arrived, kept as its 00:00 UTC.
+    const at = utc(2026, 10, 23);
 
-    expect(await recordCounterNotice(core(), "desk", id, at)).toStrictEqual({
+    expect(
+      await recordCounterNotice(core(), "desk", id, "2026-10-23"),
+    ).toStrictEqual({
       outcome: "recorded",
       counterNoticeAt: at,
       restoreAt: utc(2026, 11, 10),
     });
     expect(
-      await recordCounterNotice(core(), "desk", id, at + DAY),
+      await recordCounterNotice(core(), "desk", id, "2026-10-24"),
     ).toStrictEqual({ outcome: "already" });
     expect(await holdOf(photoId)).toMatchObject({
       counterNoticeAt: at,
       counterNoticeBy: "desk",
       restoreAt: utc(2026, 11, 10),
     });
+  });
+
+  it("refuses a day before the hide, and takes the hide's own day (round 39 #73)", async () => {
+    const { photoId } = await posted();
+    await takeDown("photo", photoId);
+    const { id } = await holdOf(photoId);
+    await hiddenOn(id, utc(2026, 10, 21));
+
+    expect(
+      await recordCounterNotice(core(), "desk", id, "2026-10-20"),
+    ).toStrictEqual({ outcome: "before_hidden" });
+    expect(await holdOf(photoId)).toMatchObject({ counterNoticeAt: NOT_SET });
+    expect(
+      await recordCounterNotice(core(), "desk", id, "2026-10-21"),
+    ).toMatchObject({
+      outcome: "recorded",
+      counterNoticeAt: utc(2026, 10, 21),
+    });
+  });
+
+  it("takes the hide's day even when it was hidden late that day", async () => {
+    const { photoId } = await posted();
+    await takeDown("photo", photoId);
+    const { id } = await holdOf(photoId);
+    await hiddenOn(id, utc(2026, 10, 22) - 1);
+
+    expect(
+      await recordCounterNotice(core(), "desk", id, "2026-10-21"),
+    ).toMatchObject({ outcome: "recorded" });
   });
 
   it("records a court action only after a counter-notice, and once", async () => {
@@ -328,7 +372,7 @@ describe("the Desk's counter-notice and court action", () => {
     expect(await recordCourtAction(core(), "desk", id, 100)).toStrictEqual({
       outcome: "no_counter_notice",
     });
-    await recordCounterNotice(core(), "desk", id, 200);
+    await recordCounterNotice(core(), "desk", id, isoDayOf(nowSeconds()));
     expect(await recordCourtAction(core(), "op", id, 300)).toStrictEqual({
       outcome: "recorded",
       courtActionAt: 300,
@@ -348,15 +392,15 @@ describe("the Desk's counter-notice and court action", () => {
     const hold = await holdOf(photoId);
     await sweepCopyrightHolds(core(), hold.purgeAt, quiet);
 
-    expect(await recordCounterNotice(core(), "desk", hold.id)).toStrictEqual({
-      outcome: "gone",
-    });
+    expect(
+      await recordCounterNotice(core(), "desk", hold.id, "2026-10-23"),
+    ).toStrictEqual({ outcome: "gone" });
     expect(await recordCourtAction(core(), "desk", hold.id)).toStrictEqual({
       outcome: "gone",
     });
-    expect(await recordCounterNotice(core(), "desk", newUlid())).toStrictEqual({
-      outcome: "gone",
-    });
+    expect(
+      await recordCounterNotice(core(), "desk", newUlid(), "2026-10-23"),
+    ).toStrictEqual({ outcome: "gone" });
   });
 });
 
@@ -487,7 +531,7 @@ describe("the daily sweep's purge", () => {
     const { photoId } = await posted();
     await takeDown("photo", photoId);
     const { id, purgeAt } = await holdOf(photoId);
-    await recordCounterNotice(core(), "desk", id, purgeAt + 10 * DAY);
+    await recordCounterNotice(core(), "desk", id, isoDayOf(purgeAt + 10 * DAY));
 
     await sweepCopyrightHolds(core(), purgeAt + DAY, quiet);
     expect(await holdStatus(photoId)).toBe("hidden");
@@ -500,7 +544,7 @@ describe("the daily sweep's purge", () => {
     const { id, purgeAt } = await holdOf(photoId);
     await sweepCopyrightHolds(core(), purgeAt, quiet);
 
-    await recordCounterNotice(core(), "desk", id, purgeAt);
+    await recordCounterNotice(core(), "desk", id, isoDayOf(purgeAt));
     await sweepCopyrightHolds(core(), purgeAt + 30 * DAY, quiet);
 
     expect(await photoRow(photoId)).toBeUndefined();
@@ -753,7 +797,12 @@ describe("Review's list of holds, and strikes", () => {
 });
 
 async function counterNotice(holdId: string) {
-  const answer = await recordCounterNotice(core(), "desk", holdId);
+  const answer = await recordCounterNotice(
+    core(),
+    "desk",
+    holdId,
+    isoDayOf(nowSeconds()),
+  );
   if (answer.outcome !== "recorded") throw new Error(answer.outcome);
   return answer;
 }

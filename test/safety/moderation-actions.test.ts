@@ -18,7 +18,8 @@ import {
   userProfiles,
   usernameHistory,
 } from "../../src/db/schema-core";
-import { env } from "../../src/env";
+import { weatherObservations } from "../../src/db/schema-weather";
+import { env, weatherDb } from "../../src/env";
 import {
   entryPhotoKeyFor,
   quarantineKeyFor,
@@ -29,6 +30,8 @@ import {
   decideReview,
   moderateContent,
 } from "../../src/modules/feed/moderation";
+import type { Report } from "../../src/modules/feed/retract";
+import { runDayOf } from "../../src/modules/feed/run-day";
 import {
   photoResponse,
   reviewerPhotoResponse,
@@ -66,6 +69,7 @@ import {
 } from "../../src/modules/safety";
 
 import { moderationActionInsertWhere } from "../../src/modules/safety/moderation-actions";
+import { makeObservation, NOW } from "../feed/helpers";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 
 // The handle screen (D-72) answers "clear": these tests are about retirement.
@@ -376,6 +380,8 @@ describe("moderateContent: Remove deletes (SAF-5)", () => {
               // C8 (D-145): the rule, and that a person found it.
               rule: "home",
               flagged: false,
+              // Round 40 C3: the run's day — UTC, with no observation.
+              runDay: "Thu, Sep 4",
             },
           },
         },
@@ -467,6 +473,188 @@ describe("moderateContent: Remove deletes (SAF-5)", () => {
     expect(await auditFor(photoId)).toHaveLength(1);
     expect(await noticesFor(author)).toHaveLength(1);
     expect(await owedEmails()).toHaveLength(1);
+  });
+});
+
+/**
+What a removal's owed email carries of the run's day.
+*/
+const dayTemplate = z.object({ runDay: z.string() });
+const owedDaySchema = z.object({ email: z.object({ template: dayTemplate }) });
+
+/**
+A posted photo removed, and the run day its email was owed with.
+*/
+async function owedDay(report: Report = quiet): Promise<string> {
+  const { photoId } = await postedPhoto();
+  await moderateContent(
+    core(),
+    {
+      actorId: "desk",
+      action: "remove",
+      subjectType: "photo",
+      subjectId: photoId,
+      reason: "home",
+    },
+    report,
+  );
+  const [owed] = await owedEmails();
+  return owedDaySchema.parse(owed?.payload).email.template.runDay;
+}
+
+/**
+The contexts a report was made with.
+*/
+function contextsOf(report: ReturnType<typeof vi.fn<Report>>) {
+  return report.mock.calls.map((call) => call[1]);
+}
+
+const ANY_STRING: unknown = expect.any(String);
+
+describe("the removal email names the run's day (round 40 C3)", () => {
+  beforeEach(freshState);
+  beforeEach(() => {
+    vi.spyOn(env.EMAIL, "send").mockRejectedValue(new Error("sender down"));
+  });
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await weatherDb().delete(weatherObservations);
+  });
+
+  it("dates it in the run's own zone (R-96)", async () => {
+    // 15:33 UTC on Thu Sep 4 is already Friday in Auckland.
+    await makeObservation({
+      lat: 44.98,
+      lng: -93.27,
+      startedAt: NOW,
+      tempC: 10,
+      feelsLikeC: 9,
+      timeZone: "Pacific/Auckland",
+    });
+    expect(await owedDay()).toBe("Fri, Sep 5");
+  });
+
+  it("dates it in UTC, saying nothing, when the run has no observation", async () => {
+    const report = vi.fn<Report>();
+    expect(await owedDay(report)).toBe("Thu, Sep 4");
+    // The send fails here (the sender is down), and is reported; the day
+    // is not.
+    expect(contextsOf(report)).not.toContainEqual(
+      expect.objectContaining({ surface: "removal-run-day" }),
+    );
+  });
+
+  it("reports a weather read that fails and still removes, dated in UTC (law 5)", async () => {
+    vi.spyOn(env.DIALED_WEATHER, "prepare").mockImplementation(() => {
+      throw new Error("weather down");
+    });
+    const report = vi.fn<Report>();
+    expect(await owedDay(report)).toBe("Thu, Sep 4");
+    expect(contextsOf(report)).toContainEqual({
+      surface: "removal-run-day",
+      runId: ANY_STRING,
+    });
+  });
+
+  it("names no day for a run that is not there", async () => {
+    expect(await runDayOf(core(), newUlid(), quiet)).toBeUndefined();
+  });
+});
+
+/**
+Someone's report of this photo; the reporter's id.
+*/
+async function reportedPhoto(photoId: string): Promise<string> {
+  const reporterId = await makeUser();
+  await core().insert(reports).values({
+    id: newUlid(),
+    reporterId,
+    subjectType: "photo",
+    subjectId: photoId,
+    reason: "intimate",
+    createdAt: NOW,
+  });
+  return reporterId;
+}
+
+describe("a kit's removal tells its photos' reporters (R-162 b)", () => {
+  beforeEach(freshState);
+  beforeEach(() => {
+    vi.spyOn(env.EMAIL, "send").mockRejectedValue(new Error("sender down"));
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("tells each photo's reporter it went, once, with the photo it was", async () => {
+    const { entryId, photoId } = await postedPhoto();
+    const reporterId = await reportedPhoto(photoId);
+    const removal = {
+      actorId: "desk",
+      action: "remove",
+      subjectType: "entry",
+      subjectId: entryId,
+      reason: "home",
+    } as const;
+
+    await moderateContent(core(), removal, quiet);
+    await moderateContent(core(), removal, quiet);
+
+    expect(await noticesFor(reporterId)).toStrictEqual([
+      {
+        kind: "report_removed",
+        subjectId: photoId,
+        body: "We removed what you reported.",
+      },
+    ]);
+  });
+
+  it("tells a photo's reporter nothing when only another photo on the kit goes", async () => {
+    const { entryId, photoId } = await postedPhoto();
+    const otherId = newUlid();
+    await core()
+      .insert(entryPhotos)
+      .values({
+        id: otherId,
+        entryId,
+        photoKey: `entries/x/${entryId}/${otherId}`,
+        position: 1,
+        screenStatus: "pass",
+      });
+    const reporterId = await reportedPhoto(otherId);
+
+    await moderateContent(
+      core(),
+      {
+        actorId: "desk",
+        action: "remove",
+        subjectType: "photo",
+        subjectId: photoId,
+        reason: "home",
+      },
+      quiet,
+    );
+
+    expect(await noticesFor(reporterId)).toStrictEqual([]);
+  });
+
+  it("tells nobody when the kit is quarantined (D-70)", async () => {
+    const { entryId, photoId } = await postedPhoto();
+    const reporterId = await reportedPhoto(photoId);
+
+    await moderateContent(
+      core(),
+      {
+        actorId: "desk",
+        action: "quarantine",
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "intimate",
+      },
+      quiet,
+    );
+
+    expect(await noticesFor(reporterId)).toStrictEqual([]);
   });
 });
 
@@ -844,6 +1032,7 @@ describe("takedown (SAF-6)", () => {
             reason: "it uses someone else's work",
             cause: "copyright_notice",
             flagged: false,
+            runDay: "Thu, Sep 4",
           },
         },
       });
@@ -883,6 +1072,7 @@ describe("takedown (SAF-6)", () => {
             reason: "it's an intimate image shared without consent",
             rule: "explicit",
             flagged: false,
+            runDay: "Thu, Sep 4",
           },
         },
       });
@@ -1369,7 +1559,10 @@ describe("forceRename (round 27 #16), through account's rules", () => {
           const whose = eq(userProfiles.userId, runner);
           await (after === "gone"
             ? real.delete(userProfiles).where(whose)
-            : real.update(userProfiles).set({ username: sql`NULL` }).where(whose));
+            : real
+                .update(userProfiles)
+                .set({ username: sql`NULL` })
+                .where(whose));
         }
         return results;
       };
