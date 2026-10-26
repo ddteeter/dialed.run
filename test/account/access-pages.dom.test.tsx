@@ -184,9 +184,12 @@ describe("Au5 · Request access", () => {
     await waitFor(() => {
       expect(note).toHaveAttribute(
         "aria-describedby",
-        `note-message ${NOTE_COUNTER_ID}`,
+        // The message is named after the input's per-instance id (R-165).
+        `${note.id}-message ${NOTE_COUNTER_ID}`,
       );
     });
+    const messageId = CSS.escape(`${note.id}-message`);
+    expect(document.querySelector(`#${messageId}`)).not.toBeNull();
     // The text is kept, never truncated.
     expect(note).toHaveValue("n".repeat(141));
   });

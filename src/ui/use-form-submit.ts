@@ -58,6 +58,24 @@ export interface FieldProps {
   onInput: () => void;
 }
 
+/**
+ * The id of the sentence a failing control shows, built from the control's
+ * id: what `field()`'s `aria-describedby` names and what `FieldMessage`
+ * wears. One function, so the pointer and the thing pointed at cannot
+ * drift apart.
+ */
+export function messageIdFor(controlId: string): string {
+  return `${controlId}-message`;
+}
+
+/**
+ * `useFormSubmit`'s `field`, as a control with a per-instance id takes it
+ * (`TextField`, `ChoiceField`). The control passes its id — not its `name`
+ * on a field repeated on every row of a list (R-165) — so the description
+ * points at this row's message and not the first row's.
+ */
+export type FieldOf = (name: string, id: string) => FieldProps;
+
 export interface SummaryRow {
   name: string;
   label: string;
@@ -276,12 +294,14 @@ function useFieldErrors(isPending: boolean) {
   Spread onto the control: invalid state, description, and readOnly.
   */
   const field = useCallback(
-    (name: string): FieldProps => ({
+    (name: string, id?: string): FieldProps => ({
       name,
       readOnly: isPending,
       "aria-invalid": fieldErrors[name] === undefined ? undefined : true,
       "aria-describedby":
-        fieldErrors[name] === undefined ? undefined : `${name}-message`,
+        fieldErrors[name] === undefined
+          ? undefined
+          : messageIdFor(id ?? name),
       onInput: () => {
         clearField(name);
       },

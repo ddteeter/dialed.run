@@ -5,6 +5,7 @@ import { cityLookupInput, cityNotFound } from "../lib/contracts/city-lookup";
 import type { CityLookup } from "../lib/contracts/city-lookup";
 import type { ResolvedPlace } from "../lib/contracts";
 import { FailureBand, PendingLabel, TextField, inFlight } from "./form";
+import { messageIdFor } from "./use-form-submit";
 import type { FieldProps } from "./use-form-submit";
 
 /**
@@ -143,11 +144,14 @@ export function CityFinder({
 
   const surrounding = field?.(name);
   const shown = message ?? error;
-  const own = (): FieldProps => ({
+  // `id` is `TextField`'s per-instance one (R-165), so the description
+  // names this finder's message rather than one built from the `name`.
+  const own = (_name: string, id: string): FieldProps => ({
     name,
     readOnly: (surrounding?.readOnly ?? false) || isFinding,
     "aria-invalid": shown === undefined ? undefined : true,
-    "aria-describedby": shown === undefined ? undefined : `${name}-message`,
+    "aria-describedby":
+      shown === undefined ? undefined : messageIdFor(id),
     onInput: () => {
       surrounding?.onInput();
       setMessage(undefined);

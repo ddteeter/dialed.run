@@ -1,7 +1,10 @@
+import { useId } from "react";
 import type { JSX, ReactNode, Ref, RefObject } from "react";
 
 import { Mono } from "./Mono";
+import { messageIdFor } from "./use-form-submit";
 import type {
+  FieldOf,
   FieldProps,
   FormFailure,
   FormShell,
@@ -131,7 +134,7 @@ export function FieldMessage({
   if (error === undefined) return undefined;
   return (
     <span
-      id={`${name}-message`}
+      id={messageIdFor(name)}
       className="self-start bg-failure px-3 py-2 text-small text-ink"
     >
       {error}
@@ -280,6 +283,7 @@ function BesideTheBox({
 
 export function FormField({
   name,
+  id,
   label,
   hint,
   error,
@@ -287,6 +291,14 @@ export function FormField({
   children,
 }: Readonly<
   LabelledFieldProps & {
+    /**
+     * The control's id, which the label points at and the message is named
+     * after. Defaults to `name`, which is right for a field that appears
+     * once on a page; a field repeated on every row of a list takes a
+     * per-instance one, or every row's label names the first row's control
+     * (R-165). `TextField` and `ChoiceField` pass a `useId()`.
+     */
+    id?: string | undefined;
     label: string;
     /**
     A button that belongs beside the box — see `BesideTheBox`.
@@ -329,10 +341,11 @@ export function FormField({
       {children}
     </div>
   );
+  const controlId = id ?? name;
   return (
     <div className="flex flex-col gap-2">
       <FieldShell
-        name={name}
+        name={controlId}
         hint={hint}
         error={error}
         caption={
@@ -340,7 +353,7 @@ export function FormField({
              the label (the contract's Forms row says so in as many words),
              and T1's round-13 row bans --muted from being a control's only
              label on paper. */
-          <label htmlFor={name} className="text-label">
+          <label htmlFor={controlId} className="text-label">
             <Mono step="sm">{label}</Mono>
           </label>
         }
@@ -364,6 +377,13 @@ export function FormField({
  * and the `aria-invalid`/`aria-describedby`/`readOnly` that `field()`
  * returns. Every one of those going missing is silent.
  *
+ * **The id is per instance, not the `name`.** The Desk's Review list
+ * repeats a form on every row, and a `name`-built id made every row's
+ * label point at the first row's input, so a screen reader heard every
+ * later field unlabelled (R-165). `useId()` is unique per instance and
+ * stable across server render and hydration; the `name` still does the
+ * jobs that are scoped to one form.
+ *
  * The input carries no border of its own: the box around it is the mark,
  * and a second border inside it would be two marks for one error.
  */
@@ -384,7 +404,7 @@ export function TextField({
   label: string;
   value: string;
   onChange: (value: string) => void;
-  field: (name: string) => FieldProps;
+  field: FieldOf;
   error?: string | undefined;
   hint?: string | undefined;
   type?: "text" | "email" | "password" | "url" | "date";
@@ -407,17 +427,19 @@ export function TextField({
   */
   action?: ReactNode;
 }>): JSX.Element {
+  const id = useId();
   return (
     <FormField
       name={name}
+      id={id}
       label={label}
       error={error}
       hint={hint}
       action={action}
     >
       <input
-        {...field(name)}
-        id={name}
+        {...field(name, id)}
+        id={id}
         type={type}
         autoComplete={autoComplete}
         list={list}
@@ -812,17 +834,23 @@ export function ChoiceField<TOption extends string>({
   optionLabels,
   onChange,
 }: Readonly<
-  ChoosableProps<TOption> & {
+  Omit<ChoosableProps<TOption>, "field"> & {
+    /**
+    Takes the select's per-instance id — see `FieldOf`.
+    */
+    field: FieldOf;
     label: string;
     value: TOption | "";
     onChange: (value: TOption | "") => void;
   }
 >): JSX.Element {
+  // Per instance, for the reason `TextField` gives (R-165).
+  const id = useId();
   return (
-    <FormField name={name} label={label} error={error}>
+    <FormField name={name} id={id} label={label} error={error}>
       <select
-        {...field(name)}
-        id={name}
+        {...field(name, id)}
+        id={id}
         value={value}
         onChange={(event) => {
           const picked = options.find(
