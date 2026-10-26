@@ -24,6 +24,8 @@ file explains them and does not restate them.
    secrets). Claude posts an impact review on the PR: a verdict, the
    breaking changes, whether each touches this repo (with file and line),
    and its sources. It is advisory. Read the sources before trusting it.
+   It runs Claude Code's `opus` alias, so a new Opus model arrives with the
+   claude-code-action bump that ships it, as a PR you review.
 
 The checks that carry an unattended merge are the required set:
 `Lint, typecheck, test, build`, `e2e`, `e2e (build)`, `guardrails` and
@@ -60,7 +62,10 @@ PR that adds the workflows has merged:
    - Require approval for all external contributors' fork PRs.
    - Allow GitHub's actions, verified creators' actions, and these:
      `anthropics/claude-code-action@*`, `step-security/harden-runner@*`,
-     `dependabot/fetch-metadata@*`.
+     `dependabot/fetch-metadata@*`, and `oven-sh/setup-bun@*`, which
+     claude-code-action runs inside itself. An action an allowed action
+     calls must be allowed too; `grep uses:` its `action.yml` at the pinned
+     SHA when bumping it.
    - Require actions to be pinned to a full-length commit SHA.
 7. **Branch protection on `main`**: add `e2e (build)` to the required
    checks.
