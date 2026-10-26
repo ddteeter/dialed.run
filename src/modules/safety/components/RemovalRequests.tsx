@@ -19,7 +19,7 @@ import { blockRequesterInput } from "../inputs";
 import type { HoldState } from "../takedown-limits";
 import type { PendingTakedownRequest } from "../takedown-requests";
 import { OtherPhotos } from "./OtherPhotos";
-import { PhotoMatches } from "./PhotoMatches";
+import { PhotoMatches, type DecideMatch } from "./PhotoMatches";
 import { useSettled } from "./use-settled";
 
 /**
@@ -63,10 +63,16 @@ export function RemovalRequests({
   requests,
   decide,
   block,
+  decideMatch,
 }: Readonly<{
   requests: readonly PendingTakedownRequest[];
   decide: Decide;
   block: Block;
+  /**
+   * Takes down a garment photo copy search found (design 159); without
+   * it, a garment match is shown and offers nothing.
+   */
+  decideMatch?: DecideMatch | undefined;
 }>): JSX.Element | undefined {
   // A decided request leaves the list, as a decided review row does.
   const { remaining, settle } = useSettled(requests, requestId);
@@ -83,10 +89,10 @@ export function RemovalRequests({
           request={request}
           decide={decide}
           block={block}
-          hasFocus={focusId === request.id}
-          onFocused={() => {
+          decideMatch={decideMatch}
+          takeFocus={focusOnce(focusId === request.id, () => {
             setFocusId(undefined);
-          }}
+          })}
           onDecided={() => {
             settle(request.id);
           }}
@@ -151,21 +157,20 @@ function RemovalRequestRow({
   request,
   decide,
   block,
-  hasFocus,
-  onFocused,
+  decideMatch,
+  takeFocus,
   onDecided,
   onBlocked,
 }: Readonly<{
   request: PendingTakedownRequest;
   decide: Decide;
   block: Block;
-  hasFocus: boolean;
-  onFocused: () => void;
+  decideMatch: DecideMatch | undefined;
+  takeFocus: (node: HTMLElement | null) => void;
   onDecided: () => void;
   onBlocked: () => void;
 }>): JSX.Element {
   const [isDeclining, setIsDeclining] = useState(false);
-  const takeFocus = focusOnce(hasFocus, onFocused);
   return (
     <li
       ref={takeFocus}
@@ -207,7 +212,7 @@ function RemovalRequestRow({
       </span>
       <SubjectLink request={request} />
       <OtherPhotos others={request.otherPhotos} />
-      <PhotoMatches found={request.photoMatches} />
+      <PhotoMatches found={request.photoMatches} decide={decideMatch} />
       <RemoveForm
         requestId={request.id}
         decide={decide}

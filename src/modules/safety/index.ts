@@ -225,6 +225,7 @@ export {
   denyDomainInput,
   fileReportInput,
   forceRenameInput,
+  garmentMatchActionInput,
   handleReviewInput,
   reviewActionInput,
   reviewDecisionInput,

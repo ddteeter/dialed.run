@@ -1,24 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
-import type { JSX, ReactNode, Ref } from "react";
+import { useCallback, useState } from "react";
+import type { JSX } from "react";
 
+import { Bracketed, ListSection, Mono, useFormSubmit } from "../../../ui";
 import {
-  Bracketed,
-  ListSection,
-  Mono,
-  SubmitButton,
-  useFormSubmit,
-  useReturnFocus,
-} from "../../../ui";
-import type { FormShell } from "../../../ui";
-import {
-  removalReasonSchema,
-  removalReasons,
-  removalStatements,
   renameReasonSchema,
   renameReasons,
   reportReasonLabels,
 } from "../contracts";
-import type { RemovalReason, RenameReason, ReportReason } from "../contracts";
+import type { RenameReason, ReportReason } from "../contracts";
 import {
   handleReviewInput,
   reviewActionInput,
@@ -26,11 +15,21 @@ import {
   type ReviewActionValues,
 } from "../inputs";
 import type { HandleReview, QueueRow } from "../review";
-import { DeskForm, PickOne } from "./DeskForm";
+import { PickOne } from "./DeskForm";
 import { OtherPhotos } from "./OtherPhotos";
-import { PhotoMatches, RemovedMatchLine } from "./PhotoMatches";
+import {
+  PhotoMatches,
+  RemovedMatchLine,
+  type DecideMatch,
+} from "./PhotoMatches";
 import { RENAME_LABELS, renameMessage } from "./DeskRunners";
 import { NotRenamedBand } from "./NotRenamedBand";
+import {
+  DecisionForm,
+  QuietAction,
+  RemovalDecision,
+  subjectWord,
+} from "./RemovalDecision";
 import { useSettled } from "./use-settled";
 
 /**
@@ -121,13 +120,6 @@ function ListOfReasons({
   );
 }
 
-/**
- * A reason, as the Desk lists them: the sentence the author will read.
- * Keyed by value so `ChoiceField` shows the words and submits the key.
- */
-const REASON_LABELS: Readonly<Record<RemovalReason, string>> =
-  removalStatements;
-
 type Decide = (input: { data: ReviewActionValues }) => Promise<unknown>;
 
 /**
@@ -147,236 +139,26 @@ A flagged handle's rename lost a race: the handle as it is now.
 type Moved = (username: string) => void;
 
 /**
-A decision that needs no reason: a text button beside the row's submit.
-*/
-function QuietAction({
-  label,
-  onPress,
-  buttonRef,
-}: Readonly<{
-  label: string;
-  onPress: () => void;
-  buttonRef?: Ref<HTMLButtonElement> | undefined;
-}>): JSX.Element {
-  return (
-    <button ref={buttonRef} className="target" type="button" onClick={onPress}>
-      <Mono step="xs">{label}</Mono>
-    </button>
-  );
-}
-
-/**
- * A review row's decision bar: a reasonless decision first, the one that
- * takes the picked reason as the submit, and anything after it — the same
- * frame for a content row and a flagged handle's (D-97).
- */
-function DecisionForm(
-  props: Readonly<{
-    form: FormShell;
-    onSubmit: () => void;
-    first: ReactNode;
-    submit: { label: string; pendingLabel: string };
-    last?: ReactNode;
-    children: ReactNode;
-  }>,
-): JSX.Element {
-  const { form, submit } = props;
-  return (
-    <DeskForm
-      form={form}
-      className="flex flex-col gap-2"
-      onSubmit={props.onSubmit}
-      action={
-        <div className="flex flex-wrap gap-2">
-          {props.first}
-          <SubmitButton
-            label={submit.label}
-            pendingLabel={submit.pendingLabel}
-            pending={form.pending}
-          />
-          {props.last}
-        </div>
-      }
-    >
-      {props.children}
-    </DeskForm>
-  );
-}
-
-/**
- * One row, and the three things a reviewer can do with it (task 128 ·
- * SAF-5). **Remove deletes** the entry or photo and tells its author why;
- * **Remove as suspected CSAM** does the same but keeps one copy out of
- * every route's reach for the preservation period. Both need a reason —
- * it is the statement the author is sent — and Approve does not.
- *
- * **Suspected CSAM asks again, in the row** (round 28 #8): the decision
- * bar gives way to the question, with Cancel focused, because there is
- * no undo afterwards and this is the only check. The question says only
- * what happens (D-88): a quarantine never closes the uploader's account.
- *
- * The row leaves the list only once the server has said so: a remove
- * that failed must stay where the reviewer can try it again.
+ * A content row's decision: Approve, Remove, or Remove as suspected CSAM
+ * (`RemovalDecision`), sent by the queue row's id.
  */
 function Decision({
   row,
   decide,
   onSettled,
 }: RowSettleProps & Readonly<{ decide: Decide }>): JSX.Element {
-  // Nothing chosen is `undefined`, which the schema refuses with its own
-  // message; the select sees it as the "—" option's value.
-  const [reason, setReason] = useState<RemovalReason | undefined>();
-  const [isAsking, setIsAsking] = useState(false);
-  // Cancel in the question puts focus back on the press that asked it,
-  // drawn afresh with the decision bar — not on the page.
-  const askedFrom = useReturnFocus();
-  const form = useFormSubmit({
-    schema: reviewActionInput,
-    action: (values) => decide({ data: values }),
-    onSuccess: () => {
-      onSettled(row.id);
-    },
-    successMessage: "Decided.",
-  });
-
-  function send(action: "remove" | "quarantine"): void {
-    void form.submit({ queueId: row.id, action, reason });
-  }
-
-  if (isAsking) {
-    return (
-      <CsamQuestion
-        form={form}
-        subjectType={row.subjectType}
-        owner={row.subject.owner}
-        onConfirm={() => {
-          send("quarantine");
-        }}
-        onCancel={() => {
-          setIsAsking(false);
-          askedFrom.restore();
-        }}
-      />
-    );
-  }
-
   return (
-    <DecisionForm
-      form={form}
-      onSubmit={() => {
-        send("remove");
+    <RemovalDecision
+      schema={reviewActionInput}
+      subject={{ queueId: row.id }}
+      act={(values) => decide({ data: values })}
+      canApprove
+      subjectType={row.subjectType}
+      owner={row.subject.owner}
+      onSettled={() => {
+        onSettled(row.id);
       }}
-      first={
-        <QuietAction
-          label="Approve"
-          onPress={() => {
-            void form.submit({ queueId: row.id, action: "approve" });
-          }}
-        />
-      }
-      submit={{ label: "Remove", pendingLabel: "Removing" }}
-      last={
-        <QuietAction
-          label="Remove as suspected CSAM"
-          buttonRef={askedFrom.ref}
-          onPress={() => {
-            // A press with no reason goes to the form, which refuses it
-            // with the schema's own sentence on the field — asking a
-            // question whose answer would only be refused after is worse.
-            if (removalReasonSchema.safeParse(reason).success) {
-              setIsAsking(true);
-            } else {
-              send("quarantine");
-            }
-          }}
-        />
-      }
-    >
-      <PickOne<RemovalReason>
-        name="reason"
-        label="Why it comes down"
-        options={removalReasons}
-        optionLabels={REASON_LABELS}
-        schema={removalReasonSchema}
-        value={reason}
-        onChange={setReason}
-        field={form.field}
-        error={form.fieldErrors.reason}
-      />
-    </DecisionForm>
-  );
-}
-
-/**
- * Round 28 #8's second press: "Remove this photo everywhere and keep the
- * evidence for the report?" · Remove and report / Cancel, in place of the
- * decision bar, **with Cancel focused** — so a reviewer who pressed by
- * mistake is one Enter from safety, never from the quarantine.
- *
- * Round 28's first draft said "close @n8's account"; that is not here
- * (D-88): removing suspected CSAM does not close the account, and the
- * question says what happens. Round 29 #3 adds the quiet line under it,
- * "@n8's account stays open. Closing it is a separate action on their
- * Runners page.", so the operator does not assume it was closed — said
- * when the author's handle is known. The same form, so a quarantine that
- * fails shows its band here, with Try again beside the question.
- */
-function CsamQuestion({
-  form,
-  subjectType,
-  owner,
-  onConfirm,
-  onCancel,
-}: Readonly<{
-  form: FormShell;
-  subjectType: QueueRow["subjectType"];
-  owner: string | undefined;
-  onConfirm: () => void;
-  onCancel: () => void;
-}>): JSX.Element {
-  // State rather than a ref, so the effect runs once the button exists.
-  const [cancel, setCancel] = useState<HTMLButtonElement | undefined>();
-  useEffect(() => {
-    cancel?.focus();
-  }, [cancel]);
-
-  return (
-    <DeskForm
-      form={form}
-      className="flex flex-col gap-2"
-      onSubmit={onConfirm}
-      action={
-        <div className="flex flex-wrap gap-2">
-          <SubmitButton
-            label="Remove and report"
-            pendingLabel="Removing"
-            pending={form.pending}
-          />
-          <button
-            ref={(node) => {
-              setCancel(node ?? undefined);
-            }}
-            className="target"
-            type="button"
-            onClick={onCancel}
-          >
-            <Mono step="xs">Cancel</Mono>
-          </button>
-        </div>
-      }
-    >
-      <Mono step="xs">Remove as suspected CSAM</Mono>
-      <p className="m-0 text-body">
-        Remove this {subjectWord(subjectType)} everywhere and keep the
-        evidence for the report?
-      </p>
-      {owner === undefined ? undefined : (
-        <p className="m-0 text-small text-quiet">
-          @{owner}&apos;s account stays open. Closing it is a separate action on
-          their Runners page.
-        </p>
-      )}
-    </DeskForm>
+    />
   );
 }
 
@@ -473,15 +255,6 @@ function rowKind(row: QueueRow): string {
 }
 
 /**
- * What a row's subject is called on the Desk: its type, except a garment's
- * photo (design 157), which the row is about rather than the garment —
- * the garment stays in its owner's closet whatever is decided.
- */
-function subjectWord(subjectType: QueueRow["subjectType"]): string {
-  return subjectType === "garment" ? "garment photo" : subjectType;
-}
-
-/**
  * `ReviewRow`'s props, named rather than inlined at the call site:
  * `RowSettleProps` plus the two things round 28 #8 added
  * (`active`/`focusOnOpen`/`onActivate`) and the two decision callbacks a
@@ -494,6 +267,7 @@ type ReviewRowProps = RowSettleProps &
     onActivate: () => void;
     decide: Decide;
     reviewHandle: ReviewHandle;
+    decideMatch: DecideMatch | undefined;
   }>;
 
 /**
@@ -514,6 +288,7 @@ function ReviewRow({
   onActivate,
   decide,
   reviewHandle,
+  decideMatch,
   onSettled,
 }: ReviewRowProps): JSX.Element {
   const opener = useFocusWhen(active && focusOnOpen);
@@ -545,7 +320,7 @@ function ReviewRow({
       <ReportedPhotos keys={row.subject.photoKeys} />
       <RemovedMatchLine match={row.removedMatch} />
       <OtherPhotos others={row.otherPhotos} />
-      <PhotoMatches found={row.photoMatches} />
+      <PhotoMatches found={row.photoMatches} decide={decideMatch} />
       {row.subject.handleFlagged === true ? (
         <p data-part="why-here" className="m-0 text-body">
           {HANDLE_FLAGGED_LINE}
@@ -637,6 +412,11 @@ export function ReviewQueue(
     queue: readonly QueueRow[];
     resolve: Decide;
     reviewHandle: ReviewHandle;
+    /**
+     * Takes down a garment photo copy search found (design 159); without
+     * it, a garment match is shown and offers nothing.
+     */
+    decideMatch?: DecideMatch | undefined;
   }>,
 ): JSX.Element {
   // Rows leave the list as they are decided; `useSettled` says why that
@@ -669,6 +449,7 @@ export function ReviewQueue(
             }}
             decide={props.resolve}
             reviewHandle={props.reviewHandle}
+            decideMatch={props.decideMatch}
             onSettled={(id) => {
               // The row that takes the decided one's place opens next —
               // the one after it, or the one before when it was the last

@@ -93,6 +93,19 @@ export const reviewActionInput = z.discriminatedUnion("action", [
 export type ReviewActionValues = z.infer<typeof reviewActionInput>;
 
 /**
+ * A garment photo found by copy search, taken down from Review (R-167,
+ * design 159): the garment, and a garment row's own Remove or suspected-
+ * CSAM Remove with its reason. No Approve — nothing queued it.
+ */
+export const garmentMatchActionInput = z.object({
+  itemId: ulidSchema,
+  action: z.enum(["remove", "quarantine"]),
+  reason: removalReasonSchema,
+});
+
+export type GarmentMatchActionValues = z.infer<typeof garmentMatchActionInput>;
+
+/**
  * A decision on a handle the re-ask flagged (D-97): **Keep** — the handle
  * is fine, and the flag clears — or **Rename**, the moderator's
  * force-rename with a reason from its fixed list, which O0's "USERNAME

@@ -206,6 +206,8 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "feed/functions.ts deleteEntryPhotoAction": "unconfirmed",
   "feed/functions.ts garmentBandCountQuery": "unconfirmed",
   "feed/functions.ts decideReviewAction": "admin",
+  // Design 159: a garment photo found by copy search, taken down.
+  "feed/functions.ts decideGarmentMatchAction": "admin",
   "feed/functions.ts takedownAction": "admin",
   "feed/functions.ts caseOverDeleteAction": "admin",
   // Design 136: an operator decides a `/takedown` request.

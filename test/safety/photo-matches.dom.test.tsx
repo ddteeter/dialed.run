@@ -1,9 +1,11 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import {
   PhotoMatches,
   RemovedMatchLine,
+  type DecideMatch,
 } from "../../src/modules/safety/components/PhotoMatches";
 import { RemovalRequests } from "../../src/modules/safety/components/RemovalRequests";
 import { ReviewQueue } from "../../src/modules/safety/components/ReviewQueue";
@@ -20,7 +22,8 @@ import { renderWithRouter } from "../modules/run-fixtures";
 const KIT = "01JKIT00000000000000000001";
 const PHOTO = "01JPHOTO000000000000000001";
 const HIDDEN = "01JPHOTO000000000000000002";
-const GARMENT = "01JITEM0000000000000000001";
+// A ULID in Crockford's alphabet, which a garment takedown's input parses.
+const GARMENT = "01JGARMENT0000000000000001";
 
 const MATCHES: readonly PhotoMatch[] = [
   {
@@ -280,5 +283,156 @@ describe("RemovedMatchLine", () => {
     expect(part("removed-match")).toHaveTextContent("0 bits apart");
     expect(part("photo-matches")).not.toBeNull();
     expect(screen.getByText("[fingerprint]")).toBeVisible();
+  });
+});
+
+async function chooseReason(user: ReturnType<typeof userEvent.setup>) {
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: /Why it comes down/u }),
+    "it's sexual or explicit",
+  );
+}
+
+/**
+ * R-167 (design 159): a garment found by copy search is taken down from
+ * its tile, with a garment row's own bar and no Approve.
+ */
+describe("a garment match's takedown", () => {
+  const GARMENT_MATCH: PhotoMatch = {
+    kind: "garment",
+    id: GARMENT,
+    photoKey: "items/u/i/v1/card.webp",
+    canOpen: false,
+    distance: 5,
+    ownerId: "u-kim",
+    handle: "k_lopes",
+    isPrivate: false,
+  };
+  const found = {
+    fingerprinted: true,
+    matches: [...MATCHES.slice(0, 1), GARMENT_MATCH],
+  };
+
+  it("offers Remove and Remove as suspected CSAM on the garment's tile only, never Approve", async () => {
+    await renderWithRouter(<PhotoMatches found={found} decide={vi.fn()} />);
+
+    const tiles = [...(part("photo-matches")?.querySelectorAll("li") ?? [])];
+    expect(tiles).toHaveLength(2);
+    expect(within(tiles[0] ?? document.body).queryByRole("button")).toBeNull();
+    const garment = within(tiles[1] ?? document.body);
+    expect(garment.getByRole("button", { name: "Remove" })).toBeVisible();
+    expect(
+      garment.getByRole("button", { name: "Remove as suspected CSAM" }),
+    ).toBeVisible();
+    expect(garment.queryByRole("button", { name: "Approve" })).toBeNull();
+  });
+
+  it("offers nothing where no takedown was handed down", async () => {
+    await renderWithRouter(<PhotoMatches found={found} />);
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("removes the garment's photo with the reason, and the tile leaves the list", async () => {
+    const user = userEvent.setup();
+    const decide = vi
+      .fn<DecideMatch>()
+      .mockResolvedValue({ outcome: "removed" });
+    await renderWithRouter(<PhotoMatches found={found} decide={decide} />);
+
+    await chooseReason(user);
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+
+    expect(decide).toHaveBeenCalledExactlyOnceWith({
+      data: { itemId: GARMENT, action: "remove", reason: "explicit" },
+    });
+    await waitFor(() => {
+      expect(screen.queryByText(`Garment ${GARMENT}`)).toBeNull();
+    });
+    expect(screen.getByText(PHOTO)).toBeVisible();
+  });
+
+  it("asks again before a quarantine, naming the garment photo and its owner", async () => {
+    const user = userEvent.setup();
+    const decide = vi
+      .fn<DecideMatch>()
+      .mockResolvedValue({ outcome: "removed" });
+    await renderWithRouter(<PhotoMatches found={found} decide={decide} />);
+
+    await chooseReason(user);
+    await user.click(
+      screen.getByRole("button", { name: "Remove as suspected CSAM" }),
+    );
+
+    expect(decide).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(
+        "Remove this garment photo everywhere and keep the evidence for the report?",
+      ),
+    ).toBeVisible();
+    expect(screen.getByText(/@k_lopes's account stays open\./u)).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Remove and report" }));
+
+    expect(decide).toHaveBeenCalledExactlyOnceWith({
+      data: { itemId: GARMENT, action: "quarantine", reason: "explicit" },
+    });
+  });
+
+  it("is handed down to Review's rows and removal requests", async () => {
+    const decide = vi.fn<DecideMatch>();
+    const matches = { fingerprinted: true, matches: [GARMENT_MATCH] };
+    const row: QueueRow = {
+      id: "01HZZZZZZZZZZZZZZZZZZZZZZX",
+      subjectType: "entry",
+      subjectId: KIT,
+      source: "reports",
+      createdAt: 1_755_000_000,
+      reporterCount: 1,
+      reasons: ["intimate"],
+      otherPhotos: { photos: [], total: 0, handle: undefined },
+      photoMatches: matches,
+      subject: { photoKeys: [] },
+    };
+    const request: PendingTakedownRequest = {
+      id: "01JREQUEST0000000000000002",
+      requesterEmail: "sam@example.com",
+      signature: "Sam Runner",
+      location: `https://dialed.run/feed/entry/${KIT}`,
+      description: undefined,
+      posterUsername: undefined,
+      subject: { subjectType: "entry", subjectId: KIT, entryId: KIT },
+      createdAt: 1,
+      dueAt: 2,
+      due: "Due in 31h",
+      holdState: "held",
+      relatedIds: [],
+      otherPhotos: { photos: [], total: 0, handle: undefined },
+      photoMatches: matches,
+    };
+    await renderWithRouter(
+      <>
+        <RemovalRequests
+          requests={[request]}
+          decide={vi.fn()}
+          block={vi.fn()}
+          decideMatch={decide}
+        />
+        <ReviewQueue
+          queue={[row]}
+          resolve={vi.fn()}
+          reviewHandle={vi.fn()}
+          decideMatch={decide}
+        />
+      </>,
+    );
+
+    const blocks = [
+      ...document.querySelectorAll<HTMLElement>("[data-part='photo-matches']"),
+    ];
+    expect(blocks).toHaveLength(2);
+    for (const block of blocks) {
+      expect(
+        within(block).getByRole("button", { name: "Remove as suspected CSAM" }),
+      ).toBeVisible();
+    }
   });
 });
