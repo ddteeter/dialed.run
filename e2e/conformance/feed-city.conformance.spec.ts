@@ -132,7 +132,11 @@ test("City field not found: the field message, quoting what was typed", async ({
   await answerFind(page, { kind: "not-found" });
   await page.getByLabel("Your city").fill("Portlnd, OR");
   await page.getByRole("button", { name: "Find" }).click();
-  await expect(page.locator("#cityLabel-message")).toBeVisible();
+  // By what the field says it is described by: the message's id is per
+  // instance (R-165), so the field's own pointer is the way to it.
+  await expect(page.getByLabel("Your city")).toHaveAccessibleDescription(
+    /We couldn't find "Portlnd, OR"/u,
+  );
 
   // The hint steps aside for the message, which the board does not do: a
   // field shows one sentence under it, never two (Form Contract).

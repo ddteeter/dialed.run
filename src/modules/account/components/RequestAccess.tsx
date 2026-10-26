@@ -223,7 +223,9 @@ export function RequestAccess({
                 if (said !== undefined) form.announce(said);
                 setNote(next);
               }}
-              field={(name) => withCounter(form.field(name), note.length)}
+              field={(name, id) =>
+                withCounter(form.field(name, id), note.length)
+              }
               error={form.fieldErrors.note}
             />
             <NoteCounter length={note.length} />

@@ -336,7 +336,7 @@ describe("ConditionsTab: location denied", () => {
     const sentence = `We couldn't find "Atlantis". Check the spelling, or try a nearby city.`;
     // On the field, and said in the screen's one status region.
     await waitFor(() => {
-      expect(document.querySelector("#cityLabel-message")).toHaveTextContent(
+      expect(screen.getByLabelText("Your city")).toHaveAccessibleDescription(
         sentence,
       );
     });
