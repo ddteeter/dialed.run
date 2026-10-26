@@ -83,13 +83,15 @@ export async function preserveObject(key: string) {
  * its sizes — under the quarantine prefix, and says for each where it went
  * and when R2 says it was uploaded. Listed rather than named, because an
  * original kept the extension it arrived with before it was re-encoded.
+ * An object gone between the list and the copy is recorded by its key
+ * alone, as a kit photo with no bytes is: the purge reads only the keys
+ * that were preserved (`preservedKeysOf`).
  */
 async function copyVersion(photoKey: string) {
   const listed = await env.MEDIA.list({ prefix: `${photoKey}/` });
   const copies = [];
   for (const { key } of listed.objects) {
-    const copy = await preserveObject(key);
-    if (copy !== undefined) copies.push({ key, ...copy });
+    copies.push({ key, ...(await preserveObject(key)) });
   }
   return copies;
 }

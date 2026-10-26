@@ -181,13 +181,14 @@ const subjectColumn = {
  * whose object is already gone has nothing to copy and no entry here.
  */
 async function copyBytes(photoKeys: readonly string[]) {
+  // A photo with no object maps to nothing, which its snapshot's spread
+  // reads the same as no entry at all.
   const copies = new Map<
     string,
-    { preservedKey: string; uploadedAt: number }
+    Awaited<ReturnType<typeof preserveObject>>
   >();
   for (const photoKey of photoKeys) {
-    const copy = await preserveObject(photoKey);
-    if (copy !== undefined) copies.set(photoKey, copy);
+    copies.set(photoKey, await preserveObject(photoKey));
   }
   return copies;
 }
@@ -497,7 +498,7 @@ export async function decideReview(
   const subject = await openSubject(queueId);
   const isTakenDown =
     subject !== undefined &&
-    (await takeDown(db, reviewerId, decision, subject)) === "removed";
+    (await wasTakenDown(db, reviewerId, decision, subject));
   // Anything not taken down here — a product, a profile, an entry already
   // gone, or a garment photo's Remove — is settled by safety's own writer,
   // so the row never stays open on a subject nobody can act on.
@@ -510,30 +511,35 @@ export async function decideReview(
  * The takedown a decision owes its subject, where feed makes it: a kit or
  * a kit photo's Remove or quarantine, or a garment photo's quarantine
  * (design 157). A garment photo's Remove is safety's hide until its
- * author's notice exists, and anything else is safety's too.
+ * author's notice exists, and anything else is safety's too. Says
+ * whether it took the subject down now.
  */
-async function takeDown(
+async function wasTakenDown(
   db: Db,
   reviewerId: string,
   decision: Exclude<ReviewActionValues, { action: "approve" }>,
   subject: { subjectType: ReviewSubjectType; subjectId: string },
-): Promise<string> {
+): Promise<boolean> {
   if (isModerated(subject)) {
-    return moderateContent(db, {
+    const outcome = await moderateContent(db, {
       actorId: reviewerId,
       action: decision.action,
       subjectType: subject.subjectType,
       subjectId: subject.subjectId,
       reason: decision.reason,
     });
+    return outcome === "removed";
   }
-  return subject.subjectType === "garment" && decision.action === "quarantine"
-    ? quarantineGarmentPhoto(db, {
-        actorId: reviewerId,
-        itemId: subject.subjectId,
-        reason: decision.reason,
-      })
-    : "not_found";
+  const isGarmentQuarantine =
+    subject.subjectType === "garment" && decision.action === "quarantine";
+  return (
+    isGarmentQuarantine &&
+    (await quarantineGarmentPhoto(db, {
+      actorId: reviewerId,
+      itemId: subject.subjectId,
+      reason: decision.reason,
+    })) === "removed"
+  );
 }
 
 /**

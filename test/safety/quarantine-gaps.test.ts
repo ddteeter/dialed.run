@@ -1,6 +1,6 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { session } from "../../src/db/schema-auth";
@@ -13,6 +13,7 @@ import {
   quarantinedContent,
   removedFingerprints,
   reviewQueue,
+  userProfiles,
   wardrobeItems,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
@@ -237,6 +238,11 @@ async function garmentRow(itemId: string) {
   return row;
 }
 
+async function photoKeyOf(itemId: string) {
+  const row = await garmentRow(itemId);
+  return row?.photoKey;
+}
+
 async function visibilityOf(itemId: string): Promise<string | undefined> {
   const row = await garmentRow(itemId);
   return row?.visibility;
@@ -360,6 +366,18 @@ describe("a quarantine keeps who uploaded it (§2258A(h)(2), design 157)", () =>
     expect(await core().select().from(quarantinedContent)).toStrictEqual([]);
   });
 
+  it("leaves the handle out for a runner with no profile", async () => {
+    const author = await uploader();
+    const { photoId } = await postedPhoto(author);
+    await core().delete(userProfiles).where(eq(userProfiles.userId, author));
+
+    await quarantinePhoto(photoId);
+
+    const kept = await keptUploader();
+    expect(kept.username).toBeUndefined();
+    expect(kept.sessions).toHaveLength(2);
+  });
+
   it("names nobody for an account already gone, and keeps the record", async () => {
     const author = await makeUser();
     const { photoId } = await postedPhoto(author);
@@ -465,6 +483,33 @@ describe("garment photos reach a person (design 157)", () => {
     expect(await statusesFor(removal.itemId)).toStrictEqual(["removed"]);
   });
 
+  it("tells nobody on Approve, even a row that somehow carries a report", async () => {
+    const owner = await makeUser();
+    const reporter = await makeUser();
+    const { itemId } = await garmentPhoto(owner);
+    // Nothing files a report on a garment; written raw, past the enum,
+    // to show the decision would still name nobody.
+    await core().run(
+      sql`INSERT INTO reports (id, reporter_id, subject_type, subject_id, reason, created_at) VALUES (${newUlid()}, ${reporter}, 'garment', ${itemId}, 'explicit', ${nowSeconds()})`,
+    );
+    await core().batch([
+      enqueueForReview(core(), {
+        subjectType: "garment",
+        subjectId: itemId,
+        source: "reports",
+      }),
+    ]);
+    const [row] = await core().select({ id: reviewQueue.id }).from(reviewQueue);
+
+    await decideReview(core(), "rev", {
+      queueId: ulidSchema.parse(row?.id),
+      action: "approve",
+    });
+
+    expect(await visibilityOf(itemId)).toBe("pass");
+    expect(await core().select().from(notifications)).toStrictEqual([]);
+  });
+
   it("writes nothing to a garment whose photo is already gone", async () => {
     const owner = await makeUser();
     const itemId = await makeItem({ userId: owner });
@@ -504,8 +549,11 @@ async function upload(
   );
 }
 
-const neverAsked: Classify = () =>
-  Promise.reject(new Error("a held photo is not screened"));
+function neverAsked() {
+  return vi.fn<Classify>(() =>
+    Promise.reject(new Error("a held photo is not screened")),
+  );
+}
 
 describe("a garment photo that copies a removed image is held (D-147, design 157)", () => {
   beforeEach(freshState);
@@ -521,9 +569,20 @@ describe("a garment photo that copies a removed image is held (D-147, design 157
         createdAt: nowSeconds(),
       });
     const garment = await closetGarment();
+    const classify = neverAsked();
 
-    await upload(garment, bytes, neverAsked);
+    const uploaded = await uploadItemPhoto(
+      core(),
+      garment.userId,
+      garment.itemId,
+      bytes,
+      "image/jpeg",
+      classify,
+      quiet,
+    );
 
+    expect(classify).not.toHaveBeenCalled();
+    expect(await photoKeyOf(garment.itemId)).toBe(uploaded.photoKey);
     expect(await visibilityOf(garment.itemId)).toBe("hidden_pending_review");
     expect(await queueRowsFor(garment.itemId)).toMatchObject([
       { subjectType: "garment", source: "fingerprint", status: "pending" },
@@ -579,6 +638,10 @@ describe("a garment photo quarantined as suspected CSAM (design 157, D-70)", () 
   it("copies every size and takes the photo off the garment, which stays", async () => {
     const owner = await uploader();
     const { itemId, photoKey } = await garmentPhoto(owner);
+    // A replaced version not yet cleaned up, and another runner's photo:
+    // neither is the photo being quarantined.
+    await env.MEDIA.put(`items/${owner}/${itemId}/older/card.webp`, BYTES);
+    await garmentPhoto(await makeUser());
     await screen("garment", itemId, explicit);
     const queueId = await queued(itemId, "classifier");
 
@@ -590,8 +653,9 @@ describe("a garment photo quarantined as suspected CSAM (design 157, D-70)", () 
       }),
     ).toBe("resolved");
 
-    // Preserved, every object of the version, outside the garment's prefix.
-    expect(await stored(`quarantine/${photoKey}/`)).toStrictEqual(
+    // Preserved, every object of the version and nothing else, outside the
+    // garment's prefix.
+    expect(await stored("quarantine/")).toStrictEqual(
       SIZES.map((name) => `quarantine/${photoKey}/${name}`),
     );
     // The garment stays; its photo, fingerprint and screenings go.
@@ -690,6 +754,30 @@ describe("a garment photo quarantined as suspected CSAM (design 157, D-70)", () 
         reason: "explicit",
       }),
     ).toBe("resolved");
+    expect(await core().select().from(quarantinedContent)).toStrictEqual([]);
+    expect(await statusesFor(itemId)).toStrictEqual(["removed"]);
+  });
+
+  it("quarantines a garment's photo only for a garment row", async () => {
+    const owner = await makeUser();
+    const { itemId, photoKey } = await garmentPhoto(owner);
+    // A product row that happens to carry the garment's id.
+    await core().batch([
+      enqueueForReview(core(), {
+        subjectType: "product",
+        subjectId: itemId,
+        source: "reports",
+      }),
+    ]);
+    const [row] = await core().select({ id: reviewQueue.id }).from(reviewQueue);
+
+    await decideReview(core(), "rev", {
+      queueId: ulidSchema.parse(row?.id),
+      action: "quarantine",
+      reason: "explicit",
+    });
+
+    expect(await photoKeyOf(itemId)).toBe(photoKey);
     expect(await core().select().from(quarantinedContent)).toStrictEqual([]);
   });
 });
