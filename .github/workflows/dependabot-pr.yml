@@ -109,10 +109,17 @@ jobs:
           permission-contents: write
           permission-pull-requests: write
 
-      # A merge commit, as every other merge in this repo is.
-      - run: gh pr merge --auto --merge "$PR_URL"
+      # A merge commit, as every other merge in this repo is, of the commit
+      # classify read. GitHub arms auto-merge only while a check is still
+      # pending; once every required check has passed (a re-run, or CI
+      # finishing first) it refuses, and the PR is merged now instead.
+      # Branch protection decides either way.
+      - run: |
+          gh pr merge --auto --merge --match-head-commit "$HEAD_SHA" "$PR_URL" ||
+            gh pr merge --merge --match-head-commit "$HEAD_SHA" "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           GH_TOKEN: ${{ steps.app.outputs.token }}
 
   review:

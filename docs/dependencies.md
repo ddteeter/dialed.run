@@ -18,7 +18,9 @@ file explains them and does not restate them.
    anywhere but 0.0.x) and was published by the same maintainers, auto-merge
    is armed. GitHub merges it once every required check passes on the head
    commit, with a merge commit, as the App, so main's deploy and its cold
-   mutation run start as they would after any merge.
+   mutation run start as they would after any merge. If the checks have
+   already passed (GitHub only arms auto-merge while one is pending), the
+   job merges it at once, still only at the commit it classified.
 4. **Anything else waits for you**: majors, 0.x minors, 0.0.x updates, new
    maintainers, and every GitHub Actions bump (Actions run with this repo's
    secrets). Claude posts an impact review on the PR: a verdict, the
