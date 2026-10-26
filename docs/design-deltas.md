@@ -940,7 +940,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
-84. **"A copy of an image removed as intimate" on Review (D-147, design
+45. **"A copy of an image removed as intimate" on Review (D-147, design
     152). Undesigned; built as a placeholder.** A kit photo whose
     fingerprint is within 8 bits of one removed as intimate is held and
     lands on Review with the source `[fingerprint]`. Under the photo, one
@@ -950,7 +950,7 @@ bits` apart.", the date and distance in MONO.xs. The row also carries
     glyph or colour. **The ask:** draw the line, and say whether the
     source tag should read something kinder than `[fingerprint]`.
 
-85. **Where else to go, on the removal receipts (D-147, design 152).
+46. **Where else to go, on the removal receipts (D-147, design 152).
     Undesigned copy on drawn screens.** The `/takedown` receipt ("We have
     your request"), its confirm page, and the report sheet's intimate-image
     branch gain one quiet line: "If it may be on other sites too,
@@ -958,6 +958,17 @@ bits` apart.", the date and distance in MONO.xs. The row also carries
     spreading there. They fingerprint the image on your own device; the
     image never leaves it." The two names are plain links, opening in a new
     tab. **The ask:** confirm or reword, and place it on the boards.
+
+47. **A garment's photo on Review (C17, design 157). Undesigned; built
+    as a placeholder.** The classifier and the D-147 hold now queue
+    garment photos. The row is a content row like a kit photo's: the
+    kicker reads `garment photo · {id}`, the photo is the garment's card
+    size, and the suspected-CSAM question reads "Remove this garment photo
+    everywhere and keep the evidence for the report?". No new glyph or
+    colour. Remove on such a row keeps the photo hidden and tells its owner
+    nothing until the notice's words are settled (register R-167).
+    **The ask:** draw the row, and the owner's notice once its words are
+    approved.
 
 <!-- Item numbers continue past rounds 35–40 (45–76, 82–85). Design numbered the Garmin asks 77–81 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
 
@@ -1034,88 +1045,82 @@ where an item says otherwise.
     OFL.txt PR, after #226.** Design 153 does not touch the app's list.
 
 C1. **Item 39 · the delete sheet's Google flow. Confirmed, with two
-    corrections; built.** As described (a sign-in over ten minutes old is
-    a refused field, "Sign in with Google again to confirm it's you." above
-    the button, which takes focus), plus: back from Google, the sheet
-    reopens with no message and focus on "Delete my account" — a fresh
-    sign-in proves who you are, not that you still mean it — and it never
-    deletes on return. The build focused "Keep it" on the way back; it now
-    focuses Delete my account. And Keep pressed after the purge has begun
-    is the §4a band in Keep's place: kicker NOT KEPT, as O0's, "Your
-    account is already being deleted. It can't be kept now.", no Try
-    again; Keep my account leaves, because pressing it again can only say
-    this again, and Log out stays. The build said only "Your account is
-    already being deleted." as a line under the body, with Keep still
-    there. Both pages keep the signed-out panel and DELETION SCHEDULED, as
-    built. Building it found the way back broken: the router rewrites
-    `?deleting=1` to `?deleting=true` before the page renders, and the
-    search schema refused `true`, so the sheet never reopened; it now
-    does. And NOT KEPT was first reachable only in a race: the purge's
-    claim also ends the runner's sessions, and Keep's gate refuses a
-    claimed runner as nobody, so Keep after it said "Still scheduled. You
-    were signed out." with a Try again that could not work. **The owner
-    ruled NOT KEPT for both (2026-10-25):** on this page a signed-out
-    refusal of Keep reads NOT KEPT, with no Try again; any other failure
-    keeps its band and retry.
+corrections; built.** As described (a sign-in over ten minutes old is
+a refused field, "Sign in with Google again to confirm it's you." above
+the button, which takes focus), plus: back from Google, the sheet
+reopens with no message and focus on "Delete my account" — a fresh
+sign-in proves who you are, not that you still mean it — and it never
+deletes on return. The build focused "Keep it" on the way back; it now
+focuses Delete my account. And Keep pressed after the purge has begun
+is the §4a band in Keep's place: kicker NOT KEPT, as O0's, "Your
+account is already being deleted. It can't be kept now.", no Try
+again; Keep my account leaves, because pressing it again can only say
+this again, and Log out stays. The build said only "Your account is
+already being deleted." as a line under the body, with Keep still
+there. Both pages keep the signed-out panel and DELETION SCHEDULED, as
+built. Building it found the way back broken: the router rewrites
+`?deleting=1` to `?deleting=true` before the page renders, and the
+search schema refused `true`, so the sheet never reopened; it now
+does. And NOT KEPT was first reachable only in a race: the purge's
+claim also ends the runner's sessions, and Keep's gate refuses a
+claimed runner as nobody, so Keep after it said "Still scheduled. You
+were signed out." with a Try again that could not work. **The owner
+ruled NOT KEPT for both (2026-10-25):** on this page a signed-out
+refusal of Keep reads NOT KEPT, with no Try again; any other failure
+keeps its band and retry.
 
 C2. **Item 39 · five emails, four of them here. Three confirmed, one
-    reworded; built.**
-    - **Deletion: confirmed as built.** The date is the UTC day the week
-      ends, and the sheet and both DELETION SCHEDULED pages print the same
-      UTC date. They do: all four read `proseDayLabel` with no zone, the
-      email and both pages through `deletion.ts`' `deletionDay`.
-    - **Invite: the foot is reworded.** "Sent because this address asked
-      for access. Didn't ask? Ignore this; nothing happens.", in the reset
-      email's grammar ("You asked" reads as an accusation to someone who
-      didn't). Replaces the build's "You asked for an invite. Didn't?
-      Ignore this and nothing happens."
-    - **Strava disconnected: confirmed, and round 27's lines retire.** One
-      neutral opening for both causes, "Strava says dialed.run was
-      disconnected, so run reminders have stopped.", foot "Runs you
-      already added stay." The build's body still ended in round 27's
-      "Your runs here haven't changed."; that sentence is gone.
-    - **Daily digest: confirmed as built.** From `hello@dialed.run`
-      (desk@ is where runners write to us, not where we write from); D5's
-      rows as sentences in one paragraph; the third number is Today's
-      "bans this week". The board's sentences show their shape, not new
-      words.
+reworded; built.** - **Deletion: confirmed as built.** The date is the UTC day the week
+ends, and the sheet and both DELETION SCHEDULED pages print the same
+UTC date. They do: all four read `proseDayLabel` with no zone, the
+email and both pages through `deletion.ts`' `deletionDay`. - **Invite: the foot is reworded.** "Sent because this address asked
+for access. Didn't ask? Ignore this; nothing happens.", in the reset
+email's grammar ("You asked" reads as an accusation to someone who
+didn't). Replaces the build's "You asked for an invite. Didn't?
+Ignore this and nothing happens." - **Strava disconnected: confirmed, and round 27's lines retire.** One
+neutral opening for both causes, "Strava says dialed.run was
+disconnected, so run reminders have stopped.", foot "Runs you
+already added stay." The build's body still ended in round 27's
+"Your runs here haven't changed."; that sentence is gone. - **Daily digest: confirmed as built.** From `hello@dialed.run`
+(desk@ is where runners write to us, not where we write from); D5's
+rows as sentences in one paragraph; the third number is Today's
+"bans this week". The board's sentences show their shape, not new
+words.
 
 C3. **Item 36 · the content-removed email. Corrected; built by the C8
-    follow-up after PR #220**, which merges it with C8's DSA lines (owner
-    approved). Not covered by 74–76, which are bell rows. Round 27's frame
-    is the text of record and replaces the round 26 build: "We removed the
-    {photo} from your {Sat, Aug 29} run. Reason: {reason}. Your run and
-    verdict stay.", the button "See the community rules", the foot "Think
-    we got it wrong? Reply to this email." Copyright removals use round 38
-    #63b's sentences, with no reason. Design 153 does not touch it.
+follow-up after PR #220**, which merges it with C8's DSA lines (owner
+approved). Not covered by 74–76, which are bell rows. Round 27's frame
+is the text of record and replaces the round 26 build: "We removed the
+{photo} from your {Sat, Aug 29} run. Reason: {reason}. Your run and
+verdict stay.", the button "See the community rules", the foot "Think
+we got it wrong? Reply to this email." Copyright removals use round 38
+#63b's sentences, with no reason. Design 153 does not touch it.
 
 C4. **Item 38 · F's rail card by category. Confirmed, and drawn in
-    sentence case; built.** "Already in your closet · Top", empty "No tops
-    yet."; round 25's "no card before a category" is retired, since the
-    select always holds one. With TYPE (built in design PR C, R-112):
-    "Already in your closet · Top · Half-zip" once a type is picked, empty
-    "No half-zips yet.", and the category alone when the type is cleared
-    (in the build, a new category clears it). The words, the narrowing and
-    the empty lines already matched, and there was no "no card before a
-    category" code to delete. What changed is the face the board draws:
-    the heading in TYPE.heading, sentence case, where the build had the
-    rail's MONO.xs caps title, and the empty line in TYPE.body, `--quiet`,
-    where it had TYPE.small, `--label`. The other rail cards (A2, A3) keep
-    their mono titles.
+sentence case; built.** "Already in your closet · Top", empty "No tops
+yet."; round 25's "no card before a category" is retired, since the
+select always holds one. With TYPE (built in design PR C, R-112):
+"Already in your closet · Top · Half-zip" once a type is picked, empty
+"No half-zips yet.", and the category alone when the type is cleared
+(in the build, a new category clears it). The words, the narrowing and
+the empty lines already matched, and there was no "no card before a
+category" code to delete. What changed is the face the board draws:
+the heading in TYPE.heading, sentence case, where the build had the
+rail's MONO.xs caps title, and the empty line in TYPE.body, `--quiet`,
+where it had TYPE.small, `--label`. The other rail cards (A2, A3) keep
+their mono titles.
 
-C5. **Round 30's two errata. Both settled.**
-    - **(a) Form Contract §02b's kicker samples: redrawn.** Both samples
-      (the summary and the failure band) now draw the kicker in MONO.xs,
-      Plex Mono 10 / 0.10em, caps, so the two contracts agree (item 44).
-      The 8px button radius is round 10's COLLAPSE, not redrawn. Nothing
-      to build: `FailureBand` already draws `<Mono step="xs">`.
-    - **(b) The feed gutter: retired, and no T1 role added.** `#1C1C22` is
-      dark's `--tint`, which means a recessed block, not a gap. Posts are
-      divided by a 1px `--hairline`, full width, and each post keeps
-      SPACE[4] top and bottom. The build had each post's own hairline
-      under it with a 20px gap between posts; it is now the hairline
-      between posts, across the column, with SPACE[4] above and below
-      each.
+C5. **Round 30's two errata. Both settled.** - **(a) Form Contract §02b's kicker samples: redrawn.** Both samples
+(the summary and the failure band) now draw the kicker in MONO.xs,
+Plex Mono 10 / 0.10em, caps, so the two contracts agree (item 44).
+The 8px button radius is round 10's COLLAPSE, not redrawn. Nothing
+to build: `FailureBand` already draws `<Mono step="xs">`. - **(b) The feed gutter: retired, and no T1 role added.** `#1C1C22` is
+dark's `--tint`, which means a recessed block, not a gap. Posts are
+divided by a 1px `--hairline`, full width, and each post keeps
+SPACE[4] top and bottom. The build had each post's own hairline
+under it with a 20px gap between posts; it is now the hairline
+between posts, across the column, with SPACE[4] above and below
+each.
 
 ## Answered in round 39 (imported 2026-10-24)
 
