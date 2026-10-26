@@ -169,8 +169,7 @@ function sessionOf(
   return slot.open.session;
 }
 
-export const SESSION_ONLY_MESSAGE =
-  "a D1 session offers only prepare and batch";
+const SESSION_ONLY_MESSAGE = "a D1 session offers only prepare and batch";
 
 function sessionOnly(): never {
   throw new Error(SESSION_ONLY_MESSAGE);
@@ -181,36 +180,62 @@ function sessionOnly(): never {
  * drizzle runs on it with no cast. Only `prepare` and `batch` are drizzle's
  * query path; a session has nothing else, so in a request the rest refuse
  * rather than quietly reaching the primary.
+ *
+ * A class, not an object literal: the interface still requires the
+ * deprecated `dump`, and an object literal's `dump` key reads as a use of
+ * it, where a class method that implements it does not.
+ */
+class RoutedDatabase implements D1Database {
+  constructor(
+    private readonly binding: D1Database,
+    private readonly slotIn: (scope: Scope) => Slot,
+  ) {}
+
+  prepare(query: string): D1PreparedStatement {
+    const scope = scopes.getStore();
+    if (scope === undefined) return this.binding.prepare(query);
+    const slot = this.slotIn(scope);
+    if (isWriteStatement(query)) slot.wrote = true;
+    return sessionOf(scope, slot, this.binding).prepare(query);
+  }
+
+  batch<T = unknown>(
+    statements: D1PreparedStatement[],
+  ): Promise<D1Result<T>[]> {
+    const scope = scopes.getStore();
+    if (scope === undefined) return this.binding.batch<T>(statements);
+    return sessionOf(scope, this.slotIn(scope), this.binding).batch<T>(
+      statements,
+    );
+  }
+
+  exec(query: string): Promise<D1ExecResult> {
+    if (scopes.getStore() === undefined) return this.binding.exec(query);
+    return sessionOnly();
+  }
+
+  withSession(
+    constraint?: Parameters<D1Database["withSession"]>[0],
+  ): D1DatabaseSession {
+    if (scopes.getStore() === undefined) {
+      return this.binding.withSession(constraint);
+    }
+    return sessionOnly();
+  }
+
+  dump(): Promise<ArrayBuffer> {
+    return sessionOnly();
+  }
+}
+
+/**
+ * Typed as the interface, so drizzle's `$client` is a `D1Database`.
  */
 function routedDatabase(
   binding: D1Database,
   slotIn: (scope: Scope) => Slot,
 ): D1Database {
-  return {
-    prepare(query) {
-      const scope = scopes.getStore();
-      if (scope === undefined) return binding.prepare(query);
-      const slot = slotIn(scope);
-      if (isWriteStatement(query)) slot.wrote = true;
-      return sessionOf(scope, slot, binding).prepare(query);
-    },
-    batch(statements) {
-      const scope = scopes.getStore();
-      if (scope === undefined) return binding.batch(statements);
-      return sessionOf(scope, slotIn(scope), binding).batch(statements);
-    },
-    exec(query) {
-      if (scopes.getStore() === undefined) return binding.exec(query);
-      return sessionOnly();
-    },
-    withSession(constraint) {
-      if (scopes.getStore() === undefined) {
-        return binding.withSession(constraint);
-      }
-      return sessionOnly();
-    },
-    dump: sessionOnly,
-  };
+  return new RoutedDatabase(binding, slotIn);
 }
 
 /**
