@@ -8,7 +8,9 @@ file explains them and does not restate them.
 ## What happens to an update
 
 1. **Dependabot opens a PR**, weekly and seven days behind each release.
-   Security updates skip the wait.
+   Security updates skip the wait, and their minor and patch fixes share
+   one PR. Every PR costs a full CI and mutation run, which is why
+   `dependabot.yml` keeps the groups few.
 2. **If it moves a package the bundles ship**, CI's build fails on the
    stale open-source list. `oss-list.yml` rebuilds the list, read-only, and
    `oss-list-commit.yml` commits it to the PR as the automation App. CI

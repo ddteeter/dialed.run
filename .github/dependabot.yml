@@ -5,12 +5,18 @@
 # window. Security updates skip the cooldown, so a fix for a known
 # vulnerability is not held back.
 #
-# Packages that must move together share a group, majors included, so a
-# family is never split across PRs that each fail without the others.
-# Dependabot puts a dependency in the FIRST group it matches, so the
-# families come before the catch-alls. Everything else is grouped by
-# production/development for minor and patch only; a major outside a
-# family gets a PR of its own, so one the tree can't take yet fails alone.
+# Each PR costs a full CI and mutation run, so the groups are few. Minor
+# and patch updates go in one production and one development PR, except
+# TanStack's and Cloudflare's, whose packages pin each other at every
+# version and so get a PR of their own. A family's major moves together,
+# in its family's group; a major outside a family gets a PR of its own, so
+# one the tree can't take yet fails alone. Dependabot puts a dependency in
+# the FIRST group it matches, so the families come before the catch-alls.
+#
+# Security updates ignore all of that unless a group says
+# `applies-to: security-updates`: without one, each vulnerable package
+# gets a PR. Their minor and patch fixes share one PR; a major fix is
+# alone, like any major.
 #
 # What merges itself is decided in .github/workflows/dependabot-pr.yml, not
 # here: minor and patch, except a minor on a 0.x version (breaking under
@@ -34,6 +40,10 @@ updates:
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
     groups:
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
+        update-types: [minor, patch]
       tanstack:
         patterns: ["@tanstack/*"]
       cloudflare:
@@ -42,18 +52,25 @@ updates:
         patterns: ["@cloudflare/*", "wrangler"]
       vitest:
         patterns: ["vitest", "@vitest/*"]
+        update-types: [major]
       stryker:
         patterns: ["@stryker-mutator/*"]
+        update-types: [major]
       react:
         patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
+        update-types: [major]
       tailwind:
         patterns: ["tailwindcss", "@tailwindcss/*"]
+        update-types: [major]
       drizzle:
         patterns: ["drizzle-orm", "drizzle-kit"]
+        update-types: [major]
       eslint:
         patterns: ["eslint", "@eslint/js", "typescript-eslint"]
+        update-types: [major]
       react-email:
         patterns: ["@react-email/*"]
+        update-types: [major]
       production:
         dependency-type: production
         patterns: ["*"]
