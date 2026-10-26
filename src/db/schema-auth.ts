@@ -51,7 +51,6 @@ export const session = /*#__PURE__*/ sqliteTable(
 
 export const account = /*#__PURE__*/ sqliteTable("account", {
   id: text("id").primaryKey(),
-  issuer: text("issuer").notNull(),
   accountId: text("account_id").notNull(),
   providerId: text("provider_id").notNull(),
   userId: text("user_id")

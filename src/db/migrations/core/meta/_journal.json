@@ -477,6 +477,13 @@
       "when": 1792883709276,
       "tag": "0067_add_removed_fingerprints",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "6",
+      "when": 1793021913756,
+      "tag": "0068_drop_account_issuer",
+      "breakpoints": true
     }
   ]
 }

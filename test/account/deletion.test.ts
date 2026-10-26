@@ -41,7 +41,6 @@ async function withPassword(userId: string): Promise<void> {
   const now = new Date();
   await db.insert(account).values({
     id: newUlid(),
-    issuer: "local",
     accountId: userId,
     providerId: "credential",
     userId,
