@@ -87,12 +87,11 @@ export function RemovalRequests({
         <RemovalRequestRow
           key={request.id}
           request={request}
-          decide={decide}
-          block={block}
-          decideMatch={decideMatch}
-          takeFocus={focusOnce(focusId === request.id, () => {
+          actions={{ decide, block, decideMatch }}
+          hasFocus={focusId === request.id}
+          onFocused={() => {
             setFocusId(undefined);
-          })}
+          }}
           onDecided={() => {
             settle(request.id);
           }}
@@ -153,24 +152,31 @@ function focusOnce(
   };
 }
 
-function RemovalRequestRow({
-  request,
-  decide,
-  block,
-  decideMatch,
-  takeFocus,
-  onDecided,
-  onBlocked,
-}: Readonly<{
-  request: PendingTakedownRequest;
+/**
+ * What a row can do with its request, handed down from the route: decide
+ * it, block its requester, and take down a garment photo copy search
+ * found (design 159).
+ */
+type RowActions = Readonly<{
   decide: Decide;
   block: Block;
   decideMatch: DecideMatch | undefined;
-  takeFocus: (node: HTMLElement | null) => void;
+}>;
+
+type RowProps = Readonly<{
+  request: PendingTakedownRequest;
+  actions: RowActions;
+  hasFocus: boolean;
+  onFocused: () => void;
   onDecided: () => void;
   onBlocked: () => void;
-}>): JSX.Element {
+}>;
+
+function RemovalRequestRow(props: RowProps): JSX.Element {
+  const { request, hasFocus, onFocused, onDecided, onBlocked } = props;
+  const { decide, block, decideMatch } = props.actions;
   const [isDeclining, setIsDeclining] = useState(false);
+  const takeFocus = focusOnce(hasFocus, onFocused);
   return (
     <li
       ref={takeFocus}
