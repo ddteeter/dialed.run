@@ -199,6 +199,13 @@ export default tseslint.config(
         "error",
         { checkThenables: true },
       ],
+      // New in strict at typescript-eslint 8.71, and wrong here as of 8.72:
+      // `SQLiteUpdateSetSource<T>` inside a generic function is a mapped
+      // type over T's columns that has no members until T is known, so the
+      // rule calls it `{}`. Every caller passes a real table, where the type
+      // checks column names and values (`setOnSubject`, `didClaim`). Back on
+      // when upstream skips deferred mapped types (R-168).
+      "@typescript-eslint/no-generated-empty-object-type": "off",
       // Workers/React codebase adjustments to unicorn defaults:
       "unicorn/prevent-abbreviations": "off",
       "unicorn/name-replacements": "off",
