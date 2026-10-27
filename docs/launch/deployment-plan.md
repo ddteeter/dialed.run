@@ -111,6 +111,11 @@ key and Anthropic key go in their own environments
 - R-72's one line: `ADMIN_USER_IDS` in the e2e job's `.dev.vars`, so the
   admin surfaces get a demo.
 
+**Applied (#114).** `.github/workflows/ci.yml` on `main` migrates both
+databases `--remote` before `wrangler deploy`, the deploy job has
+`needs: [test, e2e]`, and the e2e job writes `ADMIN_USER_IDS`. Nothing in
+this section is left for the owner.
+
 ## 4. Email (Cloudflare Email Sending)
 
 | step                                                                                                                                                                                                                      | cites               |
@@ -143,6 +148,10 @@ step: owner, friends or public.
 | Friends can sign in while the consent screen is in **Testing** only if each is added as a test user (limit 100). Either add them or switch now.                                  | friends | §1.7  |
 | Switch the consent screen to **In production**. Non-sensitive scopes only, so verification is not mandatory.                                                                     | public  | §1.7  |
 | Brand verification (name and logo on the consent screen): homepage and privacy policy on the verified domain; Search Console ownership of `dialed.run`. Allow 2–3 business days. | public  | §1.7  |
+
+**Open conflict:** `legal-readiness-plan.md` Step 4 says Testing mode needs
+no test users for `openid email profile` (A11); owner to confirm against
+Google's docs; adding test users is the safe default.
 
 **Turnstile**: create the widget for `dialed.run` (managed mode); site key
 as a var, secret as a secret. Free.
@@ -308,7 +317,8 @@ Everything in stage 0, plus:
   Strava**: the owner's own connection is the tenth (D-128), and the next
   sees 127's STR-6 message.
 - Google: each friend added as a test user, or the consent screen switched
-  to In production.
+  to In production. (Open conflict with `legal-readiness-plan.md` Step 4;
+  see §5's Google table.)
 - A photo uploaded from a phone has **no GPS in the served bytes** (128's
   SAF-1); check with an EXIF reader.
 
