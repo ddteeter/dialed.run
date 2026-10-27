@@ -161,7 +161,6 @@ async function seedAccount(): Promise<Seeded> {
     core.insert(account).values({
       id: newUlid(),
       userId,
-      issuer: "credential",
       accountId: userId,
       providerId: "credential",
       password: "hash",
