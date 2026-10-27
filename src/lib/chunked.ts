@@ -12,16 +12,19 @@
  * wrong bound changes the chunks themselves, and a test can just look at
  * them. Moving the code was cheaper than proving three equivalences, and
  * it leaves the caller saying what it means.
+ *
+ * The chunk count is fixed before any chunk is built, rather than found
+ * by an index loop: that loop's `+=` mutated to `-=`, or its bound to
+ * `true`, never ends and allocates a chunk every turn — enough to take a
+ * CI runner down before Stryker's timeout fires. Every mutant here ends.
  */
 export function chunked<TItem>(
   items: readonly TItem[],
   size: number,
 ): TItem[][] {
-  const chunks: TItem[][] = [];
-  for (let index = 0; index < items.length; index += size) {
-    chunks.push(items.slice(index, index + size));
-  }
-  return chunks;
+  return Array.from({ length: Math.ceil(items.length / size) }, (_, chunk) =>
+    items.slice(chunk * size, (chunk + 1) * size),
+  );
 }
 
 /**
