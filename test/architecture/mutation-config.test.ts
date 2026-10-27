@@ -102,7 +102,7 @@ describe("stryker.conf.json", () => {
 
   it("matches every file in src/lib to exactly one entry, which split entries cannot promise on their own", () => {
     /**
-     * `src/lib` is split across nine entries rather than one
+     * `src/lib` is split across ten entries rather than one
      * `src/lib/**\/*.ts` glob, because it was the longest shard in every
      * run — 31.8 minutes cold, 4.3 warm, about 2.5x the next one either
      * way — and its static mutants each re-run the whole suite. The
@@ -110,9 +110,11 @@ describe("stryker.conf.json", () => {
      * `browser/`, isomorphic files at the root), and so are the entries:
      * `sql/` and `browser/` are one glob each, while `contracts/` is
      * four explicit lists — three balanced by static-mutant count, plus
-     * `thermal.ts` on its own — and the root is three: `nav-types.ts`
-     * alone, for its static-heavy module-level `NAV` table, and two lists
-     * balanced by static weight. The `contracts.ts` barrel rides with a
+     * `thermal.ts` on its own — and the root is four: `nav-types.ts`
+     * alone, for its static-heavy module-level `NAV` table, two lists
+     * balanced by static weight, and `dates.ts` leading the ordinary
+     * mutants split off the photo-constraints list when its runner kept
+     * being shut down mid-run. The `contracts.ts` barrel rides with a
      * contracts shard, which is why the root is listed rather than globbed.
      *
      * The split has to be by *positive* path. A `!src/lib/contracts.ts`
