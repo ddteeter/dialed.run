@@ -1157,7 +1157,7 @@
     },
     {
       "name": "fallow",
-      "version": "3.34.1",
+      "version": "3.36.0",
       "licence": "MIT",
       "project": "https://fallow.tools/docs/"
     },
