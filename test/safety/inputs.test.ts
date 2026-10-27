@@ -6,6 +6,7 @@ import {
   blockRunnerInput,
   denyDomainInput,
   fileReportInput,
+  garmentMatchActionInput,
   removalDecisionInput,
   reviewDecisionInput,
   takedownRequestInput,
@@ -482,5 +483,36 @@ describe("RECEIVED ON (round 39 #73)", () => {
         message: "Pick a date on or after it was hidden.",
       },
     ]);
+  });
+});
+
+describe("garmentMatchActionInput (design 159)", () => {
+  const itemId = newUlid();
+
+  it("takes a garment's Remove or quarantine with its reason", () => {
+    for (const action of ["remove", "quarantine"] as const) {
+      expect(
+        garmentMatchActionInput.parse({ itemId, action, reason: "spam" }),
+      ).toStrictEqual({ itemId, action, reason: "spam" });
+    }
+  });
+
+  it("refuses an Approve, a missing reason and an id that is not a garment's", () => {
+    expect(
+      garmentMatchActionInput.safeParse({ itemId, action: "approve" }).success,
+    ).toBe(false);
+    expect(
+      garmentMatchActionInput.safeParse({ itemId, action: "remove" }).error
+        ?.issues,
+    ).toMatchObject([
+      { path: ["reason"], message: "Pick why it's coming down." },
+    ]);
+    expect(
+      garmentMatchActionInput.safeParse({
+        itemId: "not-an-id",
+        action: "remove",
+        reason: "spam",
+      }).success,
+    ).toBe(false);
   });
 });

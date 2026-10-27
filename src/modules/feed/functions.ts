@@ -42,8 +42,10 @@ import { photoUploadFrom, uploadPhoto } from "./photos";
 import { deleteEntryPhoto, photoIdInput, retractEntry } from "./retract";
 import { garmentBandCountOrNone, garmentBandsInput } from "./garment-bands";
 import { decideReview, deleteAfterCase, moderateContent } from "./moderation";
+import { moderateGarmentPhoto } from "./garment-moderation";
 import {
   copyrightHoldInput,
+  garmentMatchActionInput,
   removalDecisionInput,
   requireAdmin,
   reviewActionInput,
@@ -353,6 +355,20 @@ export const decideReviewAction = createServerFn({ method: "POST" })
     const reviewerId = requireAdmin(await verifiedUserId());
     return {
       outcome: await decideReview(coreDb(), reviewerId, data),
+    };
+  });
+
+/**
+ * A garment photo found by copy search, taken down from Review (R-167,
+ * design 159): a Remove that tells its owner, or a quarantine that tells
+ * nobody. Admin-only; the takedown lives in `./garment-moderation`.
+ */
+export const decideGarmentMatchAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => garmentMatchActionInput.parse(input))
+  .handler(async ({ data }) => {
+    const actorId = requireAdmin(await verifiedUserId());
+    return {
+      outcome: await moderateGarmentPhoto(coreDb(), { actorId, ...data }),
     };
   });
 

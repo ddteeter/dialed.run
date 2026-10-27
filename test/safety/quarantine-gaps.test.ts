@@ -27,15 +27,12 @@ import {
   uploadItemPhoto,
 } from "../../src/modules/closet/photos";
 import { createItem, deleteItem } from "../../src/modules/closet/service";
-import { quarantineGarmentPhoto } from "../../src/modules/feed/garment-moderation";
+import { moderateGarmentPhoto } from "../../src/modules/feed/garment-moderation";
 import {
   decideReview,
   moderateContent,
 } from "../../src/modules/feed/moderation";
-import {
-  deleteEntryPhoto,
-  retractEntry,
-} from "../../src/modules/feed/retract";
+import { deleteEntryPhoto, retractEntry } from "../../src/modules/feed/retract";
 import {
   banUser,
   enqueueForReview,
@@ -453,12 +450,10 @@ describe("garment photos reach a person (design 157)", () => {
     expect(row?.subject).toStrictEqual({ photoKeys: [] });
   });
 
-  it("clears it on Approve, and keeps it hidden on Remove, telling nobody either way", async () => {
+  it("clears it on Approve, telling nobody", async () => {
     const owner = await makeUser();
     const approved = await garmentPhoto(owner);
-    const removal = await garmentPhoto(owner);
     const approvalRow = await queued(approved.itemId, "classifier");
-    const removalRow = await queued(removal.itemId, "classifier");
 
     expect(
       await decideReview(core(), "rev", {
@@ -466,21 +461,10 @@ describe("garment photos reach a person (design 157)", () => {
         action: "approve",
       }),
     ).toBe("resolved");
-    expect(
-      await decideReview(core(), "rev", {
-        queueId: removalRow,
-        action: "remove",
-        reason: "explicit",
-      }),
-    ).toBe("resolved");
 
     expect(await visibilityOf(approved.itemId)).toBe("pass");
-    expect(await garmentRow(removal.itemId)).toMatchObject({
-      visibility: "flagged",
-      photoKey: removal.photoKey,
-    });
     expect(await core().select().from(notifications)).toStrictEqual([]);
-    expect(await statusesFor(removal.itemId)).toStrictEqual(["removed"]);
+    expect(await statusesFor(approved.itemId)).toStrictEqual(["approved"]);
   });
 
   it("tells nobody on Approve, even a row that somehow carries a report", async () => {
@@ -680,9 +664,9 @@ describe("a garment photo quarantined as suspected CSAM (design 157, D-70)", () 
     await screen("garment", itemId, explicit);
     const before = nowSeconds();
 
-    await quarantineGarmentPhoto(
+    await moderateGarmentPhoto(
       core(),
-      { actorId: "rev", itemId, reason: "explicit" },
+      { actorId: "rev", itemId, action: "quarantine", reason: "explicit" },
       quiet,
     );
 
@@ -729,14 +713,19 @@ describe("a garment photo quarantined as suspected CSAM (design 157, D-70)", () 
   it("answers a repeat as already removed, and an unknown garment as not found", async () => {
     const owner = await makeUser();
     const { itemId } = await garmentPhoto(owner);
-    const input = { actorId: "rev", itemId, reason: "explicit" } as const;
+    const input = {
+      actorId: "rev",
+      itemId,
+      action: "quarantine",
+      reason: "explicit",
+    } as const;
 
-    expect(await quarantineGarmentPhoto(core(), input, quiet)).toBe("removed");
-    expect(await quarantineGarmentPhoto(core(), input, quiet)).toBe(
+    expect(await moderateGarmentPhoto(core(), input, quiet)).toBe("removed");
+    expect(await moderateGarmentPhoto(core(), input, quiet)).toBe(
       "already_removed",
     );
     const unknown = { ...input, itemId: newUlid() };
-    expect(await quarantineGarmentPhoto(core(), unknown, quiet)).toBe(
+    expect(await moderateGarmentPhoto(core(), unknown, quiet)).toBe(
       "not_found",
     );
     expect(await core().select().from(quarantinedContent)).toHaveLength(1);

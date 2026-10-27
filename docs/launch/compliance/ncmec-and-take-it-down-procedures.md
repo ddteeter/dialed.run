@@ -111,7 +111,7 @@ only cached responses and none of ours are cached (D-69).
    - sends the uploader nothing: no bell row, no email (D-70).
 
    **A garment photo** (a `garment photo` row) quarantines the same way
-   (`feed/garment-moderation.ts` `quarantineGarmentPhoto`): every size of
+   (`feed/garment-moderation.ts` `moderateGarmentPhoto`): every size of
    the photo is copied to `quarantine/items/…`, the photo is taken off the
    garment (the garment stays), and the record holds the garment row, its
    screenings, the copies and the uploader snapshot, with no entry id.
@@ -336,12 +336,12 @@ Closed by design 157 (C17): the quarantine now keeps the uploader's email,
 username and session records; the reviewer photo route sends `no-store`;
 and garment photos are queued and can be quarantined.
 
-1. **A garment photo's Remove tells its owner nothing yet.** Remove on a
-   `garment photo` row keeps the photo hidden (`flagged`) and writes the
-   decision, but no notice exists for it (design 157's open question).
-   Suspected CSAM is unaffected: it is a quarantine, silent by design.
-2. **A garment found only by copy search cannot be acted on from Review.**
-   Its tile opens nothing; it reaches the queue only through the
-   classifier or the D-147 hold.
-3. **No automated CSAM detection** until C11.
-4. **Copy search covers only the same runner's 12 newest photos** until C16.
+Closed by design 159 (R-167): Remove on a `garment photo` row deletes the
+photo (the garment stays) and tells its owner, in the bell and by email,
+as a kit photo's Remove does; suspected CSAM is still a silent quarantine.
+A garment found by copy search carries the same Remove and Remove as
+suspected CSAM on its Matching photos tile
+(`feed/garment-moderation.ts` `moderateGarmentPhoto`).
+
+1. **No automated CSAM detection** until C11.
+2. **Copy search covers only the same runner's 12 newest photos** until C16.

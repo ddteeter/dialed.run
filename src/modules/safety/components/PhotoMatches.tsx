@@ -3,9 +3,15 @@ import type { JSX } from "react";
 
 import { monthDayLabel } from "../../../lib/dates";
 import { Bracketed, Mono } from "../../../ui";
+import {
+  garmentMatchActionInput,
+  type GarmentMatchActionValues,
+} from "../inputs";
 import type { PhotoMatch, PhotoMatches as Found } from "../photo-matches";
 import type { RemovedMatch } from "../removed-fingerprints";
 import { PhotoSection } from "./OtherPhotos";
+import { RemovalDecision } from "./RemovalDecision";
+import { useSettled } from "./use-settled";
 
 /**
  * Photos from any runner, private included, that match a reported one by
@@ -18,8 +24,9 @@ import { PhotoSection } from "./OtherPhotos";
  * named as one); its distance, "{N} bits" or "same", with [private] for a
  * kit not shared; and its owner's @handle, opening them in D8. A kit photo
  * links its kit when an operator can open it; a garment photo is never
- * shown to another runner, so its tile opens nothing and its owner link
- * is what it offers. Each photo is served from `/safety/review-photo/`.
+ * shown to another runner, so its tile opens nothing and carries its own
+ * takedown instead (design 159). Each photo is served from
+ * `/safety/review-photo/`.
  *
  * Nothing renders on a row that does not search (`undefined`). A subject
  * with no fingerprint says so rather than "no matches", which would be a
@@ -27,7 +34,11 @@ import { PhotoSection } from "./OtherPhotos";
  */
 export function PhotoMatches({
   found,
-}: Readonly<{ found: Found | undefined }>): JSX.Element | undefined {
+  decide,
+}: Readonly<{
+  found: Found | undefined;
+  decide?: DecideMatch | undefined;
+}>): JSX.Element | undefined {
   if (found === undefined) return undefined;
   const count = found.matches.length;
   return (
@@ -39,15 +50,35 @@ export function PhotoMatches({
           : `Matching photos · any runner · ${String(count)}`
       }
     >
-      <Matches found={found} />
+      <Matches found={found} decide={decide} />
     </PhotoSection>
   );
 }
 
 /**
-The list, or the sentence that stands in for it.
-*/
-function Matches({ found }: Readonly<{ found: Found }>): JSX.Element {
+ * Takes down a garment photo copy search found (R-167, design 159): the
+ * server function's own shape, handed down from the route.
+ */
+export type DecideMatch = (input: {
+  data: GarmentMatchActionValues;
+}) => Promise<unknown>;
+
+function matchKey(match: PhotoMatch): string {
+  return match.photoKey;
+}
+
+/**
+ * The list, or the sentence that stands in for it. A garment match taken
+ * down leaves it, as a decided Review row does (`useSettled`).
+ */
+function Matches({
+  found,
+  decide,
+}: Readonly<{
+  found: Found;
+  decide: DecideMatch | undefined;
+}>): JSX.Element {
+  const { remaining, settle } = useSettled(found.matches, matchKey);
   if (!found.fingerprinted) {
     return (
       <span className="text-micro text-quiet">
@@ -65,7 +96,7 @@ function Matches({ found }: Readonly<{ found: Found }>): JSX.Element {
   }
   return (
     <ul className="m-0 flex list-none flex-wrap gap-3 p-0">
-      {found.matches.map((match) => (
+      {remaining.map((match) => (
         <li key={match.photoKey} className="flex flex-col gap-1">
           <Thumbnail match={match} />
           <span className="text-quiet">
@@ -81,9 +112,47 @@ function Matches({ found }: Readonly<{ found: Found }>): JSX.Element {
             ) : undefined}
           </span>
           <Owner handle={match.handle} />
+          <GarmentDecision
+            match={match}
+            decide={decide}
+            onSettled={() => {
+              settle(match.photoKey);
+            }}
+          />
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * A garment match's takedown (R-167, design 159): a kit match is acted on
+ * from its kit's page, but a garment has no page, so its tile carries the
+ * bar a garment row on Review has — the reason, Remove (which tells its
+ * owner) and Remove as suspected CSAM (which tells nobody) — with no
+ * Approve, since nothing queued it. Nothing for a kit match, or where no
+ * takedown was handed down.
+ */
+function GarmentDecision({
+  match,
+  decide,
+  onSettled,
+}: Readonly<{
+  match: PhotoMatch;
+  decide: DecideMatch | undefined;
+  onSettled: () => void;
+}>): JSX.Element | undefined {
+  if (decide === undefined || match.kind !== "garment") return undefined;
+  return (
+    <RemovalDecision
+      schema={garmentMatchActionInput}
+      subject={{ itemId: match.id }}
+      act={(values) => decide({ data: values })}
+      canApprove={false}
+      subjectType="garment"
+      owner={match.handle}
+      onSettled={onSettled}
+    />
   );
 }
 
@@ -95,9 +164,8 @@ function distanceLabel(distance: number): string {
 }
 
 /**
- * Whose the photo is: their @handle, opening them in D8, where a garment
- * that has to go is reached too. A runner with no handle cannot be
- * searched for there, so nothing is offered.
+ * Whose the photo is: their @handle, opening them in D8. A runner with no
+ * handle cannot be searched for there, so nothing is offered.
  */
 function Owner({
   handle,

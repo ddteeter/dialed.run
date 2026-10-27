@@ -25,6 +25,7 @@ describe("emailTemplateSchema", () => {
       { kind: "run_reminder", landedAt: "6:58 AM", runs: 3 },
       { kind: "content_removed", subject: "photo", reason: "it's spam" },
       { kind: "content_removed", subject: "entry", reason: "it's spam" },
+      { kind: "content_removed", subject: "garment", reason: "it's spam" },
       { kind: "account_closed", reason: "spam" },
       { kind: "account_closed", reason: "csam", namesNoReason: true },
       {
