@@ -519,9 +519,11 @@ async function fetchUserEntryItemRows(
   return (
     db
       .select({
+        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; fetchUserEntryItemRows reads a runner's worn items with each run's verdict and distance and the item's retired flag
         entryId: outfitEntries.id,
         itemId: outfitEntryItems.itemId,
         createdAt: outfitEntries.createdAt,
+        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; fetchUserEntryItemRows reads a runner's worn items with each run's verdict and distance and the item's retired flag
         verdict: outfitEntries.verdict,
         distanceM: runs.distanceM,
         retired: wardrobeItems.retired,
@@ -529,6 +531,7 @@ async function fetchUserEntryItemRows(
       .from(outfitEntries)
       .innerJoin(
         outfitEntryItems,
+        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; fetchUserEntryItemRows reads a runner's worn items with each run's verdict and distance and the item's retired flag
         eq(outfitEntryItems.entryId, outfitEntries.id),
       )
       .innerJoin(runs, eq(runs.id, outfitEntries.runId))

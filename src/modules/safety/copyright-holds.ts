@@ -525,9 +525,12 @@ export async function heldCopyrightContent(db: Db) {
       subjectId: copyrightHolds.subjectId,
       ownerId: copyrightHolds.ownerId,
       strikes: strikesOf(copyrightHolds.ownerId),
+      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; heldCopyrightContent reads the hidden holds with the notice that hid them, a join only copyright holds have
       notice: moderationActions.reason,
+      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; heldCopyrightContent reads the hidden holds with the notice that hid them, a join only copyright holds have
       hiddenAt: copyrightHolds.hiddenAt,
       purgeAt: copyrightHolds.purgeAt,
+      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; heldCopyrightContent reads the hidden holds with the notice that hid them, a join only copyright holds have
       counterNoticeAt: copyrightHolds.counterNoticeAt,
       restoreAt: copyrightHolds.restoreAt,
       courtActionAt: copyrightHolds.courtActionAt,

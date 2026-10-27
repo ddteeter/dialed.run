@@ -49,6 +49,7 @@ export async function garmentBandCount(
   // (entry_id, item_id) pair index: an item-only filter would scan every
   // runner's kit rows.
   const worn = await db
+    // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; garmentBandCount reads one garment's verdicted runs for its band counts
     .select({ runId: outfitEntries.runId, verdict: outfitEntries.verdict })
     .from(outfitEntries)
     .innerJoin(

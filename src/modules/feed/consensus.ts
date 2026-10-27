@@ -255,6 +255,7 @@ async function groupsByRunner(
   // statement. The join
   // brings each garment row its runner, so no row has to look one up.
   const itemRows = await readInChunks(entryIds, (chunk) =>
+    // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; groupsByRunner reads which runner wore each item in a chunk of entries for the conditions consensus
     database
       .select({
         itemId: outfitEntryItems.itemId,

@@ -11,7 +11,7 @@ export {
   type ReminderJob,
 } from "./queue-messages";
 export { stravaApiFromEnv } from "./strava/api-from-env";
-export { runsAwaitingVerdict } from "./awaiting-verdict";
+export { runsAwaitingVerdict, runsWithEntry } from "./awaiting-verdict";
 export { runCountsOf } from "./counts";
 export { pruneStravaIds } from "./strava/prune";
 export {

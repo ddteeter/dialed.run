@@ -22,9 +22,10 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { outfitEntries, runs } from "../../db/schema-core";
+import { runs } from "../../db/schema-core";
 import { coreDb } from "../../env";
 import { ulidSchema } from "../../lib/ids";
+import { runsWithEntry } from "../runs";
 import type { Conditions } from "./conditions";
 import { observationsForRuns } from "./conditions";
 import { pickerGroups } from "./picker";
@@ -59,20 +60,7 @@ export interface AttachContext {
  * deserve on a screen that only ever shows your own.
  */
 async function ownRun(userId: string, runId: string) {
-  const [run] = await coreDb()
-    .select({
-      id: runs.id,
-      lat: runs.lat,
-      lng: runs.lng,
-      startedAt: runs.startedAt,
-      durationS: runs.durationS,
-      distanceM: runs.distanceM,
-      // A run has at most one entry (UNIQUE `entries_run`), so the join
-      // never multiplies the row; the probe is that index.
-      entryId: outfitEntries.id,
-    })
-    .from(runs)
-    .leftJoin(outfitEntries, eq(outfitEntries.runId, runs.id))
+  const [run] = await runsWithEntry(coreDb())
     .where(and(eq(runs.id, runId), eq(runs.userId, userId)))
     .limit(1);
   return run;

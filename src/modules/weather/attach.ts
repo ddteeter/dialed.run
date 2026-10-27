@@ -301,8 +301,10 @@ interface RetryCronResult {
  */
 export async function retryPendingWeather(): Promise<RetryCronResult> {
   const db = coreDb();
+  // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; retryPendingWeather reads the runs still waiting for weather with when their import arrived
   const candidates = await db
     .select({
+      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; retryPendingWeather reads the runs still waiting for weather with when their import arrived
       id: runs.id,
       startedAt: runs.startedAt,
       importCreatedAt: imports.createdAt,

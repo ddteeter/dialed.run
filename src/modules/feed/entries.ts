@@ -47,6 +47,7 @@ import { bandFloorC } from "../../lib/contracts/temperature";
 import type { Conditions } from "./conditions";
 import { observationsForEntries, observationsForRuns } from "./conditions";
 import { judgedFeelsLikeC } from "./judged-conditions";
+import { recentOwnEntries } from "./own-history";
 import { hasReacted, usefulCount } from "./reactions";
 import { audienceAsChosen, defaultAudienceFor } from "./share-default";
 import { nowSeconds } from "../../lib/now";
@@ -449,19 +450,10 @@ export async function itemBandWearStat(
 ): Promise<{ worn: number; total: number }> {
   // The band filter below genuinely cannot move into SQL: the band comes
   // from a weather observation in DIALED_WEATHER, and DIALED_CORE cannot
-  // join across databases (CLAUDE.md §D1 query discipline). The ORDER BY
-  // is not decorative — LIMIT without it makes "the 200 rows we looked at"
-  // depend on the query plan.
-  const own = await db()
-    .select({
-      id: outfitEntries.id,
-      runId: outfitEntries.runId,
-      verdict: outfitEntries.verdict,
-    })
-    .from(outfitEntries)
-    .where(eq(outfitEntries.userId, userId))
-    .orderBy(desc(outfitEntries.createdAt))
-    .limit(200);
+  // join across databases (CLAUDE.md §D1 query discipline). So the walk
+  // is over the runner's last HISTORY_LIMIT entries, the same window the
+  // prefill and the conditions history read.
+  const own = await recentOwnEntries(db(), userId);
   // Equivalent mutant: no entries means no observations and an empty
   // band, so the zeroes come out either way. The return saves the walk.
   // Stryker disable next-line ConditionalExpression

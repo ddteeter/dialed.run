@@ -152,6 +152,7 @@ export async function getImportOutcome(
   // The run comes with the import, in one read: joined on the runner too,
   // so an import can only ever carry its own runner's run.
   const [row] = await db
+    // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; getImportOutcome reads one import with the run it made, scoped to its runner
     .select({ upload: imports, run: runs })
     .from(imports)
     .leftJoin(runs, and(eq(runs.id, imports.runId), eq(runs.userId, userId)))

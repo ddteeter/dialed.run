@@ -36,10 +36,13 @@ export function recentOwnEntries(
   database: DrizzleD1Database,
   userId: string,
 ): Promise<OwnEntryRow[]> {
+  // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; recentOwnEntries is the one read of a runner's last HISTORY_LIMIT entries; prefill.ts and entries.ts call it rather than copying it
   return database
     .select({
       id: outfitEntries.id,
+      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; recentOwnEntries is the one read of a runner's last HISTORY_LIMIT entries; prefill.ts and entries.ts call it rather than copying it
       runId: outfitEntries.runId,
+      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; recentOwnEntries is the one read of a runner's last HISTORY_LIMIT entries; prefill.ts and entries.ts call it rather than copying it
       verdict: outfitEntries.verdict,
       createdAt: outfitEntries.createdAt,
       moderationStatus: outfitEntries.moderationStatus,
