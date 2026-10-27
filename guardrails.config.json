@@ -533,6 +533,106 @@
       "key": "src/lib/sql/d1-session.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent mutant, proof at the site: newerBookmark's `if (a === undefined) return b` replaced by `if (false)` falls through to `b < a ? a : b`, where `b < undefined` is false and `b` is returned, the same answer. TypeScript needs the guard; the runtime does not. Whichever of the two undefined guards the comparison does not lean on is always equivalent; the other is killed. Owner's call, 2026-10-18, PR #195 review (accept newerBookmark's equivalent mutants with a grant).",
       "count": 1
+    },
+    {
+      "key": "src/lib/contracts/garments.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- each garmentBase.extend is one category's own fields in the discriminated union; categories sharing optional fields is the domain, and garmentSchema is the source every other table derives from",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
+      "count": 2
+    },
+    {
+      "key": "src/modules/account/export.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; exportData reads each table a runner owns once, in turn, for their data export; each read is a different sheet",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
+      "count": 5
+    },
+    {
+      "key": "src/modules/account/invites.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; accessDesk reads invite codes with their requests and redemptions with their accounts, for the owner's access desk",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
+      "count": 4
+    },
+    {
+      "key": "src/modules/account/purge.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; addressesOf reads every email address a runner left in each table that holds one, so purge can scrub them all",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/closet/service.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; fetchUserEntryItemRows reads a runner's worn items with each run's verdict and distance and the item's retired flag",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
+      "count": 3
+    },
+    {
+      "key": "src/modules/feed/backlog.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; ownHistory is the same window as own-history.ts's recentOwnEntries plus each run's start (wornAt), which needs the join to runs that recentOwnEntries does not make",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/consensus.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; groupsByRunner reads which runner wore each item in a chunk of entries for the conditions consensus",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/garment-bands.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; garmentBandCount reads one garment's verdicted runs for its band counts",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/feed/own-history.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; recentOwnEntries is the one read of a runner's last HISTORY_LIMIT entries; prefill.ts and entries.ts call it rather than copying it",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
+      "count": 3
+    },
+    {
+      "key": "src/modules/onboarding/profile.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; currentSettings reads one runner's settings row",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/ops/gave-up.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectFacts reads one fact per kind of gave-up subject (product name, stored page, run, import, athlete) from its own table; the two identical handle reads are already ownerHandles",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
+      "count": 6
+    },
+    {
+      "key": "src/modules/runs/awaiting-verdict.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; runsWithEntry is the one projection of a run with its entry, shared by the attach screen and the verdict backlog",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/runs/imports.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; getImportOutcome reads one import with the run it made, scoped to its runner",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/safety/blocks.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; blockedRunners reads a runner's blocks with each blocked handle, a fact no other query states",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
+      "count": 2
+    },
+    {
+      "key": "src/modules/safety/copyright-holds.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; heldCopyrightContent reads the hidden holds with the notice that hid them, a join only copyright holds have",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
+      "count": 3
+    },
+    {
+      "key": "src/modules/safety/duplicates.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; duplicateProducts reads every product with its brand to find near-duplicate names, a catalogue-wide read nothing else does",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
+      "count": 2
+    },
+    {
+      "key": "src/modules/safety/photo-matches.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- kitMatches and garmentMatches read two different photo tables against one fingerprint distance, already factored through nearestOf; kit rows carry an entry, visibility and audience a garment has no column for",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
+      "count": 3
+    },
+    {
+      "key": "src/modules/safety/quarantine.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; uploaderContextOf reads one uploader's account, profile and sessions for a quarantine record, each table once",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
+      "count": 5
+    },
+    {
+      "key": "src/modules/safety/review.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectsFor reads each kind of reported subject from its own table; the entry-owner read matches ops/owner-handles.ts but safety cannot import ops without a cycle (ops/desk.ts imports safety)",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
+      "count": 8
+    },
+    {
+      "key": "src/modules/weather/attach.ts|analyzer-ignore|// fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; retryPendingWeather reads the runs still waiting for weather with when their import arrived",
+      "reason": "Fallow 3.34 (#3491) reads the object a call receives and no longer drops a method chain, so semantic mode matches drizzle query builders over different tables and columns: 34 new clone groups on main. Each was read on both sides; the real copies were extracted in the same PR (runsWithEntry, ownerHandles, recentOwnEntries for prefill and itemBandWearStat), and what remains is the query grammar. fallow-ignore-next-line only covers a clone that starts on the next line and fallow has no block form, so the comment sits where each clone starts. Owner's call, 2026-10-26: fix where possible, suppress the rhymes inline.",
+      "count": 2
     }
   ]
 }

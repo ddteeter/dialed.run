@@ -133,8 +133,10 @@ export async function blockedRunners(
   // only the number of round trips. A LEFT JOIN has neither problem, and
   // it is left rather than inner because a blocked account may have no
   // profile row and must still appear on the roster.
+  // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; blockedRunners reads a runner's blocks with each blocked handle, a fact no other query states
   const rows = await db()
     .select({
+      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; blockedRunners reads a runner's blocks with each blocked handle, a fact no other query states
       blockedId: blocks.blockedId,
       createdAt: blocks.createdAt,
       username: userProfiles.username,

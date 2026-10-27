@@ -392,6 +392,7 @@ function involvingEither(
 async function addressesOf(db: Db, userId: string): Promise<string[]> {
   // One round trip: each read is by the runner's id, on its own index.
   const found = await db.batch([
+    // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; addressesOf reads every email address a runner left in each table that holds one, so purge can scrub them all
     db.select({ address: user.email }).from(user).where(eq(user.id, userId)),
     db
       .select({ address: inviteRedemptions.email })

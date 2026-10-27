@@ -76,16 +76,20 @@ export async function exportData(db: Db, userId: string) {
       .where(eq(runs.userId, userId))
       .orderBy(asc(runs.startedAt)),
     db
+      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; exportData reads each table a runner owns once, in turn, for their data export; each read is a different sheet
       .select()
       .from(outfitEntries)
       .where(eq(outfitEntries.userId, userId))
       .orderBy(asc(outfitEntries.createdAt)),
     db
       .select({
+        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; exportData reads each table a runner owns once, in turn, for their data export; each read is a different sheet
         id: imports.id,
         r2Key: imports.r2Key,
+        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; exportData reads each table a runner owns once, in turn, for their data export; each read is a different sheet
         status: imports.status,
         runId: imports.runId,
+        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; exportData reads each table a runner owns once, in turn, for their data export; each read is a different sheet
       })
       .from(imports)
       .where(eq(imports.userId, userId))
@@ -93,6 +97,7 @@ export async function exportData(db: Db, userId: string) {
     // Every version of the terms they accepted, oldest first (D-95).
     db
       .select({
+        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; exportData reads each table a runner owns once, in turn, for their data export; each read is a different sheet
         version: termsAcceptances.version,
         acceptedAt: termsAcceptances.acceptedAt,
         how: termsAcceptances.how,

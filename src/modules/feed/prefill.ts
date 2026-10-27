@@ -15,15 +15,14 @@
  * entries (own history is small at MVP scale; still index-backed via
  * `entries_user_created`).
  */
-import { desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
-import { outfitEntries, outfitEntryItems } from "../../db/schema-core";
+import { outfitEntryItems } from "../../db/schema-core";
 import { coreDb } from "../../env";
 import { precipClassOf } from "../../lib/contracts/temperature";
 import type { Conditions } from "./conditions";
 import { conditionsAt, observationsForEntries } from "./conditions";
-
-const HISTORY_LIMIT = 200;
+import { recentOwnEntries } from "./own-history";
 
 export interface PrefillCandidate {
   entryId: string;
@@ -97,16 +96,7 @@ export async function nearestPriorEntry(
   currentConditions: Conditions,
 ): Promise<PrefillCandidate | undefined> {
   const database = coreDb();
-  const own = await database
-    .select({
-      id: outfitEntries.id,
-      runId: outfitEntries.runId,
-      createdAt: outfitEntries.createdAt,
-    })
-    .from(outfitEntries)
-    .where(eq(outfitEntries.userId, userId))
-    .orderBy(desc(outfitEntries.createdAt))
-    .limit(HISTORY_LIMIT);
+  const own = await recentOwnEntries(database, userId);
   // Equivalent mutant: an empty `inArray` matches nothing, so the loop
   // below would find no best and answer undefined anyway. The return saves
   // two queries on every attach by a runner with no history — which is

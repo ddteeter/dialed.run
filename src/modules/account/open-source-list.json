@@ -1157,9 +1157,9 @@
     },
     {
       "name": "fallow",
-      "version": "3.23.0",
+      "version": "3.34.1",
       "licence": "MIT",
-      "project": "https://docs.fallow.tools"
+      "project": "https://fallow.tools/docs/"
     },
     {
       "name": "guardrails-core",

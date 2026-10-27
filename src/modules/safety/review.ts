@@ -404,12 +404,15 @@ async function subjectsFor(
     productRows,
     garmentRows,
   ] = await database.batch([
+    // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectsFor reads each kind of reported subject from its own table; the entry-owner read matches ops/owner-handles.ts but safety cannot import ops without a cycle (ops/desk.ts imports safety)
     database
       .select({
         id: entryPhotos.id,
+        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectsFor reads each kind of reported subject from its own table; the entry-owner read matches ops/owner-handles.ts but safety cannot import ops without a cycle (ops/desk.ts imports safety)
         photoKey: entryPhotos.photoKey,
         owner: userProfiles.username,
       })
+      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectsFor reads each kind of reported subject from its own table; the entry-owner read matches ops/owner-handles.ts but safety cannot import ops without a cycle (ops/desk.ts imports safety)
       .from(entryPhotos)
       // LEFT, both: the author is a line of text and the photo is the
       // thing being judged. `entry_photos.entry_id` carries no foreign
@@ -417,17 +420,21 @@ async function subjectsFor(
       // join would hide the very image the reviewer is asked about,
       // where a left one shows it and simply names nobody.
       .leftJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
+      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectsFor reads each kind of reported subject from its own table; the entry-owner read matches ops/owner-handles.ts but safety cannot import ops without a cycle (ops/desk.ts imports safety)
       .leftJoin(userProfiles, eq(userProfiles.userId, outfitEntries.userId))
       .where(inArray(entryPhotos.id, subjectIds)),
     database
       .select({
+        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectsFor reads each kind of reported subject from its own table; the entry-owner read matches ops/owner-handles.ts but safety cannot import ops without a cycle (ops/desk.ts imports safety)
         entryId: entryPhotos.entryId,
         photoKey: entryPhotos.photoKey,
       })
       .from(entryPhotos)
       .where(inArray(entryPhotos.entryId, subjectIds))
       .orderBy(asc(entryPhotos.position)),
+    // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectsFor reads each kind of reported subject from its own table; the entry-owner read matches ops/owner-handles.ts but safety cannot import ops without a cycle (ops/desk.ts imports safety)
     database
+      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectsFor reads each kind of reported subject from its own table; the entry-owner read matches ops/owner-handles.ts but safety cannot import ops without a cycle (ops/desk.ts imports safety)
       .select({ id: outfitEntries.id, owner: userProfiles.username })
       .from(outfitEntries)
       .leftJoin(userProfiles, eq(userProfiles.userId, outfitEntries.userId))
@@ -438,6 +445,7 @@ async function subjectsFor(
         username: userProfiles.username,
         screen: userProfiles.usernameScreen,
       })
+      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectsFor reads each kind of reported subject from its own table; the entry-owner read matches ops/owner-handles.ts but safety cannot import ops without a cycle (ops/desk.ts imports safety)
       .from(userProfiles)
       .where(inArray(userProfiles.userId, subjectIds)),
     database
