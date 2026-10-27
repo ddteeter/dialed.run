@@ -294,6 +294,7 @@ export async function accessDesk(db: Db): Promise<AccessDesk> {
         id: inviteCodes.id,
         code: inviteCodes.code,
         label: requestLabelOr(inviteCodes.label),
+        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; accessDesk reads invite codes with their requests and redemptions with their accounts, for the owner's access desk
         maxUses: inviteCodes.maxUses,
         createdAt: inviteCodes.createdAt,
         revokedAt: inviteCodes.revokedAt,
@@ -301,11 +302,14 @@ export async function accessDesk(db: Db): Promise<AccessDesk> {
       .from(inviteCodes)
       .leftJoin(accessRequests, eq(accessRequests.id, inviteCodes.requestId))
       .orderBy(desc(inviteCodes.createdAt))
+      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; accessDesk reads invite codes with their requests and redemptions with their accounts, for the owner's access desk
       .limit(DESK_LIST_LIMIT),
     // Only accounts that exist — a claim whose account never arrived
     // spent nothing anybody can name — and only for the codes listed.
+    // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; accessDesk reads invite codes with their requests and redemptions with their accounts, for the owner's access desk
     db
       .select({
+        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; accessDesk reads invite codes with their requests and redemptions with their accounts, for the owner's access desk
         codeId: inviteRedemptions.codeId,
         username: userProfiles.username,
         email: user.email,

@@ -62,8 +62,10 @@ export async function duplicateProducts(
 ): Promise<DuplicateCandidate[]> {
   const rows = await db()
     .select({
+      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; duplicateProducts reads every product with its brand to find near-duplicate names, a catalogue-wide read nothing else does
       id: products.id,
       name: products.name,
+      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; duplicateProducts reads every product with its brand to find near-duplicate names, a catalogue-wide read nothing else does
       normalizedName: products.normalizedName,
       brandId: products.brandId,
       brandName: brands.name,

@@ -71,17 +71,22 @@ export async function uploaderContextOf(
 ): Promise<string> {
   const [account, profile, sessions] = await db.batch([
     db
+      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; uploaderContextOf reads one uploader's account, profile and sessions for a quarantine record, each table once
       .select({ email: user.email, createdAt: user.createdAt })
+      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; uploaderContextOf reads one uploader's account, profile and sessions for a quarantine record, each table once
       .from(user)
       .where(eq(user.id, uploaderId)),
     db
       .select({ username: userProfiles.username })
       .from(userProfiles)
       .where(eq(userProfiles.userId, uploaderId)),
+    // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; uploaderContextOf reads one uploader's account, profile and sessions for a quarantine record, each table once
     db
       .select({
         createdAt: session.createdAt,
+        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; uploaderContextOf reads one uploader's account, profile and sessions for a quarantine record, each table once
         updatedAt: session.updatedAt,
+        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; uploaderContextOf reads one uploader's account, profile and sessions for a quarantine record, each table once
         expiresAt: session.expiresAt,
         ipAddress: session.ipAddress,
         userAgent: session.userAgent,

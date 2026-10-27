@@ -126,6 +126,7 @@ async function ownHistory(userId: string): Promise<
   return coreDb()
     .select({
       id: outfitEntries.id,
+      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; ownHistory is the same window as own-history.ts's recentOwnEntries plus each run's start (wornAt), which needs the join to runs that recentOwnEntries does not make
       runId: outfitEntries.runId,
       createdAt: outfitEntries.createdAt,
       wornAt: runs.startedAt,

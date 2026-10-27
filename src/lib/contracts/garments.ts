@@ -506,6 +506,7 @@ export const garmentSchema = z.discriminatedUnion("category", [
     category: z.literal("headwear"),
     type: z.enum(garmentTypesByCategory.headwear).optional(),
     weight: weightSchema.optional(),
+    // fallow-ignore-next-line code-duplication -- each garmentBase.extend is one category's own fields in the discriminated union; categories sharing optional fields is the domain, and garmentSchema is the source every other table derives from
     fabric: fabricSchema.optional(),
     windResistant: z.boolean().optional(),
   }),
@@ -519,6 +520,7 @@ export const garmentSchema = z.discriminatedUnion("category", [
     category: z.literal("gloves"),
     type: z.enum(garmentTypesByCategory.gloves).optional(),
     weight: weightSchema.optional(),
+    // fallow-ignore-next-line code-duplication -- each garmentBase.extend is one category's own fields in the discriminated union; categories sharing optional fields is the domain, and garmentSchema is the source every other table derives from
     windResistant: z.boolean().optional(),
     waterResistant: z.boolean().optional(),
   }),
