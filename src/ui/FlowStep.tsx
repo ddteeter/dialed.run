@@ -17,7 +17,7 @@ export type FlowDirection = "forward" | "back";
  * the router now owns, which is two moves on one navigation. So entering
  * carries no class: the rise is the move.
  */
-export type FlowArrival = FlowDirection | "entering";
+type FlowArrival = FlowDirection | "entering";
 
 /**
  * Forward unless the step number went down.

@@ -128,17 +128,7 @@ describe("respondInD1Scope", () => {
     await db.insert(userProfiles).values({ userId });
     const { deps, deferred, captured } = harness();
     const failure = new Error("store failed");
-    const fail = (): never => {
-      throw failure;
-    };
-    const broken: D1Database = {
-      prepare: fail,
-      batch: fail,
-      exec: fail,
-      withSession: fail,
-      dump: fail,
-    };
-    const failing = { ...deps, db: drizzle(broken) };
+    const failing = { ...deps, db: drizzle(new BrokenDatabase(failure)) };
     const response = await respondInD1Scope(
       requestWith(),
       async () => {
@@ -229,3 +219,29 @@ describe("d1RequestDepsFromEnv", () => {
     expect(row?.value).toBe(DEVICE);
   });
 });
+
+// A class, not an object literal: D1Database still requires the deprecated
+// `dump`, and only a class method implements it without reading as a use.
+class BrokenDatabase implements D1Database {
+  constructor(private readonly failure: Error) {}
+
+  prepare(): never {
+    throw this.failure;
+  }
+
+  batch(): never {
+    throw this.failure;
+  }
+
+  exec(): never {
+    throw this.failure;
+  }
+
+  withSession(): never {
+    throw this.failure;
+  }
+
+  dump(): never {
+    throw this.failure;
+  }
+}
