@@ -23,24 +23,32 @@ Desk D7. The CSP (OPS-8) is built but still **report-only**.
 
 ## What is left
 
-| id                | status      | remaining work                                                                                                                                                     |
-| ----------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| STR-9             | partial     | Nothing sends the `run_reminder` email. The template, the preference and the outbox fields exist; `runs/consumer.ts` writes only the bell row.                     |
-| SAF-4             | partial     | `AccountClosed` is mounted nowhere, and `ACCOUNT_CLOSED` is mapped in neither `auth/credentials.ts` nor `google-button.tsx`. A banned runner sees a generic error. |
-| FEED-3            | partial     | `capped()` says "9+ new" where round 27 #25 says "more than 9 new" (R-141(1)). 14 routes pass only `unreadCount`, so their bell shows a dot and no number.         |
-| FEED-9            | partial     | E1's compact line and N's privacy-card wording are missing (`design-deltas.md:3848`, "Not built").                                                                 |
-| R-124 / D-98      | not started | Change password calls Better Auth from the client and skips `auth/password-check.ts`. It needs a server function with the per-runner lockout.                      |
-| D-108 (D)         | not started | "Count my runs in anonymous totals": no column and no setting.                                                                                                     |
-| D-108 (E)         | not started | The three in-app disclosures: A3's PRIVATE sub-line, the Settings copy, and Au2's legal sentence.                                                                  |
-| D-108 (d) region  | not started | Settings › Profile › Region: no columns, no setting, not in `profile.csv`.                                                                                         |
-| R-134             | not started | The nightly guide artifact. **It needs a `wrangler.jsonc` binding.**                                                                                               |
-| R-135             | not started | Export's runs sheet lacks `moving_s` and `elevation_gain_m`. The columns have existed since 0047.                                                                  |
-| R-142             | done (C2)   | Deletes on disconnect, deauthorize and purge were already built; C2 made the 7-day prune count from the first failure.                                             |
-| R-140             | not started | Takedown wording: the barrel export, the `content_removed` email variant, and `notice` passing `input.action`.                                                     |
-| R-145 (c) / D-117 | not started | The Review row should list the runner's other photos. (a) and (d) ride #169.                                                                                       |
-| OPS-8             | report-only | Enforcing it means flipping `CSP_HEADER` in `ops/security-headers.ts` and the copy in `public/_headers`.                                                           |
+**Status (2026-10-27):** lanes A (#183), F (#184), C (#186), D1 (#187)
+and D2 (#188) have merged, and so have the legal-readiness code lanes
+C1–C9 and C12–C17 (`legal-readiness-plan.md` Step 3). What remains in
+code is lane B (R-134, with C10) soon after public, C11 (PhotoDNA) before
+public once Microsoft approves, and the CSP flip at the public gate. The
+"remaining work" column below is the 2026-10-11 audit, kept as written.
 
-Drift worth folding in while a lane is in the file:
+| id                | status                           | remaining work                                                                                                                                                     |
+| ----------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| STR-9             | done (#187)                      | Nothing sends the `run_reminder` email. The template, the preference and the outbox fields exist; `runs/consumer.ts` writes only the bell row.                     |
+| SAF-4             | done (#186)                      | `AccountClosed` is mounted nowhere, and `ACCOUNT_CLOSED` is mapped in neither `auth/credentials.ts` nor `google-button.tsx`. A banned runner sees a generic error. |
+| FEED-3            | done (#187)                      | `capped()` says "9+ new" where round 27 #25 says "more than 9 new" (R-141(1)). 14 routes pass only `unreadCount`, so their bell shows a dot and no number.         |
+| FEED-9            | done (#187)                      | E1's compact line and N's privacy-card wording are missing (`design-deltas.md:3848`, "Not built").                                                                 |
+| R-124 / D-98      | done (#184)                      | Change password calls Better Auth from the client and skips `auth/password-check.ts`. It needs a server function with the per-runner lockout.                      |
+| D-108 (D)         | done (#183)                      | "Count my runs in anonymous totals": no column and no setting.                                                                                                     |
+| D-108 (E)         | done (#183)                      | The three in-app disclosures: A3's PRIVATE sub-line, the Settings copy, and Au2's legal sentence.                                                                  |
+| D-108 (d) region  | dropped (D-120)                  | Settings › Profile › Region: no columns, no setting, not in `profile.csv`.                                                                                         |
+| R-134             | after public (lane B)            | The nightly guide artifact. **It needs a `wrangler.jsonc` binding.**                                                                                               |
+| R-135             | done (#183)                      | Export's runs sheet lacks `moving_s` and `elevation_gain_m`. The columns have existed since 0047.                                                                  |
+| R-142             | done (C2, #184)                  | Deletes on disconnect, deauthorize and purge were already built; C2 made the 7-day prune count from the first failure.                                             |
+| R-140             | done (#188)                      | Takedown wording: the barrel export, the `content_removed` email variant, and `notice` passing `input.action`.                                                     |
+| R-145 (c) / D-117 | done (#188)                      | The Review row should list the runner's other photos. (a) and (d) ride #169.                                                                                       |
+| OPS-8             | report-only; flip drafted (#186) | Enforcing it means flipping `CSP_HEADER` in `ops/security-headers.ts` and the copy in `public/_headers`.                                                           |
+
+Drift worth folding in while a lane is in the file (all three fixed in
+#186 and #187):
 
 - STR-13: three private Intl date formatters remain (`AccountClosed.tsx:12`,
   `ops/components/Today.tsx:48`, `closet/retired-label.ts:17`).
@@ -296,6 +304,8 @@ gate (decision 2).
   - STR-9, SAF-4, FEED-3 and FEED-9 are marked done;
   - FEED-14 and open decision 7 are marked superseded by D-107;
   - the register rows close in `docs/deferred.md`.
+
+  Done 2026-10-27: `development-plan.md` now has a status column.
 
 ## Not in this plan
 
