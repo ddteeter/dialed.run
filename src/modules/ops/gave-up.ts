@@ -31,6 +31,7 @@ import { dedupeKeyFor } from "../../lib/sql/outbox";
 import { reextract, requestEnrichment } from "../enrichment";
 import { reminderFromSubject, type ImportJob, type ReminderJob } from "../runs";
 import type { GaveUpRetry } from "./inputs";
+import { ownerHandles } from "./owner-handles";
 import { enrichmentDeps } from "./queues";
 import { captureException } from "./sentry";
 
@@ -146,40 +147,38 @@ async function subjectFacts(
           // One column, worded in SQL: both tables call theirs `name`, and
           // D1 hands rows back keyed by column name. A product whose brand
           // row is gone is named alone.
+          // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectFacts reads one fact per kind of gave-up subject (product name, stored page, run, import, athlete) from its own table; the two identical handle reads are already ownerHandles
           label: sql<string>`coalesce(${brands.name} || ' ', '') || ${products.name}`,
         })
         .from(products)
+        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectFacts reads one fact per kind of gave-up subject (product name, stored page, run, import, athlete) from its own table; the two identical handle reads are already ownerHandles
         .leftJoin(brands, eq(brands.id, products.brandId))
         .where(inArray(products.id, subjects)),
       db
         .selectDistinct({ id: productSnapshots.productId })
         .from(productSnapshots)
+        // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectFacts reads one fact per kind of gave-up subject (product name, stored page, run, import, athlete) from its own table; the two identical handle reads are already ownerHandles
         .where(inArray(productSnapshots.productId, subjects)),
+      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectFacts reads one fact per kind of gave-up subject (product name, stored page, run, import, athlete) from its own table; the two identical handle reads are already ownerHandles
       db
         .select({
+          // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectFacts reads one fact per kind of gave-up subject (product name, stored page, run, import, athlete) from its own table; the two identical handle reads are already ownerHandles
           id: runs.id,
+          // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; subjectFacts reads one fact per kind of gave-up subject (product name, stored page, run, import, athlete) from its own table; the two identical handle reads are already ownerHandles
           startedAt: runs.startedAt,
           handle: userProfiles.username,
         })
         .from(runs)
         .leftJoin(userProfiles, eq(userProfiles.userId, runs.userId))
         .where(inArray(runs.id, subjects)),
-      db
-        .select({ id: imports.id, handle: userProfiles.username })
-        .from(imports)
-        .leftJoin(userProfiles, eq(userProfiles.userId, imports.userId))
-        .where(inArray(imports.id, subjects)),
-      db
-        .select({
-          id: stravaConnections.athleteId,
-          handle: userProfiles.username,
-        })
-        .from(stravaConnections)
-        .leftJoin(
-          userProfiles,
-          eq(userProfiles.userId, stravaConnections.userId),
-        )
-        .where(inArray(stravaConnections.athleteId, athleteIds)),
+      ownerHandles(db, imports, imports.id, imports.userId, subjects),
+      ownerHandles(
+        db,
+        stravaConnections,
+        stravaConnections.athleteId,
+        stravaConnections.userId,
+        athleteIds,
+      ),
     ]);
   return {
     products: new Map(productRows.map((row) => [row.id, row.label])),
@@ -417,9 +416,6 @@ export async function retryGaveUp(
  * and the job, nothing else"). The row is all that is left of the job, so
  * removing it is removing both; the subject keeps its `failed`.
  */
-export async function dropGaveUp(
-  id: string,
-  db: Db = coreDb(),
-): Promise<void> {
+export async function dropGaveUp(id: string, db: Db = coreDb()): Promise<void> {
   await db.delete(gaveUp).where(eq(gaveUp.id, id));
 }

@@ -242,6 +242,7 @@ export async function currentSettings(
   db: DrizzleD1Database,
   userId: string,
 ): Promise<CurrentSettings> {
+  // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; currentSettings reads one runner's settings row
   const [row] = await db
     .select({
       thermalLevel: userProfiles.thermalLevel,

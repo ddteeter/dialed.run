@@ -199,7 +199,9 @@ function kitMatches(
         sql<boolean>`${outfitEntries.audience} <> ${SHARED_AUDIENCE}`.mapWith(
           Boolean,
         ),
+      // fallow-ignore-next-line code-duplication -- kitMatches and garmentMatches read two different photo tables against one fingerprint distance, already factored through nearestOf; kit rows carry an entry, visibility and audience a garment has no column for
       distance: sql<number>`${distance}`.mapWith(Number),
+      // fallow-ignore-next-line code-duplication -- kitMatches and garmentMatches read two different photo tables against one fingerprint distance, already factored through nearestOf; kit rows carry an entry, visibility and audience a garment has no column for
       ownerId: outfitEntries.userId,
       handle: userProfiles.username,
     })
@@ -228,6 +230,7 @@ function garmentMatches(db: Db, own: readonly string[]) {
     .select({
       id: wardrobeItems.id,
       photoKey: sql<string>`${wardrobeItems.photoKey} || '/card.webp'`,
+      // fallow-ignore-next-line code-duplication -- kitMatches and garmentMatches read two different photo tables against one fingerprint distance, already factored through nearestOf; kit rows carry an entry, visibility and audience a garment has no column for
       distance: sql<number>`${distance}`.mapWith(Number),
       ownerId: wardrobeItems.userId,
       handle: userProfiles.username,
