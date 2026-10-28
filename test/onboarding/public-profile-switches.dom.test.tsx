@@ -76,7 +76,9 @@ describe("the PUBLIC PROFILE switches", () => {
       "text-small",
       "text-muted",
     );
-    expect(screen.queryByRole("checkbox", { name: "Show my closet" })).toBeNull();
+    expect(
+      screen.queryByRole("checkbox", { name: "Show my closet" }),
+    ).toBeNull();
     expect(screen.queryByText(CLOSET_LINE)).toBeNull();
   });
 
@@ -87,6 +89,9 @@ describe("the PUBLIC PROFILE switches", () => {
     expect(profile).toHaveAccessibleDescription(ON_LINE);
     const closet = screen.getByRole("checkbox", { name: "Show my closet" });
     expect(closet).toBeChecked();
+    // Each field by the column it saves.
+    expect(profile).toHaveAttribute("name", "publicProfile");
+    expect(closet).toHaveAttribute("name", "publicCloset");
     expect(closet).toHaveAccessibleDescription(CLOSET_LINE);
     expect(screen.getByText(CLOSET_LINE)).toHaveClass(
       "m-0",
@@ -160,10 +165,16 @@ describe("the PUBLIC PROFILE switches", () => {
   });
 
   it("show the caller's notice, in ink, and nothing without one", () => {
-    const { rerender } = render(switches());
+    const { container, rerender } = render(switches());
     expect(screen.queryByText(MOVED)).toBeNull();
+    // Not even an empty line: the profile's own line is the only one.
+    expect(container.querySelectorAll("p")).toHaveLength(1);
     rerender(switches({ notice: MOVED }));
-    expect(screen.getByText(MOVED)).toHaveClass("m-0", "text-small", "text-ink");
+    expect(screen.getByText(MOVED)).toHaveClass(
+      "m-0",
+      "text-small",
+      "text-ink",
+    );
   });
 });
 
@@ -180,7 +191,9 @@ const PUBLIC_DEFAULT: CurrentSettings = {
 
 function privacy(
   current: CurrentSettings,
-  savePublicProfile: Parameters<typeof SettingsSectionPage>[0]["savePublicProfile"],
+  savePublicProfile: Parameters<
+    typeof SettingsSectionPage
+  >[0]["savePublicProfile"],
   saveSharing: Parameters<typeof SettingsSectionPage>[0]["saveSharing"] = vi
     .fn()
     .mockResolvedValue(undefined),
@@ -213,10 +226,13 @@ describe("Privacy with the PUBLIC PROFILE group (round 41 #86b)", () => {
     const user = userEvent.setup();
     const save = vi
       .fn()
-      .mockResolvedValue(state({ publicCloset: true, defaultAudience: "runners" }));
+      .mockResolvedValue(
+        state({ publicCloset: true, defaultAudience: "runners" }),
+      );
     await renderWithRouter(privacy(PUBLIC_DEFAULT, save));
     expect(rowValues()).toStrictEqual(["private", "runners", "world"]);
     expect(screen.getByRole("radio", { name: "Public" })).toBeChecked();
+    expect(screen.queryByText(MOVED)).toBeNull();
 
     await user.click(screen.getByRole("checkbox", { name: "Public profile" }));
 
@@ -226,12 +242,16 @@ describe("Privacy with the PUBLIC PROFILE group (round 41 #86b)", () => {
     expect(
       screen.getByRole("checkbox", { name: "Public profile" }),
     ).not.toBeChecked();
-    expect(screen.queryByRole("checkbox", { name: "Show my closet" })).toBeNull();
+    expect(
+      screen.queryByRole("checkbox", { name: "Show my closet" }),
+    ).toBeNull();
   });
 
   it("says nothing moved when the default was not PUBLIC", async () => {
     const user = userEvent.setup();
-    const save = vi.fn().mockResolvedValue(state({ defaultAudience: "private" }));
+    const save = vi
+      .fn()
+      .mockResolvedValue(state({ defaultAudience: "private" }));
     await renderWithRouter(
       privacy({ ...PUBLIC_DEFAULT, defaultAudience: "private" }, save),
     );
@@ -271,7 +291,9 @@ describe("Privacy with the PUBLIC PROFILE group (round 41 #86b)", () => {
     const user = userEvent.setup();
     const save = vi
       .fn()
-      .mockResolvedValue(state({ publicProfile: true, defaultAudience: "private" }));
+      .mockResolvedValue(
+        state({ publicProfile: true, defaultAudience: "private" }),
+      );
     const saveSharing = vi.fn().mockResolvedValue(undefined);
     await renderWithRouter(
       privacy(
@@ -305,7 +327,9 @@ describe("Privacy with the PUBLIC PROFILE group (round 41 #86b)", () => {
     const user = userEvent.setup();
     const save = vi
       .fn()
-      .mockResolvedValue(state({ publicProfile: true, defaultAudience: "runners" }));
+      .mockResolvedValue(
+        state({ publicProfile: true, defaultAudience: "runners" }),
+      );
     const saveSharing = vi.fn().mockRejectedValue(new Error("D1"));
     await renderWithRouter(
       privacy(
@@ -330,5 +354,68 @@ describe("Privacy with the PUBLIC PROFILE group (round 41 #86b)", () => {
     expect(
       screen.getByRole("checkbox", { name: "Public profile" }),
     ).toHaveAccessibleDescription(ON_LINE);
+  });
+
+  it("says nothing moved when a switch leaves a PUBLIC default where it was", async () => {
+    const user = userEvent.setup();
+    const save = vi
+      .fn()
+      .mockResolvedValue(
+        state({
+          publicProfile: true,
+          publicCloset: false,
+          defaultAudience: "world",
+        }),
+      );
+    await renderWithRouter(privacy(PUBLIC_DEFAULT, save));
+    await user.click(screen.getByRole("checkbox", { name: "Show my closet" }));
+    await waitFor(() => {
+      expect(
+        screen.getByRole("checkbox", { name: "Show my closet" }),
+      ).not.toBeChecked();
+    });
+    expect(screen.queryByText(MOVED)).toBeNull();
+  });
+
+  it("says nothing moved when the default changed but was never PUBLIC", async () => {
+    // A default changed in another tab comes back with the switch; only
+    // PUBLIC going to SHARED is this switch's doing.
+    const user = userEvent.setup();
+    const save = vi
+      .fn()
+      .mockResolvedValue(state({ defaultAudience: "runners" }));
+    await renderWithRouter(
+      privacy({ ...PUBLIC_DEFAULT, defaultAudience: "private" }, save),
+    );
+    await user.click(screen.getByRole("checkbox", { name: "Public profile" }));
+    await waitFor(() => {
+      expect(screen.getByRole("radio", { name: "Shared" })).toBeChecked();
+    });
+    expect(screen.queryByText(MOVED)).toBeNull();
+  });
+
+  it("knows a PUBLIC default saved on the page, so turning the profile off says it moved", async () => {
+    const user = userEvent.setup();
+    const save = vi
+      .fn()
+      .mockResolvedValue(state({ defaultAudience: "runners" }));
+    const saveSharing = vi.fn().mockResolvedValue(undefined);
+    await renderWithRouter(
+      privacy(
+        { ...PUBLIC_DEFAULT, defaultAudience: "runners" },
+        save,
+        saveSharing,
+      ),
+    );
+    await user.click(screen.getByRole("radio", { name: "Public" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(saveSharing).toHaveBeenCalledWith({
+        data: { defaultAudience: "world" },
+      });
+    });
+
+    await user.click(screen.getByRole("checkbox", { name: "Public profile" }));
+    expect(await screen.findByText(MOVED)).toBeVisible();
   });
 });

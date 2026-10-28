@@ -633,6 +633,24 @@ describe("EntryDetail: the owner meta (round 41 #86a)", () => {
     }
   });
 
+  it("says what happened in the board's plain words, on a link-styled press", async () => {
+    expect(LINK_COPIED).toBe("Link copied.");
+    expect(LINK_NOT_COPIED).toBe("Link not copied.");
+    await renderFeedScreen(detail({ audience: "world" }, { viewerId: OWNER }));
+    for (const press of [
+      screen.getByRole("button", { name: "Copy link" }),
+      screen.getByRole("link", { name: "Change" }),
+    ]) {
+      expect(press).toHaveClass(
+        "target",
+        "text-small",
+        "font-semibold",
+        "text-ink",
+        "underline",
+      );
+    }
+  });
+
   it("builds the address from the origin it is given", () => {
     expect(publicKitUrl("01ENTRY", "https://app.dialed.run")).toBe(
       "https://app.dialed.run/k/01ENTRY",
