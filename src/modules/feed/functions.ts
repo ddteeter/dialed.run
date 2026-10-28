@@ -4,6 +4,7 @@
  * (and only from here) — no business logic lives in `src/routes/feed/`.
  */
 import { createServerFn } from "@tanstack/react-start";
+import { setResponseHeaders } from "@tanstack/react-start/server";
 
 import { coreDb, waitUntil } from "../../env";
 import { optionalUserId, requireUserId, verifiedUserId } from "../auth";
@@ -15,6 +16,7 @@ import {
   entryIdInput,
   feedInput,
   handleInput,
+  publicKitInput,
   itemBandStatInput,
   saveBacklogRowInput,
   searchInput,
@@ -54,6 +56,7 @@ import {
 import { decideRemovalRequest } from "./removal-requests";
 import { ownProfile, profileAtHandle, visibleRunnerHandle } from "./profiles";
 import { unitsFor } from "./units";
+import { publicKitForPage } from "./public-kit";
 import { setUsefulReaction } from "./reactions";
 import { searchRunners } from "./search";
 import { nowSeconds } from "../../lib/now";
@@ -162,6 +165,20 @@ export const entryDetailQuery = createServerFn({ method: "GET" })
     const viewerId = await requireUserId();
     return entryDetailForViewer(data.entryId, viewerId);
   });
+
+// ---- The public kit (round 41 #86c, D-149) -----------------------------------
+
+// For anyone, signed in or not, and the same for both (D-152): no session
+// is read, so nothing about the viewer can reach the page. The page's cache
+// headers go on whatever response carries it — the document when rendered
+// on the server, this call's own when a browser asks.
+export const publicKitQuery = createServerFn({ method: "GET" })
+  .validator((input: unknown) => publicKitInput.parse(input))
+  .handler(async ({ data }) =>
+    publicKitForPage(data.entryId, (headers) => {
+      setResponseHeaders(new Headers(headers));
+    }),
+  );
 
 // ---- Useful reactions (D-11) -------------------------------------------------
 

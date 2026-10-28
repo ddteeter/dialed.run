@@ -7,6 +7,8 @@ import {
   formatDuration,
   formatWind,
   formatTempRange,
+  gainNumber,
+  paceNumber,
 } from "../../src/lib/contracts/measures";
 import { formatTemp } from "../../src/lib/contracts/temperature";
 
@@ -178,5 +180,30 @@ describe("inFahrenheitRange", () => {
 
   it("keeps the degree sign on the high end only", () => {
     expect(formatTempRange(0, 10, "f")).toBe("32–50°");
+  });
+});
+
+describe("paceNumber", () => {
+  it("is formatPace without its unit", () => {
+    expect(paceNumber(3098, 9978, "mi")).toBe("8:20");
+    expect(paceNumber(3098, 9978, "km")).toBe("5:10");
+  });
+
+  it("has no pace with no distance", () => {
+    expect(paceNumber(1800, 0, "mi")).toBeUndefined();
+    expect(paceNumber(1800, -1, "km")).toBeUndefined();
+  });
+});
+
+describe("gainNumber", () => {
+  it("is whole feet for a runner who counts miles", () => {
+    // Round 41's 210 FT is 64 m.
+    expect(gainNumber(64, "mi")).toStrictEqual({ value: "210", unit: "ft" });
+    expect(gainNumber(0.2, "mi")).toStrictEqual({ value: "1", unit: "ft" });
+  });
+
+  it("is whole metres for a runner who counts kilometres", () => {
+    expect(gainNumber(64.4, "km")).toStrictEqual({ value: "64", unit: "m" });
+    expect(gainNumber(64.5, "km")).toStrictEqual({ value: "65", unit: "m" });
   });
 });

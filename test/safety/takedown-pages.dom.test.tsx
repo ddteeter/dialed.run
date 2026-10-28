@@ -80,6 +80,29 @@ async function fillIn(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("/takedown", () => {
+  it("starts with the link a public kit's Report this kit hands it", async () => {
+    await renderWithRouter(
+      <TakedownRequest
+        siteKey={undefined}
+        request={vi.fn<RequestFn>()}
+        location="https://dialed.run/k/01JABCDEFGHJKMNPQRSTVWXYZ0"
+      />,
+    );
+
+    expect(screen.getByLabelText("Link to the image")).toHaveValue(
+      "https://dialed.run/k/01JABCDEFGHJKMNPQRSTVWXYZ0",
+    );
+    expect(screen.getByLabelText("Email")).toHaveValue("");
+  });
+
+  it("starts empty with no link handed in", async () => {
+    await renderWithRouter(
+      <TakedownRequest siteKey={undefined} request={vi.fn<RequestFn>()} />,
+    );
+
+    expect(screen.getByLabelText("Link to the image")).toHaveValue("");
+  });
+
   it("says what happens, and asks for the four parts of a request", async () => {
     await renderWithRouter(
       <TakedownRequest siteKey={undefined} request={vi.fn<RequestFn>()} />,

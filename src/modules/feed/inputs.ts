@@ -115,6 +115,16 @@ export const itemBandStatInput = z.object({
 export const entryIdInput = z.object({ entryId: ulidSchema });
 
 /**
+ * `/k/<id>`'s path segment, whatever it is: a segment that is not an id is
+ * a kit that never existed, and must answer as one (round 41 #86f) rather
+ * than as a refused input. A path too long to be one is read as no id at
+ * all, so it is a kit that never existed too, never an error page.
+ */
+export const publicKitInput = z.object({
+  entryId: z.string().max(200).catch(""),
+});
+
+/**
  * Useful, as the state the viewer wants — never "flip it" (law 8b): a
  * repeat of the same request leaves the same state.
  */

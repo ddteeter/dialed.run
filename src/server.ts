@@ -13,6 +13,7 @@ import {
   handleQueueBatch,
   handleScheduled,
   secureResponse,
+  withoutCookiesWhenPublic,
 } from "./modules/ops";
 import { forgetAnsweredRequests } from "./modules/account/answered-requests";
 import { exportConsumersFromEnv } from "./modules/account/export-build";
@@ -42,15 +43,16 @@ export default {
       // session that may be a read replica, started from the device's and
       // the runner's bookmarks; the newest one goes back in the `d1b`
       // cookie.
+      //
+      // A public page (design 160) leaves with no cookie, since the edge
+      // may store it and hand it to the next visitor.
       const nonce = mintNonce();
-      return secureResponse(
-        await respondInD1Scope(
-          request,
-          () => startFetch(request, { context: { nonce } }),
-          d1RequestDepsFromEnv(),
-        ),
-        nonce,
+      const response = await respondInD1Scope(
+        request,
+        () => startFetch(request, { context: { nonce } }),
+        d1RequestDepsFromEnv(),
       );
+      return secureResponse(withoutCookiesWhenPublic(response), nonce);
     } catch (error) {
       captureException(error, { surface: "fetch" });
       throw error;

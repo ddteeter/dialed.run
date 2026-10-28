@@ -6,6 +6,7 @@ import {
   SIGNATURE_MAX,
   TAKEDOWN_COPY,
   takedownRequestSchema,
+  takedownSearchSchema,
   takedownSubjectOf,
 } from "../../src/lib/contracts/takedown";
 
@@ -109,6 +110,23 @@ describe("reading a pasted link", () => {
     ).toStrictEqual(kit);
   });
 
+  it("finds a public kit by its /k link (round 41 #86c)", () => {
+    const kit = { subjectType: "entry", subjectId: ENTRY, entryId: ENTRY };
+    expect(takedownSubjectOf(`https://dialed.run/k/${ENTRY}`)).toStrictEqual(
+      kit,
+    );
+    expect(
+      takedownSubjectOf(`https://app.dialed.run/k/${ENTRY}/`),
+    ).toStrictEqual(kit);
+    expect(takedownSubjectOf(`https://dialed.run/k/not-a-ulid`)).toBeUndefined();
+    expect(
+      takedownSubjectOf(`https://dialed.run/x/k/${ENTRY}`),
+    ).toBeUndefined();
+    expect(
+      takedownSubjectOf(`https://dialed.run/feed/k/${ENTRY}`),
+    ).toBeUndefined();
+  });
+
   it("finds a photo and the kit it belongs to", () => {
     expect(
       takedownSubjectOf(
@@ -155,5 +173,29 @@ describe("reading a pasted link", () => {
   it("finds nothing in words", () => {
     expect(takedownSubjectOf("a photo on someone's profile")).toBeUndefined();
     expect(takedownSubjectOf(`/feed/entry/${ENTRY}`)).toBeUndefined();
+  });
+});
+
+describe("takedownSearchSchema", () => {
+  it("keeps a link handed in the URL", () => {
+    expect(
+      takedownSearchSchema.parse({ location: `https://dialed.run/k/${ENTRY}` }),
+    ).toStrictEqual({ location: `https://dialed.run/k/${ENTRY}` });
+  });
+
+  it("is empty for a plain visit", () => {
+    expect(takedownSearchSchema.parse({})).toStrictEqual({});
+  });
+
+  it("drops a value it cannot use rather than failing the page", () => {
+    expect(takedownSearchSchema.parse({ location: 5 })).toStrictEqual({
+      location: undefined,
+    });
+    expect(
+      takedownSearchSchema.parse({ location: "x".repeat(LOCATION_MAX + 1) }),
+    ).toStrictEqual({ location: undefined });
+    expect(
+      takedownSearchSchema.parse({ location: "x".repeat(LOCATION_MAX) }),
+    ).toStrictEqual({ location: "x".repeat(LOCATION_MAX) });
   });
 });

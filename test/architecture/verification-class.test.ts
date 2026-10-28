@@ -205,6 +205,9 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "feed/functions.ts retractEntryAction": "unconfirmed",
   "feed/functions.ts deleteEntryPhotoAction": "unconfirmed",
   "feed/functions.ts garmentBandCountQuery": "unconfirmed",
+  // D-149, D-152: a public kit is for anyone, and reads no session at all,
+  // so nothing about the viewer can reach the page the edge keeps.
+  "feed/functions.ts publicKitQuery": "sessionless",
   "feed/functions.ts decideReviewAction": "admin",
   // Design 159: a garment photo found by copy search, taken down.
   "feed/functions.ts decideGarmentMatchAction": "admin",
@@ -307,6 +310,9 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // Entry photos: visibility is decided per viewer, signed out included.
   "routes/feed/photo.$.tsx GET": "sessionless",
   "routes/og/default.ts GET": "sessionless",
+  // A public kit's card (D-150), or the default card: a preview fetcher
+  // has no session.
+  "routes/og/k.$entryId.ts GET": "sessionless",
   "routes/runs/strava-connect.ts GET": "sessionless",
   // A reviewer's view of a photo: a Desk read (Q5), asked of `isAdmin`
   // inside (`reviewerPhotoResponse`) for a confirmed viewer only.

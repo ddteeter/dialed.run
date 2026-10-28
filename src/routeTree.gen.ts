@@ -41,6 +41,7 @@ import { Route as DeskRunnersRouteImport } from './routes/desk/runners'
 import { Route as FeedIndexRouteImport } from './routes/feed/index'
 import { Route as FeedMeRouteImport } from './routes/feed/me'
 import { Route as FeedSearchRouteImport } from './routes/feed/search'
+import { Route as KEntryIdRouteImport } from './routes/k/$entryId'
 import { Route as NotificationsIndexRouteImport } from './routes/notifications/index'
 import { Route as OgDefaultRouteImport } from './routes/og/default'
 import { Route as OnboardingCalibrateRouteImport } from './routes/onboarding/calibrate'
@@ -68,6 +69,7 @@ import { Route as FeedEntryEntryIdRouteImport } from './routes/feed/entry.$entry
 import { Route as FeedPhotoSplatRouteImport } from './routes/feed/photo.$'
 import { Route as FeedUUserIdRouteImport } from './routes/feed/u.$userId'
 import { Route as FeedVerdictEntryIdRouteImport } from './routes/feed/verdict.$entryId'
+import { Route as OgKEntryIdRouteImport } from './routes/og/k.$entryId'
 import { Route as OnboardingSettingsIndexRouteImport } from './routes/onboarding/settings/index'
 import { Route as OnboardingSettingsSectionRouteImport } from './routes/onboarding/settings/$section'
 import { Route as RunsImportImportIdRouteImport } from './routes/runs/import.$importId'
@@ -234,6 +236,11 @@ const FeedSearchRoute = FeedSearchRouteImport.update({
   path: '/feed/search',
   getParentRoute: () => rootRouteImport,
 } as any)
+const KEntryIdRoute = KEntryIdRouteImport.update({
+  id: '/k/$entryId',
+  path: '/k/$entryId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NotificationsIndexRoute = NotificationsIndexRouteImport.update({
   id: '/notifications/',
   path: '/notifications/',
@@ -369,6 +376,11 @@ const FeedVerdictEntryIdRoute = FeedVerdictEntryIdRouteImport.update({
   path: '/feed/verdict/$entryId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OgKEntryIdRoute = OgKEntryIdRouteImport.update({
+  id: '/og/k/$entryId',
+  path: '/og/k/$entryId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingSettingsIndexRoute = OnboardingSettingsIndexRouteImport.update({
   id: '/onboarding/settings/',
   path: '/onboarding/settings/',
@@ -425,6 +437,7 @@ export interface FileRoutesByFullPath {
   '/desk/runners': typeof DeskRunnersRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
+  '/k/$entryId': typeof KEntryIdRoute
   '/og/default': typeof OgDefaultRoute
   '/onboarding/calibrate': typeof OnboardingCalibrateRoute
   '/onboarding/done': typeof OnboardingDoneRoute
@@ -456,6 +469,7 @@ export interface FileRoutesByFullPath {
   '/feed/photo/$': typeof FeedPhotoSplatRoute
   '/feed/u/$userId': typeof FeedUUserIdRoute
   '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
+  '/og/k/$entryId': typeof OgKEntryIdRoute
   '/onboarding/settings/$section': typeof OnboardingSettingsSectionRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
   '/safety/review-photo/$': typeof SafetyReviewPhotoSplatRoute
@@ -490,6 +504,7 @@ export interface FileRoutesByTo {
   '/desk/runners': typeof DeskRunnersRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
+  '/k/$entryId': typeof KEntryIdRoute
   '/og/default': typeof OgDefaultRoute
   '/onboarding/calibrate': typeof OnboardingCalibrateRoute
   '/onboarding/done': typeof OnboardingDoneRoute
@@ -521,6 +536,7 @@ export interface FileRoutesByTo {
   '/feed/photo/$': typeof FeedPhotoSplatRoute
   '/feed/u/$userId': typeof FeedUUserIdRoute
   '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
+  '/og/k/$entryId': typeof OgKEntryIdRoute
   '/onboarding/settings/$section': typeof OnboardingSettingsSectionRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
   '/safety/review-photo/$': typeof SafetyReviewPhotoSplatRoute
@@ -557,6 +573,7 @@ export interface FileRoutesById {
   '/desk/runners': typeof DeskRunnersRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
+  '/k/$entryId': typeof KEntryIdRoute
   '/og/default': typeof OgDefaultRoute
   '/onboarding/calibrate': typeof OnboardingCalibrateRoute
   '/onboarding/done': typeof OnboardingDoneRoute
@@ -588,6 +605,7 @@ export interface FileRoutesById {
   '/feed/photo/$': typeof FeedPhotoSplatRoute
   '/feed/u/$userId': typeof FeedUUserIdRoute
   '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
+  '/og/k/$entryId': typeof OgKEntryIdRoute
   '/onboarding/settings/$section': typeof OnboardingSettingsSectionRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
   '/safety/review-photo/$': typeof SafetyReviewPhotoSplatRoute
@@ -625,6 +643,7 @@ export interface FileRouteTypes {
     | '/desk/runners'
     | '/feed/me'
     | '/feed/search'
+    | '/k/$entryId'
     | '/og/default'
     | '/onboarding/calibrate'
     | '/onboarding/done'
@@ -656,6 +675,7 @@ export interface FileRouteTypes {
     | '/feed/photo/$'
     | '/feed/u/$userId'
     | '/feed/verdict/$entryId'
+    | '/og/k/$entryId'
     | '/onboarding/settings/$section'
     | '/runs/import/$importId'
     | '/safety/review-photo/$'
@@ -690,6 +710,7 @@ export interface FileRouteTypes {
     | '/desk/runners'
     | '/feed/me'
     | '/feed/search'
+    | '/k/$entryId'
     | '/og/default'
     | '/onboarding/calibrate'
     | '/onboarding/done'
@@ -721,6 +742,7 @@ export interface FileRouteTypes {
     | '/feed/photo/$'
     | '/feed/u/$userId'
     | '/feed/verdict/$entryId'
+    | '/og/k/$entryId'
     | '/onboarding/settings/$section'
     | '/runs/import/$importId'
     | '/safety/review-photo/$'
@@ -756,6 +778,7 @@ export interface FileRouteTypes {
     | '/desk/runners'
     | '/feed/me'
     | '/feed/search'
+    | '/k/$entryId'
     | '/og/default'
     | '/onboarding/calibrate'
     | '/onboarding/done'
@@ -787,6 +810,7 @@ export interface FileRouteTypes {
     | '/feed/photo/$'
     | '/feed/u/$userId'
     | '/feed/verdict/$entryId'
+    | '/og/k/$entryId'
     | '/onboarding/settings/$section'
     | '/runs/import/$importId'
     | '/safety/review-photo/$'
@@ -821,6 +845,7 @@ export interface RootRouteChildren {
   ClosetNewRoute: typeof ClosetNewRoute
   FeedMeRoute: typeof FeedMeRoute
   FeedSearchRoute: typeof FeedSearchRoute
+  KEntryIdRoute: typeof KEntryIdRoute
   OgDefaultRoute: typeof OgDefaultRoute
   OnboardingCalibrateRoute: typeof OnboardingCalibrateRoute
   OnboardingDoneRoute: typeof OnboardingDoneRoute
@@ -851,6 +876,7 @@ export interface RootRouteChildren {
   FeedPhotoSplatRoute: typeof FeedPhotoSplatRoute
   FeedUUserIdRoute: typeof FeedUUserIdRoute
   FeedVerdictEntryIdRoute: typeof FeedVerdictEntryIdRoute
+  OgKEntryIdRoute: typeof OgKEntryIdRoute
   OnboardingSettingsSectionRoute: typeof OnboardingSettingsSectionRoute
   RunsImportImportIdRoute: typeof RunsImportImportIdRoute
   SafetyReviewPhotoSplatRoute: typeof SafetyReviewPhotoSplatRoute
@@ -1084,6 +1110,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FeedSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/k/$entryId': {
+      id: '/k/$entryId'
+      path: '/k/$entryId'
+      fullPath: '/k/$entryId'
+      preLoaderRoute: typeof KEntryIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/notifications/': {
       id: '/notifications/'
       path: '/notifications'
@@ -1273,6 +1306,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FeedVerdictEntryIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/og/k/$entryId': {
+      id: '/og/k/$entryId'
+      path: '/og/k/$entryId'
+      fullPath: '/og/k/$entryId'
+      preLoaderRoute: typeof OgKEntryIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding/settings/': {
       id: '/onboarding/settings/'
       path: '/onboarding/settings'
@@ -1354,6 +1394,7 @@ const rootRouteChildren: RootRouteChildren = {
   ClosetNewRoute: ClosetNewRoute,
   FeedMeRoute: FeedMeRoute,
   FeedSearchRoute: FeedSearchRoute,
+  KEntryIdRoute: KEntryIdRoute,
   OgDefaultRoute: OgDefaultRoute,
   OnboardingCalibrateRoute: OnboardingCalibrateRoute,
   OnboardingDoneRoute: OnboardingDoneRoute,
@@ -1384,6 +1425,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeedPhotoSplatRoute: FeedPhotoSplatRoute,
   FeedUUserIdRoute: FeedUUserIdRoute,
   FeedVerdictEntryIdRoute: FeedVerdictEntryIdRoute,
+  OgKEntryIdRoute: OgKEntryIdRoute,
   OnboardingSettingsSectionRoute: OnboardingSettingsSectionRoute,
   RunsImportImportIdRoute: RunsImportImportIdRoute,
   SafetyReviewPhotoSplatRoute: SafetyReviewPhotoSplatRoute,
