@@ -3,9 +3,14 @@ import { useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
 
 import { verdictLabel, type VerdictValue } from "../../../lib/contracts";
-import { Mono, WeatherAttribution, Wordmark, verdictHue } from "../../../ui";
+import {
+  Mono,
+  Page,
+  WeatherAttribution,
+  Wordmark,
+  verdictHue,
+} from "../../../ui";
 import { ProductLink } from "../../../ui/ProductLink";
-import { useHydrated } from "../../../ui/use-hydrated";
 import type { PublicKit, PublicPiece } from "../public-kit-shape";
 
 /**
@@ -56,10 +61,12 @@ export function useSignedInAfterLoad(ask: AskSignedIn): {
  */
 const MARKETING_ORIGIN = "https://dialed.run";
 
-const PILL_CLASS =
-  "target inline-flex items-center rounded-pill px-5 text-small no-underline";
-const LOG_IN_CLASS = `${PILL_CLASS} border border-hairline font-semibold text-ink`;
-const INTO_APP_CLASS = `${PILL_CLASS} bg-ink font-bold text-ground`;
+// The landing bar's two pills, written out whole so each can be read as
+// one class list (`targets-and-focus` reads the 44px target off it).
+const LOG_IN_CLASS =
+  "target inline-flex items-center rounded-pill border border-hairline px-5 text-small font-semibold text-ink no-underline";
+const INTO_APP_CLASS =
+  "target inline-flex items-center rounded-pill bg-ink px-5 text-small font-bold text-ground no-underline";
 const FOOT_LINK_CLASS = "target text-muted underline underline-offset-4";
 
 /**
@@ -76,9 +83,9 @@ function PublicBar({
   return (
     <div
       data-part="top-bar"
-      className="border-b border-hairline bg-ground px-5 py-3 text-ink wide:px-6"
+      className="border-b border-hairline bg-ground py-3 text-ink"
     >
-      <div className="mx-auto flex min-h-11 w-full max-w-column items-center justify-between">
+      <div className="mx-auto flex min-h-11 w-full max-w-column items-center justify-between px-6">
         <Link
           to="/"
           reloadDocument
@@ -113,33 +120,52 @@ function PublicBar({
 }
 
 /**
- * The frame both pages wear: the bar, the column, and the foot.
+ * The page's one heading, and what sits with it: a kicker above (#86f's
+ * 404) and something beside (#86c's day). One `<h1>`, in the frame, for
+ * both pages: the route renders one or the other.
  */
-function PublicFrame({
-  entryId,
-  intoApp,
-  isSignedIn,
-  foot,
-  children,
-}: Readonly<{
-  entryId: string;
-  intoApp: string;
-  isSignedIn: boolean;
-  foot?: ReactNode;
-  children: ReactNode;
-}>): JSX.Element {
-  useHydrated();
+interface FrameHeading {
+  readonly text: ReactNode;
+  readonly className: string;
+  readonly kicker?: ReactNode;
+  readonly beside?: ReactNode;
+}
+
+interface PublicFrameProps {
+  readonly entryId: string;
+  readonly intoApp: string;
+  readonly isSignedIn: boolean;
+  readonly heading: FrameHeading;
+  readonly foot?: ReactNode;
+  readonly children: ReactNode;
+}
+
+/**
+ * The frame both pages wear: the bar, the column under its heading (a
+ * `Page`, which stamps hydration), and the foot.
+ */
+function PublicFrame(props: PublicFrameProps): JSX.Element {
+  const { entryId, intoApp, isSignedIn, heading, foot, children } = props;
   return (
     <div className="flex min-h-dvh flex-col bg-ground text-ink">
       <PublicBar entryId={entryId} intoApp={intoApp} isSignedIn={isSignedIn} />
-      <main className="mx-auto flex w-full max-w-column flex-1 flex-col gap-6 px-5 pt-6 pb-12 wide:px-6">
-        {children}
+      <main className="mx-auto w-full max-w-column flex-1">
+        <Page width="column">
+          <header className="flex flex-col gap-3">
+            {heading.kicker}
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <h1 className={heading.className}>{heading.text}</h1>
+              {heading.beside}
+            </div>
+          </header>
+          {children}
+        </Page>
       </main>
       <footer
         data-part="public-foot"
-        className="border-t border-hairline px-5 py-4 text-small wide:px-6"
+        className="border-t border-hairline py-4 text-small"
       >
-        <p className="m-0 mx-auto flex w-full max-w-column flex-wrap gap-x-4">
+        <p className="m-0 mx-auto flex w-full max-w-column flex-wrap gap-x-4 px-6">
           {foot}
           <Link to="/privacy" reloadDocument className={FOOT_LINK_CLASS}>
             Privacy
@@ -177,6 +203,15 @@ export function PublicKitPage({
       entryId={kit.entryId}
       intoApp="Open in the app"
       isSignedIn={isSignedIn}
+      heading={{
+        text: `@${kit.handle}`,
+        className: "m-0 text-body font-semibold",
+        beside: (
+          <Mono step="xs" className="text-muted">
+            {kit.day}
+          </Mono>
+        ),
+      }}
       foot={
         <Link
           to="/takedown"
@@ -188,12 +223,6 @@ export function PublicKitPage({
         </Link>
       }
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="m-0 text-body font-semibold">@{kit.handle}</h1>
-        <Mono step="xs" className="text-muted">
-          {kit.day}
-        </Mono>
-      </div>
       <Conditions kit={kit} />
       <Stats kit={kit} />
       {kit.caption === undefined ? undefined : (
@@ -368,17 +397,20 @@ export function NotPublicPage({
       entryId={entryId}
       intoApp="Look in the app"
       isSignedIn={isSignedIn}
+      heading={{
+        text: "Nothing to see at this link",
+        className: "m-0 font-display text-display uppercase",
+        kicker: (
+          <Mono step="xs" className="text-muted">
+            404
+          </Mono>
+        ),
+      }}
     >
       <section
         data-part="not-public"
-        className="flex flex-col items-start gap-3 pt-6"
+        className="flex flex-col items-start gap-3"
       >
-        <Mono step="xs" className="text-muted">
-          404
-        </Mono>
-        <h1 className="m-0 font-display text-display uppercase">
-          Nothing to see at this link
-        </h1>
         <p className="m-0 text-body">
           A kit shows here only while the runner who logged it keeps it
           public.

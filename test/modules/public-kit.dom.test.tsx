@@ -122,9 +122,13 @@ describe("the public kit, signed out", () => {
   it("names the runner and the day, never a time", async () => {
     await show(kitPage(KIT));
 
-    expect(
-      screen.getByRole("heading", { level: 1, name: "@maya_runs" }),
-    ).toBeVisible();
+    const heading = screen.getByRole("heading", {
+      level: 1,
+      name: "@maya_runs",
+    });
+    expect(heading).toBeVisible();
+    // The runner's name in body weight, not a display headline.
+    expect(heading).toHaveClass("text-body", "font-semibold");
     expect(screen.getByText("Sat Oct 18")).toHaveClass("text-mono-xs");
   });
 
@@ -358,7 +362,7 @@ describe("not public (round 41 #86f)", () => {
         level: 1,
         name: "Nothing to see at this link",
       }),
-    ).toBeVisible();
+    ).toHaveClass("font-display", "text-display", "uppercase");
     expect(
       screen.getByText(
         "A kit shows here only while the runner who logged it keeps it public.",

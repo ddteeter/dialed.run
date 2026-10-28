@@ -57,10 +57,10 @@ export function publicCacheHeaders(
  */
 export function withoutCookiesWhenPublic(response: Response): Response {
   const directives = String(response.headers.get("Cache-Control")).split(",");
-  const isPublic = directives.some(
+  const isStorable = directives.some(
     (directive) => directive.trim().toLowerCase() === "public",
   );
-  if (!isPublic) return response;
+  if (!isStorable) return response;
   const stripped = new Response(response.body, response);
   stripped.headers.delete("Set-Cookie");
   return stripped;
