@@ -139,7 +139,7 @@ export const feedInput = z.object({
 export const searchInput = z.object({ prefix: z.string().max(60) });
 
 /**
-`/@handle`'s segment, as typed — a handle as a person wrote it, which is
+H's segment (`/feed/u/<handle>`), as typed — a handle as a person wrote it, which is
 what a search prefix is too, so it takes the same cap. Shape is
 `lookUpHandle`'s to judge (a handle the rule refuses is one nobody holds),
 so this only bounds what a URL can make the server read.

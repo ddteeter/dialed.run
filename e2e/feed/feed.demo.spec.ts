@@ -5,8 +5,8 @@
  * note, the kit), H (someone else's profile), D-11 (useful reactions), the
  * bell counting a run of any age that still owes a verdict (S2), the
  * consensus bars' words as shares of the matched runners (round 35 #54), G's
- * settings button, `@handle` on the author row and `/@old` saying the
- * runner changed their name (FEED-10) and a never-held `/@handle` saying
+ * settings button, `@handle` on the author row and `/feed/u/old` saying the
+ * runner changed their name (FEED-10) and a never-held `/feed/u/<handle>` saying
  * "This runner isn't here." (round 28 #11), the author's own under-review
  * entry marked `[UNDER REVIEW]` on the card and with HIDDEN WHILE WE CHECK
  * on D (FEED-6, D-67; round 28 #6, round 29 #4), the unconfirmed runner's
@@ -95,7 +95,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
   // nobody finds them until they do (design 133, D-113 Q2).
   const waitingUserId = newUlid();
   const waitingUsername = `wait_${suffix.slice(-8)}`;
-  // A handle the same runner used to hold (FEED-10): `/@old` says they
+  // A handle the same runner used to hold (FEED-10): `/feed/u/old` says they
   // changed their name, and never who they are now (D-56).
   const oldUsername = `was_${suffix.slice(-8)}`;
   const itemId = newUlid();
@@ -579,7 +579,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
       // only takes one away, so it does not (D-113 Q3). The sheet leads
       // with round 35 #49's sentence.
       await scene(page, "Unconfirmed · Unfollow goes through, Follow waits");
-      await page.goto(`/@${otherUsername}`);
+      await page.goto(`/feed/u/${otherUsername}`);
       await hydrated(page);
       await page.getByRole("button", { name: "Following" }).click();
       const follow = page.getByRole("button", { name: "Follow" });
@@ -772,8 +772,8 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     });
 
     // FEED-10: an old handle names nobody — it says the runner moved on.
-    await scene(page, "/@old · this runner changed their name");
-    await page.goto(`/@${oldUsername}`);
+    await scene(page, "/feed/u/old · this runner changed their name");
+    await page.goto(`/feed/u/${oldUsername}`);
     await hydrated(page);
     await expect(
       page.getByText("This runner changed their name."),
@@ -782,10 +782,10 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
 
     // Round 28 #11: a handle nobody ever held gets the same page a deleted
     // one does, never a redirect, so the two cannot be told apart.
-    await scene(page, "/@nobody · this runner isn't here");
-    await page.goto(`/@never_${String(Date.now()).slice(-8)}`);
+    await scene(page, "/feed/u/nobody · this runner isn't here");
+    await page.goto(`/feed/u/never_${String(Date.now()).slice(-8)}`);
     await hydrated(page);
-    await expect(page).toHaveURL(/\/@never_/u);
+    await expect(page).toHaveURL(/\/feed\/u\/never_/u);
     await expect(page.getByText("This runner isn't here.")).toBeVisible();
 
     await scene(page, "Your own entry: take back one photo");

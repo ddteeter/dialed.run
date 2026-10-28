@@ -31,7 +31,7 @@ export function runnerVisibleToViewer(viewerId: string) {
     // H at once, by safety's rule (seam 6).
     runnerNotLeaving(userProfiles.userId),
     // Design 133 (D-113 Q2): an unconfirmed runner is not findable — in
-    // search, at H, or through H's old `/feed/u/$userId` redirect.
+    // search, at H, or through H's redirect from an id.
     runnerConfirmed(userProfiles.userId),
     notBlockedEitherWay(viewerId, userProfiles.userId),
     profileNotReportedBy(viewerId, userProfiles.userId),

@@ -199,7 +199,7 @@ export function recentPublicEntriesStatement(
 }
 
 /**
-The runner's handle and nothing else, for `/feed/u/$userId`'s redirect —
+The runner's handle and nothing else, for H by id's redirect —
 which needs a name to send the viewer to, not twenty entries to throw
 away. The same gate as H, so the redirect never names a runner H would
 refuse.
@@ -244,7 +244,7 @@ export async function otherProfile(
 }
 
 /**
-What `/@handle` answers (round 26 #7): the runner who holds it now, the
+What H (`/feed/u/<handle>`) answers (round 26 #7): the runner who holds it now, the
 viewer themself, or a handle somebody used to hold — which says "This
 runner changed their name." and never who they are now, because a
 redirect would link the old handle to the new one (decision D-56) — or
@@ -262,7 +262,7 @@ export type ProfileAtHandle =
   | { readonly kind: "gone" };
 
 /**
-What `/@handle` answers for a handle with nobody behind it the viewer may
+What H (`/feed/u/<handle>`) answers for a handle with nobody behind it the viewer may
 see: the answer a deleted account's old handle gets.
 */
 const NOBODY_HERE = { kind: "gone" } as const;

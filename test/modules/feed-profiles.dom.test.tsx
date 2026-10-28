@@ -642,7 +642,7 @@ describe("RunnerSearch", () => {
     const [ana, andy] = screen.getAllByRole("listitem");
     expect(
       within(ana ?? document.body).getByRole("link", { name: "@ana" }),
-    ).toHaveAttribute("href", "/@ana");
+    ).toHaveAttribute("href", "/feed/u/ana");
     expect(
       within(ana ?? document.body).getByRole("button", { name: "Follow" }),
     ).toBeVisible();

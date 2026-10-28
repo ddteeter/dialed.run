@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AtChar123handleChar125RouteImport } from './routes/@{$handle}'
 import { Route as CopyrightRouteImport } from './routes/copyright'
 import { Route as DeskRouteRouteImport } from './routes/desk/route'
 import { Route as JoinRouteImport } from './routes/join'
@@ -67,7 +66,7 @@ import { Route as ClosetEditItemIdRouteImport } from './routes/closet/edit.$item
 import { Route as FeedAttachRunIdRouteImport } from './routes/feed/attach.$runId'
 import { Route as FeedEntryEntryIdRouteImport } from './routes/feed/entry.$entryId'
 import { Route as FeedPhotoSplatRouteImport } from './routes/feed/photo.$'
-import { Route as FeedUUserIdRouteImport } from './routes/feed/u.$userId'
+import { Route as FeedUHandleRouteImport } from './routes/feed/u.$handle'
 import { Route as FeedVerdictEntryIdRouteImport } from './routes/feed/verdict.$entryId'
 import { Route as OgKEntryIdRouteImport } from './routes/og/k.$entryId'
 import { Route as OnboardingSettingsIndexRouteImport } from './routes/onboarding/settings/index'
@@ -79,11 +78,6 @@ import { Route as ClosetPhotoItemIdSizeRouteImport } from './routes/closet/photo
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AtChar123handleChar125Route = AtChar123handleChar125RouteImport.update({
-  id: '/@{$handle}',
-  path: '/@{$handle}',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CopyrightRoute = CopyrightRouteImport.update({
@@ -366,9 +360,9 @@ const FeedPhotoSplatRoute = FeedPhotoSplatRouteImport.update({
   path: '/feed/photo/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FeedUUserIdRoute = FeedUUserIdRouteImport.update({
-  id: '/feed/u/$userId',
-  path: '/feed/u/$userId',
+const FeedUHandleRoute = FeedUHandleRouteImport.update({
+  id: '/feed/u/$handle',
+  path: '/feed/u/$handle',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FeedVerdictEntryIdRoute = FeedVerdictEntryIdRouteImport.update({
@@ -411,7 +405,6 @@ const ClosetPhotoItemIdSizeRoute = ClosetPhotoItemIdSizeRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/desk': typeof DeskRouteRouteWithChildren
-  '/@{$handle}': typeof AtChar123handleChar125Route
   '/copyright': typeof CopyrightRoute
   '/join': typeof JoinRoute
   '/open-source': typeof OpenSourceRoute
@@ -467,7 +460,7 @@ export interface FileRoutesByFullPath {
   '/feed/attach/$runId': typeof FeedAttachRunIdRoute
   '/feed/entry/$entryId': typeof FeedEntryEntryIdRoute
   '/feed/photo/$': typeof FeedPhotoSplatRoute
-  '/feed/u/$userId': typeof FeedUUserIdRoute
+  '/feed/u/$handle': typeof FeedUHandleRoute
   '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
   '/og/k/$entryId': typeof OgKEntryIdRoute
   '/onboarding/settings/$section': typeof OnboardingSettingsSectionRoute
@@ -478,7 +471,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/@{$handle}': typeof AtChar123handleChar125Route
   '/copyright': typeof CopyrightRoute
   '/join': typeof JoinRoute
   '/open-source': typeof OpenSourceRoute
@@ -534,7 +526,7 @@ export interface FileRoutesByTo {
   '/feed/attach/$runId': typeof FeedAttachRunIdRoute
   '/feed/entry/$entryId': typeof FeedEntryEntryIdRoute
   '/feed/photo/$': typeof FeedPhotoSplatRoute
-  '/feed/u/$userId': typeof FeedUUserIdRoute
+  '/feed/u/$handle': typeof FeedUHandleRoute
   '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
   '/og/k/$entryId': typeof OgKEntryIdRoute
   '/onboarding/settings/$section': typeof OnboardingSettingsSectionRoute
@@ -547,7 +539,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/desk': typeof DeskRouteRouteWithChildren
-  '/@{$handle}': typeof AtChar123handleChar125Route
   '/copyright': typeof CopyrightRoute
   '/join': typeof JoinRoute
   '/open-source': typeof OpenSourceRoute
@@ -603,7 +594,7 @@ export interface FileRoutesById {
   '/feed/attach/$runId': typeof FeedAttachRunIdRoute
   '/feed/entry/$entryId': typeof FeedEntryEntryIdRoute
   '/feed/photo/$': typeof FeedPhotoSplatRoute
-  '/feed/u/$userId': typeof FeedUUserIdRoute
+  '/feed/u/$handle': typeof FeedUHandleRoute
   '/feed/verdict/$entryId': typeof FeedVerdictEntryIdRoute
   '/og/k/$entryId': typeof OgKEntryIdRoute
   '/onboarding/settings/$section': typeof OnboardingSettingsSectionRoute
@@ -617,7 +608,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/desk'
-    | '/@{$handle}'
     | '/copyright'
     | '/join'
     | '/open-source'
@@ -673,7 +663,7 @@ export interface FileRouteTypes {
     | '/feed/attach/$runId'
     | '/feed/entry/$entryId'
     | '/feed/photo/$'
-    | '/feed/u/$userId'
+    | '/feed/u/$handle'
     | '/feed/verdict/$entryId'
     | '/og/k/$entryId'
     | '/onboarding/settings/$section'
@@ -684,7 +674,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/@{$handle}'
     | '/copyright'
     | '/join'
     | '/open-source'
@@ -740,7 +729,7 @@ export interface FileRouteTypes {
     | '/feed/attach/$runId'
     | '/feed/entry/$entryId'
     | '/feed/photo/$'
-    | '/feed/u/$userId'
+    | '/feed/u/$handle'
     | '/feed/verdict/$entryId'
     | '/og/k/$entryId'
     | '/onboarding/settings/$section'
@@ -752,7 +741,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/desk'
-    | '/@{$handle}'
     | '/copyright'
     | '/join'
     | '/open-source'
@@ -808,7 +796,7 @@ export interface FileRouteTypes {
     | '/feed/attach/$runId'
     | '/feed/entry/$entryId'
     | '/feed/photo/$'
-    | '/feed/u/$userId'
+    | '/feed/u/$handle'
     | '/feed/verdict/$entryId'
     | '/og/k/$entryId'
     | '/onboarding/settings/$section'
@@ -821,7 +809,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DeskRouteRoute: typeof DeskRouteRouteWithChildren
-  AtChar123handleChar125Route: typeof AtChar123handleChar125Route
   CopyrightRoute: typeof CopyrightRoute
   JoinRoute: typeof JoinRoute
   OpenSourceRoute: typeof OpenSourceRoute
@@ -874,7 +861,7 @@ export interface RootRouteChildren {
   FeedAttachRunIdRoute: typeof FeedAttachRunIdRoute
   FeedEntryEntryIdRoute: typeof FeedEntryEntryIdRoute
   FeedPhotoSplatRoute: typeof FeedPhotoSplatRoute
-  FeedUUserIdRoute: typeof FeedUUserIdRoute
+  FeedUHandleRoute: typeof FeedUHandleRoute
   FeedVerdictEntryIdRoute: typeof FeedVerdictEntryIdRoute
   OgKEntryIdRoute: typeof OgKEntryIdRoute
   OnboardingSettingsSectionRoute: typeof OnboardingSettingsSectionRoute
@@ -891,13 +878,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/@{$handle}': {
-      id: '/@{$handle}'
-      path: '/@{$handle}'
-      fullPath: '/@{$handle}'
-      preLoaderRoute: typeof AtChar123handleChar125RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/copyright': {
@@ -1292,11 +1272,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FeedPhotoSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/feed/u/$userId': {
-      id: '/feed/u/$userId'
-      path: '/feed/u/$userId'
-      fullPath: '/feed/u/$userId'
-      preLoaderRoute: typeof FeedUUserIdRouteImport
+    '/feed/u/$handle': {
+      id: '/feed/u/$handle'
+      path: '/feed/u/$handle'
+      fullPath: '/feed/u/$handle'
+      preLoaderRoute: typeof FeedUHandleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/feed/verdict/$entryId': {
@@ -1370,7 +1350,6 @@ const DeskRouteRouteWithChildren = DeskRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DeskRouteRoute: DeskRouteRouteWithChildren,
-  AtChar123handleChar125Route: AtChar123handleChar125Route,
   CopyrightRoute: CopyrightRoute,
   JoinRoute: JoinRoute,
   OpenSourceRoute: OpenSourceRoute,
@@ -1423,7 +1402,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeedAttachRunIdRoute: FeedAttachRunIdRoute,
   FeedEntryEntryIdRoute: FeedEntryEntryIdRoute,
   FeedPhotoSplatRoute: FeedPhotoSplatRoute,
-  FeedUUserIdRoute: FeedUUserIdRoute,
+  FeedUHandleRoute: FeedUHandleRoute,
   FeedVerdictEntryIdRoute: FeedVerdictEntryIdRoute,
   OgKEntryIdRoute: OgKEntryIdRoute,
   OnboardingSettingsSectionRoute: OnboardingSettingsSectionRoute,

@@ -184,9 +184,9 @@ const NAV: readonly Edge[] = [
       "/closet/$itemId",
       "/closet/edit/$itemId",
       "/feed/entry/$entryId",
-      "/feed/u/$userId",
-      // Task 129 (FEED-10): the same profile, addressed by handle.
-      "/@{$handle}",
+      // H, by handle (D-152; FEED-10). `/@handle` is the open web's
+      // profile, reached by a document load, so it has no motion to type.
+      "/feed/u/$handle",
       "/feed/search",
       "/runs",
       // `/runs/$runId` claims `/runs/strava` too — a param segment matches
@@ -243,8 +243,7 @@ const NAV: readonly Edge[] = [
 ];
 
 /**
-`/closet/$itemId` matches `/closet/abc`; `/@{$handle}` matches `/@maya`;
-`*` matches anything.
+`/closet/$itemId` matches `/closet/abc`; `*` matches anything.
 */
 function isMatch(pattern: string, pathname: string): boolean {
   if (pattern === "*") return true;
@@ -261,16 +260,11 @@ function isMatch(pattern: string, pathname: string): boolean {
 /**
 A `$`-prefixed segment is a route param and matches any one segment — but
 not an empty one, or `/closet/` would read as a garment whose id is the
-empty string. `@{$handle}` is TanStack's prefixed param (task 129,
-FEED-10): the literal prefix, then a param that is again never empty, so
-`/@` is nobody's profile.
+empty string.
 */
 function isSegmentMatch(segment: string, got: string): boolean {
   if (segment.startsWith("$")) return got !== "";
-  const param = segment.indexOf("{$");
-  if (param === -1) return segment === got;
-  const prefix = segment.slice(0, param);
-  return got.startsWith(prefix) && got.length > prefix.length;
+  return segment === got;
 }
 
 function isAnyMatch(
