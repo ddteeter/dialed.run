@@ -8,6 +8,7 @@ import {
   saveSharingFn,
   saveUnitsFn,
   setCountInTotalsFn,
+  setPublicProfileFn,
   settingsSubPageData,
 } from "../../../modules/onboarding/functions";
 import { settingsSectionOrNotFound } from "../../../modules/onboarding/route-decisions";
@@ -45,6 +46,7 @@ function SectionPage() {
         saveUnits={saveUnitsFn}
         saveSharing={saveSharingFn}
         saveCountInTotals={setCountInTotalsFn}
+        savePublicProfile={setPublicProfileFn}
       />
     </BelledLayout>
   );

@@ -45,7 +45,7 @@ export type WritableAudience = z.infer<typeof writableAudienceSchema>;
 
 /**
  * SHARED on screen: runners signed in to dialed.run. A new runner's
- * default, and what the sharing switches stood for before PUBLIC.
+ * default.
  */
 export const SHARED_AUDIENCE = "runners" satisfies WritableAudience;
 
@@ -79,24 +79,6 @@ export function isStrangerAudience(audience: Audience): boolean {
 }
 
 /**
- * The audience a sharing switch stands for. A3's checkbox and the Settings
- * toggle stay on/off in the UI; this is where on/off becomes an audience.
- */
-export function audienceOfShareToggle(isOn: boolean): WritableAudience {
-  return isOn ? SHARED_AUDIENCE : "private";
-}
-
-/**
- * Whether an audience is the shared one: the switch's position for a
- * stored audience, and the boolean the dual write keeps in step until the
- * booleans are dropped (design 131, C1). `groups` is not shared: it is
- * hidden from strangers.
- */
-export function isSharedAudience(audience: Audience): boolean {
-  return audience === SHARED_AUDIENCE;
-}
-
-/**
  * A stored audience as a writer may store it again: itself when it is
  * writable, and `private` for `groups`, which nothing can write until
  * groups ship. Of the audiences a new entry may start with, `private` shows
@@ -110,7 +92,7 @@ export function writableAudienceOf(audience: Audience): WritableAudience {
 /**
  * The word a file a person reads writes for each audience: the export's
  * `audience` and `default_audience` columns now, design 130's API
- * `visibility` later. They are the UI's words (SHARED / PRIVATE on
+ * `visibility` later. They are the UI's words (PUBLIC / SHARED / PRIVATE on
  * screen; D-109: files write the UI's words), so `runners` itself never
  * leaves the server.
  */

@@ -1,11 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  audienceOfShareToggle,
   audienceSchema,
   audienceWord,
   audiences,
-  isSharedAudience,
   isStrangerAudience,
   SHARED_AUDIENCE,
   strangerAudiences,
@@ -79,34 +77,9 @@ describe("writableAudienceOf", () => {
   });
 });
 
-describe("the share toggle", () => {
-  it("maps on to runners and off to private", () => {
-    expect(audienceOfShareToggle(true)).toBe("runners");
-    expect(audienceOfShareToggle(false)).toBe("private");
-  });
-
-  it("round-trips through isSharedAudience", () => {
-    for (const isOn of [true, false]) {
-      expect(isSharedAudience(audienceOfShareToggle(isOn))).toBe(isOn);
-    }
-  });
-
-  it("is shared only for runners, of every stored audience", () => {
-    const shared = audiences.filter((audience) => isSharedAudience(audience));
-    expect(shared).toEqual(["runners"]);
-  });
-
-  it("is on for SHARED_AUDIENCE, the one audience strangers see", () => {
+describe("SHARED_AUDIENCE", () => {
+  it("is runners, SHARED on screen", () => {
     expect(SHARED_AUDIENCE).toBe("runners");
-    expect(audienceOfShareToggle(true)).toBe(SHARED_AUDIENCE);
-  });
-
-  it("only ever produces a writable audience", () => {
-    for (const isOn of [true, false]) {
-      expect(
-        writableAudienceSchema.safeParse(audienceOfShareToggle(isOn)).success,
-      ).toBe(true);
-    }
   });
 });
 

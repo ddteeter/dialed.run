@@ -13,6 +13,7 @@ import { describe, expect, it, vi } from "vitest";
 import { entryTags, verdictScale } from "../../src/lib/contracts";
 import type { BandSignals } from "../../src/modules/feed/band-signals";
 import type { Units } from "../../src/lib/contracts";
+import { PUBLIC_PREVIEW_LINE } from "../../src/ui/audience";
 import { verdictHue } from "../../src/ui/verdict-hue";
 import { VerdictForm } from "../../src/modules/feed/components/VerdictForm";
 import type { entryDetailForViewer } from "../../src/modules/feed/entries";
@@ -103,9 +104,16 @@ function flagGroups(): HTMLElement[] {
   // three flag chips; the verdict row holds buttons and no radio at all,
   // which is a property of what the control *is* rather than of where it
   // happens to sit in the document.
+  // And A3's audience picker is a radio group too (round 41 #86a), so a
+  // flag group is one whose radios are not the audience's.
   return screen
     .getAllByRole("group")
-    .filter((group) => within(group).queryAllByRole("radio").length > 0);
+    .filter(
+      (group) =>
+        within(group)
+          .queryAllByRole("radio")
+          .some((radio) => radio.getAttribute("name") !== "audience"),
+    );
 }
 
 /**
@@ -249,7 +257,9 @@ describe("VerdictForm: the scale", () => {
     expect(
       screen.getByRole("button", { name: /Per-item notes/ }),
     ).toBeVisible();
-    expect(screen.getByRole("button", { name: /Sharing/ })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: /Who sees this run/ }),
+    ).toBeVisible();
     expect(screen.getByRole("status")).toHaveTextContent(
       "Nothing saved. 4 fields need a fix.",
     );
@@ -625,7 +635,7 @@ describe("VerdictForm: A3b, every garment's triple", () => {
     );
 
     await openSpecifics(user);
-    const names = screen
+    const names = within(screen.getByRole("dialog"))
       .getAllByRole("radio")
       .map((radio) => radio.getAttribute("name"));
     expect(names).toStrictEqual([
@@ -1080,38 +1090,62 @@ describe("VerdictForm: tags and sharing", () => {
     });
   });
 
-  it("names the toggle in three words and says what sharing means beneath", async () => {
-    // A3's share-toggle as round 19 draws it. The sentence is the
-    // checkbox's *description*, not part of its name, so a reader hears
-    // "Share to feed, checkbox, checked" and then what that means — rather
-    // than one long label, which is what "Share this — the verdict label
-    // shows on the post" was.
+  it("asks who sees this run, PRIVATE / SHARED / PUBLIC, each with what it means (round 41 #86a)", async () => {
     await renderWithRouter(form());
 
-    const share = screen.getByRole("checkbox", { name: "Share to feed" });
-    expect(share).toHaveAccessibleDescription(
-      "Shared runs show your kit, conditions, and your verdict.",
-    );
+    const group = screen.getByRole("group", { name: "Who sees this run" });
+    expect(
+      within(group)
+        .getAllByRole("radio")
+        .map((radio) => radio.getAttribute("value")),
+    ).toStrictEqual(["private", "runners", "world"]);
+    expect(
+      within(group).getByRole("radio", { name: "Private Only you." }),
+    ).not.toBeChecked();
+    expect(
+      within(group).getByRole("radio", {
+        name: "Shared Runners signed in to dialed.run.",
+      }),
+    ).toBeChecked();
+    expect(
+      within(group).getByRole("radio", {
+        name: "Public Anyone with the link, no sign-in. Never when or where you ran.",
+      }),
+    ).not.toBeChecked();
   });
 
-  it("says the private line beneath the switch once it is off, and the shared line again when it is on (D-108 E)", async () => {
+  it("says the private line under the group for PRIVATE, the preview line for PUBLIC, and nothing more for SHARED", async () => {
     const user = userEvent.setup();
     await renderWithRouter(form());
-    const share = screen.getByRole("checkbox", { name: "Share to feed" });
+    const shared = screen.getByRole("radio", { name: /^Shared/ });
+    expect(shared).not.toHaveAttribute("aria-describedby");
+    expect(screen.queryByText("The private line.")).toBeNull();
+    expect(screen.queryByText(PUBLIC_PREVIEW_LINE)).toBeNull();
+
+    const privately = screen.getByRole("radio", { name: /^Private/ });
+    await user.click(privately);
+    expect(privately).toHaveAccessibleDescription("The private line.");
+    expect(screen.queryByText(PUBLIC_PREVIEW_LINE)).toBeNull();
+
+    const publicly = screen.getByRole("radio", { name: /^Public/ });
+    await user.click(publicly);
+    expect(publicly).toHaveAccessibleDescription(PUBLIC_PREVIEW_LINE);
+    expect(screen.getByText(PUBLIC_PREVIEW_LINE)).toHaveClass(
+      "text-small",
+      "text-muted",
+    );
     expect(screen.queryByText("The private line.")).toBeNull();
 
-    await user.click(share);
-    expect(share).toHaveAccessibleDescription("The private line.");
-    expect(
-      screen.queryByText(
-        "Shared runs show your kit, conditions, and your verdict.",
-      ),
-    ).toBeNull();
+    await user.click(shared);
+    expect(shared).not.toHaveAttribute("aria-describedby");
+    expect(screen.queryByText(PUBLIC_PREVIEW_LINE)).toBeNull();
+  });
 
-    await user.click(share);
-    expect(share).toHaveAccessibleDescription(
-      "Shared runs show your kit, conditions, and your verdict.",
-    );
+  it("keeps the field's own props on each radio while it adds the line", async () => {
+    await renderWithRouter(form({ entry: { audience: "private" } }));
+    const privately = screen.getByRole("radio", { name: /^Private/ });
+    expect(privately).toHaveAttribute("name", "audience");
+    expect(privately).toHaveAttribute("aria-describedby", "verdict-share-hint");
   });
 
   it("opens Change as a sheet and comes back with the form's values kept (round 32, 2a)", async () => {
@@ -1154,7 +1188,7 @@ describe("VerdictForm: tags and sharing", () => {
     // Back on the form: the line follows the saved setting, and nothing
     // picked before the sheet opened was lost.
     expect(
-      screen.getByRole("checkbox", { name: "Share to feed" }),
+      screen.getByRole("radio", { name: /^Private/ }),
     ).toHaveAccessibleDescription("Other runners won't see this run.");
     expect(screen.getByRole("button", { name: "Dialed" })).toHaveAttribute(
       "aria-pressed",
@@ -1171,17 +1205,35 @@ describe("VerdictForm: tags and sharing", () => {
     });
   });
 
-  it("is shared by default, and can be made private", async () => {
-    // Entries are public by default with a per-entry toggle.
+  it("starts at the entry's audience, and sends the one picked", async () => {
+    // The runner's default is what the entry started with.
     const user = userEvent.setup();
     const submitVerdict = vi.fn<
       (input: { data: Record<string, unknown> }) => Promise<unknown>
     >(() => Promise.resolve());
     await renderWithRouter(form({ submitVerdict }));
-    const share = screen.getByLabelText("Share to feed");
-    expect(share).toBeChecked();
+    expect(screen.getByRole("radio", { name: /^Shared/ })).toBeChecked();
 
-    await user.click(share);
+    await user.click(screen.getByRole("radio", { name: /^Public/ }));
+    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
+
+    await waitFor(() => {
+      expect(submitVerdict).toHaveBeenCalledTimes(1);
+    });
+    expect(submitVerdict.mock.calls[0]?.[0]?.data).toMatchObject({
+      audience: "world",
+    });
+  });
+
+  it("can be made private", async () => {
+    const user = userEvent.setup();
+    const submitVerdict = vi.fn<
+      (input: { data: Record<string, unknown> }) => Promise<unknown>
+    >(() => Promise.resolve());
+    await renderWithRouter(form({ submitVerdict }));
+
+    await user.click(screen.getByRole("radio", { name: /^Private/ }));
     await user.click(screen.getByRole("button", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
@@ -1193,16 +1245,21 @@ describe("VerdictForm: tags and sharing", () => {
     });
   });
 
-  it("starts private when the entry already is", async () => {
-    await renderWithRouter(form({ entry: { audience: "private" } }));
-    expect(screen.getByLabelText("Share to feed")).not.toBeChecked();
+  it("starts private or public when the entry already is", async () => {
+    const { unmount } = await renderWithRouter(
+      form({ entry: { audience: "private" } }),
+    );
+    expect(screen.getByRole("radio", { name: /^Private/ })).toBeChecked();
+    unmount();
+
+    await renderWithRouter(form({ entry: { audience: "world" } }));
+    expect(screen.getByRole("radio", { name: /^Public/ })).toBeChecked();
   });
 
-  it("starts unshared for a groups entry, which strangers do not see", async () => {
-    // Groups are storable before they are writable (D-109): the switch
-    // stands for `runners` alone, so a groups entry is not "shared".
+  it("starts private for a groups entry, which nothing can write yet", async () => {
+    // Groups are storable before they are writable (D-109).
     await renderWithRouter(form({ entry: { audience: "groups" } }));
-    expect(screen.getByLabelText("Share to feed")).not.toBeChecked();
+    expect(screen.getByRole("radio", { name: /^Private/ })).toBeChecked();
   });
 });
 
@@ -1388,9 +1445,7 @@ describe("VerdictForm: what happens after saving", () => {
     // In the submit's place: share and submit are gone, and there is no
     // button standing in for them.
     expect(screen.queryByRole("button", { name: "Log it" })).toBeNull();
-    expect(
-      screen.queryByRole("checkbox", { name: "Share to feed" }),
-    ).toBeNull();
+    expect(screen.queryByRole("radio", { name: /^Shared/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
 
     // The answer stays — the chosen verdict still pressed.

@@ -17,6 +17,7 @@ import { isProvidersReading, stripConditions } from "../strip";
 import { ConditionsCell } from "./ConditionsCell";
 import { Handle } from "./Handle";
 import { HIDDEN_WHILE_WE_CHECK } from "./UnderReview";
+import { OwnerAudience } from "./OwnerAudience";
 import { ReportFoot } from "./ReportFoot";
 import { DeletePhoto } from "./RetractEntry";
 import type { DeletePhotoProps } from "./RetractEntry";
@@ -137,6 +138,16 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
           no tag here (round 28 #6). Nobody else ever reaches it. */}
       {entry.underReview ? (
         <NoticeBand {...HIDDEN_WHILE_WE_CHECK} />
+      ) : undefined}
+
+      {/* D's owner meta (round 41 #86a): who the kit is for, after the
+          review band, which is "the band at the top". */}
+      {isOwn ? (
+        <OwnerAudience
+          entryId={entryId}
+          audience={entry.audience}
+          onStatus={setStatus}
+        />
       ) : undefined}
 
       <PhotoPager

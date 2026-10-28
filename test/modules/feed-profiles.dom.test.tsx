@@ -418,7 +418,7 @@ describe("OtherProfile (H)", () => {
     expect(screen.getByRole("heading", { name: "@ravi_k" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Follow" })).toBeVisible();
     expect(part("entries")).toHaveAttribute("data-state", "empty");
-    expect(screen.getByText("No public entries yet.")).toBeVisible();
+    expect(screen.getByText("No shared runs yet.")).toBeVisible();
     expect(
       screen.getByText(
         "Follow @ravi_k and their shared runs will show in your feed.",

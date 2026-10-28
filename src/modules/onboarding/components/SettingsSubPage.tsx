@@ -1,9 +1,15 @@
 import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 import type { JSX, ReactNode } from "react";
 
 import { Icon, Page } from "../../../ui";
 import type { CurrentSettings } from "../profile";
 import type { SettingsSection } from "../route-decisions";
+import type { PublicProfileState } from "../public-profile";
+import {
+  DEFAULT_MOVED_LINE,
+  PublicProfileSwitches,
+} from "./PublicProfileSwitches";
 import { GroupSection, SharingForm, UnitsForm } from "./Settings";
 import { TotalsSwitch } from "./TotalsSwitch";
 
@@ -110,52 +116,107 @@ type SectionPageProps = Readonly<{
   saveUnits: Parameters<typeof UnitsForm>[0]["saveUnits"];
   saveSharing: Parameters<typeof SharingForm>[0]["saveSharing"];
   saveCountInTotals: Parameters<typeof TotalsSwitch>[0]["save"];
+  savePublicProfile: Parameters<typeof PublicProfileSwitches>[0]["save"];
 }>;
 
 /**
  * One sub-page: its title, the way back, and its own small form.
- *
- * **Privacy holds two controls that save differently** (round 38 #61c):
- * NEW RUNS is a form with its Save, and ANONYMOUS TOTALS saves on toggle,
- * so it sits after the form's end, outside it, under a rule and a kicker
- * that says so. A failure there is §4a's NOT CHANGED in its own group.
- * The totals switch comes last, so Tab never passes it between the form's
- * field and its Save.
  */
 export function SettingsSectionPage(props: SectionPageProps): JSX.Element {
-  const {
-    section,
-    current,
-    isVerified,
-    saveUnits,
-    saveSharing,
-    saveCountInTotals,
-  } = props;
+  const { section, current, saveUnits } = props;
   return (
     <PickedSubPage
       section={section}
       titles={SECTION_TITLES}
       pages={{
         units: <UnitsForm current={current} saveUnits={saveUnits} />,
-        sharing: (
-          <>
-            <SubPageGroup title="New runs">
-              <SharingForm current={current} saveSharing={saveSharing} />
-            </SubPageGroup>
-            {/* Round 38 #61c's rule between the groups, in --hairline-2. */}
-            <hr className="m-0 border-0 border-t border-hairline-2" />
-            <SubPageGroup title="Anonymous totals · Saves as you switch">
-              <TotalsSwitch
-                initial={current.countInTotals}
-                isVerified={isVerified}
-                save={saveCountInTotals}
-              />
-            </SubPageGroup>
-          </>
-        ),
+        sharing: <PrivacySections {...props} />,
       }}
     />
   );
+}
+
+/**
+ * Privacy's three groups, each saving its own way (round 38 #61c, round
+ * 41 #86b): NEW RUNS is a form with its Save; PUBLIC PROFILE and
+ * ANONYMOUS TOTALS save on toggle, so they sit after the form's end,
+ * outside it, under a rule and a kicker that says so. A failure in either
+ * is §4a's NOT CHANGED in its own group. The switches come after the
+ * form, so Tab never passes them between its field and its Save.
+ *
+ * **The profile switch reaches into NEW RUNS**, so its saved state lives
+ * here: the PUBLIC row shows only while the profile is public, and
+ * turning the profile off can move a PUBLIC default to SHARED. NEW RUNS is
+ * keyed by the profile's state, so it starts again from the saved default
+ * whenever its rows change, never holding a pick it no longer offers.
+ */
+function PrivacySections({
+  current,
+  isVerified,
+  saveSharing,
+  saveCountInTotals,
+  savePublicProfile,
+}: SectionPageProps): JSX.Element {
+  const [profile, setProfile] = useState({
+    publicProfile: current.publicProfile,
+    publicCloset: current.publicCloset,
+  });
+  const [savedDefault, setSavedDefault] = useState(current.defaultAudience);
+  const [hasMoved, setHasMoved] = useState(false);
+
+  function onProfileSaved(state: PublicProfileState): void {
+    setHasMoved(
+      savedDefault === "world" && state.defaultAudience !== savedDefault,
+    );
+    setProfile({
+      publicProfile: state.publicProfile,
+      publicCloset: state.publicCloset,
+    });
+    setSavedDefault(state.defaultAudience);
+  }
+
+  return (
+    <>
+      <SubPageGroup title="New runs">
+        <SharingForm
+          key={String(profile.publicProfile)}
+          current={{
+            defaultAudience: savedDefault,
+            publicProfile: profile.publicProfile,
+          }}
+          saveSharing={async (input) => {
+            await saveSharing(input);
+            setSavedDefault(input.data.defaultAudience);
+          }}
+        />
+      </SubPageGroup>
+      <GroupRule />
+      <SubPageGroup title="Public profile · Saves as you switch">
+        <PublicProfileSwitches
+          {...profile}
+          handle={current.username}
+          notice={hasMoved ? DEFAULT_MOVED_LINE : undefined}
+          save={savePublicProfile}
+          onSaved={onProfileSaved}
+        />
+      </SubPageGroup>
+      <GroupRule />
+      <SubPageGroup title="Anonymous totals · Saves as you switch">
+        <TotalsSwitch
+          initial={current.countInTotals}
+          isVerified={isVerified}
+          save={saveCountInTotals}
+        />
+      </SubPageGroup>
+    </>
+  );
+}
+
+/**
+Round 38 #61c's rule between Privacy's groups, in --hairline-2.
+*/
+function GroupRule(): JSX.Element {
+  return <hr className="m-0 border-0 border-t border-hairline-2" />;
 }
 
 /**

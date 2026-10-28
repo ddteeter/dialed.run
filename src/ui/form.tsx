@@ -932,84 +932,96 @@ export function ToggleField({
  * does, so it is inert here rather than wrong, and the double-submit guard
  * lives in the handler regardless.
  */
-export function ChoiceList<TOption extends string>({
-  name,
-  legend,
-  hint,
-  options,
-  optionLabels,
-  optionNotes,
-  layout,
-  value,
-  field,
-  onChange,
-  error,
-  readOnly,
-}: Readonly<
-  ChoosableProps<TOption> & {
-    legend: string;
-    /**
+export function ChoiceList<TOption extends string>(
+  props: Readonly<
+    ChoosableProps<TOption> & {
+      legend: string;
+      /**
     One sentence under the group, for what the answer is used for.
     */
-    hint?: string | undefined;
-    /**
-     * A measured value shown beside each option — O1's `+8°` offsets.
-     *
-     * Mono, because that is what mono is for: the tell that a number came
-     * from the system rather than from a person. It sits *inside* the
-     * label, so it joins the option's accessible name ("Always freezing
-     * plus 8 degrees") instead of being decoration a screen reader skips —
-     * which matters here, since design's whole point is that the offset is
-     * visible on purpose.
-     */
-    optionNotes?: Readonly<Record<TOption, string>> | undefined;
-    /**
-     * `chips` wraps the options; omitted, they stack one per line.
-     *
-     * No `= "rows"` default: the stacked layout is what you get by not
-     * asking, so naming it twice would be a value nothing reads.
-     *
-     * A layout prop rather than a second component, because the control is
-     * identical — a radio group with a legend, all options readable
-     * together — and only the shape differs. Round 11 §AH needs `chips`
-     * for thirteen colour names, where thirteen stacked rows would bury
-     * the rest of the form; `rows` stays the default so the five-answer
-     * groups O1 was built for do not move.
-     *
-     * **A chip is still words, never a swatch.** Design's reason, and the
-     * one thing a future caller must not undo: *"thirteen swatches is
-     * thirteen accents in one viewport"*, and hue means verdict
-     * everywhere else in this app.
-     *
-     * `chip-grid` is the same chips in three columns instead of a wrap —
-     * R2b's twelve temperature bands, *"a 3-column radiogroup, coldest
-     * top-left"* (round 26, item 2), where reading order is the scale.
-     */
-    layout?: "chips" | "chip-grid" | undefined;
-    /**
-     * `""` is "not answered", the same spelling `ChoiceField` uses for a
-     * `<select>` with no choice made — an unanswered control reaches the
-     * DOM as an empty string, and converting it to `undefined` at every
-     * call site was four lines that did nothing: `"" === option` is false
-     * for every option, which is exactly what `undefined` means here.
-     */
-    value: TOption | "" | undefined;
-    onChange: (value: TOption) => void;
-    /**
-     * Shown as an answer, not asked as a question — A3's chips after Log
-     * it (design round 20: *"the verdict row and chips stay, read-only, so
-     * the receipt is read against the answer"*).
-     *
-     * **Not `disabled`.** Accessibility rule 07 bans dropping a control out
-     * of the tab order, and a receipt is exactly what a reader should be
-     * able to walk. `readOnly` does nothing to a radio in any browser, so
-     * the group is `aria-disabled` — announced as unavailable, still
-     * focusable — and a change is simply not passed on. The input stays
-     * controlled, so the choice on screen cannot move.
-     */
-    readOnly?: boolean | undefined;
-  }
->): JSX.Element {
+      hint?: string | undefined;
+      /**
+       * A measured value shown beside each option — O1's `+8°` offsets.
+       *
+       * Mono, because that is what mono is for: the tell that a number came
+       * from the system rather than from a person. It sits *inside* the
+       * label, so it joins the option's accessible name ("Always freezing
+       * plus 8 degrees") instead of being decoration a screen reader skips —
+       * which matters here, since design's whole point is that the offset is
+       * visible on purpose.
+       */
+      optionNotes?: Readonly<Record<TOption, string>> | undefined;
+      /**
+       * A sentence under each option's label, saying what it means — A3's
+       * PRIVATE "Only you." (round 41 #86a). Inside the label for
+       * `optionNotes`' reason: it joins the option's accessible name, so
+       * the choice is announced with its meaning rather than as a bare word.
+       */
+      optionHints?: Readonly<Record<TOption, string>> | undefined;
+      /**
+       * `chips` wraps the options; omitted, they stack one per line.
+       *
+       * No `= "rows"` default: the stacked layout is what you get by not
+       * asking, so naming it twice would be a value nothing reads.
+       *
+       * A layout prop rather than a second component, because the control is
+       * identical — a radio group with a legend, all options readable
+       * together — and only the shape differs. Round 11 §AH needs `chips`
+       * for thirteen colour names, where thirteen stacked rows would bury
+       * the rest of the form; `rows` stays the default so the five-answer
+       * groups O1 was built for do not move.
+       *
+       * **A chip is still words, never a swatch.** Design's reason, and the
+       * one thing a future caller must not undo: *"thirteen swatches is
+       * thirteen accents in one viewport"*, and hue means verdict
+       * everywhere else in this app.
+       *
+       * `chip-grid` is the same chips in three columns instead of a wrap —
+       * R2b's twelve temperature bands, *"a 3-column radiogroup, coldest
+       * top-left"* (round 26, item 2), where reading order is the scale.
+       */
+      layout?: "chips" | "chip-grid" | undefined;
+      /**
+       * `""` is "not answered", the same spelling `ChoiceField` uses for a
+       * `<select>` with no choice made — an unanswered control reaches the
+       * DOM as an empty string, and converting it to `undefined` at every
+       * call site was four lines that did nothing: `"" === option` is false
+       * for every option, which is exactly what `undefined` means here.
+       */
+      value: TOption | "" | undefined;
+      onChange: (value: TOption) => void;
+      /**
+       * Shown as an answer, not asked as a question — A3's chips after Log
+       * it (design round 20: *"the verdict row and chips stay, read-only, so
+       * the receipt is read against the answer"*).
+       *
+       * **Not `disabled`.** Accessibility rule 07 bans dropping a control out
+       * of the tab order, and a receipt is exactly what a reader should be
+       * able to walk. `readOnly` does nothing to a radio in any browser, so
+       * the group is `aria-disabled` — announced as unavailable, still
+       * focusable — and a change is simply not passed on. The input stays
+       * controlled, so the choice on screen cannot move.
+       */
+      readOnly?: boolean | undefined;
+    }
+  >,
+): JSX.Element {
+  // `optionHints` is read from `props` where it is used, the one option
+  // part only `OptionLabel` needs.
+  const {
+    name,
+    legend,
+    hint,
+    options,
+    optionLabels,
+    optionNotes,
+    layout,
+    value,
+    field,
+    onChange,
+    error,
+    readOnly,
+  } = props;
   const isChips = layout !== undefined;
   return (
     <FieldGroup name={name} legend={legend} hint={hint} error={error}>
@@ -1040,7 +1052,10 @@ export function ChoiceList<TOption extends string>({
               // which clicks the control and not the label.
               className={isChips ? CHIP_INPUT_CLASS : undefined}
             />
-            {optionLabels[option]}
+            <OptionLabel
+              label={optionLabels[option]}
+              hint={props.optionHints?.[option]}
+            />
             {optionNotes === undefined ? undefined : (
               <Mono step="md" className="ml-auto tabular-nums text-quiet">
                 {optionNotes[option]}
@@ -1050,5 +1065,23 @@ export function ChoiceList<TOption extends string>({
         ))}
       </div>
     </FieldGroup>
+  );
+}
+
+/**
+ * A `ChoiceList` option's words: its label, and its hint beneath when it
+ * has one. A label alone stays a bare string, so a group with no hints
+ * renders exactly as it did.
+ */
+function OptionLabel({
+  label,
+  hint,
+}: Readonly<{ label: string; hint: string | undefined }>): JSX.Element {
+  if (hint === undefined) return <>{label}</>;
+  return (
+    <span className="flex flex-col gap-1">
+      {label}
+      <span className="text-small font-normal text-muted">{hint}</span>
+    </span>
   );
 }

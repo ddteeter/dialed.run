@@ -1666,6 +1666,35 @@ describe("ChoiceList", () => {
     expect(screen.getByText("+8\u{00B0}")).toHaveClass("font-mono");
   });
 
+  it("puts a hint under the option's label, inside its name, in the quiet small type", () => {
+    // A3's audience picker (round 41 #86a): each choice says what it
+    // means, and a reader hears the meaning with the word.
+    render(
+      <ChoiceList
+        name="thermal"
+        legend="Do you run warm or cold?"
+        options={LEVELS}
+        optionLabels={LABELS}
+        optionHints={{
+          hot: "Strip down early.",
+          mild: "Dress for the number.",
+          cold: "Add a layer.",
+        }}
+        value={undefined}
+        field={restingField}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("radio", { name: /^Runs cold/ })).toHaveAccessibleName(
+      "Runs cold Add a layer.",
+    );
+    const hint = screen.getByText("Add a layer.");
+    expect(hint).toHaveClass("text-small", "font-normal", "text-muted");
+    expect(hint.parentElement).toHaveClass("flex", "flex-col", "gap-1");
+    expect(hint.parentElement).toHaveTextContent("Runs coldAdd a layer.");
+  });
+
   it("leaves the names alone when there are no notes", () => {
     // The default, and every other caller. A group that appended an empty
     // span would still change the name.
@@ -1674,6 +1703,8 @@ describe("ChoiceList", () => {
     expect(screen.getByLabelText("Runs cold")).toHaveAccessibleName(
       "Runs cold",
     );
+    // And no hint's box around the words: the label holds them bare.
+    expect(screen.getByText("Runs cold").tagName).toBe("LABEL");
   });
 
   it("points a field at its suggestion list, and omits the attribute without one", () => {
