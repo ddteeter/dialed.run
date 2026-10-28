@@ -241,7 +241,10 @@ export function calendarDay(epochSeconds: number, timeZone?: string): string {
   });
 }
 
-const HOUR_S = 60 * 60;
+// A literal, not `60 * 60`: mutated to `60 / 60`, the step below becomes
+// one second, and a day's search builds 86,400 formatters — slow enough to
+// hold a mutation run until its timeout.
+const HOUR_S = 3600;
 
 /**
  * The calendar day before the one an instant falls on, in a zone — the

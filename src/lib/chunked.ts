@@ -13,17 +13,20 @@
  * them. Moving the code was cheaper than proving three equivalences, and
  * it leaves the caller saying what it means.
  *
- * The chunk count is fixed before any chunk is built, rather than found
- * by an index loop: that loop's `+=` mutated to `-=`, or its bound to
- * `true`, never ends and allocates a chunk every turn — enough to take a
- * CI runner down before Stryker's timeout fires. Every mutant here ends.
+ * Each chunk starts at an index of `items` itself, rather than being
+ * counted out by an index loop or a computed length. The loop's `+=`
+ * mutated to `-=` never ends and allocates a chunk every turn, and
+ * `Math.ceil(length / size)` mutated to `length * size` asks
+ * `readInChunks` for thousands of reads; either can hold a mutation run
+ * until Stryker's ten-minute timeout and take a CI runner's memory with
+ * it. Here no mutant can make more chunks than there are items.
  */
 export function chunked<TItem>(
   items: readonly TItem[],
   size: number,
 ): TItem[][] {
-  return Array.from({ length: Math.ceil(items.length / size) }, (_, chunk) =>
-    items.slice(chunk * size, (chunk + 1) * size),
+  return items.flatMap((_, index) =>
+    index % size === 0 ? [items.slice(index, index + size)] : [],
   );
 }
 
