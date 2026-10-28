@@ -1,30 +1,54 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  garminConfigFor,
-  garminConfigFrom,
-} from "../../src/modules/runs/garmin/config";
+import type { GarminVars } from "../../src/modules/runs/garmin/config";
+import { garminConfigFor } from "../../src/modules/runs/garmin/config";
 
-describe("garminConfigFrom", () => {
-  it("is configured with both the key and its owner", () => {
-    expect(garminConfigFrom("key", "owner")).toEqual({
+/**
+The bindings as the Worker hands them: an unset secret is absent, not
+undefined.
+*/
+function varsOf(
+  key: string | undefined,
+  owner: string | undefined,
+  origin?: string,
+): GarminVars {
+  return {
+    ...(key !== undefined && { GARMIN_API_KEY: key }),
+    ...(owner !== undefined && { GARMIN_OWNER_USER_ID: owner }),
+    ...(origin !== undefined && { GARMIN_API_ORIGIN: origin }),
+  };
+}
+
+function originFor(origin: string | undefined): string | undefined {
+  return garminConfigFor(varsOf("key", "owner", origin), "owner")?.origin;
+}
+
+describe("garminConfigFor", () => {
+  it("is the owner's, with the key", () => {
+    expect(garminConfigFor(varsOf("key", "owner"), "owner")).toEqual({
       apiKey: "key",
       ownerUserId: "owner",
+      origin: undefined,
     });
   });
 
+  it("is nobody else's", () => {
+    expect(garminConfigFor(varsOf("key", "owner"), "someone")).toBeUndefined();
+  });
+
   it("points at a stub only when told to", () => {
-    expect(garminConfigFrom("key", "owner", "https://stub.test")?.origin).toBe(
-      "https://stub.test",
-    );
-    expect(garminConfigFrom("key", "owner", "")?.origin).toBeUndefined();
-    expect(garminConfigFrom("key", "owner")?.origin).toBeUndefined();
+    expect(originFor("https://stub.test")).toBe("https://stub.test");
+    expect(originFor(" https://stub.test\n")).toBe("https://stub.test");
+    expect(originFor("")).toBeUndefined();
+    expect(originFor(" ")).toBeUndefined();
+    expect(originFor(undefined)).toBeUndefined();
   });
 
   it("trims what a secret put may carry", () => {
-    expect(garminConfigFrom(" key\n", " owner ")).toEqual({
+    expect(garminConfigFor(varsOf(" key\n", " owner "), "owner")).toEqual({
       apiKey: "key",
       ownerUserId: "owner",
+      origin: undefined,
     });
   });
 
@@ -34,23 +58,10 @@ describe("garminConfigFrom", () => {
     ["", "owner"],
     ["key", "  "],
     [undefined, undefined],
-  ])("is not configured with key %j and owner %j", (key, owner) => {
-    expect(garminConfigFrom(key, owner)).toBeUndefined();
-  });
-});
-
-describe("garminConfigFor", () => {
-  const config = { apiKey: "key", ownerUserId: "owner", origin: undefined };
-
-  it("is the owner's", () => {
-    expect(garminConfigFor(config, "owner")).toBe(config);
-  });
-
-  it("is nobody else's", () => {
-    expect(garminConfigFor(config, "someone")).toBeUndefined();
-  });
-
-  it("is nobody's when unconfigured", () => {
-    expect(garminConfigFor(undefined, "owner")).toBeUndefined();
+  ])("is nobody's with key %j and owner %j", (key, owner) => {
+    const vars = varsOf(key, owner);
+    expect(garminConfigFor(vars, "owner")).toBeUndefined();
+    // A blank owner never matches a blank id either.
+    expect(garminConfigFor(vars, "")).toBeUndefined();
   });
 });

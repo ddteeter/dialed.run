@@ -42,7 +42,7 @@ import {
 import { env } from "../../env";
 import { captureException, oweInCore } from "../ops";
 import { stravaApiFromEnv, stravaConfigFromEnv } from "./strava/api-from-env";
-import { garminConfigFor, garminConfigFrom } from "./garmin/config";
+import { garminConfigFor } from "./garmin/config";
 import { garminPicker, importGarminActivity } from "./garmin/service";
 import {
   connectFromCallback,
@@ -87,33 +87,22 @@ export const startFileImport = createServerFn({ method: "POST" })
 
 // ---- Import from Garmin (plan 157, phase 1) ---------------------------
 //
-// The owner's alone: `garminConfigFor` answers undefined for anyone else,
-// and for everyone until a human sets both secrets (law 5).
+// The owner's alone: `garminConfigFor` decides, from the bindings.
 
 export const garminImportEnabledFn = createServerFn({ method: "GET" }).handler(
   async () => {
     const userId = await requireUserId();
-    const config = garminConfigFrom(
-      env.GARMIN_API_KEY,
-      env.GARMIN_OWNER_USER_ID,
-      env.GARMIN_API_ORIGIN,
-    );
-    return garminConfigFor(config, userId) !== undefined;
+    return garminConfigFor(env, userId) !== undefined;
   },
 );
 
 export const getGarminPickerFn = createServerFn({ method: "GET" }).handler(
   async () => {
     const userId = await requireUserId();
-    const config = garminConfigFrom(
-      env.GARMIN_API_KEY,
-      env.GARMIN_OWNER_USER_ID,
-      env.GARMIN_API_ORIGIN,
-    );
     return garminPicker(
       {
         db: coreDb(),
-        config: garminConfigFor(config, userId),
+        config: garminConfigFor(env, userId),
         report: captureException,
       },
       userId,
@@ -125,15 +114,10 @@ export const importGarminActivityFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => garminImportInput.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    const config = garminConfigFrom(
-      env.GARMIN_API_KEY,
-      env.GARMIN_OWNER_USER_ID,
-      env.GARMIN_API_ORIGIN,
-    );
     return importGarminActivity(
       {
         db: coreDb(),
-        config: garminConfigFor(config, userId),
+        config: garminConfigFor(env, userId),
         report: captureException,
         importBucket: env.IMPORTS,
         queue: env.IMPORTS_QUEUE,
