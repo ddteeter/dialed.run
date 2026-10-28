@@ -225,6 +225,8 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "onboarding/functions.ts settingsQuery": "unconfirmed",
   "onboarding/functions.ts saveUnitsFn": "unconfirmed",
   "onboarding/functions.ts saveSharingFn": "unconfirmed",
+  // D-149: a public profile is seen by anyone signed out.
+  "onboarding/functions.ts setPublicProfileFn": "verified",
   // The runner's own setting, read for A3 — settingsQuery's class.
   "onboarding/functions.ts countInTotalsQuery": "unconfirmed",
   // D-108: the runner's own choice, visible to nobody, so an unconfirmed

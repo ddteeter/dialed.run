@@ -9,7 +9,7 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 
 import { coreDb, waitUntil } from "../../env";
 import { cityLookupInput } from "../../lib/contracts/city-lookup";
-import { optionalUserId, requireUserId } from "../auth";
+import { optionalUserId, requireUserId, verifiedUserId } from "../auth";
 import { nameItem } from "../closet";
 import { coverageLadder } from "../feed";
 import { captureException } from "../ops";
@@ -20,6 +20,7 @@ import {
   calibrationInput,
   countInTotalsInput,
   nameGarmentInput,
+  publicProfileInput,
   sharingInput,
   unitsInput,
 } from "./inputs";
@@ -32,6 +33,7 @@ import {
   saveCalibration,
   savePreferences,
 } from "./profile";
+import { saveSharing, setPublicProfile } from "./public-profile";
 import { namedResult, namingOffer, namingSuggestions } from "./naming";
 import { starterList } from "./starter-list";
 import { unitsFromLocale } from "./units-from-locale";
@@ -100,10 +102,27 @@ export const saveUnitsFn = createServerFn({ method: "POST" })
     savePreferences(db(), await requireUserId(), data),
   );
 
+/**
+ * Settings › Privacy's NEW RUNS. A PUBLIC default is refused unless the
+ * runner's profile is public (D-149), in the write itself (`saveSharing`).
+ * Unconfirmed runners may save, since a default is seen by nobody and
+ * their entries start private whatever it says (D-50).
+ */
 export const saveSharingFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => sharingInput.parse(data))
+  .handler(async ({ data }) => saveSharing(db(), await requireUserId(), data));
+
+/**
+ * Settings › Privacy's PUBLIC PROFILE switches (round 41 #86b), saved as
+ * they are switched. A public profile is seen by anyone, so it waits for
+ * a confirmed address (D-113), and the refusal opens "Confirm your email
+ * first". A confirmed address is never lost, so nobody is left unable to
+ * turn one off.
+ */
+export const setPublicProfileFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => publicProfileInput.parse(data))
   .handler(async ({ data }) =>
-    savePreferences(db(), await requireUserId(), data),
+    setPublicProfile(db(), await verifiedUserId(), data),
   );
 
 /**
