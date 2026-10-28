@@ -12,16 +12,22 @@
  * wrong bound changes the chunks themselves, and a test can just look at
  * them. Moving the code was cheaper than proving three equivalences, and
  * it leaves the caller saying what it means.
+ *
+ * Each chunk starts at an index of `items` itself, rather than being
+ * counted out by an index loop or a computed length. The loop's `+=`
+ * mutated to `-=` never ends and allocates a chunk every turn, and
+ * `Math.ceil(length / size)` mutated to `length * size` asks
+ * `readInChunks` for thousands of reads; either can hold a mutation run
+ * until Stryker's ten-minute timeout and take a CI runner's memory with
+ * it. Here no mutant can make more chunks than there are items.
  */
 export function chunked<TItem>(
   items: readonly TItem[],
   size: number,
 ): TItem[][] {
-  const chunks: TItem[][] = [];
-  for (let index = 0; index < items.length; index += size) {
-    chunks.push(items.slice(index, index + size));
-  }
-  return chunks;
+  return items.flatMap((_, index) =>
+    index % size === 0 ? [items.slice(index, index + size)] : [],
+  );
 }
 
 /**

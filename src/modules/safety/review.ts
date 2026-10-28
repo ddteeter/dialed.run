@@ -780,8 +780,9 @@ export async function resolveReview(
  *   changes nothing about the profile (a ban is separate, and tells them
  *   itself), so neither is told "we removed it".
  * - **A quarantine** tells nobody: suspected CSAM is silent (D-70).
- * - **A garment's photo** tells nobody either way: nobody reports one,
- *   and its author's notice of a Remove waits on the owner (design 157).
+ * - **A garment's photo** tells nobody here: nobody reports one, and its
+ *   Remove reaches here only once the photo is gone — the owner's notice
+ *   is `feed/garment-moderation.ts`'s, with the Remove (design 159).
  */
 async function decisionNotices(
   row: Exclude<OpenRow, string>,
@@ -925,10 +926,11 @@ const subjectWriters: Record<
   ],
   // A garment's photo (design 157). Approve clears it: nobody but its
   // owner ever sees it, so `pass` publishes nothing, and it ends the
-  // owner's "being checked" band. Remove keeps it hidden (`flagged`) and
-  // tells nobody until the owner settles what its author is told. A
-  // quarantine is `feed/garment-moderation.ts`'s, and reaches here only
-  // once the photo is gone. Only a garment that still has a photo.
+  // owner's "being checked" band. A Remove or a quarantine is
+  // `feed/garment-moderation.ts`'s (designs 157, 159), which takes the
+  // photo off first; safety's own Remove, reached without it, keeps a
+  // photo still there hidden (`flagged`) rather than leave it waiting.
+  // Only a garment that still has a photo.
   garment: (subjectId, decision) => [
     setOnSubject(
       wardrobeItems,

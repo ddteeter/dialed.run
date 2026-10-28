@@ -83,7 +83,7 @@ import {
   type ReviewSubjectType,
 } from "../safety";
 
-import { preserveObject, quarantineGarmentPhoto } from "./garment-moderation";
+import { moderateGarmentPhoto, preserveObject } from "./garment-moderation";
 
 import {
   commit,
@@ -183,10 +183,7 @@ const subjectColumn = {
 async function copyBytes(photoKeys: readonly string[]) {
   // A photo with no object maps to nothing, which its snapshot's spread
   // reads the same as no entry at all.
-  const copies = new Map<
-    string,
-    Awaited<ReturnType<typeof preserveObject>>
-  >();
+  const copies = new Map<string, Awaited<ReturnType<typeof preserveObject>>>();
   for (const photoKey of photoKeys) {
     copies.set(photoKey, await preserveObject(photoKey));
   }
@@ -499,20 +496,18 @@ export async function decideReview(
   const isTakenDown =
     subject !== undefined &&
     (await wasTakenDown(db, reviewerId, decision, subject));
-  // Anything not taken down here — a product, a profile, an entry already
-  // gone, or a garment photo's Remove — is settled by safety's own writer,
-  // so the row never stays open on a subject nobody can act on.
+  // Anything not taken down here — a product, a profile, or an entry or
+  // garment photo already gone — is settled by safety's own writer, so
+  // the row never stays open on a subject nobody can act on.
   return isTakenDown
     ? "resolved"
     : resolveReview(queueId, reviewerId, decision.action);
 }
 
 /**
- * The takedown a decision owes its subject, where feed makes it: a kit or
- * a kit photo's Remove or quarantine, or a garment photo's quarantine
- * (design 157). A garment photo's Remove is safety's hide until its
- * author's notice exists, and anything else is safety's too. Says
- * whether it took the subject down now.
+ * The takedown a decision owes its subject, where feed makes it: a kit, a
+ * kit photo or a garment photo's Remove or quarantine (designs 157, 159).
+ * Anything else is safety's. Says whether it took the subject down now.
  */
 async function wasTakenDown(
   db: Db,
@@ -530,13 +525,12 @@ async function wasTakenDown(
     });
     return outcome === "removed";
   }
-  const isGarmentQuarantine =
-    subject.subjectType === "garment" && decision.action === "quarantine";
   return (
-    isGarmentQuarantine &&
-    (await quarantineGarmentPhoto(db, {
+    subject.subjectType === "garment" &&
+    (await moderateGarmentPhoto(db, {
       actorId: reviewerId,
       itemId: subject.subjectId,
+      action: decision.action,
       reason: decision.reason,
     })) === "removed"
   );

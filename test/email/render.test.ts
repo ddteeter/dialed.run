@@ -134,6 +134,42 @@ describe("emailContent", () => {
         footer: LEGAL,
       },
     ],
+    // R-167 (owner, 2026-10-26): a garment's photo, in the closet's words,
+    // a person's find and the automatic check's — and a runDay, which a
+    // garment's debt never carries, changes nothing.
+    [
+      {
+        kind: "content_removed",
+        subject: "garment",
+        reason: "it's sexual or explicit",
+        rule: "explicit",
+        flagged: false,
+        runDay: "Sat, Aug 29",
+      },
+      {
+        subject: "We removed a photo from your closet",
+        body: "We removed the photo of one of your garments. Reason: it's sexual or explicit. That breaks our community rules: don't post sexual or explicit content. A person made this decision. The garment stays in your closet.",
+        button: RULES,
+        foot: "Think we got it wrong? Reply to this email and a person will look again. You can also take it to a court.",
+        footer: LEGAL,
+      },
+    ],
+    [
+      {
+        kind: "content_removed",
+        subject: "garment",
+        reason: "it shows where someone lives",
+        rule: "home",
+        flagged: true,
+      },
+      {
+        subject: "We removed a photo from your closet",
+        body: "We removed the photo of one of your garments. Reason: it shows where someone lives. That breaks our community rules: don't show where someone lives. Our automatic check flagged it; a person made the decision. The garment stays in your closet.",
+        button: RULES,
+        foot: "Think we got it wrong? Reply to this email and a person will look again. You can also take it to a court.",
+        footer: LEGAL,
+      },
+    ],
     // C8 (D-145): the rule it broke, and the automatic check that flagged
     // it before a person decided.
     [

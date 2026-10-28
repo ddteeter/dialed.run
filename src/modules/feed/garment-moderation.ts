@@ -1,21 +1,24 @@
 /**
- * A garment's photo quarantined as suspected CSAM (design 157, D-70): the
- * closet's half of `moderation.ts`'s quarantine, for the one photo a
- * garment has.
+ * A garment's photo taken down by a person: a Remove, which tells its
+ * owner (R-167, design 159), or a quarantine as suspected CSAM, which
+ * tells nobody (design 157, D-70) — the closet's half of `moderation.ts`,
+ * for the one photo a garment has.
  *
  * A garment photo reaches no other runner, but it is hosted here all the
- * same, and an operator who has seen apparent CSAM in one — through the
+ * same, and an operator who has seen it break the rules — through the
  * classifier's queue, the D-147 fingerprint hold, or a copy search — owes
- * the same report and the same year of preservation as for a kit photo.
+ * its owner the same statement of reasons as for a kit photo, and, for
+ * apparent CSAM, the same report and year of preservation.
  *
- * **The same order as a kit's**: every object under the photo's version is
- * copied to `quarantine/…` first, so a failed copy stops the removal; then
- * one batch clears the photo from the garment, settles its review, deletes
- * its screenings and writes the audit row and the locked record, with the
- * photo's prefix owed a delete (law 8c). The garment itself stays: the
- * photo was the content. **Nothing tells the owner** (D-70).
+ * **The same order as a kit's**: a quarantine copies every object under
+ * the photo's version to `quarantine/…` first, so a failed copy stops the
+ * removal; then one batch clears the photo from the garment, settles its
+ * review, deletes its screenings and writes the audit row — with the
+ * locked record for a quarantine, or the owner's bell row and email debt
+ * for a Remove — and the photo's prefix is owed a delete (law 8c). The
+ * garment itself stays: the photo was the content.
  *
- * In feed beside the kit's quarantine, not in closet or safety: it shares
+ * In feed beside the kit's, not in closet or safety: it shares
  * `moderation.ts`'s outbox commit, and safety may not import ops.
  */
 import { and, eq, sql } from "drizzle-orm";
@@ -26,13 +29,19 @@ import { env } from "../../env";
 import { quarantineKeyFor } from "../../lib/entry-photo-key";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
+import { emailDebt } from "../email";
+import { notificationRaise } from "../notifications";
 import { captureException, oweOutbox } from "../ops";
 import {
   garmentPhotoForgotten,
+  garmentRemovalNotice,
+  keptGarmentFingerprint,
   moderationActionInsert,
   quarantineInsert,
+  removalRuleOf,
   removalStatements,
   uploaderContextOf,
+  wasFlaggedAutomatically,
   wasModerated,
   type RemovalReason,
 } from "../safety";
@@ -41,23 +50,22 @@ import { commit, type Report, type Statements } from "./retract";
 
 type Db = ReturnType<typeof drizzle<Record<string, never>>>;
 
-export interface GarmentQuarantine {
+export interface GarmentModeration {
   actorId: string;
   /**
   The garment whose photo it is.
   */
   itemId: string;
+  action: "remove" | "quarantine";
   reason: RemovalReason;
 }
 
 /**
- * `removed` when it was quarantined now; `already_removed` when the photo
+ * `removed` when it was taken down now; `already_removed` when the photo
  * is gone and the Desk acted on it before; `not_found` otherwise.
  */
-export type GarmentQuarantineOutcome =
-  | "removed"
-  | "already_removed"
-  | "not_found";
+export type GarmentModerationOutcome =
+  "removed" | "already_removed" | "not_found";
 
 /**
  * The one copy a quarantine makes, shared with a kit's (`moderation.ts`) so
@@ -119,7 +127,7 @@ type Found = NonNullable<Awaited<ReturnType<typeof garmentWithPhoto>>>;
 
 /**
  * The photo off the garment — only the version read, since a photo
- * replaced since is not the one preserved, and this must not clear it.
+ * replaced since is not the one decided on, and this must not clear it.
  */
 function clearedPhoto(db: Db, { item, photoKey }: Found) {
   const sameVersion = and(
@@ -133,32 +141,48 @@ function clearedPhoto(db: Db, { item, photoKey }: Found) {
 }
 
 /**
- * The quarantine's batch: the audit row, the photo's review and
- * screenings, the photo off the garment, and the locked record.
+ * What every takedown of the photo writes, whichever it is: the audit row,
+ * the photo's review and screenings, and the photo off the garment.
  */
-async function quarantineWrites(
+function takedownWrites(
   db: Db,
-  input: GarmentQuarantine,
+  input: GarmentModeration,
   found: Found,
-): Promise<Statements> {
-  const { item, photoKey, screenings } = found;
-  const copies = await copyVersion(photoKey);
-  const actionId = newUlid();
+  record: { id: string; preservedKey?: string },
+): Statements {
+  const { item } = found;
   return [
     moderationActionInsert(db, {
-      id: actionId,
+      ...record,
       actorId: input.actorId,
-      action: "quarantine",
+      action: input.action,
       subjectType: "garment",
       subjectId: item.id,
       subjectOwnerId: item.userId,
       reason: removalStatements[input.reason],
-      preservedKey: quarantineKeyFor(photoKey),
     }),
     ...garmentPhotoForgotten(db, input.actorId, item.id),
     clearedPhoto(db, found),
+  ];
+}
+
+/**
+ * The quarantine's batch: the takedown, and the locked record. Tells
+ * nobody (D-70).
+ */
+async function quarantineWrites(
+  db: Db,
+  input: GarmentModeration,
+  found: Found,
+) {
+  const { item, photoKey, screenings } = found;
+  const copies = await copyVersion(photoKey);
+  const id = newUlid();
+  const preservedKey = quarantineKeyFor(photoKey);
+  const statements: Statements = [
+    ...takedownWrites(db, input, found, { id, preservedKey }),
     quarantineInsert(db, {
-      moderationActionId: actionId,
+      moderationActionId: id,
       subjectType: "garment",
       subjectId: item.id,
       uploaderId: item.userId,
@@ -168,18 +192,60 @@ async function quarantineWrites(
       quarantinedAt: nowSeconds(),
     }),
   ];
+  return { statements, debts: [] };
 }
 
 /**
- * Quarantine a garment's photo: preserve it, take it off the garment, and
- * tell nobody. A garment with no photo is answered as a repeat when the
- * Desk took one before, and `not_found` otherwise.
+ * The Remove's batch (R-167, design 159): the takedown, the fingerprint an
+ * intimate image keeps (D-147), and the owner told — the bell row and the
+ * email, in the owner's words (2026-10-26). The email names the rule and
+ * who decided, read before the batch settles the review that says whether
+ * the automatic check flagged it.
+ *
+ * The bell row is raised rather than inserted: its subject is the garment,
+ * and a later photo on the same garment can be removed too. The email is
+ * deduplicated by the photo's version for the same reason.
  */
-export async function quarantineGarmentPhoto(
+async function removalWrites(db: Db, input: GarmentModeration, found: Found) {
+  const { item, photoKey } = found;
+  const id = newUlid();
+  const isFlagged = await wasFlaggedAutomatically(db, "garment", item.id);
+  const statements: Statements = [
+    ...takedownWrites(db, input, found, { id }),
+    ...keptGarmentFingerprint(db, input.reason, item.photoFingerprint, id),
+    notificationRaise(db, {
+      userId: item.userId,
+      kind: "content_removed",
+      subjectId: item.id,
+      body: garmentRemovalNotice(input.reason),
+    }),
+  ];
+  const email = emailDebt(
+    {
+      to: { userId: item.userId },
+      template: {
+        kind: "content_removed",
+        subject: "garment",
+        reason: removalStatements[input.reason],
+        rule: removalRuleOf(input.action, input.reason),
+        flagged: isFlagged,
+      },
+    },
+    { dedupeKey: `content_removed:garment:${photoKey}` },
+  );
+  return { statements, debts: [oweOutbox(email)] };
+}
+
+/**
+ * Take a garment's photo down: a Remove tells its owner, a quarantine
+ * preserves it and tells nobody. A garment with no photo is answered as a
+ * repeat when the Desk took one before, and `not_found` otherwise.
+ */
+export async function moderateGarmentPhoto(
   db: Db,
-  input: GarmentQuarantine,
+  input: GarmentModeration,
   report: Report = captureException,
-): Promise<GarmentQuarantineOutcome> {
+): Promise<GarmentModerationOutcome> {
   const found = await garmentWithPhoto(db, input.itemId);
   if (found === undefined) {
     return (await wasModerated(db, "garment", input.itemId))
@@ -187,10 +253,17 @@ export async function quarantineGarmentPhoto(
       : "not_found";
   }
   const { userId, id: itemId } = found.item;
+  const { statements, debts } =
+    input.action === "quarantine"
+      ? await quarantineWrites(db, input, found)
+      : await removalWrites(db, input, found);
   await commit(
     db,
-    await quarantineWrites(db, input, found),
-    [oweOutbox({ kind: "photo_delete", payload: { userId, itemId } })],
+    statements,
+    [
+      oweOutbox({ kind: "photo_delete", payload: { userId, itemId } }),
+      ...debts,
+    ],
     report,
   );
   return "removed";

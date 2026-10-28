@@ -21,6 +21,7 @@ import {
   removedFingerprints,
   wardrobeItems,
 } from "../../db/schema-core";
+import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import {
   FINGERPRINT_MATCH_DISTANCE,
@@ -63,6 +64,29 @@ export function keptFingerprints(
     .from(entryPhotos)
     .where(and(photosInScope, isNotNull(entryPhotos.fingerprint)));
   return [db.insert(removedFingerprints).select(kept)];
+}
+
+/**
+ * A garment's photo's fingerprint, kept when a person removes it as an
+ * intimate image (R-167, design 159), as a kit photo's is. The garment was
+ * read before the batch, so its one fingerprint is a value here rather
+ * than a select. None kept for another reason, or with no fingerprint.
+ */
+export function keptGarmentFingerprint(
+  db: Db,
+  reason: RemovalReason,
+  fingerprint: string | null,
+  moderationActionId: string,
+) {
+  if (reason !== "intimate" || fingerprint === null) return [];
+  return [
+    db.insert(removedFingerprints).values({
+      id: newUlid(),
+      fingerprint,
+      moderationActionId,
+      createdAt: nowSeconds(),
+    }),
+  ];
 }
 
 /**
@@ -117,7 +141,10 @@ export async function removedMatchesOf(
       .from(entryPhotos)
       .where(kits),
     db
-      .select({ id: wardrobeItems.id, fingerprint: sql<string>`${garmentPrint}` })
+      .select({
+        id: wardrobeItems.id,
+        fingerprint: sql<string>`${garmentPrint}`,
+      })
       .from(wardrobeItems)
       .where(garments),
   ]);

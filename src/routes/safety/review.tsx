@@ -9,6 +9,7 @@ import { ReviewQueue } from "../../modules/safety/components/ReviewQueue";
 import { Takedown } from "../../modules/safety/components/Takedown";
 import {
   caseOverDeleteAction,
+  decideGarmentMatchAction,
   decideRemovalRequestAction,
   decideReviewAction,
   takedownAction,
@@ -47,11 +48,13 @@ function ReviewPage() {
           requests={requests}
           decide={decideRemovalRequestAction}
           block={blockTakedownRequesterAction}
+          decideMatch={decideGarmentMatchAction}
         />
         <ReviewQueue
           queue={queue}
           resolve={decideReviewAction}
           reviewHandle={reviewHandleAction}
+          decideMatch={decideGarmentMatchAction}
         />
         {/* SAF-6: a removal the queue did not raise — a copyright notice
             naming a photo or an entry. */}

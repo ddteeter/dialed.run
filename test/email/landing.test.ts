@@ -202,7 +202,6 @@ describe("the account's settings read", () => {
     const now = new Date();
     await db.insert(account).values({
       id: newUlid(),
-      issuer: "local",
       accountId: withPassword.userId,
       providerId: "credential",
       userId: withPassword.userId,
@@ -213,7 +212,6 @@ describe("the account's settings read", () => {
     const google = await seedUser();
     await db.insert(account).values({
       id: newUlid(),
-      issuer: "https://accounts.google.com",
       accountId: "g-1",
       providerId: "google",
       userId: google.userId,
