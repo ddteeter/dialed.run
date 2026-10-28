@@ -940,7 +940,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
-87. **A garment's photo on Review (C17, design 157). Undesigned; built
+88. **A garment's photo on Review (C17, design 157). Undesigned; built
     as a placeholder.** The classifier and the D-147 hold now queue
     garment photos. The row is a content row like a kit photo's: the
     kicker reads `garment photo · {id}`, the photo is the garment's card
@@ -954,7 +954,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     **The ask:** draw the row, and confirm the bell row and email in the
     existing notice styles.
 
-88. **A garment match's takedown on Review (R-167, design 159).
+89. **A garment match's takedown on Review (R-167, design 159).
     Undesigned; built as a placeholder.** Under Matching photos, a garment
     tile now carries the garment row's own decision bar, without Approve:
     "Why it comes down", Remove, and Remove as suspected CSAM with its
@@ -962,7 +962,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     leaves the list. Kit tiles are unchanged. **The ask:** draw the bar
     on a match tile, or say where a match's takedown should sit instead.
 
-89. **`/k/<id>`'s pieces of round 41 #86c not drawn, built from existing
+90. **`/k/<id>`'s pieces of round 41 #86c not drawn, built from existing
     parts (design 160, step 6).** The desk width: round 41 draws /k at
     phone only, so the page keeps its one column (`max-w-column`) centred
     under the same bar at every width. The bar: the landing bar's two
@@ -975,7 +975,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     sky word in teal, as the app does. **The ask:** confirm or redraw the
     desk width and the bar, and the TIME label.
 
-90. **`/@handle`'s pieces of round 41 #86d not drawn, built from existing
+91. **`/@handle`'s pieces of round 41 #86d not drawn, built from existing
     parts (design 160, step 7).** The Visual Crossing credit (D-144) sits
     once under the kit list when any row shows its reading; the board
     draws none. A rotation group with nothing in it (no retired pieces,
@@ -984,14 +984,16 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     rows are. The type words are the closet's TYPE chips ("L/S crew",
     "Tights"), or the category's word when a piece has no type, not the
     board's ("LONG SLEEVE", "TIGHT"). Shoe mileage is a whole number in the
-    runner's unit ("412 mi"). At the desk the rail is DS1's `1fr` column
+    runner's unit ("412 mi"), and it is the shoe's whole mileage, private
+    runs included (owner, 2026-10-28: a partial figure says nothing about
+    the shoe). At the desk the rail is DS1's `1fr` column
     beside the 620 primary, as every DS1 screen builds it, not a fixed 300,
     and the bar and foot widen to the page measure with it. The signed-out
     invite closes the page under the kits at the desk and after the
     rotation on the phone. **The ask:** confirm or redraw the credit's
     place, the empty group, and the type words.
 
-<!-- Item numbers continue past rounds 35–40 (45–76, 82–88). Design numbered the Garmin asks 77–81 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
+<!-- Item numbers continue past rounds 35–41 (45–76, 82–91). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
 
 ## Answered in round 41 (imported 2026-10-25)
 

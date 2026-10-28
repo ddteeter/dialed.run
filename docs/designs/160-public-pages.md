@@ -152,7 +152,8 @@ delete and purge on retraction.
   because nothing in `feed`'s index reaches it. Shoe mileage is the
   closet's own sum, over every run the shoes were on, private ones
   included: it is what the closet says, and what "Show my closet"
-  promises.
+  promises. The owner confirmed it on 2026-10-28: a figure without the
+  private runs says nothing about the shoe.
 - **"Show {N} more" is `?all=true`, and lists at most 100**: a bound on
   one view's read; the count still says how many there are.
 - **Cache tags**: the profile is tagged `handle:<handle>` (normalized,

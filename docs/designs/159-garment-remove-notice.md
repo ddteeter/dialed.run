@@ -49,7 +49,7 @@ notice's words on 2026-10-26.
 - Email template: `content_removed.subject` gains `garment`.
 - Server functions: `decideGarmentMatchAction` (admin, `verifiedUserId`).
 - Routes: `safety/review.tsx` wires the new action. Bindings: none.
-- Screens: Review (match tiles), the bell. Design deltas 87 (amended), 88.
+- Screens: Review (match tiles), the bell. Design deltas 88 (amended), 89.
 
 ## Test plan
 
