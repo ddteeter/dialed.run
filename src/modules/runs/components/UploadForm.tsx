@@ -91,6 +91,11 @@ function freshAttempt(file: File): Attempt {
 interface Watched {
   importId: string;
   label: string;
+  /**
+  What the parsed card's strip names, where it is not the label: a Garmin
+  import has no file, so its card reads FROM GARMIN (round 41 #87, G9).
+  */
+  strip?: string;
   resend: () => void;
 }
 
@@ -345,6 +350,7 @@ function ImportWatch({
   actions: WatchActions;
 }>): JSX.Element {
   const { importId, label } = watched;
+  const strip = watched.strip ?? label;
   const { getOutcome, retime, units } = config;
   const { onFiles, onResend, onReplace } = actions;
   const outcome = useQuery({
@@ -367,7 +373,7 @@ function ImportWatch({
   if (data?.run !== undefined && data.status === "done") {
     return (
       <ParsedCard
-        filename={label}
+        filename={strip}
         run={data.run}
         units={units}
         retime={retime}
@@ -381,7 +387,7 @@ function ImportWatch({
   if (data?.run !== undefined && data.status === "duplicate") {
     return (
       <DuplicateCard
-        filename={label}
+        filename={strip}
         run={data.run}
         units={units}
         onReplace={onReplace}

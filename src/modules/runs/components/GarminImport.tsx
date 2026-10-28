@@ -39,6 +39,7 @@ An import the picker started, for A1's own watch to poll from here on.
 export type OnGarminImport = (started: {
   importId: string;
   label: string;
+  strip: string;
   resend: () => void;
 }) => void;
 
@@ -47,11 +48,10 @@ const NOT_LOADED: ControlFailure = {
   message: "Garmin didn't answer.",
 };
 
-// Undesigned (design-deltas): G3 draws no failure for the import itself,
-// so it says what the list's band says, with what is still true.
+// Round 41 #87, G8: the import's own failure, in the list band's slot.
 const NOT_IMPORTED: ControlFailure = {
   kicker: "Not imported",
-  message: "Garmin didn't answer.",
+  message: "Garmin didn't answer. Nothing was imported.",
 };
 
 /**
@@ -190,6 +190,8 @@ function useImportTap(
       onImport({
         importId: result.importId,
         label: `Garmin · ${rowLabel(row, units)}`,
+        // The card's stats line has the date, distance and time (G9).
+        strip: "From Garmin",
         resend: () => {
           start(row, key);
         },
@@ -238,6 +240,21 @@ function PickerBody({
   const { failed } = tap;
   return (
     <>
+      {/* Above the rows, in the list band's slot, so it never lands
+      off-screen under a long list; a status region that is always there,
+      so it is announced while focus stays on the row (round 41 #87, G8). */}
+      <div role="status">
+        {failed === undefined ? undefined : (
+          <ControlFailureBand
+            failure={failed.failure}
+            onRetry={() => {
+              // The same key: a download that landed before the answer was
+              // lost must not become a second import (law 8b).
+              tap.start(failed.row, failed.key);
+            }}
+          />
+        )}
+      </div>
       <ul className="m-0 flex list-none flex-col p-0">
         {picker.rows.map((row) => (
           <PickerRow
@@ -251,16 +268,6 @@ function PickerBody({
           />
         ))}
       </ul>
-      {failed === undefined ? undefined : (
-        <ControlFailureBand
-          failure={failed.failure}
-          onRetry={() => {
-            // The same key: a download that landed before the answer was
-            // lost must not become a second import (law 8b).
-            tap.start(failed.row, failed.key);
-          }}
-        />
-      )}
     </>
   );
 }

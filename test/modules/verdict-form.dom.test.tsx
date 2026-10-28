@@ -1833,8 +1833,11 @@ function submitSpy() {
 }
 
 function effortGroup(): HTMLElement {
-  return screen.getByRole("group", { name: "Effort" });
+  return screen.getByRole("group", { name: /^Effort/u });
 }
+
+const EFFORT_LINE =
+  "You run warmer the harder you go. Next time, the Call allows for it.";
 
 describe("VerdictForm: effort from the watch (G5)", () => {
   it("draws the watch's pick selected, and says where it came from", async () => {
@@ -1852,6 +1855,12 @@ describe("VerdictForm: effort from the watch (G5)", () => {
     );
     expect(group).toHaveTextContent("From your watch · rated 6 of 10");
     expect(group).toHaveAccessibleDescription("From your watch, rated 6 of 10");
+    // Rated, the watch line takes the kicker's OPTIONAL slot (round 41 #87).
+    expect(group).toHaveAccessibleName("Effort");
+    expect(within(group).getByText(EFFORT_LINE)).toHaveClass(
+      "text-small",
+      "text-quiet",
+    );
   });
 
   it("saves the watch's pick by leaving it alone: nothing to send", async () => {
@@ -1890,6 +1899,7 @@ describe("VerdictForm: effort from the watch (G5)", () => {
     const group = effortGroup();
     expect(group).not.toHaveTextContent("From your watch");
     expect(group).not.toHaveAttribute("aria-describedby");
+    expect(group).toHaveAccessibleName("Effort · optional");
     expect(
       within(group).getByRole("button", { name: "Steady" }),
     ).toHaveAttribute("aria-pressed", "true");
@@ -1942,6 +1952,8 @@ describe("VerdictForm: effort from the watch (G5)", () => {
       );
     }
     expect(group).not.toHaveTextContent("From your watch");
+    expect(group).toHaveAccessibleName("Effort · optional");
+    expect(group).toHaveTextContent(EFFORT_LINE);
   });
 
   it("shows a runner's own earlier pick without a source line", async () => {

@@ -47,6 +47,9 @@ const SOURCE_ID = "verdict-effort-source";
  * only thing that marks it as a suggestion (no new colour or style; the
  * words carry it). Spoken "Effort, Steady, from your watch, rated 6 of
  * 10": the mono line is for the eye, and the description says it in words.
+ * With no watch rating standing, the kicker reads EFFORT · OPTIONAL, as
+ * ANYTHING SPECIFIC? · OPTIONAL does, and the line under the chips always
+ * shows (round 41 #87, G6).
  */
 export function EffortField({
   effort,
@@ -70,7 +73,7 @@ export function EffortField({
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <span id={LABEL_ID}>
           <Mono step="xs" className="text-muted">
-            Effort
+            {watchRpe === undefined ? "Effort · optional" : "Effort"}
           </Mono>
         </span>
         {watchRpe === undefined ? undefined : (
@@ -101,6 +104,9 @@ export function EffortField({
           </ChipToggle>
         ))}
       </div>
+      <p className="m-0 text-small text-quiet">
+        You run warmer the harder you go. Next time, the Call allows for it.
+      </p>
     </div>
   );
 }

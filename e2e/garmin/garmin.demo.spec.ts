@@ -64,7 +64,9 @@ test("import a run from Garmin: the picker, the credit, the watch's effort", asy
     await imports.first().click();
 
     // ---- the parsed card, credited --------------------------------------
-    await expect(page.getByText(/^Parsed · Garmin · /u)).toBeVisible({
+    await expect(
+      page.getByText("Parsed · From Garmin", { exact: true }),
+    ).toBeVisible({
       timeout: 20_000,
     });
     await scene(page, "A1's own parsed card, credited to Garmin");

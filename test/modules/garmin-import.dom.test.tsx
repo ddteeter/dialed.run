@@ -210,15 +210,29 @@ describe("A1: Import from Garmin (G3)", () => {
       await within(section()).findByRole("button", { name: /^Import / }),
     );
 
-    expect(
-      await screen.findByText("Parsed · Garmin · Sat Aug 29 · 6.2 mi · 51:38"),
-    ).toBeVisible();
+    expect(await screen.findByText("Parsed · From Garmin")).toBeVisible();
     expect(getOutcome).toHaveBeenCalledWith({ data: { importId: "01IMPORT" } });
     const sent = importActivity.mock.calls[0]?.[0].data;
     expect(sent?.activityId).toBe("101");
     expect(sent?.idempotencyKey).toMatch(/^[0-9A-Z]{26}$/u);
     // The picker goes with the well.
     expect(document.querySelector("[data-part='garmin-import']")).toBeNull();
+  });
+
+  it("names the tapped run while A1 reads it", async () => {
+    const user = userEvent.setup();
+    const importActivity = vi.fn<GarminImportActions["importActivity"]>(() =>
+      Promise.resolve({ status: "started", importId: "01IMPORT" }),
+    );
+    await renderWithRouter(a1(actions({ importActivity })));
+
+    await user.click(
+      await within(section()).findByRole("button", { name: /^Import / }),
+    );
+
+    expect(
+      await screen.findByText("Reading Garmin · Sat Aug 29 · 6.2 mi · 51:38"),
+    ).toBeInTheDocument();
   });
 
   it("is busy while the tap is out, and takes no second tap", async () => {
@@ -244,7 +258,7 @@ describe("A1: Import from Garmin (G3)", () => {
     [
       "answers unreachable",
       () => Promise.resolve({ status: "unreachable" as const }),
-      "Garmin didn't answer.",
+      "Garmin didn't answer. Nothing was imported.",
     ],
     [
       "loses the connection",
@@ -259,7 +273,7 @@ describe("A1: Import from Garmin (G3)", () => {
     [
       "is not this runner's",
       () => Promise.resolve(undefined),
-      "Garmin didn't answer.",
+      "Garmin didn't answer. Nothing was imported.",
     ],
   ])(
     "says so when the import %s, and tries again under the same key",
@@ -274,13 +288,22 @@ describe("A1: Import from Garmin (G3)", () => {
       await user.click(
         await within(section()).findByRole("button", { name: /^Import / }),
       );
-      expect(await within(section()).findByText(sentence)).toBeVisible();
+      const message = await within(section()).findByText(sentence);
+      expect(message).toBeVisible();
       expect(section()).toHaveTextContent(/not imported/iu);
       const button = within(section()).getByRole("button", {
         name: /^Import /,
       });
       expect(button).toHaveTextContent("Import ›");
       expect(button).not.toHaveAttribute("aria-busy");
+      // Round 41 #87, G8: above the rows, announced, and focus stays put.
+      const status = within(section()).getByRole("status");
+      const list = within(section()).getByRole("list");
+      expect(status).toContainElement(message);
+      expect(status.compareDocumentPosition(list)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+      expect(button).toHaveFocus();
 
       await user.click(
         within(section()).getByRole("button", { name: /try again/iu }),
@@ -307,7 +330,9 @@ describe("A1: Import from Garmin (G3)", () => {
       name: /^Import /,
     });
     await user.click(button);
-    await within(section()).findByText("Garmin didn't answer.");
+    await within(section()).findByText(
+      "Garmin didn't answer. Nothing was imported.",
+    );
     await user.click(button);
     await waitFor(() => {
       expect(importActivity).toHaveBeenCalledTimes(2);

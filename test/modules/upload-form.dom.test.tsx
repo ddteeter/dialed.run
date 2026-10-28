@@ -869,7 +869,7 @@ describe("A1: a run imported from Garmin is watched like an upload", () => {
     expect(screen.getByText("That file is empty.")).toBeVisible();
 
     await tapImport(user);
-    await screen.findByText(/^Parsed · Garmin · /u);
+    await screen.findByText("Parsed · From Garmin");
     await user.click(screen.getByRole("button", { name: "Replace" }));
 
     expect(screen.queryByText("That file is empty.")).toBeNull();
@@ -888,7 +888,7 @@ describe("A1: a run imported from Garmin is watched like an upload", () => {
     expect(await screen.findByText("Your connection dropped.")).toBeVisible();
 
     await tapImport(user);
-    await screen.findByText(/^Parsed · Garmin · /u);
+    await screen.findByText("Parsed · From Garmin");
     await user.click(screen.getByRole("button", { name: "Replace" }));
 
     expect(screen.queryByText("Your connection dropped.")).toBeNull();
