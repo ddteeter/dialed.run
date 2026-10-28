@@ -217,8 +217,8 @@ never shown to other runners.
   Cloudflare's network. The copy is deleted when the kit stops being
   public, when the kit or photo is hidden or removed, or when you are
   banned or leave. Cloudflare checks photos served from that store against
-  lists of known child sexual abuse material; a match is blocked at once,
-  and we report it as the law requires.
+  lists of known child sexual abuse material; a match is blocked, and we
+  remove it and report it as the law requires.
 - **Screening.** Every photo is sent to **OpenAI's** moderation service to
   check for sexual, violent and self-harm content. We keep the scores it
   returns until the photo is deleted. A photo that scores high, kit or
