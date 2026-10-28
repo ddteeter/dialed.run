@@ -8,7 +8,7 @@
  * Garmin -> a tap imports the newest -> the parsed card lands, credited to
  * Garmin -> A2: pick a piece -> A3 opens with the effort the watch rated
  * (2 of 10: easy) already picked -> log it -> the runs list credits
- * Garmin -> back on A1 the run reads IMPORTED and opens it.
+ * Garmin -> back on A1 the run reads IMPORTED and opens its entry.
  *
  * **The whole app, end to end, against a stub.** Garmin's Personal API is
  * `e2e/garmin/stub-server.ts`, which Playwright starts beside the dev
@@ -105,11 +105,13 @@ test("import a run from Garmin: the picker, the credit, the watch's effort", asy
 
     await page.goto("/runs/new");
     await hydrated(page);
-    await scene(page, "Back on A1, the run reads IMPORTED and opens");
+    await scene(page, "Back on A1, the run reads IMPORTED and opens its entry");
     const imported = page.getByRole("link", { name: /^Imported: open / });
     await expect(imported).toHaveCount(1, { timeout: 20_000 });
     await imported.click();
-    await expect(page).toHaveURL(/\/runs\/[0-9A-Z]{26}$/u);
+    // The link names the run; a logged run redirects to its entry
+    // (`beforeItsEntry`), which is D, credited too.
+    await expect(page).toHaveURL(/\/feed\/entry\/[0-9A-Z]{26}$/u);
     await expect(
       page.locator('[data-part="garmin-attribution"]').first(),
     ).toBeVisible();
