@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { defineConfig } from "@playwright/test";
 
+import { GARMIN_STUB_PORT } from "./e2e/garmin/stub-runs";
+
 /** The checked-out branch, read from git's own files rather than the `git`
  *  binary (shelling out to a PATH lookup trips sonarjs/no-os-command-from-path).
  *  In a worktree `.git` is a file pointing at the real gitdir, so both plain
@@ -156,16 +158,27 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
-    command: serverCommand,
-    // VITE_DEVTOOLS=off keeps the floating devtools button out of demo
-    // recordings (it covers the tab bar's last item at 1280×720).
-    env: { PORT: String(port), VITE_DEVTOOLS: "off" },
-    url: `http://localhost:${String(port)}`,
-    // Never reuse: with per-worktree ports there is nothing legitimate to
-    // reuse, and a busy port must fail loudly rather than hand these tests a
-    // server built from a different worktree.
-    reuseExistingServer: false,
-    timeout: 60_000,
-  },
+  webServer: [
+    {
+      command: serverCommand,
+      // VITE_DEVTOOLS=off keeps the floating devtools button out of demo
+      // recordings (it covers the tab bar's last item at 1280×720).
+      env: { PORT: String(port), VITE_DEVTOOLS: "off" },
+      url: `http://localhost:${String(port)}`,
+      // Never reuse: with per-worktree ports there is nothing legitimate to
+      // reuse, and a busy port must fail loudly rather than hand these tests a
+      // server built from a different worktree.
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
+    // Garmin's Personal API, stubbed (plan 157, step 9): the dev server's
+    // `GARMIN_API_ORIGIN` points the app's own client here. Synthetic
+    // answers only; `e2e/garmin/stub-server.ts` says what it serves.
+    {
+      command: "tsx e2e/garmin/stub-server.ts",
+      url: `http://localhost:${String(GARMIN_STUB_PORT)}/health`,
+      reuseExistingServer: false,
+      timeout: 30_000,
+    },
+  ],
 });

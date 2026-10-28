@@ -24,6 +24,11 @@ TURNSTILE_SITE_KEY=1x00000000000000000000AA
 # Both or neither; without them the import is not drawn.
 # GARMIN_API_KEY=
 # GARMIN_OWNER_USER_ID=
+# For the Garmin e2e demo instead, as CI writes them: any key, the e2e
+# owner, and the stub Playwright starts (e2e/garmin/stub-runs.ts). The key
+# alone is what `npm run garmin:check` reads, so a real one can stay.
+# GARMIN_OWNER_USER_ID=e2e-garmin-owner
+# GARMIN_API_ORIGIN=http://localhost:3900
 # Optional locally; set in prod:
 # SENTRY_DSN=
 # Google OAuth (both or neither — the Google button 500s without them):
