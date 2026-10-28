@@ -39,6 +39,18 @@ export function distanceNumber(distanceM: number, unit: DistanceUnit): string {
 }
 
 /**
+ * A distance to the whole unit, in the runner's unit — "412" — for a
+ * running total, where a tenth is noise: a shoe's mileage on the public
+ * profile's rotation (round 41 #86d, "412 MI").
+ */
+export function wholeDistanceNumber(
+  distanceM: number,
+  unit: DistanceUnit,
+): string {
+  return String(Math.round(distanceM / metresPer(unit)));
+}
+
+/**
  * Wind speed in the runner's own units — `6mph` or `9km/h`.
  *
  * Styled like `formatDistance` beside it (`8.1mi`, no space), and keyed on

@@ -17,6 +17,7 @@ import {
   feedInput,
   handleInput,
   publicKitInput,
+  publicProfileInput,
   itemBandStatInput,
   saveBacklogRowInput,
   searchInput,
@@ -57,6 +58,7 @@ import { decideRemovalRequest } from "./removal-requests";
 import { ownProfile, profileAtHandle, visibleRunnerHandle } from "./profiles";
 import { unitsFor } from "./units";
 import { publicKitForPage } from "./public-kit";
+import { publicProfileForPage } from "./public-profile";
 import { setUsefulReaction } from "./reactions";
 import { searchRunners } from "./search";
 import { nowSeconds } from "../../lib/now";
@@ -176,6 +178,19 @@ export const publicKitQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => publicKitInput.parse(input))
   .handler(async ({ data }) =>
     publicKitForPage(data.entryId, (headers) => {
+      setResponseHeaders(new Headers(headers));
+    }),
+  );
+
+// ---- The public profile (round 41 #86d, D-149) -------------------------------
+
+// For anyone, and the same for both, exactly as the public kit above: no
+// session is read, and the page's cache headers go on whatever response
+// carries it.
+export const publicProfileQuery = createServerFn({ method: "GET" })
+  .validator((input: unknown) => publicProfileInput.parse(input))
+  .handler(async ({ data }) =>
+    publicProfileForPage(data.handle, data.all === true, (headers) => {
       setResponseHeaders(new Headers(headers));
     }),
   );

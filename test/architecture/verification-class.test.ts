@@ -208,6 +208,8 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // D-149, D-152: a public kit is for anyone, and reads no session at all,
   // so nothing about the viewer can reach the page the edge keeps.
   "feed/functions.ts publicKitQuery": "sessionless",
+  // The open web's profile (D-149, D-152): no session, like the kit.
+  "feed/functions.ts publicProfileQuery": "sessionless",
   "feed/functions.ts decideReviewAction": "admin",
   // Design 159: a garment photo found by copy search, taken down.
   "feed/functions.ts decideGarmentMatchAction": "admin",

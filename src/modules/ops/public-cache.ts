@@ -11,7 +11,7 @@
  * **The TTL is the guarantee; a purge only shortens it.** A retracted kit
  * is gone from the edge within `PUBLIC_PAGE_TTL_SECONDS` whatever else
  * fails. The tags are what a purge by tag would name (`entry:<id>`,
- * `runner:<userId>`); nothing purges yet (design 160, step 6).
+ * `runner:<userId>`, `handle:<handle>`); nothing purges yet (design 160, step 6).
  */
 
 /**
@@ -35,6 +35,18 @@ export function runnerCacheTag(userId: string): string {
 }
 
 /**
+ * The tag naming the page at one handle's path, `/@<handle>`, public or
+ * not (design 160): what a purge names when a profile is made public, so
+ * the not-public page cached there gives way within the purge rather than
+ * the TTL. It says nothing about who holds the handle, or whether anyone
+ * does — the path already said the handle. `handle` is the normalized one
+ * (lowercase), so `/@Maya` and `/@maya` share it.
+ */
+export function handleCacheTag(handle: string): string {
+  return `handle:${handle}`;
+}
+
+/**
  * `Cache-Control: public` for `ttlSeconds`, and the `Cache-Tag` list when
  * there are tags to name.
  */
@@ -46,6 +58,34 @@ export function publicCacheHeaders(
   return tags.length === 0
     ? cacheControl
     : { ...cacheControl, "Cache-Tag": tags.join(",") };
+}
+
+/**
+ * A public page's tags: its own (the kit's, the handle's path) when its
+ * path names one, and its runner's when the page is public.
+ */
+export function publicPageTags(
+  pageTag: string | undefined,
+  runnerId: string | undefined,
+): string[] {
+  const page = pageTag === undefined ? [] : [pageTag];
+  const runner = runnerId === undefined ? [] : [runnerCacheTag(runnerId)];
+  return [...page, ...runner];
+}
+
+/**
+ * A public page's cache headers (design 160, D-152): a minute at the edge,
+ * public or not, tagged as above. The kit's page and the profile's both
+ * leave with these, so the two cannot drift apart.
+ */
+export function publicPageHeaders(
+  pageTag: string | undefined,
+  runnerId: string | undefined,
+): Record<string, string> {
+  return publicCacheHeaders(
+    PUBLIC_PAGE_TTL_SECONDS,
+    publicPageTags(pageTag, runnerId),
+  );
 }
 
 /**

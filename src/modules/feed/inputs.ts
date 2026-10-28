@@ -125,6 +125,26 @@ export const publicKitInput = z.object({
 });
 
 /**
+ * `/@handle`'s segment, whatever it is, and whether the page lists every
+ * kit: a segment that is not a handle is a profile that is not public
+ * (round 41 #86f), never a refused input, and one too long to be a handle
+ * is read as none at all.
+ */
+export const publicProfileInput = z.object({
+  handle: z.string().max(60).catch(""),
+  all: z.boolean().optional().catch(undefined),
+});
+
+/**
+ * `/@handle`'s search: `?all=true` lists every kit ("Show {N} more", round
+ * 41 #86d); anything else is the first three. A link, not a script, so
+ * each list is its own URL for the edge to keep.
+ */
+export const publicProfileSearch = z.object({
+  all: z.literal(true).optional().catch(undefined),
+});
+
+/**
  * Useful, as the state the viewer wants — never "flip it" (law 8b): a
  * repeat of the same request leaves the same state.
  */

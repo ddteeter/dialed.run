@@ -16,12 +16,12 @@ import type { ReactElement } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
+import { PublicKitPage } from "../../src/modules/feed/components/PublicKit";
 import {
   NotPublicPage,
-  PublicKitPage,
   type AskSignedIn,
   useSignedInAfterLoad,
-} from "../../src/modules/feed/components/PublicKit";
+} from "../../src/modules/feed/components/PublicFrame";
 import type { PublicKit } from "../../src/modules/feed/public-kit-shape";
 
 /**
@@ -166,7 +166,9 @@ describe("the public kit, signed out", () => {
     expect(screen.queryByText("Feels like · Sky")).not.toBeInTheDocument();
     expect(document.querySelector('[data-part="conditions"]')).toBeNull();
     expect(document.querySelector('[data-part="caption"]')).toBeNull();
-    expect(document.querySelector('[data-part="kit"]')).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: /^The kit/u }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("link", {
         name: "Weather data provided by Visual Crossing",
@@ -354,7 +356,7 @@ describe("the public kit, once the browser knows who is looking", () => {
 
 describe("not public (round 41 #86f)", () => {
   it("says what public pages are, never what this one was", async () => {
-    await show(<NotPublicPage entryId={ID} askSignedIn={SIGNED_OUT} />);
+    await show(<NotPublicPage page={{ entryId: ID }} askSignedIn={SIGNED_OUT} />);
 
     expect(screen.getByText("404")).toHaveClass("text-mono-xs", "text-muted");
     expect(
@@ -382,7 +384,7 @@ describe("not public (round 41 #86f)", () => {
   });
 
   it("offers a runner a look in the app, at the app's own page of the kit", async () => {
-    await show(<NotPublicPage entryId={ID} askSignedIn={SIGNED_IN} />);
+    await show(<NotPublicPage page={{ entryId: ID }} askSignedIn={SIGNED_IN} />);
 
     expect(
       await screen.findByRole("link", { name: "Look in the app" }),
@@ -391,11 +393,11 @@ describe("not public (round 41 #86f)", () => {
 
   it("is the same page for every viewer: the server sends it signed out", async () => {
     const html = await firstPaint(
-      <NotPublicPage entryId={ID} askSignedIn={SIGNED_IN} />,
+      <NotPublicPage page={{ entryId: ID }} askSignedIn={SIGNED_IN} />,
     );
 
     expect(html).toBe(
-      await firstPaint(<NotPublicPage entryId={ID} askSignedIn={SIGNED_OUT} />),
+      await firstPaint(<NotPublicPage page={{ entryId: ID }} askSignedIn={SIGNED_OUT} />),
     );
     expect(html).toContain("Nothing to see at this link");
     expect(html).not.toContain("Look in the app");

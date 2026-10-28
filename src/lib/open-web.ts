@@ -18,8 +18,15 @@
 */
 const PUBLIC_KIT_PATH = /^\/k\/[^/]+\/?$/u;
 
+/**
+ * `/@<handle>`, the public profile (round 41 #86d) — with the `@` as a
+ * browser sends it, or percent-encoded, which the router reads as the same
+ * page and so must be the same page here.
+ */
+const PUBLIC_PROFILE_PATH = /^\/(?:@|%40)[^/]+\/?$/u;
+
 export function isOpenWebPath(pathname: string): boolean {
-  return PUBLIC_KIT_PATH.test(pathname);
+  return PUBLIC_KIT_PATH.test(pathname) || PUBLIC_PROFILE_PATH.test(pathname);
 }
 
 /**

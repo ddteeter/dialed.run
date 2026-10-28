@@ -1,10 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { signedInQuery } from "../../modules/auth/functions";
-import {
-  NotPublicPage,
-  PublicKitPage,
-} from "../../modules/feed/components/PublicKit";
+import { PublicKitPage } from "../../modules/feed/components/PublicKit";
+import { NotPublicPage } from "../../modules/feed/components/PublicFrame";
 import { publicKitQuery } from "../../modules/feed/functions";
 import {
   kitOrNotFound,
@@ -40,10 +38,5 @@ function KitPage() {
 }
 
 function NotPublic() {
-  return (
-    <NotPublicPage
-      entryId={Route.useParams().entryId}
-      askSignedIn={signedInQuery}
-    />
-  );
+  return <NotPublicPage page={Route.useParams()} askSignedIn={signedInQuery} />;
 }

@@ -9,6 +9,7 @@ import {
   formatTempRange,
   gainNumber,
   paceNumber,
+  wholeDistanceNumber,
 } from "../../src/lib/contracts/measures";
 import { formatTemp } from "../../src/lib/contracts/temperature";
 
@@ -22,6 +23,15 @@ describe("distanceNumber", () => {
     expect(distanceNumber(9978, "mi")).toBe("6.2");
     expect(distanceNumber(9978, "km")).toBe("10.0");
     expect(distanceNumber(0, "km")).toBe("0.0");
+  });
+});
+
+describe("wholeDistanceNumber", () => {
+  it("is a running total to the whole unit, rounded, in either unit", () => {
+    // 412.4 miles, 663.7 km.
+    expect(wholeDistanceNumber(663_700, "mi")).toBe("412");
+    expect(wholeDistanceNumber(663_700, "km")).toBe("664");
+    expect(wholeDistanceNumber(0, "mi")).toBe("0");
   });
 });
 

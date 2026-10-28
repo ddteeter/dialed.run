@@ -975,6 +975,22 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     sky word in teal, as the app does. **The ask:** confirm or redraw the
     desk width and the bar, and the TIME label.
 
+90. **`/@handle`'s pieces of round 41 #86d not drawn, built from existing
+    parts (design 160, step 7).** The Visual Crossing credit (D-144) sits
+    once under the kit list when any row shows its reading; the board
+    draws none. A rotation group with nothing in it (no retired pieces,
+    say) is left out rather than drawn as "RETIRED · 0", and a rotation
+    piece is named by the closet's name without its brand, as the board's
+    rows are. The type words are the closet's TYPE chips ("L/S crew",
+    "Tights"), or the category's word when a piece has no type, not the
+    board's ("LONG SLEEVE", "TIGHT"). Shoe mileage is a whole number in the
+    runner's unit ("412 mi"). At the desk the rail is DS1's `1fr` column
+    beside the 620 primary, as every DS1 screen builds it, not a fixed 300,
+    and the bar and foot widen to the page measure with it. The signed-out
+    invite closes the page under the kits at the desk and after the
+    rotation on the phone. **The ask:** confirm or redraw the credit's
+    place, the empty group, and the type words.
+
 <!-- Item numbers continue past rounds 35–40 (45–76, 82–88). Design numbered the Garmin asks 77–81 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
 
 ## Answered in round 41 (imported 2026-10-25)

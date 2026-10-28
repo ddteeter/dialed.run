@@ -39,6 +39,11 @@ export {
   tapListSelectionSchema,
 } from "./tap-list";
 export { photoUrlFor } from "./photo-url";
+export {
+  publicRotation,
+  type PublicRotation,
+  type RotationPiece,
+} from "./public-rotation";
 export { linkTypedGarments, nameItem } from "./product-link";
 export type { PhotoSize, PhotoUploadResult } from "./photos";
 export { photoSizes } from "./photos";

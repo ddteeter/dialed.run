@@ -171,6 +171,13 @@ const NAV: readonly Edge[] = [
   // no Desk rows. Added under the header's ownership rule.
   { from: "*", to: ["/", "/desk/runners"], type: "cut" },
 
+  // The open web's pages (design 160, D-152): `/k/<id>` and `/@handle`,
+  // linked from each other with `reloadDocument`, since the root reads no
+  // session there. A document load has no outgoing screen, so first-paint
+  // rules apply, as for the Strava return above. Not a NAV row; added
+  // under the header's ownership rule.
+  { from: "*", to: ["/k/$entryId", "/@{$handle}"], type: "cut" },
+
   // The pushes. Forward comes from the trailing edge, and back reverses it.
   // NAV, in order: "Closet C → Garment detail", "Garment detail → Edit
   // garment", "Feed X / Profile → Post detail", "Feed / Post → Someone's
@@ -243,7 +250,8 @@ const NAV: readonly Edge[] = [
 ];
 
 /**
-`/closet/$itemId` matches `/closet/abc`; `*` matches anything.
+`/closet/$itemId` matches `/closet/abc`; `/@{$handle}` matches `/@maya`;
+`*` matches anything.
 */
 function isMatch(pattern: string, pathname: string): boolean {
   if (pattern === "*") return true;
@@ -260,11 +268,16 @@ function isMatch(pattern: string, pathname: string): boolean {
 /**
 A `$`-prefixed segment is a route param and matches any one segment — but
 not an empty one, or `/closet/` would read as a garment whose id is the
-empty string.
+empty string. `@{$handle}` is TanStack's prefixed param (task 129,
+FEED-10): the literal prefix, then a param that is again never empty, so
+`/@` is nobody's profile.
 */
 function isSegmentMatch(segment: string, got: string): boolean {
   if (segment.startsWith("$")) return got !== "";
-  return segment === got;
+  const param = segment.indexOf("{$");
+  if (param === -1) return segment === got;
+  const prefix = segment.slice(0, param);
+  return got.startsWith(prefix) && got.length > prefix.length;
 }
 
 function isAnyMatch(

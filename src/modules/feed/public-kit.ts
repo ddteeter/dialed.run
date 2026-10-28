@@ -52,9 +52,8 @@ import { firstRowWhere } from "../../lib/sql/keyed-read";
 import {
   entryCacheTag,
   kitCardResponse,
-  PUBLIC_PAGE_TTL_SECONDS,
-  publicCacheHeaders,
-  runnerCacheTag,
+  publicPageHeaders,
+  publicPageTags,
   type EntryCardData,
 } from "../ops";
 import { worldVisibleEntry } from "../safety";
@@ -105,12 +104,11 @@ export async function publicKitRead(
     observationsForRuns([run]),
   ]);
   const conditions = observed.get(run.id);
-  const zone = conditions?.timeZone ?? runner.timeZone ?? undefined;
   const verdict = verdictOf(entry.verdict);
   const kit = {
     entryId: entry.id,
     handle: runner.username,
-    day: dayLabel(run.startedAt, isTimeZone(zone) ? zone : undefined),
+    day: runDayOf(run.startedAt, conditions, runner.timeZone),
     ...conditionsOf(conditions, entry.verdict, units),
     ...(verdict !== undefined && { verdict }),
     ...statsOf(run, units),
@@ -124,9 +122,23 @@ export async function publicKitRead(
 }
 
 /**
+ * The run's day where it was run (R-96), never a time: its observation's
+ * zone, else the runner's own place's, else UTC. The profile's kit rows
+ * date their runs with it too.
+ */
+export function runDayOf(
+  startedAt: number,
+  conditions: Conditions | undefined,
+  runnerZone: string | null,
+): string {
+  const zone = conditions?.timeZone ?? runnerZone ?? undefined;
+  return dayLabel(startedAt, isTimeZone(zone) ? zone : undefined);
+}
+
+/**
 A stored verdict as one on the scale, or none.
 */
-function verdictOf(stored: number | null): VerdictValue | undefined {
+export function verdictOf(stored: number | null): VerdictValue | undefined {
   return verdictScale.find((step) => step.value === stored)?.value;
 }
 
@@ -135,7 +147,7 @@ function verdictOf(stored: number | null): VerdictValue | undefined {
  * sky as the precipitation class the app says it in, and whether the
  * reading is the provider's. A field to spread: nothing for no conditions.
  */
-function conditionsOf(
+export function conditionsOf(
   conditions: Conditions | undefined,
   verdict: number | null,
   units: Units,
@@ -285,22 +297,23 @@ export function entryCardOf(kit: Omit<PublicKit, "cardVersion">): EntryCardData 
 async function versionOf(card: EntryCardData): Promise<string> {
   const bytes = new TextEncoder().encode(JSON.stringify(card));
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  // Two digits a byte, each looked up rather than padded, so a byte under
+  // 16 is still two digits whatever this digest happens to hold.
   return [...digest]
     .slice(0, 8)
-    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .map((byte) => `${HEX_DIGITS.charAt(byte >> 4)}${HEX_DIGITS.charAt(byte & 15)}`)
     .join("");
 }
 
+const HEX_DIGITS = "0123456789abcdef";
+
 /**
- * The cache tags for a kit's page and card: the kit's, and its runner's
- * when it is public. A path that is not an id names nothing a purge could.
+ * The kit's own tag: a path that is not an id names nothing a purge could.
  */
-function kitCacheTags(entryId: string, runnerId: string | undefined): string[] {
-  const entry = ulidSchema.safeParse(entryId).success
-    ? [entryCacheTag(entryId)]
-    : [];
-  const runner = runnerId === undefined ? [] : [runnerCacheTag(runnerId)];
-  return [...entry, ...runner];
+function kitTag(entryId: string): string | undefined {
+  return ulidSchema.safeParse(entryId).success
+    ? entryCacheTag(entryId)
+    : undefined;
 }
 
 /**
@@ -311,10 +324,7 @@ export function publicKitHeaders(
   entryId: string,
   read: PublicKitRead | undefined,
 ): Record<string, string> {
-  return publicCacheHeaders(
-    PUBLIC_PAGE_TTL_SECONDS,
-    kitCacheTags(entryId, read?.runnerId),
-  );
+  return publicPageHeaders(kitTag(entryId), read?.runnerId);
 }
 
 /**
@@ -347,6 +357,6 @@ export async function publicKitCardResponse(
             version: read.kit.cardVersion,
           },
         }),
-    tags: kitCacheTags(entryId, read?.runnerId),
+    tags: publicPageTags(kitTag(entryId), read?.runnerId),
   });
 }

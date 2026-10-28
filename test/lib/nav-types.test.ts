@@ -561,10 +561,21 @@ describe("viewTransitionTypesFor", () => {
   });
 });
 
-describe("the open web's profile (`/@handle`, D-152)", () => {
-  it("is a document load, not a push: H moved to /feed/u/<handle>", () => {
+describe("the open web's pages (`/k/<id>`, `/@handle`, D-152)", () => {
+  it("are document loads, cut from anywhere: H moved to /feed/u/<handle>", () => {
     expect(typeOf("/feed/search", "/@maya_runs")).toBe("cut");
+    expect(typeOf("/@maya_runs", "/k/01J00000000000000000000000")).toBe("cut");
+    expect(navTypeFor("/feed", "/@m", false)).toBe("cut");
+    expect(navTypeFor("/feed", "/k/e1", false)).toBe("cut");
+  });
+
+  it("needs the prefix and a non-empty handle to be the profile", () => {
+    // No handle after the @, or no @ at all, is no row of the table.
+    expect(navTypeFor("/feed", "/@", false)).toBeUndefined();
+    expect(navTypeFor("/feed", "/maya_runs", false)).toBeUndefined();
+    expect(navTypeFor("/feed", "/x@maya_runs", false)).toBeUndefined();
     // A param needs a value: `/feed/u/` is nobody's H.
     expect(typeOf("/feed/search", "/feed/u/")).toBe("cut");
+    expect(typeOf("/feed/search", "/feed/u/m")).toBe("push");
   });
 });

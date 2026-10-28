@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   entryCacheTag,
+  handleCacheTag,
   PUBLIC_PAGE_TTL_SECONDS,
   publicCacheHeaders,
+  publicPageHeaders,
+  publicPageTags,
   runnerCacheTag,
   withoutCookiesWhenPublic,
 } from "../../src/modules/ops/public-cache";
@@ -13,16 +16,38 @@ import { withSecurityHeaders } from "../../src/modules/ops/security-headers";
  * The open web's cache headers (design 160, D-152).
  */
 
+describe("publicPageTags and publicPageHeaders", () => {
+  it("tag a public page with its own tag and its runner, a minute at the edge", () => {
+    expect(publicPageTags("handle:maya", "u1")).toStrictEqual([
+      "handle:maya",
+      "runner:u1",
+    ]);
+    expect(publicPageHeaders("handle:maya", "u1")).toStrictEqual({
+      "Cache-Control": "public, max-age=60",
+      "Cache-Tag": "handle:maya,runner:u1",
+    });
+  });
+
+  it("leave out what is not there: no page tag, no runner", () => {
+    expect(publicPageTags(undefined, undefined)).toStrictEqual([]);
+    expect(publicPageTags("handle:maya", undefined)).toStrictEqual([
+      "handle:maya",
+    ]);
+    expect(publicPageTags(undefined, "u1")).toStrictEqual(["runner:u1"]);
+  });
+});
+
 describe("publicCacheHeaders", () => {
   it("is public for the TTL, tagged with every tag", () => {
     expect(
       publicCacheHeaders(PUBLIC_PAGE_TTL_SECONDS, [
         entryCacheTag("01J00000000000000000000000"),
         runnerCacheTag("u1"),
+        handleCacheTag("maya_runs"),
       ]),
     ).toStrictEqual({
       "Cache-Control": "public, max-age=60",
-      "Cache-Tag": "entry:01J00000000000000000000000,runner:u1",
+      "Cache-Tag": "entry:01J00000000000000000000000,runner:u1,handle:maya_runs",
     });
   });
 
@@ -105,14 +130,19 @@ const sources: Record<string, string> = import.meta.glob(
 );
 
 describe("only the open web's responses are public", () => {
-  it("sets public cache headers in the public kit and the card routes only", () => {
+  it("sets public cache headers in the public kit, the public profile and the card routes only", () => {
     const callers = Object.entries(sources)
-      .filter(([, source]) => source.includes("publicCacheHeaders("))
+      .filter(
+        ([, source]) =>
+          source.includes("publicCacheHeaders(") ||
+          source.includes("publicPageHeaders("),
+      )
       .map(([path]) => path.replace("../../", ""))
       .toSorted((left, right) => left.localeCompare(right));
 
     expect(callers).toStrictEqual([
       "src/modules/feed/public-kit.ts",
+      "src/modules/feed/public-profile.ts",
       "src/modules/ops/og/respond.ts",
       "src/modules/ops/public-cache.ts",
     ]);

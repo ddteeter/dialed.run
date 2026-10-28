@@ -133,6 +133,37 @@ delete and purge on retraction.
 - **Report this kit** prefills `/takedown?location=`, which `/takedown` now
   accepts; `takedownSubjectOf` reads a `/k/<id>` link as the kit.
 
+## Deviations (step 7)
+
+- **H is `/feed/u/<handle>`, and `/feed/u/<userId>` still works**: one
+  route takes either; an id (a ULID, which no lowercase handle of at most
+  20 characters can be) asks for the runner's current handle and
+  redirects, as the old id route did. `/@handle` is no longer an in-app
+  push in `nav-types` (it is reached by a document load).
+- **The runner gate is `runnerInStanding()`** (`feed/runner-visibility`):
+  not banned, not leaving, and a confirmed address, the floor H and search
+  already stood on, now shared with the open web. An unconfirmed runner's
+  public profile is not public, like a never-held handle. A handle given
+  up (`/@old`) is not public either: the open web never says a name
+  changed.
+- **The rotation is read in `closet`** (`closet/public-rotation.ts`,
+  through its index): the type words and the mileage are the closet's, and
+  `feed/public-profile.ts` importing `closet`'s index makes no cycle
+  because nothing in `feed`'s index reaches it. Shoe mileage is the
+  closet's own sum, over every run the shoes were on, private ones
+  included: it is what the closet says, and what "Show my closet"
+  promises.
+- **"Show {N} more" is `?all=true`, and lists at most 100**: a bound on
+  one view's read; the count still says how many there are.
+- **Cache tags**: the profile is tagged `handle:<handle>` (normalized,
+  lowercase) always, and `runner:<userId>` when public. The not-public page
+  carries only the handle's tag, which names the path, not a runner. A
+  purge on publish (making a profile public) should name `handle:<handle>`;
+  nothing purges yet.
+- **The handle is not echoed in the not-public page's HTML**; the
+  router's own state carries the URL, as `/k`'s does its id, which is the
+  request itself. "Look in the app" is built in the browser, after load.
+
 ## Build steps
 
 Each step is one or more commits that pass the commit gate on their own.

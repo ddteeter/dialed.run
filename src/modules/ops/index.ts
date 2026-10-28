@@ -11,9 +11,9 @@ export { handleScheduled } from "./scheduled";
 export { secureResponse } from "./secure-response";
 export {
   entryCacheTag,
-  PUBLIC_PAGE_TTL_SECONDS,
-  publicCacheHeaders,
-  runnerCacheTag,
+  handleCacheTag,
+  publicPageHeaders,
+  publicPageTags,
   withoutCookiesWhenPublic,
 } from "./public-cache";
 export type { EntryCardData } from "./og/cards";

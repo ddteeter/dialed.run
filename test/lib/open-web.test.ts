@@ -15,8 +15,20 @@ describe("isOpenWebPath", () => {
     },
   );
 
+  it.each(["/@maya_runs", "/@maya_runs/", "/%40maya_runs", "/%40Maya"])(
+    "is %s, a public profile",
+    (path) => {
+      expect(isOpenWebPath(path)).toBe(true);
+    },
+  );
+
   it.each([
     "/",
+    "/@",
+    "/@/",
+    "/@maya/kits",
+    "/x/@maya",
+    "/feed/u/maya_runs",
     "/k",
     "/k/",
     "/k/a/b",
