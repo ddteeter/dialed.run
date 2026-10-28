@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { MAX_IMPORT_BYTES } from "../../src/modules/runs/upload-limits";
 import { UnzipError, onlyFileIn } from "../../src/modules/runs/garmin/unzip";
-import { zipOf } from "./zip-file";
+import { zipLayoutOf, zipOf } from "./zip-file";
 
 const CONTENT = new TextEncoder().encode(
   "a synthetic file, long enough that deflate shortens it. ".repeat(20),
@@ -28,6 +28,31 @@ describe("onlyFileIn", () => {
     expect(zip.byteLength).toBeLessThan(CONTENT.byteLength);
     expect(bytesOf(await onlyFileIn(zip))).toEqual(bytesOf(CONTENT));
   });
+
+  it("reads Garmin's layout, where only the directory has the sizes", async () => {
+    const zip = await zipOf(CONTENT);
+    // Pinned to what a real download measured (2026-10-27): a reader that
+    // trusted the local header would read a zero-length entry here.
+    expect(zipLayoutOf(zip)).toEqual({
+      entries: 1,
+      method: 8,
+      flags: 0x08_08,
+      localSizesZero: true,
+    });
+    expect(bytesOf(await onlyFileIn(zip))).toEqual(bytesOf(CONTENT));
+  });
+
+  it.each(["deflated", "stored"] as const)(
+    "reads a %s entry with its sizes in the local header too",
+    async (method) => {
+      const zip = await zipOf(CONTENT, { method, sizes: "local-header" });
+      expect(zipLayoutOf(zip)).toMatchObject({
+        flags: 0,
+        localSizesZero: false,
+      });
+      expect(bytesOf(await onlyFileIn(zip))).toEqual(bytesOf(CONTENT));
+    },
+  );
 
   it("reads a stored entry as it is", async () => {
     const zip = await zipOf(CONTENT, { method: "stored" });

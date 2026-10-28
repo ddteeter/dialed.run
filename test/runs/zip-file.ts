@@ -26,7 +26,21 @@ interface ZipOptions {
   Bytes before the local header, as a self-extracting archive has.
   */
   prefix?: number;
+  /**
+  Where the sizes are written. `"descriptor"`, the default, is Garmin's
+  own layout (measured against real downloads, 2026-10-27): flags 0x808,
+  the local header's sizes zero, and the sizes in a data descriptor after
+  the data, so only the directory says how big the entry is.
+  `"local-header"` writes them in the local header instead.
+  */
+  sizes?: "descriptor" | "local-header";
 }
+
+/**
+Bit 3 (sizes in a data descriptor) and bit 11 (UTF-8 names), as Garmin sets.
+*/
+const DESCRIPTOR_FLAGS = 0x08_08;
+const DESCRIPTOR_SIZE = 16;
 
 async function deflate(bytes: ArrayBuffer): Promise<Uint8Array> {
   const stream = new Blob([bytes])
@@ -48,10 +62,13 @@ export async function zipOf(
   const entries = options.entries ?? 1;
   const comment = options.comment ?? 0;
   const local = options.prefix ?? 0;
+  const hasDescriptor = (options.sizes ?? "descriptor") === "descriptor";
+  const flags = hasDescriptor ? DESCRIPTOR_FLAGS : 0;
 
   const localSize = 30 + name.length;
   const directorySize = 46 + name.length;
-  const directoryAt = local + localSize + data.length;
+  const descriptorAt = local + localSize + data.length;
+  const directoryAt = descriptorAt + (hasDescriptor ? DESCRIPTOR_SIZE : 0);
   const total = directoryAt + directorySize + 22 + comment;
   const zip = new Uint8Array(total);
   const view = new DataView(zip.buffer);
@@ -66,16 +83,25 @@ export async function zipOf(
 
   write(local, [
     [0, 4, 0x04_03_4b_50],
+    [6, 2, flags],
     [8, 2, method],
-    [18, 4, data.length],
-    [22, 4, size],
+    [18, 4, hasDescriptor ? 0 : data.length],
+    [22, 4, hasDescriptor ? 0 : size],
     [26, 2, name.length],
   ]);
   zip.set(name, local + 30);
   zip.set(data, local + localSize);
+  if (hasDescriptor) {
+    write(descriptorAt, [
+      [0, 4, 0x08_07_4b_50],
+      [8, 4, data.length],
+      [12, 4, size],
+    ]);
+  }
 
   write(directoryAt, [
     [0, 4, 0x02_01_4b_50],
+    [8, 2, flags],
     [10, 2, method],
     [20, 4, data.length],
     [24, 4, size],
@@ -93,4 +119,32 @@ export async function zipOf(
     [20, 2, comment],
   ]);
   return zip.buffer;
+}
+
+/**
+ * How an archive is laid out, by the fields the reader depends on: what
+ * `npm run garmin:check` compares between a real download and `zipOf`'s,
+ * so these synthetic zips cannot drift from Garmin's.
+ */
+export interface ZipLayout {
+  entries: number;
+  method: number;
+  flags: number;
+  localSizesZero: boolean;
+}
+
+export function zipLayoutOf(zip: ArrayBuffer): ZipLayout {
+  const view = new DataView(zip);
+  let end = zip.byteLength - 22;
+  while (end > 0 && view.getUint32(end, true) !== 0x06_05_4b_50) end -= 1;
+  const directoryAt = view.getUint32(end + 16, true);
+  const localAt = view.getUint32(directoryAt + 42, true);
+  return {
+    entries: view.getUint16(end + 10, true),
+    method: view.getUint16(directoryAt + 10, true),
+    flags: view.getUint16(directoryAt + 8, true),
+    localSizesZero:
+      view.getUint32(localAt + 18, true) === 0 &&
+      view.getUint32(localAt + 22, true) === 0,
+  };
 }

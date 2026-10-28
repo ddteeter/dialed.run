@@ -15,38 +15,21 @@
 import { createServer } from "node:http";
 import process from "node:process";
 
+import { GARMIN_PATHS } from "../../src/modules/runs/garmin/api";
 import { fitFile } from "../../test/runs/fit-file";
 import { zipOf } from "../../test/runs/zip-file";
-import { GARMIN_STUB_PORT, GARMIN_STUB_RUNS } from "./stub-runs";
+import { GARMIN_STUB_PORT, GARMIN_STUB_RUNS, stubSummaryOf } from "./stub-runs";
 
 const TOKEN = "e2e.stub.token";
 
-const TOKEN_PATH =
-  "/personalapitoken-service/personal-api/personal-api-key/token";
-const LIST_PATH = "/activitylist-service/activities/search/activities";
-const DOWNLOAD_PATH = "/download-service/files/activity/";
-
 const startedAt = Date.now();
-
-/**
-"yyyy-MM-dd HH:mm:ss" in UTC, as Garmin writes `startTimeGMT`.
-*/
-function gmt(epochMs: number): string {
-  return new Date(epochMs).toISOString().slice(0, 19).replace("T", " ");
-}
 
 const runs = GARMIN_STUB_RUNS.map((run) => ({
   ...run,
   start: startedAt - run.daysAgo * 86_400_000,
 }));
 
-const summaries = runs.map((run) => ({
-  activityId: run.activityId,
-  activityName: "Synthetic Run",
-  startTimeGMT: gmt(run.start),
-  distance: run.distanceM,
-  duration: run.durationS,
-}));
+const summaries = runs.map((run) => stubSummaryOf(run, run.start));
 
 async function download(activityId: number): Promise<ArrayBuffer | undefined> {
   const run = runs.find((candidate) => candidate.activityId === activityId);
@@ -73,7 +56,7 @@ const server = createServer((request, response) => {
     return;
   }
   const authorization = request.headers.authorization ?? "";
-  if (url.pathname === TOKEN_PATH && request.method === "POST") {
+  if (url.pathname === GARMIN_PATHS.token && request.method === "POST") {
     if (!authorization.startsWith("ApiKey ")) {
       response.writeHead(401).end();
       return;
@@ -85,13 +68,13 @@ const server = createServer((request, response) => {
     response.writeHead(401).end();
     return;
   }
-  if (url.pathname === LIST_PATH) {
+  if (url.pathname === GARMIN_PATHS.list) {
     response.setHeader("content-type", "application/json");
     response.end(JSON.stringify(summaries));
     return;
   }
-  if (url.pathname.startsWith(DOWNLOAD_PATH)) {
-    const id = Number(url.pathname.slice(DOWNLOAD_PATH.length));
+  if (url.pathname.startsWith(GARMIN_PATHS.download)) {
+    const id = Number(url.pathname.slice(GARMIN_PATHS.download.length));
     void download(id).then((zip) => {
       if (zip === undefined) {
         response.writeHead(404).end();

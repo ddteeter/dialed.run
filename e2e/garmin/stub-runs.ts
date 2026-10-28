@@ -13,7 +13,7 @@ The id CI's `.dev.vars` names in `GARMIN_OWNER_USER_ID`.
 */
 export const GARMIN_OWNER_ID = "e2e-garmin-owner";
 
-interface StubRun {
+export interface StubRun {
   activityId: number;
   daysAgo: number;
   distanceM: number;
@@ -44,3 +44,27 @@ export const GARMIN_STUB_RUNS: readonly StubRun[] = [
     workoutRpe: 70,
   },
 ];
+
+/**
+"yyyy-MM-dd HH:mm:ss" in UTC, as Garmin writes `startTimeGMT`.
+*/
+function gmt(epochMs: number): string {
+  return new Date(epochMs).toISOString().slice(0, 19).replace("T", " ");
+}
+
+/**
+ * One run as the stub lists it: the fields the client reads, and a name.
+ * `npm run garmin:check` compares these against a real list item's.
+ */
+export function stubSummaryOf(
+  run: StubRun,
+  startMs: number,
+): Record<string, unknown> {
+  return {
+    activityId: run.activityId,
+    activityName: "Synthetic Run",
+    startTimeGMT: gmt(startMs),
+    distance: run.distanceM,
+    duration: run.durationS,
+  };
+}

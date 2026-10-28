@@ -41,8 +41,8 @@ export function garminConfigFor(
   // Blank is unset: `wrangler secret put` takes an empty value, and an
   // empty owner id must never match anyone.
   const apiKey = vars.GARMIN_API_KEY?.trim() ?? "";
-  const ownerUserId = vars.GARMIN_OWNER_USER_ID?.trim() ?? "";
-  if (apiKey === "" || ownerUserId === "" || ownerUserId !== userId) {
+  const ownerUserId = vars.GARMIN_OWNER_USER_ID?.trim();
+  if (apiKey === "" || !ownerUserId || ownerUserId !== userId) {
     return undefined;
   }
   // `GARMIN_API_ORIGIN`: set only by e2e, which serves a stub.

@@ -20,10 +20,14 @@ import { onlyFileIn } from "./unzip";
 
 export const GARMIN_PERSONAL_ORIGIN = "https://personal.connectapi.garmin.com";
 
-const TOKEN_PATH =
-  "/personalapitoken-service/personal-api/personal-api-key/token";
-const LIST_PATH = "/activitylist-service/activities/search/activities";
-const DOWNLOAD_PATH = "/download-service/files/activity/";
+/**
+The three calls, shared with the e2e stub and `npm run garmin:check`.
+*/
+export const GARMIN_PATHS = {
+  token: "/personalapitoken-service/personal-api/personal-api-key/token",
+  list: "/activitylist-service/activities/search/activities",
+  download: "/download-service/files/activity/",
+} as const;
 const TIMEOUT_MS = 10_000;
 
 export class GarminUnavailable extends Error {
@@ -115,7 +119,7 @@ export function createGarminApi(
   }
 
   async function bearer(): Promise<string> {
-    const response = await call("token", TOKEN_PATH, {
+    const response = await call("token", GARMIN_PATHS.token, {
       method: "POST",
       headers: { Authorization: `ApiKey ${apiKey}` },
     });
@@ -133,7 +137,7 @@ export function createGarminApi(
         // Includes trail and treadmill running (the spike).
         activityType: "running",
       });
-      const response = await call("list", `${LIST_PATH}?${query}`, {
+      const response = await call("list", `${GARMIN_PATHS.list}?${query}`, {
         headers: { Authorization: await bearer() },
       });
       let body: unknown;
@@ -154,7 +158,7 @@ export function createGarminApi(
     async fitFile(activityId) {
       const response = await call(
         "download",
-        `${DOWNLOAD_PATH}${encodeURIComponent(activityId)}`,
+        `${GARMIN_PATHS.download}${encodeURIComponent(activityId)}`,
         { headers: { Authorization: await bearer() } },
       );
       try {
