@@ -940,6 +940,71 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
+45. **A garment's photo on Review (C17, design 157). Undesigned; built
+    as a placeholder.** The classifier and the D-147 hold now queue
+    garment photos. The row is a content row like a kit photo's: the
+    kicker reads `garment photo · {id}`, the photo is the garment's card
+    size, and the suspected-CSAM question reads "Remove this garment photo
+    everywhere and keep the evidence for the report?". No new glyph or
+    colour. **Amended by design 159 (R-167):** Remove now deletes the photo
+    and tells its owner, in words the owner approved on 2026-10-26: the
+    bell row "We removed the photo of one of your garments. Reason:
+    {reason}." and the email "We removed a photo from your closet" (the
+    content-removed email's layout, "The garment stays in your closet.").
+    **The ask:** draw the row, and confirm the bell row and email in the
+    existing notice styles.
+
+46. **A garment match's takedown on Review (R-167, design 159).
+    Undesigned; built as a placeholder.** Under Matching photos, a garment
+    tile now carries the garment row's own decision bar, without Approve:
+    "Why it comes down", Remove, and Remove as suspected CSAM with its
+    in-place question. Existing parts and words only; a decided tile
+    leaves the list. Kit tiles are unchanged. **The ask:** draw the bar
+    on a match tile, or say where a match's takedown should sit instead.
+
+<!-- Item numbers continue past rounds 35–40 (45–76, 82–87). Design numbered the Garmin asks 77–81 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
+
+## Answered in round 41 (imported 2026-10-28)
+
+Design answered as `Round 41 Rulings.dc.html`, items 84–87, with the text
+of record under "Round 41 · Items 84–86" in `design/docs/product.md`
+(item 87 is there too). Items 84 and 85 answer open-queue items 45 and 46
+(D-147); item 86 rules the public pages. Only item 87 is built here, in
+the Garmin phase 1 PR (#275); 84–86 are build work for their own changes.
+
+- **84 · Held on upload (answers queue item 45). Ruled; not built yet.**
+  The source tag reads `[held on upload]`, not `[fingerprint]`; the line
+  under the photo reads "A close match to an image removed as intimate on
+  {OCT 3}, {3 BITS} apart." ("The same image as one removed as intimate on
+  {OCT 3}." at 0 bits); the removed original in MATCHING PHOTOS is an
+  empty hairline frame reading REMOVED. The board has the rest.
+- **85 · Other sites (answers queue item 46). Ruled; not built yet.**
+  Reworded, placed on the `/takedown` receipt, `/takedown/confirm` DONE
+  and W1's receipt after an intimate-image report; both names are links
+  with "(opens in a new tab)" in their accessible names.
+- **86 · Public pages. Ruled; not built yet.** PUBLIC beside SHARED and
+  PRIVATE, Settings › Privacy's public profile, `/k/<id>`, `/@handle`, the
+  public share card and the one not-public page. The board and
+  `docs/product.md` have the full text.
+- **87 · Garmin phase 1, G6–G10. Built in #275.**
+  - **G6 · A3 effort. Confirmed and drawn.** The order as built; the
+    hairline above EFFORT stays. Unrated, the kicker reads EFFORT ·
+    OPTIONAL (the watch line takes that slot when rated). New line under
+    the chips, always: "You run warmer the harder you go. Next time, the
+    Call allows for it." TYPE.small, --quiet.
+  - **G7 · Credit weight. Confirmed, with a COLLAPSE:** G1's 500 → 400
+    (TYPE.small, --quiet), as built.
+  - **G8 · Failed import tap. Ruled.** §4a NOT IMPORTED · "Garmin didn't
+    answer. Nothing was imported." · Try again, in the list band's slot
+    above the rows; the tapped row returns to idle; a status region, focus
+    unchanged.
+  - **G9 · Parsed card strip. Ruled.** PARSED · FROM GARMIN, without the
+    date, distance and time (the stats line has them). REPLACE stays and
+    returns to the import chooser.
+  - **G10 · Credit on D. Confirmed** as built.
+
+Lifted from the open queue, as asked:
+
 45. **"A copy of an image removed as intimate" on Review (D-147, design
     152). Undesigned; built as a placeholder.** A kit photo whose
     fingerprint is within 8 bits of one removed as intimate is held and
@@ -958,30 +1023,6 @@ bits` apart.", the date and distance in MONO.xs. The row also carries
     spreading there. They fingerprint the image on your own device; the
     image never leaves it." The two names are plain links, opening in a new
     tab. **The ask:** confirm or reword, and place it on the boards.
-
-47. **A garment's photo on Review (C17, design 157). Undesigned; built
-    as a placeholder.** The classifier and the D-147 hold now queue
-    garment photos. The row is a content row like a kit photo's: the
-    kicker reads `garment photo · {id}`, the photo is the garment's card
-    size, and the suspected-CSAM question reads "Remove this garment photo
-    everywhere and keep the evidence for the report?". No new glyph or
-    colour. **Amended by design 159 (R-167):** Remove now deletes the photo
-    and tells its owner, in words the owner approved on 2026-10-26: the
-    bell row "We removed the photo of one of your garments. Reason:
-    {reason}." and the email "We removed a photo from your closet" (the
-    content-removed email's layout, "The garment stays in your closet.").
-    **The ask:** draw the row, and confirm the bell row and email in the
-    existing notice styles.
-
-48. **A garment match's takedown on Review (R-167, design 159).
-    Undesigned; built as a placeholder.** Under Matching photos, a garment
-    tile now carries the garment row's own decision bar, without Approve:
-    "Why it comes down", Remove, and Remove as suspected CSAM with its
-    in-place question. Existing parts and words only; a decided tile
-    leaves the list. Kit tiles are unchanged. **The ask:** draw the bar
-    on a match tile, or say where a match's takedown should sit instead.
-
-<!-- Item numbers continue past rounds 35–40 (45–76, 82–87). Design numbered the Garmin asks 77–81 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
 
 ## Answered in round 40 (imported 2026-10-24)
 
@@ -1213,7 +1254,7 @@ G5 on A3; G1's line on A1's card, D, E1 and each runs-list row, and the
 word "Garmin" on R's run strip. Not built yet: G1 on the share/OG card and
 in `runs.csv` (phase 3), G2 (phase 3) and G4 (phase 3).
 
-Asked back from the phase 1 build (open):
+Asked back from the phase 1 build, and **answered in round 41 as item 87** (see that section):
 
 - **G6. A3 had no effort field to prefill.** G5's no-rating frame says
   "the field is as it is today", but A3 never had one: effort was set on
