@@ -1224,7 +1224,11 @@ Asked back from the phase 1 build (open):
   only the header, the field and Log it. The line under the chips, "Effort
   matters more than distance — you run 8° warmer in a workout.", is the
   Call's B1 copy with a figure A3 does not have, so it is not drawn.
-  Confirm the placement, and whether A3 wants a line of its own there.
+  On every run since the owner's call (2026-10-28); with no rating it is
+  four chips, none picked, no source line. Confirm the placement and the
+  hairline above EFFORT, whether A3 wants a line of its own there, and
+  whether a run with no rating shows the field at all. Asked with
+  screenshots: drafted 2026-10-28.
 - **G7. GarminAttribution's weight.** G1 says weight 500; the type
   contract has no 500 in text (`tokens.js` WEIGHT), so it is built at 400
   (`text-small`, `--quiet`, which is G1's `--ink-2` #4E4E44). Confirm, or
