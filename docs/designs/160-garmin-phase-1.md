@@ -1,6 +1,6 @@
 # Design: 160 · Garmin phase 1 — "Import from Garmin" (owner only)
 
-Status: **proposed** (owner review). Implements plan 160 steps 1.2–1.7 and
+Status: **accepted** (owner, 2026-10-28). Implements plan 160 steps 1.2–1.7 and
 design items G1 (partly), G3 and G5.
 
 ## Problem
@@ -70,7 +70,7 @@ Every step ends with the commit gate, touched-file stryker at 100%
 ## Open questions
 
 1. **A3's effort row is new for every run**, not only Garmin's, because G5's "no
-   rating: nothing is picked" implies the row is always there. Proceeding on that.
+   rating: nothing is picked" implies the row is always there. **Accepted** (owner, 2026-10-28).
 2. **`GARMIN_API_ORIGIN`** points the client at a local stub for the demo recording (step 9). Env-only, absent in every deployment, defaulting to Garmin's origin.
 3. **Deferred to phase 3**: G2's derived line on E2,
    and `runs.csv`'s `source` column. Proceeding on that.
