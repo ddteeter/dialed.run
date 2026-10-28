@@ -13,7 +13,8 @@
 
 > **DRAFT: not reviewed by a lawyer.** Written from the code on `main` as of
 > 2026-10-11, revised 2026-10-18 from the pre-launch legal review (rev. 2)
-> and decisions D-125 to D-139, for the owner to edit. Every `[OWNER: …]` note is a decision or
+> and decisions D-125 to D-139, and 2026-10-28 for public kits and
+> profiles (D-149 to D-152), for the owner to edit. Every `[OWNER: …]` note is a decision or
 > a fact the code cannot supply. Every factual claim is mapped to the code
 > that makes it true in `privacy-policy-sources.md`; change one, change both.
 
@@ -40,7 +41,10 @@ Questions about this policy or your data: hello@dialed.run.
   product.
 - Kits you share are seen by other signed-in runners, and shared is the
   default. You can make any kit private, or make private your default.
-  Nothing is shown to people who are not signed in.
+- Nothing is shown to people who are not signed in unless you make it
+  public: a kit you mark public, and your profile if you turn it on, can
+  be seen by anyone with the link. See
+  [What other people can see](#what-other-people-can-see).
 - Your runs, shared and private, count without your name in public totals
   like the guides, and only where at least 5 runners are behind a figure.
   You can turn that off in Settings. See
@@ -110,7 +114,8 @@ Questions about this policy or your data: hello@dialed.run.
 ### Your profile
 
 - **Username** and **the place you run**, if you set it. Both show on
-  your profile to other signed-in runners.
+  your profile to other signed-in runners. If you turn on your public
+  profile, your username shows on it too; the place you run does not.
 - **Username screening.** When you pick a username we check it against a
   list of offensive words and send it, alone, to **OpenAI's** moderation
   service. Nothing else about you goes with it.
@@ -122,8 +127,9 @@ Questions about this policy or your data: hello@dialed.run.
   your emails and to tell when your day starts. The coordinates are never
   shown to other runners or the public (see [Our access to your content](#our-access-to-your-content)). They stand in
   for a run's location when a manual run has none.
-- **How warm or cold you run** (your thermal level), your units, whether
-  your kits are shared by default, and which emails you have switched off.
+- **How warm or cold you run** (your thermal level), your units, who sees
+  your new kits by default, whether your profile and your closet are
+  public, and which emails you have switched off.
   Your thermal level is never shown to other runners.
 - **Whether your runs count in anonymous totals**, on unless you turn it
   off (see [Anonymous totals](#anonymous-totals)).
@@ -205,6 +211,14 @@ never shown to other runners.
   uploaded, re-encoded, and three resized copies.
 - **Kit photos** are shown to signed-in runners who can see the kit, once
   screened.
+- **Photos on public kits** are shown to anyone who opens the kit, once
+  screened. While the kit is public, a copy of each is kept in a separate
+  public store under an address nobody can guess, and served from
+  Cloudflare's network. The copy is deleted when the kit stops being
+  public, when the kit or photo is hidden or removed, or when you are
+  banned or leave. Cloudflare checks photos served from that store against
+  lists of known child sexual abuse material; a match is blocked at once,
+  and we report it as the law requires.
 - **Screening.** Every photo is sent to **OpenAI's** moderation service to
   check for sexual, violent and self-harm content. We keep the scores it
   returns until the photo is deleted. A photo that scores high, kit or
@@ -224,30 +238,66 @@ never shown to other runners.
 
 ## What other people can see
 
-**Only signed-in runners.** "Shared" means other signed-in runners on
-[dialed.run], not the open web. Kits, profiles and their photos are not
-shown to anyone who is not signed in, and are not indexed by search
-engines. A link to a kit shared elsewhere previews as a generic
-[dialed.run] card, with nothing from the kit on it.
+**Signed-in runners, unless you choose public.** "Shared" means other
+signed-in runners on [dialed.run], not the open web. Shared kits, profiles
+and their photos are not shown to anyone who is not signed in. A link to a
+shared kit posted elsewhere previews as a generic [dialed.run] card, with
+nothing from the kit on it. Only what you make public, below, reaches the
+open web.
 
 **A shared kit** shows your username, the run's title, date and start time, distance,
 duration, whether it was indoors, its conditions, the garments you wore
 (name, brand, category, layer), your verdict, caption, tags, screened photos,
 and how many people marked it useful.
 
-**Your profile** shows your username, the place you run, and your recent
-shared kits.
+**Your profile** shows other signed-in runners your username, the place you
+run, and your recent shared and public kits.
 
-**Never shown to other runners or the public:** your email, your closet as
-a whole, your garment photos, your private kits, notes and flags on
-garments, your thermal level, your verdict history and coverage, and any
-run's coordinates. The people who run [dialed.run] can see them only for
-the reasons under
+**A public kit** can be opened by anyone who has its link, signed in or
+not. It shows your username, the day of the run (never its start time or
+place), distance, time, pace, elevation gain, the feels-like temperature
+and sky, your verdict, caption, the garments you wore (name and type, with
+a link to the product where there is one) and its screened photos. A link
+to it posted elsewhere previews as a picture card with your username, the
+day, the conditions, your verdict, the distance and time, and the models
+you wore, beside the first 120 characters of your caption. The card never
+has a photo. Signed-in runners see a
+public kit as they see a shared one, and it counts in feeds and conditions
+numbers the same way.
+
+**Your public profile** is off until you turn it on in Settings ›
+Privacy. While it is on, anyone can open it at your username's address. It
+shows your username and your public kits, newest first. Its "Show my
+closet" switch, also off until you turn it on, adds your rotation: the name
+and type of each garment, retired ones included, and for shoes the
+distance logged in them, which counts your private runs too.
+
+**Public pages ask search engines not to index them**, but anyone who has
+a link can pass it on, and anyone who saw a public page may have kept a
+copy.
+
+**Taking it back.** Make a public kit shared or private, or turn your
+public profile or closet off, and it stops being public straight away;
+Cloudflare's network may keep serving a copy it already holds for up to a
+minute. A kit that is hidden or removed by moderation, and everything of
+yours when you are banned or leave, stops being public the same way.
+Turning your public profile off does not change kits you already made
+public: each stays public until you change it.
+
+**Never shown to other runners or the public:** your email, your closet
+(except your rotation, if you show it on your public profile), your
+garment photos, your private kits, notes and flags on garments, your
+thermal level, your verdict history and coverage, and any run's
+coordinates. The people who run [dialed.run] can see them only for the
+reasons under
 [Our access to your content](#our-access-to-your-content).
 
-**Sharing is on by default.** You choose shared or private for each kit when
-you give the verdict, and you can make private your default in settings.
-Until you confirm your email address, the kits you log are saved private.
+**Sharing is on by default.** You choose shared, private or public for
+each kit when you give the verdict, and you can make private your default
+in settings. Public can be your default only while your public profile is
+on; turning the profile off makes shared your default again. Until you
+confirm your email address, the kits you log are saved private, and none
+can be made public.
 Private kits never appear in feeds or in anyone's conditions numbers. They
 do count, without your name, in anonymous totals unless you turn that off
 (see [Anonymous totals](#anonymous-totals)).
@@ -261,7 +311,8 @@ name no one.
 
 **Blocking** hides the two of you from each other: each other's kits in
 feeds and on kit pages, each other's profiles, and each other in search.
-It does not notify them.
+It does not notify them. It cannot hide your public kits or public profile
+from someone who opens them signed out.
 
 ## Our access to your content
 
@@ -615,7 +666,7 @@ Where the GDPR or UK GDPR applies, these are our legal bases:
 | What                                                                                                                                           | Legal basis                                                                                                                                     |
 | ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | Your account, profile, closet, runs, kits, photos, weather lookups, the feed, follows, "useful" marks, blocks, notifications and account email | Performing our agreement with you (the terms)                                                                                                   |
-| Showing your shared kits to other signed-in runners                                                                                            | Performing our agreement with you; you choose shared or private for every kit                                                                   |
+| Showing your shared kits to other signed-in runners, and your public kits and public profile to anyone                                         | Performing our agreement with you; you choose shared, private or public for every kit, and turn your public profile on yourself                 |
 | Screening photos and usernames, photo fingerprints, reports, moderation, removal requests, bans and records of them                            | Our legitimate interest in keeping [dialed.run] safe and lawful                                                                                 |
 | Sessions, sign-in protection, counts that stop abuse, Turnstile, the leaked-password check, error reports and server logs                      | Our legitimate interest in keeping accounts and the service secure                                                                              |
 | Conditions numbers in the app, and anonymous totals                                                                                            | Our legitimate interest in useful guides and numbers; you can object with the Settings switch                                                   |
