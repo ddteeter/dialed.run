@@ -832,7 +832,7 @@ describe("A1: a file that would not parse", () => {
 });
 
 /**
- * Import from Garmin's hand-off to A1's own watch (plan 157; G3): the
+ * Import from Garmin's hand-off to A1's own watch (plan 160; G3): the
  * picker's own states are `garmin-import.dom.test.tsx`'s.
  */
 function garmin(

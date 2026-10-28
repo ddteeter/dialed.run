@@ -27,7 +27,7 @@ export function toDate(value: unknown): Date {
 
 /**
 The runner's own perceived-effort rating, 1–10, from the session's
-`workout_rpe`, which the watch stores ×10 (plan 157). A watch that did not
+`workout_rpe`, which the watch stores ×10 (plan 160). A watch that did not
 ask leaves the field out; a value off the scale is dropped rather than
 failing a file that is otherwise a good run.
 */

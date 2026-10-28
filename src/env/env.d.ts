@@ -14,7 +14,7 @@ declare namespace Cloudflare {
     // Strava OAuth + webhook (lane 102). Credentials don't exist yet — the
     // connect/webhook path degrades to a no-op until a human sets these via
     // `wrangler secret` (CLAUDE.md law 5).
-    // "Import from Garmin" (plan 157, phase 1): the Personal API key and the
+    // "Import from Garmin" (plan 160, phase 1): the Personal API key and the
     // one user it belongs to, both `wrangler secret`. Either absent hides
     // the feature (`modules/runs/garmin/config.ts`).
     GARMIN_API_KEY?: string;

@@ -8,7 +8,7 @@ import { latitudeSchema, longitudeSchema } from "./garments";
 
 // ---- Runs -----------------------------------------------------------------
 
-// `garmin`: imported through Garmin's API (plan 157), which is what earns
+// `garmin`: imported through Garmin's API (plan 160), which is what earns
 // the attribution line (G1). A file the runner uploads themselves is
 // `file`, whatever device wrote it.
 export const runSources = ["manual", "file", "garmin"] as const;
@@ -40,7 +40,7 @@ export const runDraftSchema = z.object({
   movingS: z.number().int().positive().optional(),
   elevationGainM: z.number().nonnegative().optional(),
   // Read from an uploaded file only, when the watch asked the runner how
-  // hard it was (plan 157). Absent when it did not.
+  // hard it was (plan 160). Absent when it did not.
   rpe: rpeSchema.optional(),
 });
 export type RunDraft = z.infer<typeof runDraftSchema>;

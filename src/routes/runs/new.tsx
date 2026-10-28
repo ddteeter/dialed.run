@@ -27,7 +27,7 @@ export const Route = createFileRoute("/runs/new")({
     const [units, bell, hasGarmin] = await Promise.all([
       viewerUnitsQuery(),
       bellStateFn(),
-      // Plan 157: the owner's alone; the list itself loads after A1 renders.
+      // Plan 160: the owner's alone; the list itself loads after A1 renders.
       garminImportEnabledFn(),
     ]);
     return { units, bell, hasGarmin };

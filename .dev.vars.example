@@ -19,7 +19,7 @@ BETTER_AUTH_URL=http://localhost:3000
 # console, which looks like a blocked network and is not one.
 TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
 TURNSTILE_SITE_KEY=1x00000000000000000000AA
-# "Import from Garmin" (plan 157): your own Garmin Connect Personal API key
+# "Import from Garmin" (plan 160): your own Garmin Connect Personal API key
 # and your own dialed.run user id (the key is for its holder's data only).
 # Both or neither; without them the import is not drawn.
 # GARMIN_API_KEY=

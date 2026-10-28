@@ -1,6 +1,6 @@
 /**
  * `npm run garmin:check [activityId]`: phase 1's code and its mocks against
- * the real Personal API, with the owner's key (plan 157).
+ * the real Personal API, with the owner's key (plan 160).
  *
  * **The code.** A token, the recent-runs list through the same zod schema
  * the app parses it with, one run's download through the same unzipper,
@@ -18,7 +18,7 @@
  *
  * **Local only, and it keeps nothing.** The key is personal to the owner
  * and rate-limited, so this never runs in CI, and it writes nothing to
- * disk: nothing recorded from a real account is committed (plan 157). It
+ * disk: nothing recorded from a real account is committed (plan 160). It
  * prints dates, distances, the effort, types and flags, never the token
  * or a body.
  *

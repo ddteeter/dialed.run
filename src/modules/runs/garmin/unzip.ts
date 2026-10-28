@@ -1,5 +1,5 @@
 /**
- * The one file inside the zip Garmin's download hands back (plan 157:
+ * The one file inside the zip Garmin's download hands back (plan 160:
  * `<activityId>_ACTIVITY.fit`, one deflated entry).
  *
  * A small reader rather than a dependency: the repo's zip library

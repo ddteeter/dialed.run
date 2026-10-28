@@ -171,7 +171,7 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 60_000,
     },
-    // Garmin's Personal API, stubbed (plan 157, step 9): the dev server's
+    // Garmin's Personal API, stubbed (plan 160, step 9): the dev server's
     // `GARMIN_API_ORIGIN` points the app's own client here. Synthetic
     // answers only; `e2e/garmin/stub-server.ts` says what it serves.
     {

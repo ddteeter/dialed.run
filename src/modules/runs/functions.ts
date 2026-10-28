@@ -85,7 +85,7 @@ export const startFileImport = createServerFn({ method: "POST" })
     );
   });
 
-// ---- Import from Garmin (plan 157, phase 1) ---------------------------
+// ---- Import from Garmin (plan 160, phase 1) ---------------------------
 //
 // The owner's alone: `garminConfigFor` decides, from the bindings.
 

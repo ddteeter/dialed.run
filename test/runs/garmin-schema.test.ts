@@ -33,7 +33,7 @@ function importValues(userId: string, garminActivityId?: string) {
 }
 
 /**
- * Plan 157's columns (migration `add_garmin_import_columns`). The suite has
+ * Plan 160's columns (migration `add_garmin_import_columns`). The suite has
  * already applied every migration to this D1, so this is the schema a fresh
  * database ends with.
  */

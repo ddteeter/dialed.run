@@ -1,6 +1,6 @@
 /**
  * What the Garmin stub serves, shared by the stub and the demo that reads
- * it (plan 157, step 9).
+ * it (plan 160, step 9).
  *
  * The port is fixed because the dev server reads `GARMIN_API_ORIGIN` from
  * `.dev.vars`, which is static: CI writes `http://localhost:3900` there,

@@ -38,7 +38,7 @@ export interface StartImportInput {
   bytes: ArrayBuffer;
   idempotencyKey?: string | undefined;
   /**
-  The Garmin activity the bytes were fetched for (plan 157).
+  The Garmin activity the bytes were fetched for (plan 160).
   */
   garminActivityId?: string | undefined;
 }

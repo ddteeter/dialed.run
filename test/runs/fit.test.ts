@@ -275,7 +275,7 @@ async function rpeOf(
   return draft.rpe;
 }
 
-describe("fit: the runner's own perceived effort (plan 157)", () => {
+describe("fit: the runner's own perceived effort (plan 160)", () => {
   it("reads workout_rpe as the 1–10 rating the watch stored ×10", async () => {
     expect(await rpeOf({ workoutRpe: 20 })).toBe(2);
     expect(await rpeOf({ workoutRpe: 100 })).toBe(10);

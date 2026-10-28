@@ -1,5 +1,5 @@
 /**
- * "Import from Garmin" (plan 157, phase 1; design G3): the owner's last
+ * "Import from Garmin" (plan 160, phase 1; design G3): the owner's last
  * ten runs on Garmin, which of them are already here, and the import of
  * one. From the `.FIT` on, an import is an upload like any other.
  *

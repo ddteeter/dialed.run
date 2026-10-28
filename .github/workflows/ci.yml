@@ -101,7 +101,7 @@ jobs:
       # local sign-in keeps working (OPS-4). The STRAVA_* values are fake
       # placeholders so lane 127's webhook demo runs (owner, 2026-09-26);
       # nothing real is ever called with them. The GARMIN_* lines make the
-      # Garmin demo's owner (e2e/garmin, plan 157) and point the app at the
+      # Garmin demo's owner (e2e/garmin, plan 160) and point the app at the
       # stub Playwright starts; the key is a placeholder the stub accepts
       # (owner, 2026-10-27).
       - run: |

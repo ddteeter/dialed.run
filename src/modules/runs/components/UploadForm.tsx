@@ -45,7 +45,7 @@ export interface UploadFormProps {
   retime: Retime;
   units: Units;
   /**
-  The owner's "Import from Garmin" (plan 157), when it is on.
+  The owner's "Import from Garmin" (plan 160), when it is on.
   */
   garmin?: GarminImportActions | undefined;
 }

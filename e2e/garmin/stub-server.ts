@@ -1,5 +1,5 @@
 /**
- * A stand-in for Garmin's Personal API, for the Garmin demo (plan 157,
+ * A stand-in for Garmin's Personal API, for the Garmin demo (plan 160,
  * step 9). Playwright starts it beside the dev server, and the dev
  * server's `GARMIN_API_ORIGIN` points the app's own client at it.
  *

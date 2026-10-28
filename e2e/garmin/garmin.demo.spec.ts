@@ -1,5 +1,5 @@
 /**
- * Covers: Import from Garmin on A1 (plan 157, phase 1; design G3), the
+ * Covers: Import from Garmin on A1 (plan 160, phase 1; design G3), the
  * hand-off to A1's own parsed card, Garmin's credit on it (G1), A3's
  * effort read from the watch (G5), the credit on the runs list, and the
  * picker marking a run already here.
