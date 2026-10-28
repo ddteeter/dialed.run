@@ -3,10 +3,9 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../db/schema-core";
 import {
-  audienceOfShareToggle,
   defaultUnits,
-  isSharedAudience,
   SHARED_AUDIENCE,
+  writableAudienceOf,
 } from "../../lib/contracts";
 import { orSqlNull } from "../../lib/sql/sql-null";
 import type {
@@ -258,8 +257,8 @@ export async function currentSettings(
     thermalLevel: row?.thermalLevel ?? undefined,
     tempUnit: row?.tempUnit ?? defaultUnits.temp,
     distanceUnit: row?.distanceUnit ?? defaultUnits.distance,
-    defaultAudience: audienceOfShareToggle(
-      isSharedAudience(row?.defaultAudience ?? SHARED_AUDIENCE),
+    defaultAudience: writableAudienceOf(
+      row?.defaultAudience ?? SHARED_AUDIENCE,
     ),
     countInTotals: row?.countInTotals ?? true,
   };

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -8,6 +8,7 @@ import {
   outfitEntries,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
+import { audiences } from "../../src/lib/contracts";
 import type { Audience } from "../../src/lib/contracts";
 import { entryPhotoKeyFor } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
@@ -27,6 +28,7 @@ import {
   publiclyVisibleEntry,
   unbanUser,
   unblockRunner,
+  worldVisibleEntry,
 } from "../../src/modules/safety";
 
 import {
@@ -389,6 +391,102 @@ describe("the audience", () => {
     const counted = await countable(core());
     expect(counted).toContain(shown.entryId);
     expect(counted).not.toContain(hidden.entryId);
+  });
+});
+
+describe("a PUBLIC kit (D-149)", () => {
+  beforeEach(resetSafetyTables);
+
+  it("is seen and counted by signed-in strangers, like a SHARED one", async () => {
+    const posted = await postedEntry();
+    const viewer = await makeUser();
+    await follow(viewer, posted.author);
+    await setAudience(posted.entryId, "world");
+
+    expect(await sightings(viewer, posted.entryId, posted.photoKey)).toEqual(
+      SEEN,
+    );
+    expect(await countable(core())).toContain(posted.entryId);
+  });
+});
+
+/**
+The entries the open web may see, as `worldVisibleEntry` reads them.
+*/
+async function openWeb(): Promise<string[]> {
+  const rows = await core()
+    .select({ id: outfitEntries.id })
+    .from(outfitEntries)
+    .where(worldVisibleEntry());
+  return rows.map((row) => row.id);
+}
+
+describe("the open-web rule (worldVisibleEntry, D-149)", () => {
+  beforeEach(resetSafetyTables);
+
+  it("admits a PUBLIC kit and no other audience", async () => {
+    const byAudience = new Map<Audience, string>();
+    for (const audience of audiences) {
+      const posted = await postedEntry();
+      await setAudience(posted.entryId, audience);
+      byAudience.set(audience, posted.entryId);
+    }
+    expect(await openWeb()).toEqual([byAudience.get("world")]);
+  });
+
+  it("drops a PUBLIC kit held or removed by moderation", async () => {
+    for (const moderationStatus of [
+      "hidden_pending_review",
+      "removed",
+    ] as const) {
+      const posted = await postedEntry();
+      await core()
+        .update(outfitEntries)
+        .set({ audience: "world", moderationStatus })
+        .where(eq(outfitEntries.id, posted.entryId));
+    }
+    expect(await openWeb()).toEqual([]);
+  });
+
+  it("drops a banned author's PUBLIC kit, and brings it back on unban", async () => {
+    const posted = await postedEntry();
+    await setAudience(posted.entryId, "world");
+    const moderator = await makeUser();
+    await banUser({
+      userId: posted.author,
+      reason: "spam",
+      rule: "spam",
+      bannedBy: moderator,
+    });
+    expect(await openWeb()).toEqual([]);
+    await unbanUser(posted.author, moderator);
+    expect(await openWeb()).toEqual([posted.entryId]);
+  });
+
+  it("drops a leaving runner's PUBLIC kit", async () => {
+    const posted = await postedEntry();
+    await setAudience(posted.entryId, "world");
+    await leave(posted.author);
+    expect(await openWeb()).toEqual([]);
+  });
+
+  it("reads one runner's PUBLIC kits by index, never a scan", async () => {
+    const { sql, params } = core()
+      .select({ id: outfitEntries.id })
+      .from(outfitEntries)
+      .where(and(eq(outfitEntries.userId, "01RUNNER"), worldVisibleEntry()))
+      .orderBy(desc(outfitEntries.createdAt))
+      .limit(20)
+      .toSQL();
+    const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+      .bind(...params)
+      .all<{ detail: string }>();
+    const details = plan.results.map((row) => row.detail).join("\n");
+    expect(details).toMatch(
+      /SEARCH outfit_entries USING INDEX entries_user_world_created \(user_id=\? AND moderation_status=\?\)/u,
+    );
+    expect(details).not.toMatch(/SCAN\s+(outfit_entries|user_profiles)/i);
+    expect(details).not.toMatch(/TEMP B-TREE/u);
   });
 });
 

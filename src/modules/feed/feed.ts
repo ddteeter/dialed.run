@@ -26,10 +26,10 @@ import {
   outfitEntryItems,
   reactions,
   runs,
+  sharedAudience,
   userProfiles,
 } from "../../db/schema-core";
 import { coreDb } from "../../env";
-import { SHARED_AUDIENCE } from "../../lib/contracts";
 import { garmentNamesByIds } from "./garment-names";
 import { observationsForRuns } from "./conditions";
 import type { Conditions } from "./conditions";
@@ -57,7 +57,7 @@ type ModerationStatus = (typeof outfitEntries.$inferSelect)["moderationStatus"];
  * across two shapes gives the planner no range, and D1's plan read each
  * author's entries from their newest rather than from the cursor — so
  * page k re-read the k − 1 pages before it. With the conjunct, the
- * `entries_user_audience_created` seek starts at the cursor (`feed.test.ts`
+ * `entries_user_shared_created` seek starts at the cursor (`feed.test.ts`
  * pins `created_at<?` in the plan).
  */
 function feedCursorPredicate(cursor: FeedCursor) {
@@ -94,7 +94,7 @@ function feedCursorPredicate(cursor: FeedCursor) {
  * `CROSS JOIN` is load-bearing, not style: it is SQLite's one way of
  * fixing the join order, and without it the planner prefers the
  * site-wide index because it reads in `ORDER BY` order and can stop at the
- * `LIMIT`. Each author's read is an `entries_user_audience_created` seek;
+ * `LIMIT`. Each author's read is an `entries_user_shared_created` seek;
  * the outer sort is over at most `limit` × authors rows.
  *
  * **The authors are a subquery, not a bound list** (R-101). Binding the
@@ -162,7 +162,9 @@ export function followingFeedStatement(
     .where(
       and(
         eq(outfitEntries.userId, authors.id),
-        eq(outfitEntries.audience, SHARED_AUDIENCE),
+        // SHARED or PUBLIC (D-149), the expression the author's index is
+        // partial on, so the seek needs no audience column.
+        sharedAudience(outfitEntries.audience),
         eq(outfitEntries.moderationStatus, authors.status),
         shownToViewer,
         cursor ? feedCursorPredicate(cursor) : undefined,

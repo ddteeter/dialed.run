@@ -165,6 +165,7 @@ export {
   heldPhotoStatus,
   publicPhotoStatus,
   publiclyVisibleEntry,
+  worldVisibleEntry,
   runnerNotLeaving,
 } from "./visibility";
 

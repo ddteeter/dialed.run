@@ -103,3 +103,25 @@ delete and purge on retraction.
 - Purges are rate-limited (Workers Caching uses the Free tier's limits). A
   burst of retractions (a ban across many kits) sends one purge with the
   runner's tag, not one per kit; the TTL covers any purge that is refused.
+
+## Build steps
+
+Each step is one or more commits that pass the commit gate on their own.
+
+1. **Contract** (`lib/contracts/audience.ts`): `world` joins `audiences`
+   and `writableAudienceSchema`; `strangerAudiences` (`runners`, `world`)
+   replaces `SHARED_AUDIENCE` as what strangers see; files write `public`.
+   Done when `test/lib/audience.test.ts` pins every set.
+2. **Visibility** (`modules/safety/visibility.ts`, `feed/feed.ts`,
+   `safety/photo-matches.ts`): the stranger rule admits `world`;
+   `worldVisibleEntry()` is the open-web rule. Done when
+   `test/safety/visibility.test.ts` covers every audience in both rules.
+3. **Schema**: `0071_add_public_profile_switches` (additive).
+4. **Writes**: per-kit PUBLIC, held at PRIVATE for an unconfirmed runner;
+   a PUBLIC default only while the profile is public; turning the profile
+   off moves a PUBLIC default to SHARED in the same batch.
+5. **UI** (round 41 #86a–b): A3's radiogroup, D's owner meta,
+   Settings › Privacy's PUBLIC PROFILE group, the changed strings.
+6. **`/k/<id>`** (#86c, #86f), its card (#86e) and the cache headers.
+7. **`/@handle`** (#86d) and H's move to `/feed/u/<handle>`.
+8. **World photos** (D-151), once the owner has made the bucket and domain.

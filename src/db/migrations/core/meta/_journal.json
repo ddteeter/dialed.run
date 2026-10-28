@@ -498,6 +498,13 @@
       "when": 1793040485609,
       "tag": "0070_drop_account_issuer",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "6",
+      "when": 1793158129331,
+      "tag": "0071_add_public_profile_and_shared_indexes",
+      "breakpoints": true
     }
   ]
 }

@@ -19,17 +19,18 @@ import { z } from "zod";
  * a non-empty tuple, and zod 4's `.options` is typed as a plain array. The
  * schema below is built from this, so there is still one list.
  */
-export const audiences = ["private", "groups", "runners"] as const;
+export const audiences = ["private", "groups", "runners", "world"] as const;
 
 /**
-The stored and read type: all three, `groups` included.
+The stored and read type: every audience, `groups` included.
 */
 export const audienceSchema = z.enum(audiences);
 export type Audience = z.infer<typeof audienceSchema>;
 
 /**
- * What a writer may store until groups ship: launch writes only `private`
- * and `runners` (PRIVATE / SHARED on screen).
+ * What a writer may store until groups ship: `private`, `runners` and
+ * `world` (PRIVATE / SHARED / PUBLIC on screen; `world` is D-149's open
+ * web, round 41 #86a).
  *
  * `extract`, not `exclude(["groups"])`, on purpose: a fourth audience
  * added later is unwritable until it is named here, rather than writable
@@ -38,17 +39,44 @@ export type Audience = z.infer<typeof audienceSchema>;
 export const writableAudienceSchema = audienceSchema.extract([
   "private",
   "runners",
+  "world",
 ]);
 export type WritableAudience = z.infer<typeof writableAudienceSchema>;
 
 /**
- * The one audience strangers see. Every read that shows an entry to
- * someone other than its author tests for this value and nothing else
- * (`safety/visibility.ts`'s one rule, `feed/feed.ts`'s index seek), so a
- * `groups` row is hidden from strangers without anyone having to remember
- * it.
+ * SHARED on screen: runners signed in to dialed.run. A new runner's
+ * default, and what the sharing switches stood for before PUBLIC.
  */
 export const SHARED_AUDIENCE = "runners" satisfies WritableAudience;
+
+/**
+ * PUBLIC on screen: anyone with the link, no sign-in (D-149). Only
+ * `safety/visibility.ts`'s `worldVisibleEntry` shows it to a signed-out
+ * visitor.
+ */
+export const WORLD_AUDIENCE = "world" satisfies WritableAudience;
+
+/**
+ * The audiences a signed-in stranger sees: a public kit is shared too, so
+ * it counts in the feed, consensus and "worn by N" like a SHARED one.
+ * Every read that shows an entry to someone other than its author tests
+ * for these and nothing else (`safety/visibility.ts`'s one rule,
+ * `feed/feed.ts`'s index seek), so a `groups` row is hidden from strangers
+ * without anyone having to remember it.
+ */
+export const strangerAudiences = [
+  SHARED_AUDIENCE,
+  WORLD_AUDIENCE,
+] as const satisfies readonly WritableAudience[];
+
+/**
+ * Whether a signed-in stranger may see an entry with this audience: the
+ * in-memory reading of `strangerAudiences`, for a row already loaded.
+ */
+export function isStrangerAudience(audience: Audience): boolean {
+  const shown: readonly Audience[] = strangerAudiences;
+  return shown.includes(audience);
+}
 
 /**
  * The audience a sharing switch stands for. A3's checkbox and the Settings
@@ -69,6 +97,17 @@ export function isSharedAudience(audience: Audience): boolean {
 }
 
 /**
+ * A stored audience as a writer may store it again: itself when it is
+ * writable, and `private` for `groups`, which nothing can write until
+ * groups ship. Of the audiences a new entry may start with, `private` shows
+ * nobody who was not meant to see it.
+ */
+export function writableAudienceOf(audience: Audience): WritableAudience {
+  const parsed = writableAudienceSchema.safeParse(audience);
+  return parsed.success ? parsed.data : "private";
+}
+
+/**
  * The word a file a person reads writes for each audience: the export's
  * `audience` and `default_audience` columns now, design 130's API
  * `visibility` later. They are the UI's words (SHARED / PRIVATE on
@@ -79,5 +118,6 @@ export const audienceWord = {
   private: "private",
   groups: "groups",
   runners: "shared",
+  world: "public",
 } as const satisfies Record<Audience, string>;
 export type AudienceWord = (typeof audienceWord)[Audience];
