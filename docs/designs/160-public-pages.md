@@ -104,6 +104,35 @@ delete and purge on retraction.
   burst of retractions (a ban across many kits) sends one purge with the
   runner's tag, not one per kit; the TTL covers any purge that is refused.
 
+## Deviations (step 6)
+
+- **"Identical bytes" holds up to two per-render values.** The not-public
+  page is the same for every reason, but two renders of any page differ in
+  the CSP nonce and the router's load timestamps, which carry nothing about
+  the kit. The edge keeps one render and serves it to everyone; the worker
+  test compares the read and headers, the DOM test the first paint.
+- **The root reads no session on an open-web path** (`lib/open-web.ts`): no
+  handle gate and a fixed "nobody" for the root loader, so no redirect and
+  no per-viewer value is ever written into a page the edge keeps. Links off
+  `/k` reload the document so the app's pages read the session again.
+- **A public response never sets a cookie** (`withoutCookiesWhenPublic` in
+  `server.ts`): the D1 bookmark cookie is dropped rather than stored and
+  handed to the next visitor.
+- **The day is the run's**: its observation's zone (R-96, as D dates it),
+  else the runner's place's zone, else UTC. Feels-like is the hour the
+  verdict judged (R-5). A run with no moving time shows its own time,
+  labelled TIME rather than MOVING.
+- **A piece's kind is its category's word** (Top, Bottom, Headwear…): the
+  type words live in `closet`, and `feed` importing `closet` would cycle
+  through `account`. A product link whose domain the denylist now holds is
+  dropped at read, not only refused at save.
+- **The card's version is a digest of what it shows**, and the Cache API key
+  carries it in the path (the card key drops the query string). The default
+  card served for a kit that is not public is kept a minute and tagged with
+  the kit, like the page, so a kit made public previews within the TTL.
+- **Report this kit** prefills `/takedown?location=`, which `/takedown` now
+  accepts; `takedownSubjectOf` reads a `/k/<id>` link as the kit.
+
 ## Build steps
 
 Each step is one or more commits that pass the commit gate on their own.

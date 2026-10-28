@@ -962,6 +962,19 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     leaves the list. Kit tiles are unchanged. **The ask:** draw the bar
     on a match tile, or say where a match's takedown should sit instead.
 
+89. **`/k/<id>`'s pieces of round 41 #86c not drawn, built from existing
+    parts (design 160, step 6).** The desk width: round 41 draws /k at
+    phone only, so the page keeps its one column (`max-w-column`) centred
+    under the same bar at every width. The bar: the landing bar's two
+    pills (hairline Log in, ink "Open in the app" / "Look in the app"),
+    shown at every width since the board draws it on the phone, with the
+    bracketed wordmark. A piece's kind is its category's word (Top,
+    Headwear…), not the board's type words, and a linked piece carries the
+    outbound link's domain beside it (`ui/ProductLink`). A run with no
+    moving time labels its time TIME. The kit's card puts the measured
+    sky word in teal, as the app does. **The ask:** confirm or redraw the
+    desk width and the bar, and the TIME label.
+
 <!-- Item numbers continue past rounds 35–40 (45–76, 82–88). Design numbered the Garmin asks 77–81 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
 
 ## Answered in round 41 (imported 2026-10-25)
