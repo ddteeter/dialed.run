@@ -67,11 +67,13 @@ const activitySchema = z.object({
 });
 const activityListSchema = z.array(activitySchema);
 
-// A JWT: three base64url segments.
+// Opaque to us. It is checked only against what can follow "Bearer " in
+// a header (RFC 6750's b64token), so an HTML error page or a sentence
+// answered with a 200 fails here, named, not as the next call's 401.
 const tokenSchema = z
   .string()
   .trim()
-  .regex(/^[\w-]+\.[\w-]+\.[\w-]+$/u);
+  .regex(/^[\w.~+/-]+=*$/u);
 
 function activityFrom(summary: z.infer<typeof activitySchema>): GarminActivity {
   return {

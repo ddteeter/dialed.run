@@ -9,8 +9,8 @@
  * see it in production.
  *
  * **The mocks.** Every test runs on synthetic answers, so this also holds
- * them against the real ones, by structure only: the token's form, the
- * types of the list fields the client reads against the e2e stub's,
+ * them against the real ones, by structure only: the types of the list
+ * fields the client reads against the e2e stub's,
  * the zip's layout against the unit tests' `zipOf`, and the types of the
  * FIT session fields the parser reads against `fitFile`'s. A difference
  * fails the check: the mock is wrong, and a test built on it proves
@@ -238,9 +238,6 @@ async function checkMocks(key: string, activityId: string): Promise<string[]> {
   const realFit = await onlyFileIn(zip);
 
   return [
-    ...(token.split(".").length === 3
-      ? []
-      : ["token: real is not three dot-separated parts"]),
     ...differences("list", await realListItem(auth), stubItem, listFormOf),
     ...differences(
       "zip",
@@ -275,7 +272,7 @@ async function check(): Promise<void> {
   const found = await checkMocks(key, run.activityId);
   if (found.length === 0) {
     console.log(
-      "mocks     ok: the token, list, zip and FIT session match by structure",
+      "mocks     ok: the list, zip and FIT session match by structure",
     );
     return;
   }

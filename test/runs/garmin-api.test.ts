@@ -105,6 +105,18 @@ describe("recentRuns", () => {
     for (const call of calls) expect(call.signal).toBeInstanceOf(AbortSignal);
   });
 
+  it.each(["Op4que_~+/-.token==", "x"])(
+    "sends the token %s as it came: its form is Garmin's business",
+    async (token) => {
+      const { fetchImpl, calls } = stubFetch({
+        "/personalapitoken-service": () => new Response(token),
+        "/activitylist-service": () => Response.json([]),
+      });
+      await createGarminApi("key", ORIGIN, fetchImpl).recentRuns(10);
+      expect(calls[1]?.authorization).toBe(`Bearer ${token}`);
+    },
+  );
+
   it("calls Garmin's own origin by default", async () => {
     const { fetchImpl, calls } = stubFetch({
       "/personalapitoken-service": tokenAnswer,
@@ -131,8 +143,13 @@ describe("recentRuns", () => {
       "token: not a token",
     ],
     [
-      "the token has a fourth part",
-      { "/personalapitoken-service": () => new Response("aaa.bbb.ccc.ddd") },
+      "the token has something after it",
+      { "/personalapitoken-service": () => new Response("aaa.bbb.ccc <p>") },
+      "token: not a token",
+    ],
+    [
+      "the token has padding mid-way",
+      { "/personalapitoken-service": () => new Response("aaa=bbb") },
       "token: not a token",
     ],
     [
