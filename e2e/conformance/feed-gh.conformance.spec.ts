@@ -90,9 +90,12 @@ test("H with nothing public keeps its header and Follow, and says so plainly", a
       page,
       '[data-part="entries"][data-state="empty"]',
     );
-    // The lead, word for word; the second line names the runner, which is
-    // data (the board's Ravi uses a first name v1 does not store).
-    expect(built[0]).toBe(drawn[0]);
+    // The lead is round 41 #86a's, which replaced the board's "No public
+    // entries yet." now that PUBLIC means the open web; the second line
+    // names the runner, which is data (the board's Ravi uses a first name
+    // v1 does not store).
+    expect(drawn[0]).toBe("No public entries yet.");
+    expect(built[0]).toBe("No shared runs yet.");
     expect(built[1]).toMatch(
       /^FOLLOW .+ AND THEIR SHARED RUNS WILL SHOW IN YOUR FEED\.$/u,
     );
