@@ -37,6 +37,10 @@ export interface StartImportInput {
   filename: string;
   bytes: ArrayBuffer;
   idempotencyKey?: string | undefined;
+  /**
+  The Garmin activity the bytes were fetched for (plan 160).
+  */
+  garminActivityId?: string | undefined;
 }
 
 /**
@@ -105,6 +109,7 @@ export async function startImport(
       userId: input.userId,
       r2Key,
       idempotencyKey: input.idempotencyKey,
+      garminActivityId: input.garminActivityId,
       status: "pending",
       createdAt: nowSeconds(),
     });

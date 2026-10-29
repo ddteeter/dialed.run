@@ -28,6 +28,16 @@ export const manualRunInput = runDraftSchema
 
 export const importIdInput = z.object({ importId: z.string().min(1) });
 
+/**
+One tap on IMPORT › (G3): which Garmin activity, and the tap's own key, so
+a replayed tap starts nothing new (law 8b). Garmin's activity ids are
+decimal numbers; the id goes into a URL path, so nothing else is accepted.
+*/
+export const garminImportInput = z.object({
+  activityId: z.string().regex(/^\d{1,20}$/u),
+  idempotencyKey: ulidSchema,
+});
+
 export const runIdInput = z.object({ runId: z.string().min(1) });
 
 /**

@@ -940,6 +940,71 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
+45. **A garment's photo on Review (C17, design 157). Undesigned; built
+    as a placeholder.** The classifier and the D-147 hold now queue
+    garment photos. The row is a content row like a kit photo's: the
+    kicker reads `garment photo · {id}`, the photo is the garment's card
+    size, and the suspected-CSAM question reads "Remove this garment photo
+    everywhere and keep the evidence for the report?". No new glyph or
+    colour. **Amended by design 159 (R-167):** Remove now deletes the photo
+    and tells its owner, in words the owner approved on 2026-10-26: the
+    bell row "We removed the photo of one of your garments. Reason:
+    {reason}." and the email "We removed a photo from your closet" (the
+    content-removed email's layout, "The garment stays in your closet.").
+    **The ask:** draw the row, and confirm the bell row and email in the
+    existing notice styles.
+
+46. **A garment match's takedown on Review (R-167, design 159).
+    Undesigned; built as a placeholder.** Under Matching photos, a garment
+    tile now carries the garment row's own decision bar, without Approve:
+    "Why it comes down", Remove, and Remove as suspected CSAM with its
+    in-place question. Existing parts and words only; a decided tile
+    leaves the list. Kit tiles are unchanged. **The ask:** draw the bar
+    on a match tile, or say where a match's takedown should sit instead.
+
+<!-- Item numbers continue past rounds 35–40 (45–76, 82–87). Design numbered the Garmin asks 77–81 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
+
+## Answered in round 41 (imported 2026-10-28)
+
+Design answered as `Round 41 Rulings.dc.html`, items 84–87, with the text
+of record under "Round 41 · Items 84–86" in `design/docs/product.md`
+(item 87 is there too). Items 84 and 85 answer open-queue items 45 and 46
+(D-147); item 86 rules the public pages. Only item 87 is built here, in
+the Garmin phase 1 PR (#275); 84–86 are build work for their own changes.
+
+- **84 · Held on upload (answers queue item 45). Ruled; not built yet.**
+  The source tag reads `[held on upload]`, not `[fingerprint]`; the line
+  under the photo reads "A close match to an image removed as intimate on
+  {OCT 3}, {3 BITS} apart." ("The same image as one removed as intimate on
+  {OCT 3}." at 0 bits); the removed original in MATCHING PHOTOS is an
+  empty hairline frame reading REMOVED. The board has the rest.
+- **85 · Other sites (answers queue item 46). Ruled; not built yet.**
+  Reworded, placed on the `/takedown` receipt, `/takedown/confirm` DONE
+  and W1's receipt after an intimate-image report; both names are links
+  with "(opens in a new tab)" in their accessible names.
+- **86 · Public pages. Ruled; not built yet.** PUBLIC beside SHARED and
+  PRIVATE, Settings › Privacy's public profile, `/k/<id>`, `/@handle`, the
+  public share card and the one not-public page. The board and
+  `docs/product.md` have the full text.
+- **87 · Garmin phase 1, G6–G10. Built in #275.**
+  - **G6 · A3 effort. Confirmed and drawn.** The order as built; the
+    hairline above EFFORT stays. Unrated, the kicker reads EFFORT ·
+    OPTIONAL (the watch line takes that slot when rated). New line under
+    the chips, always: "You run warmer the harder you go. Next time, the
+    Call allows for it." TYPE.small, --quiet.
+  - **G7 · Credit weight. Confirmed, with a COLLAPSE:** G1's 500 → 400
+    (TYPE.small, --quiet), as built.
+  - **G8 · Failed import tap. Ruled.** §4a NOT IMPORTED · "Garmin didn't
+    answer. Nothing was imported." · Try again, in the list band's slot
+    above the rows; the tapped row returns to idle; a status region, focus
+    unchanged.
+  - **G9 · Parsed card strip. Ruled.** PARSED · FROM GARMIN, without the
+    date, distance and time (the stats line has them). REPLACE stays and
+    returns to the import chooser.
+  - **G10 · Credit on D. Confirmed** as built.
+
+Lifted from the open queue, as asked:
+
 45. **"A copy of an image removed as intimate" on Review (D-147, design
     152). Undesigned; built as a placeholder.** A kit photo whose
     fingerprint is within 8 bits of one removed as intimate is held and
@@ -958,30 +1023,6 @@ bits` apart.", the date and distance in MONO.xs. The row also carries
     spreading there. They fingerprint the image on your own device; the
     image never leaves it." The two names are plain links, opening in a new
     tab. **The ask:** confirm or reword, and place it on the boards.
-
-47. **A garment's photo on Review (C17, design 157). Undesigned; built
-    as a placeholder.** The classifier and the D-147 hold now queue
-    garment photos. The row is a content row like a kit photo's: the
-    kicker reads `garment photo · {id}`, the photo is the garment's card
-    size, and the suspected-CSAM question reads "Remove this garment photo
-    everywhere and keep the evidence for the report?". No new glyph or
-    colour. **Amended by design 159 (R-167):** Remove now deletes the photo
-    and tells its owner, in words the owner approved on 2026-10-26: the
-    bell row "We removed the photo of one of your garments. Reason:
-    {reason}." and the email "We removed a photo from your closet" (the
-    content-removed email's layout, "The garment stays in your closet.").
-    **The ask:** draw the row, and confirm the bell row and email in the
-    existing notice styles.
-
-48. **A garment match's takedown on Review (R-167, design 159).
-    Undesigned; built as a placeholder.** Under Matching photos, a garment
-    tile now carries the garment row's own decision bar, without Approve:
-    "Why it comes down", Remove, and Remove as suspected CSAM with its
-    in-place question. Existing parts and words only; a decided tile
-    leaves the list. Kit tiles are unchanged. **The ask:** draw the bar
-    on a match tile, or say where a match's takedown should sit instead.
-
-<!-- Item numbers continue past rounds 35–40 (45–76, 82–87). Design numbered the Garmin asks 77–81 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
 
 ## Answered in round 40 (imported 2026-10-24)
 
@@ -1132,6 +1173,119 @@ SPACE[4] top and bottom. The build had each post's own hairline
 under it with a 20px gap between posts; it is now the hairline
 between posts, across the column, with SPACE[4] above and below
 each.
+
+## Answered in the Garmin round (imported 2026-10-24)
+
+Plan 160. Asked with round 39 and answered on its own board,
+`Garmin Rulings.dc.html`, with the text of record in `design/docs/garmin.md`.
+Frames marked GARMIN SUBMISSION are the attribution mockups for the Starter
+application. Phase 1 (`160-garmin-phase-1.md`) builds G3 and G5 and G1's
+lines; G2 and G4 are phase 3.
+
+The items are numbered G1–G5 rather than 77–81, because they were imported
+apart from the public sequence and a public item may have taken those
+numbers since. Design's board and `docs/garmin.md` call them 77–81.
+
+- **G1 (design's 77).** **Garmin attribution on a run's data. Ruled and drawn.** Text, never
+  the tag logo: "Garmin {device model}", or "Garmin" alone when the model
+  is unknown, which is always so in phase 1. `GarminAttribution`:
+  text-small, weight 500, `--ink-2`, sentence case, never caps or mono.
+  It is the first line under the view's title: A1's imported-run card,
+  under D's headline, under E1's byline, once per row on the runs list
+  (a header line would claim the whole of a mixed list), and under the
+  temperature on the share/OG entry card (26px at 1200×630), with the
+  weather credit at the card's foot. The weather credit stays with the
+  conditions, a step smaller, and never shares a line with Garmin's.
+  `runs.csv` gets a `source` column per row: "Garmin {model}", "Strava"
+  or "File". A run uploaded as a file draws nothing.
+
+- **G2 (design's 78).** **The derived line. Ruled.** "Derived in part from Garmin
+  device-sourced data.", the same step, directly under the figure's
+  heading, shown only when at least one Garmin run is in that figure (a
+  server flag). E2 now; B1/B2 and M2–M4 later.
+
+- **G3 (design's 79).** **Import from Garmin (owner only, phase 1). Ruled and drawn.** A
+  section of A1 under the file well, not a sheet: IMPORT FROM GARMIN ·
+  LAST 10. Row: date · distance · time, then "Garmin"; IMPORT › or
+  [IMPORTED] ›, which opens the run. Loading: three rows with breathing
+  brackets. None: "No runs on Garmin yet." Unreachable: §4a NOT LOADED ·
+  "Garmin didn't answer." · Try again. Already here: A1's duplicate
+  receipt. Retired when push arrives.
+
+- **G4 (design's 80).** **Connecting Garmin. Ruled and drawn; consent approved by the owner
+  (2026-10-24).** T1: Garmin's tile (their file, unaltered) and "Garmin
+  Connect™" on one line, the consent, then our own primary button,
+  "Connect Garmin Connect™". The consent:
+  - **What we receive.** Each run's time, duration, distance, start
+    point rounded to about a kilometre, the device, and the effort you
+    rated it on your watch. No heart rate, sleep or any other health
+    data.
+  - **How.** Garmin sends each new run once you connect. We read the
+    file, keep those facts and delete the file.
+  - **To stop.** Disconnect here or in Garmin Connect. Runs already here
+    stay until you delete them.
+  - **To delete.** Delete a run from the run itself, or your whole
+    account under Settings › Account, or write to hello@dialed.run. We
+    email you when it's done.
+
+  Settings rows: not connected, "Your runs arrive on their own." ·
+  Connect; "Connected as {name}" · Disconnect; "Disconnected. Runs
+  already here stay." · Connect; "Garmin Connect ended the connection.
+  New runs won't arrive." · Connect again; full, approved by the owner:
+  "Garmin connections are full for now. Strava still works.", with no
+  action. Bell: "New run from Garmin: add your kit", opening A2. P3
+  offers both, Garmin Connect™ first ("Your runs arrive on their
+  own."), then Strava ("So we can remind you. Optional."); the Garmin
+  row is not drawn while Garmin is full or unshipped. A Garmin import
+  clears the matching Strava reminder, silently.
+
+- **G5 (design's 81).** **Effort from the watch. Ruled and drawn.** The watch's 1–10
+  perceived-effort rating, never heart rate, prefills A3's effort chip:
+  1–4 Easy, 5–6 Steady, 7–8 Workout, 9–10 Race. It is drawn selected
+  exactly like a runner's pick, and saved if left alone. Beside EFFORT:
+  FROM YOUR WATCH · RATED {n} OF 10 (MONO.xs, `--muted`), spoken
+  "Effort, Steady, from your watch, rated 6 of 10". Any tap, even on the
+  same chip, makes it the runner's pick, drops the source line and
+  records `effort_source = runner`. It never re-prefills. No rating:
+  nothing is picked and there is no source line. **The owner adopted this mapping and `effort_source`** (2026-10-24), replacing plan 160's first draft. Garmin's own race flag is not used: a race can be run at any effort.
+
+**Built by phase 1 (`160-garmin-phase-1.md`, 2026-10-25):** G3 on A1;
+G5 on A3; G1's line on A1's card, D, E1 and each runs-list row, and the
+word "Garmin" on R's run strip. Not built yet: G1 on the share/OG card and
+in `runs.csv` (phase 3), G2 (phase 3) and G4 (phase 3).
+
+Asked back from the phase 1 build, and **answered in round 41 as item 87** (see that section):
+
+- **G6. A3 had no effort field to prefill.** G5's no-rating frame says
+  "the field is as it is today", but A3 never had one: effort was set on
+  the manual form only. Built as G5 draws it (EFFORT, the source line,
+  four chips that fill the row), using A3's own chip, without its ✕,
+  because a second tap keeps the pick. **Placed after the "Anything
+  specific?" chips and before the share switch**, since the frames show
+  only the header, the field and Log it. The line under the chips, "Effort
+  matters more than distance — you run 8° warmer in a workout.", is the
+  Call's B1 copy with a figure A3 does not have, so it is not drawn.
+  On every run since the owner's call (2026-10-28); with no rating it is
+  four chips, none picked, no source line. Confirm the placement and the
+  hairline above EFFORT, whether A3 wants a line of its own there, and
+  whether a run with no rating shows the field at all. Asked with
+  screenshots: drafted 2026-10-28.
+- **G7. GarminAttribution's weight.** G1 says weight 500; the type
+  contract has no 500 in text (`tokens.js` WEIGHT), so it is built at 400
+  (`text-small`, `--quiet`, which is G1's `--ink-2` #4E4E44). Confirm, or
+  say if it should be 600.
+- **G8. The import's own failure.** G3 draws Garmin not answering for the
+  list, not for a tap. Built as the same §4a band: NOT IMPORTED · "Garmin
+  didn't answer." · Try again (the same tap, under its key), under the
+  rows.
+- **G9. A Garmin import's file strip.** A1's parsed card names the file it
+  read ("Parsed · morning.gpx"); a Garmin import has no file the runner
+  chose, so it reads "Parsed · Garmin · Sat Aug 29 · 6.2 mi · 51:38",
+  the row the runner tapped. Draw what it should say.
+- **G10. D's line.** G1 puts the credit "under D's headline", which on the
+  board is "6.2 at 41°"; the built D has no such headline (its title is
+  "Your run" or the handle, then the strip), so the credit is the first
+  line under the title. Confirm.
 
 ## Answered in round 39 (imported 2026-10-24)
 

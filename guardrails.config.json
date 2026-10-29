@@ -30,6 +30,11 @@
   ],
   "sanctionedSuppressions": [
     {
+      "key": "src/routes/runs/new.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two signed-in routes with a Promise.all loader and a BelledLayout shell are the same route shape by mandate: createFileRoute + loader + useLoaderData + shell is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids",
+      "reason": "A1 and the runs list (runs/index.tsx): the route-shape grant, same class as the ten already here (runs/manual.tsx, call/index.tsx, safety/review.tsx and the rest). server-functions-are-glue REQUIRES a route to be createFileRoute + a loader + a shell and forbids the branching that would make two differ. Plan 152 phase 1 added the Garmin flag to A1's loader, which made it a Promise.all like the runs list's. The alternative, one shared units-and-bell loader exported for every signed-in route, is a module-ownership change wider than this PR. Owner's call, 2026-10-25.",
+      "count": 1
+    },
+    {
       "key": "src/routes/safety/review.tsx|analyzer-ignore|// fallow-ignore-next-line code-duplication -- two signed-in routes of one lane are the same shape by mandate: createFileRoute + requireSignedIn + one loader call + Layout + Page + a component is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids",
       "reason": "The route-shape grant, ninth of its kind and mechanically identical to the eight already here (login.tsx, notifications/index.tsx, runs/manual.tsx, feed/attach.$runId.tsx, call/index.tsx, onboarding/calibrate.tsx, onboarding/taplist.tsx, onboarding/name.tsx). server-functions-are-glue REQUIRES a route to be createFileRoute + a session guard + a loader call + a shell, and forbids the branching that would make two of them differ \u2014 so the shape is mandated, not copied. Lane 106 resolved five other clone groups by extraction rather than suppression, including moving ListSection to ui/ and folding the bracketed count into it; this is the one class extraction cannot touch. Added by the agent on the strength of the eight precedents rather than a fresh decision \u2014 veto it and the routes can carry the duplication instead.",
       "count": 1

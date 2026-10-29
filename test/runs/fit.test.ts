@@ -1,18 +1,13 @@
-import { Encoder, Utils } from "@garmin/fitsdk";
-import type {
-  ActivityMesg,
-  Encodable,
-  FileIdMesg,
-  SessionMesg,
-} from "@garmin/fitsdk";
+import { Utils } from "@garmin/fitsdk";
 import { describe, expect, it } from "vitest";
 
-import { fitSource, toDate } from "../../src/modules/runs/parsers/fit";
+import { fitSource, rpeFrom, toDate } from "../../src/modules/runs/parsers/fit";
 import {
   NO_TRACK_MESSAGE,
   PARSE_FAILURE_MESSAGE,
   RunParseError,
 } from "../../src/modules/runs/parsers/shared";
+import { START, fitFile, fitFileWithoutSession } from "./fit-file";
 
 /**
  * The FIT decoder's refusals, and the one conversion nobody was checking.
@@ -22,66 +17,6 @@ import {
  * reason and the semicircle conversion, where a wrong constant puts a run
  * on the other side of the planet without failing anything.
  */
-
-const MESG_NUM = { FILE_ID: 0, SESSION: 18, ACTIVITY: 34 } as const;
-const START = new Date("2026-08-15T12:00:00Z");
-
-/**
-A FIT activity file with one session, built to order. `omit` leaves a
-required session field out altogether — `exactOptionalPropertyTypes` means
-a key set to `undefined` is not the same thing as an absent one, and the
-SDK is being asked about the absent one.
-*/
-type OmittableSessionField = "startTime" | "totalElapsedTime" | "totalDistance";
-
-function fitFile(
-  session: Partial<Encodable<SessionMesg>> = {},
-  omit?: OmittableSessionField,
-): ArrayBuffer {
-  const encoder = new Encoder();
-  const fileId: Encodable<FileIdMesg> = {
-    mesgNum: MESG_NUM.FILE_ID,
-    type: "activity",
-    manufacturer: "garmin",
-    product: 1,
-    timeCreated: START,
-  };
-  encoder.writeMesg(fileId);
-  encoder.writeMesg({
-    mesgNum: MESG_NUM.SESSION,
-    timestamp: START,
-    ...(omit !== "startTime" && { startTime: START }),
-    ...(omit !== "totalElapsedTime" && { totalElapsedTime: 1800 }),
-    totalTimerTime: 1800,
-    ...(omit !== "totalDistance" && { totalDistance: 5000 }),
-    sport: "running",
-    ...session,
-  });
-  const activity: Encodable<ActivityMesg> = {
-    mesgNum: MESG_NUM.ACTIVITY,
-    timestamp: START,
-    numSessions: 1,
-    type: "manual",
-  };
-  encoder.writeMesg(activity);
-  return new Uint8Array(encoder.close()).buffer;
-}
-
-/**
-A FIT file with no session message in it at all.
-*/
-function fitFileWithoutSession(): ArrayBuffer {
-  const encoder = new Encoder();
-  const fileId: Encodable<FileIdMesg> = {
-    mesgNum: MESG_NUM.FILE_ID,
-    type: "activity",
-    manufacturer: "garmin",
-    product: 1,
-    timeCreated: START,
-  };
-  encoder.writeMesg(fileId);
-  return new Uint8Array(encoder.close()).buffer;
-}
 
 async function failureFrom(bytes: ArrayBuffer): Promise<RunParseError> {
   try {
@@ -330,5 +265,52 @@ describe("fit: moving time and the climb (D-111)", () => {
     expect(draft.indoor).toBe(true);
     expect(draft).not.toHaveProperty("movingS");
     expect(draft).not.toHaveProperty("elevationGainM");
+  });
+});
+
+async function rpeOf(
+  session: Parameters<typeof fitFile>[0],
+): Promise<number | undefined> {
+  const draft = await fitSource.parse(fitFile(session));
+  return draft.rpe;
+}
+
+describe("fit: the runner's own perceived effort (plan 160)", () => {
+  it("reads workout_rpe as the 1–10 rating the watch stored ×10", async () => {
+    expect(await rpeOf({ workoutRpe: 20 })).toBe(2);
+    expect(await rpeOf({ workoutRpe: 100 })).toBe(10);
+    expect(await rpeOf({ workoutRpe: 10 })).toBe(1);
+  });
+
+  it("leaves it out when the watch did not ask", async () => {
+    expect(await rpeOf({})).toBeUndefined();
+  });
+
+  it("drops a rating off the scale and keeps the run", async () => {
+    // 0 is "rest" on the Borg scale, not an answer to how hard a run was;
+    // 110 is past the top. Either way the run itself is good.
+    const zero = await fitSource.parse(fitFile({ workoutRpe: 0 }));
+    expect(zero.rpe).toBeUndefined();
+    expect(zero.distanceM).toBe(5000);
+    expect(await rpeOf({ workoutRpe: 110 })).toBeUndefined();
+  });
+});
+
+describe("rpeFrom", () => {
+  it("rounds a stored value to the nearest step", () => {
+    expect(rpeFrom(64)).toBe(6);
+    expect(rpeFrom(66)).toBe(7);
+  });
+
+  it("reads only a number", () => {
+    expect(rpeFrom(undefined)).toBeUndefined();
+    expect(rpeFrom("20")).toBeUndefined();
+  });
+
+  it("keeps the ends of the scale", () => {
+    expect(rpeFrom(5)).toBe(1);
+    expect(rpeFrom(104)).toBe(10);
+    expect(rpeFrom(4)).toBeUndefined();
+    expect(rpeFrom(105)).toBeUndefined();
   });
 });

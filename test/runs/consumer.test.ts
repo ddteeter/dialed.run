@@ -24,6 +24,7 @@ import { PARSE_FAILURE_MESSAGE } from "../../src/modules/runs/parsers";
 import { RunParseError } from "../../src/modules/runs/parsers/shared";
 import { createManualRun } from "../../src/modules/runs/service";
 import { unreadNotificationCount } from "../../src/modules/notifications";
+import { fitFile } from "./fit-file";
 import validTcx from "./fixtures/valid.tcx?raw";
 import malformedTcx from "./fixtures/malformed.tcx?raw";
 import treadmillTcx from "./fixtures/treadmill.tcx?raw";
@@ -119,12 +120,15 @@ function makeDeps(overrides: Partial<ConsumerDeps> = {}): ConsumerDeps & {
 async function seedImport(
   db: ReturnType<typeof coreDb>,
   userId: string,
-  content: string,
+  content: string | ArrayBuffer,
   extension: string,
 ): Promise<string> {
   const importId = newUlid();
   const r2Key = `imports/${userId}/${importId}.${extension}`;
-  await env.IMPORTS.put(r2Key, new TextEncoder().encode(content));
+  await env.IMPORTS.put(
+    r2Key,
+    typeof content === "string" ? new TextEncoder().encode(content) : content,
+  );
   await db.insert(imports).values({
     id: importId,
     userId,
@@ -194,6 +198,54 @@ describe("handleImportsBatch (102 §4, §8)", () => {
     expect(treadmill?.durationS).toBe(1800);
     expect(treadmill?.movingS).toBeNull();
     expect(treadmill?.elevationGainM).toBeNull();
+  });
+
+  it("stores the watch's effort rating and the effort it prefills (G5)", async () => {
+    const deps = makeDeps();
+    const userId = newUlid();
+    const rated = await seedImport(
+      deps.db,
+      userId,
+      fitFile({ workoutRpe: 60 }),
+      "fit",
+    );
+    // A day later, so it is not the same run as a duplicate.
+    const unrated = await seedImport(
+      deps.db,
+      userId,
+      fitFile({ startTime: new Date("2026-08-16T12:00:00Z") }),
+      "fit",
+    );
+
+    await handleImportsBatch(
+      fakeBatch([
+        { body: { type: "import", importId: rated } },
+        { body: { type: "import", importId: unrated } },
+      ]).batch,
+      deps,
+    );
+
+    const stored = await deps.db
+      .select({
+        importId: imports.id,
+        rpe: runs.rpe,
+        effort: runs.effort,
+        effortSource: runs.effortSource,
+      })
+      .from(imports)
+      .innerJoin(runs, eq(runs.id, imports.runId))
+      .where(eq(imports.userId, userId));
+
+    expect(stored.find((row) => row.importId === rated)).toMatchObject({
+      rpe: 6,
+      effort: "steady",
+      effortSource: "watch",
+    });
+    const unratedRun = stored.find((row) => row.importId === unrated);
+    expect(unratedRun).toBeDefined();
+    expect(unratedRun?.rpe).toBeNull();
+    expect(unratedRun?.effort).toBeNull();
+    expect(unratedRun?.effortSource).toBeNull();
   });
 
   it("is idempotent on redelivery — a second delivery inserts no second run", async () => {

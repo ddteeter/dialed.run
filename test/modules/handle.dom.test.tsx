@@ -184,6 +184,7 @@ function entry(isUnderReview: boolean): Entry {
     durationS: 2600,
     startedAt: 1_755_000_000,
     indoor: false,
+    deviceName: undefined,
     verdict: undefined,
     audience: "runners",
     caption: undefined,
@@ -194,6 +195,7 @@ function entry(isUnderReview: boolean): Entry {
     usefulCount: 0,
     conditions: undefined,
     underReview: isUnderReview,
+    effort: undefined,
     viewerHasReacted: false,
   };
 }

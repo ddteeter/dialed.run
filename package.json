@@ -35,6 +35,7 @@
     "db:migrate:local:core": "wrangler d1 migrations apply dialed-core --local",
     "db:migrate:local:weather": "wrangler d1 migrations apply dialed-weather --local",
     "check:bundle": "tsx scripts/check-bundle.ts",
+    "garmin:check": "tsx scripts/garmin-check.ts",
     "verify": "node ./node_modules/guardrails-core/dist/cli.mjs verify",
     "eval": "tsx eval/run.ts",
     "eval:photos": "tsx eval/photos/run.ts",

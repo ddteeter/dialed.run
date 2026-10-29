@@ -20,6 +20,8 @@ import {
   stravaConnections,
   stravaRevocations,
 } from "../../db/schema-core";
+import { effortFromWatch } from "../../lib/contracts";
+import { GARMIN_DEVICE_NAME } from "./garmin/config";
 import { didClaim } from "../../lib/sql/claim";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
@@ -246,7 +248,11 @@ async function processImportJob(
   await deps.db.insert(runs).values({
     id: runId,
     userId: importRow.userId,
-    source: "file",
+    // Fetched through Garmin's API, and so credited to it (G1); a file the
+    // runner uploaded is theirs, whatever wrote it.
+    ...(importRow.garminActivityId === null
+      ? { source: "file" }
+      : { source: "garmin", deviceName: GARMIN_DEVICE_NAME }),
     startedAt: draft.startedAt,
     durationS: draft.durationS,
     distanceM: draft.distanceM,
@@ -258,6 +264,9 @@ async function processImportJob(
     // that could not say.
     movingS: draft.movingS,
     elevationGainM: draft.elevationGainM,
+    // The watch's rating and the effort it prefills (G5); none when the
+    // watch did not ask.
+    ...effortFromWatch(draft.rpe),
   });
 
   if (weatherStatus === "pending" && deps.attachObservation) {

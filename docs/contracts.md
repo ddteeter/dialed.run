@@ -220,7 +220,8 @@ to save space (they are the un-refetchable archive — D-31).
 ```
 id           text PK   -- ULID
 user_id      text FK
-source       text      -- enum: manual | file   (Strava is NOT a source)
+source       text      -- enum: manual | file | garmin   (Strava is NOT a source;
+                       -- garmin = fetched through Garmin's API, plan 160)
 started_at   int       -- epoch seconds
 duration_s   int       -- elapsed: keeps running through a pause (D-111)
 distance_m   real
@@ -235,6 +236,9 @@ effort       text      -- enum: easy | steady | workout | race, NULLABLE
 title        text
 weather_status text    -- enum: none | pending | attached | manual | failed
 reminder_matched_at int -- NULLABLE; the Strava reminder this file run answered (127)
+rpe          int       -- NULLABLE; the watch's perceived effort 1–10 (FIT workout_rpe ÷ 10)
+effort_source text     -- NULLABLE enum: watch | runner — who picked `effort` (G5)
+device_name  text      -- NULLABLE; Garmin's name for the device, for attribution (G1)
 ```
 
 ### outfit_entries
@@ -303,7 +307,8 @@ strava_revocations: id, refresh_token, created_at
                 -- the revoke outbox (law 8c); drained with the refresh token
 cron_checkpoints: cron_name PK, last_run_at
 imports:        id, user_id, r2_key, status ('pending'|'processing'|'done'|'failed'),
-                failure_reason, run_id NULLABLE, created_at
+                failure_reason, run_id NULLABLE, created_at,
+                garmin_activity_id NULLABLE  -- plan 160; UNIQUE(user_id, garmin_activity_id)
 ```
 
 Task 106 added (migration `0015_trust_and_safety_floor`):

@@ -458,6 +458,7 @@ describe("getRunSummary / listRunSummaries: a run as the screens draw it", () =>
       },
       entryId: undefined,
       hasVerdict: false,
+      deviceName: undefined,
     });
     const [listed] = await listRunSummaries(coreDb(), userId);
     expect(listed).toStrictEqual(summary);

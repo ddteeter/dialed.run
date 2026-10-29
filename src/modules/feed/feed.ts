@@ -33,6 +33,7 @@ import { SHARED_AUDIENCE } from "../../lib/contracts";
 import { garmentNamesByIds } from "./garment-names";
 import { observationsForRuns } from "./conditions";
 import type { Conditions } from "./conditions";
+import type { EntryRunFields } from "./entries";
 import { followingCount } from "./follows";
 import {
   isUnderReviewForAuthor,
@@ -179,21 +180,9 @@ export function followingFeedStatement(
     .limit(limit);
 }
 
-export interface FeedItem {
+export interface FeedItem extends EntryRunFields {
   entryId: string;
   userId: string;
-  authorUsername: string | undefined;
-  runId: string;
-  runTitle: string;
-  distanceM: number;
-  durationS: number;
-  startedAt: number;
-  /**
-  The run says it was indoors — the strip reads "INDOOR" rather than
-  dropping its conditions cell (round 22, E1).
-  */
-  indoor: boolean;
-  verdict: number | undefined;
   caption: string | undefined;
   createdAt: number;
   itemNames: string[];
@@ -351,6 +340,7 @@ async function hydrateEntries(
       durationS: run?.durationS ?? 0,
       startedAt: run?.startedAt ?? entry.createdAt,
       indoor: run?.indoor ?? false,
+      deviceName: run?.deviceName ?? undefined,
       verdict: entry.verdict ?? undefined,
       caption: entry.caption ?? undefined,
       createdAt: entry.createdAt,

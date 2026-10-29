@@ -58,6 +58,7 @@ export function runSummary(overrides: Partial<RunSummary> = {}): RunSummary {
     durationS: 3098,
     distanceM: 9978,
     indoor: false,
+    deviceName: undefined,
     weatherStatus: "attached",
     canSetConditions: false,
     conditions: runConditions(),

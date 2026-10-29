@@ -18,6 +18,7 @@ import {
 } from "../../../lib/contracts/measures";
 import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
 import {
+  GarminAttribution,
   type ControlFailure,
   ControlFailureBand,
   FormFailureBand,
@@ -365,6 +366,7 @@ export function ParsedCard({
         <FileStrip label={`Parsed · ${filename}`} onReplace={onReplace} />
         <div className="flex flex-col gap-2 p-4">
           <Headline run={run} units={units} />
+          <GarminAttribution deviceName={run.deviceName} />
           <Facts>
             {[
               formatPace(run.durationS, run.distanceM, units.distance),
