@@ -159,7 +159,7 @@ function KitRow({ row }: Readonly<{ row: PublicKitRow }>) {
 }
 
 /**
- * The kit's tile: its first photo as the public bucket serves it (D-151,
+ * The kit's tile: its first photo as the public bucket serves it (D-152,
  * the one `/k` shows first), cropped to the tile, or the --tint tile when
  * it has none. Decorative either way: the row's own words name the kit.
  */

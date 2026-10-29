@@ -275,7 +275,7 @@ describe("the cron heartbeat", () => {
     expect(row?.status).toBe("hidden_pending_review");
   });
 
-  it("sweeps the public photo bucket on the same firing (design 160 step 8)", async () => {
+  it("sweeps the public photo bucket on the same firing (design 161 step 8)", async () => {
     // An object no row names: a copy whose Worker died before its row
     // went. The sweep is the only thing that would ever find it.
     const orphan = `orphan-${newUlid().toLowerCase()}`;

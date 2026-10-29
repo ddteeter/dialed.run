@@ -25,12 +25,12 @@
  * assets' copy in `public/_headers` names none, and needs none, because
  * none of those files is a document that runs script.
  *
- * **A page the edge may store runs on hashes instead** (design 160): a
+ * **A page the edge may store runs on hashes instead** (design 161): a
  * stored page would hand one nonce to every visitor for as long as it is
  * kept. Its policy names the SHA-256 of each inline script in that page
  * (`./inline-script-hashes`), and the page carries no nonce at all.
  *
- * **Nothing else may be stored** (design 160, Workers Caching): a Worker
+ * **Nothing else may be stored** (design 161, Workers Caching): a Worker
  * response with no `Cache-Control` is cached by heuristic freshness, two
  * hours for a 200. So every response that does not say otherwise leaves
  * with `private, no-store`, set here beside the security headers.
@@ -82,7 +82,7 @@ const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
  *   blob.
  * - `img-src blob: data:`: photo previews before upload are object URLs.
  *   The public photo bucket's origin: a PUBLIC kit's photos are served
- *   from there, not by the Worker (D-151, design 160 step 8).
+ *   from there, not by the Worker (D-152, design 161 step 8).
  * - `form-action`: Google and Strava sign-in leave by redirect, which a
  *   browser checks against `form-action` when a form started it.
  */

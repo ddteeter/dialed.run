@@ -1,7 +1,7 @@
 import type { PurgeTags } from "../src/lib/cache-tags";
 
 /**
- * A purge that records each call's tags (design 160), for the tests that
+ * A purge that records each call's tags (design 161), for the tests that
  * assert what a write purges from the edge.
  */
 export function purgeSpy(): { purge: PurgeTags; calls: string[][] } {

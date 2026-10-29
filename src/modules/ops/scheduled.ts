@@ -248,7 +248,7 @@ async function runCron(
       await eachStep([
         () => runScreeningRetry(anomalies),
         // After the screening retry, so a photo it just passed on a
-        // PUBLIC kit is copied this hour (design 160 step 8).
+        // PUBLIC kit is copied this hour (design 161 step 8).
         () => sweepPublicPhotoCopies(anomalies),
         // Email before the re-ask: each handle may wait its full five
         // seconds on moderation, and owed mail should not wait behind it.
@@ -299,7 +299,7 @@ async function drainOwedEmail(anomalies: string[]): Promise<void> {
 }
 
 /**
- * The public photo bucket's reconcile (D-151, design 160 step 8): copies
+ * The public photo bucket's reconcile (D-152, design 161 step 8): copies
  * the publications no purge saw (a review's Approve, an unban, a photo
  * screened late), and deletes what a retraction's fast path missed. A
  * delete found here is a copy that stayed public longer than it should

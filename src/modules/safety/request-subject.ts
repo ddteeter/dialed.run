@@ -1,7 +1,7 @@
 /**
  * What a removal request's link names (design 136), when that takes more
  * than its path: a public photo's URL (`https://photos.dialed.run/<key>`,
- * design 160 step 8) names the photo its copy is of, which only
+ * design 161 step 8) names the photo its copy is of, which only
  * `public_photos` knows.
  *
  * **Resolved once, at filing, and recorded.** Holding the photo deletes

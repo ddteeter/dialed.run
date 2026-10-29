@@ -1,5 +1,5 @@
 /**
- * A public kit, read for the open web (round 41 #86c, D-149): what
+ * A public kit, read for the open web (round 41 #86c, D-150): what
  * `/k/<id>` and its card show to anyone, signed in or not.
  *
  * **One gate.** The entry is read through `worldVisibleEntry()` and
@@ -18,7 +18,7 @@
  * units of their own, so the runner's are used (`unitsFor`), and the day
  * is where the run was: its observation's zone (R-96, as every run date
  * the app shows), else the runner's own place's zone, else UTC. A day,
- * never a time (D-149).
+ * never a time (D-150).
  */
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
@@ -333,7 +333,7 @@ function kitTag(entryId: string): string | undefined {
 }
 
 /**
- * The page's cache headers (design 160, D-152): a minute at the edge,
+ * The page's cache headers (design 161, D-153): a minute at the edge,
  * public or not, tagged with the kit and — when public — its runner.
  */
 export function publicKitHeaders(

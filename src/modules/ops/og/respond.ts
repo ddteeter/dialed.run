@@ -39,7 +39,7 @@ function withHeaders(
 }
 
 /**
- * A public kit's card (round 41 #86e, D-150), or the default card for any
+ * A public kit's card (round 41 #86e, D-151), or the default card for any
  * kit that is not public — the same bytes and headers whatever the
  * reason, kept a minute like the not-public page, so a kit made public
  * shows its own card within the page's TTL.
@@ -55,7 +55,7 @@ function withHeaders(
  * Caching keeps whatever `Cache-Control` says in front of the Worker, so a
  * day here would serve a retracted kit's card for a day whenever its
  * purge was refused; a minute keeps the TTL the guarantee for the card as
- * for the page (design 160, "Deviations (purge)").
+ * for the page (design 161, "Deviations (purge)").
  */
 export async function kitCardResponse(
   request: Request,

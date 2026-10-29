@@ -36,7 +36,7 @@ export function runnerVisibleToViewer(viewerId: string) {
  * The floor under every surface that shows one runner to someone else,
  * with no viewer in it: not banned, not leaving, address confirmed. The
  * signed-in rule above adds the viewer's own blocks and reports; the open
- * web's profile (`/@handle`, D-149) has no viewer, so this is its whole
+ * web's profile (`/@handle`, D-150) has no viewer, so this is its whole
  * runner rule.
  */
 export function runnerInStanding() {

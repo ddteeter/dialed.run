@@ -168,7 +168,7 @@ describe("requestAccountDeletion", () => {
     ]);
     expect(await sessionsOf(userId)).toStrictEqual([]);
     expect(await sessionsOf(bystander.userId)).toStrictEqual([theirs]);
-    // Design 160: everything public of theirs leaves the edge, by one tag.
+    // Design 161: everything public of theirs leaves the edge, by one tag.
     expect(fx.purged).toStrictEqual([[`runner:${userId}`]]);
     expect(await owedFor(userId)).toStrictEqual([
       {

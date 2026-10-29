@@ -10,7 +10,7 @@ import {
 } from "../../src/lib/cache-tags";
 
 /**
- * The open web's cache tags (design 160, D-152): what a page is stored
+ * The open web's cache tags (design 161, D-153): what a page is stored
  * under and what a purge names, from one place.
  */
 describe("the cache tags", () => {

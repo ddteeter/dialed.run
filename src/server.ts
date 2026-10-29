@@ -44,7 +44,7 @@ export default {
       // the runner's bookmarks; the newest one goes back in the `d1b`
       // cookie.
       //
-      // A public page (design 160) leaves with no cookie, since the edge
+      // A public page (design 161) leaves with no cookie, since the edge
       // may store it and hand it to the next visitor, and with no nonce,
       // for the same reason: an open-web path is rendered without one,
       // and its policy names its scripts' hashes instead.

@@ -55,7 +55,7 @@ import {
 } from "./helpers";
 
 /**
- * Design 160 step 8, the legal review's ask: every path that takes a kit
+ * Design 161 step 8, the legal review's ask: every path that takes a kit
  * or its photo off the open web deletes the photo's public copy, and
  * purges the page that showed it. Each path runs as production wires it:
  * its purge is `purgeAndSync`'s shape, recording the tags and running the

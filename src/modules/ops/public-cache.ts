@@ -1,5 +1,5 @@
 /**
- * The headers a public page leaves with (design 160, D-152): what lets the
+ * The headers a public page leaves with (design 161, D-153): what lets the
  * edge keep it, and the tags a purge names it by.
  *
  * **Only the open web's responses carry these.** A public page is safe to
@@ -8,7 +8,7 @@
  * `private, no-store` unless it names its own (`withSecurityHeaders`):
  * with Workers Caching on, a response with no `Cache-Control` is stored by
  * RFC 9111's heuristic freshness, and a request's `Cookie` is not in the
- * cache key (design 160, "Deviations (CSP)").
+ * cache key (design 161, "Deviations (CSP)").
  *
  * **The TTL is the guarantee; a purge only shortens it.** A retracted kit
  * is gone from the edge within `PUBLIC_PAGE_TTL_SECONDS` whatever else
@@ -52,7 +52,7 @@ export function publicPageTags(
 }
 
 /**
- * A public page's cache headers (design 160, D-152): a minute at the edge,
+ * A public page's cache headers (design 161, D-153): a minute at the edge,
  * public or not, tagged as above. The kit's page and the profile's both
  * leave with these, so the two cannot drift apart.
  */

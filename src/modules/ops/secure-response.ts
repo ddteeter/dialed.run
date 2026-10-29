@@ -8,7 +8,7 @@ import { sentryReportUri, withSecurityHeaders } from "./security-headers";
  * security headers, reporting CSP violations to the deployed DSN.
  *
  * Inline scripts are admitted by this request's `nonce`, unless the page
- * may be stored at the edge (design 160): then by their hashes, read from
+ * may be stored at the edge (design 161): then by their hashes, read from
  * the page, so the stored copy names no nonce. The same happens when no
  * nonce was minted (an open-web path), whatever the response
  * turned out to be — a not-found or an error page on that path has

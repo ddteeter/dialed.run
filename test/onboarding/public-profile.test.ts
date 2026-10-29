@@ -19,8 +19,8 @@ import { noPurge } from "../purge-spy";
 import { makeEntry, makeRun, makeUser, resetTables } from "../feed/helpers";
 
 /**
- * D-149's profile switches and the rule tying them to the sharing default
- * (round 41 #86b; design 160 step 4).
+ * D-150's profile switches and the rule tying them to the sharing default
+ * (round 41 #86b; design 161 step 4).
  */
 function coreDb() {
   return drizzle(env.DIALED_CORE);

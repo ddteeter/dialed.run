@@ -53,7 +53,7 @@ export async function renderCardSvg(card: JSX.Element): Promise<Response> {
 /**
  * How long a card may be served from cache. The default card never
  * changes between deploys, so an hour is only about deploys. A public
- * kit's card is a day (design 160): its URL carries a digest of what it
+ * kit's card is a day (design 161): its URL carries a digest of what it
  * shows, so an edit is a new URL rather than a stale card, and the read
  * that decides whether the kit is still public runs before this cache is
  * asked — a kit that stops being public gets the default card at once.

@@ -47,7 +47,7 @@ import {
  * discipline names, and the one a post-query filter would have walked
  * straight into.
  *
- * **Shared means `runners` or `world`** (D-109, D-149): a public kit is
+ * **Shared means `runners` or `world`** (D-109, D-150): a public kit is
  * shared with signed-in runners too. `private` and `groups` alike are
  * hidden from strangers, so a groups entry needs no clause of its own here.
  *
@@ -72,7 +72,7 @@ export function publiclyVisibleEntry(viewerId?: string): SQL | undefined {
 }
 
 /**
- * What a signed-out visitor may see (D-149): a PUBLIC kit, under the same
+ * What a signed-out visitor may see (D-150): a PUBLIC kit, under the same
  * moderation, ban and leaving clauses as the anonymous rule above. The one
  * predicate every open-web read uses; a signed-in stranger's reads use
  * `publiclyVisibleEntry`, which admits SHARED kits too.

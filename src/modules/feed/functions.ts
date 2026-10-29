@@ -168,9 +168,9 @@ export const entryDetailQuery = createServerFn({ method: "GET" })
     return entryDetailForViewer(data.entryId, viewerId);
   });
 
-// ---- The public kit (round 41 #86c, D-149) -----------------------------------
+// ---- The public kit (round 41 #86c, D-150) -----------------------------------
 
-// For anyone, signed in or not, and the same for both (D-152): no session
+// For anyone, signed in or not, and the same for both (D-153): no session
 // is read, so nothing about the viewer can reach the page. The page's cache
 // headers go on whatever response carries it — the document when rendered
 // on the server, this call's own when a browser asks.
@@ -182,7 +182,7 @@ export const publicKitQuery = createServerFn({ method: "GET" })
     }),
   );
 
-// ---- The public profile (round 41 #86d, D-149) -------------------------------
+// ---- The public profile (round 41 #86d, D-150) -------------------------------
 
 // For anyone, and the same for both, exactly as the public kit above: no
 // session is read, and the page's cache headers go on whatever response

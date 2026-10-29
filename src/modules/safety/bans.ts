@@ -91,7 +91,7 @@ export async function banUser(
     ...also(db()),
     ...told,
   ]);
-  // Design 160: everything the runner had on the open web carries their
+  // Design 161: everything the runner had on the open web carries their
   // tag, so one purge takes it all down, never one per kit.
   purge([runnerCacheTag(input.userId)]);
 }

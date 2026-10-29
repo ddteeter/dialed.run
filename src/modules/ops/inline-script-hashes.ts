@@ -1,6 +1,6 @@
 /**
  * The hashes a stored page's policy admits its inline scripts by (design
- * 160).
+ * 161).
  *
  * A page the edge keeps is served to every visitor, so it cannot carry a
  * per-request nonce: the stored copy would hand the same nonce to all of

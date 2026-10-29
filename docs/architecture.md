@@ -392,7 +392,7 @@ amplification. In the app, photos are not public bucket URLs: every photo is ser
 reads R2. Task 128 (SAF-7) moves public-entry photos to short-lived signed
 URLs, cacheable for their TTL (decision D-46).
 
-**The one exception is a PUBLIC kit on the open web** (D-151, design 160
+**The one exception is a PUBLIC kit on the open web** (D-152, design 161
 step 8): each of its screened photos is copied to `dialed-public-photos`
 (binding `PUBLIC_PHOTOS`) under a random 128-bit key, with
 `Cache-Control: public, max-age=60`, and `/k/<id>` shows it from

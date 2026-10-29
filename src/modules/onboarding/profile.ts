@@ -219,7 +219,7 @@ export interface CurrentSettings extends Preferences {
    */
   countInTotals: boolean;
   /**
-   * Settings › Privacy's PUBLIC PROFILE switches (D-149, round 41 #86b),
+   * Settings › Privacy's PUBLIC PROFILE switches (D-150, round 41 #86b),
    * off for a runner with no row, as the columns' defaults are.
    */
   publicProfile: boolean;

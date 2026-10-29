@@ -29,7 +29,7 @@ export type Audience = z.infer<typeof audienceSchema>;
 
 /**
  * What a writer may store until groups ship: `private`, `runners` and
- * `world` (PRIVATE / SHARED / PUBLIC on screen; `world` is D-149's open
+ * `world` (PRIVATE / SHARED / PUBLIC on screen; `world` is D-150's open
  * web, round 41 #86a).
  *
  * `extract`, not `exclude(["groups"])`, on purpose: a fourth audience
@@ -50,7 +50,7 @@ export type WritableAudience = z.infer<typeof writableAudienceSchema>;
 export const SHARED_AUDIENCE = "runners" satisfies WritableAudience;
 
 /**
- * PUBLIC on screen: anyone with the link, no sign-in (D-149). Only
+ * PUBLIC on screen: anyone with the link, no sign-in (D-150). Only
  * `safety/visibility.ts`'s `worldVisibleEntry` shows it to a signed-out
  * visitor.
  */

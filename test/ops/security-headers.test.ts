@@ -113,7 +113,7 @@ describe("contentSecurityPolicy", () => {
         "'self' 'nonce-n0nce+/=' 'wasm-unsafe-eval' https://challenges.cloudflare.com",
       "style-src": "'self' 'unsafe-inline'",
       // A PUBLIC kit's photos come from the public bucket's own domain
-      // (D-151, design 160 step 8); nothing else off-site.
+      // (D-152, design 161 step 8); nothing else off-site.
       "img-src": "'self' blob: data: https://photos.dialed.run",
       "font-src": "'self'",
       "connect-src": "'self'",
@@ -217,7 +217,7 @@ describe("secureResponse, as server.ts calls it", () => {
   });
 });
 
-describe("secureResponse, for a page the edge may store (design 160)", () => {
+describe("secureResponse, for a page the edge may store (design 161)", () => {
   // Fixed vectors, base64(sha256(text)), computed outside the app.
   const ALERT = "bhHHL3z2vDgxUt0W3dWQOrprscmda2Y5pLsLg4GF+pI=";
   const X = "D6IGS8VMvCoyaR/l0h9tERrBTATY01CoPS7l6xDv0kI=";

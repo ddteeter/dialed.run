@@ -1,5 +1,5 @@
 /**
- * The public photo bucket (D-151, design 160 step 8): a copy of each
+ * The public photo bucket (D-152, design 161 step 8): a copy of each
  * screened photo on a PUBLIC kit, under an unguessable key, so `/k/<id>`
  * can show it and Cloudflare's cache (and the CSAM Scanning Tool) serves
  * it. Deleted when the kit or the photo stops being public, for whatever
@@ -359,7 +359,7 @@ async function deleteUnnamedOf(
 }
 
 /**
- * The switch (proposal 160, phase 4): `PUBLIC_PHOTOS_ORIGIN`, set once the
+ * The switch (proposal 161, phase 4): `PUBLIC_PHOTOS_ORIGIN`, set once the
  * bucket, its domain and the scanning tool are live. Unset or empty, no
  * copy is made and the page shows none; deleting goes on regardless.
  */

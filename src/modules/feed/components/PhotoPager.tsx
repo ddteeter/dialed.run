@@ -8,7 +8,7 @@ import type { DeletePhotoProps } from "./RetractEntry";
  * photo carrying its own `1 / 2` from two photos, and its delete top right
  * when the viewer owns it. Absent with no photos.
  *
- * D's, and `/k`'s since design 160 step 8, so its own file: `/k` must not
+ * D's, and `/k`'s since design 161 step 8, so its own file: `/k` must not
  * reach D's screen to draw it. `srcOf` is where a key is served: the
  * app's own photo route on D, and the public bucket's URL as it stands on
  * `/k`.

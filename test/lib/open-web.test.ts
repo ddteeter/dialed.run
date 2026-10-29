@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { isOpenWebPath, signedInOffTheOpenWeb } from "../../src/lib/open-web";
 
 /**
- * The open web's paths (design 160, D-152): where the root reads no
+ * The open web's paths (design 161, D-153): where the root reads no
  * session, so a public page is the same for every viewer.
  */
 

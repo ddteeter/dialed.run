@@ -87,7 +87,7 @@ const HANDLE_CLAIMED = "has-handle";
  * `isInBrowser` is the caller's to say, because on the server the memo
  * would be shared by every request the isolate serves.
  *
- * **Never on the open web** (design 160, D-152): a public page is the same
+ * **Never on the open web** (design 161, D-153): a public page is the same
  * for every viewer, so it reads no session and sends nobody anywhere —
  * the app's own pages are where a runner meets O0.
  */

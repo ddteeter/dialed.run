@@ -138,7 +138,7 @@ export const PUBLIC_DEFAULT_NEEDS_PROFILE =
   "Public is a choice here once your profile is public.";
 
 /**
- * The rule a sharing default is held to on the server (D-149): `world`
+ * The rule a sharing default is held to on the server (D-150): `world`
  * only while the runner's profile is public. A schema rather than an `if`
  * so the refusal reaches the form as the field's own message, as every
  * other rule on it does.

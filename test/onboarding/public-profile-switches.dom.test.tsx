@@ -24,7 +24,7 @@ import type { CurrentSettings } from "../../src/modules/onboarding/profile";
 import type { PublicProfileState } from "../../src/modules/onboarding/public-profile";
 
 /**
- * Settings › Privacy's PUBLIC PROFILE group (D-149; round 41 #86b).
+ * Settings › Privacy's PUBLIC PROFILE group (D-150; round 41 #86b).
  */
 async function renderWithRouter(element: ReactElement) {
   const rootRoute = createRootRoute({ component: () => element });

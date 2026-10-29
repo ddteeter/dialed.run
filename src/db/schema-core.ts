@@ -30,7 +30,7 @@ import {
 
 /**
  * "Shared with signed-in runners": the entry's audience is one of
- * `strangerAudiences` (SHARED or PUBLIC, D-149). The two shared-entry
+ * `strangerAudiences` (SHARED or PUBLIC, D-150). The two shared-entry
  * indexes are partial on exactly this expression, and SQLite uses a
  * partial index only for a query whose WHERE carries the same expression,
  * so the stranger rule (`safety/visibility.ts`) and the feed's seek call
@@ -45,7 +45,7 @@ export function sharedAudience(audience: SQLiteColumn): SQL {
 
 /**
  * "Public on the open web": the entry's audience is `WORLD_AUDIENCE`
- * (D-149). `entries_user_world_created` is partial on exactly this, and
+ * (D-150). `entries_user_world_created` is partial on exactly this, and
  * the open-web rule (`worldVisibleEntry`) calls it, for the same reasons
  * as `sharedAudience` above.
  */
@@ -126,7 +126,7 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     countInTotals: integer("count_in_totals", { mode: "boolean" })
       .notNull()
       .default(true),
-    // Settings › Privacy › "Public profile" (D-149, round 41 #86b): off,
+    // Settings › Privacy › "Public profile" (D-150, round 41 #86b): off,
     // a signed-out visitor to /@handle sees the not-public page; on, the
     // runner's PUBLIC kits. A PUBLIC default audience needs it on, and
     // turning it off moves that default to SHARED in the same write.
@@ -866,7 +866,7 @@ export const outfitEntries = /*#__PURE__*/ sqliteTable(
     // (`feed/consensus.ts`). Partial on `sharedAudience`, so a query that
     // names the same predicate seeks it with no audience column at all:
     // two audience values in an indexed column cannot seek and come back
-    // in `created_at` order (D-149 made it two). moderationStatus is in the
+    // in `created_at` order (D-150 made it two). moderationStatus is in the
     // index because every public read filters on it too. Left out, the
     // feed query filters in memory after LIMIT — which CLAUDE.md's D1
     // discipline calls out by name as returning "the survivors of the
@@ -955,8 +955,8 @@ export const entryPhotos = /*#__PURE__*/ sqliteTable(
 );
 
 /**
- * The copies of photos on PUBLIC kits in the public bucket (D-151, design
- * 160 step 8): one row per object there, so the row is the record of what
+ * The copies of photos on PUBLIC kits in the public bucket (D-152, design
+ * 161 step 8): one row per object there, so the row is the record of what
  * anyone can read.
  *
  * **Its own table, not a column of `entry_photos`**, because the copy

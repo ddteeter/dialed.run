@@ -1,5 +1,5 @@
 /**
- * The public photo bucket's names (D-151, design 160 step 8): where a
+ * The public photo bucket's names (D-152, design 161 step 8): where a
  * PUBLIC kit's screened photos are served from, how long a copy may stay
  * at the edge, and the key a copy is stored under.
  *
@@ -50,7 +50,7 @@ export function publicPhotoUrl(origin: string, key: string): string {
 
 /**
  * The key a link names, when it is one of the bucket's own URLs (a removal
- * request may paste one, design 160): on `PUBLIC_PHOTOS_ORIGIN` exactly,
+ * request may paste one, design 161): on `PUBLIC_PHOTOS_ORIGIN` exactly,
  * its path one key of `newPublicPhotoKey`'s shape and nothing else. Any
  * other host, path or text is no key.
  */

@@ -1,5 +1,5 @@
 /**
- * What a public profile is (round 41 #86d, D-149), with no way to read one
+ * What a public profile is (round 41 #86d, D-150), with no way to read one
  * — the half the route and the component need, apart from
  * `public-profile.ts`, which reaches `src/env` (as `public-kit-shape.ts`
  * is to `public-kit.ts`).
@@ -18,7 +18,7 @@ import type { PublicKit } from "./public-kit-shape";
 /**
  * One kit as the profile lists it: a tile, its conditions, its day and
  * distance, and its verdict. `photo` is the kit's first photo as the
- * public bucket serves it (D-151, design 160 step 8), the one `/k` shows
+ * public bucket serves it (D-152, design 161 step 8), the one `/k` shows
  * first; absent with none, when the tile is --tint.
  */
 export type PublicKitRow = Pick<

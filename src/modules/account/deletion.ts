@@ -74,7 +74,7 @@ export interface DeletionEffects extends OwedMail {
   */
   readonly disconnectStrava: (userId: string) => Promise<void>;
   /**
-   * `ops`' edge purge (design 160): a runner leaving is gone from the open
+   * `ops`' edge purge (design 161): a runner leaving is gone from the open
    * web at once, as from everywhere else.
    */
   readonly purge: PurgeTags;

@@ -102,7 +102,7 @@ The same region hint as the databases (§1), for the same reason.
 | ---------------------- | ---------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `dialed-media`         | `MEDIA`                | Garment photos, entry photos                                                          | Indefinite — the app renders these; deleting one breaks a page                                                                        |
 | `dialed-imports`       | `IMPORTS`              | Uploaded `.fit`/`.gpx`/`.tcx`; data export ZIPs                                       | Run files: **until the run or account is deleted** (D-110); a file whose import failed, 30 days. Export ZIPs under `exports/`: 8 days |
-| `dialed-public-photos` | `PUBLIC_PHOTOS`        | Copies of the screened photos on `world` (PUBLIC) kits, served at `photos.dialed.run` | Only while the kit is public: deleted on any retraction (D-151, design 160 step 8)                                                    |
+| `dialed-public-photos` | `PUBLIC_PHOTOS`        | Copies of the screened photos on `world` (PUBLIC) kits, served at `photos.dialed.run` | Only while the kit is public: deleted on any retraction (D-152, design 161 step 8)                                                    |
 | `dialed-guides`        | (R-134, not yet bound) | `guide-artifact/v1.json`, the nightly anonymous totals                                | Overwritten nightly; read by the marketing site's CI with a read-only token scoped to this bucket                                     |
 
 **No rule expires a run file** (decision D-110). An uploaded file is kept
@@ -137,7 +137,7 @@ prefix-scoped, so one bucket would work. Two makes retention a property of
 where an object lives rather than a rule someone can misconfigure, and it
 stops a photo ever being written to a path that expires.
 
-### The public photo bucket (D-151)
+### The public photo bucket (D-152)
 
 `dialed-public-photos` is the one bucket anyone can read. It holds a copy
 of each screened photo on a PUBLIC kit, under an unguessable key, so the
@@ -288,7 +288,7 @@ which `test/bindings-conformance.test.ts` checks:
 | ---------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `BETTER_AUTH_URL`      | `https://dialed.run` (set)                                                                    | Callbacks resolve against the wrong host; secure cookies and rate limiting are off (both follow its https scheme). `/api/health` names it when unset                                                                   |
 | `TURNSTILE_SITE_KEY`   | empty until the widget exists — **set it**                                                    | The widget renders nothing, and verification refuses                                                                                                                                                                   |
-| `PUBLIC_PHOTOS_ORIGIN` | `https://photos.dialed.run` (set) — must equal `lib/public-photos.ts`'s, which the CSP admits | The switch for world photos (D-151): empty or unset, no photo is copied to `PUBLIC_PHOTOS` and `/k` shows none; copies already there are still deleted. Leave it set only once §2's public photo bucket steps are done |
+| `PUBLIC_PHOTOS_ORIGIN` | `https://photos.dialed.run` (set) — must equal `lib/public-photos.ts`'s, which the CSP admits | The switch for world photos (D-152): empty or unset, no photo is copied to `PUBLIC_PHOTOS` and `/k` shows none; copies already there are still deleted. Leave it set only once §2's public photo bucket steps are done |
 
 **Local dev and CI override `BETTER_AUTH_URL`** in `.dev.vars`
 (`http://localhost:<port>`; CI's e2e job writes `http://localhost:3000`).

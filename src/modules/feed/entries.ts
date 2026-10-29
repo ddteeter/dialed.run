@@ -338,7 +338,7 @@ export async function submitVerdict(
   // Stryker disable next-line ConditionalExpression
   if (first === undefined) return;
   await database.batch([first, ...rest]);
-  // Design 160: a PUBLIC kit's page shows its verdict and caption, and a
+  // Design 161: a PUBLIC kit's page shows its verdict and caption, and a
   // kit leaving PUBLIC is a retraction; one coming to it replaces the
   // not-public page cached at its path. Either way the edge is told, and
   // a kit that was never PUBLIC has nothing there to purge.

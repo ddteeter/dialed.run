@@ -174,7 +174,7 @@ export async function commit(
 }
 
 /**
- * What deleting a runner's kits purges from the edge (design 160): every
+ * What deleting a runner's kits purges from the edge (design 161): every
  * page of theirs for "all" (account deletion's purge), else each kit's own
  * page and their profile, which lists it. Nothing when no kit goes — a run
  * with no kit had no page. One purge either way, never one per kit.
@@ -340,7 +340,7 @@ export const retractEntry = retractOneOf(
  * One photo off one of the runner's entries. The row goes with its open
  * review, and the entry's prefix is owed a reconcile, which deletes this
  * object and keeps the photos still named. On a PUBLIC kit, its page is
- * purged, and with it the photo's public copy (design 160 step 8); a kit
+ * purged, and with it the photo's public copy (design 161 step 8); a kit
  * that is not PUBLIC has neither.
  */
 export async function deleteEntryPhoto(

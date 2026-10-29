@@ -406,7 +406,7 @@ describe("the audience", () => {
   });
 });
 
-describe("a PUBLIC kit (D-149)", () => {
+describe("a PUBLIC kit (D-150)", () => {
   beforeEach(resetSafetyTables);
 
   it("is seen and counted by signed-in strangers, like a SHARED one", async () => {
@@ -433,7 +433,7 @@ async function openWeb(): Promise<string[]> {
   return rows.map((row) => row.id);
 }
 
-describe("the open-web rule (worldVisibleEntry, D-149)", () => {
+describe("the open-web rule (worldVisibleEntry, D-150)", () => {
   beforeEach(resetSafetyTables);
 
   it("admits a PUBLIC kit and no other audience", async () => {

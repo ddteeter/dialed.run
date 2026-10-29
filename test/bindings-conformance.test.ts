@@ -245,7 +245,7 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
       "PUBLIC_PHOTOS_ORIGIN",
       "TURNSTILE_SITE_KEY",
     ]);
-    // The public photo switch (design 160 step 8) names the one origin the
+    // The public photo switch (design 161 step 8) names the one origin the
     // page's img-src admits; any other would be refused by the policy.
     const photos =
       typeof vars === "object" &&
@@ -257,7 +257,7 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
   });
 
   it("binds the photo buckets, the public one by name, in the Worker and the test pool alike", () => {
-    // Law 10 (design 160 step 8, D-151): PUBLIC_PHOTOS is the one bucket
+    // Law 10 (design 161 step 8, D-152): PUBLIC_PHOTOS is the one bucket
     // anyone can read, so the binding is pinned to that bucket and no
     // other, and the test pool binds the same set.
     const testConfig: unknown = JSON.parse(stripJsonc(testWranglerJsonc));
@@ -270,7 +270,7 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
   });
 
   it("turns Workers Caching on, partitioned by version, for the purge to reach", () => {
-    // Design 160 (D-152; owner, 2026-10-28): the open web's pages are kept
+    // Design 161 (D-153; owner, 2026-10-28): the open web's pages are kept
     // at the edge and `ops/edge-purge.ts` purges them by tag. Exactly
     // `enabled`: `cross_version_cache` would let a new deploy serve the
     // old version's pages.

@@ -968,19 +968,19 @@ type words). Nothing is left open.
     and bar leave, the count drops, and focus moves to the next garment
     tile's Decide or the MATCHING PHOTOS kicker. Kit tiles are unchanged.
 
-90. **`/k/<id>` (design 160, step 6). Ruled; build work.** The desk width
+90. **`/k/<id>` (design 161, step 6). Ruled; build work.** The desk width
     (one column, the 620 measure, centred) is confirmed. The bar has one
     slot, in pill form: hairline "Log in" signed out, ink "Open in the app"
     signed in, never both. A piece's kind is the closet's TYPE chip, the
     category word when it has none. The linked piece's domain, the TIME
     label and the teal sky word are confirmed.
 
-91. **`/@handle` (design 160, step 7). Confirmed; one build change.** The
+91. **`/@handle` (design 161, step 7). Confirmed; one build change.** The
     credit's place, the empty groups (all empty means no Rotation section),
     the names, the type words, the rail and the invite are confirmed.
     Mileage is set in MONO caps: "412 MI".
 
-92. **The Privacy sub-page's words (design 160). Ruled; build work.** The
+92. **The Privacy sub-page's words (design 161). Ruled; build work.** The
     legend "Who sees new runs" is confirmed as the group's MONO.xs kicker.
     While the profile is off, PUBLIC is absent, not disabled, with 86b's
     line in its place. With no handle there is no switch: kicker PUBLIC
@@ -1016,7 +1016,7 @@ design has answered 86.
     intimate-image report only. Both links open a new tab and say so in
     their accessible names.
 
-86. **Public pages (D-149–D-152, design 160). Ruled and drawn; build work,
+86. **Public pages (D-150–D-153, design 161). Ruled and drawn; build work,
     phases 1–4.** Where the ruling adds to the decisions:
     - **a. PUBLIC is the name.** A3's share toggle becomes a three-row
       radiogroup (PRIVATE "Only you." · SHARED "Runners signed in to
