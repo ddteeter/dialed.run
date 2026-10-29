@@ -213,10 +213,21 @@ appear under Workers → dialed → Settings → Triggers.
 **Each cron checks in with Sentry Crons** (OPS-3): `in_progress` when it
 starts, `ok` or `error` when it ends. The monitors create themselves on
 their first firing — the schedule rides on the first check-in — so there is
-nothing to set up in Sentry beyond the DSN. One monitor is free on every
-Sentry plan; the other three are $0.78 a month each. A monitor that misses
-its window raises an issue, which is the only thing that notices a cron
-that has stopped firing altogether.
+nothing to set up in Sentry beyond the DSN. A monitor that misses its
+window raises an issue.
+
+**Every Sentry plan includes one cron monitor**, and extra monitors come
+out of a pay-as-you-go budget, which only paid plans have ($0.78 a month
+each on Team). On the free Developer plan, whichever cron checks in first
+takes the one slot. Make it `weather-retry`, because the hourly cron
+notices a Worker-wide stop within the hour: under Crons, activate
+`weather-retry` and deactivate whatever else took the slot.
+
+**`/api/health` covers the crons without a monitor** (design 162). It
+names any cron whose `cron_checkpoints` heartbeat is more than two periods
+old in `staleCrons`, and answers 503, so the uptime check pages. A cron
+that has never run is not stale, so a fresh deployment is healthy before
+its first firing.
 
 ## 5. Secrets
 
@@ -342,6 +353,7 @@ needs its own Strava app, not a second subscription.
 ## 8. After the first deploy
 
 - `GET /api/health` — reports per-binding status; expect every check `ok`
+  and `staleCrons` empty
   and `missing` empty. A failure here names the binding, and `missing`
   names any required var by its own name (today, `BETTER_AUTH_URL` and
   `UNSUBSCRIBE_SECRET`), which
@@ -366,6 +378,11 @@ needs its own Strava app, not a second subscription.
   "an event is seen" filtered to the tag `digest = daily`. The digest sends
   one event per anomaly kind, tagged `digest_kind`, and fingerprints it by
   kind and day, so each day's anomalies arrive as a new issue as well.
+  The hourly firings report too (design 162). They are tagged
+  `digest = hourly` and fingerprinted by cron and day, so Sentry's default
+  new-issue alert covers them, at most once per cron per day. They need no
+  rule of their own, and they must not match the daily rule, which fires
+  on every event.
 - **Every alert rule filters `environment:production`.** Each event and
   check-in is tagged `production` only when `BETTER_AUTH_URL` is the
   production origin, and `development` otherwise, so a local or CI run

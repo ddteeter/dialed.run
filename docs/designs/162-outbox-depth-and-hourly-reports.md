@@ -22,10 +22,12 @@ A monitoring review (2026-10-29) found four holes in what reaches a human:
 All in `src/modules/ops/` (`outbox.ts`, `scheduled.ts`) with tests in
 `test/ops/`.
 
-- **Drain tallies.** `drainOutbox` returns `{ kind, claimed, settled }` per
-  kind instead of pushing lines. The daily digest formats them as today's
-  "owed" lines. The hourly firings report only `claimed > settled`: a held
+- **Drain lines.** `drainOutbox` takes `lines: "owed" | "unsettled"`. The
+  daily digest keeps the default, today's "owed" lines. The hourly
+  firings pass `unsettled` and name only rows that did not settle: a held
   reminder (Strava, removal) the drain sends is the schedule, not a fault.
+  (Planned as returned tallies. An option kept the signature its ~30 test
+  call sites use.)
 - **Still due after the drain** (gap 1). `checkOutboxBacklog` takes the
   drain's `now` and, per known kind, reads the count of rows with
   `next_attempt_at <= now` and the oldest of them. That read is a range on
@@ -41,6 +43,12 @@ All in `src/modules/ops/` (`outbox.ts`, `scheduled.ts`) with tests in
 - **Isolated digest checks** (gap 4). Each `digestKinds` check runs
   whatever the others do. The firing still throws afterwards, so its
   check-in closes as `error` (the `eachStep` shape).
+- **Stale crons on `/api/health`** (gap 3, revised 2026-10-29). Sentry's
+  Developer plan watches one cron, so `checkHealth` names any cron whose
+  heartbeat is older than two periods. The periods are read from the
+  schedules (`cronPeriods`), and the external uptime check pages on the
+  503. A cron that has never run is not stale. Nothing acts on the 503
+  beyond the uptime check: Workers have no health-driven restarts.
 - **Comments** (gap 3). Remove the stale-checkpoint promise from the
   `handleScheduled` docstring and the TODO in `runDailyDigest`.
 - **Docs.** `docs/deployment.md` §8 says that hourly events alert through
