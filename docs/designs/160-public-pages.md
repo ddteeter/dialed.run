@@ -251,6 +251,67 @@ Left to the TTL, on purpose:
   router's own state carries the URL, as `/k`'s does its id, which is the
   request itself. "Look in the app" is built in the browser, after load.
 
+## Deviations (CSP)
+
+Owner's ruling, 2026-10-28: a page the edge stores cannot carry the
+per-request nonce (OPS-8), because the stored copy hands one nonce to
+every visitor for as long as it is kept. Public pages use hash-based CSP.
+
+- **No nonce is minted for an open-web path.** `requestContext()`
+  (`lib/csp-nonce`) gives `/k/<id>` and `/@handle` (`isOpenWebPath`) the
+  context `{ hashedScripts: true }` instead of `{ nonce }`, so the router
+  stamps nothing: no `nonce` attribute on any script, `modulepreload`
+  link or style, and no `<meta property="csp-nonce">`. `routerSsr` reads
+  that context as "none on purpose", and still throws in dev for a
+  context with neither.
+- **The policy names each inline script's SHA-256 instead**
+  (`ops/inline-script-hashes`), read from the buffered body with the
+  platform's `HTMLRewriter`: every `<script>` without a `src`, its text
+  with CRLF and CR turned into LF as the browser's parser does, distinct
+  and in document order. Script files are admitted by `'self'` as before
+  (the policy has no `'strict-dynamic'`), so the strength is the same:
+  only the scripts the server wrote run inline. Buffering costs the
+  stream, which these small pages do not need.
+- **Which responses are hashed** (`secureResponse`): any response whose
+  `Cache-Control` says `public` (the test `withoutCookiesWhenPublic`
+  uses), and any response on an open-web path whatever it turned out to
+  be, since a not-found or error page there has no nonce either. A
+  public response that is not HTML (the share card) names neither nonce
+  nor hash. A public HTML response off the open web would still carry its
+  render's nonce in its markup, but its policy names only hashes, so that
+  nonce admits nothing; no such route exists. Every other response keeps
+  the per-request nonce, unchanged.
+- **Two renders of the same public page still differ**, now only in the
+  router's dehydrated load times (`u:<ms>` per match), which change the
+  hash of that one inline script and so the policy: step 6's first bullet
+  loses its nonce half. The edge stores headers and body together, so a
+  stored copy's policy always names its own scripts (e2e
+  `desk-door.spec.ts` checks both renders, and that nothing else
+  differs).
+- **Every response that names no `Cache-Control` now leaves with
+  `private, no-store`**, set in `withSecurityHeaders` beside the security
+  headers; a route's own value (a public page's, a photo's
+  `private, max-age=3600`, a closet photo's `private, …, immutable`)
+  stands. Not in `public/_headers`, whose static assets should be cached.
+  Why: Workers Caching docs
+  (<https://developers.cloudflare.com/workers/cache/configuration/>,
+  "Cache-Control semantics", read 2026-10-28) say a Worker response with
+  no `Cache-Control` or `Expires` is still cached by RFC 9111 heuristic
+  freshness with per-status default TTLs — "a `200` response that does not
+  set `Cache-Control` is cached for 2 hours", a 404 for 3 minutes,
+  300/301 for 20 minutes — and "Omitting `Cache-Control` is not the same
+  as opting out of the cache"; "If you want a response not to be cached,
+  return `Cache-Control: no-store` (or `private`) explicitly." A response
+  with `private` or `no-store`, or one setting a cookie, bypasses
+  (`Cf-Cache-Status: BYPASS`). The overview
+  (<https://developers.cloudflare.com/workers/cache/>) says the same:
+  "Workers Caching follows the semantics defined in RFC 9111, including
+  heuristic freshness for responses that do not carry `Cache-Control`."
+  So without this, once `"cache": { "enabled": true }` is set, a signed-in
+  page with no cookie on its response could be stored for two hours and
+  served to the next visitor. The cost: Chromium has kept `no-store` pages
+  out of the back/forward cache, so a Back to an app page may re-fetch it.
+
 ## Build steps
 
 Each step is one or more commits that pass the commit gate on their own.
