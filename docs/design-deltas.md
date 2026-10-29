@@ -940,60 +940,53 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
-88. **A garment's photo on Review (C17, design 157). Undesigned; built
-    as a placeholder.** The classifier and the D-147 hold now queue
-    garment photos. The row is a content row like a kit photo's: the
-    kicker reads `garment photo · {id}`, the photo is the garment's card
-    size, and the suspected-CSAM question reads "Remove this garment photo
-    everywhere and keep the evidence for the report?". No new glyph or
-    colour. **Amended by design 159 (R-167):** Remove now deletes the photo
-    and tells its owner, in words the owner approved on 2026-10-26: the
-    bell row "We removed the photo of one of your garments. Reason:
-    {reason}." and the email "We removed a photo from your closet" (the
-    content-removed email's layout, "The garment stays in your closet.").
-    **The ask:** draw the row, and confirm the bell row and email in the
-    existing notice styles.
+<!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
 
-89. **A garment match's takedown on Review (R-167, design 159).
-    Undesigned; built as a placeholder.** Under Matching photos, a garment
-    tile now carries the garment row's own decision bar, without Approve:
-    "Why it comes down", Remove, and Remove as suspected CSAM with its
-    in-place question. Existing parts and words only; a decided tile
-    leaves the list. Kit tiles are unchanged. **The ask:** draw the bar
-    on a match tile, or say where a match's takedown should sit instead.
+## Answered in round 42 (imported 2026-10-28)
 
-90. **`/k/<id>`'s pieces of round 41 #86c not drawn, built from existing
-    parts (design 160, step 6).** The desk width: round 41 draws /k at
-    phone only, so the page keeps its one column (`max-w-column`) centred
-    under the same bar at every width. The bar: the landing bar's two
-    pills (hairline Log in, ink "Open in the app" / "Look in the app"),
-    shown at every width since the board draws it on the phone, with the
-    bracketed wordmark. A piece's kind is its category's word (Top,
-    Headwear…), not the board's type words, and a linked piece carries the
-    outbound link's domain beside it (`ui/ProductLink`). A run with no
-    moving time labels its time TIME. The kit's card puts the measured
-    sky word in teal, as the app does. **The ask:** confirm or redraw the
-    desk width and the bar, and the TIME label.
+Sent on 2026-10-28 for items 88–92: the two garment asks (88 and 89), the
+pieces of `/k/<id>` and `/@handle` built from existing parts (90 and 91),
+and the Privacy sub-page's words (92). Design answered the same day as
+`Round 42 Rulings.dc.html`, with the text of record under "Round 42 · Items
+88–92" in `design/docs/product.md`. The round amends round 41 #86b (no
+handle; PUBLIC unavailable), #86c (the bar) and #86d (the rail width, the
+type words). Nothing is left open.
 
-91. **`/@handle`'s pieces of round 41 #86d not drawn, built from existing
-    parts (design 160, step 7).** The Visual Crossing credit (D-144) sits
-    once under the kit list when any row shows its reading; the board
-    draws none. A rotation group with nothing in it (no retired pieces,
-    say) is left out rather than drawn as "RETIRED · 0", and a rotation
-    piece is named by the closet's name without its brand, as the board's
-    rows are. The type words are the closet's TYPE chips ("L/S crew",
-    "Tights"), or the category's word when a piece has no type, not the
-    board's ("LONG SLEEVE", "TIGHT"). Shoe mileage is a whole number in the
-    runner's unit ("412 mi"), and it is the shoe's whole mileage, private
-    runs included (owner, 2026-10-28: a partial figure says nothing about
-    the shoe). At the desk the rail is DS1's `1fr` column
-    beside the 620 primary, as every DS1 screen builds it, not a fixed 300,
-    and the bar and foot widen to the page measure with it. The signed-out
-    invite closes the page under the kits at the desk and after the
-    rotation on the phone. **The ask:** confirm or redraw the credit's
-    place, the empty group, and the type words.
+88. **A garment's photo on Review (C17, design 157). Ruled; build work.**
+    The kit photo's content row: kicker "GARMENT PHOTO · {id} · @{owner}"
+    with the source tag, the photo at F's card size, then a MONO.xs line
+    "{closet name} · {CATEGORY} · {state}". MATCHING PHOTOS and the
+    decision bar as on the kit row. The CSAM question and the owner's bell
+    row and email are confirmed as worded (design 159). **A CSAM removal
+    sends neither the bell row nor the email.**
 
-<!-- Item numbers continue past rounds 35–41 (45–76, 82–91). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
+89. **A garment match's takedown (R-167, design 159). Ruled; build work.**
+    Not on the tile. A garment tile in MATCHING PHOTOS gets a 44-high
+    "Decide" link (Close while open). The garment bar without Approve opens
+    full width under the grid, kicker "DECIDE · GARMENT PHOTO · {id} ·
+    @{owner}", with the tile ringed. One open at a time. Decided: the tile
+    and bar leave, the count drops, and focus moves to the next garment
+    tile's Decide or the MATCHING PHOTOS kicker. Kit tiles are unchanged.
+
+90. **`/k/<id>` (design 160, step 6). Ruled; build work.** The desk width
+    (one column, the 620 measure, centred) is confirmed. The bar has one
+    slot, in pill form: hairline "Log in" signed out, ink "Open in the app"
+    signed in, never both. A piece's kind is the closet's TYPE chip, the
+    category word when it has none. The linked piece's domain, the TIME
+    label and the teal sky word are confirmed.
+
+91. **`/@handle` (design 160, step 7). Confirmed; one build change.** The
+    credit's place, the empty groups (all empty means no Rotation section),
+    the names, the type words, the rail and the invite are confirmed.
+    Mileage is set in MONO caps: "412 MI".
+
+92. **The Privacy sub-page's words (design 160). Ruled; build work.** The
+    legend "Who sees new runs" is confirmed as the group's MONO.xs kicker.
+    While the profile is off, PUBLIC is absent, not disabled, with 86b's
+    line in its place. With no handle there is no switch: kicker PUBLIC
+    PROFILE, "A public profile lives at your username. Pick one first." and
+    "Pick a username", which opens the username sheet; on save, 86b's
+    switch appears.
 
 ## Answered in round 41 (imported 2026-10-25)
 

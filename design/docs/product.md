@@ -695,3 +695,30 @@ Board: `Round 41 Rulings.dc.html`. Amends round 27 #7 ("public" retired), round 
 - (d) **/@handle.** Handle (TYPE.display), Kits {N} (three rows, then "Show {N} more", a link, no script; empty "No public kits yet."), then Rotation if shown: IN USE · N (name, type), SHOES · N (name, mileage), RETIRED · N (--quiet + line-through). Desk: DS1 columns, kits a 3-up grid in the 620 primary, Rotation in the 300 rail. Foot: Report this profile · Privacy · Terms. Closet off: no Rotation section, no gap. Pieces never link to runs.
 - (e) **Share card** for PUBLIC kits only: the default card's 600×315 at 2×, #0B0B0E, SPACE[8]. Top: wordmark left, MONO "@HANDLE · SAT OCT 18" right. Middle: "38° DAMP" (display) + verdict chip; MONO stats "6.2 MI · 52:10 · 8:25 /MI · 210 FT"; kit line, models without brands, "+N" past one line. Bottom right: the Visual Crossing credit (round 39 #67). Never the photo or caption. Re-rendered on any edit; once not public the image URL serves the default card. The public profile keeps the default card.
 - (f) **Not public.** One page per path, identical bytes, status, headers and card for every reason (never public, made shared or private, removed, held, deleted, banned, never existed). MONO.xs "404" · "Nothing to see at this link" · /k: "A kit shows here only while the runner who logged it keeps it public." · /@: "A profile shows here only when its runner makes it public." (handle not echoed) · link "What is dialed.run?". Signed in: the top bar slot reads "Look in the app" → /feed/entry/<id> or /feed/u/<handle>, which run their own checks.
+
+**87 · Garmin phase 1, G6–G10.** Amends 77 (G1 weight), 79 (G3), 81 (G5).
+- G6 · **A3 effort.** Confirmed as built: "Did it work?" + run line, verdict chips, ANYTHING SPECIFIC?, --hairline, EFFORT, Share to feed, LOG IT. On every run. Unrated: shown, nothing picked, kicker EFFORT · OPTIONAL (the watch line takes that slot when rated); never required. Line under the chips, always: "You run warmer the harder you go. Next time, the Call allows for it." TYPE.small, --quiet. B1's figure line stays on the Call.
+- G7 · **Credit weight.** 400, TYPE.small, --quiet. COLLAPSE: G1 credit 500 → 400.
+- G8 · **Failed import tap.** §4a NOT IMPORTED · "Garmin didn't answer. Nothing was imported." · Try again (same tap), in the load-failure band's slot above the rows. Tapped row returns to idle; status region; focus unchanged.
+- G9 · **Parsed card strip.** "PARSED · FROM GARMIN". No date, distance or time. REPLACE kept, returns to the import chooser.
+- G10 · **Credit on D.** Confirmed: first line under the title, above the date/distance strip.
+
+## Round 42 · Items 88–92
+Board: `Round 42 Rulings.dc.html`. Amends round 41 #86b (no handle; PUBLIC unavailable), #86c (bar), #86d (rail width, type words).
+
+**88 · Garment photo on Review (C17).** The kit photo's content row: kicker "GARMENT PHOTO · {id} · @{owner}" + source tag, the photo at F's card size, then a MONO.xs line "{closet name} · {CATEGORY} · {state}". MATCHING PHOTOS and decision bar as the kit row. CSAM confirm: "Remove this garment photo everywhere and keep the evidence for the report?" (round 29's second line unchanged). Remove tells the owner, confirmed as worded: bell "We removed the photo of one of your garments. Reason: {reason}." (opens F); email "We removed a photo from your closet", content-removed layout, ending "The garment stays in your closet." A CSAM removal sends neither.
+
+**89 · Garment match takedown (R-167).** Not on the tile. A garment tile in MATCHING PHOTOS gets a 44-high "Decide" link (Close while open); the garment bar without Approve (Why it comes down · Remove · Remove as suspected CSAM, its question in place) opens full width under the grid, kicker "DECIDE · GARMENT PHOTO · {id} · @{owner}", the tile ringed (§06). One open at a time. Decided: tile and bar leave, count drops, focus to the next garment tile's Decide or the MATCHING PHOTOS kicker. Kit tiles unchanged.
+
+**90 · /k/<id>.**
+- Desk: one column, 620 measure, centred; the bar runs the page width. Confirmed.
+- Bar: bracketed wordmark at every width; one slot as 86c, in pill form: hairline "Log in" signed out, ink "Open in the app" signed in. Never both.
+- Piece kind: the closet's TYPE chip, the category word when a piece has none (same rule as 91).
+- Linked piece: domain beside it, as ProductLink. TIME when the run has no moving time. Share card sky word in teal. Confirmed.
+
+**91 · /@handle.** Confirmed: credit once under the kit list (after Show N more) when any row shows a reading; empty rotation groups left out (all empty = no Rotation); names without brand; TYPE chip, else category; desk rail is DS1's 1fr, bar and foot to the page measure; invite closes the primary column under the kits at the desk, after Rotation on the phone. Mileage: whole number in the runner's unit, private runs included, MONO caps "412 MI".
+
+**92 · Privacy words.**
+- Legend "Who sees new runs", the group's MONO.xs kicker. Confirmed.
+- PUBLIC while the profile is off: not disabled; absent, with 86b's line in its place (rule 07).
+- No handle yet: no switch. Kicker PUBLIC PROFILE; "A public profile lives at your username. Pick one first." + "Pick a username" (the username sheet). On save, 86b's switch.
