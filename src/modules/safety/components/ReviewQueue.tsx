@@ -80,6 +80,50 @@ function ReportedPhotos({
 }
 
 /**
+ * A garment photo's row (round 42 #88): the photo at F's card size — the
+ * closet's photo well, not a kit photo's strip — then one MONO.xs line
+ * naming the garment, so a shoe shot reads apart from a kit shot.
+ */
+function GarmentPhoto({
+  photoKey,
+  line,
+}: Readonly<{ photoKey: string; line: string | undefined }>): JSX.Element {
+  return (
+    <>
+      <span
+        data-part="garment-photo"
+        className="aspect-4/3 w-full rounded-field border border-hairline bg-photo wide:max-h-80"
+      >
+        <img
+          src={`/safety/review-photo/${photoKey}`}
+          alt="Reported garment photo"
+          className="h-full w-full object-contain"
+        />
+      </span>
+      {line === undefined ? undefined : (
+        <span data-part="garment-line" className="text-quiet">
+          <Mono step="xs">{line}</Mono>
+        </span>
+      )}
+    </>
+  );
+}
+
+/**
+ * What a row shows of its subject: a garment's photo and line, or the
+ * reported photos as a kit's are shown.
+ */
+function SubjectPhotos({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
+  const [garmentKey] = row.subject.photoKeys;
+  if (garmentKey !== undefined && row.subjectType === "garment") {
+    return (
+      <GarmentPhoto photoKey={garmentKey} line={row.subject.garmentLine} />
+    );
+  }
+  return <ReportedPhotos keys={row.subject.photoKeys} />;
+}
+
+/**
  * What the reporters said, and how many of them said it.
  *
  * **This is the row's only content.** Everything else on it is an
@@ -255,6 +299,31 @@ function rowKind(row: QueueRow): string {
 }
 
 /**
+ * The row's kicker: its kind and what it is. A garment photo's also names
+ * its owner (round 42 #88), "garment photo · {id} · @{owner}", since the
+ * garment has no page of its own to say whose it is.
+ */
+function rowTitle(row: QueueRow, label: string): string {
+  const title = `${rowKind(row)} · ${label}`;
+  const { owner } = row.subject;
+  return owner !== undefined && row.subjectType === "garment"
+    ? `${title} · @${owner}`
+    : title;
+}
+
+/**
+ * Where the row's source tag sits: beside a garment photo's kicker (round
+ * 42 #88), at the foot of every other row.
+ */
+function SourceTag({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
+  return (
+    <span data-part="source" className="text-micro text-quiet">
+      <Bracketed>{row.source}</Bracketed>
+    </span>
+  );
+}
+
+/**
  * `ReviewRow`'s props, named rather than inlined at the call site:
  * `RowSettleProps` plus the two things round 28 #8 added
  * (`active`/`focusOnOpen`/`onActivate`) and the two decision callbacks a
@@ -295,6 +364,7 @@ function ReviewRow({
   // A flagged handle's header re-reads to the handle a rename lost to
   // (round 38 #60); the row stays open.
   const [label, setLabel] = useState(row.subject.label ?? row.subjectId);
+  const isGarment = row.subjectType === "garment";
 
   return (
     <li className="flex flex-col gap-2 border border-hairline p-3">
@@ -306,8 +376,9 @@ function ReviewRow({
           onClick={onActivate}
           className="target cursor-pointer border-none bg-transparent p-0 text-left text-body font-semibold text-ink"
         >
-          {rowKind(row)} · {label}
+          {rowTitle(row, label)}
         </button>
+        {isGarment ? <SourceTag row={row} /> : undefined}
         {/* The TAKE IT DOWN Act's 48 hours, on a row an intimate-image
             report started: in the header, right, where the age sits
             (round 35 #58b). The brackets stay about people. */}
@@ -317,7 +388,7 @@ function ReviewRow({
           </span>
         )}
       </span>
-      <ReportedPhotos keys={row.subject.photoKeys} />
+      <SubjectPhotos row={row} />
       <RemovedMatchLine match={row.removedMatch} />
       <OtherPhotos others={row.otherPhotos} />
       <PhotoMatches found={row.photoMatches} decide={decideMatch} />
@@ -328,9 +399,7 @@ function ReviewRow({
       ) : (
         <ReportedFor row={row} />
       )}
-      <span className="text-micro text-quiet">
-        <Bracketed>{row.source}</Bracketed>
-      </span>
+      {isGarment ? undefined : <SourceTag row={row} />}
       {active ? (
         <RowDecision
           row={row}
