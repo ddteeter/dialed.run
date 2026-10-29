@@ -940,6 +940,41 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
+_Empty: round 42 answered the last two._
+
+<!-- Item numbers continue past rounds 35–40 (45–76, 82–87). Design numbered the Garmin asks 77–81 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
+
+## Answered in round 42 (imported 2026-10-29)
+
+Design answered as `Round 42 Rulings.dc.html`, items 88–92 and three
+follow-ups to 84 and 85, with the text of record under "Round 42 ·
+Items 88–92" in `design/docs/product.md`. Items 88 and 89 answer
+open-queue items 45 and 46 (garment photos); 90–92 answer the asks the
+public-pages build (design 160) sent from its own branch. The 84 · 85
+follow-ups answer the three questions asked back from design 161.
+
+- **88 · Garment photo on Review (answers queue item 45). Ruled; not
+  built yet.** The kit photo's content row, with kicker "GARMENT PHOTO ·
+  {id} · @{owner}", the photo at F's card size and a MONO.xs line
+  "{closet name} · {CATEGORY} · {state}". The bell row and email are
+  confirmed as worded.
+- **89 · Garment match takedown (answers queue item 46). Ruled; not
+  built yet.** Not on the tile: a "Decide" link on the tile opens the
+  bar full width under the grid. The board has the rest.
+- **90–92 · /k, /@handle and the Privacy words.** Ruled for the
+  public-pages build (design 160); `design/docs/product.md` has the text.
+- **84 · 85 follow-ups. Built in design 161.**
+  - **W1 receipt. Drawn**, intimate-image reports only: the sheet swaps
+    in place to REPORT SENT, "Thanks for telling us.", the body, a
+    hairline, 85's line and Done. The body's "today" is **"within a day"**
+    by the owner's call (2026-10-29), matching the sheet's own promise.
+  - **REMOVED tiles. Ruled:** one per removal within 8 bits, nearest
+    first; the line names the nearest only.
+  - **Inline links. Confirmed** as built (bold ink, underlined); round
+    41's accent links were a drawing slip.
+
+Lifted from the open queue, as asked:
+
 45. **A garment's photo on Review (C17, design 157). Undesigned; built
     as a placeholder.** The classifier and the D-147 hold now queue
     garment photos. The row is a content row like a kit photo's: the
@@ -962,8 +997,6 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     leaves the list. Kit tiles are unchanged. **The ask:** draw the bar
     on a match tile, or say where a match's takedown should sit instead.
 
-<!-- Item numbers continue past rounds 35–40 (45–76, 82–87). Design numbered the Garmin asks 77–81 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
-
 ## Answered in round 41 (imported 2026-10-28)
 
 Design answered as `Round 41 Rulings.dc.html`, items 84–87, with the text
@@ -972,13 +1005,13 @@ of record under "Round 41 · Items 84–86" in `design/docs/product.md`
 (D-147); item 86 rules the public pages. Only item 87 is built here, in
 the Garmin phase 1 PR (#275); 84–86 are build work for their own changes.
 
-- **84 · Held on upload (answers queue item 45). Ruled; not built yet.**
+- **84 · Held on upload (answers queue item 45). Built in design 161.**
   The source tag reads `[held on upload]`, not `[fingerprint]`; the line
   under the photo reads "A close match to an image removed as intimate on
   {OCT 3}, {3 BITS} apart." ("The same image as one removed as intimate on
   {OCT 3}." at 0 bits); the removed original in MATCHING PHOTOS is an
   empty hairline frame reading REMOVED. The board has the rest.
-- **85 · Other sites (answers queue item 46). Ruled; not built yet.**
+- **85 · Other sites (answers queue item 46). Built in design 161.**
   Reworded, placed on the `/takedown` receipt, `/takedown/confirm` DONE
   and W1's receipt after an intimate-image report; both names are links
   with "(opens in a new tab)" in their accessible names.
