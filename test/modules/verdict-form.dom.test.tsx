@@ -60,6 +60,7 @@ function entry(overrides: Partial<Entry> = {}): Entry {
     durationS: 1830,
     startedAt: 1_755_000_000,
     indoor: false,
+    deviceName: undefined,
     verdict: undefined,
     audience: "runners",
     caption: undefined,
@@ -70,6 +71,7 @@ function entry(overrides: Partial<Entry> = {}): Entry {
     usefulCount: 0,
     conditions: undefined,
     underReview: false,
+    effort: undefined,
     viewerHasReacted: false,
     ...overrides,
   };
@@ -1876,5 +1878,186 @@ describe("VerdictForm: the log flow", () => {
     // absent precisely because the rise is the move.
     expect(step).toHaveAttribute("data-flow-direction", "entering");
     expect(step?.className).toBe("");
+  });
+});
+
+function submitSpy() {
+  return vi.fn<(input: { data: Record<string, unknown> }) => Promise<unknown>>(
+    () => Promise.resolve(),
+  );
+}
+
+function effortGroup(): HTMLElement {
+  return screen.getByRole("group", { name: /^Effort/u });
+}
+
+const EFFORT_LINE =
+  "You run warmer the harder you go. Next time, the Call allows for it.";
+
+describe("VerdictForm: effort from the watch (G5)", () => {
+  it("draws the watch's pick selected, and says where it came from", async () => {
+    await renderWithRouter(
+      form({ entry: { effort: { chosen: "steady", watchRpe: 6 } } }),
+    );
+
+    const group = effortGroup();
+    expect(
+      within(group).getByRole("button", { name: "Steady" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(within(group).getByRole("button", { name: "Easy" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(group).toHaveTextContent("From your watch · rated 6 of 10");
+    expect(group).toHaveAccessibleDescription("From your watch, rated 6 of 10");
+    // Rated, the watch line takes the kicker's OPTIONAL slot (round 41 #87).
+    expect(group).toHaveAccessibleName("Effort");
+    expect(within(group).getByText(EFFORT_LINE)).toHaveClass(
+      "text-small",
+      "text-quiet",
+    );
+  });
+
+  it("saves the watch's pick by leaving it alone: nothing to send", async () => {
+    const user = userEvent.setup();
+    const submitVerdict = submitSpy();
+    await renderWithRouter(
+      form({
+        submitVerdict,
+        entry: { effort: { chosen: "steady", watchRpe: 6 } },
+      }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
+
+    await waitFor(() => {
+      expect(submitVerdict).toHaveBeenCalledTimes(1);
+    });
+    expect(submitVerdict.mock.calls[0]?.[0]?.data).not.toHaveProperty("effort");
+  });
+
+  it("makes any tap the runner's pick, even on the chosen chip, and drops the source", async () => {
+    const user = userEvent.setup();
+    const submitVerdict = submitSpy();
+    await renderWithRouter(
+      form({
+        submitVerdict,
+        entry: { effort: { chosen: "steady", watchRpe: 6 } },
+      }),
+    );
+
+    await user.click(
+      within(effortGroup()).getByRole("button", { name: "Steady" }),
+    );
+
+    const group = effortGroup();
+    expect(group).not.toHaveTextContent("From your watch");
+    expect(group).not.toHaveAttribute("aria-describedby");
+    expect(group).toHaveAccessibleName("Effort · optional");
+    expect(
+      within(group).getByRole("button", { name: "Steady" }),
+    ).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
+    await waitFor(() => {
+      expect(submitVerdict).toHaveBeenCalledTimes(1);
+    });
+    expect(submitVerdict.mock.calls[0]?.[0]?.data).toMatchObject({
+      effort: "steady",
+    });
+  });
+
+  it("sends the effort the runner picked instead", async () => {
+    const user = userEvent.setup();
+    const submitVerdict = submitSpy();
+    await renderWithRouter(
+      form({
+        submitVerdict,
+        entry: { effort: { chosen: "steady", watchRpe: 6 } },
+      }),
+    );
+
+    await user.click(
+      within(effortGroup()).getByRole("button", { name: "Workout" }),
+    );
+    expect(
+      within(effortGroup()).getByRole("button", { name: "Steady" }),
+    ).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
+    await waitFor(() => {
+      expect(submitVerdict).toHaveBeenCalledTimes(1);
+    });
+    expect(submitVerdict.mock.calls[0]?.[0]?.data).toMatchObject({
+      effort: "workout",
+    });
+  });
+
+  it("with no rating picks nothing and names no source", async () => {
+    await renderWithRouter(form());
+
+    const group = effortGroup();
+    for (const name of ["Easy", "Steady", "Workout", "Race"]) {
+      expect(within(group).getByRole("button", { name })).toHaveAttribute(
+        "aria-pressed",
+        "false",
+      );
+    }
+    expect(group).not.toHaveTextContent("From your watch");
+    expect(group).toHaveAccessibleName("Effort · optional");
+    expect(group).toHaveTextContent(EFFORT_LINE);
+  });
+
+  it("shows a runner's own earlier pick without a source line", async () => {
+    await renderWithRouter(
+      form({ entry: { effort: { chosen: "race", watchRpe: undefined } } }),
+    );
+
+    const group = effortGroup();
+    expect(within(group).getByRole("button", { name: "Race" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(group).not.toHaveTextContent("From your watch");
+  });
+
+  it("is read-only once logged", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(
+      form({
+        submitVerdict: submitSpy(),
+        entry: { effort: { chosen: "easy", watchRpe: 2 } },
+      }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Dialed" }));
+    await user.click(screen.getByRole("button", { name: "Log it" }));
+
+    const race = await waitFor(() => {
+      const button = within(effortGroup()).getByRole("button", {
+        name: "Race",
+      });
+      expect(button).toHaveAttribute("aria-disabled", "true");
+      return button;
+    });
+    await user.click(race);
+    expect(race).toHaveAttribute("aria-pressed", "false");
+    expect(effortGroup()).toHaveTextContent("rated 2 of 10");
+  });
+
+  it("draws the pick chips centred and without the ✕", async () => {
+    await renderWithRouter(
+      form({ entry: { effort: { chosen: "easy", watchRpe: 2 } } }),
+    );
+
+    const easy = within(effortGroup()).getByRole("button", { name: "Easy" });
+    expect(easy).toHaveClass("justify-center", "bg-ink");
+    expect(easy.querySelector("svg")).toBeNull();
+    expect(
+      within(effortGroup()).getByRole("button", { name: "Race" }),
+    ).toHaveClass("justify-center", "border-hairline");
   });
 });

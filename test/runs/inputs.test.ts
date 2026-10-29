@@ -7,6 +7,7 @@ import {
 } from "../../src/modules/runs/imports";
 import {
   conditionsBandInput,
+  garminImportInput,
   importIdInput,
   importUploadFrom,
   manualRunInput,
@@ -286,5 +287,42 @@ describe("importUploadFrom", () => {
     const form = upload(fileOfSize(10));
     form.append("idempotencyKey", "not-a-key");
     expect(() => importUploadFrom(form)).toThrow();
+  });
+});
+
+describe("garminImportInput", () => {
+  it("takes a Garmin activity id and the tap's key", () => {
+    const key = newUlid();
+    expect(
+      garminImportInput.parse({
+        activityId: "20123456789",
+        idempotencyKey: key,
+      }),
+    ).toEqual({ activityId: "20123456789", idempotencyKey: key });
+  });
+
+  it.each(["", "12a", "1/../2", "1".repeat(21)])(
+    "refuses %j, which would not be an id in a URL path",
+    (activityId) => {
+      expect(
+        garminImportInput.safeParse({ activityId, idempotencyKey: newUlid() })
+          .success,
+      ).toBe(false);
+    },
+  );
+
+  it("takes the longest id there is", () => {
+    expect(
+      garminImportInput.safeParse({
+        activityId: "9".repeat(20),
+        idempotencyKey: newUlid(),
+      }).success,
+    ).toBe(true);
+  });
+
+  it("needs the key", () => {
+    expect(garminImportInput.safeParse({ activityId: "1" }).success).toBe(
+      false,
+    );
   });
 });

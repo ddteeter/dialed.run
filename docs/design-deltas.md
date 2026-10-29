@@ -1058,6 +1058,24 @@ design has answered 86.
       and the handle is never echoed. Signed in, the top bar offers "Look in
       the app", which runs its own checks.
 
+87. **Garmin phase 1, G6–G10 (plan 160, D-149). Built in #275.** Design
+    added this item to round 41 when it refreshed the board on 2026-10-28.
+    - **G6 · A3 effort. Confirmed and drawn.** The order as built; the
+      hairline above EFFORT stays. Unrated, the kicker reads EFFORT ·
+      OPTIONAL (the watch line takes that slot when rated). New line under
+      the chips, always: "You run warmer the harder you go. Next time, the
+      Call allows for it." TYPE.small, --quiet.
+    - **G7 · Credit weight. Confirmed, with a COLLAPSE:** G1's 500 → 400
+      (TYPE.small, --quiet), as built.
+    - **G8 · Failed import tap. Ruled.** §4a NOT IMPORTED · "Garmin didn't
+      answer. Nothing was imported." · Try again, in the list band's slot
+      above the rows; the tapped row returns to idle; a status region, focus
+      unchanged.
+    - **G9 · Parsed card strip. Ruled.** PARSED · FROM GARMIN, without the
+      date, distance and time (the stats line has them). REPLACE stays and
+      returns to the import chooser.
+    - **G10 · Credit on D. Confirmed** as built.
+
 ## Answered in round 40 (imported 2026-10-24)
 
 Sent on 2026-10-24: item 82 (the `/open-source` tools tier) and five asks

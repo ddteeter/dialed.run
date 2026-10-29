@@ -1083,13 +1083,13 @@
     },
     {
       "name": "@vitest/browser",
-      "version": "4.1.11",
+      "version": "4.1.12",
       "licence": "MIT",
       "project": "https://vitest.dev/guide/browser/"
     },
     {
       "name": "@vitest/browser-playwright",
-      "version": "4.1.11",
+      "version": "4.1.12",
       "licence": "MIT",
       "project": "https://vitest.dev/config/browser/playwright"
     },
@@ -1214,7 +1214,7 @@
     },
     {
       "name": "vitest",
-      "version": "4.1.11",
+      "version": "4.1.12",
       "licence": "MIT",
       "project": "https://vitest.dev"
     },

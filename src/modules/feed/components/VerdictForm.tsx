@@ -117,6 +117,7 @@ import { NotedReceipt } from "./NotedReceipt";
 import { SpecificsSheet } from "./SpecificsSheet";
 import { VerdictChips } from "./VerdictChips";
 import type { BandSignals } from "../band-signals";
+import { EffortField, useEffortPick } from "./EffortField";
 import { suggestChips } from "../chips";
 import { notedPlan } from "../noted";
 import type { Chip, Flag, ItemFlagChoice } from "../chips";
@@ -295,6 +296,7 @@ export function VerdictForm({
   // back, and the receipt is not held hostage to it.
   const [noted, setNoted] = useState<{ sentence: string | undefined }>();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const effort = useEffortPick(entry.effort);
   // `entry.id`, not an `entryId` prop beside it — the same duplication
   // EntryDetail carried: two sources for one fact, one from the URL params
   // and one from the loader, which a route can silently disagree with
@@ -368,6 +370,7 @@ export function VerdictForm({
           flag: flagValue === "none" ? undefined : flagValue,
         };
       }),
+      ...(effort.pickedByRunner && { effort: effort.effort }),
     };
   }
 
@@ -539,6 +542,13 @@ export function VerdictForm({
             items={entry.items}
             answer={{ flagFor, onFlag: setFlag, tags, onTag: toggleTag }}
             field={form.field}
+          />
+
+          <EffortField
+            effort={effort.effort}
+            watchRpe={effort.watchRpe}
+            readOnly={isLocked}
+            onPick={effort.pick}
           />
 
           {isLocked ? (

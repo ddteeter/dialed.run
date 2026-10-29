@@ -345,7 +345,7 @@ Step 8, world photos (D-152). Built as R-153 describes, with these choices
 the design had not made:
 
 - **The copy's key lives in its own table, `public_photos`** (migration
-  `0072_add_public_photos`, additive), not a column of `entry_photos`.
+  `0073_add_public_photos`, additive), not a column of `entry_photos`.
   Deleting a kit, a run or an account, and the Desk's Remove and
   quarantine, delete the photo rows in their own batch; a key held there
   would go with them and leave a public object nothing names. The row
@@ -445,7 +445,7 @@ Each step is one or more commits that pass the commit gate on their own.
    `safety/photo-matches.ts`): the stranger rule admits `world`;
    `worldVisibleEntry()` is the open-web rule. Done when
    `test/safety/visibility.test.ts` covers every audience in both rules.
-3. **Schema**: `0071_add_public_profile_switches` (additive).
+3. **Schema**: `0072_add_public_profile_and_shared_indexes` (additive).
 4. **Writes**: per-kit PUBLIC, held at PRIVATE for an unconfirmed runner;
    a PUBLIC default only while the profile is public; turning the profile
    off moves a PUBLIC default to SHARED in the same batch.

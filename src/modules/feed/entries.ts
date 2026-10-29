@@ -27,6 +27,7 @@ import {
 import { coreDb } from "../../env";
 import type {
   Audience,
+  Effort,
   WritableAudience,
   entryTags,
   itemFlagSchema,
@@ -227,17 +228,19 @@ export interface SubmitVerdictInput {
   caption?: string | undefined;
   tags: readonly EntryTag[];
   itemFlags: readonly ItemFlagInput[];
+  effort?: Effort | undefined;
 }
 
 async function assertOwnsEntry(
   entryId: string,
   userId: string,
-): Promise<{ id: string; userId: string; audience: string }> {
+): Promise<{ id: string; userId: string; runId: string; audience: string }> {
   // fallow-ignore-next-line code-duplication -- two different reads of outfit_entries that happen to select three columns each: this one gates ownership of a single entry by id, the other scans the user's last 200 for a band statistic
   const [entry] = await db()
     .select({
       id: outfitEntries.id,
       userId: outfitEntries.userId,
+      runId: outfitEntries.runId,
       audience: outfitEntries.audience,
     })
     .from(outfitEntries)
@@ -269,7 +272,7 @@ export async function submitVerdict(
   purge: PurgeTags = purgePublicPages,
 ): Promise<void> {
   const database = db();
-  const before = await assertOwnsEntry(input.entryId, input.userId);
+  const owned = await assertOwnsEntry(input.entryId, input.userId);
 
   const entryItemRows = await database
     .select({ itemId: outfitEntryItems.itemId })
@@ -328,6 +331,18 @@ export async function submitVerdict(
           ),
         ),
     ),
+    // The runner's own pick of effort (G5), in the verdict's batch because
+    // it is the same Log it. It replaces a watch's prefill for good.
+    ...(input.effort === undefined
+      ? []
+      : [
+          database
+            .update(runs)
+            .set({ effort: input.effort, effortSource: "runner" })
+            .where(
+              and(eq(runs.id, owned.runId), eq(runs.userId, input.userId)),
+            ),
+        ]),
   ];
 
   // `batch` needs a non-empty tuple; the first two statements always exist.
@@ -342,7 +357,7 @@ export async function submitVerdict(
   // kit leaving PUBLIC is a retraction; one coming to it replaces the
   // not-public page cached at its path. Either way the edge is told, and
   // a kit that was never PUBLIC has nothing there to purge.
-  if (audience === WORLD_AUDIENCE || before.audience === WORLD_AUDIENCE) {
+  if (audience === WORLD_AUDIENCE || owned.audience === WORLD_AUDIENCE) {
     purge(kitCacheTags(input.userId, input.entryId));
   }
 }
@@ -555,17 +570,32 @@ interface EntryDetailItem {
   note: string | undefined;
 }
 
-export interface EntryDetail {
-  id: string;
-  userId: string;
+/**
+What a feed card and the entry detail both say about the run behind an
+entry: one shape, so the two cannot drift apart.
+*/
+export interface EntryRunFields {
   authorUsername: string | undefined;
   runId: string;
   runTitle: string;
   distanceM: number;
   durationS: number;
   startedAt: number;
+  /**
+  The run says it was indoors — the strip reads "INDOOR" rather than
+  dropping its conditions cell (round 22, E1).
+  */
   indoor: boolean;
+  /**
+  Who to credit for the run's data (G1); only a Garmin run has one.
+  */
+  deviceName: string | undefined;
   verdict: number | undefined;
+}
+
+export interface EntryDetail extends EntryRunFields {
+  id: string;
+  userId: string;
   audience: Audience;
   caption: string | undefined;
   createdAt: number;
@@ -580,6 +610,26 @@ export interface EntryDetail {
   does (FEED-6, from 128's predicate).
   */
   underReview: boolean;
+  /**
+  A3's effort row (G5): the author's only, like the per-item flags.
+  */
+  effort: RunEffort | undefined;
+}
+
+/**
+The run's effort and, while the watch's rating is what chose it, that
+rating — the two things A3's effort row draws (G5).
+*/
+export interface RunEffort {
+  chosen: Effort | undefined;
+  watchRpe: number | undefined;
+}
+
+function runEffortOf(run: typeof runs.$inferSelect): RunEffort {
+  return {
+    chosen: run.effort ?? undefined,
+    watchRpe: run.effortSource === "watch" ? (run.rpe ?? undefined) : undefined,
+  };
 }
 
 export async function getEntryDetail(
@@ -682,6 +732,7 @@ export async function getEntryDetail(
     durationS: run.durationS,
     startedAt: run.startedAt,
     indoor: run.indoor,
+    deviceName: run.deviceName ?? undefined,
     verdict: entry.verdict ?? undefined,
     audience: entry.audience,
     caption: entry.caption ?? undefined,
@@ -703,6 +754,7 @@ export async function getEntryDetail(
     usefulCount: usefulRows.length,
     conditions: observations.get(run.id),
     underReview: isUnderReviewForAuthor(entry, viewerId),
+    effort: isOwner ? runEffortOf(run) : undefined,
   };
 }
 

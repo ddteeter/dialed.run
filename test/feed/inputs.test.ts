@@ -93,6 +93,29 @@ describe("the coordinate inputs", () => {
   });
 });
 
+describe("submitVerdictInput: the runner's effort (G5)", () => {
+  const valid = {
+    entryId: newUlid(),
+    verdict: 0,
+    audience: "runners",
+    tags: [],
+    itemFlags: [],
+  };
+
+  it("takes an effort only when one was tapped", () => {
+    expect(submitVerdictInput.parse(valid)).not.toHaveProperty("effort");
+    expect(submitVerdictInput.parse({ ...valid, effort: "race" }).effort).toBe(
+      "race",
+    );
+  });
+
+  it("refuses an effort that is not one of the four", () => {
+    expect(
+      submitVerdictInput.safeParse({ ...valid, effort: "tempo" }).success,
+    ).toBe(false);
+  });
+});
+
 describe("submitVerdictInput", () => {
   const valid = {
     entryId: newUlid(),

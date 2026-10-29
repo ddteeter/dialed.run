@@ -39,6 +39,7 @@ function entry(overrides: Partial<Entry> = {}): Entry {
     // Tue Aug 12 2025, 06:30 UTC.
     startedAt: Date.UTC(2025, 7, 12, 6, 30) / 1000,
     indoor: false,
+    deviceName: undefined,
     verdict: undefined,
     audience: "runners",
     caption: undefined,
@@ -49,6 +50,7 @@ function entry(overrides: Partial<Entry> = {}): Entry {
     usefulCount: 0,
     conditions: undefined,
     underReview: false,
+    effort: undefined,
     viewerHasReacted: false,
     ...overrides,
   };
@@ -132,6 +134,22 @@ function partsInOrder(): string[] {
     .map((element) => element.dataset.part ?? "")
     .filter((name) => name !== "verdict-badge");
 }
+
+describe("EntryDetail: Garmin's credit (G1)", () => {
+  it("is the first line under the title on a Garmin run", async () => {
+    await renderFeedScreen(detail({ deviceName: "Garmin" }));
+    const credit = part("garmin-attribution");
+    expect(credit).toHaveTextContent(/^Garmin$/u);
+    expect(credit?.previousElementSibling).toContainElement(
+      document.querySelector("h1"),
+    );
+  });
+
+  it("is not there for any other run", async () => {
+    await renderFeedScreen(detail({}));
+    expect(part("garmin-attribution")).toBeNull();
+  });
+});
 
 describe("EntryDetail: the order, and what a sparse entry leaves out", () => {
   it("is photo pager, strip, note, kit, tags, Useful, Report on a full entry", async () => {

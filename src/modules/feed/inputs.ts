@@ -8,6 +8,7 @@
 import { z } from "zod";
 
 import {
+  effortSchema,
   entryTagSchema,
   itemFlagSchema,
   latitudeSchema,
@@ -81,6 +82,9 @@ export const submitVerdictInput = z.object({
   caption: z.string().max(280).optional(),
   tags: z.array(entryTagSchema).max(entryTagSchema.options.length),
   itemFlags: z.array(itemFlagInput),
+  // Sent only when the runner tapped an effort (G5): the run already holds
+  // the watch's prefill, so a tap is the only change there is to save.
+  effort: effortSchema.optional(),
 });
 
 /**

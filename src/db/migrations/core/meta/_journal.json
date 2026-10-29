@@ -502,15 +502,22 @@
     {
       "idx": 71,
       "version": "6",
-      "when": 1793158129331,
-      "tag": "0071_add_public_profile_and_shared_indexes",
+      "when": 1793188756202,
+      "tag": "0071_add_garmin_import_columns",
       "breakpoints": true
     },
     {
       "idx": 72,
       "version": "6",
-      "when": 1793244628353,
-      "tag": "0072_add_public_photos",
+      "when": 1793277076761,
+      "tag": "0072_add_public_profile_and_shared_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "6",
+      "when": 1793277077303,
+      "tag": "0073_add_public_photos",
       "breakpoints": true
     }
   ]

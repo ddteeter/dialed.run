@@ -8,7 +8,13 @@ import type { Units } from "../../../lib/contracts";
 // route hands in is checked against the real component.
 import type { NoticeBand as NoticeBandShape } from "../../safety";
 import { formatDistance, formatPace } from "../../../lib/contracts/measures";
-import { FormStatus, Icon, Mono, WeatherAttribution } from "../../../ui";
+import {
+  FormStatus,
+  GarminAttribution,
+  Icon,
+  Mono,
+  WeatherAttribution,
+} from "../../../ui";
 import { tagLabel } from "../chips";
 import type { EntryTag } from "../chips";
 import type { entryDetailForViewer } from "../entries";
@@ -133,6 +139,7 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
           {isOwn ? "Your run" : <Handle username={entry.authorUsername} />}
         </h1>
       </div>
+      <GarminAttribution deviceName={entry.deviceName} />
 
       {/* The author's own entry under review: the band at the top, and
           no tag here (round 28 #6). Nobody else ever reaches it. */}

@@ -62,6 +62,7 @@ export {
   usePhotoPick,
 } from "./use-photo-pick";
 export { useListMotion } from "./use-list-motion";
+export { GarminAttribution } from "./GarminAttribution";
 export { WeatherAttribution } from "./WeatherAttribution";
 export { verdictHue } from "./verdict-hue";
 export { Wordmark } from "./Wordmark";
