@@ -256,12 +256,15 @@ describe("the Desk, reports and requests", () => {
   });
 
   it("names nothing for a profile or a product, and nothing for a photo that is gone", async () => {
-    expect(
-      await subjectCacheTagsOf(core(), "profile", newUlid()),
-    ).toStrictEqual([]);
-    expect(
-      await subjectCacheTagsOf(core(), "product", newUlid()),
-    ).toStrictEqual([]);
+    // An id a photo also has, so only the subject's type can say "none".
+    const { userId, entryId } = await kit();
+    const sharedId = await photoOn(userId, entryId);
+    expect(await subjectCacheTagsOf(core(), "profile", sharedId)).toStrictEqual(
+      [],
+    );
+    expect(await subjectCacheTagsOf(core(), "product", sharedId)).toStrictEqual(
+      [],
+    );
     expect(await subjectCacheTagsOf(core(), "photo", newUlid())).toStrictEqual(
       [],
     );

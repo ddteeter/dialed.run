@@ -36,7 +36,6 @@
 import {
   and,
   asc,
-  between,
   eq,
   inArray,
   isNotNull,
@@ -50,7 +49,7 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { entryPhotos, outfitEntries, publicPhotos } from "../../db/schema-core";
 import { env, primaryCoreDb, waitUntil } from "../../env";
 import type { TaggedScope } from "../../lib/cache-tags";
-import { chunked, IN_LIST_CHUNK } from "../../lib/chunked";
+import { chunked, IN_LIST_CHUNK, readInChunks } from "../../lib/chunked";
 import { nowSeconds } from "../../lib/now";
 import {
   newPublicPhotoKey,
@@ -108,11 +107,11 @@ function noLongerPublic(): SQL {
 
 /**
  * One reconcile's reach: the copies it may delete and the kits whose
- * photos it may copy. `undefined` is everything (the sweep).
+ * photos it may copy. Absent is everything (the sweep's `{}`).
  */
 interface Reach {
-  readonly copies: SQL | undefined;
-  readonly kits: SQL | undefined;
+  readonly copies?: SQL;
+  readonly kits?: SQL;
 }
 
 /**
@@ -317,43 +316,45 @@ export interface SweepFound {
 export async function sweepPublicPhotos(
   deps: PublicPhotoDeps,
 ): Promise<SweepFound> {
-  const stale = await reconcile(deps, { copies: undefined, kits: undefined });
+  const stale = await reconcile(deps, {});
   return { stale, unnamed: await deleteUnnamed(deps) };
 }
 
-async function deleteUnnamed(deps: PublicPhotoDeps): Promise<number> {
-  let unnamed = 0;
-  let cursor: string | undefined;
-  do {
-    const page = await deps.bucket.list(cursor === undefined ? {} : { cursor });
-    unnamed += await deleteUnnamedOf(
-      deps,
-      page.objects.map((object) => object.key),
-    );
-    cursor = page.truncated ? page.cursor : undefined;
-  } while (cursor !== undefined);
-  return unnamed;
+/**
+ * Every page of the bucket's listing from `options`' cursor on, each
+ * page's unnamed objects deleted. Returns how many went.
+ */
+async function deleteUnnamed(
+  deps: PublicPhotoDeps,
+  options: R2ListOptions = {},
+): Promise<number> {
+  const page = await deps.bucket.list(options);
+  const unnamed = await deleteUnnamedOf(
+    deps,
+    page.objects.map((object) => object.key),
+  );
+  return page.truncated
+    ? unnamed + (await deleteUnnamed(deps, { cursor: page.cursor }))
+    : unnamed;
 }
 
 /**
- * One listing page's keys, in the bucket's order: the rows between its
- * first and last key are read in one query, whatever the page's size,
- * and every key no row names is deleted.
+ * One listing page's keys: the rows naming them are read an `IN` list at
+ * a time, and every key no row names is deleted in one call.
  */
 async function deleteUnnamedOf(
   deps: PublicPhotoDeps,
   keys: readonly string[],
 ): Promise<number> {
-  const [first] = keys;
-  const last = keys.at(-1);
-  if (first === undefined || last === undefined) return 0;
-  const rows = await deps.db
-    .select({ key: publicPhotos.key })
-    .from(publicPhotos)
-    .where(between(publicPhotos.key, first, last));
+  const rows = await readInChunks(keys, (chunk) =>
+    deps.db
+      .select({ key: publicPhotos.key })
+      .from(publicPhotos)
+      .where(inArray(publicPhotos.key, chunk)),
+  );
   const named = new Set(rows.map((row) => row.key));
   const unnamed = keys.filter((key) => !named.has(key));
-  if (unnamed.length > 0) await deps.bucket.delete(unnamed);
+  await deps.bucket.delete(unnamed);
   return unnamed.length;
 }
 
@@ -369,14 +370,18 @@ export function publicPhotosOrigin(
 }
 
 /**
-The Worker's own: the primary, the two buckets, the switch, Sentry.
-*/
-export function workerPublicPhotos(): PublicPhotoDeps {
+ * The Worker's own: the primary, the two buckets, the switch, Sentry.
+ * `configured` is the switch's value, the Worker's unless a test names
+ * another.
+ */
+export function workerPublicPhotos(
+  configured: string | undefined = env.PUBLIC_PHOTOS_ORIGIN,
+): PublicPhotoDeps {
   return {
     db: primaryCoreDb(),
     media: env.MEDIA,
     bucket: env.PUBLIC_PHOTOS,
-    isPublishing: publicPhotosOrigin(env.PUBLIC_PHOTOS_ORIGIN) !== undefined,
+    isPublishing: publicPhotosOrigin(configured) !== undefined,
     newKey: newPublicPhotoKey,
     report: captureException,
   };

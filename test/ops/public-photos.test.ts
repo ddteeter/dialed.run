@@ -284,8 +284,10 @@ describe("copying", () => {
   it("reaches only the kits and runners named", async () => {
     const named = await kit();
     const other = await kit();
+    const untouched = await kit();
     await photoOn(named);
     await photoOn(other);
+    await photoOn(untouched);
 
     await syncPublicPhotos(deps(), only(named.entryId));
 
@@ -296,6 +298,27 @@ describe("copying", () => {
     expect(new Set(await copiedEntries())).toStrictEqual(
       new Set([named.entryId, other.entryId]),
     );
+  });
+
+  it("deletes only the named runner's stale copies", async () => {
+    const named = await kit();
+    const other = await kit();
+    await photoOn(named);
+    await photoOn(other);
+    await syncPublicPhotos(deps(), {
+      entryIds: [named.entryId, other.entryId],
+      runnerIds: [],
+    });
+    await core().delete(entryPhotos);
+
+    expect(
+      await syncPublicPhotos(deps(), {
+        entryIds: [],
+        runnerIds: [named.userId],
+      }),
+    ).toBe(1);
+
+    expect(await copiedEntries()).toStrictEqual([other.entryId]);
   });
 
   it("reaches a kit past the first IN list", async () => {
@@ -545,13 +568,16 @@ describe("the sweep", () => {
   });
 
   it("deletes every object no row names, a page at a time", async () => {
+    // Named copies fill the first page, so only following the cursor
+    // reaches the orphans after them.
     const owner = await kit();
-    await photoOn(owner);
+    await photoOn(owner, "pass", 0);
+    await photoOn(owner, "pass", 1);
     await syncPublicPhotos(
-      deps({ newKey: keys("b-named") }),
+      deps({ newKey: keys("a-named", "b-named") }),
       only(owner.entryId),
     );
-    for (const key of ["a-orphan", "c-orphan", "d-orphan"]) {
+    for (const key of ["c-orphan", "d-orphan", "e-orphan"]) {
       await env.PUBLIC_PHOTOS.put(key, BYTES);
     }
     const bucket: PublicPhotoDeps["bucket"] = {
@@ -564,7 +590,7 @@ describe("the sweep", () => {
       stale: 0,
       unnamed: 3,
     });
-    expect(await bucketKeys()).toStrictEqual(["b-named"]);
+    expect(await bucketKeys()).toStrictEqual(["a-named", "b-named"]);
   });
 
   it("finds nothing in an empty bucket", async () => {
@@ -661,6 +687,8 @@ describe("the switch and the Worker's wiring", () => {
     expect(wired.isPublishing).toBe(true);
     expect(wired.newKey).toBe(newPublicPhotoKey);
     expect(wired.report).toBe(captureException);
+    // The switch off: still wired to delete, copying nothing.
+    expect(workerPublicPhotos("").isPublishing).toBe(false);
   });
 
   it("syncs a scope in the background, and nothing for an empty one", async () => {
@@ -680,9 +708,14 @@ describe("the switch and the Worker's wiring", () => {
       deps,
     );
     syncPublicPhotosLater(only(newUlid()), keepAlive, deps);
+    syncPublicPhotosLater(
+      { entryIds: [newUlid()], runnerIds: [newUlid()] },
+      keepAlive,
+      deps,
+    );
     await Promise.all(kept);
 
-    expect(kept).toHaveLength(2);
+    expect(kept).toHaveLength(3);
     expect(await copies()).toHaveLength(1);
   });
 
