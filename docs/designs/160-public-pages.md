@@ -84,7 +84,8 @@ delete and purge on retraction.
 
 - worker: `worldVisibleEntry` excludes every non-world audience and every
   moderation, ban and leaving state; the stranger rule admits world.
-- worker: each retraction path emits the entry's and runner's tags.
+- worker: each retraction path emits the entry's and runner's tags
+  (`test/safety/edge-purges.test.ts`).
 - worker: public loaders' output never contains start time, coordinates,
   flags or notes (schema-level pick, tested against a fully populated row).
 - architecture: signed-out loaders import only `worldVisibleEntry`.
@@ -96,13 +97,98 @@ delete and purge on retraction.
 
 ## Open questions
 
-- Workers Caching is new: check plan availability and whether a cache hit
-  skips the Worker (the cost saving) before phase 2. If it is unavailable,
-  ship uncached and measure; the Cache API is per data centre and purges
-  only locally, so it is not a substitute.
-- Purges are rate-limited (Workers Caching uses the Free tier's limits). A
-  burst of retractions (a ban across many kits) sends one purge with the
-  runner's tag, not one per kit; the TTL covers any purge that is refused.
+- **Workers Caching, checked 2026-10-28** (Cloudflare's Workers Cache
+  docs; wrangler 4.151's config schema; workerd 1.20261012 under vitest).
+  Turned on in `wrangler.jsonc` (`"cache": { "enabled": true }`, owner,
+  2026-10-28). Verified from the docs: a hit is served from the edge
+  without running the Worker (no CPU billed; the request still is); there
+  is no separate price; the key is the path and query string (`?all=true`
+  is its own entry), not the host and not `Cookie`; `Set-Cookie` on a
+  response and `Authorization` on a request bypass it; it is partitioned
+  by Worker version unless `cross_version_cache` is set (it is not, so a
+  deploy starts cold); a purge reaches only the entrypoint that calls it
+  (ours all run in the default export) and propagates globally like a
+  zone purge; zone purges never reach it. **Not verified**: plan
+  availability (the docs name no plan; deploy will say), and whether the
+  scheduled and queue handlers count as the same entrypoint as `fetch`
+  for a purge (the docs imply it and do not say so; the account deletion
+  purge and the report sweep purge from there). Locally there is no
+  `purge`: workerd exports `cache` without one, even with `cache.enabled`
+  in the test pool's config, so the purge degrades to nothing there.
+- **Purges are rate-limited at the Free tier's limits whatever the plan:
+  5 calls a minute, a bucket of 25, 100 operations a call.** So one call
+  per retraction carrying all its tags, a ban or a leaving names the
+  runner and not each kit, and a refused purge is reported and left to
+  the TTL. Every writer below can be driven by a signed-in runner (an
+  audience toggle, a profile switch), so a runner could spend the bucket;
+  the TTL is still the guarantee, and a refusal in Sentry is how we would
+  see it happening.
+- **Heuristic freshness**: with caching on, Cloudflare applies RFC 9111
+  heuristic freshness to a response that has no `Cache-Control`, and
+  `Cookie` is not in the key. Every Worker response that is not public
+  today leaves with no `Cache-Control` at all, so a signed-in page could
+  in principle be stored and served to someone else. Before the cache
+  config deploys, every response that is not public must carry
+  `Cache-Control: private` (the response pipeline, `secure-response.ts`
+  / `security-headers.ts`, owned by another lane at the time of writing).
+
+## Deviations (purge)
+
+- **The tags moved to `lib/cache-tags.ts`**, with `PurgeTags`: the writers
+  that take a page back live in `safety` and `onboarding` too, which `ops`
+  imports, so they could not import the tags from `ops`. Those writers take
+  the purge as a parameter, wired by their server functions and the cron
+  (`ops/edge-purge.ts`'s `purgePublicPages`); `feed` and `account` default
+  to it.
+- **Why the runner's tag is enough for a retraction, and the entry's still
+  rides along.** A public `/k` page carries `entry:` and `runner:`, the
+  public profile `handle:` and `runner:`, and every not-public page only
+  its path's tag. A retraction turns a public page into the not-public one,
+  so purging `runner:` alone would clear it; `entry:` is named as well
+  because it costs nothing in the same call and also clears a not-public
+  page cached at a kit's path when the kit becomes public.
+- **The card leaves with the page's minute, not a day.** The card is still
+  rendered once a day per version (the Cache API, behind the Worker), but
+  its response said `max-age=86400`, and Workers Caching keeps that in
+  front of the Worker: a retracted kit's card would have stayed up a day
+  whenever its purge was refused. It now says 60 seconds like the page.
+
+What purges, and with which tags (one call each):
+
+| Path                                                                             | Tags                              | Where                                  |
+| -------------------------------------------------------------------------------- | --------------------------------- | -------------------------------------- |
+| Verdict save that changes or keeps PUBLIC (to, from, or an edit of a PUBLIC kit) | `entry:<id>`, `runner:<owner>`    | `feed/entries.ts` `submitVerdict`      |
+| A runner deletes a kit, or the run it is on                                      | `entry:<id>`, `runner:<owner>`    | `feed/retract.ts`                      |
+| Account deletion's purge (all runs and kits)                                     | `runner:<owner>`                  | `feed/retract.ts` `deleteRuns("all")`  |
+| The Desk removes, quarantines or holds (copyright) a kit                         | `entry:<id>`, `runner:<owner>`    | `feed/moderation.ts` `moderateContent` |
+| A report hides a kit (at once, at the threshold, or by the sweep)                | `entry:<id>`, `runner:<owner>`    | `safety/reports.ts`                    |
+| A removal request holds a kit (filed or confirmed)                               | `entry:<id>`, `runner:<owner>`    | `safety/takedown-requests.ts`          |
+| Ban                                                                              | `runner:<id>`                     | `safety/bans.ts` `banUser`             |
+| Leaving (deletion scheduled)                                                     | `runner:<id>`                     | `account/deletion.ts`                  |
+| Handle claimed or changed by the runner, or renamed by the Desk                  | `runner:<id>`, `handle:<new>`     | `account/username.ts`                  |
+| Public profile or Show my closet switched, either way                            | `runner:<id>`, `handle:<current>` | `onboarding/public-profile.ts`         |
+
+Left to the TTL, on purpose:
+
+- **Publications other than the two switches above**: unban, Keep my
+  account, a review's Approve, a copyright hold restored, a request given
+  back, a first-time email confirmation, a new kit saved PUBLIC (no page
+  could be cached at a path nobody had). The not-public page gives way
+  within a minute; nothing private is shown meanwhile, and each would
+  spend a purge from the bucket the retractions need.
+- **The old handle on a handle change.** Its path's public page carries
+  `runner:`, which is purged; its not-public page is the same bytes before
+  and after.
+- **Photos**: no photo is on the open web until world photos (step 8,
+  D-151), so a photo's removal, hold or hide purges nothing. Step 8 adds
+  the photo's own purge.
+- **Content edits that are not a retraction**: a run's distance or time,
+  weather attaching, a garment renamed or retired, a product renamed, a
+  domain denied, units or zone changed. What changes is not something the
+  runner took back.
+- **The copyright hold's 30-day purge and the litigation hold's delete**:
+  the kit has been hidden since the hold, so its page is already the
+  not-public one.
 
 ## Deviations (step 6)
 

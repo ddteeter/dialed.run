@@ -11,9 +11,11 @@ same backend shape).
 
 ```mermaid
 flowchart LR
-    U[Runner / Browser] -->|HTTPS, SSR + hydration| W
+    U[Runner / Browser] -->|HTTPS, SSR + hydration| EC
+    EC -->|miss, or anything not public| W
 
     subgraph CF[Cloudflare - Workers Paid plan]
+        EC{{Workers Caching\npublic pages only, 60 s,\nby Cache-Tag}}
         W[TanStack Start Worker\nSSR + server functions + API routes]
         D1[(D1: dialed-core)]
         D1W[(D1: dialed-weather)]
@@ -34,6 +36,7 @@ flowchart LR
     W -->|produce| QX
     QX -->|consume| W
     CRON --> W
+    W -->|purge by tag on retraction| EC
 
     W -->|product page fetch\nbounded, https-only| SHOP[Brand product pages\nShopify JSON / JSON-LD / OG]
     W -->|same fetch, when the shop\nrefuses a Worker: 11 of 14 do| PROXY[Firecrawl scrape API\nresidential egress, 1 credit/page]
