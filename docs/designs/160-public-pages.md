@@ -244,6 +244,10 @@ Left to the TTL, on purpose:
   included: it is what the closet says, and what "Show my closet"
   promises. The owner confirmed it on 2026-10-28: a figure without the
   private runs says nothing about the shoe.
+- **Round 42 #91 confirmed the page as built**, with two rules now held
+  by tests: a closet shown with every group empty has no Rotation and no
+  rail, as the closet off has; and shoe mileage is set in MONO caps
+  ("412 MI"), which the MONO.xs step's own `uppercase` does.
 - **"Show {N} more" is `?all=true`, and lists at most 100**: a bound on
   one view's read; the count still says how many there are.
 - **Cache tags**: the profile is tagged `handle:<handle>` (normalized,

@@ -43,14 +43,30 @@ export function PublicProfilePage({
       handle={profile.handle}
       headingClassName="m-0 font-display text-display"
       rail={
-        profile.rotation === undefined ? undefined : (
+        isRotationShown(profile.rotation) ? (
           <Rotation rotation={profile.rotation} />
-        )
+        ) : undefined
       }
       closing={(isSignedIn) => (isSignedIn ? undefined : <Invite />)}
     >
       {() => <Kits profile={profile} />}
     </RunnerFrame>
+  );
+}
+
+/**
+ * Whether the page has a Rotation: the closet is shown and at least one
+ * group has something in it. All empty is no Rotation, as the closet off
+ * is (round 42 #91), with no gap where it would be.
+ */
+function isRotationShown(
+  rotation: PublicProfile["rotation"],
+): rotation is NonNullable<PublicProfile["rotation"]> {
+  return (
+    rotation !== undefined &&
+    [rotation.inUse, rotation.shoes, rotation.retired].some(
+      (group) => group.length > 0,
+    )
   );
 }
 
@@ -143,7 +159,8 @@ function KitRow({ row }: Readonly<{ row: PublicKitRow }>) {
 /**
  * The rotation, read-only: IN USE, SHOES and RETIRED, each with its count,
  * a group with nothing in it left out. Only what the closet says about a
- * piece — name and type, or mileage for shoes.
+ * piece — name and type, or mileage for shoes, in MONO caps ("412 MI",
+ * round 42 #91) like every mono value on the page.
  */
 function Rotation({
   rotation,

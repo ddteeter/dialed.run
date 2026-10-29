@@ -271,6 +271,12 @@ describe("the public profile, signed out", () => {
     ).toBeVisible();
     const pegasus = rotation.getByText("Pegasus 41").closest("li");
     expect(pegasus).toHaveTextContent(/^Pegasus 41412 mi$/u);
+    // Mileage in MONO caps, "412 MI" (round 42 #91).
+    expect(rotation.getByText("412 mi")).toHaveClass(
+      "font-mono",
+      "text-mono-xs",
+      "uppercase",
+    );
     expect(pegasus).toHaveClass("text-ink");
     expect(pegasus).not.toHaveClass("line-through");
     expect(rotation.getByText("Tights")).toHaveClass("text-mono-xs");
@@ -304,6 +310,33 @@ describe("the public profile, signed out", () => {
       screen.queryByRole("heading", { name: /^Retired/u }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Shoes · 1" })).toBeVisible();
+  });
+
+  it("has no Rotation, and no gap, when every group is empty (round 42 #91)", async () => {
+    await show(
+      profilePage({
+        ...PROFILE,
+        rotation: { inUse: [], shoes: [], retired: [] },
+      }),
+    );
+
+    expect(
+      screen.queryByRole("heading", { name: "Rotation" }),
+    ).not.toBeInTheDocument();
+    expect(part("rail")).toBeNull();
+    expect(screen.getByRole("main")).not.toHaveClass("desk:grid");
+  });
+
+  it("keeps the Rotation while any one group has a piece", async () => {
+    for (const rotation of [
+      { inUse: ROTATION.inUse, shoes: [], retired: [] },
+      { inUse: [], shoes: ROTATION.shoes, retired: [] },
+      { inUse: [], shoes: [], retired: ROTATION.retired },
+    ]) {
+      const { unmount } = await show(profilePage({ ...PROFILE, rotation }));
+      expect(screen.getByRole("heading", { name: "Rotation" })).toBeVisible();
+      unmount();
+    }
   });
 
   it("sits in DS1's columns at the desk while it has a rail, bar and foot on the same measure", async () => {
