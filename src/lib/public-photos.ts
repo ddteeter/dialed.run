@@ -47,3 +47,21 @@ The URL a copy is served at.
 export function publicPhotoUrl(origin: string, key: string): string {
   return `${origin}/${key}`;
 }
+
+/**
+ * The key a link names, when it is one of the bucket's own URLs (a removal
+ * request may paste one, design 160): on `PUBLIC_PHOTOS_ORIGIN` exactly,
+ * its path one key of `newPublicPhotoKey`'s shape and nothing else. Any
+ * other host, path or text is no key.
+ */
+export function publicPhotoKeyOf(location: string): string | undefined {
+  if (!URL.canParse(location)) return undefined;
+  const url = new URL(location);
+  if (url.origin !== PUBLIC_PHOTOS_ORIGIN) return undefined;
+  return KEY_PATH.exec(url.pathname)?.[1];
+}
+
+/**
+A copy's path: one key, 32 lowercase hex characters.
+*/
+const KEY_PATH = new RegExp(`^/([0-9a-f]{${String(KEY_BYTES * 2)}})$`, "u");

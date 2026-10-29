@@ -1,13 +1,27 @@
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
-import { entryPhotos, publicPhotos } from "../../src/db/schema-core";
+import {
+  entryPhotos,
+  moderationActions,
+  outbox,
+  publicPhotos,
+  takedownBlocks,
+  takedownRequests,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { scopeOfTags, type PurgeTags } from "../../src/lib/cache-tags";
 import { entryPhotoKeyFor } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
-import { newPublicPhotoKey } from "../../src/lib/public-photos";
+import { readOutboxRow } from "../../src/lib/sql/outbox";
+import {
+  newPublicPhotoKey,
+  PUBLIC_PHOTOS_ORIGIN,
+  publicPhotoUrl,
+} from "../../src/lib/public-photos";
 import { requestAccountDeletion } from "../../src/modules/account/deletion";
 import {
   deleteEntryPhoto,
@@ -17,15 +31,20 @@ import {
 } from "../../src/modules/feed";
 import { submitVerdict } from "../../src/modules/feed/entries";
 import { moderateContent } from "../../src/modules/feed/moderation";
+import { decideRemovalRequest } from "../../src/modules/feed/removal-requests";
 import {
   syncPublicPhotos,
   type PublicPhotoDeps,
 } from "../../src/modules/ops/public-photos";
 import {
   banUser,
+  blockAndDeclineAll,
+  confirmTakedownRequest,
   fileReport,
   fileTakedownRequest,
+  pendingTakedownRequests,
 } from "../../src/modules/safety";
+import { noPurge } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";
 
 import {
@@ -90,17 +109,18 @@ async function copied(): Promise<Copied> {
   await env.MEDIA.put(photoKey, new Uint8Array([0xff, 0xd8, 0xff]), {
     httpMetadata: { contentType: "image/jpeg" },
   });
-  await core()
-    .insert(entryPhotos)
-    .values({
-      id: photoId,
-      entryId,
-      photoKey,
-      position: 0,
-      screenStatus: "pass",
-    });
+  await core().insert(entryPhotos).values({
+    id: photoId,
+    entryId,
+    photoKey,
+    position: 0,
+    screenStatus: "pass",
+  });
   await syncPublicPhotos(deps(), { entryIds: [entryId], runnerIds: [] });
-  const [copy] = await core().select().from(publicPhotos);
+  const [copy] = await core()
+    .select()
+    .from(publicPhotos)
+    .where(eq(publicPhotos.photoId, photoId));
   const key = copy?.key ?? "";
   expect(await env.PUBLIC_PHOTOS.head(key)).not.toBeNull();
   return { userId, runId, entryId, photoId, key };
@@ -135,11 +155,15 @@ function desk(
   );
 }
 
-function requestRemoval(location: string, purge: PurgeTags) {
+function requestRemoval(
+  location: string,
+  purge: PurgeTags,
+  email = `${newUlid().toLowerCase()}@example.com`,
+) {
   return fileTakedownRequest(
     core(),
     {
-      email: `${newUlid().toLowerCase()}@example.com`,
+      email,
       signature: "Sam Runner",
       location,
       description: "",
@@ -171,6 +195,8 @@ function reportFor(
 
 beforeEach(async () => {
   await resetSafetyTables();
+  await core().delete(takedownRequests);
+  await core().delete(takedownBlocks);
   const listed = await env.PUBLIC_PHOTOS.list();
   const keys = listed.objects.map((object) => object.key);
   if (keys.length > 0) await env.PUBLIC_PHOTOS.delete(keys);
@@ -206,6 +232,11 @@ describe("a takedown deletes the public copy and purges the page", () => {
       "a removal request holds the kit by its public link",
       (copy, purge) =>
         requestRemoval(`https://dialed.run/k/${copy.entryId}`, purge),
+    ],
+    [
+      "a removal request holds the photo by its public copy's URL",
+      (copy, purge) =>
+        requestRemoval(publicPhotoUrl(PUBLIC_PHOTOS_ORIGIN, copy.key), purge),
     ],
     [
       "a removal request holds the photo",
@@ -324,5 +355,168 @@ describe("every other retraction deletes the public copy", () => {
 
     await expectWithdrawn(copy);
     expect(wired.calls).toStrictEqual([[`runner:${copy.userId}`]]);
+  });
+});
+
+const receipt = z.object({ confirmToken: z.string() }).loose();
+
+/**
+The confirm link's token, from the receipt the request owed its requester.
+*/
+async function confirmTokenFor(requestId: string): Promise<string> {
+  const rows = await core()
+    .select({ payload: outbox.payload })
+    .from(outbox)
+    .where(eq(outbox.dedupeKey, `removal_request_received:${requestId}`));
+  const read = readOutboxRow("email", rows[0]?.payload ?? "");
+  if (!read.ok) throw new Error(read.problem);
+  const owed = z
+    .object({ email: z.object({ template: receipt }) })
+    .loose()
+    .parse(read.message.payload);
+  return owed.email.template.confirmToken;
+}
+
+async function photoStatus(photoId: string) {
+  const [row] = await core()
+    .select({ status: entryPhotos.screenStatus })
+    .from(entryPhotos)
+    .where(eq(entryPhotos.id, photoId));
+  return row?.status;
+}
+
+async function requestFor(location: string) {
+  const [row] = await core()
+    .select()
+    .from(takedownRequests)
+    .where(eq(takedownRequests.location, location));
+  if (row === undefined) throw new Error("no request filed");
+  return row;
+}
+
+/**
+A request filed with the photo's public copy's URL, settled: the copy is gone.
+*/
+async function filedByCopyUrl() {
+  const copy = await copied();
+  const wired = wiredPurge();
+  const location = publicPhotoUrl(PUBLIC_PHOTOS_ORIGIN, copy.key);
+  await requestRemoval(location, wired.purge);
+  await wired.settled();
+  await expectWithdrawn(copy);
+  return { copy, request: await requestFor(location) };
+}
+
+describe("a removal request naming a public copy's URL", () => {
+  it.each([
+    [
+      "a key no copy has",
+      () => publicPhotoUrl(PUBLIC_PHOTOS_ORIGIN, newPublicPhotoKey()),
+    ],
+    ["another host", (key: string) => `https://dialed.run/${key}`],
+  ])("names nothing for %s", async (_label, linkTo) => {
+    const copy = await copied();
+    const wired = wiredPurge();
+    const location = linkTo(copy.key);
+
+    await requestRemoval(location, wired.purge);
+    await wired.settled();
+
+    const filed = await requestFor(location);
+    expect(filed.subjectType).toBeNull();
+    expect(filed.subjectId).toBeNull();
+    expect(filed.heldAt).toBeNull();
+    expect(await photoStatus(copy.photoId)).toBe("pass");
+    expect(await env.PUBLIC_PHOTOS.head(copy.key)).not.toBeNull();
+    expect(wired.calls).toStrictEqual([]);
+  });
+
+  it("records the photo, which Review shows with its kit once the copy is gone", async () => {
+    const { copy, request } = await filedByCopyUrl();
+
+    expect(request).toMatchObject({
+      subjectType: "photo",
+      subjectId: copy.photoId,
+      holdState: "held",
+    });
+    expect(await photoStatus(copy.photoId)).toBe("hidden_pending_review");
+    const [listed] = await pendingTakedownRequests(core());
+    expect(listed?.subject).toStrictEqual({
+      subjectType: "photo",
+      subjectId: copy.photoId,
+      entryId: copy.entryId,
+    });
+  });
+
+  it("is taken down by the operator's Remove", async () => {
+    const { copy, request } = await filedByCopyUrl();
+
+    await decideRemovalRequest(core(), "op-one", request.id, {
+      outcome: "removed",
+    });
+
+    const [action] = await core()
+      .select()
+      .from(moderationActions)
+      .where(eq(moderationActions.subjectId, copy.photoId));
+    expect(action).toMatchObject({ action: "takedown", subjectType: "photo" });
+  });
+
+  it("is given back by a Decline, and by block-and-decline", async () => {
+    const declined = await filedByCopyUrl();
+    const blocked = await filedByCopyUrl();
+
+    await decideRemovalRequest(core(), "op-one", declined.request.id, {
+      outcome: "declined",
+      reason: "it is a photo of shoes",
+    });
+    await blockAndDeclineAll(core(), "op-one", blocked.request.id);
+
+    expect(await photoStatus(declined.copy.photoId)).toBe("pending");
+    expect(await photoStatus(blocked.copy.photoId)).toBe("pending");
+  });
+
+  it("names nothing once its photo is gone, and the pending list still reads", async () => {
+    const { copy } = await filedByCopyUrl();
+    await core().delete(entryPhotos).where(eq(entryPhotos.id, copy.photoId));
+
+    const [listed] = await pendingTakedownRequests(core());
+    expect(listed?.subject).toBeUndefined();
+  });
+
+  it("holds the photo at the confirm, for a request past the cap", async () => {
+    const email = "me@example.com";
+    for (let sent = 0; sent < 2; sent += 1) {
+      const other = await copied();
+      await requestRemoval(
+        `https://dialed.run/k/${other.entryId}`,
+        noPurge,
+        email,
+      );
+    }
+    const copy = await copied();
+    const location = publicPhotoUrl(PUBLIC_PHOTOS_ORIGIN, copy.key);
+    await requestRemoval(location, noPurge, email);
+    const request = await requestFor(location);
+    expect(request).toMatchObject({
+      holdState: "confirm",
+      subjectType: "photo",
+      subjectId: copy.photoId,
+    });
+    expect(await photoStatus(copy.photoId)).toBe("pass");
+    const wired = wiredPurge();
+
+    expect(
+      await confirmTakedownRequest(core(), await confirmTokenFor(request.id), {
+        owe: oweInCore,
+        purge: wired.purge,
+      }),
+    ).toBe("confirmed");
+    expect(await requestFor(location)).toMatchObject({ holdState: "held" });
+    await wired.settled();
+
+    expect(await photoStatus(copy.photoId)).toBe("hidden_pending_review");
+    expect(await env.PUBLIC_PHOTOS.head(copy.key)).toBeNull();
+    expect(wired.calls).toStrictEqual([kitTags(copy)]);
   });
 });

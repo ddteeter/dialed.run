@@ -34,10 +34,9 @@ import {
   takedownBlocks,
   takedownRequests,
 } from "../../db/schema-core";
-import {
-  takedownSubjectOf,
-  type TakedownRequestValues,
-  type TakedownSubject,
+import type {
+  TakedownRequestValues,
+  TakedownSubject,
 } from "../../lib/contracts/takedown";
 import type { PurgeTags } from "../../lib/cache-tags";
 import { newUlid } from "../../lib/ids";
@@ -50,6 +49,11 @@ import { subjectCacheTagsOf } from "./kit-cache-tags";
 import { hiddenNotice } from "./notices";
 import { otherPhotosOf, type OtherPhotos } from "./other-photos";
 import { photoMatchesOf, type PhotoMatches } from "./photo-matches";
+import {
+  filedSubjectOf,
+  requestSubjectOf,
+  requestSubjectsOf,
+} from "./request-subject";
 import type { OweEmail } from "./reports";
 import { ipKey, requesterKey } from "./requester-key";
 import type { HoldState } from "./takedown-limits";
@@ -132,7 +136,7 @@ export async function fileTakedownRequest<Attempt>(
   if (until !== undefined) return { status: "limited", until };
   const id = newUlid();
   const dueAt = now + REMOVAL_DUE_SECONDS;
-  const subject = takedownSubjectOf(input.location);
+  const subject = await filedSubjectOf(db, input.location);
   const keys = {
     requesterKey: requesterKey(email),
     ipKey: await ipKey(input.remoteIp, deps.secret),
@@ -465,7 +469,7 @@ export async function confirmTakedownRequest(
   if (request === undefined) return "not_found";
   if (request.status !== "pending") return "decided";
   if (request.confirmedAt !== null) return "confirmed";
-  const subject = takedownSubjectOf(request.location);
+  const subject = await requestSubjectOf(db, request);
   const isShut = await isValveShut(db, now);
   const isHeld = !isShut && subject !== undefined;
   const told = isHeld ? await holdNotice(db, subject) : [];
@@ -495,7 +499,8 @@ export async function confirmTakedownRequest(
 /**
  * One pending request as Review shows it: what was asked, by whom, and
  * how long is left. `subject` is what the link points at when it is ours,
- * read again from `location` so Review can link the photo by its key.
+ * read again from `location` so Review can link the photo by its key (or
+ * the photo filing recorded, for a public copy's URL: `./request-subject`).
  */
 export interface PendingTakedownRequest {
   readonly id: string;
@@ -551,10 +556,8 @@ export async function pendingTakedownRequests(
   // one whose other requests show once these are decided.
   const keyOf = (row: (typeof rows)[number]) =>
     row.requesterKey ?? requesterKey(row.requesterEmail);
-  const listed = rows.map((row) => ({
-    row,
-    subject: takedownSubjectOf(row.location),
-  }));
+  const subjects = await requestSubjectsOf(db, rows);
+  const listed = rows.map((row, index) => ({ row, subject: subjects[index] }));
   const others = await otherPhotosOf(
     db,
     listed.flatMap(({ subject }) => subject ?? []),
@@ -644,8 +647,9 @@ export async function blockAndDeclineAll(
         ),
       ),
   );
-  const giveBacks = pending.flatMap((row) => {
-    const subject = takedownSubjectOf(row.location);
+  const subjects = await requestSubjectsOf(db, pending);
+  const giveBacks = pending.flatMap((row, index) => {
+    const subject = subjects[index];
     return subject === undefined
       ? []
       : releaseHoldWrites(db, { id: row.id, declinedAt: now }, subject);

@@ -427,19 +427,61 @@ export async function publishedPhotoUrls(
   entryId: string,
   configured: string | undefined = env.PUBLIC_PHOTOS_ORIGIN,
 ): Promise<string[]> {
+  const copies = await landedCopies(db, [entryId], configured);
+  return copies.map((copy) => copy.url);
+}
+
+/**
+ * The profile's kit rows (`/@handle`, round 41 #86d): each kit's first
+ * landed copy, by the page's own read, keyed by the kit. A kit with none
+ * is absent, and every kit is when the switch is off. The kits were read
+ * through `worldVisibleEntry()` by the caller.
+ */
+export async function firstPublishedPhotos(
+  db: Db,
+  entryIds: readonly string[],
+  configured: string | undefined = env.PUBLIC_PHOTOS_ORIGIN,
+): Promise<Map<string, string>> {
+  const copies = await landedCopies(db, entryIds, configured);
+  const first = new Map<string, string>();
+  for (const copy of copies) {
+    if (!first.has(copy.entryId)) first.set(copy.entryId, copy.url);
+  }
+  return first;
+}
+
+/**
+A served copy: landed, of a screened photo on one of these kits.
+*/
+function served(entryIds: string[]): SQL | undefined {
+  return and(
+    inArray(entryPhotos.entryId, entryIds),
+    eq(entryPhotos.screenStatus, publicPhotoStatus),
+    isNotNull(publicPhotos.publishedAt),
+  );
+}
+
+/**
+ * The landed copies of these kits' screened photos as served, in each
+ * kit's order, an `IN` list at a time: what `/k` and `/@handle` both show.
+ */
+async function landedCopies(
+  db: Db,
+  entryIds: readonly string[],
+  configured: string | undefined,
+): Promise<{ readonly entryId: string; readonly url: string }[]> {
   const origin = publicPhotosOrigin(configured);
   if (origin === undefined) return [];
-  const rows = await db
-    .select({ key: publicPhotos.key })
-    .from(publicPhotos)
-    .innerJoin(entryPhotos, eq(entryPhotos.id, publicPhotos.photoId))
-    .where(
-      and(
-        eq(entryPhotos.entryId, entryId),
-        eq(entryPhotos.screenStatus, publicPhotoStatus),
-        isNotNull(publicPhotos.publishedAt),
-      ),
-    )
-    .orderBy(asc(entryPhotos.position));
-  return rows.map((row) => publicPhotoUrl(origin, row.key));
+  const rows = await readInChunks(entryIds, (chunk) =>
+    db
+      .select({ entryId: entryPhotos.entryId, key: publicPhotos.key })
+      .from(publicPhotos)
+      .innerJoin(entryPhotos, eq(entryPhotos.id, publicPhotos.photoId))
+      .where(served(chunk))
+      .orderBy(asc(entryPhotos.position)),
+  );
+  return rows.map((row) => ({
+    entryId: row.entryId,
+    url: publicPhotoUrl(origin, row.key),
+  }));
 }

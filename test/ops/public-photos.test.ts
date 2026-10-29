@@ -16,10 +16,12 @@ import {
   newPublicPhotoKey,
   PUBLIC_PHOTO_CACHE_CONTROL,
   PUBLIC_PHOTOS_ORIGIN,
+  publicPhotoKeyOf,
   publicPhotoUrl,
 } from "../../src/lib/public-photos";
 import { captureException } from "../../src/modules/ops/sentry";
 import {
+  firstPublishedPhotos,
   publicPhotosOrigin,
   publishedPhotoUrls,
   sweepPublicPhotos,
@@ -100,6 +102,14 @@ async function copies() {
   return core().select().from(publicPhotos);
 }
 
+async function copyKeyOf(photoId: string): Promise<string> {
+  const [copy] = await core()
+    .select({ key: publicPhotos.key })
+    .from(publicPhotos)
+    .where(eq(publicPhotos.photoId, photoId));
+  return copy?.key ?? "";
+}
+
 async function photoKeyOf(photoId: string): Promise<string> {
   const [row] = await core()
     .select({ photoKey: entryPhotos.photoKey })
@@ -168,6 +178,35 @@ describe("the key", () => {
     expect(publicPhotoUrl(PUBLIC_PHOTOS_ORIGIN, "abc")).toBe(
       "https://photos.dialed.run/abc",
     );
+  });
+
+  it("is read back from a copy's URL, and from nothing else", () => {
+    const key = newPublicPhotoKey();
+    const url = publicPhotoUrl(PUBLIC_PHOTOS_ORIGIN, key);
+
+    expect(publicPhotoKeyOf(url)).toBe(key);
+    expect(publicPhotoKeyOf(`${url}?from=share`)).toBe(key);
+    expect(publicPhotoKeyOf(`https://photos.dialed.run:443/${key}`)).toBe(key);
+    for (const other of [
+      `https://dialed.run/${key}`,
+      `https://www.photos.dialed.run/${key}`,
+      // The same host without TLS: another origin.
+      url.replace(/^https:/u, "http:"),
+      `${url}/`,
+      `${url}/more`,
+      `https://photos.dialed.run/x/${key}`,
+      publicPhotoUrl(
+        PUBLIC_PHOTOS_ORIGIN,
+        key.toUpperCase().replace(/^./u, "A"),
+      ),
+      publicPhotoUrl(PUBLIC_PHOTOS_ORIGIN, key.slice(1)),
+      publicPhotoUrl(PUBLIC_PHOTOS_ORIGIN, `${key}0`),
+      publicPhotoUrl(PUBLIC_PHOTOS_ORIGIN, `${key.slice(1)}g`),
+      `photos.dialed.run/${key}`,
+      "a photo on someone's profile",
+    ]) {
+      expect(publicPhotoKeyOf(other), other).toBeUndefined();
+    }
   });
 });
 
@@ -626,12 +665,13 @@ describe("the sweep", () => {
 describe("the page's photos", () => {
   it("lists the landed copies of screened photos, in the kit's order, on the origin", async () => {
     const owner = await kit();
-    await photoOn(owner, "pass", 1);
-    await photoOn(owner, "pass", 0);
-    await syncPublicPhotos(
-      deps({ newKey: keys("second", "first") }),
-      only(owner.entryId),
-    );
+    const secondPhoto = await photoOn(owner, "pass", 1);
+    const firstPhoto = await photoOn(owner, "pass", 0);
+    // Each copy's key read back by its photo: two ids minted in the same
+    // millisecond are in no particular order, so neither is the copying.
+    await syncPublicPhotos(deps(), only(owner.entryId));
+    const first = await copyKeyOf(firstPhoto);
+    const second = await copyKeyOf(secondPhoto);
     const unlanded = await photoOn(owner, "pass", 2);
     await core().insert(publicPhotos).values({
       key: "owed",
@@ -642,8 +682,8 @@ describe("the page's photos", () => {
     });
 
     expect(await publishedPhotoUrls(core(), owner.entryId)).toStrictEqual([
-      "https://photos.dialed.run/first",
-      "https://photos.dialed.run/second",
+      `https://photos.dialed.run/${first}`,
+      `https://photos.dialed.run/${second}`,
     ]);
 
     await core()
@@ -652,11 +692,11 @@ describe("the page's photos", () => {
       .where(eq(entryPhotos.position, 0));
 
     expect(await publishedPhotoUrls(core(), owner.entryId)).toStrictEqual([
-      "https://photos.dialed.run/second",
+      `https://photos.dialed.run/${second}`,
     ]);
     expect(
       await publishedPhotoUrls(core(), owner.entryId, "https://elsewhere.test"),
-    ).toStrictEqual(["https://elsewhere.test/second"]);
+    ).toStrictEqual([`https://elsewhere.test/${second}`]);
     expect(await publishedPhotoUrls(core(), newUlid())).toStrictEqual([]);
   });
 
@@ -670,6 +710,48 @@ describe("the page's photos", () => {
     );
     // The Worker's own switch, on in the test pool as in production.
     expect(await publishedPhotoUrls(core(), owner.entryId)).toHaveLength(1);
+  });
+});
+
+describe("the profile's photos", () => {
+  it("gives each kit its first landed copy, by the page's read, and nothing for a kit with none", async () => {
+    const shown = await kit();
+    const owed = await kit();
+    const held = await kit();
+    await photoOn(shown, "pass", 1);
+    const first = await photoOn(shown, "pass", 0);
+    await photoOn(held, "pass", 0);
+    await syncPublicPhotos(deps(), {
+      entryIds: [shown.entryId, held.entryId],
+      runnerIds: [],
+    });
+    await core()
+      .update(entryPhotos)
+      .set({ screenStatus: "hidden_pending_review" })
+      .where(eq(entryPhotos.entryId, held.entryId));
+    const unlanded = await photoOn(owed, "pass", 0);
+    await core().insert(publicPhotos).values({
+      key: "owed",
+      photoId: unlanded,
+      entryId: owed.entryId,
+      userId: owed.userId,
+      createdAt: NOW,
+    });
+    const key = await copyKeyOf(first);
+    const kits = [shown.entryId, owed.entryId, held.entryId, newUlid()];
+
+    expect(await firstPublishedPhotos(core(), kits)).toStrictEqual(
+      new Map([[shown.entryId, `https://photos.dialed.run/${key}`]]),
+    );
+    expect(
+      await firstPublishedPhotos(core(), kits, "https://elsewhere.test"),
+    ).toStrictEqual(
+      new Map([[shown.entryId, `https://elsewhere.test/${key}`]]),
+    );
+    expect(await firstPublishedPhotos(core(), kits, "")).toStrictEqual(
+      new Map(),
+    );
+    expect(await firstPublishedPhotos(core(), [])).toStrictEqual(new Map());
   });
 });
 
