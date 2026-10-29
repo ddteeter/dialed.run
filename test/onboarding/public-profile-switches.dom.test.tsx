@@ -9,6 +9,12 @@ import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { HandleForm } from "../../src/modules/account/components/HandleForm";
+import type { HandleClaim } from "../../src/modules/account/username";
+import {
+  NO_HANDLE_LINE,
+  type PickUsernameForm,
+} from "../../src/modules/onboarding/components/PickUsername";
 import {
   publicProfileLine,
   PublicProfileSwitches,
@@ -100,13 +106,16 @@ describe("the PUBLIC PROFILE switches", () => {
     );
   });
 
-  it("say your profile, not an address, before a handle is claimed", () => {
-    expect(publicProfileLine(false, undefined)).toBe(
-      "Off. Anyone signed out who opens your profile sees nothing. Public runs still open from their own links.",
-    );
-    expect(publicProfileLine(true, undefined)).toBe(
-      "Anyone can see your public runs at your profile. No sign-in.",
-    );
+  it("name the runner's address in both lines", () => {
+    expect(publicProfileLine(false, "maya_runs")).toBe(OFF_LINE);
+    expect(publicProfileLine(true, "maya_runs")).toBe(ON_LINE);
+  });
+
+  it("take no focus on arrival unless they were just unlocked", () => {
+    render(switches());
+    expect(
+      screen.getByRole("checkbox", { name: "Public profile" }),
+    ).not.toHaveFocus();
   });
 
   it("save each switch on its own, and hand the saved state up", async () => {
@@ -197,6 +206,7 @@ function privacy(
   saveSharing: Parameters<typeof SettingsSectionPage>[0]["saveSharing"] = vi
     .fn()
     .mockResolvedValue(undefined),
+  pickUsername: PickUsernameForm = vi.fn(),
 ) {
   return (
     <SettingsSectionPage
@@ -207,6 +217,7 @@ function privacy(
       saveSharing={saveSharing}
       saveCountInTotals={vi.fn()}
       savePublicProfile={savePublicProfile}
+      pickUsername={pickUsername}
     />
   );
 }
@@ -358,15 +369,13 @@ describe("Privacy with the PUBLIC PROFILE group (round 41 #86b)", () => {
 
   it("says nothing moved when a switch leaves a PUBLIC default where it was", async () => {
     const user = userEvent.setup();
-    const save = vi
-      .fn()
-      .mockResolvedValue(
-        state({
-          publicProfile: true,
-          publicCloset: false,
-          defaultAudience: "world",
-        }),
-      );
+    const save = vi.fn().mockResolvedValue(
+      state({
+        publicProfile: true,
+        publicCloset: false,
+        defaultAudience: "world",
+      }),
+    );
     await renderWithRouter(privacy(PUBLIC_DEFAULT, save));
     await user.click(screen.getByRole("checkbox", { name: "Show my closet" }));
     await waitFor(() => {
@@ -417,5 +426,155 @@ describe("Privacy with the PUBLIC PROFILE group (round 41 #86b)", () => {
 
     await user.click(screen.getByRole("checkbox", { name: "Public profile" }));
     expect(await screen.findByText(MOVED)).toBeVisible();
+  });
+});
+
+/**
+ * The route's username form, as `$section.tsx` builds it: Settings ›
+ * Username's form and words, its claim answered here.
+ */
+function usernameForm(
+  claim: (input: { data: { username: string } }) => Promise<HandleClaim>,
+): PickUsernameForm {
+  return (onClaimed) => (
+    <HandleForm
+      claim={claim}
+      submitLabel="Save"
+      pendingLabel="Saving"
+      successMessage="Username saved."
+      onClaimed={onClaimed}
+    />
+  );
+}
+
+const NO_HANDLE: CurrentSettings = {
+  ...PUBLIC_DEFAULT,
+  defaultAudience: "runners",
+  publicProfile: false,
+  publicCloset: false,
+  username: undefined,
+};
+
+describe("Privacy before the runner has a handle (round 42 #92)", () => {
+  it("has no switch: the kicker alone, the line, and Pick a username", async () => {
+    await renderWithRouter(privacy(NO_HANDLE, vi.fn()));
+
+    const kicker = screen.getByRole("heading", {
+      level: 2,
+      name: "Public profile",
+    });
+    const group = kicker.closest("section");
+    expect(
+      screen.queryByRole("checkbox", { name: "Public profile" }),
+    ).toBeNull();
+    expect(screen.getByText(NO_HANDLE_LINE)).toHaveClass("m-0", "text-body");
+    expect(NO_HANDLE_LINE).toBe(
+      "A public profile lives at your username. Pick one first.",
+    );
+    const pick = screen.getByRole("button", { name: "Pick a username" });
+    expect(group).toContainElement(pick);
+    expect(pick).toHaveAttribute("aria-haspopup", "dialog");
+    expect(pick).toHaveClass("target", "rounded-pill", "border-hairline");
+    // NEW RUNS still has no PUBLIC row, with its line in its place.
+    expect(rowValues()).toStrictEqual(["private", "runners"]);
+    expect(screen.getByText(/^Public is a choice here/u)).toBeVisible();
+  });
+
+  it("opens the username sheet, and on save shows the switch, focused, under its address", async () => {
+    const user = userEvent.setup();
+    const claim = vi.fn(
+      (input: { data: { username: string } }): Promise<HandleClaim> =>
+        Promise.resolve({ kind: "claimed", username: input.data.username }),
+    );
+    await renderWithRouter(
+      privacy(NO_HANDLE, vi.fn(), undefined, usernameForm(claim)),
+    );
+    expect(screen.queryByRole("textbox", { name: "Username" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Pick a username" }));
+    const sheet = screen.getByRole("dialog", { name: "Username" });
+    expect(sheet).toHaveAttribute("open");
+    expect(
+      within(sheet).getByRole("heading", { level: 2, name: "Username" }),
+    ).toBeVisible();
+    await user.type(
+      within(sheet).getByRole("textbox", { name: "Username" }),
+      "maya_runs",
+    );
+    await user.click(within(sheet).getByRole("button", { name: "Save" }));
+
+    const profile = await screen.findByRole("checkbox", {
+      name: "Public profile",
+    });
+    expect(claim).toHaveBeenCalledExactlyOnceWith({
+      data: { username: "maya_runs" },
+    });
+    expect(profile).toHaveAccessibleDescription(OFF_LINE);
+    expect(profile).toHaveFocus();
+    // The sheet went with the line and the press.
+    expect(sheet).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        level: 2,
+        name: "Public profile · Saves as you switch",
+      }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Pick a username" }),
+    ).toBeNull();
+  });
+
+  it("closes the sheet with its Close and keeps the line, the form gone until it opens again", async () => {
+    const user = userEvent.setup();
+    const claim = vi.fn();
+    await renderWithRouter(
+      privacy(NO_HANDLE, vi.fn(), undefined, usernameForm(claim)),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Pick a username" }));
+    const sheet = screen.getByRole("dialog", { name: "Username" });
+    await user.type(
+      within(sheet).getByRole("textbox", { name: "Username" }),
+      "maya",
+    );
+    await user.click(within(sheet).getByRole("button", { name: "Close" }));
+
+    expect(sheet).not.toHaveAttribute("open");
+    expect(screen.queryByRole("textbox", { name: "Username" })).toBeNull();
+    expect(screen.getByText(NO_HANDLE_LINE)).toBeVisible();
+    expect(claim).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Pick a username" }));
+    expect(screen.getByRole("textbox", { name: "Username" })).toHaveValue("");
+  });
+
+  it("keeps the line when the handle is taken, the sheet open on the refusal", async () => {
+    const user = userEvent.setup();
+    const claim = vi.fn((): Promise<HandleClaim> =>
+      Promise.resolve({
+        kind: "taken",
+        username: "maya_runs",
+        suggestion: undefined,
+      }),
+    );
+    await renderWithRouter(
+      privacy(NO_HANDLE, vi.fn(), undefined, usernameForm(claim)),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Pick a username" }));
+    const sheet = screen.getByRole("dialog", { name: "Username" });
+    await user.type(
+      within(sheet).getByRole("textbox", { name: "Username" }),
+      "maya_runs",
+    );
+    await user.click(within(sheet).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(claim).toHaveBeenCalledOnce();
+    });
+    expect(sheet).toHaveAttribute("open");
+    expect(
+      screen.queryByRole("checkbox", { name: "Public profile" }),
+    ).toBeNull();
   });
 });

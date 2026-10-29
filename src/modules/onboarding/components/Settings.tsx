@@ -415,9 +415,11 @@ export function UnitsForm({
  * NEW RUNS' group (round 41 #86b): who a new run is for, picked from the
  * same three rows A3 offers, under their labels alone, as the board draws
  * them. The legend is A3's question asked of new runs, so the group is
- * announced with what it decides.
+ * announced with what it decides; on Privacy it is also the group's
+ * MONO.xs kicker (round 42 #92), so the form's legend is not printed
+ * under it a second time.
  */
-const SHARE_DEFAULT_LEGEND = "Who sees new runs";
+export const SHARE_DEFAULT_LEGEND = "Who sees new runs";
 
 /**
  * While the profile is off, NEW RUNS has no PUBLIC row (D-149: `world`
@@ -451,6 +453,7 @@ function SharingFields({
       <ChoiceList
         name="defaultAudience"
         legend={SHARE_DEFAULT_LEGEND}
+        isLegendHeading
         options={isProfilePublic ? PICKED_AUDIENCES : NOT_PUBLIC_AUDIENCES}
         optionLabels={AUDIENCE_LABELS}
         value={value.defaultAudience}

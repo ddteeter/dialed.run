@@ -289,6 +289,7 @@ describe("the sub-pages", () => {
         saveSharing={saveSharing}
         saveCountInTotals={saveCountInTotals}
         savePublicProfile={vi.fn()}
+        pickUsername={vi.fn()}
       />,
     );
     expect(
@@ -307,6 +308,7 @@ describe("the sub-pages", () => {
         saveSharing={saveSharing}
         saveCountInTotals={saveCountInTotals}
         savePublicProfile={vi.fn()}
+        pickUsername={vi.fn()}
       />,
     );
     expect(
@@ -359,13 +361,22 @@ describe("the sub-pages", () => {
         saveSharing={vi.fn()}
         saveCountInTotals={vi.fn()}
         savePublicProfile={vi.fn()}
+        pickUsername={vi.fn()}
       />,
     );
     const [newRuns, profile, totals] = screen.getAllByRole("heading", {
       level: 2,
     });
-    expect(newRuns).toHaveTextContent(/^New runs$/u);
-    expect(profile).toHaveTextContent(/^Public profile · Saves as you switch$/u);
+    // The legend is the group's kicker (round 42 #92), said once.
+    expect(newRuns).toHaveTextContent(/^Who sees new runs$/u);
+    expect(screen.getAllByText("Who sees new runs")).toHaveLength(2);
+    expect(
+      screen.getByRole("group", { name: "Who sees new runs" })
+        .firstElementChild,
+    ).toHaveClass("sr-only");
+    expect(profile).toHaveTextContent(
+      /^Public profile · Saves as you switch$/u,
+    );
     expect(totals).toHaveTextContent(
       /^Anonymous totals · Saves as you switch$/u,
     );
@@ -392,7 +403,12 @@ describe("the sub-pages", () => {
     const rules = screen.getAllByRole("separator");
     expect(rules).toHaveLength(2);
     for (const rule of rules) {
-      expect(rule).toHaveClass("m-0", "border-0", "border-t", "border-hairline-2");
+      expect(rule).toHaveClass(
+        "m-0",
+        "border-0",
+        "border-t",
+        "border-hairline-2",
+      );
     }
     expect(newRunsGroup?.nextElementSibling).toBe(rules[0]);
     expect(rules[0]?.nextElementSibling).toBe(profileGroup);
@@ -423,6 +439,7 @@ describe("the sub-pages", () => {
         saveSharing={vi.fn()}
         saveCountInTotals={vi.fn()}
         savePublicProfile={vi.fn()}
+        pickUsername={vi.fn()}
       />,
     );
     expect(

@@ -202,6 +202,9 @@ function FieldShell({
   );
 }
 
+// The visible legend: `--label`, as the paragraph below says.
+const LEGEND_CLASS = "mb-2 p-0 text-label";
+
 /**
  * A labelled group of controls with **no field box**.
  *
@@ -232,10 +235,13 @@ function FieldShell({
 function FieldGroup({
   name,
   legend,
+  isLegendHeading,
   hint,
   error,
   children,
-}: Readonly<LabelledFieldProps & { legend: string }>): JSX.Element {
+}: Readonly<
+  LabelledFieldProps & { legend: string; isLegendHeading: boolean }
+>): JSX.Element {
   return (
     <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
       <FieldShell
@@ -243,7 +249,7 @@ function FieldGroup({
         hint={hint}
         error={error}
         caption={
-          <legend className="mb-2 p-0 text-label">
+          <legend className={isLegendHeading ? "sr-only" : LEGEND_CLASS}>
             <Mono step="sm">{legend}</Mono>
           </legend>
         }
@@ -937,6 +943,13 @@ export function ChoiceList<TOption extends string>(
     ChoosableProps<TOption> & {
       legend: string;
       /**
+       * The group's heading already says the legend, so the legend is for
+       * assistive technology alone — Settings › Privacy, where "Who sees
+       * new runs" is the group's MONO.xs kicker (round 42 #92). The group
+       * keeps its accessible name; the words are not printed twice.
+       */
+      isLegendHeading?: boolean | undefined;
+      /**
     One sentence under the group, for what the answer is used for.
     */
       hint?: string | undefined;
@@ -1024,7 +1037,13 @@ export function ChoiceList<TOption extends string>(
   } = props;
   const isChips = layout !== undefined;
   return (
-    <FieldGroup name={name} legend={legend} hint={hint} error={error}>
+    <FieldGroup
+      name={name}
+      legend={legend}
+      isLegendHeading={props.isLegendHeading === true}
+      hint={hint}
+      error={error}
+    >
       <div className={optionsLayout(layout)}>
         {options.map((option) => (
           <label

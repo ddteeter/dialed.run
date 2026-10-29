@@ -24,22 +24,12 @@ export const SHOW_CLOSET_LINE =
 export const DEFAULT_MOVED_LINE = "New runs now default to Shared.";
 
 /**
- * Where the profile is, as the lines name it: `app.dialed.run/@{handle}`.
- * A runner who has not claimed a handle yet has no address to name, so
- * the lines say "your profile" there.
+ * The "Public profile" switch's sub-line, on or off, naming where the
+ * profile is: `app.dialed.run/@{handle}`. There is no switch without a
+ * handle (round 42 #92), so there is always an address to name.
  */
-function profileAddress(handle: string | undefined): string {
-  return handle === undefined ? "your profile" : `app.dialed.run/@${handle}`;
-}
-
-/**
-The "Public profile" switch's sub-line, on or off.
-*/
-export function publicProfileLine(
-  isOn: boolean,
-  handle: string | undefined,
-): string {
-  const address = profileAddress(handle);
+export function publicProfileLine(isOn: boolean, handle: string): string {
+  const address = `app.dialed.run/@${handle}`;
   return isOn
     ? `Anyone can see your public runs at ${address}. No sign-in.`
     : `Off. Anyone signed out who opens ${address} sees nothing. Public runs still open from their own links.`;
@@ -56,19 +46,25 @@ export function publicProfileLine(
  * `onSaved` hands the saved state up, because the page shows it in two
  * more places: NEW RUNS' PUBLIC row, and the default it may have moved.
  * The caller says when that happened (`notice`).
+ *
+ * `isJustShown` is the switch arriving after the runner picked a username
+ * in the sheet (round 42 #92): the sheet and its press are gone, so focus
+ * lands on the switch they unlocked rather than on the page.
  */
 export function PublicProfileSwitches({
   publicProfile,
   publicCloset,
   handle,
   notice,
+  isJustShown = false,
   save,
   onSaved,
 }: Readonly<{
   publicProfile: boolean;
   publicCloset: boolean;
-  handle: string | undefined;
+  handle: string;
   notice: string | undefined;
+  isJustShown?: boolean | undefined;
   save: (input: { data: PublicProfileChoice }) => Promise<PublicProfileState>;
   onSaved: (state: PublicProfileState) => void;
 }>): JSX.Element {
@@ -79,7 +75,11 @@ export function PublicProfileSwitches({
     kicker: "Not changed",
   });
   return (
-    <div data-part="public-profile" className="flex flex-col gap-4">
+    <div
+      ref={isJustShown ? focusFirstSwitch : undefined}
+      data-part="public-profile"
+      className="flex flex-col gap-4"
+    >
       <SavedSwitch
         copy={{
           name: "publicProfile",
@@ -116,6 +116,13 @@ export function PublicProfileSwitches({
       />
     </div>
   );
+}
+
+/**
+The group's first switch — "Public profile" — takes focus.
+*/
+function focusFirstSwitch(group: HTMLDivElement | null): void {
+  group?.querySelector("input")?.focus();
 }
 
 /**

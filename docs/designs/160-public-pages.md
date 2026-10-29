@@ -188,6 +188,24 @@ Left to the TTL, on purpose:
   the kit has been hidden since the hold, so its page is already the
   not-public one.
 
+## Settings › Privacy as round 42 #92 rules it (step 5)
+
+- **The legend is the kicker.** "Who sees new runs" is the first group's
+  MONO.xs kicker, in place of "New runs"; the radiogroup keeps it as its
+  legend for assistive technology only (`ChoiceList`'s
+  `isLegendHeading`), so it is printed once.
+- **PUBLIC while the profile is off** is absent with 86b's line in its
+  place, as step 5 built it; round 42 confirmed it.
+- **No handle, no switch.** A runner with no handle sees the kicker
+  PUBLIC PROFILE (no "· Saves as you switch"), "A public profile lives at
+  your username. Pick one first." and "Pick a username". There was no
+  username sheet to open: Settings › Username is a sub-page. So the press
+  opens a `ui/Sheet` holding that sub-page's own form and words
+  (`HandleForm`, Save, "Username saved."), headed "Username" with W1's ✕,
+  built by the route because the form is `account`'s. On save the sheet
+  closes and 86b's switch appears, focused. `HandleForm`'s `onClaimed` now
+  hands the handle it saved.
+
 ## Deviations (step 6)
 
 - **"Identical bytes" holds up to two per-render values.** The not-public

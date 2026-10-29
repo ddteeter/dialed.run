@@ -1560,6 +1560,11 @@ describe("ToggleField", () => {
  * `ChoiceList` — the radio group O1's five answers need, because a select
  * hides its options and comparing them is how a runner picks.
  */
+function thermalLegend() {
+  return screen.getByRole("group", { name: "Do you run warm or cold?" })
+    .firstElementChild;
+}
+
 describe("ChoiceList", () => {
   const LEVELS = ["hot", "mild", "cold"] as const;
   const LABELS = { hot: "Runs hot", mild: "About average", cold: "Runs cold" };
@@ -1601,6 +1606,29 @@ describe("ChoiceList", () => {
     expect(
       screen.getByRole("group", { name: "Do you run warm or cold?" }),
     ).toBeInTheDocument();
+  });
+
+  it("prints the legend in the label role, unless a heading already says it", () => {
+    const { rerender } = renderList(vi.fn());
+    expect(thermalLegend()).toHaveClass("mb-2", "p-0", "text-label");
+    expect(thermalLegend()).not.toHaveClass("sr-only");
+
+    // Settings › Privacy's kicker is the legend (round 42 #92): still the
+    // group's name, printed once.
+    rerender(
+      <ChoiceList
+        name="thermal"
+        legend="Do you run warm or cold?"
+        isLegendHeading
+        options={LEVELS}
+        optionLabels={LABELS}
+        value={undefined}
+        field={restingField}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(thermalLegend()).toHaveClass("sr-only");
+    expect(thermalLegend()).not.toHaveClass("text-label");
   });
 
   it("shows every answer at once", () => {
