@@ -14,22 +14,22 @@ read.
 
 ## Owner decisions these texts carry
 
-| Decision                                                                             | Where it is recorded                                                                                   |
-| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| 18 and over                                                                          | `docs/decisions.md` D-114 (replaces D-71's 16)                                                         |
-| Handles never released, even after deletion                                          | D-56; D-72(6)                                                                                          |
-| Appeals have no deadline, no timeframe, no "different moderator"                     | D-73; the ban email and D4 now match (below)                                                           |
-| Quarantine: silent, preserved 1 year, then purged                                    | D-70                                                                                                   |
-| Public by default, per-entry toggle; "public" means signed-in runners                | D-19, D-58                                                                                             |
-| Link previews of shared kits show a generic card; public kits have their own (D-150) | Owner, for this draft; D-150; see "Who sees what" below                                                |
-| Retire, don't delete garments referenced by entries                                  | `CLAUDE.md` "Product rules"; see the garment row below for what the code now also allows               |
-| Runs, shared and private, count in published anonymous totals; opt-out               | D-108 (closes D-29 for totals); D-101; data requirement (a) in `docs/design-deltas.md` (must be in v1) |
-| Strava activity data never stored, displayed or used                                 | D-14, D-33, D-54; `CLAUDE.md` "Product rules"                                                          |
-| Weather from Visual Crossing                                                         | D-24                                                                                                   |
-| Invite-only sign-up                                                                  | D-39 (via task 126 ACC-5); `src/lib/contracts/access.ts:18` `IS_INVITE_ONLY`                           |
-| Email through Cloudflare                                                             | D-42, D-61; `wrangler.jsonc` `send_email` `EMAIL`                                                      |
-| Every `@dialed.run` address reaches the owner                                        | D-62                                                                                                   |
-| Operator is Big Long Run Labs LLC; law, venue; address filled at publication         | D-125, D-126, D-136 (superseded the one-individual draft); see the revision table below                |
+| Decision                                                                                     | Where it is recorded                                                                                   |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 18 and over                                                                                  | `docs/decisions.md` D-114 (replaces D-71's 16)                                                         |
+| Handles never released, even after deletion                                                  | D-56; D-72(6)                                                                                          |
+| Appeals have no deadline, no timeframe, no "different moderator"                             | D-73; the ban email and D4 now match (below)                                                           |
+| Quarantine: silent, preserved 1 year, then purged                                            | D-70                                                                                                   |
+| Shared by default, per-entry toggle; "shared" means signed-in runners, "public" the open web | D-19, D-58 as amended by D-149                                                                         |
+| Link previews of shared kits show a generic card; public kits have their own (D-150)         | Owner, for this draft; D-150; see "Who sees what" below                                                |
+| Retire, don't delete garments referenced by entries                                          | `CLAUDE.md` "Product rules"; see the garment row below for what the code now also allows               |
+| Runs, shared and private, count in published anonymous totals; opt-out                       | D-108 (closes D-29 for totals); D-101; data requirement (a) in `docs/design-deltas.md` (must be in v1) |
+| Strava activity data never stored, displayed or used                                         | D-14, D-33, D-54; `CLAUDE.md` "Product rules"                                                          |
+| Weather from Visual Crossing                                                                 | D-24                                                                                                   |
+| Invite-only sign-up                                                                          | D-39 (via task 126 ACC-5); `src/lib/contracts/access.ts:18` `IS_INVITE_ONLY`                           |
+| Email through Cloudflare                                                                     | D-42, D-61; `wrangler.jsonc` `send_email` `EMAIL`                                                      |
+| Every `@dialed.run` address reaches the owner                                                | D-62                                                                                                   |
+| Operator is Big Long Run Labs LLC; law, venue; address filled at publication                 | D-125, D-126, D-136 (superseded the one-individual draft); see the revision table below                |
 
 ## Terms: who can use it
 

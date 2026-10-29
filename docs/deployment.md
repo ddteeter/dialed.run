@@ -159,9 +159,17 @@ in it. Before the deploy that binds `PUBLIC_PHOTOS`:
    NCMEC is the owner's, and so is removing the kit in the app (Remove as
    suspected CSAM, which quarantines it), under the procedure in
    deployment plan §8.
-4. Do **not** add a lifecycle rule. The copies live as long as the kit is
+   **Read the notification the day it arrives**: it is actual knowledge
+   under 18 U.S.C. §2258A, so file the CyberTipline report and quarantine
+   the kit the same day. Register with NCMEC as an electronic service
+   provider before the bucket goes live.
+4. Keep the photos out of search: Rules → Transform Rules → **Modify
+   Response Header** on hostname `photos.dialed.run`, set
+   `X-Robots-Tag: noindex`. A page's `noindex` does not cover an image
+   URL, and the privacy policy says public pages ask not to be indexed.
+5. Do **not** add a lifecycle rule. The copies live as long as the kit is
    public, and the deletion paths remove them.
-5. No Cache Rule is needed: each object is written with its own
+6. No Cache Rule is needed: each object is written with its own
    `Cache-Control`, short enough that a retracted photo leaves the edge
    within the time the privacy policy promises.
 

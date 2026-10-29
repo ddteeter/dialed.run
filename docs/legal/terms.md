@@ -161,8 +161,9 @@ us a worldwide, non-exclusive, royalty-free licence to host, store, copy,
 process, display and distribute your content, and to adapt and reformat it:
 for example to resize and re-encode photos, remove their metadata, and
 show your kits in feeds, on your profile and in the Call, and, for what
-you make public, on the open web and in the cards that preview a link to
-it. That includes
+you make public, to display it on the open web, to make the card that
+previews a link to it, and to let the sites and apps where such a link is
+posted fetch and show that card. That includes
 displaying, reformatting and modifying the links in your content, including
 outbound product links. We may let the services we use to run [dialed.run]
 do these things on our behalf, and only for that.
@@ -207,9 +208,9 @@ owing you anything.
 
 ## Who sees what
 
-- **Kits are shared by default.** You choose shared or private for each kit
-  when you give the verdict, and you can make private your default in
-  settings. Private kits never appear in feeds or in anyone's conditions
+- **Kits are shared by default.** You choose shared, private or public for
+  each kit when you give the verdict, and you can make private, or, while
+  your profile is public, public, your default in settings. Private kits never appear in feeds or in anyone's conditions
   numbers. They do count, without your name, in
   [anonymous totals](#your-content), unless you turn that off.
 - **"Shared" means other signed-in runners on [dialed.run]**, not the open
@@ -219,7 +220,8 @@ owing you anything.
 - **"Public" means anyone.** You can make a kit public when you give the
   verdict, and turn on a public profile, and the rotation of your closet on
   it, in settings. Anyone with the link can see them, signed in or not,
-  and blocking someone cannot hide them from a visitor who is signed out.
+  and blocking someone cannot keep them off a public kit or public
+  profile, signed in or not.
   A public kit never shows the run's start time or place. You can take any
   of it back at any time; the privacy policy says how quickly it goes, and
   anyone who saw it before then may have kept a copy.

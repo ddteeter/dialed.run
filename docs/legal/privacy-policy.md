@@ -195,7 +195,7 @@ never shown to other runners.
 - **Time zone.** A run's local time comes from the time zone Visual Crossing
   reports for the place.
 - **Never shown.** No run's coordinates are shown to other runners or the
-  public, including on shared kits (see [Our access to your content](#our-access-to-your-content)).
+  public, including on shared and public kits (see [Our access to your content](#our-access-to-your-content)).
 
 ## Photos
 
@@ -223,7 +223,7 @@ never shown to other runners.
   check for sexual, violent and self-harm content. We keep the scores it
   returns until the photo is deleted. A photo that scores high, kit or
   garment, is hidden from everyone but you until a person reviews it.
-  Until a photo is screened, no other runner can see it.
+  Until a photo is screened, no one but you can see it.
   OpenAI keeps nothing it is sent for screening, and does not use it to
   train its models.
 - **Fingerprints.** For every photo, we work out a fingerprint from the
@@ -259,7 +259,7 @@ place), distance, time, pace, elevation gain, the feels-like temperature
 and sky, your verdict, caption, the garments you wore (name and type, with
 a link to the product where there is one) and its screened photos. A link
 to it posted elsewhere previews as a picture card with your username, the
-day, the conditions, your verdict, the distance and time, and the models
+day, the conditions, your verdict, the distance, time, pace and elevation gain, and the models
 you wore, beside the first 120 characters of your caption. The card never
 has a photo. Signed-in runners see a
 public kit as they see a shared one, and it counts in feeds and conditions
@@ -284,6 +284,12 @@ yours when you are banned or leave, stops being public the same way.
 Turning your public profile off does not change kits you already made
 public: each stays public until you change it.
 
+A preview card that another site or app already fetched is that site's
+copy; we cannot recall it, though the link itself stops previewing the
+kit within the same minute. Beyond the minute above, the steps we take
+are these: public pages ask search engines not to index them, and we
+clear our own copies when something stops being public.
+
 **Never shown to other runners or the public:** your email, your closet
 (except your rotation, if you show it on your public profile), your
 garment photos, your private kits, notes and flags on garments, your
@@ -297,7 +303,8 @@ each kit when you give the verdict, and you can make private your default
 in settings. Public can be your default only while your public profile is
 on; turning the profile off makes shared your default again. Until you
 confirm your email address, the kits you log are saved private, and none
-can be made public.
+can be made public; your public profile is not shown until then
+either.
 Private kits never appear in feeds or in anyone's conditions numbers. They
 do count, without your name, in anonymous totals unless you turn that off
 (see [Anonymous totals](#anonymous-totals)).
@@ -312,7 +319,8 @@ name no one.
 **Blocking** hides the two of you from each other: each other's kits in
 feeds and on kit pages, each other's profiles, and each other in search.
 It does not notify them. It cannot hide your public kits or public profile
-from someone who opens them signed out.
+from anyone who opens their public addresses, whether or not they are
+signed in.
 
 ## Our access to your content
 
@@ -512,19 +520,19 @@ you choose to sign in with Google or connect Strava, each is also a separate
 controller of what it holds about you, under its own privacy policy. We do
 not sell or rent your data to anyone.
 
-| Service                           | Company                         | Role                      | What it does for us                                                     | What it receives                                                                                           | Where                    | Safeguard for EU and UK data                                                                                            |
-| --------------------------------- | ------------------------------- | ------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| Cloudflare                        | Cloudflare, Inc.                | Processor                 | Hosts the app: servers, databases, photo and file storage, queues, logs | Everything above, stored on its platform                                                                   | North America            | EU-U.S. Data Privacy Framework and its UK and Swiss extensions; standard contractual clauses in its DPA as the fallback |
-| Cloudflare Email Service          | Cloudflare, Inc.                | Processor                 | Sends our email                                                         | Each email's address, subject and body                                                                     | North America            | EU-U.S. Data Privacy Framework and its UK and Swiss extensions; standard contractual clauses in its DPA as the fallback |
-| Cloudflare Turnstile              | Cloudflare, Inc.                | Processor                 | Tells people from bots on sign-up, request access and removal requests  | The check your browser runs, and your IP address from our server                                           | Worldwide                | EU-U.S. Data Privacy Framework and its UK and Swiss extensions; standard contractual clauses in its DPA as the fallback |
-| Google                            | Google LLC                      | Separate controller       | "Sign in with Google", if you use it                                    | The sign-in request; Google returns your name, email, picture and account id                               | US                       | Google's own Data Privacy Framework certification                                                                       |
-| Strava                            | Strava, Inc.                    | Separate controller       | Run reminders, if you connect                                           | The connect and revoke requests                                                                            | US                       | Standard contractual clauses under Strava's API terms                                                                   |
-| Visual Crossing                   | Visual Crossing Corporation     | Service provider          | Weather, and time zones for places                                      | Rounded run start points and dates; the place you set. Nothing that names you                              | US                       | None needed: nothing that names you is sent                                                                             |
-| OpenAI                            | OpenAI OpCo, LLC                | Processor                 | Photo screening; username screening; reading product pages              | Your photos; the username you pick; the text and address of product pages                                  | US                       | Standard contractual clauses with the UK addendum, in OpenAI's data processing addendum                                 |
-| Firecrawl                         | SideGuide Technologies, Inc.    | Service provider          | Fetching product pages that block us                                    | The product link. Nothing that names you                                                                   | US                       | None needed: nothing that names you is sent                                                                             |
-| Sentry                            | Functional Software, Inc.       | Processor                 | Error reports                                                           | The error and internal ids (account, run, import, product), never tokens, request bodies or file contents  | US                       | EU-U.S. Data Privacy Framework and its UK and Swiss extensions; standard contractual clauses as the fallback            |
-| Have I Been Pwned                 | Superlative Enterprises Pty Ltd | Receives no personal data | Leaked-password check                                                   | The first five characters of your password's SHA-1 hash, from our server, with nothing that identifies you | Australia                | None needed: what it receives is not personal data                                                                      |
-| GoatCounter (marketing site only) | Martin Tournoij (Ireland)       | Processor                 | Counts page views on dialed.run                                         | Your IP address and browser, held in memory for up to 8 hours and not stored                               | Finland and Germany (EU) | None needed: no transfer out of the EU                                                                                  |
+| Service                           | Company                         | Role                      | What it does for us                                                                                                 | What it receives                                                                                           | Where                    | Safeguard for EU and UK data                                                                                            |
+| --------------------------------- | ------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| Cloudflare                        | Cloudflare, Inc.                | Processor                 | Hosts the app: servers, databases, photo and file storage, queues, logs; serves and scans the photos on public kits | Everything above, stored on its platform                                                                   | North America            | EU-U.S. Data Privacy Framework and its UK and Swiss extensions; standard contractual clauses in its DPA as the fallback |
+| Cloudflare Email Service          | Cloudflare, Inc.                | Processor                 | Sends our email                                                                                                     | Each email's address, subject and body                                                                     | North America            | EU-U.S. Data Privacy Framework and its UK and Swiss extensions; standard contractual clauses in its DPA as the fallback |
+| Cloudflare Turnstile              | Cloudflare, Inc.                | Processor                 | Tells people from bots on sign-up, request access and removal requests                                              | The check your browser runs, and your IP address from our server                                           | Worldwide                | EU-U.S. Data Privacy Framework and its UK and Swiss extensions; standard contractual clauses in its DPA as the fallback |
+| Google                            | Google LLC                      | Separate controller       | "Sign in with Google", if you use it                                                                                | The sign-in request; Google returns your name, email, picture and account id                               | US                       | Google's own Data Privacy Framework certification                                                                       |
+| Strava                            | Strava, Inc.                    | Separate controller       | Run reminders, if you connect                                                                                       | The connect and revoke requests                                                                            | US                       | Standard contractual clauses under Strava's API terms                                                                   |
+| Visual Crossing                   | Visual Crossing Corporation     | Service provider          | Weather, and time zones for places                                                                                  | Rounded run start points and dates; the place you set. Nothing that names you                              | US                       | None needed: nothing that names you is sent                                                                             |
+| OpenAI                            | OpenAI OpCo, LLC                | Processor                 | Photo screening; username screening; reading product pages                                                          | Your photos; the username you pick; the text and address of product pages                                  | US                       | Standard contractual clauses with the UK addendum, in OpenAI's data processing addendum                                 |
+| Firecrawl                         | SideGuide Technologies, Inc.    | Service provider          | Fetching product pages that block us                                                                                | The product link. Nothing that names you                                                                   | US                       | None needed: nothing that names you is sent                                                                             |
+| Sentry                            | Functional Software, Inc.       | Processor                 | Error reports                                                                                                       | The error and internal ids (account, run, import, product), never tokens, request bodies or file contents  | US                       | EU-U.S. Data Privacy Framework and its UK and Swiss extensions; standard contractual clauses as the fallback            |
+| Have I Been Pwned                 | Superlative Enterprises Pty Ltd | Receives no personal data | Leaked-password check                                                                                               | The first five characters of your password's SHA-1 hash, from our server, with nothing that identifies you | Australia                | None needed: what it receives is not personal data                                                                      |
+| GoatCounter (marketing site only) | Martin Tournoij (Ireland)       | Processor                 | Counts page views on dialed.run                                                                                     | Your IP address and browser, held in memory for up to 8 hours and not stored                               | Finland and Germany (EU) | None needed: no transfer out of the EU                                                                                  |
 
 We are in the United States, and your data is stored in North America. To
 keep the app fast wherever you open it, Cloudflare also keeps read-only
@@ -599,6 +607,8 @@ any differently.
 | Your account, when you delete it                                              | Hidden at once; everything below deleted 7 days later (see [Your choices](#your-choices))                                         |
 | Suspected child sexual abuse material we removed, and its uploader's details  | One year after we report it to NCMEC, then deleted, unless the law or law enforcement requires longer                             |
 | Usernames you have used                                                       | For good, so nobody else can take them                                                                                            |
+| Copies of photos on public kits, in the public store                          | While the kit is public; deleted when it stops being public, is hidden or removed, or you are banned or leave                     |
+| Copies of public pages and photos at Cloudflare's edge                        | Up to a minute after they stop being public                                                                                       |
 | Weather                                                                       | Kept in the shared cache, linked to no one                                                                                        |
 | Reports you filed                                                             | 3 years after the decision on what you reported, or after filing if none was needed. Kept without your name if you leave          |
 | Records of moderation decisions                                               | 3 years after the decision, even after the account it concerns is deleted, and while the material is still hidden or quarantined  |
