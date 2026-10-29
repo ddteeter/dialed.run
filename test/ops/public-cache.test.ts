@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   entryCacheTag,
   handleCacheTag,
+  runnerCacheTag,
+} from "../../src/lib/cache-tags";
+import {
   PUBLIC_PAGE_TTL_SECONDS,
   publicCacheHeaders,
   publicPageHeaders,
   publicPageTags,
-  runnerCacheTag,
   withoutCookiesWhenPublic,
 } from "../../src/modules/ops/public-cache";
 import { withSecurityHeaders } from "../../src/modules/ops/security-headers";
@@ -47,7 +49,8 @@ describe("publicCacheHeaders", () => {
       ]),
     ).toStrictEqual({
       "Cache-Control": "public, max-age=60",
-      "Cache-Tag": "entry:01J00000000000000000000000,runner:u1,handle:maya_runs",
+      "Cache-Tag":
+        "entry:01J00000000000000000000000,runner:u1,handle:maya_runs",
     });
   });
 
@@ -70,9 +73,7 @@ function withCookie(cacheControl: string | undefined): Response {
 
 describe("withoutCookiesWhenPublic", () => {
   it("drops the cookie from a response the edge may store", async () => {
-    const response = withoutCookiesWhenPublic(
-      withCookie("public, max-age=60"),
-    );
+    const response = withoutCookiesWhenPublic(withCookie("public, max-age=60"));
 
     expect(response.headers.has("Set-Cookie")).toBe(false);
     expect(response.headers.get("Cache-Control")).toBe("public, max-age=60");

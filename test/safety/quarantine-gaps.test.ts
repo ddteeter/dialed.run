@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { z } from "zod";
 
 import { session } from "../../src/db/schema-auth";
@@ -46,6 +47,7 @@ import {
   type PhotoScope,
 } from "../../src/modules/safety";
 
+import { noPurge } from "../purge-spy";
 import { addAccount } from "../feed/helpers";
 import { fingerprintOfBytes, sceneJpeg } from "../fixtures/scenes";
 import {
@@ -344,12 +346,15 @@ describe("a quarantine keeps who uploaded it (§2258A(h)(2), design 157)", () =>
 
     // A ban deletes every session at once; the sweep, a year on, would
     // take any left.
-    await banUser({
-      userId: author,
-      reason: "Suspected CSAM",
-      rule: "suspected_csam",
-      bannedBy: "moderator",
-    });
+    await banUser(
+      {
+        userId: author,
+        reason: "Suspected CSAM",
+        rule: "suspected_csam",
+        bannedBy: "moderator",
+      },
+      noPurge,
+    );
     await sweepExpiredAuthRows(core(), nowSeconds() + 400 * 86_400);
     expect(await core().select().from(session)).toStrictEqual([]);
 

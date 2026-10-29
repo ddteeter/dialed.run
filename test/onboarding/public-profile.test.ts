@@ -15,6 +15,7 @@ import {
   saveSharing,
   setPublicProfile,
 } from "../../src/modules/onboarding/public-profile";
+import { noPurge } from "../purge-spy";
 import { makeEntry, makeRun, makeUser, resetTables } from "../feed/helpers";
 
 /**
@@ -103,7 +104,7 @@ describe("saveSharing", () => {
 
   it("saves a PUBLIC default once the profile is public", async () => {
     const userId = await makeUser();
-    await setPublicProfile(coreDb(), userId, { publicProfile: true });
+    await setPublicProfile(coreDb(), userId, { publicProfile: true }, noPurge);
 
     await saveSharing(coreDb(), userId, { defaultAudience: "world" });
     expect(await profileOf(userId)).toMatchObject({ defaultAudience: "world" });
@@ -112,7 +113,7 @@ describe("saveSharing", () => {
   it("refuses for the runner whose profile is off, not for another runner's", async () => {
     const open = await makeUser();
     const closed = await makeUser({ defaultAudience: "private" });
-    await setPublicProfile(coreDb(), open, { publicProfile: true });
+    await setPublicProfile(coreDb(), open, { publicProfile: true }, noPurge);
 
     const refusal = await refusalOf(
       saveSharing(coreDb(), closed, { defaultAudience: "world" }),
@@ -126,7 +127,12 @@ describe("setPublicProfile", () => {
   it("turns the profile on for a runner with no row, closet off, default shared", async () => {
     const userId = newUlid();
     expect(
-      await setPublicProfile(coreDb(), userId, { publicProfile: true }),
+      await setPublicProfile(
+        coreDb(),
+        userId,
+        { publicProfile: true },
+        noPurge,
+      ),
     ).toStrictEqual({
       publicProfile: true,
       publicCloset: false,
@@ -137,20 +143,35 @@ describe("setPublicProfile", () => {
   it("keeps Show my closet while the profile is off, and the profile while the closet changes", async () => {
     const userId = await makeUser();
     expect(
-      await setPublicProfile(coreDb(), userId, { publicCloset: true }),
+      await setPublicProfile(coreDb(), userId, { publicCloset: true }, noPurge),
     ).toMatchObject({ publicProfile: false, publicCloset: true });
 
     expect(
-      await setPublicProfile(coreDb(), userId, { publicProfile: true }),
+      await setPublicProfile(
+        coreDb(),
+        userId,
+        { publicProfile: true },
+        noPurge,
+      ),
     ).toMatchObject({ publicProfile: true, publicCloset: true });
 
     expect(
-      await setPublicProfile(coreDb(), userId, { publicCloset: false }),
+      await setPublicProfile(
+        coreDb(),
+        userId,
+        { publicCloset: false },
+        noPurge,
+      ),
     ).toMatchObject({ publicProfile: true, publicCloset: false });
 
-    await setPublicProfile(coreDb(), userId, { publicCloset: true });
+    await setPublicProfile(coreDb(), userId, { publicCloset: true }, noPurge);
     expect(
-      await setPublicProfile(coreDb(), userId, { publicProfile: false }),
+      await setPublicProfile(
+        coreDb(),
+        userId,
+        { publicProfile: false },
+        noPurge,
+      ),
     ).toMatchObject({ publicProfile: false, publicCloset: true });
     expect(await profileOf(userId)).toMatchObject({
       publicProfile: false,
@@ -160,7 +181,7 @@ describe("setPublicProfile", () => {
 
   it("moves a PUBLIC default to SHARED when the profile goes off, and leaves PUBLIC kits public", async () => {
     const userId = await makeUser();
-    await setPublicProfile(coreDb(), userId, { publicProfile: true });
+    await setPublicProfile(coreDb(), userId, { publicProfile: true }, noPurge);
     await saveSharing(coreDb(), userId, { defaultAudience: "world" });
     const kit = await makeEntry({
       userId,
@@ -169,7 +190,12 @@ describe("setPublicProfile", () => {
     });
 
     expect(
-      await setPublicProfile(coreDb(), userId, { publicProfile: false }),
+      await setPublicProfile(
+        coreDb(),
+        userId,
+        { publicProfile: false },
+        noPurge,
+      ),
     ).toStrictEqual({
       publicProfile: false,
       publicCloset: false,
@@ -185,34 +211,49 @@ describe("setPublicProfile", () => {
     const quiet = await makeUser({ defaultAudience: "private" });
     const open = await makeUser({ defaultAudience: "runners" });
     for (const userId of [quiet, open]) {
-      await setPublicProfile(coreDb(), userId, { publicProfile: true });
+      await setPublicProfile(
+        coreDb(),
+        userId,
+        { publicProfile: true },
+        noPurge,
+      );
     }
 
     expect(
-      await setPublicProfile(coreDb(), quiet, { publicProfile: false }),
+      await setPublicProfile(
+        coreDb(),
+        quiet,
+        { publicProfile: false },
+        noPurge,
+      ),
     ).toMatchObject({ defaultAudience: "private" });
     expect(
-      await setPublicProfile(coreDb(), open, { publicProfile: false }),
+      await setPublicProfile(coreDb(), open, { publicProfile: false }, noPurge),
     ).toMatchObject({ defaultAudience: "runners" });
   });
 
   it("keeps a PUBLIC default while the profile stays on", async () => {
     const userId = await makeUser();
-    await setPublicProfile(coreDb(), userId, { publicProfile: true });
+    await setPublicProfile(coreDb(), userId, { publicProfile: true }, noPurge);
     await saveSharing(coreDb(), userId, { defaultAudience: "world" });
 
     expect(
-      await setPublicProfile(coreDb(), userId, { publicProfile: true }),
+      await setPublicProfile(
+        coreDb(),
+        userId,
+        { publicProfile: true },
+        noPurge,
+      ),
     ).toMatchObject({ defaultAudience: "world" });
     expect(
-      await setPublicProfile(coreDb(), userId, { publicCloset: true }),
+      await setPublicProfile(coreDb(), userId, { publicCloset: true }, noPurge),
     ).toMatchObject({ defaultAudience: "world" });
   });
 
   it("changes only the runner it was given", async () => {
     const userId = await makeUser();
     const other = await makeUser();
-    await setPublicProfile(coreDb(), userId, { publicProfile: true });
+    await setPublicProfile(coreDb(), userId, { publicProfile: true }, noPurge);
     expect(await profileOf(other)).toMatchObject({ publicProfile: false });
   });
 });
@@ -228,8 +269,8 @@ describe("currentSettings reads the switches and the handle", () => {
 
   it("as stored", async () => {
     const userId = await makeUser({ username: "maya_runs" });
-    await setPublicProfile(coreDb(), userId, { publicProfile: true });
-    await setPublicProfile(coreDb(), userId, { publicCloset: true });
+    await setPublicProfile(coreDb(), userId, { publicProfile: true }, noPurge);
+    await setPublicProfile(coreDb(), userId, { publicCloset: true }, noPurge);
     expect(await currentSettings(coreDb(), userId)).toMatchObject({
       publicProfile: true,
       publicCloset: true,
@@ -249,8 +290,10 @@ describe("sharingDefaultRule", () => {
     for (const defaultAudience of ["private", "runners"]) {
       for (const isPublicProfile of [true, false]) {
         expect(
-          sharingDefaultRule.safeParse({ defaultAudience, publicProfile: isPublicProfile })
-            .success,
+          sharingDefaultRule.safeParse({
+            defaultAudience,
+            publicProfile: isPublicProfile,
+          }).success,
         ).toBe(true);
       }
     }

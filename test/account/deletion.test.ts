@@ -23,6 +23,7 @@ import {
   type DeletionEffects,
 } from "../../src/modules/account/deletion";
 import { captureException, settleOutbox } from "../../src/modules/ops";
+import { purgeSpy } from "../purge-spy";
 import { core, fakeMail, owedTo, seedUser } from "../email/helpers";
 
 /**
@@ -114,13 +115,16 @@ function effectsFor(mail: ReturnType<typeof fakeMail>) {
   const disconnectStrava = vi.fn<(userId: string) => Promise<void>>(() =>
     Promise.resolve(),
   );
+  const purge = purgeSpy();
   const effects: DeletionEffects = {
     ...later.owed,
     keepAlive,
     report,
     disconnectStrava,
+    purge: purge.purge,
   };
   return {
+    purged: purge.calls,
     effects,
     keepAlive,
     report,
@@ -164,6 +168,8 @@ describe("requestAccountDeletion", () => {
     ]);
     expect(await sessionsOf(userId)).toStrictEqual([]);
     expect(await sessionsOf(bystander.userId)).toStrictEqual([theirs]);
+    // Design 160: everything public of theirs leaves the edge, by one tag.
+    expect(fx.purged).toStrictEqual([[`runner:${userId}`]]);
     expect(await owedFor(userId)).toStrictEqual([
       {
         kind: "email",

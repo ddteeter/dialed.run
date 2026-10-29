@@ -47,11 +47,12 @@ import {
   entryPhotoPrefix,
   quarantineKeyFor,
 } from "../../lib/entry-photo-key";
+import { kitCacheTags, type PurgeTags } from "../../lib/cache-tags";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import { emailDebt } from "../email";
 import { notificationInsert } from "../notifications";
-import { captureException, oweOutbox } from "../ops";
+import { captureException, oweOutbox, purgePublicPages } from "../ops";
 import {
   moderationActionInsert,
   claimDuePurges,
@@ -379,6 +380,7 @@ export async function moderateContent(
   db: Db,
   input: ModerateInput,
   report: Report = captureException,
+  purge: PurgeTags = purgePublicPages,
 ): Promise<ModerateOutcome> {
   const target = await targetOf(db, input.subjectType, input.subjectId);
   if (target === undefined) {
@@ -462,7 +464,23 @@ export async function moderateContent(
     ],
     report,
   );
+  purgeTakenDown(input, target, purge);
   return "removed";
+}
+
+/**
+ * Design 160: a kit taken down — removed, quarantined or held — leaves
+ * the edge now rather than within the TTL. A photo is not on the open web
+ * (D-151's world photos are phase 4), so it has no page to purge.
+ */
+function purgeTakenDown(
+  input: Pick<ModerateInput, "subjectType">,
+  target: Pick<Target, "ownerId" | "entryId">,
+  purge: PurgeTags,
+): void {
+  if (input.subjectType === "entry") {
+    purge(kitCacheTags(target.ownerId, target.entryId));
+  }
 }
 
 /**

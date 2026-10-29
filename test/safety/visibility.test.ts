@@ -31,6 +31,7 @@ import {
   worldVisibleEntry,
 } from "../../src/modules/safety";
 
+import { noPurge } from "../purge-spy";
 import {
   makeEntry,
   makeRun,
@@ -112,12 +113,15 @@ describe("a banned author (SAF-4)", () => {
     await follow(viewer, author);
     expect(await sightings(viewer, entryId, photoKey)).toEqual(SEEN);
 
-    await banUser({
-      userId: author,
-      reason: "spam",
-      rule: "spam",
-      bannedBy: viewer,
-    });
+    await banUser(
+      {
+        userId: author,
+        reason: "spam",
+        rule: "spam",
+        bannedBy: viewer,
+      },
+      noPurge,
+    );
     expect(await sightings(viewer, entryId, photoKey)).toEqual(UNSEEN);
     const refused = await photoResponse(photoKey, viewer);
     expect(refused.status).toBe(404);
@@ -130,24 +134,30 @@ describe("a banned author (SAF-4)", () => {
     const { author, entryId } = await postedEntry();
     expect(await countable(core())).toContain(entryId);
 
-    await banUser({
-      userId: author,
-      reason: "spam",
-      rule: "spam",
-      bannedBy: author,
-    });
+    await banUser(
+      {
+        userId: author,
+        reason: "spam",
+        rule: "spam",
+        bannedBy: author,
+      },
+      noPurge,
+    );
     expect(await countable(core())).not.toContain(entryId);
   });
 
   it("cannot be marked Useful", async () => {
     const { author, entryId } = await postedEntry();
     const viewer = await makeVerifiedUser();
-    await banUser({
-      userId: author,
-      reason: "spam",
-      rule: "spam",
-      bannedBy: viewer,
-    });
+    await banUser(
+      {
+        userId: author,
+        reason: "spam",
+        rule: "spam",
+        bannedBy: viewer,
+      },
+      noPurge,
+    );
     await expect(setUsefulReaction(entryId, viewer, true)).rejects.toThrow(
       "entry is not visible to this viewer",
     );
@@ -291,6 +301,7 @@ describe("a reporter's own hide (SAF-13)", () => {
         reason: "spam",
       },
       oweInCore,
+      noPurge,
     );
     // One report is far under the threshold: nothing global happened.
     expect(filed).toMatchObject({
@@ -320,6 +331,7 @@ describe("a reporter's own hide (SAF-13)", () => {
         reason: "spam",
       },
       oweInCore,
+      noPurge,
     );
     expect(await sightings(reporter, posted.entryId, posted.photoKey)).toEqual(
       SEEN,
@@ -452,12 +464,15 @@ describe("the open-web rule (worldVisibleEntry, D-149)", () => {
     const posted = await postedEntry();
     await setAudience(posted.entryId, "world");
     const moderator = await makeUser();
-    await banUser({
-      userId: posted.author,
-      reason: "spam",
-      rule: "spam",
-      bannedBy: moderator,
-    });
+    await banUser(
+      {
+        userId: posted.author,
+        reason: "spam",
+        rule: "spam",
+        bannedBy: moderator,
+      },
+      noPurge,
+    );
     expect(await openWeb()).toEqual([]);
     await unbanUser(posted.author, moderator);
     expect(await openWeb()).toEqual([posted.entryId]);

@@ -22,12 +22,13 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { outfitEntries, runs, userProfiles } from "../../db/schema-core";
 import { coreDb } from "../../env";
 import type { Units } from "../../lib/contracts";
+import { handleCacheTag } from "../../lib/cache-tags";
 import { usernameSchema } from "../../lib/contracts/garments";
 import { distanceNumber } from "../../lib/contracts/measures";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { lookUpHandle } from "../account";
 import { publicRotation } from "../closet";
-import { handleCacheTag, publicPageHeaders } from "../ops";
+import { publicPageHeaders } from "../ops";
 import { worldVisibleEntry } from "../safety";
 
 import { observationsForRuns, type Conditions } from "./conditions";

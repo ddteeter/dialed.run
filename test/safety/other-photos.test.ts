@@ -25,6 +25,7 @@ import {
   otherPhotosQuery,
 } from "../../src/modules/safety/other-photos";
 
+import { noPurge } from "../purge-spy";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 import { oweInCore } from "../queue-fakes";
 
@@ -425,6 +426,7 @@ describe("Review's rows", () => {
     const deps = {
       verify: () => Promise.resolve({ ok: true }),
       owe: oweInCore,
+      purge: noPurge,
     };
     await fileTakedownRequest(
       core(),

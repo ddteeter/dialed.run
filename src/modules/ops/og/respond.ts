@@ -44,10 +44,18 @@ function withHeaders(
  * reason, kept a minute like the not-public page, so a kit made public
  * shows its own card within the page's TTL.
  *
- * A public kit's card is cached a day under its version, which is in its
- * own cache key: the card's URL drops its query string (`cardCacheKey`),
- * so the version goes in the path of the key instead, and an edit renders
- * a new card rather than finding the old one.
+ * A public kit's card is rendered once a day under its version, which is
+ * in its own cache key: the card's URL drops its query string
+ * (`cardCacheKey`), so the version goes in the path of the key instead,
+ * and an edit renders a new card rather than finding the old one. That
+ * cache sits behind the Worker, which checks the kit is still public on
+ * every request that reaches it.
+ *
+ * **The response leaves with the page's minute, not the day.** Workers
+ * Caching keeps whatever `Cache-Control` says in front of the Worker, so a
+ * day here would serve a retracted kit's card for a day whenever its
+ * purge was refused; a minute keeps the TTL the guarantee for the card as
+ * for the page (design 160, "Deviations (purge)").
  */
 export async function kitCardResponse(
   request: Request,
@@ -70,5 +78,5 @@ export async function kitCardResponse(
   const card = await cachedCard(key, CARD_TTL_SECONDS.entry, () =>
     renderCard(cardFor(found.card)),
   );
-  return withHeaders(card, publicCacheHeaders(CARD_TTL_SECONDS.entry, tags));
+  return withHeaders(card, publicCacheHeaders(PUBLIC_PAGE_TTL_SECONDS, tags));
 }

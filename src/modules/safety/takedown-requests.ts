@@ -39,12 +39,14 @@ import {
   type TakedownRequestValues,
   type TakedownSubject,
 } from "../../lib/contracts/takedown";
+import type { PurgeTags } from "../../lib/cache-tags";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { countSend, emailDebt, sendClaimOf } from "../email";
 import { adminUserIds } from "./admin";
 import { REMOVAL_DUE_SECONDS, removalDueLabel } from "./contracts";
+import { kitCacheTagsOf } from "./kit-cache-tags";
 import { hiddenNotice } from "./notices";
 import { otherPhotosOf, type OtherPhotos } from "./other-photos";
 import { photoMatchesOf, type PhotoMatches } from "./photo-matches";
@@ -88,6 +90,10 @@ export interface TakedownRequestDeps<Attempt> {
   limits match requesters by email alone.
   */
   readonly secret?: string | undefined;
+  /**
+  `ops`' edge purge, handed in for the reason `verify` is (design 160).
+  */
+  readonly purge: PurgeTags;
 }
 
 /**
@@ -180,7 +186,23 @@ export async function fileTakedownRequest<Attempt>(
       ),
     ),
   ]);
+  if (isHeld) await purgeHeld(db, subject, deps.purge);
   return { status: "received" };
+}
+
+/**
+ * Design 160: a kit a request hid leaves the edge now, not within the
+ * TTL — the open web's `/k/<id>` is a link `/takedown` takes. A photo is
+ * not on the open web (D-151's world photos are phase 4).
+ */
+async function purgeHeld(
+  db: Db,
+  subject: TakedownSubject,
+  purge: PurgeTags,
+): Promise<void> {
+  if (subject.subjectType === "entry") {
+    purge(await kitCacheTagsOf(db, subject.subjectId));
+  }
 }
 
 /**
@@ -432,9 +454,10 @@ export type TakedownConfirmResult = "confirmed" | "decided" | "not_found";
 export async function confirmTakedownRequest(
   db: Db,
   token: string,
-  owe: OweEmail,
+  effects: { readonly owe: OweEmail; readonly purge: PurgeTags },
   now = nowSeconds(),
 ): Promise<TakedownConfirmResult> {
+  const { owe } = effects;
   const request = await firstRowWhere(
     db,
     takedownRequests,
@@ -466,6 +489,7 @@ export async function confirmTakedownRequest(
       ? valveAlerts(owe, now)
       : operatorAlerts(owe, request.id, request.dueAt, subject !== undefined)),
   ]);
+  if (isHeld) await purgeHeld(db, subject, effects.purge);
   return "confirmed";
 }
 

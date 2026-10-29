@@ -22,6 +22,7 @@ import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 import { session } from "../../db/schema-auth";
 import { userProfiles } from "../../db/schema-core";
 import { coreDb } from "../../env";
+import { runnerCacheTag, type PurgeTags } from "../../lib/cache-tags";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
 import type { OutboxMessage } from "../../lib/sql/outbox";
 import { orSqlNull } from "../../lib/sql/sql-null";
@@ -60,6 +61,7 @@ export interface BanInput {
  */
 export async function banUser(
   input: BanInput,
+  purge: PurgeTags,
   also: (database: ReturnType<typeof db>) => BatchItem<"sqlite">[] = () => [],
 ): Promise<void> {
   const bannedAt = nowSeconds();
@@ -89,6 +91,9 @@ export async function banUser(
     ...also(db()),
     ...told,
   ]);
+  // Design 160: everything the runner had on the open web carries their
+  // tag, so one purge takes it all down, never one per kit.
+  purge([runnerCacheTag(input.userId)]);
 }
 
 /**

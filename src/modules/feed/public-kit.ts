@@ -45,12 +45,12 @@ import {
   paceNumber,
 } from "../../lib/contracts/measures";
 import { formatTemp, precipClassOf } from "../../lib/contracts/temperature";
+import { entryCacheTag } from "../../lib/cache-tags";
 import { dayLabel, isTimeZone } from "../../lib/dates";
 import { domainOf } from "../../lib/domain";
 import { ulidSchema } from "../../lib/ids";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
 import {
-  entryCacheTag,
   kitCardResponse,
   publicPageHeaders,
   publicPageTags,
@@ -91,7 +91,11 @@ export async function publicKitRead(
   if (entry === undefined) return undefined;
   const [run, runner] = await Promise.all([
     firstRowWhere(database, runs, eq(runs.id, entry.runId)),
-    firstRowWhere(database, userProfiles, eq(userProfiles.userId, entry.userId)),
+    firstRowWhere(
+      database,
+      userProfiles,
+      eq(userProfiles.userId, entry.userId),
+    ),
   ]);
   // A handle is how the page names its runner; a runner with none has
   // nothing to show under (and cannot have got past O0 to share one).
@@ -180,8 +184,12 @@ function statsOf(
       unit: units.distance,
     },
     time: { value: formatDuration(seconds), isMoving: run.movingS !== null },
-    ...(pace !== undefined && { pace: { value: pace, unit: `/${units.distance}` } }),
-    ...(run.elevationGainM !== null && { gain: gainNumber(run.elevationGainM, units.distance) }),
+    ...(pace !== undefined && {
+      pace: { value: pace, unit: `/${units.distance}` },
+    }),
+    ...(run.elevationGainM !== null && {
+      gain: gainNumber(run.elevationGainM, units.distance),
+    }),
   };
 }
 
@@ -251,9 +259,7 @@ async function deniedDomains(
   database: Database,
   domains: readonly (string | undefined)[],
 ): Promise<Set<string>> {
-  const named = [
-    ...new Set(domains.filter((domain) => domain !== undefined)),
-  ];
+  const named = [...new Set(domains.filter((domain) => domain !== undefined))];
   const rows = await database
     .select({ domain: domainDenylist.domain })
     .from(domainDenylist)
@@ -266,7 +272,9 @@ async function deniedDomains(
  * day, the conditions and the verdict, the stats as one line, the models
  * without brands, and whether the credit is owed. Never the caption.
  */
-export function entryCardOf(kit: Omit<PublicKit, "cardVersion">): EntryCardData {
+export function entryCardOf(
+  kit: Omit<PublicKit, "cardVersion">,
+): EntryCardData {
   const stats = [
     `${kit.distance.value} ${kit.distance.unit}`,
     kit.time.value,
@@ -277,11 +285,11 @@ export function entryCardOf(kit: Omit<PublicKit, "cardVersion">): EntryCardData 
     handle: kit.handle,
     day: kit.day,
     ...(kit.conditions !== undefined && {
-          conditions: {
-            feelsLike: kit.conditions.feelsLike,
-            sky: kit.conditions.sky,
-          },
-        }),
+      conditions: {
+        feelsLike: kit.conditions.feelsLike,
+        sky: kit.conditions.sky,
+      },
+    }),
     ...(kit.verdict !== undefined && { verdict: kit.verdict }),
     stats: stats.join(" · "),
     kit: kit.pieces.map((piece) => piece.model),
@@ -301,7 +309,10 @@ async function versionOf(card: EntryCardData): Promise<string> {
   // 16 is still two digits whatever this digest happens to hold.
   return [...digest]
     .slice(0, 8)
-    .map((byte) => `${HEX_DIGITS.charAt(byte >> 4)}${HEX_DIGITS.charAt(byte & 15)}`)
+    .map(
+      (byte) =>
+        `${HEX_DIGITS.charAt(byte >> 4)}${HEX_DIGITS.charAt(byte & 15)}`,
+    )
     .join("");
 }
 
@@ -352,11 +363,11 @@ export async function publicKitCardResponse(
   const read = await publicKitRead(entryId);
   return kitCardResponse(request, entryId, {
     ...(read !== undefined && {
-          found: {
-            card: entryCardOf(read.kit),
-            version: read.kit.cardVersion,
-          },
-        }),
+      found: {
+        card: entryCardOf(read.kit),
+        version: read.kit.cardVersion,
+      },
+    }),
     tags: publicPageTags(kitTag(entryId), read?.runnerId),
   });
 }

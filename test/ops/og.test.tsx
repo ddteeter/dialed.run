@@ -296,7 +296,7 @@ describe("caching", () => {
 describe("kitCardResponse", () => {
   const ENTRY_ID = "01J00000000000000000000000";
 
-  it("serves a public kit's card for a day, tagged, cached under its version", async () => {
+  it("serves a public kit's card for the page's minute at the edge, tagged", async () => {
     const response = await kitCardResponse(
       new Request(`https://dialed.test/og/k/${ENTRY_ID}?v=abc`),
       ENTRY_ID,
@@ -307,9 +307,9 @@ describe("kitCardResponse", () => {
     );
 
     expect(response.headers.get("Content-Type")).toBe("image/png");
-    expect(response.headers.get("Cache-Control")).toBe(
-      "public, max-age=86400",
-    );
+    // A minute, not the day it is rendered for: the edge keeps what this
+    // says, in front of the check that the kit is still public.
+    expect(response.headers.get("Cache-Control")).toBe("public, max-age=60");
     expect(response.headers.get("Cache-Tag")).toBe(
       `entry:${ENTRY_ID},runner:u1`,
     );
@@ -342,7 +342,9 @@ describe("kitCardResponse", () => {
     );
 
     const cards = await caches.open("og-cards");
-    expect(await cards.match(new Request(`${origin}/og/default`))).toBeDefined();
+    expect(
+      await cards.match(new Request(`${origin}/og/default`)),
+    ).toBeDefined();
     expect(
       await cards.match(new Request(`${origin}/og/k/${ENTRY_ID}`)),
     ).toBeUndefined();

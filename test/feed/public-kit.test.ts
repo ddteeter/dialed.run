@@ -215,7 +215,11 @@ describe("publicKitRead: a public kit", () => {
           url: "https://janji.com/afo",
         },
         // No brand: its own name, and no link to drop.
-        { name: "Old black beanie", model: "Old black beanie", kind: "Headwear" },
+        {
+          name: "Old black beanie",
+          model: "Old black beanie",
+          kind: "Headwear",
+        },
         // A link that does not parse is no link.
         { name: "Nike Pegasus 41", model: "Pegasus 41", kind: "Shoes" },
       ],
@@ -226,9 +230,7 @@ describe("publicKitRead: a public kit", () => {
   it("never carries a start time, coordinates, the route, flags, notes, Useful, follows or the runner's id", async () => {
     const { runner, runId, entryId } = await fullyPopulated();
 
-    const serialized = JSON.stringify(
-      await publicKitForPage(entryId, vi.fn()),
-    );
+    const serialized = JSON.stringify(await publicKitForPage(entryId, vi.fn()));
 
     for (const forbidden of [
       String(STARTED),
@@ -587,9 +589,7 @@ describe("the card (round 41 #86e)", () => {
     );
 
     expect(response.headers.get("Content-Type")).toBe("image/png");
-    expect(response.headers.get("Cache-Control")).toBe(
-      "public, max-age=86400",
-    );
+    expect(response.headers.get("Cache-Control")).toBe("public, max-age=60");
     // The kit's own card, not the default one.
     const fallback = await publicKitCardResponse(
       new Request(`https://dialed.test/og/k/${newUlid()}`),

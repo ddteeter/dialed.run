@@ -2,49 +2,26 @@
  * The headers a public page leaves with (design 160, D-152): what lets the
  * edge keep it, and the tags a purge names it by.
  *
- * **Only the open web's responses carry these.** Every other response the
- * Worker generates keeps today's headers (no `Cache-Control` at all), so a
- * page that varies by viewer can never be stored and served to someone
- * else. A public page is safe to store because it never varies by viewer:
- * the same bytes for everyone, signed in or not.
+ * **Only the open web's responses carry these.** A public page is safe to
+ * store because it never varies by viewer: the same bytes for everyone,
+ * signed in or not. Every other response must never be stored, and with
+ * Workers Caching on (`wrangler.jsonc`'s `cache`) a response with no
+ * `Cache-Control` is not safe by default: Cloudflare applies RFC 9111's
+ * heuristic freshness to it, and a request's `Cookie` is not in the cache
+ * key. So every response that is not public has to say `private` (design
+ * 160, "Deviations (purge)").
  *
  * **The TTL is the guarantee; a purge only shortens it.** A retracted kit
  * is gone from the edge within `PUBLIC_PAGE_TTL_SECONDS` whatever else
- * fails. The tags are what a purge by tag would name (`entry:<id>`,
- * `runner:<userId>`, `handle:<handle>`); nothing purges yet (design 160, step 6).
+ * fails. The tags (`lib/cache-tags.ts`) are what a purge by tag names:
+ * the writers that take a page back purge them through `./edge-purge.ts`.
  */
+import { runnerCacheTag } from "../../lib/cache-tags";
 
 /**
 How long the edge may keep a public page or its not-public twin.
 */
 export const PUBLIC_PAGE_TTL_SECONDS = 60;
-
-/**
-The tag naming one kit's page and card.
-*/
-export function entryCacheTag(entryId: string): string {
-  return `entry:${entryId}`;
-}
-
-/**
- * The tag naming everything a runner has on the open web, so one purge
- * covers a ban, a leaving or a handle change.
- */
-export function runnerCacheTag(userId: string): string {
-  return `runner:${userId}`;
-}
-
-/**
- * The tag naming the page at one handle's path, `/@<handle>`, public or
- * not (design 160): what a purge names when a profile is made public, so
- * the not-public page cached there gives way within the purge rather than
- * the TTL. It says nothing about who holds the handle, or whether anyone
- * does — the path already said the handle. `handle` is the normalized one
- * (lowercase), so `/@Maya` and `/@maya` share it.
- */
-export function handleCacheTag(handle: string): string {
-  return `handle:${handle}`;
-}
 
 /**
  * `Cache-Control: public` for `ttlSeconds`, and the `Cache-Tag` list when
@@ -54,7 +31,9 @@ export function publicCacheHeaders(
   ttlSeconds: number,
   tags: readonly string[],
 ): Record<string, string> {
-  const cacheControl = { "Cache-Control": `public, max-age=${String(ttlSeconds)}` };
+  const cacheControl = {
+    "Cache-Control": `public, max-age=${String(ttlSeconds)}`,
+  };
   return tags.length === 0
     ? cacheControl
     : { ...cacheControl, "Cache-Tag": tags.join(",") };

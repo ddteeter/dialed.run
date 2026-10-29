@@ -23,6 +23,7 @@ import { pruneStravaIds } from "../runs";
 import { retryPendingWeather, timeZoneAt } from "../weather";
 import { cronNameFor, type CronName } from "./crons";
 import { oweDigestEmail, type DigestMail } from "./digest-email";
+import { purgePublicPages } from "./edge-purge";
 import { checkOutboxBacklog, drainOutbox } from "./outbox";
 import { oweInCore } from "./queues";
 import { oweRemovalReminders } from "./removal-reminders";
@@ -301,7 +302,10 @@ async function runScreeningRetry(anomalies: string[]): Promise<void> {
   // The hide that `fileReport` does in a third statement, if the
   // worker died before reaching it — the reports are written, the
   // entry is still visible, and nothing else would ever notice.
-  const reconciled = await reconcileUnhiddenReports(oweInCore);
+  const reconciled = await reconcileUnhiddenReports(
+    oweInCore,
+    purgePublicPages,
+  );
   if (reconciled.hidden > 0) {
     anomalies.push(
       `${String(reconciled.hidden)} reported subjects were over the threshold and had not been hidden`,

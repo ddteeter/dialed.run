@@ -12,7 +12,7 @@ import { cityLookupInput } from "../../lib/contracts/city-lookup";
 import { optionalUserId, requireUserId, verifiedUserId } from "../auth";
 import { nameItem } from "../closet";
 import { coverageLadder } from "../feed";
-import { captureException } from "../ops";
+import { captureException, purgePublicPages } from "../ops";
 import { climateNormals, resolvePlace, timeZoneAt } from "../weather";
 import { countsInTotals, setCountInTotals } from "./aggregate-prefs";
 import {
@@ -122,7 +122,7 @@ export const saveSharingFn = createServerFn({ method: "POST" })
 export const setPublicProfileFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => publicProfileInput.parse(data))
   .handler(async ({ data }) =>
-    setPublicProfile(db(), await verifiedUserId(), data),
+    setPublicProfile(db(), await verifiedUserId(), data, purgePublicPages),
   );
 
 /**

@@ -2,6 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../db/schema-core";
+import { profileCacheTags, type PurgeTags } from "../../lib/cache-tags";
 import {
   SHARED_AUDIENCE,
   WORLD_AUDIENCE,
@@ -49,7 +50,10 @@ export async function saveSharing(
     .update(userProfiles)
     .set({ defaultAudience: WORLD_AUDIENCE })
     .where(
-      and(eq(userProfiles.userId, userId), eq(userProfiles.publicProfile, true)),
+      and(
+        eq(userProfiles.userId, userId),
+        eq(userProfiles.publicProfile, true),
+      ),
     )
     .returning({ userId: userProfiles.userId });
   sharingDefaultRule.parse({ ...input, publicProfile: written.length > 0 });
@@ -68,6 +72,7 @@ export async function setPublicProfile(
   db: DrizzleD1Database,
   userId: string,
   choice: PublicProfileChoice,
+  purge: PurgeTags,
 ): Promise<PublicProfileState> {
   const row = await db
     .insert(userProfiles)
@@ -77,10 +82,19 @@ export async function setPublicProfile(
       publicProfile: userProfiles.publicProfile,
       publicCloset: userProfiles.publicCloset,
       defaultAudience: userProfiles.defaultAudience,
+      username: userProfiles.username,
     })
     // An upsert always returns its one row.
     .get();
-  return { ...row, defaultAudience: writableAudienceOf(row.defaultAudience) };
+  // Design 160: either switch changes what `/@handle` shows — off takes
+  // the profile or the rotation back, on replaces the not-public page
+  // cached at the handle's path — so the edge is told either way.
+  purge(profileCacheTags(userId, row.username));
+  return {
+    publicProfile: row.publicProfile,
+    publicCloset: row.publicCloset,
+    defaultAudience: writableAudienceOf(row.defaultAudience),
+  };
 }
 
 /**
