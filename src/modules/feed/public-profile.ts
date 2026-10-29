@@ -28,7 +28,7 @@ import { distanceNumber } from "../../lib/contracts/measures";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { lookUpHandle } from "../account";
 import { publicRotation } from "../closet";
-import { publicPageHeaders } from "../ops";
+import { firstPublishedPhotos, publicPageHeaders } from "../ops";
 import { worldVisibleEntry } from "../safety";
 
 import { observationsForRuns, type Conditions } from "./conditions";
@@ -91,7 +91,7 @@ export async function publicProfileRead(
     profile: {
       handle: runner.username,
       kitCount,
-      kits: await shapedRows(kits, runner.timeZone, units),
+      kits: await shapedRows(database, kits, runner.timeZone, units),
       ...(rotation !== undefined && { rotation }),
     },
     runnerId: runner.userId,
@@ -135,30 +135,51 @@ async function kitRowsOf(database: Database, userId: string, limit: number) {
 type KitRow = Awaited<ReturnType<typeof kitRowsOf>>[number];
 
 /**
- * Each row as #86d draws it. The observations are read in one batch from
- * the weather database, which D1 cannot join to the core one (8c), so the
- * pairing happens here.
+ * Each row as #86d draws it, with the kit's first photo as `/k` reads it.
+ * The observations are read in one batch from the weather database, which
+ * D1 cannot join to the core one (8c), so the pairing happens here.
  */
 async function shapedRows(
+  database: Database,
   rows: readonly KitRow[],
   runnerZone: string | null,
   units: Units,
 ): Promise<PublicKitRow[]> {
-  const observed = await observationsForRuns(rows.map((row) => row.run));
+  const [observed, photos] = await Promise.all([
+    observationsForRuns(rows.map((row) => row.run)),
+    firstPublishedPhotos(
+      database,
+      rows.map((row) => row.entryId),
+    ),
+  ]);
   return rows.map((row) =>
-    shapedRow(row, observed.get(row.run.id), runnerZone, units),
+    shapedRow(
+      row,
+      { conditions: observed.get(row.run.id), photo: photos.get(row.entryId) },
+      runnerZone,
+      units,
+    ),
   );
+}
+
+/**
+What a row shows that was read beside it.
+*/
+interface ReadBeside {
+  readonly conditions: Conditions | undefined;
+  readonly photo: string | undefined;
 }
 
 function shapedRow(
   row: KitRow,
-  conditions: Conditions | undefined,
+  { conditions, photo }: ReadBeside,
   runnerZone: string | null,
   units: Units,
 ): PublicKitRow {
   const verdict = verdictOf(row.verdict);
   return {
     entryId: row.entryId,
+    ...(photo !== undefined && { photo }),
     day: runDayOf(row.run.startedAt, conditions, runnerZone),
     ...conditionsOf(conditions, row.verdict, units),
     ...(verdict !== undefined && { verdict }),

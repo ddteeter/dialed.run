@@ -5,8 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { user } from "../../src/db/schema-auth";
 import {
   accountDeletions,
+  entryPhotos,
   outfitEntries,
   outfitEntryItems,
+  publicPhotos,
   runs,
   userProfiles,
   usernameHistory,
@@ -15,6 +17,7 @@ import {
 import { coreDb, env } from "../../src/env";
 import type { Audience } from "../../src/lib/contracts";
 import { newUlid } from "../../src/lib/ids";
+import { PUBLIC_PHOTOS_ORIGIN } from "../../src/lib/public-photos";
 import { publicRotation } from "../../src/modules/closet";
 import { worldVisibleEntry } from "../../src/modules/safety";
 import {
@@ -377,6 +380,46 @@ describe("publicProfileRead: a public profile", () => {
     });
   });
 
+  it("shows a kit's first public photo in its row, as /k serves it, and the tile for a kit with none", async () => {
+    const { runner, publicKits } = await fullyPopulated();
+    const [withNone, withPhotos] = publicKits;
+    await core().delete(publicPhotos);
+    await core().delete(entryPhotos);
+    for (const [position, key] of ["first", "second"].entries()) {
+      const photoId = newUlid();
+      await core()
+        .insert(entryPhotos)
+        .values({
+          id: photoId,
+          entryId: withPhotos ?? "",
+          photoKey: `entries/${runner}/${withPhotos ?? ""}/${photoId}`,
+          position,
+          screenStatus: "pass",
+        });
+      await core()
+        .insert(publicPhotos)
+        .values({
+          key,
+          photoId,
+          entryId: withPhotos ?? "",
+          userId: runner,
+          createdAt: NOW,
+          publishedAt: NOW,
+        });
+    }
+
+    const read = await publicProfileRead(HANDLE, false);
+
+    expect(read?.profile.kits[0]?.entryId).toBe(withNone);
+    expect(read?.profile.kits[0]).not.toHaveProperty("photo");
+    expect(read?.profile.kits[1]).toStrictEqual({
+      entryId: withPhotos,
+      photo: `${PUBLIC_PHOTOS_ORIGIN}/first`,
+      day: "Thu Oct 16",
+      distance: { value: "3.1", unit: "mi" },
+    });
+  });
+
   it("never carries a time, a place, a caption, a flag, a note, a hidden kit or the runner's id", async () => {
     const { runner, hiddenKits, runIds } = await fullyPopulated();
 
@@ -597,7 +640,9 @@ describe("the read's cost", () => {
       .orderBy(desc(outfitEntries.createdAt))
       .limit(3)
       .toSQL();
-    const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${statement}`)
+    const plan = await env.DIALED_CORE.prepare(
+      `EXPLAIN QUERY PLAN ${statement}`,
+    )
       .bind(...params)
       .all<{ detail: string }>();
     const details = plan.results.map((row) => row.detail).join("\n");

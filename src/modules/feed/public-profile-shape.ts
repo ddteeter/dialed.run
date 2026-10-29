@@ -16,13 +16,15 @@ import { NotFoundError } from "../../lib/errors";
 import type { PublicKit } from "./public-kit-shape";
 
 /**
- * One kit as the profile lists it: a tile (the photo, once world photos
- * exist, D-151), its conditions, its day and distance, and its verdict.
+ * One kit as the profile lists it: a tile, its conditions, its day and
+ * distance, and its verdict. `photo` is the kit's first photo as the
+ * public bucket serves it (D-151, design 160 step 8), the one `/k` shows
+ * first; absent with none, when the tile is --tint.
  */
 export type PublicKitRow = Pick<
   PublicKit,
   "entryId" | "day" | "conditions" | "verdict" | "distance"
->;
+> & { readonly photo?: string };
 
 export interface PublicProfile {
   /**

@@ -142,13 +142,13 @@ describe("the public profile, signed out", () => {
   it("lists each kit as a link to its own page: conditions, day and distance, verdict", async () => {
     await show(profilePage(PROFILE));
 
-    const rows = within(part("kits") ?? document.body).getAllByRole(
-      "listitem",
-    );
+    const rows = within(part("kits") ?? document.body).getAllByRole("listitem");
     expect(rows).toHaveLength(3);
     const first = within(rows[0] ?? document.body).getByRole("link");
     expect(first).toHaveAttribute("href", `/k/${IDS[0]}`);
-    expect(first).toHaveTextContent(/^38° dampSat Oct 18 · 6\.2 miA bit cold$/u);
+    expect(first).toHaveTextContent(
+      /^38° dampSat Oct 18 · 6\.2 miA bit cold$/u,
+    );
     // The measured word teal, as teal always means measured conditions.
     expect(within(first).getByText("damp")).toHaveClass("text-dialed-text");
     expect(within(first).getByText("Sat Oct 18 · 6.2 mi")).toHaveClass(
@@ -161,17 +161,21 @@ describe("the public profile, signed out", () => {
     const third = within(rows[2] ?? document.body).getByRole("link");
     expect(third).toHaveTextContent(/^Sat Sep 27 · 5\.0 mi$/u);
     expect(third.querySelector('[data-part="verdict-chip"]')).toBeNull();
-    expect(
-      within(rows[1] ?? document.body).getByRole("link"),
-    ).toHaveAttribute("href", `/k/${IDS[1]}`);
+    expect(within(rows[1] ?? document.body).getByRole("link")).toHaveAttribute(
+      "href",
+      `/k/${IDS[1]}`,
+    );
   });
 
   it("draws each kit's tile as a --tint row on the phone and a square in the desk's 3-up grid", async () => {
     await show(profilePage(PROFILE));
 
-    expect(
-      within(part("kits") ?? document.body).getByRole("list"),
-    ).toHaveClass("flex-col", "desk:grid", "desk:grid-cols-3", "desk:gap-3");
+    expect(within(part("kits") ?? document.body).getByRole("list")).toHaveClass(
+      "flex-col",
+      "desk:grid",
+      "desk:grid-cols-3",
+      "desk:gap-3",
+    );
     const tile = part("kit-tile");
     expect(tile).toHaveClass(
       "size-16",
@@ -190,13 +194,50 @@ describe("the public profile, signed out", () => {
     );
   });
 
+  it("shows a kit's public photo in its tile, cropped to the tile's box, and the --tint tile for the rest", async () => {
+    const photo = "https://photos.dialed.run/0123456789abcdef0123456789abcdef";
+    const profile: PublicProfile = {
+      ...PROFILE,
+      kits: PROFILE.kits.map((row, index) =>
+        index === 1 ? { ...row, photo } : row,
+      ),
+    };
+    expect(await firstPaint(profilePage(profile))).toContain(`src="${photo}"`);
+
+    await show(profilePage(profile));
+
+    const rows = within(part("kits") ?? document.body).getAllByRole("listitem");
+    const tiles = rows.map((row) =>
+      row.querySelector<HTMLElement>('[data-part="kit-tile"]'),
+    );
+    expect(tiles.map((tile) => tile?.tagName)).toStrictEqual([
+      "SPAN",
+      "IMG",
+      "SPAN",
+    ]);
+    const image = tiles[1];
+    expect(image).toHaveAttribute("src", photo);
+    // Decorative: the row's own words name the kit, and stay its name.
+    expect(image).toHaveAttribute("alt", "");
+    expect(image).toHaveClass(
+      "size-16",
+      "shrink-0",
+      "rounded-tile",
+      "bg-tint",
+      "object-cover",
+      "desk:aspect-square",
+      "desk:size-auto",
+      "desk:w-full",
+    );
+    expect(link(/Sun Oct 12/u)).toHaveAccessibleName(
+      "Sun Oct 12 · 13.1 mi Dialed",
+    );
+  });
+
   it("offers the rest with Show {N} more, a plain link to ?all", async () => {
     await show(profilePage(PROFILE));
 
-    expect(link("Show 9 more")).toHaveAttribute(
-      "href",
-      "/@maya_runs?all=true",
-    );
+    expect(link("Show 9 more")).toHaveAttribute("href", "/@maya_runs?all=true");
     expect(link("Show 9 more")).toHaveClass("target", "underline");
   });
 
@@ -292,7 +333,10 @@ describe("the public profile, signed out", () => {
     const errors = vi.spyOn(console, "error");
     const twin = { name: "Grey tee", detail: "Tee" };
     await show(
-      profilePage({ ...PROFILE, rotation: { ...ROTATION, inUse: [twin, twin] } }),
+      profilePage({
+        ...PROFILE,
+        rotation: { ...ROTATION, inUse: [twin, twin] },
+      }),
     );
 
     expect(screen.getAllByText("Grey tee")).toHaveLength(2);
@@ -348,9 +392,10 @@ describe("the public profile, signed out", () => {
       "desk:max-w-page",
       "desk:grid-cols-[minmax(0,var(--container-column))_minmax(0,1fr)]",
     );
-    expect(
-      part("top-bar")?.firstElementChild,
-    ).toHaveClass("max-w-column", "desk:max-w-page");
+    expect(part("top-bar")?.firstElementChild).toHaveClass(
+      "max-w-column",
+      "desk:max-w-page",
+    );
     expect(part("public-foot")?.firstElementChild).toHaveClass(
       "max-w-column",
       "desk:max-w-page",
@@ -453,7 +498,10 @@ describe("not public (round 41 #86f)", () => {
     expect(html).not.toContain("maya_runs");
     expect(html).toBe(
       await firstPaint(
-        <NotPublicPage page={{ handle: "someone_else" }} askSignedIn={SIGNED_IN} />,
+        <NotPublicPage
+          page={{ handle: "someone_else" }}
+          askSignedIn={SIGNED_IN}
+        />,
       ),
     );
   });
@@ -474,7 +522,9 @@ describe("not public (round 41 #86f)", () => {
 
   it("stays signed out when nobody is", async () => {
     const ask = vi.fn(SIGNED_OUT);
-    await show(<NotPublicPage page={{ handle: "maya_runs" }} askSignedIn={ask} />);
+    await show(
+      <NotPublicPage page={{ handle: "maya_runs" }} askSignedIn={ask} />,
+    );
 
     await waitFor(() => {
       expect(ask).toHaveBeenCalled();

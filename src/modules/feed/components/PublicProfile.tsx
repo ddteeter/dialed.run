@@ -79,6 +79,9 @@ const MORE_CLASS =
   "target inline-flex items-center self-start text-small text-ink underline underline-offset-4";
 const KIT_TILE_CLASS =
   "size-16 shrink-0 rounded-tile bg-tint desk:aspect-square desk:size-auto desk:w-full";
+// The tile's box and corner, the photo cropped to it as D's pager crops.
+const KIT_PHOTO_CLASS =
+  "size-16 shrink-0 rounded-tile bg-tint object-cover desk:aspect-square desk:size-auto desk:w-full";
 
 /**
  * Kits {N}: the first three (or all of them, under "Show {N} more"), a
@@ -124,8 +127,7 @@ function Kits({ profile }: Readonly<{ profile: PublicProfile }>) {
 }
 
 /**
- * One kit, opening its own `/k` page: the tile (the photo once world
- * photos exist, D-151; the --tint tile until then), the conditions with
+ * One kit, opening its own `/k` page: the tile, the conditions with
  * the measured word teal, the day and distance in mono, the verdict's
  * chip in its hue.
  */
@@ -138,7 +140,7 @@ function KitRow({ row }: Readonly<{ row: PublicKitRow }>) {
         reloadDocument
         className={KIT_ROW_CLASS}
       >
-        <span aria-hidden="true" data-part="kit-tile" className={KIT_TILE_CLASS} />
+        <KitTile photo={row.photo} />
         <span className="flex min-w-0 flex-1 flex-col gap-1">
           {row.conditions === undefined ? undefined : (
             <span className="text-body font-semibold">
@@ -153,6 +155,19 @@ function KitRow({ row }: Readonly<{ row: PublicKitRow }>) {
         <VerdictChip verdict={row.verdict} />
       </Link>
     </li>
+  );
+}
+
+/**
+ * The kit's tile: its first photo as the public bucket serves it (D-151,
+ * the one `/k` shows first), cropped to the tile, or the --tint tile when
+ * it has none. Decorative either way: the row's own words name the kit.
+ */
+function KitTile({ photo }: Readonly<{ photo: string | undefined }>) {
+  return photo === undefined ? (
+    <span aria-hidden="true" data-part="kit-tile" className={KIT_TILE_CLASS} />
+  ) : (
+    <img src={photo} alt="" data-part="kit-tile" className={KIT_PHOTO_CLASS} />
   );
 }
 
