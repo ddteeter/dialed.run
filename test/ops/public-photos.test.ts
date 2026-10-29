@@ -100,6 +100,14 @@ async function copies() {
   return core().select().from(publicPhotos);
 }
 
+async function photoKeyOf(photoId: string): Promise<string> {
+  const [row] = await core()
+    .select({ photoKey: entryPhotos.photoKey })
+    .from(entryPhotos)
+    .where(eq(entryPhotos.id, photoId));
+  return row?.photoKey ?? "";
+}
+
 async function copiedEntries(): Promise<string[]> {
   const rows = await copies();
   return rows.map((copy) => copy.entryId);
@@ -413,32 +421,29 @@ describe("copying", () => {
     const failing = await photoOn(owner, "pass", 0);
     const missing = await photoOn(owner, "pass", 1);
     const fine = await photoOn(owner, "pass", 2);
-    const [missingRow] = await core()
-      .select({ photoKey: entryPhotos.photoKey })
-      .from(entryPhotos)
-      .where(eq(entryPhotos.id, missing));
-    await env.MEDIA.delete(missingRow?.photoKey ?? "");
+    await env.MEDIA.delete(await photoKeyOf(missing));
+    const failingKey = await photoKeyOf(failing);
     const report = vi.fn();
     const refusal = new Error("R2 down");
-    const bucket: PublicPhotoDeps["bucket"] = {
-      put: async (key, value, options) => {
-        if (key === "first") throw refusal;
-        return env.PUBLIC_PHOTOS.put(key, value, options);
+    const media: PublicPhotoDeps["media"] = {
+      get: async (key) => {
+        if (key === failingKey) throw refusal;
+        return env.MEDIA.get(key);
       },
-      delete: (key) => env.PUBLIC_PHOTOS.delete(key),
-      list: (options) => env.PUBLIC_PHOTOS.list(options),
     };
 
     await syncPublicPhotos(
-      deps({ bucket, report, newKey: keys("first", "second", "third") }),
+      deps({ media, report, newKey: keys("k1", "k2", "k3") }),
       only(owner.entryId),
     );
 
-    expect(report.mock.calls).toStrictEqual([
-      [refusal, { photoId: failing }],
-      [new Error("photo object missing"), { photoId: missing }],
-    ]);
-    expect(await bucketKeys()).toStrictEqual(["third"]);
+    // In whichever order the read returned them.
+    expect(report).toHaveBeenCalledTimes(2);
+    expect(report).toHaveBeenCalledWith(refusal, { photoId: failing });
+    expect(report).toHaveBeenCalledWith(new Error("photo object missing"), {
+      photoId: missing,
+    });
+    expect(await bucketKeys()).toHaveLength(1);
     const rows = await copies();
     const landed = rows.filter((copy) => copy.publishedAt !== null);
     expect(landed.map((copy) => copy.photoId)).toStrictEqual([fine]);
