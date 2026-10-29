@@ -194,13 +194,20 @@ test("someone with no account asks for an intimate image to come down, and an op
     page.getByRole("heading", { name: "We have your request" }),
   ).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText(requester)).toBeVisible();
-  // D-147: the two services that reach other sites.
+  // D-147 (round 41 #85): the two services that reach other sites, last
+  // on the receipt, each saying it opens a new tab.
   const elsewhere = page.locator("[data-part='elsewhere-help']");
   await expect(
-    elsewhere.getByRole("link", { name: "StopNCII.org" }),
+    elsewhere.getByRole("link", {
+      name: "StopNCII.org (opens in a new tab)",
+      exact: true,
+    }),
   ).toHaveAttribute("href", "https://stopncii.org/");
   await expect(
-    elsewhere.getByRole("link", { name: "Take It Down" }),
+    elsewhere.getByRole("link", {
+      name: "Take It Down (opens in a new tab)",
+      exact: true,
+    }),
   ).toHaveAttribute("href", "https://takeitdown.ncmec.org/");
 
   // A link of ours hides the kit at once (round 35 #58e), as a W1 report

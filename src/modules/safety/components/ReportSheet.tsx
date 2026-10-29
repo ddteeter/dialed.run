@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   ChoiceList,
@@ -107,13 +107,21 @@ export function ReportSheet({
   const [reason, setReason] = useState<ReportReason | undefined>();
   const [note, setNote] = useState("");
   const [alsoBlock, setAlsoBlock] = useState(false);
+  // Round 42: an intimate-image report swaps the sheet for its receipt
+  // rather than closing, so the other sites are said where it was sent.
+  const [isReceipt, setIsReceipt] = useState(false);
+
+  function finish(): void {
+    onFiled();
+    onClose();
+  }
 
   const form = useFormSubmit({
     schema: fileReportInput,
     action: (values) => fileReport({ data: values }),
     onSuccess: () => {
-      onFiled();
-      onClose();
+      if (reason === "intimate") setIsReceipt(true);
+      else finish();
     },
     successMessage: "Report sent.",
     labels: { reason: "What's wrong with it", note: "Anything else" },
@@ -123,6 +131,20 @@ export function ReportSheet({
     // a failure either: the root opens "Confirm your email first".
     confirmTrigger: "report",
   });
+
+  if (isReceipt) {
+    // The native close hands focus back to the Report link, which leads
+    // nowhere now; it moves on once that has happened (round 42).
+    const closeReceipt = () => {
+      finish();
+      globalThis.setTimeout(focusPageHeading, 0);
+    };
+    return (
+      <Sheet open={open} onClose={closeReceipt} label="Report sent">
+        <IntimateReceipt onDone={closeReceipt} />
+      </Sheet>
+    );
+  }
 
   // **The block offer needs a name, so it is gated on having one.**
   //
@@ -267,23 +289,74 @@ export function ReportSheet({
 }
 
 /**
- * Under the intimate-image reason: W1's way out (round 37 #58k), and where
- * else to go for the other sites it may be on (D-147, design 152).
+ * Under the intimate-image reason: W1's way out (round 37 #58k). Where
+ * else to go waits for the receipt (round 41 #85): here it would crowd the
+ * choice.
  */
 function IntimateHelp(): JSX.Element {
   return (
-    <>
-      <p data-part="takedown-way-out" className="m-0 text-small">
-        Rather not use your account?{" "}
-        <Link
-          to="/takedown"
-          data-target="inline"
-          className="font-bold text-ink underline underline-offset-4"
-        >
-          Report it without signing in
-        </Link>
+    <p data-part="takedown-way-out" className="m-0 text-small">
+      Rather not use your account?{" "}
+      <Link
+        to="/takedown"
+        data-target="inline"
+        className="font-bold text-ink underline underline-offset-4"
+      >
+        Report it without signing in
+      </Link>
+    </p>
+  );
+}
+
+/**
+ * W1's receipt for an intimate-image report (round 42): what happened,
+ * what we owe, then where else to go, last after a hairline. Every other
+ * reason closes the sheet on "Report sent." The head takes focus, so the
+ * swap is read out; Done, or Esc, closes it.
+ *
+ * "Within a day" is the owner's word for the board's "today" (2026-10-29):
+ * the promise the sheet's own "What happens next" already makes.
+ */
+function IntimateReceipt({
+  onDone,
+}: Readonly<{ onDone: () => void }>): JSX.Element {
+  const head = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    head.current?.focus();
+  }, []);
+  return (
+    <div data-part="report-receipt" className="flex flex-col gap-4">
+      <Mono step="xs" className="text-muted">
+        Report sent
+      </Mono>
+      <h2 ref={head} tabIndex={-1} className="m-0 text-title font-bold">
+        Thanks for telling us.
+      </h2>
+      <p className="m-0 text-body">
+        It&apos;s hidden from everyone now. We&apos;ll review it within a day
+        and keep it down if it breaks the rule.
       </p>
       <ElsewhereHelp />
-    </>
+      <button
+        type="button"
+        onClick={onDone}
+        className="target grid min-h-13 w-full cursor-pointer place-items-center rounded-card border-none bg-ink px-6 font-display text-body uppercase text-ground"
+      >
+        Done
+      </button>
+    </div>
   );
+}
+
+/**
+ * Where focus goes once the receipt closes (round 42): the next item on
+ * the page, else its heading. W1 opens from D and from a profile, each one
+ * subject with nothing after it, so that is the heading. A heading is not
+ * focusable by default, so it is made reachable by script only.
+ */
+function focusPageHeading(): void {
+  const heading = document.querySelector<HTMLElement>("main h1, h1");
+  if (heading === null) return;
+  if (!heading.hasAttribute("tabindex")) heading.setAttribute("tabindex", "-1");
+  heading.focus();
 }
