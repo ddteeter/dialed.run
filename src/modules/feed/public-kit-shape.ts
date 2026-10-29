@@ -64,6 +64,12 @@ export interface PublicKit {
   readonly pace?: PublicStat;
   readonly gain?: PublicStat;
   readonly caption?: string;
+  /**
+   * The kit's screened photos as the public bucket serves them (D-151,
+   * design 160 step 8): absolute URLs on its own origin, in the kit's
+   * order. Absent with none. Never on the card (D-150).
+   */
+  readonly photos?: readonly string[];
   readonly pieces: readonly PublicPiece[];
   /**
    * A digest of what the share card shows, so an edit gives the card a new

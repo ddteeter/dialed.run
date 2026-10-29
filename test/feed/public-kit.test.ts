@@ -5,9 +5,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   accountDeletions,
   domainDenylist,
+  entryPhotos,
   follows,
   outfitEntries,
   outfitEntryItems,
+  publicPhotos,
   reactions,
   runs,
   userProfiles,
@@ -268,6 +270,38 @@ describe("publicKitRead: a public kit", () => {
     ]) {
       expect(serialized, forbidden).not.toContain(forbidden);
     }
+  });
+
+  it("shows the photos the public bucket has landed, from its own origin, and the card never changes for them", async () => {
+    const { runner, entryId } = await fullyPopulated();
+    const before = await kitOf(entryId);
+    const photoId = newUlid();
+    await core()
+      .insert(entryPhotos)
+      .values({
+        id: photoId,
+        entryId,
+        photoKey: `entries/${runner}/${entryId}/${photoId}`,
+        position: 0,
+        screenStatus: "pass",
+      });
+    await core().insert(publicPhotos).values({
+      key: "a1b2",
+      photoId,
+      entryId,
+      userId: runner,
+      createdAt: NOW,
+      publishedAt: NOW,
+    });
+
+    const after = await kitOf(entryId);
+
+    expect(before?.photos).toBeUndefined();
+    expect(after?.photos).toStrictEqual(["https://photos.dialed.run/a1b2"]);
+    // D-150: never the photo on the card, so its version ignores them.
+    expect(after?.cardVersion).toBe(before?.cardVersion);
+    await core().delete(publicPhotos);
+    await core().delete(entryPhotos);
   });
 
   it("reads in kilometres, metres and Celsius for a runner who counts them", async () => {

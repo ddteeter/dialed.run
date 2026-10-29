@@ -71,3 +71,34 @@ export function profileCacheTags(
     ? [runner, handleCacheTag(handle)]
     : [runner];
 }
+
+/**
+ * The kits and runners a purge names, read back from its tags (design
+ * 160 step 8): what the public photo reconcile works through when a
+ * purge goes out, so every path that takes a page back takes its
+ * photos' copies back too, with no second call to forget. The prefixes
+ * are the builders' own, so a tag cannot be built one way and read
+ * another. A handle's tag names a path, not a kit or a runner, and is
+ * left out.
+ */
+export interface TaggedScope {
+  readonly entryIds: readonly string[];
+  readonly runnerIds: readonly string[];
+}
+
+export function scopeOfTags(tags: readonly string[]): TaggedScope {
+  return {
+    entryIds: idsTagged(tags, entryCacheTag("")),
+    runnerIds: idsTagged(tags, runnerCacheTag("")),
+  };
+}
+
+/**
+Each distinct id after `prefix`, among the tags that carry it.
+*/
+function idsTagged(tags: readonly string[], prefix: string): string[] {
+  const ids = tags
+    .filter((tag) => tag.startsWith(prefix))
+    .map((tag) => tag.slice(prefix.length));
+  return [...new Set(ids)];
+}

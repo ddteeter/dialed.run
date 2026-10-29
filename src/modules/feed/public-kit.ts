@@ -53,6 +53,7 @@ import {
   kitCardResponse,
   publicPageHeaders,
   publicPageTags,
+  publishedPhotoUrls,
   type EntryCardData,
 } from "../ops";
 import { typeWordOf } from "../closet";
@@ -102,10 +103,11 @@ export async function publicKitRead(
   if (run === undefined || typeof runner?.username !== "string") {
     return undefined;
   }
-  const [units, pieces, observed] = await Promise.all([
+  const [units, pieces, observed, photos] = await Promise.all([
     unitsFor(database, entry.userId),
     piecesOf(database, entry.id),
     observationsForRuns([run]),
+    publishedPhotoUrls(database, entry.id),
   ]);
   const conditions = observed.get(run.id);
   const verdict = verdictOf(entry.verdict);
@@ -117,6 +119,7 @@ export async function publicKitRead(
     ...(verdict !== undefined && { verdict }),
     ...statsOf(run, units),
     ...(entry.caption !== null && { caption: entry.caption }),
+    ...(photos.length > 0 && { photos }),
     pieces,
   };
   return {

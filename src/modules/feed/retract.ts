@@ -39,6 +39,7 @@ import {
   reactions,
   runs,
 } from "../../db/schema-core";
+import { WORLD_AUDIENCE } from "../../lib/contracts";
 import { NotFoundError } from "../../lib/errors";
 import { ulidSchema } from "../../lib/ids";
 import {
@@ -46,7 +47,7 @@ import {
   runnerCacheTag,
   type PurgeTags,
 } from "../../lib/cache-tags";
-import { columnWhere } from "../../lib/sql/keyed-read";
+import { columnWhere, firstRowWhere } from "../../lib/sql/keyed-read";
 import {
   captureException,
   outboxInsert,
@@ -338,21 +339,33 @@ export const retractEntry = retractOneOf(
 /**
  * One photo off one of the runner's entries. The row goes with its open
  * review, and the entry's prefix is owed a reconcile, which deletes this
- * object and keeps the photos still named.
+ * object and keeps the photos still named. On a PUBLIC kit, its page is
+ * purged, and with it the photo's public copy (design 160 step 8); a kit
+ * that is not PUBLIC has neither.
  */
 export async function deleteEntryPhoto(
   db: Db,
   userId: string,
   photoId: string,
   report: Report = captureException,
+  purge: PurgeTags = purgePublicPages,
 ): Promise<void> {
-  const [photo] = await db
-    .select({ entryId: entryPhotos.entryId })
+  // The kit the photo is on, if it is the runner's: a missing photo and
+  // one on someone else's kit answer the same.
+  const kitOfPhoto = db
+    .select({ id: entryPhotos.entryId })
     .from(entryPhotos)
-    .innerJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
-    .where(and(eq(entryPhotos.id, photoId), eq(outfitEntries.userId, userId)))
-    .limit(1);
-  if (photo === undefined) throw new NotFoundError("photo not found");
+    .where(eq(entryPhotos.id, photoId));
+  const entry = await firstRowWhere(
+    db,
+    outfitEntries,
+    and(
+      eq(outfitEntries.userId, userId),
+      inArray(outfitEntries.id, kitOfPhoto),
+    ),
+  );
+  if (entry === undefined) throw new NotFoundError("photo not found");
+  const photo = { entryId: entry.id, audience: entry.audience };
   await commit(
     db,
     [
@@ -363,6 +376,9 @@ export async function deleteEntryPhoto(
     mediaDebts(userId, [photo.entryId]),
     report,
   );
+  if (photo.audience === WORLD_AUDIENCE) {
+    purge(kitCacheTags(userId, photo.entryId));
+  }
 }
 
 /**

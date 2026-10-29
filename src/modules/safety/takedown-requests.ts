@@ -46,7 +46,7 @@ import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { countSend, emailDebt, sendClaimOf } from "../email";
 import { adminUserIds } from "./admin";
 import { REMOVAL_DUE_SECONDS, removalDueLabel } from "./contracts";
-import { kitCacheTagsOf } from "./kit-cache-tags";
+import { subjectCacheTagsOf } from "./kit-cache-tags";
 import { hiddenNotice } from "./notices";
 import { otherPhotosOf, type OtherPhotos } from "./other-photos";
 import { photoMatchesOf, type PhotoMatches } from "./photo-matches";
@@ -192,17 +192,16 @@ export async function fileTakedownRequest<Attempt>(
 
 /**
  * Design 160: a kit a request hid leaves the edge now, not within the
- * TTL — the open web's `/k/<id>` is a link `/takedown` takes. A photo is
- * not on the open web (D-151's world photos are phase 4).
+ * TTL — the open web's `/k/<id>` is a link `/takedown` takes. So does a
+ * held photo's kit, whose page shows it, and the purge deletes the
+ * photo's public copy (D-151, design 160 step 8).
  */
 async function purgeHeld(
   db: Db,
   subject: TakedownSubject,
   purge: PurgeTags,
 ): Promise<void> {
-  if (subject.subjectType === "entry") {
-    purge(await kitCacheTagsOf(db, subject.subjectId));
-  }
+  purge(await subjectCacheTagsOf(db, subject.subjectType, subject.subjectId));
 }
 
 /**

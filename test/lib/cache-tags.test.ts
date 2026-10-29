@@ -6,6 +6,7 @@ import {
   kitCacheTags,
   profileCacheTags,
   runnerCacheTag,
+  scopeOfTags,
 } from "../../src/lib/cache-tags";
 
 /**
@@ -36,5 +37,32 @@ describe("the cache tags", () => {
     // A NULL handle from the database reads the same: the onboarding
     // switch's test reaches it through a row with none.
     expect(profileCacheTags("u1", undefined)).toStrictEqual(["runner:u1"]);
+  });
+});
+
+describe("scopeOfTags", () => {
+  it("reads back the kits and runners a purge names, each once, and no handle", () => {
+    expect(
+      scopeOfTags([
+        "entry:e1",
+        "runner:u1",
+        "handle:maya",
+        "entry:e2",
+        "entry:e1",
+        "runner:u1",
+        "runner:u2",
+        "xentry:e3",
+      ]),
+    ).toStrictEqual({ entryIds: ["e1", "e2"], runnerIds: ["u1", "u2"] });
+  });
+
+  it("reads the builders' own tags back to their ids", () => {
+    expect(
+      scopeOfTags([
+        ...kitCacheTags("u1", "e1"),
+        ...profileCacheTags("u2", "h"),
+      ]),
+    ).toStrictEqual({ entryIds: ["e1"], runnerIds: ["u1", "u2"] });
+    expect(scopeOfTags([])).toStrictEqual({ entryIds: [], runnerIds: [] });
   });
 });

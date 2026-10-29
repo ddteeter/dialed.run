@@ -7,6 +7,7 @@ import { entryPhotoKeyFor } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
 import { claimUsername, forceRename } from "../../src/modules/account";
 import {
+  deleteEntryPhoto,
   deleteRun,
   deleteRuns,
   retractEntries,
@@ -20,7 +21,10 @@ import {
   fileReport,
   fileTakedownRequest,
 } from "../../src/modules/safety";
-import { kitCacheTagsOf } from "../../src/modules/safety/kit-cache-tags";
+import {
+  kitCacheTagsOf,
+  subjectCacheTagsOf,
+} from "../../src/modules/safety/kit-cache-tags";
 import { purgeSpy } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";
 
@@ -128,6 +132,31 @@ describe("a runner's own kit", () => {
     ]);
   });
 
+  it("purges a PUBLIC kit a photo is deleted from, and nothing for a SHARED one", async () => {
+    const world = await kit("world");
+    const shared = await kit("runners");
+    const spy = purgeSpy();
+
+    await deleteEntryPhoto(
+      core(),
+      world.userId,
+      await photoOn(world.userId, world.entryId),
+      quiet,
+      spy.purge,
+    );
+    await deleteEntryPhoto(
+      core(),
+      shared.userId,
+      await photoOn(shared.userId, shared.entryId),
+      quiet,
+      spy.purge,
+    );
+
+    expect(spy.calls).toStrictEqual([
+      [`entry:${world.entryId}`, `runner:${world.userId}`],
+    ]);
+  });
+
   it("purges only the runner for all of a runner's kits, never one per kit", async () => {
     const { userId } = await kit();
     await makeEntry({ userId, runId: await makeRun({ userId }) });
@@ -164,7 +193,7 @@ describe("the Desk, reports and requests", () => {
     expect(spy.calls).toStrictEqual([[`entry:${entryId}`, `runner:${userId}`]]);
   });
 
-  it("purges nothing for a photo the Desk takes down: no photo is on the open web", async () => {
+  it("purges the kit a photo the Desk takes down was on, whose page shows it", async () => {
     const { userId, entryId } = await kit();
     const photoId = await photoOn(userId, entryId);
     const spy = purgeSpy();
@@ -182,7 +211,7 @@ describe("the Desk, reports and requests", () => {
       spy.purge,
     );
 
-    expect(spy.calls).toStrictEqual([]);
+    expect(spy.calls).toStrictEqual([[`entry:${entryId}`, `runner:${userId}`]]);
   });
 
   it("purges a kit a report hides, and nothing for one it does not", async () => {
@@ -207,7 +236,7 @@ describe("the Desk, reports and requests", () => {
     expect(spy.calls).toStrictEqual([[`entry:${entryId}`, `runner:${userId}`]]);
   });
 
-  it("purges nothing for a photo a report hides", async () => {
+  it("purges the kit a photo a report hides is on", async () => {
     const { userId, entryId } = await kit();
     const photoId = await photoOn(userId, entryId);
     const spy = purgeSpy();
@@ -223,7 +252,19 @@ describe("the Desk, reports and requests", () => {
       spy.purge,
     );
 
-    expect(spy.calls).toStrictEqual([]);
+    expect(spy.calls).toStrictEqual([[`entry:${entryId}`, `runner:${userId}`]]);
+  });
+
+  it("names nothing for a profile or a product, and nothing for a photo that is gone", async () => {
+    expect(
+      await subjectCacheTagsOf(core(), "profile", newUlid()),
+    ).toStrictEqual([]);
+    expect(
+      await subjectCacheTagsOf(core(), "product", newUlid()),
+    ).toStrictEqual([]);
+    expect(await subjectCacheTagsOf(core(), "photo", newUlid())).toStrictEqual(
+      [],
+    );
   });
 
   it.each([
@@ -256,7 +297,7 @@ describe("the Desk, reports and requests", () => {
     expect(spy.calls).toStrictEqual([[`entry:${entryId}`, `runner:${userId}`]]);
   });
 
-  it("purges nothing for a photo a removal request holds", async () => {
+  it("purges the kit a photo a removal request holds is on", async () => {
     const { userId, entryId } = await kit();
     const photoId = await photoOn(userId, entryId);
     const spy = purgeSpy();
@@ -281,7 +322,7 @@ describe("the Desk, reports and requests", () => {
       },
     );
 
-    expect(spy.calls).toStrictEqual([]);
+    expect(spy.calls).toStrictEqual([[`entry:${entryId}`, `runner:${userId}`]]);
   });
 
   it("names a kit that is gone by its own page alone", async () => {

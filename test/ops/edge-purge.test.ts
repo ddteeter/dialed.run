@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  purgeAndSync,
   purgePublicPages,
   purgeTags,
   type EdgeCache,
@@ -129,6 +130,24 @@ describe("purgeTags", () => {
     await settled();
 
     expect(report.mock.calls).toStrictEqual([[failure, { tags: "runner:u1" }]]);
+  });
+});
+
+describe("purgeAndSync", () => {
+  it("purges the tags and syncs the public photos of the kits and runners they name", async () => {
+    const purge = vi.fn(() => Promise.resolve(purged()));
+    const { deps, settled } = harness({ purge });
+    const sync = vi.fn();
+
+    purgeAndSync(deps, sync, ["entry:e1", "runner:u1", "handle:maya"]);
+    await settled();
+
+    expect(purge.mock.calls).toStrictEqual([
+      [{ tags: ["entry:e1", "runner:u1", "handle:maya"] }],
+    ]);
+    expect(sync.mock.calls).toStrictEqual([
+      [{ entryIds: ["e1"], runnerIds: ["u1"] }],
+    ]);
   });
 });
 

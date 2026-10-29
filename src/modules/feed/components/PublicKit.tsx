@@ -4,6 +4,7 @@ import { Mono, WeatherAttribution } from "../../../ui";
 import { ProductLink } from "../../../ui/ProductLink";
 import type { PublicKit, PublicPiece } from "../public-kit-shape";
 
+import { PhotoPager } from "./PhotoPager";
 import {
   Invite,
   PieceSection,
@@ -20,9 +21,10 @@ import {
 
 /**
  * `/k/<id>` for a public kit (round 41 #86c). Order: who and which day,
- * conditions and verdict, the four stats, the caption, the kit, the
- * credit, the pitch, the foot. No photo yet (D-151 waits on the public
- * bucket).
+ * the photo when it has one, conditions and verdict, the four stats, the
+ * caption, the kit, the credit, the pitch, the foot. The photos are D's
+ * pager, served from the public bucket (D-151, design 160 step 8), with
+ * no delete: nobody owns anything on the open web's page.
  *
  * `origin` is where the page lives, for the link Report this kit hands
  * `/takedown`: the route's, so the server's page and the browser's agree.
@@ -45,6 +47,11 @@ export function PublicKitPage({
     >
       {(isSignedIn) => (
         <>
+          <PhotoPager
+            photoKeys={kit.photos ?? []}
+            deletePhoto={undefined}
+            srcOf={servedAsIs}
+          />
           <Conditions kit={kit} />
           <Stats kit={kit} />
           {kit.caption === undefined ? undefined : (
@@ -61,6 +68,13 @@ export function PublicKitPage({
       )}
     </RunnerFrame>
   );
+}
+
+/**
+A public photo's URL is already where it is served.
+*/
+function servedAsIs(url: string): string {
+  return url;
 }
 
 /**

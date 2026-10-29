@@ -954,6 +954,47 @@ export const entryPhotos = /*#__PURE__*/ sqliteTable(
   ],
 );
 
+/**
+ * The copies of photos on PUBLIC kits in the public bucket (D-151, design
+ * 160 step 8): one row per object there, so the row is the record of what
+ * anyone can read.
+ *
+ * **Its own table, not a column of `entry_photos`**, because the copy
+ * must outlive the photo's row: deleting a kit, a run or an account, and
+ * the Desk's Remove and quarantine, delete the photo rows in their own
+ * batch, and a key held only there would be gone with them, leaving a
+ * public object nothing names. Here the key survives, and the reconcile
+ * (`ops/public-photos.ts`) deletes every copy whose photo is no longer a
+ * screened photo on a world-visible kit, the row last.
+ *
+ * Written before the object (claim, then work): a row whose
+ * `published_at` is NULL is a copy owed, and no object is ever put under
+ * a key this table does not hold. No foreign keys, on purpose: the row
+ * must stay when the photo goes.
+ */
+export const publicPhotos = /*#__PURE__*/ sqliteTable(
+  "public_photos",
+  {
+    // The object's key in the public bucket and its URL's path: 128
+    // random bits, derived from nothing (`lib/public-photos.ts`).
+    key: text("key").primaryKey(),
+    photoId: text("photo_id").notNull(),
+    entryId: text("entry_id").notNull(),
+    userId: text("user_id").notNull(),
+    createdAt: integer("created_at").notNull(),
+    // When the object landed; NULL while it is owed. The page shows only
+    // a published copy.
+    publishedAt: integer("published_at"),
+  },
+  (t) => [
+    // One copy per photo: the claim's conflict target.
+    uniqueIndex("public_photos_photo").on(t.photoId),
+    // The reconcile's scopes: a kit's copies, and a runner's.
+    index("public_photos_entry").on(t.entryId),
+    index("public_photos_user").on(t.userId),
+  ],
+);
+
 export const follows = /*#__PURE__*/ sqliteTable(
   "follows",
   {

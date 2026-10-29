@@ -275,6 +275,22 @@ describe("the cron heartbeat", () => {
     expect(row?.status).toBe("hidden_pending_review");
   });
 
+  it("sweeps the public photo bucket on the same firing (design 160 step 8)", async () => {
+    // An object no row names: a copy whose Worker died before its row
+    // went. The sweep is the only thing that would ever find it.
+    const orphan = `orphan-${newUlid().toLowerCase()}`;
+    await env.PUBLIC_PHOTOS.put(orphan, new Uint8Array([1]));
+
+    const outcome = await handleScheduled({
+      cron: "15 * * * *",
+    } as ScheduledController);
+
+    expect(outcome.anomalies).toContainEqual(
+      expect.stringContaining("public photo objects had no row naming them"),
+    );
+    expect(await env.PUBLIC_PHOTOS.head(orphan)).toBeNull();
+  });
+
   it("says so when it takes a stale review claim back", async () => {
     // A claim stamped long enough ago that its lease has run out. Written
     // directly because the only other way to reach this state is to wait

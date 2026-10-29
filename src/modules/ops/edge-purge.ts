@@ -21,8 +21,13 @@
  * `vite dev`; then there is nothing to purge and the call does nothing.
  */
 import { cache, waitUntil } from "../../env";
-import type { PurgeTags } from "../../lib/cache-tags";
+import {
+  scopeOfTags,
+  type PurgeTags,
+  type TaggedScope,
+} from "../../lib/cache-tags";
 
+import { syncPublicPhotosLater } from "./public-photos";
 import { captureException, type KeepAlive } from "./sentry";
 
 /**
@@ -91,10 +96,27 @@ const workerPurge: PurgeDeps = {
 };
 
 /**
- * The purge every writer uses. Bound rather than wrapped, so it is
- * exactly `purgeTags` on the Worker's own cache.
+ * The purge every writer uses: `purgeTags` on the Worker's own cache, and
+ * the public photo reconcile for the kits and runners the tags name
+ * (design 160 step 8), so whatever takes a page back takes its photos'
+ * copies back too — and a kit made PUBLIC gets its copies. Both in the
+ * background; neither can fail the write.
  */
-export const purgePublicPages: PurgeTags = purgeTags.bind(
+export function purgeAndSync(
+  deps: PurgeDeps,
+  sync: (scope: TaggedScope) => void,
+  tags: readonly string[],
+): void {
+  purgeTags(deps, tags);
+  sync(scopeOfTags(tags));
+}
+
+/**
+ * `purgeAndSync` on the Worker's own cache and buckets. Bound rather
+ * than wrapped, as the purge was before it.
+ */
+export const purgePublicPages: PurgeTags = purgeAndSync.bind(
   undefined,
   workerPurge,
+  syncPublicPhotosLater,
 );

@@ -37,6 +37,7 @@
  * Framing, object embeds, base-tag hijacking and foreign form targets are
  * refused regardless.
  */
+import { PUBLIC_PHOTOS_ORIGIN } from "../../lib/public-photos";
 
 /**
  * Report-only until the reports are quiet; then this becomes
@@ -80,6 +81,8 @@ const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
  * - `blob:` workers: MediaPipe runs its model in a worker it builds from a
  *   blob.
  * - `img-src blob: data:`: photo previews before upload are object URLs.
+ *   The public photo bucket's origin: a PUBLIC kit's photos are served
+ *   from there, not by the Worker (D-151, design 160 step 8).
  * - `form-action`: Google and Strava sign-in leave by redirect, which a
  *   browser checks against `form-action` when a form started it.
  */
@@ -91,7 +94,7 @@ export function contentSecurityPolicy(
     "default-src 'self'",
     `script-src 'self'${inlineScriptSources(inline)} 'wasm-unsafe-eval' ${TURNSTILE_ORIGIN}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' blob: data:",
+    `img-src 'self' blob: data: ${PUBLIC_PHOTOS_ORIGIN}`,
     "font-src 'self'",
     "connect-src 'self'",
     "worker-src 'self' blob:",

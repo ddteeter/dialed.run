@@ -464,23 +464,22 @@ export async function moderateContent(
     ],
     report,
   );
-  purgeTakenDown(input, target, purge);
+  purgeTakenDown(target, purge);
   return "removed";
 }
 
 /**
  * Design 160: a kit taken down — removed, quarantined or held — leaves
- * the edge now rather than within the TTL. A photo is not on the open web
- * (D-151's world photos are phase 4), so it has no page to purge.
+ * the edge now rather than within the TTL, and so does the kit a photo
+ * taken down was on, whose page shows it. The purge deletes the public
+ * copies too (D-151, step 8): every copy of a kit taken down, and a photo
+ * taken down's own.
  */
 function purgeTakenDown(
-  input: Pick<ModerateInput, "subjectType">,
   target: Pick<Target, "ownerId" | "entryId">,
   purge: PurgeTags,
 ): void {
-  if (input.subjectType === "entry") {
-    purge(kitCacheTags(target.ownerId, target.entryId));
-  }
+  purge(kitCacheTags(target.ownerId, target.entryId));
 }
 
 /**

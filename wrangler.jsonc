@@ -46,8 +46,17 @@
   //   and so the rate limiter stays off.
   // The Turnstile site key is printed into the page; its secret is a
   // `wrangler secret`.
+  //
+  // PUBLIC_PHOTOS_ORIGIN (owner-approved, 2026-10-28; design 160 step 8,
+  // D-151) is the public photo bucket's custom domain, and the switch that
+  // turns copying photos of PUBLIC kits into PUBLIC_PHOTOS on: set it only
+  // once the bucket, its domain and the CSAM Scanning Tool are live
+  // (docs/deployment.md §2). It must equal src/lib/public-photos.ts's
+  // PUBLIC_PHOTOS_ORIGIN, which the page's img-src admits; the conformance
+  // test holds the two together.
   "vars": {
     "BETTER_AUTH_URL": "https://dialed.run",
+    "PUBLIC_PHOTOS_ORIGIN": "https://photos.dialed.run",
     "TURNSTILE_SITE_KEY": "",
   },
   "d1_databases": [
@@ -87,6 +96,19 @@
     {
       "binding": "IMPORTS",
       "bucket_name": "dialed-imports",
+    },
+    // PUBLIC_PHOTOS (owner-approved, 2026-10-28; design 160 step 8,
+    // D-151): the one bucket anyone can read, on its custom domain
+    // photos.dialed.run. It holds a copy of each screened photo on a
+    // PUBLIC kit, under an unguessable key, each with
+    // `Cache-Control: public, max-age=60`, and nothing else; the deletion
+    // paths and the hourly sweep remove every copy whose kit stops being
+    // public (src/modules/ops/public-photos.ts). No lifecycle rule. Create
+    // it, connect the domain and turn on the CSAM Scanning Tool before the
+    // deploy that binds it (docs/deployment.md §2).
+    {
+      "binding": "PUBLIC_PHOTOS",
+      "bucket_name": "dialed-public-photos",
     },
   ],
   "queues": {

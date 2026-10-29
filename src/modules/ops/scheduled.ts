@@ -25,6 +25,11 @@ import { cronNameFor, type CronName } from "./crons";
 import { oweDigestEmail, type DigestMail } from "./digest-email";
 import { purgePublicPages } from "./edge-purge";
 import { checkOutboxBacklog, drainOutbox } from "./outbox";
+import {
+  sweepPublicPhotos,
+  workerPublicPhotos,
+  type PublicPhotoDeps,
+} from "./public-photos";
 import { oweInCore } from "./queues";
 import { oweRemovalReminders } from "./removal-reminders";
 import {
@@ -242,6 +247,9 @@ async function runCron(
       const anomalies: string[] = [];
       await eachStep([
         () => runScreeningRetry(anomalies),
+        // After the screening retry, so a photo it just passed on a
+        // PUBLIC kit is copied this hour (design 160 step 8).
+        () => sweepPublicPhotoCopies(anomalies),
         // Email before the re-ask: each handle may wait its full five
         // seconds on moderation, and owed mail should not wait behind it.
         () => drainOwedEmail(anomalies),
@@ -288,6 +296,30 @@ async function eachStep(
  */
 async function drainOwedEmail(anomalies: string[]): Promise<void> {
   await drainOutbox(coreDb(), anomalies, { kinds: ["email"] });
+}
+
+/**
+ * The public photo bucket's reconcile (D-151, design 160 step 8): copies
+ * the publications no purge saw (a review's Approve, an unban, a photo
+ * screened late), and deletes what a retraction's fast path missed. A
+ * delete found here is a copy that stayed public longer than it should
+ * have, so the digest names the count.
+ */
+export async function sweepPublicPhotoCopies(
+  anomalies: string[],
+  deps: PublicPhotoDeps = workerPublicPhotos(),
+): Promise<void> {
+  const found = await sweepPublicPhotos(deps);
+  if (found.stale > 0) {
+    anomalies.push(
+      `${String(found.stale)} public photo copies were still up after their kit or photo stopped being public`,
+    );
+  }
+  if (found.unnamed > 0) {
+    anomalies.push(
+      `${String(found.unnamed)} public photo objects had no row naming them and were deleted`,
+    );
+  }
 }
 
 async function runScreeningRetry(anomalies: string[]): Promise<void> {

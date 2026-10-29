@@ -51,7 +51,7 @@ import {
 } from "./contracts";
 import { adminUserIds } from "./admin";
 import { blockRunner } from "./blocks";
-import { kitCacheTagsOf } from "./kit-cache-tags";
+import { subjectCacheTagsOf } from "./kit-cache-tags";
 import { hiddenNotice, reporterIdsOf } from "./notices";
 import { enqueueForReview, firstReportHidingAtOnce } from "./review";
 import { heldPhotoStatus } from "./visibility";
@@ -418,10 +418,11 @@ async function hidePendingReview(
     ...alerts,
     ...told,
   ]);
-  // Design 160: a hidden kit leaves the edge now, not within the TTL. Only
-  // a kit has a page on the open web; a photo, a profile and a product
-  // hide nothing there (a profile is a ban's to take down).
-  if (subjectType === "entry") purge(await kitCacheTagsOf(db(), subjectId));
+  // Design 160: a hidden kit leaves the edge now, not within the TTL, and
+  // so does a hidden photo's kit, whose page shows it; the purge deletes
+  // the photo's public copy too (step 8). A profile and a product hide
+  // nothing there (a profile is a ban's to take down).
+  purge(await subjectCacheTagsOf(db(), subjectType, subjectId));
 }
 
 /**

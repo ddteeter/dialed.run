@@ -224,9 +224,10 @@ describe("the public kit, signed out", () => {
 
   it("credits Visual Crossing only for its own reading", async () => {
     const credited = await show(kitPage(KIT));
-    expect(
-      link("Weather data provided by Visual Crossing"),
-    ).toHaveAttribute("href", "https://www.visualcrossing.com/");
+    expect(link("Weather data provided by Visual Crossing")).toHaveAttribute(
+      "href",
+      "https://www.visualcrossing.com/",
+    );
     credited.unmount();
 
     await show(
@@ -329,10 +330,9 @@ describe("the public kit, once the browser knows who is looking", () => {
     const ask = vi.fn(SIGNED_IN);
     await show(kitPage(KIT, ask));
 
-    expect(await screen.findByRole("link", { name: "Open in the app" })).toHaveAttribute(
-      "href",
-      `/feed/entry/${ID}`,
-    );
+    expect(
+      await screen.findByRole("link", { name: "Open in the app" }),
+    ).toHaveAttribute("href", `/feed/entry/${ID}`);
     expect(link("Open in the app")).toHaveClass(
       "rounded-pill",
       "bg-ink",
@@ -341,7 +341,9 @@ describe("the public kit, once the browser knows who is looking", () => {
     // One slot, never both (round 42 #90).
     const bar = document.querySelector<HTMLElement>("[data-part='top-bar']");
     expect(within(bar ?? document.body).getAllByRole("link")).toHaveLength(2);
-    expect(screen.queryByRole("link", { name: "Log in" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Log in" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "Wear what worked." }),
     ).not.toBeInTheDocument();
@@ -371,7 +373,9 @@ describe("the public kit, once the browser knows who is looking", () => {
 
 describe("not public (round 41 #86f)", () => {
   it("says what public pages are, never what this one was", async () => {
-    await show(<NotPublicPage page={{ entryId: ID }} askSignedIn={SIGNED_OUT} />);
+    await show(
+      <NotPublicPage page={{ entryId: ID }} askSignedIn={SIGNED_OUT} />,
+    );
 
     expect(screen.getByText("404")).toHaveClass("text-mono-xs", "text-muted");
     expect(
@@ -399,7 +403,9 @@ describe("not public (round 41 #86f)", () => {
   });
 
   it("offers a runner a look in the app, at the app's own page of the kit", async () => {
-    await show(<NotPublicPage page={{ entryId: ID }} askSignedIn={SIGNED_IN} />);
+    await show(
+      <NotPublicPage page={{ entryId: ID }} askSignedIn={SIGNED_IN} />,
+    );
 
     expect(
       await screen.findByRole("link", { name: "Look in the app" }),
@@ -412,7 +418,9 @@ describe("not public (round 41 #86f)", () => {
     );
 
     expect(html).toBe(
-      await firstPaint(<NotPublicPage page={{ entryId: ID }} askSignedIn={SIGNED_OUT} />),
+      await firstPaint(
+        <NotPublicPage page={{ entryId: ID }} askSignedIn={SIGNED_OUT} />,
+      ),
     );
     expect(html).toContain("Nothing to see at this link");
     expect(html).not.toContain("Look in the app");
@@ -434,5 +442,39 @@ describe("useSignedInAfterLoad", () => {
     await waitFor(() => {
       expect(result.current).toStrictEqual({ isSignedIn: true });
     });
+  });
+});
+
+describe("the public kit's photos (D-151, design 160 step 8)", () => {
+  const PHOTOS = [
+    "https://photos.dialed.run/0a1b2c3d",
+    "https://photos.dialed.run/4e5f6a7b",
+  ];
+
+  it("shows each from the public bucket, in order, under who and which day and over the conditions", async () => {
+    await show(kitPage({ ...KIT, photos: PHOTOS }));
+
+    const pager = document.querySelector('[data-part="photo"]');
+    const images = [...(pager?.querySelectorAll("img") ?? [])];
+    expect(images.map((image) => image.getAttribute("src"))).toStrictEqual(
+      PHOTOS,
+    );
+    expect(screen.getByText("1 / 2")).toBeVisible();
+    // Under the header and over the conditions: round 41's order.
+    const parts = [
+      ...document.querySelectorAll<HTMLElement>(
+        'h1, [data-part="photo"], [data-part="conditions"]',
+      ),
+    ].map((part) => part.dataset.part ?? part.tagName);
+    expect(parts).toStrictEqual(["H1", "photo", "conditions"]);
+    // Nobody owns anything on the open web's page: no delete.
+    expect(screen.queryByRole("button", { name: /delete/iu })).toBeNull();
+  });
+
+  it("shows no photo for a kit with none", async () => {
+    await show(kitPage(KIT));
+
+    expect(document.querySelector('[data-part="photo"]')).toBeNull();
+    expect(document.querySelector("img")).toBeNull();
   });
 });
