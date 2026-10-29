@@ -132,7 +132,8 @@ export type SharingChoice = z.infer<typeof sharingInput>;
 /**
  * Why a PUBLIC default was refused (round 41 #86b): the first sentence of
  * the line NEW RUNS shows in the Public row's place while the profile is
- * off. Only a stale page can send one, since the row is absent then.
+ * off, which `NO_PUBLIC_DEFAULT_LINE` builds from this. Only a stale page
+ * can send one, since the row is absent then.
  */
 export const PUBLIC_DEFAULT_NEEDS_PROFILE =
   "Public is a choice here once your profile is public.";

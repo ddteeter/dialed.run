@@ -1,3 +1,4 @@
+import { audienceWord, writableAudienceSchema } from "../lib/contracts";
 import type { WritableAudience } from "../lib/contracts";
 
 /**
@@ -7,13 +8,11 @@ import type { WritableAudience } from "../lib/contracts";
  * neither stored name ever shows.
  *
  * Here rather than in one module because three screens pick an audience:
- * A3 and D's Change (feed) and Settings › Privacy (onboarding).
+ * A3 and D's Change (feed) and Settings › Privacy (onboarding). The list
+ * is the writable schema's own, whose order is the board's.
  */
-export const PICKED_AUDIENCES = [
-  "private",
-  "runners",
-  "world",
-] as const satisfies readonly WritableAudience[];
+export const PICKED_AUDIENCES: readonly WritableAudience[] =
+  writableAudienceSchema.options;
 
 /**
  * In sentence case, as `Bracketed` asks: the board's PRIVATE / SHARED /
@@ -22,10 +21,19 @@ export const PICKED_AUDIENCES = [
  * bracketed state label — `Mono` sets it in CSS.
  */
 export const AUDIENCE_LABELS: Readonly<Record<WritableAudience, string>> = {
-  private: "Private",
-  runners: "Shared",
-  world: "Public",
+  private: sentenceCased(audienceWord.private),
+  runners: sentenceCased(audienceWord.runners),
+  world: sentenceCased(audienceWord.world),
 };
+
+/**
+ * The word a file writes, as the screen says it. D-109 makes them one
+ * word, so the screen's is read from `audienceWord` rather than kept as a
+ * second copy that could be renamed alone.
+ */
+function sentenceCased(word: string): string {
+  return `${word.charAt(0).toUpperCase()}${word.slice(1)}`;
+}
 
 /**
 What each audience means, under its label on A3's picker.

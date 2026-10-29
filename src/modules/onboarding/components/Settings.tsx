@@ -23,7 +23,11 @@ import {
   ToggleField,
   useFormSubmit,
 } from "../../../ui";
-import { sharingInput, unitsInput } from "../inputs";
+import {
+  PUBLIC_DEFAULT_NEEDS_PROFILE,
+  sharingInput,
+  unitsInput,
+} from "../inputs";
 import type { SharingChoice, UnitsChoice } from "../inputs";
 import type { CurrentSettings } from "../profile";
 import { UNIT_LABELS, UnitFields } from "./UnitFields";
@@ -426,8 +430,7 @@ export const SHARE_DEFAULT_LEGEND = "Who sees new runs";
  * can be a default only once the profile is public), and this line takes
  * its place.
  */
-export const NO_PUBLIC_DEFAULT_LINE =
-  "Public is a choice here once your profile is public. You can still make any one run public.";
+export const NO_PUBLIC_DEFAULT_LINE = `${PUBLIC_DEFAULT_NEEDS_PROFILE} You can still make any one run public.`;
 
 /**
 The rows NEW RUNS offers while the profile is off: all but PUBLIC.
