@@ -52,10 +52,13 @@ Each step is one commit that passes the commit gate.
    toast: REPORT SENT, "Thanks for telling us.", "It's hidden from
    everyone now. We'll review it within a day and keep it down if it
    breaks the rule." (owner's wording, 2026-10-29), a hairline, the
-   other-sites line, and Done (ink, 52). Focus goes to the head. Done,
-   Esc or the scrim close it, and focus then goes to the next item on the
-   page, else the page heading. Other reasons keep the toast. Done when
-   dom tests cover both branches and the focus moves.
+   other-sites line, and Done (ink, 52). Focus goes to the head. Done or
+   Esc close it, and focus then goes to the page heading: W1 opens from D
+   and a profile, one subject each, so there is no next item. **Delta:**
+   the board also lists the scrim, but `Sheet` closes on no scrim
+   anywhere (DS5 rules out a desktop scrim), so W1 keeps that rule.
+   Other reasons keep the "Report sent." status. Done when dom tests
+   cover both branches and the focus moves.
 7. **Docs**. Round 42 is imported and recorded in `docs/design-deltas.md`
    (done first, with this doc).
 
