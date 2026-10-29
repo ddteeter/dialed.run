@@ -233,6 +233,23 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
     ).toStrictEqual(["BETTER_AUTH_URL", "TURNSTILE_SITE_KEY"]);
   });
 
+  it("turns Workers Caching on, partitioned by version, for the purge to reach", () => {
+    // Design 160 (D-152; owner, 2026-10-28): the open web's pages are kept
+    // at the edge and `ops/edge-purge.ts` purges them by tag. Exactly
+    // `enabled`: `cross_version_cache` would let a new deploy serve the
+    // old version's pages.
+    const cache =
+      typeof config === "object" && config !== null && "cache" in config
+        ? config.cache
+        : undefined;
+    expect(cache).toStrictEqual({ enabled: true });
+    // The one reader of the runtime's cache is the purge, through env.
+    const readers = Object.entries(sources)
+      .filter(([, source]) => /\bcache\.purge\b|\bedge\.purge\b/u.test(source))
+      .map(([path]) => path);
+    expect(readers).toStrictEqual(["../src/modules/ops/edge-purge.ts"]);
+  });
+
   it("binds the email sender the email module reads, and nothing else sends", () => {
     // Task 126 (ACC-2; decision D-42, owner-authorised): one binding,
     // `EMAIL`, read only by `src/modules/email/deliver.ts`.

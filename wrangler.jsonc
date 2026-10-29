@@ -14,6 +14,24 @@
     "enabled": true,
   },
   "upload_source_maps": true,
+  // Workers Caching (owner-approved, 2026-10-28; design 160, D-152): the
+  // open web's pages (/k/<id>, /@handle, the kit's card) leave with
+  // `Cache-Control: public, max-age=60` and a `Cache-Tag`, and the edge
+  // serves them without running the Worker; a retraction purges by tag
+  // (src/modules/ops/edge-purge.ts). The minute is the guarantee.
+  //
+  // No `cross_version_cache`: by default the cache is partitioned by
+  // Worker version, so a deploy starts cold and never serves the previous
+  // version's HTML (its nonce, its asset hashes) to the new one.
+  //
+  // With this on, a response with NO Cache-Control may be stored too
+  // (Cloudflare applies RFC 9111's heuristic freshness), and the request's
+  // Cookie is not in the cache key. Every response that is not public must
+  // say `Cache-Control: private` (design 160, "Deviations (purge)").
+  // test/bindings-conformance.test.ts pins this block.
+  "cache": {
+    "enabled": true,
+  },
   // Non-secret configuration (owner-approved, 2026-09-26; task 125 OPS-4).
   // BETTER_AUTH_URL is the production origin: Better Auth builds callbacks
   // from it, and its https scheme turns on secure cookies and rate
