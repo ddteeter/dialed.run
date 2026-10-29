@@ -330,9 +330,13 @@ function ReviewRow({
         )}
       </span>
       <ReportedPhotos keys={row.subject.photoKeys} />
-      <RemovedMatchLine match={row.removedMatch} />
+      <RemovedMatchLine match={row.removedMatches?.[0]} />
       <OtherPhotos others={row.otherPhotos} />
-      <PhotoMatches found={row.photoMatches} decide={decideMatch} />
+      <PhotoMatches
+        found={row.photoMatches}
+        removed={row.removedMatches}
+        decide={decideMatch}
+      />
       {row.subject.handleFlagged === true ? (
         <p data-part="why-here" className="m-0 text-body">
           {HANDLE_FLAGGED_LINE}

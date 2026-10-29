@@ -212,7 +212,7 @@ async function removalWrites(db: Db, input: GarmentModeration, found: Found) {
   const isFlagged = await wasFlaggedAutomatically(db, "garment", item.id);
   const statements: Statements = [
     ...takedownWrites(db, input, found, { id }),
-    ...keptGarmentFingerprint(db, input.reason, item.photoFingerprint, id),
+    ...keptGarmentFingerprint(db, input.reason, item, id),
     notificationRaise(db, {
       userId: item.userId,
       kind: "content_removed",

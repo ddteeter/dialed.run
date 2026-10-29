@@ -10,6 +10,7 @@ import {
 import { RemovalRequests } from "../../src/modules/safety/components/RemovalRequests";
 import { ReviewQueue } from "../../src/modules/safety/components/ReviewQueue";
 import type { PhotoMatch } from "../../src/modules/safety/photo-matches";
+import type { RemovedImage } from "../../src/modules/safety/removed-fingerprints";
 import type { QueueRow } from "../../src/modules/safety/review";
 import type { PendingTakedownRequest } from "../../src/modules/safety/takedown-requests";
 import { renderWithRouter } from "../modules/run-fixtures";
@@ -24,6 +25,15 @@ const PHOTO = "01JPHOTO000000000000000001";
 const HIDDEN = "01JPHOTO000000000000000002";
 // A ULID in Crockford's alphabet, which a garment takedown's input parses.
 const GARMENT = "01JGARMENT0000000000000001";
+
+const REMOVED: RemovedImage = {
+  keptId: "k-1",
+  id: "ph_2m8q",
+  kind: "kit",
+  handle: "j_runs",
+  distance: 3,
+  removedAt: Date.UTC(2025, 9, 3, 12) / 1000,
+};
 
 const MATCHES: readonly PhotoMatch[] = [
   {
@@ -284,7 +294,10 @@ describe("RemovedMatchLine", () => {
       reasons: [],
       otherPhotos: { photos: [], total: 0, handle: undefined },
       photoMatches: { fingerprinted: true, matches: [] },
-      removedMatch: { distance: 0, removedAt: REMOVED_AT },
+      removedMatches: [
+        { ...REMOVED, distance: 0 },
+        { ...REMOVED, keptId: "k-2", id: "ph_far", distance: 6 },
+      ],
       subject: { photoKeys: [] },
     };
     await renderWithRouter(
@@ -293,6 +306,89 @@ describe("RemovedMatchLine", () => {
     expect(part("removed-match")).toHaveTextContent("The same image");
     expect(part("photo-matches")).not.toBeNull();
     expect(screen.getByText("[held on upload]")).toBeVisible();
+    // The line names the nearest; the grid has a tile for each.
+    expect(
+      document.querySelectorAll('[data-part="removed-tile"]'),
+    ).toHaveLength(2);
+  });
+});
+
+/**
+ * Round 41 #84 and round 42: in MATCHING PHOTOS, each image removed as
+ * intimate within range is an empty frame reading REMOVED, never the image.
+ */
+describe("a removed image's tile", () => {
+  const REMOVED_AT = Date.UTC(2025, 9, 3, 12) / 1000;
+  const NONE = { fingerprinted: true, matches: [] } as const;
+
+  it("is an empty frame with the photo's id, its distance and day, and its owner", async () => {
+    await renderWithRouter(
+      <PhotoMatches
+        found={NONE}
+        removed={[{ ...REMOVED, removedAt: REMOVED_AT }]}
+      />,
+    );
+    const tile = part("removed-tile");
+    expect(tile).not.toBeNull();
+    const inTile = within(tile ?? document.body);
+    expect(inTile.getByText("Removed")).toHaveClass("font-mono");
+    expect(inTile.getByText("ph_2m8q")).toBeVisible();
+    expect(inTile.getByText("3 bits · removed Oct 3")).toHaveClass("font-mono");
+    expect(inTile.getByRole("link", { name: "@j_runs" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("/desk/runners"),
+    );
+    // Never the image, and nothing else opens from it.
+    expect(tile?.querySelector("img")).toBeNull();
+    expect(inTile.getAllByRole("link")).toHaveLength(1);
+    expect(inTile.queryByRole("button")).toBeNull();
+  });
+
+  it("names a garment as one, and offers no owner without a handle", async () => {
+    await renderWithRouter(
+      <PhotoMatches
+        found={NONE}
+        removed={[
+          {
+            ...REMOVED,
+            kind: "garment",
+            id: "g-1",
+            handle: undefined,
+            distance: 1,
+          },
+        ]}
+      />,
+    );
+    const inTile = within(part("removed-tile") ?? document.body);
+    expect(inTile.getByText("Garment g-1")).toBeVisible();
+    expect(inTile.getByText(/^1 bit · removed/u)).toBeVisible();
+    expect(inTile.queryByRole("link")).toBeNull();
+  });
+
+  it("comes before the matches, counted with them", async () => {
+    await renderWithRouter(
+      <PhotoMatches
+        found={{ fingerprinted: true, matches: MATCHES }}
+        removed={[REMOVED, { ...REMOVED, keptId: "k-2" }]}
+      />,
+    );
+    expect(
+      screen.getByText(
+        `Matching photos · any runner · ${String(MATCHES.length + 2)}`,
+      ),
+    ).toBeVisible();
+    const tiles = part("photo-matches")?.querySelectorAll("li") ?? [];
+    expect(tiles[0]).toHaveAttribute("data-part", "removed-tile");
+    expect(tiles[1]).toHaveAttribute("data-part", "removed-tile");
+    expect(tiles[2]).not.toHaveAttribute("data-part", "removed-tile");
+  });
+
+  it("stands in for the empty state when it is all there is", async () => {
+    await renderWithRouter(<PhotoMatches found={NONE} removed={[REMOVED]} />);
+    expect(
+      screen.queryByText("No matching photos from any runner."),
+    ).toBeNull();
+    expect(screen.getByText("Matching photos · any runner · 1")).toBeVisible();
   });
 });
 
