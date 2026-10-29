@@ -4,12 +4,11 @@
  *
  * **Only the open web's responses carry these.** A public page is safe to
  * store because it never varies by viewer: the same bytes for everyone,
- * signed in or not. Every other response must never be stored, and with
- * Workers Caching on (`wrangler.jsonc`'s `cache`) a response with no
- * `Cache-Control` is not safe by default: Cloudflare applies RFC 9111's
- * heuristic freshness to it, and a request's `Cookie` is not in the cache
- * key. So every response that is not public has to say `private` (design
- * 160, "Deviations (purge)").
+ * signed in or not. Every other response the Worker generates leaves with
+ * `private, no-store` unless it names its own (`withSecurityHeaders`):
+ * with Workers Caching on, a response with no `Cache-Control` is stored by
+ * RFC 9111's heuristic freshness, and a request's `Cookie` is not in the
+ * cache key (design 160, "Deviations (CSP)").
  *
  * **The TTL is the guarantee; a purge only shortens it.** A retracted kit
  * is gone from the edge within `PUBLIC_PAGE_TTL_SECONDS` whatever else
@@ -68,6 +67,18 @@ export function publicPageHeaders(
 }
 
 /**
+ * Whether the edge may store `response` and hand it to the next visitor:
+ * its `Cache-Control` says `public`. What drops its cookie (below) and
+ * admits its inline scripts by hash rather than nonce (`./secure-response`).
+ */
+export function isPubliclyStorable(response: Response): boolean {
+  const directives = String(response.headers.get("Cache-Control")).split(",");
+  return directives.some(
+    (directive) => directive.trim().toLowerCase() === "public",
+  );
+}
+
+/**
  * A response the edge may store never sets a cookie: a stored
  * `Set-Cookie` would be handed to every later visitor. The one cookie a
  * public page could pick up is the D1 bookmark (`d1b`, design 143), which
@@ -75,11 +86,7 @@ export function publicPageHeaders(
  * shared. Anything not public is returned as it came.
  */
 export function withoutCookiesWhenPublic(response: Response): Response {
-  const directives = String(response.headers.get("Cache-Control")).split(",");
-  const isStorable = directives.some(
-    (directive) => directive.trim().toLowerCase() === "public",
-  );
-  if (!isStorable) return response;
+  if (!isPubliclyStorable(response)) return response;
   const stripped = new Response(response.body, response);
   stripped.headers.delete("Set-Cookie");
   return stripped;

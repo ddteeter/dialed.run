@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { mintNonce, routerSsr } from "../../src/lib/csp-nonce";
+import { mintNonce, requestContext, routerSsr } from "../../src/lib/csp-nonce";
 
 /**
 The bytes a base64 nonce decodes to.
@@ -99,4 +99,36 @@ describe("routerSsr", () => {
       expect(routerSsr(() => context, SERVER_PROD)).toStrictEqual({});
     },
   );
+});
+
+describe("requestContext", () => {
+  it.each(["/k/01J0000000000000000000000", "/@maya", "/%40maya"])(
+    "mints no nonce for the open-web page %s, which is admitted by hash",
+    (pathname) => {
+      expect(requestContext(pathname)).toStrictEqual({ hashedScripts: true });
+    },
+  );
+
+  it("mints a fresh nonce for every other request", () => {
+    const first = requestContext("/feed");
+    const second = requestContext("/feed");
+
+    expect(first.nonce).toMatch(/^[A-Za-z0-9+/]+=*$/);
+    expect(decoded(String(first.nonce))).toHaveLength(16);
+    expect(second.nonce).not.toBe(first.nonce);
+    expect(Object.keys(first)).toStrictEqual(["nonce"]);
+  });
+
+  it.each([SERVER_DEV, SERVER_PROD])(
+    "gives the router no nonce, and does not throw, for an open-web page (%o)",
+    (side) => {
+      expect(routerSsr(() => requestContext("/@maya"), side)).toStrictEqual({});
+    },
+  );
+
+  it("still throws in dev for a context that says it is hashed but not truly", () => {
+    expect(() =>
+      routerSsr(() => ({ hashedScripts: false }), SERVER_DEV),
+    ).toThrow("The request context has no CSP nonce");
+  });
 });

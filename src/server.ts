@@ -24,7 +24,7 @@ import { sweepExports } from "./modules/account/export-sweep";
 import { purgeDueAccounts } from "./modules/account/purge";
 import { linkTypedGarments } from "./modules/closet";
 import { sweepCopyrightHolds } from "./modules/feed/moderation";
-import { mintNonce } from "./lib/csp-nonce";
+import { requestContext } from "./lib/csp-nonce";
 
 const startFetch = createStartHandler(defaultStreamHandler);
 
@@ -45,14 +45,19 @@ export default {
       // cookie.
       //
       // A public page (design 160) leaves with no cookie, since the edge
-      // may store it and hand it to the next visitor.
-      const nonce = mintNonce();
+      // may store it and hand it to the next visitor, and with no nonce,
+      // for the same reason: an open-web path is rendered without one,
+      // and its policy names its scripts' hashes instead.
+      const context = requestContext(new URL(request.url).pathname);
       const response = await respondInD1Scope(
         request,
-        () => startFetch(request, { context: { nonce } }),
+        () => startFetch(request, { context }),
         d1RequestDepsFromEnv(),
       );
-      return secureResponse(withoutCookiesWhenPublic(response), nonce);
+      return await secureResponse(
+        withoutCookiesWhenPublic(response),
+        context.nonce,
+      );
     } catch (error) {
       captureException(error, { surface: "fetch" });
       throw error;

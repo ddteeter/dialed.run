@@ -10,9 +10,13 @@ import {
   publicCacheHeaders,
   publicPageHeaders,
   publicPageTags,
+  isPubliclyStorable,
   withoutCookiesWhenPublic,
 } from "../../src/modules/ops/public-cache";
-import { withSecurityHeaders } from "../../src/modules/ops/security-headers";
+import {
+  UNSTORED,
+  withSecurityHeaders,
+} from "../../src/modules/ops/security-headers";
 
 /**
  * The open web's cache headers (design 160, D-152).
@@ -102,26 +106,39 @@ describe("withoutCookiesWhenPublic", () => {
   ])("leaves %s as it came", (_label, cacheControl) => {
     const original = withCookie(cacheControl);
 
+    expect(isPubliclyStorable(original)).toBe(false);
     expect(withoutCookiesWhenPublic(original)).toBe(original);
+  });
+
+  it("calls a public response storable", () => {
+    expect(isPubliclyStorable(withCookie("max-age=60, Public"))).toBe(true);
   });
 });
 
-describe("every other response keeps today's headers", () => {
-  it("gets no Cache-Control from the security headers", () => {
-    // `server.ts` wraps every response in these; an app page leaves with
-    // no Cache-Control, so nothing per-viewer is ever public-cacheable.
-    const secured = withSecurityHeaders(new Response("page"), undefined, "n");
+describe("every other response is never stored", () => {
+  it("gets private, no-store from the security headers", () => {
+    // `server.ts` wraps every response in these. Workers Caching stores a
+    // 200 with no Cache-Control for two hours (heuristic freshness), so an
+    // app page must say no, or one runner's page could be served to
+    // another.
+    const secured = withSecurityHeaders(new Response("page"), undefined, {
+      nonce: "n",
+    });
 
-    expect(secured.headers.has("Cache-Control")).toBe(false);
+    expect(secured.headers.get("Cache-Control")).toBe(UNSTORED);
+    expect(UNSTORED).toBe("private, no-store");
   });
 
-  it("keeps a route's own Cache-Control", () => {
+  it.each([
+    ["a photo's", "private, max-age=3600"],
+    ["a public page's", "public, max-age=60"],
+  ])("keeps %s own Cache-Control", (_label, cacheControl) => {
     const secured = withSecurityHeaders(
-      new Response("page", { headers: { "Cache-Control": "private" } }),
+      new Response("page", { headers: { "Cache-Control": cacheControl } }),
       undefined,
     );
 
-    expect(secured.headers.get("Cache-Control")).toBe("private");
+    expect(secured.headers.get("Cache-Control")).toBe(cacheControl);
   });
 });
 

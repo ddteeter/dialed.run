@@ -4,8 +4,8 @@
  * TanStack Start writes its hydration state as inline `<script>`s, so a
  * policy that refuses inline script refuses the app — unless each of them
  * carries a nonce the policy also carries. `server.ts` mints one per
- * request, hands it to the framework as request context and to the
- * security headers; `router.tsx` reads it back as the router's
+ * request (none on an open-web page, `requestContext`), hands it to the
+ * framework as request context and to the security headers; `router.tsx` reads it back as the router's
  * `ssr.nonce`, which is what stamps it on every script the framework and
  * React's stream renderer write.
  *
@@ -13,6 +13,8 @@
  * bundle and must reach it without `env`.
  */
 import { z } from "zod";
+
+import { isOpenWebPath } from "./open-web";
 
 /**
  * 128 bits, the floor CSP3 recommends for a nonce, from the platform's
@@ -29,7 +31,38 @@ export function mintNonce(): string {
   return btoa(String.fromCodePoint(...bytes));
 }
 
-const nonceContext = z.object({ nonce: z.string().min(1) });
+/**
+ * What `server.ts` hands the framework as request context: the request's
+ * nonce, or `hashedScripts` for none on purpose. Both keys optional so
+ * the value fits the framework's own `{ nonce?: string }` context type.
+ */
+export interface RequestContext {
+  nonce?: string;
+  hashedScripts?: true;
+}
+
+/**
+ * The request's context. An open-web page (`lib/open-web`, design 160) is
+ * stored at the edge and served to every visitor, so a nonce in it would
+ * be one nonce for all of them for as long as the edge keeps it: it gets
+ * none, its inline scripts are admitted by their hashes instead
+ * (`modules/ops/inline-script-hashes`), and nothing in the page names a
+ * nonce at all, because none was minted. Every other page gets a fresh
+ * nonce.
+ */
+export function requestContext(pathname: string): RequestContext {
+  return isOpenWebPath(pathname)
+    ? { hashedScripts: true }
+    : { nonce: mintNonce() };
+}
+
+/**
+ * A context `requestContext` made: a nonce, or none on purpose.
+ */
+const nonceContext = z.union([
+  z.object({ nonce: z.string().min(1) }),
+  z.object({ hashedScripts: z.literal(true) }),
+]);
 
 /**
  * Which side of the build the router is being made on, from Vite's
@@ -42,7 +75,9 @@ interface BuildSide {
 
 /**
  * The router's `ssr` option: the nonce from the framework's request
- * context, or no nonce at all.
+ * context, or no nonce at all — including when the context says
+ * `hashedScripts`, an open-web page whose scripts the policy admits by
+ * hash.
  *
  * `readContext` is TanStack Start's `getGlobalStartContext`, passed in so
  * this stays importable by a test. It gives three answers, and they mean
@@ -77,10 +112,12 @@ export function routerSsr(
     return {};
   }
   const parsed = nonceContext.safeParse(context);
-  if (parsed.success) return parsed.data;
+  if (parsed.success) {
+    return "nonce" in parsed.data ? { nonce: parsed.data.nonce } : {};
+  }
   if (side.DEV && side.SSR) {
     throw new Error(
-      "The request context has no CSP nonce: server.ts must pass { context: { nonce } } to the Start handler.",
+      "The request context has no CSP nonce: server.ts must pass requestContext() to the Start handler.",
     );
   }
   return {};
