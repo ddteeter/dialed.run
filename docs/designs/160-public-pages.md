@@ -406,11 +406,32 @@ the design had not made:
   reach D's screen), under who and which day and over the
   conditions (round 41 #86c's order), with no delete. The card never
   carries one (D-150); its version ignores them.
-- **Not done here**: `/@handle`'s kit rows still draw the `--tint` tile
-  where round 41 #86d draws "the photo, or a --tint tile"; and a removal
-  request that links a `photos.dialed.run/<key>` URL is not read as a
-  photo subject (`takedownSubjectOf` reads only the app's paths), so the
-  operator finds it by hand, as for any link that is not ours.
+- **`/@handle`'s kit rows show the kit's first photo** (round 41 #86d:
+  "the photo, or a --tint tile"): the copy `/k` shows first, read by the
+  same query (`ops/public-photos.ts` `landedCopies`, behind both
+  `publishedPhotoUrls` and the profile's `firstPublishedPhotos`, one
+  `IN` list of the listed kits), so only landed copies of screened photos
+  on the public origin, and none with the switch off. The `<img>` takes
+  the tile's own box and corner, cropped to it (`object-cover`, as D's
+  pager crops), and is decorative (`alt=""`): the row's words still name
+  the link. A kit with none keeps the `--tint` tile. The page's `runner:`
+  tag already carries every photo retraction's purge, and `img-src`
+  already admits the origin.
+- **A removal request may link a public copy's URL**
+  (`https://photos.dialed.run/<key>`). `lib/public-photos.ts`
+  `publicPhotoKeyOf` reads the key back only on `PUBLIC_PHOTOS_ORIGIN`
+  itself, with a path of one key of `newPublicPhotoKey`'s shape; another
+  host, scheme or path is no key. At filing (`safety/request-subject.ts`
+  `filedSubjectOf`) the app's paths are read first, as before, then the
+  key through `public_photos` to its photo and kit; an unknown key names
+  nothing, as an unknown path does. The request is then held, purged and
+  its copy deleted exactly as one naming the photo by its app path.
+  **Resolved once, at filing, and recorded**: holding the photo deletes
+  its copy and the row naming it, so the key names nothing later. Every
+  later reading (the confirm, Review's list, the decision, a Decline's
+  give-back, block-and-decline) takes the link's path first and otherwise
+  the photo recorded on the request (`requestSubjectsOf`), its kit read
+  from `entry_photos`; a recorded photo gone since names nothing.
 
 ## Build steps
 
