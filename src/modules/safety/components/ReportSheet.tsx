@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 import {
   ChoiceList,
@@ -320,16 +320,12 @@ function IntimateHelp(): JSX.Element {
 function IntimateReceipt({
   onDone,
 }: Readonly<{ onDone: () => void }>): JSX.Element {
-  const head = useRef<HTMLHeadingElement>(null);
-  useEffect(() => {
-    head.current?.focus();
-  }, []);
   return (
     <div data-part="report-receipt" className="flex flex-col gap-4">
       <Mono step="xs" className="text-muted">
         Report sent
       </Mono>
-      <h2 ref={head} tabIndex={-1} className="m-0 text-title font-bold">
+      <h2 ref={focusOnMount} tabIndex={-1} className="m-0 text-title font-bold">
         Thanks for telling us.
       </h2>
       <p className="m-0 text-body">
@@ -352,11 +348,20 @@ function IntimateReceipt({
  * Where focus goes once the receipt closes (round 42): the next item on
  * the page, else its heading. W1 opens from D and from a profile, each one
  * subject with nothing after it, so that is the heading. A heading is not
- * focusable by default, so it is made reachable by script only.
+ * focusable by default, so it is made reachable by script only; no page
+ * heading carries a tabindex of its own to lose.
  */
 function focusPageHeading(): void {
-  const heading = document.querySelector<HTMLElement>("main h1, h1");
-  if (heading === null) return;
-  if (!heading.hasAttribute("tabindex")) heading.setAttribute("tabindex", "-1");
-  heading.focus();
+  const heading = document.querySelector<HTMLElement>("h1");
+  heading?.setAttribute("tabindex", "-1");
+  heading?.focus();
+}
+
+/**
+ * Focuses the receipt's head as it mounts, so the swap is read out. One
+ * function for the module, so React calls it once with the element and
+ * once with `null` as it goes, never again in between.
+ */
+function focusOnMount(node: HTMLElement | null): void {
+  node?.focus();
 }

@@ -383,6 +383,20 @@ describe("a removed image's tile", () => {
     expect(tiles[2]).not.toHaveAttribute("data-part", "removed-tile");
   });
 
+  it("lists one removed image beside one match, not the empty state", async () => {
+    const [first] = MATCHES;
+    await renderWithRouter(
+      <PhotoMatches
+        found={{ fingerprinted: true, matches: first ? [first] : [] }}
+        removed={[REMOVED]}
+      />,
+    );
+    expect(
+      screen.queryByText("No matching photos from any runner."),
+    ).toBeNull();
+    expect(part("photo-matches")?.querySelectorAll("li")).toHaveLength(2);
+  });
+
   it("stands in for the empty state when it is all there is", async () => {
     await renderWithRouter(<PhotoMatches found={NONE} removed={[REMOVED]} />);
     expect(

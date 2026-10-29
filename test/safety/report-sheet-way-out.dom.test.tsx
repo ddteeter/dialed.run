@@ -18,7 +18,7 @@ type SheetProps = Parameters<typeof ReportSheet>[0];
  * is picked, a link to `/takedown` for a runner who would rather not
  * report from their account. Rendered in a router, as W1 always is.
  */
-async function renderSheet() {
+async function renderSheet({ hasHeading = true } = {}) {
   const fileReport = vi.fn<SheetProps["fileReport"]>().mockResolvedValue({
     status: "filed",
     reporterCount: 1,
@@ -45,7 +45,7 @@ async function renderSheet() {
     routeTree: createRootRoute({
       component: () => (
         <main>
-          <h1>mark_t · yesterday</h1>
+          {hasHeading ? <h1>mark_t · yesterday</h1> : undefined}
           {sheet}
         </main>
       ),
@@ -53,8 +53,8 @@ async function renderSheet() {
     history: createMemoryHistory({ initialEntries: ["/"] }),
   });
   await router.load();
-  render(<RouterProvider router={router} />);
-  return { fileReport, onClose, onFiled };
+  const { unmount } = render(<RouterProvider router={router} />);
+  return { fileReport, onClose, onFiled, unmount };
 }
 
 const wayOut = () => document.querySelector("[data-part='takedown-way-out']");
@@ -87,8 +87,11 @@ describe("W1's way out to /takedown", () => {
   });
 });
 
-async function sent(reason: keyof typeof reportReasonLabels) {
-  const spies = await renderSheet();
+async function sent(
+  reason: keyof typeof reportReasonLabels,
+  page: { hasHeading?: boolean } = {},
+) {
+  const spies = await renderSheet(page);
   const user = userEvent.setup();
   await user.click(
     screen.getByRole("radio", { name: reportReasonLabels[reason] }),
@@ -114,6 +117,8 @@ describe("W1's intimate-image receipt", () => {
     await waitFor(() => {
       expect(head).toHaveFocus();
     });
+    // Focusable by script, not a stop in the tab order.
+    expect(head).toHaveAttribute("tabindex", "-1");
     const receipt = document.querySelector("[data-part='report-receipt']");
     expect(receipt).toHaveTextContent(
       /^Report sentThanks for telling us\.It's hidden from everyone now\. We'll review it within a day and keep it down if it breaks the rule\.If it's on other sites too.*leaves it\.Done$/u,
@@ -154,6 +159,26 @@ describe("W1's intimate-image receipt", () => {
     await waitFor(() => {
       expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
     });
+  });
+
+  it("lets go of its head cleanly when the sheet goes", async () => {
+    const { unmount } = await sent("intimate");
+    await screen.findByRole("heading", { name: "Thanks for telling us." });
+
+    expect(unmount).not.toThrow();
+  });
+
+  it("closes cleanly on a page with no heading to land on", async () => {
+    const { onClose } = await sent("intimate", { hasHeading: false });
+    const done = await screen.findByRole("button", { name: "Done" });
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(done);
+      expect(() => vi.runAllTimers()).not.toThrow();
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(onClose).toHaveBeenCalledOnce();
   });
 
   it("is for intimate-image reports only: any other closes on its status", async () => {
