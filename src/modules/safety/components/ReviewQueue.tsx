@@ -14,7 +14,7 @@ import {
   type HandleReviewValues,
   type ReviewActionValues,
 } from "../inputs";
-import type { HandleReview, QueueRow } from "../review";
+import type { HandleReview, QueueRow, ReviewSource } from "../review";
 import { PickOne } from "./DeskForm";
 import { OtherPhotos } from "./OtherPhotos";
 import {
@@ -49,6 +49,18 @@ import { useSettled } from "./use-settled";
  * question, the other is a judgement about people — and a reviewer who
  * cannot tell them apart treats both the same way.
  */
+/**
+ * What started a row, as its tag says it. A held upload names what was
+ * done rather than the technique (round 41 #84): `[held on upload]`, not
+ * `[fingerprint]`. Keyed by the stored value, so a new source is a type
+ * error here until it has words.
+ */
+const SOURCE_TAGS: Readonly<Record<ReviewSource, string>> = {
+  reports: "reports",
+  classifier: "classifier",
+  fingerprint: "held on upload",
+};
+
 /**
  * The photos a reviewer is being asked about.
  *
@@ -329,7 +341,7 @@ function ReviewRow({
         <ReportedFor row={row} />
       )}
       <span className="text-micro text-quiet">
-        <Bracketed>{row.source}</Bracketed>
+        <Bracketed>{SOURCE_TAGS[row.source]}</Bracketed>
       </span>
       {active ? (
         <RowDecision

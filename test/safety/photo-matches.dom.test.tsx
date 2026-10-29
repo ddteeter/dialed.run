@@ -239,13 +239,13 @@ describe("RemovedMatchLine", () => {
   // Midday UTC, so the day is the same in every zone a test runs in.
   const REMOVED_AT = Date.UTC(2025, 9, 9, 12) / 1000;
 
-  it("says when the image it copies was removed, and how many bits apart", async () => {
+  it("says when the image it matches was removed, and how many bits apart", async () => {
     await renderWithRouter(
       <RemovedMatchLine match={{ distance: 3, removedAt: REMOVED_AT }} />,
     );
     const line = part("removed-match");
     expect(line).toHaveTextContent(
-      /^A copy of an image removed as intimate on Oct 9, 3 bits apart\.$/u,
+      /^A close match to an image removed as intimate on Oct 9, 3 bits apart\.$/u,
     );
     expect(screen.getByText("Oct 9")).toHaveClass("font-mono");
     expect(screen.getByText("3 bits")).toHaveClass("font-mono");
@@ -256,6 +256,16 @@ describe("RemovedMatchLine", () => {
       <RemovedMatchLine match={{ distance: 1, removedAt: REMOVED_AT }} />,
     );
     expect(part("removed-match")).toHaveTextContent(/, 1 bit apart\.$/u);
+  });
+
+  it("calls it the same image at 0 bits, with no distance", async () => {
+    await renderWithRouter(
+      <RemovedMatchLine match={{ distance: 0, removedAt: REMOVED_AT }} />,
+    );
+    expect(part("removed-match")).toHaveTextContent(
+      /^The same image as one removed as intimate on Oct 9\.$/u,
+    );
+    expect(screen.getByText("Oct 9")).toHaveClass("font-mono");
   });
 
   it("renders nothing on any other row", async () => {
@@ -280,9 +290,9 @@ describe("RemovedMatchLine", () => {
     await renderWithRouter(
       <ReviewQueue queue={[row]} resolve={vi.fn()} reviewHandle={vi.fn()} />,
     );
-    expect(part("removed-match")).toHaveTextContent("0 bits apart");
+    expect(part("removed-match")).toHaveTextContent("The same image");
     expect(part("photo-matches")).not.toBeNull();
-    expect(screen.getByText("[fingerprint]")).toBeVisible();
+    expect(screen.getByText("[held on upload]")).toBeVisible();
   });
 });
 
