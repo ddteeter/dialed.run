@@ -125,12 +125,10 @@ delete and purge on retraction.
   see it happening.
 - **Heuristic freshness**: with caching on, Cloudflare applies RFC 9111
   heuristic freshness to a response that has no `Cache-Control`, and
-  `Cookie` is not in the key. Every Worker response that is not public
-  today leaves with no `Cache-Control` at all, so a signed-in page could
-  in principle be stored and served to someone else. Before the cache
-  config deploys, every response that is not public must carry
-  `Cache-Control: private` (the response pipeline, `secure-response.ts`
-  / `security-headers.ts`, owned by another lane at the time of writing).
+  `Cookie` is not in the key. Settled in this PR: every response that is
+  not public now leaves with `Cache-Control: private, no-store` unless it
+  names its own (`withSecurityHeaders`, "Deviations (CSP)"), so a page that
+  varies by viewer is never stored.
 
 ## Deviations (purge)
 

@@ -26,8 +26,9 @@
   //
   // With this on, a response with NO Cache-Control may be stored too
   // (Cloudflare applies RFC 9111's heuristic freshness), and the request's
-  // Cookie is not in the cache key. Every response that is not public must
-  // say `Cache-Control: private` (design 160, "Deviations (purge)").
+  // Cookie is not in the cache key. So every response that is not public
+  // leaves with `Cache-Control: private, no-store` unless it names its own
+  // (withSecurityHeaders; design 160, "Deviations (CSP)").
   // test/bindings-conformance.test.ts pins this block.
   "cache": {
     "enabled": true,
