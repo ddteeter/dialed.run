@@ -58,10 +58,7 @@ export function publicPhotoKeyOf(location: string): string | undefined {
   if (!URL.canParse(location)) return undefined;
   const url = new URL(location);
   if (url.origin !== PUBLIC_PHOTOS_ORIGIN) return undefined;
-  return KEY_PATH.exec(url.pathname)?.[1];
+  // One path segment of lowercase hex, as long as a key's two digits a byte.
+  const key = /^\/([0-9a-f]+)$/u.exec(url.pathname)?.[1];
+  return key?.length === KEY_BYTES * 2 ? key : undefined;
 }
-
-/**
-A copy's path: one key, 32 lowercase hex characters.
-*/
-const KEY_PATH = new RegExp(`^/([0-9a-f]{${String(KEY_BYTES * 2)}})$`, "u");

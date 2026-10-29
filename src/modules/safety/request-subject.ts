@@ -17,7 +17,7 @@ import type { drizzle } from "drizzle-orm/d1";
 import {
   entryPhotos,
   publicPhotos,
-  type takedownRequests,
+  takedownRequests as requests,
 } from "../../db/schema-core";
 import {
   takedownSubjectOf,
@@ -60,46 +60,56 @@ async function copySubjectOf(
 What a filed request carries that names its subject.
 */
 export type FiledRequest = Pick<
-  typeof takedownRequests.$inferSelect,
-  "location" | "subjectType" | "subjectId"
+  typeof requests.$inferSelect,
+  "id" | "location"
 >;
 
 /**
  * Each request's subject, in order: its link's path, else the photo filing
- * recorded (a public copy's URL is the only link resolved by more than its
- * path), with their kits read an `IN` list at a time. A recorded subject
- * that is no photo, or a photo gone since, names nothing.
+ * recorded on it (a public copy's URL is the only link resolved by more
+ * than its path), read with its kit by the requests' own ids, an `IN` list
+ * at a time. A recorded subject that is no photo, or a photo gone since,
+ * joins no row and names nothing.
  */
 export async function requestSubjectsOf(
   db: Db,
-  requests: readonly FiledRequest[],
+  filed: readonly FiledRequest[],
 ): Promise<(TakedownSubject | undefined)[]> {
-  const recorded = await photosNamed(
+  const recorded = await recordedPhotos(
     db,
-    requests.flatMap((request) => request.subjectId ?? []),
+    filed.map((request) => request.id),
   );
-  return requests.map(
+  return filed.map(
     (request) =>
-      takedownSubjectOf(request.location) ??
-      recorded.find((photo) => photo.subjectId === request.subjectId),
+      takedownSubjectOf(request.location) ?? recorded.get(request.id),
   );
 }
 
 /**
-The photos among these ids, each as a subject with its kit.
+The photo each of these requests recorded, with its kit, by request id.
 */
-async function photosNamed(
+async function recordedPhotos(
   db: Db,
-  ids: readonly string[],
-): Promise<TakedownSubject[]> {
-  const rows = await readInChunks(ids, (chunk) =>
-    db.select().from(entryPhotos).where(inArray(entryPhotos.id, chunk)),
+  requestIds: readonly string[],
+): Promise<Map<string, TakedownSubject>> {
+  const columns = {
+    requestId: requests.id,
+    photoId: entryPhotos.id,
+    entryId: entryPhotos.entryId,
+  };
+  const rows = await readInChunks(requestIds, (chunk) =>
+    db
+      .select(columns)
+      .from(requests)
+      .innerJoin(entryPhotos, eq(entryPhotos.id, requests.subjectId))
+      .where(inArray(requests.id, chunk)),
   );
-  return rows.map((row) => ({
-    subjectType: "photo",
-    subjectId: row.id,
-    entryId: row.entryId,
-  }));
+  return new Map(
+    rows.map((row) => [
+      row.requestId,
+      { subjectType: "photo", subjectId: row.photoId, entryId: row.entryId },
+    ]),
+  );
 }
 
 /**

@@ -433,6 +433,7 @@ describe("a removal request naming a public copy's URL", () => {
 
   it("records the photo, which Review shows with its kit once the copy is gone", async () => {
     const { copy, request } = await filedByCopyUrl();
+    const other = await filedByCopyUrl();
 
     expect(request).toMatchObject({
       subjectType: "photo",
@@ -440,12 +441,28 @@ describe("a removal request naming a public copy's URL", () => {
       holdState: "held",
     });
     expect(await photoStatus(copy.photoId)).toBe("hidden_pending_review");
-    const [listed] = await pendingTakedownRequests(core());
-    expect(listed?.subject).toStrictEqual({
-      subjectType: "photo",
-      subjectId: copy.photoId,
-      entryId: copy.entryId,
-    });
+    const listed = await pendingTakedownRequests(core());
+    // Each request its own photo, however many are listed.
+    expect(new Map(listed.map((row) => [row.id, row.subject]))).toStrictEqual(
+      new Map([
+        [
+          request.id,
+          {
+            subjectType: "photo",
+            subjectId: copy.photoId,
+            entryId: copy.entryId,
+          },
+        ],
+        [
+          other.request.id,
+          {
+            subjectType: "photo",
+            subjectId: other.copy.photoId,
+            entryId: other.copy.entryId,
+          },
+        ],
+      ]),
+    );
   });
 
   it("is taken down by the operator's Remove", async () => {
