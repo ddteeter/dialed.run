@@ -391,12 +391,18 @@ test("someone with no account asks for an intimate image to come down, and an op
     .filter({ hasText: `photo · ${copyPhotoId}` });
   await copy.scrollIntoViewIfNeeded();
   await expect(copy.locator("[data-part='removed-match']")).toContainText(
-    "A copy of an image removed as intimate on",
+    "A close match to an image removed as intimate on",
   );
   await expect(copy.locator("[data-part='removed-match']")).toContainText(
     "1 bit apart.",
   );
-  await expect(copy).toContainText("[fingerprint]");
+  await expect(copy).toContainText("[held on upload]");
+  // Round 41 #84: the removed original stands in as a frame, never shown.
+  const removedTile = copy.locator("[data-part='removed-tile']");
+  await expect(removedTile).toContainText(firstPhotoId);
+  await expect(removedTile).toContainText("1 bit · removed");
+  await expect(removedTile).toContainText(`@${handle}`);
+  await expect(removedTile.locator("img")).toHaveCount(0);
   // Scoped to this run's ids, so a rerun starts from the same queue.
   await withLocalDb(async ({ core }) => {
     await core
