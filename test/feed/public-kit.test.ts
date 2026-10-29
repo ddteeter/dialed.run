@@ -103,6 +103,7 @@ async function fullyPopulated(
     .set({
       brand: "Janji",
       name: "AFO Middle Tight",
+      type: "tights",
       productUrl: "https://janji.com/afo",
     })
     .where(eq(wardrobeItems.id, tight));
@@ -115,12 +116,19 @@ async function fullyPopulated(
     .set({
       brand: "Tracksmith",
       name: "Brighton Base Layer",
+      type: "longSleeve",
       productUrl: "https://spam.example/buy",
     })
     .where(eq(wardrobeItems.id, layer));
   await core()
     .update(wardrobeItems)
-    .set({ brand: "Nike", name: "Pegasus 41", productUrl: "not a url" })
+    // A type its category does not allow is no type: the category's word.
+    .set({
+      brand: "Nike",
+      name: "Pegasus 41",
+      type: "tights",
+      productUrl: "not a url",
+    })
     .where(eq(wardrobeItems.id, shoes));
   await core()
     .insert(domainDenylist)
@@ -206,15 +214,17 @@ describe("publicKitRead: a public kit", () => {
         {
           name: "Tracksmith Brighton Base Layer",
           model: "Brighton Base Layer",
-          kind: "Top",
+          // The closet's TYPE chip (round 42 #90).
+          kind: "L/S crew",
         },
         {
           name: "Janji AFO Middle Tight",
           model: "AFO Middle Tight",
-          kind: "Bottom",
+          kind: "Tights",
           url: "https://janji.com/afo",
         },
-        // No brand: its own name, and no link to drop.
+        // No brand: its own name, and no link to drop. No type: the
+        // category's word.
         {
           name: "Old black beanie",
           model: "Old black beanie",

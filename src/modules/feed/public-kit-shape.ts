@@ -24,7 +24,9 @@ export interface PublicStat {
  * One piece of the kit: the closet's name for it ("Tracksmith Brighton
  * Base Layer"), the model alone for the card's one line ("Brighton Base
  * Layer", round 41 #86e: models without brands), what kind of piece it
- * is, and its product link when it has one the denylist allows.
+ * is (the closet's TYPE chip, "L/S crew", else the category's word,
+ * round 42 #90), and its product link when it has one the denylist
+ * allows.
  */
 export interface PublicPiece {
   readonly name: string;

@@ -206,10 +206,16 @@ Left to the TTL, on purpose:
   else the runner's place's zone, else UTC. Feels-like is the hour the
   verdict judged (R-5). A run with no moving time shows its own time,
   labelled TIME rather than MOVING.
-- **A piece's kind is its category's word** (Top, Bottom, Headwear…): the
-  type words live in `closet`, and `feed` importing `closet` would cycle
-  through `account`. A product link whose domain the denylist now holds is
-  dropped at read, not only refused at save.
+- **A piece's kind is the closet's TYPE chip** ("L/S crew", "Tights"),
+  else its category's word (round 42 #90, the same rule as `/@handle`):
+  `closet`'s `typeWordOf`, read through its index by `feed/public-kit.ts`,
+  which nothing in `feed`'s index reaches, so it makes no cycle (as
+  `public-profile.ts`'s rotation read does). A product link whose domain
+  the denylist now holds is dropped at read, not only refused at save.
+- **The bar** (round 42 #90): the bracketed wordmark at every width and
+  one slot in pill form, a hairline Log in signed out and an ink "Open in
+  the app" signed in, never both. The swap stays client-side after load,
+  so the page the edge keeps is the same for everyone.
 - **The card's version is a digest of what it shows**, and the Cache API key
   carries it in the path (the card key drops the query string). The default
   card served for a kit that is not public is kept a minute and tagged with

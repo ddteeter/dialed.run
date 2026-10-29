@@ -53,7 +53,8 @@ export function useSignedInAfterLoad(ask: AskSignedIn): {
  */
 const MARKETING_ORIGIN = "https://dialed.run";
 
-// The landing bar's two pills, written out whole so each can be read as
+// The bar's one slot in pill form (round 42 #90): hairline for Log in,
+// ink for the way into the app. Written out whole so each can be read as
 // one class list (`targets-and-focus` reads the 44px target off it).
 const LOG_IN_CLASS =
   "target inline-flex items-center rounded-pill border border-hairline px-5 text-small font-semibold text-ink no-underline";
@@ -120,9 +121,10 @@ const MEASURE = {
 } as const;
 
 /**
- * The public pages' top bar, on every width: the wordmark home, and one
- * slot — Log in signed out, a way into the app signed in. The landing
- * bar's two pills, since this is a signed-out page with one action.
+ * The public pages' top bar, on every width (round 42 #90): the bracketed
+ * wordmark home, and one slot in pill form — a hairline Log in signed
+ * out, an ink way into the app signed in, never both: a stranger with no
+ * account gets nothing from "Open in the app".
  */
 function PublicBar({
   intoApp,

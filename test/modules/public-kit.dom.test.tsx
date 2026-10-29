@@ -54,7 +54,7 @@ const KIT: PublicKit = {
     {
       name: "Tracksmith Brighton Base Layer",
       model: "Brighton Base Layer",
-      kind: "Top",
+      kind: "L/S crew",
       url: "https://tracksmith.com/brighton",
     },
     { name: "Old black beanie", model: "Old black beanie", kind: "Headwear" },
@@ -207,7 +207,7 @@ describe("the public kit, signed out", () => {
     expect(
       screen.queryByRole("link", { name: "Old black beanie" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("Top")).toHaveClass("text-mono-xs");
+    expect(screen.getByText("L/S crew")).toHaveClass("text-mono-xs");
     expect(screen.getByText("Headwear")).toBeVisible();
   });
 
@@ -267,6 +267,14 @@ describe("the public kit, signed out", () => {
     expect(link("Log in")).toHaveAttribute("href", "/auth/login");
     expect(link("Log in")).toHaveClass("border", "border-hairline");
     expect(link("dialed.run home")).toHaveAttribute("href", "/");
+    // The bracketed wordmark, and one slot beside it (round 42 #90).
+    expect(link("dialed.run home")).toHaveTextContent(/^\[dialed\.run\]$/u);
+    const bar = document.querySelector<HTMLElement>("[data-part='top-bar']");
+    expect(
+      within(bar ?? document.body)
+        .getAllByRole("link")
+        .map((each) => each.textContent),
+    ).toStrictEqual(["[dialed.run]", "Log in"]);
     expect(
       screen.queryByRole("link", { name: "Open in the app" }),
     ).not.toBeInTheDocument();
@@ -325,7 +333,14 @@ describe("the public kit, once the browser knows who is looking", () => {
       "href",
       `/feed/entry/${ID}`,
     );
-    expect(link("Open in the app")).toHaveClass("bg-ink", "text-ground");
+    expect(link("Open in the app")).toHaveClass(
+      "rounded-pill",
+      "bg-ink",
+      "text-ground",
+    );
+    // One slot, never both (round 42 #90).
+    const bar = document.querySelector<HTMLElement>("[data-part='top-bar']");
+    expect(within(bar ?? document.body).getAllByRole("link")).toHaveLength(2);
     expect(screen.queryByRole("link", { name: "Log in" })).not.toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "Wear what worked." }),

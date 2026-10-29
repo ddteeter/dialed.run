@@ -17,12 +17,11 @@
 import { desc, eq } from "drizzle-orm";
 
 import { wardrobeItems } from "../../db/schema-core";
-import { garmentCategoryLabels, type DistanceUnit } from "../../lib/contracts";
-import { garmentTypesFor } from "../../lib/contracts/garment-fields";
+import type { DistanceUnit } from "../../lib/contracts";
 import { wholeDistanceNumber } from "../../lib/contracts/measures";
 
 import { computeUserPerformance } from "./service";
-import { garmentTypeLabels } from "./type-labels";
+import { typeWordOf } from "./type-labels";
 
 /**
  * One piece as the rotation lists it: the closet's name for it ("Pegasus
@@ -73,7 +72,7 @@ export async function publicRotation(
     name: piece.name,
     detail: isShoes(piece)
       ? `${wholeDistanceNumber(performance.get(piece.id)?.summary.mileageM ?? 0, unit)} ${unit}`
-      : typeWordOf(piece),
+      : typeWordOf(piece.category, piece.type),
   });
   return {
     inUse: pieces
@@ -90,16 +89,3 @@ function isShoes(piece: Piece): boolean {
   return piece.category === "shoes";
 }
 
-/**
- * The piece's type in the closet's words (F's TYPE chips), when it has one
- * its category allows; else its category's word. A type is optional and
- * the column is free text, so the category's list is the gate.
- */
-function typeWordOf(piece: Piece): string {
-  const type = garmentTypesFor(piece.category).find(
-    (allowed) => allowed === piece.type,
-  );
-  return type === undefined
-    ? garmentCategoryLabels[piece.category]
-    : garmentTypeLabels[type];
-}

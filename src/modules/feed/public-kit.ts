@@ -33,7 +33,6 @@ import {
 } from "../../db/schema-core";
 import { coreDb } from "../../env";
 import {
-  garmentCategoryLabels,
   verdictScale,
   type Units,
   type VerdictValue,
@@ -56,6 +55,7 @@ import {
   publicPageTags,
   type EntryCardData,
 } from "../ops";
+import { typeWordOf } from "../closet";
 import { worldVisibleEntry } from "../safety";
 
 import { observationsForRuns, type Conditions } from "./conditions";
@@ -203,15 +203,17 @@ function pieceColumns() {
     name: wardrobeItems.name,
     brand: wardrobeItems.brand,
     category: wardrobeItems.category,
+    type: wardrobeItems.type,
     productUrl: wardrobeItems.productUrl,
   };
 }
 
 /**
- * The pieces, in the order they were put on the kit, each with its product
- * link when it has one whose domain the denylist allows (packet §3): a
- * link an operator has since denied is not passed on to the open web.
- * A link that does not parse is no link.
+ * The pieces, in the order they were put on the kit, each with its kind
+ * as the closet's TYPE chip says it, else its category's word (round 42
+ * #90), and its product link when it has one whose domain the denylist
+ * allows (packet §3): a link an operator has since denied is not passed
+ * on to the open web. A link that does not parse is no link.
  */
 async function piecesOf(
   database: Database,
@@ -234,7 +236,7 @@ async function piecesOf(
     return {
       name: row.brand === null ? row.name : `${row.brand} ${row.name}`,
       model: row.name,
-      kind: garmentCategoryLabels[row.category],
+      kind: typeWordOf(row.category, row.type),
       ...(url !== undefined && { url }),
     };
   });
