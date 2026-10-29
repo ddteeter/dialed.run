@@ -168,7 +168,9 @@ in it. Before the deploy that binds `PUBLIC_PHOTOS`:
    `X-Robots-Tag: noindex`. A page's `noindex` does not cover an image
    URL, and the privacy policy says public pages ask not to be indexed.
 5. Do **not** add a lifecycle rule. The copies live as long as the kit is
-   public, and the deletion paths remove them.
+   public, and the deletion paths remove them; the `:15` hourly firing
+   sweeps what a deletion missed, and any object no `public_photos` row
+   names, and says so in the digest.
 6. No Cache Rule is needed: each object is written with its own
    `Cache-Control`, short enough that a retracted photo leaves the edge
    within the time the privacy policy promises.
@@ -282,10 +284,11 @@ that has stopped firing altogether.
 They live in `wrangler.jsonc`'s `vars` block (owner-approved, 2026-09-26),
 which `test/bindings-conformance.test.ts` checks:
 
-| Var                  | Value                                      | Without it                                                                                                                                           |
-| -------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BETTER_AUTH_URL`    | `https://dialed.run` (set)                 | Callbacks resolve against the wrong host; secure cookies and rate limiting are off (both follow its https scheme). `/api/health` names it when unset |
-| `TURNSTILE_SITE_KEY` | empty until the widget exists — **set it** | The widget renders nothing, and verification refuses                                                                                                 |
+| Var                    | Value                                                                                         | Without it                                                                                                                                                                                                             |
+| ---------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BETTER_AUTH_URL`      | `https://dialed.run` (set)                                                                    | Callbacks resolve against the wrong host; secure cookies and rate limiting are off (both follow its https scheme). `/api/health` names it when unset                                                                   |
+| `TURNSTILE_SITE_KEY`   | empty until the widget exists — **set it**                                                    | The widget renders nothing, and verification refuses                                                                                                                                                                   |
+| `PUBLIC_PHOTOS_ORIGIN` | `https://photos.dialed.run` (set) — must equal `lib/public-photos.ts`'s, which the CSP admits | The switch for world photos (D-151): empty or unset, no photo is copied to `PUBLIC_PHOTOS` and `/k` shows none; copies already there are still deleted. Leave it set only once §2's public photo bucket steps are done |
 
 **Local dev and CI override `BETTER_AUTH_URL`** in `.dev.vars`
 (`http://localhost:<port>`; CI's e2e job writes `http://localhost:3000`).

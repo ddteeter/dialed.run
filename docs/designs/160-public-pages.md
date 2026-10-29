@@ -158,9 +158,10 @@ What purges, and with which tags (one call each):
 | Verdict save that changes or keeps PUBLIC (to, from, or an edit of a PUBLIC kit) | `entry:<id>`, `runner:<owner>`    | `feed/entries.ts` `submitVerdict`      |
 | A runner deletes a kit, or the run it is on                                      | `entry:<id>`, `runner:<owner>`    | `feed/retract.ts`                      |
 | Account deletion's purge (all runs and kits)                                     | `runner:<owner>`                  | `feed/retract.ts` `deleteRuns("all")`  |
-| The Desk removes, quarantines or holds (copyright) a kit                         | `entry:<id>`, `runner:<owner>`    | `feed/moderation.ts` `moderateContent` |
-| A report hides a kit (at once, at the threshold, or by the sweep)                | `entry:<id>`, `runner:<owner>`    | `safety/reports.ts`                    |
-| A removal request holds a kit (filed or confirmed)                               | `entry:<id>`, `runner:<owner>`    | `safety/takedown-requests.ts`          |
+| The Desk removes, quarantines or holds (copyright) a kit, or a photo on one      | `entry:<id>`, `runner:<owner>`    | `feed/moderation.ts` `moderateContent` |
+| A report hides a kit or a photo (at once, at the threshold, or by the sweep)     | `entry:<id>`, `runner:<owner>`    | `safety/reports.ts`                    |
+| A removal request holds a kit or a photo (filed or confirmed)                    | `entry:<id>`, `runner:<owner>`    | `safety/takedown-requests.ts`          |
+| A runner deletes a photo from a PUBLIC kit (step 8)                              | `entry:<id>`, `runner:<owner>`    | `feed/retract.ts` `deleteEntryPhoto`   |
 | Ban                                                                              | `runner:<id>`                     | `safety/bans.ts` `banUser`             |
 | Leaving (deletion scheduled)                                                     | `runner:<id>`                     | `account/deletion.ts`                  |
 | Handle claimed or changed by the runner, or renamed by the Desk                  | `runner:<id>`, `handle:<new>`     | `account/username.ts`                  |
@@ -177,9 +178,9 @@ Left to the TTL, on purpose:
 - **The old handle on a handle change.** Its path's public page carries
   `runner:`, which is purged; its not-public page is the same bytes before
   and after.
-- **Photos**: no photo is on the open web until world photos (step 8,
-  D-151), so a photo's removal, hold or hide purges nothing. Step 8 adds
-  the photo's own purge.
+- **Photos**: since step 8 a photo's removal, hold or hide purges its
+  kit's tags (the rows marked "or a photo" above), and every purge deletes
+  the public copies of what it names ("Deviations (photos)").
 - **Content edits that are not a retraction**: a run's distance or time,
   weather attaching, a garment renamed or retired, a product renamed, a
   domain denied, units or zone changed. What changes is not something the
@@ -338,6 +339,79 @@ every visitor for as long as it is kept. Public pages use hash-based CSP.
   served to the next visitor. The cost: Chromium has kept `no-store` pages
   out of the back/forward cache, so a Back to an app page may re-fetch it.
 
+## Deviations (photos)
+
+Step 8, world photos (D-151). Built as R-153 describes, with these choices
+the design had not made:
+
+- **The copy's key lives in its own table, `public_photos`** (migration
+  `0072_add_public_photos`, additive), not a column of `entry_photos`.
+  Deleting a kit, a run or an account, and the Desk's Remove and
+  quarantine, delete the photo rows in their own batch; a key held there
+  would go with them and leave a public object nothing names. The row
+  outlives the photo, so the copy can still be found and deleted. It is
+  written before the object (claim, then work); `published_at` marks the
+  copy landed, and the page shows only landed copies.
+- **The key is 128 bits from `crypto.getRandomValues`, as 32 hex
+  characters** (`lib/public-photos.ts` `newPublicPhotoKey`), derived from
+  no id and no private key; the URL is `https://photos.dialed.run/<key>`,
+  with no extension (the object carries its `Content-Type`).
+- **One rule, one reconcile** (`ops/public-photos.ts` `syncPublicPhotos`):
+  a copy may exist only while its photo is `pass` on a kit
+  `worldVisibleEntry()` admits — the page's own rule. The reconcile
+  deletes every copy in reach the rule no longer admits (object first,
+  then the row) and copies every admitted photo that has none. It is
+  idempotent both ways and re-runnable from any point (laws 1, 2, 8c).
+  So a pending, flagged, hidden, held or quarantined photo is never
+  copied, and a photo on a kit that is not PUBLIC never is. A photo in
+  the classifier's `review` band is `pass` and is copied, as it is shown
+  to signed-in runners: the band publishes by design.
+- **Every retraction reaches it through the purge, not a second call.**
+  `purgePublicPages` (`ops/edge-purge.ts` `purgeAndSync`) now purges the
+  tags and runs the reconcile, in `waitUntil`, for the kits and runners
+  the tags name (`lib/cache-tags.ts` `scopeOfTags`, which reads the tags
+  back with the builders' own prefixes). Every path in the purge table
+  above already sends one, so none can delete the page and forget the
+  copy, and a new retraction that purges gets it free. A kit saved
+  PUBLIC is a purge too (`submitVerdict`), so its copies are made then.
+  The paths a photo's own retraction takes (a report's or a request's
+  hide, the Desk on a photo, a runner deleting one from a PUBLIC kit) now
+  purge the kit's tags, which they did not before (step 6 left them to
+  this step).
+- **The hourly sweep** (`:15`, after the screening retry;
+  `ops/scheduled.ts` `sweepPublicPhotoCopies`) reconciles everything, 50
+  copies each way a firing, and lists the bucket to delete any object no
+  row names (a Worker that died between the put and the row's delete, or
+  a claim that lost a race). It copies what no purge saw (a review's
+  Approve, an unban, Keep my account, a photo screened by the retry) and
+  says in the digest how many stale copies or unnamed objects it found,
+  since each is a fast path that missed. An upload that passes screening
+  asks the reconcile about its kit at once (`feed/photos.ts`
+  `uploadPhoto`).
+- **The photo's URL is not purged from the zone cache.** The bucket's
+  domain is a zone cache, which `cache.purge` (the Worker's own) does not
+  reach, and a zone purge needs an API token, a new secret. Instead each
+  object carries `Cache-Control: public, max-age=60`
+  (`PUBLIC_PHOTO_CACHE_CONTROL`), so a deleted copy leaves the edge and
+  browsers within the minute the privacy policy promises; the page that
+  referenced it is purged by tag at once.
+- **The switch is `PUBLIC_PHOTOS_ORIGIN`** (proposal 160, phase 4: "behind
+  a switch"), a var in `wrangler.jsonc` set to `https://photos.dialed.run`.
+  Unset or empty, nothing is copied and `/k` shows no photo; deleting goes
+  on regardless. The policy's `img-src` admits the constant
+  `lib/public-photos.ts` `PUBLIC_PHOTOS_ORIGIN` (the static `_headers` copy
+  cannot read a var), and the conformance test holds the var to it.
+- **`/k` shows the photos as D does** (D's `PhotoPager`, moved out of
+  `EntryDetail` to its own file and given a `srcOf`, so `/k` does not
+  reach D's screen), under who and which day and over the
+  conditions (round 41 #86c's order), with no delete. The card never
+  carries one (D-150); its version ignores them.
+- **Not done here**: `/@handle`'s kit rows still draw the `--tint` tile
+  where round 41 #86d draws "the photo, or a --tint tile"; and a removal
+  request that links a `photos.dialed.run/<key>` URL is not read as a
+  photo subject (`takedownSubjectOf` reads only the app's paths), so the
+  operator finds it by hand, as for any link that is not ours.
+
 ## Build steps
 
 Each step is one or more commits that pass the commit gate on their own.
@@ -358,4 +432,8 @@ Each step is one or more commits that pass the commit gate on their own.
    Settings › Privacy's PUBLIC PROFILE group, the changed strings.
 6. **`/k/<id>`** (#86c, #86f), its card (#86e) and the cache headers.
 7. **`/@handle`** (#86d) and H's move to `/feed/u/<handle>`.
-8. **World photos** (D-151), once the owner has made the bucket and domain.
+8. **World photos** (D-151): `PUBLIC_PHOTOS`, `public_photos`, the
+   reconcile and its sweep ("Deviations (photos)"). Done when
+   `test/safety/public-photo-retractions.test.ts` shows every retraction
+   path deleting the copy and `test/ops/public-photos.test.ts` that nothing
+   unscreened or held is copied.
