@@ -325,6 +325,20 @@ describe("deciding", () => {
     expect(document.querySelector("[data-part='garment-line']")).toBeNull();
   });
 
+  it("shows no photo for a garment row whose photo is gone", () => {
+    renderQueue([
+      row({
+        subjectType: "garment",
+        subjectId: "g-1",
+        source: "classifier",
+        subject: { photoKeys: [] },
+      }),
+    ]);
+
+    expect(screen.queryByRole("img")).toBeNull();
+    expect(document.querySelector("[data-part='garment-photo']")).toBeNull();
+  });
+
   it("keeps a kit row's source at its foot, and its photos as reported photos", () => {
     renderQueue([
       row({

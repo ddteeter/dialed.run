@@ -896,16 +896,22 @@ export function ToggleField({
   field,
   isOn,
   onChange,
+  inputRef,
 }: Readonly<{
   name: string;
   label: string;
   field: (name: string) => FieldProps;
   isOn: boolean;
   onChange: (isOn: boolean) => void;
+  /**
+  The box itself, for a caller that moves focus to it — Privacy's switch, unlocked.
+  */
+  inputRef?: Ref<HTMLInputElement> | undefined;
 }>): JSX.Element {
   return (
     <label className="target flex items-center gap-2 text-body font-semibold">
       <input
+        ref={inputRef}
         {...field(name)}
         type="checkbox"
         checked={isOn}

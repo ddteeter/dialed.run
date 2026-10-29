@@ -456,6 +456,13 @@ const NO_HANDLE: CurrentSettings = {
 };
 
 describe("Privacy before the runner has a handle (round 42 #92)", () => {
+  it("leaves focus where it is on a page whose runner already has a handle", async () => {
+    await renderWithRouter(privacy(PUBLIC_DEFAULT, vi.fn()));
+    expect(
+      screen.getByRole("checkbox", { name: "Public profile" }),
+    ).not.toHaveFocus();
+  });
+
   it("has no switch: the kicker alone, the line, and Pick a username", async () => {
     await renderWithRouter(privacy(NO_HANDLE, vi.fn()));
 

@@ -378,6 +378,7 @@ describe("a garment match's takedown", () => {
     await user.click(close);
     expect(part("decide-bar")).toBeNull();
     expect(garment).not.toHaveClass("outline");
+    expect(garment).toHaveClass("flex", "flex-col", "gap-1");
     expect(decideOf(garment)).toHaveAttribute("aria-expanded", "false");
   });
 
@@ -478,6 +479,7 @@ describe("a garment match's takedown", () => {
       /^Matching photos · any runner · 2$/u,
     ).parentElement;
     expect(kicker).toHaveAttribute("tabindex", "-1");
+    expect(kicker).not.toHaveFocus();
 
     await user.click(decideOf(tiles()[1]));
     await chooseReason(user);

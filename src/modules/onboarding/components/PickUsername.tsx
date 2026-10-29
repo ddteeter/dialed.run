@@ -23,7 +23,8 @@ export type PickUsernameForm = (
 
 /**
  * The line, the press and the sheet. `onClaimed` runs once the handle is
- * saved, and the sheet closes with it.
+ * saved, and the group puts the switch in this one's place, so the sheet
+ * goes with it.
  */
 export function NoHandleYet({
   pickUsername,
@@ -62,12 +63,7 @@ export function NoHandleYet({
               <Icon name="close" size={20} />
             </button>
           </div>
-          {isOpen
-            ? pickUsername((username) => {
-                close();
-                onClaimed(username);
-              })
-            : undefined}
+          {isOpen ? pickUsername(onClaimed) : undefined}
         </div>
       </Sheet>
     </div>

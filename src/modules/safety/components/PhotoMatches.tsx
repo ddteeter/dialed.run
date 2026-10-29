@@ -84,54 +84,54 @@ function FoundMatches({
       <Matches
         found={found}
         remaining={remaining}
-        canDecide={decide !== undefined}
+        decide={decide}
         deciding={deciding}
       />
-      {decide === undefined ? undefined : (
-        <DecideBar deciding={deciding} decide={decide} />
-      )}
+      <DecideBar deciding={deciding} />
     </PhotoSection>
   );
 }
 
 /**
- * Which garment tile's bar is open — one at a time — and where focus goes
- * once one is decided: the next garment tile's Decide, or, with none left,
- * the MATCHING PHOTOS kicker (round 42 #89).
+ * Which garment tile's bar is open — one at a time, with the takedown its
+ * Decide was handed — and where focus goes once one is decided: the next
+ * garment tile's Decide (the one before, after the last), or, with none
+ * left, the MATCHING PHOTOS kicker (round 42 #89). A decided tile leaves
+ * `remaining`, so its bar closes with it.
  */
 function useGarmentDeciding(
   remaining: readonly PhotoMatch[],
   settle: (key: string) => void,
 ) {
-  const [openKey, setOpenKey] = useState<string | undefined>();
+  const [opened, setOpened] = useState<
+    { readonly key: string; readonly decide: DecideMatch } | undefined
+  >();
   const [focusKey, setFocusKey] = useState<string | undefined>();
+  const [isKickerNext, setIsKickerNext] = useState(false);
   const garments = remaining.filter((match) => match.kind === "garment");
-  const open = garments.find((match) => match.photoKey === openKey);
-  const kickerRef = useFocusWhen(focusKey === KICKER);
+  const [open] = garments.flatMap((match) =>
+    opened?.key === match.photoKey ? [{ match, decide: opened.decide }] : [],
+  );
   return {
     open,
     focusKey,
-    kickerRef,
-    toggle: (key: string): void => {
-      setOpenKey((current) => (current === key ? undefined : key));
+    kickerRef: useFocusWhen(isKickerNext),
+    toggle: (key: string, decide: DecideMatch): void => {
+      setOpened((current) =>
+        current?.key === key ? undefined : { key, decide },
+      );
     },
     decided: (key: string): void => {
       const at = garments.findIndex((match) => match.photoKey === key);
       const next = garments[at + 1] ?? garments[at - 1];
       settle(key);
-      setOpenKey(undefined);
-      setFocusKey(next?.photoKey ?? KICKER);
+      if (next === undefined) setIsKickerNext(true);
+      else setFocusKey(next.photoKey);
     },
   };
 }
 
 type GarmentDeciding = ReturnType<typeof useGarmentDeciding>;
-
-/**
- * Where focus goes when no garment tile is left to take it: the MATCHING
- * PHOTOS kicker. A photo key is a storage path, never this.
- */
-const KICKER = "kicker";
 
 // A garment tile while its bar is open: §06's focus ring, so it is clear
 // which photo the bar acts on. Written out whole, so it reads as one list.
@@ -145,12 +145,12 @@ const TILE_CLASS = "flex flex-col gap-1";
 function Matches({
   found,
   remaining,
-  canDecide,
+  decide,
   deciding,
 }: Readonly<{
   found: Found;
   remaining: readonly PhotoMatch[];
-  canDecide: boolean;
+  decide: DecideMatch | undefined;
   deciding: GarmentDeciding;
 }>): JSX.Element {
   if (!found.fingerprinted) {
@@ -174,7 +174,7 @@ function Matches({
         <li
           key={match.photoKey}
           className={
-            deciding.open?.photoKey === match.photoKey
+            deciding.open?.match.photoKey === match.photoKey
               ? OPEN_TILE_CLASS
               : TILE_CLASS
           }
@@ -193,8 +193,8 @@ function Matches({
             ) : undefined}
           </span>
           <Owner handle={match.handle} />
-          {canDecide && match.kind === "garment" ? (
-            <DecideLink match={match} deciding={deciding} />
+          {decide !== undefined && match.kind === "garment" ? (
+            <DecideLink match={match} decide={decide} deciding={deciding} />
           ) : undefined}
         </li>
       ))}
@@ -216,9 +216,14 @@ function barId(match: PhotoMatch): string {
  */
 function DecideLink({
   match,
+  decide,
   deciding,
-}: Readonly<{ match: PhotoMatch; deciding: GarmentDeciding }>): JSX.Element {
-  const isOpen = deciding.open?.photoKey === match.photoKey;
+}: Readonly<{
+  match: PhotoMatch;
+  decide: DecideMatch;
+  deciding: GarmentDeciding;
+}>): JSX.Element {
+  const isOpen = deciding.open?.match.photoKey === match.photoKey;
   const ref = useFocusWhen(deciding.focusKey === match.photoKey);
   return (
     <button
@@ -227,7 +232,7 @@ function DecideLink({
       aria-expanded={isOpen}
       aria-controls={isOpen ? barId(match) : undefined}
       onClick={() => {
-        deciding.toggle(match.photoKey);
+        deciding.toggle(match.photoKey, decide);
       }}
       className="target cursor-pointer self-start border-none bg-transparent p-0 text-body text-ink underline underline-offset-4"
     >
@@ -245,13 +250,9 @@ function DecideLink({
  */
 function DecideBar({
   deciding,
-  decide,
-}: Readonly<{
-  deciding: GarmentDeciding;
-  decide: DecideMatch;
-}>): JSX.Element | undefined {
-  const { open } = deciding;
-  if (open === undefined) return undefined;
+}: Readonly<{ deciding: GarmentDeciding }>): JSX.Element | undefined {
+  if (deciding.open === undefined) return undefined;
+  const { match: open, decide } = deciding.open;
   const owner = open.handle === undefined ? "" : ` · @${open.handle}`;
   return (
     <div

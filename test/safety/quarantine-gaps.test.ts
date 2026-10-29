@@ -11,6 +11,7 @@ import {
   notifications,
   outbox,
   photoScreenings,
+  products,
   quarantinedContent,
   removedFingerprints,
   reviewQueue,
@@ -460,6 +461,28 @@ describe("garment photos reach a person (design 157)", () => {
         garmentLine: "Pegasus 41 · Shoes · Retired",
       },
     });
+  });
+
+  it("names a product's garment with its brand on the reviewer's line", async () => {
+    const owner = await makeUser({ username: "closet_owner" });
+    const { itemId } = await garmentPhoto(owner);
+    const productId = newUlid();
+    await core().insert(products).values({
+      id: productId,
+      brandId: newUlid(),
+      name: "Pegasus 41",
+      normalizedName: "pegasus 41",
+      createdBy: owner,
+      createdAt: nowSeconds(),
+    });
+    await core()
+      .update(wardrobeItems)
+      .set({ brand: "Nike", name: "Pegasus 41", category: "shoes", productId })
+      .where(eq(wardrobeItems.id, itemId));
+    await queued(itemId, "classifier");
+
+    const [row] = await pendingReviewQueue();
+    expect(row?.subject.garmentLine).toBe("Nike Pegasus 41 · Shoes · In use");
   });
 
   it("shows nothing for a queued garment whose photo is gone", async () => {

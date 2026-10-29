@@ -1,5 +1,5 @@
 import { useId } from "react";
-import type { JSX } from "react";
+import type { JSX, Ref } from "react";
 
 import { ControlFailureBand, ToggleField, useControlAction } from "../../../ui";
 import type { PublicProfileChoice } from "../inputs";
@@ -75,12 +75,9 @@ export function PublicProfileSwitches({
     kicker: "Not changed",
   });
   return (
-    <div
-      ref={isJustShown ? focusFirstSwitch : undefined}
-      data-part="public-profile"
-      className="flex flex-col gap-4"
-    >
+    <div data-part="public-profile" className="flex flex-col gap-4">
       <SavedSwitch
+        inputRef={isJustShown ? focusSwitch : undefined}
         copy={{
           name: "publicProfile",
           label: PUBLIC_PROFILE_LABEL,
@@ -119,39 +116,38 @@ export function PublicProfileSwitches({
 }
 
 /**
-The group's first switch — "Public profile" — takes focus.
+"Public profile" takes focus as it arrives; nothing as it leaves.
 */
-function focusFirstSwitch(group: HTMLDivElement | null): void {
-  group?.querySelector("input")?.focus();
+function focusSwitch(input: HTMLInputElement | null): void {
+  input?.focus();
 }
 
 /**
  * One of the group's switches and the line beneath it, which is its
  * description.
  */
-function SavedSwitch({
-  copy,
-  isOn,
-  isPending,
-  onToggle,
-}: Readonly<{
-  copy: SwitchCopy;
-  isOn: boolean;
-  isPending: boolean;
-  onToggle: (isOn: boolean) => void;
-}>): JSX.Element {
+function SavedSwitch(
+  props: Readonly<{
+    copy: SwitchCopy;
+    isOn: boolean;
+    isPending: boolean;
+    onToggle: (isOn: boolean) => void;
+    inputRef?: Ref<HTMLInputElement> | undefined;
+  }>,
+): JSX.Element {
   const hintId = useId();
   return (
     <div className="flex flex-col gap-2">
       <ToggleField
-        name={copy.name}
-        label={copy.label}
-        field={toggleFieldProps(hintId, isPending)}
-        isOn={isOn}
-        onChange={onToggle}
+        inputRef={props.inputRef}
+        name={props.copy.name}
+        label={props.copy.label}
+        field={toggleFieldProps(hintId, props.isPending)}
+        isOn={props.isOn}
+        onChange={props.onToggle}
       />
       <p id={hintId} className="m-0 text-small text-muted">
-        {copy.line}
+        {props.copy.line}
       </p>
     </div>
   );
