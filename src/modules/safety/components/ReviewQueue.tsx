@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import type { JSX } from "react";
 
 import { Bracketed, ListSection, Mono, useFormSubmit } from "../../../ui";
@@ -30,6 +30,7 @@ import {
   RemovalDecision,
   subjectWord,
 } from "./RemovalDecision";
+import { useFocusWhen } from "./use-focus-when";
 import { useSettled } from "./use-settled";
 
 /**
@@ -433,23 +434,6 @@ function RowDecision(
     );
   }
   return <Decision row={row} decide={props.decide} onSettled={onSettled} />;
-}
-
-/**
- * A ref callback that focuses its element when `shouldFocus` is, and
- * changes only with it: React calls it with the element when it changes,
- * so focus moves once — when the element becomes the one to land on — and
- * not on every render after.
- */
-function useFocusWhen(
-  shouldFocus: boolean,
-): (node: HTMLElement | null) => void {
-  return useCallback(
-    (node: HTMLElement | null) => {
-      if (shouldFocus && node !== null) node.focus();
-    },
-    [shouldFocus],
-  );
 }
 
 /**

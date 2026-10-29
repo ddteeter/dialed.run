@@ -41,6 +41,14 @@ notice's words on 2026-10-26.
    `decideGarmentMatchAction` (`garmentMatchActionInput`: item id, action,
    reason), calls `moderateGarmentPhoto`. A decided match leaves the list.
    Offered on Review rows and removal requests alike.
+   **Round 42 #89 moved the bar off the tile** (it was built on the tile
+   as a placeholder, design deltas 89): a garment tile carries one 44-high
+   "Decide" (Close while open), and the bar opens full width under the
+   grid, kicker "Decide · garment photo · {id} · @{owner}", the tile ringed
+   with §06's focus ring. One bar at a time. Decided, the tile and bar
+   leave, the count drops, and focus goes to the next garment tile's
+   Decide (the one before when it was the last), else to the MATCHING
+   PHOTOS kicker. Kit tiles are unchanged.
 
 ## Contract touches
 
