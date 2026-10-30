@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
+import { expect, test } from "../support/a11y";
 import { storageStateFor } from "../support/accounts";
 import { cellsOf, fillsOf, openBoard } from "../support/conformance";
 import {

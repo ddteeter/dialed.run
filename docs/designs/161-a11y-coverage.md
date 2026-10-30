@@ -1,8 +1,9 @@
 # Plan: 161 Accessibility coverage
 
-Status: **approved** (owner, 2026-10-29); step 0 next. This is a plan, not a lane
-design doc: it sequences the work and names what needs the owner. Step 0 is
-a measurement, and the steps after it are re-costed from what it finds.
+Status: **approved** (owner, 2026-10-29); step 0 done (2026-10-30), results
+below. This is a plan, not a lane design doc: it sequences the work and
+names what needs the owner. Step 0 is a measurement, and the steps after it
+are re-costed from what it finds.
 
 ## Why
 
@@ -21,7 +22,7 @@ on those specs, and **coverage says which UI branches have been checked**.
 That figure is then ratcheted the way the mutation score is.
 
 ```
-every e2e spec ──► a11y fixture (in-page, on each settled DOM)
+every e2e spec ──► a11y fixture (before every action, in the page)
                      ├─ axe (AA, every rule on, real CSS)
                      ├─ hit areas ≥ 44×44, focus ring visible
                      └─ V8 coverage of src/**/*.tsx
@@ -44,11 +45,14 @@ from them. **Go/no-go point for the owner.**
 **1. The fixture: `e2e/support/a11y.ts`.** It extends Playwright's `test`,
 and every spec imports `test` from it instead of `@playwright/test` (41
 specs, a mechanical change). An init script loads `axe-core` into the page.
-A debounced `MutationObserver` runs the checks each time the DOM settles,
-and skips any DOM it has already checked (by hash). All rules are on,
-including `color-contrast` and `region`, and the only way to switch one off
+The action methods of `Locator`, `Page`, `Keyboard` and `Mouse` are wrapped
+to run the checks first, so every state a spec acts on is checked; a DOM
+already checked (by hash) is skipped. Every AA rule is on, `color-contrast`
+included, plus the `best-practice` tag for `region`, and the only way to switch one off
 is a row in `decisions.md`. The same in-page pass measures interactive
-boxes against 44×44, since axe's `target-size` checks 24px. Failures
+boxes against 44×44, since axe's `target-size` checks 24px, counting a
+control's `<label>` and any overlay that takes its clicks as part of its
+hit area (the spike measured the bare `<input>` and was wrong). Failures
 collect per test and fail it at the end, naming the rule and the element.
 _Tests:_ a fixture spec over a deliberately broken page fails for each
 check, so a pass means something.
@@ -73,16 +77,17 @@ source maps, the fixture collects Chromium's V8 coverage through
 figure, and a baseline file holds it at its last value. A route check reads
 the URLs the run visited, matches them to `routeTree.gen.ts`, and fails on
 any route never visited and not listed with a reason.
-_Known limit:_ a state shorter than the debounce, such as a spinner
-mid-submit, renders and counts without being checked. The debounce is set
-in step 0 from what the spike measures.
+_Known limit:_ a state no action is taken on, such as a spinner
+mid-submit, renders and counts without being checked. A spec that asserts
+on it closes the gap: step 1 also checks before each web-first `expect`
+if the spike's cost allows it.
 _Tests:_ the report reader is pinned against a fixture report; removing a
 visit from a spec drops the figure.
 _Done:_ the figure is printed in CI and can only go up.
 
 **4. Transcripts.** At the end of each test, record what a screen reader
-would say: Guidepup's `spokenPhraseLog()` if step 0 shows it runs in the
-page, else Playwright's `ariaSnapshot()`. Each is a checked-in snapshot
+would say, with Guidepup's `spokenPhraseLog()`; step 0 showed it runs in the
+page. Each is a checked-in snapshot
 named by the test, so a change in what's announced shows up as a reviewed
 diff.
 _Done:_ the transcripts are committed and the snapshots pass.
@@ -117,14 +122,57 @@ check required in branch protection.
 it ships, the end-of-test pass also runs with `data-theme="dark"`. A line
 goes into `docs/tasks/111-dark-theme.md`'s test expectations.
 
+## Step 0 results (2026-10-30)
+
+Closet specs (3 conformance files and the closet demo, 10 tests), locally,
+with the report-only fixture against without it:
+
+| measure                                | value                                 |
+| -------------------------------------- | ------------------------------------- |
+| wall time, without → with              | 61.8s → 68.6s (+11%)                  |
+| states checked                         | 71, plus 13 skipped as seen           |
+| time inside axe                        | 1.7s in all, 25–40ms per check        |
+| axe violations at AA                   | **0**                                 |
+| planted violations caught (probe)      | image-alt, button-name, contrast      |
+| controls under 44×44, as measured      | 39 (overcounted, see step 1)          |
+| Guidepup in the page (blob-URL import) | works; the empty closet is 43 phrases |
+
+- **Waiting for a quiet DOM does not work.** The first version checked
+  after 150ms without mutations. The closet demo makes about 900 in ten
+  seconds at machine speed (React re-setting `name` and `type` on form
+  inputs, motion's inline styles) and got one check, at the end. Checking
+  before each action is deterministic and caught 47 states in the same
+  test.
+- **Zero violations is real, not a broken check.** A probe planted a
+  missing alt, an empty button and grey-on-white text in the closet; axe
+  reported all three.
+- **`region` is not a WCAG rule.** axe tags it `best-practice`, so the AA
+  tags never ran it; step 1 adds the tag.
+- **The hit-area count is wrong as measured.** It reads the bare
+  `<input>`: a 13×13 checkbox inside a 44px label, or a 1×1 `sr-only`
+  file input behind a button, counts as small. The real candidates are the
+  closet form's `<select>`s at 37px tall and the radio overlays at 42px.
+- **The first transcript already raises a question.** The empty closet's
+  heading is announced as `heading, [Nothing in here yet], level 1`, and
+  the logo as `[ / dialed / .run / ]`. Whether the brackets should reach a
+  screen reader is not in the Accessibility Contract (open questions).
+
+## Open questions
+
+- **Bracket notation and screen readers.** `Bracketed` leaves the brackets
+  in the accessible name. Should they be `aria-hidden`, so VoiceOver reads
+  "Nothing in here yet"? This is user-facing wording and the contract's
+  call, so the owner (and design) decides; step 6 applies it.
+
 ## Cost
 
-e2e already takes 40–45 minutes in CI, with one worker, because parallel
-workers lock the local SQLite. The checks run in the page, skip any DOM
-they have already checked, and add one resize, one Tab walk and one reflow
-check per test. Step 0 measures the real figure. If the run grows by more
-than about 10 minutes, the a11y checks move to their own job on the dev leg
-instead of slowing the required `e2e` check.
+The `e2e` job takes about 8 minutes in CI (the 40–45 is the whole
+Guardrails run), with one worker, because parallel workers lock the local
+SQLite. Step 0 measured the axe part at about 11% on the closet specs,
+which puts it under a minute for the suite. Steps 2 and 4 add one resize,
+one Tab walk, one reflow check and one transcript per test. If the run
+grows by more than about 10 minutes, the a11y checks move to their own job
+on the dev leg instead of slowing the required `e2e` check.
 
 ## Owner decisions (2026-10-29)
 
