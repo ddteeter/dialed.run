@@ -83,7 +83,7 @@ function routerFor(element: ReactElement) {
       indexRoute,
       stub("/auth/login"),
       stub("/@{$handle}"),
-      stub("/k/$entryId"),
+      stub("/kit/$entryId"),
       stub("/feed/u/$handle"),
       stub("/takedown"),
       stub("/join"),
@@ -145,7 +145,7 @@ describe("the public profile, signed out", () => {
     const rows = within(part("kits") ?? document.body).getAllByRole("listitem");
     expect(rows).toHaveLength(3);
     const first = within(rows[0] ?? document.body).getByRole("link");
-    expect(first).toHaveAttribute("href", `/k/${IDS[0]}`);
+    expect(first).toHaveAttribute("href", `/kit/${IDS[0]}`);
     expect(first).toHaveTextContent(
       /^38° dampSat Oct 18 · 6\.2 miA bit cold$/u,
     );
@@ -163,7 +163,7 @@ describe("the public profile, signed out", () => {
     expect(third.querySelector('[data-part="verdict-chip"]')).toBeNull();
     expect(within(rows[1] ?? document.body).getByRole("link")).toHaveAttribute(
       "href",
-      `/k/${IDS[1]}`,
+      `/kit/${IDS[1]}`,
     );
   });
 

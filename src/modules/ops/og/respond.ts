@@ -73,7 +73,7 @@ export async function kitCardResponse(
     );
   }
   const key = new Request(
-    new URL(`/og/k/${entryId}/${found.version}`, request.url),
+    new URL(`/og/kit/${entryId}/${found.version}`, request.url),
   );
   const card = await cachedCard(key, CARD_TTL_SECONDS.entry, () =>
     renderCard(cardFor(found.card)),

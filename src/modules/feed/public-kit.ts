@@ -1,6 +1,6 @@
 /**
  * A public kit, read for the open web (round 41 #86c, D-150): what
- * `/k/<id>` and its card show to anyone, signed in or not.
+ * `/kit/<id>` and its card show to anyone, signed in or not.
  *
  * **One gate.** The entry is read through `worldVisibleEntry()` and
  * nothing else: PUBLIC, nothing pending or settled against it, its runner
@@ -358,7 +358,7 @@ export async function publicKitForPage(
 }
 
 /**
- * `/og/k/<id>`: the kit's card when it is public, the default card for
+ * `/og/kit/<id>`: the kit's card when it is public, the default card for
  * every other reason (round 41 #86e).
  */
 export async function publicKitCardResponse(

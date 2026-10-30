@@ -298,7 +298,7 @@ describe("kitCardResponse", () => {
 
   it("serves a public kit's card for the page's minute at the edge, tagged", async () => {
     const response = await kitCardResponse(
-      new Request(`https://dialed.test/og/k/${ENTRY_ID}?v=abc`),
+      new Request(`https://dialed.test/og/kit/${ENTRY_ID}?v=abc`),
       ENTRY_ID,
       {
         found: { card: ENTRY, version: crypto.randomUUID() },
@@ -317,7 +317,7 @@ describe("kitCardResponse", () => {
 
   it("renders a new card for a new version, and finds the old one by its own", async () => {
     const version = crypto.randomUUID();
-    const url = `https://dialed.test/og/k/${ENTRY_ID}`;
+    const url = `https://dialed.test/og/kit/${ENTRY_ID}`;
     await kitCardResponse(new Request(url), ENTRY_ID, {
       found: { card: ENTRY, version },
       tags: [],
@@ -325,18 +325,18 @@ describe("kitCardResponse", () => {
 
     const cards = await caches.open("og-cards");
     const stored = await cards.match(
-      new Request(`https://dialed.test/og/k/${ENTRY_ID}/${version}`),
+      new Request(`https://dialed.test/og/kit/${ENTRY_ID}/${version}`),
     );
     expect(stored?.headers.get("Content-Type")).toBe("image/png");
     expect(
-      await cards.match(new Request(`https://dialed.test/og/k/${ENTRY_ID}`)),
+      await cards.match(new Request(`https://dialed.test/og/kit/${ENTRY_ID}`)),
     ).toBeUndefined();
   });
 
   it("finds the default card where the default card route keeps it", async () => {
     const origin = `https://${crypto.randomUUID()}.test`;
     await kitCardResponse(
-      new Request(`${origin}/og/k/${ENTRY_ID}?v=old`),
+      new Request(`${origin}/og/kit/${ENTRY_ID}?v=old`),
       ENTRY_ID,
       { tags: [] },
     );
@@ -346,13 +346,13 @@ describe("kitCardResponse", () => {
       await cards.match(new Request(`${origin}/og/default`)),
     ).toBeDefined();
     expect(
-      await cards.match(new Request(`${origin}/og/k/${ENTRY_ID}`)),
+      await cards.match(new Request(`${origin}/og/kit/${ENTRY_ID}`)),
     ).toBeUndefined();
   });
 
   it("serves the default card, kept a minute and tagged, for a kit that is not public", async () => {
     const response = await kitCardResponse(
-      new Request(`https://dialed.test/og/k/${ENTRY_ID}?v=old`),
+      new Request(`https://dialed.test/og/kit/${ENTRY_ID}?v=old`),
       ENTRY_ID,
       { tags: [`entry:${ENTRY_ID}`] },
     );

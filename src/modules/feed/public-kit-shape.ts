@@ -102,10 +102,10 @@ export function publicKitTitle(kit: PublicKit): string {
 }
 
 /**
- * The card's path, versioned (round 41 #86e): `/og/k/<id>?v=<digest>`.
+ * The card's path, versioned (round 41 #86e): `/og/kit/<id>?v=<digest>`.
  */
 export function publicKitCardPath(kit: PublicKit): string {
-  return `/og/k/${kit.entryId}?v=${kit.cardVersion}`;
+  return `/og/kit/${kit.entryId}?v=${kit.cardVersion}`;
 }
 
 /**

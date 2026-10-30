@@ -25,7 +25,7 @@ import {
 import type { PublicKit } from "../../src/modules/feed/public-kit-shape";
 
 /**
- * `/k/<id>` and its not-public twin (round 41 #86c, #86f).
+ * `/kit/<id>` and its not-public twin (round 41 #86c, #86f).
  */
 
 const ID = "01JABCDEFGHJKMNPQRSTVWXYZ0";
@@ -61,7 +61,7 @@ const KIT: PublicKit = {
   ],
 };
 
-const KIT_URL = `https://dialed.run/k/${ID}`;
+const KIT_URL = `https://dialed.run/kit/${ID}`;
 
 const SIGNED_OUT: AskSignedIn = () => Promise.resolve({ signedIn: false });
 const SIGNED_IN: AskSignedIn = () => Promise.resolve({ signedIn: true });

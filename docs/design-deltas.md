@@ -945,7 +945,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
 ## Answered in round 42 (imported 2026-10-28)
 
 Sent on 2026-10-28 for items 88–92: the two garment asks (88 and 89), the
-pieces of `/k/<id>` and `/@handle` built from existing parts (90 and 91),
+pieces of `/kit/<id>` and `/@handle` built from existing parts (90 and 91),
 and the Privacy sub-page's words (92). Design answered the same day as
 `Round 42 Rulings.dc.html`, with the text of record under "Round 42 · Items
 88–92" in `design/docs/product.md`. The round amends round 41 #86b (no
@@ -968,7 +968,7 @@ type words). Nothing is left open.
     and bar leave, the count drops, and focus moves to the next garment
     tile's Decide or the MATCHING PHOTOS kicker. Kit tiles are unchanged.
 
-90. **`/k/<id>` (design 161, step 6). Ruled; build work.** The desk width
+90. **`/kit/<id>` (design 161, step 6). Ruled; build work.** The desk width
     (one column, the 620 measure, centred) is confirmed. The bar has one
     slot, in pill form: hairline "Log in" signed out, ink "Open in the app"
     signed in, never both. A piece's kind is the closet's TYPE chip, the
@@ -1035,7 +1035,7 @@ design has answered 86.
       NEW RUNS has no Public row. **Turning the profile off while PUBLIC is
       the default moves the default to SHARED**; kits already public stay
       public.
-    - **c. `/k/<id>`**: handle and local day, photo, conditions and verdict
+    - **c. `/kit/<id>`**: handle and local day, photo, conditions and verdict
       chip, four stats, caption, THE KIT, the credit, an invite block ("Wear
       what worked." · Request an invite · "Have a code? Join"), and a foot
       with Report this kit (to `/takedown`, prefilled), Privacy, Terms.

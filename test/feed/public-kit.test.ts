@@ -37,7 +37,7 @@ import {
 } from "./helpers";
 
 /**
- * The public kit's read (round 41 #86c, D-150): what `/k/<id>` and its card
+ * The public kit's read (round 41 #86c, D-150): what `/kit/<id>` and its card
  * show to anyone, through `worldVisibleEntry()` alone.
  */
 
@@ -628,7 +628,7 @@ describe("the card (round 41 #86e)", () => {
     const { runner, entryId } = await fullyPopulated();
 
     const response = await publicKitCardResponse(
-      new Request(`https://dialed.test/og/k/${entryId}?v=x`),
+      new Request(`https://dialed.test/og/kit/${entryId}?v=x`),
       entryId,
     );
 
@@ -636,7 +636,7 @@ describe("the card (round 41 #86e)", () => {
     expect(response.headers.get("Cache-Control")).toBe("public, max-age=60");
     // The kit's own card, not the default one.
     const fallback = await publicKitCardResponse(
-      new Request(`https://dialed.test/og/k/${newUlid()}`),
+      new Request(`https://dialed.test/og/kit/${newUlid()}`),
       newUlid(),
     );
     expect(await digestOf(response)).not.toBe(await digestOf(fallback));
@@ -649,7 +649,7 @@ describe("the card (round 41 #86e)", () => {
     const { entryId } = await fullyPopulated({ audience: "runners" });
 
     const response = await publicKitCardResponse(
-      new Request(`https://dialed.test/og/k/${entryId}?v=x`),
+      new Request(`https://dialed.test/og/kit/${entryId}?v=x`),
       entryId,
     );
 

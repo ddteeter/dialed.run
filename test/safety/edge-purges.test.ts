@@ -271,7 +271,7 @@ describe("the Desk, reports and requests", () => {
   });
 
   it.each([
-    ["a public kit's own link", (entryId: string) => `/k/${entryId}`],
+    ["a public kit's own link", (entryId: string) => `/kit/${entryId}`],
     ["the app's link", (entryId: string) => `/feed/entry/${entryId}`],
   ])("purges a kit a removal request holds, by %s", async (_label, path) => {
     const { userId, entryId } = await kit();

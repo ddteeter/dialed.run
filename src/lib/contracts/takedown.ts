@@ -62,7 +62,7 @@ export type TakedownRequestValues = z.infer<typeof takedownRequestSchema>;
 
 /**
  * What a pasted link points at, when it is one of ours: a shared kit
- * (`/feed/entry/{id}`), a public one (`/k/{id}`, round 41 #86c — its
+ * (`/feed/entry/{id}`), a public one (`/kit/{id}`, round 41 #86c — its
  * Report this kit link fills this in) or one of a kit's photos
  * (`/feed/photo/entries/{runner}/{entry}/{photo}`). `entryId` is the kit
  * either way, where Review opens it. Any host is read, because the same
@@ -76,7 +76,7 @@ export type TakedownSubject = Readonly<{
   entryId: string;
 }>;
 
-const ENTRY_PATH = /^\/(?:feed\/entry|k)\/([^/]+)\/?$/u;
+const ENTRY_PATH = /^\/(?:feed\/entry|kit)\/([^/]+)\/?$/u;
 const PHOTO_PATH = /^\/feed\/photo\/entries\/[^/]+\/([^/]+)\/([^/]+)$/u;
 
 /**

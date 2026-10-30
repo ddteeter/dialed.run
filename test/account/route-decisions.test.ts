@@ -336,7 +336,11 @@ describe("gateOnHandle (the root's O0 gate, memoised)", () => {
     // root reads no session there and redirects nobody — not even a
     // runner the gate would otherwise send to O0 or Keep your account?.
     for (const gate of ["needs-handle", "leaving", "needs-terms"] as const) {
-      const onKit = await gateOnce(gate, false, "/k/01J00000000000000000000000");
+      const onKit = await gateOnce(
+        gate,
+        false,
+        "/kit/01J00000000000000000000000",
+      );
       expect(onKit).toStrictEqual({ thrown: undefined, asked: 0 });
     }
     // …and on the app's own page of the same kit, the gate holds.

@@ -110,21 +110,24 @@ describe("reading a pasted link", () => {
     ).toStrictEqual(kit);
   });
 
-  it("finds a public kit by its /k link (round 41 #86c)", () => {
+  it("finds a public kit by its /kit link (round 41 #86c)", () => {
     const kit = { subjectType: "entry", subjectId: ENTRY, entryId: ENTRY };
-    expect(takedownSubjectOf(`https://dialed.run/k/${ENTRY}`)).toStrictEqual(
+    expect(takedownSubjectOf(`https://dialed.run/kit/${ENTRY}`)).toStrictEqual(
       kit,
     );
     expect(
-      takedownSubjectOf(`https://app.dialed.run/k/${ENTRY}/`),
+      takedownSubjectOf(`https://app.dialed.run/kit/${ENTRY}/`),
     ).toStrictEqual(kit);
-    expect(takedownSubjectOf(`https://dialed.run/k/not-a-ulid`)).toBeUndefined();
     expect(
-      takedownSubjectOf(`https://dialed.run/x/k/${ENTRY}`),
+      takedownSubjectOf(`https://dialed.run/kit/not-a-ulid`),
     ).toBeUndefined();
     expect(
-      takedownSubjectOf(`https://dialed.run/feed/k/${ENTRY}`),
+      takedownSubjectOf(`https://dialed.run/x/kit/${ENTRY}`),
     ).toBeUndefined();
+    expect(
+      takedownSubjectOf(`https://dialed.run/feed/kit/${ENTRY}`),
+    ).toBeUndefined();
+    expect(takedownSubjectOf(`https://dialed.run/k/${ENTRY}`)).toBeUndefined();
   });
 
   it("finds a photo and the kit it belongs to", () => {
@@ -179,8 +182,10 @@ describe("reading a pasted link", () => {
 describe("takedownSearchSchema", () => {
   it("keeps a link handed in the URL", () => {
     expect(
-      takedownSearchSchema.parse({ location: `https://dialed.run/k/${ENTRY}` }),
-    ).toStrictEqual({ location: `https://dialed.run/k/${ENTRY}` });
+      takedownSearchSchema.parse({
+        location: `https://dialed.run/kit/${ENTRY}`,
+      }),
+    ).toStrictEqual({ location: `https://dialed.run/kit/${ENTRY}` });
   });
 
   it("is empty for a plain visit", () => {

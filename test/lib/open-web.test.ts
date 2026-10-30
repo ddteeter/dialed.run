@@ -8,7 +8,7 @@ import { isOpenWebPath, signedInOffTheOpenWeb } from "../../src/lib/open-web";
  */
 
 describe("isOpenWebPath", () => {
-  it.each(["/k/01J00000000000000000000000", "/k/anything/", "/k/x"])(
+  it.each(["/kit/01J00000000000000000000000", "/kit/anything/", "/kit/x"])(
     "is %s, a public kit",
     (path) => {
       expect(isOpenWebPath(path)).toBe(true);
@@ -30,11 +30,13 @@ describe("isOpenWebPath", () => {
     "/x/@maya",
     "/feed/u/maya_runs",
     "/k",
-    "/k/",
-    "/k/a/b",
+    "/kit",
+    "/kit/",
+    "/kit/a/b",
     "/feed/entry/01J00000000000000000000000",
-    "/x/k/01J00000000000000000000000",
-    "/kit/01J00000000000000000000000",
+    "/x/kit/01J00000000000000000000000",
+    "/k/01J00000000000000000000000",
+    "/kits/01J00000000000000000000000",
   ])("is not %s", (path) => {
     expect(isOpenWebPath(path)).toBe(false);
   });
@@ -44,7 +46,7 @@ describe("signedInOffTheOpenWeb", () => {
   it("answers nobody on a public page, without asking", async () => {
     const ask = vi.fn(() => Promise.resolve({ signedIn: true }));
 
-    expect(await signedInOffTheOpenWeb("/k/x", ask)).toStrictEqual({
+    expect(await signedInOffTheOpenWeb("/kit/x", ask)).toStrictEqual({
       signedIn: false,
     });
     expect(ask).not.toHaveBeenCalled();

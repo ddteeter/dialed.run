@@ -171,12 +171,12 @@ const NAV: readonly Edge[] = [
   // no Desk rows. Added under the header's ownership rule.
   { from: "*", to: ["/", "/desk/runners"], type: "cut" },
 
-  // The open web's pages (design 161, D-153): `/k/<id>` and `/@handle`,
+  // The open web's pages (design 161, D-153): `/kit/<id>` and `/@handle`,
   // linked from each other with `reloadDocument`, since the root reads no
   // session there. A document load has no outgoing screen, so first-paint
   // rules apply, as for the Strava return above. Not a NAV row; added
   // under the header's ownership rule.
-  { from: "*", to: ["/k/$entryId", "/@{$handle}"], type: "cut" },
+  { from: "*", to: ["/kit/$entryId", "/@{$handle}"], type: "cut" },
 
   // The pushes. Forward comes from the trailing edge, and back reverses it.
   // NAV, in order: "Closet C → Garment detail", "Garment detail → Edit

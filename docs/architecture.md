@@ -401,7 +401,7 @@ URLs, cacheable for their TTL (decision D-46).
 **The one exception is a PUBLIC kit on the open web** (D-152, design 161
 step 8): each of its screened photos is copied to `dialed-public-photos`
 (binding `PUBLIC_PHOTOS`) under a random 128-bit key, with
-`Cache-Control: public, max-age=60`, and `/k/<id>` shows it from
+`Cache-Control: public, max-age=60`, and `/kit/<id>` shows it from
 `photos.dialed.run`, where Cloudflare's cache and its CSAM Scanning Tool
 front the bucket. `public_photos` records every object there.
 `ops/public-photos.ts` reconciles the bucket against the open web's rule

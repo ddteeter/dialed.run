@@ -1,6 +1,6 @@
 /**
  * The public photo bucket (D-152, design 161 step 8): a copy of each
- * screened photo on a PUBLIC kit, under an unguessable key, so `/k/<id>`
+ * screened photo on a PUBLIC kit, under an unguessable key, so `/kit/<id>`
  * can show it and Cloudflare's cache (and the CSAM Scanning Tool) serves
  * it. Deleted when the kit or the photo stops being public, for whatever
  * reason.
@@ -416,7 +416,7 @@ async function syncReported(
 }
 
 /**
- * The page's photos (`/k/<id>`): the URLs of a kit's copies that have
+ * The page's photos (`/kit/<id>`): the URLs of a kit's copies that have
  * landed, in the kit's order, while each photo is still screened. None
  * when the switch is off. The kit itself was read through
  * `worldVisibleEntry()` by the caller. `configured` is the switch's

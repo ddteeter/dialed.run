@@ -238,7 +238,7 @@ test.describe("security headers (OPS-8)", () => {
   // Its policy names its inline scripts' hashes instead, and the page
   // names no nonce anywhere.
   test.describe("a page the edge stores", () => {
-    const NOT_PUBLIC = "/k/no-such-kit";
+    const NOT_PUBLIC = "/kit/no-such-kit";
 
     test("admits exactly its inline scripts by hash, and carries no nonce", async ({
       request,

@@ -671,10 +671,10 @@ describe("EntryDetail: the owner meta (round 41 #86a)", () => {
 
   it("builds the address from the origin it is given", () => {
     expect(publicKitUrl("01ENTRY", "https://app.dialed.run")).toBe(
-      "https://app.dialed.run/k/01ENTRY",
+      "https://app.dialed.run/kit/01ENTRY",
     );
     expect(publicKitUrl("01ENTRY", "http://localhost:5173")).toBe(
-      "http://localhost:5173/k/01ENTRY",
+      "http://localhost:5173/kit/01ENTRY",
     );
   });
 });

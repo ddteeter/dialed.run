@@ -318,7 +318,7 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "routes/og/default.ts GET": "sessionless",
   // A public kit's card (D-151), or the default card: a preview fetcher
   // has no session.
-  "routes/og/k.$entryId.ts GET": "sessionless",
+  "routes/og/kit.$entryId.ts GET": "sessionless",
   "routes/runs/strava-connect.ts GET": "sessionless",
   // A reviewer's view of a photo: a Desk read (Q5), asked of `isAdmin`
   // inside (`reviewerPhotoResponse`) for a confirmed viewer only.

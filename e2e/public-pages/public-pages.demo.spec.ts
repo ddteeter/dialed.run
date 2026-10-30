@@ -1,6 +1,6 @@
 /**
  * Covers: A3's PUBLIC row (round 41 #86a) and D's owner meta for a PUBLIC
- * kit, Settings › Privacy's PUBLIC PROFILE switch (#86b), `/k/<id>` as a
+ * kit, Settings › Privacy's PUBLIC PROFILE switch (#86b), `/kit/<id>` as a
  * stranger sees it (#86c), `/@handle` as a stranger sees it (#86d), and
  * the not-public page a kit made private leaves behind (#86f) — design
  * 161, decisions D-150–D-153. One journey, one video.
@@ -203,8 +203,8 @@ test("make a kit and a profile public, see them as a stranger, take the kit back
   const runnerCookies = await page.context().cookies();
   await page.context().clearCookies();
 
-  await scene(page, "Signed out · /k/<id> is the kit, for anyone");
-  const kitPage = await page.goto(`/k/${entryId}`);
+  await scene(page, "Signed out · /kit/<id> is the kit, for anyone");
+  const kitPage = await page.goto(`/kit/${entryId}`);
   expect(kitPage?.status()).toBe(200);
   await hydrated(page);
   await expect(page.getByRole("link", { name: "Log in" })).toBeVisible();
@@ -231,7 +231,7 @@ test("make a kit and a profile public, see them as a stranger, take the kit back
   await expect(kits.getByRole("heading", { level: 2 })).toHaveText(
     /^Kits\s*1$/u,
   );
-  await expect(kits.locator(`a[href="/k/${entryId}"]`)).toBeVisible();
+  await expect(kits.locator(`a[href="/kit/${entryId}"]`)).toBeVisible();
   await scene(page, "Show my closet: the rotation, read-only");
   await expect(page.getByRole("heading", { name: "Rotation" })).toBeVisible();
   await expect(page.getByText("Houdini Jacket")).toBeVisible();
@@ -253,7 +253,7 @@ test("make a kit and a profile public, see them as a stranger, take the kit back
   await devtools.send("Network.clearBrowserCache");
   await devtools.detach();
   await scene(page, "A new visitor · the same link says nothing is there");
-  const gone = await page.goto(`/k/${entryId}`);
+  const gone = await page.goto(`/kit/${entryId}`);
   expect(gone?.status()).toBe(404);
   await hydrated(page);
   await expect(

@@ -135,7 +135,7 @@ function KitRow({ row }: Readonly<{ row: PublicKitRow }>) {
   return (
     <li>
       <Link
-        to="/k/$entryId"
+        to="/kit/$entryId"
         params={{ entryId: row.entryId }}
         reloadDocument
         className={KIT_ROW_CLASS}

@@ -14,9 +14,9 @@
  */
 
 /**
-`/k/<entryId>`, the public kit (round 41 #86c).
+`/kit/<entryId>`, the public kit (round 41 #86c).
 */
-const PUBLIC_KIT_PATH = /^\/k\/[^/]+\/?$/u;
+const PUBLIC_KIT_PATH = /^\/kit\/[^/]+\/?$/u;
 
 /**
  * `/@<handle>`, the public profile (round 41 #86d) — with the `@` as a

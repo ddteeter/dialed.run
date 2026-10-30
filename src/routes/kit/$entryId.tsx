@@ -11,7 +11,7 @@ import {
 import { PUBLIC_ORIGIN } from "../../modules/ops/og/site-head";
 
 /**
- * `/k/<id>`: a kit its runner made PUBLIC, for anyone (round 41 #86c,
+ * `/kit/<id>`: a kit its runner made PUBLIC, for anyone (round 41 #86c,
  * D-150), and one 404 page for every kit that is not (#86f).
  *
  * The same page for every viewer (D-153): the loader reads no session,
@@ -19,7 +19,7 @@ import { PUBLIC_ORIGIN } from "../../modules/ops/og/site-head";
  * a signed-in viewer is filled in the browser. The server function sets
  * the cache headers the page leaves with.
  */
-export const Route = createFileRoute("/k/$entryId")({
+export const Route = createFileRoute("/kit/$entryId")({
   loader: async ({ params }) =>
     kitOrNotFound(await publicKitQuery({ data: { entryId: params.entryId } })),
   head: ({ loaderData }) => publicKitHead(loaderData, PUBLIC_ORIGIN),

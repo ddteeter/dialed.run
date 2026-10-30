@@ -54,7 +54,7 @@ describe("publicKitTitle", () => {
 describe("publicKitCardPath", () => {
   it("carries the card's version, so an edit is a new URL", () => {
     expect(publicKitCardPath(KIT)).toBe(
-      "/og/k/01J00000000000000000000000?v=0123456789abcdef",
+      "/og/kit/01J00000000000000000000000?v=0123456789abcdef",
     );
   });
 });
@@ -70,7 +70,7 @@ describe("publicKitHead", () => {
         {
           property: "og:image",
           content:
-            "https://dialed.run/og/k/01J00000000000000000000000?v=0123456789abcdef",
+            "https://dialed.run/og/kit/01J00000000000000000000000?v=0123456789abcdef",
         },
       ],
     });

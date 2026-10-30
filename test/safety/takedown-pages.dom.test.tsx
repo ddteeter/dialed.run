@@ -85,12 +85,12 @@ describe("/takedown", () => {
       <TakedownRequest
         siteKey={undefined}
         request={vi.fn<RequestFn>()}
-        location="https://dialed.run/k/01JABCDEFGHJKMNPQRSTVWXYZ0"
+        location="https://dialed.run/kit/01JABCDEFGHJKMNPQRSTVWXYZ0"
       />,
     );
 
     expect(screen.getByLabelText("Link to the image")).toHaveValue(
-      "https://dialed.run/k/01JABCDEFGHJKMNPQRSTVWXYZ0",
+      "https://dialed.run/kit/01JABCDEFGHJKMNPQRSTVWXYZ0",
     );
     expect(screen.getByLabelText("Email")).toHaveValue("");
   });

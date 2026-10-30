@@ -272,7 +272,7 @@ created_at   int
   open web** (D-58, revised by D-150). A signed-out request gets nothing
   about a SHARED or PRIVATE entry, or a profile that is not public — not
   its data, not its photo, not entry-specific head meta. A PUBLIC kit is
-  served at `/k/<id>` with the fields D-150 lists, and a public profile at
+  served at `/kit/<id>` with the fields D-150 lists, and a public profile at
   `/@handle` (design 161); `worldVisibleEntry()` in `modules/safety` is
   the one open-web rule. Link previews use the generic card except a
   PUBLIC kit's own (D-151).

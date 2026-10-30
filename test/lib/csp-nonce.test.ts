@@ -102,7 +102,7 @@ describe("routerSsr", () => {
 });
 
 describe("requestContext", () => {
-  it.each(["/k/01J0000000000000000000000", "/@maya", "/%40maya"])(
+  it.each(["/kit/01J0000000000000000000000", "/@maya", "/%40maya"])(
     "mints no nonce for the open-web page %s, which is admitted by hash",
     (pathname) => {
       expect(requestContext(pathname)).toStrictEqual({ hashedScripts: true });

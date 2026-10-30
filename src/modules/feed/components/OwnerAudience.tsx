@@ -11,7 +11,7 @@ import { AUDIENCE_LABELS, Bracketed } from "../../../ui";
  * and for a PUBLIC kit the line that says what that means, Copy link and
  * Change. Only the author sees it.
  *
- * - **Copy link** copies the kit's `/k/<id>` page, absolute against the
+ * - **Copy link** copies the kit's `/kit/<id>` page, absolute against the
  *   host the runner is on, so it is the app's host wherever the app runs
  *   and nothing here names one. What happened is said in the screen's
  *   status region (`onStatus`), as Useful's count is.
@@ -30,7 +30,7 @@ export const LINK_NOT_COPIED = "Link not copied.";
 The absolute address of a kit's public page, on the host the runner is on.
 */
 export function publicKitUrl(entryId: string, origin: string): string {
-  return new URL(`/k/${entryId}`, origin).href;
+  return new URL(`/kit/${entryId}`, origin).href;
 }
 
 const IN_LINE_BUTTON =

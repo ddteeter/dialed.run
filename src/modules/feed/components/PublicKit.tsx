@@ -15,12 +15,12 @@ import {
 
 /**
  * The open web's kit (round 41 #86c) and its not-public twin (#86f):
- * `/k/<id>`, for anyone, signed in or not, in the frame every public page
+ * `/kit/<id>`, for anyone, signed in or not, in the frame every public page
  * wears (`PublicFrame`). No Useful, follow or comment, signed in or not.
  */
 
 /**
- * `/k/<id>` for a public kit (round 41 #86c). Order: who and which day,
+ * `/kit/<id>` for a public kit (round 41 #86c). Order: who and which day,
  * the photo when it has one, conditions and verdict, the four stats, the
  * caption, the kit, the credit, the pitch, the foot. The photos are D's
  * pager, served from the public bucket (D-152, design 161 step 8), with

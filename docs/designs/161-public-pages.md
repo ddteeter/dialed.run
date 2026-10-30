@@ -23,7 +23,7 @@ files) was considered and rejected:
   design 143) is milliseconds. A front-page thread is on the order of 100
   requests a second, and the cache below absorbs nearly all of them.
 
-**Public URLs never vary by viewer** (proposal decision 6). `/k/<entryId>`
+**Public URLs never vary by viewer** (proposal decision 6). `/kit/<entryId>` (renamed from `/k` by the owner, 2026-10-29)
 and `/@handle`, on the app host (D-99), render the anonymous view for
 everyone. For a signed-in viewer, the page swaps the top bar's Log in for
 "Open in the app" and drops the invite block **client-side, after load**
@@ -70,7 +70,7 @@ delete and purge on retraction.
   `user_profiles.public_closet` (int 0/1, default 0) — **HARD STOP for
   review**. `world` needs no migration: `audience` is text with no CHECK
   (design 131); `writableAudienceSchema` widens to admit it.
-- New routes: `src/routes/k/$entryId.tsx`, `src/routes/og/k.$entryId.ts`;
+- New routes: `src/routes/kit/$entryId.tsx`, `src/routes/og/kit.$entryId.ts`;
   `@{$handle}.tsx` becomes the public profile and H moves to
   `/feed/u/$handle`.
 - New bindings: Workers Caching config (phase 2), public R2 bucket and
@@ -240,7 +240,7 @@ Left to the TTL, on purpose:
   card served for a kit that is not public is kept a minute and tagged with
   the kit, like the page, so a kit made public previews within the TTL.
 - **Report this kit** prefills `/takedown?location=`, which `/takedown` now
-  accepts; `takedownSubjectOf` reads a `/k/<id>` link as the kit.
+  accepts; `takedownSubjectOf` reads a `/kit/<id>` link as the kit.
 
 ## Deviations (step 7)
 
@@ -285,7 +285,7 @@ per-request nonce (OPS-8), because the stored copy hands one nonce to
 every visitor for as long as it is kept. Public pages use hash-based CSP.
 
 - **No nonce is minted for an open-web path.** `requestContext()`
-  (`lib/csp-nonce`) gives `/k/<id>` and `/@handle` (`isOpenWebPath`) the
+  (`lib/csp-nonce`) gives `/kit/<id>` and `/@handle` (`isOpenWebPath`) the
   context `{ hashedScripts: true }` instead of `{ nonce }`, so the router
   stamps nothing: no `nonce` attribute on any script, `modulepreload`
   link or style, and no `<meta property="csp-nonce">`. `routerSsr` reads
@@ -451,7 +451,7 @@ Each step is one or more commits that pass the commit gate on their own.
    off moves a PUBLIC default to SHARED in the same batch.
 5. **UI** (round 41 #86a–b): A3's radiogroup, D's owner meta,
    Settings › Privacy's PUBLIC PROFILE group, the changed strings.
-6. **`/k/<id>`** (#86c, #86f), its card (#86e) and the cache headers.
+6. **`/kit/<id>`** (#86c, #86f), its card (#86e) and the cache headers.
 7. **`/@handle`** (#86d) and H's move to `/feed/u/<handle>`.
 8. **World photos** (D-152): `PUBLIC_PHOTOS`, `public_photos`, the
    reconcile and its sweep ("Deviations (photos)"). Done when

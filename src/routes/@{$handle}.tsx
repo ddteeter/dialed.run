@@ -16,7 +16,7 @@ import { PUBLIC_ORIGIN } from "../modules/ops/og/site-head";
  * #86d, D-150), and one 404 page for every profile that is not (#86f).
  * H, the signed-in profile, is `/feed/u/<handle>` (D-153).
  *
- * The same page for every viewer, as `/k/<id>` is: the loader reads no
+ * The same page for every viewer, as `/kit/<id>` is: the loader reads no
  * session, the root reads none on this path (`lib/open-web`), and what
  * differs for a signed-in viewer is filled in the browser. `?all=true`
  * lists every kit; each list is its own URL for the edge to keep.

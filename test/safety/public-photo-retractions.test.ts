@@ -231,7 +231,7 @@ describe("a takedown deletes the public copy and purges the page", () => {
     [
       "a removal request holds the kit by its public link",
       (copy, purge) =>
-        requestRemoval(`https://dialed.run/k/${copy.entryId}`, purge),
+        requestRemoval(`https://dialed.run/kit/${copy.entryId}`, purge),
     ],
     [
       "a removal request holds the photo by its public copy's URL",
@@ -506,7 +506,7 @@ describe("a removal request naming a public copy's URL", () => {
     for (let sent = 0; sent < 2; sent += 1) {
       const other = await copied();
       await requestRemoval(
-        `https://dialed.run/k/${other.entryId}`,
+        `https://dialed.run/kit/${other.entryId}`,
         noPurge,
         email,
       );

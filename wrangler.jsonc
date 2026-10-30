@@ -15,7 +15,7 @@
   },
   "upload_source_maps": true,
   // Workers Caching (owner-approved, 2026-10-28; design 161, D-153): the
-  // open web's pages (/k/<id>, /@handle, the kit's card) leave with
+  // open web's pages (/kit/<id>, /@handle, the kit's card) leave with
   // `Cache-Control: public, max-age=60` and a `Cache-Tag`, and the edge
   // serves them without running the Worker; a retraction purges by tag
   // (src/modules/ops/edge-purge.ts). The minute is the guarantee.

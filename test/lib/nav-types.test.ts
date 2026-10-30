@@ -561,12 +561,14 @@ describe("viewTransitionTypesFor", () => {
   });
 });
 
-describe("the open web's pages (`/k/<id>`, `/@handle`, D-153)", () => {
+describe("the open web's pages (`/kit/<id>`, `/@handle`, D-153)", () => {
   it("are document loads, cut from anywhere: H moved to /feed/u/<handle>", () => {
     expect(typeOf("/feed/search", "/@maya_runs")).toBe("cut");
-    expect(typeOf("/@maya_runs", "/k/01J00000000000000000000000")).toBe("cut");
+    expect(typeOf("/@maya_runs", "/kit/01J00000000000000000000000")).toBe(
+      "cut",
+    );
     expect(navTypeFor("/feed", "/@m", false)).toBe("cut");
-    expect(navTypeFor("/feed", "/k/e1", false)).toBe("cut");
+    expect(navTypeFor("/feed", "/kit/e1", false)).toBe("cut");
   });
 
   it("needs the prefix and a non-empty handle to be the profile", () => {

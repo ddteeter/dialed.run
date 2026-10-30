@@ -196,7 +196,7 @@ export async function fileTakedownRequest<Attempt>(
 
 /**
  * Design 161: a kit a request hid leaves the edge now, not within the
- * TTL — the open web's `/k/<id>` is a link `/takedown` takes. So does a
+ * TTL — the open web's `/kit/<id>` is a link `/takedown` takes. So does a
  * held photo's kit, whose page shows it, and the purge deletes the
  * photo's public copy (D-152, design 161 step 8).
  */

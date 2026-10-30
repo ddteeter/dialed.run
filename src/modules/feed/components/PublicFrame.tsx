@@ -6,7 +6,7 @@ import { verdictLabel, type VerdictValue } from "../../../lib/contracts";
 import { Mono, Page, Wordmark, verdictHue } from "../../../ui";
 
 /**
- * What the open web's pages share (round 41 #86c, #86d, #86f): `/k/<id>`
+ * What the open web's pages share (round 41 #86c, #86d, #86f): `/kit/<id>`
  * and `/@handle`, and their not-public twins, for anyone, signed in or
  * not.
  *
@@ -68,8 +68,7 @@ const FOOT_LINK_CLASS = "target text-muted underline underline-offset-4";
  * URL, never from what the page read.
  */
 export type AppPage =
-  | { readonly entryId: string }
-  | { readonly handle: string };
+  { readonly entryId: string } | { readonly handle: string };
 
 /**
  * The way into the app, signed in: the bar's one slot, in ink.
@@ -169,14 +168,14 @@ interface IntoAppProps {
 
 /**
  * A public page's own address and what its foot's Report link says, from
- * the page it is: `/k/<id>` a kit, `/@<handle>` a profile.
+ * the page it is: `/kit/<id>` a kit, `/@<handle>` a profile.
  */
 function reportOf(
   page: AppPage,
   origin: string,
 ): { label: string; location: string } {
   return "entryId" in page
-    ? { label: "Report this kit", location: `${origin}/k/${page.entryId}` }
+    ? { label: "Report this kit", location: `${origin}/kit/${page.entryId}` }
     : { label: "Report this profile", location: `${origin}/@${page.handle}` };
 }
 
@@ -241,7 +240,11 @@ export function PublicFrame(props: PublicFrameProps): JSX.Element {
   const measure = rail === undefined ? MEASURE.column : MEASURE.split;
   return (
     <div className="flex min-h-dvh flex-col bg-ground text-ink">
-      <PublicBar intoApp={intoApp} isSignedIn={isSignedIn} edge={measure.edge} />
+      <PublicBar
+        intoApp={intoApp}
+        isSignedIn={isSignedIn}
+        edge={measure.edge}
+      />
       <main className={measure.main}>
         <Page width="column">
           <header className="flex flex-col gap-3">
@@ -412,7 +415,7 @@ export function Invite() {
 /**
  * Any public path's not-public page (round 41 #86f): the same page
  * whatever the reason, built from the URL and nothing else, saying what
- * pages at this path show and never what this one was. `/k/<id>` names
+ * pages at this path show and never what this one was. `/kit/<id>` names
  * the kit's id and `/@handle` its handle, which is never echoed: the page
  * only uses it, in the browser, for "Look in the app" — the bar's slot
  * signed in, to the app's own page, which runs its own check.
