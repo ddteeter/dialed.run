@@ -29,7 +29,10 @@ file explains them and does not restate them.
    breaking changes, whether each touches this repo (with file and line),
    and its sources. It is advisory. Read the sources before trusting it.
    It runs Claude Code's `opus` alias, so a new Opus model arrives with the
-   claude-code-action bump that ships it, as a PR you review.
+   claude-code-action bump that ships it, as a PR you review. The review
+   runs once, when the PR opens; a push to the branch does not rerun it.
+   A review that failed (before the key existed, say) needs its failed
+   job re-run.
 
 The checks that carry an unattended merge are the required set:
 `Lint, typecheck, test, build`, `e2e`, `e2e (build)`, `guardrails` and
@@ -40,6 +43,9 @@ server rendering while dev stays green.
 
 **When a self-merging PR fails**, nothing merges and the PR stays open. Fix
 it on Dependabot's branch, or close it and let next week's run try again.
+**When a PR falls behind main**, comment `@dependabot rebase`, except on
+a grouped security PR: Dependabot rebuilds the whole group and fails on
+its transitive conflicts. Merge main into that one's branch by hand.
 **When a family can't move yet** (TypeScript 7 before a tool supports it),
 close its PR with a comment, or add an `ignore` for that major in
 `dependabot.yml` saying why and until when.
@@ -52,8 +58,12 @@ PR that adds the workflows has merged:
 1. **Create the automation App** (Settings → Developer settings → GitHub
    Apps): no webhook; repository permissions **Contents: read and write**
    and **Pull requests: read and write**, nothing else. Not `Workflows`,
-   not `Administration`. Install it on this repository only. Generate a
-   private key.
+   not `Administration`. Install it on this repository only; another repo
+   gets its own App, so a leaked key reaches one repo. Generate a private
+   key: the secret is the downloaded `.pem`, whose first line is
+   `-----BEGIN RSA PRIVATE KEY-----`. An SSH key there fails the token step
+   with "only PKCS#8 is supported", and a mismatched App ID with "401 A JSON
+   web token could not be decoded".
 2. **Environment `dependabot-merge`**: deployment branches `main` only.
    Variable `AUTOMATION_APP_ID`, secret `AUTOMATION_APP_PRIVATE_KEY`.
 3. **Environment `dependabot-review`**: deployment branches `main` only.
