@@ -1,5 +1,9 @@
-import { env } from "../../env";
+import { inArray } from "drizzle-orm";
+
+import { cronCheckpoints } from "../../db/schema-core";
+import { coreDb, env } from "../../env";
 import { nowSeconds } from "../../lib/now";
+import { cronPeriods, type CronName } from "./crons";
 
 export interface HealthReport {
   ok: boolean;
@@ -9,6 +13,13 @@ export interface HealthReport {
    * so the fix is in the answer (OPS-4). Empty when nothing is missing.
    */
   missing: readonly string[];
+  /**
+   * Crons that have not run for two of their periods, by name (design
+   * 162). Sentry's free plan watches one cron, so this is how the uptime
+   * check notices any of the others stopping. A cron that has never run
+   * is not stale: a fresh deployment, dev and CI have no heartbeat rows.
+   */
+  staleCrons: readonly CronName[];
   at: number;
 }
 
@@ -30,8 +41,40 @@ function missingConfig(): string[] {
 }
 
 /**
-/health backing (000 §10): D1 SELECT 1 on both DBs, R2 head, and the
-required configuration by name.
+ * The crons whose heartbeat is older than two periods: one late or missed
+ * firing is tolerated, two in a row is a cron that has stopped. Empty when
+ * the read fails, which the core database check reports already.
+ */
+async function staleCrons(now: number): Promise<CronName[]> {
+  try {
+    const rows = await coreDb()
+      .select({
+        name: cronCheckpoints.cronName,
+        lastRunAt: cronCheckpoints.lastRunAt,
+      })
+      .from(cronCheckpoints)
+      .where(
+        inArray(
+          cronCheckpoints.cronName,
+          cronPeriods.map((cron) => cron.name),
+        ),
+      );
+    const lastRun = new Map(rows.map((row) => [row.name, row.lastRunAt]));
+    return cronPeriods
+      .filter((cron) => {
+        // Never run reads as just run: a fresh deployment is not stale.
+        const last = lastRun.get(cron.name) ?? now;
+        return now - last > 2 * cron.periodS;
+      })
+      .map((cron) => cron.name);
+  } catch {
+    return [];
+  }
+}
+
+/**
+/health backing (000 §10): D1 SELECT 1 on both DBs, R2 head, the required
+configuration by name, and crons that have stopped (design 162).
 */
 export async function checkHealth(): Promise<HealthReport> {
   const checks: HealthReport["checks"] = {
@@ -69,10 +112,16 @@ export async function checkHealth(): Promise<HealthReport> {
     */
   }
   const missing = missingConfig();
+  const at = nowSeconds();
+  const stale = await staleCrons(at);
   return {
-    ok: Object.values(checks).every((c) => c === "ok") && missing.length === 0,
+    ok:
+      Object.values(checks).every((c) => c === "ok") &&
+      missing.length === 0 &&
+      stale.length === 0,
     checks,
     missing,
-    at: nowSeconds(),
+    staleCrons: stale,
+    at,
   };
 }

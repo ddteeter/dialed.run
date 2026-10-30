@@ -1,11 +1,15 @@
+import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { cronCheckpoints } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { checkHealth } from "../../src/modules/ops";
+import { cronPeriods } from "../../src/modules/ops/crons";
 import { nowSeconds } from "../../src/lib/now";
 
 /**
- * `/health` is read by whatever restarts or pages when this app is down,
+ * `/health` is read by whatever pages when this app is down — an uptime
+ * check; nothing restarts a Worker on its answer —
  * so the answer that matters is the *unhealthy* one — and nothing ever
  * asked for it. Every mutant here survived on the happy path: the three
  * checks could start life as `"ok"` instead of `"failed"`, and `every`
@@ -145,5 +149,72 @@ describe("the unsubscribe secret (task 126)", () => {
 
     expect(report.missing).toStrictEqual(["UNSUBSCRIBE_SECRET"]);
     expect(report.ok).toBe(false);
+  });
+});
+
+const HOUR = 3600;
+const NOW = 1_800_000_000;
+
+async function lastRan(cronName: string, at: number): Promise<void> {
+  await drizzle(env.DIALED_CORE)
+    .insert(cronCheckpoints)
+    .values({ cronName, lastRunAt: at });
+}
+
+describe("crons that have stopped (design 162)", () => {
+  beforeEach(async () => {
+    await drizzle(env.DIALED_CORE).delete(cronCheckpoints);
+    vi.spyOn(Date, "now").mockReturnValue(NOW * 1000);
+  });
+
+  it("reads each cron's period from its schedule", () => {
+    expect(cronPeriods).toStrictEqual([
+      { name: "daily-digest", periodS: 24 * HOUR },
+      { name: "weather-retry", periodS: HOUR },
+      { name: "enrichment-retry", periodS: HOUR },
+      { name: "screening-retry", periodS: HOUR },
+    ]);
+  });
+
+  it("names a cron two periods behind, and is not healthy", async () => {
+    await lastRan("weather-retry", NOW - 2 * HOUR - 1);
+    // Exactly two periods is one firing late, not stopped.
+    await lastRan("enrichment-retry", NOW - 2 * HOUR);
+    await lastRan("daily-digest", NOW - 47 * HOUR);
+    // Never ran: a fresh deployment, not a stopped cron.
+
+    const report = await checkHealth();
+
+    expect(report.staleCrons).toStrictEqual(["weather-retry"]);
+    expect(report.ok).toBe(false);
+  });
+
+  it("names a daily cron two days behind", async () => {
+    await lastRan("daily-digest", NOW - 48 * HOUR - 1);
+
+    const report = await checkHealth();
+
+    expect(report.staleCrons).toStrictEqual(["daily-digest"]);
+  });
+
+  it("ignores a heartbeat row that is not a cron", async () => {
+    // The digest's own marks share the table.
+    await lastRan("unknown", NOW - 100 * HOUR);
+
+    const report = await checkHealth();
+
+    expect(report.staleCrons).toStrictEqual([]);
+    expect(report.ok).toBe(true);
+  });
+
+  it("leaves staleness to the database check when it cannot read", async () => {
+    vi.spyOn(env.DIALED_CORE, "prepare").mockImplementation(() => {
+      throw new Error("D1 unreachable");
+    });
+
+    const report = await checkHealth();
+
+    expect(report.staleCrons).toStrictEqual([]);
+    expect(report.checks.coreDb).toBe("failed");
   });
 });
