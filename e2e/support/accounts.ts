@@ -26,6 +26,9 @@ export const DEMO_ACCOUNTS = [
   // 106's journey blocks a runner and then unblocks them, which is state
   // the feed account's follower graph must not inherit.
   "safety",
+  // 161's journey turns a public profile on, which the feed and verdict
+  // accounts' pages must not inherit.
+  "public-pages",
 ] as const;
 export type DemoAccount = (typeof DEMO_ACCOUNTS)[number];
 

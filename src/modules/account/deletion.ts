@@ -18,6 +18,7 @@ import type { drizzle } from "drizzle-orm/d1";
 import { session } from "../../db/schema-auth";
 import { accountDeletions } from "../../db/schema-core";
 import { coreDb, env, waitUntil } from "../../env";
+import { runnerCacheTag, type PurgeTags } from "../../lib/cache-tags";
 import { DELETION_GRACE_S } from "../../lib/contracts";
 import { proseDayLabel } from "../../lib/dates";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
@@ -28,6 +29,7 @@ import {
   captureException,
   outboxInsert,
   oweOutbox,
+  purgePublicPages,
   settleOutbox,
 } from "../ops";
 import { disconnectStrava } from "../runs";
@@ -71,6 +73,11 @@ export interface DeletionEffects extends OwedMail {
   Runs' `disconnectStrava`, bound to the queue: the grant revoked (seam 5).
   */
   readonly disconnectStrava: (userId: string) => Promise<void>;
+  /**
+   * `ops`' edge purge (design 161): a runner leaving is gone from the open
+   * web at once, as from everywhere else.
+   */
+  readonly purge: PurgeTags;
 }
 
 /**
@@ -85,6 +92,7 @@ export function deletionEffectsFromEnv(): DeletionEffects {
     settle: settleOutbox,
     disconnectStrava: (userId) =>
       disconnectStrava(coreDb(), env.IMPORTS_QUEUE, userId, captureException),
+    purge: purgePublicPages,
   };
 }
 
@@ -158,6 +166,8 @@ export async function requestAccountDeletion(
     outboxInsert(db, debt, now),
   ]);
   effects.keepAlive(effects.settle(db, debt, effects.report));
+  // Everything public of the runner's carries their tag: one purge.
+  effects.purge([runnerCacheTag(userId)]);
   // Secondary to the request (law 5): a failure here is reported, and the
   // purge disconnects whatever is still connected.
   try {

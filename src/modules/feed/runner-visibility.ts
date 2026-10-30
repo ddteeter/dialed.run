@@ -26,15 +26,28 @@ import {
  */
 export function runnerVisibleToViewer(viewerId: string) {
   return and(
-    isNull(userProfiles.bannedAt),
-    // Task 126 (ACC-9): a runner deleting their account leaves search and
-    // H at once, by safety's rule (seam 6).
-    runnerNotLeaving(userProfiles.userId),
-    // Design 133 (D-113 Q2): an unconfirmed runner is not findable — in
-    // search, at H, or through H's old `/feed/u/$userId` redirect.
-    runnerConfirmed(userProfiles.userId),
+    runnerInStanding(),
     notBlockedEitherWay(viewerId, userProfiles.userId),
     profileNotReportedBy(viewerId, userProfiles.userId),
+  );
+}
+
+/**
+ * The floor under every surface that shows one runner to someone else,
+ * with no viewer in it: not banned, not leaving, address confirmed. The
+ * signed-in rule above adds the viewer's own blocks and reports; the open
+ * web's profile (`/@handle`, D-150) has no viewer, so this is its whole
+ * runner rule.
+ */
+export function runnerInStanding() {
+  return and(
+    isNull(userProfiles.bannedAt),
+    // Task 126 (ACC-9): a runner deleting their account leaves search, H
+    // and the open web at once, by safety's rule (seam 6).
+    runnerNotLeaving(userProfiles.userId),
+    // Design 133 (D-113 Q2): an unconfirmed runner is not findable — in
+    // search, at H, through H's redirect from an id, or on the open web.
+    runnerConfirmed(userProfiles.userId),
   );
 }
 

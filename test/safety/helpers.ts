@@ -21,6 +21,7 @@ import {
   reviewQueue,
   moderationActions,
   outbox,
+  publicPhotos,
   quarantinedContent,
   usernameHistory,
 } from "../../src/db/schema-core";
@@ -46,6 +47,9 @@ export async function resetSafetyTables(): Promise<void> {
     // inserted one. Left out here, screening rows leaked between tests and
     // a sweep that should have seen two photos saw three.
     entryPhotos,
+    // The public bucket's record (design 161 step 8), which outlives the
+    // photo rows on purpose; a test that copies a photo clears the bucket.
+    publicPhotos,
     // products before brands: the report joins them, and a leaked brand
     // trips its UNIQUE(normalized) on the next test's insert. Neither was
     // in any reset helper, for the same reason entry_photos was not — no

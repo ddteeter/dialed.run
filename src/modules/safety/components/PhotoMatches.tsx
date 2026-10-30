@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 import type { JSX } from "react";
 
 import { monthDayLabel } from "../../../lib/dates";
@@ -11,6 +12,7 @@ import type { PhotoMatch, PhotoMatches as Found } from "../photo-matches";
 import type { RemovedMatch } from "../removed-fingerprints";
 import { PhotoSection } from "./OtherPhotos";
 import { RemovalDecision } from "./RemovalDecision";
+import { useFocusWhen } from "./use-focus-when";
 import { useSettled } from "./use-settled";
 
 /**
@@ -24,9 +26,9 @@ import { useSettled } from "./use-settled";
  * named as one); its distance, "{N} bits" or "same", with [private] for a
  * kit not shared; and its owner's @handle, opening them in D8. A kit photo
  * links its kit when an operator can open it; a garment photo is never
- * shown to another runner, so its tile opens nothing and carries its own
- * takedown instead (design 159). Each photo is served from
- * `/safety/review-photo/`.
+ * shown to another runner, so its tile opens nothing and offers Decide,
+ * which opens its takedown under the grid (design 159, round 42 #89). Each
+ * photo is served from `/safety/review-photo/`.
  *
  * Nothing renders on a row that does not search (`undefined`). A subject
  * with no fingerprint says so rather than "no matches", which would be a
@@ -40,19 +42,7 @@ export function PhotoMatches({
   decide?: DecideMatch | undefined;
 }>): JSX.Element | undefined {
   if (found === undefined) return undefined;
-  const count = found.matches.length;
-  return (
-    <PhotoSection
-      part="photo-matches"
-      title={
-        count === 0
-          ? "Matching photos · any runner"
-          : `Matching photos · any runner · ${String(count)}`
-      }
-    >
-      <Matches found={found} decide={decide} />
-    </PhotoSection>
-  );
+  return <FoundMatches found={found} decide={decide} />;
 }
 
 /**
@@ -68,10 +58,11 @@ function matchKey(match: PhotoMatch): string {
 }
 
 /**
- * The list, or the sentence that stands in for it. A garment match taken
- * down leaves it, as a decided Review row does (`useSettled`).
+ * The search's answer, headed with how many it found that are still here:
+ * a garment match taken down leaves the grid, as a decided Review row does
+ * (`useSettled`), and the count drops with it (round 42 #89).
  */
-function Matches({
+function FoundMatches({
   found,
   decide,
 }: Readonly<{
@@ -79,6 +70,89 @@ function Matches({
   decide: DecideMatch | undefined;
 }>): JSX.Element {
   const { remaining, settle } = useSettled(found.matches, matchKey);
+  const deciding = useGarmentDeciding(remaining, settle);
+  return (
+    <PhotoSection
+      part="photo-matches"
+      title={
+        found.matches.length === 0
+          ? "Matching photos · any runner"
+          : `Matching photos · any runner · ${String(remaining.length)}`
+      }
+      titleRef={deciding.kickerRef}
+    >
+      <Matches
+        found={found}
+        remaining={remaining}
+        decide={decide}
+        deciding={deciding}
+      />
+      <DecideBar deciding={deciding} />
+    </PhotoSection>
+  );
+}
+
+/**
+ * Which garment tile's bar is open — one at a time, with the takedown its
+ * Decide was handed — and where focus goes once one is decided: the next
+ * garment tile's Decide (the one before, after the last), or, with none
+ * left, the MATCHING PHOTOS kicker (round 42 #89). A decided tile leaves
+ * `remaining`, so its bar closes with it.
+ */
+function useGarmentDeciding(
+  remaining: readonly PhotoMatch[],
+  settle: (key: string) => void,
+) {
+  const [opened, setOpened] = useState<
+    { readonly key: string; readonly decide: DecideMatch } | undefined
+  >();
+  const [focusKey, setFocusKey] = useState<string | undefined>();
+  const [isKickerNext, setIsKickerNext] = useState(false);
+  const garments = remaining.filter((match) => match.kind === "garment");
+  const [open] = garments.flatMap((match) =>
+    opened?.key === match.photoKey ? [{ match, decide: opened.decide }] : [],
+  );
+  return {
+    open,
+    focusKey,
+    kickerRef: useFocusWhen(isKickerNext),
+    toggle: (key: string, decide: DecideMatch): void => {
+      setOpened((current) =>
+        current?.key === key ? undefined : { key, decide },
+      );
+    },
+    decided: (key: string): void => {
+      const at = garments.findIndex((match) => match.photoKey === key);
+      const next = garments[at + 1] ?? garments[at - 1];
+      settle(key);
+      if (next === undefined) setIsKickerNext(true);
+      else setFocusKey(next.photoKey);
+    },
+  };
+}
+
+type GarmentDeciding = ReturnType<typeof useGarmentDeciding>;
+
+// A garment tile while its bar is open: §06's focus ring, so it is clear
+// which photo the bar acts on. Written out whole, so it reads as one list.
+const OPEN_TILE_CLASS =
+  "flex flex-col gap-1 outline outline-2 outline-offset-2 outline-ink";
+const TILE_CLASS = "flex flex-col gap-1";
+
+/**
+ * The grid, or the sentence that stands in for it.
+ */
+function Matches({
+  found,
+  remaining,
+  decide,
+  deciding,
+}: Readonly<{
+  found: Found;
+  remaining: readonly PhotoMatch[];
+  decide: DecideMatch | undefined;
+  deciding: GarmentDeciding;
+}>): JSX.Element {
   if (!found.fingerprinted) {
     return (
       <span className="text-micro text-quiet">
@@ -97,7 +171,14 @@ function Matches({
   return (
     <ul className="m-0 flex list-none flex-wrap gap-3 p-0">
       {remaining.map((match) => (
-        <li key={match.photoKey} className="flex flex-col gap-1">
+        <li
+          key={match.photoKey}
+          className={
+            deciding.open?.match.photoKey === match.photoKey
+              ? OPEN_TILE_CLASS
+              : TILE_CLASS
+          }
+        >
           <Thumbnail match={match} />
           <span className="text-quiet">
             <Mono step="xs">{nameOf(match)}</Mono>
@@ -112,13 +193,9 @@ function Matches({
             ) : undefined}
           </span>
           <Owner handle={match.handle} />
-          <GarmentDecision
-            match={match}
-            decide={decide}
-            onSettled={() => {
-              settle(match.photoKey);
-            }}
-          />
+          {decide !== undefined && match.kind === "garment" ? (
+            <DecideLink match={match} decide={decide} deciding={deciding} />
+          ) : undefined}
         </li>
       ))}
     </ul>
@@ -126,33 +203,79 @@ function Matches({
 }
 
 /**
- * A garment match's takedown (R-167, design 159): a kit match is acted on
- * from its kit's page, but a garment has no page, so its tile carries the
- * bar a garment row on Review has — the reason, Remove (which tells its
- * owner) and Remove as suspected CSAM (which tells nobody) — with no
- * Approve, since nothing queued it. Nothing for a kit match, or where no
- * takedown was handed down.
+ * The bar's id, for the Decide that opens it: one bar under the grid.
  */
-function GarmentDecision({
+function barId(match: PhotoMatch): string {
+  return `decide-${match.id}`;
+}
+
+/**
+ * A garment tile's one control (round 42 #89): "Decide", 44 high, at the
+ * tile's foot, reading "Close" while its bar is open. A kit tile has none:
+ * a kit match is acted on from its kit's page.
+ */
+function DecideLink({
   match,
   decide,
-  onSettled,
+  deciding,
 }: Readonly<{
   match: PhotoMatch;
-  decide: DecideMatch | undefined;
-  onSettled: () => void;
-}>): JSX.Element | undefined {
-  if (decide === undefined || match.kind !== "garment") return undefined;
+  decide: DecideMatch;
+  deciding: GarmentDeciding;
+}>): JSX.Element {
+  const isOpen = deciding.open?.match.photoKey === match.photoKey;
+  const ref = useFocusWhen(deciding.focusKey === match.photoKey);
   return (
-    <RemovalDecision
-      schema={garmentMatchActionInput}
-      subject={{ itemId: match.id }}
-      act={(values) => decide({ data: values })}
-      canApprove={false}
-      subjectType="garment"
-      owner={match.handle}
-      onSettled={onSettled}
-    />
+    <button
+      ref={ref}
+      type="button"
+      aria-expanded={isOpen}
+      aria-controls={isOpen ? barId(match) : undefined}
+      onClick={() => {
+        deciding.toggle(match.photoKey, decide);
+      }}
+      className="target cursor-pointer self-start border-none bg-transparent p-0 text-body text-ink underline underline-offset-4"
+    >
+      {isOpen ? "Close" : "Decide"}
+    </button>
+  );
+}
+
+/**
+ * The open garment tile's bar, full width under the grid (round 42 #89):
+ * the kicker naming which photo and whose, then the bar a garment row on
+ * Review has without Approve — nothing queued a match — so the reason,
+ * Remove (which tells its owner) and Remove as suspected CSAM (which
+ * tells nobody), its question in place.
+ */
+function DecideBar({
+  deciding,
+}: Readonly<{ deciding: GarmentDeciding }>): JSX.Element | undefined {
+  if (deciding.open === undefined) return undefined;
+  const { match: open, decide } = deciding.open;
+  const owner = open.handle === undefined ? "" : ` · @${open.handle}`;
+  return (
+    <div
+      id={barId(open)}
+      data-part="decide-bar"
+      className="flex w-full flex-col gap-2 border-t border-hairline pt-3"
+    >
+      <span className="text-label">
+        <Mono step="xs">{`Decide · garment photo · ${open.id}${owner}`}</Mono>
+      </span>
+      <RemovalDecision
+        key={open.photoKey}
+        schema={garmentMatchActionInput}
+        subject={{ itemId: open.id }}
+        act={(values) => decide({ data: values })}
+        canApprove={false}
+        subjectType="garment"
+        owner={open.handle}
+        onSettled={() => {
+          deciding.decided(open.photoKey);
+        }}
+      />
+    </div>
   );
 }
 

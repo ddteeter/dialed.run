@@ -147,6 +147,30 @@ describe("an unconfirmed runner's entries (D-50)", () => {
     expect(await storedAudience(entryId)).toEqual(SHARED);
   });
 
+  it("stay private when a verdict is saved PUBLIC (round 41 #86a)", async () => {
+    const userId = await runner({ isVerified: false });
+    const entryId = await attachKit({
+      userId,
+      runId: await makeRun({ userId }),
+      itemIds: [],
+    });
+    const publicVerdict = {
+      userId,
+      entryId,
+      verdict: 0,
+      audience: "world",
+      tags: [],
+      itemFlags: [],
+    } as const;
+
+    await submitVerdict(publicVerdict);
+    expect(await storedAudience(entryId)).toEqual(PRIVATE);
+
+    await confirm(userId);
+    await submitVerdict(publicVerdict);
+    expect(await storedAudience(entryId)).toEqual({ audience: "world" });
+  });
+
   it("keep a confirmed runner's own private choice and opt-out", async () => {
     const quiet = await runner({
       isVerified: true,

@@ -1,56 +1,50 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { getSession } from "../modules/auth/functions";
-import { RunnerAtHandle } from "../modules/feed/components/RunnerAtHandle";
+import { signedInQuery } from "../modules/auth/functions";
+import { NotPublicPage } from "../modules/feed/components/PublicFrame";
+import { PublicProfilePage } from "../modules/feed/components/PublicProfile";
+import { publicProfileQuery } from "../modules/feed/functions";
+import { publicProfileSearch } from "../modules/feed/inputs";
 import {
-  followAction,
-  profileAtHandleQuery,
-  unfollowAction,
-} from "../modules/feed/functions";
-import { orHandlePage, viewerContext } from "../modules/feed/redirect";
-import {
-  noindexHead,
-  profileReportSubject,
-} from "../modules/feed/route-decisions";
-import { BelledLayout } from "../modules/notifications/components/BelledLayout";
-import { bellStateFn } from "../modules/notifications/functions";
-import { ReportAffordance } from "../modules/safety/components/ReportAffordance";
-import { fileReportAction } from "../modules/safety/functions";
+  profileOrNotFound,
+  publicProfileHead,
+} from "../modules/feed/public-profile-shape";
+import { PUBLIC_ORIGIN } from "../modules/ops/og/site-head";
 
 /**
- * A runner's profile by handle (round 26 #7, FEED-10). Signed-in only, and
- * noindex (SAF-14, FEED-1). The one H: `/feed/u/$userId` redirects here.
+ * `/@handle`: a runner's profile they made PUBLIC, for anyone (round 41
+ * #86d, D-150), and one 404 page for every profile that is not (#86f).
+ * H, the signed-in profile, is `/feed/u/<handle>` (D-153).
+ *
+ * The same page for every viewer, as `/kit/<id>` is: the loader reads no
+ * session, the root reads none on this path (`lib/open-web`), and what
+ * differs for a signed-in viewer is filled in the browser. `?all=true`
+ * lists every kit; each list is its own URL for the edge to keep.
  */
 export const Route = createFileRoute("/@{$handle}")({
-  head: noindexHead,
-  beforeLoad: ({ location }) => viewerContext(getSession, location),
-  loader: async ({ params, context }) => {
-    const [found, bell] = await Promise.all([
-      profileAtHandleQuery({ data: { handle: params.handle } }),
-      bellStateFn(),
-    ]);
-    return { found: orHandlePage(found), viewerId: context.viewerId, bell };
-  },
-  component: HandlePage,
+  validateSearch: (search) => publicProfileSearch.parse(search),
+  loaderDeps: ({ search }) => ({ all: search.all }),
+  loader: async ({ params, deps }) =>
+    profileOrNotFound(
+      await publicProfileQuery({
+        data: { handle: params.handle, all: deps.all },
+      }),
+    ),
+  head: ({ loaderData }) => publicProfileHead(loaderData),
+  component: ProfilePage,
+  notFoundComponent: NotPublic,
 });
 
-function HandlePage() {
-  const { found, viewerId, bell } = Route.useLoaderData();
-
+function ProfilePage() {
   return (
-    <BelledLayout {...bell}>
-      <RunnerAtHandle
-        found={found}
-        follow={followAction}
-        unfollow={unfollowAction}
-        reportAffordanceFor={(profile) => (
-          <ReportAffordance
-            subject={profileReportSubject(profile)}
-            viewerId={viewerId}
-            fileReport={fileReportAction}
-          />
-        )}
-      />
-    </BelledLayout>
+    <PublicProfilePage
+      profile={Route.useLoaderData()}
+      origin={PUBLIC_ORIGIN}
+      askSignedIn={signedInQuery}
+    />
   );
+}
+
+function NotPublic() {
+  return <NotPublicPage page={Route.useParams()} askSignedIn={signedInQuery} />;
 }

@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import wranglerJsonc from "../wrangler.jsonc?raw";
 import testWranglerJsonc from "./wrangler.test.jsonc?raw";
 
+import { PUBLIC_PHOTOS_ORIGIN } from "../src/lib/public-photos";
 import { cronSchedules } from "../src/modules/ops/crons";
 import { PUBLIC_ORIGIN } from "../src/modules/ops/og/site-head";
 import { consumedQueueNames, queueRegistry } from "../src/modules/ops/queues";
@@ -55,6 +56,15 @@ function skipComment(source: string, start: number): number {
     index += 1;
   }
   return index + 2;
+}
+
+/**
+A config's R2 bindings, as written.
+*/
+function r2Buckets(config: unknown): unknown {
+  return typeof config === "object" && config !== null && "r2_buckets" in config
+    ? config.r2_buckets
+    : undefined;
 }
 
 function stripJsonc(source: string): string {
@@ -230,7 +240,50 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
       typeof vars === "object" && vars !== null
         ? Object.keys(vars).toSorted((a, b) => a.localeCompare(b))
         : [],
-    ).toStrictEqual(["BETTER_AUTH_URL", "TURNSTILE_SITE_KEY"]);
+    ).toStrictEqual([
+      "BETTER_AUTH_URL",
+      "PUBLIC_PHOTOS_ORIGIN",
+      "TURNSTILE_SITE_KEY",
+    ]);
+    // The public photo switch (design 161 step 8) names the one origin the
+    // page's img-src admits; any other would be refused by the policy.
+    const photos =
+      typeof vars === "object" &&
+      vars !== null &&
+      "PUBLIC_PHOTOS_ORIGIN" in vars
+        ? vars.PUBLIC_PHOTOS_ORIGIN
+        : undefined;
+    expect(photos).toBe(PUBLIC_PHOTOS_ORIGIN);
+  });
+
+  it("binds the photo buckets, the public one by name, in the Worker and the test pool alike", () => {
+    // Law 10 (design 161 step 8, D-152): PUBLIC_PHOTOS is the one bucket
+    // anyone can read, so the binding is pinned to that bucket and no
+    // other, and the test pool binds the same set.
+    const testConfig: unknown = JSON.parse(stripJsonc(testWranglerJsonc));
+    expect(r2Buckets(config)).toStrictEqual([
+      { binding: "MEDIA", bucket_name: "dialed-media" },
+      { binding: "IMPORTS", bucket_name: "dialed-imports" },
+      { binding: "PUBLIC_PHOTOS", bucket_name: "dialed-public-photos" },
+    ]);
+    expect(r2Buckets(testConfig)).toStrictEqual(r2Buckets(config));
+  });
+
+  it("turns Workers Caching on, partitioned by version, for the purge to reach", () => {
+    // Design 161 (D-153; owner, 2026-10-28): the open web's pages are kept
+    // at the edge and `ops/edge-purge.ts` purges them by tag. Exactly
+    // `enabled`: `cross_version_cache` would let a new deploy serve the
+    // old version's pages.
+    const cache =
+      typeof config === "object" && config !== null && "cache" in config
+        ? config.cache
+        : undefined;
+    expect(cache).toStrictEqual({ enabled: true });
+    // The one reader of the runtime's cache is the purge, through env.
+    const readers = Object.entries(sources)
+      .filter(([, source]) => /\bcache\.purge\b|\bedge\.purge\b/u.test(source))
+      .map(([path]) => path);
+    expect(readers).toStrictEqual(["../src/modules/ops/edge-purge.ts"]);
   });
 
   it("binds the email sender the email module reads, and nothing else sends", () => {

@@ -205,6 +205,11 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "feed/functions.ts retractEntryAction": "unconfirmed",
   "feed/functions.ts deleteEntryPhotoAction": "unconfirmed",
   "feed/functions.ts garmentBandCountQuery": "unconfirmed",
+  // D-150, D-153: a public kit is for anyone, and reads no session at all,
+  // so nothing about the viewer can reach the page the edge keeps.
+  "feed/functions.ts publicKitQuery": "sessionless",
+  // The open web's profile (D-150, D-153): no session, like the kit.
+  "feed/functions.ts publicProfileQuery": "sessionless",
   "feed/functions.ts decideReviewAction": "admin",
   // Design 159: a garment photo found by copy search, taken down.
   "feed/functions.ts decideGarmentMatchAction": "admin",
@@ -225,6 +230,8 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "onboarding/functions.ts settingsQuery": "unconfirmed",
   "onboarding/functions.ts saveUnitsFn": "unconfirmed",
   "onboarding/functions.ts saveSharingFn": "unconfirmed",
+  // D-150: a public profile is seen by anyone signed out.
+  "onboarding/functions.ts setPublicProfileFn": "verified",
   // The runner's own setting, read for A3 — settingsQuery's class.
   "onboarding/functions.ts countInTotalsQuery": "unconfirmed",
   // D-108: the runner's own choice, visible to nobody, so an unconfirmed
@@ -309,6 +316,9 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // Entry photos: visibility is decided per viewer, signed out included.
   "routes/feed/photo.$.tsx GET": "sessionless",
   "routes/og/default.ts GET": "sessionless",
+  // A public kit's card (D-151), or the default card: a preview fetcher
+  // has no session.
+  "routes/og/kit.$entryId.ts GET": "sessionless",
   "routes/runs/strava-connect.ts GET": "sessionless",
   // A reviewer's view of a photo: a Desk read (Q5), asked of `isAdmin`
   // inside (`reviewerPhotoResponse`) for a confirmed viewer only.

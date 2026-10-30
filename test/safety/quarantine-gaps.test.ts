@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { z } from "zod";
 
 import { session } from "../../src/db/schema-auth";
@@ -10,6 +11,7 @@ import {
   notifications,
   outbox,
   photoScreenings,
+  products,
   quarantinedContent,
   removedFingerprints,
   reviewQueue,
@@ -33,6 +35,7 @@ import {
   moderateContent,
 } from "../../src/modules/feed/moderation";
 import { deleteEntryPhoto, retractEntry } from "../../src/modules/feed/retract";
+import { garmentLineOf } from "../../src/modules/safety/review";
 import {
   banUser,
   enqueueForReview,
@@ -46,6 +49,7 @@ import {
   type PhotoScope,
 } from "../../src/modules/safety";
 
+import { noPurge } from "../purge-spy";
 import { addAccount } from "../feed/helpers";
 import { fingerprintOfBytes, sceneJpeg } from "../fixtures/scenes";
 import {
@@ -344,12 +348,15 @@ describe("a quarantine keeps who uploaded it (§2258A(h)(2), design 157)", () =>
 
     // A ban deletes every session at once; the sweep, a year on, would
     // take any left.
-    await banUser({
-      userId: author,
-      reason: "Suspected CSAM",
-      rule: "suspected_csam",
-      bannedBy: "moderator",
-    });
+    await banUser(
+      {
+        userId: author,
+        reason: "Suspected CSAM",
+        rule: "suspected_csam",
+        bannedBy: "moderator",
+      },
+      noPurge,
+    );
     await sweepExpiredAuthRows(core(), nowSeconds() + 400 * 86_400);
     expect(await core().select().from(session)).toStrictEqual([]);
 
@@ -428,17 +435,54 @@ describe("garment photos reach a person (design 157)", () => {
     expect(await visibilityOf(itemId)).toBe("hidden_pending_review");
   });
 
-  it("shows the reviewer the garment's card and its owner's handle", async () => {
+  it("shows the reviewer the garment's card, its owner's handle and the garment's line", async () => {
     const owner = await makeUser({ username: "closet_owner" });
     const { itemId, photoKey } = await garmentPhoto(owner);
+    // A piece nobody linked to a product is named without its brand, as
+    // the closet names it (round 42 #88).
+    await core()
+      .update(wardrobeItems)
+      .set({
+        brand: "Nike",
+        name: "Pegasus 41",
+        category: "shoes",
+        retired: true,
+      })
+      .where(eq(wardrobeItems.id, itemId));
     await queued(itemId, "classifier");
 
     const [row] = await pendingReviewQueue();
     expect(row).toMatchObject({
       subjectType: "garment",
       subjectId: itemId,
-      subject: { photoKeys: [`${photoKey}/card.webp`], owner: "closet_owner" },
+      subject: {
+        photoKeys: [`${photoKey}/card.webp`],
+        owner: "closet_owner",
+        garmentLine: "Pegasus 41 · Shoes · Retired",
+      },
     });
+  });
+
+  it("names a product's garment with its brand on the reviewer's line", async () => {
+    const owner = await makeUser({ username: "closet_owner" });
+    const { itemId } = await garmentPhoto(owner);
+    const productId = newUlid();
+    await core().insert(products).values({
+      id: productId,
+      brandId: newUlid(),
+      name: "Pegasus 41",
+      normalizedName: "pegasus 41",
+      createdBy: owner,
+      createdAt: nowSeconds(),
+    });
+    await core()
+      .update(wardrobeItems)
+      .set({ brand: "Nike", name: "Pegasus 41", category: "shoes", productId })
+      .where(eq(wardrobeItems.id, itemId));
+    await queued(itemId, "classifier");
+
+    const [row] = await pendingReviewQueue();
+    expect(row?.subject.garmentLine).toBe("Nike Pegasus 41 · Shoes · In use");
   });
 
   it("shows nothing for a queued garment whose photo is gone", async () => {
@@ -895,5 +939,33 @@ describe("screenings go with their photo (design 157)", () => {
     expect(await screeningCount("garment", forgotten.itemId)).toBe(0);
     expect(await statusesFor(kept.itemId)).toStrictEqual(["pending"]);
     expect(await statusesFor(forgotten.itemId)).toStrictEqual(["removed"]);
+  });
+});
+
+describe("garmentLineOf (round 42 #88)", () => {
+  const NO_BRAND = z.null().parse(JSON.parse("null"));
+
+  it("names a product's piece with its brand, then the category and that it is in use", () => {
+    expect(
+      garmentLineOf({
+        name: "Pegasus 41",
+        brand: "Nike",
+        isGeneric: false,
+        category: "shoes",
+        isRetired: false,
+      }),
+    ).toBe("Nike Pegasus 41 · Shoes · In use");
+  });
+
+  it("names a piece with no brand by its name, and says it is retired", () => {
+    expect(
+      garmentLineOf({
+        name: "Old black beanie",
+        brand: NO_BRAND,
+        isGeneric: false,
+        category: "headwear",
+        isRetired: true,
+      }),
+    ).toBe("Old black beanie · Headwear · Retired");
   });
 });

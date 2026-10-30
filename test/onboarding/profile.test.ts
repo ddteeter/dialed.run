@@ -578,7 +578,7 @@ describe("savePreferences and currentSettings", () => {
       .values([
         { userId: quiet, defaultAudience: "private" },
         { userId: open, defaultAudience: "runners" },
-        // Nothing can write `groups` yet; the switch shows it as off.
+        // Nothing can write `groups` yet; it reads as private.
         { userId: grouped, defaultAudience: "groups" },
       ]);
 
@@ -603,6 +603,9 @@ describe("savePreferences and currentSettings", () => {
       distanceUnit: "mi",
       defaultAudience: "runners",
       countInTotals: true,
+      publicProfile: false,
+      publicCloset: false,
+      username: undefined,
     });
   });
 
@@ -633,12 +636,16 @@ describe("savePreferences and currentSettings", () => {
 });
 
 describe("sharingInput", () => {
-  it("takes either writable default audience and refuses groups (D-109)", () => {
+  it("takes every writable default audience and refuses groups (D-109)", () => {
     expect(sharingInput.parse({ defaultAudience: "runners" })).toEqual({
       defaultAudience: "runners",
     });
     expect(sharingInput.parse({ defaultAudience: "private" })).toEqual({
       defaultAudience: "private",
+    });
+    // Whether the runner may have it is `saveSharing`'s question (D-150).
+    expect(sharingInput.parse({ defaultAudience: "world" })).toEqual({
+      defaultAudience: "world",
     });
     expect(sharingInput.safeParse({ defaultAudience: "groups" }).success).toBe(
       false,

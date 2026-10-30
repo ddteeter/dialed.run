@@ -85,6 +85,9 @@ describe("startHandleIfNeeded (round 26 #7)", () => {
     // sign-in's `?redirect=`, passes through.
     const [source] = Object.values(rootRoute);
     expect(source).toMatch(
+      /loader: \(\{ location \}\) =>\s*signedInOffTheOpenWeb\(location\.pathname, signedInQuery\)/u,
+    );
+    expect(source).toMatch(
       /beforeLoad: async \(\{ location \}\) => \{\s*await gateOnHandle\(\{\s*ask: handleGateQuery,\s*pathname: location\.pathname,\s*isInBrowser: typeof document !== "undefined",\s*\}\);/u,
     );
   });
@@ -326,6 +329,28 @@ describe("accountSectionSearch and the way back from Google (ACC-9)", () => {
 describe("gateOnHandle (the root's O0 gate, memoised)", () => {
   beforeEach(() => {
     forgetSession();
+  });
+
+  it("never asks on the open web, where the page must not depend on who is looking", async () => {
+    // Design 161: a public kit is the same bytes for everyone, so the
+    // root reads no session there and redirects nobody — not even a
+    // runner the gate would otherwise send to O0 or Keep your account?.
+    for (const gate of ["needs-handle", "leaving", "needs-terms"] as const) {
+      const onKit = await gateOnce(
+        gate,
+        false,
+        "/kit/01J00000000000000000000000",
+      );
+      expect(onKit).toStrictEqual({ thrown: undefined, asked: 0 });
+    }
+    // …and on the app's own page of the same kit, the gate holds.
+    const onApp = await gateOnce(
+      "needs-handle",
+      false,
+      "/feed/entry/01J00000000000000000000000",
+    );
+    expect(onApp.asked).toBe(1);
+    expect(isRedirect(onApp.thrown)).toBe(true);
   });
 
   it("sends a runner with no handle to O0, and lets the others through", async () => {

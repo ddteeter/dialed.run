@@ -19,6 +19,8 @@ import type { z } from "zod";
 import { uploadPhotoFields } from "./inputs";
 import { entryPhotoIdOf, entryPhotoKeyFor } from "../../lib/entry-photo-key";
 import { requireOwned } from "../../lib/sql/owned";
+import type { TaggedScope } from "../../lib/cache-tags";
+import { syncPublicPhotosLater } from "../ops";
 import { filePartFrom } from "../../lib/file-part";
 import type { FilePartProblem } from "../../lib/file-part";
 import {
@@ -58,11 +60,15 @@ export interface UploadPhotoInput {
  */
 export interface UploadPhotoOptions {
   classify?: Classify | undefined;
+  /**
+  The public photo reconcile; production's is `syncPublicPhotosLater`.
+  */
+  publish?: ((scope: TaggedScope) => void) | undefined;
 }
 
 export async function uploadPhoto(
   input: UploadPhotoInput,
-  { classify }: UploadPhotoOptions = {},
+  { classify, publish }: UploadPhotoOptions = {},
 ): Promise<string> {
   if (!isAllowedPhotoType(input.contentType)) {
     throw new InvalidPhotoError("unsupported photo type");
@@ -161,6 +167,14 @@ export async function uploadPhoto(
     },
     classify ?? classifierFromEnv(),
   );
+  // A photo that passed on a PUBLIC kit is copied to the public bucket now
+  // rather than at the sweep (design 161 step 8). The reconcile reads the
+  // rule itself, so a photo still pending, held or on a kit that is not
+  // PUBLIC is left alone; in the background, so it never delays the save.
+  (publish ?? syncPublicPhotosLater)({
+    entryIds: [input.entryId],
+    runnerIds: [],
+  });
 
   return key;
 }

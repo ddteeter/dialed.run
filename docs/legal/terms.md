@@ -25,7 +25,8 @@
 
 > **DRAFT: not reviewed by a lawyer.** Written from the code on `main` as of
 > 2026-10-11, revised 2026-10-18 from the pre-launch legal review (rev. 2)
-> and decisions D-125 to D-139, for the owner to edit. Every
+> and decisions D-125 to D-139, and 2026-10-28 for public kits and
+> profiles (D-150 to D-153), for the owner to edit. Every
 > `[OWNER: …]` note is a decision or a fact the code cannot supply. Every
 > factual claim is mapped to the code, decision or outside terms that make it
 > true in `terms-sources.md`; change one, change both.
@@ -47,7 +48,8 @@ say so.
 - What you post stays yours. You let us host it, show it, reformat it and
   work with its links so the app can run.
 - Kits are shared with other signed-in runners by default. You can make any
-  kit private, or make private your default.
+  kit private, or make private your default. A kit you make public, and
+  your profile if you make it public, can be seen by anyone.
 - Be decent. No harassment, no impersonation, nothing sexual, nothing
   illegal, nothing that shows where someone lives.
 - A person reviews reports. We can remove content and close accounts, and
@@ -158,7 +160,10 @@ username and the place you run.
 us a worldwide, non-exclusive, royalty-free licence to host, store, copy,
 process, display and distribute your content, and to adapt and reformat it:
 for example to resize and re-encode photos, remove their metadata, and
-show your kits in feeds, on your profile and in the Call. That includes
+show your kits in feeds, on your profile and in the Call, and, for what
+you make public, to display it on the open web, to make the card that
+previews a link to it, and to let the sites and apps where such a link is
+posted fetch and show that card. That includes
 displaying, reformatting and modifying the links in your content, including
 outbound product links. We may let the services we use to run [dialed.run]
 do these things on our behalf, and only for that.
@@ -203,18 +208,26 @@ owing you anything.
 
 ## Who sees what
 
-- **Kits are shared by default.** You choose shared or private for each kit
-  when you give the verdict, and you can make private your default in
-  settings. Private kits never appear in feeds or in anyone's conditions
+- **Kits are shared by default.** You choose shared, private or public for
+  each kit when you give the verdict, and you can make private, or, while
+  your profile is public, public, your default in settings. Private kits never appear in feeds or in anyone's conditions
   numbers. They do count, without your name, in
   [anonymous totals](#your-content), unless you turn that off.
 - **"Shared" means other signed-in runners on [dialed.run]**, not the open
   web. A shared kit, a profile and their photos are shown only to someone
-  signed in. A link to a kit shared elsewhere previews as a generic
+  signed in. A link to a shared kit posted elsewhere previews as a generic
   [dialed.run] card, with nothing from the kit on it.
+- **"Public" means anyone.** You can make a kit public when you give the
+  verdict, and turn on a public profile, and the rotation of your closet on
+  it, in settings. Anyone with the link can see them, signed in or not,
+  and blocking someone cannot keep them off a public kit or public
+  profile, signed in or not.
+  A public kit never shows the run's start time or place. You can take any
+  of it back at any time; the privacy policy says how quickly it goes, and
+  anyone who saw it before then may have kept a copy.
 - **Some things are never shown to other runners**, such as your closet as
-  a whole, your garment photos, notes and flags on garments, and your run's
-  location. The privacy policy has the full list, and says when the people
+  a whole (apart from the rotation you choose to show), your garment
+  photos, notes and flags on garments, and your run's location. The privacy policy has the full list, and says when the people
   who run [dialed.run] may see them.
 - **Garments you have worn are retired, not deleted.** When you remove a
   garment that is in one of your kits, we retire it so your old kits still

@@ -4,6 +4,7 @@
 interface __BaseEnv_Env {
 	MEDIA: R2Bucket;
 	IMPORTS: R2Bucket;
+	PUBLIC_PHOTOS: R2Bucket;
 	DIALED_CORE: D1Database;
 	DIALED_WEATHER: D1Database;
 	EMAIL: SendEmail;

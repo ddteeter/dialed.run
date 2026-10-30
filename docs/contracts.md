@@ -48,9 +48,10 @@ time_zone        text     -- IANA zone of lat/lng (design 142), nullable. Looked
 thermal_level    int      -- -2..+2 from onboarding O1 (-2 = runs warm,
                           --  +2 = always freezing); °C mapping lives in code
 temp_unit        text     -- 'f' | 'c'; distance_unit 'mi' | 'km'; from locale
-default_audience text     -- 'runners' (default) | 'private' | 'groups': who new entries are
-                          --  for (D-109, design 131). Writers store only
-                          --  runners | private until groups ship.
+default_audience text     -- 'runners' (default) | 'private' | 'groups' | 'world':
+                          --  who new entries are for (D-109, design 131).
+                          --  Writers store runners | private | world; 'world'
+                          --  only while public_profile is on (round 41 #86b).
 count_in_totals  int      -- boolean, NOT NULL DEFAULT 1: Settings › Sharing's
                           --  "Count my runs in anonymous totals" (D-108 D).
                           --  Nothing creates a profile row at signup, so a
@@ -62,6 +63,14 @@ count_in_totals  int      -- boolean, NOT NULL DEFAULT 1: Settings › Sharing's
                           --  pool folded in, owner 2026-10-12): an entry
                           --  counts unless its runner's row says 0 (NOT
                           --  EXISTS on the profile's primary key).
+public_profile   int      -- boolean, NOT NULL DEFAULT 0: Settings › Privacy's
+                          --  "Public profile" (D-150). Off, /@handle is the
+                          --  not-public page to a signed-out visitor; turning
+                          --  it off moves a 'world' default_audience to
+                          --  'runners' in the same write.
+public_closet    int      -- boolean, NOT NULL DEFAULT 0: "Show my closet", the
+                          --  rotation on the public profile; read only while
+                          --  public_profile is on, and kept while it is off.
 ```
 
 ### wardrobe_items
@@ -249,20 +258,26 @@ run_id       text FK   -- UNIQUE (at most one entry per run)
 user_id      text FK   -- denormalized deliberately: backs the feed index
 verdict      int       -- -2..+2, NULLABLE until the user answers
                        -- -2 way_cold, -1 bit_cold, 0 dialed, +1 bit_warm, +2 way_warm
-audience     text      -- 'private' | 'groups' | 'runners' (D-109): who may see it.
-                       -- Seeded from default_audience at log time, user
-                       -- toggleable. DEFAULT 'private' fails closed; every app
-                       -- writer sets it. Only 'runners' is shown to strangers.
+audience     text      -- 'private' | 'groups' | 'runners' | 'world' (D-109,
+                       -- D-150): who may see it. PRIVATE / SHARED / PUBLIC on
+                       -- screen. Seeded from default_audience at log time,
+                       -- runner-chosen. DEFAULT 'private' fails closed; every
+                       -- app writer sets it. 'runners' and 'world' are shown
+                       -- to signed-in strangers; only 'world' to the open web.
 caption      text      -- NULLABLE
 created_at   int
 ```
 
-- **"Public" means visible to any signed-in runner, never to the open
-  web** (decision D-58). A signed-out request gets nothing about an entry
-  or a profile — not its data, not its photo, not entry-specific head
-  meta. There is no crawler exception: link previews use the site-wide
-  generic card only.
-- A run appears in the feed **only when it has a shared (`runners`) outfit_entry**.
+- **SHARED is visible to any signed-in runner; only PUBLIC reaches the
+  open web** (D-58, revised by D-150). A signed-out request gets nothing
+  about a SHARED or PRIVATE entry, or a profile that is not public — not
+  its data, not its photo, not entry-specific head meta. A PUBLIC kit is
+  served at `/kit/<id>` with the fields D-150 lists, and a public profile at
+  `/@handle` (design 161); `worldVisibleEntry()` in `modules/safety` is
+  the one open-web rule. Link previews use the generic card except a
+  PUBLIC kit's own (D-151).
+- A run appears in the feed **only when it has a shared (`runners` or
+  `world`) outfit_entry**.
 - The shared post shows the 5-state verdict label. What is never public:
   aggregate verdict history, coverage charts, per-item flags/notes, thermal level.
 
@@ -366,8 +381,8 @@ copyright_holds: subject (entry|photo), owner, entry, the takedown's
                    -- hold (D-146): no purge until the Desk's "Case over".
 ```
 
-**One rule for "visible to a stranger".** `audience = 'runners' AND
-moderation_status = 'ok'` and the author not banned, expressed once as
+**One rule for "visible to a stranger".** `audience IN ('runners',
+'world') AND moderation_status = 'ok'` and the author not banned, expressed once as
 `publiclyVisibleEntry()` in `modules/safety` and imported by every read
 that shows entries to someone other than their author. Given the viewer
 (`publiclyVisibleEntry(viewerId)`, and `entryVisibleTo(viewerId)` which

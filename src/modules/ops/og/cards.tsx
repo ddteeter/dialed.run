@@ -13,21 +13,19 @@ import { OG_PALETTE } from "./palette";
  * no field that could carry one, so the rule is the type's rather than a
  * check someone could forget: a card cannot render what it is not given.
  *
- * The entry card's sizes are the board's own: no contract covers an image
- * rendered at 1200×630 — `tokens.js` is a type scale for screens — so the
- * artboard is the only source, and that is recorded as a design delta. The
- * default card is round 31's, which names its contract steps and lays them
- * out at 600×315 for a 2× export.
+ * Both cards are laid out at 600×315 for a 2× export, in contract steps:
+ * the default card is round 31's, which names them, and the kit's card is
+ * round 41 #86e's, "on the default card's grid".
  */
 
 export const OG_WIDTH = 1200;
 export const OG_HEIGHT = 630;
 
 /**
- * What a shared entry's card shows, already worded for display by the
- * feed's read (task 129), which also decides whether the entry may be
- * shown at all: an entry that is private, deleted, banned or unverified
- * never becomes one of these, and gets the default card instead.
+ * What a public kit's card shows (round 41 #86e, D-151), already worded
+ * for display by the feed's read, which also decides whether the kit may
+ * be shown at all: a kit that is not public never becomes one of these,
+ * and gets the default card instead.
  */
 export interface EntryCardData {
   /**
@@ -35,26 +33,26 @@ export interface EntryCardData {
   */
   readonly handle: string;
   /**
-  Mono, US order: "SAT AUG 29".
+  The run's day, never a time: "Sat Oct 18". The card sets it in capitals.
   */
-  readonly date: string;
+  readonly day: string;
   /**
-  "41°F".
+  Feels-like and sky, "38°" and "damp"; absent with no conditions.
   */
-  readonly temperature: string;
+  readonly conditions?: { readonly feelsLike: string; readonly sky: string };
+  readonly verdict?: VerdictValue;
   /**
-  "DAMP".
-  */
-  readonly precipitation: string;
-  readonly verdict: VerdictValue;
-  /**
-  "6.2 MI · FEELS 36° · SE 9MPH".
+  "6.2 mi · 52:10 · 8:25 /mi · 210 ft".
   */
   readonly stats: string;
   /**
-  Garment names in kit order.
+  The pieces' models, without brands, in kit order.
   */
   readonly kit: readonly string[];
+  /**
+  Whether the conditions are Visual Crossing's, which carry its credit.
+  */
+  readonly isCredited: boolean;
 }
 
 /**
@@ -153,78 +151,163 @@ export function DefaultCard(): JSX.Element {
   );
 }
 
-const MONO = { fontFamily: "IBM Plex Mono", fontSize: 28 } as const;
+/**
+ * How many characters of models fit the kit's one line at TYPE.body, 2×,
+ * across the card's 1072px: Archivo's average glyph is about 0.55em, so
+ * 65, less a margin for wide names. Satori cannot measure, so the line is
+ * cut by count.
+ */
+const KIT_LINE_CHARS = 60;
 
+function lineOf(models: readonly string[], count: number): string {
+  const rest = models.length - count;
+  const more = rest === 0 ? [] : [`+${String(rest)}`];
+  return [...models.slice(0, count), ...more].join(" · ");
+}
+
+/**
+ * The kit as one line (round 41 #86e): the models in kit order, ending
+ * "+N" past what fits. At least one model is always named.
+ */
+export function kitLine(models: readonly string[]): string {
+  let count = models.length;
+  while (count > 1 && lineOf(models, count).length > KIT_LINE_CHARS) {
+    count -= 1;
+  }
+  return lineOf(models, count);
+}
+
+/**
+A mono step at the card's 2×, in capitals, with its tracking.
+*/
+function mono(size: number, trackingEm: number) {
+  return {
+    fontFamily: "IBM Plex Mono",
+    fontSize: size * DEFAULT_SCALE,
+    letterSpacing: size * DEFAULT_SCALE * trackingEm,
+    textTransform: "uppercase",
+  } as const;
+}
+
+/**
+ * A public kit's card (round 41 #86e): the default card's grid — 600×315
+ * at 2×, ink ground, SPACE[8] in — with the handle and the day at the top
+ * opposite the wordmark, the conditions in TYPE.display beside the
+ * verdict's chip, the four stats in MONO.md, the kit as one line in
+ * TYPE.body, and Visual Crossing's credit bottom right in TYPE.micro when
+ * the conditions are theirs (round 39 #67, D-144). Never the photo or the
+ * caption: `EntryCardData` has no field for either.
+ */
 export function EntryCard({
   entry,
 }: Readonly<{ entry: EntryCardData }>): JSX.Element {
   return (
-    <div style={{ ...CARD_STYLE, padding: "64px 72px" }}>
+    <div style={{ ...CARD_STYLE, padding: 32 * DEFAULT_SCALE }}>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "baseline",
+          alignItems: "center",
+          gap: 24 * DEFAULT_SCALE,
         }}
       >
-        <Wordmark />
-        <span
-          style={{
-            fontFamily: "IBM Plex Mono",
-            fontSize: 26,
-            letterSpacing: 2.08,
-            color: OG_PALETTE.muted,
-          }}
-        >
-          {entry.date}
+        <Wordmark size={24 * DEFAULT_SCALE} />
+        <span style={{ ...mono(11, 0.06), color: OG_PALETTE.muted }}>
+          {`@${entry.handle} · ${entry.day}`}
         </span>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 8 * DEFAULT_SCALE,
+        }}
+      >
         <div
           style={{
             display: "flex",
-            gap: 36,
-            fontFamily: "Archivo Black",
-            fontSize: 150,
-            lineHeight: 0.9,
-            letterSpacing: -7.5,
+            alignItems: "center",
+            gap: 12 * DEFAULT_SCALE,
           }}
         >
-          <span>{entry.temperature}</span>
-          <span style={{ color: OG_PALETTE.teal }}>{entry.precipitation}</span>
+          {entry.conditions === undefined ? undefined : (
+            <span
+              style={{
+                display: "flex",
+                gap: 8 * DEFAULT_SCALE,
+                fontFamily: "Archivo Black",
+                fontSize: 32 * DEFAULT_SCALE,
+                lineHeight: 1.05,
+                letterSpacing: (32 * DEFAULT_SCALE * -35) / 1000,
+                textTransform: "uppercase",
+              }}
+            >
+              <span>{entry.conditions.feelsLike}</span>
+              <span style={{ color: OG_PALETTE.teal }}>
+                {entry.conditions.sky}
+              </span>
+            </span>
+          )}
+          <VerdictChip verdict={entry.verdict} />
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          <span
-            style={{
-              ...MONO,
-              fontWeight: 600,
-              letterSpacing: 1.68,
-              padding: "10px 18px",
-              textTransform: "uppercase",
-              background: chipColour(entry.verdict),
-              color: OG_PALETTE.ink,
-            }}
-          >
-            {verdictLabel(entry.verdict)}
-          </span>
-          <span
-            style={{ ...MONO, letterSpacing: 1.12, color: OG_PALETTE.soft }}
-          >
-            {entry.stats}
-          </span>
-        </div>
-        <span style={{ fontSize: 34, lineHeight: 1.3, color: OG_PALETTE.soft }}>
-          {entry.kit.join(" · ")}
+        <span style={{ ...mono(13, 0.02), color: OG_PALETTE.soft }}>
+          {entry.stats}
+        </span>
+        <span
+          style={{
+            fontSize: 15 * DEFAULT_SCALE,
+            lineHeight: 1.5,
+            color: OG_PALETTE.soft,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+          }}
+        >
+          {kitLine(entry.kit)}
         </span>
       </div>
-      <span style={{ fontSize: 32, fontWeight: 600 }}>@{entry.handle}</span>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        {entry.isCredited ? (
+          <span
+            style={{
+              fontSize: 12 * DEFAULT_SCALE,
+              lineHeight: 1.4,
+              color: OG_PALETTE.muted,
+            }}
+          >
+            Weather data provided by Visual Crossing
+          </span>
+        ) : undefined}
+      </div>
     </div>
   );
 }
 
 /**
- * The card for a share link: the entry's, when there is a shareable entry,
- * and the default otherwise — so a link reveals nothing about an entry
+ * The verdict's chip, MONO.xs on its T2 hue, padded SPACE[1] by SPACE[2];
+ * nothing for a kit with no verdict.
+ */
+function VerdictChip({
+  verdict,
+}: Readonly<{ verdict: VerdictValue | undefined }>): JSX.Element | undefined {
+  if (verdict === undefined) return undefined;
+  return (
+    <span
+      style={{
+        ...mono(10, 0.1),
+        fontWeight: 600,
+        padding: `${String(4 * DEFAULT_SCALE)}px ${String(8 * DEFAULT_SCALE)}px`,
+        background: chipColour(verdict),
+        color: OG_PALETTE.ink,
+      }}
+    >
+      {verdictLabel(verdict)}
+    </span>
+  );
+}
+
+/**
+ * The card for a share link: the kit's, when there is a public kit, and
+ * the default otherwise — so a link reveals nothing about an entry
  * that is not public ("A link can't reveal that something exists").
  */
 export function cardFor(entry: EntryCardData | undefined): JSX.Element {

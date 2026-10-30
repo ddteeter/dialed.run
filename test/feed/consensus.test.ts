@@ -266,7 +266,7 @@ describe("matchTally: who matched", () => {
     // On the audience's index (design 131, PR B): two equalities, then
     // the window as a range. The boolean's index stays until C2 drops it.
     expect(details).toMatch(
-      /SEARCH outfit_entries USING INDEX entries_audience_created \(audience=\? AND moderation_status=\? AND created_at>\?\)/u,
+      /SEARCH outfit_entries USING INDEX entries_shared_created \(moderation_status=\? AND created_at>\?\)/u,
     );
     expect(details).not.toMatch(/entries_public_created/u);
   });

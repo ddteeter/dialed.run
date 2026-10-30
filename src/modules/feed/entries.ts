@@ -32,6 +32,8 @@ import type {
   entryTags,
   itemFlagSchema,
 } from "../../lib/contracts";
+import { kitCacheTags, type PurgeTags } from "../../lib/cache-tags";
+import { WORLD_AUDIENCE } from "../../lib/contracts";
 import { ForbiddenError } from "../../lib/errors";
 import { readInChunks } from "../../lib/chunked";
 import { forIds } from "../../lib/for-ids";
@@ -43,6 +45,7 @@ import {
   publiclyVisibleEntry,
 } from "../safety";
 import { requireOwned, requireOwner } from "../../lib/sql/owned";
+import { purgePublicPages } from "../ops";
 import { newUlid } from "../../lib/ids";
 import { bandFloorC } from "../../lib/contracts/temperature";
 import type { Conditions } from "./conditions";
@@ -231,13 +234,14 @@ export interface SubmitVerdictInput {
 async function assertOwnsEntry(
   entryId: string,
   userId: string,
-): Promise<{ id: string; userId: string; runId: string }> {
+): Promise<{ id: string; userId: string; runId: string; audience: string }> {
   // fallow-ignore-next-line code-duplication -- two different reads of outfit_entries that happen to select three columns each: this one gates ownership of a single entry by id, the other scans the user's last 200 for a band statistic
   const [entry] = await db()
     .select({
       id: outfitEntries.id,
       userId: outfitEntries.userId,
       runId: outfitEntries.runId,
+      audience: outfitEntries.audience,
     })
     .from(outfitEntries)
     .where(eq(outfitEntries.id, entryId))
@@ -263,7 +267,10 @@ async function assertOwnsEntry(
  * legitimate depends on what the entry contains, and a batch cannot branch
  * on its own results.
  */
-export async function submitVerdict(input: SubmitVerdictInput): Promise<void> {
+export async function submitVerdict(
+  input: SubmitVerdictInput,
+  purge: PurgeTags = purgePublicPages,
+): Promise<void> {
   const database = db();
   const owned = await assertOwnsEntry(input.entryId, input.userId);
 
@@ -346,6 +353,13 @@ export async function submitVerdict(input: SubmitVerdictInput): Promise<void> {
   // Stryker disable next-line ConditionalExpression
   if (first === undefined) return;
   await database.batch([first, ...rest]);
+  // Design 161: a PUBLIC kit's page shows its verdict and caption, and a
+  // kit leaving PUBLIC is a retraction; one coming to it replaces the
+  // not-public page cached at its path. Either way the edge is told, and
+  // a kit that was never PUBLIC has nothing there to purge.
+  if (audience === WORLD_AUDIENCE || owned.audience === WORLD_AUDIENCE) {
+    purge(kitCacheTags(input.userId, input.entryId));
+  }
 }
 
 interface OwnEntryRow {

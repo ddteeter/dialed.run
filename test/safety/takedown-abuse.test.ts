@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
 import { z } from "zod";
 
 import {
@@ -26,6 +27,7 @@ import {
   TAKEDOWN_VALVE_PER_HOUR,
   valveHour,
 } from "../../src/modules/safety/takedown-limits";
+import { noPurge, purgeSpy } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
@@ -46,6 +48,7 @@ function core() {
 const deps = {
   verify: () => Promise.resolve({ ok: true }),
   owe: oweInCore,
+  purge: noPurge,
   secret: SECRET,
 };
 
@@ -85,6 +88,14 @@ async function file(
     .where(eq(takedownRequests.location, location));
   if (row === undefined) throw new Error("no request filed");
   return row;
+}
+
+async function ownerOf(entryId: string) {
+  const [row] = await core()
+    .select({ userId: outfitEntries.userId })
+    .from(outfitEntries)
+    .where(eq(outfitEntries.id, entryId));
+  return row?.userId ?? "nobody";
 }
 
 async function entryStatus(entryId: string) {
@@ -259,11 +270,21 @@ describe("the confirm", () => {
   it("hides it and alerts every operator, once", async () => {
     const { entryId, request } = await pastTheCap();
     const token = await confirmTokenFor(request.id);
+    const spy = purgeSpy();
 
     expect(
-      await confirmTakedownRequest(core(), token, oweInCore, NOW + 60),
+      await confirmTakedownRequest(
+        core(),
+        token,
+        { owe: oweInCore, purge: spy.purge },
+        NOW + 60,
+      ),
     ).toBe("confirmed");
     expect(await entryStatus(entryId)).toBe("hidden_pending_review");
+    // Design 161: the hidden kit leaves the edge, with its runner's pages.
+    expect(spy.calls).toStrictEqual([
+      [`entry:${entryId}`, `runner:${await ownerOf(entryId)}`],
+    ]);
     const [row] = await core()
       .select()
       .from(takedownRequests)
@@ -289,7 +310,12 @@ describe("the confirm", () => {
     // A second press is the first: nothing new is owed.
     const before = await owed();
     expect(
-      await confirmTakedownRequest(core(), token, oweInCore, NOW + 120),
+      await confirmTakedownRequest(
+        core(),
+        token,
+        { owe: oweInCore, purge: noPurge },
+        NOW + 120,
+      ),
     ).toBe("confirmed");
     expect(await owed()).toHaveLength(before.length);
   });
@@ -307,7 +333,7 @@ describe("the confirm", () => {
     await confirmTakedownRequest(
       core(),
       await confirmTokenFor(request.id),
-      oweInCore,
+      { owe: oweInCore, purge: noPurge },
       NOW + 60,
     );
 
@@ -317,7 +343,12 @@ describe("the confirm", () => {
   it("refuses a token nobody was sent, and leaves a decided request decided", async () => {
     const { entryId, request } = await pastTheCap();
     expect(
-      await confirmTakedownRequest(core(), "f".repeat(64), oweInCore, NOW),
+      await confirmTakedownRequest(
+        core(),
+        "f".repeat(64),
+        { owe: oweInCore, purge: noPurge },
+        NOW,
+      ),
     ).toBe("not_found");
     await decideRemovalRequest(core(), "op-one", request.id, {
       outcome: "declined",
@@ -327,7 +358,7 @@ describe("the confirm", () => {
       await confirmTakedownRequest(
         core(),
         await confirmTokenFor(request.id),
-        oweInCore,
+        { owe: oweInCore, purge: noPurge },
         NOW,
       ),
     ).toBe("decided");
@@ -338,13 +369,16 @@ describe("the confirm", () => {
     const { entryId, request } = await pastTheCap();
     // The first two requests hid theirs at NOW: with these, exactly ten.
     await heldThisHour(TAKEDOWN_VALVE_PER_HOUR - 2, NOW + 60);
+    const spy = purgeSpy();
     await confirmTakedownRequest(
       core(),
       await confirmTokenFor(request.id),
-      oweInCore,
+      { owe: oweInCore, purge: spy.purge },
       NOW + 60,
     );
     expect(await entryStatus(entryId)).toBe("ok");
+    // Nothing hidden, so nothing to purge.
+    expect(spy.calls).toStrictEqual([]);
     const [row] = await core()
       .select({ holdState: takedownRequests.holdState })
       .from(takedownRequests)
@@ -655,7 +689,7 @@ describe("the confirm, at its edges", () => {
     await confirmTakedownRequest(
       core(),
       await confirmTokenFor(third.id),
-      oweInCore,
+      { owe: oweInCore, purge: noPurge },
       NOW + 60,
     );
     const [row] = await core()
@@ -676,10 +710,20 @@ describe("the confirm, at its edges", () => {
   it("does nothing on a second press, even once the valve has shut", async () => {
     const { request } = await pastTheCap();
     const token = await confirmTokenFor(request.id);
-    await confirmTakedownRequest(core(), token, oweInCore, NOW + 60);
+    await confirmTakedownRequest(
+      core(),
+      token,
+      { owe: oweInCore, purge: noPurge },
+      NOW + 60,
+    );
     await heldThisHour(TAKEDOWN_VALVE_PER_HOUR, NOW + 120);
     expect(
-      await confirmTakedownRequest(core(), token, oweInCore, NOW + 120),
+      await confirmTakedownRequest(
+        core(),
+        token,
+        { owe: oweInCore, purge: noPurge },
+        NOW + 120,
+      ),
     ).toBe("confirmed");
     expect(
       await owedWhere((email) => email.dedupeKey.startsWith("takedown_valve:")),

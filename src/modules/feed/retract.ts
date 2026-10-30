@@ -39,13 +39,20 @@ import {
   reactions,
   runs,
 } from "../../db/schema-core";
+import { WORLD_AUDIENCE } from "../../lib/contracts";
 import { NotFoundError } from "../../lib/errors";
 import { ulidSchema } from "../../lib/ids";
-import { columnWhere } from "../../lib/sql/keyed-read";
+import {
+  kitCacheTags,
+  runnerCacheTag,
+  type PurgeTags,
+} from "../../lib/cache-tags";
+import { columnWhere, firstRowWhere } from "../../lib/sql/keyed-read";
 import {
   captureException,
   outboxInsert,
   oweOutbox,
+  purgePublicPages,
   settleOutbox,
 } from "../ops";
 import { screeningDeletes, settleOpenReviews } from "../safety";
@@ -167,10 +174,24 @@ export async function commit(
 }
 
 /**
+ * What deleting a runner's kits purges from the edge (design 161): every
+ * page of theirs for "all" (account deletion's purge), else each kit's own
+ * page and their profile, which lists it. Nothing when no kit goes — a run
+ * with no kit had no page. One purge either way, never one per kit.
+ */
+export function deletionCacheTags(
+  userId: string,
+  entries: "all" | readonly string[],
+): string[] {
+  if (entries === "all") return [runnerCacheTag(userId)];
+  return [...new Set(entries.flatMap((id) => kitCacheTags(userId, id)))];
+}
+
+/**
  * The frame every scope-taking delete shares: resolve `scope` to the
  * runner's own rows in `table`, hand them to `build` (which may itself read
  * before it can say what to write — a batch cannot branch on its own
- * results), and commit whatever it returns.
+ * results), commit whatever it returns, then purge the tags it names.
  *
  * Extracted from `retractEntries` and `deleteRuns`, which used to repeat
  * this frame around bodies that otherwise differ completely — one reads
@@ -182,14 +203,17 @@ async function retractScoped(
   table: typeof outfitEntries | typeof runs,
   userId: string,
   scope: Scope,
-  report: Report,
-  build: (
-    rows: ReturnType<typeof owned>,
-  ) => Promise<{ statements: Statements; debts: readonly Debt[] }>,
+  effects: { readonly report: Report; readonly purge: PurgeTags },
+  build: (rows: ReturnType<typeof owned>) => Promise<{
+    statements: Statements;
+    debts: readonly Debt[];
+    tags: readonly string[];
+  }>,
 ): Promise<void> {
   const rows = owned(db, table, userId, scope);
-  const { statements, debts } = await build(rows);
-  await commit(db, statements, debts, report);
+  const { statements, debts, tags } = await build(rows);
+  await commit(db, statements, debts, effects.report);
+  effects.purge(tags);
 }
 
 /**
@@ -200,12 +224,20 @@ export async function retractEntries(
   userId: string,
   scope: Scope,
   report: Report = captureException,
+  purge: PurgeTags = purgePublicPages,
 ): Promise<void> {
-  await retractScoped(db, outfitEntries, userId, scope, report, (entries) =>
-    Promise.resolve({
-      statements: entryStatements(db, userId, entries),
-      debts: mediaDebts(userId, scope),
-    }),
+  await retractScoped(
+    db,
+    outfitEntries,
+    userId,
+    scope,
+    { report, purge },
+    (entries) =>
+      Promise.resolve({
+        statements: entryStatements(db, userId, entries),
+        debts: mediaDebts(userId, scope),
+        tags: deletionCacheTags(userId, scope),
+      }),
   );
 }
 
@@ -239,17 +271,23 @@ async function retractOne(
   userId: string,
   id: string,
   notFoundMessage: string,
-  report: Report,
-  deleteScoped: (
-    db: Db,
-    userId: string,
-    scope: Scope,
-    report: Report,
-  ) => Promise<void>,
+  effects: { readonly report: Report; readonly purge: PurgeTags },
+  deleteScoped: ScopedDelete,
 ): Promise<void> {
   await assertOwned(db, table, userId, id, notFoundMessage);
-  await deleteScoped(db, userId, [id], report);
+  await deleteScoped(db, userId, [id], effects.report, effects.purge);
 }
+
+/**
+`retractEntries` or `deleteRuns`: a runner's rows in a scope, deleted.
+*/
+type ScopedDelete = (
+  db: Db,
+  userId: string,
+  scope: Scope,
+  report: Report,
+  purge: PurgeTags,
+) => Promise<void>;
 
 /**
  * `retractOne`, fixed to one table, message and scoped delete — so a
@@ -262,15 +300,30 @@ async function retractOne(
 function retractOneOf(
   table: typeof outfitEntries | typeof runs,
   notFoundMessage: string,
-  deleteScoped: (
-    db: Db,
-    userId: string,
-    scope: Scope,
-    report: Report,
-  ) => Promise<void>,
-): (db: Db, userId: string, id: string, report?: Report) => Promise<void> {
-  return (db, userId, id, report = captureException) =>
-    retractOne(db, table, userId, id, notFoundMessage, report, deleteScoped);
+  deleteScoped: ScopedDelete,
+): (
+  db: Db,
+  userId: string,
+  id: string,
+  report?: Report,
+  purge?: PurgeTags,
+) => Promise<void> {
+  return (
+    db,
+    userId,
+    id,
+    report = captureException,
+    purge = purgePublicPages,
+  ) =>
+    retractOne(
+      db,
+      table,
+      userId,
+      id,
+      notFoundMessage,
+      { report, purge },
+      deleteScoped,
+    );
 }
 
 /**
@@ -286,21 +339,33 @@ export const retractEntry = retractOneOf(
 /**
  * One photo off one of the runner's entries. The row goes with its open
  * review, and the entry's prefix is owed a reconcile, which deletes this
- * object and keeps the photos still named.
+ * object and keeps the photos still named. On a PUBLIC kit, its page is
+ * purged, and with it the photo's public copy (design 161 step 8); a kit
+ * that is not PUBLIC has neither.
  */
 export async function deleteEntryPhoto(
   db: Db,
   userId: string,
   photoId: string,
   report: Report = captureException,
+  purge: PurgeTags = purgePublicPages,
 ): Promise<void> {
-  const [photo] = await db
-    .select({ entryId: entryPhotos.entryId })
+  // The kit the photo is on, if it is the runner's: a missing photo and
+  // one on someone else's kit answer the same.
+  const kitOfPhoto = db
+    .select({ id: entryPhotos.entryId })
     .from(entryPhotos)
-    .innerJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
-    .where(and(eq(entryPhotos.id, photoId), eq(outfitEntries.userId, userId)))
-    .limit(1);
-  if (photo === undefined) throw new NotFoundError("photo not found");
+    .where(eq(entryPhotos.id, photoId));
+  const entry = await firstRowWhere(
+    db,
+    outfitEntries,
+    and(
+      eq(outfitEntries.userId, userId),
+      inArray(outfitEntries.id, kitOfPhoto),
+    ),
+  );
+  if (entry === undefined) throw new NotFoundError("photo not found");
+  const photo = { entryId: entry.id, audience: entry.audience };
   await commit(
     db,
     [
@@ -311,6 +376,9 @@ export async function deleteEntryPhoto(
     mediaDebts(userId, [photo.entryId]),
     report,
   );
+  if (photo.audience === WORLD_AUDIENCE) {
+    purge(kitCacheTags(userId, photo.entryId));
+  }
 }
 
 /**
@@ -339,8 +407,10 @@ export async function deleteRuns(
   userId: string,
   scope: Scope,
   report: Report = captureException,
+  purge: PurgeTags = purgePublicPages,
 ): Promise<void> {
-  await retractScoped(db, runs, userId, scope, report, async (ownedRuns) => {
+  const effects = { report, purge };
+  await retractScoped(db, runs, userId, scope, effects, async (ownedRuns) => {
     const entryIds = await columnWhere(
       db,
       outfitEntries,
@@ -390,6 +460,7 @@ export async function deleteRuns(
           }),
         ),
       ],
+      tags: deletionCacheTags(userId, entryScope),
     };
   });
 }

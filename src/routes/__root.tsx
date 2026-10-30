@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import appCss from "../styles.css?url";
 
 import { ZOD_JITLESS_SCRIPT } from "../lib/browser/zod-jitless";
+import { signedInOffTheOpenWeb } from "../lib/open-web";
 import { confirmEmailOnRefusal } from "../modules/account/components/ConfirmEmailSheet";
 import {
   handleGateQuery,
@@ -120,7 +121,10 @@ export const Route = createRootRoute({
   // Whether anyone is signed in, read once and kept until a sign-in or a
   // sign-out invalidates it: the system states frame themselves by it
   // (round 22, X1/X2) and nothing else here needs it fresh per navigation.
-  loader: () => signedInQuery(),
+  // Never asked on the open web (design 161): a public page is the same
+  // for every viewer, so nothing about this one may reach its markup.
+  loader: ({ location }) =>
+    signedInOffTheOpenWeb(location.pathname, signedInQuery),
   staleTime: Infinity,
   shellComponent: RootDocument,
 });

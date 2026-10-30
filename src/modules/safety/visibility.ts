@@ -22,9 +22,10 @@ import {
   blocks,
   outfitEntries,
   reports,
+  sharedAudience,
   userProfiles,
+  worldAudience,
 } from "../../db/schema-core";
-import { SHARED_AUDIENCE } from "../../lib/contracts";
 
 /**
  * The entry is shared by its author, nothing is pending or settled against
@@ -46,23 +47,21 @@ import { SHARED_AUDIENCE } from "../../lib/contracts";
  * discipline names, and the one a post-query filter would have walked
  * straight into.
  *
- * **Shared means the `runners` audience and nothing else** (D-109,
- * design 131): `private` and `groups` alike are hidden from strangers, so
- * a groups entry needs no clause of its own here. The legacy boolean is
- * not read; writers keep it in step only until design 131's C1.
+ * **Shared means `runners` or `world`** (D-109, D-150): a public kit is
+ * shared with signed-in runners too. `private` and `groups` alike are
+ * hidden from strangers, so a groups entry needs no clause of its own here.
  *
- * Column order matches `entries_audience_created` (audience,
- * moderation_status, created_at), so a caller that adds a `created_at`
- * range gets two equalities then a range — an index seek rather than a
+ * The audience clause is `sharedAudience`, the expression
+ * `entries_shared_created` is partial on, and the index's columns are
+ * (moderation_status, created_at), so a caller that adds a `created_at`
+ * range gets an equality then a range — an index seek rather than a
  * scan. The subqueries run per surviving row, each a primary-key or
  * unique-index probe.
  */
 export function publiclyVisibleEntry(viewerId?: string): SQL | undefined {
   return and(
-    eq(outfitEntries.audience, SHARED_AUDIENCE),
-    eq(outfitEntries.moderationStatus, "ok"),
-    authorNotBanned(),
-    runnerNotLeaving(outfitEntries.userId),
+    sharedAudience(outfitEntries.audience),
+    ...inStanding(),
     ...(viewerId === undefined
       ? []
       : [
@@ -70,6 +69,29 @@ export function publiclyVisibleEntry(viewerId?: string): SQL | undefined {
           notReportedBy(viewerId),
         ]),
   );
+}
+
+/**
+ * What a signed-out visitor may see (D-150): a PUBLIC kit, under the same
+ * moderation, ban and leaving clauses as the anonymous rule above. The one
+ * predicate every open-web read uses; a signed-in stranger's reads use
+ * `publiclyVisibleEntry`, which admits SHARED kits too.
+ */
+export function worldVisibleEntry(): SQL | undefined {
+  return and(worldAudience(outfitEntries.audience), ...inStanding());
+}
+
+/**
+ * What both rules ask beyond the audience, in the index's column order
+ * after it: nothing pending or settled against the entry, and its author
+ * neither banned nor leaving.
+ */
+function inStanding(): SQL[] {
+  return [
+    eq(outfitEntries.moderationStatus, "ok"),
+    authorNotBanned(),
+    runnerNotLeaving(outfitEntries.userId),
+  ];
 }
 
 /**

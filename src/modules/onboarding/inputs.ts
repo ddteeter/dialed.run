@@ -128,6 +128,43 @@ export const sharingInput = z.object({
 });
 export type UnitsChoice = z.infer<typeof unitsInput>;
 export type SharingChoice = z.infer<typeof sharingInput>;
+
+/**
+ * Why a PUBLIC default was refused (round 41 #86b): the first sentence of
+ * the line NEW RUNS shows in the Public row's place while the profile is
+ * off, which `NO_PUBLIC_DEFAULT_LINE` builds from this. Only a stale page
+ * can send one, since the row is absent then.
+ */
+export const PUBLIC_DEFAULT_NEEDS_PROFILE =
+  "Public is a choice here once your profile is public.";
+
+/**
+ * The rule a sharing default is held to on the server (D-150): `world`
+ * only while the runner's profile is public. A schema rather than an `if`
+ * so the refusal reaches the form as the field's own message, as every
+ * other rule on it does.
+ */
+export const sharingDefaultRule = z
+  .object({
+    defaultAudience: writableAudienceSchema,
+    publicProfile: z.boolean(),
+  })
+  .refine(
+    ({ defaultAudience, publicProfile }) =>
+      defaultAudience !== "world" || publicProfile,
+    { path: ["defaultAudience"], message: PUBLIC_DEFAULT_NEEDS_PROFILE },
+  );
+
+/**
+ * Settings › Privacy's PUBLIC PROFILE group (round 41 #86b): one switch's
+ * answer per save, since the group saves as you switch. Strict, so a save
+ * of one switch can never carry the other's value.
+ */
+export const publicProfileInput = z.union([
+  z.strictObject({ publicProfile: z.boolean() }),
+  z.strictObject({ publicCloset: z.boolean() }),
+]);
+export type PublicProfileChoice = z.infer<typeof publicProfileInput>;
 export type Preferences = UnitsChoice & SharingChoice;
 
 /**

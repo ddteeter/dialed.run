@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  audienceOfShareToggle,
   audienceSchema,
   audienceWord,
   audiences,
-  isSharedAudience,
+  isStrangerAudience,
   SHARED_AUDIENCE,
+  strangerAudiences,
+  WORLD_AUDIENCE,
+  writableAudienceOf,
   writableAudienceSchema,
 } from "../../src/lib/contracts";
 
@@ -18,7 +20,7 @@ import {
 describe("audienceSchema", () => {
   it("is built from the tuple drizzle reads, in order", () => {
     expect(audienceSchema.options).toEqual(audiences);
-    expect(audiences).toEqual(["private", "groups", "runners"]);
+    expect(audiences).toEqual(["private", "groups", "runners", "world"]);
   });
 
   it("parses every stored audience and nothing else", () => {
@@ -32,7 +34,11 @@ describe("audienceSchema", () => {
 
 describe("writableAudienceSchema", () => {
   it("is the launch subset of the stored audiences", () => {
-    expect(writableAudienceSchema.options).toEqual(["private", "runners"]);
+    expect(writableAudienceSchema.options).toEqual([
+      "private",
+      "runners",
+      "world",
+    ]);
     for (const audience of writableAudienceSchema.options) {
       expect(audiences).toContain(audience);
     }
@@ -42,37 +48,38 @@ describe("writableAudienceSchema", () => {
     expect(writableAudienceSchema.safeParse("groups").success).toBe(false);
     expect(writableAudienceSchema.parse("private")).toBe("private");
     expect(writableAudienceSchema.parse("runners")).toBe("runners");
+    expect(writableAudienceSchema.parse("world")).toBe("world");
   });
 });
 
-describe("the share toggle", () => {
-  it("maps on to runners and off to private", () => {
-    expect(audienceOfShareToggle(true)).toBe("runners");
-    expect(audienceOfShareToggle(false)).toBe("private");
-  });
-
-  it("round-trips through isSharedAudience", () => {
-    for (const isOn of [true, false]) {
-      expect(isSharedAudience(audienceOfShareToggle(isOn))).toBe(isOn);
+describe("the stranger audiences (D-150)", () => {
+  it("are SHARED and PUBLIC, both writable", () => {
+    expect(strangerAudiences).toEqual(["runners", "world"]);
+    expect(WORLD_AUDIENCE).toBe("world");
+    for (const audience of strangerAudiences) {
+      expect(writableAudienceSchema.safeParse(audience).success).toBe(true);
     }
   });
 
-  it("is shared only for runners, of every stored audience", () => {
-    const shared = audiences.filter((audience) => isSharedAudience(audience));
-    expect(shared).toEqual(["runners"]);
+  it("are exactly what isStrangerAudience admits, of every stored audience", () => {
+    expect(
+      audiences.filter((audience) => isStrangerAudience(audience)),
+    ).toEqual(["runners", "world"]);
   });
+});
 
-  it("is on for SHARED_AUDIENCE, the one audience strangers see", () => {
+describe("writableAudienceOf", () => {
+  it("keeps every writable audience and stores groups as private", () => {
+    expect(writableAudienceOf("private")).toBe("private");
+    expect(writableAudienceOf("runners")).toBe("runners");
+    expect(writableAudienceOf("world")).toBe("world");
+    expect(writableAudienceOf("groups")).toBe("private");
+  });
+});
+
+describe("SHARED_AUDIENCE", () => {
+  it("is runners, SHARED on screen", () => {
     expect(SHARED_AUDIENCE).toBe("runners");
-    expect(audienceOfShareToggle(true)).toBe(SHARED_AUDIENCE);
-  });
-
-  it("only ever produces a writable audience", () => {
-    for (const isOn of [true, false]) {
-      expect(
-        writableAudienceSchema.safeParse(audienceOfShareToggle(isOn)).success,
-      ).toBe(true);
-    }
   });
 });
 
@@ -90,6 +97,7 @@ describe("audienceWord", () => {
       private: "private",
       groups: "groups",
       runners: "shared",
+      world: "public",
     });
     expect(audienceWord[SHARED_AUDIENCE]).toBe("shared");
     expect(Object.values(audienceWord)).not.toContain("runners");

@@ -34,20 +34,26 @@ import {
   takedownBlocks,
   takedownRequests,
 } from "../../db/schema-core";
-import {
-  takedownSubjectOf,
-  type TakedownRequestValues,
-  type TakedownSubject,
+import type {
+  TakedownRequestValues,
+  TakedownSubject,
 } from "../../lib/contracts/takedown";
+import type { PurgeTags } from "../../lib/cache-tags";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { countSend, emailDebt, sendClaimOf } from "../email";
 import { adminUserIds } from "./admin";
 import { REMOVAL_DUE_SECONDS, removalDueLabel } from "./contracts";
+import { subjectCacheTagsOf } from "./kit-cache-tags";
 import { hiddenNotice } from "./notices";
 import { otherPhotosOf, type OtherPhotos } from "./other-photos";
 import { photoMatchesOf, type PhotoMatches } from "./photo-matches";
+import {
+  filedSubjectOf,
+  requestSubjectOf,
+  requestSubjectsOf,
+} from "./request-subject";
 import type { OweEmail } from "./reports";
 import { ipKey, requesterKey } from "./requester-key";
 import type { HoldState } from "./takedown-limits";
@@ -88,6 +94,10 @@ export interface TakedownRequestDeps<Attempt> {
   limits match requesters by email alone.
   */
   readonly secret?: string | undefined;
+  /**
+  `ops`' edge purge, handed in for the reason `verify` is (design 161).
+  */
+  readonly purge: PurgeTags;
 }
 
 /**
@@ -126,7 +136,7 @@ export async function fileTakedownRequest<Attempt>(
   if (until !== undefined) return { status: "limited", until };
   const id = newUlid();
   const dueAt = now + REMOVAL_DUE_SECONDS;
-  const subject = takedownSubjectOf(input.location);
+  const subject = await filedSubjectOf(db, input.location);
   const keys = {
     requesterKey: requesterKey(email),
     ipKey: await ipKey(input.remoteIp, deps.secret),
@@ -180,7 +190,22 @@ export async function fileTakedownRequest<Attempt>(
       ),
     ),
   ]);
+  if (isHeld) await purgeHeld(db, subject, deps.purge);
   return { status: "received" };
+}
+
+/**
+ * Design 161: a kit a request hid leaves the edge now, not within the
+ * TTL — the open web's `/kit/<id>` is a link `/takedown` takes. So does a
+ * held photo's kit, whose page shows it, and the purge deletes the
+ * photo's public copy (D-152, design 161 step 8).
+ */
+async function purgeHeld(
+  db: Db,
+  subject: TakedownSubject,
+  purge: PurgeTags,
+): Promise<void> {
+  purge(await subjectCacheTagsOf(db, subject.subjectType, subject.subjectId));
 }
 
 /**
@@ -432,9 +457,10 @@ export type TakedownConfirmResult = "confirmed" | "decided" | "not_found";
 export async function confirmTakedownRequest(
   db: Db,
   token: string,
-  owe: OweEmail,
+  effects: { readonly owe: OweEmail; readonly purge: PurgeTags },
   now = nowSeconds(),
 ): Promise<TakedownConfirmResult> {
+  const { owe } = effects;
   const request = await firstRowWhere(
     db,
     takedownRequests,
@@ -443,7 +469,7 @@ export async function confirmTakedownRequest(
   if (request === undefined) return "not_found";
   if (request.status !== "pending") return "decided";
   if (request.confirmedAt !== null) return "confirmed";
-  const subject = takedownSubjectOf(request.location);
+  const subject = await requestSubjectOf(db, request);
   const isShut = await isValveShut(db, now);
   const isHeld = !isShut && subject !== undefined;
   const told = isHeld ? await holdNotice(db, subject) : [];
@@ -466,13 +492,15 @@ export async function confirmTakedownRequest(
       ? valveAlerts(owe, now)
       : operatorAlerts(owe, request.id, request.dueAt, subject !== undefined)),
   ]);
+  if (isHeld) await purgeHeld(db, subject, effects.purge);
   return "confirmed";
 }
 
 /**
  * One pending request as Review shows it: what was asked, by whom, and
  * how long is left. `subject` is what the link points at when it is ours,
- * read again from `location` so Review can link the photo by its key.
+ * read again from `location` so Review can link the photo by its key (or
+ * the photo filing recorded, for a public copy's URL: `./request-subject`).
  */
 export interface PendingTakedownRequest {
   readonly id: string;
@@ -528,10 +556,8 @@ export async function pendingTakedownRequests(
   // one whose other requests show once these are decided.
   const keyOf = (row: (typeof rows)[number]) =>
     row.requesterKey ?? requesterKey(row.requesterEmail);
-  const listed = rows.map((row) => ({
-    row,
-    subject: takedownSubjectOf(row.location),
-  }));
+  const subjects = await requestSubjectsOf(db, rows);
+  const listed = rows.map((row, index) => ({ row, subject: subjects[index] }));
   const others = await otherPhotosOf(
     db,
     listed.flatMap(({ subject }) => subject ?? []),
@@ -621,8 +647,9 @@ export async function blockAndDeclineAll(
         ),
       ),
   );
-  const giveBacks = pending.flatMap((row) => {
-    const subject = takedownSubjectOf(row.location);
+  const subjects = await requestSubjectsOf(db, pending);
+  const giveBacks = pending.flatMap((row, index) => {
+    const subject = subjects[index];
     return subject === undefined
       ? []
       : releaseHoldWrites(db, { id: row.id, declinedAt: now }, subject);

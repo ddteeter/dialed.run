@@ -5,23 +5,29 @@ import type { JSX, ReactNode } from "react";
 import type { z } from "zod";
 
 import {
-  audienceOfShareToggle,
-  isSharedAudience,
+  audienceWord,
   thermalOffsetLabel,
   thermalScale,
 } from "../../../lib/contracts";
 import { notificationSettingsSchema } from "../../../lib/contracts/email";
 import type { DistanceUnit, TempUnit } from "../../../lib/contracts";
 import {
+  AUDIENCE_LABELS,
+  ChoiceList,
   FormErrorSummary,
   FormFailureBand,
   FormStatus,
   Mono,
+  PICKED_AUDIENCES,
   SubmitButton,
   ToggleField,
   useFormSubmit,
 } from "../../../ui";
-import { sharingInput, unitsInput } from "../inputs";
+import {
+  PUBLIC_DEFAULT_NEEDS_PROFILE,
+  sharingInput,
+  unitsInput,
+} from "../inputs";
 import type { SharingChoice, UnitsChoice } from "../inputs";
 import type { CurrentSettings } from "../profile";
 import { UNIT_LABELS, UnitFields } from "./UnitFields";
@@ -50,14 +56,14 @@ const DISTANCE_WORDS: Readonly<Record<DistanceUnit, string>> = {
 /**
  * U1's Privacy row states both of its settings as they stand, so a runner
  * reads them without opening it (round 38 #61b): "New runs shared ·
- * Counted in totals", with "private" and "Not counted" when those apply.
+ * Counted in totals", with "private" or "public" (round 41 #86a) and "Not
+ * counted" when those apply — the audience in the word files write
+ * (`audienceWord`), which is the screen's word lowercased.
  */
 export function privacyRowValue(
   current: Pick<CurrentSettings, "defaultAudience" | "countInTotals">,
 ): string {
-  const share = isSharedAudience(current.defaultAudience)
-    ? "shared"
-    : "private";
+  const share = audienceWord[current.defaultAudience];
   const totals = current.countInTotals ? "Counted in totals" : "Not counted";
   return `New runs ${share} · ${totals}`;
 }
@@ -410,34 +416,59 @@ export function UnitsForm({
 }
 
 /**
- * Round 38 #61c's NEW RUNS frame, which retires the build's older "Share
- * to feed by default" and "You can flip it per run." (round 27 #7 retired
- * the feed-and-public wording for this default).
+ * NEW RUNS' group (round 41 #86b): who a new run is for, picked from the
+ * same three rows A3 offers, under their labels alone, as the board draws
+ * them. The legend is A3's question asked of new runs, so the group is
+ * announced with what it decides; on Privacy it is also the group's
+ * MONO.xs kicker (round 42 #92), so the form's legend is not printed
+ * under it a second time.
  */
-const SHARE_DEFAULT_LABEL = "Share new runs";
-const SHARE_DEFAULT_HINT =
-  "Runners on dialed.run see their kit, conditions and verdict. You can change any run.";
+export const SHARE_DEFAULT_LEGEND = "Who sees new runs";
 
 /**
- * The privacy sub-page's one field, and what it means per run.
+ * While the profile is off, NEW RUNS has no PUBLIC row (D-150: `world`
+ * can be a default only once the profile is public), and this line takes
+ * its place.
+ */
+export const NO_PUBLIC_DEFAULT_LINE = `${PUBLIC_DEFAULT_NEEDS_PROFILE} You can still make any one run public.`;
+
+/**
+The rows NEW RUNS offers while the profile is off: all but PUBLIC.
+*/
+const NOT_PUBLIC_AUDIENCES = PICKED_AUDIENCES.filter(
+  (audience) => audience !== "world",
+);
+
+/**
+ * The privacy sub-page's one field: PRIVATE / SHARED, and PUBLIC while
+ * the runner's profile is public.
  */
 function SharingFields({
   value,
   onChange,
   form,
-}: Readonly<SectionFields<SharingChoice>>): JSX.Element {
+  isProfilePublic,
+}: Readonly<
+  SectionFields<SharingChoice> & { isProfilePublic: boolean }
+>): JSX.Element {
   return (
-    <div className="flex flex-col gap-1">
-      <ToggleField
+    <div className="flex flex-col gap-2">
+      <ChoiceList
         name="defaultAudience"
-        label={SHARE_DEFAULT_LABEL}
+        legend={SHARE_DEFAULT_LEGEND}
+        isLegendHeading
+        options={isProfilePublic ? PICKED_AUDIENCES : NOT_PUBLIC_AUDIENCES}
+        optionLabels={AUDIENCE_LABELS}
+        value={value.defaultAudience}
         field={form.field}
-        isOn={isSharedAudience(value.defaultAudience)}
-        onChange={(isOn) => {
-          onChange({ defaultAudience: audienceOfShareToggle(isOn) });
+        error={form.fieldErrors.defaultAudience}
+        onChange={(defaultAudience) => {
+          onChange({ defaultAudience });
         }}
       />
-      <p className="m-0 text-micro text-muted">{SHARE_DEFAULT_HINT}</p>
+      {isProfilePublic ? undefined : (
+        <p className="m-0 text-small text-muted">{NO_PUBLIC_DEFAULT_LINE}</p>
+      )}
     </div>
   );
 }
@@ -450,7 +481,7 @@ export function SharingForm({
   current,
   saveSharing,
 }: Readonly<{
-  current: CurrentSettings;
+  current: Pick<CurrentSettings, "defaultAudience" | "publicProfile">;
   saveSharing: (input: { data: SharingChoice }) => Promise<unknown>;
 }>): JSX.Element {
   return (
@@ -465,7 +496,9 @@ export function SharingForm({
       // field.
       labels={{}}
     >
-      {SharingFields}
+      {(fields) => (
+        <SharingFields {...fields} isProfilePublic={current.publicProfile} />
+      )}
     </SectionForm>
   );
 }

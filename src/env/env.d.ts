@@ -65,6 +65,13 @@ declare namespace Cloudflare {
      * `__Secure-` cookie prefix. A var in wrangler.jsonc, set by the
      * owner; `/api/health` names it when absent. */
     BETTER_AUTH_URL?: string;
+    /** The public photo bucket's origin (D-152, design 161 step 8), a var
+     * in wrangler.jsonc: `https://photos.dialed.run`, which the policy's
+     * `img-src` admits (`lib/public-photos.ts`). It is the switch: absent
+     * or empty, no photo is copied to `PUBLIC_PHOTOS` and `/k` shows none,
+     * while copies already there are still deleted. See
+     * `modules/ops/public-photos.ts`. */
+    PUBLIC_PHOTOS_ORIGIN?: string;
     /** Signs unsubscribe links (task 126; owner, 2026-09-27) — their own
      * secret, so rotating `BETTER_AUTH_SECRET` does not break every link in
      * every inbox, and an unsubscribe signature can never stand in for

@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
+
 import { z } from "zod";
 
 import {
@@ -24,6 +25,7 @@ import {
   resolveReview,
 } from "../../src/modules/safety";
 
+import { noPurge } from "../purge-spy";
 import {
   makeEntry,
   makeRun,
@@ -61,6 +63,7 @@ async function queuedEntry(): Promise<{ entryId: string; queueId: string }> {
         reason: "explicit",
       },
       oweInCore,
+      noPurge,
     );
   }
 
@@ -99,6 +102,7 @@ async function reportedPhoto(): Promise<string> {
         reason: "explicit",
       },
       oweInCore,
+      noPurge,
     );
   }
   return photoId;
@@ -189,6 +193,7 @@ describe("resolving a decision", () => {
           reason: "spam",
         },
         oweInCore,
+        noPurge,
       );
     }
     const [queued] = await pendingReviewQueue();
@@ -280,6 +285,7 @@ describe("resolving a decision", () => {
           reason: "spam",
         },
         oweInCore,
+        noPurge,
       );
     }
     const [queued] = await pendingReviewQueue();
@@ -380,6 +386,7 @@ describe("what a decision writes", () => {
           reason: "spam",
         },
         oweInCore,
+        noPurge,
       );
     }
     const [queued] = await pendingReviewQueue();
@@ -452,6 +459,7 @@ describe("what a decision writes", () => {
           reason: "harassment",
         },
         oweInCore,
+        noPurge,
       );
     }
     const [queued] = await pendingReviewQueue();
@@ -478,6 +486,7 @@ describe("the queue itself", () => {
         reason: "harassment",
       },
       oweInCore,
+      noPurge,
     );
 
     expect(await pendingReviewCount()).toBe(1);
@@ -498,6 +507,7 @@ describe("the queue itself", () => {
           reason: "explicit",
         },
         oweInCore,
+        noPurge,
       );
     }
 
@@ -529,6 +539,7 @@ describe("the queue itself", () => {
         reason: "spam",
       },
       oweInCore,
+      noPurge,
     );
 
     const [queued] = await pendingReviewQueue();
@@ -555,6 +566,7 @@ describe("the queue itself", () => {
         reason: "spam",
       },
       oweInCore,
+      noPurge,
     );
     await fileReport(
       {
@@ -564,6 +576,7 @@ describe("the queue itself", () => {
         reason: "spam",
       },
       oweInCore,
+      noPurge,
     );
 
     // One person reporting twice is one person — the same rule that
@@ -585,6 +598,7 @@ describe("the queue itself", () => {
         reason: "not_theirs",
       },
       oweInCore,
+      noPurge,
     );
 
     // The join is on subject type AND id. Getting it wrong pools every
@@ -650,6 +664,7 @@ describe("the queue itself", () => {
           reason: "explicit",
         },
         oweInCore,
+        noPurge,
       );
     }
 
@@ -699,6 +714,7 @@ describe("the queue itself", () => {
             reason: "explicit",
           },
           oweInCore,
+          noPurge,
         );
       }
     }
@@ -754,6 +770,7 @@ describe("the queue itself", () => {
             reason: "explicit",
           },
           oweInCore,
+          noPurge,
         );
       }
     }
@@ -828,6 +845,7 @@ describe("the queue itself", () => {
             reason: "spam",
           },
           oweInCore,
+          noPurge,
         );
       }
     }
@@ -874,6 +892,7 @@ describe("the queue itself", () => {
           reason: "harassment",
         },
         oweInCore,
+        noPurge,
       );
     }
 

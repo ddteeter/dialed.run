@@ -14,6 +14,25 @@
     "enabled": true,
   },
   "upload_source_maps": true,
+  // Workers Caching (owner-approved, 2026-10-28; design 161, D-153): the
+  // open web's pages (/kit/<id>, /@handle, the kit's card) leave with
+  // `Cache-Control: public, max-age=60` and a `Cache-Tag`, and the edge
+  // serves them without running the Worker; a retraction purges by tag
+  // (src/modules/ops/edge-purge.ts). The minute is the guarantee.
+  //
+  // No `cross_version_cache`: by default the cache is partitioned by
+  // Worker version, so a deploy starts cold and never serves the previous
+  // version's HTML (its nonce, its asset hashes) to the new one.
+  //
+  // With this on, a response with NO Cache-Control may be stored too
+  // (Cloudflare applies RFC 9111's heuristic freshness), and the request's
+  // Cookie is not in the cache key. So every response that is not public
+  // leaves with `Cache-Control: private, no-store` unless it names its own
+  // (withSecurityHeaders; design 161, "Deviations (CSP)").
+  // test/bindings-conformance.test.ts pins this block.
+  "cache": {
+    "enabled": true,
+  },
   // Non-secret configuration (owner-approved, 2026-09-26; task 125 OPS-4).
   // BETTER_AUTH_URL is the production origin: Better Auth builds callbacks
   // from it, and its https scheme turns on secure cookies and rate
@@ -27,8 +46,17 @@
   //   and so the rate limiter stays off.
   // The Turnstile site key is printed into the page; its secret is a
   // `wrangler secret`.
+  //
+  // PUBLIC_PHOTOS_ORIGIN (owner-approved, 2026-10-28; design 161 step 8,
+  // D-152) is the public photo bucket's custom domain, and the switch that
+  // turns copying photos of PUBLIC kits into PUBLIC_PHOTOS on: set it only
+  // once the bucket, its domain and the CSAM Scanning Tool are live
+  // (docs/deployment.md §2). It must equal src/lib/public-photos.ts's
+  // PUBLIC_PHOTOS_ORIGIN, which the page's img-src admits; the conformance
+  // test holds the two together.
   "vars": {
     "BETTER_AUTH_URL": "https://dialed.run",
+    "PUBLIC_PHOTOS_ORIGIN": "https://photos.dialed.run",
     "TURNSTILE_SITE_KEY": "",
   },
   "d1_databases": [
@@ -68,6 +96,19 @@
     {
       "binding": "IMPORTS",
       "bucket_name": "dialed-imports",
+    },
+    // PUBLIC_PHOTOS (owner-approved, 2026-10-28; design 161 step 8,
+    // D-152): the one bucket anyone can read, on its custom domain
+    // photos.dialed.run. It holds a copy of each screened photo on a
+    // PUBLIC kit, under an unguessable key, each with
+    // `Cache-Control: public, max-age=60`, and nothing else; the deletion
+    // paths and the hourly sweep remove every copy whose kit stops being
+    // public (src/modules/ops/public-photos.ts). No lifecycle rule. Create
+    // it, connect the domain and turn on the CSAM Scanning Tool before the
+    // deploy that binds it (docs/deployment.md §2).
+    {
+      "binding": "PUBLIC_PHOTOS",
+      "bucket_name": "dialed-public-photos",
     },
   ],
   "queues": {
