@@ -160,7 +160,8 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
   await seedItem(seeded, "Demo half-zip", "top");
   // The file's start, and the two corrections A1 is shown: an hour with a
   // seeded observation, and one with none (no provider key locally, so it
-  // is refused, which is the point of the beat).
+  // is refused, which is the point of the beat). The file's own hour is
+  // seeded too, so its conditions land in the consumer's pass.
   //
   // All three on one Chicago day. A correction moves the time and never
   // the date (round 26, #1), so "00:04" typed against an 11:04 PM start
@@ -174,6 +175,10 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
   const movedStart = fileStart + 3600;
   const noWeatherStart = fileStart + 2 * 3600;
   const observations = [
+    await seedObservation(Math.floor(fileStart / 3600), {
+      tempC: 2,
+      precipMm: 0,
+    }),
     await seedObservation(Math.floor(movedStart / 3600), {
       tempC: 8,
       precipMm: 0,
@@ -256,6 +261,9 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
       (cardBox?.x ?? 0) + (cardBox?.width ?? 0),
     );
     await expect(rail.locator("input, button, [role='radio']")).toHaveCount(0);
+    await scene(page, "Its conditions land with it, not an hour later");
+    const conditions = page.locator('[data-slot="conditions"]');
+    await expect(conditions).toContainText("36°F", { timeout: 20_000 });
 
     await scene(
       page,
@@ -281,6 +289,7 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
     await expect(still).toContainText(
       `Couldn't get weather for ${clockOf(noWeatherStart)}. Try again?`,
     );
+    await expect(conditions).toContainText("36°F");
 
     await startField.fill(hhmmOf(movedStart));
     await page.getByRole("button", { name: "Get weather" }).click();
@@ -290,10 +299,7 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
         name: `Change start time, ${clockOf(movedStart)}`,
       }),
     ).toContainText("Changed", { timeout: 20_000 });
-    await expect(page.locator('[data-slot="conditions"]')).toContainText(
-      "46°F",
-      { timeout: 20_000 },
-    );
+    await expect(conditions).toContainText("46°F", { timeout: 20_000 });
     await page
       .getByRole("link", { name: "Looks right — what did you wear?" })
       .click();

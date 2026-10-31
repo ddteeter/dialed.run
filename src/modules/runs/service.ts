@@ -140,10 +140,61 @@ export async function createManualRun(
     weatherStatus,
     idempotencyKey,
   });
-  // Pending(102↔103): when modules/weather merges, call
-  // weather.attachObservation(id) here for 'pending' runs (degrade on
-  // failure — law 5; status stays 'pending' for the retry machinery).
   return { id, weatherStatus };
+}
+
+/**
+ * What R1's save needs to ask for the run's weather without making the
+ * runner wait for it: `modules/weather`'s `attachObservation`, what keeps
+ * the Worker alive past the response (`waitUntil`, from `src/env`), and
+ * where a failure is reported (`ops`'s `captureException`).
+ */
+export interface WeatherOnSave {
+  readonly attach: WeatherWrites["attach"];
+  readonly keepAlive: (work: Promise<unknown>) => void;
+  readonly report: (error: unknown, context: Record<string, string>) => void;
+}
+
+/**
+ * R1's save: the run, then its weather asked for after the answer.
+ *
+ * The attempt is not awaited. It is one provider call per hour the run
+ * spans (design 054), each with a ten-second timeout, and the runner is
+ * already on to picking the kit. The run is stored `pending` first, and
+ * that marker is what makes losing the attempt safe: a Worker that dies
+ * before it lands, or a provider that is down, leaves a run the hourly
+ * retry re-drives (law 8c — the observation lives in the other database).
+ * A resubmission whose run is still pending asks again, which the attach
+ * makes harmless (law 1).
+ *
+ * Never fails the save (law 5): a failed attempt is reported, and the
+ * marker stays.
+ */
+export async function saveManualRun(
+  db: CoreDb,
+  userId: string,
+  draft: RunDraft,
+  idempotencyKey: string | undefined,
+  weather: WeatherOnSave,
+): Promise<CreatedRun> {
+  const created = await createManualRun(db, userId, draft, idempotencyKey);
+  if (created.weatherStatus === "pending") {
+    const runId = ulidSchema.parse(created.id);
+    weather.keepAlive(
+      (async () => {
+        try {
+          await weather.attach(runId);
+        } catch (error: unknown) {
+          weather.report(error, {
+            surface: "runs.attachOnSave",
+            runId,
+            userId,
+          });
+        }
+      })(),
+    );
+  }
+  return created;
 }
 
 export async function getRun(
