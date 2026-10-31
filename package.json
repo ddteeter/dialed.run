@@ -42,7 +42,8 @@
     "eval": "tsx eval/run.ts",
     "eval:photos": "tsx eval/photos/run.ts",
     "pretest": "npm run stage:mediapipe",
-    "worktrees:prune": "sh scripts/worktrees-prune.sh"
+    "worktrees:prune": "sh scripts/worktrees-prune.sh",
+    "generate:grafana": "tsx scripts/grafana-vitals.ts"
   },
   "dependencies": {
     "@cf-wasm/og": "^0.5.0",

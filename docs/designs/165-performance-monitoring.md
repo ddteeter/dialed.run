@@ -330,6 +330,15 @@ Recorded as the build found them.
 - **Unconfigured, the hourly checks are silent.** The daily digest already
   says so once a day.
 
+- **The Grafana JSON is generated** by `npm run generate:grafana`
+  (`scripts/grafana-vitals.ts`) from `DASHBOARD_PANELS` and the beacon's
+  metric and device lists, for the Altinity ClickHouse plugin Cloudflare's
+  guide names. The test pins the committed JSON to that source and the
+  queries to the blob positions `vitals.ts` writes.
+- **The Cloudflare dashboard gains "Beacons refused"** beside the server
+  queries: the refusal log line is how a flood or a broken client shows.
+  Setup for both is `docs/ops/performance-dashboards.md`.
+
 ## Test plan
 
 Covered per step above. Mutation ratchet: everything outside

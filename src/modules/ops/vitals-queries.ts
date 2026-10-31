@@ -168,3 +168,79 @@ export function versionQuery(start: number): string {
     "FORMAT JSON",
   ].join("\n");
 }
+
+/**
+ * The Grafana dashboard's panels (design 165), by title, each with its
+ * query and how Grafana should read it. `docs/ops/grafana-vitals.json` is
+ * generated from these and committed; `test/ops/dashboards.test.ts` pins
+ * the two together, so a panel cannot drift from the layout `vitals.ts`
+ * writes.
+ *
+ * Written for the Altinity ClickHouse plugin Cloudflare recommends:
+ * `$timeSeries` buckets `timestamp` by the zoom, `$timeFilter` is the
+ * range shown, and `$metric` and `$device` are the dashboard's variables.
+ * Every figure is weighted by `_sample_interval`.
+ */
+export const DASHBOARD_PANELS = [
+  {
+    title: "p75 by route",
+    format: "time_series",
+    query: [
+      "SELECT $timeSeries AS t, index1 AS route,",
+      "quantileExactWeighted(0.75)(double1, _sample_interval) AS p75",
+      `FROM ${VITALS_DATASET}`,
+      "WHERE $timeFilter AND blob1 = '$metric' AND blob3 = '$device'",
+      "GROUP BY route, t",
+      "ORDER BY t",
+    ].join("\n"),
+  },
+  {
+    title: "Samples by route",
+    format: "time_series",
+    query: [
+      "SELECT $timeSeries AS t, index1 AS route,",
+      "sum(_sample_interval) AS samples",
+      `FROM ${VITALS_DATASET}`,
+      "WHERE $timeFilter AND blob1 = '$metric' AND blob3 = '$device'",
+      "GROUP BY route, t",
+      "ORDER BY t",
+    ].join("\n"),
+  },
+  {
+    title: "Server p95 by route (2xx)",
+    format: "time_series",
+    query: [
+      "SELECT $timeSeries AS t, index1 AS route,",
+      "quantileExactWeighted(0.95)(double1, _sample_interval) AS p95",
+      `FROM ${VITALS_DATASET}`,
+      "WHERE $timeFilter AND blob1 = 'server' AND blob3 = '2xx'",
+      "GROUP BY route, t",
+      "ORDER BY t",
+    ].join("\n"),
+  },
+  {
+    title: "Server 5xx by route",
+    format: "time_series",
+    query: [
+      "SELECT $timeSeries AS t, index1 AS route,",
+      "sum(_sample_interval) AS errors",
+      `FROM ${VITALS_DATASET}`,
+      "WHERE $timeFilter AND blob1 = 'server' AND blob3 = '5xx'",
+      "GROUP BY route, t",
+      "ORDER BY t",
+    ].join("\n"),
+  },
+  {
+    title: "p75 by deploy",
+    format: "table",
+    query: [
+      "SELECT index1 AS route, blob4 AS version,",
+      "quantileExactWeighted(0.75)(double1, _sample_interval) AS p75,",
+      "sum(_sample_interval) AS n",
+      `FROM ${VITALS_DATASET}`,
+      "WHERE $timeFilter AND blob1 = '$metric' AND blob3 = '$device'",
+      "GROUP BY route, version",
+      "ORDER BY route, version",
+    ].join("\n"),
+  },
+] as const;

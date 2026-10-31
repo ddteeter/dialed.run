@@ -78,7 +78,7 @@ const NAVIGATION_TYPES = [
  * Screen width, in two: the layout changes at the desktop breakpoint, and
  * two values are as much as the privacy text promises.
  */
-const DEVICE_WIDTHS = ["narrow", "wide"] as const;
+export const DEVICE_WIDTHS = ["narrow", "wide"] as const;
 
 /**
  * The most metrics one beacon may carry. A page lifecycle sends five
