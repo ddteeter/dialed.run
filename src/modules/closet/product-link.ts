@@ -41,7 +41,7 @@ import {
   updateOwnedItem,
   type WardrobeItemRow,
 } from "./service";
-import { isTapListPlaceholder } from "./tap-list";
+import { isTapListPlaceholder } from "./tap-list-placeholder";
 
 type Db = ReturnType<typeof drizzle>;
 type Report = typeof captureException;

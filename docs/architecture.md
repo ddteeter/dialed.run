@@ -80,6 +80,13 @@ Key decisions embedded here:
   writing `audience = 'runners'` at each of its five read sites. The arrow
   therefore runs feed → safety, not the reverse: safety knows about entries,
   and nothing in safety imports feed.
+- **One rule decides whether a product link shows** (design 163).
+  `safety`'s `deniedDomainsOf` answers a batch of links in one read of
+  `domain_denylist`, where a denied host denies every host under it. The
+  save's refusal (`isDeniedDomain`) asks it on the primary. Every surface
+  that shows a link asks `closet`'s `allowedLinksOf` (or garment detail's
+  `linkDetailOf`), on its replica, so a link denied after it was saved
+  drops everywhere at once. Nothing but `safety` names the table.
 - **A photo has a second gate, and it is a different question** (106). The
   entry rule answers "may this post be seen"; `isPhotoPubliclyVisible()`
   answers "has this image been screened", and a photo needs both. They are
@@ -208,6 +215,7 @@ flowchart TD
     OPS -->|index.ts only: the :00 zone fill| ONB
     SAFE[modules/safety] --> DB
     FEED -->|index.ts only| SAFE
+    CLOSET -->|index.ts only: the one link rule| SAFE
     CLOSET -->|index.ts only| AUTH
     PROD -->|index.ts only| AUTH
     ROUTES --> ACCT[modules/account]
@@ -389,6 +397,18 @@ snapshots (D-31). The enqueue is reconciliation, not a transaction: the row
 goes `pending` first, the send is a fast path, and the `enrichment-retry`
 cron (`30 * * * *`) re-dispatches anything still pending after fifteen
 minutes.
+
+**What a paste reaches** (design 163). A product is resolved from the typed
+brand and model before any page is read, so a link with no brand and model,
+or from a runner who has not confirmed their address (D-113 Q1), reads
+nothing until those exist. The link fills `products.source_url` where it is
+still NULL, so a product first made from a typed name is read when its
+first link arrives; a product's link is never replaced. Enrichment writes
+the shared product, never the garment. Garment detail reads the outcome
+(`linkDetailOf`: found, nothing, couldn't read with or without the first
+day's retries, reading, no brand and model, unconfirmed) and names the
+page's domain only if the denylist allows it. Nothing notifies a runner of
+a late result.
 
 ## Feed read paths (lane 104)
 

@@ -59,6 +59,7 @@ import {
 import type { ProductAttributeDefaults, ProductComposition } from "../products";
 import { ownedBy } from "../../lib/sql/owned";
 import { garmentPhotoForgotten, isDeniedDomain } from "../safety";
+import { linkDetailOf, type LinkDetail } from "./garment-link";
 import { nowSeconds } from "../../lib/now";
 
 type Db = ReturnType<typeof drizzle>;
@@ -841,6 +842,11 @@ export interface ItemDetail extends ClosetItemView {
    * `.map` from rendering it.
    */
   composition: ProductComposition | undefined;
+  /**
+   * The garment's link if it may still be shown, what enrichment made of
+   * it, and the site its specs came from (design 163, round 43 #94–95).
+   */
+  linkDetail: LinkDetail;
 }
 
 export async function getItemDetail(
@@ -868,7 +874,13 @@ export async function getItemDetail(
     productDefaults,
     performanceByItem.get(item.id),
   );
-  return { ...view, productDefaults, composition: product?.composition };
+  const linkDetail = await linkDetailOf(db, item, product?.extraction);
+  return {
+    ...view,
+    productDefaults,
+    composition: product?.composition,
+    linkDetail,
+  };
 }
 
 /**

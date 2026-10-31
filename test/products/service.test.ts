@@ -116,6 +116,54 @@ describe("products: product create-if-missing", () => {
   });
 });
 
+async function made(sourceUrl?: string) {
+  const client = db();
+  const brand = await createOrGetBrand(client, `Brand ${newUlid()}`);
+  const product = await createOrGetProduct(client, {
+    brandId: brand.id,
+    name: "Rover Half-Zip",
+    createdBy: newUlid(),
+    sourceUrl,
+  });
+  return { brandId: brand.id, product };
+}
+
+describe("products: the first pasted link (design 163, Q1)", () => {
+
+  it("fills the link of a product first made without one", async () => {
+    const { brandId, product } = await made();
+    const again = await createOrGetProduct(db(), {
+      brandId,
+      name: "rover half zip",
+      createdBy: newUlid(),
+      sourceUrl: "https://janji.com/p/rover",
+    });
+    expect(again.id).toBe(product.id);
+    expect(again.sourceUrl).toBe("https://janji.com/p/rover");
+  });
+
+  it("keeps the first link when a later paste brings another", async () => {
+    const { brandId } = await made("https://janji.com/p/rover");
+    const again = await createOrGetProduct(db(), {
+      brandId,
+      name: "Rover Half-Zip",
+      createdBy: newUlid(),
+      sourceUrl: "https://other.example/rover",
+    });
+    expect(again.sourceUrl).toBe("https://janji.com/p/rover");
+  });
+
+  it("keeps a link when a later save brings none", async () => {
+    const { brandId } = await made("https://janji.com/p/rover");
+    const again = await createOrGetProduct(db(), {
+      brandId,
+      name: "Rover Half-Zip",
+      createdBy: newUlid(),
+    });
+    expect(again.sourceUrl).toBe("https://janji.com/p/rover");
+  });
+});
+
 describe("products: attribute defaults", () => {
   it("bulk defaults answer for more products than D1 binds in one statement", async () => {
     // The closet asks for every product its garments link to, uncapped,
@@ -477,6 +525,54 @@ describe("products: composition, on the way back out", () => {
 
   it("answers undefined for a product that does not exist", async () => {
     expect(await getProductComposition(db(), newUlid())).toBeUndefined();
+  });
+});
+
+describe("products: what garment detail learns of enrichment (design 163)", () => {
+  it("carries the status, whether specs were written, the age and the page read", async () => {
+    const client = db();
+    const { product } = await resolveProduct(client, {
+      brandName: `Outcome ${newUlid()}`,
+      productName: "A Tee",
+      sourceUrl: "https://janji.com/p/tee",
+      createdBy: newUlid(),
+    });
+    await client
+      .update(products)
+      .set({
+        extractionStatus: "done",
+        extracted: JSON.stringify({
+          rung: "jsonld",
+          found: {},
+          written: { weight: "light" },
+        }),
+      })
+      .where(eq(products.id, product.id));
+
+    const detail = await getProductForDetail(client, product.id);
+
+    expect(detail?.extraction).toEqual({
+      status: "done",
+      hasSpecs: true,
+      createdAt: product.createdAt,
+      sourceUrl: "https://janji.com/p/tee",
+    });
+  });
+
+  it("has no page to name for a product nobody linked", async () => {
+    const client = db();
+    const { product } = await resolveProduct(client, {
+      brandName: `Unlinked ${newUlid()}`,
+      productName: "A Tee",
+      createdBy: newUlid(),
+    });
+    const detail = await getProductForDetail(client, product.id);
+    expect(detail?.extraction).toEqual({
+      status: "none",
+      hasSpecs: false,
+      createdAt: product.createdAt,
+      sourceUrl: undefined,
+    });
   });
 });
 
