@@ -942,7 +942,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
 
 _Round 42 answered the last two; what follows is new since._
 
-93. **A photo still pending a day after upload, on Review (D-153, design
+94. **A photo still pending a day after upload, on Review (D-153, design
     167).** Built as a placeholder from the review row that exists: no
     board draws it. The row is the photo row (kicker `photo · {id}` or
     `garment photo · {id}`, the decision bar unchanged), with two

@@ -38,7 +38,7 @@ after upload goes to the Desk's review queue for a person.
   CSAM decision, with a why-here line in place of "Nobody reported this"
   (as the flagged-handle row does) and the source tag. A `missing_file` row
   shows no photo (there is none to load). Placeholder protocol: bracket
-  tags and a body line, design-deltas item 93.
+  tags and a body line, design-deltas item 94.
 - **Today** counts both sources in "photos the screener couldn't finish",
   which is what they literally are.
 - **Sentry**: the "still pending" line lists each photo as
@@ -50,7 +50,7 @@ after upload goes to the Desk's review queue for a person.
 - Schema: `review_queue.source` gains `unscreened`, `missing_file` (TS-only
   enum widening, additive; `docs/contracts.md` row updated).
 - New routes / bindings / queues / crons: **none** (rides `screening-retry`).
-- Screens: Desk · Review row (placeholder), design-deltas item 93.
+- Screens: Desk · Review row (placeholder), design-deltas item 94.
 
 ## Test plan
 
