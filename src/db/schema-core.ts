@@ -17,6 +17,7 @@ import {
 } from "../lib/contracts";
 import { EMAIL_PREFERENCE_KINDS } from "../lib/contracts/email";
 import { GAVE_UP_KINDS } from "../lib/contracts/gave-up";
+import { HOLD_CAUSES } from "../lib/contracts/hold-causes";
 import {
   index,
   integer,
@@ -1335,9 +1336,7 @@ export const reviewQueue = /*#__PURE__*/ sqliteTable(
     // differently from one three people objected to.
     // `fingerprint`: a new photo matched one removed as an intimate image
     // (D-147, design 152).
-    source: text("source", {
-      enum: ["reports", "classifier", "fingerprint"],
-    }).notNull(),
+    source: text("source", { enum: HOLD_CAUSES }).notNull(),
     status: text("status", {
       enum: ["pending", "reviewing", "approved", "removed"],
     })

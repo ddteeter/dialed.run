@@ -14,6 +14,7 @@
 import { z } from "zod";
 
 import { isoDayOf } from "../../lib/contracts/age";
+import { HOLD_CAUSES } from "../../lib/contracts/hold-causes";
 import { takedownRequestSchema } from "../../lib/contracts/takedown";
 import { rowIdSchema, ulidSchema } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
@@ -64,6 +65,15 @@ export type FileReportValues = z.infer<typeof fileReportInput>;
 
 export const blockRunnerInput = z.object({
   userId: rowIdSchema,
+});
+
+/**
+ * Releasing a burst of one cause's holds (design 164): which cause, and
+ * from when, in epoch seconds.
+ */
+export const releaseHoldsInput = z.object({
+  cause: z.enum(HOLD_CAUSES),
+  since: z.number().int().nonnegative(),
 });
 
 export const reviewDecisionInput = z.object({

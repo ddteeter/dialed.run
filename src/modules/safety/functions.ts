@@ -56,12 +56,14 @@ import {
   forceRenameInput,
   handleReviewInput,
   ncmecReportInput,
+  releaseHoldsInput,
   reviewDecisionInput,
   runnersFilterInput,
   runRemovalsInput,
   unbanUserInput,
 } from "./inputs";
 import { removalsOnRun } from "./run-removals";
+import { burstsToRelease, releaseHolds } from "./release";
 import { fileReport } from "./reports";
 import { claimForReview, pendingReviewQueue } from "./review";
 import { quarantinedContentFor, recordNcmecReport } from "./quarantine";
@@ -132,6 +134,9 @@ export const reviewQueueQuery = createServerFn({ method: "GET" }).handler(
       quarantine: await quarantinedContentFor(coreDb(), adminId),
       // D-130: what a copyright takedown is holding, and its counter-notice.
       holds: await heldCopyrightContent(coreDb()),
+      // Design 164: each cause's holds still waiting from the last day,
+      // which Review offers to release at once.
+      ...(await burstsToRelease()),
     };
   },
 );
@@ -199,6 +204,18 @@ export const recordNcmecReportAction = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const adminId = requireAdmin(await verifiedUserId());
     return recordNcmecReport(coreDb(), adminId, data);
+  });
+
+/**
+ * Releases a burst of one cause's holds (design 164): Approve, as the
+ * signed-in operator, for each still waiting since the time given.
+ * Admin-only; `releaseHolds` does the work, a bounded batch a call.
+ */
+export const releaseHoldsAction = createServerFn({ method: "POST" })
+  .validator((input: unknown) => releaseHoldsInput.parse(input))
+  .handler(async ({ data }) => {
+    const reviewerId = requireAdmin(await verifiedUserId());
+    return releaseHolds(data.cause, data.since, reviewerId);
   });
 
 export const claimReviewAction = createServerFn({ method: "POST" })

@@ -965,7 +965,21 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
 
     **The ask:** draw both on the Review row, or confirm them.
 
-_Items 93 and 94 are open (design 164); round 42 answered the two before them._
+95. **Review's "Held in the last day" (design 164).** Undesigned. At the
+    top of Review, one line per cause that has holds still waiting from
+    the last day: a `MONO.xs` label, for example _"Fingerprint matches · 37
+    waiting"_, then an _"Approve all 37"_ link. The link opens the deletes'
+    confirm sheet (round 22's grammar):
+    - heading _"Approve 37 fingerprint holds?"_;
+    - body _"Each one is approved as if you'd pressed Approve on it: it
+      goes back where an Approve puts it, and anyone an Approve tells is
+      told. Use this when a bug held them, not to skip looking."_;
+    - **Approve all**, with **Keep it** focused.
+
+    It is the undo for a burst the breakers bounded but nobody saw in time.
+    **The ask:** draw it, or confirm the composition and copy.
+
+_Items 93–95 are open (design 164); round 42 answered the two before them._
 
 <!-- Item numbers continue past rounds 35–40 (45–76, 82–87). Design numbered the Garmin asks 77–81 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
 

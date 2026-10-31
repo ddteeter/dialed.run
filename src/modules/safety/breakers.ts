@@ -27,15 +27,13 @@ import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { photoScreenings, reviewQueue } from "../../db/schema-core";
+import { HOLD_CAUSES, type HoldCause } from "../../lib/contracts/hold-causes";
 import { reportSubjectsThatHide } from "./contracts";
 import { counted } from "./takedown-limits";
 
 type Db = ReturnType<typeof drizzle>;
 
-/**
-Why a row is in Review, read from the column: each is a cause with its own ceiling.
-*/
-export type HoldCause = (typeof reviewQueue.$inferSelect)["source"];
+export type { HoldCause } from "../../lib/contracts/hold-causes";
 
 const HOUR_S = 60 * 60;
 
@@ -127,9 +125,7 @@ export async function overCeilings(
   now: number,
 ): Promise<readonly CeilingReading[]> {
   const readings = await Promise.all(
-    reviewQueue.source.enumValues.map((cause) =>
-      ceilingReading(db, cause, now),
-    ),
+    HOLD_CAUSES.map((cause) => ceilingReading(db, cause, now)),
   );
   return readings.filter((reading) => reading.isOver);
 }
