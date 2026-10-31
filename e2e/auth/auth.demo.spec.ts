@@ -409,4 +409,5 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   await page.getByRole("button", { name: "Log in" }).click();
   await expect(page).toHaveURL(/\/runs\/manual$/u, { timeout: 15_000 });
   await expect(page.getByLabel("Started")).toHaveValue("");
+  await scene(page, "Au7 · back on Log a run, as a fresh form");
 });
