@@ -13,7 +13,14 @@ import {
   type Classify,
 } from "../../src/modules/safety";
 
-import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
+import {
+  makeEntry,
+  makeRun,
+  makeUser,
+  resetSafetyTables,
+  screened,
+} from "./helpers";
+import { nowSeconds } from "../../src/lib/now";
 
 function core() {
   return drizzle(env.DIALED_CORE);
@@ -68,6 +75,16 @@ async function statusOf(photoId: string): Promise<string> {
 
 describe("the screening-retry sweep", () => {
   beforeEach(resetSafetyTables);
+
+  it("tallies a flag the classifier breaker held back (design 164)", async () => {
+    await screened("flag", 20, nowSeconds());
+    const photoId = await pendingPhoto();
+
+    const report = await retryPendingScreenings(explicit, []);
+
+    expect(report).toMatchObject({ considered: 1, flagged: 0, heldBack: 1 });
+    expect(await statusOf(photoId)).toBe("pending");
+  });
 
   it("screens what was left pending", async () => {
     const photoId = await pendingPhoto();

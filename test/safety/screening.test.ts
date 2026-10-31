@@ -23,7 +23,13 @@ import {
   type Classify,
 } from "../../src/modules/safety";
 
-import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
+import {
+  makeEntry,
+  makeRun,
+  makeUser,
+  resetSafetyTables,
+  screened,
+} from "./helpers";
 import { nowSeconds } from "../../src/lib/now";
 
 function core() {
@@ -197,6 +203,65 @@ describe("screening a photo", () => {
       }),
     );
     expect(outcome).toBe("flagged");
+  });
+});
+
+/**
+Screens one photo with `classify`, after `flags` flags in 20 screenings this hour.
+*/
+async function afterAnHourOf(flags: number, classify: Classify) {
+  await screened("pass", 20 - flags, nowSeconds());
+  await screened("flag", flags, nowSeconds());
+  const photoId = await entryPhotoRow();
+  const outcome = await screenPhoto(
+    {
+      scope: "entry",
+      photoId,
+      bytes: new Uint8Array([1]),
+      contentType: "image/jpeg",
+    },
+    classify,
+  );
+  return { photoId, outcome };
+}
+
+describe("the classifier breaker (design 164)", () => {
+  beforeEach(resetSafetyTables);
+
+  it("still hides a flag under its ceiling", async () => {
+    const { photoId, outcome } = await afterAnHourOf(
+      2,
+      flagging({ sexual: 0.99 }),
+    );
+
+    expect(outcome).toBe("flagged");
+    expect(await screenStatusOf(photoId)).toBe("hidden_pending_review");
+  });
+
+  it("holds a flag back at its ceiling: pending, unrecorded, unqueued", async () => {
+    const { photoId, outcome } = await afterAnHourOf(
+      3,
+      flagging({ sexual: 0.99 }),
+    );
+
+    expect(outcome).toBe("held_back");
+    expect(await screenStatusOf(photoId)).toBe("pending");
+    const records = await core()
+      .select()
+      .from(photoScreenings)
+      .where(eq(photoScreenings.photoId, photoId));
+    expect(records).toStrictEqual([]);
+    expect(await isQueuedForReview("photo", photoId)).toBe(false);
+  });
+
+  it("leaves the middle band alone, which hides nothing", async () => {
+    const { photoId, outcome } = await afterAnHourOf(
+      3,
+      borderline({ sexual: reviewFloors.sexual }),
+    );
+
+    expect(outcome).toBe("review");
+    expect(await screenStatusOf(photoId)).toBe("pass");
   });
 });
 
