@@ -20,7 +20,14 @@ import {
   reconcileUnhiddenReports,
 } from "../../src/modules/safety";
 
-import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
+import {
+  makeEntry,
+  makeRun,
+  makeUser,
+  opened,
+  resetSafetyTables,
+} from "./helpers";
+import { REPORT_HIDES_FLOOR } from "../../src/modules/safety/breakers";
 import { oweInCore } from "../queue-fakes";
 
 /**
@@ -147,6 +154,24 @@ describe("one report of an intimate image", () => {
       alert("op-one", "entry", entryId, dueAt),
       alert("op-two", "entry", entryId, dueAt),
     ]);
+  });
+
+  it("hides it past the report breaker's ceiling too (design 164)", async () => {
+    await opened("reports", REPORT_HIDES_FLOOR, nowSeconds());
+    const entryId = await entry();
+
+    const result = await fileReport(
+      {
+        reporterId: await makeUser(),
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "intimate",
+      },
+      oweInCore,
+    );
+
+    expect(result.hiddenPendingReview).toBe(true);
+    expect(await entryStatus(entryId)).toBe("hidden_pending_review");
   });
 
   it("hides a photo the same way, and the alert names a photo", async () => {
@@ -280,6 +305,27 @@ describe("the hourly reconcile, for an intimate report whose hide never landed",
       found: 0,
       hidden: 0,
     });
+  });
+
+  it("the sweep hides it past the report breaker's ceiling too (design 164)", async () => {
+    await opened("reports", REPORT_HIDES_FLOOR, nowSeconds());
+    const entryId = await entry();
+    await core()
+      .insert(reports)
+      .values({
+        id: newUlid(),
+        reporterId: await makeUser(),
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "intimate",
+        createdAt: nowSeconds(),
+      });
+
+    expect(await reconcileUnhiddenReports(oweInCore)).toStrictEqual({
+      found: 1,
+      hidden: 1,
+    });
+    expect(await entryStatus(entryId)).toBe("hidden_pending_review");
   });
 
   it("owes no alert for a subject over the bar on ordinary reasons", async () => {

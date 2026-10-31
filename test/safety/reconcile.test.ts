@@ -16,7 +16,14 @@ import {
   releaseStaleClaims,
 } from "../../src/modules/safety";
 
-import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
+import {
+  makeEntry,
+  makeRun,
+  makeUser,
+  opened,
+  resetSafetyTables,
+} from "./helpers";
+import { REPORT_HIDES_FLOOR } from "../../src/modules/safety/breakers";
 import { oweInCore } from "../queue-fakes";
 
 function core() {
@@ -80,6 +87,25 @@ describe("reconciling reports that crossed the threshold and were never hidden",
     expect(await statusOf(entryId)).toBe("hidden_pending_review");
     const queued = await pendingReviewQueue();
     expect(queued.map((row) => row.subjectId)).toStrictEqual([entryId]);
+  });
+
+  it("only queues at the report breaker's ceiling, and never comes back to hide it (design 164)", async () => {
+    await opened("reports", REPORT_HIDES_FLOOR, nowSeconds());
+    const entryId = await reportedButNotHidden();
+
+    expect(await reconcileUnhiddenReports(oweInCore)).toStrictEqual({
+      found: 1,
+      hidden: 0,
+    });
+    expect(await statusOf(entryId)).toBe("ok");
+    const queued = await pendingReviewQueue();
+    expect(queued.map((row) => row.subjectId)).toContain(entryId);
+
+    // Its queue row is the marker: the next sweep finds nothing to do.
+    expect(await reconcileUnhiddenReports(oweInCore)).toStrictEqual({
+      found: 0,
+      hidden: 0,
+    });
   });
 
   it("leaves a subject one report short alone", async () => {
