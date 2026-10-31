@@ -1496,6 +1496,10 @@ export const removedFingerprints = /*#__PURE__*/ sqliteTable(
   {
     id: text("id").primaryKey(),
     fingerprint: text("fingerprint").notNull(),
+    // The photo it was: a kit photo's id, or a garment's for its photo
+    // (design 157), so Review's REMOVED tile can name it (round 41 #84).
+    // The photo itself is gone. Null on rows kept before this column.
+    photoId: text("photo_id"),
     // The Remove or takedown that kept it.
     moderationActionId: text("moderation_action_id").notNull(),
     createdAt: integer("created_at").notNull(),

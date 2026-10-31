@@ -8,7 +8,7 @@ import {
   type GarmentMatchActionValues,
 } from "../inputs";
 import type { PhotoMatch, PhotoMatches as Found } from "../photo-matches";
-import type { RemovedMatch } from "../removed-fingerprints";
+import type { RemovedImage, RemovedMatch } from "../removed-fingerprints";
 import { PhotoSection } from "./OtherPhotos";
 import { RemovalDecision } from "./RemovalDecision";
 import { useSettled } from "./use-settled";
@@ -28,19 +28,27 @@ import { useSettled } from "./use-settled";
  * takedown instead (design 159). Each photo is served from
  * `/safety/review-photo/`.
  *
+ * **Removed images come first** (round 41 #84, round 42), on a row held
+ * on upload: one tile for each image removed as intimate within the match
+ * distance, nearest first. The image is never shown again, so the tile is
+ * an empty hairline frame reading REMOVED, with the photo's id, "{N} BITS
+ * · REMOVED {date}" and its owner. They count toward N.
+ *
  * Nothing renders on a row that does not search (`undefined`). A subject
  * with no fingerprint says so rather than "no matches", which would be a
  * claim the search never made; an empty state's kicker has no count.
  */
 export function PhotoMatches({
   found,
+  removed = [],
   decide,
 }: Readonly<{
   found: Found | undefined;
+  removed?: readonly RemovedImage[] | undefined;
   decide?: DecideMatch | undefined;
 }>): JSX.Element | undefined {
   if (found === undefined) return undefined;
-  const count = found.matches.length;
+  const count = removed.length + found.matches.length;
   return (
     <PhotoSection
       part="photo-matches"
@@ -50,7 +58,7 @@ export function PhotoMatches({
           : `Matching photos · any runner · ${String(count)}`
       }
     >
-      <Matches found={found} decide={decide} />
+      <Matches found={found} removed={removed} decide={decide} />
     </PhotoSection>
   );
 }
@@ -73,9 +81,11 @@ function matchKey(match: PhotoMatch): string {
  */
 function Matches({
   found,
+  removed,
   decide,
 }: Readonly<{
   found: Found;
+  removed: readonly RemovedImage[];
   decide: DecideMatch | undefined;
 }>): JSX.Element {
   const { remaining, settle } = useSettled(found.matches, matchKey);
@@ -87,7 +97,7 @@ function Matches({
       </span>
     );
   }
-  if (found.matches.length === 0) {
+  if (removed.length + found.matches.length === 0) {
     return (
       <span className="text-micro text-quiet">
         No matching photos from any runner.
@@ -96,6 +106,9 @@ function Matches({
   }
   return (
     <ul className="m-0 flex list-none flex-wrap gap-3 p-0">
+      {removed.map((image) => (
+        <RemovedTile key={image.keptId} image={image} />
+      ))}
       {remaining.map((match) => (
         <li key={match.photoKey} className="flex flex-col gap-1">
           <Thumbnail match={match} />
@@ -122,6 +135,33 @@ function Matches({
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * An image removed as intimate (round 41 #84): never shown again, so an
+ * empty frame the photos' size, reading REMOVED, then which photo it was,
+ * how near and when it went, and whose. Nothing opens from it: there is no
+ * kit to open and nothing left to take down.
+ */
+function RemovedTile({
+  image,
+}: Readonly<{ image: RemovedImage }>): JSX.Element {
+  return (
+    <li data-part="removed-tile" className="flex flex-col gap-1">
+      <span className="flex h-32 w-32 items-center justify-center border border-hairline text-quiet">
+        <Mono step="xs">Removed</Mono>
+      </span>
+      <span className="text-quiet">
+        <Mono step="xs">{nameOf(image)}</Mono>
+      </span>
+      <span className="text-quiet">
+        <Mono step="xs">
+          {`${bitsLabel(image.distance)} · removed ${monthDayLabel(image.removedAt)}`}
+        </Mono>
+      </span>
+      <Owner handle={image.handle} />
+    </li>
   );
 }
 
@@ -186,7 +226,7 @@ function Owner({
 /**
 A kit photo by its id, which the takedown form takes; a garment as one.
 */
-function nameOf(match: PhotoMatch): string {
+function nameOf(match: Pick<PhotoMatch, "kind" | "id">): string {
   return match.kind === "garment" ? `Garment ${match.id}` : match.id;
 }
 
@@ -223,24 +263,28 @@ function Thumbnail({ match }: Readonly<{ match: PhotoMatch }>): JSX.Element {
 }
 
 /**
- * Why a fingerprint row is here (D-147, design 152): the photo is a copy
- * of an image removed as intimate, removed on this day, this many bits
- * apart. The removed image itself is gone, so there is nothing to show
- * beside it but the facts.
- *
- * **Undesigned** (design deltas item 84): one line of text and mono, as
- * the handle-flagged row's "why here" line is. Nothing renders on any
- * other row.
+ * Why a held-on-upload row is here (D-147, round 41 #84): the photo is a
+ * close match to an image removed as intimate, removed on this day, this
+ * many bits apart — or the same image, at 0. "Copy" is not said: a match
+ * within 8 bits is a likeness, and the operator decides. Date and distance
+ * in MONO.xs, BODY otherwise, under the row's photo. Nothing renders on
+ * any other row.
  */
 export function RemovedMatchLine({
   match,
 }: Readonly<{ match: RemovedMatch | undefined }>): JSX.Element | undefined {
   if (match === undefined) return undefined;
+  const removed = <Mono step="xs">{monthDayLabel(match.removedAt)}</Mono>;
   return (
     <p data-part="removed-match" className="m-0 text-body">
-      A copy of an image removed as intimate on{" "}
-      <Mono step="xs">{monthDayLabel(match.removedAt)}</Mono>,{" "}
-      <Mono step="xs">{bitsLabel(match.distance)}</Mono> apart.
+      {match.distance === 0 ? (
+        <>The same image as one removed as intimate on {removed}.</>
+      ) : (
+        <>
+          A close match to an image removed as intimate on {removed},{" "}
+          <Mono step="xs">{bitsLabel(match.distance)}</Mono> apart.
+        </>
+      )}
     </p>
   );
 }

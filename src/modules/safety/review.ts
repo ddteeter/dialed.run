@@ -45,7 +45,7 @@ import type { ReportReason } from "./contracts";
 import { keptNotice, reporterNotices } from "./notices";
 import { otherPhotosOf, type OtherPhotos } from "./other-photos";
 import { photoMatchesOf, type PhotoMatches } from "./photo-matches";
-import { removedMatchesOf, type RemovedMatch } from "./removed-fingerprints";
+import { removedMatchesOf, type RemovedImage } from "./removed-fingerprints";
 import { heldPhotoStatus } from "./visibility";
 
 function db() {
@@ -225,10 +225,11 @@ export interface QueueRow {
   photoMatches?: PhotoMatches | undefined;
   /**
    * On a row a fingerprint match started (D-147, design 152): the removed
-   * image the photo is a copy of — when it was removed and how many bits
-   * apart. Absent on every other row, and on one whose photo is gone.
+   * images the photo is near, nearest first — which, whose, when each was
+   * removed and how many bits apart (round 41 #84, round 42). Absent on
+   * every other row, and on one whose photo is gone.
    */
-  removedMatch?: RemovedMatch | undefined;
+  removedMatches?: readonly RemovedImage[] | undefined;
   subject: QueueSubject;
 }
 
@@ -316,7 +317,7 @@ export async function pendingReviewQueue(limit = 100): Promise<QueueRow[]> {
     ...removalClock(row.firstAtOnce, now),
     otherPhotos: others.get(`${row.subjectType}:${row.subjectId}`),
     photoMatches: matches.get(`${row.subjectType}:${row.subjectId}`),
-    removedMatch: removed.get(row.subjectId),
+    removedMatches: removed.get(row.subjectId),
     subject: subjects.get(`${row.subjectType}:${row.subjectId}`) ?? {
       photoKeys: [],
     },

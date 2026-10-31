@@ -7,6 +7,7 @@ import {
   moderationActions,
   removedFingerprints,
   reviewQueue,
+  userProfiles,
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { entryPhotoIdOf } from "../../src/lib/entry-photo-key";
@@ -93,6 +94,7 @@ async function keptRows() {
   return core()
     .select({
       fingerprint: removedFingerprints.fingerprint,
+      photoId: removedFingerprints.photoId,
       moderationActionId: removedFingerprints.moderationActionId,
     })
     .from(removedFingerprints);
@@ -141,6 +143,7 @@ describe("a Remove for `intimate` keeps the fingerprints (D-147)", () => {
     expect(await keptRows()).toStrictEqual([
       {
         fingerprint: await fingerprintOfBytes(bytes),
+        photoId,
         moderationActionId: action?.id,
       },
     ]);
@@ -150,8 +153,8 @@ describe("a Remove for `intimate` keeps the fingerprints (D-147)", () => {
     const kit = await aKit();
     const one = await sceneJpeg(1);
     const two = await sceneJpeg(2);
-    await posted(one, kit);
-    await posted(two, kit);
+    const first = await posted(one, kit);
+    const second = await posted(two, kit);
     // A photo uploaded before fingerprints.
     await core().insert(entryPhotos).values({
       id: newUlid(),
@@ -167,6 +170,10 @@ describe("a Remove for `intimate` keeps the fingerprints (D-147)", () => {
       [await fingerprintOfBytes(one), await fingerprintOfBytes(two)].toSorted(
         byText,
       ),
+    );
+    // Each under its own photo's id, not the kit's (round 41 #84).
+    expect(rows.map((row) => row.photoId ?? "").toSorted(byText)).toStrictEqual(
+      [first.photoId, second.photoId].toSorted(byText),
     );
   });
 
@@ -242,8 +249,19 @@ describe("a copy of a removed image is held for review (D-147)", () => {
 
     const row = rows.find((r) => r.subjectId === again.photoId);
     expect(row?.source).toBe("fingerprint");
-    expect(row?.removedMatch?.distance).toBe(0);
-    expect(row?.removedMatch?.removedAt).toBeGreaterThan(0);
+    const [handle] = await core()
+      .select({ username: userProfiles.username })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, first.userId));
+    expect(row?.removedMatches).toMatchObject([
+      {
+        id: first.photoId,
+        kind: "kit",
+        handle: handle?.username,
+        distance: 0,
+      },
+    ]);
+    expect(row?.removedMatches?.[0]?.removedAt).toBeGreaterThan(0);
     expect(row?.photoMatches?.fingerprinted).toBe(true);
     expect(row?.otherPhotos).toBeDefined();
   });
@@ -263,7 +281,7 @@ describe("a copy of a removed image is held for review (D-147)", () => {
 
     const row = rows.find((r) => r.subjectId === again.photoId);
     expect(row?.source).toBe("classifier");
-    expect(row?.removedMatch).toBeUndefined();
+    expect(row?.removedMatches).toBeUndefined();
   });
 });
 
@@ -283,7 +301,7 @@ describe("removedMatchesOf", () => {
       .select({ fingerprint: entryPhotos.fingerprint })
       .from(entryPhotos)
       .where(eq(entryPhotos.id, near.photoId));
-    await aKept(nearRow?.fingerprint ?? "", 100);
+    await aKept(nearRow?.fingerprint ?? "", 100, { photoId: "ph-gone" });
 
     const found = await removedMatchesOf(core(), [
       near.photoId,
@@ -293,22 +311,125 @@ describe("removedMatchesOf", () => {
     ]);
 
     expect(found.size).toBe(2);
-    expect(found.get(near.photoId)).toStrictEqual({
-      distance: 0,
-      removedAt: 100,
+    expect(found.get(near.photoId)).toMatchObject([
+      { id: "ph-gone", distance: 0, removedAt: 100 },
+    ]);
+    expect(found.get(far.photoId)).toStrictEqual([]);
+  });
+
+  it("lists every removal in range, nearest first and the earliest of equals, and none past 8 bits", async () => {
+    const { photoId } = await printed("0000000000000000");
+    await aKept("000000000000000f", 300, { photoId: "ph-4" });
+    await aKept("0000000000000003", 200, { photoId: "ph-2b" });
+    await aKept("0000000000000003", 100, { photoId: "ph-2a" });
+    await aKept("00000000000001ff", 50, { photoId: "ph-9" });
+
+    const found = await removedMatchesOf(core(), [photoId]);
+
+    expect(found.get(photoId)?.map((image) => image.id)).toStrictEqual([
+      "ph-2a",
+      "ph-2b",
+      "ph-4",
+    ]);
+    expect(found.get(photoId)?.map((image) => image.distance)).toStrictEqual([
+      2, 2, 4,
+    ]);
+  });
+
+  it("names a garment as one, and whose it was", async () => {
+    const { photoId } = await printed("0000000000000000");
+    const ownerId = await makeUser({ username: "j_runs" });
+    await aKept("0000000000000000", 100, {
+      photoId: "g-1",
+      subjectType: "garment",
+      ownerId,
     });
-    expect(found.has(far.photoId)).toBe(true);
-    expect(found.get(far.photoId)).toBeUndefined();
+
+    const found = await removedMatchesOf(core(), [photoId]);
+    const [image] = found.get(photoId) ?? [];
+
+    expect(image).toMatchObject({
+      id: "g-1",
+      kind: "garment",
+      handle: "j_runs",
+    });
+  });
+
+  it("falls back to the Remove's subject for a row kept before the photo's id, with no handle for an owner without one", async () => {
+    const { photoId } = await printed("0000000000000000");
+    await aKept("0000000000000000", 100, {
+      isLegacy: true,
+      subjectId: "ph-old",
+      ownerId: newUlid(),
+    });
+
+    const found = await removedMatchesOf(core(), [photoId]);
+    const [image] = found.get(photoId) ?? [];
+
+    expect(image).toMatchObject({ id: "ph-old", kind: "kit" });
+    expect(image?.handle).toBeUndefined();
+    expect(image?.keptId).toEqual(expect.any(String));
   });
 });
 
-async function aKept(fingerprint: string, createdAt: number) {
-  await core().insert(removedFingerprints).values({
-    id: newUlid(),
-    fingerprint,
-    moderationActionId: newUlid(),
-    createdAt,
-  });
+/**
+A kit photo with a fingerprint written straight in, for the distances.
+*/
+async function printed(fingerprint: string) {
+  const kit = await aKit();
+  const photoId = newUlid();
+  await core()
+    .insert(entryPhotos)
+    .values({
+      id: photoId,
+      entryId: kit.entryId,
+      photoKey: `entries/${photoId}`,
+      position: 0,
+      fingerprint,
+    });
+  return { photoId };
+}
+
+/**
+ * A kept fingerprint and the Remove that kept it, as one batch writes
+ * them: Review reads the Remove for whose it was.
+ */
+async function aKept(
+  fingerprint: string,
+  createdAt: number,
+  of: Partial<{
+    photoId: string;
+    /**
+    Kept before the photo's id was: the column holds NULL.
+    */
+    isLegacy: boolean;
+    subjectType: "photo" | "garment";
+    subjectId: string;
+    ownerId: string;
+  }> = {},
+) {
+  const actionId = newUlid();
+  await core()
+    .insert(moderationActions)
+    .values({
+      id: actionId,
+      actorId: "rev",
+      action: "remove",
+      subjectType: of.subjectType ?? "photo",
+      subjectId: of.subjectId ?? newUlid(),
+      subjectOwnerId: of.ownerId,
+      reason: "intimate",
+      createdAt,
+    });
+  await core()
+    .insert(removedFingerprints)
+    .values({
+      id: newUlid(),
+      fingerprint,
+      photoId: of.isLegacy === true ? undefined : (of.photoId ?? newUlid()),
+      moderationActionId: actionId,
+      createdAt,
+    });
 }
 
 describe("removedMatchOf", () => {

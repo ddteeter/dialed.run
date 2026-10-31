@@ -533,6 +533,23 @@ async function upload(
   );
 }
 
+/**
+The Remove a kept fingerprint names: one batch writes both.
+*/
+async function anIntimateRemoval() {
+  const id = newUlid();
+  await core().insert(moderationActions).values({
+    id,
+    actorId: "rev",
+    action: "remove",
+    subjectType: "photo",
+    subjectId: newUlid(),
+    reason: "intimate",
+    createdAt: nowSeconds(),
+  });
+  return id;
+}
+
 function neverAsked() {
   return vi.fn<Classify>(() =>
     Promise.reject(new Error("a held photo is not screened")),
@@ -549,7 +566,7 @@ describe("a garment photo that copies a removed image is held (D-147, design 157
       .values({
         id: newUlid(),
         fingerprint: await fingerprintOfBytes(bytes),
-        moderationActionId: newUlid(),
+        moderationActionId: await anIntimateRemoval(),
         createdAt: nowSeconds(),
       });
     const garment = await closetGarment();
@@ -574,7 +591,7 @@ describe("a garment photo that copies a removed image is held (D-147, design 157
     expect(await allScreenings()).toStrictEqual([]);
     // The Review row says what it is a copy of.
     const [row] = await pendingReviewQueue();
-    expect(row?.removedMatch).toMatchObject({ distance: 0 });
+    expect(row?.removedMatches).toMatchObject([{ distance: 0 }]);
   });
 
   it("screens one that matches nothing, as before", async () => {

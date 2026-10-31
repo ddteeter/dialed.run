@@ -686,7 +686,7 @@ Board: `Round 41 Rulings.dc.html`. Amends round 27 #7 ("public" retired), round 
 - In MATCHING PHOTOS the removed original is an empty 1px --hairline frame reading REMOVED, with its id, "{N} BITS · REMOVED {date}" and owner. The image is never shown again.
 - The uploader sees [CHECKING] (round 38) and nothing else.
 
-**85 · Other sites (D-147).** Reworded: "If it's on other sites too, these free services can help stop it spreading: StopNCII.org if the person in it was 18 or over when it was taken, Take It Down if they were under 18. Each makes a fingerprint of the image on your own device; the image never leaves it." TYPE.small, --quiet, last in the body after a --hairline. On: the /takedown receipt, /takedown/confirm DONE, and W1's receipt after an intimate-image report (not under the reason while picking). Both names are links, new tab, with "(opens in a new tab)" in their accessible names.
+**85 · Other sites (D-147).** Reworded: "If it's on other sites too, these free services can help stop it spreading: StopNCII.org if the person in it was 18 or over when it was taken, Take It Down if they were under 18. Each makes a fingerprint of the image on your own device; the image never leaves it." TYPE.small, --quiet, last in the body after a --hairline. On: the /takedown receipt, /takedown/confirm DONE, and W1's receipt after an intimate-image report (not under the reason while picking; receipt drawn in round 42). Both names are links, new tab, with "(opens in a new tab)" in their accessible names.
 
 **86 · Public pages.**
 - (a) **Name: PUBLIC.** `world` = PUBLIC beside SHARED and PRIVATE, on the picker, the bracketed state label and Privacy. Picker (A3's share-toggle becomes a three-row radiogroup; D's Change opens it as a sheet): PRIVATE "Only you." · SHARED "Runners signed in to dialed.run." · PUBLIC "Anyone with the link, no sign-in. Never when or where you ran." While PUBLIC is picked, under the group: "Sites that already showed a preview of the link, like Reddit, iMessage or Slack, keep their own copy. Making it shared or private later can't take that back." D owner meta for a public kit: "Public: anyone with the link can see it." with Copy link (the /k URL) and Change. Unconfirmed runners stay held at PRIVATE. Strings that change: H empty "No public entries yet." → "No shared runs yet."; any legal "public" meaning signed-in → "shared with runners on dialed.run"; /privacy gains "What anyone can see" (for legal review). D-58's signed-out /feed/entry page is unchanged.
@@ -702,3 +702,28 @@ Board: `Round 41 Rulings.dc.html`. Amends round 27 #7 ("public" retired), round 
 - G8 · **Failed import tap.** §4a NOT IMPORTED · "Garmin didn't answer. Nothing was imported." · Try again (same tap), in the load-failure band's slot above the rows. Tapped row returns to idle; status region; focus unchanged.
 - G9 · **Parsed card strip.** "PARSED · FROM GARMIN". No date, distance or time. REPLACE kept, returns to the import chooser.
 - G10 · **Credit on D.** Confirmed: first line under the title, above the date/distance strip.
+
+## Round 42 · Items 88–92
+Board: `Round 42 Rulings.dc.html`. Amends round 41 #86b (no handle; PUBLIC unavailable), #86c (bar), #86d (rail width, type words).
+
+**88 · Garment photo on Review (C17).** The kit photo's content row: kicker "GARMENT PHOTO · {id} · @{owner}" + source tag, the photo at F's card size, then a MONO.xs line "{closet name} · {CATEGORY} · {state}". MATCHING PHOTOS and decision bar as the kit row. CSAM confirm: "Remove this garment photo everywhere and keep the evidence for the report?" (round 29's second line unchanged). Remove tells the owner, confirmed as worded: bell "We removed the photo of one of your garments. Reason: {reason}." (opens F); email "We removed a photo from your closet", content-removed layout, ending "The garment stays in your closet." A CSAM removal sends neither.
+
+**89 · Garment match takedown (R-167).** Not on the tile. A garment tile in MATCHING PHOTOS gets a 44-high "Decide" link (Close while open); the garment bar without Approve (Why it comes down · Remove · Remove as suspected CSAM, its question in place) opens full width under the grid, kicker "DECIDE · GARMENT PHOTO · {id} · @{owner}", the tile ringed (§06). One open at a time. Decided: tile and bar leave, count drops, focus to the next garment tile's Decide or the MATCHING PHOTOS kicker. Kit tiles unchanged.
+
+**90 · /k/<id>.**
+- Desk: one column, 620 measure, centred; the bar runs the page width. Confirmed.
+- Bar: bracketed wordmark at every width; one slot as 86c, in pill form: hairline "Log in" signed out, ink "Open in the app" signed in. Never both.
+- Piece kind: the closet's TYPE chip, the category word when a piece has none (same rule as 91).
+- Linked piece: domain beside it, as ProductLink. TIME when the run has no moving time. Share card sky word in teal. Confirmed.
+
+**91 · /@handle.** Confirmed: credit once under the kit list (after Show N more) when any row shows a reading; empty rotation groups left out (all empty = no Rotation); names without brand; TYPE chip, else category; desk rail is DS1's 1fr, bar and foot to the page measure; invite closes the primary column under the kits at the desk, after Rotation on the phone. Mileage: whole number in the runner's unit, private runs included, MONO caps "412 MI".
+
+**92 · Privacy words.**
+- Legend "Who sees new runs", the group's MONO.xs kicker. Confirmed.
+- PUBLIC while the profile is off: not disabled; absent, with 86b's line in its place (rule 07).
+- No handle yet: no switch. Kicker PUBLIC PROFILE; "A public profile lives at your username. Pick one first." + "Pick a username" (the username sheet). On save, 86b's switch.
+
+**84 · 85 follow-ups (round 42).**
+- W1 receipt, intimate-image reports only: on send the sheet swaps in place (no toast). Kicker REPORT SENT; head "Thanks for telling us."; body "It's hidden from everyone now. We'll review it today and keep it down if it breaks the rule."; --hairline; 85's line last; Done (ink, 52). Focus to the head; Done/Esc/scrim close, focus to the next item on the page, else the page heading. Other reasons keep "Report sent." toast. Way-out line stays under the reason.
+- MATCHING PHOTOS: one REMOVED tile per removal within 8 bits, nearest first; the line names the nearest only.
+- Inline links: bold ink, underlined, everywhere, including 85's two names. Round 41 board's accent links superseded.

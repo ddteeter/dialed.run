@@ -13,12 +13,23 @@
  * distance (design 146). The table holds removed images only, so it stays
  * small while the photo tables grow.
  */
-import { and, asc, inArray, isNotNull, lte, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  inArray,
+  isNotNull,
+  lte,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import {
   entryPhotos,
+  moderationActions,
   removedFingerprints,
+  userProfiles,
   wardrobeItems,
 } from "../../db/schema-core";
 import { newUlid } from "../../lib/ids";
@@ -53,13 +64,13 @@ export function keptFingerprints(
       // Minted in SQL, one per photo: an `INSERT … SELECT` has nowhere to
       // mint one in code per row, and nothing sorts these ids.
       id: sql<string>`lower(hex(randomblob(16)))`.as(into.id.name),
-      fingerprint: sql<string>`${entryPhotos.fingerprint}`.as(
-        into.fingerprint.name,
+      fingerprint: filling<string>(into.fingerprint, entryPhotos.fingerprint),
+      photoId: filling<string>(into.photoId, entryPhotos.id),
+      moderationActionId: filling<string>(
+        into.moderationActionId,
+        moderationActionId,
       ),
-      moderationActionId: sql<string>`${moderationActionId}`.as(
-        into.moderationActionId.name,
-      ),
-      createdAt: sql<number>`${nowSeconds()}`.as(into.createdAt.name),
+      createdAt: filling<number>(into.createdAt, nowSeconds()),
     })
     .from(entryPhotos)
     .where(and(photosInScope, isNotNull(entryPhotos.fingerprint)));
@@ -67,22 +78,32 @@ export function keptFingerprints(
 }
 
 /**
+A value selected under the name of the column it fills.
+*/
+function filling<T>(column: Readonly<{ name: string }>, value: unknown) {
+  return sql<T>`${value}`.as(column.name);
+}
+
+/**
  * A garment's photo's fingerprint, kept when a person removes it as an
- * intimate image (R-167, design 159), as a kit photo's is. The garment was
- * read before the batch, so its one fingerprint is a value here rather
- * than a select. None kept for another reason, or with no fingerprint.
+ * intimate image (R-167, design 159), as a kit photo's is, under the
+ * garment's id. The garment was read before the batch, so its one
+ * fingerprint is a value here rather than a select. None kept for another
+ * reason, or with no fingerprint.
  */
 export function keptGarmentFingerprint(
   db: Db,
   reason: RemovalReason,
-  fingerprint: string | null,
+  item: Readonly<{ id: string; photoFingerprint: string | null }>,
   moderationActionId: string,
 ) {
+  const fingerprint = item.photoFingerprint;
   if (reason !== "intimate" || fingerprint === null) return [];
   return [
     db.insert(removedFingerprints).values({
       id: newUlid(),
       fingerprint,
+      photoId: item.id,
       moderationActionId,
       createdAt: nowSeconds(),
     }),
@@ -103,30 +124,60 @@ export async function removedMatchOf(
   db: Db,
   fingerprint: string,
 ): Promise<RemovedMatch | undefined> {
-  // Parsed, not trusted: it is spelt into the SQL.
-  const own = [fingerprintSchema.parse(fingerprint)];
-  const distance = nearestOf(removedFingerprints.fingerprint, own);
+  const near = keptNear(fingerprint);
   const [nearest] = await db
-    .select({
-      distance: sql<number>`${distance}`.mapWith(Number),
-      removedAt: removedFingerprints.createdAt,
-    })
+    .select({ distance: near.distance, removedAt: removedFingerprints.createdAt })
     .from(removedFingerprints)
-    .where(lte(distance, FINGERPRINT_MATCH_DISTANCE))
-    .orderBy(asc(distance), asc(removedFingerprints.createdAt))
+    .where(near.within)
+    .orderBy(...near.nearestFirst)
     .limit(1);
   return nearest;
 }
 
 /**
- * The nearest removed image for each held photo on a page of Review rows,
- * by photo id; `undefined` for one with none near. A photo gone since, or
- * with no fingerprint, is not read at all, so the map has no entry for it.
+ * The pieces of a read of the kept fingerprints near `fingerprint`: the
+ * distance as a number, the filter to the match distance, and the order,
+ * nearest first and the earliest of equals.
+ */
+function keptNear(fingerprint: string) {
+  // Parsed, not trusted: it is spelt into the SQL.
+  const own = [fingerprintSchema.parse(fingerprint)];
+  const bits = nearestOf(removedFingerprints.fingerprint, own);
+  return {
+    distance: sql<number>`${bits}`.mapWith(Number),
+    within: lte(bits, FINGERPRINT_MATCH_DISTANCE),
+    nearestFirst: [asc(bits), asc(removedFingerprints.createdAt)] as const,
+  };
+}
+
+/**
+ * A removed image near a held photo, as Review's REMOVED tile names it
+ * (round 41 #84, round 42): which photo it was — a kit photo, or a garment
+ * by the garment's id — and whose, by @handle when they have one. The
+ * image itself is never shown again.
+ */
+export type RemovedImage = RemovedMatch &
+  Readonly<{
+    /**
+    The kept row: one image removed twice is two rows with one photo id.
+    */
+    keptId: string;
+    id: string;
+    kind: "kit" | "garment";
+    handle: string | undefined;
+  }>;
+
+/**
+ * Every removed image within the match distance of each held photo on a
+ * page of Review rows, nearest first (round 42: a second removal in range
+ * is a repeat upload, and the operator sees it), by photo id. A photo
+ * gone since, or with no fingerprint, is not read at all, so the map has
+ * no entry for it; one with nothing near has an empty list.
  */
 export async function removedMatchesOf(
   db: Db,
   photoIds: readonly string[],
-): Promise<Map<string, RemovedMatch | undefined>> {
+): Promise<Map<string, readonly RemovedImage[]>> {
   // A kit photo by its id, or a garment's photo by the garment's (design
   // 157): ids are ULIDs, so one list serves both tables. Each fingerprint
   // is typed as present: its `WHERE` keeps no row without one.
@@ -152,8 +203,47 @@ export async function removedMatchesOf(
   const answers = await Promise.all(
     photos.map(
       async (photo) =>
-        [photo.id, await removedMatchOf(db, photo.fingerprint)] as const,
+        [photo.id, await removedImagesNear(db, photo.fingerprint)] as const,
     ),
   );
   return new Map(answers);
+}
+
+/**
+ * The kept fingerprints within the match distance of `fingerprint`,
+ * nearest first and the earliest of equals, each with the Remove that
+ * kept it: its subject names the photo where the kept row has no id of
+ * its own, and its owner gives the handle. A kept row always has its
+ * Remove (one batch writes both, and one sweeps both).
+ */
+async function removedImagesNear(
+  db: Db,
+  fingerprint: string,
+): Promise<RemovedImage[]> {
+  const near = keptNear(fingerprint);
+  const rows = await db
+    .select({
+      distance: near.distance,
+      removedAt: removedFingerprints.createdAt,
+      keptId: removedFingerprints.id,
+      id: sql<string>`coalesce(${removedFingerprints.photoId}, ${moderationActions.subjectId})`,
+      subjectType: moderationActions.subjectType,
+      handle: userProfiles.username,
+    })
+    .from(removedFingerprints)
+    .innerJoin(
+      moderationActions,
+      eq(moderationActions.id, removedFingerprints.moderationActionId),
+    )
+    .leftJoin(
+      userProfiles,
+      eq(userProfiles.userId, moderationActions.subjectOwnerId),
+    )
+    .where(near.within)
+    .orderBy(...near.nearestFirst);
+  return rows.map(({ subjectType, handle, ...row }) => ({
+    ...row,
+    kind: subjectType === "garment" ? "garment" : "kit",
+    handle: handle ?? undefined,
+  }));
 }
