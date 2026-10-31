@@ -9,6 +9,7 @@
  */
 import { leafRouteIds, routeMatcher } from "../../lib/route-ids";
 import { captureException } from "./sentry";
+import { recordServerTiming } from "./vitals";
 
 /**
 TanStack Start's prefix for a server function call.
@@ -70,6 +71,11 @@ export interface TimingDeps {
   readonly name: RequestNamer;
   readonly now: () => number;
   readonly log: (line: TimingLine) => void;
+  /**
+   * Keeps the line past Workers Logs' 7 days, in Analytics Engine. Never
+   * throws (`recordServerTiming`).
+   */
+  readonly record: (line: TimingLine) => void;
 }
 
 /**
@@ -83,25 +89,29 @@ export async function timeRequest(
   deps: TimingDeps,
 ): Promise<Response> {
   const started = deps.now();
-  const line = (status: number): TimingLine => ({
-    kind: "timing",
-    route: deps.name(new URL(request.url).pathname),
-    method: request.method,
-    status,
-    ms: deps.now() - started,
-  });
+  const finish = (status: number): void => {
+    const line: TimingLine = {
+      kind: "timing",
+      route: deps.name(new URL(request.url).pathname),
+      method: request.method,
+      status,
+      ms: deps.now() - started,
+    };
+    deps.log(line);
+    deps.record(line);
+  };
   try {
     const response = await respond();
-    deps.log(line(response.status));
+    finish(response.status);
     return response;
   } catch (error) {
-    deps.log(line(500));
+    finish(500);
     throw error;
   }
 }
 
 /**
- * The real clock and log. An object rather than a string: Workers Logs
+ * The real clock, log and dataset. An object rather than a string: Workers Logs
  * indexes a logged object's fields, which is what the Query Builder groups
  * and charts by.
  */
@@ -111,6 +121,9 @@ export function timingDeps(name: RequestNamer): TimingDeps {
     now: () => Date.now(),
     log: (line) => {
       console.log(line);
+    },
+    record: (line) => {
+      recordServerTiming(line);
     },
   };
 }

@@ -10,6 +10,8 @@ import {
 import {
   MAX_VITALS_BYTES,
   receiveVitals,
+  recordServerTiming,
+  serverDataPoint,
   toDataPoints,
   vitalsDepsFromEnv,
   type VitalsDeps,
@@ -30,6 +32,10 @@ const payload = (overrides: Record<string, unknown> = {}) => ({
   device: "narrow",
   metrics: [lcp],
   ...overrides,
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 const parse = (value: unknown) => vitalsPayloadSchema.safeParse(value);
@@ -365,10 +371,6 @@ function nothing(): void {
 }
 
 describe("vitalsDepsFromEnv", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it("writes to the dataset and stamps the version the bindings give", () => {
     const points: AnalyticsEngineDataPoint[] = [];
     const deps = vitalsDepsFromEnv({
@@ -413,5 +415,74 @@ describe("vitalsDepsFromEnv", () => {
     expect(() => {
       deps.write({ indexes: ["/"], blobs: ["nav"], doubles: [1] });
     }).not.toThrow();
+  });
+});
+
+describe("serverDataPoint", () => {
+  const timing = { route: "/runs/$runId", method: "POST", status: 201, ms: 87 };
+
+  it("writes a server point: method, status class and deploy in the blobs, ms in the double", () => {
+    expect(serverDataPoint(timing, "v-3")).toEqual({
+      indexes: ["/runs/$runId"],
+      blobs: ["server", "POST", "2xx", "v-3"],
+      doubles: [87],
+    });
+  });
+
+  it("names each status by its class", () => {
+    const classes = [100, 200, 299, 301, 404, 499, 500, 503].map(
+      (status) => serverDataPoint({ ...timing, status }, "v").blobs?.[2],
+    );
+    expect(classes).toEqual([
+      "1xx",
+      "2xx",
+      "2xx",
+      "3xx",
+      "4xx",
+      "4xx",
+      "5xx",
+      "5xx",
+    ]);
+  });
+
+  it("cuts an index to the 96 bytes Analytics Engine keeps", () => {
+    const long = `serverFn:${"a".repeat(120)}`;
+    expect(serverDataPoint({ ...timing, route: long }, "v").indexes).toEqual([
+      long.slice(0, 96),
+    ]);
+    const exact = "b".repeat(96);
+    expect(serverDataPoint({ ...timing, route: exact }, "v").indexes).toEqual([
+      exact,
+    ]);
+  });
+});
+
+describe("recordServerTiming", () => {
+  const timing = { route: "/", method: "GET", status: 200, ms: 5 };
+
+  it("writes the server point with the deploy's version", () => {
+    const deps = fakeDeps();
+    recordServerTiming(timing, deps);
+    expect(deps.points).toEqual([serverDataPoint(timing, "v-9")]);
+    expect(deps.reports).toEqual([]);
+  });
+
+  it("reports a dataset that throws, and does not throw itself", () => {
+    const failure = new Error("binding down");
+    const deps = fakeDeps(() => {
+      throw failure;
+    });
+    expect(() => {
+      recordServerTiming(timing, deps);
+    }).not.toThrow();
+    expect(deps.reports).toEqual([failure]);
+  });
+
+  it("writes to the Worker's own dataset by default", () => {
+    const write = vi.spyOn(env.VITALS, "writeDataPoint");
+    recordServerTiming(timing);
+    expect(write).toHaveBeenCalledWith(
+      serverDataPoint(timing, env.CF_VERSION_METADATA.id),
+    );
   });
 });

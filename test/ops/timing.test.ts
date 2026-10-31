@@ -7,6 +7,7 @@ import {
   type TimingDeps,
   type TimingLine,
 } from "../../src/modules/ops/timing";
+import { env } from "../../src/env";
 
 /**
 A route tree in the shape `routeTree.gen.ts` leaves at runtime.
@@ -83,17 +84,23 @@ describe("requestNamer", () => {
  */
 function fakeDeps(): TimingDeps & {
   lines: TimingLine[];
+  recorded: TimingLine[];
   tick: (ms: number) => void;
 } {
   let now = 1000;
   const lines: TimingLine[] = [];
+  const recorded: TimingLine[] = [];
   return {
     name: requestNamer(tree),
     now: () => now,
     log: (line) => {
       lines.push(line);
     },
+    record: (line) => {
+      recorded.push(line);
+    },
     lines,
+    recorded,
     tick: (ms) => {
       now += ms;
     },
@@ -122,6 +129,7 @@ describe("timeRequest", () => {
         ms: 42,
       },
     ]);
+    expect(deps.recorded).toEqual(deps.lines);
   });
 
   it("logs a request that throws as a 500 and lets the error through", async () => {
@@ -140,6 +148,7 @@ describe("timeRequest", () => {
     expect(deps.lines).toEqual([
       { kind: "timing", route: "/", method: "GET", status: 500, ms: 7 },
     ]);
+    expect(deps.recorded).toEqual(deps.lines);
   });
 });
 
@@ -160,6 +169,22 @@ describe("timingDeps", () => {
   it("reads the real clock in milliseconds", () => {
     vi.spyOn(Date, "now").mockReturnValue(123_456);
     expect(timingDeps(requestNamer(tree)).now()).toBe(123_456);
+  });
+
+  it("records the line in the dataset, stamped with the deploy", () => {
+    const write = vi.spyOn(env.VITALS, "writeDataPoint");
+    timingDeps(requestNamer(tree)).record({
+      kind: "timing",
+      route: "/runs/$runId",
+      method: "GET",
+      status: 200,
+      ms: 12,
+    });
+    expect(write).toHaveBeenCalledWith({
+      indexes: ["/runs/$runId"],
+      blobs: ["server", "GET", "2xx", env.CF_VERSION_METADATA.id],
+      doubles: [12],
+    });
   });
 
   it("keeps the namer it was given", () => {

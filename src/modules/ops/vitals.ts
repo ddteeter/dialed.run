@@ -9,6 +9,11 @@
  * - double1: the value; double2–5: the metric's attribution parts, in
  *   `VITAL_METRICS`' order.
  *
+ * The server's own timing (design 165, part 2) goes to the same dataset as
+ * a `server` point, with its own meanings for the same positions: blob2
+ * the method, blob3 the status class, double1 the milliseconds. Every
+ * query filters on blob1, so the two never mix.
+ *
  * `vitals-queries.ts` reads them back by these positions; the layout test
  * pins the two together.
  */
@@ -29,6 +34,55 @@ export function toDataPoints(
     blobs: [metric.name, payload.navigationType, payload.device, version],
     doubles: [metric.value, ...metric.parts],
   }));
+}
+
+/**
+ * Analytics Engine's limit on an index: a point over it is not recorded.
+ * A route id is held to it by the beacon's schema; a server function's
+ * id is not, so it is cut here (ASCII, so characters are bytes).
+ */
+const MAX_INDEX_BYTES = 96;
+
+/**
+ * One request as `timing.ts` measured it.
+ */
+export interface ServerTiming {
+  readonly route: string;
+  readonly method: string;
+  readonly status: number;
+  readonly ms: number;
+}
+
+export function serverDataPoint(
+  timing: ServerTiming,
+  version: string,
+): AnalyticsEngineDataPoint {
+  return {
+    indexes: [timing.route.slice(0, MAX_INDEX_BYTES)],
+    blobs: [
+      "server",
+      timing.method,
+      `${String(Math.floor(timing.status / 100))}xx`,
+      version,
+    ],
+    doubles: [timing.ms],
+  };
+}
+
+/**
+ * Writes a request's timing to the dataset. A dataset that throws is
+ * reported and goes no further: timing a request must never fail it
+ * (law 5).
+ */
+export function recordServerTiming(
+  timing: ServerTiming,
+  deps: Pick<VitalsDeps, "write" | "version" | "report"> = vitalsDepsFromEnv(),
+): void {
+  try {
+    deps.write(serverDataPoint(timing, deps.version));
+  } catch (error) {
+    deps.report(error);
+  }
 }
 
 /**
