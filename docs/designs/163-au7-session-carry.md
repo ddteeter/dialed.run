@@ -33,16 +33,24 @@ come back.
   terms refusal. A form without `carry`, or with no provider above it (a
   test), keeps the band.
 
-**No form passes `carry` yet**, so nothing a runner sees changes in this PR.
-Turning a form on is one line, but it would make the notice's _"What you
-entered is kept."_ untrue: restoring the contents is not built (open
-question 1).
+- **Every signed-in form passes `carry`** (D-151): run forms `run`,
+  the garment form `garment`, settings forms `settings`, and every other
+  signed-in form `page`, which the notice says as "back where you were".
+  `HandleForm` takes the noun as a prop, because it is both O0 (`page`)
+  and Settings › Username (`settings`). Signed-out forms (log-in, sign-up,
+  forgot and reset password, request access, unsubscribe, `/takedown` and
+  its confirm) pass none.
+- Au7's notice: "Log in and you're back on your {noun}." or "Log in and
+  you're back where you were.", then "What you typed wasn't kept." Nothing
+  is restored.
 
 ## Contract touches
 
 - Schema: **none**. Bindings/queues/crons: **none**. Routes: none new.
 - `signedInQuery`'s result gains `email`.
-- Screens: Au7 (sending half). No new copy.
+- Screens: Au7. The notice's second sentence, and its generic variant,
+  differ from the board: design-deltas item 93.
+- `carriedFormSchema` gains `page`.
 
 ## Test plan
 
@@ -52,15 +60,24 @@ question 1).
 - ui: `carried-email` write/read (refused storage, a non-email dropped).
 - Existing `auth-page.dom.test.tsx` and `system-state.dom.test.tsx` stay
   green with the moved key and nouns.
+- ui: the notice for each noun and for `page` (`auth-page.dom.test.tsx`);
+  `manual-run-form.dom.test.tsx` drives a lapsed save through the real
+  root answer to log-in; every other form's test reads the noun it hands
+  `useFormSubmit` (`test/ui/carry-spy.ts`), and the signed-out forms'
+  read none.
+- e2e: Au7's conformance spec allows the one sentence D-151 changes; the
+  auth demo records a lapse mid-form, log-in, and the return.
 
 ## Open questions
 
-1. **Restore the form, or change the notice?** Restoring needs each form to
-   hand its values to the carry and take them back (forms in `runs`,
-   `closet`, `onboarding`, `account`), a rule for a photo mid-upload, and
-   the runner's typed text (notes) in session storage. The owner declined
-   the same restore for the terms refusal (D-96 / D-102, round 29) and
-   chose a line saying what was not kept. Recommendation: the D-102 shape —
-   carry the route and the email, and the notice says the entry was not
-   kept (owner's wording).
-2. Which forms carry, and with which noun? The board names three.
+Both answered by the owner, 2026-10-31 (D-151):
+
+1. **Restore the form, or change the notice?** Change the notice, the
+   D-96 / D-102 shape: carry the route and the email, and say "What you
+   typed wasn't kept." Restoring would need each form to hand its values
+   to the carry and take them back (forms in `runs`, `closet`,
+   `onboarding`, `account`), a rule for a photo mid-upload, and the
+   runner's typed text (notes) in session storage.
+2. **Which forms carry, and with which noun?** Every signed-in form. Run,
+   garment and settings forms keep the board's nouns; the rest say "back
+   where you were" rather than a noun invented per form.
