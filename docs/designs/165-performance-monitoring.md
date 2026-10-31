@@ -40,8 +40,8 @@ one screen.
 **Data-point layout** (`VITALS`):
 
 - index1: route id
-- blobs: metric, rating (good / needs-improvement / poor), navigation type,
-  device (`narrow` below 768px, `wide` otherwise), deploy version
+- blobs: metric, navigation type, device (`narrow` below 768px, `wide`
+  otherwise), deploy version (stamped by the server)
 - doubles: value, then up to four attribution sub-parts. LCP: TTFB, load
   delay, load time, render delay. INP: input delay, processing time,
   presentation delay.
@@ -58,8 +58,7 @@ queries.
 - it requires `Sec-Fetch-Site: same-origin`;
 - it parses with zod: at most 20 metrics, each name from an enum, each
   value finite and inside a per-metric range;
-- it checks that the route id exists. The set is derived from `routeTree`,
-  never listed by hand, and a test pins it;
+- it checks the route id's shape (see Deltas);
 - it is rate-limited at the zone: `/api/vitals` joins the WAF
   rate-limiting rules in `deployment-plan.md` §7. That needs no binding,
   and the Worker never sees the IP;
@@ -120,6 +119,7 @@ one failure doesn't stop the rest (the design 162 shape).
 - New route file: `src/routes/api/vitals.ts`
 - **New bindings (owner, `wrangler.jsonc`)**:
   - `analytics_engine_datasets` with `VITALS`, dataset `dialed_vitals`;
+  - `version_metadata` with `CF_VERSION_METADATA`, for the deploy version;
   - `observability.traces.enabled`.
 - **Zone (owner)**: a WAF rate-limiting rule for `/api/vitals`, 60 a
   minute per IP.
@@ -173,6 +173,28 @@ Each step is one commit and passes the commit gate.
     diagram, the deployment checklists (secret, binding, WAF rule, the
     tracing line, the dashboard setup in §8), and the example queries in
     `deployment.md`.
+
+## Deltas
+
+Recorded as the build found them.
+
+- **The route id's shape is checked, not whether it exists.** The real list
+  can only be read where `routeTree` is, which is `server.ts`, and the
+  endpoint is a route. An existence check would also not stop the abuse
+  that matters: a forged slow value for a real route. The WAF rate limit
+  and the detector's `MIN_N` are the defence.
+- **No rating blob.** A rating (good / poor) follows from the value and
+  the thresholds, so the queries derive it rather than store a second
+  copy.
+- **The deploy version is the server's**, from a `version_metadata`
+  binding, never the client's claim. A tab left open across a deploy
+  reports for the new version for a few minutes; that is accepted.
+- **Server functions log as `serverFn:<hash>`.** In production TanStack
+  names a server function by a sha256 of its file and export. A readable
+  name would need `generateFunctionId` in `vite.config.ts`, which is
+  human-managed.
+- **The matcher found a bug of its own design:** an exact route must beat
+  a splat that matches it with nothing left over (`/feed` over `/feed/$`).
 
 ## Test plan
 
