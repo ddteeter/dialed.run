@@ -67,6 +67,7 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   const sharedRunId = newUlid();
   const sharedEntryId = newUlid();
   const garmentId = newUlid();
+  const stuckGarmentId = newUlid();
 
   // One runner with one reported public entry. Scoped to ids generated
   // here — never a bare delete of these tables.
@@ -172,6 +173,26 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
       source: "classifier",
       status: "pending",
       createdAt: now - 1200,
+    });
+    // A garment photo still pending a day after upload whose file is not
+    // in storage (D-153, design 167): what the screening sweep sends.
+    await core.insert(wardrobeItems).values({
+      id: stuckGarmentId,
+      userId: authorId,
+      category: "top",
+      name: "Lost tee",
+      origin: "manual",
+      photoKey: `items/${authorId}/${stuckGarmentId}/${newUlid()}`,
+      visibility: "pending",
+      createdAt: now - 2 * 86_400,
+    });
+    await core.insert(reviewQueue).values({
+      id: newUlid(),
+      subjectType: "garment",
+      subjectId: stuckGarmentId,
+      source: "missing_file",
+      status: "pending",
+      createdAt: now - 1000,
     });
     // A handle the hourly re-check flagged after it was claimed (D-97),
     // waiting behind the reported entry.
@@ -323,6 +344,29 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   await expect(
     page.getByRole("listitem").filter({ hasText: garmentId }),
   ).toHaveCount(0);
+
+  // D-153 (design 167): a photo still pending a day after upload is on
+  // Review, saying which failure it is; a missing file draws no photo.
+  await scene(page, "Review: a photo still unscreened a day on, file missing");
+  const stuckRow = page
+    .getByRole("listitem")
+    .filter({ hasText: `garment photo · ${stuckGarmentId}` });
+  await expect(stuckRow.getByText("[file missing]")).toBeVisible();
+  await expect(
+    stuckRow.getByText(
+      "Uploaded over a day ago, and its file is not in storage, so it cannot be screened or shown. Nobody but its owner sees it while it waits.",
+    ),
+  ).toBeVisible();
+  await expect(stuckRow.getByRole("img")).toHaveCount(0);
+  // Not decided here (design 167's open question: what a decision on a
+  // missing file should do), so settled behind the page, scoped to its id,
+  // rather than left waiting in the local queue.
+  await withLocalDb(async ({ core }) => {
+    await core
+      .update(reviewQueue)
+      .set({ status: "removed", resolvedAt: nowSeconds() })
+      .where(eq(reviewQueue.subjectId, stuckGarmentId));
+  });
 
   // Round 35 #45: a flagged handle's row says why it is there, and offers
   // Keep and Rename rather than Approve and Remove.

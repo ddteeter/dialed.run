@@ -59,7 +59,32 @@ const SOURCE_TAGS: Readonly<Record<ReviewSource, string>> = {
   reports: "reports",
   classifier: "classifier",
   fingerprint: "held on upload",
+  unscreened: "not screened in a day",
+  missing_file: "file missing",
 };
+
+/**
+ * Why a stuck photo is here (D-153, design 167), where a reported row
+ * lists what the reporters said: nobody reported it, and "Nobody reported
+ * this" would leave the reviewer guessing why they are looking. The two
+ * say which failure it is, because they want different things — a photo
+ * the classifier never answered for can be looked at, and one whose file
+ * is gone cannot.
+ */
+const STUCK_LINES: Readonly<Partial<Record<ReviewSource, string>>> = {
+  unscreened:
+    "Uploaded over a day ago and still not screened: the classifier has not answered for it. Nobody but its owner sees it while it waits.",
+  missing_file:
+    "Uploaded over a day ago, and its file is not in storage, so it cannot be screened or shown. Nobody but its owner sees it while it waits.",
+};
+
+/**
+ * The photos a row shows: none for a missing file, whose frame would only
+ * be an image that failed to load.
+ */
+function photosShown(row: QueueRow): readonly string[] {
+  return row.source === "missing_file" ? [] : row.subject.photoKeys;
+}
 
 /**
  * The photos a reviewer is being asked about.
@@ -260,6 +285,23 @@ function HandleDecision({
 const HANDLE_FLAGGED_LINE =
   "The hourly re-check flagged a handle this runner already has. Nothing is hidden while it waits.";
 
+/**
+ * Why the row is here: a flagged handle's or a stuck photo's sentence, or
+ * what the reporters said.
+ */
+function WhyHere({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
+  const line =
+    row.subject.handleFlagged === true
+      ? HANDLE_FLAGGED_LINE
+      : STUCK_LINES[row.source];
+  if (line === undefined) return <ReportedFor row={row} />;
+  return (
+    <p data-part="why-here" className="m-0 text-body">
+      {line}
+    </p>
+  );
+}
+
 function rowKind(row: QueueRow): string {
   return row.subject.handleFlagged === true
     ? "handle · re-check"
@@ -329,7 +371,7 @@ function ReviewRow({
           </span>
         )}
       </span>
-      <ReportedPhotos keys={row.subject.photoKeys} />
+      <ReportedPhotos keys={photosShown(row)} />
       <RemovedMatchLine match={row.removedMatches?.[0]} />
       <OtherPhotos others={row.otherPhotos} />
       <PhotoMatches
@@ -337,13 +379,7 @@ function ReviewRow({
         removed={row.removedMatches}
         decide={decideMatch}
       />
-      {row.subject.handleFlagged === true ? (
-        <p data-part="why-here" className="m-0 text-body">
-          {HANDLE_FLAGGED_LINE}
-        </p>
-      ) : (
-        <ReportedFor row={row} />
-      )}
+      <WhyHere row={row} />
       <span className="text-micro text-quiet">
         <Bracketed>{SOURCE_TAGS[row.source]}</Bracketed>
       </span>
