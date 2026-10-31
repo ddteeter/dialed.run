@@ -20,6 +20,7 @@
 import { readFile } from "node:fs/promises";
 
 import { and, eq, inArray } from "drizzle-orm";
+import { ulid } from "ulidx";
 import { z } from "zod";
 
 import { user } from "../../src/db/schema-auth";
@@ -120,7 +121,11 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
       .where(
         and(
           eq(notifications.userId, authorId),
-          inArray(notifications.kind, ["content_hidden", "report_removed"]),
+          inArray(notifications.kind, [
+            "content_hidden",
+            "report_removed",
+            "photo_missing",
+          ]),
         ),
       );
     // Its report, by the safety account, which is told the outcome (C8).
@@ -182,7 +187,8 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
       category: "top",
       name: "Lost tee",
       origin: "manual",
-      photoKey: `items/${authorId}/${stuckGarmentId}/${newUlid()}`,
+      // The version is the upload's clock (design 167): two days old.
+      photoKey: `items/${authorId}/${stuckGarmentId}/${ulid((now - 2 * 86_400) * 1000)}`,
       visibility: "pending",
       createdAt: now - 2 * 86_400,
     });
@@ -358,15 +364,20 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
     ),
   ).toBeVisible();
   await expect(stuckRow.getByRole("img")).toHaveCount(0);
-  // Not decided here (design 167's open question: what a decision on a
-  // missing file should do), so settled behind the page, scoped to its id,
-  // rather than left waiting in the local queue.
-  await withLocalDb(async ({ core }) => {
-    await core
-      .update(reviewQueue)
-      .set({ status: "removed", resolvedAt: nowSeconds() })
-      .where(eq(reviewQueue.subjectId, stuckGarmentId));
-  });
+  // Owner, 2026-10-31: there is no file to approve, so the row offers
+  // Clear photo where Approve sits; it takes the photo off, citing no rule.
+  await scene(page, "Review: Clear photo on a missing file");
+  const stuckOpener = stuckRow.locator("button[aria-expanded]");
+  if ((await stuckOpener.getAttribute("aria-expanded")) === "false") {
+    await stuckOpener.click();
+  }
+  await expect(stuckRow.getByRole("button", { name: "Approve" })).toHaveCount(
+    0,
+  );
+  await stuckRow.getByRole("button", { name: "Clear photo" }).click();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: stuckGarmentId }),
+  ).toHaveCount(0);
 
   // Round 35 #45: a flagged handle's row says why it is there, and offers
   // Keep and Rename rather than Approve and Remove.
@@ -616,6 +627,14 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
       .locator("p"),
   ).toHaveText(
     "We removed the photo of one of your garments. Reason: it's sexual or explicit.",
+  );
+  // D-153: the cleared photo's owner is asked to add it again.
+  await expect(
+    rows
+      .filter({ hasText: "We couldn't find the file for the photo" })
+      .locator("p"),
+  ).toHaveText(
+    "We couldn't find the file for the photo on one of your garments, so we took it off. Add it again from your Closet if you'd like it there.",
   );
 });
 
