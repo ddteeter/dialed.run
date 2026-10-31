@@ -32,14 +32,14 @@ import {
 } from "./inputs";
 import {
   countRuns,
-  createManualRun,
+  saveManualRun,
   retimeRun,
   didRetryRunWeather,
   didSetRunConditions,
   getRunSummary,
   listRunSummaries,
 } from "./service";
-import { env } from "../../env";
+import { env, waitUntil } from "../../env";
 import { captureException, oweInCore } from "../ops";
 import { stravaApiFromEnv, stravaConfigFromEnv } from "./strava/api-from-env";
 import { garminConfigFor } from "./garmin/config";
@@ -64,7 +64,11 @@ export const submitManualRun = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     const { idempotencyKey, ...draft } = data;
-    return createManualRun(coreDb(), userId, draft, idempotencyKey);
+    return saveManualRun(coreDb(), userId, draft, idempotencyKey, {
+      attach: attachObservation,
+      keepAlive: waitUntil,
+      report: captureException,
+    });
   });
 
 export const startFileImport = createServerFn({ method: "POST" })

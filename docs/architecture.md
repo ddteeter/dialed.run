@@ -339,9 +339,9 @@ sequenceDiagram
         Queue->>Worker: consume ImportJob
         Worker->>Worker: parse FIT/GPX/TCX -> RunDraft
         Worker->>D1: insert run (source=file), dedupe-check started_at
+        Worker->>D1: import 'done' + notification: "Add your kit"
         Worker->>Weather: attachObservation(runId)
         Weather->>D1: cache + attach weather to run
-        Worker->>D1: notification: "Add your kit"
     else Strava webhook (reminder only)
         Strava->>Worker: POST activity event (api route)
         Worker->>Worker: verify subscription, zod-validate, dedupe
@@ -351,8 +351,14 @@ sequenceDiagram
     end
 ```
 
-Manual entry is a plain server function: parse `RunDraft`, insert, attach
-weather inline (degrade to `weather_pending` on failure — law 5).
+The attach comes last: the import is done before its conditions are asked
+for, and the upload screen keeps polling while the run is `pending`.
+
+Manual entry is a plain server function: parse `RunDraft`, insert as
+`pending`, answer, and ask for the weather after the answer under
+`waitUntil` (`saveManualRun`), so the save never waits on the provider. Any
+failure — the provider, or the Worker dying first — leaves the run
+`pending` for the hourly retry (law 5, law 8c).
 
 ## Product enrichment pipeline (lane 107)
 
