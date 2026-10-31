@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   digitDistances,
+  DISTINCTIVE_BITS,
   FINGERPRINT_COLUMNS,
   FINGERPRINT_MATCH_DISTANCE,
   FINGERPRINT_ROWS,
@@ -9,12 +10,14 @@ import {
   fingerprintOfGrid,
   HEX_DIGITS,
   fingerprintSchema,
+  isDistinctive,
 } from "../../src/lib/photo-fingerprint";
 import {
   bitsApart,
   copyOf,
   fingerprintOfBytes,
   sceneJpeg,
+  withBitsSet,
 } from "../fixtures/scenes";
 
 type Rgb = readonly [number, number, number];
@@ -184,5 +187,32 @@ describe("fingerprintOf", () => {
     } finally {
       image.free();
     }
+  });
+});
+
+describe("isDistinctive (design 164)", () => {
+  it("takes the band's edges and refuses one bit past either", () => {
+    const { fewest, most } = DISTINCTIVE_BITS;
+    const counts = [fewest - 1, fewest, most, most + 1];
+    const answers = counts.map((bits) => isDistinctive(withBitsSet(bits)));
+    expect(answers).toStrictEqual([false, true, true, false]);
+  });
+
+  it("counts every digit, not the first", () => {
+    // Eight bits, all in the last two digits.
+    expect(isDistinctive("00000000000000ff")).toBe(true);
+  });
+
+  it("refuses a flat picture's fingerprint, and an empty grid's", () => {
+    const flat = fingerprintOfGrid(grid());
+    const empty = fingerprintOfGrid(new Uint8Array(0));
+    expect(isDistinctive(flat)).toBe(false);
+    expect(isDistinctive(empty)).toBe(false);
+  });
+
+  it("takes a picture with something in it", async () => {
+    const scene = await sceneJpeg(1);
+    const fingerprint = await fingerprintOfBytes(scene);
+    expect(isDistinctive(fingerprint)).toBe(true);
   });
 });

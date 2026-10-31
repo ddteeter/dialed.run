@@ -94,9 +94,15 @@ dropped, because it means keeping up with model releases by hand.)
 - **Ceilings** (proposed, pre-launch scale): fingerprint 5/h, classifier
   flag 10/h, report hides 10/h. These are fixed numbers now. A share of
   uploads later, once there is volume to take a share of.
-- **Popcount band 8–56**: agreed as the starting point (owner, 2026-10-31).
-  Test images are to be added as fixtures for the measurement: flat, dark,
-  gradient, and ordinary kit photos.
+- **Popcount band 8–56**: provisional (owner, 2026-10-31). **Settle before
+  step 11** against real run/kit photos the owner is collecting. Measure
+  them locally and commit only the numbers. Synthetic results (step 0,
+  Photon's Triangle resize): flat, black, white and the left→right and
+  top→bottom gradients set 0 bits, the right→left gradient sets 64,
+  near-black/near-white/low-contrast noise set 3/4/7, full noise sets 30.
+  The 200 seeded `scenes.ts` pictures run min 3, p5 11, median 22, p95 34,
+  max 37. They skew low because their background brightens to the right,
+  as a photo lit from one side would. So 8 may be too high a floor.
 - **`intimate` 1-report hides bypass the report breaker** (owner,
   2026-10-31). The 48-hour clock, and the harm of one more viewer, outweigh a
   burst bug on a path a person files one report at a time.
