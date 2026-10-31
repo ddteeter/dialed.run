@@ -940,7 +940,67 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
-<!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
+45. **F's product-link field returns (design 163). Undesigned; not
+    built.** AC2b took the field off F because F could only ever say
+    "Enrichment pending". Design 163 makes enrichment reachable from a
+    paste, so the field comes back on F (add, and Edit as F prefilled).
+    Optional, after brand and model: a link reads nothing without a brand
+    and a model. **The ask:** draw five states. Empty. Typed or pasted.
+    Invalid, for a link that isn't https or doesn't parse; it gets field
+    words, checked before save. Denied: the save is refused, and the
+    message must not name the list or a reason (842cdc53). Today's words
+    are "That link isn't allowed here. The rest of the piece is fine."
+    Edit with a stored link denied since it was saved: the same message
+    on open, and the save refused until the field is cleared. **No
+    duplicate state:** nothing detects one by URL.
+
+46. **F2a / F2b: what enrichment did with the link (design 163).
+    Undesigned; not built.** Enrichment reads the page in the background
+    and writes the **shared product**, never the garment. It fills
+    composition (verbatim and parts), weight, fabric, wind-resistant,
+    water-resistant and a category hint. It never fills brand, name or
+    type (R-33), and its image is never shown (R-67). A garment shows
+    those values only where the runner left the field blank, and anything
+    the runner enters always wins. The outcomes: found specs; read the page
+    and found nothing; couldn't read it (the shop refused, 404, too big);
+    still reading; nothing read yet (no brand, or the address unconfirmed).
+    Usually under a minute, sometimes up to ~75 min, and a failure can
+    still turn into specs found within the first day. A product another
+    runner's link already read has its result at save. **The ask:** F2a
+    (found: what is shown, and that the runner overrides it by setting
+    the field on Edit) and F2b (couldn't read). Recommendation: the save
+    never waits; F returns to E as today, and E carries the outcome as one
+    line by the link, with no notification kind.
+
+47. **E shows the link (design 163). Undesigned; not built.** 842cdc53
+    put `ProductLink` on E (the link text plus its bare domain in mono,
+    `rel="ugc nofollow noopener"`) and task 122 took it off with F's
+    field. **The ask:** where the link and its domain sit in Y's order,
+    where the outcome line from 94 goes, and the edit/remove affordance.
+    Recommendation: in the identity block under the name, removed or
+    changed through Edit (F prefilled) rather than a control of its own.
+    A denied link shows nowhere, E included.
+
+48. **Links on kit views (design 163). Partly ruled.** /kit is confirmed
+    by round 42 #90 ("Linked piece: domain beside it, as ProductLink").
+    Undrawn: kit detail D's kit list, the feed card (round 26 dropped the
+    kit from it) and the /@handle rotation. **The ask:** in or out for
+    each. Recommendation: D in, the same treatment as /kit; the feed card
+    and the rotation out.
+
+49. **O3's paste field: in or out for v1 (R-55, design 163).** The
+    artboard draws `brand.com/product…` with SPECS FOUND, and
+    `TapListForm` never built it. The tap list makes generic rows with no
+    brand, and a link reads nothing without a brand and a model (93).
+    **The ask:** rule it. Recommendation: out for v1; redraw O3 without
+    it.
+
+50. **Product images (R-67, design 163).** Enrichment copies a shop's
+    primary image to R2, and nothing serves it. Showing one is the
+    owner's call on rights (R-67). **The ask:** confirm none of 93–97
+    shows a product image. Recommendation: none.
+
+<!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98. This comment keeps the list from being renumbered. -->
 
 ## Answered in round 42 (imported 2026-10-28 and 2026-10-29)
 
