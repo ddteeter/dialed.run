@@ -17,6 +17,8 @@ flowchart LR
         W[TanStack Start Worker\nSSR + server functions + API routes]
         D1[(D1: dialed-core)]
         D1W[(D1: dialed-weather)]
+        D1O[(D1: dialed-ops)]
+        AE[(Analytics Engine:\ndialed_vitals)]
         R2[(R2: photos)]
         Q[[Queue: imports]]
         QE[[Queue: enrichment]]
@@ -26,6 +28,9 @@ flowchart LR
 
     W --> D1
     W --> D1W
+    W -->|speed beacon, server timing| AE
+    CRON -->|daily rollup via\nSQL API| AE
+    W -->|perf_daily| D1O
     W --> R2
     W -->|produce| Q
     Q -->|consume| W
@@ -53,11 +58,16 @@ Key decisions embedded here:
 
 - **Strava data never enters the feed or the recommender.** The webhook is a
   reminder trigger only; run records are first-party (manual or file import).
-- **Two D1 databases**: `dialed-core` (users, closet, runs, feed) and
-  `dialed-weather` (observations cache). Weather grows unbounded; isolating
-  it protects the core DB from the 10 GB per-database cap.
+- **Three D1 databases**: `dialed-core` (users, closet, runs, feed),
+  `dialed-weather` (observations cache) and `dialed-ops` (design 165).
+  Weather grows unbounded; isolating it protects the core DB from the 10 GB
+  per-database cap. Ops holds data about the app, never about anyone, and
+  nothing that must commit in one batch with a core write (law 8c): today
+  only `perf_daily`, the daily speed rollup the cron reads from Analytics
+  Engine's SQL API. `opsDb()` is the bare binding, so the primary; it has
+  no replication and no request reads it.
 - **Reads may come from a D1 read replica; writes' checks never do**
-  (design 143, D-123). Replication is on for both databases. Every query
+  (design 143, D-123). Replication is on for core and weather. Every query
   goes through `src/env/d1.ts`: `coreDb()`/`weatherDb()` read through the
   request's D1 session, opened lazily in `lib/sql/d1-session.ts` from the
   newest of the device's `d1b` cookie and the runner's stored

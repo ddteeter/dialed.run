@@ -16,6 +16,7 @@ import {
   secureResponse,
   timeRequest,
   timingDeps,
+  rollupVitals,
 } from "./modules/ops";
 import { forgetAnsweredRequests } from "./modules/account/answered-requests";
 import { exportConsumersFromEnv } from "./modules/account/export-build";
@@ -100,6 +101,8 @@ export default {
         sweepAuthRows: sweepExpiredAuthRows,
         forgetAnsweredRequests,
         sweepCopyrightHolds,
+        // Ops' own, handed in so a test can fake the SQL API (design 165).
+        rollupSpeed: rollupVitals,
       });
     } catch (error) {
       captureException(error, { surface: "scheduled", cron: controller.cron });

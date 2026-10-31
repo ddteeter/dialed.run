@@ -51,3 +51,9 @@ TURNSTILE_SITE_KEY=1x00000000000000000000AA
 # wrangler.jsonc, so this file is the only place it can be set locally —
 # which is also why the admin surfaces have no demo video yet (R-72).
 # ADMIN_USER_IDS=
+# The daily speed rollup (design 165): an account token with Account
+# Analytics Read, and the account to read. Optional locally: without them
+# the rollup only says, in the daily digest, that it is not configured.
+# CF_ACCOUNT_ID is a var in wrangler.jsonc; set it here only to override.
+# ANALYTICS_SQL_TOKEN=
+# CF_ACCOUNT_ID=

@@ -280,6 +280,27 @@ Recorded as the build found them.
   from `__root.tsx`. The route stays glue, and the component is only the
   lifecycle: started when the page is live, stopped if the router changes.
 
+- **The account id is a var, `CF_ACCOUNT_ID`** (owner, 2026-10-31). The
+  SQL API's URL names the account, and the plan had only the token. An
+  account id is not a secret, so it sits in `wrangler.jsonc`'s `vars`,
+  empty until the deployment sweep. Either value missing or empty, the
+  rollup says so in the digest and does nothing else.
+- **Each firing rolls up the last three days, not just yesterday.** A day
+  the SQL API could not answer is filled in by the next firing, and points
+  that arrived late are counted. Three queries a day cost nothing.
+- **A day is replaced, not upserted:** one batch deletes the day and
+  inserts its rows, so a re-run that finds fewer groups leaves no stale
+  row behind (law 1).
+- **The rollup is a digest kind of its own, `speed`,** handed in through
+  `DailyUpkeep` (`rollupSpeed`) like the purge. The test pool binds the
+  token and account so the env-reading shell can be tested, and a live
+  default would have every digest test calling the real API.
+- **The SQL API's numbers are taken as numbers or strings.** Its docs show
+  values as strings and do not say which types come back as numbers. An
+  answer that fails to parse is named in the digest, never quoted.
+- **The day is filtered with `toDateTime('… 00:00:00', 'Etc/UTC')`.** The
+  SQL API's docs say it runs in `Etc/UTC`; the zone is spelled out anyway.
+
 ## Test plan
 
 Covered per step above. Mutation ratchet: everything outside

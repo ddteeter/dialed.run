@@ -155,6 +155,12 @@ export async function handleScheduled(
  * it restores what a counter-notice saved on its 12th weekday and deletes
  * what was held 30 days with none pending (`feed/moderation.ts`).
  *
+ * **The speed rollup** (design 165) is ops' own, and a field for the
+ * digest email's reason: so a test hands in a fake rather than reach the
+ * Analytics Engine SQL API, which the test bindings configure. It is
+ * handed today's UTC day and rolls up the days before it into the ops
+ * database (`vitals-rollup.ts`).
+ *
  * All are optional: a firing handed none purges and sweeps nothing and
  * mails the digest the live way (`oweDigestEmail`'s default). A product
  * link drained with no linker stays owed and is reported.
@@ -169,6 +175,8 @@ export interface DailyUpkeep {
   readonly sweepAuthRows?: (() => Promise<void>) | undefined;
   readonly forgetAnsweredRequests?: (() => Promise<void>) | undefined;
   readonly sweepCopyrightHolds?: (() => Promise<void>) | undefined;
+  readonly rollupSpeed?:
+    ((today: string, anomalies: string[]) => Promise<void>) | undefined;
 }
 
 /**
@@ -726,6 +734,7 @@ export const digestKinds = [
   "stalled-import",
   "review-queue",
   "account-deletion",
+  "speed",
 ] as const;
 
 export type DigestKind = (typeof digestKinds)[number];
@@ -778,6 +787,9 @@ async function runDailyDigest(
     "review-queue": checkReviewQueueDepth,
     "account-deletion": async (anomalies) => {
       await upkeep.purgeAccounts?.(anomalies);
+    },
+    speed: async (anomalies) => {
+      await upkeep.rollupSpeed?.(utcDay(), anomalies);
     },
   };
   // Threshold checks fill in as their features land:

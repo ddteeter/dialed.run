@@ -18,6 +18,11 @@
       "database_name": "dialed-weather",
       "database_id": "test-weather",
     },
+    {
+      "binding": "DIALED_OPS",
+      "database_name": "dialed-ops",
+      "database_id": "test-ops",
+    },
   ],
   // Test-only stand-in secrets, so the success path of each adapter is
   // exercisable against a mocked `fetch`. A secret comes from the Worker's
@@ -33,6 +38,10 @@
     // Not a secret: signs unsubscribe links in a throwaway isolate, so the
     // one-click handler that reads it from the environment can be tested.
     "UNSUBSCRIBE_SECRET": "test-unsubscribe-secret-not-for-production",
+    // Design 165: the speed rollup's account and SQL API token, so its
+    // env-reading shell runs against a mocked `fetch`.
+    "CF_ACCOUNT_ID": "test-account",
+    "ANALYTICS_SQL_TOKEN": "test-token",
   },
   // Task 126 (ACC-2): the email sender, as ../wrangler.jsonc binds it.
   // No test sends through it — they hand `deliverEmail` a fake — but the

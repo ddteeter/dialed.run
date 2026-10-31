@@ -6,6 +6,7 @@ interface __BaseEnv_Env {
 	IMPORTS: R2Bucket;
 	DIALED_CORE: D1Database;
 	DIALED_WEATHER: D1Database;
+	DIALED_OPS: D1Database;
 	EMAIL: SendEmail;
 	VITALS: AnalyticsEngineDataset;
 	IMPORTS_QUEUE: Queue;

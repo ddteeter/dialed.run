@@ -6,6 +6,13 @@
 declare namespace Cloudflare {
   interface Env {
     SENTRY_DSN?: string;
+    /** The speed rollup's Analytics Engine SQL API token (design 165),
+     * Account Analytics Read, and the account it reads, a var. Either
+     * absent or empty: the rollup reports itself unconfigured in the daily
+     * digest and nothing else changes (law 5). See
+     * `modules/ops/vitals-rollup.ts`. */
+    ANALYTICS_SQL_TOKEN?: string;
+    CF_ACCOUNT_ID?: string;
     GOOGLE_CLIENT_ID?: string;
     GOOGLE_CLIENT_SECRET?: string;
     /** Visual Crossing Timeline API key (000/103) — does not exist yet;

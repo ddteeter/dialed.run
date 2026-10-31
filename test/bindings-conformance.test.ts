@@ -9,6 +9,7 @@ import testWranglerJsonc from "./wrangler.test.jsonc?raw";
 import { cronSchedules } from "../src/modules/ops/crons";
 import { PUBLIC_ORIGIN } from "../src/modules/ops/og/site-head";
 import { consumedQueueNames, queueRegistry } from "../src/modules/ops/queues";
+import { VITALS_DATASET } from "../src/modules/ops/vitals-queries";
 
 /**
  * wrangler.jsonc is human-managed (CLAUDE.md forbidden zones) and the code
@@ -153,6 +154,25 @@ const sources: Record<string, string> = import.meta.glob(
   { query: "?raw", import: "default", eager: true },
 );
 
+/**
+ * The `DIALED_OPS` entry of a config's `d1_databases`, or `undefined`.
+ */
+function opsBinding(bound: unknown): unknown {
+  const databases: unknown =
+    typeof bound === "object" && bound !== null
+      ? new Map(Object.entries(bound)).get("d1_databases")
+      : undefined;
+  return Array.isArray(databases)
+    ? databases.find(
+        (database: unknown) =>
+          typeof database === "object" &&
+          database !== null &&
+          "binding" in database &&
+          database.binding === "DIALED_OPS",
+      )
+    : undefined;
+}
+
 describe("wrangler.jsonc matches the code that depends on it", () => {
   const config: unknown = JSON.parse(stripJsonc(wranglerJsonc));
 
@@ -230,7 +250,7 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
       typeof vars === "object" && vars !== null
         ? Object.keys(vars).toSorted((a, b) => a.localeCompare(b))
         : [],
-    ).toStrictEqual(["BETTER_AUTH_URL", "TURNSTILE_SITE_KEY"]);
+    ).toStrictEqual(["BETTER_AUTH_URL", "CF_ACCOUNT_ID", "TURNSTILE_SITE_KEY"]);
   });
 
   it("binds the speed beacon's dataset and the deploy version, read only by the beacon", () => {
@@ -242,7 +262,7 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
     for (const [key, expected] of [
       [
         "analytics_engine_datasets",
-        [{ binding: "VITALS", dataset: "dialed_vitals" }],
+        [{ binding: "VITALS", dataset: VITALS_DATASET }],
       ],
       ["version_metadata", { binding: "CF_VERSION_METADATA" }],
     ] as const) {
@@ -261,6 +281,24 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
       )
       .map(([path]) => path);
     expect(readers).toStrictEqual(["../src/modules/ops/vitals.ts"]);
+  });
+
+  it("binds the ops database in both configs, with its own migrations", () => {
+    // Design 165 (owner-approved 2026-10-31). Production applies the
+    // migrations from `migrations_dir`; the test pool applies the same
+    // directory (`vitest.config.ts`), so the two cannot disagree on it.
+    const testConfig: unknown = JSON.parse(stripJsonc(testWranglerJsonc));
+    expect(opsBinding(config)).toStrictEqual({
+      binding: "DIALED_OPS",
+      database_name: "dialed-ops",
+      database_id: "00000000-0000-0000-0000-000000000003",
+      migrations_dir: "src/db/migrations/ops",
+    });
+    expect(opsBinding(testConfig)).toStrictEqual({
+      binding: "DIALED_OPS",
+      database_name: "dialed-ops",
+      database_id: "test-ops",
+    });
   });
 
   it("binds the email sender the email module reads, and nothing else sends", () => {

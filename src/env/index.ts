@@ -10,4 +10,4 @@
  */
 
 export { env, waitUntil } from "cloudflare:workers";
-export { coreDb, primaryCoreDb, weatherDb } from "./d1";
+export { coreDb, opsDb, primaryCoreDb, weatherDb } from "./d1";

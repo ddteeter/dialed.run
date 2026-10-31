@@ -697,7 +697,48 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
       "stalled-import",
       "review-queue",
       "account-deletion",
+      "speed",
     ]);
+  });
+
+  it("hands the speed rollup today's UTC day and reports what it could not do (design 165)", async () => {
+    const { reporter, events } = recordingReporter();
+    const asked: string[] = [];
+
+    const outcome = await handleScheduled(DIGEST, reporter, {
+      rollupSpeed: (today, anomalies) => {
+        asked.push(today);
+        anomalies.push("speed rollup for 2026-10-30 failed: answered 503");
+        return Promise.resolve();
+      },
+    });
+
+    expect(asked).toStrictEqual([
+      new Date(nowSeconds() * 1000).toISOString().slice(0, 10),
+    ]);
+    expect(outcome.anomalies).toStrictEqual([
+      "speed rollup for 2026-10-30 failed: answered 503",
+    ]);
+    expect(events.map((event) => event.report.tags)).toStrictEqual([
+      { digest: "daily", digest_kind: "speed" },
+    ]);
+  });
+
+  it("runs the other checks when the speed rollup throws, then fails the firing", async () => {
+    await insertRun({ weatherStatus: "failed" });
+    const { reporter, events, checkIns } = recordingReporter();
+    const failure = new Error("ops database unavailable");
+
+    const firing = handleScheduled(DIGEST, reporter, {
+      rollupSpeed: () => Promise.reject(failure),
+    });
+
+    await expect(firing).rejects.toBe(failure);
+    expect(events.map((event) => event.report.tags)).toContainEqual({
+      digest: "daily",
+      digest_kind: "weather-backlog",
+    });
+    expect(checkIns.at(-1)?.status).toBe("error");
   });
 
   it("runs the purge it is handed and reports what it could not finish (ACC-9)", async () => {
