@@ -34,11 +34,26 @@ after upload goes to the Desk's review queue for a person.
 - **A later verdict clears it.** When screening finally lands a `pass`, the
   same batch settles an open `unscreened`/`missing_file` row (`approved`, by
   `screening`); `review`/`flag` already re-point the row to `classifier`.
-- **The Desk row** reuses the review row: the existing Approve / Remove /
-  CSAM decision, with a why-here line in place of "Nobody reported this"
-  (as the flagged-handle row does) and the source tag. A `missing_file` row
-  shows no photo (there is none to load). Placeholder protocol: bracket
-  tags and a body line, design-deltas item 94.
+- **The Desk row** reuses the review row, with a why-here line in place
+  of "Nobody reported this" (as the flagged-handle row does) and the
+  source tag. A `missing_file` row shows no photo (there is none to load).
+  Placeholder protocol: bracket tags and a body line, design-deltas
+  item 94.
+- **Approve on an `unscreened` row publishes** (owner, 2026-10-31): the
+  entry photo goes to `pass`, not back to `pending`, since nothing else
+  will screen it and a person now has. Every other source keeps the
+  2026-09-15 rule. A garment's Approve was already `pass`.
+- **A `missing_file` row offers Clear photo, not Approve** (owner,
+  2026-10-31; `feed/missing-photo.ts`). One batch takes the photo off its
+  kit (`photoDeletion`, shared with the runner's delete and a Remove) or
+  garment (`clearedPhoto`), settles the row as the reviewer, deletes its
+  screenings and raises a `photo_missing` bell row asking the owner to add
+  it again; the storage reconcile is owed through the outbox in the same
+  batch (law 8c) and the fast path's failure is reported, not thrown
+  (law 5). No rule, no `moderation_actions` row: it is no verdict on the
+  runner. It clears only a photo still pending, and a garment photo only
+  if its version is a day old, so a re-upload is never taken off. Remove
+  and Remove as suspected CSAM stay on the row.
 - **Today** counts both sources in "photos the screener couldn't finish",
   which is what they literally are.
 - **Sentry**: the "still pending" line lists each photo as
@@ -60,14 +75,17 @@ after upload goes to the Desk's review queue for a person.
   re-opened within 24h and is after; an open `reports` row is left alone; a
   late pass settles the stuck row; the Sentry line names ids and `(missing)`.
 - worker: `uploadedAt` from a ULID / version key; `todayCounts` counts both.
-- dom: the review row's tags, why-here lines and no photo on `missing_file`.
+- dom: the review row's tags, why-here lines and no photo on `missing_file`;
+  Clear photo in place of Approve there, sending `clear`.
+- worker: Approve on `unscreened` publishes, on `missing_file` stays
+  pending; Clear takes a kit's and a garment's photo off with one notice,
+  no audit row, no debt left; refuses an `unscreened` row, a photo no
+  longer pending, a garment re-uploaded within the day, and a repeat.
 
 ## Open questions
 
-- **Approve on a stuck entry photo** sends it back to `pending` (owner's
-  2026-09-15 rule: Approve never publishes unscreened bytes), so it stays
-  private and returns in 24h. Recommend: Approve on `unscreened`/
-  `missing_file` rows publishes (`pass`) — a person has now seen it.
-  Built as the existing rule until answered.
-- **A missing file** cannot be shown or published; recommend Remove-only
-  rows and a notice telling the owner to re-upload. Not built.
+- None open. Approve and the missing file were answered 2026-10-31 (see
+  Approach). The button label and the notice text are drafts awaiting the
+  owner (`RemovalDecision.tsx` `REASONLESS_LABELS`,
+  `feed/missing-photo.ts` `MISSING_PHOTO_NOTICE`). The notice is a bell row
+  only, not an email.

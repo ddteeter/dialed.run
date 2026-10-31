@@ -959,8 +959,16 @@ _Round 42 answered the last two; what follows is new since._
       waits."_ A `[file missing]` row draws no photo, since there is none
       to load.
     - Today counts both in "photos the screener couldn't finish".
-    - **The ask:** draw the row and confirm or replace the two tags and
-      two lines.
+    - **Clear photo** (owner, 2026-10-31): a `[file missing]` row's
+      decision bar has Clear photo where Approve sits, as the same quiet
+      text button, then Remove and Remove as suspected CSAM. It takes the
+      photo off and the owner's bell says: _"We couldn't find the file for
+      a photo on your run, so we took it off your kit. Add it again if
+      you'd like it there."_, or for a garment _"We couldn't find the file
+      for the photo on one of your garments, so we took it off. Add it
+      again from your Closet if you'd like it there."_
+    - **The ask:** draw the row and its Clear photo bar, and confirm or
+      replace the two tags, two lines, the label and the two notices.
 
 <!-- Item numbers continue past rounds 35–40 (45–76, 82–87). Design numbered the Garmin asks 77–81 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
 
