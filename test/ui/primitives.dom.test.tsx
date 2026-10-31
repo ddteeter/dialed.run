@@ -85,6 +85,19 @@ describe("Bracketed", () => {
     expect(container.firstElementChild).toHaveTextContent("[8 of 9]");
   });
 
+  it("draws the brackets but leaves them out of the accessible name", () => {
+    // D-150: a reader that speaks brackets says "left bracket … right
+    // bracket" around every value. The name is the value alone, and both
+    // ends are checked, so hiding only one of them fails.
+    render(
+      <h2>
+        <Bracketed>8 of 9</Bracketed>
+      </h2>,
+    );
+    expect(screen.getByRole("heading")).toHaveAccessibleName("8 of 9");
+    expect(screen.getByRole("heading")).toHaveTextContent("[8 of 9]");
+  });
+
   it("shouts in CSS, not in the string", () => {
     // The accessible name stays in normal case on purpose: several screen
     // readers spell short all-caps tokens out letter by letter, having no

@@ -75,7 +75,7 @@ test("the author's own entry under review: the tag in the author row on the card
     // ruling's sentence.
     expect(
       await post
-        .locator('[data-part="review-tag"] [aria-hidden="true"]')
+        .locator('[data-part="review-tag"] > [aria-hidden="true"]')
         .innerText(),
     ).toBe(drawn.tag);
     await expect(post.locator('a[href^="/feed/entry/"]')).toHaveAccessibleName(

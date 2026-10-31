@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { BlockedRunners } from "../../src/modules/safety/components/BlockedRunners";
 import type { BlockedRunner } from "../../src/modules/safety/blocks";
+import { bracketed } from "../ui/bracketed";
 
 function runner(overrides: Partial<BlockedRunner> = {}): BlockedRunner {
   return {
@@ -73,7 +74,7 @@ describe("the roster", () => {
       />,
     );
 
-    expect(screen.getByText("[2 blocked]")).toBeInTheDocument();
+    expect(screen.getByText(bracketed("2 blocked"))).toBeInTheDocument();
     expect(screen.getByText("j_holloway")).toBeInTheDocument();
     expect(screen.getByText("gearfiend22")).toBeInTheDocument();
   });
@@ -101,7 +102,7 @@ describe("the roster", () => {
     await waitFor(() => {
       expect(screen.queryByText("j_holloway")).not.toBeInTheDocument();
     });
-    expect(screen.getByText("[0 blocked]")).toBeInTheDocument();
+    expect(screen.getByText(bracketed("0 blocked"))).toBeInTheDocument();
   });
 
   it("removes only the one unblocked", async () => {
@@ -182,7 +183,7 @@ describe("Unblock as a control that can fail (round 22, item 21)", () => {
     );
     expect(band).toHaveTextContent("Still blocked");
     expect(band).toHaveTextContent("Our end failed.");
-    expect(screen.getByText("[2 blocked]")).toBeInTheDocument();
+    expect(screen.getByText(bracketed("2 blocked"))).toBeInTheDocument();
     // The one status region says it once.
     expect(screen.getByRole("status")).toHaveTextContent(
       "Still blocked. Our end failed.",

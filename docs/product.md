@@ -152,7 +152,8 @@ a sensor, not a person.
 Never a garment name, username, or prose. Brackets are pink only when the
 wordmark is the subject; elsewhere they inherit text color. Build `Mono` and
 `Bracketed` primitives in `ui/` and use them exclusively — no ad-hoc styling
-of measured values.
+of measured values. The brackets are drawn, not said: a screen reader
+announces the value alone (D-150).
 
 **Wordmark**: `[dialed.run]` lowercase always, including sentence-initial.
 
