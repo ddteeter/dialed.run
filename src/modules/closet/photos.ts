@@ -21,6 +21,7 @@ import {
   withReleased,
 } from "../../lib/photo-pipeline";
 import { photoKeyFor } from "../../lib/garment-photo-key";
+import { nowSeconds } from "../../lib/now";
 import { fingerprintOf } from "../../lib/photo-fingerprint";
 import { ownedBy } from "../../lib/sql/owned";
 import { getOwnedItem } from "./service";
@@ -34,7 +35,7 @@ import {
   classifierFromEnv,
   enqueueForReview,
   garmentPhotoForgotten,
-  removedMatchOf,
+  isHeldAsRemovedCopy,
   screenPhoto,
   type Classify,
 } from "../safety";
@@ -160,10 +161,14 @@ export async function uploadItemPhoto(
   // the runner asked for is saved — and the outbox drainer finishes it.
   const debt = oweOutbox({ kind: "photo_delete", payload: { userId, itemId } });
   // A copy of an image removed as intimate (D-147, design 157) is held for
-  // a person, as a kit photo's is: from the primary, since what was kept
-  // is an operator's write and a replica may not have it yet.
-  const isCopyOfRemoved =
-    (await removedMatchOf(primaryCoreDb(), fingerprint)) !== undefined;
+  // a person, as a kit photo's is, while the fingerprint breaker has room
+  // (design 164): from the primary, since what was kept is an operator's
+  // write and a replica may not have it yet.
+  const isCopyOfRemoved = await isHeldAsRemovedCopy(
+    primaryCoreDb(),
+    fingerprint,
+    nowSeconds(),
+  );
   const pointAtNewVersion = db
     .update(wardrobeItems)
     // `visibility: "pending"` in the same write as the key. A garment with

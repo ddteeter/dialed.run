@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { photoScreenings, reviewQueue } from "../../src/db/schema-core";
 import { env } from "../../src/env";
-import { newUlid } from "../../src/lib/ids";
 import {
   ceilingReading,
   classifierCeiling,
@@ -11,8 +10,9 @@ import {
   REPORT_BASELINE_S,
   REPORT_HIDES_FLOOR,
   reportCeiling,
-  type HoldCause,
 } from "../../src/modules/safety/breakers";
+
+import { opened, screened } from "./helpers";
 
 /**
  * The hold breakers (design 164): each cause's last hour against its
@@ -27,48 +27,6 @@ const HOUR = 3600;
 On an hour's edge, so an hour's rows land in one bucket of the baseline.
 */
 const NOW = 500_000 * HOUR;
-
-/**
-`n` rows of a cause in Review, each opened at `openedAt`.
-*/
-async function opened(cause: HoldCause, n: number, openedAt: number) {
-  for (let index = 0; index < n; index += 1) {
-    await core()
-      .insert(reviewQueue)
-      .values({
-        id: newUlid(),
-        subjectType: "photo",
-        subjectId: newUlid(),
-        source: cause,
-        status: "pending",
-        createdAt: 1,
-        openedAt,
-      });
-  }
-}
-
-/**
-`n` screenings with one decision, each made at `createdAt`.
-*/
-async function screened(
-  decision: "pass" | "review" | "flag",
-  n: number,
-  createdAt: number,
-) {
-  for (let index = 0; index < n; index += 1) {
-    await core()
-      .insert(photoScreenings)
-      .values({
-        id: newUlid(),
-        photoScope: "entry",
-        photoId: newUlid(),
-        model: "test",
-        scores: "{}",
-        decision,
-        createdAt,
-      });
-  }
-}
 
 beforeEach(async () => {
   await core().delete(reviewQueue);

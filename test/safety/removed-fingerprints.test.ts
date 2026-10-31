@@ -12,6 +12,8 @@ import {
 import { env } from "../../src/env";
 import { entryPhotoIdOf } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
+import { nowSeconds } from "../../src/lib/now";
+import { FINGERPRINT_HOLDS_PER_HOUR } from "../../src/modules/safety/breakers";
 import { moderateContent } from "../../src/modules/feed/moderation";
 import { uploadPhoto } from "../../src/modules/feed/photos";
 import type { Classify } from "../../src/modules/safety";
@@ -31,6 +33,7 @@ import {
 } from "../fixtures/scenes";
 
 import { makeEntry, makeRun, makeUser, resetTables } from "../feed/helpers";
+import { opened } from "./helpers";
 
 /**
  * D-147 (design 152): a photo removed as an intimate image keeps its
@@ -262,6 +265,36 @@ describe("a copy of a removed image is held for review (D-147)", () => {
       status: "pending",
     });
     expect(classify).not.toHaveBeenCalled();
+  });
+
+  it("holds one under the fingerprint breaker's ceiling (design 164)", async () => {
+    const bytes = await sceneJpeg(4);
+    const first = await posted(bytes);
+    await removed("photo", first.photoId);
+    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR - 1, nowSeconds());
+
+    const again = await posted(await copyOf(bytes));
+
+    expect(await photoRow(again.photoId)).toStrictEqual({
+      screenStatus: "hidden_pending_review",
+    });
+  });
+
+  it("screens one past the ceiling instead, queuing nothing (design 164)", async () => {
+    const bytes = await sceneJpeg(4);
+    const first = await posted(bytes);
+    await removed("photo", first.photoId);
+    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR, nowSeconds());
+    const classify = vi.fn<Classify>(unscreened);
+
+    const again = await posted(await copyOf(bytes), undefined, classify);
+
+    expect(await photoRow(again.photoId)).toStrictEqual({
+      screenStatus: "pending",
+    });
+    expect(classify).toHaveBeenCalledOnce();
+    const queued = await queueRows();
+    expect(queued.map((row) => row.subjectId)).not.toContain(again.photoId);
   });
 
   it("never holds a plain picture, whatever was kept (design 164)", async () => {

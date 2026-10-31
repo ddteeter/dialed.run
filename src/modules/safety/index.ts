@@ -79,7 +79,7 @@ export { sweepModerationRecords } from "./retention";
 export {
   keptFingerprints,
   keptGarmentFingerprint,
-  removedMatchOf,
+  isHeldAsRemovedCopy,
 } from "./removed-fingerprints";
 
 // D-130: a copyright takedown's 30-day hide, its restore and its purge.

@@ -43,6 +43,7 @@ import {
   isDistinctive,
 } from "../../lib/photo-fingerprint";
 import { bitsSetSql, nearestOf } from "../../lib/sql/fingerprint-distance";
+import { ceilingReading } from "./breakers";
 import type { RemovalReason } from "./contracts";
 
 type Db = ReturnType<typeof drizzle>;
@@ -154,6 +155,26 @@ export async function removedMatchOf(
     .orderBy(...near.nearestFirst)
     .limit(1);
   return nearest;
+}
+
+/**
+ * Whether an upload with `fingerprint` is held for review as a copy of a
+ * removed image (D-147): it is near one, and the fingerprint breaker
+ * (design 164) has room this hour. Past the ceiling a match is not held,
+ * and the upload goes to the classifier like every other photo, so a bug in
+ * matching hides a few photos an hour rather than every upload.
+ *
+ * The match is read first: the ordinary upload matches nothing, and pays
+ * for no count.
+ */
+export async function isHeldAsRemovedCopy(
+  db: Db,
+  fingerprint: string,
+  now: number,
+): Promise<boolean> {
+  if ((await removedMatchOf(db, fingerprint)) === undefined) return false;
+  const reading = await ceilingReading(db, "fingerprint", now);
+  return !reading.isOver;
 }
 
 /**
