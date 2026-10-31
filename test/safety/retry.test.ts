@@ -2,9 +2,10 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { entryPhotos } from "../../src/db/schema-core";
+import { entryPhotos, wardrobeItems } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
+import { uploadItemPhoto } from "../../src/modules/closet/photos";
 import {
   contentTypeOf,
   imageCategories,
@@ -13,14 +14,19 @@ import {
   type Classify,
 } from "../../src/modules/safety";
 
+import { nowSeconds } from "../../src/lib/now";
+import { tinyJpeg } from "../feed/photos-fixture";
 import {
   makeEntry,
+  makeItem,
   makeRun,
   makeUser,
   resetSafetyTables,
   screened,
 } from "./helpers";
-import { nowSeconds } from "../../src/lib/now";
+
+// A real JPEG: the closet decodes and re-encodes what it stores.
+const GARMENT_BYTES = new Uint8Array(await tinyJpeg());
 
 function core() {
   return drizzle(env.DIALED_CORE);
@@ -255,5 +261,103 @@ describe("when a photo cannot be screened", () => {
     expect(report).toMatchObject({ considered: 2, passed: 1, deferred: 1 });
     expect(await statusOf(fine)).toBe("pass");
     expect(await statusOf(broken)).toBe("pending");
+  });
+});
+
+/**
+ * A garment photo left `pending` by the upload, exactly as the closet
+ * stores it: through `uploadItemPhoto` with the classifier down, so the
+ * sweep has to find bytes the real upload path wrote. Hand-placing them
+ * would test the sweep against this file's idea of the key, which is the
+ * mistake the sweep itself made — `photo_key` on a garment names a
+ * version prefix, and the prefix is no object.
+ */
+async function pendingGarment(): Promise<{ itemId: string }> {
+  const userId = await makeUser();
+  const itemId = await makeItem({ userId });
+  await uploadItemPhoto(
+    core(),
+    userId,
+    itemId,
+    GARMENT_BYTES,
+    "image/jpeg",
+    unavailable,
+  );
+  return { itemId };
+}
+
+/**
+ * Where the upload put the original, spelled out here rather than read
+ * from `garmentOriginalKey`: an oracle that shares the code under test
+ * agrees with it when both are wrong.
+ */
+async function originalKeyOf(itemId: string): Promise<string> {
+  const [row] = await core()
+    .select({ photoKey: wardrobeItems.photoKey })
+    .from(wardrobeItems)
+    .where(eq(wardrobeItems.id, itemId))
+    .limit(1);
+  if (!row?.photoKey) throw new Error("garment has no photo");
+  return `${row.photoKey}/original.jpg`;
+}
+
+async function visibilityOf(itemId: string): Promise<string> {
+  const [row] = await core()
+    .select({ visibility: wardrobeItems.visibility })
+    .from(wardrobeItems)
+    .where(eq(wardrobeItems.id, itemId))
+    .limit(1);
+  if (!row) throw new Error("garment vanished");
+  return row.visibility;
+}
+
+describe("a garment photo in the sweep", () => {
+  beforeEach(resetSafetyTables);
+
+  it("is screened from the original the upload stored", async () => {
+    const { itemId } = await pendingGarment();
+    const seen: { size: number; contentType: string }[] = [];
+    const spy: Classify = (params) => {
+      seen.push({
+        size: params.bytes.byteLength,
+        contentType: params.contentType,
+      });
+      return Promise.resolve({ flagged: false, scores: scores() });
+    };
+    const anomalies: string[] = [];
+
+    const report = await retryPendingScreenings(spy, anomalies);
+
+    expect(report).toMatchObject({ considered: 1, passed: 1, deferred: 0 });
+    expect(await visibilityOf(itemId)).toBe("pass");
+    expect(anomalies).toEqual([]);
+    // The re-encoded original, byte for byte — not a resized webp, which
+    // is our artefact rather than what the runner sent.
+    const original = await env.MEDIA.get(await originalKeyOf(itemId));
+    const stored = await original?.arrayBuffer();
+    expect(seen).toEqual([
+      { size: stored?.byteLength, contentType: "image/jpeg" },
+    ]);
+  });
+
+  it("hides one the classifier flags", async () => {
+    const { itemId } = await pendingGarment();
+    const report = await retryPendingScreenings(explicit, []);
+    expect(report).toMatchObject({ considered: 1, flagged: 1 });
+    expect(await visibilityOf(itemId)).toBe("hidden_pending_review");
+  });
+
+  it("defers one whose original is missing, and says so", async () => {
+    const { itemId } = await pendingGarment();
+    // Only the original goes; the sizes stay, so a sweep reading a resize
+    // instead would screen something here and fail this.
+    await env.MEDIA.delete(await originalKeyOf(itemId));
+    const anomalies: string[] = [];
+
+    const report = await retryPendingScreenings(clean, anomalies);
+
+    expect(report).toMatchObject({ considered: 1, deferred: 1 });
+    expect(await visibilityOf(itemId)).toBe("pending");
+    expect(anomalies).toHaveLength(1);
   });
 });

@@ -20,7 +20,7 @@ import {
   photoRefusal,
   withReleased,
 } from "../../lib/photo-pipeline";
-import { photoKeyFor } from "../../lib/garment-photo-key";
+import { garmentOriginalKey, photoKeyFor } from "../../lib/garment-photo-key";
 import { nowSeconds } from "../../lib/now";
 import { fingerprintOf } from "../../lib/photo-fingerprint";
 import { ownedBy } from "../../lib/sql/owned";
@@ -128,7 +128,7 @@ export async function uploadItemPhoto(
       // the runner sent, not our copy of it.
       const taken = await fingerprintOf(input, photon);
       const reencoded = input.get_bytes_jpeg(ORIGINAL_QUALITY);
-      await env.MEDIA.put(`${keyPrefix}/original.jpg`, reencoded, {
+      await env.MEDIA.put(garmentOriginalKey(keyPrefix), reencoded, {
         httpMetadata: { contentType: "image/jpeg" },
       });
       const width = input.get_width();

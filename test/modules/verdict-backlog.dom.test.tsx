@@ -18,6 +18,7 @@ import { defaultUnits } from "../../src/lib/contracts";
 import type { BacklogRow, Conditions } from "../../src/modules/feed";
 import { VerdictBacklog } from "../../src/modules/runs/components/VerdictBacklog";
 import type { VerdictBacklogProps } from "../../src/modules/runs/components/VerdictBacklog";
+import { bracketed } from "../ui/bracketed";
 
 /**
  * DS2's table, driven the way a runner drives it — on the keyboard.
@@ -728,7 +729,7 @@ describe("VerdictBacklog: all logged (round 22, item 18)", () => {
     // Reachable by typing the URL with an empty queue.
     await renderTable([]);
 
-    expect(screen.getByText("[All logged]")).toBeVisible();
+    expect(screen.getByText(bracketed("All logged"))).toBeVisible();
     expect(screen.queryByRole("table")).toBeNull();
     expect(document.querySelector("[data-slot='backlog-rail']")).toBeNull();
     expect(screen.queryByText(/runs · no verdict yet/)).toBeNull();
@@ -742,7 +743,7 @@ describe("VerdictBacklog: all logged (round 22, item 18)", () => {
     fireEvent.keyDown(body() ?? document.body, { key: "3" });
     fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
 
-    expect(await screen.findByText("[All logged]")).toBeVisible();
+    expect(await screen.findByText(bracketed("All logged"))).toBeVisible();
     expect(invalidate).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("table")).toBeNull();
   });
@@ -759,7 +760,7 @@ describe("VerdictBacklog: all logged (round 22, item 18)", () => {
       expect(rowsOf()[0]).toHaveAttribute("data-saved", "true");
     });
     expect(invalidate).not.toHaveBeenCalled();
-    expect(screen.queryByText("[All logged]")).toBeNull();
+    expect(screen.queryByText(bracketed("All logged"))).toBeNull();
   });
 });
 

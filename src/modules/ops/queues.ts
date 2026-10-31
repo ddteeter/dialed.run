@@ -11,6 +11,7 @@ import {
   handleImportsDlqBatch,
   stravaApiFromEnv,
 } from "../runs";
+import { attachObservation } from "../weather";
 import { outboxInsert, oweOutbox } from "./outbox";
 import { captureException } from "./sentry";
 
@@ -123,6 +124,7 @@ export async function handleQueueBatch(
         stravaApi: stravaApiFromEnv(),
         owe: oweInCore,
         runnerTimeZone: (userId) => runnerTimeZone(coreDb(), userId),
+        attachObservation,
       });
       break;
     }
