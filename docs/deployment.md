@@ -398,6 +398,54 @@ needs its own Strava app, not a second subscription.
   production origin, and `development` otherwise, so a local or CI run
   holding a real DSN cannot page you.
 
+- **Speed (design 165).** Four owner steps, then a check:
+  - **Turn tracing on** in `wrangler.jsonc`:
+    `"observability": { "enabled": true, "traces": { "enabled": true } }`.
+    First, in `wrangler dev` with tracing on, open a run and read one D1
+    span: if it records bound values (an email, a note), add
+    `"persist": false` under `traces` or a line to the privacy policy
+    before deploying it (design 165, open question 5).
+  - **The WAF rate-limiting rule** for `/api/vitals`: 60 requests a
+    minute per IP, beside the other rules in the deployment plan's §7.
+  - **`ANALYTICS_SQL_TOKEN` and `CF_ACCOUNT_ID`** (§5). Until both are
+    set, the daily digest says the rollup is not configured.
+  - **The dashboards**: `docs/ops/performance-dashboards.md` (Grafana over
+    `VITALS`, and the Cloudflare "Performance" dashboard over Workers
+    Logs).
+  - **Check**: open any screen, switch tabs, and in Workers Logs find no
+    `vitals-refused` line; the next day's digest should carry no `speed`
+    line about configuration, and `perf_daily` in `dialed-ops` should have
+    yesterday's rows.
+- **Asking the speed data a question by hand.** The SQL API takes the
+  query as the body (`curl -H "Authorization: Bearer $TOKEN" --data
+"<sql>" https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/analytics_engine/sql`).
+  Weight everything by `_sample_interval`: Analytics Engine samples at
+  volume, so a plain `count()` or `quantile` is wrong. Filter on `blob1`
+  always: browser metrics and the server's `server` points share the
+  dataset. Two to start from:
+
+  ```sql
+  -- Yesterday's LCP p75 per screen, phones only.
+  SELECT index1 AS route,
+    quantileExactWeighted(0.75)(double1, _sample_interval) AS p75,
+    sum(_sample_interval) AS n
+  FROM dialed_vitals
+  WHERE blob1 = 'LCP' AND blob3 = 'narrow'
+    AND timestamp > NOW() - INTERVAL '1' DAY
+  GROUP BY route ORDER BY p75 DESC
+
+  -- Server p95 per screen and deploy, successful responses, this week.
+  SELECT index1 AS route, blob4 AS deploy,
+    quantileExactWeighted(0.95)(double1, _sample_interval) AS p95
+  FROM dialed_vitals
+  WHERE blob1 = 'server' AND blob3 = '2xx'
+    AND timestamp > NOW() - INTERVAL '7' DAY
+  GROUP BY route, deploy ORDER BY route
+  ```
+
+  The layout (which blob is what) is `src/modules/ops/vitals.ts`'s header;
+  the queries the code runs are `src/modules/ops/vitals-queries.ts`.
+
 ## 9. Restoring a database (D1 Time Travel)
 
 D1 keeps 30 days of point-in-time history on the Paid plan, with no setup.

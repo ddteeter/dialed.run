@@ -61,7 +61,7 @@ them twice:
 | Add the one lifecycle rule on `dialed-imports`: prefix `exports/`, delete after 8 days, the net behind the hourly export sweep.                                                                                                                                                                                      | owner, per `docs/deployment.md` §2                                                                                                                | decision D-85 |
 | Create the `dialed-guides` bucket, and an R2 API token with read-only access to that bucket alone. Add it to the `dialed.run-site` repo as `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`.                                                                                                                              | owner, per `docs/deployment.md` §2                                                                                                                | R-134         |
 | To create, before friends: the `dialed-evidence` bucket and its three bucket locks (`ncmec/` and `takedown/` 400 days, `register/` indefinite), and an R2 API token with Object Read & Write on that bucket alone, kept by the owner, never bound to the Worker.                                                     | owner, per `docs/deployment.md` §2                                                                                                                | D-148         |
-| Observability: tracing **off** (billable); logs at full sample (`head_sampling_rate: 1` is fine at launch volume). Carried over from the old launch-gate checklist.                                                                                                                                                  | owner                                                                                                                                             | workflow.md   |
+| Observability: tracing **on** (design 165: the 2026-12-01 pricing includes 50 GB of ingest on Workers Paid; check D1 spans first, `deployment.md` §8); logs at full sample (`head_sampling_rate: 1` is fine at launch volume).                                                                                       | owner                                                                                                                                             | workflow.md   |
 | Usage notifications for Workers, D1, R2 and Email.                                                                                                                                                                                                                                                                   | owner                                                                                                                                             | §3.7          |
 
 ## 2. Vars and secrets
@@ -183,7 +183,8 @@ as a var, secret as a secret. Free.
 ## 7. Abuse controls at the zone
 
 - **WAF rate-limiting rules** on `/api/auth/*`, the upload server
-  functions, product create, request access and `/api/strava`. This is
+  functions, product create, request access, `/api/strava` and
+  `/api/vitals` (60 a minute per IP; design 165). This is
   the default answer to §3.6 (open decision 4 in the development plan):
   zone rules need no new binding. If the owner prefers the Workers Rate
   Limiting binding, that is a `wrangler.jsonc` binding and a lane change.

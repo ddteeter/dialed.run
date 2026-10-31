@@ -339,6 +339,11 @@ Recorded as the build found them.
   queries: the refusal log line is how a flood or a broken client shows.
   Setup for both is `docs/ops/performance-dashboards.md`.
 
+- **The privacy text is exactly the approved wording**, in the overview
+  and the Cloudflare processor row. No legal-basis or retention row was
+  added: what is stored carries no identifier, and new policy wording is
+  the owner's to approve. The ROPA's row 23 says so.
+
 ## Test plan
 
 Covered per step above. Mutation ratchet: everything outside

@@ -28,6 +28,7 @@ flowchart LR
 
     W --> D1
     W --> D1W
+    U -->|sendBeacon on hide:\nPOST /api/vitals| W
     W -->|speed beacon, server timing| AE
     CRON -->|daily rollup via\nSQL API| AE
     W -->|perf_daily| D1O
