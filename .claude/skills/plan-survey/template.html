@@ -1,0 +1,1229 @@
+<title>dialed.run Plan vs. Build</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500&display=swap"
+/>
+<style>
+  /* Layout: one reading column; summary first, then scorecard → journey → the deferred ledger (the point) → design → launch → epics. Brand: dialed.run's own five colours. */
+  :root {
+    --ground: #f4f3ef;
+    --ink: #0b0b0e;
+    --panel: #ffffff;
+    --tint: #edece3;
+    --hairline: #dcdbd2;
+    --muted: #6e6e64;
+    --pink: #ff2d8a;
+    --pink-text: #c21a6b;
+    --teal: #00e0c6;
+    --teal-text: #00776a;
+    --hiviz: #f5ff3d;
+    --hiviz-wash: #fff9dc;
+    --s-shipped: #00776a;
+    --s-changed: #5b6cff;
+    --s-partial: #d79a00;
+    --s-missing: #c21a6b;
+    --s-post: #9a9a90;
+    --f-ui: "Archivo", ui-sans-serif, system-ui, sans-serif;
+    --f-display:
+      "Archivo Black", "Archivo", ui-sans-serif, system-ui, sans-serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0b0b0e;
+      --ink: #f4f3ef;
+      --panel: #16161b;
+      --tint: #1c1c22;
+      --hairline: #2a2a31;
+      --muted: #8b8b93;
+      --pink-text: #ff2d8a;
+      --teal-text: #00e0c6;
+      --hiviz-wash: #26260f;
+      --s-shipped: #00e0c6;
+      --s-changed: #8c98ff;
+      --s-partial: #f0b829;
+      --s-missing: #ff2d8a;
+      --s-post: #6d6d75;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0b0b0e;
+    --ink: #f4f3ef;
+    --panel: #16161b;
+    --tint: #1c1c22;
+    --hairline: #2a2a31;
+    --muted: #8b8b93;
+    --pink-text: #ff2d8a;
+    --teal-text: #00e0c6;
+    --hiviz-wash: #26260f;
+    --s-shipped: #00e0c6;
+    --s-changed: #8c98ff;
+    --s-partial: #f0b829;
+    --s-missing: #ff2d8a;
+    --s-post: #6d6d75;
+    color-scheme: dark;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-ui);
+    font-size: 15px;
+    line-height: 1.5;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding-block: 40px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 56px;
+  }
+  h1,
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 400;
+    text-wrap: balance;
+    margin: 0;
+  }
+  h1 {
+    font-size: clamp(32px, 6vw, 56px);
+    line-height: 1;
+    letter-spacing: -0.035em;
+  }
+  h2 {
+    font-size: 24px;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+  }
+  h3 {
+    font-size: 17px;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  p {
+    margin: 0;
+    max-width: 68ch;
+  }
+  .mono {
+    font-family: var(--f-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .muted {
+    color: var(--muted);
+  }
+  section {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .sec-head {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-top: 2px solid var(--ink);
+    padding-top: 16px;
+  }
+
+  /* hero */
+  .hero {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .hero .lede {
+    font-size: 17px;
+    max-width: 62ch;
+  }
+  .stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 28px;
+    font-family: var(--f-mono);
+    font-size: 14px;
+  }
+  .stats b {
+    font-weight: 500;
+    color: var(--teal-text);
+  }
+  .bk::before {
+    content: "[ ";
+    color: var(--muted);
+  }
+  .bk::after {
+    content: " ]";
+    color: var(--muted);
+  }
+
+  .tldr {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+  }
+  .tl {
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .tl .k {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .tl.good .k {
+    color: var(--teal-text);
+  }
+  .tl.bad .k {
+    color: var(--pink-text);
+  }
+  .tl.warn .k {
+    color: var(--s-partial);
+  }
+
+  /* legend + stacked bars */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    font-size: 13px;
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .sw {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    display: inline-block;
+    flex: none;
+  }
+  .lanes {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .lane {
+    border-bottom: 1px solid var(--hairline);
+  }
+  .lane > button {
+    all: unset;
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: 52px minmax(0, 220px) 1fr 56px;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 4px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .lane > button:focus-visible {
+    outline: 2px solid var(--pink);
+    outline-offset: 2px;
+  }
+  .lane > button:hover {
+    background: var(--tint);
+  }
+  .lane .id {
+    font-family: var(--f-mono);
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .lane .nm {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bar {
+    display: flex;
+    height: 14px;
+    border-radius: 3px;
+    overflow: hidden;
+    background: var(--tint);
+    gap: 1px;
+  }
+  .bar i {
+    display: block;
+    height: 100%;
+  }
+  .lane .ct {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--muted);
+    text-align: right;
+  }
+  .lane .detail {
+    padding: 4px 4px 16px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .item {
+    display: grid;
+    grid-template-columns: 84px 1fr;
+    gap: 10px;
+    font-size: 14px;
+  }
+  .item .what {
+    min-width: 0;
+  }
+  .item .ev {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+  }
+  .pill {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid currentColor;
+    height: fit-content;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .st-shipped,
+  .st-built,
+  .st-done {
+    color: var(--s-shipped);
+  }
+  .st-changed,
+  .st-built-differently {
+    color: var(--s-changed);
+  }
+  .st-partial {
+    color: var(--s-partial);
+  }
+  .st-not-built,
+  .st-open,
+  .st-not-started {
+    color: var(--s-missing);
+  }
+  .st-post-mvp,
+  .st-seams-only {
+    color: var(--s-post);
+  }
+
+  /* timeline */
+  .gantt-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    background: var(--panel);
+  }
+  .gantt {
+    min-width: 760px;
+    padding: 12px 16px 16px;
+    position: relative;
+  }
+  .g-axis {
+    position: relative;
+    height: 22px;
+    margin-left: 280px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .g-axis span {
+    position: absolute;
+    font-family: var(--f-mono);
+    font-size: 11px;
+    color: var(--muted);
+    transform: translateX(-50%);
+  }
+  .g-row {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    align-items: center;
+    min-height: 26px;
+    font-size: 13px;
+  }
+  .g-row .lbl {
+    padding-right: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .g-track {
+    position: relative;
+    height: 26px;
+  }
+  .g-track i {
+    position: absolute;
+    top: 7px;
+    height: 12px;
+    border-radius: 2px;
+    background: var(--ink);
+    min-width: 4px;
+  }
+  .g-track .tick {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--hairline);
+  }
+  .pivots {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 0 28px;
+  }
+  .pv {
+    display: grid;
+    grid-template-columns: 76px 64px 1fr;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--hairline);
+    font-size: 14px;
+    align-items: start;
+  }
+  .pv .d {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--muted);
+    padding-top: 2px;
+  }
+  .pv .why {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 2px;
+  }
+  .k-cut {
+    color: var(--pink-text);
+  }
+  .k-added {
+    color: var(--teal-text);
+  }
+  .k-changed {
+    color: var(--s-changed);
+  }
+
+  /* deferred */
+  .callouts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 12px;
+  }
+  .co {
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-left: 4px solid var(--pink);
+    border-radius: 4px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .co .meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .co h3 {
+    font-size: 15px;
+    line-height: 1.3;
+  }
+  .co p {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .co .ev {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+  }
+  .vf {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    background: var(--hiviz);
+    color: #0b0b0e;
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+  .classbar {
+    display: flex;
+    height: 36px;
+    border-radius: 4px;
+    overflow: hidden;
+    gap: 2px;
+  }
+  .classbar button {
+    all: unset;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: #0b0b0e;
+    white-space: nowrap;
+    overflow: hidden;
+    min-width: 0;
+  }
+  .classbar button:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: -2px;
+  }
+  .classbar button[aria-pressed="false"] {
+    opacity: 0.35;
+  }
+  .c-open-orphaned {
+    background: var(--pink);
+  }
+  .c-open-tracked {
+    background: var(--hiviz);
+  }
+  .c-register-stale {
+    background: #b9b8ad;
+  }
+  .c-done-later {
+    background: var(--teal);
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .chip {
+    all: unset;
+    cursor: pointer;
+    font-family: var(--f-mono);
+    font-size: 12px;
+    padding: 4px 10px;
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    background: var(--panel);
+  }
+  .chip[aria-pressed="true"] {
+    background: var(--ink);
+    color: var(--ground);
+    border-color: var(--ink);
+  }
+  .chip:focus-visible {
+    outline: 2px solid var(--pink);
+    outline-offset: 2px;
+  }
+  input[type="search"] {
+    font: inherit;
+    font-size: 16px;
+    padding: 6px 10px;
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    background: var(--panel);
+    color: var(--ink);
+    min-width: 0;
+    flex: 1 1 200px;
+  }
+  select {
+    font: inherit;
+    font-size: 14px;
+    padding: 5px 8px;
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    background: var(--panel);
+    color: var(--ink);
+  }
+  .tbl-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    background: var(--panel);
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13px;
+    min-width: 760px;
+  }
+  th {
+    text-align: left;
+    font-family: var(--f-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--hairline);
+    position: sticky;
+    top: 0;
+    background: var(--panel);
+  }
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--hairline);
+    vertical-align: top;
+  }
+  td.id {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    white-space: nowrap;
+    color: var(--muted);
+  }
+  td .t {
+    font-weight: 600;
+  }
+  td .w {
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  td .e {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    overflow-wrap: anywhere;
+  }
+  td.age {
+    font-family: var(--f-mono);
+    text-align: right;
+    white-space: nowrap;
+  }
+  .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: 1px;
+  }
+  .sev-launch-blocker {
+    color: var(--pink-text);
+    font-weight: 600;
+  }
+  .sev-important {
+    color: var(--s-partial);
+  }
+  .sev-minor {
+    color: var(--muted);
+  }
+  details summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  /* screens */
+  .screens {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 6px;
+  }
+  .scr {
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-top: 4px solid;
+    border-radius: 3px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .scr .c {
+    font-family: var(--f-mono);
+    font-size: 12px;
+  }
+  .scr .n {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+  .scr .x {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.35;
+  }
+  .b-built {
+    border-top-color: var(--s-shipped);
+  }
+  .b-built-differently {
+    border-top-color: var(--s-changed);
+  }
+  .b-partial {
+    border-top-color: var(--s-partial);
+  }
+  .b-not-built {
+    border-top-color: var(--s-missing);
+  }
+  .b-post-mvp {
+    border-top-color: var(--s-post);
+  }
+
+  /* launch */
+  .cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+  }
+  .col {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .col h3 {
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--ink);
+  }
+  .li {
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--hairline);
+    font-size: 14px;
+  }
+  .li .e {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+  }
+  .epics {
+    display: flex;
+    flex-direction: column;
+  }
+  .ep {
+    display: grid;
+    grid-template-columns: 60px minmax(0, 200px) 104px 1fr;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--hairline);
+    font-size: 14px;
+    align-items: start;
+  }
+  .ep .e {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  @media (max-width: 640px) {
+    .lane > button {
+      grid-template-columns: 40px 1fr 44px;
+    }
+    .lane .bar {
+      grid-column: 1 / -1;
+      order: 4;
+    }
+    .lane .detail {
+      padding-left: 4px;
+    }
+    .item {
+      grid-template-columns: 1fr;
+    }
+    .ep {
+      grid-template-columns: 50px 1fr;
+    }
+    .ep .e,
+    .ep .pill {
+      grid-column: 2;
+    }
+    .pv {
+      grid-template-columns: 70px 1fr;
+    }
+    .pv .kind {
+      grid-column: 2;
+      grid-row: 1;
+    }
+    .pv > div:last-child {
+      grid-column: 1 / -1;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .bar i,
+    .classbar button {
+      transition: opacity 150ms ease;
+    }
+  }
+  footer {
+    font-size: 13px;
+    color: var(--muted);
+    border-top: 1px solid var(--hairline);
+    padding-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="eyebrow" data-n="asof"></div>
+    <h1>Plan vs. build</h1>
+    <p class="lede">
+      What the 2026-08-30 unified plan set out to build, what's on main now, how
+      the plan changed along the way, and the deferred work that never came
+      back.
+    </p>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <section>
+    <div class="tldr" id="tldr"></div>
+  </section>
+
+  <section id="changes" hidden>
+    <div class="sec-head">
+      <div class="eyebrow">Since the last survey</div>
+      <h2 data-n="changes_h">What moved since the last survey</h2>
+      <p class="muted" id="changes-p"></p>
+    </div>
+    <div class="cols" id="changes-cols"></div>
+  </section>
+
+  <section id="plan">
+    <div class="sec-head">
+      <div class="eyebrow">The original plan</div>
+      <h2 data-n="plan_h"></h2>
+      <p class="muted">
+        Every deliverable in the initial-commit task packets, checked against
+        src/, test/ and wrangler.jsonc. "Changed" means it shipped in a
+        different form because of a recorded decision. Click a lane to see its
+        items.
+      </p>
+    </div>
+    <div class="legend" id="plan-legend"></div>
+    <div class="lanes" id="lanes"></div>
+  </section>
+
+  <section id="journey">
+    <div class="sec-head">
+      <div class="eyebrow">How we got here</div>
+      <h2 data-n="journey_h"></h2>
+      <p class="muted" data-n="journey_p"></p>
+    </div>
+    <div class="gantt-wrap"><div class="gantt" id="gantt"></div></div>
+    <h3>Pivots</h3>
+    <div class="legend">
+      <span class="k-added">● added</span
+      ><span class="k-changed">● changed</span><span class="k-cut">● cut</span>
+    </div>
+    <div class="pivots" id="pivots"></div>
+  </section>
+
+  <section id="deferred">
+    <div class="sec-head">
+      <div class="eyebrow">Deferred, never returned</div>
+      <h2 data-n="deferred_h"></h2>
+      <p class="muted">
+        <span data-n="deferred_p"></span> "Orphaned" means it was deferred
+        somewhere, has no register row and was never built. These are the items
+        the register's own rule says get dropped without anyone deciding to drop
+        them. Items marked <span class="vf">VERIFIED</span> were re-checked by
+        hand after the agents reported them.
+      </p>
+    </div>
+    <h3>The ones that matter</h3>
+    <div class="callouts" id="callouts"></div>
+    <h3 style="margin-top: 12px">The whole ledger</h3>
+    <div
+      class="classbar"
+      id="classbar"
+      role="group"
+      aria-label="Filter by class"
+    ></div>
+    <div class="controls">
+      <input
+        type="search"
+        id="q"
+        placeholder="Search titles, evidence, ids…"
+        aria-label="Search deferred items"
+      />
+      <select id="area" aria-label="Area"></select>
+      <select id="sev" aria-label="Severity">
+        <option value="">Any severity</option>
+        <option value="launch-blocker">Launch blocker</option>
+        <option value="important">Important</option>
+        <option value="minor">Minor</option>
+      </select>
+      <select id="sort" aria-label="Sort">
+        <option value="sev">Sort: severity, then age</option>
+        <option value="age">Sort: oldest first</option>
+        <option value="id">Sort: id</option>
+      </select>
+      <span class="mono muted" id="count"></span>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Id</th>
+            <th>Item</th>
+            <th>Class</th>
+            <th>Area</th>
+            <th>Severity</th>
+            <th style="text-align: right">Age</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="design">
+    <div class="sec-head">
+      <div class="eyebrow">The design track</div>
+      <h2 data-n="design_h"></h2>
+      <p class="muted" data-n="design_p"></p>
+    </div>
+    <div class="legend" id="scr-legend"></div>
+    <div class="screens" id="screens"></div>
+    <details>
+      <summary>
+        Ruled in a design round, never built (<span id="fu-n"></span>)
+      </summary>
+      <div class="cols" style="margin-top: 12px">
+        <div class="col" id="followups"></div>
+      </div>
+    </details>
+    <details>
+      <summary>design-deltas.md: about 190 work-order items, by theme</summary>
+      <div class="col" id="themes" style="margin-top: 12px"></div>
+    </details>
+  </section>
+
+  <section id="launch">
+    <div class="sec-head">
+      <div class="eyebrow">Between here and launch</div>
+      <h2 data-n="launch_h"></h2>
+      <p class="muted" data-n="launch_p"></p>
+    </div>
+    <div class="cols">
+      <div class="col" id="eng"><h3>Engineering · open</h3></div>
+      <div class="col" id="human"><h3>Owner · open</h3></div>
+    </div>
+  </section>
+
+  <section id="epics">
+    <div class="sec-head">
+      <div class="eyebrow">Post-MVP</div>
+      <h2 data-n="epics_h"></h2>
+      <p class="muted" data-n="epics_p"></p>
+    </div>
+    <div class="epics" id="epiclist"></div>
+  </section>
+
+  <footer>
+    <div>
+      Method: four read-only research agents, one each for the initial plan,
+      deferred work, design coverage and the decision timeline, plus hand checks
+      of the findings that carried the most weight. Classification is a judgment
+      call. Treat counts as ±a few.
+    </div>
+    <div data-n="caveats"></div>
+  </footer>
+</div>
+
+<script>
+  const D = __DATA__;
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) =>
+    String(s ?? "").replace(
+      /[&<>"]/g,
+      (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
+    );
+
+  // hero stats
+  const allItems = D.lanes.flatMap((l) => l.items);
+  const cnt = (arr, f) =>
+    arr.reduce((m, x) => ((m[f(x)] = (m[f(x)] || 0) + 1), m), {});
+  const ps = cnt(allItems, (i) => i.status);
+  const dc = cnt(D.deferred, (i) => i.class);
+  const landed = (ps.shipped || 0) + (ps.changed || 0);
+  $("stats").innerHTML = [
+    [D.narrative.days, "days"],
+    [D.stats.merged_prs, "merged PRs"],
+    [D.stats.commits.toLocaleString(), "commits"],
+    [D.stats.decisions, "decisions"],
+    [
+      Math.round((100 * landed) / allItems.length) + "%",
+      "of the original plan landed",
+    ],
+    [dc["open-orphaned"], "orphaned deferrals"],
+  ]
+    .map(([v, l]) => `<span><span class="bk"><b>${v}</b></span> ${l}</span>`)
+    .join("");
+
+  $("tldr").innerHTML = D.narrative.tldr
+    .map(
+      ([c, k, t]) =>
+        `<div class="tl ${c}"><div class="k">${esc(k)}</div><div>${esc(t)}</div></div>`,
+    )
+    .join("");
+  document.querySelectorAll("[data-n]").forEach((el) => {
+    const v = D.narrative.text[el.dataset.n];
+    if (v != null) el.textContent = v;
+  });
+
+  // changes since the previous survey (ids are kept stable across runs)
+  if (D.previous) {
+    const prev = new Map(D.previous.deferred.map((d) => [d.id, d]));
+    const now = new Map(D.deferred.map((d) => [d.id, d]));
+    const isOpen = (d) => d && d.class.startsWith("open");
+    const added = D.deferred.filter(
+      (d) => isOpen(d) && !isOpen(prev.get(d.id)),
+    );
+    const closed = D.previous.deferred.filter(
+      (d) => isOpen(d) && !isOpen(now.get(d.id)),
+    );
+    const row = (d) =>
+      `<div class="li" style="grid-template-columns:1fr"><div><b>${esc(d.title)}</b><div class="e">${esc(d.id)} · ${esc(d.area)} · ${esc(d.severity)}</div></div></div>`;
+    $("changes-p").textContent =
+      `Compared with the survey of ${D.previous.as_of}. An item counts as open when its class is orphaned or tracked.`;
+    $("changes-cols").innerHTML =
+      `<div class="col"><h3>Newly open · ${added.length}</h3>${added.map(row).join("") || '<p class="muted">None.</p>'}</div>` +
+      `<div class="col"><h3>Closed since · ${closed.length}</h3>${closed.map(row).join("") || '<p class="muted">None.</p>'}</div>`;
+    $("changes").hidden = false;
+  }
+
+  // plan scorecard
+  const PS = [
+    ["shipped", "Shipped", "--s-shipped"],
+    ["changed", "Changed by decision", "--s-changed"],
+    ["partial", "Partial", "--s-partial"],
+    ["not-built", "Not built", "--s-missing"],
+  ];
+  $("plan-legend").innerHTML = PS.map(
+    ([k, l, v]) =>
+      `<span><i class="sw" style="background:var(${v})"></i>${l} <span class="mono muted">${ps[k] || 0}</span></span>`,
+  ).join("");
+  $("lanes").innerHTML = D.lanes
+    .map((l, idx) => {
+      const c = cnt(l.items, (i) => i.status);
+      const n = l.items.length;
+      const order = { "not-built": 0, partial: 1, changed: 2, shipped: 3 };
+      const items = [...l.items].sort(
+        (a, b) => order[a.status] - order[b.status],
+      );
+      return `<div class="lane"><button aria-expanded="false" aria-controls="ld${idx}">
+    <span class="id">${esc(l.id)}</span><span class="nm">${esc(l.name)}</span>
+    <span class="bar">${PS.map(([k, , v]) => (c[k] ? `<i style="width:${(100 * c[k]) / n}%;background:var(${v})" title="${c[k]} ${k}"></i>` : "")).join("")}</span>
+    <span class="ct">${(c.shipped || 0) + (c.changed || 0)}/${n}</span></button>
+    <div class="detail" id="ld${idx}" hidden><p class="muted">${esc(l.summary)}</p>
+    ${items.map((i) => `<div class="item"><span class="pill st-${i.status}">${i.status.replace("-", " ")}</span><div class="what"><div><b>${esc(i.title)}</b>. ${esc(i.planned)}</div>${i.notes ? `<div class="muted">${esc(i.notes)}</div>` : ""}<div class="ev">${esc(i.evidence)}</div></div></div>`).join("")}
+    </div></div>`;
+    })
+    .join("");
+  document.querySelectorAll(".lane > button").forEach((b) =>
+    b.addEventListener("click", () => {
+      const d = $(b.getAttribute("aria-controls"));
+      d.hidden = !d.hidden;
+      b.setAttribute("aria-expanded", String(!d.hidden));
+    }),
+  );
+
+  // gantt
+  const t0 = Date.parse("2026-08-30"),
+    t1 = Date.parse(D.narrative.as_of) + 2 * 864e5,
+    span = t1 - t0;
+  const pct = (d) => (100 * (Date.parse(d) - t0)) / span;
+  const weeks = [];
+  for (let t = t0; t < t1; t += 7 * 864e5)
+    weeks.push(new Date(t).toISOString().slice(0, 10));
+  const ticks = weeks
+    .map((w) => `<span class="tick" style="left:${pct(w)}%"></span>`)
+    .join("");
+  $("gantt").innerHTML =
+    `<div class="g-axis">${weeks.map((w) => `<span style="left:${pct(w)}%">${w.slice(5)}</span>`).join("")}</div>` +
+    D.phases
+      .map((p) => {
+        const left = pct(p.start),
+          w = Math.max(pct(p.end) + (100 * 864e5) / span - left, 0.8);
+        const audit = p.name.startsWith("Production-readiness");
+        return `<div class="g-row" title="${esc(p.summary)}"><div class="lbl">${esc(p.name)}</div><div class="g-track">${ticks}<i style="left:${left}%;width:${w}%;${audit ? "background:var(--pink)" : ""}"></i></div></div>`;
+      })
+      .join("");
+  $("pivots").innerHTML = D.pivots
+    .map(
+      (p) =>
+        `<div class="pv"><span class="d">${p.date.slice(5)}</span><span class="kind mono k-${p.kind}" style="font-size:12px">${p.kind}</span><div><div>${esc(p.title)}</div><div class="why">${esc(p.why)} <span class="mono">${esc(p.ref)}</span></div></div></div>`,
+    )
+    .join("");
+
+  // deferred
+  const sevRank = { "launch-blocker": 0, important: 1, minor: 2 };
+  const CL = [
+    ["open-orphaned", "Orphaned"],
+    ["open-tracked", "Open, tracked"],
+    ["register-stale", "Register stale"],
+    ["done-later", "Done later"],
+  ];
+  const callouts = D.deferred
+    .filter((d) => d.class === "open-orphaned" && d.severity !== "minor")
+    .sort(
+      (a, b) =>
+        b.verified - a.verified || (b.age_days || 0) - (a.age_days || 0),
+    );
+  $("callouts").innerHTML = callouts
+    .map(
+      (d) =>
+        `<div class="co"><div class="meta"><span>${esc(d.id)}</span><span>·</span><span>${esc(d.area)}</span><span>·</span><span class="bk">${d.age_days ?? "?"}d</span>${d.verified ? '<span class="vf">VERIFIED</span>' : ""}</div><h3>${esc(d.title)}</h3><p>${esc(d.what)}</p><div class="ev">${esc(d.evidence)}</div></div>`,
+    )
+    .join("");
+
+  const state = {
+    classes: new Set(["open-orphaned", "open-tracked"]),
+    q: "",
+    area: "",
+    sev: "",
+    sort: "sev",
+  };
+  $("classbar").innerHTML = CL.map(
+    ([k, l]) =>
+      `<button class="c-${k}" data-k="${k}" aria-pressed="${state.classes.has(k)}" style="flex:${dc[k] || 0}">${l} ${dc[k] || 0}</button>`,
+  ).join("");
+  $("classbar").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    const k = b.dataset.k;
+    state.classes.has(k) ? state.classes.delete(k) : state.classes.add(k);
+    b.setAttribute("aria-pressed", String(state.classes.has(k)));
+    render();
+  });
+  const areas = [...new Set(D.deferred.map((d) => d.area))].sort();
+  $("area").innerHTML =
+    `<option value="">Any area</option>` +
+    areas.map((a) => `<option>${a}</option>`).join("");
+  ["q", "area", "sev", "sort"].forEach((id) =>
+    $(id).addEventListener("input", (e) => {
+      state[id] = e.target.value;
+      render();
+    }),
+  );
+  const clsLabel = Object.fromEntries(CL);
+  function render() {
+    const q = state.q.toLowerCase();
+    let r = D.deferred.filter(
+      (d) =>
+        state.classes.has(d.class) &&
+        (!state.area || d.area === state.area) &&
+        (!state.sev || d.severity === state.sev) &&
+        (!q ||
+          [d.id, d.title, d.what, d.evidence, d.source]
+            .join(" ")
+            .toLowerCase()
+            .includes(q)),
+    );
+    const cmp = {
+      sev: (a, b) =>
+        sevRank[a.severity] - sevRank[b.severity] ||
+        (b.age_days || 0) - (a.age_days || 0),
+      age: (a, b) => (b.age_days || 0) - (a.age_days || 0),
+      id: (a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }),
+    }[state.sort];
+    r.sort(cmp);
+    $("count").textContent = `${r.length} of ${D.deferred.length}`;
+    $("rows").innerHTML =
+      r
+        .map(
+          (
+            d,
+          ) => `<tr><td class="id">${esc(d.id)}${d.verified ? '<br><span class="vf">VERIFIED</span>' : ""}</td>
+    <td><div class="t">${esc(d.title)}</div><div class="w">${esc(d.what)}</div><div class="e">${esc(d.source)} → ${esc(d.evidence)}</div></td>
+    <td style="white-space:nowrap"><span class="dot c-${d.class}"></span>${clsLabel[d.class]}</td><td>${esc(d.area)}</td>
+    <td class="sev-${d.severity}" style="white-space:nowrap">${d.severity.replace("-", " ")}</td><td class="age">${d.age_days ?? "–"}d</td></tr>`,
+        )
+        .join("") ||
+      `<tr><td colspan="6" class="muted">Nothing matches. Clear the search or turn a class back on.</td></tr>`;
+  }
+  render();
+
+  // screens
+  const SS = [
+    ["built", "Built", "--s-shipped"],
+    ["built-differently", "Built differently", "--s-changed"],
+    ["partial", "Partial", "--s-partial"],
+    ["not-built", "Not built", "--s-missing"],
+    ["post-mvp", "Post-MVP by decision", "--s-post"],
+  ];
+  const sc = cnt(D.screens, (s) => s.status);
+  $("scr-legend").innerHTML = SS.map(
+    ([k, l, v]) =>
+      `<span><i class="sw" style="background:var(${v})"></i>${l} <span class="mono muted">${sc[k] || 0}</span></span>`,
+  ).join("");
+  const sOrder = {
+    "not-built": 0,
+    partial: 1,
+    "built-differently": 2,
+    built: 3,
+    "post-mvp": 4,
+  };
+  $("screens").innerHTML = [...D.screens]
+    .sort((a, b) => sOrder[a.status] - sOrder[b.status])
+    .map(
+      (s) =>
+        `<div class="scr b-${s.status}" title="${esc(s.route || "")}"><span class="c">${esc(s.code)}</span><span class="n">${esc(s.name)}</span>${s.status !== "built" && s.notes ? `<span class="x">${esc(s.notes)}</span>` : ""}</div>`,
+    )
+    .join("");
+  $("fu-n").textContent = D.deltaFollowups.length;
+  $("followups").innerHTML = D.deltaFollowups
+    .map(
+      (f) =>
+        `<div class="li" style="grid-template-columns:1fr"><div><b>${esc(f.title)}</b><div class="e">${esc(f.source)} → ${esc(f.evidence)}</div></div></div>`,
+    )
+    .join("");
+  const maxT = Math.max(...D.deltaThemes.map((t) => t.count));
+  $("themes").innerHTML = D.deltaThemes
+    .sort((a, b) => b.count - a.count)
+    .map(
+      (t) =>
+        `<div class="li" style="grid-template-columns:minmax(0,1fr) 120px"><div><div>${esc(t.theme)}</div><div class="e">${esc(t.example)}</div></div><div><span class="bar" style="height:10px"><i style="width:${(100 * t.count) / maxT}%;background:var(--teal-text)"></i></span><span class="mono muted" style="font-size:12px">~${t.count}</span></div></div>`,
+    )
+    .join("");
+
+  // launch
+  const open = D.launch.filter((l) => l.status !== "done");
+  const li = (l) =>
+    `<div class="li"><span class="pill st-${l.status}">${l.status}</span><div><div>${esc(l.title)}</div><div class="e">${esc(l.plan)} · ${esc(l.id)} · ${esc(l.evidence)}</div></div></div>`;
+  $("eng").insertAdjacentHTML(
+    "beforeend",
+    open
+      .filter((l) => l.owner === "engineering")
+      .map(li)
+      .join(""),
+  );
+  $("human").insertAdjacentHTML(
+    "beforeend",
+    open
+      .filter((l) => l.owner === "human")
+      .map(li)
+      .join(""),
+  );
+
+  // epics
+  $("epiclist").innerHTML = D.epics
+    .map(
+      (e) =>
+        `<div class="ep"><span class="mono muted">${esc(e.id)}</span><b>${esc(e.name)}</b><span class="pill st-${e.status}">${e.status.replace("-", " ")}</span><div class="e">${esc(e.evidence)}${e.notes ? `. <i>${esc(e.notes)}</i>` : ""}</div></div>`,
+    )
+    .join("");
+</script>
