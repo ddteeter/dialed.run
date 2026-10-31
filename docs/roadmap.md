@@ -35,8 +35,9 @@ is enforced in one shared read, not per surface.
 - **Pieces:** design F2a/F2b first, then the field on F, the link on E and
   `/kit`, safety's batched denylist check, and O3 if design rules it in
   (R-55).
-- **Status:** a branch has started (`feat/163-product-links`). Its design
-  number becomes 164 if #277 (design 163) lands first.
+- **Status:** a branch has started (`feat/163-product-links`). It must
+  renumber its design: #277 holds 163, and `feat/164-moderation-breakers`
+  holds 164.
 
 ### 2. An architecture map generated from the code (C4)
 
