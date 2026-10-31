@@ -76,7 +76,11 @@ describe("GarmentDetail's first paint, against a real stored row", () => {
     // 2026-09-12 23:50 UTC. The device's zone takes over after mount.
     const markup = await renderedMarkup(true);
 
-    expect(markup).toMatch(/\[<!-- -->Retired Sep 12<!-- -->\]/u);
+    // Between Bracketed's two aria-hidden brackets (D-150), so the date is
+    // the whole value rather than a substring of some other one.
+    expect(markup).toMatch(
+      /\[<\/span>Retired Sep 12<span aria-hidden="true">\]/u,
+    );
   });
 
   it("draws no product link, even for a garment that has one stored", async () => {

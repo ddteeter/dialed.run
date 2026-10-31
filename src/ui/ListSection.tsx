@@ -59,9 +59,10 @@ export function ListSection<TItem>({
   const heading =
     count === true ? (
       <h2>
-        <Bracketed>
-          {String(items.length)} {title}
-        </Bracketed>
+        {/* One string, not `{count} {title}`: React renders that as three
+            text nodes, and Chromium drops the space between them from the
+            heading's accessible name ("7waiting"), though it draws it. */}
+        <Bracketed>{`${String(items.length)} ${title}`}</Bracketed>
       </h2>
     ) : (
       <h2>

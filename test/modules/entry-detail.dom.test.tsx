@@ -10,6 +10,7 @@ import type { entryDetailForViewer } from "../../src/modules/feed/entries";
 import { pointConditions } from "../feed/conditions-fixture";
 import { MILES, renderFeedScreen, unconfirmed } from "./feed-fixtures";
 import { useUnconfirmedRefusal } from "../../src/ui/unconfirmed-refusal";
+import { bracketed } from "../ui/bracketed";
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
 type Item = Entry["items"][number];
@@ -432,8 +433,8 @@ describe("EntryDetail: the note, the kit and the tags", () => {
       }),
     );
 
-    expect(screen.getAllByText("[Generic]")).toHaveLength(1);
-    expect(screen.getByText("[Generic]")).toHaveClass(
+    expect(screen.getAllByText(bracketed("Generic"))).toHaveLength(1);
+    expect(screen.getByText(bracketed("Generic"))).toHaveClass(
       "font-mono",
       "text-label",
     );
@@ -450,11 +451,11 @@ describe("EntryDetail: the note, the kit and the tags", () => {
       }),
     );
 
-    expect(screen.getByText("[Too much]")).toHaveClass(
+    expect(screen.getByText(bracketed("Too much"))).toHaveClass(
       "font-mono",
       "font-semibold",
     );
-    expect(screen.getByText("[Not enough]")).toBeVisible();
+    expect(screen.getByText(bracketed("Not enough"))).toBeVisible();
     const rows = part("kit")?.querySelectorAll("li") ?? [];
     expect(rows[2]).toHaveTextContent(/^Patagonia Tights$/u);
     expect(rows[2]?.children).toHaveLength(1);
