@@ -17,7 +17,11 @@ import { z } from "zod";
 import { perfDaily } from "../../db/schema-ops";
 import { env, opsDb } from "../../env";
 import { chunked } from "../../lib/chunked";
-import { dailyRollupQuery } from "./vitals-queries";
+import {
+  answerSchema,
+  dailyRollupQuery,
+  rollupRowSchema,
+} from "./vitals-queries";
 
 /**
  * How many days back each firing rolls up, yesterday included.
@@ -36,34 +40,9 @@ const TIMEOUT_MS = 10_000;
  */
 const ROWS_PER_INSERT = 12;
 
-/**
- * A number as the SQL API may send it. Its docs show values as strings
- * and do not say which types come back as numbers, so both are taken; a
- * string that is not a plain decimal is refused.
- */
-const numeric = z
-  .union([
-    z.number(),
-    z
-      .string()
-      .regex(/^-?\d+(?:\.\d+)?(?:e[+-]?\d+)?$/iu)
-      .transform(Number),
-  ])
-  .pipe(z.number());
+const responseSchema = answerSchema(rollupRowSchema);
 
-const rowSchema = z.object({
-  route: z.string().min(1).max(96),
-  metric: z.string().min(1).max(32),
-  device: z.string().min(1).max(32),
-  p50: numeric,
-  p75: numeric,
-  p95: numeric,
-  n: numeric.pipe(z.number().int().nonnegative()),
-});
-
-const responseSchema = z.object({ data: z.array(rowSchema) });
-
-type RollupRow = z.infer<typeof rowSchema>;
+type RollupRow = z.infer<typeof rollupRowSchema>;
 
 export interface RollupDeps {
   /**

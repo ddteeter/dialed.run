@@ -312,6 +312,24 @@ Recorded as the build found them.
   carries the day's breaches (the digest's existing fingerprint by kind
   and day), rather than an event per route.
 
+- **"Two windows in a row" is computed in one firing, with no state.** The
+  windows are whole hours: the last three (`[H-3, H)`) and the three
+  before the last one (`[H-4, H-1)`), each against the same hours of the
+  past four weeks. Both must breach. Keeping a breach between firings
+  would need somewhere to keep it; overlapping windows say the same thing.
+- **The drift limit has a floor:** median + 3 × MAD, or median + 10%,
+  whichever is more. Four quiet weeks can have a MAD of zero, and then any
+  rise at all would count. At least three of the four weeks must pass
+  `MIN_N`.
+- **The deploy check reads the last seven days per deploy** and orders the
+  deploys by when each was first measured, so a rollback to an old deploy
+  does not count as new. It uses the daily check's 25%.
+- **Each hourly finding is its own event,** tagged `digest: hourly` and
+  `speed_check`, fingerprinted `["perf", check, route, metric, day]`.
+  Eleven SQL API queries an hour: one for deploys, ten for the windows.
+- **Unconfigured, the hourly checks are silent.** The daily digest already
+  says so once a day.
+
 ## Test plan
 
 Covered per step above. Mutation ratchet: everything outside

@@ -13,9 +13,22 @@
  */
 
 /**
+ * One route, metric and device's figures over some span: a day in
+ * `perf_daily`, a deploy, or a few hours.
+ */
+export interface Measured {
+  readonly route: string;
+  readonly metric: string;
+  readonly device: string;
+  readonly p75: number;
+  readonly p95: number;
+  readonly n: number;
+}
+
+/**
  * A `perf_daily` row, as much of it as the checks read.
  */
-export interface PerfRow {
+export interface PerfRow extends Measured {
   readonly day: string;
   readonly route: string;
   readonly metric: string;
@@ -32,6 +45,8 @@ export const MIN_N = 30;
  * "more than 25% worse".
  */
 export const MEDIAN_TOLERANCE = 1.25;
+
+const TOLERANCE_PERCENT = String(Math.round((MEDIAN_TOLERANCE - 1) * 100));
 
 /**
  * The days before yesterday whose median is the baseline, and how many of
@@ -69,7 +84,9 @@ function isChecked(metric: string): metric is CheckedMetric {
  * A row the checks may judge: a checked metric, a server row only if it
  * is `2xx`, and enough samples.
  */
-function isJudged(row: PerfRow): row is PerfRow & { metric: CheckedMetric } {
+function isJudged<TRow extends Measured>(
+  row: TRow,
+): row is TRow & { metric: CheckedMetric } {
   return (
     isChecked(row.metric) &&
     (row.metric !== "server" || row.device === "2xx") &&
@@ -77,7 +94,17 @@ function isJudged(row: PerfRow): row is PerfRow & { metric: CheckedMetric } {
   );
 }
 
-function valueOf(row: PerfRow & { metric: CheckedMetric }): number {
+/**
+ * The rows that pass `isKept` and may be judged.
+ */
+function judgedWhere<TRow extends Measured>(
+  rows: readonly TRow[],
+  isKept: (row: TRow) => boolean,
+): (TRow & { metric: CheckedMetric })[] {
+  return rows.filter((row) => isKept(row)).filter((row) => isJudged(row));
+}
+
+function valueOf(row: Measured & { metric: CheckedMetric }): number {
   return row[SPEED_LIMITS[row.metric].stat];
 }
 
@@ -91,7 +118,7 @@ function shown(metric: CheckedMetric, value: number): string {
     : `${String(Math.round(value))} ms`;
 }
 
-function named(row: PerfRow & { metric: CheckedMetric }): string {
+function named(row: Measured & { metric: CheckedMetric }): string {
   return `${row.metric} ${SPEED_LIMITS[row.metric].stat} on ${row.route} (${row.device})`;
 }
 
@@ -100,9 +127,7 @@ function named(row: PerfRow & { metric: CheckedMetric }): string {
  * over it: the thresholds are "good up to and including".
  */
 export function overLimit(rows: readonly PerfRow[], day: string): string[] {
-  return rows
-    .filter((row) => row.day === day)
-    .filter((row) => isJudged(row))
+  return judgedWhere(rows, (row) => row.day === day)
     .filter((row) => valueOf(row) > SPEED_LIMITS[row.metric].limit)
     .map(
       (row) =>
@@ -122,7 +147,7 @@ function median(values: readonly number[]): number {
   return middle.reduce((sum, value) => sum + value, 0) / middle.length;
 }
 
-const keyOf = (row: PerfRow): string =>
+const keyOf = (row: Measured): string =>
   `${row.route}\u{0}${row.metric}\u{0}${row.device}`;
 
 /**
@@ -133,27 +158,23 @@ const keyOf = (row: PerfRow): string =>
  */
 export function overMedian(rows: readonly PerfRow[], day: string): string[] {
   const baselines = new Map<string, number[]>();
-  for (const row of rows) {
-    if (row.day < day && isJudged(row)) {
-      baselines.set(keyOf(row), [
-        ...(baselines.get(keyOf(row)) ?? []),
-        valueOf(row),
-      ]);
-    }
+  const earlier = judgedWhere(rows, (row) => row.day < day);
+  for (const row of earlier) {
+    baselines.set(keyOf(row), [
+      ...(baselines.get(keyOf(row)) ?? []),
+      valueOf(row),
+    ]);
   }
-  return rows
-    .filter((row) => row.day === day)
-    .filter((row) => isJudged(row))
-    .flatMap((row) => {
-      const baseline = baselines.get(keyOf(row)) ?? [];
-      if (baseline.length < MIN_BASELINE_DAYS) return [];
-      const usual = median(baseline);
-      return valueOf(row) > usual * MEDIAN_TOLERANCE
-        ? [
-            `${named(row)} was ${shown(row.metric, valueOf(row))} on ${day}, more than ${String(Math.round((MEDIAN_TOLERANCE - 1) * 100))}% over its ${String(baseline.length)}-day median of ${shown(row.metric, usual)} (n=${String(row.n)})`,
-          ]
-        : [];
-    });
+  return judgedWhere(rows, (row) => row.day === day).flatMap((row) => {
+    const baseline = baselines.get(keyOf(row)) ?? [];
+    if (baseline.length < MIN_BASELINE_DAYS) return [];
+    const usual = median(baseline);
+    return valueOf(row) > usual * MEDIAN_TOLERANCE
+      ? [
+          `${named(row)} was ${shown(row.metric, valueOf(row))} on ${day}, more than ${TOLERANCE_PERCENT}% over its ${String(baseline.length)}-day median of ${shown(row.metric, usual)} (n=${String(row.n)})`,
+        ]
+      : [];
+  });
 }
 
 /**
@@ -171,4 +192,158 @@ export function runSpeedChecks(
       anomalies.push(`a speed check failed: ${String(error)}`);
     }
   }
+}
+
+/**
+ * One hourly finding (design 165): which check, where, and the line a
+ * person reads. Each is its own Sentry event, fingerprinted by check,
+ * route, metric and day, so a regression is its own issue and alerts once
+ * a day.
+ */
+export interface SpeedFinding {
+  readonly check: "deploy-regression" | "drift";
+  readonly route: string;
+  readonly metric: string;
+  readonly line: string;
+}
+
+/**
+ * A route, metric and device's figures under one deploy, and when that
+ * deploy was first measured (unix seconds).
+ */
+export interface VersionRow extends Measured {
+  readonly version: string;
+  readonly firstSeen: number;
+}
+
+/**
+ * The two deploys to compare: the newest measured, and the one before it,
+ * ordered by when each was first measured. `undefined` until there are
+ * two.
+ */
+function lastTwoVersions(
+  rows: readonly VersionRow[],
+): [newest: string, previous: string] | undefined {
+  const firstSeen = new Map<string, number>();
+  for (const row of rows) {
+    firstSeen.set(
+      row.version,
+      Math.min(firstSeen.get(row.version) ?? row.firstSeen, row.firstSeen),
+    );
+  }
+  const [newest, previous] = [...firstSeen]
+    .toSorted(([, a], [, b]) => b - a)
+    .map(([version]) => version);
+  return newest === undefined || previous === undefined
+    ? undefined
+    : [newest, previous];
+}
+
+/**
+ * Each route, metric and device the newest deploy made more than
+ * `MEDIAN_TOLERANCE` times slower than the deploy before it, once both
+ * have `MIN_N` samples. A first deploy has nothing to compare with, and is
+ * silent.
+ */
+export function deployRegressions(rows: readonly VersionRow[]): SpeedFinding[] {
+  const versions = lastTwoVersions(rows);
+  if (versions === undefined) return [];
+  const [newest, previous] = versions;
+  const before = new Map<string, VersionRow & { metric: CheckedMetric }>();
+  const older = judgedWhere(rows, (row) => row.version === previous);
+  for (const row of older) {
+    before.set(keyOf(row), row);
+  }
+  return judgedWhere(rows, (row) => row.version === newest).flatMap((row) => {
+    const old = before.get(keyOf(row));
+    if (old === undefined) return [];
+    return valueOf(row) > valueOf(old) * MEDIAN_TOLERANCE
+      ? [
+          {
+            check: "deploy-regression" as const,
+            route: row.route,
+            metric: row.metric,
+            line: `${named(row)} is ${shown(row.metric, valueOf(row))} on deploy ${row.version}, more than ${TOLERANCE_PERCENT}% over ${shown(row.metric, valueOf(old))} on ${old.version} (n=${String(row.n)} and ${String(old.n)})`,
+          },
+        ]
+      : [];
+  });
+}
+
+/**
+ * How far above its usual a window must be to count, as a multiple of the
+ * baseline's median absolute deviation, and the least it must be above
+ * the median whatever the MAD: four quiet weeks can have a MAD of zero,
+ * and then any rise at all would count.
+ */
+export const DRIFT_MADS = 3;
+export const DRIFT_FLOOR = 0.1;
+
+/**
+ * The weeks of history a window is compared with, and how many of them
+ * must have passed `MIN_N`.
+ */
+export const DRIFT_WEEKS = 4;
+export const MIN_DRIFT_WEEKS = 3;
+
+/**
+ * One window's rows for this week and each of the `DRIFT_WEEKS` before
+ * it, the same hours of the same weekday: index 0 is this week.
+ */
+export type WindowWeeks = readonly (readonly Measured[])[];
+
+interface Drifted {
+  readonly row: Measured & { metric: CheckedMetric };
+  readonly limit: number;
+}
+
+/**
+ * The rows of this week's window above their usual: the median of the
+ * same window in past weeks plus `DRIFT_MADS` deviations, or plus
+ * `DRIFT_FLOOR` of the median if that is more.
+ */
+function driftedIn(weeks: WindowWeeks): Map<string, Drifted> {
+  const [now = [], ...past] = weeks;
+  const history = new Map<string, number[]>();
+  for (const row of past.flat()) {
+    if (isJudged(row)) {
+      history.set(keyOf(row), [
+        ...(history.get(keyOf(row)) ?? []),
+        valueOf(row),
+      ]);
+    }
+  }
+  const drifted = new Map<string, Drifted>();
+  for (const row of now) {
+    const values = history.get(keyOf(row)) ?? [];
+    if (!isJudged(row) || values.length < MIN_DRIFT_WEEKS) continue;
+    const usual = median(values);
+    const spread = median(values.map((value) => Math.abs(value - usual)));
+    const limit = usual + Math.max(DRIFT_MADS * spread, DRIFT_FLOOR * usual);
+    if (valueOf(row) > limit) drifted.set(keyOf(row), { row, limit });
+  }
+  return drifted;
+}
+
+/**
+ * Each route, metric and device above its usual in both of the last two
+ * windows: the last three whole hours, and the three hours before the
+ * last one. One noisy window is not drift; two in a row is.
+ */
+export function drifts(
+  current: WindowWeeks,
+  previous: WindowWeeks,
+): SpeedFinding[] {
+  const before = driftedIn(previous);
+  const findings: SpeedFinding[] = [];
+  for (const [key, { row, limit }] of driftedIn(current)) {
+    if (!before.has(key)) continue;
+    findings.push({
+      check: "drift",
+      route: row.route,
+      metric: row.metric,
+      line: `${named(row)} has been ${shown(row.metric, valueOf(row))} for the last three hours, above the ${shown(row.metric, limit)} usual for these hours (n=${String(row.n)})`,
+    });
+  }
+  return findings;
 }

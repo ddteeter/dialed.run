@@ -17,6 +17,7 @@ import {
   timeRequest,
   timingDeps,
   dailySpeed,
+  hourlySpeed,
 } from "./modules/ops";
 import { forgetAnsweredRequests } from "./modules/account/answered-requests";
 import { exportConsumersFromEnv } from "./modules/account/export-build";
@@ -103,6 +104,7 @@ export default {
         sweepCopyrightHolds,
         // Ops' own, handed in so a test can fake the SQL API (design 165).
         speed: dailySpeed,
+        speedHourly: hourlySpeed,
       });
     } catch (error) {
       captureException(error, { surface: "scheduled", cron: controller.cron });
