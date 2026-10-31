@@ -32,7 +32,8 @@ export type NotificationKind =
   | "content_hidden"
   | "content_kept"
   | "report_removed"
-  | "report_kept";
+  | "report_kept"
+  | "photo_missing";
 
 /**
  * What this notification is *about* — the thing it links to, and the key
@@ -50,6 +51,8 @@ export type NotificationKind =
  * | content_kept    | the reported entry or photo a person left up     |
  * | report_removed  | what the reporter reported, once removed (C8)    |
  * | report_kept     | what the reporter reported, once left up (C8)    |
+ * | photo_missing   | the kit photo or garment the Desk cleared because |
+ * |                 | its file never reached storage (D-153)           |
  *
  * A kind with no subject would pass `null`, and SQLite treats NULLs as
  * distinct in a UNIQUE index, so this key would not dedupe it — its guard

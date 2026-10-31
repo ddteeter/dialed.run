@@ -170,6 +170,9 @@ export {
 
 export { classifierFromEnv } from "./classifier/from-env";
 
+// D-153: whether a photo has waited the day out, for the Desk's Clear photo.
+export { isStuck } from "./stuck";
+
 export {
   decide,
   imageCategories,

@@ -808,6 +808,28 @@ describe("a photo still pending a day after upload (D-153)", () => {
   it("is decided as any other photo row", () => {
     renderQueue([stuck("unscreened")]);
     expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Clear photo" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers Clear photo for a missing file, never Approve, and sends no reason", async () => {
+    const user = userEvent.setup();
+    const { resolve } = renderQueue([stuck("missing_file")]);
+
+    expect(
+      screen.queryByRole("button", { name: "Approve" }),
+    ).not.toBeInTheDocument();
+    // Remove stays: a reviewer may still decide the row is a takedown.
+    expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Clear photo" }));
+
+    expect(resolve).toHaveBeenCalledWith({
+      data: { queueId: "01HZZZZZZZZZZZZZZZZZZZZZZZ", action: "clear" },
+    });
+    await waitFor(() => {
+      expect(screen.getByText(bracketed("0 waiting"))).toBeInTheDocument();
+    });
   });
 });
 

@@ -24,7 +24,7 @@
  * cycle dependency-cruiser refuses. The feed already reads `runs` for every
  * card it draws, and a run's deletion is mostly its entry's.
  */
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, eq, inArray, ne, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { drizzle } from "drizzle-orm/d1";
@@ -284,6 +284,22 @@ export const retractEntry = retractOneOf(
 );
 
 /**
+ * The one entry photo a condition picks out, with the entry it is on and
+ * that entry's owner: the runner's own delete scopes it to them, and the
+ * Desk's Clear photo to the photo still pending. The condition may name
+ * `entryPhotos` and `outfitEntries` columns.
+ */
+export async function entryPhotoWhere(db: Db, condition: SQL | undefined) {
+  const [photo] = await db
+    .select({ entryId: entryPhotos.entryId, ownerId: outfitEntries.userId })
+    .from(entryPhotos)
+    .innerJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
+    .where(condition)
+    .limit(1);
+  return photo;
+}
+
+/**
  * One photo off one of the runner's entries. The row goes with its open
  * review, and the entry's prefix is owed a reconcile, which deletes this
  * object and keeps the photos still named.
@@ -294,23 +310,35 @@ export async function deleteEntryPhoto(
   photoId: string,
   report: Report = captureException,
 ): Promise<void> {
-  const [photo] = await db
-    .select({ entryId: entryPhotos.entryId })
-    .from(entryPhotos)
-    .innerJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
-    .where(and(eq(entryPhotos.id, photoId), eq(outfitEntries.userId, userId)))
-    .limit(1);
+  const photo = await entryPhotoWhere(
+    db,
+    and(eq(entryPhotos.id, photoId), eq(outfitEntries.userId, userId)),
+  );
   if (photo === undefined) throw new NotFoundError("photo not found");
   await commit(
     db,
-    [
-      settleOpenReviews(db, "photo", [photoId], userId),
-      screeningDeletes(db, "entry", [photoId]),
-      db.delete(entryPhotos).where(eq(entryPhotos.id, photoId)),
-    ],
+    photoDeletion(db, photoId, userId),
     mediaDebts(userId, [photo.entryId]),
     report,
   );
+}
+
+/**
+ * One photo's rows, whoever takes it off: its open review settled by
+ * `settledBy`, what the screener said of it, and the photo itself — the
+ * runner's own delete, a moderator's Remove, and the Desk's Clear photo
+ * on a file that is missing (D-153). The bytes are the caller's debt.
+ */
+export function photoDeletion(
+  db: Db,
+  photoId: string,
+  settledBy: string,
+): Statements {
+  return [
+    settleOpenReviews(db, "photo", [photoId], settledBy),
+    screeningDeletes(db, "entry", [photoId]),
+    db.delete(entryPhotos).where(eq(entryPhotos.id, photoId)),
+  ];
 }
 
 /**

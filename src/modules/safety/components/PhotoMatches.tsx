@@ -188,7 +188,6 @@ function GarmentDecision({
       schema={garmentMatchActionInput}
       subject={{ itemId: match.id }}
       act={(values) => decide({ data: values })}
-      canApprove={false}
       subjectType="garment"
       owner={match.handle}
       onSettled={onSettled}

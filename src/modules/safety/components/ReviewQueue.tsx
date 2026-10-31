@@ -177,7 +177,8 @@ type Moved = (username: string) => void;
 
 /**
  * A content row's decision: Approve, Remove, or Remove as suspected CSAM
- * (`RemovalDecision`), sent by the queue row's id.
+ * (`RemovalDecision`), sent by the queue row's id. A missing file has
+ * nothing to approve, so it offers Clear photo instead (D-153).
  */
 function Decision({
   row,
@@ -189,7 +190,7 @@ function Decision({
       schema={reviewActionInput}
       subject={{ queueId: row.id }}
       act={(values) => decide({ data: values })}
-      canApprove
+      reasonless={row.source === "missing_file" ? "clear" : "approve"}
       subjectType={row.subjectType}
       owner={row.subject.owner}
       onSettled={() => {

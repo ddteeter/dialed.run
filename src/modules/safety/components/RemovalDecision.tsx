@@ -98,8 +98,23 @@ export function subjectWord(subjectType: ReviewSubjectType): string {
  * or a takedown with the picked reason.
  */
 type Choice =
-  | { action: "approve" }
+  | { action: Reasonless }
   | { action: "remove" | "quarantine"; reason: RemovalReason | undefined };
+
+/**
+ * The decision a row may offer that takes no reason: **Approve**, where
+ * something queued the subject, or **Clear photo**, where its file is
+ * missing (D-153, design 167) and there is nothing to approve.
+ */
+export type Reasonless = "approve" | "clear";
+
+/**
+What each reasonless decision is called on its button.
+*/
+const REASONLESS_LABELS: Readonly<Record<Reasonless, string>> = {
+  approve: "Approve",
+  clear: "Clear photo",
+};
 
 /**
  * One subject, and what a reviewer can do with it (task 128 · SAF-5).
@@ -107,7 +122,8 @@ type Choice =
  * CSAM** does the same but keeps one copy out of every route's reach for
  * the preservation period, and tells nobody. Both need a reason — it is
  * the statement the author is sent. **Approve** is offered where something
- * queued the subject; a copy-search match has nothing to approve.
+ * queued the subject; a copy-search match has nothing to approve, and a
+ * missing file offers **Clear photo** in its place (`reasonless`).
  *
  * **Suspected CSAM asks again, in place** (round 28 #8): the decision bar
  * gives way to the question, with Cancel focused, because there is no
@@ -124,7 +140,7 @@ export function RemovalDecision<TSchema extends z.ZodType>(
     schema: TSchema;
     subject: Readonly<Record<string, string>>;
     act: (values: z.output<TSchema>) => Promise<unknown>;
-    canApprove: boolean;
+    reasonless?: Reasonless | undefined;
     subjectType: ReviewSubjectType;
     owner: string | undefined;
     onSettled: () => void;
@@ -143,6 +159,8 @@ export function RemovalDecision<TSchema extends z.ZodType>(
     onSuccess: props.onSettled,
     successMessage: "Decided.",
   });
+
+  const { reasonless } = props;
 
   function send(choice: Choice): void {
     void form.submit({ ...props.subject, ...choice });
@@ -172,14 +190,14 @@ export function RemovalDecision<TSchema extends z.ZodType>(
         send({ action: "remove", reason });
       }}
       first={
-        props.canApprove ? (
+        reasonless === undefined ? undefined : (
           <QuietAction
-            label="Approve"
+            label={REASONLESS_LABELS[reasonless]}
             onPress={() => {
-              send({ action: "approve" });
+              send({ action: reasonless });
             }}
           />
-        ) : undefined
+        )
       }
       submit={{ label: "Remove", pendingLabel: "Removing" }}
       last={

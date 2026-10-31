@@ -128,8 +128,12 @@ type Found = NonNullable<Awaited<ReturnType<typeof garmentWithPhoto>>>;
 /**
  * The photo off the garment — only the version read, since a photo
  * replaced since is not the one decided on, and this must not clear it.
+ * Also the Desk's Clear photo on a garment whose file is missing (D-153).
  */
-function clearedPhoto(db: Db, { item, photoKey }: Found) {
+export function clearedPhoto(
+  db: Db,
+  { item, photoKey }: { item: { id: string }; photoKey: string },
+) {
   const sameVersion = and(
     eq(wardrobeItems.id, item.id),
     eq(wardrobeItems.photoKey, photoKey),

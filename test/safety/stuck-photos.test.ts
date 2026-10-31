@@ -10,6 +10,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   entryPhotos,
+  moderationActions,
+  notifications,
+  outbox,
+  outfitEntries,
   reviewQueue,
   wardrobeItems,
 } from "../../src/db/schema-core";
@@ -18,7 +22,17 @@ import {
   garmentOriginalKey,
   garmentVersionId,
 } from "../../src/lib/garment-photo-key";
-import { newUlid, ulidSeconds } from "../../src/lib/ids";
+import {
+  newUlid,
+  type Ulid,
+  ulidSchema,
+  ulidSeconds,
+} from "../../src/lib/ids";
+import {
+  clearMissingPhoto,
+  MISSING_PHOTO_NOTICE,
+} from "../../src/modules/feed/missing-photo";
+import { decideReview } from "../../src/modules/feed/moderation";
 import { nowSeconds } from "../../src/lib/now";
 import {
   imageCategories,
@@ -453,5 +467,264 @@ describe("the clock a photo carries", () => {
     expect(isStuck(undefined, STUCK_AFTER_SECONDS)).toBe(true);
     expect(isStuck(1, STUCK_AFTER_SECONDS)).toBe(false);
     expect(STUCK_AFTER_SECONDS).toBe(DAY);
+  });
+});
+
+/**
+The open queue row a stuck photo's escalation made, by its subject.
+*/
+async function queueIdOf(subjectId: string): Promise<Ulid> {
+  const [row] = await core()
+    .select({ id: reviewQueue.id })
+    .from(reviewQueue)
+    .where(eq(reviewQueue.subjectId, subjectId));
+  if (row === undefined) throw new Error(`no queue row for ${subjectId}`);
+  return ulidSchema.parse(row.id);
+}
+
+/**
+What a runner's bell says about missing photos.
+*/
+async function missingNotices(userId: string) {
+  return core()
+    .select({ subjectId: notifications.subjectId, body: notifications.body })
+    .from(notifications)
+    .where(
+      and(
+        eq(notifications.userId, userId),
+        eq(notifications.kind, "photo_missing"),
+      ),
+    );
+}
+
+async function entryPhotoRow(photoId: string) {
+  const [row] = await core()
+    .select({ screenStatus: entryPhotos.screenStatus })
+    .from(entryPhotos)
+    .where(eq(entryPhotos.id, photoId));
+  return row;
+}
+
+async function ownerOfPhoto(photoId: string): Promise<string> {
+  const [row] = await core()
+    .select({ userId: outfitEntries.userId })
+    .from(entryPhotos)
+    .innerJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
+    .where(eq(entryPhotos.id, photoId));
+  if (row === undefined) throw new Error(`no photo ${photoId}`);
+  return row.userId;
+}
+
+async function garmentRow(itemId: string) {
+  const [row] = await core()
+    .select({
+      userId: wardrobeItems.userId,
+      photoKey: wardrobeItems.photoKey,
+      visibility: wardrobeItems.visibility,
+    })
+    .from(wardrobeItems)
+    .where(eq(wardrobeItems.id, itemId));
+  if (row === undefined) throw new Error(`no garment ${itemId}`);
+  return { ...row, photoKey: row.photoKey ?? undefined };
+}
+
+describe("Approve on a stuck photo (owner, 2026-10-31)", () => {
+  beforeEach(resetSafetyTables);
+
+  it("publishes a photo the classifier never answered for", async () => {
+    const now = nowSeconds();
+    const photoId = await entryPhoto(now, 2 * DAY);
+    await retryPendingScreenings(unavailable, [], now);
+
+    const outcome = await decideReview(core(), "op", {
+      queueId: await queueIdOf(photoId),
+      action: "approve",
+    });
+
+    expect(outcome).toBe("resolved");
+    expect(await entryPhotoRow(photoId)).toEqual({ screenStatus: "pass" });
+    expect(await queueRows()).toEqual([
+      expect.objectContaining({ status: "approved", resolvedBy: "op" }),
+    ]);
+  });
+
+  it("leaves a missing file pending: there are no bytes to publish", async () => {
+    const now = nowSeconds();
+    const photoId = await entryPhoto(now, 2 * DAY, false);
+    await retryPendingScreenings(clean, [], now);
+
+    await decideReview(core(), "op", {
+      queueId: await queueIdOf(photoId),
+      action: "approve",
+    });
+
+    expect(await entryPhotoRow(photoId)).toEqual({ screenStatus: "pending" });
+  });
+});
+
+describe("Clear photo on a missing file (owner, 2026-10-31)", () => {
+  beforeEach(resetSafetyTables);
+
+  it("takes a kit's photo off, settles the row and asks its owner to add it again", async () => {
+    const now = nowSeconds();
+    const photoId = await entryPhoto(now, 2 * DAY, false);
+    const ownerId = await ownerOfPhoto(photoId);
+    await retryPendingScreenings(clean, [], now);
+
+    const outcome = await decideReview(core(), "op", {
+      queueId: await queueIdOf(photoId),
+      action: "clear",
+    });
+
+    expect(outcome).toBe("resolved");
+    expect(await entryPhotoRow(photoId)).toBeUndefined();
+    expect(await queueRows()).toEqual([
+      expect.objectContaining({
+        source: "missing_file",
+        status: "removed",
+        resolvedBy: "op",
+      }),
+    ]);
+    expect(await missingNotices(ownerId)).toEqual([
+      { subjectId: photoId, body: MISSING_PHOTO_NOTICE.photo },
+    ]);
+    // No verdict on the runner: nothing a run reads back as a removal.
+    expect(await core().select().from(moderationActions)).toEqual([]);
+    // The bytes were owed and the fast path settled the debt.
+    expect(await core().select().from(outbox)).toEqual([]);
+  });
+
+  it("takes a garment's photo off and tells its owner in Closet words", async () => {
+    const now = nowSeconds();
+    const itemId = await garmentPhoto(now, 2 * DAY, false);
+    const { userId } = await garmentRow(itemId);
+    await retryPendingScreenings(clean, [], now);
+
+    const outcome = await decideReview(core(), "op", {
+      queueId: await queueIdOf(itemId),
+      action: "clear",
+    });
+
+    expect(outcome).toBe("resolved");
+    expect(await garmentRow(itemId)).toEqual({
+      userId,
+      photoKey: undefined,
+      visibility: "ok",
+    });
+    expect(await queueRows()).toEqual([
+      expect.objectContaining({ status: "removed", resolvedBy: "op" }),
+    ]);
+    expect(await missingNotices(userId)).toEqual([
+      { subjectId: itemId, body: MISSING_PHOTO_NOTICE.garment },
+    ]);
+    expect(await core().select().from(moderationActions)).toEqual([]);
+    expect(await core().select().from(outbox)).toEqual([]);
+  });
+
+  it("keeps a garment photo added again within the day", async () => {
+    const now = nowSeconds();
+    const itemId = await garmentPhoto(now, 2 * DAY, false);
+    await retryPendingScreenings(clean, [], now);
+    const { userId } = await garmentRow(itemId);
+    const fresh = `items/${userId}/${itemId}/${mintedAgo(now, 60)}`;
+    await core()
+      .update(wardrobeItems)
+      .set({ photoKey: fresh })
+      .where(eq(wardrobeItems.id, itemId));
+
+    const outcome = await clearMissingPhoto(
+      core(),
+      "op",
+      await queueIdOf(itemId),
+      undefined,
+      now,
+    );
+
+    expect(outcome).toBe("not_found");
+    expect(await garmentRow(itemId)).toMatchObject({ photoKey: fresh });
+    expect(await missingNotices(userId)).toEqual([]);
+  });
+
+  it("clears nothing on a photo the classifier never answered for", async () => {
+    const now = nowSeconds();
+    const photoId = await entryPhoto(now, 2 * DAY);
+    await retryPendingScreenings(unavailable, [], now);
+
+    const outcome = await decideReview(core(), "op", {
+      queueId: await queueIdOf(photoId),
+      action: "clear",
+    });
+
+    expect(outcome).toBe("not_found");
+    expect(await entryPhotoRow(photoId)).toEqual({ screenStatus: "pending" });
+    expect(await queueRows()).toEqual([
+      expect.objectContaining({ status: "pending" }),
+    ]);
+  });
+
+  it("clears nothing once the photo is no longer pending", async () => {
+    const now = nowSeconds();
+    const photoId = await entryPhoto(now, 2 * DAY, false);
+    await retryPendingScreenings(clean, [], now);
+    await core()
+      .update(entryPhotos)
+      .set({ screenStatus: "flagged" })
+      .where(eq(entryPhotos.id, photoId));
+
+    const outcome = await decideReview(core(), "op", {
+      queueId: await queueIdOf(photoId),
+      action: "clear",
+    });
+
+    expect(outcome).toBe("not_found");
+    expect(await entryPhotoRow(photoId)).toEqual({ screenStatus: "flagged" });
+  });
+
+  it("clears nothing on a garment whose photo is no longer pending", async () => {
+    const now = nowSeconds();
+    const itemId = await garmentPhoto(now, 2 * DAY, false);
+    await retryPendingScreenings(clean, [], now);
+    await core()
+      .update(wardrobeItems)
+      .set({ visibility: "flagged" })
+      .where(eq(wardrobeItems.id, itemId));
+    const before = await garmentRow(itemId);
+
+    const outcome = await decideReview(core(), "op", {
+      queueId: await queueIdOf(itemId),
+      action: "clear",
+    });
+
+    expect(outcome).toBe("not_found");
+    expect(await garmentRow(itemId)).toEqual(before);
+    expect(before.photoKey).toMatch(/^items\//);
+  });
+
+  it("clears nothing on a subject that has no photo to clear", async () => {
+    const queueId = newUlid();
+    await core().insert(reviewQueue).values({
+      id: queueId,
+      subjectType: "product",
+      subjectId: newUlid(),
+      source: "missing_file",
+      status: "pending",
+      createdAt: nowSeconds(),
+    });
+
+    expect(await decideReview(core(), "op", { queueId, action: "clear" })).toBe(
+      "not_found",
+    );
+  });
+
+  it("answers a second Clear as already settled", async () => {
+    const now = nowSeconds();
+    const photoId = await entryPhoto(now, 2 * DAY, false);
+    await retryPendingScreenings(clean, [], now);
+    const queueId = await queueIdOf(photoId);
+    await decideReview(core(), "op", { queueId, action: "clear" });
+
+    expect(await decideReview(core(), "op", { queueId, action: "clear" })).toBe(
+      "already_resolved",
+    );
   });
 });
