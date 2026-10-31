@@ -23,13 +23,22 @@ dropped, because it means keeping up with model releases by hand.)
    rows only. The band is checked in code on the given fingerprint.
 2. **Hold breakers** (`safety/breakers.ts`, new). These keep no state: before
    holding, count the last hour's holds of that cause from `review_queue`
-   (`source`, `created_at`). At or over the ceiling, don't hold, and fall back
-   to what the system already does when degraded:
+   (`source`, `opened_at`). `created_at` won't do: `enqueueForReview`
+   reopens an existing row on conflict and keeps its first `created_at`, so
+   a re-hide would go uncounted. At or over the ceiling, don't hold, and fall
+   back to what the system already does when degraded:
    - fingerprint → the photo goes to the classifier as any upload does;
    - classifier flag → the photo stays `pending` (visible only to its owner),
      the classifier-outage state, and the hourly retry owns it.
      The hold rate is therefore bounded during a bug, not merely detected. The
      breaker resets itself when the window drains, so the Desk has no switch.
+   **Ceilings** (owner, 2026-10-31). Each scales with what drives it:
+   - fingerprint: **fixed 5/h**. Re-uploads of removed images don't grow
+     with traffic.
+   - classifier flag: **over 15% of the hour's screened photos, with at
+     least 20 screened**.
+   - report hide: **the larger of 10/h and 4× the busiest hour of the
+     trailing 28 days**. The baseline is read only once the hour is over 10.
 3. **Report-hide breaker** (`safety/reports.ts`). This is item 5 of the
    2026-10-31 review, changed on purpose. Over the ceiling, a report
    still **queues** the subject but does not hide it, so no notice is owed. That
@@ -38,7 +47,9 @@ dropped, because it means keeping up with model releases by hand.)
 4. **Trip alerts** (`ops/sentry.ts`). A trip sends one Sentry event,
    fingerprinted `["breaker", cause, day]`, through the same new-issue rule
    as design 162. Today shows a line while any breaker is over its ceiling.
-5. **Too-quiet line** (daily digest). If the last 7 days screened ≥ 50 photos
+5. **Headroom and too-quiet lines** (daily digest). Weekly, each cause's
+   busiest hour as a percentage of its ceiling, with a warning over 50%, so the
+   ceilings are revisited before growth trips them. Separately: if the last 7 days screened ≥ 50 photos
    and the classifier returned no `flag` and no `review`, say so. This catches a
    model change in the direction the breaker can't see.
 6. **Matches gap** (Review row, `PhotoMatches`). The list stops at
@@ -51,11 +62,15 @@ dropped, because it means keeping up with model releases by hand.)
 
 ## Contract touches
 
-- Schema changes needed: **none.** The counts read `review_queue`, and the
-  quiet line reads `photo_screenings`. Whether existing indexes cover both is
-  a step-1 check, and a new index is additive.
+- Schema (additive, so proceed per `.claude/rules/schema.md`; numbered past
+  `feat/160-public-pages`' 0073–0074):
+  `0075_add_review_queue_opened_at` adds nullable `review_queue.opened_at`,
+  set on insert and on reopen, with index `(source, opened_at)`.
+  `0076_add_photo_screenings_created_index` adds
+  `photo_screenings(created_at)` for the classifier share and the quiet line.
 - New route files: none expected. The release action is a server function
-  called from the Desk.
+  called from the Desk, and it needs a row in `verification-class.test.ts`
+  (Desk class, as the other Desk writes).
 - New bindings/queues/crons: **none** (the digest and hourly firings exist).
 - Screens: Desk Today (breaker line), Review (12+, many-runners warning,
   release). The copy is operator-facing only.
@@ -70,6 +85,8 @@ dropped, because it means keeping up with model releases by hand.)
 - worker: a trip raises one Sentry event a cause a day. The quiet line fires
   only with enough volume.
 - worker: release approves only the matching cause and window, with audit rows.
+- worker: a reopened queue row stamps `opened_at`. The headroom line's
+  percentage is pinned.
 - ui: 12+ label, many-runners warning, release confirm.
 
 ## Open questions
@@ -77,8 +94,29 @@ dropped, because it means keeping up with model releases by hand.)
 - **Ceilings** (proposed, pre-launch scale): fingerprint 5/h, classifier
   flag 10/h, report hides 10/h. These are fixed numbers now. A share of
   uploads later, once there is volume to take a share of.
-- **Popcount band 8–56**: I'm proceeding on it. I'll measure it against the
-  design-146 fixtures and any eval photos before settling.
-- **Do `intimate` 1-report hides bypass the report breaker?** Proposed: yes.
-  The 48-hour clock, and the harm of one more viewer, outweigh a burst bug on
-  a path a person files one report at a time.
+- **Popcount band 8–56**: agreed as the starting point (owner, 2026-10-31).
+  Test images are to be added as fixtures for the measurement: flat, dark,
+  gradient, and ordinary kit photos.
+- **`intimate` 1-report hides bypass the report breaker** (owner,
+  2026-10-31). The 48-hour clock, and the harm of one more viewer, outweigh a
+  burst bug on a path a person files one report at a time.
+
+## Steps
+
+Every step ends with the commit gate, touched-file stryker at 100%
+(`--mutate "<file>"`, never a bare `stryker run`), and one commit.
+
+| #  | builds | tested by | done when |
+| -- | ------ | --------- | --------- |
+| 0  | **Measure the band.** `test/fixtures/scenes.ts` gains flat, near-black, near-white, one-way gradient, low-contrast and noisy scenes. Seeded scenes stand in for ordinary photos. Record the popcount of each in this doc. | a fixture test listing each scene's popcount | 8–56 is confirmed or moved, with the numbers here |
+| 1  | **`isDistinctive`** in `lib/photo-fingerprint.ts`. The keep paths in `removed-fingerprints.ts` keep nothing outside the band, and `removedMatchOf` answers nothing for an upload outside it. | band edges 7/8/56/57; a flat grid; an empty pixel buffer; worker tests for both keep paths and the match | a flat removed image keeps no row, and a flat upload is never held |
+| 2  | **Schema**: migrations 0075 and 0076. `enqueueForReview` stamps `opened_at` on insert and on reopen. | `migration-chain`; fresh-D1 apply; worker test on reopen | the migrations apply to a fresh local D1 |
+| 3  | **`safety/breakers.ts`**: `holdsInLastHour(cause)`, the three ceiling rules as pure functions, and `isOverCeiling(cause)`. | each rule at ceiling − 1 / ceiling; share below 20 screened; baseline read only over 10; other causes and outside the window not counted | pure rules at 100% mutation |
+| 4  | **Fingerprint breaker** wired into `feed/photos.ts` and `closet/photos.ts`: over the ceiling → no hold, the photo goes to the classifier. | worker tests on both upload paths at and over the ceiling | the 6th hold in an hour is screened, not held |
+| 5  | **Classifier breaker** in `screening.ts`: when a `flag` lands over the ceiling, write nothing and leave the photo `pending`. `retryPendingScreenings` counts these separately. | worker tests: flag over the ceiling stays pending with no queue row; review/pass unaffected | flags stop hiding once over 15% |
+| 6  | **Report-hide breaker** in `reports.ts`: over the ceiling, `fileReport` and `reconcileUnhiddenReports` queue without hiding and send no notice. `intimate` bypasses. | worker tests: queue-only over the ceiling; intimate still hides and notifies; the sweep doesn't re-hide later | no `content_hidden` notice while tripped |
+| 7  | **Trip alerts**: one Sentry event per cause per day (`["breaker", cause, day]`), plus a Today line while any cause is over. | worker test on the event and its dedupe; dom test for the Today line | a trip in the worker test reaches the Sentry stub once |
+| 8  | **Digest lines**: headroom (weekly) and too-quiet. | worker tests at 49/50/51% and at 49/50 screened | both lines appear, and stay away on an ordinary week |
+| 9  | **Review matches gap**: "12+" when cut off, and the many-runners warning before an `intimate` Remove. | dom tests on `PhotoMatches` / `RemovalDecision` | the warning names the runner count |
+| 10 | **Release a burst** on the Desk: cause + since, confirm, then chunked approves with audit rows. | worker test on scope and audit; dom test on the confirm; `verification-class` row | releasing 30 held photos returns them all to `pending` |
+| 11 | **pr-ready**: self-review, `docs/architecture.md` if a boundary moved, demo video of the Desk changes, PR. | the skill's checks | PR open; push run in the background |
