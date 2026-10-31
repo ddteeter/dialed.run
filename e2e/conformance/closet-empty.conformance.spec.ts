@@ -1,10 +1,10 @@
 import { eq } from "drizzle-orm";
-import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
 import { wardrobeItems } from "../../src/db/schema-core";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
+import { expect, test } from "../support/a11y";
 import { storageStateFor } from "../support/accounts";
 import { cellsOf, openBoard } from "../support/conformance";
 import { withLocalDb } from "../support/local-db";
