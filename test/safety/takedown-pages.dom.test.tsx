@@ -781,7 +781,7 @@ describe("Review · removal requests", () => {
 });
 
 describe("takedown pages: a lapsed session (Au7, D-151)", () => {
-  it("carries page to log-in", async () => {
+  it("carries every form on a request, Decline's too, as the page", async () => {
     carriedSince();
     await renderWithRouter(
       <RemovalRequests
@@ -790,6 +790,10 @@ describe("takedown pages: a lapsed session (Au7, D-151)", () => {
         block={vi.fn<BlockFn>()}
       />,
     );
+    // Decline's form is asked for only once Decline is pressed.
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Decline" }));
 
     expect(carriedSince()).toEqual(["page"]);
   });

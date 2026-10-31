@@ -1002,9 +1002,12 @@ describe("a handle the re-ask flagged (D-97)", () => {
 });
 
 describe("the review queue: a lapsed session (Au7, D-151)", () => {
-  it("carries page to log-in", () => {
+  it.each([
+    ["a content row's removal", row],
+    ["a flagged handle's review", flagged],
+  ])("carries %s as the page", (_case, queued) => {
     carriedSince();
-    renderQueue([row(), flagged({ id: "01HYYYYYYYYYYYYYYYYYYYYYYY" })]);
+    renderQueue([queued()]);
 
     expect(carriedSince()).toEqual(["page"]);
   });
