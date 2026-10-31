@@ -951,7 +951,21 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     the hour clears."_ **The ask:** draw it on D0, or confirm the
     composition and the copy.
 
-_Item 93 is open (design 164); round 42 answered the two before it._
+94. **Review's match grid: a floor count, and a many-runners warning
+    (design 164).** Undesigned additions to round 39 #71's MATCHING PHOTOS
+    · ANY RUNNER · N:
+    - When either list has more than its 12, the count reads `12+`, so a
+      count the search did not finish is not shown as a total.
+    - When the matches come from more than three runners, a line sits above
+      the grid, composed as Today's notices are: a hi-viz `MONO.xs` kicker
+      _"Photos from N runners match"_ over a `text-micro` sentence, _"A
+      picture this common may not be one person's. Removed as intimate, it
+      would hold every later upload that looks like it."_ It is there
+      because a Remove as intimate keeps the fingerprint (D-147).
+
+    **The ask:** draw both on the Review row, or confirm them.
+
+_Items 93 and 94 are open (design 164); round 42 answered the two before them._
 
 <!-- Item numbers continue past rounds 35–40 (45–76, 82–87). Design numbered the Garmin asks 77–81 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
 

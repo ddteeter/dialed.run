@@ -49,17 +49,50 @@ export function PhotoMatches({
 }>): JSX.Element | undefined {
   if (found === undefined) return undefined;
   const count = removed.length + found.matches.length;
+  // A list cut off at the limit counted only what it read (design 164).
+  const shown = `${String(count)}${found.isCutOff ? "+" : ""}`;
   return (
     <PhotoSection
       part="photo-matches"
       title={
         count === 0
           ? "Matching photos · any runner"
-          : `Matching photos · any runner · ${String(count)}`
+          : `Matching photos · any runner · ${shown}`
       }
     >
+      <ManyRunners matches={found.matches} />
       <Matches found={found} removed={removed} decide={decide} />
     </PhotoSection>
+  );
+}
+
+/**
+ * More runners than this matching one picture says it is common rather
+ * than one person's (design 164).
+ */
+const MANY_RUNNERS = 3;
+
+/**
+ * Said above the matches when they come from more than `MANY_RUNNERS`
+ * runners (design 164): before a Remove as intimate, which keeps the
+ * fingerprint and holds every later upload near it, the reviewer sees
+ * that this picture looks like a lot of other runners' photos.
+ */
+function ManyRunners({
+  matches,
+}: Readonly<{ matches: readonly PhotoMatch[] }>): JSX.Element | undefined {
+  const runners = new Set(matches.map((match) => match.ownerId)).size;
+  if (runners <= MANY_RUNNERS) return undefined;
+  return (
+    <p data-part="many-runners" className="m-0 flex flex-col gap-1">
+      <Mono step="xs" className="text-hiviz-text">
+        {`Photos from ${String(runners)} runners match`}
+      </Mono>
+      <span className="text-micro">
+        A picture this common may not be one person's. Removed as intimate,
+        it would hold every later upload that looks like it.
+      </span>
+    </p>
   );
 }
 

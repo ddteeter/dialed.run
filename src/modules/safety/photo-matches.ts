@@ -80,6 +80,12 @@ export type PhotoMatch = Readonly<
 export interface PhotoMatches {
   readonly fingerprinted: boolean;
   readonly matches: readonly PhotoMatch[];
+  /**
+   * Whether either list had more than `PHOTO_MATCHES_LIMIT` (design 164):
+   * the count is then a floor, and Review says "12+" rather than a number
+   * the search never finished counting.
+   */
+  readonly isCutOff: boolean;
 }
 
 /**
@@ -114,11 +120,19 @@ async function search(
   subject: OtherPhotosSubject,
   own: readonly string[],
 ): Promise<PhotoMatches> {
-  if (own.length === 0) return { fingerprinted: false, matches: [] };
-  const [kits, garments] = await db.batch([
+  if (own.length === 0) {
+    return { fingerprinted: false, matches: [], isCutOff: false };
+  }
+  const [kitsRead, garmentsRead] = await db.batch([
     kitMatches(db, subject, own),
     garmentMatches(db, own),
   ]);
+  // One past the limit was read, to know whether there were more.
+  const isCutOff = [kitsRead, garmentsRead].some(
+    (rows) => rows.length > PHOTO_MATCHES_LIMIT,
+  );
+  const kits = kitsRead.slice(0, PHOTO_MATCHES_LIMIT);
+  const garments = garmentsRead.slice(0, PHOTO_MATCHES_LIMIT);
   // Nearest first, a kit before a garment at the same distance (round 39
   // #71): each list is nearest first already, and the sort is stable.
   const matches: PhotoMatch[] = [
@@ -138,6 +152,7 @@ async function search(
   return {
     fingerprinted: true,
     matches: matches.toSorted((one, other) => one.distance - other.distance),
+    isCutOff,
   };
 }
 
@@ -214,7 +229,7 @@ function kitMatches(
       and(lte(distance, FINGERPRINT_MATCH_DISTANCE), notOwn),
     )
     .orderBy(asc(distance), asc(entryPhotos.id))
-    .limit(PHOTO_MATCHES_LIMIT);
+    .limit(PHOTO_MATCHES_LIMIT + 1);
 }
 
 /**
@@ -239,5 +254,5 @@ function garmentMatches(db: Db, own: readonly string[]) {
     .leftJoin(userProfiles, eq(userProfiles.userId, wardrobeItems.userId))
     .where(lte(distance, FINGERPRINT_MATCH_DISTANCE))
     .orderBy(asc(distance), asc(wardrobeItems.id))
-    .limit(PHOTO_MATCHES_LIMIT);
+    .limit(PHOTO_MATCHES_LIMIT + 1);
 }
