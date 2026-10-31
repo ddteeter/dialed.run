@@ -941,7 +941,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       redraw both, D0 in D-87's order.
 
 45. **Au7's notice says what was typed is gone, and names a page as well
-    as a form (D-151, design 163).** _Drawn:_ Auth's "Au7 Signed out
+    as a form (D-151, design 166).** _Drawn:_ Auth's "Au7 Signed out
     arrival" — "Log in and you're back on your run. What you entered is
     kept.", with the annotation "It names what's kept … After Log in, the
     runner lands on the filled form they left".

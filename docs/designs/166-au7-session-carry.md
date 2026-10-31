@@ -1,4 +1,4 @@
-# Design: 163 Au7, the session-expiry carry (sending half)
+# Design: 166 Au7, the session-expiry carry (sending half)
 
 ## Problem
 
