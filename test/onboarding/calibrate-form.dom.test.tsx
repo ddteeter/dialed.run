@@ -11,6 +11,12 @@ import { describe, expect, it, vi } from "vitest";
 import { CalibrateForm } from "../../src/modules/onboarding/components/CalibrateForm";
 import type { Calibration } from "../../src/modules/onboarding/inputs";
 import type { CityLookup } from "../../src/lib/contracts/city-lookup";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 /**
  * Screen O1, with round 22's location step (item 19). The behaviour that
@@ -477,5 +483,14 @@ describe("units: two segmented pairs (round 22, item 19)", () => {
     expect(save.mock.calls[0]?.[0]).toMatchObject({
       data: { tempUnit: "c", distanceUnit: "km" },
     });
+  });
+});
+
+describe("CalibrateForm: a lapsed session (Au7, D-151)", () => {
+  it("carries page to log-in", () => {
+    carriedSince();
+    renderForm();
+
+    expect(carriedSince()).toEqual(["page"]);
   });
 });

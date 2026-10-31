@@ -11,6 +11,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import { UnsubscribeLanding } from "../../src/modules/email/components/UnsubscribeLanding";
 import type { SubscriptionLanding } from "../../src/modules/email/landing";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 /**
  * The unsubscribe landing (round 26 #19, D-64): opening the link asks,
@@ -217,5 +223,20 @@ describe("UnsubscribeLanding (round 27 #8)", () => {
     });
     await user.click(screen.getByRole("button", { name: "Unsubscribe" }));
     expect(submitted?.defaultPrevented).toBe(true);
+  });
+});
+
+describe("UnsubscribeLanding, a signed-out form: a lapsed session (Au7, D-151)", () => {
+  it("carries nothing to log-in", async () => {
+    carriedSince();
+    await renderWithRouter(
+      <UnsubscribeLanding
+        landing={OFF}
+        unsubscribe={vi.fn()}
+        resubscribe={vi.fn()}
+      />,
+    );
+
+    expect(carriedSince()).toEqual([undefined]);
   });
 });

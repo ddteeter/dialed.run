@@ -4,6 +4,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import { SetConditionsSheet } from "../../src/modules/runs/components/SetConditionsSheet";
 import type { ConditionsActions } from "../../src/modules/runs/components/SetConditionsSheet";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 /**
  * R2b's two picks (round 26, item 2), on the sheet itself — the parts the
@@ -105,5 +111,15 @@ describe("SetConditionsSheet: the picks", () => {
     } finally {
       document.removeEventListener("submit", onSubmit);
     }
+  });
+});
+
+describe("SetConditionsSheet: a lapsed session (Au7, D-151)", () => {
+  it("carries run to log-in", async () => {
+    carriedSince();
+    render(sheet());
+    await openPicks(userEvent.setup());
+
+    expect(carriedSince()).toEqual(["run"]);
   });
 });

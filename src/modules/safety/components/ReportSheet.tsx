@@ -117,6 +117,7 @@ export function ReportSheet({
   }
 
   const form = useFormSubmit({
+    carry: "page",
     schema: fileReportInput,
     action: (values) => fileReport({ data: values }),
     onSuccess: () => {

@@ -99,6 +99,14 @@ async function drawn(
   return { order, words };
 }
 
+/**
+Au7's sentence as the board draws it, and as D-151 has it built.
+*/
+const BOARD_NOTICE =
+  "Log in and you're back on your run. What you entered is kept.";
+const BUILT_NOTICE =
+  "Log in and you're back on your run. What you typed wasn't kept.";
+
 async function builtAt390(page: Page, path: string): Promise<void> {
   await page.setViewportSize({ width: 390, height: 900 });
   await page.goto(path);
@@ -303,7 +311,24 @@ test.describe("Au · phone", () => {
     expect(page.url()).not.toContain("email");
 
     expect(await partsIn(page, PANEL)).toEqual(board.order);
-    await expectSameWords(page, board.words, {});
+    // D-151: the form is not restored, so the notice's second sentence is
+    // the owner's, not the board's "What you entered is kept." (design
+    // deltas). Every other word is the board's.
+    const drawnNotice = board.words.get("session-notice") ?? [];
+    expect(drawnNotice).toContain(BOARD_NOTICE);
+    await expectSameWords(
+      page,
+      new Map([
+        ...board.words,
+        [
+          "session-notice",
+          drawnNotice.map((line) =>
+            line === BOARD_NOTICE ? BUILT_NOTICE : line,
+          ),
+        ],
+      ]),
+      {},
+    );
     expect(await fillOf(page, `${PANEL} [data-part='session-notice']`)).toBe(
       notice,
     );

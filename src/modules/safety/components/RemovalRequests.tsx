@@ -273,6 +273,7 @@ function BlockRequester({
   // Cancel or Esc hands focus back to the button that asked.
   const askedFrom = useReturnFocus();
   const form = useFormSubmit({
+    carry: "page",
     schema: blockRequesterInput,
     action: (values) => block({ data: values }),
     successMessage: `Blocked. ${String(count)} ${count === 1 ? "request" : "requests"} declined.`,
@@ -378,6 +379,7 @@ function RemoveForm({
   onDecided: () => void;
 }>): JSX.Element {
   const form = useFormSubmit({
+    carry: "page",
     schema: z.object({}),
     action: () => decide({ data: { requestId, outcome: "removed" } }),
     successMessage: "Removed.",
@@ -416,6 +418,7 @@ function DeclineForm({
 }>): JSX.Element {
   const [reason, setReason] = useState("");
   const form = useFormSubmit({
+    carry: "page",
     schema: declineSchema,
     action: (values) =>
       decide({ data: { requestId, outcome: "declined", ...values } }),

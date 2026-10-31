@@ -308,12 +308,22 @@ export const TOTALS_LINE =
   "Your runs count, without your name, in totals like the guides. You can turn that off in Settings.";
 
 /**
+ * Where Au7's notice says Log in returns: the carried form by its own noun,
+ * or, for a form that is none of the three, the page (D-151).
+ */
+function backTo(carried: CarriedForm): string {
+  return carried === "page" ? "back where you were" : `back on your ${carried}`;
+}
+
+/**
  * Au7's notice: *"an ink block (square, --hiviz-text eyebrow on ink only)
  * — a statement, not an error, so no yellow and no band."*
  *
- * *"It names what's kept, not why the session died"*, and it names the
- * carried form by its own noun. Rendered only when a form was carried:
- * *"Arrival with nothing carried shows no notice at all — just Au2."*
+ * It names where Log in returns, not why the session died, and says that
+ * what was typed is gone: the form is not restored (D-151, the D-102
+ * shape; the board's "What you entered is kept" is a design delta).
+ * Rendered only when a form was carried: *"Arrival with nothing carried
+ * shows no notice at all — just Au2."*
  */
 export function SessionNotice({
   carried,
@@ -331,7 +341,7 @@ export function SessionNotice({
       </Mono>
       {/* One string, so the sentence is one run of text and not three. */}
       <span className="text-body">
-        {`Log in and you're back on your ${carried}. What you entered is kept.`}
+        {`Log in and you're ${backTo(carried)}. What you typed wasn't kept.`}
       </span>
     </div>
   );

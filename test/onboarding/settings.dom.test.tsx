@@ -22,6 +22,12 @@ import {
   SettingsSubPage,
 } from "../../src/modules/onboarding/components/SettingsSubPage";
 import type { CurrentSettings } from "../../src/modules/onboarding/profile";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 /**
  * Settings as round 22 rules it (item 20): U1/N's tap-through index, one
@@ -461,5 +467,16 @@ describe("the sub-pages", () => {
       document.removeEventListener("submit", watch);
     }
     expect(prevented).toBe(true);
+  });
+});
+
+describe("Settings' sub-page forms: a lapsed session (Au7, D-151)", () => {
+  it("carries settings to log-in", async () => {
+    carriedSince();
+    await renderWithRouter(
+      <UnitsForm current={ANSWERED} saveUnits={vi.fn()} />,
+    );
+
+    expect(carriedSince()).toEqual(["settings"]);
   });
 });

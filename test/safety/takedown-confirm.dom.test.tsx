@@ -11,6 +11,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import { TakedownConfirm } from "../../src/modules/safety/components/TakedownConfirm";
 import { takedownConfirmSearch } from "../../src/modules/safety/inputs";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 /**
  * `/takedown/confirm` (design 137): asks before it confirms, because mail
@@ -131,5 +137,16 @@ describe("its search", () => {
         token: undefined,
       });
     }
+  });
+});
+
+describe("/takedown/confirm, a signed-out form: a lapsed session (Au7, D-151)", () => {
+  it("carries nothing to log-in", async () => {
+    carriedSince();
+    await renderWithRouter(
+      <TakedownConfirm token={TOKEN} confirm={vi.fn<ConfirmFn>()} />,
+    );
+
+    expect(carriedSince()).toEqual([undefined]);
   });
 });

@@ -48,6 +48,7 @@ export function Takedown({
   const [notice, setNotice] = useState("");
   const [said, setSaid] = useState("");
   const form = useFormSubmit({
+    carry: "page",
     schema: takedownInput,
     action: (values) => takeDown({ data: values }),
     onSuccess: ({ outcome }) => {

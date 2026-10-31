@@ -138,6 +138,7 @@ export function RemovalDecision<TSchema extends z.ZodType>(
   // drawn afresh with the decision bar — not on the page.
   const askedFrom = useReturnFocus();
   const form = useFormSubmit({
+    carry: "page",
     schema: props.schema,
     action: props.act,
     onSuccess: props.onSettled,

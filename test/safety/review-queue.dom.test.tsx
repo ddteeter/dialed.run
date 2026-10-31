@@ -5,6 +5,12 @@ import { describe, expect, it, vi } from "vitest";
 import { ReviewQueue } from "../../src/modules/safety/components/ReviewQueue";
 import type { HandleReview, QueueRow } from "../../src/modules/safety/review";
 import { bracketed } from "../ui/bracketed";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 type Props = Parameters<typeof ReviewQueue>[0];
 
@@ -992,5 +998,14 @@ describe("a handle the re-ask flagged (D-97)", () => {
       screen.getByRole("button", { name: "profile · dee" }),
     ).toBeInTheDocument();
     expect(document.querySelector("[data-part='why-here']")).toBeNull();
+  });
+});
+
+describe("the review queue: a lapsed session (Au7, D-151)", () => {
+  it("carries page to log-in", () => {
+    carriedSince();
+    renderQueue([row(), flagged({ id: "01HYYYYYYYYYYYYYYYYYYYYYYY" })]);
+
+    expect(carriedSince()).toEqual(["page"]);
   });
 });

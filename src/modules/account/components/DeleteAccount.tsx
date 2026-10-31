@@ -148,6 +148,7 @@ function DeleteSheet({
   // `deletionDay`): the sheet and the email must not name different days.
   const day = proseDayLabel(nowSeconds() + DELETION_GRACE_S);
   const form = useFormSubmit({
+    carry: "settings",
     // An account with no password sends none; the field is asked for
     // only of one that has one.
     schema: hasPassword ? accountDeletionSchema : accountDeletionInput,

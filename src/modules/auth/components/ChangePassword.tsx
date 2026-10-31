@@ -56,6 +56,7 @@ export function ChangePassword({
   const [currentPassword, setCurrentPassword] = useState("");
   const [password, setPassword] = useState("");
   const form = useFormSubmit({
+    carry: "settings",
     schema: changePasswordSchema,
     action: async (values) => {
       const refusal = refusalOf(await change({ data: values }));

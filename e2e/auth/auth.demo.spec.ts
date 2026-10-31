@@ -8,9 +8,10 @@
  * (wrong password), Au6 (Google didn't answer, under its button), ACC-4
  * (forgot it, the reset link, a new password), Au1
  * (log in, landing on the deep link that sent the runner there), sign out
- * from the settings index, and unpublished terms asking
- * nothing (ACC-6, D-93: no acceptance recorded, no prompt) — one journey,
- * one video.
+ * from the settings index, unpublished terms asking
+ * nothing (ACC-6, D-93: no acceptance recorded, no prompt), and Au7 (a
+ * session that lapses mid-form goes to log-in and comes back to the form,
+ * D-151) — one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
@@ -381,4 +382,31 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   // The prompt itself has nothing to ask, and sends the runner home.
   await page.goto("/account/terms");
   await expect(page).not.toHaveURL(/\/account\/terms/u, { timeout: 15_000 });
+
+  // Au7 (D-151): the session lapses while a run is typed in. The save goes
+  // to log-in carrying the form's noun and the way back, the notice says
+  // what was typed is gone, and Log in returns to the form.
+  await scene(page, "Au7 · the session lapses while a run is typed in");
+  await page.goto("/runs/manual");
+  await hydrated(page);
+  await page.getByLabel("Started").fill("2026-10-30T07:30");
+  await page.context().clearCookies();
+  await page.getByRole("button", { name: "Next · pick the outfit" }).click();
+  await expect(page).toHaveURL(/\/auth\/login\?.*carried=run/u, {
+    timeout: 15_000,
+  });
+  await hydrated(page);
+  const notice = page.locator("[data-part='session-notice']");
+  await expect(notice).toContainText("You were signed out");
+  await expect(notice).toContainText(
+    "Log in and you're back on your run. What you typed wasn't kept.",
+  );
+  await expect(page.getByLabel("Email")).toHaveValue(email);
+  await expect(page.getByLabel("Password")).toBeFocused();
+
+  await scene(page, "Au7 · Log in, and back on the form, empty");
+  await page.getByLabel("Password").fill(`${PASSPHRASE}-new`);
+  await page.getByRole("button", { name: "Log in" }).click();
+  await expect(page).toHaveURL(/\/runs\/manual$/u, { timeout: 15_000 });
+  await expect(page.getByLabel("Started")).toHaveValue("");
 });

@@ -196,6 +196,7 @@ function HandleDecision({
   const [reason, setReason] = useState<RenameReason | undefined>();
   const [said, setSaid] = useState("");
   const form = useFormSubmit({
+    carry: "page",
     schema: handleReviewInput,
     action: (values) => reviewHandle({ data: values }),
     onSuccess: (review) => {

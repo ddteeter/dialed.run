@@ -36,6 +36,12 @@ import { refusalMessage } from "../../src/lib/contracts/access";
 import type { AccessDesk, DeskCode } from "../../src/modules/account/invites";
 import type { TurnstileApi } from "../../src/ui/Turnstile";
 import { bracketed } from "../ui/bracketed";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 /**
  * Au5 · Request access and Desk D7 · Access (task 126, ACC-5; round 26
@@ -1123,5 +1129,23 @@ describe("D7's labels", () => {
         code({ isRevoked: true, usedBy: [] }),
       ]),
     ).toBe("1 active · 2 used");
+  });
+});
+
+describe("access pages: a lapsed session (Au7, D-151)", () => {
+  it("carries D7 to log-in as the page", () => {
+    carriedSince();
+    desk();
+
+    expect(carriedSince()).toEqual(["page"]);
+  });
+
+  it("leaves Au5, a signed-out form, carrying nothing", async () => {
+    carriedSince();
+    await renderWithRouter(
+      <RequestAccess siteKey={undefined} request={vi.fn<RequestFn>()} />,
+    );
+
+    expect(carriedSince()).toEqual([undefined]);
   });
 });

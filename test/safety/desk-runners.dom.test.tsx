@@ -25,6 +25,12 @@ import {
 } from "../../src/modules/safety/components/Takedown";
 import type { DeskRunner } from "../../src/modules/safety/runners";
 import { bracketed } from "../ui/bracketed";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 /**
  * D8 (round 27 #22), its Rename (#16) and Close account (D3), and SAF-6's
@@ -684,5 +690,16 @@ describe("Takedown (SAF-6)", () => {
     expect(takedownMessage("not_found")).toBe(
       "Nothing has that id. Check it against the notice.",
     );
+  });
+});
+
+describe("D8 and Takedown: a lapsed session (Au7, D-151)", () => {
+  it("carries page to log-in", async () => {
+    carriedSince();
+    await renderDesk();
+    await userEvent.setup().click(screen.getByRole("button", { name: "@ada" }));
+    render(<Takedown takeDown={vi.fn()} />);
+
+    expect(carriedSince()).toEqual(["page"]);
   });
 });

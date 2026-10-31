@@ -32,6 +32,12 @@ import { CARRIED_EMAIL_KEY } from "../../src/lib/browser/carried-email";
 import { useCarriedEmail } from "../../src/modules/auth/carried-email";
 import type { CarriedForm } from "../../src/lib/carried-form";
 import { AccountClosed } from "../../src/modules/safety/components/AccountClosed";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 /**
  * Au1–Au7 (round 22, `design/Auth.dc.html`), through the page both auth
@@ -713,13 +719,34 @@ describe("Au7 · signed out arrival", () => {
     expect(notice).toHaveAttribute("data-ground", "ink");
     expect(notice).toHaveTextContent("You were signed out");
     expect(notice).toHaveTextContent(
-      "Log in and you're back on your garment. What you entered is kept.",
+      /^You were signed outLog in and you're back on your garment\. What you typed wasn't kept\.$/u,
     );
     expect(notice?.nextElementSibling).toBe(
       screen.getByRole("heading", { name: "Log in" }),
     );
     expect(part("cross-link")).toBeNull();
   });
+
+  it.each([
+    ["run", "Log in and you're back on your run. What you typed wasn't kept."],
+    [
+      "settings",
+      "Log in and you're back on your settings. What you typed wasn't kept.",
+    ],
+    // Every other signed-in form (D-151): no noun invented per form.
+    [
+      "page",
+      "Log in and you're back where you were. What you typed wasn't kept.",
+    ],
+  ] as const)(
+    "says where Log in returns for %s, and that nothing typed was kept (D-151)",
+    async (carried, sentence) => {
+      await logIn({ carried });
+      expect(part("session-notice")?.lastElementChild?.textContent).toBe(
+        sentence,
+      );
+    },
+  );
 
   it("prefills the email from session storage, never from the URL", async () => {
     await logIn({ carried: "run" });
@@ -1073,5 +1100,14 @@ describe("CredentialFields (round 26 #7, #18)", () => {
     expect(password).toHaveAttribute("autocomplete", "current-password");
     expect(password).toHaveFocus();
     expect(screen.queryByText(/characters/u)).toBeNull();
+  });
+});
+
+describe("Au1 and Au2, signed-out forms: a lapsed session (Au7, D-151)", () => {
+  it("carries nothing to log-in", async () => {
+    carriedSince();
+    await logIn();
+
+    expect(carriedSince()).toEqual([undefined]);
   });
 });

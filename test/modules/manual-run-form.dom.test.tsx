@@ -1,4 +1,5 @@
 import {
+  Outlet,
   RouterProvider,
   createMemoryHistory,
   createRootRoute,
@@ -10,7 +11,9 @@ import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { AUTH_REQUIRED_CODE } from "../../src/lib/auth-signal";
 import { ManualRunForm } from "../../src/modules/runs/components/ManualRunForm";
+import { SessionLapseAnswer } from "../../src/ui";
 
 /**
  * Screen R2, the run you type in yourself.
@@ -418,5 +421,59 @@ describe("ManualRunForm: the log flow", () => {
     // absent precisely because the rise is the move.
     expect(step).toHaveAttribute("data-flow-direction", "entering");
     expect(step?.className).toBe("");
+  });
+});
+
+describe("ManualRunForm: a lapsed session (Au7, D-151)", () => {
+  it("goes to log-in carrying the run, with the way back to the form", async () => {
+    // The root as `__root.tsx` mounts it: the lapse answer around the
+    // pages, and log-in one of them.
+    const rootRoute = createRootRoute({
+      loader: () => ({ signedIn: true, email: "dana.k@hey.com" }),
+      component: () => (
+        <SessionLapseAnswer>
+          <Outlet />
+        </SessionLapseAnswer>
+      ),
+    });
+    const formRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/runs/manual",
+      component: () => (
+        <ManualRunForm
+          submitRun={() =>
+            Promise.reject(
+              Object.assign(new Error("Not signed in"), {
+                code: AUTH_REQUIRED_CODE,
+              }),
+            )
+          }
+        />
+      ),
+    });
+    const loginRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/auth/login",
+      component: () => <h1>Log in</h1>,
+    });
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([formRoute, loginRoute]),
+      history: createMemoryHistory({ initialEntries: ["/runs/manual"] }),
+    });
+    await router.load();
+    render(<RouterProvider router={router} />);
+    const user = userEvent.setup();
+
+    await fillValid(user);
+    await user.click(
+      screen.getByRole("button", { name: "Next · pick the outfit" }),
+    );
+
+    await screen.findByRole("heading", { name: "Log in" });
+    expect(router.state.location.search).toEqual({
+      redirect: "/runs/manual",
+      carried: "run",
+    });
+    sessionStorage.clear();
   });
 });

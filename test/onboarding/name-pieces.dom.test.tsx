@@ -7,6 +7,12 @@ import type {
   NameableItem,
   NamedResult,
 } from "../../src/modules/onboarding/naming";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 /**
  * Screen P2.5 (design §AC), whose argument is that a category cannot
@@ -425,5 +431,15 @@ describe("NamePieces", () => {
     }
 
     expect(prevented).toBe(true);
+  });
+});
+
+describe("NamePieces: a lapsed session (Au7, D-151)", () => {
+  it("carries page to log-in", async () => {
+    carriedSince();
+    renderScreen();
+    await nameFirst(userEvent.setup());
+
+    expect(carriedSince()).toEqual(["page"]);
   });
 });
