@@ -38,6 +38,12 @@
   // No test sends through it — they hand `deliverEmail` a fake — but the
   // conformance test keeps the two configs in step.
   "send_email": [{ "name": "EMAIL" }],
+  // Design 165: the speed beacon's dataset and the deploy's version, as
+  // ../wrangler.jsonc binds them (the conformance test keeps them in step).
+  "analytics_engine_datasets": [
+    { "binding": "VITALS", "dataset": "dialed_vitals" },
+  ],
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
   "r2_buckets": [
     { "binding": "MEDIA", "bucket_name": "dialed-media" },
     { "binding": "IMPORTS", "bucket_name": "dialed-imports" },

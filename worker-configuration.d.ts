@@ -7,9 +7,11 @@ interface __BaseEnv_Env {
 	DIALED_CORE: D1Database;
 	DIALED_WEATHER: D1Database;
 	EMAIL: SendEmail;
+	VITALS: AnalyticsEngineDataset;
 	IMPORTS_QUEUE: Queue;
 	ENRICHMENT_QUEUE: Queue;
 	EXPORTS_QUEUE: Queue;
+	CF_VERSION_METADATA: WorkerVersionMetadata;
 	BETTER_AUTH_SECRET: string;
 }
 declare namespace Cloudflare {

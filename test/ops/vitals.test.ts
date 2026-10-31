@@ -1,12 +1,20 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { env } from "../../src/env";
 import {
   MAX_METRICS_PER_BEACON,
   VITAL_METRICS,
   VITAL_METRIC_NAMES,
   vitalsPayloadSchema,
 } from "../../src/lib/contracts/vitals";
-import { toDataPoints } from "../../src/modules/ops/vitals";
+import {
+  MAX_VITALS_BYTES,
+  receiveVitals,
+  toDataPoints,
+  vitalsDepsFromEnv,
+  type VitalsDeps,
+  type VitalsRefusalLine,
+} from "../../src/modules/ops/vitals";
 
 /**
  * Design 165's beacon: the payload the endpoint accepts, and the data
@@ -47,8 +55,11 @@ function refusals(metric: Record<string, unknown>): string[] {
   return result.error?.issues.map((issue) => issue.message) ?? [];
 }
 
-const LONGEST_ROUTE = `/${"a".repeat(119)}`;
-const TOO_LONG_ROUTE = `/${"a".repeat(120)}`;
+/**
+The index Analytics Engine keeps is at most 96 bytes.
+*/
+const LONGEST_ROUTE = `/${"a".repeat(95)}`;
+const TOO_LONG_ROUTE = `/${"a".repeat(96)}`;
 
 const navs = (count: number) =>
   Array.from({ length: count }, () => ({ name: "nav", value: 1 }));
@@ -197,5 +208,210 @@ describe("toDataPoints", () => {
         doubles: [850],
       },
     ]);
+  });
+});
+
+/**
+ * A dataset, log and Sentry that keep what they are given.
+ */
+function fakeDeps(write?: VitalsDeps["write"]): VitalsDeps & {
+  points: AnalyticsEngineDataPoint[];
+  lines: VitalsRefusalLine[];
+  reports: unknown[];
+} {
+  const points: AnalyticsEngineDataPoint[] = [];
+  const lines: VitalsRefusalLine[] = [];
+  const reports: unknown[] = [];
+  return {
+    write:
+      write ??
+      ((point) => {
+        points.push(point);
+      }),
+    version: "v-9",
+    log: (line) => {
+      lines.push(line);
+    },
+    report: (error) => {
+      reports.push(error);
+    },
+    points,
+    lines,
+    reports,
+  };
+}
+
+/**
+ * A beacon as `sendBeacon` posts it from our own page.
+ */
+function beacon(
+  body: BodyInit | null,
+  headers?: Record<string, string>,
+): Request {
+  return new Request("https://dialed.test/api/vitals", {
+    method: "POST",
+    headers: headers ?? { "sec-fetch-site": "same-origin" },
+    body,
+  });
+}
+
+/**
+ * A same-origin beacon carrying the payload with these fields changed.
+ */
+const sent = (overrides: Record<string, unknown> = {}) =>
+  beacon(JSON.stringify(payload(overrides)));
+
+async function received(request: Request, deps = fakeDeps()) {
+  const response = await receiveVitals(request, deps);
+  expect(response.status).toBe(204);
+  expect(await response.text()).toBe("");
+  return deps;
+}
+
+describe("receiveVitals", () => {
+  it("writes each metric as a data point stamped with the deploy, and logs nothing", async () => {
+    const deps = await received(
+      sent({ metrics: [lcp, { name: "nav", value: 9 }] }),
+    );
+    expect(deps.points).toEqual([
+      {
+        indexes: ["/runs/$runId"],
+        blobs: ["LCP", "navigate", "narrow", "v-9"],
+        doubles: [2400, 300, 200, 1500, 400],
+      },
+      {
+        indexes: ["/runs/$runId"],
+        blobs: ["nav", "navigate", "narrow", "v-9"],
+        doubles: [9],
+      },
+    ]);
+    expect(deps.lines).toEqual([]);
+  });
+
+  it("drops a beacon from anywhere but our own pages, unread", async () => {
+    for (const headers of [
+      {},
+      { "sec-fetch-site": "cross-site" },
+      { "sec-fetch-site": "same-site" },
+      { "sec-fetch-site": "none" },
+    ]) {
+      const request = beacon(JSON.stringify(payload()), headers);
+      const deps = await received(request);
+      expect(deps.points, JSON.stringify(headers)).toEqual([]);
+      expect(deps.lines).toEqual([
+        { kind: "vitals-refused", reason: "cross-site" },
+      ]);
+      expect(request.bodyUsed).toBe(false);
+    }
+  });
+
+  it("drops a body past the cap, and takes one at it", async () => {
+    const over = await received(beacon("x".repeat(MAX_VITALS_BYTES + 1)));
+    expect(over.lines).toEqual([
+      { kind: "vitals-refused", reason: "too-large" },
+    ]);
+    const json = JSON.stringify(payload());
+    const atCap = await received(beacon(json.padEnd(MAX_VITALS_BYTES, " ")));
+    expect(atCap.lines).toEqual([]);
+    expect(atCap.points).toHaveLength(1);
+  });
+
+  it("drops a body that is not JSON, or not a beacon", async () => {
+    const cases = [
+      ["{", "not-json"],
+      ["", "not-json"],
+      ["null", "invalid"],
+      [JSON.stringify(payload({ device: "tablet" })), "invalid"],
+    ] as const;
+    for (const [body, reason] of cases) {
+      const deps = await received(beacon(body));
+      expect(deps.lines, body).toEqual([{ kind: "vitals-refused", reason }]);
+      expect(deps.points).toEqual([]);
+    }
+  });
+
+  it("drops a body that breaks while being read", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.error(new Error("client went away"));
+      },
+    });
+    const deps = await received(beacon(body));
+    expect(deps.lines).toEqual([
+      { kind: "vitals-refused", reason: "unreadable" },
+    ]);
+    expect(deps.reports).toEqual([]);
+  });
+
+  it("reports a dataset that throws, and still answers 204", async () => {
+    const failure = new Error("binding down");
+    const deps = await received(
+      sent(),
+      fakeDeps(() => {
+        throw failure;
+      }),
+    );
+    expect(deps.reports).toEqual([failure]);
+    expect(deps.lines).toEqual([
+      { kind: "vitals-refused", reason: "write-failed" },
+    ]);
+  });
+});
+
+function nothing(): void {
+  /*
+   * A silenced console: the call is what the test reads.
+   */
+}
+
+describe("vitalsDepsFromEnv", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("writes to the dataset and stamps the version the bindings give", () => {
+    const points: AnalyticsEngineDataPoint[] = [];
+    const deps = vitalsDepsFromEnv({
+      VITALS: {
+        writeDataPoint: (point) => {
+          if (point !== undefined) points.push(point);
+        },
+      },
+      CF_VERSION_METADATA: { id: "abc-123" },
+    });
+    const point = { indexes: ["/"], blobs: ["nav"], doubles: [1] };
+    deps.write(point);
+    expect(points).toEqual([point]);
+    expect(deps.version).toBe("abc-123");
+  });
+
+  it("logs a refusal as an object and reports to Sentry as the vitals surface", () => {
+    const log = vi.spyOn(console, "log").mockImplementation(nothing);
+    const error = vi.spyOn(console, "error").mockImplementation(nothing);
+    const deps = vitalsDepsFromEnv();
+    const line: VitalsRefusalLine = {
+      kind: "vitals-refused",
+      reason: "invalid",
+    };
+    deps.log(line);
+    expect(log).toHaveBeenCalledWith(line);
+    const failure = new Error("x");
+    deps.report(failure);
+    expect(error).toHaveBeenCalledWith(
+      "[sentry-disabled]",
+      { surface: "vitals" },
+      failure,
+    );
+  });
+
+  it("reads the Worker's own bindings by default", () => {
+    // Law 10: the pool binds them as wrangler.jsonc does, so this is the
+    // shape production hands the endpoint.
+    const deps = vitalsDepsFromEnv();
+    expect(deps.version).toBe(env.CF_VERSION_METADATA.id);
+    expect(typeof deps.version).toBe("string");
+    expect(() => {
+      deps.write({ indexes: ["/"], blobs: ["nav"], doubles: [1] });
+    }).not.toThrow();
   });
 });

@@ -233,6 +233,36 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
     ).toStrictEqual(["BETTER_AUTH_URL", "TURNSTILE_SITE_KEY"]);
   });
 
+  it("binds the speed beacon's dataset and the deploy version, read only by the beacon", () => {
+    // Design 165 (owner-approved 2026-10-31): `VITALS` and
+    // `CF_VERSION_METADATA`, read only by `src/modules/ops/vitals.ts`. A
+    // dataset renamed here alone would start an empty one, and every
+    // dashboard and check reads the old name.
+    const testConfig: unknown = JSON.parse(stripJsonc(testWranglerJsonc));
+    for (const [key, expected] of [
+      [
+        "analytics_engine_datasets",
+        [{ binding: "VITALS", dataset: "dialed_vitals" }],
+      ],
+      ["version_metadata", { binding: "CF_VERSION_METADATA" }],
+    ] as const) {
+      for (const bound of [config, testConfig]) {
+        expect(
+          typeof bound === "object" && bound !== null
+            ? new Map(Object.entries(bound)).get(key)
+            : undefined,
+          key,
+        ).toStrictEqual(expected);
+      }
+    }
+    const readers = Object.entries(sources)
+      .filter(([, source]) =>
+        /\.(?:VITALS|CF_VERSION_METADATA)\b/u.test(source),
+      )
+      .map(([path]) => path);
+    expect(readers).toStrictEqual(["../src/modules/ops/vitals.ts"]);
+  });
+
   it("binds the email sender the email module reads, and nothing else sends", () => {
     // Task 126 (ACC-2; decision D-42, owner-authorised): one binding,
     // `EMAIL`, read only by `src/modules/email/deliver.ts`.

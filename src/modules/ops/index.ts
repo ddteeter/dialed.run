@@ -11,6 +11,7 @@ export { handleScheduled } from "./scheduled";
 export { secureResponse } from "./secure-response";
 export { captureException } from "./sentry";
 export { requestNamer, timeRequest, timingDeps } from "./timing";
+export { receiveVitals, vitalsDepsFromEnv } from "./vitals";
 export {
   turnstileSiteKey,
   verifyTurnstileToken,

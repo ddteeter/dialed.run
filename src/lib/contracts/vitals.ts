@@ -90,9 +90,11 @@ export const MAX_METRICS_PER_BEACON = 20;
  * The shape of a route id (`/runs/$runId`, `/@{$handle}`): which ids exist
  * is not checked here, because the list can only be read where the route
  * tree is, and a forged value for a real route is the abuse that matters
- * anyway (design 165, deltas).
+ * anyway (design 165, deltas). At most 96 characters, all ASCII, because
+ * it becomes the data point's index and Analytics Engine drops a point
+ * whose index is over 96 bytes; the longest real id is under 30.
  */
-const ROUTE_ID = /^\/[\w$@{}./-]{0,119}$/;
+const ROUTE_ID = /^\/[\w$@{}./-]{0,95}$/;
 
 const measurement = z.number().nonnegative();
 

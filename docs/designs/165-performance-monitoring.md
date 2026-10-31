@@ -195,6 +195,20 @@ Recorded as the build found them.
   human-managed.
 - **The matcher found a bug of its own design:** an exact route must beat
   a splat that matches it with nothing left over (`/feed` over `/feed/$`).
+- **A route id is at most 96 characters,** not 120. It becomes the data
+  point's index, and Analytics Engine drops a point whose index is over
+  96 bytes. The longest real id is 29.
+- **Refusals are logged by reason** (`cross-site`, `too-large`,
+  `not-json`, `invalid`, `unreadable` for a body that broke mid-read,
+  `write-failed`). Only `write-failed` goes to Sentry, because only it is
+  ours to fix.
+- **The capped body reader moved to `src/lib/read-capped.ts`.**
+  Enrichment's `readCapped` had it first. The beacon needed the same
+  loop, and two copies would be a clone. Enrichment keeps its wrapper and
+  its error messages.
+- **The bindings went in on 2026-10-31,** by the owner's leave, in this
+  branch. The test pool binds them too, and `bindings-conformance` pins
+  both configs and the one module that reads them.
 
 ## Test plan
 

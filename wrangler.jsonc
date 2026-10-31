@@ -131,6 +131,15 @@
   // so does every e2e run in CI. Left local, dev and e2e get Miniflare's
   // simulated sender, which sends nothing to anyone.
   "send_email": [{ "name": "EMAIL" }],
+  // The speed beacon's dataset (design 165, part 1; owner-approved
+  // 2026-10-31). Written by POST /api/vitals through src/modules/ops and
+  // read back over the SQL API; the dataset is created on first write.
+  "analytics_engine_datasets": [
+    { "binding": "VITALS", "dataset": "dialed_vitals" },
+  ],
+  // The running deploy's version id, stamped on each beacon so a
+  // regression can be pinned to the deploy that caused it (design 165).
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
   // Matched against src/modules/ops/crons.ts by the conformance test. A
   // schedule changed here and not there sends every firing to the `unknown`
   // branch, which is a cron that quietly stops working.
