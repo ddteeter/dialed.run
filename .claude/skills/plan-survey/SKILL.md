@@ -36,7 +36,7 @@ owner asks, not on a schedule they haven't set up.
   fails, find it with `Artifact` `action: "list"`.
 - Read it (`Artifact` `action: "read"`; the result names the saved file),
   then pull its deferred list out for the stable-id step:
-  `python3 -I build.py --extract <saved-page> $OUT/previous-deferred.json`.
+  `npm run plan-survey -- --extract <saved-page> $OUT/previous-deferred.json`.
   Keep the saved page; step 5 passes it as `--previous`.
 - If there is no previous artifact, skip the extract. Drop the `<PREV>`
   sentence from brief 2, and publish without `url` in step 5.
@@ -112,11 +112,17 @@ prose comes from this file:
 ### 5 · Build, check, publish
 
 ```sh
-python3 -I .claude/skills/plan-survey/build.py "$OUT" "$OUT/dialed-plan-vs-build.html" --previous <saved-page>
+npm run plan-survey -- "$OUT" "$OUT/dialed-plan-vs-build.html" --previous <saved-page>
 ```
 
+- The build parses every input with zod. If an agent's JSON has drifted from
+  its brief, the build fails and names the file and field. Fix the JSON, or
+  ask that agent to correct it.
 - The build refuses duplicate deferred ids. Fix those at the source, because
   the delta matches items by id.
+- The build reads the brand from `src/ui/tokens.css`. If a role the template
+  uses was renamed in the app, the build fails and names the role. Update
+  `ROLES_USED` in `scripts/plan-survey.ts` and the template to match.
 - Smoke-test the script once: extract the `<script>` body and run
   `node --check` on it.
 - Publish with `Artifact`. Pass `url` set to the existing artifact so the link
@@ -139,7 +145,8 @@ afterwards, say so (global CLAUDE.md, context hygiene).
 ## Files
 
 - `agents.md`: the four agent briefs and their output shapes.
-- `build.py`: assembles the page from `$OUT/*.json`. Also `--extract`.
-- `template.html`: the page, in dialed.run's own palette and type, filled
-  from the embedded `D`. Changing its look is a design change, so keep it in
-  the brand tokens (`src/ui/tokens.css`).
+- `scripts/plan-survey.ts` (`npm run plan-survey`): parses `$OUT/*.json`, injects the brand from
+  `src/ui/tokens.css`, and assembles the page. Also `--extract`.
+- `template.html`: the page, filled from the embedded `D`. It writes no brand
+  values of its own, only the report's status hues. The palette, roles and
+  fonts all come from `tokens.css` at build time.

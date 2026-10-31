@@ -7,63 +7,30 @@
   href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500&display=swap"
 />
 <style>
-  /* Layout: one reading column; summary first, then scorecard → journey → the deferred ledger (the point) → design → launch → epics. Brand: dialed.run's own five colours. */
+  /* Layout: one reading column; summary first, then scorecard → journey → the deferred ledger (the point) → design → launch → epics. */
+  /* The brand is injected by scripts/plan-survey.ts from src/ui/tokens.css: its :root block here, its ground-ink block as the dark theme. Only the report's own status hues are written below. */
   :root {
-    --ground: #f4f3ef;
-    --ink: #0b0b0e;
-    --panel: #ffffff;
-    --tint: #edece3;
-    --hairline: #dcdbd2;
-    --muted: #6e6e64;
-    --pink: #ff2d8a;
-    --pink-text: #c21a6b;
-    --teal: #00e0c6;
-    --teal-text: #00776a;
-    --hiviz: #f5ff3d;
-    --hiviz-wash: #fff9dc;
-    --s-shipped: #00776a;
+    /*__BRAND_LIGHT__*/
+    --s-shipped: var(--dialed-text);
+    --s-missing: var(--cold-text);
     --s-changed: #5b6cff;
     --s-partial: #d79a00;
-    --s-missing: #c21a6b;
     --s-post: #9a9a90;
-    --f-ui: "Archivo", ui-sans-serif, system-ui, sans-serif;
-    --f-display:
-      "Archivo Black", "Archivo", ui-sans-serif, system-ui, sans-serif;
-    --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+    --s-stale: #b9b8ad;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --ground: #0b0b0e;
-      --ink: #f4f3ef;
-      --panel: #16161b;
-      --tint: #1c1c22;
-      --hairline: #2a2a31;
-      --muted: #8b8b93;
-      --pink-text: #ff2d8a;
-      --teal-text: #00e0c6;
-      --hiviz-wash: #26260f;
-      --s-shipped: #00e0c6;
+      /*__BRAND_DARK__*/
       --s-changed: #8c98ff;
       --s-partial: #f0b829;
-      --s-missing: #ff2d8a;
       --s-post: #6d6d75;
       color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
-    --ground: #0b0b0e;
-    --ink: #f4f3ef;
-    --panel: #16161b;
-    --tint: #1c1c22;
-    --hairline: #2a2a31;
-    --muted: #8b8b93;
-    --pink-text: #ff2d8a;
-    --teal-text: #00e0c6;
-    --hiviz-wash: #26260f;
-    --s-shipped: #00e0c6;
+    /*__BRAND_DARK__*/
     --s-changed: #8c98ff;
     --s-partial: #f0b829;
-    --s-missing: #ff2d8a;
     --s-post: #6d6d75;
     color-scheme: dark;
   }
@@ -74,7 +41,7 @@
   body {
     background: var(--ground);
     color: var(--ink);
-    font-family: var(--f-ui);
+    font-family: var(--font-family-interface);
     font-size: 15px;
     line-height: 1.5;
     padding-left: max(16px, env(safe-area-inset-left, 0px));
@@ -90,7 +57,7 @@
   }
   h1,
   h2 {
-    font-family: var(--f-display);
+    font-family: var(--font-family-display);
     font-weight: 400;
     text-wrap: balance;
     margin: 0;
@@ -115,11 +82,11 @@
     max-width: 68ch;
   }
   .mono {
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     font-variant-numeric: tabular-nums;
   }
   .eyebrow {
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     font-size: 12px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -155,12 +122,12 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px 28px;
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     font-size: 14px;
   }
   .stats b {
     font-weight: 500;
-    color: var(--teal-text);
+    color: var(--dialed-text);
   }
   .bk::before {
     content: "[ ";
@@ -187,16 +154,16 @@
     min-width: 0;
   }
   .tl .k {
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
   }
   .tl.good .k {
-    color: var(--teal-text);
+    color: var(--dialed-text);
   }
   .tl.bad .k {
-    color: var(--pink-text);
+    color: var(--cold-text);
   }
   .tl.warn .k {
     color: var(--s-partial);
@@ -241,14 +208,14 @@
     box-sizing: border-box;
   }
   .lane > button:focus-visible {
-    outline: 2px solid var(--pink);
+    outline: 2px solid var(--course-pink);
     outline-offset: 2px;
   }
   .lane > button:hover {
     background: var(--tint);
   }
   .lane .id {
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     font-size: 13px;
     color: var(--muted);
   }
@@ -271,7 +238,7 @@
     height: 100%;
   }
   .lane .ct {
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     font-size: 12px;
     color: var(--muted);
     text-align: right;
@@ -292,13 +259,13 @@
     min-width: 0;
   }
   .item .ev {
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     font-size: 12px;
     color: var(--muted);
     overflow-wrap: anywhere;
   }
   .pill {
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -351,7 +318,7 @@
   }
   .g-axis span {
     position: absolute;
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     font-size: 11px;
     color: var(--muted);
     transform: translateX(-50%);
@@ -403,7 +370,7 @@
     align-items: start;
   }
   .pv .d {
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     font-size: 12px;
     color: var(--muted);
     padding-top: 2px;
@@ -414,10 +381,10 @@
     margin-top: 2px;
   }
   .k-cut {
-    color: var(--pink-text);
+    color: var(--cold-text);
   }
   .k-added {
-    color: var(--teal-text);
+    color: var(--dialed-text);
   }
   .k-changed {
     color: var(--s-changed);
@@ -432,7 +399,7 @@
   .co {
     background: var(--panel);
     border: 1px solid var(--hairline);
-    border-left: 4px solid var(--pink);
+    border-left: 4px solid var(--course-pink);
     border-radius: 4px;
     padding: 14px 16px;
     display: flex;
@@ -445,7 +412,7 @@
     gap: 8px;
     flex-wrap: wrap;
     align-items: center;
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     font-size: 12px;
     color: var(--muted);
   }
@@ -458,16 +425,16 @@
     color: var(--muted);
   }
   .co .ev {
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     font-size: 11px;
     color: var(--muted);
     overflow-wrap: anywhere;
   }
   .vf {
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     font-size: 11px;
-    background: var(--hiviz);
-    color: #0b0b0e;
+    background: var(--hi-viz);
+    color: var(--night-run);
     padding: 1px 5px;
     border-radius: 2px;
   }
@@ -484,9 +451,9 @@
     display: flex;
     align-items: center;
     padding: 0 10px;
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     font-size: 12px;
-    color: #0b0b0e;
+    color: var(--night-run);
     white-space: nowrap;
     overflow: hidden;
     min-width: 0;
@@ -499,16 +466,16 @@
     opacity: 0.35;
   }
   .c-open-orphaned {
-    background: var(--pink);
+    background: var(--course-pink);
   }
   .c-open-tracked {
-    background: var(--hiviz);
+    background: var(--hi-viz);
   }
   .c-register-stale {
-    background: #b9b8ad;
+    background: var(--s-stale);
   }
   .c-done-later {
-    background: var(--teal);
+    background: var(--split-teal);
   }
   .controls {
     display: flex;
@@ -519,7 +486,7 @@
   .chip {
     all: unset;
     cursor: pointer;
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     font-size: 12px;
     padding: 4px 10px;
     border: 1px solid var(--hairline);
@@ -532,7 +499,7 @@
     border-color: var(--ink);
   }
   .chip:focus-visible {
-    outline: 2px solid var(--pink);
+    outline: 2px solid var(--course-pink);
     outline-offset: 2px;
   }
   input[type="search"] {
@@ -569,7 +536,7 @@
   }
   th {
     text-align: left;
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -586,7 +553,7 @@
     vertical-align: top;
   }
   td.id {
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     font-size: 12px;
     white-space: nowrap;
     color: var(--muted);
@@ -599,14 +566,14 @@
     margin-top: 2px;
   }
   td .e {
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     font-size: 11px;
     color: var(--muted);
     margin-top: 4px;
     overflow-wrap: anywhere;
   }
   td.age {
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     text-align: right;
     white-space: nowrap;
   }
@@ -619,7 +586,7 @@
     vertical-align: 1px;
   }
   .sev-launch-blocker {
-    color: var(--pink-text);
+    color: var(--cold-text);
     font-weight: 600;
   }
   .sev-important {
@@ -651,7 +618,7 @@
     min-width: 0;
   }
   .scr .c {
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     font-size: 12px;
   }
   .scr .n {
@@ -704,7 +671,7 @@
     font-size: 14px;
   }
   .li .e {
-    font-family: var(--f-mono);
+    font-family: var(--font-family-mono);
     font-size: 11px;
     color: var(--muted);
     overflow-wrap: anywhere;
@@ -1059,7 +1026,7 @@
         const left = pct(p.start),
           w = Math.max(pct(p.end) + (100 * 864e5) / span - left, 0.8);
         const audit = p.name.startsWith("Production-readiness");
-        return `<div class="g-row" title="${esc(p.summary)}"><div class="lbl">${esc(p.name)}</div><div class="g-track">${ticks}<i style="left:${left}%;width:${w}%;${audit ? "background:var(--pink)" : ""}"></i></div></div>`;
+        return `<div class="g-row" title="${esc(p.summary)}"><div class="lbl">${esc(p.name)}</div><div class="g-track">${ticks}<i style="left:${left}%;width:${w}%;${audit ? "background:var(--course-pink)" : ""}"></i></div></div>`;
       })
       .join("");
   $("pivots").innerHTML = D.pivots
@@ -1196,7 +1163,7 @@
     .sort((a, b) => b.count - a.count)
     .map(
       (t) =>
-        `<div class="li" style="grid-template-columns:minmax(0,1fr) 120px"><div><div>${esc(t.theme)}</div><div class="e">${esc(t.example)}</div></div><div><span class="bar" style="height:10px"><i style="width:${(100 * t.count) / maxT}%;background:var(--teal-text)"></i></span><span class="mono muted" style="font-size:12px">~${t.count}</span></div></div>`,
+        `<div class="li" style="grid-template-columns:minmax(0,1fr) 120px"><div><div>${esc(t.theme)}</div><div class="e">${esc(t.example)}</div></div><div><span class="bar" style="height:10px"><i style="width:${(100 * t.count) / maxT}%;background:var(--dialed-text)"></i></span><span class="mono muted" style="font-size:12px">~${t.count}</span></div></div>`,
     )
     .join("");
 
