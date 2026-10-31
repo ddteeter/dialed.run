@@ -73,6 +73,14 @@ describe("the fingerprint breaker", () => {
     expect(reading.isOver).toBe(true);
   });
 
+  it("counts a garment photo's hold, which no report could make", async () => {
+    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR, NOW - 60, "garment");
+
+    const reading = await ceilingReading(core(), "fingerprint", NOW);
+
+    expect(reading.isOver).toBe(true);
+  });
+
   it("counts the hour to the second, and only its own cause", async () => {
     await opened("fingerprint", 4, NOW - HOUR);
     await opened("fingerprint", 3, NOW - HOUR - 1);
@@ -161,6 +169,29 @@ describe("the report breaker", () => {
     const reading = await ceilingReading(core(), "reports", NOW);
 
     expect(reading).toMatchObject({ isOver: false, count: 10, ceiling: 12 });
+  });
+
+  it("counts only the subjects a report can hide (owner, 2026-10-31)", async () => {
+    await opened("reports", 6, NOW - 60, "profile");
+    await opened("reports", 6, NOW - 60, "product");
+    await opened("reports", REPORT_HIDES_FLOOR - 1, NOW - 60, "entry");
+    expect(await ceilingReading(core(), "reports", NOW)).toMatchObject({
+      isOver: false,
+      count: 9,
+    });
+
+    await opened("reports", 1, NOW - 60, "photo");
+    const reading = await ceilingReading(core(), "reports", NOW);
+    expect(reading).toMatchObject({ isOver: true, count: 10 });
+  });
+
+  it("leaves profile and product reports out of the baseline too", async () => {
+    await opened("reports", 3, NOW - 2 * HOUR, "profile");
+    await opened("reports", REPORT_HIDES_FLOOR, NOW - 60);
+
+    const reading = await ceilingReading(core(), "reports", NOW);
+
+    expect(reading).toMatchObject({ ceiling: REPORT_HIDES_FLOOR });
   });
 
   it("remembers a busy hour four weeks back", async () => {

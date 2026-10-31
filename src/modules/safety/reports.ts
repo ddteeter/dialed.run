@@ -42,6 +42,7 @@ import { nowSeconds } from "../../lib/now";
 import type { OutboxMessage } from "../../lib/sql/outbox";
 import {
   autoHideReporterThreshold,
+  hiddenByReport,
   REMOVAL_DUE_SECONDS,
   reasonsThatHideAtOnce,
   reportersToHide,
@@ -64,20 +65,6 @@ import { heldPhotoStatus } from "./visibility";
 export type OweEmail = (message: OutboxMessage) => BatchItem<"sqlite">;
 
 /**
- * What a removal alert names, per subject type: the two a report can hide.
- * A profile or a product hides nothing, so a report of one queues for a
- * person without an alert.
- */
-const alertSubject: Readonly<
-  Record<ReportSubjectType, "entry" | "photo" | undefined>
-> = {
-  entry: "entry",
-  photo: "photo",
-  profile: undefined,
-  product: undefined,
-};
-
-/**
  * One alert per operator that `subjectId` was hidden as an intimate image
  * shared without consent, due 48 hours after `reportedAt` (design 136,
  * D-117). Nothing for a subject a report cannot hide, or when no operator
@@ -89,7 +76,7 @@ function removalAlerts(
   subjectId: string,
   reportedAt: number,
 ): BatchItem<"sqlite">[] {
-  const subject = alertSubject[subjectType];
+  const subject = hiddenByReport[subjectType];
   if (subject === undefined) return [];
   return adminUserIds().map((userId) =>
     owe({

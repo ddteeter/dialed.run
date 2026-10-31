@@ -22,10 +22,12 @@
  * - reports: people, so a multiple of the busiest hour of the last four
  *   weeks, never under a floor.
  */
-import { and, count, desc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import { photoScreenings, reviewQueue } from "../../db/schema-core";
+import { reportSubjectsThatHide } from "./contracts";
 import { counted } from "./takedown-limits";
 
 type Db = ReturnType<typeof drizzle>;
@@ -246,6 +248,17 @@ async function reportsCeilingBefore(db: Db, until: number): Promise<number> {
 }
 
 /**
+ * The Review rows a cause's breaker counts: every row it opened, except
+ * that reports count only on the subjects a report can hide (owner,
+ * 2026-10-31), so a pile-on of profile reports cannot pause post hides.
+ */
+function heldBy(cause: HoldCause): SQL | undefined {
+  const opened = eq(reviewQueue.source, cause);
+  if (cause !== "reports") return opened;
+  return and(opened, inArray(reviewQueue.subjectType, reportSubjectsThatHide));
+}
+
+/**
 How many rows of a cause went in front of a person since `since`.
 */
 async function openedSince(
@@ -256,7 +269,7 @@ async function openedSince(
   const rows = await db
     .select({ n: count() })
     .from(reviewQueue)
-    .where(and(eq(reviewQueue.source, cause), gte(reviewQueue.openedAt, since)));
+    .where(and(heldBy(cause), gte(reviewQueue.openedAt, since)));
   return counted(rows);
 }
 
@@ -275,9 +288,7 @@ async function busiestHourIn(
   const rows = await db
     .select({ n: count() })
     .from(reviewQueue)
-    .where(
-      and(eq(reviewQueue.source, cause), gte(opened, from), lt(opened, until)),
-    )
+    .where(and(heldBy(cause), gte(opened, from), lt(opened, until)))
     .groupBy(hour)
     .orderBy(desc(count()))
     .limit(1);

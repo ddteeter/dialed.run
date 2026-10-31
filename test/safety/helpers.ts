@@ -27,6 +27,7 @@ import {
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
 import type { HoldCause } from "../../src/modules/safety/breakers";
+import type { ReviewSubjectType } from "../../src/modules/safety/review";
 
 import {
   deleteAllFrom,
@@ -89,11 +90,12 @@ export async function opened(
   cause: HoldCause,
   n: number,
   openedAt: number,
+  subjectType: ReviewSubjectType = "photo",
 ): Promise<void> {
   await times(n, (core) =>
     core.insert(reviewQueue).values({
       id: newUlid(),
-      subjectType: "photo",
+      subjectType,
       subjectId: newUlid(),
       source: cause,
       status: "pending",
