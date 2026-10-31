@@ -38,8 +38,8 @@ import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import {
   DISTINCTIVE_BITS,
-  FINGERPRINT_MATCH_DISTANCE,
   fingerprintSchema,
+  HOLD_MATCH_DISTANCE,
   isDistinctive,
 } from "../../lib/photo-fingerprint";
 import { bitsSetSql, nearestOf } from "../../lib/sql/fingerprint-distance";
@@ -133,7 +133,7 @@ export function keptGarmentFingerprint(
 
 /**
  * The kept fingerprint nearest to `fingerprint`, when one is within the
- * match distance: how many bits apart, and when the image it describes was
+ * hold's match distance: how many bits apart, and when the image it describes was
  * removed. Nothing when none is close, or when `fingerprint` is too plain
  * to match anything by (design 164).
  */
@@ -179,7 +179,7 @@ export async function isHeldAsRemovedCopy(
 
 /**
  * The pieces of a read of the kept fingerprints near `fingerprint`: the
- * distance as a number, the filter to the match distance, and the order,
+ * distance as a number, the filter to the hold's match distance, and the order,
  * nearest first and the earliest of equals. None for a fingerprint too
  * plain to match by: near one of those is near half the uploads.
  */
@@ -191,7 +191,7 @@ function keptNear(fingerprint: string) {
   const bits = nearestOf(removedFingerprints.fingerprint, own);
   return {
     distance: sql<number>`${bits}`.mapWith(Number),
-    within: lte(bits, FINGERPRINT_MATCH_DISTANCE),
+    within: lte(bits, HOLD_MATCH_DISTANCE),
     nearestFirst: [asc(bits), asc(removedFingerprints.createdAt)] as const,
   };
 }
@@ -214,7 +214,7 @@ export type RemovedImage = RemovedMatch &
   }>;
 
 /**
- * Every removed image within the match distance of each held photo on a
+ * Every removed image within the hold's match distance of each held photo on a
  * page of Review rows, nearest first (round 42: a second removal in range
  * is a repeat upload, and the operator sees it), by photo id. A photo
  * gone since, or with no fingerprint, is not read at all, so the map has
@@ -256,7 +256,7 @@ export async function removedMatchesOf(
 }
 
 /**
- * The kept fingerprints within the match distance of `fingerprint`,
+ * The kept fingerprints within the hold's match distance of `fingerprint`,
  * nearest first and the earliest of equals, each with the Remove that
  * kept it: its subject names the photo where the kept row has no id of
  * its own, and its owner gives the handle. A kept row always has its

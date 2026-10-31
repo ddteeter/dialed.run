@@ -398,7 +398,7 @@ describe("removedMatchesOf", () => {
     expect(found.get(far.photoId)).toStrictEqual([]);
   });
 
-  it("lists every removal in range, nearest first and the earliest of equals, and none past 8 bits", async () => {
+  it("lists every removal in range, nearest first and the earliest of equals, and none past the hold's 5 bits", async () => {
     const { photoId } = await printed(BASE);
     await aKept("00000000fffffff0", 300, { photoId: "ph-4" });
     await aKept("00000000fffffffc", 200, { photoId: "ph-2b" });
@@ -523,14 +523,14 @@ async function aKept(
 }
 
 describe("removedMatchOf", () => {
-  it("matches at 8 bits and not at 9", async () => {
+  it("matches at 5 bits and not at 6 (design 164)", async () => {
     await aKept(BASE, 100);
 
-    expect(await removedMatchOf(core(), "00000000ffffff00")).toStrictEqual({
-      distance: 8,
+    expect(await removedMatchOf(core(), "00000000ffffffe0")).toStrictEqual({
+      distance: 5,
       removedAt: 100,
     });
-    expect(await removedMatchOf(core(), "00000000fffffe00")).toBeUndefined();
+    expect(await removedMatchOf(core(), "00000000ffffffc0")).toBeUndefined();
   });
 
   it("answers with the nearest, and the earliest of equals", async () => {

@@ -103,15 +103,23 @@ dropped, because it means keeping up with model releases by hand.)
 - **Ceilings** (proposed, pre-launch scale): fingerprint 5/h, classifier
   flag 10/h, report hides 10/h. These are fixed numbers now. A share of
   uploads later, once there is volume to take a share of.
-- **Popcount band 8–56**: provisional (owner, 2026-10-31). **Settle before
-  step 11** against real run/kit photos the owner is collecting. Measure
-  them locally and commit only the numbers. Synthetic results (step 0,
-  Photon's Triangle resize): flat, black, white and the left→right and
-  top→bottom gradients set 0 bits, the right→left gradient sets 64,
-  near-black/near-white/low-contrast noise set 3/4/7, full noise sets 30.
-  The 200 seeded `scenes.ts` pictures run min 3, p5 11, median 22, p95 34,
-  max 37. They skew low because their background brightens to the right,
-  as a photo lit from one side would. So 8 may be too high a floor.
+- **Popcount band 8–56: settled** (owner, 2026-10-31). Measured on 26 of
+  the owner's own run and kit photos, kept locally and never committed.
+  Real photos set **17–40 bits (median 33)**, 9 clear of the floor. The
+  synthetic step-0 scenes (3–37) skew low because of their gradient
+  background.
+- **Hold match distance tightened to 5** (owner, 2026-10-31;
+  `HOLD_MATCH_DISTANCE`). The same 26 photos showed:
+  - a shrunk, re-encoded copy moved **0–1 bits**;
+  - two pairs of *different* garment flat-lays sat **6 bits** apart, so
+    2 of 325 pairs were within the old 8.
+
+  A dark garment on a sunlit surface is most of what a 9 × 8 grid sees.
+  5 holds every copy design 146 measured (0–5) and neither pair. Review's
+  copy search keeps 8 (`FINGERPRINT_MATCH_DISTANCE`), because a person
+  reads it. The cost: a copy altered past 5 bits (a tight crop, a
+  screenshot) goes to the classifier rather than being held. A report
+  still hides it on one report.
 - **`intimate` 1-report hides bypass the report breaker** (owner,
   2026-10-31). The 48-hour clock, and the harm of one more viewer, outweigh a
   burst bug on a path a person files one report at a time.
@@ -123,7 +131,7 @@ Every step ends with the commit gate, touched-file stryker at 100%
 
 | #  | builds | tested by | done when |
 | -- | ------ | --------- | --------- |
-| 0  | **Measure the band.** `test/fixtures/scenes.ts` gains flat, near-black, near-white, one-way gradient, low-contrast and noisy scenes. Seeded scenes stand in for ordinary photos. Record the popcount of each in this doc. | a fixture test listing each scene's popcount | 8–56 is confirmed or moved, with the numbers here |
+| 0  | **Measure the band.** (Done: synthetic, then the owner's photos; see Open questions.) `test/fixtures/scenes.ts` gains flat, near-black, near-white, one-way gradient, low-contrast and noisy scenes. Seeded scenes stand in for ordinary photos. Record the popcount of each in this doc. | a fixture test listing each scene's popcount | 8–56 is confirmed or moved, with the numbers here |
 | 1  | **`isDistinctive`** in `lib/photo-fingerprint.ts`. The keep paths in `removed-fingerprints.ts` keep nothing outside the band, and `removedMatchOf` answers nothing for an upload outside it. | band edges 7/8/56/57; a flat grid; an empty pixel buffer; worker tests for both keep paths and the match | a flat removed image keeps no row, and a flat upload is never held |
 | 2  | **Schema**: migrations 0073 and 0074. `enqueueForReview` stamps `opened_at` on insert and on reopen. | `migration-chain`; fresh-D1 apply; worker test on reopen | the migrations apply to a fresh local D1 |
 | 3  | **`safety/breakers.ts`**: `holdsInLastHour(cause)`, the three ceiling rules as pure functions, and `isOverCeiling(cause)`. | each rule at ceiling − 1 / ceiling; share below 20 screened; baseline read only over 10; other causes and outside the window not counted | pure rules at 100% mutation |
