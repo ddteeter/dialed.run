@@ -10,6 +10,7 @@ export { handleQueueBatch, oweInCore, type ExportConsumers } from "./queues";
 export { handleScheduled } from "./scheduled";
 export { secureResponse } from "./secure-response";
 export { captureException } from "./sentry";
+export { requestNamer, timeRequest, timingDeps } from "./timing";
 export {
   turnstileSiteKey,
   verifyTurnstileToken,

@@ -12,7 +12,10 @@ import {
   captureException,
   handleQueueBatch,
   handleScheduled,
+  requestNamer,
   secureResponse,
+  timeRequest,
+  timingDeps,
 } from "./modules/ops";
 import { forgetAnsweredRequests } from "./modules/account/answered-requests";
 import { exportConsumersFromEnv } from "./modules/account/export-build";
@@ -24,8 +27,15 @@ import { purgeDueAccounts } from "./modules/account/purge";
 import { linkTypedGarments } from "./modules/closet";
 import { sweepCopyrightHolds } from "./modules/feed/moderation";
 import { mintNonce } from "./lib/csp-nonce";
+import { routeTree } from "./routeTree.gen";
 
 const startFetch = createStartHandler(defaultStreamHandler);
+
+/**
+ * Design 165: every request logs its route id and how long it took. The
+ * namer reads the route tree on the first request, not here.
+ */
+const timing = timingDeps(requestNamer(routeTree));
 
 export default {
   async fetch(request): Promise<Response> {
@@ -44,10 +54,15 @@ export default {
       // cookie.
       const nonce = mintNonce();
       return secureResponse(
-        await respondInD1Scope(
+        await timeRequest(
           request,
-          () => startFetch(request, { context: { nonce } }),
-          d1RequestDepsFromEnv(),
+          () =>
+            respondInD1Scope(
+              request,
+              () => startFetch(request, { context: { nonce } }),
+              d1RequestDepsFromEnv(),
+            ),
+          timing,
         ),
         nonce,
       );
