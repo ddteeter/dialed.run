@@ -74,6 +74,16 @@ describe("what a reviewer is shown", () => {
     expect(screen.getByText("[classifier]")).toBeInTheDocument();
   });
 
+  it("tags a photo held on upload by what was done, not how", () => {
+    renderQueue([
+      row({ subjectType: "photo", subjectId: "p-2", source: "fingerprint" }),
+    ]);
+
+    // Round 41 #84: the tag names the hold, not the technique.
+    expect(screen.getByText("[held on upload]")).toBeInTheDocument();
+    expect(screen.queryByText("[fingerprint]")).toBeNull();
+  });
+
   it("names what is being reviewed", () => {
     renderQueue([row({ subjectType: "product", subjectId: "p-9" })]);
     expect(screen.getByText(/product · p-9/)).toBeInTheDocument();

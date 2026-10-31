@@ -418,7 +418,7 @@ async function hidePendingReview(
     ...alerts,
     ...told,
   ]);
-  // Design 161: a hidden kit leaves the edge now, not within the TTL, and
+  // Design 163: a hidden kit leaves the edge now, not within the TTL, and
   // so does a hidden photo's kit, whose page shows it; the purge deletes
   // the photo's public copy too (step 8). A profile and a product hide
   // nothing there (a profile is a ban's to take down).

@@ -171,7 +171,7 @@ const NAV: readonly Edge[] = [
   // no Desk rows. Added under the header's ownership rule.
   { from: "*", to: ["/", "/desk/runners"], type: "cut" },
 
-  // The open web's pages (design 161, D-153): `/kit/<id>` and `/@handle`,
+  // The open web's pages (design 163, D-153): `/kit/<id>` and `/@handle`,
   // linked from each other with `reloadDocument`, since the root reads no
   // session there. A document load has no outgoing screen, so first-paint
   // rules apply, as for the Strava return above. Not a NAV row; added

@@ -445,7 +445,7 @@ describe("useSignedInAfterLoad", () => {
   });
 });
 
-describe("the public kit's photos (D-152, design 161 step 8)", () => {
+describe("the public kit's photos (D-152, design 163 step 8)", () => {
   const PHOTOS = [
     "https://photos.dialed.run/0a1b2c3d",
     "https://photos.dialed.run/4e5f6a7b",

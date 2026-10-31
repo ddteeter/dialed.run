@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "56c1463b-e22c-46e7-b1c9-33a4f743ff9b",
+  "id": "949e25c5-d2a6-43e0-a88e-8092af4c7859",
   "prevId": "43ce831e-82e1-49ef-9803-82c1dc979306",
   "tables": {
     "access_requests": {
@@ -1587,34 +1587,24 @@
           ],
           "isUnique": false
         },
-        "entries_shared_created": {
-          "name": "entries_shared_created",
+        "entries_audience_created": {
+          "name": "entries_audience_created",
           "columns": [
+            "audience",
             "moderation_status",
             "created_at"
           ],
-          "isUnique": false,
-          "where": "\"outfit_entries\".\"audience\" in ('runners', 'world')"
+          "isUnique": false
         },
-        "entries_user_shared_created": {
-          "name": "entries_user_shared_created",
+        "entries_user_audience_created": {
+          "name": "entries_user_audience_created",
           "columns": [
             "user_id",
+            "audience",
             "moderation_status",
             "created_at"
           ],
-          "isUnique": false,
-          "where": "\"outfit_entries\".\"audience\" in ('runners', 'world')"
-        },
-        "entries_user_world_created": {
-          "name": "entries_user_world_created",
-          "columns": [
-            "user_id",
-            "moderation_status",
-            "created_at"
-          ],
-          "isUnique": false,
-          "where": "\"outfit_entries\".\"audience\" = 'world'"
+          "isUnique": false
         }
       },
       "foreignKeys": {},
@@ -2310,6 +2300,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "photo_id": {
+          "name": "photo_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "moderation_action_id": {
@@ -3205,22 +3202,6 @@
           "notNull": true,
           "autoincrement": false,
           "default": true
-        },
-        "public_profile": {
-          "name": "public_profile",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": false
-        },
-        "public_closet": {
-          "name": "public_closet",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": false
         }
       },
       "indexes": {

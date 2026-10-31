@@ -20,7 +20,7 @@ import { makeEntry, makeRun, makeUser, resetTables } from "../feed/helpers";
 
 /**
  * D-150's profile switches and the rule tying them to the sharing default
- * (round 41 #86b; design 161 step 4).
+ * (round 41 #86b; design 163 step 4).
  */
 function coreDb() {
   return drizzle(env.DIALED_CORE);

@@ -95,7 +95,7 @@ export interface TakedownRequestDeps<Attempt> {
   */
   readonly secret?: string | undefined;
   /**
-  `ops`' edge purge, handed in for the reason `verify` is (design 161).
+  `ops`' edge purge, handed in for the reason `verify` is (design 163).
   */
   readonly purge: PurgeTags;
 }
@@ -195,10 +195,10 @@ export async function fileTakedownRequest<Attempt>(
 }
 
 /**
- * Design 161: a kit a request hid leaves the edge now, not within the
+ * Design 163: a kit a request hid leaves the edge now, not within the
  * TTL — the open web's `/kit/<id>` is a link `/takedown` takes. So does a
  * held photo's kit, whose page shows it, and the purge deletes the
- * photo's public copy (D-152, design 161 step 8).
+ * photo's public copy (D-152, design 163 step 8).
  */
 async function purgeHeld(
   db: Db,

@@ -40,7 +40,7 @@ import {
 } from "../safety/helpers";
 
 /**
- * The public photo bucket (D-152, design 161 step 8): a copy of each
+ * The public photo bucket (D-152, design 163 step 8): a copy of each
  * screened photo on a PUBLIC kit, under an unguessable key, and none of
  * anything else. Run against the test pool's real D1 and R2.
  */

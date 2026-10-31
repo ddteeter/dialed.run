@@ -1,5 +1,5 @@
 /**
- * Purging the open web's pages from the edge by tag (design 161, D-153):
+ * Purging the open web's pages from the edge by tag (design 163, D-153):
  * what a write that takes a page back calls, so the page goes within the
  * purge rather than the TTL.
  *
@@ -98,7 +98,7 @@ const workerPurge: PurgeDeps = {
 /**
  * The purge every writer uses: `purgeTags` on the Worker's own cache, and
  * the public photo reconcile for the kits and runners the tags name
- * (design 161 step 8), so whatever takes a page back takes its photos'
+ * (design 163 step 8), so whatever takes a page back takes its photos'
  * copies back too — and a kit made PUBLIC gets its copies. Both in the
  * background; neither can fail the write.
  */

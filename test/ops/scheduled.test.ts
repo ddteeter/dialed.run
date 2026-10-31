@@ -23,7 +23,11 @@ import { handleScheduled } from "../../src/modules/ops";
 import { MODERATION_RECORD_KEPT_SECONDS } from "../../src/modules/safety/retention";
 import { gaveUpRow } from "../gave-up-rows";
 import { mockVisualCrossing } from "../weather/fixtures/visual-crossing-observation";
-import { digestKinds, digestReport } from "../../src/modules/ops/scheduled";
+import {
+  digestKinds,
+  digestReport,
+  hourlyReport,
+} from "../../src/modules/ops/scheduled";
 import type { CronReporter, SentryReport } from "../../src/modules/ops/sentry";
 import {
   createOrGetBrand,
@@ -119,8 +123,8 @@ afterEach(() => {
 
 describe("the cron heartbeat", () => {
   it("stamps last_run_at in epoch seconds, not milliseconds", async () => {
-    // A millisecond value here reads as the year 57000, and the digest's
-    // own "stale cron" check would never fire again.
+    // A millisecond value here reads as the year 57000 to anyone reading
+    // the row to see when a cron last ran.
     const before = nowSeconds();
 
     await handleScheduled(DIGEST);
@@ -275,7 +279,7 @@ describe("the cron heartbeat", () => {
     expect(row?.status).toBe("hidden_pending_review");
   });
 
-  it("sweeps the public photo bucket on the same firing (design 161 step 8)", async () => {
+  it("sweeps the public photo bucket on the same firing (design 163 step 8)", async () => {
     // An object no row names: a copy whose Worker died before its row
     // went. The sweep is the only thing that would ever find it.
     const orphan = `orphan-${newUlid().toLowerCase()}`;
@@ -771,6 +775,181 @@ async function attemptsOf(id: string) {
   return row?.attempts;
 }
 
+function today(): string {
+  return new Date(nowSeconds() * 1000).toISOString().slice(0, 10);
+}
+
+describe("hourly firings report what they find (design 162)", () => {
+  const WEATHER_RETRY = { cron: "0 * * * *" } as ScheduledController;
+
+  it("sends a firing's lines as one event, fingerprinted by cron and day", async () => {
+    const { reporter, events } = recordingReporter();
+
+    const outcome = await handleScheduled(WEATHER_RETRY, reporter, {
+      sweepExports: (anomalies) => {
+        anomalies.push(
+          "2 data export(s) stalled and were re-sent",
+          "1 failed data export(s) could not be deleted",
+        );
+        return Promise.resolve();
+      },
+    });
+
+    expect(outcome.anomalies).toStrictEqual([
+      "2 data export(s) stalled and were re-sent",
+      "1 failed data export(s) could not be deleted",
+    ]);
+    expect(events.map((event) => event.report)).toStrictEqual([
+      {
+        context: {
+          cron: "weather-retry",
+          anomalies:
+            "2 data export(s) stalled and were re-sent; 1 failed data export(s) could not be deleted",
+        },
+        tags: { digest: "hourly", cron: "weather-retry" },
+        fingerprint: ["hourly", "weather-retry", today()],
+      },
+    ]);
+    expect(events.map((event) => event.error)).toStrictEqual([
+      expect.objectContaining({ message: "hourly: weather-retry" }),
+    ]);
+  });
+
+  it.each([
+    ["0 * * * *", "weather-retry"],
+    ["30 * * * *", "enrichment-retry"],
+    ["15 * * * *", "screening-retry"],
+  ] as const)(
+    "%s names owed email its drain could not send",
+    async (cron, cronName) => {
+      vi.spyOn(console, "error").mockImplementation(nothing);
+      await seedDueEmail();
+      const { reporter, events } = recordingReporter();
+
+      const outcome = await handleScheduled(
+        { cron } as ScheduledController,
+        reporter,
+      );
+
+      expect(outcome.anomalies).toContain(
+        "1 of 1 email outbox row(s) did not settle",
+      );
+      expect(events.map((event) => event.report.fingerprint)).toStrictEqual([
+        ["hourly", cronName, today()],
+      ]);
+    },
+  );
+
+  it("raises nothing for an hour with nothing to say", async () => {
+    const { reporter, events } = recordingReporter();
+
+    await handleScheduled(WEATHER_RETRY, reporter);
+
+    expect(events).toStrictEqual([]);
+  });
+
+  it("reports what the steps found when one of them throws", async () => {
+    const boom = new Error("sweep fell over");
+    const { reporter, events } = recordingReporter();
+
+    await expect(
+      handleScheduled(WEATHER_RETRY, reporter, {
+        sweepExports: (anomalies) => {
+          anomalies.push("1 expired data export(s) could not be deleted");
+          return Promise.reject(boom);
+        },
+      }),
+    ).rejects.toBe(boom);
+
+    expect(events.map((event) => event.report.context)).toStrictEqual([
+      {
+        cron: "weather-retry",
+        anomalies: "1 expired data export(s) could not be deleted",
+      },
+    ]);
+  });
+
+  it("is never tagged as the daily digest, whose rule pages on every event", () => {
+    expect(
+      hourlyReport("screening-retry", ["a", "b"], "2026-10-29"),
+    ).toStrictEqual({
+      context: { cron: "screening-retry", anomalies: "a; b" },
+      tags: { digest: "hourly", cron: "screening-retry" },
+      fingerprint: ["hourly", "screening-retry", "2026-10-29"],
+    });
+  });
+});
+
+describe("the digest runs every check, whichever throw (design 162)", () => {
+  it("drains the outbox after a check before it throws, then throws", async () => {
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    const id = await seedDueEmail();
+    const key = await staleCount();
+    const boom = new Error("weather read fell over");
+    // Fail only the weather backlog's read: the first check in the list.
+    const prepare = env.DIALED_CORE.prepare.bind(env.DIALED_CORE);
+    vi.spyOn(env.DIALED_CORE, "prepare").mockImplementation((query) => {
+      if (query.includes('"weather_status"')) throw boom;
+      return prepare(query);
+    });
+    const { reporter, events, checkIns } = recordingReporter();
+
+    await expect(handleScheduled(DIGEST, reporter)).rejects.toBe(boom);
+
+    expect(await attemptsOf(id)).toBe(1);
+    expect(events.map((event) => event.report.tags)).toStrictEqual([
+      { digest: "daily", digest_kind: "outbox" },
+    ]);
+    // The upkeep after the checks ran too.
+    expect(await isCountKept(key)).toBe(false);
+    expect(checkIns.map((checkIn) => checkIn.status)).toStrictEqual([
+      "in_progress",
+      "error",
+    ]);
+  });
+
+  it("reports what a check found before it threw", async () => {
+    const boom = new Error("purge fell over");
+    const { reporter, events } = recordingReporter();
+
+    await expect(
+      handleScheduled(DIGEST, reporter, {
+        purgeAccounts: (anomalies) => {
+          anomalies.push("1 account deletion failed and is retried tomorrow");
+          return Promise.reject(boom);
+        },
+      }),
+    ).rejects.toBe(boom);
+
+    expect(events.map((event) => event.report.context)).toStrictEqual([
+      {
+        kind: "account-deletion",
+        anomalies: "1 account deletion failed and is retried tomorrow",
+      },
+    ]);
+  });
+
+  it("throws every failure together when more than one check throws", async () => {
+    vi.spyOn(console, "error").mockImplementation(nothing);
+    const weather = new Error("weather read fell over");
+    const purge = new Error("purge fell over");
+    const prepare = env.DIALED_CORE.prepare.bind(env.DIALED_CORE);
+    vi.spyOn(env.DIALED_CORE, "prepare").mockImplementation((query) => {
+      if (query.includes('"weather_status"')) throw weather;
+      return prepare(query);
+    });
+
+    const firing = handleScheduled(DIGEST, recordingReporter().reporter, {
+      purgeAccounts: () => Promise.reject(purge),
+    });
+
+    await expect(firing).rejects.toMatchObject({
+      message: "several upkeep steps failed",
+      errors: [weather, purge],
+    });
+  });
+});
+
 describe("every hourly step runs, whichever fail (law 5)", () => {
   it.each(["0 * * * *", "30 * * * *", "15 * * * *"])(
     "%s drains the email owed",
@@ -903,12 +1082,15 @@ describe("every cron checks in (OPS-3)", () => {
     const { reporter, checkIns } = recordingReporter();
     const boom = new Error("database gone");
     // Let the heartbeat row land, then fail the cron's own first query, so
-    // the throw comes from inside the work the check-in brackets.
+    // the throw comes from inside the work the check-in brackets. Only that
+    // one: the digest now runs on past a failed check (design 162), and a
+    // `prepare` that throws synchronously inside drizzle's `batch()`
+    // leaves an unhandled rejection behind, which real D1 never does.
     const prepare = env.DIALED_CORE.prepare.bind(env.DIALED_CORE);
     let statements = 0;
     vi.spyOn(env.DIALED_CORE, "prepare").mockImplementation((query) => {
       statements += 1;
-      if (statements > 1) throw boom;
+      if (statements === 2) throw boom;
       return prepare(query);
     });
 
@@ -1499,7 +1681,7 @@ describe("the product link a confirmation owes (design 133, D-113 Q1)", () => {
 
     expect(await attemptsOf(id)).toBe(1);
     expect(outcome.anomalies).toContain(
-      "1 product_link outbox row(s) were owed; 0 settled",
+      "1 of 1 product_link outbox row(s) did not settle",
     );
   });
 

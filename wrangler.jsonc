@@ -14,7 +14,7 @@
     "enabled": true,
   },
   "upload_source_maps": true,
-  // Workers Caching (owner-approved, 2026-10-28; design 161, D-153): the
+  // Workers Caching (owner-approved, 2026-10-28; design 163, D-153): the
   // open web's pages (/kit/<id>, /@handle, the kit's card) leave with
   // `Cache-Control: public, max-age=60` and a `Cache-Tag`, and the edge
   // serves them without running the Worker; a retraction purges by tag
@@ -28,7 +28,7 @@
   // (Cloudflare applies RFC 9111's heuristic freshness), and the request's
   // Cookie is not in the cache key. So every response that is not public
   // leaves with `Cache-Control: private, no-store` unless it names its own
-  // (withSecurityHeaders; design 161, "Deviations (CSP)").
+  // (withSecurityHeaders; design 163, "Deviations (CSP)").
   // test/bindings-conformance.test.ts pins this block.
   "cache": {
     "enabled": true,
@@ -47,7 +47,7 @@
   // The Turnstile site key is printed into the page; its secret is a
   // `wrangler secret`.
   //
-  // PUBLIC_PHOTOS_ORIGIN (owner-approved, 2026-10-28; design 161 step 8,
+  // PUBLIC_PHOTOS_ORIGIN (owner-approved, 2026-10-28; design 163 step 8,
   // D-152) is the public photo bucket's custom domain, and the switch that
   // turns copying photos of PUBLIC kits into PUBLIC_PHOTOS on: set it only
   // once the bucket, its domain and the CSAM Scanning Tool are live
@@ -97,7 +97,7 @@
       "binding": "IMPORTS",
       "bucket_name": "dialed-imports",
     },
-    // PUBLIC_PHOTOS (owner-approved, 2026-10-28; design 161 step 8,
+    // PUBLIC_PHOTOS (owner-approved, 2026-10-28; design 163 step 8,
     // D-152): the one bucket anyone can read, on its custom domain
     // photos.dialed.run. It holds a copy of each screened photo on a
     // PUBLIC kit, under an unguessable key, each with

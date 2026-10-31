@@ -250,6 +250,17 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
     })
     .click();
   await page.getByRole("button", { name: "Send report" }).click();
+  // Round 42: an intimate-image report swaps the sheet for its receipt,
+  // with the other-sites line last, and Done closes it.
+  const receipt = page.locator("[data-part='report-receipt']");
+  await expect(
+    receipt.getByRole("heading", { name: "Thanks for telling us." }),
+  ).toBeFocused();
+  await expect(receipt).toContainText("We'll review it within a day");
+  await expect(
+    receipt.getByRole("link", { name: "StopNCII.org (opens in a new tab)" }),
+  ).toBeVisible();
+  await receipt.getByRole("button", { name: "Done" }).click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
 
   await scene(page, "Review: one row opens at a time");

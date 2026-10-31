@@ -233,7 +233,7 @@ test.describe("security headers (OPS-8)", () => {
     expect(response.headers()["cache-control"]).toBe("private, no-store");
   });
 
-  // Design 161: the edge stores a public page and hands the same bytes to
+  // Design 163: the edge stores a public page and hands the same bytes to
   // every visitor, so a nonce in it would be one nonce for all of them.
   // Its policy names its inline scripts' hashes instead, and the page
   // names no nonce anywhere.

@@ -55,7 +55,7 @@ function withHeaders(
  * Caching keeps whatever `Cache-Control` says in front of the Worker, so a
  * day here would serve a retracted kit's card for a day whenever its
  * purge was refused; a minute keeps the TTL the guarantee for the card as
- * for the page (design 161, "Deviations (purge)").
+ * for the page (design 163, "Deviations (purge)").
  */
 export async function kitCardResponse(
   request: Request,

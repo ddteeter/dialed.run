@@ -243,7 +243,11 @@ describe("a garment photo's Remove tells its owner (R-167, design 159)", () => {
       .from(moderationActions);
     const kept = await core().select().from(removedFingerprints);
     expect(kept).toMatchObject([
-      { fingerprint: FINGERPRINT, moderationActionId: audit?.id },
+      {
+        fingerprint: FINGERPRINT,
+        photoId: itemId,
+        moderationActionId: audit?.id,
+      },
     ]);
     expect(kept[0]?.createdAt).toBeGreaterThan(0);
   });

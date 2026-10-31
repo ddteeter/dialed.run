@@ -42,7 +42,7 @@ export interface RequestContext {
 }
 
 /**
- * The request's context. An open-web page (`lib/open-web`, design 161) is
+ * The request's context. An open-web page (`lib/open-web`, design 163) is
  * stored at the edge and served to every visitor, so a nonce in it would
  * be one nonce for all of them for as long as the edge keeps it: it gets
  * none, its inline scripts are admitted by their hashes instead

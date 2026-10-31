@@ -1,4 +1,4 @@
-import { test as base } from "@playwright/test";
+import { test as base } from "./a11y";
 
 import { captionRule, holdFor } from "./caption";
 import type { Page } from "@playwright/test";

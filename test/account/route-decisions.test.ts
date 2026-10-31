@@ -332,7 +332,7 @@ describe("gateOnHandle (the root's O0 gate, memoised)", () => {
   });
 
   it("never asks on the open web, where the page must not depend on who is looking", async () => {
-    // Design 161: a public kit is the same bytes for everyone, so the
+    // Design 163: a public kit is the same bytes for everyone, so the
     // root reads no session there and redirects nobody — not even a
     // runner the gate would otherwise send to O0 or Keep your account?.
     for (const gate of ["needs-handle", "leaving", "needs-terms"] as const) {

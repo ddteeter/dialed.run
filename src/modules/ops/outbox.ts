@@ -11,7 +11,8 @@
  * - **the drainer** (`drainOutbox`, from the daily digest) re-drives every
  *   row a fast path could not settle, backing off between attempts;
  * - **the digest** (`checkOutboxBacklog`) reports rows that have exhausted
- *   their attempts, and rows of a kind this build cannot read (law 6).
+ *   their attempts, rows of a kind this build cannot read, and rows still
+ *   due once the drain has run — debt the cap could not reach (law 6).
  */
 import {
   and,
@@ -19,7 +20,9 @@ import {
   count,
   eq,
   gte,
+  inArray,
   lte,
+  min,
   notInArray,
   sql,
   type SQL,
@@ -213,6 +216,15 @@ export interface DrainOptions {
    * the hour rather than at the next daily digest.
    */
   readonly kinds?: readonly OutboxKind[];
+  /**
+   * Which lines the drain writes (design 162). `owed`, the daily
+   * digest's and the default: every kind whose fast path failed, settled
+   * or not. `unsettled`, the hourly firings': only rows this run could not
+   * settle. The hourly drain is the only sender a held reminder has, so
+   * a row it sends is the schedule arriving, and an hourly line is an
+   * alert.
+   */
+  readonly lines?: "owed" | "unsettled";
 }
 
 type ClaimedRow = typeof outbox.$inferSelect;
@@ -343,26 +355,76 @@ export async function drainOutbox(
     for (const row of claimed) {
       if (await didSettle(db, row, report, handlers)) settled += 1;
     }
-    const isScheduled = scheduledOutboxKinds.includes(kind);
-    if (isScheduled && settled === claimed.length) continue;
-    anomalies.push(
-      `${String(claimed.length)} ${kind} outbox row(s) were owed; ${String(settled)} settled`,
-    );
+    const line = drainLine(kind, claimed.length, settled, options.lines);
+    if (line !== undefined) anomalies.push(line);
   }
 }
 
 /**
+What one kind's run says, if anything, under `DrainOptions["lines"]`.
+*/
+function drainLine(
+  kind: OutboxKind,
+  claimed: number,
+  settled: number,
+  lines: DrainOptions["lines"],
+): string | undefined {
+  if (lines === "unsettled") {
+    return settled < claimed
+      ? `${String(claimed - settled)} of ${String(claimed)} ${kind} outbox row(s) did not settle`
+      : undefined;
+  }
+  if (settled === claimed && scheduledOutboxKinds.includes(kind)) {
+    return undefined;
+  }
+  return `${String(claimed)} ${kind} outbox row(s) were owed; ${String(settled)} settled`;
+}
+
+/**
+ * Rows of a kind this build drains that are due at `now`: how many, and
+ * the earliest they fell due. Read after the drain, a row a run worked has
+ * settled or moved to its backoff, so whatever is left is debt the cap
+ * never reached. It is one range on `outbox_kind_due` per kind, read
+ * daily; exported for the test that reads its plan.
+ */
+export function stillDueOf(db: Db, now: number) {
+  return db
+    .select({
+      kind: outbox.kind,
+      rows: count(),
+      oldest: min(outbox.nextAttemptAt),
+    })
+    .from(outbox)
+    .where(
+      and(
+        inArray(outbox.kind, [...outboxKinds]),
+        lte(outbox.nextAttemptAt, now),
+      ),
+    )
+    .groupBy(outbox.kind);
+}
+
+const HOUR_S = 60 * 60;
+
+/**
  * The debt nobody is paying (law 6): rows past their terminal attempt
- * count, and rows of a kind this build cannot drain.
+ * count, rows of a kind this build cannot drain, and rows still due at
+ * `now` — the drain's own `now`, so a row it backed off is not counted.
  *
- * Neither read is index-covered, and that is deliberate: `attempts` and a
- * NOT IN over `kind` would each need an index for a table that only ever
- * holds unpaid debt — a handful of rows on a bad day — read once a day by
- * a cron, never by a page.
+ * The first two reads are not index-covered, and that is deliberate:
+ * `attempts` and a NOT IN over `kind` would each need an index for a table
+ * that only ever holds unpaid debt — a handful of rows on a bad day — read
+ * once a day by a cron, never by a page. The third is covered
+ * (`stillDueOf`), because a backlog is exactly when the table is large.
+ *
+ * The still-due line has no threshold to tune: a healthy drain leaves
+ * nothing due, so one row left is the cap at work, and its age says how
+ * far behind the drain is (design 162).
  */
 export async function checkOutboxBacklog(
   db: Db,
   anomalies: string[],
+  now = nowSeconds(),
 ): Promise<void> {
   const exhausted = await db
     .select({ kind: outbox.kind, rows: count() })
@@ -382,6 +444,13 @@ export async function checkOutboxBacklog(
   for (const { kind, rows } of unreadable) {
     anomalies.push(
       `${String(rows)} outbox row(s) of kind ${kind}, which this build cannot drain`,
+    );
+  }
+  const stillDue = await stillDueOf(db, now);
+  for (const { kind, rows, oldest } of stillDue) {
+    const waited = Math.floor((now - (oldest ?? now)) / HOUR_S);
+    anomalies.push(
+      `${String(rows)} ${kind} outbox row(s) still due after the drain, which takes ${String(OUTBOX_DRAIN_CAP)} a run; the oldest has waited ${String(waited)}h`,
     );
   }
 }

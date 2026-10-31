@@ -605,7 +605,7 @@ describe("not public (round 41 #86f): one answer for every reason", () => {
   });
 });
 
-describe("publicProfileHeaders (design 161, D-153)", () => {
+describe("publicProfileHeaders (design 163, D-153)", () => {
   it("keeps a public profile a minute, tagged with its path and its runner", async () => {
     const { runner } = await fullyPopulated();
 
@@ -659,7 +659,7 @@ const publicProfileSource: Record<string, string> = import.meta.glob(
   { query: "?raw", import: "default", eager: true },
 );
 
-describe("one gate for the open web (design 161's test plan)", () => {
+describe("one gate for the open web (design 163's test plan)", () => {
   it("reads the kits through worldVisibleEntry, and through no signed-in rule", () => {
     const [source = ""] = Object.values(publicProfileSource);
 

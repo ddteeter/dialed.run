@@ -168,7 +168,7 @@ export async function uploadPhoto(
     classify ?? classifierFromEnv(),
   );
   // A photo that passed on a PUBLIC kit is copied to the public bucket now
-  // rather than at the sweep (design 161 step 8). The reconcile reads the
+  // rather than at the sweep (design 163 step 8). The reconcile reads the
   // rule itself, so a photo still pending, held or on a kit that is not
   // PUBLIC is left alone; in the background, so it never delays the save.
   (publish ?? syncPublicPhotosLater)({

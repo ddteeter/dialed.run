@@ -281,7 +281,7 @@ describe("the confirm", () => {
       ),
     ).toBe("confirmed");
     expect(await entryStatus(entryId)).toBe("hidden_pending_review");
-    // Design 161: the hidden kit leaves the edge, with its runner's pages.
+    // Design 163: the hidden kit leaves the edge, with its runner's pages.
     expect(spy.calls).toStrictEqual([
       [`entry:${entryId}`, `runner:${await ownerOf(entryId)}`],
     ]);

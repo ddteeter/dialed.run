@@ -148,7 +148,7 @@ jobs:
           if [ "$changed" != " M $LIST" ]; then
             echo "::error::only the list may change"; echo "$changed"; exit 1
           fi
-          bot="$APP_SLUG[bot]"
+          bot="${APP_SLUG}[bot]"
           bot_id=$(gh api "users/$bot" --jq .id)
           git -c core.hooksPath=/dev/null \
             -c user.name="$bot" \

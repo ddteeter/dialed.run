@@ -88,9 +88,8 @@ describe("/takedown/confirm", () => {
     expect(
       screen.getByText("We've emailed you what we decided."),
     ).toBeVisible();
-    expect(
-      document.querySelector("[data-part='elsewhere-help']"),
-    ).toBeVisible();
+    // The other sites are for DONE only (round 41 #85).
+    expect(document.querySelector("[data-part='elsewhere-help']")).toBeNull();
   });
 
   it("says a link that matches nothing does not work, before or after asking", async () => {

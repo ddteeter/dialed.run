@@ -19,7 +19,7 @@ import {
 } from "../../src/modules/ops/security-headers";
 
 /**
- * The open web's cache headers (design 161, D-153).
+ * The open web's cache headers (design 163, D-153).
  */
 
 describe("publicPageTags and publicPageHeaders", () => {

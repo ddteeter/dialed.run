@@ -545,7 +545,7 @@ describe("not public (round 41 #86f): one answer for every reason", () => {
   });
 });
 
-describe("publicKitHeaders (design 161, D-153)", () => {
+describe("publicKitHeaders (design 163, D-153)", () => {
   it("keeps a public kit a minute, tagged with the kit and its runner", async () => {
     const { runner, entryId } = await fullyPopulated();
 
@@ -663,7 +663,7 @@ const publicKitSource: Record<string, string> = import.meta.glob(
   { query: "?raw", import: "default", eager: true },
 );
 
-describe("one gate for the open web (design 161's test plan)", () => {
+describe("one gate for the open web (design 163's test plan)", () => {
   it("reads the kit through worldVisibleEntry, and through no signed-in rule", () => {
     const [source = ""] = Object.values(publicKitSource);
 

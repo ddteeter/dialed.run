@@ -191,6 +191,15 @@ async function copyOwed(
   deps: PublicPhotoDeps,
   kits: SQL | undefined,
 ): Promise<void> {
+  // The photo's kit, and its copy if one was claimed.
+  const itsKit = eq(outfitEntries.id, entryPhotos.entryId);
+  const itsCopy = eq(publicPhotos.photoId, entryPhotos.id);
+  const notYetLanded = and(
+    kits,
+    eq(entryPhotos.screenStatus, publicPhotoStatus),
+    worldVisibleEntry(),
+    isNull(publicPhotos.publishedAt),
+  );
   const owed = await deps.db
     .select({
       photoId: entryPhotos.id,
@@ -200,16 +209,9 @@ async function copyOwed(
       key: publicPhotos.key,
     })
     .from(entryPhotos)
-    .innerJoin(outfitEntries, eq(outfitEntries.id, entryPhotos.entryId))
-    .leftJoin(publicPhotos, eq(publicPhotos.photoId, entryPhotos.id))
-    .where(
-      and(
-        kits,
-        eq(entryPhotos.screenStatus, publicPhotoStatus),
-        worldVisibleEntry(),
-        isNull(publicPhotos.publishedAt),
-      ),
-    )
+    .innerJoin(outfitEntries, itsKit)
+    .leftJoin(publicPhotos, itsCopy)
+    .where(notYetLanded)
     .limit(COPIES_PER_PASS);
   for (const photo of owed) {
     await didSettle(deps, photo.photoId, () => copy(deps, photo));

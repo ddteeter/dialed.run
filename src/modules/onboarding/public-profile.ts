@@ -86,7 +86,7 @@ export async function setPublicProfile(
     })
     // An upsert always returns its one row.
     .get();
-  // Design 161: either switch changes what `/@handle` shows — off takes
+  // Design 163: either switch changes what `/@handle` shows — off takes
   // the profile or the rotation back, on replaces the not-public page
   // cached at the handle's path — so the edge is told either way.
   purge(profileCacheTags(userId, row.username));

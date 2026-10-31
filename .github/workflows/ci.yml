@@ -127,6 +127,37 @@ jobs:
         env:
           E2E_SERVER: ${{ matrix.server }}
 
+  # The workflows themselves: expressions, permissions, and every `run:`
+  # through shellcheck. They hold the deploy keys and the automation App,
+  # and an unattended merge trusts them, yet nothing else reads them.
+  #
+  # The release binary at a pinned checksum, not a marketplace action, so
+  # the allowed-actions list stays as it is. actionlint skips shellcheck
+  # without a word when it is missing, so its absence fails the job.
+  # Shellcheck's info level is off: it flags the single-quoted
+  # `node -p '…'` programs in mutation.yml, which are quoted that way so
+  # the shell leaves their `${…}` alone.
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    env:
+      ACTIONLINT_VERSION: 1.7.12
+      ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install actionlint
+        run: |
+          command -v shellcheck || { echo "::error::shellcheck is not on the runner"; exit 1; }
+          tarball="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL -o "$tarball" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/$tarball"
+          echo "$ACTIONLINT_SHA256  $tarball" | sha256sum -c -
+          tar xzf "$tarball" actionlint
+      - name: Lint the workflows
+        run: ./actionlint -color
+        env:
+          SHELLCHECK_OPTS: --severity=warning
+
   deploy:
     name: Deploy to workers.dev
     # Both gates, both e2e legs: a merge whose browser journeys fail, on

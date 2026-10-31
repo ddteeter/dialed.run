@@ -58,10 +58,10 @@ import { nowSeconds } from "../../lib/now";
 const WEATHER_PENDING_STALE_SECONDS = 24 * 60 * 60;
 
 /**
- * What a cron run found. `anomalies` is the digest's product — the things
- * a human should look at — and it is returned rather than only shipped to
- * Sentry so that "the digest found nothing" is a fact a caller and a test
- * can read. Every other cron returns an empty list.
+ * What a cron run found. `anomalies` are the things a human should look
+ * at — the digest's whole product, and an hourly firing's findings — and
+ * they are returned as well as shipped to Sentry so that "the firing found
+ * nothing" is a fact a caller and a test can read.
  */
 export interface ScheduledOutcome {
   readonly cronName: string;
@@ -69,12 +69,14 @@ export interface ScheduledOutcome {
 }
 
 /**
- * Cron entry (000 §10). Every cron writes its heartbeat row first (the
- * digest flags stale ones — law: crons must be safely re-runnable), then
+ * Cron entry (000 §10). Every cron writes its heartbeat row first, then
  * checks in with Sentry Crons around the work (OPS-3): `in_progress`, then
  * `ok` or `error`. The row says when a cron last ran to anyone reading the
  * database; the check-in says so to someone who is not, and is the only one
- * of the two that can notice a cron that stopped firing altogether.
+ * of the two that can notice a cron that stopped firing altogether. Nothing
+ * reads the row for staleness, on purpose (design 162): a check inside the
+ * daily firing would stop with it, and would report through the same
+ * Sentry the check-ins already reach.
  *
  * `reporter` is a parameter so a test can read the check-ins and digest
  * events a firing produced. Production passes nothing and gets Sentry.
@@ -196,6 +198,7 @@ async function drainProductLinks(
   await drainOutbox(coreDb(), anomalies, {
     kinds: ["product_link"],
     handlers: handlersFor(upkeep),
+    lines: "unsettled",
   });
 }
 
@@ -209,8 +212,7 @@ async function runCron(
       return runDailyDigest(reporter, upkeep);
     }
     case "weather-retry": {
-      const anomalies: string[] = [];
-      await eachStep([
+      return runHourly(cronName, reporter, (anomalies) => [
         // docs/tasks/103-weather.md requirement 4/5: the hourly
         // pending-observation retry, claim-then-work at the module level.
         () => retryPendingWeather(),
@@ -229,11 +231,9 @@ async function runCron(
             report: captureException,
           }),
       ]);
-      return anomalies;
     }
     case "enrichment-retry": {
-      const anomalies: string[] = [];
-      await eachStep([
+      return runHourly(cronName, reporter, (anomalies) => [
         () => redispatchStalledEnrichments(anomalies),
         // What the sweep just stopped re-driving goes on the Desk's Gave
         // up (R-119): the hour a product's day runs out, not the morning
@@ -241,23 +241,100 @@ async function runCron(
         () => listAbandonedEnrichments(coreDb()),
         () => drainOwedEmail(anomalies),
       ]);
-      return anomalies;
     }
     case "screening-retry": {
-      const anomalies: string[] = [];
-      await eachStep([
+      return runHourly(cronName, reporter, (anomalies) => [
         () => runScreeningRetry(anomalies),
         // After the screening retry, so a photo it just passed on a
-        // PUBLIC kit is copied this hour (design 161 step 8).
+        // PUBLIC kit is copied this hour (design 163 step 8).
         () => sweepPublicPhotoCopies(anomalies),
         // Email before the re-ask: each handle may wait its full five
         // seconds on moderation, and owed mail should not wait behind it.
         () => drainOwedEmail(anomalies),
         () => upkeep.rescreenHandles?.(anomalies),
       ]);
-      return anomalies;
     }
   }
+}
+
+type Step = () => Promise<unknown> | undefined;
+
+type HourlyCron = Exclude<CronName, "daily-digest">;
+
+/**
+ * An hourly firing (design 162): its steps, then what they found, sent to
+ * Sentry as one event. Sent when a step threw as well, because what the
+ * other steps found is still true, and a firing that throws is when it
+ * matters most.
+ */
+async function runHourly(
+  cronName: HourlyCron,
+  reporter: CronReporter,
+  steps: (anomalies: string[]) => readonly Step[],
+): Promise<readonly string[]> {
+  const anomalies: string[] = [];
+  try {
+    await eachStep(steps(anomalies));
+  } finally {
+    if (anomalies.length > 0) {
+      reporter.report(
+        new Error(`hourly: ${cronName}`),
+        hourlyReport(cronName, anomalies, utcDay()),
+      );
+    }
+  }
+  return anomalies;
+}
+
+/**
+ * The event for one hourly cron's findings on one day. These findings
+ * once went nowhere: the Worker entry drops the outcome, and only the
+ * digest reported.
+ *
+ * Fingerprinted by cron and day, so the first finding of a day opens a
+ * new issue and Sentry's default new-issue alert fires once, not 24
+ * times. The tag is `digest: hourly`, never `daily`, so the every-event
+ * rule on the daily digest (deployment §8) does not page on each hour.
+ */
+export function hourlyReport(
+  cronName: HourlyCron,
+  lines: readonly string[],
+  day: string,
+): SentryReport {
+  return anomalyReport(
+    { cron: cronName },
+    { digest: "hourly", cron: cronName },
+    ["hourly", cronName, day],
+    lines,
+  );
+}
+
+/**
+ * The shape both reports share: the findings joined into one context
+ * field beside whatever names the source, the tags an alert rule matches,
+ * and the fingerprint Sentry groups by.
+ */
+/**
+One anomaly event: where it came from, its lines joined, and how it groups.
+*/
+function anomalyReport(
+  source: Record<string, string>,
+  tags: Record<string, string>,
+  fingerprint: readonly string[],
+  lines: readonly string[],
+): SentryReport {
+  return {
+    context: { ...source, anomalies: lines.join("; ") },
+    tags,
+    fingerprint,
+  };
+}
+
+/**
+The UTC date a person reads a report under: one issue a day.
+*/
+function utcDay(): string {
+  return new Date(nowSeconds() * 1000).toISOString().slice(0, 10);
 }
 
 /**
@@ -267,9 +344,14 @@ async function runCron(
  * run — the one failure itself, or all of them together — so its check-in
  * closes as an error and the Worker entry reports what went wrong.
  */
-async function eachStep(
-  steps: readonly (() => Promise<unknown> | undefined)[],
-): Promise<void> {
+async function eachStep(steps: readonly Step[]): Promise<void> {
+  throwAny(await failuresOf(steps));
+}
+
+/**
+Every step run, whichever fail; what they threw, in order.
+*/
+async function failuresOf(steps: readonly Step[]): Promise<unknown[]> {
   const failures: unknown[] = [];
   for (const step of steps) {
     try {
@@ -278,6 +360,10 @@ async function eachStep(
       failures.push(error);
     }
   }
+  return failures;
+}
+
+function throwAny(failures: readonly unknown[]): void {
   if (failures.length === 0) return;
   throw failures.length === 1
     ? failures[0]
@@ -295,11 +381,14 @@ async function eachStep(
  * firings never send one row twice.
  */
 async function drainOwedEmail(anomalies: string[]): Promise<void> {
-  await drainOutbox(coreDb(), anomalies, { kinds: ["email"] });
+  await drainOutbox(coreDb(), anomalies, {
+    kinds: ["email"],
+    lines: "unsettled",
+  });
 }
 
 /**
- * The public photo bucket's reconcile (D-152, design 161 step 8): copies
+ * The public photo bucket's reconcile (D-152, design 163 step 8): copies
  * the publications no purge saw (a review's Approve, an unban, a photo
  * screened late), and deletes what a retraction's fast path missed. A
  * delete found here is a copy that stayed public longer than it should
@@ -686,11 +775,12 @@ export function digestReport(
   lines: readonly string[],
   day: string,
 ): SentryReport {
-  return {
-    context: { kind, anomalies: lines.join("; ") },
-    tags: { digest: "daily", digest_kind: kind },
-    fingerprint: ["daily-digest", kind, day],
-  };
+  return anomalyReport(
+    { kind },
+    { digest: "daily", digest_kind: kind },
+    ["daily-digest", kind, day],
+    lines,
+  );
 }
 
 /**
@@ -715,8 +805,10 @@ async function runDailyDigest(
     "abandoned-enrichment": checkAbandonedEnrichments,
     "strava-revocation": redispatchStrandedRevocations,
     outbox: async (anomalies) => {
-      await drainOutbox(db, anomalies, { handlers: handlersFor(upkeep) });
-      await checkOutboxBacklog(db, anomalies);
+      // One `now` for both, so a row the drain backed off is not still due.
+      const now = nowSeconds();
+      await drainOutbox(db, anomalies, { handlers: handlersFor(upkeep), now });
+      await checkOutboxBacklog(db, anomalies, now);
     },
     "stalled-import": redispatchStalledImports,
     "review-queue": checkReviewQueueDepth,
@@ -726,19 +818,28 @@ async function runDailyDigest(
   };
   // Threshold checks fill in as their features land:
   // - failed-import rate (lane 102)
-  // - stale cron_checkpoints rows
-  const day = new Date(nowSeconds() * 1000).toISOString().slice(0, 10);
+  const day = utcDay();
   const everything: string[] = [];
-  for (const kind of digestKinds) {
-    const lines: string[] = [];
-    await checks[kind](lines);
-    if (lines.length === 0) continue;
-    reporter.report(
-      new Error(`daily digest: ${kind}`),
-      digestReport(kind, lines, day),
-    );
-    everything.push(...lines);
-  }
+  // Each check runs whichever of the others throw (design 162): a weather
+  // read that fails must not cost the day's outbox drain. What a throwing
+  // check found before it threw is still reported, and the firing throws
+  // at the end, so its check-in closes as an error.
+  const failed = await failuresOf(
+    digestKinds.map((kind) => async () => {
+      const lines: string[] = [];
+      try {
+        await checks[kind](lines);
+      } finally {
+        if (lines.length > 0) {
+          reporter.report(
+            new Error(`daily digest: ${kind}`),
+            digestReport(kind, lines, day),
+          );
+          everything.push(...lines);
+        }
+      }
+    }),
+  );
   // Strava's seven-day cache rule, on the activity ids we hold (task 127,
   // STR-10). Rides this firing rather than a cron of its own; it is upkeep,
   // not a check, so it reports nothing.
@@ -761,8 +862,9 @@ async function runDailyDigest(
   // expired a month ago, access requests answered 90 days ago, moderation
   // records whose 3 years are up (D-131). After the
   // email, so a sweep that throws costs only itself, and each runs whether
-  // the others fail (law 5).
-  await eachStep([
+  // the others fail (law 5). A check that threw above is thrown with
+  // them.
+  const sweeps = await failuresOf([
     () => sweepSendLimits(db),
     () => upkeep.sweepAuthRows?.(),
     () => upkeep.forgetAnsweredRequests?.(),
@@ -771,6 +873,7 @@ async function runDailyDigest(
     // judged on yesterday's status.
     () => sweepModerationRecords(db),
   ]);
+  throwAny([...failed, ...sweeps]);
   return everything;
 }
 

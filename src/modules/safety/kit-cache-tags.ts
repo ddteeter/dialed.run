@@ -1,5 +1,5 @@
 /**
- * What hiding a kit purges from the edge (design 161): the kit's own page
+ * What hiding a kit purges from the edge (design 163): the kit's own page
  * and card, and its runner's profile, which lists it. A report's hide and
  * a takedown request's hold know the kit by its id alone, so its runner is
  * read here; a kit that is gone by then still names its own page.
@@ -32,7 +32,7 @@ export async function kitCacheTagsOf(
  * product, which hide nothing on the open web (a profile is a ban's to
  * take down).
  *
- * A photo (design 161 step 8) purges the page of the kit it is on, which
+ * A photo (design 163 step 8) purges the page of the kit it is on, which
  * shows it while the kit is PUBLIC, read here because a report and a
  * takedown request know the photo by its id alone. The purge also deletes
  * the photo's public copy. Nothing for a photo that is gone (its kit's own

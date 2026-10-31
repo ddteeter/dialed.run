@@ -47,7 +47,7 @@ export async function resetSafetyTables(): Promise<void> {
     // inserted one. Left out here, screening rows leaked between tests and
     // a sweep that should have seen two photos saw three.
     entryPhotos,
-    // The public bucket's record (design 161 step 8), which outlives the
+    // The public bucket's record (design 163 step 8), which outlives the
     // photo rows on purpose; a test that copies a photo clears the bucket.
     publicPhotos,
     // products before brands: the report joins them, and a leaked brand

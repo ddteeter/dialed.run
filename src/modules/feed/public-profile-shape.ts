@@ -18,7 +18,7 @@ import type { PublicKit } from "./public-kit-shape";
 /**
  * One kit as the profile lists it: a tile, its conditions, its day and
  * distance, and its verdict. `photo` is the kit's first photo as the
- * public bucket serves it (D-152, design 161 step 8), the one `/k` shows
+ * public bucket serves it (D-152, design 163 step 8), the one `/k` shows
  * first; absent with none, when the tile is --tint.
  */
 export type PublicKitRow = Pick<

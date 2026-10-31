@@ -9,7 +9,7 @@ import {
 } from "../../src/modules/ops/edge-purge";
 
 /**
- * The edge purge (design 161): one call per retraction, in the
+ * The edge purge (design 163): one call per retraction, in the
  * background, never failing the write, and a refusal reported.
  */
 function harness(edge: EdgeCache) {

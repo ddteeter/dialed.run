@@ -333,7 +333,7 @@ function kitTag(entryId: string): string | undefined {
 }
 
 /**
- * The page's cache headers (design 161, D-153): a minute at the edge,
+ * The page's cache headers (design 163, D-153): a minute at the edge,
  * public or not, tagged with the kit and — when public — its runner.
  */
 export function publicKitHeaders(

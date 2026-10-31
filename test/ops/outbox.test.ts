@@ -25,6 +25,7 @@ import {
   outboxInsert,
   oweOutbox,
   settleOutbox,
+  stillDueOf,
 } from "../../src/modules/ops/outbox";
 import {
   boundHandler,
@@ -479,6 +480,40 @@ describe("drainOutbox", () => {
       nextAttemptAt: NOW,
     });
   });
+
+  it("names only what did not settle when asked for unsettled lines (design 162)", async () => {
+    await owedRow();
+    const run = vi.fn().mockResolvedValue(undefined);
+    const sent: string[] = [];
+
+    // The hourly drain is the only sender a held reminder has: a row it
+    // settles is the schedule, so it says nothing.
+    await drainOutbox(db(), sent, {
+      now: NOW,
+      handlers: handlersRunning(run),
+      lines: "unsettled",
+    });
+
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(sent).toStrictEqual([]);
+
+    await owedRow();
+    await owedRow();
+    run.mockResolvedValueOnce(undefined);
+    run.mockRejectedValueOnce(new Error("R2 down"));
+    const failed: string[] = [];
+
+    await drainOutbox(db(), failed, {
+      now: NOW,
+      report: vi.fn(),
+      handlers: handlersRunning(run),
+      lines: "unsettled",
+    });
+
+    expect(failed).toStrictEqual([
+      "1 of 2 photo_delete outbox row(s) did not settle",
+    ]);
+  });
 });
 
 describe("the drain's read (D1 bills rows scanned)", () => {
@@ -541,6 +576,95 @@ describe("checkOutboxBacklog", () => {
     await checkOutboxBacklog(db(), anomalies);
 
     expect(anomalies).toStrictEqual([]);
+  });
+
+  it("names rows still due, and how long the oldest has waited (design 162)", async () => {
+    await owedRow({ nextAttemptAt: NOW - 2 * 3600 - 5 });
+    await owedRow({ nextAttemptAt: NOW - 60 });
+    // Due at this very second counts: `now` is the drain's own.
+    await owedRow({ nextAttemptAt: NOW });
+    // Not yet due: a row in its backoff, or held back.
+    await owedRow({ nextAttemptAt: NOW + 1 });
+    // A newer deploy's kind is named by its own line, never this one.
+    await owedRow({ kind: "from_a_newer_deploy", nextAttemptAt: NOW - 60 });
+    const anomalies: string[] = [];
+
+    await checkOutboxBacklog(db(), anomalies, NOW);
+
+    expect(anomalies).toStrictEqual([
+      "1 outbox row(s) of kind from_a_newer_deploy, which this build cannot drain",
+      `3 photo_delete outbox row(s) still due after the drain, which takes ${String(OUTBOX_DRAIN_CAP)} a run; the oldest has waited 2h`,
+    ]);
+  });
+
+  it("names each kind's still-due rows on a line of its own", async () => {
+    await owedRow({ nextAttemptAt: NOW - 3600 });
+    await owedRow({
+      kind: "product_link",
+      dedupeKey: "u1",
+      payload: JSON.stringify({ userId: "u1" }),
+      nextAttemptAt: NOW,
+    });
+    const anomalies: string[] = [];
+
+    await checkOutboxBacklog(db(), anomalies, NOW);
+
+    expect(new Set(anomalies)).toStrictEqual(
+      new Set([
+        `1 photo_delete outbox row(s) still due after the drain, which takes ${String(OUTBOX_DRAIN_CAP)} a run; the oldest has waited 1h`,
+        `1 product_link outbox row(s) still due after the drain, which takes ${String(OUTBOX_DRAIN_CAP)} a run; the oldest has waited 0h`,
+      ]),
+    );
+  });
+});
+
+describe("outbox depth after a drain (design 162)", () => {
+  it("names the rows the cap left, and not the ones it worked", async () => {
+    for (let index = 0; index < OUTBOX_DRAIN_CAP + 3; index += 1) {
+      await owedRow({ nextAttemptAt: NOW - index });
+    }
+    const run = vi.fn().mockResolvedValue(undefined);
+    const anomalies: string[] = [];
+
+    await drainOutbox(db(), anomalies, {
+      now: NOW,
+      handlers: handlersRunning(run),
+    });
+    await checkOutboxBacklog(db(), anomalies, NOW);
+
+    expect(anomalies).toStrictEqual([
+      `${String(OUTBOX_DRAIN_CAP)} photo_delete outbox row(s) were owed; ${String(OUTBOX_DRAIN_CAP)} settled`,
+      `3 photo_delete outbox row(s) still due after the drain, which takes ${String(OUTBOX_DRAIN_CAP)} a run; the oldest has waited 0h`,
+    ]);
+  });
+
+  it("does not count a row the drain failed and backed off", async () => {
+    await owedRow();
+    const failing = vi.fn().mockRejectedValue(new Error("down"));
+    const anomalies: string[] = [];
+
+    await drainOutbox(db(), anomalies, {
+      now: NOW,
+      report: vi.fn(),
+      handlers: handlersRunning(failing),
+    });
+    await checkOutboxBacklog(db(), anomalies, NOW);
+
+    expect(anomalies).toStrictEqual([
+      "1 photo_delete outbox row(s) were owed; 0 settled",
+    ]);
+  });
+});
+
+describe("the still-due read (D1 bills rows scanned)", () => {
+  it("searches outbox_kind_due rather than scanning the table", async () => {
+    const { sql, params } = stillDueOf(db(), NOW).toSQL();
+    const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+      .bind(...params)
+      .all<{ detail: string }>();
+    expect(plan.results.map((row) => row.detail)).toStrictEqual([
+      "SEARCH outbox USING COVERING INDEX outbox_kind_due (kind=? AND next_attempt_at<?)",
+    ]);
   });
 });
 

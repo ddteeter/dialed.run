@@ -618,8 +618,10 @@ describe("the email outbox kind", () => {
       } as ScheduledController);
 
       expect(outcome.cronName).toBe(cronName);
-      expect(outcome.anomalies).toContain(
-        "1 email outbox row(s) were owed; 1 settled",
+      // An hourly drain names only what did not settle (design 162): it is
+      // the only sender a held reminder has, so a send is not news.
+      expect(outcome.anomalies).not.toContainEqual(
+        expect.stringContaining("email outbox"),
       );
       expect(await db.select().from(outbox)).toHaveLength(0);
     },

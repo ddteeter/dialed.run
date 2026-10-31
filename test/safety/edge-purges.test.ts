@@ -37,7 +37,7 @@ import {
 } from "./helpers";
 
 /**
- * Design 161's test plan: "each retraction path emits the entry's and
+ * Design 163's test plan: "each retraction path emits the entry's and
  * runner's tags". Every writer that takes a public page back hands the
  * edge one purge naming what it took; the ones that touch nothing public
  * name nothing.

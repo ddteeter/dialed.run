@@ -942,7 +942,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
 
-## Answered in round 42 (imported 2026-10-28)
+## Answered in round 42 (imported 2026-10-28 and 2026-10-29)
 
 Sent on 2026-10-28 for items 88–92: the two garment asks (88 and 89), the
 pieces of `/kit/<id>` and `/@handle` built from existing parts (90 and 91),
@@ -950,7 +950,9 @@ and the Privacy sub-page's words (92). Design answered the same day as
 `Round 42 Rulings.dc.html`, with the text of record under "Round 42 · Items
 88–92" in `design/docs/product.md`. The round amends round 41 #86b (no
 handle; PUBLIC unavailable), #86c (the bar) and #86d (the rail width, the
-type words). Nothing is left open.
+type words). A re-export on 2026-10-29 added three follow-ups to 84 and 85,
+answering the questions asked back from design 161 (held on upload); they
+are listed after 92. Nothing is left open.
 
 88. **A garment's photo on Review (C17, design 157). Ruled; build work.**
     The kit photo's content row: kicker "GARMENT PHOTO · {id} · @{owner}"
@@ -968,25 +970,36 @@ type words). Nothing is left open.
     and bar leave, the count drops, and focus moves to the next garment
     tile's Decide or the MATCHING PHOTOS kicker. Kit tiles are unchanged.
 
-90. **`/kit/<id>` (design 161, step 6). Ruled; build work.** The desk width
+90. **`/kit/<id>` (design 163, step 6). Ruled; build work.** The desk width
     (one column, the 620 measure, centred) is confirmed. The bar has one
     slot, in pill form: hairline "Log in" signed out, ink "Open in the app"
     signed in, never both. A piece's kind is the closet's TYPE chip, the
     category word when it has none. The linked piece's domain, the TIME
     label and the teal sky word are confirmed.
 
-91. **`/@handle` (design 161, step 7). Confirmed; one build change.** The
+91. **`/@handle` (design 163, step 7). Confirmed; one build change.** The
     credit's place, the empty groups (all empty means no Rotation section),
     the names, the type words, the rail and the invite are confirmed.
     Mileage is set in MONO caps: "412 MI".
 
-92. **The Privacy sub-page's words (design 161). Ruled; build work.** The
+92. **The Privacy sub-page's words (design 163). Ruled; build work.** The
     legend "Who sees new runs" is confirmed as the group's MONO.xs kicker.
     While the profile is off, PUBLIC is absent, not disabled, with 86b's
     line in its place. With no handle there is no switch: kicker PUBLIC
     PROFILE, "A public profile lives at your username. Pick one first." and
     "Pick a username", which opens the username sheet; on save, 86b's
     switch appears.
+
+**84 · 85 follow-ups. Built in design 161 (held on upload).**
+
+- **W1 receipt. Drawn**, intimate-image reports only: the sheet swaps in
+  place to REPORT SENT, "Thanks for telling us.", the body, a hairline,
+  85's line and Done. The body's "today" is **"within a day"** by the
+  owner's call (2026-10-29), matching the sheet's own promise.
+- **REMOVED tiles. Ruled:** one per removal within 8 bits, nearest first;
+  the line names the nearest only.
+- **Inline links. Confirmed** as built (bold ink, underlined); round 41's
+  accent links were a drawing slip.
 
 ## Answered in round 41 (imported 2026-10-25)
 
@@ -1000,7 +1013,7 @@ changed nothing else. The round amends round 27 #7 ("public" retired), round
 2026-10-26 as 86 and 87 were not in this round, and move to 87 and 88 because
 design has answered 86.
 
-84. **Held on upload (D-147). Ruled and drawn; build work.** The source tag
+84. **Held on upload (D-147). Ruled and drawn; built in design 161 (held on upload).** The source tag
     is `[held on upload]`, not `[fingerprint]`. The line reads "A close
     match to an image removed as intimate on `OCT 3`, `3 BITS` apart.", or
     at 0 bits "The same image as one removed as intimate on `OCT 3`." In
@@ -1008,7 +1021,7 @@ design has answered 86.
     REMOVED, with its id, distance, removal date and owner; the image is
     never shown again. The uploader sees `[CHECKING]` and nothing else.
 
-85. **Other sites (D-147). Reworded and drawn; build work.** The line is
+85. **Other sites (D-147). Reworded and drawn; built in design 161 (held on upload).** The line is
     reworded (product.md has it verbatim): StopNCII.org if the person was 18
     or over when the image was taken, Take It Down if under 18. TYPE.small,
     `--quiet`, last in the body after a hairline, on the `/takedown`
@@ -1016,7 +1029,7 @@ design has answered 86.
     intimate-image report only. Both links open a new tab and say so in
     their accessible names.
 
-86. **Public pages (D-150–D-153, design 161). Ruled and drawn; build work,
+86. **Public pages (D-150–D-153, design 163). Ruled and drawn; build work,
     phases 1–4.** Where the ruling adds to the decisions:
     - **a. PUBLIC is the name.** A3's share toggle becomes a three-row
       radiogroup (PRIVATE "Only you." · SHARED "Runners signed in to
@@ -1225,6 +1238,119 @@ SPACE[4] top and bottom. The build had each post's own hairline
 under it with a 20px gap between posts; it is now the hairline
 between posts, across the column, with SPACE[4] above and below
 each.
+
+## Answered in the Garmin round (imported 2026-10-24)
+
+Plan 160. Asked with round 39 and answered on its own board,
+`Garmin Rulings.dc.html`, with the text of record in `design/docs/garmin.md`.
+Frames marked GARMIN SUBMISSION are the attribution mockups for the Starter
+application. Phase 1 (`160-garmin-phase-1.md`) builds G3 and G5 and G1's
+lines; G2 and G4 are phase 3.
+
+The items are numbered G1–G5 rather than 77–81, because they were imported
+apart from the public sequence and a public item may have taken those
+numbers since. Design's board and `docs/garmin.md` call them 77–81.
+
+- **G1 (design's 77).** **Garmin attribution on a run's data. Ruled and drawn.** Text, never
+  the tag logo: "Garmin {device model}", or "Garmin" alone when the model
+  is unknown, which is always so in phase 1. `GarminAttribution`:
+  text-small, weight 500, `--ink-2`, sentence case, never caps or mono.
+  It is the first line under the view's title: A1's imported-run card,
+  under D's headline, under E1's byline, once per row on the runs list
+  (a header line would claim the whole of a mixed list), and under the
+  temperature on the share/OG entry card (26px at 1200×630), with the
+  weather credit at the card's foot. The weather credit stays with the
+  conditions, a step smaller, and never shares a line with Garmin's.
+  `runs.csv` gets a `source` column per row: "Garmin {model}", "Strava"
+  or "File". A run uploaded as a file draws nothing.
+
+- **G2 (design's 78).** **The derived line. Ruled.** "Derived in part from Garmin
+  device-sourced data.", the same step, directly under the figure's
+  heading, shown only when at least one Garmin run is in that figure (a
+  server flag). E2 now; B1/B2 and M2–M4 later.
+
+- **G3 (design's 79).** **Import from Garmin (owner only, phase 1). Ruled and drawn.** A
+  section of A1 under the file well, not a sheet: IMPORT FROM GARMIN ·
+  LAST 10. Row: date · distance · time, then "Garmin"; IMPORT › or
+  [IMPORTED] ›, which opens the run. Loading: three rows with breathing
+  brackets. None: "No runs on Garmin yet." Unreachable: §4a NOT LOADED ·
+  "Garmin didn't answer." · Try again. Already here: A1's duplicate
+  receipt. Retired when push arrives.
+
+- **G4 (design's 80).** **Connecting Garmin. Ruled and drawn; consent approved by the owner
+  (2026-10-24).** T1: Garmin's tile (their file, unaltered) and "Garmin
+  Connect™" on one line, the consent, then our own primary button,
+  "Connect Garmin Connect™". The consent:
+  - **What we receive.** Each run's time, duration, distance, start
+    point rounded to about a kilometre, the device, and the effort you
+    rated it on your watch. No heart rate, sleep or any other health
+    data.
+  - **How.** Garmin sends each new run once you connect. We read the
+    file, keep those facts and delete the file.
+  - **To stop.** Disconnect here or in Garmin Connect. Runs already here
+    stay until you delete them.
+  - **To delete.** Delete a run from the run itself, or your whole
+    account under Settings › Account, or write to hello@dialed.run. We
+    email you when it's done.
+
+  Settings rows: not connected, "Your runs arrive on their own." ·
+  Connect; "Connected as {name}" · Disconnect; "Disconnected. Runs
+  already here stay." · Connect; "Garmin Connect ended the connection.
+  New runs won't arrive." · Connect again; full, approved by the owner:
+  "Garmin connections are full for now. Strava still works.", with no
+  action. Bell: "New run from Garmin: add your kit", opening A2. P3
+  offers both, Garmin Connect™ first ("Your runs arrive on their
+  own."), then Strava ("So we can remind you. Optional."); the Garmin
+  row is not drawn while Garmin is full or unshipped. A Garmin import
+  clears the matching Strava reminder, silently.
+
+- **G5 (design's 81).** **Effort from the watch. Ruled and drawn.** The watch's 1–10
+  perceived-effort rating, never heart rate, prefills A3's effort chip:
+  1–4 Easy, 5–6 Steady, 7–8 Workout, 9–10 Race. It is drawn selected
+  exactly like a runner's pick, and saved if left alone. Beside EFFORT:
+  FROM YOUR WATCH · RATED {n} OF 10 (MONO.xs, `--muted`), spoken
+  "Effort, Steady, from your watch, rated 6 of 10". Any tap, even on the
+  same chip, makes it the runner's pick, drops the source line and
+  records `effort_source = runner`. It never re-prefills. No rating:
+  nothing is picked and there is no source line. **The owner adopted this mapping and `effort_source`** (2026-10-24), replacing plan 160's first draft. Garmin's own race flag is not used: a race can be run at any effort.
+
+**Built by phase 1 (`160-garmin-phase-1.md`, 2026-10-25):** G3 on A1;
+G5 on A3; G1's line on A1's card, D, E1 and each runs-list row, and the
+word "Garmin" on R's run strip. Not built yet: G1 on the share/OG card and
+in `runs.csv` (phase 3), G2 (phase 3) and G4 (phase 3).
+
+Asked back from the phase 1 build, and **answered in round 41 as item 87** (see that section):
+
+- **G6. A3 had no effort field to prefill.** G5's no-rating frame says
+  "the field is as it is today", but A3 never had one: effort was set on
+  the manual form only. Built as G5 draws it (EFFORT, the source line,
+  four chips that fill the row), using A3's own chip, without its ✕,
+  because a second tap keeps the pick. **Placed after the "Anything
+  specific?" chips and before the share switch**, since the frames show
+  only the header, the field and Log it. The line under the chips, "Effort
+  matters more than distance — you run 8° warmer in a workout.", is the
+  Call's B1 copy with a figure A3 does not have, so it is not drawn.
+  On every run since the owner's call (2026-10-28); with no rating it is
+  four chips, none picked, no source line. Confirm the placement and the
+  hairline above EFFORT, whether A3 wants a line of its own there, and
+  whether a run with no rating shows the field at all. Asked with
+  screenshots: drafted 2026-10-28.
+- **G7. GarminAttribution's weight.** G1 says weight 500; the type
+  contract has no 500 in text (`tokens.js` WEIGHT), so it is built at 400
+  (`text-small`, `--quiet`, which is G1's `--ink-2` #4E4E44). Confirm, or
+  say if it should be 600.
+- **G8. The import's own failure.** G3 draws Garmin not answering for the
+  list, not for a tap. Built as the same §4a band: NOT IMPORTED · "Garmin
+  didn't answer." · Try again (the same tap, under its key), under the
+  rows.
+- **G9. A Garmin import's file strip.** A1's parsed card names the file it
+  read ("Parsed · morning.gpx"); a Garmin import has no file the runner
+  chose, so it reads "Parsed · Garmin · Sat Aug 29 · 6.2 mi · 51:38",
+  the row the runner tapped. Draw what it should say.
+- **G10. D's line.** G1 puts the credit "under D's headline", which on the
+  board is "6.2 at 41°"; the built D has no such headline (its title is
+  "Your run" or the handle, then the strip), so the credit is the first
+  line under the title. Confirm.
 
 ## Answered in round 39 (imported 2026-10-24)
 

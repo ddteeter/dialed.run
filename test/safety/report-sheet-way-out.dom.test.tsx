@@ -4,7 +4,7 @@ import {
   createRootRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -18,11 +18,18 @@ type SheetProps = Parameters<typeof ReportSheet>[0];
  * is picked, a link to `/takedown` for a runner who would rather not
  * report from their account. Rendered in a router, as W1 always is.
  */
-async function renderSheet() {
+async function renderSheet({ hasHeading = true } = {}) {
+  const fileReport = vi.fn<SheetProps["fileReport"]>().mockResolvedValue({
+    status: "filed",
+    reporterCount: 1,
+    hiddenPendingReview: true,
+  });
+  const onClose = vi.fn();
+  const onFiled = vi.fn();
   const sheet = (
     <ReportSheet
       open
-      onClose={vi.fn()}
+      onClose={onClose}
       subject={{
         type: "entry",
         id: "01HZZZZZZZZZZZZZZZZZZZZZZZ",
@@ -30,16 +37,24 @@ async function renderSheet() {
         authorName: "mark_t",
       }}
       canBlock
-      fileReport={vi.fn<SheetProps["fileReport"]>()}
-      onFiled={vi.fn()}
+      fileReport={fileReport}
+      onFiled={onFiled}
     />
   );
   const router = createRouter({
-    routeTree: createRootRoute({ component: () => sheet }),
+    routeTree: createRootRoute({
+      component: () => (
+        <main>
+          {hasHeading ? <h1>mark_t · yesterday</h1> : undefined}
+          {sheet}
+        </main>
+      ),
+    }),
     history: createMemoryHistory({ initialEntries: ["/"] }),
   });
   await router.load();
-  render(<RouterProvider router={router} />);
+  const { unmount } = render(<RouterProvider router={router} />);
+  return { fileReport, onClose, onFiled, unmount };
 }
 
 const wayOut = () => document.querySelector("[data-part='takedown-way-out']");
@@ -67,7 +82,113 @@ describe("W1's way out to /takedown", () => {
     expect(
       screen.getByRole("link", { name: "Report it without signing in" }),
     ).toHaveAttribute("href", "/takedown");
-    // D-147: and where else to go for the other sites it may be on.
-    expect(elsewhere()).toBeVisible();
+    // Where else to go waits for the receipt (round 41 #85).
+    expect(elsewhere()).toBeNull();
+  });
+});
+
+async function sent(
+  reason: keyof typeof reportReasonLabels,
+  page: { hasHeading?: boolean } = {},
+) {
+  const spies = await renderSheet(page);
+  const user = userEvent.setup();
+  await user.click(
+    screen.getByRole("radio", { name: reportReasonLabels[reason] }),
+  );
+  await user.click(screen.getByRole("button", { name: "Send report" }));
+  await waitFor(() => {
+    expect(spies.fileReport).toHaveBeenCalled();
+  });
+  return { ...spies, user };
+}
+
+/**
+ * Round 42: an intimate-image report swaps the sheet for a receipt that
+ * says what we owe and where else to go; every other reason closes it.
+ */
+describe("W1's intimate-image receipt", () => {
+  it("swaps in place, with the head focused and the other sites last", async () => {
+    const { onClose, onFiled } = await sent("intimate");
+
+    const head = await screen.findByRole("heading", {
+      name: "Thanks for telling us.",
+    });
+    await waitFor(() => {
+      expect(head).toHaveFocus();
+    });
+    // Focusable by script, not a stop in the tab order.
+    expect(head).toHaveAttribute("tabindex", "-1");
+    const receipt = document.querySelector("[data-part='report-receipt']");
+    expect(receipt).toHaveTextContent(
+      /^Report sentThanks for telling us\.It's hidden from everyone now\. We'll review it within a day and keep it down if it breaks the rule\.If it's on other sites too.*leaves it\.Done$/u,
+    );
+    expect(receipt?.lastElementChild?.previousElementSibling).toBe(elsewhere());
+    expect(screen.queryByRole("button", { name: "Send report" })).toBeNull();
+    expect(screen.getByRole("dialog", { name: "Report sent" })).toBeVisible();
+    // Still open: nothing has closed it yet.
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onFiled).not.toHaveBeenCalled();
+  });
+
+  it("closes on Done, and hands focus to the page heading", async () => {
+    const { onClose, onFiled, user } = await sent("intimate");
+
+    await user.click(await screen.findByRole("button", { name: "Done" }));
+
+    expect(onFiled).toHaveBeenCalledOnce();
+    expect(onClose).toHaveBeenCalledOnce();
+    const heading = screen.getByRole("heading", {
+      level: 1,
+      name: "mark_t · yesterday",
+    });
+    await waitFor(() => {
+      expect(heading).toHaveFocus();
+    });
+    expect(heading).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("closes on Esc the same way", async () => {
+    const { onClose, onFiled } = await sent("intimate");
+    await screen.findByRole("heading", { name: "Thanks for telling us." });
+
+    fireEvent(screen.getByRole("dialog"), new Event("close"));
+
+    expect(onFiled).toHaveBeenCalledOnce();
+    expect(onClose).toHaveBeenCalledOnce();
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+    });
+  });
+
+  it("lets go of its head cleanly when the sheet goes", async () => {
+    const { unmount } = await sent("intimate");
+    await screen.findByRole("heading", { name: "Thanks for telling us." });
+
+    expect(unmount).not.toThrow();
+  });
+
+  it("closes cleanly on a page with no heading to land on", async () => {
+    const { onClose } = await sent("intimate", { hasHeading: false });
+    const done = await screen.findByRole("button", { name: "Done" });
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(done);
+      expect(() => vi.runAllTimers()).not.toThrow();
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("is for intimate-image reports only: any other closes on its status", async () => {
+    const { onClose, onFiled } = await sent("harassment");
+
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+    expect(onFiled).toHaveBeenCalledOnce();
+    expect(screen.getByText("Report sent.")).toBeInTheDocument();
+    expect(document.querySelector("[data-part='report-receipt']")).toBeNull();
   });
 });

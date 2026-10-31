@@ -179,6 +179,32 @@
       </div>
     </div>
 
+    <div id="r84-85" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">84 · 85 · Follow-ups</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 860px; line-height: 1.45;"><strong style="color: #F4F3EF;">W1 gets a receipt for intimate-image reports only.</strong> Round 41 kept the line off the picking step on purpose: before sending, it reads as "go elsewhere". The toast can't hold two links. Every other reason keeps the toast.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+        <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">85 · W1 · AFTER SEND · INTIMATE IMAGE</span>
+          <div data-screen-label="W1 intimate receipt r42" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px 12px 0 0; padding: 20px 20px 28px; display: flex; flex-direction: column; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">REPORT SENT</span>
+            <span style="font-family: 'Archivo Black', sans-serif; font-size: 24px; line-height: 1.05; letter-spacing: -0.03em;">Thanks for telling us.</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5; text-wrap: pretty;">It's hidden from everyone now. We'll review it today and keep it down if it breaks the rule.</p>
+            <div style="height: 1px; background: #DCDBD2;"></div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4E4E44; text-wrap: pretty;">If it's on other sites too, these free services can help stop it spreading: <span style="font-weight: 700; color: #0B0B0E; text-decoration: underline; text-underline-offset: 3px;">StopNCII.org</span> if the person in it was 18 or over when it was taken, <span style="font-weight: 700; color: #0B0B0E; text-decoration: underline; text-underline-offset: 3px;">Take It Down</span> if they were under 18. Each makes a fingerprint of the image on your own device; the image never leaves it.</p>
+            <span style="height: 52px; border-radius: 100px; background: #0B0B0E; color: #F4F3EF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; margin-top: 4px;">Done</span>
+          </div>
+          <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px; text-wrap: pretty;">On send, the sheet's content swaps in place (no toast). Focus to the head. Done, Esc or the scrim closes it, with focus to the next item on the page (the reported one is gone), else the page heading.</p>
+        </div>
+        <div style="flex: 1 1 360px; max-width: 520px; display: flex; flex-direction: column; gap: 12px; font-size: 14px; line-height: 1.55; color: #DEDDD6;">
+          <p style="margin: 0; text-wrap: pretty;"><strong style="color: #F4F3EF;">1 · Receipt.</strong> As drawn: kicker, head, body, --hairline, 85's line last, Done. The head and body are new and owner-approvable; "today" matches Review's same-day target for this reason. The way-out line stays under the reason, as built.</p>
+          <p style="margin: 0; text-wrap: pretty;"><strong style="color: #F4F3EF;">2 · One REMOVED tile per removal within 8 bits, nearest first.</strong> A second removal in range is the repeat-upload signal; the operator should see it. The line still names only the nearest. Count includes them.</p>
+          <p style="margin: 0; text-wrap: pretty;"><strong style="color: #F4F3EF;">3 · Built style, everywhere.</strong> Inline links are bold ink, underlined (as drawn here). The round 41 board's accent links were a drawing slip, not a rule.</p>
+        </div>
+      </div>
+    </div>
+
     <div id="rulings" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
       <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Rulings · Round 42</span>
       <div style="display: flex; flex-direction: column; border: 1px solid #2A2A31;">
@@ -220,6 +246,9 @@ class Component extends DCLogic {
       R('92 · Legend', 'CONFIRMED', '"Who sees new runs", as the group\'s MONO.xs kicker.'),
       R('92 · PUBLIC unavailable', 'RULED', 'Not disabled: absent, with 86b\'s line in its place (rule 07).'),
       R('92 · No handle', 'REDRAWN', 'No switch. "A public profile lives at your username. Pick one first." + Pick a username (the username sheet). Kicker PUBLIC PROFILE.'),
+      R('85 · W1 receipt', 'DRAWN', 'Intimate-image reports only: sheet swaps to REPORT SENT · "Thanks for telling us." · "It\'s hidden from everyone now. We\'ll review it today and keep it down if it breaks the rule." · hairline · 85\'s line · Done. No toast. Other reasons keep the toast.'),
+      R('84 · REMOVED tiles', 'RULED', 'One per removal within 8 bits, nearest first. Line names the nearest only.'),
+      R('85 · Inline links', 'CONFIRMED', 'Built style everywhere: bold ink, underlined. Board accent links superseded.'),
     ];
     return { stats, kit, rows };
   }

@@ -63,7 +63,9 @@ export function TakedownConfirm({
               ? "We've emailed you what we decided."
               : "We'll decide within 48 hours and email you either way."}
           </p>
-          <ElsewhereHelp />
+          {/* DONE only (round 41 #85): a decided request has had its
+              answer, and the other sites are for one still open. */}
+          {outcome === "decided" ? undefined : <ElsewhereHelp />}
         </SignedOutReceipt>
       </SignedOutPanel>
     );

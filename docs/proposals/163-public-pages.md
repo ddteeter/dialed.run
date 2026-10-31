@@ -4,7 +4,7 @@
 recommended and are D-150 (1, 3, 4), D-151 (2), D-152 (5) and D-153 (6);
 decision 4 adds that a choice of coarser dates can come later. Decision 7
 went to design as item 86: round 41 named the audience PUBLIC and drew
-every surface (`docs/design-deltas.md`, "Answered in round 41"). The build design is `docs/designs/161-public-pages.md`.
+every surface (`docs/design-deltas.md`, "Answered in round 41"). The build design is `docs/designs/163-public-pages.md`.
 
 ## Why
 

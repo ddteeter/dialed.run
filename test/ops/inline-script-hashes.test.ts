@@ -4,7 +4,7 @@ import { withInlineScriptHashes } from "../../src/modules/ops/inline-script-hash
 
 /**
  * The hashes a stored page's policy admits its inline scripts by (design
- * 161). The expected digests are fixed vectors, computed outside the app
+ * 163). The expected digests are fixed vectors, computed outside the app
  * (`base64(sha256(text))`), so the test does not restate the code.
  */
 

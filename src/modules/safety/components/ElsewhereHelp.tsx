@@ -2,35 +2,46 @@ import type { JSX } from "react";
 
 /**
  * The two hash-sharing services the FTC points people to, by the age of
- * whoever is in the image: StopNCII for adults, NCMEC's Take It Down for
- * minors. Each fingerprints the image on the person's own device and
- * shares only the fingerprint with the platforms that take part.
+ * whoever is in the image when it was taken: StopNCII for adults, NCMEC's
+ * Take It Down for minors. Each fingerprints the image on the person's own
+ * device and shares only the fingerprint with the platforms that take part.
  */
 const SERVICES = [
-  { name: "StopNCII.org", href: "https://stopncii.org/", who: "18 and over" },
+  {
+    name: "StopNCII.org",
+    href: "https://stopncii.org/",
+    who: "if the person in it was 18 or over when it was taken",
+  },
   {
     name: "Take It Down",
     href: "https://takeitdown.ncmec.org/",
-    who: "under 18",
+    who: "if they were under 18",
   },
 ] as const;
 
 /**
- * Where else to go (D-147, design 152): a removal here covers this site
- * only, and a person asking for one may have the image on others. Shown on
- * the `/takedown` receipts and on the report sheet's intimate-image branch.
+ * Where else to go (D-147, round 41 #85): a removal here covers this site
+ * only, and a person asking for one may have the image on others. The age
+ * is the person's in the image, when it was taken — not the reader's.
  *
- * **Undesigned copy** (design deltas item 85): one quiet line, the names
- * as plain links. External, so anchors rather than the router's `Link`,
- * opened in a new tab so the receipt stays where it was.
+ * Last in a receipt's body, after a --hairline, so the decision we owe
+ * comes first: TYPE.small, --quiet. On the `/takedown` receipt,
+ * `/takedown/confirm`'s DONE, and W1's intimate-image receipt (round 42).
+ * External, so anchors rather than the router's `Link`, in the inline-link
+ * style (round 42), opened in a new tab so the receipt stays where it was,
+ * and saying so to a screen reader.
  */
 export function ElsewhereHelp(): JSX.Element {
   const [adults, minors] = SERVICES;
   return (
-    <p data-part="elsewhere-help" className="m-0 text-small text-muted">
-      If it may be on other sites too, <Service service={adults} /> or{" "}
-      <Service service={minors} /> can help stop it spreading there. They
-      fingerprint the image on your own device; the image never leaves it.
+    <p
+      data-part="elsewhere-help"
+      className="m-0 border-t border-hairline pt-4 text-small text-quiet"
+    >
+      If it&apos;s on other sites too, these free services can help stop it
+      spreading: <Service service={adults} />, <Service service={minors} />.
+      Each makes a fingerprint of the image on your own device; the image never
+      leaves it.
     </p>
   );
 }
@@ -48,8 +59,9 @@ function Service({
         className="font-bold text-ink underline underline-offset-4"
       >
         {service.name}
+        <span className="sr-only"> (opens in a new tab)</span>
       </a>{" "}
-      ({service.who})
+      {service.who}
     </>
   );
 }

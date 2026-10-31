@@ -19,7 +19,7 @@ BETTER_AUTH_URL=http://localhost:3000
 # console, which looks like a blocked network and is not one.
 TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
 TURNSTILE_SITE_KEY=1x00000000000000000000AA
-# The public photo switch (D-152, design 161 step 8). wrangler.jsonc sets
+# The public photo switch (D-152, design 163 step 8). wrangler.jsonc sets
 # the production bucket's domain, https://photos.dialed.run; locally the
 # copies land in Miniflare's PUBLIC_PHOTOS, which that domain cannot serve,
 # so /k would show broken images. Empty turns copying and /k's photos off.

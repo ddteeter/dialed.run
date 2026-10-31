@@ -38,6 +38,30 @@ export const cronSchedules: readonly string[] = cronRegistry.map(
   (entry) => entry.schedule,
 );
 
+const HOUR_S = 60 * 60;
+
+/**
+ * How often a schedule fires, read from its expression rather than
+ * written beside it: an hour field of `*` fires hourly, a fixed hour once a
+ * day. Those are the only two shapes the registry uses, and
+ * `test/ops/health.test.ts` pins every entry, so a third shape fails there
+ * rather than being misread here.
+ */
+export function cronPeriodSeconds(schedule: string): number {
+  return schedule.split(" ", 2)[1] === "*" ? HOUR_S : 24 * HOUR_S;
+}
+
+/**
+Every cron by name, with how often it fires, for `/api/health` (design 162).
+*/
+export const cronPeriods: readonly {
+  readonly name: CronName;
+  readonly periodS: number;
+}[] = cronRegistry.map((entry) => ({
+  name: entry.name,
+  periodS: cronPeriodSeconds(entry.schedule),
+}));
+
 /**
  * The handler name for a fired schedule, or `undefined` when the platform
  * delivered one this build does not know about (a config/code skew the

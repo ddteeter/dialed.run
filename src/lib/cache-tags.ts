@@ -1,6 +1,6 @@
 /**
  * The tags a public page is stored under at the edge, and what a purge
- * names (design 161, D-153): `entry:<id>`, `runner:<userId>` and
+ * names (design 163, D-153): `entry:<id>`, `runner:<userId>` and
  * `handle:<handle>`.
  *
  * **In `lib` because the writers are everywhere.** A kit is taken back by
@@ -29,7 +29,7 @@ export function runnerCacheTag(userId: string): string {
 
 /**
  * The tag naming the page at one handle's path, `/@<handle>`, public or
- * not (design 161): what a purge names when a profile is made public, so
+ * not (design 163): what a purge names when a profile is made public, so
  * the not-public page cached there gives way within the purge rather than
  * the TTL. It says nothing about who holds the handle, or whether anyone
  * does — the path already said the handle. `handle` is the normalized one
@@ -40,7 +40,7 @@ export function handleCacheTag(handle: string): string {
 }
 
 /**
- * Purges these tags from the edge, in the background (design 161, D-153):
+ * Purges these tags from the edge, in the background (design 163, D-153):
  * it never throws and never delays the write that asked (law 5). `ops`'
  * `purgePublicPages`, handed to the writers that cannot import `ops`, and a
  * spy in a test.
@@ -74,7 +74,7 @@ export function profileCacheTags(
 
 /**
  * The kits and runners a purge names, read back from its tags (design
- * 161 step 8): what the public photo reconcile works through when a
+ * 163 step 8): what the public photo reconcile works through when a
  * purge goes out, so every path that takes a page back takes its
  * photos' copies back too, with no second call to forget. The prefixes
  * are the builders' own, so a tag cannot be built one way and read

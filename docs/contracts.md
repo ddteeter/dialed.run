@@ -273,7 +273,7 @@ created_at   int
   about a SHARED or PRIVATE entry, or a profile that is not public — not
   its data, not its photo, not entry-specific head meta. A PUBLIC kit is
   served at `/kit/<id>` with the fields D-150 lists, and a public profile at
-  `/@handle` (design 161); `worldVisibleEntry()` in `modules/safety` is
+  `/@handle` (design 163); `worldVisibleEntry()` in `modules/safety` is
   the one open-web rule. Link previews use the generic card except a
   PUBLIC kit's own (D-151).
 - A run appears in the feed **only when it has a shared (`runners` or

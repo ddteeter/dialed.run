@@ -14,7 +14,7 @@ import {
   type HandleReviewValues,
   type ReviewActionValues,
 } from "../inputs";
-import type { HandleReview, QueueRow } from "../review";
+import type { HandleReview, QueueRow, ReviewSource } from "../review";
 import { PickOne } from "./DeskForm";
 import { OtherPhotos } from "./OtherPhotos";
 import {
@@ -50,6 +50,18 @@ import { useSettled } from "./use-settled";
  * question, the other is a judgement about people — and a reviewer who
  * cannot tell them apart treats both the same way.
  */
+/**
+ * What started a row, as its tag says it. A held upload names what was
+ * done rather than the technique (round 41 #84): `[held on upload]`, not
+ * `[fingerprint]`. Keyed by the stored value, so a new source is a type
+ * error here until it has words.
+ */
+const SOURCE_TAGS: Readonly<Record<ReviewSource, string>> = {
+  reports: "reports",
+  classifier: "classifier",
+  fingerprint: "held on upload",
+};
+
 /**
  * The photos a reviewer is being asked about.
  *
@@ -319,7 +331,7 @@ function rowTitle(row: QueueRow, label: string): string {
 function SourceTag({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
   return (
     <span data-part="source" className="text-micro text-quiet">
-      <Bracketed>{row.source}</Bracketed>
+      <Bracketed>{SOURCE_TAGS[row.source]}</Bracketed>
     </span>
   );
 }
@@ -390,9 +402,13 @@ function ReviewRow({
         )}
       </span>
       <SubjectPhotos row={row} />
-      <RemovedMatchLine match={row.removedMatch} />
+      <RemovedMatchLine match={row.removedMatches?.[0]} />
       <OtherPhotos others={row.otherPhotos} />
-      <PhotoMatches found={row.photoMatches} decide={decideMatch} />
+      <PhotoMatches
+        found={row.photoMatches}
+        removed={row.removedMatches}
+        decide={decideMatch}
+      />
       {row.subject.handleFlagged === true ? (
         <p data-part="why-here" className="m-0 text-body">
           {HANDLE_FLAGGED_LINE}
