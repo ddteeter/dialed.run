@@ -30,7 +30,11 @@ one screen.
    streamed body runs longer, and the invocation's own wall time already
    covers that. Server functions log as `serverFn:<id>`. Workers Logs
    indexes JSON fields, so the Query Builder and Custom Dashboards can
-   chart p50/p95 per route with no new binding.
+   chart p50/p95 per route with no new binding. **The same timing is also
+   written to `VITALS`** as a `server` data point (owner, 2026-10-31):
+   Workers Logs (and tracing) keep 7 days on Workers Paid, so without it a server slowdown that
+   crept in over a month would be invisible, and the rollup could not keep
+   it.
 3. **Workers tracing on** (`observability.traces`). Per-request spans show
    where server time goes: D1, R2, fetches. This is an owner edit to
    `wrangler.jsonc`. It reverses the deployment plan's "tracing off",
@@ -45,6 +49,11 @@ one screen.
 - doubles: value, then up to four attribution sub-parts. LCP: TTFB, load
   delay, load time, render delay. INP: input delay, processing time,
   presentation delay.
+
+A `server` data point uses the same positions with its own meanings:
+blob1 `server`, blob2 the method, blob3 the status class (`2xx` … `5xx`),
+blob4 the deploy version; double1 the milliseconds. Every query filters
+on blob1, so the two never mix.
 
 There is no account, session, URL, query string, IP, user agent or
 element selector. Queries must weight by `_sample_interval`, because
@@ -67,8 +76,24 @@ queries.
 
 **Retention rollup.** Analytics Engine keeps about 3 months of data. The
 daily firing reads yesterday's p50/p75/p95 and count per route, metric and
-device through the SQL API, then upserts them into a new core table,
-`perf_daily`. Re-running a day overwrites its rows (law 1). The run has a
+device through the SQL API, then upserts them into `perf_daily` in a new
+**ops database** (below). Re-running a day overwrites its rows (law 1).
+
+**The ops database** (`dialed-ops`, binding `DIALED_OPS`; owner,
+2026-10-31). Core is the database every user write waits on, and D1 runs
+one query at a time per database under a 10 GB cap, so data that is not a
+user's stays out of it. The rule for what may go in: **no personal data,
+and nothing that must commit in the same batch as a core write** (law 8c:
+nothing is atomic across two databases). Today only `perf_daily` meets
+it. `outbox`, `processed_webhook_events` and `gave_up` look like ops data
+but are written in one `db.batch` with the user write they belong to
+(e.g. a weather retry resets the run and clears its `gave_up` row
+together), so they stay in core. Likely later tenants: hourly rollups for
+year-long same-hour baselines, a deploy log, alert history, and daily
+third-party spend. Raw traces and per-request data never go in any D1;
+that is what Analytics Engine, Workers Logs and tracing are for.
+`opsDb()` reads the primary: the only reader and writer is the cron, so
+a read replica would buy nothing. The run has a
 Sentry Crons monitor already, because it rides the existing daily cron.
 
 **Detection** (`src/modules/ops/perf-checks.ts`). Every check is pure
@@ -114,13 +139,20 @@ one failure doesn't stop the rest (the design 162 shape).
 
 ## Contract touches
 
-- Schema: **`perf_daily`** (core): `day`, `route`, `metric`, `device`,
-  `p50`, `p75`, `p95`, `n`; primary key on the first four. Additive.
+- Schema: **`perf_daily`** (ops): `day`, `route`, `metric`, `device`,
+  `p50`, `p75`, `p95`, `n`; primary key on the first four. A new
+  database, so additive by definition. For `server` rows, `device` holds
+  the status class.
 - New route file: `src/routes/api/vitals.ts`
 - **New bindings (owner, `wrangler.jsonc`)**:
   - `analytics_engine_datasets` with `VITALS`, dataset `dialed_vitals`;
   - `version_metadata` with `CF_VERSION_METADATA`, for the deploy version;
-  - `observability.traces.enabled`.
+  - `observability.traces.enabled`;
+  - `d1_databases` gains `DIALED_OPS` (`dialed-ops`, migrations in
+    `src/db/migrations/ops`), a placeholder id until `wrangler d1 create`.
+- **CI (owner, `.github/workflows/ci.yml`)**: the deploy job's "Apply
+  migrations" step gains `npx wrangler d1 migrations apply dialed-ops
+  --remote`. Without it production never gets `perf_daily`.
 - **Zone (owner)**: a WAF rate-limiting rule for `/api/vitals`, 60 a
   minute per IP.
 - **New secret**: `ANALYTICS_SQL_TOKEN`, an account token with Account
@@ -149,12 +181,19 @@ Each step is one commit and passes the commit gate.
 4. **Ingest endpoint.** Add the size cap, the origin check and the 204,
    with worker tests against the binding. Extend `bindings-conformance` to
    cover `VITALS` (law 10). _Blocked on the owner's binding edit._
+4b. **Server timing to Analytics Engine.** `timeRequest` also writes a
+   `server` data point through the same writer as the beacon (one module
+   reads `VITALS`). Tests cover the layout, the status class, and that a
+   dataset that throws neither fails the request nor loses the log line.
 5. **Client reporter.** `lib/browser/vitals.ts` collects metrics, adds the
    router `nav` timing, and sends one beacon on hide. It is wired in
    `__root.tsx`. UI tests use fake `web-vitals` callbacks and a stubbed
    `sendBeacon`. One browser test runs a real load and checks that a
    payload passes `vitalsPayloadSchema`. `npm run build` stays green.
-6. **Rollup.** Add the `perf_daily` migration and `rollupVitals(day)` on
+6. **Ops database and rollup.** Wire `dialed-ops` the way weather is
+   wired (binding, test pool, `opsDb()`, drizzle config, scripts, the
+   D1-access and migration-chain tests, `deployment.md` §1's order), add
+   the `perf_daily` migration and `rollupVitals(day)` on
    the daily firing, with a zod-parsed SQL API response and a timeout
    (law 4). Worker tests check that a re-run is idempotent and that an API
    failure reports without failing the other digest checks.
