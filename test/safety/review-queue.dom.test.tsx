@@ -298,7 +298,7 @@ describe("deciding", () => {
     });
     // The source tag beside the kicker, and only there.
     expect(kicker.nextElementSibling).toHaveTextContent(/^\[classifier\]$/u);
-    expect(screen.getAllByText("[classifier]")).toHaveLength(1);
+    expect(screen.getAllByText(bracketed("classifier"))).toHaveLength(1);
     const photo = screen.getByRole("img", { name: "Reported garment photo" });
     expect(photo).toHaveAttribute(
       "src",
@@ -369,7 +369,7 @@ describe("deciding", () => {
     expect(document.querySelector("[data-part='garment-photo']")).toBeNull();
     // At the row's foot, a child of the row, not of its header.
     expect(
-      screen.getByText("[classifier]").closest("[data-part='source']")
+      screen.getByText(bracketed("classifier")).closest("[data-part='source']")
         ?.parentElement?.tagName,
     ).toBe("LI");
   });
