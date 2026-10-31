@@ -111,7 +111,7 @@ async function screenOne(
   photo: PendingPhoto,
   classify: Classify,
 ): Promise<ScreenOutcome> {
-  const object = await env.MEDIA.get(photo.photoKey);
+  const object = await env.MEDIA.get(photo.objectKey);
   if (!object) return "deferred";
   const bytes = new Uint8Array(await object.arrayBuffer());
   return screenPhoto(
