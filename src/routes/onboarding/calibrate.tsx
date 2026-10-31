@@ -12,7 +12,9 @@ import { Page } from "../../ui";
 
 /**
  * Screen O1. No `Layout`: onboarding is a flow rather than a tab, and a
- * tab bar here offers four ways out of a two-minute path.
+ * tab bar here offers four ways out of a two-minute path. Without the
+ * shell there is no landmark, so each onboarding step brings its own
+ * `<main>` (plan 161's `region`).
  */
 // fallow-ignore-next-line code-duplication -- two steps of one flow are the same route by mandate: createFileRoute + requireSession + one loader call + Page + a component, which is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids
 export const Route = createFileRoute("/onboarding/calibrate")({
@@ -28,16 +30,18 @@ function CalibratePage() {
   const navigate = useNavigate();
 
   return (
-    <Page title="One question does most of the work" width="panel">
-      <CalibrateForm
-        defaults={defaults}
-        locate={geolocate}
-        lookUpCity={lookUpCityFn}
-        saveCalibration={saveCalibrationFn}
-        onSaved={() => {
-          void navigate({ to: "/onboarding/taplist" });
-        }}
-      />
-    </Page>
+    <main>
+      <Page title="One question does most of the work" width="panel">
+        <CalibrateForm
+          defaults={defaults}
+          locate={geolocate}
+          lookUpCity={lookUpCityFn}
+          saveCalibration={saveCalibrationFn}
+          onSaved={() => {
+            void navigate({ to: "/onboarding/taplist" });
+          }}
+        />
+      </Page>
+    </main>
   );
 }

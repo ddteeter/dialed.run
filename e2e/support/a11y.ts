@@ -4,33 +4,34 @@ import { createRequire } from "node:module";
 import { test as base } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
+import type { Finding } from "./a11y-findings";
+import { findingOf, keyOf, loadBaseline, RULES } from "./a11y-findings";
+import type { CheckReport } from "./a11y-page";
+import { installChecker } from "./a11y-page";
+
 /**
- * Plan 161, step 0: axe on every state an e2e spec acts on.
- *
- * **Report-only, for the spike.** The plan's step 0 measures what the
- * checks cost and how many violations exist before anything enforces
- * them, so this records and never fails a test, and it does nothing at
- * all unless `A11Y_SPIKE=1` — CI runs the specs exactly as before. A spec
- * opts in by importing `test` from here instead of `@playwright/test`;
- * the results land in `test-results/a11y/report.jsonl`, one line a test.
+ * Plan 161, step 1: accessibility checks on every state an e2e spec acts
+ * on, in a real browser with the real stylesheet.
  *
  * **When it checks: before every action, and once at the end.** A spec
  * waits for a state and then acts on it, so the moment before a click,
- * fill, navigation or resize is a state the spec meant to reach. The
- * first version waited instead for the DOM to go quiet for 150ms, and at
- * machine speed it never did: the closet journey made ~900 mutations in
- * ten seconds and got one check, at the end. So the action methods of
- * `Locator`, `Page`, `Keyboard` and `Mouse` are wrapped, once per worker,
- * to run the check first.
+ * fill, navigation or resize is a state the spec meant to reach. Waiting
+ * for the DOM to go quiet does not work at machine speed: the closet
+ * journey makes ~900 mutations in ten seconds and never settles (step 0).
+ * So the action methods of `Locator`, `Page`, `Keyboard` and `Mouse` are
+ * wrapped, once per worker, to run the check first. A state is checked
+ * once per test, keyed by a hash of its markup and the viewport width.
  *
- * Each state is checked once: the key is a hash of the body's markup and
- * the viewport width, kept here in node because a binding survives a
- * navigation and the page's own state does not. Pages on another origin
- * — the design boards `openBoard` loads — are not the app and are skipped.
+ * **What it checks** (`a11y-page.ts`): every axe rule tagged WCAG A or AA,
+ * plus `region`; a 44×44 hit area, counting a control's labels; and a
+ * space Chromium would leave out of an accessible name.
  *
- * All rules in the AA tags run, `color-contrast` and `region` included:
- * this is a real browser with the real stylesheet, which is the reason
- * `test/ui/axe.ts` had to switch them off.
+ * **What fails.** A finding in `e2e/a11y-baseline.json` predates the
+ * fixture and passes; any other fails the test at its end, listing each
+ * one. `A11Y_RECORD=1` fails nothing and writes every finding to
+ * `test-results/a11y/findings.jsonl`, which is how the baseline is made.
+ * Pages on another origin, such as the design boards `openBoard` loads,
+ * are not the app and are not checked.
  */
 
 const AXE_SOURCE = readFileSync(
@@ -38,38 +39,16 @@ const AXE_SOURCE = readFileSync(
   "utf8",
 );
 
-const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
-
-/**
- * The slice of axe-core's API the in-page checker calls.
- */
-interface Axe {
-  run: (
-    context: Document,
-    runOptions: unknown,
-  ) => Promise<{
-    violations: { id: string; nodes: { html: string }[] }[];
-  }>;
-}
-
-/**
- * The bindings and hooks the in-page checker sets up on the global object. Types
- * only: nothing here is emitted, so `installChecker` serializes unchanged.
- */
-declare global {
-  var hasA11yChecked: (key: string) => Promise<boolean>;
-  var __a11yReport: (report: unknown) => Promise<void>;
-  var __a11yError: (message: string) => Promise<void>;
-  var __a11yCheck: (() => Promise<void>) | undefined;
-  var axe: Axe | undefined;
-}
-
 /**
  * WCAG 2.5.5's 44 CSS pixels: the contract's floor, not axe's 24.
  */
 const MIN_TARGET = 44;
 
 const REPORT_DIR = "test-results/a11y";
+
+const IS_RECORDING = process.env.A11Y_RECORD === "1";
+
+const BASELINE = loadBaseline();
 
 const LOCATOR_ACTIONS = [
   "blur",
@@ -118,119 +97,24 @@ const KEYBOARD_ACTIONS = ["down", "insertText", "press", "type"] as const;
 const MOUSE_ACTIONS = ["click", "dblclick", "down", "wheel"] as const;
 
 /**
- * One check's findings, as the page reports them.
- */
-interface CheckReport {
-  readonly key: string;
-  readonly url: string;
-  readonly width: number;
-  readonly ms: number;
-  readonly violations: readonly { id: string; nodes: string[] }[];
-  readonly smallTargets: readonly string[];
-}
-
-/**
- * Everything a test's checks found, appended as one JSON line.
- */
-interface TestReport {
-  readonly test: string;
-  readonly file: string;
-  readonly durationMs: number;
-  readonly checks: number;
-  readonly skippedSeen: number;
-  readonly checkMs: number;
-  readonly reports: readonly CheckReport[];
-  readonly errors: readonly string[];
-}
-
-/**
  * What one test's page hands back over the bindings.
  */
 interface Collected {
   readonly seen: Set<string>;
-  readonly reports: CheckReport[];
+  readonly findings: Finding[];
   readonly errors: string[];
-  skippedSeen: number;
+  checks: number;
+  checkMs: number;
 }
 
 /**
- * The in-page half, serialized by `addInitScript`. Everything it uses must
- * be inside it.
+ * What a spec gets from the fixture. Most never ask: it is automatic.
+ * The fixture's own spec uses it to check a page on demand and read what
+ * was found.
  */
-function installChecker(options: {
-  origin: string;
-  tags: string[];
-  minTarget: number;
-}): void {
-  if (location.origin !== options.origin) return;
-
-  const bridge = globalThis;
-
-  const INTERACTIVE =
-    "a[href], button, input:not([type=hidden]), select, textarea, [role=button], [role=link], [role=checkbox], [role=radio], [role=switch], [role=tab], [tabindex]:not([tabindex='-1'])";
-
-  function smallTargets(): string[] {
-    const found: string[] = [];
-    for (const element of document.querySelectorAll(INTERACTIVE)) {
-      const box = element.getBoundingClientRect();
-      if (box.width === 0 || box.height === 0) continue;
-      if (box.width < options.minTarget || box.height < options.minTarget) {
-        found.push(
-          `${element.outerHTML.slice(0, 120)} (${String(Math.round(box.width))}×${String(Math.round(box.height))})`,
-        );
-      }
-    }
-    return found;
-  }
-
-  async function check(): Promise<void> {
-    const axe = bridge.axe;
-    if (axe === undefined) return;
-    // SHA-1 of the markup: a dedupe key, not a security boundary.
-    const digest = await crypto.subtle.digest(
-      "SHA-1",
-      new TextEncoder().encode(document.body.getHTML()),
-    );
-    const hex = [...new Uint8Array(digest)]
-      .map((byte) => byte.toString(16).padStart(2, "0"))
-      .join("");
-    const key = `${String(innerWidth)}:${hex}`;
-    if (await bridge.hasA11yChecked(key)) return;
-    const started = performance.now();
-    const result = await axe.run(document, {
-      runOnly: { type: "tag", values: options.tags },
-    });
-    await bridge.__a11yReport({
-      key,
-      url: location.pathname + location.search,
-      width: innerWidth,
-      ms: Math.round(performance.now() - started),
-      violations: result.violations.map((violation) => ({
-        id: violation.id,
-        nodes: violation.nodes.map((node) => node.html.slice(0, 200)),
-      })),
-      smallTargets: smallTargets(),
-    });
-  }
-
-  /*
-   * axe refuses to start while it is running, and a spec can fire two
-   * actions at once (`Promise.all([waitForURL, click])`), so a second
-   * check waits for the first.
-   */
-  let running: Promise<void> = Promise.resolve();
-  bridge.__a11yCheck = async () => {
-    const previous = running;
-    running = (async () => {
-      await previous;
-      try {
-        await check();
-      } catch (error) {
-        await bridge.__a11yError(String(error));
-      }
-    })();
-    await running;
-  };
+export interface A11y {
+  readonly checkNow: () => Promise<void>;
+  readonly findings: () => readonly Finding[];
 }
 
 /**
@@ -249,8 +133,8 @@ async function checkNow(page: Page): Promise<void> {
       await globalThis.__a11yCheck?.();
     });
   } catch {
-    // The page navigated away or closed mid-check. The spike only
-    // reports, and the next action checks whatever replaced it.
+    // The page navigated away or closed mid-check; the next action
+    // checks whatever replaced it.
   }
 }
 
@@ -284,68 +168,99 @@ async function arm(
   baseURL: string,
   collected: Collected,
 ): Promise<void> {
-  const { seen, reports, errors } = collected;
   await page.exposeBinding("hasA11yChecked", (_source, key: string) => {
-    if (seen.has(key)) {
-      collected.skippedSeen += 1;
-      return true;
-    }
-    seen.add(key);
+    if (collected.seen.has(key)) return true;
+    collected.seen.add(key);
     return false;
   });
   await page.exposeBinding("__a11yError", (_source, message: string) => {
-    errors.push(message);
+    collected.errors.push(message);
   });
-  await page.exposeBinding("__a11yReport", (_source, report: CheckReport) => {
-    reports.push(report);
-  });
+  await page.exposeBinding(
+    "__a11yReport",
+    (_source, report: CheckReport) => {
+      collected.checks += 1;
+      collected.checkMs += report.ms;
+      for (const raw of report.findings) {
+        collected.findings.push(findingOf(report.url, raw));
+      }
+    },
+  );
   await page.addInitScript({ content: AXE_SOURCE });
   await page.addInitScript(installChecker, {
     origin: new URL(baseURL).origin,
-    tags: TAGS,
+    rules: RULES,
     minTarget: MIN_TARGET,
   });
 }
 
-function record(report: TestReport): void {
-  mkdirSync(REPORT_DIR, { recursive: true });
-  appendFileSync(`${REPORT_DIR}/report.jsonl`, `${JSON.stringify(report)}\n`);
+/**
+ * Each distinct finding once, in the order first seen.
+ */
+function distinct(findings: readonly Finding[]): Finding[] {
+  const seen = new Set<string>();
+  return findings.filter((finding) => {
+    const key = keyOf(finding);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
-export const test = base.extend<{ a11y: undefined }>({
+function record(test: string, collected: Collected): void {
+  mkdirSync(REPORT_DIR, { recursive: true });
+  const line = {
+    test,
+    checks: collected.checks,
+    checkMs: collected.checkMs,
+    errors: collected.errors,
+    findings: distinct(collected.findings),
+  };
+  appendFileSync(`${REPORT_DIR}/findings.jsonl`, `${JSON.stringify(line)}\n`);
+}
+
+function failOnNew(collected: Collected): void {
+  const fresh = distinct(collected.findings).filter(
+    (finding) => !BASELINE.has(keyOf(finding)),
+  );
+  if (fresh.length === 0 && collected.errors.length === 0) return;
+  const lines = [
+    ...fresh.map((finding) => `  ${keyOf(finding)}`),
+    ...collected.errors.map((error) => `  checker error: ${error}`),
+  ];
+  throw new Error(
+    `Accessibility: ${String(lines.length)} new finding(s), not in e2e/a11y-baseline.json:\n${lines.join("\n")}`,
+  );
+}
+
+export const test = base.extend<{
+  a11yMode: "enforce" | "collect";
+  a11y: A11y;
+}>({
+  a11yMode: ["enforce", { option: true }],
   a11y: [
-    async ({ page, baseURL }, use, testInfo) => {
-      if (process.env.A11Y_SPIKE !== "1") {
-        await use(undefined);
-        return;
-      }
+    async ({ page, baseURL, a11yMode }, use, testInfo) => {
       const collected: Collected = {
         seen: new Set(),
-        reports: [],
+        findings: [],
         errors: [],
-        skippedSeen: 0,
+        checks: 0,
+        checkMs: 0,
       };
       await arm(page, baseURL ?? "", collected);
       wrapActions(page);
       worker.current = page;
-      const started = Date.now();
       try {
-        await use(undefined);
+        await use({
+          checkNow: () => checkNow(page),
+          findings: () => distinct(collected.findings),
+        });
         await checkNow(page);
       } finally {
         worker.current = undefined;
       }
-      const { reports } = collected;
-      record({
-        test: testInfo.titlePath.join(" › "),
-        file: testInfo.file,
-        durationMs: Date.now() - started,
-        checks: reports.length,
-        skippedSeen: collected.skippedSeen,
-        checkMs: reports.reduce((sum, report) => sum + report.ms, 0),
-        reports,
-        errors: collected.errors,
-      });
+      record(testInfo.titlePath.join(" › "), collected);
+      if (a11yMode === "enforce" && !IS_RECORDING) failOnNew(collected);
     },
     { auto: true },
   ],

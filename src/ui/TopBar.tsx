@@ -141,7 +141,7 @@ export function TopBar({ bell }: Readonly<{ bell?: ReactNode }>): JSX.Element {
   const { isSlow } = useSlowRoute();
 
   return (
-    <div
+    <header
       data-ground="ink"
       data-slot="top-bar"
       className="hidden bg-ground px-6 text-ink wide:block"
@@ -193,7 +193,7 @@ export function TopBar({ bell }: Readonly<{ bell?: ReactNode }>): JSX.Element {
           <BarLauncher to={LAUNCHER.to} label={LAUNCH_LABEL} />
         </div>
       </div>
-    </div>
+    </header>
   );
 }
 
@@ -260,7 +260,7 @@ export function LandingBar({
   action,
 }: Readonly<{ action: LandingAction }>): JSX.Element {
   return (
-    <div
+    <header
       data-slot="landing-bar"
       data-part="top-bar"
       className="hidden border-b border-hairline bg-ground px-6 py-4 text-ink wide:block"
@@ -276,6 +276,6 @@ export function LandingBar({
         </Link>
         <LandingActionLink action={action} />
       </div>
-    </div>
+    </header>
   );
 }

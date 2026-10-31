@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../support/a11y";
 
 import { user } from "../../src/db/schema-auth";
 import {

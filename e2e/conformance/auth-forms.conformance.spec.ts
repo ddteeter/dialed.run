@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../support/a11y";
 import type { Page, Route } from "@playwright/test";
 
 import { CARRIED_EMAIL_KEY } from "../../src/modules/auth/carried-email";
