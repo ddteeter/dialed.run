@@ -401,6 +401,7 @@ describe("a removed image's tile", () => {
       screen.queryByText("No matching photos from any runner."),
     ).toBeNull();
     expect(part("photo-matches")?.querySelectorAll("li")).toHaveLength(2);
+    expect(screen.getByText("Matching photos · any runner · 2")).toBeVisible();
   });
 
   it("stands in for the empty state when it is all there is", async () => {
