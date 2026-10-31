@@ -265,7 +265,10 @@ export {
 
 // Design 164: the hold breakers, read by the hourly alert and Today.
 export {
+  dayHeadroom,
+  HEADROOM_WARN_SHARE,
   overCeilings,
+  quietScreenerWeek,
   type CeilingReading,
   type HoldCause,
 } from "./breakers";

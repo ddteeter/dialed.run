@@ -6,10 +6,13 @@ import { env } from "../../src/env";
 import {
   ceilingReading,
   classifierCeiling,
+  dayHeadroom,
+  quietScreenerWeek,
   FINGERPRINT_HOLDS_PER_HOUR,
   REPORT_BASELINE_S,
   REPORT_HIDES_FLOOR,
   reportCeiling,
+  type HoldCause,
 } from "../../src/modules/safety/breakers";
 
 import { opened, screened } from "./helpers";
@@ -184,5 +187,85 @@ describe("the report breaker", () => {
     await opened("reports", 3, NOW - HOUR - REPORT_BASELINE_S);
     const reading = await ceilingReading(core(), "reports", NOW);
     expect(reading).toMatchObject({ ceiling: 12 });
+  });
+});
+
+const DAY = 24 * HOUR;
+const WEEK = 7 * DAY;
+
+/**
+One cause's share of its ceiling from `dayHeadroom`.
+*/
+async function usedBy(cause: HoldCause): Promise<number | undefined> {
+  const headroom = await dayHeadroom(core(), NOW);
+  return headroom.find((each) => each.cause === cause)?.used;
+}
+
+describe("dayHeadroom", () => {
+  it("reads every cause, at nothing used on a quiet day", async () => {
+    expect(await dayHeadroom(core(), NOW)).toStrictEqual([
+      { cause: "fingerprint", used: 0 },
+      { cause: "classifier", used: 0 },
+      { cause: "reports", used: 0 },
+    ]);
+  });
+
+  it("reads the busiest hour of the last day, to the second", async () => {
+    await opened("fingerprint", 3, NOW - DAY);
+    await opened("fingerprint", 1, NOW - 2 * HOUR);
+    await opened("fingerprint", 5, NOW - DAY - 1);
+
+    expect(await usedBy("fingerprint")).toBeCloseTo(0.6);
+  });
+
+  it("measures the reports against the ceiling their baseline set going into the day", async () => {
+    await opened("reports", 4, NOW - 2 * HOUR);
+    expect(await usedBy("reports")).toBeCloseTo(0.4);
+
+    await opened("reports", 3, NOW - DAY - HOUR);
+    expect(await usedBy("reports")).toBeCloseTo(4 / 12);
+  });
+
+  it("reads the classifier's busiest share among hours with enough screenings", async () => {
+    // An hour of 19, every one flagged: too few to read a share from.
+    await screened("flag", 19, NOW - 5 * HOUR);
+    await screened("pass", 17, NOW - 2 * HOUR);
+    await screened("flag", 3, NOW - 2 * HOUR);
+    await screened("pass", 19, NOW - 3 * HOUR);
+    await screened("flag", 1, NOW - 3 * HOUR);
+
+    expect(await usedBy("classifier")).toBeCloseTo(1);
+  });
+
+  it("leaves a classifier hour older than the day out", async () => {
+    await screened("flag", 20, NOW - DAY - HOUR);
+
+    expect(await usedBy("classifier")).toBe(0);
+  });
+});
+
+describe("quietScreenerWeek", () => {
+  it("says how many a week screened when none was flagged or queued", async () => {
+    await screened("pass", 50, NOW - WEEK);
+
+    expect(await quietScreenerWeek(core(), NOW)).toBe(50);
+  });
+
+  it("says nothing under the fewest, or past a week", async () => {
+    await screened("pass", 49, NOW - 60);
+    await screened("pass", 5, NOW - WEEK - 1);
+
+    expect(await quietScreenerWeek(core(), NOW)).toBeUndefined();
+  });
+
+  it("says nothing once one photo was flagged or sent to review", async () => {
+    await screened("pass", 60, NOW - 60);
+    await screened("review", 1, NOW - 60);
+    expect(await quietScreenerWeek(core(), NOW)).toBeUndefined();
+
+    await core().delete(photoScreenings);
+    await screened("pass", 60, NOW - 60);
+    await screened("flag", 1, NOW - 60);
+    expect(await quietScreenerWeek(core(), NOW)).toBeUndefined();
   });
 });

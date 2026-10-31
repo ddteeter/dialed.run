@@ -39,17 +39,23 @@ dropped, because it means keeping up with model releases by hand.)
      least 20 screened**.
    - report hide: **the larger of 10/h and 4× the busiest hour of the
      trailing 28 days**. The baseline is read only once the hour is over 10.
+     It counts only reports on entries and photos, the types a report can
+     hide (owner, 2026-10-31). A flood of profile or product reports can't
+     pause hides of posts, and still shows in Review's waiting count.
 3. **Report-hide breaker** (`safety/reports.ts`). This is item 5 of the
    2026-10-31 review, changed on purpose. Over the ceiling, a report
    still **queues** the subject but does not hide it, so no notice is owed. That
    replaces "hold the emails": under DSA Art. 17 a hide nobody was told of is
    not allowed, and delaying the notice would be exactly that.
-4. **Trip alerts** (`ops/sentry.ts`). A trip sends one Sentry event,
+4. **Trip alerts** (`ops/scheduled.ts`). Today's line wording was approved
+   as written (owner, 2026-10-31; design-deltas item 93). A trip sends one Sentry event,
    fingerprinted `["breaker", cause, day]`, through the same new-issue rule
    as design 162. Today shows a line while any breaker is over its ceiling.
-5. **Headroom and too-quiet lines** (daily digest). Weekly, each cause's
-   busiest hour as a percentage of its ceiling, with a warning over 50%, so the
-   ceilings are revisited before growth trips them. Separately: if the last 7 days screened ≥ 50 photos
+5. **Headroom and too-quiet lines** (daily digest). Each cause's busiest
+   hour **of the last day** as a percentage of its ceiling, said at 50% or
+   more, so the ceilings are revisited before growth trips them. It was
+   planned as a week, but the digest reads every morning, so a week would
+   report one busy hour seven times. Separately: if the last 7 days screened ≥ 50 photos
    and the classifier returned no `flag` and no `review`, say so. This catches a
    model change in the direction the breaker can't see.
 6. **Matches gap** (Review row, `PhotoMatches`). The list stops at

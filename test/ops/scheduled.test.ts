@@ -6,6 +6,7 @@ import {
   cronCheckpoints,
   emailSendLimits,
   entryPhotos,
+  photoScreenings,
   imports,
   outbox,
   outfitEntries,
@@ -29,8 +30,11 @@ import {
   digestReport,
   hourlyReport,
 } from "../../src/modules/ops/scheduled";
-import { FINGERPRINT_HOLDS_PER_HOUR } from "../../src/modules/safety/breakers";
-import { opened } from "../safety/helpers";
+import {
+  FINGERPRINT_HOLDS_PER_HOUR,
+  QUIET_FEWEST_SCREENED,
+} from "../../src/modules/safety/breakers";
+import { opened, screened } from "../safety/helpers";
 import type { CronReporter, SentryReport } from "../../src/modules/ops/sentry";
 import {
   createOrGetBrand,
@@ -112,6 +116,8 @@ async function emptyTheTablesTheDigestReads(): Promise<void> {
   // and points at the digest rather than at the leak.
   await db.delete(reviewQueue);
   await db.delete(reports);
+  // The screener's week, which design 164's quiet line reads.
+  await db.delete(photoScreenings);
   await db.delete(entryPhotos);
   await db.delete(outfitEntries);
 }
@@ -548,7 +554,9 @@ async function seedAnomaly(
     | "abandoned-enrichment"
     | "strava-revocation"
     | "outbox"
-    | "review-queue",
+    | "review-queue"
+    | "breaker-headroom"
+    | "screener-quiet",
 ): Promise<void> {
   const db = coreDb();
   switch (kind) {
@@ -584,6 +592,16 @@ async function seedAnomaly(
     }
     case "review-queue": {
       await queueItem();
+      return;
+    }
+    // Resolved, so the review-queue kind stays quiet beside it.
+    case "breaker-headroom": {
+      await opened("fingerprint", 3, nowSeconds() - HOUR);
+      await db.update(reviewQueue).set({ status: "approved" });
+      return;
+    }
+    case "screener-quiet": {
+      await screened("pass", QUIET_FEWEST_SCREENED, nowSeconds() - HOUR);
       return;
     }
   }
@@ -677,6 +695,8 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
     "strava-revocation",
     "outbox",
     "review-queue",
+    "breaker-headroom",
+    "screener-quiet",
   ] as const)("reports %s under its own kind", async (kind) => {
     await seedAnomaly(kind);
     vi.spyOn(console, "error").mockImplementation(nothing);
@@ -699,6 +719,8 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
       "outbox",
       "stalled-import",
       "review-queue",
+      "breaker-headroom",
+      "screener-quiet",
       "account-deletion",
     ]);
   });
@@ -925,6 +947,42 @@ describe("a hold breaker at its ceiling (design 164)", () => {
       tags: { breaker: "reports" },
       fingerprint: ["breaker", "reports", "2026-10-31"],
     });
+  });
+});
+
+describe("the digest's breaker lines (design 164)", () => {
+  it("names a breaker whose busiest hour came within half its ceiling", async () => {
+    await opened("fingerprint", 3, nowSeconds() - HOUR);
+    await opened("reports", 4, nowSeconds() - HOUR);
+    await coreDb().update(reviewQueue).set({ status: "approved" });
+
+    const outcome = await handleScheduled(DIGEST, recordingReporter().reporter);
+
+    expect(outcome.anomalies).toContain(
+      "fingerprint breaker's busiest hour in the last day reached 60% of its ceiling",
+    );
+    expect(outcome.anomalies.join("; ")).not.toContain("reports breaker");
+  });
+
+  it("names one at exactly half its ceiling", async () => {
+    await opened("reports", 5, nowSeconds() - HOUR);
+    await coreDb().update(reviewQueue).set({ status: "approved" });
+
+    const outcome = await handleScheduled(DIGEST, recordingReporter().reporter);
+
+    expect(outcome.anomalies).toContain(
+      "reports breaker's busiest hour in the last day reached 50% of its ceiling",
+    );
+  });
+
+  it("says a week of screenings flagged and queued nothing", async () => {
+    await screened("pass", QUIET_FEWEST_SCREENED, nowSeconds() - HOUR);
+
+    const outcome = await handleScheduled(DIGEST, recordingReporter().reporter);
+
+    expect(outcome.anomalies).toContain(
+      "The classifier flagged or queued none of 50 photos screened this week; check its model has not changed",
+    );
   });
 });
 

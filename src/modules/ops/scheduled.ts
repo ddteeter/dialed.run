@@ -40,8 +40,11 @@ import {
 } from "./sentry";
 import {
   classifierFromEnv,
+  dayHeadroom,
+  HEADROOM_WARN_SHARE,
   overCeilings,
   pendingReviewCount,
+  quietScreenerWeek,
   purgeExpiredQuarantine,
   reconcileUnhiddenReports,
   releaseStaleClaims,
@@ -674,6 +677,34 @@ async function checkReviewQueueDepth(anomalies: string[]): Promise<void> {
 }
 
 /**
+ * Each hold breaker whose busiest hour of the last day came within
+ * `HEADROOM_WARN_SHARE` of its ceiling (design 164). The ceilings are
+ * fixed numbers or rules set at pre-launch scale; this is what says one
+ * needs revisiting before growth starts tripping it.
+ */
+async function checkBreakerHeadroom(anomalies: string[]): Promise<void> {
+  const headroom = await dayHeadroom(coreDb(), nowSeconds());
+  for (const { cause, used } of headroom) {
+    if (used < HEADROOM_WARN_SHARE) continue;
+    anomalies.push(
+      `${cause} breaker's busiest hour in the last day reached ${String(Math.round(used * 100))}% of its ceiling`,
+    );
+  }
+}
+
+/**
+ * A week of screenings with no flag and no review (design 164): the
+ * classifier's model changing in the direction its breaker cannot see.
+ */
+async function checkQuietScreener(anomalies: string[]): Promise<void> {
+  const screened = await quietScreenerWeek(coreDb(), nowSeconds());
+  if (screened === undefined) return;
+  anomalies.push(
+    `The classifier flagged or queued none of ${String(screened)} photos screened this week; check its model has not changed`,
+  );
+}
+
+/**
  * The epoch-second cutoff `n` seconds ago.
  *
  * Written out at three call sites, which is what made two of the digest's
@@ -764,6 +795,8 @@ export const digestKinds = [
   "outbox",
   "stalled-import",
   "review-queue",
+  "breaker-headroom",
+  "screener-quiet",
   "account-deletion",
 ] as const;
 
@@ -815,6 +848,8 @@ async function runDailyDigest(
     },
     "stalled-import": redispatchStalledImports,
     "review-queue": checkReviewQueueDepth,
+    "breaker-headroom": checkBreakerHeadroom,
+    "screener-quiet": checkQuietScreener,
     "account-deletion": async (anomalies) => {
       await upkeep.purgeAccounts?.(anomalies);
     },
