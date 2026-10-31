@@ -87,6 +87,13 @@ const DEVICE_WIDTHS = ["narrow", "wide"] as const;
 export const MAX_METRICS_PER_BEACON = 20;
 
 /**
+ * Where the beacon goes: `src/routes/api/vitals.ts`, which a test pins to
+ * this. A string because `sendBeacon` takes one, and the typed router has
+ * no say over a request that is not a navigation.
+ */
+export const VITALS_PATH = "/api/vitals";
+
+/**
  * The shape of a route id (`/runs/$runId`, `/@{$handle}`): which ids exist
  * is not checked here, because the list can only be read where the route
  * tree is, and a forged value for a real route is the abuse that matters
@@ -98,7 +105,11 @@ const ROUTE_ID = /^\/[\w$@{}./-]{0,95}$/;
 
 const measurement = z.number().nonnegative();
 
-const metricSchema = z
+/**
+ * One metric, parsed on its own. The browser drops a metric that fails it
+ * rather than send a beacon the endpoint would refuse whole.
+ */
+export const vitalMetricSchema = z
   .strictObject({
     name: z.enum(VITAL_METRIC_NAMES),
     value: measurement,
@@ -118,7 +129,7 @@ export const vitalsPayloadSchema = z.strictObject({
   route: z.string().regex(ROUTE_ID),
   navigationType: z.enum(NAVIGATION_TYPES),
   device: z.enum(DEVICE_WIDTHS),
-  metrics: z.array(metricSchema).min(1).max(MAX_METRICS_PER_BEACON),
+  metrics: z.array(vitalMetricSchema).min(1).max(MAX_METRICS_PER_BEACON),
 });
 
 export type VitalsPayload = z.infer<typeof vitalsPayloadSchema>;

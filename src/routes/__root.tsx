@@ -16,6 +16,7 @@ import { SITE_LINKS, SITE_META } from "../modules/ops/og/site-head";
 import { Devtools } from "../ui/Devtools";
 import { TermsRefusalAnswer } from "../ui/terms-refusal";
 import { UnconfirmedRefusalAnswer } from "../ui/unconfirmed-refusal";
+import { VitalsReporter } from "../ui/VitalsReporter";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -142,6 +143,8 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
             {children}
           </UnconfirmedRefusalAnswer>
         </TermsRefusalAnswer>
+        {/* How long each screen takes, by route id (design 165). */}
+        <VitalsReporter />
         <Devtools />
         <Scripts />
       </body>

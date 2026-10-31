@@ -44,8 +44,8 @@ one screen.
 **Data-point layout** (`VITALS`):
 
 - index1: route id
-- blobs: metric, navigation type, device (`narrow` below 768px, `wide`
-  otherwise), deploy version (stamped by the server)
+- blobs: metric, navigation type, device (`narrow` below the `wide`
+  breakpoint, 720px, `wide` from it up), deploy version (stamped by the server)
 - doubles: value, then up to four attribution sub-parts. LCP: TTFB, load
   delay, load time, render delay. INP: input delay, processing time,
   presentation delay.
@@ -158,7 +158,7 @@ one failure doesn't stop the rest (the design 162 shape).
 - **New secret**: `ANALYTICS_SQL_TOKEN`, an account token with Account
   Analytics Read, for the rollup. It goes in `deployment.md` §5,
   `deployment-plan.md` §2 and `.dev.vars.example`.
-- New dependency: `web-vitals` (MIT, about 2 KB attribution build).
+- New dependency: `web-vitals` 6.2.3 (Apache-2.0, about 2 KB attribution build).
   `check:bundle` and the open-source list pick it up.
 - CSP: unchanged. The beacon is same-origin.
 - `docs/architecture.md`: add the dataset and the ingest flow to the
@@ -248,6 +248,37 @@ Recorded as the build found them.
 - **The bindings went in on 2026-10-31,** by the owner's leave, in this
   branch. The test pool binds them too, and `bindings-conformance` pins
   both configs and the one module that reads them.
+
+- **Narrow is below 720px, not 768.** 720 is the `wide` breakpoint in
+  `src/styles.css` (`design/tokens.js`), where the layout really changes;
+  768 was a guess. A test pins the media query to the theme.
+- **One beacon per route and navigation type, not one per page.** A
+  payload carries one route id, and a page that navigates client-side has
+  `nav` timings for several. So a hide sends one beacon per group, each at
+  most 20 metrics.
+- **A hard-load metric is filed under the screen the page loaded on,**
+  even when `web-vitals` reports it at hide after the runner has moved on
+  (INP, CLS). It measures the load. A `nav` is filed under where it landed.
+- **Each metric is sent once.** `web-vitals` re-reports CLS and INP on a
+  later hide if they grew; the reporter keeps the latest value until the
+  first send and drops anything after. Counting one page twice would skew
+  every percentile; this understates only a page that kept shifting.
+- **A same-address navigation is not a `nav`.** `invalidate()` after a save
+  fires the router's navigation events with `hrefChanged` false.
+- **The client drops what the endpoint would refuse**, one metric at a time
+  (a value out of range) or one beacon (a route id of the wrong shape, such
+  as a page that matched only the root), by the endpoint's own schema.
+- **`web-vitals` is loaded with a dynamic import, after hydration.** A
+  static import put the entry chunk 617 bytes over `check:bundle`'s
+  280,000-byte budget. The budget's own note says to move a dependency
+  behind a dynamic import before raising it, and this one loses nothing
+  that way: its observers read the browser's buffered entries. A chunk
+  that fails to load leaves that page unmeasured and nothing else.
+- **`web-vitals` is Apache-2.0, not MIT.** The open-source list reads it
+  from the build.
+- **The reporter is `lib/browser/vitals.ts`, started by `ui/VitalsReporter`**
+  from `__root.tsx`. The route stays glue, and the component is only the
+  lifecycle: started when the page is live, stopped if the router changes.
 
 ## Test plan
 
