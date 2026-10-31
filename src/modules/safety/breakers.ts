@@ -117,6 +117,22 @@ export async function ceilingReading(
 }
 
 /**
+ * Every cause at its ceiling this hour: what the hourly alert (one Sentry
+ * event a cause a day) and Today's line name. Empty on an ordinary hour.
+ */
+export async function overCeilings(
+  db: Db,
+  now: number,
+): Promise<readonly CeilingReading[]> {
+  const readings = await Promise.all(
+    reviewQueue.source.enumValues.map((cause) =>
+      ceilingReading(db, cause, now),
+    ),
+  );
+  return readings.filter((reading) => reading.isOver);
+}
+
+/**
  * The reports' ceiling: the floor while the hour is under it, which is
  * every ordinary hour, and otherwise the baseline's.
  */

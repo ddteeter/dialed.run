@@ -12,6 +12,7 @@ import {
   inFlight,
   useControlAction,
 } from "../../../ui";
+import type { CeilingReading, HoldCause } from "../../safety";
 import type { DeskToday, SkippedOperator } from "../desk";
 import { DeskShell } from "./DeskShell";
 import type { GaveUpJob } from "../gave-up";
@@ -342,6 +343,26 @@ function GaveUp({
 }
 
 /**
+ * A line under Today's numbers that needs a person: a hi-viz mono kicker
+ * over one plain sentence, and no button. OPS-11's skipped operator and
+ * design 164's tripped breaker share it.
+ */
+function TodayNotice({
+  part,
+  kicker,
+  children,
+}: Readonly<{ part: string; kicker: string; children: string }>): JSX.Element {
+  return (
+    <p data-part={part} className="m-0 flex flex-col gap-1">
+      <Mono step="xs" className="text-hiviz-text">
+        {kicker}
+      </Mono>
+      <span className="text-body">{children}</span>
+    </p>
+  );
+}
+
+/**
  * OPS-11: this morning's digest skipped an operator whose address is not
  * confirmed, said where they will look when the email does not come. One
  * line per operator, named by @handle with the address masked (round 38
@@ -357,14 +378,34 @@ function DigestUnconfirmed({
   const whom =
     operator.handle === undefined ? "an operator" : `@${operator.handle}`;
   return (
-    <p data-part="digest-unconfirmed" className="m-0 flex flex-col gap-1">
-      <Mono step="xs" className="text-hiviz-text">
-        Digest not emailed
-      </Mono>
-      <span className="text-body">
-        {`Today's digest wasn't sent to ${whom}. Their email address, ${operator.address}, isn't confirmed.`}
-      </span>
-    </p>
+    <TodayNotice part="digest-unconfirmed" kicker="Digest not emailed">
+      {`Today's digest wasn't sent to ${whom}. Their email address, ${operator.address}, isn't confirmed.`}
+    </TodayNotice>
+  );
+}
+
+/**
+ * Design 164: a hold breaker at its ceiling this hour, said where the
+ * operator looks first. What stopped and what happens instead, per cause;
+ * it clears itself as the hour drains, so there is nothing to press. An
+ * undesigned surface (design-deltas item 93), composed as OPS-11's is.
+ */
+const BREAKER_SAYS: Readonly<Record<HoldCause, (count: string) => string>> = {
+  fingerprint: (count) =>
+    `${count} uploads matched removed images in the last hour, the most held in one hour. New matches are screened like any photo until the hour clears.`,
+  classifier: (count) =>
+    `The screener hid ${count} photos in the last hour, the most it hides in one hour. New flags stay visible only to their owners until the hour clears.`,
+  reports: (count) =>
+    `Reports hid ${count} posts in the last hour, the most they hide in one hour. New ones go to Review without being hidden until the hour clears.`,
+};
+
+function BreakerOver({
+  reading,
+}: Readonly<{ reading: CeilingReading }>): JSX.Element {
+  return (
+    <TodayNotice part="breaker-over" kicker="Holds paused">
+      {BREAKER_SAYS[reading.cause](String(reading.count))}
+    </TodayNotice>
   );
 }
 
@@ -415,6 +456,9 @@ export function Today({
             {counts.bansThisWeek === 1 ? "ban" : "bans"} this week
           </Stat>
         </ul>
+        {today.breakers.map((reading) => (
+          <BreakerOver key={reading.cause} reading={reading} />
+        ))}
         {today.skipped.map((operator) => (
           <DigestUnconfirmed key={operator.userId} operator={operator} />
         ))}

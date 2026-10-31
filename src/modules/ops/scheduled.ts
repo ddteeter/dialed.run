@@ -40,12 +40,14 @@ import {
 } from "./sentry";
 import {
   classifierFromEnv,
+  overCeilings,
   pendingReviewCount,
   purgeExpiredQuarantine,
   reconcileUnhiddenReports,
   releaseStaleClaims,
   retryPendingScreenings,
   sweepModerationRecords,
+  type CeilingReading,
 } from "../safety";
 
 import { nowSeconds } from "../../lib/now";
@@ -243,6 +245,7 @@ async function runCron(
         // seconds on moderation, and owed mail should not wait behind it.
         () => drainOwedEmail(anomalies),
         () => upkeep.rescreenHandles?.(anomalies),
+        () => reportBreakerTrips(reporter),
       ]);
     }
   }
@@ -301,13 +304,10 @@ export function hourlyReport(
 }
 
 /**
- * The shape both reports share: the findings joined into one context
+ * The shape every report shares: the findings joined into one context
  * field beside whatever names the source, the tags an alert rule matches,
  * and the fingerprint Sentry groups by.
  */
-/**
-One anomaly event: where it came from, its lines joined, and how it groups.
-*/
 function anomalyReport(
   source: Record<string, string>,
   tags: Record<string, string>,
@@ -326,6 +326,45 @@ The UTC date a person reads a report under: one issue a day.
 */
 function utcDay(): string {
   return new Date(nowSeconds() * 1000).toISOString().slice(0, 10);
+}
+
+/**
+ * One event per hold breaker at its ceiling (design 164), each its own
+ * issue a day: fingerprinted by cause and day, not folded into the
+ * firing's own event, whose issue may already be open today and so would
+ * alert nobody.
+ *
+ * Read on the hour, so a burst split across two firings' hours can stay
+ * under the ceiling in each; the digest's weekly headroom line names a
+ * cause running near it.
+ */
+async function reportBreakerTrips(reporter: CronReporter): Promise<void> {
+  const over = await overCeilings(coreDb(), nowSeconds());
+  const day = utcDay();
+  for (const reading of over) {
+    reporter.report(
+      new Error(`breaker: ${reading.cause}`),
+      breakerReport(reading, day),
+    );
+  }
+}
+
+/**
+The event for one breaker at its ceiling, on one day.
+*/
+export function breakerReport(
+  reading: CeilingReading,
+  day: string,
+): SentryReport {
+  const { cause, count, ceiling } = reading;
+  return anomalyReport(
+    { breaker: cause },
+    { breaker: cause },
+    ["breaker", cause, day],
+    [
+      `${cause} holds at ${String(count)} of ${String(ceiling)} in the last hour; past the ceiling they stop`,
+    ],
+  );
 }
 
 /**

@@ -940,7 +940,18 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
-_Empty: round 42 answered the last two._
+93. **Today's tripped-breaker line (design 164).** Undesigned. When a hold
+    breaker is at its ceiling this hour, Today shows one line per cause under
+    the three numbers and above OPS-11's skipped-operator line. It is
+    composed exactly as OPS-11's is: a hi-viz `MONO.xs` kicker HOLDS PAUSED
+    over one `text-body` sentence, and no button, because it clears itself
+    as the hour drains. The sentences say what stopped and what happens
+    instead, for example _"Reports hid 12 posts in the last hour, the most
+    they hide in one hour. New ones go to Review without being hidden until
+    the hour clears."_ **The ask:** draw it on D0, or confirm the
+    composition and the copy.
+
+_Item 93 is open (design 164); round 42 answered the two before it._
 
 <!-- Item numbers continue past rounds 35–40 (45–76, 82–87). Design numbered the Garmin asks 77–81 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
 

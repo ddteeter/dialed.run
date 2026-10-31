@@ -262,3 +262,10 @@ export {
   REMOVAL_REMINDER_LEAD_SECONDS,
   undecidedRemovalsDue,
 } from "./removal-reminders";
+
+// Design 164: the hold breakers, read by the hourly alert and Today.
+export {
+  overCeilings,
+  type CeilingReading,
+  type HoldCause,
+} from "./breakers";

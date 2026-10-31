@@ -24,10 +24,13 @@ import { MODERATION_RECORD_KEPT_SECONDS } from "../../src/modules/safety/retenti
 import { gaveUpRow } from "../gave-up-rows";
 import { mockVisualCrossing } from "../weather/fixtures/visual-crossing-observation";
 import {
+  breakerReport,
   digestKinds,
   digestReport,
   hourlyReport,
 } from "../../src/modules/ops/scheduled";
+import { FINGERPRINT_HOLDS_PER_HOUR } from "../../src/modules/safety/breakers";
+import { opened } from "../safety/helpers";
 import type { CronReporter, SentryReport } from "../../src/modules/ops/sentry";
 import {
   createOrGetBrand,
@@ -860,6 +863,67 @@ describe("hourly firings report what they find (design 162)", () => {
       context: { cron: "screening-retry", anomalies: "a; b" },
       tags: { digest: "hourly", cron: "screening-retry" },
       fingerprint: ["hourly", "screening-retry", "2026-10-29"],
+    });
+  });
+});
+
+describe("a hold breaker at its ceiling (design 164)", () => {
+  it("raises its own event from the screening sweep, one issue a cause a day", async () => {
+    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR, nowSeconds());
+    const { reporter, events } = recordingReporter();
+
+    await handleScheduled(
+      { cron: "15 * * * *" } as ScheduledController,
+      reporter,
+    );
+
+    const breakers = events.filter((event) =>
+      event.report.fingerprint?.includes("breaker"),
+    );
+    expect(breakers.map((event) => event.report)).toStrictEqual([
+      breakerReport(
+        {
+          cause: "fingerprint",
+          isOver: true,
+          count: FINGERPRINT_HOLDS_PER_HOUR,
+          ceiling: FINGERPRINT_HOLDS_PER_HOUR,
+        },
+        today(),
+      ),
+    ]);
+    expect(breakers.map((event) => event.error)).toStrictEqual([
+      expect.objectContaining({ message: "breaker: fingerprint" }),
+    ]);
+  });
+
+  it("raises nothing on an hour under every ceiling", async () => {
+    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR - 1, nowSeconds());
+    const { reporter, events } = recordingReporter();
+
+    await handleScheduled(
+      { cron: "15 * * * *" } as ScheduledController,
+      reporter,
+    );
+
+    expect(
+      events.filter((event) => event.report.fingerprint?.includes("breaker")),
+    ).toStrictEqual([]);
+  });
+
+  it("names the cause, the count and the ceiling, grouped by cause and day", () => {
+    expect(
+      breakerReport(
+        { cause: "reports", isOver: true, count: 12, ceiling: 12 },
+        "2026-10-31",
+      ),
+    ).toStrictEqual({
+      context: {
+        breaker: "reports",
+        anomalies:
+          "reports holds at 12 of 12 in the last hour; past the ceiling they stop",
+      },
+      tags: { breaker: "reports" },
+      fingerprint: ["breaker", "reports", "2026-10-31"],
     });
   });
 });
