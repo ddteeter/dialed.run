@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { JSX, ReactNode } from "react";
 
 import type { GaveUpKind } from "../../../lib/contracts/gave-up";
+import { outboxBehindSentence } from "../../../lib/copy";
 import { longDayLabel, monthDayLabel, timeOfDay } from "../../../lib/dates";
 import {
   ControlFailureBand,
@@ -389,14 +390,13 @@ function RunningBehind({
     oldestAt === undefined
       ? ""
       : ` The oldest has waited ${String(Math.floor((asOf - oldestAt) / HOUR_SECONDS))}h.`;
-  const jobs = rows === 1 ? "queued job was" : "queued jobs were";
   return (
     <p data-part="running-behind" className="m-0 flex flex-col gap-1">
       <Mono step="xs" className="text-hiviz-text">
         Running behind
       </Mono>
       <span className="text-body">
-        {`${String(rows)} ${jobs} still due after this morning's run.${wait}`}
+        {`${outboxBehindSentence(rows)}${wait}`}
       </span>
     </p>
   );

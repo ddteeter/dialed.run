@@ -19,6 +19,7 @@ import {
   type CommunityRule,
 } from "../../lib/contracts/community-rules";
 import { CONTACT_ADDRESS } from "../../lib/contracts/contact";
+import { outboxBehindSentence } from "../../lib/copy";
 import { EXPORT_LINK_DAYS } from "../../lib/contracts/data-export";
 import {
   COPYRIGHT_NOTICE_CLAUSE,
@@ -271,7 +272,7 @@ function digestBody(
     behind === 0
       ? []
       : [
-          `${counted(behind, "queued job was", "queued jobs were")} still due after this morning's run. ${behind === 1 ? "It's" : "They're"} on the Desk's Today.`,
+          `${outboxBehindSentence(behind)} ${behind === 1 ? "It's" : "They're"} on the Desk's Today.`,
         ];
   return [
     `${String(template.waiting)} waiting for a decision.${oldest}`,
