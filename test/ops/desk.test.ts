@@ -6,6 +6,7 @@ import { inArray } from "drizzle-orm";
 import { user } from "../../src/db/schema-auth";
 import {
   cronCheckpoints,
+  outbox,
   reviewQueue,
   userProfiles,
 } from "../../src/db/schema-core";
@@ -14,7 +15,12 @@ import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { handleScheduled } from "../../src/modules/ops";
 import { NotFoundError } from "../../src/lib/errors";
-import { deskToday, isOperator, todayCounts } from "../../src/modules/ops/desk";
+import {
+  deskToday,
+  isOperator,
+  outboxBehindOf,
+  todayCounts,
+} from "../../src/modules/ops/desk";
 import { operatorOrNotFound } from "../../src/modules/ops/desk-gate";
 
 /**
@@ -64,6 +70,8 @@ describe("todayCounts", () => {
       gaveUp: 0,
       oldestGaveUpAt: undefined,
       digestUnconfirmedAt: undefined,
+      outboxBehind: 0,
+      oldestBehindAt: undefined,
     });
   });
 
@@ -293,5 +301,84 @@ describe("operatorOrNotFound", () => {
     expect(thrown).toBeInstanceOf(NotFoundError);
     // What TanStack's router duck-types on to render a 404.
     expect(thrown).toHaveProperty("isNotFound", true);
+  });
+});
+
+const RAN_AT = 1_000_000;
+
+async function heartbeat(cronName: string, lastRunAt: number) {
+  await coreDb().insert(cronCheckpoints).values({ cronName, lastRunAt });
+}
+
+async function dueAt(
+  nextAttemptAt: number,
+  kind: "photo_delete" | "email" | "retired_kind" = "photo_delete",
+) {
+  const id = newUlid();
+  await coreDb()
+    .insert(outbox)
+    .values({
+      id,
+      kind,
+      dedupeKey: id,
+      payload: "{}",
+      nextAttemptAt,
+      createdAt: nextAttemptAt - 3600,
+    });
+}
+
+/**
+ * Design 168: what the last daily digest's drain could not reach. Bounded
+ * by the digest's heartbeat rather than `now`, so a row that fell due
+ * after the digest is the next drain's, not a backlog.
+ */
+describe("todayCounts' outbox behind", () => {
+  beforeEach(async () => {
+    await coreDb().delete(outbox);
+    await coreDb().delete(cronCheckpoints);
+  });
+
+  it("counts rows due when the digest ran, across kinds, and dates the oldest", async () => {
+    await heartbeat("daily-digest", RAN_AT);
+    await dueAt(RAN_AT - 38 * 3600);
+    await dueAt(RAN_AT - 3600, "email");
+    await dueAt(RAN_AT);
+
+    const counts = await todayCounts();
+
+    expect(counts.outboxBehind).toBe(3);
+    expect(counts.oldestBehindAt).toBe(RAN_AT - 38 * 3600);
+  });
+
+  it("leaves out a row due after the digest ran, and a kind this build cannot drain", async () => {
+    await heartbeat("daily-digest", RAN_AT);
+    await dueAt(RAN_AT + 1);
+    await dueAt(RAN_AT - 3600, "retired_kind");
+
+    const counts = await todayCounts();
+
+    expect(counts.outboxBehind).toBe(0);
+    expect(counts.oldestBehindAt).toBeUndefined();
+  });
+
+  it("is nothing before the first digest, whatever is due and whatever else ran", async () => {
+    await heartbeat("weather-retry", RAN_AT);
+    await dueAt(RAN_AT - 3600);
+
+    const counts = await todayCounts();
+
+    expect(counts.outboxBehind).toBe(0);
+  });
+
+  it("searches outbox_kind_due rather than scanning the table", async () => {
+    const { sql, params } = outboxBehindOf(coreDb()).toSQL();
+    const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+      .bind(...params)
+      .all<{ detail: string }>();
+    expect(plan.results.map((row) => row.detail)).toStrictEqual([
+      "SEARCH outbox USING COVERING INDEX outbox_kind_due (kind=? AND next_attempt_at<?)",
+      "SCALAR SUBQUERY 1",
+      "SEARCH cron_checkpoints USING INDEX sqlite_autoindex_cron_checkpoints_1 (cron_name=?)",
+    ]);
   });
 });

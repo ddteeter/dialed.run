@@ -21,10 +21,13 @@ import { calendarDay } from "../../lib/dates";
 import { nowSeconds } from "../../lib/now";
 import { maskedAddress } from "../email";
 import { adminUserIds, pendingReviewCount } from "../safety";
+import type { CronName } from "./crons";
 import { DIGEST_UNCONFIRMED } from "./digest-marks";
+import { stillDueOf } from "./outbox";
 
 /**
-Today's three numbers, and the two facts printed under them.
+Today's three numbers, the two facts printed under them, and the lines
+that show only above zero.
 */
 export interface TodayCounts {
   /**
@@ -58,6 +61,34 @@ export interface TodayCounts {
    * Today says so while it is today's.
    */
   readonly digestUnconfirmedAt: number | undefined;
+  /**
+   * Outbox rows that were due when the last daily digest started and are
+   * due still: what its drain could not reach (design 168). A line on
+   * Today and in the digest, only above zero; never a fourth number.
+   */
+  readonly outboxBehind: number;
+  /**
+  When the longest-waiting of those fell due; absent at zero.
+  */
+  readonly oldestBehindAt: number | undefined;
+}
+
+const DIGEST_CRON: CronName = "daily-digest";
+
+/**
+ * The outbox rows the last daily digest's drain could not reach, by kind
+ * (design 168). Bounded by the digest's heartbeat, which its firing writes
+ * before anything else, so a row due by then was due when the drain read
+ * the table — and not by `now`: most kinds drain only in the digest, so a
+ * row due since is the schedule, not a backlog. Before the first digest
+ * the bound is NULL and nothing is behind. Exported for the test that
+ * reads its plan.
+ */
+export function outboxBehindOf(db: ReturnType<typeof coreDb>) {
+  return stillDueOf(
+    db,
+    sql<number>`(select ${cronCheckpoints.lastRunAt} from ${cronCheckpoints} where ${cronCheckpoints.cronName} = ${DIGEST_CRON})`,
+  );
 }
 
 const WEEK_SECONDS = 7 * 24 * 60 * 60;
@@ -80,7 +111,7 @@ export async function todayCounts(): Promise<TodayCounts> {
   const db = coreDb();
   const weekAgo = nowSeconds() - WEEK_SECONDS;
   const waiting = await pendingReviewCount();
-  const [review, bans, gave, unconfirmed] = await db.batch([
+  const [review, bans, gave, unconfirmed, behind] = await db.batch([
     db
       .select({
         source: reviewQueue.source,
@@ -114,6 +145,7 @@ export async function todayCounts(): Promise<TodayCounts> {
       .select({ at: cronCheckpoints.lastRunAt })
       .from(cronCheckpoints)
       .where(eq(cronCheckpoints.cronName, DIGEST_UNCONFIRMED)),
+    outboxBehindOf(db),
   ]);
   const [gaveUpGroup] = gave;
   return {
@@ -129,6 +161,11 @@ export async function todayCounts(): Promise<TodayCounts> {
     gaveUp: gaveUpGroup?.rows ?? 0,
     oldestGaveUpAt: gaveUpGroup?.oldest,
     digestUnconfirmedAt: unconfirmed[0]?.at,
+    outboxBehind: sumOf(behind),
+    oldestBehindAt:
+      behind.length === 0
+        ? undefined
+        : Math.min(...behind.map((g) => g.oldest ?? Infinity)),
   };
 }
 
@@ -188,7 +225,9 @@ async function unconfirmedOperators(): Promise<readonly SkippedOperator[]> {
   );
   // The handle is a scalar subquery rather than a join: an operator with no
   // profile row still appears, with a null handle, either way.
-  const handleOf = sql<string | null>`(select ${userProfiles.username} from ${userProfiles} where ${userProfiles.userId} = ${user.id})`;
+  const handleOf = sql<
+    string | null
+  >`(select ${userProfiles.username} from ${userProfiles} where ${userProfiles.userId} = ${user.id})`;
   const rows = await coreDb()
     .select({ userId: user.id, handle: handleOf, email: user.email })
     .from(user)

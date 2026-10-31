@@ -264,11 +264,21 @@ function digestBody(
       : [
           `${counted(gaveUp, "job", "jobs")} the system gave up on. ${gaveUp === 1 ? "It's" : "They're"} on the Desk's Today.`,
         ];
+  // Design 168: the outbox the morning's drain could not reach, under the
+  // same rule. Not in the subject: a backlog is not a failure.
+  const behind = template.outboxBehind ?? 0;
+  const behindLine =
+    behind === 0
+      ? []
+      : [
+          `${counted(behind, "queued job was", "queued jobs were")} still due after this morning's run. ${behind === 1 ? "It's" : "They're"} on the Desk's Today.`,
+        ];
   return [
     `${String(template.waiting)} waiting for a decision.${oldest}`,
     `${counted(unfinished, "photo", "photos")} the screener couldn't finish.${hidden}`,
     `${counted(template.bansThisWeek, "ban", "bans")} this week.`,
     ...gaveUpLine,
+    ...behindLine,
   ].join(" ");
 }
 

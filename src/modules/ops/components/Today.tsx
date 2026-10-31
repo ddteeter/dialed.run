@@ -368,6 +368,40 @@ function DigestUnconfirmed({
   );
 }
 
+/**
+ * Design 168: queued jobs the morning's drain could not reach, by the
+ * skipped-digest line's shape, under Today's three numbers and only above
+ * zero — D5's numbers stay three. The wait is in whole hours, as "Oldest ·
+ * 19h" and the digest's Sentry line count it. Hi-viz, because a backlog
+ * that outlives a drain needs a person to look at why.
+ */
+function RunningBehind({
+  rows,
+  oldestAt,
+  asOf,
+}: Readonly<{
+  rows: number;
+  oldestAt: number | undefined;
+  asOf: number;
+}>): JSX.Element | undefined {
+  if (rows === 0) return undefined;
+  const wait =
+    oldestAt === undefined
+      ? ""
+      : ` The oldest has waited ${String(Math.floor((asOf - oldestAt) / HOUR_SECONDS))}h.`;
+  const jobs = rows === 1 ? "queued job was" : "queued jobs were";
+  return (
+    <p data-part="running-behind" className="m-0 flex flex-col gap-1">
+      <Mono step="xs" className="text-hiviz-text">
+        Running behind
+      </Mono>
+      <span className="text-body">
+        {`${String(rows)} ${jobs} still due after this morning's run.${wait}`}
+      </span>
+    </p>
+  );
+}
+
 export function Today({
   today,
   gaveUp,
@@ -418,6 +452,11 @@ export function Today({
         {today.skipped.map((operator) => (
           <DigestUnconfirmed key={operator.userId} operator={operator} />
         ))}
+        <RunningBehind
+          rows={counts.outboxBehind}
+          oldestAt={counts.oldestBehindAt}
+          asOf={asOf}
+        />
       </section>
       <GaveUp
         jobs={gaveUp}

@@ -36,8 +36,9 @@ above zero. It uses that line's shape: MONO.xs hi-viz kicker, then body.
 > 12 queued jobs were still due after this morning's run. The oldest has
 > waited 38h.
 
-The age uses `spanOf` (`38h`, `2d`), as Gave up does. There is no
-per-kind breakdown, because Sentry has one line per kind.
+The age is in whole hours, as "Oldest · 19h" and the Sentry line count
+it. (`spanOf` would turn 38h into "1d".) There is no per-kind breakdown,
+because Sentry has one line per kind.
 
 **Email.** One sentence after the Gave up line, only above zero (D6's
 rule): "12 queued jobs were still due after this morning's run. They're
@@ -70,17 +71,16 @@ undrawn line, mark R-169 Done in `docs/deferred.md`, and reword design
   `outboxBehind`.
 - `test/email/render.test.ts`: the line appears above zero and not at
   zero or when the field is absent (an old row). The subject is unchanged.
-- `test/ops/today-outbox.dom.test.tsx` (ui): the line and its age above
-  zero, and nothing at zero.
+- `test/ops/today-gave-up.dom.test.tsx` (ui), beside the skipped-digest
+  line's tests: the line and its age above zero, and nothing at zero.
 - Extend the `e2e/desk/operator.demo.spec.ts` demo with seeded overdue
   rows, so the line shows for the demo video.
 - Stryker reaches 100% on the touched files.
 
 ## Open questions
 
-1. **A line, not a fourth figure.** The owner's call was framed as "a
-   fourth figure". I am proceeding with a conditional line, for D5/D6's
-   reasons above. If you want an always-visible fourth `Stat` instead
-   ("0 queued jobs behind"), say so. The read is the same either way.
-2. **Copy.** "Running behind" and "queued jobs" are proposed wording.
-   "Outbox" stays internal.
+Answered by the owner, 2026-10-31:
+
+1. **A line, not a fourth figure**: the conditional line above.
+2. **Copy**: as proposed. "Running behind" and "queued jobs"; "outbox"
+   stays internal.

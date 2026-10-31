@@ -940,7 +940,22 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
-_Empty: round 42 answered the last two._
+45. **The outbox running behind, on Today and in the digest (design 168,
+    R-169). Built without a drawing.** The owner chose to show the
+    outbox backlog on both surfaces now (2026-10-31), and approved the
+    shape and the words.
+    - **On Today:** RUNNING BEHIND (MONO.xs, hi-viz) · "12 queued jobs
+      were still due after this morning's run. The oldest has waited 38h."
+      It sits under Today's three numbers, after any DIGEST NOT EMAILED
+      line and above Gave up, and shows only above zero. It takes that
+      line's shape (round 38 #62b) and has no button. The wait is in whole
+      hours, as "Oldest · 19h" counts it.
+    - **In the digest:** one sentence after Gave up's, only above zero,
+      as D6 adds Gave up's: "12 queued jobs were still due after this
+      morning's run. They're on the Desk's Today." The subject is
+      unchanged, because a backlog is not a failure.
+    - **The ask:** draw it on D0 and D5, or say how it should differ.
+      D5's three numbers stay three either way.
 
 <!-- Item numbers continue past rounds 35–40 (45–76, 82–87). Design numbered the Garmin asks 77–81 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
 

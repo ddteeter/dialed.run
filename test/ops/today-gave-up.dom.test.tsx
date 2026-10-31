@@ -45,6 +45,8 @@ function desk(
       gaveUp,
       oldestGaveUpAt,
       digestUnconfirmedAt,
+      outboxBehind: 0,
+      oldestBehindAt: undefined,
     },
     skipped: [],
   };
@@ -482,5 +484,73 @@ describe("a digest that skipped an operator, on Today", () => {
     expect(
       document.querySelector("[data-part='digest-unconfirmed']"),
     ).toBeNull();
+  });
+});
+
+function runningBehind() {
+  return document.querySelector("[data-part='running-behind']");
+}
+
+function behind(
+  outboxBehind: number,
+  oldestBehindAt: number | undefined,
+  skipped: DeskToday["skipped"] = [],
+): DeskToday {
+  const today = desk(0);
+  return {
+    ...today,
+    counts: { ...today.counts, outboxBehind, oldestBehindAt },
+    skipped,
+  };
+}
+
+/**
+ * Design 168: queued jobs the morning's drain could not reach, one line
+ * under Today's three numbers, only above zero. What counts as behind is
+ * `todayCounts`' to decide (test/ops/desk.test.ts).
+ */
+describe("an outbox running behind, on Today", () => {
+  it("says how many and how long the oldest has waited, in hi-viz, with no button", () => {
+    renderToday([], {}, behind(12, NOON - 38 * HOUR));
+    expect(runningBehind()?.textContent).toBe(
+      "Running behind12 queued jobs were still due after this morning's run. The oldest has waited 38h.",
+    );
+    expect(screen.getByText("Running behind")).toHaveClass("text-hiviz-text");
+    expect(runningBehind()?.previousElementSibling).toBe(
+      screen.getByRole("list", { name: "Today" }),
+    );
+    expect(runningBehind()?.querySelector("button")).toBeNull();
+  });
+
+  it("says one job in the singular, its wait in whole hours however long", () => {
+    renderToday([], {}, behind(1, NOON - 2 * DAY - HOUR - 1));
+    expect(runningBehind()?.textContent).toBe(
+      "Running behind1 queued job was still due after this morning's run. The oldest has waited 49h.",
+    );
+  });
+
+  it("sits under the skipped-digest line when both show", () => {
+    renderToday(
+      [],
+      {},
+      behind(3, NOON - HOUR, [
+        { userId: "op-jess", handle: "jess", address: "je•••@gmail.com" },
+      ]),
+    );
+    expect(runningBehind()?.previousElementSibling).toBe(
+      document.querySelector("[data-part='digest-unconfirmed']"),
+    );
+  });
+
+  it("leaves out the wait when no oldest is known", () => {
+    renderToday([], {}, behind(2, undefined));
+    expect(runningBehind()?.textContent).toBe(
+      "Running behind2 queued jobs were still due after this morning's run.",
+    );
+  });
+
+  it("says nothing when nothing is behind", () => {
+    renderToday([], {}, behind(0, undefined));
+    expect(runningBehind()).toBeNull();
   });
 });

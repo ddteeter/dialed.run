@@ -46,8 +46,7 @@ All in `src/modules/ops/` (`outbox.ts`, `scheduled.ts`) with tests in
 - **Stale crons on `/api/health`** (gap 3, revised 2026-10-29). Sentry's
   Developer plan watches one cron, so `checkHealth` names any cron whose
   heartbeat is older than two periods. The periods are read from the
-  schedules (`cronPeriods`), and the external uptime check pages on the
-  503. A cron that has never run is not stale. Nothing acts on the 503
+  schedules (`cronPeriods`), and the external uptime check pages on the 503. A cron that has never run is not stale. Nothing acts on the 503
   beyond the uptime check: Workers have no health-driven restarts.
 - **Comments** (gap 3). Remove the stale-checkpoint promise from the
   `handleScheduled` docstring and the TODO in `runDailyDigest`.
@@ -84,6 +83,8 @@ All in the `worker` project (integration against D1):
 - **Show outbox depth on the Desk's Today and in the morning email?** That
   is a designed screen (D5: three numbers), so it is out of scope here.
   I recommend deferring it until production gives a baseline.
+  **Built in design 168** (owner, 2026-10-31): a line on each, only above
+  zero.
 - **Hourly alert noise.** Some hourly lines may turn out to be routine
   ("N review claims went stale…"). The bound is one alert per cron per
   day. If one proves routine, demote that line rather than the channel.
