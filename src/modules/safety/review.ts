@@ -86,6 +86,12 @@ export type EnqueueInput = Pick<
 export function enqueueForReview<TSchema extends Record<string, unknown>>(
   database: DrizzleD1Database<TSchema>,
   input: EnqueueInput,
+  /**
+   * When an existing row may be re-opened; every time, unless given. A
+   * stuck photo's escalation (D-153) re-opens only a row settled more than
+   * a day ago, so the hourly sweep never undoes a decision just made.
+   */
+  reopenOnlyIf: SQL = sql`1`,
 ) {
   return (
     database
@@ -115,6 +121,7 @@ export function enqueueForReview<TSchema extends Record<string, unknown>>(
           resolvedAt: orSqlNull(undefined),
           claimedAt: orSqlNull(undefined),
         },
+        setWhere: reopenOnlyIf,
       })
   );
 }
@@ -140,11 +147,20 @@ export function settleOpenReviews(
   subjectType: ReviewSubjectType,
   subjectIds: SQLWrapper | readonly string[],
   settledBy: string,
+  /**
+   * Settled as something other than `removed`, and only rows some sources
+   * opened: a stuck photo's row (D-153) is `approved` by the screening
+   * that finally passed it, and a row reports opened is left for a person.
+   */
+  settled?: {
+    as: "approved";
+    onlyFrom: readonly ReviewSource[];
+  },
 ) {
   return database
     .update(reviewQueue)
     .set({
-      status: "removed",
+      status: settled?.as ?? "removed",
       resolvedBy: settledBy,
       resolvedAt: nowSeconds(),
       claimedAt: orSqlNull(undefined),
@@ -154,6 +170,9 @@ export function settleOpenReviews(
         eq(reviewQueue.subjectType, subjectType),
         inArray(reviewQueue.subjectId, subjectIds),
         inArray(reviewQueue.status, ["pending", "reviewing"]),
+        settled === undefined
+          ? undefined
+          : inArray(reviewQueue.source, settled.onlyFrom),
       ),
     );
 }

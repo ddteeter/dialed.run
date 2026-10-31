@@ -114,6 +114,20 @@ describe("todayCounts", () => {
     expect(counts.waiting).toBe(3);
   });
 
+  it("counts a photo the screener never finished as the screener's (D-153)", async () => {
+    await queueRow({ source: "unscreened" });
+    await queueRow({ source: "missing_file", subjectType: "garment" });
+    await queueRow({ source: "classifier" });
+    await queueRow({ source: "fingerprint" });
+    await queueRow({ source: "reports" });
+
+    const counts = await todayCounts();
+
+    // A held upload is a removed image's copy, not the screener's work.
+    expect(counts.screenerUnfinished).toBe(3);
+    expect(counts.waiting).toBe(5);
+  });
+
   it("has no screener count when only reporters are waiting", async () => {
     await queueRow({ source: "reports" });
 

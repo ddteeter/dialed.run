@@ -533,7 +533,10 @@ flowchart LR
   existing message type (law 9); Drop deletes the row. A dead letter's
   tries are its queue's `max_retries + 1`, from `queueRegistry`, which
   `test/bindings-conformance.test.ts` pins to `wrangler.jsonc`. Photo
-  screening never gives up: its sweep retries `pending` forever.
+  screening never gives up: its sweep retries `pending` forever, and a
+  photo still pending a day after upload goes to the Desk's review queue
+  instead of Gave up (D-153, `safety/stuck.ts`), as `unscreened` or
+  `missing_file`, since Review is where photos are decided.
 - **Two systems, one outbox** (law 8c): a write that owes work to another
   system records the debt in the generic `outbox` table in the same
   `db.batch()` as the change, runs the work as a fast path, and deletes the

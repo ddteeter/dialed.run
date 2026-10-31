@@ -189,6 +189,7 @@ export {
   garmentPhotoForgotten,
   screeningDeletes,
   screenPhoto,
+  stuckSources,
   type Classify,
   type PendingPhoto,
   type PhotoScope,

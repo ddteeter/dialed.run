@@ -1335,8 +1335,18 @@ export const reviewQueue = /*#__PURE__*/ sqliteTable(
     // differently from one three people objected to.
     // `fingerprint`: a new photo matched one removed as an intimate image
     // (D-147, design 152).
+    // `unscreened` and `missing_file`: a photo still pending screening 24
+    // hours after upload (D-153, design 167) — the classifier never
+    // answered, or storage has no object to screen. Widening a text enum
+    // is TypeScript only: the column has no CHECK, so no migration.
     source: text("source", {
-      enum: ["reports", "classifier", "fingerprint"],
+      enum: [
+        "reports",
+        "classifier",
+        "fingerprint",
+        "unscreened",
+        "missing_file",
+      ],
     }).notNull(),
     status: text("status", {
       enum: ["pending", "reviewing", "approved", "removed"],
