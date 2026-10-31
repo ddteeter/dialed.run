@@ -7,8 +7,8 @@
  * Idempotency (resilience law 1) lives in the `imports` row's `status`:
  * a redelivered ImportJob for an already-terminal import (`done` / `failed`
  * / `duplicate`) is a silent no-op. Weather attach is dependency-injected
- * (`attachObservation`) so this compiles and tests fully without lane 103
- * — see the pending-integration call-site below.
+ * (`attachObservation`, `modules/weather`'s own, handed in by the queue
+ * entry) so a test can make it fail.
  */
 import { and, eq, sql } from "drizzle-orm";
 
@@ -23,7 +23,7 @@ import {
 import { effortFromWatch } from "../../lib/contracts";
 import { GARMIN_DEVICE_NAME } from "./garmin/config";
 import { didClaim } from "../../lib/sql/claim";
-import { newUlid } from "../../lib/ids";
+import { newUlid, type Ulid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import { firstRowWhere, hasRowWhere } from "../../lib/sql/keyed-read";
 import { consumeEach } from "../../lib/sql/queue-batch";
@@ -58,10 +58,12 @@ export interface ConsumerDeps {
   importBucket: Pick<R2Bucket, "get">;
   captureException: (error: unknown, context: Record<string, string>) => void;
   /**
-  Pending(102↔103): wire to weather.attachObservation once that module
-  merges; degrades to a no-op (weather stays 'pending') until then.
+  `modules/weather`'s `attachObservation`: one attempt at an imported run's
+  conditions, made once the import is done. Required, so a queue entry that
+  forgets it does not compile — leaving it out once left every imported
+  run waiting up to an hour on the retry cron.
   */
-  attachObservation?: ((runId: string) => Promise<unknown>) | undefined;
+  attachObservation: (runId: Ulid) => Promise<unknown>;
   /**
   Present when Strava credentials are configured; the revoke job is a
   no-op without them.
@@ -83,6 +85,12 @@ export interface ConsumerDeps {
    */
   runnerTimeZone?: ((userId: string) => Promise<string>) | undefined;
 }
+
+/**
+What the dead-letter handler needs: it marks and tells, and never asks for
+a run's weather.
+*/
+type DeadLetterDeps = Omit<ConsumerDeps, "attachObservation">;
 
 const IMPORT_TERMINAL_STATUSES = ["done", "failed", "duplicate"] as const;
 
@@ -269,15 +277,6 @@ async function processImportJob(
     ...effortFromWatch(draft.rpe),
   });
 
-  if (weatherStatus === "pending" && deps.attachObservation) {
-    try {
-      await deps.attachObservation(runId);
-    } catch (error) {
-      // Degrade, don't fail (law 5) — the run stays 'pending' for the
-      // weather module's own retry machinery once it exists.
-      deps.captureException(error, { runId, surface: "attachObservation" });
-    }
-  }
 
   // The import is done, and the Strava reminder this file answers — if it
   // had one — is answered (round 25; one upload clears one reminder), and
@@ -305,6 +304,21 @@ async function processImportJob(
     subjectId: runId,
     body: "Add your kit for the run you just imported.",
   });
+
+  // Last, once the import is done: the conditions are secondary to it, and
+  // the upload screen keeps polling while the run's weather is pending. One
+  // attempt (law 3); `pending` is the reconciliation marker the hourly
+  // retry re-drives if this fails or the Worker dies first (law 8c — the
+  // observation lives in the other database).
+  if (weatherStatus === "pending") {
+    try {
+      await deps.attachObservation(runId);
+    } catch (error) {
+      // Degrade, don't fail (law 5): the import stays done and the run
+      // pending, so a redelivery has nothing to redo.
+      deps.captureException(error, { runId, surface: "attachObservation" });
+    }
+  }
 }
 
 /**
@@ -541,7 +555,7 @@ re-drive.
 */
 export async function handleImportsDlqBatch(
   batch: MessageBatch,
-  deps: ConsumerDeps,
+  deps: DeadLetterDeps,
   tries: number,
 ): Promise<void> {
   await dlqBatchHandler(
@@ -583,7 +597,7 @@ const DEAD_IMPORT_REASON =
  * A dead-lettered import's writes: failed, its runner told, its file's
  * deletion owed — unless it already ended, when there is nothing to mark.
  */
-async function deadImportWrites(deps: ConsumerDeps, importId: string) {
+async function deadImportWrites(deps: DeadLetterDeps, importId: string) {
   const importRow = await importById(deps.db, importId);
   if (
     importRow === undefined ||
