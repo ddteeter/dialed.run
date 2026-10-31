@@ -359,6 +359,20 @@ describe("what a decision writes", () => {
     expect(queued?.createdAt).toBeLessThanOrEqual(before + 5);
   });
 
+  it("is opened when it is created (design 164)", async () => {
+    const { queueId } = await queuedEntry();
+
+    const [row] = await core()
+      .select({
+        createdAt: reviewQueue.createdAt,
+        openedAt: reviewQueue.openedAt,
+      })
+      .from(reviewQueue)
+      .where(eq(reviewQueue.id, queueId));
+
+    expect(row?.openedAt).toBe(row?.createdAt);
+  });
+
   it("approving a product puts it back in autocomplete", async () => {
     const productId = newUlid();
     await core()
@@ -516,6 +530,41 @@ describe("the queue itself", () => {
     // read as "someone already looked at this".
     expect(row?.resolvedBy).toBeNull();
     expect(row?.resolvedAt).toBeNull();
+  });
+
+  it("re-opens now, keeping when it was first created (design 164)", async () => {
+    const { entryId, queueId } = await queuedEntry();
+    await resolveReview(queueId, await makeUser(), "approve");
+    await core()
+      .update(reviewQueue)
+      .set({ createdAt: 1000, openedAt: 1000 })
+      .where(eq(reviewQueue.id, queueId));
+    const before = nowSeconds();
+
+    for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+      await fileReport(
+        {
+          reporterId: await makeUser(),
+          subjectType: "entry",
+          subjectId: entryId,
+          reason: "explicit",
+        },
+        oweInCore,
+      );
+    }
+
+    const [row] = await core()
+      .select({
+        createdAt: reviewQueue.createdAt,
+        openedAt: reviewQueue.openedAt,
+      })
+      .from(reviewQueue)
+      .where(eq(reviewQueue.id, queueId));
+    // What the hold breakers count: a re-hide is a hold this hour, though
+    // the row's first opening was long ago.
+    expect(row?.createdAt).toBe(1000);
+    expect(row?.openedAt).toBeGreaterThanOrEqual(before);
+    expect(row?.openedAt).toBeLessThanOrEqual(before + 5);
   });
 
   it("carries what was alleged and how many people said it", async () => {

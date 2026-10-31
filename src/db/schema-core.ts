@@ -1352,6 +1352,11 @@ export const reviewQueue = /*#__PURE__*/ sqliteTable(
     // and nothing anywhere said so. Null unless claimed. Raised on PR #73.
     claimedAt: integer("claimed_at"),
     createdAt: integer("created_at").notNull(),
+    // When it last went in front of a person: set on the insert and again
+    // on every reopen, which keeps `created_at`. What the hold breakers
+    // count an hour of (design 164), so a re-hide counts as a hold. Null
+    // only on a row from before the column, as `created_at` was copied in.
+    openedAt: integer("opened_at"),
   },
   (t) => [
     // One open decision per subject; a second trigger updates rather than
@@ -1366,6 +1371,8 @@ export const reviewQueue = /*#__PURE__*/ sqliteTable(
     // The 3-year sweep (D-131, design 150): decisions made before its
     // line. An open row has no `resolved_at`.
     index("review_queue_resolved").on(t.resolvedAt),
+    // The hold breakers (design 164): one cause's openings since a time.
+    index("review_queue_source_opened").on(t.source, t.openedAt),
   ],
 );
 
@@ -1409,7 +1416,12 @@ export const photoScreenings = /*#__PURE__*/ sqliteTable(
     }).notNull(),
     createdAt: integer("created_at").notNull(),
   },
-  (t) => [index("photo_screenings_photo").on(t.photoScope, t.photoId)],
+  (t) => [
+    index("photo_screenings_photo").on(t.photoScope, t.photoId),
+    // The classifier breaker's share and the digest's quiet line (design
+    // 164): screenings since a time, and how many were each decision.
+    index("photo_screenings_created").on(t.createdAt, t.decision),
+  ],
 );
 
 /**

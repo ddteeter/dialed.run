@@ -62,12 +62,15 @@ dropped, because it means keeping up with model releases by hand.)
 
 ## Contract touches
 
-- Schema (additive, so proceed per `.claude/rules/schema.md`; numbered past
-  `feat/160-public-pages`' 0073–0074):
-  `0075_add_review_queue_opened_at` adds nullable `review_queue.opened_at`,
-  set on insert and on reopen, with index `(source, opened_at)`.
-  `0076_add_photo_screenings_created_index` adds
-  `photo_screenings(created_at)` for the classifier share and the quiet line.
+- Schema (additive, so proceed per `.claude/rules/schema.md`):
+  `0073_add_review_queue_opened_at` adds nullable `review_queue.opened_at`,
+  set on insert and on reopen and backfilled from `created_at`, with index
+  `(source, opened_at)`. `0074_add_photo_screenings_created_index` adds
+  `photo_screenings(created_at, decision)` for the classifier share and the
+  quiet line. **Numbering**: PR #277 also takes 0073–0074 (it already
+  collides with main's 0072). A gap fails `migration-chain`, so these go
+  in sequence, and whichever PR merges second renumbers its migrations
+  (law 11).
 - New route files: none expected. The release action is a server function
   called from the Desk, and it needs a row in `verification-class.test.ts`
   (Desk class, as the other Desk writes).
@@ -116,7 +119,7 @@ Every step ends with the commit gate, touched-file stryker at 100%
 | -- | ------ | --------- | --------- |
 | 0  | **Measure the band.** `test/fixtures/scenes.ts` gains flat, near-black, near-white, one-way gradient, low-contrast and noisy scenes. Seeded scenes stand in for ordinary photos. Record the popcount of each in this doc. | a fixture test listing each scene's popcount | 8–56 is confirmed or moved, with the numbers here |
 | 1  | **`isDistinctive`** in `lib/photo-fingerprint.ts`. The keep paths in `removed-fingerprints.ts` keep nothing outside the band, and `removedMatchOf` answers nothing for an upload outside it. | band edges 7/8/56/57; a flat grid; an empty pixel buffer; worker tests for both keep paths and the match | a flat removed image keeps no row, and a flat upload is never held |
-| 2  | **Schema**: migrations 0075 and 0076. `enqueueForReview` stamps `opened_at` on insert and on reopen. | `migration-chain`; fresh-D1 apply; worker test on reopen | the migrations apply to a fresh local D1 |
+| 2  | **Schema**: migrations 0073 and 0074. `enqueueForReview` stamps `opened_at` on insert and on reopen. | `migration-chain`; fresh-D1 apply; worker test on reopen | the migrations apply to a fresh local D1 |
 | 3  | **`safety/breakers.ts`**: `holdsInLastHour(cause)`, the three ceiling rules as pure functions, and `isOverCeiling(cause)`. | each rule at ceiling − 1 / ceiling; share below 20 screened; baseline read only over 10; other causes and outside the window not counted | pure rules at 100% mutation |
 | 4  | **Fingerprint breaker** wired into `feed/photos.ts` and `closet/photos.ts`: over the ceiling → no hold, the photo goes to the classifier. | worker tests on both upload paths at and over the ceiling | the 6th hold in an hour is screened, not held |
 | 5  | **Classifier breaker** in `screening.ts`: when a `flag` lands over the ceiling, write nothing and leave the photo `pending`. `retryPendingScreenings` counts these separately. | worker tests: flag over the ceiling stays pending with no queue row; review/pass unaffected | flags stop hiding once over 15% |
