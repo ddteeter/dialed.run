@@ -388,7 +388,7 @@ async function drainOwedEmail(anomalies: string[]): Promise<void> {
 }
 
 /**
- * The public photo bucket's reconcile (D-152, design 163 step 8): copies
+ * The public photo bucket's reconcile (D-153, design 163 step 8): copies
  * the publications no purge saw (a review's Approve, an unban, a photo
  * screened late), and deletes what a retraction's fast path missed. A
  * delete found here is a copy that stayed public longer than it should

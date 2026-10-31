@@ -14,7 +14,7 @@
 > **DRAFT: not reviewed by a lawyer.** Written from the code on `main` as of
 > 2026-10-11, revised 2026-10-18 from the pre-launch legal review (rev. 2)
 > and decisions D-125 to D-139, and 2026-10-28 for public kits and
-> profiles (D-150 to D-153), for the owner to edit. Every `[OWNER: …]` note is a decision or
+> profiles (D-151 to D-154), for the owner to edit. Every `[OWNER: …]` note is a decision or
 > a fact the code cannot supply. Every factual claim is mapped to the code
 > that makes it true in `privacy-policy-sources.md`; change one, change both.
 

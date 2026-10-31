@@ -198,7 +198,7 @@ export async function fileTakedownRequest<Attempt>(
  * Design 163: a kit a request hid leaves the edge now, not within the
  * TTL — the open web's `/kit/<id>` is a link `/takedown` takes. So does a
  * held photo's kit, whose page shows it, and the purge deletes the
- * photo's public copy (D-152, design 163 step 8).
+ * photo's public copy (D-153, design 163 step 8).
  */
 async function purgeHeld(
   db: Db,

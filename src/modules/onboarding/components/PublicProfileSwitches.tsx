@@ -7,7 +7,7 @@ import type { PublicProfileState } from "../public-profile";
 import { toggleFieldProps } from "./TotalsSwitch";
 
 /**
- * Settings › Privacy's PUBLIC PROFILE group (D-150; round 41 #86b), in the
+ * Settings › Privacy's PUBLIC PROFILE group (D-151; round 41 #86b), in the
  * board's words. It saves as you switch, like ANONYMOUS TOTALS, and is
  * not optimistic either (§4a): a switch keeps its saved state until the
  * save lands, and a failed save leaves it under a `Not changed` band.
@@ -19,7 +19,7 @@ export const SHOW_CLOSET_LINE =
 
 /**
  * The status after turning the profile off while PUBLIC was the default:
- * the default moved to SHARED with it (D-150).
+ * the default moved to SHARED with it (D-151).
  */
 export const DEFAULT_MOVED_LINE = "New runs now default to Shared.";
 

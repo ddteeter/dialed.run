@@ -38,7 +38,7 @@ import {
 } from "./helpers";
 
 /**
- * The public profile's read (round 41 #86d, #86f; D-150): what `/@handle`
+ * The public profile's read (round 41 #86d, #86f; D-151): what `/@handle`
  * shows to anyone — the runner's PUBLIC kits through `worldVisibleEntry()`
  * alone, and the closet's own rotation while they show it.
  */
@@ -605,7 +605,7 @@ describe("not public (round 41 #86f): one answer for every reason", () => {
   });
 });
 
-describe("publicProfileHeaders (design 163, D-153)", () => {
+describe("publicProfileHeaders (design 163, D-154)", () => {
   it("keeps a public profile a minute, tagged with its path and its runner", async () => {
     const { runner } = await fullyPopulated();
 

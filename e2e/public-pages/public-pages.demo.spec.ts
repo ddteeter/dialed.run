@@ -3,7 +3,7 @@
  * kit, Settings › Privacy's PUBLIC PROFILE switch (#86b), `/kit/<id>` as a
  * stranger sees it (#86c), `/@handle` as a stranger sees it (#86d), and
  * the not-public page a kit made private leaves behind (#86f) — design
- * 163, decisions D-150–D-153. One journey, one video.
+ * 163, decisions D-151–D-154. One journey, one video.
  *
  * A3 as a whole is `e2e/verdict/`'s; this claims only the PUBLIC choice,
  * because the pages it opens are what this journey is about.
@@ -178,7 +178,7 @@ test("make a kit and a profile public, see them as a stranger, take the kit back
   await page.goto("/onboarding/settings/sharing");
   await hydrated(page);
   const newRuns = page.getByRole("group", { name: "Who sees new runs" });
-  // D-150: PUBLIC is a default only once the profile is public.
+  // D-151: PUBLIC is a default only once the profile is public.
   await expect(newRuns.getByRole("radio")).toHaveCount(2);
   const profileSwitch = page.getByRole("checkbox", { name: "Public profile" });
   await expect(profileSwitch).not.toBeChecked();

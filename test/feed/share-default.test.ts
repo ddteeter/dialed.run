@@ -39,7 +39,7 @@ describe("defaultAudienceFor", () => {
   });
 });
 
-describe("a PUBLIC default (D-150)", () => {
+describe("a PUBLIC default (D-151)", () => {
   it("starts a new entry public", async () => {
     const open = await makeUser({ defaultAudience: "world" });
 

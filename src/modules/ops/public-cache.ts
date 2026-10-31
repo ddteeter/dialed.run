@@ -1,5 +1,5 @@
 /**
- * The headers a public page leaves with (design 163, D-153): what lets the
+ * The headers a public page leaves with (design 163, D-154): what lets the
  * edge keep it, and the tags a purge names it by.
  *
  * **Only the open web's responses carry these.** A public page is safe to
@@ -52,7 +52,7 @@ export function publicPageTags(
 }
 
 /**
- * A public page's cache headers (design 163, D-153): a minute at the edge,
+ * A public page's cache headers (design 163, D-154): a minute at the edge,
  * public or not, tagged as above. The kit's page and the profile's both
  * leave with these, so the two cannot drift apart.
  */

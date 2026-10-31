@@ -39,7 +39,7 @@ function withHeaders(
 }
 
 /**
- * A public kit's card (round 41 #86e, D-151), or the default card for any
+ * A public kit's card (round 41 #86e, D-152), or the default card for any
  * kit that is not public — the same bytes and headers whatever the
  * reason, kept a minute like the not-public page, so a kit made public
  * shows its own card within the page's TTL.

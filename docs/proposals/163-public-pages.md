@@ -1,7 +1,7 @@
 # Proposal — Public pages: kits and profiles the open web can see
 
 **Status**: approved (owner, 2026-10-25). Decisions 1–6 were ruled as
-recommended and are D-150 (1, 3, 4), D-151 (2), D-152 (5) and D-153 (6);
+recommended and are D-151 (1, 3, 4), D-152 (2), D-153 (5) and D-154 (6);
 decision 4 adds that a choice of coarser dates can come later. Decision 7
 went to design as item 86: round 41 named the audience PUBLIC and drew
 every surface (`docs/design-deltas.md`, "Answered in round 41"). The build design is `docs/designs/163-public-pages.md`.

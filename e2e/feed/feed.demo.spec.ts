@@ -746,7 +746,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     const tag = ownCard.locator(
       '[data-part="author"] [data-part="review-tag"]',
     );
-    await expect(tag.locator('[aria-hidden="true"]')).toHaveText(
+    await expect(tag.locator(':scope > [aria-hidden="true"]')).toHaveText(
       "[Under review]",
       { ignoreCase: true },
     );

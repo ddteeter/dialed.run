@@ -1029,7 +1029,7 @@ design has answered 86.
     intimate-image report only. Both links open a new tab and say so in
     their accessible names.
 
-86. **Public pages (D-150–D-153, design 163). Ruled and drawn; build work,
+86. **Public pages (D-151–D-154, design 163). Ruled and drawn; build work,
     phases 1–4.** Where the ruling adds to the decisions:
     - **a. PUBLIC is the name.** A3's share toggle becomes a three-row
       radiogroup (PRIVATE "Only you." · SHARED "Runners signed in to

@@ -163,7 +163,7 @@ export function followingFeedStatement(
     .where(
       and(
         eq(outfitEntries.userId, authors.id),
-        // SHARED or PUBLIC (D-150), the expression the author's index is
+        // SHARED or PUBLIC (D-151), the expression the author's index is
         // partial on, so the seek needs no audience column.
         sharedAudience(outfitEntries.audience),
         eq(outfitEntries.moderationStatus, authors.status),

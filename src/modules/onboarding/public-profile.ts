@@ -14,7 +14,7 @@ import type { PublicProfileChoice, SharingChoice } from "./inputs";
 import { savePreferences } from "./profile";
 
 /**
- * D-150's two profile switches and the one rule tying them to the sharing
+ * D-151's two profile switches and the one rule tying them to the sharing
  * default (round 41 #86b): `world` can be a runner's default only while
  * their profile is public, and turning the profile off takes a PUBLIC
  * default back to SHARED in the same statement.
@@ -100,7 +100,7 @@ export async function setPublicProfile(
 /**
  * What a switch writes over an existing row. Off also takes a PUBLIC
  * default back to SHARED: a PUBLIC default with no public profile is the
- * state D-150 rules out.
+ * state D-151 rules out.
  */
 function setOf(choice: PublicProfileChoice) {
   if (!("publicProfile" in choice) || choice.publicProfile) return choice;

@@ -12,9 +12,9 @@ import { PUBLIC_ORIGIN } from "../../modules/ops/og/site-head";
 
 /**
  * `/kit/<id>`: a kit its runner made PUBLIC, for anyone (round 41 #86c,
- * D-150), and one 404 page for every kit that is not (#86f).
+ * D-151), and one 404 page for every kit that is not (#86f).
  *
- * The same page for every viewer (D-153): the loader reads no session,
+ * The same page for every viewer (D-154): the loader reads no session,
  * the root reads none on this path (`lib/open-web`), and what differs for
  * a signed-in viewer is filled in the browser. The server function sets
  * the cache headers the page leaves with.

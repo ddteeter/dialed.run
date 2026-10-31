@@ -104,7 +104,7 @@ export const saveUnitsFn = createServerFn({ method: "POST" })
 
 /**
  * Settings › Privacy's NEW RUNS. A PUBLIC default is refused unless the
- * runner's profile is public (D-150), in the write itself (`saveSharing`).
+ * runner's profile is public (D-151), in the write itself (`saveSharing`).
  * Unconfirmed runners may save, since a default is seen by nobody and
  * their entries start private whatever it says (D-50).
  */

@@ -83,3 +83,26 @@ describe("with items", () => {
     expect(screen.queryByText("None.")).not.toBeInTheDocument();
   });
 });
+
+describe("the counted heading", () => {
+  it("hands its count and title to Bracketed as one text node", () => {
+    // Chromium drops a whitespace-only text node from an accessible name,
+    // so `{count} {title}` is announced "2waiting" while it draws "2
+    // waiting". happy-dom computes the name with the space either way, so
+    // this pins the shape that reads right in a real browser.
+    render(
+      <ListSection title="waiting" items={["a", "b"]} count>
+        {(item) => <li key={item}>{item}</li>}
+      </ListSection>,
+    );
+    const heading = screen.getByRole("heading", { level: 2 });
+    const texts = Array.from(
+      heading.querySelectorAll("span:not([aria-hidden])"),
+      (span) =>
+        [...span.childNodes]
+          .filter((node) => node.nodeType === Node.TEXT_NODE)
+          .map((node) => node.textContent),
+    ).flat();
+    expect(texts).toStrictEqual(["2 waiting"]);
+  });
+});

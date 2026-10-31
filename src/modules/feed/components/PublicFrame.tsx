@@ -10,7 +10,7 @@ import { Mono, Page, Wordmark, verdictHue } from "../../../ui";
  * and `/@handle`, and their not-public twins, for anyone, signed in or
  * not.
  *
- * **One page for every viewer** (D-153). The server renders the signed-out
+ * **One page for every viewer** (D-154). The server renders the signed-out
  * page, always, so the edge can keep it; only the top bar's right slot and
  * the invite block differ for a signed-in viewer, and both are filled in
  * the browser, after load, from a session check the route hands in.

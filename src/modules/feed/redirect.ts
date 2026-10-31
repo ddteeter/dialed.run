@@ -114,7 +114,7 @@ export function toHandlePage(
 }
 
 /**
- * `/feed/u/<segment>` was H by id before it was H by handle (D-153), and
+ * `/feed/u/<segment>` was H by id before it was H by handle (D-154), and
  * links and specs still name a runner by id: an id is asked for its
  * runner's handle (`handleOf`, the caller's server function) and sent on
  * to it. Anything else is a handle, and left for the page. A handle is

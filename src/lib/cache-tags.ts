@@ -1,6 +1,6 @@
 /**
  * The tags a public page is stored under at the edge, and what a purge
- * names (design 163, D-153): `entry:<id>`, `runner:<userId>` and
+ * names (design 163, D-154): `entry:<id>`, `runner:<userId>` and
  * `handle:<handle>`.
  *
  * **In `lib` because the writers are everywhere.** A kit is taken back by
@@ -40,7 +40,7 @@ export function handleCacheTag(handle: string): string {
 }
 
 /**
- * Purges these tags from the edge, in the background (design 163, D-153):
+ * Purges these tags from the edge, in the background (design 163, D-154):
  * it never throws and never delays the write that asked (law 5). `ops`'
  * `purgePublicPages`, handed to the writers that cannot import `ops`, and a
  * spy in a test.

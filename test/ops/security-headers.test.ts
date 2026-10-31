@@ -113,7 +113,7 @@ describe("contentSecurityPolicy", () => {
         "'self' 'nonce-n0nce+/=' 'wasm-unsafe-eval' https://challenges.cloudflare.com",
       "style-src": "'self' 'unsafe-inline'",
       // A PUBLIC kit's photos come from the public bucket's own domain
-      // (D-152, design 163 step 8); nothing else off-site.
+      // (D-153, design 163 step 8); nothing else off-site.
       "img-src": "'self' blob: data: https://photos.dialed.run",
       "font-src": "'self'",
       "connect-src": "'self'",

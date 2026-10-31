@@ -14,6 +14,7 @@
  * empty: the CSVs never point at a file the ZIP does not have.
  */
 import { audienceWord } from "../../lib/contracts";
+import { garmentOriginalKey } from "../../lib/garment-photo-key";
 import type { ExportData } from "./export";
 import {
   csvOf,
@@ -57,7 +58,7 @@ function garmentPhoto(
 ): ExportObject | undefined {
   if (garment.photoKey === null) return undefined;
   const candidates = [
-    { key: `${garment.photoKey}/original.jpg`, extension: "jpg" },
+    { key: garmentOriginalKey(garment.photoKey), extension: "jpg" },
     { key: `${garment.photoKey}/full.webp`, extension: "webp" },
   ];
   for (const candidate of candidates) {

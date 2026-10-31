@@ -1,5 +1,5 @@
 /**
- * A runner's rotation, for their public profile (round 41 #86d, D-150):
+ * A runner's rotation, for their public profile (round 41 #86d, D-151):
  * what `/@handle` shows of the closet when its runner turned on "Show my
  * closet".
  *

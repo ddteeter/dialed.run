@@ -37,7 +37,7 @@ import {
 } from "./helpers";
 
 /**
- * The public kit's read (round 41 #86c, D-150): what `/kit/<id>` and its card
+ * The public kit's read (round 41 #86c, D-151): what `/kit/<id>` and its card
  * show to anyone, through `worldVisibleEntry()` alone.
  */
 
@@ -190,7 +190,7 @@ async function resetAll(): Promise<void> {
 beforeEach(resetAll);
 
 describe("publicKitRead: a public kit", () => {
-  it("shows exactly the fields D-150 lists, in the runner's units, on the run's day", async () => {
+  it("shows exactly the fields D-151 lists, in the runner's units, on the run's day", async () => {
     const { runner, handle, entryId } = await fullyPopulated();
 
     const read = await publicKitRead(entryId);
@@ -298,7 +298,7 @@ describe("publicKitRead: a public kit", () => {
 
     expect(before?.photos).toBeUndefined();
     expect(after?.photos).toStrictEqual(["https://photos.dialed.run/a1b2"]);
-    // D-151: never the photo on the card, so its version ignores them.
+    // D-152: never the photo on the card, so its version ignores them.
     expect(after?.cardVersion).toBe(before?.cardVersion);
     await core().delete(publicPhotos);
     await core().delete(entryPhotos);
@@ -545,7 +545,7 @@ describe("not public (round 41 #86f): one answer for every reason", () => {
   });
 });
 
-describe("publicKitHeaders (design 163, D-153)", () => {
+describe("publicKitHeaders (design 163, D-154)", () => {
   it("keeps a public kit a minute, tagged with the kit and its runner", async () => {
     const { runner, entryId } = await fullyPopulated();
 

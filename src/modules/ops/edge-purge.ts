@@ -1,5 +1,5 @@
 /**
- * Purging the open web's pages from the edge by tag (design 163, D-153):
+ * Purging the open web's pages from the edge by tag (design 163, D-154):
  * what a write that takes a page back calls, so the page goes within the
  * purge rather than the TTL.
  *

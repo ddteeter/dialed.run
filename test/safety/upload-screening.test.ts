@@ -227,7 +227,7 @@ describe("uploading an entry photo", () => {
       .where(eq(entryPhotos.photoKey, key));
     expect(row?.status).toBe("pending");
     const pending = await pendingEntryPhotos();
-    expect(pending.map((photo) => photo.photoKey)).toContain(key);
+    expect(pending.map((photo) => photo.objectKey)).toContain(key);
   });
 });
 

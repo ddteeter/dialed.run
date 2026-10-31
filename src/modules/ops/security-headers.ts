@@ -82,7 +82,7 @@ const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
  *   blob.
  * - `img-src blob: data:`: photo previews before upload are object URLs.
  *   The public photo bucket's origin: a PUBLIC kit's photos are served
- *   from there, not by the Worker (D-152, design 163 step 8).
+ *   from there, not by the Worker (D-153, design 163 step 8).
  * - `form-action`: Google and Strava sign-in leave by redirect, which a
  *   browser checks against `form-action` when a form started it.
  */

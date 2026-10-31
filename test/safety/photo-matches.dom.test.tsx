@@ -14,6 +14,7 @@ import type { RemovedImage } from "../../src/modules/safety/removed-fingerprints
 import type { QueueRow } from "../../src/modules/safety/review";
 import type { PendingTakedownRequest } from "../../src/modules/safety/takedown-requests";
 import { renderWithRouter } from "../modules/run-fixtures";
+import { bracketed } from "../ui/bracketed";
 
 /**
  * D-142 (design 146): a Review row about an intimate image lists the
@@ -311,7 +312,7 @@ describe("RemovedMatchLine", () => {
     );
     expect(part("removed-match")).toHaveTextContent("The same image");
     expect(part("photo-matches")).not.toBeNull();
-    expect(screen.getByText("[held on upload]")).toBeVisible();
+    expect(screen.getByText(bracketed("held on upload"))).toBeVisible();
     // The line names the nearest; the grid has a tile for each.
     expect(
       document.querySelectorAll('[data-part="removed-tile"]'),

@@ -52,7 +52,7 @@ describe("writableAudienceSchema", () => {
   });
 });
 
-describe("the stranger audiences (D-150)", () => {
+describe("the stranger audiences (D-151)", () => {
   it("are SHARED and PUBLIC, both writable", () => {
     expect(strangerAudiences).toEqual(["runners", "world"]);
     expect(WORLD_AUDIENCE).toBe("world");

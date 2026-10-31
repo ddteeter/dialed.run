@@ -472,7 +472,7 @@ export async function moderateContent(
  * Design 163: a kit taken down — removed, quarantined or held — leaves
  * the edge now rather than within the TTL, and so does the kit a photo
  * taken down was on, whose page shows it. The purge deletes the public
- * copies too (D-152, step 8): every copy of a kit taken down, and a photo
+ * copies too (D-153, step 8): every copy of a kit taken down, and a photo
  * taken down's own.
  */
 function purgeTakenDown(

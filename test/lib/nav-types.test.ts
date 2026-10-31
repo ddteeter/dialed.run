@@ -196,7 +196,7 @@ describe("which type an edge resolves to", () => {
       ["/feed", "/feed/entry/e1"],
       ["/feed/me", "/feed/entry/e1"],
       ["/feed/entry/e1", "/feed/u/u1"],
-      // H by handle (D-153; FEED-10).
+      // H by handle (D-154; FEED-10).
       ["/feed/search", "/feed/u/maya_runs"],
       ["/feed", "/feed/search"],
       ["/runs", "/runs/r1"],
@@ -561,7 +561,7 @@ describe("viewTransitionTypesFor", () => {
   });
 });
 
-describe("the open web's pages (`/kit/<id>`, `/@handle`, D-153)", () => {
+describe("the open web's pages (`/kit/<id>`, `/@handle`, D-154)", () => {
   it("are document loads, cut from anywhere: H moved to /feed/u/<handle>", () => {
     expect(typeOf("/feed/search", "/@maya_runs")).toBe("cut");
     expect(typeOf("/@maya_runs", "/kit/01J00000000000000000000000")).toBe(

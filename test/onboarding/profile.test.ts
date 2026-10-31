@@ -643,7 +643,7 @@ describe("sharingInput", () => {
     expect(sharingInput.parse({ defaultAudience: "private" })).toEqual({
       defaultAudience: "private",
     });
-    // Whether the runner may have it is `saveSharing`'s question (D-150).
+    // Whether the runner may have it is `saveSharing`'s question (D-151).
     expect(sharingInput.parse({ defaultAudience: "world" })).toEqual({
       defaultAudience: "world",
     });

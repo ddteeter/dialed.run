@@ -1,9 +1,9 @@
 /**
- * What a public kit is (round 41 #86c, D-150), with no way to read one —
+ * What a public kit is (round 41 #86c, D-151), with no way to read one —
  * the half a route and a component need, apart from `public-kit.ts`,
  * which reaches `src/env` (the same split as `conditions-shape.ts`).
  *
- * **Every field is one D-150 lists**, already worded for display in the
+ * **Every field is one D-151 lists**, already worded for display in the
  * runner's own units: a signed-out visitor has none of their own. There
  * is no field that could carry the run's start time, its coordinates or
  * route, a piece's flag or note, a Useful count or a follow, so the page
@@ -65,9 +65,9 @@ export interface PublicKit {
   readonly gain?: PublicStat;
   readonly caption?: string;
   /**
-   * The kit's screened photos as the public bucket serves them (D-152,
+   * The kit's screened photos as the public bucket serves them (D-153,
    * design 163 step 8): absolute URLs on its own origin, in the kit's
-   * order. Absent with none. Never on the card (D-151).
+   * order. Absent with none. Never on the card (D-152).
    */
   readonly photos?: readonly string[];
   readonly pieces: readonly PublicPiece[];

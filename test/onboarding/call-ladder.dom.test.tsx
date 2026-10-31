@@ -16,6 +16,7 @@ import {
 } from "../../src/modules/onboarding/components/CallLadder";
 import { ladderFrom } from "../../src/modules/onboarding/ladder";
 import { queryWeatherCredit, WEATHER_CREDIT } from "../ui/weather-credit";
+import { bracketed } from "../ui/bracketed";
 
 /**
  * The Call tab's teaser — K, as round 22's item 24 rules it.
@@ -224,7 +225,7 @@ describe("coverage", () => {
       />,
     );
     expect(screen.getByText("Your coverage")).toBeVisible();
-    expect(screen.getByText("[5 verdicts]")).toBeVisible();
+    expect(screen.getByText(bracketed("5 verdicts"))).toBeVisible();
   });
 
   it("credits Visual Crossing inside the coverage, whose bands are feels-like bands (D-144)", async () => {

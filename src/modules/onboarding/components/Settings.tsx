@@ -426,7 +426,7 @@ export function UnitsForm({
 export const SHARE_DEFAULT_LEGEND = "Who sees new runs";
 
 /**
- * While the profile is off, NEW RUNS has no PUBLIC row (D-150: `world`
+ * While the profile is off, NEW RUNS has no PUBLIC row (D-151: `world`
  * can be a default only once the profile is public), and this line takes
  * its place.
  */

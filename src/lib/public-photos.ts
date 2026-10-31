@@ -1,5 +1,5 @@
 /**
- * The public photo bucket's names (D-152, design 163 step 8): where a
+ * The public photo bucket's names (D-153, design 163 step 8): where a
  * PUBLIC kit's screened photos are served from, how long a copy may stay
  * at the edge, and the key a copy is stored under.
  *

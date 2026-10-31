@@ -341,7 +341,7 @@ every visitor for as long as it is kept. Public pages use hash-based CSP.
 
 ## Deviations (photos)
 
-Step 8, world photos (D-152). Built as R-153 describes, with these choices
+Step 8, world photos (D-153). Built as R-153 describes, with these choices
 the design had not made:
 
 - **The copy's key lives in its own table, `public_photos`** (migration
@@ -405,7 +405,7 @@ the design had not made:
   `EntryDetail` to its own file and given a `srcOf`, so `/k` does not
   reach D's screen), under who and which day and over the
   conditions (round 41 #86c's order), with no delete. The card never
-  carries one (D-151); its version ignores them.
+  carries one (D-152); its version ignores them.
 - **`/@handle`'s kit rows show the kit's first photo** (round 41 #86d:
   "the photo, or a --tint tile"): the copy `/k` shows first, read by the
   same query (`ops/public-photos.ts` `landedCopies`, behind both
@@ -453,7 +453,7 @@ Each step is one or more commits that pass the commit gate on their own.
    Settings › Privacy's PUBLIC PROFILE group, the changed strings.
 6. **`/kit/<id>`** (#86c, #86f), its card (#86e) and the cache headers.
 7. **`/@handle`** (#86d) and H's move to `/feed/u/<handle>`.
-8. **World photos** (D-152): `PUBLIC_PHOTOS`, `public_photos`, the
+8. **World photos** (D-153): `PUBLIC_PHOTOS`, `public_photos`, the
    reconcile and its sweep ("Deviations (photos)"). Done when
    `test/safety/public-photo-retractions.test.ts` shows every retraction
    path deleting the copy and `test/ops/public-photos.test.ts` that nothing

@@ -22,7 +22,7 @@ export const OG_WIDTH = 1200;
 export const OG_HEIGHT = 630;
 
 /**
- * What a public kit's card shows (round 41 #86e, D-151), already worded
+ * What a public kit's card shows (round 41 #86e, D-152), already worded
  * for display by the feed's read, which also decides whether the kit may
  * be shown at all: a kit that is not public never becomes one of these,
  * and gets the default card instead.

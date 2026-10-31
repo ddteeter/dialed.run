@@ -23,7 +23,7 @@ import {
  * `/kit/<id>` for a public kit (round 41 #86c). Order: who and which day,
  * the photo when it has one, conditions and verdict, the four stats, the
  * caption, the kit, the credit, the pitch, the foot. The photos are D's
- * pager, served from the public bucket (D-152, design 163 step 8), with
+ * pager, served from the public bucket (D-153, design 163 step 8), with
  * no delete: nobody owns anything on the open web's page.
  *
  * `origin` is where the page lives, for the link Report this kit hands

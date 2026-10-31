@@ -64,7 +64,7 @@ count_in_totals  int      -- boolean, NOT NULL DEFAULT 1: Settings › Sharing's
                           --  counts unless its runner's row says 0 (NOT
                           --  EXISTS on the profile's primary key).
 public_profile   int      -- boolean, NOT NULL DEFAULT 0: Settings › Privacy's
-                          --  "Public profile" (D-150). Off, /@handle is the
+                          --  "Public profile" (D-151). Off, /@handle is the
                           --  not-public page to a signed-out visitor; turning
                           --  it off moves a 'world' default_audience to
                           --  'runners' in the same write.
@@ -259,7 +259,7 @@ user_id      text FK   -- denormalized deliberately: backs the feed index
 verdict      int       -- -2..+2, NULLABLE until the user answers
                        -- -2 way_cold, -1 bit_cold, 0 dialed, +1 bit_warm, +2 way_warm
 audience     text      -- 'private' | 'groups' | 'runners' | 'world' (D-109,
-                       -- D-150): who may see it. PRIVATE / SHARED / PUBLIC on
+                       -- D-151): who may see it. PRIVATE / SHARED / PUBLIC on
                        -- screen. Seeded from default_audience at log time,
                        -- runner-chosen. DEFAULT 'private' fails closed; every
                        -- app writer sets it. 'runners' and 'world' are shown
@@ -269,13 +269,13 @@ created_at   int
 ```
 
 - **SHARED is visible to any signed-in runner; only PUBLIC reaches the
-  open web** (D-58, revised by D-150). A signed-out request gets nothing
+  open web** (D-58, revised by D-151). A signed-out request gets nothing
   about a SHARED or PRIVATE entry, or a profile that is not public — not
   its data, not its photo, not entry-specific head meta. A PUBLIC kit is
-  served at `/kit/<id>` with the fields D-150 lists, and a public profile at
+  served at `/kit/<id>` with the fields D-151 lists, and a public profile at
   `/@handle` (design 163); `worldVisibleEntry()` in `modules/safety` is
   the one open-web rule. Link previews use the generic card except a
-  PUBLIC kit's own (D-151).
+  PUBLIC kit's own (D-152).
 - A run appears in the feed **only when it has a shared (`runners` or
   `world`) outfit_entry**.
 - The shared post shows the 5-state verdict label. What is never public:
