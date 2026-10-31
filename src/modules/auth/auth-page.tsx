@@ -22,7 +22,7 @@ import { AGE_LINE } from "../../lib/contracts/age";
 import { authFailure, authStatus, isAccountClosed } from "./auth-copy";
 import { GoogleButton, type GoogleSignIn } from "./google-button";
 import { PasswordField } from "./password-field";
-import type { CarriedForm } from "./sign-in-search";
+import type { CarriedForm } from "../../lib/carried-form";
 
 /**
  * The shell both auth screens wear — Au1 and Au2, and every state drawn

@@ -6,11 +6,11 @@ Design 124 built Au7's arrival (`/auth/login?carried=…`: the ink notice,
 the prefilled email, focus on Password, the return to `redirect`), but
 nothing sends a runner there. A form whose save is refused for a lapsed
 session shows the "Nothing saved. You were signed out." band, and its Try
-again is refused again. The Form Contract (`SESSION EXPIRED`: *"route to
-sign-in carrying the payload, return to the filled form"*), product.md §4
-and the Auth board (*"After Log in, the runner lands on the filled form
-they left, and nothing re-submits on its own"*; the notice *"What you
-entered is kept."*) all promise more than the route: the form's contents
+again is refused again. The Form Contract (`SESSION EXPIRED`: _"route to
+sign-in carrying the payload, return to the filled form"_), product.md §4
+and the Auth board (_"After Log in, the runner lands on the filled form
+they left, and nothing re-submits on its own"_; the notice _"What you
+entered is kept."_) all promise more than the route: the form's contents
 come back.
 
 ## Approach
@@ -34,8 +34,8 @@ come back.
   test), keeps the band.
 
 **No form passes `carry` yet**, so nothing a runner sees changes in this PR.
-Turning a form on is one line, but it would make the notice's *"What you
-entered is kept."* untrue: restoring the contents is not built (open
+Turning a form on is one line, but it would make the notice's _"What you
+entered is kept."_ untrue: restoring the contents is not built (open
 question 1).
 
 ## Contract touches

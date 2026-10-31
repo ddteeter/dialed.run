@@ -28,11 +28,9 @@ import {
 import { PasswordField } from "../../src/modules/auth/password-field";
 import { signIn } from "../../src/modules/auth/credentials";
 import { useGoogleSignIn } from "../../src/modules/auth/google-button";
-import {
-  CARRIED_EMAIL_KEY,
-  useCarriedEmail,
-} from "../../src/modules/auth/carried-email";
-import type { CarriedForm } from "../../src/modules/auth/sign-in-search";
+import { CARRIED_EMAIL_KEY } from "../../src/lib/browser/carried-email";
+import { useCarriedEmail } from "../../src/modules/auth/carried-email";
+import type { CarriedForm } from "../../src/lib/carried-form";
 import { AccountClosed } from "../../src/modules/safety/components/AccountClosed";
 
 /**
@@ -757,7 +755,7 @@ describe("Au7 · signed out arrival", () => {
 
   it("reads the key the session-expiry carry writes", () => {
     // The wire name between this reader and its writer (the carry in
-    // `ui/use-form-submit`, and the e2e specs): changing it on one side
+    // `ui/session-lapse`, and the e2e specs): changing it on one side
     // alone silently loses every prefilled email.
     expect(CARRIED_EMAIL_KEY).toBe("dialed.carried-email");
   });

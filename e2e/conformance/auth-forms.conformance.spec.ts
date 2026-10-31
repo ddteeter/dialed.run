@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { Page, Route } from "@playwright/test";
 
-import { CARRIED_EMAIL_KEY } from "../../src/modules/auth/carried-email";
+import { CARRIED_EMAIL_KEY } from "../../src/lib/browser/carried-email";
 import { accountEmail } from "../support/accounts";
 import { fillOf, hydrated, openBoard } from "../support/conformance";
 import { partsExcept, partsIn, wordsOf } from "./auth-parts";

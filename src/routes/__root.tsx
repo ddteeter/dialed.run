@@ -14,6 +14,7 @@ import { gateOnHandle } from "../modules/account/route-decisions";
 import { signedInQuery } from "../modules/auth/functions";
 import { SITE_LINKS, SITE_META } from "../modules/ops/og/site-head";
 import { Devtools } from "../ui/Devtools";
+import { SessionLapseAnswer } from "../ui/session-lapse";
 import { TermsRefusalAnswer } from "../ui/terms-refusal";
 import { UnconfirmedRefusalAnswer } from "../ui/unconfirmed-refusal";
 
@@ -134,12 +135,13 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       <body className="bg-ground font-sans text-ink antialiased">
         {/* A refusal for being behind on the terms opens the prompt, from
             any form, control or loader under here (decision D-96); one for
-            an unconfirmed address opens "Confirm your email first" (D-113). */}
+            an unconfirmed address opens "Confirm your email first" (D-113);
+            a carrying form's lapsed session goes to log-in (Au7). */}
         <TermsRefusalAnswer>
           <UnconfirmedRefusalAnswer
             gate={confirmEmailOnRefusal(ownAccountQuery, resendConfirmationFn)}
           >
-            {children}
+            <SessionLapseAnswer>{children}</SessionLapseAnswer>
           </UnconfirmedRefusalAnswer>
         </TermsRefusalAnswer>
         <Devtools />
