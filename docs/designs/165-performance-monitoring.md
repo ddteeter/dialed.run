@@ -301,6 +301,17 @@ Recorded as the build found them.
 - **The day is filtered with `toDateTime('… 00:00:00', 'Etc/UTC')`.** The
   SQL API's docs say it runs in `Etc/UTC`; the zone is spelled out anyway.
 
+- **The daily checks judge LCP, INP, CLS and `nav` at p75, and the
+  server at p95 for `2xx` responses only.** A slow error is the error's
+  problem, and Sentry has it. FCP and TTFB are stored but not judged: LCP
+  covers the load, and they are there to explain it.
+- **The 7-day median needs three days that passed `MIN_N`** before it
+  speaks, so a route's first quiet week stays silent. At a limit, or at
+  exactly 25% over the median, is not a breach.
+- **A breach is a line in the `speed` digest kind,** so one daily event
+  carries the day's breaches (the digest's existing fingerprint by kind
+  and day), rather than an event per route.
+
 ## Test plan
 
 Covered per step above. Mutation ratchet: everything outside

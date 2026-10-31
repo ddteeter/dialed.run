@@ -115,15 +115,21 @@ export function rollupDepsFromEnv(
 }
 
 /**
+ * The UTC day `count` days before `day`.
+ */
+export function dayBefore(day: string, count: number): string {
+  const date = new Date(`${day}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - count);
+  return date.toISOString().slice(0, 10);
+}
+
+/**
  * The `count` UTC days before `today`, newest first.
  */
 export function daysBefore(today: string, count: number): string[] {
-  const start = new Date(`${today}T00:00:00Z`);
-  return Array.from({ length: count }, (_, index) => {
-    const day = new Date(start);
-    day.setUTCDate(start.getUTCDate() - index - 1);
-    return day.toISOString().slice(0, 10);
-  });
+  return Array.from({ length: count }, (_, index) =>
+    dayBefore(today, index + 1),
+  );
 }
 
 /**

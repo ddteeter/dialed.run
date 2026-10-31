@@ -701,12 +701,12 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
     ]);
   });
 
-  it("hands the speed rollup today's UTC day and reports what it could not do (design 165)", async () => {
+  it("hands the speed digest today's UTC day and reports what it could not do (design 165)", async () => {
     const { reporter, events } = recordingReporter();
     const asked: string[] = [];
 
     const outcome = await handleScheduled(DIGEST, reporter, {
-      rollupSpeed: (today, anomalies) => {
+      speed: (today, anomalies) => {
         asked.push(today);
         anomalies.push("speed rollup for 2026-10-30 failed: answered 503");
         return Promise.resolve();
@@ -724,13 +724,13 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
     ]);
   });
 
-  it("runs the other checks when the speed rollup throws, then fails the firing", async () => {
+  it("runs the other checks when the speed digest throws, then fails the firing", async () => {
     await insertRun({ weatherStatus: "failed" });
     const { reporter, events, checkIns } = recordingReporter();
     const failure = new Error("ops database unavailable");
 
     const firing = handleScheduled(DIGEST, reporter, {
-      rollupSpeed: () => Promise.reject(failure),
+      speed: () => Promise.reject(failure),
     });
 
     await expect(firing).rejects.toBe(failure);
