@@ -940,8 +940,46 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
-45. **F's product-link field returns (design 163). Undesigned; not
-    built.** AC2b took the field off F because F could only ever say
+_Empty: round 43 answered the last six._
+
+<!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98. This comment keeps the list from being renumbered. -->
+
+## Answered in round 43 (imported 2026-10-31)
+
+Design answered as `Round 43 Rulings.dc.html`, items 93–98, with the text
+of record under "Round 43 · Items 93–98 · Product links" in
+`design/docs/product.md`. AC2b is met for F and E: every reachable
+outcome has a drawn place. P2.5 keeps no link field. Built in design 163.
+
+- **93 · F's link field. Ruled; not built yet.** A FormField after brand
+  and model, "Product link · optional", with a hint that says it needs a
+  brand and model. A link typed without a scheme gets https:// on save;
+  only an explicit http:// or a non-URL errors, on blur and submit. Denied
+  comes back on the server field-error path with today's words. Edit with
+  a since-denied link shows the message on open, and Save is refused
+  until the field changes.
+- **94 · Outcomes. Ruled; not built yet.** No F2a/F2b screens: F never
+  waits, and E carries one MONO.xs line under the link (found, reading,
+  couldn't read with "TRYING AGAIN TODAY" for the first day, found
+  nothing, not read: no brand and model, or email unconfirmed).
+  Product-filled stat values are --quiet, the runner's are ink.
+  Composition's kicker names its source. On Edit a product-filled field
+  shows the product's value as its placeholder. A late result just appears
+  the next time E loads.
+- **95 · E. Ruled; not built yet.** In the identity block under the name:
+  ProductLink labelled "Shop page", then the outcome line. Change or
+  remove only through Edit. A denied link: nothing on E.
+- **96 · Kit views. Ruled.** D in, as /kit. The feed card and the /@handle
+  rotation are out. The outcome line is on E only.
+- **97 · O3. Ruled out for v1; nothing to build.** The build never had
+  the field. O3 is redrawn without it, closing R-55.
+- **98 · Product images. None; nothing to build.** The photo slot is the
+  runner's photo or nothing, never enrichment's copy (R-67 stays open).
+
+Lifted from the open queue, as asked:
+
+93. **F's product-link field returns (design 163).** **ANSWERED by round 43.**
+    Undesigned when asked; AC2b took the field off F because F could only ever say
     "Enrichment pending". Design 163 makes enrichment reachable from a
     paste, so the field comes back on F (add, and Edit as F prefilled).
     Optional, after brand and model: a link reads nothing without a brand
@@ -954,8 +992,8 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     on open, and the save refused until the field is cleared. **No
     duplicate state:** nothing detects one by URL.
 
-46. **F2a / F2b: what enrichment did with the link (design 163).
-    Undesigned; not built.** Enrichment reads the page in the background
+94. **F2a / F2b: what enrichment did with the link (design 163).**
+    **ANSWERED by round 43.** Undesigned when asked. Enrichment reads the page in the background
     and writes the **shared product**, never the garment. It fills
     composition (verbatim and parts), weight, fabric, wind-resistant,
     water-resistant and a category hint. It never fills brand, name or
@@ -972,7 +1010,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     never waits; F returns to E as today, and E carries the outcome as one
     line by the link, with no notification kind.
 
-47. **E shows the link (design 163). Undesigned; not built.** 842cdc53
+95. **E shows the link (design 163).** **ANSWERED by round 43.** Undesigned when asked. 842cdc53
     put `ProductLink` on E (the link text plus its bare domain in mono,
     `rel="ugc nofollow noopener"`) and task 122 took it off with F's
     field. **The ask:** where the link and its domain sit in Y's order,
@@ -981,26 +1019,24 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     changed through Edit (F prefilled) rather than a control of its own.
     A denied link shows nowhere, E included.
 
-48. **Links on kit views (design 163). Partly ruled.** /kit is confirmed
+96. **Links on kit views (design 163).** **ANSWERED by round 43.** /kit is confirmed
     by round 42 #90 ("Linked piece: domain beside it, as ProductLink").
     Undrawn: kit detail D's kit list, the feed card (round 26 dropped the
     kit from it) and the /@handle rotation. **The ask:** in or out for
     each. Recommendation: D in, the same treatment as /kit; the feed card
     and the rotation out.
 
-49. **O3's paste field: in or out for v1 (R-55, design 163).** The
+97. **O3's paste field: in or out for v1 (R-55, design 163).** **ANSWERED by round 43.** The
     artboard draws `brand.com/product…` with SPECS FOUND, and
     `TapListForm` never built it. The tap list makes generic rows with no
     brand, and a link reads nothing without a brand and a model (93).
     **The ask:** rule it. Recommendation: out for v1; redraw O3 without
     it.
 
-50. **Product images (R-67, design 163).** Enrichment copies a shop's
+98. **Product images (R-67, design 163).** **ANSWERED by round 43.** Enrichment copies a shop's
     primary image to R2, and nothing serves it. Showing one is the
     owner's call on rights (R-67). **The ask:** confirm none of 93–97
     shows a product image. Recommendation: none.
-
-<!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98. This comment keeps the list from being renumbered. -->
 
 ## Answered in round 42 (imported 2026-10-28 and 2026-10-29)
 
