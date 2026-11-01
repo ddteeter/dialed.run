@@ -18,6 +18,7 @@ import {
   usePhotoPick,
 } from "../../../ui";
 import type { PhotoStep } from "../../../ui";
+import { ProductLink } from "../../../ui/ProductLink";
 import { garmentLabel } from "../../../lib/garment-label";
 import { isPhotoBeingChecked, photoUrlFor } from "../photo-url";
 import { retiredLabel } from "../retired-label";
@@ -28,6 +29,7 @@ import { BackToCloset } from "./BackToCloset";
 import { DeleteWithRuns, type BandCount } from "./DeleteWithRuns";
 import { GarmentConfirm, type ConfirmKind } from "./GarmentConfirm";
 import { GARMENT_PHOTO_COPY } from "./photo-pick";
+import type { LinkOutcome } from "../garment-link";
 import type {
   EffectiveAttributes,
   WardrobeItemRow,
@@ -64,27 +66,152 @@ const VISIBILITY_WORDS = {
 } as const satisfies Record<Exclude<GarmentVisibility, "plain">, string>;
 
 /**
+ * One of the words beside §AG's composition, and whether the product lent
+ * it: the runner left that field empty and the shop's page filled it
+ * (round 43 #94). A lent word is drawn in --quiet, the runner's in ink.
+ */
+interface AttributeWord {
+  readonly word: string;
+  readonly isLent: boolean;
+}
+
+/**
  * What the piece is built from and how — the words beside §AG's
  * composition ("82% merino, 18% nylon · midweight").
  *
  * `plain` visibility is not shown. All three values are stored because the
  * Call's rule needs to tell "plain" from "not answered", but "plain" on a
  * detail screen is a line that says nothing — the two worth reading are
- * the two that change how a garment is seen.
+ * the two that change how a garment is seen. Visibility is never lent.
  */
 function attributeWords(
   effective: EffectiveAttributes,
   item: WardrobeItemRow,
-): string[] {
-  const words: string[] = [];
-  if (effective.weight) words.push(effective.weight);
-  if (effective.fabric) words.push(effective.fabric);
-  if (effective.windResistant) words.push("wind resistant");
-  if (effective.waterResistant) words.push("water resistant");
+): AttributeWord[] {
+  const words: AttributeWord[] = [];
+  if (effective.weight) {
+    words.push({ word: effective.weight, isLent: item.weight === null });
+  }
+  if (effective.fabric) {
+    words.push({ word: effective.fabric, isLent: item.fabric === null });
+  }
+  if (effective.windResistant) {
+    words.push({ word: "wind resistant", isLent: item.windResistant === null });
+  }
+  if (effective.waterResistant) {
+    words.push({
+      word: "water resistant",
+      isLent: item.waterResistant === null,
+    });
+  }
   if (item.visibilityLevel && item.visibilityLevel !== "plain") {
-    words.push(VISIBILITY_WORDS[item.visibilityLevel]);
+    words.push({ word: VISIBILITY_WORDS[item.visibilityLevel], isLent: false });
   }
   return words;
+}
+
+/**
+ * The site a line names, kept in its own case inside an uppercase line:
+ * a domain is data, and `JANJI.COM` is not how it is written. A source
+ * that was denied is "the page" (design 163), which is a word and shouts
+ * with the rest.
+ */
+function Site({ domain }: Readonly<{ domain: string | undefined }>) {
+  return domain === undefined ? (
+    "the page"
+  ) : (
+    <span className="normal-case">{domain}</span>
+  );
+}
+
+/**
+ * Round 43 #94's one line under the link: what enrichment made of it, as
+ * a bracketed statement and, where the round gives one, a clause after.
+ * `hasLentWords` keeps "grey values are from the page" to when there are
+ * grey values to speak of.
+ */
+function outcomeParts(
+  outcome: LinkOutcome,
+  hasLentWords: boolean,
+): { statement: ReactNode; clause: string | undefined } {
+  switch (outcome.kind) {
+    case "found": {
+      return {
+        statement: (
+          <>
+            Specs from <Site domain={outcome.source} />
+          </>
+        ),
+        clause: hasLentWords ? "Grey values are from the page" : undefined,
+      };
+    }
+    case "nothing": {
+      return {
+        statement: (
+          <>
+            No specs on <Site domain={outcome.source} />
+          </>
+        ),
+        clause: undefined,
+      };
+    }
+    case "unread": {
+      return {
+        statement: (
+          <>
+            Couldn&apos;t read <Site domain={outcome.source} />
+          </>
+        ),
+        clause: outcome.isRetrying ? "Trying again today" : undefined,
+      };
+    }
+    case "reading": {
+      return {
+        statement: "Reading the page",
+        clause: "Usually under a minute",
+      };
+    }
+    case "noIdentity": {
+      return { statement: "Not read", clause: "Add a brand and model" };
+    }
+    case "unconfirmed": {
+      return {
+        statement: "Not read yet",
+        clause: "Confirm your email to read it",
+      };
+    }
+  }
+}
+
+/**
+ * Round 43 #95: under the name, the shop's page as `ProductLink`, "Shop
+ * page" with its domain beside it, and #94's outcome line beneath. A link
+ * closet's one read will not show — denied, or not https — is no link
+ * and no line here. Changed or removed through Edit only.
+ */
+function ShopPage({
+  detail,
+}: Readonly<{ detail: Detail }>): JSX.Element | undefined {
+  const { link, outcome } = detail.linkDetail;
+  if (link === undefined) return undefined;
+  const hasLentWords = attributeWords(detail.effective, detail.item).some(
+    (word) => word.isLent,
+  );
+  const parts =
+    outcome === undefined ? undefined : outcomeParts(outcome, hasLentWords);
+  return (
+    <div data-part="shop-page" className="flex flex-col gap-1">
+      <ProductLink url={link} label="Shop page" />
+      {parts === undefined ? undefined : (
+        <p className="m-0 text-quiet">
+          <Bracketed step="xs">{parts.statement}</Bracketed>
+          {parts.clause === undefined ? undefined : (
+            <Mono step="xs">{` · ${parts.clause}`}</Mono>
+          )}
+        </p>
+      )}
+    </div>
+  );
 }
 
 /**
@@ -471,10 +598,18 @@ function CompositionSection({
             parts: composition.parts,
             brand: item.brand ?? undefined,
           }}
+          source={detail.linkDetail.specSource}
         />
       )}
       {words.length > 0 ? (
-        <p className="m-0 text-body">{words.join(" · ")}</p>
+        <p className="m-0 text-body">
+          {words.map(({ word, isLent }, index) => (
+            <span key={word}>
+              {index > 0 ? " · " : undefined}
+              <span className={isLent ? "text-quiet" : "text-ink"}>{word}</span>
+            </span>
+          ))}
+        </p>
       ) : undefined}
     </div>
   );
@@ -584,6 +719,7 @@ export function GarmentDetail({
         <BackToCloset />
         <IdentityKicker item={item} isGeneric={isGeneric} />
         <h1 className="m-0 font-display text-title">{label}</h1>
+        <ShopPage detail={detail} />
         <Colorway item={item} />
       </div>
 

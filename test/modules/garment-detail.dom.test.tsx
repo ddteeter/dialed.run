@@ -581,7 +581,9 @@ describe("GarmentDetail: stats", () => {
 
   it("says untested when there is no range", async () => {
     await renderWithRouter(garment());
-    expect(within(part("stats")).getByText(bracketed("Untested"))).toBeVisible();
+    expect(
+      within(part("stats")).getByText(bracketed("Untested")),
+    ).toBeVisible();
   });
 });
 
@@ -618,9 +620,14 @@ describe("GarmentDetail: composition", () => {
         },
       }),
     );
+    // One line, each word its own span so a lent one can be grey (round
+    // 43 #94): read as the line a runner sees.
     expect(
       within(part("composition")).getByText(
-        "heavy · merino · wind resistant · water resistant · hi-viz",
+        (_, element) =>
+          element?.tagName === "P" &&
+          element.textContent ===
+            "heavy · merino · wind resistant · water resistant · hi-viz",
       ),
     ).toBeVisible();
   });
