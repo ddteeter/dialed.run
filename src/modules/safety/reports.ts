@@ -35,6 +35,7 @@ import {
   reviewQueue,
 } from "../../db/schema-core";
 import { coreDb } from "../../env";
+import type { PurgeTags } from "../../lib/cache-tags";
 import { columnWhere, hasRowWhere } from "../../lib/sql/keyed-read";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
@@ -52,6 +53,7 @@ import {
 import { adminUserIds } from "./admin";
 import { blockRunner } from "./blocks";
 import { ceilingReading } from "./breakers";
+import { subjectCacheTagsOf } from "./kit-cache-tags";
 import { hiddenNotice, reporterIdsOf } from "./notices";
 import { enqueueForReview, firstReportHidingAtOnce } from "./review";
 import { heldPhotoStatus } from "./visibility";
@@ -150,6 +152,7 @@ export interface FileReportResult {
 export async function fileReport(
   input: FileReportInput,
   owe: OweEmail,
+  purge: PurgeTags,
 ): Promise<FileReportResult> {
   const database = db();
   const reportedAt = nowSeconds();
@@ -196,7 +199,13 @@ export async function fileReport(
     ? removalAlerts(owe, input.subjectType, input.subjectId, reportedAt)
     : [];
   const canHide = await canHideNow(isAtOnce, reportedAt);
-  await hidePendingReview(input.subjectType, input.subjectId, alerts, canHide);
+  await hidePendingReview(
+    input.subjectType,
+    input.subjectId,
+    alerts,
+    purge,
+    canHide,
+  );
   return { status: "filed", reporterCount, hiddenPendingReview: canHide };
 }
 
@@ -238,6 +247,7 @@ export interface ReconcileReport {
  */
 export async function reconcileUnhiddenReports(
   owe: OweEmail,
+  purge: PurgeTags,
   limit = 50,
 ): Promise<ReconcileReport> {
   const database = db();
@@ -275,7 +285,13 @@ export async function reconcileUnhiddenReports(
         ? []
         : removalAlerts(owe, row.subjectType, row.subjectId, row.firstAtOnce);
     const canHide = await canHideNow(row.firstAtOnce !== null, now);
-    await hidePendingReview(row.subjectType, row.subjectId, alerts, canHide);
+    await hidePendingReview(
+      row.subjectType,
+      row.subjectId,
+      alerts,
+      purge,
+      canHide,
+    );
     // Queued is reconciled either way: its row is the marker, so the
     // sweep never comes back to hide what the breaker held back.
     if (canHide) outcome.hidden += 1;
@@ -404,6 +420,7 @@ async function hidePendingReview(
   subjectType: ReportSubjectType,
   subjectId: string,
   alerts: BatchItem<"sqlite">[],
+  purge: PurgeTags,
   canHide: boolean,
 ): Promise<void> {
   const queueWrite = enqueueForReview(db(), {
@@ -430,6 +447,11 @@ async function hidePendingReview(
     ...alerts,
     ...told,
   ]);
+  // Design 163: a hidden kit leaves the edge now, not within the TTL, and
+  // so does a hidden photo's kit, whose page shows it; the purge deletes
+  // the photo's public copy too (step 8). A profile and a product hide
+  // nothing there (a profile is a ban's to take down).
+  purge(await subjectCacheTagsOf(db(), subjectType, subjectId));
 }
 
 /**

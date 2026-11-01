@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
+
 import { z } from "zod";
 
 import {
@@ -18,6 +19,7 @@ import { readOutboxRow } from "../../src/lib/sql/outbox";
 import { decideRemovalRequest } from "../../src/modules/feed/removal-requests";
 import { fileTakedownRequest } from "../../src/modules/safety";
 import { HIDDEN_NOTICE } from "../../src/modules/safety/notice-copy";
+import { noPurge } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
@@ -265,7 +267,11 @@ describe("a request already decided, or never made", () => {
  * Round 35 #58e: a request whose link is ours hides it at once, as a W1
  * report of the reason does; a Decline gives it back.
  */
-const deps = { verify: () => Promise.resolve({ ok: true }), owe: oweInCore };
+const deps = {
+  verify: () => Promise.resolve({ ok: true }),
+  owe: oweInCore,
+  purge: noPurge,
+};
 
 async function file(location: string): Promise<string> {
   await fileTakedownRequest(

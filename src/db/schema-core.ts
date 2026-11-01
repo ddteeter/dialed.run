@@ -6,10 +6,14 @@
  * ids as plain text columns (FK constraints arrive with that migration).
  */
 import { sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import {
   audiences,
   colorNames,
+  strangerAudiences,
+  WORLD_AUDIENCE,
   effortSources,
   garmentVisibilities,
   HANDLE_SCREEN_STATES,
@@ -26,6 +30,32 @@ import {
   text,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
+
+/**
+ * "Shared with signed-in runners": the entry's audience is one of
+ * `strangerAudiences` (SHARED or PUBLIC, D-151). The two shared-entry
+ * indexes are partial on exactly this expression, and SQLite uses a
+ * partial index only for a query whose WHERE carries the same expression,
+ * so the stranger rule (`safety/visibility.ts`) and the feed's seek call
+ * this rather than writing their own. The values are literals, not bound
+ * parameters, for the same reason: a parameter cannot prove the index's
+ * condition. They are the contract's own constants, never input.
+ */
+export function sharedAudience(audience: SQLiteColumn): SQL {
+  const values = strangerAudiences.map((value) => `'${value}'`).join(", ");
+  return sql`${audience} in (${sql.raw(values)})`;
+}
+
+/**
+ * "Public on the open web": the entry's audience is `WORLD_AUDIENCE`
+ * (D-151). `entries_user_world_created` is partial on exactly this, and
+ * the open-web rule (`worldVisibleEntry`) calls it, for the same reasons
+ * as `sharedAudience` above.
+ */
+export function worldAudience(audience: SQLiteColumn): SQL {
+  const literal = "'" + WORLD_AUDIENCE + "'";
+  return sql`${audience} = ${sql.raw(literal)}`;
+}
 
 export const userProfiles = /*#__PURE__*/ sqliteTable(
   "user_profiles",
@@ -99,6 +129,18 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     countInTotals: integer("count_in_totals", { mode: "boolean" })
       .notNull()
       .default(true),
+    // Settings › Privacy › "Public profile" (D-151, round 41 #86b): off,
+    // a signed-out visitor to /@handle sees the not-public page; on, the
+    // runner's PUBLIC kits. A PUBLIC default audience needs it on, and
+    // turning it off moves that default to SHARED in the same write.
+    publicProfile: integer("public_profile", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    // "Show my closet", under it: the rotation on the public profile. Kept
+    // while the profile is off, and shown only while it is on.
+    publicCloset: integer("public_closet", { mode: "boolean" })
+      .notNull()
+      .default(false),
   },
   (t) => [
     // The re-ask's sweep reads only the rows it might claim. Partial, so
@@ -834,27 +876,31 @@ export const outfitEntries = /*#__PURE__*/ sqliteTable(
   (t) => [
     uniqueIndex("entries_run").on(t.runId),
     index("entries_user_created").on(t.userId, t.createdAt),
-    // Shared entries, newest first: "Your conditions" (`feed/consensus.ts`).
-    // moderationStatus is in the covering index because every public read
-    // filters on it too. Left out, the feed query filters in memory after
-    // LIMIT — which CLAUDE.md's D1 discipline calls out by name as
-    // returning "the survivors of the first 200 rows".
-    index("entries_audience_created").on(
-      t.audience,
-      t.moderationStatus,
-      t.createdAt,
-    ),
+    // Shared entries (SHARED or PUBLIC), newest first: "Your conditions"
+    // (`feed/consensus.ts`). Partial on `sharedAudience`, so a query that
+    // names the same predicate seeks it with no audience column at all:
+    // two audience values in an indexed column cannot seek and come back
+    // in `created_at` order (D-151 made it two). moderationStatus is in the
+    // index because every public read filters on it too. Left out, the
+    // feed query filters in memory after LIMIT — which CLAUDE.md's D1
+    // discipline calls out by name as returning "the survivors of the
+    // first 200 rows".
+    index("entries_shared_created")
+      .on(t.moderationStatus, t.createdAt)
+      .where(sharedAudience(t.audience)),
     // One runner's shared entries, newest first: the Following feed's
     // per-author seek (FEED-5 review, `feed/feed.ts`) and H's entries.
     // Driving the page from the viewer's followees, each read to at most a
     // page, is what makes the rows it scans scale with who they follow
     // rather than with every runner on the site.
-    index("entries_user_audience_created").on(
-      t.userId,
-      t.audience,
-      t.moderationStatus,
-      t.createdAt,
-    ),
+    index("entries_user_shared_created")
+      .on(t.userId, t.moderationStatus, t.createdAt)
+      .where(sharedAudience(t.audience)),
+    // One runner's PUBLIC kits, newest first: the public profile's list
+    // (/@handle, round 41 #86d), read with no viewer at all.
+    index("entries_user_world_created")
+      .on(t.userId, t.moderationStatus, t.createdAt)
+      .where(worldAudience(t.audience)),
   ],
 );
 
@@ -919,6 +965,47 @@ export const entryPhotos = /*#__PURE__*/ sqliteTable(
     // users cannot reach the same key. Every other key in this schema is
     // user-scoped because its table has no such parent.
     uniqueIndex("entry_photos_idempotency").on(t.entryId, t.idempotencyKey),
+  ],
+);
+
+/**
+ * The copies of photos on PUBLIC kits in the public bucket (D-153, design
+ * 163 step 8): one row per object there, so the row is the record of what
+ * anyone can read.
+ *
+ * **Its own table, not a column of `entry_photos`**, because the copy
+ * must outlive the photo's row: deleting a kit, a run or an account, and
+ * the Desk's Remove and quarantine, delete the photo rows in their own
+ * batch, and a key held only there would be gone with them, leaving a
+ * public object nothing names. Here the key survives, and the reconcile
+ * (`ops/public-photos.ts`) deletes every copy whose photo is no longer a
+ * screened photo on a world-visible kit, the row last.
+ *
+ * Written before the object (claim, then work): a row whose
+ * `published_at` is NULL is a copy owed, and no object is ever put under
+ * a key this table does not hold. No foreign keys, on purpose: the row
+ * must stay when the photo goes.
+ */
+export const publicPhotos = /*#__PURE__*/ sqliteTable(
+  "public_photos",
+  {
+    // The object's key in the public bucket and its URL's path: 128
+    // random bits, derived from nothing (`lib/public-photos.ts`).
+    key: text("key").primaryKey(),
+    photoId: text("photo_id").notNull(),
+    entryId: text("entry_id").notNull(),
+    userId: text("user_id").notNull(),
+    createdAt: integer("created_at").notNull(),
+    // When the object landed; NULL while it is owed. The page shows only
+    // a published copy.
+    publishedAt: integer("published_at"),
+  },
+  (t) => [
+    // One copy per photo: the claim's conflict target.
+    uniqueIndex("public_photos_photo").on(t.photoId),
+    // The reconcile's scopes: a kit's copies, and a runner's.
+    index("public_photos_entry").on(t.entryId),
+    index("public_photos_user").on(t.userId),
   ],
 );
 

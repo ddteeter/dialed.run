@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
 import { z } from "zod";
 
 import {
@@ -20,6 +21,7 @@ import {
   reconcileUnhiddenReports,
 } from "../../src/modules/safety";
 
+import { noPurge } from "../purge-spy";
 import {
   makeEntry,
   makeRun,
@@ -136,6 +138,7 @@ describe("one report of an intimate image", () => {
         reason: "intimate",
       },
       oweInCore,
+      noPurge,
     );
 
     expect(result).toStrictEqual({
@@ -186,6 +189,7 @@ describe("one report of an intimate image", () => {
         reason: "intimate",
       },
       oweInCore,
+      noPurge,
     );
 
     expect(await photoStatus(photoId)).toBe("hidden_pending_review");
@@ -206,6 +210,7 @@ describe("one report of an intimate image", () => {
         reason: "intimate",
       },
       oweInCore,
+      noPurge,
     );
 
     expect(result.hiddenPendingReview).toBe(true);
@@ -225,6 +230,7 @@ describe("one report of an intimate image", () => {
         reason: "intimate",
       },
       oweInCore,
+      noPurge,
     );
 
     expect(await entryStatus(entryId)).toBe("hidden_pending_review");
@@ -245,6 +251,7 @@ describe("every other reason", () => {
         reason: "explicit",
       },
       oweInCore,
+      noPurge,
     );
     expect(once.hiddenPendingReview).toBe(false);
     expect(await entryStatus(entryId)).toBe("ok");
@@ -258,6 +265,7 @@ describe("every other reason", () => {
           reason: "explicit",
         },
         oweInCore,
+        noPurge,
       );
     }
     expect(await entryStatus(entryId)).toBe("hidden_pending_review");
@@ -293,7 +301,7 @@ describe("the hourly reconcile, for an intimate report whose hide never landed",
         createdAt: reportedAt - 60,
       });
 
-    expect(await reconcileUnhiddenReports(oweInCore)).toStrictEqual({
+    expect(await reconcileUnhiddenReports(oweInCore, noPurge)).toStrictEqual({
       found: 1,
       hidden: 1,
     });
@@ -301,7 +309,7 @@ describe("the hourly reconcile, for an intimate report whose hide never landed",
     expect(await owedEmails()).toStrictEqual([
       alert("op-one", "entry", entryId, reportedAt + 2 * DAY_S),
     ]);
-    expect(await reconcileUnhiddenReports(oweInCore)).toStrictEqual({
+    expect(await reconcileUnhiddenReports(oweInCore, noPurge)).toStrictEqual({
       found: 0,
       hidden: 0,
     });
@@ -344,7 +352,7 @@ describe("the hourly reconcile, for an intimate report whose hide never landed",
         });
     }
 
-    await reconcileUnhiddenReports(oweInCore);
+    await reconcileUnhiddenReports(oweInCore, noPurge);
 
     expect(await entryStatus(entryId)).toBe("hidden_pending_review");
     expect(await owedEmails()).toStrictEqual([]);
@@ -365,7 +373,7 @@ describe("the Review row's clock", () => {
         reason: "intimate",
         createdAt: reportedAt,
       });
-    await reconcileUnhiddenReports(oweInCore);
+    await reconcileUnhiddenReports(oweInCore, noPurge);
 
     const [row] = await pendingReviewQueue();
     expect(row?.dueAt).toBe(reportedAt + 2 * DAY_S);
@@ -383,6 +391,7 @@ describe("the Review row's clock", () => {
           reason: "spam",
         },
         oweInCore,
+        noPurge,
       );
     }
 

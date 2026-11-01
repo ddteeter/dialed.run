@@ -22,7 +22,11 @@ file explains them and does not restate them.
    commit, with a merge commit, as the App, so main's deploy and its cold
    mutation run start as they would after any merge. If the checks have
    already passed (GitHub only arms auto-merge while one is pending), the
-   job merges it at once, still only at the commit it classified.
+   job merges it at once, still only at the commit it classified, or at
+   that commit with the App's open-source list on top. The list can land
+   while the job waits for a runner, and the run it starts doesn't
+   classify again, so the job follows the head, but only past commits
+   that are all the App's and change the list alone.
 4. **Anything else waits for you**: majors, 0.x minors, 0.0.x updates, new
    maintainers, and every GitHub Actions bump (Actions run with this repo's
    secrets). Claude posts an impact review on the PR: a verdict, the

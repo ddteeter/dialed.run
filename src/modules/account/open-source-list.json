@@ -22,35 +22,35 @@
   "packages": [
     {
       "name": "@better-auth/core",
-      "version": "1.7.11",
+      "version": "1.7.12",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com"
     },
     {
       "name": "@better-auth/drizzle-adapter",
-      "version": "1.7.11",
+      "version": "1.7.12",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com/docs/adapters/drizzle"
     },
     {
       "name": "@better-auth/kysely-adapter",
-      "version": "1.7.11",
+      "version": "1.7.12",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com/docs/adapters/kysely"
     },
     {
       "name": "@better-auth/memory-adapter",
-      "version": "1.7.11",
+      "version": "1.7.12",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com"
     },
     {
       "name": "@better-auth/telemetry",
-      "version": "1.7.11",
+      "version": "1.7.12",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com"
@@ -249,42 +249,42 @@
     },
     {
       "name": "@tanstack/query-core",
-      "version": "5.104.4",
+      "version": "5.104.5",
       "licence": "MIT",
       "copyright": "2021-present Tanner Linsley",
       "project": "https://tanstack.com/query"
     },
     {
       "name": "@tanstack/react-query",
-      "version": "5.104.4",
+      "version": "5.104.5",
       "licence": "MIT",
       "copyright": "2021-present Tanner Linsley",
       "project": "https://tanstack.com/query"
     },
     {
       "name": "@tanstack/react-router",
-      "version": "1.170.45",
+      "version": "1.170.46",
       "licence": "MIT",
       "copyright": "2021-present Tanner Linsley",
       "project": "https://tanstack.com/router"
     },
     {
       "name": "@tanstack/react-start",
-      "version": "1.169.3",
+      "version": "1.169.4",
       "licence": "MIT",
       "copyright": "2021-present Tanner Linsley",
       "project": "https://tanstack.com/start"
     },
     {
       "name": "@tanstack/react-start-client",
-      "version": "1.168.43",
+      "version": "1.168.44",
       "licence": "MIT",
       "copyright": "2021-present Tanner Linsley",
       "project": "https://tanstack.com/start"
     },
     {
       "name": "@tanstack/react-start-server",
-      "version": "1.167.51",
+      "version": "1.167.52",
       "licence": "MIT",
       "copyright": "2021-present Tanner Linsley",
       "project": "https://tanstack.com/start"
@@ -298,28 +298,28 @@
     },
     {
       "name": "@tanstack/router-core",
-      "version": "1.171.38",
+      "version": "1.171.39",
       "licence": "MIT",
       "copyright": "2021-present Tanner Linsley",
       "project": "https://tanstack.com/router"
     },
     {
       "name": "@tanstack/start-client-core",
-      "version": "1.170.38",
+      "version": "1.170.39",
       "licence": "MIT",
       "copyright": "2021-present Tanner Linsley",
       "project": "https://tanstack.com/start"
     },
     {
       "name": "@tanstack/start-server-core",
-      "version": "1.169.44",
+      "version": "1.169.45",
       "licence": "MIT",
       "copyright": "2021-present Tanner Linsley",
       "project": "https://tanstack.com/start"
     },
     {
       "name": "@tanstack/start-storage-context",
-      "version": "1.167.40",
+      "version": "1.167.41",
       "licence": "MIT",
       "copyright": "2021-present Tanner Linsley",
       "project": "https://tanstack.com/start"
@@ -347,14 +347,14 @@
     },
     {
       "name": "better-auth",
-      "version": "1.7.11",
+      "version": "1.7.12",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://better-auth.com"
     },
     {
       "name": "better-call",
-      "version": "1.4.2",
+      "version": "1.4.4",
       "licence": "MIT",
       "copyright": "2025 Bereket Engida",
       "project": "https://github.com/better-auth/better-call#readme"
@@ -570,7 +570,7 @@
     },
     {
       "name": "jose",
-      "version": "6.2.12",
+      "version": "6.2.13",
       "licence": "MIT",
       "copyright": "2018 Filip Skokan",
       "project": "https://github.com/panva/jose"
@@ -945,9 +945,9 @@
   "tools": [
     {
       "name": "@cloudflare/vite-plugin",
-      "version": "1.64.0",
+      "version": "1.65.0",
       "licence": "MIT",
-      "project": "https://github.com/cloudflare/workers-sdk/tree/main/packages/vite-plugin-cloudflare#readme"
+      "project": "https://github.com/cloudflare/workers-sdk/tree/vite-plugin-v1/packages/vite-plugin-cloudflare#readme"
     },
     {
       "name": "@cloudflare/vitest-pool-workers",
@@ -1011,7 +1011,7 @@
     },
     {
       "name": "@tanstack/router-cli",
-      "version": "1.167.45",
+      "version": "1.167.46",
       "licence": "MIT",
       "project": "https://tanstack.com/router"
     },
@@ -1220,7 +1220,7 @@
     },
     {
       "name": "wrangler",
-      "version": "4.151.0",
+      "version": "4.152.0",
       "licence": "MIT OR Apache-2.0",
       "project": "https://github.com/cloudflare/workers-sdk#readme"
     }

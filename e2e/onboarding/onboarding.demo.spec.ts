@@ -253,10 +253,17 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
   ).toBeVisible();
   await scene(
     page,
-    "Two groups: a form with its Save, and a switch that saves",
+    "Three groups: a form with its Save, and two that save as you switch",
   );
+  // Round 42 #92: the legend is the group's kicker, printed once.
   await expect(
-    page.getByRole("heading", { level: 2, name: "New runs" }),
+    page.getByRole("heading", { level: 2, name: "Who sees new runs" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      level: 2,
+      name: "Public profile · Saves as you switch",
+    }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", {
@@ -264,9 +271,10 @@ test("calibrate -> tap what you own -> now go run -> an honest ladder", async ({
       name: "Anonymous totals · Saves as you switch",
     }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("checkbox", { name: "Share new runs" }),
-  ).toBeChecked();
+  // Round 41 #86b: PRIVATE / SHARED, and PUBLIC only once the profile is.
+  const newRuns = page.getByRole("group", { name: "Who sees new runs" });
+  await expect(newRuns.getByRole("radio", { name: "Shared" })).toBeChecked();
+  await expect(newRuns.getByRole("radio")).toHaveCount(2);
   const totals = page.getByRole("checkbox", {
     name: "Count my runs in anonymous totals",
   });

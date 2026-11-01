@@ -516,15 +516,29 @@
     {
       "idx": 73,
       "version": "6",
-      "when": 1793458281842,
-      "tag": "0073_add_review_queue_opened_at",
+      "when": 1793454151633,
+      "tag": "0073_add_public_profile_and_shared_indexes",
       "breakpoints": true
     },
     {
       "idx": 74,
       "version": "6",
-      "when": 1793458283116,
-      "tag": "0074_add_photo_screenings_created_index",
+      "when": 1793454157347,
+      "tag": "0074_add_public_photos",
+      "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "6",
+      "when": 1793563824412,
+      "tag": "0075_add_review_queue_opened_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "6",
+      "when": 1793563825637,
+      "tag": "0076_add_photo_screenings_created_index",
       "breakpoints": true
     }
   ]

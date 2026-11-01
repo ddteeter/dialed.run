@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { uiGroups } from "../../../lib/contracts";
 import { formatTempRange } from "../../../lib/contracts/thermal";
 import { Bracketed, Icon, Mono, useListMotion } from "../../../ui";
-import { garmentLabel } from "../label";
+import { garmentLabel } from "../../../lib/garment-label";
 import { isPhotoBeingChecked } from "../photo-url";
 import type { ClosetItemView, ClosetListing } from "../service";
 

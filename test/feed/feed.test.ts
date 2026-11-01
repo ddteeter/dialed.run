@@ -195,13 +195,13 @@ describe("following feed (E1)", () => {
     });
     const { sql, params } = statement.toSQL();
     // The viewer three times (the follows lookup, and their two own author
-    // rows — D-67), the shared audience and the under-review arm's
-    // status, the two
-    // visibility values, the viewer three more times for the viewer rule
-    // (a block from either end, and their own reports — SAF-12/13), the
-    // three cursor values and the limit twice (per author, and the page):
-    // fifteen, at one follow or a thousand.
-    expect(params).toHaveLength(15);
+    // rows — D-67), the under-review arm's status, the visibility rule's
+    // status, the viewer three more times for the viewer rule (a block from
+    // either end, and their own reports — SAF-12/13), the three cursor
+    // values and the limit twice (per author, and the page): thirteen, at
+    // one follow or a thousand. The shared audiences are literals, not
+    // parameters, so the partial index applies (`sharedAudience`).
+    expect(params).toHaveLength(13);
     // The followees arm's status discriminator: raw `'ok'` aliased to
     // `"status"` so the outer `eq(outfitEntries.moderationStatus,
     // authors.status)` can name it. Every later reference to `authors.status`
@@ -227,11 +227,11 @@ describe("following feed (E1)", () => {
     );
     expect(details).toMatch(/SCAN CONSTANT ROW/u);
     expect(details).toMatch(
-      /SEARCH outfit_entries USING INDEX entries_user_audience_created \(user_id=\? AND audience=\? AND moderation_status=\? AND created_at<\?\)/u,
+      /SEARCH outfit_entries USING INDEX entries_user_shared_created \(user_id=\? AND moderation_status=\? AND created_at<\?\)/u,
     );
     // Neither site-wide index, and not the boolean's per-runner one the
     // read flip left behind for C2 to drop.
-    expect(details).not.toMatch(/entries_(?:public|audience)_created/u);
+    expect(details).not.toMatch(/entries_(?:public|shared)_created/u);
     expect(details).not.toMatch(/entries_user_public_created/u);
     expect(details).not.toMatch(/SCAN\s+(?:outfit_entries|page|follows)/iu);
   });

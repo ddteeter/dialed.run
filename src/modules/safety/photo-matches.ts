@@ -19,7 +19,16 @@
  * row an intimate-image report or a removal request started. Nothing a
  * runner opens reaches it.
  */
-import { and, asc, eq, isNotNull, lte, not, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  isNotNull,
+  lte,
+  not,
+  notInArray,
+  sql,
+} from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
 import {
@@ -28,7 +37,7 @@ import {
   userProfiles,
   wardrobeItems,
 } from "../../db/schema-core";
-import { SHARED_AUDIENCE } from "../../lib/contracts";
+import { strangerAudiences } from "../../lib/contracts";
 import {
   FINGERPRINT_MATCH_DISTANCE,
   fingerprintSchema,
@@ -210,10 +219,9 @@ function kitMatches(
       photoKey: entryPhotos.photoKey,
       entryId: entryPhotos.entryId,
       canOpen: sql<boolean>`${publiclyVisibleEntry()}`.mapWith(Boolean),
-      isPrivate:
-        sql<boolean>`${outfitEntries.audience} <> ${SHARED_AUDIENCE}`.mapWith(
-          Boolean,
-        ),
+      isPrivate: sql<boolean>`${notInArray(outfitEntries.audience, [
+        ...strangerAudiences,
+      ])}`.mapWith(Boolean),
       // fallow-ignore-next-line code-duplication -- kitMatches and garmentMatches read two different photo tables against one fingerprint distance, already factored through nearestOf; kit rows carry an entry, visibility and audience a garment has no column for
       distance: sql<number>`${distance}`.mapWith(Number),
       // fallow-ignore-next-line code-duplication -- kitMatches and garmentMatches read two different photo tables against one fingerprint distance, already factored through nearestOf; kit rows carry an entry, visibility and audience a garment has no column for

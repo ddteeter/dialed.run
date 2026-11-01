@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "ecd278ef-a4a1-4777-a7fc-987cfa727500",
+  "id": "afc44859-8edf-4246-868d-1649d748e9d0",
   "prevId": "949e25c5-d2a6-43e0-a88e-8092af4c7859",
   "tables": {
     "access_requests": {
@@ -1587,24 +1587,34 @@
           ],
           "isUnique": false
         },
-        "entries_audience_created": {
-          "name": "entries_audience_created",
+        "entries_shared_created": {
+          "name": "entries_shared_created",
           "columns": [
-            "audience",
             "moderation_status",
             "created_at"
           ],
-          "isUnique": false
+          "isUnique": false,
+          "where": "\"outfit_entries\".\"audience\" in ('runners', 'world')"
         },
-        "entries_user_audience_created": {
-          "name": "entries_user_audience_created",
+        "entries_user_shared_created": {
+          "name": "entries_user_shared_created",
           "columns": [
             "user_id",
-            "audience",
             "moderation_status",
             "created_at"
           ],
-          "isUnique": false
+          "isUnique": false,
+          "where": "\"outfit_entries\".\"audience\" in ('runners', 'world')"
+        },
+        "entries_user_world_created": {
+          "name": "entries_user_world_created",
+          "columns": [
+            "user_id",
+            "moderation_status",
+            "created_at"
+          ],
+          "isUnique": false,
+          "where": "\"outfit_entries\".\"audience\" = 'world'"
         }
       },
       "foreignKeys": {},
@@ -2488,13 +2498,6 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
-        },
-        "opened_at": {
-          "name": "opened_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
         }
       },
       "indexes": {
@@ -2526,14 +2529,6 @@
           "name": "review_queue_resolved",
           "columns": [
             "resolved_at"
-          ],
-          "isUnique": false
-        },
-        "review_queue_source_opened": {
-          "name": "review_queue_source_opened",
-          "columns": [
-            "source",
-            "opened_at"
           ],
           "isUnique": false
         }
@@ -3217,6 +3212,22 @@
           "notNull": true,
           "autoincrement": false,
           "default": true
+        },
+        "public_profile": {
+          "name": "public_profile",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "public_closet": {
+          "name": "public_closet",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         }
       },
       "indexes": {

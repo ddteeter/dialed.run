@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "dacfbed5-a766-4144-99be-6647c8cd9a81",
-  "prevId": "ecd278ef-a4a1-4777-a7fc-987cfa727500",
+  "id": "df55053d-fa34-4f88-b72a-833711dcbee0",
+  "prevId": "afc44859-8edf-4246-868d-1649d748e9d0",
   "tables": {
     "access_requests": {
       "name": "access_requests",
@@ -1587,24 +1587,34 @@
           ],
           "isUnique": false
         },
-        "entries_audience_created": {
-          "name": "entries_audience_created",
+        "entries_shared_created": {
+          "name": "entries_shared_created",
           "columns": [
-            "audience",
             "moderation_status",
             "created_at"
           ],
-          "isUnique": false
+          "isUnique": false,
+          "where": "\"outfit_entries\".\"audience\" in ('runners', 'world')"
         },
-        "entries_user_audience_created": {
-          "name": "entries_user_audience_created",
+        "entries_user_shared_created": {
+          "name": "entries_user_shared_created",
           "columns": [
             "user_id",
-            "audience",
             "moderation_status",
             "created_at"
           ],
-          "isUnique": false
+          "isUnique": false,
+          "where": "\"outfit_entries\".\"audience\" in ('runners', 'world')"
+        },
+        "entries_user_world_created": {
+          "name": "entries_user_world_created",
+          "columns": [
+            "user_id",
+            "moderation_status",
+            "created_at"
+          ],
+          "isUnique": false,
+          "where": "\"outfit_entries\".\"audience\" = 'world'"
         }
       },
       "foreignKeys": {},
@@ -1757,14 +1767,6 @@
           "columns": [
             "photo_scope",
             "photo_id"
-          ],
-          "isUnique": false
-        },
-        "photo_screenings_created": {
-          "name": "photo_screenings_created",
-          "columns": [
-            "created_at",
-            "decision"
           ],
           "isUnique": false
         }
@@ -2068,6 +2070,80 @@
           ],
           "isUnique": false,
           "where": "\"products\".\"extraction_status\" = 'done'"
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "public_photos": {
+      "name": "public_photos",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "photo_id": {
+          "name": "photo_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "entry_id": {
+          "name": "entry_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "public_photos_photo": {
+          "name": "public_photos_photo",
+          "columns": [
+            "photo_id"
+          ],
+          "isUnique": true
+        },
+        "public_photos_entry": {
+          "name": "public_photos_entry",
+          "columns": [
+            "entry_id"
+          ],
+          "isUnique": false
+        },
+        "public_photos_user": {
+          "name": "public_photos_user",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {},
@@ -2496,13 +2572,6 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
-        },
-        "opened_at": {
-          "name": "opened_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
         }
       },
       "indexes": {
@@ -2534,14 +2603,6 @@
           "name": "review_queue_resolved",
           "columns": [
             "resolved_at"
-          ],
-          "isUnique": false
-        },
-        "review_queue_source_opened": {
-          "name": "review_queue_source_opened",
-          "columns": [
-            "source",
-            "opened_at"
           ],
           "isUnique": false
         }
@@ -3225,6 +3286,22 @@
           "notNull": true,
           "autoincrement": false,
           "default": true
+        },
+        "public_profile": {
+          "name": "public_profile",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "public_closet": {
+          "name": "public_closet",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         }
       },
       "indexes": {
