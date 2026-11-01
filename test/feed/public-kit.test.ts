@@ -119,7 +119,8 @@ async function fullyPopulated(
       brand: "Tracksmith",
       name: "Brighton Base Layer",
       type: "longSleeve",
-      productUrl: "https://spam.example/buy",
+      // On a subdomain of the denied one: closet's one read (design 163).
+      productUrl: "https://shop.spam.example/buy",
     })
     .where(eq(wardrobeItems.id, layer));
   await core()
@@ -212,7 +213,8 @@ describe("publicKitRead: a public kit", () => {
       gain: { value: "210", unit: "ft" },
       caption: "First frosty one.",
       pieces: [
-        // Denied since it was saved: no link to the open web.
+        // Its domain's parent denied since it was saved: no link to the
+        // open web.
         {
           name: "Tracksmith Brighton Base Layer",
           model: "Brighton Base Layer",

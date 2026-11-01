@@ -20,11 +20,9 @@
  * the app shows), else the runner's own place's zone, else UTC. A day,
  * never a time (D-151).
  */
-import { and, eq, inArray, sql } from "drizzle-orm";
-import type { DrizzleD1Database } from "drizzle-orm/d1";
+import { and, eq, sql } from "drizzle-orm";
 
 import {
-  domainDenylist,
   outfitEntries,
   outfitEntryItems,
   runs,
@@ -46,7 +44,6 @@ import {
 import { formatTemp, precipClassOf } from "../../lib/contracts/temperature";
 import { entryCacheTag } from "../../lib/cache-tags";
 import { dayLabel, isTimeZone } from "../../lib/dates";
-import { domainOf } from "../../lib/domain";
 import { ulidSchema } from "../../lib/ids";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
 import {
@@ -56,7 +53,7 @@ import {
   publishedPhotoUrls,
   type EntryCardData,
 } from "../ops";
-import { typeWordOf } from "../closet";
+import { allowedLinksOf, typeWordOf } from "../closet";
 import { worldVisibleEntry } from "../safety";
 
 import { observationsForRuns, type Conditions } from "./conditions";
@@ -65,7 +62,7 @@ import type { PublicKit, PublicPiece } from "./public-kit-shape";
 import { isProvidersReading } from "./strip";
 import { unitsFor } from "./units";
 
-type Database = DrizzleD1Database;
+type Database = ReturnType<typeof coreDb>;
 type Run = typeof runs.$inferSelect;
 
 /**
@@ -203,6 +200,7 @@ function statsOf(
  */
 function pieceColumns() {
   return {
+    id: wardrobeItems.id,
     name: wardrobeItems.name,
     brand: wardrobeItems.brand,
     category: wardrobeItems.category,
@@ -214,9 +212,9 @@ function pieceColumns() {
 /**
  * The pieces, in the order they were put on the kit, each with its kind
  * as the closet's TYPE chip says it, else its category's word (round 42
- * #90), and its product link when it has one whose domain the denylist
- * allows (packet §3): a link an operator has since denied is not passed
- * on to the open web. A link that does not parse is no link.
+ * #90), and its product link when closet's one read of it allows it
+ * (design 163): a link an operator has since denied is not passed on to
+ * the open web, nor one that does not parse or is not https.
  */
 async function piecesOf(
   database: Database,
@@ -230,12 +228,9 @@ async function piecesOf(
     // The order they were attached in: the table has no position column,
     // and its index would otherwise hand them back by item id.
     .orderBy(sql`${outfitEntryItems}.rowid`);
-  const denied = await deniedDomains(
-    database,
-    rows.map((row) => domainOf(row.productUrl ?? undefined)),
-  );
+  const links = await allowedLinksOf(database, rows);
   return rows.map((row) => {
-    const url = allowedLink(row.productUrl, denied);
+    const url = links.get(row.id);
     return {
       name: row.brand === null ? row.name : `${row.brand} ${row.name}`,
       model: row.name,
@@ -243,33 +238,6 @@ async function piecesOf(
       ...(url !== undefined && { url }),
     };
   });
-}
-
-/**
-A product link to pass on: one that parses, to a domain not denied.
-*/
-function allowedLink(
-  url: string | null,
-  denied: ReadonlySet<string>,
-): string | undefined {
-  const domain = domainOf(url ?? undefined);
-  if (domain === undefined || denied.has(domain)) return undefined;
-  return url ?? undefined;
-}
-
-/**
-Which of these domains the denylist holds, in one read by its key.
-*/
-async function deniedDomains(
-  database: Database,
-  domains: readonly (string | undefined)[],
-): Promise<Set<string>> {
-  const named = [...new Set(domains.filter((domain) => domain !== undefined))];
-  const rows = await database
-    .select({ domain: domainDenylist.domain })
-    .from(domainDenylist)
-    .where(inArray(domainDenylist.domain, named));
-  return new Set(rows.map((row) => row.domain));
 }
 
 /**
