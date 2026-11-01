@@ -52,8 +52,14 @@ after upload goes to the Desk's review queue for a person.
   batch (law 8c) and the fast path's failure is reported, not thrown
   (law 5). No rule, no `moderation_actions` row: it is no verdict on the
   runner. It clears only a photo still pending, and a garment photo only
-  if its version is a day old, so a re-upload is never taken off. Remove
-  and Remove as suspected CSAM stay on the row.
+  if its version is a day old, so a re-upload is never taken off; a clear
+  it refuses (`not_found`) fails on the Desk like any decision, with the
+  band and Try again, and the row stays. Remove and Remove as suspected
+  CSAM stay on the row (owner, 2026-10-31): a missing file can still be a
+  report on real abuse.
+- **Wording** (owner, 2026-10-31): the button is "Clear photo", and the
+  owner is told `MISSING_PHOTO_NOTICE`'s two sentences
+  (`feed/missing-photo.ts`), in a bell row only, with no email.
 - **Today** counts both sources in "photos the screener couldn't finish",
   which is what they literally are.
 - **Sentry**: the "still pending" line lists each photo as
@@ -76,7 +82,8 @@ after upload goes to the Desk's review queue for a person.
   late pass settles the stuck row; the Sentry line names ids and `(missing)`.
 - worker: `uploadedAt` from a ULID / version key; `todayCounts` counts both.
 - dom: the review row's tags, why-here lines and no photo on `missing_file`;
-  Clear photo in place of Approve there, sending `clear`.
+  Clear photo in place of Approve there, sending `clear`; a refused clear
+  keeps its row with the failure band.
 - worker: Approve on `unscreened` publishes, on `missing_file` stays
   pending; Clear takes a kit's and a garment's photo off with one notice,
   no audit row, no debt left; refuses an `unscreened` row, a photo no
@@ -84,8 +91,5 @@ after upload goes to the Desk's review queue for a person.
 
 ## Open questions
 
-- None open. Approve and the missing file were answered 2026-10-31 (see
-  Approach). The button label and the notice text are drafts awaiting the
-  owner (`RemovalDecision.tsx` `REASONLESS_LABELS`,
-  `feed/missing-photo.ts` `MISSING_PHOTO_NOTICE`). The notice is a bell row
-  only, not an email.
+- None open. Approve, the missing file, its wording and the Remove pair
+  were all answered 2026-10-31 (see Approach).
