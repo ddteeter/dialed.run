@@ -446,6 +446,8 @@ describe("a garment match's takedown", () => {
       garment.getByRole("button", { name: "Remove as suspected CSAM" }),
     ).toBeVisible();
     expect(garment.queryByRole("button", { name: "Approve" })).toBeNull();
+    // Nor any other reasonless decision: those two are the whole bar.
+    expect(garment.getAllByRole("button")).toHaveLength(2);
   });
 
   it("offers nothing where no takedown was handed down", async () => {

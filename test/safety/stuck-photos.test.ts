@@ -22,12 +22,7 @@ import {
   garmentOriginalKey,
   garmentVersionId,
 } from "../../src/lib/garment-photo-key";
-import {
-  newUlid,
-  type Ulid,
-  ulidSchema,
-  ulidSeconds,
-} from "../../src/lib/ids";
+import { newUlid, type Ulid, ulidSchema, ulidSeconds } from "../../src/lib/ids";
 import {
   clearMissingPhoto,
   MISSING_PHOTO_NOTICE,
@@ -619,6 +614,41 @@ describe("Clear photo on a missing file (owner, 2026-10-31)", () => {
     ]);
     expect(await core().select().from(moderationActions)).toEqual([]);
     expect(await core().select().from(outbox)).toEqual([]);
+  });
+
+  it("owes storage the kit's prefix, so a part of the upload that landed late goes", async () => {
+    const now = nowSeconds();
+    const photoId = await entryPhoto(now, 2 * DAY, false);
+    await retryPendingScreenings(clean, [], now);
+    const [photo] = await core()
+      .select({ photoKey: entryPhotos.photoKey })
+      .from(entryPhotos)
+      .where(eq(entryPhotos.id, photoId));
+    const late = photo?.photoKey ?? "";
+    await env.MEDIA.put(late, new Uint8Array([1]));
+
+    await decideReview(core(), "op", {
+      queueId: await queueIdOf(photoId),
+      action: "clear",
+    });
+
+    expect(await env.MEDIA.head(late)).toBeNull();
+  });
+
+  it("owes storage the garment's photo, so a part of the upload that landed late goes", async () => {
+    const now = nowSeconds();
+    const itemId = await garmentPhoto(now, 2 * DAY, false);
+    await retryPendingScreenings(clean, [], now);
+    const { photoKey } = await garmentRow(itemId);
+    const late = garmentOriginalKey(photoKey ?? "");
+    await env.MEDIA.put(late, new Uint8Array([1]));
+
+    await decideReview(core(), "op", {
+      queueId: await queueIdOf(itemId),
+      action: "clear",
+    });
+
+    expect(await env.MEDIA.head(late)).toBeNull();
   });
 
   it("keeps a garment photo added again within the day", async () => {
