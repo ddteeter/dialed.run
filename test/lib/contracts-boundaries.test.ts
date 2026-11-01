@@ -194,18 +194,31 @@ describe("httpsUrlSchema", () => {
   });
 
   it("refuses a string that is not a URL at all", () => {
-    // The `catch` branch. Without it `new URL` throws out of the refine and
-    // the parse fails with a stack rather than a message — and a mutant
-    // that empties the catch is invisible unless something takes this path.
     expect(httpsUrlSchema.safeParse("not a url").success).toBe(false);
     expect(httpsUrlSchema.safeParse("").success).toBe(false);
   });
 
-  it("says what was wrong", () => {
-    const result = httpsUrlSchema.safeParse(urlWithScheme("http"));
-    expect(result.error?.issues[0]?.message).toBe(
-      "Product links need to start with https://",
-    );
+  it("refuses a host with no dot, which is no shop's page", () => {
+    expect(httpsUrlSchema.safeParse("https://janji").success).toBe(false);
+    expect(httpsUrlSchema.safeParse("https://j.co").success).toBe(true);
+  });
+
+  it("says which of round 43's two things was wrong, once", () => {
+    const notALink = "That isn't a link. Paste the address of the shop's page.";
+    for (const value of ["not a url", "https://janji", "javascript:alert(1)"]) {
+      expect(httpsUrlSchema.safeParse(value).error?.issues).toEqual([
+        expect.objectContaining({ message: notALink }),
+      ]);
+    }
+    for (const scheme of ["http", "ftp"]) {
+      expect(
+        httpsUrlSchema.safeParse(urlWithScheme(scheme)).error?.issues,
+      ).toEqual([
+        expect.objectContaining({
+          message: "Use a link that starts with https://.",
+        }),
+      ]);
+    }
   });
 });
 

@@ -587,13 +587,167 @@ describe("GarmentForm: the estimate", () => {
 });
 
 describe("GarmentForm: no product link for v1 (round 22, item 17)", () => {
-  it("draws no link field and no pending line", () => {
-    // AC2b: a field that can only say "pending" is a promise the build
-    // can't keep. F2a/F2b return with enrichment.
+  it("draws round 43's link field after the model, with its hint and placeholder", () => {
     renderForm();
 
-    expect(screen.queryByLabelText("Product link")).toBeNull();
+    const link = screen.getByLabelText(/Product link · optional/);
+    expect(link).toHaveAttribute("type", "url");
+    expect(link).toHaveAttribute("placeholder", "brand.com/product…");
+    expect(
+      screen.getByText(
+        "We'll read the shop's page for what it's made of. Needs a brand and model.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/Model \/ name/).compareDocumentPosition(link) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // AC2b's old promise stays gone: F never waits on enrichment.
     expect(screen.queryByText(/Enrichment pending/)).toBeNull();
+  });
+
+  it("saves a link typed without a scheme as https", async () => {
+    const user = userEvent.setup();
+    const { save } = renderForm({ initial: { name: "AFO Middle Short" } });
+
+    await user.type(
+      screen.getByLabelText(/Product link · optional/),
+      "janji.com/afo",
+    );
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await saved(save)).toMatchObject({
+      productUrl: "https://janji.com/afo",
+    });
+  });
+
+  it("checks the link when the runner leaves it, never while typing", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const link = screen.getByLabelText(/Product link · optional/);
+
+    await user.type(link, ["http:", "//janji.com/afo"].join(""));
+    expect(
+      screen.queryByText("Use a link that starts with https://."),
+    ).toBeNull();
+
+    await user.tab();
+    expect(
+      screen.getByText("Use a link that starts with https://."),
+    ).toBeInTheDocument();
+    expect(link).toHaveAttribute("aria-invalid", "true");
+
+    // Typing clears it, as every field's message does.
+    await user.type(link, "x");
+    expect(
+      screen.queryByText("Use a link that starts with https://."),
+    ).toBeNull();
+  });
+
+  it("says a non-link is not a link, and a good one or an empty box says nothing", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const link = screen.getByLabelText(/Product link · optional/);
+    const notALink = "That isn't a link. Paste the address of the shop's page.";
+
+    await user.type(link, "not a link");
+    await user.tab();
+    expect(screen.getByText(notALink)).toBeInTheDocument();
+
+    await user.clear(link);
+    await user.type(link, "janji.com/afo");
+    await user.tab();
+    expect(screen.queryByText(notALink)).toBeNull();
+
+    await user.clear(link);
+    await user.tab();
+    expect(link).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("puts a denied link's refusal on the link field and keeps every other value", async () => {
+    const user = userEvent.setup();
+    const denied =
+      "That link isn't allowed here. The rest of the piece is fine.";
+    // The server's refusal, as it arrives: an error carrying a field issue.
+    const save = vi.fn<GarmentFormProps["save"]>(() =>
+      Promise.reject(
+        Object.assign(new Error(denied), {
+          issues: [{ path: ["productUrl"], message: denied }],
+        }),
+      ),
+    );
+    renderForm({ save, initial: { name: "AFO Middle Short", brand: "Janji" } });
+
+    await user.type(
+      screen.getByLabelText(/Product link · optional/),
+      "https://shop.example/afo",
+    );
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByText(denied)).toBeInTheDocument();
+    expect(screen.queryByText(/Our end failed/)).toBeNull();
+    expect(screen.getByLabelText(/Model \/ name/)).toHaveValue(
+      "AFO Middle Short",
+    );
+    expect(screen.getByLabelText(/Product link · optional/)).toHaveValue(
+      "https://shop.example/afo",
+    );
+  });
+
+  it("removes a stored link when the box is cleared", async () => {
+    const user = userEvent.setup();
+    const { save } = renderForm({
+      initial: { name: "Harrier", productUrl: "https://example.com/harrier" },
+    });
+
+    await user.clear(screen.getByLabelText(/Product link · optional/));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    const sent = await saved(save);
+    expect(sent.productUrl).toBeUndefined();
+  });
+
+  it("opens Edit on a since-denied link's message, focused, with Save still there to refuse", async () => {
+    const user = userEvent.setup();
+    const denied =
+      "That link isn't allowed here. The rest of the piece is fine.";
+    const { save } = renderForm({
+      initial: { name: "Harrier", productUrl: "https://shop.example/afo" },
+      stored: {
+        errors: { productUrl: denied },
+        placeholders: { weight: undefined, fabric: undefined },
+      },
+    });
+    const link = screen.getByLabelText(/Product link · optional/);
+
+    expect(screen.getByText(denied)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(link).toHaveFocus();
+    });
+    // Refused, not disabled: the button still sends, and the server says no.
+    const button = screen.getByRole("button", { name: "Save" });
+    expect(button).not.toBeDisabled();
+    await user.click(button);
+    expect(await saved(save)).toMatchObject({
+      productUrl: "https://shop.example/afo",
+    });
+  });
+
+  it("shows the product's weight and fabric as the empty choice on Edit", () => {
+    renderForm({
+      initial: { name: "Harrier", category: "top" },
+      stored: { errors: {}, placeholders: { weight: "mid", fabric: "merino" } },
+    });
+
+    expect(selectFor("Weight")).toHaveValue("");
+    expect(selectFor("Weight").options[0]?.textContent).toBe("Mid");
+    expect(selectFor("Fabric").options[0]?.textContent).toBe("Merino");
+  });
+
+  it("reads a dash for the empty choice where the product lends nothing", () => {
+    renderForm({ initial: { name: "Harrier", category: "top" } });
+
+    expect(selectFor("Weight").options[0]?.textContent).toBe("—");
   });
 
   it("keeps a stored link, untouched, through an edit", async () => {

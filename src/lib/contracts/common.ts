@@ -21,7 +21,16 @@ import { z } from "zod";
  */
 export const httpsUrlSchema = z
   .string()
+  // Round 43 #93's two words: one for what is not a link at all, and one
+  // for a link on the wrong scheme. A host with no dot is not a shop's
+  // page, and `javascript:` has no host, so both read as "not a link".
+  // `abort` because the second check has nothing to say about a string
+  // the first could not read.
+  .refine((value) => URL.parse(value)?.hostname.includes(".") === true, {
+    message: "That isn't a link. Paste the address of the shop's page.",
+    abort: true,
+  })
   .refine(
     (value) => URL.parse(value)?.protocol === "https:",
-    "Product links need to start with https://",
+    "Use a link that starts with https://.",
   );

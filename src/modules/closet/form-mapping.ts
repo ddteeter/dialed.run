@@ -11,14 +11,24 @@
  * `garmentSchema`, and the previous version returned a hand-built object
  * typed as `Garment` that the schema never actually saw.
  */
+import { httpsUrlSchema } from "../../lib/contracts";
+import type { FieldErrors } from "../../ui";
+
 import type { GarmentFormValues } from "./form-schema";
+import type { LinkDetail } from "./garment-link";
+import { DENIED_LINK } from "./link-copy";
 import type { EffectiveAttributes, WardrobeItemRow } from "./service";
 
 /**
  * The reverse direction for edit.$itemId.tsx: pre-fill the form from a
- * stored item, using the read-side effective attributes (item columns
- * merged with product defaults) so an edit starts from what's actually
- * shown on the detail page.
+ * stored item.
+ *
+ * **Weight and fabric are the runner's own** (round 43 #94): a value the
+ * product lent is shown as the field's placeholder (`productPlaceholders`),
+ * not filled in, so saving an Edit does not copy it onto the garment, and
+ * clearing a field goes back to the product's. The two toggles still start
+ * from what E shows: a checkbox has no placeholder, and F already writes
+ * both on every save, so they are the runner's on any piece F made.
  */
 export function formValuesFromItem(
   item: WardrobeItemRow,
@@ -36,9 +46,42 @@ export function formValuesFromItem(
     visibilityLevel: item.visibilityLevel ?? "",
     productUrl: item.productUrl ?? "",
     layer: item.layer ?? "",
-    weight: effective.weight ?? "",
-    fabric: effective.fabric ?? "",
+    weight: item.weight ?? "",
+    fabric: item.fabric ?? "",
     windResistant: effective.windResistant ?? false,
     waterResistant: effective.waterResistant ?? false,
   };
+}
+
+/**
+ * What the product lends where the runner left a field empty: Edit's
+ * placeholders for weight and fabric (round 43 #94).
+ */
+export type ProductPlaceholders = Readonly<
+  Pick<EffectiveAttributes, "weight" | "fabric">
+>;
+
+export function productPlaceholders(
+  item: WardrobeItemRow,
+  effective: EffectiveAttributes,
+): ProductPlaceholders {
+  return {
+    weight: item.weight === null ? effective.weight : undefined,
+    fabric: item.fabric === null ? effective.fabric : undefined,
+  };
+}
+
+/**
+ * Edit's opening error for a stored link it will not show (round 43 #93,
+ * state 5): denied since it was saved, or stored before the https rule.
+ * `linkDetail.link` is closet's one read of it, so a link that read lets
+ * through opens clean.
+ */
+export function storedLinkErrors(
+  item: WardrobeItemRow,
+  linkDetail: LinkDetail,
+): FieldErrors {
+  if (item.productUrl === null || linkDetail.link !== undefined) return {};
+  const parsed = httpsUrlSchema.safeParse(item.productUrl);
+  return { productUrl: parsed.error?.issues[0]?.message ?? DENIED_LINK };
 }
