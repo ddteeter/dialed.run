@@ -28,6 +28,7 @@ import {
 } from "../../src/modules/safety/notice-copy";
 import type { ReviewSource } from "../../src/modules/safety/review";
 
+import { noPurge } from "../purge-spy";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 import { oweInCore } from "../queue-fakes";
 
@@ -91,6 +92,7 @@ async function report(
   await fileReport(
     { reporterId: reporter, subjectType, subjectId, reason },
     oweInCore,
+    noPurge,
   );
   return reporter;
 }
@@ -238,7 +240,7 @@ describe("the author's notice when a report hides their thing (D-145)", () => {
     const entryId = await entryOf(author);
     for (let n = 0; n < 3; n += 1) await reportRow("entry", entryId);
 
-    await reconcileUnhiddenReports(oweInCore);
+    await reconcileUnhiddenReports(oweInCore, noPurge);
 
     expect(await bodiesTold(author)).toStrictEqual([HIDDEN_NOTICE.entry]);
   });

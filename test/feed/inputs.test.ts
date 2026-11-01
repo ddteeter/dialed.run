@@ -10,6 +10,8 @@ import {
   bandSignalsInput,
   coordinatesInput,
   entryIdInput,
+  publicKitInput,
+  publicProfileInput,
   handleInput,
   usefulInput,
   feedInput,
@@ -394,5 +396,46 @@ describe("saveBacklogRowInput", () => {
         verdict: 0,
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("publicKitInput", () => {
+  it("takes any path segment, since one that is not an id is a kit that never existed", () => {
+    const id = newUlid();
+    expect(publicKitInput.parse({ entryId: id })).toStrictEqual({ entryId: id });
+    expect(publicKitInput.parse({ entryId: "not-an-id" })).toStrictEqual({
+      entryId: "not-an-id",
+    });
+  });
+
+  it("reads a segment too long to be an id, or none, as no id rather than an error", () => {
+    expect(publicKitInput.parse({ entryId: "x".repeat(201) })).toStrictEqual({
+      entryId: "",
+    });
+    expect(publicKitInput.parse({ entryId: "x".repeat(200) })).toStrictEqual({
+      entryId: "x".repeat(200),
+    });
+    expect(publicKitInput.parse({})).toStrictEqual({ entryId: "" });
+  });
+});
+
+describe("publicProfileInput", () => {
+  it("takes any segment and whether to list every kit", () => {
+    expect(
+      publicProfileInput.parse({ handle: "maya_runs", all: true }),
+    ).toStrictEqual({ handle: "maya_runs", all: true });
+    expect(publicProfileInput.parse({ handle: "Not A Handle!" })).toStrictEqual(
+      { handle: "Not A Handle!" },
+    );
+  });
+
+  it("reads a segment too long to be a handle, or none, as no handle, and a stray all as none", () => {
+    expect(
+      publicProfileInput.parse({ handle: "x".repeat(61), all: "yes" }),
+    ).toStrictEqual({ handle: "", all: undefined });
+    expect(publicProfileInput.parse({ handle: "x".repeat(60) })).toStrictEqual(
+      { handle: "x".repeat(60) },
+    );
+    expect(publicProfileInput.parse({})).toStrictEqual({ handle: "" });
   });
 });

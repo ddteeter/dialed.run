@@ -90,3 +90,19 @@ export function typeOf(
 ): GarmentType | undefined {
   return garmentTypesFor(category).find((type) => type === value);
 }
+
+/**
+ * A piece's kind in one word, as the open web names it (round 42 #90,
+ * #91): its TYPE chip when it has a type its category allows, else its
+ * category's word — so a piece reads the same on `/k`, `/@handle` and in
+ * the closet.
+ */
+export function typeWordOf(
+  category: (typeof garmentCategories)[number],
+  stored: string | null,
+): string {
+  const type = typeOf(category, stored);
+  return type === undefined
+    ? garmentCategoryLabels[category]
+    : garmentTypeLabels[type];
+}

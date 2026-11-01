@@ -277,6 +277,103 @@ describe("deciding", () => {
     ).toBeInTheDocument();
   });
 
+  it("draws a garment photo's row as round 42 #88 rules: kicker with owner and source, F's card, the garment's line", () => {
+    renderQueue([
+      row({
+        subjectType: "garment",
+        subjectId: "g-1",
+        source: "classifier",
+        reporterCount: 0,
+        reasons: [],
+        subject: {
+          photoKeys: ["items/u/g-1/v1/card.webp"],
+          owner: "k_lopes",
+          garmentLine: "Nike Pegasus 41 · Shoes · In use",
+        },
+      }),
+    ]);
+
+    const kicker = screen.getByRole("button", {
+      name: "garment photo · g-1 · @k_lopes",
+    });
+    // The source tag beside the kicker, and only there.
+    expect(kicker.nextElementSibling).toHaveTextContent(/^\[classifier\]$/u);
+    expect(screen.getAllByText(bracketed("classifier"))).toHaveLength(1);
+    const photo = screen.getByRole("img", { name: "Reported garment photo" });
+    expect(photo).toHaveAttribute(
+      "src",
+      "/safety/review-photo/items/u/g-1/v1/card.webp",
+    );
+    expect(photo).toHaveClass("h-full", "w-full", "object-contain");
+    // F's photo well: the card at its own size, not a kit photo's strip.
+    expect(photo.parentElement).toHaveClass(
+      "aspect-4/3",
+      "w-full",
+      "rounded-field",
+      "border-hairline",
+      "bg-photo",
+      "wide:max-h-80",
+    );
+    const line = screen.getByText("Nike Pegasus 41 · Shoes · In use");
+    expect(line).toHaveClass("font-mono", "text-mono-xs", "uppercase");
+    expect(line.parentElement).toHaveClass("text-quiet");
+    expect(photo.parentElement?.nextElementSibling).toBe(line.parentElement);
+  });
+
+  it("names nobody in a garment photo's kicker when the owner has no handle, and draws no line without one", () => {
+    renderQueue([
+      row({
+        subjectType: "garment",
+        subjectId: "g-1",
+        source: "fingerprint",
+        subject: { photoKeys: ["items/u/g-1/v1/card.webp"] },
+      }),
+    ]);
+
+    expect(
+      screen.getByRole("button", { name: "garment photo · g-1" }),
+    ).toBeVisible();
+    expect(document.querySelector("[data-part='garment-line']")).toBeNull();
+  });
+
+  it("shows no photo for a garment row whose photo is gone", () => {
+    renderQueue([
+      row({
+        subjectType: "garment",
+        subjectId: "g-1",
+        source: "classifier",
+        subject: { photoKeys: [] },
+      }),
+    ]);
+
+    expect(screen.queryByRole("img")).toBeNull();
+    expect(document.querySelector("[data-part='garment-photo']")).toBeNull();
+  });
+
+  it("keeps a kit row's source at its foot, and its photos as reported photos", () => {
+    renderQueue([
+      row({
+        subjectType: "photo",
+        subjectId: "p-1",
+        source: "classifier",
+        subject: { photoKeys: ["entries/u/k/1"], owner: "k_lopes" },
+      }),
+    ]);
+
+    // A kit photo's kicker does not name its owner: its kit does.
+    const kicker = screen.getByRole("button", { name: "photo · p-1" });
+    expect(kicker.nextElementSibling).toBeNull();
+    expect(screen.getByRole("img", { name: "Reported photo" })).toHaveClass(
+      "h-32",
+    );
+    expect(document.querySelector("[data-part='garment-photo']")).toBeNull();
+    // At the row's foot, a child of the row, not of its header.
+    expect(
+      screen.getByText(bracketed("classifier")).closest("[data-part='source']")
+        ?.parentElement?.tagName,
+    ).toBe("LI");
+  });
+
   it("goes back to the decision bar on Cancel, deciding nothing", async () => {
     const user = userEvent.setup();
     const { resolve } = renderQueue([row()]);

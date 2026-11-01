@@ -87,21 +87,23 @@ losing them silently breaks brand autocomplete rather than failing a test.
 
 ## 2. R2 buckets
 
-Two buckets, split by **retention**, not by cost.
+Split by **retention** and by **who may read them**, not by cost.
 
 ```sh
 wrangler r2 bucket create dialed-media --location enam
 wrangler r2 bucket create dialed-imports --location enam
 wrangler r2 bucket create dialed-guides --location enam
+wrangler r2 bucket create dialed-public-photos --location enam
 ```
 
 The same region hint as the databases (§1), for the same reason.
 
-| Bucket           | Binding                | Holds                                                  | Retention                                                                                                                             |
-| ---------------- | ---------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `dialed-media`   | `MEDIA`                | Garment photos, entry photos                           | Indefinite — the app renders these; deleting one breaks a page                                                                        |
-| `dialed-imports` | `IMPORTS`              | Uploaded `.fit`/`.gpx`/`.tcx`; data export ZIPs        | Run files: **until the run or account is deleted** (D-110); a file whose import failed, 30 days. Export ZIPs under `exports/`: 8 days |
-| `dialed-guides`  | (R-134, not yet bound) | `guide-artifact/v1.json`, the nightly anonymous totals | Overwritten nightly; read by the marketing site's CI with a read-only token scoped to this bucket                                     |
+| Bucket                 | Binding                | Holds                                                                                 | Retention                                                                                                                             |
+| ---------------------- | ---------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `dialed-media`         | `MEDIA`                | Garment photos, entry photos                                                          | Indefinite — the app renders these; deleting one breaks a page                                                                        |
+| `dialed-imports`       | `IMPORTS`              | Uploaded `.fit`/`.gpx`/`.tcx`; data export ZIPs                                       | Run files: **until the run or account is deleted** (D-110); a file whose import failed, 30 days. Export ZIPs under `exports/`: 8 days |
+| `dialed-public-photos` | `PUBLIC_PHOTOS`        | Copies of the screened photos on `world` (PUBLIC) kits, served at `photos.dialed.run` | Only while the kit is public: deleted on any retraction (D-153, design 163 step 8)                                                    |
+| `dialed-guides`        | (R-134, not yet bound) | `guide-artifact/v1.json`, the nightly anonymous totals                                | Overwritten nightly; read by the marketing site's CI with a read-only token scoped to this bucket                                     |
 
 **No rule expires a run file** (decision D-110). An uploaded file is kept
 for as long as its run: deleting a run deletes its file (feed's `deleteRuns`,
@@ -134,6 +136,44 @@ Why not one bucket with a prefix rule: R2 lifecycle rules can be
 prefix-scoped, so one bucket would work. Two makes retention a property of
 where an object lives rather than a rule someone can misconfigure, and it
 stops a photo ever being written to a path that expires.
+
+### The public photo bucket (D-153)
+
+`dialed-public-photos` is the one bucket anyone can read. It holds a copy
+of each screened photo on a PUBLIC kit, under an unguessable key, so the
+public kit page can show it and **Cloudflare's CSAM Scanning Tool can scan
+it** — the tool sees only what is served through Cloudflare's cache, which
+no Worker response is (deployment plan §8). The app writes a copy when a
+kit becomes public and deletes it on every retraction; nothing else goes
+in it. Before the deploy that binds `PUBLIC_PHOTOS`:
+
+1. Create the bucket (the command above).
+2. Connect the custom domain: R2 → `dialed-public-photos` → Settings →
+   Custom Domains → **Connect Domain** → `photos.dialed.run` (the zone is
+   already on Cloudflare). Leave the `r2.dev` public URL **disabled**: it
+   bypasses the cache, and with it the scanning tool.
+3. Turn on the CSAM Scanning Tool for the `dialed.run` zone: Caching →
+   Configuration → CSAM Scanning Tool → **Configure**, with the
+   notification email set to the owner's address. Cloudflare blocks a match
+   where it can and emails the matched paths once a day; the report to
+   NCMEC is the owner's, and so is removing the kit in the app (Remove as
+   suspected CSAM, which quarantines it), under the procedure in
+   deployment plan §8.
+   **Read the notification the day it arrives**: it is actual knowledge
+   under 18 U.S.C. §2258A, so file the CyberTipline report and quarantine
+   the kit the same day. Register with NCMEC as an electronic service
+   provider before the bucket goes live.
+4. Keep the photos out of search: Rules → Transform Rules → **Modify
+   Response Header** on hostname `photos.dialed.run`, set
+   `X-Robots-Tag: noindex`. A page's `noindex` does not cover an image
+   URL, and the privacy policy says public pages ask not to be indexed.
+5. Do **not** add a lifecycle rule. The copies live as long as the kit is
+   public, and the deletion paths remove them; the `:15` hourly firing
+   sweeps what a deletion missed, and any object no `public_photos` row
+   names, and says so in the digest.
+6. No Cache Rule is needed: each object is written with its own
+   `Cache-Control`, short enough that a retracted photo leaves the edge
+   within the time the privacy policy promises.
 
 ### The evidence bucket (to create; no binding)
 
@@ -257,10 +297,11 @@ its first firing.
 They live in `wrangler.jsonc`'s `vars` block (owner-approved, 2026-09-26),
 which `test/bindings-conformance.test.ts` checks:
 
-| Var                  | Value                                      | Without it                                                                                                                                           |
-| -------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BETTER_AUTH_URL`    | `https://dialed.run` (set)                 | Callbacks resolve against the wrong host; secure cookies and rate limiting are off (both follow its https scheme). `/api/health` names it when unset |
-| `TURNSTILE_SITE_KEY` | empty until the widget exists — **set it** | The widget renders nothing, and verification refuses                                                                                                 |
+| Var                    | Value                                                                                         | Without it                                                                                                                                                                                                             |
+| ---------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BETTER_AUTH_URL`      | `https://dialed.run` (set)                                                                    | Callbacks resolve against the wrong host; secure cookies and rate limiting are off (both follow its https scheme). `/api/health` names it when unset                                                                   |
+| `TURNSTILE_SITE_KEY`   | empty until the widget exists — **set it**                                                    | The widget renders nothing, and verification refuses                                                                                                                                                                   |
+| `PUBLIC_PHOTOS_ORIGIN` | `https://photos.dialed.run` (set) — must equal `lib/public-photos.ts`'s, which the CSP admits | The switch for world photos (D-153): empty or unset, no photo is copied to `PUBLIC_PHOTOS` and `/k` shows none; copies already there are still deleted. Leave it set only once §2's public photo bucket steps are done |
 
 **Local dev and CI override `BETTER_AUTH_URL`** in `.dev.vars`
 (`http://localhost:<port>`; CI's e2e job writes `http://localhost:3000`).

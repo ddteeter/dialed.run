@@ -12,7 +12,7 @@
  * read decides what the next one asks. The subject itself is left out —
  * the row already shows it, or links its kit — and so is a kit already
  * removed. Served by an index on `outfit_entries.user_id` for the runner's
- * kits (`entries_user_created`, or `entries_user_audience_created` since
+ * kits (`entries_user_created`, or `entries_user_shared_created` since
  * the window count reads them all), and by `entry_photos_idempotency`'s `entry_id` prefix for each
  * kit's photos: no scan of either table, which
  * `test/safety/other-photos.test.ts` pins with EXPLAIN. The total and the

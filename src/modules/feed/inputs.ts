@@ -119,6 +119,36 @@ export const itemBandStatInput = z.object({
 export const entryIdInput = z.object({ entryId: ulidSchema });
 
 /**
+ * `/kit/<id>`'s path segment, whatever it is: a segment that is not an id is
+ * a kit that never existed, and must answer as one (round 41 #86f) rather
+ * than as a refused input. A path too long to be one is read as no id at
+ * all, so it is a kit that never existed too, never an error page.
+ */
+export const publicKitInput = z.object({
+  entryId: z.string().max(200).catch(""),
+});
+
+/**
+ * `/@handle`'s segment, whatever it is, and whether the page lists every
+ * kit: a segment that is not a handle is a profile that is not public
+ * (round 41 #86f), never a refused input, and one too long to be a handle
+ * is read as none at all.
+ */
+export const publicProfileInput = z.object({
+  handle: z.string().max(60).catch(""),
+  all: z.boolean().optional().catch(undefined),
+});
+
+/**
+ * `/@handle`'s search: `?all=true` lists every kit ("Show {N} more", round
+ * 41 #86d); anything else is the first three. A link, not a script, so
+ * each list is its own URL for the edge to keep.
+ */
+export const publicProfileSearch = z.object({
+  all: z.literal(true).optional().catch(undefined),
+});
+
+/**
  * Useful, as the state the viewer wants — never "flip it" (law 8b): a
  * repeat of the same request leaves the same state.
  */
@@ -133,7 +163,7 @@ export const feedInput = z.object({
 export const searchInput = z.object({ prefix: z.string().max(60) });
 
 /**
-`/@handle`'s segment, as typed — a handle as a person wrote it, which is
+H's segment (`/feed/u/<handle>`), as typed — a handle as a person wrote it, which is
 what a search prefix is too, so it takes the same cap. Shape is
 `lookUpHandle`'s to judge (a handle the rule refuses is one nobody holds),
 so this only bounds what a URL can make the server read.

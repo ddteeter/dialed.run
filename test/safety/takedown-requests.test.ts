@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
 import { z } from "zod";
 
 import {
@@ -16,6 +17,7 @@ import {
   fileTakedownRequest,
   pendingTakedownRequests,
 } from "../../src/modules/safety";
+import { noPurge } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";
 
 /**
@@ -34,7 +36,7 @@ function core() {
 }
 
 const pass = () => Promise.resolve({ ok: true });
-const deps = { verify: pass, owe: oweInCore };
+const deps = { verify: pass, owe: oweInCore, purge: noPurge };
 
 function request(overrides: Record<string, unknown> = {}) {
   return {
@@ -178,7 +180,11 @@ describe("filing a request", () => {
     const result = await fileTakedownRequest(
       core(),
       request(),
-      { verify: () => Promise.resolve({ ok: false }), owe: oweInCore },
+      {
+        verify: () => Promise.resolve({ ok: false }),
+        owe: oweInCore,
+        purge: noPurge,
+      },
       NOW,
     );
     expect(result).toStrictEqual({ status: "refused" });

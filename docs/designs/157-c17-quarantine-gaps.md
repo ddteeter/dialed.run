@@ -70,14 +70,23 @@ photos.
 - Screening rows deleted on retract, photo delete, Remove, quarantine,
   garment delete/replace/Remove photo; late screening writes nothing.
 
+## The row, as round 42 #88 draws it
+
+The garment row was built as a placeholder (design deltas 88) and is now
+drawn: it is the kit photo's content row, with the kicker "garment photo
+· {id} · @{owner}" and the source tag beside it, the photo at F's card
+size (the closet's photo well), then one MONO.xs line "{closet name} ·
+{category} · {state}" (`garmentLineOf` in `safety/review.ts`; the name is
+`lib/garment-label`'s, moved out of `closet` so `safety` can read it, and
+the state is the rotation's "In use" or "Retired"). MATCHING PHOTOS and the
+decision bar are the kit row's. A quarantine still tells nobody: no bell
+row and no email (round 42 #88, D-70; pinned by `garment-remove.test.ts`
+and `quarantine-gaps.test.ts`).
+
 ## Open questions (asked in the lane report)
 
-- **Remove of a garment photo**: the author's notice wording does not exist
-  (`content_removed` says "from your run"). Until it does, Remove keeps the
-  garment photo hidden (`flagged`) and tells nobody. Recommended copy: bell
-  "We removed the photo of this garment. Reason: …"; email subject "We
-  removed a photo from your closet", body ending "The garment stays in your
-  closet."
+- **Remove of a garment photo**: answered by design 159 (the owner's words,
+  2026-10-26), confirmed in round 42 #88.
 - This reverses design 106's 2026-09-15 call that garment photos never
   reach the queue (R-69's second shape). Privacy policy already lists
   moderation as a reason operators see private content.

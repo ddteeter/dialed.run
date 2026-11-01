@@ -36,6 +36,7 @@ import { photoIdInput } from "../../src/modules/feed/retract";
 import { drainOutbox } from "../../src/modules/ops/outbox";
 import { fileReport, reconcileUnhiddenReports } from "../../src/modules/safety";
 
+import { noPurge } from "../purge-spy";
 import {
   makeEntry,
   makeItem,
@@ -245,6 +246,7 @@ describe("deleting an entry", () => {
           reason: "spam",
         },
         oweInCore,
+        noPurge,
       );
     }
 
@@ -255,7 +257,7 @@ describe("deleting an entry", () => {
       .from(reviewQueue)
       .where(eq(reviewQueue.subjectId, entryId));
     expect(queued).toMatchObject({ status: "removed", resolvedBy: userId });
-    expect(await reconcileUnhiddenReports(oweInCore)).toStrictEqual({
+    expect(await reconcileUnhiddenReports(oweInCore, noPurge)).toStrictEqual({
       found: 0,
       hidden: 0,
     });
@@ -308,6 +310,7 @@ describe("deleting an entry", () => {
           reason: "spam",
         },
         oweInCore,
+        noPurge,
       );
     }
 

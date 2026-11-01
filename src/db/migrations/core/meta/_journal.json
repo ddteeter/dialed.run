@@ -512,6 +512,20 @@
       "when": 1793285567811,
       "tag": "0072_add_removed_fingerprint_photo",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "6",
+      "when": 1793454151633,
+      "tag": "0073_add_public_profile_and_shared_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "6",
+      "when": 1793454157347,
+      "tag": "0074_add_public_photos",
+      "breakpoints": true
     }
   ]
 }
