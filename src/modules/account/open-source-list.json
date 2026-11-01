@@ -945,9 +945,9 @@
   "tools": [
     {
       "name": "@cloudflare/vite-plugin",
-      "version": "1.64.0",
+      "version": "1.65.0",
       "licence": "MIT",
-      "project": "https://github.com/cloudflare/workers-sdk/tree/main/packages/vite-plugin-cloudflare#readme"
+      "project": "https://github.com/cloudflare/workers-sdk/tree/vite-plugin-v1/packages/vite-plugin-cloudflare#readme"
     },
     {
       "name": "@cloudflare/vitest-pool-workers",
@@ -1220,7 +1220,7 @@
     },
     {
       "name": "wrangler",
-      "version": "4.151.0",
+      "version": "4.152.0",
       "licence": "MIT OR Apache-2.0",
       "project": "https://github.com/cloudflare/workers-sdk#readme"
     }
