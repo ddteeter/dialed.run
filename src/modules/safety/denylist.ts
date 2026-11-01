@@ -9,13 +9,16 @@
  * anchor, not here — a function that returns a domain has no business
  * knowing about HTML attributes.
  */
-import { eq } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
+import type { drizzle } from "drizzle-orm/d1";
 
 import { domainDenylist } from "../../db/schema-core";
 import { primaryCoreDb } from "../../env";
 import { domainOf } from "../../lib/domain";
-import { hasRowWhere } from "../../lib/sql/keyed-read";
+import { columnWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
+
+type Db = ReturnType<typeof drizzle>;
 
 // Primary: the denylist is read to refuse a save, and an operator's new
 // entry must hold at once (D-123, design 143).
@@ -24,26 +27,67 @@ function db() {
 }
 
 /**
- * Whether this URL's domain is denied. A URL we cannot parse is not
- * denied — it is invalid, which is a different answer with a different
- * message, and conflating them would tell a runner their perfectly good
- * link was blocked.
+ * A host and every parent domain above it: `shop.spam.example` is
+ * `shop.spam.example` and `spam.example`. A denied row is a registrable
+ * host (contracts), so denying it denies everything under it (design 163,
+ * owner Q2). The last label alone is never one: it is a TLD, and no
+ * reviewer means "every .com".
+ */
+function suffixesOf(domain: string): string[] {
+  const labels = domain.split(".");
+  return labels.slice(0, -1).map((_, index) => labels.slice(index).join("."));
+}
+
+/**
+ * Which of these links' domains are denied, in one read of the denylist
+ * by its key, whatever the batch size (design 163).
+ *
+ * **The one rule.** The save's refusal and every surface that shows a link
+ * ask this, so a link cannot be refused at save and shown somewhere else,
+ * or the reverse. The answer is in `domainOf`'s form, so a caller asks
+ * `denied.has(domainOf(url))`.
+ *
+ * The handle is the caller's: a save's refusal reads the primary, and a
+ * page reads its replica (owner Q4), where a new denial lands within the
+ * same minute its cache already accepts.
+ *
+ * A link we cannot parse, or that is not https, is never in the answer —
+ * it is invalid, which is a different answer with a different message,
+ * and conflating them would tell a runner their perfectly good link was
+ * blocked.
+ */
+export async function deniedDomainsOf(
+  database: Db,
+  urls: readonly (string | undefined)[],
+): Promise<Set<string>> {
+  const domains = new Set(
+    urls.map((url) => domainOf(url)).filter((domain) => domain !== undefined),
+  );
+  const candidates = [...domains].flatMap((domain) => suffixesOf(domain));
+  const listed = new Set(
+    await columnWhere(
+      database,
+      domainDenylist,
+      domainDenylist.domain,
+      inArray(domainDenylist.domain, candidates),
+    ),
+  );
+  return new Set(
+    [...domains].filter((domain) =>
+      suffixesOf(domain).some((suffix) => listed.has(suffix)),
+    ),
+  );
+}
+
+/**
+ * Whether this URL's domain is denied: `deniedDomainsOf` for one link, on
+ * the primary, for a save's refusal.
  */
 export async function isDeniedDomain(
   url: string | undefined,
 ): Promise<boolean> {
-  // No guard for an absent url: `domainOf` answers `undefined` for one,
-  // which is the same answer it gives an unparseable string and leads to
-  // the same "not denied" below. A check here would be a branch nothing
-  // could distinguish.
-  const domain = domainOf(url);
-  if (domain === undefined) return false;
-  return hasRowWhere(
-    db(),
-    domainDenylist,
-    domainDenylist.domain,
-    eq(domainDenylist.domain, domain),
-  );
+  const denied = await deniedDomainsOf(db(), [url]);
+  return denied.size > 0;
 }
 
 /**

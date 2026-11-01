@@ -68,6 +68,7 @@ function detail(overrides: Partial<Detail> = {}): Detail {
     }),
     productDefaults: undefined,
     composition: undefined,
+    linkDetail: { link: undefined, outcome: undefined, specSource: undefined },
     pairedItems: [],
     ...overrides,
   };

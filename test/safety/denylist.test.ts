@@ -9,7 +9,11 @@ import {
   DeniedLinkError,
   updateItem,
 } from "../../src/modules/closet/service";
-import { denyDomain, isDeniedDomain } from "../../src/modules/safety";
+import {
+  deniedDomainsOf,
+  denyDomain,
+  isDeniedDomain,
+} from "../../src/modules/safety";
 
 import { makeUser, resetSafetyTables } from "./helpers";
 import { nowSeconds } from "../../src/lib/now";
@@ -156,5 +160,72 @@ describe("saving a garment with a denied link", () => {
     await denyDomain("spam.example", userId);
     const item = await createItem(core(), userId, garmentWith());
     expect(item.id).toBeTruthy();
+  });
+});
+
+describe("denying a domain denies everything under it (design 163, Q2)", () => {
+  beforeEach(resetSafetyTables);
+
+  it("denies a subdomain of a denied host, at any depth", async () => {
+    await denyDomain("spam.example", await makeUser());
+    expect(await isDeniedDomain("https://shop.spam.example/x")).toBe(true);
+    expect(await isDeniedDomain("https://a.b.spam.example/x")).toBe(true);
+  });
+
+  it("does not deny the parent of a denied subdomain", async () => {
+    await denyDomain("shop.spam.example", await makeUser());
+    expect(await isDeniedDomain("https://spam.example/x")).toBe(false);
+    expect(await isDeniedDomain("https://other.spam.example/x")).toBe(false);
+  });
+
+  it("never treats a TLD row as a parent", async () => {
+    // A host's last label alone is never one of its suffixes: a row
+    // reading "example" must not deny every site under it.
+    await denyDomain("example", await makeUser());
+    expect(await isDeniedDomain("https://spam.example/x")).toBe(false);
+  });
+});
+
+describe("deniedDomainsOf, the batched read every surface asks", () => {
+  beforeEach(resetSafetyTables);
+
+  it("answers a mixed batch in domainOf's form", async () => {
+    await denyDomain("spam.example", await makeUser());
+
+    const denied = await deniedDomainsOf(core(), [
+      "https://www.spam.example/a",
+      "https://shop.spam.example/b",
+      "https://janji.com/p/tee",
+      undefined,
+    ]);
+
+    expect(denied).toEqual(new Set(["spam.example", "shop.spam.example"]));
+  });
+
+  it("is empty for a batch with no links at all", async () => {
+    await denyDomain("spam.example", await makeUser());
+    expect(await deniedDomainsOf(core(), [])).toEqual(new Set());
+    expect(await deniedDomainsOf(core(), [undefined])).toEqual(new Set());
+  });
+
+  it("never names an unparseable or http link, which is invalid rather than denied", async () => {
+    await denyDomain("spam.example", await makeUser());
+    expect(
+      await deniedDomainsOf(core(), [
+        "not a url",
+        ["http:", "//spam.example/x"].join(""),
+      ]),
+    ).toEqual(new Set());
+  });
+
+  it("reads whichever handle it is given, so a page can ask its replica", async () => {
+    // The display read takes the caller's handle (owner Q4). A denial
+    // written through one handle is read back through another.
+    await denyDomain("spam.example", await makeUser());
+    expect(
+      await deniedDomainsOf(drizzle(env.DIALED_CORE), [
+        "https://spam.example/x",
+      ]),
+    ).toEqual(new Set(["spam.example"]));
   });
 });
