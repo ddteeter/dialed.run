@@ -31,8 +31,11 @@ import {
   wardrobeItems,
 } from "../../db/schema-core";
 import { coreDb } from "../../env";
-import { garmentOriginalKey } from "../../lib/garment-photo-key";
-import { newUlid } from "../../lib/ids";
+import {
+  garmentOriginalKey,
+  garmentVersionId,
+} from "../../lib/garment-photo-key";
+import { newUlid, ulidSeconds } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 
 import {
@@ -41,7 +44,11 @@ import {
   type CategoryScores,
   type ScreenDecision,
 } from "./classifier/moderation";
-import { enqueueForReview, settleOpenReviews } from "./review";
+import {
+  enqueueForReview,
+  settleOpenReviews,
+  type ReviewSource,
+} from "./review";
 
 function db() {
   return coreDb();
@@ -238,7 +245,21 @@ export function screeningDeletes(
  * queues by the garment's id, as a `garment` subject.
  */
 function queueWritesFor(photo: PhotoToScreen, decision: ScreenDecision) {
-  if (decision === "pass") return [];
+  // A pass that lands after the photo went to the Desk as stuck (D-157)
+  // settles that row: the reason it was opened has gone. Only that row —
+  // one reports opened is a person's question, not the screener's. A
+  // `review` or `flag` re-points it to `classifier` below instead.
+  if (decision === "pass") {
+    return [
+      settleOpenReviews(
+        db(),
+        queueSubjectOf[photo.scope],
+        [photo.photoId],
+        "screening",
+        { as: "approved", onlyFrom: stuckSources },
+      ),
+    ];
+  }
   return [
     enqueueForReview(db(), {
       subjectType: queueSubjectOf[photo.scope],
@@ -251,10 +272,21 @@ function queueWritesFor(photo: PhotoToScreen, decision: ScreenDecision) {
 /**
 Which queue subject a photo of each scope is.
 */
-const queueSubjectOf = {
+export const queueSubjectOf = {
   entry: "photo",
   garment: "garment",
 } as const satisfies Record<PhotoScope, string>;
+
+/**
+ * Why a photo still pending a day after upload is in the queue (D-157,
+ * design 167): storage had nothing to screen, or the classifier has not
+ * answered. Here rather than with the escalation, because a verdict that
+ * finally lands settles exactly these.
+ */
+export const stuckSources = [
+  "missing_file",
+  "unscreened",
+] as const satisfies readonly ReviewSource[];
 
 /**
 Which outcome each decision reports to the caller.
@@ -321,6 +353,12 @@ export interface PendingPhoto {
    * the prefix of a version (`garmentOriginalKey`).
    */
   objectKey: string;
+  /**
+   * When it was uploaded, in unix seconds, read from the ULID the upload
+   * minted (D-157): an entry photo's id, a garment photo's version. No
+   * column records it; the id already does.
+   */
+  uploadedAt: number | undefined;
 }
 
 /**
@@ -343,6 +381,7 @@ export async function pendingEntryPhotos(limit = 50): Promise<PendingPhoto[]> {
     scope: "entry" as const,
     photoId: row.id,
     objectKey: row.photoKey,
+    uploadedAt: ulidSeconds(row.id),
   }));
 }
 
@@ -398,6 +437,8 @@ export function pendingGarmentFrom(row: {
           // The original the runner sent, as the upload screens it: the
           // row names a version, and a version is a prefix, not an object.
           objectKey: garmentOriginalKey(row.photoKey),
+          // A replaced photo is a new version, so its day starts again.
+          uploadedAt: ulidSeconds(garmentVersionId(row.photoKey)),
         },
       ];
 }

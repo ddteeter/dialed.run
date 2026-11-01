@@ -49,7 +49,7 @@ import { keptNotice, reporterNotices } from "./notices";
 import { otherPhotosOf, type OtherPhotos } from "./other-photos";
 import { photoMatchesOf, type PhotoMatches } from "./photo-matches";
 import { removedMatchesOf, type RemovedImage } from "./removed-fingerprints";
-import { heldPhotoStatus } from "./visibility";
+import { heldPhotoStatus, publicPhotoStatus } from "./visibility";
 
 function db() {
   return coreDb();
@@ -89,6 +89,12 @@ export type EnqueueInput = Pick<
 export function enqueueForReview<TSchema extends Record<string, unknown>>(
   database: DrizzleD1Database<TSchema>,
   input: EnqueueInput,
+  /**
+   * When an existing row may be re-opened; every time, unless given. A
+   * stuck photo's escalation (D-157) re-opens only a row settled more than
+   * a day ago, so the hourly sweep never undoes a decision just made.
+   */
+  reopenOnlyIf: SQL = sql`1`,
 ) {
   return (
     database
@@ -118,6 +124,7 @@ export function enqueueForReview<TSchema extends Record<string, unknown>>(
           resolvedAt: orSqlNull(undefined),
           claimedAt: orSqlNull(undefined),
         },
+        setWhere: reopenOnlyIf,
       })
   );
 }
@@ -143,11 +150,20 @@ export function settleOpenReviews(
   subjectType: ReviewSubjectType,
   subjectIds: SQLWrapper | readonly string[],
   settledBy: string,
+  /**
+   * Settled as something other than `removed`, and only rows some sources
+   * opened: a stuck photo's row (D-157) is `approved` by the screening
+   * that finally passed it, and a row reports opened is left for a person.
+   */
+  settled?: {
+    as: "approved";
+    onlyFrom: readonly ReviewSource[];
+  },
 ) {
   return database
     .update(reviewQueue)
     .set({
-      status: "removed",
+      status: settled?.as ?? "removed",
       resolvedBy: settledBy,
       resolvedAt: nowSeconds(),
       claimedAt: orSqlNull(undefined),
@@ -157,6 +173,9 @@ export function settleOpenReviews(
         eq(reviewQueue.subjectType, subjectType),
         inArray(reviewQueue.subjectId, subjectIds),
         inArray(reviewQueue.status, ["pending", "reviewing"]),
+        settled === undefined
+          ? undefined
+          : inArray(reviewQueue.source, settled.onlyFrom),
       ),
     );
 }
@@ -800,7 +819,7 @@ export async function resolveReview(
       reviewerId,
       decision === "approve" ? "approved" : "removed",
     ),
-    ...subjectWritesFor(row.subjectType, row.subjectId, decision),
+    ...subjectWritesFor(row, decision),
     ...told,
   ] as const;
 
@@ -906,11 +925,10 @@ export function reviewResolution(
  * mean two very different things depending on what was reported.
  */
 function subjectWritesFor(
-  subjectType: ReviewSubjectType,
-  subjectId: string,
+  row: Exclude<OpenRow, string>,
   decision: ReviewDecision,
 ) {
-  return subjectWriters[subjectType](subjectId, decision);
+  return subjectWriters[row.subjectType](row.subjectId, decision, row.source);
 }
 
 /**
@@ -925,7 +943,11 @@ function subjectWritesFor(
  */
 const subjectWriters: Record<
   ReviewSubjectType,
-  (subjectId: string, decision: ReviewDecision) => BatchItem<"sqlite">[]
+  (
+    subjectId: string,
+    decision: ReviewDecision,
+    source: ReviewSource,
+  ) => BatchItem<"sqlite">[]
 > = {
   // Neither entry nor photo moves out of `removed`: that is a copyright
   // takedown's hide (D-130), and only its counter-notice puts it back.
@@ -955,11 +977,23 @@ const subjectWriters: Record<
   // `wardrobe_items.visibility` and a private closet has no strangers to
   // report it. Owner's call, 2026-09-15; the reasoning is in
   // docs/designs/106-trust-safety.md.
-  photo: (subjectId, decision) => [
+  //
+  // The one exception is a photo the classifier never answered for a day
+  // after upload (D-157, design 167): the row exists because nothing will
+  // screen it, so back to `pending` would only bring it back tomorrow. A
+  // person has looked at it now, and their Approve publishes it (owner,
+  // 2026-10-31).
+  photo: (subjectId, decision, source) => [
     setOnSubject(
       entryPhotos,
       subjectId,
-      { screenStatus: onDecision(decision, "pending", "flagged") },
+      {
+        screenStatus: onDecision(
+          decision,
+          approvedPhotoStatus(source),
+          "flagged",
+        ),
+      },
       ne(entryPhotos.screenStatus, heldPhotoStatus),
     ),
   ],
@@ -979,6 +1013,17 @@ const subjectWriters: Record<
     ),
   ],
 };
+
+/**
+ * Where Approve leaves an entry photo: `pass` when a person is the only
+ * screening it will get (an `unscreened` row, D-157), `pending` for every
+ * other source, so the screener still sees it.
+ */
+function approvedPhotoStatus(
+  source: ReviewSource,
+): typeof publicPhotoStatus | "pending" {
+  return source === "unscreened" ? publicPhotoStatus : "pending";
+}
 
 /**
  * One column set on the row a report named.

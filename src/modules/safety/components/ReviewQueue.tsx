@@ -14,7 +14,12 @@ import {
   type HandleReviewValues,
   type ReviewActionValues,
 } from "../inputs";
-import type { HandleReview, QueueRow, ReviewSource } from "../review";
+import type {
+  HandleReview,
+  QueueRow,
+  ResolveOutcome,
+  ReviewSource,
+} from "../review";
 import { PickOne } from "./DeskForm";
 import { OtherPhotos } from "./OtherPhotos";
 import {
@@ -60,7 +65,39 @@ const SOURCE_TAGS: Readonly<Record<ReviewSource, string>> = {
   reports: "reports",
   classifier: "classifier",
   fingerprint: "held on upload",
+  unscreened: "not screened in a day",
+  missing_file: "file missing",
 };
+
+/**
+ * Why a stuck photo is here (D-157, design 167), where a reported row
+ * lists what the reporters said: nobody reported it, and "Nobody reported
+ * this" would leave the reviewer guessing why they are looking. The two
+ * say which failure it is, because they want different things — a photo
+ * the classifier never answered for can be looked at, and one whose file
+ * is gone cannot.
+ */
+const STUCK_LINES: Readonly<Partial<Record<ReviewSource, string>>> = {
+  unscreened:
+    "Uploaded over a day ago and still not screened: the classifier has not answered for it. Nobody but its owner sees it while it waits.",
+  missing_file:
+    "Uploaded over a day ago, and its file is not in storage, so it cannot be screened or shown. Nobody but its owner sees it while it waits.",
+};
+
+/**
+ * What a refused Clear photo says (owner, 2026-11-01): the photo is no
+ * longer the stuck one, and a reload shows it as it is now.
+ */
+const CLEAR_REFUSED_LINE =
+  "Nothing changed. This photo was already handled or uploaded again. Reload to see it.";
+
+/**
+ * The photos a row shows: none for a missing file, whose frame would only
+ * be an image that failed to load.
+ */
+function photosShown(row: QueueRow): readonly string[] {
+  return row.source === "missing_file" ? [] : row.subject.photoKeys;
+}
 
 /**
  * The photos a reviewer is being asked about.
@@ -124,16 +161,17 @@ function GarmentPhoto({
 
 /**
  * What a row shows of its subject: a garment's photo and line, or the
- * reported photos as a kit's are shown.
+ * reported photos as a kit's are shown — and nothing for a missing file.
  */
 function SubjectPhotos({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
-  const [garmentKey] = row.subject.photoKeys;
+  const keys = photosShown(row);
+  const [garmentKey] = keys;
   if (garmentKey !== undefined && row.subjectType === "garment") {
     return (
       <GarmentPhoto photoKey={garmentKey} line={row.subject.garmentLine} />
     );
   }
-  return <ReportedPhotos keys={row.subject.photoKeys} />;
+  return <ReportedPhotos keys={keys} />;
 }
 
 /**
@@ -177,7 +215,9 @@ function ListOfReasons({
   );
 }
 
-type Decide = (input: { data: ReviewActionValues }) => Promise<unknown>;
+type Decide = (input: {
+  data: ReviewActionValues;
+}) => Promise<{ outcome: ResolveOutcome }>;
 
 /**
  * What every row-level decision form needs, whatever decides it: the row
@@ -197,7 +237,15 @@ type Moved = (username: string) => void;
 
 /**
  * A content row's decision: Approve, Remove, or Remove as suspected CSAM
- * (`RemovalDecision`), sent by the queue row's id.
+ * (`RemovalDecision`), sent by the queue row's id. A missing file has
+ * nothing to approve, so it offers Clear photo instead (D-157).
+ *
+ * **A refused Clear photo is not a failure** (D-157): `not_found` there is
+ * the server declining to clear a photo that is no longer the stuck one —
+ * screened since, or a garment's re-uploaded within the day — and the row
+ * is still open. So the row stays where it is, with the owner's line in
+ * place of the band and no Try again, since pressing again would only be
+ * declined again; only a decision the server took takes it off the list.
  */
 function Decision({
   row,
@@ -208,8 +256,16 @@ function Decision({
     <RemovalDecision
       schema={reviewActionInput}
       subject={{ queueId: row.id }}
-      act={(values) => decide({ data: values })}
-      canApprove
+      act={async (values) => {
+        const decided = await decide({ data: values });
+        return { action: values.action, outcome: decided.outcome };
+      }}
+      refused={{
+        matches: (decided) =>
+          decided.action === "clear" && decided.outcome === "not_found",
+        line: CLEAR_REFUSED_LINE,
+      }}
+      reasonless={row.source === "missing_file" ? "clear" : "approve"}
       subjectType={row.subjectType}
       owner={row.subject.owner}
       onSettled={() => {
@@ -304,6 +360,23 @@ function HandleDecision({
  */
 const HANDLE_FLAGGED_LINE =
   "The hourly re-check flagged a handle this runner already has. Nothing is hidden while it waits.";
+
+/**
+ * Why the row is here: a flagged handle's or a stuck photo's sentence, or
+ * what the reporters said.
+ */
+function WhyHere({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
+  const line =
+    row.subject.handleFlagged === true
+      ? HANDLE_FLAGGED_LINE
+      : STUCK_LINES[row.source];
+  if (line === undefined) return <ReportedFor row={row} />;
+  return (
+    <p data-part="why-here" className="m-0 text-body">
+      {line}
+    </p>
+  );
+}
 
 function rowKind(row: QueueRow): string {
   return row.subject.handleFlagged === true
@@ -409,13 +482,7 @@ function ReviewRow({
         removed={row.removedMatches}
         decide={decideMatch}
       />
-      {row.subject.handleFlagged === true ? (
-        <p data-part="why-here" className="m-0 text-body">
-          {HANDLE_FLAGGED_LINE}
-        </p>
-      ) : (
-        <ReportedFor row={row} />
-      )}
+      <WhyHere row={row} />
       {isGarment ? undefined : <SourceTag row={row} />}
       {active ? (
         <RowDecision

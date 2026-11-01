@@ -940,6 +940,36 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
+_Round 42 answered the last two; what follows is new since._
+
+94. **A photo still pending a day after upload, on Review (D-157, design
+    167).** Built as a placeholder from the review row that exists: no
+    board draws it. The row is the photo row (kicker `photo · {id}` or
+    `garment photo · {id}`, the decision bar unchanged), with two
+    differences.
+    - **The tag** under the row: `[not screened in a day]` when the
+      classifier never answered, `[file missing]` when storage has no
+      object to screen.
+    - **The why-here line**, in the body face where a reported row lists
+      the reporters' reasons (as the flagged-handle row does): _"Uploaded
+      over a day ago and still not screened: the classifier has not
+      answered for it. Nobody but its owner sees it while it waits."_, or
+      _"Uploaded over a day ago, and its file is not in storage, so it
+      cannot be screened or shown. Nobody but its owner sees it while it
+      waits."_ A `[file missing]` row draws no photo, since there is none
+      to load.
+    - Today counts both in "photos the screener couldn't finish".
+    - **Clear photo** (owner, 2026-10-31): a `[file missing]` row's
+      decision bar has Clear photo where Approve sits, as the same quiet
+      text button, then Remove and Remove as suspected CSAM. It takes the
+      photo off and the owner's bell says: _"We couldn't find the file for
+      a photo on your run, so we took it off your kit. Add it again if
+      you'd like it there."_, or for a garment _"We couldn't find the file
+      for the photo on one of your garments, so we took it off. Add it
+      again from your Closet if you'd like it there."_
+    - **The ask:** draw the row and its Clear photo bar, and confirm or
+      replace the two tags, two lines, the label and the two notices.
+
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
 
 ## Answered in round 42 (imported 2026-10-28 and 2026-10-29)
