@@ -3,7 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { ReviewQueue } from "../../src/modules/safety/components/ReviewQueue";
-import type { HandleReview, QueueRow } from "../../src/modules/safety/review";
+import type {
+  HandleReview,
+  QueueRow,
+  ResolveOutcome,
+} from "../../src/modules/safety/review";
 import { bracketed } from "../ui/bracketed";
 
 type Props = Parameters<typeof ReviewQueue>[0];
@@ -148,7 +152,9 @@ describe("deciding", () => {
 
   it("shows the in-flight label while a removal is pending", async () => {
     const user = userEvent.setup();
-    const { promise, resolve: settle } = Promise.withResolvers<unknown>();
+    const { promise, resolve: settle } = Promise.withResolvers<{
+      outcome: ResolveOutcome;
+    }>();
     const resolve: Props["resolve"] = vi
       .fn<Props["resolve"]>()
       .mockReturnValue(promise);
@@ -827,6 +833,72 @@ describe("a photo still pending a day after upload (D-153)", () => {
     expect(resolve).toHaveBeenCalledWith({
       data: { queueId: "01HZZZZZZZZZZZZZZZZZZZZZZZ", action: "clear" },
     });
+    await waitFor(() => {
+      expect(screen.getByText(bracketed("0 waiting"))).toBeInTheDocument();
+    });
+  });
+
+  it("keeps a row whose Clear photo was refused, with the failure band", async () => {
+    const user = userEvent.setup();
+    const resolve: Props["resolve"] = vi
+      .fn<Props["resolve"]>()
+      .mockResolvedValue({ outcome: "not_found" });
+    render(
+      <ReviewQueue
+        queue={[stuck("missing_file")]}
+        resolve={resolve}
+        reviewHandle={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Clear photo" }));
+
+    // The server declined: the photo was screened or re-uploaded since,
+    // and the row is still open. It stays, failed, ready to try again.
+    expect(
+      await screen.findByRole("button", { name: "Try again" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Nothing saved. Our end failed. Nothing changed."),
+    ).toBeInTheDocument();
+    expect(screen.getByText(bracketed("1 waiting"))).toBeInTheDocument();
+  });
+
+  it("takes a row off when Clear photo finds it already decided", async () => {
+    const user = userEvent.setup();
+    const resolve: Props["resolve"] = vi
+      .fn<Props["resolve"]>()
+      .mockResolvedValue({ outcome: "already_resolved" });
+    render(
+      <ReviewQueue
+        queue={[stuck("missing_file")]}
+        resolve={resolve}
+        reviewHandle={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Clear photo" }));
+
+    await waitFor(() => {
+      expect(screen.getByText(bracketed("0 waiting"))).toBeInTheDocument();
+    });
+  });
+
+  it("takes a row off when Approve finds nothing, as before", async () => {
+    const user = userEvent.setup();
+    const resolve: Props["resolve"] = vi
+      .fn<Props["resolve"]>()
+      .mockResolvedValue({ outcome: "not_found" });
+    render(
+      <ReviewQueue
+        queue={[stuck("unscreened")]}
+        resolve={resolve}
+        reviewHandle={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+
     await waitFor(() => {
       expect(screen.getByText(bracketed("0 waiting"))).toBeInTheDocument();
     });
