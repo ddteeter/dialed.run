@@ -134,7 +134,8 @@ function baseline(values: readonly number[], overrides: Partial<PerfRow> = {}) {
 
 describe("overMedian", () => {
   it("fires past 25% over the median of the days before, and not at it", () => {
-    const before = baseline([300, 100, 200]);
+    // A mean would be 400, and 250.1 under 25% over it.
+    const before = baseline([900, 100, 200]);
     expect(overMedian([...before, row({ p75: 250 })], DAY)).toStrictEqual([]);
     expect(overMedian([...before, row({ p75: 250.1 })], DAY)).toStrictEqual([
       "LCP p75 on /closet/ (narrow) was 250 ms on 2026-10-30, more than 25% over its 3-day median of 200 ms (n=40)",
@@ -142,7 +143,8 @@ describe("overMedian", () => {
   });
 
   it("takes the mean of the middle two for an even count", () => {
-    const before = baseline([400, 100, 300, 200]);
+    // A mean would be 400: the middle two are 200 and 300.
+    const before = baseline([1000, 100, 300, 200]);
     expect(overMedian([...before, row({ p75: 312.5 })], DAY)).toStrictEqual([]);
     expect(overMedian([...before, row({ p75: 312.6 })], DAY)).toStrictEqual([
       expect.stringContaining("4-day median of 250 ms"),

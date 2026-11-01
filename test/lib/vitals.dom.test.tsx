@@ -438,6 +438,40 @@ describe("startVitalsReporter, navigations", () => {
     expect(page.beacons).toHaveLength(1);
   });
 
+  it("finishes a navigation at the first render with a route", () => {
+    const page = start();
+    page.router.emit("onBeforeNavigate");
+    page.clock += 100;
+    page.router.state.matches = [];
+    page.router.emit("onRendered");
+    page.clock += 200;
+    page.router.state.matches = [
+      { routeId: "__root__" },
+      { routeId: "/feed/" },
+    ];
+    page.router.emit("onRendered");
+    page.hide();
+    expect(page.beacons).toEqual([
+      expect.objectContaining({
+        route: "/feed/",
+        metrics: [{ name: "nav", value: 300, parts: [] }],
+      }),
+    ]);
+  });
+
+  it("drops a navigation too long to be real, and only that one", () => {
+    const page = start();
+    page.router.navigate("/feed/", page, 100);
+    page.router.navigate("/feed/", page, 200_000);
+    page.hide();
+    expect(page.beacons).toEqual([
+      expect.objectContaining({
+        route: "/feed/",
+        metrics: [{ name: "nav", value: 100, parts: [] }],
+      }),
+    ]);
+  });
+
   it("drops a navigation that lands on no route, and one too long to be real", () => {
     const page = start();
     page.router.emit("onBeforeNavigate");

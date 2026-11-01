@@ -166,8 +166,10 @@ export function overMedian(rows: readonly PerfRow[], day: string): string[] {
     ]);
   }
   return judgedWhere(rows, (row) => row.day === day).flatMap((row) => {
-    const baseline = baselines.get(keyOf(row)) ?? [];
-    if (baseline.length < MIN_BASELINE_DAYS) return [];
+    const baseline = baselines.get(keyOf(row));
+    if (baseline === undefined || baseline.length < MIN_BASELINE_DAYS) {
+      return [];
+    }
     const usual = median(baseline);
     return valueOf(row) > usual * MEDIAN_TOLERANCE
       ? [
@@ -217,13 +219,10 @@ export interface VersionRow extends Measured {
 }
 
 /**
- * The two deploys to compare: the newest measured, and the one before it,
- * ordered by when each was first measured. `undefined` until there are
- * two.
+ * The deploys measured, newest first, ordered by when each was first
+ * measured.
  */
-function lastTwoVersions(
-  rows: readonly VersionRow[],
-): [newest: string, previous: string] | undefined {
+function versionsNewestFirst(rows: readonly VersionRow[]): string[] {
   const firstSeen = new Map<string, number>();
   for (const row of rows) {
     firstSeen.set(
@@ -231,12 +230,9 @@ function lastTwoVersions(
       Math.min(firstSeen.get(row.version) ?? row.firstSeen, row.firstSeen),
     );
   }
-  const [newest, previous] = [...firstSeen]
+  return [...firstSeen]
     .toSorted(([, a], [, b]) => b - a)
     .map(([version]) => version);
-  return newest === undefined || previous === undefined
-    ? undefined
-    : [newest, previous];
 }
 
 /**
@@ -246,9 +242,9 @@ function lastTwoVersions(
  * silent.
  */
 export function deployRegressions(rows: readonly VersionRow[]): SpeedFinding[] {
-  const versions = lastTwoVersions(rows);
-  if (versions === undefined) return [];
-  const [newest, previous] = versions;
+  // With one deploy `previous` is undefined, so no row is older and none
+  // has anything to compare with; with none, `newest` is too.
+  const [newest, previous] = versionsNewestFirst(rows);
   const before = new Map<string, VersionRow & { metric: CheckedMetric }>();
   const older = judgedWhere(rows, (row) => row.version === previous);
   for (const row of older) {
@@ -303,9 +299,10 @@ interface Drifted {
  * `DRIFT_FLOOR` of the median if that is more.
  */
 function driftedIn(weeks: WindowWeeks): Map<string, Drifted> {
-  const [now = [], ...past] = weeks;
+  const now = weeks.slice(0, 1).flat();
+  const past = weeks.slice(1).flat();
   const history = new Map<string, number[]>();
-  for (const row of past.flat()) {
+  for (const row of past) {
     if (isJudged(row)) {
       history.set(keyOf(row), [
         ...(history.get(keyOf(row)) ?? []),
@@ -315,8 +312,14 @@ function driftedIn(weeks: WindowWeeks): Map<string, Drifted> {
   }
   const drifted = new Map<string, Drifted>();
   for (const row of now) {
-    const values = history.get(keyOf(row)) ?? [];
-    if (!isJudged(row) || values.length < MIN_DRIFT_WEEKS) continue;
+    const values = history.get(keyOf(row));
+    if (
+      values === undefined ||
+      !isJudged(row) ||
+      values.length < MIN_DRIFT_WEEKS
+    ) {
+      continue;
+    }
     const usual = median(values);
     const spread = median(values.map((value) => Math.abs(value - usual)));
     const limit = usual + Math.max(DRIFT_MADS * spread, DRIFT_FLOOR * usual);

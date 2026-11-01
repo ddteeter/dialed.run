@@ -127,20 +127,15 @@ export function browserVitalsDeps(): VitalsReporterDeps {
 
 /**
  * The sub-parts a metric carries, in `VITAL_METRICS`' order, read off the
- * attribution by the contract's own names.
+ * attribution by the contract's own names: none for a metric the contract
+ * gives none. Unparsed: `beaconMetricOf` checks them.
  */
-function partsOf(metric: MetricWithAttribution): number[] {
-  switch (metric.name) {
-    case "LCP": {
-      return VITAL_METRICS.LCP.parts.map((part) => metric.attribution[part]);
-    }
-    case "INP": {
-      return VITAL_METRICS.INP.parts.map((part) => metric.attribution[part]);
-    }
-    default: {
-      return [];
-    }
-  }
+function partsOf(metric: MetricWithAttribution): unknown[] {
+  const attribution = new Map<string, unknown>(
+    Object.entries(metric.attribution),
+  );
+  const names: readonly string[] = VITAL_METRICS[metric.name].parts;
+  return names.map((name) => attribution.get(name));
 }
 
 /**
@@ -153,14 +148,18 @@ function navigationTypeOf(metric: MetricWithAttribution): NavigationType {
     : metric.navigationType;
 }
 
+/**
+ * `route` is `undefined` for a hard-load metric on a page that loaded on no
+ * route, which `beaconsOf`' parse drops.
+ */
 interface Pending {
-  readonly route: string;
+  readonly route: string | undefined;
   readonly navigationType: NavigationType;
   readonly metric: BeaconMetric;
 }
 
 interface Group {
-  readonly route: string;
+  readonly route: string | undefined;
   readonly navigationType: NavigationType;
   readonly metrics: readonly BeaconMetric[];
 }
@@ -183,18 +182,19 @@ function beaconsOf(
 ): VitalsPayload[] {
   const groups = new Map<string, Group>();
   for (const { route, navigationType, metric } of pending) {
-    const key = `${navigationType} ${route}`;
+    const key = `${navigationType} ${String(route)}`;
     const group = groups.get(key) ?? { route, navigationType, metrics: [] };
     groups.set(key, { ...group, metrics: [...group.metrics, metric] });
   }
   const beacons: VitalsPayload[] = [];
   for (const { route, navigationType, metrics } of groups.values()) {
-    for (let at = 0; at < metrics.length; at += MAX_METRICS_PER_BEACON) {
+    const rest = [...metrics];
+    while (rest.length > 0) {
       const parsed = vitalsPayloadSchema.safeParse({
         route,
         navigationType,
         device,
-        metrics: metrics.slice(at, at + MAX_METRICS_PER_BEACON),
+        metrics: rest.splice(0, MAX_METRICS_PER_BEACON),
       });
       if (parsed.success) beacons.push(parsed.data);
     }
@@ -207,7 +207,7 @@ function beaconsOf(
  * would refuse (a value out of range), which is dropped alone rather than
  * sinking its beacon.
  */
-function beaconMetricOf(metric: BeaconMetric): BeaconMetric | undefined {
+function beaconMetricOf(metric: unknown): BeaconMetric | undefined {
   const parsed = vitalMetricSchema.safeParse(metric);
   return parsed.success ? parsed.data : undefined;
 }
@@ -224,7 +224,8 @@ export function startVitalsReporter(
 ): () => void {
   const landing = routeIdOf(router);
   let isStopped = false;
-  let navigationStart: number | undefined;
+  // The navigation in flight, which the next render with a route finishes.
+  let finishNavigation: ((route: string) => void) | undefined;
 
   // `web-vitals`' metrics by their id, so a re-report replaces the last; a
   // navigation is measured once, so it is keyed by a symbol of its own.
@@ -232,7 +233,7 @@ export function startVitalsReporter(
   const sent = new Set<string | symbol>();
 
   deps.observe((metric) => {
-    if (isStopped || landing === undefined || sent.has(metric.id)) return;
+    if (isStopped || sent.has(metric.id)) return;
     const beaconMetric = beaconMetricOf({
       name: metric.name,
       value: metric.value,
@@ -249,20 +250,24 @@ export function startVitalsReporter(
   const unsubscribeStart = router.subscribe("onBeforeNavigate", (event) => {
     // Same address is the router reloading the screen it is on (an
     // `invalidate` after a save), which is not a navigation.
-    if (event.hrefChanged) navigationStart = deps.now();
+    if (!event.hrefChanged) return;
+    const navigationStart = deps.now();
+    finishNavigation = (route) => {
+      const metric = beaconMetricOf({
+        name: "nav",
+        value: deps.now() - navigationStart,
+        parts: [],
+      });
+      if (metric !== undefined) {
+        pending.set(Symbol("nav"), { route, navigationType: "soft", metric });
+      }
+    };
   });
   const unsubscribeRendered = router.subscribe("onRendered", () => {
     const route = routeIdOf(router);
-    if (navigationStart === undefined || route === undefined) return;
-    const metric = beaconMetricOf({
-      name: "nav",
-      value: deps.now() - navigationStart,
-      parts: [],
-    });
-    navigationStart = undefined;
-    if (metric !== undefined) {
-      pending.set(Symbol("nav"), { route, navigationType: "soft", metric });
-    }
+    if (route === undefined) return;
+    finishNavigation?.(route);
+    finishNavigation = undefined;
   });
 
   const unsubscribeHidden = deps.onHidden(() => {

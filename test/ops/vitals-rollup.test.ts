@@ -172,9 +172,9 @@ describe("rollupVitals", () => {
       "2026-10-30": {
         data: [
           apiRow("/closet/", {
-            p50: "999.5",
-            p75: "1.5e3",
-            p95: "2500",
+            p50: "999.25",
+            p75: "1.5e+3",
+            p95: "25e002",
             n: "40",
           }),
         ],
@@ -186,9 +186,25 @@ describe("rollupVitals", () => {
     expect(await stored()).toStrictEqual([
       {
         day: "2026-10-30",
-        ...apiRow("/closet/", { p50: 999.5, p75: 1500 }),
+        ...apiRow("/closet/", { p50: 999.25, p75: 1500 }),
       },
     ]);
+  });
+
+  it("refuses a number sent with anything before or after it", async () => {
+    const { deps } = fakeApi({
+      "2026-10-30": { data: [apiRow("/closet/", { p75: " 1500" })] },
+      "2026-10-29": { data: [apiRow("/closet/", { p75: "1500 " })] },
+    });
+    const anomalies: string[] = [];
+
+    await rollupVitals("2026-10-31", anomalies, deps);
+
+    expect(anomalies).toStrictEqual([
+      "speed rollup for 2026-10-30 failed: the SQL API's answer did not parse",
+      "speed rollup for 2026-10-29 failed: the SQL API's answer did not parse",
+    ]);
+    expect(await stored()).toStrictEqual([]);
   });
 
   it("replaces a day on a re-run, dropping a row the new answer lacks", async () => {

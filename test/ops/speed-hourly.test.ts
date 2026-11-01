@@ -118,6 +118,14 @@ describe("deployRegressions", () => {
         deploy("v3", 300, { p75: 1100 }),
       ]),
     ).toStrictEqual([]);
+    // Nor judges an older deploy against the one before the newest.
+    expect(
+      deployRegressions([
+        deploy("v1", 100, { p75: 9000 }),
+        deploy("v2", 200, { p75: 1000 }),
+        deploy("v3", 300, { p75: 1000 }),
+      ]),
+    ).toStrictEqual([]);
   });
 
   it("is silent for a first deploy, and for none", () => {
@@ -236,6 +244,12 @@ describe("drifts", () => {
 
   it("is silent with nothing measured this week", () => {
     expect(drifts([], [])).toStrictEqual([]);
+    // A past week above the others is history, not drift.
+    const quiet = [
+      [],
+      ...[900, 100, 100, 100].map((p75) => [measured({ p75 })]),
+    ];
+    expect(drifts(quiet, quiet)).toStrictEqual([]);
   });
 });
 
