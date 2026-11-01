@@ -210,6 +210,10 @@ export default tseslint.config(
       // Workers/React codebase adjustments to unicorn defaults:
       "unicorn/prevent-abbreviations": "off",
       "unicorn/name-replacements": "off",
+      // New in recommended at unicorn 79: it rejects the ` * ` gutter of a
+      // JSDoc block, which is this repo's comment style in over 1,100
+      // files. A formatting preference, not a defect (owner, 2026-11-01).
+      "unicorn/no-asterisk-prefix-in-documentation-comments": "off",
       "unicorn/filename-case": [
         "error",
         { cases: { kebabCase: true, pascalCase: true } },
