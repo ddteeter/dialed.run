@@ -1143,7 +1143,7 @@
     },
     {
       "name": "eslint-plugin-unicorn",
-      "version": "74.0.0",
+      "version": "79.0.0",
       "licence": "MIT",
       "project": "https://github.com/sindresorhus/eslint-plugin-unicorn#readme"
     },
