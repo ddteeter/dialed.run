@@ -113,7 +113,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-better-tailwindcss": "4.10.0",
     "eslint-plugin-sonarjs": "^4.2.2",
-    "eslint-plugin-unicorn": "^74.0.0",
+    "eslint-plugin-unicorn": "^79.0.0",
     "fallow": "^3.36.0",
     "guardrails-core": "https://github.com/ddteeter/agentic-guardrails-scaffolding/releases/download/v0.11.1/guardrails-core-0.11.1.tgz",
     "happy-dom": "^21.0.4",
