@@ -51,7 +51,7 @@ cli="./node_modules/guardrails-core/dist/cli.mjs"
   exit 1
 }
 
-lock="${GUARDRAILS_GATE_LOCK:-$HOME/.dialed-gate.lock}"
+lock="${GUARDRAILS_GATE_LOCK:-$HOME/.guardrails-gate.lock}"
 ceiling="${GUARDRAILS_GATE_LOCK_TIMEOUT:-10800}"
 gate="node $cli gate --mode=push"
 waiting="guardrails: another checkout is running the gate — waiting for the lock (up to ${ceiling}s)…"
