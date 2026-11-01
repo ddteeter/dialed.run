@@ -22,35 +22,35 @@
   "packages": [
     {
       "name": "@better-auth/core",
-      "version": "1.7.11",
+      "version": "1.7.12",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com"
     },
     {
       "name": "@better-auth/drizzle-adapter",
-      "version": "1.7.11",
+      "version": "1.7.12",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com/docs/adapters/drizzle"
     },
     {
       "name": "@better-auth/kysely-adapter",
-      "version": "1.7.11",
+      "version": "1.7.12",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com/docs/adapters/kysely"
     },
     {
       "name": "@better-auth/memory-adapter",
-      "version": "1.7.11",
+      "version": "1.7.12",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com"
     },
     {
       "name": "@better-auth/telemetry",
-      "version": "1.7.11",
+      "version": "1.7.12",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://www.better-auth.com"
@@ -347,14 +347,14 @@
     },
     {
       "name": "better-auth",
-      "version": "1.7.11",
+      "version": "1.7.12",
       "licence": "MIT",
       "copyright": "2024 - present, Bereket Engida",
       "project": "https://better-auth.com"
     },
     {
       "name": "better-call",
-      "version": "1.4.2",
+      "version": "1.4.4",
       "licence": "MIT",
       "copyright": "2025 Bereket Engida",
       "project": "https://github.com/better-auth/better-call#readme"
@@ -570,7 +570,7 @@
     },
     {
       "name": "jose",
-      "version": "6.2.12",
+      "version": "6.2.13",
       "licence": "MIT",
       "copyright": "2018 Filip Skokan",
       "project": "https://github.com/panva/jose"
