@@ -23,8 +23,9 @@ import { isProvidersReading, stripConditions } from "../strip";
 import { ConditionsCell } from "./ConditionsCell";
 import { Handle } from "./Handle";
 import { HIDDEN_WHILE_WE_CHECK } from "./UnderReview";
+import { OwnerAudience } from "./OwnerAudience";
 import { ReportFoot } from "./ReportFoot";
-import { DeletePhoto } from "./RetractEntry";
+import { PhotoPager } from "./PhotoPager";
 import type { DeletePhotoProps } from "./RetractEntry";
 import { UsefulButton } from "./UsefulButton";
 import type { SetUsefulFn } from "./useful-reaction";
@@ -146,6 +147,16 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
         <NoticeBand {...HIDDEN_WHILE_WE_CHECK} />
       ) : undefined}
 
+      {/* D's owner meta (round 41 #86a): who the kit is for, after the
+          review band, which is "the band at the top". */}
+      {isOwn ? (
+        <OwnerAudience
+          entryId={entryId}
+          audience={entry.audience}
+          onStatus={setStatus}
+        />
+      ) : undefined}
+
       <PhotoPager
         photoKeys={entry.photoKeys}
         deletePhoto={isOwn ? deletePhoto : undefined}
@@ -206,53 +217,6 @@ function tagsOf(stored: readonly string[]): EntryTag[] {
     const parsed = entryTagSchema.safeParse(tag);
     return parsed.success ? [parsed.data] : [];
   });
-}
-
-/**
- * The photos, one at a time: a scroll-snapping row a thumb swipes, each
- * photo carrying its own `1 / 2` from two photos, and its delete top right
- * when the viewer owns it. Absent with no photos.
- */
-function PhotoPager({
-  photoKeys,
-  deletePhoto,
-}: Readonly<{
-  photoKeys: readonly string[];
-  deletePhoto: DeletePhotoProps["deletePhoto"] | undefined;
-}>) {
-  if (photoKeys.length === 0) return;
-  // The counter shows from two photos; a lone one has none (round 35 #53c).
-  const isPaged = photoKeys.length > 1;
-  return (
-    <ul
-      data-part="photo"
-      className="m-0 flex list-none snap-x snap-mandatory gap-2 overflow-x-auto p-0"
-    >
-      {photoKeys.map((key, index) => (
-        <li key={key} className="relative w-full shrink-0 snap-start">
-          <img
-            src={`/feed/photo/${key}`}
-            alt=""
-            className="aspect-4/3 w-full rounded-card object-cover"
-          />
-          {isPaged ? (
-            <span className="absolute bottom-3 left-3 rounded-tight bg-ground px-2 py-1 text-label">
-              <Mono step="xs">
-                {String(index + 1)} / {String(photoKeys.length)}
-              </Mono>
-            </span>
-          ) : undefined}
-          {deletePhoto === undefined ? undefined : (
-            <DeletePhoto
-              photoKey={key}
-              index={index}
-              deletePhoto={deletePhoto}
-            />
-          )}
-        </li>
-      ))}
-    </ul>
-  );
 }
 
 /**

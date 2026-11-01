@@ -165,6 +165,7 @@ export {
   heldPhotoStatus,
   publicPhotoStatus,
   publiclyVisibleEntry,
+  worldVisibleEntry,
   runnerNotLeaving,
 } from "./visibility";
 
@@ -257,6 +258,8 @@ export {
   type PendingTakedownRequest,
   type TakedownRequestResult,
 } from "./takedown-requests";
+
+export { requestSubjectOf } from "./request-subject";
 
 export {
   REMOVAL_REMINDER_LEAD_SECONDS,

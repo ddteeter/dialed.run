@@ -27,11 +27,13 @@ import {
   userProfiles,
   usernameHistory,
 } from "../../db/schema-core";
+import { profileCacheTags, type PurgeTags } from "../../lib/cache-tags";
 import { USERNAME_MAX_LENGTH, usernameSchema } from "../../lib/contracts";
 import { hasRowWhere } from "../../lib/sql/keyed-read";
 import { orSqlNull } from "../../lib/sql/sql-null";
 import { nowSeconds } from "../../lib/now";
 import { isProfaneHandle, readBackDigits } from "../../lib/contracts/profanity";
+import { purgePublicPages } from "../ops";
 import type { ScreenHandle } from "./handle-screen";
 import { currentTermsVersion, termsStanding } from "./terms-acceptance";
 
@@ -327,6 +329,7 @@ export async function claimUsername(
   userId: string,
   typed: string,
   screen: ScreenHandle,
+  purge: PurgeTags = purgePublicPages,
 ): Promise<HandleClaim> {
   const refused: HandleClaim = {
     kind: "taken",
@@ -381,9 +384,9 @@ export async function claimUsername(
     const held = results[4];
     // Nothing held means D-56 refused the claim inside the batch: someone
     // gave this handle up after the read above said it was free.
-    return held.length > 0
-      ? { kind: "claimed", username: typed }
-      : await taken();
+    if (held.length === 0) return await taken();
+    purge(profileCacheTags(userId, typed));
+    return { kind: "claimed", username: typed };
   } catch (error: unknown) {
     if (isHandleIndexViolation(error)) return taken();
     throw error;
@@ -476,6 +479,7 @@ function ownUnlocked(userId: string, handle: string) {
 export async function forceRename(
   db: Db,
   request: ForceRenameRequest,
+  purge: PurgeTags = purgePublicPages,
 ): Promise<ForcedRename> {
   const { userId, reason } = request;
   const profile = await profileOf(db, userId);
@@ -531,9 +535,9 @@ export async function forceRename(
   const after = await profileOf(db, userId);
   const current = after?.username ?? undefined;
   if (current === undefined) return { kind: "not_found" };
-  return current === username
-    ? { kind: "renamed", username }
-    : { kind: "moved", username: current };
+  if (current !== username) return { kind: "moved", username: current };
+  purge(profileCacheTags(userId, username));
+  return { kind: "renamed", username };
 }
 
 /**

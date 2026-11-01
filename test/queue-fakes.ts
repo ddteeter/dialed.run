@@ -49,3 +49,12 @@ export function batchOf(queue: string, messages: SpiedMessage[]): MessageBatch {
 export function oweInCore(message: OutboxMessage, notBefore?: number) {
   return outboxInsert(coreDb(), oweOutbox(message, notBefore));
 }
+
+/**
+ * The imports consumer's weather attempt, for a test about something else:
+ * it asks for nothing and leaves the run `pending`, as a provider that did
+ * not answer would.
+ */
+export function weatherLater(): Promise<string> {
+  return Promise.resolve("pending");
+}

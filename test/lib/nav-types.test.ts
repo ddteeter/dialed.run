@@ -196,8 +196,8 @@ describe("which type an edge resolves to", () => {
       ["/feed", "/feed/entry/e1"],
       ["/feed/me", "/feed/entry/e1"],
       ["/feed/entry/e1", "/feed/u/u1"],
-      // Task 129 (FEED-10): H by handle, a prefixed param.
-      ["/feed/search", "/@maya_runs"],
+      // H by handle (D-154; FEED-10).
+      ["/feed/search", "/feed/u/maya_runs"],
       ["/feed", "/feed/search"],
       ["/runs", "/runs/r1"],
       ["/runs/import/i1", "/runs/r1"],
@@ -561,12 +561,23 @@ describe("viewTransitionTypesFor", () => {
   });
 });
 
-describe("a prefixed param (`/@{$handle}`)", () => {
-  it("needs its literal prefix and a non-empty value", () => {
-    expect(typeOf("/feed/search", "/@m")).toBe("push");
-    // No handle after the @, or no @ at all, is not H.
-    expect(typeOf("/feed/search", "/@")).toBe("cut");
-    expect(typeOf("/feed/search", "/maya_runs")).toBe("cut");
-    expect(typeOf("/feed/search", "/x@maya_runs")).toBe("cut");
+describe("the open web's pages (`/kit/<id>`, `/@handle`, D-154)", () => {
+  it("are document loads, cut from anywhere: H moved to /feed/u/<handle>", () => {
+    expect(typeOf("/feed/search", "/@maya_runs")).toBe("cut");
+    expect(typeOf("/@maya_runs", "/kit/01J00000000000000000000000")).toBe(
+      "cut",
+    );
+    expect(navTypeFor("/feed", "/@m", false)).toBe("cut");
+    expect(navTypeFor("/feed", "/kit/e1", false)).toBe("cut");
+  });
+
+  it("needs the prefix and a non-empty handle to be the profile", () => {
+    // No handle after the @, or no @ at all, is no row of the table.
+    expect(navTypeFor("/feed", "/@", false)).toBeUndefined();
+    expect(navTypeFor("/feed", "/maya_runs", false)).toBeUndefined();
+    expect(navTypeFor("/feed", "/x@maya_runs", false)).toBeUndefined();
+    // A param needs a value: `/feed/u/` is nobody's H.
+    expect(typeOf("/feed/search", "/feed/u/")).toBe("cut");
+    expect(typeOf("/feed/search", "/feed/u/m")).toBe("push");
   });
 });

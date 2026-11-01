@@ -17,6 +17,14 @@ import { Mono, type MonoStep } from "./Mono";
  * visually. Callers that pass SHOUTING strings get the same pixels and a
  * worse announcement, so don't.
  *
+ * The brackets are drawn, not said (D-150). Every reader that speaks them
+ * says "left bracket … right bracket" around the value (JAWS by default,
+ * NVDA at "most"), and VoiceOver only pauses, so they are `aria-hidden`
+ * and the accessible name is the value alone: a heading drawn
+ * `[Nothing in here yet]` is announced "Nothing in here yet". The value
+ * keeps its own words; a caller whose tag needs a fuller spoken sentence
+ * hides the whole bracket and says it in `sr-only`, as `UnderReview` does.
+ *
  * `step` reaches the mono ramp for the same reason `Mono` has it, with one
  * extra constraint: only `xs` and `sm` are uppercase, so a bracketed value
  * at `md` or `lg` renders the caller's own casing. That is right for the
@@ -34,9 +42,9 @@ export function Bracketed({
 }>) {
   return (
     <Mono step={step} className={className}>
-      {"["}
+      <span aria-hidden="true">[</span>
       {children}
-      {"]"}
+      <span aria-hidden="true">]</span>
     </Mono>
   );
 }

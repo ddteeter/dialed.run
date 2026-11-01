@@ -35,6 +35,7 @@ import {
 import { refusalMessage } from "../../src/lib/contracts/access";
 import type { AccessDesk, DeskCode } from "../../src/modules/account/invites";
 import type { TurnstileApi } from "../../src/ui/Turnstile";
+import { bracketed } from "../ui/bracketed";
 
 /**
  * Au5 · Request access and Desk D7 · Access (task 126, ACC-5; round 26
@@ -497,7 +498,7 @@ describe("D7 · Access", () => {
       },
     });
     const tn = within(rowOf("tn@example.com"));
-    expect(tn.getByText("[TN]")).toBeVisible();
+    expect(tn.getByText(bracketed("TN"))).toBeVisible();
     expect(
       tn.getByText("No invite while sign-up is closed in Tennessee."),
     ).toBeVisible();
@@ -505,7 +506,7 @@ describe("D7 · Access", () => {
     expect(tn.getByRole("button", { name: "Decline" })).toBeVisible();
     // A state no longer listed keeps its tag and can be invited.
     const al = within(rowOf("al@example.com"));
-    expect(al.getByText("[AL]")).toBeVisible();
+    expect(al.getByText(bracketed("AL"))).toBeVisible();
     expect(al.getByRole("button", { name: "Send invite" })).toBeVisible();
     // A request from anywhere else wears no tag at all.
     expect(rowOf("sam@example.com")).not.toHaveTextContent("[");

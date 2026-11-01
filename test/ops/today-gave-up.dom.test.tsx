@@ -14,6 +14,7 @@ import {
 } from "../../src/modules/ops/components/Today";
 import type { DeskToday } from "../../src/modules/ops/desk";
 import type { GaveUpJob } from "../../src/modules/ops/gave-up";
+import { bracketed } from "../ui/bracketed";
 
 /**
  * Today's Gave up section (Operator Screens D6's rows, round 29 B·2's
@@ -116,7 +117,7 @@ describe("Gave up, on Today", () => {
   it("counts the jobs and dates the oldest, in hi-viz", () => {
     renderToday([job()]);
 
-    const count = within(section()).getByText("[1 job · oldest 2d]");
+    const count = within(section()).getByText(bracketed("1 job · oldest 2d"));
     expect(count).toHaveClass("text-hiviz-text");
   });
 
@@ -124,14 +125,14 @@ describe("Gave up, on Today", () => {
     renderToday([job()], {}, desk(3, NOON - 6 * HOUR));
 
     expect(
-      within(section()).getByText("[3 jobs · oldest 6h]"),
+      within(section()).getByText(bracketed("3 jobs · oldest 6h")),
     ).toBeInTheDocument();
   });
 
   it("dates no oldest when it has none to date", () => {
     renderToday([job()], {}, desk(1));
 
-    expect(within(section()).getByText("[1 job]")).toBeInTheDocument();
+    expect(within(section()).getByText(bracketed("1 job"))).toBeInTheDocument();
   });
 
   it("shows the two newest, then expands in place to show them all", () => {

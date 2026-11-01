@@ -38,6 +38,9 @@
     // Not a secret: signs unsubscribe links in a throwaway isolate, so the
     // one-click handler that reads it from the environment can be tested.
     "UNSUBSCRIBE_SECRET": "test-unsubscribe-secret-not-for-production",
+    // The public photo switch on, as production has it, so the page's
+    // read and the Worker's own reconcile wiring are what tests exercise.
+    "PUBLIC_PHOTOS_ORIGIN": "https://photos.dialed.run",
     // Design 165: the speed rollup's account and SQL API token, so its
     // env-reading shell runs against a mocked `fetch`.
     "CF_ACCOUNT_ID": "test-account",
@@ -56,6 +59,7 @@
   "r2_buckets": [
     { "binding": "MEDIA", "bucket_name": "dialed-media" },
     { "binding": "IMPORTS", "bucket_name": "dialed-imports" },
+    { "binding": "PUBLIC_PHOTOS", "bucket_name": "dialed-public-photos" },
   ],
   "queues": {
     "producers": [

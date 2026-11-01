@@ -334,7 +334,7 @@ describe("the pending sweep's reading list", () => {
   it("carries the R2 key the sweep needs to fetch the bytes", async () => {
     await entryPhotoRow();
     const [photo] = await pendingEntryPhotos();
-    expect(photo?.photoKey).toMatch(/^entries\//);
+    expect(photo?.objectKey).toMatch(/^entries\//);
     expect(photo?.scope).toBe("entry");
   });
 });
@@ -350,7 +350,14 @@ describe("a garment row with nothing to screen", () => {
     const missing = z.null().parse(JSON.parse("null"));
     expect(pendingGarmentFrom({ id: "g-1", photoKey: missing })).toEqual([]);
     expect(pendingGarmentFrom({ id: "g-1", photoKey: "garments/u/g" })).toEqual(
-      [{ scope: "garment", photoId: "g-1", photoKey: "garments/u/g" }],
+      // The object, not the row's key: a garment's key names a version.
+      [
+        {
+          scope: "garment",
+          photoId: "g-1",
+          objectKey: "garments/u/g/original.jpg",
+        },
+      ],
     );
   });
 });

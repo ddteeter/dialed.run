@@ -316,6 +316,9 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   if ((await garmentOpener.getAttribute("aria-expanded")) === "false") {
     await garmentOpener.click();
   }
+  // Round 42 #88: the photo at F's card size, and the garment's line.
+  await expect(garmentRow.locator("[data-part='garment-photo']")).toBeVisible();
+  await expect(garmentRow.locator("[data-part='garment-line']")).toBeVisible();
   await garmentRow
     .getByRole("combobox", { name: /Why it comes down/ })
     .selectOption("it's sexual or explicit");

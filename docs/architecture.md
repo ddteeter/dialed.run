@@ -11,15 +11,20 @@ same backend shape).
 
 ```mermaid
 flowchart LR
-    U[Runner / Browser] -->|HTTPS, SSR + hydration| W
+    U[Runner / Browser] -->|HTTPS, SSR + hydration| EC
+    EC -->|miss, or anything not public| W
+    U -->|a PUBLIC kit's photo,\nphotos.dialed.run| ZC
 
     subgraph CF[Cloudflare - Workers Paid plan]
+        EC{{Workers Caching\npublic pages only, 60 s,\nby Cache-Tag}}
         W[TanStack Start Worker\nSSR + server functions + API routes]
         D1[(D1: dialed-core)]
         D1W[(D1: dialed-weather)]
         D1O[(D1: dialed-ops)]
         AE[(Analytics Engine:\ndialed_vitals)]
         R2[(R2: photos)]
+        ZC{{Zone cache + CSAM Scanning Tool\neach copy 60 s}}
+        R2P[(R2: dialed-public-photos\nPUBLIC_PHOTOS, unguessable keys)]
         Q[[Queue: imports]]
         QE[[Queue: enrichment]]
         QX[[Queue: exports]]
@@ -33,6 +38,8 @@ flowchart LR
     CRON -->|daily rollup via\nSQL API| AE
     W -->|perf_daily| D1O
     W --> R2
+    W -->|copy a PUBLIC kit's screened photo;\ndelete on every retraction\nand the hourly sweep| R2P
+    ZC -->|miss| R2P
     W -->|produce| Q
     Q -->|consume| W
     W -->|produce| QE
@@ -40,6 +47,7 @@ flowchart LR
     W -->|produce| QX
     QX -->|consume| W
     CRON --> W
+    W -->|purge by tag on retraction| EC
 
     W -->|product page fetch\nbounded, https-only| SHOP[Brand product pages\nShopify JSON / JSON-LD / OG]
     W -->|same fetch, when the shop\nrefuses a Worker: 11 of 14 do| PROXY[Firecrawl scrape API\nresidential egress, 1 credit/page]
@@ -350,9 +358,9 @@ sequenceDiagram
         Queue->>Worker: consume ImportJob
         Worker->>Worker: parse FIT/GPX/TCX -> RunDraft
         Worker->>D1: insert run (source=file), dedupe-check started_at
+        Worker->>D1: import 'done' + notification: "Add your kit"
         Worker->>Weather: attachObservation(runId)
         Weather->>D1: cache + attach weather to run
-        Worker->>D1: notification: "Add your kit"
     else Strava webhook (reminder only)
         Strava->>Worker: POST activity event (api route)
         Worker->>Worker: verify subscription, zod-validate, dedupe
@@ -362,8 +370,14 @@ sequenceDiagram
     end
 ```
 
-Manual entry is a plain server function: parse `RunDraft`, insert, attach
-weather inline (degrade to `weather_pending` on failure — law 5).
+The attach comes last: the import is done before its conditions are asked
+for, and the upload screen keeps polling while the run is `pending`.
+
+Manual entry is a plain server function: parse `RunDraft`, insert as
+`pending`, answer, and ask for the weather after the answer under
+`waitUntil` (`saveManualRun`), so the save never waits on the provider. Any
+failure — the provider, or the Worker dying first — leaves the run
+`pending` for the hourly retry (law 5, law 8c).
 
 ## Product enrichment pipeline (lane 107)
 
@@ -396,10 +410,22 @@ past the cursor (`outfit_entries(user_id, audience, moderation_status,
 created_at)`), then ordered by `created_at DESC, id DESC` and cut to the
 page. Rows scanned are at most a page per author — they scale with who
 the viewer follows, not with the site. No feed table, no write
-amplification. Photos are not public bucket URLs: every photo is served by the Worker
+amplification. In the app, photos are not public bucket URLs: every photo is served by the Worker
 (`routes/feed/photo.$.tsx`), which checks visibility and screening before it
 reads R2. Task 128 (SAF-7) moves public-entry photos to short-lived signed
 URLs, cacheable for their TTL (decision D-46).
+
+**The one exception is a PUBLIC kit on the open web** (D-153, design 163
+step 8): each of its screened photos is copied to `dialed-public-photos`
+(binding `PUBLIC_PHOTOS`) under a random 128-bit key, with
+`Cache-Control: public, max-age=60`, and `/kit/<id>` shows it from
+`photos.dialed.run`, where Cloudflare's cache and its CSAM Scanning Tool
+front the bucket. `public_photos` records every object there.
+`ops/public-photos.ts` reconciles the bucket against the open web's rule
+(a `pass` photo on a kit `worldVisibleEntry()` admits): the edge purge that
+every retraction already sends syncs the kits and runners it names, and
+the `:15` firing sweeps everything and deletes objects no row names.
+`PUBLIC_PHOTOS_ORIGIN` is the switch; unset, nothing is copied.
 
 **Your conditions (E2-lite)** — the consensus block only in v1: recent shared
 entries (last 72h, `outfit_entries(audience, moderation_status, created_at)` index) whose

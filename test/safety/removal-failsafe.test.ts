@@ -19,6 +19,7 @@ import {
   screenPhoto,
   type CategoryScores,
 } from "../../src/modules/safety";
+import { noPurge } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";
 
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
@@ -35,7 +36,11 @@ function core() {
   return drizzle(env.DIALED_CORE);
 }
 
-const deps = { verify: () => Promise.resolve({ ok: true }), owe: oweInCore };
+const deps = {
+  verify: () => Promise.resolve({ ok: true }),
+  owe: oweInCore,
+  purge: noPurge,
+};
 
 function takedownOf(location: string) {
   return {
@@ -165,6 +170,7 @@ describe("a photo hidden while it was being screened", () => {
         reason: "intimate",
       },
       oweInCore,
+      noPurge,
     );
     expect(await photoStatus(photoId)).toBe("hidden_pending_review");
 

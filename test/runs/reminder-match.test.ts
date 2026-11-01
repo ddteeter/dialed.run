@@ -19,7 +19,12 @@ import {
   pairWithReminder,
   unpairedUploadFor,
 } from "../../src/modules/runs/strava/reminder-match";
-import { batchOf, fakeMessage, oweInCore } from "../queue-fakes";
+import {
+  batchOf,
+  fakeMessage,
+  oweInCore,
+  weatherLater,
+} from "../queue-fakes";
 import validTcx from "./fixtures/valid.tcx?raw";
 
 /**
@@ -45,6 +50,7 @@ async function deliver(body: unknown): Promise<void> {
     importBucket: env.IMPORTS,
     captureException: nothing,
     owe: oweInCore,
+    attachObservation: weatherLater,
   });
 }
 

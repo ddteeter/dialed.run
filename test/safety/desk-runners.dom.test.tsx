@@ -24,6 +24,7 @@ import {
   takedownMessage,
 } from "../../src/modules/safety/components/Takedown";
 import type { DeskRunner } from "../../src/modules/safety/runners";
+import { bracketed } from "../ui/bracketed";
 
 /**
  * D8 (round 27 #22), its Rename (#16) and Close account (D3), and SAF-6's
@@ -89,7 +90,7 @@ describe("D8's table", () => {
   it("counts every account and draws one row per runner", async () => {
     await renderDesk();
 
-    expect(screen.getByText("[412 accounts]")).toBeInTheDocument();
+    expect(screen.getByText(bracketed("412 accounts"))).toBeInTheDocument();
     const [header, first, second] = screen.getAllByRole("row");
     expect(header).toHaveTextContent("HandleEmailJoinedRunsReportsState");
     expect(first).toHaveTextContent("@adaada@example.com2025-09-04122[ACTIVE]");

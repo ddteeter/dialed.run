@@ -18,6 +18,7 @@ import type {
 } from "../../src/modules/closet/service";
 import { itemView, wardrobeItem } from "./closet-fixtures";
 import { expectAvailable, expectBusy } from "../ui/unavailable";
+import { bracketed } from "../ui/bracketed";
 
 type Props = ComponentProps<typeof GarmentDetail>;
 type Detail = Props["detail"];
@@ -261,8 +262,8 @@ describe("GarmentDetail: identity", () => {
 
   it("tags neither on a named, active piece", async () => {
     await renderWithRouter(garment());
-    expect(screen.queryByText("[Generic]")).toBeNull();
-    expect(screen.queryByText("[Retired]")).toBeNull();
+    expect(screen.queryByText(bracketed("Generic"))).toBeNull();
+    expect(screen.queryByText(bracketed("Retired"))).toBeNull();
   });
 
   it("carries the name and the colourway as words", async () => {
@@ -579,7 +580,7 @@ describe("GarmentDetail: stats", () => {
 
   it("says untested when there is no range", async () => {
     await renderWithRouter(garment());
-    expect(within(part("stats")).getByText("[Untested]")).toBeVisible();
+    expect(within(part("stats")).getByText(bracketed("Untested"))).toBeVisible();
   });
 });
 

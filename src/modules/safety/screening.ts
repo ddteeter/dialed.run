@@ -31,6 +31,7 @@ import {
   wardrobeItems,
 } from "../../db/schema-core";
 import { coreDb } from "../../env";
+import { garmentOriginalKey } from "../../lib/garment-photo-key";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 
@@ -314,7 +315,12 @@ function visibilityWrite(
 export interface PendingPhoto {
   scope: PhotoScope;
   photoId: string;
-  photoKey: string;
+  /**
+   * The R2 object holding the bytes to screen. Not always the row's
+   * `photo_key`: an entry photo's key is its object, but a garment's is
+   * the prefix of a version (`garmentOriginalKey`).
+   */
+  objectKey: string;
 }
 
 /**
@@ -336,7 +342,7 @@ export async function pendingEntryPhotos(limit = 50): Promise<PendingPhoto[]> {
   return rows.map((row) => ({
     scope: "entry" as const,
     photoId: row.id,
-    photoKey: row.photoKey,
+    objectKey: row.photoKey,
   }));
 }
 
@@ -385,5 +391,13 @@ export function pendingGarmentFrom(row: {
 }): PendingPhoto[] {
   return row.photoKey === null
     ? []
-    : [{ scope: "garment", photoId: row.id, photoKey: row.photoKey }];
+    : [
+        {
+          scope: "garment",
+          photoId: row.id,
+          // The original the runner sent, as the upload screens it: the
+          // row names a version, and a version is a prefix, not an object.
+          objectKey: garmentOriginalKey(row.photoKey),
+        },
+      ];
 }

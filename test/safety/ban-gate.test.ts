@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { z } from "zod";
 
 import { session, user } from "../../src/db/schema-auth";
@@ -10,6 +11,7 @@ import { ACCOUNT_CLOSED_CODE } from "../../src/lib/contracts/access";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { createAuth } from "../../src/modules/auth/create-auth";
+import { noPurge } from "../purge-spy";
 import { recordingMail } from "../auth/mail-recorder";
 import { OPEN_ACCESS } from "../auth/open-access";
 import { banGate, banUser, unbanUser } from "../../src/modules/safety";
@@ -78,12 +80,15 @@ async function signIn(email: string): Promise<Response> {
 describe("a banned runner signing in (SAF-4)", () => {
   it("is refused with the closed code, the reason and the date, and no session is made", async () => {
     const { userId, email } = await runner();
-    await banUser({
-      userId,
-      reason: "Adverts for a supplement store.",
-      rule: "spam",
-      bannedBy: newUlid(),
-    });
+    await banUser(
+      {
+        userId,
+        reason: "Adverts for a supplement store.",
+        rule: "spam",
+        bannedBy: newUlid(),
+      },
+      noPurge,
+    );
 
     const refused = await signIn(email);
 
@@ -105,12 +110,15 @@ describe("a banned runner signing in (SAF-4)", () => {
     // Google's callback and every other provider end in createSession, so
     // the hook on it is the one gate they all pass through.
     const { userId } = await runner();
-    await banUser({
-      userId,
-      reason: "spam",
-      rule: "spam",
-      bannedBy: newUlid(),
-    });
+    await banUser(
+      {
+        userId,
+        reason: "spam",
+        rule: "spam",
+        bannedBy: newUlid(),
+      },
+      noPurge,
+    );
     const context = await auth.$context;
     await expect(
       context.internalAdapter.createSession(userId),
@@ -119,12 +127,15 @@ describe("a banned runner signing in (SAF-4)", () => {
 
   it("signs in again once unbanned", async () => {
     const { userId, email } = await runner();
-    await banUser({
-      userId,
-      reason: "mistake",
-      rule: "spam",
-      bannedBy: newUlid(),
-    });
+    await banUser(
+      {
+        userId,
+        reason: "mistake",
+        rule: "spam",
+        bannedBy: newUlid(),
+      },
+      noPurge,
+    );
     await unbanUser(userId, "desk-operator");
 
     const signedIn = await signIn(email);

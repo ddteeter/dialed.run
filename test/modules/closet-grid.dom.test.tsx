@@ -67,9 +67,13 @@ describe("ClosetGrid: the empty closet (ruling 16)", () => {
   it("says so in brackets, asks for three pieces, and offers the Add tile", async () => {
     await renderWithRouter(<ClosetGrid listing={listing([])} />);
 
-    expect(
-      screen.getByRole("heading", { level: 1, name: "[Nothing in here yet]" }),
-    ).toBeVisible();
+    // Drawn in brackets, said without them (D-150).
+    const heading = screen.getByRole("heading", {
+      level: 1,
+      name: "Nothing in here yet",
+    });
+    expect(heading).toBeVisible();
+    expect(heading).toHaveTextContent("[Nothing in here yet]");
     expect(
       screen.getByText(
         "Add what you run in most. Three pieces is enough to start.",

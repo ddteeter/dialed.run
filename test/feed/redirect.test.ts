@@ -1,5 +1,5 @@
 import { isRedirect } from "@tanstack/react-router";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import type { ProfileAtHandle } from "../../src/modules/feed/profiles";
@@ -8,6 +8,7 @@ import {
   orHandlePage,
   redirectTo,
   toHandlePage,
+  toHandleWhenId,
   requireSignedIn,
   viewerContext,
 } from "../../src/modules/feed/redirect";
@@ -185,10 +186,10 @@ describe("orHandlePage", () => {
 });
 
 describe("toHandlePage", () => {
-  it("sends H by id to the runner's /@handle", () => {
+  it("sends H by id to the runner's /feed/u/<handle>", () => {
     expect(
       redirectFrom(() => toHandlePage({ username: "ravi_k" })),
-    ).toMatchObject({ to: "/@{$handle}", params: { handle: "ravi_k" } });
+    ).toMatchObject({ to: "/feed/u/$handle", params: { handle: "ravi_k" } });
   });
 
   it("sends a runner the viewer may not see, or one with no handle, back to the feed", () => {
@@ -196,5 +197,38 @@ describe("toHandlePage", () => {
     expect(redirectFrom(() => toHandlePage({ username: NO_SESSION })).to).toBe(
       "/feed",
     );
+  });
+});
+
+describe("toHandleWhenId", () => {
+  const ID = "01JABCDEFGHJKMNPQRSTVWXYZ0";
+
+  it("asks an id for its runner's handle and sends the viewer there", async () => {
+    const handleOf = vi.fn(() => Promise.resolve({ username: "ravi_k" }));
+
+    const landed = toHandleWhenId(ID, handleOf);
+
+    expect(handleOf).toHaveBeenCalledWith(ID);
+    await expect(landed).rejects.toSatisfy(isRedirect);
+    await expect(landed).rejects.toMatchObject({
+      options: { to: "/feed/u/$handle", params: { handle: "ravi_k" } },
+    });
+  });
+
+  it("sends an id the viewer may not see back to the feed", async () => {
+    const landed = toHandleWhenId(ID, () => Promise.resolve(void 0));
+
+    await expect(landed).rejects.toMatchObject({ options: { to: "/feed" } });
+  });
+
+  it("leaves a handle for the page, without asking", async () => {
+    const handleOf = vi.fn(() => Promise.resolve({ username: "ravi_k" }));
+
+    await expect(toHandleWhenId("ravi_k", handleOf)).resolves.toBeUndefined();
+    // Lowercase, so never an id, even at an id's length.
+    await expect(
+      toHandleWhenId(ID.toLowerCase(), handleOf),
+    ).resolves.toBeUndefined();
+    expect(handleOf).not.toHaveBeenCalled();
   });
 });

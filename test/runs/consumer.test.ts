@@ -1,5 +1,12 @@
 import { and, eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it } from "vitest";
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+  vi,
+} from "vitest";
 
 import {
   gaveUp,
@@ -24,6 +31,8 @@ import { PARSE_FAILURE_MESSAGE } from "../../src/modules/runs/parsers";
 import { RunParseError } from "../../src/modules/runs/parsers/shared";
 import { createManualRun } from "../../src/modules/runs/service";
 import { unreadNotificationCount } from "../../src/modules/notifications";
+import { attachObservation } from "../../src/modules/weather";
+import { mockVisualCrossing } from "../weather/fixtures/visual-crossing-observation";
 import { fitFile } from "./fit-file";
 import validTcx from "./fixtures/valid.tcx?raw";
 import malformedTcx from "./fixtures/malformed.tcx?raw";
@@ -31,7 +40,7 @@ import treadmillTcx from "./fixtures/treadmill.tcx?raw";
 import pausedClimbGpx from "./fixtures/paused-climb.gpx?raw";
 import { nowSeconds } from "../../src/lib/now";
 import { drainOutbox } from "../../src/modules/ops/outbox";
-import { oweInCore } from "../queue-fakes";
+import { oweInCore, weatherLater } from "../queue-fakes";
 import { DEAD_LETTER_REASON } from "../../src/db/gave-up";
 import {
   reminderFromSubject,
@@ -67,6 +76,14 @@ function fakeMessage(body: unknown) {
     },
   };
 }
+
+/**
+A run with resolvable coordinates, so its weather status is 'pending'.
+*/
+const LOCATED_GPX = `<?xml version="1.0"?><gpx><trk><trkseg>
+      <trkpt lat="44.9" lon="-93.2"><time>2026-08-16T08:00:00Z</time></trkpt>
+      <trkpt lat="44.91" lon="-93.21"><time>2026-08-16T08:30:00Z</time></trkpt>
+    </trkseg></trk></gpx>`;
 
 function fakeBatch(messages: readonly { body: unknown }[]) {
   const wrapped = messages.map((m) => fakeMessage(m.body));
@@ -112,6 +129,7 @@ function makeDeps(overrides: Partial<ConsumerDeps> = {}): ConsumerDeps & {
       exceptions.push({ error, context });
     },
     owe: oweInCore,
+    attachObservation: weatherLater,
     exceptions,
     ...overrides,
   };
@@ -316,12 +334,7 @@ describe("handleImportsBatch (102 §4, §8)", () => {
       attachObservation: () => Promise.reject(new Error("weather is down")),
     });
     const userId = newUlid();
-    // Give the run resolvable coordinates so weather status is 'pending'.
-    const gpxWithCoords = `<?xml version="1.0"?><gpx><trk><trkseg>
-      <trkpt lat="44.9" lon="-93.2"><time>2026-08-16T08:00:00Z</time></trkpt>
-      <trkpt lat="44.91" lon="-93.21"><time>2026-08-16T08:30:00Z</time></trkpt>
-    </trkseg></trk></gpx>`;
-    const importId = await seedImport(deps.db, userId, gpxWithCoords, "gpx");
+    const importId = await seedImport(deps.db, userId, LOCATED_GPX, "gpx");
     const { batch } = fakeBatch([{ body: { type: "import", importId } }]);
 
     await handleImportsBatch(batch, deps);
@@ -339,6 +352,94 @@ describe("handleImportsBatch (102 §4, §8)", () => {
     expect(
       deps.exceptions.some((e) => e.context.surface === "attachObservation"),
     ).toBe(true);
+  });
+
+  it("asks for a located run's weather once the import is done", async () => {
+    const asked: { runId: string; importStatus: string | undefined }[] = [];
+    const deps = makeDeps({
+      attachObservation: async (runId) => {
+        const [row] = await coreDb()
+          .select({ status: imports.status })
+          .from(imports)
+          .where(eq(imports.runId, runId));
+        asked.push({ runId, importStatus: row?.status });
+        return "attached";
+      },
+    });
+    const importId = await seedImport(
+      deps.db,
+      newUlid(),
+      LOCATED_GPX,
+      "gpx",
+    );
+
+    await handleImportsBatch(
+      fakeBatch([{ body: { type: "import", importId } }]).batch,
+      deps,
+    );
+
+    const [importRow] = await deps.db
+      .select()
+      .from(imports)
+      .where(eq(imports.id, importId));
+    // After the import is done, not before: the conditions are secondary
+    // to it, and the upload screen polls on while they are pending.
+    expect(asked).toStrictEqual([
+      { runId: importRow?.runId, importStatus: "done" },
+    ]);
+    expect(deps.exceptions).toStrictEqual([]);
+  });
+
+  it("asks for nothing for a treadmill run", async () => {
+    const asked: string[] = [];
+    const deps = makeDeps({
+      attachObservation: (runId) => {
+        asked.push(runId);
+        return Promise.resolve("attached");
+      },
+    });
+    const importId = await seedImport(
+      deps.db,
+      newUlid(),
+      treadmillTcx,
+      "tcx",
+    );
+
+    await handleImportsBatch(
+      fakeBatch([{ body: { type: "import", importId } }]).batch,
+      deps,
+    );
+
+    expect(asked).toStrictEqual([]);
+  });
+
+  it("with the real attach, an imported run has its conditions in the same pass", async () => {
+    mockVisualCrossing();
+    onTestFinished(() => {
+      vi.restoreAllMocks();
+    });
+    const deps = makeDeps({ attachObservation });
+    const importId = await seedImport(
+      deps.db,
+      newUlid(),
+      LOCATED_GPX,
+      "gpx",
+    );
+
+    await handleImportsBatch(
+      fakeBatch([{ body: { type: "import", importId } }]).batch,
+      deps,
+    );
+
+    const [importRow] = await deps.db
+      .select()
+      .from(imports)
+      .where(eq(imports.id, importId));
+    const [runRow] = await deps.db
+      .select()
+      .from(runs)
+      .where(eq(runs.id, importRow?.runId ?? ""));
+    expect(runRow?.weatherStatus).toBe("attached");
   });
 
   it("an invalid queue message is acked, never retried", async () => {

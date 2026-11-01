@@ -1,6 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { z } from "zod";
 
 import { user } from "../../src/db/schema-auth";
@@ -69,6 +70,7 @@ import {
 } from "../../src/modules/safety";
 
 import { moderationActionInsertWhere } from "../../src/modules/safety/moderation-actions";
+import { noPurge } from "../purge-spy";
 import { makeObservation, NOW } from "../feed/helpers";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 
@@ -1276,12 +1278,15 @@ describe("bans are audited", () => {
   it("records the ban with its reason, and the lift beside it", async () => {
     const runner = await makeUser();
 
-    await banUser({
-      userId: runner,
-      reason: "Spam accounts",
-      rule: "spam",
-      bannedBy: "op",
-    });
+    await banUser(
+      {
+        userId: runner,
+        reason: "Spam accounts",
+        rule: "spam",
+        bannedBy: "op",
+      },
+      noPurge,
+    );
     await unbanUser(runner, "op2");
 
     const audit = await auditFor(runner);
@@ -1720,12 +1725,15 @@ describe("deskRunners, D8 (round 27 #22)", () => {
           createdAt: 1,
         },
       ]);
-    await banUser({
-      userId: newer,
-      reason: "Spam",
-      rule: "spam",
-      bannedBy: "op",
-    });
+    await banUser(
+      {
+        userId: newer,
+        reason: "Spam",
+        rule: "spam",
+        bannedBy: "op",
+      },
+      noPurge,
+    );
 
     const listed = await deskList({ filter: "all" });
 

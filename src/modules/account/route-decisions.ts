@@ -1,6 +1,7 @@
 import { redirect } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { isOpenWebPath } from "../../lib/open-web";
 import { returnPathSchema } from "../../lib/return-path";
 import {
   isRememberedForSession,
@@ -85,6 +86,10 @@ const HANDLE_CLAIMED = "has-handle";
  *
  * `isInBrowser` is the caller's to say, because on the server the memo
  * would be shared by every request the isolate serves.
+ *
+ * **Never on the open web** (design 163, D-154): a public page is the same
+ * for every viewer, so it reads no session and sends nobody anywhere —
+ * the app's own pages are where a runner meets O0.
  */
 export async function gateOnHandle({
   ask,
@@ -95,6 +100,7 @@ export async function gateOnHandle({
   pathname: string;
   isInBrowser: boolean;
 }>): Promise<void> {
+  if (isOpenWebPath(pathname)) return;
   if (isInBrowser && isRememberedForSession(HANDLE_CLAIMED)) return;
   const answer = await ask();
   if (isInBrowser) noteSessionOwner(answer.userId);

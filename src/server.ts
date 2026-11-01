@@ -18,6 +18,7 @@ import {
   timingDeps,
   dailySpeed,
   hourlySpeed,
+  withoutCookiesWhenPublic,
 } from "./modules/ops";
 import { forgetAnsweredRequests } from "./modules/account/answered-requests";
 import { exportConsumersFromEnv } from "./modules/account/export-build";
@@ -28,7 +29,7 @@ import { sweepExports } from "./modules/account/export-sweep";
 import { purgeDueAccounts } from "./modules/account/purge";
 import { linkTypedGarments } from "./modules/closet";
 import { sweepCopyrightHolds } from "./modules/feed/moderation";
-import { mintNonce } from "./lib/csp-nonce";
+import { requestContext } from "./lib/csp-nonce";
 import { routeTree } from "./routeTree.gen";
 
 const startFetch = createStartHandler(defaultStreamHandler);
@@ -54,19 +55,28 @@ export default {
       // session that may be a read replica, started from the device's and
       // the runner's bookmarks; the newest one goes back in the `d1b`
       // cookie.
-      const nonce = mintNonce();
-      return secureResponse(
-        await timeRequest(
-          request,
-          () =>
-            respondInD1Scope(
-              request,
-              () => startFetch(request, { context: { nonce } }),
-              d1RequestDepsFromEnv(),
-            ),
-          timing,
-        ),
-        nonce,
+      //
+      // A public page (design 163) leaves with no cookie, since the edge
+      // may store it and hand it to the next visitor, and with no nonce,
+      // for the same reason: an open-web path is rendered without one,
+      // and its policy names its scripts' hashes instead.
+      //
+      // Design 165: the response is timed by route id, logged and written
+      // to VITALS.
+      const context = requestContext(new URL(request.url).pathname);
+      const response = await timeRequest(
+        request,
+        () =>
+          respondInD1Scope(
+            request,
+            () => startFetch(request, { context }),
+            d1RequestDepsFromEnv(),
+          ),
+        timing,
+      );
+      return await secureResponse(
+        withoutCookiesWhenPublic(response),
+        context.nonce,
       );
     } catch (error) {
       captureException(error, { surface: "fetch" });

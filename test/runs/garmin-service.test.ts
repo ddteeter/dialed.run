@@ -14,7 +14,7 @@ import {
 } from "../../src/modules/runs/garmin/service";
 import type { ImportJob } from "../../src/modules/runs/queue-messages";
 import { oweInCore } from "../../src/modules/ops";
-import { batchOf, fakeMessage } from "../queue-fakes";
+import { batchOf, fakeMessage, weatherLater } from "../queue-fakes";
 import { urlOf } from "./request-url";
 import { fitFile } from "./fit-file";
 import { zipOf } from "./zip-file";
@@ -311,6 +311,7 @@ describe("importGarminActivity", () => {
         importBucket: env.IMPORTS,
         captureException: ignoreException,
         owe: oweInCore,
+        attachObservation: weatherLater,
       },
     );
     const [run] = await coreDb()

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ReviewQueue } from "../../src/modules/safety/components/ReviewQueue";
 import type { HandleReview, QueueRow } from "../../src/modules/safety/review";
+import { bracketed } from "../ui/bracketed";
 
 type Props = Parameters<typeof ReviewQueue>[0];
 
@@ -44,7 +45,7 @@ describe("an empty queue", () => {
     // know the digest is watching, or an empty page is indistinguishable
     // from a broken one.
     expect(screen.getByText(/Nothing waiting/)).toBeInTheDocument();
-    expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
+    expect(screen.getByText(bracketed("0 waiting"))).toBeInTheDocument();
     // Arriving on an empty queue moves nothing.
     expect(document.body).toHaveFocus();
   });
@@ -53,7 +54,7 @@ describe("an empty queue", () => {
 describe("what a reviewer is shown", () => {
   it("counts what is waiting", () => {
     renderQueue([row(), row({ id: "b", subjectId: "e-2" })]);
-    expect(screen.getByText("[2 waiting]")).toBeInTheDocument();
+    expect(screen.getByText(bracketed("2 waiting"))).toBeInTheDocument();
   });
 
   it("distinguishes a classifier flag from a pile of reports", () => {
@@ -70,8 +71,8 @@ describe("what a reviewer is shown", () => {
     // A photo a model flagged is a threshold question; an entry three
     // people objected to is a judgement about people. A reviewer who
     // cannot tell them apart treats both the same way.
-    expect(screen.getByText("[reports]")).toBeInTheDocument();
-    expect(screen.getByText("[classifier]")).toBeInTheDocument();
+    expect(screen.getByText(bracketed("reports"))).toBeInTheDocument();
+    expect(screen.getByText(bracketed("classifier"))).toBeInTheDocument();
   });
 
   it("tags a photo held on upload by what was done, not how", () => {
@@ -80,8 +81,8 @@ describe("what a reviewer is shown", () => {
     ]);
 
     // Round 41 #84: the tag names the hold, not the technique.
-    expect(screen.getByText("[held on upload]")).toBeInTheDocument();
-    expect(screen.queryByText("[fingerprint]")).toBeNull();
+    expect(screen.getByText(bracketed("held on upload"))).toBeInTheDocument();
+    expect(screen.queryByText(bracketed("fingerprint"))).toBeNull();
   });
 
   it("names what is being reviewed", () => {
@@ -112,7 +113,7 @@ describe("deciding", () => {
       data: { queueId: QUEUE_ID, action: "approve" },
     });
     await waitFor(() => {
-      expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
+      expect(screen.getByText(bracketed("0 waiting"))).toBeInTheDocument();
     });
   });
 
@@ -141,7 +142,7 @@ describe("deciding", () => {
       data: { queueId: QUEUE_ID, action: "remove", reason: "home" },
     });
     await waitFor(() => {
-      expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
+      expect(screen.getByText(bracketed("0 waiting"))).toBeInTheDocument();
     });
   });
 
@@ -172,7 +173,7 @@ describe("deciding", () => {
 
     settle({ outcome: "resolved" });
     await waitFor(() => {
-      expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
+      expect(screen.getByText(bracketed("0 waiting"))).toBeInTheDocument();
     });
   });
 
@@ -210,7 +211,7 @@ describe("deciding", () => {
       data: { queueId: QUEUE_ID, action: "quarantine", reason: "explicit" },
     });
     await waitFor(() => {
-      expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
+      expect(screen.getByText(bracketed("0 waiting"))).toBeInTheDocument();
     });
   });
 
@@ -276,6 +277,103 @@ describe("deciding", () => {
     ).toBeInTheDocument();
   });
 
+  it("draws a garment photo's row as round 42 #88 rules: kicker with owner and source, F's card, the garment's line", () => {
+    renderQueue([
+      row({
+        subjectType: "garment",
+        subjectId: "g-1",
+        source: "classifier",
+        reporterCount: 0,
+        reasons: [],
+        subject: {
+          photoKeys: ["items/u/g-1/v1/card.webp"],
+          owner: "k_lopes",
+          garmentLine: "Nike Pegasus 41 · Shoes · In use",
+        },
+      }),
+    ]);
+
+    const kicker = screen.getByRole("button", {
+      name: "garment photo · g-1 · @k_lopes",
+    });
+    // The source tag beside the kicker, and only there.
+    expect(kicker.nextElementSibling).toHaveTextContent(/^\[classifier\]$/u);
+    expect(screen.getAllByText(bracketed("classifier"))).toHaveLength(1);
+    const photo = screen.getByRole("img", { name: "Reported garment photo" });
+    expect(photo).toHaveAttribute(
+      "src",
+      "/safety/review-photo/items/u/g-1/v1/card.webp",
+    );
+    expect(photo).toHaveClass("h-full", "w-full", "object-contain");
+    // F's photo well: the card at its own size, not a kit photo's strip.
+    expect(photo.parentElement).toHaveClass(
+      "aspect-4/3",
+      "w-full",
+      "rounded-field",
+      "border-hairline",
+      "bg-photo",
+      "wide:max-h-80",
+    );
+    const line = screen.getByText("Nike Pegasus 41 · Shoes · In use");
+    expect(line).toHaveClass("font-mono", "text-mono-xs", "uppercase");
+    expect(line.parentElement).toHaveClass("text-quiet");
+    expect(photo.parentElement?.nextElementSibling).toBe(line.parentElement);
+  });
+
+  it("names nobody in a garment photo's kicker when the owner has no handle, and draws no line without one", () => {
+    renderQueue([
+      row({
+        subjectType: "garment",
+        subjectId: "g-1",
+        source: "fingerprint",
+        subject: { photoKeys: ["items/u/g-1/v1/card.webp"] },
+      }),
+    ]);
+
+    expect(
+      screen.getByRole("button", { name: "garment photo · g-1" }),
+    ).toBeVisible();
+    expect(document.querySelector("[data-part='garment-line']")).toBeNull();
+  });
+
+  it("shows no photo for a garment row whose photo is gone", () => {
+    renderQueue([
+      row({
+        subjectType: "garment",
+        subjectId: "g-1",
+        source: "classifier",
+        subject: { photoKeys: [] },
+      }),
+    ]);
+
+    expect(screen.queryByRole("img")).toBeNull();
+    expect(document.querySelector("[data-part='garment-photo']")).toBeNull();
+  });
+
+  it("keeps a kit row's source at its foot, and its photos as reported photos", () => {
+    renderQueue([
+      row({
+        subjectType: "photo",
+        subjectId: "p-1",
+        source: "classifier",
+        subject: { photoKeys: ["entries/u/k/1"], owner: "k_lopes" },
+      }),
+    ]);
+
+    // A kit photo's kicker does not name its owner: its kit does.
+    const kicker = screen.getByRole("button", { name: "photo · p-1" });
+    expect(kicker.nextElementSibling).toBeNull();
+    expect(screen.getByRole("img", { name: "Reported photo" })).toHaveClass(
+      "h-32",
+    );
+    expect(document.querySelector("[data-part='garment-photo']")).toBeNull();
+    // At the row's foot, a child of the row, not of its header.
+    expect(
+      screen.getByText(bracketed("classifier")).closest("[data-part='source']")
+        ?.parentElement?.tagName,
+    ).toBe("LI");
+  });
+
   it("goes back to the decision bar on Cancel, deciding nothing", async () => {
     const user = userEvent.setup();
     const { resolve } = renderQueue([row()]);
@@ -301,7 +399,7 @@ describe("deciding", () => {
     expect(
       screen.getByRole("combobox", { name: /Why it comes down/ }),
     ).toHaveDisplayValue("it's sexual or explicit");
-    expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
+    expect(screen.getByText(bracketed("1 waiting"))).toBeInTheDocument();
   });
 
   it("keeps the question up, with the band, when the quarantine fails", async () => {
@@ -331,7 +429,7 @@ describe("deciding", () => {
     expect(
       screen.getByRole("button", { name: "Remove and report" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
+    expect(screen.getByText(bracketed("1 waiting"))).toBeInTheDocument();
   });
 
   it("refuses a Remove with no reason, and says why", async () => {
@@ -346,7 +444,7 @@ describe("deciding", () => {
     expect(resolve).not.toHaveBeenCalled();
     const said = await screen.findAllByText("Pick why it's coming down.");
     expect(said.length).toBeGreaterThan(0);
-    expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
+    expect(screen.getByText(bracketed("1 waiting"))).toBeInTheDocument();
     // No question is asked whose answer would only be refused.
     expect(
       screen.queryByRole("button", { name: "Remove and report" }),
@@ -399,7 +497,7 @@ describe("deciding", () => {
     await waitFor(() => {
       expect(resolve).toHaveBeenCalledTimes(1);
     });
-    expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
+    expect(screen.getByText(bracketed("1 waiting"))).toBeInTheDocument();
   });
 
   it("only takes the decided row off the list", async () => {
@@ -411,7 +509,7 @@ describe("deciding", () => {
     await user.click(first);
 
     await waitFor(() => {
-      expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
+      expect(screen.getByText(bracketed("1 waiting"))).toBeInTheDocument();
     });
     expect(screen.getByText(/entry · e-2/)).toBeInTheDocument();
   });
@@ -443,7 +541,7 @@ describe("deciding", () => {
       data: { queueId: "01HYYYYYYYYYYYYYYYYYYYYYYY", action: "approve" },
     });
     await waitFor(() => {
-      expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
+      expect(screen.getByText(bracketed("1 waiting"))).toBeInTheDocument();
     });
     // The one left is decided next, with no pick needed.
     expect(first).toHaveAttribute("aria-expanded", "true");
@@ -486,7 +584,7 @@ describe("deciding", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "entry · e-3" })).toHaveFocus();
     });
-    expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
+    expect(screen.getByText(bracketed("1 waiting"))).toBeInTheDocument();
   });
 
   it("does not take focus back from the decision once the row has it", async () => {
@@ -591,7 +689,7 @@ describe("deciding", () => {
 
     await user.click(screen.getByRole("button", { name: "Approve" }));
     await waitFor(() => {
-      expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
+      expect(screen.getByText(bracketed("0 waiting"))).toBeInTheDocument();
     });
 
     // The row is gone, so there is no second button to press. The server
@@ -613,7 +711,7 @@ describe("what a row tells the reviewer", () => {
     // The row's whole content. Without it a reviewer is deciding about a
     // subject type and a ULID, and Approve on an opaque id is not a
     // judgement about anything.
-    expect(screen.getByText("[3 people]")).toBeInTheDocument();
+    expect(screen.getByText(bracketed("3 people"))).toBeInTheDocument();
     // The whole line, separator included. Two reasons run together read
     // as one sentence nobody wrote.
     expect(
@@ -625,7 +723,7 @@ describe("what a row tells the reviewer", () => {
 
   it("counts one person as a person", () => {
     renderQueue([row({ reporterCount: 1 })]);
-    expect(screen.getByText("[1 person]")).toBeInTheDocument();
+    expect(screen.getByText(bracketed("1 person"))).toBeInTheDocument();
   });
 
   it("shows the removal clock in the row's header, right of its name, on a row an intimate-image report started (round 35 #58b)", () => {
@@ -641,8 +739,8 @@ describe("what a row tells the reviewer", () => {
     const opener = screen.getByRole("button", { expanded: true });
     expect(opener.nextElementSibling).toBe(clock);
     // The brackets stay about people.
-    expect(screen.getByText("[1 person]")).toBeInTheDocument();
-    expect(screen.queryByText("[Due in 31h]")).toBeNull();
+    expect(screen.getByText(bracketed("1 person"))).toBeInTheDocument();
+    expect(screen.queryByText(bracketed("Due in 31h"))).toBeNull();
     expect(
       screen.getByText(
         "It's an intimate image of someone, shared without their consent",
@@ -662,7 +760,7 @@ describe("what a row tells the reviewer", () => {
     // A classifier row has no people behind it. Rendering an empty reason
     // list would read as a report with nothing written on it.
     expect(screen.getByText("Nobody reported this.")).toBeInTheDocument();
-    expect(screen.getByText("[classifier]")).toBeInTheDocument();
+    expect(screen.getByText(bracketed("classifier"))).toBeInTheDocument();
   });
 
   it("reads the same set the same way whatever order it arrives in", () => {
@@ -789,7 +887,7 @@ describe("a handle the re-ask flagged (D-97)", () => {
       /^The hourly re-check flagged a handle this runner already has\. Nothing is hidden while it waits\.$/u,
     );
     expect(screen.queryByText("Nobody reported this.")).toBeNull();
-    expect(screen.getByText("[classifier]")).toBeInTheDocument();
+    expect(screen.getByText(bracketed("classifier"))).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Keep" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Rename" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
@@ -823,7 +921,7 @@ describe("a handle the re-ask flagged (D-97)", () => {
       data: { queueId: QUEUE_ID, action: "keep" },
     });
     await waitFor(() => {
-      expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
+      expect(screen.getByText(bracketed("0 waiting"))).toBeInTheDocument();
     });
   });
 
@@ -856,7 +954,7 @@ describe("a handle the re-ask flagged (D-97)", () => {
       },
     });
     await waitFor(() => {
-      expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
+      expect(screen.getByText(bracketed("0 waiting"))).toBeInTheDocument();
     });
   });
 
@@ -891,7 +989,7 @@ describe("a handle the re-ask flagged (D-97)", () => {
 
     settle({ outcome: "resolved" });
     await waitFor(() => {
-      expect(screen.getByText("[0 waiting]")).toBeInTheDocument();
+      expect(screen.getByText(bracketed("0 waiting"))).toBeInTheDocument();
     });
   });
 
@@ -929,7 +1027,7 @@ describe("a handle the re-ask flagged (D-97)", () => {
       /^Not renamed.*That placeholder is taken\. Press Rename again\.$/u,
     );
     expect(band?.querySelector("button")).toBeNull();
-    expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
+    expect(screen.getByText(bracketed("1 waiting"))).toBeInTheDocument();
   });
 
   it("keeps the row when the handle changed before the rename landed, and re-reads its header (R-121; round 38 #60)", async () => {
@@ -956,7 +1054,7 @@ describe("a handle the re-ask flagged (D-97)", () => {
     expect(band.closest("[data-part='control-failure']")).toHaveTextContent(
       /^Not renamed/u,
     );
-    expect(screen.getByText("[1 waiting]")).toBeInTheDocument();
+    expect(screen.getByText(bracketed("1 waiting"))).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "handle · re-check · dunk_runs" }),
     ).toBeInTheDocument();

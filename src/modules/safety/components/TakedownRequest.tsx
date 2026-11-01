@@ -45,10 +45,9 @@ interface Draft {
   isAttested: boolean;
 }
 
-const BLANK: Draft = {
+const BLANK: Omit<Draft, "location"> = {
   email: "",
   signature: "",
-  location: "",
   posterUsername: "",
   description: "",
   isAttested: false,
@@ -78,8 +77,16 @@ type Request = (input: {
 export function TakedownRequest({
   siteKey,
   request,
-}: Readonly<{ siteKey: string | undefined; request: Request }>): JSX.Element {
-  const [draft, setDraft] = useState(BLANK);
+  location = "",
+}: Readonly<{
+  siteKey: string | undefined;
+  request: Request;
+  /**
+  The link to start with, from the URL: a public kit's Report this kit.
+  */
+  location?: string | undefined;
+}>): JSX.Element {
+  const [draft, setDraft] = useState({ ...BLANK, location });
   const { email, signature, posterUsername, isAttested } = draft;
   const edit =
     <Key extends keyof Draft>(key: Key) =>
