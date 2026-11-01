@@ -314,19 +314,20 @@ test.describe("Au · phone", () => {
     // D-151: the form is not restored, so the notice's second sentence is
     // the owner's, not the board's "What you entered is kept." (design
     // deltas). Every other word is the board's.
-    const drawnNotice = board.words.get("session-notice") ?? [];
-    expect(drawnNotice).toContain(BOARD_NOTICE);
+    // `wordsOf` folds case (`signatureOf` upper-cases every run), so the
+    // sentences are folded the same way to be found and swapped — in every
+    // region that holds the notice, the header that encloses it included.
+    const drawnSentence = BOARD_NOTICE.toUpperCase();
+    const builtSentence = BUILT_NOTICE.toUpperCase();
+    expect(board.words.get("session-notice")).toContain(drawnSentence);
     await expectSameWords(
       page,
-      new Map([
-        ...board.words,
-        [
-          "session-notice",
-          drawnNotice.map((line) =>
-            line === BOARD_NOTICE ? BUILT_NOTICE : line,
-          ),
-        ],
-      ]),
+      new Map(
+        [...board.words].map(([part, words]) => [
+          part,
+          words.map((line) => (line === drawnSentence ? builtSentence : line)),
+        ]),
+      ),
       {},
     );
     expect(await fillOf(page, `${PANEL} [data-part='session-notice']`)).toBe(
