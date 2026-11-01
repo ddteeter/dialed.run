@@ -114,7 +114,7 @@ describe("todayCounts", () => {
     expect(counts.waiting).toBe(3);
   });
 
-  it("counts a photo the screener never finished as the screener's (D-153)", async () => {
+  it("counts a photo the screener never finished as the screener's (D-157)", async () => {
     await queueRow({ source: "unscreened" });
     await queueRow({ source: "missing_file", subjectType: "garment" });
     await queueRow({ source: "classifier" });

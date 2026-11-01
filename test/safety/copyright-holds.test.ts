@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
+
 import { z } from "zod";
 
 import { user } from "../../src/db/schema-auth";
@@ -38,6 +39,7 @@ import {
 } from "../../src/modules/safety/copyright-holds";
 import { removalsOnRun } from "../../src/modules/safety/run-removals";
 
+import { noPurge } from "../purge-spy";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 
 /**
@@ -292,6 +294,7 @@ describe("a copyright takedown hides (D-130)", () => {
           reason: "intimate",
         },
         oweInCore,
+        noPurge,
       );
     }
     expect(await entryStatus(entryId)).toBe("removed");

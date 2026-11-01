@@ -21,7 +21,7 @@ export const ulidSchema = z
  * When a ULID was minted, in unix seconds (the unit every timestamp column
  * stores), or nothing for a string that is not one. A ULID's first ten
  * characters are its time, so a row named by one already says when it was
- * made — an entry photo's id, a garment photo's version (D-153).
+ * made — an entry photo's id, a garment photo's version (D-157).
  */
 export function ulidSeconds(id: string): number | undefined {
   return ulidSchema.safeParse(id).success

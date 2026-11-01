@@ -31,6 +31,9 @@ import {
   firstRowWhere,
   hasRowWhere,
 } from "../../lib/sql/keyed-read";
+import { garmentCategoryLabels } from "../../lib/contracts";
+import type { GarmentCategory } from "../../lib/contracts/garment-fields";
+import { garmentLabel } from "../../lib/garment-label";
 import { orSqlNull } from "../../lib/sql/sql-null";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
@@ -88,7 +91,7 @@ export function enqueueForReview<TSchema extends Record<string, unknown>>(
   input: EnqueueInput,
   /**
    * When an existing row may be re-opened; every time, unless given. A
-   * stuck photo's escalation (D-153) re-opens only a row settled more than
+   * stuck photo's escalation (D-157) re-opens only a row settled more than
    * a day ago, so the hourly sweep never undoes a decision just made.
    */
   reopenOnlyIf: SQL = sql`1`,
@@ -149,7 +152,7 @@ export function settleOpenReviews(
   settledBy: string,
   /**
    * Settled as something other than `removed`, and only rows some sources
-   * opened: a stuck photo's row (D-153) is `approved` by the screening
+   * opened: a stuck photo's row (D-157) is `approved` by the screening
    * that finally passed it, and a row reports opened is left for a person.
    */
   settled?: {
@@ -201,6 +204,31 @@ export interface QueueSubject {
    * author with no handle yet.
    */
   owner?: string | undefined;
+  /**
+   * A garment photo's row names the garment (round 42 #88): its closet
+   * name, category and state in the closet's own words, "Nike Pegasus 41
+   * · Shoes · In use". Absent on every other row.
+   */
+  garmentLine?: string | undefined;
+}
+
+/**
+ * A garment as round 42 #88's line names it: the closet's name for it,
+ * its category's word, and whether it is in use or retired — the
+ * rotation's words.
+ */
+export function garmentLineOf(garment: {
+  name: string;
+  brand: string | null;
+  isGeneric: boolean;
+  category: GarmentCategory;
+  isRetired: boolean;
+}): string {
+  return [
+    garmentLabel(garment),
+    garmentCategoryLabels[garment.category],
+    garment.isRetired ? "Retired" : "In use",
+  ].join(" · ");
 }
 
 export interface QueueRow {
@@ -479,6 +507,11 @@ async function subjectsFor(
         id: wardrobeItems.id,
         photoKey: sql<string>`${wardrobeItems.photoKey} || '/card.webp'`,
         owner: userProfiles.username,
+        name: wardrobeItems.name,
+        brand: wardrobeItems.brand,
+        productId: wardrobeItems.productId,
+        category: wardrobeItems.category,
+        retired: wardrobeItems.retired,
       })
       .from(wardrobeItems)
       .leftJoin(userProfiles, eq(userProfiles.userId, wardrobeItems.userId))
@@ -517,6 +550,11 @@ async function subjectsFor(
     found.set(`garment:${row.id}`, {
       photoKeys: [row.photoKey],
       owner: row.owner ?? undefined,
+      garmentLine: garmentLineOf({
+        ...row,
+        isGeneric: row.productId === null,
+        isRetired: row.retired,
+      }),
     });
   }
   return found;
@@ -941,7 +979,7 @@ const subjectWriters: Record<
   // docs/designs/106-trust-safety.md.
   //
   // The one exception is a photo the classifier never answered for a day
-  // after upload (D-153, design 167): the row exists because nothing will
+  // after upload (D-157, design 167): the row exists because nothing will
   // screen it, so back to `pending` would only bring it back tomorrow. A
   // person has looked at it now, and their Approve publishes it (owner,
   // 2026-10-31).
@@ -978,7 +1016,7 @@ const subjectWriters: Record<
 
 /**
  * Where Approve leaves an entry photo: `pass` when a person is the only
- * screening it will get (an `unscreened` row, D-153), `pending` for every
+ * screening it will get (an `unscreened` row, D-157), `pending` for every
  * other source, so the screener still sees it.
  */
 function approvedPhotoStatus(

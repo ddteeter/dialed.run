@@ -1,4 +1,4 @@
-# Design: 167 Stuck photos go to the Desk (D-153)
+# Design: 167 Stuck photos go to the Desk (D-157)
 
 > Hard cap: one page (~60 lines). If you exceed it, cut. The reviewer reads
 > this on a phone. Diagrams count as clarity, not length.
@@ -8,7 +8,7 @@
 A photo whose R2 object is missing, or that the classifier never answers
 for, stays `pending` for good (law 6). Its owner sees "being checked"
 forever, and the only signal is an hourly Sentry line with no ids. The owner
-decided (2026-10-31, D-153): a garment or entry photo still pending 24 hours
+decided (2026-10-31, D-157): a garment or entry photo still pending 24 hours
 after upload goes to the Desk's review queue for a person.
 
 ## Approach

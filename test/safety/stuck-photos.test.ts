@@ -1,5 +1,5 @@
 /**
- * D-153, design 167: a photo still pending screening a day after upload
+ * D-157, design 167: a photo still pending screening a day after upload
  * goes to the Desk's review queue, once, saying whether its file is
  * missing or the classifier never answered.
  */

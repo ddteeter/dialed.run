@@ -39,7 +39,7 @@ export function garmentOriginalKey(versionKey: string): string {
 /**
  * The id one version of a garment's photo was minted with — the last
  * segment of `wardrobe_items.photo_key`, a ULID the upload makes, so it
- * also says when the photo was uploaded (D-153, design 167). No column
+ * also says when the photo was uploaded (D-157, design 167). No column
  * records that time; this segment already does.
  */
 export function garmentVersionId(versionKey: string): string {

@@ -1560,6 +1560,11 @@ describe("ToggleField", () => {
  * `ChoiceList` — the radio group O1's five answers need, because a select
  * hides its options and comparing them is how a runner picks.
  */
+function thermalLegend() {
+  return screen.getByRole("group", { name: "Do you run warm or cold?" })
+    .firstElementChild;
+}
+
 describe("ChoiceList", () => {
   const LEVELS = ["hot", "mild", "cold"] as const;
   const LABELS = { hot: "Runs hot", mild: "About average", cold: "Runs cold" };
@@ -1601,6 +1606,29 @@ describe("ChoiceList", () => {
     expect(
       screen.getByRole("group", { name: "Do you run warm or cold?" }),
     ).toBeInTheDocument();
+  });
+
+  it("prints the legend in the label role, unless a heading already says it", () => {
+    const { rerender } = renderList(vi.fn());
+    expect(thermalLegend()).toHaveClass("mb-2", "p-0", "text-label");
+    expect(thermalLegend()).not.toHaveClass("sr-only");
+
+    // Settings › Privacy's kicker is the legend (round 42 #92): still the
+    // group's name, printed once.
+    rerender(
+      <ChoiceList
+        name="thermal"
+        legend="Do you run warm or cold?"
+        isLegendHeading
+        options={LEVELS}
+        optionLabels={LABELS}
+        value={undefined}
+        field={restingField}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(thermalLegend()).toHaveClass("sr-only");
+    expect(thermalLegend()).not.toHaveClass("text-label");
   });
 
   it("shows every answer at once", () => {
@@ -1666,6 +1694,35 @@ describe("ChoiceList", () => {
     expect(screen.getByText("+8\u{00B0}")).toHaveClass("font-mono");
   });
 
+  it("puts a hint under the option's label, inside its name, in the quiet small type", () => {
+    // A3's audience picker (round 41 #86a): each choice says what it
+    // means, and a reader hears the meaning with the word.
+    render(
+      <ChoiceList
+        name="thermal"
+        legend="Do you run warm or cold?"
+        options={LEVELS}
+        optionLabels={LABELS}
+        optionHints={{
+          hot: "Strip down early.",
+          mild: "Dress for the number.",
+          cold: "Add a layer.",
+        }}
+        value={undefined}
+        field={restingField}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("radio", { name: /^Runs cold/ })).toHaveAccessibleName(
+      "Runs cold Add a layer.",
+    );
+    const hint = screen.getByText("Add a layer.");
+    expect(hint).toHaveClass("text-small", "font-normal", "text-muted");
+    expect(hint.parentElement).toHaveClass("flex", "flex-col", "gap-1");
+    expect(hint.parentElement).toHaveTextContent("Runs coldAdd a layer.");
+  });
+
   it("leaves the names alone when there are no notes", () => {
     // The default, and every other caller. A group that appended an empty
     // span would still change the name.
@@ -1674,6 +1731,8 @@ describe("ChoiceList", () => {
     expect(screen.getByLabelText("Runs cold")).toHaveAccessibleName(
       "Runs cold",
     );
+    // And no hint's box around the words: the label holds them bare.
+    expect(screen.getByText("Runs cold").tagName).toBe("LABEL");
   });
 
   it("points a field at its suggestion list, and omits the attribute without one", () => {

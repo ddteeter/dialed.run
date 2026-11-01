@@ -128,7 +128,7 @@ type Found = NonNullable<Awaited<ReturnType<typeof garmentWithPhoto>>>;
 /**
  * The photo off the garment — only the version read, since a photo
  * replaced since is not the one decided on, and this must not clear it.
- * Also the Desk's Clear photo on a garment whose file is missing (D-153).
+ * Also the Desk's Clear photo on a garment whose file is missing (D-157).
  */
 export function clearedPhoto(
   db: Db,

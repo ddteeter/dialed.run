@@ -74,6 +74,12 @@ const MATCHES: readonly PhotoMatch[] = [
 const part = (name: string) =>
   document.querySelector<HTMLElement>(`[data-part='${CSS.escape(name)}']`);
 
+const tiles = () => [...(part("photo-matches")?.querySelectorAll("li") ?? [])];
+const decideOf = (tile: Element | undefined) =>
+  within((tile ?? document.body) as HTMLElement).getByRole("button", {
+    name: "Decide",
+  });
+
 describe("PhotoMatches", () => {
   it("lists each match as an operator's image, named, linking only a kit an operator can open", async () => {
     await renderWithRouter(
@@ -396,6 +402,7 @@ describe("a removed image's tile", () => {
       screen.queryByText("No matching photos from any runner."),
     ).toBeNull();
     expect(part("photo-matches")?.querySelectorAll("li")).toHaveLength(2);
+    expect(screen.getByText("Matching photos · any runner · 2")).toBeVisible();
   });
 
   it("stands in for the empty state when it is all there is", async () => {
@@ -415,8 +422,9 @@ async function chooseReason(user: ReturnType<typeof userEvent.setup>) {
 }
 
 /**
- * R-167 (design 159): a garment found by copy search is taken down from
- * its tile, with a garment row's own bar and no Approve.
+ * R-167 (design 159), as round 42 #89 draws it: a garment found by copy
+ * search is taken down from a bar under the grid, opened by its tile's
+ * Decide, with a garment row's own bar and no Approve.
  */
 describe("a garment match's takedown", () => {
   const GARMENT_MATCH: PhotoMatch = {
@@ -429,25 +437,97 @@ describe("a garment match's takedown", () => {
     handle: "k_lopes",
     isPrivate: false,
   };
+  const OTHER_GARMENT = "01JGARMENT0000000000000002";
+  const SECOND_MATCH: PhotoMatch = {
+    ...GARMENT_MATCH,
+    id: OTHER_GARMENT,
+    photoKey: "items/u/j/v1/card.webp",
+    handle: undefined,
+  };
   const found = {
     fingerprinted: true,
     matches: [...MATCHES.slice(0, 1), GARMENT_MATCH],
   };
-
-  it("offers Remove and Remove as suspected CSAM on the garment's tile only, never Approve", async () => {
+  it("offers Decide on a garment tile only, and no bar until it is pressed", async () => {
     await renderWithRouter(<PhotoMatches found={found} decide={vi.fn()} />);
 
-    const tiles = [...(part("photo-matches")?.querySelectorAll("li") ?? [])];
-    expect(tiles).toHaveLength(2);
-    expect(within(tiles[0] ?? document.body).queryByRole("button")).toBeNull();
-    const garment = within(tiles[1] ?? document.body);
-    expect(garment.getByRole("button", { name: "Remove" })).toBeVisible();
+    const [kit, garment] = tiles();
+    expect(within(kit ?? document.body).queryByRole("button")).toBeNull();
+    const decide = decideOf(garment);
+    expect(decide).toHaveClass("target", "underline", "text-ink");
+    expect(decide).toHaveAttribute("aria-expanded", "false");
+    expect(decide).not.toHaveAttribute("aria-controls");
+    expect(part("decide-bar")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
+  });
+
+  it("opens the bar under the grid, full width, the tile ringed and its link reading Close", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(<PhotoMatches found={found} decide={vi.fn()} />);
+
+    const [kit, garment] = tiles();
+    await user.click(decideOf(garment));
+
+    const bar = part("decide-bar");
+    const close = within(garment ?? document.body).getByRole("button", {
+      name: "Close",
+    });
+    expect(close).toHaveAttribute("aria-expanded", "true");
+    expect(close).toHaveAttribute("aria-controls", bar?.id);
+    expect(bar?.id).toBe(`decide-${GARMENT}`);
+    // Under the grid, not on the tile.
+    expect(bar?.previousElementSibling?.tagName).toBe("UL");
+    expect(bar).toHaveClass("w-full", "border-t", "border-hairline");
     expect(
-      garment.getByRole("button", { name: "Remove as suspected CSAM" }),
+      within(bar ?? document.body).getByText(
+        `Decide · garment photo · ${GARMENT} · @k_lopes`,
+      ),
+    ).toHaveClass("font-mono", "text-mono-xs", "uppercase");
+    expect(garment).toHaveClass(
+      "outline",
+      "outline-2",
+      "outline-offset-2",
+      "outline-ink",
+    );
+    expect(kit).not.toHaveClass("outline");
+    const actions = within(bar ?? document.body);
+    expect(actions.getByRole("button", { name: "Remove" })).toBeVisible();
+    expect(
+      actions.getByRole("button", { name: "Remove as suspected CSAM" }),
     ).toBeVisible();
-    expect(garment.queryByRole("button", { name: "Approve" })).toBeNull();
+    expect(actions.queryByRole("button", { name: "Approve" })).toBeNull();
     // Nor any other reasonless decision: those two are the whole bar.
-    expect(garment.getAllByRole("button")).toHaveLength(2);
+    expect(actions.getAllByRole("button")).toHaveLength(2);
+
+    await user.click(close);
+    expect(part("decide-bar")).toBeNull();
+    expect(garment).not.toHaveClass("outline");
+    expect(garment).toHaveClass("flex", "flex-col", "gap-1");
+    expect(decideOf(garment)).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("keeps one bar open at a time, and leaves the owner out of a kicker with none", async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(
+      <PhotoMatches
+        found={{ fingerprinted: true, matches: [GARMENT_MATCH, SECOND_MATCH] }}
+        decide={vi.fn()}
+      />,
+    );
+
+    const [first, second] = tiles();
+    await user.click(decideOf(first));
+    await user.click(decideOf(second));
+
+    expect(document.querySelectorAll("[data-part='decide-bar']")).toHaveLength(
+      1,
+    );
+    expect(
+      screen.getByText(`Decide · garment photo · ${OTHER_GARMENT}`),
+    ).toBeVisible();
+    expect(first).not.toHaveClass("outline");
+    expect(second).toHaveClass("outline");
+    expect(decideOf(first)).toBeVisible();
   });
 
   it("offers nothing where no takedown was handed down", async () => {
@@ -455,13 +535,25 @@ describe("a garment match's takedown", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("removes the garment's photo with the reason, and the tile leaves the list", async () => {
+  it("removes the garment's photo with the reason; tile and bar leave, the count drops, focus to the next Decide", async () => {
     const user = userEvent.setup();
     const decide = vi
       .fn<DecideMatch>()
       .mockResolvedValue({ outcome: "removed" });
-    await renderWithRouter(<PhotoMatches found={found} decide={decide} />);
+    await renderWithRouter(
+      <PhotoMatches
+        found={{
+          fingerprinted: true,
+          matches: [...MATCHES.slice(0, 1), GARMENT_MATCH, SECOND_MATCH],
+        }}
+        decide={decide}
+      />,
+    );
+    expect(part("photo-matches")).toHaveTextContent(
+      /^Matching photos · any runner · 3/u,
+    );
 
+    await user.click(decideOf(tiles()[1]));
     await chooseReason(user);
     await user.click(screen.getByRole("button", { name: "Remove" }));
 
@@ -471,7 +563,57 @@ describe("a garment match's takedown", () => {
     await waitFor(() => {
       expect(screen.queryByText(`Garment ${GARMENT}`)).toBeNull();
     });
+    expect(part("decide-bar")).toBeNull();
+    expect(part("photo-matches")).toHaveTextContent(
+      /^Matching photos · any runner · 2/u,
+    );
     expect(screen.getByText(PHOTO)).toBeVisible();
+    expect(decideOf(tiles()[1])).toHaveFocus();
+  });
+
+  it("hands focus back to the garment before when the last one is decided", async () => {
+    const user = userEvent.setup();
+    const decide = vi
+      .fn<DecideMatch>()
+      .mockResolvedValue({ outcome: "removed" });
+    await renderWithRouter(
+      <PhotoMatches
+        found={{ fingerprinted: true, matches: [GARMENT_MATCH, SECOND_MATCH] }}
+        decide={decide}
+      />,
+    );
+
+    await user.click(decideOf(tiles()[1]));
+    await chooseReason(user);
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+
+    await waitFor(() => {
+      expect(tiles()).toHaveLength(1);
+    });
+    expect(decideOf(tiles()[0])).toHaveFocus();
+  });
+
+  it("puts focus on the MATCHING PHOTOS kicker once no garment tile is left", async () => {
+    const user = userEvent.setup();
+    const decide = vi
+      .fn<DecideMatch>()
+      .mockResolvedValue({ outcome: "removed" });
+    await renderWithRouter(<PhotoMatches found={found} decide={decide} />);
+    const kicker = screen.getByText(
+      /^Matching photos · any runner · 2$/u,
+    ).parentElement;
+    expect(kicker).toHaveAttribute("tabindex", "-1");
+    expect(kicker).not.toHaveFocus();
+
+    await user.click(decideOf(tiles()[1]));
+    await chooseReason(user);
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+
+    await waitFor(() => {
+      expect(kicker).toHaveFocus();
+    });
+    expect(kicker).toHaveTextContent(/^Matching photos · any runner · 1$/u);
+    expect(tiles()).toHaveLength(1);
   });
 
   it("asks again before a quarantine, naming the garment photo and its owner", async () => {
@@ -481,6 +623,7 @@ describe("a garment match's takedown", () => {
       .mockResolvedValue({ outcome: "removed" });
     await renderWithRouter(<PhotoMatches found={found} decide={decide} />);
 
+    await user.click(decideOf(tiles()[1]));
     await chooseReason(user);
     await user.click(
       screen.getByRole("button", { name: "Remove as suspected CSAM" }),
@@ -554,7 +697,7 @@ describe("a garment match's takedown", () => {
     expect(blocks).toHaveLength(2);
     for (const block of blocks) {
       expect(
-        within(block).getByRole("button", { name: "Remove as suspected CSAM" }),
+        within(block).getByRole("button", { name: "Decide" }),
       ).toBeVisible();
     }
   });

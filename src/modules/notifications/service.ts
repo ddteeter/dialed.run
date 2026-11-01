@@ -52,7 +52,7 @@ export type NotificationKind =
  * | report_removed  | what the reporter reported, once removed (C8)    |
  * | report_kept     | what the reporter reported, once left up (C8)    |
  * | photo_missing   | the kit photo or garment the Desk cleared because |
- * |                 | its file never reached storage (D-153)           |
+ * |                 | its file never reached storage (D-157)           |
  *
  * A kind with no subject would pass `null`, and SQLite treats NULLs as
  * distinct in a UNIQUE index, so this key would not dedupe it — its guard

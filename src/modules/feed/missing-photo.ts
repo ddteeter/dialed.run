@@ -1,5 +1,5 @@
 /**
- * The Desk's **Clear photo** (D-153, design 167; owner, 2026-10-31): a
+ * The Desk's **Clear photo** (D-157, design 167; owner, 2026-10-31): a
  * photo still pending a day after upload whose file is not in storage
  * comes off its kit or garment, and its owner is asked to add it again.
  *

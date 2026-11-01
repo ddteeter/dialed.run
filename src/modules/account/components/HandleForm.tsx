@@ -68,10 +68,10 @@ export function HandleForm({
   pendingLabel: string;
   successMessage: string;
   /**
-   * Where the form goes next. A prop, because the contract is
-   * announce-then-move.
+   * Where the form goes next, handed the handle now held. A prop, because
+   * the contract is announce-then-move.
    */
-  onClaimed?: (() => void) | undefined;
+  onClaimed?: ((username: string) => void) | undefined;
 }>): JSX.Element {
   const onSuccess =
     onClaimed ??
@@ -86,6 +86,7 @@ export function HandleForm({
       if (result.kind === "taken") {
         throw new HandleTaken(takenMessage(result.username, result.suggestion));
       }
+      return result.username;
     },
     successMessage,
     onSuccess,

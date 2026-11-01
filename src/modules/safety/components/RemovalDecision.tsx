@@ -104,7 +104,7 @@ type Choice =
 /**
  * The decision a row may offer that takes no reason: **Approve**, where
  * something queued the subject, or **Clear photo**, where its file is
- * missing (D-153, design 167) and there is nothing to approve.
+ * missing (D-157, design 167) and there is nothing to approve.
  */
 export type Reasonless = "approve" | "clear";
 

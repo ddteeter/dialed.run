@@ -64,7 +64,7 @@ const WEEK_SECONDS = 7 * 24 * 60 * 60;
 
 /**
  * The queue sources Today counts as "photos the screener couldn't
- * finish": what it flagged, and what it never screened at all (D-153).
+ * finish": what it flagged, and what it never screened at all (D-157).
  */
 const screenerSources: ReadonlySet<string> = new Set([
   "classifier",
@@ -132,7 +132,7 @@ export async function todayCounts(): Promise<TodayCounts> {
         ? undefined
         : Math.min(...review.map((g) => g.oldest)),
     // What the screener sent, and what it never finished: a photo still
-    // pending a day after upload (D-153) is exactly "a photo the screener
+    // pending a day after upload (D-157) is exactly "a photo the screener
     // couldn't finish", and hidden until someone looks.
     screenerUnfinished: sumOf(
       review.filter((g) => screenerSources.has(g.source)),

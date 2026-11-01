@@ -47,11 +47,12 @@ import {
   entryPhotoPrefix,
   quarantineKeyFor,
 } from "../../lib/entry-photo-key";
+import { kitCacheTags, type PurgeTags } from "../../lib/cache-tags";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import { emailDebt } from "../email";
 import { notificationInsert } from "../notifications";
-import { captureException, oweOutbox } from "../ops";
+import { captureException, oweOutbox, purgePublicPages } from "../ops";
 import {
   moderationActionInsert,
   claimDuePurges,
@@ -375,6 +376,7 @@ export async function moderateContent(
   db: Db,
   input: ModerateInput,
   report: Report = captureException,
+  purge: PurgeTags = purgePublicPages,
 ): Promise<ModerateOutcome> {
   const target = await targetOf(db, input.subjectType, input.subjectId);
   if (target === undefined) {
@@ -458,7 +460,22 @@ export async function moderateContent(
     ],
     report,
   );
+  purgeTakenDown(target, purge);
   return "removed";
+}
+
+/**
+ * Design 163: a kit taken down — removed, quarantined or held — leaves
+ * the edge now rather than within the TTL, and so does the kit a photo
+ * taken down was on, whose page shows it. The purge deletes the public
+ * copies too (D-153, step 8): every copy of a kit taken down, and a photo
+ * taken down's own.
+ */
+function purgeTakenDown(
+  target: Pick<Target, "ownerId" | "entryId">,
+  purge: PurgeTags,
+): void {
+  purge(kitCacheTags(target.ownerId, target.entryId));
 }
 
 /**
@@ -486,7 +503,7 @@ export async function decideReview(
   if (decision.action === "approve") {
     return resolveReview(queueId, reviewerId, "approve");
   }
-  // A missing file's Clear photo (D-153): no verdict, so not safety's.
+  // A missing file's Clear photo (D-157): no verdict, so not safety's.
   if (decision.action === "clear") {
     return clearMissingPhoto(db, reviewerId, queueId);
   }

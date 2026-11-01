@@ -11,13 +11,18 @@ same backend shape).
 
 ```mermaid
 flowchart LR
-    U[Runner / Browser] -->|HTTPS, SSR + hydration| W
+    U[Runner / Browser] -->|HTTPS, SSR + hydration| EC
+    EC -->|miss, or anything not public| W
+    U -->|a PUBLIC kit's photo,\nphotos.dialed.run| ZC
 
     subgraph CF[Cloudflare - Workers Paid plan]
+        EC{{Workers Caching\npublic pages only, 60 s,\nby Cache-Tag}}
         W[TanStack Start Worker\nSSR + server functions + API routes]
         D1[(D1: dialed-core)]
         D1W[(D1: dialed-weather)]
         R2[(R2: photos)]
+        ZC{{Zone cache + CSAM Scanning Tool\neach copy 60 s}}
+        R2P[(R2: dialed-public-photos\nPUBLIC_PHOTOS, unguessable keys)]
         Q[[Queue: imports]]
         QE[[Queue: enrichment]]
         QX[[Queue: exports]]
@@ -27,6 +32,8 @@ flowchart LR
     W --> D1
     W --> D1W
     W --> R2
+    W -->|copy a PUBLIC kit's screened photo;\ndelete on every retraction\nand the hourly sweep| R2P
+    ZC -->|miss| R2P
     W -->|produce| Q
     Q -->|consume| W
     W -->|produce| QE
@@ -34,6 +41,7 @@ flowchart LR
     W -->|produce| QX
     QX -->|consume| W
     CRON --> W
+    W -->|purge by tag on retraction| EC
 
     W -->|product page fetch\nbounded, https-only| SHOP[Brand product pages\nShopify JSON / JSON-LD / OG]
     W -->|same fetch, when the shop\nrefuses a Worker: 11 of 14 do| PROXY[Firecrawl scrape API\nresidential egress, 1 credit/page]
@@ -391,10 +399,22 @@ past the cursor (`outfit_entries(user_id, audience, moderation_status,
 created_at)`), then ordered by `created_at DESC, id DESC` and cut to the
 page. Rows scanned are at most a page per author — they scale with who
 the viewer follows, not with the site. No feed table, no write
-amplification. Photos are not public bucket URLs: every photo is served by the Worker
+amplification. In the app, photos are not public bucket URLs: every photo is served by the Worker
 (`routes/feed/photo.$.tsx`), which checks visibility and screening before it
 reads R2. Task 128 (SAF-7) moves public-entry photos to short-lived signed
 URLs, cacheable for their TTL (decision D-46).
+
+**The one exception is a PUBLIC kit on the open web** (D-153, design 163
+step 8): each of its screened photos is copied to `dialed-public-photos`
+(binding `PUBLIC_PHOTOS`) under a random 128-bit key, with
+`Cache-Control: public, max-age=60`, and `/kit/<id>` shows it from
+`photos.dialed.run`, where Cloudflare's cache and its CSAM Scanning Tool
+front the bucket. `public_photos` records every object there.
+`ops/public-photos.ts` reconciles the bucket against the open web's rule
+(a `pass` photo on a kit `worldVisibleEntry()` admits): the edge purge that
+every retraction already sends syncs the kits and runners it names, and
+the `:15` firing sweeps everything and deletes objects no row names.
+`PUBLIC_PHOTOS_ORIGIN` is the switch; unset, nothing is copied.
 
 **Your conditions (E2-lite)** — the consensus block only in v1: recent shared
 entries (last 72h, `outfit_entries(audience, moderation_status, created_at)` index) whose
@@ -535,7 +555,7 @@ flowchart LR
   `test/bindings-conformance.test.ts` pins to `wrangler.jsonc`. Photo
   screening never gives up: its sweep retries `pending` forever, and a
   photo still pending a day after upload goes to the Desk's review queue
-  instead of Gave up (D-153, `safety/stuck.ts`), as `unscreened` or
+  instead of Gave up (D-157, `safety/stuck.ts`), as `unscreened` or
   `missing_file`, since Review is where photos are decided.
 - **Two systems, one outbox** (law 8c): a write that owes work to another
   system records the debt in the generic `outbox` table in the same

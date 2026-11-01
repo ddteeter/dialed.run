@@ -8,7 +8,20 @@ export {
 export type { OutboxDebt } from "./outbox";
 export { handleQueueBatch, oweInCore, type ExportConsumers } from "./queues";
 export { handleScheduled } from "./scheduled";
+export { purgePublicPages } from "./edge-purge";
+export {
+  firstPublishedPhotos,
+  publishedPhotoUrls,
+  syncPublicPhotosLater,
+} from "./public-photos";
 export { secureResponse } from "./secure-response";
+export {
+  publicPageHeaders,
+  publicPageTags,
+  withoutCookiesWhenPublic,
+} from "./public-cache";
+export type { EntryCardData } from "./og/cards";
+export { kitCardResponse, type KitCardAnswer } from "./og/respond";
 export { captureException } from "./sentry";
 export {
   turnstileSiteKey,

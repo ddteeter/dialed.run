@@ -1,6 +1,6 @@
 /**
  * A photo still pending screening a day after upload goes to a person
- * (D-153, design 167).
+ * (D-157, design 167).
  *
  * The `screening-retry` sweep re-drives every `pending` photo, and most of
  * them heal there. Two never do: a photo whose object is not in storage,

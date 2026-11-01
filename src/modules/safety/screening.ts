@@ -245,7 +245,7 @@ export function screeningDeletes(
  * queues by the garment's id, as a `garment` subject.
  */
 function queueWritesFor(photo: PhotoToScreen, decision: ScreenDecision) {
-  // A pass that lands after the photo went to the Desk as stuck (D-153)
+  // A pass that lands after the photo went to the Desk as stuck (D-157)
   // settles that row: the reason it was opened has gone. Only that row —
   // one reports opened is a person's question, not the screener's. A
   // `review` or `flag` re-points it to `classifier` below instead.
@@ -278,7 +278,7 @@ export const queueSubjectOf = {
 } as const satisfies Record<PhotoScope, string>;
 
 /**
- * Why a photo still pending a day after upload is in the queue (D-153,
+ * Why a photo still pending a day after upload is in the queue (D-157,
  * design 167): storage had nothing to screen, or the classifier has not
  * answered. Here rather than with the escalation, because a verdict that
  * finally lands settles exactly these.
@@ -355,7 +355,7 @@ export interface PendingPhoto {
   objectKey: string;
   /**
    * When it was uploaded, in unix seconds, read from the ULID the upload
-   * minted (D-153): an entry photo's id, a garment photo's version. No
+   * minted (D-157): an entry photo's id, a garment photo's version. No
    * column records it; the id already does.
    */
   uploadedAt: number | undefined;

@@ -180,7 +180,7 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
       createdAt: now - 1200,
     });
     // A garment photo still pending a day after upload whose file is not
-    // in storage (D-153, design 167): what the screening sweep sends.
+    // in storage (D-157, design 167): what the screening sweep sends.
     await core.insert(wardrobeItems).values({
       id: stuckGarmentId,
       userId: authorId,
@@ -343,6 +343,9 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   if ((await garmentOpener.getAttribute("aria-expanded")) === "false") {
     await garmentOpener.click();
   }
+  // Round 42 #88: the photo at F's card size, and the garment's line.
+  await expect(garmentRow.locator("[data-part='garment-photo']")).toBeVisible();
+  await expect(garmentRow.locator("[data-part='garment-line']")).toBeVisible();
   await garmentRow
     .getByRole("combobox", { name: /Why it comes down/ })
     .selectOption("it's sexual or explicit");
@@ -351,7 +354,7 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
     page.getByRole("listitem").filter({ hasText: garmentId }),
   ).toHaveCount(0);
 
-  // D-153 (design 167): a photo still pending a day after upload is on
+  // D-157 (design 167): a photo still pending a day after upload is on
   // Review, saying which failure it is; a missing file draws no photo.
   await scene(page, "Review: a photo still unscreened a day on, file missing");
   const stuckRow = page
@@ -628,7 +631,7 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   ).toHaveText(
     "We removed the photo of one of your garments. Reason: it's sexual or explicit.",
   );
-  // D-153: the cleared photo's owner is asked to add it again.
+  // D-157: the cleared photo's owner is asked to add it again.
   await expect(
     rows
       .filter({ hasText: "We couldn't find the file for the photo" })

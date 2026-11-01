@@ -77,13 +77,7 @@ export function TotalsSwitch({
       onSaved?.(countInTotals);
     },
   });
-  const field = (name: string): FieldProps => ({
-    name,
-    readOnly: control.pending,
-    "aria-invalid": undefined,
-    "aria-describedby": hintId,
-    onInput: noop,
-  });
+  const field = toggleFieldProps(hintId, control.pending);
 
   return (
     <div data-part="totals-optout" className="flex flex-col gap-2">
@@ -120,6 +114,25 @@ The sub-line for the saved state, in the confirmed or unconfirmed words.
 function totalsLine(isOn: boolean, isVerified: boolean): string {
   if (isVerified) return isOn ? TOTALS_ON : TOTALS_OFF;
   return isOn ? TOTALS_ON_UNCONFIRMED : TOTALS_OFF_UNCONFIRMED;
+}
+
+/**
+ * A saved-on-toggle switch's field props: described by its sub-line,
+ * read-only while its save is in flight, and never invalid — it has no
+ * validation, so its input handler has nothing to clear. The totals
+ * switch and the PUBLIC PROFILE switches share it.
+ */
+export function toggleFieldProps(
+  hintId: string,
+  isPending: boolean,
+): (name: string) => FieldProps {
+  return (name) => ({
+    name,
+    readOnly: isPending,
+    "aria-invalid": undefined,
+    "aria-describedby": hintId,
+    onInput: noop,
+  });
 }
 
 /**

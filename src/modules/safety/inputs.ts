@@ -76,7 +76,7 @@ export const reviewDecisionInput = z.object({
  * reason is the statement the author is sent, and `quarantine` is the
  * suspected-CSAM Remove, which keeps one copy out of every route's reach.
  * `clear` takes a photo whose file is missing off its kit or garment
- * (D-153, design 167): no reason, because it is no verdict on the runner.
+ * (D-157, design 167): no reason, because it is no verdict on the runner.
  */
 export const reviewActionInput = z.discriminatedUnion("action", [
   z.object({ queueId: ulidSchema, action: z.literal("approve") }),

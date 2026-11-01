@@ -11,7 +11,7 @@
  * uploaded while `OPENAI_API_KEY` was unset is `pending`, and the first
  * firing after the key exists screens the backlog.
  *
- * And the case that never heals by itself (D-153, design 167): a photo
+ * And the case that never heals by itself (D-157, design 167): a photo
  * still pending a day after upload goes to the Desk (`stuck.ts`).
  */
 import { env } from "../../env";
@@ -37,7 +37,7 @@ export interface RetryReport {
   deferred: number;
   /**
    * Of those, the ones a day old or more that this firing put in front of
-   * a person (D-153) — rows it opened, not rows it found already open.
+   * a person (D-157) — rows it opened, not rows it found already open.
    */
   escalated: number;
 }
@@ -172,7 +172,7 @@ const missingWhen: Record<Attempt, boolean | undefined> = {
  * sweep keeps trying it — the object may yet arrive — and a photo that
  * stays invisible to the public is a safe resting place, where guessing it
  * is gone would mean publishing bytes nobody classified. What changed with
- * D-153 is that it no longer rests there unwatched: a day on, it is a Desk
+ * D-157 is that it no longer rests there unwatched: a day on, it is a Desk
  * row that says the file is missing.
  *
  * With no classifier there is nothing to screen, but whether the object is

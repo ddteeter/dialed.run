@@ -5,7 +5,8 @@
  * MORE gone (round 21), seeing the verdict on the entry, and re-opening
  * the verdict to find the flag still there — and DS2, the verdict
  * backlog, which is the same act done from a table instead of six sheets.
- * Also A3's PRIVATE sub-line and its Change sheet (D-108 E, round 32 2a).
+ * Also A3's PRIVATE sub-line and its Change sheet (D-108 E, round 32 2a),
+ * picked from the audience radiogroup (round 41 #86a).
  * One journey, one video.
  *
  * The photo is not here any more: round 20 moved the outfit photo from A3
@@ -254,8 +255,10 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
   // runner is told so at the moment they choose it. Change opens the
   // totals switch as a sheet over the form, so nothing picked is lost.
   await scene(page, "Private: told it still counts, anonymously");
-  const share = page.getByRole("checkbox", { name: "Share to feed" });
-  await share.uncheck();
+  // Round 41 #86a: A3's switch is a radiogroup, PRIVATE / SHARED / PUBLIC.
+  // PUBLIC's own beat is `e2e/public-pages/`'s.
+  const audience = page.getByRole("group", { name: "Who sees this run" });
+  await audience.getByRole("radio", { name: /^Private/u }).check();
   await expect(
     page.getByText(
       "Other runners won't see this run. Its kit and verdict still count, anonymously, in the guides.",
@@ -288,7 +291,7 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
   await expect(
     page.getByRole("button", { name: "A bit cold" }),
   ).toHaveAttribute("aria-pressed", "true");
-  await share.check();
+  await audience.getByRole("radio", { name: /^Shared/u }).check();
 
   await scene(page, "Saving reports the wear rate in this temperature band");
   await page.getByRole("button", { name: "Log it" }).click();

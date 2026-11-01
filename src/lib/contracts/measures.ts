@@ -39,6 +39,18 @@ export function distanceNumber(distanceM: number, unit: DistanceUnit): string {
 }
 
 /**
+ * A distance to the whole unit, in the runner's unit — "412" — for a
+ * running total, where a tenth is noise: a shoe's mileage on the public
+ * profile's rotation (round 41 #86d, "412 MI").
+ */
+export function wholeDistanceNumber(
+  distanceM: number,
+  unit: DistanceUnit,
+): string {
+  return String(Math.round(distanceM / metresPer(unit)));
+}
+
+/**
  * Wind speed in the runner's own units — `6mph` or `9km/h`.
  *
  * Styled like `formatDistance` beside it (`8.1mi`, no space), and keyed on
@@ -91,9 +103,39 @@ export function formatPace(
   distanceM: number,
   unit: DistanceUnit,
 ): string | undefined {
+  const pace = paceNumber(durationS, distanceM, unit);
+  return pace === undefined ? undefined : `${pace} /${unit}`;
+}
+
+/**
+ * The pace alone, "8:25", for the lines that set the number apart from
+ * its unit — the public kit's stats (round 41 #86c) draw the unit as a
+ * word of its own under it. `formatPace` is this with the unit glued on,
+ * so the two cannot round differently. Nothing with no distance.
+ */
+export function paceNumber(
+  durationS: number,
+  distanceM: number,
+  unit: DistanceUnit,
+): string | undefined {
   if (distanceM <= 0) return undefined;
-  const perUnitS = Math.round((durationS * metresPer(unit)) / distanceM);
-  return `${formatDuration(perUnitS)} /${unit}`;
+  return formatDuration(Math.round((durationS * metresPer(unit)) / distanceM));
+}
+
+const FEET_PER_METRE = 3.28084;
+
+/**
+ * Elevation gain in the runner's own unit, and the unit's word: feet for a
+ * runner who counts miles, metres for one who counts kilometres — round
+ * 41's "210 FT GAIN". Whole numbers; nobody climbs a tenth of a foot.
+ */
+export function gainNumber(
+  elevationGainM: number,
+  unit: DistanceUnit,
+): { value: string; unit: "ft" | "m" } {
+  return unit === "km"
+    ? { value: String(Math.round(elevationGainM)), unit: "m" }
+    : { value: String(Math.round(elevationGainM * FEET_PER_METRE)), unit: "ft" };
 }
 
 /**

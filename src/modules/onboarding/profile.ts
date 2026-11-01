@@ -3,10 +3,9 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../db/schema-core";
 import {
-  audienceOfShareToggle,
   defaultUnits,
-  isSharedAudience,
   SHARED_AUDIENCE,
+  writableAudienceOf,
 } from "../../lib/contracts";
 import { orSqlNull } from "../../lib/sql/sql-null";
 import type {
@@ -219,6 +218,17 @@ export interface CurrentSettings extends Preferences {
    * On for a runner with no row, as the column's default is.
    */
   countInTotals: boolean;
+  /**
+   * Settings › Privacy's PUBLIC PROFILE switches (D-151, round 41 #86b),
+   * off for a runner with no row, as the columns' defaults are.
+   */
+  publicProfile: boolean;
+  publicCloset: boolean;
+  /**
+   * The handle the PUBLIC PROFILE lines name (`app.dialed.run/@{handle}`):
+   * absent only for a runner who has not claimed one yet.
+   */
+  username: string | undefined;
 }
 
 /**
@@ -234,9 +244,9 @@ export interface CurrentSettings extends Preferences {
  *
  * The default audience is read from `default_audience` (design 131,
  * PR B). It is `NOT NULL DEFAULT 'runners'`, so its only missing case is a
- * missing row, and shared there is the contract's "shared by default". The
- * toggle shows a stored `groups`, which nothing can write yet, as off: the
- * Settings switch is on for `runners` alone, as A3's is.
+ * missing row, and shared there is the contract's "shared by default". A
+ * stored `groups`, which nothing can write yet, reads as private
+ * (`writableAudienceOf`).
  */
 export async function currentSettings(
   db: DrizzleD1Database,
@@ -244,13 +254,7 @@ export async function currentSettings(
 ): Promise<CurrentSettings> {
   // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; currentSettings reads one runner's settings row
   const [row] = await db
-    .select({
-      thermalLevel: userProfiles.thermalLevel,
-      tempUnit: userProfiles.tempUnit,
-      distanceUnit: userProfiles.distanceUnit,
-      defaultAudience: userProfiles.defaultAudience,
-      countInTotals: userProfiles.countInTotals,
-    })
+    .select()
     .from(userProfiles)
     .where(eq(userProfiles.userId, userId))
     .limit(1);
@@ -258,10 +262,13 @@ export async function currentSettings(
     thermalLevel: row?.thermalLevel ?? undefined,
     tempUnit: row?.tempUnit ?? defaultUnits.temp,
     distanceUnit: row?.distanceUnit ?? defaultUnits.distance,
-    defaultAudience: audienceOfShareToggle(
-      isSharedAudience(row?.defaultAudience ?? SHARED_AUDIENCE),
+    defaultAudience: writableAudienceOf(
+      row?.defaultAudience ?? SHARED_AUDIENCE,
     ),
     countInTotals: row?.countInTotals ?? true,
+    publicProfile: row?.publicProfile ?? false,
+    publicCloset: row?.publicCloset ?? false,
+    username: row?.username ?? undefined,
   };
 }
 

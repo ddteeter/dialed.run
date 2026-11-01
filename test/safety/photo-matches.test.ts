@@ -22,6 +22,7 @@ import {
   pendingReviewQueue,
   pendingTakedownRequests,
 } from "../../src/modules/safety";
+import { noPurge } from "../purge-spy";
 import { oweInCore } from "../queue-fakes";
 import {
   deleteAllFrom,
@@ -402,6 +403,7 @@ describe("the Review rows that carry them", () => {
     const deps = {
       verify: () => Promise.resolve({ ok: true }),
       owe: oweInCore,
+      purge: noPurge,
     };
     await fileTakedownRequest(
       core,

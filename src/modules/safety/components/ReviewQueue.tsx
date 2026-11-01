@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import type { JSX } from "react";
 
 import { Bracketed, ListSection, Mono, useFormSubmit } from "../../../ui";
@@ -35,6 +35,7 @@ import {
   RemovalDecision,
   subjectWord,
 } from "./RemovalDecision";
+import { useFocusWhen } from "./use-focus-when";
 import { useSettled } from "./use-settled";
 
 /**
@@ -69,7 +70,7 @@ const SOURCE_TAGS: Readonly<Record<ReviewSource, string>> = {
 };
 
 /**
- * Why a stuck photo is here (D-153, design 167), where a reported row
+ * Why a stuck photo is here (D-157, design 167), where a reported row
  * lists what the reporters said: nobody reported it, and "Nobody reported
  * this" would leave the reviewer guessing why they are looking. The two
  * say which failure it is, because they want different things — a photo
@@ -126,6 +127,51 @@ function ReportedPhotos({
       ))}
     </span>
   );
+}
+
+/**
+ * A garment photo's row (round 42 #88): the photo at F's card size — the
+ * closet's photo well, not a kit photo's strip — then one MONO.xs line
+ * naming the garment, so a shoe shot reads apart from a kit shot.
+ */
+function GarmentPhoto({
+  photoKey,
+  line,
+}: Readonly<{ photoKey: string; line: string | undefined }>): JSX.Element {
+  return (
+    <>
+      <span
+        data-part="garment-photo"
+        className="aspect-4/3 w-full rounded-field border border-hairline bg-photo wide:max-h-80"
+      >
+        <img
+          src={`/safety/review-photo/${photoKey}`}
+          alt="Reported garment photo"
+          className="h-full w-full object-contain"
+        />
+      </span>
+      {line === undefined ? undefined : (
+        <span data-part="garment-line" className="text-quiet">
+          <Mono step="xs">{line}</Mono>
+        </span>
+      )}
+    </>
+  );
+}
+
+/**
+ * What a row shows of its subject: a garment's photo and line, or the
+ * reported photos as a kit's are shown — and nothing for a missing file.
+ */
+function SubjectPhotos({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
+  const keys = photosShown(row);
+  const [garmentKey] = keys;
+  if (garmentKey !== undefined && row.subjectType === "garment") {
+    return (
+      <GarmentPhoto photoKey={garmentKey} line={row.subject.garmentLine} />
+    );
+  }
+  return <ReportedPhotos keys={keys} />;
 }
 
 /**
@@ -192,9 +238,9 @@ type Moved = (username: string) => void;
 /**
  * A content row's decision: Approve, Remove, or Remove as suspected CSAM
  * (`RemovalDecision`), sent by the queue row's id. A missing file has
- * nothing to approve, so it offers Clear photo instead (D-153).
+ * nothing to approve, so it offers Clear photo instead (D-157).
  *
- * **A refused Clear photo is not a failure** (D-153): `not_found` there is
+ * **A refused Clear photo is not a failure** (D-157): `not_found` there is
  * the server declining to clear a photo that is no longer the stuck one —
  * screened since, or a garment's re-uploaded within the day — and the row
  * is still open. So the row stays where it is, with the owner's line in
@@ -339,6 +385,31 @@ function rowKind(row: QueueRow): string {
 }
 
 /**
+ * The row's kicker: its kind and what it is. A garment photo's also names
+ * its owner (round 42 #88), "garment photo · {id} · @{owner}", since the
+ * garment has no page of its own to say whose it is.
+ */
+function rowTitle(row: QueueRow, label: string): string {
+  const title = `${rowKind(row)} · ${label}`;
+  const { owner } = row.subject;
+  return owner !== undefined && row.subjectType === "garment"
+    ? `${title} · @${owner}`
+    : title;
+}
+
+/**
+ * Where the row's source tag sits: beside a garment photo's kicker (round
+ * 42 #88), at the foot of every other row.
+ */
+function SourceTag({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
+  return (
+    <span data-part="source" className="text-micro text-quiet">
+      <Bracketed>{SOURCE_TAGS[row.source]}</Bracketed>
+    </span>
+  );
+}
+
+/**
  * `ReviewRow`'s props, named rather than inlined at the call site:
  * `RowSettleProps` plus the two things round 28 #8 added
  * (`active`/`focusOnOpen`/`onActivate`) and the two decision callbacks a
@@ -379,6 +450,7 @@ function ReviewRow({
   // A flagged handle's header re-reads to the handle a rename lost to
   // (round 38 #60); the row stays open.
   const [label, setLabel] = useState(row.subject.label ?? row.subjectId);
+  const isGarment = row.subjectType === "garment";
 
   return (
     <li className="flex flex-col gap-2 border border-hairline p-3">
@@ -390,8 +462,9 @@ function ReviewRow({
           onClick={onActivate}
           className="target cursor-pointer border-none bg-transparent p-0 text-left text-body font-semibold text-ink"
         >
-          {rowKind(row)} · {label}
+          {rowTitle(row, label)}
         </button>
+        {isGarment ? <SourceTag row={row} /> : undefined}
         {/* The TAKE IT DOWN Act's 48 hours, on a row an intimate-image
             report started: in the header, right, where the age sits
             (round 35 #58b). The brackets stay about people. */}
@@ -401,7 +474,7 @@ function ReviewRow({
           </span>
         )}
       </span>
-      <ReportedPhotos keys={photosShown(row)} />
+      <SubjectPhotos row={row} />
       <RemovedMatchLine match={row.removedMatches?.[0]} />
       <OtherPhotos others={row.otherPhotos} />
       <PhotoMatches
@@ -410,9 +483,7 @@ function ReviewRow({
         decide={decideMatch}
       />
       <WhyHere row={row} />
-      <span className="text-micro text-quiet">
-        <Bracketed>{SOURCE_TAGS[row.source]}</Bracketed>
-      </span>
+      {isGarment ? undefined : <SourceTag row={row} />}
       {active ? (
         <RowDecision
           row={row}
@@ -446,23 +517,6 @@ function RowDecision(
     );
   }
   return <Decision row={row} decide={props.decide} onSettled={onSettled} />;
-}
-
-/**
- * A ref callback that focuses its element when `shouldFocus` is, and
- * changes only with it: React calls it with the element when it changes,
- * so focus moves once — when the element becomes the one to land on — and
- * not on every render after.
- */
-function useFocusWhen(
-  shouldFocus: boolean,
-): (node: HTMLElement | null) => void {
-  return useCallback(
-    (node: HTMLElement | null) => {
-      if (shouldFocus && node !== null) node.focus();
-    },
-    [shouldFocus],
-  );
 }
 
 /**
