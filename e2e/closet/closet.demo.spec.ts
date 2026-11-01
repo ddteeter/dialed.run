@@ -7,8 +7,10 @@
  * R-137 (a brand written in any script), round 28 #5 (W3 confirm:
  * Check the blur, Pick another, Use this photo, as the closet's sheet)
  * and #13 (the rail's hatch and "RETIRED MAR 2026", the merge words in
- * ink), and D-75 / R-112 / R-114 (F's TYPE, the rail by type, and the
- * rail listing a save F kept) — one journey, one video.
+ * ink), D-75 / R-112 / R-114 (F's TYPE, the rail by type, and the
+ * rail listing a save F kept), and round 43 #93-95 (F's product link, and
+ * E's shop page with what came of it, design 163) — one journey, one
+ * video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
@@ -117,7 +119,7 @@ test("add garments with product identity -> detail in round 22's order -> retire
   // autocomplete + model name lead, per screen F.
   await scene(
     page,
-    "F · Category and Type lead, then Brand and Name — no product-link field (AC2b)",
+    "F · Category and Type lead, then Brand, Name and the product link",
   );
   await page.getByRole("link", { name: "Add garment" }).click();
   await hydrated(page);
@@ -125,15 +127,18 @@ test("add garments with product identity -> detail in round 22's order -> retire
   // already set from the closet page: wait for F itself before reading it.
   const category = page.getByLabel("Category");
   await expect(category).toBeVisible();
-  await expect(page.getByLabel("Product link")).toHaveCount(0);
-  // Round 35 #52b: what it is comes first, at every width.
+  // Round 35 #52b: what it is comes first, at every width — and round 43
+  // #93's link after it, since a link reads nothing without a brand and a
+  // model.
   const order = await page
     .locator("form", { has: category })
-    .locator("[name='category'], [name='brand'], [name='name']")
+    .locator(
+      "[name='category'], [name='brand'], [name='name'], [name='productUrl']",
+    )
     .evaluateAll((controls) =>
       controls.map((control) => control.getAttribute("name")),
     );
-  expect(order).toStrictEqual(["category", "brand", "name"]);
+  expect(order).toStrictEqual(["category", "brand", "name", "productUrl"]);
   await page.getByLabel("Category").selectOption("shoes");
   await page.getByLabel("Brand").fill("Nike");
   await page.getByLabel("Model / name").fill("Pegasus 41");
@@ -157,6 +162,20 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await page.getByRole("radio", { name: "Jacket" }).check();
   await page.getByLabel("Brand").fill("Patagonia");
   await page.getByLabel("Model / name").fill("Houdini Jacket");
+  // Round 43 #93: checked when the runner leaves the box, never while
+  // typing, and a link pasted without its scheme gets https:// on save.
+  await scene(page, "F · the product link: checked on leaving the box");
+  const link = page.getByLabel(/Product link/);
+  await link.fill(["http:", "//patagonia.com/houdini"].join(""));
+  await link.blur();
+  await expect(
+    page.getByText("Use a link that starts with https://."),
+  ).toBeVisible();
+  await link.fill("patagonia.com/houdini");
+  await link.blur();
+  await expect(
+    page.getByText("Use a link that starts with https://."),
+  ).toHaveCount(0);
   await page.getByLabel("Layer").selectOption("outer");
   await page.getByLabel("Weight").selectOption("light");
   await page.getByLabel("Wind resistant").check();
@@ -266,6 +285,15 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await expect(
     page.getByText("light · wind resistant · reflective trim"),
   ).toBeVisible();
+  // Round 43 #95: the shop page under the name, its domain beside it.
+  const shopPage = page.getByRole("link", { name: "Shop page" });
+  await expect(shopPage).toHaveAttribute(
+    "href",
+    "https://patagonia.com/houdini",
+  );
+  await expect(
+    page.locator("[data-part='shop-page']").getByText("patagonia.com"),
+  ).toBeVisible();
 
   // §AG. Composition belongs to the product, not to the runner's copy —
   // enrichment writes it from a brand's page, so the demo writes the row
@@ -274,6 +302,15 @@ test("add garments with product identity -> detail in round 22's order -> retire
     await core
       .update(products)
       .set({
+        // What a read of the pasted page leaves (round 43 #94): done, with
+        // the columns it wrote, and a fabric the runner left empty.
+        extractionStatus: "done",
+        extracted: JSON.stringify({
+          rung: "jsonld",
+          found: { fabric: "synthetic" },
+          written: { fabric: "synthetic", fabricComposition: "100% nylon" },
+        }),
+        fabric: "synthetic",
         fabricComposition: "100% nylon, GORE-TEX",
         fabricParts: JSON.stringify([
           { part: "Body", materials: [{ material: "nylon", pct: 100 }] },
@@ -289,10 +326,23 @@ test("add garments with product identity -> detail in round 22's order -> retire
       .where(eq(products.name, "Houdini Jacket"));
   });
 
-  await scene(page, "§AG · made of — the brand's words, on detail alone");
+  await scene(
+    page,
+    "§AG and round 43 #94 · specs from the page, its values in grey",
+  );
   await page.reload();
   await hydrated(page);
-  await expect(page.getByText("Made of")).toBeVisible();
+  await expect(page.locator("[data-part='shop-page'] p")).toHaveText(
+    "[Specs from patagonia.com] · Grey values are from the page",
+  );
+  // The fabric the page lent is grey; the runner's own weight stays ink.
+  await expect(
+    page.locator("[data-part='composition']").getByText("synthetic", { exact: true }),
+  ).toHaveClass(/text-quiet/);
+  await expect(
+    page.locator("[data-part='composition']").getByText("light", { exact: true }),
+  ).toHaveClass(/text-ink/);
+  await expect(page.getByText("Composition · from")).toBeVisible();
   await expect(page.getByText("Body")).toBeVisible();
   await expect(page.getByText("87% polyester · 13% elastane")).toBeVisible();
   await expect(page.getByText("As labelled by Patagonia")).toBeVisible();
