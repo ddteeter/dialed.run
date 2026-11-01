@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../support/a11y";
 
 import { nowSeconds } from "../../src/lib/now";
 import { storageStateFor } from "../support/accounts";

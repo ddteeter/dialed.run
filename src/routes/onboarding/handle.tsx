@@ -28,18 +28,20 @@ function HandlePage() {
   const navigate = useNavigate();
 
   return (
-    <Page width="panel">
-      <OnboardingHandle
-        notice={notice}
-        claim={claimUsernameFn}
-        keep={keepPlaceholderFn}
-        onFirstHandle={() => {
-          void navigate({ to: "/onboarding/calibrate" });
-        }}
-        onRepicked={() => {
-          void navigate({ to: "/" });
-        }}
-      />
-    </Page>
+    <main>
+      <Page width="panel">
+        <OnboardingHandle
+          notice={notice}
+          claim={claimUsernameFn}
+          keep={keepPlaceholderFn}
+          onFirstHandle={() => {
+            void navigate({ to: "/onboarding/calibrate" });
+          }}
+          onRepicked={() => {
+            void navigate({ to: "/" });
+          }}
+        />
+      </Page>
+    </main>
   );
 }

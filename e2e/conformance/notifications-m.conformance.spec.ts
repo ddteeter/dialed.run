@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../support/a11y";
 
 import { notifications } from "../../src/db/schema-core";
 import { newUlid } from "../../src/lib/ids";

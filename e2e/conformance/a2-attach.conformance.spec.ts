@@ -1,5 +1,5 @@
 import type { Page, Route } from "@playwright/test";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../support/a11y";
 
 import { storageStateFor } from "../support/accounts";
 import { isServerFnCall } from "../support/server-fn";

@@ -50,7 +50,7 @@ function useViewer(): { isSignedIn: boolean } {
 }
 
 /**
- * The frame: the product shell signed in, nothing at all signed out.
+ * The frame: the product shell signed in, a bare `<main>` signed out.
  *
  * `Page` on its own is the bare frame — it stamps hydration and sets the
  * panel, and wears no bar.
@@ -60,7 +60,9 @@ function SystemFrame({
   children,
 }: Readonly<{ signedIn: boolean; children: ReactNode }>): JSX.Element {
   const body = <Page width="panel">{children}</Page>;
-  return signedIn ? <Layout>{body}</Layout> : body;
+  // Signed in, `Layout`'s content is the page's main landmark; signed out
+  // there is no shell, so the frame is its own (plan 161's `region`).
+  return signedIn ? <Layout>{body}</Layout> : <main>{body}</main>;
 }
 
 /**

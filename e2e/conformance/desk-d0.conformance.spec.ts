@@ -18,7 +18,7 @@
  * sign-out is 126's component); and "SCREENING · OK / LAST DIGEST" is
  * undrawn in words the build has anything behind yet.
  */
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../support/a11y";
 
 import { leavesOf, openBoard, screen } from "../support/conformance";
 import { signInAsOperator } from "../desk/operator";

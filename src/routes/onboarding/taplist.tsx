@@ -29,14 +29,16 @@ function TapListPage() {
   };
 
   return (
-    <Page title="Start your closet" width="panel">
-      <TapListForm
-        entries={starter.entries}
-        fold={starter.fold}
-        saveTapList={addFromTapListFn}
-        onSaved={done}
-        onSkip={done}
-      />
-    </Page>
+    <main>
+      <Page title="Start your closet" width="panel">
+        <TapListForm
+          entries={starter.entries}
+          fold={starter.fold}
+          saveTapList={addFromTapListFn}
+          onSaved={done}
+          onSkip={done}
+        />
+      </Page>
+    </main>
   );
 }

@@ -1,0 +1,117 @@
+[
+  {
+    "rule": "color-contrast",
+    "route": "/account/sign-in",
+    "node": "section[data-part=\"delete-account\"] span.text-body"
+  },
+  {
+    "rule": "color-contrast",
+    "route": "/desk/access",
+    "node": "form[data-part=\"new-code\"] span.[grid-area:#/#]"
+  },
+  {
+    "rule": "color-contrast",
+    "route": "/desk/runners",
+    "node": "span.[grid-area:#/#]"
+  },
+  {
+    "rule": "color-contrast",
+    "route": "/onboarding/done",
+    "node": "p.m-#"
+  },
+  {
+    "rule": "color-contrast",
+    "route": "/onboarding/done",
+    "node": "span.font-mono"
+  },
+  {
+    "rule": "color-contrast",
+    "route": "/onboarding/done",
+    "node": "span.text-micro"
+  },
+  {
+    "rule": "color-contrast",
+    "route": "/runs/backlog",
+    "node": "span.font-mono"
+  },
+  {
+    "rule": "color-contrast",
+    "route": "/runs/new",
+    "node": "div[data-slot=\"parsed-card\"] span.font-mono"
+  },
+  {
+    "rule": "label-content-name-mismatch",
+    "route": "/runs/new",
+    "node": "button[type=\"button\"][aria-label=\"Change start time, #:#\"]"
+  },
+  {
+    "rule": "p-as-heading",
+    "route": "/feed/me",
+    "node": "div[data-part=\"entries\"] p.m-#"
+  },
+  {
+    "rule": "p-as-heading",
+    "route": "/feed",
+    "node": "div[data-part=\"feed\"] p.m-#"
+  },
+  {
+    "rule": "p-as-heading",
+    "route": "/feed",
+    "node": "div[data-part=\"match-block\"] p.m-#"
+  },
+  {
+    "rule": "target-44",
+    "route": "/closet/new",
+    "node": "select[name=\"category\"]"
+  },
+  {
+    "rule": "target-44",
+    "route": "/closet/new",
+    "node": "select[name=\"fabric\"]"
+  },
+  {
+    "rule": "target-44",
+    "route": "/closet/new",
+    "node": "select[name=\"layer\"]"
+  },
+  {
+    "rule": "target-44",
+    "route": "/closet/new",
+    "node": "select[name=\"weight\"]"
+  },
+  {
+    "rule": "target-44",
+    "route": "/desk/runners",
+    "node": "select[name=\"nameReason\"]"
+  },
+  {
+    "rule": "target-44",
+    "route": "/desk/runners",
+    "node": "select[name=\"rule\"]"
+  },
+  {
+    "rule": "target-44",
+    "route": "/feed/search",
+    "node": "input[type=\"search\"][aria-label=\"Search by name\"]"
+  },
+  {
+    "rule": "target-44",
+    "route": "/runs/manual",
+    "node": "select[name=\"effort\"]"
+  },
+  {
+    "rule": "target-44",
+    "route": "/safety/review",
+    "node": "select[name=\"nameReason\"]"
+  },
+  {
+    "rule": "target-44",
+    "route": "/safety/review",
+    "node": "select[name=\"reason\"]"
+  },
+  {
+    "rule": "target-44",
+    "route": "/safety/review",
+    "node": "select[name=\"subjectType\"]"
+  }
+]

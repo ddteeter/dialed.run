@@ -4,7 +4,8 @@
  *
  * The operator's journey is `operator.demo.spec.ts`.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "../support/a11y";
+import type { Page } from "@playwright/test";
 import { z } from "zod";
 
 import { CSP_HEADER } from "../../src/modules/ops/security-headers";
