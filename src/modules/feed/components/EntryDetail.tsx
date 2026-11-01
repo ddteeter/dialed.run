@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
+import type { JSX, ReactNode } from "react";
 
 import { entryTagSchema } from "../../../lib/contracts";
 import type { Units } from "../../../lib/contracts";
@@ -15,6 +15,7 @@ import {
   Mono,
   WeatherAttribution,
 } from "../../../ui";
+import { ProductLink } from "../../../ui/ProductLink";
 import { tagLabel } from "../chips";
 import type { EntryTag } from "../chips";
 import type { entryDetailForViewer } from "../entries";
@@ -274,6 +275,21 @@ function Tags({ tags }: Readonly<{ tags: readonly EntryTag[] }>) {
 }
 
 /**
+ * A piece's name, as its product link with the site beside it when it has
+ * one (round 43 #96: D in, as /kit).
+ */
+function PieceName({
+  name,
+  url,
+}: Readonly<{ name: string; url: string | undefined }>): JSX.Element {
+  return url === undefined ? (
+    <span>{name}</span>
+  ) : (
+    <ProductLink url={url} label={name} />
+  );
+}
+
+/**
  * The kit as a list, not chips, so a flag can sit at the row's end.
  * Absent when nothing was worn.
  */
@@ -296,13 +312,13 @@ function Kit({ items }: Readonly<{ items: Entry["items"] }>) {
                 (`garmentLabel`: brand and name, unless there is no brand). */}
             {item.brand === undefined ? (
               <span className="flex items-baseline gap-2">
-                {item.name}
+                <PieceName name={item.name} url={item.url} />
                 <Mono step="xs" className="text-label">
                   [Generic]
                 </Mono>
               </span>
             ) : (
-              <span>{`${item.brand} ${item.name}`}</span>
+              <PieceName name={`${item.brand} ${item.name}`} url={item.url} />
             )}
             {item.flag === undefined ? undefined : (
               <Mono step="xs" className="font-semibold text-ink">

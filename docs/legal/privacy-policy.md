@@ -444,8 +444,10 @@ a copy of the page and may send its text and address to **OpenAI** to read
 the fabric and composition. Nothing about you is sent with it.
 
 Products are a shared catalogue. A product you add, and its name as you
-typed it, can be seen by other runners and reported by them. We record which
-account added it.
+typed it, can be seen by other runners and reported by them. A link you add
+to a garment is shown, with its site's name, beside that piece on your kits
+that others can see, including public ones. We record which account added
+it.
 
 ## Moderation
 

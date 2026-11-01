@@ -66,6 +66,7 @@ function item(overrides: Partial<Item> = {}): Item {
     layer: "outer",
     flag: undefined,
     note: undefined,
+    url: undefined,
     ...overrides,
   };
 }
@@ -427,6 +428,35 @@ describe("EntryDetail: the note, the kit and the tags", () => {
       "L/S crew[Generic]",
     ]);
     expect(screen.getByText("Kit")).toHaveClass("font-mono");
+  });
+
+  it("links a piece to its shop with the site beside it, as /kit does (round 43 #96)", async () => {
+    await renderFeedScreen(
+      detail({
+        items: [
+          item({ url: "https://www.patagonia.com/houdini" }),
+          item({
+            itemId: "01B",
+            brand: undefined,
+            name: "L/S crew",
+            url: "https://janji.com/crew",
+          }),
+          item({ itemId: "01C", name: "Capilene" }),
+        ],
+      }),
+    );
+
+    const link = screen.getByRole("link", { name: "Patagonia Houdini" });
+    expect(link).toHaveAttribute("href", "https://www.patagonia.com/houdini");
+    expect(link).toHaveAttribute("rel", "ugc nofollow noopener");
+    expect(screen.getByText("patagonia.com")).toBeInTheDocument();
+    // A generic piece keeps its mark beside its link.
+    expect(screen.getByRole("link", { name: "L/S crew" })).toBeInTheDocument();
+    expect(screen.getByText(bracketed("Generic"))).toBeInTheDocument();
+    // No link, no anchor.
+    expect(
+      screen.queryByRole("link", { name: "Patagonia Capilene" }),
+    ).toBeNull();
   });
 
   it("marks a generic piece [GENERIC], and only that one", async () => {
