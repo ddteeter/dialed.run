@@ -134,12 +134,19 @@ const REASONLESS_LABELS: Readonly<Record<Reasonless, string>> = {
  * garment's — and `schema` is the server function's own, so the reason's
  * refusal is its sentence. `onSettled` runs only once the server has said
  * so: a remove that failed must stay where the reviewer can try again.
+ *
+ * `refused` is a decision the server declined, which is not a failure:
+ * nothing broke, and pressing again would only be declined again. Its
+ * line stands where the band would, with no Try again, is said in the
+ * status region, and goes with the next press.
  */
-export function RemovalDecision<TSchema extends z.ZodType>(
+export function RemovalDecision<TSchema extends z.ZodType, TResult>(
   props: Readonly<{
     schema: TSchema;
     subject: Readonly<Record<string, string>>;
-    act: (values: z.output<TSchema>) => Promise<unknown>;
+    act: (values: z.output<TSchema>) => Promise<TResult>;
+    refused?:
+      { matches: (result: TResult) => boolean; line: string } | undefined;
     reasonless?: Reasonless | undefined;
     subjectType: ReviewSubjectType;
     owner: string | undefined;
@@ -153,16 +160,25 @@ export function RemovalDecision<TSchema extends z.ZodType>(
   // Cancel in the question puts focus back on the press that asked it,
   // drawn afresh with the decision bar — not on the page.
   const askedFrom = useReturnFocus();
+  const [refusedLine, setRefusedLine] = useState<string | undefined>();
+  const { reasonless, refused } = props;
   const form = useFormSubmit({
     schema: props.schema,
     action: props.act,
     onSuccess: props.onSettled,
     successMessage: "Decided.",
+    ...(refused !== undefined && {
+      refusal: {
+        matches: refused.matches,
+        answer: () => {
+          setRefusedLine(refused.line);
+        },
+      },
+    }),
   });
 
-  const { reasonless } = props;
-
   function send(choice: Choice): void {
+    setRefusedLine(undefined);
     void form.submit({ ...props.subject, ...choice });
   }
 
@@ -185,7 +201,7 @@ export function RemovalDecision<TSchema extends z.ZodType>(
 
   return (
     <DecisionForm
-      form={form}
+      form={{ ...form, status: refusedLine ?? form.status }}
       onSubmit={() => {
         send({ action: "remove", reason });
       }}
@@ -228,6 +244,11 @@ export function RemovalDecision<TSchema extends z.ZodType>(
         field={form.field}
         error={form.fieldErrors.reason}
       />
+      {refusedLine === undefined ? undefined : (
+        <p data-part="decision-refused" className="m-0 text-body">
+          {refusedLine}
+        </p>
+      )}
     </DecisionForm>
   );
 }

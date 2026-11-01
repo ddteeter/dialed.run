@@ -776,6 +776,19 @@ function stuck(source: "unscreened" | "missing_file"): QueueRow {
   });
 }
 
+const CLEAR_REFUSED =
+  "Nothing changed. This photo was already handled or uploaded again. Reload to see it.";
+
+function renderStuck(resolve: Props["resolve"]): void {
+  render(
+    <ReviewQueue
+      queue={[stuck("missing_file")]}
+      resolve={resolve}
+      reviewHandle={vi.fn()}
+    />,
+  );
+}
+
 describe("a photo still pending a day after upload (D-153)", () => {
   it("says the classifier never answered, and shows the photo", () => {
     renderQueue([stuck("unscreened")]);
@@ -838,29 +851,61 @@ describe("a photo still pending a day after upload (D-153)", () => {
     });
   });
 
-  it("keeps a row whose Clear photo was refused, with the failure band", async () => {
+  it("keeps a row whose Clear photo was refused, with its own line and no Try again", async () => {
     const user = userEvent.setup();
-    const resolve: Props["resolve"] = vi
-      .fn<Props["resolve"]>()
-      .mockResolvedValue({ outcome: "not_found" });
-    render(
-      <ReviewQueue
-        queue={[stuck("missing_file")]}
-        resolve={resolve}
-        reviewHandle={vi.fn()}
-      />,
+    renderStuck(
+      vi.fn<Props["resolve"]>().mockResolvedValue({ outcome: "not_found" }),
     );
 
     await user.click(screen.getByRole("button", { name: "Clear photo" }));
 
     // The server declined: the photo was screened or re-uploaded since,
-    // and the row is still open. It stays, failed, ready to try again.
+    // and the row is still open. Nothing failed, so no band: the owner's
+    // line, said in the status region, and a reload rather than a retry.
+    expect(
+      await screen.findByText(CLEAR_REFUSED, { selector: "p" }),
+    ).toHaveAttribute("data-part", "decision-refused");
+    expect(screen.getByRole("status")).toHaveTextContent(CLEAR_REFUSED);
+    expect(
+      screen.queryByRole("button", { name: "Try again" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Our end failed/)).not.toBeInTheDocument();
+    expect(screen.getByText(bracketed("1 waiting"))).toBeInTheDocument();
+  });
+
+  it("drops the refused line at the next press", async () => {
+    const user = userEvent.setup();
+    renderStuck(
+      vi.fn<Props["resolve"]>().mockResolvedValue({ outcome: "not_found" }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Clear photo" }));
+    await screen.findByText(CLEAR_REFUSED, { selector: "p" });
+    // Remove with no reason is refused by the form itself, so the row
+    // stays and only the line's going is observed.
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+
+    // No line at all, not an empty one.
+    expect(document.querySelector("[data-part='decision-refused']")).toBeNull();
+    expect(screen.getByText(bracketed("1 waiting"))).toBeInTheDocument();
+  });
+
+  it("keeps a row whose Clear photo failed, with the failure band", async () => {
+    const user = userEvent.setup();
+    renderStuck(
+      vi.fn<Props["resolve"]>().mockRejectedValue(new Error("D1 down")),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Clear photo" }));
+
     expect(
       await screen.findByRole("button", { name: "Try again" }),
     ).toBeInTheDocument();
     expect(
       screen.getByText("Nothing saved. Our end failed. Nothing changed."),
     ).toBeInTheDocument();
+    // No line at all, not an empty one.
+    expect(document.querySelector("[data-part='decision-refused']")).toBeNull();
     expect(screen.getByText(bracketed("1 waiting"))).toBeInTheDocument();
   });
 

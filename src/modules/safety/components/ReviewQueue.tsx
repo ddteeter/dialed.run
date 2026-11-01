@@ -84,6 +84,13 @@ const STUCK_LINES: Readonly<Partial<Record<ReviewSource, string>>> = {
 };
 
 /**
+ * What a refused Clear photo says (owner, 2026-11-01): the photo is no
+ * longer the stuck one, and a reload shows it as it is now.
+ */
+const CLEAR_REFUSED_LINE =
+  "Nothing changed. This photo was already handled or uploaded again. Reload to see it.";
+
+/**
  * The photos a row shows: none for a missing file, whose frame would only
  * be an image that failed to load.
  */
@@ -187,12 +194,12 @@ type Moved = (username: string) => void;
  * (`RemovalDecision`), sent by the queue row's id. A missing file has
  * nothing to approve, so it offers Clear photo instead (D-153).
  *
- * **A refused Clear photo is a failure** (D-153): `not_found` there is the
- * server declining to clear a photo that is no longer the stuck one —
+ * **A refused Clear photo is not a failure** (D-153): `not_found` there is
+ * the server declining to clear a photo that is no longer the stuck one —
  * screened since, or a garment's re-uploaded within the day — and the row
- * is still open. So it fails like any other decision, with the band and
- * Try again, and the row stays where it is; only a decision the server
- * took takes it off the list.
+ * is still open. So the row stays where it is, with the owner's line in
+ * place of the band and no Try again, since pressing again would only be
+ * declined again; only a decision the server took takes it off the list.
  */
 function Decision({
   row,
@@ -205,10 +212,12 @@ function Decision({
       subject={{ queueId: row.id }}
       act={async (values) => {
         const decided = await decide({ data: values });
-        if (values.action === "clear" && decided.outcome === "not_found") {
-          throw new Error(decided.outcome);
-        }
-        return decided;
+        return { action: values.action, outcome: decided.outcome };
+      }}
+      refused={{
+        matches: (decided) =>
+          decided.action === "clear" && decided.outcome === "not_found",
+        line: CLEAR_REFUSED_LINE,
       }}
       reasonless={row.source === "missing_file" ? "clear" : "approve"}
       subjectType={row.subjectType}

@@ -53,13 +53,18 @@ after upload goes to the Desk's review queue for a person.
   (law 5). No rule, no `moderation_actions` row: it is no verdict on the
   runner. It clears only a photo still pending, and a garment photo only
   if its version is a day old, so a re-upload is never taken off; a clear
-  it refuses (`not_found`) fails on the Desk like any decision, with the
-  band and Try again, and the row stays. Remove and Remove as suspected
+  it refuses (`not_found`) keeps its row on the Desk, with its own line in
+  place of the failure band and no Try again (pressing again would only be
+  refused again; the line says to reload, as the Desk's other refusals
+  offer no button); a real failure keeps the band and Try again. Remove and Remove as suspected
   CSAM stay on the row (owner, 2026-10-31): a missing file can still be a
   report on real abuse.
 - **Wording** (owner, 2026-10-31): the button is "Clear photo", and the
   owner is told `MISSING_PHOTO_NOTICE`'s two sentences
   (`feed/missing-photo.ts`), in a bell row only, with no email.
+  A refused clear says (owner, 2026-11-01; `CLEAR_REFUSED_LINE` in
+  `safety/components/ReviewQueue.tsx`): "Nothing changed. This photo was
+  already handled or uploaded again. Reload to see it."
 - **Today** counts both sources in "photos the screener couldn't finish",
   which is what they literally are.
 - **Sentry**: the "still pending" line lists each photo as
@@ -83,7 +88,8 @@ after upload goes to the Desk's review queue for a person.
 - worker: `uploadedAt` from a ULID / version key; `todayCounts` counts both.
 - dom: the review row's tags, why-here lines and no photo on `missing_file`;
   Clear photo in place of Approve there, sending `clear`; a refused clear
-  keeps its row with the failure band.
+  keeps its row with the owner's line, announced, and no Try again, and the
+  line goes at the next press; a failed clear keeps the failure band.
 - worker: Approve on `unscreened` publishes, on `missing_file` stays
   pending; Clear takes a kit's and a garment's photo off with one notice,
   no audit row, no debt left; refuses an `unscreened` row, a photo no
