@@ -785,7 +785,7 @@ describe("ChangeEmail (ACC-8)", () => {
   });
 });
 
-describe("ChangeEmail: a lapsed session (Au7, D-151)", () => {
+describe("ChangeEmail: a lapsed session (Au7, D-155)", () => {
   it("carries settings to log-in", () => {
     carriedSince();
     renderChange();

@@ -940,8 +940,10 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
-45. **Au7's notice says what was typed is gone, and names a page as well
-    as a form (D-151, design 166).** _Drawn:_ Auth's "Au7 Signed out
+<!-- Numbered from the note below, not from 44: a list break, so Prettier keeps 93. -->
+
+93. **Au7's notice says what was typed is gone, and names a page as well
+    as a form (D-155, design 166).** _Drawn:_ Auth's "Au7 Signed out
     arrival" — "Log in and you're back on your run. What you entered is
     kept.", with the annotation "It names what's kept … After Log in, the
     runner lands on the filled form they left".
@@ -958,120 +960,154 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       generic variant, and drop "lands on the filled form" from the
       annotation.
 
-<!-- Item numbers continue past rounds 35–40 (45–76, 82–87). Design numbered the Garmin asks 77–81 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
+<!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
 
-## Answered in round 42 (imported 2026-10-29)
+## Answered in round 42 (imported 2026-10-28 and 2026-10-29)
 
-Design answered as `Round 42 Rulings.dc.html`, items 88–92 and three
-follow-ups to 84 and 85, with the text of record under "Round 42 ·
-Items 88–92" in `design/docs/product.md`. Items 88 and 89 answer
-open-queue items 45 and 46 (garment photos); 90–92 answer the asks the
-public-pages build (design 160) sent from its own branch. The 84 · 85
-follow-ups answer the three questions asked back from design 161.
+Sent on 2026-10-28 for items 88–92: the two garment asks (88 and 89), the
+pieces of `/kit/<id>` and `/@handle` built from existing parts (90 and 91),
+and the Privacy sub-page's words (92). Design answered the same day as
+`Round 42 Rulings.dc.html`, with the text of record under "Round 42 · Items
+88–92" in `design/docs/product.md`. The round amends round 41 #86b (no
+handle; PUBLIC unavailable), #86c (the bar) and #86d (the rail width, the
+type words). A re-export on 2026-10-29 added three follow-ups to 84 and 85,
+answering the questions asked back from design 161 (held on upload); they
+are listed after 92. Nothing is left open.
 
-- **88 · Garment photo on Review (answers queue item 45). Ruled; not
-  built yet.** The kit photo's content row, with kicker "GARMENT PHOTO ·
-  {id} · @{owner}", the photo at F's card size and a MONO.xs line
-  "{closet name} · {CATEGORY} · {state}". The bell row and email are
-  confirmed as worded.
-- **89 · Garment match takedown (answers queue item 46). Ruled; not
-  built yet.** Not on the tile: a "Decide" link on the tile opens the
-  bar full width under the grid. The board has the rest.
-- **90–92 · /k, /@handle and the Privacy words.** Ruled for the
-  public-pages build (design 160); `design/docs/product.md` has the text.
-- **84 · 85 follow-ups. Built in design 161.**
-  - **W1 receipt. Drawn**, intimate-image reports only: the sheet swaps
-    in place to REPORT SENT, "Thanks for telling us.", the body, a
-    hairline, 85's line and Done. The body's "today" is **"within a day"**
-    by the owner's call (2026-10-29), matching the sheet's own promise.
-  - **REMOVED tiles. Ruled:** one per removal within 8 bits, nearest
-    first; the line names the nearest only.
-  - **Inline links. Confirmed** as built (bold ink, underlined); round
-    41's accent links were a drawing slip.
+88. **A garment's photo on Review (C17, design 157). Ruled; build work.**
+    The kit photo's content row: kicker "GARMENT PHOTO · {id} · @{owner}"
+    with the source tag, the photo at F's card size, then a MONO.xs line
+    "{closet name} · {CATEGORY} · {state}". MATCHING PHOTOS and the
+    decision bar as on the kit row. The CSAM question and the owner's bell
+    row and email are confirmed as worded (design 159). **A CSAM removal
+    sends neither the bell row nor the email.**
 
-Lifted from the open queue, as asked:
+89. **A garment match's takedown (R-167, design 159). Ruled; build work.**
+    Not on the tile. A garment tile in MATCHING PHOTOS gets a 44-high
+    "Decide" link (Close while open). The garment bar without Approve opens
+    full width under the grid, kicker "DECIDE · GARMENT PHOTO · {id} ·
+    @{owner}", with the tile ringed. One open at a time. Decided: the tile
+    and bar leave, the count drops, and focus moves to the next garment
+    tile's Decide or the MATCHING PHOTOS kicker. Kit tiles are unchanged.
 
-45. **A garment's photo on Review (C17, design 157). Undesigned; built
-    as a placeholder.** The classifier and the D-147 hold now queue
-    garment photos. The row is a content row like a kit photo's: the
-    kicker reads `garment photo · {id}`, the photo is the garment's card
-    size, and the suspected-CSAM question reads "Remove this garment photo
-    everywhere and keep the evidence for the report?". No new glyph or
-    colour. **Amended by design 159 (R-167):** Remove now deletes the photo
-    and tells its owner, in words the owner approved on 2026-10-26: the
-    bell row "We removed the photo of one of your garments. Reason:
-    {reason}." and the email "We removed a photo from your closet" (the
-    content-removed email's layout, "The garment stays in your closet.").
-    **The ask:** draw the row, and confirm the bell row and email in the
-    existing notice styles.
+90. **`/kit/<id>` (design 163, step 6). Ruled; build work.** The desk width
+    (one column, the 620 measure, centred) is confirmed. The bar has one
+    slot, in pill form: hairline "Log in" signed out, ink "Open in the app"
+    signed in, never both. A piece's kind is the closet's TYPE chip, the
+    category word when it has none. The linked piece's domain, the TIME
+    label and the teal sky word are confirmed.
 
-46. **A garment match's takedown on Review (R-167, design 159).
-    Undesigned; built as a placeholder.** Under Matching photos, a garment
-    tile now carries the garment row's own decision bar, without Approve:
-    "Why it comes down", Remove, and Remove as suspected CSAM with its
-    in-place question. Existing parts and words only; a decided tile
-    leaves the list. Kit tiles are unchanged. **The ask:** draw the bar
-    on a match tile, or say where a match's takedown should sit instead.
+91. **`/@handle` (design 163, step 7). Confirmed; one build change.** The
+    credit's place, the empty groups (all empty means no Rotation section),
+    the names, the type words, the rail and the invite are confirmed.
+    Mileage is set in MONO caps: "412 MI".
 
-## Answered in round 41 (imported 2026-10-28)
+92. **The Privacy sub-page's words (design 163). Ruled; build work.** The
+    legend "Who sees new runs" is confirmed as the group's MONO.xs kicker.
+    While the profile is off, PUBLIC is absent, not disabled, with 86b's
+    line in its place. With no handle there is no switch: kicker PUBLIC
+    PROFILE, "A public profile lives at your username. Pick one first." and
+    "Pick a username", which opens the username sheet; on save, 86b's
+    switch appears.
 
-Design answered as `Round 41 Rulings.dc.html`, items 84–87, with the text
-of record under "Round 41 · Items 84–86" in `design/docs/product.md`
-(item 87 is there too). Items 84 and 85 answer open-queue items 45 and 46
-(D-147); item 86 rules the public pages. Only item 87 is built here, in
-the Garmin phase 1 PR (#275); 84–86 are build work for their own changes.
+**84 · 85 follow-ups. Built in design 161 (held on upload).**
 
-- **84 · Held on upload (answers queue item 45). Built in design 161.**
-  The source tag reads `[held on upload]`, not `[fingerprint]`; the line
-  under the photo reads "A close match to an image removed as intimate on
-  {OCT 3}, {3 BITS} apart." ("The same image as one removed as intimate on
-  {OCT 3}." at 0 bits); the removed original in MATCHING PHOTOS is an
-  empty hairline frame reading REMOVED. The board has the rest.
-- **85 · Other sites (answers queue item 46). Built in design 161.**
-  Reworded, placed on the `/takedown` receipt, `/takedown/confirm` DONE
-  and W1's receipt after an intimate-image report; both names are links
-  with "(opens in a new tab)" in their accessible names.
-- **86 · Public pages. Ruled; not built yet.** PUBLIC beside SHARED and
-  PRIVATE, Settings › Privacy's public profile, `/k/<id>`, `/@handle`, the
-  public share card and the one not-public page. The board and
-  `docs/product.md` have the full text.
-- **87 · Garmin phase 1, G6–G10. Built in #275.**
-  - **G6 · A3 effort. Confirmed and drawn.** The order as built; the
-    hairline above EFFORT stays. Unrated, the kicker reads EFFORT ·
-    OPTIONAL (the watch line takes that slot when rated). New line under
-    the chips, always: "You run warmer the harder you go. Next time, the
-    Call allows for it." TYPE.small, --quiet.
-  - **G7 · Credit weight. Confirmed, with a COLLAPSE:** G1's 500 → 400
-    (TYPE.small, --quiet), as built.
-  - **G8 · Failed import tap. Ruled.** §4a NOT IMPORTED · "Garmin didn't
-    answer. Nothing was imported." · Try again, in the list band's slot
-    above the rows; the tapped row returns to idle; a status region, focus
-    unchanged.
-  - **G9 · Parsed card strip. Ruled.** PARSED · FROM GARMIN, without the
-    date, distance and time (the stats line has them). REPLACE stays and
-    returns to the import chooser.
-  - **G10 · Credit on D. Confirmed** as built.
+- **W1 receipt. Drawn**, intimate-image reports only: the sheet swaps in
+  place to REPORT SENT, "Thanks for telling us.", the body, a hairline,
+  85's line and Done. The body's "today" is **"within a day"** by the
+  owner's call (2026-10-29), matching the sheet's own promise.
+- **REMOVED tiles. Ruled:** one per removal within 8 bits, nearest first;
+  the line names the nearest only.
+- **Inline links. Confirmed** as built (bold ink, underlined); round 41's
+  accent links were a drawing slip.
 
-Lifted from the open queue, as asked:
+## Answered in round 41 (imported 2026-10-25)
 
-45. **"A copy of an image removed as intimate" on Review (D-147, design
-    152). Undesigned; built as a placeholder.** A kit photo whose
-    fingerprint is within 8 bits of one removed as intimate is held and
-    lands on Review with the source `[fingerprint]`. Under the photo, one
-    line in BODY: "A copy of an image removed as intimate on `OCT 3`, `3
-bits` apart.", the date and distance in MONO.xs. The row also carries
-    "Their other photos" and "Matching photos" (items 63a and 71). No new
-    glyph or colour. **The ask:** draw the line, and say whether the
-    source tag should read something kinder than `[fingerprint]`.
+Sent on 2026-10-25 for items 84–86: the two D-147 asks (84 and 85) and
+public pages (86). Design answered the same day as `Round 41 Rulings.dc.html`,
+with the text of record under "Round 41 · Items 84–86" in
+`design/docs/product.md`. Design added that one board and that section and
+changed nothing else. The round amends round 27 #7 ("public" retired), round
+33 (profiles signed-in only), round 38 #61 (the Privacy sub-page) and round
+31's one default card. Nothing is left open. The two garment asks queued on
+2026-10-26 as 86 and 87 were not in this round, and move to 87 and 88 because
+design has answered 86.
 
-46. **Where else to go, on the removal receipts (D-147, design 152).
-    Undesigned copy on drawn screens.** The `/takedown` receipt ("We have
-    your request"), its confirm page, and the report sheet's intimate-image
-    branch gain one quiet line: "If it may be on other sites too,
-    StopNCII.org (18 and over) or Take It Down (under 18) can help stop it
-    spreading there. They fingerprint the image on your own device; the
-    image never leaves it." The two names are plain links, opening in a new
-    tab. **The ask:** confirm or reword, and place it on the boards.
+84. **Held on upload (D-147). Ruled and drawn; built in design 161 (held on upload).** The source tag
+    is `[held on upload]`, not `[fingerprint]`. The line reads "A close
+    match to an image removed as intimate on `OCT 3`, `3 BITS` apart.", or
+    at 0 bits "The same image as one removed as intimate on `OCT 3`." In
+    Matching photos the removed original is an empty hairline frame reading
+    REMOVED, with its id, distance, removal date and owner; the image is
+    never shown again. The uploader sees `[CHECKING]` and nothing else.
+
+85. **Other sites (D-147). Reworded and drawn; built in design 161 (held on upload).** The line is
+    reworded (product.md has it verbatim): StopNCII.org if the person was 18
+    or over when the image was taken, Take It Down if under 18. TYPE.small,
+    `--quiet`, last in the body after a hairline, on the `/takedown`
+    receipt, `/takedown/confirm` DONE, and W1's receipt after an
+    intimate-image report only. Both links open a new tab and say so in
+    their accessible names.
+
+86. **Public pages (D-151–D-154, design 163). Ruled and drawn; build work,
+    phases 1–4.** Where the ruling adds to the decisions:
+    - **a. PUBLIC is the name.** A3's share toggle becomes a three-row
+      radiogroup (PRIVATE "Only you." · SHARED "Runners signed in to
+      dialed.run." · PUBLIC "Anyone with the link, no sign-in. Never when
+      or where you ran."), with the preview line under it while PUBLIC is
+      picked. D's owner meta for a public kit has Copy link (the `/k` URL)
+      and Change, which opens the picker as a sheet. Unconfirmed runners
+      stay held at PRIVATE. The shipped strings change: H's empty state
+      becomes "No shared runs yet.", legal "public" meaning signed-in
+      becomes "shared with runners on dialed.run", and `/privacy` gains
+      "What anyone can see" (the owner's legal text). D-58's signed-out
+      `/feed/entry` page is unchanged.
+    - **b. Settings › Privacy** gains a PUBLIC PROFILE group between NEW
+      RUNS and ANONYMOUS TOTALS. "Show my closet" shows only while the
+      profile is on and keeps its value while hidden. With the profile off,
+      NEW RUNS has no Public row. **Turning the profile off while PUBLIC is
+      the default moves the default to SHARED**; kits already public stay
+      public.
+    - **c. `/kit/<id>`**: handle and local day, photo, conditions and verdict
+      chip, four stats, caption, THE KIT, the credit, an invite block ("Wear
+      what worked." · Request an invite · "Have a code? Join"), and a foot
+      with Report this kit (to `/takedown`, prefilled), Privacy, Terms.
+      Signed in, the top bar's Log in becomes "Open in the app" and the
+      invite block leaves, **filled client-side so the HTML stays one cached
+      page**. No Useful, follow or comment. og:title "@{handle} · {38°
+      damp}, {cold}".
+    - **d. `/@handle`**: kits (three, then "Show {N} more" as a plain link),
+      then Rotation if shown (IN USE, SHOES with mileage, RETIRED). DS1
+      columns at the desk. No per-week or per-weekday counts, which would
+      be a routine. Pieces never link to runs.
+    - **e. The share card** is for public kits only, at the default card's
+      size: handle and day, conditions and verdict, MONO stats, a kit line,
+      the credit; never the photo or caption. Once a kit is not public its
+      image URL serves the default card. **The public profile keeps the
+      default card.**
+    - **f. Not public**: one 404 page per path with **identical bytes,
+      status, headers and card for every reason** (never public, made
+      shared or private, removed, held, deleted, banned, never existed),
+      and the handle is never echoed. Signed in, the top bar offers "Look in
+      the app", which runs its own checks.
+
+87. **Garmin phase 1, G6–G10 (plan 160, D-149). Built in #275.** Design
+    added this item to round 41 when it refreshed the board on 2026-10-28.
+    - **G6 · A3 effort. Confirmed and drawn.** The order as built; the
+      hairline above EFFORT stays. Unrated, the kicker reads EFFORT ·
+      OPTIONAL (the watch line takes that slot when rated). New line under
+      the chips, always: "You run warmer the harder you go. Next time, the
+      Call allows for it." TYPE.small, --quiet.
+    - **G7 · Credit weight. Confirmed, with a COLLAPSE:** G1's 500 → 400
+      (TYPE.small, --quiet), as built.
+    - **G8 · Failed import tap. Ruled.** §4a NOT IMPORTED · "Garmin didn't
+      answer. Nothing was imported." · Try again, in the list band's slot
+      above the rows; the tapped row returns to idle; a status region, focus
+      unchanged.
+    - **G9 · Parsed card strip. Ruled.** PARSED · FROM GARMIN, without the
+      date, distance and time (the stats line has them). REPLACE stays and
+      returns to the import chooser.
+    - **G10 · Credit on D. Confirmed** as built.
 
 ## Answered in round 40 (imported 2026-10-24)
 

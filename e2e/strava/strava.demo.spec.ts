@@ -79,9 +79,14 @@ test("Strava: connect with the official button, a reminder lands, disconnect", a
     );
 
     // The connect is a server redirect to Strava's consent screen, which
-    // is off-app: hold the navigation so the in-flight state is on film.
+    // is off-app: drop the navigation so the in-flight state stays on film.
+    // Aborted as net::ERR_ABORTED, which Chromium cancels without an error
+    // page and Playwright reports as a failed navigation, so the click's
+    // after-action wait ends. A 204 used to do the same, but Playwright
+    // 1.64 reports a 204 navigation as finished, never aborts it, and the
+    // click waits forever (microsoft/playwright#43279).
     await page.route("**/runs/strava-connect", (route) =>
-      route.fulfill({ status: 204 }),
+      route.abort("aborted"),
     );
     await scene(page, "Pressed: our brackets beside it, the asset untouched");
     await button.click();

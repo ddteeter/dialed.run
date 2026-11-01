@@ -219,7 +219,7 @@ describe("QuarantineRecords", () => {
   });
 });
 
-describe("QuarantineRecords: a lapsed session (Au7, D-151)", () => {
+describe("QuarantineRecords: a lapsed session (Au7, D-155)", () => {
   it("carries page to log-in", () => {
     carriedSince();
     render(<QuarantineRecords records={[held()]} recordReport={vi.fn()} />);

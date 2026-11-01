@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import type { JSX, ReactNode } from "react";
+import type { JSX, ReactNode, Ref } from "react";
 
 import { Mono } from "../../../ui";
 import type { OtherPhoto, OtherPhotos as Others } from "../other-photos";
@@ -69,20 +69,29 @@ export function OtherPhotos({
 /**
  * The frame both photo lists on a Review row share (this and
  * `PhotoMatches`): a mono label carrying the count, then the list or the
- * sentence standing in for it.
+ * sentence standing in for it. `titleRef` makes the label a place focus
+ * can be put by script (MATCHING PHOTOS, once its last garment tile is
+ * decided — round 42 #89); it is a label, not a control, so never a tab
+ * stop.
  */
 export function PhotoSection({
   part,
   title,
+  titleRef,
   children,
 }: Readonly<{
   part: string;
   title: string;
+  titleRef?: Ref<HTMLSpanElement> | undefined;
   children: ReactNode;
 }>): JSX.Element {
   return (
     <div data-part={part} className="flex flex-col gap-2">
-      <span className="text-label uppercase">
+      <span
+        ref={titleRef}
+        tabIndex={titleRef === undefined ? undefined : -1}
+        className="text-label uppercase"
+      >
         <Mono step="xs">{title}</Mono>
       </span>
       {children}

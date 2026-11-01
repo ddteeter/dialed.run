@@ -309,7 +309,7 @@ export const TOTALS_LINE =
 
 /**
  * Where Au7's notice says Log in returns: the carried form by its own noun,
- * or, for a form that is none of the three, the page (D-151).
+ * or, for a form that is none of the three, the page (D-155).
  */
 function backTo(carried: CarriedForm): string {
   return carried === "page" ? "back where you were" : `back on your ${carried}`;
@@ -320,7 +320,7 @@ function backTo(carried: CarriedForm): string {
  * — a statement, not an error, so no yellow and no band."*
  *
  * It names where Log in returns, not why the session died, and says that
- * what was typed is gone: the form is not restored (D-151, the D-102
+ * what was typed is gone: the form is not restored (D-155, the D-102
  * shape; the board's "What you entered is kept" is a design delta).
  * Rendered only when a form was carried: *"Arrival with nothing carried
  * shows no notice at all — just Au2."*

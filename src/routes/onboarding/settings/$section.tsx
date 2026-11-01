@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { HandleForm } from "../../../modules/account/components/HandleForm";
+import { claimUsernameFn } from "../../../modules/account/functions";
 import { requireSession } from "../../../modules/auth/functions";
 import { BelledLayout } from "../../../modules/notifications/components/BelledLayout";
 import { bellStateFn } from "../../../modules/notifications/functions";
@@ -8,6 +10,7 @@ import {
   saveSharingFn,
   saveUnitsFn,
   setCountInTotalsFn,
+  setPublicProfileFn,
   settingsSubPageData,
 } from "../../../modules/onboarding/functions";
 import { settingsSectionOrNotFound } from "../../../modules/onboarding/route-decisions";
@@ -45,6 +48,19 @@ function SectionPage() {
         saveUnits={saveUnitsFn}
         saveSharing={saveSharingFn}
         saveCountInTotals={setCountInTotalsFn}
+        savePublicProfile={setPublicProfileFn}
+        pickUsername={(onClaimed) => (
+          // Settings › Username's form and words, in Privacy's sheet
+          // (round 42 #92).
+          <HandleForm
+            claim={claimUsernameFn}
+            submitLabel="Save"
+            pendingLabel="Saving"
+            successMessage="Username saved."
+            onClaimed={onClaimed}
+            carry="settings"
+          />
+        )}
       />
     </BelledLayout>
   );

@@ -49,6 +49,9 @@ const ANSWERED: CurrentSettings = {
   distanceUnit: "mi",
   defaultAudience: "runners",
   countInTotals: true,
+  publicProfile: false,
+  publicCloset: false,
+  username: "maya_runs",
 };
 
 function row(name: RegExp) {
@@ -158,6 +161,9 @@ describe("the index (U1/N)", () => {
           distanceUnit: "km",
           defaultAudience: "private",
           countInTotals: false,
+          publicProfile: false,
+          publicCloset: false,
+          username: undefined,
         }}
         runReminderEmail={false}
         blockedCount={0}
@@ -184,6 +190,10 @@ describe("the index (U1/N)", () => {
     expect(
       privacyRowValue({ defaultAudience: "private", countInTotals: true }),
     ).toBe("New runs private · Counted in totals");
+    // PUBLIC, in the screen's word lowercased (round 41 #86a).
+    expect(
+      privacyRowValue({ defaultAudience: "world", countInTotals: true }),
+    ).toBe("New runs public · Counted in totals");
   });
 
   it("asks the unanswered calibration as the ruling words it", async () => {
@@ -284,6 +294,8 @@ describe("the sub-pages", () => {
         saveUnits={saveUnits}
         saveSharing={saveSharing}
         saveCountInTotals={saveCountInTotals}
+        savePublicProfile={vi.fn()}
+        pickUsername={vi.fn()}
       />,
     );
     expect(
@@ -301,15 +313,14 @@ describe("the sub-pages", () => {
         saveUnits={saveUnits}
         saveSharing={saveSharing}
         saveCountInTotals={saveCountInTotals}
+        savePublicProfile={vi.fn()}
+        pickUsername={vi.fn()}
       />,
     );
     expect(
       screen.getByRole("heading", { level: 1, name: "Privacy" }),
     ).toBeVisible();
-    expect(
-      screen.getByRole("checkbox", { name: "Share new runs" }),
-    ).toBeChecked();
-    expect(screen.queryByRole("radio")).toBeNull();
+    expect(screen.getByRole("radio", { name: "Shared" })).toBeChecked();
     await userEvent.setup().click(screen.getByRole("button", { name: "Save" }));
     expect(saveSharing).toHaveBeenCalledWith({
       data: { defaultAudience: "runners" },
@@ -345,20 +356,33 @@ describe("the sub-pages", () => {
     });
   });
 
-  it("hold Privacy's two controls in two groups, the totals switch outside the form and last (round 38 #61c)", async () => {
+  it("hold Privacy's three groups, the switches outside the form and after it (round 38 #61c, round 41 #86b)", async () => {
     const user = userEvent.setup();
     await renderWithRouter(
       <SettingsSectionPage
         section="sharing"
-        current={ANSWERED}
+        current={{ ...ANSWERED, publicProfile: true }}
         isVerified
         saveUnits={vi.fn()}
         saveSharing={vi.fn()}
         saveCountInTotals={vi.fn()}
+        savePublicProfile={vi.fn()}
+        pickUsername={vi.fn()}
       />,
     );
-    const [newRuns, totals] = screen.getAllByRole("heading", { level: 2 });
-    expect(newRuns).toHaveTextContent(/^New runs$/u);
+    const [newRuns, profile, totals] = screen.getAllByRole("heading", {
+      level: 2,
+    });
+    // The legend is the group's kicker (round 42 #92), said once.
+    expect(newRuns).toHaveTextContent(/^Who sees new runs$/u);
+    expect(screen.getAllByText("Who sees new runs")).toHaveLength(2);
+    expect(
+      screen.getByRole("group", { name: "Who sees new runs" })
+        .firstElementChild,
+    ).toHaveClass("sr-only");
+    expect(profile).toHaveTextContent(
+      /^Public profile · Saves as you switch$/u,
+    );
     expect(totals).toHaveTextContent(
       /^Anonymous totals · Saves as you switch$/u,
     );
@@ -366,27 +390,47 @@ describe("the sub-pages", () => {
     expect(newRuns).toHaveClass("text-muted");
     expect(newRuns?.firstElementChild).toHaveClass("text-mono-xs");
 
-    const share = screen.getByRole("checkbox", { name: "Share new runs" });
+    const shared = screen.getByRole("radio", { name: "Shared" });
+    const publicly = screen.getByRole("checkbox", { name: "Public profile" });
+    const closet = screen.getByRole("checkbox", { name: "Show my closet" });
     const counted = screen.getByRole("checkbox", {
       name: "Count my runs in anonymous totals",
     });
     const save = screen.getByRole("button", { name: "Save" });
     const newRunsGroup = newRuns?.closest("section");
+    const profileGroup = profile?.closest("section");
     const totalsGroup = totals?.closest("section");
-    expect(newRunsGroup).toContainElement(share);
+    expect(newRunsGroup).toContainElement(shared);
     expect(newRunsGroup).toContainElement(save);
+    expect(profileGroup).toContainElement(publicly);
+    expect(profileGroup).toContainElement(closet);
     expect(totalsGroup).toContainElement(counted);
-    // One --hairline-2 rule, between the two groups.
-    const rule = screen.getByRole("separator");
-    expect(rule).toHaveClass("border-t", "border-hairline-2");
-    expect(newRunsGroup?.nextElementSibling).toBe(rule);
-    expect(rule.nextElementSibling).toBe(totalsGroup);
+    // A --hairline-2 rule between each pair of groups.
+    const rules = screen.getAllByRole("separator");
+    expect(rules).toHaveLength(2);
+    for (const rule of rules) {
+      expect(rule).toHaveClass(
+        "m-0",
+        "border-0",
+        "border-t",
+        "border-hairline-2",
+      );
+    }
+    expect(newRunsGroup?.nextElementSibling).toBe(rules[0]);
+    expect(rules[0]?.nextElementSibling).toBe(profileGroup);
+    expect(profileGroup?.nextElementSibling).toBe(rules[1]);
+    expect(rules[1]?.nextElementSibling).toBe(totalsGroup);
+    expect(publicly.closest("form")).toBeNull();
     expect(counted.closest("form")).toBeNull();
-    expect(share.closest("form")).toBe(save.closest("form"));
+    expect(shared.closest("form")).toBe(save.closest("form"));
 
-    share.focus();
+    shared.focus();
     await user.tab();
     expect(save).toHaveFocus();
+    await user.tab();
+    expect(publicly).toHaveFocus();
+    await user.tab();
+    expect(closet).toHaveFocus();
     await user.tab();
     expect(counted).toHaveFocus();
   });
@@ -400,6 +444,8 @@ describe("the sub-pages", () => {
         saveUnits={vi.fn()}
         saveSharing={vi.fn()}
         saveCountInTotals={vi.fn()}
+        savePublicProfile={vi.fn()}
+        pickUsername={vi.fn()}
       />,
     );
     expect(
@@ -426,16 +472,9 @@ describe("the sub-pages", () => {
       <SharingForm current={ANSWERED} saveSharing={saveSharing} />,
     );
 
-    const toggle = screen.getByRole("checkbox", {
-      name: "Share new runs",
-    });
-    expect(toggle).toBeChecked();
-    expect(
-      screen.getByText(
-        "Runners on dialed.run see their kit, conditions and verdict. You can change any run.",
-      ),
-    ).toBeVisible();
-    await user.click(toggle);
+    const group = screen.getByRole("group", { name: "Who sees new runs" });
+    expect(within(group).getByRole("radio", { name: "Shared" })).toBeChecked();
+    await user.click(within(group).getByRole("radio", { name: "Private" }));
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(saveSharing).toHaveBeenCalledWith({
@@ -444,6 +483,73 @@ describe("the sub-pages", () => {
     await waitFor(() => {
       expect(screen.getByRole("status")).toHaveTextContent("Privacy saved.");
     });
+  });
+
+  it("offer no PUBLIC row while the profile is off, and say where it comes from (round 41 #86b)", async () => {
+    await renderWithRouter(
+      <SharingForm current={ANSWERED} saveSharing={vi.fn()} />,
+    );
+    const group = screen.getByRole("group", { name: "Who sees new runs" });
+    expect(
+      within(group)
+        .getAllByRole("radio")
+        .map((radio) => radio.getAttribute("value")),
+    ).toStrictEqual(["private", "runners"]);
+    const line = screen.getByText(
+      "Public is a choice here once your profile is public. You can still make any one run public.",
+    );
+    expect(line).toHaveClass("m-0", "text-small", "text-muted");
+    // In the third row's place: after the rows, before Save.
+    expect(group.nextElementSibling).toBe(line);
+  });
+
+  it("offer PUBLIC as a default while the profile is public, with no line", async () => {
+    const user = userEvent.setup();
+    const saveSharing = vi.fn().mockResolvedValue(undefined);
+    await renderWithRouter(
+      <SharingForm
+        current={{ defaultAudience: "world", publicProfile: true }}
+        saveSharing={saveSharing}
+      />,
+    );
+    const group = screen.getByRole("group", { name: "Who sees new runs" });
+    expect(
+      within(group)
+        .getAllByRole("radio")
+        .map((radio) => radio.getAttribute("value")),
+    ).toStrictEqual(["private", "runners", "world"]);
+    expect(within(group).getByRole("radio", { name: "Public" })).toBeChecked();
+    expect(screen.queryByText(/^Public is a choice here/u)).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(saveSharing).toHaveBeenCalledWith({
+      data: { defaultAudience: "world" },
+    });
+  });
+
+  it("mark the default's field with the server's refusal", async () => {
+    // A stale page can send PUBLIC after the profile went off elsewhere.
+    const user = userEvent.setup();
+    const saveSharing = vi.fn().mockRejectedValue({
+      issues: [
+        {
+          path: ["defaultAudience"],
+          message: "Public is a choice here once your profile is public.",
+        },
+      ],
+    });
+    await renderWithRouter(
+      <SharingForm
+        current={{ defaultAudience: "world", publicProfile: true }}
+        saveSharing={saveSharing}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(
+      await screen.findByText(
+        "Public is a choice here once your profile is public.",
+      ),
+    ).toHaveAttribute("id", "defaultAudience-message");
   });
 
   it("never let the browser submit either form", async () => {
@@ -470,7 +576,7 @@ describe("the sub-pages", () => {
   });
 });
 
-describe("Settings' sub-page forms: a lapsed session (Au7, D-151)", () => {
+describe("Settings' sub-page forms: a lapsed session (Au7, D-155)", () => {
   it("carries settings to log-in", async () => {
     carriedSince();
     await renderWithRouter(

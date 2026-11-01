@@ -535,7 +535,7 @@ describe("Leaving (round 27 #14)", () => {
   });
 });
 
-describe("DeleteAccount: a lapsed session (Au7, D-151)", () => {
+describe("DeleteAccount: a lapsed session (Au7, D-155)", () => {
   it("carries settings to log-in", async () => {
     carriedSince();
     const { user, view } = deleteRow();

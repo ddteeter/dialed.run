@@ -393,7 +393,7 @@ describe("Sign out everywhere (ACC-7)", () => {
   });
 });
 
-describe("password pages: a lapsed session (Au7, D-151)", () => {
+describe("password pages: a lapsed session (Au7, D-155)", () => {
   it("carries settings to log-in", () => {
     carriedSince();
     render(<ChangePassword change={vi.fn()} />);

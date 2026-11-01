@@ -62,7 +62,8 @@ export type TakedownRequestValues = z.infer<typeof takedownRequestSchema>;
 
 /**
  * What a pasted link points at, when it is one of ours: a shared kit
- * (`/feed/entry/{id}`) or one of its photos
+ * (`/feed/entry/{id}`), a public one (`/kit/{id}`, round 41 #86c — its
+ * Report this kit link fills this in) or one of a kit's photos
  * (`/feed/photo/entries/{runner}/{entry}/{photo}`). `entryId` is the kit
  * either way, where Review opens it. Any host is read, because the same
  * path on a preview deployment or a copied `www.` link is still ours;
@@ -75,7 +76,7 @@ export type TakedownSubject = Readonly<{
   entryId: string;
 }>;
 
-const ENTRY_PATH = /^\/feed\/entry\/([^/]+)\/?$/u;
+const ENTRY_PATH = /^\/(?:feed\/entry|kit)\/([^/]+)\/?$/u;
 const PHOTO_PATH = /^\/feed\/photo\/entries\/[^/]+\/([^/]+)\/([^/]+)$/u;
 
 /**
@@ -105,3 +106,13 @@ function subjectAt(path: string): TakedownSubject | undefined {
   const [, entryId, photoId] = photo.data;
   return { subjectType: "photo", subjectId: photoId, entryId };
 }
+
+/**
+ * What `/takedown` can be handed in its URL: the link to fill in, as a
+ * public kit's Report this kit does (round 41 #86c). A value too long to
+ * be a link, or not a string, is dropped rather than an error — the form
+ * is then simply empty.
+ */
+export const takedownSearchSchema = z.object({
+  location: z.string().max(LOCATION_MAX).optional().catch(undefined),
+});

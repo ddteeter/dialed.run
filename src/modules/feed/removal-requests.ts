@@ -16,12 +16,11 @@
 import { and, eq, sql } from "drizzle-orm";
 
 import { takedownRequests } from "../../db/schema-core";
-import { takedownSubjectOf } from "../../lib/contracts/takedown";
 import { nowSeconds } from "../../lib/now";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { emailDebt } from "../email";
 import { outboxInsertWhere, oweOutbox } from "../ops";
-import { releaseHoldWrites } from "../safety";
+import { releaseHoldWrites, requestSubjectOf } from "../safety";
 import { moderateContent } from "./moderation";
 
 type Db = Parameters<typeof moderateContent>[0];
@@ -51,9 +50,9 @@ export async function decideRemovalRequest(
   );
   if (request === undefined) return "not_found";
   if (request.status !== "pending") return "already_decided";
-  // The subject is read from the link as filed, the way Review shows it:
-  // a link that is not ours names nothing to take down.
-  const subject = takedownSubjectOf(request.location);
+  // The subject is read from the request as filed, the way Review shows
+  // it: a link that is not ours names nothing to take down.
+  const subject = await requestSubjectOf(db, request);
   if (subject !== undefined && decision.outcome === "removed") {
     await moderateContent(db, {
       actorId,

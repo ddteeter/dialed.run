@@ -16,6 +16,7 @@ import type {
 } from "@tanstack/react-router";
 import { redirect } from "@tanstack/react-router";
 
+import { ulidSchema } from "../../lib/ids";
 import { returnPathOf } from "../../lib/return-path";
 
 import type { ProfileAtHandle } from "./profiles";
@@ -80,7 +81,7 @@ export function orBackToFeed<T>(value: T | undefined): T {
 }
 
 /**
-`/@handle`'s one redirect: the viewer's own handle goes to G — H is for
+H's one redirect by handle: the viewer's own handle goes to G — H is for
 somebody else, and it would offer them a Follow on themself.
 
 Everything else is a page to render: the runner, "changed their name", or
@@ -101,7 +102,7 @@ export function orHandlePage(
 }
 
 /**
-`/feed/u/$userId`'s answer: the runner's `/@handle`, or back to the feed
+H by id's answer: the runner's `/feed/u/<handle>`, or back to the feed
 for a runner the viewer may not see — or one with no handle, which after
 O0 no runner has, and which would have no page to go to.
 */
@@ -109,5 +110,20 @@ export function toHandlePage(
   profile: { username: string | null } | undefined,
 ): never {
   const handle = orBackToFeed(orBackToFeed(profile).username ?? undefined);
-  return redirectTo({ to: "/@{$handle}", params: { handle } });
+  return redirectTo({ to: "/feed/u/$handle", params: { handle } });
+}
+
+/**
+ * `/feed/u/<segment>` was H by id before it was H by handle (D-154), and
+ * links and specs still name a runner by id: an id is asked for its
+ * runner's handle (`handleOf`, the caller's server function) and sent on
+ * to it. Anything else is a handle, and left for the page. A handle is
+ * lowercase and at most 20 characters, so it is never read as an id.
+ */
+export async function toHandleWhenId(
+  segment: string,
+  handleOf: (userId: string) => Promise<{ username: string | null } | undefined>,
+): Promise<void> {
+  const id = ulidSchema.safeParse(segment);
+  if (id.success) toHandlePage(await handleOf(id.data));
 }

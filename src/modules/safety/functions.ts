@@ -29,6 +29,7 @@ import {
   outboxInsert,
   outboxInsertWhere,
   oweOutbox,
+  purgePublicPages,
   settleOutbox,
 } from "../ops";
 
@@ -82,7 +83,7 @@ export const fileReportAction = createServerFn({ method: "POST" })
     // decision, because a route may not branch.
     // `oweInCore` owes the removal alert in the report's batch (design
     // 136); handed in because `ops` imports this module.
-    return fileReport({ reporterId, ...data }, oweInCore);
+    return fileReport({ reporterId, ...data }, oweInCore, purgePublicPages);
   });
 
 export const blockRunnerAction = createServerFn({ method: "POST" })
@@ -159,6 +160,7 @@ export const takedownRequestFn = createServerFn({ method: "POST" })
         verify: verifyTurnstileToken,
         owe: oweInCore,
         secret: env.TAKEDOWN_SECRET,
+        purge: purgePublicPages,
       },
     );
   });
@@ -171,11 +173,10 @@ export const takedownRequestFn = createServerFn({ method: "POST" })
 export const confirmTakedownFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => takedownConfirmInput.parse(data))
   .handler(async ({ data }) => ({
-    outcome: await confirmTakedownRequest(
-      primaryCoreDb(),
-      data.token,
-      oweInCore,
-    ),
+    outcome: await confirmTakedownRequest(primaryCoreDb(), data.token, {
+      owe: oweInCore,
+      purge: purgePublicPages,
+    }),
   }));
 
 /**
@@ -215,7 +216,9 @@ export const banUserAction = createServerFn({ method: "POST" })
     const ban = { ...data, bannedBy };
     // The ban's email, owed in the ban's batch, then the fast path.
     const debt = oweOutbox(banEmail(ban));
-    await banUser(ban, (database) => [outboxInsert(database, debt)]);
+    await banUser(ban, purgePublicPages, (database) => [
+      outboxInsert(database, debt),
+    ]);
     await settleOutbox(coreDb(), debt);
     return { banned: true };
   });

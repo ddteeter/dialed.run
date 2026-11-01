@@ -53,7 +53,7 @@ import {
 import { photoAcceptAttribute } from "../../../lib/photo-constraints";
 import type { PhotoStep } from "../../../ui";
 import { garmentFormSchema, type GarmentFormValues } from "../form-schema";
-import { garmentLabel } from "../label";
+import { garmentLabel } from "../../../lib/garment-label";
 import type { ClosetNearby } from "../nearby";
 import { AlreadyInCloset } from "./AlreadyInCloset";
 import { GARMENT_PHOTO_COPY } from "./photo-pick";

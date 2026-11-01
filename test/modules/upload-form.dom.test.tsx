@@ -1555,7 +1555,7 @@ describe("A1: the units are the runner's", () => {
   });
 });
 
-describe("A1's parsed card: a lapsed session (Au7, D-151)", () => {
+describe("A1's parsed card: a lapsed session (Au7, D-155)", () => {
   it("carries run to log-in", async () => {
     carriedSince();
     const user = setupUser();

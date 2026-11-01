@@ -424,7 +424,7 @@ describe("ManualRunForm: the log flow", () => {
   });
 });
 
-describe("ManualRunForm: a lapsed session (Au7, D-151)", () => {
+describe("ManualRunForm: a lapsed session (Au7, D-155)", () => {
   it("goes to log-in carrying the run, with the way back to the form", async () => {
     // The root as `__root.tsx` mounts it: the lapse answer around the
     // pages, and log-in one of them.

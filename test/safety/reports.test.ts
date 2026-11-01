@@ -15,6 +15,7 @@ import {
   reportedSubjectIdsFor,
 } from "../../src/modules/safety";
 
+import { noPurge } from "../purge-spy";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 import { nowSeconds } from "../../src/lib/now";
 import { oweInCore } from "../queue-fakes";
@@ -58,6 +59,7 @@ describe("the distinct-reporter threshold", () => {
             reason: "explicit",
           },
           oweInCore,
+          noPurge,
         ),
       );
     }
@@ -85,6 +87,7 @@ describe("the distinct-reporter threshold", () => {
         reason: "spam",
       },
       oweInCore,
+      noPurge,
     );
 
     const [row] = await core()
@@ -112,6 +115,7 @@ describe("the distinct-reporter threshold", () => {
           reason: "spam",
         },
         oweInCore,
+        noPurge,
       );
     }
     const [queued] = await pendingReviewQueue();
@@ -134,6 +138,7 @@ describe("the distinct-reporter threshold", () => {
           reason: "spam",
         },
         oweInCore,
+        noPurge,
       );
       // Every repeat reports the same truth rather than erroring: a
       // double-click and a retried POST are indistinguishable (law 8b).
@@ -163,6 +168,7 @@ describe("the distinct-reporter threshold", () => {
           reason: "other",
         },
         oweInCore,
+        noPurge,
       );
     }
 
@@ -188,6 +194,7 @@ describe("the distinct-reporter threshold", () => {
         reason: "explicit",
       },
       oweInCore,
+      noPurge,
     );
     const asProduct = await fileReport(
       {
@@ -197,6 +204,7 @@ describe("the distinct-reporter threshold", () => {
         reason: "spam",
       },
       oweInCore,
+      noPurge,
     );
 
     expect(asProduct).toMatchObject({ status: "filed", reporterCount: 1 });
@@ -221,6 +229,7 @@ describe("the reporter's own hide (W1)", () => {
         reason: "harassment",
       },
       oweInCore,
+      noPurge,
     );
     await fileReport(
       {
@@ -230,6 +239,7 @@ describe("the reporter's own hide (W1)", () => {
         reason: "harassment",
       },
       oweInCore,
+      noPurge,
     );
 
     // The promise is "hidden from YOUR feed" — one report must not hide an
@@ -251,6 +261,7 @@ describe("the reporter's own hide (W1)", () => {
         reason: "other",
       },
       oweInCore,
+      noPurge,
     );
     await fileReport(
       {
@@ -260,6 +271,7 @@ describe("the reporter's own hide (W1)", () => {
         reason: "spam",
       },
       oweInCore,
+      noPurge,
     );
 
     expect(await reportedSubjectIdsFor(me, "entry")).toEqual([entryId]);
@@ -285,6 +297,7 @@ describe("W1's block-with-report checkbox", () => {
         alsoBlock: true,
       },
       oweInCore,
+      noPurge,
     );
 
     // One call, not two. A reporter who ticked the box and lost a second
@@ -305,6 +318,7 @@ describe("W1's block-with-report checkbox", () => {
         reason: "harassment",
       },
       oweInCore,
+      noPurge,
     );
 
     expect(await isBlocked(reporter, subject)).toBe(false);
@@ -323,6 +337,7 @@ describe("W1's block-with-report checkbox", () => {
         alsoBlock: true,
       },
       oweInCore,
+      noPurge,
     );
 
     // An entry id is not a user id. Blocking it would create a row naming
@@ -349,6 +364,7 @@ describe("subjects with no moderation column of their own", () => {
           reason: "harassment",
         },
         oweInCore,
+        noPurge,
       );
     }
 

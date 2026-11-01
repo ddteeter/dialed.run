@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { userProfiles } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { defaultAudienceFor } from "../../src/modules/feed/share-default";
-import { makeUser, resetTables } from "./helpers";
+import { addAccount, makeUser, resetTables } from "./helpers";
 
 /**
  * `defaultAudienceFor` on its own — both call sites (`attachKit`,
@@ -36,6 +36,23 @@ describe("defaultAudienceFor", () => {
     const quiet = await makeUser({ defaultAudience: "private" });
 
     expect(await defaultAudienceFor(coreDb(), quiet)).toBe("private");
+  });
+});
+
+describe("a PUBLIC default (D-151)", () => {
+  it("starts a new entry public", async () => {
+    const open = await makeUser({ defaultAudience: "world" });
+
+    expect(await defaultAudienceFor(coreDb(), open)).toBe("world");
+  });
+
+  it("starts it private while the runner is unconfirmed (D-50)", async () => {
+    await coreDb()
+      .insert(userProfiles)
+      .values({ userId: "pending", defaultAudience: "world" });
+    await addAccount("pending", false);
+
+    expect(await defaultAudienceFor(coreDb(), "pending")).toBe("private");
   });
 });
 

@@ -11,7 +11,7 @@
  * from the settings index, unpublished terms asking
  * nothing (ACC-6, D-93: no acceptance recorded, no prompt), and Au7 (a
  * session that lapses mid-form goes to log-in and comes back to the form,
- * D-151) — one journey, one video.
+ * D-155) — one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
@@ -383,7 +383,7 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   await page.goto("/account/terms");
   await expect(page).not.toHaveURL(/\/account\/terms/u, { timeout: 15_000 });
 
-  // Au7 (D-151): the session lapses while a run is typed in. The save goes
+  // Au7 (D-155): the session lapses while a run is typed in. The save goes
   // to log-in carrying the form's noun and the way back, the notice says
   // what was typed is gone, and Log in returns to the form.
   await scene(page, "Au7 · the session lapses while a run is typed in");

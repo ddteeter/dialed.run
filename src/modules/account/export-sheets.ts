@@ -161,7 +161,7 @@ export function buildSheets(rows: ExportRows): ExportSheets {
       {
         name: "default_audience",
         about:
-          "what a new run starts as when you log it, shared or private. You can change any run afterwards.",
+          "what a new run starts as when you log it: public, shared or private. You can change any run afterwards.",
         value: (row) => row.defaultAudience,
       },
       {
@@ -169,6 +169,18 @@ export function buildSheets(rows: ExportRows): ExportSheets {
         about:
           "true if your runs count, without your name, in anonymous totals like the guides.",
         value: (row) => row.countInTotals,
+      },
+      {
+        name: "public_profile",
+        about:
+          "true if anyone, signed in or not, can see your public runs on your profile.",
+        value: (row) => row.profile?.publicProfile,
+      },
+      {
+        name: "public_closet",
+        about:
+          "true if your public profile shows your closet: pieces in use, shoe mileage and retired pieces. Kept while the profile is off.",
+        value: (row) => row.profile?.publicCloset,
       },
     ],
   };
@@ -295,7 +307,7 @@ export function buildSheets(rows: ExportRows): ExportSheets {
       {
         name: "audience",
         about:
-          "who can see this run's kit and verdict: shared means any runner on dialed.run, private means other runners don't see it.",
+          "who can see this run's kit and verdict: public means anyone with the link, signed in or not, shared means any runner on dialed.run, private means other runners don't see it.",
         value: (entry) => entry.audience,
       },
       {

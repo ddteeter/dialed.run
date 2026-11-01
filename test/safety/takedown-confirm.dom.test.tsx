@@ -140,7 +140,7 @@ describe("its search", () => {
   });
 });
 
-describe("/takedown/confirm, a signed-out form: a lapsed session (Au7, D-151)", () => {
+describe("/takedown/confirm, a signed-out form: a lapsed session (Au7, D-155)", () => {
   it("carries nothing to log-in", async () => {
     carriedSince();
     await renderWithRouter(

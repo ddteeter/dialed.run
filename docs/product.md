@@ -307,7 +307,7 @@ dropped.` / `Our end failed. Nothing about your run changed.`
 Session expiry is the one exception to "stay put": every signed-in form routes
 to sign-in carrying its page and the runner's email, and Log in returns to the
 page as a fresh form. What was typed is not kept, and Au7's notice says so
-(D-151).
+(D-155).
 
 ### 5. Submitting: the button
 

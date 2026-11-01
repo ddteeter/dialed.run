@@ -641,7 +641,7 @@ describe("GarmentForm: no product link for v1 (round 22, item 17)", () => {
   });
 });
 
-describe("GarmentForm: a lapsed session (Au7, D-151)", () => {
+describe("GarmentForm: a lapsed session (Au7, D-155)", () => {
   it("carries garment to log-in", () => {
     carriedSince();
     renderForm();

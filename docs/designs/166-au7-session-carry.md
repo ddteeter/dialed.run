@@ -33,7 +33,7 @@ come back.
   terms refusal. A form without `carry`, or with no provider above it (a
   test), keeps the band.
 
-- **Every signed-in form passes `carry`** (D-151): run forms `run`,
+- **Every signed-in form passes `carry`** (D-155): run forms `run`,
   the garment form `garment`, settings forms `settings`, and every other
   signed-in form `page`, which the notice says as "back where you were".
   `HandleForm` takes the noun as a prop, because it is both O0 (`page`)
@@ -65,12 +65,12 @@ come back.
   root answer to log-in; every other form's test reads the noun it hands
   `useFormSubmit` (`test/ui/carry-spy.ts`), and the signed-out forms'
   read none.
-- e2e: Au7's conformance spec allows the one sentence D-151 changes; the
+- e2e: Au7's conformance spec allows the one sentence D-155 changes; the
   auth demo records a lapse mid-form, log-in, and the return.
 
 ## Open questions
 
-Both answered by the owner, 2026-10-31 (D-151):
+Both answered by the owner, 2026-10-31 (D-155):
 
 1. **Restore the form, or change the notice?** Change the notice, the
    D-96 / D-102 shape: carry the route and the email, and say "What you

@@ -100,7 +100,7 @@ async function drawn(
 }
 
 /**
-Au7's sentence as the board draws it, and as D-151 has it built.
+Au7's sentence as the board draws it, and as D-155 has it built.
 */
 const BOARD_NOTICE =
   "Log in and you're back on your run. What you entered is kept.";
@@ -311,7 +311,7 @@ test.describe("Au · phone", () => {
     expect(page.url()).not.toContain("email");
 
     expect(await partsIn(page, PANEL)).toEqual(board.order);
-    // D-151: the form is not restored, so the notice's second sentence is
+    // D-155: the form is not restored, so the notice's second sentence is
     // the owner's, not the board's "What you entered is kept." (design
     // deltas). Every other word is the board's.
     // `wordsOf` folds case (`signatureOf` upper-cases every run), so the

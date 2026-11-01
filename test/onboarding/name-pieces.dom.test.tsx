@@ -434,7 +434,7 @@ describe("NamePieces", () => {
   });
 });
 
-describe("NamePieces: a lapsed session (Au7, D-151)", () => {
+describe("NamePieces: a lapsed session (Au7, D-155)", () => {
   it("carries page to log-in", async () => {
     carriedSince();
     renderScreen();

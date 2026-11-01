@@ -733,13 +733,13 @@ describe("Au7 · signed out arrival", () => {
       "settings",
       "Log in and you're back on your settings. What you typed wasn't kept.",
     ],
-    // Every other signed-in form (D-151): no noun invented per form.
+    // Every other signed-in form (D-155): no noun invented per form.
     [
       "page",
       "Log in and you're back where you were. What you typed wasn't kept.",
     ],
   ] as const)(
-    "says where Log in returns for %s, and that nothing typed was kept (D-151)",
+    "says where Log in returns for %s, and that nothing typed was kept (D-155)",
     async (carried, sentence) => {
       await logIn({ carried });
       expect(part("session-notice")?.lastElementChild?.textContent).toBe(
@@ -1103,7 +1103,7 @@ describe("CredentialFields (round 26 #7, #18)", () => {
   });
 });
 
-describe("Au1 and Au2, signed-out forms: a lapsed session (Au7, D-151)", () => {
+describe("Au1 and Au2, signed-out forms: a lapsed session (Au7, D-155)", () => {
   it("carries nothing to log-in", async () => {
     carriedSince();
     await logIn();

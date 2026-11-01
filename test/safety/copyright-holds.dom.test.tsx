@@ -438,7 +438,7 @@ describe("CopyrightHolds", () => {
   });
 });
 
-describe("CopyrightHolds: a lapsed session (Au7, D-151)", () => {
+describe("CopyrightHolds: a lapsed session (Au7, D-155)", () => {
   it("carries page to log-in", () => {
     carriedSince();
     renderHolds(held());

@@ -1132,7 +1132,7 @@ describe("D7's labels", () => {
   });
 });
 
-describe("access pages: a lapsed session (Au7, D-151)", () => {
+describe("access pages: a lapsed session (Au7, D-155)", () => {
   it("carries D7 to log-in as the page", () => {
     carriedSince();
     desk();

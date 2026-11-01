@@ -114,7 +114,7 @@ describe("SetConditionsSheet: the picks", () => {
   });
 });
 
-describe("SetConditionsSheet: a lapsed session (Au7, D-151)", () => {
+describe("SetConditionsSheet: a lapsed session (Au7, D-155)", () => {
   it("carries run to log-in", async () => {
     carriedSince();
     render(sheet());

@@ -99,7 +99,8 @@ describe("Next", () => {
     await user.type(field(), "maya_runs");
     await user.click(next());
     await waitFor(() => {
-      expect(onClaimed).toHaveBeenCalledOnce();
+      // Handed the handle now held: Privacy's switch names it (round 42 #92).
+      expect(onClaimed).toHaveBeenCalledExactlyOnceWith("maya_runs");
     });
     expect(claim).toHaveBeenCalledWith({ data: { username: "maya_runs" } });
     expect(screen.getByRole("status")).toHaveTextContent("Handle saved.");
@@ -337,7 +338,7 @@ describe("O0's re-pick after a moderator's rename (ACC-12; round 27 #16)", () =>
   });
 });
 
-describe("the handle form: a lapsed session (Au7, D-151)", () => {
+describe("the handle form: a lapsed session (Au7, D-155)", () => {
   it("carries O0, first pick and re-pick, as the page", () => {
     carriedSince();
     renderRepick();

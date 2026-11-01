@@ -2,12 +2,15 @@ import type { JSX, ReactNode } from "react";
 import { useState } from "react";
 
 import {
-  audienceOfShareToggle,
   entryTags,
-  isSharedAudience,
   verdictScale,
+  writableAudienceOf,
 } from "../../../lib/contracts";
-import type { Units, VerdictValue } from "../../../lib/contracts";
+import type {
+  Units,
+  VerdictValue,
+  WritableAudience,
+} from "../../../lib/contracts";
 import { clockLabel, dayLabel } from "../../../lib/dates";
 import {
   distanceNumber,
@@ -19,6 +22,9 @@ import {
   precipClassOf,
 } from "../../../lib/contracts/temperature";
 import {
+  AUDIENCE_HINTS,
+  AUDIENCE_LABELS,
+  ChoiceList,
   DeskSplit,
   FieldMessage,
   FlowStep,
@@ -27,12 +33,15 @@ import {
   FormStatus,
   LOG_FLOW,
   Mono,
+  PICKED_AUDIENCES,
+  PUBLIC_PREVIEW_LINE,
   SubmitButton,
   useFormSubmit,
   RailCard,
   verdictHue,
   WeatherAttribution,
 } from "../../../ui";
+import type { FieldProps } from "../../../ui";
 
 /**
  * `relative` and a horizontal gutter, because the brackets frame the cell.
@@ -136,7 +145,7 @@ const LABELS = {
   verdict: "Did it work?",
   tags: "Tags",
   itemFlags: "Per-item notes",
-  audience: "Sharing",
+  audience: "Who sees this run",
 };
 
 /**
@@ -269,7 +278,9 @@ export function VerdictForm({
 }>) {
   const [verdict, setVerdict] = useState<number | undefined>(entry.verdict);
   const [tags, setTags] = useState<Set<string>>(new Set(entry.tags));
-  const [isShared, setIsShared] = useState(isSharedAudience(entry.audience));
+  const [audience, setAudience] = useState<WritableAudience>(
+    writableAudienceOf(entry.audience),
+  );
   // Seeded from the entry, not from nothing.
   //
   // `entry.items[].flag` is what was saved last time, and starting empty
@@ -349,7 +360,7 @@ export function VerdictForm({
     return {
       entryId,
       verdict,
-      audience: audienceOfShareToggle(isShared),
+      audience,
       tags: [...tags] as (typeof entryTags)[number][],
       itemFlags: entry.items.map((item) => {
         // `=== "none"` alone: an item with no entry reads as undefined,
@@ -545,15 +556,10 @@ export function VerdictForm({
             <NotedReceipt sentence={noted.sentence} />
           ) : (
             <>
-              {/* A3's share-toggle as round 19 draws it: "Share to feed", with
-              what sharing means on the line beneath. The line is outside the
-              label and linked with `aria-describedby`, so the checkbox's
-              accessible name stays the three words and the sentence is read
-              as its description. It was "Share this — the verdict label
-              shows on the post", one line inside the label. */}
-              <ShareToggle
-                isShared={isShared}
-                onChange={setIsShared}
+              <AudiencePicker
+                audience={audience}
+                onChange={setAudience}
+                field={form.field}
                 privateLine={privateLine}
               />
 
@@ -603,38 +609,52 @@ function chipHistory(
 }
 
 /**
- * A3's "Share to feed" switch, and the line beneath it: what sharing
- * means when it is on, the route's `privateLine` when it is off.
+ * Who sees this run (round 41 #86a): A3's share switch became a three-row
+ * radiogroup, PRIVATE / SHARED / PUBLIC, each with what it means under its
+ * label. Under the group, the line for the audience picked: the route's
+ * `privateLine` for PRIVATE, and for PUBLIC what a link preview keeps.
+ * SHARED's own sub-line says all it needs.
+ *
+ * The line is outside the labels and is each radio's description while
+ * it shows, so a radio's name stays its label and meaning. The runner's
+ * default is what the entry started with, and PUBLIC is never picked for
+ * them. An unconfirmed runner may pick any; the save holds the run at
+ * PRIVATE (D-50), as `privateLine` says.
  */
-function ShareToggle({
-  isShared,
+function AudiencePicker({
+  audience,
   onChange,
+  field,
   privateLine,
 }: Readonly<{
-  isShared: boolean;
-  onChange: (isShared: boolean) => void;
+  audience: WritableAudience;
+  onChange: (audience: WritableAudience) => void;
+  field: (name: string) => FieldProps;
   privateLine: (hintId: string) => ReactNode;
 }>): JSX.Element {
+  // SHARED's own sub-line says all it needs; the other two have a line.
+  const hasLine = audience !== "runners";
   return (
-    <div className="flex flex-col gap-1">
-      <label className="target flex items-center gap-2 text-body">
-        <input
-          type="checkbox"
-          checked={isShared}
-          aria-describedby={SHARE_HINT_ID}
-          onChange={(event) => {
-            onChange(event.target.checked);
-          }}
-        />
-        Share to feed
-      </label>
-      {isShared ? (
+    <div className="flex flex-col gap-2">
+      <ChoiceList
+        name="audience"
+        legend={LABELS.audience}
+        options={PICKED_AUDIENCES}
+        optionLabels={AUDIENCE_LABELS}
+        optionHints={AUDIENCE_HINTS}
+        value={audience}
+        field={(name) => ({
+          ...field(name),
+          "aria-describedby": hasLine ? SHARE_HINT_ID : undefined,
+        })}
+        onChange={onChange}
+      />
+      {audience === "private" ? privateLine(SHARE_HINT_ID) : undefined}
+      {audience === "world" ? (
         <span id={SHARE_HINT_ID} className="text-small text-muted">
-          Shared runs show your kit, conditions, and your verdict.
+          {PUBLIC_PREVIEW_LINE}
         </span>
-      ) : (
-        privateLine(SHARE_HINT_ID)
-      )}
+      ) : undefined}
     </div>
   );
 }

@@ -70,12 +70,12 @@ export function HandleForm({
   pendingLabel: string;
   successMessage: string;
   /**
-   * Where the form goes next. A prop, because the contract is
-   * announce-then-move.
+   * Where the form goes next, handed the handle now held. A prop, because
+   * the contract is announce-then-move.
    */
-  onClaimed?: (() => void) | undefined;
+  onClaimed?: ((username: string) => void) | undefined;
   /**
-   * Au7's noun, should the session lapse (D-151): Settings › Username is
+   * Au7's noun, should the session lapse (D-155): Settings › Username is
    * a settings form, O0 is not one of the three and carries the page.
    */
   carry: CarriedForm;
@@ -93,6 +93,7 @@ export function HandleForm({
       if (result.kind === "taken") {
         throw new HandleTaken(takenMessage(result.username, result.suggestion));
       }
+      return result.username;
     },
     successMessage,
     onSuccess,
