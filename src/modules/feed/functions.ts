@@ -142,7 +142,7 @@ export const itemBandWearStatQuery = createServerFn({ method: "GET" })
     return itemBandWearStat(userId, data.itemId, data.bandFloorC);
   });
 
-export const verdictPromptQuery = createServerFn({ method: "GET" })
+export const shouldPromptForVerdictQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => entryIdInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
@@ -220,7 +220,7 @@ export const unfollowAction = createServerFn({ method: "POST" })
     await unfollow(userId, data.userId);
   });
 
-export const followStatusQuery = createServerFn({ method: "GET" })
+export const isFollowingQuery = createServerFn({ method: "GET" })
   .validator((input: unknown) => userIdInput.parse(input))
   .handler(async ({ data }) => {
     const userId = await requireUserId();

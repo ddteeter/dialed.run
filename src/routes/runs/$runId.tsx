@@ -10,8 +10,8 @@ import { RunDetail } from "../../modules/runs/components/RunDetail";
 import {
   deleteRunFn,
   getRunSummaryFn,
-  retryRunWeatherFn,
-  setRunConditionsFn,
+  didRetryRunWeatherFn,
+  didSetRunConditionsFn,
 } from "../../modules/runs/functions";
 import { beforeItsEntry, runOrNotFound } from "../../modules/runs/not-found";
 import { Page } from "../../ui";
@@ -47,8 +47,8 @@ function RunDetailPage() {
           run={run}
           units={units}
           actions={{
-            setConditions: setRunConditionsFn,
-            retryWeather: retryRunWeatherFn,
+            setConditions: didSetRunConditionsFn,
+            retryWeather: didRetryRunWeatherFn,
           }}
         />
         <DeleteRun

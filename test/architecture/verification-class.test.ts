@@ -96,9 +96,7 @@ function routeHandlers(): { name: string; body: string }[] {
       const handlers = code.slice(code.indexOf("handlers:"));
       return handlers.split(HANDLER_START).flatMap((body) => {
         const method = HANDLER_METHOD.exec(body)?.[1];
-        return method === undefined
-          ? []
-          : [{ name: `${file} ${method}`, body }];
+        return method === undefined ? [] : { name: `${file} ${method}`, body };
       });
     });
 }
@@ -181,7 +179,7 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "feed/functions.ts verdictBandCountsQuery": "unconfirmed",
   "feed/functions.ts bandSignalsQuery": "unconfirmed",
   "feed/functions.ts itemBandWearStatQuery": "unconfirmed",
-  "feed/functions.ts verdictPromptQuery": "unconfirmed",
+  "feed/functions.ts shouldPromptForVerdictQuery": "unconfirmed",
   "feed/functions.ts recordVerdictPromptedAction": "unconfirmed",
   "feed/functions.ts entryDetailQuery": "unconfirmed",
   // A count and a notification another runner sees.
@@ -189,7 +187,7 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // Q3: a follower count others see; unfollow only removes.
   "feed/functions.ts followAction": "verified",
   "feed/functions.ts unfollowAction": "unconfirmed",
-  "feed/functions.ts followStatusQuery": "unconfirmed",
+  "feed/functions.ts isFollowingQuery": "unconfirmed",
   "feed/functions.ts followingFeedQuery": "unconfirmed",
   "feed/functions.ts yourConditionsQuery": "unconfirmed",
   // The runner's own saved place, and E1's compact line from it (FEED-9):
@@ -238,7 +236,7 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // runner may opt out (owner, 2026-10-11).
   "onboarding/functions.ts setCountInTotalsFn": "unconfirmed",
   "onboarding/functions.ts lookUpCityFn": "unconfirmed",
-  "onboarding/functions.ts onboardingGateQuery": "sessionless",
+  "onboarding/functions.ts requiresOnboardingQuery": "sessionless",
   "onboarding/functions.ts namingOfferQuery": "unconfirmed",
   // Q1: closet's clamp, as createItemFn.
   "onboarding/functions.ts nameGarmentFn": "unconfirmed",
@@ -258,14 +256,14 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "runs/functions.ts submitManualRun": "unconfirmed",
   "runs/functions.ts startFileImport": "unconfirmed",
   // Plan 160: the owner's own runs, private to them until they share one.
-  "runs/functions.ts garminImportEnabledFn": "unconfirmed",
+  "runs/functions.ts isGarminImportEnabledFn": "unconfirmed",
   "runs/functions.ts getGarminPickerFn": "unconfirmed",
   "runs/functions.ts importGarminActivityFn": "unconfirmed",
   "runs/functions.ts getImportOutcomeFn": "unconfirmed",
   "runs/functions.ts getRunSummaryFn": "unconfirmed",
   "runs/functions.ts listRunSummariesFn": "unconfirmed",
-  "runs/functions.ts setRunConditionsFn": "unconfirmed",
-  "runs/functions.ts retryRunWeatherFn": "unconfirmed",
+  "runs/functions.ts didSetRunConditionsFn": "unconfirmed",
+  "runs/functions.ts didRetryRunWeatherFn": "unconfirmed",
   "runs/functions.ts retimeRunFn": "unconfirmed",
   "runs/functions.ts getStravaStatusFn": "unconfirmed",
   "runs/functions.ts completeStravaConnectFn": "unconfirmed",

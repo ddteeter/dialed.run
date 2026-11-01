@@ -163,9 +163,9 @@ export const lookUpCityFn = createServerFn({ method: "POST" })
     }),
   );
 
-export const onboardingGateQuery = createServerFn({ method: "GET" }).handler(
-  async () => requiresOnboarding(db(), await optionalUserId()),
-);
+export const requiresOnboardingQuery = createServerFn({
+  method: "GET",
+}).handler(async () => requiresOnboarding(db(), await optionalUserId()));
 
 export const namingOfferQuery = createServerFn({ method: "GET" }).handler(
   async () => namingOffer(db(), await requireUserId()),
