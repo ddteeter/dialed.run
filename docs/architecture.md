@@ -368,6 +368,14 @@ Manual entry is a plain server function: parse `RunDraft`, insert as
 failure — the provider, or the Worker dying first — leaves the run
 `pending` for the hourly retry (law 5, law 8c).
 
+Either way, only **finished hours** are fetched (D-156): an hour is asked
+for once it has settled, two hours after it ends, because the observation
+cache is shared by everyone in the cell and never refreshed. The attach
+takes the settled hours and leaves the run `pending` for the rest, which
+the hourly `weather-retry` cron fills as they settle. The cron's five-hour
+give-up window opens when the run's last sampled hour settles, not when
+the run started.
+
 ## Product enrichment pipeline (lane 107)
 
 Pasted product URL → server function validates https + resolves/creates the

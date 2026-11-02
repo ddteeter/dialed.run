@@ -1,6 +1,8 @@
 import { drizzle, type DrizzleD1Database } from "drizzle-orm/d1";
 import { getPlatformProxy } from "wrangler";
 
+import { LockRetryingDatabase } from "./busy-retry";
+
 /**
  * Handles onto the same local D1 databases the dev server reads. Verified
  * bidirectional: rows written here are visible to `wrangler d1 execute
@@ -22,6 +24,10 @@ export interface LocalDatabases {
  * opens the bindings from `wrangler.jsonc` directly, so nothing test-only
  * is added to the deployed Worker.
  *
+ * Every statement retries, briefly, while the server under test holds the
+ * database's lock: the two processes share one SQLite file, and this is the
+ * one place every seed and read passes through (`./busy-retry`).
+ *
  * Always dispose: a leaked proxy keeps the process alive and Playwright
  * hangs after the last test.
  */
@@ -31,8 +37,8 @@ export async function withLocalDb<T>(
   const { env, dispose } = await getPlatformProxy<Env>();
   try {
     return await fn({
-      core: drizzle(env.DIALED_CORE),
-      weather: drizzle(env.DIALED_WEATHER),
+      core: drizzle(new LockRetryingDatabase(env.DIALED_CORE)),
+      weather: drizzle(new LockRetryingDatabase(env.DIALED_WEATHER)),
     });
   } finally {
     await dispose();

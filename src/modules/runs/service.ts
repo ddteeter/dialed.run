@@ -526,10 +526,20 @@ export async function didSetRunConditions(
 export type RetimeOutcome = "moved" | "no-weather" | "refused";
 
 /**
- * Settled: the weather for the run's start is in (or set by the runner).
+ * Whether a correction keeps its new start: the weather for it is in (or
+ * set by the runner), or it is owed rather than refused — `awaiting-hours`,
+ * an hour too recent to fetch yet (D-156), which the hourly cron fills
+ * once it settles. Undoing that move would refuse every correction to a
+ * run that just ended, and say the weather failed when nothing was asked.
  */
-function isSettled(outcome: string): boolean {
-  return outcome === "attached" || outcome === "manual";
+const MOVE_KEEPING_OUTCOMES: ReadonlySet<string> = new Set([
+  "attached",
+  "manual",
+  "awaiting-hours",
+]);
+
+function isMoveKept(outcome: string): boolean {
+  return MOVE_KEEPING_OUTCOMES.has(outcome);
 }
 
 /**
@@ -546,7 +556,9 @@ function isSettled(outcome: string): boolean {
  * cache, so the old conditions come back with them — and the answer says
  * so, for the runner to try again. The revert only applies while the run
  * is still at the new start and unsettled, so it never undoes a retry of
- * the same correction that got its weather in the meantime.
+ * the same correction that got its weather in the meantime. An hour too
+ * recent to fetch is not weather we lack but weather not yet asked for
+ * (D-156): the move stands and the run stays `pending` for the cron.
  *
  * The revert is a second write, and the two cannot be one batch: the
  * attach between them is another database (law 8c). If the worker dies in
@@ -587,7 +599,7 @@ export async function retimeRun(
     .update(runs)
     .set({ startedAt, weatherStatus: "pending" })
     .where(eq(runs.id, runId));
-  if (isSettled(await weather.attach(ulidSchema.parse(runId)))) {
+  if (isMoveKept(await weather.attach(ulidSchema.parse(runId)))) {
     return "moved";
   }
   // Put it back, unless a retry settled it meanwhile. For a call that did
