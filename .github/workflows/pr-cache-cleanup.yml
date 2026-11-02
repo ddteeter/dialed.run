@@ -1,0 +1,38 @@
+name: Clear a closed PR's caches
+
+# A PR's caches are saved under its merge ref (refs/pull/<n>/merge), and only
+# that PR can restore them. Every PR head saves one stryker report per
+# Mutation shard (mutation.yml), so a PR that is pushed several times leaves
+# dozens, and none of them is read again once it closes. On 2026-11-02 the
+# repository held about 1,900 such caches and 10.6 GB in total, over
+# GitHub's 10 GB limit. Over the limit, GitHub evicts the least recently used
+# caches, and those can include the `main` caches every new PR starts from.
+#
+# - It runs on `pull_request`, not `pull_request_target`. It checks nothing
+#   out and runs no repository code, so the only thing it trusts is the PR
+#   number.
+# - `actions: write` is the only permission. Dependabot PRs get a read-only
+#   token unless the workflow asks for more, and this one does.
+# - A Mutation shard still running when the PR closes can save a report
+#   after this has run. That is one stray cache per such shard, and GitHub's
+#   7-day expiry removes it.
+on:
+  pull_request:
+    types: [closed]
+
+permissions: {}
+
+jobs:
+  clear:
+    name: Clear the PR's caches
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Delete every cache saved under the PR's merge ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          REF: refs/pull/${{ github.event.pull_request.number }}/merge
+        run: gh cache delete --all --ref "$REF" --succeed-on-no-caches
