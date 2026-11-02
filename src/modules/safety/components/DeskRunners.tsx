@@ -193,6 +193,7 @@ function RenamePanel({
   const [reason, setReason] = useState<RenameReason | undefined>();
   const [said, setSaid] = useState<RenameOutcome | undefined>();
   const form = useFormSubmit({
+    carry: "page",
     schema: forceRenameInput,
     action: (values) => rename({ data: values }),
     onSuccess: (outcome) => {
@@ -242,6 +243,7 @@ function CloseAccountPanel({
   const [reason, setReason] = useState("");
   const [rule, setRule] = useState<ClosureRule | undefined>();
   const form = useFormSubmit({
+    carry: "page",
     schema: banUserInput,
     action: (values) => ban({ data: values }),
     onSuccess: onDone,

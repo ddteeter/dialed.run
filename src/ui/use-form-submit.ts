@@ -7,7 +7,10 @@ import {
   isUnconfirmedRefusal,
 } from "../lib/auth-signal";
 import type { ConfirmTrigger } from "../lib/auth-signal";
+import type { CarriedForm } from "../lib/carried-form";
 import { DURATION } from "./motion";
+import { useSessionLapse } from "./session-lapse";
+import type { AnswerSessionLapse } from "./session-lapse";
 import { useTermsRefusal } from "./terms-refusal";
 import type { AnswerTermsRefusal } from "./terms-refusal";
 import { useUnconfirmedRefusal } from "./unconfirmed-refusal";
@@ -184,6 +187,10 @@ export function didAnswerRefusal(
   answers: Readonly<{
     terms: AnswerTermsRefusal | undefined;
     unconfirmed: ((trigger: ConfirmTrigger | undefined) => void) | undefined;
+    /**
+    A carrying form's lapsed session (Au7); a control never carries.
+    */
+    session?: (() => void) | undefined;
   }>,
   trigger: ConfirmTrigger | undefined,
   isSave: boolean,
@@ -196,7 +203,26 @@ export function didAnswerRefusal(
     answers.unconfirmed(trigger);
     return true;
   }
+  if (kind === "session" && answers.session !== undefined) {
+    answers.session();
+    return true;
+  }
   return false;
+}
+
+/**
+ * A form's answer to its lapsed session: the root's, under the form's own
+ * noun — or none, when the form carries nothing or no root answers, and
+ * the lapse is the band.
+ */
+function carryAway(
+  answer: AnswerSessionLapse | undefined,
+  carry: CarriedForm | undefined,
+): (() => void) | undefined {
+  if (answer === undefined || carry === undefined) return undefined;
+  return () => {
+    answer(carry);
+  };
 }
 
 /**
@@ -255,6 +281,13 @@ export interface UseFormSubmitOptions<TSchema extends z.ZodType, TResult> {
    * given; without it the sheet shows the address alone.
    */
   confirmTrigger?: ConfirmTrigger | undefined;
+  /**
+   * The noun Au7's notice names this form by, should its save be refused
+   * because the session lapsed: the root then sends the runner to log-in
+   * (`ui/session-lapse`) instead of showing the band. Without it, the
+   * lapse is the band.
+   */
+  carry?: CarriedForm | undefined;
 }
 
 /**
@@ -299,9 +332,7 @@ function useFieldErrors(isPending: boolean) {
       readOnly: isPending,
       "aria-invalid": fieldErrors[name] === undefined ? undefined : true,
       "aria-describedby":
-        fieldErrors[name] === undefined
-          ? undefined
-          : messageIdFor(id ?? name),
+        fieldErrors[name] === undefined ? undefined : messageIdFor(id ?? name),
       onInput: () => {
         clearField(name);
       },
@@ -320,6 +351,7 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
   labels,
   refusal,
   confirmTrigger,
+  carry,
 }: UseFormSubmitOptions<TSchema, TResult>) {
   const [pending, setPending] = useState(false);
   const { fieldErrors, setFieldErrors, field } = useFieldErrors(pending);
@@ -332,6 +364,7 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
   const lastValues = useRef<unknown>(undefined);
   const { terms: answerTermsRefusal, unconfirmed: answerUnconfirmed } =
     useRefusalAnswers();
+  const answerLapse = useSessionLapse();
 
   // Two equivalent mutants in here. `formRef.current` is null only before
   // the form has mounted, and nothing can call `focusField` until it has —
@@ -435,10 +468,12 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
           // A stale tab behind on the terms (D-96), or an address not
           // confirmed yet (D-113): the root's answer, with nothing
           // announced and no band. The form stays as it was, ready to send
-          // again. A form's refused call is always a save (D-102).
+          // again. A form's refused call is always a save (D-102). A
+          // carrying form's lapsed session goes to log-in (Au7).
           const answers = {
             terms: answerTermsRefusal,
             unconfirmed: answerUnconfirmed,
+            session: carryAway(answerLapse, carry),
           };
           if (
             didAnswerRefusal(classified.kind, answers, confirmTrigger, true)
@@ -471,6 +506,8 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
       answerTermsRefusal,
       answerUnconfirmed,
       confirmTrigger,
+      answerLapse,
+      carry,
     ],
   );
 

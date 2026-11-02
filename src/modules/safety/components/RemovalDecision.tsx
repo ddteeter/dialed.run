@@ -163,6 +163,7 @@ export function RemovalDecision<TSchema extends z.ZodType, TResult>(
   const [refusedLine, setRefusedLine] = useState<string | undefined>();
   const { reasonless, refused } = props;
   const form = useFormSubmit({
+    carry: "page",
     schema: props.schema,
     action: props.act,
     onSuccess: props.onSettled,

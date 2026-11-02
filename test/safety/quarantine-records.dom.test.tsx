@@ -5,6 +5,12 @@ import { z } from "zod";
 
 import { QuarantineRecords } from "../../src/modules/safety/components/QuarantineRecords";
 import type { QuarantineSummary } from "../../src/modules/safety/quarantine";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 /**
  * C12: Review's quarantine, and recording a record's NCMEC report, which
@@ -210,5 +216,14 @@ describe("QuarantineRecords", () => {
     render(<QuarantineRecords records={[]} recordReport={vi.fn()} />);
     expect(part("quarantine-record")).toBeNull();
     expect(screen.queryByRole("heading")).toBeNull();
+  });
+});
+
+describe("QuarantineRecords: a lapsed session (Au7, D-155)", () => {
+  it("carries page to log-in", () => {
+    carriedSince();
+    render(<QuarantineRecords records={[held()]} recordReport={vi.fn()} />);
+
+    expect(carriedSince()).toEqual(["page"]);
   });
 });

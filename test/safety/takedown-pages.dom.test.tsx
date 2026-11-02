@@ -26,6 +26,12 @@ import type {
   TakedownRequestResult,
 } from "../../src/modules/safety/takedown-requests";
 import type { TurnstileApi } from "../../src/ui/Turnstile";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 /**
  * `/takedown` and Review's removal requests (design 136, D-117), with
@@ -794,5 +800,33 @@ describe("Review · removal requests", () => {
     );
     expect(part("removal-request")).toBeNull();
     expect(screen.queryByText(/Removal requests/u)).toBeNull();
+  });
+});
+
+describe("takedown pages: a lapsed session (Au7, D-155)", () => {
+  it("carries every form on a request, Decline's too, as the page", async () => {
+    carriedSince();
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    // Decline's form is asked for only once Decline is pressed.
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Decline" }));
+
+    expect(carriedSince()).toEqual(["page"]);
+  });
+
+  it("leaves /takedown, open to anyone, carrying nothing", async () => {
+    carriedSince();
+    await renderWithRouter(
+      <TakedownRequest siteKey={undefined} request={vi.fn<RequestFn>()} />,
+    );
+
+    expect(carriedSince()).toEqual([undefined]);
   });
 });
