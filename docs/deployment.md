@@ -424,6 +424,23 @@ needs its own Strava app, not a second subscription.
   new-issue alert covers them, at most once per cron per day. They need no
   rule of their own, and they must not match the daily rule, which fires
   on every event.
+- **A Sentry issue-frequency rule**: an issue alert on "the issue is seen
+  more than 20 times in one hour". The default rule fires once, when an
+  issue is new. Without this rule, a storm of an error Sentry already knows
+  about pages nobody.
+- **A Cloudflare monitor for what Sentry cannot see** (R-170). Sentry hears
+  only from code that is still running. It hears nothing when the platform
+  kills a Worker for CPU or memory, and nothing when the app returns a 5xx
+  on purpose. Cloudflare's HTTP error-rate alert is Enterprise-only, but
+  custom monitors (Alerts → Monitors, in beta on 2026-10-31) are on our
+  plan. Create a **Threshold** monitor on the Workers events dataset for
+  the `dialed` Worker: count invocations whose outcome is not `ok`
+  (`exception`, `exceededCpu`, `exceededMemory`) or whose response status
+  is 500 or above, and fire when there are more than 10 in 5 minutes. Send
+  it to the same place as the Sentry alerts. The field names come from
+  Cloudflare's docs and are unverified; confirm them in the dataset's
+  field picker, and record here anything that differs. Start with the
+  threshold at 10 and tune it once real traffic shows the baseline.
 - **Every alert rule filters `environment:production`.** Each event and
   check-in is tagged `production` only when `BETTER_AUTH_URL` is the
   production origin, and `development` otherwise, so a local or CI run

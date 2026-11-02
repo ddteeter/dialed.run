@@ -113,8 +113,31 @@ export function requestUrl(input: RequestInfo | URL): URL {
  * put at the end of the path.
  */
 function answerFor(input: RequestInfo | URL): Response {
-  const epoch = Number(requestUrl(input).pathname.split("/").at(-1));
-  return Response.json(visualCrossingCurrentBody(nearestHour(epoch)));
+  const hour = nearestHour(requestedEpoch(input));
+  return Response.json(visualCrossingCurrentBody(hour));
+}
+
+/**
+ * The epoch seconds a request asked for, from the end of its path.
+ */
+function requestedEpoch(input: RequestInfo | URL): number {
+  return Number(requestUrl(input).pathname.split("/").at(-1));
+}
+
+/**
+ * The epoch seconds each call to a fetch spy asked for, in call order.
+ */
+export function askedEpochs(fetchSpy: {
+  mock: { calls: readonly (readonly [RequestInfo | URL, ...unknown[]])[] };
+}): number[] {
+  return fetchSpy.mock.calls.map(([input]) => requestedEpoch(input));
+}
+
+/**
+ * Pins the clock every `nowSeconds()` reads, at whole seconds.
+ */
+export function pinNow(seconds: number): void {
+  vi.spyOn(Date, "now").mockReturnValue(seconds * 1000);
 }
 
 /**

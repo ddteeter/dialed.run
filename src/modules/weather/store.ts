@@ -221,18 +221,40 @@ export function toWeatherObservation(row: ObservationRow): WeatherObservation {
  */
 const MAX_SAMPLED_HOURS = 6;
 
+function sampledHourCount(startedAt: number, durationS: number): number {
+  const spanned =
+    Math.floor((startedAt + Math.max(durationS, 0)) / 3600) -
+    Math.floor(startedAt / 3600);
+  return Math.min(spanned + 1, MAX_SAMPLED_HOURS);
+}
+
 export function runHourKeys(
   lat: number,
   lng: number,
   startedAt: number,
   durationS: number,
 ): CacheKey[] {
-  const spanned =
-    Math.floor((startedAt + Math.max(durationS, 0)) / 3600) -
-    Math.floor(startedAt / 3600);
-  const hours = Math.min(spanned + 1, MAX_SAMPLED_HOURS);
-  return Array.from({ length: hours }, (_unused, index) =>
-    cacheKeyFor(lat, lng, new Date((startedAt + index * 3600) * 1000)),
+  return Array.from(
+    { length: sampledHourCount(startedAt, durationS) },
+    (_unused, index) =>
+      cacheKeyFor(lat, lng, new Date((startedAt + index * 3600) * 1000)),
+  );
+}
+
+/**
+ * The hour bucket of the last hour `runHourKeys` walks for a run — the
+ * same walk and the same cap, without needing the run's place. The retry
+ * cron reads it to know when a run's last hour settles (D-156), and a
+ * run with no coordinates still has one.
+ */
+export function lastSampledHourBucket(
+  startedAt: number,
+  durationS: number,
+): number {
+  return (
+    hourBucketFor(new Date(startedAt * 1000)) +
+    sampledHourCount(startedAt, durationS) -
+    1
   );
 }
 
