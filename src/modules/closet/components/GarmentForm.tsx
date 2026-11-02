@@ -539,6 +539,7 @@ export function GarmentForm({
   const { refused } = well;
 
   const form = useFormSubmit({
+    carry: "garment",
     schema: garmentFormSchema,
     action: save,
     successMessage,

@@ -76,6 +76,7 @@ export function NameRowForm({
   const [model, setModel] = useState("");
 
   const form = useFormSubmit({
+    carry: "page",
     schema: nameIdentityInput,
     action: (values) => nameGarment({ data: { itemId, ...values } }),
     onSuccess: onNamed,

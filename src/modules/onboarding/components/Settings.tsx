@@ -341,6 +341,7 @@ function SectionForm<TSchema extends z.ZodType>({
 }>): JSX.Element {
   const [value, setValue] = useState(initial);
   const form = useFormSubmit({
+    carry: "settings",
     schema,
     action: (values) => save({ data: values }),
     successMessage,

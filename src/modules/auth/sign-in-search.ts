@@ -1,6 +1,8 @@
 import { redirect } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { carriedFormSchema } from "../../lib/carried-form";
+import type { CarriedForm } from "../../lib/carried-form";
 import { landingAfterSignIn, returnPathSchema } from "../../lib/return-path";
 
 /**
@@ -19,13 +21,6 @@ import { landingAfterSignIn, returnPathSchema } from "../../lib/return-path";
  * error**: someone who edits the URL gets the ordinary log-in page, not a
  * failure screen for a form they have not touched.
  */
-
-/**
- * Which form was carried, in the notice's own nouns: *"'Your run' names
- * the carried form: 'your garment', 'your settings' for the others."*
- */
-const carriedFormSchema = z.enum(["run", "garment", "settings"]);
-export type CarriedForm = z.infer<typeof carriedFormSchema>;
 
 /**
  * What Better Auth appends to the error callback when Google's round trip
@@ -95,9 +90,9 @@ export function onToSignUp(search: { code?: string | undefined }): void {
 /**
 `/join`'s search: the code, and nothing else.
 */
-export function joinSearch(
-  search: Readonly<Record<string, unknown>>,
-): { code?: string | undefined } {
+export function joinSearch(search: Readonly<Record<string, unknown>>): {
+  code?: string | undefined;
+} {
   return { code: kept(inviteSearchSchema, search.code) };
 }
 

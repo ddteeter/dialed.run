@@ -5,6 +5,12 @@ import { describe, expect, it, vi } from "vitest";
 import type { TapListSelection } from "../../src/lib/contracts";
 import type { TapListEntry } from "../../src/modules/closet";
 import { TapListForm } from "../../src/modules/onboarding/components/TapListForm";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 /**
  * Screen O3, against design round 6 §AA's six rules.
@@ -377,5 +383,14 @@ describe("TapListForm", () => {
 
     await user.click(screen.getByRole("button", { name: "Try again" }));
     expect(save).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("TapListForm: a lapsed session (Au7, D-155)", () => {
+  it("carries page to log-in", () => {
+    carriedSince();
+    renderForm();
+
+    expect(carriedSince()).toEqual(["page"]);
   });
 });

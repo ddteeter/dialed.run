@@ -20,6 +20,7 @@
 import { readFile } from "node:fs/promises";
 
 import { and, eq, inArray } from "drizzle-orm";
+import { ulid } from "ulidx";
 import { z } from "zod";
 
 import { user } from "../../src/db/schema-auth";
@@ -67,6 +68,7 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   const sharedRunId = newUlid();
   const sharedEntryId = newUlid();
   const garmentId = newUlid();
+  const stuckGarmentId = newUlid();
 
   // One runner with one reported public entry. Scoped to ids generated
   // here — never a bare delete of these tables.
@@ -119,7 +121,11 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
       .where(
         and(
           eq(notifications.userId, authorId),
-          inArray(notifications.kind, ["content_hidden", "report_removed"]),
+          inArray(notifications.kind, [
+            "content_hidden",
+            "report_removed",
+            "photo_missing",
+          ]),
         ),
       );
     // Its report, by the safety account, which is told the outcome (C8).
@@ -172,6 +178,27 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
       source: "classifier",
       status: "pending",
       createdAt: now - 1200,
+    });
+    // A garment photo still pending a day after upload whose file is not
+    // in storage (D-157, design 167): what the screening sweep sends.
+    await core.insert(wardrobeItems).values({
+      id: stuckGarmentId,
+      userId: authorId,
+      category: "top",
+      name: "Lost tee",
+      origin: "manual",
+      // The version is the upload's clock (design 167): two days old.
+      photoKey: `items/${authorId}/${stuckGarmentId}/${ulid((now - 2 * 86_400) * 1000)}`,
+      visibility: "pending",
+      createdAt: now - 2 * 86_400,
+    });
+    await core.insert(reviewQueue).values({
+      id: newUlid(),
+      subjectType: "garment",
+      subjectId: stuckGarmentId,
+      source: "missing_file",
+      status: "pending",
+      createdAt: now - 1000,
     });
     // A handle the hourly re-check flagged after it was claimed (D-97),
     // waiting behind the reported entry.
@@ -325,6 +352,34 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   await garmentRow.getByRole("button", { name: "Remove", exact: true }).click();
   await expect(
     page.getByRole("listitem").filter({ hasText: garmentId }),
+  ).toHaveCount(0);
+
+  // D-157 (design 167): a photo still pending a day after upload is on
+  // Review, saying which failure it is; a missing file draws no photo.
+  await scene(page, "Review: a photo still unscreened a day on, file missing");
+  const stuckRow = page
+    .getByRole("listitem")
+    .filter({ hasText: `garment photo · ${stuckGarmentId}` });
+  await expect(stuckRow.getByText("[file missing]")).toBeVisible();
+  await expect(
+    stuckRow.getByText(
+      "Uploaded over a day ago, and its file is not in storage, so it cannot be screened or shown. Nobody but its owner sees it while it waits.",
+    ),
+  ).toBeVisible();
+  await expect(stuckRow.getByRole("img")).toHaveCount(0);
+  // Owner, 2026-10-31: there is no file to approve, so the row offers
+  // Clear photo where Approve sits; it takes the photo off, citing no rule.
+  await scene(page, "Review: Clear photo on a missing file");
+  const stuckOpener = stuckRow.locator("button[aria-expanded]");
+  if ((await stuckOpener.getAttribute("aria-expanded")) === "false") {
+    await stuckOpener.click();
+  }
+  await expect(stuckRow.getByRole("button", { name: "Approve" })).toHaveCount(
+    0,
+  );
+  await stuckRow.getByRole("button", { name: "Clear photo" }).click();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: stuckGarmentId }),
   ).toHaveCount(0);
 
   // Round 35 #45: a flagged handle's row says why it is there, and offers
@@ -575,6 +630,14 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
       .locator("p"),
   ).toHaveText(
     "We removed the photo of one of your garments. Reason: it's sexual or explicit.",
+  );
+  // D-157: the cleared photo's owner is asked to add it again.
+  await expect(
+    rows
+      .filter({ hasText: "We couldn't find the file for the photo" })
+      .locator("p"),
+  ).toHaveText(
+    "We couldn't find the file for the photo on one of your garments, so we took it off. Add it again from your Closet if you'd like it there.",
   );
 });
 

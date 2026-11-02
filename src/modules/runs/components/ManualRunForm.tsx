@@ -99,6 +99,7 @@ export function ManualRunForm({ submitRun }: Readonly<ManualRunFormProps>) {
   const { idempotencyKey, rotate } = useIdempotencyKey();
 
   const form = useFormSubmit({
+    carry: "run",
     schema: manualRunInput,
     action: async (values) => submitRun({ data: values }),
     // Equivalent mutant on the sentence, and a finding rather than a gap:
