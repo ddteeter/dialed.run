@@ -171,6 +171,7 @@ function SetConditionsForm({
   const [band, setBand] = useState("");
   const [sky, setSky] = useState<ManualSky | "">("");
   const form = useFormSubmit({
+    carry: "run",
     schema: conditionsPickSchema,
     action: async (values) =>
       actions.setConditions({ data: { runId, ...values } }),

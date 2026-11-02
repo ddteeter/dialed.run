@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { SyntheticEvent, JSX } from "react";
 
+import type { CarriedForm } from "../../../lib/carried-form";
 import { normalizeUsername, usernameInput } from "../../../lib/contracts";
 import {
   FormField,
@@ -57,6 +58,7 @@ export function HandleForm({
   pendingLabel,
   successMessage,
   onClaimed,
+  carry,
 }: Readonly<{
   initial?: string | undefined;
   /**
@@ -72,6 +74,11 @@ export function HandleForm({
    * the contract is announce-then-move.
    */
   onClaimed?: ((username: string) => void) | undefined;
+  /**
+   * Au7's noun, should the session lapse (D-155): Settings › Username is
+   * a settings form, O0 is not one of the three and carries the page.
+   */
+  carry: CarriedForm;
 }>): JSX.Element {
   const onSuccess =
     onClaimed ??
@@ -90,6 +97,7 @@ export function HandleForm({
     },
     successMessage,
     onSuccess,
+    carry,
     // No summary labels: the summary appears only for two or more failing
     // fields, and this form has one (SharingForm's reasoning).
     labels: {},

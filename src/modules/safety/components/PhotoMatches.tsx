@@ -345,7 +345,6 @@ function DecideBar({
         schema={garmentMatchActionInput}
         subject={{ itemId: open.id }}
         act={(values) => decide({ data: values })}
-        canApprove={false}
         subjectType="garment"
         owner={open.handle}
         onSettled={() => {

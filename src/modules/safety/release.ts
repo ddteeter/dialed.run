@@ -17,7 +17,7 @@ import { and, asc, count, eq, gte, inArray, type SQL } from "drizzle-orm";
 
 import { reviewQueue } from "../../db/schema-core";
 import { coreDb } from "../../env";
-import type { HoldCause } from "../../lib/contracts/hold-causes";
+import { HOLD_CAUSES, type HoldCause } from "../../lib/contracts/hold-causes";
 import { nowSeconds } from "../../lib/now";
 import { claimForReview, resolveReview } from "./review";
 
@@ -103,18 +103,30 @@ export interface WaitingHolds {
 /**
  * Each cause with holds still waiting that were opened at or after
  * `since`, and how many. A cause with none is not listed: a grouped count
- * answers a row only for a group that exists.
+ * answers a row only for a group that exists. A stuck photo (D-157) is in
+ * Review for want of a screening, not held by one, so it is never offered:
+ * an Approve on an `unscreened` row publishes what nothing screened.
  */
 export async function waitingHoldsSince(
   since: number,
 ): Promise<readonly WaitingHolds[]> {
-  return coreDb()
+  const rows = await coreDb()
     .select({ cause: reviewQueue.source, waiting: count() })
     .from(reviewQueue)
     .where(openSince(since))
     .groupBy(reviewQueue.source)
     .orderBy(asc(reviewQueue.source));
+  return rows.filter((row): row is WaitingHolds => isHoldCause(row.cause));
 }
+
+/**
+Whether a Review row's source is one of the holds the breakers bound.
+*/
+function isHoldCause(source: string): boolean {
+  return holdCauses.has(source);
+}
+
+const holdCauses: ReadonlySet<string> = new Set(HOLD_CAUSES);
 
 /**
  * What Review's release section reads (design 164): each cause's holds

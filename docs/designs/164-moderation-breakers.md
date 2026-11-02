@@ -48,7 +48,7 @@ dropped, because it means keeping up with model releases by hand.)
    replaces "hold the emails": under DSA Art. 17 a hide nobody was told of is
    not allowed, and delaying the notice would be exactly that.
 4. **Trip alerts** (`ops/scheduled.ts`). Today's line wording was approved
-   as written (owner, 2026-10-31; design-deltas item 93). A trip sends one Sentry event,
+   as written (owner, 2026-10-31; design-deltas item 95). A trip sends one Sentry event,
    fingerprinted `["breaker", cause, day]`, through the same new-issue rule
    as design 162. Today shows a line while any breaker is over its ceiling.
 5. **Headroom and too-quiet lines** (daily digest). Each cause's busiest
@@ -122,6 +122,23 @@ dropped, because it means keeping up with model releases by hand.)
 - **`intimate` 1-report hides bypass the report breaker** (owner,
   2026-10-31). The 48-hour clock, and the harm of one more viewer, outweigh a
   burst bug on a path a person files one report at a time.
+- **A held-back flag is recorded** (owner, 2026-11-02; with #291, D-157).
+  A flag over the classifier ceiling writes a `photo_screenings` row with
+  decision `held_back` and nothing else, so the photo stays `pending`.
+  #291's day-old sweep would otherwise send it to Review as `unscreened`
+  ("the classifier has not answered for it"), where Approve publishes it.
+  With the record, the sweep sends it as `classifier`, where Approve sends
+  it back to be screened. The breaker's share leaves `held_back` out (it
+  hid nothing, and counting it would lower the share that held it); the
+  quiet line counts it as a flag.
+- **Stuck photos are not hold causes** (with #291). `review_queue.source`
+  gains `unscreened` and `missing_file`, but `HOLD_CAUSES` stays at three:
+  no breaker counts them, and "Held in the last day" never offers them,
+  since an Approve on an `unscreened` row publishes what nothing screened.
+- **Approve all runs from the browser, and says how far it got** (owner,
+  2026-11-02). It releases 50 a request until none is left; a server-side
+  release would need a queue and a new message type (law 9) for a few
+  seconds' wait. The button reads "Approved 50 of 120" as it goes.
 
 ## Steps
 

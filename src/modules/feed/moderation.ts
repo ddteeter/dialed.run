@@ -71,8 +71,6 @@ import {
   removalStatements,
   reporterNotices,
   resolveReview,
-  screeningDeletes,
-  settleOpenReviews,
   uploaderContextOf,
   wasFlaggedAutomatically,
   wasModerated,
@@ -85,12 +83,14 @@ import {
 } from "../safety";
 
 import { moderateGarmentPhoto, preserveObject } from "./garment-moderation";
+import { clearMissingPhoto } from "./missing-photo";
 
 import {
   commit,
   entryStatements,
   mediaDebts,
   owned,
+  photoDeletion,
   type Report,
   type Statements,
 } from "./retract";
@@ -298,11 +298,7 @@ function deletions(
   target: Pick<Target, "ownerId">,
 ): Statements {
   return input.subjectType === "photo"
-    ? [
-        settleOpenReviews(db, "photo", [input.subjectId], input.actorId),
-        screeningDeletes(db, "entry", [input.subjectId]),
-        db.delete(entryPhotos).where(eq(entryPhotos.id, input.subjectId)),
-      ]
+    ? photoDeletion(db, input.subjectId, input.actorId)
     : entryStatements(
         db,
         target.ownerId,
@@ -507,6 +503,10 @@ export async function decideReview(
   if (decision.action === "approve") {
     return resolveReview(queueId, reviewerId, "approve");
   }
+  // A missing file's Clear photo (D-157): no verdict, so not safety's.
+  if (decision.action === "clear") {
+    return clearMissingPhoto(db, reviewerId, queueId);
+  }
   // Only a row still open is acted on; a settled or missing one is
   // answered by safety's own writer below, which says which it was.
   const subject = await openSubject(queueId);
@@ -529,7 +529,7 @@ export async function decideReview(
 async function wasTakenDown(
   db: Db,
   reviewerId: string,
-  decision: Exclude<ReviewActionValues, { action: "approve" }>,
+  decision: Exclude<ReviewActionValues, { action: "approve" | "clear" }>,
   subject: { subjectType: ReviewSubjectType; subjectId: string },
 ): Promise<boolean> {
   if (isModerated(subject)) {

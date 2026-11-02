@@ -159,6 +159,9 @@ describe("what Review offers to release", () => {
       .update(reviewQueue)
       .set({ status: "approved" })
       .where(eq(reviewQueue.source, "classifier"));
+    // A stuck photo (D-157) is never offered: Approve would publish it.
+    await opened("unscreened", 3, SINCE);
+    await opened("missing_file", 1, SINCE);
 
     expect(await waitingHoldsSince(SINCE)).toStrictEqual([
       { cause: "fingerprint", waiting: 1 },

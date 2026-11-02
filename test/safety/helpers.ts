@@ -27,7 +27,6 @@ import {
 } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid } from "../../src/lib/ids";
-import type { HoldCause } from "../../src/modules/safety/breakers";
 import type { ReviewSubjectType } from "../../src/modules/safety/review";
 
 import {
@@ -91,7 +90,7 @@ async function times(
  * holds, as the hold breakers count them (design 164).
  */
 export async function opened(
-  cause: HoldCause,
+  cause: (typeof reviewQueue.$inferInsert)["source"],
   n: number,
   openedAt: number,
   subjectType: ReviewSubjectType = "photo",
@@ -114,7 +113,7 @@ export async function opened(
  * the classifier, as its breaker counts it (design 164).
  */
 export async function screened(
-  decision: "pass" | "review" | "flag",
+  decision: (typeof photoScreenings.$inferInsert)["decision"],
   n: number,
   createdAt: number,
 ): Promise<void> {

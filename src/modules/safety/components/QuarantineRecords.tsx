@@ -74,6 +74,7 @@ function QuarantineRow({
   const [isGone, setIsGone] = useState(false);
   const [reportId, setReportId] = useState(record.ncmecReportId ?? "");
   const form = useFormSubmit({
+    carry: "page",
     schema: ncmecReportInput,
     action: (values) => recordReport({ data: values }),
     successMessage: "Report recorded.",

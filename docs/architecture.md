@@ -368,6 +368,14 @@ Manual entry is a plain server function: parse `RunDraft`, insert as
 failure — the provider, or the Worker dying first — leaves the run
 `pending` for the hourly retry (law 5, law 8c).
 
+Either way, only **finished hours** are fetched (D-156): an hour is asked
+for once it has settled, two hours after it ends, because the observation
+cache is shared by everyone in the cell and never refreshed. The attach
+takes the settled hours and leaves the run `pending` for the rest, which
+the hourly `weather-retry` cron fills as they settle. The cron's five-hour
+give-up window opens when the run's last sampled hour settles, not when
+the run started.
+
 ## Product enrichment pipeline (lane 107)
 
 Pasted product URL → server function validates https + resolves/creates the
@@ -553,7 +561,10 @@ flowchart LR
   existing message type (law 9); Drop deletes the row. A dead letter's
   tries are its queue's `max_retries + 1`, from `queueRegistry`, which
   `test/bindings-conformance.test.ts` pins to `wrangler.jsonc`. Photo
-  screening never gives up: its sweep retries `pending` forever.
+  screening never gives up: its sweep retries `pending` forever, and a
+  photo still pending a day after upload goes to the Desk's review queue
+  instead of Gave up (D-157, `safety/stuck.ts`), as `unscreened` or
+  `missing_file`, since Review is where photos are decided.
 - **Two systems, one outbox** (law 8c): a write that owes work to another
   system records the debt in the generic `outbox` table in the same
   `db.batch()` as the change, runs the work as a fast path, and deletes the

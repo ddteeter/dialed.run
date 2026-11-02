@@ -24,6 +24,7 @@ import {
   adminUserIds,
   overCeilings,
   pendingReviewCount,
+  stuckSources,
   type CeilingReading,
 } from "../safety";
 import { DIGEST_UNCONFIRMED } from "./digest-marks";
@@ -66,6 +67,15 @@ export interface TodayCounts {
 }
 
 const WEEK_SECONDS = 7 * 24 * 60 * 60;
+
+/**
+ * The queue sources Today counts as "photos the screener couldn't
+ * finish": what it flagged, and what it never screened at all (D-157).
+ */
+const screenerSources: ReadonlySet<string> = new Set([
+  "classifier",
+  ...stuckSources,
+]);
 
 /**
  * Today's counts: "waiting" from safety, the rest in one round trip.
@@ -127,8 +137,12 @@ export async function todayCounts(): Promise<TodayCounts> {
       review.length === 0
         ? undefined
         : Math.min(...review.map((g) => g.oldest)),
-    screenerUnfinished:
-      review.find((g) => g.source === "classifier")?.rows ?? 0,
+    // What the screener sent, and what it never finished: a photo still
+    // pending a day after upload (D-157) is exactly "a photo the screener
+    // couldn't finish", and hidden until someone looks.
+    screenerUnfinished: sumOf(
+      review.filter((g) => screenerSources.has(g.source)),
+    ),
     bansThisWeek: bans.find((g) => g.recent === 1)?.rows ?? 0,
     bansAllTime: sumOf(bans),
     gaveUp: gaveUpGroup?.rows ?? 0,
@@ -198,7 +212,9 @@ async function unconfirmedOperators(): Promise<readonly SkippedOperator[]> {
   );
   // The handle is a scalar subquery rather than a join: an operator with no
   // profile row still appears, with a null handle, either way.
-  const handleOf = sql<string | null>`(select ${userProfiles.username} from ${userProfiles} where ${userProfiles.userId} = ${user.id})`;
+  const handleOf = sql<
+    string | null
+  >`(select ${userProfiles.username} from ${userProfiles} where ${userProfiles.userId} = ${user.id})`;
   const rows = await coreDb()
     .select({ userId: user.id, handle: handleOf, email: user.email })
     .from(user)

@@ -5,6 +5,7 @@ import {
   ReleaseHolds,
   type ReleaseHoldsFn,
 } from "../../src/modules/safety/components/ReleaseHolds";
+import type { ReleaseOutcome } from "../../src/modules/safety/release";
 import { renderWithRouter } from "../modules/run-fixtures";
 
 /**
@@ -86,6 +87,42 @@ describe("ReleaseHolds", () => {
     await waitFor(() => {
       expect(
         screen.queryByRole("heading", { name: "Approve 53 screener holds?" }),
+      ).toBeNull();
+    });
+  });
+
+  it("counts what it has approved while it works", async () => {
+    const first = Promise.withResolvers<ReleaseOutcome>();
+    const second = Promise.withResolvers<ReleaseOutcome>();
+    const release = vi
+      .fn<ReleaseHoldsFn>()
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise);
+    await renderWithRouter(
+      <ReleaseHolds
+        bursts={[{ cause: "fingerprint", waiting: 53 }]}
+        since={SINCE}
+        release={release}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Approve all 53" }));
+    fireEvent.click(screen.getByRole("button", { name: "Approve all" }));
+    expect(
+      await screen.findByRole("button", { name: "Approving" }),
+    ).toBeInTheDocument();
+
+    first.resolve({ released: 50, hasMore: true });
+    expect(
+      await screen.findByRole("button", { name: "Approved 50 of 53" }),
+    ).toBeInTheDocument();
+
+    second.resolve({ released: 3, hasMore: false });
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("heading", {
+          name: "Approve 53 fingerprint holds?",
+        }),
       ).toBeNull();
     });
   });

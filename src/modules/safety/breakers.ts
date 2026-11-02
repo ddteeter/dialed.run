@@ -22,7 +22,7 @@
  * - reports: people, so a multiple of the busiest hour of the last four
  *   weeks, never under a floor.
  */
-import { and, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, lt, ne, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
@@ -171,6 +171,12 @@ export async function dayHeadroom(
 }
 
 /**
+ * The screenings that are verdicts: all but a flag the breaker held back,
+ * which hid nothing and would otherwise lower the share that held it.
+ */
+const verdicts = ne(photoScreenings.decision, "held_back");
+
+/**
  * The largest share of an hour's screenings flagged, among hours with
  * enough screenings to read a share from. Zero with none.
  */
@@ -185,7 +191,7 @@ async function busiestFlagShareIn(
   const rows = await db
     .select({ share })
     .from(photoScreenings)
-    .where(and(gte(at, from), lt(at, until)))
+    .where(and(verdicts, gte(at, from), lt(at, until)))
     .groupBy(sql`${at} / ${HOUR_S}`)
     .having(gte(count(), CLASSIFIER_FEWEST_SCREENED))
     .orderBy(desc(share))
@@ -305,7 +311,7 @@ async function screenedSince(
       flagged: sql<number>`sum(${flag})`.mapWith(Number),
     })
     .from(photoScreenings)
-    .where(gte(photoScreenings.createdAt, since));
+    .where(and(verdicts, gte(photoScreenings.createdAt, since)));
   const flagged = rows.reduce((total, row) => total + row.flagged, 0);
   return { flagged, screened: counted(rows) };
 }

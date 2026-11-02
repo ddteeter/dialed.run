@@ -388,7 +388,7 @@ function DigestUnconfirmed({
  * Design 164: a hold breaker at its ceiling this hour, said where the
  * operator looks first. What stopped and what happens instead, per cause;
  * it clears itself as the hour drains, so there is nothing to press. An
- * undesigned surface (design-deltas item 93), composed as OPS-11's is.
+ * undesigned surface (design-deltas item 95), composed as OPS-11's is.
  */
 const BREAKER_SAYS: Readonly<Record<HoldCause, (count: string) => string>> = {
   fingerprint: (count) =>

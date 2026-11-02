@@ -85,6 +85,7 @@ export function OnboardingHandle({
     <HandleStep notice={notice}>
       {notice === undefined ? (
         <HandleForm
+          carry="page"
           claim={claim}
           submitLabel="Next"
           pendingLabel="Checking"
@@ -94,6 +95,7 @@ export function OnboardingHandle({
       ) : (
         <>
           <HandleForm
+            carry="page"
             claim={claim}
             hint={HANDLE_COPY.repickHint}
             submitLabel="Save username"

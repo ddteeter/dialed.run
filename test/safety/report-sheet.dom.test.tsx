@@ -7,6 +7,12 @@ import { reportReasons } from "../../src/modules/safety/contracts";
 import { ReportSheet } from "../../src/modules/safety/components/ReportSheet";
 import type { ConfirmGate } from "../../src/ui";
 import { UnconfirmedRefusalAnswer } from "../../src/ui/unconfirmed-refusal";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 type SheetProps = Parameters<typeof ReportSheet>[0];
 
@@ -417,5 +423,14 @@ describe("the block offer needs somebody to name", () => {
     });
     const [call] = vi.mocked(fileReport).mock.calls;
     expect(call?.[0].data.alsoBlock).toBeUndefined();
+  });
+});
+
+describe("ReportSheet: a lapsed session (Au7, D-155)", () => {
+  it("carries page to log-in", () => {
+    carriedSince();
+    renderSheet();
+
+    expect(carriedSince()).toEqual(["page"]);
   });
 });

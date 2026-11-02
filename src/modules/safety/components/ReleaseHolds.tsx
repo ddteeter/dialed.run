@@ -1,4 +1,5 @@
 import { useRouter } from "@tanstack/react-router";
+import { useState } from "react";
 import type { JSX } from "react";
 
 import type { HoldCause } from "../../../lib/contracts/hold-causes";
@@ -15,7 +16,7 @@ import { PhotoSection } from "./OtherPhotos";
  * Each release is many Approves, each told as one is, so the confirm says
  * so and says when to use it. It presses the server function until
  * nothing of that cause and day is left. An undesigned surface (design
- * deltas item 95), composed from the confirm the deletes use.
+ * deltas item 97), composed from the confirm the deletes use.
  */
 export function ReleaseHolds({
   bursts,
@@ -29,31 +30,61 @@ export function ReleaseHolds({
   since: number;
   release: ReleaseHoldsFn;
 }>): JSX.Element | undefined {
-  const router = useRouter();
   if (bursts.length === 0) return undefined;
   return (
     <PhotoSection part="release-holds" title="Held in the last day">
       <ul className="m-0 flex list-none flex-col gap-2 p-0">
-        {bursts.map(({ cause, waiting }) => (
-          <li key={cause} className="flex flex-col">
-            <Mono step="xs">{`${CAUSE_LABEL[cause]} · ${String(waiting)} waiting`}</Mono>
-            <ConfirmLink
-              label={`Approve all ${String(waiting)}`}
-              heading={`Approve ${String(waiting)} ${CAUSE_NOUN[cause]}?`}
-              body="Each one is approved as if you'd pressed Approve on it: it goes back where an Approve puts it, and anyone an Approve tells is told. Use this when a bug held them, not to skip looking."
-              verb="Approve all"
-              pendingVerb="Approving"
-              kicker="Not all approved"
-              state={`confirm-release-${cause}`}
-              act={async () => {
-                await releaseAll(release, cause, since);
-                await router.invalidate();
-              }}
-            />
-          </li>
+        {bursts.map((burst) => (
+          <ReleaseRow
+            key={burst.cause}
+            burst={burst}
+            since={since}
+            release={release}
+          />
         ))}
       </ul>
     </PhotoSection>
+  );
+}
+
+/**
+ * One cause's line and its Approve-them-all. While it runs, the button
+ * counts what is done (owner, 2026-11-02): a burst is released a batch a
+ * press, and the operator waits on it.
+ */
+function ReleaseRow({
+  burst,
+  since,
+  release,
+}: Readonly<{
+  burst: WaitingHolds;
+  since: number;
+  release: ReleaseHoldsFn;
+}>): JSX.Element {
+  const { cause, waiting } = burst;
+  const router = useRouter();
+  const [approved, setApproved] = useState(0);
+  return (
+    <li className="flex flex-col">
+      <Mono step="xs">{`${CAUSE_LABEL[cause]} · ${String(waiting)} waiting`}</Mono>
+      <ConfirmLink
+        label={`Approve all ${String(waiting)}`}
+        heading={`Approve ${String(waiting)} ${CAUSE_NOUN[cause]}?`}
+        body="Each one is approved as if you'd pressed Approve on it: it goes back where an Approve puts it, and anyone an Approve tells is told. Use this when a bug held them, not to skip looking."
+        verb="Approve all"
+        pendingVerb={
+          approved === 0
+            ? "Approving"
+            : `Approved ${String(approved)} of ${String(waiting)}`
+        }
+        kicker="Not all approved"
+        state={`confirm-release-${cause}`}
+        act={async () => {
+          await releaseAll(release, cause, since, setApproved);
+          await router.invalidate();
+        }}
+      />
+    </li>
   );
 }
 
@@ -66,16 +97,22 @@ export type ReleaseHoldsFn = (input: {
 
 /**
  * Presses `release` until nothing of `cause` since `since` is left: each
- * call releases a bounded batch and says whether more wait.
+ * call releases a bounded batch and says whether more wait. `counted` hears
+ * the running total after each.
  */
 async function releaseAll(
   release: ReleaseHoldsFn,
   cause: HoldCause,
   since: number,
+  counted: (total: number) => void,
 ): Promise<void> {
-  let outcome = await release({ data: { cause, since } });
-  while (outcome.hasMore) {
-    outcome = await release({ data: { cause, since } });
+  let total = 0;
+  let hasMore = true;
+  while (hasMore) {
+    const outcome = await release({ data: { cause, since } });
+    total += outcome.released;
+    counted(total);
+    hasMore = outcome.hasMore;
   }
 }
 

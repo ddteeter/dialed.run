@@ -238,7 +238,7 @@ describe("the classifier breaker (design 164)", () => {
     expect(await screenStatusOf(photoId)).toBe("hidden_pending_review");
   });
 
-  it("holds a flag back at its ceiling: pending, unrecorded, unqueued", async () => {
+  it("holds a flag back at its ceiling: pending, recorded as held, unqueued", async () => {
     const { photoId, outcome } = await afterAnHourOf(
       3,
       flagging({ sexual: 0.99 }),
@@ -247,10 +247,11 @@ describe("the classifier breaker (design 164)", () => {
     expect(outcome).toBe("held_back");
     expect(await screenStatusOf(photoId)).toBe("pending");
     const records = await core()
-      .select()
+      .select({ decision: photoScreenings.decision })
       .from(photoScreenings)
       .where(eq(photoScreenings.photoId, photoId));
-    expect(records).toStrictEqual([]);
+    // What tells the stuck sweep the screener did answer (D-157).
+    expect(records).toStrictEqual([{ decision: "held_back" }]);
     expect(await isQueuedForReview("photo", photoId)).toBe(false);
   });
 

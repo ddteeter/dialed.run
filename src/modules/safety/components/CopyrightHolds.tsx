@@ -441,6 +441,7 @@ function HoldAction<
   also?: ReactNode;
 }>): JSX.Element {
   const form = useFormSubmit({
+    carry: "page",
     schema,
     action: (submitted: V) => act({ data: submitted }),
     successMessage: sentences.recorded,

@@ -15,6 +15,8 @@ import {
   type HoldCause,
 } from "../../src/modules/safety/breakers";
 
+import { HOLD_CAUSES } from "../../src/lib/contracts/hold-causes";
+
 import { opened, screened } from "./helpers";
 
 /**
@@ -128,6 +130,20 @@ describe("the classifier breaker", () => {
     await screened("flag", 1, NOW - 60);
     const reading = await ceilingReading(core(), "classifier", NOW);
     expect(reading.isOver).toBe(true);
+  });
+
+  it("leaves a flag it held back out of the hour's share", async () => {
+    await screened("pass", 16, NOW - 60);
+    await screened("review", 2, NOW - 60);
+    await screened("flag", 2, NOW - 60);
+    await screened("held_back", 40, NOW - 60);
+
+    expect(await ceilingReading(core(), "classifier", NOW)).toStrictEqual({
+      cause: "classifier",
+      isOver: false,
+      count: 2,
+      ceiling: 3,
+    });
   });
 
   it("reads only the hour, and nothing at all as no flags", async () => {
@@ -273,6 +289,14 @@ describe("dayHeadroom", () => {
     expect(await usedBy("classifier")).toBeCloseTo(1);
   });
 
+  it("leaves held-back flags out of the classifier's share", async () => {
+    await screened("pass", 17, NOW - 2 * HOUR);
+    await screened("flag", 3, NOW - 2 * HOUR);
+    await screened("held_back", 20, NOW - 2 * HOUR);
+
+    expect(await usedBy("classifier")).toBeCloseTo(1);
+  });
+
   it("leaves a classifier hour older than the day out", async () => {
     await screened("flag", 20, NOW - DAY - HOUR);
 
@@ -303,5 +327,27 @@ describe("quietScreenerWeek", () => {
     await screened("pass", 60, NOW - 60);
     await screened("flag", 1, NOW - 60);
     expect(await quietScreenerWeek(core(), NOW)).toBeUndefined();
+  });
+
+  it("counts a flag the breaker held back as the flag it was", async () => {
+    await screened("pass", 60, NOW - 60);
+    await screened("held_back", 1, NOW - 60);
+
+    expect(await quietScreenerWeek(core(), NOW)).toBeUndefined();
+  });
+});
+
+describe("a photo still pending a day after upload (D-157)", () => {
+  it("counts toward no breaker: it is in Review for want of a screening", async () => {
+    await opened("unscreened", 20, NOW - 60);
+    await opened("missing_file", 20, NOW - 60);
+
+    const counts = await Promise.all(
+      HOLD_CAUSES.map(async (cause) => {
+        const { count } = await ceilingReading(core(), cause, NOW);
+        return count;
+      }),
+    );
+    expect(counts).toStrictEqual([0, 0, 0]);
   });
 });

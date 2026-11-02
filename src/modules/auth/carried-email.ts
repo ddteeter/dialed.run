@@ -1,40 +1,11 @@
 import { useEffect, useState } from "react";
-import { z } from "zod";
 
-import type { CarriedForm } from "./sign-in-search";
-
-/**
- * Au7's prefilled email, carried beside the URL rather than in it.
- *
- * The board's *"email prefilled"* was built as `?email=` first, which put
- * the address in the Workers request log and the browser's history. Session
- * storage is per tab, gone when the tab closes, and never sent anywhere —
- * which is exactly the lifetime of "you were signed out a moment ago". What
- * writes it is the session-expiry carry (`ui/use-form-submit`'s `session`
- * branch); this is the reading half.
- */
-export const CARRIED_EMAIL_KEY = "dialed.carried-email";
-
-const emailSchema = z.email();
+import { readCarriedEmail } from "../../lib/browser/carried-email";
+import type { CarriedForm } from "../../lib/carried-form";
 
 /**
- * The carried email, or nothing — never a throw. Storage can be absent or
- * refuse access (a private window, blocked site data), and what is in it
- * is `unknown` until parsed like any other input.
- */
-function readCarriedEmail(): string | undefined {
-  let stored: unknown;
-  try {
-    stored = globalThis.sessionStorage.getItem(CARRIED_EMAIL_KEY);
-  } catch {
-    // Storage refused: nothing stored, so the ordinary empty field.
-  }
-  const parsed = emailSchema.safeParse(stored);
-  return parsed.success ? parsed.data : undefined;
-}
-
-/**
- * The log-in page's email field, prefilled on Au7's arrival.
+ * The log-in page's email field, prefilled on Au7's arrival from what the
+ * session-expiry carry kept (`lib/browser/carried-email`).
  *
  * Read after mount rather than during render: the server has no session
  * storage, so reading it in render would paint one email on the server and

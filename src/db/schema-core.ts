@@ -1423,7 +1423,15 @@ export const reviewQueue = /*#__PURE__*/ sqliteTable(
     // differently from one three people objected to.
     // `fingerprint`: a new photo matched one removed as an intimate image
     // (D-147, design 152).
-    source: text("source", { enum: HOLD_CAUSES }).notNull(),
+    // `unscreened` and `missing_file`: a photo still pending screening 24
+    // hours after upload (D-157, design 167) — the classifier never
+    // answered, or storage has no object to screen. Widening a text enum
+    // is TypeScript only: the column has no CHECK, so no migration. They
+    // are not hold causes (design 164): no breaker counts them and no
+    // burst release approves them.
+    source: text("source", {
+      enum: [...HOLD_CAUSES, "unscreened", "missing_file"],
+    }).notNull(),
     status: text("status", {
       enum: ["pending", "reviewing", "approved", "removed"],
     })
@@ -1497,8 +1505,13 @@ export const photoScreenings = /*#__PURE__*/ sqliteTable(
     // score buys calibration instead of costing a runner their photo.
     // Widening a drizzle text enum is a TypeScript change only — the column
     // is plain `text` with no CHECK, so there is no migration in it.
+    // `held_back` (design 164) is a flag the classifier breaker held back:
+    // the photo stayed `pending`, and the row is what tells the stuck sweep
+    // (D-157) that the screener did answer for it. It hid nothing, so the
+    // breaker's share leaves it out; the quiet line counts it as the flag
+    // it was.
     decision: text("decision", {
-      enum: ["pass", "review", "flag"],
+      enum: ["pass", "review", "flag", "held_back"],
     }).notNull(),
     createdAt: integer("created_at").notNull(),
   },
