@@ -15,6 +15,12 @@ import {
 } from "../../src/modules/account/components/HandleStep";
 import { OnboardingHandle } from "../../src/modules/account/components/OnboardingHandle";
 import type { HandleClaim } from "../../src/modules/account/username";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 /**
  * O0 and Settings › Username (round 26 #7): one field, checked on Next,
@@ -33,6 +39,7 @@ function renderForm(
   const onClaimed = vi.fn();
   render(
     <HandleForm
+      carry="page"
       initial={options.initial}
       claim={claim}
       submitLabel="Next"
@@ -146,6 +153,7 @@ describe("Next", () => {
     const claim = vi.fn(() => Promise.reject(new Error("boom")));
     render(
       <HandleForm
+        carry="page"
         claim={claim}
         submitLabel="Next"
         pendingLabel="Checking"
@@ -231,7 +239,6 @@ function renderRepick(keep: () => Promise<unknown> = () => Promise.resolve()) {
 }
 
 describe("O0's re-pick after a moderator's rename (ACC-12; round 27 #16)", () => {
-
   it("says what was taken, what stands in, and why, as the board draws it", () => {
     renderRepick();
     const kicker = screen.getByText("Username changed by a moderator");
@@ -328,5 +335,38 @@ describe("O0's re-pick after a moderator's rename (ACC-12; round 27 #16)", () =>
     expect(renamedLine({ ...NOTICE, reason: "Advertising" })).toContain(
       "names: advertising.",
     );
+  });
+});
+
+describe("the handle form: a lapsed session (Au7, D-155)", () => {
+  it("carries O0, first pick and re-pick, as the page", () => {
+    carriedSince();
+    renderRepick();
+    render(
+      <OnboardingHandle
+        notice={undefined}
+        claim={vi.fn()}
+        keep={vi.fn()}
+        onFirstHandle={vi.fn()}
+        onRepicked={vi.fn()}
+      />,
+    );
+
+    expect(carriedSince()).toEqual(["page"]);
+  });
+
+  it("hands Settings › Username's noun to the carry", () => {
+    carriedSince();
+    render(
+      <HandleForm
+        carry="settings"
+        claim={vi.fn()}
+        submitLabel="Save"
+        pendingLabel="Saving"
+        successMessage="Username saved."
+      />,
+    );
+
+    expect(carriedSince()).toEqual(["settings"]);
   });
 });

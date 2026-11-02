@@ -117,6 +117,7 @@ export function TapListForm({
   const shown = expanded ? entries : entries.slice(0, fold);
 
   const form = useFormSubmit({
+    carry: "page",
     schema: tapListSelectionSchema,
     action: (values) => saveTapList({ data: values }),
     onSuccess: onSaved,

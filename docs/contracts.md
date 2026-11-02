@@ -337,12 +337,16 @@ reports:         id, reporter_id, subject_type ('entry'|'photo'|'profile'|
                    -- cannot become a second row; this is what makes
                    -- COUNT(*) a count of people.
 review_queue:    id, subject_type, subject_id, source ('reports'|
-                 'classifier'), status ('pending'|'reviewing'|'approved'|
+                 'classifier'|'fingerprint'|'unscreened'|'missing_file'),
+                 status ('pending'|'reviewing'|'approved'|
                  'removed'), resolved_by NULLABLE, resolved_at NULLABLE,
                  created_at; UNIQUE(subject_type, subject_id)
                    -- one row per subject, not per report: three reports
                    -- about one entry are one decision. `status` is the
-                   -- claim column (law 2).
+                   -- claim column (law 2). 'unscreened' and
+                   -- 'missing_file': a photo still pending screening a
+                   -- day after upload (D-157) — the classifier never
+                   -- answered, or storage has no object to screen.
 domain_denylist: domain PK (bare registrable host, lowercased, no 'www.'),
                  added_by, reason NULLABLE, created_at. Seeded empty.
 photo_screenings: id, photo_scope ('entry'|'garment'), photo_id, model,

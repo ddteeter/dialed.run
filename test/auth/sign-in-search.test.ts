@@ -53,8 +53,9 @@ describe("parseSignInSearch", () => {
     expect(parseSignInSearch({})).toEqual({});
   });
 
-  it("accepts each form the notice has a noun for, and nothing else", () => {
-    for (const carried of ["run", "garment", "settings"]) {
+  it("accepts each form the notice has a noun for, the page, and nothing else", () => {
+    // `page` is every other signed-in form (D-155).
+    for (const carried of ["run", "garment", "settings", "page"]) {
       expect(parseSignInSearch({ carried }).carried).toBe(carried);
     }
     expect(parseSignInSearch({ carried: "closet" }).carried).toBeUndefined();

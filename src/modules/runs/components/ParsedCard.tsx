@@ -264,6 +264,7 @@ function useRetimeForm({
   onNoWeather: (time: string) => void;
 }>) {
   const form = useFormSubmit({
+    carry: "run",
     schema: retimeSchema,
     action: async (values) => {
       const startedAt = startAtTimeOfDay(run.startedAt, zone, values.time);

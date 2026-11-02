@@ -1,4 +1,4 @@
-import { ulid } from "ulidx";
+import { decodeTime, ulid } from "ulidx";
 import { z } from "zod";
 
 declare const ulidBrand: unique symbol;
@@ -16,6 +16,18 @@ export const ulidSchema = z
   .string()
   .regex(/^[0-9A-HJKMNP-TV-Z]{26}$/, "not a ULID")
   .transform((value) => value as Ulid);
+
+/**
+ * When a ULID was minted, in unix seconds (the unit every timestamp column
+ * stores), or nothing for a string that is not one. A ULID's first ten
+ * characters are its time, so a row named by one already says when it was
+ * made — an entry photo's id, a garment photo's version (D-157).
+ */
+export function ulidSeconds(id: string): number | undefined {
+  return ulidSchema.safeParse(id).success
+    ? Math.floor(decodeTime(id) / 1000)
+    : undefined;
+}
 
 /**
  * An id this app did not mint, so not a ULID: Better Auth's user ids, and
