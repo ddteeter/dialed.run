@@ -85,11 +85,7 @@ export type Classify = (params: {
  * left `pending` with nothing written, as an outage leaves it.
  */
 export type ScreenOutcome =
-  | "pass"
-  | "review"
-  | "flagged"
-  | "held_back"
-  | "deferred";
+  "pass" | "review" | "flagged" | "held_back" | "deferred";
 
 /**
  * Screens one photo and records the verdict.

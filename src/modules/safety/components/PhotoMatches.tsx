@@ -76,8 +76,8 @@ function ManyRunners({
         {`Photos from ${String(runners)} runners match`}
       </Mono>
       <span className="text-micro">
-        A picture this common may not be one person's. Removed as intimate,
-        it would hold every later upload that looks like it.
+        A picture this common may not be one person's. Removed as intimate, it
+        would hold every later upload that looks like it.
       </span>
     </p>
   );

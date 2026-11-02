@@ -285,8 +285,14 @@ describe("photoMatchesOf", () => {
 
     expect(found).toStrictEqual(
       new Map([
-        [`photo:${legacy}`, { fingerprinted: false, matches: [], isCutOff: false }],
-        [`photo:${gone}`, { fingerprinted: false, matches: [], isCutOff: false }],
+        [
+          `photo:${legacy}`,
+          { fingerprinted: false, matches: [], isCutOff: false },
+        ],
+        [
+          `photo:${gone}`,
+          { fingerprinted: false, matches: [], isCutOff: false },
+        ],
       ]),
     );
   });

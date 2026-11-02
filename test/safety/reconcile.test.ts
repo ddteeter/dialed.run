@@ -94,7 +94,7 @@ describe("reconciling reports that crossed the threshold and were never hidden",
     await opened("reports", REPORT_HIDES_FLOOR, nowSeconds());
     const entryId = await reportedButNotHidden();
 
-    expect(await reconcileUnhiddenReports(oweInCore)).toStrictEqual({
+    expect(await reconcileUnhiddenReports(oweInCore, noPurge)).toStrictEqual({
       found: 1,
       hidden: 0,
     });
@@ -103,7 +103,7 @@ describe("reconciling reports that crossed the threshold and were never hidden",
     expect(queued.map((row) => row.subjectId)).toContain(entryId);
 
     // Its queue row is the marker: the next sweep finds nothing to do.
-    expect(await reconcileUnhiddenReports(oweInCore)).toStrictEqual({
+    expect(await reconcileUnhiddenReports(oweInCore, noPurge)).toStrictEqual({
       found: 0,
       hidden: 0,
     });

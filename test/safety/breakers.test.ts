@@ -74,7 +74,12 @@ describe("the fingerprint breaker", () => {
   });
 
   it("counts a garment photo's hold, which no report could make", async () => {
-    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR, NOW - 60, "garment");
+    await opened(
+      "fingerprint",
+      FINGERPRINT_HOLDS_PER_HOUR,
+      NOW - 60,
+      "garment",
+    );
 
     const reading = await ceilingReading(core(), "fingerprint", NOW);
 

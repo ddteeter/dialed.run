@@ -940,7 +940,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
-93. **Today's tripped-breaker line (design 164).** Undesigned. When a hold
+45. **Today's tripped-breaker line (design 164).** Undesigned. When a hold
     breaker is at its ceiling this hour, Today shows one line per cause under
     the three numbers and above OPS-11's skipped-operator line. It is
     composed exactly as OPS-11's is: a hi-viz `MONO.xs` kicker HOLDS PAUSED
@@ -951,7 +951,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
     the hour clears."_ **The ask:** draw it on D0, or confirm the
     composition and the copy.
 
-94. **Review's match grid: a floor count, and a many-runners warning
+46. **Review's match grid: a floor count, and a many-runners warning
     (design 164).** Undesigned additions to round 39 #71's MATCHING PHOTOS
     · ANY RUNNER · N:
     - When either list has more than its 12, the count reads `12+`, so a
@@ -965,7 +965,7 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
 
     **The ask:** draw both on the Review row, or confirm them.
 
-95. **Review's "Held in the last day" (design 164).** Undesigned. At the
+47. **Review's "Held in the last day" (design 164).** Undesigned. At the
     top of Review, one line per cause that has holds still waiting from
     the last day: a `MONO.xs` label, for example _"Fingerprint matches · 37
     waiting"_, then an _"Approve all 37"_ link. The link opens the deletes'

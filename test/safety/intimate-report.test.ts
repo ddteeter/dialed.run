@@ -171,6 +171,7 @@ describe("one report of an intimate image", () => {
         reason: "intimate",
       },
       oweInCore,
+      noPurge,
     );
 
     expect(result.hiddenPendingReview).toBe(true);
@@ -329,7 +330,7 @@ describe("the hourly reconcile, for an intimate report whose hide never landed",
         createdAt: nowSeconds(),
       });
 
-    expect(await reconcileUnhiddenReports(oweInCore)).toStrictEqual({
+    expect(await reconcileUnhiddenReports(oweInCore, noPurge)).toStrictEqual({
       found: 1,
       hidden: 1,
     });

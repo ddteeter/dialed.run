@@ -560,6 +560,7 @@ describe("the queue itself", () => {
           reason: "explicit",
         },
         oweInCore,
+        noPurge,
       );
     }
 

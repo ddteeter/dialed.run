@@ -149,7 +149,10 @@ export async function removedMatchOf(
   const near = keptNear(fingerprint);
   if (near === undefined) return undefined;
   const [nearest] = await db
-    .select({ distance: near.distance, removedAt: removedFingerprints.createdAt })
+    .select({
+      distance: near.distance,
+      removedAt: removedFingerprints.createdAt,
+    })
     .from(removedFingerprints)
     .where(near.within)
     .orderBy(...near.nearestFirst)

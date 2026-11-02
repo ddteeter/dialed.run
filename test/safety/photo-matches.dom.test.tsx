@@ -526,7 +526,11 @@ describe("a garment match's takedown", () => {
     const user = userEvent.setup();
     await renderWithRouter(
       <PhotoMatches
-        found={{ fingerprinted: true, matches: [GARMENT_MATCH, SECOND_MATCH] }}
+        found={{
+          fingerprinted: true,
+          matches: [GARMENT_MATCH, SECOND_MATCH],
+          isCutOff: false,
+        }}
         decide={vi.fn()}
       />,
     );
@@ -561,6 +565,7 @@ describe("a garment match's takedown", () => {
         found={{
           fingerprinted: true,
           matches: [...MATCHES.slice(0, 1), GARMENT_MATCH, SECOND_MATCH],
+          isCutOff: false,
         }}
         decide={decide}
       />,
@@ -594,7 +599,11 @@ describe("a garment match's takedown", () => {
       .mockResolvedValue({ outcome: "removed" });
     await renderWithRouter(
       <PhotoMatches
-        found={{ fingerprinted: true, matches: [GARMENT_MATCH, SECOND_MATCH] }}
+        found={{
+          fingerprinted: true,
+          matches: [GARMENT_MATCH, SECOND_MATCH],
+          isCutOff: false,
+        }}
         decide={decide}
       />,
     );
