@@ -23,6 +23,7 @@ import { entryPhotoKeyFor } from "../../src/lib/entry-photo-key";
 import { newUlid, ulidSchema, type Ulid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { purgeAccount } from "../../src/modules/account/purge";
+import { FINGERPRINT_HOLDS_PER_HOUR } from "../../src/modules/safety/breakers";
 import { sweepExpiredAuthRows } from "../../src/modules/auth/expired-rows";
 import {
   removeItemPhoto,
@@ -57,6 +58,7 @@ import {
   makeItem,
   makeRun,
   makeUser,
+  opened,
   resetSafetyTables,
 } from "./helpers";
 
@@ -636,6 +638,25 @@ describe("a garment photo that copies a removed image is held (D-147, design 157
     // The Review row says what it is a copy of.
     const [row] = await pendingReviewQueue();
     expect(row?.removedMatches).toMatchObject([{ distance: 0 }]);
+  });
+
+  it("screens a copy past the fingerprint breaker's ceiling instead (design 164)", async () => {
+    const bytes = await sceneJpeg(3);
+    await core()
+      .insert(removedFingerprints)
+      .values({
+        id: newUlid(),
+        fingerprint: await fingerprintOfBytes(bytes),
+        moderationActionId: await anIntimateRemoval(),
+        createdAt: nowSeconds(),
+      });
+    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR, nowSeconds());
+    const garment = await closetGarment();
+
+    await upload(garment, bytes, clean);
+
+    expect(await visibilityOf(garment.itemId)).toBe("pass");
+    expect(await queueRowsFor(garment.itemId)).toStrictEqual([]);
   });
 
   it("screens one that matches nothing, as before", async () => {

@@ -83,7 +83,9 @@ const decideOf = (tile: Element | undefined) =>
 describe("PhotoMatches", () => {
   it("lists each match as an operator's image, named, linking only a kit an operator can open", async () => {
     await renderWithRouter(
-      <PhotoMatches found={{ fingerprinted: true, matches: MATCHES }} />,
+      <PhotoMatches
+        found={{ fingerprinted: true, isCutOff: false, matches: MATCHES }}
+      />,
     );
 
     const block = part("photo-matches");
@@ -124,7 +126,9 @@ describe("PhotoMatches", () => {
 
   it("says under each how near it is, whether it is private, and whose (round 39 #71)", async () => {
     await renderWithRouter(
-      <PhotoMatches found={{ fingerprinted: true, matches: MATCHES }} />,
+      <PhotoMatches
+        found={{ fingerprinted: true, isCutOff: false, matches: MATCHES }}
+      />,
     );
 
     const distances = [
@@ -155,6 +159,7 @@ describe("PhotoMatches", () => {
       <PhotoMatches
         found={{
           fingerprinted: true,
+          isCutOff: false,
           matches: [
             {
               kind: "garment",
@@ -175,7 +180,9 @@ describe("PhotoMatches", () => {
 
   it("says when nothing matches", async () => {
     await renderWithRouter(
-      <PhotoMatches found={{ fingerprinted: true, matches: [] }} />,
+      <PhotoMatches
+        found={{ fingerprinted: true, isCutOff: false, matches: [] }}
+      />,
     );
     expect(part("photo-matches")).toHaveTextContent(
       "Matching photos · any runnerNo matching photos from any runner.",
@@ -184,7 +191,9 @@ describe("PhotoMatches", () => {
 
   it("says when there was nothing to match by, rather than that nothing matched", async () => {
     await renderWithRouter(
-      <PhotoMatches found={{ fingerprinted: false, matches: [] }} />,
+      <PhotoMatches
+        found={{ fingerprinted: false, isCutOff: false, matches: [] }}
+      />,
     );
     expect(part("photo-matches")).toHaveTextContent(
       "Matching photos · any runnerNo fingerprint to match by: the photo is gone, or older than fingerprints.",
@@ -198,7 +207,11 @@ describe("PhotoMatches", () => {
 });
 
 describe("on Review's rows", () => {
-  const found = { fingerprinted: true, matches: MATCHES.slice(0, 1) };
+  const found = {
+    fingerprinted: true,
+    isCutOff: false,
+    matches: MATCHES.slice(0, 1),
+  };
 
   it("sits on a queue row an intimate report started", async () => {
     const row: QueueRow = {
@@ -300,7 +313,7 @@ describe("RemovedMatchLine", () => {
       reporterCount: 0,
       reasons: [],
       otherPhotos: { photos: [], total: 0, handle: undefined },
-      photoMatches: { fingerprinted: true, matches: [] },
+      photoMatches: { fingerprinted: true, isCutOff: false, matches: [] },
       removedMatches: [
         { ...REMOVED, distance: 0 },
         { ...REMOVED, keptId: "k-2", id: "ph_far", distance: 6 },
@@ -326,7 +339,7 @@ describe("RemovedMatchLine", () => {
  */
 describe("a removed image's tile", () => {
   const REMOVED_AT = Date.UTC(2025, 9, 3, 12) / 1000;
-  const NONE = { fingerprinted: true, matches: [] } as const;
+  const NONE = { fingerprinted: true, isCutOff: false, matches: [] } as const;
 
   it("is an empty frame with the photo's id, its distance and day, and its owner", async () => {
     await renderWithRouter(
@@ -375,7 +388,7 @@ describe("a removed image's tile", () => {
   it("comes before the matches, counted with them", async () => {
     await renderWithRouter(
       <PhotoMatches
-        found={{ fingerprinted: true, matches: MATCHES }}
+        found={{ fingerprinted: true, isCutOff: false, matches: MATCHES }}
         removed={[REMOVED, { ...REMOVED, keptId: "k-2" }]}
       />,
     );
@@ -394,7 +407,11 @@ describe("a removed image's tile", () => {
     const [first] = MATCHES;
     await renderWithRouter(
       <PhotoMatches
-        found={{ fingerprinted: true, matches: first ? [first] : [] }}
+        found={{
+          fingerprinted: true,
+          isCutOff: false,
+          matches: first ? [first] : [],
+        }}
         removed={[REMOVED]}
       />,
     );
@@ -446,6 +463,7 @@ describe("a garment match's takedown", () => {
   };
   const found = {
     fingerprinted: true,
+    isCutOff: false,
     matches: [...MATCHES.slice(0, 1), GARMENT_MATCH],
   };
   it("offers Decide on a garment tile only, and no bar until it is pressed", async () => {
@@ -508,7 +526,11 @@ describe("a garment match's takedown", () => {
     const user = userEvent.setup();
     await renderWithRouter(
       <PhotoMatches
-        found={{ fingerprinted: true, matches: [GARMENT_MATCH, SECOND_MATCH] }}
+        found={{
+          fingerprinted: true,
+          matches: [GARMENT_MATCH, SECOND_MATCH],
+          isCutOff: false,
+        }}
         decide={vi.fn()}
       />,
     );
@@ -543,6 +565,7 @@ describe("a garment match's takedown", () => {
         found={{
           fingerprinted: true,
           matches: [...MATCHES.slice(0, 1), GARMENT_MATCH, SECOND_MATCH],
+          isCutOff: false,
         }}
         decide={decide}
       />,
@@ -576,7 +599,11 @@ describe("a garment match's takedown", () => {
       .mockResolvedValue({ outcome: "removed" });
     await renderWithRouter(
       <PhotoMatches
-        found={{ fingerprinted: true, matches: [GARMENT_MATCH, SECOND_MATCH] }}
+        found={{
+          fingerprinted: true,
+          matches: [GARMENT_MATCH, SECOND_MATCH],
+          isCutOff: false,
+        }}
         decide={decide}
       />,
     );
@@ -643,7 +670,11 @@ describe("a garment match's takedown", () => {
 
   it("is handed down to Review's rows and removal requests", async () => {
     const decide = vi.fn<DecideMatch>();
-    const matches = { fingerprinted: true, matches: [GARMENT_MATCH] };
+    const matches = {
+      fingerprinted: true,
+      isCutOff: false,
+      matches: [GARMENT_MATCH],
+    };
     const row: QueueRow = {
       id: "01HZZZZZZZZZZZZZZZZZZZZZZX",
       subjectType: "entry",
@@ -698,5 +729,75 @@ describe("a garment match's takedown", () => {
         within(block).getByRole("button", { name: "Decide" }),
       ).toBeVisible();
     }
+  });
+});
+
+/**
+`count` kit matches, each a different runner's, or all one runner's.
+*/
+function matchesFrom(count: number, runners: number): PhotoMatch[] {
+  return Array.from({ length: count }, (_, index) => ({
+    kind: "kit" as const,
+    id: `ph-${String(index)}`,
+    entryId: KIT,
+    photoKey: `entries/u/k/${String(index)}`,
+    canOpen: true,
+    isPrivate: false,
+    distance: 1,
+    ownerId: `u-${String(index % runners)}`,
+    handle: undefined,
+  }));
+}
+
+describe("a list cut off, and a picture many runners share (design 164)", () => {
+  it("counts a list cut off at the limit as a floor", async () => {
+    await renderWithRouter(
+      <PhotoMatches
+        found={{
+          fingerprinted: true,
+          isCutOff: true,
+          matches: matchesFrom(12, 1),
+        }}
+      />,
+    );
+    expect(part("photo-matches")).toHaveTextContent(
+      "Matching photos · any runner · 12+",
+    );
+  });
+
+  it("says nothing of runners up to three", async () => {
+    await renderWithRouter(
+      <PhotoMatches
+        found={{
+          fingerprinted: true,
+          isCutOff: false,
+          matches: matchesFrom(6, 3),
+        }}
+      />,
+    );
+    expect(part("photo-matches")).toHaveTextContent(
+      "Matching photos · any runner · 6",
+    );
+    expect(part("many-runners")).toBeNull();
+  });
+
+  it("warns above the matches when more than three runners' photos match", async () => {
+    await renderWithRouter(
+      <PhotoMatches
+        found={{
+          fingerprinted: true,
+          isCutOff: false,
+          matches: matchesFrom(4, 4),
+        }}
+      />,
+    );
+    const warning = part("many-runners");
+    expect(warning?.textContent).toBe(
+      "Photos from 4 runners matchA picture this common may not be one person's. Removed as intimate, it would hold every later upload that looks like it.",
+    );
+    expect(screen.getByText("Photos from 4 runners match")).toHaveClass(
+      "text-hiviz-text",
+    );
+    expect(warning?.nextElementSibling?.tagName).toBe("UL");
   });
 });

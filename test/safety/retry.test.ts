@@ -14,6 +14,7 @@ import {
   type Classify,
 } from "../../src/modules/safety";
 
+import { nowSeconds } from "../../src/lib/now";
 import { tinyJpeg } from "../feed/photos-fixture";
 import {
   makeEntry,
@@ -21,6 +22,7 @@ import {
   makeRun,
   makeUser,
   resetSafetyTables,
+  screened,
 } from "./helpers";
 
 // A real JPEG: the closet decodes and re-encodes what it stores.
@@ -79,6 +81,16 @@ async function statusOf(photoId: string): Promise<string> {
 
 describe("the screening-retry sweep", () => {
   beforeEach(resetSafetyTables);
+
+  it("tallies a flag the classifier breaker held back (design 164)", async () => {
+    await screened("flag", 20, nowSeconds());
+    const photoId = await pendingPhoto();
+
+    const report = await retryPendingScreenings(explicit, []);
+
+    expect(report).toMatchObject({ considered: 1, flagged: 0, heldBack: 1 });
+    expect(await statusOf(photoId)).toBe("pending");
+  });
 
   it("screens what was left pending", async () => {
     const photoId = await pendingPhoto();

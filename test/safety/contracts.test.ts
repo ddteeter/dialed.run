@@ -12,6 +12,7 @@ import {
   reportReasons,
   reportSubjectTypeSchema,
   reportSubjectTypes,
+  reportSubjectsThatHide,
 } from "../../src/modules/safety/contracts";
 
 /**
@@ -89,6 +90,12 @@ describe("the subject-type schema derives from its table", () => {
   it("includes product, because product names are UGC (D-26)", () => {
     const types: readonly string[] = reportSubjectTypes;
     expect(types).toContain("product");
+  });
+});
+
+describe("what a report can hide (design 164)", () => {
+  it("is an entry or a photo, read from the hide table", () => {
+    expect(reportSubjectsThatHide).toStrictEqual(["entry", "photo"]);
   });
 });
 

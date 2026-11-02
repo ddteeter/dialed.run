@@ -268,6 +268,22 @@ describe("a garment photo's Remove tells its owner (R-167, design 159)", () => {
     expect(await core().select().from(removedFingerprints)).toStrictEqual([]);
   });
 
+  it("keeps no fingerprint too plain to tell from other pictures (design 164)", async () => {
+    const { itemId } = await heldGarment();
+    await core()
+      .update(wardrobeItems)
+      .set({ photoFingerprint: "0000000000000000" })
+      .where(eq(wardrobeItems.id, itemId));
+
+    await moderateGarmentPhoto(
+      core(),
+      { actorId: "rev", itemId, action: "remove", reason: "intimate" },
+      quiet,
+    );
+
+    expect(await core().select().from(removedFingerprints)).toStrictEqual([]);
+  });
+
   it("answers a repeat as already removed, telling the owner once", async () => {
     const { owner, itemId } = await heldGarment();
     const input = {

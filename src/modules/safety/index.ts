@@ -79,7 +79,7 @@ export { sweepModerationRecords } from "./retention";
 export {
   keptFingerprints,
   keptGarmentFingerprint,
-  removedMatchOf,
+  isHeldAsRemovedCopy,
 } from "./removed-fingerprints";
 
 // D-130: a copyright takedown's 30-day hide, its restore and its purge.
@@ -265,3 +265,13 @@ export {
   REMOVAL_REMINDER_LEAD_SECONDS,
   undecidedRemovalsDue,
 } from "./removal-reminders";
+
+// Design 164: the hold breakers, read by the hourly alert and Today.
+export {
+  dayHeadroom,
+  HEADROOM_WARN_SHARE,
+  overCeilings,
+  quietScreenerWeek,
+  type CeilingReading,
+  type HoldCause,
+} from "./breakers";

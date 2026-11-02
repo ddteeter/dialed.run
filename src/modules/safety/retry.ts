@@ -26,6 +26,11 @@ export interface RetryReport {
   considered: number;
   passed: number;
   flagged: number;
+  /**
+   * Flags the classifier breaker held back (design 164): still pending,
+   * hidden from nobody, screened again next firing.
+   */
+  heldBack: number;
   /** Still pending afterwards — the classifier declined or the bytes were
    * unreadable. Not an error: the next firing tries again. */
   deferred: number;
@@ -52,6 +57,7 @@ export async function retryPendingScreenings(
     considered: pending.length,
     passed: 0,
     flagged: 0,
+    heldBack: 0,
     deferred: 0,
   };
 
@@ -95,6 +101,7 @@ const countedAs = {
   // queue row it wrote, which is where the decision actually lives.
   review: "passed",
   flagged: "flagged",
+  held_back: "heldBack",
   deferred: "deferred",
 } as const;
 

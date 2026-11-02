@@ -285,8 +285,14 @@ describe("photoMatchesOf", () => {
 
     expect(found).toStrictEqual(
       new Map([
-        [`photo:${legacy}`, { fingerprinted: false, matches: [] }],
-        [`photo:${gone}`, { fingerprinted: false, matches: [] }],
+        [
+          `photo:${legacy}`,
+          { fingerprinted: false, matches: [], isCutOff: false },
+        ],
+        [
+          `photo:${gone}`,
+          { fingerprinted: false, matches: [], isCutOff: false },
+        ],
       ]),
     );
   });
@@ -302,8 +308,8 @@ describe("photoMatchesOf", () => {
 
     expect(found).toStrictEqual(
       new Map([
-        [`photo:${one}`, { fingerprinted: true, matches: [] }],
-        [`photo:${two}`, { fingerprinted: true, matches: [] }],
+        [`photo:${one}`, { fingerprinted: true, matches: [], isCutOff: false }],
+        [`photo:${two}`, { fingerprinted: true, matches: [], isCutOff: false }],
       ]),
     );
   });
@@ -329,6 +335,24 @@ describe("photoMatchesOf", () => {
     expect(kinds.filter((kind) => kind === "garment")).toHaveLength(
       PHOTO_MATCHES_LIMIT,
     );
+    expect(found.get(`photo:${subject}`)?.isCutOff).toBe(true);
+  });
+
+  it("says a list is cut off only when one kind had more than the limit (design 164)", async () => {
+    const subject = await photo(await kit(), SUBJECT);
+    const copies = await kit();
+    for (let index = 0; index < PHOTO_MATCHES_LIMIT; index += 1) {
+      await photo(copies, SUBJECT, index);
+      await garment(SUBJECT);
+    }
+    const search = [{ subjectType: "photo" as const, subjectId: subject }];
+
+    const full = await photoMatchesOf(core, search);
+    expect(full.get(`photo:${subject}`)?.isCutOff).toBe(false);
+
+    await garment(SUBJECT);
+    const over = await photoMatchesOf(core, search);
+    expect(over.get(`photo:${subject}`)?.isCutOff).toBe(true);
   });
 
   it("refuses a stored fingerprint it did not write rather than spell it into SQL", async () => {
@@ -383,6 +407,7 @@ describe("the Review rows that carry them", () => {
     expect(rowFor(reported)?.photoMatches).toStrictEqual({
       fingerprinted: true,
       matches: [expect.objectContaining({ id: copy, distance: 0 })],
+      isCutOff: false,
     });
     expect(rowFor(spammy)?.photoMatches).toBeUndefined();
   });
@@ -427,6 +452,7 @@ describe("the Review rows that carry them", () => {
     expect(ours?.photoMatches).toStrictEqual({
       fingerprinted: true,
       matches: [expect.objectContaining({ id: copy, distance: 1 })],
+      isCutOff: false,
     });
     expect(theirs?.location).toBe("a forum somewhere");
     expect(theirs?.photoMatches).toBeUndefined();

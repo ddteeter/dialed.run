@@ -282,6 +282,7 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "safety/functions.ts reviewQueueQuery": "admin",
   "safety/functions.ts claimReviewAction": "admin",
   "safety/functions.ts recordNcmecReportAction": "admin",
+  "safety/functions.ts releaseHoldsAction": "admin",
   "safety/functions.ts counterNoticeAction": "admin",
   "safety/functions.ts courtActionAction": "admin",
   "safety/functions.ts caseOverRestoreAction": "admin",

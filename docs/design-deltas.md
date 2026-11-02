@@ -940,6 +940,47 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
+45. **Today's tripped-breaker line (design 164).** Undesigned. When a hold
+    breaker is at its ceiling this hour, Today shows one line per cause under
+    the three numbers and above OPS-11's skipped-operator line. It is
+    composed exactly as OPS-11's is: a hi-viz `MONO.xs` kicker HOLDS PAUSED
+    over one `text-body` sentence, and no button, because it clears itself
+    as the hour drains. The sentences say what stopped and what happens
+    instead, for example _"Reports hid 12 posts in the last hour, the most
+    they hide in one hour. New ones go to Review without being hidden until
+    the hour clears."_ **The ask:** draw it on D0, or confirm the
+    composition and the copy.
+
+46. **Review's match grid: a floor count, and a many-runners warning
+    (design 164).** Undesigned additions to round 39 #71's MATCHING PHOTOS
+    · ANY RUNNER · N:
+    - When either list has more than its 12, the count reads `12+`, so a
+      count the search did not finish is not shown as a total.
+    - When the matches come from more than three runners, a line sits above
+      the grid, composed as Today's notices are: a hi-viz `MONO.xs` kicker
+      _"Photos from N runners match"_ over a `text-micro` sentence, _"A
+      picture this common may not be one person's. Removed as intimate, it
+      would hold every later upload that looks like it."_ It is there
+      because a Remove as intimate keeps the fingerprint (D-147).
+
+    **The ask:** draw both on the Review row, or confirm them.
+
+47. **Review's "Held in the last day" (design 164).** Undesigned. At the
+    top of Review, one line per cause that has holds still waiting from
+    the last day: a `MONO.xs` label, for example _"Fingerprint matches · 37
+    waiting"_, then an _"Approve all 37"_ link. The link opens the deletes'
+    confirm sheet (round 22's grammar):
+    - heading _"Approve 37 fingerprint holds?"_;
+    - body _"Each one is approved as if you'd pressed Approve on it: it
+      goes back where an Approve puts it, and anyone an Approve tells is
+      told. Use this when a bug held them, not to skip looking."_;
+    - **Approve all**, with **Keep it** focused.
+
+    It is the undo for a burst the breakers bounded but nobody saw in time.
+    **The ask:** draw it, or confirm the composition and copy.
+
+_Items 93–95 are open (design 164)._
+
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
 
 ## Answered in round 42 (imported 2026-10-28 and 2026-10-29)

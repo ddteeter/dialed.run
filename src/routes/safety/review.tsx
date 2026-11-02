@@ -4,6 +4,7 @@ import { getSession } from "../../modules/auth/functions";
 import { requireSignedIn } from "../../modules/feed/redirect";
 import { CopyrightHolds } from "../../modules/safety/components/CopyrightHolds";
 import { QuarantineRecords } from "../../modules/safety/components/QuarantineRecords";
+import { ReleaseHolds } from "../../modules/safety/components/ReleaseHolds";
 import { RemovalRequests } from "../../modules/safety/components/RemovalRequests";
 import { ReviewQueue } from "../../modules/safety/components/ReviewQueue";
 import { Takedown } from "../../modules/safety/components/Takedown";
@@ -20,6 +21,7 @@ import {
   counterNoticeAction,
   courtActionAction,
   recordNcmecReportAction,
+  releaseHoldsAction,
   reviewHandleAction,
   reviewQueueQuery,
 } from "../../modules/safety/functions";
@@ -38,11 +40,18 @@ export const Route = createFileRoute("/safety/review")({
 });
 
 function ReviewPage() {
-  const { queue, requests, quarantine, holds } = Route.useLoaderData();
+  const { queue, requests, quarantine, holds, bursts, burstsSince } =
+    Route.useLoaderData();
 
   return (
     <Layout>
       <Page title="Review queue" width="column">
+        {/* Design 164: a burst of holds a bug may have made, to release. */}
+        <ReleaseHolds
+          bursts={bursts}
+          since={burstsSince}
+          release={releaseHoldsAction}
+        />
         {/* Design 136: `/takedown` requests, soonest due first. */}
         <RemovalRequests
           requests={requests}

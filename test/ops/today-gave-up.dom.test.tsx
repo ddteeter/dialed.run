@@ -47,6 +47,7 @@ function desk(
       digestUnconfirmedAt,
     },
     skipped: [],
+    breakers: [],
   };
 }
 
@@ -482,5 +483,57 @@ describe("a digest that skipped an operator, on Today", () => {
     expect(
       document.querySelector("[data-part='digest-unconfirmed']"),
     ).toBeNull();
+  });
+});
+
+/**
+ * Design 164: a hold breaker at its ceiling this hour, one line a cause
+ * under the three numbers, in hi-viz, with nothing to press.
+ */
+/**
+An empty Today with `breakers` at their ceilings.
+*/
+function withBreakers(breakers: DeskToday["breakers"]): DeskToday {
+  return { ...desk(0), breakers };
+}
+
+describe("a hold breaker at its ceiling, on Today", () => {
+  it("says what stopped and what happens instead, for each cause", () => {
+    renderToday(
+      [],
+      {},
+      withBreakers([
+        { cause: "fingerprint", isOver: true, count: 5, ceiling: 5 },
+        { cause: "classifier", isOver: true, count: 4, ceiling: 4 },
+        { cause: "reports", isOver: true, count: 12, ceiling: 12 },
+      ]),
+    );
+    const lines = [
+      ...document.querySelectorAll("[data-part='breaker-over']"),
+    ].map((line) => line.textContent);
+    expect(lines).toStrictEqual([
+      "Holds paused5 uploads matched removed images in the last hour, the most held in one hour. New matches are screened like any photo until the hour clears.",
+      "Holds pausedThe screener hid 4 photos in the last hour, the most it hides in one hour. New flags stay visible only to their owners until the hour clears.",
+      "Holds pausedReports hid 12 posts in the last hour, the most they hide in one hour. New ones go to Review without being hidden until the hour clears.",
+    ]);
+  });
+
+  it("sits under the three numbers in hi-viz, with no button", () => {
+    renderToday(
+      [],
+      {},
+      withBreakers([{ cause: "reports", isOver: true, count: 10, ceiling: 10 }]),
+    );
+    const line = document.querySelector("[data-part='breaker-over']");
+    expect(screen.getByText("Holds paused")).toHaveClass("text-hiviz-text");
+    expect(line?.previousElementSibling).toBe(
+      screen.getByRole("list", { name: "Today" }),
+    );
+    expect(line?.querySelector("button")).toBeNull();
+  });
+
+  it("says nothing on an ordinary hour", () => {
+    renderToday([], {}, withBreakers([]));
+    expect(document.querySelector("[data-part='breaker-over']")).toBeNull();
   });
 });

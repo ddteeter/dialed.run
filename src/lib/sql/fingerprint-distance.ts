@@ -26,6 +26,17 @@ export function nearestOf(column: SQLiteColumn, own: readonly string[]): SQL {
   return sql`min(${sql.join(each, COMMA)}, 64)`;
 }
 
+/**
+ * How many bits a stored fingerprint sets, as SQL: its distance from the
+ * fingerprint that sets none. What lets an `INSERT … SELECT` keep only the
+ * distinctive ones (design 164), where no value passes through code.
+ */
+export function bitsSetSql(column: SQLiteColumn): SQL {
+  return distanceSql(column, NO_BITS);
+}
+
+const NO_BITS = "0".repeat(16);
+
 const COMMA = sql`, `;
 const PLUS = sql` + `;
 

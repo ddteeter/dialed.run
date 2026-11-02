@@ -54,6 +54,36 @@ export function PhotoMatches({
 }
 
 /**
+ * More runners than this matching one picture says it is common rather
+ * than one person's (design 164).
+ */
+const MANY_RUNNERS = 3;
+
+/**
+ * Said above the matches when they come from more than `MANY_RUNNERS`
+ * runners (design 164): before a Remove as intimate, which keeps the
+ * fingerprint and holds every later upload near it, the reviewer sees
+ * that this picture looks like a lot of other runners' photos.
+ */
+function ManyRunners({
+  matches,
+}: Readonly<{ matches: readonly PhotoMatch[] }>): JSX.Element | undefined {
+  const runners = new Set(matches.map((match) => match.ownerId)).size;
+  if (runners <= MANY_RUNNERS) return undefined;
+  return (
+    <p data-part="many-runners" className="m-0 flex flex-col gap-1">
+      <Mono step="xs" className="text-hiviz-text">
+        {`Photos from ${String(runners)} runners match`}
+      </Mono>
+      <span className="text-micro">
+        A picture this common may not be one person's. Removed as intimate, it
+        would hold every later upload that looks like it.
+      </span>
+    </p>
+  );
+}
+
+/**
  * Takes down a garment photo copy search found (R-167, design 159): the
  * server function's own shape, handed down from the route.
  */
@@ -82,16 +112,19 @@ function FoundMatches({
 }>): JSX.Element {
   const { remaining, settle } = useSettled(found.matches, matchKey);
   const deciding = useGarmentDeciding(remaining, settle);
+  // A list cut off at the limit counted only what it read (design 164).
+  const shown = `${String(removed.length + remaining.length)}${found.isCutOff ? "+" : ""}`;
   return (
     <PhotoSection
       part="photo-matches"
       title={
         removed.length + found.matches.length === 0
           ? "Matching photos · any runner"
-          : `Matching photos · any runner · ${String(removed.length + remaining.length)}`
+          : `Matching photos · any runner · ${shown}`
       }
       titleRef={deciding.kickerRef}
     >
+      <ManyRunners matches={remaining} />
       <Matches
         found={found}
         removed={removed}

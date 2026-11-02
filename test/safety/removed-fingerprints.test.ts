@@ -12,6 +12,8 @@ import {
 import { env } from "../../src/env";
 import { entryPhotoIdOf } from "../../src/lib/entry-photo-key";
 import { newUlid } from "../../src/lib/ids";
+import { nowSeconds } from "../../src/lib/now";
+import { FINGERPRINT_HOLDS_PER_HOUR } from "../../src/modules/safety/breakers";
 import { moderateContent } from "../../src/modules/feed/moderation";
 import { uploadPhoto } from "../../src/modules/feed/photos";
 import type { Classify } from "../../src/modules/safety";
@@ -24,11 +26,14 @@ import type { RemovalReason } from "../../src/modules/safety/contracts";
 import {
   copyOf,
   fingerprintOfBytes,
+  flatJpeg,
   quiet,
   sceneJpeg,
+  withBitsSet,
 } from "../fixtures/scenes";
 
 import { makeEntry, makeRun, makeUser, resetTables } from "../feed/helpers";
+import { opened } from "./helpers";
 
 /**
  * D-147 (design 152): a photo removed as an intimate image keeps its
@@ -37,6 +42,12 @@ import { makeEntry, makeRun, makeUser, resetTables } from "../feed/helpers";
  */
 
 const core = () => drizzle(env.DIALED_CORE);
+
+/**
+ * A fingerprint the distances are measured from: 32 bits set, so it and
+ * everything a few bits from it are distinctive (design 164).
+ */
+const BASE = "00000000ffffffff";
 const byText = (a: string, b: string) => a.localeCompare(b);
 
 /**
@@ -195,6 +206,37 @@ describe("a Remove for `intimate` keeps the fingerprints (D-147)", () => {
     expect(await keptRows()).toStrictEqual([]);
   });
 
+  it("keeps nothing for a picture too plain to tell from others (design 164)", async () => {
+    const { photoId } = await posted(await flatJpeg());
+
+    await removed("photo", photoId);
+
+    expect(await keptRows()).toStrictEqual([]);
+  });
+
+  it("keeps the band's edges and nothing a bit past either (design 164)", async () => {
+    const kit = await aKit();
+    const prints = [7, 8, 56, 57].map((bits) => withBitsSet(bits));
+    for (const [position, fingerprint] of prints.entries()) {
+      await core()
+        .insert(entryPhotos)
+        .values({
+          id: newUlid(),
+          entryId: kit.entryId,
+          photoKey: `entries/${String(position)}`,
+          position,
+          fingerprint,
+        });
+    }
+
+    await removed("entry", kit.entryId);
+
+    const rows = await keptRows();
+    expect(rows.map((row) => row.fingerprint).toSorted(byText)).toStrictEqual(
+      [withBitsSet(8), withBitsSet(56)].toSorted(byText),
+    );
+  });
+
   it("keeps nothing for a quarantine, which keeps its own snapshot", async () => {
     const { photoId } = await posted(await sceneJpeg(1));
 
@@ -223,6 +265,45 @@ describe("a copy of a removed image is held for review (D-147)", () => {
       status: "pending",
     });
     expect(classify).not.toHaveBeenCalled();
+  });
+
+  it("holds one under the fingerprint breaker's ceiling (design 164)", async () => {
+    const bytes = await sceneJpeg(4);
+    const first = await posted(bytes);
+    await removed("photo", first.photoId);
+    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR - 1, nowSeconds());
+
+    const again = await posted(await copyOf(bytes));
+
+    expect(await photoRow(again.photoId)).toStrictEqual({
+      screenStatus: "hidden_pending_review",
+    });
+  });
+
+  it("screens one past the ceiling instead, queuing nothing (design 164)", async () => {
+    const bytes = await sceneJpeg(4);
+    const first = await posted(bytes);
+    await removed("photo", first.photoId);
+    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR, nowSeconds());
+    const classify = vi.fn<Classify>(unscreened);
+
+    const again = await posted(await copyOf(bytes), undefined, classify);
+
+    expect(await photoRow(again.photoId)).toStrictEqual({
+      screenStatus: "pending",
+    });
+    expect(classify).toHaveBeenCalledOnce();
+    const queued = await queueRows();
+    expect(queued.map((row) => row.subjectId)).not.toContain(again.photoId);
+  });
+
+  it("never holds a plain picture, whatever was kept (design 164)", async () => {
+    await aKept("0000000000000000", 100);
+
+    const { photoId } = await posted(await flatJpeg());
+
+    expect(await photoRow(photoId)).toStrictEqual({ screenStatus: "pending" });
+    expect(await queueRows()).toStrictEqual([]);
   });
 
   it("leaves a different picture to the classifier, with nothing queued", async () => {
@@ -317,12 +398,12 @@ describe("removedMatchesOf", () => {
     expect(found.get(far.photoId)).toStrictEqual([]);
   });
 
-  it("lists every removal in range, nearest first and the earliest of equals, and none past 8 bits", async () => {
-    const { photoId } = await printed("0000000000000000");
-    await aKept("000000000000000f", 300, { photoId: "ph-4" });
-    await aKept("0000000000000003", 200, { photoId: "ph-2b" });
-    await aKept("0000000000000003", 100, { photoId: "ph-2a" });
-    await aKept("00000000000001ff", 50, { photoId: "ph-9" });
+  it("lists every removal in range, nearest first and the earliest of equals, and none past the hold's 5 bits", async () => {
+    const { photoId } = await printed(BASE);
+    await aKept("00000000fffffff0", 300, { photoId: "ph-4" });
+    await aKept("00000000fffffffc", 200, { photoId: "ph-2b" });
+    await aKept("00000000fffffffc", 100, { photoId: "ph-2a" });
+    await aKept("00000000fffffe00", 50, { photoId: "ph-9" });
 
     const found = await removedMatchesOf(core(), [photoId]);
 
@@ -336,10 +417,19 @@ describe("removedMatchesOf", () => {
     ]);
   });
 
-  it("names a garment as one, and whose it was", async () => {
+  it("lists nothing for a held photo too plain to match by (design 164)", async () => {
     const { photoId } = await printed("0000000000000000");
+    await aKept("0000000000000000", 100);
+
+    const found = await removedMatchesOf(core(), [photoId]);
+
+    expect(found.get(photoId)).toStrictEqual([]);
+  });
+
+  it("names a garment as one, and whose it was", async () => {
+    const { photoId } = await printed(BASE);
     const ownerId = await makeUser({ username: "j_runs" });
-    await aKept("0000000000000000", 100, {
+    await aKept(BASE, 100, {
       photoId: "g-1",
       subjectType: "garment",
       ownerId,
@@ -356,8 +446,8 @@ describe("removedMatchesOf", () => {
   });
 
   it("falls back to the Remove's subject for a row kept before the photo's id, with no handle for an owner without one", async () => {
-    const { photoId } = await printed("0000000000000000");
-    await aKept("0000000000000000", 100, {
+    const { photoId } = await printed(BASE);
+    await aKept(BASE, 100, {
       isLegacy: true,
       subjectId: "ph-old",
       ownerId: newUlid(),
@@ -433,25 +523,31 @@ async function aKept(
 }
 
 describe("removedMatchOf", () => {
-  it("matches at 8 bits and not at 9", async () => {
-    await aKept("0000000000000000", 100);
+  it("matches at 5 bits and not at 6 (design 164)", async () => {
+    await aKept(BASE, 100);
 
-    expect(await removedMatchOf(core(), "00000000000000ff")).toStrictEqual({
-      distance: 8,
+    expect(await removedMatchOf(core(), "00000000ffffffe0")).toStrictEqual({
+      distance: 5,
       removedAt: 100,
     });
-    expect(await removedMatchOf(core(), "00000000000001ff")).toBeUndefined();
+    expect(await removedMatchOf(core(), "00000000ffffffc0")).toBeUndefined();
   });
 
   it("answers with the nearest, and the earliest of equals", async () => {
-    await aKept("000000000000000f", 300);
-    await aKept("0000000000000003", 200);
-    await aKept("0000000000000003", 100);
+    await aKept("00000000fffffff0", 300);
+    await aKept("00000000fffffffc", 200);
+    await aKept("00000000fffffffc", 100);
 
-    expect(await removedMatchOf(core(), "0000000000000000")).toStrictEqual({
+    expect(await removedMatchOf(core(), BASE)).toStrictEqual({
       distance: 2,
       removedAt: 100,
     });
+  });
+
+  it("matches nothing by a fingerprint too plain to tell from others (design 164)", async () => {
+    await aKept("0000000000000000", 100);
+
+    expect(await removedMatchOf(core(), "0000000000000000")).toBeUndefined();
   });
 
   it("refuses a value that is not a fingerprint, rather than spell it into SQL", async () => {
