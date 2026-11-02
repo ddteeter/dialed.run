@@ -350,14 +350,15 @@ function useFieldErrors(isPending: boolean, initial: FieldErrors) {
   /**
    * One field's sentence, from a check the form runs itself: F's link on
    * blur (round 43 #93). A check that passes clears it.
+   *
+   * Not memoised: only an event handler calls it, so its identity is
+   * nobody's dependency, and `[clearField]` was a list no test could tell
+   * from `[]` since `clearField` never changes.
    */
-  const markField = useCallback(
-    (name: string, message: string | undefined) => {
-      if (message === undefined) clearField(name);
-      else setFieldErrors((previous) => ({ ...previous, [name]: message }));
-    },
-    [clearField],
-  );
+  function markField(name: string, message: string | undefined) {
+    if (message === undefined) clearField(name);
+    else setFieldErrors((previous) => ({ ...previous, [name]: message }));
+  }
 
   return { fieldErrors, setFieldErrors, field, markField };
 }
