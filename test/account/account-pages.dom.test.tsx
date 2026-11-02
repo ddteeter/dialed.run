@@ -36,6 +36,12 @@ import type {
   ResendResult,
 } from "../../src/modules/account/verification";
 import { UnconfirmedRefusalAnswer } from "../../src/ui/unconfirmed-refusal";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 /**
  * Round 26 #11's pages, as a runner meets them: Au4, the link landings,
@@ -776,5 +782,14 @@ describe("ChangeEmail (ACC-8)", () => {
     expect(currentPasswordField()).toHaveAttribute("aria-invalid", "true");
     expect(screen.queryByText(/^Sent ✓/u)).toBeNull();
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});
+
+describe("ChangeEmail: a lapsed session (Au7, D-155)", () => {
+  it("carries settings to log-in", () => {
+    carriedSince();
+    renderChange();
+
+    expect(carriedSince()).toEqual(["settings"]);
   });
 });

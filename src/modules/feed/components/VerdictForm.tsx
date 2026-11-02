@@ -346,6 +346,7 @@ export function VerdictForm({
    * happened. The schema refuses the submission with a reason instead.
    */
   const form = useFormSubmit({
+    carry: "run",
     schema: submitVerdictInput,
     action: async (values) => submitVerdict({ data: values }),
     successMessage: "Verdict saved.",
