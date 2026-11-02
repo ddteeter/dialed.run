@@ -40,8 +40,14 @@ export function ProductLink({
    * component that renders nothing and a component that is not rendered
    * look identical from outside. Asked of the component directly, they
    * do not.
+   *
+   * `undefined` for a named piece that has no link (D's kit list, round
+   * 43 #96): the label alone, as a link we cannot read gets. A call site
+   * that guarded for it drew the same `<span>` this does, so its ternary
+   * was two branches no test could tell apart; `domainOf` already
+   * answers an absent URL.
    */
-  url: string | null;
+  url: string | null | undefined;
   /**
   What the link says. A product name, typically — and it is UGC.
   */
