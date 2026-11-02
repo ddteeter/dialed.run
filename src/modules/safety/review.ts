@@ -96,6 +96,7 @@ export function enqueueForReview<TSchema extends Record<string, unknown>>(
    */
   reopenOnlyIf: SQL = sql`1`,
 ) {
+  const now = nowSeconds();
   return (
     database
       .insert(reviewQueue)
@@ -105,7 +106,8 @@ export function enqueueForReview<TSchema extends Record<string, unknown>>(
         subjectId: input.subjectId,
         source: input.source,
         status: "pending",
-        createdAt: nowSeconds(),
+        createdAt: now,
+        openedAt: now,
       })
       // UNIQUE(subject_type, subject_id): a subject already queued stays one
       // decision. Re-opening a resolved row is deliberate — a subject
@@ -116,6 +118,9 @@ export function enqueueForReview<TSchema extends Record<string, unknown>>(
         set: {
           status: "pending",
           source: input.source,
+          // Reopened now, though created when it first was: the hold
+          // breakers count this as a hold (design 164).
+          openedAt: now,
           // Cleared, not left alone: this row is being re-opened, and a
           // stale reviewer stamped on a pending decision would read as
           // "someone already looked at this". An `undefined` here would

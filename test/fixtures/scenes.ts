@@ -116,6 +116,34 @@ export function bitsApart(a: string, b: string): number {
 }
 
 /**
+ * A fingerprint setting the lowest `bits` bits: a value with a known
+ * count, for the edges of `DISTINCTIVE_BITS` (design 164).
+ */
+export function withBitsSet(bits: number): string {
+  return ((1n << BigInt(bits)) - 1n).toString(16).padStart(16, "0");
+}
+
+/**
+ * A picture with nothing in it, as a JPEG: one grey all over, which a
+ * perceptual hash sees as no bits at all (design 164).
+ */
+export async function flatJpeg(): Promise<Uint8Array> {
+  const { PhotonImage } = await import("@cf-wasm/photon/workerd");
+  const width = 400;
+  const height = 300;
+  const image = new PhotonImage(
+    new Uint8Array(width * height * 4).fill(128),
+    width,
+    height,
+  );
+  try {
+    return image.get_bytes_jpeg(92);
+  } finally {
+    image.free();
+  }
+}
+
+/**
 Where a report would go: nowhere, since no path here reports.
 */
 export function quiet(): void {

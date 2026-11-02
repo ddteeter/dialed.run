@@ -1,6 +1,8 @@
 /**
  * Covers: D0 (the Desk's shell) and Today, with D6 · Gave up as Today's
- * section (D-87; R-119) — one journey, one video.
+ * section (D-87; R-119), then a hold breaker at its ceiling: Today's HOLDS
+ * PAUSED line and Review's release of the burst (design 164; design
+ * deltas 93 and 95) — one journey, one video.
  *
  * The journey needs `ADMIN_USER_IDS=e2e-desk-operator` in the dev server's
  * `.dev.vars`, which CI's e2e job writes (register R-72, PR #114). Locally,
@@ -26,7 +28,12 @@ import { signInAsOperator } from "./operator";
 
 const HOUR = 3600;
 
-test("an operator opens the Desk and reads Today", async ({ page }) => {
+test("an operator opens the Desk and reads Today", async ({
+  page,
+}, testInfo) => {
+  // Paced for recording (DEMO_SLOWMO), the breaker scenes (design 164)
+  // take the journey past the default 30 seconds.
+  testInfo.setTimeout(120_000);
   // What Today counts: three more things waiting (one 19 hours old), one of
   // them a photo the screener sent, and a ban this week. Added to whatever
   // the local database already holds, never in place of it.
@@ -216,7 +223,69 @@ test("an operator opens the Desk and reads Today", async ({ page }) => {
   await refused.getByRole("button", { name: /^Drop/u }).click();
   await expect(refused).toHaveCount(0);
 
+  // Design 164: a bug holds five uploads as copies of a removed image in
+  // one hour, the fingerprint breaker's ceiling. Rows only, opened now.
+  const burst = Array.from({ length: 5 }, () => newUlid());
   await withLocalDb(async ({ core }) => {
+    const now = nowSeconds();
+    await core.insert(reviewQueue).values(
+      burst.map((id) => ({
+        id,
+        subjectType: "photo" as const,
+        subjectId: newUlid(),
+        source: "fingerprint" as const,
+        status: "pending" as const,
+        createdAt: now,
+        openedAt: now,
+      })),
+    );
+  });
+
+  await page.reload();
+  await page
+    .locator('html[data-hydrated="true"]')
+    .waitFor({ state: "attached" });
+  await scene(page, "A breaker at its ceiling: Today says what stopped");
+  const paused = page
+    .locator("[data-part='breaker-over']")
+    .filter({ hasText: "matched removed images" });
+  await expect(paused).toContainText("Holds paused");
+  await expect(paused).toContainText(
+    "uploads matched removed images in the last hour, the most held in one hour. New matches are screened like any photo until the hour clears.",
+  );
+
+  await page.goto("/safety/review");
+  await page
+    .locator('html[data-hydrated="true"]')
+    .waitFor({ state: "attached" });
+  await scene(page, "Review: the burst, waiting from the last day");
+  const held = page.locator("[data-part='release-holds']");
+  await expect(held).toContainText("Held in the last day");
+  await expect(held).toContainText(/Fingerprint matches · \d+ waiting/u);
+
+  await scene(page, "Release them: each one an Approve, behind a confirm");
+  // Every waiting fingerprint hold from the last day: in CI, the five.
+  await held.getByRole("button", { name: /^Approve all \d+$/u }).click();
+  await expect(
+    page.getByRole("heading", { name: /^Approve \d+ fingerprint holds\?$/u }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Keep it" })).toBeFocused();
+  await page.getByRole("button", { name: "Approve all", exact: true }).click();
+  await expect(
+    held.getByText(/Fingerprint matches · \d+ waiting/u),
+  ).toHaveCount(0);
+  const released = await withLocalDb(async ({ core }) =>
+    core
+      .select({ status: reviewQueue.status })
+      .from(reviewQueue)
+      .where(inArray(reviewQueue.id, burst)),
+  );
+  expect(released.map((row) => row.status)).toStrictEqual(
+    burst.map(() => "approved"),
+  );
+
+  await withLocalDb(async ({ core }) => {
+    await core.delete(reviewQueue).where(inArray(reviewQueue.id, burst));
     await core.delete(gaveUp).where(inArray(gaveUp.id, [...gaveUpIds]));
     await core.delete(runs).where(eq(runs.id, runId));
     await core.delete(products).where(eq(products.id, productId));
