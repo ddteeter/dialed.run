@@ -26,6 +26,7 @@ import {
   type Reopening,
 } from "../../src/modules/safety";
 
+import { noPurge } from "../purge-spy";
 import { makeUser, NOW, resetSafetyTables } from "./helpers";
 import { nowSeconds } from "../../src/lib/now";
 import { orSqlNull } from "../../src/lib/sql/sql-null";
@@ -103,12 +104,15 @@ describe("banning", () => {
     const userId = await signedInUser(3);
     expect(await sessionCountOf(userId)).toBe(3);
 
-    await banUser({
-      userId,
-      reason: "spam",
-      rule: "spam",
-      bannedBy: await makeUser(),
-    });
+    await banUser(
+      {
+        userId,
+        reason: "spam",
+        rule: "spam",
+        bannedBy: await makeUser(),
+      },
+      noPurge,
+    );
 
     // All three effects, because any two of them looks like it works: a
     // banned account with live sessions is still posting.
@@ -155,7 +159,7 @@ describe("banning", () => {
         },
       },
     });
-    await banUser(ban, (database) => [
+    await banUser(ban, noPurge, (database) => [
       outboxInsert(database, oweOutbox(message)),
     ]);
     const owed = await core()
@@ -200,8 +204,14 @@ describe("banning", () => {
       });
     }
 
-    await banUser({ userId, reason: "spam", rule: "spam", bannedBy: "op" });
-    await banUser({ userId, reason: "spam", rule: "spam", bannedBy: "op" });
+    await banUser(
+      { userId, reason: "spam", rule: "spam", bannedBy: "op" },
+      noPurge,
+    );
+    await banUser(
+      { userId, reason: "spam", rule: "spam", bannedBy: "op" },
+      noPurge,
+    );
 
     const told = await core()
       .select({
@@ -241,12 +251,15 @@ describe("banning", () => {
         createdAt: NOW,
       });
 
-    await banUser({
-      userId,
-      reason: "Closed",
-      rule: "suspected_csam",
-      bannedBy: "op",
-    });
+    await banUser(
+      {
+        userId,
+        reason: "Closed",
+        rule: "suspected_csam",
+        bannedBy: "op",
+      },
+      noPurge,
+    );
 
     const state = await banStateOf(userId);
     expect(state.banned).toBe(true);
@@ -257,12 +270,15 @@ describe("banning", () => {
     const banned = await signedInUser(2);
     const bystander = await signedInUser(2);
 
-    await banUser({
-      userId: banned,
-      reason: "spam",
-      rule: "spam",
-      bannedBy: await makeUser(),
-    });
+    await banUser(
+      {
+        userId: banned,
+        reason: "spam",
+        rule: "spam",
+        bannedBy: await makeUser(),
+      },
+      noPurge,
+    );
 
     expect(await sessionCountOf(bystander)).toBe(2);
     const bystanderState = await banStateOf(bystander);
@@ -273,8 +289,14 @@ describe("banning", () => {
     const userId = await signedInUser(1);
     const bannedBy = await makeUser();
 
-    await banUser({ userId, reason: "harassment", rule: "spam", bannedBy });
-    await banUser({ userId, reason: "harassment", rule: "spam", bannedBy });
+    await banUser(
+      { userId, reason: "harassment", rule: "spam", bannedBy },
+      noPurge,
+    );
+    await banUser(
+      { userId, reason: "harassment", rule: "spam", bannedBy },
+      noPurge,
+    );
 
     const userState = await banStateOf(userId);
     expect(userState.banned).toBe(true);
@@ -287,12 +309,15 @@ describe("unbanning", () => {
 
   it("actually clears the ban", async () => {
     const userId = await signedInUser(1);
-    await banUser({
-      userId,
-      reason: "mistake",
-      rule: "spam",
-      bannedBy: await makeUser(),
-    });
+    await banUser(
+      {
+        userId,
+        reason: "mistake",
+        rule: "spam",
+        bannedBy: await makeUser(),
+      },
+      noPurge,
+    );
     const banState = await banStateOf(userId);
     expect(banState.banned).toBe(true);
 
@@ -353,12 +378,15 @@ describe("unbanning", () => {
 
   it("owes the reopen email in the lift's own batch, and sends it (D-89)", async () => {
     const userId = await signedInUser(1);
-    await banUser({
-      userId,
-      reason: "mistake",
-      rule: "spam",
-      bannedBy: await makeUser(),
-    });
+    await banUser(
+      {
+        userId,
+        reason: "mistake",
+        rule: "spam",
+        bannedBy: await makeUser(),
+      },
+      noPurge,
+    );
     await core().delete(outbox);
     const settle = vi.fn(() => Promise.resolve());
 
@@ -381,12 +409,15 @@ describe("unbanning", () => {
 
   it("owes and sends nothing for a second Reopen once the first email went out", async () => {
     const userId = await signedInUser(1);
-    await banUser({
-      userId,
-      reason: "mistake",
-      rule: "spam",
-      bannedBy: await makeUser(),
-    });
+    await banUser(
+      {
+        userId,
+        reason: "mistake",
+        rule: "spam",
+        bannedBy: await makeUser(),
+      },
+      noPurge,
+    );
     await core().delete(outbox);
     const reopening = () => {
       const debt = oweOutbox(reopenEmail(userId, undefined));
@@ -430,12 +461,15 @@ describe("unbanning", () => {
 
   it("does not restore the revoked sessions", async () => {
     const userId = await signedInUser(2);
-    await banUser({
-      userId,
-      reason: "mistake",
-      rule: "spam",
-      bannedBy: await makeUser(),
-    });
+    await banUser(
+      {
+        userId,
+        reason: "mistake",
+        rule: "spam",
+        bannedBy: await makeUser(),
+      },
+      noPurge,
+    );
     await unbanUser(userId, "desk-operator");
 
     // They sign in again, which is correct — the rows were deleted, not

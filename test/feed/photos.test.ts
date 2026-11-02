@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ForbiddenError, getEntryDetail } from "../../src/modules/feed/entries";
 import { eq } from "drizzle-orm";
@@ -291,6 +291,30 @@ describe("entry photos: the rules, and what they say", () => {
     );
 
     expect(seen).toStrictEqual(["image/jpeg"]);
+  });
+
+  it("asks the public photo reconcile about the kit once the photo is screened", async () => {
+    const { userId, entryId } = await ownEntry();
+    const publish = vi.fn();
+    const classify: Classify = () => {
+      // Screened before the reconcile is asked, never after.
+      expect(publish).not.toHaveBeenCalled();
+      return Promise.resolve({
+        flagged: false,
+        scores: Object.fromEntries(
+          imageCategories.map((category) => [category, 0]),
+        ) as CategoryScores,
+      });
+    };
+
+    await uploadPhoto(
+      { userId, entryId, contentType: "image/jpeg", bytes: JPEG_BYTES },
+      { classify, publish },
+    );
+
+    expect(publish.mock.calls).toStrictEqual([
+      [{ entryIds: [entryId], runnerIds: [] }],
+    ]);
   });
 
   it("returns the same key for a resubmitted upload, without storing it twice", async () => {

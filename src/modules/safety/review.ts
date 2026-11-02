@@ -31,6 +31,9 @@ import {
   firstRowWhere,
   hasRowWhere,
 } from "../../lib/sql/keyed-read";
+import { garmentCategoryLabels } from "../../lib/contracts";
+import type { GarmentCategory } from "../../lib/contracts/garment-fields";
+import { garmentLabel } from "../../lib/garment-label";
 import { orSqlNull } from "../../lib/sql/sql-null";
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
@@ -182,6 +185,31 @@ export interface QueueSubject {
    * author with no handle yet.
    */
   owner?: string | undefined;
+  /**
+   * A garment photo's row names the garment (round 42 #88): its closet
+   * name, category and state in the closet's own words, "Nike Pegasus 41
+   * · Shoes · In use". Absent on every other row.
+   */
+  garmentLine?: string | undefined;
+}
+
+/**
+ * A garment as round 42 #88's line names it: the closet's name for it,
+ * its category's word, and whether it is in use or retired — the
+ * rotation's words.
+ */
+export function garmentLineOf(garment: {
+  name: string;
+  brand: string | null;
+  isGeneric: boolean;
+  category: GarmentCategory;
+  isRetired: boolean;
+}): string {
+  return [
+    garmentLabel(garment),
+    garmentCategoryLabels[garment.category],
+    garment.isRetired ? "Retired" : "In use",
+  ].join(" · ");
 }
 
 export interface QueueRow {
@@ -460,6 +488,11 @@ async function subjectsFor(
         id: wardrobeItems.id,
         photoKey: sql<string>`${wardrobeItems.photoKey} || '/card.webp'`,
         owner: userProfiles.username,
+        name: wardrobeItems.name,
+        brand: wardrobeItems.brand,
+        productId: wardrobeItems.productId,
+        category: wardrobeItems.category,
+        retired: wardrobeItems.retired,
       })
       .from(wardrobeItems)
       .leftJoin(userProfiles, eq(userProfiles.userId, wardrobeItems.userId))
@@ -498,6 +531,11 @@ async function subjectsFor(
     found.set(`garment:${row.id}`, {
       photoKeys: [row.photoKey],
       owner: row.owner ?? undefined,
+      garmentLine: garmentLineOf({
+        ...row,
+        isGeneric: row.productId === null,
+        isRetired: row.retired,
+      }),
     });
   }
   return found;

@@ -284,3 +284,13 @@ are stable because code cites them.
 - Another lane's `src/modules/<lane>/` or `src/routes/<lane>/` directory.
 - `design/` and `plan/` archives — read-only, never edited.
 - Secrets: never write a secret, token, or key into any file. Bindings only.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on ddteeter/dialed.run, through `gh`. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context, using the existing docs: decisions in `docs/decisions.md` (D-NN), vocabulary in `docs/product.md` §Lexicon and `docs/contracts.md`. No GLOSSARY.md or ADRs. See `docs/agents/domain.md`.

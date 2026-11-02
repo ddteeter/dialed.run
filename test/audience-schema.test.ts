@@ -53,8 +53,8 @@ describe("the audience schema", () => {
     const indexes = await indexesOf("outfit_entries");
     expect(indexes).toEqual(
       expect.arrayContaining([
-        "entries_audience_created",
-        "entries_user_audience_created",
+        "entries_shared_created",
+        "entries_user_shared_created",
       ]),
     );
     expect(indexes).not.toContain("entries_public_created");

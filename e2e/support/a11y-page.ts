@@ -11,37 +11,33 @@
  * One problem on one element, as the page reports it. `rule` is an axe
  * rule id, or one of this checker's own: `target-44` and `name-space`.
  */
-export interface PageFinding {
-  readonly rule: string;
-  readonly node: string;
-}
+export type PageFinding = Readonly<Record<"rule" | "node", string>>;
 
 /**
  * One checked state.
  */
-export interface CheckReport {
-  readonly key: string;
-  readonly url: string;
-  readonly ms: number;
-  readonly findings: readonly PageFinding[];
-}
+export type CheckReport = Readonly<{
+  key: string;
+  url: string;
+  ms: number;
+  findings: readonly PageFinding[];
+}>;
 
-export interface CheckerOptions {
-  readonly origin: string;
-  readonly rules: readonly string[];
-  readonly minTarget: number;
-}
+export type CheckerOptions = Readonly<{
+  origin: string;
+  rules: readonly string[];
+  minTarget: number;
+}>;
 
 /**
  * The slice of axe-core's API the checker calls.
  */
+interface AxeResult {
+  violations: { id: string; nodes: { html: string; target: unknown[] }[] }[];
+}
+
 interface Axe {
-  run: (
-    context: Document,
-    runOptions: unknown,
-  ) => Promise<{
-    violations: { id: string; nodes: { html: string; target: unknown[] }[] }[];
-  }>;
+  run: (context: Document, runOptions: unknown) => Promise<AxeResult>;
 }
 
 declare global {

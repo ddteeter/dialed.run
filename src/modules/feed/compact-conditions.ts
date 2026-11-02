@@ -11,7 +11,7 @@
  *
  * Index-backed: the profile by its primary key (`conditionsHomeStatement`),
  * the observation by the weather cache's key, and the entries on
- * `entries_audience_created` (`test/feed/consensus.test.ts` holds the
+ * `entries_shared_created` (`test/feed/consensus.test.ts` holds the
  * profile's plan and the entries').
  */
 import { captureException } from "../ops";

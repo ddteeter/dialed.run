@@ -92,7 +92,8 @@ describe("Next", () => {
     await user.type(field(), "maya_runs");
     await user.click(next());
     await waitFor(() => {
-      expect(onClaimed).toHaveBeenCalledOnce();
+      // Handed the handle now held: Privacy's switch names it (round 42 #92).
+      expect(onClaimed).toHaveBeenCalledExactlyOnceWith("maya_runs");
     });
     expect(claim).toHaveBeenCalledWith({ data: { username: "maya_runs" } });
     expect(screen.getByRole("status")).toHaveTextContent("Handle saved.");

@@ -2,11 +2,7 @@ import { eq } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { userProfiles } from "../../db/schema-core";
-import {
-  audienceOfShareToggle,
-  isSharedAudience,
-  SHARED_AUDIENCE,
-} from "../../lib/contracts";
+import { SHARED_AUDIENCE, writableAudienceOf } from "../../lib/contracts";
 import type { WritableAudience } from "../../lib/contracts";
 import { isUnconfirmed } from "../account";
 
@@ -25,8 +21,8 @@ import { isUnconfirmed } from "../account";
  * DEFAULT 'runners'`, so the only missing case is a missing profile row —
  * a runner who signed up and has not reached O1 — and that is shared too.
  * A stored `groups` default, which nothing can write yet, starts the entry
- * `private`: of the two audiences a new entry may be stored with, it is
- * the one that shows nobody who was not meant to see it.
+ * `private` (`writableAudienceOf`). A `world` default is kept: it can be
+ * stored only while the runner's profile is public (round 41 #86b).
  *
  * **This is the seed, not the state.** The per-entry truth is the entry's
  * own audience, which A3's sharing toggle writes and which
@@ -61,10 +57,8 @@ export async function defaultAudienceFor(
   // The missing-profile `?? SHARED_AUDIENCE` is asserted directly
   // (`test/feed/share-default.test.ts`): `attachKit`'s fixtures always make
   // a profile row, so only that file reaches it.
-  return audienceOfShareToggle(
-    isSharedAudience(profile?.defaultAudience ?? SHARED_AUDIENCE) &&
-      !(await isUnconfirmed(database, userId)),
-  );
+  if (await isUnconfirmed(database, userId)) return "private";
+  return writableAudienceOf(profile?.defaultAudience ?? SHARED_AUDIENCE);
 }
 
 /**

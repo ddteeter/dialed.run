@@ -10,6 +10,7 @@ import {
   garmentTypePlurals,
   kindLabel,
   typeOf,
+  typeWordOf,
 } from "../../src/modules/closet/type-labels";
 
 /**
@@ -110,5 +111,25 @@ describe("typeOf", () => {
     });
     expect(item.type).toBeNull();
     expect(typeOf(item.category, item.type)).toBeUndefined();
+  });
+});
+
+describe("typeWordOf (round 42 #90, #91)", () => {
+  it("is the closet's TYPE chip when the piece has a type its category allows", () => {
+    expect(typeWordOf("top", "longSleeve")).toBe("L/S crew");
+    expect(typeWordOf("bottom", "tights")).toBe("Tights");
+  });
+
+  it("is the category's word with no type, or one the category does not allow", async () => {
+    // The no-type value is the stored column's own `null`, read from a real
+    // row as in the `typeOf` test above, not a hand-written literal.
+    const client = drizzle(env.DIALED_CORE);
+    const item = await createItem(client, newUlid(), {
+      category: "headwear",
+      name: "No type",
+    });
+    expect(item.type).toBeNull();
+    expect(typeWordOf(item.category, item.type)).toBe("Headwear");
+    expect(typeWordOf("shoes", "tights")).toBe("Shoes");
   });
 });

@@ -98,7 +98,7 @@ export function noindexHead(): {
 }
 
 /**
- * The `ReportAffordance` subject for the runner H shows (`/@{$handle}`).
+ * The `ReportAffordance` subject for the runner H shows (`/feed/u/$handle`).
  *
  * A route may not branch (`server-functions-are-glue`), and `label` /
  * `authorName`'s `?? "A runner"` / `?? undefined` fallbacks are exactly that

@@ -882,6 +882,21 @@ describe("retimeRun: A1's time correction", () => {
     },
   );
 
+  it("keeps the new time when its hours are only too recent to fetch yet (D-156)", async () => {
+    // Weather owed is not weather refused: the run stays pending at the new
+    // start, and the hourly cron fills it once its hours settle.
+    const userId = newUlid();
+    const runId = await aRun(userId, { weatherStatus: "attached" });
+
+    expect(
+      await retime(fakeWeather("awaiting-hours"), userId, runId, START + 1800),
+    ).toBe("moved");
+    expect(await getRun(coreDb(), userId, runId)).toMatchObject({
+      startedAt: START + 1800,
+      weatherStatus: "pending",
+    });
+  });
+
   it("keeps the new time when the run's own band settles it", async () => {
     // A band the runner set is the run's conditions whatever the hour.
     const userId = newUlid();

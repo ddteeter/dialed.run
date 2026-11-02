@@ -24,15 +24,40 @@
  * report. Only a response the Worker generates has a nonce; the static
  * assets' copy in `public/_headers` names none, and needs none, because
  * none of those files is a document that runs script.
+ *
+ * **A page the edge may store runs on hashes instead** (design 163): a
+ * stored page would hand one nonce to every visitor for as long as it is
+ * kept. Its policy names the SHA-256 of each inline script in that page
+ * (`./inline-script-hashes`), and the page carries no nonce at all.
+ *
+ * **Nothing else may be stored** (design 163, Workers Caching): a Worker
+ * response with no `Cache-Control` is cached by heuristic freshness, two
+ * hours for a 200. So every response that does not say otherwise leaves
+ * with `private, no-store`, set here beside the security headers.
  * Framing, object embeds, base-tag hijacking and foreign form targets are
  * refused regardless.
  */
+import { PUBLIC_PHOTOS_ORIGIN } from "../../lib/public-photos";
 
 /**
  * Report-only until the reports are quiet; then this becomes
  * `Content-Security-Policy` (OPS-8).
  */
 export const CSP_HEADER = "Content-Security-Policy-Report-Only";
+
+/**
+ * How a response's policy admits inline script: by the request's nonce,
+ * or, for a page the edge may store, by the hash of each inline script
+ * (base64 SHA-256 digests).
+ */
+export type InlineScripts =
+  { readonly nonce: string } | { readonly hashes: readonly string[] };
+
+/**
+ * What a response that names no `Cache-Control` of its own leaves with:
+ * no cache, the edge's included, keeps it.
+ */
+export const UNSTORED = "private, no-store";
 
 /**
  * Turnstile's widget: its script, and the iframe the challenge runs in
@@ -43,8 +68,9 @@ const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
 /**
  * The policy, one directive per line so a diff shows what changed.
  *
- * - `'nonce-…'`: the request's script nonce, when the Worker generated the
- *   response (see above).
+ * - `'nonce-…'` or `'sha256-…'`s: the request's script nonce, or a stored
+ *   page's script hashes, when the Worker generated the response (see
+ *   above). Script files are admitted by `'self'` either way.
  * - `'wasm-unsafe-eval'`: MediaPipe's face detector compiles WebAssembly
  *   in the browser (`safety/blur/detect.ts`), which a CSP refuses without
  *   it. It permits compiling wasm, not `eval` of JavaScript.
@@ -55,19 +81,20 @@ const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
  * - `blob:` workers: MediaPipe runs its model in a worker it builds from a
  *   blob.
  * - `img-src blob: data:`: photo previews before upload are object URLs.
+ *   The public photo bucket's origin: a PUBLIC kit's photos are served
+ *   from there, not by the Worker (D-153, design 163 step 8).
  * - `form-action`: Google and Strava sign-in leave by redirect, which a
  *   browser checks against `form-action` when a form started it.
  */
 export function contentSecurityPolicy(
   reportUri: string | undefined,
-  nonce?: string,
+  inline?: InlineScripts,
 ): string {
-  const scriptNonce = nonce === undefined ? "" : ` 'nonce-${nonce}'`;
   const directives = [
     "default-src 'self'",
-    `script-src 'self'${scriptNonce} 'wasm-unsafe-eval' ${TURNSTILE_ORIGIN}`,
+    `script-src 'self'${inlineScriptSources(inline)} 'wasm-unsafe-eval' ${TURNSTILE_ORIGIN}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' blob: data:",
+    `img-src 'self' blob: data: ${PUBLIC_PHOTOS_ORIGIN}`,
     "font-src 'self'",
     "connect-src 'self'",
     "worker-src 'self' blob:",
@@ -79,6 +106,16 @@ export function contentSecurityPolicy(
   ];
   if (reportUri !== undefined) directives.push(`report-uri ${reportUri}`);
   return directives.join("; ");
+}
+
+/**
+ * The `script-src` sources that admit inline script, each with its
+ * leading space: none, the nonce, or one per script hash.
+ */
+function inlineScriptSources(inline: InlineScripts | undefined): string {
+  if (inline === undefined) return "";
+  if ("nonce" in inline) return ` 'nonce-${inline.nonce}'`;
+  return inline.hashes.map((hash) => ` 'sha256-${hash}'`).join("");
 }
 
 /**
@@ -116,9 +153,9 @@ export function sentryReportUri(dsn: string | undefined): string | undefined {
  */
 export function securityHeaders(
   reportUri: string | undefined,
-  nonce?: string,
+  inline?: InlineScripts,
 ): readonly (readonly [string, string])[] {
-  const csp = contentSecurityPolicy(reportUri, nonce);
+  const csp = contentSecurityPolicy(reportUri, inline);
   return [
     [CSP_HEADER, csp],
     ["X-Frame-Options", "DENY"],
@@ -137,15 +174,23 @@ export function securityHeaders(
  * immutable (one passed through from `fetch`), so this copies the
  * response rather than editing it; the body streams through untouched.
  * A header the route already set wins — a route that knows better (an
- * embeddable card, say) is not overridden.
+ * embeddable card, say) is not overridden. That includes `Cache-Control`:
+ * a public page's, or a photo's `private, max-age=…`, stands, and only a
+ * response that names none gets `UNSTORED`. That one is not in
+ * `securityHeaders`, because `public/_headers` copies that list onto the
+ * static assets, which browsers and the edge should cache.
  */
 export function withSecurityHeaders(
   response: Response,
   reportUri: string | undefined,
-  nonce?: string,
+  inline?: InlineScripts,
 ): Response {
   const secured = new Response(response.body, response);
-  for (const [name, value] of securityHeaders(reportUri, nonce)) {
+  const headers: readonly (readonly [string, string])[] = [
+    ...securityHeaders(reportUri, inline),
+    ["Cache-Control", UNSTORED],
+  ];
+  for (const [name, value] of headers) {
     if (!secured.headers.has(name)) secured.headers.set(name, value);
   }
   return secured;

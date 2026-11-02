@@ -18,7 +18,7 @@ import {
   usePhotoPick,
 } from "../../../ui";
 import type { PhotoStep } from "../../../ui";
-import { garmentLabel } from "../label";
+import { garmentLabel } from "../../../lib/garment-label";
 import { isPhotoBeingChecked, photoUrlFor } from "../photo-url";
 import { retiredLabel } from "../retired-label";
 import { kindLabel, typeOf } from "../type-labels";
