@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { Page, Route } from "@playwright/test";
 
-import { CARRIED_EMAIL_KEY } from "../../src/modules/auth/carried-email";
+import { CARRIED_EMAIL_KEY } from "../../src/lib/browser/carried-email";
 import { accountEmail } from "../support/accounts";
 import { fillOf, hydrated, openBoard } from "../support/conformance";
 import { partsExcept, partsIn, wordsOf } from "./auth-parts";
@@ -98,6 +98,14 @@ async function drawn(
   }
   return { order, words };
 }
+
+/**
+Au7's sentence as the board draws it, and as D-155 has it built.
+*/
+const BOARD_NOTICE =
+  "Log in and you're back on your run. What you entered is kept.";
+const BUILT_NOTICE =
+  "Log in and you're back on your run. What you typed wasn't kept.";
 
 async function builtAt390(page: Page, path: string): Promise<void> {
   await page.setViewportSize({ width: 390, height: 900 });
@@ -303,7 +311,25 @@ test.describe("Au · phone", () => {
     expect(page.url()).not.toContain("email");
 
     expect(await partsIn(page, PANEL)).toEqual(board.order);
-    await expectSameWords(page, board.words, {});
+    // D-155: the form is not restored, so the notice's second sentence is
+    // the owner's, not the board's "What you entered is kept." (design
+    // deltas). Every other word is the board's.
+    // `wordsOf` folds case (`signatureOf` upper-cases every run), so the
+    // sentences are folded the same way to be found and swapped — in every
+    // region that holds the notice, the header that encloses it included.
+    const drawnSentence = BOARD_NOTICE.toUpperCase();
+    const builtSentence = BUILT_NOTICE.toUpperCase();
+    expect(board.words.get("session-notice")).toContain(drawnSentence);
+    await expectSameWords(
+      page,
+      new Map(
+        [...board.words].map(([part, words]) => [
+          part,
+          words.map((line) => (line === drawnSentence ? builtSentence : line)),
+        ]),
+      ),
+      {},
+    );
     expect(await fillOf(page, `${PANEL} [data-part='session-notice']`)).toBe(
       notice,
     );

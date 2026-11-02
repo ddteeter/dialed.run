@@ -115,6 +115,7 @@ export function CalibrateForm({
   );
 
   const form = useFormSubmit({
+    carry: "page",
     schema: calibrationInput,
     action: async (values) => saveCalibration({ data: values }),
     onSuccess: onSaved,

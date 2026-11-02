@@ -10,6 +10,12 @@ import {
 import type { CopyrightHoldSummary } from "../../src/modules/safety/copyright-holds";
 import { isoDayOf } from "../../src/lib/contracts/age";
 import { nowSeconds } from "../../src/lib/now";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 /**
  * D-130: Review's copyright holds, and the Desk actions on one —
@@ -429,5 +435,14 @@ describe("CopyrightHolds", () => {
     expect(
       await screen.findByRole("button", { name: "Recording" }),
     ).toHaveAttribute("aria-busy", "true");
+  });
+});
+
+describe("CopyrightHolds: a lapsed session (Au7, D-155)", () => {
+  it("carries page to log-in", () => {
+    carriedSince();
+    renderHolds(held());
+
+    expect(carriedSince()).toEqual(["page"]);
   });
 });

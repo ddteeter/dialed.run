@@ -575,6 +575,7 @@ export function GarmentForm({
   });
 
   const form = useFormSubmit({
+    carry: "garment",
     schema: garmentFormSchema,
     action: save,
     successMessage,

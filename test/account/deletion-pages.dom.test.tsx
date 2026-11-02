@@ -32,6 +32,12 @@ import type {
   DeletionResult,
   KeepResult,
 } from "../../src/modules/account/deletion";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 /**
  * Round 27 #14's deletion screens (ACC-9): U1's Delete account row and
@@ -526,5 +532,16 @@ describe("Leaving (round 27 #14)", () => {
     await rendered;
     expect(screen.queryByRole("heading")).toBeNull();
     expect(document.querySelector("[data-part='landing']")).toBeNull();
+  });
+});
+
+describe("DeleteAccount: a lapsed session (Au7, D-155)", () => {
+  it("carries settings to log-in", async () => {
+    carriedSince();
+    const { user, view } = deleteRow();
+    await view;
+    await openSheet(user);
+
+    expect(carriedSince()).toEqual(["settings"]);
   });
 });
