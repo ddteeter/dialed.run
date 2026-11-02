@@ -21,10 +21,13 @@ import {
   upsertRealObservation,
 } from "../../src/modules/weather/store";
 import {
+  askedEpochs,
   mockVisualCrossing,
+  pinNow,
   requestUrl,
 } from "./fixtures/visual-crossing-observation";
 import { spiedBinding } from "../d1-spy";
+import { observationsForRuns } from "../../src/modules/feed/conditions";
 
 const OBSERVATION_HOUR_EPOCH = 1_768_485_600; // 07:00 fixture hour
 
@@ -678,5 +681,153 @@ describe("weather cache reads that decide a write read the primary (design 143)"
         ),
       ),
     ).toEqual(["first-unconstrained", "first-primary"]);
+  });
+});
+
+/**
+ * D-156: an hour is fetched only once it has settled — two hours after it
+ * ends — because the cache cell it lands in is shared and never refreshed.
+ *
+ * The run starts at 07:00 and runs two hours, so it spans 07, 08 and 09.
+ * Those settle at 10:00, 11:00 and 12:00: three, four and five hours after
+ * it started. The clock is pinned, so each boundary is exact.
+ */
+async function cachedBuckets(lat: number): Promise<number[]> {
+  const rows = await drizzle(env.DIALED_WEATHER)
+    .select()
+    .from(weatherObservations)
+    .where(eq(weatherObservations.latR, lat));
+  return rows.map((row) => row.hourBucket).toSorted((a, b) => a - b);
+}
+
+describe("only settled hours are fetched (D-156)", () => {
+  const SETTLES = {
+    first: OBSERVATION_HOUR_EPOCH + 3 * 3600,
+    second: OBSERVATION_HOUR_EPOCH + 4 * 3600,
+    last: OBSERVATION_HOUR_EPOCH + 5 * 3600,
+  };
+  const START_BUCKET = Math.floor(OBSERVATION_HOUR_EPOCH / 3600);
+
+  it("asks for nothing while every hour is too recent, and marks the run owed", async () => {
+    pinNow(SETTLES.first - 1);
+    const fetchSpy = mockVisualCrossing();
+    const runId = await insertRun({
+      durationS: 2 * 3600,
+      lat: 43.01,
+      lng: -73.01,
+    });
+
+    expect(await attachObservation(runId)).toBe("awaiting-hours");
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(await cachedBuckets(43.01)).toStrictEqual([]);
+    // Inserted as `none`: the attempt is what marks it owed.
+    expect(await statusOf(runId)).toBe("pending");
+  });
+
+  it("settles an hour exactly two hours after it ends, not a second before", async () => {
+    pinNow(SETTLES.first);
+    const fetchSpy = mockVisualCrossing();
+    const runId = await insertRun({
+      durationS: 2 * 3600,
+      lat: 43.02,
+      lng: -73.02,
+    });
+
+    expect(await attachObservation(runId)).toBe("awaiting-hours");
+
+    expect(askedEpochs(fetchSpy)).toStrictEqual([OBSERVATION_HOUR_EPOCH]);
+    expect(await cachedBuckets(43.02)).toStrictEqual([START_BUCKET]);
+    expect(await statusOf(runId)).toBe("pending");
+  });
+
+  it("attaches the settled hours and leaves the rest owed", async () => {
+    pinNow(SETTLES.last - 1);
+    const fetchSpy = mockVisualCrossing();
+    const runId = await insertRun({
+      durationS: 2 * 3600,
+      lat: 43.03,
+      lng: -73.03,
+    });
+
+    expect(await attachObservation(runId)).toBe("awaiting-hours");
+
+    expect(askedEpochs(fetchSpy)).toStrictEqual([
+      OBSERVATION_HOUR_EPOCH,
+      OBSERVATION_HOUR_EPOCH + 3600,
+    ]);
+    expect(await cachedBuckets(43.03)).toStrictEqual([
+      START_BUCKET,
+      START_BUCKET + 1,
+    ]);
+    expect(await statusOf(runId)).toBe("pending");
+  });
+
+  it("shows the settled hours' conditions while the last one is owed", async () => {
+    // The runner sees conditions at once: the start hour, and the span so
+    // far. The span widens when the cron fills the last hour.
+    pinNow(SETTLES.last - 1);
+    mockVisualCrossing();
+    const run = {
+      id: await insertRun({ durationS: 2 * 3600, lat: 43.04, lng: -73.04 }),
+      lat: 43.04,
+      lng: -73.04,
+      startedAt: OBSERVATION_HOUR_EPOCH,
+      durationS: 2 * 3600,
+    };
+    await attachObservation(run.id);
+
+    const conditions = await observationsForRuns([run]);
+
+    expect(conditions.get(run.id)).toMatchObject({
+      tempC: -4.8,
+      span: { minTempC: -4.8, maxTempC: -3.9 },
+    });
+  });
+
+  it("finishes the run once its last hour settles, asking only for that hour", async () => {
+    pinNow(SETTLES.second);
+    const first = mockVisualCrossing();
+    const runId = await insertRun({
+      durationS: 2 * 3600,
+      lat: 43.05,
+      lng: -73.05,
+    });
+    await attachObservation(runId);
+    expect(askedEpochs(first)).toHaveLength(2);
+    vi.restoreAllMocks();
+
+    pinNow(SETTLES.last);
+    const second = mockVisualCrossing();
+    expect(await attachObservation(runId)).toBe("attached");
+
+    expect(askedEpochs(second)).toStrictEqual([
+      OBSERVATION_HOUR_EPOCH + 2 * 3600,
+    ]);
+    expect(await statusOf(runId)).toBe("attached");
+  });
+
+  it("still fetches a run's later hours when its start was already cached", async () => {
+    // The start hour being someone else's cache hit used to settle the
+    // run there and then, so its later hours were never asked for.
+    await upsertRealObservation(
+      { latR: 43.06, lngR: -73.06, hourBucket: START_BUCKET },
+      {
+        tempC: 5,
+        feelsLikeC: 3,
+        humidity: 70,
+        windKph: 10,
+        precipMm: 0,
+        condition: "clear",
+      },
+    );
+    const fetchSpy = mockVisualCrossing();
+    const runId = await insertRun({ durationS: 3600, lat: 43.06, lng: -73.06 });
+
+    expect(await attachObservation(runId)).toBe("attached");
+
+    expect(askedEpochs(fetchSpy)).toStrictEqual([
+      OBSERVATION_HOUR_EPOCH + 3600,
+    ]);
   });
 });
