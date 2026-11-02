@@ -2,12 +2,16 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { cronCheckpoints, runs } from "../../src/db/schema-core";
+import { cronCheckpoints, imports, runs } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { newUlid, type Ulid } from "../../src/lib/ids";
 import { retryPendingWeather } from "../../src/modules/weather";
 import { handleScheduled } from "../../src/modules/ops";
-import { mockVisualCrossing } from "./fixtures/visual-crossing-observation";
+import {
+  askedEpochs,
+  mockVisualCrossing,
+  pinNow,
+} from "./fixtures/visual-crossing-observation";
 import { gaveUpUpsert } from "../../src/db/gave-up";
 import { nowSeconds } from "../../src/lib/now";
 import { gaveUpRow } from "../gave-up-rows";
@@ -48,6 +52,21 @@ async function statusOf(runId: Ulid): Promise<string | undefined> {
   return row?.weatherStatus;
 }
 
+/**
+ * A start for a thirty-minute run whose retry window opened between
+ * `hours` and `hours + 1` ago.
+ *
+ * The window opens when the run's last hour settles (D-156): two hours
+ * after that hour ends. A run starting on the hour `S` has one hour, which
+ * ends at `S + 1h` and settles at `S + 3h` — always on an hour boundary,
+ * which is why the age can only be pinned to within an hour here. The
+ * tests that need an exact boundary pin the clock instead.
+ */
+function startedForWindowAge(hours: number): number {
+  const opens = Math.floor((nowSeconds() - hours * HOUR) / HOUR) * HOUR;
+  return opens - 3 * HOUR;
+}
+
 function nothing(): void {
   /*
    * The point is to do nothing.
@@ -85,7 +104,7 @@ describe("retryPendingWeather (103, hourly cron)", () => {
   });
 
   it("pending -> exhausted: past the 5h window with no resolution becomes failed", async () => {
-    const sixHoursAgo = nowSeconds() - 6 * HOUR;
+    const sixHoursAgo = startedForWindowAge(5);
     const runId = await insertPendingRun({
       lat: 61.1,
       lng: 21.1,
@@ -100,7 +119,7 @@ describe("retryPendingWeather (103, hourly cron)", () => {
   });
 
   it("a run within the 5h window stays pending rather than failing early", async () => {
-    const oneHourAgo = nowSeconds() - 1 * HOUR;
+    const oneHourAgo = startedForWindowAge(1);
     const runId = await insertPendingRun({
       lat: 62.1,
       lng: 22.1,
@@ -167,7 +186,7 @@ describe("retryPendingWeather counts what it actually did", () => {
     const runId = await insertPendingRun({
       lat: 64.1,
       lng: 24.1,
-      startedAt: nowSeconds() - HOUR,
+      startedAt: startedForWindowAge(1),
     });
     mockFetchJson({ unexpected: "shape" });
 
@@ -186,7 +205,7 @@ describe("retryPendingWeather counts what it actually did", () => {
     await insertPendingRun({
       lat: 65.1,
       lng: 25.1,
-      startedAt: nowSeconds() - HOUR,
+      startedAt: startedForWindowAge(1),
     });
     mockFetchJson({ unexpected: "shape" });
     const warn = silenceWarn();
@@ -204,7 +223,7 @@ describe("retryPendingWeather counts what it actually did", () => {
     const runId = await insertPendingRun({
       lat: 66.1,
       lng: 26.1,
-      startedAt: nowSeconds() - 6 * HOUR,
+      startedAt: startedForWindowAge(5),
     });
     mockFetchJson({ unexpected: "shape" });
     const warn = silenceWarn();
@@ -231,26 +250,31 @@ describe("retryPendingWeather counts what it actually did", () => {
     // the drift makes the age strictly greater, both operators agree, and
     // the mutant survives. It did, on CI, on a run where nothing about
     // this code had changed.
-    const now = nowSeconds();
-    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    //
+    // The window opens when the run's last hour settles (D-156), so the
+    // start is fixed on an hour and the clock is what moves.
     const FAIL_AFTER = 5 * HOUR;
+    const startedAt = startedForWindowAge(FAIL_AFTER / HOUR);
+    const opens = startedAt + 3 * HOUR;
+    mockFetchJson({ unexpected: "shape" });
 
     await clearPendingRuns();
+    vi.spyOn(Date, "now").mockReturnValue((opens + FAIL_AFTER) * 1000);
     const atTheLimit = await insertPendingRun({
       lat: 67.1,
       lng: 27.1,
-      startedAt: now - FAIL_AFTER,
+      startedAt,
     });
-    mockFetchJson({ unexpected: "shape" });
     const exhausted = await retryPendingWeather();
     expect(exhausted.failed).toBe(1);
     expect(await statusOf(atTheLimit)).toBe("failed");
 
     await clearPendingRuns();
+    vi.spyOn(Date, "now").mockReturnValue((opens + FAIL_AFTER - 1) * 1000);
     const justInside = await insertPendingRun({
       lat: 68.1,
       lng: 28.1,
-      startedAt: now - FAIL_AFTER + 2,
+      startedAt,
     });
     const stillTrying = await retryPendingWeather();
     expect(stillTrying.failed).toBe(0);
@@ -264,7 +288,7 @@ describe("the Desk's Gave up (R-119)", () => {
     const runId = await insertPendingRun({
       lat: 63.1,
       lng: 23.1,
-      startedAt: nowSeconds() - 5.5 * HOUR,
+      startedAt: startedForWindowAge(5),
     });
     mockFetchJson({ unexpected: "shape" });
 
@@ -284,7 +308,7 @@ describe("the Desk's Gave up (R-119)", () => {
     const runId = await insertPendingRun({
       lat: 64.1,
       lng: 24.1,
-      startedAt: nowSeconds() - HOUR,
+      startedAt: startedForWindowAge(1),
     });
     mockFetchJson({ unexpected: "shape" });
 
@@ -299,7 +323,7 @@ describe("the Desk's Gave up (R-119)", () => {
     const runId = await insertPendingRun({
       lat: 65.1,
       lng: 25.1,
-      startedAt: nowSeconds() - HOUR,
+      startedAt: startedForWindowAge(1),
     });
     await gaveUpUpsert(coreDb(), {
       kind: "weather",
@@ -320,7 +344,7 @@ describe("the Desk's Gave up (R-119)", () => {
     const runId = await insertPendingRun({
       lat: 66.1,
       lng: 26.1,
-      startedAt: nowSeconds() - HOUR,
+      startedAt: startedForWindowAge(1),
     });
     await gaveUpUpsert(coreDb(), {
       kind: "weather",
@@ -348,7 +372,7 @@ describe("a give-up after the window (R-119): a Retry is one try, not five", () 
     const runId = await insertPendingRun({
       lat: 69.1,
       lng: 29.1,
-      startedAt: nowSeconds() - 9 * HOUR,
+      startedAt: startedForWindowAge(9),
     });
     mockFetchJson({ unexpected: "shape" });
 
@@ -365,7 +389,7 @@ describe("a give-up after the window (R-119): a Retry is one try, not five", () 
     const runId = await insertPendingRun({
       lat: 70.1,
       lng: 30.1,
-      startedAt: nowSeconds() - 9 * HOUR,
+      startedAt: startedForWindowAge(9),
     });
     await gaveUpUpsert(coreDb(), {
       kind: "weather",
@@ -385,26 +409,28 @@ describe("a give-up after the window (R-119): a Retry is one try, not five", () 
   });
 
   it("draws the line at six hours: the window's five tries before it, one after", async () => {
-    const now = nowSeconds();
-    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const startedAt = startedForWindowAge(6);
+    const opens = startedAt + 3 * HOUR;
     silenceWarn();
     mockFetchJson({ unexpected: "shape" });
 
     await clearPendingRuns();
+    vi.spyOn(Date, "now").mockReturnValue((opens + 6 * HOUR - 1) * 1000);
     const justInside = await insertPendingRun({
       lat: 71.1,
       lng: 31.1,
-      startedAt: now - 6 * HOUR + 1,
+      startedAt,
     });
     await retryPendingWeather();
     const inside = await gaveUpRow("weather", justInside);
     expect(inside?.tries).toBe(5);
 
     await clearPendingRuns();
+    vi.spyOn(Date, "now").mockReturnValue((opens + 6 * HOUR) * 1000);
     const atTheLine = await insertPendingRun({
       lat: 72.1,
       lng: 32.1,
-      startedAt: now - 6 * HOUR,
+      startedAt,
     });
     await retryPendingWeather();
     const atLine = await gaveUpRow("weather", atTheLine);
@@ -418,7 +444,7 @@ describe("the cap fails only what is still pending", () => {
     const runId = await insertPendingRun({
       lat: 60.2,
       lng: 20.2,
-      startedAt: nowSeconds() - 9 * HOUR,
+      startedAt: startedForWindowAge(9),
     });
     mockVisualCrossing();
     const warn = silenceWarn();
@@ -442,12 +468,12 @@ describe("the cap fails only what is still pending", () => {
     const banded = await insertPendingRun({
       lat: 60.3,
       lng: 20.3,
-      startedAt: nowSeconds() - 10 * HOUR,
+      startedAt: startedForWindowAge(10),
     });
     await insertPendingRun({
       lat: 60.35,
       lng: 20.35,
-      startedAt: nowSeconds() - 9 * HOUR,
+      startedAt: startedForWindowAge(9),
     });
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       if (urlOf(input).includes("60.35")) {
@@ -473,7 +499,7 @@ describe("the cap fails only what is still pending", () => {
     const failing = await insertPendingRun({
       lat: 60.4,
       lng: 20.4,
-      startedAt: nowSeconds() - 5.5 * HOUR,
+      startedAt: startedForWindowAge(5),
     });
     mockFetchJson({ unexpected: "shape" });
 
@@ -483,3 +509,144 @@ describe("the cap fails only what is still pending", () => {
     expect(await gaveUpRow("weather", failing)).toBeDefined();
   });
 });
+
+/**
+ * D-156 from the cron's side: it fetches only settled hours too, and its
+ * five-hour window opens when the run's last hour settles, so a long run
+ * is never given up on before its last hour could be asked for.
+ *
+ * A run starting on the hour `S` and lasting two hours spans `S`, `S+1h`
+ * and `S+2h`; the last ends at `S+3h` and settles at `S+5h`.
+ */
+describe("the cron waits for a run's hours to settle (D-156)", () => {
+  const S = 1_768_485_600;
+  const LAST_SETTLES = S + 5 * HOUR;
+
+  it("leaves a run wholly inside the settling margin pending, asking for nothing", async () => {
+    await clearPendingRuns();
+    pinNow(S + 3 * HOUR - 1);
+    const fetchSpy = mockVisualCrossing();
+    const runId = await insertPendingRun({
+      lat: 73.1,
+      lng: 33.1,
+      durationS: 2 * HOUR,
+    });
+
+    expect(await retryPendingWeather()).toStrictEqual({
+      claimed: 1,
+      attached: 0,
+      failed: 0,
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(await statusOf(runId)).toBe("pending");
+  });
+
+  it("fills the last hour once it settles, and not a second before", async () => {
+    await clearPendingRuns();
+    const runId = await insertPendingRun({
+      lat: 73.2,
+      lng: 33.2,
+      durationS: 2 * HOUR,
+    });
+
+    pinNow(LAST_SETTLES - 1);
+    const before = mockVisualCrossing();
+    expect(await passCount("attached")).toBe(0);
+    expect(askedEpochs(before)).toStrictEqual([S, S + HOUR]);
+    expect(await statusOf(runId)).toBe("pending");
+    vi.restoreAllMocks();
+
+    pinNow(LAST_SETTLES);
+    const after = mockVisualCrossing();
+    expect(await passCount("attached")).toBe(1);
+    expect(askedEpochs(after)).toStrictEqual([S + 2 * HOUR]);
+    expect(await statusOf(runId)).toBe("attached");
+  });
+
+  it("gives up five hours after the last hour settles, not five after the start", async () => {
+    // Counted from its start, this run's window would have closed at
+    // S+5h, the moment its last hour first became fetchable.
+    mockFetchJson({ unexpected: "shape" });
+    silenceWarn();
+
+    await clearPendingRuns();
+    pinNow(LAST_SETTLES + 5 * HOUR - 1);
+    const inside = await insertPendingRun({
+      lat: 73.3,
+      lng: 33.3,
+      durationS: 2 * HOUR,
+    });
+    expect(await passCount("failed")).toBe(0);
+    expect(await statusOf(inside)).toBe("pending");
+
+    await clearPendingRuns();
+    pinNow(LAST_SETTLES + 5 * HOUR);
+    const atTheLimit = await insertPendingRun({
+      lat: 73.4,
+      lng: 33.4,
+      durationS: 2 * HOUR,
+    });
+    expect(await passCount("failed")).toBe(1);
+    expect(await gaveUpRow("weather", atTheLimit)).toMatchObject({
+      tries: 5,
+    });
+  });
+
+  it("opens the window at the sixth hour for a run longer than the six it samples", async () => {
+    // Ten hours long, but only six are sampled (S to S+5h): the last
+    // settles at S+8h, so the window closes at S+13h.
+    mockFetchJson({ unexpected: "shape" });
+    silenceWarn();
+
+    await clearPendingRuns();
+    pinNow(S + 13 * HOUR - 1);
+    await insertPendingRun({ lat: 73.5, lng: 33.5, durationS: 10 * HOUR });
+    expect(await passCount("failed")).toBe(0);
+
+    await clearPendingRuns();
+    pinNow(S + 13 * HOUR);
+    await insertPendingRun({ lat: 73.6, lng: 33.6, durationS: 10 * HOUR });
+    expect(await passCount("failed")).toBe(1);
+  });
+
+  it("opens the window on arrival for a file uploaded long after its hours settled", async () => {
+    mockFetchJson({ unexpected: "shape" });
+    silenceWarn();
+    const arrived = S + 100 * HOUR;
+
+    await clearPendingRuns();
+    pinNow(arrived + 5 * HOUR - 1);
+    const inside = await insertPendingRun({ lat: 73.7, lng: 33.7 });
+    await insertImportFor(inside, arrived);
+    expect(await passCount("failed")).toBe(0);
+
+    await clearPendingRuns();
+    pinNow(arrived + 5 * HOUR);
+    const atTheLimit = await insertPendingRun({ lat: 73.8, lng: 33.8 });
+    await insertImportFor(atTheLimit, arrived);
+    expect(await passCount("failed")).toBe(1);
+  });
+});
+
+/**
+ * One pass of the cron, and one of its counts.
+ */
+async function passCount(
+  count: "claimed" | "attached" | "failed",
+): Promise<number> {
+  const result = await retryPendingWeather();
+  return result[count];
+}
+
+async function insertImportFor(runId: Ulid, createdAt: number): Promise<void> {
+  await coreDb()
+    .insert(imports)
+    .values({
+      id: newUlid(),
+      userId: newUlid(),
+      r2Key: `imports/${runId}.gpx`,
+      status: "done",
+      runId,
+      createdAt,
+    });
+}
