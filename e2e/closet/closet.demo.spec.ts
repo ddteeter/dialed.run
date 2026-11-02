@@ -34,7 +34,7 @@
  * reading a brand's page, so the demo seeds the product row the save
  * created rather than pretending a runner typed it.
  */
-import { eq } from "drizzle-orm";
+import { eq, sql, type SQL } from "drizzle-orm";
 
 import {
   outfitEntries,
@@ -87,6 +87,24 @@ const PNG_2X1 = Buffer.from(
  * Whether a server-function request is the photo's upload: the only one
  * sent as multipart form data, so the demo can drop that one alone.
  */
+/**
+Writes the columns an enrichment read owns on the shared Houdini row.
+*/
+async function setHoudiniProduct(
+  columns: {
+    [Key in keyof typeof products.$inferInsert]?:
+      | (typeof products.$inferInsert)[Key]
+      | SQL;
+  },
+): Promise<void> {
+  await withLocalDb(async ({ core }) => {
+    await core
+      .update(products)
+      .set(columns)
+      .where(eq(products.name, "Houdini Jacket"));
+  });
+}
+
 function isPhotoUpload(contentType: string | undefined): boolean {
   return contentType?.includes("multipart/form-data") === true;
 }
@@ -100,6 +118,17 @@ test("add garments with product identity -> detail in round 22's order -> retire
   // the first paced run of a session also pays Vite's on-demand compile of
   // whatever a real submit reaches. A timeout here is for catching a hang.
   testInfo.setTimeout(150_000);
+  // Products are shared rows, so a previous run's Houdini keeps the read
+  // seeded below; E would show its specs on the first view. Put it back
+  // as an unread product, the state a fresh database starts the save in.
+  await setHoudiniProduct({
+    sourceUrl: sql`NULL`,
+    extractionStatus: "none",
+    extracted: sql`NULL`,
+    fabric: sql`NULL`,
+    fabricComposition: sql`NULL`,
+    fabricParts: sql`NULL`,
+  });
   await page.goto("/closet");
   await hydrated(page);
 
@@ -298,10 +327,7 @@ test("add garments with product identity -> detail in round 22's order -> retire
   // §AG. Composition belongs to the product, not to the runner's copy —
   // enrichment writes it from a brand's page, so the demo writes the row
   // enrichment would have. Seeded through Drizzle and the real schema.
-  await withLocalDb(async ({ core }) => {
-    await core
-      .update(products)
-      .set({
+  await setHoudiniProduct({
         // What a read of the pasted page leaves (round 43 #94): done, with
         // the columns it wrote, and a fabric the runner left empty.
         extractionStatus: "done",
@@ -322,8 +348,6 @@ test("add garments with product identity -> detail in round 22's order -> retire
             ],
           },
         ]),
-      })
-      .where(eq(products.name, "Houdini Jacket"));
   });
 
   await scene(
