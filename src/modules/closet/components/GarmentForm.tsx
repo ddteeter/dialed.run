@@ -52,7 +52,7 @@ import {
 } from "../../../ui";
 import { photoAcceptAttribute } from "../../../lib/photo-constraints";
 import type { FieldErrors, PhotoStep } from "../../../ui";
-import { httpsUrlSchema } from "../../../lib/contracts";
+import { httpsUrlProblem } from "../../../lib/contracts";
 import type { ProductPlaceholders } from "../form-mapping";
 import {
   garmentFormSchema,
@@ -190,13 +190,16 @@ function fieldsForCategory(
 }
 
 /**
-A product's value, in the words its select would show it in.
+A product's value, in the words its select would show it in. A `Map`
+because its `get` takes `undefined` and answers it: a product that lends
+nothing needs no branch of its own (a guard here was one no test could
+tell from `labels[undefined]`).
 */
 function placeholderOf<TOption extends string>(
   value: TOption | undefined,
   labels: Readonly<Record<TOption, string>>,
 ): string | undefined {
-  return value === undefined ? undefined : labels[value];
+  return new Map<string | undefined, string>(Object.entries(labels)).get(value);
 }
 
 const EMPTY_VALUES: GarmentFormValues = {
@@ -266,11 +269,6 @@ interface StoredGarment {
   readonly errors: FieldErrors;
   readonly placeholders: ProductPlaceholders;
 }
-
-const NO_PLACEHOLDERS: ProductPlaceholders = {
-  weight: undefined,
-  fabric: undefined,
-};
 
 interface GarmentRail {
   /**
@@ -622,7 +620,7 @@ export function GarmentForm({
         update={update}
         form={form}
         preview={well.preview}
-        placeholders={stored?.placeholders ?? NO_PLACEHOLDERS}
+        placeholders={stored?.placeholders ?? {}}
       />
 
       <EstimatedRange values={values} />
@@ -912,9 +910,7 @@ function LinkField({
         const link = withScheme(value);
         form.markField(
           "productUrl",
-          link === undefined
-            ? undefined
-            : httpsUrlSchema.safeParse(link).error?.issues[0]?.message,
+          link === undefined ? undefined : httpsUrlProblem(link),
         );
       }}
       field={form.field}

@@ -739,6 +739,30 @@ describe("GarmentForm: no product link for v1 (round 22, item 17)", () => {
     });
   });
 
+  it("lets a good link's blur clear the message Edit opened on", async () => {
+    // A link stored before the https rule reads as one once fixed; the
+    // runner's check on leaving the box answers, not the opening error.
+    const user = userEvent.setup();
+    renderForm({
+      initial: { name: "Harrier", productUrl: "https://janji.com/harrier" },
+      stored: {
+        errors: { productUrl: "Use a link that starts with https://." },
+        placeholders: {},
+      },
+    });
+    const link = screen.getByLabelText(/Product link · optional/);
+    await waitFor(() => {
+      expect(link).toHaveFocus();
+    });
+
+    await user.tab();
+
+    expect(
+      screen.queryByText("Use a link that starts with https://."),
+    ).toBeNull();
+    expect(link).not.toHaveAttribute("aria-invalid");
+  });
+
   it("shows the product's weight and fabric as the empty choice on Edit", () => {
     renderForm({
       initial: { name: "Harrier", category: "top" },

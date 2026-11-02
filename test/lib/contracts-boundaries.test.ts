@@ -7,6 +7,7 @@ import {
   entryTagSchema,
   fabricSchema,
   garmentSchema,
+  httpsUrlProblem,
   httpsUrlSchema,
   itemFlagSchema,
   latitudeSchema,
@@ -219,6 +220,22 @@ describe("httpsUrlSchema", () => {
         }),
       ]);
     }
+  });
+});
+
+describe("httpsUrlProblem", () => {
+  it("has nothing to say of a good link", () => {
+    expect(httpsUrlProblem("https://janji.com/rover")).toBeUndefined();
+  });
+
+  it("names round 43's sentence for each thing wrong", () => {
+    const notALink = "That isn't a link. Paste the address of the shop's page.";
+    expect(httpsUrlProblem("not a url")).toBe(notALink);
+    expect(httpsUrlProblem("https://janji")).toBe(notALink);
+    expect(httpsUrlProblem("javascript:alert(1)")).toBe(notALink);
+    expect(httpsUrlProblem(urlWithScheme("http"))).toBe(
+      "Use a link that starts with https://.",
+    );
   });
 });
 

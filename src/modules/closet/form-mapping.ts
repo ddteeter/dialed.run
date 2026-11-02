@@ -11,7 +11,7 @@
  * `garmentSchema`, and the previous version returned a hand-built object
  * typed as `Garment` that the schema never actually saw.
  */
-import { httpsUrlSchema } from "../../lib/contracts";
+import { httpsUrlProblem } from "../../lib/contracts";
 import type { FieldErrors } from "../../ui";
 
 import type { GarmentFormValues } from "./form-schema";
@@ -55,10 +55,11 @@ export function formValuesFromItem(
 
 /**
  * What the product lends where the runner left a field empty: Edit's
- * placeholders for weight and fabric (round 43 #94).
+ * placeholders for weight and fabric (round 43 #94). Partial, so a form
+ * with nothing stored lends `{}` rather than a pair of `undefined`s.
  */
 export type ProductPlaceholders = Readonly<
-  Pick<EffectiveAttributes, "weight" | "fabric">
+  Partial<Pick<EffectiveAttributes, "weight" | "fabric">>
 >;
 
 export function productPlaceholders(
@@ -82,6 +83,5 @@ export function storedLinkErrors(
   linkDetail: LinkDetail,
 ): FieldErrors {
   if (item.productUrl === null || linkDetail.link !== undefined) return {};
-  const parsed = httpsUrlSchema.safeParse(item.productUrl);
-  return { productUrl: parsed.error?.issues[0]?.message ?? DENIED_LINK };
+  return { productUrl: httpsUrlProblem(item.productUrl) ?? DENIED_LINK };
 }

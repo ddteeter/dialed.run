@@ -18,19 +18,27 @@ import { z } from "zod";
  *
  * A scheme allowlist rather than a prefix check because the value reaches
  * an `href`: `javascript:` parses as a URL perfectly well.
+ *
+ * `httpsUrlProblem` is the check itself, as the one sentence a runner
+ * reads or `undefined` for a good link: F's blur and Edit's opening error
+ * ask it directly rather than digging the first issue out of a parse.
  */
-export const httpsUrlSchema = z
-  .string()
+export function httpsUrlProblem(value: string): string | undefined {
   // Round 43 #93's two words: one for what is not a link at all, and one
   // for a link on the wrong scheme. A host with no dot is not a shop's
   // page, and `javascript:` has no host, so both read as "not a link".
-  // `abort` because the second check has nothing to say about a string
-  // the first could not read.
-  .refine((value) => URL.parse(value)?.hostname.includes(".") === true, {
-    message: "That isn't a link. Paste the address of the shop's page.",
-    abort: true,
-  })
-  .refine(
-    (value) => URL.parse(value)?.protocol === "https:",
-    "Use a link that starts with https://.",
-  );
+  // One parse answers both, so the scheme is only asked of a string that
+  // read as a URL.
+  const url = URL.parse(value);
+  if (!url?.hostname.includes(".")) {
+    return "That isn't a link. Paste the address of the shop's page.";
+  }
+  return url.protocol === "https:"
+    ? undefined
+    : "Use a link that starts with https://.";
+}
+
+export const httpsUrlSchema = z.string().superRefine((value, context) => {
+  const problem = httpsUrlProblem(value);
+  if (problem !== undefined) context.addIssue(problem);
+});
