@@ -38,6 +38,12 @@ import {
   runConditions,
   runSummary,
 } from "./run-fixtures";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 /**
  * A1, in place (round 22): every outcome of an upload renders in the step
@@ -1546,5 +1552,20 @@ describe("A1: the units are the runner's", () => {
     expect(
       document.querySelector("[data-slot='conditions']"),
     ).toHaveTextContent("5°C");
+  });
+});
+
+describe("A1's parsed card: a lapsed session (Au7, D-155)", () => {
+  it("carries run to log-in", async () => {
+    carriedSince();
+    const user = setupUser();
+    const getOutcome = vi.fn<GetOutcome>(parsed());
+    await renderWithRouter(form({ getOutcome }));
+    await user.upload(dropInput(), gpx());
+    await user.click(
+      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+    );
+
+    expect(carriedSince()).toEqual(["run"]);
   });
 });

@@ -22,6 +22,12 @@ import {
   AuthFieldError,
   ResetLinkExpired,
 } from "../../src/modules/auth/credentials";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 /**
  * ACC-4 and ACC-7 as a runner meets them: forgot, reset, change, and
@@ -384,5 +390,22 @@ describe("Sign out everywhere (ACC-7)", () => {
     await waitFor(() => {
       expect(button).not.toHaveAttribute("aria-busy");
     });
+  });
+});
+
+describe("password pages: a lapsed session (Au7, D-155)", () => {
+  it("carries settings to log-in", () => {
+    carriedSince();
+    render(<ChangePassword change={vi.fn()} />);
+
+    expect(carriedSince()).toEqual(["settings"]);
+  });
+
+  it("leaves the signed-out two carrying nothing", async () => {
+    carriedSince();
+    await renderWithRouter(<ForgotPassword request={vi.fn()} />);
+    await renderWithRouter(<ResetPassword token="tok" reset={vi.fn()} />);
+
+    expect(carriedSince()).toEqual([undefined]);
   });
 });

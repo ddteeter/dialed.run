@@ -31,6 +31,7 @@ function UsernamePage() {
     <BelledLayout {...bell}>
       <SettingsSubPage title="Username">
         <HandleForm
+          carry="settings"
           initial={username}
           claim={claimUsernameFn}
           submitLabel="Save"

@@ -5,6 +5,12 @@ import { describe, expect, it, vi } from "vitest";
 import { GarmentForm } from "../../src/modules/closet/components/GarmentForm";
 import type { GarmentFormProps } from "../../src/modules/closet/components/GarmentForm";
 import { garmentCategoriesInOrder } from "../../src/lib/contracts/garment-fields";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 /**
  * Screen F, driven.
@@ -632,5 +638,14 @@ describe("GarmentForm: no product link for v1 (round 22, item 17)", () => {
           Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
     }
+  });
+});
+
+describe("GarmentForm: a lapsed session (Au7, D-155)", () => {
+  it("carries garment to log-in", () => {
+    carriedSince();
+    renderForm();
+
+    expect(carriedSince()).toEqual(["garment"]);
   });
 });

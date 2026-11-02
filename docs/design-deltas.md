@@ -940,6 +940,26 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
+<!-- Numbered from the note below, not from 44: a list break, so Prettier keeps 93. -->
+
+93. **Au7's notice says what was typed is gone, and names a page as well
+    as a form (D-155, design 166).** _Drawn:_ Auth's "Au7 Signed out
+    arrival" — "Log in and you're back on your run. What you entered is
+    kept.", with the annotation "It names what's kept … After Log in, the
+    runner lands on the filled form they left".
+    - **Built instead (owner, 2026-10-31):** no form is restored, the shape
+      of D-96 / D-102 for the terms refusal. The second sentence is "What
+      you typed wasn't kept." Log in still returns to the form's page, as a
+      fresh form, and nothing re-submits.
+    - **Every signed-in form carries**, not only the three the board
+      names. Run, garment and settings forms keep "your run" / "your
+      garment" / "your settings"; every other one (onboarding steps, a
+      report, the Desk's forms) says "Log in and you're back where you
+      were. What you typed wasn't kept."
+    - **The ask:** redraw Au7's notice to the built sentence, annotate the
+      generic variant, and drop "lands on the filled form" from the
+      annotation.
+
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
 
 ## Answered in round 42 (imported 2026-10-28 and 2026-10-29)

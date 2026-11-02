@@ -44,6 +44,7 @@ export { TabBar } from "./TabBar";
 export { TABS, tabToLight } from "./tabs";
 export { Turnstile } from "./Turnstile";
 export { classifyFailure, useFormSubmit } from "./use-form-submit";
+export { SessionLapseAnswer } from "./session-lapse";
 export { TermsRefusalAnswer, useTermsRefusal } from "./terms-refusal";
 export { causeLine, useControlAction } from "./use-control-action";
 export type { ControlAction } from "./use-control-action";

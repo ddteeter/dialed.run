@@ -4,6 +4,7 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 import { changePasswordSchema } from "../../lib/contracts";
 import { auth } from "./instance";
 import { sessionOrRedirect } from "./require-session";
+import { signedInOf } from "./signed-in";
 import { changeCurrentPassword, requireUserId } from "./require-user";
 
 /**
@@ -17,14 +18,12 @@ export const getSession = createServerFn({ method: "GET" }).handler(
 );
 
 /**
- * Whether anyone is signed in, for the shell's own decisions — the system
- * states' frame (round 22, X1/X2) — read once at the root.
+ * Who is signed in, for the shell's own decisions, read once at the root
+ * (`signedInOf` says what it carries and why).
  */
 export const signedInQuery = createServerFn({ method: "GET" }).handler(
-  async () => ({
-    signedIn:
-      (await auth.api.getSession({ headers: getRequestHeaders() })) !== null,
-  }),
+  async () =>
+    signedInOf(await auth.api.getSession({ headers: getRequestHeaders() })),
 );
 
 /**

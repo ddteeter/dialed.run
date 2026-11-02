@@ -19,6 +19,12 @@ import { VerdictForm } from "../../src/modules/feed/components/VerdictForm";
 import type { entryDetailForViewer } from "../../src/modules/feed/entries";
 import { PrivateRunLine } from "../../src/modules/onboarding/components/PrivateRunLine";
 import { queryWeatherCredit } from "../ui/weather-credit";
+import { carriedSince } from "../ui/carry-spy";
+
+vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
+  const { spyOnCarry } = await import("../ui/carry-spy");
+  return spyOnCarry(await importOriginal());
+});
 
 type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
 
@@ -2059,5 +2065,14 @@ describe("VerdictForm: effort from the watch (G5)", () => {
     expect(
       within(effortGroup()).getByRole("button", { name: "Race" }),
     ).toHaveClass("justify-center", "border-hairline");
+  });
+});
+
+describe("VerdictForm: a lapsed session (Au7, D-155)", () => {
+  it("carries run to log-in", async () => {
+    carriedSince();
+    await renderWithRouter(form());
+
+    expect(carriedSince()).toEqual(["run"]);
   });
 });

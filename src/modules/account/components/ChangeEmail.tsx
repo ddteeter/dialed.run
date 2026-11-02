@@ -54,6 +54,7 @@ export function ChangeEmail({
   const [currentPassword, setCurrentPassword] = useState("");
   const [outcome, setOutcome] = useState<ChangeResult | undefined>();
   const form = useFormSubmit({
+    carry: "settings",
     schema: changeEmailSchema,
     action: async (values) => {
       const result = await request({ data: values });
