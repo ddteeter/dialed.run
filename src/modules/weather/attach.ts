@@ -16,6 +16,7 @@ import type { Ulid } from "../../lib/ids";
 import { weatherProvider } from "./provider";
 import {
   runHourKeys,
+  lastSampledHourBucket,
   cacheKeyFor,
   findManualBand,
   findObservationRow,
@@ -32,6 +33,27 @@ const HOUR_SECONDS = 60 * 60;
 const FAIL_AFTER_SECONDS = 5 * HOUR_SECONDS;
 
 /**
+ * How long after an hour ends its weather is final enough to cache (D-156).
+ *
+ * The cache is shared — every runner in the cell that hour reads the same
+ * row — and it is never refreshed, so whatever the first fetch got is that
+ * hour's weather for good, and the training signal the Call will learn
+ * from. Visual Crossing answers for the current or just-finished hour with
+ * a value that can still be partly forecast, blended in until its station
+ * observations arrive. Two hours is the margin the owner accepted for
+ * those to settle; a run saved sooner attaches the hours already settled
+ * and the hourly retry cron fills the rest.
+ */
+const SETTLE_MARGIN_SECONDS = 2 * HOUR_SECONDS;
+
+/**
+ * When an hour's weather may be fetched: the hour's end, plus the margin.
+ */
+function settlesAt(hourBucket: number): number {
+  return (hourBucket + 1) * HOUR_SECONDS + SETTLE_MARGIN_SECONDS;
+}
+
+/**
  * Why a run's conditions gave up, for its Gave up row. The cron keeps no
  * error — a provider failure is logged and the run left `pending` — so
  * what it can say is how long it tried; the logs have the rest.
@@ -42,18 +64,20 @@ const WEATHER_GAVE_UP_REASON =
 /**
  * The same, for a run the cron fails on its first pass already past the
  * window: an operator's Retry (which puts it back to `pending`), or a run
- * that entered the system older than five hours. Either way it had one
+ * logged by hand so long after it ran that its window had already closed.
+ * Either way it had one
  * try, and saying "five hours of hourly tries" again would be untrue.
  */
 const WEATHER_LATE_TRY_REASON =
   "No weather came back for this run on its latest try, made after its five-hour window had closed.";
 
 /**
- * What a give-up says and counts, by the run's age when the cron fails it.
+ * What a give-up says and counts, by how long the run's window has been
+ * open (`windowOpensAt`) when the cron fails it.
  *
  * The cron fails a run on its first pass at or past five hours, so a run
- * that was pending all along is failed before it is six hours old, having
- * had about five hourly goes. One failed later than that was not pending
+ * that was pending all along is failed before its window is six hours
+ * old, having had about five hourly goes. One failed later than that was not pending
  * all along — it came back after a give-up, or entered late — and had the
  * one go this pass made. A run already listed adds that to its tries
  * (`gaveUpUpsert`), so a retried run counts one more, not five.
@@ -97,7 +121,7 @@ async function setStatus(runId: Ulid, status: WeatherStatus): Promise<void> {
 
 /**
  * What an attach attempt did. Returned rather than swallowed: three of the
- * six outcomes are degradations (law 5 — a weather failure never fails the
+ * seven outcomes are degradations (law 5 — a weather failure never fails the
  * run), and a caller that cannot tell "attached" from "pending" has no way
  * to report or count them. The retry cron counts on these, and the strings
  * are what a tail log shows.
@@ -106,6 +130,9 @@ type AttachOutcome =
   | "attached"
   | "manual"
   | "pending"
+  // Every settled hour is in, and at least one hour has not settled yet
+  // (D-156): the run stays `pending` for the cron, which is not a failure.
+  | "awaiting-hours"
   | "skipped-no-location"
   | "skipped-resolved"
   | "skipped-not-found";
@@ -150,21 +177,15 @@ async function resolveAndAttach(runId: Ulid): Promise<AttachOutcome> {
     return "manual";
   }
 
+  // Only the hours that have settled (D-156). They are a prefix of the
+  // walk — a later hour ends later — so the indexes below are still each
+  // hour's offset from the start. What is left over stays owed: the run
+  // keeps `pending`, and the hourly cron asks again once it settles.
   const keys = runHourKeys(run.lat, run.lng, run.startedAt, run.durationS);
-  const [key] = keys;
-  // Unreachable: `runHourKeys` always yields at least the starting hour.
-  // The guard is here for the compiler — destructuring a `CacheKey[]`
-  // gives `CacheKey | undefined` whatever the runtime does.
-  // Stryker disable next-line ConditionalExpression,EqualityOperator,StringLiteral
-  if (key === undefined) return "skipped-no-location";
-  // Real observations only: another runner's band in this cell is not
-  // this run's weather (B1), so it reads as a miss and this run fetches.
-  if ((await findObservationRow(key)) !== undefined) {
-    await setStatus(runId, "attached");
-    return "attached";
-  }
-
-  const provider = weatherProvider();
+  const now = nowSeconds();
+  const settled = keys.filter((key) => settlesAt(key.hourBucket) <= now);
+  let outcome: AttachOutcome =
+    settled.length === keys.length ? "attached" : "awaiting-hours";
   try {
     // Sample every hour the run spans, not just its start.
     //
@@ -181,40 +202,30 @@ async function resolveAndAttach(runId: Ulid): Promise<AttachOutcome> {
     // from started_at + duration_s. What was missing was resolving the
     // later hours at all. The run still links to its starting hour, so
     // every existing reader is unaffected.
-    await sampleRunHours(provider, keys, run.lat, run.lng, run.startedAt);
-    await setStatus(runId, "attached");
-    return "attached";
+    await sampleRunHours(settled, run.lat, run.lng, run.startedAt);
   } catch (error) {
     console.warn("[weather] attach: provider call failed, marking pending", {
       runId,
       error: error instanceof Error ? error.message : String(error),
     });
-    await setStatus(runId, "pending");
-    return "pending";
+    outcome = "pending";
   }
+  await setStatus(runId, outcome === "attached" ? "attached" : "pending");
+  return outcome;
 }
 
 async function sampleRunHours(
-  provider: ReturnType<typeof weatherProvider>,
   keys: readonly CacheKey[],
   lat: number,
   lng: number,
   startedAt: number,
 ): Promise<void> {
+  const provider = weatherProvider();
   for (const [index, hourKey] of keys.entries()) {
-    // A later hour already cached by someone else's run at the same place
-    // needs no upstream call.
-    //
-    // Stryker cannot kill the guard itself and neither can a test: hour 0
-    // is *known* to be a miss, because `resolveAndAttach` looked it up and
-    // returned early if it hit. Widening the guard therefore only adds a
-    // query that always misses. It stays because that query is billed.
-    // Stryker disable next-line ConditionalExpression,EqualityOperator
-    if (index > 0) {
-      const existing = await findObservationRow(hourKey);
-      if (existing !== undefined) continue;
-    }
-    const at = new Date((startedAt + index * 3600) * 1000);
+    // An hour already cached — by this run's earlier attempt, or by
+    // someone else's run at the same place — needs no upstream call.
+    if ((await findObservationRow(hourKey)) !== undefined) continue;
+    const at = new Date((startedAt + index * HOUR_SECONDS) * 1000);
     const observation = await provider.observation(lat, lng, at);
     // No hour names the run (C1): the row is a shared cache cell, found
     // by place and hour, and a run id on it would outlive the run.
@@ -278,6 +289,31 @@ export async function recordManualObservation(
   await setStatus(runId, "manual");
 }
 
+/**
+ * When a pending run's five hours of tries start: when it entered the
+ * system (`imports.created_at` for a file import, else `started_at`), or
+ * when its last sampled hour settles (D-156), whichever is later.
+ *
+ * Counting from entry alone would give up on a long run before its last
+ * hour could be asked for: a three-hour run's last hour settles five
+ * hours after it started, which was the whole window. So the tries that
+ * count are the ones made once every hour is fetchable, and a give-up
+ * still means five hourly tries at a complete run. A run that entered
+ * late — a file uploaded days after — is already settled, and its window
+ * opens on arrival, as before.
+ */
+function windowOpensAt(run: {
+  startedAt: number;
+  durationS: number;
+  importCreatedAt: number | null;
+}): number {
+  const entered = run.importCreatedAt ?? run.startedAt;
+  return Math.max(
+    entered,
+    settlesAt(lastSampledHourBucket(run.startedAt, run.durationS)),
+  );
+}
+
 interface RetryCronResult {
   claimed: number;
   attached: number;
@@ -293,11 +329,11 @@ interface RetryCronResult {
  * duplicate row or a lost update) — documented deviation from law 2's
  * literal shape, flagged in the design doc.
  *
- * The packet's "5 attempts" cap is approximated with a 5-hour age window on
- * the run's entry time (`imports.created_at` for file imports, else
- * `started_at`) instead of a persisted per-run counter — no schema change
- * needed, at the cost of exact-5 counting (docs/designs/103-weather.md open
- * questions; reviewer may veto for a `runs.weather_attempts` column).
+ * The packet's "5 attempts" cap is approximated with a 5-hour window
+ * instead of a persisted per-run counter — no schema change needed, at the
+ * cost of exact-5 counting (docs/designs/103-weather.md open questions;
+ * reviewer may veto for a `runs.weather_attempts` column). See
+ * `windowOpensAt` for when the five hours start.
  */
 export async function retryPendingWeather(): Promise<RetryCronResult> {
   const db = coreDb();
@@ -307,6 +343,7 @@ export async function retryPendingWeather(): Promise<RetryCronResult> {
       // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; retryPendingWeather reads the runs still waiting for weather with when their import arrived
       id: runs.id,
       startedAt: runs.startedAt,
+      durationS: runs.durationS,
       importCreatedAt: imports.createdAt,
     })
     .from(runs)
@@ -325,7 +362,7 @@ export async function retryPendingWeather(): Promise<RetryCronResult> {
 
   const now = nowSeconds();
   const toFail = candidates
-    .map((c) => ({ id: c.id, age: now - (c.importCreatedAt ?? c.startedAt) }))
+    .map((c) => ({ id: c.id, age: now - windowOpensAt(c) }))
     .filter((c) => c.age >= FAIL_AFTER_SECONDS);
   // Equivalent mutant: skipping this return changes nothing an assertion
   // can see — an empty `inArray` matches nothing, so the batch below fails

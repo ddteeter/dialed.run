@@ -37,7 +37,8 @@ jobs:
   classify:
     # The third clause only SKIPS: a synchronize someone other than
     # Dependabot caused is the open-source-list commit (oss-list-commit.yml),
-    # and the decision made on Dependabot's own push already stands.
+    # and the decision made on Dependabot's own push already stands:
+    # auto-merge arms the list commit when it lands first (see below).
     if: >-
       github.event.pull_request.user.login == 'dependabot[bot]' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
@@ -109,18 +110,59 @@ jobs:
           permission-contents: write
           permission-pull-requests: write
 
-      # A merge commit, as every other merge in this repo is, of the commit
-      # classify read. GitHub arms auto-merge only while a check is still
-      # pending; once every required check has passed (a re-run, or CI
-      # finishing first) it refuses, and the PR is merged now instead.
-      # Branch protection decides either way.
-      - run: |
-          gh pr merge --auto --merge --match-head-commit "$HEAD_SHA" "$PR_URL" ||
-            gh pr merge --merge --match-head-commit "$HEAD_SHA" "$PR_URL"
-        env:
+      # A merge commit, as every other merge in this repo is. GitHub arms
+      # auto-merge only while a check is still pending; once every required
+      # check has passed (a re-run, or CI finishing first) it refuses, and
+      # the PR is merged now instead. Branch protection decides either way.
+      #
+      # Of which commit: the one classify read, or that commit with the
+      # open-source list committed on top. oss-list-commit.yml can push the
+      # list while this job waits for a runner (16 minutes, the morning a
+      # week's PRs opened at once), and the run that push starts skips
+      # classify, so a job that armed only the classified commit would arm
+      # nothing, ever. The head it arms instead must be the classified
+      # commit plus commits that are all the App's, that together change the
+      # list and no other file. Anything else is a push someone else made,
+      # and that push's own run decides. Auto-merge, once armed, survives
+      # the App's later push, so only this ordering needed the follow.
+      #
+      # It reads the head, checks it, then arms that exact head; a push
+      # between the read and the arm fails the arm, so it reads again. The
+      # App pushes the list at most once per Dependabot push.
+      - env:
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_URL: ${{ github.event.pull_request.html_url }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CLASSIFIED_SHA: ${{ github.event.pull_request.head.sha }}
+          BOT: ${{ steps.app.outputs.app-slug }}[bot]
+          LIST: src/modules/account/open-source-list.json
           GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          set -euo pipefail
+          followed() {
+            [ "$1" = "$CLASSIFIED_SHA" ] && return 0
+            gh api "repos/$REPO/compare/$CLASSIFIED_SHA...$1" |
+              jq -e --arg bot "$BOT" --arg list "$LIST" '
+                .status == "ahead" and .behind_by == 0
+                and .total_commits > 0 and (.commits | length) == .total_commits
+                and all(.commits[]; .author.login == $bot and .committer.login == $bot)
+                and ([.files[].filename] == [$list])
+              ' >/dev/null
+          }
+          for attempt in 1 2 3; do
+            head=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq .head.sha)
+            if ! followed "$head"; then
+              echo "::warning::the head ($head) is not $CLASSIFIED_SHA plus the open-source list; not arming it"
+              exit 0
+            fi
+            echo "Arming $head (classified $CLASSIFIED_SHA), attempt $attempt"
+            if gh pr merge --auto --merge --match-head-commit "$head" "$PR_URL" ||
+              gh pr merge --merge --match-head-commit "$head" "$PR_URL"; then
+              exit 0
+            fi
+          done
+          echo "::error::could not arm auto-merge on $PR_URL"
+          exit 1
 
   review:
     needs: classify
@@ -171,7 +213,7 @@ jobs:
       # The answer leaves as structured output, which `post` screens.
       # `show_full_output` stays off: these logs are public.
       - id: claude
-        uses: anthropics/claude-code-action@db77d4d3c98f3f6380e7cd45ffba2342a3dbde3c # v1.0.254
+        uses: anthropics/claude-code-action@925afb53776cf1a2b738c6bdbed37b4d4000ef13 # v1.0.262
         env:
           GH_TOKEN: ${{ github.token }}
           CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
