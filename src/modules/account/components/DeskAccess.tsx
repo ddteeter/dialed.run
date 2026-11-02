@@ -482,6 +482,7 @@ function NewCodeForm({
   const [maxUses, setMaxUses] = useState("1");
   const { idempotencyKey, rotate } = useIdempotencyKey();
   const form = useFormSubmit({
+    carry: "page",
     schema: newInviteSchema,
     action: (values) => createCode({ data: { ...values, idempotencyKey } }),
     successMessage: "Code created.",

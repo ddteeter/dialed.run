@@ -58,6 +58,7 @@ function SectionPage() {
             pendingLabel="Saving"
             successMessage="Username saved."
             onClaimed={onClaimed}
+            carry="settings"
           />
         )}
       />
