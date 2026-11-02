@@ -4,6 +4,12 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { EntryDetail } from "../../src/modules/feed/components/EntryDetail";
+import {
+  LINK_COPIED,
+  LINK_NOT_COPIED,
+  PUBLIC_KIT_LINE,
+  publicKitUrl,
+} from "../../src/modules/feed/components/OwnerAudience";
 import { NoticeBand } from "../../src/modules/safety/components/NoticeBand";
 import type { SetUsefulFn } from "../../src/modules/feed/components/useful-reaction";
 import type { entryDetailForViewer } from "../../src/modules/feed/entries";
@@ -486,7 +492,8 @@ describe("EntryDetail: Useful and Report", () => {
 
     expect(screen.queryByRole("button", { name: /Useful/u })).toBeNull();
     expect(part("report")).toBeNull();
-    expect(partsInOrder()).toStrictEqual(["run-strip"]);
+    // The owner meta is the runner's own, above the strip.
+    expect(partsInOrder()).toStrictEqual(["owner-meta", "run-strip"]);
   });
 
   it("is Useful on the control-failure pattern, announced in the screen's region", async () => {
@@ -574,5 +581,101 @@ describe("EntryDetail: Useful and report wait for a confirmed address (round 26 
       expect(sheet()).toHaveTextContent("Opened from useful");
     });
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  });
+});
+
+describe("EntryDetail: the owner meta (round 41 #86a)", () => {
+  it("says who the runner's own kit is for, bracketed in ink, and nothing more unless it is public", async () => {
+    await renderFeedScreen(detail({}, { viewerId: OWNER }));
+    const meta = part("owner-meta");
+    expect(meta).toHaveTextContent(/^\[Shared\]$/u);
+    expect(meta?.firstElementChild).toHaveClass("text-ink", "text-mono-xs");
+    expect(screen.queryByText(PUBLIC_KIT_LINE)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
+  });
+
+  it("reads PRIVATE for a private kit and for a groups one, which nothing writes yet", async () => {
+    const { unmount } = await renderFeedScreen(
+      detail({ audience: "private" }, { viewerId: OWNER }),
+    );
+    expect(part("owner-meta")).toHaveTextContent(/^\[Private\]$/u);
+    unmount();
+    await renderFeedScreen(detail({ audience: "groups" }, { viewerId: OWNER }));
+    expect(part("owner-meta")).toHaveTextContent(/^\[Private\]$/u);
+  });
+
+  it("is not on anyone else's view of the kit", async () => {
+    await renderFeedScreen(detail({ audience: "world" }));
+    expect(part("owner-meta")).toBeNull();
+    expect(screen.queryByText(PUBLIC_KIT_LINE)).toBeNull();
+  });
+
+  it("gives a PUBLIC kit its line, Copy link and Change, which opens A3's picker", async () => {
+    await renderFeedScreen(detail({ audience: "world" }, { viewerId: OWNER }));
+    const meta = part("owner-meta");
+    expect(meta).toHaveTextContent(
+      "[Public]Public: anyone with the link can see it.Copy linkChange",
+    );
+    expect(screen.getByRole("link", { name: "Change" })).toHaveAttribute(
+      "href",
+      "/feed/verdict/01ENTRY",
+    );
+  });
+
+  it("copies the kit's absolute /k address on the runner's host, and says so", async () => {
+    const user = userEvent.setup();
+    await renderFeedScreen(detail({ audience: "world" }, { viewerId: OWNER }));
+
+    await user.click(screen.getByRole("button", { name: "Copy link" }));
+
+    expect(await navigator.clipboard.readText()).toBe(
+      publicKitUrl("01ENTRY", globalThis.location.origin),
+    );
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(LINK_COPIED);
+    });
+  });
+
+  it("says the link was not copied when the browser refuses the clipboard", async () => {
+    const user = userEvent.setup();
+    await renderFeedScreen(detail({ audience: "world" }, { viewerId: OWNER }));
+    const refuse = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockRejectedValue(new Error("denied"));
+    try {
+      await user.click(screen.getByRole("button", { name: "Copy link" }));
+      await waitFor(() => {
+        expect(screen.getByRole("status")).toHaveTextContent(LINK_NOT_COPIED);
+      });
+    } finally {
+      refuse.mockRestore();
+    }
+  });
+
+  it("says what happened in the board's plain words, on a link-styled press", async () => {
+    expect(LINK_COPIED).toBe("Link copied.");
+    expect(LINK_NOT_COPIED).toBe("Link not copied.");
+    await renderFeedScreen(detail({ audience: "world" }, { viewerId: OWNER }));
+    for (const press of [
+      screen.getByRole("button", { name: "Copy link" }),
+      screen.getByRole("link", { name: "Change" }),
+    ]) {
+      expect(press).toHaveClass(
+        "target",
+        "text-small",
+        "font-semibold",
+        "text-ink",
+        "underline",
+      );
+    }
+  });
+
+  it("builds the address from the origin it is given", () => {
+    expect(publicKitUrl("01ENTRY", "https://app.dialed.run")).toBe(
+      "https://app.dialed.run/kit/01ENTRY",
+    );
+    expect(publicKitUrl("01ENTRY", "http://localhost:5173")).toBe(
+      "http://localhost:5173/kit/01ENTRY",
+    );
   });
 });

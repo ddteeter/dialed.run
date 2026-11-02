@@ -4,6 +4,8 @@
  *
  * The operator's journey is `operator.demo.spec.ts`.
  */
+import { createHash } from "node:crypto";
+
 import { expect, test, type Page } from "@playwright/test";
 import { z } from "zod";
 
@@ -56,6 +58,43 @@ A tag's `nonce` attribute; React quotes it one way, the router another.
 */
 function nonceAttribute(tag: string): string | undefined {
   return /\snonce=["']([^"']*)["']/.exec(tag)?.[1];
+}
+
+/**
+The text of every `<script>` without a `src`, as the browser hashes it.
+*/
+function inlineScriptBodies(html: string): string[] {
+  // React escapes `>` in an attribute, so the first one ends the tag.
+  return (html.match(/<script\b[^>]*>[\s\S]*?<\/script>/g) ?? [])
+    .filter((element) => !/^<script\b[^>]*\ssrc=/.test(element))
+    .map((element) =>
+      element
+        .slice(element.indexOf(">") + 1, -"</script>".length)
+        .replaceAll(/\r\n?/g, "\n"),
+    );
+}
+
+/**
+The base64 SHA-256 a CSP hash source names.
+*/
+function sha256(text: string): string {
+  return createHash("sha256").update(text, "utf8").digest("base64");
+}
+
+/**
+The digests a policy's `'sha256-…'` sources name, in order.
+*/
+function hashSources(policy: string): string[] {
+  return (policy.match(/'sha256-[^']+'/g) ?? []).map((source) =>
+    source.slice("'sha256-".length, -1),
+  );
+}
+
+/**
+The digests a policy must name for `html`: each distinct inline script's.
+*/
+function scriptHashes(html: string): string[] {
+  return [...new Set(inlineScriptBodies(html).map((script) => sha256(script)))];
 }
 
 /**
@@ -182,6 +221,87 @@ test.describe("security headers (OPS-8)", () => {
         expect(await violationsVisiting(page, "/closet", 200)).toStrictEqual(
           [],
         );
+      });
+    });
+  });
+
+  test("an app page is never stored, by the edge or anyone", async ({
+    request,
+  }) => {
+    const response = await request.get("/auth/login");
+
+    expect(response.headers()["cache-control"]).toBe("private, no-store");
+  });
+
+  // Design 163: the edge stores a public page and hands the same bytes to
+  // every visitor, so a nonce in it would be one nonce for all of them.
+  // Its policy names its inline scripts' hashes instead, and the page
+  // names no nonce anywhere.
+  test.describe("a page the edge stores", () => {
+    const NOT_PUBLIC = "/kit/no-such-kit";
+
+    test("admits exactly its inline scripts by hash, and carries no nonce", async ({
+      request,
+    }) => {
+      const response = await request.get(NOT_PUBLIC);
+      const headers = response.headers();
+      const html = await response.text();
+
+      expect(response.status()).toBe(404);
+      expect(headers["cache-control"]).toBe("public, max-age=60");
+      const policy = headers[CSP_HEADER.toLowerCase()] ?? "";
+      expect(policy).not.toContain("nonce");
+      expect(html).not.toMatch(/\snonce=/);
+      expect(html).not.toContain("csp-nonce");
+
+      expect(inlineScriptBodies(html).length).toBeGreaterThan(0);
+      expect(hashSources(policy)).toStrictEqual(scriptHashes(html));
+    });
+
+    test("differs between two renders only in the router's load times", async ({
+      request,
+    }) => {
+      // The router's dehydrated state stamps each match with when it
+      // loaded (`u:<ms>`), so two renders are not byte-identical; that is
+      // all that differs, and each render's policy names its own scripts.
+      // The edge keeps one render, headers and body together.
+      const first = await request.get(NOT_PUBLIC);
+      const second = await request.get(NOT_PUBLIC);
+      const loadTimes = /\bu:\d+/g;
+
+      const pages = [await first.text(), await second.text()];
+
+      expect(pages[1]?.replaceAll(loadTimes, "u:0")).toBe(
+        pages[0]?.replaceAll(loadTimes, "u:0"),
+      );
+      for (const [index, response] of [first, second].entries()) {
+        const policy = response.headers()[CSP_HEADER.toLowerCase()] ?? "";
+        expect(hashSources(policy)).toStrictEqual(
+          scriptHashes(pages[index] ?? ""),
+        );
+      }
+    });
+
+    for (const path of [NOT_PUBLIC, "/@nosuchrunner"]) {
+      test(`${path} raises no violation in a browser, and hydrates`, async ({
+        page,
+      }) => {
+        expect(await violationsVisiting(page, path, 404)).toStrictEqual([]);
+      });
+    }
+
+    test.describe("signed in", () => {
+      test.use({ storageState: storageStateFor("closet") });
+
+      test("runs the swap into the app, which only hydration can do", async ({
+        page,
+      }) => {
+        expect(await violationsVisiting(page, NOT_PUBLIC, 404)).toStrictEqual(
+          [],
+        );
+        await expect(
+          page.getByRole("link", { name: "Look in the app" }),
+        ).toBeVisible();
       });
     });
   });

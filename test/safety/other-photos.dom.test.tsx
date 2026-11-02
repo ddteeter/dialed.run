@@ -80,6 +80,10 @@ describe("OtherPhotos", () => {
     );
 
     expect(part("other-photos")).toHaveTextContent(/^Their other photos · 14/u);
+    // Only MATCHING PHOTOS' kicker takes focus by script (round 42 #89).
+    expect(
+      screen.getByText(/^Their other photos · 14$/u).parentElement,
+    ).not.toHaveAttribute("tabindex");
     const more = screen.getByRole("link", {
       name: "+ 12 more · Open @maya_runs in Runners",
     });

@@ -84,7 +84,7 @@ export function OtherProfile({
           data-state="empty"
           className="flex flex-col gap-3"
         >
-          <p className="m-0 text-lead">No public entries yet.</p>
+          <p className="m-0 text-lead">No shared runs yet.</p>
           <p className="m-0 text-body text-quiet">
             Follow {name} and their shared runs will show in your feed.
           </p>

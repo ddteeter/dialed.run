@@ -16,6 +16,7 @@ import {
   releaseStaleClaims,
 } from "../../src/modules/safety";
 
+import { noPurge } from "../purge-spy";
 import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
 import { oweInCore } from "../queue-fakes";
 
@@ -74,7 +75,7 @@ describe("reconciling reports that crossed the threshold and were never hidden",
     // The state a crash leaves: enough reporters, still public.
     expect(await statusOf(entryId)).toBe("ok");
 
-    const outcome = await reconcileUnhiddenReports(oweInCore);
+    const outcome = await reconcileUnhiddenReports(oweInCore, noPurge);
 
     expect(outcome).toStrictEqual({ found: 1, hidden: 1 });
     expect(await statusOf(entryId)).toBe("hidden_pending_review");
@@ -103,7 +104,7 @@ describe("reconciling reports that crossed the threshold and were never hidden",
         });
     }
 
-    expect(await reconcileUnhiddenReports(oweInCore)).toStrictEqual({
+    expect(await reconcileUnhiddenReports(oweInCore, noPurge)).toStrictEqual({
       found: 0,
       hidden: 0,
     });
@@ -144,7 +145,7 @@ describe("reconciling reports that crossed the threshold and were never hidden",
       });
     }
 
-    const outcome = await reconcileUnhiddenReports(oweInCore);
+    const outcome = await reconcileUnhiddenReports(oweInCore, noPurge);
     expect(outcome.hidden).toBe(0);
     expect(await statusOf(entryId)).toBe("ok");
   });
@@ -154,7 +155,7 @@ describe("reconciling reports that crossed the threshold and were never hidden",
     // subject keeps its row, so reconciliation passes over it — otherwise
     // the sweep would undo a person's decision every hour, forever.
     const entryId = await reportedButNotHidden();
-    await reconcileUnhiddenReports(oweInCore);
+    await reconcileUnhiddenReports(oweInCore, noPurge);
     const [queued] = await pendingReviewQueue();
     if (!queued) throw new Error("nothing queued");
     await core()
@@ -166,7 +167,7 @@ describe("reconciling reports that crossed the threshold and were never hidden",
       .set({ moderationStatus: "ok" })
       .where(eq(outfitEntries.id, entryId));
 
-    expect(await reconcileUnhiddenReports(oweInCore)).toStrictEqual({
+    expect(await reconcileUnhiddenReports(oweInCore, noPurge)).toStrictEqual({
       found: 0,
       hidden: 0,
     });
@@ -177,9 +178,9 @@ describe("reconciling reports that crossed the threshold and were never hidden",
     // Law 1: crons re-fire. The second run must find nothing left to do
     // rather than queue the same subject again.
     await reportedButNotHidden();
-    const first = await reconcileUnhiddenReports(oweInCore);
+    const first = await reconcileUnhiddenReports(oweInCore, noPurge);
     expect(first.hidden).toBe(1);
-    expect(await reconcileUnhiddenReports(oweInCore)).toStrictEqual({
+    expect(await reconcileUnhiddenReports(oweInCore, noPurge)).toStrictEqual({
       found: 0,
       hidden: 0,
     });
@@ -207,6 +208,7 @@ async function queuedAndClaimed(): Promise<string> {
         reason: "explicit",
       },
       oweInCore,
+      noPurge,
     );
   }
   const [queued] = await pendingReviewQueue();
@@ -315,7 +317,7 @@ describe("review claims expire", () => {
 
   it("does not touch rows nobody has claimed", async () => {
     const entryId = await reportedButNotHidden();
-    await reconcileUnhiddenReports(oweInCore);
+    await reconcileUnhiddenReports(oweInCore, noPurge);
     expect(
       await releaseStaleClaims(nowSeconds() + claimLeaseSeconds + 1),
     ).toStrictEqual({ released: 0 });

@@ -8,7 +8,7 @@ import type { FollowAction } from "./Follow";
 import { OtherProfile } from "./OtherProfile";
 
 /**
- * `/@handle` (round 26 #7): the runner who holds the handle now, or — for
+ * H at `/feed/u/<handle>` (round 26 #7): the runner who holds the handle now, or — for
  * a handle somebody used to hold — "This runner changed their name." and
  * nothing more; for one whose runner's account was deleted, one nobody
  * ever held, or one whose runner the viewer may not see, "This runner

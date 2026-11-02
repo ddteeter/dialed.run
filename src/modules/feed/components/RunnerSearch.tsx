@@ -152,7 +152,7 @@ function ResultRow({
       <div className="flex items-center gap-3">
         <Avatar name={result.username} size="small" />
         <Link
-          to="/@{$handle}"
+          to="/feed/u/$handle"
           params={{ handle: result.username }}
           className="target flex flex-1 items-center text-body text-ink no-underline"
         >
