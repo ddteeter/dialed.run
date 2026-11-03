@@ -7,8 +7,9 @@
  * R-137 (a brand written in any script), round 28 #5 (W3 confirm:
  * Check the blur, Pick another, Use this photo, as the closet's sheet)
  * and #13 (the rail's hatch and "RETIRED MAR 2026", the merge words in
- * ink), and D-75 / R-112 / R-114 (F's TYPE, the rail by type, and the
- * rail listing a save F kept) — one journey, one video.
+ * ink), D-75 / R-112 / R-114 (F's TYPE, the rail by type, and the rail
+ * listing a save F kept) and design-deltas 104 (a select's ▾) — one
+ * journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
@@ -134,6 +135,20 @@ test("add garments with product identity -> detail in round 22's order -> retire
       controls.map((control) => control.getAttribute("name")),
     );
   expect(order).toStrictEqual(["category", "brand", "name"]);
+  // Design-deltas 104: the native arrow is gone, and ▾ sits 12px in from
+  // the right border, the same as the label's 12px from the left.
+  await expect(category).toHaveCSS("appearance", "none");
+  const arrow = category.locator("xpath=following-sibling::*[1]");
+  await expect(arrow).toHaveText("▾");
+  await expect(arrow).toHaveAttribute("aria-hidden", "true");
+  const selectBox = await category.boundingBox();
+  const arrowBox = await arrow.boundingBox();
+  if (selectBox === null || arrowBox === null) {
+    throw new Error("F's category select or its ▾ is not laid out");
+  }
+  expect(
+    selectBox.x + selectBox.width - (arrowBox.x + arrowBox.width),
+  ).toBeCloseTo(12, 0);
   await page.getByLabel("Category").selectOption("shoes");
   await page.getByLabel("Brand").fill("Nike");
   await page.getByLabel("Model / name").fill("Pegasus 41");
