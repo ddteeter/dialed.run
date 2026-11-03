@@ -31,7 +31,13 @@ ground, with no rail and no `data-ground="ink"`. Task 128's packet owns
   note goes. The four "Open Review" emails link `/desk/review`.
 - **The ink ground**: every part is checked on the Desk in the browser, and
   a class that only reads on chalk (a tint, a hairline, hi-viz text) is
-  fixed in place. Findings are listed in the PR.
+  fixed in place. **Found:** every pink button read chalk on pink.
+  `SubmitButton` (`ui/form.tsx`) and the copyright hold's presses set
+  `text-ink` on `bg-action`, and inside `data-ground="ink"` `--ink` is
+  chalk. Both now take `text-accent-ink`, the fixed ink `tokens.css` names
+  for text on an accent. That also clears the two contrast findings the
+  a11y baseline carried for Runners and Access. Tints, hairlines and
+  hi-viz text raised nothing.
 
 ## Behaviour change
 
