@@ -113,5 +113,10 @@
     "rule": "target-44",
     "route": "/safety/review",
     "node": "select[name=\"subjectType\"]"
+  },
+  {
+    "rule": "reflow",
+    "route": "/desk",
+    "node": "main.flex-#"
   }
 ]
