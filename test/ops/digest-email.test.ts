@@ -34,6 +34,8 @@ const COUNTS: TodayCounts = {
   gaveUp: 2,
   oldestGaveUpAt: 900_000,
   digestUnconfirmedAt: undefined,
+  outboxBehind: 12,
+  oldestBehindAt: 800_000,
 };
 
 /**
@@ -71,6 +73,7 @@ describe("digestTemplate", () => {
       screenerUnfinished: 1,
       bansThisWeek: 0,
       gaveUp: 2,
+      outboxBehind: 12,
     });
   });
 
