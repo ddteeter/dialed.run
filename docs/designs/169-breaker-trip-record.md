@@ -75,3 +75,11 @@ differ only once there is real traffic.
 - **Option 3 chosen** (owner, 2026-11-02). After a reopen, a subject held
   twice in the window counts once. That is accepted, since the live breaker
   counts it the same way.
+- **As built.** `tripsSince(db, from, now)` in `safety/breakers.ts` takes
+  the busiest sliding hour of each cause's Review rows. For the classifier
+  it replays the reading at the last `held_back` flag: the hour up to it,
+  with nothing screened after it. With no `held_back` flag it uses the
+  reading now. The reports' ceiling comes from the baseline before the
+  look, so a busy hour inside the look doesn't raise it, which errs toward
+  alerting. The event line now says "reached N of C within an hour" rather
+  than "in the last hour", because the hour may not be the last one.

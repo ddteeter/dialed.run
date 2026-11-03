@@ -9,9 +9,12 @@ import {
   dayHeadroom,
   quietScreenerWeek,
   FINGERPRINT_HOLDS_PER_HOUR,
+  overCeilings,
   REPORT_BASELINE_S,
   REPORT_HIDES_FLOOR,
   reportCeiling,
+  TRIP_LOOKBACK_S,
+  tripsSince,
   type HoldCause,
 } from "../../src/modules/safety/breakers";
 
@@ -349,5 +352,123 @@ describe("a photo still pending a day after upload (D-157)", () => {
       }),
     );
     expect(counts).toStrictEqual([0, 0, 0]);
+  });
+});
+
+/**
+ * R-172: the hourly alert reads every sliding hour since the firing
+ * before, from the rows the holds wrote, not only the hour ending now.
+ */
+describe("tripsSince", () => {
+  const FROM = NOW - TRIP_LOOKBACK_S;
+  const trips = () => tripsSince(core(), FROM, NOW);
+
+  it("looks back two hours, two firings' worth", () => {
+    expect(TRIP_LOOKBACK_S).toBe(2 * HOUR);
+  });
+
+  it("finds a burst that straddles a firing, which each hour alone misses", async () => {
+    const firing = NOW - HOUR;
+    await opened("fingerprint", 3, firing - 60);
+    expect(await overCeilings(core(), firing)).toStrictEqual([]);
+    await opened("fingerprint", 2, firing + 60);
+    expect(await overCeilings(core(), NOW)).toStrictEqual([]);
+
+    expect(await trips()).toStrictEqual([
+      {
+        cause: "fingerprint",
+        isOver: true,
+        count: FINGERPRINT_HOLDS_PER_HOUR,
+        ceiling: FINGERPRINT_HOLDS_PER_HOUR,
+      },
+    ]);
+  });
+
+  it("counts an hour as the breaker does, its first second included", async () => {
+    await opened("fingerprint", 3, NOW - 2 * HOUR + 60);
+    await opened("fingerprint", 2, NOW - HOUR + 61);
+    expect(await trips()).toStrictEqual([]);
+
+    await opened("fingerprint", 2, NOW - HOUR + 60);
+    expect(await trips()).toMatchObject([{ cause: "fingerprint", count: 5 }]);
+  });
+
+  it("reads whole hours back to an hour before the look", async () => {
+    await opened("fingerprint", 3, FROM - HOUR - 1);
+    await opened("fingerprint", 2, FROM);
+    expect(await trips()).toStrictEqual([]);
+
+    await opened("fingerprint", 3, FROM - HOUR);
+    expect(await trips()).toMatchObject([{ cause: "fingerprint", count: 5 }]);
+  });
+
+  it("names nothing for a burst that ended before the look, or lands at now", async () => {
+    // The next look, which overlaps this one, reads the second of `now`.
+    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR, FROM - 1);
+    await opened("reports", REPORT_HIDES_FLOOR, NOW);
+
+    expect(await trips()).toStrictEqual([]);
+  });
+
+  it("counts only the cause's own rows, and reports only where they hide", async () => {
+    await opened("classifier", FINGERPRINT_HOLDS_PER_HOUR, NOW - 60);
+    await opened("reports", REPORT_HIDES_FLOOR, NOW - 60, "profile");
+    expect(await trips()).toStrictEqual([]);
+
+    await opened("reports", REPORT_HIDES_FLOOR, NOW - 60);
+    expect(await trips()).toStrictEqual([
+      {
+        cause: "reports",
+        isOver: true,
+        count: REPORT_HIDES_FLOOR,
+        ceiling: REPORT_HIDES_FLOOR,
+      },
+    ]);
+  });
+
+  it("reads the reports' ceiling from the baseline before the look", async () => {
+    await opened("reports", 3, FROM - HOUR - 60);
+    await opened("reports", REPORT_HIDES_FLOOR, NOW - 60);
+    expect(await trips()).toStrictEqual([]);
+  });
+
+  it("leaves a busy hour inside the look out of the reports' ceiling", async () => {
+    // A busier baseline would raise the ceiling the alert reads against;
+    // an hour inside the look is the burst itself, not a baseline.
+    await opened("reports", 3, FROM - HOUR / 2);
+    await opened("reports", REPORT_HIDES_FLOOR, NOW - 60);
+
+    expect(await trips()).toMatchObject([
+      { cause: "reports", count: REPORT_HIDES_FLOOR, ceiling: 10 },
+    ]);
+  });
+
+  it("takes the classifier's reading at the flag it held back", async () => {
+    const refused = NOW - HOUR / 2;
+    await screened("pass", 16, refused - 60);
+    await screened("flag", 4, refused - 60);
+    await screened("held_back", 1, refused);
+    // Screened after the refusal, inside its hour: the breaker had not seen
+    // them, and they dilute the share now.
+    await screened("pass", 100, NOW - 60);
+    expect(await overCeilings(core(), NOW)).toStrictEqual([]);
+
+    expect(await trips()).toStrictEqual([
+      { cause: "classifier", isOver: true, count: 4, ceiling: 3 },
+    ]);
+  });
+
+  it("takes the classifier's reading now, with no flag held back in the look", async () => {
+    await screened("pass", 16, FROM - 60);
+    await screened("flag", 4, FROM - 60);
+    await screened("held_back", 1, FROM - 1);
+    await screened("pass", 16, NOW + 1);
+    await screened("flag", 4, NOW + 1);
+    await screened("held_back", 1, NOW + 1);
+    expect(await trips()).toStrictEqual([]);
+
+    await screened("pass", 16, NOW - 60);
+    await screened("flag", 4, NOW - 60);
+    expect(await trips()).toMatchObject([{ cause: "classifier", count: 4 }]);
   });
 });

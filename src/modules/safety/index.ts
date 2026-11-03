@@ -270,12 +270,15 @@ export {
   undecidedRemovalsDue,
 } from "./removal-reminders";
 
-// Design 164: the hold breakers, read by the hourly alert and Today.
+// Design 164: the hold breakers, read by the hourly alert (R-172: since
+// the last firing) and Today (now).
 export {
   dayHeadroom,
   HEADROOM_WARN_SHARE,
   overCeilings,
   quietScreenerWeek,
+  TRIP_LOOKBACK_S,
+  tripsSince,
   type CeilingReading,
   type HoldCause,
 } from "./breakers";
