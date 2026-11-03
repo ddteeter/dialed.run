@@ -19,8 +19,8 @@ ground, with no rail and no `data-ground="ink"`. Task 128's packet owns
   QuarantineRecords) inside `DeskShell current="review"`, as Runners and
   Access do. It sits behind `/desk`'s `operatorOrNotFound`, and every
   server function still checks `requireAdmin`.
-- **`/safety/review` redirects** to `/desk/review`, so a bookmark or an
-  email sent before this deploy still lands.
+- **`/safety/review` is deleted**, not redirected (owner, 2026-11-03):
+  nothing has launched, so no bookmark or sent email points at it.
 - **The photos move too** (owner, 2026-11-02): `/safety/review-photo/$`
   becomes `/desk/review-photo/$`, unchanged inside (`reviewerPhotoResponse`
   is still the gate, not `/desk`'s `beforeLoad`, which is for pages). The old address is deleted, not redirected: only Review's
@@ -52,7 +52,7 @@ has to sign in first. Accepted in the plan (owner, 2026-11-02).
 - Schema changes needed: **none**
 - New route files: `src/routes/desk/review.tsx`,
   `src/routes/desk/review-photo.$.tsx`; `src/routes/safety/review.tsx`
-  becomes a redirect; `src/routes/safety/review-photo.$.tsx` is deleted.
+  and `src/routes/safety/review-photo.$.tsx` are deleted.
 - New bindings/queues/crons: **none**
 - Screens: Operator Screens D0's rail and Review on the ink ground.
 

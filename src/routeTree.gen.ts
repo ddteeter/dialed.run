@@ -60,7 +60,6 @@ import { Route as RunsStravaRouteImport } from './routes/runs/strava'
 import { Route as RunsStravaCallbackRouteImport } from './routes/runs/strava-callback'
 import { Route as RunsStravaConnectRouteImport } from './routes/runs/strava-connect'
 import { Route as SafetyBlockedRouteImport } from './routes/safety/blocked'
-import { Route as SafetyReviewRouteImport } from './routes/safety/review'
 import { Route as TakedownIndexRouteImport } from './routes/takedown/index'
 import { Route as TakedownConfirmRouteImport } from './routes/takedown/confirm'
 import { Route as AccountExportTokenRouteImport } from './routes/account/export.$token'
@@ -333,11 +332,6 @@ const SafetyBlockedRoute = SafetyBlockedRouteImport.update({
   path: '/safety/blocked',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SafetyReviewRoute = SafetyReviewRouteImport.update({
-  id: '/safety/review',
-  path: '/safety/review',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TakedownIndexRoute = TakedownIndexRouteImport.update({
   id: '/takedown/',
   path: '/takedown/',
@@ -466,7 +460,6 @@ export interface FileRoutesByFullPath {
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
   '/runs/strava-connect': typeof RunsStravaConnectRoute
   '/safety/blocked': typeof SafetyBlockedRoute
-  '/safety/review': typeof SafetyReviewRoute
   '/takedown/confirm': typeof TakedownConfirmRoute
   '/call/': typeof CallIndexRoute
   '/closet/': typeof ClosetIndexRoute
@@ -535,7 +528,6 @@ export interface FileRoutesByTo {
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
   '/runs/strava-connect': typeof RunsStravaConnectRoute
   '/safety/blocked': typeof SafetyBlockedRoute
-  '/safety/review': typeof SafetyReviewRoute
   '/takedown/confirm': typeof TakedownConfirmRoute
   '/call': typeof CallIndexRoute
   '/closet': typeof ClosetIndexRoute
@@ -606,7 +598,6 @@ export interface FileRoutesById {
   '/runs/strava-callback': typeof RunsStravaCallbackRoute
   '/runs/strava-connect': typeof RunsStravaConnectRoute
   '/safety/blocked': typeof SafetyBlockedRoute
-  '/safety/review': typeof SafetyReviewRoute
   '/takedown/confirm': typeof TakedownConfirmRoute
   '/call/': typeof CallIndexRoute
   '/closet/': typeof ClosetIndexRoute
@@ -678,7 +669,6 @@ export interface FileRouteTypes {
     | '/runs/strava-callback'
     | '/runs/strava-connect'
     | '/safety/blocked'
-    | '/safety/review'
     | '/takedown/confirm'
     | '/call/'
     | '/closet/'
@@ -747,7 +737,6 @@ export interface FileRouteTypes {
     | '/runs/strava-callback'
     | '/runs/strava-connect'
     | '/safety/blocked'
-    | '/safety/review'
     | '/takedown/confirm'
     | '/call'
     | '/closet'
@@ -817,7 +806,6 @@ export interface FileRouteTypes {
     | '/runs/strava-callback'
     | '/runs/strava-connect'
     | '/safety/blocked'
-    | '/safety/review'
     | '/takedown/confirm'
     | '/call/'
     | '/closet/'
@@ -885,7 +873,6 @@ export interface RootRouteChildren {
   RunsStravaCallbackRoute: typeof RunsStravaCallbackRoute
   RunsStravaConnectRoute: typeof RunsStravaConnectRoute
   SafetyBlockedRoute: typeof SafetyBlockedRoute
-  SafetyReviewRoute: typeof SafetyReviewRoute
   TakedownConfirmRoute: typeof TakedownConfirmRoute
   CallIndexRoute: typeof CallIndexRoute
   ClosetIndexRoute: typeof ClosetIndexRoute
@@ -1267,13 +1254,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SafetyBlockedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/safety/review': {
-      id: '/safety/review'
-      path: '/safety/review'
-      fullPath: '/safety/review'
-      preLoaderRoute: typeof SafetyReviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/takedown/': {
       id: '/takedown/'
       path: '/takedown'
@@ -1452,7 +1432,6 @@ const rootRouteChildren: RootRouteChildren = {
   RunsStravaCallbackRoute: RunsStravaCallbackRoute,
   RunsStravaConnectRoute: RunsStravaConnectRoute,
   SafetyBlockedRoute: SafetyBlockedRoute,
-  SafetyReviewRoute: SafetyReviewRoute,
   TakedownConfirmRoute: TakedownConfirmRoute,
   CallIndexRoute: CallIndexRoute,
   ClosetIndexRoute: ClosetIndexRoute,

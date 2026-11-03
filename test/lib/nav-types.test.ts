@@ -98,7 +98,7 @@ describe("which type an edge resolves to", () => {
   });
 
   it("types Desk · Review explicitly, as a cut", () => {
-    // The rail's destination, and where `/safety/review` redirects (R-173).
+    // The rail's destination (R-173).
     expect(navTypeFor("/feed", "/desk/review", false)).toBe("cut");
     expect(navTypeFor("/desk/review", "/desk/review", false)).toBe("cut");
   });

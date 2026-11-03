@@ -32,7 +32,7 @@ const desk = getRouteApi("/desk");
  * Desk · Review (decision D-87), the queue task 106 built, moved inside
  * the Desk by R-173: dark, with the rail. Behind `/desk`'s not-found for
  * anyone who is not an operator, and `reviewQueueQuery` and every action
- * check `requireAdmin` besides. `/safety/review` redirects here.
+ * check `requireAdmin` besides.
  */
 export const Route = createFileRoute("/desk/review")({
   loader: async () => reviewQueueQuery(),
