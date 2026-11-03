@@ -224,6 +224,37 @@ named by the test, so a change in what's announced shows up as a reviewed
 diff.
 _Done:_ the transcripts are committed and the snapshots pass.
 
+_How (2026-11-03):_
+
+- **When.** In the fixture's teardown, on a test that passed and ended on
+  the app's origin. It runs after the final check and before step 2's
+  checks, which resize the page, so it reads the test's own width. The
+  fixture's own spec (`a11yMode: "collect"`) records none.
+- **Loading Guidepup.** Its browser build is one ES module. The app's CSP
+  (`script-src 'self'`) refuses a blob or inline module, which is how
+  step 0 loaded it on a page without the CSP. `a11y-transcript.ts`
+  rewrites the build's one `export {…}` into a global and evaluates it
+  through the debugger protocol, which the CSP does not govern. Nothing
+  is injected into the app's pages before the end of the test.
+- **The walk.** `next()` from the top until "end of document", which is
+  where Guidepup wraps to the start. It is capped at 1,500 phrases; the
+  longest page today, `/open-source`, is about 1,100.
+- **What is normalized.** ULIDs, day and month names, and numbers, which
+  are seeded handles, counts, times and dates. Heading levels and list
+  positions stay. A transcript records what is said and in what order;
+  the values are other tests' business.
+- **Where.** `e2e/transcripts/<spec path>/<test title>.txt`, one per test,
+  through `snapshotPathTemplate`. The template has no platform suffix, so
+  a laptop and CI share one file. To accept a change, run
+  `npx playwright test --update-snapshots` and review the diff. A new
+  test with no transcript fails in CI until its file is committed.
+- Both servers must say the same thing. The dev and preview legs read
+  the same files.
+
+_Tests:_ `a11y-transcript.spec.ts`: a probe page's exact transcript
+(levels, positions, stop at the end), the normalization, and the module
+rewrite.
+
 **5. Claude reviews the transcript diff.** A PR workflow sends the
 transcript diff and the contract's rules to Claude and posts one advisory
 comment: unclear names, repeated announcements, reading order that
