@@ -121,6 +121,7 @@ jobs:
           } > .dev.vars
       - run: npx wrangler d1 migrations apply dialed-core --local
       - run: npx wrangler d1 migrations apply dialed-weather --local
+      - run: npx wrangler d1 migrations apply dialed-ops --local
       - if: matrix.server == 'preview'
         run: npm run build
       - run: npx playwright test
@@ -183,7 +184,7 @@ jobs:
       - name: Build
         run: npm run build
 
-      # Before the deploy, and core before weather, the order
+      # Before the deploy, in the order (core, weather, ops)
       # docs/deployment.md §1 gives. `--remote` is required: Wrangler 4
       # applies to the local database by default, and succeeds doing it.
       # Safe to run first because migrations are expand→contract (law 8):
@@ -193,6 +194,7 @@ jobs:
         run: |
           npx wrangler d1 migrations apply dialed-core --remote
           npx wrangler d1 migrations apply dialed-weather --remote
+          npx wrangler d1 migrations apply dialed-ops --remote
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
