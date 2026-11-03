@@ -97,6 +97,29 @@ export type ReportSubjectType = (typeof reportSubjectTypes)[number];
 export const reportSubjectTypeSchema = z.enum(reportSubjectTypes);
 
 /**
+ * What a report can hide, per subject type, and what a removal alert names
+ * it as: an entry or a photo. A profile or a product queues for a person
+ * without hiding anything — a profile is a ban decision, and hiding a
+ * shared product would take every garment linked to it down too.
+ */
+export const hiddenByReport: Readonly<
+  Record<ReportSubjectType, "entry" | "photo" | undefined>
+> = {
+  entry: "entry",
+  photo: "photo",
+  profile: undefined,
+  product: undefined,
+};
+
+/**
+ * The subject types a report can hide, read from `hiddenByReport`: what
+ * the report breaker counts (design 164; owner, 2026-10-31), so a flood of
+ * profile or product reports cannot pause the hides it bounds.
+ */
+export const reportSubjectsThatHide: readonly ReportSubjectType[] =
+  reportSubjectTypes.filter((type) => hiddenByReport[type] !== undefined);
+
+/**
  * Distinct reporters required before a subject is hidden globally pending
  * review (packet §2: "N reports from distinct users (default 3)").
  *

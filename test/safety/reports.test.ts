@@ -2,7 +2,11 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { outfitEntries, reports } from "../../src/db/schema-core";
+import {
+  notifications,
+  outfitEntries,
+  reports,
+} from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import {
   autoHideReporterThreshold,
@@ -16,7 +20,14 @@ import {
 } from "../../src/modules/safety";
 
 import { noPurge } from "../purge-spy";
-import { makeEntry, makeRun, makeUser, resetSafetyTables } from "./helpers";
+import {
+  makeEntry,
+  makeRun,
+  makeUser,
+  opened,
+  resetSafetyTables,
+} from "./helpers";
+import { REPORT_HIDES_FLOOR } from "../../src/modules/safety/breakers";
 import { nowSeconds } from "../../src/lib/now";
 import { oweInCore } from "../queue-fakes";
 
@@ -371,5 +382,54 @@ describe("subjects with no moderation column of their own", () => {
     // A reported profile is a ban decision, and a ban is a person's call —
     // so this reaches the queue and stops there.
     expect(await isQueuedForReview("profile", subject)).toBe(true);
+  });
+});
+
+/**
+Reports an entry by enough people to hide it, and says what the last report did.
+*/
+async function reportedToTheThreshold(entryId: string) {
+  let last;
+  for (let n = 0; n < autoHideReporterThreshold; n += 1) {
+    last = await fileReport(
+      {
+        reporterId: await makeUser(),
+        subjectType: "entry",
+        subjectId: entryId,
+        reason: "explicit",
+      },
+      oweInCore,
+      noPurge,
+    );
+  }
+  return last;
+}
+
+describe("the report breaker (design 164)", () => {
+  beforeEach(resetSafetyTables);
+  beforeEach(async () => {
+    await core().delete(notifications);
+  });
+
+  it("still hides under its ceiling", async () => {
+    await opened("reports", REPORT_HIDES_FLOOR - 1, nowSeconds());
+    const entryId = await reportableEntry();
+
+    const last = await reportedToTheThreshold(entryId);
+
+    expect(last?.hiddenPendingReview).toBe(true);
+    expect(await moderationStatusOf(entryId)).toBe("hidden_pending_review");
+  });
+
+  it("only queues at its ceiling: nothing hidden, nobody told", async () => {
+    await opened("reports", REPORT_HIDES_FLOOR, nowSeconds());
+    const entryId = await reportableEntry();
+
+    const last = await reportedToTheThreshold(entryId);
+
+    expect(last?.hiddenPendingReview).toBe(false);
+    expect(await moderationStatusOf(entryId)).toBe("ok");
+    expect(await isQueuedForReview("entry", entryId)).toBe(true);
+    expect(await core().select().from(notifications)).toStrictEqual([]);
   });
 });

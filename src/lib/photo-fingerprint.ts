@@ -33,6 +33,17 @@ export const FINGERPRINT_ROWS = 8;
 export const FINGERPRINT_MATCH_DISTANCE = 8;
 
 /**
+ * The most bits apart an upload may be from an image removed as intimate
+ * and still be held as a copy of it (D-147; owner, 2026-10-31, design
+ * 164) — tighter than the copy search's, which a person reads. Measured
+ * on 26 of the owner's own kit photos: a shrunk, re-encoded copy moved
+ * 0–1 bits, but two pairs of *different* garment flat-lays sat 6 apart,
+ * because a dark shape on a sunlit surface is most of what a 9 × 8 grid
+ * sees. 5 holds every copy design 146 measured (0–5) and neither pair.
+ */
+export const HOLD_MATCH_DISTANCE = 5;
+
+/**
  * Brightness, from ITU-R BT.601's weights in thousandths, so the sum is
  * an integer and two runtimes cannot round it differently.
  */
@@ -93,6 +104,42 @@ const BITS_SET = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4] as const;
  * The hex digits in value order — `HEX_DIGITS.indexOf(d)` is d's value.
  */
 export const HEX_DIGITS = "0123456789abcdef";
+
+/**
+ * The fewest and the most bits a fingerprint may set and still describe
+ * its picture (design 164). A picture with no detail sets none: a flat
+ * frame, black or white, or a gradient that brightens to the right, since
+ * a bit is set only where a pixel is strictly brighter than its neighbour.
+ * One that darkens to the right sets all 64. Pictures like these are alike
+ * to the hash whatever is in them, so one kept fingerprint near either end
+ * would hold every upload near it. Equally, a Photon change that empties
+ * the grid makes every hash zeros.
+ *
+ * **Provisional.** Synthetic scenes ran 3–37 (design 164, step 0), so the
+ * floor is to be measured against real run photos before this ships.
+ */
+export const DISTINCTIVE_BITS = { fewest: 8, most: 56 } as const;
+
+/**
+ * Whether a fingerprint sets enough bits, and leaves enough clear, to tell
+ * its picture from others: what keeping one and matching against one
+ * both require (design 164).
+ */
+export function isDistinctive(fingerprint: string): boolean {
+  const bits = bitsSetIn(fingerprint);
+  return bits >= DISTINCTIVE_BITS.fewest && bits <= DISTINCTIVE_BITS.most;
+}
+
+/**
+How many bits a fingerprint sets, digit by digit.
+*/
+function bitsSetIn(fingerprint: string): number {
+  const each = Array.from({ length: fingerprint.length }, (_, index) => {
+    const value = HEX_DIGITS.indexOf(fingerprint.charAt(index));
+    return BITS_SET[value] ?? 0;
+  });
+  return each.reduce<number>((bits, digit) => bits + digit, 0);
+}
 
 /**
  * For one digit of a fingerprint, the bits a stored digit differs by, as

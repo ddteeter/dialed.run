@@ -43,6 +43,7 @@ import { nowSeconds } from "../../lib/now";
 import type { OutboxMessage } from "../../lib/sql/outbox";
 import {
   autoHideReporterThreshold,
+  hiddenByReport,
   REMOVAL_DUE_SECONDS,
   reasonsThatHideAtOnce,
   reportersToHide,
@@ -51,6 +52,7 @@ import {
 } from "./contracts";
 import { adminUserIds } from "./admin";
 import { blockRunner } from "./blocks";
+import { ceilingReading } from "./breakers";
 import { subjectCacheTagsOf } from "./kit-cache-tags";
 import { hiddenNotice, reporterIdsOf } from "./notices";
 import { enqueueForReview, firstReportHidingAtOnce } from "./review";
@@ -65,20 +67,6 @@ import { heldPhotoStatus } from "./visibility";
 export type OweEmail = (message: OutboxMessage) => BatchItem<"sqlite">;
 
 /**
- * What a removal alert names, per subject type: the two a report can hide.
- * A profile or a product hides nothing, so a report of one queues for a
- * person without an alert.
- */
-const alertSubject: Readonly<
-  Record<ReportSubjectType, "entry" | "photo" | undefined>
-> = {
-  entry: "entry",
-  photo: "photo",
-  profile: undefined,
-  product: undefined,
-};
-
-/**
  * One alert per operator that `subjectId` was hidden as an intimate image
  * shared without consent, due 48 hours after `reportedAt` (design 136,
  * D-117). Nothing for a subject a report cannot hide, or when no operator
@@ -90,7 +78,7 @@ function removalAlerts(
   subjectId: string,
   reportedAt: number,
 ): BatchItem<"sqlite">[] {
-  const subject = alertSubject[subjectType];
+  const subject = hiddenByReport[subjectType];
   if (subject === undefined) return [];
   return adminUserIds().map((userId) =>
     owe({
@@ -206,11 +194,19 @@ export async function fileReport(
     return { status: "filed", reporterCount, hiddenPendingReview: false };
   }
 
-  const alerts = reasonsThatHideAtOnce.includes(input.reason)
+  const isAtOnce = reasonsThatHideAtOnce.includes(input.reason);
+  const alerts = isAtOnce
     ? removalAlerts(owe, input.subjectType, input.subjectId, reportedAt)
     : [];
-  await hidePendingReview(input.subjectType, input.subjectId, alerts, purge);
-  return { status: "filed", reporterCount, hiddenPendingReview: true };
+  const canHide = await canHideNow(isAtOnce, reportedAt);
+  await hidePendingReview(
+    input.subjectType,
+    input.subjectId,
+    alerts,
+    purge,
+    canHide,
+  );
+  return { status: "filed", reporterCount, hiddenPendingReview: canHide };
 }
 
 export interface ReconcileReport {
@@ -219,8 +215,9 @@ export interface ReconcileReport {
   */
   found: number;
   /**
-  Of those, the ones this sweep hid and queued.
-  */
+   * Of those, the ones this sweep hid and queued. Past the report
+   * breaker's ceiling the rest only queue (design 164).
+   */
   hidden: number;
 }
 
@@ -279,6 +276,7 @@ export async function reconcileUnhiddenReports(
     .limit(limit);
 
   const outcome: ReconcileReport = { found: over.length, hidden: 0 };
+  const now = nowSeconds();
   for (const row of over) {
     // The hide and its alerts are one batch, so a subject found unhidden
     // was never alerted either: owe both now.
@@ -286,8 +284,17 @@ export async function reconcileUnhiddenReports(
       row.firstAtOnce === null
         ? []
         : removalAlerts(owe, row.subjectType, row.subjectId, row.firstAtOnce);
-    await hidePendingReview(row.subjectType, row.subjectId, alerts, purge);
-    outcome.hidden += 1;
+    const canHide = await canHideNow(row.firstAtOnce !== null, now);
+    await hidePendingReview(
+      row.subjectType,
+      row.subjectId,
+      alerts,
+      purge,
+      canHide,
+    );
+    // Queued is reconciled either way: its row is the marker, so the
+    // sweep never comes back to hide what the breaker held back.
+    if (canHide) outcome.hidden += 1;
   }
   return outcome;
 }
@@ -378,6 +385,19 @@ export async function reportedSubjectIdsFor(
 }
 
 /**
+ * Whether a report may hide its subject now (design 164): always for a
+ * reason that hides at once — an intimate image's 48 hours, and the harm
+ * of one more viewer, outweigh a burst on a path a person files one at a
+ * time (owner, 2026-10-31) — and otherwise while the report breaker has
+ * room this hour.
+ */
+async function canHideNow(isAtOnce: boolean, now: number): Promise<boolean> {
+  if (isAtOnce) return true;
+  const reading = await ceilingReading(db(), "reports", now);
+  return !reading.isOver;
+}
+
+/**
  * Flips the subject out of public view and puts it in front of a person.
  *
  * **One batch** (CLAUDE.md: two writes in one handler go in one batch
@@ -391,18 +411,27 @@ export async function reportedSubjectIdsFor(
  * ban decision, which is a person's call, so it queues without hiding
  * anything. `photo` and `product` are wired as their owning lanes' columns
  * come under this module's reads.
+ *
+ * **Past the report breaker's ceiling it only queues** (design 164): a
+ * person still looks, nothing is hidden, so no notice is owed. Holding a
+ * hide's notice back instead would be the silent restriction below.
  */
 async function hidePendingReview(
   subjectType: ReportSubjectType,
   subjectId: string,
   alerts: BatchItem<"sqlite">[],
   purge: PurgeTags,
+  canHide: boolean,
 ): Promise<void> {
   const queueWrite = enqueueForReview(db(), {
     subjectType,
     subjectId,
     source: "reports",
   });
+  if (!canHide) {
+    await queueWrite;
+    return;
+  }
 
   // Read before the batch, which cannot branch: whose it is, for the
   // author's notice that it was hidden (C8, D-145).

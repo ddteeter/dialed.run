@@ -34,19 +34,23 @@ function NamePage() {
   }>({ brands: [], models: [] });
 
   return (
-    <Page title="Which ones do you actually reach for?" width="panel">
-      <NamePieces
-        offer={offer}
-        nameGarment={nameGarmentFn}
-        brandOptions={suggestions.brands}
-        modelOptions={suggestions.models}
-        onBrandInput={(brand) => {
-          void namingSuggestionsQuery({ data: { brand } }).then(setSuggestions);
-        }}
-        onDone={() => {
-          void navigate({ to: "/onboarding/done" });
-        }}
-      />
-    </Page>
+    <main>
+      <Page title="Which ones do you actually reach for?" width="panel">
+        <NamePieces
+          offer={offer}
+          nameGarment={nameGarmentFn}
+          brandOptions={suggestions.brands}
+          modelOptions={suggestions.models}
+          onBrandInput={(brand) => {
+            void namingSuggestionsQuery({ data: { brand } }).then(
+              setSuggestions,
+            );
+          }}
+          onDone={() => {
+            void navigate({ to: "/onboarding/done" });
+          }}
+        />
+      </Page>
+    </main>
   );
 }

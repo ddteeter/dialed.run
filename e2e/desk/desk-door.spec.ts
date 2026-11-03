@@ -6,11 +6,12 @@
  */
 import { createHash } from "node:crypto";
 
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { z } from "zod";
 
 import { CSP_HEADER } from "../../src/modules/ops/security-headers";
 import { storageStateFor } from "../support/accounts";
+import { expect, test } from "../support/a11y";
 
 test.describe("anyone who is not an operator", () => {
   test("gets not-found at /desk when signed out, never a refusal", async ({

@@ -942,23 +942,23 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
 
 <!-- Numbered from the note below, not from 44: a list break, so Prettier keeps 99. -->
 
-99. **Au7's notice says what was typed is gone, and names a page as well
-    as a form (D-155, design 166).** _Drawn:_ Auth's "Au7 Signed out
-    arrival" — "Log in and you're back on your run. What you entered is
-    kept.", with the annotation "It names what's kept … After Log in, the
-    runner lands on the filled form they left".
-    - **Built instead (owner, 2026-10-31):** no form is restored, the shape
-      of D-96 / D-102 for the terms refusal. The second sentence is "What
-      you typed wasn't kept." Log in still returns to the form's page, as a
-      fresh form, and nothing re-submits.
-    - **Every signed-in form carries**, not only the three the board
-      names. Run, garment and settings forms keep "your run" / "your
-      garment" / "your settings"; every other one (onboarding steps, a
-      report, the Desk's forms) says "Log in and you're back where you
-      were. What you typed wasn't kept."
-    - **The ask:** redraw Au7's notice to the built sentence, annotate the
-      generic variant, and drop "lands on the filled form" from the
-      annotation.
+99.  **Au7's notice says what was typed is gone, and names a page as well
+     as a form (D-155, design 166).** _Drawn:_ Auth's "Au7 Signed out
+     arrival" — "Log in and you're back on your run. What you entered is
+     kept.", with the annotation "It names what's kept … After Log in, the
+     runner lands on the filled form they left".
+     - **Built instead (owner, 2026-10-31):** no form is restored, the shape
+       of D-96 / D-102 for the terms refusal. The second sentence is "What
+       you typed wasn't kept." Log in still returns to the form's page, as a
+       fresh form, and nothing re-submits.
+     - **Every signed-in form carries**, not only the three the board
+       names. Run, garment and settings forms keep "your run" / "your
+       garment" / "your settings"; every other one (onboarding steps, a
+       report, the Desk's forms) says "Log in and you're back where you
+       were. What you typed wasn't kept."
+     - **The ask:** redraw Au7's notice to the built sentence, annotate the
+       generic variant, and drop "lands on the filled form" from the
+       annotation.
 
 100. **A photo still pending a day after upload, on Review (D-157, design
      167).** Built as a placeholder from the review row that exists: no
@@ -982,6 +982,46 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
      for the photo on one of your garments, so we took it off. Add it
      again from your Closet if you'd like it there."_ - **The ask:** draw the row and its Clear photo bar, and confirm or
      replace the two tags, two lines, the label and the two notices.
+
+101. **Today's tripped-breaker line (design 164).** Undesigned. When a hold
+     breaker is at its ceiling this hour, Today shows one line per cause under
+     the three numbers and above OPS-11's skipped-operator line. It is
+     composed exactly as OPS-11's is: a hi-viz `MONO.xs` kicker HOLDS PAUSED
+     over one `text-body` sentence, and no button, because it clears itself
+     as the hour drains. The sentences say what stopped and what happens
+     instead, for example _"Reports hid 12 posts in the last hour, the most
+     they hide in one hour. New ones go to Review without being hidden until
+     the hour clears."_ **The ask:** draw it on D0, or confirm the
+     composition and the copy.
+
+102. **Review's match grid: a floor count, and a many-runners warning
+     (design 164).** Undesigned additions to round 39 #71's MATCHING PHOTOS
+     · ANY RUNNER · N: - When either list has more than its 12, the count reads `12+`, so a
+     count the search did not finish is not shown as a total. - When the matches come from more than three runners, a line sits above
+     the grid, composed as Today's notices are: a hi-viz `MONO.xs` kicker
+     _"Photos from N runners match"_ over a `text-micro` sentence, _"A
+     picture this common may not be one person's. Removed as intimate, it
+     would hold every later upload that looks like it."_ It is there
+     because a Remove as intimate keeps the fingerprint (D-147).
+
+    **The ask:** draw both on the Review row, or confirm them.
+
+103. **Review's "Held in the last day" (design 164).** Undesigned. At the
+     top of Review, one line per cause that has holds still waiting from
+     the last day: a `MONO.xs` label, for example _"Fingerprint matches · 37
+     waiting"_, then an _"Approve all 37"_ link. The link opens the deletes'
+     confirm sheet (round 22's grammar): - heading _"Approve 37 fingerprint holds?"_; - body _"Each one is approved as if you'd pressed Approve on it: it
+     goes back where an Approve puts it, and anyone an Approve tells is
+     told. Use this when a bug held them, not to skip looking."_; - **Approve all**, with **Keep it** focused. While it works, the
+     button reads _"Approving"_, then _"Approved 50 of 120"_ after each
+     batch (owner, 2026-11-02): it releases 50 a request, and the operator
+     waits on it.
+
+    It is the undo for a burst the breakers bounded but nobody saw in time.
+
+    **The ask:** draw it, or confirm the composition and copy.
+
+_Items 101–103 are open (design 164)._
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 

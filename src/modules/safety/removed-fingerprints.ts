@@ -16,6 +16,7 @@
 import {
   and,
   asc,
+  between,
   eq,
   inArray,
   isNotNull,
@@ -24,6 +25,7 @@ import {
   type SQL,
 } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import {
   entryPhotos,
@@ -35,10 +37,13 @@ import {
 import { newUlid } from "../../lib/ids";
 import { nowSeconds } from "../../lib/now";
 import {
-  FINGERPRINT_MATCH_DISTANCE,
+  DISTINCTIVE_BITS,
   fingerprintSchema,
+  HOLD_MATCH_DISTANCE,
+  isDistinctive,
 } from "../../lib/photo-fingerprint";
-import { nearestOf } from "../../lib/sql/fingerprint-distance";
+import { bitsSetSql, nearestOf } from "../../lib/sql/fingerprint-distance";
+import { ceilingReading } from "./breakers";
 import type { RemovalReason } from "./contracts";
 
 type Db = ReturnType<typeof drizzle>;
@@ -48,7 +53,8 @@ type Db = ReturnType<typeof drizzle>;
  * statements for the Remove's batch, ahead of the delete that takes the
  * photos: in one batch they are read before they go. A photo with no
  * fingerprint keeps nothing, and any reason but `intimate` keeps nothing
- * at all.
+ * at all. Nor does one too plain to tell from other pictures (design 164),
+ * which would hold every upload near it.
  */
 export function keptFingerprints(
   db: Db,
@@ -73,8 +79,22 @@ export function keptFingerprints(
       createdAt: filling<number>(into.createdAt, nowSeconds()),
     })
     .from(entryPhotos)
-    .where(and(photosInScope, isNotNull(entryPhotos.fingerprint)));
+    .where(
+      and(
+        photosInScope,
+        isNotNull(entryPhotos.fingerprint),
+        distinctive(entryPhotos.fingerprint),
+      ),
+    );
   return [db.insert(removedFingerprints).select(kept)];
+}
+
+/**
+A stored fingerprint inside `DISTINCTIVE_BITS`, as SQL (design 164).
+*/
+function distinctive(column: SQLiteColumn): SQL {
+  const bits = bitsSetSql(column);
+  return between(bits, DISTINCTIVE_BITS.fewest, DISTINCTIVE_BITS.most);
 }
 
 /**
@@ -89,7 +109,7 @@ function filling<T>(column: Readonly<{ name: string }>, value: unknown) {
  * intimate image (R-167, design 159), as a kit photo's is, under the
  * garment's id. The garment was read before the batch, so its one
  * fingerprint is a value here rather than a select. None kept for another
- * reason, or with no fingerprint.
+ * reason, with no fingerprint, or with one too plain (design 164).
  */
 export function keptGarmentFingerprint(
   db: Db,
@@ -99,6 +119,7 @@ export function keptGarmentFingerprint(
 ) {
   const fingerprint = item.photoFingerprint;
   if (reason !== "intimate" || fingerprint === null) return [];
+  if (!isDistinctive(fingerprint)) return [];
   return [
     db.insert(removedFingerprints).values({
       id: newUlid(),
@@ -112,8 +133,9 @@ export function keptGarmentFingerprint(
 
 /**
  * The kept fingerprint nearest to `fingerprint`, when one is within the
- * match distance: how many bits apart, and when the image it describes was
- * removed. Nothing when none is close.
+ * hold's match distance: how many bits apart, and when the image it describes was
+ * removed. Nothing when none is close, or when `fingerprint` is too plain
+ * to match anything by (design 164).
  */
 export interface RemovedMatch {
   readonly distance: number;
@@ -125,8 +147,12 @@ export async function removedMatchOf(
   fingerprint: string,
 ): Promise<RemovedMatch | undefined> {
   const near = keptNear(fingerprint);
+  if (near === undefined) return undefined;
   const [nearest] = await db
-    .select({ distance: near.distance, removedAt: removedFingerprints.createdAt })
+    .select({
+      distance: near.distance,
+      removedAt: removedFingerprints.createdAt,
+    })
     .from(removedFingerprints)
     .where(near.within)
     .orderBy(...near.nearestFirst)
@@ -135,17 +161,40 @@ export async function removedMatchOf(
 }
 
 /**
+ * Whether an upload with `fingerprint` is held for review as a copy of a
+ * removed image (D-147): it is near one, and the fingerprint breaker
+ * (design 164) has room this hour. Past the ceiling a match is not held,
+ * and the upload goes to the classifier like every other photo, so a bug in
+ * matching hides a few photos an hour rather than every upload.
+ *
+ * The match is read first: the ordinary upload matches nothing, and pays
+ * for no count.
+ */
+export async function isHeldAsRemovedCopy(
+  db: Db,
+  fingerprint: string,
+  now: number,
+): Promise<boolean> {
+  if ((await removedMatchOf(db, fingerprint)) === undefined) return false;
+  const reading = await ceilingReading(db, "fingerprint", now);
+  return !reading.isOver;
+}
+
+/**
  * The pieces of a read of the kept fingerprints near `fingerprint`: the
- * distance as a number, the filter to the match distance, and the order,
- * nearest first and the earliest of equals.
+ * distance as a number, the filter to the hold's match distance, and the order,
+ * nearest first and the earliest of equals. None for a fingerprint too
+ * plain to match by: near one of those is near half the uploads.
  */
 function keptNear(fingerprint: string) {
   // Parsed, not trusted: it is spelt into the SQL.
-  const own = [fingerprintSchema.parse(fingerprint)];
+  const parsed = fingerprintSchema.parse(fingerprint);
+  if (!isDistinctive(parsed)) return;
+  const own = [parsed];
   const bits = nearestOf(removedFingerprints.fingerprint, own);
   return {
     distance: sql<number>`${bits}`.mapWith(Number),
-    within: lte(bits, FINGERPRINT_MATCH_DISTANCE),
+    within: lte(bits, HOLD_MATCH_DISTANCE),
     nearestFirst: [asc(bits), asc(removedFingerprints.createdAt)] as const,
   };
 }
@@ -168,7 +217,7 @@ export type RemovedImage = RemovedMatch &
   }>;
 
 /**
- * Every removed image within the match distance of each held photo on a
+ * Every removed image within the hold's match distance of each held photo on a
  * page of Review rows, nearest first (round 42: a second removal in range
  * is a repeat upload, and the operator sees it), by photo id. A photo
  * gone since, or with no fingerprint, is not read at all, so the map has
@@ -210,7 +259,7 @@ export async function removedMatchesOf(
 }
 
 /**
- * The kept fingerprints within the match distance of `fingerprint`,
+ * The kept fingerprints within the hold's match distance of `fingerprint`,
  * nearest first and the earliest of equals, each with the Remove that
  * kept it: its subject names the photo where the kept row has no id of
  * its own, and its owner gives the handle. A kept row always has its
@@ -221,6 +270,7 @@ async function removedImagesNear(
   fingerprint: string,
 ): Promise<RemovedImage[]> {
   const near = keptNear(fingerprint);
+  if (near === undefined) return [];
   const rows = await db
     .select({
       distance: near.distance,
