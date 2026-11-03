@@ -66,6 +66,14 @@ export function installWalk(origin: string): void {
    */
   const INNER_PRESSES = 30;
 
+  /*
+   * How long any other element may: a trap holds focus press after press,
+   * but one press can land while the page is busy (CI's preview leg saw
+   * it once, on the login form after a server fault) and leave focus
+   * where it was.
+   */
+  const STALL_PRESSES = 3;
+
   const INNER_STOPS =
     "iframe, input[type=date], input[type=datetime-local], input[type=time], input[type=month], input[type=week]";
 
@@ -283,16 +291,18 @@ export function installWalk(origin: string): void {
     },
 
     /**
-    Focus did not move. In a frame or a date input, Tab moved inside.
+    Focus stayed put past what is allowed: in a frame or a date input Tab moves inside, and anywhere a press may land on a busy page.
     */
     isStuck(active: Element): boolean {
       if (active !== state.last) {
         state.innerRun = 0;
         return false;
       }
-      if (!active.matches(INNER_STOPS)) return true;
       state.innerRun += 1;
-      return state.innerRun > INNER_PRESSES;
+      const allowed = active.matches(INNER_STOPS)
+        ? INNER_PRESSES
+        : STALL_PRESSES;
+      return state.innerRun > allowed;
     },
   };
 

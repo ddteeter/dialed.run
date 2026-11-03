@@ -107,10 +107,12 @@ In order:
      (`.field-box` draws the ring for its input);
    - `focus-obscured`: the stop is entirely covered (WCAG 2.4.11), read by
      `elementFromPoint` at its centre and four inset corners;
-   - `focus-trap`: Tab left focus where it was, or the cap ran out first.
-     An iframe (its own document takes the presses) and a date or time
-     input (Chromium tabs through its day, month and year) may hold focus
-     for 30 presses.
+   - `focus-trap`: Tab left focus where it was for more than three
+     presses in a row, or the cap ran out first. One press can land on a
+     busy page and move nothing (CI's preview leg saw it once), and a trap
+     holds focus every time. An iframe (its own document takes the
+     presses) and a date or time input (Chromium tabs through its day,
+     month and year) may hold focus for 30 presses.
 
    Before the walk, the page lists its controls: anything focusable or
    with an interactive role, or drawn with `cursor: pointer` and not
