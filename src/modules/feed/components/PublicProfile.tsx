@@ -41,7 +41,7 @@ export function PublicProfilePage({
       {...frame}
       page={{ handle: profile.handle }}
       handle={profile.handle}
-      headingClassName="m-0 font-display text-display"
+      headingClassName="m-0 font-display text-display wrap-anywhere"
       rail={
         isRotationShown(profile.rotation) ? (
           <Rotation rotation={profile.rotation} />
