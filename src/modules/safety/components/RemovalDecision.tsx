@@ -94,14 +94,6 @@ export function subjectWord(subjectType: ReviewSubjectType): string {
 }
 
 /**
- * The values a decision sends, before the subject that names it: Approve,
- * or a takedown with the picked reason.
- */
-type Choice =
-  | { action: Reasonless }
-  | { action: "remove" | "quarantine"; reason: RemovalReason | undefined };
-
-/**
  * The decision a row may offer that takes no reason: **Approve**, where
  * something queued the subject, or **Clear photo**, where its file is
  * missing (D-157, design 167) and there is nothing to approve.
@@ -153,6 +145,11 @@ export function RemovalDecision<TSchema extends z.ZodType, TResult>(
     onSettled: () => void;
   }>,
 ): JSX.Element {
+  // The values a decision sends, before the subject that names it: a
+  // reasonless decision, or a takedown with the picked reason.
+  type Choice =
+    | { action: Reasonless }
+    | { action: "remove" | "quarantine"; reason: RemovalReason | undefined };
   // Nothing chosen is `undefined`, which the schema refuses with its own
   // message; the select sees it as the "—" option's value.
   const [reason, setReason] = useState<RemovalReason | undefined>();

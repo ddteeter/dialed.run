@@ -49,8 +49,9 @@ export function PhotoMatches({
   removed?: readonly RemovedImage[] | undefined;
   decide?: DecideMatch | undefined;
 }>): JSX.Element | undefined {
-  if (found === undefined) return undefined;
-  return <FoundMatches found={found} removed={removed} decide={decide} />;
+  return found === undefined ? undefined : (
+    <FoundMatches found={found} removed={removed} decide={decide} />
+  );
 }
 
 /**
@@ -155,7 +156,7 @@ function useGarmentDeciding(
   const [isKickerNext, setIsKickerNext] = useState(false);
   const garments = remaining.filter((match) => match.kind === "garment");
   const [open] = garments.flatMap((match) =>
-    opened?.key === match.photoKey ? [{ match, decide: opened.decide }] : [],
+    opened?.key === match.photoKey ? { match, decide: opened.decide } : [],
   );
   return {
     open,

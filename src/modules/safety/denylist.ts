@@ -37,13 +37,14 @@ export async function isDeniedDomain(
   // the same "not denied" below. A check here would be a branch nothing
   // could distinguish.
   const domain = domainOf(url);
-  if (domain === undefined) return false;
-  return hasRowWhere(
-    db(),
-    domainDenylist,
-    domainDenylist.domain,
-    eq(domainDenylist.domain, domain),
-  );
+  return domain === undefined
+    ? false
+    : hasRowWhere(
+        db(),
+        domainDenylist,
+        domainDenylist.domain,
+        eq(domainDenylist.domain, domain),
+      );
 }
 
 /**

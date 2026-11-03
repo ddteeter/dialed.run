@@ -57,8 +57,9 @@ export async function defaultAudienceFor(
   // The missing-profile `?? SHARED_AUDIENCE` is asserted directly
   // (`test/feed/share-default.test.ts`): `attachKit`'s fixtures always make
   // a profile row, so only that file reaches it.
-  if (await isUnconfirmed(database, userId)) return "private";
-  return writableAudienceOf(profile?.defaultAudience ?? SHARED_AUDIENCE);
+  return (await isUnconfirmed(database, userId))
+    ? "private"
+    : writableAudienceOf(profile?.defaultAudience ?? SHARED_AUDIENCE);
 }
 
 /**

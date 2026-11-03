@@ -69,8 +69,9 @@ export function clamped(
   const top = Math.max(0, region.y);
   const right = Math.min(imageWidth, region.x + region.width);
   const bottom = Math.min(imageHeight, region.y + region.height);
-  if (right <= left || bottom <= top) return undefined;
-  return { x: left, y: top, width: right - left, height: bottom - top };
+  return right <= left || bottom <= top
+    ? undefined
+    : { x: left, y: top, width: right - left, height: bottom - top };
 }
 
 /**
@@ -174,7 +175,7 @@ export function blurSummary(params: {
   // says whether there is a claim to make.
   const detected =
     params.detected > 0
-      ? `Auto-blur covered ${countOf(params.detected, "area")}.`
+      ? `Auto-blur covered ${areasOf(params.detected)}.`
       : undefined;
   // Round 22, item 22: once the runner has tapped, the line is theirs,
   // after the detector's claim when it made one, and in place of "found
@@ -187,7 +188,7 @@ export function blurSummary(params: {
     // counting what they did, and the number is what the tap changes.
     const yours = detected
       ? `You covered ${String(params.tapped)} more.`
-      : `You covered ${countOf(params.tapped, "area")}.`;
+      : `You covered ${areasOf(params.tapped)}.`;
     return [detected, yours, "Tap one to undo."].filter(Boolean).join(" ");
   }
   if (params.detector === "unavailable") {
@@ -197,7 +198,7 @@ export function blurSummary(params: {
   // ran and a runner who has not tapped yet. Nothing is "posting" any
   // more: W3 waits for Use this photo, so the line says what to do here.
   return detected
-    ? `Auto-blur covered ${countOf(params.detected, "area")}. Tap the photo or a cell to change it.`
+    ? `Auto-blur covered ${areasOf(params.detected)}. Tap the photo or a cell to change it.`
     : "Auto-blur found nothing to cover. Tap the photo or a cell to blur an area.";
 }
 
@@ -212,8 +213,8 @@ export const BLUR_OFF_LINE =
  * Digits, always (round 26, #18: "counts are digits, always, including
  * 'You blurred 1 spot.'") — "Auto-blur covered 1 area.", never "one area".
  */
-function countOf(count: number, noun: string): string {
-  return `${String(count)} ${noun}${count === 1 ? "" : "s"}`;
+function areasOf(count: number): string {
+  return `${String(count)} area${count === 1 ? "" : "s"}`;
 }
 
 /**

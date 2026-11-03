@@ -151,6 +151,7 @@ export async function blurredFile(
       0.92,
     );
   });
-  if (blob === undefined) return undefined;
-  return new File([blob], fileName, { type: "image/jpeg" });
+  return blob === undefined
+    ? undefined
+    : new File([blob], fileName, { type: "image/jpeg" });
 }

@@ -129,10 +129,9 @@ export async function verifyTurnstile(
   const answer = parsed.data;
   if (!answer.success) return refuse("rejected", answer["error-codes"]);
   const isTestKey = answer.metadata?.result_with_testing_key === true;
-  if (!isTestKey && answer.hostname !== hostname) {
-    return refuse("wrong-hostname");
-  }
-  return { ok: true };
+  return isTestKey || answer.hostname === hostname
+    ? { ok: true }
+    : refuse("wrong-hostname");
 }
 
 /**

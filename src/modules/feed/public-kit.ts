@@ -253,8 +253,9 @@ function allowedLink(
   denied: ReadonlySet<string>,
 ): string | undefined {
   const domain = domainOf(url ?? undefined);
-  if (domain === undefined || denied.has(domain)) return undefined;
-  return url ?? undefined;
+  return domain === undefined || denied.has(domain)
+    ? undefined
+    : (url ?? undefined);
 }
 
 /**

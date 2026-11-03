@@ -46,11 +46,12 @@ export function isAdminRequired(error: unknown): error is AdminRequiredError {
  */
 export function adminUserIds(): readonly string[] {
   const configured: unknown = env.ADMIN_USER_IDS;
-  if (typeof configured !== "string") return [];
-  return configured
-    .split(",")
-    .map((id) => id.trim())
-    .filter((id) => id !== "");
+  return typeof configured === "string"
+    ? configured
+        .split(",")
+        .map((id) => id.trim())
+        .filter((id) => id !== "")
+    : [];
 }
 
 export function isAdmin(userId: string): boolean {
