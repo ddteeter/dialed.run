@@ -6,8 +6,11 @@ import type { Page } from "@playwright/test";
 
 import type { Finding } from "./a11y-findings";
 import { findingOf, keyOf, loadBaseline, RULES } from "./a11y-findings";
+import { endOfTest } from "./a11y-end";
 import type { CheckReport } from "./a11y-page";
 import { installChecker } from "./a11y-page";
+import type { PageReport } from "./a11y-walk";
+import { installWalk } from "./a11y-walk";
 
 /**
  * Plan 161, step 1: accessibility checks on every state an e2e spec acts
@@ -21,6 +24,10 @@ import { installChecker } from "./a11y-page";
  * So the action methods of `Locator`, `Page`, `Keyboard` and `Mouse` are
  * wrapped, once per worker, to run the check first. A state is checked
  * once per test, keyed by a hash of its markup and the viewport width.
+ *
+ * **Then, at the end of a test that passed** (step 2, `a11y-end.ts`): a
+ * Tab walk, the other width, and reflow at 320px. The action wrapper is
+ * off by then, so the walk's own presses are not states.
  *
  * **What it checks** (`a11y-page.ts`): every axe rule tagged WCAG A or AA,
  * plus `region`; a 44×44 hit area, counting a control's labels; and a
@@ -105,6 +112,7 @@ interface Collected {
   readonly errors: string[];
   checks: number;
   checkMs: number;
+  endMs: number;
 }
 
 /**
@@ -114,6 +122,10 @@ interface Collected {
  */
 export interface A11y {
   readonly checkNow: () => Promise<void>;
+  /**
+   * The end-of-test checks, now: the fixture's spec runs them on a probe.
+   */
+  readonly endOfTest: () => Promise<void>;
   readonly findings: () => readonly Finding[];
 }
 
@@ -176,22 +188,46 @@ async function arm(
   await page.exposeBinding("__a11yError", (_source, message: string) => {
     collected.errors.push(message);
   });
-  await page.exposeBinding(
-    "__a11yReport",
-    (_source, report: CheckReport) => {
-      collected.checks += 1;
-      collected.checkMs += report.ms;
-      for (const raw of report.findings) {
-        collected.findings.push(findingOf(report.url, raw));
-      }
-    },
-  );
+  await page.exposeBinding("__a11yReport", (_source, report: CheckReport) => {
+    collected.checks += 1;
+    collected.checkMs += report.ms;
+    for (const raw of report.findings) {
+      collected.findings.push(findingOf(report.url, raw));
+    }
+  });
   await page.addInitScript({ content: AXE_SOURCE });
   await page.addInitScript(installChecker, {
     origin: new URL(baseURL).origin,
     rules: RULES,
     minTarget: MIN_TARGET,
   });
+  await page.addInitScript(installWalk, new URL(baseURL).origin);
+}
+
+/**
+ * Step 2's checks, timed. A page that navigates or closes under them is
+ * a checker error, which fails the test like a finding: a check that
+ * did not run must not read as one that passed.
+ */
+async function runEndOfTest(
+  page: Page,
+  baseURL: string,
+  collected: Collected,
+): Promise<void> {
+  const started = performance.now();
+  try {
+    await endOfTest(page, new URL(baseURL).origin, {
+      check: () => checkNow(page),
+      report: (report: PageReport) => {
+        for (const raw of report.findings) {
+          collected.findings.push(findingOf(report.url, raw));
+        }
+      },
+    });
+  } catch (error) {
+    collected.errors.push(`end of test: ${String(error)}`);
+  }
+  collected.endMs += Math.round(performance.now() - started);
 }
 
 /**
@@ -213,6 +249,7 @@ function record(test: string, collected: Collected): void {
     test,
     checks: collected.checks,
     checkMs: collected.checkMs,
+    endMs: collected.endMs,
     errors: collected.errors,
     findings: distinct(collected.findings),
   };
@@ -246,6 +283,7 @@ export const test = base.extend<{
         errors: [],
         checks: 0,
         checkMs: 0,
+        endMs: 0,
       };
       await arm(page, baseURL ?? "", collected);
       wrapActions(page);
@@ -253,11 +291,15 @@ export const test = base.extend<{
       try {
         await use({
           checkNow: () => checkNow(page),
+          endOfTest: () => runEndOfTest(page, baseURL ?? "", collected),
           findings: () => distinct(collected.findings),
         });
         await checkNow(page);
       } finally {
         worker.current = undefined;
+      }
+      if (testInfo.status === testInfo.expectedStatus) {
+        await runEndOfTest(page, baseURL ?? "", collected);
       }
       record(testInfo.titlePath.join(" › "), collected);
       if (a11yMode === "enforce" && !IS_RECORDING) failOnNew(collected);
