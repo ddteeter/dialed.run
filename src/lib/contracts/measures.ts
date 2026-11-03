@@ -118,8 +118,9 @@ export function paceNumber(
   distanceM: number,
   unit: DistanceUnit,
 ): string | undefined {
-  if (distanceM <= 0) return undefined;
-  return formatDuration(Math.round((durationS * metresPer(unit)) / distanceM));
+  return distanceM <= 0
+    ? undefined
+    : formatDuration(Math.round((durationS * metresPer(unit)) / distanceM));
 }
 
 const FEET_PER_METRE = 3.28084;
@@ -135,7 +136,10 @@ export function gainNumber(
 ): { value: string; unit: "ft" | "m" } {
   return unit === "km"
     ? { value: String(Math.round(elevationGainM)), unit: "m" }
-    : { value: String(Math.round(elevationGainM * FEET_PER_METRE)), unit: "ft" };
+    : {
+        value: String(Math.round(elevationGainM * FEET_PER_METRE)),
+        unit: "ft",
+      };
 }
 
 /**

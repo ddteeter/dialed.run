@@ -86,13 +86,10 @@ function populated(uploadPhoto = vi.fn()): ReactElement {
   );
 }
 
-function withVisibility(
-  visibility: typeof item.visibility,
-  photoKey: string | null = item.photoKey,
-): ReactElement {
+function withVisibility(visibility: typeof item.visibility): ReactElement {
   return (
     <GarmentDetail
-      detail={{ ...detail, item: { ...item, visibility, photoKey } }}
+      detail={{ ...detail, item: { ...item, visibility } }}
       retire={vi.fn()}
       unretire={vi.fn()}
       remove={vi.fn()}

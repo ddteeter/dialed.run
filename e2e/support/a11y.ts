@@ -165,8 +165,8 @@ function wrapActions(page: Page): void {
 
 async function arm(
   page: Page,
-  baseURL: string,
   collected: Collected,
+  baseURL = "",
 ): Promise<void> {
   await page.exposeBinding("hasA11yChecked", (_source, key: string) => {
     if (collected.seen.has(key)) return true;
@@ -247,7 +247,7 @@ export const test = base.extend<{
         checks: 0,
         checkMs: 0,
       };
-      await arm(page, baseURL ?? "", collected);
+      await arm(page, collected, baseURL);
       wrapActions(page);
       worker.current = page;
       try {

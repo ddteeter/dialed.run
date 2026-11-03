@@ -54,17 +54,13 @@ function expectEnum(
 }
 
 /**
-Accepts a string of exactly `max` characters and rejects one longer.
+Accepts a string of exactly `max` characters and rejects one longer, or an
+empty one.
 */
-function expectLength(
-  schema: z.ZodType<string>,
-  { min, max }: { min: number; max: number },
-): void {
+function expectLength(schema: z.ZodType<string>, max: number): void {
   expect(schema.safeParse("a".repeat(max)).success).toBe(true);
   expect(schema.safeParse("a".repeat(max + 1)).success).toBe(false);
-  if (min > 0) {
-    expect(schema.safeParse("a".repeat(min - 1)).success).toBe(false);
-  }
+  expect(schema.safeParse("").success).toBe(false);
 }
 
 /**
@@ -133,10 +129,10 @@ function isAcceptedAt(field: string, length: number): boolean {
 
 describe("string fields hold their declared length", () => {
   it("brand name is 1..60", () => {
-    expectLength(brandNameSchema, { min: 1, max: 60 });
+    expectLength(brandNameSchema, 60);
   });
   it("product name is 1..120", () => {
-    expectLength(productNameSchema, { min: 1, max: 120 });
+    expectLength(productNameSchema, 120);
   });
   it("garment name is 1..80, and the other identity fields are shorter", () => {
     expect(isAcceptedAt("name", 80)).toBe(true);

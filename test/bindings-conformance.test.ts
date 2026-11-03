@@ -102,7 +102,7 @@ function crons(config: unknown): string[] {
   }
   if (!("crons" in triggers)) return [];
   const { crons: values } = triggers;
-  if (!Array.isArray(values)) throw new Error(configSchemaError);
+  if (!Array.isArray(values)) throw new TypeError(configSchemaError);
   return values.map(String);
 }
 
@@ -123,7 +123,7 @@ function queueConsumers(config: unknown): BoundConsumer[] {
   }
   if (!("consumers" in queues)) return [];
   const { consumers } = queues;
-  if (!Array.isArray(consumers)) throw new Error(configSchemaError);
+  if (!Array.isArray(consumers)) throw new TypeError(configSchemaError);
   return consumers.map((consumer: unknown) => {
     if (typeof consumer !== "object" || consumer === null) {
       throw new Error(configSchemaError);

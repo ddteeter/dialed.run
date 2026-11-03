@@ -49,8 +49,9 @@ function manifestNames(): ReadonlyMap<string, string> {
 }
 
 function serverFnName(segment: string): string {
-  if (HASHED.test(segment)) return manifestNames().get(segment) ?? "";
-  return Buffer.from(segment, "base64url").toString("utf8");
+  return HASHED.test(segment)
+    ? (manifestNames().get(segment) ?? "")
+    : Buffer.from(segment, "base64url").toString("utf8");
 }
 
 /**

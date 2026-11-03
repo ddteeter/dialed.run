@@ -77,7 +77,7 @@ const told = z.object({
   email: z.object({ to: z.unknown(), template: z.unknown() }),
 });
 
-async function emailsTo(address: string) {
+async function emailsToSam() {
   const rows = await core()
     .select({ payload: outbox.payload })
     .from(outbox)
@@ -88,7 +88,9 @@ async function emailsTo(address: string) {
       if (!read.ok) throw new Error(read.problem);
       return told.parse(read.message.payload);
     })
-    .filter((email) => JSON.stringify(email.email.to).includes(address));
+    .filter((email) =>
+      JSON.stringify(email.email.to).includes("sam@example.com"),
+    );
 }
 
 beforeEach(async () => {
@@ -132,7 +134,7 @@ describe("taking it down", () => {
     });
     const decided = await requestRow(id);
     expect(decided?.declineReason).toBeNull();
-    expect(await emailsTo("sam@example.com")).toStrictEqual([
+    expect(await emailsToSam()).toStrictEqual([
       {
         dedupeKey: `removal_request_decided:${id}`,
         email: {
@@ -207,7 +209,7 @@ describe("declining", () => {
       .from(outfitEntries)
       .where(eq(outfitEntries.id, entryId));
     expect(entry).toBeDefined();
-    expect(await emailsTo("sam@example.com")).toStrictEqual([
+    expect(await emailsToSam()).toStrictEqual([
       {
         dedupeKey: `removal_request_decided:${id}`,
         email: {
@@ -247,7 +249,7 @@ describe("a request already decided, or never made", () => {
       status: "removed",
       resolvedBy: "op-one",
     });
-    expect(await emailsTo("sam@example.com")).toHaveLength(1);
+    expect(await emailsToSam()).toHaveLength(1);
   });
 
   it("says not found for an id nobody filed", async () => {

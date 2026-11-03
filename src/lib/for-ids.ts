@@ -13,6 +13,5 @@ export async function forIds<Row>(
   read: () => Promise<Row[]>,
 ): Promise<Row[]> {
   // Stryker disable next-line ConditionalExpression,EqualityOperator,ArrayDeclaration
-  if (ids.length === 0) return [];
-  return read();
+  return ids.length === 0 ? [] : read();
 }

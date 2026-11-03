@@ -102,11 +102,11 @@ function htmlOnce(html: string, headers: Record<string, string> = {}) {
  * are told apart by host, which is also what the escalation test asserts:
  * the second call goes to the proxy, with the shop's URL in the body.
  */
-function refusingShop(code: number, proxiedHtml = "<html>via proxy</html>") {
+function refusingShop(code: number) {
   const impl: typeof fetch = (input) =>
     Promise.resolve(
       isProxyCall(input)
-        ? proxyEnvelope(proxiedHtml)
+        ? proxyEnvelope("<html>via proxy</html>")
         : new Response("blocked", { status: code }),
     );
   return vi.fn(impl);

@@ -42,8 +42,8 @@ async function logEntry(
   itemIds: string[],
   verdict: number | null,
   distanceM = 8000,
-  createdAt = nowSeconds(),
 ) {
+  const createdAt = nowSeconds();
   const client = db();
   const runId = newUlid();
   await client.insert(runs).values({

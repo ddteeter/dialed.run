@@ -54,8 +54,8 @@ type SubmitRun = (input: {
   data: Record<string, unknown>;
 }) => Promise<{ id: string }>;
 
-function fakeSubmit(id = "01RUN") {
-  return vi.fn<SubmitRun>(() => Promise.resolve({ id }));
+function fakeSubmit() {
+  return vi.fn<SubmitRun>(() => Promise.resolve({ id: "01RUN" }));
 }
 
 function submitted(fake: ReturnType<typeof fakeSubmit>) {

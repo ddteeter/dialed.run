@@ -174,7 +174,7 @@ export function exportFiles(
   }));
   const uploaded = data.uploads.flatMap((upload) => {
     const file = runFile(upload, stored);
-    return file === undefined ? [] : [{ upload, file }];
+    return file === undefined ? [] : { upload, file };
   });
 
   const {

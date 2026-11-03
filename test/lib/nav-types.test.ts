@@ -426,12 +426,15 @@ describe("the table covers the app", () => {
   const destinations = new Map<string, string[]>();
   for (const [globPath, source] of Object.entries(sources)) {
     const path = repoPath(globPath);
-    if (path === "src/lib/nav-types.ts") continue;
-    // Stryker instruments in a sandbox copy, and instrumentation wraps
-    // every string literal in a ternary — so `to: "/feed"` stops looking
-    // like a navigation. Those files are not the repo; skip them rather
-    // than read a mutant's idea of where the app can go.
-    if (isInstrumented(source)) continue;
+    if (
+      path === "src/lib/nav-types.ts" ||
+      // Stryker instruments in a sandbox copy, and instrumentation wraps
+      // every string literal in a ternary — so `to: "/feed"` stops looking
+      // like a navigation. Those files are not the repo; skip them rather
+      // than read a mutant's idea of where the app can go.
+      isInstrumented(source)
+    )
+      continue;
     for (const to of navigationsIn(source)) {
       destinations.set(to, [...(destinations.get(to) ?? []), path]);
     }

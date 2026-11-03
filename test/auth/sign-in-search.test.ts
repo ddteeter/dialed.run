@@ -93,8 +93,8 @@ describe("parseSignInSearch", () => {
     expect(back("/closet\u{1F}")).toBeUndefined();
     expect(back("/closet\u{7F}")).toBeUndefined();
     // The edges of the range, from the inside out.
-    expect(back("/closet\u{20}x")).toBe("/closet%20x");
-    expect(back("/closet\u{7E}")).toBe("/closet~");
+    expect(back("/closet x")).toBe("/closet%20x");
+    expect(back("/closet~")).toBe("/closet~");
     expect(back("/closet\u{9F}")).toBeUndefined();
     expect(back("/closet\u{A0}")).toBe("/closet%C2%A0");
     // An ordinary escape is still a path on this site.

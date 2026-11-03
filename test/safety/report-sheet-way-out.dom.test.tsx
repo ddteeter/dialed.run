@@ -11,14 +11,14 @@ import { describe, expect, it, vi } from "vitest";
 import { reportReasonLabels } from "../../src/modules/safety/contracts";
 import { ReportSheet } from "../../src/modules/safety/components/ReportSheet";
 
-type SheetProps = Parameters<typeof ReportSheet>[0];
-
 /**
  * W1's way out (round 37 #58k): under the intimate-image reason, once it
  * is picked, a link to `/takedown` for a runner who would rather not
  * report from their account. Rendered in a router, as W1 always is.
  */
 async function renderSheet({ hasHeading = true } = {}) {
+  type SheetProps = Parameters<typeof ReportSheet>[0];
+
   const fileReport = vi.fn<SheetProps["fileReport"]>().mockResolvedValue({
     status: "filed",
     reporterCount: 1,

@@ -106,7 +106,8 @@ describe("deciding", () => {
     renderQueue([row()]);
     const picker = screen.getByRole("combobox");
     expect(picker).toHaveDisplayValue("—");
-    if (!(picker instanceof HTMLSelectElement)) throw new Error("no select");
+    if (!(picker instanceof HTMLSelectElement))
+      throw new TypeError("no select");
     expect(picker.selectedIndex).toBe(0);
     expect(picker.value).toBe("");
   });

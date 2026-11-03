@@ -245,17 +245,17 @@ function noise(seed: number): () => number {
 
 /**
  * A flat hour at one point a second: every altitude 100 m plus Gaussian
- * noise of standard deviation `sigma` metres, plus `wander` metres of slow
+ * noise of standard deviation 2 metres, plus `wander` metres of slow
  * drift (one full sine over the hour).
  */
-function flatHour(seed: number, sigma: number, wander: number): number[] {
+function flatHour(seed: number, wander: number): number[] {
   const next = noise(seed);
   return Array.from({ length: 3600 }, (_, second) => {
     // Box-Muller: two uniforms make one standard normal.
     const normal =
       Math.sqrt(-2 * Math.log(1 - next())) * Math.cos(2 * Math.PI * next());
     const drift = wander * Math.sin((2 * Math.PI * second) / 3600);
-    return 100 + normal * sigma + drift;
+    return 100 + normal * 2 + drift;
   });
 }
 
@@ -318,7 +318,7 @@ describe("elevationGainMeters (D-111)", () => {
     // between neighbours, and the hysteresis alone reads a flat hour as
     // hundreds of metres.
     for (const seed of [7919, 15_838, 23_757]) {
-      const altitudes = flatHour(seed, 2, 0);
+      const altitudes = flatHour(seed, 0);
       expect(hysteresisGainMeters(altitudes)).toBeGreaterThan(150);
       expect(elevationGainMeters(altitudes)).toBe(0);
     }
@@ -327,7 +327,7 @@ describe("elevationGainMeters (D-111)", () => {
   it("reads slow wander under the noise as the wander, not the noise", () => {
     // ±8 m of drift is a real 16 m swing a hysteresis cannot tell from a
     // hill; the noise on top of it adds a few metres, not hundreds.
-    const gain = elevationGainMeters(flatHour(7919, 2, 8)) ?? NaN;
+    const gain = elevationGainMeters(flatHour(7919, 8)) ?? NaN;
     expect(gain).toBeGreaterThan(14);
     expect(gain).toBeLessThan(26);
   });

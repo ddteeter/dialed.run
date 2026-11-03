@@ -218,9 +218,9 @@ export const unsubscribeSearch = z.object({
  */
 export function startOverIfNoAddress(
   account: { email: string } | undefined,
-  searchEmail: string | undefined,
+  searchEmail: string | undefined = "",
 ): void {
-  if (account === undefined && (searchEmail ?? "") === "") {
+  if (account === undefined && searchEmail === "") {
     redirect({ to: "/auth/signup", throw: true });
   }
 }

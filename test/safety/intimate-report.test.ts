@@ -99,17 +99,12 @@ async function owedEmails(): Promise<unknown[]> {
 const dueTemplate = z.object({ dueAt: z.number() });
 const dueOf = z.object({ email: z.object({ template: dueTemplate }) });
 
-function alert(
-  admin: string,
-  subjectType: "entry" | "photo",
-  subjectId: string,
-  dueAt: number,
-) {
+function alert(admin: string, subjectId: string, dueAt: number) {
   return {
-    dedupeKey: `removal_due:${subjectType}:${subjectId}:${admin}`,
+    dedupeKey: `removal_due:entry:${subjectId}:${admin}`,
     email: {
       to: { userId: admin },
-      template: { kind: "removal_due", subject: subjectType, dueAt },
+      template: { kind: "removal_due", subject: "entry", dueAt },
     },
   };
 }
@@ -154,8 +149,8 @@ describe("one report of an intimate image", () => {
     expect(dueAt).toBeGreaterThanOrEqual(before + 2 * DAY_S);
     expect(dueAt).toBeLessThanOrEqual(nowSeconds() + 2 * DAY_S);
     expect(owed).toStrictEqual([
-      alert("op-one", "entry", entryId, dueAt),
-      alert("op-two", "entry", entryId, dueAt),
+      alert("op-one", entryId, dueAt),
+      alert("op-two", entryId, dueAt),
     ]);
   });
 
@@ -308,7 +303,7 @@ describe("the hourly reconcile, for an intimate report whose hide never landed",
     });
     expect(await entryStatus(entryId)).toBe("hidden_pending_review");
     expect(await owedEmails()).toStrictEqual([
-      alert("op-one", "entry", entryId, reportedAt + 2 * DAY_S),
+      alert("op-one", entryId, reportedAt + 2 * DAY_S),
     ]);
     expect(await reconcileUnhiddenReports(oweInCore, noPurge)).toStrictEqual({
       found: 0,

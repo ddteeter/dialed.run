@@ -40,8 +40,9 @@ function stubFetch(
     const answer = Object.entries(answers).find(([prefix]) =>
       path.startsWith(prefix),
     );
-    if (answer === undefined) return new Response("no stub", { status: 599 });
-    return answer[1]();
+    return answer === undefined
+      ? new Response("no stub", { status: 599 })
+      : answer[1]();
   };
   return { fetchImpl, calls };
 }

@@ -129,17 +129,22 @@ function renderedFrom(path: string): string[] {
 function hasShell(path: string, seen = new Set<string>()): boolean {
   if (seen.has(path)) return false;
   seen.add(path);
-  if (WEARS_A_SHELL.test(codeOnly(byPath.get(path) ?? ""))) return true;
-  return renderedFrom(path).some((next) => hasShell(next, seen));
+  return (
+    WEARS_A_SHELL.test(codeOnly(byPath.get(path) ?? "")) ||
+    renderedFrom(path).some((next) => hasShell(next, seen))
+  );
 }
 
 const screens: string[] = [];
 for (const [path, source] of byPath) {
-  if (!path.startsWith("src/routes/")) continue;
-  // Stryker rewrites source in its sandbox, and Vite's `?raw` inlines the
-  // rewrite — so a mutation run would scan its own instrumentation.
-  if (isInstrumented(source)) continue;
-  if (!RENDERS_A_SCREEN.test(codeOnly(source))) continue;
+  if (
+    !path.startsWith("src/routes/") ||
+    // Stryker rewrites source in its sandbox, and Vite's `?raw` inlines the
+    // rewrite — so a mutation run would scan its own instrumentation.
+    isInstrumented(source) ||
+    !RENDERS_A_SCREEN.test(codeOnly(source))
+  )
+    continue;
   screens.push(path);
 }
 

@@ -152,10 +152,12 @@ async function writeZip(
     }),
     makeZip(entries()).pipeTo(writable),
   ]);
-  if (missing.length > 0) {
-    await deps.imports.delete(key);
-    throw new Error("an export file went missing");
+  if (missing.length === 0) {
+    return;
   }
+
+  await deps.imports.delete(key);
+  throw new Error("an export file went missing");
 }
 
 /**

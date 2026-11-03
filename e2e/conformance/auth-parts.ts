@@ -26,12 +26,12 @@ export async function partsIn(
 ): Promise<readonly string[]> {
   return page.$$eval(`${root} [data-part]`, (elements) =>
     elements
-      .filter((element) => {
-        if (element.closest("[data-annotation]") !== null) return false;
-        if ((element as HTMLElement).dataset.part === "status-bar")
-          return false;
-        return element.getClientRects().length > 0;
-      })
+      .filter(
+        (element) =>
+          element.closest("[data-annotation]") === null &&
+          (element as HTMLElement).dataset.part !== "status-bar" &&
+          element.getClientRects().length > 0,
+      )
       .map((element) => (element as HTMLElement).dataset.part ?? ""),
   );
 }

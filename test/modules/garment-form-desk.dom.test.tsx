@@ -12,8 +12,6 @@ import { itemView, wardrobeItem } from "./closet-fixtures";
  * guards.
  */
 
-type Upload = GarmentFormProps["photo"]["upload"];
-
 const rover = itemView({
   item: wardrobeItem({ id: "01ROV", name: "Rover Half-zip", brand: "Janji" }),
   isGeneric: false,
@@ -60,13 +58,14 @@ function rail(): HTMLElement | null {
   return document.querySelector<HTMLElement>("[data-part='rail']");
 }
 
-function png(name: string): File {
-  return new File(["x"], name, { type: "image/png" });
+function png(): File {
+  return new File(["x"], "kit.png", { type: "image/png" });
 }
 
 function fileInput(): HTMLInputElement {
   const input = document.querySelector("input[type='file']");
-  if (!(input instanceof HTMLInputElement)) throw new Error("no file input");
+  if (!(input instanceof HTMLInputElement))
+    throw new TypeError("no file input");
   return input;
 }
 
@@ -302,7 +301,7 @@ async function refuseThePhoto(overrides: Partial<GarmentFormProps>) {
     ...overrides,
   });
   await user.click(screen.getByRole("radio", { name: "Half-zip" }));
-  await user.upload(fileInput(), png("kit.png"));
+  await user.upload(fileInput(), png());
   await user.click(screen.getByRole("button", { name: "Add to closet" }));
   await screen.findByRole("button", { name: "Done" });
 }
@@ -354,6 +353,7 @@ describe("GarmentForm, saved with its photo refused: the rail (R-114)", () => {
 
 describe("GarmentForm, saved with its photo refused", () => {
   it("sends the photo once when Try again is pressed twice, busy while it goes", async () => {
+    type Upload = GarmentFormProps["photo"]["upload"];
     const user = userEvent.setup();
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:1");
     const retry = Promise.withResolvers<{ ok: true }>();
@@ -366,7 +366,7 @@ describe("GarmentForm, saved with its photo refused", () => {
       photo: { upload, remove: () => Promise.resolve() },
     });
 
-    await user.upload(fileInput(), png("kit.png"));
+    await user.upload(fileInput(), png());
     await user.click(screen.getByRole("button", { name: "Add to closet" }));
     const again = await screen.findByRole("button", { name: "Try again" });
     await user.click(again);

@@ -508,7 +508,7 @@ describe("Au4's decisions", () => {
     ).toBeUndefined();
     expect(
       thrownBy(() => {
-        startOverIfNoAddress({ email: "me@example.com" }, undefined);
+        startOverIfNoAddress({ email: "me@example.com" });
       }),
     ).toBeUndefined();
   });

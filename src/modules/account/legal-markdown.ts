@@ -263,7 +263,7 @@ export function parseLegalDoc(text: string): LegalDoc {
     blocks,
     contents: blocks.flatMap((block) =>
       block.kind === "section"
-        ? [{ id: block.id, title: plainText(block.inlines) }]
+        ? { id: block.id, title: plainText(block.inlines) }
         : [],
     ),
   };
@@ -345,8 +345,9 @@ function publishedFrontMatter(text: string): FrontMatter | undefined {
   if (first !== PUBLISHED_LINE) return undefined;
   if (listHead !== undefined && listHead !== CHANGED_LINE) return undefined;
   const changed = items.map((line) => CHANGED_ITEM.exec(line)?.[1]);
-  if (!isEveryLineKnown(changed)) return undefined;
-  return { body: lines.slice(end + 1).join("\n"), changed };
+  return isEveryLineKnown(changed)
+    ? { body: lines.slice(end + 1).join("\n"), changed }
+    : undefined;
 }
 
 /**

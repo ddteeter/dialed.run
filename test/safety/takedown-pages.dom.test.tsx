@@ -67,8 +67,6 @@ function answeringTurnstile(token: string): void {
   vi.stubGlobal("turnstile", api);
 }
 
-type RequestFn = Parameters<typeof TakedownRequest>[0]["request"];
-
 /**
 `expect.stringMatching` is typed `any`; `unknown` keeps it out of no-unsafe-assignment.
 */
@@ -84,6 +82,8 @@ async function fillIn(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("What it shows · optional"), "me");
   await user.click(screen.getByLabelText(ATTESTATION));
 }
+
+type RequestFn = Parameters<typeof TakedownRequest>[0]["request"];
 
 describe("/takedown", () => {
   it("starts with the link a public kit's Report this kit hands it", async () => {
@@ -326,9 +326,6 @@ describe("/takedown", () => {
   });
 });
 
-type DecideFn = Parameters<typeof RemovalRequests>[0]["decide"];
-type BlockFn = Parameters<typeof RemovalRequests>[0]["block"];
-
 const ENTRY = "01JABCDEFGHJKMNPQRSTVWXYZ0";
 
 function pending(
@@ -351,6 +348,10 @@ function pending(
     ...overrides,
   };
 }
+
+type DecideFn = Parameters<typeof RemovalRequests>[0]["decide"];
+
+type BlockFn = Parameters<typeof RemovalRequests>[0]["block"];
 
 describe("Review · removal requests", () => {
   it("names the subject, then the clock right, who signed, what they said, and opens the kit (round 35 #58e)", async () => {

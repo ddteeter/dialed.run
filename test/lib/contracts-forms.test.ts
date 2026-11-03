@@ -48,10 +48,11 @@ function messagesFor(
   field: string,
 ): string[] {
   const result = schema.safeParse(value);
-  if (result.success) return [];
-  return result.error.issues
-    .filter((issue) => issue.path[0] === field)
-    .map((issue) => issue.message);
+  return result.success
+    ? []
+    : result.error.issues
+        .filter((issue) => issue.path[0] === field)
+        .map((issue) => issue.message);
 }
 
 const signIn = { email: "runner@example.com", password: "hunter22" };
@@ -106,9 +107,7 @@ describe("signUpSchemaFor (the invite-only flag)", () => {
         { ...signUp, inviteCode: "DIAL-0000" },
         "inviteCode",
       ),
-    ).toStrictEqual([
-      "That code doesn't work. Check it, or request access.",
-    ]);
+    ).toStrictEqual(["That code doesn't work. Check it, or request access."]);
     expect(
       withCode.parse({ ...signUp, inviteCode: " dial-7k3p " }),
     ).toMatchObject({ inviteCode: "DIAL-7K3P" });

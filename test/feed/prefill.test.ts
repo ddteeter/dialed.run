@@ -24,7 +24,7 @@ import {
 
 const HOURS = 3600;
 
-function conditions(overrides: Partial<Conditions> = {}): Conditions {
+function conditions(): Conditions {
   return {
     tempC: 5,
     feelsLikeC: 3,
@@ -33,7 +33,6 @@ function conditions(overrides: Partial<Conditions> = {}): Conditions {
     condition: "clear",
     source: "visualcrossing",
     span: { minTempC: 5, maxTempC: 5, minFeelsLikeC: 3, maxFeelsLikeC: 3 },
-    ...overrides,
   };
 }
 

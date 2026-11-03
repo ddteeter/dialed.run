@@ -29,11 +29,7 @@ const NOON = Date.UTC(2025, 8, 16, 12) / 1000;
 const HOUR = 3600;
 const DAY = 24 * HOUR;
 
-function desk(
-  gaveUp: number,
-  oldestGaveUpAt?: number,
-  digestUnconfirmedAt?: number,
-): DeskToday {
+function desk(gaveUp: number, oldestGaveUpAt?: number): DeskToday {
   return {
     asOf: NOON,
     counts: {
@@ -44,7 +40,7 @@ function desk(
       bansAllTime: 0,
       gaveUp,
       oldestGaveUpAt,
-      digestUnconfirmedAt,
+      digestUnconfirmedAt: undefined,
     },
     skipped: [],
     breakers: [],
