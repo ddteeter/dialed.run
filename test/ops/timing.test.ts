@@ -1,3 +1,9 @@
+import {
+  type AnyRoute,
+  createRootRoute,
+  createRoute,
+  createRouter,
+} from "@tanstack/react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -10,16 +16,25 @@ import {
 import { env } from "../../src/env";
 
 /**
-A route tree in the shape `routeTree.gen.ts` leaves at runtime.
-*/
-const tree = {
-  options: {},
-  children: [
-    { options: { id: "/" } },
-    { options: { id: "/runs/$runId" } },
-    { options: { id: "/desk" }, children: [{ options: { id: "/" } }] },
-  ],
-};
+ * A real TanStack router over a small tree with each kind of route the
+ * app has: an index, a param, a literal beside it, a layout with an
+ * index, a splat and a template segment. Built per call, inside each test.
+ */
+function testRouter() {
+  const root = createRootRoute();
+  const route = (path: string, parent: AnyRoute = root) =>
+    createRoute({ getParentRoute: () => parent, path });
+  const runs = route("runs");
+  const desk = route("desk");
+  const tree = root.addChildren([
+    route("/"),
+    runs.addChildren([route("$runId", runs), route("backlog", runs)]),
+    desk.addChildren([route("/", desk)]),
+    route("photo/$"),
+    route("@{$handle}"),
+  ]);
+  return createRouter({ routeTree: tree });
+}
 
 function nothing(): void {
   /*
@@ -32,45 +47,71 @@ afterEach(() => {
 });
 
 describe("requestNamer", () => {
-  it("names a page by its route id, never its URL", () => {
-    const name = requestNamer(tree);
-    expect(name("/runs/abc")).toBe("/runs/$runId");
-    expect(name("/desk")).toBe("/desk/");
+  it("names a page by the route TanStack matches, never its URL", () => {
+    const name = requestNamer(() => testRouter());
     expect(name("/")).toBe("/");
+    expect(name("/runs/abc")).toBe("/runs/$runId");
+    expect(name("/runs/backlog")).toBe("/runs/backlog");
+    expect(name("/desk")).toBe("/desk/");
+    expect(name("/desk/")).toBe("/desk/");
+    expect(name("/photo/a/b.webp")).toBe("/photo/$");
+    expect(name("/@ana")).toBe("/@{$handle}");
   });
 
   it("names a server function by its id", () => {
-    expect(requestNamer(tree)("/_serverFn/abc123")).toBe("serverFn:abc123");
+    expect(requestNamer(() => testRouter())("/_serverFn/abc123")).toBe(
+      "serverFn:abc123",
+    );
   });
 
   it("names every path no route covers alike", () => {
-    const name = requestNamer(tree);
+    const name = requestNamer(() => testRouter());
     expect(name("/wp-admin")).toBe("unmatched");
-    expect(name("/runs/a/b")).toBe("unmatched");
     expect(name("/x/_serverFn/abc")).toBe("unmatched");
   });
 
-  it("reads the tree only when first asked, and only once", () => {
+  it("names a path too deep for its route by the route TanStack serves its not-found under", () => {
+    // The 404 status in the same line keeps it apart from the screen's
+    // real loads, and the checks judge 2xx only.
+    expect(requestNamer(() => testRouter())("/runs/a/b")).toBe("/runs/$runId");
+  });
+
+  it("builds the router only when first asked, and only once", () => {
+    const makeRouter = vi.fn(() => testRouter());
+    const name = requestNamer(makeRouter);
+    expect(makeRouter).not.toHaveBeenCalled();
+    expect(name("/runs/abc")).toBe("/runs/$runId");
+    expect(name("/")).toBe("/");
+    expect(makeRouter).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports a router that will not build, once, and names every page unmatched", () => {
     const report = vi.fn();
-    const name = requestNamer({ children: "not routes" }, report);
+    const broken = new Error("no tree");
+    const name = requestNamer(() => {
+      throw broken;
+    }, report);
     expect(report).not.toHaveBeenCalled();
     expect(name("/")).toBe("unmatched");
     expect(name("/runs/abc")).toBe("unmatched");
     expect(report).toHaveBeenCalledTimes(1);
-    expect(report.mock.calls[0]?.[0]).toBeInstanceOf(Error);
+    expect(report).toHaveBeenCalledWith(broken);
   });
 
-  it("still names server functions when the tree cannot be read", () => {
+  it("still names server functions when the router will not build", () => {
     const report = vi.fn();
-    expect(requestNamer(undefined, report)("/_serverFn/abc")).toBe(
-      "serverFn:abc",
-    );
+    const name = requestNamer(() => {
+      throw new Error("no tree");
+    }, report);
+    expect(name("/_serverFn/abc")).toBe("serverFn:abc");
     expect(report).not.toHaveBeenCalled();
   });
 
-  it("reports an unreadable tree to Sentry by default, as the timing surface", () => {
+  it("reports a router that will not build to Sentry by default, as the timing surface", () => {
     const error = vi.spyOn(console, "error").mockImplementation(nothing);
-    requestNamer(undefined)("/");
+    requestNamer(() => {
+      throw new Error("no tree");
+    })("/");
     expect(error).toHaveBeenCalledWith(
       "[sentry-disabled]",
       { surface: "timing" },
@@ -91,7 +132,7 @@ function fakeDeps(): TimingDeps & {
   const lines: TimingLine[] = [];
   const recorded: TimingLine[] = [];
   return {
-    name: requestNamer(tree),
+    name: requestNamer(() => testRouter()),
     now: () => now,
     log: (line) => {
       lines.push(line);
@@ -162,18 +203,18 @@ describe("timingDeps", () => {
       status: 200,
       ms: 3,
     };
-    timingDeps(requestNamer(tree)).log(line);
+    timingDeps(requestNamer(() => testRouter())).log(line);
     expect(log).toHaveBeenCalledWith(line);
   });
 
   it("reads the real clock in milliseconds", () => {
     vi.spyOn(Date, "now").mockReturnValue(123_456);
-    expect(timingDeps(requestNamer(tree)).now()).toBe(123_456);
+    expect(timingDeps(requestNamer(() => testRouter())).now()).toBe(123_456);
   });
 
   it("records the line in the dataset, stamped with the deploy", () => {
     const write = vi.spyOn(env.VITALS, "writeDataPoint");
-    timingDeps(requestNamer(tree)).record({
+    timingDeps(requestNamer(() => testRouter())).record({
       kind: "timing",
       route: "/runs/$runId",
       method: "GET",
@@ -188,7 +229,7 @@ describe("timingDeps", () => {
   });
 
   it("keeps the namer it was given", () => {
-    const name = requestNamer(tree);
+    const name = requestNamer(() => testRouter());
     expect(timingDeps(name).name).toBe(name);
   });
 });

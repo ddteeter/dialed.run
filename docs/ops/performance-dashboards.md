@@ -4,6 +4,11 @@ Two dashboards, set up once by the owner after the first deploy
 (`docs/deployment.md` §8). Both read only what design 165 records: route
 ids, never URLs, and no account, IP or user agent.
 
+Nothing here is hosted by us. The data lives in Workers Analytics Engine,
+which Cloudflare runs; its SQL API speaks ClickHouse's dialect, which is
+why Grafana reaches it through a ClickHouse plugin. There is no ClickHouse
+server anywhere.
+
 ## Grafana: speed over the last three months (`VITALS`)
 
 Grafana Cloud's free tier is enough. The dashboard is generated, not drawn:

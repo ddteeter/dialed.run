@@ -7,7 +7,6 @@
  * its time to first byte; the invocation's own wall time, which Workers
  * Logs records beside this line, covers the rest of the body.
  */
-import { leafRouteIds, routeMatcher } from "../../lib/route-ids";
 import { captureException } from "./sentry";
 import { recordServerTiming } from "./vitals";
 
@@ -27,13 +26,24 @@ export type RequestNamer = (pathname: string) => string;
 const UNMATCHED = "unmatched";
 
 /**
- * A namer for this route tree. Nothing is built until the first request
- * asks, so `server.ts` can hold one at module scope; and a tree it cannot
- * read is reported once and degrades to naming every page `unmatched`
- * (law 5): a changed generator must never stop the Worker answering.
+ * The one thing the namer asks of TanStack's router: the route a pathname
+ * ends on (`foundRoute`, the third of `getMatchedRoutes`' answer), matched
+ * by the router itself rather than a copy of its rules.
+ */
+export interface RouteFinder {
+  getMatchedRoutes(
+    pathname: string,
+  ): readonly [unknown, unknown, { readonly id: string } | undefined];
+}
+
+/**
+ * A namer over the router `makeRouter` builds. Nothing is built until the
+ * first request asks, so `server.ts` can hold one at module scope; a
+ * router that will not build is reported once and every page is named
+ * `unmatched` (law 5): naming must never stop the Worker answering.
  */
 export function requestNamer(
-  tree: unknown,
+  makeRouter: () => RouteFinder,
   report: (error: unknown) => void = (error) => {
     captureException(error, { surface: "timing" });
   },
@@ -42,8 +52,9 @@ export function requestNamer(
   const namePage = (): RequestNamer => {
     if (pageName !== undefined) return pageName;
     try {
-      const match = routeMatcher(leafRouteIds(tree));
-      pageName = (pathname) => match(pathname) ?? UNMATCHED;
+      const router = makeRouter();
+      pageName = (pathname) =>
+        router.getMatchedRoutes(pathname)[2]?.id ?? UNMATCHED;
     } catch (error) {
       report(error);
       pageName = () => UNMATCHED;

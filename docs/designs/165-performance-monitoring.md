@@ -152,7 +152,7 @@ one failure doesn't stop the rest (the design 162 shape).
     `src/db/migrations/ops`), a placeholder id until `wrangler d1 create`.
 - **CI (owner, `.github/workflows/ci.yml`)**: the deploy job's "Apply
   migrations" step gains `npx wrangler d1 migrations apply dialed-ops
-  --remote`. Without it production never gets `perf_daily`.
+--remote`. Without it production never gets `perf_daily`.
 - **Zone (owner)**: a WAF rate-limiting rule for `/api/vitals`, 60 a
   minute per IP.
 - **New secret**: `ANALYTICS_SQL_TOKEN`, an account token with Account
@@ -181,7 +181,7 @@ Each step is one commit and passes the commit gate.
 4. **Ingest endpoint.** Add the size cap, the origin check and the 204,
    with worker tests against the binding. Extend `bindings-conformance` to
    cover `VITALS` (law 10). _Blocked on the owner's binding edit._
-4b. **Server timing to Analytics Engine.** `timeRequest` also writes a
+   4b. **Server timing to Analytics Engine.** `timeRequest` also writes a
    `server` data point through the same writer as the beacon (one module
    reads `VITALS`). Tests cover the layout, the status class, and that a
    dataset that throws neither fails the request nor loses the log line.
@@ -232,8 +232,12 @@ Recorded as the build found them.
   names a server function by a sha256 of its file and export. A readable
   name would need `generateFunctionId` in `vite.config.ts`, which is
   human-managed.
-- **The matcher found a bug of its own design:** an exact route must beat
-  a splat that matches it with nothing left over (`/feed` over `/feed/$`).
+- **The server names a request with TanStack's own matcher**
+  (`router.getMatchedRoutes`, on a router `server.ts` builds at the first
+  request), not a copy of its rules. The first build hand-rolled one
+  (`lib/route-ids.ts`, owner review on #311). A path too deep for its
+  route (`/runs/a/b`) is named by the route TanStack serves its
+  not-found under (`/runs/$runId`), and its 404 status keeps it apart.
 - **A route id is at most 96 characters,** not 120. It becomes the data
   point's index, and Analytics Engine drops a point whose index is over
   96 bytes. The longest real id is 29.

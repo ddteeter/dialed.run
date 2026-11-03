@@ -3,6 +3,7 @@
  * queue and cron entries the platform needs. wrangler.jsonc `main` points
  * here instead of the framework's default entry.
  */
+import { createRouter } from "@tanstack/react-router";
 import {
   createStartHandler,
   defaultStreamHandler,
@@ -38,7 +39,9 @@ const startFetch = createStartHandler(defaultStreamHandler);
  * Design 165: every request logs its route id and how long it took. The
  * namer reads the route tree on the first request, not here.
  */
-const timing = timingDeps(requestNamer(routeTree));
+// Design 165: requests are named by TanStack's own matcher, on a router
+// built at the first request and kept.
+const timing = timingDeps(requestNamer(() => createRouter({ routeTree })));
 
 export default {
   async fetch(request): Promise<Response> {
