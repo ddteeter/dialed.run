@@ -36,6 +36,7 @@ export {
   inFlight,
   NO_CHOICE,
   PendingLabel,
+  Select,
   SubmitButton,
   TextField,
   ToggleField,

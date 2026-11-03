@@ -1,5 +1,5 @@
 import { useId } from "react";
-import type { JSX, ReactNode, Ref, RefObject } from "react";
+import type { ComponentProps, JSX, ReactNode, Ref, RefObject } from "react";
 
 import { Mono } from "./Mono";
 import { messageIdFor } from "./use-form-submit";
@@ -810,6 +810,44 @@ interface ChoosableProps<TOption extends string> {
 export const NO_CHOICE = "";
 
 /**
+ * A native `<select>` with the arrow drawn as the text mark ▾, inset to match
+ * the label's padding. Every select in the app is this one.
+ *
+ * Chromium draws its own arrow about 3px from the right border and ignores
+ * the padding, so a label 12px in from the left sat opposite an arrow 3px in
+ * from the right. `appearance-none` hides the native one; the ▾ sits 12px in
+ * (`right-3`, the same step as `pl-3`), and `pr-8` keeps a long label from
+ * running under it. The mark is ▾ rather than an icon because design already
+ * draws it: round 38's Desk remove-reason select, the boards' "SORT: MOST
+ * DIALED ▾", and `MoreDisclosure`'s "more".
+ *
+ * The ▾ is `aria-hidden` — the select already says it is a select — and
+ * `pointer-events-none`, so a click on it lands on the select and opens it.
+ * `--muted` has a light and a dark value, so it reads on the Desk too.
+ *
+ * Takes everything a `<select>` takes but `className`: one look, in one
+ * place, is the point.
+ */
+export function Select(
+  props: Readonly<Omit<ComponentProps<"select">, "className">>,
+): JSX.Element {
+  return (
+    <span className="relative flex">
+      <select
+        {...props}
+        className="appearance-none rounded-field border border-hairline bg-panel py-2 pr-8 pl-3 font-normal"
+      />
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-muted"
+      >
+        ▾
+      </span>
+    </span>
+  );
+}
+
+/**
  * A `<select>` over a set the schema already holds.
  *
  * `GarmentForm` had three of these written out — layer, weight, fabric —
@@ -854,7 +892,7 @@ export function ChoiceField<TOption extends string>({
   const id = useId();
   return (
     <FormField name={name} id={id} label={label} error={error}>
-      <select
+      <Select
         {...field(name, id)}
         id={id}
         value={value}
@@ -864,7 +902,6 @@ export function ChoiceField<TOption extends string>({
           );
           onChange(picked ?? NO_CHOICE);
         }}
-        className="rounded-field border border-hairline bg-panel px-3 py-2 font-normal"
       >
         <option value={NO_CHOICE}>—</option>
         {options.map((option) => (
@@ -872,7 +909,7 @@ export function ChoiceField<TOption extends string>({
             {optionLabels[option]}
           </option>
         ))}
-      </select>
+      </Select>
     </FormField>
   );
 }
