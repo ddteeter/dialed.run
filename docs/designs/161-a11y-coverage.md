@@ -88,6 +88,44 @@ Focus returning when a sheet closes stays in `use-return-focus`'s unit
 test, because the end state can't see it.
 _Done:_ as in step 1.
 
+_How (2026-11-02):_ the fixture's teardown runs them after its last
+check, on a test that passed, on the app's origin. The action wrapper is
+off by then, so the walk's own key presses are not checked as states.
+In order:
+
+1. **The Tab walk, at the test's own width** (`a11y-walk.ts`, in the
+   page; Node presses the real Tab key, so `:focus-visible` is the
+   browser's own). It presses Tab until focus comes back to where it
+   started, capped at twice the page's tabbable count. Each stop is
+   measured:
+   - `focus-ring`: no 2px outline on the element, its labels, the next
+     sibling (Tailwind's `peer`) or an ancestor up to three levels
+     (`.field-box` draws the ring for its input);
+   - `focus-obscured`: the stop is entirely covered (WCAG 2.4.11), read by
+     `elementFromPoint` at its centre and four inset corners;
+   - `focus-trap`: Tab left focus where it was (outside an iframe, whose
+     own document takes the presses), or the cap ran out first.
+
+   Before the walk, the page lists its controls: anything focusable or
+   with an interactive role, or drawn with `cursor: pointer` and not
+   inside or around a control or a label (a clickable `<div>`).
+   - `tab-unreached`: a control the walk never reached. A radio group
+     counts once (arrow keys move inside it), and with a modal `<dialog>`
+     open only the dialog's controls count;
+   - `tab-order`: a positive `tabindex`, which reorders the page.
+2. **The other width:** the one of `PHONE` and `DESK` farther from the
+   test's width. axe and the step 1 checks run again there.
+3. **Reflow at 320×568** (WCAG 1.4.10): `reflow` when the page scrolls
+   sideways, named by each element that starts the overflow (its parent
+   fits), not inside a container that scrolls or clips on its own.
+
+A failed test skips them: its last state is not one it meant to reach.
+Each finding is named and baselined like step 1's.
+_Tests:_ `a11y.spec.ts` gets a probe per check: a ring removed, a
+covered control, a trap, a clickable `<div>`, a positive `tabindex`, a
+phone-only image without alt, and a 400px box. It also plants what must
+not be found: a radio group, a field-box input and a scrolling strip.
+
 **3. Coverage: what was checked.** On the dev leg only, where Vite serves
 source maps, the fixture collects Chromium's V8 coverage through
 `monocart-coverage-reports` and maps it back to `src/ui/**/*.tsx` and
