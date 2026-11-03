@@ -20,6 +20,7 @@ import type { HoldState } from "../takedown-limits";
 import type { PendingTakedownRequest } from "../takedown-requests";
 import { OtherPhotos } from "./OtherPhotos";
 import { PhotoMatches, type DecideMatch } from "./PhotoMatches";
+import { QUIET_CANCEL, QUIET_PILL } from "./RemovalDecision";
 import { useSettled } from "./use-settled";
 
 /**
@@ -128,10 +129,10 @@ function CancelButton({
         setButton(node ?? undefined);
       }}
       type="button"
-      className="target self-start"
+      className={QUIET_CANCEL}
       onClick={onCancel}
     >
-      <Mono step="xs">Cancel</Mono>
+      Cancel
     </button>
   );
 }
@@ -233,12 +234,12 @@ function RemovalRequestRow(props: RowProps): JSX.Element {
       ) : (
         <button
           type="button"
-          className="target self-start"
+          className={QUIET_PILL}
           onClick={() => {
             setIsDeclining(true);
           }}
         >
-          <Mono step="xs">Decline</Mono>
+          Decline
         </button>
       )}
       <BlockRequester
@@ -288,12 +289,12 @@ function BlockRequester({
       <button
         ref={askedFrom.ref}
         type="button"
-        className="target self-start"
+        className={QUIET_PILL}
         onClick={() => {
           setIsAsking(true);
         }}
       >
-        <Mono step="xs">Block and decline all</Mono>
+        Block and decline all
       </button>
     );
   }

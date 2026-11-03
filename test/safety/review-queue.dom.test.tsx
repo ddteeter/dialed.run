@@ -216,6 +216,14 @@ describe("deciding", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
     });
+    // Backing out is the boards' underlined text, quieter than a pill.
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveClass(
+      "border-none",
+      "bg-transparent",
+      "text-ink",
+      "underline",
+      "underline-offset-4",
+    );
 
     await user.click(screen.getByRole("button", { name: "Remove and report" }));
 
@@ -1088,7 +1096,16 @@ describe("a handle the re-ask flagged (D-97)", () => {
     );
     expect(screen.queryByText("Nobody reported this.")).toBeNull();
     expect(screen.getByText(bracketed("classifier"))).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Keep" })).toBeInTheDocument();
+    // A decision that is not the row's submit is the boards' outline pill,
+    // not bare text (R-173: on the Desk's dark ground it read as a label).
+    expect(screen.getByRole("button", { name: "Keep" })).toHaveClass(
+      "rounded-pill",
+      "border",
+      "border-ink",
+      "bg-transparent",
+      "font-bold",
+      "text-ink",
+    );
     expect(screen.getByRole("button", { name: "Rename" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();

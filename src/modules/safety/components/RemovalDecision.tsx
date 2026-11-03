@@ -28,7 +28,22 @@ const REASON_LABELS: Readonly<Record<RemovalReason, string>> =
   removalStatements;
 
 /**
-A decision that needs no reason: a text button beside the row's submit.
+A Desk decision that is not the row's submit (Keep, Approve, Decline):
+the operator boards' outline pill, in the ground's ink so it reads on the
+Desk's dark ground as on paper.
+*/
+export const QUIET_PILL =
+  "target cursor-pointer self-start rounded-pill border border-ink bg-transparent px-5 py-3 text-body font-bold text-ink";
+
+/**
+Backing out of a question the row asked (Cancel): the boards' underlined
+text, quieter than the pill beside it.
+*/
+export const QUIET_CANCEL =
+  "target cursor-pointer self-start border-none bg-transparent p-0 py-3 text-body text-ink underline underline-offset-4";
+
+/**
+A decision that needs no reason: an outline pill beside the row's submit.
 */
 export function QuietAction({
   label,
@@ -40,8 +55,13 @@ export function QuietAction({
   buttonRef?: Ref<HTMLButtonElement> | undefined;
 }>): JSX.Element {
   return (
-    <button ref={buttonRef} className="target" type="button" onClick={onPress}>
-      <Mono step="xs">{label}</Mono>
+    <button
+      ref={buttonRef}
+      className={QUIET_PILL}
+      type="button"
+      onClick={onPress}
+    >
+      {label}
     </button>
   );
 }
@@ -303,11 +323,11 @@ function CsamQuestion({
             ref={(node) => {
               setCancel(node ?? undefined);
             }}
-            className="target"
+            className={QUIET_CANCEL}
             type="button"
             onClick={onCancel}
           >
-            <Mono step="xs">Cancel</Mono>
+            Cancel
           </button>
         </div>
       }

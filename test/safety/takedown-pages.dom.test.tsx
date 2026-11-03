@@ -470,10 +470,18 @@ describe("Review · removal requests", () => {
       />,
     );
     const user = userEvent.setup();
-    // Decline is a text button until pressed: then it asks for the line.
+    // Decline is an outline pill until pressed: then it asks for the line.
     expect(screen.queryByLabelText("Why not")).toBeNull();
     const ask = screen.getByRole("button", { name: "Decline" });
     expect(ask).toHaveAttribute("type", "button");
+    expect(ask).toHaveClass(
+      "rounded-pill",
+      "border",
+      "border-ink",
+      "bg-transparent",
+      "font-bold",
+      "text-ink",
+    );
     await user.click(ask);
     expect(
       screen.getByText("The person who asked is sent this."),
@@ -573,8 +581,25 @@ describe("Review · removal requests", () => {
     );
     const row = within(first ?? document.body);
 
+    expect(
+      row.getByRole("button", { name: "Block and decline all" }),
+    ).toHaveClass(
+      "rounded-pill",
+      "border",
+      "border-ink",
+      "bg-transparent",
+      "font-bold",
+      "text-ink",
+    );
     await user.click(
       row.getByRole("button", { name: "Block and decline all" }),
+    );
+    expect(row.getByRole("button", { name: "Cancel" })).toHaveClass(
+      "border-none",
+      "bg-transparent",
+      "text-ink",
+      "underline",
+      "underline-offset-4",
     );
     expect(
       row.getByText(
