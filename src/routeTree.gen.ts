@@ -38,6 +38,7 @@ import { Route as ClosetItemIdRouteImport } from './routes/closet/$itemId'
 import { Route as ClosetNewRouteImport } from './routes/closet/new'
 import { Route as DeskIndexRouteImport } from './routes/desk/index'
 import { Route as DeskAccessRouteImport } from './routes/desk/access'
+import { Route as DeskReviewRouteImport } from './routes/desk/review'
 import { Route as DeskRunnersRouteImport } from './routes/desk/runners'
 import { Route as FeedIndexRouteImport } from './routes/feed/index'
 import { Route as FeedMeRouteImport } from './routes/feed/me'
@@ -65,6 +66,7 @@ import { Route as TakedownConfirmRouteImport } from './routes/takedown/confirm'
 import { Route as AccountExportTokenRouteImport } from './routes/account/export.$token'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ClosetEditItemIdRouteImport } from './routes/closet/edit.$itemId'
+import { Route as DeskReviewPhotoSplatRouteImport } from './routes/desk/review-photo.$'
 import { Route as FeedAttachRunIdRouteImport } from './routes/feed/attach.$runId'
 import { Route as FeedEntryEntryIdRouteImport } from './routes/feed/entry.$entryId'
 import { Route as FeedPhotoSplatRouteImport } from './routes/feed/photo.$'
@@ -74,7 +76,6 @@ import { Route as OgKitEntryIdRouteImport } from './routes/og/kit.$entryId'
 import { Route as OnboardingSettingsIndexRouteImport } from './routes/onboarding/settings/index'
 import { Route as OnboardingSettingsSectionRouteImport } from './routes/onboarding/settings/$section'
 import { Route as RunsImportImportIdRouteImport } from './routes/runs/import.$importId'
-import { Route as SafetyReviewPhotoSplatRouteImport } from './routes/safety/review-photo.$'
 import { Route as ClosetPhotoItemIdSizeRouteImport } from './routes/closet/photo.$itemId.$size'
 
 const IndexRoute = IndexRouteImport.update({
@@ -222,6 +223,11 @@ const DeskAccessRoute = DeskAccessRouteImport.update({
   path: '/access',
   getParentRoute: () => DeskRouteRoute,
 } as any)
+const DeskReviewRoute = DeskReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
+  getParentRoute: () => DeskRouteRoute,
+} as any)
 const DeskRunnersRoute = DeskRunnersRouteImport.update({
   id: '/runners',
   path: '/runners',
@@ -357,6 +363,11 @@ const ClosetEditItemIdRoute = ClosetEditItemIdRouteImport.update({
   path: '/closet/edit/$itemId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DeskReviewPhotoSplatRoute = DeskReviewPhotoSplatRouteImport.update({
+  id: '/review-photo/$',
+  path: '/review-photo/$',
+  getParentRoute: () => DeskRouteRoute,
+} as any)
 const FeedAttachRunIdRoute = FeedAttachRunIdRouteImport.update({
   id: '/feed/attach/$runId',
   path: '/feed/attach/$runId',
@@ -403,11 +414,6 @@ const RunsImportImportIdRoute = RunsImportImportIdRouteImport.update({
   path: '/runs/import/$importId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SafetyReviewPhotoSplatRoute = SafetyReviewPhotoSplatRouteImport.update({
-  id: '/safety/review-photo/$',
-  path: '/safety/review-photo/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ClosetPhotoItemIdSizeRoute = ClosetPhotoItemIdSizeRouteImport.update({
   id: '/closet/photo/$itemId/$size',
   path: '/closet/photo/$itemId/$size',
@@ -441,6 +447,7 @@ export interface FileRoutesByFullPath {
   '/closet/$itemId': typeof ClosetItemIdRoute
   '/closet/new': typeof ClosetNewRoute
   '/desk/access': typeof DeskAccessRoute
+  '/desk/review': typeof DeskReviewRoute
   '/desk/runners': typeof DeskRunnersRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
@@ -471,6 +478,7 @@ export interface FileRoutesByFullPath {
   '/account/export/$token': typeof AccountExportTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
+  '/desk/review-photo/$': typeof DeskReviewPhotoSplatRoute
   '/feed/attach/$runId': typeof FeedAttachRunIdRoute
   '/feed/entry/$entryId': typeof FeedEntryEntryIdRoute
   '/feed/photo/$': typeof FeedPhotoSplatRoute
@@ -479,7 +487,6 @@ export interface FileRoutesByFullPath {
   '/og/kit/$entryId': typeof OgKitEntryIdRoute
   '/onboarding/settings/$section': typeof OnboardingSettingsSectionRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
-  '/safety/review-photo/$': typeof SafetyReviewPhotoSplatRoute
   '/onboarding/settings/': typeof OnboardingSettingsIndexRoute
   '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
@@ -509,6 +516,7 @@ export interface FileRoutesByTo {
   '/closet/$itemId': typeof ClosetItemIdRoute
   '/closet/new': typeof ClosetNewRoute
   '/desk/access': typeof DeskAccessRoute
+  '/desk/review': typeof DeskReviewRoute
   '/desk/runners': typeof DeskRunnersRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
@@ -539,6 +547,7 @@ export interface FileRoutesByTo {
   '/account/export/$token': typeof AccountExportTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
+  '/desk/review-photo/$': typeof DeskReviewPhotoSplatRoute
   '/feed/attach/$runId': typeof FeedAttachRunIdRoute
   '/feed/entry/$entryId': typeof FeedEntryEntryIdRoute
   '/feed/photo/$': typeof FeedPhotoSplatRoute
@@ -547,7 +556,6 @@ export interface FileRoutesByTo {
   '/og/kit/$entryId': typeof OgKitEntryIdRoute
   '/onboarding/settings/$section': typeof OnboardingSettingsSectionRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
-  '/safety/review-photo/$': typeof SafetyReviewPhotoSplatRoute
   '/onboarding/settings': typeof OnboardingSettingsIndexRoute
   '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
@@ -579,6 +587,7 @@ export interface FileRoutesById {
   '/closet/$itemId': typeof ClosetItemIdRoute
   '/closet/new': typeof ClosetNewRoute
   '/desk/access': typeof DeskAccessRoute
+  '/desk/review': typeof DeskReviewRoute
   '/desk/runners': typeof DeskRunnersRoute
   '/feed/me': typeof FeedMeRoute
   '/feed/search': typeof FeedSearchRoute
@@ -609,6 +618,7 @@ export interface FileRoutesById {
   '/account/export/$token': typeof AccountExportTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/closet/edit/$itemId': typeof ClosetEditItemIdRoute
+  '/desk/review-photo/$': typeof DeskReviewPhotoSplatRoute
   '/feed/attach/$runId': typeof FeedAttachRunIdRoute
   '/feed/entry/$entryId': typeof FeedEntryEntryIdRoute
   '/feed/photo/$': typeof FeedPhotoSplatRoute
@@ -617,7 +627,6 @@ export interface FileRoutesById {
   '/og/kit/$entryId': typeof OgKitEntryIdRoute
   '/onboarding/settings/$section': typeof OnboardingSettingsSectionRoute
   '/runs/import/$importId': typeof RunsImportImportIdRoute
-  '/safety/review-photo/$': typeof SafetyReviewPhotoSplatRoute
   '/onboarding/settings/': typeof OnboardingSettingsIndexRoute
   '/closet/photo/$itemId/$size': typeof ClosetPhotoItemIdSizeRoute
 }
@@ -650,6 +659,7 @@ export interface FileRouteTypes {
     | '/closet/$itemId'
     | '/closet/new'
     | '/desk/access'
+    | '/desk/review'
     | '/desk/runners'
     | '/feed/me'
     | '/feed/search'
@@ -680,6 +690,7 @@ export interface FileRouteTypes {
     | '/account/export/$token'
     | '/api/auth/$'
     | '/closet/edit/$itemId'
+    | '/desk/review-photo/$'
     | '/feed/attach/$runId'
     | '/feed/entry/$entryId'
     | '/feed/photo/$'
@@ -688,7 +699,6 @@ export interface FileRouteTypes {
     | '/og/kit/$entryId'
     | '/onboarding/settings/$section'
     | '/runs/import/$importId'
-    | '/safety/review-photo/$'
     | '/onboarding/settings/'
     | '/closet/photo/$itemId/$size'
   fileRoutesByTo: FileRoutesByTo
@@ -718,6 +728,7 @@ export interface FileRouteTypes {
     | '/closet/$itemId'
     | '/closet/new'
     | '/desk/access'
+    | '/desk/review'
     | '/desk/runners'
     | '/feed/me'
     | '/feed/search'
@@ -748,6 +759,7 @@ export interface FileRouteTypes {
     | '/account/export/$token'
     | '/api/auth/$'
     | '/closet/edit/$itemId'
+    | '/desk/review-photo/$'
     | '/feed/attach/$runId'
     | '/feed/entry/$entryId'
     | '/feed/photo/$'
@@ -756,7 +768,6 @@ export interface FileRouteTypes {
     | '/og/kit/$entryId'
     | '/onboarding/settings/$section'
     | '/runs/import/$importId'
-    | '/safety/review-photo/$'
     | '/onboarding/settings'
     | '/closet/photo/$itemId/$size'
   id:
@@ -787,6 +798,7 @@ export interface FileRouteTypes {
     | '/closet/$itemId'
     | '/closet/new'
     | '/desk/access'
+    | '/desk/review'
     | '/desk/runners'
     | '/feed/me'
     | '/feed/search'
@@ -817,6 +829,7 @@ export interface FileRouteTypes {
     | '/account/export/$token'
     | '/api/auth/$'
     | '/closet/edit/$itemId'
+    | '/desk/review-photo/$'
     | '/feed/attach/$runId'
     | '/feed/entry/$entryId'
     | '/feed/photo/$'
@@ -825,7 +838,6 @@ export interface FileRouteTypes {
     | '/og/kit/$entryId'
     | '/onboarding/settings/$section'
     | '/runs/import/$importId'
-    | '/safety/review-photo/$'
     | '/onboarding/settings/'
     | '/closet/photo/$itemId/$size'
   fileRoutesById: FileRoutesById
@@ -892,7 +904,6 @@ export interface RootRouteChildren {
   OgKitEntryIdRoute: typeof OgKitEntryIdRoute
   OnboardingSettingsSectionRoute: typeof OnboardingSettingsSectionRoute
   RunsImportImportIdRoute: typeof RunsImportImportIdRoute
-  SafetyReviewPhotoSplatRoute: typeof SafetyReviewPhotoSplatRoute
   OnboardingSettingsIndexRoute: typeof OnboardingSettingsIndexRoute
   ClosetPhotoItemIdSizeRoute: typeof ClosetPhotoItemIdSizeRoute
 }
@@ -1102,6 +1113,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeskAccessRouteImport
       parentRoute: typeof DeskRouteRoute
     }
+    '/desk/review': {
+      id: '/desk/review'
+      path: '/review'
+      fullPath: '/desk/review'
+      preLoaderRoute: typeof DeskReviewRouteImport
+      parentRoute: typeof DeskRouteRoute
+    }
     '/desk/runners': {
       id: '/desk/runners'
       path: '/runners'
@@ -1291,6 +1309,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClosetEditItemIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/desk/review-photo/$': {
+      id: '/desk/review-photo/$'
+      path: '/review-photo/$'
+      fullPath: '/desk/review-photo/$'
+      preLoaderRoute: typeof DeskReviewPhotoSplatRouteImport
+      parentRoute: typeof DeskRouteRoute
+    }
     '/feed/attach/$runId': {
       id: '/feed/attach/$runId'
       path: '/feed/attach/$runId'
@@ -1354,13 +1379,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RunsImportImportIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/safety/review-photo/$': {
-      id: '/safety/review-photo/$'
-      path: '/safety/review-photo/$'
-      fullPath: '/safety/review-photo/$'
-      preLoaderRoute: typeof SafetyReviewPhotoSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/closet/photo/$itemId/$size': {
       id: '/closet/photo/$itemId/$size'
       path: '/closet/photo/$itemId/$size'
@@ -1373,14 +1391,18 @@ declare module '@tanstack/react-router' {
 
 interface DeskRouteRouteChildren {
   DeskAccessRoute: typeof DeskAccessRoute
+  DeskReviewRoute: typeof DeskReviewRoute
   DeskRunnersRoute: typeof DeskRunnersRoute
   DeskIndexRoute: typeof DeskIndexRoute
+  DeskReviewPhotoSplatRoute: typeof DeskReviewPhotoSplatRoute
 }
 
 const DeskRouteRouteChildren: DeskRouteRouteChildren = {
   DeskAccessRoute: DeskAccessRoute,
+  DeskReviewRoute: DeskReviewRoute,
   DeskRunnersRoute: DeskRunnersRoute,
   DeskIndexRoute: DeskIndexRoute,
+  DeskReviewPhotoSplatRoute: DeskReviewPhotoSplatRoute,
 }
 
 const DeskRouteRouteWithChildren = DeskRouteRoute._addFileChildren(
@@ -1449,7 +1471,6 @@ const rootRouteChildren: RootRouteChildren = {
   OgKitEntryIdRoute: OgKitEntryIdRoute,
   OnboardingSettingsSectionRoute: OnboardingSettingsSectionRoute,
   RunsImportImportIdRoute: RunsImportImportIdRoute,
-  SafetyReviewPhotoSplatRoute: SafetyReviewPhotoSplatRoute,
   OnboardingSettingsIndexRoute: OnboardingSettingsIndexRoute,
   ClosetPhotoItemIdSizeRoute: ClosetPhotoItemIdSizeRoute,
 }

@@ -41,19 +41,18 @@ const LABEL: Readonly<Record<DeskPage, string>> = {
 /**
  * Where each built destination lives. A page not in here is not built
  * yet, and its rail entry is text rather than a link (placeholder
- * protocol): Duplicates is task 110's. Review is the queue task 106 built,
- * at its own address until 128 moves it under `/desk`.
+ * protocol): Duplicates is task 110's.
  */
 const BUILT: Readonly<
   Partial<
     Record<
       DeskPage,
-      "/desk" | "/safety/review" | "/desk/runners" | "/desk/access"
+      "/desk" | "/desk/review" | "/desk/runners" | "/desk/access"
     >
   >
 > = {
   today: "/desk",
-  review: "/safety/review",
+  review: "/desk/review",
   runners: "/desk/runners",
   access: "/desk/access",
 };

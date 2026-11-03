@@ -13,9 +13,10 @@ import { reviewerPhotoResponse } from "../../modules/feed/photos";
  * module rather than here — a route may not branch, and a privilege test
  * in a loader is one no test can reach. The viewer is asked of
  * `optionalVerifiedUserId`, as the Desk's door is (D-113 Q5): an operator
- * whose address is unconfirmed is nobody here.
+ * whose address is unconfirmed is nobody here. That check, not `/desk`'s
+ * `beforeLoad`, is this route's gate: `beforeLoad` is for pages.
  */
-export const Route = createFileRoute("/safety/review-photo/$")({
+export const Route = createFileRoute("/desk/review-photo/$")({
   server: {
     handlers: {
       GET: async ({ params }) =>

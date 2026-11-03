@@ -314,7 +314,7 @@ describe("deciding", () => {
     const photo = screen.getByRole("img", { name: "Reported garment photo" });
     expect(photo).toHaveAttribute(
       "src",
-      "/safety/review-photo/items/u/g-1/v1/card.webp",
+      "/desk/review-photo/items/u/g-1/v1/card.webp",
     );
     expect(photo).toHaveClass("h-full", "w-full", "object-contain");
     // F's photo well: the card at its own size, not a kit photo's strip.
@@ -795,14 +795,14 @@ describe("the subject itself", () => {
       }),
     ]);
 
-    // `/safety/review-photo/`, not `/feed/photo/`. Every photo in this
+    // `/desk/review-photo/`, not `/feed/photo/`. Every photo in this
     // queue is hidden precisely because somebody reported it, so the
     // ordinary route refuses it — pointing at that one would give a
     // reviewer a broken image on the subject that most needs looking at.
     const photo = screen.getByRole("img", { name: "Reported photo" });
     expect(photo).toHaveAttribute(
       "src",
-      "/safety/review-photo/entries/u-1/e-1/p-1",
+      "/desk/review-photo/entries/u-1/e-1/p-1",
     );
   });
 
@@ -909,7 +909,7 @@ describe("a photo still pending a day after upload (D-157)", () => {
     expect(screen.queryByText(bracketed("0 people"))).toBeNull();
     expect(screen.getByRole("img", { name: "Reported photo" })).toHaveAttribute(
       "src",
-      "/safety/review-photo/entries/u-1/e-1/p-7",
+      "/desk/review-photo/entries/u-1/e-1/p-7",
     );
   });
 

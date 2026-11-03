@@ -2,8 +2,9 @@
  * Covers: D0 (the Desk's shell) and Today, with D6 · Gave up as Today's
  * section (D-87; R-119), then a hold breaker at its ceiling: Today's HOLDS
  * PAUSED line and Review's release of the burst (design 164; design
- * deltas 93 and 95), and the outbox running behind (design 168) — one
- * journey, one video.
+ * deltas 93 and 95), on the Desk's own dark ground with the rail, and its
+ * old `/safety/review` address redirecting there (R-173), and the outbox
+ * running behind (design 168) — one journey, one video.
  *
  * The journey needs `ADMIN_USER_IDS=e2e-desk-operator` in the dev server's
  * `.dev.vars`, which CI's e2e job writes (register R-72, PR #114). Locally,
@@ -295,10 +296,27 @@ test("an operator opens the Desk and reads Today", async ({
     "uploads matched removed images in the last hour, the most held in one hour. New matches are screened like any photo until the hour clears.",
   );
 
-  await page.goto("/safety/review");
+  await scene(page, "Review is a Desk page: the rail opens it, dark");
+  await page
+    .getByRole("navigation", { name: "Desk" })
+    .getByRole("link", { name: /^Review/u })
+    .click();
+  await expect(page).toHaveURL(/\/desk\/review$/u);
   await page
     .locator('html[data-hydrated="true"]')
     .waitFor({ state: "attached" });
+  // R-173: inside DeskShell, so on the ink ground with the rail, Review lit.
+  await expect(
+    page.getByRole("navigation", { name: "Desk" }).getByRole("link", {
+      name: /^Review/u,
+    }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.locator("[data-ground='ink']").getByRole("heading", {
+      name: "Review queue",
+      level: 1,
+    }),
+  ).toBeVisible();
   await scene(page, "Review: the burst, waiting from the last day");
   const held = page.locator("[data-part='release-holds']");
   await expect(held).toContainText("Held in the last day");
@@ -324,6 +342,13 @@ test("an operator opens the Desk and reads Today", async ({
   expect(released.map((row) => row.status)).toStrictEqual(
     burst.map(() => "approved"),
   );
+
+  await scene(page, "Review's old address lands on the Desk");
+  await page.goto("/safety/review");
+  await expect(page).toHaveURL(/\/desk\/review$/u);
+  await expect(
+    page.getByRole("heading", { name: "Review queue", level: 1 }),
+  ).toBeVisible();
 
   await withLocalDb(async ({ core }) => {
     await core.delete(reviewQueue).where(inArray(reviewQueue.id, burst));

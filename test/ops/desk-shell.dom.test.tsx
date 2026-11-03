@@ -136,7 +136,7 @@ describe("DeskShell", () => {
       links.map((link) => [link.textContent, link.getAttribute("href")]),
     ).toStrictEqual([
       ["Today", "/desk"],
-      ["Review", "/safety/review"],
+      ["Review", "/desk/review"],
       // D7, task 126 (ACC-5).
       ["Access", "/desk/access"],
       ["Runners", "/desk/runners"],
