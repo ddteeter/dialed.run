@@ -289,7 +289,7 @@ function BesideTheBox({
 
 export function FormField({
   name,
-  id,
+  id: controlId = name,
   label,
   hint,
   error,
@@ -347,7 +347,6 @@ export function FormField({
       {children}
     </div>
   );
-  const controlId = id ?? name;
   return (
     <div className="flex flex-col gap-2">
       <FieldShell
