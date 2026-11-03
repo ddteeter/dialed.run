@@ -1,0 +1,75 @@
+document
+banner
+main
+heading, What did you wear?, level 1
+#.# mi · #°F damp · # pieces
+link, Weather data provided by Visual Crossing
+status
+busy
+Most likely
+Checking what you wore at #°
+end, busy
+region, Or pick from the closet
+heading, Or pick from the closet, level 2
+Or pick from the closet
+end of heading, Or pick from the closet, level 2
+button, #° damp, pressed
+Showing
+#
+of
+#
+Tops · # of # match
+button, All Tops, has popup dialog
+All ›
+end of button, All Tops, has popup dialog
+button, Conformance top, not pressed
+Bottoms · # of # match
+button, All Bottoms, has popup dialog
+All ›
+end of button, All Bottoms, has popup dialog
+button, Conformance tights, not pressed
+end of region, Or pick from the closet
+Outfit photo · optional
+Add a photo
+Flat on the floor works best.
+Outfit photo · optional Add a photo Flat on the floor works best.
+button, Next — did it work?
+Next — did it work?
+end of button, Next — did it work?
+paragraph
+Not now —
+link, leave it in the queue
+.
+end of paragraph
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed, current page
+Feed
+end of link, Feed, current page
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet
+Closet
+end of link, Closet
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add, has popup dialog
++ Add
+end of button, Add, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document

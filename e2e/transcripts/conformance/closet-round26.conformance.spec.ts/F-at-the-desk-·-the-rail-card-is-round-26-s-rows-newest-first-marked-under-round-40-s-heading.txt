@@ -1,0 +1,181 @@
+document
+banner
+link, dialed.run home
+[
+dialed
+.run
+]
+end of link, dialed.run home
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet, current page
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+button, Log a run, has popup dialog
+end of banner
+main
+status
+link, Closet, current page
+heading, Add a garment, level 1
+form
+Category
+combobox, Category, top, has popup listbox, not expanded
+option, Top, top, selected, position 1, set size 8
+option, Bottom, bottom, not selected, position 2, set size 8
+option, Headwear, headwear, not selected, position 3, set size 8
+option, Neckwear, neckwear, not selected, position 4, set size 8
+option, Gloves, gloves, not selected, position 5, set size 8
+option, Socks, socks, not selected, position 6, set size 8
+option, Shoes, shoes, not selected, position 7, set size 8
+option, Accessory, accessory, not selected, position 8, set size 8
+end of combobox, Category, top, has popup listbox, not expanded
+group, Type
+Type
+Type
+end, Type
+radio, Singlet, not checked, position 1, set size 7
+Singlet
+radio, Tee, not checked, position 2, set size 7
+Tee
+radio, L/S crew, not checked, position 3, set size 7
+L/S crew
+radio, Half-zip, not checked, position 4, set size 7
+Half-zip
+radio, Jacket, not checked, position 5, set size 7
+Jacket
+radio, Vest, not checked, position 6, set size 7
+Vest
+radio, Sports bra, not checked, position 7, set size 7
+Sports bra
+end of group, Type
+group, What is it?
+What is it?
+Brand
+combobox, Brand, :month, has popup listbox, not expanded, # control
+Model / name
+textbox, Model / name, Rover Half-zip
+Product link · optional
+textbox, Product link · optional, placeholder brand.com/product…
+We'll read the shop's page for what it's made of. Needs a brand and model.
+end of group, What is it?
+group, Attributes
+Attributes
+Layer
+combobox, Layer, has popup listbox, not expanded
+option, —, selected, position 1, set size 4
+option, Base, base, not selected, position 2, set size 4
+option, Mid, mid, not selected, position 3, set size 4
+option, Outer, outer, not selected, position 4, set size 4
+end of combobox, Layer, has popup listbox, not expanded
+Weight
+combobox, Weight, has popup listbox, not expanded
+option, —, selected, position 1, set size 4
+option, Light, light, not selected, position 2, set size 4
+option, Mid, mid, not selected, position 3, set size 4
+option, Heavy, heavy, not selected, position 4, set size 4
+end of combobox, Weight, has popup listbox, not expanded
+Fabric
+combobox, Fabric, has popup listbox, not expanded
+option, —, selected, position 1, set size 6
+option, Synthetic, synthetic, not selected, position 2, set size 6
+option, Merino, merino, not selected, position 3, set size 6
+option, Cotton, cotton, not selected, position 4, set size 6
+option, Blend, blend, not selected, position 5, set size 6
+option, Down, down, not selected, position 6, set size 6
+end of combobox, Fabric, has popup listbox, not expanded
+checkbox, Wind resistant, not checked
+Wind resistant
+checkbox, Water resistant, not checked
+Water resistant
+group, Visibility
+Visibility
+Visibility
+end, Visibility
+radio, Plain, not checked, position 1, set size 3
+Plain
+radio, Reflective trim, not checked, position 2, set size 3
+Reflective trim
+radio, Hi-viz, not checked, position 3, set size 3
+Hi-viz
+end of group, Visibility
+group, Color
+Color
+Color
+end, Color
+radio, Black, not checked, position 1, set size 13
+Black
+radio, White, not checked, position 2, set size 13
+White
+radio, Grey, not checked, position 3, set size 13
+Grey
+radio, Navy, not checked, position 4, set size 13
+Navy
+radio, Brown, not checked, position 5, set size 13
+Brown
+radio, Beige, not checked, position 6, set size 13
+Beige
+radio, Red, not checked, position 7, set size 13
+Red
+radio, Orange, not checked, position 8, set size 13
+Orange
+radio, Yellow, not checked, position 9, set size 13
+Yellow
+radio, Green, not checked, position 10, set size 13
+Green
+radio, Blue, not checked, position 11, set size 13
+Blue
+radio, Purple, not checked, position 12, set size 13
+Purple
+radio, Pink, not checked, position 13, set size 13
+Pink
+Pick the nearest. A print is its main color.
+end of group, Color
+end of group, Attributes
+Size
+textbox, Size
+Colorway
+textbox, Colorway
+Photo · optional
+Drop a photo, or browse
+Flat on the floor works best. JPG, PNG or WebP.
+Photo · optional Drop a photo, or browse Flat on the floor works best. JPG, PNG or WebP.
+button, Add to closet
+Add to closet
+end of button, Add to closet
+end of form
+heading, Already in your closet · Top · Half-zip, level 2
+list
+listitem, level 1, position 1, set size 4
+Tracksmith Harrier
+# runs · #/# dialed #–#°
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+:month Rover Half-zip
+# runs · Retired :month #
+Same name · Retired
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+Uniqlo quarter-zip
+# runs · No verdict yet
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+:month Rover Half-zip
+# runs · No verdict yet
+Same name
+end of listitem, level 1, position 4, set size 4
+end of list
+end of main
+status
+end of document

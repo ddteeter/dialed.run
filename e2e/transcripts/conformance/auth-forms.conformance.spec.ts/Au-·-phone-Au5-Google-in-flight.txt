@@ -1,0 +1,36 @@
+document
+main
+dialed
+.run
+heading, Log in, level 1
+form
+status
+Email
+textbox, Email
+Password
+Password
+button, Show, # control
+link, Forgot it?
+button, Log in
+Log in
+end of button, Log in
+end of form
+or
+button, Opening Google, busy, disabled
+Opening Google
+end of button, Opening Google, busy, disabled
+paragraph
+New here?
+link, Create an account
+end of paragraph
+end of main
+contentinfo
+paragraph
+link, Privacy
+link, Terms
+link, Copyright
+link, Open source
+link, Report an intimate image
+end of paragraph
+end of contentinfo
+end of document

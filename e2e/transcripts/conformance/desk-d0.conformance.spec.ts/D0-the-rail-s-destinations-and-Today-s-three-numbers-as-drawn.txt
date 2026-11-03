@@ -1,0 +1,66 @@
+document
+navigation, Desk
+[
+dialed
+.run
+]
+Desk
+Operator
+list
+listitem, level 1, position 1, set size 5
+link, Today, current page
+Today
+end of link, Today, current page
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Review
+Review
+end of link, Review
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+link, Access
+Access
+end of link, Access
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+Duplicates
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, Runners
+Runners
+end of link, Runners
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Desk
+main
+region, :day, :month #
+heading, :day, :month #, level 1
+list, Today
+listitem, level 1, position 1, set size 3
+#
+waiting for a :month
+Nothing waiting
+end of listitem, level 1, position 1, set size 3
+listitem, level 1, position 2, set size 3
+#
+photos
+the screener couldn't finish
+Hidden until you look
+end of listitem, level 1, position 2, set size 3
+listitem, level 1, position 3, set size 3
+#
+bans
+this week
+# all time
+end of listitem, level 1, position 3, set size 3
+end of list, Today
+end of region, :day, :month #
+region, Gave up
+heading, Gave up, level 2
+status
+paragraph
+Nothing gave up.
+end of paragraph
+end of region, Gave up
+end of main
+end of document

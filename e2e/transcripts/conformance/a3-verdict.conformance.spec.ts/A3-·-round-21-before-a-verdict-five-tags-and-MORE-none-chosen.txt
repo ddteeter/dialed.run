@@ -1,0 +1,89 @@
+document
+banner
+main
+form
+:day :month # · #:#
+paragraph
+#.# mi
+end of paragraph
+heading, Did it work?, level 1
+status
+group, Did it work?
+button, Way cold, not pressed
+button, A bit cold, not pressed
+button, Dialed, not pressed
+button, A bit warm, not pressed
+button, Way warm, not pressed
+end of group, Did it work?
+heading, Anything specific? · optional, level 2
+Anything specific? · optional
+end of heading, Anything specific? · optional, level 2
+button, cold first mile, not pressed
+button, cold throughout, not pressed
+button, overheated late, not pressed
+button, sleeves damp, not pressed
+button, chafed, not pressed
+button, More ›, has popup dialog
+group, Effort · optional
+Effort · optional
+button, Easy, not pressed
+button, Steady, not pressed
+button, Workout, not pressed
+button, Race, not pressed
+paragraph
+You run warmer the harder you go. Next time, the Call allows for it.
+end of paragraph
+end of group, Effort · optional
+group, Who sees this run
+Who sees this run
+Who sees this run
+end, Who sees this run
+radio, Private Only you., Other runners won't see this run. Its kit and verdict still count, anonymously, in the guides. Change, checked, position 1, set size 3
+Private
+Only you.
+radio, Shared Runners signed in to dialed.run., Other runners won't see this run. Its kit and verdict still count, anonymously, in the guides. Change, not checked, position 2, set size 3
+Shared
+Runners signed in to dialed.run.
+radio, Public Anyone with the link, no sign-in. Never when or where you ran., Other runners won't see this run. Its kit and verdict still count, anonymously, in the guides. Change, not checked, position 3, set size 3
+Public
+Anyone with the link, no sign-in. Never when or where you ran.
+end of group, Who sees this run
+Other runners won't see this run.
+Its kit and verdict still count, anonymously, in the guides.
+button, Change
+button, Log it
+Log it
+end of button, Log it
+end of form
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed, current page
+Feed
+end of link, Feed, current page
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet
+Closet
+end of link, Closet
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add, has popup dialog
++ Add
+end of button, Add, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document

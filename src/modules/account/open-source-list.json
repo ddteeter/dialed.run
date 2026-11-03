@@ -970,6 +970,12 @@
       "project": "https://eslint.org"
     },
     {
+      "name": "@guidepup/virtual-screen-reader",
+      "version": "0.33.0",
+      "licence": "MIT",
+      "project": "https://github.com/guidepup/virtual-screen-reader"
+    },
+    {
       "name": "@playwright/test",
       "version": "1.64.1",
       "licence": "Apache-2.0",

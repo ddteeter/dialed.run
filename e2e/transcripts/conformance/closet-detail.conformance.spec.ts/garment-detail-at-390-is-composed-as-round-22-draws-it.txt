@@ -1,0 +1,70 @@
+document
+banner
+main
+status
+link, Closet, current page
+paragraph
+Top · Half-zip · M
+end of paragraph
+heading, :month Rover Half-zip, level 1
+paragraph
+Midnight
+end of paragraph
+image, :month Rover Half-zip
+Replace
+Replace
+button, Remove
+# km logged · #/# dialed
+paragraph
+Works at
+#–#°
+end of paragraph
+paragraph
+mid
+end of paragraph
+heading, Pairs with · when dialed, level 2
+Pairs with · when dialed
+end of heading, Pairs with · when dialed, level 2
+list
+listitem, level 1, position 1, set size 2
+Bandit #" Split · #
+end of listitem, level 1, position 1, set size 2
+listitem, level 1, position 2, set size 2
+Thin gloves · #
+end of listitem, level 1, position 2, set size 2
+end of list
+link, Edit
+button, Retire
+button, Delete
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed
+Feed
+end of link, Feed
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet, current page
+Closet
+end of link, Closet, current page
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add, has popup dialog
++ Add
+end of button, Add, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document

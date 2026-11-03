@@ -1,0 +1,86 @@
+document
+banner
+link, Notifications
+end of banner
+main
+heading, Feed, level 1
+link, Find runners
+button, Following, current page
+button, Your conditions
+status
+article
+link, @e#_runner_# #h ago · #:# Dialed Half-zip was right. #.#mi #° · clear
+@e#_runner_#
+#h ago · #:#
+Dialed
+paragraph
+Half-zip was right.
+end of paragraph
+#.#mi
+#° · clear
+end of link, @e#_runner_# #h ago · #:# Dialed Half-zip was right. #.#mi #° · clear
+link, Weather data provided by Visual Crossing
+button, Useful, not pressed
+Useful
+end of button, Useful, not pressed
+end of article
+article
+link, @e#_runner_# #h ago · #:# A bit warm Wore the shell for a forecast that never showed up. #.#mi #° · clear
+@e#_runner_#
+#h ago · #:#
+A bit warm
+paragraph
+Wore the shell for a forecast that never showed up.
+end of paragraph
+#.#mi
+#° · clear
+end of link, @e#_runner_# #h ago · #:# A bit warm Wore the shell for a forecast that never showed up. #.#mi #° · clear
+link, Weather data provided by Visual Crossing
+button, Useful, not pressed
+Useful
+end of button, Useful, not pressed
+end of article
+article
+link, @e#_runner_# #h ago · #:# Dialed #.#mi Indoor
+@e#_runner_#
+#h ago · #:#
+Dialed
+#.#mi
+Indoor
+end of link, @e#_runner_# #h ago · #:# Dialed #.#mi Indoor
+button, Useful, not pressed
+Useful
+end of button, Useful, not pressed
+end of article
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed, current page
+Feed
+end of link, Feed, current page
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet
+Closet
+end of link, Closet
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add, has popup dialog
++ Add
+end of button, Add, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document

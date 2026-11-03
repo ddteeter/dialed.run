@@ -1,0 +1,41 @@
+document
+main
+dialed
+.run
+heading, Log in, level 1
+form
+status
+Not signed in. Our end failed. Try again in a moment.
+end of status
+Email
+textbox, Email, closet-#@example.com
+Password
+Password, any-password-at-all
+button, Show, # control
+link, Forgot it?
+Not signed in
+Our end failed. Try again in a moment.
+button, Try again
+button, Log in
+Log in
+end of button, Log in
+end of form
+or
+button, Continue with Google
+Continue with Google
+end of button, Continue with Google
+paragraph
+New here?
+link, Create an account
+end of paragraph
+end of main
+contentinfo
+paragraph
+link, Privacy
+link, Terms
+link, Copyright
+link, Open source
+link, Report an intimate image
+end of paragraph
+end of contentinfo
+end of document

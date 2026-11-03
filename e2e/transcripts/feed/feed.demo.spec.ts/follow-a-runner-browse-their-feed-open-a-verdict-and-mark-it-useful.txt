@@ -1,0 +1,69 @@
+document
+banner
+link, dialed.run home, current page
+[
+dialed
+.run
+]
+end of link, dialed.run home, current page
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed, current page
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+link, Notifications, # new
+#
+end of link, Notifications, # new
+button, Log a run, has popup dialog
+end of banner
+main
+heading, Feed, level 1
+link, Find runners
+link, # runs still need a verdict Clear the queue ›
+#
+runs still need a verdict
+Clear the queue ›
+end of link, # runs still need a verdict Clear the queue ›
+button, Following, current page
+button, Your conditions
+status
+Same conditions · Feels
+#–#°
+·
+dry
+paragraph
+# runners logged #° and dry in the last # days.
+end of paragraph
+link, Weather data provided by Visual Crossing
+article
+link, @trail_# #h ago · #:# Dialed Chilly first mile, settled in by the bridge — # #.#mi #–#° · light rain
+@trail_#
+#h ago · #:#
+Dialed
+paragraph
+Chilly first mile, settled in by the bridge — #
+end of paragraph
+#.#mi
+#–#° · light rain
+end of link, @trail_# #h ago · #:# Dialed Chilly first mile, settled in by the bridge — # #.#mi #–#° · light rain
+link, Weather data provided by Visual Crossing
+button, # Useful, pressed
+#
+Useful
+end of button, # Useful, pressed
+end of article
+end of main
+status
+end of document

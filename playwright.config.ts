@@ -91,6 +91,11 @@ export default defineConfig({
   // Plan 161, step 3: the a11y coverage figure and the route check, once
   // the whole run is over (a no-op unless it measured).
   globalTeardown: "./e2e/support/a11y-coverage-teardown.ts",
+  // Plan 161, step 4: each test's screen-reader transcript, checked in.
+  // One file per test, with no platform or project suffix: the text is
+  // the same on a laptop and in CI, and the default template would make
+  // a Linux copy of every macOS one.
+  snapshotPathTemplate: "{testDir}/transcripts/{testFilePath}/{arg}{ext}",
   // One demo per feature carries the happy-path journey and is recorded; the
   // edge-case specs around it are not. Recording everything would bury the
   // journey in thirty validation cases and make the video unwatchable.

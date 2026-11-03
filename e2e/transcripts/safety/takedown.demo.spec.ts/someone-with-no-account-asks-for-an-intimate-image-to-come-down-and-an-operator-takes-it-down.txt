@@ -1,0 +1,151 @@
+document
+banner
+link, dialed.run home
+[
+dialed
+.run
+]
+end of link, dialed.run home
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+button, Log a run, has popup dialog
+end of banner
+main
+heading, Review queue, level 1
+Held in the last day
+list
+listitem, level 1, position 1, set size 1
+Reports · # waiting
+button, Approve all #
+end of listitem, level 1, position 1, set size 1
+end of list
+heading, # waiting, level 2
+# waiting
+end of heading, # waiting, level 2
+list
+listitem, level 1, position 1, set size 2
+button, entry · :id, expanded
+Due in #h
+Their other photos
+No other photos from this runner.
+Matching photos · any runner
+No fingerprint to match by: the photo is gone, or older than fingerprints.
+# person
+It's an intimate image of someone, shared without their consent
+reports
+form
+status
+Why it comes down
+combobox, Why it comes down, has popup listbox, not expanded
+option, —, selected, position 1, set size 7
+option, it shows where someone lives, home, not selected, position 2, set size 7
+option, it's sexual or explicit, explicit, not selected, position 3, set size 7
+option, it's an intimate image shared without consent, intimate, not selected, position 4, set size 7
+option, it harasses someone, harassment, not selected, position 5, set size 7
+option, it's an ad or spam, spam, not selected, position 6, set size 7
+option, it uses someone else's work, copyright, not selected, position 7, set size 7
+end of combobox, Why it comes down, has popup listbox, not expanded
+button, Approve
+button, Remove
+Remove
+end of button, Remove
+button, Remove as suspected CSAM
+end of form
+end of listitem, level 1, position 1, set size 2
+listitem, level 1, position 2, set size 2
+button, photo · :id, not expanded
+image, Reported photo
+paragraph
+A close match to an image removed as intimate on
+:month #
+,
+# bit
+apart.
+end of paragraph
+Their other photos · #
+list
+listitem, level 2, position 1, set size 1
+image, Photo :id, on a kit an operator cannot open
+:id
+end of listitem, level 2, position 1, set size 1
+end of list
+Matching photos · any runner · #
+list
+listitem, level 2, position 1, set size 1
+Removed
+:id
+# bit · removed :month #
+link, @poster_#
+@poster_#
+end of link, @poster_#
+end of listitem, level 2, position 1, set size 1
+end of list
+# people
+Nobody reported this.
+held on upload
+end of listitem, level 1, position 2, set size 2
+end of list
+region, Takedown
+heading, Takedown, level 2
+form
+status
+What it is
+combobox, What it is, has popup listbox, not expanded
+option, —, selected, position 1, set size 3
+option, A photo, photo, not selected, position 2, set size 3
+option, A whole entry, entry, not selected, position 3, set size 3
+end of combobox, What it is, has popup listbox, not expanded
+Its id
+textbox, Its id
+The notice
+textbox, The notice
+Who sent it, and its reference.
+button, Take it down
+Take it down
+end of button, Take it down
+end of form
+end of region, Takedown
+heading, Quarantine · #, level 2
+Quarantine · #
+end of heading, Quarantine · #, level 2
+list
+listitem, level 1, position 1, set size 1
+entry
+Held
+:month # #
+Uploader
+:id
+Kept until
+:month # #
+reported to NCMEC :month # #
+·
+E#E-#
+form
+status
+CyberTipline report number
+textbox, CyberTipline report number, E#E-#
+Optional. Record it once the report is filed; it is then kept a year from now.
+button, Record the NCMEC report
+Record the NCMEC report
+end of button, Record the NCMEC report
+end of form
+end of listitem, level 1, position 1, set size 1
+end of list
+end of main
+status
+end of document

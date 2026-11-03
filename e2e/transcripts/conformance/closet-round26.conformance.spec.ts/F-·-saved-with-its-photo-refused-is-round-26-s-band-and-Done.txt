@@ -1,0 +1,52 @@
+document
+banner
+main
+status
+Garment saved, photo didn't. Try again?
+end of status
+link, Closet, current page
+Saved to closet · Top · Half-zip
+heading, :month Rover Half-zip, level 1
+Photo · optional
+Add a photo
+Flat on the floor works best. JPG, PNG or WebP.
+Photo · optional Add a photo Flat on the floor works best. JPG, PNG or WebP.
+Photo not added
+Garment saved, photo didn't. Try again?
+Your connection dropped.
+button, Try again
+Pick another
+Pick another
+button, Done
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed
+Feed
+end of link, Feed
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet, current page
+Closet
+end of link, Closet, current page
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add, has popup dialog
++ Add
+end of button, Add, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document

@@ -1,0 +1,93 @@
+document
+banner
+link, dialed.run home
+[
+dialed
+.run
+]
+end of link, dialed.run home
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+button, Log a run, has popup dialog
+end of banner
+main
+heading, Review queue, level 1
+heading, # waiting, level 2
+# waiting
+end of heading, # waiting, level 2
+list
+listitem, level 1, position 1, set size 3
+button, entry · :id, expanded
+# people
+Nobody reported this.
+reports
+form
+status
+Why it comes down
+combobox, Why it comes down, has popup listbox, not expanded
+option, —, selected, position 1, set size 7
+option, it shows where someone lives, home, not selected, position 2, set size 7
+option, it's sexual or explicit, explicit, not selected, position 3, set size 7
+option, it's an intimate image shared without consent, intimate, not selected, position 4, set size 7
+option, it harasses someone, harassment, not selected, position 5, set size 7
+option, it's an ad or spam, spam, not selected, position 6, set size 7
+option, it uses someone else's work, copyright, not selected, position 7, set size 7
+end of combobox, Why it comes down, has popup listbox, not expanded
+button, Approve
+button, Remove
+Remove
+end of button, Remove
+button, Remove as suspected CSAM
+end of form
+end of listitem, level 1, position 1, set size 3
+listitem, level 1, position 2, set size 3
+button, profile · :id, not expanded
+# people
+Nobody reported this.
+reports
+end of listitem, level 1, position 2, set size 3
+listitem, level 1, position 3, set size 3
+button, photo · :id, not expanded
+# people
+Nobody reported this.
+classifier
+end of listitem, level 1, position 3, set size 3
+end of list
+region, Takedown
+heading, Takedown, level 2
+form
+status
+What it is
+combobox, What it is, has popup listbox, not expanded
+option, —, selected, position 1, set size 3
+option, A photo, photo, not selected, position 2, set size 3
+option, A whole entry, entry, not selected, position 3, set size 3
+end of combobox, What it is, has popup listbox, not expanded
+Its id
+textbox, Its id
+The notice
+textbox, The notice
+Who sent it, and its reference.
+button, Take it down
+Take it down
+end of button, Take it down
+end of form
+end of region, Takedown
+end of main
+status
+end of document

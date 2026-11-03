@@ -1,8 +1,8 @@
 import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 
-import { test as base } from "@playwright/test";
-import type { Page } from "@playwright/test";
+import { expect, test as base } from "@playwright/test";
+import type { Page, TestInfo } from "@playwright/test";
 
 import type { Measure } from "./a11y-coverage";
 import {
@@ -16,6 +16,7 @@ import { findingOf, keyOf, loadBaseline, RULES } from "./a11y-findings";
 import { endOfTest } from "./a11y-end";
 import type { CheckReport } from "./a11y-page";
 import { installChecker } from "./a11y-page";
+import { transcriptOf } from "./a11y-transcript";
 import type { PageReport } from "./a11y-walk";
 import { installWalk } from "./a11y-walk";
 
@@ -46,6 +47,9 @@ import { installWalk } from "./a11y-walk";
  * `test-results/a11y/findings.jsonl`, which is how the baseline is made.
  * Pages on another origin, such as the design boards `openBoard` loads,
  * are not the app and are not checked.
+ *
+ * **What it says** (step 4, `a11y-transcript.ts`): the final state's
+ * screen-reader transcript, compared with the one checked in.
  *
  * **What it reached** (step 3, `a11y-coverage.ts`): on a measured run,
  * each test's page coverage and visited paths, read once the run ends.
@@ -255,6 +259,39 @@ async function runEndOfTest(
 }
 
 /**
+ * Step 4's transcript of the final state, at the test's own width (the
+ * end-of-test checks resize after it). A page that fails under it is a
+ * checker error, like step 2's.
+ */
+async function readTranscript(
+  page: Page,
+  baseURL: string,
+  collected: Collected,
+): Promise<string | undefined> {
+  if (
+    page.isClosed() ||
+    new URL(page.url()).origin !== new URL(baseURL).origin
+  ) {
+    return undefined;
+  }
+  try {
+    const phrases = await transcriptOf(page);
+    return `${phrases.join("\n")}\n`;
+  } catch (error) {
+    collected.errors.push(`transcript: ${String(error)}`);
+    return undefined;
+  }
+}
+
+/**
+ * One transcript per test, named by its title: the file is
+ * `e2e/transcripts/<spec>/<title>.txt` (`snapshotPathTemplate`).
+ */
+function transcriptName(testInfo: TestInfo): string {
+  return `${testInfo.titlePath.slice(1).join(" ")}.txt`;
+}
+
+/**
  * Each distinct finding once, in the order first seen.
  */
 function distinct(findings: readonly Finding[]): Finding[] {
@@ -327,12 +364,19 @@ export const test = base.extend<{
         worker.current = undefined;
         worker.measure = undefined;
       }
+      let transcript: string | undefined;
       if (testInfo.status === testInfo.expectedStatus) {
+        if (a11yMode === "enforce") {
+          transcript = await readTranscript(page, baseURL ?? "", collected);
+        }
         await runEndOfTest(page, baseURL ?? "", collected);
       }
       if (measure !== undefined) await stopMeasuring(measure);
       record(testInfo.titlePath.join(" › "), collected);
       if (a11yMode === "enforce" && !IS_RECORDING) failOnNew(collected);
+      if (transcript !== undefined) {
+        expect(transcript).toMatchSnapshot(transcriptName(testInfo));
+      }
     },
     { auto: true },
   ],
