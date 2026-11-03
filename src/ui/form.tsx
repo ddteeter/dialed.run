@@ -405,6 +405,8 @@ export function TextField({
   autoComplete,
   list,
   action,
+  placeholder,
+  onBlur,
 }: Readonly<{
   name: string;
   label: string;
@@ -414,6 +416,11 @@ export function TextField({
   error?: string | undefined;
   hint?: string | undefined;
   type?: "text" | "email" | "password" | "url" | "date";
+  placeholder?: string | undefined;
+  /**
+  Leaving the box, for a field checked then and not while typing (round 43 #93).
+  */
+  onBlur?: ((value: string) => void) | undefined;
   autoComplete?: string | undefined;
   /**
    * The id of a `<datalist>` holding suggestions for this field.
@@ -449,11 +456,16 @@ export function TextField({
         type={type}
         autoComplete={autoComplete}
         list={list}
+        placeholder={placeholder}
         value={value}
         onChange={(event) => {
           onChange(event.target.value);
         }}
-        className="w-full border-none bg-transparent"
+        onBlur={(event) => {
+          onBlur?.(event.target.value);
+        }}
+        // A long link is one line, cut at its end while unfocused (#93).
+        className="w-full border-none bg-transparent text-ellipsis"
       />
     </FormField>
   );
@@ -877,6 +889,7 @@ export function ChoiceField<TOption extends string>({
   options,
   optionLabels,
   onChange,
+  placeholder,
 }: Readonly<
   Omit<ChoosableProps<TOption>, "field"> & {
     /**
@@ -886,6 +899,12 @@ export function ChoiceField<TOption extends string>({
     label: string;
     value: TOption | "";
     onChange: (value: TOption | "") => void;
+    /**
+     * What "nothing chosen" means here, when it means something: Edit's
+     * product value, which applies until the runner picks their own
+     * (round 43 #94). Otherwise the option reads "—".
+     */
+    placeholder?: string | undefined;
   }
 >): JSX.Element {
   // Per instance, for the reason `TextField` gives (R-165).
@@ -903,7 +922,7 @@ export function ChoiceField<TOption extends string>({
           onChange(picked ?? NO_CHOICE);
         }}
       >
-        <option value={NO_CHOICE}>—</option>
+        <option value={NO_CHOICE}>{placeholder ?? "—"}</option>
         {options.map((option) => (
           <option key={option} value={option}>
             {optionLabels[option]}

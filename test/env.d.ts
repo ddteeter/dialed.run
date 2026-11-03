@@ -6,6 +6,7 @@ declare global {
     interface Env {
       TEST_MIGRATIONS_CORE: D1Migration[];
       TEST_MIGRATIONS_WEATHER: D1Migration[];
+      TEST_MIGRATIONS_OPS: D1Migration[];
     }
   }
 }

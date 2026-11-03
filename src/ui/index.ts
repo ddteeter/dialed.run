@@ -54,7 +54,12 @@ export {
   UnconfirmedRefusalAnswer,
   useUnconfirmedRefusal,
 } from "./unconfirmed-refusal";
-export type { FieldProps, FormFailure, FormShell } from "./use-form-submit";
+export type {
+  FieldErrors,
+  FieldProps,
+  FormFailure,
+  FormShell,
+} from "./use-form-submit";
 export type { ControlFailure } from "./form";
 export { useIdempotencyKey } from "./use-idempotency-key";
 export { useReturnFocus } from "./use-return-focus";

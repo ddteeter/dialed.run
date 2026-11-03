@@ -122,7 +122,7 @@ assertions on every push and has no use for a 52-second recording of a
 **A fresh worktree needs three things first**, which CI's `e2e` job does
 for itself (`.github/workflows/ci.yml`) and nothing does for you:
 
-1. `npm run db:migrate:local:core && npm run db:migrate:local:weather`.
+1. `npm run db:migrate:local:core && npm run db:migrate:local:weather && npm run db:migrate:local:ops`.
 2. A `.dev.vars` with `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` set to
    Cloudflare's public test keys. `.dev.vars.example` has them. Without
    the site key, the widget renders nothing, and every demo that signs up

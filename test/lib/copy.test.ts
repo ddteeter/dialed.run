@@ -46,3 +46,15 @@ describe("shared user-facing copy", () => {
     expect(text).not.toMatch(/\blike\b/i);
   });
 });
+
+describe("outboxBehindSentence (design 168)", () => {
+  it("counts in the singular and the plural, by the copy rules", () => {
+    expect(copy.outboxBehindSentence(1)).toBe(
+      "1 queued job was still due after this morning's run.",
+    );
+    expect(copy.outboxBehindSentence(12)).toBe(
+      "12 queued jobs were still due after this morning's run.",
+    );
+    expect(copy.outboxBehindSentence(12)).not.toMatch(BANNED);
+  });
+});

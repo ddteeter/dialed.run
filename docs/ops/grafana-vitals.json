@@ -1,0 +1,233 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_VITALS",
+      "label": "Analytics Engine (dialed_vitals)",
+      "type": "datasource",
+      "pluginId": "vertamedia-clickhouse-datasource",
+      "pluginName": "Altinity plugin for ClickHouse"
+    }
+  ],
+  "title": "dialed.run speed",
+  "uid": "dialed-vitals",
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "metric",
+        "label": "metric",
+        "type": "custom",
+        "query": "LCP,INP,CLS,FCP,TTFB,nav",
+        "current": {
+          "text": "LCP",
+          "value": "LCP"
+        },
+        "options": [
+          {
+            "text": "LCP",
+            "value": "LCP",
+            "selected": true
+          },
+          {
+            "text": "INP",
+            "value": "INP",
+            "selected": false
+          },
+          {
+            "text": "CLS",
+            "value": "CLS",
+            "selected": false
+          },
+          {
+            "text": "FCP",
+            "value": "FCP",
+            "selected": false
+          },
+          {
+            "text": "TTFB",
+            "value": "TTFB",
+            "selected": false
+          },
+          {
+            "text": "nav",
+            "value": "nav",
+            "selected": false
+          }
+        ]
+      },
+      {
+        "name": "device",
+        "label": "device",
+        "type": "custom",
+        "query": "narrow,wide",
+        "current": {
+          "text": "narrow",
+          "value": "narrow"
+        },
+        "options": [
+          {
+            "text": "narrow",
+            "value": "narrow",
+            "selected": true
+          },
+          {
+            "text": "wide",
+            "value": "wide",
+            "selected": false
+          }
+        ]
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "p75 by route",
+      "type": "timeseries",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_VITALS}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_VITALS}"
+          },
+          "format": "time_series",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "rawQuery": true,
+          "query": "SELECT $timeSeries AS t, index1 AS route,\nquantileExactWeighted(0.75)(double1, _sample_interval) AS p75\nFROM dialed_vitals\nWHERE $timeFilter AND blob1 = '$metric' AND blob3 = '$device'\nGROUP BY route, t\nORDER BY t"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Samples by route",
+      "type": "timeseries",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_VITALS}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_VITALS}"
+          },
+          "format": "time_series",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "rawQuery": true,
+          "query": "SELECT $timeSeries AS t, index1 AS route,\nsum(_sample_interval) AS samples\nFROM dialed_vitals\nWHERE $timeFilter AND blob1 = '$metric' AND blob3 = '$device'\nGROUP BY route, t\nORDER BY t"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Server p95 by route (2xx)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_VITALS}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_VITALS}"
+          },
+          "format": "time_series",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "rawQuery": true,
+          "query": "SELECT $timeSeries AS t, index1 AS route,\nquantileExactWeighted(0.95)(double1, _sample_interval) AS p95\nFROM dialed_vitals\nWHERE $timeFilter AND blob1 = 'server' AND blob3 = '2xx'\nGROUP BY route, t\nORDER BY t"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Server 5xx by route",
+      "type": "timeseries",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_VITALS}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_VITALS}"
+          },
+          "format": "time_series",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "rawQuery": true,
+          "query": "SELECT $timeSeries AS t, index1 AS route,\nsum(_sample_interval) AS errors\nFROM dialed_vitals\nWHERE $timeFilter AND blob1 = 'server' AND blob3 = '5xx'\nGROUP BY route, t\nORDER BY t"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "p75 by deploy",
+      "type": "table",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_VITALS}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_VITALS}"
+          },
+          "format": "table",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "rawQuery": true,
+          "query": "SELECT index1 AS route, blob4 AS version,\nquantileExactWeighted(0.75)(double1, _sample_interval) AS p75,\nsum(_sample_interval) AS n\nFROM dialed_vitals\nWHERE $timeFilter AND blob1 = '$metric' AND blob3 = '$device'\nGROUP BY route, version\nORDER BY route, version"
+        }
+      ]
+    }
+  ]
+}

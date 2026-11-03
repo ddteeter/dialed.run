@@ -3,6 +3,7 @@
  * queue and cron entries the platform needs. wrangler.jsonc `main` points
  * here instead of the framework's default entry.
  */
+import { createRouter } from "@tanstack/react-router";
 import {
   createStartHandler,
   defaultStreamHandler,
@@ -12,7 +13,12 @@ import {
   captureException,
   handleQueueBatch,
   handleScheduled,
+  requestNamer,
   secureResponse,
+  timeRequest,
+  timingDeps,
+  dailySpeed,
+  hourlySpeed,
   withoutCookiesWhenPublic,
 } from "./modules/ops";
 import { forgetAnsweredRequests } from "./modules/account/answered-requests";
@@ -25,8 +31,17 @@ import { purgeDueAccounts } from "./modules/account/purge";
 import { linkTypedGarments } from "./modules/closet";
 import { sweepCopyrightHolds } from "./modules/feed/moderation";
 import { requestContext } from "./lib/csp-nonce";
+import { routeTree } from "./routeTree.gen";
 
 const startFetch = createStartHandler(defaultStreamHandler);
+
+/**
+ * Design 165: every request logs its route id and how long it took. The
+ * namer reads the route tree on the first request, not here.
+ */
+// Design 165: requests are named by TanStack's own matcher, on a router
+// built at the first request and kept.
+const timing = timingDeps(requestNamer(() => createRouter({ routeTree })));
 
 export default {
   async fetch(request): Promise<Response> {
@@ -48,11 +63,19 @@ export default {
       // may store it and hand it to the next visitor, and with no nonce,
       // for the same reason: an open-web path is rendered without one,
       // and its policy names its scripts' hashes instead.
+      //
+      // Design 165: the response is timed by route id, logged and written
+      // to VITALS.
       const context = requestContext(new URL(request.url).pathname);
-      const response = await respondInD1Scope(
+      const response = await timeRequest(
         request,
-        () => startFetch(request, { context }),
-        d1RequestDepsFromEnv(),
+        () =>
+          respondInD1Scope(
+            request,
+            () => startFetch(request, { context }),
+            d1RequestDepsFromEnv(),
+          ),
+        timing,
       );
       return await secureResponse(
         withoutCookiesWhenPublic(response),
@@ -92,6 +115,9 @@ export default {
         sweepAuthRows: sweepExpiredAuthRows,
         forgetAnsweredRequests,
         sweepCopyrightHolds,
+        // Ops' own, handed in so a test can fake the SQL API (design 165).
+        speed: dailySpeed,
+        speedHourly: hourlySpeed,
       });
     } catch (error) {
       captureException(error, { surface: "scheduled", cron: controller.cron });

@@ -312,6 +312,9 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   // Strava's handshake and its webhook: a machine, verified by token.
   "routes/api/strava.ts GET": "sessionless",
   "routes/api/strava.ts POST": "sessionless",
+  // Speed beacons (design 165): anonymous by design, same-origin and
+  // size-capped, and they write only to the VITALS dataset.
+  "routes/api/vitals.ts POST": "sessionless",
   // The owner's own garment photo.
   "routes/closet/photo.$itemId.$size.ts GET": "unconfirmed",
   // Entry photos: visibility is decided per viewer, signed out included.

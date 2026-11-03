@@ -15,6 +15,7 @@ import {
   Mono,
   WeatherAttribution,
 } from "../../../ui";
+import { ProductLink } from "../../../ui/ProductLink";
 import { tagLabel } from "../chips";
 import type { EntryTag } from "../chips";
 import type { entryDetailForViewer } from "../entries";
@@ -296,13 +297,16 @@ function Kit({ items }: Readonly<{ items: Entry["items"] }>) {
                 (`garmentLabel`: brand and name, unless there is no brand). */}
             {item.brand === undefined ? (
               <span className="flex items-baseline gap-2">
-                {item.name}
+                <ProductLink url={item.url} label={item.name} />
                 <Mono step="xs" className="text-label">
                   [Generic]
                 </Mono>
               </span>
             ) : (
-              <span>{`${item.brand} ${item.name}`}</span>
+              <ProductLink
+                url={item.url}
+                label={`${item.brand} ${item.name}`}
+              />
             )}
             {item.flag === undefined ? undefined : (
               <Mono step="xs" className="font-semibold text-ink">

@@ -2,7 +2,8 @@
  * Covers: D0 (the Desk's shell) and Today, with D6 · Gave up as Today's
  * section (D-87; R-119), then a hold breaker at its ceiling: Today's HOLDS
  * PAUSED line and Review's release of the burst (design 164; design
- * deltas 93 and 95) — one journey, one video.
+ * deltas 93 and 95), and the outbox running behind (design 168) — one
+ * journey, one video.
  *
  * The journey needs `ADMIN_USER_IDS=e2e-desk-operator` in the dev server's
  * `.dev.vars`, which CI's e2e job writes (register R-72, PR #114). Locally,
@@ -16,7 +17,9 @@ import { count, eq, inArray } from "drizzle-orm";
 
 import {
   brands,
+  cronCheckpoints,
   gaveUp,
+  outbox,
   products,
   reviewQueue,
   runs,
@@ -148,6 +151,36 @@ test("an operator opens the Desk and reads Today", async ({
   });
   const gaveUpCount = gaveUpBefore + 3;
 
+  // What the morning's drain could not reach (design 168): photo deletes
+  // due 38 hours ago, behind a digest that ran an hour ago. The heartbeat
+  // this replaces is put back at the end.
+  const behindIds = [newUlid(), newUlid(), newUlid()] as const;
+  const heartbeatBefore = await withLocalDb(async ({ core }) => {
+    const [row] = await core
+      .select({ at: cronCheckpoints.lastRunAt })
+      .from(cronCheckpoints)
+      .where(eq(cronCheckpoints.cronName, "daily-digest"));
+    const now = nowSeconds();
+    await core
+      .insert(cronCheckpoints)
+      .values({ cronName: "daily-digest", lastRunAt: now - HOUR })
+      .onConflictDoUpdate({
+        target: cronCheckpoints.cronName,
+        set: { lastRunAt: now - HOUR },
+      });
+    await core.insert(outbox).values(
+      behindIds.map((id) => ({
+        id,
+        kind: "photo_delete",
+        dedupeKey: `e2e-behind:${id}`,
+        payload: JSON.stringify({ userId: banned, itemId: id }),
+        nextAttemptAt: now - 38 * HOUR,
+        createdAt: now - 40 * HOUR,
+      })),
+    );
+    return row?.at;
+  });
+
   await signInAsOperator(page);
 
   await page.goto("/desk");
@@ -173,6 +206,14 @@ test("an operator opens the Desk and reads Today", async ({
     page.getByText(/photos? the screener couldn't finish/u),
   ).toBeVisible();
   await expect(page.getByText(/bans? this week/u)).toBeVisible();
+
+  await scene(page, "Running behind: what the morning's drain couldn't reach");
+  const behind = page.locator("[data-part='running-behind']");
+  await expect(behind).toContainText("Running behind");
+  await expect(behind).toContainText(
+    "queued jobs were still due after this morning's run.",
+  );
+  await expect(behind).toContainText(/waited \d+h/u);
 
   await scene(page, "Review carries the count that needs a person");
   await expect(
@@ -294,5 +335,14 @@ test("an operator opens the Desk and reads Today", async ({
     await core
       .delete(userProfiles)
       .where(inArray(userProfiles.userId, [banned]));
+    await core.delete(outbox).where(inArray(outbox.id, [...behindIds]));
+    await (heartbeatBefore === undefined
+      ? core
+          .delete(cronCheckpoints)
+          .where(eq(cronCheckpoints.cronName, "daily-digest"))
+      : core
+          .update(cronCheckpoints)
+          .set({ lastRunAt: heartbeatBefore })
+          .where(eq(cronCheckpoints.cronName, "daily-digest")));
   });
 });

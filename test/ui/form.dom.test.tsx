@@ -26,6 +26,7 @@ import {
 } from "../../src/ui/form";
 import { DURATION } from "../../src/ui/motion";
 import { useFormSubmit } from "../../src/ui/use-form-submit";
+import type { FieldErrors } from "../../src/ui/use-form-submit";
 
 /**
  * The Forms & failure contract, driven rather than rendered.
@@ -1243,6 +1244,102 @@ describe("the summary names a field", () => {
 
     expect(await screen.findByRole("button", { name: /^name/ })).toBeVisible();
     expect(screen.getByRole("button", { name: /^brand/ })).toBeVisible();
+  });
+});
+
+/**
+ * A form that opens on errors it was handed, and marks fields from checks
+ * of its own: F's link on blur, Edit's since-denied link (round 43 #93).
+ */
+function Marking({
+  initialErrors,
+}: Readonly<{ initialErrors?: FieldErrors | undefined }>) {
+  const form = useFormSubmit({
+    schema,
+    action: () => Promise.resolve(undefined),
+    successMessage: "Saved.",
+    initialErrors,
+  });
+  return (
+    <form ref={form.formRef}>
+      <FormErrorSummary
+        rows={form.summaryRows}
+        onFocusField={form.focusField}
+        summaryRef={form.summaryRef}
+      />
+      <input aria-label="Name" {...form.field("name")} />
+      <input aria-label="Brand" {...form.field("brand")} />
+      {/* What `focusField(undefined)` would find: the name it coerces to. */}
+      <input name="undefined" aria-label="Unnamed" />
+      <button
+        type="button"
+        onClick={() => {
+          form.markField("name", undefined);
+        }}
+      >
+        Name passes
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          form.markField("name", "Too short.");
+        }}
+      >
+        Name fails
+      </button>
+    </form>
+  );
+}
+
+describe("a field the form checks itself (round 43 #93)", () => {
+  const both = { name: "Give it a name.", brand: "Which brand?" };
+
+  it("clears a field whose check passes, so the summary counts what is left", async () => {
+    const user = userEvent.setup();
+    render(<Marking initialErrors={both} />);
+    expect(screen.getByText("2 fields need a fix.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Name passes" }));
+
+    // One error left is no summary; a key left behind holding `undefined`
+    // would still be counted as a second row.
+    expect(screen.queryByText(/fields need a fix/)).toBeNull();
+    expect(screen.getByLabelText("Name")).not.toHaveAttribute("aria-invalid");
+    expect(screen.getByLabelText("Brand")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
+
+  it("puts a failed check's sentence on its field beside the others", async () => {
+    const user = userEvent.setup();
+    render(<Marking initialErrors={{ brand: both.brand }} />);
+
+    await user.click(screen.getByRole("button", { name: "Name fails" }));
+
+    expect(screen.getByText("2 fields need a fix.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Too short\./ })).toBeVisible();
+  });
+
+  it("opens on its first error, focused, and moves when it reopens on another", async () => {
+    const view = render(<Marking initialErrors={{ brand: both.brand }} />);
+    await waitFor(() => {
+      expect(screen.getByLabelText("Brand")).toHaveFocus();
+    });
+
+    view.rerender(<Marking initialErrors={{ name: both.name }} />);
+    await waitFor(() => {
+      expect(screen.getByLabelText("Name")).toHaveFocus();
+    });
+  });
+
+  it("opens clean without moving focus anywhere", () => {
+    render(<Marking />);
+
+    // Not even to a control named "undefined", which is what the first
+    // key of no errors would be asked for if the form did not check.
+    expect(screen.getByLabelText("Unnamed")).not.toHaveFocus();
+    expect(document.body).toHaveFocus();
   });
 });
 
