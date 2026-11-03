@@ -51,10 +51,14 @@ export function Layout({
           padding; this only bounds it.
 
           The tab bar is fixed to the bottom edge and needs the content to
-          clear it; the top bar is in the flow and does not. */}
-      <div className="mx-auto w-full max-w-page flex-1 pb-24 wide:pb-0">
+          clear it; the top bar is in the flow and does not.
+
+          It is the page's one `<main>`: without it every heading and link
+          on a signed-in screen sat outside any landmark (plan 161's
+          `region`). A screen inside it does not bring its own. */}
+      <main className="mx-auto w-full max-w-page flex-1 pb-24 wide:pb-0">
         {children}
-      </div>
+      </main>
       <TabBar />
       <SlowRouteStatus />
     </div>

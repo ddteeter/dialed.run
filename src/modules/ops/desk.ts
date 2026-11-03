@@ -20,7 +20,13 @@ import { coreDb } from "../../env";
 import { calendarDay } from "../../lib/dates";
 import { nowSeconds } from "../../lib/now";
 import { maskedAddress } from "../email";
-import { adminUserIds, pendingReviewCount, stuckSources } from "../safety";
+import {
+  adminUserIds,
+  overCeilings,
+  pendingReviewCount,
+  stuckSources,
+  type CeilingReading,
+} from "../safety";
 import { DIGEST_UNCONFIRMED } from "./digest-marks";
 
 /**
@@ -185,6 +191,11 @@ export interface DeskToday {
    * skipped nobody, in UTC like the date above it.
    */
   readonly skipped: readonly SkippedOperator[];
+  /**
+   * Each hold breaker at its ceiling this hour (design 164), one line each
+   * on Today; empty on an ordinary hour.
+   */
+  readonly breakers: readonly CeilingReading[];
 }
 
 /**
@@ -226,5 +237,6 @@ export async function deskToday(): Promise<DeskToday> {
     counts,
     asOf,
     skipped: isToday ? await unconfirmedOperators() : [],
+    breakers: await overCeilings(coreDb(), asOf),
   };
 }

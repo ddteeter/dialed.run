@@ -98,8 +98,10 @@ export async function holdStateFor(
 /**
  * What a `count()` answered. It always answers with one row; summing the
  * rows says that without indexing `[0]`, whose fallback no input reaches.
+ * A grouped count with no groups answers none, which sums to zero (the
+ * hold breakers' baseline, design 164).
  */
-function counted(rows: readonly { n: number }[]): number {
+export function counted(rows: readonly { n: number }[]): number {
   return rows.reduce((total, row) => total + row.n, 0);
 }
 

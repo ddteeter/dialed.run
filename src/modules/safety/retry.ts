@@ -32,6 +32,11 @@ export interface RetryReport {
   considered: number;
   passed: number;
   flagged: number;
+  /**
+   * Flags the classifier breaker held back (design 164): still pending,
+   * hidden from nobody, screened again next firing.
+   */
+  heldBack: number;
   /** Still pending afterwards — the classifier declined or the bytes were
    * unreadable. Not an error: the next firing tries again. */
   deferred: number;
@@ -65,6 +70,7 @@ export async function retryPendingScreenings(
     considered: pending.length,
     passed: 0,
     flagged: 0,
+    heldBack: 0,
     deferred: 0,
     escalated: 0,
   };
@@ -101,7 +107,7 @@ export async function retryPendingScreenings(
   // holds back would bury the digest in the backlog of a setting.
   if (classify !== undefined && unfinished.length > 0) {
     anomalies.push(
-      `${String(report.deferred)} of ${String(report.considered)} photos still pending after a screening sweep: ${namesOf(unfinished)}`,
+      `${String(unfinished.length)} of ${String(report.considered)} photos still pending after a screening sweep: ${namesOf(unfinished)}`,
     );
   }
 
@@ -149,6 +155,7 @@ const countedAs = {
   // queue row it wrote, which is where the decision actually lives.
   review: "passed",
   flagged: "flagged",
+  held_back: "heldBack",
   deferred: "deferred",
   missing: "deferred",
 } as const satisfies Record<Attempt, keyof RetryReport>;
@@ -161,6 +168,8 @@ const missingWhen: Record<Attempt, boolean | undefined> = {
   pass: undefined,
   review: undefined,
   flagged: undefined,
+  // Held by the breaker (design 164): still pending, its file is there.
+  held_back: false,
   deferred: false,
   missing: true,
 };

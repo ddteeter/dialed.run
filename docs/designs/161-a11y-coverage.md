@@ -42,22 +42,40 @@ Playwright page.
 _Done:_ the numbers are in this doc, and the steps below are re-costed
 from them. **Go/no-go point for the owner.**
 
-**1. The fixture: `e2e/support/a11y.ts`.** It extends Playwright's `test`,
-and every spec imports `test` from it instead of `@playwright/test` (41
-specs, a mechanical change). An init script loads `axe-core` into the page.
-The action methods of `Locator`, `Page`, `Keyboard` and `Mouse` are wrapped
-to run the checks first, so every state a spec acts on is checked; a DOM
-already checked (by hash) is skipped. Every AA rule is on, `color-contrast`
-included, plus the `best-practice` tag for `region`, and the only way to switch one off
-is a row in `decisions.md`. The same in-page pass measures interactive
-boxes against 44×44, since axe's `target-size` checks 24px, counting a
-control's `<label>` and any overlay that takes its clicks as part of its
-hit area (the spike measured the bare `<input>` and was wrong). Failures
-collect per test and fail it at the end, naming the rule and the element.
-_Tests:_ a fixture spec over a deliberately broken page fails for each
-check, so a pass means something.
-_Done:_ every spec runs under the fixture; the existing backlog is listed
-in `e2e/a11y-baseline.json` (step 6 empties it).
+**1. The fixture: `e2e/support/a11y.ts`.** Built 2026-10-31. Every spec
+imports `test` from it instead of `@playwright/test`. The action methods of
+`Locator`, `Page`, `Keyboard` and `Mouse` are wrapped to run the checks
+first, so every state a spec acts on is checked once. It checks:
+
+- every axe rule tagged WCAG A or AA, read from axe rather than listed,
+  plus `region` (`a11y-findings.ts`'s `RULES`);
+- `target-44`: a 44×44 hit area, counting a control's labels and a
+  `::before` drawn proud of it (`target-seam`), and honouring the app's
+  own `data-target="inline"`;
+- `name-space`: a space that is a text node of its own between two
+  others, which Chromium leaves out of the accessible name ("7waiting").
+
+A finding is named by rule, route and element, and the element by its tag
+and naming attributes (`data-slot`, `data-part`, `name`, `type`, `role`,
+`aria-label`, `href`), never its markup. Markup differed between the dev
+server and the built Worker, so the first baseline matched on neither.
+Anything not in `e2e/a11y-baseline.json` fails the test at its end.
+`A11Y_RECORD=1` fails nothing and writes every finding, which is how the
+baseline is made: the union of a run on each server.
+_Fixed here rather than baselined:_ 420 of the first 468 findings were
+`region`, because the signed-in `Layout` had no `<main>` and neither bar
+was a `<header>`. Baselining them element by element would have failed any
+PR that added content to almost any screen. `Layout`'s content is now the
+page's `<main>`, both bars are `<header>`s, and `SystemState`'s signed-out
+frame is a `<main>`. Onboarding's five routes and the Strava callback still
+render no landmark; they are in the baseline for step 6.
+_Tests:_ `e2e/support/a11y.spec.ts` serves a page with one of each problem
+planted and asserts exactly those are found, and that a label-wrapped
+checkbox, an inline link, a seam chip and a hidden file input are not.
+_Not done:_ checking before each web-first `expect`, for states no action
+is taken on. Wrapping `expect`'s matchers needs a proxy over every chained
+form (`.not`, `.soft`, `.poll`); it waits until step 3's coverage shows
+how much it would add.
 
 **2. End-of-test checks.** These run once per test, on its final state:
 

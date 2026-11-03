@@ -16,6 +16,7 @@ import {
   counterNoticeInputFor,
   ncmecReportInput,
   runRemovalsInput,
+  releaseHoldsInput,
 } from "../../src/modules/safety/inputs";
 import { isoDayOf } from "../../src/lib/contracts/age";
 import { nowSeconds } from "../../src/lib/now";
@@ -514,5 +515,23 @@ describe("garmentMatchActionInput (design 159)", () => {
         reason: "spam",
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("releaseHoldsInput (design 164)", () => {
+  it("takes a cause and a time in whole seconds from the epoch on", () => {
+    expect(
+      releaseHoldsInput.parse({ cause: "fingerprint", since: 0 }),
+    ).toStrictEqual({ cause: "fingerprint", since: 0 });
+  });
+
+  it("refuses a cause that is not one, and a time that is not whole or is negative", () => {
+    for (const bad of [
+      { cause: "manual", since: 1 },
+      { cause: "reports", since: 1.5 },
+      { cause: "reports", since: -1 },
+    ]) {
+      expect(releaseHoldsInput.safeParse(bad).success).toBe(false);
+    }
   });
 });
