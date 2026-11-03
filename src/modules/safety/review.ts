@@ -585,7 +585,7 @@ export function reasonsFrom(concatenated: string | null): ReportReason[] {
   // unreachable on the only input that could have thrown.
   return concatenated.split(",").flatMap((value) => {
     const parsed = reportReasonSchema.safeParse(value);
-    return parsed.success ? [parsed.data] : [];
+    return parsed.success ? parsed.data : [];
   });
 }
 

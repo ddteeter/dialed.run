@@ -103,12 +103,10 @@ export async function observationsForRuns(
   const keyed = runRows.flatMap((r) =>
     r.lat === null || r.lng === null
       ? []
-      : [
-          {
-            runId: r.id as Ulid,
-            key: cacheKeyFor(r.lat, r.lng, new Date(r.startedAt * 1000)),
-          },
-        ],
+      : {
+          runId: r.id as Ulid,
+          key: cacheKeyFor(r.lat, r.lng, new Date(r.startedAt * 1000)),
+        },
   );
 
   const weather = weatherDb();

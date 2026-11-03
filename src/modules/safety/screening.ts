@@ -24,6 +24,11 @@
 import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import type { SQLWrapper } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
+import type {
+  SQLiteColumn,
+  SQLiteTable,
+  SQLiteUpdateSetSource,
+} from "drizzle-orm/sqlite-core";
 
 import {
   entryPhotos,
@@ -341,34 +346,61 @@ function visibilityWrite(
   // charged for our uncertainty, and the reviewer looks at a photo that is
   // already live rather than at one being held for them.
   const status = decision === "flag" ? "hidden_pending_review" : "pass";
-  if (scope === "entry") {
-    // Only over `pending`, the state a verdict is owed for. A report or a
-    // removal request can hide a photo while the classifier is still
-    // answering, and a `pass` landing after it would put the photo back
-    // with nobody having decided (C6: a removal is never undone by
-    // itself). Hidden already, a `flag` has nothing left to hide.
-    return db()
-      .update(entryPhotos)
-      .set({ screenStatus: status })
-      .where(
-        and(
-          eq(entryPhotos.id, photoId),
-          eq(entryPhotos.screenStatus, "pending"),
-        ),
-      );
-  }
-  // Over `pending` only, as above (design 157): a garment photo held as a
-  // copy of a removed image (D-147) waits for a person, and a verdict
-  // landing late must not clear it.
+  return scope === "entry"
+    ? entryVisibilityWrite(photoId, status)
+    : garmentVisibilityWrite(photoId, status);
+}
+
+/**
+ * Only over `pending`, the state a verdict is owed for. A report or a
+ * removal request can hide a photo while the classifier is still
+ * answering, and a `pass` landing after it would put the photo back with
+ * nobody having decided (C6: a removal is never undone by itself). Hidden
+ * already, a `flag` has nothing left to hide.
+ */
+function entryVisibilityWrite(
+  photoId: string,
+  status: "hidden_pending_review" | "pass",
+) {
+  return updateWhilePending(
+    entryPhotos,
+    { screenStatus: status },
+    [entryPhotos.id, entryPhotos.screenStatus],
+    photoId,
+  );
+}
+
+/**
+Applies `values` to the row `photoId` names, but only while its status column
+is still `pending`. The one place that guard is written, for both photo tables.
+*/
+function updateWhilePending<TTable extends SQLiteTable>(
+  table: TTable,
+  values: SQLiteUpdateSetSource<TTable>,
+  [idColumn, statusColumn]: [SQLiteColumn, SQLiteColumn],
+  photoId: string,
+) {
   return db()
-    .update(wardrobeItems)
-    .set({ visibility: status })
-    .where(
-      and(
-        eq(wardrobeItems.id, photoId),
-        eq(wardrobeItems.visibility, "pending"),
-      ),
-    );
+    .update(table)
+    .set(values)
+    .where(and(eq(idColumn, photoId), eq(statusColumn, "pending")));
+}
+
+/**
+ * Over `pending` only, as for an entry photo (design 157): a garment photo
+ * held as a copy of a removed image (D-147) waits for a person, and a
+ * verdict landing late must not clear it.
+ */
+function garmentVisibilityWrite(
+  photoId: string,
+  status: "hidden_pending_review" | "pass",
+) {
+  return updateWhilePending(
+    wardrobeItems,
+    { visibility: status },
+    [wardrobeItems.id, wardrobeItems.visibility],
+    photoId,
+  );
 }
 
 export interface PendingPhoto {
