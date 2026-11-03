@@ -262,6 +262,36 @@ contradicts the layout, an error read before its field. It is advisory
 only: its verdicts aren't deterministic, so it never fails a check.
 _Done:_ it comments on a PR that changes a label.
 
+_How (2026-11-03):_ `.github/workflows/a11y-review.yml`, on
+`pull_request` when `e2e/transcripts/**` changes. It is built like
+`dependabot-pr.yml`'s review, for the same reasons: the job holds a key
+and reads text it does not control.
+
+- **`review`** (`contents: read`):
+  - The network is fenced by `harden-runner` to the hosts the action
+    installs from and Claude's API.
+  - The transcripts' diff against the base is written to a file, with
+    no model, and capped at 200 KB.
+  - Claude reads the diff, the contract (`design/Accessibility
+    Contract.dc.html`, through design 112) and the source with Read,
+    Grep and Glob only: no Bash, web or writes. It answers in a JSON
+    schema of a summary and up to 30 findings (transcript, phrase as
+    said, problem, fix).
+- **`post`** (`pull-requests: write`, no model) screens that output as
+  data before posting one comment:
+  - the agreed shape and sizes;
+  - nothing shaped like a credential;
+  - every `@` defused.
+- **Advisory.** Both jobs `continue-on-error`, nothing is a required
+  check, and the comment says it is a model's reading.
+- **The key.** The repository secret `ANTHROPIC_API_KEY`. Today the key
+  exists only in the `dependabot-review` environment. Until the owner adds
+  the repository secret, the job logs a notice and skips. A fork's PR gets
+  no secrets and skips the same way, so nothing runs this repo's key on
+  code from outside it.
+- _Not done here:_ the "Done" demonstration. It needs the secret, then a
+  PR that changes a label.
+
 **6. Fix the backlog.** Work through `a11y-baseline.json`, grouped by the
 lane that owns the file, until it is empty. Contrast in a real browser is
 the likely bulk.
