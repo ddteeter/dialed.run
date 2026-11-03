@@ -62,7 +62,7 @@ export function PostCard(props: Readonly<PostCardProps>) {
       >
         <div data-part="author" className="flex items-center gap-3">
           <Avatar name={item.authorUsername ?? "A runner"} size="small" />
-          <span className="flex flex-1 flex-col">
+          <span className="flex min-w-0 flex-1 flex-col wrap-anywhere">
             <span className="text-body">
               <Handle username={item.authorUsername} />
             </span>

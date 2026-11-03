@@ -251,7 +251,9 @@ export function PublicFrame(props: PublicFrameProps): JSX.Element {
           <header className="flex flex-col gap-3">
             {heading.kicker}
             <div className="flex flex-wrap items-baseline justify-between gap-3">
-              <h1 className={heading.className}>{heading.text}</h1>
+              <h1 className={`${heading.className} wrap-anywhere`}>
+                {heading.text}
+              </h1>
               {heading.beside}
             </div>
           </header>
