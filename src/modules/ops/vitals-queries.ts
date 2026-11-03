@@ -110,6 +110,7 @@ export const rollupRowSchema = measuredRowSchema.extend({ p50: numeric });
 export const versionRowSchema = measuredRowSchema.extend({
   version: z.string().min(1).max(64),
   firstSeen: numeric,
+  lastSeen: numeric,
 });
 
 /**
@@ -160,7 +161,8 @@ export function versionQuery(start: number): string {
     "quantileExactWeighted(0.75)(double1, _sample_interval) AS p75,",
     "quantileExactWeighted(0.95)(double1, _sample_interval) AS p95,",
     "sum(_sample_interval) AS n,",
-    "toUnixTimestamp(min(timestamp)) AS firstSeen",
+    "toUnixTimestamp(min(timestamp)) AS firstSeen,",
+    "toUnixTimestamp(max(timestamp)) AS lastSeen",
     `FROM ${VITALS_DATASET}`,
     `WHERE ${since(start)}`,
     "GROUP BY index1, blob1, blob3, blob4",

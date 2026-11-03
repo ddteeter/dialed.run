@@ -211,11 +211,12 @@ export interface SpeedFinding {
 
 /**
  * A route, metric and device's figures under one deploy, and when that
- * deploy was first measured (unix seconds).
+ * deploy was first and last measured (unix seconds).
  */
 export interface VersionRow extends Measured {
   readonly version: string;
   readonly firstSeen: number;
+  readonly lastSeen: number;
 }
 
 /**
@@ -240,11 +241,24 @@ function versionsNewestFirst(rows: readonly VersionRow[]): string[] {
  * `MEDIAN_TOLERANCE` times slower than the deploy before it, once both
  * have `MIN_N` samples. A first deploy has nothing to compare with, and is
  * silent.
+ *
+ * Only while the newest is still serving: measured at or after
+ * `servingSince` (unix seconds). A rollback re-serves the older version
+ * under its own id, so without this the deploy rolled back from would
+ * stay "newest" and alert daily until it left the window.
  */
-export function deployRegressions(rows: readonly VersionRow[]): SpeedFinding[] {
+export function deployRegressions(
+  rows: readonly VersionRow[],
+  servingSince: number,
+): SpeedFinding[] {
   // With one deploy `previous` is undefined, so no row is older and none
-  // has anything to compare with; with none, `newest` is too.
+  // has anything to compare with; with none, `newest` is too, and nothing
+  // is serving.
   const [newest, previous] = versionsNewestFirst(rows);
+  const isServing = rows.some(
+    (row) => row.version === newest && row.lastSeen >= servingSince,
+  );
+  if (!isServing) return [];
   const before = new Map<string, VersionRow & { metric: CheckedMetric }>();
   const older = judgedWhere(rows, (row) => row.version === previous);
   for (const row of older) {

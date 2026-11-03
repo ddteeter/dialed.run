@@ -41,7 +41,9 @@ export const VERSION_DAYS = 7;
 export type SpeedQuery = NonNullable<RollupDeps["query"]>;
 
 /**
- * The newest deploy against the one before it.
+ * The newest deploy against the one before it, while the newest has been
+ * measured within the drift check's window: a deploy rolled back from
+ * goes quiet, and is judged no more.
  */
 export async function checkDeployRegressions(
   now: number,
@@ -50,7 +52,7 @@ export async function checkDeployRegressions(
   const answer = answerSchema(versionRowSchema).parse(
     await query(versionQuery(now - VERSION_DAYS * 24 * HOUR)),
   );
-  return deployRegressions(answer.data);
+  return deployRegressions(answer.data, now - WINDOW_HOURS * HOUR);
 }
 
 /**

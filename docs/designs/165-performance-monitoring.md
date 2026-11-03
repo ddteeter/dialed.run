@@ -327,7 +327,13 @@ Recorded as the build found them.
   `MIN_N`.
 - **The deploy check reads the last seven days per deploy** and orders the
   deploys by when each was first measured, so a rollback to an old deploy
-  does not count as new. It uses the daily check's 25%.
+  does not count as new. It uses the daily check's 25%. A Cloudflare
+  rollback makes a new deployment of the old _version_, and
+  `CF_VERSION_METADATA.id` is the version id, so the old id comes back.
+  The newest deploy is therefore judged only while it is still serving
+  (measured in the last three hours): once rolled back from, it goes
+  quiet instead of alerting daily until it leaves the seven days (owner
+  review on #311).
 - **Each hourly finding is its own event,** tagged `digest: hourly` and
   `speed_check`, fingerprinted `["perf", check, route, metric, day]`.
   Eleven SQL API queries an hour: one for deploys, ten for the windows.

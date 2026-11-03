@@ -50,7 +50,7 @@ function deploy(
   firstSeen: number,
   overrides: Partial<VersionRow> = {},
 ): VersionRow {
-  return { ...measured(), version, firstSeen, ...overrides };
+  return { ...measured(), version, firstSeen, lastSeen: NOW, ...overrides };
 }
 
 describe("the hourly thresholds", () => {
@@ -67,10 +67,13 @@ describe("the hourly thresholds", () => {
 describe("deployRegressions", () => {
   it("fires when the newest deploy is more than 25% slower than the last", () => {
     expect(
-      deployRegressions([
-        deploy("v1", 100, { p75: 1000 }),
-        deploy("v2", 200, { p75: 1251, n: 35 }),
-      ]),
+      deployRegressions(
+        [
+          deploy("v1", 100, { p75: 1000 }),
+          deploy("v2", 200, { p75: 1251, n: 35 }),
+        ],
+        0,
+      ),
     ).toStrictEqual([
       {
         check: "deploy-regression",
@@ -83,10 +86,10 @@ describe("deployRegressions", () => {
 
   it("is silent at exactly 25% slower", () => {
     expect(
-      deployRegressions([
-        deploy("v1", 100, { p75: 1000 }),
-        deploy("v2", 200, { p75: 1250 }),
-      ]),
+      deployRegressions(
+        [deploy("v1", 100, { p75: 1000 }), deploy("v2", 200, { p75: 1250 })],
+        0,
+      ),
     ).toStrictEqual([]);
   });
 
@@ -95,8 +98,8 @@ describe("deployRegressions", () => {
       deploy("v2", 200, { p75: 1000 }),
       deploy("v1", 100, { p75: 5000 }),
     ];
-    expect(deployRegressions(rows)).toStrictEqual([]);
-    expect(deployRegressions(rows.toReversed())).toStrictEqual([]);
+    expect(deployRegressions(rows, 0)).toStrictEqual([]);
+    expect(deployRegressions(rows.toReversed(), 0)).toStrictEqual([]);
   });
 
   it("dates a deploy by its earliest row", () => {
@@ -107,60 +110,86 @@ describe("deployRegressions", () => {
       deploy("v1", 100, { p75: 1000 }),
       deploy("v2", 200, { p75: 2000 }),
     ];
-    expect(deployRegressions(rows)).toHaveLength(1);
+    expect(deployRegressions(rows, 0)).toHaveLength(1);
   });
 
   it("compares the newest with the one just before it, not an older one", () => {
     expect(
-      deployRegressions([
-        deploy("v1", 100, { p75: 100 }),
-        deploy("v2", 200, { p75: 1000 }),
-        deploy("v3", 300, { p75: 1100 }),
-      ]),
+      deployRegressions(
+        [
+          deploy("v1", 100, { p75: 100 }),
+          deploy("v2", 200, { p75: 1000 }),
+          deploy("v3", 300, { p75: 1100 }),
+        ],
+        0,
+      ),
     ).toStrictEqual([]);
     // Nor judges an older deploy against the one before the newest.
     expect(
-      deployRegressions([
-        deploy("v1", 100, { p75: 9000 }),
-        deploy("v2", 200, { p75: 1000 }),
-        deploy("v3", 300, { p75: 1000 }),
-      ]),
+      deployRegressions(
+        [
+          deploy("v1", 100, { p75: 9000 }),
+          deploy("v2", 200, { p75: 1000 }),
+          deploy("v3", 300, { p75: 1000 }),
+        ],
+        0,
+      ),
     ).toStrictEqual([]);
   });
 
+  it("goes quiet when the newest deploy stops serving, as after a rollback", () => {
+    // v2 was slow and served until 300; v1, older, has served since.
+    const rows = [
+      deploy("v1", 100, { p75: 1000, lastSeen: 500 }),
+      deploy("v2", 200, { p75: 2000, lastSeen: 300 }),
+    ];
+    expect(deployRegressions(rows, 400)).toStrictEqual([]);
+    expect(deployRegressions(rows, 301)).toStrictEqual([]);
+    expect(deployRegressions(rows, 300)).toHaveLength(1);
+  });
+
   it("is silent for a first deploy, and for none", () => {
-    expect(deployRegressions([deploy("v1", 100, { p75: 9000 })])).toStrictEqual(
-      [],
-    );
-    expect(deployRegressions([])).toStrictEqual([]);
+    expect(
+      deployRegressions([deploy("v1", 100, { p75: 9000 })], 0),
+    ).toStrictEqual([]);
+    expect(deployRegressions([], 0)).toStrictEqual([]);
   });
 
   it("is silent until both deploys pass MIN_N", () => {
     expect(
-      deployRegressions([
-        deploy("v1", 100, { p75: 1000, n: 29 }),
-        deploy("v2", 200, { p75: 9000 }),
-      ]),
+      deployRegressions(
+        [
+          deploy("v1", 100, { p75: 1000, n: 29 }),
+          deploy("v2", 200, { p75: 9000 }),
+        ],
+        0,
+      ),
     ).toStrictEqual([]);
     expect(
-      deployRegressions([
-        deploy("v1", 100, { p75: 1000 }),
-        deploy("v2", 200, { p75: 9000, n: 29 }),
-      ]),
+      deployRegressions(
+        [
+          deploy("v1", 100, { p75: 1000 }),
+          deploy("v2", 200, { p75: 9000, n: 29 }),
+        ],
+        0,
+      ),
     ).toStrictEqual([]);
   });
 
   it("compares like with like, and judges only what the daily check does", () => {
     expect(
-      deployRegressions([
-        deploy("v1", 100, { p75: 1000 }),
-        deploy("v2", 200, { p75: 9000, device: "wide" }),
-        deploy("v2", 200, { p75: 9000, route: "/feed/" }),
-        deploy("v1", 100, { metric: "server", device: "5xx", p95: 10 }),
-        deploy("v2", 200, { metric: "server", device: "5xx", p95: 9000 }),
-        deploy("v1", 100, { metric: "FCP", p75: 10 }),
-        deploy("v2", 200, { metric: "FCP", p75: 9000 }),
-      ]),
+      deployRegressions(
+        [
+          deploy("v1", 100, { p75: 1000 }),
+          deploy("v2", 200, { p75: 9000, device: "wide" }),
+          deploy("v2", 200, { p75: 9000, route: "/feed/" }),
+          deploy("v1", 100, { metric: "server", device: "5xx", p95: 10 }),
+          deploy("v2", 200, { metric: "server", device: "5xx", p95: 9000 }),
+          deploy("v1", 100, { metric: "FCP", p75: 10 }),
+          deploy("v2", 200, { metric: "FCP", p75: 9000 }),
+        ],
+        0,
+      ),
     ).toStrictEqual([]);
   });
 });
@@ -306,13 +335,28 @@ describe("checkDeployRegressions", () => {
   it("asks for a week of deploys and compares the last two", async () => {
     const { query, asked } = api(() => [
       { ...deploy("v1", 100, { p75: 1000 }), firstSeen: "100" },
-      { ...deploy("v2", 200, { p75: 2000 }), firstSeen: "200" },
+      {
+        ...deploy("v2", 200, { p75: 2000 }),
+        firstSeen: "200",
+        lastSeen: String(NOW - 3 * HOUR),
+      },
     ]);
 
     const findings = await checkDeployRegressions(NOW, query);
 
     expect(asked).toStrictEqual([versionQuery(NOW - 7 * 24 * HOUR)]);
     expect(findings).toHaveLength(1);
+  });
+
+  it("judges the newest only if it was measured in the last three hours", async () => {
+    const { query } = api(() => [
+      { ...deploy("v1", 100, { p75: 1000 }), lastSeen: NOW },
+      {
+        ...deploy("v2", 200, { p75: 2000 }),
+        lastSeen: NOW - 3 * HOUR - 1,
+      },
+    ]);
+    expect(await checkDeployRegressions(NOW, query)).toStrictEqual([]);
   });
 
   it("refuses an answer that does not parse", async () => {
@@ -342,14 +386,15 @@ describe("the hourly queries", () => {
     );
   });
 
-  it("read the same per deploy, with when each was first measured", () => {
+  it("read the same per deploy, with when each was first and last measured", () => {
     expect(versionQuery(NOW)).toBe(
       [
         "SELECT index1 AS route, blob1 AS metric, blob3 AS device, blob4 AS version,",
         "quantileExactWeighted(0.75)(double1, _sample_interval) AS p75,",
         "quantileExactWeighted(0.95)(double1, _sample_interval) AS p95,",
         "sum(_sample_interval) AS n,",
-        "toUnixTimestamp(min(timestamp)) AS firstSeen",
+        "toUnixTimestamp(min(timestamp)) AS firstSeen,",
+        "toUnixTimestamp(max(timestamp)) AS lastSeen",
         "FROM dialed_vitals",
         "WHERE timestamp >= toDateTime('2026-10-31 13:30:00', 'Etc/UTC')",
         "GROUP BY index1, blob1, blob3, blob4",
