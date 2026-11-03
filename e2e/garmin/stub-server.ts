@@ -1,6 +1,6 @@
 /**
  * A stand-in for Garmin's Personal API, for the Garmin demo (plan 160,
- * step 9). Playwright starts it beside the dev server, and the dev
+ * step 9). Playwright starts it beside the app's server, and that
  * server's `GARMIN_API_ORIGIN` points the app's own client at it.
  *
  * Every answer is synthetic: the list in the shape the client's zod
@@ -18,7 +18,15 @@ import process from "node:process";
 import { GARMIN_PATHS } from "../../src/modules/runs/garmin/api";
 import { fitFile } from "../../test/runs/fit-file";
 import { zipOf } from "../../test/runs/zip-file";
-import { GARMIN_STUB_PORT, GARMIN_STUB_RUNS, stubSummaryOf } from "./stub-runs";
+import { GARMIN_STUB_RUNS, stubSummaryOf } from "./stub-runs";
+
+/**
+Playwright picks the port (`stub-origin.ts`) and passes it here.
+*/
+const port = Number(process.env.GARMIN_STUB_PORT);
+if (!Number.isSafeInteger(port) || port <= 0) {
+  throw new Error("GARMIN_STUB_PORT must name the port to listen on");
+}
 
 const TOKEN = "e2e.stub.token";
 
@@ -88,8 +96,8 @@ const server = createServer((request, response) => {
   response.writeHead(404).end();
 });
 
-server.listen(GARMIN_STUB_PORT, () => {
-  console.log(`Garmin stub on ${String(GARMIN_STUB_PORT)}`);
+server.listen(port, () => {
+  console.log(`Garmin stub on ${String(port)}`);
 });
 
 process.on("SIGTERM", () => {

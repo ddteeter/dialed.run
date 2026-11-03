@@ -19,7 +19,8 @@
  * **The owner is configuration, not data**: the feature is the runner's
  * whose id `GARMIN_OWNER_USER_ID` names, so the journey signs up and
  * becomes that id (`signInAsKnownUser`). The dev server's `.dev.vars`
- * needs the three Garmin lines CI writes (`.dev.vars.example`).
+ * needs the two Garmin lines CI writes (`.dev.vars.example`); the origin
+ * is Playwright's to set (`stub-origin.ts`).
  *
  * Exactly one test() per demo spec.
  */
