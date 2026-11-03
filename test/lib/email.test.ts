@@ -55,6 +55,7 @@ describe("emailTemplateSchema", () => {
         screenerUnfinished: 0,
         bansThisWeek: 0,
         gaveUp: 3,
+        outboxBehind: 12,
       },
     ];
     for (const payload of payloads) {
