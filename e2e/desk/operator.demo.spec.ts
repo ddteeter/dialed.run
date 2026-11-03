@@ -324,7 +324,13 @@ test("an operator opens the Desk and reads Today", async ({
 
   await scene(page, "Release them: each one an Approve, behind a confirm");
   // Every waiting fingerprint hold from the last day: in CI, the five.
-  await held.getByRole("button", { name: /^Approve all \d+$/u }).click();
+  // The fingerprint row only: another source's burst from the same day
+  // (a report raised by an earlier demo) has its own Approve all.
+  await held
+    .getByRole("listitem")
+    .filter({ hasText: "Fingerprint matches" })
+    .getByRole("button", { name: /^Approve all \d+$/u })
+    .click();
   await expect(
     page.getByRole("heading", { name: /^Approve \d+ fingerprint holds\?$/u }),
   ).toBeVisible();
