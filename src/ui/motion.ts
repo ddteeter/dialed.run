@@ -73,6 +73,8 @@ export function shouldReduceMotion(): boolean {
   // present, so an optional chain here is a branch the compiler insists
   // cannot be taken and the linter agrees with it. The server and some
   // test environments disagree.
-  if (typeof globalThis.matchMedia !== "function") return false;
-  return globalThis.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  return (
+    typeof globalThis.matchMedia === "function" &&
+    globalThis.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
 }

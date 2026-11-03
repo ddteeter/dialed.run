@@ -121,8 +121,7 @@ export function activeTabIndex(
   // predicate already answers leaves nothing to suppress.
   let deepest = "";
   for (const { index, route } of seatRoutes(tabs)) {
-    if (!isOwnerOf(route, pathname)) continue;
-    if (!isOwnerOf(deepest, route)) continue;
+    if (!isOwnerOf(route, pathname) || !isOwnerOf(deepest, route)) continue;
     found = index;
     deepest = route;
   }
