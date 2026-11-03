@@ -70,6 +70,19 @@ function optional(value: string): string | undefined {
 }
 
 /**
+ * A typed link with no scheme gets https:// (round 43 #93): runners paste
+ * `janji.com/afo` as often as the whole address. One with a scheme keeps
+ * it, so an `http://` link still meets the contract's words for it rather
+ * than being quietly upgraded to a page that may not exist. Absent stays
+ * absent. F's blur check reads the same value the save will.
+ */
+export function withScheme(link: string): string | undefined {
+  const typed = optional(link);
+  if (typed === undefined || typed.includes("://")) return typed;
+  return `https://${typed}`;
+}
+
+/**
  * Form state -> the object `garmentSchema` expects.
  *
  * Only the attributes this category declares: the union is a
@@ -115,7 +128,7 @@ function toGarmentInput(values: z.output<typeof formValues>): unknown {
     ...(values.visibilityLevel !== "" && {
       visibilityLevel: values.visibilityLevel,
     }),
-    productUrl: optional(values.productUrl),
+    productUrl: withScheme(values.productUrl),
     category,
     // F's TYPE chips (D-75): unanswered is absent, so the product may
     // still lend one.

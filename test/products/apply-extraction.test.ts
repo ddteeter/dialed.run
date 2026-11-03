@@ -9,6 +9,7 @@ import { newUlid } from "../../src/lib/ids";
 import {
   applyExtraction,
   ExtractionConflictError,
+  hasWrittenSpecs,
 } from "../../src/modules/products/apply-extraction";
 import {
   createOrGetBrand,
@@ -341,5 +342,33 @@ describe("applyExtraction: the row changing underneath", () => {
     ).rejects.toThrow();
     const after2 = await rowOf(id);
     expect(after2.weight).toBe("heavy");
+  });
+});
+
+const ledger = (written: Record<string, string | boolean>) =>
+  JSON.stringify({ rung: "og", found: {}, written });
+
+describe("hasWrittenSpecs: specs found, or a page with nothing (round 43 #94)", () => {
+  it("is true once enrichment wrote a column", () => {
+    expect(hasWrittenSpecs(ledger({ fabric: "merino" }))).toBe(true);
+  });
+
+  it("is false for a page read that wrote nothing", () => {
+    expect(hasWrittenSpecs(ledger({}))).toBe(false);
+  });
+
+  it("is false for a product with no ledger", async () => {
+    // The empty column, as D1 returns it for a product never enriched.
+    const row = await rowOf(await freshProduct());
+    expect(hasWrittenSpecs(row.extracted)).toBe(false);
+  });
+
+  it("answers false, never throws, for a ledger it cannot read", () => {
+    // Garment detail asks this about someone else's product; a malformed
+    // row must not be what stops the screen rendering.
+    expect(hasWrittenSpecs("{not json")).toBe(false);
+    expect(hasWrittenSpecs(JSON.stringify({ written: { fabric: 1 } }))).toBe(
+      false,
+    );
   });
 });

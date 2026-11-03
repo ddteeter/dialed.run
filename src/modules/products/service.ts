@@ -6,7 +6,7 @@
  * pages is lane 107's; this module only owns identity + the fields a user
  * can type directly.
  */
-import { and, eq, gte, inArray, lt, type SQL } from "drizzle-orm";
+import { and, eq, gte, inArray, lt, sql, type SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
@@ -14,6 +14,7 @@ import { brands, products } from "../../db/schema-core";
 import { fabricPartsSchema, type FabricPart } from "../../lib/contracts";
 import { readInChunks } from "../../lib/chunked";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
+import { hasWrittenSpecs } from "./apply-extraction";
 import { newUlid } from "../../lib/ids";
 import { normalizeIdentity } from "../../lib/normalize";
 import { nowSeconds } from "../../lib/now";
@@ -156,8 +157,16 @@ export interface CreateProductInput {
 
 /**
  * Create-if-missing on UNIQUE(brand_id, normalized_name) (D-30). The first
- * caller's sourceUrl seeds `source_url`; later callers reusing the row don't
+ * caller with a sourceUrl seeds `source_url`, and later callers never
  * overwrite it (enrichment owns refreshing product fields, not this path).
+ *
+ * **"First with a link", not "first".** A product made from a typed brand
+ * and model has no link, and a link pasted for it later is the first
+ * pasted link there is (contracts: "first pasted product URL"). Without
+ * filling it here, `requestEnrichment` — which needs a `source_url` — would
+ * skip that product for good, and every product made before its first
+ * link was one (design 163, owner Q1). Filled only where NULL, so a
+ * product whose first link failed keeps it.
  */
 export async function createOrGetProduct(
   db: Db,
@@ -182,7 +191,12 @@ export async function createOrGetProduct(
           createdBy: input.createdBy,
           createdAt: nowSeconds(),
         })
-        .onConflictDoNothing(PRODUCT_IDENTITY_CONFLICT),
+        .onConflictDoUpdate({
+          ...PRODUCT_IDENTITY_CONFLICT,
+          set: {
+            sourceUrl: sql`coalesce(${products.sourceUrl}, excluded.source_url)`,
+          },
+        }),
     () =>
       db
         .select()
@@ -359,6 +373,18 @@ export async function getProductComposition(
 export interface ProductForDetail {
   readonly defaults: ProductAttributeDefaults;
   readonly composition: ProductComposition;
+  /**
+   * What enrichment has made of the product, for E's outcome line (design
+   * 163, round 43 #94): its status, whether it wrote anything, when the
+   * product was made (the sweep retries a failure for its first day), and
+   * the page it read, whose domain E names once the denylist allows it.
+   */
+  readonly extraction: Readonly<{
+    status: ProductRow["extractionStatus"];
+    hasSpecs: boolean;
+    createdAt: number;
+    sourceUrl: string | undefined;
+  }>;
 }
 
 export async function getProductForDetail(
@@ -379,6 +405,12 @@ export async function getProductForDetail(
     composition: {
       verbatim: row.fabricComposition ?? undefined,
       parts: parseParts(row.fabricParts),
+    },
+    extraction: {
+      status: row.extractionStatus,
+      hasSpecs: hasWrittenSpecs(row.extracted),
+      createdAt: row.createdAt,
+      sourceUrl: row.sourceUrl ?? undefined,
     },
   };
 }

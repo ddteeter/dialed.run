@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px;">
+  <div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px;">
+
+    <div style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Round 43 &nbsp;/&nbsp; items 93–98 · product links</span>
+        <span style="color: #FF2D8A;">dialed.run</span>
+      </div>
+      <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 1120px; text-transform: uppercase;">The link comes back, with an honest receipt.</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">AC2b is met: every reachable outcome now has a drawn place on E. Only the states listed are drawn. No product image anywhere. No new step, colour or glyph; every value is from tokens.js / T1. Text of record: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">docs/product.md</span> · Round 43.</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em;">
+        <a href="#r93" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">93 · F link field</a>
+        <a href="#r94" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">94–95 · E outcomes</a>
+        <a href="#r96" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">96–98</a>
+        <a href="#rulings" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">Rulings</a>
+      </div>
+    </div>
+
+    <div id="r93" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">93 · F · the link field</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 860px; line-height: 1.45;"><strong style="color: #F4F3EF;">Recommendation confirmed: a plain FormField after brand and model.</strong> Label "Product link · optional", type url, placeholder <span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px;">brand.com/product…</span>. The hint tells the truth about what a link does and when it does nothing.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <sc-for list="{{ fStates }}" as="s" hint-placeholder-count="5">
+          <div style="flex: 0 0 330px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ s.tag }}</span>
+            <div data-screen-label="F link field r43" style="width: 330px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: -0.03em;">{{ s.title }}</span>
+              <span style="font-size: 13px; color: #6E6E64;">(brand, model as built)</span>
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <span style="font-size: 14px; font-weight: 600;">Product link <span style="font-weight: 400; color: #6E6E64;">· optional</span></span>
+                <div style="height: 48px; border-radius: 8px; background: #FFFFFF; border: {{ s.border }}; display: flex; align-items: center; padding: 0 14px; overflow: hidden;"><span style="font-size: 15px; color: {{ s.valColor }}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;">{{ s.value }}</span></div>
+                <sc-if value="{{ s.hasError }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; line-height: 1.45; color: #B3261E; font-weight: 600; text-wrap: pretty;">{{ s.error }}</span></sc-if>
+                <span style="font-size: 13px; line-height: 1.45; color: #4E4E44; text-wrap: pretty;">We'll read the shop's page for what it's made of. Needs a brand and model.</span>
+              </div>
+              <span style="height: 52px; border-radius: 100px; background: #0B0B0E; color: #F4F3EF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700;">{{ s.cta }}</span>
+            </div>
+            <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 330px; text-wrap: pretty;">{{ s.note }}</p>
+          </div>
+        </sc-for>
+      </div>
+      <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #DEDDD6; max-width: 860px; text-wrap: pretty;"><strong style="color: #F4F3EF;">Field error</strong> is the Form Contract's treatment (FormField error ring, message under the field, FormErrorSummary on submit); red above stands in for its token. <strong style="color: #F4F3EF;">Denied</strong> comes back on the server field-error path; add it to that list. Invalid fires on blur and on submit, never while typing. A runner who types <span style="font-family: 'IBM Plex Mono', monospace;">janji.com/…</span> without a scheme gets https:// added silently on save; only an explicit http:// or a non-URL errors.</p>
+    </div>
+
+    <div id="r94" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">94 · 95 · E · link and outcome</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 860px; line-height: 1.45;"><strong style="color: #F4F3EF;">Confirmed: F never waits; E carries one MONO line under the link, in the identity block.</strong> F2a and F2b are not separate screens: they are E with one line, and values in the blocks E already has. Change or remove through Edit only.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <sc-for list="{{ eStates }}" as="e" hint-placeholder-count="5">
+          <div style="flex: 0 0 330px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ e.tag }}</span>
+            <div data-screen-label="E link outcome r43" style="width: 330px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">{{ e.kicker }}</span>
+                <span style="font-family: 'Archivo Black', sans-serif; font-size: 24px; line-height: 1.05; letter-spacing: -0.03em;">{{ e.name }}</span>
+                <span style="display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; padding-top: 4px;"><span style="font-size: 15px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px;">Shop page</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6E6E64;">janji.com</span></span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #4E4E44; line-height: 1.5;">{{ e.line }}</span>
+              </div>
+              <div style="height: 120px; background: #E1E0D5; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">RUNNER'S PHOTO OR NONE</div>
+              <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; border-top: 1px solid #DCDBD2; padding-top: 12px;">
+                <sc-for list="{{ e.stats }}" as="st" hint-placeholder-count="3"><span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 15px; font-weight: 600; color: {{ st.c }};">{{ st.v }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">{{ st.k }}</span></span></sc-for>
+              </div>
+              <sc-if value="{{ e.hasComp }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 4px; border-top: 1px solid #DCDBD2; padding-top: 12px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">COMPOSITION · FROM janji.com</span><span style="font-size: 14px; line-height: 1.45;">Body: 100% recycled polyester; Liner: 88% polyester, 12% spandex</span></div>
+              </sc-if>
+            </div>
+            <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 330px; text-wrap: pretty;">{{ e.note }}</p>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px; max-width: 860px; font-size: 14px; line-height: 1.55; color: #DEDDD6;">
+        <p style="margin: 0; text-wrap: pretty;"><strong style="color: #F4F3EF;">Which values came from the page:</strong> a stat value from the product is drawn in --quiet, and the outcome line says so once: "GREY VALUES ARE FROM THE PAGE". Values the runner set are ink. That needs no new glyph and no per-field tag. Composition carries its source in its kicker, since a runner can't override it.</p>
+        <p style="margin: 0; text-wrap: pretty;"><strong style="color: #F4F3EF;">Override:</strong> on Edit, a product-filled field shows the product's value as its placeholder, not its value. Typing replaces it for this garment; clearing goes back to the product's. When every stat is the runner's, the "grey values" clause drops.</p>
+        <p style="margin: 0; text-wrap: pretty;"><strong style="color: #F4F3EF;">Late result:</strong> no notification, no bell row, no live update. It's there the next time E loads. Denied after save: E shows no link and no line; Edit shows 93's message (state 5).</p>
+      </div>
+    </div>
+
+    <div id="r96" style="display: flex; flex-direction: column; gap: 20px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">96 · 97 · 98</span>
+      <div style="display: flex; flex-direction: column; gap: 10px; max-width: 860px; font-size: 14px; line-height: 1.55; color: #DEDDD6;">
+        <p style="margin: 0; text-wrap: pretty;"><strong style="color: #F4F3EF;">96 · Confirmed.</strong> D in, as /k: domain beside the piece as ProductLink. The feed card is out (no kit on v1's card). The /@handle rotation is out: it's a list of what someone wears, not a shop. No outcome line outside E; only the owner sees it.</p>
+        <p style="margin: 0; text-wrap: pretty;"><strong style="color: #F4F3EF;">97 · Out, confirmed.</strong> O3 is redrawn without the paste field and without SPECS FOUND: everything else stays as built, and the list closes up. Nothing takes the field's place, and the list closes up. Brand, model and link are added later on F.</p>
+        <p style="margin: 0; text-wrap: pretty;"><strong style="color: #F4F3EF;">98 · None, confirmed.</strong> No screen in 93–97 shows a product image; the photo slot shows the runner's photo or nothing. Enrichment's copy is never a fallback for a missing photo.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">97 · O3 · REDRAWN · NO PASTE FIELD</span>
+        <div data-screen-label="O3 redrawn r43" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+          <span style="font-size: 13px; color: #6E6E64;">(kicker and head as built)</span>
+          <span style="font-size: 13px; color: #6E6E64;">(tap list and its count as built)</span>
+          <div style="height: 1px; background: #DCDBD2;"></div>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">NO PASTE FIELD · NO SPECS FOUND · LIST CLOSES UP</span>
+          <span style="font-size: 13px; color: #6E6E64;">(primary action as built)</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="rulings" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Rulings · Round 43</span>
+      <div style="display: flex; flex-direction: column; border: 1px solid #2A2A31;">
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="10">
+          <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 170px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;">
+            <span style="font-size: 15px; font-weight: 600;">{{ r.q }}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: {{ r.vc }};">{{ r.v }}</span>
+            <span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">{{ r.a }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const ok = '1px solid #C9C8BE', bad = '2px solid #B3261E', ink = '#0B0B0E', ph = '#8B8B80';
+    const fStates = [
+      { tag: '1 · EMPTY', title: 'Add a piece', value: 'brand.com/product…', valColor: ph, border: ok, hasError: false, cta: 'Add it', note: 'After brand and model. Optional, never required to save.' },
+      { tag: '2 · PASTED · LONG URL', title: 'Add a piece', value: 'https://janji.com/products/mens-afo-middle-short-5-inch?variant=4410293', valColor: ink, border: ok, hasError: false, cta: 'Add it', note: 'One line, end-truncated with an ellipsis while not focused; scrolls in the field while editing. No domain preview here; E shows it.' },
+      { tag: '3 · INVALID · ON BLUR / SUBMIT', title: 'Add a piece', value: 'http://janji.com/products/afo', valColor: ink, border: bad, hasError: true, error: 'Use a link that starts with https://.', cta: 'Add it', note: 'Not a URL at all: "That isn\'t a link. Paste the address of the shop\'s page." Both clear as soon as the value is valid.' },
+      { tag: '4 · DENIED · SAVE REFUSED', title: 'Add a piece', value: 'https://shop.example/afo-short', valColor: ink, border: bad, hasError: true, error: 'That link isn\'t allowed here. The rest of the piece is fine.', cta: 'Add it', note: 'Words confirmed. Nothing is saved until the field changes or is cleared; the rest of the form keeps its values.' },
+      { tag: '5 · EDIT · STORED LINK DENIED', title: 'Edit AFO Middle Short', value: 'https://shop.example/afo-short', valColor: ink, border: bad, hasError: true, error: 'That link isn\'t allowed here. The rest of the piece is fine.', cta: 'Save', note: 'Shown on open, focus on the field. Save is refused (not disabled) until it\'s cleared or changed, so the reason stays readable.' },
+    ];
+    const q = '#7A7A70', k = '#0B0B0E';
+    const runnerStats = [{ v: '—', k: 'WEIGHT', c: q }, { v: '—', k: 'FABRIC', c: q }, { v: 'No', k: 'WIND', c: k }];
+    const eStates = [
+      { tag: 'F2a · FOUND SPECS', kicker: 'JANJI · SHORTS', name: 'AFO Middle Short', line: '[SPECS FROM janji.com] · GREY VALUES ARE FROM THE PAGE', stats: [{ v: 'Light', k: 'WEIGHT', c: q }, { v: 'Synthetic', k: 'FABRIC', c: q }, { v: 'No', k: 'WIND', c: k }], hasComp: true, note: 'Weight and fabric from the page (quiet); wind set by the runner (ink) wins. Composition from the page only.' },
+      { tag: 'READING', kicker: 'JANJI · SHORTS', name: 'AFO Middle Short', line: '[READING THE PAGE] · USUALLY UNDER A MINUTE', stats: runnerStats, hasComp: false, note: 'Shown right after save. If another runner\'s link already read this product, E opens straight to F2a.' },
+      { tag: 'F2b · COULDN\'T READ', kicker: 'JANJI · SHORTS', name: 'AFO Middle Short', line: '[COULDN\'T READ janji.com] · TRYING AGAIN TODAY', stats: runnerStats, hasComp: false, note: 'First day, while it retries hourly. After that: [COULDN\'T READ janji.com], no clause. No reason is given.' },
+      { tag: 'FOUND NOTHING', kicker: 'JANJI · SHORTS', name: 'AFO Middle Short', line: '[NO SPECS ON janji.com]', stats: runnerStats, hasComp: false, note: 'Read fine, nothing usable. The link still works as a link.' },
+      { tag: 'NOTHING WILL BE READ', kicker: 'SHORTS', name: 'Shorts', line: '[NOT READ] · ADD A BRAND AND MODEL', stats: runnerStats, hasComp: false, note: 'Email unconfirmed instead: [NOT READ YET] · CONFIRM YOUR EMAIL TO READ IT. Becomes READING when they confirm. No-brand wins if both.' },
+    ];
+    const C = '#00E0C6', A = '#F5FF3D', D = '#FF2D8A';
+    const R = (q, v, a) => ({ q, v, a, vc: v.startsWith('CONFIRM') ? C : v.startsWith('DRAWN') || v.startsWith('REDRAWN') ? D : A });
+    const rows = [
+      R('93 · Field', 'CONFIRMED · DRAWN', 'FormField after brand and model. "Product link · optional", placeholder brand.com/product…, hint "We\'ll read the shop\'s page for what it\'s made of. Needs a brand and model." Long URL end-truncates unfocused. No scheme: https:// added on save.'),
+      R('93 · Invalid', 'RULED', 'http: "Use a link that starts with https://." Not a URL: "That isn\'t a link. Paste the address of the shop\'s page." On blur and submit.'),
+      R('93 · Denied', 'CONFIRMED', '"That link isn\'t allowed here. The rest of the piece is fine." Server field-error path. Edit: shown on open, Save refused until changed or cleared.'),
+      R('94 · Outcomes', 'DRAWN', 'No F2a/F2b screens: E\'s MONO line. [SPECS FROM d] · GREY VALUES ARE FROM THE PAGE / [READING THE PAGE] · USUALLY UNDER A MINUTE / [COULDN\'T READ d] · TRYING AGAIN TODAY (first day) / [NO SPECS ON d] / [NOT READ] · ADD A BRAND AND MODEL / [NOT READ YET] · CONFIRM YOUR EMAIL TO READ IT.'),
+      R('94 · Source + override', 'RULED', 'Product-filled stats in --quiet, runner\'s in ink. Composition kicker "COMPOSITION · FROM d". On Edit, product value is the placeholder; typing overrides, clearing restores.'),
+      R('94 · Late result', 'CONFIRMED', 'No notification, bell row or live update. There next time E loads.'),
+      R('95 · Place on E', 'CONFIRMED', 'Identity block, under the name: ProductLink ("Shop page" + domain), outcome line under it. Change/remove via Edit only. Denied: nothing on E.'),
+      R('96 · Kit views', 'CONFIRMED', 'D in (as /k). Feed card out. /@handle rotation out. Outcome line on E only.'),
+      R('97 · O3', 'REDRAWN', 'No paste field, no SPECS FOUND. Everything else as built; the list closes up.'),
+      R('98 · Images', 'CONFIRMED', 'None in 93–97. Never a fallback for a missing runner photo.'),
+    ];
+    return { fStates, eStates, rows };
+  }
+}
+</script>
+</body>
+</html>
