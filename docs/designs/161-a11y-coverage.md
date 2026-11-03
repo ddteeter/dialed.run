@@ -224,10 +224,14 @@ with the report-only fixture against without it:
 
 ## Open questions
 
-- **Bracket notation and screen readers.** `Bracketed` leaves the brackets
-  in the accessible name. Should they be `aria-hidden`, so VoiceOver reads
-  "Nothing in here yet"? This is user-facing wording and the contract's
-  call, so the owner (and design) decides; step 6 applies it.
+- ~~**Bracket notation and screen readers.**~~ **Decided (owner,
+  2026-11-03): hide them.** The bracket glyphs in `Bracketed` and the
+  wordmark become `aria-hidden`, so VoiceOver reads "Nothing in here yet"
+  and "dialed.run". The drawing does not change. Step 6 applies it.
+- ~~**The Desk at 320px.**~~ **Decided (owner, 2026-11-03):** step 2's
+  reflow check finds `/desk` scrolling sideways at 320px, because the rail
+  keeps its width. It is baselined, and step 6 stacks the rail above the
+  content below the `wide` breakpoint.
 
 ## Cost
 
