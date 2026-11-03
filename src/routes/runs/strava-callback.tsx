@@ -25,5 +25,11 @@ export const Route = createFileRoute("/runs/strava-callback")({
 
 function StravaCallbackPage() {
   const { result, configured } = Route.useLoaderData();
-  return <StravaCallbackResult result={result} configured={configured} />;
+  // No shell here, so the page brings its own landmark (plan 161's
+  // `region`).
+  return (
+    <main>
+      <StravaCallbackResult result={result} configured={configured} />
+    </main>
+  );
 }

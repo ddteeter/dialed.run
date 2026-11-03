@@ -130,8 +130,9 @@ function PublicBar({
   isSignedIn,
   edge,
 }: Readonly<{ intoApp: IntoAppProps; isSignedIn: boolean; edge: string }>) {
+  // A `<header>`, so the bar is a landmark, as the app's own is.
   return (
-    <div
+    <header
       data-part="top-bar"
       className="border-b border-hairline bg-ground py-3 text-ink"
     >
@@ -157,7 +158,7 @@ function PublicBar({
           </Link>
         )}
       </div>
-    </div>
+    </header>
   );
 }
 

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../support/a11y";
 
 /** Not part of the auth journey, so it lives outside the demo: keeping it
  *  here would put a second, unrelated video beside the one a reviewer is
