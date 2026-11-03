@@ -95,16 +95,22 @@ In order:
 
 1. **The Tab walk, at the test's own width** (`a11y-walk.ts`, in the
    page; Node presses the real Tab key, so `:focus-visible` is the
-   browser's own). It presses Tab until focus comes back to where it
-   started, capped at twice the page's tabbable count. Each stop is
-   measured:
+   browser's own). It is a line, not a loop: a stop is placed first in
+   the page (or in the open modal), focused, and Tab is pressed until
+   focus is back on it or leaves the page, capped at twice the page's
+   control count. Looping does not work: Chromium's Tab past the last
+   control lands on the page, and the next one resumes from wherever
+   focus last started, not from the top, so a loop skipped the login
+   form after a server fault. Each stop is measured:
    - `focus-ring`: no 2px outline on the element, its labels, the next
      sibling (Tailwind's `peer`) or an ancestor up to three levels
      (`.field-box` draws the ring for its input);
    - `focus-obscured`: the stop is entirely covered (WCAG 2.4.11), read by
      `elementFromPoint` at its centre and four inset corners;
-   - `focus-trap`: Tab left focus where it was (outside an iframe, whose
-     own document takes the presses), or the cap ran out first.
+   - `focus-trap`: Tab left focus where it was, or the cap ran out first.
+     An iframe (its own document takes the presses) and a date or time
+     input (Chromium tabs through its day, month and year) may hold focus
+     for 30 presses.
 
    Before the walk, the page lists its controls: anything focusable or
    with an interactive role, or drawn with `cursor: pointer` and not
@@ -112,12 +118,15 @@ In order:
    - `tab-unreached`: a control the walk never reached. A radio group
      counts once (arrow keys move inside it), and with a modal `<dialog>`
      open only the dialog's controls count;
-   - `tab-order`: a positive `tabindex`, which reorders the page.
+   - `tab-order`: a positive `tabindex`, which reorders the page. Such a
+     control comes before the walk's start, so it is not also unreached.
 2. **The other width:** the one of `PHONE` and `DESK` farther from the
    test's width. axe and the step 1 checks run again there.
 3. **Reflow at 320×568** (WCAG 1.4.10): `reflow` when the page scrolls
    sideways, named by each element that starts the overflow (its parent
-   fits), not inside a container that scrolls or clips on its own.
+   fits), not inside a container that scrolls or clips on its own. When
+   no element's box overflows, it is text: a word too long to wrap, named
+   by the deepest box it spills out of.
 
 A failed test skips them: its last state is not one it meant to reach.
 Each finding is named and baselined like step 1's.
