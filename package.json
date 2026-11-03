@@ -32,8 +32,10 @@
     "prepare": "guardrails-core install-hooks",
     "db:generate:core": "node -e \"const a=process.argv.slice(1);if(!a.some((x,i)=>/^--name=[a-z0-9_]+$/.test(x)||(x==='--name'&&/^[a-z0-9_]+$/.test(a[i+1]||'')))){console.error('Name the migration for what it does to the schema: npm run db:generate:core -- --name=add_run_idempotency_key (see CLAUDE.md, Schema changes).');process.exit(1);}require('node:child_process').execFileSync('npx',['drizzle-kit','generate','--config','drizzle-core.config.ts',...a],{stdio:'inherit'});\" --",
     "db:generate:weather": "node -e \"const a=process.argv.slice(1);if(!a.some((x,i)=>/^--name=[a-z0-9_]+$/.test(x)||(x==='--name'&&/^[a-z0-9_]+$/.test(a[i+1]||'')))){console.error('Name the migration for what it does to the schema: npm run db:generate:weather -- --name=add_run_idempotency_key (see CLAUDE.md, Schema changes).');process.exit(1);}require('node:child_process').execFileSync('npx',['drizzle-kit','generate','--config','drizzle-weather.config.ts',...a],{stdio:'inherit'});\" --",
+    "db:generate:ops": "node -e \"const a=process.argv.slice(1);if(!a.some((x,i)=>/^--name=[a-z0-9_]+$/.test(x)||(x==='--name'&&/^[a-z0-9_]+$/.test(a[i+1]||'')))){console.error('Name the migration for what it does to the schema: npm run db:generate:ops -- --name=add_run_idempotency_key (see CLAUDE.md, Schema changes).');process.exit(1);}require('node:child_process').execFileSync('npx',['drizzle-kit','generate','--config','drizzle-ops.config.ts',...a],{stdio:'inherit'});\" --",
     "db:migrate:local:core": "wrangler d1 migrations apply dialed-core --local",
     "db:migrate:local:weather": "wrangler d1 migrations apply dialed-weather --local",
+    "db:migrate:local:ops": "wrangler d1 migrations apply dialed-ops --local",
     "check:bundle": "tsx scripts/check-bundle.ts",
     "garmin:check": "tsx scripts/garmin-check.ts",
     "plan-survey": "tsx scripts/plan-survey.ts",
@@ -41,7 +43,8 @@
     "eval": "tsx eval/run.ts",
     "eval:photos": "tsx eval/photos/run.ts",
     "pretest": "npm run stage:mediapipe",
-    "worktrees:prune": "sh scripts/worktrees-prune.sh"
+    "worktrees:prune": "sh scripts/worktrees-prune.sh",
+    "generate:grafana": "tsx scripts/grafana-vitals.ts"
   },
   "dependencies": {
     "@cf-wasm/og": "^0.5.0",
@@ -80,6 +83,7 @@
     "toucan-js": "^4.1.1",
     "ulidx": "^2.4.1",
     "validator": "13.15.35",
+    "web-vitals": "6.2.3",
     "zod": "^4.6.7"
   },
   "devDependencies": {

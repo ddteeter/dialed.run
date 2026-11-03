@@ -18,7 +18,7 @@ import { withoutComments } from "./source-text";
  * product link a confirmation owes (design 133) the fourth.
  */
 describe("the Worker entry hands the firings and the queue their upkeep", () => {
-  it("passes account deletion's purge, the export sweep, the handle re-ask, the product link and the expired-row sweeps to handleScheduled", () => {
+  it("passes account deletion's purge, the export sweep, the handle re-ask, the product link, the expired-row sweeps and the speed checks to handleScheduled", () => {
     const code = withoutComments(serverSource);
     expect(code).toContain(
       'import { purgeDueAccounts } from "./modules/account/purge";',
@@ -46,8 +46,13 @@ describe("the Worker entry hands the firings and the queue their upkeep", () => 
     expect(code).toContain(
       'import { sweepCopyrightHolds } from "./modules/feed/moderation";',
     );
+    // The speed checks (design 165): `ops`'s own, but they read the ops
+    // database and the SQL API, so they come in as upkeep too.
     expect(code).toMatch(
-      /handleScheduled\(controller, undefined, \{\s*purgeAccounts: purgeDueAccounts,\s*sweepExports,\s*rescreenHandles: rescreenHandlesFromEnv,\s*linkProducts: linkTypedGarments,\s*sweepAuthRows: sweepExpiredAuthRows,\s*forgetAnsweredRequests,\s*sweepCopyrightHolds,\s*\}\)/u,
+      /import \{[^}]*\bdailySpeed,\s*hourlySpeed,[^}]*\} from "\.\/modules\/ops";/u,
+    );
+    expect(code).toMatch(
+      /handleScheduled\(controller, undefined, \{\s*purgeAccounts: purgeDueAccounts,\s*sweepExports,\s*rescreenHandles: rescreenHandlesFromEnv,\s*linkProducts: linkTypedGarments,\s*sweepAuthRows: sweepExpiredAuthRows,\s*forgetAnsweredRequests,\s*sweepCopyrightHolds,\s*speed: dailySpeed,\s*speedHourly: hourlySpeed,\s*\}\)/u,
     );
   });
 

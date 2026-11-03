@@ -738,7 +738,96 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
       "breaker-headroom",
       "screener-quiet",
       "account-deletion",
+      "speed",
     ]);
+  });
+
+  it("hands the speed digest today's UTC day and reports what it could not do (design 165)", async () => {
+    const { reporter, events } = recordingReporter();
+    const asked: string[] = [];
+
+    const outcome = await handleScheduled(DIGEST, reporter, {
+      speed: (today, anomalies) => {
+        asked.push(today);
+        anomalies.push("speed rollup for 2026-10-30 failed: answered 503");
+        return Promise.resolve();
+      },
+    });
+
+    expect(asked).toStrictEqual([
+      new Date(nowSeconds() * 1000).toISOString().slice(0, 10),
+    ]);
+    expect(outcome.anomalies).toStrictEqual([
+      "speed rollup for 2026-10-30 failed: answered 503",
+    ]);
+    expect(events.map((event) => event.report.tags)).toStrictEqual([
+      { digest: "daily", digest_kind: "speed" },
+    ]);
+  });
+
+  it("reports each hourly speed finding as its own event on the :30 firing (design 165)", async () => {
+    const { reporter, events } = recordingReporter();
+    const asked: number[] = [];
+
+    await handleScheduled(ENRICHMENT_RETRY, reporter, {
+      speedHourly: (now, report) => {
+        asked.push(now);
+        report({
+          check: "drift",
+          route: "/closet/",
+          metric: "LCP",
+          line: "LCP p75 on /closet/ (narrow) has been slow",
+        });
+        return Promise.resolve();
+      },
+    });
+
+    const day = new Date(nowSeconds() * 1000).toISOString().slice(0, 10);
+    expect(asked).toStrictEqual([nowSeconds()]);
+    expect(events.map((event) => event.error)).toStrictEqual([
+      expect.objectContaining({ message: "speed: drift" }),
+    ]);
+    expect(events.map((event) => event.report)).toStrictEqual([
+      {
+        context: {
+          check: "drift",
+          route: "/closet/",
+          metric: "LCP",
+          anomalies: "LCP p75 on /closet/ (narrow) has been slow",
+        },
+        tags: {
+          digest: "hourly",
+          cron: "enrichment-retry",
+          speed_check: "drift",
+        },
+        fingerprint: ["perf", "drift", "/closet/", "LCP", day],
+      },
+    ]);
+  });
+
+  it("does not run the hourly speed checks on the other firings", async () => {
+    const speedHourly = vi.fn(() => Promise.resolve());
+    await handleScheduled(DIGEST, recordingReporter().reporter, {
+      speedHourly,
+    });
+    expect(speedHourly).not.toHaveBeenCalled();
+  });
+
+  it("runs the other checks when the speed digest throws, then fails the firing", async () => {
+    await insertRun({ weatherStatus: "failed" });
+    const { reporter, events, checkIns } = recordingReporter();
+    const failure = new Error("ops database unavailable");
+
+    const firing = handleScheduled(DIGEST, reporter, {
+      speed: () => Promise.reject(failure),
+    });
+
+    await expect(firing).rejects.toBe(failure);
+    expect(events.map((event) => event.report.tags)).toContainEqual({
+      digest: "daily",
+      digest_kind: "weather-backlog",
+    });
+    expect(checkIns.at(-1)?.status).toBe("error");
   });
 
   it("runs the purge it is handed and reports what it could not finish (ACC-9)", async () => {

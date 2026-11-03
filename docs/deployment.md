@@ -15,12 +15,15 @@ The repo has never been deployed. Nothing below has been done yet, and
 
 ## 1. D1 databases
 
-Two, and the code cannot join across them — that separation is load-bearing
-(CLAUDE.md §D1 query discipline), not an accident to be tidied up later.
+Three, and the code cannot join across them — that separation is
+load-bearing (CLAUDE.md §D1 query discipline), not an accident to be tidied
+up later. `dialed-ops` (design 165) holds data about the app, never about
+anyone: today only `perf_daily`, the daily speed rollup.
 
 ```sh
 wrangler d1 create dialed-core --location enam
 wrangler d1 create dialed-weather --location enam
+wrangler d1 create dialed-ops --location enam
 ```
 
 `--location` is the data-region hint, and the privacy policy depends on it:
@@ -30,7 +33,8 @@ whichever is nearer; never leave it off, because Cloudflare then places the
 database near whoever runs the command. A database's location cannot be
 changed after it is created.
 
-Then turn on **read replication for both databases** (D-123): in the
+Then turn on **read replication for core and weather** (D-123), not ops:
+its only reader and writer is the daily cron, which reads the primary. In the
 dashboard, each database › Settings › Enable Read Replication, or with a
 `PUT` of `{"read_replication": {"mode": "auto"}}` to the database's API
 endpoint (`/accounts/<account>/d1/database/<id>`, a token with `D1:Edit`).
@@ -42,8 +46,9 @@ replication on is what moves request reads onto the replicas; with it off,
 every session simply reads the primary. Turning it off takes up to 24 hours
 to stop replicas serving.
 
-Both `database_id` values in `wrangler.jsonc` are placeholder zeros
-(`00000000-…-0001`/`-0002`). Replace them with the real ids from the output.
+All three `database_id` values in `wrangler.jsonc` are placeholder zeros
+(`00000000-…-0001`/`-0002`/`-0003`). Replace them with the real ids from
+the output.
 A deploy against the placeholders fails at bind time.
 
 Then apply migrations, core first. **`--remote` is not optional**: Wrangler 4
@@ -56,10 +61,13 @@ database stays empty.
 ```sh
 wrangler d1 migrations apply dialed-core --remote
 wrangler d1 migrations apply dialed-weather --remote
+wrangler d1 migrations apply dialed-ops --remote
 ```
 
-Once `docs/proposals/125-ci-migrate-before-deploy.md` is applied, CI runs
-exactly these two before every deploy and this step is only for the first.
+CI runs these before every deploy, so this step is only for the first.
+**The ops line is owed to `.github/workflows/ci.yml`'s "Apply migrations"
+step** (design 165, owner edit): until it is there, production never gets
+`perf_daily`, and the daily rollup reports every day it cannot write.
 
 **With replication on, a replica can be behind the migration for a moment**
 (design 143, R-156). The primary has the new schema as soon as `apply`
@@ -291,6 +299,7 @@ its first firing.
 | `FIRECRAWL_API_KEY`           | optional   | A shop that refuses a Worker (11 of 14 sampled) is a failed fetch, and its product gets no composition                                                                                                                                                                                            |
 | `TURNSTILE_SECRET_KEY`        | **yes**    | Turnstile fails closed: every sign-up and access request is refused, and Sentry says why                                                                                                                                                                                                          |
 | `UNSUBSCRIBE_SECRET`          | **yes**    | Signs unsubscribe links (its own secret, not the auth one). Fails closed: no optional email goes, every link is refused, and `/api/health` names it                                                                                                                                               |
+| `ANALYTICS_SQL_TOKEN`         | strongly   | The daily speed rollup (design 165) cannot read Analytics Engine, so nothing outlives its three months, and the digest says so every day. An account API token with Account › Account Analytics › Read, nothing else                                                                              |
 | `TAKEDOWN_SECRET`             | optional   | Keys the HMAC of a `/takedown` visitor's IP, so the abuse limits (D-118) match a requester by IP as well as email. Without it they match by email alone; nothing fails. Any long random string                                                                                                    |
 
 **Vars, not secrets** — printed into the page or read as configuration.
@@ -302,6 +311,7 @@ which `test/bindings-conformance.test.ts` checks:
 | `BETTER_AUTH_URL`      | `https://dialed.run` (set)                                                                    | Callbacks resolve against the wrong host; secure cookies and rate limiting are off (both follow its https scheme). `/api/health` names it when unset                                                                   |
 | `TURNSTILE_SITE_KEY`   | empty until the widget exists — **set it**                                                    | The widget renders nothing, and verification refuses                                                                                                                                                                   |
 | `PUBLIC_PHOTOS_ORIGIN` | `https://photos.dialed.run` (set) — must equal `lib/public-photos.ts`'s, which the CSP admits | The switch for world photos (D-153): empty or unset, no photo is copied to `PUBLIC_PHOTOS` and `/k` shows none; copies already there are still deleted. Leave it set only once §2's public photo bucket steps are done |
+| `CF_ACCOUNT_ID`        | empty — **set it** to the account's id                                                        | The daily speed rollup (design 165) has no SQL API endpoint to ask, and the digest says so every day                                                                                                                   |
 
 **Local dev and CI override `BETTER_AUTH_URL`** in `.dev.vars`
 (`http://localhost:<port>`; CI's e2e job writes `http://localhost:3000`).
@@ -445,6 +455,54 @@ needs its own Strava app, not a second subscription.
   check-in is tagged `production` only when `BETTER_AUTH_URL` is the
   production origin, and `development` otherwise, so a local or CI run
   holding a real DSN cannot page you.
+
+- **Speed (design 165).** Four owner steps, then a check:
+  - **Turn tracing on** in `wrangler.jsonc`:
+    `"observability": { "enabled": true, "traces": { "enabled": true } }`.
+    First, in `wrangler dev` with tracing on, open a run and read one D1
+    span: if it records bound values (an email, a note), add
+    `"persist": false` under `traces` or a line to the privacy policy
+    before deploying it (design 165, open question 5).
+  - **The WAF rate-limiting rule** for `/api/vitals`: 60 requests a
+    minute per IP, beside the other rules in the deployment plan's §7.
+  - **`ANALYTICS_SQL_TOKEN` and `CF_ACCOUNT_ID`** (§5). Until both are
+    set, the daily digest says the rollup is not configured.
+  - **The dashboards**: `docs/ops/performance-dashboards.md` (Grafana over
+    `VITALS`, and the Cloudflare "Performance" dashboard over Workers
+    Logs).
+  - **Check**: open any screen, switch tabs, and in Workers Logs find no
+    `vitals-refused` line; the next day's digest should carry no `speed`
+    line about configuration, and `perf_daily` in `dialed-ops` should have
+    yesterday's rows.
+- **Asking the speed data a question by hand.** The SQL API takes the
+  query as the body (`curl -H "Authorization: Bearer $TOKEN" --data
+"<sql>" https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/analytics_engine/sql`).
+  Weight everything by `_sample_interval`: Analytics Engine samples at
+  volume, so a plain `count()` or `quantile` is wrong. Filter on `blob1`
+  always: browser metrics and the server's `server` points share the
+  dataset. Two to start from:
+
+  ```sql
+  -- Yesterday's LCP p75 per screen, phones only.
+  SELECT index1 AS route,
+    quantileExactWeighted(0.75)(double1, _sample_interval) AS p75,
+    sum(_sample_interval) AS n
+  FROM dialed_vitals
+  WHERE blob1 = 'LCP' AND blob3 = 'narrow'
+    AND timestamp > NOW() - INTERVAL '1' DAY
+  GROUP BY route ORDER BY p75 DESC
+
+  -- Server p95 per screen and deploy, successful responses, this week.
+  SELECT index1 AS route, blob4 AS deploy,
+    quantileExactWeighted(0.95)(double1, _sample_interval) AS p95
+  FROM dialed_vitals
+  WHERE blob1 = 'server' AND blob3 = '2xx'
+    AND timestamp > NOW() - INTERVAL '7' DAY
+  GROUP BY route, deploy ORDER BY route
+  ```
+
+  The layout (which blob is what) is `src/modules/ops/vitals.ts`'s header;
+  the queries the code runs are `src/modules/ops/vitals-queries.ts`.
 
 ## 9. Restoring a database (D1 Time Travel)
 

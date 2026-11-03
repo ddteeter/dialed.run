@@ -10,6 +10,7 @@ import { PUBLIC_PHOTOS_ORIGIN } from "../src/lib/public-photos";
 import { cronSchedules } from "../src/modules/ops/crons";
 import { PUBLIC_ORIGIN } from "../src/modules/ops/og/site-head";
 import { consumedQueueNames, queueRegistry } from "../src/modules/ops/queues";
+import { VITALS_DATASET } from "../src/modules/ops/vitals-queries";
 
 /**
  * wrangler.jsonc is human-managed (CLAUDE.md forbidden zones) and the code
@@ -163,6 +164,25 @@ const sources: Record<string, string> = import.meta.glob(
   { query: "?raw", import: "default", eager: true },
 );
 
+/**
+ * The `DIALED_OPS` entry of a config's `d1_databases`, or `undefined`.
+ */
+function opsBinding(bound: unknown): unknown {
+  const databases: unknown =
+    typeof bound === "object" && bound !== null
+      ? new Map(Object.entries(bound)).get("d1_databases")
+      : undefined;
+  return Array.isArray(databases)
+    ? databases.find(
+        (database: unknown) =>
+          typeof database === "object" &&
+          database !== null &&
+          "binding" in database &&
+          database.binding === "DIALED_OPS",
+      )
+    : undefined;
+}
+
 describe("wrangler.jsonc matches the code that depends on it", () => {
   const config: unknown = JSON.parse(stripJsonc(wranglerJsonc));
 
@@ -242,6 +262,7 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
         : [],
     ).toStrictEqual([
       "BETTER_AUTH_URL",
+      "CF_ACCOUNT_ID",
       "PUBLIC_PHOTOS_ORIGIN",
       "TURNSTILE_SITE_KEY",
     ]);
@@ -284,6 +305,54 @@ describe("wrangler.jsonc matches the code that depends on it", () => {
       .filter(([, source]) => /\bcache\.purge\b|\bedge\.purge\b/u.test(source))
       .map(([path]) => path);
     expect(readers).toStrictEqual(["../src/modules/ops/edge-purge.ts"]);
+  });
+
+  it("binds the speed beacon's dataset and the deploy version, read only by the beacon", () => {
+    // Design 165 (owner-approved 2026-10-31): `VITALS` and
+    // `CF_VERSION_METADATA`, read only by `src/modules/ops/vitals.ts`. A
+    // dataset renamed here alone would start an empty one, and every
+    // dashboard and check reads the old name.
+    const testConfig: unknown = JSON.parse(stripJsonc(testWranglerJsonc));
+    for (const [key, expected] of [
+      [
+        "analytics_engine_datasets",
+        [{ binding: "VITALS", dataset: VITALS_DATASET }],
+      ],
+      ["version_metadata", { binding: "CF_VERSION_METADATA" }],
+    ] as const) {
+      for (const bound of [config, testConfig]) {
+        expect(
+          typeof bound === "object" && bound !== null
+            ? new Map(Object.entries(bound)).get(key)
+            : undefined,
+          key,
+        ).toStrictEqual(expected);
+      }
+    }
+    const readers = Object.entries(sources)
+      .filter(([, source]) =>
+        /\.(?:VITALS|CF_VERSION_METADATA)\b/u.test(source),
+      )
+      .map(([path]) => path);
+    expect(readers).toStrictEqual(["../src/modules/ops/vitals.ts"]);
+  });
+
+  it("binds the ops database in both configs, with its own migrations", () => {
+    // Design 165 (owner-approved 2026-10-31). Production applies the
+    // migrations from `migrations_dir`; the test pool applies the same
+    // directory (`vitest.config.ts`), so the two cannot disagree on it.
+    const testConfig: unknown = JSON.parse(stripJsonc(testWranglerJsonc));
+    expect(opsBinding(config)).toStrictEqual({
+      binding: "DIALED_OPS",
+      database_name: "dialed-ops",
+      database_id: "00000000-0000-0000-0000-000000000003",
+      migrations_dir: "src/db/migrations/ops",
+    });
+    expect(opsBinding(testConfig)).toStrictEqual({
+      binding: "DIALED_OPS",
+      database_name: "dialed-ops",
+      database_id: "test-ops",
+    });
   });
 
   it("binds the email sender the email module reads, and nothing else sends", () => {

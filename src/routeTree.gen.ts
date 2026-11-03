@@ -29,6 +29,7 @@ import { Route as AccountUsernameRouteImport } from './routes/account/username'
 import { Route as AccountVerifyRouteImport } from './routes/account/verify'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiStravaRouteImport } from './routes/api/strava'
+import { Route as ApiVitalsRouteImport } from './routes/api/vitals'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthSignupRouteImport } from './routes/auth/signup'
 import { Route as CallIndexRouteImport } from './routes/call/index'
@@ -174,6 +175,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
 const ApiStravaRoute = ApiStravaRouteImport.update({
   id: '/api/strava',
   path: '/api/strava',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVitalsRoute = ApiVitalsRouteImport.update({
+  id: '/api/vitals',
+  path: '/api/vitals',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
@@ -429,6 +435,7 @@ export interface FileRoutesByFullPath {
   '/account/verify': typeof AccountVerifyRoute
   '/api/health': typeof ApiHealthRoute
   '/api/strava': typeof ApiStravaRoute
+  '/api/vitals': typeof ApiVitalsRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
   '/closet/$itemId': typeof ClosetItemIdRoute
@@ -496,6 +503,7 @@ export interface FileRoutesByTo {
   '/account/verify': typeof AccountVerifyRoute
   '/api/health': typeof ApiHealthRoute
   '/api/strava': typeof ApiStravaRoute
+  '/api/vitals': typeof ApiVitalsRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
   '/closet/$itemId': typeof ClosetItemIdRoute
@@ -565,6 +573,7 @@ export interface FileRoutesById {
   '/account/verify': typeof AccountVerifyRoute
   '/api/health': typeof ApiHealthRoute
   '/api/strava': typeof ApiStravaRoute
+  '/api/vitals': typeof ApiVitalsRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
   '/closet/$itemId': typeof ClosetItemIdRoute
@@ -635,6 +644,7 @@ export interface FileRouteTypes {
     | '/account/verify'
     | '/api/health'
     | '/api/strava'
+    | '/api/vitals'
     | '/auth/login'
     | '/auth/signup'
     | '/closet/$itemId'
@@ -702,6 +712,7 @@ export interface FileRouteTypes {
     | '/account/verify'
     | '/api/health'
     | '/api/strava'
+    | '/api/vitals'
     | '/auth/login'
     | '/auth/signup'
     | '/closet/$itemId'
@@ -770,6 +781,7 @@ export interface FileRouteTypes {
     | '/account/verify'
     | '/api/health'
     | '/api/strava'
+    | '/api/vitals'
     | '/auth/login'
     | '/auth/signup'
     | '/closet/$itemId'
@@ -839,6 +851,7 @@ export interface RootRouteChildren {
   AccountVerifyRoute: typeof AccountVerifyRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiStravaRoute: typeof ApiStravaRoute
+  ApiVitalsRoute: typeof ApiVitalsRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthSignupRoute: typeof AuthSignupRoute
   ClosetItemIdRoute: typeof ClosetItemIdRoute
@@ -1024,6 +1037,13 @@ declare module '@tanstack/react-router' {
       path: '/api/strava'
       fullPath: '/api/strava'
       preLoaderRoute: typeof ApiStravaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/vitals': {
+      id: '/api/vitals'
+      path: '/api/vitals'
+      fullPath: '/api/vitals'
+      preLoaderRoute: typeof ApiVitalsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/login': {
@@ -1388,6 +1408,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountVerifyRoute: AccountVerifyRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiStravaRoute: ApiStravaRoute,
+  ApiVitalsRoute: ApiVitalsRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthSignupRoute: AuthSignupRoute,
   ClosetItemIdRoute: ClosetItemIdRoute,

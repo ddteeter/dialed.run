@@ -29,23 +29,26 @@ const manifest = new Map<string, string>();
 
 function manifestNames(): ReadonlyMap<string, string> {
   if (manifest.size > 0) return manifest;
-  const file = readdirSync(ASSETS).find((entry) => entry.startsWith(RESOLVER));
-  if (file === undefined) {
-    throw new Error(
-      `No server-function manifest in ${ASSETS}: run \`npm run build\` first, or TanStack Start has moved it.`,
-    );
+  // The resolver is usually a chunk of its own, but Rollup folds it into
+  // another when the server's import graph changes (design 165's
+  // `server.ts` reads the route tree), so the entries are what is looked
+  // for, in the named chunk first.
+  const files = readdirSync(ASSETS).filter((entry) => entry.endsWith(".js"));
+  const ordered = [
+    ...files.filter((entry) => entry.startsWith(RESOLVER)),
+    ...files.filter((entry) => !entry.startsWith(RESOLVER)),
+  ];
+  for (const file of ordered) {
+    const source = readFileSync(path.join(ASSETS, file), "utf8");
+    for (const match of source.matchAll(ENTRY)) {
+      const { id, name } = match.groups ?? {};
+      if (id !== undefined && name !== undefined) manifest.set(id, name);
+    }
+    if (manifest.size > 0) return manifest;
   }
-  const source = readFileSync(path.join(ASSETS, file), "utf8");
-  for (const match of source.matchAll(ENTRY)) {
-    const { id, name } = match.groups ?? {};
-    if (id !== undefined && name !== undefined) manifest.set(id, name);
-  }
-  if (manifest.size === 0) {
-    throw new Error(
-      `${file} names no server functions: TanStack Start has changed its manifest.`,
-    );
-  }
-  return manifest;
+  throw new Error(
+    `No server-function manifest in ${ASSETS}: run \`npm run build\` first, or TanStack Start has changed its manifest.`,
+  );
 }
 
 function serverFnName(segment: string): string {
