@@ -10,7 +10,14 @@ import {
   garmentCategoriesInOrder,
   garmentFieldSpec,
 } from "../../src/lib/contracts/garment-fields";
-import { formValuesFromItem } from "../../src/modules/closet/form-mapping";
+import {
+  formValuesFromItem,
+  productPlaceholders,
+  storedLinkErrors,
+} from "../../src/modules/closet/form-mapping";
+import type { LinkDetail } from "../../src/modules/closet/garment-link";
+import { wardrobeItems } from "../../src/db/schema-core";
+import { eq } from "drizzle-orm";
 import {
   garmentFormSchema,
   type GarmentFormValues,
@@ -208,13 +215,22 @@ describe("formValuesFromItem prefills from what the page actually shows", () => 
     });
   });
 
-  it("uses the effective attributes, not the item's own empty columns", async () => {
-    // The detail page shows product defaults where the item says nothing,
-    // so an edit that started from the raw columns would silently clear
-    // them on save.
+  it("fills weight and fabric with the runner's own, and leaves the product's to the placeholder", async () => {
+    // Round 43 #94: a product-filled value is a placeholder, so saving an
+    // Edit does not copy it onto the garment and clearing goes back to it.
     const values = formValuesFromItem(await storedItem(BRANDED), EFFECTIVE);
-    expect(values.weight).toBe("mid");
-    expect(values.fabric).toBe("merino");
+    expect(values.weight).toBe("");
+    expect(values.fabric).toBe("");
+    const own = formValuesFromItem(
+      await storedItem({ ...BRANDED, weight: "light", fabric: "synthetic" }),
+      EFFECTIVE,
+    );
+    expect(own.weight).toBe("light");
+    expect(own.fabric).toBe("synthetic");
+  });
+
+  it("starts the two toggles from what E shows, since a checkbox has no placeholder", async () => {
+    const values = formValuesFromItem(await storedItem(BRANDED), EFFECTIVE);
     expect(values.windResistant).toBe(true);
     expect(values.waterResistant).toBe(false);
   });
@@ -248,5 +264,65 @@ describe("formValuesFromItem prefills from what the page actually shows", () => 
     expect(garment.name).toBe("Rover Half-Zip");
     // The type rides through Edit, rather than being cleared by a save.
     expect(garment.type).toBe("halfZip");
+  });
+});
+
+describe("productPlaceholders: what the product lends Edit (round 43 #94)", () => {
+  it("lends weight and fabric where the runner left them empty", async () => {
+    expect(productPlaceholders(await storedItem(BRANDED), EFFECTIVE)).toEqual({
+      weight: "mid",
+      fabric: "merino",
+    });
+  });
+
+  it("lends nothing where the runner chose their own", async () => {
+    const own = await storedItem({
+      ...BRANDED,
+      weight: "light",
+      fabric: "synthetic",
+    });
+    expect(productPlaceholders(own, EFFECTIVE)).toEqual({
+      weight: undefined,
+      fabric: undefined,
+    });
+  });
+});
+
+describe("storedLinkErrors: Edit's opening error for a stored link (round 43 #93)", () => {
+  const SHOWN: LinkDetail = {
+    link: "https://janji.com/rover",
+    outcome: { kind: "reading" },
+    specSource: undefined,
+  };
+  const HIDDEN: LinkDetail = {
+    link: undefined,
+    outcome: undefined,
+    specSource: undefined,
+  };
+
+  it("opens clean on a link the one read lets through, and on none", async () => {
+    expect(storedLinkErrors(await storedItem(BRANDED), SHOWN)).toEqual({});
+    const bare = await storedItem({ category: "top", name: "Wind jacket" });
+    expect(storedLinkErrors(bare, HIDDEN)).toEqual({});
+  });
+
+  it("opens on the denied words for a link denied since it was saved", async () => {
+    expect(storedLinkErrors(await storedItem(BRANDED), HIDDEN)).toEqual({
+      productUrl:
+        "That link isn't allowed here. The rest of the piece is fine.",
+    });
+  });
+
+  it("opens on the contract's words for a link stored before the https rule", async () => {
+    const item = await storedItem(BRANDED);
+    const database = drizzle(env.DIALED_CORE);
+    const [legacy] = await database
+      .update(wardrobeItems)
+      .set({ productUrl: ["http:", "//janji.com/rover"].join("") })
+      .where(eq(wardrobeItems.id, item.id))
+      .returning();
+    expect(legacy && storedLinkErrors(legacy, HIDDEN)).toEqual({
+      productUrl: "Use a link that starts with https://.",
+    });
   });
 });

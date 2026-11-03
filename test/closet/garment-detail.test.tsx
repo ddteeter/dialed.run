@@ -83,9 +83,15 @@ describe("GarmentDetail's first paint, against a real stored row", () => {
     );
   });
 
-  it("draws no product link, even for a garment that has one stored", async () => {
+  it("draws a stored link as the shop page, with the line the real read gives it", async () => {
+    // Round 43 #95, through closet's one read on a real row: a piece with
+    // a link and no brand gets no product, so nothing will be read (#94).
     const markup = await renderedMarkup();
 
-    expect(markup).not.toContain("janji.com");
+    expect(markup).toContain('href="https://janji.com/p/rover-half-zip"');
+    expect(markup).toContain('rel="ugc nofollow noopener"');
+    expect(markup).toContain("Shop page");
+    expect(markup).toContain("Not read");
+    expect(markup).toContain("Add a brand and model");
   });
 });

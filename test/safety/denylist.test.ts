@@ -126,6 +126,15 @@ describe("saving a garment with a denied link", () => {
     expect(error.message).not.toMatch(/denylist|blocked domain|spam/i);
   });
 
+  it("lands on the link field, as F's other field issues do (round 43 #93)", () => {
+    expect(new DeniedLinkError().issues).toEqual([
+      {
+        path: ["productUrl"],
+        message: "That link isn't allowed here. The rest of the piece is fine.",
+      },
+    ]);
+  });
+
   it("is refused on edit too, not only on create", async () => {
     const userId = await makeUser();
     const item = await createItem(core(), userId, garmentWith());

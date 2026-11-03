@@ -1032,25 +1032,33 @@ of record under "Round 43 · Items 93–98 · Product links" in
 `design/docs/product.md`. AC2b is met for F and E: every reachable
 outcome has a drawn place. P2.5 keeps no link field. Built in design 163.
 
-- **93 · F's link field. Ruled; not built yet.** A FormField after brand
+- **93 · F's link field. Built** (design 163, PR B). A FormField after brand
   and model, "Product link · optional", with a hint that says it needs a
   brand and model. A link typed without a scheme gets https:// on save;
   only an explicit http:// or a non-URL errors, on blur and submit. Denied
   comes back on the server field-error path with today's words. Edit with
   a since-denied link shows the message on open, and Save is refused
   until the field changes.
-- **94 · Outcomes. Ruled; not built yet.** No F2a/F2b screens: F never
+- **94 · Outcomes. Built** (design 163, PR B). No F2a/F2b screens: F never
   waits, and E carries one MONO.xs line under the link (found, reading,
   couldn't read with "TRYING AGAIN TODAY" for the first day, found
   nothing, not read: no brand and model, or email unconfirmed).
   Product-filled stat values are --quiet, the runner's are ink.
   Composition's kicker names its source. On Edit a product-filled field
   shows the product's value as its placeholder. A late result just appears
-  the next time E loads.
-- **95 · E. Ruled; not built yet.** In the identity block under the name:
+  the next time E loads. **Built as, three readings to confirm:** (a) the
+  board draws a WEIGHT / FABRIC / WIND grid E does not have; the build
+  greys words in E's existing attribute line ("mid · synthetic"), per the
+  text's "E's existing stats". (b) Weight and fabric are selects, so the
+  placeholder is the empty option's text ("Mid" instead of "—"). The wind
+  and water toggles have no placeholder: a checkbox cannot show one, and
+  F writes both on every save, so they are always the runner's. (c) For
+  93's "not a URL", a host with no dot (`https://janji`) also reads "That
+  isn't a link."
+- **95 · E. Built** (design 163, PR B). In the identity block under the name:
   ProductLink labelled "Shop page", then the outcome line. Change or
   remove only through Edit. A denied link: nothing on E.
-- **96 · Kit views. Ruled.** D in, as /kit. The feed card and the /@handle
+- **96 · Kit views. Built:** D in PR B, /kit in PR A. D in, as /kit. The feed card and the /@handle
   rotation are out. The outcome line is on E only.
 - **97 · O3. Ruled out for v1; nothing to build.** The build never had
   the field. O3 is redrawn without it, closing R-55.

@@ -66,7 +66,16 @@ function materialsLine(part: FabricPart): string {
  */
 export function CompositionBlock({
   composition,
-}: Readonly<{ composition: Composition }>): JSX.Element | undefined {
+  source,
+}: Readonly<{
+  composition: Composition;
+  /**
+   * The site whose page it was read from, when it was (round 43 #94): the
+   * kicker names it, since a runner cannot override a composition and so
+   * should know whose it is. Absent, the kicker is the plain "Made of".
+   */
+  source?: string | undefined;
+}>): JSX.Element | undefined {
   const { verbatim, parts, brand } = composition;
   const hasLabelledParts = parts.length > 1;
   if (!hasLabelledParts && verbatim === undefined) return undefined;
@@ -74,7 +83,13 @@ export function CompositionBlock({
   return (
     <section className="flex flex-col gap-2">
       <h2 className="m-0 text-muted">
-        <Mono step="xs">Made of</Mono>
+        {source === undefined ? (
+          <Mono step="xs">Made of</Mono>
+        ) : (
+          <Mono step="xs">
+            Composition · from <span className="normal-case">{source}</span>
+          </Mono>
+        )}
       </h2>
       {hasLabelledParts ? (
         <dl className="m-0 flex flex-col gap-2">

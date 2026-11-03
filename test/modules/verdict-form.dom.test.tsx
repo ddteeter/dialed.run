@@ -91,6 +91,7 @@ const item = (itemId: string, name: string) => ({
   layer: undefined,
   flag: undefined,
   note: undefined,
+  url: undefined,
 });
 
 /**
