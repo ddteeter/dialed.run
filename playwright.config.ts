@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { defineConfig } from "@playwright/test";
 
-import { GARMIN_STUB_PORT } from "./e2e/garmin/stub-runs";
+import { garminStubPort, pointServerAtStub } from "./e2e/garmin/stub-origin";
 
 /** The checked-out branch, read from git's own files rather than the `git`
  *  binary (shelling out to a PATH lookup trips sonarjs/no-os-command-from-path).
@@ -43,6 +43,7 @@ function resolvePort(): number {
 }
 
 const port = resolvePort();
+const stubPort = garminStubPort(port);
 
 /**
  * What the suite drives. The dev server by default, which is what a lane
@@ -53,8 +54,9 @@ const port = resolvePort();
  * CI's `e2e (build)` job exists to see it (design 156). It serves `dist/`,
  * so build first.
  */
+const server = process.env.E2E_SERVER === "preview" ? "preview" : "dev";
 const serverCommand =
-  process.env.E2E_SERVER === "preview"
+  server === "preview"
     ? `npx vite preview --port ${String(port)} --strictPort`
     : "npm run dev";
 
@@ -163,7 +165,11 @@ export default defineConfig({
       command: serverCommand,
       // VITE_DEVTOOLS=off keeps the floating devtools button out of demo
       // recordings (it covers the tab bar's last item at 1280×720).
-      env: { PORT: String(port), VITE_DEVTOOLS: "off" },
+      env: {
+        PORT: String(port),
+        VITE_DEVTOOLS: "off",
+        ...pointServerAtStub(server, stubPort),
+      },
       url: `http://localhost:${String(port)}`,
       // Never reuse: with per-worktree ports there is nothing legitimate to
       // reuse, and a busy port must fail loudly rather than hand these tests a
@@ -171,12 +177,15 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 60_000,
     },
-    // Garmin's Personal API, stubbed (plan 160, step 9): the dev server's
-    // `GARMIN_API_ORIGIN` points the app's own client here. Synthetic
-    // answers only; `e2e/garmin/stub-server.ts` says what it serves.
+    // Garmin's Personal API, stubbed (plan 160, step 9), on a port that
+    // follows the app's so worktrees never share one. `pointServerAtStub`
+    // above points the server's `GARMIN_API_ORIGIN` here; how is
+    // `e2e/garmin/stub-origin.ts`'s. Synthetic answers only;
+    // `e2e/garmin/stub-server.ts` says what it serves.
     {
       command: "tsx e2e/garmin/stub-server.ts",
-      url: `http://localhost:${String(GARMIN_STUB_PORT)}/health`,
+      env: { GARMIN_STUB_PORT: String(stubPort) },
+      url: `http://localhost:${String(stubPort)}/health`,
       reuseExistingServer: false,
       timeout: 30_000,
     },

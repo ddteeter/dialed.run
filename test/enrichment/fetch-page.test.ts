@@ -381,9 +381,14 @@ describe("fetchProductPage", () => {
     const fetchImpl = htmlOnce("<html></html>", {
       "content-length": String(7 * 1024 * 1024),
     });
-    await expect(
-      fetchProductPage("https://shop.example.com/p", fetchImpl),
-    ).rejects.toThrow(/declares/u);
+    // The error itself, not just `toThrow(/declares/)`: in the workers pool
+    // that also passes for a rejection with `undefined`.
+    const failure = fetchProductPage("https://shop.example.com/p", fetchImpl);
+    await expect(failure).rejects.toBeInstanceOf(PageFetchError);
+    await expect(failure).rejects.toHaveProperty(
+      "message",
+      `Page declares ${String(7 * 1024 * 1024)} bytes`,
+    );
   });
 
   it("stops reading a body that lies about its size", async () => {

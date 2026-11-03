@@ -58,6 +58,10 @@
     "BETTER_AUTH_URL": "https://dialed.run",
     "PUBLIC_PHOTOS_ORIGIN": "https://photos.dialed.run",
     "TURNSTILE_SITE_KEY": "",
+    // Design 165: the account the speed rollup queries Analytics Engine's
+    // SQL API in. Not a secret; set in the deployment sweep. Empty, the
+    // rollup reports itself unconfigured in the daily digest.
+    "CF_ACCOUNT_ID": "",
   },
   "d1_databases": [
     {
@@ -71,6 +75,15 @@
       "database_name": "dialed-weather",
       "database_id": "00000000-0000-0000-0000-000000000002",
       "migrations_dir": "src/db/migrations/weather",
+    },
+    // Design 165: the ops database. No personal data, and nothing that
+    // must commit in one batch with a core write (law 8c). Today only
+    // `perf_daily`, the daily speed rollup the cron writes.
+    {
+      "binding": "DIALED_OPS",
+      "database_name": "dialed-ops",
+      "database_id": "00000000-0000-0000-0000-000000000003",
+      "migrations_dir": "src/db/migrations/ops",
     },
   ],
   // Two buckets, split by retention rather than by cost. Photos are
@@ -172,6 +185,15 @@
   // so does every e2e run in CI. Left local, dev and e2e get Miniflare's
   // simulated sender, which sends nothing to anyone.
   "send_email": [{ "name": "EMAIL" }],
+  // The speed beacon's dataset (design 165, part 1; owner-approved
+  // 2026-10-31). Written by POST /api/vitals through src/modules/ops and
+  // read back over the SQL API; the dataset is created on first write.
+  "analytics_engine_datasets": [
+    { "binding": "VITALS", "dataset": "dialed_vitals" },
+  ],
+  // The running deploy's version id, stamped on each beacon so a
+  // regression can be pinned to the deploy that caused it (design 165).
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
   // Matched against src/modules/ops/crons.ts by the conformance test. A
   // schedule changed here and not there sends every firing to the `unknown`
   // branch, which is a cron that quietly stops working.

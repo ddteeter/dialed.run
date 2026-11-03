@@ -18,6 +18,11 @@
       "database_name": "dialed-weather",
       "database_id": "test-weather",
     },
+    {
+      "binding": "DIALED_OPS",
+      "database_name": "dialed-ops",
+      "database_id": "test-ops",
+    },
   ],
   // Test-only stand-in secrets, so the success path of each adapter is
   // exercisable against a mocked `fetch`. A secret comes from the Worker's
@@ -36,11 +41,21 @@
     // The public photo switch on, as production has it, so the page's
     // read and the Worker's own reconcile wiring are what tests exercise.
     "PUBLIC_PHOTOS_ORIGIN": "https://photos.dialed.run",
+    // Design 165: the speed rollup's account and SQL API token, so its
+    // env-reading shell runs against a mocked `fetch`.
+    "CF_ACCOUNT_ID": "test-account",
+    "ANALYTICS_SQL_TOKEN": "test-token",
   },
   // Task 126 (ACC-2): the email sender, as ../wrangler.jsonc binds it.
   // No test sends through it — they hand `deliverEmail` a fake — but the
   // conformance test keeps the two configs in step.
   "send_email": [{ "name": "EMAIL" }],
+  // Design 165: the speed beacon's dataset and the deploy's version, as
+  // ../wrangler.jsonc binds them (the conformance test keeps them in step).
+  "analytics_engine_datasets": [
+    { "binding": "VITALS", "dataset": "dialed_vitals" },
+  ],
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
   "r2_buckets": [
     { "binding": "MEDIA", "bucket_name": "dialed-media" },
     { "binding": "IMPORTS", "bucket_name": "dialed-imports" },
