@@ -53,6 +53,21 @@ const weatherSql: Record<string, string> = import.meta.glob(
   { query: "?raw", import: "default", eager: true },
 );
 
+const opsJournal: Record<string, string> = import.meta.glob(
+  "../src/db/migrations/ops/meta/_journal.json",
+  { query: "?raw", import: "default", eager: true },
+);
+
+const opsSnapshots: Record<string, string> = import.meta.glob(
+  "../src/db/migrations/ops/meta/[0-9]*_snapshot.json",
+  { query: "?raw", import: "default", eager: true },
+);
+
+const opsSql: Record<string, string> = import.meta.glob(
+  "../src/db/migrations/ops/*.sql",
+  { query: "?raw", import: "default", eager: true },
+);
+
 const ROOT_PREV_ID = "00000000-0000-0000-0000-000000000000";
 
 interface JournalEntry {
@@ -138,6 +153,12 @@ describe.each([
     journal: weatherJournal,
     snapshots: weatherSnapshots,
     sql: weatherSql,
+  },
+  {
+    name: "ops",
+    journal: opsJournal,
+    snapshots: opsSnapshots,
+    sql: opsSql,
   },
 ])("$name migrations", ({ name, journal, snapshots, sql }) => {
   it("journal indexes are 0..n with no gaps or duplicates", () => {

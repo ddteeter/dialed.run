@@ -68,6 +68,7 @@ function detail(overrides: Partial<Detail> = {}): Detail {
     }),
     productDefaults: undefined,
     composition: undefined,
+    linkDetail: { link: undefined, outcome: undefined, specSource: undefined },
     pairedItems: [],
     ...overrides,
   };
@@ -620,9 +621,14 @@ describe("GarmentDetail: composition", () => {
         },
       }),
     );
+    // One line, each word its own span so a lent one can be grey (round
+    // 43 #94): read as the line a runner sees.
     expect(
       within(part("composition")).getByText(
-        "heavy · merino · wind resistant · water resistant · hi-viz",
+        (_, element) =>
+          element?.tagName === "P" &&
+          element.textContent ===
+            "heavy · merino · wind resistant · water resistant · hi-viz",
       ),
     ).toBeVisible();
   });

@@ -663,6 +663,33 @@ describe("emailContent", () => {
     }
   });
 
+  it("adds the outbox's one line after Gave up's, only above zero, and leaves the subject (design 168)", () => {
+    const base = {
+      kind: "digest",
+      day: "Wed Sep 17",
+      waiting: 0,
+      screenerUnfinished: 0,
+      bansThisWeek: 0,
+    } as const;
+    const one = emailContent({ ...base, outboxBehind: 1 }, { origin: ORIGIN });
+    expect(one.subject).toBe("Wed Sep 17 — Nothing waiting. Nothing failed.");
+    expect(one.body).toBe(
+      "0 waiting for a decision. 0 photos the screener couldn't finish. 0 bans this week. 1 queued job was still due after this morning's run. It's on the Desk's Today.",
+    );
+    expect(
+      emailContent({ ...base, gaveUp: 2, outboxBehind: 12 }, { origin: ORIGIN })
+        .body,
+    ).toMatch(
+      / They're on the Desk's Today\. 12 queued jobs were still due after this morning's run\. They're on the Desk's Today\.$/u,
+    );
+    // At zero, and from a deploy that never wrote the field.
+    for (const zero of [{ ...base, outboxBehind: 0 }, base]) {
+      expect(emailContent(zero, { origin: ORIGIN }).body).not.toContain(
+        "queued",
+      );
+    }
+  });
+
   it("counts every run the one-a-day reminder covers", () => {
     expect(
       emailContent(

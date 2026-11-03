@@ -4,3 +4,4 @@ import { env } from "../src/env";
 
 await applyD1Migrations(env.DIALED_CORE, env.TEST_MIGRATIONS_CORE);
 await applyD1Migrations(env.DIALED_WEATHER, env.TEST_MIGRATIONS_WEATHER);
+await applyD1Migrations(env.DIALED_OPS, env.TEST_MIGRATIONS_OPS);

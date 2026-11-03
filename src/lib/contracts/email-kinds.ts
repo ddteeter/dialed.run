@@ -289,4 +289,7 @@ export const digest = emailKind("digest", {
   // Jobs the system gave up on (R-119): optional, because a digest owed by
   // the deploy before this one sits in the outbox without it (law 9).
   gaveUp: z.int().min(0).optional(),
+  // Queued jobs the morning's drain could not reach (design 168): optional
+  // for the same reason.
+  outboxBehind: z.int().min(0).optional(),
 });

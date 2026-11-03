@@ -45,6 +45,7 @@ import {
   publiclyVisibleEntry,
 } from "../safety";
 import { requireOwned, requireOwner } from "../../lib/sql/owned";
+import { allowedLinksOf } from "../closet";
 import { purgePublicPages } from "../ops";
 import { newUlid } from "../../lib/ids";
 import { bandFloorC } from "../../lib/contracts/temperature";
@@ -568,6 +569,11 @@ interface EntryDetailItem {
   layer: string | undefined;
   flag: ItemFlag | undefined;
   note: string | undefined;
+  /**
+   * The piece's product link, when closet's one read lets it show (round
+   * 43 #96: D in, as /kit). Shown to anyone who can see the kit, as it is.
+   */
+  url: string | undefined;
 }
 
 /**
@@ -682,6 +688,7 @@ export async function getEntryDetail(
       .where(inArray(wardrobeItems.id, itemIds)),
   );
   const garmentsById = new Map(garments.map((g) => [g.id, g]));
+  const links = await allowedLinksOf(database, garments);
 
   // Screened photos only, unless the viewer is the author. In the WHERE
   // rather than filtered after: a stranger must not be billed for rows
@@ -747,6 +754,7 @@ export async function getEntryDetail(
         layer: garment?.layer ?? undefined,
         flag: isOwner ? (row.flag ?? undefined) : undefined,
         note: isOwner ? (row.note ?? undefined) : undefined,
+        url: links.get(row.itemId),
       };
     }),
     photoKeys: photos.map((p) => p.photoKey),

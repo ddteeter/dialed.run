@@ -62,6 +62,7 @@ export function digestTemplate(
     screenerUnfinished: counts.screenerUnfinished,
     bansThisWeek: counts.bansThisWeek,
     gaveUp: counts.gaveUp,
+    outboxBehind: counts.outboxBehind,
   };
 }
 

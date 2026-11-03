@@ -385,9 +385,11 @@ function drainLine(
  * the earliest they fell due. Read after the drain, a row a run worked has
  * settled or moved to its backoff, so whatever is left is debt the cap
  * never reached. It is one range on `outbox_kind_due` per kind, read
- * daily; exported for the test that reads its plan.
+ * daily by the digest and whenever the Desk opens (design 168), which
+ * passes the digest's start as a subquery; exported for the test that
+ * reads its plan.
  */
-export function stillDueOf(db: Db, now: number) {
+export function stillDueOf(db: Db, now: number | SQL<number>) {
   return db
     .select({
       kind: outbox.kind,

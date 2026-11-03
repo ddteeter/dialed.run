@@ -1,4 +1,5 @@
 import { UpstreamError } from "../../lib/errors";
+import { readCappedText } from "../../lib/read-capped";
 
 /**
  * The bounds every fetched page is held to, whichever path fetched it.
@@ -34,44 +35,22 @@ export class PageFetchError extends UpstreamError {
 }
 
 /**
- * Read at most `limit` bytes, and stop reading when we pass it.
- *
- * A cap applied to an already-buffered body is not a cap — by the time you
- * can measure it you have already held it in a 128 MB isolate. Content-Length
- * is a claim, not a measurement, so it is used only as an early reject.
+ * Read at most `limit` bytes of a fetched page (`lib/read-capped.ts` says
+ * why it has to be a cap), failing as a `PageFetchError`.
  */
 export async function readCapped(
   response: Response,
   limit = MAX_BYTES,
 ): Promise<string> {
-  // `Number(null)` is 0, so a missing header needs no branch of its own.
-  const claimed = Number(response.headers.get("content-length"));
-  if (claimed > limit) {
-    throw new PageFetchError(`Page declares ${String(claimed)} bytes`);
-  }
-  const body = response.body;
-  if (body === null) throw new PageFetchError("Page had no body");
-
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let total = 0;
-  let html = "";
-  try {
-    let isDone = false;
-    while (!isDone) {
-      const chunk = await reader.read();
-      isDone = chunk.done;
-      if (chunk.value === undefined) continue;
-      total += chunk.value.byteLength;
-      if (total > limit) {
-        throw new PageFetchError(`Page exceeded ${String(limit)} bytes`);
-      }
-      html += decoder.decode(chunk.value, { stream: true });
-    }
-  } finally {
-    await reader.cancel();
-  }
-  return html + decoder.decode();
+  if (response.body === null) throw new PageFetchError("Page had no body");
+  // `return await`: under workerd an inner rejection returned bare is
+  // reported as unhandled before the outer promise adopts it (see
+  // `fetch-page.ts`).
+  return await readCappedText(
+    response,
+    limit,
+    (detail) => new PageFetchError(`Page ${detail}`),
+  );
 }
 
 /**

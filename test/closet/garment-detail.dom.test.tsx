@@ -7,8 +7,10 @@ import {
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import { GarmentDetail } from "../../src/modules/closet/components/GarmentDetail";
+import type { LinkDetail } from "../../src/modules/closet/garment-link";
 import type { WardrobeItemRow } from "../../src/modules/closet/service";
 
 /**
@@ -60,6 +62,7 @@ const detail = {
   performance: undefined,
   productDefaults: undefined,
   composition: undefined,
+  linkDetail: { link: undefined, outcome: undefined, specSource: undefined },
   pairedItems: [],
 };
 
@@ -118,15 +121,254 @@ describe("GarmentDetail: a photo being checked (R-69, round 27 #21)", () => {
   );
 });
 
-describe("GarmentDetail: no product link (round 22)", () => {
-  it("draws no link for a garment that has one stored", async () => {
-    // Round 22's Y: "Order is fixed" — identity, photo, stats,
-    // composition, pairs with, actions. A product link is none of them;
-    // F2a/F2b bring links back with enrichment.
+type Composition = Parameters<typeof GarmentDetail>[0]["detail"]["composition"];
+
+function linked(
+  linkDetail: LinkDetail,
+  changes: Readonly<{
+    item?: Partial<WardrobeItemRow>;
+    composition?: Composition;
+  }> = {},
+): ReactElement {
+  return (
+    <GarmentDetail
+      detail={{
+        ...detail,
+        item: { ...item, ...changes.item },
+        composition: changes.composition,
+        linkDetail,
+      }}
+      retire={vi.fn()}
+      unretire={vi.fn()}
+      remove={vi.fn()}
+      uploadPhoto={vi.fn()}
+      removePhoto={vi.fn()}
+    />
+  );
+}
+
+const LINK = "https://janji.com/p/rover-half-zip";
+
+/**
+A field the runner left empty: the columns are nullable and null is the
+value here, parsed rather than written.
+*/
+function unset(): null {
+  return z.null().parse(JSON.parse("null"));
+}
+const FOUND = { kind: "found", source: "janji.com" } as const;
+
+function outcomeLine(): string | null | undefined {
+  return document.querySelector('[data-part="shop-page"] p')?.textContent;
+}
+
+describe("GarmentDetail: the shop page and its one line (round 43 #94-95)", () => {
+  it("draws no link and no line when closet's one read shows none", async () => {
+    // Denied since it was saved, or never https: the row's link is there,
+    // and E shows nothing of it (#95).
     await renderWithRouter(populated());
 
     expect(screen.queryByText("janji.com")).not.toBeInTheDocument();
     expect(document.querySelector('a[href^="https://"]')).toBeNull();
+    expect(document.querySelector('[data-part="shop-page"]')).toBeNull();
+  });
+
+  it("puts the shop page under the name, as ProductLink with its domain", async () => {
+    await renderWithRouter(
+      linked({
+        link: LINK,
+        outcome: { kind: "reading" },
+        specSource: undefined,
+      }),
+    );
+
+    const link = screen.getByRole("link", { name: "Shop page" });
+    expect(link).toHaveAttribute("href", LINK);
+    expect(link).toHaveAttribute("rel", "ugc nofollow noopener");
+    expect(screen.getByText("janji.com")).toHaveClass("text-quiet");
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(
+      heading.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it.each([
+    [{ kind: "reading" }, "[Reading the page] · Usually under a minute"],
+    [{ kind: "nothing", source: "janji.com" }, "[No specs on janji.com]"],
+    [
+      { kind: "unread", source: "janji.com", isRetrying: true },
+      "[Couldn't read janji.com] · Trying again today",
+    ],
+    [
+      { kind: "unread", source: "janji.com", isRetrying: false },
+      "[Couldn't read janji.com]",
+    ],
+    [{ kind: "noIdentity" }, "[Not read] · Add a brand and model"],
+    [{ kind: "unconfirmed" }, "[Not read yet] · Confirm your email to read it"],
+  ] as const)("says %o as round 43 words it", async (outcome, words) => {
+    await renderWithRouter(
+      linked({ link: LINK, outcome, specSource: undefined }),
+    );
+
+    // Sentence case in the DOM; the uppercase is CSS (Mono xs).
+    expect(outcomeLine()).toBe(words);
+  });
+
+  it("names no site it was denied", async () => {
+    await renderWithRouter(
+      linked({
+        link: LINK,
+        outcome: { kind: "nothing", source: undefined },
+        specSource: undefined,
+      }),
+    );
+    expect(outcomeLine()).toBe("[No specs on the page]");
+  });
+
+  it("keeps the site's own case inside the uppercase line", async () => {
+    await renderWithRouter(
+      linked({
+        link: LINK,
+        outcome: { kind: "nothing", source: "Rabbit.run" },
+        specSource: undefined,
+      }),
+    );
+    expect(screen.getByText("Rabbit.run")).toHaveClass("normal-case");
+  });
+
+  it("adds no clause about grey values when every value is the runner's", async () => {
+    // The fixture's weight and fabric are the runner's own.
+    await renderWithRouter(
+      linked({ link: LINK, outcome: FOUND, specSource: "janji.com" }),
+    );
+    expect(outcomeLine()).toBe("[Specs from janji.com]");
+    expect(screen.getByText("mid")).toHaveClass("text-ink");
+  });
+
+  it("draws the link with no line under it before enrichment has an outcome", async () => {
+    await renderWithRouter(
+      linked({ link: LINK, outcome: undefined, specSource: undefined }),
+    );
+
+    expect(screen.getByRole("link", { name: "Shop page" })).toHaveAttribute(
+      "href",
+      LINK,
+    );
+    expect(outcomeLine()).toBeUndefined();
+  });
+
+  it("says grey values are the page's when one is, and greys exactly that one", async () => {
+    // Weight left empty, so the product lent it.
+    await renderWithRouter(
+      linked(
+        { link: LINK, outcome: FOUND, specSource: "janji.com" },
+        { item: { weight: unset() } },
+      ),
+    );
+    expect(outcomeLine()).toBe(
+      "[Specs from janji.com] · Grey values are from the page",
+    );
+    expect(screen.getByText("mid")).toHaveClass("text-quiet");
+    expect(screen.getByText("synthetic")).toHaveClass("text-ink");
+  });
+});
+
+/**
+A garment whose words are the subject: the stored row and what it reads as.
+*/
+function words(
+  effective: Partial<typeof detail.effective>,
+  own: Partial<WardrobeItemRow>,
+): ReactElement {
+  return (
+    <GarmentDetail
+      detail={{
+        ...detail,
+        item: { ...item, ...own },
+        effective: { ...detail.effective, ...effective },
+      }}
+      retire={vi.fn()}
+      unretire={vi.fn()}
+      remove={vi.fn()}
+      uploadPhoto={vi.fn()}
+      removePhoto={vi.fn()}
+    />
+  );
+}
+
+describe("GarmentDetail: which words the page lent (round 43 #94)", () => {
+  it("greys each word the runner left empty, and inks visibility, which is never lent", async () => {
+    // Weight is the runner's; fabric, wind and water came from the page.
+    await renderWithRouter(
+      words(
+        { windResistant: true, waterResistant: true },
+        {
+          fabric: unset(),
+          windResistant: unset(),
+          waterResistant: unset(),
+          visibilityLevel: "hi_viz",
+        },
+      ),
+    );
+
+    expect(screen.getByText("mid")).toHaveClass("text-ink");
+    expect(screen.getByText("synthetic")).toHaveClass("text-quiet");
+    expect(screen.getByText("wind resistant")).toHaveClass("text-quiet");
+    expect(screen.getByText("water resistant")).toHaveClass("text-quiet");
+    expect(screen.getByText("hi-viz")).toHaveClass("text-ink");
+  });
+
+  it("inks wind and water the runner answered themselves", async () => {
+    await renderWithRouter(
+      words(
+        { windResistant: true, waterResistant: true },
+        { windResistant: true, waterResistant: true },
+      ),
+    );
+
+    expect(screen.getByText("wind resistant")).toHaveClass("text-ink");
+    expect(screen.getByText("water resistant")).toHaveClass("text-ink");
+  });
+
+  it("says nothing of wind or water a piece does not resist", async () => {
+    await renderWithRouter(words({}, {}));
+
+    expect(screen.getByText("mid")).toBeInTheDocument();
+    expect(screen.queryByText("wind resistant")).toBeNull();
+    expect(screen.queryByText("water resistant")).toBeNull();
+  });
+});
+
+describe("GarmentDetail: composition names its source (round 43 #94)", () => {
+  const composition = {
+    verbatim: "100% recycled polyester",
+    parts: [],
+  } as const;
+
+  it("names the site its composition was read from", async () => {
+    await renderWithRouter(
+      linked(
+        { link: undefined, outcome: undefined, specSource: "janji.com" },
+        { composition: { ...composition, parts: [] } },
+      ),
+    );
+
+    const kicker = screen.getByRole("heading", { name: /composition/i });
+    expect(kicker).toHaveTextContent("Composition · from janji.com");
+    expect(screen.getByText("janji.com")).toHaveClass("normal-case");
+  });
+
+  it("keeps the plain kicker for a composition no page gave", async () => {
+    await renderWithRouter(
+      linked(
+        { link: undefined, outcome: undefined, specSource: undefined },
+        { composition: { ...composition, parts: [] } },
+      ),
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Made of" }),
+    ).toBeInTheDocument();
   });
 });
 
