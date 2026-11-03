@@ -162,7 +162,7 @@ const CASE_ENDS: readonly CaseEnd[] = ["delete", "restore"];
 A press that asks before it acts: as the Desk's submit, but it submits nothing.
 */
 const PRESS_CLASS =
-  "target grid min-h-13 cursor-pointer place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-ink";
+  "target grid min-h-13 cursor-pointer place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-accent-ink";
 
 /**
 The confirm's way out, quieter than the press it answers.

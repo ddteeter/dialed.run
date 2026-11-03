@@ -216,6 +216,10 @@ describe("the submit button is never disabled", () => {
     // Pink is action, and the submit button is the action. The cursor is
     // the visual half of aria-disabled: it must stop inviting a click.
     expect(button).toHaveClass("bg-action");
+    // Text on pink is the fixed ink, not the ground-relative role: on the
+    // Desk's ink ground `text-ink` is chalk, chalk on pink (R-173).
+    expect(button).toHaveClass("text-accent-ink");
+    expect(button).not.toHaveClass("text-ink");
     expect(button).toHaveClass("cursor-default");
     expect(button).not.toHaveClass("cursor-pointer");
 
@@ -1416,9 +1420,7 @@ describe("a field repeated on every row (R-165)", () => {
     expect(second.getByRole("textbox", { name: "Received on" })).toHaveValue(
       "Tuesday",
     );
-    expect(first.getByRole("textbox", { name: "Received on" })).toHaveValue(
-      "",
-    );
+    expect(first.getByRole("textbox", { name: "Received on" })).toHaveValue("");
   });
 
   it("labels each row's select with its own label", () => {
@@ -1811,9 +1813,9 @@ describe("ChoiceList", () => {
       />,
     );
 
-    expect(screen.getByRole("radio", { name: /^Runs cold/ })).toHaveAccessibleName(
-      "Runs cold Add a layer.",
-    );
+    expect(
+      screen.getByRole("radio", { name: /^Runs cold/ }),
+    ).toHaveAccessibleName("Runs cold Add a layer.");
     const hint = screen.getByText("Add a layer.");
     expect(hint).toHaveClass("text-small", "font-normal", "text-muted");
     expect(hint.parentElement).toHaveClass("flex", "flex-col", "gap-1");

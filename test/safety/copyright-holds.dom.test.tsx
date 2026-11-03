@@ -344,7 +344,9 @@ describe("CopyrightHolds", () => {
     renderHolds(inCourt());
     for (const label of ["Case over: delete", "Case over: restore"]) {
       const press = screen.getByRole("button", { name: label });
-      expect(press).toHaveClass("target", "bg-action");
+      // The Desk is ink: text on pink is the fixed ink, never chalk (R-173).
+      expect(press).toHaveClass("target", "bg-action", "text-accent-ink");
+      expect(press).not.toHaveClass("text-ink");
       expect(press).toHaveAttribute("type", "button");
       expect(press).not.toHaveFocus();
     }

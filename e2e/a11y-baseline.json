@@ -6,16 +6,6 @@
   },
   {
     "rule": "color-contrast",
-    "route": "/desk/access",
-    "node": "form[data-part=\"new-code\"] span.[grid-area:#/#]"
-  },
-  {
-    "rule": "color-contrast",
-    "route": "/desk/runners",
-    "node": "span.[grid-area:#/#]"
-  },
-  {
-    "rule": "color-contrast",
     "route": "/onboarding/done",
     "node": "p.m-#"
   },
