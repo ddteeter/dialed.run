@@ -4,6 +4,13 @@ import { createRequire } from "node:module";
 import { test as base } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
+import type { Measure } from "./a11y-coverage";
+import {
+  flushCoverage,
+  IS_MEASURING,
+  startMeasuring,
+  stopMeasuring,
+} from "./a11y-coverage";
 import type { Finding } from "./a11y-findings";
 import { findingOf, keyOf, loadBaseline, RULES } from "./a11y-findings";
 import { endOfTest } from "./a11y-end";
@@ -39,6 +46,9 @@ import { installWalk } from "./a11y-walk";
  * `test-results/a11y/findings.jsonl`, which is how the baseline is made.
  * Pages on another origin, such as the design boards `openBoard` loads,
  * are not the app and are not checked.
+ *
+ * **What it reached** (step 3, `a11y-coverage.ts`): on a measured run,
+ * each test's page coverage and visited paths, read once the run ends.
  */
 
 const AXE_SOURCE = readFileSync(
@@ -99,6 +109,12 @@ const PAGE_ACTIONS = [
   "uncheck",
 ] as const;
 
+/**
+ * The page actions that load a new document, which drops the last one's
+ * coverage unless it is taken first (`flushCoverage`).
+ */
+const NAVIGATIONS = new Set<string>(["goBack", "goForward", "goto", "reload"]);
+
 const KEYBOARD_ACTIONS = ["down", "insertText", "press", "type"] as const;
 
 const MOUSE_ACTIONS = ["click", "dblclick", "down", "wheel"] as const;
@@ -133,8 +149,13 @@ export interface A11y {
  * Per worker: whether the prototypes are wrapped yet, and the page the
  * current test drives, which is what a wrapped action checks.
  */
-const worker: { current: Page | undefined; isWrapped: boolean } = {
+const worker: {
+  current: Page | undefined;
+  measure: Measure | undefined;
+  isWrapped: boolean;
+} = {
   current: undefined,
+  measure: undefined,
   isWrapped: false,
 };
 
@@ -159,6 +180,9 @@ function wrap(prototype: object, names: readonly string[]): void {
       name,
       async function checked(this: unknown, ...args: unknown[]) {
         if (worker.current !== undefined) await checkNow(worker.current);
+        if (worker.measure !== undefined && NAVIGATIONS.has(name)) {
+          await flushCoverage(worker.measure);
+        }
         const result: unknown = await Reflect.apply(original, this, args);
         return result;
       },
@@ -285,9 +309,13 @@ export const test = base.extend<{
         checkMs: 0,
         endMs: 0,
       };
+      const measure = IS_MEASURING
+        ? await startMeasuring(page, new URL(baseURL ?? "").origin)
+        : undefined;
       await arm(page, baseURL ?? "", collected);
       wrapActions(page);
       worker.current = page;
+      worker.measure = measure;
       try {
         await use({
           checkNow: () => checkNow(page),
@@ -297,10 +325,12 @@ export const test = base.extend<{
         await checkNow(page);
       } finally {
         worker.current = undefined;
+        worker.measure = undefined;
       }
       if (testInfo.status === testInfo.expectedStatus) {
         await runEndOfTest(page, baseURL ?? "", collected);
       }
+      if (measure !== undefined) await stopMeasuring(measure);
       record(testInfo.titlePath.join(" › "), collected);
       if (a11yMode === "enforce" && !IS_RECORDING) failOnNew(collected);
     },
