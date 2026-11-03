@@ -44,6 +44,7 @@ import {
   type CategoryScores,
   type ScreenDecision,
 } from "./classifier/moderation";
+import { ceilingReading } from "./breakers";
 import {
   enqueueForReview,
   settleOpenReviews,
@@ -52,6 +53,14 @@ import {
 
 function db() {
   return coreDb();
+}
+
+/**
+Whether the classifier breaker is at its ceiling this hour (design 164).
+*/
+async function isClassifierOver(now: number): Promise<boolean> {
+  const reading = await ceilingReading(db(), "classifier", now);
+  return reading.isOver;
 }
 
 /** Which table the photo hangs off. Entry photos and garment photos are
@@ -78,7 +87,12 @@ export type Classify = (params: {
   contentType: string;
 }) => Promise<{ flagged: boolean; scores: CategoryScores }>;
 
-export type ScreenOutcome = "pass" | "review" | "flagged" | "deferred";
+/**
+ * `held_back`: a flag over the classifier breaker's ceiling (design 164),
+ * left `pending` with nothing written, as an outage leaves it.
+ */
+export type ScreenOutcome =
+  "pass" | "review" | "flagged" | "held_back" | "deferred";
 
 /**
  * Screens one photo and records the verdict.
@@ -125,6 +139,17 @@ export async function screenPhoto(
   const decision = decide(result.scores);
   const now = nowSeconds();
 
+  // A flag hides a runner's photo, so it is the one answer the breaker
+  // (design 164) bounds: past the ceiling the photo stays `pending` — its
+  // owner sees it and nobody else does, exactly as in an outage — for the
+  // hourly sweep to screen again. Only the screening is written, as
+  // `held_back`, so a photo still waiting a day on goes to Review as the
+  // classifier's, not as one it never answered for (D-157).
+  if (decision === "flag" && (await isClassifierOver(now))) {
+    await screeningInsert(photo, result.scores, "held_back", now);
+    return "held_back";
+  }
+
   // One batch: the verdict, the visibility it implies, and the row that
   // puts it in front of a person are one fact. A gap between them leaves a
   // photo screened-but-still-pending (harmless, the sweep redoes it),
@@ -154,7 +179,7 @@ export async function screenPhoto(
 function screeningInsert(
   photo: PhotoToScreen,
   scores: CategoryScores,
-  decision: ScreenDecision,
+  decision: ScreenDecision | "held_back",
   now: number,
 ) {
   // Each field is named for the column it fills, read from the table.
@@ -165,7 +190,9 @@ function screeningInsert(
     photoId: sql<string>`${photo.photoId}`.as(into.photoId.name),
     model: sql<string>`${MODERATION_MODEL}`.as(into.model.name),
     scores: sql<string>`${JSON.stringify(scores)}`.as(into.scores.name),
-    decision: sql<ScreenDecision>`${decision}`.as(into.decision.name),
+    decision: sql<ScreenDecision | "held_back">`${decision}`.as(
+      into.decision.name,
+    ),
     createdAt: sql<number>`${now}`.as(into.createdAt.name),
   };
   const stillThere =

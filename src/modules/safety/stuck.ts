@@ -9,9 +9,9 @@
  * end — and the only trace was an hourly line with no ids (law 6). Past
  * the day, each becomes a review queue row, so the Desk owns it.
  */
-import { lt } from "drizzle-orm";
+import { and, eq, inArray, lt } from "drizzle-orm";
 
-import { reviewQueue } from "../../db/schema-core";
+import { photoScreenings, reviewQueue } from "../../db/schema-core";
 import { coreDb } from "../../env";
 
 import { enqueueForReview } from "./review";
@@ -66,13 +66,14 @@ export async function escalateStuck(
   now: number,
 ): Promise<StuckPhoto[]> {
   const database = coreDb();
+  const held = await heldFlagsAmong(stuck);
   const [first, ...rest] = stuck.map((photo) =>
     enqueueForReview(
       database,
       {
         subjectType: queueSubjectOf[photo.scope],
         subjectId: photo.photoId,
-        source: photo.missing ? "missing_file" : "unscreened",
+        source: sourceOf(photo, held),
       },
       lt(reviewQueue.resolvedAt, now - STUCK_AFTER_SECONDS),
     ).returning({ subjectId: reviewQueue.subjectId }),
@@ -81,4 +82,38 @@ export async function escalateStuck(
   const written = await database.batch([first, ...rest]);
   const opened = new Set(written.flat().map((row) => row.subjectId));
   return stuck.filter((photo) => opened.has(photo.photoId));
+}
+
+/**
+ * Why a stuck photo is in Review. The classifier's, when it flagged the
+ * photo and the breaker held the flag back (design 164): "the classifier
+ * has not answered for it" would be false, and an Approve on an
+ * `unscreened` row publishes the photo, where one on a `classifier` row
+ * sends it back to be screened.
+ */
+function sourceOf(
+  photo: StuckPhoto,
+  held: ReadonlySet<string>,
+): "missing_file" | "classifier" | "unscreened" {
+  if (photo.missing) return "missing_file";
+  return held.has(photo.photoId) ? "classifier" : "unscreened";
+}
+
+/**
+Which of these photos have a flag the breaker held back.
+*/
+async function heldFlagsAmong(
+  stuck: readonly StuckPhoto[],
+): Promise<ReadonlySet<string>> {
+  const ids = stuck.map((photo) => photo.photoId);
+  const rows = await coreDb()
+    .selectDistinct({ photoId: photoScreenings.photoId })
+    .from(photoScreenings)
+    .where(
+      and(
+        eq(photoScreenings.decision, "held_back"),
+        inArray(photoScreenings.photoId, ids),
+      ),
+    );
+  return new Set(rows.map((row) => row.photoId));
 }

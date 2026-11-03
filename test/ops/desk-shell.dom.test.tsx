@@ -55,6 +55,7 @@ function desk(counts: Partial<TodayCounts> = {}): DeskToday {
       ...counts,
     },
     skipped: [],
+    breakers: [],
   };
 }
 

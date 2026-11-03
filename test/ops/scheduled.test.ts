@@ -6,6 +6,7 @@ import {
   cronCheckpoints,
   emailSendLimits,
   entryPhotos,
+  photoScreenings,
   imports,
   outbox,
   outfitEntries,
@@ -24,10 +25,16 @@ import { MODERATION_RECORD_KEPT_SECONDS } from "../../src/modules/safety/retenti
 import { gaveUpRow } from "../gave-up-rows";
 import { mockVisualCrossing } from "../weather/fixtures/visual-crossing-observation";
 import {
+  breakerReport,
   digestKinds,
   digestReport,
   hourlyReport,
 } from "../../src/modules/ops/scheduled";
+import {
+  FINGERPRINT_HOLDS_PER_HOUR,
+  QUIET_FEWEST_SCREENED,
+} from "../../src/modules/safety/breakers";
+import { opened, screened } from "../safety/helpers";
 import type { CronReporter, SentryReport } from "../../src/modules/ops/sentry";
 import {
   createOrGetBrand,
@@ -109,6 +116,8 @@ async function emptyTheTablesTheDigestReads(): Promise<void> {
   // and points at the digest rather than at the leak.
   await db.delete(reviewQueue);
   await db.delete(reports);
+  // The screener's week, which design 164's quiet line reads.
+  await db.delete(photoScreenings);
   await db.delete(entryPhotos);
   await db.delete(outfitEntries);
 }
@@ -561,7 +570,9 @@ async function seedAnomaly(
     | "abandoned-enrichment"
     | "strava-revocation"
     | "outbox"
-    | "review-queue",
+    | "review-queue"
+    | "breaker-headroom"
+    | "screener-quiet",
 ): Promise<void> {
   const db = coreDb();
   switch (kind) {
@@ -597,6 +608,16 @@ async function seedAnomaly(
     }
     case "review-queue": {
       await queueItem();
+      return;
+    }
+    // Resolved, so the review-queue kind stays quiet beside it.
+    case "breaker-headroom": {
+      await opened("fingerprint", 3, nowSeconds() - HOUR);
+      await db.update(reviewQueue).set({ status: "approved" });
+      return;
+    }
+    case "screener-quiet": {
+      await screened("pass", QUIET_FEWEST_SCREENED, nowSeconds() - HOUR);
       return;
     }
   }
@@ -690,6 +711,8 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
     "strava-revocation",
     "outbox",
     "review-queue",
+    "breaker-headroom",
+    "screener-quiet",
   ] as const)("reports %s under its own kind", async (kind) => {
     await seedAnomaly(kind);
     vi.spyOn(console, "error").mockImplementation(nothing);
@@ -712,6 +735,8 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
       "outbox",
       "stalled-import",
       "review-queue",
+      "breaker-headroom",
+      "screener-quiet",
       "account-deletion",
     ]);
   });
@@ -877,6 +902,103 @@ describe("hourly firings report what they find (design 162)", () => {
       tags: { digest: "hourly", cron: "screening-retry" },
       fingerprint: ["hourly", "screening-retry", "2026-10-29"],
     });
+  });
+});
+
+describe("a hold breaker at its ceiling (design 164)", () => {
+  it("raises its own event from the screening sweep, one issue a cause a day", async () => {
+    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR, nowSeconds());
+    const { reporter, events } = recordingReporter();
+
+    await handleScheduled(
+      { cron: "15 * * * *" } as ScheduledController,
+      reporter,
+    );
+
+    const breakers = events.filter((event) =>
+      event.report.fingerprint?.includes("breaker"),
+    );
+    expect(breakers.map((event) => event.report)).toStrictEqual([
+      breakerReport(
+        {
+          cause: "fingerprint",
+          isOver: true,
+          count: FINGERPRINT_HOLDS_PER_HOUR,
+          ceiling: FINGERPRINT_HOLDS_PER_HOUR,
+        },
+        today(),
+      ),
+    ]);
+    expect(breakers.map((event) => event.error)).toStrictEqual([
+      expect.objectContaining({ message: "breaker: fingerprint" }),
+    ]);
+  });
+
+  it("raises nothing on an hour under every ceiling", async () => {
+    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR - 1, nowSeconds());
+    const { reporter, events } = recordingReporter();
+
+    await handleScheduled(
+      { cron: "15 * * * *" } as ScheduledController,
+      reporter,
+    );
+
+    expect(
+      events.filter((event) => event.report.fingerprint?.includes("breaker")),
+    ).toStrictEqual([]);
+  });
+
+  it("names the cause, the count and the ceiling, grouped by cause and day", () => {
+    expect(
+      breakerReport(
+        { cause: "reports", isOver: true, count: 12, ceiling: 12 },
+        "2026-10-31",
+      ),
+    ).toStrictEqual({
+      context: {
+        breaker: "reports",
+        anomalies:
+          "reports holds at 12 of 12 in the last hour; past the ceiling they stop",
+      },
+      tags: { breaker: "reports" },
+      fingerprint: ["breaker", "reports", "2026-10-31"],
+    });
+  });
+});
+
+describe("the digest's breaker lines (design 164)", () => {
+  it("names a breaker whose busiest hour came within half its ceiling", async () => {
+    await opened("fingerprint", 3, nowSeconds() - HOUR);
+    await opened("reports", 4, nowSeconds() - HOUR);
+    await coreDb().update(reviewQueue).set({ status: "approved" });
+
+    const outcome = await handleScheduled(DIGEST, recordingReporter().reporter);
+
+    expect(outcome.anomalies).toContain(
+      "fingerprint breaker's busiest hour in the last day reached 60% of its ceiling",
+    );
+    expect(outcome.anomalies.join("; ")).not.toContain("reports breaker");
+  });
+
+  it("names one at exactly half its ceiling", async () => {
+    await opened("reports", 5, nowSeconds() - HOUR);
+    await coreDb().update(reviewQueue).set({ status: "approved" });
+
+    const outcome = await handleScheduled(DIGEST, recordingReporter().reporter);
+
+    expect(outcome.anomalies).toContain(
+      "reports breaker's busiest hour in the last day reached 50% of its ceiling",
+    );
+  });
+
+  it("says a week of screenings flagged and queued nothing", async () => {
+    await screened("pass", QUIET_FEWEST_SCREENED, nowSeconds() - HOUR);
+
+    const outcome = await handleScheduled(DIGEST, recordingReporter().reporter);
+
+    expect(outcome.anomalies).toContain(
+      "The classifier flagged or queued none of 50 photos screened this week; check its model has not changed",
+    );
   });
 });
 

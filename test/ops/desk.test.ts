@@ -21,6 +21,8 @@ import {
   outboxBehindOf,
   todayCounts,
 } from "../../src/modules/ops/desk";
+import { FINGERPRINT_HOLDS_PER_HOUR } from "../../src/modules/safety/breakers";
+import { opened } from "../safety/helpers";
 import { operatorOrNotFound } from "../../src/modules/ops/desk-gate";
 
 /**
@@ -393,6 +395,29 @@ describe("todayCounts' outbox behind", () => {
       "SEARCH outbox USING COVERING INDEX outbox_kind_due (kind=? AND next_attempt_at<?)",
       "SCALAR SUBQUERY 1",
       "SEARCH cron_checkpoints USING INDEX sqlite_autoindex_cron_checkpoints_1 (cron_name=?)",
+    ]);
+  });
+});
+
+describe("deskToday's breakers (design 164)", () => {
+  beforeEach(async () => {
+    await coreDb().delete(reviewQueue);
+  });
+
+  it("lists each cause at its ceiling this hour, and nothing on an ordinary hour", async () => {
+    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR - 1, nowSeconds());
+    const ordinary = await deskToday();
+    expect(ordinary.breakers).toStrictEqual([]);
+
+    await opened("fingerprint", 1, nowSeconds());
+    const { breakers } = await deskToday();
+    expect(breakers).toStrictEqual([
+      {
+        cause: "fingerprint",
+        isOver: true,
+        count: FINGERPRINT_HOLDS_PER_HOUR,
+        ceiling: FINGERPRINT_HOLDS_PER_HOUR,
+      },
     ]);
   });
 });

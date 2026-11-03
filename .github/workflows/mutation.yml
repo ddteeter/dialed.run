@@ -48,9 +48,20 @@ on:
 permissions:
   contents: read
 
+# A newer push to a PR supersedes the run on its old head, so that run is
+# cancelled. A run on `main` is not, because it writes the cache every PR
+# restores from. Each shard saves its own report when it finishes, so a
+# cancelled `main` run still leaves the fast shards' caches. The slow ones
+# (`modules/safety` and `lib/contracts/email`, about 3 hours cold) were
+# cancelled by the next merge on every run, so they never stored a report.
+# After any dependency change to the cache key, every PR then ran those two
+# cold, for 2 to 3 hours. Measured 2026-11-01: the last 11 `main` runs were
+# cancelled, and no `main` cache existed for either shard under the
+# current key. Without cancellation, GitHub keeps one run going and at most
+# one newer run pending.
 concurrency:
   group: mutation-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # The scopes are read from stryker.conf.json rather than restated here.

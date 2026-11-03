@@ -43,6 +43,7 @@ import {
   makeRun,
   makeUser,
   resetSafetyTables,
+  screened,
 } from "./helpers";
 
 const DAY = 24 * 60 * 60;
@@ -176,6 +177,33 @@ describe("a photo still pending a day after upload", () => {
         subjectType: "photo",
         subjectId: photoId,
         source: "unscreened",
+        status: "pending",
+        resolvedBy: undefined,
+        resolvedAt: undefined,
+      },
+    ]);
+    expect(anomalies).toEqual([
+      `1 of 1 photos still pending after a screening sweep: photo ${photoId}`,
+      `1 photos still pending a day after upload went to the Desk: photo ${photoId}`,
+    ]);
+  });
+
+  it("goes as the classifier's when it flagged and the breaker held it back (design 164)", async () => {
+    const now = nowSeconds();
+    const photoId = await entryPhoto(now, DAY + 60);
+    // An hour at the classifier breaker's ceiling: 3 flags in 20.
+    await screened("pass", 17, now - 60);
+    await screened("flag", 3, now - 60);
+    const anomalies: string[] = [];
+
+    const report = await retryPendingScreenings(explicit, anomalies, now);
+
+    expect(report).toMatchObject({ considered: 1, heldBack: 1, escalated: 1 });
+    expect(await queueRows()).toEqual([
+      {
+        subjectType: "photo",
+        subjectId: photoId,
+        source: "classifier",
         status: "pending",
         resolvedBy: undefined,
         resolvedAt: undefined,

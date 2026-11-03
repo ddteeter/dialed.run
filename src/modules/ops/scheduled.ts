@@ -46,12 +46,17 @@ import {
 } from "./sentry";
 import {
   classifierFromEnv,
+  dayHeadroom,
+  HEADROOM_WARN_SHARE,
+  overCeilings,
   pendingReviewCount,
+  quietScreenerWeek,
   purgeExpiredQuarantine,
   reconcileUnhiddenReports,
   releaseStaleClaims,
   retryPendingScreenings,
   sweepModerationRecords,
+  type CeilingReading,
 } from "../safety";
 
 import { nowSeconds } from "../../lib/now";
@@ -252,6 +257,7 @@ async function runCron(
         // seconds on moderation, and owed mail should not wait behind it.
         () => drainOwedEmail(anomalies),
         () => upkeep.rescreenHandles?.(anomalies),
+        () => reportBreakerTrips(reporter),
       ]);
     }
   }
@@ -310,13 +316,10 @@ export function hourlyReport(
 }
 
 /**
- * The shape both reports share: the findings joined into one context
+ * The shape every report shares: the findings joined into one context
  * field beside whatever names the source, the tags an alert rule matches,
  * and the fingerprint Sentry groups by.
  */
-/**
-One anomaly event: where it came from, its lines joined, and how it groups.
-*/
 function anomalyReport(
   source: Record<string, string>,
   tags: Record<string, string>,
@@ -335,6 +338,45 @@ The UTC date a person reads a report under: one issue a day.
 */
 function utcDay(): string {
   return new Date(nowSeconds() * 1000).toISOString().slice(0, 10);
+}
+
+/**
+ * One event per hold breaker at its ceiling (design 164), each its own
+ * issue a day: fingerprinted by cause and day, not folded into the
+ * firing's own event, whose issue may already be open today and so would
+ * alert nobody.
+ *
+ * Read on the hour, so a burst split across two firings' hours can stay
+ * under the ceiling in each; the digest's weekly headroom line names a
+ * cause running near it.
+ */
+async function reportBreakerTrips(reporter: CronReporter): Promise<void> {
+  const over = await overCeilings(coreDb(), nowSeconds());
+  const day = utcDay();
+  for (const reading of over) {
+    reporter.report(
+      new Error(`breaker: ${reading.cause}`),
+      breakerReport(reading, day),
+    );
+  }
+}
+
+/**
+The event for one breaker at its ceiling, on one day.
+*/
+export function breakerReport(
+  reading: CeilingReading,
+  day: string,
+): SentryReport {
+  const { cause, count, ceiling } = reading;
+  return anomalyReport(
+    { breaker: cause },
+    { breaker: cause },
+    ["breaker", cause, day],
+    [
+      `${cause} holds at ${String(count)} of ${String(ceiling)} in the last hour; past the ceiling they stop`,
+    ],
+  );
 }
 
 /**
@@ -671,6 +713,34 @@ async function checkReviewQueueDepth(anomalies: string[]): Promise<void> {
 }
 
 /**
+ * Each hold breaker whose busiest hour of the last day came within
+ * `HEADROOM_WARN_SHARE` of its ceiling (design 164). The ceilings are
+ * fixed numbers or rules set at pre-launch scale; this is what says one
+ * needs revisiting before growth starts tripping it.
+ */
+async function checkBreakerHeadroom(anomalies: string[]): Promise<void> {
+  const headroom = await dayHeadroom(coreDb(), nowSeconds());
+  for (const { cause, used } of headroom) {
+    if (used < HEADROOM_WARN_SHARE) continue;
+    anomalies.push(
+      `${cause} breaker's busiest hour in the last day reached ${String(Math.round(used * 100))}% of its ceiling`,
+    );
+  }
+}
+
+/**
+ * A week of screenings with no flag and no review (design 164): the
+ * classifier's model changing in the direction its breaker cannot see.
+ */
+async function checkQuietScreener(anomalies: string[]): Promise<void> {
+  const screened = await quietScreenerWeek(coreDb(), nowSeconds());
+  if (screened === undefined) return;
+  anomalies.push(
+    `The classifier flagged or queued none of ${String(screened)} photos screened this week; check its model has not changed`,
+  );
+}
+
+/**
  * The epoch-second cutoff `n` seconds ago.
  *
  * Written out at three call sites, which is what made two of the digest's
@@ -761,6 +831,8 @@ export const digestKinds = [
   "outbox",
   "stalled-import",
   "review-queue",
+  "breaker-headroom",
+  "screener-quiet",
   "account-deletion",
 ] as const;
 
@@ -812,6 +884,8 @@ async function runDailyDigest(
     },
     "stalled-import": redispatchStalledImports,
     "review-queue": checkReviewQueueDepth,
+    "breaker-headroom": checkBreakerHeadroom,
+    "screener-quiet": checkQuietScreener,
     "account-deletion": async (anomalies) => {
       await upkeep.purgeAccounts?.(anomalies);
     },

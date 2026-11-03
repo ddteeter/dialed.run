@@ -11,6 +11,7 @@ import { entryPhotos, outfitEntries } from "../../db/schema-core";
 import { coreDb, env, primaryCoreDb } from "../../env";
 import { firstColumnWhere } from "../../lib/sql/keyed-read";
 import { newUlid } from "../../lib/ids";
+import { nowSeconds } from "../../lib/now";
 import { isAllowedPhotoType } from "../../lib/photo-constraints";
 import { photoRefusal, withReleased } from "../../lib/photo-pipeline";
 import { fingerprintOf } from "../../lib/photo-fingerprint";
@@ -32,7 +33,7 @@ import {
 import {
   classifierFromEnv,
   enqueueForReview,
-  removedMatchOf,
+  isHeldAsRemovedCopy,
   screenPhoto,
   type Classify,
 } from "../safety";
@@ -181,10 +182,11 @@ export async function uploadPhoto(
 
 /**
  * Writes the photo's row, held for review when it is a copy of an image
- * removed as intimate (D-147, design 152): hidden from everyone but its
- * owner, as a classifier flag is, with a Review row in the same batch.
- * Returns whether it was held. The match is read first, since a batch
- * cannot branch on its own results.
+ * removed as intimate (D-147, design 152) and the fingerprint breaker has
+ * room (design 164): hidden from everyone but its owner, as a classifier
+ * flag is, with a Review row in the same batch. Returns whether it was
+ * held. The match is read first, since a batch cannot branch on its own
+ * results.
  */
 async function wasStoredHeld(
   database: ReturnType<typeof db>,
@@ -194,8 +196,12 @@ async function wasStoredHeld(
   // not this runner's, so the session's bookmark does not promise a replica
   // has it. Read from one, a copy posted seconds after its takedown would
   // miss the check and go to the classifier as any photo does.
-  const match = await removedMatchOf(primaryCoreDb(), row.fingerprint);
-  if (match === undefined) {
+  const isHeld = await isHeldAsRemovedCopy(
+    primaryCoreDb(),
+    row.fingerprint,
+    nowSeconds(),
+  );
+  if (!isHeld) {
     await database.insert(entryPhotos).values(row);
     return false;
   }

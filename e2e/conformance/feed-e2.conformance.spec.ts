@@ -1,5 +1,5 @@
 import { eq, sql } from "drizzle-orm";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../support/a11y";
 import type { Page } from "@playwright/test";
 
 import { userProfiles } from "../../src/db/schema-core";
