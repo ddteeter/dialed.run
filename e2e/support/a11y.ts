@@ -233,6 +233,26 @@ async function arm(
 }
 
 /**
+ * Runs a read of the final state, and once more if the document went away
+ * under it. The dev server reloads a page when it has just optimized a
+ * dependency, which on a fresh run lands right after the first test that
+ * loads it (`home.spec.ts`, 2026-11-03); the state that matters is the
+ * reloaded one. Any other error, or a second one, is the caller's.
+ */
+async function onSettledPage<T>(
+  page: Page,
+  read: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await read();
+  } catch (error) {
+    if (!String(error).includes("Execution context was destroyed")) throw error;
+    await page.waitForLoadState("load");
+    return read();
+  }
+}
+
+/**
  * Step 2's checks, timed. A page that navigates or closes under them is
  * a checker error, which fails the test like a finding: a check that
  * did not run must not read as one that passed.
@@ -244,14 +264,16 @@ async function runEndOfTest(
 ): Promise<void> {
   const started = performance.now();
   try {
-    await endOfTest(page, new URL(baseURL).origin, {
-      check: () => checkNow(page),
-      report: (report: PageReport) => {
-        for (const raw of report.findings) {
-          collected.findings.push(findingOf(report.url, raw));
-        }
-      },
-    });
+    await onSettledPage(page, () =>
+      endOfTest(page, new URL(baseURL).origin, {
+        check: () => checkNow(page),
+        report: (report: PageReport) => {
+          for (const raw of report.findings) {
+            collected.findings.push(findingOf(report.url, raw));
+          }
+        },
+      }),
+    );
   } catch (error) {
     collected.errors.push(`end of test: ${String(error)}`);
   }
@@ -275,7 +297,7 @@ async function readTranscript(
     return undefined;
   }
   try {
-    const phrases = await transcriptOf(page);
+    const phrases = await onSettledPage(page, () => transcriptOf(page));
     return `${phrases.join("\n")}\n`;
   } catch (error) {
     collected.errors.push(`transcript: ${String(error)}`);
