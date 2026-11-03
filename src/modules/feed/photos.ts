@@ -360,9 +360,9 @@ export async function photoResponse(
   // `=== ""` arm would be indistinguishable from letting it fall through
   // to the visibility check, which refuses it too — at the cost of a
   // query.
-  if (!key) return notFound();
-  if (!(await isPhotoVisible(key, viewerId))) return notFound();
-  return bytesResponse(key, RUNNER_CACHE);
+  return key && (await isPhotoVisible(key, viewerId))
+    ? bytesResponse(key, RUNNER_CACHE)
+    : notFound();
 }
 
 /**
@@ -400,8 +400,7 @@ export async function reviewerPhotoResponse(
   // deliberately — a 403 tells a stranger the photo exists, which is most
   // of what they wanted to know. A throw would also surface as a 500 on a
   // media URL, which says the same thing louder.
-  if (!isAdmin(viewerId)) return notFound();
-  return bytesResponse(key, REVIEW_CACHE);
+  return isAdmin(viewerId) ? bytesResponse(key, REVIEW_CACHE) : notFound();
 }
 
 /**

@@ -75,13 +75,12 @@ Is this node a product? `@type` may be a string or a list of them.
 function isProduct(value: unknown): value is object {
   if (typeof value !== "object" || value === null) return false;
   const type: unknown = Reflect.get(value, "@type");
-  if (typeof type === "string") return PRODUCT_TYPES.has(localType(type));
-  return (
-    Array.isArray(type) &&
-    type.some(
-      (one) => typeof one === "string" && PRODUCT_TYPES.has(localType(one)),
-    )
-  );
+  return typeof type === "string"
+    ? PRODUCT_TYPES.has(localType(type))
+    : Array.isArray(type) &&
+        type.some(
+          (one) => typeof one === "string" && PRODUCT_TYPES.has(localType(one)),
+        );
 }
 
 /**
