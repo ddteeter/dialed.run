@@ -48,8 +48,6 @@ export interface FeedCursor {
 
 const PAGE_SIZE = 20;
 
-type ModerationStatus = (typeof outfitEntries.$inferSelect)["moderationStatus"];
-
 /**
  * Strictly older than the cursor, in `(created_at, id)` order.
  *
@@ -123,6 +121,8 @@ export function followingFeedStatement(
   cursor: FeedCursor | undefined,
   limit = PAGE_SIZE,
 ) {
+  type ModerationStatus =
+    (typeof outfitEntries.$inferSelect)["moderationStatus"];
   const authors = database
     .select({
       id: follows.followeeId,

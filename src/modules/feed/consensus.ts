@@ -187,12 +187,11 @@ function isWithinConsensusBand(
   verdict: number | null,
   viewer: Conditions,
 ): boolean {
-  if (observation.source === "manual") return false;
-  if (precipClassOf(observation.precipMm) !== precipClassOf(viewer.precipMm))
-    return false;
   return (
+    observation.source !== "manual" &&
+    precipClassOf(observation.precipMm) === precipClassOf(viewer.precipMm) &&
     Math.abs(judgedFeelsLikeC(observation, verdict) - viewer.feelsLikeC) <=
-    BAND_HALF_WIDTH_C
+      BAND_HALF_WIDTH_C
   );
 }
 

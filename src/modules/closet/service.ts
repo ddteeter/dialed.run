@@ -582,11 +582,10 @@ export function summarizeByItem(rows: EntryItemRow[]): {
 
     // A retired piece is left out of the kits a pairing is read from, so it
     // is never offered as something to wear with another.
-    if (row.verdict === 0 && !row.retired) {
-      const items = dialedKits.get(row.entryId) ?? [];
-      items.push(row.itemId);
-      dialedKits.set(row.entryId, items);
-    }
+    if (row.verdict !== 0 || row.retired) continue;
+    const items = dialedKits.get(row.entryId) ?? [];
+    items.push(row.itemId);
+    dialedKits.set(row.entryId, items);
   }
 
   return { summaries, dialedKits };
@@ -649,8 +648,9 @@ export function pairsFor(
   summary: PerformanceSummary,
   counts: Map<string, number> | undefined,
 ): PairWith[] {
-  if (summary.runCount < PAIRS_WITH_MIN_RUNS) return [];
-  return topPairs(counts ?? new Map<string, number>(), PAIRS_WITH_LIMIT);
+  return summary.runCount < PAIRS_WITH_MIN_RUNS
+    ? []
+    : topPairs(counts ?? new Map<string, number>(), PAIRS_WITH_LIMIT);
 }
 
 /**
@@ -710,15 +710,11 @@ export function shouldIncludeByConditionFilters(
   effective: EffectiveAttributes,
   filters: ClosetFilters,
 ): boolean {
-  if (
-    filters.windResistant !== undefined &&
-    effective.windResistant !== filters.windResistant
-  ) {
-    return false;
-  }
   return (
-    filters.waterResistant === undefined ||
-    effective.waterResistant === filters.waterResistant
+    (filters.windResistant === undefined ||
+      effective.windResistant === filters.windResistant) &&
+    (filters.waterResistant === undefined ||
+      effective.waterResistant === filters.waterResistant)
   );
 }
 
@@ -884,13 +880,17 @@ export async function getItemsByIds(
   // Equivalent mutant: an empty `inArray` matches nothing, so the query
   // would answer with the same empty list. The return saves the query.
   // Stryker disable next-line ConditionalExpression
-  if (itemIds.length === 0) return [];
-  return db
-    .select()
-    .from(wardrobeItems)
-    .where(
-      and(eq(wardrobeItems.userId, userId), inArray(wardrobeItems.id, itemIds)),
-    );
+  return itemIds.length === 0
+    ? []
+    : db
+        .select()
+        .from(wardrobeItems)
+        .where(
+          and(
+            eq(wardrobeItems.userId, userId),
+            inArray(wardrobeItems.id, itemIds),
+          ),
+        );
 }
 
 /**
@@ -924,7 +924,7 @@ export async function getItemDetailWithPairs(
   const byId = new Map(rows.map((row) => [row.id, row]));
   const pairedItems = pairs.flatMap((pair) => {
     const item = byId.get(pair.itemId);
-    return item === undefined ? [] : [{ item, count: pair.count }];
+    return item === undefined ? [] : { item, count: pair.count };
   });
   return { ...detail, pairedItems };
 }

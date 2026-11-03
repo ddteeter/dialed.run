@@ -49,9 +49,10 @@ export async function pickerGroups(
     const { estTempLowC, estTempHighC } = item;
     const hasRange = estTempLowC !== null && estTempHighC !== null;
     const isMatches =
-      conditions === undefined || estTempLowC === null || estTempHighC === null
-        ? true
-        : estTempLowC <= conditions.tempC && conditions.tempC <= estTempHighC;
+      conditions === undefined ||
+      estTempLowC === null ||
+      estTempHighC === null ||
+      (estTempLowC <= conditions.tempC && conditions.tempC <= estTempHighC);
     const list = byGroup.get(group) ?? [];
     list.push({
       id: item.id,

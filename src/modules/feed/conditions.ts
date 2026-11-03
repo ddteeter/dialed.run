@@ -23,8 +23,6 @@ import { chunked, readInChunks } from "../../lib/chunked";
 import { isTimeZone } from "../../lib/dates";
 import { pointSpan } from "./conditions-shape";
 import type { Conditions } from "./conditions-shape";
-
-type ObservationRow = typeof weatherObservations.$inferSelect;
 import { weatherDb } from "../../env";
 // The cache key and its predicate come from the module that owns the table
 // (docs/architecture.md: only modules/weather touches dialed-weather).
@@ -123,6 +121,7 @@ export async function observationsForEntries(
 export async function observationsForRuns(
   batch: readonly Locatable[],
 ): Promise<Map<string, Conditions>> {
+  type ObservationRow = typeof weatherObservations.$inferSelect;
   // Every hour the run touched, not just the one it began in. The walk is
   // `runHourKeys` from the weather module rather than a local copy,
   // because `attach.ts` uses the same one to decide which hours to
@@ -131,12 +130,10 @@ export async function observationsForRuns(
   const spans = batch.flatMap((run) =>
     run.lat === null || run.lng === null
       ? []
-      : [
-          {
-            runId: run.id,
-            keys: runHourKeys(run.lat, run.lng, run.startedAt, run.durationS),
-          },
-        ],
+      : {
+          runId: run.id,
+          keys: runHourKeys(run.lat, run.lng, run.startedAt, run.durationS),
+        },
   );
   const keyed = spans.flatMap(({ runId, keys }) =>
     keys.map((key) => ({ runId, key })),
@@ -313,6 +310,7 @@ export async function conditionsAt(
   // match and answers undefined anyway. The guard says the intent — "we do
   // not know where you are" — and saves the query.
   // Stryker disable next-line ConditionalExpression,LogicalOperator
-  if (lat === undefined || lng === undefined) return undefined;
-  return currentConditions(lat, lng, nowEpochSeconds);
+  return lat === undefined || lng === undefined
+    ? undefined
+    : currentConditions(lat, lng, nowEpochSeconds);
 }

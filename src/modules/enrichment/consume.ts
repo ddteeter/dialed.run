@@ -454,6 +454,7 @@ export async function reextract(
   const latest = await latestSnapshot(deps.db, productId, 0);
   if (latest === undefined) return undefined;
   const html = await readSnapshot(latest.r2Key);
-  if (html === undefined) return undefined;
-  return extractStored(deps, productId, latest, html);
+  return html === undefined
+    ? undefined
+    : extractStored(deps, productId, latest, html);
 }

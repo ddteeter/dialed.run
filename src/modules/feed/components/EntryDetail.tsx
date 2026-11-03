@@ -215,7 +215,7 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
 function tagsOf(stored: readonly string[]): EntryTag[] {
   return stored.flatMap((tag) => {
     const parsed = entryTagSchema.safeParse(tag);
-    return parsed.success ? [parsed.data] : [];
+    return parsed.success ? parsed.data : [];
   });
 }
 

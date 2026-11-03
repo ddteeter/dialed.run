@@ -136,11 +136,15 @@ async function optionalMail(
   // an explicit `undefined` value here was a mutant no input could kill.
   const preference = preferenceFor(payload.template.kind);
   if (preference === undefined) return {};
-  if (!recipient.isVerified) return "skip";
-  // No secret, no link — and optional mail without its unsubscribe link
-  // does not go (fail closed; `/api/health` names the secret).
-  if (deps.secret === undefined || deps.secret === "") return "skip";
-  if (!(await isEmailWanted(db, recipient.userId, preference))) return "skip";
+  if (
+    !recipient.isVerified ||
+    // No secret, no link — and optional mail without its unsubscribe link
+    // does not go (fail closed; `/api/health` names the secret).
+    deps.secret === undefined ||
+    deps.secret === "" ||
+    !(await isEmailWanted(db, recipient.userId, preference))
+  )
+    return "skip";
   return {
     unsubscribe: await unsubscribeUrl(
       deps.origin,

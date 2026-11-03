@@ -81,8 +81,8 @@ export function nearestMatch<T extends HistoryEntry>(
   let best: BestMatch<T> | undefined;
   for (const entry of history) {
     const observation = observations.get(entry.runId);
-    if (!observation) continue;
-    if (precipClassOf(observation.precipMm) !== targetPrecip) continue;
+    if (!observation || precipClassOf(observation.precipMm) !== targetPrecip)
+      continue;
     const delta = Math.abs(observation.feelsLikeC - target.feelsLikeC);
     if (!best || delta < best.feelsLikeDeltaC) {
       best = { entry, conditions: observation, feelsLikeDeltaC: delta };
@@ -141,6 +141,7 @@ export async function prefillAt(
   nowEpochSeconds: number,
 ): Promise<PrefillCandidate | undefined> {
   const conditions = await conditionsAt(lat, lng, nowEpochSeconds);
-  if (conditions === undefined) return undefined;
-  return nearestPriorEntry(userId, conditions);
+  return conditions === undefined
+    ? undefined
+    : nearestPriorEntry(userId, conditions);
 }
