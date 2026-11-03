@@ -25,7 +25,7 @@ interface Walk {
   */
   start: () => number;
   /**
-  Measures where focus is now; true once the walk is back at its start.
+  Measures where focus is now; true once focus is back at the start or has left the page.
   */
   step: () => boolean;
   /**
@@ -59,11 +59,15 @@ export function installWalk(origin: string): void {
     "[role=tablist], [role=radiogroup], [role=toolbar], [role=listbox], [role=menu], [role=menubar], [role=grid], [role=tree]";
 
   /*
-   * How long the walk may sit on an iframe. Tab moves inside the frame's
-   * own document, so the parent sees the same element for each control
-   * in it (Turnstile's widget is one).
+   * How long the walk may sit on one element whose Tab moves inside it:
+   * an iframe, whose own document has controls (Turnstile's widget), or
+   * a date or time input, whose day, month, year and hour are fields
+   * Chromium tabs through while the input stays the active element.
    */
-  const FRAME_PRESSES = 30;
+  const INNER_PRESSES = 30;
+
+  const INNER_STOPS =
+    "iframe, input[type=date], input[type=datetime-local], input[type=time], input[type=month], input[type=week]";
 
   const name = (element: Element): string =>
     globalThis.__a11yDescribe?.(element) ?? element.tagName.toLowerCase();
@@ -77,10 +81,9 @@ export function installWalk(origin: string): void {
     controls: [] as Element[],
     reached: new Set<Element>(),
     findings: [] as PageFinding[],
-    first: undefined as Element | undefined,
+    sentinel: undefined as HTMLElement | undefined,
     last: undefined as Element | undefined,
-    frameRun: 0,
-    bodyRun: 0,
+    innerRun: 0,
     isTrapped: false,
   };
 
@@ -128,6 +131,34 @@ export function installWalk(origin: string): void {
         if (getComputedStyle(parent).overflowX !== "visible") return true;
       }
       return false;
+    },
+
+    /*
+     * Where a sideways overflow begins: the element runs past the
+     * viewport and its parent does not.
+     */
+    startsOverflow(element: Element, width: number): boolean {
+      const right = element.getBoundingClientRect().right;
+      const parent = element.parentElement?.getBoundingClientRect().right;
+      return (
+        right > width + 1 &&
+        (parent === undefined || parent <= width + 1) &&
+        !geometry.isContained(element)
+      );
+    },
+
+    /*
+     * Content that runs past its own box and the viewport: a long word or
+     * a URL that does not wrap, which no element's box shows.
+     */
+    spills(element: Element, width: number): boolean {
+      if (element.scrollWidth <= element.clientWidth + 1) return false;
+      const left = element.getBoundingClientRect().left;
+      return (
+        left + element.scrollWidth > width + 1 &&
+        getComputedStyle(element).overflowX === "visible" &&
+        !geometry.isContained(element)
+      );
     },
 
     hasRing(element: Element): boolean {
@@ -228,7 +259,9 @@ export function installWalk(origin: string): void {
       return state.controls.filter(
         (element) =>
           !state.reached.has(element) &&
-          !reachedGroups.has(controls.groupOf(element)),
+          !reachedGroups.has(controls.groupOf(element)) &&
+          // Before the walk's start in Tab order; `tab-order` names it.
+          !(element instanceof HTMLElement && element.tabIndex > 0),
       );
     },
   };
@@ -250,25 +283,16 @@ export function installWalk(origin: string): void {
     },
 
     /**
-    Focus on the page itself: true after two in a row, an empty page.
-    */
-    onBody(): boolean {
-      state.bodyRun += 1;
-      state.last = undefined;
-      return state.first === undefined && state.bodyRun > 1;
-    },
-
-    /**
-    Focus did not move. In a frame that is the frame's own walk.
+    Focus did not move. In a frame or a date input, Tab moved inside.
     */
     isStuck(active: Element): boolean {
       if (active !== state.last) {
-        state.frameRun = 0;
+        state.innerRun = 0;
         return false;
       }
-      if (active.tagName !== "IFRAME") return true;
-      state.frameRun += 1;
-      return state.frameRun > FRAME_PRESSES;
+      if (!active.matches(INNER_STOPS)) return true;
+      state.innerRun += 1;
+      return state.innerRun > INNER_PRESSES;
     },
   };
 
@@ -282,26 +306,40 @@ export function installWalk(origin: string): void {
           state.findings.push(finding("tab-order", element));
         }
       }
+      /*
+       * Chromium's Tab past the last control lands on the page, and the
+       * next Tab resumes from wherever focus last started, not from the
+       * top. So the walk is a line, not a loop: from a stop placed first
+       * in the page (or the open modal) until focus is back on it or
+       * leaves the page.
+       */
+      const sentinel = document.createElement("span");
+      sentinel.tabIndex = 0;
+      const host: Element = modal ?? document.body;
+      host.insertBefore(sentinel, host.firstChild);
+      sentinel.focus();
+      state.sentinel = sentinel;
       return Math.min(2 * state.controls.length + 10, 400);
     },
 
     step() {
       const active = document.activeElement;
-      if (active === null || active === document.body) return stops.onBody();
-      state.bodyRun = 0;
+      if (active === null || active === document.body) return true;
+      if (state.sentinel !== undefined && active.isSameNode(state.sentinel)) {
+        return true;
+      }
       if (stops.isStuck(active)) {
         state.isTrapped = true;
         return true;
       }
       if (active === state.last) return false;
       state.last = active;
-      if (active === state.first) return true;
-      state.first ??= active;
       stops.measure(active);
       return false;
     },
 
     finish(isCut) {
+      state.sentinel?.remove();
       const trap = state.last ?? document.body;
       if (isCut || state.isTrapped) {
         state.findings.push(finding("focus-trap", trap));
@@ -319,18 +357,17 @@ export function installWalk(origin: string): void {
       const width = document.documentElement.clientWidth;
       const report = { url: location.pathname, findings: [] as PageFinding[] };
       if (document.documentElement.scrollWidth <= width) return report;
-      const starts = [...document.body.querySelectorAll("*")].filter(
-        (element) => {
-          const right = element.getBoundingClientRect().right;
-          const parent = element.parentElement?.getBoundingClientRect().right;
-          return (
-            right > width + 1 &&
-            (parent === undefined || parent <= width + 1) &&
-            !geometry.isContained(element)
-          );
-        },
+      const all = [...document.body.querySelectorAll("*")];
+      const starts = all.filter((element) =>
+        geometry.startsOverflow(element, width),
       );
-      const found = starts.length === 0 ? [document.documentElement] : starts;
+      const spills = all.filter((element) => geometry.spills(element, width));
+      const deepest = spills.filter((element) =>
+        spills.every((other) => other === element || !element.contains(other)),
+      );
+      const found = [starts, deepest, [document.documentElement]].find(
+        (set) => set.length > 0,
+      ) ?? [document.documentElement];
       report.findings = found.map((element) => finding("reflow", element));
       return report;
     },

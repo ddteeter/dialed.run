@@ -118,6 +118,7 @@ const WALK = `<!doctype html>
     <label><input type="radio" name="pick">A</label>
     <label><input type="radio" name="pick">B</label>
     <div class="field-box"><input aria-label="Field"></div>
+    <input type="date" aria-label="Day">
     <input type="file" tabindex="-1" aria-label="Photo" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">
   </div>
 </main></body></html>`;
@@ -152,6 +153,7 @@ const WIDTHS = `<!doctype html>
   <h1>Widths</h1>
   <img class="phone" src="/x.png">
   <div class="wide" style="width:400px">Wide</div>
+  <p class="word">Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</p>
   <div class="strip" style="overflow-x:auto;width:200px"><div style="width:600px">Strip</div></div>
 </main></body></html>`;
 
@@ -200,4 +202,14 @@ test("the other width and 320px are checked", async ({ page, a11y }) => {
     "image-alt img.phone",
     "reflow div.wide",
   ]);
+});
+
+test("reflow names a word too long to wrap", async ({ page, a11y }) => {
+  expect(
+    await endFindings(
+      page,
+      a11y,
+      WIDTHS.replace('<div class="wide" style="width:400px">Wide</div>', ""),
+    ),
+  ).toStrictEqual(["image-alt img.phone", "reflow p.word"]);
 });
