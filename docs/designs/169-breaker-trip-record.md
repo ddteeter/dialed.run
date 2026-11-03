@@ -72,5 +72,6 @@ differ only once there is real traffic.
 
 ## Open questions
 
-- Option 3 vs 2: is losing the double-hold count after a reopen acceptable?
-  The live breaker already counts a reopened row once.
+- **Option 3 chosen** (owner, 2026-11-02). After a reopen, a subject held
+  twice in the window counts once. That is accepted, since the live breaker
+  counts it the same way.
