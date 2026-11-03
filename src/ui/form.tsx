@@ -818,7 +818,7 @@ export const NO_CHOICE = "";
  * from the right. `appearance-none` hides the native one; the ▾ sits 12px in
  * (`right-3`, the same step as `pl-3`), and `pr-8` keeps a long label from
  * running under it. The mark is ▾ rather than an icon because design already
- * draws it: round 38's Desk remove-reason select, the boards' "SORT: MOST
+ * draws it: round 28's Desk remove-reason select, the boards' "SORT: MOST
  * DIALED ▾", and `MoreDisclosure`'s "more".
  *
  * The ▾ is `aria-hidden` — the select already says it is a select — and
