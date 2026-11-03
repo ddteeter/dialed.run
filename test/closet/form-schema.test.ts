@@ -105,7 +105,12 @@ describe("garmentFormSchema", () => {
     [
       "productUrl",
       urlWithScheme("http"),
-      "Product links need to start with https://",
+      "Use a link that starts with https://.",
+    ],
+    [
+      "productUrl",
+      "not a url",
+      "That isn't a link. Paste the address of the shop's page.",
     ],
   ])(
     "says what is wrong with %s in the contract's voice",
@@ -196,5 +201,36 @@ describe("§AH's colour fields, through the form schema", () => {
 
   it("refuses a hex that is not one, with the schema's own sentence", () => {
     expect(() => parsed({ colorHex: "nope" })).toThrow(/six-digit hex/);
+  });
+});
+
+function linkOf(productUrl: string): string | undefined {
+  const parsed = garmentFormSchema.parse({ ...VALID, productUrl });
+  return parsed.productUrl;
+}
+
+describe("F's product link (round 43 #93)", () => {
+  it("adds https:// to a link typed without a scheme", () => {
+    expect(linkOf("janji.com/afo")).toBe("https://janji.com/afo");
+    expect(linkOf("  janji.com/afo ")).toBe("https://janji.com/afo");
+  });
+
+  it("keeps a link that names its scheme as typed", () => {
+    expect(linkOf("https://janji.com/afo")).toBe("https://janji.com/afo");
+  });
+
+  it("leaves an empty field absent, which is how a cleared link is removed", () => {
+    expect(linkOf("")).toBeUndefined();
+    expect(linkOf(" ".repeat(3))).toBeUndefined();
+  });
+
+  it("never upgrades a link typed with http", () => {
+    const result = garmentFormSchema.safeParse({
+      ...VALID,
+      productUrl: urlWithScheme("http"),
+    });
+    expect(result.error?.issues[0]?.message).toBe(
+      "Use a link that starts with https://.",
+    );
   });
 });

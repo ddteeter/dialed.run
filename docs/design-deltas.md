@@ -940,99 +940,192 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
       and Au6 still draws Google's fault band above the button. **The ask:**
       redraw both, D0 in D-87's order.
 
-<!-- Numbered from the note below, not from 44: a list break, so Prettier keeps 93. -->
+<!-- Numbered from the note below, not from 44: a list break, so Prettier keeps 99. -->
 
-93. **Au7's notice says what was typed is gone, and names a page as well
-    as a form (D-155, design 166).** _Drawn:_ Auth's "Au7 Signed out
-    arrival" — "Log in and you're back on your run. What you entered is
-    kept.", with the annotation "It names what's kept … After Log in, the
-    runner lands on the filled form they left".
-    - **Built instead (owner, 2026-10-31):** no form is restored, the shape
-      of D-96 / D-102 for the terms refusal. The second sentence is "What
-      you typed wasn't kept." Log in still returns to the form's page, as a
-      fresh form, and nothing re-submits.
-    - **Every signed-in form carries**, not only the three the board
-      names. Run, garment and settings forms keep "your run" / "your
-      garment" / "your settings"; every other one (onboarding steps, a
-      report, the Desk's forms) says "Log in and you're back where you
-      were. What you typed wasn't kept."
-    - **The ask:** redraw Au7's notice to the built sentence, annotate the
-      generic variant, and drop "lands on the filled form" from the
-      annotation.
+99.  **Au7's notice says what was typed is gone, and names a page as well
+     as a form (D-155, design 166).** _Drawn:_ Auth's "Au7 Signed out
+     arrival" — "Log in and you're back on your run. What you entered is
+     kept.", with the annotation "It names what's kept … After Log in, the
+     runner lands on the filled form they left".
+     - **Built instead (owner, 2026-10-31):** no form is restored, the shape
+       of D-96 / D-102 for the terms refusal. The second sentence is "What
+       you typed wasn't kept." Log in still returns to the form's page, as a
+       fresh form, and nothing re-submits.
+     - **Every signed-in form carries**, not only the three the board
+       names. Run, garment and settings forms keep "your run" / "your
+       garment" / "your settings"; every other one (onboarding steps, a
+       report, the Desk's forms) says "Log in and you're back where you
+       were. What you typed wasn't kept."
+     - **The ask:** redraw Au7's notice to the built sentence, annotate the
+       generic variant, and drop "lands on the filled form" from the
+       annotation.
 
-94. **A photo still pending a day after upload, on Review (D-157, design
-    167).** Built as a placeholder from the review row that exists: no
-    board draws it. The row is the photo row (kicker `photo · {id}` or
-    `garment photo · {id}`, the decision bar unchanged), with two
-    differences.
-    - **The tag** under the row: `[not screened in a day]` when the
-      classifier never answered, `[file missing]` when storage has no
-      object to screen.
-    - **The why-here line**, in the body face where a reported row lists
-      the reporters' reasons (as the flagged-handle row does): _"Uploaded
-      over a day ago and still not screened: the classifier has not
-      answered for it. Nobody but its owner sees it while it waits."_, or
-      _"Uploaded over a day ago, and its file is not in storage, so it
-      cannot be screened or shown. Nobody but its owner sees it while it
-      waits."_ A `[file missing]` row draws no photo, since there is none
-      to load.
-    - Today counts both in "photos the screener couldn't finish".
-    - **Clear photo** (owner, 2026-10-31): a `[file missing]` row's
-      decision bar has Clear photo where Approve sits, as the same quiet
-      text button, then Remove and Remove as suspected CSAM. It takes the
-      photo off and the owner's bell says: _"We couldn't find the file for
-      a photo on your run, so we took it off your kit. Add it again if
-      you'd like it there."_, or for a garment _"We couldn't find the file
-      for the photo on one of your garments, so we took it off. Add it
-      again from your Closet if you'd like it there."_
-    - **The ask:** draw the row and its Clear photo bar, and confirm or
-      replace the two tags, two lines, the label and the two notices.
+100. **A photo still pending a day after upload, on Review (D-157, design
+     167).** Built as a placeholder from the review row that exists: no
+     board draws it. The row is the photo row (kicker `photo · {id}` or
+     `garment photo · {id}`, the decision bar unchanged), with two
+     differences. - **The tag** under the row: `[not screened in a day]` when the
+     classifier never answered, `[file missing]` when storage has no
+     object to screen. - **The why-here line**, in the body face where a reported row lists
+     the reporters' reasons (as the flagged-handle row does): _"Uploaded
+     over a day ago and still not screened: the classifier has not
+     answered for it. Nobody but its owner sees it while it waits."_, or
+     _"Uploaded over a day ago, and its file is not in storage, so it
+     cannot be screened or shown. Nobody but its owner sees it while it
+     waits."_ A `[file missing]` row draws no photo, since there is none
+     to load. - Today counts both in "photos the screener couldn't finish". - **Clear photo** (owner, 2026-10-31): a `[file missing]` row's
+     decision bar has Clear photo where Approve sits, as the same quiet
+     text button, then Remove and Remove as suspected CSAM. It takes the
+     photo off and the owner's bell says: _"We couldn't find the file for
+     a photo on your run, so we took it off your kit. Add it again if
+     you'd like it there."_, or for a garment _"We couldn't find the file
+     for the photo on one of your garments, so we took it off. Add it
+     again from your Closet if you'd like it there."_ - **The ask:** draw the row and its Clear photo bar, and confirm or
+     replace the two tags, two lines, the label and the two notices.
 
-95. **Today's tripped-breaker line (design 164).** Undesigned. When a hold
-    breaker is at its ceiling this hour, Today shows one line per cause under
-    the three numbers and above OPS-11's skipped-operator line. It is
-    composed exactly as OPS-11's is: a hi-viz `MONO.xs` kicker HOLDS PAUSED
-    over one `text-body` sentence, and no button, because it clears itself
-    as the hour drains. The sentences say what stopped and what happens
-    instead, for example _"Reports hid 12 posts in the last hour, the most
-    they hide in one hour. New ones go to Review without being hidden until
-    the hour clears."_ **The ask:** draw it on D0, or confirm the
-    composition and the copy.
+101. **Today's tripped-breaker line (design 164).** Undesigned. When a hold
+     breaker is at its ceiling this hour, Today shows one line per cause under
+     the three numbers and above OPS-11's skipped-operator line. It is
+     composed exactly as OPS-11's is: a hi-viz `MONO.xs` kicker HOLDS PAUSED
+     over one `text-body` sentence, and no button, because it clears itself
+     as the hour drains. The sentences say what stopped and what happens
+     instead, for example _"Reports hid 12 posts in the last hour, the most
+     they hide in one hour. New ones go to Review without being hidden until
+     the hour clears."_ **The ask:** draw it on D0, or confirm the
+     composition and the copy.
 
-96. **Review's match grid: a floor count, and a many-runners warning
-    (design 164).** Undesigned additions to round 39 #71's MATCHING PHOTOS
-    · ANY RUNNER · N:
-    - When either list has more than its 12, the count reads `12+`, so a
-      count the search did not finish is not shown as a total.
-    - When the matches come from more than three runners, a line sits above
-      the grid, composed as Today's notices are: a hi-viz `MONO.xs` kicker
-      _"Photos from N runners match"_ over a `text-micro` sentence, _"A
-      picture this common may not be one person's. Removed as intimate, it
-      would hold every later upload that looks like it."_ It is there
-      because a Remove as intimate keeps the fingerprint (D-147).
+102. **Review's match grid: a floor count, and a many-runners warning
+     (design 164).** Undesigned additions to round 39 #71's MATCHING PHOTOS
+     · ANY RUNNER · N: - When either list has more than its 12, the count reads `12+`, so a
+     count the search did not finish is not shown as a total. - When the matches come from more than three runners, a line sits above
+     the grid, composed as Today's notices are: a hi-viz `MONO.xs` kicker
+     _"Photos from N runners match"_ over a `text-micro` sentence, _"A
+     picture this common may not be one person's. Removed as intimate, it
+     would hold every later upload that looks like it."_ It is there
+     because a Remove as intimate keeps the fingerprint (D-147).
 
     **The ask:** draw both on the Review row, or confirm them.
 
-97. **Review's "Held in the last day" (design 164).** Undesigned. At the
-    top of Review, one line per cause that has holds still waiting from
-    the last day: a `MONO.xs` label, for example _"Fingerprint matches · 37
-    waiting"_, then an _"Approve all 37"_ link. The link opens the deletes'
-    confirm sheet (round 22's grammar):
-    - heading _"Approve 37 fingerprint holds?"_;
-    - body _"Each one is approved as if you'd pressed Approve on it: it
-      goes back where an Approve puts it, and anyone an Approve tells is
-      told. Use this when a bug held them, not to skip looking."_;
-    - **Approve all**, with **Keep it** focused. While it works, the
-      button reads _"Approving"_, then _"Approved 50 of 120"_ after each
-      batch (owner, 2026-11-02): it releases 50 a request, and the operator
-      waits on it.
+103. **Review's "Held in the last day" (design 164).** Undesigned. At the
+     top of Review, one line per cause that has holds still waiting from
+     the last day: a `MONO.xs` label, for example _"Fingerprint matches · 37
+     waiting"_, then an _"Approve all 37"_ link. The link opens the deletes'
+     confirm sheet (round 22's grammar): - heading _"Approve 37 fingerprint holds?"_; - body _"Each one is approved as if you'd pressed Approve on it: it
+     goes back where an Approve puts it, and anyone an Approve tells is
+     told. Use this when a bug held them, not to skip looking."_; - **Approve all**, with **Keep it** focused. While it works, the
+     button reads _"Approving"_, then _"Approved 50 of 120"_ after each
+     batch (owner, 2026-11-02): it releases 50 a request, and the operator
+     waits on it.
 
     It is the undo for a burst the breakers bounded but nobody saw in time.
+
     **The ask:** draw it, or confirm the composition and copy.
 
-_Items 95–97 are open (design 164)._
+_Items 101–103 are open (design 164)._
 
-<!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. This comment keeps the list from being renumbered. -->
+<!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
+
+## Answered in round 43 (imported 2026-10-31)
+
+Design answered as `Round 43 Rulings.dc.html`, items 93–98, with the text
+of record under "Round 43 · Items 93–98 · Product links" in
+`design/docs/product.md`. AC2b is met for F and E: every reachable
+outcome has a drawn place. P2.5 keeps no link field. Built in design 163.
+
+- **93 · F's link field. Built** (design 163, PR B). A FormField after brand
+  and model, "Product link · optional", with a hint that says it needs a
+  brand and model. A link typed without a scheme gets https:// on save;
+  only an explicit http:// or a non-URL errors, on blur and submit. Denied
+  comes back on the server field-error path with today's words. Edit with
+  a since-denied link shows the message on open, and Save is refused
+  until the field changes.
+- **94 · Outcomes. Built** (design 163, PR B). No F2a/F2b screens: F never
+  waits, and E carries one MONO.xs line under the link (found, reading,
+  couldn't read with "TRYING AGAIN TODAY" for the first day, found
+  nothing, not read: no brand and model, or email unconfirmed).
+  Product-filled stat values are --quiet, the runner's are ink.
+  Composition's kicker names its source. On Edit a product-filled field
+  shows the product's value as its placeholder. A late result just appears
+  the next time E loads. **Built as, three readings to confirm:** (a) the
+  board draws a WEIGHT / FABRIC / WIND grid E does not have; the build
+  greys words in E's existing attribute line ("mid · synthetic"), per the
+  text's "E's existing stats". (b) Weight and fabric are selects, so the
+  placeholder is the empty option's text ("Mid" instead of "—"). The wind
+  and water toggles have no placeholder: a checkbox cannot show one, and
+  F writes both on every save, so they are always the runner's. (c) For
+  93's "not a URL", a host with no dot (`https://janji`) also reads "That
+  isn't a link."
+- **95 · E. Built** (design 163, PR B). In the identity block under the name:
+  ProductLink labelled "Shop page", then the outcome line. Change or
+  remove only through Edit. A denied link: nothing on E.
+- **96 · Kit views. Built:** D in PR B, /kit in PR A. D in, as /kit. The feed card and the /@handle
+  rotation are out. The outcome line is on E only.
+- **97 · O3. Ruled out for v1; nothing to build.** The build never had
+  the field. O3 is redrawn without it, closing R-55.
+- **98 · Product images. None; nothing to build.** The photo slot is the
+  runner's photo or nothing, never enrichment's copy (R-67 stays open).
+
+Lifted from the open queue, as asked:
+
+93. **F's product-link field returns (design 163).** **ANSWERED by round 43.**
+    Undesigned when asked; AC2b took the field off F because F could only ever say
+    "Enrichment pending". Design 163 makes enrichment reachable from a
+    paste, so the field comes back on F (add, and Edit as F prefilled).
+    Optional, after brand and model: a link reads nothing without a brand
+    and a model. **The ask:** draw five states. Empty. Typed or pasted.
+    Invalid, for a link that isn't https or doesn't parse; it gets field
+    words, checked before save. Denied: the save is refused, and the
+    message must not name the list or a reason (842cdc53). Today's words
+    are "That link isn't allowed here. The rest of the piece is fine."
+    Edit with a stored link denied since it was saved: the same message
+    on open, and the save refused until the field is cleared. **No
+    duplicate state:** nothing detects one by URL.
+
+94. **F2a / F2b: what enrichment did with the link (design 163).**
+    **ANSWERED by round 43.** Undesigned when asked. Enrichment reads the page in the background
+    and writes the **shared product**, never the garment. It fills
+    composition (verbatim and parts), weight, fabric, wind-resistant,
+    water-resistant and a category hint. It never fills brand, name or
+    type (R-33), and its image is never shown (R-67). A garment shows
+    those values only where the runner left the field blank, and anything
+    the runner enters always wins. The outcomes: found specs; read the page
+    and found nothing; couldn't read it (the shop refused, 404, too big);
+    still reading; nothing read yet (no brand, or the address unconfirmed).
+    Usually under a minute, sometimes up to ~75 min, and a failure can
+    still turn into specs found within the first day. A product another
+    runner's link already read has its result at save. **The ask:** F2a
+    (found: what is shown, and that the runner overrides it by setting
+    the field on Edit) and F2b (couldn't read). Recommendation: the save
+    never waits; F returns to E as today, and E carries the outcome as one
+    line by the link, with no notification kind.
+
+95. **E shows the link (design 163).** **ANSWERED by round 43.** Undesigned when asked. 842cdc53
+    put `ProductLink` on E (the link text plus its bare domain in mono,
+    `rel="ugc nofollow noopener"`) and task 122 took it off with F's
+    field. **The ask:** where the link and its domain sit in Y's order,
+    where the outcome line from 94 goes, and the edit/remove affordance.
+    Recommendation: in the identity block under the name, removed or
+    changed through Edit (F prefilled) rather than a control of its own.
+    A denied link shows nowhere, E included.
+
+96. **Links on kit views (design 163).** **ANSWERED by round 43.** /kit is confirmed
+    by round 42 #90 ("Linked piece: domain beside it, as ProductLink").
+    Undrawn: kit detail D's kit list, the feed card (round 26 dropped the
+    kit from it) and the /@handle rotation. **The ask:** in or out for
+    each. Recommendation: D in, the same treatment as /kit; the feed card
+    and the rotation out.
+
+97. **O3's paste field: in or out for v1 (R-55, design 163).** **ANSWERED by round 43.** The
+    artboard draws `brand.com/product…` with SPECS FOUND, and
+    `TapListForm` never built it. The tap list makes generic rows with no
+    brand, and a link reads nothing without a brand and a model (93).
+    **The ask:** rule it. Recommendation: out for v1; redraw O3 without
+    it.
+
+98. **Product images (R-67, design 163).** **ANSWERED by round 43.** Enrichment copies a shop's
+    primary image to R2, and nothing serves it. Showing one is the
+    owner's call on rights (R-67). **The ask:** confirm none of 93–97
+    shows a product image. Recommendation: none.
 
 ## Answered in round 42 (imported 2026-10-28 and 2026-10-29)
 

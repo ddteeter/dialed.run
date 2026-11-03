@@ -38,6 +38,7 @@ export {
   tapListFor,
   tapListSelectionSchema,
 } from "./tap-list";
+export { allowedLinksOf } from "./garment-link";
 export { photoUrlFor } from "./photo-url";
 export {
   publicRotation,

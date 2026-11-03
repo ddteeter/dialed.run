@@ -199,12 +199,13 @@ publish" and names no schedule.
 
 ## Product lookups
 
-| Claim                                       | Source                                                                                                              |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Server fetches, Firecrawl fallback          | `src/modules/enrichment/fetch-page.ts`, `enrichment/firecrawl.ts`                                                   |
-| Page copy kept                              | `schema-core.ts` `productSnapshots`; `docs/contracts.md` "product_snapshots (retention)"                            |
-| Page text + URL to OpenAI, nothing personal | `enrichment/model/chat-completions.ts`; `enrichment/model/from-env.ts`                                              |
-| Shared catalogue, creator recorded          | `schema-core.ts` `products.createdBy`; reportable as `subjectType: "product"`; kept at deletion (`purge.ts` header) |
+| Claim                                                         | Source                                                                                                                                                         |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Server fetches, Firecrawl fallback                            | `src/modules/enrichment/fetch-page.ts`, `enrichment/firecrawl.ts`                                                                                              |
+| Page copy kept                                                | `schema-core.ts` `productSnapshots`; `docs/contracts.md` "product_snapshots (retention)"                                                                       |
+| Page text + URL to OpenAI, nothing personal                   | `enrichment/model/chat-completions.ts`; `enrichment/model/from-env.ts`                                                                                         |
+| Shared catalogue, creator recorded                            | `schema-core.ts` `products.createdBy`; reportable as `subjectType: "product"`; kept at deletion (`purge.ts` header)                                            |
+| A garment's link shown, with its site, on kits others can see | `feed/entries.ts` (D's kit list) and `feed/public-kit.ts` (/kit), both through `closet.allowedLinksOf`; the site is `ui/ProductLink.tsx`'s domain (design 163) |
 
 ## Moderation
 

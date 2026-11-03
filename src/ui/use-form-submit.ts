@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
 import {
@@ -282,6 +282,13 @@ export interface UseFormSubmitOptions<TSchema extends z.ZodType, TResult> {
    */
   confirmTrigger?: ConfirmTrigger | undefined;
   /**
+   * What is already wrong when the form opens: Edit on a piece whose stored
+   * link was denied since it was saved (round 43 #93). Shown at once, and
+   * the field takes focus, as a failed submit's one error would; it clears
+   * on input like any other.
+   */
+  initialErrors?: FieldErrors | undefined;
+  /**
    * The noun Au7's notice names this form by, should its save be refused
    * because the session lapsed: the root then sends the runner to log-in
    * (`ui/session-lapse`) instead of showing the band. Without it, the
@@ -303,8 +310,8 @@ export function useRefusalAnswers() {
  * A form's field errors, and the per-field props that show and clear them.
  * `isPending` makes every control read-only while a submit is in flight.
  */
-function useFieldErrors(isPending: boolean) {
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+function useFieldErrors(isPending: boolean, initial: FieldErrors) {
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>(initial);
 
   /**
   Clears on input, never on blur, and never re-validates while typing.
@@ -340,7 +347,20 @@ function useFieldErrors(isPending: boolean) {
     [isPending, fieldErrors, clearField],
   );
 
-  return { fieldErrors, setFieldErrors, field };
+  /**
+   * One field's sentence, from a check the form runs itself: F's link on
+   * blur (round 43 #93). A check that passes clears it.
+   *
+   * Not memoised: only an event handler calls it, so its identity is
+   * nobody's dependency, and `[clearField]` was a list no test could tell
+   * from `[]` since `clearField` never changes.
+   */
+  function markField(name: string, message: string | undefined) {
+    if (message === undefined) clearField(name);
+    else setFieldErrors((previous) => ({ ...previous, [name]: message }));
+  }
+
+  return { fieldErrors, setFieldErrors, field, markField };
 }
 
 export function useFormSubmit<TSchema extends z.ZodType, TResult>({
@@ -351,10 +371,14 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
   labels,
   refusal,
   confirmTrigger,
+  initialErrors = {},
   carry,
 }: UseFormSubmitOptions<TSchema, TResult>) {
   const [pending, setPending] = useState(false);
-  const { fieldErrors, setFieldErrors, field } = useFieldErrors(pending);
+  const { fieldErrors, setFieldErrors, field, markField } = useFieldErrors(
+    pending,
+    initialErrors,
+  );
   const [failure, setFailure] = useState<FormFailure | undefined>();
   const [status, setStatus] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
@@ -381,6 +405,12 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
       ?.focus();
   }, []);
   // Stryker restore OptionalChaining,ArrayDeclaration
+
+  // A form that opens with an error lands on it, once (round 43 #93).
+  const openedOn = Object.keys(initialErrors)[0];
+  useEffect(() => {
+    if (openedOn !== undefined) focusField(openedOn);
+  }, [openedOn, focusField]);
 
   /**
   Announce, then move. Never move without announcing.
@@ -542,6 +572,7 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
     summaryRef,
     retryRef,
     field,
+    markField,
     focusField,
     retry: () => {
       // Equivalent: `retry` is only reachable from the failure band, and

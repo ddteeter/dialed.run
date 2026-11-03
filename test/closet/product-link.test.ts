@@ -127,6 +127,30 @@ describe("withResolvedProduct for an unconfirmed runner", () => {
   });
 });
 
+describe("a link pasted for a product made without one (design 163, Q1)", () => {
+  it("is read: the product takes the link and goes pending", async () => {
+    const userId = await runner(true);
+    const brand = unique("Brand");
+    const name = unique("Tee");
+    await withResolvedProduct(db(), { category: "top", name, brand }, userId);
+    const send = vi.spyOn(env.ENRICHMENT_QUEUE, "send");
+
+    await withResolvedProduct(
+      db(),
+      { category: "top", name, brand, productUrl: "https://janji.com/p/tee" },
+      userId,
+    );
+
+    const [product] = await productRows(name);
+    expect(product?.sourceUrl).toBe("https://janji.com/p/tee");
+    expect(product?.extractionStatus).toBe("pending");
+    expect(send).toHaveBeenCalledWith({
+      type: "enrich",
+      productId: product?.id,
+    });
+  });
+});
+
 describe("nameItem for an unconfirmed runner", () => {
   it("writes the brand and the model as typed, and makes nothing shared", async () => {
     const userId = await runner(false);
