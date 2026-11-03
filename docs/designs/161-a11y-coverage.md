@@ -152,6 +152,55 @@ _Tests:_ the report reader is pinned against a fixture report; removing a
 visit from a spec drops the figure.
 _Done:_ the figure is printed in CI and can only go up.
 
+_How (2026-11-03):_
+
+- **When it measures.** Only on the dev leg, and only when the whole suite
+  runs: in CI, or locally with `A11Y_COVERAGE=1`. A local run of one folder
+  would fail both checks, so measuring is opt-in there.
+- **Coverage.** The fixture starts Chromium's JS coverage with each test's
+  page (`resetOnNavigation: false`) and stops it after the end-of-test
+  checks. It keeps only the entries Vite serves as `src/ui/**/*.tsx` and
+  `src/modules/**/*.tsx`, and hands them to `monocart-coverage-reports`,
+  which caches them on disk between tests. The global teardown
+  (`a11y-coverage-teardown.ts`) maps them through Vite's inline source
+  maps and reads the branch percentage.
+  - Chromium reports only the scripts of the document still loaded, so a
+    second full page load in one test used to drop the first. The fixture
+    takes the coverage before each navigation it drives (`goto`,
+    `reload`, `goBack`, `goForward`). A full load the app makes itself
+    (a form post, `location.assign`) still drops the document before it.
+    The app's own navigations are client-side, and those keep their
+    modules.
+  - Vite's maps name each source by its bare file name, so two
+    `index.tsx` files would merge into one. Each source is named by the
+    path it was served at instead.
+- **The visited routes.** The fixture records each path the test's page
+  navigated to, including client-side navigations (Playwright's
+  `framenavigated` fires for both). The teardown reads the routes from
+  `routeTree.gen.ts`'s `FileRoutesByTo`, so the list is derived, never
+  restated, and matches each visited path to one:
+  - `$param` matches one segment;
+  - `$` matches the rest;
+  - `{$handle}` matches the rest of its segment.
+- **Both checks read `e2e/a11y-coverage.json`.** It holds:
+  - `branches`, the figure at its last value;
+  - `unvisited`, each route no spec opens, with the reason. Endpoints
+    (`/api/*`, `/og/*`, photo routes) are routes but not pages.
+
+  The run fails:
+  - when the figure falls below `branches`;
+  - when a route is neither visited nor listed;
+  - when a listed route was visited, so its reason is stale.
+
+  `A11Y_RECORD=1` writes the figure instead of failing on it. A rise is
+  printed, with a reminder to raise the baseline.
+- **CI.** The teardown prints the figure and appends it to
+  `$GITHUB_STEP_SUMMARY`, so no workflow changes. The HTML report is not
+  uploaded: the Actions bill is artifact storage.
+- _Known limit:_ a component that no visited route imports never loads. It
+  is left out of the figure rather than counted as zero. The route check is
+  what catches a screen no spec opens.
+
 **4. Transcripts.** At the end of each test, record what a screen reader
 would say, with Guidepup's `spokenPhraseLog()`; step 0 showed it runs in the
 page. Each is a checked-in snapshot
