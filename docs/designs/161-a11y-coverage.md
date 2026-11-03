@@ -272,9 +272,9 @@ and reads text it does not control.
     installs from and Claude's API.
   - The transcripts' diff against the base is written to a file, with
     no model, and capped at 200 KB.
-  - Claude reads the diff, the contract (`design/Accessibility
-    Contract.dc.html`, through design 112) and the source with Read,
-    Grep and Glob only: no Bash, web or writes. It answers in a JSON
+  - Claude reads the diff, the contract (through design 112), and the
+    source, with Read, Grep and Glob only: no Bash, web or writes. The
+    contract is `design/Accessibility Contract.dc.html`. It answers in a JSON
     schema of a summary and up to 30 findings (transcript, phrase as
     said, problem, fix).
 - **`post`** (`pull-requests: write`, no model) screens that output as
