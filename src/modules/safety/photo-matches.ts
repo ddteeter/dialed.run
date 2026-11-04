@@ -56,7 +56,7 @@ type Db = ReturnType<typeof drizzle>;
 export const PHOTO_MATCHES_LIMIT = 12;
 
 /**
- * One matching photo. `photoKey` is the object `/safety/review-photo/`
+ * One matching photo. `photoKey` is the object `/desk/review-photo/`
  * serves; `distance` is how many bits apart it is, 0 for the same
  * picture. Whose it is — the owner, and their handle when they have one,
  * for the link to D8 (round 39 #71). A kit photo carries its kit, for the

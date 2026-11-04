@@ -15,11 +15,19 @@ import {
 import type { FieldProps, FormShell } from "../../../ui";
 
 /**
+ * A Desk's row of buttons: the chalk pill first, then outline pills, then
+ * Cancel, side by side and wrapping on a narrow screen (round 44).
+ */
+export const ACTION_BAR = "flex flex-wrap items-center gap-3";
+
+/**
  * The frame every Desk form shares (Form Contract): the live status, the
  * error summary, the fields, the §4a band directly above the action, and
- * the action. Written once so the Desk's four forms — a review decision,
- * Rename, Close account and a takedown — cannot drift into four answers
- * to "the save failed".
+ * the action bar — the submit first, then anything `also` holds, in one
+ * row that wraps, as every board draws a Desk's buttons (round 44).
+ * Written once so the Desk's four forms — a review decision, Rename,
+ * Close account and a takedown — cannot drift into four answers to "the
+ * save failed".
  */
 export function DeskForm({
   form,
@@ -28,7 +36,7 @@ export function DeskForm({
   className,
   children,
   submit,
-  action,
+  also,
 }: Readonly<{
   form: FormShell;
   onSubmit: () => void;
@@ -39,11 +47,13 @@ export function DeskForm({
   className: string;
   children: ReactNode;
   /**
-   * The one submit button's words — or, for a form with more than one
-   * decision, `action`: the row of them.
-   */
-  submit?: { label: string; pendingLabel: string } | undefined;
-  action?: ReactNode;
+  The submit button's words.
+  */
+  submit: { label: string; pendingLabel: string };
+  /**
+  The bar's other buttons, after the submit: a quiet action, Cancel.
+  */
+  also?: ReactNode;
 }>): JSX.Element {
   const headingId = useId();
   return (
@@ -74,15 +84,15 @@ export function DeskForm({
         onRetry={form.retry}
         retryRef={form.retryRef}
       />
-      {submit === undefined ? (
-        action
-      ) : (
+      <div className={ACTION_BAR}>
         <SubmitButton
+          tone="chalk"
           label={submit.label}
           pendingLabel={submit.pendingLabel}
           pending={form.pending}
         />
-      )}
+        {also}
+      </div>
     </form>
   );
 }

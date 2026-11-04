@@ -168,8 +168,9 @@ const NAV: readonly Edge[] = [
   // Desk · Runners (D8) joins it: reached from the Desk rail and re-read
   // with new search params by its own search and filters, it is a
   // destination rather than a journey (the tab bar's reasoning), and NAV has
-  // no Desk rows. Added under the header's ownership rule.
-  { from: "*", to: ["/", "/desk/runners"], type: "cut" },
+  // no Desk rows. Added under the header's ownership rule. Desk · Review
+  // too, for the same reason; its old address redirects to it (R-173).
+  { from: "*", to: ["/", "/desk/runners", "/desk/review"], type: "cut" },
 
   // The open web's pages (design 163, D-154): `/kit/<id>` and `/@handle`,
   // linked from each other with `reloadDocument`, since the root reads no

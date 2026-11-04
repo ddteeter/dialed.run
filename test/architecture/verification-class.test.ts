@@ -326,7 +326,7 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "routes/runs/strava-connect.ts GET": "sessionless",
   // A reviewer's view of a photo: a Desk read (Q5), asked of `isAdmin`
   // inside (`reviewerPhotoResponse`) for a confirmed viewer only.
-  "routes/safety/review-photo.$.tsx GET": "verified-viewer",
+  "routes/desk/review-photo.$.tsx GET": "verified-viewer",
 };
 
 function byName(left: string, right: string): number {

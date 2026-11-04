@@ -3,6 +3,7 @@ import type { JSX, ReactNode, Ref } from "react";
 
 import { Mono } from "../../../ui";
 import type { OtherPhoto, OtherPhotos as Others } from "../other-photos";
+import { reviewPhotoSrc } from "./review-photo-src";
 
 /**
  * The same runner's other photos, on a Review row about an intimate image
@@ -11,7 +12,7 @@ import type { OtherPhoto, OtherPhotos as Others } from "../other-photos";
  * fingerprint search across every runner (D-142).
  *
  * **Undesigned** (design deltas item 63): existing primitives and bracket
- * text only. Each photo is served from `/safety/review-photo/`, as the
+ * text only. Each photo is served from `/desk/review-photo/`, as the
  * row's own are, because a copy may be hidden too, and each carries its
  * id, which the takedown form under Review takes. A photo whose kit's page
  * an operator can open links to it; a private kit, or one hidden pending
@@ -136,7 +137,7 @@ function MorePhotos({
 function Thumbnail({ photo }: Readonly<{ photo: OtherPhoto }>): JSX.Element {
   const image = (
     <img
-      src={`/safety/review-photo/${photo.photoKey}`}
+      src={reviewPhotoSrc(photo.photoKey)}
       alt={
         photo.canOpen
           ? `Photo ${photo.id}: open its kit`

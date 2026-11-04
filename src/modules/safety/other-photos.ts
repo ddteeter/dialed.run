@@ -43,7 +43,7 @@ export const OTHER_PHOTOS_LIMIT = 12;
 
 /**
  * One of the runner's other photos: its id, which the takedown form under
- * Review takes; its kit; and its key, which `/safety/review-photo/` serves
+ * Review takes; its kit; and its key, which `/desk/review-photo/` serves
  * to an operator.
  */
 export interface OtherPhoto {

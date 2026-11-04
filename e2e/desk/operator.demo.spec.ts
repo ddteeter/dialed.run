@@ -2,8 +2,8 @@
  * Covers: D0 (the Desk's shell) and Today, with D6 · Gave up as Today's
  * section (D-87; R-119), then a hold breaker at its ceiling: Today's HOLDS
  * PAUSED line and Review's release of the burst (design 164; design
- * deltas 93 and 95), and the outbox running behind (design 168) — one
- * journey, one video.
+ * deltas 93 and 95), on the Desk's own dark ground with the rail (R-173),
+ * and the outbox running behind (design 168) — one journey, one video.
  *
  * The journey needs `ADMIN_USER_IDS=e2e-desk-operator` in the dev server's
  * `.dev.vars`, which CI's e2e job writes (register R-72, PR #114). Locally,
@@ -295,10 +295,29 @@ test("an operator opens the Desk and reads Today", async ({
     "uploads matched removed images in the last hour, the most held in one hour. New matches are screened like any photo until the hour clears.",
   );
 
-  await page.goto("/safety/review");
+  await scene(page, "Review is a Desk page: the rail opens it, dark");
+  await page
+    .getByRole("navigation", { name: "Desk" })
+    .getByRole("link", { name: /^Review/u })
+    .click();
+  await expect(page).toHaveURL(/\/desk\/review$/u);
   await page
     .locator('html[data-hydrated="true"]')
     .waitFor({ state: "attached" });
+  // R-173: inside DeskShell, so on the ink ground with the rail, Review lit.
+  await expect(
+    page.getByRole("navigation", { name: "Desk" }).getByRole("link", {
+      name: /^Review/u,
+    }),
+  ).toHaveAttribute("aria-current", "page");
+  const ink = page.locator("[data-ground='ink']");
+  await expect(
+    ink.getByRole("heading", { name: "Review", exact: true, level: 1 }),
+  ).toBeVisible();
+  // Round 44 #106: how the page stands, beside the heading, even at zero.
+  await expect(
+    ink.getByText(/^\[\d+ waiting · \d+ decided today\]$/iu),
+  ).toBeVisible();
   await scene(page, "Review: the burst, waiting from the last day");
   const held = page.locator("[data-part='release-holds']");
   await expect(held).toContainText("Held in the last day");
@@ -306,7 +325,13 @@ test("an operator opens the Desk and reads Today", async ({
 
   await scene(page, "Release them: each one an Approve, behind a confirm");
   // Every waiting fingerprint hold from the last day: in CI, the five.
-  await held.getByRole("button", { name: /^Approve all \d+$/u }).click();
+  // The fingerprint row only: another source's burst from the same day
+  // (a report raised by an earlier demo) has its own Approve all.
+  await held
+    .getByRole("listitem")
+    .filter({ hasText: "Fingerprint matches" })
+    .getByRole("button", { name: /^Approve all \d+$/u })
+    .click();
   await expect(
     page.getByRole("heading", { name: /^Approve \d+ fingerprint holds\?$/u }),
   ).toBeVisible();
@@ -324,6 +349,26 @@ test("an operator opens the Desk and reads Today", async ({
   expect(released.map((row) => row.status)).toStrictEqual(
     burst.map(() => "approved"),
   );
+
+  await scene(page, "A fresh load counts them as decided today");
+  // Round 44 #106: the header says how the page stands, and the release
+  // was today's decisions. A full load, so it is read from the server.
+  await page.goto("/desk/review");
+  await page
+    .locator('html[data-hydrated="true"]')
+    .waitFor({ state: "attached" });
+  const standing = ink.getByText(/^\[\d+ waiting · \d+ decided today\]$/iu);
+  await expect(standing).toBeVisible();
+  const decided = Number(
+    ((await standing.textContent()) ?? "")
+      .split("·", 2)[1]
+      ?.trim()
+      .split(" ", 1)[0],
+  );
+  expect(decided).toBeGreaterThanOrEqual(burst.length);
+  await expect(
+    held.getByText(/Fingerprint matches · \d+ waiting/u),
+  ).toHaveCount(0);
 
   await withLocalDb(async ({ core }) => {
     await core.delete(reviewQueue).where(inArray(reviewQueue.id, burst));

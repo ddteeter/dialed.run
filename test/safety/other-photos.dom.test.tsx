@@ -63,8 +63,8 @@ describe("OtherPhotos", () => {
         .getAllByRole("img")
         .map((image) => image.getAttribute("src")),
     ).toStrictEqual([
-      "/safety/review-photo/entries/u/k/1",
-      "/safety/review-photo/entries/u/k/2",
+      "/desk/review-photo/entries/u/k/1",
+      "/desk/review-photo/entries/u/k/2",
     ]);
     // MONO.sm, and one click selects it whole (round 38 #63a).
     const id = screen.getByText(PHOTO_1);
@@ -123,7 +123,7 @@ describe("OtherPhotos", () => {
       screen.getByRole("img", {
         name: `Photo ${PHOTO_1}, on a kit an operator cannot open`,
       }),
-    ).toHaveAttribute("src", "/safety/review-photo/entries/u/k/1");
+    ).toHaveAttribute("src", "/desk/review-photo/entries/u/k/1");
     expect(screen.getByText(PHOTO_1)).toHaveClass("font-mono");
   });
 
