@@ -56,6 +56,15 @@ function isBefore(a: Node, b: Node): boolean {
   );
 }
 
+/**
+The request rows as drawn now.
+*/
+function rows(): HTMLElement[] {
+  return [
+    ...document.querySelectorAll<HTMLElement>("[data-part='removal-request']"),
+  ];
+}
+
 const part = (name: string) =>
   document.querySelector<HTMLElement>(`[data-part='${CSS.escape(name)}']`);
 
@@ -849,6 +858,47 @@ describe("Review · removal requests", () => {
     expect(part("removal-request")).not.toHaveFocus();
   });
 
+  it("lands focus once: the list drawn again after another decision leaves it", async () => {
+    const block = vi.fn<BlockFn>().mockResolvedValue({ status: "blocked" });
+    const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[
+          pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" }),
+          pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ2", signature: "Next" }),
+          pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ3", signature: "Last" }),
+        ]}
+        decide={decide}
+        block={block}
+      />,
+    );
+    const user = userEvent.setup();
+    const first = within(rows()[0] ?? document.body);
+    await user.click(
+      first.getByRole("button", { name: "Block and decline all" }),
+    );
+    await user.click(
+      first.getByRole("button", { name: "Block and decline all" }),
+    );
+    await waitFor(() => {
+      expect(rows()[0]).toHaveFocus();
+    });
+    const next = rows()[0];
+    expect(next).toHaveTextContent("Next");
+
+    // Taking the last one down draws the list again; Next's row does not
+    // take focus back.
+    await user.click(
+      within(rows()[1] ?? document.body).getByRole("button", {
+        name: "Take it down",
+      }),
+    );
+    await waitFor(() => {
+      expect(rows()).toHaveLength(1);
+    });
+    expect(next).not.toHaveFocus();
+  });
+
   it("names the poster in the line for a link that is not ours (round 37 #59g)", async () => {
     await renderWithRouter(
       <RemovalRequests
@@ -897,6 +947,23 @@ describe("takedown pages: a lapsed session (Au7, D-155)", () => {
     await userEvent
       .setup()
       .click(screen.getByRole("button", { name: "Decline" }));
+
+    expect(carriedSince()).toEqual(["page"]);
+  });
+
+  it("carries Block's question as the page", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    carriedSince();
+    // The question's form is asked for only once Block is pressed.
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Block and decline all" }));
 
     expect(carriedSince()).toEqual(["page"]);
   });

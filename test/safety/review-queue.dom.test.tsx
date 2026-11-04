@@ -445,6 +445,38 @@ describe("deciding", () => {
     expect(screen.getByText(bracketed("1 waiting"))).toBeInTheDocument();
   });
 
+  it("names the confirm by its in-flight verb while the quarantine is pending", async () => {
+    const user = userEvent.setup();
+    const { promise, resolve: settle } = Promise.withResolvers<{
+      outcome: ResolveOutcome;
+    }>();
+    const resolve: Props["resolve"] = vi
+      .fn<Props["resolve"]>()
+      .mockReturnValue(promise);
+    render(
+      <ReviewQueue queue={[row()]} resolve={resolve} reviewHandle={vi.fn()} />,
+    );
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why it comes down/ }),
+      "it's sexual or explicit",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Remove as suspected CSAM" }),
+    );
+    const confirm = screen.getByRole("button", { name: "Remove and report" });
+    await user.click(confirm);
+
+    await waitFor(() => {
+      expect(confirm).toHaveAttribute("aria-busy", "true");
+    });
+    expect(confirm).toHaveAccessibleName("Removing");
+    settle({ outcome: "resolved" });
+    await waitFor(() => {
+      expect(screen.getByText(bracketed("0 waiting"))).toBeInTheDocument();
+    });
+  });
+
   it("keeps the question up, with the band, when the quarantine fails", async () => {
     const user = userEvent.setup();
     const resolve: Props["resolve"] = vi
