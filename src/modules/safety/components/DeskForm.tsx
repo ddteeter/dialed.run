@@ -78,6 +78,7 @@ export function DeskForm({
         action
       ) : (
         <SubmitButton
+          tone="chalk"
           label={submit.label}
           pendingLabel={submit.pendingLabel}
           pending={form.pending}

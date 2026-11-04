@@ -8,9 +8,11 @@ import { monthDayLabel } from "../../../lib/dates";
 import { nowSeconds } from "../../../lib/now";
 import {
   Bracketed,
+  CHALK_PILL,
   FormStatus,
   ListSection,
   Mono,
+  QUIET_PILL,
   TextField,
   useFormSubmit,
 } from "../../../ui";
@@ -157,18 +159,6 @@ const CASE_OVER = {
 type CaseEnd = keyof typeof CASE_OVER;
 
 const CASE_ENDS: readonly CaseEnd[] = ["delete", "restore"];
-
-/**
-A press that asks before it acts: as the Desk's submit, but it submits nothing.
-*/
-const PRESS_CLASS =
-  "target grid min-h-13 cursor-pointer place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-accent-ink";
-
-/**
-The confirm's way out, quieter than the press it answers.
-*/
-const NOT_YET_CLASS =
-  "target grid min-h-13 cursor-pointer place-items-center rounded-card border border-hairline bg-transparent px-6 py-4 text-body font-semibold text-ink";
 
 function HoldRow({
   hold,
@@ -352,7 +342,7 @@ function CaseOver({
             key={end}
             ref={end === back ? focusOn : undefined}
             type="button"
-            className={PRESS_CLASS}
+            className={`target ${CHALK_PILL}`}
             onClick={() => {
               setAsking(end);
             }}
@@ -385,7 +375,7 @@ function CaseOver({
         also={
           <button
             type="button"
-            className={NOT_YET_CLASS}
+            className={`target ${QUIET_PILL}`}
             onClick={() => {
               setBack(asking);
               setAsking(undefined);

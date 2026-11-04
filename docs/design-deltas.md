@@ -1021,37 +1021,39 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
 
     **The ask:** draw it, or confirm the composition and copy.
 
-104. **The Desk's submit is the runner app's pink button (R-173, design
-128).** Built: every Desk form's submit (Review's Remove, Rename and
-Take it down, the copyright hold's presses, Runners and Access) is
-`SubmitButton`: pink `--action`, `rounded-card`, display caps, ink
-text. Drawn: Operator Screens D1 and rounds 35, 38 and 42 draw it as a
-**chalk-filled pill** with ink text, and no pink button anywhere on
-the Desk. Moving Review onto the ink ground made the gap visible.
-**The ask:** confirm pink on the Desk ("pink is action"), or say the
-chalk pill is meant, and the build gives the Desk its own submit.
-
-105. **Review's quiet actions are outline pills now (R-173, design 128).**
-     They were bare `MONO.xs` text, which on the ink ground read as labels;
-     item 45 recorded Keep as "text button, as built". The boards draw
-     Keep, Approve and Decline as outline pills, so the build now matches:
-     Keep, Approve, Clear photo, Remove as suspected CSAM, Decline and
-     Block and decline all are outline pills in the ground's ink, and
-     Cancel is underlined text, as D1 draws it. Remove as suspected CSAM
-     follows round 42; Clear photo and Block and decline all are not
-     drawn and take the pill as their siblings do. **The ask:** confirm.
-
-106. **Review's heading on the Desk (R-173, design 128).** Built: the page
-     keeps the "Review queue" `h1` it had at `/safety/review`, at the
-     Desk's title size, and no count beside it. Drawn: D1's header reads
-     "Review" with `[4 WAITING · 2 DECIDED TODAY]`, and the rail already
-     shows the waiting count. **The ask:** confirm the heading's words, and
-     whether the bracketed counts belong beside it now that the rail
-     carries one.
-
-_Items 101–106 are open (designs 164 and 128)._
+_Items 101–103 are open (design 164)._
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
+
+## Answered in round 44 (imported 2026-11-03)
+
+Design answered as `Round 44 Rulings.dc.html`, items 104–106, which draws
+Review's header and three decision bars on the dark Desk ground. The
+boards were right on all three. The board's text is the text of record;
+there is no round 44 section in `design/docs/product.md`. Built in design
+128 (R-173, PR #322).
+
+- **104 · The Desk's main button. Built.** A chalk-filled pill in the
+  ground's ink, Archivo 700, 44 high (`SubmitButton`'s `chalk` tone, and
+  `CHALK_PILL` for the copyright hold's presses), for every main action on
+  Review, the copyright hold, Runners and Access. No pink button anywhere
+  on the Desk: "pink is action" is the runner app's rule, and on the Desk
+  the main action is often a removal. A destructive main action gets no
+  red; its confirm step carries the weight. The main action comes first in
+  its bar, as drawn.
+- **105 · Review's other actions. Confirmed, built.** Outline pills, 1px in
+  the ground's ink, Archivo 700, 44 high (`QUIET_PILL`): Keep, Approve,
+  Decline, Remove as suspected CSAM, Clear photo where Approve sits, Block
+  and decline all after Decline, and the copyright hold's Not yet. Cancel
+  is underlined text (`QUIET_CANCEL`). At most one chalk pill per bar.
+  Supersedes item 45's "text button, as built".
+- **106 · Review's heading. Built.** "Review", the rail's word, not
+  "Review queue", with D1's `[{n} WAITING · {m} DECIDED TODAY]` beside it
+  in `MONO.xs` `--muted`, shown at zero too. (Erratum, Design, 2026-11-03: the
+  ruling's text first said `--quiet`; tokens.js makes a `MONO.xs` caption
+  muted unless it carries state, as the board draws it.) Both counts come from Today's
+  (`decidedToday` is review rows approved or removed since midnight UTC),
+  the value the rail's badge reads, so the two cannot disagree.
 
 ## Answered in round 43 (imported 2026-10-31)
 

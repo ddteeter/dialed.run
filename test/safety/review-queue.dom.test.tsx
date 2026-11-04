@@ -111,6 +111,29 @@ describe("deciding", () => {
     expect(picker.value).toBe("");
   });
 
+  it("puts the main action first, as the Desk's one chalk pill", () => {
+    renderQueue([row()]);
+    // Round 44 #104-#105: Remove, then Approve, then Remove as suspected
+    // CSAM; the first is chalk, the rest outline pills.
+    const bar = ["Remove", "Approve", "Remove as suspected CSAM"].map((name) =>
+      screen.getByRole("button", { name }),
+    );
+    const [remove, approve, csam] = bar;
+    if (remove === undefined || approve === undefined || csam === undefined) {
+      throw new Error("no bar");
+    }
+    expect(
+      remove.compareDocumentPosition(approve) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      approve.compareDocumentPosition(csam) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(remove).toHaveClass("rounded-pill", "bg-ink", "text-ground");
+    expect(remove).not.toHaveClass("bg-action");
+    expect(approve).toHaveClass("rounded-pill", "border-ink", "bg-transparent");
+  });
+
   const QUEUE_ID = "01HZZZZZZZZZZZZZZZZZZZZZZZ";
 
   it("approves without a reason and takes the row off the list", async () => {

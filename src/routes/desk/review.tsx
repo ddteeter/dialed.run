@@ -1,6 +1,7 @@
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 
 import { DeskShell } from "../../modules/ops/components/DeskShell";
+import { ReviewHeading } from "../../modules/ops/components/ReviewHeading";
 import { CopyrightHolds } from "../../modules/safety/components/CopyrightHolds";
 import { QuarantineRecords } from "../../modules/safety/components/QuarantineRecords";
 import { ReleaseHolds } from "../../modules/safety/components/ReleaseHolds";
@@ -46,8 +47,7 @@ function ReviewPage() {
 
   return (
     <DeskShell current="review" today={today}>
-      {/* The heading Review had on its own page, at the Desk's size. */}
-      <h1 className="m-0 font-display text-title uppercase">Review queue</h1>
+      <ReviewHeading counts={today.counts} />
       {/* Design 164: a burst of holds a bug may have made, to release. */}
       <ReleaseHolds
         bursts={bursts}

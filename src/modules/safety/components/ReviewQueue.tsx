@@ -329,7 +329,7 @@ function HandleDecision({
           nameReason: reason,
         });
       }}
-      first={
+      quiet={
         <QuietAction
           label="Keep"
           onPress={() => {

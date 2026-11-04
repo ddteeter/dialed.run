@@ -43,6 +43,7 @@ function desk(counts: Partial<TodayCounts> = {}): DeskToday {
     asOf: TUESDAY_NOON,
     counts: {
       waiting: 0,
+      decidedToday: 0,
       oldestWaitingAt: undefined,
       screenerUnfinished: 0,
       bansThisWeek: 0,
@@ -213,6 +214,7 @@ describe("Today", () => {
     renderToday(
       desk({
         waiting: 4,
+        decidedToday: 0,
         oldestWaitingAt: TUESDAY_NOON - 19 * 3600 - 1200,
         screenerUnfinished: 1,
         bansThisWeek: 0,
@@ -234,6 +236,7 @@ describe("Today", () => {
     renderToday(
       desk({
         waiting: 2,
+        decidedToday: 0,
         oldestWaitingAt: TUESDAY_NOON - 3600,
         screenerUnfinished: 0,
         bansThisWeek: 1,

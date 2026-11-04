@@ -7,7 +7,7 @@
  * definition of it. The digest needs only that number, so it calls that
  * alone rather than all of Today.
  */
-import { and, asc, count, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, asc, count, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
 
 import { user } from "../../db/schema-auth";
 import {
@@ -42,6 +42,12 @@ export interface TodayCounts {
    * nobody finishes returns to `pending` within the lease.
    */
   readonly waiting: number;
+  /**
+   * Review rows approved or removed since midnight UTC, the day `calendarDay`
+   * reads: Review's header prints it beside `waiting` (round 44 #106), from
+   * this one value so the header and the rail cannot disagree.
+   */
+  readonly decidedToday: number;
   /**
   When the oldest of those arrived (epoch seconds); absent at zero.
   */
@@ -97,7 +103,25 @@ export function outboxBehindOf(db: ReturnType<typeof coreDb>) {
   );
 }
 
-const WEEK_SECONDS = 7 * 24 * 60 * 60;
+/**
+ * Review rows decided since `since`: approved or removed, `resolved_at`
+ * being when. Grouped by a constant, as gave_up's read is, so none decided
+ * is no row.
+ */
+function decidedSinceOf(db: ReturnType<typeof coreDb>, since: number) {
+  const decided = and(
+    inArray(reviewQueue.status, ["approved", "removed"]),
+    gte(reviewQueue.resolvedAt, since),
+  );
+  return db
+    .select({ rows: count() })
+    .from(reviewQueue)
+    .where(decided)
+    .groupBy(sql`'decided'`);
+}
+
+const DAY_SECONDS = 24 * 60 * 60;
+const WEEK_SECONDS = 7 * DAY_SECONDS;
 
 /**
  * The queue sources Today counts as "photos the screener couldn't
@@ -124,9 +148,11 @@ const screenerSources: ReadonlySet<string> = new Set([
  */
 export async function todayCounts(): Promise<TodayCounts> {
   const db = coreDb();
-  const weekAgo = nowSeconds() - WEEK_SECONDS;
+  const now = nowSeconds();
+  const weekAgo = now - WEEK_SECONDS;
+  const dayStart = now - (now % DAY_SECONDS);
   const waiting = await pendingReviewCount();
-  const [review, bans, gave, unconfirmed, behind] = await db.batch([
+  const [review, bans, gave, unconfirmed, behind, decided] = await db.batch([
     db
       .select({
         source: reviewQueue.source,
@@ -161,10 +187,12 @@ export async function todayCounts(): Promise<TodayCounts> {
       .from(cronCheckpoints)
       .where(eq(cronCheckpoints.cronName, DIGEST_UNCONFIRMED)),
     outboxBehindOf(db),
+    decidedSinceOf(db, dayStart),
   ]);
   const [gaveUpGroup] = gave;
   return {
     waiting,
+    decidedToday: sumOf(decided),
     oldestWaitingAt:
       review.length === 0
         ? undefined

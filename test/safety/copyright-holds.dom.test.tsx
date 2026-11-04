@@ -333,9 +333,12 @@ describe("CopyrightHolds", () => {
       // Asked again, it confirms again: the pair is the same press.
       await user.click(screen.getByRole("button", { name: label }));
       expect(screen.getByRole("alertdialog", { name: question })).toBeVisible();
+      // The way out is an outline pill beside the chalk one (round 44 #105).
       expect(screen.getByRole("button", { name: "Not yet" })).toHaveClass(
         "target",
-        "border-hairline",
+        "rounded-pill",
+        "border-ink",
+        "bg-transparent",
       );
     },
   );
@@ -344,9 +347,15 @@ describe("CopyrightHolds", () => {
     renderHolds(inCourt());
     for (const label of ["Case over: delete", "Case over: restore"]) {
       const press = screen.getByRole("button", { name: label });
-      // The Desk is ink: text on pink is the fixed ink, never chalk (R-173).
-      expect(press).toHaveClass("target", "bg-action", "text-accent-ink");
-      expect(press).not.toHaveClass("text-ink");
+      // The Desk has no pink button: its main press is a chalk pill in the
+      // ground's ink (round 44 #104).
+      expect(press).toHaveClass(
+        "target",
+        "rounded-pill",
+        "bg-ink",
+        "text-ground",
+      );
+      expect(press).not.toHaveClass("bg-action");
       expect(press).toHaveAttribute("type", "button");
       expect(press).not.toHaveFocus();
     }

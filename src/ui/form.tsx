@@ -730,6 +730,41 @@ export function PendingLabel({
 }
 
 /**
+ * The two main buttons. `action` is the runner app's: pink, a card,
+ * display caps. `chalk` is the Desk's (round 44 #104): a chalk-filled pill
+ * in the ground's ink, bold, 44 high, because on the Desk the main action
+ * is often a removal and nothing should pull the operator toward it.
+ */
+const SUBMIT_TONE = {
+  action:
+    "grid min-h-13 place-items-center rounded-card bg-action px-6 py-4 font-display uppercase text-accent-ink",
+  chalk:
+    "inline-flex min-h-11 items-center justify-center self-start rounded-pill bg-ink px-5 font-bold text-ground",
+} as const;
+
+/**
+ * The Desk's main action as a class, for the one Desk press that is not a
+ * form's submit (the copyright hold's).
+ */
+export const CHALK_PILL = `cursor-pointer border-none text-body ${SUBMIT_TONE.chalk}`;
+
+/**
+ * A Desk decision that is not the bar's main one (Keep, Approve, Decline),
+ * beside a literal `target` (the hit-area check reads each site's class):
+ * an outline pill in the ground's ink, 44 high (round 44 #105). One chalk
+ * pill per bar, at most; everything else beside it is this.
+ */
+export const QUIET_PILL =
+  "inline-flex min-h-11 cursor-pointer items-center justify-center self-start rounded-pill border border-ink bg-transparent px-5 text-body font-bold text-ink";
+
+/**
+ * Backing out of a question a Desk row asked (Cancel): underlined text,
+ * quieter than the pills beside it (round 44 #105).
+ */
+export const QUIET_CANCEL =
+  "inline-flex min-h-11 cursor-pointer items-center self-start border-none bg-transparent p-0 text-body font-semibold text-ink underline underline-offset-4";
+
+/**
  * Never the `disabled` attribute: a disabled button drops focus and stops
  * announcing, so the guard against a double submit lives in the handler
  * (`useFormSubmit`) and this only reports the state.
@@ -739,10 +774,15 @@ export function SubmitButton({
   pendingLabel,
   pending,
   ref,
+  tone = "action",
 }: Readonly<{
   label: string;
   pendingLabel: string;
   pending: boolean;
+  /**
+  `chalk` on the Desk, which has no pink button.
+  */
+  tone?: keyof typeof SUBMIT_TONE | undefined;
   /**
   For a form that must focus its submit: the delete sheet, back from Google.
   */
@@ -753,7 +793,7 @@ export function SubmitButton({
       ref={ref}
       type="submit"
       {...inFlight(pending)}
-      className={`target grid min-h-13 place-items-center rounded-card border-none bg-action px-6 py-4 font-display text-body uppercase text-accent-ink ${
+      className={`target border-none text-body ${SUBMIT_TONE[tone]} ${
         pending ? "cursor-default" : "cursor-pointer"
       }`}
     >
@@ -1126,5 +1166,38 @@ function OptionLabel({
       {label}
       <span className="text-small font-normal text-muted">{hint}</span>
     </span>
+  );
+}
+
+/**
+ * A form's last two parts: its failure band, then its submit, wired to
+ * the same `useFormSubmit` state. One place, so the band never drifts from
+ * the button it sits above.
+ */
+export function FormEnd({
+  form,
+  label,
+  pendingLabel,
+  tone,
+}: Readonly<{
+  form: Pick<FormShell, "failure" | "retry" | "retryRef" | "pending">;
+  label: string;
+  pendingLabel: string;
+  tone?: "action" | "chalk" | undefined;
+}>): JSX.Element {
+  return (
+    <>
+      <FormFailureBand
+        failure={form.failure}
+        onRetry={form.retry}
+        retryRef={form.retryRef}
+      />
+      <SubmitButton
+        tone={tone}
+        label={label}
+        pendingLabel={pendingLabel}
+        pending={form.pending}
+      />
+    </>
   );
 }

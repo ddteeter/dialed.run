@@ -310,11 +310,13 @@ test("an operator opens the Desk and reads Today", async ({
       name: /^Review/u,
     }),
   ).toHaveAttribute("aria-current", "page");
+  const ink = page.locator("[data-ground='ink']");
   await expect(
-    page.locator("[data-ground='ink']").getByRole("heading", {
-      name: "Review queue",
-      level: 1,
-    }),
+    ink.getByRole("heading", { name: "Review", exact: true, level: 1 }),
+  ).toBeVisible();
+  // Round 44 #106: how the page stands, beside the heading, even at zero.
+  await expect(
+    ink.getByText(/^\[\d+ waiting · \d+ decided today\]$/iu),
   ).toBeVisible();
   await scene(page, "Review: the burst, waiting from the last day");
   const held = page.locator("[data-part='release-holds']");

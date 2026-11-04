@@ -2,7 +2,14 @@ import { useEffect, useState } from "react";
 import type { JSX, ReactNode, Ref } from "react";
 import type { z } from "zod";
 
-import { Mono, SubmitButton, useFormSubmit, useReturnFocus } from "../../../ui";
+import {
+  Mono,
+  QUIET_CANCEL,
+  QUIET_PILL,
+  SubmitButton,
+  useFormSubmit,
+  useReturnFocus,
+} from "../../../ui";
 import type { FormShell } from "../../../ui";
 import {
   removalReasonSchema,
@@ -28,21 +35,6 @@ const REASON_LABELS: Readonly<Record<RemovalReason, string>> =
   removalStatements;
 
 /**
-A Desk decision that is not the row's submit (Keep, Approve, Decline):
-the operator boards' outline pill, in the ground's ink so it reads on the
-Desk's dark ground as on paper.
-*/
-export const QUIET_PILL =
-  "target cursor-pointer self-start rounded-pill border border-ink bg-transparent px-5 py-3 text-body font-bold text-ink";
-
-/**
-Backing out of a question the row asked (Cancel): the boards' underlined
-text, quieter than the pill beside it.
-*/
-export const QUIET_CANCEL =
-  "target cursor-pointer self-start border-none bg-transparent p-0 py-3 text-body text-ink underline underline-offset-4";
-
-/**
 A decision that needs no reason: an outline pill beside the row's submit.
 */
 export function QuietAction({
@@ -57,7 +49,7 @@ export function QuietAction({
   return (
     <button
       ref={buttonRef}
-      className={QUIET_PILL}
+      className={`target ${QUIET_PILL}`}
       type="button"
       onClick={onPress}
     >
@@ -67,15 +59,16 @@ export function QuietAction({
 }
 
 /**
- * A review row's decision bar: a reasonless decision first, the one that
- * takes the picked reason as the submit, and anything after it — the same
- * frame for a content row and a flagged handle's (D-97).
+ * A review row's decision bar: the one that takes the picked reason as the
+ * submit first, as round 44 draws it, then a reasonless decision, then
+ * anything after it — the same frame for a content row and a flagged
+ * handle's (D-97).
  */
 export function DecisionForm(
   props: Readonly<{
     form: FormShell;
     onSubmit: () => void;
-    first: ReactNode;
+    quiet: ReactNode;
     submit: { label: string; pendingLabel: string };
     last?: ReactNode;
     children: ReactNode;
@@ -88,13 +81,14 @@ export function DecisionForm(
       className="flex flex-col gap-2"
       onSubmit={props.onSubmit}
       action={
-        <div className="flex flex-wrap gap-2">
-          {props.first}
+        <div className="flex flex-wrap items-center gap-3">
           <SubmitButton
+            tone="chalk"
             label={submit.label}
             pendingLabel={submit.pendingLabel}
             pending={form.pending}
           />
+          {props.quiet}
           {props.last}
         </div>
       }
@@ -226,7 +220,7 @@ export function RemovalDecision<TSchema extends z.ZodType, TResult>(
       onSubmit={() => {
         send({ action: "remove", reason });
       }}
-      first={
+      quiet={
         reasonless === undefined ? undefined : (
           <QuietAction
             label={REASONLESS_LABELS[reasonless]}
@@ -315,6 +309,7 @@ function CsamQuestion({
       action={
         <div className="flex flex-wrap gap-2">
           <SubmitButton
+            tone="chalk"
             label="Remove and report"
             pendingLabel="Removing"
             pending={form.pending}
@@ -323,7 +318,7 @@ function CsamQuestion({
             ref={(node) => {
               setCancel(node ?? undefined);
             }}
-            className={QUIET_CANCEL}
+            className={`target ${QUIET_CANCEL}`}
             type="button"
             onClick={onCancel}
           >

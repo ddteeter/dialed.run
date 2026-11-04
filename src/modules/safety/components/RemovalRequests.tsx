@@ -7,9 +7,12 @@ import { declineReasonField } from "../contracts";
 import {
   Bracketed,
   FormElement,
+  FormEnd,
   FormFailureBand,
   ListSection,
   Mono,
+  QUIET_CANCEL,
+  QUIET_PILL,
   SubmitButton,
   TextField,
   useFormSubmit,
@@ -20,7 +23,6 @@ import type { HoldState } from "../takedown-limits";
 import type { PendingTakedownRequest } from "../takedown-requests";
 import { OtherPhotos } from "./OtherPhotos";
 import { PhotoMatches, type DecideMatch } from "./PhotoMatches";
-import { QUIET_CANCEL, QUIET_PILL } from "./RemovalDecision";
 import { useSettled } from "./use-settled";
 
 /**
@@ -129,7 +131,7 @@ function CancelButton({
         setButton(node ?? undefined);
       }}
       type="button"
-      className={QUIET_CANCEL}
+      className={`target ${QUIET_CANCEL}`}
       onClick={onCancel}
     >
       Cancel
@@ -234,7 +236,7 @@ function RemovalRequestRow(props: RowProps): JSX.Element {
       ) : (
         <button
           type="button"
-          className={QUIET_PILL}
+          className={`target ${QUIET_PILL}`}
           onClick={() => {
             setIsDeclining(true);
           }}
@@ -289,7 +291,7 @@ function BlockRequester({
       <button
         ref={askedFrom.ref}
         type="button"
-        className={QUIET_PILL}
+        className={`target ${QUIET_PILL}`}
         onClick={() => {
           setIsAsking(true);
         }}
@@ -327,6 +329,7 @@ function BlockRequester({
           retryRef={form.retryRef}
         />
         <SubmitButton
+          tone="chalk"
           label="Block and decline all"
           pendingLabel="Blocking"
           pending={form.pending}
@@ -400,6 +403,7 @@ function RemoveForm({
         retryRef={form.retryRef}
       />
       <SubmitButton
+        tone="chalk"
         label="Take it down"
         pendingLabel="Taking it down"
         pending={form.pending}
@@ -443,15 +447,11 @@ function DeclineForm({
         field={form.field}
         error={form.fieldErrors.reason}
       />
-      <FormFailureBand
-        failure={form.failure}
-        onRetry={form.retry}
-        retryRef={form.retryRef}
-      />
-      <SubmitButton
+      <FormEnd
+        form={form}
+        tone="chalk"
         label="Decline"
         pendingLabel="Declining"
-        pending={form.pending}
       />
     </FormElement>
   );

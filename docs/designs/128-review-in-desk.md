@@ -39,6 +39,11 @@ ground, with no rail and no `data-ground="ink"`. Task 128's packet owns
   a11y baseline carried for Runners and Access. Tints, hairlines and
   hi-viz text raised nothing.
 
+- **Round 44** (design deltas 104–106, 2026-11-03): the Desk's main
+  button is a chalk pill, first in its bar; Review's other decisions are
+  outline pills and Cancel underlined text; the heading reads "Review"
+  with `[N WAITING · M DECIDED TODAY]`, from Today's counts.
+
 ## Behaviour change
 
 `/safety/review` sent a signed-out visitor to sign in. `/desk/*` answers

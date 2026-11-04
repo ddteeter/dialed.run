@@ -27,6 +27,7 @@ const HOUR = 3600;
 
 const COUNTS: TodayCounts = {
   waiting: 4,
+  decidedToday: 0,
   oldestWaitingAt: 1_000_000,
   screenerUnfinished: 1,
   bansThisWeek: 0,
@@ -235,6 +236,7 @@ describe("oweDigestEmail", () => {
       digestMail([userId], later.owed.settle, {
         ...COUNTS,
         waiting: 0,
+        decidedToday: 0,
         oldestWaitingAt: undefined,
         screenerUnfinished: 0,
         gaveUp: 0,
