@@ -6,7 +6,6 @@ import {
   Mono,
   QUIET_CANCEL,
   QUIET_PILL,
-  SubmitButton,
   useFormSubmit,
   useReturnFocus,
 } from "../../../ui";
@@ -80,17 +79,12 @@ export function DecisionForm(
       form={form}
       className="flex flex-col gap-2"
       onSubmit={props.onSubmit}
-      action={
-        <div className="flex flex-wrap items-center gap-3">
-          <SubmitButton
-            tone="chalk"
-            label={submit.label}
-            pendingLabel={submit.pendingLabel}
-            pending={form.pending}
-          />
+      submit={submit}
+      also={
+        <>
           {props.quiet}
           {props.last}
-        </div>
+        </>
       }
     >
       {props.children}
@@ -306,25 +300,18 @@ function CsamQuestion({
       form={form}
       className="flex flex-col gap-2"
       onSubmit={onConfirm}
-      action={
-        <div className="flex flex-wrap gap-2">
-          <SubmitButton
-            tone="chalk"
-            label="Remove and report"
-            pendingLabel="Removing"
-            pending={form.pending}
-          />
-          <button
-            ref={(node) => {
-              setCancel(node ?? undefined);
-            }}
-            className={`target ${QUIET_CANCEL}`}
-            type="button"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-        </div>
+      submit={{ label: "Remove and report", pendingLabel: "Removing" }}
+      also={
+        <button
+          ref={(node) => {
+            setCancel(node ?? undefined);
+          }}
+          className={`target ${QUIET_CANCEL}`}
+          type="button"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
       }
     >
       <Mono step="xs">Remove as suspected CSAM</Mono>

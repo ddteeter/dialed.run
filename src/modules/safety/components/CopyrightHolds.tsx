@@ -27,7 +27,7 @@ import {
   counterNoticeInputFor,
   RECEIVED_ON_COPY,
 } from "../inputs";
-import { DeskForm } from "./DeskForm";
+import { ACTION_BAR, DeskForm } from "./DeskForm";
 import { useSettled } from "./use-settled";
 
 type HoldAct<R, V = { holdId: string }> = (input: { data: V }) => Promise<R>;
@@ -336,7 +336,7 @@ function CaseOver({
   const [back, setBack] = useState<CaseEnd | undefined>();
   if (asking === undefined) {
     return (
-      <span data-part="case-over" className="flex flex-wrap gap-4">
+      <span data-part="case-over" className={ACTION_BAR}>
         {CASE_ENDS.map((end) => (
           <button
             key={end}
@@ -454,9 +454,9 @@ function HoldAction<
         void form.submit(values);
       }}
       submit={{ label, pendingLabel: "Recording" }}
+      also={also}
     >
       {fields?.(form)}
-      {also}
     </DeskForm>
   );
 }

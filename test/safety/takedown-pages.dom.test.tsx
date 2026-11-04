@@ -47,6 +47,15 @@ async function renderWithRouter(element: ReactElement) {
   return render(<RouterProvider router={router} />);
 }
 
+/**
+Whether `a` comes before `b` in the page: the order a reader meets them.
+*/
+function isBefore(a: Node, b: Node): boolean {
+  return (
+    (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+  );
+}
+
 const part = (name: string) =>
   document.querySelector<HTMLElement>(`[data-part='${CSS.escape(name)}']`);
 
@@ -458,6 +467,52 @@ describe("Review · removal requests", () => {
     expect(decide).toHaveBeenCalledWith({
       data: { requestId: "01JREQUEST0000000000000001", outcome: "removed" },
     });
+  });
+
+  it("draws its decisions as one bar, Take it down first, and Block's question in its place (round 44)", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    const user = userEvent.setup();
+    const bar = part("request-actions");
+    expect(bar).toHaveClass("flex", "flex-wrap", "items-center", "gap-3");
+    const press = (name: string): HTMLElement =>
+      within(bar ?? document.body).getByRole("button", { name });
+    expect(isBefore(press("Take it down"), press("Decline"))).toBe(true);
+    expect(isBefore(press("Decline"), press("Block and decline all"))).toBe(
+      true,
+    );
+
+    // Decline's reason opens under the bar, which keeps its other two.
+    await user.click(press("Decline"));
+    expect(press("Take it down")).toBeVisible();
+    expect(press("Block and decline all")).toBeVisible();
+    expect(
+      within(bar ?? document.body).queryByRole("button", { name: "Decline" }),
+    ).toBeNull();
+    expect(
+      isBefore(bar ?? document.body, part("decline") ?? document.body),
+    ).toBe(true);
+
+    // Block's question takes the bar's place, its answer then Cancel in a row.
+    await user.click(press("Block and decline all"));
+    expect(part("request-actions")).toBeNull();
+    const question = within(part("block") ?? document.body);
+    const confirm = question.getByRole("button", {
+      name: "Block and decline all",
+    });
+    const cancel = question.getByRole("button", { name: "Cancel" });
+    expect(confirm.parentElement).toBe(cancel.parentElement);
+    expect(confirm.parentElement).toHaveClass("flex", "flex-wrap");
+    expect(isBefore(confirm, cancel)).toBe(true);
+    // Cancel brings the bar back with Decline's reason still open.
+    await user.click(cancel);
+    expect(part("request-actions")).not.toBeNull();
+    expect(part("decline")).not.toBeNull();
   });
 
   it("declines only with a reason, asked for once Decline is pressed, and sends it", async () => {
