@@ -1,32 +1,42 @@
 document
-banner
-link, dialed.run home
+navigation, Desk
 [
 dialed
 .run
 ]
-end of link, dialed.run home
-navigation, Main
+Desk
+Operator
 list
-listitem, level 1, position 1, set size 4
-link, Feed
-end of listitem, level 1, position 1, set size 4
-listitem, level 1, position 2, set size 4
-link, Closet
-end of listitem, level 1, position 2, set size 4
-listitem, level 1, position 3, set size 4
-link, Call
-end of listitem, level 1, position 3, set size 4
-listitem, level 1, position 4, set size 4
-link, You
-end of listitem, level 1, position 4, set size 4
+listitem, level 1, position 1, set size 5
+link, :when #, current page
+:when
+#
+end of link, :when #, current page
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Review #, current page
+Review
+#
+end of link, Review #, current page
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+link, Access
+Access
+end of link, Access
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+Duplicates
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, Runners
+Runners
+end of link, Runners
+end of listitem, level 1, position 5, set size 5
 end of list
-end of navigation, Main
-link, Search runners
-button, Log a run, has popup dialog
-end of banner
+end of navigation, Desk
 main
-heading, Review queue, level 1
+heading, Review, level 1
+# waiting · # decided today
 heading, # waiting, level 2
 # waiting
 end of heading, # waiting, level 2
@@ -48,10 +58,10 @@ option, it harasses someone, harassment, not selected, position 5, set size 7
 option, it's an ad or spam, spam, not selected, position 6, set size 7
 option, it uses someone else's work, copyright, not selected, position 7, set size 7
 end of combobox, Why it comes down, has popup listbox, not expanded
-button, Approve
 button, Remove
 Remove
 end of button, Remove
+button, Approve
 button, Remove as suspected CSAM
 end of form
 end of listitem, level 1, position 1, set size 3
@@ -89,5 +99,4 @@ end of button, Take it down
 end of form
 end of region, Takedown
 end of main
-status
 end of document
