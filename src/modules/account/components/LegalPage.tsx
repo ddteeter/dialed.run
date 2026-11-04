@@ -158,7 +158,9 @@ function Items({
   return (
     <>
       {items.map((item, index) => (
-        <li key={index}>
+        // A bare URL is one word: it breaks rather than scrolling the
+        // page sideways at 320px (plan 161's reflow check).
+        <li key={index} className="wrap-anywhere">
           <Inlines inlines={item} />
         </li>
       ))}

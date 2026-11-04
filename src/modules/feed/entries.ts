@@ -525,8 +525,7 @@ export async function shouldPromptForVerdict(
     .from(outfitEntries)
     .where(eq(outfitEntries.id, entryId))
     .limit(1);
-  if (!entry) return false;
-  if (entry.userId !== userId || entry.verdict !== null) return false;
+  if (entry?.userId !== userId || entry.verdict !== null) return false;
   const [prompted] = await db()
     .select({ id: notifications.id })
     .from(notifications)
@@ -701,9 +700,9 @@ export async function getEntryDetail(
       and(
         eq(entryPhotos.entryId, entryId),
         // The author sees all but a photo a copyright takedown holds.
-        ...(entry.userId === viewerId
-          ? [ne(entryPhotos.screenStatus, heldPhotoStatus)]
-          : [eq(entryPhotos.screenStatus, publicPhotoStatus)]),
+        entry.userId === viewerId
+          ? ne(entryPhotos.screenStatus, heldPhotoStatus)
+          : eq(entryPhotos.screenStatus, publicPhotoStatus),
       ),
     )
     .orderBy(entryPhotos.position);

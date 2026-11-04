@@ -163,3 +163,19 @@ summary:focus-visible,
     inset: -6px 0;
   }
 }
+
+/* ------------------------------------------------------------------
+ * 06 · FOCUS IS NOT HIDDEN — under the tab bar
+ *
+ * WCAG 2.4.11: a control that takes focus is not entirely covered. On a
+ * phone the tab bar is fixed to the bottom edge, and a Tab to the next
+ * control scrolls it only as far as the window's edge: under the bar
+ * (plan 161 step 2's walk found the Feed's weather credit and A3's MORE
+ * there). Scroll padding moves that edge up by what `Layout`'s `<main>`
+ * already reserves for the bar (`pb-24`), at the widths the bar is drawn.
+ * ------------------------------------------------------------------ */
+html {
+  @variant max-wide {
+    scroll-padding-bottom: --spacing(24);
+  }
+}

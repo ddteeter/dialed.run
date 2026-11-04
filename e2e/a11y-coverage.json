@@ -1,0 +1,13 @@
+{
+  "branches": 75.09,
+  "unvisited": {
+    "/api/health": "an endpoint: JSON, no page",
+    "/api/strava": "an endpoint: Strava's webhook",
+    "/api/auth/$": "an endpoint: Better Auth's handlers",
+    "/og/default": "an endpoint: the share image",
+    "/og/kit/$entryId": "an endpoint: a kit's share image",
+    "/feed/photo/$": "an endpoint: a photo's bytes",
+    "/safety/review-photo/$": "an endpoint: a photo's bytes for review",
+    "/closet/photo/$itemId/$size": "an endpoint: a garment photo's bytes"
+  }
+}

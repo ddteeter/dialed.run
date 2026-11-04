@@ -88,6 +88,55 @@ Focus returning when a sheet closes stays in `use-return-focus`'s unit
 test, because the end state can't see it.
 _Done:_ as in step 1.
 
+_How (2026-11-02):_ the fixture's teardown runs them after its last
+check, on a test that passed, on the app's origin. The action wrapper is
+off by then, so the walk's own key presses are not checked as states.
+In order:
+
+1. **The Tab walk, at the test's own width** (`a11y-walk.ts`, in the
+   page; Node presses the real Tab key, so `:focus-visible` is the
+   browser's own). It is a line, not a loop: a stop is placed first in
+   the page (or in the open modal), focused, and Tab is pressed until
+   focus is back on it or leaves the page, capped at twice the page's
+   control count. Looping does not work: Chromium's Tab past the last
+   control lands on the page, and the next one resumes from wherever
+   focus last started, not from the top, so a loop skipped the login
+   form after a server fault. Each stop is measured:
+   - `focus-ring`: no 2px outline on the element, its labels, the next
+     sibling (Tailwind's `peer`) or an ancestor up to three levels
+     (`.field-box` draws the ring for its input);
+   - `focus-obscured`: the stop is entirely covered (WCAG 2.4.11), read by
+     `elementFromPoint` at its centre and four inset corners;
+   - `focus-trap`: Tab left focus where it was for more than three
+     presses in a row, or the cap ran out first. One press can land on a
+     busy page and move nothing (CI's preview leg saw it once), and a trap
+     holds focus every time. An iframe (its own document takes the
+     presses) and a date or time input (Chromium tabs through its day,
+     month and year) may hold focus for 30 presses.
+
+   Before the walk, the page lists its controls: anything focusable or
+   with an interactive role, or drawn with `cursor: pointer` and not
+   inside or around a control or a label (a clickable `<div>`).
+   - `tab-unreached`: a control the walk never reached. A radio group
+     counts once (arrow keys move inside it), and with a modal `<dialog>`
+     open only the dialog's controls count;
+   - `tab-order`: a positive `tabindex`, which reorders the page. Such a
+     control comes before the walk's start, so it is not also unreached.
+2. **The other width:** the one of `PHONE` and `DESK` farther from the
+   test's width. axe and the step 1 checks run again there.
+3. **Reflow at 320×568** (WCAG 1.4.10): `reflow` when the page scrolls
+   sideways, named by each element that starts the overflow (its parent
+   fits), not inside a container that scrolls or clips on its own. When
+   no element's box overflows, it is text: a word too long to wrap, named
+   by the deepest box it spills out of.
+
+A failed test skips them: its last state is not one it meant to reach.
+Each finding is named and baselined like step 1's.
+_Tests:_ `a11y.spec.ts` gets a probe per check: a ring removed, a
+covered control, a trap, a clickable `<div>`, a positive `tabindex`, a
+phone-only image without alt, and a 400px box. It also plants what must
+not be found: a radio group, a field-box input and a scrolling strip.
+
 **3. Coverage: what was checked.** On the dev leg only, where Vite serves
 source maps, the fixture collects Chromium's V8 coverage through
 `monocart-coverage-reports` and maps it back to `src/ui/**/*.tsx` and
@@ -102,6 +151,55 @@ if the spike's cost allows it.
 _Tests:_ the report reader is pinned against a fixture report; removing a
 visit from a spec drops the figure.
 _Done:_ the figure is printed in CI and can only go up.
+
+_How (2026-11-03):_
+
+- **When it measures.** Only on the dev leg, and only when the whole suite
+  runs: in CI, or locally with `A11Y_COVERAGE=1`. A local run of one folder
+  would fail both checks, so measuring is opt-in there.
+- **Coverage.** The fixture starts Chromium's JS coverage with each test's
+  page (`resetOnNavigation: false`) and stops it after the end-of-test
+  checks. It keeps only the entries Vite serves as `src/ui/**/*.tsx` and
+  `src/modules/**/*.tsx`, and hands them to `monocart-coverage-reports`,
+  which caches them on disk between tests. The global teardown
+  (`a11y-coverage-teardown.ts`) maps them through Vite's inline source
+  maps and reads the branch percentage.
+  - Chromium reports only the scripts of the document still loaded, so a
+    second full page load in one test used to drop the first. The fixture
+    takes the coverage before each navigation it drives (`goto`,
+    `reload`, `goBack`, `goForward`). A full load the app makes itself
+    (a form post, `location.assign`) still drops the document before it.
+    The app's own navigations are client-side, and those keep their
+    modules.
+  - Vite's maps name each source by its bare file name, so two
+    `index.tsx` files would merge into one. Each source is named by the
+    path it was served at instead.
+- **The visited routes.** The fixture records each path the test's page
+  navigated to, including client-side navigations (Playwright's
+  `framenavigated` fires for both). The teardown reads the routes from
+  `routeTree.gen.ts`'s `FileRoutesByTo`, so the list is derived, never
+  restated, and matches each visited path to one:
+  - `$param` matches one segment;
+  - `$` matches the rest;
+  - `{$handle}` matches the rest of its segment.
+- **Both checks read `e2e/a11y-coverage.json`.** It holds:
+  - `branches`, the figure at its last value;
+  - `unvisited`, each route no spec opens, with the reason. Endpoints
+    (`/api/*`, `/og/*`, photo routes) are routes but not pages.
+
+  The run fails:
+  - when the figure falls below `branches`;
+  - when a route is neither visited nor listed;
+  - when a listed route was visited, so its reason is stale.
+
+  `A11Y_RECORD=1` writes the figure instead of failing on it. A rise is
+  printed, with a reminder to raise the baseline.
+- **CI.** The teardown prints the figure and appends it to
+  `$GITHUB_STEP_SUMMARY`, so no workflow changes. The HTML report is not
+  uploaded: the Actions bill is artifact storage.
+- _Known limit:_ a component that no visited route imports never loads. It
+  is left out of the figure rather than counted as zero. The route check is
+  what catches a screen no spec opens.
 
 **4. Transcripts.** At the end of each test, record what a screen reader
 would say, with Guidepup's `spokenPhraseLog()`; step 0 showed it runs in the
@@ -177,10 +275,14 @@ with the report-only fixture against without it:
 
 ## Open questions
 
-- **Bracket notation and screen readers.** `Bracketed` leaves the brackets
-  in the accessible name. Should they be `aria-hidden`, so VoiceOver reads
-  "Nothing in here yet"? This is user-facing wording and the contract's
-  call, so the owner (and design) decides; step 6 applies it.
+- ~~**Bracket notation and screen readers.**~~ **Decided (owner,
+  2026-11-03): hide them.** The bracket glyphs in `Bracketed` and the
+  wordmark become `aria-hidden`, so VoiceOver reads "Nothing in here yet"
+  and "dialed.run". The drawing does not change. Step 6 applies it.
+- ~~**The Desk at 320px.**~~ **Decided (owner, 2026-11-03):** step 2's
+  reflow check finds `/desk` scrolling sideways at 320px, because the rail
+  keeps its width. It is baselined, and step 6 stacks the rail above the
+  content below the `wide` breakpoint.
 
 ## Cost
 

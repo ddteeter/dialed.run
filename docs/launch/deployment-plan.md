@@ -116,8 +116,9 @@ key and Anthropic key go in their own environments
 - R-72's one line: `ADMIN_USER_IDS` in the e2e job's `.dev.vars`, so the
   admin surfaces get a demo.
 
-**Applied (#114).** `.github/workflows/ci.yml` on `main` migrates both
-databases `--remote` before `wrangler deploy`, the deploy job has
+**Applied (#114).** `.github/workflows/ci.yml` on `main` migrates every
+database `--remote` before `wrangler deploy` (core and weather since #114,
+ops since design 165), the deploy job has
 `needs: [test, e2e]`, and the e2e job writes `ADMIN_USER_IDS`. Nothing in
 this section is left for the owner.
 

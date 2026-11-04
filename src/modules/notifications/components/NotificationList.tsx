@@ -65,7 +65,7 @@ export function NotificationList({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="m-0 font-display text-display uppercase">
           Notifications
         </h1>
