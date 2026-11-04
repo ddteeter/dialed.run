@@ -9,45 +9,45 @@ button, Following, current page
 button, Your conditions
 status
 article
-link, @e#_runner_# #h ago · #:# Dialed Half-zip was right. #.#mi #° · clear
+link, @e#_runner_# :when · #:# Dialed Half-zip was right. #.#mi #° · clear
 @e#_runner_#
-#h ago · #:#
+:when · #:#
 Dialed
 paragraph
 Half-zip was right.
 end of paragraph
 #.#mi
 #° · clear
-end of link, @e#_runner_# #h ago · #:# Dialed Half-zip was right. #.#mi #° · clear
+end of link, @e#_runner_# :when · #:# Dialed Half-zip was right. #.#mi #° · clear
 link, Weather data provided by Visual Crossing
 button, Useful, not pressed
 Useful
 end of button, Useful, not pressed
 end of article
 article
-link, @e#_runner_# #h ago · #:# A bit warm Wore the shell for a forecast that never showed up. #.#mi #° · clear
+link, @e#_runner_# :when · #:# A bit warm Wore the shell for a forecast that never showed up. #.#mi #° · clear
 @e#_runner_#
-#h ago · #:#
+:when · #:#
 A bit warm
 paragraph
 Wore the shell for a forecast that never showed up.
 end of paragraph
 #.#mi
 #° · clear
-end of link, @e#_runner_# #h ago · #:# A bit warm Wore the shell for a forecast that never showed up. #.#mi #° · clear
+end of link, @e#_runner_# :when · #:# A bit warm Wore the shell for a forecast that never showed up. #.#mi #° · clear
 link, Weather data provided by Visual Crossing
 button, Useful, not pressed
 Useful
 end of button, Useful, not pressed
 end of article
 article
-link, @e#_runner_# #h ago · #:# Dialed #.#mi Indoor
+link, @e#_runner_# :when · #:# Dialed #.#mi Indoor
 @e#_runner_#
-#h ago · #:#
+:when · #:#
 Dialed
 #.#mi
 Indoor
-end of link, @e#_runner_# #h ago · #:# Dialed #.#mi Indoor
+end of link, @e#_runner_# :when · #:# Dialed #.#mi Indoor
 button, Useful, not pressed
 Useful
 end of button, Useful, not pressed

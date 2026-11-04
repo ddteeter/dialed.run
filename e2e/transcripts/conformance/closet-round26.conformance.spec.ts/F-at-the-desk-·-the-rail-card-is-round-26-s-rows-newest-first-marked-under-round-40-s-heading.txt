@@ -63,7 +63,7 @@ end of group, Type
 group, What is it?
 What is it?
 Brand
-combobox, Brand, :month, has popup listbox, not expanded, # control
+combobox, Brand, Janji, has popup listbox, not expanded, # control
 Model / name
 textbox, Model / name, Rover Half-zip
 Product link · optional
@@ -162,7 +162,7 @@ Tracksmith Harrier
 # runs · #/# dialed #–#°
 end of listitem, level 1, position 1, set size 4
 listitem, level 1, position 2, set size 4
-:month Rover Half-zip
+Janji Rover Half-zip
 # runs · Retired :month #
 Same name · Retired
 end of listitem, level 1, position 2, set size 4
@@ -171,7 +171,7 @@ Uniqlo quarter-zip
 # runs · No verdict yet
 end of listitem, level 1, position 3, set size 4
 listitem, level 1, position 4, set size 4
-:month Rover Half-zip
+Janji Rover Half-zip
 # runs · No verdict yet
 Same name
 end of listitem, level 1, position 4, set size 4

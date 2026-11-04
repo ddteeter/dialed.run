@@ -63,6 +63,14 @@ test("what differs between runs is normalized, and structure is not", () => {
   expect(normalize("listitem, level 1, position 3, set size 12")).toBe(
     "listitem, level 1, position 3, set size 12",
   );
+  expect(normalize("@trail_7 2h ago · 6:04 AM, SAT AUG 29")).toBe(
+    "@trail_# :when · #:#, :day :month #",
+  );
+  expect(normalize("Yesterday · 6:04 AM; 15m ago")).toBe(":when · #:#; :when");
+  // Whole names only: a word that starts like one is a word.
+  expect(normalize("IBM Plex Mono; Garmin may satisfy a marked notice")).toBe(
+    "IBM Plex Mono; Garmin may satisfy a marked notice",
+  );
 });
 
 test("the module build becomes a script that sets a global", async ({

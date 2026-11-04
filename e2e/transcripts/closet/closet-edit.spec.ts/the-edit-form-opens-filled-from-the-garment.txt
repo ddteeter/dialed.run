@@ -63,7 +63,7 @@ end of group, Type
 group, What is it?
 What is it?
 Brand
-combobox, Brand, :month, has popup listbox, not expanded, # control
+combobox, Brand, Janji, has popup listbox, not expanded, # control
 Model / name
 textbox, Model / name, Rover Half-zip
 Product link · optional

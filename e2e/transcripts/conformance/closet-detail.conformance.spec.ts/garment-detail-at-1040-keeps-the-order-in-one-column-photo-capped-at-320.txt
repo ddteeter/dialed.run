@@ -31,11 +31,11 @@ link, Closet, current page
 paragraph
 Top · Half-zip · M
 end of paragraph
-heading, :month Rover Half-zip, level 1
+heading, Janji Rover Half-zip, level 1
 paragraph
 Midnight
 end of paragraph
-image, :month Rover Half-zip
+image, Janji Rover Half-zip
 Replace
 Replace
 button, Remove

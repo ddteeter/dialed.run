@@ -6,7 +6,7 @@ Garment saved, photo didn't. Try again?
 end of status
 link, Closet, current page
 Saved to closet · Top · Half-zip
-heading, :month Rover Half-zip, level 1
+heading, Janji Rover Half-zip, level 1
 Photo · optional
 Add a photo
 Flat on the floor works best. JPG, PNG or WebP.

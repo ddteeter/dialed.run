@@ -48,16 +48,16 @@ paragraph
 end of paragraph
 link, Weather data provided by Visual Crossing
 article
-link, @trail_# #h ago · #:# Dialed Chilly first mile, settled in by the bridge — # #.#mi #–#° · light rain
+link, @trail_# :when · #:# Dialed Chilly first mile, settled in by the bridge — # #.#mi #–#° · light rain
 @trail_#
-#h ago · #:#
+:when · #:#
 Dialed
 paragraph
 Chilly first mile, settled in by the bridge — #
 end of paragraph
 #.#mi
 #–#° · light rain
-end of link, @trail_# #h ago · #:# Dialed Chilly first mile, settled in by the bridge — # #.#mi #–#° · light rain
+end of link, @trail_# :when · #:# Dialed Chilly first mile, settled in by the bridge — # #.#mi #–#° · light rain
 link, Weather data provided by Visual Crossing
 button, # Useful, pressed
 #

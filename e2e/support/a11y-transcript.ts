@@ -58,7 +58,8 @@ const END = "end of document";
 /**
  * What differs between two runs of the same test, and between the dev
  * server and the build: ids, seeded handles and every number (counts,
- * times, dates, temperatures). A transcript is about what is said and
+ * times, dates, temperatures), and a post's "2h ago" or "Yesterday",
+ * which depends on the hour the test runs. A transcript is about what is said and
  * in what order; the values are other tests' business. Heading levels
  * and list positions stay.
  */
@@ -66,16 +67,69 @@ export function normalize(phrase: string): string {
   return (
     phrase
       .replaceAll(/[0-9A-HJKMNP-TV-Z]{26}/gu, ":id")
-      .replaceAll(/\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*\b/giu, ":day")
-      .replaceAll(
-        /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\b/giu,
-        ":month",
-      )
+      .replaceAll(DAY_NAME, ":day")
+      .replaceAll(MONTH_NAME, ":month")
       // A heading's level and a list item's place are structure, not data.
       .replaceAll(/(?<!level |position |set size |\d)\d+/gu, "#")
       .replaceAll(/#:# ?[AP]M/gu, "#:#")
+      // When a post's run was, against the clock (`feed/posted.ts`).
+      .replaceAll(/# ?[mhd] ago\b|\b(?:Yesterday|Today)\b/gu, ":when")
   );
 }
+
+/**
+ * Whole names only, as the app writes them or shouts them: "Sat" and
+ * "SATURDAY" are days, "Mono" and "satisfy" are not, and "may" in a
+ * sentence is not a month.
+ */
+function namesOf(names: readonly string[]): RegExp {
+  const all = names.flatMap((name) => [name, name.toUpperCase()]);
+  return new RegExp(String.raw`\b(?:${all.join("|")})\b`, "gu");
+}
+
+const DAY_NAME = namesOf([
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+  "Sun",
+]);
+
+const MONTH_NAME = namesOf([
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Sept",
+  "Oct",
+  "Nov",
+  "Dec",
+]);
 
 /**
  * Guidepup's reader, as `globalThis.__guidepup.virtual`.
