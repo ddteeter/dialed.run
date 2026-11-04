@@ -297,6 +297,38 @@ lane that owns the file, until it is empty. Contrast in a real browser is
 the likely bulk.
 _Done:_ the baseline is empty and the file is deleted.
 
+_How (2026-11-03):_ 28 findings, in five kinds, plus the owner's two
+decisions.
+
+- **`target-44`** (13): every `<select>` and the runner search.
+  - `FormField`'s box held its control centred in 12px of padding. A
+    select drew its own 37px box inside the box.
+  - The box now has no vertical padding: `min-h-field` alone makes it
+    50. Each select fills it borderless (48px), the way a text input sits
+    in it.
+  - The search input stretches to its 48px box.
+  - The text fields look the same. The selects no longer draw a box
+    inside the box.
+- **`color-contrast`** (8), each against the token rules in `tokens.css`:
+  - "Pink as text is `--cold-text`": Delete account.
+  - "Text on `--action` is always `--accent-ink`": the shared
+    `SubmitButton` and Copyright holds' button. The Desk is an inverted
+    block, so `text-ink` there was chalk on pink.
+  - NowGoRun's ink block was `bg-ink text-ground` with the paper values
+    inside, so `--muted` and `--cold-text` failed on ink. It is now a
+    `ground-ink` block, which redefines them.
+  - `--label`/`--muted` grey is 4.0:1 on `--tint`. Text on a tinted row
+    (a saved backlog row, the file strip) is `--quiet`.
+- **`label-content-name-mismatch`** (1): the start-time button is named
+  by what it shows, then what it does: "6:04 AM · Changed, change start
+  time" (WCAG 2.5.3).
+- **`p-as-heading`** (3): `BracketHeadline` and the conditions block's
+  state titles are `<h2>`s under the feed's `<h1>`.
+- **`reflow /desk`**: the rail is beside the content from `wide` and
+  above it below `wide`.
+- **Brackets**: the wordmark's bracket glyphs are `aria-hidden`.
+  `Bracketed` already hid its own.
+
 **7. `eslint-plugin-jsx-a11y`.** The owner adds it to the ESLint config at
 `recommended`. Its findings are fixed in the same PR.
 
