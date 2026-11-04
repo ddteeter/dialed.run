@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import type { JSX, ReactNode, Ref } from "react";
 import type { z } from "zod";
 
-import { Mono, SubmitButton, useFormSubmit, useReturnFocus } from "../../../ui";
+import {
+  Mono,
+  QUIET_CANCEL,
+  QUIET_PILL,
+  useFormSubmit,
+  useReturnFocus,
+} from "../../../ui";
 import type { FormShell } from "../../../ui";
 import {
   removalReasonSchema,
@@ -28,7 +34,7 @@ const REASON_LABELS: Readonly<Record<RemovalReason, string>> =
   removalStatements;
 
 /**
-A decision that needs no reason: a text button beside the row's submit.
+A decision that needs no reason: an outline pill beside the row's submit.
 */
 export function QuietAction({
   label,
@@ -40,22 +46,28 @@ export function QuietAction({
   buttonRef?: Ref<HTMLButtonElement> | undefined;
 }>): JSX.Element {
   return (
-    <button ref={buttonRef} className="target" type="button" onClick={onPress}>
-      <Mono step="xs">{label}</Mono>
+    <button
+      ref={buttonRef}
+      className={`target ${QUIET_PILL}`}
+      type="button"
+      onClick={onPress}
+    >
+      {label}
     </button>
   );
 }
 
 /**
- * A review row's decision bar: a reasonless decision first, the one that
- * takes the picked reason as the submit, and anything after it — the same
- * frame for a content row and a flagged handle's (D-97).
+ * A review row's decision bar: the one that takes the picked reason as the
+ * submit first, as round 44 draws it, then a reasonless decision, then
+ * anything after it — the same frame for a content row and a flagged
+ * handle's (D-97).
  */
 export function DecisionForm(
   props: Readonly<{
     form: FormShell;
     onSubmit: () => void;
-    first: ReactNode;
+    quiet: ReactNode;
     submit: { label: string; pendingLabel: string };
     last?: ReactNode;
     children: ReactNode;
@@ -67,16 +79,12 @@ export function DecisionForm(
       form={form}
       className="flex flex-col gap-2"
       onSubmit={props.onSubmit}
-      action={
-        <div className="flex flex-wrap gap-2">
-          {props.first}
-          <SubmitButton
-            label={submit.label}
-            pendingLabel={submit.pendingLabel}
-            pending={form.pending}
-          />
+      submit={submit}
+      also={
+        <>
+          {props.quiet}
           {props.last}
-        </div>
+        </>
       }
     >
       {props.children}
@@ -203,7 +211,7 @@ export function RemovalDecision<TSchema extends z.ZodType, TResult>(
       onSubmit={() => {
         send({ action: "remove", reason });
       }}
-      first={
+      quiet={
         reasonless === undefined ? undefined : (
           <QuietAction
             label={REASONLESS_LABELS[reasonless]}
@@ -289,24 +297,18 @@ function CsamQuestion({
       form={form}
       className="flex flex-col gap-2"
       onSubmit={onConfirm}
-      action={
-        <div className="flex flex-wrap gap-2">
-          <SubmitButton
-            label="Remove and report"
-            pendingLabel="Removing"
-            pending={form.pending}
-          />
-          <button
-            ref={(node) => {
-              setCancel(node ?? undefined);
-            }}
-            className="target"
-            type="button"
-            onClick={onCancel}
-          >
-            <Mono step="xs">Cancel</Mono>
-          </button>
-        </div>
+      submit={{ label: "Remove and report", pendingLabel: "Removing" }}
+      also={
+        <button
+          ref={(node) => {
+            setCancel(node ?? undefined);
+          }}
+          className={`target ${QUIET_CANCEL}`}
+          type="button"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
       }
     >
       <Mono step="xs">Remove as suspected CSAM</Mono>

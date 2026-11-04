@@ -65,6 +65,7 @@ describe("todayCounts", () => {
   it("is all zeros, and no oldest, on an empty desk", async () => {
     expect(await todayCounts()).toStrictEqual({
       waiting: 0,
+      decidedToday: 0,
       oldestWaitingAt: undefined,
       screenerUnfinished: 0,
       bansThisWeek: 0,
@@ -92,6 +93,24 @@ describe("todayCounts", () => {
     // waiting one here, so counting them would move both numbers.
     expect(counts.waiting).toBe(2);
     expect(counts.oldestWaitingAt).toBe(now - 19 * 3600);
+  });
+
+  it("counts what was decided since midnight UTC, as decidedToday", async () => {
+    const now = nowSeconds();
+    const midnight = now - (now % DAY);
+    // Both decisions count, from the first second of the day.
+    await queueRow({ status: "approved", resolvedAt: midnight });
+    await queueRow({ status: "removed", resolvedAt: now });
+    // Yesterday's last second is not today's.
+    await queueRow({ status: "removed", resolvedAt: midnight - 1 });
+    // Not decided, whatever the column says.
+    await queueRow({ status: "reviewing", resolvedAt: now });
+    await queueRow({ status: "pending" });
+
+    const counts = await todayCounts();
+
+    expect(counts.decidedToday).toBe(2);
+    expect(counts.waiting).toBe(1);
   });
 
   it("does not count a claimed photo as the screener's", async () => {

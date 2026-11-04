@@ -35,6 +35,7 @@ import {
   RemovalDecision,
   subjectWord,
 } from "./RemovalDecision";
+import { reviewPhotoSrc } from "./review-photo-src";
 import { useFocusWhen } from "./use-focus-when";
 import { useSettled } from "./use-settled";
 
@@ -102,7 +103,7 @@ function photosShown(row: QueueRow): readonly string[] {
 /**
  * The photos a reviewer is being asked about.
  *
- * **Served from `/safety/review-photo/`, not `/feed/photo/`.** Every photo
+ * **Served from `/desk/review-photo/`, not `/feed/photo/`.** Every photo
  * in this queue is hidden precisely because it was reported, so the
  * ordinary route refuses it — which for a while meant the one subject
  * that most needs looking at was the one nothing showed.
@@ -120,7 +121,7 @@ function ReportedPhotos({
       {keys.map((key) => (
         <img
           key={key}
-          src={`/safety/review-photo/${key}`}
+          src={reviewPhotoSrc(key)}
           alt="Reported photo"
           className="h-32 w-auto border border-hairline"
         />
@@ -145,7 +146,7 @@ function GarmentPhoto({
         className="aspect-4/3 w-full rounded-field border border-hairline bg-photo wide:max-h-80"
       >
         <img
-          src={`/safety/review-photo/${photoKey}`}
+          src={reviewPhotoSrc(photoKey)}
           alt="Reported garment photo"
           className="h-full w-full object-contain"
         />
@@ -327,7 +328,7 @@ function HandleDecision({
           nameReason: reason,
         });
       }}
-      first={
+      quiet={
         <QuietAction
           label="Keep"
           onPress={() => {

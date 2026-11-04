@@ -38,6 +38,7 @@ function desk(
     asOf: NOON,
     counts: {
       waiting: 0,
+      decidedToday: 0,
       oldestWaitingAt: undefined,
       screenerUnfinished: 0,
       bansThisWeek: 0,

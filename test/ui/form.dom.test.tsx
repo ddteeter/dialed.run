@@ -11,14 +11,18 @@ import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import {
+  CHALK_PILL,
   ChoiceField,
   ChoiceList,
   FailureBand,
   FormElement,
+  FormEnd,
   FormErrorSummary,
   FormFailureBand,
   FormField,
   FormStatus,
+  QUIET_CANCEL,
+  QUIET_PILL,
   SubmitButton,
   TextField,
   ToggleField,
@@ -216,6 +220,10 @@ describe("the submit button is never disabled", () => {
     // Pink is action, and the submit button is the action. The cursor is
     // the visual half of aria-disabled: it must stop inviting a click.
     expect(button).toHaveClass("bg-action");
+    // Text on pink is the fixed ink, not the ground-relative role: on the
+    // Desk's ink ground `text-ink` is chalk, chalk on pink (R-173).
+    expect(button).toHaveClass("text-accent-ink");
+    expect(button).not.toHaveClass("text-ink");
     expect(button).toHaveClass("cursor-default");
     expect(button).not.toHaveClass("cursor-pointer");
 
@@ -1416,9 +1424,7 @@ describe("a field repeated on every row (R-165)", () => {
     expect(second.getByRole("textbox", { name: "Received on" })).toHaveValue(
       "Tuesday",
     );
-    expect(first.getByRole("textbox", { name: "Received on" })).toHaveValue(
-      "",
-    );
+    expect(first.getByRole("textbox", { name: "Received on" })).toHaveValue("");
   });
 
   it("labels each row's select with its own label", () => {
@@ -1811,9 +1817,9 @@ describe("ChoiceList", () => {
       />,
     );
 
-    expect(screen.getByRole("radio", { name: /^Runs cold/ })).toHaveAccessibleName(
-      "Runs cold Add a layer.",
-    );
+    expect(
+      screen.getByRole("radio", { name: /^Runs cold/ }),
+    ).toHaveAccessibleName("Runs cold Add a layer.");
     const hint = screen.getByText("Add a layer.");
     expect(hint).toHaveClass("text-small", "font-normal", "text-muted");
     expect(hint.parentElement).toHaveClass("flex", "flex-col", "gap-1");
@@ -2079,5 +2085,118 @@ describe("SubmitButton's ref", () => {
     expect(ref.current).toBe(
       screen.getByRole("button", { name: "Delete my account" }),
     );
+  });
+});
+
+describe("the Desk's buttons (round 44 #104-#105)", () => {
+  it("draws the chalk tone as a pill in the ground's ink, never pink", () => {
+    render(
+      <form>
+        <SubmitButton
+          tone="chalk"
+          label="Remove"
+          pendingLabel="Removing"
+          pending={false}
+        />
+      </form>,
+    );
+    const button = screen.getByRole("button", { name: "Remove" });
+    expect(button).toHaveClass(
+      "target",
+      "inline-flex",
+      "min-h-11",
+      "items-center",
+      "justify-center",
+      "self-start",
+      "rounded-pill",
+      "bg-ink",
+      "px-5",
+      "text-body",
+      "font-bold",
+      "text-ground",
+      "cursor-pointer",
+    );
+    expect(button).not.toHaveClass("bg-action", "rounded-card", "font-display");
+  });
+
+  it("gives the one press that is not a submit the same pill", () => {
+    expect(CHALK_PILL.split(" ")).toStrictEqual(
+      expect.arrayContaining([
+        "cursor-pointer",
+        "border-none",
+        "text-body",
+        "rounded-pill",
+        "bg-ink",
+        "text-ground",
+        "min-h-11",
+      ]),
+    );
+  });
+
+  it("draws the quiet decisions as outline pills, and Cancel as underlined text", () => {
+    expect(QUIET_PILL.split(" ")).toStrictEqual([
+      "inline-flex",
+      "min-h-11",
+      "cursor-pointer",
+      "items-center",
+      "justify-center",
+      "self-start",
+      "rounded-pill",
+      "border",
+      "border-ink",
+      "bg-transparent",
+      "px-5",
+      "text-body",
+      "font-bold",
+      "text-ink",
+    ]);
+    expect(QUIET_CANCEL.split(" ")).toStrictEqual([
+      "inline-flex",
+      "min-h-11",
+      "cursor-pointer",
+      "items-center",
+      "self-start",
+      "border-none",
+      "bg-transparent",
+      "p-0",
+      "text-body",
+      "font-semibold",
+      "text-ink",
+      "underline",
+      "underline-offset-4",
+    ]);
+  });
+});
+
+describe("FormEnd", () => {
+  it("puts the failure band above the submit, both from one form's state", async () => {
+    const retry = vi.fn<() => void>();
+    render(
+      <form>
+        <FormEnd
+          form={{
+            failure: { kind: "network", message: "We couldn't save that." },
+            retry,
+            retryRef: createRef<HTMLButtonElement>(),
+            pending: true,
+          }}
+          tone="chalk"
+          label="Decline"
+          pendingLabel="Declining"
+        />
+      </form>,
+    );
+    const band = screen.getByText("We couldn't save that.");
+    const submit = screen.getByRole("button", { name: /Declin/u });
+    expect(
+      band.compareDocumentPosition(submit) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(submit).toHaveAttribute("type", "submit");
+    expect(submit).toHaveAttribute("aria-busy", "true");
+    expect(submit).toHaveClass("bg-ink", "rounded-pill");
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: /try again/iu }));
+    expect(retry).toHaveBeenCalledOnce();
   });
 });

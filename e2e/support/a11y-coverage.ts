@@ -1,4 +1,5 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 import type { Page } from "@playwright/test";
 import { CoverageReport } from "monocart-coverage-reports";
@@ -52,6 +53,37 @@ export function coverageReport(
     logging: "error",
     ...options,
   });
+}
+
+/**
+ * Every component counts, loaded or not. Counting only what a run
+ * loaded let the figure's denominator move: a component one run
+ * preloaded and the next never fetched (`LinkLanding`) swung it by a
+ * tenth of a point, and a component no spec loads never lowered it.
+ * Files no test loaded are compiled as Vite would and count as 0%.
+ */
+export function allComponents(
+  isCounted: (filePath: string) => boolean = (filePath) =>
+    filePath.endsWith(".tsx"),
+): NonNullable<CoverageReportOptions["all"]> {
+  return {
+    dir: ["./src/ui", "./src/modules"],
+    filter: isCounted,
+    transformer: async (entry: {
+      url: string;
+      source: string;
+      sourceMap?: unknown;
+    }) => {
+      const { transformWithOxc } = await import("vite");
+      const result = await transformWithOxc(
+        entry.source,
+        fileURLToPath(entry.url),
+        { sourcemap: true, jsx: { runtime: "automatic" } },
+      );
+      entry.source = result.code;
+      entry.sourceMap = result.map;
+    },
+  };
 }
 
 /**
@@ -202,6 +234,15 @@ export function loadCoverageBaseline(): CoverageBaseline {
 }
 
 /**
+ * How far the figure moves between two runs of the same code, in
+ * points. Two fresh-database runs (2026-11-03) differed by four
+ * branches of about 2,200: one component preloaded or not, and one
+ * branch that reads the shared data. A screen no spec reaches any more
+ * is tens of branches, well past this.
+ */
+export const FIGURE_NOISE = 0.25;
+
+/**
  * What the run reached, against the baseline: each line is a failure.
  */
 export function judge(
@@ -217,9 +258,9 @@ export function judge(
     return [...reached.visits].some((path) => pattern.test(path));
   };
   const problems: string[] = [];
-  if (reached.branches < baseline.branches) {
+  if (reached.branches < baseline.branches - FIGURE_NOISE) {
     problems.push(
-      `branch coverage fell to ${String(reached.branches)}%, below the baseline's ${String(baseline.branches)}%`,
+      `branch coverage fell to ${String(reached.branches)}%, more than ${String(FIGURE_NOISE)} below the baseline's ${String(baseline.branches)}%`,
     );
   }
   for (const route of reached.routes) {

@@ -108,15 +108,15 @@ describe("PhotoMatches", () => {
         .map((image) => [image.getAttribute("src"), image.getAttribute("alt")]),
     ).toStrictEqual([
       [
-        "/safety/review-photo/entries/u/k/1",
+        "/desk/review-photo/entries/u/k/1",
         `${PHOTO}, 0 bits from the reported photo: open its kit`,
       ],
       [
-        "/safety/review-photo/entries/u/k/2",
+        "/desk/review-photo/entries/u/k/2",
         `${HIDDEN}, 2 bits from the reported photo`,
       ],
       [
-        "/safety/review-photo/items/u/i/v1/card.webp",
+        "/desk/review-photo/items/u/i/v1/card.webp",
         `Garment ${GARMENT}, 5 bits from the reported photo`,
       ],
     ]);

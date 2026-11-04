@@ -6,16 +6,6 @@
   },
   {
     "rule": "color-contrast",
-    "route": "/desk/access",
-    "node": "form[data-part=\"new-code\"] span.[grid-area:#/#]"
-  },
-  {
-    "rule": "color-contrast",
-    "route": "/desk/runners",
-    "node": "span.[grid-area:#/#]"
-  },
-  {
-    "rule": "color-contrast",
     "route": "/onboarding/done",
     "node": "p.m-#"
   },
@@ -101,17 +91,17 @@
   },
   {
     "rule": "target-44",
-    "route": "/safety/review",
+    "route": "/desk/review",
     "node": "select[name=\"nameReason\"]"
   },
   {
     "rule": "target-44",
-    "route": "/safety/review",
+    "route": "/desk/review",
     "node": "select[name=\"reason\"]"
   },
   {
     "rule": "target-44",
-    "route": "/safety/review",
+    "route": "/desk/review",
     "node": "select[name=\"subjectType\"]"
   },
   {
@@ -138,5 +128,30 @@
     "rule": "target-44",
     "route": "/closet/edit/:id",
     "node": "select[name=\"weight\"]"
+  },
+  {
+    "rule": "color-contrast",
+    "route": "/desk/review",
+    "node": "span.font-mono"
+  },
+  {
+    "rule": "color-contrast",
+    "route": "/desk/review",
+    "node": "div[data-part=\"photo-matches\"] span.text-micro"
+  },
+  {
+    "rule": "color-contrast",
+    "route": "/desk/review",
+    "node": "span.text-quiet"
+  },
+  {
+    "rule": "color-contrast",
+    "route": "/desk/review",
+    "node": "li[data-part=\"quarantine-record\"] span.text-micro"
+  },
+  {
+    "rule": "reflow",
+    "route": "/desk/review",
+    "node": "main.flex-#"
   }
 ]

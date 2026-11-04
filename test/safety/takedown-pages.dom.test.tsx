@@ -47,6 +47,24 @@ async function renderWithRouter(element: ReactElement) {
   return render(<RouterProvider router={router} />);
 }
 
+/**
+Whether `a` comes before `b` in the page: the order a reader meets them.
+*/
+function isBefore(a: Node, b: Node): boolean {
+  return (
+    (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+  );
+}
+
+/**
+The request rows as drawn now.
+*/
+function rows(): HTMLElement[] {
+  return [
+    ...document.querySelectorAll<HTMLElement>("[data-part='removal-request']"),
+  ];
+}
+
 const part = (name: string) =>
   document.querySelector<HTMLElement>(`[data-part='${CSS.escape(name)}']`);
 
@@ -460,6 +478,52 @@ describe("Review · removal requests", () => {
     });
   });
 
+  it("draws its decisions as one bar, Take it down first, and Block's question in its place (round 44)", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    const user = userEvent.setup();
+    const bar = part("request-actions");
+    expect(bar).toHaveClass("flex", "flex-wrap", "items-center", "gap-3");
+    const press = (name: string): HTMLElement =>
+      within(bar ?? document.body).getByRole("button", { name });
+    expect(isBefore(press("Take it down"), press("Decline"))).toBe(true);
+    expect(isBefore(press("Decline"), press("Block and decline all"))).toBe(
+      true,
+    );
+
+    // Decline's reason opens under the bar, which keeps its other two.
+    await user.click(press("Decline"));
+    expect(press("Take it down")).toBeVisible();
+    expect(press("Block and decline all")).toBeVisible();
+    expect(
+      within(bar ?? document.body).queryByRole("button", { name: "Decline" }),
+    ).toBeNull();
+    expect(
+      isBefore(bar ?? document.body, part("decline") ?? document.body),
+    ).toBe(true);
+
+    // Block's question takes the bar's place, its answer then Cancel in a row.
+    await user.click(press("Block and decline all"));
+    expect(part("request-actions")).toBeNull();
+    const question = within(part("block") ?? document.body);
+    const confirm = question.getByRole("button", {
+      name: "Block and decline all",
+    });
+    const cancel = question.getByRole("button", { name: "Cancel" });
+    expect(confirm.parentElement).toBe(cancel.parentElement);
+    expect(confirm.parentElement).toHaveClass("flex", "flex-wrap");
+    expect(isBefore(confirm, cancel)).toBe(true);
+    // Cancel brings the bar back with Decline's reason still open.
+    await user.click(cancel);
+    expect(part("request-actions")).not.toBeNull();
+    expect(part("decline")).not.toBeNull();
+  });
+
   it("declines only with a reason, asked for once Decline is pressed, and sends it", async () => {
     const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
     await renderWithRouter(
@@ -470,10 +534,18 @@ describe("Review · removal requests", () => {
       />,
     );
     const user = userEvent.setup();
-    // Decline is a text button until pressed: then it asks for the line.
+    // Decline is an outline pill until pressed: then it asks for the line.
     expect(screen.queryByLabelText("Why not")).toBeNull();
     const ask = screen.getByRole("button", { name: "Decline" });
     expect(ask).toHaveAttribute("type", "button");
+    expect(ask).toHaveClass(
+      "rounded-pill",
+      "border",
+      "border-ink",
+      "bg-transparent",
+      "font-bold",
+      "text-ink",
+    );
     await user.click(ask);
     expect(
       screen.getByText("The person who asked is sent this."),
@@ -573,8 +645,25 @@ describe("Review · removal requests", () => {
     );
     const row = within(first ?? document.body);
 
+    expect(
+      row.getByRole("button", { name: "Block and decline all" }),
+    ).toHaveClass(
+      "rounded-pill",
+      "border",
+      "border-ink",
+      "bg-transparent",
+      "font-bold",
+      "text-ink",
+    );
     await user.click(
       row.getByRole("button", { name: "Block and decline all" }),
+    );
+    expect(row.getByRole("button", { name: "Cancel" })).toHaveClass(
+      "border-none",
+      "bg-transparent",
+      "text-ink",
+      "underline",
+      "underline-offset-4",
     );
     expect(
       row.getByText(
@@ -769,6 +858,47 @@ describe("Review · removal requests", () => {
     expect(part("removal-request")).not.toHaveFocus();
   });
 
+  it("lands focus once: the list drawn again after another decision leaves it", async () => {
+    const block = vi.fn<BlockFn>().mockResolvedValue({ status: "blocked" });
+    const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[
+          pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" }),
+          pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ2", signature: "Next" }),
+          pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ3", signature: "Last" }),
+        ]}
+        decide={decide}
+        block={block}
+      />,
+    );
+    const user = userEvent.setup();
+    const first = within(rows()[0] ?? document.body);
+    await user.click(
+      first.getByRole("button", { name: "Block and decline all" }),
+    );
+    await user.click(
+      first.getByRole("button", { name: "Block and decline all" }),
+    );
+    await waitFor(() => {
+      expect(rows()[0]).toHaveFocus();
+    });
+    const next = rows()[0];
+    expect(next).toHaveTextContent("Next");
+
+    // Taking the last one down draws the list again; Next's row does not
+    // take focus back.
+    await user.click(
+      within(rows()[1] ?? document.body).getByRole("button", {
+        name: "Take it down",
+      }),
+    );
+    await waitFor(() => {
+      expect(rows()).toHaveLength(1);
+    });
+    expect(next).not.toHaveFocus();
+  });
+
   it("names the poster in the line for a link that is not ours (round 37 #59g)", async () => {
     await renderWithRouter(
       <RemovalRequests
@@ -817,6 +947,23 @@ describe("takedown pages: a lapsed session (Au7, D-155)", () => {
     await userEvent
       .setup()
       .click(screen.getByRole("button", { name: "Decline" }));
+
+    expect(carriedSince()).toEqual(["page"]);
+  });
+
+  it("carries Block's question as the page", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    carriedSince();
+    // The question's form is asked for only once Block is pressed.
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Block and decline all" }));
 
     expect(carriedSince()).toEqual(["page"]);
   });

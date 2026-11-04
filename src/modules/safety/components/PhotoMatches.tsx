@@ -12,6 +12,7 @@ import type { PhotoMatch, PhotoMatches as Found } from "../photo-matches";
 import type { RemovedImage, RemovedMatch } from "../removed-fingerprints";
 import { PhotoSection } from "./OtherPhotos";
 import { RemovalDecision } from "./RemovalDecision";
+import { reviewPhotoSrc } from "./review-photo-src";
 import { useFocusWhen } from "./use-focus-when";
 import { useSettled } from "./use-settled";
 
@@ -28,7 +29,7 @@ import { useSettled } from "./use-settled";
  * links its kit when an operator can open it; a garment photo is never
  * shown to another runner, so its tile opens nothing and offers Decide,
  * which opens its takedown under the grid (design 159, round 42 #89). Each
- * photo is served from `/safety/review-photo/`.
+ * photo is served from `/desk/review-photo/`.
  *
  * **Removed images come first** (round 41 #84, round 42), on a row held
  * on upload: one tile for each image removed as intimate within the match
@@ -405,7 +406,7 @@ One match: a link to its kit when the operator can open it, the image alone when
 function Thumbnail({ match }: Readonly<{ match: PhotoMatch }>): JSX.Element {
   const image = (
     <img
-      src={`/safety/review-photo/${match.photoKey}`}
+      src={reviewPhotoSrc(match.photoKey)}
       alt={altOf(match)}
       className="h-32 w-auto border border-hairline"
     />

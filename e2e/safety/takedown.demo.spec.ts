@@ -267,7 +267,7 @@ test("someone with no account asks for an intimate image to come down, and an op
   await signInAsOperator(page);
 
   await scene(page, "Review: the request, its clock, and the kit");
-  await page.goto("/safety/review");
+  await page.goto("/desk/review");
   await hydrated(page);
   // The row whose link is the first kit: the requester has three now.
   const request = page.locator("[data-part='removal-request']").filter({
@@ -296,7 +296,7 @@ test("someone with no account asks for an intimate image to come down, and an op
     others.getByRole("img", {
       name: `Photo ${otherPhotoId}, on a kit an operator cannot open`,
     }),
-  ).toHaveAttribute("src", `/safety/review-photo/${otherPhotoKey}`);
+  ).toHaveAttribute("src", `/desk/review-photo/${otherPhotoKey}`);
   await expect(others).toContainText(otherPhotoId);
 
   await scene(page, "Take it down: the kit goes, and the requester is told");
