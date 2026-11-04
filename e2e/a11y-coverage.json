@@ -7,7 +7,7 @@
     "/og/default": "an endpoint: the share image",
     "/og/kit/$entryId": "an endpoint: a kit's share image",
     "/feed/photo/$": "an endpoint: a photo's bytes",
-    "/safety/review-photo/$": "an endpoint: a photo's bytes for review",
+    "/desk/review-photo/$": "an endpoint: a photo's bytes for review",
     "/closet/photo/$itemId/$size": "an endpoint: a garment photo's bytes",
     "/api/vitals": "an endpoint: the speed beacon's POST"
   }

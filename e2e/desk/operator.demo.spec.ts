@@ -350,6 +350,26 @@ test("an operator opens the Desk and reads Today", async ({
     burst.map(() => "approved"),
   );
 
+  await scene(page, "A fresh load counts them as decided today");
+  // Round 44 #106: the header says how the page stands, and the release
+  // was today's decisions. A full load, so it is read from the server.
+  await page.goto("/desk/review");
+  await page
+    .locator('html[data-hydrated="true"]')
+    .waitFor({ state: "attached" });
+  const standing = ink.getByText(/^\[\d+ waiting · \d+ decided today\]$/iu);
+  await expect(standing).toBeVisible();
+  const decided = Number(
+    ((await standing.textContent()) ?? "")
+      .split("·", 2)[1]
+      ?.trim()
+      .split(" ", 1)[0],
+  );
+  expect(decided).toBeGreaterThanOrEqual(burst.length);
+  await expect(
+    held.getByText(/Fingerprint matches · \d+ waiting/u),
+  ).toHaveCount(0);
+
   await withLocalDb(async ({ core }) => {
     await core.delete(reviewQueue).where(inArray(reviewQueue.id, burst));
     await core.delete(gaveUp).where(inArray(gaveUp.id, [...gaveUpIds]));

@@ -128,5 +128,30 @@
     "rule": "target-44",
     "route": "/closet/edit/:id",
     "node": "select[name=\"weight\"]"
+  },
+  {
+    "rule": "color-contrast",
+    "route": "/desk/review",
+    "node": "span.font-mono"
+  },
+  {
+    "rule": "color-contrast",
+    "route": "/desk/review",
+    "node": "div[data-part=\"photo-matches\"] span.text-micro"
+  },
+  {
+    "rule": "color-contrast",
+    "route": "/desk/review",
+    "node": "span.text-quiet"
+  },
+  {
+    "rule": "color-contrast",
+    "route": "/desk/review",
+    "node": "li[data-part=\"quarantine-record\"] span.text-micro"
+  },
+  {
+    "rule": "reflow",
+    "route": "/desk/review",
+    "node": "main.flex-#"
   }
 ]
