@@ -361,6 +361,10 @@ summary, a skeleton.
 **9. Manual pass.** Add `docs/launch/voiceover-checklist.md`: the core
 flows on a real iPhone with VoiceOver, covering gestures, the rotor and
 Safari. Run it before friends get access.
+_Done (2026-11-03):_ the checklist is eight gestures checked on every
+screen, the five flows (join, log a run, closet, feed, You), and a runs
+table. It is a gate line in `docs/launch/deployment-plan.md` §11, at
+stage 1 (friends) and again at stage 2.
 
 **10. Make it required.** Once step 6 is done, the owner makes the a11y
 check required in branch protection.
