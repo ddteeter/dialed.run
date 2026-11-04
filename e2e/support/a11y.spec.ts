@@ -142,6 +142,23 @@ const TRAP = `<!doctype html>
 </main></body></html>`;
 
 /*
+ * Au4's race, made certain: the page moves focus to Try again on a
+ * motion token's timer, past a run of fields long enough that a walk
+ * started at once is still among them when the move lands.
+ */
+const LATE = `<!doctype html>
+<html lang="en"><head><title>Late</title>${RING}</head>
+<body><main>
+  <h1>Late</h1>
+  ${Array.from({ length: 40 }, (_, index) => `<button class="field">Field ${String(index)}</button>`).join("\n  ")}
+  <button id="retry">Try again</button>
+  <button class="submit">Log in</button>
+  <script>
+    setTimeout(() => document.getElementById("retry").focus(), 90);
+  </script>
+</main></body></html>`;
+
+/*
  * Only the other width shows the image, and only 320 makes the box too
  * wide. The strip scrolls on its own, which reflow allows.
  */
@@ -195,6 +212,13 @@ test("the Tab walk reports a trap and what it cut off", async ({
     'focus-trap input[aria-label="Trap"]',
     "tab-unreached button.after",
   ]);
+});
+
+test("the Tab walk waits out the app's own late focus move", async ({
+  page,
+  a11y,
+}) => {
+  expect(await endFindings(page, a11y, LATE)).toStrictEqual([]);
 });
 
 test("the other width and 320px are checked", async ({ page, a11y }) => {
