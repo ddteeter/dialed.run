@@ -63,11 +63,14 @@ export function pageTextFor(html: string): string {
     // model to copy that into `verbatim` — measured on the rabbit page,
     // which is exactly what it did.
     const text = readableText(node);
-    if (text === "") continue;
-    // `continue`, never `break`: a node that does not fit is one node, and
-    // the page's real copy is usually still to come.
-    if (text.length > MAX_NODE_CHARS) continue;
-    if (total + text.length > MAX_CHARS) continue;
+    if (
+      text === "" ||
+      // `continue`, never `break`: a node that does not fit is one node,
+      // and the page's real copy is usually still to come.
+      text.length > MAX_NODE_CHARS ||
+      total + text.length > MAX_CHARS
+    )
+      continue;
     kept.push(text);
     total += text.length + 1;
   }

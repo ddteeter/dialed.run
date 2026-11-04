@@ -1495,6 +1495,14 @@ describe("Select", () => {
     expect(screen.getByText("▾")).toHaveClass("right-3", "text-muted");
   });
 
+  it("never grows past its column, so a long option still reflows at 320px", () => {
+    renderSelect(vi.fn());
+
+    const select = screen.getByRole("combobox");
+    expect(select).toHaveClass("max-w-full");
+    expect(select.parentElement).toHaveClass("max-w-full");
+  });
+
   it("keeps the select's accessible name and value", () => {
     renderSelect(vi.fn());
 

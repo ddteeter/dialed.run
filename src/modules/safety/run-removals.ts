@@ -111,6 +111,6 @@ export async function removalsOnRun(
   const rows = await runRemovalsSelect(db, ownerId, runId, since);
   return rows.flatMap((row) => {
     const reason = reasonOf(row.reason);
-    return reason === undefined ? [] : [{ ...row, reason }];
+    return reason === undefined ? [] : { ...row, reason };
   });
 }

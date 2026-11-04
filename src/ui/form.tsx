@@ -289,7 +289,7 @@ function BesideTheBox({
 
 export function FormField({
   name,
-  id,
+  id: controlId = name,
   label,
   hint,
   error,
@@ -347,7 +347,6 @@ export function FormField({
       {children}
     </div>
   );
-  const controlId = id ?? name;
   return (
     <div className="flex flex-col gap-2">
       <FieldShell
@@ -844,10 +843,10 @@ export function Select(
   props: Readonly<Omit<ComponentProps<"select">, "className">>,
 ): JSX.Element {
   return (
-    <span className="relative flex">
+    <span className="relative flex max-w-full">
       <select
         {...props}
-        className="appearance-none rounded-field border border-hairline bg-panel py-2 pr-8 pl-3 font-normal"
+        className="max-w-full appearance-none rounded-field border border-hairline bg-panel py-2 pr-8 pl-3 font-normal"
       />
       <span
         aria-hidden="true"

@@ -19,8 +19,9 @@ import {
  * the bad value and keeps the rest.
  */
 export function textAt(source: unknown, key: string): string | undefined {
-  if (typeof source !== "object" || source === null) return undefined;
-  return z.string().safeParse(Reflect.get(source, key)).data;
+  return typeof source !== "object" || source === null
+    ? undefined
+    : z.string().safeParse(Reflect.get(source, key)).data;
 }
 
 /**

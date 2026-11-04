@@ -66,7 +66,7 @@ export function OtherProfile({
         <div className="flex items-center gap-4">
           <Avatar name={profile.username ?? name} size="large" />
           <div className="flex flex-col gap-1">
-            <h1 className="m-0 text-heading">
+            <h1 className="m-0 text-heading wrap-anywhere">
               <Handle username={profile.username} />
             </h1>
             {profile.cityLabel === null ? undefined : (

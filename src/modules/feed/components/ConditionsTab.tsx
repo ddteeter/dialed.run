@@ -410,7 +410,9 @@ const BAR_FILL = {
  * not know, never that nobody ran. Round 26 #9 names the place: "No
  * weather for Portland, OR yet. It shows after the first reading."
  */
-function NoWeather({ place }: Readonly<{ place: string | undefined }>) {
+function NoWeather({
+  place = "where you are",
+}: Readonly<{ place: string | undefined }>) {
   return (
     <div
       data-part="match-block"
@@ -420,8 +422,7 @@ function NoWeather({ place }: Readonly<{ place: string | undefined }>) {
       <Eyebrow>Your conditions</Eyebrow>
       <p className="m-0 font-display text-title uppercase">No weather yet</p>
       <p className="m-0 text-lead">
-        No weather for {place ?? "where you are"} yet. It shows after the first
-        reading.
+        No weather for {place} yet. It shows after the first reading.
       </p>
       <OpenTheCall />
     </div>
