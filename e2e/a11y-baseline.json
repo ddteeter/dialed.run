@@ -118,5 +118,25 @@
     "rule": "reflow",
     "route": "/desk",
     "node": "main.flex-#"
+  },
+  {
+    "rule": "target-44",
+    "route": "/closet/edit/:id",
+    "node": "select[name=\"category\"]"
+  },
+  {
+    "rule": "target-44",
+    "route": "/closet/edit/:id",
+    "node": "select[name=\"fabric\"]"
+  },
+  {
+    "rule": "target-44",
+    "route": "/closet/edit/:id",
+    "node": "select[name=\"layer\"]"
+  },
+  {
+    "rule": "target-44",
+    "route": "/closet/edit/:id",
+    "node": "select[name=\"weight\"]"
   }
 ]
