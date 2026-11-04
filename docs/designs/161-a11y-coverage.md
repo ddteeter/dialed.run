@@ -101,7 +101,11 @@ In order:
    control count. Looping does not work: Chromium's Tab past the last
    control lands on the page, and the next one resumes from wherever
    focus last started, not from the top, so a loop skipped the login
-   form after a server fault. Each stop is measured:
+   form after a server fault. It starts only once focus has held still
+   for longer than the longest motion token (capped at 2 s): the app moves
+   focus on a token's timer (Try again, `DURATION.instant` after a
+   failure), and a walk already under way followed the jump and skipped
+   what lay between (Au4, CI, 2026-11-03). Each stop is measured:
    - `focus-ring`: no 2px outline on the element, its labels, the next
      sibling (Tailwind's `peer`) or an ancestor up to three levels
      (`.field-box` draws the ring for its input);
@@ -141,7 +145,8 @@ not be found: a radio group, a field-box input and a scrolling strip.
 source maps, the fixture collects Chromium's V8 coverage through
 `monocart-coverage-reports` and maps it back to `src/ui/**/*.tsx` and
 `src/modules/**/*.tsx`. Branch coverage of that set is the a11y coverage
-figure, and a baseline file holds it at its last value. A route check reads
+figure, and a baseline file holds it at its last value, give or take its
+noise. A route check reads
 the URLs the run visited, matches them to `routeTree.gen.ts`, and fails on
 any route never visited and not listed with a reason.
 _Known limit:_ a state no action is taken on, such as a spinner
@@ -150,7 +155,7 @@ on it closes the gap: step 1 also checks before each web-first `expect`
 if the spike's cost allows it.
 _Tests:_ the report reader is pinned against a fixture report; removing a
 visit from a spec drops the figure.
-_Done:_ the figure is printed in CI and can only go up.
+_Done:_ the figure is printed in CI and can't fall by more than its noise.
 
 _How (2026-11-03):_
 
@@ -164,6 +169,12 @@ _How (2026-11-03):_
   which caches them on disk between tests. The global teardown
   (`a11y-coverage-teardown.ts`) maps them through Vite's inline source
   maps and reads the branch percentage.
+  - Every component counts, loaded or not (monocart's `all`, each unloaded
+    file compiled with Vite's `transformWithOxc`; its branch counts match
+    the served files'). Counting only what a run loaded made the
+    denominator move: `LinkLanding` was preloaded by one run and never
+    fetched by the next, and a component no spec loads never lowered the
+    figure.
   - Chromium reports only the scripts of the document still loaded, so a
     second full page load in one test used to drop the first. The fixture
     takes the coverage before each navigation it drives (`goto`,
@@ -188,18 +199,23 @@ _How (2026-11-03):_
     (`/api/*`, `/og/*`, photo routes) are routes but not pages.
 
   The run fails:
-  - when the figure falls below `branches`;
+  - when the figure falls more than `FIGURE_NOISE` (0.25 points) below
+    `branches`. Two fresh-database runs of the same code differed by four
+    branches of about 2,200: a component preloaded or not, and one
+    `EntryDetail` branch that reads the shared data. A screen no spec
+    reaches any more is tens of branches;
   - when a route is neither visited nor listed;
   - when a listed route was visited, so its reason is stale.
 
-  `A11Y_RECORD=1` writes the figure instead of failing on it. A rise is
-  printed, with a reminder to raise the baseline.
+  `A11Y_RECORD=1` writes the figure instead of failing on it. A rise past
+  the noise is printed, with a reminder to raise the baseline; one inside
+  it is the next run's fall, so it is not kept.
 - **CI.** The teardown prints the figure and appends it to
   `$GITHUB_STEP_SUMMARY`, so no workflow changes. The HTML report is not
   uploaded: the Actions bill is artifact storage.
-- _Known limit:_ a component that no visited route imports never loads. It
-  is left out of the figure rather than counted as zero. The route check is
-  what catches a screen no spec opens.
+- _Known limit:_ the noise band. A loss smaller than 0.25 points, a
+  handful of branches, passes; the route check still catches a screen no
+  spec opens.
 
 **4. Transcripts.** At the end of each test, record what a screen reader
 would say, with Guidepup's `spokenPhraseLog()`; step 0 showed it runs in the
