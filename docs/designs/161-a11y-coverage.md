@@ -353,6 +353,10 @@ at `recommended` on `src/**/*.tsx`.
 **8. Tidy.** Correct the comment in `test/ui/axe.dom.test.tsx`. It keeps
 the primitives' states that no screen reaches, and points at the fixture
 for everything else.
+_Done (2026-11-03):_ the comment no longer says module components are
+covered from their own suites. It points at the fixture for screens, and
+names the states it keeps: invalid, pending, a failure band, an error
+summary, a skeleton.
 
 **9. Manual pass.** Add `docs/launch/voiceover-checklist.md`: the core
 flows on a real iPhone with VoiceOver, covering gestures, the rotor and
