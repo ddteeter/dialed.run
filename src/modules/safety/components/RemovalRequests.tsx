@@ -7,9 +7,12 @@ import { declineReasonField } from "../contracts";
 import {
   Bracketed,
   FormElement,
+  FormEnd,
   FormFailureBand,
   ListSection,
   Mono,
+  QUIET_CANCEL,
+  QUIET_PILL,
   SubmitButton,
   TextField,
   useFormSubmit,
@@ -18,6 +21,7 @@ import {
 import { blockRequesterInput } from "../inputs";
 import type { HoldState } from "../takedown-limits";
 import type { PendingTakedownRequest } from "../takedown-requests";
+import { ACTION_BAR } from "./DeskForm";
 import { OtherPhotos } from "./OtherPhotos";
 import { PhotoMatches, type DecideMatch } from "./PhotoMatches";
 import { useSettled } from "./use-settled";
@@ -128,10 +132,10 @@ function CancelButton({
         setButton(node ?? undefined);
       }}
       type="button"
-      className="target self-start"
+      className={`target ${QUIET_CANCEL}`}
       onClick={onCancel}
     >
-      <Mono step="xs">Cancel</Mono>
+      Cancel
     </button>
   );
 }
@@ -175,7 +179,6 @@ type RowProps = Readonly<{
 function RemovalRequestRow(props: RowProps): JSX.Element {
   const { request, hasFocus, onFocused, onDecided, onBlocked } = props;
   const { decide, block, decideMatch } = props.actions;
-  const [isDeclining, setIsDeclining] = useState(false);
   const takeFocus = focusOnce(hasFocus, onFocused);
   return (
     <li
@@ -219,59 +222,115 @@ function RemovalRequestRow(props: RowProps): JSX.Element {
       <SubjectLink request={request} />
       <OtherPhotos others={request.otherPhotos} />
       <PhotoMatches found={request.photoMatches} decide={decideMatch} />
-      <RemoveForm
-        requestId={request.id}
-        decide={decide}
-        onDecided={onDecided}
-      />
-      {isDeclining ? (
-        <DeclineForm
-          requestId={request.id}
-          decide={decide}
-          onDecided={onDecided}
-        />
-      ) : (
-        <button
-          type="button"
-          className="target self-start"
-          onClick={() => {
-            setIsDeclining(true);
-          }}
-        >
-          <Mono step="xs">Decline</Mono>
-        </button>
-      )}
-      <BlockRequester
-        requestId={request.id}
-        count={request.relatedIds.length + 1}
-        block={block}
-        onBlocked={onBlocked}
+      <RequestActions
+        request={request}
+        acts={{ decide, block, onDecided, onBlocked }}
       />
     </li>
   );
 }
 
 /**
- * Block and decline all (design 137): asks in the row first, because it
+ * A request's decisions, as rounds 37 and 44 draw them: one bar, Take it
+ * down first, then Decline and Block and decline all as outline pills.
+ * Decline opens its reason under the bar. Block and decline all asks
+ * first (design 137), and its question takes the bar's place, because it
  * declines every open request from this requester at once and blocks
- * them. Nothing is sent to them. Undesigned: the review row's own parts,
- * placeholder words (design deltas).
+ * them. Nothing is sent to them. Round 37 #59f: the question opens on
+ * Cancel, as CSAM's does, and Cancel or Esc hands focus back to the
+ * button that asked.
  */
-function BlockRequester({
+function RequestActions({
+  request,
+  acts,
+}: Readonly<{
+  request: PendingTakedownRequest;
+  /**
+  What a decision is sent through, and what follows it.
+  */
+  acts: Readonly<{
+    decide: Decide;
+    block: Block;
+    onDecided: () => void;
+    onBlocked: () => void;
+  }>;
+}>): JSX.Element {
+  const { decide, block, onDecided, onBlocked } = acts;
+  const [isDeclining, setIsDeclining] = useState(false);
+  const [isAsking, setIsAsking] = useState(false);
+  const askedFrom = useReturnFocus();
+  if (isAsking) {
+    return (
+      <BlockQuestion
+        requestId={request.id}
+        count={request.relatedIds.length + 1}
+        block={block}
+        onBlocked={onBlocked}
+        onCancel={() => {
+          setIsAsking(false);
+          askedFrom.restore();
+        }}
+      />
+    );
+  }
+  return (
+    <>
+      <div data-part="request-actions" className={ACTION_BAR}>
+        <RemoveForm
+          requestId={request.id}
+          decide={decide}
+          onDecided={onDecided}
+        />
+        {isDeclining ? undefined : (
+          <button
+            type="button"
+            className={`target ${QUIET_PILL}`}
+            onClick={() => {
+              setIsDeclining(true);
+            }}
+          >
+            Decline
+          </button>
+        )}
+        <button
+          ref={askedFrom.ref}
+          type="button"
+          className={`target ${QUIET_PILL}`}
+          onClick={() => {
+            setIsAsking(true);
+          }}
+        >
+          Block and decline all
+        </button>
+      </div>
+      {isDeclining ? (
+        <DeclineForm
+          requestId={request.id}
+          decide={decide}
+          onDecided={onDecided}
+        />
+      ) : undefined}
+    </>
+  );
+}
+
+/**
+ * Block and decline all's question, in the bar's place. Undesigned: the
+ * review row's own parts, placeholder words (design deltas).
+ */
+function BlockQuestion({
   requestId,
   count,
   block,
   onBlocked,
+  onCancel,
 }: Readonly<{
   requestId: string;
   count: number;
   block: Block;
   onBlocked: () => void;
+  onCancel: () => void;
 }>): JSX.Element {
-  const [isAsking, setIsAsking] = useState(false);
-  // Round 37 #59f: the question opens on Cancel, as CSAM's does, and
-  // Cancel or Esc hands focus back to the button that asked.
-  const askedFrom = useReturnFocus();
   const form = useFormSubmit({
     carry: "page",
     schema: blockRequesterInput,
@@ -279,31 +338,13 @@ function BlockRequester({
     successMessage: `Blocked. ${String(count)} ${count === 1 ? "request" : "requests"} declined.`,
     onSuccess: onBlocked,
   });
-  function stopAsking(): void {
-    setIsAsking(false);
-    askedFrom.restore();
-  }
-  if (!isAsking) {
-    return (
-      <button
-        ref={askedFrom.ref}
-        type="button"
-        className="target self-start"
-        onClick={() => {
-          setIsAsking(true);
-        }}
-      >
-        <Mono step="xs">Block and decline all</Mono>
-      </button>
-    );
-  }
   // Esc anywhere in the question is Cancel. On a wrapper, because
   // `FormElement` is the forms primitive and takes no key handler; a key
   // pressed inside the form bubbles to it.
   return (
     <div
       onKeyDown={(event) => {
-        if (event.key === "Escape") stopAsking();
+        if (event.key === "Escape") onCancel();
       }}
     >
       <FormElement
@@ -325,12 +366,15 @@ function BlockRequester({
           onRetry={form.retry}
           retryRef={form.retryRef}
         />
-        <SubmitButton
-          label="Block and decline all"
-          pendingLabel="Blocking"
-          pending={form.pending}
-        />
-        <CancelButton onCancel={stopAsking} />
+        <div className={ACTION_BAR}>
+          <SubmitButton
+            tone="chalk"
+            label="Block and decline all"
+            pendingLabel="Blocking"
+            pending={form.pending}
+          />
+          <CancelButton onCancel={onCancel} />
+        </div>
       </FormElement>
     </div>
   );
@@ -399,6 +443,7 @@ function RemoveForm({
         retryRef={form.retryRef}
       />
       <SubmitButton
+        tone="chalk"
         label="Take it down"
         pendingLabel="Taking it down"
         pending={form.pending}
@@ -442,15 +487,11 @@ function DeclineForm({
         field={form.field}
         error={form.fieldErrors.reason}
       />
-      <FormFailureBand
-        failure={form.failure}
-        onRetry={form.retry}
-        retryRef={form.retryRef}
-      />
-      <SubmitButton
+      <FormEnd
+        form={form}
+        tone="chalk"
         label="Decline"
         pendingLabel="Declining"
-        pending={form.pending}
       />
     </FormElement>
   );

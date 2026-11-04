@@ -1025,6 +1025,36 @@ _Items 101–103 are open (design 164)._
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 
+## Answered in round 44 (imported 2026-11-03)
+
+Design answered as `Round 44 Rulings.dc.html`, items 104–106, which draws
+Review's header and three decision bars on the dark Desk ground. The
+boards were right on all three. The board's text is the text of record;
+there is no round 44 section in `design/docs/product.md`. Built in design
+128 (R-173, PR #322).
+
+- **104 · The Desk's main button. Built.** A chalk-filled pill in the
+  ground's ink, Archivo 700, 44 high (`SubmitButton`'s `chalk` tone, and
+  `CHALK_PILL` for the copyright hold's presses), for every main action on
+  Review, the copyright hold, Runners and Access. No pink button anywhere
+  on the Desk: "pink is action" is the runner app's rule, and on the Desk
+  the main action is often a removal. A destructive main action gets no
+  red; its confirm step carries the weight. The main action comes first in
+  its bar, as drawn.
+- **105 · Review's other actions. Confirmed, built.** Outline pills, 1px in
+  the ground's ink, Archivo 700, 44 high (`QUIET_PILL`): Keep, Approve,
+  Decline, Remove as suspected CSAM, Clear photo where Approve sits, Block
+  and decline all after Decline, and the copyright hold's Not yet. Cancel
+  is underlined text (`QUIET_CANCEL`). At most one chalk pill per bar.
+  Supersedes item 45's "text button, as built".
+- **106 · Review's heading. Built.** "Review", the rail's word, not
+  "Review queue", with D1's `[{n} WAITING · {m} DECIDED TODAY]` beside it
+  in `MONO.xs` `--muted`, shown at zero too. (Erratum, Design, 2026-11-03: the
+  ruling's text first said `--quiet`; tokens.js makes a `MONO.xs` caption
+  muted unless it carries state, as the board draws it.) Both counts come from Today's
+  (`decidedToday` is review rows approved or removed since midnight UTC),
+  the value the rail's badge reads, so the two cannot disagree.
+
 ## Answered in round 43 (imported 2026-10-31)
 
 Design answered as `Round 43 Rulings.dc.html`, items 93–98, with the text

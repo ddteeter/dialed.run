@@ -97,6 +97,12 @@ describe("which type an edge resolves to", () => {
     }
   });
 
+  it("types Desk · Review explicitly, as a cut", () => {
+    // The rail's destination (R-173).
+    expect(navTypeFor("/feed", "/desk/review", false)).toBe("cut");
+    expect(navTypeFor("/desk/review", "/desk/review", false)).toBe("cut");
+  });
+
   it("types Desk · Runners explicitly, as a cut", () => {
     // Asked of navTypeFor, not typeOf: typeOf falls back to `cut` for an
     // edge with no row, so it cannot tell an explicit row from none. And not

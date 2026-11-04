@@ -431,7 +431,7 @@ const CONTENT: {
     return {
       subject: `Removal due by ${due}`,
       body: `Someone reported ${REPORTED[template.subject]} as an intimate image shared without consent. It's hidden from everyone now. The law gives us 48 hours to decide.`,
-      button: { label: "Open Review", href: `${origin}/safety/review` },
+      button: { label: "Open Review", href: `${origin}/desk/review` },
       foot: "Sent to every operator, once per report that hides something.",
     };
   },
@@ -443,7 +443,7 @@ const CONTENT: {
     return {
       subject: `Removal request, due by ${due}`,
       body: `Someone asked for an intimate image to come down. ${template.isOurs ? "It's hidden from everyone now." : "The link isn't one of ours, so nothing is hidden: find it from what they wrote."} The law gives us 48 hours to decide.`,
-      button: { label: "Open Review", href: `${origin}/safety/review` },
+      button: { label: "Open Review", href: `${origin}/desk/review` },
       foot: "Sent to every operator, once per request.",
     };
   },
@@ -454,7 +454,7 @@ const CONTENT: {
     return {
       subject: `Removal still undecided, due by ${due}`,
       body: "An intimate-image removal is still waiting for a decision. Nothing changes until someone decides it in Review.",
-      button: { label: "Open Review", href: `${origin}/safety/review` },
+      button: { label: "Open Review", href: `${origin}/desk/review` },
       foot: "Sent to every operator, once per removal, 8 hours before it's due.",
     };
   },
@@ -479,7 +479,7 @@ const CONTENT: {
     return {
       subject: "Removal requests paused: possible abuse",
       body: `${String(template.perHour)} removal requests hid something in the last hour, so new requests hide nothing until the hour clears. They still wait in Review with their 48 hours.`,
-      button: { label: "Open Review", href: `${origin}/safety/review` },
+      button: { label: "Open Review", href: `${origin}/desk/review` },
       foot: "Sent to every operator, once an hour while it lasts.",
     };
   },
