@@ -103,7 +103,7 @@ function byWeakness(
     .flatMap((garment) => {
       const record = records[garment.itemId];
       return record && record.total >= MIN_RUNS_FOR_A_RECORD
-        ? [{ ...garment, record }]
+        ? { ...garment, record }
         : [];
     })
     .toSorted(
@@ -180,7 +180,7 @@ export function suggestChips(input: {
   const chosenFlagChips: Chip[] = input.kit.flatMap((garment) => {
     const flag = input.chosenFlags[garment.itemId];
     return flag
-      ? [{ kind: "flag", itemId: garment.itemId, name: garment.name, flag }]
+      ? { kind: "flag", itemId: garment.itemId, name: garment.name, flag }
       : [];
   });
   const chosenTagChips: Chip[] = entryTags

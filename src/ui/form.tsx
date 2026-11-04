@@ -289,7 +289,7 @@ function BesideTheBox({
 
 export function FormField({
   name,
-  id,
+  id: controlId = name,
   label,
   hint,
   error,
@@ -347,7 +347,6 @@ export function FormField({
       {children}
     </div>
   );
-  const controlId = id ?? name;
   return (
     <div className="flex flex-col gap-2">
       <FieldShell
@@ -883,7 +882,7 @@ export function ChoiceField<TOption extends string>({
           );
           onChange(picked ?? NO_CHOICE);
         }}
-        className="rounded-field border border-hairline bg-panel px-3 py-2 font-normal"
+        className="max-w-full rounded-field border border-hairline bg-panel px-3 py-2 font-normal"
       >
         <option value={NO_CHOICE}>{placeholder ?? "—"}</option>
         {options.map((option) => (

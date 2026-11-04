@@ -88,8 +88,7 @@ function isPrivateAddress(host: string): boolean {
   // A hostname, not an address. Every literal form is valid here, and a
   // name with dots in it is not; the parser is the authority on which is
   // which.
-  if (!ipaddr.isValid(host)) return false;
-  return ipaddr.process(host).range() !== "unicast";
+  return ipaddr.isValid(host) && ipaddr.process(host).range() !== "unicast";
 }
 
 /**
@@ -109,20 +108,34 @@ export function isBlockedHost(hostname: string): boolean {
   // Bracketed IPv6 first, and this is not a tidy-up: a v6 address contains
   // no dot, so the bare-name rule below would have called every public one
   // private and refused it. Found by asserting a public address is allowed.
-  if (host.startsWith("[")) {
-    // **Fails closed.** An unbalanced bracket is a host we cannot parse, and
-    // a guard that shrugs at input it cannot parse is a guard you feed
-    // unparseable input. Refusing it costs nothing — `URL.hostname` never
-    // produces one.
-    if (!host.endsWith("]")) return true;
-    return isPrivateAddress(host.slice(1, -1));
-  }
-  // An empty host has no dot either, so it needs no clause of its own — and
-  // `metadata.google.internal` is caught by `.internal` below, which is why
-  // neither is written out. Both were, and both were unreachable.
-  if (!host.includes(".")) return true; // "localhost", bare names
-  if (host.endsWith(".local") || host.endsWith(".internal")) return true;
-  return isPrivateAddress(host);
+  return host.startsWith("[")
+    ? isBlockedBracketedHost(host)
+    : isBlockedNamedHost(host);
+}
+
+/**
+ * A bracketed IPv6 host. **Fails closed.** An unbalanced bracket is a host
+ * we cannot parse, and a guard that shrugs at input it cannot parse is a
+ * guard you feed unparseable input. Refusing it costs nothing —
+ * `URL.hostname` never produces one.
+ */
+function isBlockedBracketedHost(host: string): boolean {
+  return !host.endsWith("]") || isPrivateAddress(host.slice(1, -1));
+}
+
+/**
+ * Any other host. An empty host has no dot either, so it needs no clause of
+ * its own — and `metadata.google.internal` is caught by `.internal` below,
+ * which is why neither is written out. Both were, and both were
+ * unreachable.
+ */
+function isBlockedNamedHost(host: string): boolean {
+  return (
+    !host.includes(".") || // "localhost", bare names
+    host.endsWith(".local") ||
+    host.endsWith(".internal") ||
+    isPrivateAddress(host)
+  );
 }
 
 /**

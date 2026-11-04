@@ -322,10 +322,11 @@ function useFieldErrors(isPending: boolean, initial: FieldErrors) {
   // Stryker disable ArrayDeclaration
   const clearField = useCallback((name: string) => {
     setFieldErrors((previous) => {
-      if (previous[name] === undefined) return previous;
-      return Object.fromEntries(
-        Object.entries(previous).filter(([key]) => key !== name),
-      );
+      return previous[name] === undefined
+        ? previous
+        : Object.fromEntries(
+            Object.entries(previous).filter(([key]) => key !== name),
+          );
     });
   }, []);
   // Stryker restore ArrayDeclaration
@@ -334,12 +335,12 @@ function useFieldErrors(isPending: boolean, initial: FieldErrors) {
   Spread onto the control: invalid state, description, and readOnly.
   */
   const field = useCallback(
-    (name: string, id?: string): FieldProps => ({
+    (name: string, id: string = name): FieldProps => ({
       name,
       readOnly: isPending,
       "aria-invalid": fieldErrors[name] === undefined ? undefined : true,
       "aria-describedby":
-        fieldErrors[name] === undefined ? undefined : messageIdFor(id ?? name),
+        fieldErrors[name] === undefined ? undefined : messageIdFor(id),
       onInput: () => {
         clearField(name);
       },

@@ -4,10 +4,20 @@ import { createRequire } from "node:module";
 import { test as base } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
+import type { Measure } from "./a11y-coverage";
+import {
+  flushCoverage,
+  IS_MEASURING,
+  startMeasuring,
+  stopMeasuring,
+} from "./a11y-coverage";
 import type { Finding } from "./a11y-findings";
 import { findingOf, keyOf, loadBaseline, RULES } from "./a11y-findings";
+import { endOfTest } from "./a11y-end";
 import type { CheckReport } from "./a11y-page";
 import { installChecker } from "./a11y-page";
+import type { PageReport } from "./a11y-walk";
+import { installWalk } from "./a11y-walk";
 
 /**
  * Plan 161, step 1: accessibility checks on every state an e2e spec acts
@@ -22,6 +32,10 @@ import { installChecker } from "./a11y-page";
  * wrapped, once per worker, to run the check first. A state is checked
  * once per test, keyed by a hash of its markup and the viewport width.
  *
+ * **Then, at the end of a test that passed** (step 2, `a11y-end.ts`): a
+ * Tab walk, the other width, and reflow at 320px. The action wrapper is
+ * off by then, so the walk's own presses are not states.
+ *
  * **What it checks** (`a11y-page.ts`): every axe rule tagged WCAG A or AA,
  * plus `region`; a 44×44 hit area, counting a control's labels; and a
  * space Chromium would leave out of an accessible name.
@@ -32,6 +46,9 @@ import { installChecker } from "./a11y-page";
  * `test-results/a11y/findings.jsonl`, which is how the baseline is made.
  * Pages on another origin, such as the design boards `openBoard` loads,
  * are not the app and are not checked.
+ *
+ * **What it reached** (step 3, `a11y-coverage.ts`): on a measured run,
+ * each test's page coverage and visited paths, read once the run ends.
  */
 
 const AXE_SOURCE = readFileSync(
@@ -92,6 +109,12 @@ const PAGE_ACTIONS = [
   "uncheck",
 ] as const;
 
+/**
+ * The page actions that load a new document, which drops the last one's
+ * coverage unless it is taken first (`flushCoverage`).
+ */
+const NAVIGATIONS = new Set<string>(["goBack", "goForward", "goto", "reload"]);
+
 const KEYBOARD_ACTIONS = ["down", "insertText", "press", "type"] as const;
 
 const MOUSE_ACTIONS = ["click", "dblclick", "down", "wheel"] as const;
@@ -105,6 +128,7 @@ interface Collected {
   readonly errors: string[];
   checks: number;
   checkMs: number;
+  endMs: number;
 }
 
 /**
@@ -114,6 +138,10 @@ interface Collected {
  */
 export interface A11y {
   readonly checkNow: () => Promise<void>;
+  /**
+   * The end-of-test checks, now: the fixture's spec runs them on a probe.
+   */
+  readonly endOfTest: () => Promise<void>;
   readonly findings: () => readonly Finding[];
 }
 
@@ -121,8 +149,13 @@ export interface A11y {
  * Per worker: whether the prototypes are wrapped yet, and the page the
  * current test drives, which is what a wrapped action checks.
  */
-const worker: { current: Page | undefined; isWrapped: boolean } = {
+const worker: {
+  current: Page | undefined;
+  measure: Measure | undefined;
+  isWrapped: boolean;
+} = {
   current: undefined,
+  measure: undefined,
   isWrapped: false,
 };
 
@@ -147,6 +180,9 @@ function wrap(prototype: object, names: readonly string[]): void {
       name,
       async function checked(this: unknown, ...args: unknown[]) {
         if (worker.current !== undefined) await checkNow(worker.current);
+        if (worker.measure !== undefined && NAVIGATIONS.has(name)) {
+          await flushCoverage(worker.measure);
+        }
         const result: unknown = await Reflect.apply(original, this, args);
         return result;
       },
@@ -165,8 +201,8 @@ function wrapActions(page: Page): void {
 
 async function arm(
   page: Page,
+  baseURL: string,
   collected: Collected,
-  baseURL = "",
 ): Promise<void> {
   await page.exposeBinding("hasA11yChecked", (_source, key: string) => {
     if (collected.seen.has(key)) return true;
@@ -176,22 +212,46 @@ async function arm(
   await page.exposeBinding("__a11yError", (_source, message: string) => {
     collected.errors.push(message);
   });
-  await page.exposeBinding(
-    "__a11yReport",
-    (_source, report: CheckReport) => {
-      collected.checks += 1;
-      collected.checkMs += report.ms;
-      for (const raw of report.findings) {
-        collected.findings.push(findingOf(report.url, raw));
-      }
-    },
-  );
+  await page.exposeBinding("__a11yReport", (_source, report: CheckReport) => {
+    collected.checks += 1;
+    collected.checkMs += report.ms;
+    for (const raw of report.findings) {
+      collected.findings.push(findingOf(report.url, raw));
+    }
+  });
   await page.addInitScript({ content: AXE_SOURCE });
   await page.addInitScript(installChecker, {
     origin: new URL(baseURL).origin,
     rules: RULES,
     minTarget: MIN_TARGET,
   });
+  await page.addInitScript(installWalk, new URL(baseURL).origin);
+}
+
+/**
+ * Step 2's checks, timed. A page that navigates or closes under them is
+ * a checker error, which fails the test like a finding: a check that
+ * did not run must not read as one that passed.
+ */
+async function runEndOfTest(
+  page: Page,
+  baseURL: string,
+  collected: Collected,
+): Promise<void> {
+  const started = performance.now();
+  try {
+    await endOfTest(page, new URL(baseURL).origin, {
+      check: () => checkNow(page),
+      report: (report: PageReport) => {
+        for (const raw of report.findings) {
+          collected.findings.push(findingOf(report.url, raw));
+        }
+      },
+    });
+  } catch (error) {
+    collected.errors.push(`end of test: ${String(error)}`);
+  }
+  collected.endMs += Math.round(performance.now() - started);
 }
 
 /**
@@ -213,6 +273,7 @@ function record(test: string, collected: Collected): void {
     test,
     checks: collected.checks,
     checkMs: collected.checkMs,
+    endMs: collected.endMs,
     errors: collected.errors,
     findings: distinct(collected.findings),
   };
@@ -246,19 +307,30 @@ export const test = base.extend<{
         errors: [],
         checks: 0,
         checkMs: 0,
+        endMs: 0,
       };
-      await arm(page, collected, baseURL);
+      const measure = IS_MEASURING
+        ? await startMeasuring(page, new URL(baseURL ?? "").origin)
+        : undefined;
+      await arm(page, baseURL ?? "", collected);
       wrapActions(page);
       worker.current = page;
+      worker.measure = measure;
       try {
         await use({
           checkNow: () => checkNow(page),
+          endOfTest: () => runEndOfTest(page, baseURL ?? "", collected),
           findings: () => distinct(collected.findings),
         });
         await checkNow(page);
       } finally {
         worker.current = undefined;
+        worker.measure = undefined;
       }
+      if (testInfo.status === testInfo.expectedStatus) {
+        await runEndOfTest(page, baseURL ?? "", collected);
+      }
+      if (measure !== undefined) await stopMeasuring(measure);
       record(testInfo.titlePath.join(" › "), collected);
       if (a11yMode === "enforce" && !IS_RECORDING) failOnNew(collected);
     },

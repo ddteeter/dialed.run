@@ -273,8 +273,11 @@ function withoutSaidNull(found: ExtractedProduct): ExtractedProduct {
   // on a `Set<string>` is already false, so a single combined guard has a
   // branch no input can distinguish.
   const composition = found.fabricComposition;
-  if (composition === undefined) return found;
-  if (!SAID_NULL.has(composition.verbatim.trim().toLowerCase())) return found;
+  if (
+    composition === undefined ||
+    !SAID_NULL.has(composition.verbatim.trim().toLowerCase())
+  )
+    return found;
   // Rebuilt without the field rather than destructured around it: an
   // unused binding is what the rest-spread form leaves behind, and the
   // lint rule is right that it reads as a mistake.
