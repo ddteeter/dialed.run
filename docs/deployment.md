@@ -65,9 +65,6 @@ wrangler d1 migrations apply dialed-ops --remote
 ```
 
 CI runs these before every deploy, so this step is only for the first.
-**The ops line is owed to `.github/workflows/ci.yml`'s "Apply migrations"
-step** (design 165, owner edit): until it is there, production never gets
-`perf_daily`, and the daily rollup reports every day it cannot write.
 
 **With replication on, a replica can be behind the migration for a moment**
 (design 143, R-156). The primary has the new schema as soon as `apply`
