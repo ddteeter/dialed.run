@@ -150,8 +150,7 @@ export function CityFinder({
     name,
     readOnly: (surrounding?.readOnly ?? false) || isFinding,
     "aria-invalid": shown === undefined ? undefined : true,
-    "aria-describedby":
-      shown === undefined ? undefined : messageIdFor(id),
+    "aria-describedby": shown === undefined ? undefined : messageIdFor(id),
     onInput: () => {
       surrounding?.onInput();
       setMessage(undefined);
@@ -163,8 +162,11 @@ export function CityFinder({
     <div data-part="city-finder" className="flex flex-col gap-3">
       {/* Enter anywhere in here is Find. The field and Find are the only
           controls inside, and Enter on Find already meant Find — taking it
-          here as well stops it reaching the surrounding form's submit. */}
+          here as well stops it reaching the surrounding form's submit.
+          `presentation`: it only catches what bubbles, and is no control
+          itself. */}
       <div
+        role="presentation"
         onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
           if (event.key !== "Enter") return;
           event.preventDefault();

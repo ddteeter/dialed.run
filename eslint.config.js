@@ -1,6 +1,7 @@
 import js from "@eslint/js";
 import prettier from "eslint-config-prettier";
 import betterTailwind from "eslint-plugin-better-tailwindcss";
+import jsxA11y from "eslint-plugin-jsx-a11y-x";
 import sonarjs from "eslint-plugin-sonarjs";
 import unicorn from "eslint-plugin-unicorn";
 import tseslint from "typescript-eslint";
@@ -279,6 +280,20 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  {
+    /**
+     * Plan 161, step 7: the JSX accessibility rules at `recommended`, on
+     * what the app renders. It catches at the keyboard what the e2e a11y
+     * fixture only sees on a screen a spec reaches.
+     *
+     * The es-tooling fork, not `eslint-plugin-jsx-a11y` itself: upstream's
+     * last release declares ESLint 9 at most, and the fork carries the
+     * same rules with ESLint 10 as its peer (owner, 2026-11-03). The rule
+     * names are upstream's, so moving back is the import and the prefix.
+     */
+    ...jsxA11y.configs.recommended,
+    files: ["src/**/*.tsx"],
   },
   {
     files: ["**/*.js", "**/*.mjs"],

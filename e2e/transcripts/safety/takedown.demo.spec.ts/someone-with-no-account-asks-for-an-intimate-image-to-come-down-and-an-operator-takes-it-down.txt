@@ -76,7 +76,7 @@ end of form
 end of listitem, level 1, position 1, set size 2
 listitem, level 1, position 2, set size 2
 button, photo · :id, not expanded
-image, Reported photo
+image, Reported
 paragraph
 A close match to an image removed as intimate on
 :month #

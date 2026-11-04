@@ -158,9 +158,7 @@ describe("colour on the garment form", () => {
     await user.click(screen.getByRole("radio", { name: "Navy" }));
     await user.click(screen.getByRole("button", { name: /exact shade/i }));
 
-    expect(
-      screen.getByAltText(/tap to sample a shade from your photo/i),
-    ).toBeInTheDocument();
+    expect(screen.getByAltText(/tap to sample a shade/i)).toBeInTheDocument();
     expect(screen.getByText(/tap the photo to sample/i)).toBeVisible();
   });
 

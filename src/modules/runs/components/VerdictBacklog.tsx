@@ -382,7 +382,7 @@ export function VerdictBacklog({
   }
 
   function onKeyDown(
-    event: KeyboardEvent<HTMLTableSectionElement>,
+    event: KeyboardEvent<HTMLTableRowElement>,
     row: BacklogRow,
   ): void {
     const action = actionForKey(event.key);
@@ -512,7 +512,7 @@ interface BacklogRowActions {
 interface BacklogSelection {
   selected: number;
   onSelect: (index: number) => void;
-  onKeyDown: (event: KeyboardEvent<HTMLTableSectionElement>) => void;
+  onKeyDown: (event: KeyboardEvent<HTMLTableRowElement>) => void;
 }
 
 /**
@@ -549,10 +549,7 @@ function BacklogTable({
             ))}
           </tr>
         </thead>
-        {/* The keys live on the body rather than on each row: `↑`/`↓`
-            move between rows, so the handler has to outlive the row that
-            had focus when it was pressed. */}
-        <tbody onKeyDown={onKeyDown} className="block desk:table-row-group">
+        <tbody className="block desk:table-row-group">
           {rows.map((row, index) => {
             const failure = failures.get(row.runId);
             const isHere = index === selected;
@@ -570,6 +567,12 @@ function BacklogTable({
                   onFocus={() => {
                     onSelect(index);
                   }}
+                  // On the row, the one focusable thing that holds focus
+                  // (plan 161 step 7: a key handler on the body is one on
+                  // a non-interactive element). Every row has it, and the
+                  // one with focus answers: `↑`/`↓` move the selection,
+                  // and focus follows it to the next row's handler.
+                  onKeyDown={onKeyDown}
                   className={`${rowClass(saved.has(row.runId), failure !== undefined)} ${isHere ? ROW_HERE : ROW_WAITING}`}
                 >
                   <td className="block px-2 py-2 desk:table-cell">

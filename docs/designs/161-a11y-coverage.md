@@ -303,8 +303,7 @@ decisions.
 - **`target-44`** (13): every `<select>` and the runner search.
   - `FormField`'s box held its control centred in 12px of padding. A
     select drew its own 37px box inside the box.
-  - The box now has no vertical padding: `min-h-field` alone makes it
-    50. Each select fills it borderless (48px), the way a text input sits
+  - The box now has no vertical padding: `min-h-field` alone makes it 50. Each select fills it borderless (48px), the way a text input sits
     in it.
   - The search input stretches to its 48px box.
   - The text fields look the same. The selects no longer draw a box
@@ -331,6 +330,25 @@ decisions.
 
 **7. `eslint-plugin-jsx-a11y`.** The owner adds it to the ESLint config at
 `recommended`. Its findings are fixed in the same PR.
+
+_How (2026-11-03):_ `eslint-plugin-jsx-a11y-x` 0.2.0, the es-tooling fork,
+at `recommended` on `src/**/*.tsx`.
+
+- **Why the fork (owner, 2026-11-03).** Upstream's last release (6.10.2,
+  October 2024) declares ESLint 9 at most as its peer, and this repo is on 10. Upstream's ESLint 10 issue (#1075) and three community PRs are open;
+  the sole maintainer has said it will come, without a date. The fork has
+  the same 34 rules, ESLint 9 and 10 as its peer, and is kept by the e18e
+  lead. Both ran clean under ESLint 10 here and found the same seven
+  problems. Moving back is the import and the rule prefix.
+- **What it found, and the fixes:**
+  - `img-redundant-alt` (3): alts that said "photo", which a screen reader
+    already says. "Reported", "Reported garment", "Tap to sample a shade".
+  - `no-noninteractive-element-interactions` (1): the backlog's key
+    handler sat on `<tbody>`. It is on each focusable row now; the row with
+    focus answers, and a failed row's Retry is a plain button again.
+  - `no-static-element-interactions` (3): wrappers that only catch keys
+    bubbling from the controls inside (Escape to cancel, Enter to find)
+    take `role="presentation"`, the plugin's documented case for it.
 
 **8. Tidy.** Correct the comment in `test/ui/axe.dom.test.tsx`. It keeps
 the primitives' states that no screen reaches, and points at the fixture
