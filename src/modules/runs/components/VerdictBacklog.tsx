@@ -576,7 +576,9 @@ function BacklogTable({
                     <span className="block text-body font-semibold">
                       {runDay(row)}
                     </span>
-                    <Mono step="sm" className="text-muted">
+                    {/* `--quiet`, like the conditions beside it: a saved
+                        row is tinted, and `--muted` is 4.0:1 on the tint. */}
+                    <Mono step="sm" className="text-quiet">
                       {formatDuration(row.durationS)} ·{" "}
                       {formatDistance(row.distanceM, units.distance)}
                     </Mono>

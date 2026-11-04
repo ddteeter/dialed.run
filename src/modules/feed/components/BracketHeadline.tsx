@@ -9,7 +9,8 @@ import type { ReactNode } from "react";
  * Motion Doctrine's waiting device (*"no spinners or skeleton shimmer —
  * brackets breathe instead"*), the same one `PendingLabel` uses. The
  * brackets are hidden from a screen reader either way; the words are the
- * headline.
+ * headline, and an `<h2>` under the screen's own `<h1>`: drawn as a
+ * headline, it is announced as one (axe's `p-as-heading`, plan 161).
  */
 export function BracketHeadline({
   children,
@@ -17,7 +18,7 @@ export function BracketHeadline({
 }: Readonly<{ children: ReactNode; pending?: boolean }>) {
   const bracket = pending ? "breathe text-action" : "text-action";
   return (
-    <p className="m-0 flex gap-2 font-display text-display uppercase">
+    <h2 className="m-0 flex gap-2 font-display text-display uppercase">
       <span aria-hidden="true" className={bracket}>
         [
       </span>
@@ -25,6 +26,6 @@ export function BracketHeadline({
       <span aria-hidden="true" className={bracket}>
         ]
       </span>
-    </p>
+    </h2>
   );
 }

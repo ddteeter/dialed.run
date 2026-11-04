@@ -10,9 +10,9 @@ button, Your conditions, current page
 status
 busy
 Your conditions
-paragraph
+heading, Finding weather, level 2
 Finding weather
-end of paragraph
+end of heading, Finding weather, level 2
 end, busy
 end of main
 navigation, Main

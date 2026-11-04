@@ -80,7 +80,7 @@ export function DeleteAccount({
         className="target flex cursor-pointer items-center justify-between gap-3 border-none bg-transparent p-0 py-3 text-left"
       >
         <span className="flex flex-col gap-1">
-          <span className="text-body font-semibold text-action">
+          <span className="text-body font-semibold text-cold-text">
             Delete account
           </span>
           <span className="text-small text-muted">

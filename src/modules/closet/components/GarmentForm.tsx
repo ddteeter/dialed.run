@@ -808,7 +808,7 @@ function IdentityFields({
               type: "",
             }));
           }}
-          className="rounded-field border border-hairline bg-panel px-3 py-2 font-normal"
+          className="min-h-target w-full self-stretch border-none bg-transparent font-normal"
         >
           {garmentCategoriesInOrder.map((category) => (
             <option key={category} value={category}>
@@ -855,7 +855,7 @@ function IdentityFields({
               update("brand", event.target.value);
               brand.onInput?.(event.target.value);
             }}
-            className="rounded-field border border-hairline bg-panel px-3 py-2 font-normal"
+            className="w-full border-none bg-transparent"
           />
         </FormField>
         <datalist id="garment-brand-options">

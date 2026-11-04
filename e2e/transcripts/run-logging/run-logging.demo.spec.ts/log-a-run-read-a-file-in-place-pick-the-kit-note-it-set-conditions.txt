@@ -1,10 +1,8 @@
 document
 banner
 link, dialed.run home
-[
 dialed
 .run
-]
 end of link, dialed.run home
 navigation, Main
 list
@@ -39,9 +37,9 @@ end of paragraph
 paragraph
 #:# /mi
 :day :month #
-button, Change start time, #:#
+button, #:#, change start time
 #:#
-end of button, Change start time, #:#
+end of button, #:#, change start time
 end of paragraph
 Fetching weather
 link, Looks right — what did you wear?

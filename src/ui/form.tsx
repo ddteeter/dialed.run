@@ -326,8 +326,10 @@ export function FormField({
   // Form Contract 02b, carried in tokens.js since round 28: 50 tall
   // (`min-h-field`, HEIGHT.field), 16px type (`text-field`, TYPE.field,
   // which the control inherits through preflight's `font: inherit`) and
-  // radius 10 (`rounded-field`). The padding alone reaches 48, so the
-  // minimum is what makes it 50.
+  // radius 10 (`rounded-field`). The minimum is the height, with no
+  // vertical padding, so a control can fill the box: a `<select>` that
+  // stretches is a 48px target (plan 161, step 6), where one centred in
+  // padding was 37 and drew a box inside the box.
   const box = (
     <div
       data-invalid={isInvalid ? "true" : undefined}
@@ -340,8 +342,8 @@ export function FormField({
       // Which is why a *group* does not get one — see `FieldGroup`.
       className={
         isInvalid
-          ? "field-box flex min-h-field items-center rounded-field border border-ink inset-ring-1 inset-ring-ink bg-ground px-4 py-3 text-field"
-          : "field-box flex min-h-field items-center rounded-field border border-hairline bg-ground px-4 py-3 text-field"
+          ? "field-box flex min-h-field items-center rounded-field border border-ink inset-ring-1 inset-ring-ink bg-ground px-4 text-field"
+          : "field-box flex min-h-field items-center rounded-field border border-hairline bg-ground px-4 text-field"
       }
     >
       {children}
@@ -922,7 +924,7 @@ export function ChoiceField<TOption extends string>({
           );
           onChange(picked ?? NO_CHOICE);
         }}
-        className="max-w-full rounded-field border border-hairline bg-panel px-3 py-2 font-normal"
+        className="min-h-target w-full self-stretch border-none bg-transparent font-normal"
       >
         <option value={NO_CHOICE}>{placeholder ?? "—"}</option>
         {options.map((option) => (

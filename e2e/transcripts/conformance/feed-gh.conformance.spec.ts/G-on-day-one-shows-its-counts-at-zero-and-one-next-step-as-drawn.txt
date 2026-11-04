@@ -15,9 +15,9 @@ Following
 #
 Followers
 end of paragraph
-paragraph
+heading, No runs yet, level 2
 No runs yet
-end of paragraph
+end of heading, No runs yet, level 2
 paragraph
 Your runs land here once you log one. Shared runs are what other people see.
 end of paragraph

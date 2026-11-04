@@ -1,10 +1,8 @@
 document
 banner
 link, dialed.run home
-[
 dialed
 .run
-]
 end of link, dialed.run home
 link, Log in
 end of banner

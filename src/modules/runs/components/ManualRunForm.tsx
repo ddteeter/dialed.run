@@ -245,7 +245,7 @@ export function ManualRunForm({ submitRun }: Readonly<ManualRunFormProps>) {
               const { value } = event.target;
               setEffort(isEffort(value) ? value : "");
             }}
-            className="w-full border-none bg-transparent"
+            className="min-h-target w-full self-stretch border-none bg-transparent"
           >
             <option value="">Not set</option>
             {EFFORTS.map((value) => (

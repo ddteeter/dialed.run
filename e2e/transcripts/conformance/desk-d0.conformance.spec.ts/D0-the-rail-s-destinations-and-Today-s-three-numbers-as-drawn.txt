@@ -1,9 +1,7 @@
 document
 navigation, Desk
-[
 dialed
 .run
-]
 Desk
 Operator
 list

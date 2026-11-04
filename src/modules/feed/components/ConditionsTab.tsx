@@ -369,9 +369,9 @@ function TooFew({
         className="flex flex-col gap-2 border-b border-hairline py-5 text-muted"
       >
         <SameConditionsEyebrow band={band} units={units} />
-        <p className="m-0 font-display text-title uppercase text-ink">
+        <h2 className="m-0 font-display text-title uppercase text-ink">
           Not enough runs yet
-        </p>
+        </h2>
       </div>
       <div className="flex flex-col gap-4 py-5">
         <p className="m-0 text-lead">
@@ -420,7 +420,7 @@ function NoWeather({
       className="flex flex-col gap-4 py-5"
     >
       <Eyebrow>Your conditions</Eyebrow>
-      <p className="m-0 font-display text-title uppercase">No weather yet</p>
+      <h2 className="m-0 font-display text-title uppercase">No weather yet</h2>
       <p className="m-0 text-lead">
         No weather for {place} yet. It shows after the first reading.
       </p>
@@ -455,9 +455,9 @@ function Matched({
           windowDays={result.windowDays}
           units={units}
         />
-        <p className="m-0 font-display text-title uppercase">
+        <h2 className="m-0 font-display text-title uppercase">
           {String(result.runners)} runners logged this
-        </p>
+        </h2>
         <p className="m-0 text-body">
           {isWidened
             ? `In ${conditions}, wherever they were. Too few in three days, so this looks back two weeks.`

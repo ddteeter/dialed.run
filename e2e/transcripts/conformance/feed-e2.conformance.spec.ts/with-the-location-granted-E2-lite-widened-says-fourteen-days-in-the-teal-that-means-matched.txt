@@ -13,10 +13,10 @@ Same conditions · Feels
 ·
 dry
 · # days
-paragraph
+heading, # runners logged this, level 2
 #
 runners logged this
-end of paragraph
+end of heading, # runners logged this, level 2
 paragraph
 In #° and dry, wherever they were. Too few in three days, so this looks back two weeks.
 end of paragraph

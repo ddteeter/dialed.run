@@ -12,9 +12,7 @@ Same conditions · Feels
 #–#°
 ·
 dry
-paragraph
-Not enough runs yet
-end of paragraph
+heading, Not enough runs yet, level 2
 paragraph
 Fewer than five runners logged
 #° and dry

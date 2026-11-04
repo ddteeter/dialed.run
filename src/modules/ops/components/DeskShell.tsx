@@ -130,11 +130,14 @@ export function DeskShell({
   return (
     <div
       data-ground="ink"
-      className="flex min-h-dvh bg-ground font-sans text-body text-ink"
+      // The rail beside the content from `wide`, above it below: at 320px
+      // a rail kept beside the column made the whole Desk scroll sideways
+      // (plan 161, step 6; owner 2026-11-03).
+      className="flex min-h-dvh flex-col bg-ground font-sans text-body text-ink wide:flex-row"
     >
       <nav
         aria-label="Desk"
-        className="flex flex-col gap-8 border-r border-hairline p-6"
+        className="flex flex-col gap-8 border-b border-hairline p-6 wide:border-r wide:border-b-0"
       >
         <div className="flex flex-col gap-2">
           <span className="flex items-baseline gap-3 text-heading">
@@ -161,7 +164,7 @@ export function DeskShell({
       </nav>
       {/* `Page` for the column and the hydration stamp every screen
           carries (useHydrated), which the e2e specs wait on. */}
-      <main className="flex-1">
+      <main className="min-w-0 flex-1">
         <Page>{children}</Page>
       </main>
     </div>

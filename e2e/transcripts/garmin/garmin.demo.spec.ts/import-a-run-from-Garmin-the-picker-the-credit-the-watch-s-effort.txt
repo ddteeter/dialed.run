@@ -1,10 +1,8 @@
 document
 banner
 link, dialed.run home, current page
-[
 dialed
 .run
-]
 end of link, dialed.run home, current page
 navigation, Main
 list

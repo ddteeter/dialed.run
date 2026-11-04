@@ -970,7 +970,7 @@ describe("A1: the parsed card", () => {
     expect(within(card).getByText("Sat Aug 29")).toBeVisible();
     expect(
       within(card).getByRole("button", {
-        name: "Change start time, 6:04 AM",
+        name: "6:04 AM, change start time",
       }),
     ).toHaveTextContent("6:04 AM");
     expect(document.querySelector("[data-part='drop-zone']")).toBeNull();
@@ -1051,13 +1051,13 @@ describe("A1: the parsed card", () => {
     await user.upload(dropInput(), gpx());
 
     await user.click(
-      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
 
     // The row replaces the time on the stats line; the date stays.
     const card = region("parsed-card");
     expect(
-      within(card).queryByRole("button", { name: /Change start time/u }),
+      within(card).queryByRole("button", { name: /change start time/u }),
     ).toBeNull();
     expect(within(card).getByText("Sat Aug 29")).toBeVisible();
     expect(within(card).getByText("8:20 /mi").closest("p")).toHaveTextContent(
@@ -1084,7 +1084,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome, retime }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
     const asked = getOutcome.mock.calls.length;
 
@@ -1103,7 +1103,7 @@ describe("A1: the parsed card", () => {
       });
     });
     const changed = await screen.findByRole("button", {
-      name: "Change start time, 7:34 AM",
+      name: "7:34 AM · Changed, change start time",
     });
     expect(changed).toHaveTextContent("7:34 AM · Changed");
     expect(screen.queryByLabelText("Start time")).toBeNull();
@@ -1121,7 +1121,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
     const field = screen.getByLabelText("Start time");
     await user.clear(field);
@@ -1159,7 +1159,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
     const field = screen.getByLabelText("Start time");
     await user.clear(field);
@@ -1203,7 +1203,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
 
     await user.clear(screen.getByLabelText("Start time"));
@@ -1224,7 +1224,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
 
     await user.click(screen.getByRole("button", { name: "Get weather" }));
@@ -1245,7 +1245,7 @@ describe("A1: the parsed card", () => {
       await user.upload(dropInput(), gpx());
       await user.click(
         await screen.findByRole("button", {
-          name: "Change start time, 6:04 AM",
+          name: "6:04 AM, change start time",
         }),
       );
 
@@ -1269,7 +1269,7 @@ describe("A1: the parsed card", () => {
     );
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
     await user.click(screen.getByRole("button", { name: "Get weather" }));
     await waitFor(() => {
@@ -1321,7 +1321,7 @@ describe("A1: the parsed card", () => {
     );
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: /Change start time/u }),
+      await screen.findByRole("button", { name: /change start time/u }),
     );
     await user.click(screen.getByRole("button", { name: "Get weather" }));
 
@@ -1343,7 +1343,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome: parsed() }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
     const status = screen.getByRole("status");
     const said: string[] = [];
@@ -1385,7 +1385,7 @@ describe("A1: the parsed card", () => {
     await user.upload(dropInput(), gpx());
 
     const time = await screen.findByRole("button", {
-      name: "Change start time, 4:04 AM",
+      name: "4:04 AM, change start time",
     });
     expect(time).toHaveTextContent("4:04 AM");
     await user.click(time);
@@ -1417,7 +1417,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
     const field = screen.getByLabelText("Start time");
     await user.clear(field);
@@ -1563,7 +1563,7 @@ describe("A1's parsed card: a lapsed session (Au7, D-155)", () => {
     await renderWithRouter(form({ getOutcome }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
 
     expect(carriedSince()).toEqual(["run"]);

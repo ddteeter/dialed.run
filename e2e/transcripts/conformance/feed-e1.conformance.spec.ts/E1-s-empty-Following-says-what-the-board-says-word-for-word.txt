@@ -7,9 +7,9 @@ heading, Feed, level 1
 link, Find runners
 button, Following, current page
 button, Your conditions
-paragraph
+heading, Nobody yet, level 2
 Nobody yet
-end of paragraph
+end of heading, Nobody yet, level 2
 paragraph
 Nobody you follow has posted yet.
 end of paragraph
