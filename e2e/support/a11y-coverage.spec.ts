@@ -5,8 +5,10 @@ import type { Page } from "@playwright/test";
 import type { CoverageResults } from "monocart-coverage-reports";
 
 import {
+  allComponents,
   coverageReport,
   flushCoverage,
+  FIGURE_NOISE,
   judge,
   ownEntries,
   patternOf,
@@ -91,6 +93,34 @@ test("two loads in one test both count, and a visit taken away drops the figure"
   expect(one).toBeLessThan(both);
 });
 
+test("a component no test loaded counts, at 0%", async ({
+  browser,
+}, testInfo) => {
+  const page = await browser.newPage();
+  try {
+    await serveProbe(page);
+    const outputDir = testInfo.outputPath("all");
+    const measure = await startMeasuring(page, PROBE, outputDir);
+    // As the fixture does: flushed before each load, and once at the end.
+    for (const n of [1, -1]) {
+      await flushCoverage(measure);
+      await page.goto(`${PROBE}/?n=${String(n)}`);
+      await expect(page.getByRole("main")).toHaveText(n > 0 ? "up" : "down");
+    }
+    await flushCoverage(measure);
+    const results: CoverageResults | undefined = await coverageReport({
+      outputDir,
+      reports: [],
+      all: allComponents((filePath) => filePath.endsWith("/src/ui/Mono.tsx")),
+    }).generate();
+    const files = results?.files.map((file) => file.sourcePath) ?? [];
+    expect(files).toContain("src/ui/Mono.tsx");
+    expect(results?.summary.branches.pct).toBeLessThan(100);
+  } finally {
+    await page.close();
+  }
+});
+
 test("only the app's components count", () => {
   const entries = [
     { url: `${PROBE}/src/ui/Bar.tsx` },
@@ -146,7 +176,8 @@ test("the judgement names each gap", () => {
   expect(
     judge(
       {
-        branches: 50,
+        // Inside the noise: the same code measured again.
+        branches: 50 - FIGURE_NOISE,
         routes,
         visits: new Set(["/", "/closet", "/feed/entry/01A"]),
       },
@@ -155,14 +186,14 @@ test("the judgement names each gap", () => {
   ).toEqual([]);
   expect(
     judge(
-      { branches: 49.9, routes, visits: new Set(["/", "/api/health"]) },
+      { branches: 49.7, routes, visits: new Set(["/", "/api/health"]) },
       {
         ...baseline,
         unvisited: { ...baseline.unvisited, "/gone": "a route since removed" },
       },
     ),
   ).toEqual([
-    "branch coverage fell to 49.9%, below the baseline's 50%",
+    "branch coverage fell to 49.7%, more than 0.25 below the baseline's 50%",
     "/closet: no spec visits it, and it is not listed",
     '/api/health: listed as unvisited ("an endpoint, not a page"), but a spec visits it',
     "/feed/entry/$entryId: no spec visits it, and it is not listed",
