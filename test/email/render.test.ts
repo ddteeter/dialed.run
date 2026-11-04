@@ -295,7 +295,7 @@ describe("emailContent", () => {
       {
         subject: "Removal request, due by 2026-10-12 13:05 UTC",
         body: "Someone asked for an intimate image to come down. It's hidden from everyone now. The law gives us 48 hours to decide.",
-        button: { label: "Open Review", href: `${ORIGIN}/safety/review` },
+        button: { label: "Open Review", href: `${ORIGIN}/desk/review` },
         foot: "Sent to every operator, once per request.",
         footer: LEGAL,
       },
@@ -305,7 +305,7 @@ describe("emailContent", () => {
       {
         subject: "Removal request, due by 2026-10-12 13:05 UTC",
         body: "Someone asked for an intimate image to come down. The link isn't one of ours, so nothing is hidden: find it from what they wrote. The law gives us 48 hours to decide.",
-        button: { label: "Open Review", href: `${ORIGIN}/safety/review` },
+        button: { label: "Open Review", href: `${ORIGIN}/desk/review` },
         foot: "Sent to every operator, once per request.",
         footer: LEGAL,
       },
@@ -364,7 +364,7 @@ describe("emailContent", () => {
       {
         subject: "Removal requests paused: possible abuse",
         body: "10 removal requests hid something in the last hour, so new requests hide nothing until the hour clears. They still wait in Review with their 48 hours.",
-        button: { label: "Open Review", href: `${ORIGIN}/safety/review` },
+        button: { label: "Open Review", href: `${ORIGIN}/desk/review` },
         foot: "Sent to every operator, once an hour while it lasts.",
         footer: LEGAL,
       },
@@ -375,7 +375,7 @@ describe("emailContent", () => {
       {
         subject: "Removal still undecided, due by 2026-10-12 13:05 UTC",
         body: "An intimate-image removal is still waiting for a decision. Nothing changes until someone decides it in Review.",
-        button: { label: "Open Review", href: `${ORIGIN}/safety/review` },
+        button: { label: "Open Review", href: `${ORIGIN}/desk/review` },
         foot: "Sent to every operator, once per removal, 8 hours before it's due.",
         footer: LEGAL,
       },
@@ -417,7 +417,7 @@ describe("emailContent", () => {
       {
         subject: "Removal due by 2026-10-12 13:05 UTC",
         body: "Someone reported a photo as an intimate image shared without consent. It's hidden from everyone now. The law gives us 48 hours to decide.",
-        button: { label: "Open Review", href: `${ORIGIN}/safety/review` },
+        button: { label: "Open Review", href: `${ORIGIN}/desk/review` },
         foot: "Sent to every operator, once per report that hides something.",
         footer: LEGAL,
       },
@@ -427,7 +427,7 @@ describe("emailContent", () => {
       {
         subject: "Removal due by 2026-10-12 13:05 UTC",
         body: "Someone reported a run's kit as an intimate image shared without consent. It's hidden from everyone now. The law gives us 48 hours to decide.",
-        button: { label: "Open Review", href: `${ORIGIN}/safety/review` },
+        button: { label: "Open Review", href: `${ORIGIN}/desk/review` },
         foot: "Sent to every operator, once per report that hides something.",
         footer: LEGAL,
       },

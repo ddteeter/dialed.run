@@ -111,6 +111,29 @@ describe("deciding", () => {
     expect(picker.value).toBe("");
   });
 
+  it("puts the main action first, as the Desk's one chalk pill", () => {
+    renderQueue([row()]);
+    // Round 44 #104-#105: Remove, then Approve, then Remove as suspected
+    // CSAM; the first is chalk, the rest outline pills.
+    const bar = ["Remove", "Approve", "Remove as suspected CSAM"].map((name) =>
+      screen.getByRole("button", { name }),
+    );
+    const [remove, approve, csam] = bar;
+    if (remove === undefined || approve === undefined || csam === undefined) {
+      throw new Error("no bar");
+    }
+    expect(
+      remove.compareDocumentPosition(approve) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      approve.compareDocumentPosition(csam) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(remove).toHaveClass("rounded-pill", "bg-ink", "text-ground");
+    expect(remove).not.toHaveClass("bg-action");
+    expect(approve).toHaveClass("rounded-pill", "border-ink", "bg-transparent");
+  });
+
   const QUEUE_ID = "01HZZZZZZZZZZZZZZZZZZZZZZZ";
 
   it("approves without a reason and takes the row off the list", async () => {
@@ -216,6 +239,14 @@ describe("deciding", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
     });
+    // Backing out is the boards' underlined text, quieter than a pill.
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveClass(
+      "border-none",
+      "bg-transparent",
+      "text-ink",
+      "underline",
+      "underline-offset-4",
+    );
 
     await user.click(screen.getByRole("button", { name: "Remove and report" }));
 
@@ -314,7 +345,7 @@ describe("deciding", () => {
     const photo = screen.getByRole("img", { name: "Reported garment photo" });
     expect(photo).toHaveAttribute(
       "src",
-      "/safety/review-photo/items/u/g-1/v1/card.webp",
+      "/desk/review-photo/items/u/g-1/v1/card.webp",
     );
     expect(photo).toHaveClass("h-full", "w-full", "object-contain");
     // F's photo well: the card at its own size, not a kit photo's strip.
@@ -412,6 +443,38 @@ describe("deciding", () => {
       screen.getByRole("combobox", { name: /Why it comes down/ }),
     ).toHaveDisplayValue("it's sexual or explicit");
     expect(screen.getByText(bracketed("1 waiting"))).toBeInTheDocument();
+  });
+
+  it("names the confirm by its in-flight verb while the quarantine is pending", async () => {
+    const user = userEvent.setup();
+    const { promise, resolve: settle } = Promise.withResolvers<{
+      outcome: ResolveOutcome;
+    }>();
+    const resolve: Props["resolve"] = vi
+      .fn<Props["resolve"]>()
+      .mockReturnValue(promise);
+    render(
+      <ReviewQueue queue={[row()]} resolve={resolve} reviewHandle={vi.fn()} />,
+    );
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Why it comes down/ }),
+      "it's sexual or explicit",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Remove as suspected CSAM" }),
+    );
+    const confirm = screen.getByRole("button", { name: "Remove and report" });
+    await user.click(confirm);
+
+    await waitFor(() => {
+      expect(confirm).toHaveAttribute("aria-busy", "true");
+    });
+    expect(confirm).toHaveAccessibleName("Removing");
+    settle({ outcome: "resolved" });
+    await waitFor(() => {
+      expect(screen.getByText(bracketed("0 waiting"))).toBeInTheDocument();
+    });
   });
 
   it("keeps the question up, with the band, when the quarantine fails", async () => {
@@ -795,14 +858,14 @@ describe("the subject itself", () => {
       }),
     ]);
 
-    // `/safety/review-photo/`, not `/feed/photo/`. Every photo in this
+    // `/desk/review-photo/`, not `/feed/photo/`. Every photo in this
     // queue is hidden precisely because somebody reported it, so the
     // ordinary route refuses it — pointing at that one would give a
     // reviewer a broken image on the subject that most needs looking at.
     const photo = screen.getByRole("img", { name: "Reported photo" });
     expect(photo).toHaveAttribute(
       "src",
-      "/safety/review-photo/entries/u-1/e-1/p-1",
+      "/desk/review-photo/entries/u-1/e-1/p-1",
     );
   });
 
@@ -909,7 +972,7 @@ describe("a photo still pending a day after upload (D-157)", () => {
     expect(screen.queryByText(bracketed("0 people"))).toBeNull();
     expect(screen.getByRole("img", { name: "Reported photo" })).toHaveAttribute(
       "src",
-      "/safety/review-photo/entries/u-1/e-1/p-7",
+      "/desk/review-photo/entries/u-1/e-1/p-7",
     );
   });
 
@@ -1088,7 +1151,16 @@ describe("a handle the re-ask flagged (D-97)", () => {
     );
     expect(screen.queryByText("Nobody reported this.")).toBeNull();
     expect(screen.getByText(bracketed("classifier"))).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Keep" })).toBeInTheDocument();
+    // A decision that is not the row's submit is the boards' outline pill,
+    // not bare text (R-173: on the Desk's dark ground it read as a label).
+    expect(screen.getByRole("button", { name: "Keep" })).toHaveClass(
+      "rounded-pill",
+      "border",
+      "border-ink",
+      "bg-transparent",
+      "font-bold",
+      "text-ink",
+    );
     expect(screen.getByRole("button", { name: "Rename" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();

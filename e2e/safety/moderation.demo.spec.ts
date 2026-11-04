@@ -291,7 +291,7 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
   await expect(page.locator("dialog[open]")).toHaveCount(0);
 
   await scene(page, "Review: one row opens at a time");
-  await page.goto("/safety/review");
+  await page.goto("/desk/review");
   await hydrated(page);
   const row = page.getByRole("listitem").filter({ hasText: entryId });
   // Round 28 #8: the row's name opens it; there is no "Decide this one".

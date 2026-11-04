@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -322,6 +328,14 @@ describe("CopyrightHolds", () => {
 
       await user.click(screen.getByRole("button", { name: label }));
       expect(screen.getByRole("alertdialog", { name: question })).toBeVisible();
+      // The answer, then Not yet, side by side in one bar (round 44).
+      const [answer, notYet, ...more] = within(
+        screen.getByRole("alertdialog", { name: question }),
+      ).getAllByRole("button");
+      expect(more).toHaveLength(0);
+      expect(notYet).toHaveAccessibleName("Not yet");
+      expect(answer?.parentElement).toBe(notYet?.parentElement);
+      expect(answer?.parentElement).toHaveClass("flex", "flex-wrap");
       await user.click(screen.getByRole("button", { name: "Not yet" }));
 
       expect(screen.queryByRole("alertdialog")).toBeNull();
@@ -333,9 +347,12 @@ describe("CopyrightHolds", () => {
       // Asked again, it confirms again: the pair is the same press.
       await user.click(screen.getByRole("button", { name: label }));
       expect(screen.getByRole("alertdialog", { name: question })).toBeVisible();
+      // The way out is an outline pill beside the chalk one (round 44 #105).
       expect(screen.getByRole("button", { name: "Not yet" })).toHaveClass(
         "target",
-        "border-hairline",
+        "rounded-pill",
+        "border-ink",
+        "bg-transparent",
       );
     },
   );
@@ -344,7 +361,15 @@ describe("CopyrightHolds", () => {
     renderHolds(inCourt());
     for (const label of ["Case over: delete", "Case over: restore"]) {
       const press = screen.getByRole("button", { name: label });
-      expect(press).toHaveClass("target", "bg-action");
+      // The Desk has no pink button: its main press is a chalk pill in the
+      // ground's ink (round 44 #104).
+      expect(press).toHaveClass(
+        "target",
+        "rounded-pill",
+        "bg-ink",
+        "text-ground",
+      );
+      expect(press).not.toHaveClass("bg-action");
       expect(press).toHaveAttribute("type", "button");
       expect(press).not.toHaveFocus();
     }

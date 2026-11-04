@@ -84,8 +84,8 @@ only cached responses and none of ours are cached (D-69).
 
 ### Step 1: quarantine (in the app)
 
-1. Open **Review** (`/safety/review`, admin only). Look at the item only
-   through the review photo route (`src/routes/safety/review-photo.$.tsx`
+1. Open **Review** (`/desk/review`, operators only). Look at the item only
+   through the review photo route (`src/routes/desk/review-photo.$.tsx`
    → `feed/photos.ts` `reviewerPhotoResponse`), which tells the browser to
    keep no copy (`Cache-Control: private, no-store`). Do not save,
    screenshot, forward or download it.

@@ -10,10 +10,9 @@ import { monthDayLabel } from "../../../lib/dates";
 import {
   FailureBand,
   FormElement,
-  FormFailureBand,
+  FormEnd,
   FormStatus,
   Mono,
-  SubmitButton,
   TextField,
   useControlAction,
   useFormSubmit,
@@ -518,15 +517,11 @@ function NewCodeForm({
         field={form.field}
         error={form.fieldErrors.maxUses}
       />
-      <FormFailureBand
-        failure={form.failure}
-        onRetry={form.retry}
-        retryRef={form.retryRef}
-      />
-      <SubmitButton
+      <FormEnd
+        form={form}
+        tone="chalk"
         label="Create code"
         pendingLabel="Creating"
-        pending={form.pending}
       />
     </FormElement>
   );
