@@ -45,6 +45,7 @@ declare global {
   var __a11yReport: (report: CheckReport) => Promise<void>;
   var __a11yError: (message: string) => Promise<void>;
   var __a11yCheck: (() => Promise<void>) | undefined;
+  var __a11yDescribe: ((element: Element) => string) | undefined;
   var axe: Axe | undefined;
 }
 
@@ -284,6 +285,8 @@ export function installChecker(options: CheckerOptions): void {
    */
   let running: Promise<void> = Promise.resolve();
   const bridge = globalThis;
+  // The end-of-test walk (`a11y-walk.ts`) names elements the same way.
+  bridge.__a11yDescribe = (element) => dom.describe(element);
   bridge.__a11yCheck = async () => {
     const previous = running;
     running = (async () => {

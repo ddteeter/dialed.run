@@ -39,8 +39,7 @@ export function notedPlan(
     return { kind: "nothing-moved", sentence: NOTHING_MOVED.noBand };
   }
   const [first] = kit;
-  if (first === undefined) {
-    return { kind: "nothing-moved", sentence: NOTHING_MOVED.noKit };
-  }
-  return { kind: "record", itemId: first.itemId, name: first.name, bandFloorC };
+  return first === undefined
+    ? { kind: "nothing-moved", sentence: NOTHING_MOVED.noKit }
+    : { kind: "record", itemId: first.itemId, name: first.name, bandFloorC };
 }

@@ -208,7 +208,7 @@ function PieceRow({
   return (
     <li className="flex flex-col gap-1 border-t border-hairline py-3">
       <div className="flex flex-wrap items-center gap-x-4">
-        <span className="font-semibold">{piece.name}</span>
+        <span className="font-semibold wrap-anywhere">{piece.name}</span>
         {piece.version === undefined ? undefined : (
           <Mono step="sm" className="text-muted">
             {piece.version}
@@ -256,7 +256,7 @@ function TextDisclosure({
       <summary className="target cursor-pointer text-small text-ink underline underline-offset-4">
         {label}
       </summary>
-      <pre className="m-0 mt-2 font-sans text-small whitespace-pre-wrap">
+      <pre className="m-0 mt-2 font-sans text-small whitespace-pre-wrap wrap-anywhere">
         {text}
       </pre>
     </details>

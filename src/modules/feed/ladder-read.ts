@@ -1,4 +1,3 @@
-
 import { coreDb } from "../../env";
 import { bandLabel } from "../../lib/contracts/temperature";
 import { observationsForEntries } from "./conditions";

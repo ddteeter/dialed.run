@@ -88,6 +88,9 @@ export default defineConfig({
   // it waits until the suite is slow enough to pay for it.
   workers: 1,
   use: { baseURL: `http://localhost:${String(port)}` },
+  // Plan 161, step 3: the a11y coverage figure and the route check, once
+  // the whole run is over (a no-op unless it measured).
+  globalTeardown: "./e2e/support/a11y-coverage-teardown.ts",
   // One demo per feature carries the happy-path journey and is recorded; the
   // edge-case specs around it are not. Recording everything would bury the
   // journey in thirty validation cases and make the video unwatchable.

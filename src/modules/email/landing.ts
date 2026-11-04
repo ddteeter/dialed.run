@@ -65,8 +65,9 @@ async function signedFor(
     user.email,
     eq(user.id, signed.userId),
   );
-  if (email === undefined) return undefined;
-  return { ...signed, email: maskedAddress(email) };
+  return email === undefined
+    ? undefined
+    : { ...signed, email: maskedAddress(email) };
 }
 
 /**
@@ -94,8 +95,9 @@ export async function readByLink(
   search: unknown,
 ): Promise<SubscriptionLanding> {
   const signed = await signedFor(db, secret, search);
-  if (signed === undefined) return { state: "invalid" };
-  return landingOf(signed, await isEmailWanted(db, signed.userId, signed.kind));
+  return signed === undefined
+    ? { state: "invalid" }
+    : landingOf(signed, await isEmailWanted(db, signed.userId, signed.kind));
 }
 
 /**

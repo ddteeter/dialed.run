@@ -94,8 +94,9 @@ async function ownRunConditions(
   | undefined
 > {
   const run = await ownRun(userId, runId);
-  if (run === undefined) return undefined;
-  return { run, conditions: await conditionsOf(run) };
+  return run === undefined
+    ? undefined
+    : { run, conditions: await conditionsOf(run) };
 }
 
 export async function attachContext(
@@ -122,6 +123,7 @@ export async function prefillForRun(
   runId: string,
 ): Promise<PrefillCandidate | undefined> {
   const found = await ownRunConditions(userId, runId);
-  if (found?.conditions === undefined) return undefined;
-  return nearestPriorEntry(userId, found.conditions);
+  return found?.conditions === undefined
+    ? undefined
+    : nearestPriorEntry(userId, found.conditions);
 }

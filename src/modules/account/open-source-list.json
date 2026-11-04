@@ -1185,6 +1185,12 @@
       "project": "https://github.com/lirantal/lockfile-lint/tree/master/packages/lockfile-lint"
     },
     {
+      "name": "monocart-coverage-reports",
+      "version": "3.1.0",
+      "licence": "MIT",
+      "project": "https://github.com/cenfun/monocart-coverage-reports#readme"
+    },
+    {
       "name": "normalize-package-data",
       "version": "9.0.0",
       "licence": "BSD-2-Clause",

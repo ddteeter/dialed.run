@@ -38,7 +38,7 @@ export function PublicKitPage({
       {...frame}
       page={{ entryId: kit.entryId }}
       handle={kit.handle}
-      headingClassName="m-0 text-body font-semibold"
+      headingClassName="m-0 text-body font-semibold wrap-anywhere"
       beside={
         <Mono step="xs" className="text-muted">
           {kit.day}
