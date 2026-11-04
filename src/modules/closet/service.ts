@@ -59,6 +59,8 @@ import {
 import type { ProductAttributeDefaults, ProductComposition } from "../products";
 import { ownedBy } from "../../lib/sql/owned";
 import { garmentPhotoForgotten, isDeniedDomain } from "../safety";
+import { linkDetailOf, type LinkDetail } from "./garment-link";
+import { DENIED_LINK } from "./link-copy";
 import { nowSeconds } from "../../lib/now";
 
 type Db = ReturnType<typeof drizzle>;
@@ -218,13 +220,18 @@ export async function getOwnedItem(
  * that only hides things leaves the row there for the next reader of the
  * raw data.
  *
- * The message is the runner's, not the operator's. It says the link was
- * not accepted and stops there — naming why, or which list, would turn a
- * moderation tool into a probe anyone can query.
+ * **A field issue, not a failure** (round 43 #93): it carries the
+ * `{ issues: [{ path, message }] }` shape `useFormSubmit` lands on a
+ * field, so F marks the link and keeps every other value, where a bare
+ * `Error` read as "Our end failed". The issues are an own property, which
+ * is what survives the server function's serialization.
  */
 export class DeniedLinkError extends Error {
+  readonly issues: readonly { path: string[]; message: string }[];
+
   constructor() {
-    super("That link isn't allowed here. The rest of the piece is fine.");
+    super(DENIED_LINK);
+    this.issues = [{ path: ["productUrl"], message: DENIED_LINK }];
   }
 }
 
@@ -841,6 +848,11 @@ export interface ItemDetail extends ClosetItemView {
    * `.map` from rendering it.
    */
   composition: ProductComposition | undefined;
+  /**
+   * The garment's link if it may still be shown, what enrichment made of
+   * it, and the site its specs came from (design 163, round 43 #94–95).
+   */
+  linkDetail: LinkDetail;
 }
 
 export async function getItemDetail(
@@ -868,7 +880,13 @@ export async function getItemDetail(
     productDefaults,
     performanceByItem.get(item.id),
   );
-  return { ...view, productDefaults, composition: product?.composition };
+  const linkDetail = await linkDetailOf(db, item, product?.extraction);
+  return {
+    ...view,
+    productDefaults,
+    composition: product?.composition,
+    linkDetail,
+  };
 }
 
 /**

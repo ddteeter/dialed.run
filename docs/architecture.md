@@ -20,6 +20,8 @@ flowchart LR
         W[TanStack Start Worker\nSSR + server functions + API routes]
         D1[(D1: dialed-core)]
         D1W[(D1: dialed-weather)]
+        D1O[(D1: dialed-ops)]
+        AE[(Analytics Engine:\ndialed_vitals)]
         R2[(R2: photos)]
         ZC{{Zone cache + CSAM Scanning Tool\neach copy 60 s}}
         R2P[(R2: dialed-public-photos\nPUBLIC_PHOTOS, unguessable keys)]
@@ -31,6 +33,10 @@ flowchart LR
 
     W --> D1
     W --> D1W
+    U -->|sendBeacon on hide:\nPOST /api/vitals| W
+    W -->|speed beacon, server timing| AE
+    CRON -->|daily rollup via\nSQL API| AE
+    W -->|perf_daily| D1O
     W --> R2
     W -->|copy a PUBLIC kit's screened photo;\ndelete on every retraction\nand the hourly sweep| R2P
     ZC -->|miss| R2P
@@ -61,11 +67,16 @@ Key decisions embedded here:
 
 - **Strava data never enters the feed or the recommender.** The webhook is a
   reminder trigger only; run records are first-party (manual or file import).
-- **Two D1 databases**: `dialed-core` (users, closet, runs, feed) and
-  `dialed-weather` (observations cache). Weather grows unbounded; isolating
-  it protects the core DB from the 10 GB per-database cap.
+- **Three D1 databases**: `dialed-core` (users, closet, runs, feed),
+  `dialed-weather` (observations cache) and `dialed-ops` (design 165).
+  Weather grows unbounded; isolating it protects the core DB from the 10 GB
+  per-database cap. Ops holds data about the app, never about anyone, and
+  nothing that must commit in one batch with a core write (law 8c): today
+  only `perf_daily`, the daily speed rollup the cron reads from Analytics
+  Engine's SQL API. `opsDb()` is the bare binding, so the primary; it has
+  no replication and no request reads it.
 - **Reads may come from a D1 read replica; writes' checks never do**
-  (design 143, D-123). Replication is on for both databases. Every query
+  (design 143, D-123). Replication is on for core and weather. Every query
   goes through `src/env/d1.ts`: `coreDb()`/`weatherDb()` read through the
   request's D1 session, opened lazily in `lib/sql/d1-session.ts` from the
   newest of the device's `d1b` cookie and the runner's stored
@@ -80,6 +91,13 @@ Key decisions embedded here:
   writing `audience = 'runners'` at each of its five read sites. The arrow
   therefore runs feed → safety, not the reverse: safety knows about entries,
   and nothing in safety imports feed.
+- **One rule decides whether a product link shows** (design 163).
+  `safety`'s `deniedDomainsOf` answers a batch of links in one read of
+  `domain_denylist`, where a denied host denies every host under it. The
+  save's refusal (`isDeniedDomain`) asks it on the primary. Every surface
+  that shows a link asks `closet`'s `allowedLinksOf` (or garment detail's
+  `linkDetailOf`), on its replica, so a link denied after it was saved
+  drops everywhere at once. Nothing but `safety` names the table.
 - **A photo has a second gate, and it is a different question** (106). The
   entry rule answers "may this post be seen"; `isPhotoPubliclyVisible()`
   answers "has this image been screened", and a photo needs both. They are
@@ -208,6 +226,7 @@ flowchart TD
     OPS -->|index.ts only: the :00 zone fill| ONB
     SAFE[modules/safety] --> DB
     FEED -->|index.ts only| SAFE
+    CLOSET -->|index.ts only: the one link rule| SAFE
     CLOSET -->|index.ts only| AUTH
     PROD -->|index.ts only| AUTH
     ROUTES --> ACCT[modules/account]
@@ -397,6 +416,18 @@ snapshots (D-31). The enqueue is reconciliation, not a transaction: the row
 goes `pending` first, the send is a fast path, and the `enrichment-retry`
 cron (`30 * * * *`) re-dispatches anything still pending after fifteen
 minutes.
+
+**What a paste reaches** (design 163). A product is resolved from the typed
+brand and model before any page is read, so a link with no brand and model,
+or from a runner who has not confirmed their address (D-113 Q1), reads
+nothing until those exist. The link fills `products.source_url` where it is
+still NULL, so a product first made from a typed name is read when its
+first link arrives; a product's link is never replaced. Enrichment writes
+the shared product, never the garment. Garment detail reads the outcome
+(`linkDetailOf`: found, nothing, couldn't read with or without the first
+day's retries, reading, no brand and model, unconfirmed) and names the
+page's domain only if the denylist allows it. Nothing notifies a runner of
+a late result.
 
 ## Feed read paths (lane 104)
 

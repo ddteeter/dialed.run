@@ -18,6 +18,7 @@ import { Devtools } from "../ui/Devtools";
 import { SessionLapseAnswer } from "../ui/session-lapse";
 import { TermsRefusalAnswer } from "../ui/terms-refusal";
 import { UnconfirmedRefusalAnswer } from "../ui/unconfirmed-refusal";
+import { VitalsReporter } from "../ui/VitalsReporter";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -148,6 +149,8 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
             <SessionLapseAnswer>{children}</SessionLapseAnswer>
           </UnconfirmedRefusalAnswer>
         </TermsRefusalAnswer>
+        {/* How long each screen takes, by route id (design 165). */}
+        <VitalsReporter />
         <Devtools />
         <Scripts />
       </body>

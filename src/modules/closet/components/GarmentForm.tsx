@@ -51,8 +51,14 @@ import {
   usePhotoPick,
 } from "../../../ui";
 import { photoAcceptAttribute } from "../../../lib/photo-constraints";
-import type { PhotoStep } from "../../../ui";
-import { garmentFormSchema, type GarmentFormValues } from "../form-schema";
+import type { FieldErrors, PhotoStep } from "../../../ui";
+import { httpsUrlProblem } from "../../../lib/contracts";
+import type { ProductPlaceholders } from "../form-mapping";
+import {
+  garmentFormSchema,
+  withScheme,
+  type GarmentFormValues,
+} from "../form-schema";
 import { garmentLabel } from "../../../lib/garment-label";
 import type { ClosetNearby } from "../nearby";
 import { AlreadyInCloset } from "./AlreadyInCloset";
@@ -112,6 +118,7 @@ const LABELS = {
   colorName: "Color",
   colorHex: "Hex",
   visibilityLevel: "Visibility",
+  productUrl: "Product link · optional",
 };
 
 /**
@@ -182,6 +189,19 @@ function fieldsForCategory(
   };
 }
 
+/**
+A product's value, in the words its select would show it in. A `Map`
+because its `get` takes `undefined` and answers it: a product that lends
+nothing needs no branch of its own (a guard here was one no test could
+tell from `labels[undefined]`).
+*/
+function placeholderOf<TOption extends string>(
+  value: TOption | undefined,
+  labels: Readonly<Record<TOption, string>>,
+): string | undefined {
+  return new Map<string | undefined, string>(Object.entries(labels)).get(value);
+}
+
 const EMPTY_VALUES: GarmentFormValues = {
   brand: "",
   name: "",
@@ -211,6 +231,12 @@ export interface GarmentFormProps {
    */
   back?: ReactNode;
   initial?: Partial<GarmentFormValues> | undefined;
+  /**
+   * Edit's reading of the stored piece (round 43 #93–94): the link error
+   * it opens on, and the product's values shown as weight and fabric's
+   * placeholders. The add form has neither.
+   */
+  stored?: StoredGarment | undefined;
   brandOptions?: readonly string[] | undefined;
   onBrandInput?: ((value: string) => void) | undefined;
   /**
@@ -237,6 +263,11 @@ export interface GarmentFormProps {
    * given it, the form is DS1's split.
    */
   rail?: GarmentRail | undefined;
+}
+
+interface StoredGarment {
+  readonly errors: FieldErrors;
+  readonly placeholders: ProductPlaceholders;
 }
 
 interface GarmentRail {
@@ -482,7 +513,10 @@ type HeldGarmentPhoto = ReturnType<typeof useGarmentPhoto>;
 type GarmentFormSubmit = ReturnType<
   typeof useFormSubmit<typeof garmentFormSchema, { id: string }>
 >;
-type FieldsForm = Pick<GarmentFormSubmit, "field" | "fieldErrors">;
+type FieldsForm = Pick<
+  GarmentFormSubmit,
+  "field" | "fieldErrors" | "markField"
+>;
 type UpdateValue = <K extends keyof GarmentFormValues>(
   key: K,
   value: GarmentFormValues[K],
@@ -513,6 +547,7 @@ export function GarmentForm({
   heading,
   back,
   initial,
+  stored,
   brandOptions,
   onBrandInput,
   save,
@@ -536,7 +571,6 @@ export function GarmentForm({
       form.announce(sentence);
     },
   });
-  const { refused } = well;
 
   const form = useFormSubmit({
     carry: "garment",
@@ -544,6 +578,7 @@ export function GarmentForm({
     action: save,
     successMessage,
     labels: LABELS,
+    initialErrors: stored?.errors,
     onSuccess: async (saved) => {
       await well.finish(saved.id);
     },
@@ -585,6 +620,7 @@ export function GarmentForm({
         update={update}
         form={form}
         preview={well.preview}
+        placeholders={stored?.placeholders ?? {}}
       />
 
       <EstimatedRange values={values} />
@@ -630,36 +666,14 @@ export function GarmentForm({
           says the photo did not go up is written as the fields leave. */}
       <FormStatus>{well.removal.status || form.status}</FormStatus>
       {back}
-      <FormHeading
+      <HeadingAndView
         heading={heading}
-        saved={refused === undefined ? undefined : values}
-        savedType={pickedType}
+        values={values}
+        type={pickedType}
+        well={well}
+        onSaved={onSaved}
+        fieldsView={fieldsView}
       />
-      {refused === undefined ? (
-        fieldsView
-      ) : (
-        <SavedPhotoRefused
-          onDone={() => {
-            void onSaved({ id: refused.itemId });
-          }}
-        >
-          <FileWell
-            part="photo-well"
-            copy={GARMENT_PHOTO_COPY}
-            pending={well.pending}
-            inputRef={well.wellRef}
-            accept={photoAcceptAttribute}
-            onFiles={well.onFiles}
-          />
-          <PhotoRefused
-            refusal={refused}
-            onRetry={() => {
-              void well.finish(refused.itemId);
-            }}
-            onFiles={well.onFiles}
-          />
-        </SavedPhotoRefused>
-      )}
       {/* W3, as a sheet over whichever view picked the photo (round 28
           #5: "the closet form and AttachKit use the same sheet"). */}
       {well.step(form.announce)}
@@ -670,6 +684,78 @@ export function GarmentForm({
     <FormFrame nearby={well.nearby} values={values} type={pickedType}>
       {primary}
     </FormFrame>
+  );
+}
+
+/**
+ * The heading and the view under it: the fields, or — once the row is saved
+ * and only its photo is owed — round 26 #4's saved garment.
+ */
+interface HeadingAndViewProps {
+  heading: string;
+  values: GarmentFormValues;
+  type: GarmentType | undefined;
+  well: HeldGarmentPhoto;
+  onSaved: GarmentFormProps["onSaved"];
+  fieldsView: JSX.Element;
+}
+
+function HeadingAndView(props: Readonly<HeadingAndViewProps>): JSX.Element {
+  const { refused } = props.well;
+  return (
+    <>
+      <FormHeading
+        heading={props.heading}
+        saved={refused === undefined ? undefined : props.values}
+        savedType={props.type}
+      />
+      {refused === undefined ? (
+        props.fieldsView
+      ) : (
+        <RefusedPhotoView
+          well={props.well}
+          refused={refused}
+          onSaved={props.onSaved}
+        />
+      )}
+    </>
+  );
+}
+
+/**
+ * Round 26 #4's saved garment: the row exists and only its photo is owed.
+ */
+function RefusedPhotoView({
+  well,
+  refused,
+  onSaved,
+}: Readonly<{
+  well: HeldGarmentPhoto;
+  refused: NonNullable<HeldGarmentPhoto["refused"]>;
+  onSaved: GarmentFormProps["onSaved"];
+}>): JSX.Element {
+  return (
+    <SavedPhotoRefused
+      onDone={() => {
+        void onSaved({ id: refused.itemId });
+      }}
+    >
+      <FileWell
+        part="photo-well"
+        copy={GARMENT_PHOTO_COPY}
+        pending={well.pending}
+        inputRef={well.wellRef}
+        accept={photoAcceptAttribute}
+        onFiles={well.onFiles}
+      />
+      <PhotoRefused
+        refusal={refused}
+        onRetry={() => {
+          void well.finish(refused.itemId);
+        }}
+        onFiles={well.onFiles}
+      />
+    </SavedPhotoRefused>
   );
 }
 
@@ -787,10 +873,65 @@ function IdentityFields({
           field={form.field}
           error={form.fieldErrors.name}
         />
+        <LinkField values={values} update={update} form={form} />
       </fieldset>
     </>
   );
 }
+
+/**
+ * Round 43 #93's product link, after brand and model: enrichment reads the
+ * shop's page from it, and needs both. Checked when the runner leaves the
+ * box and on submit, never while typing, against the value the save will
+ * send (`withScheme`); a denied link comes back from the save on the same
+ * field. An empty box is no link, so clearing it removes one.
+ */
+function LinkField({
+  values,
+  update,
+  form,
+}: Readonly<{
+  values: GarmentFormValues;
+  update: UpdateValue;
+  form: FieldsForm;
+}>): JSX.Element {
+  return (
+    <TextField
+      name="productUrl"
+      label={LABELS.productUrl}
+      type="url"
+      placeholder="brand.com/product…"
+      hint="We'll read the shop's page for what it's made of. Needs a brand and model."
+      value={values.productUrl}
+      onChange={(value) => {
+        update("productUrl", value);
+      }}
+      onBlur={(value) => {
+        const link = withScheme(value);
+        form.markField(
+          "productUrl",
+          link === undefined ? undefined : httpsUrlProblem(link),
+        );
+      }}
+      field={form.field}
+      error={form.fieldErrors.productUrl}
+    />
+  );
+}
+
+type AttributeFieldsProps = Readonly<{
+  values: GarmentFormValues;
+  update: UpdateValue;
+  form: FieldsForm;
+  /**
+  The well's preview, which the shade sampler reads a pixel out of.
+  */
+  preview: string | undefined;
+  /**
+  What the product lends where the runner left a field empty (round 43 #94).
+  */
+  placeholders: ProductPlaceholders;
+}>;
 
 /**
  * The attributes the category admits, then visibility, colour and §AH's
@@ -801,15 +942,8 @@ function AttributeFields({
   update,
   form,
   preview,
-}: Readonly<{
-  values: GarmentFormValues;
-  update: UpdateValue;
-  form: FieldsForm;
-  /**
-  The well's preview, which the shade sampler reads a pixel out of.
-  */
-  preview: string | undefined;
-}>): JSX.Element {
+  placeholders,
+}: AttributeFieldsProps): JSX.Element {
   const fields = fieldsForCategory(values.category);
   return (
     <fieldset className="flex flex-col gap-3 border-t border-hairline pt-4">
@@ -840,6 +974,7 @@ function AttributeFields({
           value={values.weight}
           options={weightSchema.options}
           optionLabels={WEIGHT_LABELS}
+          placeholder={placeholderOf(placeholders.weight, WEIGHT_LABELS)}
           onChange={(picked) => {
             update("weight", picked);
           }}
@@ -854,6 +989,7 @@ function AttributeFields({
           value={values.fabric}
           options={fabricSchema.options}
           optionLabels={FABRIC_LABELS}
+          placeholder={placeholderOf(placeholders.fabric, FABRIC_LABELS)}
           onChange={(picked) => {
             update("fabric", picked);
           }}

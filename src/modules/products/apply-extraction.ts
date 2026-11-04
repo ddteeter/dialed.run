@@ -237,6 +237,26 @@ function lastWritten(row: ProductRow): Ledger["written"] {
   return ledgerSchema.parse(stored).written;
 }
 
+/**
+ * Whether enrichment has written any column of this product: "specs from
+ * the page" rather than "read the page and found nothing" (design 163,
+ * round 43 #94).
+ *
+ * The read side's question, so unlike `lastWritten` it never throws: a
+ * ledger it cannot read answers "nothing written" rather than taking
+ * garment detail down over someone else's product. `String(null)` is
+ * "null", which parses to a value the schema refuses, so a product with no
+ * ledger takes the same path as one with a bad ledger.
+ */
+export function hasWrittenSpecs(extracted: string | null): boolean {
+  try {
+    const ledger = ledgerSchema.safeParse(JSON.parse(String(extracted)));
+    return ledger.success && Object.keys(ledger.data.written).length > 0;
+  } catch {
+    return false;
+  }
+}
+
 export async function applyExtraction(
   db: Db,
   productId: string,

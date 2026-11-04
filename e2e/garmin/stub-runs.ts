@@ -1,12 +1,7 @@
 /**
  * What the Garmin stub serves, shared by the stub and the demo that reads
- * it (plan 160, step 9).
- *
- * The port is fixed because the dev server reads `GARMIN_API_ORIGIN` from
- * `.dev.vars`, which is static: CI writes `http://localhost:3900` there,
- * and a local `.dev.vars` that runs this demo says the same.
+ * it (plan 160, step 9). Where the stub listens is `stub-origin.ts`'s.
  */
-export const GARMIN_STUB_PORT = 3900;
 
 /**
 The id CI's `.dev.vars` names in `GARMIN_OWNER_USER_ID`.

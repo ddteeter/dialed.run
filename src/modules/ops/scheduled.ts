@@ -22,6 +22,7 @@ import { fillMissingTimeZones } from "../onboarding";
 import { pruneStravaIds } from "../runs";
 import { retryPendingWeather, timeZoneAt } from "../weather";
 import { cronNameFor, type CronName } from "./crons";
+import type { SpeedFinding } from "./perf-checks";
 import { oweDigestEmail, type DigestMail } from "./digest-email";
 import { purgePublicPages } from "./edge-purge";
 import { checkOutboxBacklog, drainOutbox } from "./outbox";
@@ -166,6 +167,16 @@ export async function handleScheduled(
  * it restores what a counter-notice saved on its 12th weekday and deletes
  * what was held 30 days with none pending (`feed/moderation.ts`).
  *
+ * **The speed digest** (design 165) is ops' own, and a field for the
+ * digest email's reason: so a test hands in a fake rather than reach the
+ * Analytics Engine SQL API, which the test bindings configure. It is
+ * handed today's UTC day, rolls up the days before it into the ops
+ * database and judges yesterday (`speed-digest.ts`).
+ *
+ * **The hourly speed checks** (design 165) ride the `:30` firing for the
+ * same reason, a field so a test fakes the SQL API: deploy regression and
+ * drift, each finding its own event (`speedReport`).
+ *
  * All are optional: a firing handed none purges and sweeps nothing and
  * mails the digest the live way (`oweDigestEmail`'s default). A product
  * link drained with no linker stays owed and is reported.
@@ -180,6 +191,11 @@ export interface DailyUpkeep {
   readonly sweepAuthRows?: (() => Promise<void>) | undefined;
   readonly forgetAnsweredRequests?: (() => Promise<void>) | undefined;
   readonly sweepCopyrightHolds?: (() => Promise<void>) | undefined;
+  readonly speed?:
+    ((today: string, anomalies: string[]) => Promise<void>) | undefined;
+  readonly speedHourly?:
+    | ((now: number, report: (finding: SpeedFinding) => void) => Promise<void>)
+    | undefined;
 }
 
 /**
@@ -245,6 +261,13 @@ async function runCron(
         // after.
         () => listAbandonedEnrichments(coreDb()),
         () => drainOwedEmail(anomalies),
+        () =>
+          upkeep.speedHourly?.(nowSeconds(), (finding) => {
+            reporter.report(
+              new Error(`speed: ${finding.check}`),
+              speedReport(finding, utcDay()),
+            );
+          }),
       ]);
     }
     case "screening-retry": {
@@ -312,6 +335,22 @@ export function hourlyReport(
     { digest: "hourly", cron: cronName },
     ["hourly", cronName, day],
     lines,
+  );
+}
+
+/**
+ * The event for one hourly speed finding (design 165). Fingerprinted by
+ * check, route, metric and day, so each regression is its own issue and
+ * alerts once a day however many hours it lasts. Tagged `digest: hourly`
+ * like the cron's own findings, so the daily digest's every-event rule
+ * does not page on it.
+ */
+export function speedReport(finding: SpeedFinding, day: string): SentryReport {
+  return anomalyReport(
+    { check: finding.check, route: finding.route, metric: finding.metric },
+    { digest: "hourly", cron: "enrichment-retry", speed_check: finding.check },
+    ["perf", finding.check, finding.route, finding.metric, day],
+    [finding.line],
   );
 }
 
@@ -834,6 +873,7 @@ export const digestKinds = [
   "breaker-headroom",
   "screener-quiet",
   "account-deletion",
+  "speed",
 ] as const;
 
 export type DigestKind = (typeof digestKinds)[number];
@@ -888,6 +928,9 @@ async function runDailyDigest(
     "screener-quiet": checkQuietScreener,
     "account-deletion": async (anomalies) => {
       await upkeep.purgeAccounts?.(anomalies);
+    },
+    speed: async (anomalies) => {
+      await upkeep.speed?.(utcDay(), anomalies);
     },
   };
   // Threshold checks fill in as their features land:

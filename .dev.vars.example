@@ -30,11 +30,12 @@ PUBLIC_PHOTOS_ORIGIN=
 # Both or neither; without them the import is not drawn.
 # GARMIN_API_KEY=
 # GARMIN_OWNER_USER_ID=
-# For the Garmin e2e demo instead, as CI writes them: any key, the e2e
-# owner, and the stub Playwright starts (e2e/garmin/stub-runs.ts). The key
-# alone is what `npm run garmin:check` reads, so a real one can stay.
+# For the Garmin e2e demo instead, as CI writes them: any key and the e2e
+# owner. The key alone is what `npm run garmin:check` reads, so a real one
+# can stay. GARMIN_API_ORIGIN is never written here: Playwright points it
+# at the stub it starts, on a port that follows the app's
+# (e2e/garmin/stub-origin.ts), so a value here is overridden in e2e.
 # GARMIN_OWNER_USER_ID=e2e-garmin-owner
-# GARMIN_API_ORIGIN=http://localhost:3900
 # Optional locally; set in prod:
 # SENTRY_DSN=
 # Google OAuth (both or neither — the Google button 500s without them):
@@ -57,3 +58,9 @@ PUBLIC_PHOTOS_ORIGIN=
 # wrangler.jsonc, so this file is the only place it can be set locally —
 # which is also why the admin surfaces have no demo video yet (R-72).
 # ADMIN_USER_IDS=
+# The daily speed rollup (design 165): an account token with Account
+# Analytics Read, and the account to read. Optional locally: without them
+# the rollup only says, in the daily digest, that it is not configured.
+# CF_ACCOUNT_ID is a var in wrangler.jsonc; set it here only to override.
+# ANALYTICS_SQL_TOKEN=
+# CF_ACCOUNT_ID=

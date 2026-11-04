@@ -41,3 +41,13 @@ export const STRAVA_CONSENT: readonly string[] = [
   "What we collect: your Strava athlete id, a token we use only to disconnect, and, for 7 days, the id, type and time of each new activity so we remind you once. How: through Strava's sign-in and its activity notifications. Never: your activity details, route, pace or anything else about the run.",
   "To stop: Disconnect in Settings, or remove dialed.run under Strava › Settings › My Apps. Either deletes what we hold from Strava, apart from what we need to finish disconnecting, and we email you to confirm it.",
 ];
+
+/**
+ * The outbox running behind (design 168): the one sentence Today's line
+ * and the morning digest both say, owner-approved 2026-10-31. Each adds
+ * its own second sentence.
+ */
+export function outboxBehindSentence(rows: number): string {
+  const jobs = rows === 1 ? "queued job was" : "queued jobs were";
+  return `${String(rows)} ${jobs} still due after this morning's run.`;
+}

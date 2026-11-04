@@ -70,6 +70,7 @@ const TEST_TIMEOUT_MS =
 export default defineConfig(async () => {
   const coreMigrations = await readD1Migrations("src/db/migrations/core");
   const weatherMigrations = await readD1Migrations("src/db/migrations/weather");
+  const opsMigrations = await readD1Migrations("src/db/migrations/ops");
 
   return {
     test: {
@@ -118,6 +119,7 @@ export default defineConfig(async () => {
                 bindings: {
                   TEST_MIGRATIONS_CORE: coreMigrations,
                   TEST_MIGRATIONS_WEATHER: weatherMigrations,
+                  TEST_MIGRATIONS_OPS: opsMigrations,
                   // Stryker activates a mutant by setting this on the child
                   // process, and stryker's instrumented code reads it from
                   // `globalThis.process.env`. Inside the workers pool that

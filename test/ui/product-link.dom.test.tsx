@@ -84,3 +84,16 @@ describe("a garment with no link", () => {
     expect(container).toBeEmptyDOMElement();
   });
 });
+
+describe("a named piece with no link", () => {
+  it("is its label alone, with no anchor and no domain", () => {
+    const { container } = render(
+      <ProductLink url={undefined} label="Capilene" />,
+    );
+
+    // D's kit list names every piece, linked or not (round 43 #96); a
+    // missing link is not a missing piece.
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(container).toHaveTextContent(/^Capilene$/);
+  });
+});

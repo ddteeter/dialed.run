@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { drizzle } from "drizzle-orm/d1";
 import { eq } from "drizzle-orm";
 
 import {
+  domainDenylist,
   notifications,
   outfitEntries,
   outfitEntryItems,
@@ -23,6 +24,7 @@ import {
   verdictBandCounts,
 } from "../../src/modules/feed/entries";
 import { setUsefulReaction } from "../../src/modules/feed/reactions";
+import { denyDomain } from "../../src/modules/safety";
 import {
   makeEntry,
   makeItem,
@@ -796,5 +798,45 @@ describe("entryDetailForViewer", () => {
     expect(
       await entryDetailForViewer(newUlid(), await makeUser()),
     ).toBeUndefined();
+  });
+});
+
+describe("D's kit list carries each piece's link through closet's one read (round 43 #96)", () => {
+  afterEach(async () => {
+    await db().delete(domainDenylist);
+  });
+
+  it("passes an allowed link and drops a denied one, for anyone who can see the kit", async () => {
+    const owner = await makeUser();
+    const runId = await makeRun({ userId: owner });
+    const linked = await makeItem({ userId: owner, name: "AFO Middle Short" });
+    const denied = await makeItem({ userId: owner, name: "Brighton Base" });
+    const bare = await makeItem({ userId: owner, name: "Old beanie" });
+    await db()
+      .update(wardrobeItems)
+      .set({ productUrl: "https://janji.com/afo" })
+      .where(eq(wardrobeItems.id, linked));
+    await db()
+      .update(wardrobeItems)
+      .set({ productUrl: "https://shop.spam.example/x" })
+      .where(eq(wardrobeItems.id, denied));
+    await denyDomain("spam.example", owner);
+    const entryId = await makeEntry({
+      userId: owner,
+      runId,
+      audience: "runners",
+      itemIds: [linked, denied, bare],
+    });
+
+    const detail = await getEntryDetail(entryId, await makeUser());
+
+    const urls = new Map(detail?.items.map((item) => [item.itemId, item.url]));
+    expect(urls).toEqual(
+      new Map([
+        [linked, "https://janji.com/afo"],
+        [denied, undefined],
+        [bare, undefined],
+      ]),
+    );
   });
 });

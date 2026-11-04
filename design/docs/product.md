@@ -727,3 +727,30 @@ Board: `Round 42 Rulings.dc.html`. Amends round 41 #86b (no handle; PUBLIC unava
 - W1 receipt, intimate-image reports only: on send the sheet swaps in place (no toast). Kicker REPORT SENT; head "Thanks for telling us."; body "It's hidden from everyone now. We'll review it today and keep it down if it breaks the rule."; --hairline; 85's line last; Done (ink, 52). Focus to the head; Done/Esc/scrim close, focus to the next item on the page, else the page heading. Other reasons keep "Report sent." toast. Way-out line stays under the reason.
 - MATCHING PHOTOS: one REMOVED tile per removal within 8 bits, nearest first; the line names the nearest only.
 - Inline links: bold ink, underlined, everywhere, including 85's two names. Round 41 board's accent links superseded.
+
+## Round 43 · Items 93–98 · Product links
+Board: `Round 43 Rulings.dc.html`. AC2b met for F/E (every reachable outcome has a drawn place); P2.5 keeps no link field.
+
+**93 · F link field.** FormField after brand and model. Label "Product link · optional"; type url; placeholder `brand.com/product…`; hint "We'll read the shop's page for what it's made of. Needs a brand and model." Long URL: one line, end-truncated when unfocused. No scheme typed: https:// added on save.
+- Invalid (blur and submit, never while typing): http → "Use a link that starts with https://."; not a URL → "That isn't a link. Paste the address of the shop's page."
+- Denied (server field-error path; add to that list): "That link isn't allowed here. The rest of the piece is fine." Nothing saves; other fields keep their values.
+- Edit with a stored denied link: message shown on open, focus on the field, Save refused (not disabled) until changed or cleared. Clearing removes the link.
+- No duplicate state.
+
+**94 · Outcomes.** F never waits; save returns to E. No F2a/F2b screens: one MONO.xs line on E under the link.
+- Found: `[SPECS FROM {domain}] · GREY VALUES ARE FROM THE PAGE` (clause drops when every stat is the runner's).
+- Reading: `[READING THE PAGE] · USUALLY UNDER A MINUTE`.
+- Couldn't read: `[COULDN'T READ {domain}] · TRYING AGAIN TODAY` for the first day, then without the clause. No reason shown.
+- Found nothing: `[NO SPECS ON {domain}]`.
+- No brand/model: `[NOT READ] · ADD A BRAND AND MODEL`. Email unconfirmed: `[NOT READ YET] · CONFIRM YOUR EMAIL TO READ IT`. No-brand wins if both.
+- Values show in E's existing stats and composition. Product-filled stat values in --quiet, runner's in ink. Composition kicker "COMPOSITION · FROM {domain}"; not overridable.
+- Override: on Edit, a product-filled field shows the product value as placeholder; typing overrides for this garment, clearing restores.
+- Late result: no notification, bell row or live update; there next time E loads.
+
+**95 · E placement.** Identity block, under the name: ProductLink ("Shop page", then domain in MONO --quiet), outcome line beneath. Change/remove via Edit only. Denied link: nothing on E.
+
+**96 · Kit views.** D in, as /k. Feed card out. /@handle rotation out. Outcome line on E only.
+
+**97 · O3.** Out for v1. Redrawn without the paste field and SPECS FOUND; everything else as built, the list closes up.
+
+**98 · Product images.** None in 93–97; photo slot is the runner's photo or nothing. Never a fallback.

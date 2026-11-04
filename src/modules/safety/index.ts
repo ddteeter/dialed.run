@@ -117,7 +117,7 @@ export {
   type RenameRecordInput,
 } from "./rename";
 
-export { denyDomain, isDeniedDomain } from "./denylist";
+export { deniedDomainsOf, denyDomain, isDeniedDomain } from "./denylist";
 
 export {
   distinctReporterCount,

@@ -6,8 +6,8 @@ import { codeOnly, isInstrumented, repoPath } from "./source-text";
  * **Every query reaches D1 through `src/env/d1.ts`** (design 143, D-123).
  *
  * A request's reads may go to a read replica only through its D1 session,
- * and a write's checks must not: `coreDb()`, `weatherDb()` and
- * `primaryCoreDb()` are where that is decided. A handle built straight on
+ * and a write's checks must not: `coreDb()`, `weatherDb()`, `opsDb()`
+ * and `primaryCoreDb()` are where that is decided. A handle built straight on
  * a binding, a raw `prepare` on one, or a session opened by hand goes
  * around the decision silently: it still works, it just reads the primary,
  * or a replica nobody chose. So nothing outside `src/env` names a D1
@@ -23,7 +23,7 @@ const ALLOWED = new Set([
   "src/modules/ops/health.ts",
 ]);
 
-const BYPASS = /\benv\.DIALED_(?:CORE|WEATHER)\b|\.withSession\(/u;
+const BYPASS = /\benv\.DIALED_(?:CORE|WEATHER|OPS)\b|\.withSession\(/u;
 
 const production: Record<string, string> = import.meta.glob(
   ["../../src/**/*.{ts,tsx}", "!../../src/db/migrations/**"],
@@ -48,6 +48,7 @@ describe("D1 access", () => {
   it("would catch a bypass", () => {
     expect(BYPASS.test("const db = drizzle(env.DIALED_CORE);")).toBe(true);
     expect(BYPASS.test("env.DIALED_WEATHER.prepare('select 1')")).toBe(true);
+    expect(BYPASS.test("const db = drizzle(env.DIALED_OPS);")).toBe(true);
     expect(BYPASS.test("env.DIALED_CORE.withSession('first-primary')")).toBe(
       true,
     );

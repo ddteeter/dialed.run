@@ -3,7 +3,11 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { requireSession } from "../../modules/auth/functions";
 import { BackToCloset } from "../../modules/closet/components/BackToCloset";
 import { GarmentForm } from "../../modules/closet/components/GarmentForm";
-import { formValuesFromItem } from "../../modules/closet/form-mapping";
+import {
+  formValuesFromItem,
+  productPlaceholders,
+  storedLinkErrors,
+} from "../../modules/closet/form-mapping";
 import { photoUrlFor } from "../../modules/closet/photo-url";
 import {
   getItemFn,
@@ -38,6 +42,10 @@ function EditGarmentPage() {
         heading={`Edit ${detail.item.name}`}
         back={<BackToCloset />}
         initial={formValuesFromItem(detail.item, detail.effective)}
+        stored={{
+          errors: storedLinkErrors(detail.item, detail.linkDetail),
+          placeholders: productPlaceholders(detail.item, detail.effective),
+        }}
         save={async (garment) =>
           updateItemFn({ data: { itemId: detail.item.id, garment } })
         }
