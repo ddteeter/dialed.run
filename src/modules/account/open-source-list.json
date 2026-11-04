@@ -1150,6 +1150,12 @@
       "project": "https://github.com/schoero/eslint-plugin-better-tailwindcss#readme"
     },
     {
+      "name": "eslint-plugin-jsx-a11y-x",
+      "version": "0.2.0",
+      "licence": "MIT",
+      "project": "https://github.com/es-tooling/eslint-plugin-jsx-a11y-x#readme"
+    },
+    {
       "name": "eslint-plugin-sonarjs",
       "version": "4.2.2",
       "licence": "LGPL-3.0-only",
