@@ -1,3 +1,6 @@
+import type { Page } from "@playwright/test";
+
+import type { A11y } from "./a11y";
 import { expect, test } from "./a11y";
 
 /**
@@ -73,4 +76,140 @@ test("checks before an action, without being asked", async ({ page, a11y }) => {
   await page.mouse.wheel(0, 1);
 
   expect(a11y.findings().map((finding) => finding.rule)).toContain("image-alt");
+});
+
+/**
+ * Step 2's rules: what the end-of-test walk and reflow check report.
+ */
+const END_RULES = new Set([
+  "focus-ring",
+  "focus-obscured",
+  "focus-trap",
+  "tab-order",
+  "tab-unreached",
+  "reflow",
+  "image-alt",
+]);
+
+const RING = `<style>
+  :focus-visible { outline: 2px solid #000; outline-offset: 2px }
+  .field-box:has(:focus-visible) { outline: 2px solid #000 }
+  .field-box :focus-visible, .noring:focus-visible { outline: none }
+</style>`;
+
+/*
+ * The walk's problems, one each: a covered control, a ring taken off, a
+ * positive tabindex, a mouse-only link and a clickable <div>. Around
+ * them, what must pass: a radio group (Tab reaches one), a field-box
+ * input whose box draws the ring, and a hidden file input.
+ */
+const WALK = `<!doctype html>
+<html lang="en"><head><title>Walk</title>${RING}</head>
+<body><main>
+  <div style="position:fixed;inset:0 0 auto 0;height:100px;background:#fff;z-index:2">Bar</div>
+  <button class="under" style="position:absolute;top:10px;left:10px">Under</button>
+  <div style="margin-top:120px">
+    <h1>Walk</h1>
+    <button class="one">One</button>
+    <button class="noring">Ringless</button>
+    <button class="jump" tabindex="2">Jump</button>
+    <div class="fake" style="cursor:pointer">Fake</div>
+    <a href="/x" tabindex="-1">Mouse only</a>
+    <label><input type="radio" name="pick">A</label>
+    <label><input type="radio" name="pick">B</label>
+    <div class="field-box"><input aria-label="Field"></div>
+    <input type="date" aria-label="Day">
+    <input type="file" tabindex="-1" aria-label="Photo" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">
+  </div>
+</main></body></html>`;
+
+/*
+ * A control that keeps Tab for itself, and the button the walk then
+ * never reaches.
+ */
+const TRAP = `<!doctype html>
+<html lang="en"><head><title>Trap</title>${RING}</head>
+<body><main>
+  <h1>Trap</h1>
+  <button class="before">Before</button>
+  <input aria-label="Trap" id="trap">
+  <button class="after">After</button>
+  <script>
+    document.getElementById("trap").addEventListener("keydown", (event) => {
+      if (event.key === "Tab") event.preventDefault();
+    });
+  </script>
+</main></body></html>`;
+
+/*
+ * Only the other width shows the image, and only 320 makes the box too
+ * wide. The strip scrolls on its own, which reflow allows.
+ */
+const WIDTHS = `<!doctype html>
+<html lang="en"><head><title>Widths</title>${RING}
+<style>.phone { display: none } @media (max-width: 600px) { .phone { display: block } }</style>
+</head>
+<body><main>
+  <h1>Widths</h1>
+  <img class="phone" src="/x.png">
+  <div class="wide" style="width:400px">Wide</div>
+  <p class="word">Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</p>
+  <div class="strip" style="overflow-x:auto;width:200px"><div style="width:600px">Strip</div></div>
+</main></body></html>`;
+
+async function endFindings(
+  page: Page,
+  a11y: A11y,
+  body: string,
+): Promise<string[]> {
+  await page.route(`**${PROBE}`, (route) =>
+    route.fulfill({ contentType: "text/html", body }),
+  );
+  await page.goto(PROBE);
+  await a11y.endOfTest();
+  return a11y
+    .findings()
+    .filter((finding) => END_RULES.has(finding.rule))
+    .map((finding) => `${finding.rule} ${finding.node}`)
+    .toSorted((one, other) => one.localeCompare(other));
+}
+
+test("the Tab walk finds each planted problem, and only those", async ({
+  page,
+  a11y,
+}) => {
+  expect(await endFindings(page, a11y, WALK)).toStrictEqual([
+    "focus-obscured button.under",
+    "focus-ring button.noring",
+    "tab-order button.jump",
+    'tab-unreached a[href="/x"]',
+    "tab-unreached div.fake",
+  ]);
+});
+
+test("the Tab walk reports a trap and what it cut off", async ({
+  page,
+  a11y,
+}) => {
+  expect(await endFindings(page, a11y, TRAP)).toStrictEqual([
+    'focus-trap input[aria-label="Trap"]',
+    "tab-unreached button.after",
+  ]);
+});
+
+test("the other width and 320px are checked", async ({ page, a11y }) => {
+  expect(await endFindings(page, a11y, WIDTHS)).toStrictEqual([
+    "image-alt img.phone",
+    "reflow div.wide",
+  ]);
+});
+
+test("reflow names a word too long to wrap", async ({ page, a11y }) => {
+  expect(
+    await endFindings(
+      page,
+      a11y,
+      WIDTHS.replace('<div class="wide" style="width:400px">Wide</div>', ""),
+    ),
+  ).toStrictEqual(["image-alt img.phone", "reflow p.word"]);
 });
