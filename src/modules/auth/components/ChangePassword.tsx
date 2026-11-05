@@ -32,10 +32,9 @@ function refusalOf(result: PasswordChange): AuthFieldError | undefined {
     const clock = clockLabel(result.until, deviceTimeZone());
     return new AuthFieldError("currentPassword", currentPasswordLimited(clock));
   }
-  if (result.status === "breached") {
-    return new AuthFieldError("password", AUTH_COPY.passwordBreached);
-  }
-  return undefined;
+  return result.status === "breached"
+    ? new AuthFieldError("password", AUTH_COPY.passwordBreached)
+    : undefined;
 }
 
 /**

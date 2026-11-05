@@ -41,18 +41,18 @@ function bodyAt(source: string, open: number): string {
   return "";
 }
 
-function blocksOf(source: string, at: RegExp): Map<string, string> {
+function blocksOf(at: RegExp): Map<string, string> {
   const found = new Map<string, string>();
-  for (const match of source.matchAll(at)) {
+  for (const match of css.matchAll(at)) {
     const name = match[1];
     if (name === undefined) continue;
-    found.set(name, bodyAt(source, match.index + match[0].length - 1));
+    found.set(name, bodyAt(css, match.index + match[0].length - 1));
   }
   return found;
 }
 
-const utilities = blocksOf(css, /@utility ([\w-]+) \{/g);
-const keyframes = blocksOf(css, /@keyframes ([\w-]+) \{/g);
+const utilities = blocksOf(/@utility ([\w-]+) \{/g);
+const keyframes = blocksOf(/@keyframes ([\w-]+) \{/g);
 
 /**
  * `{ instant: 90, quick: 140, … }` / `{ snap: 'cubic-bezier(…)', … }`.
@@ -99,14 +99,9 @@ const surfacePattern = new RegExp(
   "g",
 );
 for (const match of doctrine.matchAll(surfacePattern)) {
-  const [, surface, move, duration, easing, why] = match;
+  const [, surface, move = "", duration = "", easing = "", why = ""] = match;
   if (surface === undefined) continue;
-  SURFACES.set(surface, {
-    move: move ?? "",
-    duration: duration ?? "",
-    easing: easing ?? "",
-    why: why ?? "",
-  });
+  SURFACES.set(surface, { move, duration, easing, why });
 }
 
 /**
@@ -171,8 +166,7 @@ function fullMotion(body: string): string {
 
 function reducedMotion(body: string): string {
   const match = REDUCED.exec(body);
-  if (match === null) return "";
-  return bodyAt(body, match.index + match[0].length - 1);
+  return match === null ? "" : bodyAt(body, match.index + match[0].length - 1);
 }
 
 /**
@@ -195,15 +189,16 @@ function isTravelling(body: string): boolean {
 }
 
 /**
- * Whether this CSS animates `property`, following its `animation:` through
+ * Whether this CSS animates opacity, following its `animation:` through
  * to the keyframes. The distinction matters for the collapse: a reduced
  * block says `animation: reduced-arrive …` and the word "opacity" is a
  * file away, so a reader that stopped at the declaration would accept a
  * block that collapsed to another slide.
  */
-function isAnimating(body: string, property: string): boolean {
+function isAnimatingOpacity(body: string): boolean {
   for (const match of body.matchAll(/animation: ([\w-]+) /g)) {
-    if (keyframes.get(match[1] ?? "")?.includes(property) === true) return true;
+    if (keyframes.get(match[1] ?? "")?.includes("opacity:") === true)
+      return true;
   }
   return false;
 }
@@ -359,7 +354,7 @@ describe("the ported Motion Doctrine (design/motion.js)", () => {
       // it stops transitioning and lets the label's colour do the work.
       const isHonest =
         collapsed.includes("opacity") ||
-        isAnimating(collapsed, "opacity:") ||
+        isAnimatingOpacity(collapsed) ||
         collapsed.includes("transition-property: none");
       expect([name, isHonest]).toEqual([name, true]);
     }
@@ -554,9 +549,12 @@ function navRule(
       source.lastIndexOf("{", open - 1),
     );
     const selector = source.slice(after + 1, open);
-    if (!selector.includes(`nav-${type})`)) continue;
-    if (!selector.includes(`view-transition-${pseudo}(root)`)) continue;
-    if (selector.includes("nav-back") !== isBack) continue;
+    if (
+      !selector.includes(`nav-${type})`) ||
+      !selector.includes(`view-transition-${pseudo}(root)`) ||
+      selector.includes("nav-back") !== isBack
+    )
+      continue;
     return bodyAt(source, open);
   }
 }
@@ -681,7 +679,7 @@ describe("the navigation types (design round 12)", () => {
       expect([type, leaving === ""]).toEqual([type, false]);
       // The swap treatment: the outgoing holds, the incoming fades.
       expect([type, leaving.includes("animation: none")]).toEqual([type, true]);
-      expect([type, isAnimating(arriving, "opacity:")]).toEqual([type, true]);
+      expect([type, isAnimatingOpacity(arriving)]).toEqual([type, true]);
       // …at instant, and never travelling.
       expect([type, arriving.includes("var(--dur-instant)")]).toEqual([
         type,

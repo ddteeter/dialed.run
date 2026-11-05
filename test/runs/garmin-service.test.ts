@@ -87,7 +87,8 @@ function reports() {
   };
 }
 
-function importDeps(userId: string, stub: Stub, config = configFor(userId)) {
+function importDeps(userId: string, stub: Stub) {
+  const config = configFor(userId);
   const reported = reports();
   return {
     reported,

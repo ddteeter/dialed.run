@@ -19,9 +19,9 @@ export function useGoHome(): () => Promise<void> {
 function useGoTo(): (href: string | undefined) => Promise<void> {
   const router = useRouter();
   const navigate = useNavigate();
-  return async (href) => {
+  return async (href = "/") => {
     await router.invalidate();
-    await navigate({ href: href ?? "/" });
+    await navigate({ href });
   };
 }
 

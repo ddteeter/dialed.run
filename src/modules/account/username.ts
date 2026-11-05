@@ -168,8 +168,9 @@ async function isFreeFor(
   userId: string,
   handle: string,
 ): Promise<boolean> {
-  if (isReservedHandle(handle)) return false;
-  return !(await isHeldByAnother(db, userId, handle));
+  return (
+    !isReservedHandle(handle) && !(await isHeldByAnother(db, userId, handle))
+  );
 }
 
 /**
@@ -712,9 +713,12 @@ export async function renameNoticeOf(
       .orderBy(desc(usernameHistory.lockedAt))
       .limit(1),
   ]);
-  if (profile?.current == undefined || profile.reason == undefined)
+  if (
+    locked === undefined ||
+    profile?.current == undefined ||
+    profile.reason == undefined
+  )
     return undefined;
-  if (locked === undefined) return undefined;
   return {
     previous: locked.previous,
     current: profile.current,

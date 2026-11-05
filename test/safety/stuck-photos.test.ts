@@ -150,14 +150,10 @@ async function queuedIds(): Promise<string[]> {
   return rows.map((row) => row.subjectId);
 }
 
-async function settle(
-  subjectId: string,
-  status: "approved" | "removed",
-  resolvedAt: number,
-): Promise<void> {
+async function settle(subjectId: string, resolvedAt: number): Promise<void> {
   await core()
     .update(reviewQueue)
-    .set({ status, resolvedBy: "operator", resolvedAt })
+    .set({ status: "approved", resolvedBy: "operator", resolvedAt })
     .where(eq(reviewQueue.subjectId, subjectId));
 }
 
@@ -338,7 +334,7 @@ describe("escalation re-runs safely (laws 1, 2)", () => {
     const photoId = await entryPhoto(now, 3 * DAY);
     await retryPendingScreenings(unavailable, [], now);
     // Exactly a day ago is still "within": the row comes back after it.
-    await settle(photoId, "approved", now - DAY);
+    await settle(photoId, now - DAY);
 
     const report = await retryPendingScreenings(unavailable, [], now);
 
@@ -352,7 +348,7 @@ describe("escalation re-runs safely (laws 1, 2)", () => {
     const now = nowSeconds();
     const photoId = await entryPhoto(now, 3 * DAY);
     await retryPendingScreenings(unavailable, [], now);
-    await settle(photoId, "approved", now - DAY - 1);
+    await settle(photoId, now - DAY - 1);
 
     const report = await retryPendingScreenings(unavailable, [], now);
 
@@ -667,8 +663,8 @@ describe("Clear photo on a missing file (owner, 2026-10-31)", () => {
     const now = nowSeconds();
     const itemId = await garmentPhoto(now, 2 * DAY, false);
     await retryPendingScreenings(clean, [], now);
-    const { photoKey } = await garmentRow(itemId);
-    const late = garmentOriginalKey(photoKey ?? "");
+    const { photoKey = "" } = await garmentRow(itemId);
+    const late = garmentOriginalKey(photoKey);
     await env.MEDIA.put(late, new Uint8Array([1]));
 
     await decideReview(core(), "op", {

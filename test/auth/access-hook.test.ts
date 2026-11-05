@@ -85,12 +85,12 @@ function instance(access: AccessGate) {
 
 async function seedCode(
   code: string,
-  { maxUses = 1, revokedAt }: { maxUses?: number; revokedAt?: number } = {},
+  { revokedAt }: { revokedAt?: number } = {},
 ): Promise<string> {
   const id = newUlid();
   await db
     .insert(inviteCodes)
-    .values({ id, code, maxUses, createdAt: nowSeconds(), revokedAt });
+    .values({ id, code, maxUses: 1, createdAt: nowSeconds(), revokedAt });
   return id;
 }
 

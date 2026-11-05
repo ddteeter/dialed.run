@@ -85,10 +85,9 @@ function depsAt(now: number, failFor: readonly string[] = []): Recorded {
       now,
       revokeStrava: (userId) => {
         revoked.push(userId);
-        if (pending.delete(userId)) {
-          return Promise.reject(new Error("Strava is down"));
-        }
-        return Promise.resolve();
+        return pending.delete(userId)
+          ? Promise.reject(new Error("Strava is down"))
+          : Promise.resolve();
       },
       importsBucket: env.IMPORTS,
       report: (error, context) => {
@@ -1140,12 +1139,13 @@ describe("purgeDueAccounts — a purge that stops deleting the runner's files", 
     const stopped = await footprint(runner);
     expect(stopped.imports).toStrictEqual([]);
     expect(stopped.claim).toHaveLength(1);
-    const [looseUpload, runUpload, unnamedUpload] = runner.uploadKeys;
+    const [looseUpload = "", runUpload = "", unnamedUpload = ""] =
+      runner.uploadKeys;
     // The run's file went with its run, on feed's fast path; the other
     // two wait for the listing.
-    expect(await env.IMPORTS.head(runUpload ?? "")).toBeNull();
-    expect(await env.IMPORTS.head(looseUpload ?? "")).not.toBeNull();
-    expect(await env.IMPORTS.head(unnamedUpload ?? "")).not.toBeNull();
+    expect(await env.IMPORTS.head(runUpload)).toBeNull();
+    expect(await env.IMPORTS.head(looseUpload)).not.toBeNull();
+    expect(await env.IMPORTS.head(unnamedUpload)).not.toBeNull();
 
     await purgeDueAccounts([], depsAt(NOW + PURGE_LEASE_S + 1).deps);
 

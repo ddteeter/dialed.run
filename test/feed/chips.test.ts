@@ -24,12 +24,12 @@ const NONE = { chosenFlags: {}, chosenTags: new Set<string>() };
 
 function flags(chips: readonly Chip[]): string[] {
   return chips.flatMap((chip) =>
-    chip.kind === "flag" ? [`${chip.itemId}:${chip.flag}`] : [],
+    chip.kind === "flag" ? `${chip.itemId}:${chip.flag}` : [],
   );
 }
 
 function tags(chips: readonly Chip[]): string[] {
-  return chips.flatMap((chip) => (chip.kind === "tag" ? [chip.tag] : []));
+  return chips.flatMap((chip) => (chip.kind === "tag" ? chip.tag : []));
 }
 
 // Dialed shares: shell 1/4, gloves 2/4, cap 3/4 — so the weakest-first

@@ -21,11 +21,11 @@ import { LandingBar } from "../../src/ui/TopBar";
  * happy-dom lays nothing out, so "hidden below 720" is asserted as the
  * class that does it and Playwright's conformance specs check the widths.
  */
-async function renderAt(element: ReactElement, pathname = "/") {
+async function renderAt(element: ReactElement) {
   const rootRoute = createRootRoute({ component: () => element });
   const router = createRouter({
     routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: [pathname] }),
+    history: createMemoryHistory({ initialEntries: ["/"] }),
   });
   await router.load();
   return render(<RouterProvider router={router} />);

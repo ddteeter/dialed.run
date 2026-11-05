@@ -166,7 +166,7 @@ function differences(
     const mockShape = formOf(field, mock[field]);
     return realShape === mockShape
       ? []
-      : [`${what}.${field}: real ${realShape}, mock ${mockShape}`];
+      : `${what}.${field}: real ${realShape}, mock ${mockShape}`;
   });
 }
 

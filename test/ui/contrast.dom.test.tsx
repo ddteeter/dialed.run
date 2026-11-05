@@ -132,8 +132,10 @@ function luminance(hex: string): number {
 }
 
 function contrast(a: string, b: string): number {
-  const [high, low] = [luminance(a), luminance(b)].toSorted((x, y) => y - x);
-  return ((high ?? 0) + 0.05) / ((low ?? 0) + 0.05);
+  const [high = 0, low = 0] = [luminance(a), luminance(b)].toSorted(
+    (x, y) => y - x,
+  );
+  return (high + 0.05) / (low + 0.05);
 }
 
 describe("the T1 port", () => {

@@ -312,7 +312,8 @@ describe("PrivateRunLine (round 32, frame 2a)", () => {
     expect(dialog).toBeVisible();
     // The platform's close, as Escape does it (happy-dom has no Escape
     // handling; test/ui/sheet.dom.test.tsx closes it the same way).
-    if (!(dialog instanceof HTMLDialogElement)) throw new Error("no dialog");
+    if (!(dialog instanceof HTMLDialogElement))
+      throw new TypeError("no dialog");
     dialog.close();
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).toBeNull();

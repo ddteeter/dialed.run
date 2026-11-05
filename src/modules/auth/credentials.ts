@@ -172,14 +172,14 @@ export interface Admission {
 }
 
 function admissionHeaders({
-  inviteCode,
-  birthDate,
-  turnstileToken,
+  inviteCode = "",
+  birthDate = "",
+  turnstileToken = "",
 }: Admission): Record<string, string> {
   return {
-    [ACCESS_HEADERS.inviteCode]: inviteCode ?? "",
-    [BIRTH_DATE_HEADER]: birthDate ?? "",
-    [ACCESS_HEADERS.turnstileToken]: turnstileToken ?? "",
+    [ACCESS_HEADERS.inviteCode]: inviteCode,
+    [BIRTH_DATE_HEADER]: birthDate,
+    [ACCESS_HEADERS.turnstileToken]: turnstileToken,
   };
 }
 

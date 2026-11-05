@@ -71,7 +71,8 @@ function well(): HTMLElement {
 
 function fileInput(): HTMLInputElement {
   const input = document.querySelector("input[type='file']");
-  if (!(input instanceof HTMLInputElement)) throw new Error("no file input");
+  if (!(input instanceof HTMLInputElement))
+    throw new TypeError("no file input");
   return input;
 }
 

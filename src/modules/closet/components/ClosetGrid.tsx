@@ -18,8 +18,10 @@ function itemLabel(view: ClosetItemView): string {
 }
 
 function tempLabel(view: ClosetItemView): string {
-  if (!view.tempRange) return "Untested"; // uppercased by <Bracketed> in CSS
-  return formatTempRange(view.tempRange) ?? "Untested";
+  // "Untested" is uppercased by <Bracketed> in CSS.
+  return view.tempRange
+    ? (formatTempRange(view.tempRange) ?? "Untested")
+    : "Untested";
 }
 
 const itemKey = (view: ClosetItemView): string => view.item.id;

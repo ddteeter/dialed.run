@@ -83,14 +83,10 @@ async function runner(
 }
 
 /**
-How many runners matched, and nothing else.
+How many runners matched `VIEWER` over the last three days, and nothing else.
 */
-async function runnersIn(
-  viewer: typeof VIEWER,
-  since: number,
-  viewerId?: string,
-): Promise<number> {
-  const tally = await matchTally(viewer, since, viewerId);
+async function runnersIn(viewerId?: string): Promise<number> {
+  const tally = await matchTally(VIEWER, THREE_DAYS_AGO, viewerId);
   return tally.runners;
 }
 
@@ -123,7 +119,7 @@ describe("matchTally: who matched", () => {
     await runner({ feelsLikeC: 7 - 3 });
     await runner({ feelsLikeC: 7 + 3 });
     await runner({ feelsLikeC: 7 + 4 });
-    expect(await runnersIn(VIEWER, THREE_DAYS_AGO)).toBe(2);
+    expect(await runnersIn()).toBe(2);
   });
 
   it("leaves out a run whose only conditions are its own band (B1)", async () => {
@@ -140,7 +136,7 @@ describe("matchTally: who matched", () => {
     await makeEntry({ userId: author, runId, createdAt: NOW - HOUR, itemIds });
     await makeManualBand(runId, 7);
 
-    expect(await runnersIn(VIEWER, THREE_DAYS_AGO)).toBe(0);
+    expect(await runnersIn()).toBe(0);
   });
 
   it("leaves out a different precip class and an unresolved one", async () => {
@@ -162,7 +158,7 @@ describe("matchTally: who matched", () => {
 
   it("leaves out an entry from before the window", async () => {
     await runner({ ago: 3 * DAY + 1 });
-    expect(await runnersIn(VIEWER, THREE_DAYS_AGO)).toBe(0);
+    expect(await runnersIn()).toBe(0);
   });
 
   it("counts runners, not entries — and a runner once per group", async () => {
@@ -187,9 +183,9 @@ describe("matchTally: who matched", () => {
   it("leaves the viewer's own entries out of what other runners wore", async () => {
     const viewerId = await runner();
     await runner();
-    expect(await runnersIn(VIEWER, THREE_DAYS_AGO, viewerId)).toBe(1);
+    expect(await runnersIn(viewerId)).toBe(1);
     // And only with a viewer to leave out.
-    expect(await runnersIn(VIEWER, THREE_DAYS_AGO)).toBe(2);
+    expect(await runnersIn()).toBe(2);
   });
 
   it("aggregates more entries and garments than D1 binds in one statement", async () => {
@@ -248,7 +244,7 @@ describe("matchTally: who matched", () => {
       await makeEntry({ userId: author, runId, createdAt: NOW - index });
     }
 
-    expect(await runnersIn(VIEWER, THREE_DAYS_AGO)).toBe(1);
+    expect(await runnersIn()).toBe(1);
   });
 
   it("resolves the recent-public-entries scan with an index seek, no table scan", async () => {
@@ -353,7 +349,7 @@ describe("the totals switch covers the block (U2 folded into count_in_totals)", 
   it("leaves out a runner who turned totals off, and the floor counts without them", async () => {
     const optedOut = await runner();
     await runners(4);
-    expect(await runnersIn(VIEWER, THREE_DAYS_AGO)).toBe(5);
+    expect(await runnersIn()).toBe(5);
 
     await optOut(optedOut);
     expect(await matchTally(VIEWER, THREE_DAYS_AGO)).toStrictEqual({
@@ -374,7 +370,7 @@ describe("the totals switch covers the block (U2 folded into count_in_totals)", 
     // Nothing creates a profile at signup: no row is counted, as the
     // column's default says.
     await runner({ userId: newUlid() });
-    expect(await runnersIn(VIEWER, THREE_DAYS_AGO)).toBe(2);
+    expect(await runnersIn()).toBe(2);
   });
 
   it("still shows the block to a viewer who turned totals off", async () => {

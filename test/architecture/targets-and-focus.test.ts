@@ -38,8 +38,9 @@ const sources: Record<string, string> = import.meta.glob(
  * `components/` convention and are screens all the same.
  */
 function isOwned(path: string): boolean {
-  if (path.startsWith("src/ui/") || path.startsWith("src/routes/")) return true;
   return (
+    path.startsWith("src/ui/") ||
+    path.startsWith("src/routes/") ||
     path.includes("/components/") ||
     path.endsWith("auth/auth-page.tsx") ||
     path.endsWith("auth/google-button.tsx")
@@ -198,10 +199,13 @@ function elementsIn(path: string, code: string): Element[] {
 const elements: Element[] = [];
 for (const [globPath, source] of Object.entries(sources)) {
   const path = repoPath(globPath);
-  if (!isOwned(path)) continue;
-  // Stryker rewrites source in its sandbox and Vite's `?raw` inlines the
-  // rewrite, so a mutation run would scan its own instrumentation.
-  if (isInstrumented(source)) continue;
+  if (
+    !isOwned(path) ||
+    // Stryker rewrites source in its sandbox and Vite's `?raw` inlines the
+    // rewrite, so a mutation run would scan its own instrumentation.
+    isInstrumented(source)
+  )
+    continue;
   const code = withoutComments(source);
   elements.push(...elementsIn(path, code));
 }

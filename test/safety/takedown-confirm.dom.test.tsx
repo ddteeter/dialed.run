@@ -32,9 +32,9 @@ async function renderWithRouter(element: ReactElement) {
   return render(<RouterProvider router={router} />);
 }
 
-type ConfirmFn = Parameters<typeof TakedownConfirm>[0]["confirm"];
-
 const TOKEN = "a".repeat(64);
+
+type ConfirmFn = Parameters<typeof TakedownConfirm>[0]["confirm"];
 
 describe("/takedown/confirm", () => {
   it("asks, and confirms nothing until the button is pressed", async () => {

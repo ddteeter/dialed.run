@@ -28,9 +28,9 @@ function Harness({
   );
 }
 
-function focusOn(name: string): void {
+function focusElsewhere(): void {
   act(() => {
-    screen.getByRole("button", { name }).focus();
+    screen.getByRole("button", { name: "elsewhere" }).focus();
   });
 }
 
@@ -42,7 +42,7 @@ describe("useReturnFocus", () => {
 
   it("returns focus to a trigger that is on screen, there and then", () => {
     render(<Harness />);
-    focusOn("elsewhere");
+    focusElsewhere();
 
     fireEvent.click(screen.getByRole("button", { name: "close" }));
 
@@ -73,7 +73,7 @@ describe("useReturnFocus", () => {
   it("takes nothing back once focus has moved on", () => {
     const { rerender } = render(<Harness />);
     fireEvent.click(screen.getByRole("button", { name: "close" }));
-    focusOn("elsewhere");
+    focusElsewhere();
 
     rerender(<Harness version="b" />);
 
@@ -82,7 +82,7 @@ describe("useReturnFocus", () => {
 
   it("gives a remount nothing it did not hold", () => {
     const { rerender } = render(<Harness />);
-    focusOn("elsewhere");
+    focusElsewhere();
 
     rerender(<Harness version="b" />);
 

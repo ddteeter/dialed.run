@@ -21,10 +21,9 @@ export const Route = createFileRoute("/api/strava")({
           url.searchParams,
           env.STRAVA_WEBHOOK_VERIFY_TOKEN,
         );
-        if (result === undefined) {
-          return new Response("Forbidden", { status: 403 });
-        }
-        return Response.json({ "hub.challenge": result.challenge });
+        return result === undefined
+          ? new Response("Forbidden", { status: 403 })
+          : Response.json({ "hub.challenge": result.challenge });
       },
       POST: async ({ request }) => {
         let body: unknown;

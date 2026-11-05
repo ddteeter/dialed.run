@@ -62,24 +62,24 @@ function depsWith(overrides: Partial<RetryDeps> = {}) {
   const enrichmentQueue = { send: vi.fn(() => Promise.resolve()) };
   const importsQueue = { send: vi.fn(() => Promise.resolve()) };
   const reextract = vi.fn(() => Promise.resolve<unknown>({ filled: [] }));
-  const importFileExists = vi.fn(() => Promise.resolve(true));
+  const doesImportFileExist = vi.fn(() => Promise.resolve(true));
   return {
     deps: {
       db: db(),
       enrichmentQueue,
       importsQueue,
       reextract,
-      importFileExists,
+      importFileExists: doesImportFileExist,
       ...overrides,
     },
     enrichmentQueue,
     importsQueue,
     reextract,
-    importFileExists,
+    importFileExists: doesImportFileExist,
   };
 }
 
-async function product(extractionStatus: "failed" | "done" = "failed") {
+async function product() {
   const brand = await createOrGetBrand(db(), `Janji ${newUlid()}`);
   const row = await createOrGetProduct(db(), {
     brandId: brand.id,
@@ -89,7 +89,7 @@ async function product(extractionStatus: "failed" | "done" = "failed") {
   });
   await db()
     .update(products)
-    .set({ extractionStatus })
+    .set({ extractionStatus: "failed" })
     .where(eq(products.id, row.id));
   return { id: row.id, brand: brand.name };
 }
@@ -477,11 +477,11 @@ describe("retryGaveUp", () => {
   it("asks after the import's own file before re-sending it", async () => {
     const upload = await failedImport(await runner());
     const id = await gaveUpFor("import", upload.id);
-    const { deps, importFileExists } = depsWith();
+    const { deps, importFileExists: doesImportFileExist } = depsWith();
 
     expect(await retryGaveUp({ id, step: "again" }, deps)).toBe("retried");
 
-    expect(importFileExists).toHaveBeenCalledWith(upload.r2Key);
+    expect(doesImportFileExist).toHaveBeenCalledWith(upload.r2Key);
   });
 
   it("forgets a run that is gone, rather than calling it retried", async () => {

@@ -251,12 +251,13 @@ async function visibilityOf(itemId: string): Promise<string | undefined> {
   return row?.visibility;
 }
 
-async function queued(
-  subjectId: string,
-  source: "classifier" | "fingerprint",
-): Promise<Ulid> {
+async function queued(subjectId: string): Promise<Ulid> {
   await core().batch([
-    enqueueForReview(core(), { subjectType: "garment", subjectId, source }),
+    enqueueForReview(core(), {
+      subjectType: "garment",
+      subjectId,
+      source: "classifier",
+    }),
   ]);
   const [row] = await core()
     .select({ id: reviewQueue.id })
@@ -451,7 +452,7 @@ describe("garment photos reach a person (design 157)", () => {
         retired: true,
       })
       .where(eq(wardrobeItems.id, itemId));
-    await queued(itemId, "classifier");
+    await queued(itemId);
 
     const [row] = await pendingReviewQueue();
     expect(row).toMatchObject({
@@ -481,7 +482,7 @@ describe("garment photos reach a person (design 157)", () => {
       .update(wardrobeItems)
       .set({ brand: "Nike", name: "Pegasus 41", category: "shoes", productId })
       .where(eq(wardrobeItems.id, itemId));
-    await queued(itemId, "classifier");
+    await queued(itemId);
 
     const [row] = await pendingReviewQueue();
     expect(row?.subject.garmentLine).toBe("Nike Pegasus 41 · Shoes · In use");
@@ -490,7 +491,7 @@ describe("garment photos reach a person (design 157)", () => {
   it("shows nothing for a queued garment whose photo is gone", async () => {
     const owner = await makeUser();
     const itemId = await makeItem({ userId: owner });
-    await queued(itemId, "classifier");
+    await queued(itemId);
 
     const [row] = await pendingReviewQueue();
     expect(row?.subject).toStrictEqual({ photoKeys: [] });
@@ -499,7 +500,7 @@ describe("garment photos reach a person (design 157)", () => {
   it("clears it on Approve, telling nobody", async () => {
     const owner = await makeUser();
     const approved = await garmentPhoto(owner);
-    const approvalRow = await queued(approved.itemId, "classifier");
+    const approvalRow = await queued(approved.itemId);
 
     expect(
       await decideReview(core(), "rev", {
@@ -543,7 +544,7 @@ describe("garment photos reach a person (design 157)", () => {
   it("writes nothing to a garment whose photo is already gone", async () => {
     const owner = await makeUser();
     const itemId = await makeItem({ userId: owner });
-    const queueId = await queued(itemId, "classifier");
+    const queueId = await queued(itemId);
 
     await decideReview(core(), "rev", { queueId, action: "approve" });
 
@@ -709,7 +710,7 @@ describe("a garment photo quarantined as suspected CSAM (design 157, D-70)", () 
     await env.MEDIA.put(`items/${owner}/${itemId}/older/card.webp`, BYTES);
     await garmentPhoto(await makeUser());
     await screen("garment", itemId, explicit);
-    const queueId = await queued(itemId, "classifier");
+    const queueId = await queued(itemId);
 
     expect(
       await decideReview(core(), "rev", {
@@ -816,7 +817,7 @@ describe("a garment photo quarantined as suspected CSAM (design 157, D-70)", () 
   it("settles a garment row whose photo is gone through safety, without a record", async () => {
     const owner = await makeUser();
     const itemId = await makeItem({ userId: owner });
-    const queueId = await queued(itemId, "classifier");
+    const queueId = await queued(itemId);
 
     expect(
       await decideReview(core(), "rev", {
@@ -966,8 +967,8 @@ describe("screenings go with their photo (design 157)", () => {
     const forgotten = await garmentPhoto(owner);
     await screened("garment", kept.itemId);
     await screened("garment", forgotten.itemId);
-    await queued(kept.itemId, "classifier");
-    await queued(forgotten.itemId, "classifier");
+    await queued(kept.itemId);
+    await queued(forgotten.itemId);
 
     await core().batch([
       ...garmentPhotoForgotten(core(), owner, forgotten.itemId),

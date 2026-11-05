@@ -61,15 +61,15 @@ async function runner(profile?: {
 }
 
 /**
- * `db`, with `before` run ahead of its `nth` `batch()` — the moment between
+ * `db`, with `before` run ahead of its second `batch()` — the moment between
  * the claim's reads and its write, which no ordinary interleaving reaches
  * on demand.
  */
-function beforeBatch(nth: number, before: () => Promise<void>): typeof db {
+function beforeBatch(before: () => Promise<void>): typeof db {
   let calls = 0;
   const batch = async (...args: Parameters<typeof db.batch>) => {
     calls += 1;
-    if (calls === nth) await before();
+    if (calls === 2) await before();
     return db.batch(...args);
   };
   return new Proxy(db, {
@@ -438,7 +438,7 @@ describe("claimUsername", () => {
     const userId = await runner();
     // A rival claims the same handle after our free check and before our
     // write: the write batch is the claim's second batch.
-    const racing = beforeBatch(2, async () => {
+    const racing = beforeBatch(async () => {
       await runner({ username: "sam_runs" });
     });
     expect(
@@ -455,7 +455,7 @@ describe("claimUsername", () => {
     const userId = await runner({ username: "me_now" });
     // A rival holds sam_runs and gives it up after our free check and
     // before our write: the read said free, the batch must still refuse.
-    const racing = beforeBatch(2, async () => {
+    const racing = beforeBatch(async () => {
       const rival = await runner({ username: "sam_runs" });
       await claimUsername(db, rival, "sam_trails", CLEAR);
     });
@@ -474,7 +474,7 @@ describe("claimUsername", () => {
 
   it("refuses it for a runner with no profile row yet, leaving no handle", async () => {
     const userId = newUlid();
-    const racing = beforeBatch(2, async () => {
+    const racing = beforeBatch(async () => {
       const rival = await runner({ username: "sam_runs" });
       await claimUsername(db, rival, "sam_trails", CLEAR);
     });
@@ -489,7 +489,7 @@ describe("claimUsername", () => {
   it("answers a second submit of a change that already landed as claimed", async () => {
     const userId = await runner({ username: "maya_runs" });
     // The first submit lands between the second's read and its write.
-    const doubled = beforeBatch(2, async () => {
+    const doubled = beforeBatch(async () => {
       await claimUsername(db, userId, "maya_trails", CLEAR);
     });
     expect(
@@ -507,7 +507,7 @@ describe("claimUsername", () => {
     const userId = await runner({ username: "maya_runs" });
     // Two different changes racing: the first lands between the second's
     // read (which saw maya_runs) and its write.
-    const racing = beforeBatch(2, async () => {
+    const racing = beforeBatch(async () => {
       await claimUsername(db, userId, "maya_trails", CLEAR);
     });
     expect(
@@ -524,7 +524,7 @@ describe("claimUsername", () => {
 
   it("lets any other UNIQUE failure through, rather than calling it taken", async () => {
     const userId = await runner();
-    const failing = beforeBatch(2, () => {
+    const failing = beforeBatch(() => {
       throw new Error(
         "D1_ERROR: UNIQUE constraint failed: username_history.username: SQLITE_CONSTRAINT",
       );
@@ -536,7 +536,7 @@ describe("claimUsername", () => {
 
   it("lets any other write failure through", async () => {
     const userId = await runner();
-    const failing = beforeBatch(2, () => {
+    const failing = beforeBatch(() => {
       throw new Error("D1_ERROR: the database is unavailable");
     });
     await expect(
@@ -796,7 +796,6 @@ async function renamedFrom(
 }
 
 describe("the rename notice (ACC-12; round 27 #16)", () => {
-
   it("says the handle taken away, the placeholder and why", async () => {
     const userId = await renamedFrom("quadzilla_69");
     expect(await renameNoticeOf(db, userId)).toStrictEqual({
@@ -834,6 +833,14 @@ describe("the rename notice (ACC-12; round 27 #16)", () => {
     expect(await renameNoticeOf(db, newUlid())).toBeUndefined();
   });
 
+  it("is nothing, not a throw, for a handle taken away from a runner with no profile row", async () => {
+    // `username_history` has no foreign key to the profile, so a lock can
+    // outlive the row it was taken from.
+    const userId = await renamedFrom("quadzilla_69");
+    await db.delete(userProfiles).where(eq(userProfiles.userId, userId));
+    expect(await renameNoticeOf(db, userId)).toBeUndefined();
+  });
+
   it("is nothing for a reason with no handle taken away on record", async () => {
     const userId = await runner({ username: "runner_0042" });
     await db
@@ -866,9 +873,9 @@ describe("the rename notice (ACC-12; round 27 #16)", () => {
   it("is settled by saving the placeholder itself, which keeps it", async () => {
     const userId = await renamedFrom("quadzilla_69");
     const screen = vi.fn(CLEAR);
-    expect(await claimUsername(db, userId, "runner_4821", screen)).toStrictEqual(
-      { kind: "claimed", username: "runner_4821" },
-    );
+    expect(
+      await claimUsername(db, userId, "runner_4821", screen),
+    ).toStrictEqual({ kind: "claimed", username: "runner_4821" });
     expect(screen).not.toHaveBeenCalled();
     expect(await renameNoticeOf(db, userId)).toBeUndefined();
     expect(await usernameOf(db, userId)).toBe("runner_4821");

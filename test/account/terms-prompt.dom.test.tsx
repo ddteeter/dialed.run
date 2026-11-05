@@ -96,7 +96,7 @@ const BUMP: TermsPromptView = {
 
 function landing(): HTMLElement {
   const found = document.querySelector("[data-part='landing']");
-  if (!(found instanceof HTMLElement)) throw new Error("no landing");
+  if (!(found instanceof HTMLElement)) throw new TypeError("no landing");
   return found;
 }
 

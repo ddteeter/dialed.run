@@ -176,8 +176,9 @@ describe("the request the adapter builds", () => {
 
     await provider.observation(44.98, -93.27, new Date(1_768_485_780_250));
 
-    const [input, init] = vi.mocked(fetchImpl).mock.calls[0] ?? [];
-    const asUrl = urlOf(input ?? "https://example.invalid");
+    const [input = "https://example.invalid", init] =
+      vi.mocked(fetchImpl).mock.calls[0] ?? [];
+    const asUrl = urlOf(input);
     // The moment in epoch seconds, not a date: a day is 24 records, and a
     // local date-time would be read in the place's zone, which the adapter
     // does not know yet. Whole seconds — Timeline takes no fraction.
