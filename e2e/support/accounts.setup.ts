@@ -71,15 +71,17 @@ setup("create the demo accounts", async ({ browser }, testInfo) => {
       await page.getByLabel("Email").fill(email);
       await page.getByLabel("Password").fill("a-long-enough-password");
       await page.getByRole("button", { name: submit }).click();
-      if (path === "/auth/signup") {
-        await expect(page).toHaveURL(/\/account\/check-email/, {
-          timeout: 15_000,
-        });
-        await page.goto(await confirmLinkFor(email));
-        await expect(
-          page.getByRole("heading", { name: "Email confirmed" }),
-        ).toBeVisible({ timeout: 15_000 });
+      if (path !== "/auth/signup") {
+        continue;
       }
+
+      await expect(page).toHaveURL(/\/account\/check-email/, {
+        timeout: 15_000,
+      });
+      await page.goto(await confirmLinkFor(email));
+      await expect(
+        page.getByRole("heading", { name: "Email confirmed" }),
+      ).toBeVisible({ timeout: 15_000 });
     }
 
     // A new account picks its handle at O0 first (round 26 #7), through

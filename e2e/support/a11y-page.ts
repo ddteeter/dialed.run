@@ -136,8 +136,11 @@ export function installChecker(options: CheckerOptions): void {
      * accessible name by Chromium: "7 waiting" is announced "7waiting".
      */
     isStrandedSpace(node: Node): boolean {
-      if (node.nodeType !== Node.TEXT_NODE) return false;
-      if ((node.textContent ?? "").trim() !== "") return false;
+      if (
+        node.nodeType !== Node.TEXT_NODE ||
+        (node.textContent ?? "").trim() !== ""
+      )
+        return false;
       const beside = (step: "previousSibling" | "nextSibling") => {
         let other = node[step];
         while (other !== null && other.nodeType === Node.COMMENT_NODE) {
