@@ -548,7 +548,8 @@ describe("Takedown (SAF-6)", () => {
     expect(picker).toHaveDisplayValue("Not set");
     // The empty option is chosen, not merely shown: a value no option
     // holds leaves nothing selected.
-    if (!(picker instanceof HTMLSelectElement)) throw new Error("no select");
+    if (!(picker instanceof HTMLSelectElement))
+      throw new TypeError("no select");
     expect(picker.selectedIndex).toBe(0);
     expect(picker.value).toBe("");
   });

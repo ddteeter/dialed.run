@@ -140,7 +140,7 @@ export function serverFunctionsIn(
       return chunks.flatMap((body) => {
         const name = DECLARATION.exec(body)?.[1];
         return name !== undefined && body.includes("createServerFn(")
-          ? [{ name: `${file} ${name}`, body }]
+          ? { name: `${file} ${name}`, body }
           : [];
       });
     });

@@ -86,9 +86,8 @@ async function report(
   subjectType: ReportSubjectType,
   subjectId: string,
   reason: ReportReason = "intimate",
-  reporterId?: string,
 ): Promise<string> {
-  const reporter = reporterId ?? (await makeUser());
+  const reporter = await makeUser();
   await fileReport(
     { reporterId: reporter, subjectType, subjectId, reason },
     oweInCore,

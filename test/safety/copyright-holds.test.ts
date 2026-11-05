@@ -62,8 +62,8 @@ A column D1 left empty, as drizzle reads it back.
 */
 const NOT_SET = z.null().parse(JSON.parse("null"));
 
-function utc(year: number, month: number, day: number, hour = 0): number {
-  return Date.UTC(year, month - 1, day, hour) / 1000;
+function utc(month: number, day: number, hour = 0): number {
+  return Date.UTC(2026, month - 1, day, hour) / 1000;
 }
 
 async function isStored(key: string): Promise<boolean> {
@@ -191,15 +191,13 @@ beforeEach(async () => {
 describe("restoreDayAfter: the 12th weekday after the counter-notice", () => {
   it("counts weekdays only, from the UTC day, to its midnight", () => {
     // Fri Oct 23 2026: two weeks and a Tuesday, skipping two weekends.
-    expect(restoreDayAfter(utc(2026, 10, 23, 15))).toBe(utc(2026, 11, 10));
-    expect(restoreDayAfter(utc(2026, 10, 23, 23) + 3599)).toBe(
-      utc(2026, 11, 10),
-    );
+    expect(restoreDayAfter(utc(10, 23, 15))).toBe(utc(11, 10));
+    expect(restoreDayAfter(utc(10, 23, 23) + 3599)).toBe(utc(11, 10));
     // A weekend counts from the Monday after it.
-    expect(restoreDayAfter(utc(2026, 10, 24, 9))).toBe(utc(2026, 11, 10));
-    expect(restoreDayAfter(utc(2026, 10, 25, 9))).toBe(utc(2026, 11, 10));
-    expect(restoreDayAfter(utc(2026, 10, 26))).toBe(utc(2026, 11, 11));
-    expect(restoreDayAfter(utc(2026, 10, 22, 12))).toBe(utc(2026, 11, 9));
+    expect(restoreDayAfter(utc(10, 24, 9))).toBe(utc(11, 10));
+    expect(restoreDayAfter(utc(10, 25, 9))).toBe(utc(11, 10));
+    expect(restoreDayAfter(utc(10, 26))).toBe(utc(11, 11));
+    expect(restoreDayAfter(utc(10, 22, 12))).toBe(utc(11, 9));
   });
 });
 
@@ -317,16 +315,16 @@ describe("the Desk's counter-notice and court action", () => {
     const { photoId } = await posted();
     await takeDown("photo", photoId);
     const { id } = await holdOf(photoId);
-    await hiddenOn(id, utc(2026, 10, 20, 9));
+    await hiddenOn(id, utc(10, 20, 9));
     // RECEIVED ON (round 39 #73): the day it arrived, kept as its 00:00 UTC.
-    const at = utc(2026, 10, 23);
+    const at = utc(10, 23);
 
     expect(
       await recordCounterNotice(core(), "desk", id, "2026-10-23"),
     ).toStrictEqual({
       outcome: "recorded",
       counterNoticeAt: at,
-      restoreAt: utc(2026, 11, 10),
+      restoreAt: utc(11, 10),
     });
     expect(
       await recordCounterNotice(core(), "desk", id, "2026-10-24"),
@@ -334,7 +332,7 @@ describe("the Desk's counter-notice and court action", () => {
     expect(await holdOf(photoId)).toMatchObject({
       counterNoticeAt: at,
       counterNoticeBy: "desk",
-      restoreAt: utc(2026, 11, 10),
+      restoreAt: utc(11, 10),
     });
   });
 
@@ -342,7 +340,7 @@ describe("the Desk's counter-notice and court action", () => {
     const { photoId } = await posted();
     await takeDown("photo", photoId);
     const { id } = await holdOf(photoId);
-    await hiddenOn(id, utc(2026, 10, 21));
+    await hiddenOn(id, utc(10, 21));
 
     expect(
       await recordCounterNotice(core(), "desk", id, "2026-10-20"),
@@ -352,7 +350,7 @@ describe("the Desk's counter-notice and court action", () => {
       await recordCounterNotice(core(), "desk", id, "2026-10-21"),
     ).toMatchObject({
       outcome: "recorded",
-      counterNoticeAt: utc(2026, 10, 21),
+      counterNoticeAt: utc(10, 21),
     });
   });
 
@@ -360,7 +358,7 @@ describe("the Desk's counter-notice and court action", () => {
     const { photoId } = await posted();
     await takeDown("photo", photoId);
     const { id } = await holdOf(photoId);
-    await hiddenOn(id, utc(2026, 10, 22) - 1);
+    await hiddenOn(id, utc(10, 22) - 1);
 
     expect(
       await recordCounterNotice(core(), "desk", id, "2026-10-21"),

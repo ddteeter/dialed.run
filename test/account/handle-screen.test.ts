@@ -32,7 +32,11 @@ describe("screenHandle", () => {
     const fetchImpl = answering({ results: [{ flagged: false }] });
     const { report, reports } = reporter();
     expect(
-      await screenHandle("quiet_mile", { apiKey: "sk-test", fetchImpl, report }),
+      await screenHandle("quiet_mile", {
+        apiKey: "sk-test",
+        fetchImpl,
+        report,
+      }),
     ).toBe("clear");
     const [url, init] = fetchImpl.mock.calls[0] ?? [];
     expect(url).toBe("https://api.openai.com/v1/moderations");
@@ -42,7 +46,8 @@ describe("screenHandle", () => {
       "content-type": "application/json",
     });
     const body = init?.body;
-    if (typeof body !== "string") throw new Error("expected a JSON string body");
+    if (typeof body !== "string")
+      throw new TypeError("expected a JSON string body");
     expect(JSON.parse(body)).toStrictEqual({
       model: MODERATION_MODEL,
       input: "quiet mile",
@@ -80,15 +85,18 @@ describe("screenHandle", () => {
       "a call that throws",
       vi.fn<typeof fetch>(() => Promise.reject(new Error("timeout"))),
     ],
-  ])("fails open to the list on %s, and reports it without the handle", async (_, fetchImpl) => {
-    const { report, reports } = reporter();
-    expect(
-      await screenHandle("secret_handle", { apiKey: "k", fetchImpl, report }),
-    ).toBe("unknown");
-    expect(reports).toHaveLength(1);
-    expect(reports[0]?.context).toStrictEqual({ surface: "handle-screen" });
-    expect(JSON.stringify(reports)).not.toContain("secret_handle");
-  });
+  ])(
+    "fails open to the list on %s, and reports it without the handle",
+    async (_, fetchImpl) => {
+      const { report, reports } = reporter();
+      expect(
+        await screenHandle("secret_handle", { apiKey: "k", fetchImpl, report }),
+      ).toBe("unknown");
+      expect(reports).toHaveLength(1);
+      expect(reports[0]?.context).toStrictEqual({ surface: "handle-screen" });
+      expect(JSON.stringify(reports)).not.toContain("secret_handle");
+    },
+  );
 
   it("names the status it was refused with", async () => {
     const { report, reports } = reporter();

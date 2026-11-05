@@ -100,10 +100,10 @@ function nothing(): void {
    */
 }
 
-function mockFetchJson(body: unknown, status = 200) {
+function mockFetchJson(body: unknown) {
   return vi
     .spyOn(globalThis, "fetch")
-    .mockImplementation(() => Promise.resolve(Response.json(body, { status })));
+    .mockImplementation(() => Promise.resolve(Response.json(body)));
 }
 
 afterEach(() => {

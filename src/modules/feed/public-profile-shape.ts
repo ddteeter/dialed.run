@@ -70,8 +70,9 @@ export function publicProfileHead(profile: PublicProfile | undefined): {
   meta: HeadMeta[];
 } {
   const noindex = { name: "robots", content: "noindex" };
-  if (profile === undefined) return { meta: [noindex] };
-  return { meta: [noindex, { title: `@${profile.handle}` }] };
+  return profile === undefined
+    ? { meta: [noindex] }
+    : { meta: [noindex, { title: `@${profile.handle}` }] };
 }
 
 /**

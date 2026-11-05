@@ -91,8 +91,9 @@ function toucanFor(
   { dsn, environment }: SentryTarget,
   keepAlive: KeepAlive,
 ): Toucan | undefined {
-  if (dsn === undefined || dsn === "") return undefined;
-  return new Toucan({ dsn, environment, context: { waitUntil: keepAlive } });
+  return dsn === undefined || dsn === ""
+    ? undefined
+    : new Toucan({ dsn, environment, context: { waitUntil: keepAlive } });
 }
 
 /**

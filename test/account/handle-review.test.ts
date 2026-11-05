@@ -41,9 +41,9 @@ const UNKNOWN: ScreenHandle = () => Promise.resolve("unknown");
  * A runner whose handle was claimed during an outage and flagged by the
  * re-ask: the state the Desk's review row is about.
  */
-async function flaggedRunner(handle = "quadzilla_69") {
+async function flaggedRunner() {
   const userId = newUlid();
-  await claimUsername(db, userId, handle, UNKNOWN);
+  await claimUsername(db, userId, "quadzilla_69", UNKNOWN);
   await rescreenHandles(db, () => Promise.resolve("flagged"), [], 5000);
   const [row] = await pendingReviewQueue();
   if (row === undefined) throw new Error("nothing queued");

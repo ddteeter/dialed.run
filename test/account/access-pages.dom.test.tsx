@@ -716,7 +716,8 @@ describe("D7 · Access", () => {
     });
     expect(link).toHaveValue("https://dialed.run/join?code=DIAL-TR8K");
     expect(link).toHaveAttribute("readonly");
-    if (!(link instanceof HTMLInputElement)) throw new Error("not an input");
+    if (!(link instanceof HTMLInputElement))
+      throw new TypeError("not an input");
     expect(link.selectionStart).toBe(0);
     expect(link.selectionEnd).toBe(link.value.length);
     // No Try again: the same press would fail the same way.

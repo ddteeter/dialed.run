@@ -82,10 +82,8 @@ function silenceWarn() {
   return vi.spyOn(console, "warn").mockImplementation(nothing);
 }
 
-function mockFetchJson(body: unknown, status = 200) {
-  return vi
-    .spyOn(globalThis, "fetch")
-    .mockResolvedValue(Response.json(body, { status }));
+function mockFetchJson(body: unknown) {
+  return vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(body));
 }
 
 afterEach(() => {

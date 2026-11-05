@@ -996,7 +996,7 @@ describe("hourly firings report what they find (design 162)", () => {
 
 describe("a hold breaker at its ceiling (design 164)", () => {
   it("raises its own event from the screening sweep, one issue a cause a day", async () => {
-    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR, nowSeconds());
+    await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR, nowSeconds() - 60);
     const { reporter, events } = recordingReporter();
 
     await handleScheduled(
@@ -1023,6 +1023,50 @@ describe("a hold breaker at its ceiling (design 164)", () => {
     ]);
   });
 
+  it("raises a burst split across the hour before, which neither hour holds alone (R-172)", async () => {
+    await opened("fingerprint", 3, nowSeconds() - HOUR - 60);
+    await opened("fingerprint", 2, nowSeconds() - HOUR + 60);
+    const { reporter, events } = recordingReporter();
+
+    await handleScheduled(
+      { cron: "15 * * * *" } as ScheduledController,
+      reporter,
+    );
+
+    expect(
+      events
+        .filter((event) => event.report.fingerprint?.includes("breaker"))
+        .map((event) => event.report.context.anomalies),
+    ).toStrictEqual([
+      "fingerprint holds reached 5 of 5 within an hour; past the ceiling they stop",
+    ]);
+  });
+
+  it("looks back two hours and no further", async () => {
+    await opened("fingerprint", 5, nowSeconds() - 2 * HOUR - 60);
+    const { reporter, events } = recordingReporter();
+
+    await handleScheduled(
+      { cron: "15 * * * *" } as ScheduledController,
+      reporter,
+    );
+    expect(
+      events.filter((event) => event.report.fingerprint?.includes("breaker")),
+    ).toStrictEqual([]);
+
+    await opened("fingerprint", 5, nowSeconds() - 2 * HOUR + 60);
+    const later = recordingReporter();
+    await handleScheduled(
+      { cron: "15 * * * *" } as ScheduledController,
+      later.reporter,
+    );
+    expect(
+      later.events.filter((event) =>
+        event.report.fingerprint?.includes("breaker"),
+      ),
+    ).toHaveLength(1);
+  });
+
   it("raises nothing on an hour under every ceiling", async () => {
     await opened("fingerprint", FINGERPRINT_HOLDS_PER_HOUR - 1, nowSeconds());
     const { reporter, events } = recordingReporter();
@@ -1047,7 +1091,7 @@ describe("a hold breaker at its ceiling (design 164)", () => {
       context: {
         breaker: "reports",
         anomalies:
-          "reports holds at 12 of 12 in the last hour; past the ceiling they stop",
+          "reports holds reached 12 of 12 within an hour; past the ceiling they stop",
       },
       tags: { breaker: "reports" },
       fingerprint: ["breaker", "reports", "2026-10-31"],

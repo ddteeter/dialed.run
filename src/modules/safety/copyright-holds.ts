@@ -372,8 +372,7 @@ export async function restoreAfterCase(
       caseClosedBy: actorId,
     }),
   );
-  if (claimed.length > 0) return { outcome: "recorded" };
-  return whyNotHeld(db, holdId);
+  return claimed.length > 0 ? { outcome: "recorded" } : whyNotHeld(db, holdId);
 }
 
 export type CaseOverClaim =
@@ -397,8 +396,9 @@ export async function claimPurgeAfterCase(
     .where(heldForCase(holdId))
     .returning({ id: copyrightHolds.id });
   const [hold] = await claimedPurges(db, claimed);
-  if (hold !== undefined) return { outcome: "claimed", hold };
-  return whyNotHeld(db, holdId);
+  return hold === undefined
+    ? whyNotHeld(db, holdId)
+    : { outcome: "claimed", hold };
 }
 
 /**

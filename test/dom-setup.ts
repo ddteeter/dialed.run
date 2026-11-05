@@ -77,7 +77,7 @@ Object.defineProperties(HTMLCanvasElement.prototype, {
     value(
       this: HTMLCanvasElement,
       callback: (blob: Blob | null) => void,
-      type?: string,
+      type = "image/png",
     ): void {
       const backing = backings.get(this);
       if (backing === undefined) {
@@ -87,9 +87,7 @@ Object.defineProperties(HTMLCanvasElement.prototype, {
       const buffer = backing.toBuffer("image/png");
       // Copied into a plain Uint8Array: node's Buffer is backed by a shared
       // pool, and Blob's types will not take one.
-      callback(
-        new Blob([Uint8Array.from(buffer)], { type: type ?? "image/png" }),
-      );
+      callback(new Blob([Uint8Array.from(buffer)], { type }));
     },
   },
 });

@@ -30,11 +30,11 @@ import { TermsRefusalAnswer } from "../../src/ui";
  * the shell stays so the tab bar is the way out. Signed out, Auth's rule:
  * no bars."*
  */
-async function renderAt(element: ReactElement, path = "/somewhere") {
+async function renderAt(element: ReactElement) {
   const rootRoute = createRootRoute({ component: () => element });
   const router = createRouter({
     routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: [path] }),
+    history: createMemoryHistory({ initialEntries: ["/somewhere"] }),
   });
   await router.load();
   return render(<RouterProvider router={router} />);

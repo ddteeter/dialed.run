@@ -15,9 +15,9 @@ import {
  * loaded" is a `load` event on the tag the component added.
  */
 
-type RenderOptions = Parameters<TurnstileApi["render"]>[1];
-
 function fakeTurnstile() {
+  type RenderOptions = Parameters<TurnstileApi["render"]>[1];
+
   const rendered: { container: HTMLElement; options: RenderOptions }[] = [];
   const removed: string[] = [];
   const api: TurnstileApi = {

@@ -136,16 +136,15 @@ export async function searchBrands(
   limit = AUTOCOMPLETE_LIMIT,
 ): Promise<BrandRow[]> {
   const matches = prefixMatch(brands.normalized, prefix);
-  if (matches === undefined) return [];
-  return (
-    db
-      .select()
-      .from(brands)
-      // fallow-ignore-next-line code-duplication -- two prefix searches over different tables; searchProducts also filters status='active', a moderation rule that belongs in sight at its own call site rather than inside a shared helper's argument
-      .where(matches)
-      .orderBy(brands.name)
-      .limit(limit)
-  );
+  return matches === undefined
+    ? []
+    : db
+        .select()
+        .from(brands)
+        // fallow-ignore-next-line code-duplication -- two prefix searches over different tables; searchProducts also filters status='active', a moderation rule that belongs in sight at its own call site rather than inside a shared helper's argument
+        .where(matches)
+        .orderBy(brands.name)
+        .limit(limit);
 }
 
 export interface CreateProductInput {
@@ -222,19 +221,20 @@ export async function searchProducts(
   limit = AUTOCOMPLETE_LIMIT,
 ): Promise<ProductRow[]> {
   const matches = prefixMatch(products.normalizedName, prefix);
-  if (matches === undefined) return [];
-  return db
-    .select()
-    .from(products)
-    .where(
-      and(
-        eq(products.brandId, brandId),
-        eq(products.status, "active"),
-        matches,
-      ),
-    )
-    .orderBy(products.name)
-    .limit(limit);
+  return matches === undefined
+    ? []
+    : db
+        .select()
+        .from(products)
+        .where(
+          and(
+            eq(products.brandId, brandId),
+            eq(products.status, "active"),
+            matches,
+          ),
+        )
+        .orderBy(products.name)
+        .limit(limit);
 }
 
 export interface ResolveProductInput {
@@ -276,13 +276,16 @@ export async function productsForBrand(
     .from(brands)
     .where(eq(brands.normalized, normalized))
     .limit(1);
-  if (brand === undefined) return [];
-  return db
-    .select()
-    .from(products)
-    .where(and(eq(products.brandId, brand.id), eq(products.status, "active")))
-    .orderBy(products.name)
-    .limit(limit);
+  return brand === undefined
+    ? []
+    : db
+        .select()
+        .from(products)
+        .where(
+          and(eq(products.brandId, brand.id), eq(products.status, "active")),
+        )
+        .orderBy(products.name)
+        .limit(limit);
 }
 
 export async function resolveProduct(

@@ -138,10 +138,12 @@ export function clustersIn(names: readonly string[]): string[][] {
     const cluster = unique.filter(
       (other) => other === name || areNearlyTheSame(name, other),
     );
-    if (cluster.length > 1) {
-      for (const member of cluster) claimed.add(member);
-      clusters.push(cluster);
+    if (cluster.length <= 1) {
+      continue;
     }
+
+    for (const member of cluster) claimed.add(member);
+    clusters.push(cluster);
   }
   return clusters;
 }
@@ -238,6 +240,6 @@ function alignedTokens(
  * the other anyway.
  */
 function areSpellingsOfOneWord(left: string, right: string): boolean {
-  if (!left.startsWith(right) && !right.startsWith(left)) return false;
-  return Math.abs(left.length - right.length) <= 2;
+  const hasSharedPrefix = left.startsWith(right) || right.startsWith(left);
+  return hasSharedPrefix && Math.abs(left.length - right.length) <= 2;
 }

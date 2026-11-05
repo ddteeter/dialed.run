@@ -845,7 +845,7 @@ The chips row, as the runner sees it: each chip's name, in order.
 */
 function chipNames(): string[] {
   const row = document.querySelector("[data-slot='flag-chips']");
-  if (!(row instanceof HTMLElement)) throw new Error("no chips row");
+  if (!(row instanceof HTMLElement)) throw new TypeError("no chips row");
   return within(row)
     .getAllByRole("button")
     .map((chip) => chip.textContent);

@@ -52,8 +52,8 @@ A 200 with bytes and no content-type at all — what a bare file server sends.
 */
 const untyped: typeof fetch = () => Promise.resolve(new Response(PHOTO));
 
-async function storedBytes(key: string | undefined): Promise<Uint8Array> {
-  const stored = await env.MEDIA.get(key ?? "");
+async function storedBytes(key = ""): Promise<Uint8Array> {
+  const stored = await env.MEDIA.get(key);
   return new Uint8Array(await (stored?.arrayBuffer() ?? new ArrayBuffer(0)));
 }
 

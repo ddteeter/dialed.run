@@ -80,7 +80,7 @@ describe("normalizeIdentity: names in any script", () => {
   it("collapses full-width and half-width compatibility forms", () => {
     expect(normalizeIdentity("ＡＳＩＣＳ")).toBe("asics");
     expect(normalizeIdentity("ﾐｽﾞﾉ")).toBe("ミズノ");
-    expect(normalizeIdentity("ナイキ　２")).toBe("ナイキ 2");
+    expect(normalizeIdentity("ナイキ\u{3000}２")).toBe("ナイキ 2");
   });
 
   it("folds accents on Latin letters, as it always did", () => {

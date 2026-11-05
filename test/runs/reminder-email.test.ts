@@ -39,12 +39,7 @@ import {
 } from "../../src/modules/runs/strava/reminder-email";
 import { pairWithReminder } from "../../src/modules/runs/strava/reminder-match";
 import { fakeMail, seedUser } from "../email/helpers";
-import {
-  batchOf,
-  fakeMessage,
-  oweInCore,
-  weatherLater,
-} from "../queue-fakes";
+import { batchOf, fakeMessage, oweInCore, weatherLater } from "../queue-fakes";
 
 /**
  * STR-9 (design 140): a run landing on Strava owes one reminder email, 20
@@ -225,11 +220,11 @@ async function connectedRunner(
   return { userId, athleteId, email };
 }
 
-function reminderJob(athleteId: string, objectId = newUlid()) {
+function reminderJob(athleteId: string) {
   return {
     type: "strava_reminder",
     athleteId,
-    objectId,
+    objectId: newUlid(),
     aspectType: "create",
     eventTime: nowSeconds(),
   };

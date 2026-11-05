@@ -57,8 +57,8 @@ vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
 
 const ULID = /^[0-9A-HJKMNP-TV-Z]{26}$/u;
 
-function gpx(name = "run.gpx", body = "<gpx/>"): File {
-  return new File([body], name, { type: "application/gpx+xml" });
+function gpx(name = "run.gpx"): File {
+  return new File(["<gpx/>"], name, { type: "application/gpx+xml" });
 }
 
 function dropInput(): HTMLInputElement {
@@ -112,11 +112,11 @@ function parsed(overrides: Parameters<typeof runSummary>[0] = {}) {
     Promise.resolve(outcome({ status: "done", run: runSummary(overrides) }));
 }
 
-function region(slot: string): HTMLElement {
+function parsedCard(): HTMLElement {
   const found = document.querySelector<HTMLElement>(
-    `[data-slot='${CSS.escape(slot)}']`,
+    "[data-slot='parsed-card']",
   );
-  if (found === null) throw new Error(`no ${slot}`);
+  if (found === null) throw new Error("no parsed-card");
   return found;
 }
 
@@ -140,7 +140,7 @@ function told(): HTMLElement {
 The retime form's own region, inside the parsed card's grid.
 */
 function cardStatus(): HTMLElement {
-  const grid = region("parsed-card").parentElement;
+  const grid = parsedCard().parentElement;
   if (grid === null) throw new Error("no card grid");
   return within(grid).getByRole("status");
 }
@@ -976,7 +976,7 @@ describe("A1: Garmin's credit on the card (G1)", () => {
     await user.upload(dropInput(), gpx("morning.gpx"));
     await screen.findByText("Parsed · morning.gpx");
 
-    const credit = region("parsed-card").querySelector(
+    const credit = parsedCard().querySelector(
       "[data-part='garmin-attribution']",
     );
     expect(credit).toHaveTextContent(/^Garmin$/u);
@@ -994,7 +994,7 @@ describe("A1: the parsed card", () => {
     await user.upload(dropInput(), gpx("morning.gpx"));
 
     const strip = await screen.findByText("Parsed · morning.gpx");
-    const card = region("parsed-card");
+    const card = parsedCard();
     expect(card).toContainElement(strip);
     expect(card).toHaveAttribute("data-state", "parsed");
     expect(within(card).getByText("6.2 mi · 51:38")).toBeVisible();
@@ -1088,7 +1088,7 @@ describe("A1: the parsed card", () => {
     );
 
     // The row replaces the time on the stats line; the date stays.
-    const card = region("parsed-card");
+    const card = parsedCard();
     expect(
       within(card).queryByRole("button", { name: /change start time/u }),
     ).toBeNull();
@@ -1503,7 +1503,7 @@ describe("A1: a run already logged", () => {
     await user.upload(dropInput(), gpx("MORNING_RUN_0829.GPX"));
 
     const kicker = await screen.findByText("Already logged");
-    const card = region("parsed-card");
+    const card = parsedCard();
     expect(card).toContainElement(kicker);
     expect(card).toHaveAttribute("data-state", "duplicate");
     expect(within(card).getByText("MORNING_RUN_0829.GPX")).toBeVisible();

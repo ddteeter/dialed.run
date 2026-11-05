@@ -63,11 +63,11 @@ export function ReportAffordance({
   // own entry does nothing, and offering it reads as a bug — while a
   // signed-out reporter has no identity for the distinct-reporter count
   // to be counted against, which is the rule the whole threshold rests on.
-  if (viewerId === undefined) return undefined;
-  // No `authorId !== undefined` in front of this. `viewerId` is known
-  // defined by the line above, so an absent author can never equal it —
+  //
+  // No `authorId !== undefined` in front of the second arm. `viewerId` is
+  // known defined by the first, so an absent author can never equal it —
   // the extra check was a condition no input could make false on its own.
-  if (subject.authorId === viewerId) return undefined;
+  if (viewerId === undefined || subject.authorId === viewerId) return undefined;
 
   function close(): void {
     setIsOpen(false);

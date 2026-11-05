@@ -258,11 +258,13 @@ function isMatch(pattern: string, pathname: string): boolean {
   if (pattern === "*") return true;
   const wanted = pattern.split("/");
   const got = pathname.split("/");
-  if (wanted.length !== got.length) return false;
   // `String()` rather than a `??` default: the lengths are equal, so every
   // index is present, and a fallback would be a branch nothing can reach.
-  return wanted.every((segment, index) =>
-    isSegmentMatch(segment, String(got[index])),
+  return (
+    wanted.length === got.length &&
+    wanted.every((segment, index) =>
+      isSegmentMatch(segment, String(got[index])),
+    )
   );
 }
 
@@ -342,8 +344,7 @@ export function navTypeFor(
 ): NavType | undefined {
   // Same screen, new search params or hash: nothing moved, and that is a
   // ruling rather than an absence — hence `cut` and not `undefined`.
-  if (from === to) return "cut";
-  return rowFor(from, to, isBack)?.type;
+  return from === to ? "cut" : rowFor(from, to, isBack)?.type;
 }
 
 /**

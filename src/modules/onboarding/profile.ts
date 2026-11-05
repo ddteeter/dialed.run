@@ -290,6 +290,5 @@ export async function requiresOnboarding(
   db: DrizzleD1Database,
   userId: string | undefined,
 ): Promise<boolean> {
-  if (userId === undefined) return false;
-  return !(await hasOnboarded(db, userId));
+  return userId !== undefined && !(await hasOnboarded(db, userId));
 }

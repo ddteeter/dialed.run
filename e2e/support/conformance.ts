@@ -231,7 +231,6 @@ export async function signatureOf(
   return [...rows].toSorted((a, b) => a[0] - b[0]).map(([, row]) => row);
 }
 
-
 /**
  * The region's own children, each as the text it contains.
  *
@@ -311,10 +310,18 @@ export async function alignmentsOf(
       const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
       let top = Infinity;
       let bottom = -Infinity;
-      for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+      for (
+        let node = walker.nextNode();
+        node !== null;
+        node = walker.nextNode()
+      ) {
         const parent = node.parentElement;
-        if (parent === null || getComputedStyle(parent).position === "absolute") continue;
-        if ((node.textContent ?? "").trim() === "") continue;
+        if (
+          parent === null ||
+          getComputedStyle(parent).position === "absolute" ||
+          (node.textContent ?? "").trim() === ""
+        )
+          continue;
         const range = document.createRange();
         range.selectNodeContents(node);
         const rect = range.getBoundingClientRect();

@@ -46,7 +46,7 @@ What the fetch was asked to send, as form fields.
 function sentFields(fetchImpl: ReturnType<typeof answering>): URLSearchParams {
   const init = fetchImpl.mock.calls[0]?.[1];
   const body = init?.body;
-  if (!(body instanceof URLSearchParams)) throw new Error("no form body");
+  if (!(body instanceof URLSearchParams)) throw new TypeError("no form body");
   return body;
 }
 

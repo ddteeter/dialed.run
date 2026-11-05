@@ -13,13 +13,6 @@ const LINK_CLASS =
   "target inline-flex items-center self-start rounded-pill bg-ink px-5 font-bold text-ground no-underline";
 
 /**
- * What a reset attempt came to: the password is set, or the link had run
- * out — which is not a failure the form can fix, so it replaces the form
- * rather than banding it.
- */
-type Outcome = "set" | "expired";
-
-/**
 The run-out panel: a link with no token, or one the server refused.
 */
 function RunOut(): JSX.Element {
@@ -65,6 +58,10 @@ function ResetForm({
   reset: (token: string, values: { password: string }) => Promise<void>;
 }>): JSX.Element {
   const [password, setPassword] = useState("");
+  // What a reset attempt came to: the password is set, or the link had run
+  // out — which is not a failure the form can fix, so it replaces the form
+  // rather than banding it.
+  type Outcome = "set" | "expired";
   const [outcome, setOutcome] = useState<Outcome | undefined>();
   const form = useFormSubmit({
     schema: newPasswordSchema,

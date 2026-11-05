@@ -137,7 +137,8 @@ function part(name: string): HTMLElement {
 
 function fileInput(): HTMLInputElement {
   const input = document.querySelector("input[type='file']");
-  if (!(input instanceof HTMLInputElement)) throw new Error("no file input");
+  if (!(input instanceof HTMLInputElement))
+    throw new TypeError("no file input");
   return input;
 }
 
@@ -977,7 +978,7 @@ describe("GarmentDetail: the retire confirm (round 22)", () => {
       screen.getByRole("button", { name: "Retire Tracksmith Harrier" }),
     );
     const primary = sheet().querySelector("[data-part='primary-action']");
-    if (!(primary instanceof HTMLElement)) throw new Error("no primary");
+    if (!(primary instanceof HTMLElement)) throw new TypeError("no primary");
     await user.click(primary);
 
     expectBusy(primary);

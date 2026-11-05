@@ -184,8 +184,9 @@ function paceSeconds(
   distanceM: number,
   unit: DistanceUnit,
 ): number | undefined {
-  if (distanceM <= 0) return undefined;
-  return Math.round((durationS * metresPer(unit)) / distanceM);
+  return distanceM <= 0
+    ? undefined
+    : Math.round((durationS * metresPer(unit)) / distanceM);
 }
 
 /**

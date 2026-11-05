@@ -79,7 +79,7 @@ export function matchingGroups(
     const pieces = group.pieces.filter((piece) =>
       piece.name.toLowerCase().includes(wanted),
     );
-    return pieces.length === 0 ? [] : [{ ...group, pieces }];
+    return pieces.length === 0 ? [] : { ...group, pieces };
   });
 }
 

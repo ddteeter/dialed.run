@@ -108,12 +108,10 @@ describe("the JSON-LD rung", () => {
     // `typeof null === "object"`, so a walk that skips the null check reads
     // a property off it and throws — losing the rung to a page that merely
     // had a hole in its list.
-    // `JSON.stringify` writes the hole as a literal null, which is the
-    // point — the document really does contain one.
+    // The hole is written out as a literal null, which is the point — the
+    // document really does contain one.
     const html = pageWith(
-      JSON.stringify({
-        "@graph": [undefined, { "@type": "Product", name: "Rover Half-Zip" }],
-      }),
+      '{"@graph":[null,{"@type":"Product","name":"Rover Half-Zip"}]}',
     );
     expect(html).toContain("null");
     expect(jsonLdExtractor.extract(PAGE, html)?.name).toBe("Rover Half-Zip");

@@ -57,9 +57,7 @@ const CONTENT_PARTS = new Set([
 ]);
 
 function withoutKnownGaps(cell: string): string {
-  return cell
-    .replace(" · DAMP", "")
-    .replace(/^← /u, "");
+  return cell.replace(" · DAMP", "").replace(/^← /u, "");
 }
 
 /**
@@ -122,15 +120,22 @@ async function isSideBySide(page: Page, selector: string): Promise<boolean> {
     const [first, second] = [...element.children].map((child) =>
       child.getBoundingClientRect(),
     );
-    if (first === undefined || second === undefined) return false;
-    return second.top < first.bottom && second.left >= first.right;
+    return (
+      first !== undefined &&
+      second !== undefined &&
+      second.top < first.bottom &&
+      second.left >= first.right
+    );
   });
 }
 
 /**
 Whether a region's last cell is pushed to its right-hand edge.
 */
-async function isLastFlushRight(page: Page, selector: string): Promise<boolean> {
+async function isLastFlushRight(
+  page: Page,
+  selector: string,
+): Promise<boolean> {
   return page.$eval(selector, (element) => {
     const last = element.lastElementChild;
     if (last === null) return false;
@@ -153,7 +158,9 @@ async function box(
 
 async function openDetail(page: Page, seed: SeededGarment): Promise<void> {
   await page.goto(`/closet/${seed.itemId}`);
-  await page.locator('html[data-hydrated="true"]').waitFor({ state: "attached" });
+  await page
+    .locator('html[data-hydrated="true"]')
+    .waitFor({ state: "attached" });
 }
 
 /**
@@ -333,10 +340,14 @@ async function visibleCells(page: Page, selector: string): Promise<string[]> {
     children.map((child) => {
       const walker = document.createTreeWalker(child, NodeFilter.SHOW_TEXT);
       const words: string[] = [];
-      for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+      for (
+        let node = walker.nextNode();
+        node !== null;
+        node = walker.nextNode()
+      ) {
         const parent = node.parentElement;
-        if (parent === null) continue;
-        if (getComputedStyle(parent).visibility === "hidden") continue;
+        if (parent === null || getComputedStyle(parent).visibility === "hidden")
+          continue;
         const text = (node.textContent ?? "").trim();
         if (text !== "") words.push(text);
       }

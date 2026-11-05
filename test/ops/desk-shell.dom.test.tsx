@@ -17,7 +17,6 @@ import { describe, expect, it, vi } from "vitest";
 import { DeskShell } from "../../src/modules/ops/components/DeskShell";
 import { DeskTodayPage, Today } from "../../src/modules/ops/components/Today";
 import type { DeskToday, TodayCounts } from "../../src/modules/ops/desk";
-import type { GaveUpJob } from "../../src/modules/ops/gave-up";
 
 /**
  * The Desk's shell and Today (Operator Screens D0).
@@ -60,19 +59,14 @@ function desk(counts: Partial<TodayCounts> = {}): DeskToday {
   };
 }
 
-function renderToday(
-  today: DeskToday,
-  gaveUp: readonly GaveUpJob[] = [],
-  handlers: Partial<Parameters<typeof Today>[0]> = {},
-) {
+function renderToday(today: DeskToday) {
   return render(
     <Today
       today={today}
-      gaveUp={gaveUp}
+      gaveUp={[]}
       retry={vi.fn(() => Promise.resolve("retried"))}
       drop={vi.fn(() => Promise.resolve())}
       onChanged={vi.fn(() => Promise.resolve())}
-      {...handlers}
     />,
   );
 }

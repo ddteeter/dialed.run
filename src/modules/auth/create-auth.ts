@@ -138,8 +138,9 @@ export function googleCredentials(
   clientId: string | undefined,
   clientSecret: string | undefined,
 ): AuthConfig["google"] {
-  if (clientId === undefined || clientSecret === undefined) return undefined;
-  return { clientId, clientSecret };
+  return clientId === undefined || clientSecret === undefined
+    ? undefined
+    : { clientId, clientSecret };
 }
 
 /**
