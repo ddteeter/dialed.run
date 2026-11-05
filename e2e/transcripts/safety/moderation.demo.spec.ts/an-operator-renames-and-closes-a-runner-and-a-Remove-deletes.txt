@@ -35,7 +35,7 @@ status
 list
 listitem, level 1, position 1, set size 4
 paragraph
-We couldn't find the file for the photo on one of your garments, so we took it off. Add it again from your Closet if you'd like it there.
+We couldn't find the file for the photo of one of your garments, so we took it off. Add it again from your Closet if you'd like it there.
 end of paragraph
 :day :month #, #:#
 end of listitem, level 1, position 1, set size 4

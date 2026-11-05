@@ -942,103 +942,57 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
 
 <!-- Numbered from the note below, not from 44: a list break, so Prettier keeps 99. -->
 
-99.  **Au7's notice says what was typed is gone, and names a page as well
-     as a form (D-155, design 166).** _Drawn:_ Auth's "Au7 Signed out
-     arrival" — "Log in and you're back on your run. What you entered is
-     kept.", with the annotation "It names what's kept … After Log in, the
-     runner lands on the filled form they left".
-     - **Built instead (owner, 2026-10-31):** no form is restored, the shape
-       of D-96 / D-102 for the terms refusal. The second sentence is "What
-       you typed wasn't kept." Log in still returns to the form's page, as a
-       fresh form, and nothing re-submits.
-     - **Every signed-in form carries**, not only the three the board
-       names. Run, garment and settings forms keep "your run" / "your
-       garment" / "your settings"; every other one (onboarding steps, a
-       report, the Desk's forms) says "Log in and you're back where you
-       were. What you typed wasn't kept."
-     - **The ask:** redraw Au7's notice to the built sentence, annotate the
-       generic variant, and drop "lands on the filled form" from the
-       annotation.
-
-100. **A photo still pending a day after upload, on Review (D-157, design
-     167).** Built as a placeholder from the review row that exists: no
-     board draws it. The row is the photo row (kicker `photo · {id}` or
-     `garment photo · {id}`, the decision bar unchanged), with two
-     differences. - **The tag** under the row: `[not screened in a day]` when the
-     classifier never answered, `[file missing]` when storage has no
-     object to screen. - **The why-here line**, in the body face where a reported row lists
-     the reporters' reasons (as the flagged-handle row does): _"Uploaded
-     over a day ago and still not screened: the classifier has not
-     answered for it. Nobody but its owner sees it while it waits."_, or
-     _"Uploaded over a day ago, and its file is not in storage, so it
-     cannot be screened or shown. Nobody but its owner sees it while it
-     waits."_ A `[file missing]` row draws no photo, since there is none
-     to load. - Today counts both in "photos the screener couldn't finish". - **Clear photo** (owner, 2026-10-31): a `[file missing]` row's
-     decision bar has Clear photo where Approve sits, as the same quiet
-     text button, then Remove and Remove as suspected CSAM. It takes the
-     photo off and the owner's bell says: _"We couldn't find the file for
-     a photo on your run, so we took it off your kit. Add it again if
-     you'd like it there."_, or for a garment _"We couldn't find the file
-     for the photo on one of your garments, so we took it off. Add it
-     again from your Closet if you'd like it there."_ - **The ask:** draw the row and its Clear photo bar, and confirm or
-     replace the two tags, two lines, the label and the two notices.
-
-101. **Today's tripped-breaker line (design 164).** Undesigned. When a hold
-     breaker is at its ceiling this hour, Today shows one line per cause under
-     the three numbers and above OPS-11's skipped-operator line. It is
-     composed exactly as OPS-11's is: a hi-viz `MONO.xs` kicker HOLDS PAUSED
-     over one `text-body` sentence, and no button, because it clears itself
-     as the hour drains. The sentences say what stopped and what happens
-     instead, for example _"Reports hid 12 posts in the last hour, the most
-     they hide in one hour. New ones go to Review without being hidden until
-     the hour clears."_ **The ask:** draw it on D0, or confirm the
-     composition and the copy.
-
-102. **Review's match grid: a floor count, and a many-runners warning
-     (design 164).** Undesigned additions to round 39 #71's MATCHING PHOTOS
-     · ANY RUNNER · N: - When either list has more than its 12, the count reads `12+`, so a
-     count the search did not finish is not shown as a total. - When the matches come from more than three runners, a line sits above
-     the grid, composed as Today's notices are: a hi-viz `MONO.xs` kicker
-     _"Photos from N runners match"_ over a `text-micro` sentence, _"A
-     picture this common may not be one person's. Removed as intimate, it
-     would hold every later upload that looks like it."_ It is there
-     because a Remove as intimate keeps the fingerprint (D-147).
-
-    **The ask:** draw both on the Review row, or confirm them.
-
-103. **Review's "Held in the last day" (design 164).** Undesigned. At the
-     top of Review, one line per cause that has holds still waiting from
-     the last day: a `MONO.xs` label, for example _"Fingerprint matches · 37
-     waiting"_, then an _"Approve all 37"_ link. The link opens the deletes'
-     confirm sheet (round 22's grammar): - heading _"Approve 37 fingerprint holds?"_; - body _"Each one is approved as if you'd pressed Approve on it: it
-     goes back where an Approve puts it, and anyone an Approve tells is
-     told. Use this when a bug held them, not to skip looking."_; - **Approve all**, with **Keep it** focused. While it works, the
-     button reads _"Approving"_, then _"Approved 50 of 120"_ after each
-     batch (owner, 2026-11-02): it releases 50 a request, and the operator
-     waits on it.
-
-    It is the undo for a burst the breakers bounded but nobody saw in time.
-
-    **The ask:** draw it, or confirm the composition and copy.
-
-107. **A takedown request's Decline, once pressed (design 128).**
-Undesigned. Rounds 37 and 44 draw the request's bar (Take it down,
-Decline, Block and decline all) and Block's question, which takes the
-bar's place with its answer and Cancel. Nothing draws Decline once
-pressed. As built: the bar keeps Take it down and Block and decline
-all, Decline leaves it, and under it opens the reason field
-(_"Why not"_, hint _"The person who asked is sent this."_) with a
-chalk **Decline** submit, the §4a band above it. There is no Cancel:
-once Decline is pressed, the field stays open until a decision is
-made or the page is loaded again.
-
-     **The ask:** draw Decline's open state. Should it take the bar's
-     place as Block's question does, and does it get a Cancel back to the
-     bar?
-
-_Items 101–103 (design 164) and 107 (design 128) are open._
+_Nothing from 99 on is open: round 45 answered the last of it._
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
+
+## Answered in round 45 (imported 2026-11-04)
+
+Design answered as `Round 45 Rulings.dc.html`, items 99–103 and 107: four
+confirmed with copy edits, two changed. Desk buttons follow round 44 (104,
+105), which outranks "quiet text button" in 100's entry. The board's text
+is the text of record. Built in design 170.
+
+- **99 · Au7's notice. Confirmed as built.** The board is redrawn to the
+  built sentences: "Log in and you're back on your run." (your garment,
+  your settings) or, for every other signed-in form, "Log in and you're
+  back where you were.", then "What you typed wasn't kept." Log in returns
+  to the form's page as a fresh form, and nothing re-submits. The board's
+  clause that on the Desk the notice takes the Desk's chalk pill does not
+  arise: the notice renders only on the log-in page, which is never on the
+  ink ground (owner, 2026-11-04).
+- **100 · A photo pending a day. Changed, built.** The tags and both why-here
+  lines are confirmed verbatim, and a `[file missing]` row draws no photo.
+  A `[not screened in a day]` row keeps the full photo bar. A `[file
+missing]` row offers **Clear photo only**, as the chalk pill: no Remove,
+  no Remove as suspected CSAM, no Why it comes down, because nothing can be
+  judged and with no file there is no evidence to keep. The bell notices
+  (bell only, no email) read "We couldn't find the file for a photo on your
+  run, so we took it off. Add it again if you'd like it there." and "We
+  couldn't find the file for the photo of one of your garments, so we took
+  it off. Add it again from your Closet if you'd like it there." The ruling
+  that the run's row opens the run and the garment's opens F is deferred
+  as R-178: no bell row links today.
+- **101 · Holds paused. Confirmed as built.**
+- **102 · The match grid. Confirmed, with one addition, built.** `12+` once
+  either list passes 12, and the many-runners kicker over the grid. Added:
+  its N reads "N+" when the search stopped short. It shows on any row with
+  the grid and never changes the bar.
+- **103 · Held in the last day. Changed, built.** The body now reads "…and
+  whoever Approve would tell is told." While it works, the button reads
+  "Approving", then "Approved 50 of 120", and Keep it becomes **Stop**,
+  which finishes the batch in flight and then stops. Esc and the scrim do
+  nothing while it works. Stopped: kicker STOPPED, "Approved 50 of 120. The
+  other 70 are still waiting.", primary "Approve the rest", and Keep it. A
+  failed batch is §4a with NOT FINISHED and the same sentence. Finished:
+  the sheet closes, the line leaves, and focus goes to the next line or the
+  heading.
+- **107 · Decline, once pressed. Changed, built.** It takes the bar's place,
+  as Block's question does: kicker DECLINE THIS REQUEST, the §4a band, Why
+  not (hint "The person who asked is sent this."), chalk Decline, underlined
+  Cancel. Focus goes to the field on open. Cancel or Esc draws the full bar
+  again with focus on Decline, and the typed reason is kept until the row
+  is decided or the page reloads. On submit the row leaves.
 
 ## Answered in round 44 (imported 2026-11-03)
 

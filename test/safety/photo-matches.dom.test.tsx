@@ -802,4 +802,19 @@ describe("a list cut off, and a picture many runners share (design 164)", () => 
     );
     expect(warning?.nextElementSibling?.tagName).toBe("UL");
   });
+
+  it("counts runners as a floor when the search stopped short (round 45 #102)", async () => {
+    await renderWithRouter(
+      <PhotoMatches
+        found={{
+          fingerprinted: true,
+          isCutOff: true,
+          matches: matchesFrom(5, 5),
+        }}
+      />,
+    );
+    expect(
+      screen.getByText("Photos from 5+ runners match"),
+    ).toBeInTheDocument();
+  });
 });

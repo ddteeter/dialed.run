@@ -69,13 +69,20 @@ const MANY_RUNNERS = 3;
  */
 function ManyRunners({
   matches,
-}: Readonly<{ matches: readonly PhotoMatch[] }>): JSX.Element | undefined {
+  isCutOff,
+}: Readonly<{
+  matches: readonly PhotoMatch[];
+  /**
+  The search stopped short, so the count is a floor: "N+" (round 45 #102).
+  */
+  isCutOff: boolean;
+}>): JSX.Element | undefined {
   const runners = new Set(matches.map((match) => match.ownerId)).size;
   if (runners <= MANY_RUNNERS) return undefined;
   return (
     <p data-part="many-runners" className="m-0 flex flex-col gap-1">
       <Mono step="xs" className="text-hiviz-text">
-        {`Photos from ${String(runners)} runners match`}
+        {`Photos from ${String(runners)}${isCutOff ? "+" : ""} runners match`}
       </Mono>
       <span className="text-micro">
         A picture this common may not be one person's. Removed as intimate, it
@@ -126,7 +133,7 @@ function FoundMatches({
       }
       titleRef={deciding.kickerRef}
     >
-      <ManyRunners matches={remaining} />
+      <ManyRunners matches={remaining} isCutOff={found.isCutOff} />
       <Matches
         found={found}
         removed={removed}

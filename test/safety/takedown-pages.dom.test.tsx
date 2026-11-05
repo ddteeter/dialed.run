@@ -497,17 +497,6 @@ describe("Review · removal requests", () => {
       true,
     );
 
-    // Decline's reason opens under the bar, which keeps its other two.
-    await user.click(press("Decline"));
-    expect(press("Take it down")).toBeVisible();
-    expect(press("Block and decline all")).toBeVisible();
-    expect(
-      within(bar ?? document.body).queryByRole("button", { name: "Decline" }),
-    ).toBeNull();
-    expect(
-      isBefore(bar ?? document.body, part("decline") ?? document.body),
-    ).toBe(true);
-
     // Block's question takes the bar's place, its answer then Cancel in a row.
     await user.click(press("Block and decline all"));
     expect(part("request-actions")).toBeNull();
@@ -519,10 +508,73 @@ describe("Review · removal requests", () => {
     expect(confirm.parentElement).toBe(cancel.parentElement);
     expect(confirm.parentElement).toHaveClass("flex", "flex-wrap");
     expect(isBefore(confirm, cancel)).toBe(true);
-    // Cancel brings the bar back with Decline's reason still open.
+    // Cancel brings the bar back, all three in it.
     await user.click(cancel);
-    expect(part("request-actions")).not.toBeNull();
+    const again = within(part("request-actions") ?? document.body);
+    for (const name of ["Take it down", "Decline", "Block and decline all"]) {
+      expect(again.getByRole("button", { name })).toBeVisible();
+    }
+  });
+
+  it("asks why not in the bar's place, and keeps what was typed through Cancel and Esc (round 45 #107)", async () => {
+    const decide = vi.fn<DecideFn>().mockResolvedValue({ outcome: "decided" });
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending()]}
+        decide={decide}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Decline" }));
+
+    // The question replaces the bar, and opens on its field.
+    expect(part("request-actions")).toBeNull();
+    const question = part("decline") ?? document.body;
+    expect(question).toHaveTextContent(/^Decline this request/u);
+    const field = within(question).getByLabelText("Why not");
+    await waitFor(() => {
+      expect(field).toHaveFocus();
+    });
+    const answer = within(question).getByRole("button", { name: "Decline" });
+    const cancel = within(question).getByRole("button", { name: "Cancel" });
+    expect(answer).toHaveClass("bg-ink", "text-ground", "rounded-pill");
+    expect(cancel).toHaveClass("underline");
+    expect(answer.parentElement).toBe(cancel.parentElement);
+    expect(answer.parentElement).toHaveClass("flex", "flex-wrap");
+    expect(isBefore(answer, cancel)).toBe(true);
+    expect(cancel).not.toHaveFocus();
+
+    // Cancel draws the bar again, focus on Decline; the reason is kept.
+    await user.type(field, "Not theirs to ask about");
+    await user.click(cancel);
+    expect(part("decline")).toBeNull();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Decline" })).toHaveFocus();
+    });
+    await user.click(screen.getByRole("button", { name: "Decline" }));
+    expect(screen.getByLabelText("Why not")).toHaveValue(
+      "Not theirs to ask about",
+    );
+
+    // Esc in the field is Cancel too, and keeps it as well.
+    await user.keyboard("{Escape}");
+    expect(part("decline")).toBeNull();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Decline" })).toHaveFocus();
+    });
+    await user.click(screen.getByRole("button", { name: "Decline" }));
+    // A key that is not Esc leaves the question up.
+    await user.keyboard("{Enter}");
     expect(part("decline")).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "Decline" }));
+    expect(decide).toHaveBeenCalledWith({
+      data: {
+        requestId: "01JREQUEST0000000000000001",
+        outcome: "declined",
+        reason: "Not theirs to ask about",
+      },
+    });
   });
 
   it("declines only with a reason, asked for once Decline is pressed, and sends it", async () => {
@@ -784,6 +836,51 @@ describe("Review · removal requests", () => {
       expect(
         screen.getByRole("button", { name: "Block and decline all" }),
       ).toHaveFocus();
+    });
+  });
+
+  it("hands focus back to Decline on Cancel even when the click did not take it", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Decline" }));
+    // Focus left on the page, as Safari leaves it, not on the field.
+    const active = globalThis.document.activeElement;
+    if (active instanceof HTMLElement) active.blur();
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Decline" })).toHaveFocus();
+    });
+  });
+
+  it.each([
+    ["Block and decline all", "Blocking"],
+    ["Decline", "Declining"],
+  ])("names %s's answer by its in-flight verb, %s", async (press, verb) => {
+    const never = Promise.withResolvers<never>().promise;
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" })]}
+        decide={vi.fn<DecideFn>().mockReturnValue(never)}
+        block={vi.fn<BlockFn>().mockReturnValue(never)}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: press }));
+    if (press === "Decline") {
+      await user.type(screen.getByLabelText("Why not"), "Not theirs");
+    }
+    const question = part(press === "Decline" ? "decline" : "block");
+    const answer = within(question ?? document.body).getByRole("button", {
+      name: press,
+    });
+    await user.click(answer);
+    await waitFor(() => {
+      expect(answer).toHaveAccessibleName(verb);
     });
   });
 

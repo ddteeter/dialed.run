@@ -584,6 +584,15 @@ describe("Approve on a stuck photo (owner, 2026-10-31)", () => {
 describe("Clear photo on a missing file (owner, 2026-10-31)", () => {
   beforeEach(resetSafetyTables);
 
+  it("tells the owner in round 45 #100's words", () => {
+    expect(MISSING_PHOTO_NOTICE).toEqual({
+      photo:
+        "We couldn't find the file for a photo on your run, so we took it off. Add it again if you'd like it there.",
+      garment:
+        "We couldn't find the file for the photo of one of your garments, so we took it off. Add it again from your Closet if you'd like it there.",
+    });
+  });
+
   it("takes a kit's photo off, settles the row and asks its owner to add it again", async () => {
     const now = nowSeconds();
     const photoId = await entryPhoto(now, 2 * DAY, false);

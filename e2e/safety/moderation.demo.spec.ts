@@ -367,16 +367,20 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
     ),
   ).toBeVisible();
   await expect(stuckRow.getByRole("img")).toHaveCount(0);
-  // Owner, 2026-10-31: there is no file to approve, so the row offers
-  // Clear photo where Approve sits; it takes the photo off, citing no rule.
-  await scene(page, "Review: Clear photo on a missing file");
+  // Round 45 #100: with no file there is nothing to judge and no evidence
+  // to keep, so Clear photo is the row's only decision, and it asks no
+  // reason; it takes the photo off, citing no rule.
+  await scene(page, "Review: Clear photo, alone, on a missing file");
   const stuckOpener = stuckRow.locator("button[aria-expanded]");
   if ((await stuckOpener.getAttribute("aria-expanded")) === "false") {
     await stuckOpener.click();
   }
-  await expect(stuckRow.getByRole("button", { name: "Approve" })).toHaveCount(
-    0,
-  );
+  for (const gone of ["Approve", "Remove", "Remove as suspected CSAM"]) {
+    await expect(
+      stuckRow.getByRole("button", { name: gone, exact: true }),
+    ).toHaveCount(0);
+  }
+  await expect(stuckRow.getByLabel(/Why it comes down/u)).toHaveCount(0);
   await stuckRow.getByRole("button", { name: "Clear photo" }).click();
   await expect(
     page.getByRole("listitem").filter({ hasText: stuckGarmentId }),
@@ -637,7 +641,7 @@ test("an operator renames and closes a runner, and a Remove deletes", async ({
       .filter({ hasText: "We couldn't find the file for the photo" })
       .locator("p"),
   ).toHaveText(
-    "We couldn't find the file for the photo on one of your garments, so we took it off. Add it again from your Closet if you'd like it there.",
+    "We couldn't find the file for the photo of one of your garments, so we took it off. Add it again from your Closet if you'd like it there.",
   );
 });
 

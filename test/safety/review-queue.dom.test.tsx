@@ -987,24 +987,40 @@ describe("a photo still pending a day after upload (D-157)", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("is decided as any other photo row", () => {
+  it("is decided as any other photo row: the full bar (round 45 #100)", () => {
     renderQueue([stuck("unscreened")]);
-    expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
+    for (const name of ["Remove", "Approve", "Remove as suspected CSAM"]) {
+      expect(screen.getByRole("button", { name })).toBeInTheDocument();
+    }
+    expect(
+      screen.getByRole("combobox", { name: /Why it comes down/ }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Clear photo" }),
     ).not.toBeInTheDocument();
   });
 
-  it("offers Clear photo for a missing file, never Approve, and sends no reason", async () => {
+  it("offers only Clear photo for a missing file, as the chalk pill, and sends no reason (round 45 #100)", async () => {
     const user = userEvent.setup();
+    const { promise, resolve: settle } = Promise.withResolvers<{
+      outcome: ResolveOutcome;
+    }>();
     const { resolve } = renderQueue([stuck("missing_file")]);
+    vi.mocked(resolve).mockReturnValue(promise);
 
-    expect(
-      screen.queryByRole("button", { name: "Approve" }),
-    ).not.toBeInTheDocument();
-    // Remove stays: a reviewer may still decide the row is a takedown.
-    expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Clear photo" }));
+    // Nothing to judge and no evidence to keep: no Approve, no Remove, no
+    // CSAM, and no reason to pick.
+    for (const name of ["Approve", "Remove", "Remove as suspected CSAM"]) {
+      expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+    }
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    const clear = screen.getByRole("button", { name: "Clear photo" });
+    expect(clear).toHaveClass("bg-ink", "text-ground", "rounded-pill");
+    await user.click(clear);
+    await waitFor(() => {
+      expect(clear).toHaveAccessibleName("Clearing");
+    });
+    settle({ outcome: "resolved" });
 
     expect(resolve).toHaveBeenCalledWith({
       data: { queueId: "01HZZZZZZZZZZZZZZZZZZZZZZZ", action: "clear" },
@@ -1038,15 +1054,18 @@ describe("a photo still pending a day after upload (D-157)", () => {
 
   it("drops the refused line at the next press", async () => {
     const user = userEvent.setup();
+    // The second press is left unanswered, so the row stays and only the
+    // line's going is observed.
     renderStuck(
-      vi.fn<Props["resolve"]>().mockResolvedValue({ outcome: "not_found" }),
+      vi
+        .fn<Props["resolve"]>()
+        .mockResolvedValueOnce({ outcome: "not_found" })
+        .mockReturnValueOnce(Promise.withResolvers<never>().promise),
     );
 
     await user.click(screen.getByRole("button", { name: "Clear photo" }));
     await screen.findByText(CLEAR_REFUSED, { selector: "p" });
-    // Remove with no reason is refused by the form itself, so the row
-    // stays and only the line's going is observed.
-    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(screen.getByRole("button", { name: "Clear photo" }));
 
     // No line at all, not an empty one.
     expect(document.querySelector("[data-part='decision-refused']")).toBeNull();
