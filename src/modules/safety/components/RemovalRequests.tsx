@@ -1,13 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 import { z } from "zod";
 
 import { declineReasonField } from "../contracts";
 import {
   Bracketed,
   FormElement,
-  FormEnd,
   FormFailureBand,
   ListSection,
   Mono,
@@ -18,6 +17,7 @@ import {
   useFormSubmit,
   useReturnFocus,
 } from "../../../ui";
+import type { FormShell } from "../../../ui";
 import { blockRequesterInput } from "../inputs";
 import type { HoldState } from "../takedown-limits";
 import type { PendingTakedownRequest } from "../takedown-requests";
@@ -37,6 +37,15 @@ type Decide = (input: {
     | { requestId: string; outcome: "removed" }
     | { requestId: string; outcome: "declined"; reason: string };
 }) => Promise<unknown>;
+
+/**
+ * One request's decision: which request, what sends it, and what follows.
+ */
+type Deciding = Readonly<{
+  requestId: string;
+  decide: Decide;
+  onDecided: () => void;
+}>;
 
 function requestId(request: PendingTakedownRequest): string {
   return request.id;
@@ -115,17 +124,19 @@ export function RemovalRequests({
 }
 
 /**
- * The Cancel of a question asked in place. The question opens on Cancel
- * (round 37 #59f), so the safe answer is the one under focus.
+ * The Cancel of a question asked in place. Block's question opens on
+ * Cancel (round 37 #59f), so the safe answer is the one under focus;
+ * Decline's opens on its field (round 45 #107), so its Cancel waits.
  */
 function CancelButton({
   onCancel,
-}: Readonly<{ onCancel: () => void }>): JSX.Element {
+  hasFocus,
+}: Readonly<{ onCancel: () => void; hasFocus: boolean }>): JSX.Element {
   // State rather than a ref, so the effect runs once the button exists.
   const [button, setButton] = useState<HTMLButtonElement | undefined>();
   useEffect(() => {
-    button?.focus();
-  }, [button]);
+    if (hasFocus) button?.focus();
+  }, [button, hasFocus]);
   return (
     <button
       ref={(node) => {
@@ -233,12 +244,12 @@ function RemovalRequestRow(props: RowProps): JSX.Element {
 /**
  * A request's decisions, as rounds 37 and 44 draw them: one bar, Take it
  * down first, then Decline and Block and decline all as outline pills.
- * Decline opens its reason under the bar. Block and decline all asks
- * first (design 137), and its question takes the bar's place, because it
- * declines every open request from this requester at once and blocks
- * them. Nothing is sent to them. Round 37 #59f: the question opens on
- * Cancel, as CSAM's does, and Cancel or Esc hands focus back to the
- * button that asked.
+ * Each of those two asks in the bar's place. Block and decline all asks
+ * first (design 137) because it declines every open request from this
+ * requester at once and blocks them; nothing is sent to them. Decline asks
+ * why not (round 45 #107), and what was typed is kept through Cancel until
+ * the row is decided. Cancel or Esc draws the bar again with focus on the
+ * button that asked (round 37 #59f).
  */
 function RequestActions({
   request,
@@ -256,10 +267,12 @@ function RequestActions({
   }>;
 }>): JSX.Element {
   const { decide, block, onDecided, onBlocked } = acts;
-  const [isDeclining, setIsDeclining] = useState(false);
-  const [isAsking, setIsAsking] = useState(false);
-  const askedFrom = useReturnFocus();
-  if (isAsking) {
+  const deciding = { requestId: request.id, decide, onDecided };
+  const [asking, setAsking] = useState<"decline" | "block" | undefined>();
+  const [reason, setReason] = useState("");
+  const declinedFrom = useReturnFocus();
+  const blockedFrom = useReturnFocus();
+  if (asking === "block") {
     return (
       <BlockQuestion
         requestId={request.id}
@@ -267,50 +280,108 @@ function RequestActions({
         block={block}
         onBlocked={onBlocked}
         onCancel={() => {
-          setIsAsking(false);
-          askedFrom.restore();
+          setAsking(undefined);
+          blockedFrom.restore();
+        }}
+      />
+    );
+  }
+  if (asking === "decline") {
+    return (
+      <DeclineQuestion
+        deciding={deciding}
+        reason={{ value: reason, onChange: setReason }}
+        onCancel={() => {
+          setAsking(undefined);
+          declinedFrom.restore();
         }}
       />
     );
   }
   return (
-    <>
-      <div data-part="request-actions" className={ACTION_BAR}>
-        <RemoveForm
-          requestId={request.id}
-          decide={decide}
-          onDecided={onDecided}
+    <div data-part="request-actions" className={ACTION_BAR}>
+      <RemoveForm deciding={deciding} />
+      <button
+        ref={declinedFrom.ref}
+        type="button"
+        className={`target ${QUIET_PILL}`}
+        onClick={() => {
+          setAsking("decline");
+        }}
+      >
+        Decline
+      </button>
+      <button
+        ref={blockedFrom.ref}
+        type="button"
+        className={`target ${QUIET_PILL}`}
+        onClick={() => {
+          setAsking("block");
+        }}
+      >
+        Block and decline all
+      </button>
+    </div>
+  );
+}
+
+/**
+ * A question asked in the bar's place: what it asks, the §4a band, then
+ * its answer as the chalk pill and Cancel beside it. Esc anywhere in it is
+ * Cancel. On a wrapper, because `FormElement` is the forms primitive and
+ * takes no key handler; a key pressed inside the form bubbles to it.
+ */
+function QuestionInPlace({
+  form,
+  dataPart,
+  onSubmit,
+  answer,
+  children,
+}: Readonly<{
+  form: FormShell;
+  dataPart: string;
+  onSubmit: () => void;
+  /**
+  The answer's words, the way back, and whether Cancel takes focus.
+  */
+  answer: Readonly<{
+    label: string;
+    pendingLabel: string;
+    onCancel: () => void;
+    cancelHasFocus: boolean;
+  }>;
+  children: ReactNode;
+}>): JSX.Element {
+  // `presentation`: the wrapper only catches what bubbles, and is no
+  // control itself.
+  return (
+    <div
+      role="presentation"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") answer.onCancel();
+      }}
+    >
+      <FormElement form={form} dataPart={dataPart} onSubmit={onSubmit}>
+        {children}
+        <FormFailureBand
+          failure={form.failure}
+          onRetry={form.retry}
+          retryRef={form.retryRef}
         />
-        {isDeclining ? undefined : (
-          <button
-            type="button"
-            className={`target ${QUIET_PILL}`}
-            onClick={() => {
-              setIsDeclining(true);
-            }}
-          >
-            Decline
-          </button>
-        )}
-        <button
-          ref={askedFrom.ref}
-          type="button"
-          className={`target ${QUIET_PILL}`}
-          onClick={() => {
-            setIsAsking(true);
-          }}
-        >
-          Block and decline all
-        </button>
-      </div>
-      {isDeclining ? (
-        <DeclineForm
-          requestId={request.id}
-          decide={decide}
-          onDecided={onDecided}
-        />
-      ) : undefined}
-    </>
+        <div className={ACTION_BAR}>
+          <SubmitButton
+            tone="chalk"
+            label={answer.label}
+            pendingLabel={answer.pendingLabel}
+            pending={form.pending}
+          />
+          <CancelButton
+            onCancel={answer.onCancel}
+            hasFocus={answer.cancelHasFocus}
+          />
+        </div>
+      </FormElement>
+    </div>
   );
 }
 
@@ -338,47 +409,28 @@ function BlockQuestion({
     successMessage: `Blocked. ${String(count)} ${count === 1 ? "request" : "requests"} declined.`,
     onSuccess: onBlocked,
   });
-  // Esc anywhere in the question is Cancel. On a wrapper, because
-  // `FormElement` is the forms primitive and takes no key handler; a key
-  // pressed inside the form bubbles to it. `presentation`: it only
-  // catches what bubbles, and is no control itself.
   return (
-    <div
-      role="presentation"
-      onKeyDown={(event) => {
-        if (event.key === "Escape") onCancel();
+    <QuestionInPlace
+      form={form}
+      dataPart="block"
+      onSubmit={() => {
+        void form.submit({ requestId });
+      }}
+      answer={{
+        label: "Block and decline all",
+        pendingLabel: "Blocking",
+        onCancel,
+        cancelHasFocus: true,
       }}
     >
-      <FormElement
-        form={form}
-        dataPart="block"
-        onSubmit={() => {
-          void form.submit({ requestId });
-        }}
-      >
-        <p className="m-0 text-body">
-          Block this requester and decline{" "}
-          {count === 1
-            ? "this request"
-            : `all ${String(count)} of their requests`}
-          ? Anything they hid comes back, and nothing is sent to them.
-        </p>
-        <FormFailureBand
-          failure={form.failure}
-          onRetry={form.retry}
-          retryRef={form.retryRef}
-        />
-        <div className={ACTION_BAR}>
-          <SubmitButton
-            tone="chalk"
-            label="Block and decline all"
-            pendingLabel="Blocking"
-            pending={form.pending}
-          />
-          <CancelButton onCancel={onCancel} />
-        </div>
-      </FormElement>
-    </div>
+      <p className="m-0 text-body">
+        Block this requester and decline{" "}
+        {count === 1
+          ? "this request"
+          : `all ${String(count)} of their requests`}
+        ? Anything they hid comes back, and nothing is sent to them.
+      </p>
+    </QuestionInPlace>
   );
 }
 
@@ -416,14 +468,9 @@ function SubjectLink({
 }
 
 function RemoveForm({
-  requestId,
-  decide,
-  onDecided,
-}: Readonly<{
-  requestId: string;
-  decide: Decide;
-  onDecided: () => void;
-}>): JSX.Element {
+  deciding,
+}: Readonly<{ deciding: Deciding }>): JSX.Element {
+  const { requestId, decide, onDecided } = deciding;
   const form = useFormSubmit({
     carry: "page",
     schema: z.object({}),
@@ -454,16 +501,19 @@ function RemoveForm({
   );
 }
 
-function DeclineForm({
-  requestId,
-  decide,
-  onDecided,
+function DeclineQuestion({
+  deciding,
+  reason,
+  onCancel,
 }: Readonly<{
-  requestId: string;
-  decide: Decide;
-  onDecided: () => void;
+  deciding: Deciding;
+  /**
+  What was typed, kept by the row so Cancel does not lose it.
+  */
+  reason: Readonly<{ value: string; onChange: (next: string) => void }>;
+  onCancel: () => void;
 }>): JSX.Element {
-  const [reason, setReason] = useState("");
+  const { requestId, decide, onDecided } = deciding;
   const form = useFormSubmit({
     carry: "page",
     schema: declineSchema,
@@ -472,29 +522,35 @@ function DeclineForm({
     successMessage: "Declined.",
     onSuccess: onDecided,
   });
+  // Round 45 #107: the question opens on its field.
+  const { focusField } = form;
+  useEffect(() => {
+    focusField("reason");
+  }, [focusField]);
   return (
-    <FormElement
+    <QuestionInPlace
       form={form}
       dataPart="decline"
       onSubmit={() => {
-        void form.submit({ reason });
+        void form.submit({ reason: reason.value });
+      }}
+      answer={{
+        label: "Decline",
+        pendingLabel: "Declining",
+        onCancel,
+        cancelHasFocus: false,
       }}
     >
+      <Mono step="xs">Decline this request</Mono>
       <TextField
         name="reason"
         label="Why not"
         hint="The person who asked is sent this."
-        value={reason}
-        onChange={setReason}
+        value={reason.value}
+        onChange={reason.onChange}
         field={form.field}
         error={form.fieldErrors.reason}
       />
-      <FormEnd
-        form={form}
-        tone="chalk"
-        label="Decline"
-        pendingLabel="Declining"
-      />
-    </FormElement>
+    </QuestionInPlace>
   );
 }
