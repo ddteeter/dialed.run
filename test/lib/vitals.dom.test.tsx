@@ -54,12 +54,11 @@ function base(id: string, value: number, navigationType: NavigationType) {
 }
 
 function lcp(
-  id: string,
   value: number,
   navigationType: NavigationType = "navigate",
 ): LCPMetricWithAttribution {
   return {
-    ...base(id, value, navigationType),
+    ...base("v1", value, navigationType),
     name: "LCP",
     attribution: {
       timeToFirstByte: 100,
@@ -70,9 +69,9 @@ function lcp(
   };
 }
 
-function inp(id: string, value: number): INPMetricWithAttribution {
+function inp(value: number): INPMetricWithAttribution {
   return {
-    ...base(id, value, "navigate"),
+    ...base("i1", value, "navigate"),
     name: "INP",
     attribution: {
       interactionTarget: "",
@@ -208,7 +207,7 @@ function start(routeIds = ["__root__", "/closet/"]): Harness {
 describe("startVitalsReporter, the hard load", () => {
   it("sends LCP with its four parts, under the landing route, on hide", () => {
     const page = start();
-    page.report(lcp("v1", 1200));
+    page.report(lcp(1200));
     expect(page.beacons).toEqual([]);
     page.hide();
     expect(page.beacons).toEqual([
@@ -223,7 +222,7 @@ describe("startVitalsReporter, the hard load", () => {
 
   it("sends INP's three parts in the contract's order, and CLS with none", () => {
     const page = start();
-    page.report(inp("i1", 180));
+    page.report(inp(180));
     page.report(cls("c1", 0.05));
     page.hide();
     expect(page.beacons).toEqual([
@@ -250,7 +249,7 @@ describe("startVitalsReporter, the hard load", () => {
   it("keeps a hard-load metric on the landing route after navigating", () => {
     const page = start();
     page.router.navigate("/runs/$runId", page, 0);
-    page.report(inp("i1", 90));
+    page.report(inp(90));
     page.hide();
     expect(page.beacons).toContainEqual(
       expect.objectContaining({
@@ -297,7 +296,7 @@ describe("startVitalsReporter, the hard load", () => {
 
   it("spells a soft navigation the way the contract does", () => {
     const page = start();
-    page.report(lcp("v1", 900, "soft-navigation"));
+    page.report(lcp(900, "soft-navigation"));
     page.hide();
     expect(page.beacons).toEqual([
       expect.objectContaining({ navigationType: "soft" }),
@@ -306,7 +305,7 @@ describe("startVitalsReporter, the hard load", () => {
 
   it("one beacon per navigation type", () => {
     const page = start();
-    page.report(lcp("v1", 900, "reload"));
+    page.report(lcp(900, "reload"));
     page.report(cls("c1", 0.1, "navigate"));
     page.hide();
     expect(page.beacons).toEqual([
@@ -323,7 +322,7 @@ describe("startVitalsReporter, the hard load", () => {
 
   it("drops a value the endpoint would refuse, and only that one", () => {
     const page = start();
-    page.report(lcp("v1", 200_000));
+    page.report(lcp(200_000));
     page.report(cls("c1", 0.1));
     page.hide();
     expect(page.beacons).toEqual([
@@ -347,8 +346,8 @@ describe("startVitalsReporter, the hard load", () => {
 
   it("every beacon passes the endpoint's schema", () => {
     const page = start();
-    page.report(lcp("v1", 1200));
-    page.report(inp("i1", 180));
+    page.report(lcp(1200));
+    page.report(inp(180));
     page.router.navigate("/feed/", page, 250);
     page.hide();
     expect(page.beacons).toHaveLength(2);
@@ -532,10 +531,10 @@ describe("browserVitalsDeps", () => {
   });
 
   it("sends a beacon to the endpoint", () => {
-    const sendBeacon = vi.fn(() => true);
-    vi.stubGlobal("navigator", { sendBeacon });
+    const isQueued = vi.fn(() => true);
+    vi.stubGlobal("navigator", { sendBeacon: isQueued });
     browserVitalsDeps().send("{}");
-    expect(sendBeacon).toHaveBeenCalledWith("/api/vitals", "{}");
+    expect(isQueued).toHaveBeenCalledWith("/api/vitals", "{}");
   });
 
   it("flushes when the document is hidden, and not when it is shown", () => {
