@@ -92,8 +92,9 @@ export interface CeilingReading {
  * share of them, rounded up, and never reachable under the fewest.
  */
 export function classifierCeiling(screened: number): number {
-  if (screened < CLASSIFIER_FEWEST_SCREENED) return Infinity;
-  return Math.ceil(screened * CLASSIFIER_FLAG_SHARE);
+  return screened < CLASSIFIER_FEWEST_SCREENED
+    ? Infinity
+    : Math.ceil(screened * CLASSIFIER_FLAG_SHARE);
 }
 
 /**
@@ -360,8 +361,9 @@ async function reportsCeilingFor(
   held: number,
   now: number,
 ): Promise<number> {
-  if (held < REPORT_HIDES_FLOOR) return REPORT_HIDES_FLOOR;
-  return reportsCeilingBefore(db, now - HOUR_S);
+  return held < REPORT_HIDES_FLOOR
+    ? REPORT_HIDES_FLOOR
+    : reportsCeilingBefore(db, now - HOUR_S);
 }
 
 /**
@@ -379,8 +381,9 @@ async function reportsCeilingBefore(db: Db, until: number): Promise<number> {
  */
 function heldBy(cause: HoldCause): SQL | undefined {
   const opened = eq(reviewQueue.source, cause);
-  if (cause !== "reports") return opened;
-  return and(opened, inArray(reviewQueue.subjectType, reportSubjectsThatHide));
+  return cause === "reports"
+    ? and(opened, inArray(reviewQueue.subjectType, reportSubjectsThatHide))
+    : opened;
 }
 
 /**

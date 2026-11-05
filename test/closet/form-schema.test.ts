@@ -27,7 +27,8 @@ The same dodge `test/lib/contracts-boundaries.test.ts` documents: a literal
 insecure URL is rejected" into "this secure URL is rejected". Built from a
 variable so no fixer can see it. Reported as guardrails#63.
 */
-function urlWithScheme(scheme: string): string {
+function httpUrl(): string {
+  const scheme = "http";
   return `${scheme}://example.com`;
 }
 
@@ -102,11 +103,7 @@ describe("garmentFormSchema", () => {
     ["brand", "b".repeat(61), "Keep the brand under 60 characters."],
     ["size", "s".repeat(21), "Keep the size under 20 characters."],
     ["color", "c".repeat(31), "Keep the color under 30 characters."],
-    [
-      "productUrl",
-      urlWithScheme("http"),
-      "Use a link that starts with https://.",
-    ],
+    ["productUrl", httpUrl(), "Use a link that starts with https://."],
     [
       "productUrl",
       "not a url",
@@ -227,7 +224,7 @@ describe("F's product link (round 43 #93)", () => {
   it("never upgrades a link typed with http", () => {
     const result = garmentFormSchema.safeParse({
       ...VALID,
-      productUrl: urlWithScheme("http"),
+      productUrl: httpUrl(),
     });
     expect(result.error?.issues[0]?.message).toBe(
       "Use a link that starts with https://.",

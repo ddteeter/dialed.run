@@ -244,7 +244,7 @@ describe("R: the badges, and the one breath", () => {
 describe("R: R2b from the list", () => {
   it("opens for the row it was asked from, and reloads the list when it lands", async () => {
     const user = userEvent.setup();
-    const setConditions = vi.fn<ConditionsActions["setConditions"]>(() =>
+    const didSetConditions = vi.fn<ConditionsActions["setConditions"]>(() =>
       Promise.resolve(true),
     );
     const { router } = await renderWithRouter(
@@ -264,7 +264,7 @@ describe("R: R2b from the list", () => {
             canSetConditions: true,
           }),
         ],
-        { setConditions },
+        { setConditions: didSetConditions },
       ),
     );
     const invalidate = vi.spyOn(router, "invalidate");
@@ -288,7 +288,7 @@ describe("R: R2b from the list", () => {
     );
 
     await waitFor(() => {
-      expect(setConditions).toHaveBeenCalledWith({
+      expect(didSetConditions).toHaveBeenCalledWith({
         data: { runId: "01B", bandFloorC: 10, sky: "rain" },
       });
     });

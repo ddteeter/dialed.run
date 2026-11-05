@@ -52,8 +52,7 @@ export default async function a11yCoverageTeardown(): Promise<void> {
       branches: process.env.A11Y_RECORD === "1" ? branches : baseline.branches,
     },
   );
-  if (problems.length > 0) {
-    const lines = problems.map((problem) => `  ${problem}`);
-    throw new Error(`Accessibility coverage:\n${lines.join("\n")}`);
-  }
+  if (problems.length === 0) return;
+  const lines = problems.map((problem) => `  ${problem}`);
+  throw new Error(`Accessibility coverage:\n${lines.join("\n")}`);
 }

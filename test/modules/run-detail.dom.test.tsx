@@ -20,9 +20,6 @@ import {
  * "Set ›" into a band where it did not.
  */
 
-type SetConditions = ConditionsActions["setConditions"];
-type RetryWeather = ConditionsActions["retryWeather"];
-
 const MILES: Units = { temp: "f", distance: "mi" };
 
 async function openSheet(
@@ -206,6 +203,9 @@ describe("R: the conditions row", () => {
 });
 
 describe("R2b: no weather saved", () => {
+  type SetConditions = ConditionsActions["setConditions"];
+  type RetryWeather = ConditionsActions["retryWeather"];
+
   it("says what happened, outlined, with the two ways on", async () => {
     const user = userEvent.setup();
     await renderWithRouter(detail(runSummary(UNAVAILABLE)));
@@ -286,8 +286,10 @@ describe("R2b: no weather saved", () => {
 
   it("refuses a missing pick with the board's words, on the group it is missing from", async () => {
     const user = userEvent.setup();
-    const setConditions = vi.fn<SetConditions>(() => Promise.resolve(true));
-    await renderWithRouter(detail(runSummary(UNAVAILABLE), { setConditions }));
+    const didSetConditions = vi.fn<SetConditions>(() => Promise.resolve(true));
+    await renderWithRouter(
+      detail(runSummary(UNAVAILABLE), { setConditions: didSetConditions }),
+    );
     const sheet = await openSheet(user);
     await user.click(
       within(sheet).getByRole("button", { name: "Set conditions" }),
@@ -301,7 +303,7 @@ describe("R2b: no weather saved", () => {
       await within(sheet).findByText("Pick how warm it was."),
     ).toBeVisible();
     expect(within(sheet).getByText("Pick the sky.")).toBeVisible();
-    expect(setConditions).not.toHaveBeenCalled();
+    expect(didSetConditions).not.toHaveBeenCalled();
 
     await user.click(within(sheet).getByRole("radio", { name: "50–59°" }));
     await user.click(
@@ -312,14 +314,14 @@ describe("R2b: no weather saved", () => {
       expect(within(sheet).queryByText("Pick how warm it was.")).toBeNull();
     });
     expect(within(sheet).getByText("Pick the sky.")).toBeVisible();
-    expect(setConditions).not.toHaveBeenCalled();
+    expect(didSetConditions).not.toHaveBeenCalled();
   });
 
   it("says the pick on the button, sets both, then reloads the run and closes", async () => {
     const user = userEvent.setup();
-    const setConditions = vi.fn<SetConditions>(() => Promise.resolve(true));
+    const didSetConditions = vi.fn<SetConditions>(() => Promise.resolve(true));
     const { router } = await renderWithRouter(
-      detail(runSummary(UNAVAILABLE), { setConditions }),
+      detail(runSummary(UNAVAILABLE), { setConditions: didSetConditions }),
     );
     const invalidate = vi.spyOn(router, "invalidate");
     const sheet = await openSheet(user);
@@ -338,7 +340,7 @@ describe("R2b: no weather saved", () => {
     );
 
     await waitFor(() => {
-      expect(setConditions).toHaveBeenCalledWith({
+      expect(didSetConditions).toHaveBeenCalledWith({
         data: { runId: RUN_ID, bandFloorC: 10, sky: "rain" },
       });
     });
@@ -351,11 +353,13 @@ describe("R2b: no weather saved", () => {
   it("waits while it sets, and says nothing was saved if it fails", async () => {
     const user = userEvent.setup();
     const pending = Promise.withResolvers<boolean>();
-    const setConditions = vi
+    const didSetConditions = vi
       .fn<SetConditions>()
       .mockReturnValueOnce(pending.promise)
       .mockResolvedValueOnce(true);
-    await renderWithRouter(detail(runSummary(UNAVAILABLE), { setConditions }));
+    await renderWithRouter(
+      detail(runSummary(UNAVAILABLE), { setConditions: didSetConditions }),
+    );
     const sheet = await openSheet(user);
     await user.click(
       within(sheet).getByRole("button", { name: "Set conditions" }),
@@ -373,7 +377,7 @@ describe("R2b: no weather saved", () => {
     expect(submit).toHaveAccessibleName("Setting");
     // A second press mid-flight is not a second write.
     await user.click(submit);
-    expect(setConditions).toHaveBeenCalledTimes(1);
+    expect(didSetConditions).toHaveBeenCalledTimes(1);
 
     pending.reject(new Error("D1 unavailable"));
     expect(await within(sheet).findByText("Nothing saved")).toBeVisible();
@@ -381,18 +385,18 @@ describe("R2b: no weather saved", () => {
     // Try again resubmits exactly the picks that failed.
     await user.click(within(sheet).getByRole("button", { name: "Try again" }));
     await waitFor(() => {
-      expect(setConditions).toHaveBeenCalledTimes(2);
+      expect(didSetConditions).toHaveBeenCalledTimes(2);
     });
-    expect(setConditions).toHaveBeenLastCalledWith({
+    expect(didSetConditions).toHaveBeenLastCalledWith({
       data: { runId: RUN_ID, bandFloorC: 0, sky: "snow" },
     });
   });
 
   it("asks the weather again on Try again, then reloads and closes", async () => {
     const user = userEvent.setup();
-    const retryWeather = vi.fn<RetryWeather>(() => Promise.resolve(true));
+    const didRetryWeather = vi.fn<RetryWeather>(() => Promise.resolve(true));
     const { router } = await renderWithRouter(
-      detail(runSummary(UNAVAILABLE), { retryWeather }),
+      detail(runSummary(UNAVAILABLE), { retryWeather: didRetryWeather }),
     );
     const invalidate = vi.spyOn(router, "invalidate");
     const sheet = await openSheet(user);
@@ -400,7 +404,7 @@ describe("R2b: no weather saved", () => {
     await user.click(within(sheet).getByRole("button", { name: "Try again" }));
 
     await waitFor(() => {
-      expect(retryWeather).toHaveBeenCalledWith({ data: { runId: RUN_ID } });
+      expect(didRetryWeather).toHaveBeenCalledWith({ data: { runId: RUN_ID } });
     });
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).toBeNull();
@@ -411,11 +415,13 @@ describe("R2b: no weather saved", () => {
   it("says it is trying, and still no conditions when the retry fails", async () => {
     const user = userEvent.setup();
     const pending = Promise.withResolvers<boolean>();
-    const retryWeather = vi
+    const didRetryWeather = vi
       .fn<RetryWeather>()
       .mockReturnValueOnce(pending.promise)
       .mockResolvedValueOnce(true);
-    await renderWithRouter(detail(runSummary(UNAVAILABLE), { retryWeather }));
+    await renderWithRouter(
+      detail(runSummary(UNAVAILABLE), { retryWeather: didRetryWeather }),
+    );
     const sheet = await openSheet(user);
 
     const retry = within(sheet).getByRole("button", { name: "Try again" });
@@ -436,7 +442,7 @@ describe("R2b: no weather saved", () => {
     if (band === null) throw new Error("no failure band");
     await user.click(within(band).getByRole("button", { name: "Try again" }));
     await waitFor(() => {
-      expect(retryWeather).toHaveBeenCalledTimes(2);
+      expect(didRetryWeather).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -444,8 +450,10 @@ describe("R2b: no weather saved", () => {
     // Escape and swipe-down are the dialog's own close; both arrive at
     // the same callback.
     const user = userEvent.setup();
-    const setConditions = vi.fn<SetConditions>();
-    await renderWithRouter(detail(runSummary(UNAVAILABLE), { setConditions }));
+    const didSetConditions = vi.fn<SetConditions>();
+    await renderWithRouter(
+      detail(runSummary(UNAVAILABLE), { setConditions: didSetConditions }),
+    );
     const sheet = await openSheet(user);
 
     (sheet as HTMLDialogElement).close();
@@ -453,7 +461,7 @@ describe("R2b: no weather saved", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).toBeNull();
     });
-    expect(setConditions).not.toHaveBeenCalled();
+    expect(didSetConditions).not.toHaveBeenCalled();
     // And it opens again from the row.
     expect(await openSheet(user)).toBeVisible();
   });

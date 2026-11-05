@@ -78,8 +78,9 @@ function optional(value: string): string | undefined {
  */
 export function withScheme(link: string): string | undefined {
   const typed = optional(link);
-  if (typed === undefined || typed.includes("://")) return typed;
-  return `https://${typed}`;
+  return typed === undefined || typed.includes("://")
+    ? typed
+    : `https://${typed}`;
 }
 
 /**

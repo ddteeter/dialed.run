@@ -82,6 +82,7 @@ export function storedLinkErrors(
   item: WardrobeItemRow,
   linkDetail: LinkDetail,
 ): FieldErrors {
-  if (item.productUrl === null || linkDetail.link !== undefined) return {};
-  return { productUrl: httpsUrlProblem(item.productUrl) ?? DENIED_LINK };
+  return item.productUrl === null || linkDetail.link !== undefined
+    ? {}
+    : { productUrl: httpsUrlProblem(item.productUrl) ?? DENIED_LINK };
 }

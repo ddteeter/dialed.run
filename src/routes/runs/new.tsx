@@ -8,7 +8,7 @@ import {
   getGarminPickerFn,
   getImportOutcomeFn,
   importGarminActivityFn,
-  garminImportEnabledFn,
+  isGarminImportEnabledFn,
   retimeRunFn,
   startFileImport,
 } from "../../modules/runs/functions";
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/runs/new")({
       viewerUnitsQuery(),
       bellStateFn(),
       // Plan 160: the owner's alone; the list itself loads after A1 renders.
-      garminImportEnabledFn(),
+      isGarminImportEnabledFn(),
     ]);
     return { units, bell, hasGarmin };
   },

@@ -118,8 +118,12 @@ export function keptGarmentFingerprint(
   moderationActionId: string,
 ) {
   const fingerprint = item.photoFingerprint;
-  if (reason !== "intimate" || fingerprint === null) return [];
-  if (!isDistinctive(fingerprint)) return [];
+  if (
+    reason !== "intimate" ||
+    fingerprint === null ||
+    !isDistinctive(fingerprint)
+  )
+    return [];
   return [
     db.insert(removedFingerprints).values({
       id: newUlid(),
