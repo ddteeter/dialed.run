@@ -892,7 +892,7 @@ export function ChoiceField<TOption extends string>({
   options,
   optionLabels,
   onChange,
-  placeholder,
+  placeholder = "—",
 }: Readonly<
   Omit<ChoosableProps<TOption>, "field"> & {
     /**
@@ -926,7 +926,7 @@ export function ChoiceField<TOption extends string>({
         }}
         className="min-h-target w-full self-stretch border-none bg-transparent font-normal"
       >
-        <option value={NO_CHOICE}>{placeholder ?? "—"}</option>
+        <option value={NO_CHOICE}>{placeholder}</option>
         {options.map((option) => (
           <option key={option} value={option}>
             {optionLabels[option]}
