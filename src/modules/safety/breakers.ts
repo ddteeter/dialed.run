@@ -22,7 +22,18 @@
  * - reports: people, so a multiple of the busiest hour of the last four
  *   weeks, never under a floor.
  */
-import { and, count, desc, eq, gte, inArray, lt, ne, sql } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  lt,
+  lte,
+  ne,
+  sql,
+} from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { drizzle } from "drizzle-orm/d1";
 
@@ -102,13 +113,8 @@ export async function ceilingReading(
   cause: HoldCause,
   now: number,
 ): Promise<CeilingReading> {
-  const since = now - HOUR_S;
-  if (cause === "classifier") {
-    const { flagged, screened } = await screenedSince(db, since);
-    const ceiling = classifierCeiling(screened);
-    return { cause, isOver: flagged >= ceiling, count: flagged, ceiling };
-  }
-  const held = await openedSince(db, cause, since);
+  if (cause === "classifier") return classifierReadingAt(db, now);
+  const held = await openedSince(db, cause, now - HOUR_S);
   const ceiling =
     cause === "fingerprint"
       ? FINGERPRINT_HOLDS_PER_HOUR
@@ -128,6 +134,123 @@ export async function overCeilings(
     HOLD_CAUSES.map((cause) => ceilingReading(db, cause, now)),
   );
   return readings.filter((reading) => reading.isOver);
+}
+
+/**
+ * How far back the hourly alert looks for a trip (R-172): two firings'
+ * worth, so a burst that straddles the top of an hour is inside one look.
+ * Looking twice at one trip is harmless, because the alert's issue is one
+ * a cause a day.
+ */
+export const TRIP_LOOKBACK_S = 2 * HOUR_S;
+
+/**
+ * Every cause whose breaker reached its ceiling at some point from `from`
+ * up to `now` (R-172): what the hourly alert names. A reading on the hour
+ * alone misses a burst split across two hours, because each hour holds
+ * half of it.
+ *
+ * The rows the holds already write say when the ceiling was reached:
+ * - fingerprint and reports: the busiest sliding hour of Review rows;
+ * - classifier: a flag it held back is the breaker refusing, so the
+ *   reading is the one it took then, and otherwise the one now.
+ */
+export async function tripsSince(
+  db: Db,
+  from: number,
+  now: number,
+): Promise<readonly CeilingReading[]> {
+  const readings = await Promise.all(
+    HOLD_CAUSES.map((cause) => busiestReading(db, cause, from, now)),
+  );
+  return readings.filter((reading) => reading.isOver);
+}
+
+/**
+A cause's highest reading from `from` up to `now`.
+*/
+async function busiestReading(
+  db: Db,
+  cause: HoldCause,
+  from: number,
+  now: number,
+): Promise<CeilingReading> {
+  if (cause === "classifier") {
+    return classifierReadingAt(db, await lastRefusalOr(db, from, now));
+  }
+  const held = await busiestSlidingHour(db, cause, from, now);
+  const ceiling =
+    cause === "fingerprint"
+      ? FINGERPRINT_HOLDS_PER_HOUR
+      : await reportsCeilingFor(db, held, from);
+  return { cause, isOver: held >= ceiling, count: held, ceiling };
+}
+
+/**
+ * The classifier's reading as its breaker took it at `at`: the hour up to
+ * and including `at`, nothing screened after it.
+ */
+async function classifierReadingAt(
+  db: Db,
+  at: number,
+): Promise<CeilingReading> {
+  const { flagged, screened } = await screenedIn(db, at - HOUR_S, at);
+  const ceiling = classifierCeiling(screened);
+  return {
+    cause: "classifier",
+    isOver: flagged >= ceiling,
+    count: flagged,
+    ceiling,
+  };
+}
+
+/**
+ * When the classifier breaker last held a flag back from `from` up to
+ * `now`, or `now` when it held none back.
+ */
+async function lastRefusalOr(
+  db: Db,
+  from: number,
+  now: number,
+): Promise<number> {
+  const at = photoScreenings.createdAt;
+  const heldBack = eq(photoScreenings.decision, "held_back");
+  const [latest] = await db
+    .select({ at })
+    .from(photoScreenings)
+    .where(screenedWithin(heldBack, from, now))
+    .orderBy(desc(at))
+    .limit(1);
+  return latest?.at ?? now;
+}
+
+/**
+ * The most rows of a cause opened inside any one hour that ends from
+ * `from` up to `now` (not including it: the next look covers that
+ * second), each hour as a breaker reads it at a hold: that hold and every
+ * one in the hour before it. The rows are read back to an
+ * hour before `from`, so the first hours counted are whole. They are few:
+ * the breakers bound them.
+ */
+async function busiestSlidingHour(
+  db: Db,
+  cause: HoldCause,
+  from: number,
+  now: number,
+): Promise<number> {
+  const opened = reviewQueue.openedAt;
+  const rows = await db
+    .select({
+      at: sql<number>`${opened}`,
+      inHour: sql<number>`count(*) over (order by ${opened} range between ${sql.raw(String(HOUR_S))} preceding and current row)`,
+    })
+    .from(reviewQueue)
+    .where(openedIn(cause, from - HOUR_S, now));
+  let peak = 0;
+  for (const row of rows) {
+    if (row.at >= from) peak = Math.max(peak, row.inHour);
+  }
+  return peak;
 }
 
 /**
@@ -261,6 +384,18 @@ function heldBy(cause: HoldCause): SQL | undefined {
 }
 
 /**
+The rows of a cause opened from `from` up to, not including, `until`.
+*/
+function openedIn(
+  cause: HoldCause,
+  from: number,
+  until: number,
+): SQL | undefined {
+  const opened = reviewQueue.openedAt;
+  return and(heldBy(cause), gte(opened, from), lt(opened, until));
+}
+
+/**
 How many rows of a cause went in front of a person since `since`.
 */
 async function openedSince(
@@ -290,7 +425,7 @@ async function busiestHourIn(
   const rows = await db
     .select({ n: count() })
     .from(reviewQueue)
-    .where(and(heldBy(cause), gte(opened, from), lt(opened, until)))
+    .where(openedIn(cause, from, until))
     .groupBy(hour)
     .orderBy(desc(count()))
     .limit(1);
@@ -298,11 +433,25 @@ async function busiestHourIn(
 }
 
 /**
-How many photos were screened since `since`, and how many of them flagged.
+The screenings matching `which` made from `since` up to and including `until`.
 */
-async function screenedSince(
+function screenedWithin(
+  which: SQL,
+  since: number,
+  until: number,
+): SQL | undefined {
+  const at = photoScreenings.createdAt;
+  return and(which, gte(at, since), lte(at, until));
+}
+
+/**
+ * How many photos were screened from `since` up to `until`, and how many
+ * of them flagged.
+ */
+async function screenedIn(
   db: Db,
   since: number,
+  until: number,
 ): Promise<{ flagged: number; screened: number }> {
   const flag = eq(photoScreenings.decision, "flag");
   const rows = await db
@@ -311,7 +460,7 @@ async function screenedSince(
       flagged: sql<number>`sum(${flag})`.mapWith(Number),
     })
     .from(photoScreenings)
-    .where(and(verdicts, gte(photoScreenings.createdAt, since)));
+    .where(screenedWithin(verdicts, since, until));
   const flagged = rows.reduce((total, row) => total + row.flagged, 0);
   return { flagged, screened: counted(rows) };
 }

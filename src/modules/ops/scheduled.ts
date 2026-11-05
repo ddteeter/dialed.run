@@ -49,7 +49,6 @@ import {
   classifierFromEnv,
   dayHeadroom,
   HEADROOM_WARN_SHARE,
-  overCeilings,
   pendingReviewCount,
   quietScreenerWeek,
   purgeExpiredQuarantine,
@@ -57,6 +56,8 @@ import {
   releaseStaleClaims,
   retryPendingScreenings,
   sweepModerationRecords,
+  TRIP_LOOKBACK_S,
+  tripsSince,
   type CeilingReading,
 } from "../safety";
 
@@ -385,12 +386,13 @@ function utcDay(): string {
  * firing's own event, whose issue may already be open today and so would
  * alert nobody.
  *
- * Read on the hour, so a burst split across two firings' hours can stay
- * under the ceiling in each; the digest's weekly headroom line names a
- * cause running near it.
+ * Read over the last two hours, not on the hour (R-172): a burst split
+ * across two firings stays under the ceiling in each hour taken alone, but
+ * not in the sliding hour the breaker read while holding it.
  */
 async function reportBreakerTrips(reporter: CronReporter): Promise<void> {
-  const over = await overCeilings(coreDb(), nowSeconds());
+  const now = nowSeconds();
+  const over = await tripsSince(coreDb(), now - TRIP_LOOKBACK_S, now);
   const day = utcDay();
   for (const reading of over) {
     reporter.report(
@@ -413,7 +415,7 @@ export function breakerReport(
     { breaker: cause },
     ["breaker", cause, day],
     [
-      `${cause} holds at ${String(count)} of ${String(ceiling)} in the last hour; past the ceiling they stop`,
+      `${cause} holds reached ${String(count)} of ${String(ceiling)} within an hour; past the ceiling they stop`,
     ],
   );
 }
