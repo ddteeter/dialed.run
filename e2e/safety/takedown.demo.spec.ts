@@ -299,6 +299,24 @@ test("someone with no account asks for an intimate image to come down, and an op
   ).toHaveAttribute("src", `/desk/review-photo/${otherPhotoKey}`);
   await expect(others).toContainText(otherPhotoId);
 
+  // Round 45 #107: Decline asks why not in the bar's place, and Cancel
+  // draws the bar again with what was typed kept.
+  await scene(page, "Decline asks why not, in the bar's place");
+  await request.getByRole("button", { name: "Decline", exact: true }).click();
+  const why = request.getByLabel("Why not");
+  await expect(why).toBeFocused();
+  await expect(
+    request.getByRole("button", { name: "Take it down" }),
+  ).toHaveCount(0);
+  await why.fill("Not a photo of you");
+  await request.getByRole("button", { name: "Cancel" }).click();
+  await expect(
+    request.getByRole("button", { name: "Decline", exact: true }),
+  ).toBeFocused();
+  await request.getByRole("button", { name: "Decline", exact: true }).click();
+  await expect(request.getByLabel("Why not")).toHaveValue("Not a photo of you");
+  await page.keyboard.press("Escape");
+
   await scene(page, "Take it down: the kit goes, and the requester is told");
   await request.getByRole("button", { name: "Take it down" }).click();
   await expect(request).toHaveCount(0, { timeout: 15_000 });
