@@ -126,6 +126,7 @@ In order:
      open only the dialog's controls count;
    - `tab-order`: a positive `tabindex`, which reorders the page. Such a
      control comes before the walk's start, so it is not also unreached.
+
 2. **The other width:** the one of `PHONE` and `DESK` farther from the
    test's width. axe and the step 1 checks run again there.
 3. **Reflow at 320×568** (WCAG 1.4.10): `reflow` when the page scrolls
@@ -210,6 +211,7 @@ _How (2026-11-03):_
   `A11Y_RECORD=1` writes the figure instead of failing on it. A rise past
   the noise is printed, with a reminder to raise the baseline; one inside
   it is the next run's fall, so it is not kept.
+
 - **CI.** The teardown prints the figure and appends it to
   `$GITHUB_STEP_SUMMARY`, so no workflow changes. The HTML report is not
   uploaded: the Actions bill is artifact storage.
@@ -272,9 +274,9 @@ and reads text it does not control.
     installs from and Claude's API.
   - The transcripts' diff against the base is written to a file, with
     no model, and capped at 200 KB.
-  - Claude reads the diff, the contract (through design 112), and the
-    source, with Read, Grep and Glob only: no Bash, web or writes. The
-    contract is `design/Accessibility Contract.dc.html`. It answers in a JSON
+  - Claude reads the diff and applies the `a11y-judgment` skill's
+    criteria (step 9b), reading the contract and the source with Read,
+    Grep and Glob only: no Bash, web or writes. It answers in a JSON
     schema of a summary and up to 30 findings (transcript, phrase as
     said, problem, fix).
 - **`post`** (`pull-requests: write`, no model) screens that output as
@@ -365,6 +367,15 @@ _Done (2026-11-03):_ the checklist is eight gestures checked on every
 screen, the five flows (join, log a run, closet, feed, You), and a runs
 table. It is a gate line in `docs/launch/deployment-plan.md` §11, at
 stage 1 (friends) and again at stage 2.
+
+**9b. The judgment review (owner, 2026-11-04).** What no rule can check
+(whether names, headings, errors and order make sense when heard) gets one
+written set of criteria: the skill `.claude/skills/a11y-judgment`. It has
+two branches. A full audit fans out over every transcript in subagent
+shards. A PR review applies the same criteria to a transcript diff, and
+step 5's workflow now reads the skill instead of carrying its own list.
+Findings are flags for the owner to triage, never a gate. Automating a
+real VoiceOver pass is deferred (R-177, #336).
 
 **10. Make it required.** Once step 6 is done, the owner makes the a11y
 check required in branch protection.
