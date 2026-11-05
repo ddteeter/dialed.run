@@ -104,7 +104,8 @@ export function subjectWord(subjectType: ReviewSubjectType): string {
 /**
  * The decision a row may offer that takes no reason: **Approve**, where
  * something queued the subject, or **Clear photo**, where its file is
- * missing (D-157, design 167) and there is nothing to approve.
+ * missing (D-157, design 167) and there is nothing to approve. Clear photo
+ * is then the row's only decision (round 45 #100).
  */
 export type Reasonless = "approve" | "clear";
 
@@ -205,6 +206,34 @@ export function RemovalDecision<TSchema extends z.ZodType, TResult>(
     );
   }
 
+  // A refused decision's line, where the band would be.
+  const refusal =
+    refusedLine === undefined ? undefined : (
+      <p data-part="decision-refused" className="m-0 text-body">
+        {refusedLine}
+      </p>
+    );
+
+  // Round 45 #100: a missing file has nothing to judge and no evidence to
+  // keep, so Clear photo is its only decision, as the chalk pill.
+  if (reasonless === "clear") {
+    return (
+      <DeskForm
+        form={{ ...form, status: refusedLine ?? form.status }}
+        className="flex flex-col gap-2"
+        onSubmit={() => {
+          send({ action: reasonless });
+        }}
+        submit={{
+          label: REASONLESS_LABELS[reasonless],
+          pendingLabel: "Clearing",
+        }}
+      >
+        {refusal}
+      </DeskForm>
+    );
+  }
+
   return (
     <DecisionForm
       form={{ ...form, status: refusedLine ?? form.status }}
@@ -250,11 +279,7 @@ export function RemovalDecision<TSchema extends z.ZodType, TResult>(
         field={form.field}
         error={form.fieldErrors.reason}
       />
-      {refusedLine === undefined ? undefined : (
-        <p data-part="decision-refused" className="m-0 text-body">
-          {refusedLine}
-        </p>
-      )}
+      {refusal}
     </DecisionForm>
   );
 }

@@ -46,14 +46,15 @@ import {
 type Db = ReturnType<typeof drizzle<Record<string, never>>>;
 
 /**
- * What the owner is told, by what the photo was on. It names no rule and
- * no moderator, because neither had a part in it: the file never arrived.
+ * What the owner is told, by what the photo was on, in round 45 #100's
+ * words: in the bell only, with no email. It names no rule and no
+ * moderator, because neither had a part in it: the file never arrived.
  */
 export const MISSING_PHOTO_NOTICE = {
   photo:
-    "We couldn't find the file for a photo on your run, so we took it off your kit. Add it again if you'd like it there.",
+    "We couldn't find the file for a photo on your run, so we took it off. Add it again if you'd like it there.",
   garment:
-    "We couldn't find the file for the photo on one of your garments, so we took it off. Add it again from your Closet if you'd like it there.",
+    "We couldn't find the file for the photo of one of your garments, so we took it off. Add it again from your Closet if you'd like it there.",
 } as const;
 
 type ClearedSubject = keyof typeof MISSING_PHOTO_NOTICE;
