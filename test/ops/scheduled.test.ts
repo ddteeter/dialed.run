@@ -768,6 +768,10 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
   it("reports each hourly speed finding as its own event on the :30 firing (design 165)", async () => {
     const { reporter, events } = recordingReporter();
     const asked: number[] = [];
+    // Bracketed, not compared with a second read of the clock: a second
+    // can tick between the handler's read and the test's, and under
+    // Stryker's slower dry run it did (#303).
+    const before = nowSeconds();
 
     await handleScheduled(ENRICHMENT_RETRY, reporter, {
       speedHourly: (now, report) => {
@@ -782,8 +786,11 @@ describe("the digest reports each kind on its own (OPS-2)", () => {
       },
     });
 
+    const after = nowSeconds();
+    expect(asked).toHaveLength(1);
+    expect(asked[0]).toBeGreaterThanOrEqual(before);
+    expect(asked[0]).toBeLessThanOrEqual(after);
     const day = new Date(nowSeconds() * 1000).toISOString().slice(0, 10);
-    expect(asked).toStrictEqual([nowSeconds()]);
     expect(events.map((event) => event.error)).toStrictEqual([
       expect.objectContaining({ message: "speed: drift" }),
     ]);
