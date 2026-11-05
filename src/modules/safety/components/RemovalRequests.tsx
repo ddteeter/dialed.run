@@ -124,34 +124,6 @@ export function RemovalRequests({
 }
 
 /**
- * The Cancel of a question asked in place. Block's question opens on
- * Cancel (round 37 #59f), so the safe answer is the one under focus;
- * Decline's opens on its field (round 45 #107), so its Cancel waits.
- */
-function CancelButton({
-  onCancel,
-  hasFocus,
-}: Readonly<{ onCancel: () => void; hasFocus: boolean }>): JSX.Element {
-  // State rather than a ref, so the effect runs once the button exists.
-  const [button, setButton] = useState<HTMLButtonElement | undefined>();
-  useEffect(() => {
-    if (hasFocus) button?.focus();
-  }, [button, hasFocus]);
-  return (
-    <button
-      ref={(node) => {
-        setButton(node ?? undefined);
-      }}
-      type="button"
-      className={`target ${QUIET_CANCEL}`}
-      onClick={onCancel}
-    >
-      Cancel
-    </button>
-  );
-}
-
-/**
  * A ref callback that focuses its element once: the flag clears as focus
  * lands, so a later render of the row never takes focus back from a
  * control inside it.
@@ -352,11 +324,24 @@ function QuestionInPlace({
   }>;
   children: ReactNode;
 }>): JSX.Element {
+  // Where the question opens (round 37 #59f, round 45 #107): Block's on
+  // Cancel, the safe answer; Decline's on its field. State rather than a
+  // ref, so the effect runs once the question is in the page.
+  const [question, setQuestion] = useState<HTMLDivElement | undefined>();
+  useEffect(() => {
+    const target = question?.querySelector<HTMLElement>(
+      answer.cancelHasFocus ? "[data-part='cancel']" : "input",
+    );
+    if (target) target.focus();
+  }, [question, answer.cancelHasFocus]);
   // `presentation`: the wrapper only catches what bubbles, and is no
   // control itself.
   return (
     <div
       role="presentation"
+      ref={(node) => {
+        setQuestion(node ?? undefined);
+      }}
       onKeyDown={(event) => {
         if (event.key === "Escape") answer.onCancel();
       }}
@@ -375,10 +360,14 @@ function QuestionInPlace({
             pendingLabel={answer.pendingLabel}
             pending={form.pending}
           />
-          <CancelButton
-            onCancel={answer.onCancel}
-            hasFocus={answer.cancelHasFocus}
-          />
+          <button
+            type="button"
+            data-part="cancel"
+            className={`target ${QUIET_CANCEL}`}
+            onClick={answer.onCancel}
+          >
+            Cancel
+          </button>
         </div>
       </FormElement>
     </div>
@@ -522,11 +511,6 @@ function DeclineQuestion({
     successMessage: "Declined.",
     onSuccess: onDecided,
   });
-  // Round 45 #107: the question opens on its field.
-  const { focusField } = form;
-  useEffect(() => {
-    focusField("reason");
-  }, [focusField]);
   return (
     <QuestionInPlace
       form={form}

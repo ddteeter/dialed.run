@@ -321,16 +321,21 @@ function useRelease(
   const action = useControlAction({
     kicker: "Not finished",
     action: async () => {
-      stopAsked.current = false;
       setIsStopped(false);
-      const isDone = await didReleaseAll({
-        release: run.release,
-        input: { cause: burst.cause, since: run.since },
-        onBatch: (released) => {
-          setApproved((total) => total + released);
-        },
-        shouldStop: () => stopAsked.current,
-      });
+      let isDone: boolean;
+      try {
+        isDone = await didReleaseAll({
+          release: run.release,
+          input: { cause: burst.cause, since: run.since },
+          onBatch: (released) => {
+            setApproved((total) => total + released);
+          },
+          shouldStop: () => stopAsked.current,
+        });
+      } finally {
+        // A Stop is spent by the run it stopped, failed or not.
+        stopAsked.current = false;
+      }
       if (!isDone) {
         setIsStopped(true);
         return;

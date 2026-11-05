@@ -839,6 +839,51 @@ describe("Review · removal requests", () => {
     });
   });
 
+  it("hands focus back to Decline on Cancel even when the click did not take it", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Decline" }));
+    // Focus left on the page, as Safari leaves it, not on the field.
+    const active = globalThis.document.activeElement;
+    if (active instanceof HTMLElement) active.blur();
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Decline" })).toHaveFocus();
+    });
+  });
+
+  it.each([
+    ["Block and decline all", "Blocking"],
+    ["Decline", "Declining"],
+  ])("names %s's answer by its in-flight verb, %s", async (press, verb) => {
+    const never = Promise.withResolvers<never>().promise;
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending({ id: "01JABCDEFGHJKMNPQRSTVWXYZ1" })]}
+        decide={vi.fn<DecideFn>().mockReturnValue(never)}
+        block={vi.fn<BlockFn>().mockReturnValue(never)}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: press }));
+    if (press === "Decline") {
+      await user.type(screen.getByLabelText("Why not"), "Not theirs");
+    }
+    const question = part(press === "Decline" ? "decline" : "block");
+    const answer = within(question ?? document.body).getByRole("button", {
+      name: press,
+    });
+    await user.click(answer);
+    await waitFor(() => {
+      expect(answer).toHaveAccessibleName(verb);
+    });
+  });
+
   it("takes focus only from script: a row is not a tab stop", async () => {
     await renderWithRouter(
       <RemovalRequests

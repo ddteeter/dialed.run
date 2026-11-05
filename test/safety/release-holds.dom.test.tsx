@@ -161,11 +161,18 @@ describe("ReleaseHolds", () => {
         release={release}
       />,
     );
+    // Nothing has left, so nothing takes focus on arrival.
+    expect(
+      screen.getByText("Held in the last day").closest("[tabindex]"),
+    ).not.toHaveFocus();
     fireEvent.click(screen.getByRole("button", { name: "Approve all 5" }));
     const keep = screen.getByRole("button", { name: "Keep it" });
     await waitFor(() => {
       expect(keep).toHaveFocus();
     });
+    expect(keep).toHaveClass("rounded-pill", "border-hairline", "w-full");
+    // No band until a release stops or fails.
+    expect(part("failure-band")).toBeNull();
     fireEvent.click(keep);
     expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
     expect(release).not.toHaveBeenCalled();
@@ -173,10 +180,11 @@ describe("ReleaseHolds", () => {
 
   it("stops after the batch in flight, says how far it got, and offers the rest (round 45 #103)", async () => {
     const first = Promise.withResolvers<ReleaseOutcome>();
+    const rest = Promise.withResolvers<ReleaseOutcome>();
     const release = vi
       .fn<ReleaseHoldsFn>()
       .mockImplementationOnce(() => first.promise)
-      .mockResolvedValueOnce({ released: 70, hasMore: false });
+      .mockImplementationOnce(() => rest.promise);
     const { router } = await renderWithRouter(
       <ReleaseHolds
         bursts={[{ cause: "fingerprint", waiting: 120 }]}
@@ -190,6 +198,7 @@ describe("ReleaseHolds", () => {
 
     // While it works, Keep it is Stop, and Esc does not close the sheet.
     const stop = await screen.findByRole("button", { name: "Stop" });
+    expect(stop).toHaveClass("rounded-pill", "border-hairline", "w-full");
     expect(screen.queryByRole("button", { name: "Keep it" })).toBeNull();
     const dialog = document.querySelector("dialog") ?? document.body;
     const esc = new Event("cancel", { cancelable: true });
@@ -224,10 +233,15 @@ describe("ReleaseHolds", () => {
     await waitFor(() => {
       expect(release).toHaveBeenCalledTimes(2);
     });
+    // Working again: the band has gone, and the count carries on.
+    expect(part("failure-band")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Approved 50 of 120" }),
+    ).toBeInTheDocument();
+    rest.resolve({ released: 70, hasMore: false });
     await waitFor(() => {
       expect(part("release-holds")).toBeNull();
     });
-    expect(screen.queryByText("Stopped")).toBeNull();
     expect(invalidate).toHaveBeenCalled();
   });
 
@@ -359,5 +373,58 @@ describe("ReleaseHolds", () => {
       expect(screen.getByRole("heading", { name: "Review" })).toHaveFocus();
     });
     expect(part("release-holds")).toBeNull();
+  });
+
+  it("lands focus afresh for each line released at the same place", async () => {
+    const release = vi
+      .fn<ReleaseHoldsFn>()
+      .mockResolvedValue({ released: 9, hasMore: false });
+    await renderWithRouter(
+      <ReleaseHolds
+        bursts={[
+          { cause: "fingerprint", waiting: 2 },
+          { cause: "reports", waiting: 3 },
+          { cause: "classifier", waiting: 4 },
+        ]}
+        since={SINCE}
+        release={release}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Approve all 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Approve all" }));
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Approve all 3" }),
+      ).toHaveFocus();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Approve all 3" }));
+    fireEvent.click(screen.getByRole("button", { name: "Approve all" }));
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Approve all 4" }),
+      ).toHaveFocus();
+    });
+  });
+
+  it("lands nowhere, and breaks nothing, with no heading on the page to take focus", async () => {
+    const release = vi
+      .fn<ReleaseHoldsFn>()
+      .mockResolvedValue({ released: 2, hasMore: false });
+    await renderWithRouter(
+      <>
+        <p>the rest of Review</p>
+        <ReleaseHolds
+          bursts={[{ cause: "fingerprint", waiting: 2 }]}
+          since={SINCE}
+          release={release}
+        />
+      </>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Approve all 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Approve all" }));
+    await waitFor(() => {
+      expect(part("release-holds")).toBeNull();
+    });
+    expect(screen.getByText("the rest of Review")).toBeInTheDocument();
   });
 });

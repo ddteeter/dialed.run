@@ -33,4 +33,12 @@ describe("ReviewHeading", () => {
     render(<ReviewHeading counts={{ waiting: 0, decidedToday: 0 }} />);
     expect(screen.getByText("0 waiting · 0 decided today")).toBeInTheDocument();
   });
+
+  it("takes focus from script only, never from Tab (round 45 #103)", () => {
+    render(<ReviewHeading counts={{ waiting: 0, decidedToday: 0 }} />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveAttribute(
+      "tabindex",
+      "-1",
+    );
+  });
 });
