@@ -9,8 +9,9 @@
  * and #13 (the rail's hatch and "RETIRED MAR 2026", the merge words in
  * ink), D-75 / R-112 / R-114 (F's TYPE, the rail by type, and the
  * rail listing a save F kept), and round 43 #93-95 (F's product link, and
- * E's shop page with what came of it, design 163) and design-deltas
- * 104 (a select's ▾) — one journey, one video.
+ * E's shop page with what came of it, design 163), design-deltas
+ * 104 (a select's ▾) and R-176 (a shortened link refused at F's save,
+ * design 171) — one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
@@ -189,6 +190,21 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await page.getByLabel("Brand").fill("Nike");
   await page.getByLabel("Model / name").fill("Pegasus 41");
   await page.getByLabel("Water resistant").check();
+  // R-176 (design 171): a shortener goes wherever its owner points it, so
+  // the denylist starts with them. The save refuses the link on its own
+  // field and keeps the rest of the piece, as for any denied link.
+  await scene(page, "F · a shortened link is refused, and the piece is kept");
+  const shortLink = page.getByLabel(/Product link/);
+  await shortLink.fill("https://bit.ly/pegasus41");
+  await page.getByRole("button", { name: "Add to closet" }).click();
+  await expect(
+    page.getByText(
+      "That link isn't allowed here. The rest of the piece is fine.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByLabel("Brand")).toHaveValue("Nike");
+  await expect(page.getByLabel("Model / name")).toHaveValue("Pegasus 41");
+  await shortLink.fill("");
   await page.getByRole("button", { name: "Add to closet" }).click();
   await expect(
     page.getByRole("heading", { name: "Nike Pegasus 41" }),
