@@ -71,6 +71,14 @@ export interface EnrichmentDeps {
   model choice (D-32). Absent means the declared rungs are the answer.
   */
   model?: ExtractionModel | undefined;
+  /**
+   * Safety's `isDeniedOnLanding`: records where a link landed and answers
+   * whether it is denied, by its own domain or the landing's (R-176,
+   * design 171). Passed in because enrichment importing safety would close
+   * a cycle through ops, and required because a consumer without it would
+   * read denied pages again.
+   */
+  isLandingDenied: (link: string, landedUrl: string) => Promise<boolean>;
 }
 
 /**
@@ -267,20 +275,42 @@ async function askModel(
 }
 
 /**
+ * A read that landed somewhere denied (R-176, design 171): nothing it
+ * found is kept, and the product lets go of the link. Back to `none` with
+ * no `source_url`, so the next runner's link becomes its source and asks
+ * again — not `failed`, which the sweep would re-drive into the same
+ * denied page every hour for a day.
+ */
+async function dropDeniedSource(db: Db, productId: string): Promise<void> {
+  await db
+    .update(products)
+    .set({ sourceUrl: sql`NULL`, extractionStatus: "none" })
+    .where(eq(products.id, productId));
+}
+
+/**
  * Fetch, store, extract, record, write back — the bytes go to R2 before
  * anything tries to understand them (D-31), and the row is written once the
  * ladder has said which rung read it. A ladder that throws between the two
  * leaves an object with no row, which is the recoverable kind of residue
  * `snapshot.ts` already accepts.
+ *
+ * **Where the page landed is checked before anything is kept** (R-176): a
+ * link that redirected to a denied site leaves no snapshot, no specs and
+ * no image behind, and is denied wherever it would show.
  */
 async function fetchAndExtract(
   deps: EnrichmentDeps,
   productId: string,
   sourceUrl: string,
-): Promise<ApplyReport> {
+): Promise<void> {
   const page = await fetchProductPage(sourceUrl, deps.fetchImpl ?? fetch, {
     proxyApiKey: deps.proxyApiKey,
   });
+  if (await deps.isLandingDenied(sourceUrl, page.finalUrl)) {
+    await dropDeniedSource(deps.db, productId);
+    return;
+  }
   const fetchedAt = Date.now();
   const r2Key = await putSnapshot(productId, page.html, fetchedAt);
   const result = runLadder(new URL(page.finalUrl), page.html);
@@ -291,7 +321,7 @@ async function fetchAndExtract(
     rung: result.rung,
     fetchedAt,
   });
-  const report = await extractFrom(
+  await extractFrom(
     deps,
     productId,
     { id, url: page.finalUrl },
@@ -301,7 +331,6 @@ async function fetchAndExtract(
   // After the write-back, so a failed apply does not leave an image copied
   // for a product whose extraction never landed.
   await copyImageOnce(deps, productId, result.extracted.imageUrl, fetchedAt);
-  return report;
 }
 
 /**

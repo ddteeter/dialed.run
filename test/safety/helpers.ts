@@ -15,6 +15,7 @@ import {
   brands,
   domainDenylist,
   entryPhotos,
+  linkLandings,
   photoScreenings,
   products,
   reports,
@@ -62,6 +63,9 @@ export async function resetSafetyTables(): Promise<void> {
     reviewQueue,
     blocks,
     domainDenylist,
+    // Where links landed (R-176): a landing left behind would deny the
+    // next test's link the moment its domain was.
+    linkLandings,
     photoScreenings,
     moderationActions,
     quarantinedContent,

@@ -18,7 +18,7 @@ import { domainOf } from "../../lib/domain";
 import { isUnconfirmed } from "../account";
 import { abandonedBefore } from "../enrichment";
 import type { ProductForDetail } from "../products";
-import { deniedDomainsOf } from "../safety";
+import { deniedLinksOf } from "../safety";
 import { isTapListPlaceholder } from "./tap-list-placeholder";
 
 type Db = ReturnType<typeof drizzle>;
@@ -110,26 +110,26 @@ type GarmentForLink = Readonly<{
 }>;
 
 /**
- * Garment detail's link and what came of it, in one denylist read for the
- * garment's link and the page its product read.
+ * Garment detail's link and what came of it, in one `deniedLinksOf` for
+ * the garment's link and the page its product read — so a link that lands
+ * somewhere denied is absent here, and F's Edit opens on the denied error
+ * (`storedLinkErrors`), as for one typed there (R-176).
  */
 export async function linkDetailOf(
   db: Db,
   garment: GarmentForLink,
   extraction: Extraction | undefined,
 ): Promise<LinkDetail> {
-  const denied = await deniedDomainsOf(db, [
+  const denied = await deniedLinksOf(db, [
     garment.productUrl ?? undefined,
     extraction?.sourceUrl,
   ]);
-  // No branch for a source with no domain: it is `undefined` either way,
-  // and "undefined" is never a denied host.
-  const sourceDomain = domainOf(extraction?.sourceUrl);
-  const specSource = denied.has(String(sourceDomain))
+  // No branch for a source with no domain: it is `undefined` either way.
+  const specSource = denied.has(String(extraction?.sourceUrl))
     ? undefined
-    : sourceDomain;
-  const linkDomain = domainOf(garment.productUrl ?? undefined);
-  if (linkDomain === undefined || denied.has(linkDomain)) {
+    : domainOf(extraction?.sourceUrl);
+  const link = garment.productUrl ?? undefined;
+  if (domainOf(link) === undefined || denied.has(String(link))) {
     return { link: undefined, outcome: undefined, specSource };
   }
   const outcome =
@@ -141,21 +141,27 @@ export async function linkDetailOf(
 
 /**
  * The links of these garments that may be shown, keyed by garment id; a
- * garment with none to show is absent. One read of the denylist for the
- * whole batch, on the caller's handle — a page's replica (owner Q4).
+ * garment with none to show is absent. One read of the landings and one
+ * of the denylist for the whole batch, on the caller's handle — a page's
+ * replica (owner Q4). A link that lands somewhere denied is absent like
+ * one typed there (R-176).
  */
 export async function allowedLinksOf(
   db: Db,
   garments: readonly Readonly<{ id: string; productUrl: string | null }>[],
 ): Promise<Map<string, string>> {
-  const denied = await deniedDomainsOf(
+  const denied = await deniedLinksOf(
     db,
     garments.map((garment) => garment.productUrl ?? undefined),
   );
   const allowed = new Map<string, string>();
   for (const { id, productUrl } of garments) {
-    const domain = domainOf(productUrl ?? undefined);
-    if (domain === undefined || denied.has(domain)) continue;
+    if (
+      domainOf(productUrl ?? undefined) === undefined ||
+      denied.has(String(productUrl))
+    ) {
+      continue;
+    }
     allowed.set(id, String(productUrl));
   }
   return allowed;

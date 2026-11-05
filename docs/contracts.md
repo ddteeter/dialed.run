@@ -172,7 +172,9 @@ brand_id           text FK -> brands
 name               text          -- model name ("Rover Half-Zip")
 normalized_name    text          -- UNIQUE(brand_id, normalized_name);
                                  -- create-if-missing dedup key (D-30)
-source_url         text          -- NULLABLE; first pasted product URL
+source_url         text          -- NULLABLE; first pasted product URL;
+                                 -- cleared when its read lands on a denied
+                                 -- site (R-176), so the next paste fills it
 image_key          text          -- NULLABLE; primary image copied to R2
 category_hint      text          -- NULLABLE garment category enum value
 type               text          -- NULLABLE garment type; the source of
@@ -348,7 +350,16 @@ review_queue:    id, subject_type, subject_id, source ('reports'|
                    -- day after upload (D-157) — the classifier never
                    -- answered, or storage has no object to screen.
 domain_denylist: domain PK (bare registrable host, lowercased, no 'www.'),
-                 added_by, reason NULLABLE, created_at. Seeded empty.
+                 added_by, reason NULLABLE, created_at. Seeded with link
+                   -- shorteners and redirectors, added_by 'seed'
+                   -- (R-176, migration 0078); a redirector host such as
+                   -- l.facebook.com is a row for that subdomain only.
+link_landings:   url PK (a product link as typed), landed_domain (domainOf
+                 form), checked_at -- where enrichment's read of the link
+                   -- landed, kept only when that is another domain
+                   -- (R-176, design 171). A landing, not a verdict: a
+                   -- link is denied when its own domain or its landing's
+                   -- is, at every read. Read and written only by safety.
 photo_screenings: id, photo_scope ('entry'|'garment'), photo_id, model,
                  scores (raw per-category JSON), decision ('pass'|'flag'),
                  created_at -- kept so a threshold can be re-tuned against

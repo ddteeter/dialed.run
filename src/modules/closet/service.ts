@@ -58,7 +58,7 @@ import {
 } from "../products";
 import type { ProductAttributeDefaults, ProductComposition } from "../products";
 import { ownedBy } from "../../lib/sql/owned";
-import { garmentPhotoForgotten, isDeniedDomain } from "../safety";
+import { garmentPhotoForgotten, isDeniedLink } from "../safety";
 import { linkDetailOf, type LinkDetail } from "./garment-link";
 import { DENIED_LINK } from "./link-copy";
 import { nowSeconds } from "../../lib/now";
@@ -236,7 +236,7 @@ export class DeniedLinkError extends Error {
 }
 
 async function assertLinkAllowed(garment: Garment): Promise<void> {
-  if (await isDeniedDomain(garment.productUrl)) throw new DeniedLinkError();
+  if (await isDeniedLink(garment.productUrl)) throw new DeniedLinkError();
 }
 
 export async function createItem(

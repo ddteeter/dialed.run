@@ -1,7 +1,8 @@
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { drizzle } from "drizzle-orm/d1";
 
-import { domainDenylist } from "../../src/db/schema-core";
+import { domainDenylist, linkLandings } from "../../src/db/schema-core";
 import { env } from "../../src/env";
 import { garmentSchema } from "../../src/lib/contracts";
 import {
@@ -10,9 +11,10 @@ import {
   updateItem,
 } from "../../src/modules/closet/service";
 import {
-  deniedDomainsOf,
+  deniedLinksOf,
   denyDomain,
-  isDeniedDomain,
+  isDeniedLink,
+  isDeniedOnLanding,
 } from "../../src/modules/safety";
 
 import { makeUser, resetSafetyTables } from "./helpers";
@@ -33,21 +35,21 @@ function garmentWith(url?: string) {
 describe("the denylist itself", () => {
   beforeEach(resetSafetyTables);
 
-  it("is seeded empty, so nothing is denied until someone says so", async () => {
-    expect(await isDeniedDomain("https://janji.com/x")).toBe(false);
+  it("denies nothing until someone says so", async () => {
+    expect(await isDeniedLink("https://janji.com/x")).toBe(false);
   });
 
   it("denies a domain a reviewer added", async () => {
     await denyDomain("spam.example", await makeUser(), "link farm");
-    expect(await isDeniedDomain("https://spam.example/x")).toBe(true);
+    expect(await isDeniedLink("https://spam.example/x")).toBe(true);
   });
 
   it("normalises what the reviewer pasted", async () => {
     // A reviewer's clipboard holds the URL, not the bare host. Both must
     // land on the same row or the entry silently misses.
     await denyDomain("https://www.spam.example/some/page", await makeUser());
-    expect(await isDeniedDomain("https://spam.example/other")).toBe(true);
-    expect(await isDeniedDomain("https://www.spam.example/")).toBe(true);
+    expect(await isDeniedLink("https://spam.example/other")).toBe(true);
+    expect(await isDeniedLink("https://www.spam.example/")).toBe(true);
   });
 
   it("normalises a bare host the same way, down to the www and the spaces", async () => {
@@ -58,8 +60,8 @@ describe("the denylist itself", () => {
     // one domain.
     await denyDomain("  WWW.Spam.Example ", await makeUser());
 
-    expect(await isDeniedDomain("https://spam.example/x")).toBe(true);
-    expect(await isDeniedDomain("https://www.spam.example/x")).toBe(true);
+    expect(await isDeniedLink("https://spam.example/x")).toBe(true);
+    expect(await isDeniedLink("https://www.spam.example/x")).toBe(true);
   });
 
   it("stamps when a domain was denied, in seconds", async () => {
@@ -79,8 +81,8 @@ describe("the denylist itself", () => {
 
   it("does not deny a different site with a similar name", async () => {
     await denyDomain("spam.example", await makeUser());
-    expect(await isDeniedDomain("https://notspam.example/x")).toBe(false);
-    expect(await isDeniedDomain("https://spam.example.org/x")).toBe(false);
+    expect(await isDeniedLink("https://notspam.example/x")).toBe(false);
+    expect(await isDeniedLink("https://spam.example.org/x")).toBe(false);
   });
 
   it("treats a garment with no link at all as not denied", async () => {
@@ -88,21 +90,21 @@ describe("the denylist itself", () => {
     // The closet's save path asks this about every garment, most of which
     // have no link. Answering here rather than guarding at the call site
     // is what makes the rule testable.
-    expect(await isDeniedDomain(undefined)).toBe(false);
+    expect(await isDeniedLink(undefined)).toBe(false);
   });
 
   it("treats an unparseable link as not denied, which is a different answer", async () => {
     await denyDomain("spam.example", await makeUser());
     // Invalid and denied are different facts with different messages;
     // conflating them tells a runner their good link was blocked.
-    expect(await isDeniedDomain("not a url")).toBe(false);
+    expect(await isDeniedLink("not a url")).toBe(false);
   });
 
   it("is idempotent, so adding a domain twice is not an error", async () => {
     const reviewer = await makeUser();
     await denyDomain("spam.example", reviewer);
     await denyDomain("spam.example", reviewer);
-    expect(await isDeniedDomain("https://spam.example/x")).toBe(true);
+    expect(await isDeniedLink("https://spam.example/x")).toBe(true);
   });
 });
 
@@ -177,50 +179,52 @@ describe("denying a domain denies everything under it (design 163, Q2)", () => {
 
   it("denies a subdomain of a denied host, at any depth", async () => {
     await denyDomain("spam.example", await makeUser());
-    expect(await isDeniedDomain("https://shop.spam.example/x")).toBe(true);
-    expect(await isDeniedDomain("https://a.b.spam.example/x")).toBe(true);
+    expect(await isDeniedLink("https://shop.spam.example/x")).toBe(true);
+    expect(await isDeniedLink("https://a.b.spam.example/x")).toBe(true);
   });
 
   it("does not deny the parent of a denied subdomain", async () => {
     await denyDomain("shop.spam.example", await makeUser());
-    expect(await isDeniedDomain("https://spam.example/x")).toBe(false);
-    expect(await isDeniedDomain("https://other.spam.example/x")).toBe(false);
+    expect(await isDeniedLink("https://spam.example/x")).toBe(false);
+    expect(await isDeniedLink("https://other.spam.example/x")).toBe(false);
   });
 
   it("never treats a TLD row as a parent", async () => {
     // A host's last label alone is never one of its suffixes: a row
     // reading "example" must not deny every site under it.
     await denyDomain("example", await makeUser());
-    expect(await isDeniedDomain("https://spam.example/x")).toBe(false);
+    expect(await isDeniedLink("https://spam.example/x")).toBe(false);
   });
 });
 
-describe("deniedDomainsOf, the batched read every surface asks", () => {
+describe("deniedLinksOf, the batched read every surface asks", () => {
   beforeEach(resetSafetyTables);
 
-  it("answers a mixed batch in domainOf's form", async () => {
+  it("answers a mixed batch with the links as given", async () => {
     await denyDomain("spam.example", await makeUser());
 
-    const denied = await deniedDomainsOf(core(), [
+    const denied = await deniedLinksOf(core(), [
       "https://www.spam.example/a",
       "https://shop.spam.example/b",
       "https://janji.com/p/tee",
       undefined,
     ]);
 
-    expect(denied).toEqual(new Set(["spam.example", "shop.spam.example"]));
+    expect(denied).toEqual(
+      new Set(["https://www.spam.example/a", "https://shop.spam.example/b"]),
+    );
   });
 
   it("is empty for a batch with no links at all", async () => {
     await denyDomain("spam.example", await makeUser());
-    expect(await deniedDomainsOf(core(), [])).toEqual(new Set());
-    expect(await deniedDomainsOf(core(), [undefined])).toEqual(new Set());
+    expect(await deniedLinksOf(core(), [])).toEqual(new Set());
+    expect(await deniedLinksOf(core(), [undefined])).toEqual(new Set());
   });
 
   it("never names an unparseable or http link, which is invalid rather than denied", async () => {
     await denyDomain("spam.example", await makeUser());
     expect(
-      await deniedDomainsOf(core(), [
+      await deniedLinksOf(core(), [
         "not a url",
         ["http:", "//spam.example/x"].join(""),
       ]),
@@ -232,9 +236,102 @@ describe("deniedDomainsOf, the batched read every surface asks", () => {
     // written through one handle is read back through another.
     await denyDomain("spam.example", await makeUser());
     expect(
-      await deniedDomainsOf(drizzle(env.DIALED_CORE), [
-        "https://spam.example/x",
-      ]),
-    ).toEqual(new Set(["spam.example"]));
+      await deniedLinksOf(drizzle(env.DIALED_CORE), ["https://spam.example/x"]),
+    ).toEqual(new Set(["https://spam.example/x"]));
   });
 });
+
+describe("a link is denied by where it lands (R-176)", () => {
+  beforeEach(resetSafetyTables);
+
+  const LINK = "https://shop.example/out?to=elsewhere";
+
+  it("records a landing on another domain, and denies the link once that domain is", async () => {
+    expect(await isDeniedOnLanding(LINK, "https://spam.example/p")).toBe(false);
+    expect(await deniedLinksOf(core(), [LINK])).toEqual(new Set());
+
+    await denyDomain("spam.example", await makeUser());
+    expect(await deniedLinksOf(core(), [LINK])).toEqual(new Set([LINK]));
+    expect(await isDeniedLink(LINK)).toBe(true);
+    // The landing denies that link, not its domain.
+    expect(await isDeniedLink("https://shop.example/other")).toBe(false);
+  });
+
+  it("answers denied at once when the landing is already denied", async () => {
+    await denyDomain("spam.example", await makeUser());
+    expect(await isDeniedOnLanding(LINK, "https://www.spam.example/p")).toBe(
+      true,
+    );
+    expect(await isDeniedLink(LINK)).toBe(true);
+  });
+
+  it("denies by a denied parent of the landing, as for a typed link", async () => {
+    await denyDomain("spam.example", await makeUser());
+    expect(
+      await isDeniedOnLanding(LINK, "https://cdn.shop.spam.example/p"),
+    ).toBe(true);
+  });
+
+  it("answers by the link's own domain when it lands at home, and keeps no row", async () => {
+    expect(await isDeniedOnLanding(LINK, "https://www.shop.example/p")).toBe(
+      false,
+    );
+    await denyDomain("shop.example", await makeUser());
+    expect(await isDeniedOnLanding(LINK, "https://shop.example/p")).toBe(true);
+    await expectNoLanding(LINK);
+  });
+
+  it("keeps only the latest landing for a link", async () => {
+    await isDeniedOnLanding(LINK, "https://first.example/p");
+    await isDeniedOnLanding(LINK, "https://second.example/p");
+    const rows = await core().select().from(linkLandings);
+    expect(rows.map((row) => [row.url, row.landedDomain])).toEqual([
+      [LINK, "second.example"],
+    ]);
+
+    await denyDomain("first.example", await makeUser());
+    expect(await isDeniedLink(LINK)).toBe(false);
+  });
+
+  it("stamps when the landing was checked, in seconds", async () => {
+    const before = nowSeconds();
+    await isDeniedOnLanding(LINK, "https://elsewhere.example/p");
+    const [row] = await core().select().from(linkLandings);
+    expect(row?.checkedAt).toBeGreaterThanOrEqual(before);
+    expect(row?.checkedAt).toBeLessThanOrEqual(nowSeconds());
+  });
+
+  it("refuses a read that landed with no https domain, and keeps no row", async () => {
+    expect(
+      await isDeniedOnLanding(
+        LINK,
+        ["http:", "//elsewhere.example/p"].join(""),
+      ),
+    ).toBe(true);
+    expect(await isDeniedOnLanding(LINK, "not a url")).toBe(true);
+    await expectNoLanding(LINK);
+    expect(await isDeniedLink(LINK)).toBe(false);
+  });
+
+  it("answers a batch from both tables in one call", async () => {
+    await denyDomain("spam.example", await makeUser());
+    await isDeniedOnLanding(LINK, "https://spam.example/p");
+    await isDeniedOnLanding("https://fine.example/x", "https://ok.example/p");
+    expect(
+      await deniedLinksOf(core(), [
+        LINK,
+        "https://fine.example/x",
+        "https://spam.example/typed",
+        "https://janji.com/p",
+      ]),
+    ).toEqual(new Set([LINK, "https://spam.example/typed"]));
+  });
+});
+
+async function expectNoLanding(url: string): Promise<void> {
+  const rows = await core()
+    .select()
+    .from(linkLandings)
+    .where(eq(linkLandings.url, url));
+  expect(rows).toEqual([]);
+}

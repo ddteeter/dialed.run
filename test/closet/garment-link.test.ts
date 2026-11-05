@@ -5,10 +5,12 @@ import { env } from "../../src/env";
 import { garmentSchema } from "../../src/lib/contracts";
 import { allowedLinksOf } from "../../src/modules/closet";
 import { linkDetailOf } from "../../src/modules/closet/garment-link";
-import { createItem } from "../../src/modules/closet/service";
+import { storedLinkErrors } from "../../src/modules/closet/form-mapping";
+import { DENIED_LINK } from "../../src/modules/closet/link-copy";
+import { createItem, DeniedLinkError } from "../../src/modules/closet/service";
 import { abandonedBefore } from "../../src/modules/enrichment";
 import { newUlid } from "../../src/lib/ids";
-import { denyDomain } from "../../src/modules/safety";
+import { denyDomain, isDeniedOnLanding } from "../../src/modules/safety";
 
 import { addAccount } from "../feed/helpers";
 import { makeUser, resetSafetyTables } from "../safety/helpers";
@@ -287,5 +289,83 @@ describe("linkDetailOf: E's link and its one line (round 43 #94-95)", () => {
         isRetrying: false,
       });
     });
+  });
+});
+
+/**
+ * A link that redirects somewhere denied is denied wherever a link typed
+ * there would be (R-176, design 171): kit views, E, F's Edit, the save.
+ */
+describe("a link denied by where it lands (R-176)", () => {
+  beforeEach(resetSafetyTables);
+
+  const SHORT = "https://go.example/rover";
+
+  async function landedOnDenied(userId: string): Promise<void> {
+    await isDeniedOnLanding(SHORT, "https://spam.example/rover");
+    await denyDomain("spam.example", userId);
+  }
+
+  it("is dropped from a kit's links, and its neighbours are not", async () => {
+    await landedOnDenied(await makeUser());
+    const links = await allowedLinksOf(core(), [
+      { id: "short", productUrl: SHORT },
+      { id: "kept", productUrl: "https://go.example/other" },
+    ]);
+    expect(links).toEqual(new Map([["kept", "https://go.example/other"]]));
+  });
+
+  it("shows no link and no line on E, and F's Edit opens on the denied error", async () => {
+    const userId = await runner(true);
+    await landedOnDenied(userId);
+    const item = await createItem(
+      core(),
+      userId,
+      garmentSchema.parse({ category: "top", name: "Rover" }),
+    );
+    const detail = await linkDetailOf(
+      core(),
+      garment(userId, { productUrl: SHORT }),
+      extraction(),
+    );
+    expect(detail).toEqual({
+      link: undefined,
+      outcome: undefined,
+      specSource: "rabbit.run",
+    });
+    expect(storedLinkErrors({ ...item, productUrl: SHORT }, detail)).toEqual({
+      productUrl: DENIED_LINK,
+    });
+  });
+
+  it("names no site when the product's page landed somewhere denied", async () => {
+    const userId = await runner(true);
+    await landedOnDenied(userId);
+    const detail = await linkDetailOf(
+      core(),
+      garment(userId),
+      extraction({ sourceUrl: SHORT }),
+    );
+    expect(detail).toEqual({
+      link: "https://janji.com/p/rover",
+      outcome: { kind: "found", source: undefined },
+      specSource: undefined,
+    });
+  });
+
+  it("is refused at save, like a link typed there", async () => {
+    const userId = await makeUser();
+    await landedOnDenied(userId);
+    await expect(
+      createItem(
+        core(),
+        userId,
+        garmentSchema.parse({
+          category: "top",
+          name: "Rover",
+          productUrl: SHORT,
+        }),
+      ),
+    ).rejects.toBeInstanceOf(DeniedLinkError);
   });
 });

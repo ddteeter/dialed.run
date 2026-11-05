@@ -6,6 +6,7 @@ import {
   handleEnrichmentDlqBatch,
 } from "../enrichment";
 import { runnerTimeZone } from "../onboarding";
+import { isDeniedOnLanding } from "../safety";
 import {
   handleImportsBatch,
   handleImportsDlqBatch,
@@ -70,6 +71,7 @@ export function enrichmentDeps() {
     captureException,
     proxyApiKey: env.FIRECRAWL_API_KEY,
     model: extractionModelFromEnv(),
+    isLandingDenied: isDeniedOnLanding,
   };
 }
 
