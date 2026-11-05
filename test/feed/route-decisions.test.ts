@@ -29,9 +29,9 @@ describe("shouldAskForVerdict", () => {
   const entry = { userId: "01AUTHOR", verdict: undefined };
 
   it("asks the author of an entry with no verdict", async () => {
-    const budget = vi.fn(() => Promise.resolve(true));
-    expect(await shouldAskForVerdict(entry, "01AUTHOR", budget)).toBe(true);
-    expect(budget).toHaveBeenCalledTimes(1);
+    const hasBudget = vi.fn(() => Promise.resolve(true));
+    expect(await shouldAskForVerdict(entry, "01AUTHOR", hasBudget)).toBe(true);
+    expect(hasBudget).toHaveBeenCalledTimes(1);
   });
 
   it("defers to the once-only budget when it says no", async () => {
@@ -47,41 +47,41 @@ describe("shouldAskForVerdict", () => {
   it("never asks a stranger, and never spends a query on one", async () => {
     // The cheap checks come first on purpose: a popular entry would
     // otherwise cost one budget lookup per viewer.
-    const budget = vi.fn(() => Promise.resolve(true));
-    expect(await shouldAskForVerdict(entry, "01SOMEONEELSE", budget)).toBe(
+    const hasBudget = vi.fn(() => Promise.resolve(true));
+    expect(await shouldAskForVerdict(entry, "01SOMEONEELSE", hasBudget)).toBe(
       false,
     );
-    expect(budget).not.toHaveBeenCalled();
+    expect(hasBudget).not.toHaveBeenCalled();
   });
 
   it("never asks a signed-out viewer", async () => {
-    const budget = vi.fn(() => Promise.resolve(true));
-    expect(await shouldAskForVerdict(entry, undefined, budget)).toBe(false);
-    expect(budget).not.toHaveBeenCalled();
+    const hasBudget = vi.fn(() => Promise.resolve(true));
+    expect(await shouldAskForVerdict(entry, undefined, hasBudget)).toBe(false);
+    expect(hasBudget).not.toHaveBeenCalled();
   });
 
   it("never asks about an entry that already has a verdict", async () => {
-    const budget = vi.fn(() => Promise.resolve(true));
+    const hasBudget = vi.fn(() => Promise.resolve(true));
     expect(
       await shouldAskForVerdict(
         { userId: "01AUTHOR", verdict: 0 },
         "01AUTHOR",
-        budget,
+        hasBudget,
       ),
     ).toBe(false);
-    expect(budget).not.toHaveBeenCalled();
+    expect(hasBudget).not.toHaveBeenCalled();
   });
 
   it("treats a dialed verdict as a verdict", async () => {
     // 0 means dialed, not "no answer" — a truthiness check here would ask
     // every runner who got it exactly right to answer again.
-    const budget = vi.fn(() => Promise.resolve(true));
+    const hasBudget = vi.fn(() => Promise.resolve(true));
     await shouldAskForVerdict(
       { userId: "01AUTHOR", verdict: 0 },
       "01AUTHOR",
-      budget,
+      hasBudget,
     );
-    expect(budget).not.toHaveBeenCalled();
+    expect(hasBudget).not.toHaveBeenCalled();
   });
 });
 
