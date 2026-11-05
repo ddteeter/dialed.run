@@ -48,11 +48,17 @@ export function Sheet({
   open,
   onClose,
   label,
+  isLocked = false,
   children,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   label: string;
+  /**
+   * While true, Esc does not close it: the sheet is mid-way through work
+   * that has to end where it can be told (round 45 #103's release).
+   */
+  isLocked?: boolean | undefined;
   children: ReactNode;
 }>) {
   const dialogRef = useRef<HTMLDialogElement | undefined>(undefined);
@@ -78,6 +84,9 @@ export function Sheet({
         dialogRef.current = node ?? undefined;
       }}
       aria-label={label}
+      onCancel={(event) => {
+        if (isLocked) event.preventDefault();
+      }}
       onClose={onClose}
       className="sheet-motion fixed inset-x-0 bottom-0 top-auto m-0 w-full max-w-none rounded-t-sheet bg-ground p-6 text-ink backdrop:bg-ink/60 wide:bottom-auto wide:top-[var(--bar-height)] wide:mx-auto wide:mt-12 wide:h-fit wide:max-h-[calc(100dvh-var(--bar-height)-6rem)] wide:max-w-panel wide:overflow-y-auto wide:rounded-sheet wide:backdrop:bg-ground"
     >

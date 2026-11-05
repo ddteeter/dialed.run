@@ -174,6 +174,26 @@ describe("Sheet", () => {
     expect(sheet().open).toBe(false);
   });
 
+  it("lets Escape's cancel through unless it is locked (round 45 #103)", () => {
+    const { rerender } = render(
+      <Sheet open onClose={vi.fn()} label="Pick a kit">
+        <p>a kit</p>
+      </Sheet>,
+    );
+    const free = new Event("cancel", { cancelable: true });
+    sheet().dispatchEvent(free);
+    expect(free.defaultPrevented).toBe(false);
+
+    rerender(
+      <Sheet open isLocked onClose={vi.fn()} label="Pick a kit">
+        <p>a kit</p>
+      </Sheet>,
+    );
+    const held = new Event("cancel", { cancelable: true });
+    sheet().dispatchEvent(held);
+    expect(held.defaultPrevented).toBe(true);
+  });
+
   it("carries the label as its accessible name", () => {
     render(<Controlled initiallyOpen />);
     expect(sheet()).toHaveAttribute("aria-label", "Pick a kit");
