@@ -20,7 +20,7 @@ import {
   recordVerdictPromptedAction,
   retractEntryAction,
   setUsefulAction,
-  verdictPromptQuery,
+  shouldPromptForVerdictQuery,
   viewerUnitsQuery,
 } from "../../modules/feed/functions";
 import { orBackToFeed, viewerContext } from "../../modules/feed/redirect";
@@ -45,7 +45,7 @@ export const Route = createFileRoute("/feed/entry/$entryId")({
         data: { runId: entry.runId, since: entry.createdAt },
       }),
       shouldAskForVerdict(entry, viewerId, () =>
-        verdictPromptQuery({ data: { entryId: params.entryId } }),
+        shouldPromptForVerdictQuery({ data: { entryId: params.entryId } }),
       ),
     ]);
     return { entry, viewerId, units, bell, removals, shouldPromptVerdict };

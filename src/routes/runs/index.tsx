@@ -6,8 +6,8 @@ import { bellStateFn } from "../../modules/notifications/functions";
 import { RunList } from "../../modules/runs/components/RunList";
 import {
   listRunSummariesFn,
-  retryRunWeatherFn,
-  setRunConditionsFn,
+  didRetryRunWeatherFn,
+  didSetRunConditionsFn,
 } from "../../modules/runs/functions";
 import { Page } from "../../ui";
 
@@ -33,8 +33,8 @@ function RunsIndexPage() {
           runs={runs}
           units={units}
           actions={{
-            setConditions: setRunConditionsFn,
-            retryWeather: retryRunWeatherFn,
+            setConditions: didSetRunConditionsFn,
+            retryWeather: didRetryRunWeatherFn,
           }}
         />
         <Link

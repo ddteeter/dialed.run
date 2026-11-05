@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { Landing } from "../modules/auth/components/Landing";
 import { getSession } from "../modules/auth/functions";
-import { onboardingGateQuery } from "../modules/onboarding/functions";
+import { requiresOnboardingQuery } from "../modules/onboarding/functions";
 import { startOnboardingIfNeeded } from "../modules/onboarding/route-decisions";
 
 /**
@@ -20,7 +20,7 @@ export const Route = createFileRoute("/")({
   loader: async () => {
     const [session, isUnfinished] = await Promise.all([
       getSession(),
-      onboardingGateQuery(),
+      requiresOnboardingQuery(),
     ]);
     startOnboardingIfNeeded(isUnfinished);
     return { signedIn: session !== null };

@@ -151,6 +151,28 @@ const keyOf = (row: Measured): string =>
   `${row.route}\u{0}${row.metric}\u{0}${row.device}`;
 
 /**
+ * Each of `rows` more than `MEDIAN_TOLERANCE` times slower than its
+ * reference, with that reference and the figure it was compared with. A
+ * row with no reference is skipped: there is nothing to be slower than.
+ */
+function slowerThan<TRow extends Measured & { metric: CheckedMetric }, TRef>(
+  rows: readonly TRow[],
+  referenceOf: (row: TRow) => TRef | undefined,
+  usualOf: (reference: TRef) => number,
+): { row: TRow; reference: TRef; usual: number }[] {
+  const slower: { row: TRow; reference: TRef; usual: number }[] = [];
+  for (const row of rows) {
+    const reference = referenceOf(row);
+    if (reference === undefined) continue;
+    const usual = usualOf(reference);
+    if (valueOf(row) > usual * MEDIAN_TOLERANCE) {
+      slower.push({ row, reference, usual });
+    }
+  }
+  return slower;
+}
+
+/**
  * Each of `day`'s judged rows more than `MEDIAN_TOLERANCE` times the
  * median of the same route, metric and device over the days before it in
  * `rows` (the caller reads `BASELINE_DAYS` of them). Silent until
@@ -165,18 +187,20 @@ export function overMedian(rows: readonly PerfRow[], day: string): string[] {
       valueOf(row),
     ]);
   }
-  return judgedWhere(rows, (row) => row.day === day).flatMap((row) => {
-    const baseline = baselines.get(keyOf(row));
-    if (baseline === undefined || baseline.length < MIN_BASELINE_DAYS) {
-      return [];
-    }
-    const usual = median(baseline);
-    return valueOf(row) > usual * MEDIAN_TOLERANCE
-      ? [
-          `${named(row)} was ${shown(row.metric, valueOf(row))} on ${day}, more than ${TOLERANCE_PERCENT}% over its ${String(baseline.length)}-day median of ${shown(row.metric, usual)} (n=${String(row.n)})`,
-        ]
-      : [];
-  });
+  const today = judgedWhere(rows, (row) => row.day === day);
+  return slowerThan(
+    today,
+    (row) => {
+      const baseline = baselines.get(keyOf(row));
+      return baseline === undefined || baseline.length < MIN_BASELINE_DAYS
+        ? undefined
+        : baseline;
+    },
+    median,
+  ).map(
+    ({ row, reference: baseline, usual }) =>
+      `${named(row)} was ${shown(row.metric, valueOf(row))} on ${day}, more than ${TOLERANCE_PERCENT}% over its ${String(baseline.length)}-day median of ${shown(row.metric, usual)} (n=${String(row.n)})`,
+  );
 }
 
 /**
@@ -264,20 +288,15 @@ export function deployRegressions(
   for (const row of older) {
     before.set(keyOf(row), row);
   }
-  return judgedWhere(rows, (row) => row.version === newest).flatMap((row) => {
-    const old = before.get(keyOf(row));
-    if (old === undefined) return [];
-    return valueOf(row) > valueOf(old) * MEDIAN_TOLERANCE
-      ? [
-          {
-            check: "deploy-regression" as const,
-            route: row.route,
-            metric: row.metric,
-            line: `${named(row)} is ${shown(row.metric, valueOf(row))} on deploy ${row.version}, more than ${TOLERANCE_PERCENT}% over ${shown(row.metric, valueOf(old))} on ${old.version} (n=${String(row.n)} and ${String(old.n)})`,
-          },
-        ]
-      : [];
-  });
+  const newer = judgedWhere(rows, (row) => row.version === newest);
+  return slowerThan(newer, (row) => before.get(keyOf(row)), valueOf).map(
+    ({ row, reference: old }) => ({
+      check: "deploy-regression",
+      route: row.route,
+      metric: row.metric,
+      line: `${named(row)} is ${shown(row.metric, valueOf(row))} on deploy ${row.version}, more than ${TOLERANCE_PERCENT}% over ${shown(row.metric, valueOf(old))} on ${old.version} (n=${String(row.n)} and ${String(old.n)})`,
+    }),
+  );
 }
 
 /**

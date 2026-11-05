@@ -359,7 +359,7 @@ export const test = base.extend<{
 }>({
   a11yMode: ["enforce", { option: true }],
   a11y: [
-    async ({ page, baseURL, a11yMode }, use, testInfo) => {
+    async ({ page, baseURL: appURL = "", a11yMode }, use, testInfo) => {
       const collected: Collected = {
         seen: new Set(),
         findings: [],
@@ -369,16 +369,16 @@ export const test = base.extend<{
         endMs: 0,
       };
       const measure = IS_MEASURING
-        ? await startMeasuring(page, new URL(baseURL ?? "").origin)
+        ? await startMeasuring(page, new URL(appURL).origin)
         : undefined;
-      await arm(page, baseURL ?? "", collected);
+      await arm(page, appURL, collected);
       wrapActions(page);
       worker.current = page;
       worker.measure = measure;
       try {
         await use({
           checkNow: () => checkNow(page),
-          endOfTest: () => runEndOfTest(page, baseURL ?? "", collected),
+          endOfTest: () => runEndOfTest(page, appURL, collected),
           findings: () => distinct(collected.findings),
         });
         await checkNow(page);
@@ -389,9 +389,9 @@ export const test = base.extend<{
       let transcript: string | undefined;
       if (testInfo.status === testInfo.expectedStatus) {
         if (a11yMode === "enforce") {
-          transcript = await readTranscript(page, baseURL ?? "", collected);
+          transcript = await readTranscript(page, appURL, collected);
         }
-        await runEndOfTest(page, baseURL ?? "", collected);
+        await runEndOfTest(page, appURL, collected);
       }
       if (measure !== undefined) await stopMeasuring(measure);
       record(testInfo.titlePath.join(" › "), collected);

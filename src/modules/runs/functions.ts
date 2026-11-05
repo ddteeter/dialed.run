@@ -93,12 +93,12 @@ export const startFileImport = createServerFn({ method: "POST" })
 //
 // The owner's alone: `garminConfigFor` decides, from the bindings.
 
-export const garminImportEnabledFn = createServerFn({ method: "GET" }).handler(
-  async () => {
-    const userId = await requireUserId();
-    return garminConfigFor(env, userId) !== undefined;
-  },
-);
+export const isGarminImportEnabledFn = createServerFn({
+  method: "GET",
+}).handler(async () => {
+  const userId = await requireUserId();
+  return garminConfigFor(env, userId) !== undefined;
+});
 
 export const getGarminPickerFn = createServerFn({ method: "GET" }).handler(
   async () => {
@@ -152,14 +152,14 @@ export const listRunSummariesFn = createServerFn({ method: "GET" }).handler(
   },
 );
 
-export const setRunConditionsFn = createServerFn({ method: "POST" })
+export const didSetRunConditionsFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => conditionsBandInput.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();
     return didSetRunConditions(coreDb(), weather, userId, data.runId, data);
   });
 
-export const retryRunWeatherFn = createServerFn({ method: "POST" })
+export const didRetryRunWeatherFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => runIdInput.parse(data))
   .handler(async ({ data }) => {
     const userId = await requireUserId();

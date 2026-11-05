@@ -341,8 +341,10 @@ describe("operatorOrNotFound", () => {
 
 const RAN_AT = 1_000_000;
 
-async function heartbeat(cronName: string, lastRunAt: number) {
-  await coreDb().insert(cronCheckpoints).values({ cronName, lastRunAt });
+async function heartbeat(cronName: string) {
+  await coreDb()
+    .insert(cronCheckpoints)
+    .values({ cronName, lastRunAt: RAN_AT });
 }
 
 async function dueAt(
@@ -374,7 +376,7 @@ describe("todayCounts' outbox behind", () => {
   });
 
   it("counts rows due when the digest ran, across kinds, and dates the oldest", async () => {
-    await heartbeat("daily-digest", RAN_AT);
+    await heartbeat("daily-digest");
     await dueAt(RAN_AT - 38 * 3600);
     await dueAt(RAN_AT - 3600, "email");
     await dueAt(RAN_AT);
@@ -386,7 +388,7 @@ describe("todayCounts' outbox behind", () => {
   });
 
   it("leaves out a row due after the digest ran, and a kind this build cannot drain", async () => {
-    await heartbeat("daily-digest", RAN_AT);
+    await heartbeat("daily-digest");
     await dueAt(RAN_AT + 1);
     await dueAt(RAN_AT - 3600, "retired_kind");
 
@@ -397,7 +399,7 @@ describe("todayCounts' outbox behind", () => {
   });
 
   it("is nothing before the first digest, whatever is due and whatever else ran", async () => {
-    await heartbeat("weather-retry", RAN_AT);
+    await heartbeat("weather-retry");
     await dueAt(RAN_AT - 3600);
 
     const counts = await todayCounts();

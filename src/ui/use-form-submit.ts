@@ -102,10 +102,10 @@ export function describedByFor(
     hint?: ReactNode;
     error?: string | undefined;
   }>,
-  also?: string,
+  also = "",
 ): string | undefined {
   const own = ownSentenceId(controlId, sentences);
-  const rest = (also ?? "").split(" ").filter((id) => id !== "" && id !== own);
+  const rest = also.split(" ").filter((id) => id !== "" && id !== own);
   const ids = own === undefined ? rest : [own, ...rest];
   return ids.length === 0 ? undefined : ids.join(" ");
 }
