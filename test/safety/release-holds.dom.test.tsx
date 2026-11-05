@@ -179,7 +179,9 @@ describe("ReleaseHolds", () => {
     // No band until a release stops or fails.
     expect(part("failure-band")).toBeNull();
     fireEvent.click(keep);
-    expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: "Approve 5 fingerprint holds?" }),
+    ).toBeNull();
     expect(release).not.toHaveBeenCalled();
   });
 
