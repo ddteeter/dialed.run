@@ -23,6 +23,7 @@ import {
   FormStatus,
   QUIET_CANCEL,
   QUIET_PILL,
+  Select,
   SubmitButton,
   TextField,
   ToggleField,
@@ -1458,6 +1459,90 @@ describe("a field repeated on every row (R-165)", () => {
     expect(first.getByText("Which day?").id).not.toBe(
       second.getByText("Which day?").id,
     );
+  });
+});
+
+/**
+ * `Select` — the one native `<select>`, with its arrow drawn as ▾.
+ *
+ * The arrow is decoration: it must not reach the accessibility tree, must
+ * not take the select's name, and must not stand between a click and the
+ * select. What the select was before it — its label, value and change — has
+ * to come through the wrapper unchanged.
+ */
+function renderSelect(onChange: (value: string) => void) {
+  return render(
+    <label>
+      Effort
+      <Select
+        name="effort"
+        value="easy"
+        onChange={(event) => {
+          onChange(event.target.value);
+        }}
+      >
+        <option value="easy">easy</option>
+        <option value="hard">hard</option>
+      </Select>
+    </label>,
+  );
+}
+
+describe("Select", () => {
+  it("draws its arrow as ▾, hidden from assistive technology", () => {
+    renderSelect(vi.fn());
+
+    const arrow = screen.getByText("▾");
+    expect(arrow).toHaveAttribute("aria-hidden", "true");
+    // Unclickable, so a click on the arrow opens the select under it.
+    expect(arrow).toHaveClass("pointer-events-none");
+  });
+
+  it("hides the native arrow and insets ▾ to the label's padding", () => {
+    renderSelect(vi.fn());
+
+    // The box's px-4 is the inset on both sides: ▾ at the select's right
+    // edge, with room so a long label stops short of it.
+    expect(screen.getByRole("combobox")).toHaveClass("appearance-none", "pr-6");
+    expect(screen.getByText("▾")).toHaveClass("right-0", "text-muted");
+  });
+
+  it("is borderless and fills its field box, so the whole box is the target", () => {
+    renderSelect(vi.fn());
+
+    const select = screen.getByRole("combobox");
+    expect(select).toHaveClass(
+      "min-h-target",
+      "w-full",
+      "border-none",
+      "bg-transparent",
+    );
+    expect(select.parentElement).toHaveClass(
+      "min-h-target",
+      "w-full",
+      "self-stretch",
+    );
+  });
+
+  it("keeps the select's accessible name and value", () => {
+    renderSelect(vi.fn());
+
+    const select = screen.getByRole("combobox", { name: "Effort" });
+    expect(select).toHaveValue("easy");
+    expect(select).toHaveAttribute("name", "effort");
+  });
+
+  it("still fires a change", async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    renderSelect(onChange);
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Effort" }),
+      "hard",
+    );
+
+    expect(onChange).toHaveBeenCalledWith("hard");
   });
 });
 

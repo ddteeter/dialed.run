@@ -9,8 +9,8 @@
  * and #13 (the rail's hatch and "RETIRED MAR 2026", the merge words in
  * ink), D-75 / R-112 / R-114 (F's TYPE, the rail by type, and the
  * rail listing a save F kept), and round 43 #93-95 (F's product link, and
- * E's shop page with what came of it, design 163) — one journey, one
- * video.
+ * E's shop page with what came of it, design 163) and design-deltas
+ * 104 (a select's ▾) — one journey, one video.
  *
  * Exactly one test() per demo spec. A second test here would record a
  * second video beside the one the reviewer is meant to watch; standalone
@@ -90,13 +90,10 @@ const PNG_2X1 = Buffer.from(
 /**
 Writes the columns an enrichment read owns on the shared Houdini row.
 */
-async function setHoudiniProduct(
-  columns: {
-    [Key in keyof typeof products.$inferInsert]?:
-      | (typeof products.$inferInsert)[Key]
-      | SQL;
-  },
-): Promise<void> {
+async function setHoudiniProduct(columns: {
+  [Key in keyof typeof products.$inferInsert]?:
+    (typeof products.$inferInsert)[Key] | SQL;
+}): Promise<void> {
   await withLocalDb(async ({ core }) => {
     await core
       .update(products)
@@ -168,6 +165,26 @@ test("add garments with product identity -> detail in round 22's order -> retire
       controls.map((control) => control.getAttribute("name")),
     );
   expect(order).toStrictEqual(["category", "brand", "name", "productUrl"]);
+  // Design-deltas 104: the native arrow is gone, and ▾ sits as far in from
+  // the field box's right edge as the label sits from its left (the box's
+  // border and px-4, on both sides).
+  await expect(category).toHaveCSS("appearance", "none");
+  const arrow = category.locator("xpath=following-sibling::*[1]");
+  await expect(arrow).toHaveText("▾");
+  await expect(arrow).toHaveAttribute("aria-hidden", "true");
+  const fieldBox = await category
+    .locator("xpath=ancestor::*[contains(@class, 'field-box')][1]")
+    .boundingBox();
+  const selectBox = await category.boundingBox();
+  const arrowBox = await arrow.boundingBox();
+  if (fieldBox === null || selectBox === null || arrowBox === null) {
+    throw new Error("F's category field or its ▾ is not laid out");
+  }
+  const leftInset = selectBox.x - fieldBox.x;
+  expect(leftInset).toBeGreaterThan(8);
+  expect(
+    fieldBox.x + fieldBox.width - (arrowBox.x + arrowBox.width),
+  ).toBeCloseTo(leftInset, 0);
   await page.getByLabel("Category").selectOption("shoes");
   await page.getByLabel("Brand").fill("Nike");
   await page.getByLabel("Model / name").fill("Pegasus 41");
@@ -328,26 +345,26 @@ test("add garments with product identity -> detail in round 22's order -> retire
   // enrichment writes it from a brand's page, so the demo writes the row
   // enrichment would have. Seeded through Drizzle and the real schema.
   await setHoudiniProduct({
-        // What a read of the pasted page leaves (round 43 #94): done, with
-        // the columns it wrote, and a fabric the runner left empty.
-        extractionStatus: "done",
-        extracted: JSON.stringify({
-          rung: "jsonld",
-          found: { fabric: "synthetic" },
-          written: { fabric: "synthetic", fabricComposition: "100% nylon" },
-        }),
-        fabric: "synthetic",
-        fabricComposition: "100% nylon, GORE-TEX",
-        fabricParts: JSON.stringify([
-          { part: "Body", materials: [{ material: "nylon", pct: 100 }] },
-          {
-            part: "Underarm",
-            materials: [
-              { material: "polyester", pct: 87 },
-              { material: "elastane", pct: 13 },
-            ],
-          },
-        ]),
+    // What a read of the pasted page leaves (round 43 #94): done, with
+    // the columns it wrote, and a fabric the runner left empty.
+    extractionStatus: "done",
+    extracted: JSON.stringify({
+      rung: "jsonld",
+      found: { fabric: "synthetic" },
+      written: { fabric: "synthetic", fabricComposition: "100% nylon" },
+    }),
+    fabric: "synthetic",
+    fabricComposition: "100% nylon, GORE-TEX",
+    fabricParts: JSON.stringify([
+      { part: "Body", materials: [{ material: "nylon", pct: 100 }] },
+      {
+        part: "Underarm",
+        materials: [
+          { material: "polyester", pct: 87 },
+          { material: "elastane", pct: 13 },
+        ],
+      },
+    ]),
   });
 
   await scene(
@@ -361,10 +378,14 @@ test("add garments with product identity -> detail in round 22's order -> retire
   );
   // The fabric the page lent is grey; the runner's own weight stays ink.
   await expect(
-    page.locator("[data-part='composition']").getByText("synthetic", { exact: true }),
+    page
+      .locator("[data-part='composition']")
+      .getByText("synthetic", { exact: true }),
   ).toHaveClass(/text-quiet/);
   await expect(
-    page.locator("[data-part='composition']").getByText("light", { exact: true }),
+    page
+      .locator("[data-part='composition']")
+      .getByText("light", { exact: true }),
   ).toHaveClass(/text-ink/);
   await expect(page.getByText("Composition · from")).toBeVisible();
   await expect(page.getByText("Body")).toBeVisible();

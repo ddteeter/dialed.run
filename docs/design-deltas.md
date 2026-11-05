@@ -944,6 +944,23 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
 
 _Nothing from 99 on is open: round 45 answered the last of it._
 
+<!-- Numbered 104, not 98: round 43 answered 93–98, and the open queue goes on at 99–103. A list break, so Prettier keeps the number. -->
+
+104. **A select's arrow is ▾, inset to match its padding.** Undesigned as
+     a control: no contract draws a select's anatomy, and Chromium drew
+     its own arrow a few pixels inside the select, out of line with the
+     label 16px in from the left. Built from round 28's drawn Desk
+     remove-reason select (_"SHOWS WHERE SOMEONE LIVES ▾"_), which the
+     boards' _"SORT: MOST DIALED ▾"_ and `MoreDisclosure`'s "more" also
+     use: `ui/form.tsx`'s `Select` hides the native arrow and draws the
+     text mark ▾ in `--muted`, 16px in from the field box's right border
+     to match the box's 16px left inset, with 24px of right padding so a
+     long label never runs under it. The mark is `aria-hidden` and does
+     not take a click. Every select in the app is this one, in a
+     `FormField` box: `ChoiceField`, F's category and the manual run's
+     effort.
+     **The ask:** confirm, or draw a select's anatomy.
+
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 
 ## Answered in round 45 (imported 2026-11-04)

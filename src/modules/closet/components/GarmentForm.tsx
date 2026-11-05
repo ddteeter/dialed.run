@@ -42,6 +42,7 @@ import {
   FormField,
   FormStatus,
   Mono,
+  Select,
   SubmitButton,
   TextField,
   ToggleField,
@@ -796,7 +797,7 @@ function IdentityFields({
           copy existed briefly and its only effect was four mutants nothing
           could kill.
         */}
-        <select
+        <Select
           {...form.field("category")}
           id="category"
           value={values.category}
@@ -808,14 +809,13 @@ function IdentityFields({
               type: "",
             }));
           }}
-          className="min-h-target w-full self-stretch border-none bg-transparent font-normal"
         >
           {garmentCategoriesInOrder.map((category) => (
             <option key={category} value={category}>
               {garmentCategoryLabels[category]}
             </option>
           ))}
-        </select>
+        </Select>
       </FormField>
       {/* Round 26's TYPE chips, under the category (D-75, R-112). Only
           where there is a choice: a category with one type (gloves,
