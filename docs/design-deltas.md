@@ -1021,7 +1021,22 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
 
     **The ask:** draw it, or confirm the composition and copy.
 
-_Items 101–103 are open (design 164)._
+107. **A takedown request's Decline, once pressed (design 128).**
+Undesigned. Rounds 37 and 44 draw the request's bar (Take it down,
+Decline, Block and decline all) and Block's question, which takes the
+bar's place with its answer and Cancel. Nothing draws Decline once
+pressed. As built: the bar keeps Take it down and Block and decline
+all, Decline leaves it, and under it opens the reason field
+(_"Why not"_, hint _"The person who asked is sent this."_) with a
+chalk **Decline** submit, the §4a band above it. There is no Cancel:
+once Decline is pressed, the field stays open until a decision is
+made or the page is loaded again.
+
+     **The ask:** draw Decline's open state. Should it take the bar's
+     place as Block's question does, and does it get a Cancel back to the
+     bar?
+
+_Items 101–103 (design 164) and 107 (design 128) are open._
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 
