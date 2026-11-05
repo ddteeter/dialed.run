@@ -22,17 +22,21 @@ import { Skeleton } from "../../src/ui/Skeleton";
 import type { FieldProps } from "../../src/ui/use-form-submit";
 
 /**
- * The mechanical half of the contract, over `src/ui/`.
+ * The mechanical half of the contract, for `src/ui/`'s primitives in the
+ * states no screen is reliably in when a test looks.
  *
- * Every primitive here is rendered in the states a screen can put it in,
- * because axe reads the DOM in front of it and a component's resting state
- * is the one least likely to be wrong: `FormField` is fine until it is
- * invalid and grows a message nothing points at, `SubmitButton` is fine
- * until it is pending and carries `aria-busy` on an element that may not
- * take it.
+ * **Screens are checked elsewhere.** The e2e fixture (`e2e/support/a11y.ts`,
+ * plan 161) runs axe and the contract's own checks in a real browser, with
+ * the real stylesheet, on every state an e2e spec acts on, then walks Tab,
+ * resizes and reads each test's final screen. That is where a module's
+ * component is checked, on the screen it is part of; a finding there fails
+ * the spec, and `docs/designs/161-a11y-coverage.md` says what it covers.
  *
- * The module components are covered from their own suites — they need
- * fixtures, and their fixtures already live there.
+ * **What this file keeps** is what a screen passes through too fast or too
+ * rarely to be caught there: `FormField` invalid, with a message that must
+ * be pointed at; `SubmitButton` pending, carrying `aria-busy`; a failure
+ * band, an error summary, a skeleton. axe reads the DOM in front of it, and
+ * a primitive's resting state is the one least likely to be wrong.
  */
 const field = (name: string): FieldProps => ({
   name,

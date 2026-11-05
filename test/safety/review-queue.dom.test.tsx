@@ -106,7 +106,8 @@ describe("deciding", () => {
     renderQueue([row()]);
     const picker = screen.getByRole("combobox");
     expect(picker).toHaveDisplayValue("—");
-    if (!(picker instanceof HTMLSelectElement)) throw new Error("no select");
+    if (!(picker instanceof HTMLSelectElement))
+      throw new TypeError("no select");
     expect(picker.selectedIndex).toBe(0);
     expect(picker.value).toBe("");
   });
@@ -342,7 +343,7 @@ describe("deciding", () => {
     // The source tag beside the kicker, and only there.
     expect(kicker.nextElementSibling).toHaveTextContent(/^\[classifier\]$/u);
     expect(screen.getAllByText(bracketed("classifier"))).toHaveLength(1);
-    const photo = screen.getByRole("img", { name: "Reported garment photo" });
+    const photo = screen.getByRole("img", { name: "Reported garment" });
     expect(photo).toHaveAttribute(
       "src",
       "/desk/review-photo/items/u/g-1/v1/card.webp",
@@ -406,9 +407,7 @@ describe("deciding", () => {
     // A kit photo's kicker does not name its owner: its kit does.
     const kicker = screen.getByRole("button", { name: "photo · p-1" });
     expect(kicker.nextElementSibling).toBeNull();
-    expect(screen.getByRole("img", { name: "Reported photo" })).toHaveClass(
-      "h-32",
-    );
+    expect(screen.getByRole("img", { name: "Reported" })).toHaveClass("h-32");
     expect(document.querySelector("[data-part='garment-photo']")).toBeNull();
     // At the row's foot, a child of the row, not of its header.
     expect(
@@ -862,7 +861,7 @@ describe("the subject itself", () => {
     // queue is hidden precisely because somebody reported it, so the
     // ordinary route refuses it — pointing at that one would give a
     // reviewer a broken image on the subject that most needs looking at.
-    const photo = screen.getByRole("img", { name: "Reported photo" });
+    const photo = screen.getByRole("img", { name: "Reported" });
     expect(photo).toHaveAttribute(
       "src",
       "/desk/review-photo/entries/u-1/e-1/p-1",
@@ -879,9 +878,7 @@ describe("the subject itself", () => {
 
     // A kit posted as two photos is one thing to judge, and judging half
     // of it is judging something else.
-    expect(screen.getAllByRole("img", { name: "Reported photo" })).toHaveLength(
-      2,
-    );
+    expect(screen.getAllByRole("img", { name: "Reported" })).toHaveLength(2);
   });
 
   it("names a runner or a product instead of its id", () => {
@@ -914,7 +911,7 @@ describe("the subject itself", () => {
     // An empty frame on a profile row reads as an image that failed to
     // load, which is a different problem from the one being reviewed.
     expect(
-      screen.queryByRole("img", { name: "Reported photo" }),
+      screen.queryByRole("img", { name: "Reported" }),
     ).not.toBeInTheDocument();
 
     // And no empty container either. The row is a flex column with a gap,
@@ -970,7 +967,7 @@ describe("a photo still pending a day after upload (D-157)", () => {
     // Not a reported row: no count of people, no "Nobody reported this".
     expect(screen.queryByText(/Nobody reported this/)).toBeNull();
     expect(screen.queryByText(bracketed("0 people"))).toBeNull();
-    expect(screen.getByRole("img", { name: "Reported photo" })).toHaveAttribute(
+    expect(screen.getByRole("img", { name: "Reported" })).toHaveAttribute(
       "src",
       "/desk/review-photo/entries/u-1/e-1/p-7",
     );
@@ -986,7 +983,7 @@ describe("a photo still pending a day after upload (D-157)", () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("img", { name: "Reported photo" }),
+      screen.queryByRole("img", { name: "Reported" }),
     ).not.toBeInTheDocument();
   });
 

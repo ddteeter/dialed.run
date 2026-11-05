@@ -140,11 +140,14 @@ function headings(path: string, seen = new Set<string>()): string[] {
 
 const screens: string[] = [];
 for (const [path, source] of byPath) {
-  if (!path.startsWith("src/routes/")) continue;
-  // Stryker rewrites source in its sandbox and Vite's `?raw` inlines the
-  // rewrite, so a mutation run would scan its own instrumentation.
-  if (isInstrumented(source)) continue;
-  if (!RENDERS_A_SCREEN.test(codeOnly(source))) continue;
+  if (
+    !path.startsWith("src/routes/") ||
+    // Stryker rewrites source in its sandbox and Vite's `?raw` inlines the
+    // rewrite, so a mutation run would scan its own instrumentation.
+    isInstrumented(source) ||
+    !RENDERS_A_SCREEN.test(codeOnly(source))
+  )
+    continue;
   screens.push(path);
 }
 

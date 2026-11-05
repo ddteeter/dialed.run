@@ -369,7 +369,10 @@ describe("the mark, the message and the hint", () => {
     expect(box()).toHaveClass("border");
     expect(box()).toHaveClass("border-hairline");
     expect(box()).not.toHaveClass("inset-ring-1");
-    expect(box()).toHaveClass("px-4", "py-3");
+    // No vertical padding: `min-h-field` is the height, and a control
+    // fills it (plan 161, step 6).
+    expect(box()).toHaveClass("px-4", "min-h-field");
+    expect(box()).not.toHaveClass("py-3");
 
     await user.type(screen.getByLabelText("Brand"), "Patagonia");
     await user.click(screen.getByRole("button", { name: /save/i }));
@@ -379,7 +382,10 @@ describe("the mark, the message and the hint", () => {
     });
     expect(box()).toHaveClass("inset-ring-1", "inset-ring-ink", "border-ink");
     // The padding is the same on both sides, which is the no-growth half.
-    expect(box()).toHaveClass("px-4", "py-3");
+    // No vertical padding: `min-h-field` is the height, and a control
+    // fills it (plan 161, step 6).
+    expect(box()).toHaveClass("px-4", "min-h-field");
+    expect(box()).not.toHaveClass("py-3");
     expect(screen.getByText("Give it a name.")).toBeVisible();
   });
 
@@ -1495,20 +1501,27 @@ describe("Select", () => {
   it("hides the native arrow and insets ▾ to the label's padding", () => {
     renderSelect(vi.fn());
 
-    expect(screen.getByRole("combobox")).toHaveClass(
-      "appearance-none",
-      "pl-3",
-      "pr-8",
-    );
-    expect(screen.getByText("▾")).toHaveClass("right-3", "text-muted");
+    // The box's px-4 is the inset on both sides: ▾ at the select's right
+    // edge, with room so a long label stops short of it.
+    expect(screen.getByRole("combobox")).toHaveClass("appearance-none", "pr-6");
+    expect(screen.getByText("▾")).toHaveClass("right-0", "text-muted");
   });
 
-  it("never grows past its column, so a long option still reflows at 320px", () => {
+  it("is borderless and fills its field box, so the whole box is the target", () => {
     renderSelect(vi.fn());
 
     const select = screen.getByRole("combobox");
-    expect(select).toHaveClass("max-w-full");
-    expect(select.parentElement).toHaveClass("max-w-full");
+    expect(select).toHaveClass(
+      "min-h-target",
+      "w-full",
+      "border-none",
+      "bg-transparent",
+    );
+    expect(select.parentElement).toHaveClass(
+      "min-h-target",
+      "w-full",
+      "self-stretch",
+    );
   });
 
   it("keeps the select's accessible name and value", () => {

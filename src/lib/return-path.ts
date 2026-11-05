@@ -73,10 +73,11 @@ function isAuthPage(pathname: string): boolean {
 function resolveOnSite(path: string): string | undefined {
   if (!URL.canParse(path, ORIGIN)) return undefined;
   const url = new URL(path, ORIGIN);
-  if (url.origin !== ORIGIN) return undefined;
-  if (url.pathname.startsWith("//")) return undefined;
-  if (isAuthPage(url.pathname)) return undefined;
-  return `${url.pathname}${url.search}`;
+  return url.origin === ORIGIN &&
+    !url.pathname.startsWith("//") &&
+    !isAuthPage(url.pathname)
+    ? `${url.pathname}${url.search}`
+    : undefined;
 }
 
 /**

@@ -124,7 +124,7 @@ test("the heading row counts the pieces on the left, the switch on the right", a
   if (baseURL === undefined) throw new Error("no baseURL");
 
   await openBoard(page, "Round 22 Coverage.dc.html", baseURL);
-  const [count, switchLabel] = await rulingQuotes(page);
+  const [count, switchLabel = ""] = await rulingQuotes(page);
 
   const createdAt = nowSeconds();
   const userId = closetOwner();
@@ -152,7 +152,7 @@ test("the heading row counts the pieces on the left, the switch on the right", a
   const heading = page.getByRole("heading", { level: 1 });
   expect(count).toMatch(/^\d+ pieces$/u);
   await expect(heading).toHaveText("1 piece");
-  const toggle = page.getByRole("switch", { name: switchLabel ?? "" });
+  const toggle = page.getByRole("switch", { name: switchLabel });
   await expect(toggle).toBeVisible();
 
   // Left and right, on one row.

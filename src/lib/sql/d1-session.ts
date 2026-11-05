@@ -205,24 +205,23 @@ class RoutedDatabase implements D1Database {
     statements: D1PreparedStatement[],
   ): Promise<D1Result<T>[]> {
     const scope = scopes.getStore();
-    if (scope === undefined) return this.binding.batch<T>(statements);
-    return sessionOf(scope, this.slotIn(scope), this.binding).batch<T>(
-      statements,
-    );
+    return scope === undefined
+      ? this.binding.batch<T>(statements)
+      : sessionOf(scope, this.slotIn(scope), this.binding).batch<T>(statements);
   }
 
   exec(query: string): Promise<D1ExecResult> {
-    if (scopes.getStore() === undefined) return this.binding.exec(query);
-    return sessionOnly();
+    return scopes.getStore() === undefined
+      ? this.binding.exec(query)
+      : sessionOnly();
   }
 
   withSession(
     constraint?: Parameters<D1Database["withSession"]>[0],
   ): D1DatabaseSession {
-    if (scopes.getStore() === undefined) {
-      return this.binding.withSession(constraint);
-    }
-    return sessionOnly();
+    return scopes.getStore() === undefined
+      ? this.binding.withSession(constraint)
+      : sessionOnly();
   }
 }
 

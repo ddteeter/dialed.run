@@ -122,7 +122,7 @@ function ReportedPhotos({
         <img
           key={key}
           src={reviewPhotoSrc(key)}
-          alt="Reported photo"
+          alt="Reported"
           className="h-32 w-auto border border-hairline"
         />
       ))}
@@ -147,7 +147,7 @@ function GarmentPhoto({
       >
         <img
           src={reviewPhotoSrc(photoKey)}
-          alt="Reported garment photo"
+          alt="Reported garment"
           className="h-full w-full object-contain"
         />
       </span>
@@ -167,12 +167,11 @@ function GarmentPhoto({
 function SubjectPhotos({ row }: Readonly<{ row: QueueRow }>): JSX.Element {
   const keys = photosShown(row);
   const [garmentKey] = keys;
-  if (garmentKey !== undefined && row.subjectType === "garment") {
-    return (
-      <GarmentPhoto photoKey={garmentKey} line={row.subject.garmentLine} />
-    );
-  }
-  return <ReportedPhotos keys={keys} />;
+  return garmentKey !== undefined && row.subjectType === "garment" ? (
+    <GarmentPhoto photoKey={garmentKey} line={row.subject.garmentLine} />
+  ) : (
+    <ReportedPhotos keys={keys} />
+  );
 }
 
 /**

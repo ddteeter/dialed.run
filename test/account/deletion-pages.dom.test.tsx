@@ -89,7 +89,7 @@ async function openSheet(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("DeleteAccount (U1's last row)", () => {
-  it("is set apart by a 2px rule, its title in the action colour, and says what happens", async () => {
+  it("is set apart by a 2px rule, its title in the action colour as text, and says what happens", async () => {
     const { view } = deleteRow();
     await view;
     const row = document.querySelector("[data-part='delete-account']");
@@ -98,7 +98,10 @@ describe("DeleteAccount (U1's last row)", () => {
     expect(open).toHaveTextContent(
       /^Delete accountDeleted after 7 days\. Log in before then to keep it\.Delete$/u,
     );
-    expect(within(open).getByText("Delete account")).toHaveClass("text-action");
+    // Pink as text is `--cold-text`; `--action` is a surface (tokens.css).
+    expect(within(open).getByText("Delete account")).toHaveClass(
+      "text-cold-text",
+    );
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 

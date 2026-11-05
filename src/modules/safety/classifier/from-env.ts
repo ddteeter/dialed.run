@@ -21,6 +21,7 @@ import { classifyImage } from "./moderation";
 
 export function classifierFromEnv(): Classify | undefined {
   const apiKey: unknown = env.OPENAI_API_KEY;
-  if (typeof apiKey !== "string" || apiKey === "") return undefined;
-  return (params) => classifyImage({ ...params, apiKey });
+  return typeof apiKey !== "string" || apiKey === ""
+    ? undefined
+    : (params) => classifyImage({ ...params, apiKey });
 }

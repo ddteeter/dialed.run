@@ -1,0 +1,216 @@
+name: Transcript review
+
+# Plan 161, step 5 (docs/designs/161-a11y-coverage.md §5). When a PR
+# changes what a screen reader says (e2e/transcripts/, step 4's snapshots),
+# Claude reads the diff against the accessibility contract and posts one
+# advisory comment. Two jobs, as in dependabot-pr.yml:
+#
+#   review  computes the diff (no model), then Claude reads it with
+#           read-only tools behind a fenced network and returns structured
+#           output. No write token.
+#   post    screens that output as data and posts it. No model.
+#
+# ADVISORY. A model's verdicts are not deterministic, so nothing here is a
+# required check and neither job can fail the PR: both continue on error,
+# and the comment says it is advisory.
+#
+# THE KEY. The repository secret ANTHROPIC_API_KEY (owner, plan 161's
+# decisions), capped on the key itself. Without it the review is skipped,
+# not failed. `pull_request`, not `pull_request_target`: a fork's PR gets
+# no secrets, so it is skipped too, and nothing here runs with this repo's
+# secrets on code from outside it.
+#
+# PINS. Every `uses:` is a full commit SHA with its version in a comment.
+on:
+  pull_request:
+    paths:
+      - "e2e/transcripts/**"
+
+permissions: {}
+
+concurrency:
+  group: a11y-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      reviewed: ${{ steps.diff.outputs.reviewed }}
+    steps:
+      - uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            api.anthropic.com:443
+            api.github.com:443
+            github.com:443
+            codeload.github.com:443
+            objects.githubusercontent.com:443
+            release-assets.githubusercontent.com:443
+            registry.npmjs.org:443
+            claude.ai:443
+            downloads.claude.ai:443
+            storage.googleapis.com:443
+            bun.sh:443
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # The transcripts' diff against the base, to a file. Skipped when the
+      # key is absent or the diff is empty (a rename, say).
+      - id: diff
+        env:
+          HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$HAS_KEY" != "true" ]; then
+            echo "::notice::ANTHROPIC_API_KEY is not set; the transcript review is skipped"
+            echo "reviewed=false" >>"$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --unified=6 "$BASE"...HEAD -- e2e/transcripts >"$RUNNER_TEMP/transcripts.diff"
+          if [ ! -s "$RUNNER_TEMP/transcripts.diff" ]; then
+            echo "reviewed=false" >>"$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # A diff past ~200 KB is a regenerated suite, not a change to read.
+          head -c 200000 "$RUNNER_TEMP/transcripts.diff" >transcripts.diff
+          echo "reviewed=true" >>"$GITHUB_OUTPUT"
+
+      # Read, Grep and Glob over the checkout, nothing else: no Bash, no
+      # web, no writes. Reads of process state and the runner's own files
+      # are denied, so the key in this process's environment is out of
+      # reach of a tool. The answer leaves as structured output, which
+      # `post` screens. `show_full_output` stays off: these logs are public.
+      - id: claude
+        if: steps.diff.outputs.reviewed == 'true'
+        uses: anthropics/claude-code-action@925afb53776cf1a2b738c6bdbed37b4d4000ef13 # v1.0.262
+        env:
+          CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ github.token }}
+          settings: |
+            {
+              "permissions": {
+                "deny": [
+                  "Read(//proc/**)",
+                  "Read(//sys/**)",
+                  "Read(//etc/**)",
+                  "Read(//home/runner/work/_temp/**)",
+                  "Read(//home/runner/.config/**)",
+                  "Read(~/.claude/**)",
+                  "Read(./.git/**)"
+                ]
+              }
+            }
+          # `opus` is Claude Code's alias for its newest Opus; the action's
+          # SHA pin fixes which Claude Code runs.
+          claude_args: |
+            --model opus
+            --max-turns 40
+            --allowedTools "Read,Grep,Glob"
+            --disallowedTools "Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch,Task"
+            --json-schema '{"type":"object","additionalProperties":false,"required":["summary","findings"],"properties":{"summary":{"type":"string","maxLength":1500},"findings":{"type":"array","maxItems":30,"items":{"type":"object","additionalProperties":false,"required":["transcript","said","problem","suggestion"],"properties":{"transcript":{"type":"string","maxLength":300},"said":{"type":"string","maxLength":300},"problem":{"type":"string","maxLength":500},"suggestion":{"type":"string","maxLength":500}}}}}}'
+          prompt: |
+            This pull request changes what a screen reader announces in the
+            dialed.run web app. Read .claude/skills/a11y-judgment/SKILL.md
+            and follow its section "Review a PR's transcript diff". The
+            diff against the base branch is in ./transcripts.diff.
+
+            Return its findings in this run's output schema: `transcript`
+            is the first screen's path, `said` the phrase as heard,
+            `problem` starts with the severity and criterion number, then
+            the problem and the confidence, and `suggestion` is the fix. If
+            nothing in the diff makes it worse, return no findings and say
+            so in the summary. Be terse.
+
+      # Untrusted text: it goes to a file through the environment, never
+      # into a script.
+      - if: steps.diff.outputs.reviewed == 'true'
+        env:
+          REVIEW: ${{ steps.claude.outputs.structured_output }}
+        run: printf '%s' "$REVIEW" >"$RUNNER_TEMP/review.json"
+
+      - if: steps.diff.outputs.reviewed == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: a11y-review
+          path: ${{ runner.temp }}/review.json
+          if-no-files-found: error
+          retention-days: 1
+
+  post:
+    needs: review
+    if: needs.review.outputs.reviewed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: a11y-review
+          path: ${{ runner.temp }}/review
+
+      # Model output, checked as data before anyone sees it: one small file
+      # of the agreed shape, nothing shaped like a credential, and no live
+      # @-mention. Rendering is ours.
+      - name: Screen and post the review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          DIR: ${{ runner.temp }}/review
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          file="$DIR/review.json"
+          if [ "$(find "$DIR" -mindepth 1 | wc -l)" != 1 ] || [ ! -f "$file" ] || [ -L "$file" ]; then
+            echo "::error::the artifact must be the review alone"; exit 1
+          fi
+          if [ "$(stat -c %s "$file")" -gt 65536 ]; then
+            echo "::error::the review is over 64 KB"; exit 1
+          fi
+          jq -e '
+            def text($max): type == "string" and length <= $max;
+            type == "object"
+            and (keys == ["findings", "summary"])
+            and (.summary | text(1500))
+            and (.findings | type == "array" and length <= 30 and all(.[];
+              type == "object"
+              and (keys == ["problem", "said", "suggestion", "transcript"])
+              and (.transcript | text(300)) and (.said | text(300))
+              and (.problem | text(500)) and (.suggestion | text(500))))
+          ' "$file" >/dev/null || { echo "::error::the review isn't the agreed shape"; exit 1; }
+          body=$(jq -r '
+            def cell: gsub("[\r\n]+"; " ") | gsub("\\|"; "\\|") | gsub("`"; "ʼ");
+            "\(.summary)\n\n"
+            + (if (.findings | length) == 0 then "No findings.\n"
+               else "| Transcript | Said | Problem | Suggestion |\n|---|---|---|---|\n"
+                 + (.findings | map("| \(.transcript | cell) | \(.said | cell) | \(.problem | cell) | \(.suggestion | cell) |") | join("\n")) + "\n"
+               end)
+          ' "$file")
+          if grep -qE 'sk-ant-|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_|-----BEGIN' <<<"$body"; then
+            echo "::error::the review contains something shaped like a credential; not posting it"; exit 1
+          fi
+          # A zero-width space after every @ keeps the text and drops the mention.
+          body=$(sed -E 's/@([A-Za-z0-9_-])/@\xe2\x80\x8b\1/g' <<<"$body")
+          {
+            echo "### Screen-reader transcript review"
+            echo
+            echo "_Advisory. Written by Claude from this PR's transcript diff (plan 161, step 5); a model's reading, not a check. [Run]($RUN_URL)_"
+            echo
+            printf '%s\n' "$body"
+          } >"$RUNNER_TEMP/comment.md"
+          gh pr comment "$PR_URL" --body-file "$RUNNER_TEMP/comment.md"

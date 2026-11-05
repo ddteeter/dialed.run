@@ -1,0 +1,9 @@
+document
+main
+heading, Nothing here, level 1
+paragraph
+This page doesn't exist, or it's an entry its runner has made private.
+end of paragraph
+link, Log in
+end of main
+end of document

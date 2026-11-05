@@ -50,7 +50,7 @@ export function NowGoRun(): JSX.Element {
         <h1 className="m-0 font-display text-display uppercase">Now go run.</h1>
       </div>
 
-      <div className="flex flex-col gap-5 bg-ink px-5 py-6 text-ground">
+      <div className="ground-ink flex flex-col gap-5 bg-ground px-5 py-6 text-ink">
         <p className="m-0 text-lead">
           Next time you finish a run, upload it and tell us what you wore.
           That&rsquo;s the whole loop.
@@ -77,13 +77,13 @@ export function NowGoRun(): JSX.Element {
         <div className="flex flex-col gap-3">
           <Link
             to="/runs/new"
-            className="target flex items-center justify-center rounded-pill bg-action px-4 py-4 text-center font-display text-body uppercase text-ink"
+            className="target flex items-center justify-center rounded-pill bg-action px-4 py-4 text-center font-display text-body uppercase text-accent-ink"
           >
             I have a run to upload
           </Link>
           <Link
             to="/"
-            className="target flex items-center justify-center rounded-pill border border-hairline px-4 py-4 text-center text-body font-semibold text-ground"
+            className="target flex items-center justify-center rounded-pill border border-hairline px-4 py-4 text-center text-body font-semibold text-ink"
           >
             Done for now
           </Link>

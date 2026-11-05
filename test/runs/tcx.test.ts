@@ -87,9 +87,9 @@ function lap(options: {
 }
 
 function trackpoint(lat?: number, lon?: number): string {
-  if (lat === undefined || lon === undefined)
-    return "<Trackpoint></Trackpoint>";
-  return `<Trackpoint><Position><LatitudeDegrees>${String(lat)}</LatitudeDegrees><LongitudeDegrees>${String(lon)}</LongitudeDegrees></Position></Trackpoint>`;
+  return lat === undefined || lon === undefined
+    ? "<Trackpoint></Trackpoint>"
+    : `<Trackpoint><Position><LatitudeDegrees>${String(lat)}</LatitudeDegrees><LongitudeDegrees>${String(lon)}</LongitudeDegrees></Position></Trackpoint>`;
 }
 
 const OUTDOOR_LAP = {

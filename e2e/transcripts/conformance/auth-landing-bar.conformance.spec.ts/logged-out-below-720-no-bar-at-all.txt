@@ -1,0 +1,21 @@
+document
+main
+dialed
+.run
+heading, Every run has an outfit. Log it., level 1
+paragraph
+A virtual wardrobe for runners: what you wore, on which run, in which weather.
+end of paragraph
+link, Create account
+link, Log in
+end of main
+contentinfo
+paragraph
+link, Privacy
+link, Terms
+link, Copyright
+link, Open source
+link, Report an intimate image
+end of paragraph
+end of contentinfo
+end of document

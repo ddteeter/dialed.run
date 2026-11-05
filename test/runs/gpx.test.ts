@@ -37,8 +37,8 @@ function gpxWith(segments: string): string {
 <gpx version="1.1" creator="test"><trk><name>Test</name>${segments}</trk></gpx>`;
 }
 
-function point(lat: number, lon: number, time: string): string {
-  return `<trkpt lat="${String(lat)}" lon="${String(lon)}"><time>${time}</time></trkpt>`;
+function point(lat: number, time: string): string {
+  return `<trkpt lat="${String(lat)}" lon="-93.27"><time>${time}</time></trkpt>`;
 }
 
 const START = "2026-01-15T07:00:00Z";
@@ -82,9 +82,7 @@ async function reasonFor(text: string): Promise<string> {
 describe("gpx: a well-formed track", () => {
   it("reads the start, the duration and the distance off the points", async () => {
     const draft = await parse(
-      gpxWith(
-        `<trkseg>${point(44.98, -93.27, START)}${point(45, -93.27, LATER)}</trkseg>`,
-      ),
+      gpxWith(`<trkseg>${point(44.98, START)}${point(45, LATER)}</trkseg>`),
     );
 
     expect(draft.startedAt).toBe(Math.floor(Date.parse(START) / 1000));
@@ -99,14 +97,12 @@ describe("gpx: a well-formed track", () => {
     // One `<trk>` with two `<trkseg>`s is a paused run; two `<trk>`s is a
     // multi-sport export. Both are one run's worth of points.
     const oneSegment = await parse(
-      gpxWith(
-        `<trkseg>${point(44.98, -93.27, START)}${point(45, -93.27, LATER)}</trkseg>`,
-      ),
+      gpxWith(`<trkseg>${point(44.98, START)}${point(45, LATER)}</trkseg>`),
     );
     const twoSegments = await parse(
       gpxWith(
-        `<trkseg>${point(44.98, -93.27, START)}${point(44.99, -93.27, "2026-01-15T07:15:00Z")}</trkseg>` +
-          `<trkseg>${point(44.99, -93.27, "2026-01-15T07:16:00Z")}${point(45, -93.27, LATER)}</trkseg>`,
+        `<trkseg>${point(44.98, START)}${point(44.99, "2026-01-15T07:15:00Z")}</trkseg>` +
+          `<trkseg>${point(44.99, "2026-01-15T07:16:00Z")}${point(45, LATER)}</trkseg>`,
       ),
     );
 
@@ -119,11 +115,11 @@ describe("gpx: a well-formed track", () => {
     // cannot be measured. Both are dropped rather than read as zero.
     const withGaps = await parse(
       gpxWith(
-        `<trkseg>${point(44.98, -93.27, START)}` +
+        `<trkseg>${point(44.98, START)}` +
           `<trkpt lat="45" lon="-93.27"></trkpt>` +
           `<trkpt lon="-93.27"><time>${LATER}</time></trkpt>` +
           `<trkpt lat="45"><time>${LATER}</time></trkpt>` +
-          `${point(45, -93.27, LATER)}</trkseg>`,
+          `${point(45, LATER)}</trkseg>`,
       ),
     );
 
@@ -134,7 +130,7 @@ describe("gpx: a well-formed track", () => {
   it("ignores a trackpoint that is not an element", async () => {
     const withText = await parse(
       gpxWith(
-        `<trkseg>${point(44.98, -93.27, START)}<trkpt>stray text</trkpt>${point(45, -93.27, LATER)}</trkseg>`,
+        `<trkseg>${point(44.98, START)}<trkpt>stray text</trkpt>${point(45, LATER)}</trkseg>`,
       ),
     );
     expect(withText.durationS).toBe(1800);
@@ -154,7 +150,7 @@ describe("gpx: every way it refuses", () => {
 
   it("says when there are fewer than two usable points", async () => {
     const single = await reasonFor(
-      gpxWith(`<trkseg>${point(44.98, -93.27, START)}</trkseg>`),
+      gpxWith(`<trkseg>${point(44.98, START)}</trkseg>`),
     );
     expect(single).toContain("fewer than 2 track points");
     expect(await reasonFor(gpxWith("<trkseg></trkseg>"))).toContain(
@@ -175,14 +171,10 @@ describe("gpx: every way it refuses", () => {
     // Two points at the same instant, and two at the same place. Either
     // one produces a run that is not a run.
     const noTime = await reasonFor(
-      gpxWith(
-        `<trkseg>${point(44.98, -93.27, START)}${point(45, -93.27, START)}</trkseg>`,
-      ),
+      gpxWith(`<trkseg>${point(44.98, START)}${point(45, START)}</trkseg>`),
     );
     const noDistance = await reasonFor(
-      gpxWith(
-        `<trkseg>${point(44.98, -93.27, START)}${point(44.98, -93.27, LATER)}</trkseg>`,
-      ),
+      gpxWith(`<trkseg>${point(44.98, START)}${point(44.98, LATER)}</trkseg>`),
     );
     expect(noTime).toContain("non-positive duration or distance");
     expect(noDistance).toContain("non-positive duration or distance");
@@ -190,9 +182,7 @@ describe("gpx: every way it refuses", () => {
 
   it("says when time runs backwards", async () => {
     const backwards = await reasonFor(
-      gpxWith(
-        `<trkseg>${point(44.98, -93.27, LATER)}${point(45, -93.27, START)}</trkseg>`,
-      ),
+      gpxWith(`<trkseg>${point(44.98, LATER)}${point(45, START)}</trkseg>`),
     );
     expect(backwards).toContain("non-positive duration or distance");
   });
@@ -201,9 +191,7 @@ describe("gpx: every way it refuses", () => {
     // A latitude past the pole reaches the schema, not a guard here — and
     // that is the last thing between a corrupt file and a stored run.
     const outOfRange = await reasonFor(
-      gpxWith(
-        `<trkseg>${point(91, -93.27, START)}${point(92, -93.27, LATER)}</trkseg>`,
-      ),
+      gpxWith(`<trkseg>${point(91, START)}${point(92, LATER)}</trkseg>`),
     );
     expect(outOfRange).toContain("runDraftSchema");
   });
@@ -215,7 +203,7 @@ describe("gpx: every way it refuses", () => {
     // literal, the point has no readable time, and the run is refused.
     const withEntity = `<?xml version="1.0"?>
 <!DOCTYPE gpx [<!ENTITY later "${LATER}">]>
-<gpx><trk><trkseg>${point(44.98, -93.27, START)}<trkpt lat="45" lon="-93.27"><time>&later;</time></trkpt></trkseg></trk></gpx>`;
+<gpx><trk><trkseg>${point(44.98, START)}<trkpt lat="45" lon="-93.27"><time>&later;</time></trkpt></trkseg></trk></gpx>`;
 
     expect(await reasonFor(withEntity)).toContain("fewer than 2 track points");
   });
@@ -225,13 +213,13 @@ describe("gpx: every way it refuses", () => {
     // library actually complained about.
     const rejected = `<?xml version="1.0"?>
 <!DOCTYPE gpx [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
-<gpx><trk><trkseg>${point(44.98, -93.27, START)}</trkseg></trk></gpx>`;
+<gpx><trk><trkseg>${point(44.98, START)}</trkseg></trk></gpx>`;
     const xmlFailure = await failureFrom(() => parse(rejected));
     expect(xmlFailure.reason).toContain("XML parser threw");
     expect(xmlFailure.cause).toBeDefined();
 
     const outOfRange = gpxWith(
-      `<trkseg>${point(91, -93.27, START)}${point(92, -93.27, LATER)}</trkseg>`,
+      `<trkseg>${point(91, START)}${point(92, LATER)}</trkseg>`,
     );
     const schemaFailure = await failureFrom(() => parse(outOfRange));
     expect(schemaFailure.cause).toBeDefined();
@@ -350,19 +338,15 @@ describe("gpx: moving time, pauses left out (D-111)", () => {
 });
 
 /**
-A climb sampled every 20 s for `minutes`: `ground` metres north and `rise`
+A climb sampled every 20 s for `minutes`: 9 metres north and `rise`
 metres up between each point, or no altitude at all when `rise` is omitted.
 */
-function sparseClimb(
-  minutes: number,
-  ground: number,
-  rise?: number,
-): Promise<RunDraft> {
+function sparseClimb(minutes: number, rise?: number): Promise<RunDraft> {
   const count = (minutes * 60) / 20 + 1;
   return parseSegments(
     Array.from({ length: count }, (_, index) =>
       at(
-        index * ground,
+        index * 9,
         index * 20,
         rise === undefined ? undefined : 100 + index * rise,
       ),
@@ -374,8 +358,8 @@ describe("gpx: a slow climb is not a pause", () => {
   it("measures the move through the climb where both points have an altitude", async () => {
     // 9 m over the ground in 20 s is 0.45 m/s, under the stopped speed;
     // with 5 m of climb it is 10.3 m, which is not.
-    const steep = await sparseClimb(5, 9, 5);
-    const groundOnly = await sparseClimb(5, 9);
+    const steep = await sparseClimb(5, 5);
+    const groundOnly = await sparseClimb(5);
 
     expect(steep.movingS).toBe(300);
     expect(groundOnly.movingS).toBeUndefined();
@@ -397,7 +381,7 @@ describe("gpx: a slow climb is not a pause", () => {
     // moving time is stored. Whether STOPPED_SPEED_MPS should come down is
     // the owner's call; if it does, this is the test that flips.
     expect(STOPPED_SPEED_MPS).toBe(0.5);
-    const draft = await sparseClimb(20, 9, 2.7);
+    const draft = await sparseClimb(20, 2.7);
 
     expect(draft.durationS).toBe(1200);
     expect(draft.movingS).toBeUndefined();

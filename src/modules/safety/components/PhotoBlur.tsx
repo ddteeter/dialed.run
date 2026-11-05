@@ -211,6 +211,9 @@ export function PhotoBlur({
     <div
       data-part="photo-check"
       className="flex flex-col gap-3"
+      // It only catches Escape bubbling up from the controls inside, so it
+      // is no control itself (jsx-a11y's documented case for the role).
+      role="presentation"
       onKeyDown={(event) => {
         if (event.key === "Escape") onCancel();
       }}

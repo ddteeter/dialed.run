@@ -1,0 +1,48 @@
+document
+banner
+link, Notifications
+end of banner
+main
+heading, Add a run, level 1
+GPX / TCX / FIT
+Drop a file, or browse
+From your watch export or any tracking app.
+GPX / TCX / FIT Drop a file, or browse From your watch export or any tracking app.
+MORNING_RUN.GPX has no track in it. Export the run again.
+paragraph
+No file?
+link, Enter the run by hand
+instead.
+end of paragraph
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed
+Feed
+end of link, Feed
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet
+Closet
+end of link, Closet
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add, has popup dialog
++ Add
+end of button, Add, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document

@@ -126,6 +126,7 @@ In order:
      open only the dialog's controls count;
    - `tab-order`: a positive `tabindex`, which reorders the page. Such a
      control comes before the walk's start, so it is not also unreached.
+
 2. **The other width:** the one of `PHONE` and `DESK` farther from the
    test's width. axe and the step 1 checks run again there.
 3. **Reflow at 320×568** (WCAG 1.4.10): `reflow` when the page scrolls
@@ -210,6 +211,7 @@ _How (2026-11-03):_
   `A11Y_RECORD=1` writes the figure instead of failing on it. A rise past
   the noise is printed, with a reminder to raise the baseline; one inside
   it is the next run's fall, so it is not kept.
+
 - **CI.** The teardown prints the figure and appends it to
   `$GITHUB_STEP_SUMMARY`, so no workflow changes. The HTML report is not
   uploaded: the Actions bill is artifact storage.
@@ -224,6 +226,37 @@ named by the test, so a change in what's announced shows up as a reviewed
 diff.
 _Done:_ the transcripts are committed and the snapshots pass.
 
+_How (2026-11-03):_
+
+- **When.** In the fixture's teardown, on a test that passed and ended on
+  the app's origin. It runs after the final check and before step 2's
+  checks, which resize the page, so it reads the test's own width. The
+  fixture's own spec (`a11yMode: "collect"`) records none.
+- **Loading Guidepup.** Its browser build is one ES module. The app's CSP
+  (`script-src 'self'`) refuses a blob or inline module, which is how
+  step 0 loaded it on a page without the CSP. `a11y-transcript.ts`
+  rewrites the build's one `export {…}` into a global and evaluates it
+  through the debugger protocol, which the CSP does not govern. Nothing
+  is injected into the app's pages before the end of the test.
+- **The walk.** `next()` from the top until "end of document", which is
+  where Guidepup wraps to the start. It is capped at 1,500 phrases; the
+  longest page today, `/open-source`, is about 1,100.
+- **What is normalized.** ULIDs, day and month names, and numbers, which
+  are seeded handles, counts, times and dates. Heading levels and list
+  positions stay. A transcript records what is said and in what order;
+  the values are other tests' business.
+- **Where.** `e2e/transcripts/<spec path>/<test title>.txt`, one per test,
+  through `snapshotPathTemplate`. The template has no platform suffix, so
+  a laptop and CI share one file. To accept a change, run
+  `npx playwright test --update-snapshots` and review the diff. A new
+  test with no transcript fails in CI until its file is committed.
+- Both servers must say the same thing. The dev and preview legs read
+  the same files.
+
+_Tests:_ `a11y-transcript.spec.ts`: a probe page's exact transcript
+(levels, positions, stop at the end), the normalization, and the module
+rewrite.
+
 **5. Claude reviews the transcript diff.** A PR workflow sends the
 transcript diff and the contract's rules to Claude and posts one advisory
 comment: unclear names, repeated announcements, reading order that
@@ -231,21 +264,118 @@ contradicts the layout, an error read before its field. It is advisory
 only: its verdicts aren't deterministic, so it never fails a check.
 _Done:_ it comments on a PR that changes a label.
 
+_How (2026-11-03):_ `.github/workflows/a11y-review.yml`, on
+`pull_request` when `e2e/transcripts/**` changes. It is built like
+`dependabot-pr.yml`'s review, for the same reasons: the job holds a key
+and reads text it does not control.
+
+- **`review`** (`contents: read`):
+  - The network is fenced by `harden-runner` to the hosts the action
+    installs from and Claude's API.
+  - The transcripts' diff against the base is written to a file, with
+    no model, and capped at 200 KB.
+  - Claude reads the diff and applies the `a11y-judgment` skill's
+    criteria (step 9b), reading the contract and the source with Read,
+    Grep and Glob only: no Bash, web or writes. It answers in a JSON
+    schema of a summary and up to 30 findings (transcript, phrase as
+    said, problem, fix).
+- **`post`** (`pull-requests: write`, no model) screens that output as
+  data before posting one comment:
+  - the agreed shape and sizes;
+  - nothing shaped like a credential;
+  - every `@` defused.
+- **Advisory.** Both jobs `continue-on-error`, nothing is a required
+  check, and the comment says it is a model's reading.
+- **The key.** The repository secret `ANTHROPIC_API_KEY`. Today the key
+  exists only in the `dependabot-review` environment. Until the owner adds
+  the repository secret, the job logs a notice and skips. A fork's PR gets
+  no secrets and skips the same way, so nothing runs this repo's key on
+  code from outside it.
+- _Not done here:_ the "Done" demonstration. It needs the secret, then a
+  PR that changes a label.
+
 **6. Fix the backlog.** Work through `a11y-baseline.json`, grouped by the
 lane that owns the file, until it is empty. Contrast in a real browser is
 the likely bulk.
 _Done:_ the baseline is empty and the file is deleted.
 
+_How (2026-11-03):_ 28 findings, in five kinds, plus the owner's two
+decisions.
+
+- **`target-44`** (13): every `<select>` and the runner search.
+  - `FormField`'s box held its control centred in 12px of padding. A
+    select drew its own 37px box inside the box.
+  - The box now has no vertical padding: `min-h-field` alone makes it 50. Each select fills it borderless (48px), the way a text input sits
+    in it.
+  - The search input stretches to its 48px box.
+  - The text fields look the same. The selects no longer draw a box
+    inside the box.
+- **`color-contrast`** (8), each against the token rules in `tokens.css`:
+  - "Pink as text is `--cold-text`": Delete account.
+  - "Text on `--action` is always `--accent-ink`": the shared
+    `SubmitButton` and Copyright holds' button. The Desk is an inverted
+    block, so `text-ink` there was chalk on pink.
+  - NowGoRun's ink block was `bg-ink text-ground` with the paper values
+    inside, so `--muted` and `--cold-text` failed on ink. It is now a
+    `ground-ink` block, which redefines them.
+  - `--label`/`--muted` grey is 4.0:1 on `--tint`. Text on a tinted row
+    (a saved backlog row, the file strip) is `--quiet`.
+- **`label-content-name-mismatch`** (1): the start-time button is named
+  by what it shows, then what it does: "6:04 AM · Changed, change start
+  time" (WCAG 2.5.3).
+- **`p-as-heading`** (3): `BracketHeadline` and the conditions block's
+  state titles are `<h2>`s under the feed's `<h1>`.
+- **`reflow /desk`**: the rail is beside the content from `wide` and
+  above it below `wide`.
+- **Brackets**: the wordmark's bracket glyphs are `aria-hidden`.
+  `Bracketed` already hid its own.
+
 **7. `eslint-plugin-jsx-a11y`.** The owner adds it to the ESLint config at
 `recommended`. Its findings are fixed in the same PR.
+
+_How (2026-11-03):_ `eslint-plugin-jsx-a11y-x` 0.2.0, the es-tooling fork,
+at `recommended` on `src/**/*.tsx`.
+
+- **Why the fork (owner, 2026-11-03).** Upstream's last release (6.10.2,
+  October 2024) declares ESLint 9 at most as its peer, and this repo is on 10. Upstream's ESLint 10 issue (#1075) and three community PRs are open;
+  the sole maintainer has said it will come, without a date. The fork has
+  the same 34 rules, ESLint 9 and 10 as its peer, and is kept by the e18e
+  lead. Both ran clean under ESLint 10 here and found the same seven
+  problems. Moving back is the import and the rule prefix.
+- **What it found, and the fixes:**
+  - `img-redundant-alt` (3): alts that said "photo", which a screen reader
+    already says. "Reported", "Reported garment", "Tap to sample a shade".
+  - `no-noninteractive-element-interactions` (1): the backlog's key
+    handler sat on `<tbody>`. It is on each focusable row now; the row with
+    focus answers, and a failed row's Retry is a plain button again.
+  - `no-static-element-interactions` (3): wrappers that only catch keys
+    bubbling from the controls inside (Escape to cancel, Enter to find)
+    take `role="presentation"`, the plugin's documented case for it.
 
 **8. Tidy.** Correct the comment in `test/ui/axe.dom.test.tsx`. It keeps
 the primitives' states that no screen reaches, and points at the fixture
 for everything else.
+_Done (2026-11-03):_ the comment no longer says module components are
+covered from their own suites. It points at the fixture for screens, and
+names the states it keeps: invalid, pending, a failure band, an error
+summary, a skeleton.
 
 **9. Manual pass.** Add `docs/launch/voiceover-checklist.md`: the core
 flows on a real iPhone with VoiceOver, covering gestures, the rotor and
 Safari. Run it before friends get access.
+_Done (2026-11-03):_ the checklist is eight gestures checked on every
+screen, the five flows (join, log a run, closet, feed, You), and a runs
+table. It is a gate line in `docs/launch/deployment-plan.md` §11, at
+stage 1 (friends) and again at stage 2.
+
+**9b. The judgment review (owner, 2026-11-04).** What no rule can check
+(whether names, headings, errors and order make sense when heard) gets one
+written set of criteria: the skill `.claude/skills/a11y-judgment`. It has
+two branches. A full audit fans out over every transcript in subagent
+shards. A PR review applies the same criteria to a transcript diff, and
+step 5's workflow now reads the skill instead of carrying its own list.
+Findings are flags for the owner to triage, never a gate. Automating a
+real VoiceOver pass is deferred (R-177, #336).
 
 **10. Make it required.** Once step 6 is done, the owner makes the a11y
 check required in branch protection.

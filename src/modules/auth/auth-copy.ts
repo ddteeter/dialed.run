@@ -261,8 +261,8 @@ export function authFailure(
   failure: FormFailure | undefined,
   cause: unknown,
 ): AuthBand | undefined {
-  if (failure === undefined) return undefined;
-  if (cause instanceof AccountClosedRefusal) return undefined;
+  if (failure === undefined || cause instanceof AccountClosedRefusal)
+    return undefined;
   if (cause instanceof AccessRefused) return cause;
   return { kicker: AUTH_KICKER, message: authFailureMessage(failure, cause) };
 }

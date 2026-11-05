@@ -1,0 +1,42 @@
+document
+banner
+link, dialed.run home
+dialed
+.run
+end of link, dialed.run home
+link, Log in
+end of banner
+main
+heading, @public_pages_#, level 1
+heading, Kits #, level 2
+Kits
+#
+end of heading, Kits #, level 2
+paragraph
+No public kits yet.
+end of paragraph
+heading, Rotation, level 2
+heading, In use · #, level 3
+In use · #
+end of heading, In use · #, level 3
+list
+listitem, level 1, position 1, set size 1
+Houdini Jacket
+Top
+end of listitem, level 1, position 1, set size 1
+end of list
+heading, Wear what worked., level 2
+paragraph
+dialed.run keeps what you wore on each run and how it felt, then tells you what to wear when that weather comes round again.
+end of paragraph
+link, Request an invite
+link, Have a code? Join
+end of main
+contentinfo
+paragraph
+link, Report this profile
+link, Privacy
+link, Terms
+end of paragraph
+end of contentinfo
+end of document

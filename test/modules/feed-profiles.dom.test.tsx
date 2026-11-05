@@ -59,20 +59,13 @@ function part(name: string): HTMLElement | null {
   );
 }
 
-function otherScreen(
-  overrides: Partial<OtherProfileData> = {},
-  options: {
-    isFollowing?: boolean;
-    follow?: () => Promise<unknown>;
-    unfollow?: () => Promise<unknown>;
-  } = {},
-) {
+function otherScreen(overrides: Partial<OtherProfileData> = {}) {
   return (
     <OtherProfile
       profile={otherProfile(overrides)}
-      isFollowing={options.isFollowing ?? false}
-      follow={options.follow ?? done}
-      unfollow={options.unfollow ?? done}
+      isFollowing={false}
+      follow={done}
+      unfollow={done}
       reportAffordance={<button type="button">Report</button>}
     />
   );

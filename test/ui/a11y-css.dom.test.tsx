@@ -56,8 +56,7 @@ function bodyAt(source: string, open: number): string {
  */
 function blockAfter(marker: string): string {
   const at = rules.indexOf(marker);
-  if (at === -1) return "";
-  return bodyAt(rules, rules.indexOf("{", at));
+  return at === -1 ? "" : bodyAt(rules, rules.indexOf("{", at));
 }
 
 describe("06 · focus is visible and square", () => {

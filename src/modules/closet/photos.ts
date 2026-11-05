@@ -375,8 +375,7 @@ export async function getItemPhotoObject(
   ifNoneMatch?: string | null,
 ): Promise<R2Object | R2ObjectBody | undefined> {
   const item = await getOwnedItem(db, userId, itemId);
-  if (item.photoKey === null) return undefined;
-  if (!isPhotoSize(size)) return undefined;
+  if (item.photoKey === null || !isPhotoSize(size)) return undefined;
   const key = `${item.photoKey}/${size}.webp`;
   const conditionalEtag = unquoteEtag(ifNoneMatch);
   const object =

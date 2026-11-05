@@ -326,8 +326,10 @@ export function FormField({
   // Form Contract 02b, carried in tokens.js since round 28: 50 tall
   // (`min-h-field`, HEIGHT.field), 16px type (`text-field`, TYPE.field,
   // which the control inherits through preflight's `font: inherit`) and
-  // radius 10 (`rounded-field`). The padding alone reaches 48, so the
-  // minimum is what makes it 50.
+  // radius 10 (`rounded-field`). The minimum is the height, with no
+  // vertical padding, so a control can fill the box: a `<select>` that
+  // stretches is a 48px target (plan 161, step 6), where one centred in
+  // padding was 37 and drew a box inside the box.
   const box = (
     <div
       data-invalid={isInvalid ? "true" : undefined}
@@ -340,8 +342,8 @@ export function FormField({
       // Which is why a *group* does not get one — see `FieldGroup`.
       className={
         isInvalid
-          ? "field-box flex min-h-field items-center rounded-field border border-ink inset-ring-1 inset-ring-ink bg-ground px-4 py-3 text-field"
-          : "field-box flex min-h-field items-center rounded-field border border-hairline bg-ground px-4 py-3 text-field"
+          ? "field-box flex min-h-field items-center rounded-field border border-ink inset-ring-1 inset-ring-ink bg-ground px-4 text-field"
+          : "field-box flex min-h-field items-center rounded-field border border-hairline bg-ground px-4 text-field"
       }
     >
       {children}
@@ -862,15 +864,19 @@ export const NO_CHOICE = "";
 
 /**
  * A native `<select>` with the arrow drawn as the text mark ▾, inset to match
- * the label's padding. Every select in the app is this one.
+ * the label's padding. Every select in the app is this one, and it sits in a
+ * `FormField` box.
  *
- * Chromium draws its own arrow about 3px from the right border and ignores
- * the padding, so a label 12px in from the left sat opposite an arrow 3px in
- * from the right. `appearance-none` hides the native one; the ▾ sits 12px in
- * (`right-3`, the same step as `pl-3`), and `pr-8` keeps a long label from
- * running under it. The mark is ▾ rather than an icon because design already
- * draws it: round 28's Desk remove-reason select, the boards' "SORT: MOST
- * DIALED ▾", and `MoreDisclosure`'s "more".
+ * The box draws the border and the `px-4` inset; the select itself is
+ * borderless and fills the box's full height, so the whole 48px is the
+ * target (plan 161, step 6). Chromium draws its own arrow about 3px inside
+ * the select and ignores the padding, so it never lined up with the label.
+ * `appearance-none` hides the native one, and the ▾ sits at the select's
+ * right edge, which is the box's `px-4`: 16px in from the border, the same
+ * as the label's 16px from the left. `pr-6` keeps a long label from running
+ * under it. The mark is ▾ rather than an icon because design already draws
+ * it: round 28's Desk remove-reason select, the boards' "SORT: MOST DIALED
+ * ▾", and `MoreDisclosure`'s "more".
  *
  * The ▾ is `aria-hidden` — the select already says it is a select — and
  * `pointer-events-none`, so a click on it lands on the select and opens it.
@@ -883,14 +889,14 @@ export function Select(
   props: Readonly<Omit<ComponentProps<"select">, "className">>,
 ): JSX.Element {
   return (
-    <span className="relative flex max-w-full">
+    <span className="relative flex min-h-target w-full self-stretch">
       <select
         {...props}
-        className="max-w-full appearance-none rounded-field border border-hairline bg-panel py-2 pr-8 pl-3 font-normal"
+        className="min-h-target w-full appearance-none border-none bg-transparent pr-6 font-normal"
       />
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-muted"
+        className="pointer-events-none absolute inset-y-0 right-0 flex items-center text-muted"
       >
         ▾
       </span>

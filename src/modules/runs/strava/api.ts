@@ -135,8 +135,9 @@ export function stravaConfigFrom(
   clientId: string | undefined,
   clientSecret: string | undefined,
 ): StravaConfig | undefined {
-  if (clientId === undefined || clientSecret === undefined) return undefined;
-  return { clientId, clientSecret };
+  return clientId === undefined || clientSecret === undefined
+    ? undefined
+    : { clientId, clientSecret };
 }
 
 /**

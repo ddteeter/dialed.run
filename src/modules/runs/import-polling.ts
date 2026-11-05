@@ -46,10 +46,10 @@ interface Progress {
  * good on one dropped request. The budget still ends it.
  */
 function isUnsettled(progress: Progress | undefined): boolean {
-  if (progress === undefined) return true;
-  if (isReading(progress.status)) return true;
   return (
-    progress.status === "done" && progress.run?.weatherStatus === "pending"
+    progress === undefined ||
+    isReading(progress.status) ||
+    (progress.status === "done" && progress.run?.weatherStatus === "pending")
   );
 }
 
@@ -62,9 +62,7 @@ export function importPollIntervalMs(
   progress: Progress | undefined,
   pollCount: number,
 ): number {
-  if (!isUnsettled(progress)) return 0;
-  if (pollCount >= MAX_POLLS) return 0;
-  return POLL_INTERVAL_MS;
+  return isUnsettled(progress) && pollCount < MAX_POLLS ? POLL_INTERVAL_MS : 0;
 }
 
 /**

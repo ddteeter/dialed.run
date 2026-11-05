@@ -24,10 +24,8 @@ The foot link, whichever of its two wordings the subject gets.
 */
 const REPORT = /^Report (this entry|or block )/u;
 
-function renderAffordance(
-  overrides: Partial<Props> = {},
-  sheet = confirmGate(),
-) {
+function renderAffordance(overrides: Partial<Props> = {}) {
+  const sheet = confirmGate();
   const fileReport: Props["fileReport"] = vi
     .fn<Props["fileReport"]>()
     .mockResolvedValue({

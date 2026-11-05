@@ -247,7 +247,7 @@ export async function unseed(seeded: Seeded): Promise<void> {
     const runIds = [
       ...new Set([
         ...seeded.runIds,
-        ...imported.flatMap((row) => (row.runId === null ? [] : [row.runId])),
+        ...imported.flatMap((row) => row.runId ?? []),
       ]),
     ];
     await core.delete(imports).where(eq(imports.userId, seeded.userId));

@@ -57,8 +57,9 @@ export function exportKeyFor(
 ): string;
 export function exportKeyFor(row: ExportKeyParts): string | undefined;
 export function exportKeyFor(row: ExportKeyParts): string | undefined {
-  if (row.claimId === null) return undefined;
-  return `${exportPrefixFor(row.userId)}${row.id}/${row.claimId}.zip`;
+  return row.claimId === null
+    ? undefined
+    : `${exportPrefixFor(row.userId)}${row.id}/${row.claimId}.zip`;
 }
 
 /**

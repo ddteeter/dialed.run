@@ -76,7 +76,7 @@ export function RunnerSearch({
     <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0">
       <FormStatus>{status}</FormStatus>
       <h1 className="m-0 font-display text-title uppercase">Find a runner</h1>
-      <div className="field-box flex min-h-12 items-center gap-3 rounded-field border border-hairline bg-ground px-4 py-3">
+      <div className="field-box flex min-h-12 items-center gap-3 rounded-field border border-hairline bg-ground px-4">
         <input
           type="search"
           aria-label="Search by name"
@@ -85,7 +85,7 @@ export function RunnerSearch({
           onChange={(event) => {
             void runSearch(event.target.value);
           }}
-          className="min-w-0 flex-1 border-none bg-transparent"
+          className="min-w-0 flex-1 self-stretch border-none bg-transparent"
         />
         {/* The field's trailing label: the brackets breathe while a search
             is out, and there is nothing there otherwise. */}

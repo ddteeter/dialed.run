@@ -356,10 +356,10 @@ const positional = flag === -1 ? args : args.toSpliced(flag, 2);
 const [first, second, third] = positional;
 if (first === "--extract" && second !== undefined && third !== undefined) {
   extract(second, third);
-} else if (first !== undefined && second !== undefined) {
-  build(first, second, flag === -1 ? undefined : args[flag + 1]);
-} else {
+} else if (first === undefined || second === undefined) {
   throw new Error(
     "usage: plan-survey <survey-dir> <out.html> [--previous <file>] | --extract <page.html> <out.json>",
   );
+} else {
+  build(first, second, flag === -1 ? undefined : args[flag + 1]);
 }

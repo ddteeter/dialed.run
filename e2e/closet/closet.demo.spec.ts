@@ -165,20 +165,26 @@ test("add garments with product identity -> detail in round 22's order -> retire
       controls.map((control) => control.getAttribute("name")),
     );
   expect(order).toStrictEqual(["category", "brand", "name", "productUrl"]);
-  // Design-deltas 104: the native arrow is gone, and ▾ sits 12px in from
-  // the right border, the same as the label's 12px from the left.
+  // Design-deltas 104: the native arrow is gone, and ▾ sits as far in from
+  // the field box's right edge as the label sits from its left (the box's
+  // border and px-4, on both sides).
   await expect(category).toHaveCSS("appearance", "none");
   const arrow = category.locator("xpath=following-sibling::*[1]");
   await expect(arrow).toHaveText("▾");
   await expect(arrow).toHaveAttribute("aria-hidden", "true");
+  const fieldBox = await category
+    .locator("xpath=ancestor::*[contains(@class, 'field-box')][1]")
+    .boundingBox();
   const selectBox = await category.boundingBox();
   const arrowBox = await arrow.boundingBox();
-  if (selectBox === null || arrowBox === null) {
-    throw new Error("F's category select or its ▾ is not laid out");
+  if (fieldBox === null || selectBox === null || arrowBox === null) {
+    throw new Error("F's category field or its ▾ is not laid out");
   }
+  const leftInset = selectBox.x - fieldBox.x;
+  expect(leftInset).toBeGreaterThan(8);
   expect(
-    selectBox.x + selectBox.width - (arrowBox.x + arrowBox.width),
-  ).toBeCloseTo(12, 0);
+    fieldBox.x + fieldBox.width - (arrowBox.x + arrowBox.width),
+  ).toBeCloseTo(leftInset, 0);
   await page.getByLabel("Category").selectOption("shoes");
   await page.getByLabel("Brand").fill("Nike");
   await page.getByLabel("Model / name").fill("Pegasus 41");

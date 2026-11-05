@@ -506,8 +506,8 @@ describe("the confirm-first sheet and the nag", () => {
 /**
 `account`'s `ownAccountQuery`, answering with the runner's address.
 */
-function ownAccount(email = "maya@example.com") {
-  return vi.fn(() => Promise.resolve({ email }));
+function ownAccount() {
+  return vi.fn(() => Promise.resolve({ email: "maya@example.com" }));
 }
 
 describe("the sheet the root opens on a refusal (design 133)", () => {

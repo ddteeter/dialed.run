@@ -1021,21 +1021,38 @@ WAITING`, `STILL REVOKED`), leaving `NOT CHANGED`'s page band to New
 
     **The ask:** draw it, or confirm the composition and copy.
 
-_Items 101–103 are open (design 164)._
+107. **A takedown request's Decline, once pressed (design 128).**
+Undesigned. Rounds 37 and 44 draw the request's bar (Take it down,
+Decline, Block and decline all) and Block's question, which takes the
+bar's place with its answer and Cancel. Nothing draws Decline once
+pressed. As built: the bar keeps Take it down and Block and decline
+all, Decline leaves it, and under it opens the reason field
+(_"Why not"_, hint _"The person who asked is sent this."_) with a
+chalk **Decline** submit, the §4a band above it. There is no Cancel:
+once Decline is pressed, the field stays open until a decision is
+made or the page is loaded again.
+
+     **The ask:** draw Decline's open state. Should it take the bar's
+     place as Block's question does, and does it get a Cancel back to the
+     bar?
+
+_Items 101–103 (design 164) and 107 (design 128) are open._
 
 <!-- Numbered 104, not 98: round 43 answered 93–98, and the open queue goes on at 99–103. A list break, so Prettier keeps the number. -->
 
 104. **A select's arrow is ▾, inset to match its padding.** Undesigned as
      a control: no contract draws a select's anatomy, and Chromium drew
-     its own arrow about 3px from the right border, opposite a label 12px
-     in from the left. Built from round 28's drawn Desk remove-reason
-     select (_"SHOWS WHERE SOMEONE LIVES ▾"_), which the boards' _"SORT:
-     MOST DIALED ▾"_ and `MoreDisclosure`'s "more" also use: `ui/form.tsx`'s
-     `Select` hides the native arrow and draws the text mark ▾ in `--muted`,
-     12px in from the right border to match the 12px left padding, with
-     32px of right padding so a long label never runs under it. The mark is
-     `aria-hidden` and does not take a click. Every select in the app is
-     this one: `ChoiceField`, F's category and the manual run's effort.
+     its own arrow a few pixels inside the select, out of line with the
+     label 16px in from the left. Built from round 28's drawn Desk
+     remove-reason select (_"SHOWS WHERE SOMEONE LIVES ▾"_), which the
+     boards' _"SORT: MOST DIALED ▾"_ and `MoreDisclosure`'s "more" also
+     use: `ui/form.tsx`'s `Select` hides the native arrow and draws the
+     text mark ▾ in `--muted`, 16px in from the field box's right border
+     to match the box's 16px left inset, with 24px of right padding so a
+     long label never runs under it. The mark is `aria-hidden` and does
+     not take a click. Every select in the app is this one, in a
+     `FormField` box: `ChoiceField`, F's category and the manual run's
+     effort.
      **The ask:** confirm, or draw a select's anatomy.
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->

@@ -54,8 +54,8 @@ vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
 
 const ULID = /^[0-9A-HJKMNP-TV-Z]{26}$/u;
 
-function gpx(name = "run.gpx", body = "<gpx/>"): File {
-  return new File([body], name, { type: "application/gpx+xml" });
+function gpx(name = "run.gpx"): File {
+  return new File(["<gpx/>"], name, { type: "application/gpx+xml" });
 }
 
 function dropInput(): HTMLInputElement {
@@ -109,11 +109,11 @@ function parsed(overrides: Parameters<typeof runSummary>[0] = {}) {
     Promise.resolve(outcome({ status: "done", run: runSummary(overrides) }));
 }
 
-function region(slot: string): HTMLElement {
+function parsedCard(): HTMLElement {
   const found = document.querySelector<HTMLElement>(
-    `[data-slot='${CSS.escape(slot)}']`,
+    "[data-slot='parsed-card']",
   );
-  if (found === null) throw new Error(`no ${slot}`);
+  if (found === null) throw new Error("no parsed-card");
   return found;
 }
 
@@ -943,7 +943,7 @@ describe("A1: Garmin's credit on the card (G1)", () => {
     await user.upload(dropInput(), gpx("morning.gpx"));
     await screen.findByText("Parsed · morning.gpx");
 
-    const credit = region("parsed-card").querySelector(
+    const credit = parsedCard().querySelector(
       "[data-part='garmin-attribution']",
     );
     expect(credit).toHaveTextContent(/^Garmin$/u);
@@ -961,7 +961,7 @@ describe("A1: the parsed card", () => {
     await user.upload(dropInput(), gpx("morning.gpx"));
 
     const strip = await screen.findByText("Parsed · morning.gpx");
-    const card = region("parsed-card");
+    const card = parsedCard();
     expect(card).toContainElement(strip);
     expect(card).toHaveAttribute("data-state", "parsed");
     expect(within(card).getByText("6.2 mi · 51:38")).toBeVisible();
@@ -970,7 +970,7 @@ describe("A1: the parsed card", () => {
     expect(within(card).getByText("Sat Aug 29")).toBeVisible();
     expect(
       within(card).getByRole("button", {
-        name: "Change start time, 6:04 AM",
+        name: "6:04 AM, change start time",
       }),
     ).toHaveTextContent("6:04 AM");
     expect(document.querySelector("[data-part='drop-zone']")).toBeNull();
@@ -1051,13 +1051,13 @@ describe("A1: the parsed card", () => {
     await user.upload(dropInput(), gpx());
 
     await user.click(
-      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
 
     // The row replaces the time on the stats line; the date stays.
-    const card = region("parsed-card");
+    const card = parsedCard();
     expect(
-      within(card).queryByRole("button", { name: /Change start time/u }),
+      within(card).queryByRole("button", { name: /change start time/u }),
     ).toBeNull();
     expect(within(card).getByText("Sat Aug 29")).toBeVisible();
     expect(within(card).getByText("8:20 /mi").closest("p")).toHaveTextContent(
@@ -1084,7 +1084,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome, retime }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
     const asked = getOutcome.mock.calls.length;
 
@@ -1103,7 +1103,7 @@ describe("A1: the parsed card", () => {
       });
     });
     const changed = await screen.findByRole("button", {
-      name: "Change start time, 7:34 AM",
+      name: "7:34 AM · Changed, change start time",
     });
     expect(changed).toHaveTextContent("7:34 AM · Changed");
     expect(screen.queryByLabelText("Start time")).toBeNull();
@@ -1121,7 +1121,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
     const field = screen.getByLabelText("Start time");
     await user.clear(field);
@@ -1159,7 +1159,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
     const field = screen.getByLabelText("Start time");
     await user.clear(field);
@@ -1203,7 +1203,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
 
     await user.clear(screen.getByLabelText("Start time"));
@@ -1224,7 +1224,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
 
     await user.click(screen.getByRole("button", { name: "Get weather" }));
@@ -1245,7 +1245,7 @@ describe("A1: the parsed card", () => {
       await user.upload(dropInput(), gpx());
       await user.click(
         await screen.findByRole("button", {
-          name: "Change start time, 6:04 AM",
+          name: "6:04 AM, change start time",
         }),
       );
 
@@ -1269,7 +1269,7 @@ describe("A1: the parsed card", () => {
     );
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
     await user.click(screen.getByRole("button", { name: "Get weather" }));
     await waitFor(() => {
@@ -1321,7 +1321,7 @@ describe("A1: the parsed card", () => {
     );
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: /Change start time/u }),
+      await screen.findByRole("button", { name: /change start time/u }),
     );
     await user.click(screen.getByRole("button", { name: "Get weather" }));
 
@@ -1343,7 +1343,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome: parsed() }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
     const status = screen.getByRole("status");
     const said: string[] = [];
@@ -1385,7 +1385,7 @@ describe("A1: the parsed card", () => {
     await user.upload(dropInput(), gpx());
 
     const time = await screen.findByRole("button", {
-      name: "Change start time, 4:04 AM",
+      name: "4:04 AM, change start time",
     });
     expect(time).toHaveTextContent("4:04 AM");
     await user.click(time);
@@ -1417,7 +1417,7 @@ describe("A1: the parsed card", () => {
     await renderWithRouter(form({ getOutcome: parsed(), retime }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
     const field = screen.getByLabelText("Start time");
     await user.clear(field);
@@ -1458,7 +1458,7 @@ describe("A1: a run already logged", () => {
     await user.upload(dropInput(), gpx("MORNING_RUN_0829.GPX"));
 
     const kicker = await screen.findByText("Already logged");
-    const card = region("parsed-card");
+    const card = parsedCard();
     expect(card).toContainElement(kicker);
     expect(card).toHaveAttribute("data-state", "duplicate");
     expect(within(card).getByText("MORNING_RUN_0829.GPX")).toBeVisible();
@@ -1563,7 +1563,7 @@ describe("A1's parsed card: a lapsed session (Au7, D-155)", () => {
     await renderWithRouter(form({ getOutcome }));
     await user.upload(dropInput(), gpx());
     await user.click(
-      await screen.findByRole("button", { name: "Change start time, 6:04 AM" }),
+      await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
 
     expect(carriedSince()).toEqual(["run"]);

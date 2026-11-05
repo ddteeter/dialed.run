@@ -1,0 +1,43 @@
+document
+banner
+link, dialed.run home
+dialed
+.run
+end of link, dialed.run home
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet, current page
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+button, Log a run, has popup dialog
+end of banner
+main
+status
+heading, Nothing in here yet, level 1
+Nothing in here yet
+end of heading, Nothing in here yet, level 1
+paragraph
+Add what you run in most. Three pieces is enough to start.
+end of paragraph
+list
+listitem, level 1, position 1, set size 1
+link, Add garment
+Add garment
+end of link, Add garment
+end of listitem, level 1, position 1, set size 1
+end of list
+end of main
+status
+end of document

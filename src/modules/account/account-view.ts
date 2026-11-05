@@ -37,8 +37,7 @@ async function addressView(
   userId: string,
 ): Promise<AddressView | undefined> {
   const row = await firstRowWhere(db, user, eq(user.id, userId));
-  if (row === undefined) return undefined;
-  return { email: row.email, isVerified: row.emailVerified };
+  return row && { email: row.email, isVerified: row.emailVerified };
 }
 
 /**

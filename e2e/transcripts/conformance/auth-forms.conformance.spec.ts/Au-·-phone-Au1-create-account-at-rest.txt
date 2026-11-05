@@ -1,0 +1,58 @@
+document
+main
+dialed
+.run
+heading, Create account, level 1
+form
+status
+paragraph
+dialed.run is invite-only for now.
+end of paragraph
+Invite code
+textbox, Invite code
+Date of birth
+Date of birth
+Email
+textbox, Email
+Password
+Password
+button, Show, # control
+At least # characters.
+button, Create account
+Create account
+end of button, Create account
+end of form
+or
+button, Continue with Google
+Continue with Google
+end of button, Continue with Google
+paragraph
+No code?
+link, Request access
+end of paragraph
+paragraph
+By creating an account you agree to the
+link, Terms
+and have read the
+link, Privacy policy
+.
+Your runs count, without your name, in totals like the guides. You can turn that off in Settings.
+end of paragraph
+paragraph
+dialed.run is for runners # and over.
+end of paragraph
+paragraph
+Have an account?
+link, Log in
+end of paragraph
+end of main
+contentinfo
+paragraph
+link, Privacy
+link, Terms
+link, Copyright
+link, Open source
+link, Report an intimate image
+end of paragraph
+end of contentinfo
+end of document

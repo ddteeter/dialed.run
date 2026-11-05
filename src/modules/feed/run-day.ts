@@ -36,8 +36,9 @@ export async function runDayOf(
 ): Promise<string | undefined> {
   // A primary-key read; `observationsForRuns` takes the run row as it is.
   const run = await firstRowWhere(db, runs, eq(runs.id, runId));
-  if (run === undefined) return undefined;
-  return proseDayLabel(run.startedAt, await zoneOf(run, report));
+  return run === undefined
+    ? undefined
+    : proseDayLabel(run.startedAt, await zoneOf(run, report));
 }
 
 /**

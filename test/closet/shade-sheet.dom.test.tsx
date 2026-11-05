@@ -126,9 +126,7 @@ async function tapPhoto(fractionX: number, fractionY = 0.25) {
   // `getByAltText` is typed `HTMLElement`; the natural dimensions live on
   // `HTMLImageElement`, so the element is re-found as one rather than
   // asserted into one.
-  const photo = screen
-    .getByAltText(/tap to sample a shade from your photo/i)
-    .closest("img");
+  const photo = screen.getByAltText(/tap to sample a shade/i).closest("img");
   const target = photo?.closest("button");
   if (photo === null || target === undefined || target === null) {
     throw new Error("the sampler is not an image inside a button");
@@ -295,7 +293,7 @@ describe("ShadeSheet (design round 11 §AH2)", () => {
   it("offers the photo as the sampler when there is one", () => {
     render(<ShadeSheet {...props} photoUrl="/closet/photo/01ITEM/card" />);
 
-    const photo = screen.getByAltText(/tap to sample a shade from your photo/i);
+    const photo = screen.getByAltText(/tap to sample a shade/i);
     expect(photo).toHaveAttribute("src", "/closet/photo/01ITEM/card");
     expect(screen.getByText(/tap the photo to sample/i)).toBeVisible();
     // Same-origin, which is what keeps the canvas untainted so a pixel can

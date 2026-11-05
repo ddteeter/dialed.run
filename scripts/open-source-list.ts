@@ -187,7 +187,7 @@ function tools(
       direct.has(name) &&
       !shipped.has(name) &&
       node.location === `node_modules/${name}`
-        ? [{ ...node, name, version }]
+        ? { ...node, name, version }
         : [],
     ),
   );

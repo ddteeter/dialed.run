@@ -16,7 +16,6 @@ vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
  * C12: Review's quarantine, and recording a record's NCMEC report, which
  * sets the year it is kept from the report.
  */
-type RecordFn = Parameters<typeof QuarantineRecords>[0]["recordReport"];
 
 const AUG_29_2026 = Date.UTC(2026, 7, 29) / 1000;
 const SEP_10_2026 = Date.UTC(2026, 8, 10) / 1000;
@@ -52,6 +51,8 @@ const part = (name: string) =>
   document.querySelector<HTMLElement>(`[data-part='${CSS.escape(name)}']`);
 
 describe("QuarantineRecords", () => {
+  type RecordFn = Parameters<typeof QuarantineRecords>[0]["recordReport"];
+
   it("lists what is held, with its clock, and that it is not yet reported", () => {
     render(<QuarantineRecords records={[held()]} recordReport={vi.fn()} />);
 

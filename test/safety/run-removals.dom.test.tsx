@@ -6,8 +6,8 @@ import { RunRemovals } from "../../src/modules/safety/components/RunRemovals";
 /**
 R-140: the band on the author's run, one per removal, newest first.
 */
-const part = (name: string) =>
-  document.querySelector<HTMLElement>(`[data-part='${CSS.escape(name)}']`);
+const removalsPart = () =>
+  document.querySelector<HTMLElement>("[data-part='run-removals']");
 
 describe("RunRemovals", () => {
   it("draws a band for each removal, in the order given", () => {
@@ -30,9 +30,7 @@ describe("RunRemovals", () => {
       />,
     );
 
-    const bands = part("run-removals")?.querySelectorAll(
-      "[data-part='notice-band']",
-    );
+    const bands = removalsPart()?.querySelectorAll("[data-part='notice-band']");
     expect([...(bands ?? [])].map((band) => band.textContent)).toStrictEqual([
       "Removed from the feedA moderator removed this entry from the feed: it's an ad or spam.That breaks our community rules: don't post spam, advertising or promotion we have not allowed.",
       "Photo removedWe removed this photo after a copyright notice.Your run and verdict stay.",
@@ -41,6 +39,6 @@ describe("RunRemovals", () => {
 
   it("renders nothing for a run nothing was taken off", () => {
     render(<RunRemovals removals={[]} />);
-    expect(part("run-removals")).toBeNull();
+    expect(removalsPart()).toBeNull();
   });
 });

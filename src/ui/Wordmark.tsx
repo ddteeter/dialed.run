@@ -22,13 +22,23 @@ export function Wordmark({
     <span
       className={className ? `${WORDMARK_CLASS} ${className}` : WORDMARK_CLASS}
     >
-      {brackets ? <span className="text-cold-text">[</span> : undefined}
+      {/* The brackets are drawn, not said (plan 161, owner 2026-11-03):
+          VoiceOver reads "dialed.run", not "left bracket dialed". */}
+      {brackets ? (
+        <span aria-hidden="true" className="text-cold-text">
+          [
+        </span>
+      ) : undefined}
       <span>dialed</span>
       {/* T1's --muted. The brand board draws #8B8B93, which is the *dark*
           column's muted; on paper the role resolves to #6E6E64 and keeps
           its contrast. CLAUDE.md §Design truth: the contract wins. */}
       <span className="text-muted">.run</span>
-      {brackets ? <span className="text-cold-text">]</span> : undefined}
+      {brackets ? (
+        <span aria-hidden="true" className="text-cold-text">
+          ]
+        </span>
+      ) : undefined}
     </span>
   );
 }

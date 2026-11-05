@@ -94,14 +94,11 @@ export function stravaCallbackOutcome(callback: {
   // link would pass. A separate `state === undefined` arm would be
   // redundant — an absent state can never equal a present cookie.
   const expected = callback.expectedState;
-  if (
-    expected === undefined ||
+  return expected === undefined ||
     callback.code === undefined ||
     callback.state !== expected
-  ) {
-    return { ok: false, reason: "That connection link expired. Try again." };
-  }
-  return { ok: true, code: callback.code };
+    ? { ok: false, reason: "That connection link expired. Try again." }
+    : { ok: true, code: callback.code };
 }
 
 /**

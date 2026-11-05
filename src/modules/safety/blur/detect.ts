@@ -145,14 +145,12 @@ export function regionsFromDetections(
     const box = detection.boundingBox;
     return box === undefined
       ? []
-      : [
-          {
-            x: box.originX,
-            y: box.originY,
-            width: box.width,
-            height: box.height,
-          },
-        ];
+      : {
+          x: box.originX,
+          y: box.originY,
+          width: box.width,
+          height: box.height,
+        };
   });
 }
 

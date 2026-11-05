@@ -108,8 +108,7 @@ export function parseFailureSentence(
   reason: string | null,
   filename: string,
 ): string {
-  if (reason === NO_TRACK_MESSAGE) {
-    return `${filename} has no track in it. Export the run again.`;
-  }
-  return reason ?? PARSE_FAILURE_MESSAGE;
+  return reason === NO_TRACK_MESSAGE
+    ? `${filename} has no track in it. Export the run again.`
+    : (reason ?? PARSE_FAILURE_MESSAGE);
 }

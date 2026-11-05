@@ -44,6 +44,16 @@ ground, with no rail and no `data-ground="ink"`. Task 128's packet owns
   outline pills and Cancel underlined text; the heading reads "Review"
   with `[N WAITING · M DECIDED TODAY]`, from Today's counts.
 
+- **One bar per decision** (2026-11-04): every board draws a Desk's
+  buttons side by side in one wrapping row, chalk pill first, then
+  outline pills, then Cancel, and the build had stacked three groups (a
+  takedown request's Take it down, Decline and Block and decline all;
+  Block's answer and Cancel; a copyright hold's answer, under Not yet).
+  `DeskForm` now draws that row (`ACTION_BAR`) with the submit first and
+  `also` after it. Block's question takes the row's place, as round 37
+  draws it. Decline's reason opening under the row is undrawn (design
+  delta 107).
+
 ## Behaviour change
 
 `/safety/review` sent a signed-out visitor to sign in. `/desk/*` answers

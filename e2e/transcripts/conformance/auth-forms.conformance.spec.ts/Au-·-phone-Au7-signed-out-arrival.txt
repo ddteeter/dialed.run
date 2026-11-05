@@ -1,0 +1,34 @@
+document
+main
+dialed
+.run
+You were signed out
+Log in and you're back on your run. What you typed wasn't kept.
+heading, Log in, level 1
+form
+status
+Email
+textbox, Email, closet-#@example.com
+Password
+Password
+button, Show, # control
+link, Forgot it?
+button, Log in
+Log in
+end of button, Log in
+end of form
+or
+button, Continue with Google
+Continue with Google
+end of button, Continue with Google
+end of main
+contentinfo
+paragraph
+link, Privacy
+link, Terms
+link, Copyright
+link, Open source
+link, Report an intimate image
+end of paragraph
+end of contentinfo
+end of document

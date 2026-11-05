@@ -1,0 +1,52 @@
+document
+banner
+link, dialed.run home
+dialed
+.run
+end of link, dialed.run home
+navigation, Main
+list
+listitem, level 1, position 1, set size 4
+link, Feed
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Closet
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Call
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, You
+end of listitem, level 1, position 4, set size 4
+end of list
+end of navigation, Main
+link, Search runners
+link, Notifications, current page
+button, Log a run, has popup dialog
+end of banner
+main
+heading, Notifications, level 1
+status
+list
+listitem, level 1, position 1, set size 3
+paragraph
+Your run import didn't work.
+end of paragraph
+:day :month #, #:#
+end of listitem, level 1, position 1, set size 3
+listitem, level 1, position 2, set size 3
+paragraph
+New run on Strava — log your kit?
+end of paragraph
+:day :month #, #:#
+end of listitem, level 1, position 2, set size 3
+listitem, level 1, position 3, set size 3
+paragraph
+Your run import didn't work.
+end of paragraph
+:day :month #, #:#
+end of listitem, level 1, position 3, set size 3
+end of list
+end of main
+status
+end of document

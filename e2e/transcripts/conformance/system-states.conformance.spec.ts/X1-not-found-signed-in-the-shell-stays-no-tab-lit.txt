@@ -1,0 +1,40 @@
+document
+banner
+main
+heading, Nothing here, level 1
+paragraph
+This page doesn't exist, or it's an entry its runner has made private.
+end of paragraph
+link, Go to your feed
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed
+Feed
+end of link, Feed
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet
+Closet
+end of link, Closet
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add, has popup dialog
++ Add
+end of button, Add, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document

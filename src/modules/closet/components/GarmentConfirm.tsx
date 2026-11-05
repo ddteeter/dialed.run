@@ -40,10 +40,9 @@ function keptSentence(runCount: number): string {
  * gets round 26's own sheet (`DeleteWithRuns`), which lists what goes.
  */
 function body(kind: ConfirmKind, runCount: number): string {
-  if (kind === "delete") {
-    return "This can't be undone. Retire keeps the history.";
-  }
-  return `It leaves the closet and the picker.${keptSentence(runCount)} You can bring it back.`;
+  return kind === "delete"
+    ? "This can't be undone. Retire keeps the history."
+    : `It leaves the closet and the picker.${keptSentence(runCount)} You can bring it back.`;
 }
 
 /**

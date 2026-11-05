@@ -1,8 +1,8 @@
 import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 
-import { test as base } from "@playwright/test";
-import type { Page } from "@playwright/test";
+import { expect, test as base } from "@playwright/test";
+import type { Page, TestInfo } from "@playwright/test";
 
 import type { Measure } from "./a11y-coverage";
 import {
@@ -16,6 +16,7 @@ import { findingOf, keyOf, loadBaseline, RULES } from "./a11y-findings";
 import { endOfTest } from "./a11y-end";
 import type { CheckReport } from "./a11y-page";
 import { installChecker } from "./a11y-page";
+import { transcriptOf } from "./a11y-transcript";
 import type { PageReport } from "./a11y-walk";
 import { installWalk } from "./a11y-walk";
 
@@ -46,6 +47,9 @@ import { installWalk } from "./a11y-walk";
  * `test-results/a11y/findings.jsonl`, which is how the baseline is made.
  * Pages on another origin, such as the design boards `openBoard` loads,
  * are not the app and are not checked.
+ *
+ * **What it says** (step 4, `a11y-transcript.ts`): the final state's
+ * screen-reader transcript, compared with the one checked in.
  *
  * **What it reached** (step 3, `a11y-coverage.ts`): on a measured run,
  * each test's page coverage and visited paths, read once the run ends.
@@ -229,6 +233,26 @@ async function arm(
 }
 
 /**
+ * Runs a read of the final state, and once more if the document went away
+ * under it. The dev server reloads a page when it has just optimized a
+ * dependency, which on a fresh run lands right after the first test that
+ * loads it (`home.spec.ts`, 2026-11-03); the state that matters is the
+ * reloaded one. Any other error, or a second one, is the caller's.
+ */
+async function onSettledPage<T>(
+  page: Page,
+  read: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await read();
+  } catch (error) {
+    if (!String(error).includes("Execution context was destroyed")) throw error;
+    await page.waitForLoadState("load");
+    return read();
+  }
+}
+
+/**
  * Step 2's checks, timed. A page that navigates or closes under them is
  * a checker error, which fails the test like a finding: a check that
  * did not run must not read as one that passed.
@@ -240,18 +264,53 @@ async function runEndOfTest(
 ): Promise<void> {
   const started = performance.now();
   try {
-    await endOfTest(page, new URL(baseURL).origin, {
-      check: () => checkNow(page),
-      report: (report: PageReport) => {
-        for (const raw of report.findings) {
-          collected.findings.push(findingOf(report.url, raw));
-        }
-      },
-    });
+    await onSettledPage(page, () =>
+      endOfTest(page, new URL(baseURL).origin, {
+        check: () => checkNow(page),
+        report: (report: PageReport) => {
+          for (const raw of report.findings) {
+            collected.findings.push(findingOf(report.url, raw));
+          }
+        },
+      }),
+    );
   } catch (error) {
     collected.errors.push(`end of test: ${String(error)}`);
   }
   collected.endMs += Math.round(performance.now() - started);
+}
+
+/**
+ * Step 4's transcript of the final state, at the test's own width (the
+ * end-of-test checks resize after it). A page that fails under it is a
+ * checker error, like step 2's.
+ */
+async function readTranscript(
+  page: Page,
+  baseURL: string,
+  collected: Collected,
+): Promise<string | undefined> {
+  if (
+    page.isClosed() ||
+    new URL(page.url()).origin !== new URL(baseURL).origin
+  ) {
+    return undefined;
+  }
+  try {
+    const phrases = await onSettledPage(page, () => transcriptOf(page));
+    return `${phrases.join("\n")}\n`;
+  } catch (error) {
+    collected.errors.push(`transcript: ${String(error)}`);
+    return undefined;
+  }
+}
+
+/**
+ * One transcript per test, named by its title: the file is
+ * `e2e/transcripts/<spec>/<title>.txt` (`snapshotPathTemplate`).
+ */
+function transcriptName(testInfo: TestInfo): string {
+  return `${testInfo.titlePath.slice(1).join(" ")}.txt`;
 }
 
 /**
@@ -327,12 +386,19 @@ export const test = base.extend<{
         worker.current = undefined;
         worker.measure = undefined;
       }
+      let transcript: string | undefined;
       if (testInfo.status === testInfo.expectedStatus) {
+        if (a11yMode === "enforce") {
+          transcript = await readTranscript(page, baseURL ?? "", collected);
+        }
         await runEndOfTest(page, baseURL ?? "", collected);
       }
       if (measure !== undefined) await stopMeasuring(measure);
       record(testInfo.titlePath.join(" › "), collected);
       if (a11yMode === "enforce" && !IS_RECORDING) failOnNew(collected);
+      if (transcript !== undefined) {
+        expect(transcript).toMatchSnapshot(transcriptName(testInfo));
+      }
     },
     { auto: true },
   ],
