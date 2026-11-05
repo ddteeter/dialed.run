@@ -236,7 +236,10 @@ function RunBadge({
       onClick={onSet}
       className="target shrink-0 rounded-pill border border-ink bg-transparent px-3 text-ink"
     >
-      <Mono step="xs">Set conditions &rsaquo;</Mono>
+      {/* The › is drawn, not said: it reads as "right angle bracket". */}
+      <Mono step="xs">
+        Set conditions <span aria-hidden="true">&rsaquo;</span>
+      </Mono>
     </button>
   );
 }

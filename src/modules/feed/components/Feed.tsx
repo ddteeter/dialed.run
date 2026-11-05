@@ -121,7 +121,7 @@ export function Feed(props: Readonly<FeedProps>) {
             <Mono step="sm">{unjudgedCount}</Mono> runs still need a verdict
           </span>
           <span className="font-semibold text-cold-text">
-            Clear the queue &rsaquo;
+            Clear the queue <span aria-hidden="true">&rsaquo;</span>
           </span>
         </Link>
       ) : undefined}
@@ -138,7 +138,9 @@ export function Feed(props: Readonly<FeedProps>) {
             onClick={() => {
               setTab(value);
             }}
-            aria-current={tab === value ? "page" : undefined}
+            // A view switch, not a page: `aria-pressed` says which one is
+            // showing, where `aria-current="page"` claimed a navigation.
+            aria-pressed={tab === value}
             // The 90ms colour flip is the tab switch's other half
             // (design/motion.js). The indicator itself does not slide
             // here: these two labels are different widths, so a sliding

@@ -4,7 +4,9 @@ heading, Now go run., level 1
 paragraph
 Next time you finish a run, upload it and tell us what you wore. That’s the whole loop.
 end of paragraph
+heading, What happens as you log, level 2
 What happens as you log
+end of heading, What happens as you log, level 2
 list
 listitem, level 1, position 1, set size 3
 #
@@ -19,7 +21,7 @@ listitem, level 1, position 3, set size 3
 After # verdicts we start making the call for you.
 end of listitem, level 1, position 3, set size 3
 end of list
-Connect Strava
+heading, Connect Strava, level 2
 So we can remind you. Optional.
 paragraph
 Connecting Strava lets us remind you to log a kit after each run.

@@ -78,7 +78,7 @@ async function openConditions(page: Page): Promise<void> {
   await hydrated(page);
   await expect(
     page.getByRole("button", { name: "Your conditions" }),
-  ).toHaveAttribute("aria-current", "page");
+  ).toHaveAttribute("aria-pressed", "true");
 }
 
 async function drawnBlock(

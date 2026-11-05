@@ -7,12 +7,14 @@ import type { Units } from "../../../lib/contracts";
 // Type only, so nothing of safety reaches the client bundle: the shape the
 // route hands in is checked against the real component.
 import type { NoticeBand as NoticeBandShape } from "../../safety";
-import { formatDistance, formatPace } from "../../../lib/contracts/measures";
+import { formatDistance, paceForms } from "../../../lib/contracts/measures";
 import {
+  Bracketed,
   FormStatus,
   GarminAttribution,
   Icon,
   Mono,
+  Spoken,
   WeatherAttribution,
 } from "../../../ui";
 import { ProductLink } from "../../../ui/ProductLink";
@@ -36,11 +38,12 @@ type Entry = NonNullable<Awaited<ReturnType<typeof entryDetailForViewer>>>;
 
 /**
  * A per-item flag as D marks it at the row's end (round 22):
- * `[TOO MUCH]` / `[NOT ENOUGH]`; Fine shows nothing.
+ * `[TOO MUCH]` / `[NOT ENOUGH]`; Fine shows nothing. The words only:
+ * `Bracketed` draws the brackets and keeps them out of the name (D-150).
  */
 const FLAG_MARK: Readonly<Record<"too_much" | "not_enough", string>> = {
-  too_much: "[Too much]",
-  not_enough: "[Not enough]",
+  too_much: "Too much",
+  not_enough: "Not enough",
 };
 
 /**
@@ -129,8 +132,11 @@ export function EntryDetail(props: Readonly<EntryDetailProps>) {
     <div className="mx-auto flex w-full max-w-column flex-col gap-4 px-5 pt-6 wide:mx-0">
       <FormStatus>{status}</FormStatus>
       <div className="flex items-center gap-3">
+        {/* `exact`: the router marks a prefix match `aria-current="page"`,
+            and /feed/entry/:id is under /feed — back is never here. */}
         <Link
           to="/feed"
+          activeOptions={{ exact: true }}
           aria-label="Back to feed"
           className="target inline-flex items-center justify-center text-ink"
         >
@@ -231,7 +237,7 @@ function RunStrip({
   showBadge,
 }: Readonly<{ entry: Entry; units: Units; showBadge: boolean }>) {
   const conditions = stripConditions(entry.conditions, entry.indoor, units);
-  const pace = formatPace(entry.durationS, entry.distanceM, units.distance);
+  const pace = paceForms(entry.durationS, entry.distanceM, units.distance);
   return (
     <div
       data-part="run-strip"
@@ -243,7 +249,9 @@ function RunStrip({
       <div className="flex flex-wrap items-baseline gap-3">
         <Mono step="lg">{formatDistance(entry.distanceM, units.distance)}</Mono>
         {pace === undefined ? undefined : (
-          <Mono className="text-quiet">{pace}</Mono>
+          <Mono className="text-quiet">
+            <Spoken {...pace} />
+          </Mono>
         )}
         {showBadge ? <VerdictBadge verdict={entry.verdict} /> : undefined}
       </div>
@@ -264,7 +272,11 @@ function RunStrip({
 function Tags({ tags }: Readonly<{ tags: readonly EntryTag[] }>) {
   if (tags.length === 0) return;
   return (
-    <ul data-part="tags" className="m-0 flex list-none flex-wrap gap-2 p-0">
+    <ul
+      data-part="tags"
+      aria-label="Tags"
+      className="m-0 flex list-none flex-wrap gap-2 p-0"
+    >
       {tags.map((tag) => (
         <li key={tag} className="rounded-pill bg-tint px-2 py-1 text-quiet">
           <Mono step="xs">{tagLabel(tag)}</Mono>
@@ -298,9 +310,9 @@ function Kit({ items }: Readonly<{ items: Entry["items"] }>) {
             {item.brand === undefined ? (
               <span className="flex items-baseline gap-2">
                 <ProductLink url={item.url} label={item.name} />
-                <Mono step="xs" className="text-label">
-                  [Generic]
-                </Mono>
+                <Bracketed step="xs" className="text-label">
+                  Generic
+                </Bracketed>
               </span>
             ) : (
               <ProductLink
@@ -309,9 +321,9 @@ function Kit({ items }: Readonly<{ items: Entry["items"] }>) {
               />
             )}
             {item.flag === undefined ? undefined : (
-              <Mono step="xs" className="font-semibold text-ink">
+              <Bracketed step="xs" className="font-semibold text-ink">
                 {FLAG_MARK[item.flag]}
-              </Mono>
+              </Bracketed>
             )}
           </li>
         ))}

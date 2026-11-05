@@ -21,6 +21,7 @@ export type { PhotoStep } from "./photo-step";
 export { Sheet } from "./Sheet";
 export { ConfirmLink, ConfirmSheet } from "./ConfirmSheet";
 export { Skeleton } from "./Skeleton";
+export { Spoken } from "./Spoken";
 export { StravaConsent } from "./StravaConsent";
 export {
   ChoiceField,
@@ -47,7 +48,11 @@ export {
 export { TabBar } from "./TabBar";
 export { TABS, tabToLight } from "./tabs";
 export { Turnstile } from "./Turnstile";
-export { classifyFailure, useFormSubmit } from "./use-form-submit";
+export {
+  classifyFailure,
+  describedByFor,
+  useFormSubmit,
+} from "./use-form-submit";
 export { SessionLapseAnswer } from "./session-lapse";
 export { TermsRefusalAnswer, useTermsRefusal } from "./terms-refusal";
 export { causeLine, useControlAction } from "./use-control-action";

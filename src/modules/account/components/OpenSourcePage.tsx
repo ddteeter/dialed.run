@@ -1,6 +1,6 @@
-import { useState, type ComponentType, type JSX } from "react";
+import { useRef, useState, type ComponentType, type JSX } from "react";
 
-import { FormField, Mono } from "../../../ui";
+import { FormField, FormStatus, Mono } from "../../../ui";
 import type { LegalDoc } from "../legal-markdown";
 import {
   matchingGroups,
@@ -90,8 +90,12 @@ export function OpenSourcePage({
             className="w-full border-none bg-transparent"
           />
         </FormField>
+        <FormStatus>{searchStatus(query, shown)}</FormStatus>
         {shown.length === 0 ? (
-          <p className="m-0">{`Nothing we ship or build with is called “${query.trim()}”.`}</p>
+          // The status region says it; drawn here, read there, once.
+          <p aria-hidden="true" className="m-0">
+            {noMatch(query)}
+          </p>
         ) : undefined}
         {shown
           .filter((group) => group.kind !== "tools")
@@ -121,6 +125,48 @@ export function OpenSourcePage({
   );
 }
 
+/**
+ * What the search's status region says: nothing until there is a query,
+ * then how many match, or the line that says none do.
+ */
+function searchStatus(query: string, shown: readonly LicenceGroup[]): string {
+  if (query.trim() === "") return "";
+  if (shown.length === 0) return noMatch(query);
+  const count = pieceCount(shown);
+  return count === 1
+    ? "1 package matches."
+    : `${String(count)} packages match.`;
+}
+
+function noMatch(query: string): string {
+  return `Nothing we ship or build with is called “${query.trim()}”.`;
+}
+
+/**
+ * Show all removes itself, so focus would fall to the page: it goes to
+ * the first row it showed instead, as that row mounts.
+ *
+ * Once. The ref is a fresh function every render, so React detaches the
+ * last one (which forgets the press) before attaching the next: a row
+ * that a search re-renders or brings back never takes focus from the
+ * search box. Returning that cleanup also means React never calls the
+ * ref with `null`.
+ */
+function useFocusFirstShown() {
+  const pressed = useRef(false);
+  return {
+    press: () => {
+      pressed.current = true;
+    },
+    firstShown: (row: HTMLLIElement) => {
+      if (pressed.current) row.focus();
+      return () => {
+        pressed.current = false;
+      };
+    },
+  };
+}
+
 function GroupSection({
   group,
   isOpen,
@@ -132,6 +178,7 @@ function GroupSection({
 }>): JSX.Element {
   const rows = isOpen ? group.pieces : group.pieces.slice(0, COLLAPSED_ROWS);
   const count = String(group.pieces.length);
+  const { firstShown, press } = useFocusFirstShown();
   return (
     <ReadingSection id={group.id} heading={group.name}>
       <Mono step="sm" className="text-muted">
@@ -146,11 +193,12 @@ function GroupSection({
         <TextDisclosure label={readLabel(group)} text={group.text} />
       )}
       <ul className="m-0 flex list-none flex-col p-0 text-body">
-        {rows.map((piece) => (
+        {rows.map((piece, index) => (
           <PieceRow
             key={`${piece.name}@${String(piece.version)}`}
             piece={piece}
             showsLicence={group.kind === "tools"}
+            rowRef={index === COLLAPSED_ROWS ? firstShown : undefined}
           />
         ))}
       </ul>
@@ -158,6 +206,7 @@ function GroupSection({
         <button
           type="button"
           onClick={() => {
+            press();
             onOpen(group.id);
           }}
           className="target self-start text-small text-ink underline underline-offset-4"
@@ -204,9 +253,21 @@ function contentsEntry(group: LicenceGroup) {
 function PieceRow({
   piece,
   showsLicence,
-}: Readonly<{ piece: OpenSourcePiece; showsLicence: boolean }>): JSX.Element {
+  rowRef,
+}: Readonly<{
+  piece: OpenSourcePiece;
+  showsLicence: boolean;
+  /**
+  The first row Show all showed, which takes focus when it does.
+  */
+  rowRef?: ((row: HTMLLIElement) => () => void) | undefined;
+}>): JSX.Element {
   return (
-    <li className="flex flex-col gap-1 border-t border-hairline py-3">
+    <li
+      ref={rowRef}
+      tabIndex={rowRef === undefined ? undefined : -1}
+      className="flex flex-col gap-1 border-t border-hairline py-3"
+    >
       <div className="flex flex-wrap items-center gap-x-4">
         <span className="font-semibold wrap-anywhere">{piece.name}</span>
         {piece.version === undefined ? undefined : (
@@ -217,6 +278,7 @@ function PieceRow({
         {piece.project === undefined ? undefined : (
           <a
             href={piece.project}
+            aria-label={`Project: ${piece.name}`}
             className="target inline-flex items-center text-small text-ink underline underline-offset-4"
           >
             Project
@@ -233,10 +295,10 @@ function PieceRow({
         <span className="text-small text-muted">{`© ${piece.copyright}`}</span>
       )}
       {piece.notice === undefined ? undefined : (
-        <TextDisclosure label="Notice" text={piece.notice} />
+        <TextDisclosure label="Notice" of={piece.name} text={piece.notice} />
       )}
       {piece.text === undefined ? undefined : (
-        <TextDisclosure label="Licence" text={piece.text} />
+        <TextDisclosure label="Licence" of={piece.name} text={piece.text} />
       )}
     </li>
   );
@@ -249,11 +311,24 @@ function PieceRow({
  */
 function TextDisclosure({
   label,
+  of,
   text,
-}: Readonly<{ label: string; text: string }>): JSX.Element {
+}: Readonly<{
+  label: string;
+  /**
+   * The package a row's Notice or Licence belongs to, said after the word
+   * so a list of summaries is not a hundred "Licence"s. The drawn word
+   * starts the name (WCAG 2.5.3); the Project link is named the same way.
+   */
+  of?: string | undefined;
+  text: string;
+}>): JSX.Element {
   return (
     <details>
-      <summary className="target cursor-pointer text-small text-ink underline underline-offset-4">
+      <summary
+        aria-label={of === undefined ? undefined : `${label}: ${of}`}
+        className="target cursor-pointer text-small text-ink underline underline-offset-4"
+      >
         {label}
       </summary>
       <pre className="m-0 mt-2 font-sans text-small whitespace-pre-wrap wrap-anywhere">

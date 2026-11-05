@@ -58,14 +58,24 @@ const BUILT: Readonly<
 };
 
 /**
+A rail count and what it counts. The words are for a screen reader only:
+the rail draws the bare number, and "Review 4" alone does not say four of
+what (a11y judgment audit, 2026-11-04).
+*/
+type RailTally = Readonly<{ count: number; counts: string }>;
+
+/**
 A count that needs a person is hi-viz; at zero it is not shown at all.
 */
-function RailCount({ count }: Readonly<{ count: number | undefined }>) {
-  if (count === undefined || count === 0) return;
+function RailCount({ tally }: Readonly<{ tally: RailTally | undefined }>) {
+  if (tally === undefined || tally.count === 0) return;
   return (
-    <Mono step="sm" className="text-hiviz-text">
-      {count}
-    </Mono>
+    <>
+      <Mono step="sm" className="text-hiviz-text">
+        {tally.count}
+      </Mono>
+      <span className="sr-only"> {tally.counts}</span>
+    </>
   );
 }
 
@@ -73,19 +83,19 @@ function RailEntry({
   page,
   label,
   current,
-  count,
+  tally,
 }: Readonly<{
   page: DeskPage;
   label: string;
   current: DeskPage;
-  count: number | undefined;
+  tally: RailTally | undefined;
 }>) {
   const isActive = page === current;
   const tone = isActive ? "text-hiviz-text" : "text-ink";
   const content = (
     <>
       <span>{label}</span>
-      <RailCount count={count} />
+      <RailCount tally={tally} />
     </>
   );
   const to = BUILT[page];
@@ -93,6 +103,9 @@ function RailEntry({
     return (
       <li className="flex items-baseline justify-between gap-6 text-muted">
         {content}
+        {/* Muted is how the rail draws "not built"; colour alone does not
+            say it to a screen reader. */}
+        <span className="sr-only">, not built yet</span>
       </li>
     );
   }
@@ -100,6 +113,10 @@ function RailEntry({
     <li>
       <Link
         to={to}
+        // Exact: by default Link marks a prefix match current, so Today
+        // ("/desk") read as the current page on every Desk page. The
+        // Link sets aria-current itself whenever it matches.
+        activeOptions={{ exact: true }}
         aria-current={isActive ? "page" : undefined}
         className={`target flex items-baseline justify-between gap-6 ${tone}`}
       >
@@ -123,9 +140,9 @@ export function DeskShell({
 }>) {
   // Only a destination that needs a person carries a count: Review's is
   // what waits for a decision, Today's what the system gave up on.
-  const counts: Partial<Record<DeskPage, number>> = {
-    today: today.counts.gaveUp,
-    review: today.counts.waiting,
+  const tallies: Partial<Record<DeskPage, RailTally>> = {
+    today: { count: today.counts.gaveUp, counts: "gave up" },
+    review: { count: today.counts.waiting, counts: "waiting" },
   };
   return (
     <div
@@ -157,7 +174,7 @@ export function DeskShell({
               page={page}
               label={LABEL[page]}
               current={current}
-              count={counts[page]}
+              tally={tallies[page]}
             />
           ))}
         </ul>

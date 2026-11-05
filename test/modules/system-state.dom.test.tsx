@@ -98,6 +98,14 @@ describe("X2 · loader failed", () => {
     );
 
     expect(tabBar()).not.toBeNull();
+    // The page's one heading, as X1 has, in the band's own words: first in
+    // the state, and not drawn, since the band shows them.
+    const heading = screen.getByRole("heading", {
+      level: 1,
+      name: "Didn't load",
+    });
+    expect(heading).toHaveClass("sr-only");
+    expect(state()?.firstElementChild).toBe(heading);
     const band = state()?.querySelector("[data-part='failure-band']");
     expect(band).toHaveTextContent("Didn't load");
     expect(band).toHaveTextContent("Our end failed. Your closet is fine.");
@@ -115,6 +123,9 @@ describe("X2 · loader failed", () => {
     );
     expect(tabBar()).toBeNull();
     expect(state()).toHaveAttribute("data-state", "loader-failed");
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Didn't load" }),
+    ).toBeInTheDocument();
   });
 });
 

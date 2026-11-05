@@ -35,7 +35,7 @@ describe("notedPlan", () => {
     const noBand = {
       kind: "nothing-moved",
       sentence:
-        "Logged. No weather came with this run, so no band record moved.",
+        "Logged. No weather came with this run, so no temperature record moved.",
     };
     expect(notedPlan(undefined, [HOUDINI])).toStrictEqual(noBand);
     expect(notedPlan(undefined, [])).toStrictEqual(noBand);

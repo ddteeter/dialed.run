@@ -1,5 +1,4 @@
 document
-banner
 main
 form
 :day :month # · #:#
@@ -25,7 +24,9 @@ button, cold throughout, not pressed
 button, overheated late, not pressed
 button, sleeves damp, not pressed
 button, chafed, not pressed
-button, More ›, has popup dialog
+button, More, anything specific, has popup dialog
+More
+end of button, More, anything specific, has popup dialog
 group, Effort · optional
 Effort · optional
 button, Easy, not pressed
@@ -40,19 +41,20 @@ group, Who sees this run
 Who sees this run
 Who sees this run
 end, Who sees this run
-radio, Private Only you., Other runners won't see this run. Its kit and verdict still count, anonymously, in the guides. Change, checked, position 1, set size 3
+radio, Private Only you., Other runners won't see this run. Its kit and verdict still count, anonymously, in the guides., checked, position 1, set size 3
 Private
 Only you.
-radio, Shared Runners signed in to dialed.run., Other runners won't see this run. Its kit and verdict still count, anonymously, in the guides. Change, not checked, position 2, set size 3
+radio, Shared Runners signed in to dialed.run., not checked, position 2, set size 3
 Shared
 Runners signed in to dialed.run.
-radio, Public Anyone with the link, no sign-in. Never when or where you ran., Other runners won't see this run. Its kit and verdict still count, anonymously, in the guides. Change, not checked, position 3, set size 3
+radio, Public Anyone with the link, no sign-in. Never when or where you ran., not checked, position 3, set size 3
 Public
 Anyone with the link, no sign-in. Never when or where you ran.
 end of group, Who sees this run
-Other runners won't see this run.
-Its kit and verdict still count, anonymously, in the guides.
-button, Change
+Other runners won't see this run. Its kit and verdict still count, anonymously, in the guides.
+button, Change whether runs count in the guides
+Change
+end of button, Change whether runs count in the guides
 button, Log it
 Log it
 end of button, Log it
@@ -61,9 +63,9 @@ end of main
 navigation, Main
 list
 listitem, level 1, position 1, set size 5
-link, Feed, current page
+link, Feed
 Feed
-end of link, Feed, current page
+end of link, Feed
 end of listitem, level 1, position 1, set size 5
 listitem, level 1, position 2, set size 5
 link, Closet
@@ -71,9 +73,9 @@ Closet
 end of link, Closet
 end of listitem, level 1, position 2, set size 5
 listitem, level 1, position 3, set size 5
-button, Add, has popup dialog
+button, Add a run, has popup dialog
 + Add
-end of button, Add, has popup dialog
+end of button, Add a run, has popup dialog
 end of listitem, level 1, position 3, set size 5
 listitem, level 1, position 4, set size 5
 link, Call

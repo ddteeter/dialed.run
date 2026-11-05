@@ -55,8 +55,11 @@ export function OtherProfile({
   return (
     <div className="mx-auto flex w-full max-w-column flex-col gap-6 px-5 pt-6 wide:mx-0">
       <FormStatus>{status}</FormStatus>
+      {/* `exact`: the router marks a prefix match current, and this page
+          sits under /feed. */}
       <Link
         to="/feed"
+        activeOptions={{ exact: true }}
         aria-label="Back to feed"
         className="target inline-flex items-center self-start text-ink"
       >

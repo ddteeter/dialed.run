@@ -5,18 +5,17 @@ end of banner
 main
 heading, Feed, level 1
 link, Find runners
-button, Following
-button, Your conditions, current page
+button, Following, not pressed
+button, Your conditions, pressed
 status
 Weather for Portland, OR, United States.
 end of status
-Your conditions
 heading, Where do you run?, level 2
 paragraph
 Location is off. Type your city and we’ll match its weather instead.
 end of paragraph
 Your city
-textbox, Your city, Portland
+textbox, Your city, Portland, Add the state or country. We'll show you the place we found before we use it.
 button, Find
 Find
 end of button, Find
@@ -27,9 +26,9 @@ strong
 Portland, OR, United States
 end of strong
 end of paragraph
-button, Use this
+button, Use this, Weather for Portland, OR, United States
 Use this
-end of button, Use this
+end of button, Use this, Weather for Portland, OR, United States
 Not it? Add more to the name.
 paragraph
 Saved to your settings. Change it any time under You.
@@ -48,9 +47,9 @@ Closet
 end of link, Closet
 end of listitem, level 1, position 2, set size 5
 listitem, level 1, position 3, set size 5
-button, Add, has popup dialog
+button, Add a run, has popup dialog
 + Add
-end of button, Add, has popup dialog
+end of button, Add a run, has popup dialog
 end of listitem, level 1, position 3, set size 5
 listitem, level 1, position 4, set size 5
 link, Call

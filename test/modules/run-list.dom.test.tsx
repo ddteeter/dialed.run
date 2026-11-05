@@ -224,10 +224,16 @@ describe("R: the badges, and the one breath", () => {
       "text-muted",
     );
     const control = within(row).getByRole("button", {
-      name: "Set conditions ›",
+      name: "Set conditions",
     });
     expect(control).toHaveClass("border-ink");
     expect(control).toHaveAttribute("aria-haspopup", "dialog");
+    // The › is drawn and not said.
+    expect(control).toHaveTextContent("Set conditions ›");
+    expect(within(control).getByText("›")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
     // A sibling of the row's link, never inside it.
     expect(control.closest("a")).toBeNull();
   });
@@ -272,7 +278,7 @@ describe("R: R2b from the list", () => {
 
     await user.click(
       within(rowAt(1)).getByRole("button", {
-        name: "Set conditions ›",
+        name: "Set conditions",
       }),
     );
     const sheet = await screen.findByRole("dialog", {
@@ -310,7 +316,7 @@ describe("R: R2b from the list", () => {
       ]),
     );
     const control = within(onlyRow()).getByRole("button", {
-      name: "Set conditions ›",
+      name: "Set conditions",
     });
 
     await user.click(control);
@@ -347,7 +353,7 @@ describe("R: R2b from the list", () => {
 
     await user.click(
       within(rowAt(0)).getByRole("button", {
-        name: "Set conditions ›",
+        name: "Set conditions",
       }),
     );
     let sheet = await screen.findByRole("dialog");
@@ -361,7 +367,7 @@ describe("R: R2b from the list", () => {
 
     await user.click(
       within(rowAt(1)).getByRole("button", {
-        name: "Set conditions ›",
+        name: "Set conditions",
       }),
     );
     sheet = await screen.findByRole("dialog");

@@ -300,7 +300,7 @@ test.describe("A3 · round 21", () => {
     await hydrated(page);
     // The board's sheet opened on "A bit warm".
     await page.getByRole("button", { name: "A bit warm" }).click();
-    await page.getByRole("button", { name: "More ›" }).click();
+    await page.getByRole("button", { name: "More, anything specific" }).click();
     const sheet = page.getByRole("dialog", { name: "Anything specific?" });
     await expect(sheet).toBeVisible();
 
@@ -338,7 +338,16 @@ test.describe("A3 · round 21", () => {
 
     const noted = page.locator('[data-slot="noted"]');
     await expect(noted).toBeVisible({ timeout: 15_000 });
-    expect(await signatureOf(page, '[data-slot="noted"]')).toEqual(drawnNoted);
+    // The board's words, but one: "band record" is jargon, and the build
+    // says "temperature record" (a11y judgment audit 2026-11-04, an owner
+    // wording proposal awaiting a recorded delta). The board must still
+    // draw the old words, so this fails loudly once Design redraws it.
+    const board = "NO BAND RECORD MOVED";
+    expect(drawnNoted.flat().join(" ")).toContain(board);
+    const proposed = drawnNoted.map((row) =>
+      row.map((cell) => cell.replace(board, "NO TEMPERATURE RECORD MOVED")),
+    );
+    expect(await signatureOf(page, '[data-slot="noted"]')).toEqual(proposed);
     const fill = await noted.evaluate(
       (element) => getComputedStyle(element).backgroundColor,
     );
@@ -352,7 +361,9 @@ test.describe("A3 · round 21", () => {
     // The chips stay — five, no MORE — and nothing navigated.
     const chips = await cellsOf(page, '[data-slot="flag-chips"]');
     expect(chips).toHaveLength(drawnChips.length);
-    await expect(page.getByRole("button", { name: "More ›" })).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "More, anything specific" }),
+    ).toHaveCount(0);
     expect(new URL(page.url()).pathname).toBe(`/feed/verdict/${entryId}`);
   });
 });

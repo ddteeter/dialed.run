@@ -1,5 +1,5 @@
 import type { JSX, KeyboardEvent } from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { cityLookupInput, cityNotFound } from "../lib/contracts/city-lookup";
 import type { CityLookup } from "../lib/contracts/city-lookup";
@@ -87,6 +87,7 @@ export function CityFinder({
   const [found, setFound] = useState<ResolvedPlace>();
   const [message, setMessage] = useState<string>();
   const [hasFailed, setHasFailed] = useState(false);
+  const resolvedId = useId();
 
   /**
   A field message, said in the status region too — it is the answer.
@@ -146,6 +147,7 @@ export function CityFinder({
   const shown = message ?? error;
   // `id` is `TextField`'s per-instance one (R-165), so the description
   // names this finder's message rather than one built from the `name`.
+  // The hint is `TextField`'s to add, while it shows.
   const own = (_name: string, id: string): FieldProps => ({
     name,
     readOnly: (surrounding?.readOnly ?? false) || isFinding,
@@ -206,13 +208,16 @@ export function CityFinder({
           data-part="resolved"
           className="flex flex-col gap-3 rounded-card border border-hairline bg-ground p-4"
         >
-          <p className="m-0 text-body">
+          <p id={resolvedId} className="m-0 text-body">
             Weather for <strong>{found.address}</strong>
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               data-part="use-this"
+              // "Use this" alone does not say what this is; the sentence
+              // above it does, so it is the button's description.
+              aria-describedby={resolvedId}
               {...inFlight(using)}
               onClick={() => {
                 onUse(found);

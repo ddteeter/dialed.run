@@ -32,7 +32,7 @@ export function ReleaseHolds({
 }>): JSX.Element | undefined {
   if (bursts.length === 0) return undefined;
   return (
-    <PhotoSection part="release-holds" title="Held in the last day">
+    <PhotoSection part="release-holds" level={2} title="Held in the last day">
       <ul className="m-0 flex list-none flex-col gap-2 p-0">
         {bursts.map((burst) => (
           <ReleaseRow

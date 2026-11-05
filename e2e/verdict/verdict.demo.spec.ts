@@ -242,7 +242,7 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
   // MORE › opens A3b: every garment's triple and all nine tags — how
   // something the chips did not suggest gets said.
   await scene(page, "MORE opens A3b: every garment, all nine tags");
-  await page.getByRole("button", { name: "More ›" }).click();
+  await page.getByRole("button", { name: "More, anything specific" }).click();
   const sheet = page.getByRole("dialog", { name: "Anything specific?" });
   await sheet.getByRole("button", { name: "hands cold" }).click();
   await sheet.getByRole("button", { name: "Done" }).click();
@@ -264,7 +264,9 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
       "Other runners won't see this run. Its kit and verdict still count, anonymously, in the guides.",
     ),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Change" }).click();
+  await page
+    .getByRole("button", { name: "Change whether runs count in the guides" })
+    .click();
   const sharing = page.getByRole("dialog", { name: "Privacy" });
   const totals = sharing.getByRole("checkbox", {
     name: "Count my runs in anonymous totals",
@@ -299,9 +301,15 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
   // With conditions resolved, saving reports the item's wear rate in this
   // temperature band rather than navigating away — the calibration signal
   // that makes a verdict worth logging.
-  await expect(page.getByText(/Houdini Jacket is now \d+ of \d+/)).toBeVisible({
-    timeout: 15_000,
-  });
+  await expect(
+    page
+      .locator("[data-slot='noted']")
+      .getByText(/Houdini Jacket is now \d+ of \d+/),
+  ).toBeVisible({ timeout: 15_000 });
+  // And said once, by the form's one status region, in the receipt's words.
+  await expect(
+    page.getByRole("status").filter({ hasText: /^Noted\. Houdini Jacket/ }),
+  ).toHaveText(/^Noted\. Houdini Jacket is now \d+ of \d+/);
   // Round 20: Noted is a receipt in the submit's place. Share and Log it
   // give way to it, and the answer stays on screen, read-only, so the
   // receipt is read against it.
@@ -313,7 +321,9 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
   // Round 21: MORE leaves with share and submit, and a chosen chip keeps
   // its ink and loses its close glyph — a receipt makes no offers.
   await scene(page, "The chips stay, read-only; MORE is gone");
-  await expect(page.getByRole("button", { name: "More ›" })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "More, anything specific" }),
+  ).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Houdini Jacket not enough" }),
   ).toHaveAttribute("aria-disabled", "true");

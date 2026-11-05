@@ -105,7 +105,7 @@ describe("deciding", () => {
   it("opens with no reason chosen", () => {
     renderQueue([row()]);
     const picker = screen.getByRole("combobox");
-    expect(picker).toHaveDisplayValue("—");
+    expect(picker).toHaveDisplayValue("Not set");
     if (!(picker instanceof HTMLSelectElement)) throw new Error("no select");
     expect(picker.selectedIndex).toBe(0);
     expect(picker.value).toBe("");
@@ -547,13 +547,13 @@ describe("deciding", () => {
 
     await user.selectOptions(picker, "it's an ad or spam");
     expect(picker).toHaveDisplayValue("it's an ad or spam");
-    await user.selectOptions(picker, "—");
+    await user.selectOptions(picker, "Not set");
     await user.click(screen.getByRole("button", { name: /^Remove$/ }));
 
     expect(resolve).not.toHaveBeenCalled();
     const said = await screen.findAllByText("Pick why it's coming down.");
     expect(said.length).toBeGreaterThan(0);
-    expect(picker).toHaveDisplayValue("—");
+    expect(picker).toHaveDisplayValue("Not set");
   });
 
   it("keeps a row whose decision failed, so it can be tried again", async () => {
@@ -834,6 +834,8 @@ describe("what a row tells the reviewer", () => {
     // list would read as a report with nothing written on it.
     expect(screen.getByText("Nobody reported this.")).toBeInTheDocument();
     expect(screen.getByText(bracketed("classifier"))).toBeInTheDocument();
+    // Nor "[0 people]" over it: nobody is not a count of people.
+    expect(screen.queryByText(bracketed("0 people"))).toBeNull();
   });
 
   it("reads the same set the same way whatever order it arrives in", () => {
@@ -1171,7 +1173,7 @@ describe("a handle the re-ask flagged (D-97)", () => {
         (option) => option.textContent,
       ),
     ).toStrictEqual([
-      "—",
+      "Not set",
       "Offensive or sexual",
       "Pretends to be someone else",
       "Contains personal information",

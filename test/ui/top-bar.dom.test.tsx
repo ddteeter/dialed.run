@@ -57,7 +57,8 @@ describe("TopBar", () => {
     ).toStrictEqual([
       // The wordmark first: it links to Feed and is "the one place the
       // logo appears in the product".
-      ["[dialed.run]", "/feed"],
+      // Drawn as "[dialed.run]", then said once as "dialed.run".
+      ["[dialed.run]dialed.run", "/feed"],
       ["Feed", "/feed"],
       ["Closet", "/closet"],
       ["Call", "/call"],
@@ -82,6 +83,35 @@ describe("TopBar", () => {
         "border-b-2",
         "border-transparent",
       );
+    }
+  });
+
+  it("says page only where the runner is, and current beneath it", async () => {
+    // M1: the router's prefix match made the wordmark and Feed both say
+    // "current page" on a post's detail. Beneath its page a lit tab is
+    // the current item; the wordmark, which is no tab, says nothing.
+    await renderAt("/feed/entry/entry_1", <TopBar />);
+
+    expect(
+      screen.getByRole("link", { name: "dialed.run home" }),
+    ).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: "Feed" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    expect(screen.getByRole("link", { name: "Closet" })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
+
+  it("still says page on the page itself, whatever its query", async () => {
+    await renderAt("/feed?view=following", <TopBar />);
+
+    for (const name of ["dialed.run home", "Feed"]) {
+      expect([
+        name,
+        screen.getByRole("link", { name }).getAttribute("aria-current"),
+      ]).toEqual([name, "page"]);
     }
   });
 

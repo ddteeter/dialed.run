@@ -4,7 +4,7 @@ import {
   createRootRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps, ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -95,7 +95,14 @@ describe("Au1's Forgot it?", () => {
         hasForgotLink
       />,
     );
-    const link = screen.getByRole("link", { name: "Forgot it?" });
+    // Drawn "Forgot it?"; heard with what it does, the drawn words first.
+    const link = screen.getByRole("link", {
+      name: "Forgot it? Reset your password",
+    });
+    expect(link).toHaveTextContent(/^Forgot it\? Reset your password$/u);
+    expect(within(link).getByText("Reset your password")).toHaveClass(
+      "sr-only",
+    );
     expect(link).toHaveAttribute("href", "/account/forgot");
     expect(link).toHaveClass("target");
     rerender(<></>);
@@ -112,7 +119,7 @@ describe("Au1's Forgot it?", () => {
         passwordAutoComplete="new-password"
       />,
     );
-    expect(screen.queryByRole("link", { name: "Forgot it?" })).toBeNull();
+    expect(screen.queryByRole("link", { name: /^Forgot it\?/u })).toBeNull();
   });
 });
 

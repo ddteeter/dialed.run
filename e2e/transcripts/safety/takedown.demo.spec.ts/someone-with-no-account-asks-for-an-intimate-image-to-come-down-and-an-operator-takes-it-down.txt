@@ -1,20 +1,20 @@
 document
 navigation, Desk
-dialed
-.run
+dialed.run
 Desk
 Operator
 list
 listitem, level 1, position 1, set size 5
-link, :when, current page
+link, :when
 :when
-end of link, :when, current page
+end of link, :when
 end of listitem, level 1, position 1, set size 5
 listitem, level 1, position 2, set size 5
-link, Review #, current page
+link, Review # waiting, current page
 Review
 #
-end of link, Review #, current page
+waiting
+end of link, Review # waiting, current page
 end of listitem, level 1, position 2, set size 5
 listitem, level 1, position 3, set size 5
 link, Access
@@ -23,6 +23,7 @@ end of link, Access
 end of listitem, level 1, position 3, set size 5
 listitem, level 1, position 4, set size 5
 Duplicates
+, not built yet
 end of listitem, level 1, position 4, set size 5
 listitem, level 1, position 5, set size 5
 link, Runners
@@ -34,7 +35,9 @@ end of navigation, Desk
 main
 heading, Review, level 1
 # waiting · # decided today
+heading, Held in the last day, level 2
 Held in the last day
+end of heading, Held in the last day, level 2
 list
 listitem, level 1, position 1, set size 1
 Reports · # waiting
@@ -48,9 +51,13 @@ list
 listitem, level 1, position 1, set size 2
 button, entry · :id, expanded
 Due in #h
+heading, Their other photos, level 3
 Their other photos
+end of heading, Their other photos, level 3
 No other photos from this runner.
+heading, Matching photos · any runner, level 3
 Matching photos · any runner
+end of heading, Matching photos · any runner, level 3
 No fingerprint to match by: the photo is gone, or older than fingerprints.
 # person
 It's an intimate image of someone, shared without their consent
@@ -59,7 +66,7 @@ form
 status
 Why it comes down
 combobox, Why it comes down, has popup listbox, not expanded
-option, —, selected, position 1, set size 7
+option, Not set, selected, position 1, set size 7
 option, it shows where someone lives, home, not selected, position 2, set size 7
 option, it's sexual or explicit, explicit, not selected, position 3, set size 7
 option, it's an intimate image shared without consent, intimate, not selected, position 4, set size 7
@@ -84,14 +91,18 @@ A close match to an image removed as intimate on
 # bit
 apart.
 end of paragraph
+heading, Their other photos · #, level 3
 Their other photos · #
+end of heading, Their other photos · #, level 3
 list
 listitem, level 2, position 1, set size 1
 image, Photo :id, on a kit an operator cannot open
 :id
 end of listitem, level 2, position 1, set size 1
 end of list
+heading, Matching photos · any runner · #, level 3
 Matching photos · any runner · #
+end of heading, Matching photos · any runner · #, level 3
 list
 listitem, level 2, position 1, set size 1
 Removed
@@ -102,7 +113,6 @@ link, @poster_#
 end of link, @poster_#
 end of listitem, level 2, position 1, set size 1
 end of list
-# people
 Nobody reported this.
 held on upload
 end of listitem, level 1, position 2, set size 2
@@ -113,14 +123,14 @@ form
 status
 What it is
 combobox, What it is, has popup listbox, not expanded
-option, —, selected, position 1, set size 3
+option, Not set, selected, position 1, set size 3
 option, A photo, photo, not selected, position 2, set size 3
 option, A whole entry, entry, not selected, position 3, set size 3
 end of combobox, What it is, has popup listbox, not expanded
 Its id
 textbox, Its id
 The notice
-textbox, The notice
+textbox, The notice, Who sent it, and its reference.
 Who sent it, and its reference.
 button, Take it down
 Take it down
@@ -145,7 +155,7 @@ E#E-#
 form
 status
 CyberTipline report number
-textbox, CyberTipline report number, E#E-#
+textbox, CyberTipline report number, E#E-#, Optional. Record it once the report is filed; it is then kept a year from now.
 Optional. Record it once the report is filed; it is then kept a year from now.
 button, Record the NCMEC report
 Record the NCMEC report

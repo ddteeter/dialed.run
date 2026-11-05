@@ -90,13 +90,10 @@ const PNG_2X1 = Buffer.from(
 /**
 Writes the columns an enrichment read owns on the shared Houdini row.
 */
-async function setHoudiniProduct(
-  columns: {
-    [Key in keyof typeof products.$inferInsert]?:
-      | (typeof products.$inferInsert)[Key]
-      | SQL;
-  },
-): Promise<void> {
+async function setHoudiniProduct(columns: {
+  [Key in keyof typeof products.$inferInsert]?:
+    (typeof products.$inferInsert)[Key] | SQL;
+}): Promise<void> {
   await withLocalDb(async ({ core }) => {
     await core
       .update(products)
@@ -312,7 +309,7 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await expect(well.locator('img[src^="/closet/photo/"]')).toBeVisible();
   await expect(page.getByText("Replace")).toBeVisible();
   await expect(
-    page.getByText("light · wind resistant · reflective trim"),
+    page.getByText("lightweight · wind resistant · reflective trim"),
   ).toBeVisible();
   // Round 43 #95: the shop page under the name, its domain beside it.
   const shopPage = page.getByRole("link", { name: "Shop page" });
@@ -328,26 +325,26 @@ test("add garments with product identity -> detail in round 22's order -> retire
   // enrichment writes it from a brand's page, so the demo writes the row
   // enrichment would have. Seeded through Drizzle and the real schema.
   await setHoudiniProduct({
-        // What a read of the pasted page leaves (round 43 #94): done, with
-        // the columns it wrote, and a fabric the runner left empty.
-        extractionStatus: "done",
-        extracted: JSON.stringify({
-          rung: "jsonld",
-          found: { fabric: "synthetic" },
-          written: { fabric: "synthetic", fabricComposition: "100% nylon" },
-        }),
-        fabric: "synthetic",
-        fabricComposition: "100% nylon, GORE-TEX",
-        fabricParts: JSON.stringify([
-          { part: "Body", materials: [{ material: "nylon", pct: 100 }] },
-          {
-            part: "Underarm",
-            materials: [
-              { material: "polyester", pct: 87 },
-              { material: "elastane", pct: 13 },
-            ],
-          },
-        ]),
+    // What a read of the pasted page leaves (round 43 #94): done, with
+    // the columns it wrote, and a fabric the runner left empty.
+    extractionStatus: "done",
+    extracted: JSON.stringify({
+      rung: "jsonld",
+      found: { fabric: "synthetic" },
+      written: { fabric: "synthetic", fabricComposition: "100% nylon" },
+    }),
+    fabric: "synthetic",
+    fabricComposition: "100% nylon, GORE-TEX",
+    fabricParts: JSON.stringify([
+      { part: "Body", materials: [{ material: "nylon", pct: 100 }] },
+      {
+        part: "Underarm",
+        materials: [
+          { material: "polyester", pct: 87 },
+          { material: "elastane", pct: 13 },
+        ],
+      },
+    ]),
   });
 
   await scene(
@@ -361,10 +358,14 @@ test("add garments with product identity -> detail in round 22's order -> retire
   );
   // The fabric the page lent is grey; the runner's own weight stays ink.
   await expect(
-    page.locator("[data-part='composition']").getByText("synthetic", { exact: true }),
+    page
+      .locator("[data-part='composition']")
+      .getByText("synthetic", { exact: true }),
   ).toHaveClass(/text-quiet/);
   await expect(
-    page.locator("[data-part='composition']").getByText("light", { exact: true }),
+    page
+      .locator("[data-part='composition']")
+      .getByText("lightweight", { exact: true }),
   ).toHaveClass(/text-ink/);
   await expect(page.getByText("Composition · from")).toBeVisible();
   await expect(page.getByText("Body")).toBeVisible();

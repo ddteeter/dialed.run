@@ -43,14 +43,22 @@ export function Mono({
   step = "sm",
   children,
   className,
+  id,
 }: Readonly<{
   step?: MonoStep | undefined;
   children: ReactNode;
   className?: string | undefined;
+  /**
+  For a line a control names as its description, as `FileWell`'s kicker.
+  */
+  id?: string | undefined;
 }>) {
   const stepClass = STEP_CLASS[step];
   return (
-    <span className={className ? `${stepClass} ${className}` : stepClass}>
+    <span
+      id={id}
+      className={className ? `${stepClass} ${className}` : stepClass}
+    >
       {children}
     </span>
   );

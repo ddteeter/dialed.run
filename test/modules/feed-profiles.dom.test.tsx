@@ -512,11 +512,11 @@ describe("OtherProfile (H)", () => {
   });
 
   it("goes back to the feed", async () => {
-    await renderFeedScreen(otherScreen());
-    expect(screen.getByRole("link", { name: "Back to feed" })).toHaveAttribute(
-      "href",
-      "/feed",
-    );
+    // Under /feed, where the router would call a prefix match current.
+    await renderFeedScreen(otherScreen(), "/feed/u/maya_runs");
+    const back = screen.getByRole("link", { name: "Back to feed" });
+    expect(back).toHaveAttribute("href", "/feed");
+    expect(back).not.toHaveAttribute("aria-current");
   });
 });
 
@@ -625,7 +625,8 @@ describe("RunnerSearch", () => {
   it("says nothing at rest, and lists nothing", async () => {
     await renderFeedScreen(searchScreen());
     expect(screen.queryByText(/No runner called/u)).toBeNull();
-    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+    // Not even an empty list, which a reader hears as "list, 0 items".
+    expect(screen.queryByRole("list")).toBeNull();
   });
 
   it("searches on what is typed, trimmed, and lists avatar, name and a Follow pill", async () => {
@@ -719,7 +720,9 @@ describe("RunnerSearch", () => {
     const box = screen.getByLabelText("Search by name");
 
     await user.type(box, "z");
-    expect(await screen.findByText("No runner called @z.")).toBeVisible();
+    expect(
+      await screen.findByText("No runner called @z.", { selector: "p" }),
+    ).toBeVisible();
     await user.type(box, "e");
 
     expect(await screen.findByText("Didn't load")).toBeVisible();
@@ -742,7 +745,63 @@ describe("RunnerSearch", () => {
 
     await user.type(screen.getByLabelText("Search by name"), "zed ");
 
-    expect(await screen.findByText("No runner called @zed.")).toBeVisible();
+    expect(
+      await screen.findByText("No runner called @zed.", { selector: "p" }),
+    ).toBeVisible();
+    // Said in the region too: the sentence lands under the field, away
+    // from where a reader is typing.
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /^No runner called @zed\.$/u,
+    );
+    expect(screen.queryByRole("list")).toBeNull();
+  });
+
+  it("says Searching in its region while a search is out, then how many it found", async () => {
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<SearchResult[]>();
+    await renderFeedScreen(searchScreen(() => pending.promise));
+
+    await user.type(screen.getByLabelText("Search by name"), "A");
+    expect(screen.getByRole("status")).toHaveTextContent(/^Searching$/u);
+
+    pending.resolve(results("ana", "andy"));
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        /^2 runners found\.$/u,
+      );
+    });
+  });
+
+  it("says one runner in the singular", async () => {
+    const user = userEvent.setup();
+    await renderFeedScreen(searchScreen(() => Promise.resolve(results("ana"))));
+
+    await user.type(screen.getByLabelText("Search by name"), "A");
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        /^1 runner found\.$/u,
+      );
+    });
+  });
+
+  it("goes quiet in its region when the box is cleared, or the search fails", async () => {
+    const user = userEvent.setup();
+    const found = vi
+      .fn<(prefix: string) => Promise<SearchResult[]>>()
+      .mockResolvedValueOnce(results("ana"))
+      .mockRejectedValueOnce(new TypeError("offline"));
+    await renderFeedScreen(searchScreen(found));
+    const box = screen.getByLabelText("Search by name");
+
+    await user.type(box, "A");
+    await screen.findByRole("listitem");
+    await user.clear(box);
+    expect(screen.getByRole("status")).toHaveTextContent(/^$/u);
+
+    await user.type(box, "B");
+    expect(await screen.findByText("Didn't load")).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(/^$/u);
   });
 
   it("goes quiet again when the box is cleared, whitespace and all", async () => {

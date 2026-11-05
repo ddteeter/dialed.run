@@ -349,7 +349,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await hydrated(page);
     await expect(
       page.getByRole("button", { name: "Your conditions" }),
-    ).toHaveAttribute("aria-current", "page");
+    ).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByText("Where do you run?")).toBeVisible();
 
     // The bell's number is every run still owed a verdict, however old —
@@ -385,7 +385,22 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     // another bar; 3 of 5 is more than half, so Bottoms reads Most.
     await scene(page, "What they wore: All beside Most, each a share");
     const bars = page.locator('[data-part="match-block"] + div li');
-    await expect(bars).toHaveText(["TopsAll5/5", "BottomsMost3/5"]);
+    // What is drawn, then what is said: each share is drawn "5/5" and said
+    // "5 of 5 runners" in an sr-only span, which `textContent` would join
+    // to the drawn text.
+    await expect(bars.locator(".sr-only")).toHaveText([
+      "5 of 5 runners",
+      "3 of 5 runners",
+    ]);
+    const drawnBars = await bars.evaluateAll((items) =>
+      items.map((item) => {
+        const copy = item.cloneNode(true);
+        if (!(copy instanceof HTMLElement)) return "";
+        for (const said of copy.querySelectorAll(".sr-only")) said.remove();
+        return copy.textContent;
+      }),
+    );
+    expect(drawnBars).toStrictEqual(["TopsAll5/5", "BottomsMost3/5"]);
 
     // Following is a tab away, and its empty state is drawn (E1).
     await scene(page, "E1 · nobody yet, and one way to find someone");
@@ -404,9 +419,14 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     // way to be found by it until they do (D-113 Q2).
     await scene(page, "Search · nobody finds a runner who has not confirmed");
     await page.getByPlaceholder("Search by name").fill(waitingUsername);
+    // Drawn under the field, and said by the screen's one status region.
+    const nobody = `No runner called @${waitingUsername}.`;
     await expect(
-      page.getByText(`No runner called @${waitingUsername}.`),
+      page.getByRole("paragraph").filter({ hasText: nobody }),
     ).toBeVisible();
+    await expect(
+      page.getByRole("status").filter({ hasText: nobody }),
+    ).toHaveText(nobody);
     await scene(page, "Search · name and a Follow pill, no city");
     await page.getByPlaceholder("Search by name").fill(otherUsername);
     const row = page.getByRole("listitem").filter({ hasText: otherUsername });
@@ -437,7 +457,7 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await hydrated(page);
     await expect(
       page.getByRole("button", { name: "Following" }),
-    ).toHaveAttribute("aria-current", "page");
+    ).toHaveAttribute("aria-pressed", "true");
     const card = page.locator('[data-part="post"]').filter({
       hasText: publicCaption,
     });

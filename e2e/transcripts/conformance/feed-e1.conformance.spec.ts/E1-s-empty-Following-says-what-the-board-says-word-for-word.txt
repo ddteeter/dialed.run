@@ -5,8 +5,8 @@ end of banner
 main
 heading, Feed, level 1
 link, Find runners
-button, Following, current page
-button, Your conditions
+button, Following, pressed
+button, Your conditions, not pressed
 heading, Nobody yet, level 2
 Nobody yet
 end of heading, Nobody yet, level 2
@@ -35,9 +35,9 @@ Closet
 end of link, Closet
 end of listitem, level 1, position 2, set size 5
 listitem, level 1, position 3, set size 5
-button, Add, has popup dialog
+button, Add a run, has popup dialog
 + Add
-end of button, Add, has popup dialog
+end of button, Add a run, has popup dialog
 end of listitem, level 1, position 3, set size 5
 listitem, level 1, position 4, set size 5
 link, Call

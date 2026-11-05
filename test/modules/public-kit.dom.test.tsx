@@ -35,19 +35,41 @@ const BARE: PublicKit = {
   handle: "maya_runs",
   day: "Sat Oct 18",
   distance: { value: "6.2", unit: "mi" },
-  time: { value: "52:10", isMoving: false },
+  time: { value: "52:10", said: "52 minutes 10 seconds", isMoving: false },
   pieces: [],
   cardVersion: "0123456789abcdef",
 };
 
 const CONDITIONS = { feelsLike: "38°", sky: "damp", isProviders: true };
 
+/**
+ * A stat's drawn text: the said halves are sr-only and the drawn ones
+ * aria-hidden, so what is drawn is every innermost span not sr-only.
+ */
+function drawnText(element: HTMLElement): string {
+  return [...element.querySelectorAll("span:not(.sr-only)")]
+    .filter((span) => span.children.length === 0)
+    .map((span) => span.textContent)
+    .join("");
+}
+
+/**
+A stat's said text, when it is said other than as drawn.
+*/
+function saidText(element: HTMLElement): string | undefined {
+  return element.querySelector(".sr-only")?.textContent;
+}
+
 const KIT: PublicKit = {
   ...BARE,
   conditions: CONDITIONS,
   verdict: -1,
-  time: { value: "52:10", isMoving: true },
-  pace: { value: "8:25", unit: "/mi" },
+  time: { value: "52:10", said: "52 minutes 10 seconds", isMoving: true },
+  pace: {
+    value: "8:25",
+    unit: "/mi",
+    said: { value: "8 minutes 25 seconds", unit: "per mile" },
+  },
   gain: { value: "210", unit: "ft" },
   caption: "First frosty one.",
   pieces: [
@@ -150,12 +172,30 @@ describe("the public kit, signed out", () => {
   it("gives the four stats, each number over its word", async () => {
     await show(kitPage(KIT));
 
-    const words = screen.getAllByRole("term").map((term) => term.textContent);
-    const values = screen
-      .getAllByRole("definition")
-      .map((value) => value.textContent);
-    expect(words).toStrictEqual(["mi", "moving", "/mi", "ft gain"]);
-    expect(values).toStrictEqual(["6.2", "52:10", "8:25", "210"]);
+    expect(
+      screen.getAllByRole("term").map((term) => drawnText(term)),
+    ).toStrictEqual(["mi", "moving", "/mi", "ft gain"]);
+    expect(
+      screen.getAllByRole("definition").map((value) => drawnText(value)),
+    ).toStrictEqual(["6.2", "52:10", "8:25", "210"]);
+  });
+
+  it("says the time and the pace in words, where the drawn ones read as a clock and a slash", async () => {
+    await show(kitPage(KIT));
+
+    expect(
+      screen.getAllByRole("term").map((term) => saidText(term)),
+    ).toStrictEqual([undefined, undefined, "per mile", undefined]);
+    expect(
+      screen.getAllByRole("definition").map((value) => saidText(value)),
+    ).toStrictEqual([
+      undefined,
+      "52 minutes 10 seconds",
+      "8 minutes 25 seconds",
+      undefined,
+    ]);
+    expect(screen.getByText("8:25")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("/mi")).toHaveAttribute("aria-hidden", "true");
   });
 
   it("names a run's own clock as time, and leaves out what it has not got", async () => {
@@ -268,14 +308,17 @@ describe("the public kit, signed out", () => {
     expect(link("Log in")).toHaveAttribute("href", "/auth/login");
     expect(link("Log in")).toHaveClass("border", "border-hairline");
     expect(link("dialed.run home")).toHaveAttribute("href", "/");
-    // The bracketed wordmark, and one slot beside it (round 42 #90).
-    expect(link("dialed.run home")).toHaveTextContent(/^\[dialed\.run\]$/u);
+    // The bracketed wordmark, and one slot beside it (round 42 #90):
+    // drawn as "[dialed.run]", then said once as "dialed.run".
+    expect(link("dialed.run home")).toHaveTextContent(
+      /^\[dialed\.run\]dialed\.run$/u,
+    );
     const bar = document.querySelector<HTMLElement>("[data-part='top-bar']");
     expect(
       within(bar ?? document.body)
         .getAllByRole("link")
         .map((each) => each.textContent),
-    ).toStrictEqual(["[dialed.run]", "Log in"]);
+    ).toStrictEqual(["[dialed.run]dialed.run", "Log in"]);
     expect(
       screen.queryByRole("link", { name: "Open in the app" }),
     ).not.toBeInTheDocument();

@@ -7,11 +7,19 @@
  */
 export const HANDLE_COPY = {
   label: "Username",
-  hint: "3–20 letters, numbers or _. It's on everything you share. You can change it in settings.",
   /**
-  A moderator's re-pick (round 27 #16): the rule alone.
+   * The rule, drawn as the board words it and said in words: a screen
+   * reader reads "3–20 … or _" as "3 dash 20 … or underscore" or skips
+   * the mark (a11y judgment audit, 2026-11-04). `Spoken` takes the pair.
+   */
+  rule: {
+    shown: "3–20 letters, numbers or _.",
+    said: "3 to 20 letters, numbers or underscores.",
+  },
+  /**
+  What O0 and Settings add after the rule. A moderator's re-pick (round 27 #16) says the rule alone.
   */
-  repickHint: "3–20 letters, numbers or _.",
+  ruleReason: "It's on everything you share. You can change it in settings.",
 } as const;
 
 /**

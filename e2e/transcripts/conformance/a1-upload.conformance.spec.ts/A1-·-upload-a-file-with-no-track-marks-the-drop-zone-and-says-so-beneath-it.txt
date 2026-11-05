@@ -4,10 +4,13 @@ link, Notifications
 end of banner
 main
 heading, Add a run, level 1
+status
+MORNING_RUN.GPX has no track in it. Export the run again.
+end of status
 GPX / TCX / FIT
 Drop a file, or browse
 From your watch export or any tracking app.
-GPX / TCX / FIT Drop a file, or browse From your watch export or any tracking app.
+Drop a file, or browse, GPX / TCX / FIT From your watch export or any tracking app. MORNING_RUN.GPX has no track in it. Export the run again.
 MORNING_RUN.GPX has no track in it. Export the run again.
 paragraph
 No file?
@@ -28,9 +31,9 @@ Closet
 end of link, Closet
 end of listitem, level 1, position 2, set size 5
 listitem, level 1, position 3, set size 5
-button, Add, has popup dialog
+button, Add a run, has popup dialog
 + Add
-end of button, Add, has popup dialog
+end of button, Add a run, has popup dialog
 end of listitem, level 1, position 3, set size 5
 listitem, level 1, position 4, set size 5
 link, Call

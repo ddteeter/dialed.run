@@ -6,9 +6,16 @@ import {
 } from "@tanstack/react-router";
 import type { JSX, ReactNode } from "react";
 
-import { PendingLabel } from "./form";
 import { Icon } from "./icons";
-import { LAUNCHER, TABS, bar, tabToLight, useSlowRoute } from "./tabs";
+import { TabItem, TabLabel } from "./TabItem";
+import {
+  LAUNCHER,
+  PAGE_ONLY,
+  TABS,
+  bar,
+  tabToLight,
+  useSlowRoute,
+} from "./tabs";
 import { Wordmark } from "./Wordmark";
 
 /**
@@ -52,40 +59,6 @@ const ACTIVE_LINK_CLASS =
   "tab-label target flex h-full items-center border-b-2 border-cold-text px-3 text-body font-bold text-ink no-underline";
 const RESTING_LINK_CLASS =
   "tab-label target flex h-full items-center border-b-2 border-transparent px-3 text-body text-label no-underline";
-
-/**
- * One of the four. A launcher is not one of them — it owns no path and the
- * underline never travels to it (round 12) — so it is filtered out by the
- * absence of a `label` mapping rather than by a flag read twice.
- */
-function BarTab({
-  to,
-  label,
-  active,
-  waiting,
-}: Readonly<{
-  to: NonNullable<LinkProps["to"]>;
-  label: string;
-  active: boolean;
-  /**
-   * X3 at desk: *"same on the bar-nav item"* — the lit link's label
-   * breathes once its screen has taken 300ms. Only while waiting, so a
-   * resting link's text is its label and nothing else.
-   */
-  waiting: boolean;
-}>): JSX.Element {
-  return (
-    <li className="flex">
-      <Link to={to} className={active ? ACTIVE_LINK_CLASS : RESTING_LINK_CLASS}>
-        {waiting ? (
-          <PendingLabel label={label} pendingLabel={label} pending />
-        ) : (
-          label
-        )}
-      </Link>
-    </li>
-  );
-}
 
 /**
  * The pink pill, on every screen.
@@ -152,6 +125,7 @@ export function TopBar({ bell }: Readonly<{ bell?: ReactNode }>): JSX.Element {
             tab, so it is a shortcut rather than a sixth destination. */}
         <Link
           to="/feed"
+          activeOptions={PAGE_ONLY}
           aria-label="dialed.run home"
           className="target flex items-center no-underline"
         >
@@ -162,16 +136,26 @@ export function TopBar({ bell }: Readonly<{ bell?: ReactNode }>): JSX.Element {
           <ul className="m-0 flex list-none items-stretch gap-1 p-0">
             {TABS.map((tab, index) =>
               "launcher" in tab ? undefined : (
-                <BarTab
+                <TabItem
                   key={tab.to}
                   to={tab.to}
-                  label={tab.label}
                   // The index into `TABS`, not into the four that survive
                   // the filter: `tabToLight` answers in seats, and the
                   // launcher holds one.
                   active={index === active}
-                  waiting={index === active && isSlow}
-                />
+                  itemClass="flex"
+                  activeClass={ACTIVE_LINK_CLASS}
+                  restingClass={RESTING_LINK_CLASS}
+                >
+                  {/* X3 at desk: "same on the bar-nav item" — the lit
+                      link's label breathes once its screen has taken 300ms.
+                      Only while waiting, so a resting link's text is its
+                      label and nothing else. */}
+                  <TabLabel
+                    label={tab.label}
+                    waiting={index === active && isSlow}
+                  />
+                </TabItem>
               ),
             )}
           </ul>

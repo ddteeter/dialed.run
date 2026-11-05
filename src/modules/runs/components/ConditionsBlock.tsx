@@ -87,6 +87,42 @@ export function FetchingWeather(): JSX.Element {
 }
 
 /**
+What of a run the conditions row reads.
+*/
+type RowRun = Pick<
+  RunSummary,
+  "conditions" | "weatherStatus" | "indoor" | "canSetConditions"
+>;
+
+/**
+The four states a run's weather can be in, in the order the row asks.
+*/
+type WeatherShown = "attached" | "fetching" | "indoor" | "unavailable";
+
+function weatherShown(run: RowRun): WeatherShown {
+  if (run.conditions !== undefined) return "attached";
+  if (run.weatherStatus === "pending") return "fetching";
+  return run.indoor ? "indoor" : "unavailable";
+}
+
+/**
+ * What a screen reader is told as the weather changes under A1's card: the
+ * breath ("Fetching weather") and the block arriving are both silent on
+ * screen, and the runner's focus is elsewhere. In the row's own words where
+ * it has them. A treadmill run has no weather to wait for, so nothing.
+ */
+const WEATHER_SAID: Readonly<Record<WeatherShown, string | undefined>> = {
+  attached: "Weather found.",
+  fetching: "Fetching weather.",
+  indoor: undefined,
+  unavailable: "No conditions.",
+};
+
+export function weatherSaid(run: RowRun): string | undefined {
+  return WEATHER_SAID[weatherShown(run)];
+}
+
+/**
  * A run's conditions, in the four states its weather can be in: arrived
  * (the ink block), still being asked for (the breath), indoor (a fact),
  * or never came — "No conditions", with "Set ›" into R2b where the run can
@@ -98,10 +134,7 @@ export function ConditionsRow({
   note,
   onSet,
 }: Readonly<{
-  run: Pick<
-    RunSummary,
-    "conditions" | "weatherStatus" | "indoor" | "canSetConditions"
-  >;
+  run: RowRun;
   units: Units;
   note?: ReactNode;
   /**
@@ -114,8 +147,9 @@ export function ConditionsRow({
       <ConditionsBlock conditions={run.conditions} units={units} note={note} />
     );
   }
-  if (run.weatherStatus === "pending") return <FetchingWeather />;
-  if (run.indoor) {
+  const shown = weatherShown(run);
+  if (shown === "fetching") return <FetchingWeather />;
+  if (shown === "indoor") {
     return (
       <div data-slot="conditions" data-state="indoor">
         <Mono step="xs" className="text-muted">
@@ -142,10 +176,13 @@ export function ConditionsRow({
         <button
           type="button"
           aria-haspopup="dialog"
+          // The visible word first (WCAG 2.5.3), and what it sets; the
+          // chevron is decoration.
+          aria-label="Set conditions"
           onClick={onSet}
           className="target shrink-0 border-none bg-transparent text-body font-bold"
         >
-          Set &rsaquo;
+          Set <span aria-hidden="true">&rsaquo;</span>
         </button>
       ) : undefined}
     </div>

@@ -1,21 +1,31 @@
 document
-banner
 main
 status
-link, Closet, current page
+link, Closet
 paragraph
 Shoes
 ·
 Generic
 end of paragraph
 heading, Pegasus #, level 1
-# km logged · #/# dialed
+# km logged
+·
+# of # runs dialed
 paragraph
 Untested
 end of paragraph
-link, Edit
-button, Retire
-button, Delete
+link, Edit Pegasus #
+Edit
+Pegasus #
+end of link, Edit Pegasus #
+button, Retire Pegasus #
+Retire
+Pegasus #
+end of button, Retire Pegasus #
+button, Delete Pegasus #
+Delete
+Pegasus #
+end of button, Delete Pegasus #
 dialog, Delete the Pegasus #? Retire it instead.
 dialog, Delete the Pegasus #? Retire it instead.
 heading, Delete the Pegasus #? Retire it instead., level 2
@@ -57,14 +67,14 @@ Feed
 end of link, Feed
 end of listitem, level 1, position 1, set size 5
 listitem, level 1, position 2, set size 5
-link, Closet, current page
+link, Closet, current item
 Closet
-end of link, Closet, current page
+end of link, Closet, current item
 end of listitem, level 1, position 2, set size 5
 listitem, level 1, position 3, set size 5
-button, Add, has popup dialog
+button, Add a run, has popup dialog
 + Add
-end of button, Add, has popup dialog
+end of button, Add a run, has popup dialog
 end of listitem, level 1, position 3, set size 5
 listitem, level 1, position 4, set size 5
 link, Call

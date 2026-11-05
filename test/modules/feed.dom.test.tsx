@@ -71,11 +71,13 @@ describe("Feed: the tabs", () => {
     await renderFeedScreen(feed({ followeeCount: 3 }));
 
     const following = screen.getByRole("button", { name: "Following" });
-    expect(following).toHaveAttribute("aria-current", "page");
+    // A view switch, not a page: pressed, never "current page".
+    expect(following).toHaveAttribute("aria-pressed", "true");
+    expect(following).not.toHaveAttribute("aria-current");
     expect(following).toHaveClass("border-action");
     expect(following).not.toHaveClass("border-teal");
     const conditions = screen.getByRole("button", { name: "Your conditions" });
-    expect(conditions).not.toHaveAttribute("aria-current");
+    expect(conditions).toHaveAttribute("aria-pressed", "false");
     expect(conditions).toHaveClass("text-label");
   });
 
@@ -83,7 +85,7 @@ describe("Feed: the tabs", () => {
     await renderFeedScreen(feed({ followeeCount: 0 }));
 
     const conditions = screen.getByRole("button", { name: "Your conditions" });
-    expect(conditions).toHaveAttribute("aria-current", "page");
+    expect(conditions).toHaveAttribute("aria-pressed", "true");
     expect(conditions).toHaveClass("border-teal");
     expect(await screen.findByText("Where do you run?")).toBeVisible();
   });
@@ -137,13 +139,13 @@ describe("Feed: the default follows the data until the runner chooses", () => {
     await renderFeedScreen(<Refreshing />);
     expect(
       screen.getByRole("button", { name: "Your conditions" }),
-    ).toHaveAttribute("aria-current", "page");
+    ).toHaveAttribute("aria-pressed", "true");
 
     await user.click(screen.getByRole("button", { name: "Refresh" }));
 
     expect(screen.getByRole("button", { name: "Following" })).toHaveAttribute(
-      "aria-current",
-      "page",
+      "aria-pressed",
+      "true",
     );
   });
 
@@ -156,7 +158,7 @@ describe("Feed: the default follows the data until the runner chooses", () => {
 
     expect(
       screen.getByRole("button", { name: "Your conditions" }),
-    ).toHaveAttribute("aria-current", "page");
+    ).toHaveAttribute("aria-pressed", "true");
   });
 });
 
@@ -168,6 +170,10 @@ describe("Feed: the queue", () => {
     const link = screen.getByRole("link", { name: /Clear the queue/ });
     expect(link).toHaveAttribute("href", "/runs/backlog");
     expect(link.textContent).toContain("4");
+    // The chevron is drawn, not said.
+    expect(link).toHaveAccessibleName(
+      "4 runs still need a verdict Clear the queue",
+    );
   });
 
   it("says nothing when one run is waiting, because one is a sheet", async () => {
@@ -306,7 +312,7 @@ describe("Feed: Following, empty", () => {
 
     expect(
       screen.getByRole("button", { name: "Your conditions" }),
-    ).toHaveAttribute("aria-current", "page");
+    ).toHaveAttribute("aria-pressed", "true");
   });
 
   it("reaches the feed's empty state without a conditions call", async () => {

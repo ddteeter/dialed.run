@@ -1,16 +1,15 @@
 document
-banner
 main
 status
 Garment saved, photo didn't. Try again?
 end of status
-link, Closet, current page
+link, Closet
 Saved to closet · Top · Half-zip
 heading, Janji Rover Half-zip, level 1
 Photo · optional
 Add a photo
 Flat on the floor works best. JPG, PNG or WebP.
-Photo · optional Add a photo Flat on the floor works best. JPG, PNG or WebP.
+Add a photo, Photo · optional Flat on the floor works best. JPG, PNG or WebP.
 Photo not added
 Garment saved, photo didn't. Try again?
 Your connection dropped.
@@ -27,14 +26,14 @@ Feed
 end of link, Feed
 end of listitem, level 1, position 1, set size 5
 listitem, level 1, position 2, set size 5
-link, Closet, current page
+link, Closet, current item
 Closet
-end of link, Closet, current page
+end of link, Closet, current item
 end of listitem, level 1, position 2, set size 5
 listitem, level 1, position 3, set size 5
-button, Add, has popup dialog
+button, Add a run, has popup dialog
 + Add
-end of button, Add, has popup dialog
+end of button, Add a run, has popup dialog
 end of listitem, level 1, position 3, set size 5
 listitem, level 1, position 4, set size 5
 link, Call

@@ -1,8 +1,7 @@
 document
 banner
 link, dialed.run home
-dialed
-.run
+dialed.run
 end of link, dialed.run home
 navigation, Main
 list
@@ -10,7 +9,7 @@ listitem, level 1, position 1, set size 4
 link, Feed
 end of listitem, level 1, position 1, set size 4
 listitem, level 1, position 2, set size 4
-link, Closet, current page
+link, Closet, current item
 end of listitem, level 1, position 2, set size 4
 listitem, level 1, position 3, set size 4
 link, Call
@@ -25,7 +24,7 @@ button, Log a run, has popup dialog
 end of banner
 main
 status
-link, Closet, current page
+link, Closet
 paragraph
 Shoes
 end of paragraph
@@ -34,9 +33,18 @@ heading, ミズノ ウエーブライダー #, level 1
 paragraph
 Untested
 end of paragraph
-link, Edit
-button, Retire
-button, Delete
+link, Edit ミズノ ウエーブライダー #
+Edit
+ミズノ ウエーブライダー #
+end of link, Edit ミズノ ウエーブライダー #
+button, Retire ミズノ ウエーブライダー #
+Retire
+ミズノ ウエーブライダー #
+end of button, Retire ミズノ ウエーブライダー #
+button, Delete ミズノ ウエーブライダー #
+Delete
+ミズノ ウエーブライダー #
+end of button, Delete ミズノ ウエーブライダー #
 end of main
 status
 end of document

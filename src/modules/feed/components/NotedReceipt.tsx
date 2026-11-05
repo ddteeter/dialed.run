@@ -20,9 +20,9 @@ import { Mono } from "../../../ui";
  * surfaces, with `accent-ink` on it because text on an accent is always
  * ink, inverted block or not.
  *
- * `role="status"`, so the sentence is announced when it lands: the
- * control the runner pressed has just disappeared, and this is what took
- * its place.
+ * Not a status region of its own: A3 has one (rule 08), and the form's
+ * says `notedAnnouncement` when this lands, so the save is reported once,
+ * with the sentence, rather than as "Verdict saved." and then again here.
  *
  * With no sentence — the verdict saved, and only the record's count failed
  * to come back — the receipt is "Noted" alone. The save is what it
@@ -33,7 +33,6 @@ export function NotedReceipt({
 }: Readonly<{ sentence: string | undefined }>): JSX.Element {
   return (
     <div
-      role="status"
       data-slot="noted"
       className="flex flex-col gap-2 rounded-card bg-teal p-4 text-accent-ink"
     >
@@ -43,4 +42,12 @@ export function NotedReceipt({
       )}
     </div>
   );
+}
+
+/**
+ * What the screen's status region says when Noted lands: the receipt's
+ * own words, so a reader hears what the eye reads, once.
+ */
+export function notedAnnouncement(sentence: string | undefined): string {
+  return sentence === undefined ? "Noted." : `Noted. ${sentence}`;
 }

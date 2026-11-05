@@ -100,7 +100,10 @@ export function AuthPage(
   // band nor Google's speaks for it — there is nothing to try again — so
   // the status region says the notice's own words.
   const isClosed = google.closed || isAccountClosed(form.failure, cause);
-  const said = band ?? (isClosed ? CLOSED_SAID : undefined);
+  const said =
+    band === undefined && isClosed
+      ? CLOSED_SAID
+      : authStatus({ status: form.status, band, google: google.failure });
 
   return (
     <SignedOutPanel heading={heading} notice={props.notice}>
@@ -123,13 +126,7 @@ export function AuthPage(
             props.onSubmit();
           }}
         >
-          <FormStatus>
-            {authStatus({
-              status: form.status,
-              band: said,
-              google: google.failure,
-            })}
-          </FormStatus>
+          <FormStatus>{said}</FormStatus>
           <FormErrorSummary
             rows={form.summaryRows}
             onFocusField={form.focusField}
@@ -168,13 +165,12 @@ export function AuthPage(
 }
 
 /**
- * Item 23's notice as the status region says it: the kicker, the sentence
- * and both appeal lines, so a screen reader hears all the band shows.
+ * Item 23's notice as the status region says it: the kicker alone. The
+ * band above the form carries the sentence and both appeal lines, and a
+ * screen reader in browse mode reads the band; the region saying them all
+ * again had them heard twice.
  */
-const CLOSED_SAID = {
-  kicker: ACCOUNT_CLOSED_COPY.kicker,
-  message: `${ACCOUNT_CLOSED_COPY.message} ${ACCOUNT_CLOSED_COPY.detail} ${ACCOUNT_CLOSED_COPY.appeal}`,
-};
+const CLOSED_SAID = `${ACCOUNT_CLOSED_COPY.kicker}.`;
 
 /**
  * Which of the board's form states this is, by its own `data-state`
@@ -325,6 +321,12 @@ function backTo(carried: CarriedForm): string {
  * Rendered only when a form was carried: *"Arrival with nothing carried
  * shows no notice at all — just Au2."*
  */
+/**
+ * The id of Au7's sentence, which the Password field is described by: focus
+ * lands in Password on arrival and skips the notice above the heading.
+ */
+export const SESSION_NOTICE_ID = "session-notice";
+
 export function SessionNotice({
   carried,
 }: Readonly<{ carried: CarriedForm | undefined }>): JSX.Element | undefined {
@@ -340,7 +342,7 @@ export function SessionNotice({
         You were signed out
       </Mono>
       {/* One string, so the sentence is one run of text and not three. */}
-      <span className="text-body">
+      <span id={SESSION_NOTICE_ID} className="text-body">
         {`Log in and you're ${backTo(carried)}. What you typed wasn't kept.`}
       </span>
     </div>
@@ -503,13 +505,16 @@ export function CredentialFields({
         error={form.fieldErrors.password}
         hint={passwordHint}
         focusOnArrival={focusPasswordOnArrival}
+        // Arrival focus is Au7's alone, and it skips Au7's notice, so the
+        // field it lands in is read with the sentence it skipped.
+        describedBy={focusPasswordOnArrival ? SESSION_NOTICE_ID : undefined}
       />
       {hasForgotLink ? (
         <Link
           to="/account/forgot"
           className="target inline-flex items-center self-start text-small font-semibold text-ink underline underline-offset-4"
         >
-          Forgot it?
+          Forgot it?<span className="sr-only"> Reset your password</span>
         </Link>
       ) : undefined}
     </>

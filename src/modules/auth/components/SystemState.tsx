@@ -161,11 +161,21 @@ export function LoaderFailedState({
   return (
     <SystemFrame signedIn={signedIn}>
       <section data-part="system-state" data-state="loader-failed">
-        <FailureBand kicker="Didn't load" message={message} onRetry={onRetry} />
+        {/* The page's one heading, as X1 has: the band's kicker, said
+            first so a screen reader's heading list finds the page. Not
+            drawn, because the band already shows the words. */}
+        <h1 className="sr-only">{LOADER_FAILED_KICKER}</h1>
+        <FailureBand
+          kicker={LOADER_FAILED_KICKER}
+          message={message}
+          onRetry={onRetry}
+        />
       </section>
     </SystemFrame>
   );
 }
+
+const LOADER_FAILED_KICKER = "Didn't load";
 
 /**
  * The router's error screen: the band, framed by who is looking, and Try

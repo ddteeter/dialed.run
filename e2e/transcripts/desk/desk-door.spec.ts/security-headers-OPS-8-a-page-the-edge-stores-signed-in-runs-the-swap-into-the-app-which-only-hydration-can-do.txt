@@ -1,8 +1,7 @@
 document
 banner
 link, dialed.run home
-dialed
-.run
+dialed.run
 end of link, dialed.run home
 link, Look in the app
 end of banner

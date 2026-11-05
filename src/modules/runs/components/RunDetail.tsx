@@ -4,8 +4,8 @@ import { useState } from "react";
 
 import type { Units } from "../../../lib/contracts";
 import { clockLabel, dayLabel } from "../../../lib/dates";
-import { distanceNumber, formatPace } from "../../../lib/contracts/measures";
-import { Mono } from "../../../ui";
+import { distanceNumber, paceForms } from "../../../lib/contracts/measures";
+import { Mono, Spoken } from "../../../ui";
 import type { RunSummary } from "../service";
 import { ConditionsRow } from "./ConditionsBlock";
 import { SetConditionsSheet } from "./SetConditionsSheet";
@@ -46,6 +46,7 @@ export function RunDetail({
   const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const zone = run.conditions?.timeZone;
+  const pace = paceForms(run.durationS, run.distanceM, units.distance);
 
   return (
     <div className="flex flex-col gap-4">
@@ -61,7 +62,7 @@ export function RunDetail({
             {`${distanceNumber(run.distanceM, units.distance)} ${units.distance}`}
           </span>
           <Mono step="sm" className="text-label">
-            {formatPace(run.durationS, run.distanceM, units.distance)}
+            {pace === undefined ? undefined : <Spoken {...pace} />}
           </Mono>
         </p>
       </div>

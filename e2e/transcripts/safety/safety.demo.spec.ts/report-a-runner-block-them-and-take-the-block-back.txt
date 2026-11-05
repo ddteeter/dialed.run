@@ -1,8 +1,7 @@
 document
 banner
 link, dialed.run home
-dialed
-.run
+dialed.run
 end of link, dialed.run home
 end of banner
 main
@@ -15,14 +14,20 @@ link, desk@dialed.run
 .
 form
 status
-Account closed. This account was closed for breaking the community rules. Think we got it wrong? Reply to the email we sent you. Or write to desk@dialed.run.
+Account closed.
 end of status
 Email
 textbox, Email, safety-#@example.com
 Password
 Password, a-long-enough-password
-button, Show, # control
-link, Forgot it?
+button, Show password, # control
+Show
+password
+end of button, Show password, # control
+link, Forgot it? Reset your password
+Forgot it?
+Reset your password
+end of link, Forgot it? Reset your password
 button, Log in
 Log in
 end of button, Log in

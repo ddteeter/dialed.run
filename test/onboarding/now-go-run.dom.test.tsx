@@ -4,7 +4,7 @@ import {
   createRootRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { CALL_VERDICT_THRESHOLD } from "../../src/lib/contracts";
@@ -54,6 +54,16 @@ describe("NowGoRun", () => {
     // the screen's only content besides the instruction, so a blank one is
     // a promise silently withdrawn.
     await renderScreen();
+
+    // The section is found by its heading, drawn as the mono kicker.
+    const heading = screen.getByRole("heading", {
+      level: 2,
+      name: "What happens as you log",
+    });
+    expect(heading).toHaveClass("m-0", "text-hiviz-text");
+    expect(within(heading).getByText("What happens as you log")).toHaveClass(
+      "text-mono-xs",
+    );
 
     expect(
       screen.getByText(
@@ -113,6 +123,9 @@ describe("NowGoRun", () => {
     // leaves straight for Strava's consent screen.
     // The Strava consent (API Policy §2.1) is read before the button.
     expectConsentBeforeButton();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Connect Strava" }),
+    ).toHaveClass("m-0", "text-body", "font-semibold");
     expect(
       screen.getByText("We read that a run happened. Nothing else."),
     ).toBeVisible();

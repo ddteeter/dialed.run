@@ -76,7 +76,7 @@ function SettingsRow({
   params,
   label,
   value,
-  action = "›",
+  verb,
 }: Readonly<{
   to: NonNullable<LinkProps["to"]>;
   /**
@@ -87,9 +87,10 @@ function SettingsRow({
   label: string;
   value: ReactNode;
   /**
-  "›" when it opens something, and the verb when there is something to do.
-  */
-  action?: string;
+   * The verb before the "›" when there is something to do ("Answer",
+   * "Change"); a row that only opens something has the "›" alone.
+   */
+  verb?: string;
 }>): JSX.Element {
   return (
     <li>
@@ -103,7 +104,11 @@ function SettingsRow({
           <span className="text-body font-semibold">{label}</span>
           <span className="text-small text-muted">{value}</span>
         </span>
-        <span className="shrink-0 text-body">{action}</span>
+        <span className="shrink-0 text-body">
+          {verb === undefined ? undefined : `${verb} `}
+          {/* Drawn, not said: the link is already the way in. */}
+          <span aria-hidden="true">›</span>
+        </span>
       </Link>
     </li>
   );
@@ -289,7 +294,7 @@ function CalibrationRow({
         params={{}}
         label="How you run"
         value="Not answered"
-        action="Answer ›"
+        verb="Answer"
       />
     );
   }
@@ -698,7 +703,7 @@ export function AccountIndex({
               ? account.email
               : `${account.email} · not confirmed yet`
           }
-          action="Change ›"
+          verb="Change"
         />
         <SettingsRow
           to="/account/username"

@@ -8,7 +8,11 @@ import {
   formatWind,
   formatTempRange,
   gainNumber,
+  paceForms,
   paceNumber,
+  paceUnit,
+  spokenDuration,
+  spokenPace,
   wholeDistanceNumber,
 } from "../../src/lib/contracts/measures";
 import { formatTemp } from "../../src/lib/contracts/temperature";
@@ -194,14 +198,30 @@ describe("inFahrenheitRange", () => {
 });
 
 describe("paceNumber", () => {
-  it("is formatPace without its unit", () => {
-    expect(paceNumber(3098, 9978, "mi")).toBe("8:20");
-    expect(paceNumber(3098, 9978, "km")).toBe("5:10");
+  it("is formatPace and spokenPace without their unit", () => {
+    expect(paceNumber(3098, 9978, "mi")).toStrictEqual({
+      shown: "8:20",
+      said: "8 minutes 20 seconds",
+    });
+    expect(paceNumber(3098, 9978, "km")).toStrictEqual({
+      shown: "5:10",
+      said: "5 minutes 10 seconds",
+    });
   });
 
   it("has no pace with no distance", () => {
     expect(paceNumber(1800, 0, "mi")).toBeUndefined();
     expect(paceNumber(1800, -1, "km")).toBeUndefined();
+  });
+});
+
+describe("paceUnit", () => {
+  it("is the unit as drawn and as said", () => {
+    expect(paceUnit("mi")).toStrictEqual({ shown: "/mi", said: "per mile" });
+    expect(paceUnit("km")).toStrictEqual({
+      shown: "/km",
+      said: "per kilometre",
+    });
   });
 });
 
@@ -215,5 +235,75 @@ describe("gainNumber", () => {
   it("is whole metres for a runner who counts kilometres", () => {
     expect(gainNumber(64.4, "km")).toStrictEqual({ value: "64", unit: "m" });
     expect(gainNumber(64.5, "km")).toStrictEqual({ value: "65", unit: "m" });
+  });
+});
+
+/**
+ * What a screen reader hears in place of "51:38" and "8:15 /mi": the first
+ * reads as a time of day, the second as "slash m i" (a11y judgment audit,
+ * 2026-11-04).
+ */
+describe("spokenDuration", () => {
+  it("says minutes and seconds in words", () => {
+    expect(spokenDuration(3098)).toBe("51 minutes 38 seconds");
+  });
+
+  it("says hours from one hour, as formatDuration shows them", () => {
+    expect(spokenDuration(3821)).toBe("1 hour 3 minutes 41 seconds");
+    expect(spokenDuration(2 * 3600 + 15 * 60 + 9)).toBe(
+      "2 hours 15 minutes 9 seconds",
+    );
+  });
+
+  it("says one of a thing in the singular", () => {
+    expect(spokenDuration(3600 + 60 + 1)).toBe("1 hour 1 minute 1 second");
+    expect(spokenDuration(2 * 3600 + 2 * 60 + 2)).toBe(
+      "2 hours 2 minutes 2 seconds",
+    );
+  });
+
+  it("leaves out a part that is zero", () => {
+    expect(spokenDuration(480)).toBe("8 minutes");
+    expect(spokenDuration(3605)).toBe("1 hour 5 seconds");
+    expect(spokenDuration(59)).toBe("59 seconds");
+    expect(spokenDuration(3600)).toBe("1 hour");
+  });
+
+  it("says nothing at all as no seconds", () => {
+    expect(spokenDuration(0)).toBe("0 seconds");
+  });
+});
+
+describe("spokenPace", () => {
+  it("is formatPace in words, per the runner's unit", () => {
+    expect(spokenPace(3098, 9978, "mi")).toBe("8 minutes 20 seconds per mile");
+    expect(spokenPace(3098, 9978, "km")).toBe(
+      "5 minutes 10 seconds per kilometre",
+    );
+  });
+
+  it("rounds to the second as formatPace does", () => {
+    expect(spokenPace(1001, 3000, "km")).toBe(
+      "5 minutes 34 seconds per kilometre",
+    );
+    expect(spokenPace(3601, 1000, "km")).toBe("1 hour 1 second per kilometre");
+  });
+
+  it("has no pace with no distance", () => {
+    expect(spokenPace(1800, 0, "mi")).toBeUndefined();
+    expect(spokenPace(1800, -1, "km")).toBeUndefined();
+  });
+});
+
+describe("paceForms", () => {
+  it("is formatPace and spokenPace together", () => {
+    expect(paceForms(3098, 9978, "mi")).toStrictEqual({
+      shown: "8:20 /mi",
+      said: "8 minutes 20 seconds per mile",
+    });
+  });
+
+  it("has neither with no distance", () => {
+    expect(paceForms(1800, 0, "km")).toBeUndefined();
   });
 });

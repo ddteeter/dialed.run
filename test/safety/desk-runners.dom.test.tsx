@@ -291,7 +291,7 @@ describe("Close account (D3)", () => {
 
     await user.type(screen.getByRole("textbox", { name: /Why/ }), "Spam");
     await user.selectOptions(rule, "Harass anyone");
-    await user.selectOptions(rule, "—");
+    await user.selectOptions(rule, "Not set");
     await user.click(screen.getByRole("button", { name: "Close account" }));
 
     expect(ban).not.toHaveBeenCalled();
@@ -430,11 +430,11 @@ describe("after an action", () => {
 
     await user.selectOptions(picker, "Advertising");
     expect(picker).toHaveDisplayValue("Advertising");
-    await user.selectOptions(picker, "—");
+    await user.selectOptions(picker, "Not set");
     await user.click(screen.getByRole("button", { name: "Rename" }));
 
     expect(rename).not.toHaveBeenCalled();
-    expect(picker).toHaveDisplayValue("—");
+    expect(picker).toHaveDisplayValue("Not set");
   });
 
   it("says nothing in Rename before it is pressed", async () => {
@@ -478,7 +478,7 @@ describe("after an action", () => {
 
     expect(
       screen.getByRole("combobox", { name: /Why the name has to go/ }),
-    ).toHaveDisplayValue("—");
+    ).toHaveDisplayValue("Not set");
     expect(screen.getByRole("textbox", { name: /Why/ })).toHaveValue("");
   });
 });
@@ -545,7 +545,7 @@ describe("Takedown (SAF-6)", () => {
     const picker = screen.getByRole("combobox", {
       name: /What it is/,
     });
-    expect(picker).toHaveDisplayValue("—");
+    expect(picker).toHaveDisplayValue("Not set");
     // The empty option is chosen, not merely shown: a value no option
     // holds leaves nothing selected.
     if (!(picker instanceof HTMLSelectElement)) throw new Error("no select");
@@ -606,7 +606,7 @@ describe("Takedown (SAF-6)", () => {
     const options = within(select)
       .getAllByRole("option")
       .map((option) => option.textContent);
-    expect(options).toStrictEqual(["—", "A photo", "A whole entry"]);
+    expect(options).toStrictEqual(["Not set", "A photo", "A whole entry"]);
   });
 
   it("takes a whole entry down too", async () => {
@@ -671,13 +671,13 @@ describe("Takedown (SAF-6)", () => {
 
     await user.selectOptions(picker, "A photo");
     expect(picker).toHaveDisplayValue("A photo");
-    await user.selectOptions(picker, "—");
+    await user.selectOptions(picker, "Not set");
     await user.click(screen.getByRole("button", { name: "Take it down" }));
 
     expect(takeDown).not.toHaveBeenCalled();
     const said = await screen.findAllByText("Pick a photo or an entry.");
     expect(said.length).toBeGreaterThan(0);
-    expect(picker).toHaveDisplayValue("—");
+    expect(picker).toHaveDisplayValue("Not set");
   });
 
   it("tells the operator each outcome", () => {

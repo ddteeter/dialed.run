@@ -120,7 +120,7 @@ describe("DeskShell", () => {
       "Today",
       "Review",
       "Access",
-      "Duplicates",
+      "Duplicates, not built yet",
       "Runners",
     ]);
   });
@@ -143,9 +143,12 @@ describe("DeskShell", () => {
       ["Runners", "/desk/runners"],
     ]);
     // Not yet built: text, not a link that goes nowhere.
-    expect(within(rail()).getByText("Duplicates").closest("li")).toHaveClass(
-      "text-muted",
-    );
+    const duplicates = within(rail()).getByText("Duplicates").closest("li");
+    expect(duplicates).toHaveClass("text-muted");
+    // Muted alone does not say it to a screen reader.
+    expect(
+      within(duplicates ?? document.body).getByText(", not built yet"),
+    ).toHaveClass("sr-only");
   });
 
   it("marks the current destination, in hi-viz", async () => {
@@ -170,8 +173,12 @@ describe("DeskShell", () => {
       </DeskShell>,
     );
 
-    const review = within(rail()).getByRole("link", { name: "Review 4" });
+    const review = within(rail()).getByRole("link", {
+      name: "Review 4 waiting",
+    });
     expect(within(review).getByText("4")).toHaveClass("text-hiviz-text");
+    // The rail draws the bare number; the unit is spoken only.
+    expect(within(review).getByText("waiting")).toHaveClass("sr-only");
   });
 
   it("counts what the system gave up on on the Today entry, in hi-viz", async () => {
@@ -181,10 +188,13 @@ describe("DeskShell", () => {
       </DeskShell>,
     );
 
-    const today = within(rail()).getByRole("link", { name: "Today 3" });
+    const today = within(rail()).getByRole("link", {
+      name: "Today 3 gave up",
+    });
     expect(within(today).getByText("3")).toHaveClass("text-hiviz-text");
+    expect(within(today).getByText("gave up")).toHaveClass("sr-only");
     expect(
-      within(rail()).getByRole("link", { name: "Review 4" }),
+      within(rail()).getByRole("link", { name: "Review 4 waiting" }),
     ).toBeVisible();
   });
 
@@ -198,6 +208,33 @@ describe("DeskShell", () => {
     // The entry stays; the count goes (D6).
     expect(within(rail()).getByRole("link", { name: "Review" })).toBeVisible();
     expect(rail().querySelectorAll(":scope li .font-mono")).toHaveLength(0);
+    // Nor the words that would have said what it counts.
+    expect(within(rail()).queryByText("waiting")).not.toBeInTheDocument();
+  });
+
+  it("marks only the page you are on current, not Today on every Desk page", async () => {
+    const rootRoute = createRootRoute({
+      component: () => (
+        <DeskShell current="review" today={desk()}>
+          <p>page</p>
+        </DeskShell>
+      ),
+    });
+    const router = createRouter({
+      routeTree: rootRoute,
+      history: createMemoryHistory({ initialEntries: ["/desk/review"] }),
+    });
+    await router.load();
+    render(<RouterProvider router={router} />);
+
+    // The router's own match: "/desk" is a prefix of "/desk/review", and
+    // a prefix match would mark Today current too.
+    expect(
+      await within(rail()).findByRole("link", { name: "Review" }),
+    ).toHaveAttribute("aria-current", "page");
+    expect(
+      within(rail()).getByRole("link", { name: "Today" }),
+    ).not.toHaveAttribute("aria-current");
   });
 });
 
@@ -313,7 +350,7 @@ describe("DeskTodayPage", () => {
     render(<RouterProvider router={router} />);
 
     expect(
-      await within(rail()).findByRole("link", { name: "Today 1" }),
+      await within(rail()).findByRole("link", { name: "Today 1 gave up" }),
     ).toHaveAttribute("aria-current", "page");
     fireEvent.click(screen.getByRole("button", { name: /^Drop/u }));
 

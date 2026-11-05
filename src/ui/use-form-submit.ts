@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { z } from "zod";
 
 import {
@@ -69,6 +70,59 @@ export interface FieldProps {
  */
 export function messageIdFor(controlId: string): string {
   return `${controlId}-message`;
+}
+
+/**
+ * The id of the hint under a control, built the way `messageIdFor` builds
+ * the message's: what `FieldShell`'s hint wears and what `describedByFor`
+ * names.
+ */
+export function hintIdFor(controlId: string): string {
+  return `${controlId}-hint`;
+}
+
+/**
+ * What a labelled control's `aria-describedby` names: whichever of its
+ * two sentences is on screen, then anything else the caller passes.
+ *
+ * `FieldShell` shows the hint, or the message once the field fails, and
+ * never both — so its part is one id or the other, and only ever the id
+ * of an element that was rendered. A pointer at a missing element
+ * describes nothing and fails axe. It reads the same `hint` and `error`
+ * the shell is given, rather than the form's own errors, because those
+ * are what decide what is drawn.
+ *
+ * `also` is what the control was already described by — `field()`'s own
+ * answer, which may carry a caller's extra id such as a counter. The
+ * message id it may also hold is said once, not twice.
+ */
+export function describedByFor(
+  controlId: string,
+  sentences: Readonly<{
+    hint?: ReactNode;
+    error?: string | undefined;
+  }>,
+  also?: string,
+): string | undefined {
+  const own = ownSentenceId(controlId, sentences);
+  const rest = (also ?? "").split(" ").filter((id) => id !== "" && id !== own);
+  const ids = own === undefined ? rest : [own, ...rest];
+  return ids.length === 0 ? undefined : ids.join(" ");
+}
+
+/**
+The id of the one sentence `FieldShell` is showing under a control.
+*/
+function ownSentenceId(
+  controlId: string,
+  sentences: Readonly<{
+    hint?: ReactNode;
+    error?: string | undefined;
+  }>,
+): string | undefined {
+  if (sentences.error !== undefined) return messageIdFor(controlId);
+  if (sentences.hint !== undefined) return hintIdFor(controlId);
+  return undefined;
 }
 
 /**

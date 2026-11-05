@@ -141,10 +141,15 @@ export function VerdictChips({
             type="button"
             data-slot="flag-more"
             aria-haspopup="dialog"
+            // "More" first, as drawn, then what it opens: the sheet's own
+            // title. The chevron is drawn, not said.
+            aria-label="More, anything specific"
             onClick={onMore}
             className="target-seam flex h-8 items-center rounded-pill border border-hairline px-3 font-semibold text-cold-text"
           >
-            <Mono step="sm">More &rsaquo;</Mono>
+            <Mono step="sm">
+              More <span aria-hidden="true">&rsaquo;</span>
+            </Mono>
           </button>
         )}
       </ChipRow>

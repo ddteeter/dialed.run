@@ -35,26 +35,49 @@ const CATEGORY_PLURALS = {
  * worn, then its standing — retired, not judged yet, or how often it was
  * dialed and the range it works in. A retirement is dated by month and
  * year here (round 28 #13, "RETIRED MAR 2026"), not the closet's day.
+ *
+ * The line draws "8/9 dialed 3–8°", which a screen reader says as "eight
+ * slash nine dialed three to eight degrees" with nothing to say what the
+ * range is. The eye keeps the drawn line; a screen reader gets "8 of 9
+ * runs dialed, works at 3–8°" — detail's own words for the range (a11y
+ * judgment audit, 2026-11-04).
  */
-function recordLine(view: ClosetItemView, zone: string | undefined): string {
+function RecordLine({
+  view,
+  zone,
+}: Readonly<{ view: ClosetItemView; zone: string | undefined }>): JSX.Element {
   const summary = view.performance?.summary;
   const worn = runsLabel(summary?.runCount ?? 0);
   if (view.item.retired) {
-    return `${worn} · ${retiredMonthLabel(view.item.retiredAt, zone)}`;
+    return <>{`${worn} · ${retiredMonthLabel(view.item.retiredAt, zone)}`}</>;
   }
   // `summary === undefined` folded into this guard (rather than checked
   // via `summary?.verdictCount ?? 0 === 0` as before) narrows `summary` to
   // defined for the rest of the function, so `summary.dialedCount` below
   // needs no `?.` of its own.
   if (summary === undefined || summary.verdictCount === 0) {
-    return `${worn} · No verdict yet`;
+    return <>{`${worn} · No verdict yet`}</>;
   }
-  const dialed = `${String(summary.dialedCount)}/${String(summary.verdictCount)} dialed`;
+  const dialed = String(summary.dialedCount);
   const range =
     view.tempRange === undefined ? undefined : formatTempRange(view.tempRange);
-  return range === undefined
-    ? `${worn} · ${dialed}`
-    : `${worn} · ${dialed} ${range}`;
+  return (
+    <>
+      {`${worn} · `}
+      <span aria-hidden="true">
+        {`${dialed}/${String(summary.verdictCount)} dialed`}
+      </span>
+      <span className="sr-only">
+        {`${dialed} of ${runsLabel(summary.verdictCount)} dialed`}
+      </span>
+      {range === undefined ? undefined : (
+        <>
+          <span className="sr-only">, works at</span>
+          {` ${range}`}
+        </>
+      )}
+    </>
+  );
 }
 
 /**
@@ -127,7 +150,7 @@ function Row({
         </span>
         {/* MONO.sm, the metadata row's step (round 28 #13). */}
         <Mono step="sm" className="text-label">
-          {recordLine(view, zone)}
+          <RecordLine view={view} zone={zone} />
         </Mono>
       </span>
       {flags === "" ? undefined : (

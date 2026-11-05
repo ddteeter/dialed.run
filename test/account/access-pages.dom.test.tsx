@@ -136,7 +136,8 @@ describe("Au5 · Request access", () => {
     const note = screen.getByLabelText("Note · optional");
     fireEvent.change(note, { target: { value: "n".repeat(119) } });
     expect(screen.queryByText(/\/ 140$/u)).toBeNull();
-    expect(note).not.toHaveAttribute("aria-describedby");
+    // Only the field's hint, which is heard with it (M6).
+    expect(note).toHaveAttribute("aria-describedby", `${note.id}-hint`);
     fireEvent.change(note, { target: { value: "n".repeat(120) } });
     const counter = (): HTMLElement => {
       const found = document.querySelector<HTMLElement>(`#${NOTE_COUNTER_ID}`);
@@ -153,7 +154,10 @@ describe("Au5 · Request access", () => {
     expect(document.querySelector(`#${NOTE_COUNTER_ID}`)).toHaveClass(
       "self-end",
     );
-    expect(note).toHaveAttribute("aria-describedby", NOTE_COUNTER_ID);
+    expect(note).toHaveAttribute(
+      "aria-describedby",
+      `${note.id}-hint ${NOTE_COUNTER_ID}`,
+    );
     fireEvent.change(note, { target: { value: "n".repeat(140) } });
     expect(counter()).toHaveTextContent(/^140 \/ 140$/u);
     expect(counter()).toHaveClass("text-muted");

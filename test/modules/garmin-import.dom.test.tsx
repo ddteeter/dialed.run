@@ -105,11 +105,18 @@ describe("A1: Import from Garmin (G3)", () => {
     await renderWithRouter(a1(actions()));
 
     const row = await within(section()).findByRole("listitem");
-    expect(row).toHaveTextContent("Sat Aug 29 · 6.2 mi · 51:38");
+    // The time is shown as a clock and said in words: "51:38" reads as a
+    // time of day.
+    expect(
+      within(row).getByText("Sat Aug 29 · 6.2 mi · 51:38"),
+    ).toHaveAttribute("aria-hidden", "true");
+    expect(
+      within(row).getByText("Sat Aug 29 · 6.2 mi · 51 minutes 38 seconds"),
+    ).toHaveClass("sr-only");
     expect(row).toHaveTextContent("Garmin");
     expect(
       within(row).getByRole("button", {
-        name: "Import Sat Aug 29 · 6.2 mi · 51:38",
+        name: "Import Sat Aug 29 · 6.2 mi · 51 minutes 38 seconds",
       }),
     ).toHaveTextContent("Import ›");
   });
@@ -129,7 +136,7 @@ describe("A1: Import from Garmin (G3)", () => {
     );
 
     const link = await within(section()).findByRole("link", {
-      name: "Imported: open Sat Aug 29 · 6.2 mi · 51:38",
+      name: "Imported: open Sat Aug 29 · 6.2 mi · 51 minutes 38 seconds",
     });
     expect(link).toHaveTextContent("[Imported] ›");
     expect(link).toHaveAttribute("href", "/runs/01RUN");

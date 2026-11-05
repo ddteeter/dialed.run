@@ -245,7 +245,7 @@ describe("GarmentDetail: the shop page and its one line (round 43 #94-95)", () =
       linked({ link: LINK, outcome: FOUND, specSource: "janji.com" }),
     );
     expect(outcomeLine()).toBe("[Specs from janji.com]");
-    expect(screen.getByText("mid")).toHaveClass("text-ink");
+    expect(screen.getByText("midweight")).toHaveClass("text-ink");
   });
 
   it("draws the link with no line under it before enrichment has an outcome", async () => {
@@ -271,7 +271,7 @@ describe("GarmentDetail: the shop page and its one line (round 43 #94-95)", () =
     expect(outcomeLine()).toBe(
       "[Specs from janji.com] · Grey values are from the page",
     );
-    expect(screen.getByText("mid")).toHaveClass("text-quiet");
+    expect(screen.getByText("midweight")).toHaveClass("text-quiet");
     expect(screen.getByText("synthetic")).toHaveClass("text-ink");
   });
 });
@@ -314,7 +314,7 @@ describe("GarmentDetail: which words the page lent (round 43 #94)", () => {
       ),
     );
 
-    expect(screen.getByText("mid")).toHaveClass("text-ink");
+    expect(screen.getByText("midweight")).toHaveClass("text-ink");
     expect(screen.getByText("synthetic")).toHaveClass("text-quiet");
     expect(screen.getByText("wind resistant")).toHaveClass("text-quiet");
     expect(screen.getByText("water resistant")).toHaveClass("text-quiet");
@@ -336,7 +336,7 @@ describe("GarmentDetail: which words the page lent (round 43 #94)", () => {
   it("says nothing of wind or water a piece does not resist", async () => {
     await renderWithRouter(words({}, {}));
 
-    expect(screen.getByText("mid")).toBeInTheDocument();
+    expect(screen.getByText("midweight")).toBeInTheDocument();
     expect(screen.queryByText("wind resistant")).toBeNull();
     expect(screen.queryByText("water resistant")).toBeNull();
   });

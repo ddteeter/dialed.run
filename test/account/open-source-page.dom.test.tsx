@@ -235,6 +235,9 @@ describe("OpenSourcePage", () => {
     const read = within(mit).getByText("Read the MIT licence");
     expect(read.tagName).toBe("SUMMARY");
     expect(read).toHaveClass("target", "underline");
+    // Its own words already say whose licence it is.
+    expect(read).not.toHaveAttribute("aria-label");
+    expect(read).toHaveAccessibleName("Read the MIT licence");
     const details = read.closest("details");
     expect(details).not.toHaveAttribute("open");
     expect(details?.querySelector("pre")).toHaveTextContent(
@@ -258,9 +261,12 @@ describe("OpenSourcePage", () => {
     expect(within(react).getByText("19.2.0")).toHaveClass("text-mono-sm");
     // Its group's heading names the licence; the row does not repeat it.
     expect(within(react).queryByText("MIT")).toBeNull();
-    const project = within(react).getByRole("link", { name: "Project" });
+    // Drawn "Project", heard with the package's name: ~130 of them alone
+    // were a list of identical links.
+    const project = within(react).getByRole("link", { name: "Project: react" });
     expect(project).toHaveAttribute("href", "https://react.dev/");
     expect(project).toHaveClass("target", "underline");
+    expect(project).toHaveTextContent(/^Project$/u);
     expect(
       within(react).getByText("© Meta Platforms, Inc. and affiliates"),
     ).toHaveClass("text-small", "text-muted");
@@ -294,6 +300,14 @@ describe("OpenSourcePage", () => {
       "react-dom",
       "seroval",
     ]);
+    // The button went with the press, so focus went to the first row it
+    // showed rather than falling to the page.
+    const rows = within(section("MIT")).getAllByRole("listitem");
+    expect(rows[3]).toHaveFocus();
+    expect(rows[3]).toHaveAttribute("tabindex", "-1");
+    // Only that row is a focus target.
+    expect(rows[2]).not.toHaveAttribute("tabindex");
+    expect(rows[4]).not.toHaveAttribute("tabindex");
     expect(within(section("MIT")).queryByRole("button")).toBeNull();
     // Three is all of Apache's, so there is nothing to show.
     expect(within(section("Apache 2.0")).queryByRole("button")).toBeNull();
@@ -305,6 +319,8 @@ describe("OpenSourcePage", () => {
     const photon = within(section("Apache 2.0")).getAllByRole("listitem")[0];
     const notice = within(photon ?? document.body).getByText("Notice");
     expect(notice.tagName).toBe("SUMMARY");
+    // Drawn "Notice", heard with the package's name.
+    expect(notice).toHaveAccessibleName("Notice: photon");
     expect(notice.closest("details")?.querySelector("pre")).toHaveTextContent(
       "This product includes…",
     );
@@ -313,6 +329,7 @@ describe("OpenSourcePage", () => {
     );
     const seroval = within(section("MIT")).getAllByRole("listitem")[4];
     const own = within(seroval ?? document.body).getByText("Licence");
+    expect(own).toHaveAccessibleName("Licence: seroval");
     expect(own.closest("details")?.querySelector("pre")).toHaveTextContent(
       "MIT, with a clause of its own",
     );
@@ -341,7 +358,7 @@ describe("OpenSourcePage", () => {
     expect(licence).toHaveClass("text-mono-xs", "text-muted");
     expect(licence.parentElement).toBe(vitest);
     expect(
-      within(vitest).getByRole("link", { name: "Project" }),
+      within(vitest).getByRole("link", { name: "Project: vitest" }),
     ).toHaveAttribute("href", "https://vitest.dev");
     expect(within(drizzleKit).getByText("MIT")).toBeInTheDocument();
     expect(within(tools).queryByText(/^Read the/u)).toBeNull();
@@ -375,8 +392,13 @@ describe("OpenSourcePage", () => {
     const field = search();
     expect(field).toHaveAttribute("placeholder", "Name, e.g. date-fns");
     expect(field).toHaveAttribute("type", "search");
+    expect(screen.getByRole("status")).toHaveTextContent(/^$/u);
     await user.type(field, "Re");
     expect(rowNames("MIT")).toEqual(["react", "react-dom"]);
+    // Rows changing is silent; the count is not.
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /^2 packages match\.$/u,
+    );
     expect(screen.queryByRole("heading", { name: "Apache 2.0" })).toBeNull();
     expect(
       screen.queryByRole("heading", { name: "SIL Open Font License 1.1" }),
@@ -385,6 +407,14 @@ describe("OpenSourcePage", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "Third-party notices" }),
     ).toBeInTheDocument();
+    await user.type(field, "act-dom");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /^1 package matches\.$/u,
+    );
+    await user.clear(field);
+    expect(screen.getByRole("status")).toHaveTextContent(/^$/u);
+    await user.type(field, "  ");
+    expect(screen.getByRole("status")).toHaveTextContent(/^$/u);
     await user.clear(field);
     expect(rowNames("MIT")).toEqual(["react", "zod", "clsx"]);
     expect(
@@ -403,8 +433,16 @@ describe("OpenSourcePage", () => {
     await user.type(search(), "a");
     expect(rowNames("MIT")).toEqual(["a1", "a2", "a3"]);
     await user.click(screen.getByRole("button", { name: "Show all 5" }));
+    expect(within(section("MIT")).getAllByRole("listitem")[3]).toHaveFocus();
     await user.type(search(), "{Backspace}a");
     expect(rowNames("MIT")).toEqual(["a1", "a2", "a3", "a4", "a5"]);
+    // The press moved focus once: a re-render, or the row coming back
+    // after a search hid it, leaves it in the search box.
+    expect(search()).toHaveFocus();
+    await user.type(search(), "5");
+    await user.type(search(), "{Backspace}");
+    expect(rowNames("MIT")).toEqual(["a1", "a2", "a3", "a4", "a5"]);
+    expect(search()).toHaveFocus();
   });
 
   it("says so when nothing matches, and only then", async () => {
@@ -412,10 +450,15 @@ describe("OpenSourcePage", () => {
     await renderPage();
     expect(screen.queryByText(/^Nothing we ship/u)).toBeNull();
     await user.type(search(), " xyz ");
-    expect(
-      screen.getByText("Nothing we ship or build with is called “xyz”.")
-        .tagName,
-    ).toBe("P");
+    // Said once, by the status region; the drawn line is hidden from it.
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /^Nothing we ship or build with is called “xyz”\.$/u,
+    );
+    const drawn = screen.getByText(
+      "Nothing we ship or build with is called “xyz”.",
+      { selector: "p" },
+    );
+    expect(drawn).toHaveAttribute("aria-hidden", "true");
     expect(screen.queryByRole("heading", { name: "MIT" })).toBeNull();
   });
 

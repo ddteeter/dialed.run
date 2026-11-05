@@ -6,6 +6,7 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 import { render, screen, waitFor, within } from "@testing-library/react";
+import type { MatcherFunction } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -115,14 +116,11 @@ function flagGroups(): HTMLElement[] {
   // happens to sit in the document.
   // And A3's audience picker is a radio group too (round 41 #86a), so a
   // flag group is one whose radios are not the audience's.
-  return screen
-    .getAllByRole("group")
-    .filter(
-      (group) =>
-        within(group)
-          .queryAllByRole("radio")
-          .some((radio) => radio.getAttribute("name") !== "audience"),
-    );
+  return screen.getAllByRole("group").filter((group) =>
+    within(group)
+      .queryAllByRole("radio")
+      .some((radio) => radio.getAttribute("name") !== "audience"),
+  );
 }
 
 /**
@@ -150,7 +148,9 @@ function flagGroup(index: number): HTMLElement {
 async function openSpecifics(
   user: ReturnType<typeof userEvent.setup>,
 ): Promise<HTMLElement> {
-  await user.click(screen.getByRole("button", { name: "More ›" }));
+  await user.click(
+    screen.getByRole("button", { name: "More, anything specific" }),
+  );
   return screen.findByRole("dialog", { name: "Anything specific?" });
 }
 
@@ -866,6 +866,7 @@ describe("VerdictForm: the generated chips (round 20)", () => {
       "cold throughout",
       "overheated late",
       "chafed",
+      // Its text; its name is "More, anything specific".
       "More ›",
     ]);
 
@@ -896,6 +897,7 @@ describe("VerdictForm: the generated chips (round 20)", () => {
       "overheated late",
       "sleeves damp",
       "chafed",
+      // Its text; its name is "More, anything specific".
       "More ›",
     ]);
   });
@@ -1019,7 +1021,9 @@ describe("VerdictForm: the generated chips (round 20)", () => {
 
   it("says MORE opens a dialog, and is live until the verdict is noted", async () => {
     await renderWithRouter(form());
-    const more = screen.getByRole("button", { name: "More ›" });
+    const more = screen.getByRole("button", {
+      name: "More, anything specific",
+    });
     expect(more).toHaveAttribute("aria-haspopup", "dialog");
     // Read-only is the receipt's state, not the resting one.
     expect(more).not.toHaveAttribute("aria-disabled");
@@ -1133,12 +1137,19 @@ describe("VerdictForm: tags and sharing", () => {
 
     const privately = screen.getByRole("radio", { name: /^Private/ });
     await user.click(privately);
-    expect(privately).toHaveAccessibleDescription("The private line.");
+    expect(screen.getByText("The private line.")).toBeVisible();
     expect(screen.queryByText(PUBLIC_PREVIEW_LINE)).toBeNull();
+    // The line describes the picked radio alone: on the unpicked two it
+    // would tell them what the picked one means.
+    expect(privately).toHaveAccessibleDescription("The private line.");
+    expect(privately).toHaveAttribute("aria-describedby", "verdict-share-hint");
+    expect(shared).not.toHaveAttribute("aria-describedby");
 
     const publicly = screen.getByRole("radio", { name: /^Public/ });
     await user.click(publicly);
     expect(publicly).toHaveAccessibleDescription(PUBLIC_PREVIEW_LINE);
+    expect(privately).not.toHaveAttribute("aria-describedby");
+    expect(shared).not.toHaveAttribute("aria-describedby");
     expect(screen.getByText(PUBLIC_PREVIEW_LINE)).toHaveClass(
       "text-small",
       "text-muted",
@@ -1150,11 +1161,16 @@ describe("VerdictForm: tags and sharing", () => {
     expect(screen.queryByText(PUBLIC_PREVIEW_LINE)).toBeNull();
   });
 
-  it("keeps the field's own props on each radio while it adds the line", async () => {
+  it("keeps the field's own props on each radio, and points only the picked one at the line", async () => {
     await renderWithRouter(form({ entry: { audience: "private" } }));
     const privately = screen.getByRole("radio", { name: /^Private/ });
     expect(privately).toHaveAttribute("name", "audience");
     expect(privately).toHaveAttribute("aria-describedby", "verdict-share-hint");
+    for (const name of [/^Shared/u, /^Public/u]) {
+      expect(screen.getByRole("radio", { name })).not.toHaveAttribute(
+        "aria-describedby",
+      );
+    }
   });
 
   it("opens Change as a sheet and comes back with the form's values kept (round 32, 2a)", async () => {
@@ -1180,7 +1196,11 @@ describe("VerdictForm: tags and sharing", () => {
     await user.click(screen.getByRole("button", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "chafed" }));
 
-    await user.click(screen.getByRole("button", { name: "Change" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "Change whether runs count in the guides",
+      }),
+    );
     const sheet = screen.getByRole("dialog", { name: "Privacy" });
     await user.click(
       within(sheet).getByRole("checkbox", {
@@ -1196,9 +1216,9 @@ describe("VerdictForm: tags and sharing", () => {
 
     // Back on the form: the line follows the saved setting, and nothing
     // picked before the sheet opened was lost.
-    expect(
-      screen.getByRole("radio", { name: /^Private/ }),
-    ).toHaveAccessibleDescription("Other runners won't see this run.");
+    expect(document.querySelector("#verdict-share-hint")).toHaveTextContent(
+      /^Other runners won't see this run\.$/u,
+    );
     expect(screen.getByRole("button", { name: "Dialed" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -1324,11 +1344,13 @@ describe("VerdictForm: what happens after saving", () => {
       "Houdini is now 3 of 5 in 41–50°.",
     );
     expect(sentence).toBeVisible();
-    // Announced when it lands: the button just pressed has gone, and this
-    // is what took its place.
-    const receipt = sentence.closest("[role='status']");
-    expect(receipt).not.toBeNull();
-    expect(receipt).toHaveTextContent(/^Noted/);
+    // Announced when it lands, in the screen's one region (rule 08): the
+    // button just pressed has gone, and this is what took its place.
+    expect(sentence.closest("[data-slot='noted']")).toHaveTextContent(/^Noted/);
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /^Noted\. Houdini is now 3 of 5 in 41–50°\.$/u,
+    );
     expect(itemBandWearStat).toHaveBeenCalledWith({
       data: { itemId: "01JTEMA0000000000000000000", bandFloorC: 5 },
     });
@@ -1358,6 +1380,7 @@ describe("VerdictForm: what happens after saving", () => {
       return found;
     });
     expect(receipt).toHaveTextContent(/^Noted$/u);
+    expect(screen.getByRole("status")).toHaveTextContent(/^Noted\.$/u);
     // No empty sentence standing in for the missing one.
     expect(receipt.querySelector("p")).toBeNull();
     expect(screen.queryByText(/Nothing saved/u)).toBeNull();
@@ -1388,9 +1411,12 @@ describe("VerdictForm: what happens after saving", () => {
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
     const sentence = await screen.findByText(
-      "Logged. No weather came with this run, so no band record moved.",
+      "Logged. No weather came with this run, so no temperature record moved.",
     );
-    expect(sentence.closest("[role='status']")).toHaveTextContent(/^Noted/);
+    expect(sentence.closest("[data-slot='noted']")).toHaveTextContent(/^Noted/);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /^Noted\. Logged\. No weather came with this run/u,
+    );
     expect(router.state.location.pathname).toBe("/");
     // No band, no record to read — the stat is never asked for.
     expect(itemBandWearStat).not.toHaveBeenCalled();
@@ -1426,7 +1452,7 @@ describe("VerdictForm: what happens after saving", () => {
 
     expect(
       await screen.findByText(
-        "Logged. No weather came with this run, so no band record moved.",
+        "Logged. No weather came with this run, so no temperature record moved.",
       ),
     ).toBeVisible();
   });
@@ -1449,7 +1475,7 @@ describe("VerdictForm: what happens after saving", () => {
     );
     await user.click(screen.getByRole("button", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
-    await screen.findByText(/Houdini is now 3 of 5/);
+    await screen.findByText(/Houdini is now 3 of 5/, { selector: "p" });
 
     // In the submit's place: share and submit are gone, and there is no
     // button standing in for them.
@@ -1495,7 +1521,7 @@ describe("VerdictForm: what happens after saving", () => {
     );
     await user.click(screen.getByRole("button", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
-    await screen.findByText(/Houdini is now 3 of 5/);
+    await screen.findByText(/Houdini is now 3 of 5/, { selector: "p" });
 
     const wayCold = screen.getByRole("button", { name: "Way cold" });
     expect(wayCold).toHaveAttribute("aria-disabled", "true");
@@ -1514,7 +1540,9 @@ describe("VerdictForm: what happens after saving", () => {
 
     // MORE › leaves with share and submit (round 21, ask 1a): "an inert
     // control that still looks tappable is a lie". Not read-only — gone.
-    expect(screen.queryByRole("button", { name: "More ›" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "More, anything specific" }),
+    ).toBeNull();
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
@@ -1536,7 +1564,7 @@ describe("VerdictForm: what happens after saving", () => {
 
     await user.click(screen.getByRole("button", { name: "Dialed" }));
     await user.click(screen.getByRole("button", { name: "Log it" }));
-    await screen.findByText(/Houdini is now 3 of 5/);
+    await screen.findByText(/Houdini is now 3 of 5/, { selector: "p" });
 
     const chafed = screen.getByRole("button", { name: "chafed" });
     expect(chafed).toHaveAttribute("aria-pressed", "true");
@@ -1612,15 +1640,11 @@ describe("VerdictForm: the details that go missing silently", () => {
     expect(prevented).toBe(true);
   });
 
-  it("announces the save before the receipt lands", async () => {
-    // Noted takes the submit's place, so the sentence has to be said
-    // while the form still stands. It is observable in exactly one
-    // window: `onSuccess` has set the status and is awaiting the band
-    // stat, so the form is still mounted with the region filled. Holding
-    // that promise open is what makes the window big enough to assert in.
-    //
-    // That the window exists at all is R-44's fix: before it, the status
-    // and the unmount landed in the same commit.
+  it("announces the save once, with Noted's sentence, when the receipt lands", async () => {
+    // One announcement for one save: "Verdict saved." and then Noted's
+    // own region said it twice. While the band stat is out the region
+    // stays quiet; holding that promise open is what makes the window big
+    // enough to assert in.
     const user = userEvent.setup();
     const stat = Promise.withResolvers<{ worn: number; total: number }>();
     await renderWithRouter(
@@ -1635,13 +1659,33 @@ describe("VerdictForm: the details that go missing silently", () => {
     await user.click(screen.getByRole("button", { name: "Log it" }));
 
     await waitFor(() => {
-      expect(screen.getByRole("status")).toHaveTextContent("Verdict saved.");
+      expect(
+        screen.getByRole("button", { name: "Log it" }),
+      ).not.toHaveAttribute("aria-busy");
     });
+    expect(screen.getByRole("status")).toHaveTextContent(/^$/u);
 
     stat.resolve({ worn: 3, total: 7 });
-    expect(await screen.findByText(/Houdini is now 3 of 7/)).toBeVisible();
+    expect(
+      await screen.findByText(/Houdini is now 3 of 7/, { selector: "p" }),
+    ).toBeVisible();
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /^Noted\. Houdini is now 3 of 7/u,
+    );
   });
 });
+
+/**
+ * The element whose whole text is `text`, across the spans inside it —
+ * the headline's unit is a span of its own — and none of whose children
+ * already is.
+ */
+function wholeText(text: string): MatcherFunction {
+  return (_content, element) =>
+    element?.textContent === text &&
+    [...element.children].every((child) => child.textContent !== text);
+}
 
 describe("VerdictForm: the run header (round 21)", () => {
   // 2026-08-29 11:04 UTC — 6:04 AM in Chicago, the board's own morning.
@@ -1670,7 +1714,14 @@ describe("VerdictForm: the run header (round 21)", () => {
     expect(header).toHaveAttribute("data-slot", "header");
     expect(header).toHaveAttribute("data-ground", "ink-until-wide");
     expect(within(header).getByText("Sat Aug 29 · 6:04 AM")).toBeVisible();
-    expect(within(header).getByText("6.2 at 41°")).toBeVisible();
+    const headline = within(header).getByText(wholeText("6.2 mi at 41°"));
+    expect(headline).toBeVisible();
+    // The unit is dropped from the drawing for the temperature, but said:
+    // "6.2 at 41°" told a reader neither miles nor kilometres.
+    expect(within(headline).getByText("mi")).toHaveClass(
+      "sr-only",
+      "normal-case",
+    );
   });
 
   it("becomes the title line at width: the question, then the run in one mono line", async () => {
@@ -1697,11 +1748,11 @@ describe("VerdictForm: the run header (round 21)", () => {
     // lines come before the question in the markup, the desk's after it,
     // and each width hides the other's — no `order-*` anywhere.
     const phoneWhen = within(header).getByText("Sat Aug 29 · 6:04 AM");
-    const phoneHeadline = within(header).getByText("6.2 at 41°");
+    const phoneHeadline = within(header).getByText(wholeText("6.2 mi at 41°"));
     expect(phoneWhen).toHaveClass("wide:hidden");
     expect(phoneHeadline).toHaveClass("wide:hidden");
     const deskLine = within(header).getByText(
-      "Sat Aug 29 · 6:04 AM · 6.2 at 41°",
+      wholeText("Sat Aug 29 · 6:04 AM · 6.2 mi at 41°"),
     );
     expect(deskLine).toHaveClass("hidden", "wide:block", "text-dialed-text");
     // Visual Crossing's credit closes the header at every width (D-144):
@@ -1752,7 +1803,7 @@ describe("VerdictForm: the run header (round 21)", () => {
       }),
     );
 
-    expect(screen.getByText("10.0 at 5°")).toBeVisible();
+    expect(screen.getByText(wholeText("10.0 km at 5°"))).toBeVisible();
   });
 
   it("sets the run and the kit being judged in the desk's rail, read-only", async () => {
@@ -1779,7 +1830,15 @@ describe("VerdictForm: the run header (round 21)", () => {
         name: "This run · Sat Aug 29 · 6:04 AM",
       }),
     ).toBeInTheDocument();
-    expect(rail).toHaveTextContent("6.2 mi · 51:38");
+    // Drawn as the board draws it, said with the time in words: "51:38"
+    // reads as a time of day.
+    expect(within(rail).getByText("6.2 mi · 51:38")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(within(rail).getByText("6.2 mi, 51 minutes 38 seconds")).toHaveClass(
+      "sr-only",
+    );
     expect(within(rail).getByText("41°F damp · feels 36°")).toHaveClass(
       "text-dialed-text",
     );

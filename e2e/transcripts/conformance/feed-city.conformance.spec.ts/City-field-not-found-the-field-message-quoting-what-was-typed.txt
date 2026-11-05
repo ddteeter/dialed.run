@@ -5,12 +5,11 @@ end of banner
 main
 heading, Feed, level 1
 link, Find runners
-button, Following
-button, Your conditions, current page
+button, Following, not pressed
+button, Your conditions, pressed
 status
 We couldn't find "Portlnd, OR". Check the spelling, or try a nearby city.
 end of status
-Your conditions
 heading, Where do you run?, level 2
 paragraph
 Location is off. Type your city and we’ll match its weather instead.
@@ -38,9 +37,9 @@ Closet
 end of link, Closet
 end of listitem, level 1, position 2, set size 5
 listitem, level 1, position 3, set size 5
-button, Add, has popup dialog
+button, Add a run, has popup dialog
 + Add
-end of button, Add, has popup dialog
+end of button, Add a run, has popup dialog
 end of listitem, level 1, position 3, set size 5
 listitem, level 1, position 4, set size 5
 link, Call

@@ -36,6 +36,10 @@ export const PRIVATE_UNCONFIRMED = `${CONFIRM_LINK}${PRIVATE_UNCONFIRMED_REST}`;
 export const PRIVATE_NOT_SHOWN = "Other runners won't see this run.";
 export const PRIVATE_COUNTED =
   "Its kit and verdict still count, anonymously, in the guides.";
+/**
+Change's name: what it changes, which "Change" alone does not say.
+*/
+export const CHANGE_NAME = "Change whether runs count in the guides";
 
 /**
 The share switch's sub-line, set as A3's shared line is.
@@ -94,13 +98,22 @@ export function PrivateRunLine({
   }
   return (
     <>
-      <span id={hintId} className={LINE}>
-        {PRIVATE_NOT_SHOWN}
+      {/* The id is on the sentences alone: Change sits beside them, so a
+          description that names the line is never "… Change". */}
+      <span className={LINE}>
+        <span id={hintId}>
+          {isCounted
+            ? `${PRIVATE_NOT_SHOWN} ${PRIVATE_COUNTED}`
+            : PRIVATE_NOT_SHOWN}
+        </span>
         {isCounted ? (
           <>
-            {` ${PRIVATE_COUNTED} `}
+            {" "}
             <button
               type="button"
+              // "Change" first, as drawn, then what it changes: the sheet
+              // it opens holds the anonymous-totals switch alone.
+              aria-label={CHANGE_NAME}
               onClick={() => {
                 setIsSheetOpen(true);
               }}

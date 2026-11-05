@@ -5,8 +5,8 @@ end of banner
 main
 heading, Feed, level 1
 link, Find runners
-button, Following
-button, Your conditions, current page
+button, Following, not pressed
+button, Your conditions, pressed
 status
 Same conditions · Feels
 #–#°
@@ -37,9 +37,9 @@ Closet
 end of link, Closet
 end of listitem, level 1, position 2, set size 5
 listitem, level 1, position 3, set size 5
-button, Add, has popup dialog
+button, Add a run, has popup dialog
 + Add
-end of button, Add, has popup dialog
+end of button, Add a run, has popup dialog
 end of listitem, level 1, position 3, set size 5
 listitem, level 1, position 4, set size 5
 link, Call

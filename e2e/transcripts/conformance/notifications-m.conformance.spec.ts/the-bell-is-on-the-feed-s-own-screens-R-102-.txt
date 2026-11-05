@@ -6,14 +6,13 @@ main
 status
 heading, Find a runner, level 1
 searchbox, Search by name, placeholder Search by name
-list
 end of main
 navigation, Main
 list
 listitem, level 1, position 1, set size 5
-link, Feed, current page
+link, Feed, current item
 Feed
-end of link, Feed, current page
+end of link, Feed, current item
 end of listitem, level 1, position 1, set size 5
 listitem, level 1, position 2, set size 5
 link, Closet
@@ -21,9 +20,9 @@ Closet
 end of link, Closet
 end of listitem, level 1, position 2, set size 5
 listitem, level 1, position 3, set size 5
-button, Add, has popup dialog
+button, Add a run, has popup dialog
 + Add
-end of button, Add, has popup dialog
+end of button, Add a run, has popup dialog
 end of listitem, level 1, position 3, set size 5
 listitem, level 1, position 4, set size 5
 link, Call

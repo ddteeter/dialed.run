@@ -115,13 +115,13 @@ describe("Tab switch: the indicator slides under the label", () => {
     const { unmount } = await renderAt(<TabBar />, "/runs/new");
 
     expect(indicator()).not.toHaveStyle({ translate: "200% 0" });
-    expect(screen.getByRole("button", { name: "Add" })).toHaveClass(
+    expect(screen.getByRole("button", { name: "Add a run" })).toHaveClass(
       "text-label",
     );
     // The seat is still in the bar — it is the indicator that stays away,
     // not the way in. A button rather than a link, per the Accessibility
     // Contract: a launcher cannot be where you are.
-    expect(screen.getByRole("button", { name: "Add" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Add a run" })).toHaveAttribute(
       "aria-haspopup",
       "dialog",
     );
@@ -216,7 +216,7 @@ describe("Tab switch: the indicator slides under the label", () => {
     // log flow, so the memory does not apply to it either.
     await renderAt(<TabBar />, "/onboarding/name");
     expect(indicator()).toBeNull();
-    expect(screen.getByRole("button", { name: "Add" })).toHaveClass(
+    expect(screen.getByRole("button", { name: "Add a run" })).toHaveClass(
       "text-label",
     );
   });
@@ -250,9 +250,9 @@ describe("Tab switch: the indicator slides under the label", () => {
       );
     }
     // And the launcher is never either.
-    expect(screen.getByRole("button", { name: "Add" })).not.toHaveAttribute(
-      "aria-current",
-    );
+    expect(
+      screen.getByRole("button", { name: "Add a run" }),
+    ).not.toHaveAttribute("aria-current");
 
     // Exactly one tab is held — the one they came from. "Current item in
     // the set" means one item, and a bar that marked all four would say
@@ -282,12 +282,66 @@ describe("Tab switch: the indicator slides under the label", () => {
     );
   });
 
+  it("says page only on the tab's own path, and current beneath it", async () => {
+    // TanStack's `Link` claims "page" on any prefix of the path, so on a
+    // post's detail the Feed tab said "current page" (M1). Lit beneath
+    // its page, a tab is the current item in the set, not the page.
+    const detail = await renderAt(<TabBar />, "/feed/entry/entry_1");
+    expect(screen.getByRole("link", { name: "Feed" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    for (const link of screen.getAllByRole("link")) {
+      expect([link.textContent, link.getAttribute("aria-current")]).not.toEqual(
+        [link.textContent, "page"],
+      );
+    }
+    detail.unmount();
+
+    // A query is still the same page: Feed's own views are `?view=…`.
+    const view = await renderAt(<TabBar />, "/feed?view=following");
+    expect(screen.getByRole("link", { name: "Feed" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    view.unmount();
+
+    // And a tab that is not lit says nothing at all, beneath it or not.
+    await renderAt(<TabBar />, "/closet/garment_1");
+    expect(screen.getByRole("link", { name: "Closet" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    expect(screen.getByRole("link", { name: "Feed" })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
+
+  it("never lets a flow step under /feed call the Feed tab the page", async () => {
+    // Two of the flow's steps live under `/feed`. The tab held beneath
+    // is the closet, and the router's prefix match must not light Feed's
+    // `aria-current` over it.
+    const go = await renderWalking(<TabBar />, [
+      "/closet",
+      "/feed/attach/run_1",
+    ]);
+    await go("/feed/attach/run_1");
+
+    expect(screen.getByRole("link", { name: "Feed" })).not.toHaveAttribute(
+      "aria-current",
+    );
+    expect(screen.getByRole("link", { name: "Closet" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+  });
+
   it("opens the flow from the launcher, which is not a link", async () => {
     const go = await renderWalking(<TabBar />, ["/closet", "/runs/new"]);
-    expect(screen.queryByRole("link", { name: "Add" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Add a run" })).toBeNull();
 
     act(() => {
-      screen.getByRole("button", { name: "Add" }).click();
+      screen.getByRole("button", { name: "Add a run" }).click();
     });
 
     // It still navigates — the flow is three routes, and `rise` is what

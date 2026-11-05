@@ -212,7 +212,7 @@ test("request access -> an invite from the Desk -> create an account -> sign out
   await page.getByLabel("Date of birth").fill("1990-04-21");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSPHRASE);
-  await page.getByRole("button", { name: "Show" }).click();
+  await page.getByRole("button", { name: "Show password" }).click();
   await expect(page.getByLabel("Password")).toHaveAttribute("type", "text");
   await turnstileAnswered(page);
   await page.getByRole("button", { name: "Create account" }).click();
@@ -318,7 +318,9 @@ test("request access -> an invite from the Desk -> create an account -> sign out
 
   // ACC-4: forgotten, it is reset by email.
   await scene(page, "Forgot it? A reset link goes to the address");
-  await page.getByRole("link", { name: "Forgot it?" }).click();
+  await page
+    .getByRole("link", { name: "Forgot it? Reset your password" })
+    .click();
   await expect(page).toHaveURL(/\/account\/forgot/u, { timeout: 15_000 });
   await expect(
     page.getByRole("heading", { name: "Forgot your password?" }),

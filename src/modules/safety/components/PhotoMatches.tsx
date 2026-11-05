@@ -118,6 +118,7 @@ function FoundMatches({
   return (
     <PhotoSection
       part="photo-matches"
+      level={3}
       title={
         removed.length + found.matches.length === 0
           ? "Matching photos · any runner"

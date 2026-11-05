@@ -57,7 +57,8 @@ describe("LandingBar", () => {
     expect(home).toHaveAttribute("href", "/");
     expect(home).toHaveAttribute("data-part", "wordmark");
     // The plain lockup: no brackets on this bar.
-    expect(home).toHaveTextContent(/^dialed\.run$/u);
+    // Drawn, then said once by the sr-only copy (`Wordmark`).
+    expect(home).toHaveTextContent(/^dialed\.rundialed\.run$/u);
     // "'Log in' on the log-in page would point at itself."
     expect(screen.getAllByRole("link")).toHaveLength(1);
     expect(document.querySelector("[data-part='bar-actions']")).toBeNull();

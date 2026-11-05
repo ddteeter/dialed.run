@@ -58,11 +58,18 @@ describe("the field", () => {
   it("is labelled, hinted as the board words it, and starts from what is saved", () => {
     renderForm(undefined, { initial: "maya_runs" });
     expect(field()).toHaveValue("maya_runs");
-    expect(
-      screen.getByText(
-        "3–20 letters, numbers or _. It's on everything you share. You can change it in settings.",
-      ),
-    ).toBeVisible();
+    // Drawn as the board words it, said in words: "3–20 … or _" reads
+    // as "3 dash 20 … or underscore", or loses the mark.
+    const rule = screen.getByText("3–20 letters, numbers or _.");
+    expect(rule).toBeVisible();
+    expect(rule).toHaveAttribute("aria-hidden", "true");
+    expect(rule.parentElement).toHaveTextContent(
+      "3–20 letters, numbers or _.3 to 20 letters, numbers or underscores. It's on everything you share. You can change it in settings.",
+    );
+    expect(field()).toHaveAttribute("aria-describedby", "username-hint");
+    expect(field()).toHaveAccessibleDescription(
+      "3 to 20 letters, numbers or underscores. It's on everything you share. You can change it in settings.",
+    );
     expect(field()).toHaveAttribute("autocomplete", "username");
     expect(field()).toHaveAttribute("autocapitalize", "none");
     expect(field()).toHaveAttribute("spellcheck", "false");
@@ -91,6 +98,8 @@ describe("Next", () => {
     expect(
       await screen.findByText("Use 3–20 letters, numbers or _."),
     ).toBeVisible();
+    // The message replaces the hint, as the field's description too.
+    expect(field()).toHaveAttribute("aria-describedby", "username-message");
     expect(claim).not.toHaveBeenCalled();
   });
 
@@ -256,6 +265,10 @@ describe("O0's re-pick after a moderator's rename (ACC-12; round 27 #16)", () =>
       ),
     ).toBeVisible();
     expect(screen.getByText("3–20 letters, numbers or _.")).toBeVisible();
+    // The rule alone, said in words.
+    expect(
+      screen.getByRole("textbox", { name: "Username" }),
+    ).toHaveAccessibleDescription("3 to 20 letters, numbers or underscores.");
     expect(screen.queryByText("Step 1 of 4")).toBeNull();
     expect(
       screen.getByRole("button", { name: "Save username" }),

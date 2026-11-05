@@ -107,6 +107,7 @@ export function KitList({
   onToggle,
   onOpen,
   error,
+  onStatus,
 }: Readonly<{
   groups: readonly PickerGroup[];
   conditions: Conditions | undefined;
@@ -123,13 +124,22 @@ export function KitList({
   onToggle: (itemId: string) => void;
   onOpen: (group: UiGroup) => void;
   error: string | undefined;
+  /**
+   * The screen's one status region (rule 08): the filter says there how
+   * many pieces it now shows, which otherwise changes in silence.
+   */
+  onStatus: (sentence: string) => void;
 }>): JSX.Element {
   const rows = groups.filter((group) => ROW_GROUPS.has(group.group));
   const chips = groups.filter((group) => !ROW_GROUPS.has(group.group));
   const shown: Shown = isFiltered ? matchingOnly : everything;
   const countLine = isFiltered ? matchLine : totalLine;
   const total = groups.reduce((sum, group) => sum + group.items.length, 0);
-  const showing = groups.reduce((sum, group) => sum + shown(group).length, 0);
+  const showingLine = (isOn: boolean): string => {
+    const showOf = isOn ? matchingOnly : everything;
+    const count = groups.reduce((sum, group) => sum + showOf(group).length, 0);
+    return `Showing ${String(count)} of ${String(total)}`;
+  };
 
   return (
     <section
@@ -148,15 +158,19 @@ export function KitList({
             <button
               type="button"
               aria-pressed={isFiltered}
+              // The drawn conditions first, then what the chip does, in
+              // the words the sheet's own chip uses.
+              aria-label={`${conditionsWords(conditions, units)}, matches conditions`}
               onClick={() => {
                 onFilter(!isFiltered);
+                onStatus(showingLine(!isFiltered));
               }}
               className="target flex items-center rounded-pill border border-hairline px-3 text-quiet"
             >
               <Mono step="xs">{conditionsWords(conditions, units)}</Mono>
             </button>
             <Mono step="xs" className="text-muted">
-              Showing {showing} of {total}
+              {showingLine(isFiltered)}
             </Mono>
           </div>
         )}

@@ -142,6 +142,12 @@ const EXTRACT = ({
   // - `data-status="unbuilt"` — a region design marks as not built yet
   //   (round 19), skipped by design's word rather than by a list kept by
   //   hand here;
+  // - `sr-only` — words said to a screen reader and never drawn ("5 of 6
+  //   runners", a pace in words), which the board has no copy of. Its
+  //   box is clipped to a pixel, but a range over its text measures the
+  //   text, so the size check below does not catch it. The drawn half of
+  //   such a pair is `aria-hidden` and stays: the walk reads what is
+  //   drawn, whoever it is said to;
   // - anything not rendered.
   //
   // A TreeWalker rather than a recursive function with a helper, because
@@ -158,6 +164,7 @@ const EXTRACT = ({
         const isHidden =
           Object.hasOwn(element.dataset, "annotation") ||
           element.dataset.status === "unbuilt" ||
+          element.classList.contains("sr-only") ||
           style.display === "none" ||
           style.visibility === "hidden";
         return isHidden ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_SKIP;
@@ -259,12 +266,16 @@ export async function cellsOf(
         // difference in copy. Walking the nodes puts the separator back
         // wherever the markup had a boundary, `<br />` or nested span
         // alike.
+        //
+        // Text inside `sr-only` is said, not drawn, so the board has no
+        // copy of it; `EXTRACT` gives the reason.
         const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
         const words: string[] = [];
         let node = walker.nextNode();
         while (node !== null) {
           const text = (node.textContent ?? "").trim();
-          if (text !== "") words.push(text);
+          const isSaid = Boolean(node.parentElement?.closest(".sr-only"));
+          if (text !== "" && !isSaid) words.push(text);
           node = walker.nextNode();
         }
         return words.join(" ").replaceAll(/\s+/gu, " ").toUpperCase();

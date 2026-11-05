@@ -44,6 +44,10 @@ describe("OtherPhotos", () => {
 
     const block = part("other-photos");
     expect(block).toHaveTextContent(/^Their other photos · 2/u);
+    // Inside a row of Review's h2 list: a heading of its own, one down.
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Their other photos · 2" }),
+    ).toBeInTheDocument();
     // Each named by its id, so a screen reader does not hear one name twice.
     const links = within(block ?? document.body).getAllByRole("link");
     expect(links.map((link) => link.getAttribute("href"))).toStrictEqual([

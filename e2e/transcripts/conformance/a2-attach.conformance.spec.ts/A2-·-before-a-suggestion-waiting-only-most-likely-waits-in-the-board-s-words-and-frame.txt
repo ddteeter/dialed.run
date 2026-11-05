@@ -1,5 +1,4 @@
 document
-banner
 main
 heading, What did you wear?, level 1
 #.# mi · #°F damp · # pieces
@@ -13,11 +12,10 @@ region, Or pick from the closet
 heading, Or pick from the closet, level 2
 Or pick from the closet
 end of heading, Or pick from the closet, level 2
-button, #° damp, pressed
-Showing
-#
-of
-#
+button, #° damp, matches conditions, pressed
+#° damp
+end of button, #° damp, matches conditions, pressed
+Showing # of #
 Tops · # of # match
 button, All Tops, has popup dialog
 All ›
@@ -32,7 +30,7 @@ end of region, Or pick from the closet
 Outfit photo · optional
 Add a photo
 Flat on the floor works best.
-Outfit photo · optional Add a photo Flat on the floor works best.
+Add a photo, Outfit photo · optional Flat on the floor works best.
 button, Next — did it work?
 Next — did it work?
 end of button, Next — did it work?
@@ -45,9 +43,9 @@ end of main
 navigation, Main
 list
 listitem, level 1, position 1, set size 5
-link, Feed, current page
+link, Feed
 Feed
-end of link, Feed, current page
+end of link, Feed
 end of listitem, level 1, position 1, set size 5
 listitem, level 1, position 2, set size 5
 link, Closet
@@ -55,9 +53,9 @@ Closet
 end of link, Closet
 end of listitem, level 1, position 2, set size 5
 listitem, level 1, position 3, set size 5
-button, Add, has popup dialog
+button, Add a run, has popup dialog
 + Add
-end of button, Add, has popup dialog
+end of button, Add a run, has popup dialog
 end of listitem, level 1, position 3, set size 5
 listitem, level 1, position 4, set size 5
 link, Call

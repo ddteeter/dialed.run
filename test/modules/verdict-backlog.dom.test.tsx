@@ -159,10 +159,22 @@ describe("VerdictBacklog: what a row offers", () => {
     expect(
       screen.getByText(/^Same as [A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}\?$/u),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Use" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Use — / })).toBeInTheDocument();
+    // Both name the row they are in, as its verdict buttons do: a list of
+    // fifty "Use"s says nothing about which run each is for.
+    const day = slot(/^Way cold — /)
+      .getAttribute("aria-label")
+      ?.replace("Way cold — ", "");
+    expect(day).toMatch(/^[A-Z][a-z]{2} [A-Z][a-z]{2} \d{1,2}$/u);
+    expect(
+      screen.getByRole("button", { name: `Use — ${String(day)}` }),
+    ).toHaveTextContent(/^Use$/u);
+    expect(
+      screen.getByRole("link", { name: `Pick — ${String(day)}` }),
+    ).toHaveTextContent(/^Pick$/u);
     // Pick is A2 at its own route, which at width is the centred panel.
     // No picker is rebuilt here, which is the whole of "not a new form".
-    expect(screen.getByRole("link", { name: "Pick" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /^Pick — / })).toHaveAttribute(
       "href",
       "/feed/attach/01RUN1",
     );
@@ -171,11 +183,11 @@ describe("VerdictBacklog: what a row offers", () => {
   it("offers only Pick when there is nothing near enough to suggest", async () => {
     await renderTable([bare]);
 
-    expect(screen.queryByRole("button", { name: "Use" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Use — / })).toBeNull();
     expect(screen.queryByText(/^Same as/)).toBeNull();
     // Round 20: "No usual kit here · Pick" — the cell names the gap.
     expect(screen.getByText("No usual kit here ·")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Pick" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /^Pick — / })).toHaveAttribute(
       "href",
       "/feed/attach/01RUN2",
     );
@@ -192,11 +204,11 @@ describe("VerdictBacklog: what a row offers", () => {
   it("shows the kit once it is taken, in place of the offer", async () => {
     await renderTable([row()]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
 
     expect(screen.getByText("Janji half-zip")).toBeInTheDocument();
     expect(screen.getByText("Bandit split")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Use" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Use — / })).toBeNull();
   });
 });
 
@@ -218,8 +230,8 @@ describe("VerdictBacklog: a run that already has a kit", () => {
     await renderTable([kitted]);
 
     expect(screen.getByText("Houdini")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Use" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "Pick" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Use — / })).toBeNull();
+    expect(screen.queryByRole("link", { name: /^Pick — / })).toBeNull();
     expect(screen.queryByText("No usual kit here ·")).toBeNull();
   });
 
@@ -246,7 +258,7 @@ describe("VerdictBacklog: a run that already has a kit", () => {
     ]);
 
     expect(screen.getByText("No kit on this run")).toBeVisible();
-    expect(screen.queryByRole("link", { name: "Pick" })).toBeNull();
+    expect(screen.queryByRole("link", { name: /^Pick — / })).toBeNull();
     fireEvent.keyDown(here(), { key: "3" });
     fireEvent.keyDown(here(), { key: "Enter" });
 
@@ -267,7 +279,9 @@ describe("VerdictBacklog: the keyboard", () => {
     // per-item.
     await renderTable([row()]);
 
-    const slots = screen.getAllByRole("button", { name: /—/ });
+    // The five are the row's pressable buttons; Use and Pick name the row
+    // too, but press nothing.
+    const slots = screen.getAllByRole("button", { pressed: false });
     expect(slots.map((slot) => slot.textContent)).toStrictEqual([
       "Way cold",
       "A bit cold",
@@ -348,7 +362,7 @@ describe("VerdictBacklog: saving", () => {
   it("sends the kit and the verdict, then moves on", async () => {
     const saveRow = await renderTable([row(), bare]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
     fireEvent.keyDown(here(), { key: "3" });
     fireEvent.keyDown(here(), { key: "Enter" });
 
@@ -372,7 +386,7 @@ describe("VerdictBacklog: saving", () => {
     // 'row flies away'."
     await renderTable([row(), bare]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
     fireEvent.keyDown(here(), { key: "3" });
     fireEvent.keyDown(here(), { key: "Enter" });
 
@@ -401,7 +415,7 @@ describe("VerdictBacklog: saving", () => {
   it("asks for the verdict when only the outfit is there", async () => {
     const saveRow = await renderTable([row()]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
     fireEvent.keyDown(here(), { key: "Enter" });
 
     await waitFor(() => {
@@ -416,7 +430,7 @@ describe("VerdictBacklog: saving", () => {
     const saveRow = vi.fn().mockRejectedValue(new Error("offline"));
     await renderTable([row()], saveRow);
 
-    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
     fireEvent.keyDown(here(), { key: "4" });
     fireEvent.keyDown(here(), { key: "Enter" });
 
@@ -447,7 +461,7 @@ describe("VerdictBacklog: saving", () => {
       .mockResolvedValue({ entryId: "01NEW" });
     await renderTable([row(), bare], saveRow);
 
-    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
     fireEvent.keyDown(here(), { key: "3" });
     fireEvent.keyDown(here(), { key: "Enter" });
     await waitFor(() => {
@@ -482,7 +496,7 @@ describe("VerdictBacklog: saving", () => {
     const saveRow = vi.fn().mockRejectedValue(new Error("offline"));
     await renderTable([row(), bare], saveRow);
 
-    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
     fireEvent.keyDown(here(), { key: "3" });
     fireEvent.keyDown(here(), { key: "Enter" });
     await waitFor(() => {
@@ -502,7 +516,7 @@ describe("VerdictBacklog: saving", () => {
     // has to work — DS5's "hover-only anything" in its other direction.
     const saveRow = await renderTable([row()]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
     fireEvent.click(screen.getByRole("button", { name: /^Way warm —/ }));
     fireEvent.keyDown(here(), { key: "Enter" });
 
@@ -605,7 +619,12 @@ describe("VerdictBacklog: what each state is drawn as", () => {
   it("says how long and how far, in the viewer's own units", async () => {
     await renderTable([row()]);
 
-    expect(screen.getByText(/40:00 · 5\.0mi/)).toBeInTheDocument();
+    // The time is drawn as a clock and said in words: "40:00" reads as a
+    // time of day.
+    const time = screen.getByText("40:00");
+    expect(time).toHaveAttribute("aria-hidden", "true");
+    expect(time.parentElement).toHaveTextContent(/^40:0040 minutes · 5\.0mi$/u);
+    expect(screen.getByText("40 minutes")).toHaveClass("sr-only");
   });
 
   it("draws a resting row with a hairline and no wash", async () => {
@@ -633,6 +652,35 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     expect(legend?.textContent).toContain("Taboutfit");
   });
 
+  it("says each key as a sentence, and hides the glyphs it draws", async () => {
+    // "↑↓" is read as "up arrow down arrow" or not at all, and "→" in
+    // "way cold → way warm" as "right arrow".
+    await renderTable([row()]);
+
+    for (const glyph of ["↑↓", "1–5", "↵", "↓", "Tab"]) {
+      expect(screen.getByText(glyph)).toHaveAttribute("aria-hidden", "true");
+    }
+    for (const does of [
+      "row",
+      "way cold → way warm",
+      "save & next",
+      "skip",
+      "outfit",
+    ]) {
+      expect(screen.getByText(does)).toHaveAttribute("aria-hidden", "true");
+    }
+    const said = [
+      "Up and down arrows: move between rows.",
+      "1 to 5: way cold to way warm.",
+      "Enter: save and go to the next.",
+      "Down arrow: skip.",
+      "Tab: outfit.",
+    ];
+    for (const sentence of said) {
+      expect(screen.getByText(sentence)).toHaveClass("sr-only");
+    }
+  });
+
   it("says nothing before anything has happened, and is not waiting", async () => {
     await renderTable([row()]);
 
@@ -657,7 +705,7 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     const saveRow = vi.fn().mockReturnValue(pending.promise);
     await renderTable([row(), bare], saveRow);
 
-    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
     fireEvent.keyDown(here(), { key: "3" });
     fireEvent.keyDown(here(), { key: "Enter" });
 
@@ -750,7 +798,7 @@ describe("VerdictBacklog: all logged (round 22, item 18)", () => {
     const saveRow = vi.fn().mockResolvedValue({ entryId: "01NEW" });
     const invalidate = await renderTableWatching([row()], saveRow);
 
-    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
     fireEvent.keyDown(here(), { key: "3" });
     fireEvent.keyDown(here(), { key: "Enter" });
 
@@ -763,7 +811,7 @@ describe("VerdictBacklog: all logged (round 22, item 18)", () => {
     const saveRow = vi.fn().mockResolvedValue({ entryId: "01NEW" });
     const invalidate = await renderTableWatching([row(), bare], saveRow);
 
-    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
     fireEvent.keyDown(here(), { key: "3" });
     fireEvent.keyDown(here(), { key: "Enter" });
 
@@ -794,7 +842,7 @@ describe("VerdictBacklog: 720–1039, one run at a time", () => {
     const saveRow = vi.fn().mockResolvedValue({ entryId: "01NEW" });
     await renderTable([row(), bare], saveRow);
 
-    fireEvent.click(screen.getByRole("button", { name: "Use" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Use — / }));
     fireEvent.click(
       within(rowsOf()[0] ?? document.body).getByRole("button", {
         name: /^A bit warm —/,

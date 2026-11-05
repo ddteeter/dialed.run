@@ -1,8 +1,7 @@
 document
 banner
 link, dialed.run home
-dialed
-.run
+dialed.run
 end of link, dialed.run home
 navigation, Main
 list
@@ -10,7 +9,7 @@ listitem, level 1, position 1, set size 4
 link, Feed
 end of listitem, level 1, position 1, set size 4
 listitem, level 1, position 2, set size 4
-link, Closet, current page
+link, Closet, current item
 end of listitem, level 1, position 2, set size 4
 listitem, level 1, position 3, set size 4
 link, Call
@@ -25,7 +24,7 @@ button, Log a run, has popup dialog
 end of banner
 main
 status
-link, Closet, current page
+link, Closet
 paragraph
 Top · Half-zip · M
 end of paragraph
@@ -37,28 +36,41 @@ image, Janji Rover Half-zip
 Replace
 Replace
 button, Remove
-# km logged · #/# dialed
+# km logged
+·
+# of # runs dialed
 paragraph
 Works at
 #–#°
 end of paragraph
 paragraph
-mid
+midweight
 end of paragraph
 heading, Pairs with · when dialed, level 2
 Pairs with · when dialed
 end of heading, Pairs with · when dialed, level 2
 list
 listitem, level 1, position 1, set size 2
-Bandit #" Split · #
+Bandit #" Split
+, # runs dialed together
 end of listitem, level 1, position 1, set size 2
 listitem, level 1, position 2, set size 2
-Thin gloves · #
+Thin gloves
+, # runs dialed together
 end of listitem, level 1, position 2, set size 2
 end of list
-link, Edit
-button, Retire
-button, Delete
+link, Edit Janji Rover Half-zip
+Edit
+Janji Rover Half-zip
+end of link, Edit Janji Rover Half-zip
+button, Retire Janji Rover Half-zip
+Retire
+Janji Rover Half-zip
+end of button, Retire Janji Rover Half-zip
+button, Delete Janji Rover Half-zip
+Delete
+Janji Rover Half-zip
+end of button, Delete Janji Rover Half-zip
 end of main
 status
 end of document

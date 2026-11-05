@@ -47,6 +47,11 @@ describe("ReleaseHolds", () => {
         "Reports · 2 waitingApprove all 2" +
         "Screener · 4 waitingApprove all 4",
     );
+    // Beside Review's own lists, under its h1: a heading a screen reader
+    // can move to, at their level.
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Held in the last day" }),
+    ).toBeInTheDocument();
     expect(release).not.toHaveBeenCalled();
   });
 

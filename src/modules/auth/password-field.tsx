@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import type { JSX } from "react";
 
 import { PASSWORD_MIN_LENGTH } from "../../lib/contracts";
-import { FormField } from "../../ui";
+import { FormField, describedByFor } from "../../ui";
 import type { FieldProps } from "../../ui";
 
 /**
@@ -26,6 +26,7 @@ export function PasswordField({
   hint,
   autoComplete,
   focusOnArrival = false,
+  describedBy,
 }: Readonly<{
   /**
    * The field's name and id: `password` everywhere but Change password,
@@ -40,6 +41,11 @@ export function PasswordField({
   hint?: string | undefined;
   autoComplete: "current-password" | "new-password";
   focusOnArrival?: boolean | undefined;
+  /**
+   * The id of a sentence elsewhere on the page that the field should be
+   * read with, after its own: Au7's notice, which arrival focus skips.
+   */
+  describedBy?: string | undefined;
 }>): JSX.Element {
   const [isShown, setIsShown] = useState(false);
   // Arrival is once. An inline callback ref here was a new function on
@@ -58,6 +64,9 @@ export function PasswordField({
     <FormField name={name} label={label} error={error} hint={hint}>
       <input
         {...field(name)}
+        // Whichever of its own hint and message is showing, then the
+        // page's sentence.
+        aria-describedby={describedByFor(name, { hint, error }, describedBy)}
         ref={focusOnArrivalRef}
         id={name}
         type={isShown ? "text" : "password"}
@@ -83,7 +92,9 @@ export function PasswordField({
         }}
         className="target shrink-0 cursor-pointer self-stretch border-none bg-transparent p-0 text-small font-semibold text-ink"
       >
+        {/* The visible word first (WCAG 2.5.3), then what it shows. */}
         {isShown ? "Hide" : "Show"}
+        <span className="sr-only"> password</span>
       </button>
     </FormField>
   );

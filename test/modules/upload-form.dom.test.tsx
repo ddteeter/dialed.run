@@ -19,7 +19,10 @@ import {
 } from "vitest";
 import { z } from "zod";
 
-import { importPollIntervalMs } from "../../src/modules/runs/import-polling";
+import {
+  importPollIntervalMs,
+  STALL_AFTER_MS,
+} from "../../src/modules/runs/import-polling";
 import type { ImportOutcome } from "../../src/modules/runs/imports";
 import { UploadForm } from "../../src/modules/runs/components/UploadForm";
 import type { GarminImportActions } from "../../src/modules/runs/components/GarminImport";
@@ -115,6 +118,31 @@ function region(slot: string): HTMLElement {
   );
   if (found === null) throw new Error(`no ${slot}`);
   return found;
+}
+
+/**
+ * What a sentence on screen is looked for under: the step's status region
+ * says the same words to a screen reader, and is not the screen.
+ */
+const ON_SCREEN = { ignore: "script, style, [role='status']" };
+
+/**
+ * The step's one status region, which stays mounted while the well, the
+ * card and the receipt swap in and out beneath it.
+ */
+function told(): HTMLElement {
+  const [first] = screen.getAllByRole("status");
+  if (first === undefined) throw new Error("no status region");
+  return first;
+}
+
+/**
+The retime form's own region, inside the parsed card's grid.
+*/
+function cardStatus(): HTMLElement {
+  const grid = region("parsed-card").parentElement;
+  if (grid === null) throw new Error("no card grid");
+  return within(grid).getByRole("status");
 }
 
 type Upload = (input: { data: FormData }) => Promise<{ importId: string }>;
@@ -360,7 +388,7 @@ describe("A1: a file refused before it is sent", () => {
 
     await user.upload(dropInput(), file);
 
-    expect(screen.getByText(sentence)).toBeVisible();
+    expect(screen.getByText(sentence, ON_SCREEN)).toBeVisible();
     expect(well()).toHaveAttribute("data-state", "error");
     expect(upload).not.toHaveBeenCalled();
   });
@@ -372,7 +400,9 @@ describe("A1: a file refused before it is sent", () => {
     const big = new File([new Uint8Array(25 * 1024 * 1024 + 1)], "long.gpx");
     await user.upload(dropInput(), big);
 
-    expect(screen.getByText("That file is larger than 25 MB.")).toBeVisible();
+    expect(
+      screen.getByText("That file is larger than 25 MB.", ON_SCREEN),
+    ).toBeVisible();
   });
 
   it("clears the mark when a good file follows", async () => {
@@ -446,7 +476,7 @@ describe("A1: a file refused before it is sent", () => {
     await user.upload(dropInput(), new File(["x"], "run.csv"));
 
     expect(
-      screen.getByText("That's not a GPX, TCX or FIT file."),
+      screen.getByText("That's not a GPX, TCX or FIT file.", ON_SCREEN),
     ).toBeVisible();
     expect(screen.queryByText("Nothing saved")).toBeNull();
   });
@@ -459,12 +489,12 @@ describe("A1: a file refused before it is sent", () => {
       }),
     );
     await user.upload(dropInput(), gpx());
-    await screen.findByText(PARSE_FAILURE_MESSAGE);
+    await screen.findByText(PARSE_FAILURE_MESSAGE, ON_SCREEN);
 
     await user.upload(dropInput(), new File(["x"], "run.csv"));
 
     expect(
-      screen.getByText("That's not a GPX, TCX or FIT file."),
+      screen.getByText("That's not a GPX, TCX or FIT file.", ON_SCREEN),
     ).toBeVisible();
     expect(screen.queryByText(PARSE_FAILURE_MESSAGE)).toBeNull();
   });
@@ -720,7 +750,7 @@ describe("A1: sending and reading", () => {
       }),
     );
     await user.upload(dropInput(), gpx());
-    await screen.findByText(PARSE_FAILURE_MESSAGE);
+    await screen.findByText(PARSE_FAILURE_MESSAGE, ON_SCREEN);
 
     await user.upload(dropInput(), gpx("better.gpx"));
 
@@ -747,7 +777,7 @@ describe("A1: sending and reading", () => {
     await renderWithRouter(form({ upload, getOutcome }));
     await user.upload(dropInput(), gpx());
     await screen.findByText("Parsed · run.gpx");
-    await user.click(screen.getByRole("button", { name: "Replace" }));
+    await user.click(screen.getByRole("button", { name: /^Replace / }));
 
     await user.upload(dropInput(), gpx("second.gpx"));
     await waitFor(() => {
@@ -797,6 +827,7 @@ describe("A1: a file that would not parse", () => {
     expect(
       await screen.findByText(
         "MORNING_RUN.GPX has no track in it. Export the run again.",
+        ON_SCREEN,
       ),
     ).toBeVisible();
     expect(well()).toHaveAttribute("data-state", "error");
@@ -812,7 +843,9 @@ describe("A1: a file that would not parse", () => {
 
     await user.upload(dropInput(), gpx());
 
-    expect(await screen.findByText(PARSE_FAILURE_MESSAGE)).toBeVisible();
+    expect(
+      await screen.findByText(PARSE_FAILURE_MESSAGE, ON_SCREEN),
+    ).toBeVisible();
   });
 
   it("takes another file straight from the marked well", async () => {
@@ -827,7 +860,7 @@ describe("A1: a file that would not parse", () => {
       }),
     );
     await user.upload(dropInput(), gpx());
-    await screen.findByText(PARSE_FAILURE_MESSAGE);
+    await screen.findByText(PARSE_FAILURE_MESSAGE, ON_SCREEN);
 
     await user.upload(dropInput(), gpx("better.gpx"));
 
@@ -872,11 +905,11 @@ describe("A1: a run imported from Garmin is watched like an upload", () => {
     const user = setupUser({ applyAccept: false });
     await renderWithRouter(form({ garmin: garmin(), getOutcome: parsed() }));
     await user.upload(dropInput(), new File([], "run.gpx"));
-    expect(screen.getByText("That file is empty.")).toBeVisible();
+    expect(screen.getByText("That file is empty.", ON_SCREEN)).toBeVisible();
 
     await tapImport(user);
     await screen.findByText("Parsed · From Garmin");
-    await user.click(screen.getByRole("button", { name: "Replace" }));
+    await user.click(screen.getByRole("button", { name: /^Replace / }));
 
     expect(screen.queryByText("That file is empty.")).toBeNull();
     expect(well()).toHaveAttribute("data-state", "empty");
@@ -895,7 +928,7 @@ describe("A1: a run imported from Garmin is watched like an upload", () => {
 
     await tapImport(user);
     await screen.findByText("Parsed · From Garmin");
-    await user.click(screen.getByRole("button", { name: "Replace" }));
+    await user.click(screen.getByRole("button", { name: /^Replace / }));
 
     expect(screen.queryByText("Your connection dropped.")).toBeNull();
   });
@@ -1030,7 +1063,7 @@ describe("A1: the parsed card", () => {
     await user.upload(dropInput(), gpx());
 
     expect(await screen.findByText("No conditions")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Set ›" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Set/u })).toBeNull();
   });
 
   it("goes back to the drop zone on REPLACE — the only way back", async () => {
@@ -1039,7 +1072,7 @@ describe("A1: the parsed card", () => {
     await user.upload(dropInput(), gpx());
     await screen.findByText("Parsed · run.gpx");
 
-    await user.click(screen.getByRole("button", { name: "Replace" }));
+    await user.click(screen.getByRole("button", { name: /^Replace / }));
 
     expect(well()).toHaveAttribute("data-state", "empty");
     expect(document.querySelector("[data-slot='parsed-card']")).toBeNull();
@@ -1061,7 +1094,7 @@ describe("A1: the parsed card", () => {
     ).toBeNull();
     expect(within(card).getByText("Sat Aug 29")).toBeVisible();
     expect(within(card).getByText("8:20 /mi").closest("p")).toHaveTextContent(
-      /^8:20 \/mi\|Sat Aug 29$/u,
+      /^8:20 \/mi8 minutes 20 seconds per mile\|Sat Aug 29$/u,
     );
     const field = within(card).getByLabelText("Start time");
     // The run's own clock: 6:04 in Chicago, not 11:04 UTC.
@@ -1072,6 +1105,11 @@ describe("A1: the parsed card", () => {
         "The file said 6:04 AM. Change it if your watch's clock was off.",
       ),
     ).toBeVisible();
+    // The hint is heard with the field, not only seen under it.
+    expect(field).toHaveAttribute("aria-describedby", "time-hint");
+    expect(field).toHaveAccessibleDescription(
+      "The file said 6:04 AM. Change it if your watch's clock was off.",
+    );
     expect(
       within(card).getByRole("button", { name: "Get weather" }),
     ).toBeVisible();
@@ -1107,9 +1145,7 @@ describe("A1: the parsed card", () => {
     });
     expect(changed).toHaveTextContent("7:34 AM · Changed");
     expect(screen.queryByLabelText("Start time")).toBeNull();
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Start time changed to 7:34 AM.",
-    );
+    expect(cardStatus()).toHaveTextContent("Start time changed to 7:34 AM.");
     // The run is asked for again, so the block fills in for the new hour.
     expect(getOutcome.mock.calls.length).toBeGreaterThan(asked);
   });
@@ -1179,7 +1215,7 @@ describe("A1: the parsed card", () => {
     expect(band).toHaveTextContent(
       "Couldn't get weather for 7:34 AM. Try again?",
     );
-    expect(screen.getByRole("status")).toHaveTextContent(
+    expect(cardStatus()).toHaveTextContent(
       "Still 6:04 AM. Couldn't get weather for 7:34 AM. Try again?",
     );
     // The time did not move: the server put it back.
@@ -1214,6 +1250,10 @@ describe("A1: the parsed card", () => {
     ).toBeVisible();
     expect(screen.getByLabelText("Start time")).toHaveAccessibleDescription(
       "Pick the time the run started.",
+    );
+    expect(screen.getByLabelText("Start time")).toHaveAttribute(
+      "aria-describedby",
+      "time-message",
     );
     expect(retime).not.toHaveBeenCalled();
   });
@@ -1345,7 +1385,7 @@ describe("A1: the parsed card", () => {
     await user.click(
       await screen.findByRole("button", { name: "6:04 AM, change start time" }),
     );
-    const status = screen.getByRole("status");
+    const status = cardStatus();
     const said: string[] = [];
     const observer = new MutationObserver(() => {
       said.push(status.textContent);
@@ -1440,7 +1480,7 @@ describe("A1: the parsed card", () => {
     const pace = await screen.findByText("8:20 /mi");
 
     expect(pace.closest("p")).toHaveTextContent(
-      /^8:20 \/mi\|Sat Aug 29\|6:04 AM$/u,
+      /^8:20 \/mi8 minutes 20 seconds per mile\|Sat Aug 29\|6:04 AM$/u,
     );
   });
 });
@@ -1473,7 +1513,7 @@ describe("A1: a run already logged", () => {
         "This run is already in your log. Nothing new was added.",
       ),
     ).toBeVisible();
-    expect(screen.getByText("Wrong file? Tap Replace above.")).toBeVisible();
+    expect(screen.getByText("Wrong file? Replace it.")).toBeVisible();
     // No conditions block: they are already the run's.
     expect(document.querySelector("[data-slot='conditions']")).toBeNull();
   });
@@ -1527,7 +1567,7 @@ describe("A1: a run already logged", () => {
     await user.upload(dropInput(), gpx());
     await screen.findByText("Already logged");
 
-    await user.click(screen.getByRole("button", { name: "Replace" }));
+    await user.click(screen.getByRole("button", { name: /^Replace / }));
 
     expect(well()).toHaveAttribute("data-state", "empty");
   });
@@ -1567,5 +1607,378 @@ describe("A1's parsed card: a lapsed session (Au7, D-155)", () => {
     );
 
     expect(carriedSince()).toEqual(["run"]);
+  });
+});
+
+/**
+ * Every text the step's status region holds, in order, from now on — what
+ * a screen reader is told, once each.
+ */
+function hearing(): { said: string[]; stop: () => void } {
+  const status = told();
+  const said: string[] = [];
+  const observer = new MutationObserver(() => {
+    const text = status.textContent;
+    if (text !== said.at(-1)) said.push(text);
+  });
+  observer.observe(status, {
+    childList: true,
+    characterData: true,
+    subtree: true,
+  });
+  return {
+    said,
+    stop: () => {
+      observer.disconnect();
+    },
+  };
+}
+
+describe("A1 tells a screen reader each outcome, once (a11y audit M2)", () => {
+  it("starts silent, and takes no focus on arrival", async () => {
+    await renderWithRouter(form());
+
+    expect(told()).toHaveTextContent(/^$/u);
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it("says it is reading the file, in the well's own words", async () => {
+    const user = setupUser();
+    await renderWithRouter(form({ upload: never }));
+
+    await user.upload(dropInput(), gpx("MORNING_RUN.GPX"));
+
+    expect(told()).toHaveTextContent(/^Reading MORNING_RUN\.GPX\.$/u);
+  });
+
+  it("says the file was parsed, then the weather as it lands, from one region that outlives the well", async () => {
+    const user = setupUser();
+    const getOutcome = vi
+      .fn<GetOutcome>()
+      .mockResolvedValueOnce(
+        outcome({
+          status: "done",
+          run: runSummary({ weatherStatus: "pending", conditions: undefined }),
+        }),
+      )
+      .mockResolvedValue(outcome({ status: "done", run: runSummary() }));
+    await renderWithRouter(form({ getOutcome }));
+    const status = told();
+    const heard = hearing();
+
+    await user.upload(dropInput(), gpx("MORNING_RUN.GPX"));
+    await screen.findByText("Fetching weather");
+    await elapse(POLL_MS);
+    await screen.findByText("Conditions · auto-attached");
+    heard.stop();
+
+    expect(told()).toBe(status);
+    expect(heard.said).toStrictEqual([
+      "Reading MORNING_RUN.GPX.",
+      "Parsed MORNING_RUN.GPX. Fetching weather.",
+      "Weather found.",
+    ]);
+  });
+
+  it("says the weather with the file when both land at once", async () => {
+    const user = setupUser();
+    await renderWithRouter(form({ getOutcome: parsed() }));
+
+    await user.upload(dropInput(), gpx());
+    await screen.findByText("Conditions · auto-attached");
+
+    expect(told()).toHaveTextContent(/^Parsed run\.gpx\. Weather found\.$/u);
+  });
+
+  it("says when no weather came", async () => {
+    const user = setupUser();
+    await renderWithRouter(
+      form({
+        getOutcome: parsed({ weatherStatus: "failed", conditions: undefined }),
+      }),
+    );
+
+    await user.upload(dropInput(), gpx());
+    await screen.findByText("No conditions");
+
+    expect(told()).toHaveTextContent(/^Parsed run\.gpx\. No conditions\.$/u);
+  });
+
+  it("says nothing of weather for a treadmill run, which has none to wait for", async () => {
+    const user = setupUser();
+    await renderWithRouter(
+      form({
+        getOutcome: parsed({
+          indoor: true,
+          weatherStatus: "none",
+          conditions: undefined,
+        }),
+      }),
+    );
+
+    await user.upload(dropInput(), gpx());
+    await screen.findByText("Treadmill");
+
+    expect(told()).toHaveTextContent(/^Parsed run\.gpx\.$/u);
+  });
+
+  it("says a run already logged is, in the receipt's words", async () => {
+    const user = setupUser();
+    await renderWithRouter(
+      form({
+        getOutcome: () =>
+          Promise.resolve(outcome({ status: "duplicate", run: runSummary() })),
+      }),
+    );
+
+    await user.upload(dropInput(), gpx());
+    await screen.findByText("Already logged");
+
+    expect(told()).toHaveTextContent(/^Already logged\.$/u);
+  });
+
+  it("says why a file would not parse, as the well does", async () => {
+    const user = setupUser();
+    await renderWithRouter(
+      form({
+        getOutcome: () =>
+          Promise.resolve(
+            outcome({ status: "failed", failureReason: NO_TRACK_MESSAGE }),
+          ),
+      }),
+    );
+
+    await user.upload(dropInput(), gpx("MORNING_RUN.GPX"));
+    await screen.findByText(
+      "MORNING_RUN.GPX has no track in it. Export the run again.",
+      ON_SCREEN,
+    );
+
+    expect(told()).toHaveTextContent(
+      /^MORNING_RUN\.GPX has no track in it\. Export the run again\.$/u,
+    );
+  });
+
+  it("says nothing for a row it cannot use, and keeps what it said last", async () => {
+    const user = setupUser();
+    await renderWithRouter(
+      form({ getOutcome: () => Promise.resolve(outcome({ status: "done" })) }),
+    );
+
+    await user.upload(dropInput(), gpx());
+    await waitFor(() => {
+      expect(well()).toHaveAttribute("data-state", "empty");
+    });
+
+    expect(told()).toHaveTextContent(/^Reading run\.gpx\.$/u);
+  });
+
+  it("says why a file was refused before it was sent", async () => {
+    const user = setupUser({ applyAccept: false });
+    await renderWithRouter(form());
+
+    await user.upload(dropInput(), new File([], "run.gpx"));
+
+    expect(told()).toHaveTextContent(/^That file is empty\.$/u);
+  });
+
+  it("says a dropped connection saved nothing, as the band does", async () => {
+    const user = setupUser();
+    await renderWithRouter(
+      form({ upload: () => Promise.reject(new TypeError("Failed to fetch")) }),
+    );
+
+    await user.upload(dropInput(), gpx());
+    await screen.findByText("Your connection dropped.");
+
+    expect(told()).toHaveTextContent(
+      /^Nothing saved\. Your connection dropped\.$/u,
+    );
+  });
+
+  it("says a slow read is slow, as the band does", async () => {
+    const user = setupUser();
+    const getOutcome = vi.fn<GetOutcome>(() => Promise.resolve(outcome()));
+    await renderWithRouter(form({ getOutcome }));
+
+    await user.upload(dropInput(), gpx());
+    await firstPoll(getOutcome);
+    await elapse(STALL_AFTER_MS);
+
+    expect(told()).toHaveTextContent(
+      /^Nothing saved\. Our end is slow\. Your file is fine\.$/u,
+    );
+  });
+
+  it("says a Garmin import's time in words, as its row does", async () => {
+    const user = setupUser();
+    await renderWithRouter(
+      form({ garmin: garmin(), getOutcome: neverAnswers }),
+    );
+
+    await tapImport(user);
+
+    await waitFor(() => {
+      expect(told()).toHaveTextContent(
+        /^Reading Garmin · Sat Aug 29 · 6\.2 mi · 51 minutes 38 seconds\.$/u,
+      );
+    });
+  });
+});
+
+describe("A1 keeps focus where the runner can find it (a11y audit M2)", () => {
+  it("keeps focus in the well while it reads, though the well is a new one", async () => {
+    const user = setupUser();
+    const getOutcome = vi.fn<GetOutcome>(neverAnswers);
+    await renderWithRouter(form({ getOutcome }));
+
+    await user.upload(dropInput(), gpx());
+    await firstPoll(getOutcome);
+
+    expect(document.activeElement).toBe(dropInput());
+  });
+
+  it("moves focus to the card's file line when the card takes the well's place", async () => {
+    const user = setupUser();
+    await renderWithRouter(form({ getOutcome: parsed() }));
+
+    await user.upload(dropInput(), gpx());
+    await screen.findByText("Parsed · run.gpx");
+
+    const line = document.querySelector("[data-part='file-line']");
+    expect(line).toHaveTextContent(/^Parsed · run\.gpx$/u);
+    expect(line).toHaveAttribute("tabindex", "-1");
+    expect(document.activeElement).toBe(line);
+  });
+
+  it("moves focus to the receipt's file line for a run already logged", async () => {
+    const user = setupUser();
+    await renderWithRouter(
+      form({
+        getOutcome: () =>
+          Promise.resolve(outcome({ status: "duplicate", run: runSummary() })),
+      }),
+    );
+
+    await user.upload(dropInput(), gpx());
+    await screen.findByText("Already logged");
+
+    expect(document.activeElement).toHaveTextContent(/^run\.gpx$/u);
+    expect(document.activeElement).toHaveAttribute("data-part", "file-line");
+  });
+
+  it("leaves focus where the runner put it, when it was not lost", async () => {
+    const user = setupUser();
+    const getOutcome = vi
+      .fn<GetOutcome>()
+      .mockResolvedValueOnce(outcome())
+      .mockResolvedValue(outcome({ status: "done", run: runSummary() }));
+    await renderWithRouter(
+      <>
+        <button type="button">Elsewhere</button>
+        {form({ getOutcome })}
+      </>,
+    );
+
+    await user.upload(dropInput(), gpx());
+    await firstPoll(getOutcome);
+    const elsewhere = screen.getByRole("button", { name: "Elsewhere" });
+    elsewhere.focus();
+    await elapse(POLL_MS);
+    await screen.findByText("Parsed · run.gpx");
+
+    expect(document.activeElement).toBe(elsewhere);
+  });
+
+  it("puts focus back in the well when a slow read is tried again", async () => {
+    const user = setupUser();
+    const getOutcome = vi.fn<GetOutcome>(() => Promise.resolve(outcome()));
+    await renderWithRouter(form({ getOutcome }));
+    await user.upload(dropInput(), gpx());
+    await firstPoll(getOutcome);
+    await elapse(STALL_AFTER_MS);
+
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+
+    expect(document.activeElement).toBe(dropInput());
+  });
+
+  it("puts focus back in the well on Replace after a Garmin import", async () => {
+    const user = setupUser();
+    await renderWithRouter(form({ garmin: garmin(), getOutcome: parsed() }));
+    await tapImport(user);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Replace From Garmin" }),
+    );
+
+    expect(document.activeElement).toBe(dropInput());
+  });
+
+  it("puts focus back in the well on Replace", async () => {
+    const user = setupUser();
+    await renderWithRouter(form({ getOutcome: parsed() }));
+    await user.upload(dropInput(), gpx());
+
+    await user.click(
+      await screen.findByRole("button", { name: "Replace run.gpx" }),
+    );
+
+    expect(document.activeElement).toBe(dropInput());
+  });
+});
+
+describe("A1: Replace names the file it replaces (a11y audit)", () => {
+  it("is the visible word, then the file", async () => {
+    const user = setupUser();
+    await renderWithRouter(form({ getOutcome: parsed() }));
+
+    await user.upload(dropInput(), gpx("MORNING_RUN.GPX"));
+
+    expect(
+      await screen.findByRole("button", { name: "Replace MORNING_RUN.GPX" }),
+    ).toHaveTextContent(/^Replace$/u);
+  });
+
+  it("names a Garmin import by where it came from", async () => {
+    const user = setupUser();
+    await renderWithRouter(form({ garmin: garmin(), getOutcome: parsed() }));
+
+    await tapImport(user);
+
+    expect(
+      await screen.findByRole("button", { name: "Replace From Garmin" }),
+    ).toBeVisible();
+  });
+});
+
+describe("A1: the card's time and pace are said in words (a11y audit)", () => {
+  it("shows the clock and says the minutes and seconds", async () => {
+    const user = setupUser();
+    await renderWithRouter(form({ getOutcome: parsed() }));
+
+    await user.upload(dropInput(), gpx());
+    const card = await screen.findByText("6.2 mi · 51:38");
+
+    expect(card).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("6.2 mi, 51 minutes 38 seconds")).toHaveClass(
+      "sr-only",
+    );
+    expect(screen.getByText("8:20 /mi")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("8 minutes 20 seconds per mile")).toHaveClass(
+      "sr-only",
+    );
+  });
+
+  it("draws no pace cell, shown or said, for a run with no distance", async () => {
+    const user = setupUser();
+    await renderWithRouter(form({ getOutcome: parsed({ distanceM: 0 }) }));
+
+    await user.upload(dropInput(), gpx());
+    const day = await screen.findByText("Sat Aug 29");
+
+    expect(screen.queryByText(/per mile/u)).toBeNull();
+    // The day leads the facts line, with no rule before it.
+    expect(day.closest("p")?.textContent).toMatch(/^Sat Aug 29\|/u);
   });
 });

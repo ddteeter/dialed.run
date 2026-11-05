@@ -13,7 +13,8 @@
  * where the runner most wonders if it worked".
  */
 export const NOTHING_MOVED = {
-  noBand: "Logged. No weather came with this run, so no band record moved.",
+  noBand:
+    "Logged. No weather came with this run, so no temperature record moved.",
   noKit: "Logged. No kit on this run, so no garment record moved.",
 } as const;
 

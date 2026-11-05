@@ -208,8 +208,16 @@ describe("publicKitRead: a public kit", () => {
       conditions: { feelsLike: "38°", sky: "damp", isProviders: true },
       verdict: -1,
       distance: { value: "6.2", unit: "mi" },
-      time: { value: "52:10", isMoving: true },
-      pace: { value: "8:25", unit: "/mi" },
+      time: {
+        value: "52:10",
+        said: "52 minutes 10 seconds",
+        isMoving: true,
+      },
+      pace: {
+        value: "8:25",
+        unit: "/mi",
+        said: { value: "8 minutes 25 seconds", unit: "per mile" },
+      },
       gain: { value: "210", unit: "ft" },
       caption: "First frosty one.",
       pieces: [
@@ -317,7 +325,11 @@ describe("publicKitRead: a public kit", () => {
 
     expect(kit?.conditions?.feelsLike).toBe("3°");
     expect(kit?.distance).toStrictEqual({ value: "10.0", unit: "km" });
-    expect(kit?.pace).toStrictEqual({ value: "5:14", unit: "/km" });
+    expect(kit?.pace).toStrictEqual({
+      value: "5:14",
+      unit: "/km",
+      said: { value: "5 minutes 14 seconds", unit: "per kilometre" },
+    });
     expect(kit?.gain).toStrictEqual({ value: "64", unit: "m" });
   });
 
@@ -343,8 +355,16 @@ describe("publicKitRead: a public kit", () => {
     expect(kit).not.toHaveProperty("gain");
     expect(kit).not.toHaveProperty("caption");
     // A manual run's time is its own, not moving time; 5 km in 30:00.
-    expect(kit?.time).toStrictEqual({ value: "30:00", isMoving: false });
-    expect(kit?.pace).toStrictEqual({ value: "9:39", unit: "/mi" });
+    expect(kit?.time).toStrictEqual({
+      value: "30:00",
+      said: "30 minutes",
+      isMoving: false,
+    });
+    expect(kit?.pace).toStrictEqual({
+      value: "9:39",
+      unit: "/mi",
+      said: { value: "9 minutes 39 seconds", unit: "per mile" },
+    });
     expect(kit?.pieces).toStrictEqual([]);
   });
 

@@ -7,6 +7,7 @@ import {
   formatDistance,
   formatDuration,
   formatWind,
+  spokenDuration,
 } from "../../../lib/contracts/measures";
 import type { Units } from "../../../lib/contracts";
 import { dayLabel, proseDayLabel } from "../../../lib/dates";
@@ -17,6 +18,7 @@ import {
   ControlFailureBand,
   Mono,
   PendingLabel,
+  Spoken,
   verdictHue,
   WeatherAttribution,
 } from "../../../ui";
@@ -151,11 +153,16 @@ function KitChips({ kit }: Readonly<{ kit: BacklogKit }>): JSX.Element {
  */
 function OutfitCell({
   runId,
+  day,
   suggestion,
   chosen,
   onUse,
 }: Readonly<{
   runId: string;
+  /**
+  The row's day, for Use's and Pick's names, as the verdict buttons have it.
+  */
+  day: string;
   suggestion: BacklogSuggestion | undefined;
   chosen: BacklogKit | undefined;
   onUse: (kit: BacklogSuggestion) => void;
@@ -176,6 +183,7 @@ function OutfitCell({
           </span>
           <button
             type="button"
+            aria-label={`Use — ${day}`}
             onClick={() => {
               onUse(suggestion);
             }}
@@ -188,6 +196,7 @@ function OutfitCell({
       <Link
         to="/feed/attach/$runId"
         params={{ runId }}
+        aria-label={`Pick — ${day}`}
         className="target inline-flex items-center px-2 text-body font-semibold text-cold-text"
       >
         Pick
@@ -582,8 +591,11 @@ function BacklogTable({
                     {/* `--quiet`, like the conditions beside it: a saved
                         row is tinted, and `--muted` is 4.0:1 on the tint. */}
                     <Mono step="sm" className="text-quiet">
-                      {formatDuration(row.durationS)} ·{" "}
-                      {formatDistance(row.distanceM, units.distance)}
+                      <Spoken
+                        shown={formatDuration(row.durationS)}
+                        said={spokenDuration(row.durationS)}
+                      />{" "}
+                      · {formatDistance(row.distanceM, units.distance)}
                     </Mono>
                   </td>
                   <td className="block px-2 py-2 desk:table-cell">
@@ -596,6 +608,7 @@ function BacklogTable({
                   <td className="block px-2 py-2 desk:table-cell">
                     <OutfitCell
                       runId={row.runId}
+                      day={runDay(row)}
                       suggestion={row.suggestion}
                       chosen={kitOf(row)}
                       onUse={(kit) => {
@@ -675,12 +688,15 @@ function BacklogTable({
           <Mono step="xs" className="text-muted">
             Keys
           </Mono>
-          {LEGEND.map(({ keys, does }) => (
+          {LEGEND.map(({ keys, does, said }) => (
             <span key={does} className="flex items-center gap-2 text-small">
+              {/* The glyphs are read as "up arrow down arrow" or not at
+                  all, so each entry is said as a sentence instead. */}
               <Mono step="sm" className="border border-hairline-2 px-2 py-1">
-                {keys}
+                <span aria-hidden="true">{keys}</span>
               </Mono>
-              {does}
+              <span aria-hidden="true">{does}</span>
+              <span className="sr-only">{said}</span>
             </span>
           ))}
         </span>
@@ -724,10 +740,18 @@ function without<TValue>(
  * 16). It is also where skip lives: skip is a key, not a slot, so there
  * is no sixth button offering to do nothing.
  */
-const LEGEND: readonly { keys: string; does: string }[] = [
-  { keys: "↑↓", does: "row" },
-  { keys: "1–5", does: "way cold → way warm" },
-  { keys: "↵", does: "save & next" },
-  { keys: "↓", does: "skip" },
-  { keys: "Tab", does: "outfit" },
+const LEGEND: readonly { keys: string; does: string; said: string }[] = [
+  {
+    keys: "↑↓",
+    does: "row",
+    said: "Up and down arrows: move between rows.",
+  },
+  {
+    keys: "1–5",
+    does: "way cold → way warm",
+    said: "1 to 5: way cold to way warm.",
+  },
+  { keys: "↵", does: "save & next", said: "Enter: save and go to the next." },
+  { keys: "↓", does: "skip", said: "Down arrow: skip." },
+  { keys: "Tab", does: "outfit", said: "Tab: outfit." },
 ];

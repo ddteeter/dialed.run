@@ -5,8 +5,8 @@ end of banner
 main
 heading, Feed, level 1
 link, Find runners
-button, Following, current page
-button, Your conditions
+button, Following, pressed
+button, Your conditions, not pressed
 status
 article
 link, @e#_runner_# :when · #:# Dialed Half-zip was right. #.#mi #° · clear
@@ -20,9 +20,9 @@ end of paragraph
 #° · clear
 end of link, @e#_runner_# :when · #:# Dialed Half-zip was right. #.#mi #° · clear
 link, Weather data provided by Visual Crossing
-button, Useful, not pressed
+button, Useful, @e#_runner_#’s run, not pressed
 Useful
-end of button, Useful, not pressed
+end of button, Useful, @e#_runner_#’s run, not pressed
 end of article
 article
 link, @e#_runner_# :when · #:# A bit warm Wore the shell for a forecast that never showed up. #.#mi #° · clear
@@ -36,9 +36,9 @@ end of paragraph
 #° · clear
 end of link, @e#_runner_# :when · #:# A bit warm Wore the shell for a forecast that never showed up. #.#mi #° · clear
 link, Weather data provided by Visual Crossing
-button, Useful, not pressed
+button, Useful, @e#_runner_#’s run, not pressed
 Useful
-end of button, Useful, not pressed
+end of button, Useful, @e#_runner_#’s run, not pressed
 end of article
 article
 link, @e#_runner_# :when · #:# Dialed #.#mi Indoor
@@ -48,9 +48,9 @@ Dialed
 #.#mi
 Indoor
 end of link, @e#_runner_# :when · #:# Dialed #.#mi Indoor
-button, Useful, not pressed
+button, Useful, @e#_runner_#’s run, not pressed
 Useful
-end of button, Useful, not pressed
+end of button, Useful, @e#_runner_#’s run, not pressed
 end of article
 end of main
 navigation, Main
@@ -66,9 +66,9 @@ Closet
 end of link, Closet
 end of listitem, level 1, position 2, set size 5
 listitem, level 1, position 3, set size 5
-button, Add, has popup dialog
+button, Add a run, has popup dialog
 + Add
-end of button, Add, has popup dialog
+end of button, Add a run, has popup dialog
 end of listitem, level 1, position 3, set size 5
 listitem, level 1, position 4, set size 5
 link, Call

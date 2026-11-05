@@ -1,8 +1,7 @@
 document
 banner
 link, dialed.run home, current page
-dialed
-.run
+dialed.run
 end of link, dialed.run home, current page
 navigation, Main
 list
@@ -29,13 +28,13 @@ end of banner
 main
 heading, Feed, level 1
 link, Find runners
-link, # runs still need a verdict Clear the queue ›
+link, # runs still need a verdict Clear the queue
 #
 runs still need a verdict
-Clear the queue ›
-end of link, # runs still need a verdict Clear the queue ›
-button, Following, current page
-button, Your conditions
+Clear the queue
+end of link, # runs still need a verdict Clear the queue
+button, Following, pressed
+button, Your conditions, not pressed
 status
 Same conditions · Feels
 #–#°
@@ -57,10 +56,10 @@ end of paragraph
 #–#° · light rain
 end of link, @trail_# :when · #:# Dialed Chilly first mile, settled in by the bridge — # #.#mi #–#° · light rain
 link, Weather data provided by Visual Crossing
-button, # Useful, pressed
+button, # Useful, @trail_#’s run, pressed
 #
 Useful
-end of button, # Useful, pressed
+end of button, # Useful, @trail_#’s run, pressed
 end of article
 end of main
 status

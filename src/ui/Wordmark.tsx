@@ -29,16 +29,23 @@ export function Wordmark({
           [
         </span>
       ) : undefined}
-      <span>dialed</span>
+      <span aria-hidden="true">dialed</span>
       {/* T1's --muted. The brand board draws #8B8B93, which is the *dark*
           column's muted; on paper the role resolves to #6E6E64 and keeps
           its contrast. CLAUDE.md §Design truth: the contract wins. */}
-      <span className="text-muted">.run</span>
+      <span aria-hidden="true" className="text-muted">
+        .run
+      </span>
       {brackets ? (
         <span aria-hidden="true" className="text-cold-text">
           ]
         </span>
       ) : undefined}
+      {/* Said once, as one word, last so the drawn lockup's text stays
+          contiguous. The two halves above are separate flex items for
+          their colours, and a screen reader walking them heard "dialed"
+          and ".run" as two pieces. */}
+      <span className="sr-only">dialed.run</span>
     </span>
   );
 }

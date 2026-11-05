@@ -40,6 +40,8 @@ import {
   formatDuration,
   gainNumber,
   paceNumber,
+  paceUnit,
+  spokenDuration,
 } from "../../lib/contracts/measures";
 import { formatTemp, precipClassOf } from "../../lib/contracts/temperature";
 import { entryCacheTag } from "../../lib/cache-tags";
@@ -178,14 +180,23 @@ function statsOf(
 ): Pick<PublicKit, "distance" | "time" | "pace" | "gain"> {
   const seconds = run.movingS ?? run.durationS;
   const pace = paceNumber(seconds, run.distanceM, units.distance);
+  const per = paceUnit(units.distance);
   return {
     distance: {
       value: distanceNumber(run.distanceM, units.distance),
       unit: units.distance,
     },
-    time: { value: formatDuration(seconds), isMoving: run.movingS !== null },
+    time: {
+      value: formatDuration(seconds),
+      said: spokenDuration(seconds),
+      isMoving: run.movingS !== null,
+    },
     ...(pace !== undefined && {
-      pace: { value: pace, unit: `/${units.distance}` },
+      pace: {
+        value: pace.shown,
+        unit: per.shown,
+        said: { value: pace.said, unit: per.said },
+      },
     }),
     ...(run.elevationGainM !== null && {
       gain: gainNumber(run.elevationGainM, units.distance),

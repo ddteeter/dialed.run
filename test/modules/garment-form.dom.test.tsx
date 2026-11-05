@@ -498,19 +498,24 @@ describe("GarmentForm: the attributes a category admits", () => {
     // The values are derived from the schema; the display names are not,
     // and cannot be — "synthetic" is a contract value, "Synthetic" is
     // English. A missing one renders as an empty row that still selects a
-    // real value, which no value assertion would catch. The leading em
-    // dash is the "not saying" option, which is a real answer here.
+    // real value, which no value assertion would catch. The leading "Not
+    // set" is the "not saying" option, which is a real answer here.
     renderForm();
 
-    expect(optionLabels("Layer")).toStrictEqual(["—", "Base", "Mid", "Outer"]);
+    expect(optionLabels("Layer")).toStrictEqual([
+      "Not set",
+      "Base",
+      "Mid",
+      "Outer",
+    ]);
     expect(optionLabels("Weight")).toStrictEqual([
-      "—",
+      "Not set",
       "Light",
       "Mid",
       "Heavy",
     ]);
     expect(optionLabels("Fabric")).toStrictEqual([
-      "—",
+      "Not set",
       "Synthetic",
       "Merino",
       "Cotton",
@@ -774,10 +779,10 @@ describe("GarmentForm: no product link for v1 (round 22, item 17)", () => {
     expect(selectFor("Fabric").options[0]?.textContent).toBe("Merino");
   });
 
-  it("reads a dash for the empty choice where the product lends nothing", () => {
+  it("reads Not set for the empty choice where the product lends nothing", () => {
     renderForm({ initial: { name: "Harrier", category: "top" } });
 
-    expect(selectFor("Weight").options[0]?.textContent).toBe("—");
+    expect(selectFor("Weight").options[0]?.textContent).toBe("Not set");
   });
 
   it("keeps a stored link, untouched, through an edit", async () => {

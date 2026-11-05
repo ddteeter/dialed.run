@@ -217,14 +217,16 @@ test("an operator opens the Desk and reads Today", async ({
 
   await scene(page, "Review carries the count that needs a person");
   await expect(
-    rail.getByRole("link", { name: `Review ${waiting}` }),
+    rail.getByRole("link", { name: `Review ${waiting} waiting` }),
   ).toBeVisible();
 
   await scene(page, "D-87's rail: Today, Review, Access, Duplicates, Runners");
   await expect(
-    rail.getByRole("link", { name: `Today ${String(gaveUpCount)}` }),
+    rail.getByRole("link", { name: `Today ${String(gaveUpCount)} gave up` }),
   ).toBeVisible();
-  await expect(rail.getByText("Gave up")).toHaveCount(0);
+  // No "Gave up" entry of its own: Today's count is it. The count's
+  // " gave up" is sr-only words, lower case, so only an entry matches.
+  await expect(rail.getByText("Gave up", { exact: true })).toHaveCount(0);
 
   await scene(page, "Gave up: two newest jobs, the rest one press away");
   const gave = page.getByRole("region", { name: "Gave up" });

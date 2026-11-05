@@ -5,7 +5,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -140,6 +140,13 @@ describe("NotificationList · the rows", () => {
     expect(read?.firstElementChild).not.toHaveClass("bg-action");
     // The kept width is the dot's own shape and nothing else.
     expect(read?.firstElementChild?.classList).toHaveLength(5);
+    // The row's colour and the dot say "unread" to the eye only.
+    expect(within(unread ?? document.body).getByText("Unread")).toHaveClass(
+      "sr-only",
+    );
+    expect(
+      within(read ?? document.body).queryByText("Unread"),
+    ).not.toBeInTheDocument();
   });
 
   it("offers Mark all read only while something is unread", async () => {

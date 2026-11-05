@@ -214,6 +214,18 @@ describe("the index (U1/N)", () => {
     );
     expect(row(/^Units/u)).toHaveTextContent(/›$/u);
     expect(row(/^Units/u)).not.toHaveTextContent("Answer");
+    // The "›" is drawn, not said: the verb stays in the name, the glyph
+    // leaves it.
+    expect(calibration).toHaveAccessibleName("How you run Not answered Answer");
+    expect(row(/^Units/u)).toHaveAccessibleName(/[^›]$/u);
+    expect(within(calibration).getByText("›")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(within(row(/^Units/u)).getByText("›")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
   });
 
   it("puts the caller's sign-out at the foot", async () => {

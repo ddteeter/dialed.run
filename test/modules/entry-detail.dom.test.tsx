@@ -203,11 +203,11 @@ describe("EntryDetail: the heading", () => {
   });
 
   it("goes back to the feed from the header's own slot", async () => {
-    await renderFeedScreen(detail());
-    expect(screen.getByRole("link", { name: "Back to feed" })).toHaveAttribute(
-      "href",
-      "/feed",
-    );
+    // Under /feed, where the router would call a prefix match current.
+    await renderFeedScreen(detail(), "/feed/entry/01ENTRY");
+    const back = screen.getByRole("link", { name: "Back to feed" });
+    expect(back).toHaveAttribute("href", "/feed");
+    expect(back).not.toHaveAttribute("aria-current");
   });
 });
 
@@ -216,9 +216,18 @@ describe("EntryDetail: the run strip", () => {
     await renderFeedScreen(detail());
 
     const strip = part("run-strip");
-    expect(strip).toHaveTextContent("Tue Aug 12 · 6:30 AM5.0mi8:40 /mi");
+    expect(strip).toHaveTextContent(
+      "Tue Aug 12 · 6:30 AM5.0mi8:40 /mi8 minutes 40 seconds per mile",
+    );
     expect(screen.getByText("5.0mi")).toHaveClass("font-mono", "text-mono-lg");
-    expect(screen.getByText("8:40 /mi")).toHaveClass("font-mono", "text-quiet");
+    // The pace is drawn as the board draws it and said in words: "8:40
+    // /mi" reads as "eight forty slash m i".
+    const pace = screen.getByText("8:40 /mi");
+    expect(pace).toHaveAttribute("aria-hidden", "true");
+    expect(pace.parentElement).toHaveClass("font-mono", "text-quiet");
+    expect(screen.getByText("8 minutes 40 seconds per mile")).toHaveClass(
+      "sr-only",
+    );
   });
 
   it("leaves pace out of a run with no distance — no empty cell for it", async () => {
@@ -474,6 +483,8 @@ describe("EntryDetail: the note, the kit and the tags", () => {
       "font-mono",
       "text-label",
     );
+    // The brackets are drawn, not said (D-150).
+    expect(drawnOnly(bracketed("Generic"))).toStrictEqual(["[", "]"]);
   });
 
   it("puts a flag at the row's end, in words, and Fine shows nothing", async () => {
@@ -492,6 +503,8 @@ describe("EntryDetail: the note, the kit and the tags", () => {
       "font-semibold",
     );
     expect(screen.getByText(bracketed("Not enough"))).toBeVisible();
+    expect(drawnOnly(bracketed("Too much"))).toStrictEqual(["[", "]"]);
+    expect(drawnOnly(bracketed("Not enough"))).toStrictEqual(["[", "]"]);
     const rows = part("kit")?.querySelectorAll("li") ?? [];
     expect(rows[2]).toHaveTextContent(/^Patagonia Tights$/u);
     expect(rows[2]?.children).toHaveLength(1);
@@ -508,6 +521,8 @@ describe("EntryDetail: the note, the kit and the tags", () => {
       "chafed",
     ]);
     expect(chips[0]).toHaveClass("bg-tint");
+    // Named, so the list after Kit says what it is.
+    expect(screen.getByRole("list", { name: "Tags" })).toBe(part("tags"));
   });
 
   it("draws no tag row when no stored word is a tag", async () => {
@@ -515,6 +530,17 @@ describe("EntryDetail: the note, the kit and the tags", () => {
     expect(part("tags")).toBeNull();
   });
 });
+
+/**
+ * What a bracketed mark hides from a reader: its `aria-hidden` children's
+ * text.
+ */
+function drawnOnly(mark: ReturnType<typeof bracketed>): string[] {
+  const element = screen.getByText(mark);
+  return [...element.querySelectorAll('[aria-hidden="true"]')].map(
+    (hidden) => hidden.textContent,
+  );
+}
 
 describe("EntryDetail: Useful and Report", () => {
   it("leaves both off the runner's own entry — they are what others say", async () => {
@@ -541,6 +567,17 @@ describe("EntryDetail: Useful and Report", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "Not marked. Your connection dropped.",
     );
+  });
+
+  it("is named as drawn on one entry, count first and no owner", async () => {
+    await renderFeedScreen(detail({ usefulCount: 11 }));
+    const useful = screen.getByRole("button", { name: "11 Useful" });
+    expect(useful).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("names no zero on one entry nobody has marked", async () => {
+    await renderFeedScreen(detail({ usefulCount: 0 }));
+    expect(screen.getByRole("button", { name: "Useful" })).toBeVisible();
   });
 
   it("says nothing in its status region until something happens", async () => {
@@ -618,8 +655,13 @@ describe("EntryDetail: the owner meta (round 41 #86a)", () => {
   it("says who the runner's own kit is for, bracketed in ink, and nothing more unless it is public", async () => {
     await renderFeedScreen(detail({}, { viewerId: OWNER }));
     const meta = part("owner-meta");
-    expect(meta).toHaveTextContent(/^\[Shared\]$/u);
-    expect(meta?.firstElementChild).toHaveClass("text-ink", "text-mono-xs");
+    expect(meta).toHaveTextContent(/^Seen by: \[Shared\]$/u);
+    // A reader hears what the label is the state of; the eye sees it bare.
+    expect(screen.getByText("Seen by:")).toHaveClass("sr-only");
+    expect(meta?.firstElementChild?.lastElementChild).toHaveClass(
+      "text-ink",
+      "text-mono-xs",
+    );
     expect(screen.queryByText(PUBLIC_KIT_LINE)).toBeNull();
     expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
   });
@@ -628,10 +670,10 @@ describe("EntryDetail: the owner meta (round 41 #86a)", () => {
     const { unmount } = await renderFeedScreen(
       detail({ audience: "private" }, { viewerId: OWNER }),
     );
-    expect(part("owner-meta")).toHaveTextContent(/^\[Private\]$/u);
+    expect(part("owner-meta")).toHaveTextContent(/^Seen by: \[Private\]$/u);
     unmount();
     await renderFeedScreen(detail({ audience: "groups" }, { viewerId: OWNER }));
-    expect(part("owner-meta")).toHaveTextContent(/^\[Private\]$/u);
+    expect(part("owner-meta")).toHaveTextContent(/^Seen by: \[Private\]$/u);
   });
 
   it("is not on anyone else's view of the kit", async () => {
@@ -644,7 +686,7 @@ describe("EntryDetail: the owner meta (round 41 #86a)", () => {
     await renderFeedScreen(detail({ audience: "world" }, { viewerId: OWNER }));
     const meta = part("owner-meta");
     expect(meta).toHaveTextContent(
-      "[Public]Public: anyone with the link can see it.Copy linkChange",
+      "Seen by: [Public]Public: anyone with the link can see it.Copy linkChange",
     );
     expect(screen.getByRole("link", { name: "Change" })).toHaveAttribute(
       "href",
