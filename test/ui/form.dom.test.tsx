@@ -2113,6 +2113,20 @@ describe("ChoiceList", () => {
       "thermal-message",
     );
   });
+
+  it("keeps an id `field()` names beyond the message, ahead of the option's", () => {
+    // A caller's own extra id, such as a counter, is not the field's
+    // sentence, so nothing else would say it.
+    renderDescribed({ describedBy: "thermal-counter" });
+    expect(radioNamed("Runs cold")).toHaveAttribute(
+      "aria-describedby",
+      "thermal-counter cold-line",
+    );
+    expect(radioNamed("Runs hot")).toHaveAttribute(
+      "aria-describedby",
+      "thermal-counter",
+    );
+  });
 });
 
 /**

@@ -87,6 +87,8 @@ describe("R: a run before its kit", () => {
     const strip = region("run-strip");
     expect(within(strip).queryByText(/\/mi/u)).toBeNull();
     expect(within(strip).queryByText(/per mile/u)).toBeNull();
+    // Not even an empty said half for a reader to land on.
+    expect(strip.querySelector(".sr-only")).toBeNull();
   });
 
   it("names a run entered by hand as the board does, and dates it in UTC with no zone", async () => {

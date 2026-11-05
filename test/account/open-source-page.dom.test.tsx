@@ -445,6 +445,24 @@ describe("OpenSourcePage", () => {
     expect(search()).toHaveFocus();
   });
 
+  it("leaves focus in the search box when an opened group comes back from a search that hid it", async () => {
+    const user = userEvent.setup();
+    await renderPage([
+      {
+        ...MIT,
+        pieces: ["a1", "a2", "a3", "a4", "a5"].map((name) => ({ name })),
+      },
+    ]);
+    await user.click(screen.getByRole("button", { name: "Show all 5" }));
+    await user.type(search(), "zzz");
+    expect(screen.queryByRole("heading", { level: 2, name: "MIT" })).toBeNull();
+
+    // The group mounts afresh, open: nobody pressed its Show all.
+    await user.clear(search());
+    expect(rowNames("MIT")).toEqual(["a1", "a2", "a3", "a4", "a5"]);
+    expect(search()).toHaveFocus();
+  });
+
   it("says so when nothing matches, and only then", async () => {
     const user = userEvent.setup();
     await renderPage();

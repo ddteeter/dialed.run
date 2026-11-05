@@ -263,6 +263,12 @@ describe("TapListForm", () => {
     expect(
       screen.getByText("Tap what you own, or skip for now."),
     ).toBeVisible();
+    // Heard on every row it is about, not only seen under them.
+    for (const row of screen.getAllByRole("checkbox")) {
+      expect(row).toHaveAccessibleDescription(
+        "Tap what you own, or skip for now.",
+      );
+    }
   });
 
   it("clears that sentence on the tap it asked for", async () => {

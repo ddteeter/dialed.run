@@ -1255,6 +1255,11 @@ describe("A1: the parsed card", () => {
       "aria-describedby",
       "time-message",
     );
+    // The field the message is about is the one marked failing.
+    expect(screen.getByLabelText("Start time")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
     expect(retime).not.toHaveBeenCalled();
   });
 
@@ -1735,6 +1740,59 @@ describe("A1 tells a screen reader each outcome, once (a11y audit M2)", () => {
     await screen.findByText("Already logged");
 
     expect(told()).toHaveTextContent(/^Already logged\.$/u);
+  });
+
+  it("says nothing is logged already when the duplicate's run cannot be read", async () => {
+    const user = setupUser();
+    const getOutcome = vi.fn<GetOutcome>(() =>
+      Promise.resolve(outcome({ status: "duplicate", run: undefined })),
+    );
+    await renderWithRouter(form({ getOutcome }));
+    const heard = hearing();
+
+    await user.upload(dropInput(), gpx("MORNING_RUN.GPX"));
+    await waitFor(() => {
+      expect(getOutcome).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(well()).not.toHaveAttribute("data-state", "uploading");
+    });
+    // The well drew the answer; what it says runs in an effect after.
+    await act(() => Promise.resolve());
+
+    // No receipt is drawn, so none is said.
+    expect(screen.queryByText("Already logged")).toBeNull();
+    expect(told()).not.toHaveTextContent("Already logged");
+    // The observer's records arrive a microtask late; take them first.
+    await Promise.resolve();
+    heard.stop();
+    expect(heard.said).toStrictEqual(["Reading MORNING_RUN.GPX."]);
+  });
+
+  it("says a failure as a failure, even with a run beside it", async () => {
+    const user = setupUser();
+    await renderWithRouter(
+      form({
+        getOutcome: () =>
+          Promise.resolve(
+            outcome({
+              status: "failed",
+              failureReason: NO_TRACK_MESSAGE,
+              run: runSummary(),
+            }),
+          ),
+      }),
+    );
+
+    await user.upload(dropInput(), gpx("MORNING_RUN.GPX"));
+    await screen.findByText(
+      "MORNING_RUN.GPX has no track in it. Export the run again.",
+      ON_SCREEN,
+    );
+
+    expect(told()).toHaveTextContent(
+      /^MORNING_RUN\.GPX has no track in it\. Export the run again\.$/u,
+    );
   });
 
   it("says why a file would not parse, as the well does", async () => {

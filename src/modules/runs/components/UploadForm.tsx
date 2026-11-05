@@ -400,13 +400,8 @@ function heardOf(
   isStalled: boolean,
   names: { said: string; strip: string },
 ): Heard {
-  const run = data?.run;
-  if (run !== undefined && data?.status === "done") {
-    return { file: `Parsed ${names.strip}.`, weather: weatherSaid(run) };
-  }
-  if (run !== undefined && data?.status === "duplicate") {
-    return { file: "Already logged.", weather: undefined };
-  }
+  // Reading first: neither status it waits on is "done" or "duplicate",
+  // so the order changes nothing, and past it there is always an answer.
   if (data === undefined || isReading(data.status)) {
     return {
       file: isStalled
@@ -414,6 +409,13 @@ function heardOf(
         : `Reading ${names.said}.`,
       weather: undefined,
     };
+  }
+  const { run } = data;
+  if (run !== undefined && data.status === "done") {
+    return { file: `Parsed ${names.strip}.`, weather: weatherSaid(run) };
+  }
+  if (run !== undefined && data.status === "duplicate") {
+    return { file: "Already logged.", weather: undefined };
   }
   return {
     file:

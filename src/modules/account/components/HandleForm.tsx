@@ -151,11 +151,9 @@ export function HandleForm({
         <AtMark />
         <input
           {...field}
-          aria-describedby={describedByFor(
-            "username",
-            { hint, error },
-            field["aria-describedby"],
-          )}
+          // Its hint or its message, whichever shows: `field`'s own
+          // pointer is only ever that message's id, so it is not passed on.
+          aria-describedby={describedByFor("username", { hint, error })}
           id="username"
           type="text"
           autoComplete="username"

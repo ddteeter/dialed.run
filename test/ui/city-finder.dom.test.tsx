@@ -108,6 +108,7 @@ describe("CityFinder", () => {
     // points at no message.
     expect(field()).not.toHaveAttribute("aria-invalid");
     expect(field()).toHaveAccessibleDescription(CITY_HINT);
+    expect(field()).toHaveAttribute("aria-describedby", `${field().id}-hint`);
   });
 
   it("finds once, shows the provider's place, and uses nothing until Use this", async () => {
@@ -207,6 +208,10 @@ describe("CityFinder", () => {
     // And the hint steps aside for it, in the description too.
     expect(screen.queryByText(CITY_HINT)).toBeNull();
     expect(field()).toHaveAccessibleDescription(message);
+    expect(field()).toHaveAttribute(
+      "aria-describedby",
+      `${field().id}-message`,
+    );
   });
 
   it("shows the NOT FOUND YET band when the lookup fails, and Try again asks again", async () => {

@@ -98,12 +98,13 @@ export function AuthPage(
   const band = authFailure(form.failure, cause);
   // Item 23: "D4's band on Au1, over the empty form". Neither the form's
   // band nor Google's speaks for it — there is nothing to try again — so
-  // the status region says the notice's own words.
+  // the status region says the notice's own words. A closed account never
+  // has a band beside it: the ban gate's refusal draws none, and Google's
+  // closed return is cleared by the submit any band would come from.
   const isClosed = google.closed || isAccountClosed(form.failure, cause);
-  const said =
-    band === undefined && isClosed
-      ? CLOSED_SAID
-      : authStatus({ status: form.status, band, google: google.failure });
+  const said = isClosed
+    ? CLOSED_SAID
+    : authStatus({ status: form.status, band, google: google.failure });
 
   return (
     <SignedOutPanel heading={heading} notice={props.notice}>

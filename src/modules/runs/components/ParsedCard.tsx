@@ -289,11 +289,9 @@ function StartTimeRow({
       <FormField name="time" label="Start time" hint={hint} error={error}>
         <input
           {...field}
-          aria-describedby={describedByFor(
-            "time",
-            { hint, error },
-            field["aria-describedby"],
-          )}
+          // Its hint or its message, whichever shows: `field`'s own
+          // pointer is only ever that message's id, so it is not passed on.
+          aria-describedby={describedByFor("time", { hint, error })}
           ref={focusOnMount}
           id="time"
           type="time"
