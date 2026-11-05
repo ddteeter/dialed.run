@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #16161A; -webkit-font-smoothing: antialiased; }
+  a { color: #FF2D8A; text-decoration: none; }
+  a:hover { color: #F5FF3D; }
+</style>
+</helmet>
+<div style="font-family: Archivo, Helvetica, sans-serif; background: #16161A; color: #F4F3EF; padding: 48px 40px 88px;">
+  <div style="max-width: 1420px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px;">
+
+    <div style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #2A2A31;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B93;">
+        <span>Round 45 &nbsp;/&nbsp; design deltas 99–103 · 107</span>
+        <span style="color: #FF2D8A;">dialed.run</span>
+      </div>
+      <h1 style="font-family: 'Archivo Black', sans-serif; font-size: clamp(34px, 5vw, 62px); line-height: 0.94; letter-spacing: -0.03em; margin: 0; max-width: 1120px; text-transform: uppercase;">Say what was lost. Don't offer what can't be judged.</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #8B8B93; max-width: 860px; text-wrap: pretty;">Four confirmed with copy edits, two changed: 100's file-missing bar loses Remove and CSAM (there's nothing to look at), and 107 takes the bar's place with a Cancel. Desk buttons follow round 44 (104, 105), which outranks "quiet text button" in 100's entry. Every value is from tokens.js / T1. Text of record: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px;">docs/design-deltas.md</span> · Round 45.</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em;">
+        <a href="#r99" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">99 · Au7</a>
+        <a href="#r100" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">100 · Pending a day</a>
+        <a href="#r101" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">101 · Holds paused</a>
+        <a href="#r102" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">102 · Match grid</a>
+        <a href="#r103" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">103 · Held in the last day</a>
+        <a href="#r107" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">107 · Decline</a>
+        <a href="#rulings" style="border: 1px solid #3A3A42; color: #F4F3EF; padding: 7px 12px; border-radius: 100px;">Rulings</a>
+      </div>
+    </div>
+
+    <div id="r99" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">99 · Au7 · signed out</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 860px; line-height: 1.45;"><strong style="color: #F4F3EF;">Redrawn to the built sentences. Confirmed.</strong> The old board promised a restored form the build never had. Rule AC2b again: the notice now says only what happens.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <sc-for list="{{ au7 }}" as="a" hint-placeholder-count="2">
+          <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ a.tag }}</span>
+            <div data-screen-label="Au7 signed out r45" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 24px 20px; display: flex; flex-direction: column; gap: 14px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">SIGNED OUT</span>
+              <p style="margin: 0; font-size: 16px; line-height: 1.5; text-wrap: pretty;">{{ a.s1 }} What you typed wasn't kept.</p>
+              <span style="height: 52px; border-radius: 100px; background: #FF2D8A; color: #0B0B0E; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700;">Log in</span>
+            </div>
+            <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 390px; text-wrap: pretty;">{{ a.note }}</p>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div id="r100" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">100 · A photo pending a day</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 860px; line-height: 1.45;"><strong style="color: #F4F3EF;">Tags and why-here lines confirmed. The file-missing bar is Clear photo only, as the chalk pill.</strong> An operator can't Remove what they can't see, and with no file there's no evidence to keep, so Remove as suspected CSAM would make a promise the build can't keep. The unscreened row keeps the full bar.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <sc-for list="{{ pend }}" as="p" hint-placeholder-count="2">
+          <div style="flex: 1 1 520px; max-width: 640px; display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ p.tag }}</span>
+            <div data-screen-label="Review pending a day r45" style="background: #16161B; border: 1px solid #24242B;">
+              <div style="display: flex; justify-content: space-between; padding: 12px 18px; border-bottom: 1px solid #24242B; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; gap: 12px; flex-wrap: wrap;"><span style="color: #F4F3EF;">{{ p.kicker }} <span style="color: #8B8B93;">{{ p.src }}</span></span><span style="color: #8B8B93;">1D</span></div>
+              <div style="padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+                <sc-if value="{{ p.hasPhoto }}" hint-placeholder-val="{{ true }}"><div style="width: 200px; height: 200px; background: #24242B;"></div></sc-if>
+                <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #DEDDD6; max-width: 560px; text-wrap: pretty;">{{ p.why }}</p>
+                <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; border-top: 1px solid #24242B; padding-top: 14px;">
+                  <sc-for list="{{ p.btns }}" as="b" hint-placeholder-count="3"><span style="height: 44px; padding: 0 18px; border-radius: 100px; background: {{ b.bg }}; color: {{ b.fg }}; border: 1px solid #F4F3EF; display: flex; align-items: center; font-size: 15px; font-weight: 700;">{{ b.t }}</span></sc-for>
+                </div>
+              </div>
+            </div>
+            <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 640px; text-wrap: pretty;">{{ p.note }}</p>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <sc-for list="{{ bells }}" as="b" hint-placeholder-count="2">
+          <div style="flex: 0 0 390px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ b.tag }}</span>
+            <div data-screen-label="Bell clear photo r45" style="width: 390px; max-width: 100%; background: #F4F3EF; color: #0B0B0E; border-radius: 12px; padding: 14px 20px; display: flex; flex-direction: column; gap: 4px;">
+              <span style="font-size: 15px; line-height: 1.45; text-wrap: pretty;">{{ b.t }}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #6E6E64;">2H</span>
+            </div>
+          </div>
+        </sc-for>
+        <p data-annotation="" style="flex: 1 1 300px; max-width: 460px; margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">Run notice: dropped "off your kit". The photo is on the run, and saying kit there mixes two things. Garment notice: "the photo of one of your garments", matching round 42 #88's bell. Bell only, no email: nothing broke a rule. The run row opens the run; the garment row opens F.</p>
+      </div>
+    </div>
+
+    <div id="r101" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">101 · D0 · holds paused</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 860px; line-height: 1.45;"><strong style="color: #F4F3EF;">Composition and copy confirmed.</strong> One line per tripped cause, under the three numbers, above OPS-11's line, no button. Each sentence follows the same pattern: what stopped, then what happens instead.</span>
+      </div>
+      <div style="flex: 1 1 640px; max-width: 760px; display: flex; flex-direction: column; gap: 10px;">
+        <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">101 · D0 TODAY · ONE BREAKER TRIPPED</span>
+        <div data-screen-label="D0 holds paused r45" style="background: #0B0B0E; border: 1px solid #24242B; padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+          <span style="font-size: 13px; color: #8B8B93;">(the three numbers as built)</span>
+          <div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #24242B; padding-top: 16px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #F5FF3D; font-weight: 600;">HOLDS PAUSED</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #F4F3EF; max-width: 620px; text-wrap: pretty;">Reports hid 12 posts in the last hour, the most they hide in one hour. New ones go to Review without being hidden until the hour clears.</p>
+          </div>
+          <span style="font-size: 13px; color: #8B8B93;">(OPS-11's line, when present, as built)</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="r102" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">102 · Match grid · 12+ and many runners</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 860px; line-height: 1.45;"><strong style="color: #F4F3EF;">Both confirmed, plus one rule: the runner count is a floor too.</strong> If the search stopped at 12, it reads "4+ runners", so a count that wasn't finished never looks like a total.</span>
+      </div>
+      <div style="flex: 1 1 640px; max-width: 760px; display: flex; flex-direction: column; gap: 10px;">
+        <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">102 · D1 · MATCHING PHOTOS · OVER 12 · OVER 3 RUNNERS</span>
+        <div data-screen-label="D1 match grid warning r45" style="background: #16161B; border: 1px solid #24242B; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #8B8B93;">MATCHING PHOTOS · ANY RUNNER · 12+</span>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #F5FF3D; font-weight: 600;">PHOTOS FROM 5+ RUNNERS MATCH</span>
+            <p style="margin: 0; font-size: 13px; line-height: 1.45; color: #DEDDD6; max-width: 560px; text-wrap: pretty;">A picture this common may not be one person's. Removed as intimate, it would hold every later upload that looks like it.</p>
+          </div>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="4"><div style="width: 128px; height: 128px; background: #24242B;"></div></sc-for>
+          </div>
+          <span style="font-size: 13px; color: #8B8B93;">(row's decision bar, as built)</span>
+        </div>
+        <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 760px; text-wrap: pretty;">The warning sits between the kicker and the grid, so it's read before the tiles. It shows on every row whose grid carries it, not only intimate-reason rows: any Remove as intimate keeps the fingerprint (D-147). It never blocks or changes the bar.</p>
+      </div>
+    </div>
+
+    <div id="r103" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">103 · Held in the last day</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 860px; line-height: 1.45;"><strong style="color: #F4F3EF;">Confirmed, with one line of the body reworded and the end states drawn.</strong> "Anyone an Approve tells is told" becomes "whoever Approve would tell is told". The sheet can't close mid-batch, and stopping is drawn.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <div style="flex: 1 1 520px; max-width: 640px; display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">103 · TOP OF /desk/review</span>
+          <div data-screen-label="Review held last day r45" style="background: #0B0B0E; border: 1px solid #24242B; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;"><span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em;">Review</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">[41 WAITING · 2 DECIDED TODAY]</span></div>
+            <div style="display: flex; flex-direction: column; border-top: 1px solid #24242B;">
+              <sc-for list="{{ held }}" as="h" hint-placeholder-count="2">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 44px; border-bottom: 1px solid #24242B; flex-wrap: wrap;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #DEDDD6;">{{ h.l }}</span><span style="font-size: 15px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; min-height: 44px; display: flex; align-items: center;">{{ h.a }}</span></div>
+              </sc-for>
+            </div>
+            <span style="font-size: 13px; color: #8B8B93;">(rows as built)</span>
+          </div>
+        </div>
+        <sc-for list="{{ sheets }}" as="s" hint-placeholder-count="3">
+          <div style="flex: 0 0 360px; max-width: 100%; display: flex; flex-direction: column; gap: 10px;">
+            <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">{{ s.tag }}</span>
+            <div data-screen-label="Approve all sheet r45" style="width: 360px; max-width: 100%; background: #16161B; border: 1px solid #3A3A42; border-radius: 12px; padding: 22px; display: flex; flex-direction: column; gap: 14px;">
+              <span style="font-family: 'Archivo Black', sans-serif; font-size: 22px; line-height: 1.1; letter-spacing: -0.02em;">Approve 120 fingerprint holds?</span>
+              <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #DEDDD6; text-wrap: pretty;">Each one is approved as if you'd pressed Approve on it: it goes back where an Approve puts it, and whoever Approve would tell is told. Use this when a bug held them, not to skip looking.</p>
+              <sc-if value="{{ s.band }}" hint-placeholder-val="{{ false }}"><div style="border: 1px solid #F5FF3D; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #F5FF3D; font-weight: 600;">STOPPED</span><span style="font-size: 14px; line-height: 1.45;">Approved 50 of 120. The other 70 are still waiting.</span></div></sc-if>
+              <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+                <span style="height: 44px; padding: 0 18px; border-radius: 100px; background: #F4F3EF; color: #0B0B0E; display: flex; align-items: center; font-size: 15px; font-weight: 700; opacity: {{ s.op }};">{{ s.primary }}</span>
+                <span style="height: 44px; padding: 0 18px; border-radius: 100px; border: 1px solid #F4F3EF; display: flex; align-items: center; font-size: 15px; font-weight: 700; outline: {{ s.focus }}; outline-offset: 3px;">{{ s.second }}</span>
+              </div>
+            </div>
+            <p data-annotation="" style="margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; max-width: 360px; text-wrap: pretty;">{{ s.note }}</p>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div id="r107" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <div style="display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap;">
+        <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">107 · Decline, once pressed</span>
+        <span style="font-size: 16px; color: #8B8B93; max-width: 860px; line-height: 1.45;"><strong style="color: #F4F3EF;">Yes to both: it takes the bar's place, as Block's question does, and Cancel goes back to the bar.</strong> With Take it down still beside an open decline, one row offered two opposite decisions at once.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+        <div style="flex: 1 1 520px; max-width: 640px; display: flex; flex-direction: column; gap: 10px;">
+          <span data-annotation="" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #8B8B93;">107 · D1 · TAKEDOWN REQUEST · DECLINE OPEN</span>
+          <div data-screen-label="D1 decline open r45" style="background: #16161B; border: 1px solid #24242B; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+            <span style="font-size: 13px; color: #8B8B93;">(request content as built)</span>
+            <div style="display: flex; flex-direction: column; gap: 12px; border-top: 1px solid #24242B; padding-top: 14px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: #F4F3EF;">DECLINE THIS REQUEST</span>
+              <span style="font-size: 13px; color: #8B8B93;">(§4a band here, on a failed submit)</span>
+              <div style="display: flex; flex-direction: column; gap: 6px; max-width: 480px;">
+                <span style="font-size: 14px; font-weight: 600;">Why not</span>
+                <div style="height: 88px; border: 1px solid #3A3A42; background: #0B0B0E; outline: 2px solid #F4F3EF; outline-offset: 2px;"></div>
+                <span style="font-size: 13px; line-height: 1.45; color: #8B8B93;">The person who asked is sent this.</span>
+              </div>
+              <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
+                <span style="height: 44px; padding: 0 18px; border-radius: 100px; background: #F4F3EF; color: #0B0B0E; display: flex; align-items: center; font-size: 15px; font-weight: 700;">Decline</span>
+                <span style="height: 44px; display: flex; align-items: center; font-size: 15px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;">Cancel</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p data-annotation="" style="flex: 1 1 300px; max-width: 460px; margin: 0; font-size: 13px; line-height: 1.5; color: #8B8B93; text-wrap: pretty;">Open: focus to the Why not field. Cancel (or Esc in the field) puts the full bar back (Take it down · Decline · Block and decline all) and returns focus to Decline. What was typed is kept until the row is decided or the page reloads, so a slip doesn't cost the operator their words. Submit: the row leaves, as any decision.</p>
+      </div>
+    </div>
+
+    <div id="rulings" style="display: flex; flex-direction: column; gap: 28px; padding-top: 24px; border-top: 1px solid #2A2A31;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 30px; letter-spacing: -0.02em; text-transform: uppercase;">Rulings · Round 45</span>
+      <div style="display: flex; flex-direction: column; border: 1px solid #2A2A31;">
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="10">
+          <div style="display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 170px) minmax(0, 1fr); gap: 20px; padding: 14px 16px; border-top: 1px solid #2A2A31; background: #0B0B0E; align-items: baseline;">
+            <span style="font-size: 15px; font-weight: 600;">{{ r.q }}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: {{ r.vc }};">{{ r.v }}</span>
+            <span style="font-size: 14px; line-height: 1.55; color: #DEDDD6; text-wrap: pretty;">{{ r.a }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const au7 = [
+      { tag: '99 · AU7 · RUN, GARMENT, SETTINGS FORMS', s1: 'Log in and you\'re back on your run.', note: 'Garment and settings forms say "your garment" / "your settings". After Log in, the runner lands on the form\'s page as a fresh form; nothing re-submits.' },
+      { tag: '99 · AU7 · EVERY OTHER SIGNED-IN FORM', s1: 'Log in and you\'re back where you were.', note: 'Onboarding steps, a report, the Desk\'s forms. Same return: the page, a fresh form, nothing re-submitted. On the Desk, the notice sits on the ink ground with the Desk\'s chalk pill (104).' },
+    ];
+    const chalk = { bg: '#F4F3EF', fg: '#0B0B0E' }, out = { bg: 'transparent', fg: '#F4F3EF' };
+    const pend = [
+      { tag: '100 · [NOT SCREENED IN A DAY]', kicker: 'PHOTO · ph_2m9q · @k_lopes', src: '[not screened in a day]', hasPhoto: true,
+        why: 'Uploaded over a day ago and still not screened: the classifier has not answered for it. Nobody but its owner sees it while it waits.',
+        btns: [{ t: 'Remove', ...chalk }, { t: 'Approve', ...out }, { t: 'Remove as suspected CSAM', ...out }], note: 'The full photo bar, unchanged. The operator is the screen now.' },
+      { tag: '100 · [FILE MISSING]', kicker: 'GARMENT PHOTO · gp_5t0a · @j_runs', src: '[file missing]', hasPhoto: false,
+        why: 'Uploaded over a day ago, and its file is not in storage, so it cannot be screened or shown. Nobody but its owner sees it while it waits.',
+        btns: [{ t: 'Clear photo', ...chalk }], note: 'No photo slot. Clear photo is the only action, so it is the chalk pill (104). No Why it comes down: nothing is being judged.' },
+    ];
+    const bells = [
+      { tag: '100 · BELL · RUN PHOTO', t: 'We couldn\'t find the file for a photo on your run, so we took it off. Add it again if you\'d like it there.' },
+      { tag: '100 · BELL · GARMENT PHOTO', t: 'We couldn\'t find the file for the photo of one of your garments, so we took it off. Add it again from your Closet if you\'d like it there.' },
+    ];
+    const tiles = [1, 2, 3, 4];
+    const held = [{ l: 'FINGERPRINT MATCHES · 120 WAITING', a: 'Approve all 120' }, { l: 'REPORT HOLDS · 6 WAITING', a: 'Approve all 6' }];
+    const sheets = [
+      { tag: '103 · SHEET · OPEN', primary: 'Approve all', second: 'Keep it', op: 1, focus: '2px solid #F4F3EF', band: false, note: 'Round 22\'s grammar; Keep it focused. The count is the line\'s count when it opened.' },
+      { tag: '103 · SHEET · WORKING', primary: 'Approved 50 of 120', second: 'Stop', op: 0.6, focus: 'none', band: false, note: '"Approving", then "Approved 50 of 120" after each batch. Keep it becomes Stop: it finishes the batch in flight, then stops. Esc and the scrim do nothing while it works.' },
+      { tag: '103 · SHEET · STOPPED OR FAILED', primary: 'Approve the rest', second: 'Keep it', op: 1, focus: '2px solid #F4F3EF', band: true, note: 'After Stop, or a failed batch (§4a, kicker NOT FINISHED instead). Finished: the sheet closes, the line leaves, and focus goes to the next line or the heading.' },
+    ];
+    const C = '#00E0C6', A = '#F5FF3D', D = '#FF2D8A';
+    const R = (q, v, a) => ({ q, v, a, vc: v.startsWith('CONFIRM') ? C : v.startsWith('DRAWN') || v.startsWith('REDRAWN') ? D : A });
+    const rows = [
+      R('99 · Au7', 'REDRAWN', '"Log in and you\'re back on your run / your garment / your settings. What you typed wasn\'t kept." Generic: "Log in and you\'re back where you were. What you typed wasn\'t kept." Annotation: returns to the page, fresh form, nothing re-submits. "Lands on the filled form" dropped.'),
+      R('100 · Tags + lines', 'CONFIRMED', '[not screened in a day] / [file missing]; both why-here lines verbatim. File-missing row draws no photo.'),
+      R('100 · Bars', 'RULED', 'Not screened: full photo bar. File missing: Clear photo only, chalk pill (104). Remove and CSAM dropped, since nothing can be judged or kept.'),
+      R('100 · Notices', 'RULED', 'Run: "We couldn\'t find the file for a photo on your run, so we took it off. Add it again if you\'d like it there." Garment: "We couldn\'t find the file for the photo of one of your garments, so we took it off. Add it again from your Closet if you\'d like it there." Bell only.'),
+      R('101 · Holds paused', 'CONFIRMED · DRAWN', 'Hi-viz MONO.xs HOLDS PAUSED over one text-body sentence, one per cause, under the numbers, above OPS-11. No button. Copy confirmed.'),
+      R('102 · 12+', 'CONFIRMED', 'Count reads 12+ when either list passes its 12.'),
+      R('102 · Many runners', 'CONFIRMED · RULED', 'Over 3 runners: kicker PHOTOS FROM N RUNNERS MATCH between kicker and grid; sentence verbatim. N reads N+ when the search stopped short. Any row, never changes the bar.'),
+      R('103 · Line + sheet', 'CONFIRMED', 'Composition confirmed. Body: "…and whoever Approve would tell is told." Keep it focused.'),
+      R('103 · While working', 'DRAWN', 'Keep it becomes Stop (finishes the batch in flight). No Esc/scrim close. Stopped: STOPPED band "Approved 50 of 120. The other 70 are still waiting." + Approve the rest. Failed: §4a NOT FINISHED, same words. Finished: sheet closes, line leaves.'),
+      R('107 · Decline open', 'RULED · DRAWN', 'Takes the bar\'s place (kicker DECLINE THIS REQUEST, §4a band, Why not, chalk Decline, Cancel). Cancel / Esc restores the bar, focus to Decline; typed reason kept until decided or reload.'),
+    ];
+    return { au7, pend, bells, tiles, held, sheets, rows };
+  }
+}
+</script>
+</body>
+</html>
