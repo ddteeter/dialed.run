@@ -45,7 +45,10 @@ export function DeskForm({
   */
   title?: string | undefined;
   className: string;
-  children: ReactNode;
+  /**
+  The fields, if the form asks for any.
+  */
+  children?: ReactNode;
   /**
   The submit button's words.
   */

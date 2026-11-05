@@ -1,5 +1,5 @@
 import { useId } from "react";
-import type { JSX, ReactNode, Ref, RefObject } from "react";
+import type { ComponentProps, JSX, ReactNode, Ref, RefObject } from "react";
 
 import { Mono } from "./Mono";
 import { describedByFor, hintIdFor, messageIdFor } from "./use-form-submit";
@@ -917,6 +917,48 @@ export const NO_CHOICE = "";
 const NOT_SET = "Not set";
 
 /**
+ * A native `<select>` with the arrow drawn as the text mark ▾, inset to match
+ * the label's padding. Every select in the app is this one, and it sits in a
+ * `FormField` box.
+ *
+ * The box draws the border and the `px-4` inset; the select itself is
+ * borderless and fills the box's full height, so the whole 48px is the
+ * target (plan 161, step 6). Chromium draws its own arrow about 3px inside
+ * the select and ignores the padding, so it never lined up with the label.
+ * `appearance-none` hides the native one, and the ▾ sits at the select's
+ * right edge, which is the box's `px-4`: 16px in from the border, the same
+ * as the label's 16px from the left. `pr-6` keeps a long label from running
+ * under it. The mark is ▾ rather than an icon because design already draws
+ * it: round 28's Desk remove-reason select, the boards' "SORT: MOST DIALED
+ * ▾", and `MoreDisclosure`'s "more".
+ *
+ * The ▾ is `aria-hidden` — the select already says it is a select — and
+ * `pointer-events-none`, so a click on it lands on the select and opens it.
+ * `--muted` has a light and a dark value, so it reads on the Desk too.
+ *
+ * Takes everything a `<select>` takes but `className`: one look, in one
+ * place, is the point.
+ */
+export function Select(
+  props: Readonly<Omit<ComponentProps<"select">, "className">>,
+): JSX.Element {
+  return (
+    <span className="relative flex min-h-target w-full self-stretch">
+      <select
+        {...props}
+        className="min-h-target w-full appearance-none border-none bg-transparent pr-6 font-normal"
+      />
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 right-0 flex items-center text-muted"
+      >
+        ▾
+      </span>
+    </span>
+  );
+}
+
+/**
  * A `<select>` over a set the schema already holds.
  *
  * `GarmentForm` had three of these written out — layer, weight, fabric —
@@ -968,7 +1010,7 @@ export function ChoiceField<TOption extends string>({
   const id = useId();
   return (
     <FormField name={name} id={id} label={label} error={error}>
-      <select
+      <Select
         {...described(field(name, id), id, { hint: undefined, error })}
         id={id}
         value={value}
@@ -978,7 +1020,6 @@ export function ChoiceField<TOption extends string>({
           );
           onChange(picked ?? NO_CHOICE);
         }}
-        className="min-h-target w-full self-stretch border-none bg-transparent font-normal"
       >
         <option value={NO_CHOICE}>{placeholder ?? NOT_SET}</option>
         {options.map((option) => (
@@ -986,7 +1027,7 @@ export function ChoiceField<TOption extends string>({
             {optionLabels[option]}
           </option>
         ))}
-      </select>
+      </Select>
     </FormField>
   );
 }

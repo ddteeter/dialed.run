@@ -10,6 +10,7 @@ import {
   FormField,
   FormStatus,
   LOG_FLOW,
+  Select,
   SubmitButton,
   TextField,
   useFormSubmit,
@@ -233,7 +234,7 @@ export function ManualRunForm({ submitRun }: Readonly<ManualRunFormProps>) {
           label="Effort (optional)"
           error={form.fieldErrors.effort}
         >
-          <select
+          <Select
             {...form.field("effort")}
             id="effort"
             value={effort}
@@ -245,7 +246,6 @@ export function ManualRunForm({ submitRun }: Readonly<ManualRunFormProps>) {
               const { value } = event.target;
               setEffort(isEffort(value) ? value : "");
             }}
-            className="min-h-target w-full self-stretch border-none bg-transparent"
           >
             <option value="">Not set</option>
             {EFFORTS.map((value) => (
@@ -253,7 +253,7 @@ export function ManualRunForm({ submitRun }: Readonly<ManualRunFormProps>) {
                 {value}
               </option>
             ))}
-          </select>
+          </Select>
         </FormField>
         <FormFailureBand
           failure={form.failure}

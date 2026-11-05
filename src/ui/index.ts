@@ -41,6 +41,7 @@ export {
   PendingLabel,
   QUIET_CANCEL,
   QUIET_PILL,
+  Select,
   SubmitButton,
   TextField,
   ToggleField,

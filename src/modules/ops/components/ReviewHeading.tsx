@@ -16,7 +16,11 @@ export function ReviewHeading({
 }>): JSX.Element {
   return (
     <div className="flex flex-wrap items-baseline gap-3">
-      <h1 className="m-0 font-display text-title uppercase">Review</h1>
+      {/* Focusable from script only: where focus lands when the last of
+          Review's "Held in the last day" lines is released (round 45 #103). */}
+      <h1 tabIndex={-1} className="m-0 font-display text-title uppercase">
+        Review
+      </h1>
       <Bracketed step="xs" className="text-muted">
         {`${String(counts.waiting)} waiting · ${String(counts.decidedToday)} decided today`}
       </Bracketed>
