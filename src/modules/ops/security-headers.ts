@@ -136,8 +136,9 @@ export function sentryReportUri(dsn: string | undefined): string | undefined {
     return undefined;
   }
   const project = url.pathname.slice(1);
-  if (project === "" || url.username === "") return undefined;
-  return `${url.protocol}//${url.host}/api/${project}/security/?sentry_key=${url.username}`;
+  return project === "" || url.username === ""
+    ? undefined
+    : `${url.protocol}//${url.host}/api/${project}/security/?sentry_key=${url.username}`;
 }
 
 /**

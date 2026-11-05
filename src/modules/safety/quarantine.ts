@@ -261,9 +261,7 @@ export function preservedKeysOf(snapshot: string): SnapshotKeys {
   return {
     ok: true,
     keys: parsed.data.flatMap((photo) =>
-      photo.preservedKey?.startsWith(prefix) === true
-        ? [photo.preservedKey]
-        : [],
+      photo.preservedKey?.startsWith(prefix) === true ? photo.preservedKey : [],
     ),
   };
 }

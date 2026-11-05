@@ -69,12 +69,14 @@ export function verifyStravaChallenge(
   // string or null and can never equal undefined, so an explicit
   // `=== undefined` arm would be unreachable — but it can equal "", which
   // would make a blank deployment secret match every caller.
-  if (!verifyToken) return undefined;
-  if (searchParams.get("hub.mode") !== "subscribe") return undefined;
-  if (searchParams.get("hub.verify_token") !== verifyToken) return undefined;
+  if (
+    !verifyToken ||
+    searchParams.get("hub.mode") !== "subscribe" ||
+    searchParams.get("hub.verify_token") !== verifyToken
+  )
+    return undefined;
   const challenge = searchParams.get("hub.challenge");
-  if (challenge === null || challenge === "") return undefined;
-  return { challenge };
+  return challenge === null || challenge === "" ? undefined : { challenge };
 }
 
 /**

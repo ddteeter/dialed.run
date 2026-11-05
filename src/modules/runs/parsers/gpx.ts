@@ -59,10 +59,9 @@ function parseTrackPoint(node: unknown): TrackPoint | undefined {
   const lat = readNumber(node["@_lat"]);
   const lon = readNumber(node["@_lon"]);
   const time = readDate(node.time);
-  if (lat === undefined || lon === undefined || time === undefined) {
-    return undefined;
-  }
-  return { lat, lon, time, ele: readNumber(node.ele) };
+  return lat === undefined || lon === undefined || time === undefined
+    ? undefined
+    : { lat, lon, time, ele: readNumber(node.ele) };
 }
 
 function pointsInSegment(seg: unknown): TrackPoint[] {
@@ -84,14 +83,14 @@ or lost its fix (GPX 1.1), so the time across one is not moving time.
 function segmentsInTrack(trk: unknown): TrackPoint[][] {
   // Same shape again: a non-record track has no `trkseg` to read.
   // Stryker disable next-line ArrayDeclaration,ConditionalExpression
-  if (!isRecord(trk)) return [];
-  return toArray(trk.trkseg).map((seg: unknown) => pointsInSegment(seg));
+  const segs = isRecord(trk) ? toArray(trk.trkseg) : [];
+  return segs.map((seg: unknown) => pointsInSegment(seg));
 }
 
 function extractSegments(doc: unknown): TrackPoint[][] {
   // Stryker disable next-line ArrayDeclaration
-  if (!isRecord(doc) || !isRecord(doc.gpx)) return [];
-  return toArray(doc.gpx.trk).flatMap((trk: unknown) => segmentsInTrack(trk));
+  const trks = isRecord(doc) && isRecord(doc.gpx) ? toArray(doc.gpx.trk) : [];
+  return trks.flatMap((trk: unknown) => segmentsInTrack(trk));
 }
 
 /**
@@ -104,8 +103,9 @@ function extractSegments(doc: unknown): TrackPoint[][] {
  */
 function metresBetween(a: TrackPoint, b: TrackPoint): number {
   const ground = haversineMeters(a.lat, a.lon, b.lat, b.lon);
-  if (a.ele === undefined || b.ele === undefined) return ground;
-  return Math.hypot(ground, b.ele - a.ele);
+  return a.ele === undefined || b.ele === undefined
+    ? ground
+    : Math.hypot(ground, b.ele - a.ele);
 }
 
 /**

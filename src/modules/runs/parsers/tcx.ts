@@ -89,8 +89,7 @@ function findActivity(doc: unknown): Record<string, unknown> | undefined {
   const activities = root.Activities;
   // A course file has no `Activities` at all, and reading `.Activity` off
   // undefined would throw a TypeError instead of refusing the file.
-  if (!isRecord(activities)) return undefined;
-  return firstOf(activities.Activity);
+  return isRecord(activities) ? firstOf(activities.Activity) : undefined;
 }
 
 /**

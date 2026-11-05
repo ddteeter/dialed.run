@@ -579,10 +579,10 @@ export async function retimeRun(
 ): Promise<RetimeOutcome> {
   const { runId, startedAt } = request;
   const run = await getRun(db, userId, runId);
-  if (run === undefined) return "refused";
   if (
+    run === undefined ||
     calendarDay(startedAt, request.timeZone) !==
-    calendarDay(run.startedAt, request.timeZone)
+      calendarDay(run.startedAt, request.timeZone)
   ) {
     return "refused";
   }

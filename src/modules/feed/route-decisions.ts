@@ -30,9 +30,11 @@ export async function shouldAskForVerdict(
   // `!==` alone: a signed-out viewer's `undefined` is not equal to any
   // author id either, so an explicit undefined check would be the same
   // answer written twice.
-  if (viewerId !== entry.userId) return false;
-  if (entry.verdict !== undefined) return false;
-  return hasBudget();
+  return (
+    viewerId === entry.userId &&
+    entry.verdict === undefined &&
+    (await hasBudget())
+  );
 }
 
 /**

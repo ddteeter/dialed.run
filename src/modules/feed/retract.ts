@@ -183,8 +183,9 @@ export function deletionCacheTags(
   userId: string,
   entries: "all" | readonly string[],
 ): string[] {
-  if (entries === "all") return [runnerCacheTag(userId)];
-  return [...new Set(entries.flatMap((id) => kitCacheTags(userId, id)))];
+  return entries === "all"
+    ? [runnerCacheTag(userId)]
+    : [...new Set(entries.flatMap((id) => kitCacheTags(userId, id)))];
 }
 
 /**
