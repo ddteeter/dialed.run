@@ -143,6 +143,9 @@ describe("Wordmark", () => {
     expect(screen.getAllByText("[")).toHaveLength(1);
     expect(screen.getByText("[")).toHaveClass("text-cold-text");
     expect(screen.getByText("]")).toHaveClass("text-cold-text");
+    // Drawn, not said: a screen reader reads "dialed.run" (plan 161).
+    expect(screen.getByText("[")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("]")).toHaveAttribute("aria-hidden", "true");
   });
 
   it("drops the brackets for the plain lockup the signed-out bars draw", () => {

@@ -1,0 +1,82 @@
+document
+banner
+main
+status
+link, Closet, current page
+paragraph
+Shoes
+·
+Generic
+end of paragraph
+heading, Pegasus #, level 1
+# km logged · #/# dialed
+paragraph
+Untested
+end of paragraph
+link, Edit
+button, Retire
+button, Delete
+dialog, Delete the Pegasus #? Retire it instead.
+dialog, Delete the Pegasus #? Retire it instead.
+heading, Delete the Pegasus #? Retire it instead., level 2
+paragraph
+It's on # runs. Retiring takes it out of the picker and keeps everything it taught you.
+end of paragraph
+If you delete it
+list
+listitem, level 1, position 1, set size 3
+Goes
+It comes off the kit of all # runs
+end of listitem, level 1, position 1, set size 3
+listitem, level 1, position 2, set size 3
+Goes
+Its record in # bands
+end of listitem, level 1, position 2, set size 3
+listitem, level 1, position 3, set size 3
+Stays
+Every entry and verdict, and the rest of each kit
+end of listitem, level 1, position 3, set size 3
+end of list
+paragraph
+This can't be undone.
+end of paragraph
+button, Retire it
+Retire it
+end of button, Retire it
+button, Delete it and its record
+Delete it and its record
+end of button, Delete it and its record
+button, Cancel
+end of dialog, Delete the Pegasus #? Retire it instead.
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed
+Feed
+end of link, Feed
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet, current page
+Closet
+end of link, Closet, current page
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add, has popup dialog
++ Add
+end of button, Add, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document

@@ -336,6 +336,8 @@ Everything in stage 0, plus:
   see §5's Google table.)
 - A photo uploaded from a phone has **no GPS in the served bytes** (128's
   SAF-1); check with an EXIF reader.
+- The **VoiceOver checklist** (`docs/launch/voiceover-checklist.md`, plan 161) run on a real iPhone, its run recorded there, and each failure fixed
+  or deferred with the owner's decision.
 
 ### Stage 2 — the public
 
@@ -361,3 +363,4 @@ Everything in stage 1, plus:
 - WAF rate-limiting rules live.
 - The R-45 copy pass done with design (every placeholder string these lanes
   shipped has been read by a human).
+- The VoiceOver checklist run again, on the build going public.

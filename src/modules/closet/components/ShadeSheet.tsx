@@ -182,7 +182,7 @@ export function ShadeSheet({
           >
             <img
               src={photoUrl}
-              alt="Tap to sample a shade from your photo"
+              alt="Tap to sample a shade"
               className="aspect-square w-full rounded-field object-cover"
             />
           </button>

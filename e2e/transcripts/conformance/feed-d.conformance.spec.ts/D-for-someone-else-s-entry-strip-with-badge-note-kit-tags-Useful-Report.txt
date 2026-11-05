@@ -1,0 +1,70 @@
+document
+banner
+link, Notifications
+end of banner
+main
+status
+link, Back to feed, current page
+heading, @d_runner_#, level 1
+@d_runner_#
+end of heading, @d_runner_#, level 1
+:day :month # · #:#
+#.#mi
+#:# /mi
+A bit warm
+#° · clear
+link, Weather data provided by Visual Crossing
+paragraph
+Wore the shell for a forecast that never showed up.
+end of paragraph
+Kit
+list
+listitem, level 1, position 1, set size 1
+Long sleeve
+[Generic]
+end of listitem, level 1, position 1, set size 1
+end of list
+list
+listitem, level 1, position 1, set size 2
+chafed
+end of listitem, level 1, position 1, set size 2
+listitem, level 1, position 2, set size 2
+overheated late
+end of listitem, level 1, position 2, set size 2
+end of list
+button, Useful, not pressed
+Useful
+end of button, Useful, not pressed
+button, Report this entry
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed, current page
+Feed
+end of link, Feed, current page
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet
+Closet
+end of link, Closet
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add, has popup dialog
++ Add
+end of button, Add, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document

@@ -1,0 +1,59 @@
+document
+banner
+link, Notifications, # new
+#
+end of link, Notifications, # new
+end of banner
+main
+status
+link, Back to feed, current page
+heading, Your run, level 1
+Private
+:day :month # · #:#
+#.#mi
+#:# /mi
+link, You didn’t log a verdict for this run. Add one? Did it work?
+You didn’t log a verdict for this run. Add one?
+Did it work?
+end of link, You didn’t log a verdict for this run. Add one? Did it work?
+Kit
+list
+listitem, level 1, position 1, set size 1
+Long sleeve
+[Generic]
+end of listitem, level 1, position 1, set size 1
+end of list
+Yours
+button, Delete this entry
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed, current page
+Feed
+end of link, Feed, current page
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet
+Closet
+end of link, Closet
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add, has popup dialog
++ Add
+end of button, Add, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document

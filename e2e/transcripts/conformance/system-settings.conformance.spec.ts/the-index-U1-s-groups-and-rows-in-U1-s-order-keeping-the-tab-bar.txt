@@ -1,0 +1,143 @@
+document
+banner
+link, Notifications
+end of banner
+main
+heading, Settings, level 1
+heading, You, level 2
+You
+end of heading, You, level 2
+list
+listitem, level 1, position 1, set size 3
+link, Account @closet_# · email, password ›
+Account
+@closet_# · email, password
+›
+end of link, Account @closet_# · email, password ›
+end of listitem, level 1, position 1, set size 3
+listitem, level 1, position 2, set size 3
+link, How you run Not answered Answer ›
+How you run
+Not answered
+Answer ›
+end of link, How you run Not answered Answer ›
+end of listitem, level 1, position 2, set size 3
+listitem, level 1, position 3, set size 3
+link, Units Fahrenheit, miles ›
+Units
+Fahrenheit, miles
+›
+end of link, Units Fahrenheit, miles ›
+end of listitem, level 1, position 3, set size 3
+end of list
+heading, Who sees what, level 2
+Who sees what
+end of heading, Who sees what, level 2
+list
+listitem, level 1, position 1, set size 1
+link, Privacy New runs shared · Counted in totals ›
+Privacy
+New runs shared · Counted in totals
+›
+end of link, Privacy New runs shared · Counted in totals ›
+end of listitem, level 1, position 1, set size 1
+end of list
+heading, Review, level 2
+Review
+end of heading, Review, level 2
+list
+listitem, level 1, position 1, set size 2
+link, Blocked runners # blocked ›
+Blocked runners
+# blocked
+›
+end of link, Blocked runners # blocked ›
+end of listitem, level 1, position 1, set size 2
+listitem, level 1, position 2, set size 2
+link, Notifications Run reminders by email ›
+Notifications
+Run reminders by email
+›
+end of link, Notifications Run reminders by email ›
+end of listitem, level 1, position 2, set size 2
+end of list
+heading, Data, level 2
+Data
+end of heading, Data, level 2
+list
+listitem, level 1, position 1, set size 1
+link, Connections Strava ›
+Connections
+Strava
+›
+end of link, Connections Strava ›
+end of listitem, level 1, position 1, set size 1
+end of list
+heading, About, level 2
+About
+end of heading, About, level 2
+list
+listitem, level 1, position 1, set size 4
+link, Privacy policy What we keep, and who sees it ›
+Privacy policy
+What we keep, and who sees it
+›
+end of link, Privacy policy What we keep, and who sees it ›
+end of listitem, level 1, position 1, set size 4
+listitem, level 1, position 2, set size 4
+link, Terms The rules for using dialed.run ›
+Terms
+The rules for using dialed.run
+›
+end of link, Terms The rules for using dialed.run ›
+end of listitem, level 1, position 2, set size 4
+listitem, level 1, position 3, set size 4
+link, Copyright Report something of yours posted here ›
+Copyright
+Report something of yours posted here
+›
+end of link, Copyright Report something of yours posted here ›
+end of listitem, level 1, position 3, set size 4
+listitem, level 1, position 4, set size 4
+link, Open source What dialed.run is built on ›
+Open source
+What dialed.run is built on
+›
+end of link, Open source What dialed.run is built on ›
+end of listitem, level 1, position 4, set size 4
+end of list
+button, Sign out
+Sign out
+end of button, Sign out
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed
+Feed
+end of link, Feed
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet
+Closet
+end of link, Closet
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add, has popup dialog
++ Add
+end of button, Add, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document

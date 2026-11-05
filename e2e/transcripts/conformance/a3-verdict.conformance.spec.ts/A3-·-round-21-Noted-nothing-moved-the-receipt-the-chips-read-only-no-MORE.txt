@@ -1,0 +1,78 @@
+document
+banner
+main
+form
+:day :month # · #:#
+paragraph
+#.# mi
+end of paragraph
+heading, Did it work?, level 1
+status
+Verdict saved.
+end of status
+group, Did it work?
+button, Way cold, disabled, not pressed
+button, A bit cold, disabled, not pressed
+button, Dialed, disabled, pressed
+Dialed
+end of button, Dialed, disabled, pressed
+button, A bit warm, disabled, not pressed
+button, Way warm, disabled, not pressed
+end of group, Did it work?
+heading, Anything specific? · optional, level 2
+Anything specific? · optional
+end of heading, Anything specific? · optional, level 2
+button, cold first mile, disabled, not pressed
+button, cold throughout, disabled, not pressed
+button, overheated late, disabled, not pressed
+button, sleeves damp, disabled, not pressed
+button, chafed, disabled, not pressed
+group, Effort · optional
+Effort · optional
+button, Easy, disabled, not pressed
+button, Steady, disabled, not pressed
+button, Workout, disabled, not pressed
+button, Race, disabled, not pressed
+paragraph
+You run warmer the harder you go. Next time, the Call allows for it.
+end of paragraph
+end of group, Effort · optional
+status
+Noted
+paragraph
+Logged. No weather came with this run, so no band record moved.
+end of paragraph
+end of status
+end of form
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed, current page
+Feed
+end of link, Feed, current page
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet
+Closet
+end of link, Closet
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add, has popup dialog
++ Add
+end of button, Add, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document

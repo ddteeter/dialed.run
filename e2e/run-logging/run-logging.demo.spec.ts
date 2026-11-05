@@ -270,7 +270,7 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
       "Wrong start time? Change it, and get the weather for it",
     );
     await page
-      .getByRole("button", { name: `Change start time, ${clockOf(fileStart)}` })
+      .getByRole("button", { name: `${clockOf(fileStart)}, change start time` })
       .click();
     const startField = page.getByLabel("Start time");
     await expect(startField).toBeFocused();
@@ -296,7 +296,7 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
     await scene(page, "A time with weather: the row closes and says CHANGED");
     await expect(
       page.getByRole("button", {
-        name: `Change start time, ${clockOf(movedStart)}`,
+        name: `${clockOf(movedStart)} · Changed, change start time`,
       }),
     ).toContainText("Changed", { timeout: 20_000 });
     await expect(conditions).toContainText("46°F", { timeout: 20_000 });

@@ -109,8 +109,19 @@ async function renderTableWatching(
   return invalidate;
 }
 
-const body = () => screen.getAllByRole("rowgroup")[1];
 const rowsOf = () => screen.getAllByRole("row").slice(1);
+/**
+ * The selected row, where a key comes from: it is the one in the tab
+ * order, and its key handler answers (plan 161 step 7 moved the handler
+ * off the body).
+ */
+const here = (): HTMLElement => {
+  const selected = rowsOf().find(
+    (element) => element.getAttribute("aria-current") === "true",
+  );
+  if (selected === undefined) throw new Error("no row is selected");
+  return selected;
+};
 const slot = (name: RegExp) => screen.getByRole("button", { name });
 
 /**
@@ -215,8 +226,8 @@ describe("VerdictBacklog: a run that already has a kit", () => {
   it("saves the verdict against the kit it showed", async () => {
     const saveRow = await renderTable([kitted]);
 
-    fireEvent.keyDown(body() ?? document.body, { key: "4" });
-    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+    fireEvent.keyDown(here(), { key: "4" });
+    fireEvent.keyDown(here(), { key: "Enter" });
 
     await waitFor(() => {
       expect(saveRow).toHaveBeenCalledWith({
@@ -236,8 +247,8 @@ describe("VerdictBacklog: a run that already has a kit", () => {
 
     expect(screen.getByText("No kit on this run")).toBeVisible();
     expect(screen.queryByRole("link", { name: "Pick" })).toBeNull();
-    fireEvent.keyDown(body() ?? document.body, { key: "3" });
-    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+    fireEvent.keyDown(here(), { key: "3" });
+    fireEvent.keyDown(here(), { key: "Enter" });
 
     await waitFor(() => {
       expect(saveRow).toHaveBeenCalledWith({
@@ -282,7 +293,7 @@ describe("VerdictBacklog: the keyboard", () => {
   it("sets the verdict on the selected row and says which", async () => {
     await renderTable([row(), bare]);
 
-    fireEvent.keyDown(body() ?? document.body, { key: "2" });
+    fireEvent.keyDown(here(), { key: "2" });
 
     // Scoped to the selected row: both rows carry the same five slots, and
     // what this case is about is that only the selected one moved.
@@ -308,12 +319,12 @@ describe("VerdictBacklog: the keyboard", () => {
     const [first, second] = rowsOf();
     expect(first).toHaveAttribute("aria-current", "true");
 
-    fireEvent.keyDown(body() ?? document.body, { key: "ArrowDown" });
+    fireEvent.keyDown(here(), { key: "ArrowDown" });
     expect(second).toHaveAttribute("aria-current", "true");
     expect(first).not.toHaveAttribute("aria-current");
 
     // Off the end: the selection stays put rather than wrapping to the top.
-    fireEvent.keyDown(body() ?? document.body, { key: "ArrowDown" });
+    fireEvent.keyDown(here(), { key: "ArrowDown" });
     expect(second).toHaveAttribute("aria-current", "true");
   });
 
@@ -338,8 +349,8 @@ describe("VerdictBacklog: saving", () => {
     const saveRow = await renderTable([row(), bare]);
 
     fireEvent.click(screen.getByRole("button", { name: "Use" }));
-    fireEvent.keyDown(body() ?? document.body, { key: "3" });
-    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+    fireEvent.keyDown(here(), { key: "3" });
+    fireEvent.keyDown(here(), { key: "Enter" });
 
     await waitFor(() => {
       expect(saveRow).toHaveBeenCalledWith({
@@ -362,8 +373,8 @@ describe("VerdictBacklog: saving", () => {
     await renderTable([row(), bare]);
 
     fireEvent.click(screen.getByRole("button", { name: "Use" }));
-    fireEvent.keyDown(body() ?? document.body, { key: "3" });
-    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+    fireEvent.keyDown(here(), { key: "3" });
+    fireEvent.keyDown(here(), { key: "Enter" });
 
     await waitFor(() => {
       expect(screen.getByText(/1 of 2 saved/)).toBeInTheDocument();
@@ -376,8 +387,8 @@ describe("VerdictBacklog: saving", () => {
   it("asks for the outfit first, because A3 does too", async () => {
     const saveRow = await renderTable([row()]);
 
-    fireEvent.keyDown(body() ?? document.body, { key: "3" });
-    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+    fireEvent.keyDown(here(), { key: "3" });
+    fireEvent.keyDown(here(), { key: "Enter" });
 
     await waitFor(() => {
       expect(screen.getByRole("status").textContent).toContain(
@@ -391,7 +402,7 @@ describe("VerdictBacklog: saving", () => {
     const saveRow = await renderTable([row()]);
 
     fireEvent.click(screen.getByRole("button", { name: "Use" }));
-    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+    fireEvent.keyDown(here(), { key: "Enter" });
 
     await waitFor(() => {
       expect(screen.getByRole("status").textContent).toContain("1 to 5");
@@ -406,8 +417,8 @@ describe("VerdictBacklog: saving", () => {
     await renderTable([row()], saveRow);
 
     fireEvent.click(screen.getByRole("button", { name: "Use" }));
-    fireEvent.keyDown(body() ?? document.body, { key: "4" });
-    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+    fireEvent.keyDown(here(), { key: "4" });
+    fireEvent.keyDown(here(), { key: "Enter" });
 
     await waitFor(() => {
       expect(screen.getByRole("status").textContent).toContain(
@@ -437,8 +448,8 @@ describe("VerdictBacklog: saving", () => {
     await renderTable([row(), bare], saveRow);
 
     fireEvent.click(screen.getByRole("button", { name: "Use" }));
-    fireEvent.keyDown(body() ?? document.body, { key: "3" });
-    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+    fireEvent.keyDown(here(), { key: "3" });
+    fireEvent.keyDown(here(), { key: "Enter" });
     await waitFor(() => {
       expect(rowsOf()[0]).toHaveAttribute("data-failed", "true");
     });
@@ -472,12 +483,12 @@ describe("VerdictBacklog: saving", () => {
     await renderTable([row(), bare], saveRow);
 
     fireEvent.click(screen.getByRole("button", { name: "Use" }));
-    fireEvent.keyDown(body() ?? document.body, { key: "3" });
-    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+    fireEvent.keyDown(here(), { key: "3" });
+    fireEvent.keyDown(here(), { key: "Enter" });
     await waitFor(() => {
       expect(rowsOf()[0]).toHaveAttribute("data-failed", "true");
     });
-    fireEvent.keyDown(body() ?? document.body, { key: "ArrowDown" });
+    fireEvent.keyDown(here(), { key: "ArrowDown" });
 
     const band = document.querySelector("[data-slot='row-failure']");
     expect(band).not.toBeNull();
@@ -493,7 +504,7 @@ describe("VerdictBacklog: saving", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Use" }));
     fireEvent.click(screen.getByRole("button", { name: /^Way warm —/ }));
-    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+    fireEvent.keyDown(here(), { key: "Enter" });
 
     await waitFor(() => {
       expect(saveRow).toHaveBeenCalledWith({
@@ -647,8 +658,8 @@ describe("VerdictBacklog: what each state is drawn as", () => {
     await renderTable([row(), bare], saveRow);
 
     fireEvent.click(screen.getByRole("button", { name: "Use" }));
-    fireEvent.keyDown(body() ?? document.body, { key: "3" });
-    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+    fireEvent.keyDown(here(), { key: "3" });
+    fireEvent.keyDown(here(), { key: "Enter" });
 
     // **`toBeVisible`, not `textContent`.** `PendingLabel` stacks both
     // halves in one grid cell and swaps them by `visibility`, so the
@@ -684,7 +695,7 @@ describe("VerdictBacklog: the rail", () => {
     // follows the selection is the day it names.
     expect(rail?.textContent).toContain("Sep 2");
 
-    fireEvent.keyDown(body() ?? document.body, { key: "ArrowDown" });
+    fireEvent.keyDown(here(), { key: "ArrowDown" });
     expect(rail?.textContent).toContain("Sep 4");
   });
 
@@ -740,8 +751,8 @@ describe("VerdictBacklog: all logged (round 22, item 18)", () => {
     const invalidate = await renderTableWatching([row()], saveRow);
 
     fireEvent.click(screen.getByRole("button", { name: "Use" }));
-    fireEvent.keyDown(body() ?? document.body, { key: "3" });
-    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+    fireEvent.keyDown(here(), { key: "3" });
+    fireEvent.keyDown(here(), { key: "Enter" });
 
     expect(await screen.findByText(bracketed("All logged"))).toBeVisible();
     expect(invalidate).toHaveBeenCalledTimes(1);
@@ -753,8 +764,8 @@ describe("VerdictBacklog: all logged (round 22, item 18)", () => {
     const invalidate = await renderTableWatching([row(), bare], saveRow);
 
     fireEvent.click(screen.getByRole("button", { name: "Use" }));
-    fireEvent.keyDown(body() ?? document.body, { key: "3" });
-    fireEvent.keyDown(body() ?? document.body, { key: "Enter" });
+    fireEvent.keyDown(here(), { key: "3" });
+    fireEvent.keyDown(here(), { key: "Enter" });
 
     await waitFor(() => {
       expect(rowsOf()[0]).toHaveAttribute("data-saved", "true");
@@ -831,7 +842,7 @@ describe("VerdictBacklog: keys it does not claim", () => {
       bubbles: true,
       cancelable: true,
     });
-    fireEvent(body() ?? document.body, tab);
+    fireEvent(here(), tab);
     expect(tab.defaultPrevented).toBe(false);
     // …and nothing moved.
     expect(rowsOf()[0]).toHaveAttribute("aria-current", "true");
@@ -842,7 +853,7 @@ describe("VerdictBacklog: keys it does not claim", () => {
       bubbles: true,
       cancelable: true,
     });
-    fireEvent(body() ?? document.body, down);
+    fireEvent(here(), down);
     expect(down.defaultPrevented).toBe(true);
     expect(rowsOf()[1]).toHaveAttribute("aria-current", "true");
   });

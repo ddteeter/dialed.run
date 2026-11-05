@@ -122,7 +122,7 @@ function ReportedPhotos({
         <img
           key={key}
           src={reviewPhotoSrc(key)}
-          alt="Reported photo"
+          alt="Reported"
           className="h-32 w-auto border border-hairline"
         />
       ))}
@@ -147,7 +147,7 @@ function GarmentPhoto({
       >
         <img
           src={reviewPhotoSrc(photoKey)}
-          alt="Reported garment photo"
+          alt="Reported garment"
           className="h-full w-full object-contain"
         />
       </span>

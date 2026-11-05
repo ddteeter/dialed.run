@@ -1,0 +1,48 @@
+document
+banner
+link, dialed.run home
+dialed
+.run
+end of link, dialed.run home
+end of banner
+main
+heading, Log in, level 1
+Account closed
+This account was closed for breaking the community rules.
+Think we got it wrong? Reply to the email we sent you.
+Or write to
+link, desk@dialed.run
+.
+form
+status
+Account closed. This account was closed for breaking the community rules. Think we got it wrong? Reply to the email we sent you. Or write to desk@dialed.run.
+end of status
+Email
+textbox, Email, safety-#@example.com
+Password
+Password, a-long-enough-password
+button, Show, # control
+link, Forgot it?
+button, Log in
+Log in
+end of button, Log in
+end of form
+or
+button, Continue with Google
+Continue with Google
+end of button, Continue with Google
+paragraph
+New here?
+link, Create an account
+end of paragraph
+end of main
+contentinfo
+paragraph
+link, Privacy
+link, Terms
+link, Copyright
+link, Open source
+link, Report an intimate image
+end of paragraph
+end of contentinfo
+end of document

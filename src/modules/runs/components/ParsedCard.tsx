@@ -75,7 +75,8 @@ function FileStrip({
 }: Readonly<{ label: string; onReplace: () => void }>): JSX.Element {
   return (
     <div className="flex items-center justify-between gap-3 bg-tint px-4 py-2">
-      <Mono step="xs" className="min-w-0 truncate text-label">
+      {/* `--quiet`: the strip is tinted, and `--label` is 4.0:1 on the tint. */}
+      <Mono step="xs" className="min-w-0 truncate text-quiet">
         {label}
       </Mono>
       <button
@@ -86,6 +87,28 @@ function FileStrip({
         <Mono step="xs">Replace</Mono>
       </button>
     </div>
+  );
+}
+
+/**
+ * The start time on the stats line, as the button that changes it. Its
+ * name starts with what it shows (WCAG 2.5.3): a voice user says what
+ * they see, and "6:04 AM · Changed" was not in "Change start time,
+ * 6:04 AM".
+ */
+function TimeButton({
+  shown,
+  onPress,
+}: Readonly<{ shown: string; onPress: () => void }>): JSX.Element {
+  return (
+    <button
+      type="button"
+      aria-label={`${shown}, change start time`}
+      onClick={onPress}
+      className="target border-none bg-transparent p-0 font-mono text-mono-sm uppercase text-ink underline underline-offset-4"
+    >
+      {shown}
+    </button>
   );
 }
 
@@ -301,7 +324,7 @@ function useRetimeForm({
  * the file lands — one screen, no wizard step for weather."*
  *
  * **The start time is the one correction** (round 26, item 1). The time
- * on the stats line is a button, "Change start time, 6:04 AM"; it opens
+ * on the stats line is a button, "6:04 AM, change start time"; it opens
  * the START TIME row in its place. While the weather for the new time is
  * fetched the conditions block says so, with what it was. On success the
  * row closes and the line reads "{t} · CHANGED"; on failure a band under
@@ -375,17 +398,15 @@ export function ParsedCard({
               ...(isRetiming
                 ? []
                 : [
-                    <button
+                    <TimeButton
                       key="time"
-                      type="button"
-                      aria-label={`Change start time, ${clock}`}
-                      onClick={() => {
+                      shown={
+                        movedTo === undefined ? clock : `${clock} · Changed`
+                      }
+                      onPress={() => {
                         setIsRetiming(true);
                       }}
-                      className="target border-none bg-transparent p-0 font-mono text-mono-sm uppercase text-ink underline underline-offset-4"
-                    >
-                      {movedTo === undefined ? clock : `${clock} · Changed`}
-                    </button>,
+                    />,
                   ]),
             ]}
           </Facts>

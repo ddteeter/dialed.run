@@ -16,6 +16,10 @@ describe("BracketHeadline", () => {
     const { container } = render(<BracketHeadline>Nobody yet</BracketHeadline>);
 
     expect(screen.getByText("Nobody yet")).toBeVisible();
+    // Drawn as a headline, announced as one, under the screen's own h1.
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Nobody yet" }),
+    ).toBeVisible();
     const marks = brackets(container);
     expect(marks.map((mark) => mark.textContent)).toStrictEqual(["[", "]"]);
     for (const mark of marks) {

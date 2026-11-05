@@ -212,7 +212,9 @@ describe("ConditionsTab: location denied", () => {
       }),
     );
 
-    expect(await screen.findByText("No weather yet")).toBeVisible();
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "No weather yet" }),
+    ).toBeVisible();
     // A label with no coordinates was never found, so it heads nothing.
     expect(document.querySelector('[data-part="resolved-place"]')).toBeNull();
     // Round 26 #9 names the place.
@@ -260,7 +262,12 @@ describe("ConditionsTab: location denied", () => {
       { interval: 1 },
     );
     // A city nobody's matched yet goes straight to No matches (round 22).
-    expect(await screen.findByText("Not enough runs yet")).toBeVisible();
+    expect(
+      await screen.findByRole("heading", {
+        level: 2,
+        name: "Not enough runs yet",
+      }),
+    ).toBeVisible();
     expect(conditionsFor).toHaveBeenCalledWith({ data: PORTLAND });
   });
 
@@ -443,7 +450,12 @@ describe("ConditionsTab: matched", () => {
       tab({ conditionsFor: () => Promise.resolve(matched) }),
     );
 
-    expect(await screen.findByText("6 runners logged this")).toBeVisible();
+    expect(
+      await screen.findByRole("heading", {
+        level: 2,
+        name: "6 runners logged this",
+      }),
+    ).toBeVisible();
     expect(block()).toHaveAttribute("data-state", "matched");
     expect(block()).toHaveClass("bg-teal");
     // Square on the phone; RADIUS.card at desk, where it no longer runs

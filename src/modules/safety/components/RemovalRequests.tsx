@@ -340,9 +340,11 @@ function BlockQuestion({
   });
   // Esc anywhere in the question is Cancel. On a wrapper, because
   // `FormElement` is the forms primitive and takes no key handler; a key
-  // pressed inside the form bubbles to it.
+  // pressed inside the form bubbles to it. `presentation`: it only
+  // catches what bubbles, and is no control itself.
   return (
     <div
+      role="presentation"
       onKeyDown={(event) => {
         if (event.key === "Escape") onCancel();
       }}

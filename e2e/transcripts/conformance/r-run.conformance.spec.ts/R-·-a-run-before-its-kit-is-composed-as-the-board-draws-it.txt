@@ -1,0 +1,54 @@
+document
+banner
+link, Notifications, # new
+#
+end of link, Notifications, # new
+end of banner
+main
+heading, Run, level 1
+:day :month # · #:# · File
+paragraph
+#.# mi
+#:# /mi
+end of paragraph
+No conditions
+No weather came back for this time and place.
+button, Set ›, has popup dialog
+Kit
+paragraph
+No kit yet. Without one, this run can’t teach your closet anything.
+end of paragraph
+link, What did you wear?
+button, Delete this run
+end of main
+navigation, Main
+list
+listitem, level 1, position 1, set size 5
+link, Feed
+Feed
+end of link, Feed
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Closet
+Closet
+end of link, Closet
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+button, Add, has popup dialog
++ Add
+end of button, Add, has popup dialog
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Call
+Call
+end of link, Call
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, You
+You
+end of link, You
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Main
+status
+end of document
