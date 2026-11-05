@@ -56,9 +56,9 @@ import { Wordmark } from "./Wordmark";
  * to start the panel SPACE[12] below the bar rather than measuring it.
  */
 const ACTIVE_LINK_CLASS =
-  "tab-label target flex h-full items-center border-b-2 border-cold-text px-3 text-body font-bold text-ink no-underline";
+  "flex h-full items-center border-b-2 border-cold-text px-3 text-body font-bold text-ink no-underline";
 const RESTING_LINK_CLASS =
-  "tab-label target flex h-full items-center border-b-2 border-transparent px-3 text-body text-label no-underline";
+  "flex h-full items-center border-b-2 border-transparent px-3 text-body text-label no-underline";
 
 /**
  * The pink pill, on every screen.

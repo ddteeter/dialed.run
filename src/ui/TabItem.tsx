@@ -60,7 +60,7 @@ export function TabItem({
         to={to}
         activeOptions={PAGE_ONLY}
         aria-current={active ? "true" : undefined}
-        className={active ? activeClass : restingClass}
+        className={`tab-label target ${active ? activeClass : restingClass}`}
       >
         {children}
       </Link>

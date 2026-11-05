@@ -50,7 +50,7 @@ function Launcher({
         // control. "Add a run" keeps the visible word first (WCAG 2.5.3)
         // and says what is added.
         aria-label={LAUNCHER_NAME}
-        className={`${RESTING_LABEL_CLASS} bg-transparent p-0`}
+        className={`tab-label target ${RESTING_LABEL_CLASS} bg-transparent p-0`}
         onClick={() => {
           void navigate({ to });
         }}
@@ -73,9 +73,9 @@ function Launcher({
  * claiming otherwise.
  */
 const ACTIVE_LABEL_CLASS =
-  "tab-label target flex items-center justify-center text-ink no-underline";
+  "flex items-center justify-center text-ink no-underline";
 const RESTING_LABEL_CLASS =
-  "tab-label target flex items-center justify-center text-label no-underline";
+  "flex items-center justify-center text-label no-underline";
 
 /**
  * The five-tab shell footer (docs/product.md §Navigation), **below 720
