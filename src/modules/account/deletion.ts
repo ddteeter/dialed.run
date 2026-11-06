@@ -20,11 +20,13 @@ import { accountDeletions } from "../../db/schema-core";
 import { coreDb, env, waitUntil } from "../../env";
 import { runnerCacheTag, type PurgeTags } from "../../lib/cache-tags";
 import { DELETION_GRACE_S } from "../../lib/contracts";
-import { proseDayLabel } from "../../lib/dates";
+import { homeZoneOf, proseDayLabel } from "../../lib/dates";
+import type { ViewerZone } from "../../lib/dates";
 import { firstRowWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 import type { PasswordCheck } from "../auth";
 import { emailDebt } from "../email";
+import { viewerZone } from "../notifications";
 import {
   captureException,
   outboxInsert,
@@ -98,14 +100,12 @@ export function deletionEffectsFromEnv(): DeletionEffects {
 
 /**
  * The day a deletion lands, as the email and both pages of the week say
- * it — **in UTC, on purpose**. A profile carries no time zone to say it in
- * (a run's zone is the run's own, R-96), and the purge runs on the daily
- * firing, which is scheduled in UTC. `proseDayLabel` with no zone is UTC;
- * passing the string would say the same thing and leave a mutant no input
- * could tell apart. The delete sheet says its day the same way.
+ * it: on the runner's home zone (R-96 (3); owner 2026-11-05, round 46
+ * 107b), UTC while that zone is owed. A day alone, so no UTC mark. The
+ * delete sheet says its day the same way.
  */
-function deletionDay(epochSeconds: number): string {
-  return proseDayLabel(epochSeconds);
+function deletionDay(epochSeconds: number, viewer: ViewerZone): string {
+  return proseDayLabel(epochSeconds, viewer.homeZone);
 }
 
 /**
@@ -146,7 +146,7 @@ export async function requestAccountDeletion(
   const { userId } = request;
   const existing = await pendingDeletionOf(db, userId);
   const purgeAfter = existing?.purgeAfter ?? now + DELETION_GRACE_S;
-  const day = deletionDay(purgeAfter);
+  const day = deletionDay(purgeAfter, await viewerZone(db, userId));
   const debt = oweOutbox(
     emailDebt(
       { to: { userId }, template: { kind: "deletion_scheduled", day } },
@@ -229,15 +229,20 @@ export type LeavingView =
 export async function leavingView(
   db: Db,
   userId: string | undefined,
-  on: number | undefined,
+  { on, zone }: { on?: number | undefined; zone?: string | undefined },
 ): Promise<LeavingView> {
   if (userId !== undefined) {
     const pending = await pendingDeletionOf(db, userId);
     return pending === undefined
       ? { state: "none" }
-      : { state: "ask", day: deletionDay(pending.purgeAfter) };
+      : {
+          state: "ask",
+          day: deletionDay(pending.purgeAfter, await viewerZone(db, userId)),
+        };
   }
+  // Signed out: the zone the request's redirect carried (see
+  // `leavingSearch`), checked here as a stored one would be.
   return on === undefined
     ? { state: "none" }
-    : { state: "scheduled", day: deletionDay(on) };
+    : { state: "scheduled", day: deletionDay(on, homeZoneOf(zone)) };
 }

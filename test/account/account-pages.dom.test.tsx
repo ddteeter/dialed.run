@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { EMAIL_UNCONFIRMED_CODE } from "../../src/lib/auth-signal";
 import { currentPasswordLimited } from "../../src/lib/contracts";
-import { clockLabel, deviceTimeZone } from "../../src/lib/dates";
+import type { ViewerZone } from "../../src/lib/dates";
 import { ChangeEmail } from "../../src/modules/account/components/ChangeEmail";
 import { CheckEmail } from "../../src/modules/account/components/CheckEmail";
 import { ConfirmEmailBand } from "../../src/modules/account/components/ConfirmEmailBand";
@@ -29,7 +29,6 @@ import {
   RESEND_PILL,
   ResendLink,
   SENT_FOR_MS,
-  limitedMessage,
 } from "../../src/modules/account/components/ResendLink";
 import type {
   ChangeResult,
@@ -87,6 +86,27 @@ function resender(...answers: (ResendResult | Error)[]) {
   });
 }
 
+/**
+A signed-in runner whose home zone is still owed: their clock is UTC, marked.
+*/
+const OWED: ViewerZone = { homeZone: undefined };
+const CHICAGO: ViewerZone = { homeZone: "America/Chicago" };
+/**
+2027-01-15T08:00:00Z: 2:00 AM in Chicago.
+*/
+const UNTIL = 1_800_000_000;
+
+/**
+Stub the zone this device's clock reads in, as `test/lib/dates.test.ts` does.
+*/
+function deviceReads(timeZone: string): void {
+  const resolved = new Intl.DateTimeFormat().resolvedOptions();
+  vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
+    ...resolved,
+    timeZone,
+  });
+}
+
 const status = () => screen.getByRole("status");
 const resendButton = () => screen.getByRole("button", { name: "Resend link" });
 
@@ -96,7 +116,9 @@ afterEach(() => {
 
 describe("ResendLink", () => {
   it("is the band's text link unless asked for the sheet's pill (round 29 #12)", () => {
-    render(<ResendLink email="maya@example.com" resend={resender()} />);
+    render(
+      <ResendLink email="maya@example.com" resend={resender()} viewer={OWED} />,
+    );
     expect(resendButton()).toHaveClass(...RESEND_LINK.split(" "));
     expect(resendButton()).not.toHaveClass("rounded-pill");
   });
@@ -107,7 +129,9 @@ describe("ResendLink", () => {
       advanceTimers: (ms) => vi.advanceTimersByTime(ms),
     });
     const resend = resender({ status: "sent" });
-    render(<ResendLink email="maya@example.com" resend={resend} />);
+    render(
+      <ResendLink email="maya@example.com" resend={resend} viewer={OWED} />,
+    );
 
     await user.click(resendButton());
 
@@ -141,7 +165,9 @@ describe("ResendLink", () => {
     const pending = Promise.withResolvers<ResendResult>();
     const resend = vi.fn(() => pending.promise);
     const user = userEvent.setup();
-    render(<ResendLink email="maya@example.com" resend={resend} />);
+    render(
+      <ResendLink email="maya@example.com" resend={resend} viewer={OWED} />,
+    );
 
     await user.click(resendButton());
     const button = screen.getByRole("button", { name: /Resend link|Sending/u });
@@ -160,34 +186,83 @@ describe("ResendLink", () => {
   });
 
   it("bands NOT SENT when the hour's links are used up, naming when the next can go", async () => {
-    const until = 1_800_000_000;
-    const resend = resender({ status: "limited", until }, { status: "sent" });
+    const resend = resender(
+      { status: "limited", until: UNTIL },
+      { status: "sent" },
+    );
     const user = userEvent.setup();
-    render(<ResendLink email="maya@example.com" resend={resend} />);
+    render(
+      <ResendLink email="maya@example.com" resend={resend} viewer={CHICAGO} />,
+    );
 
     await user.click(resendButton());
 
-    const band = await screen.findByText(limitedMessage(until));
+    const message =
+      "That's 5 links this hour. You can send another at 2:00 AM.";
+    const band = await screen.findByText(message);
     expect(band.closest("[data-part=failure-band]")).toHaveTextContent(
       /Not sent/u,
     );
-    expect(limitedMessage(until)).toMatch(
-      /^That's 5 links this hour\. You can send another at \d{1,2}:\d{2} [AP]M\.$/u,
-    );
-    expect(status()).toHaveTextContent(`Not sent. ${limitedMessage(until)}`);
+    expect(status()).toHaveTextContent(`Not sent. ${message}`);
     expect(screen.queryByText(/^Sent ✓/u)).toBeNull();
 
     // The band's Try again is a resend; a sent one clears the band.
     await user.click(screen.getByRole("button", { name: "Try again" }));
     expect(resend).toHaveBeenCalledTimes(2);
     expect(await screen.findByText(/^Sent ✓/u)).toBeVisible();
-    expect(screen.queryByText(limitedMessage(until))).toBeNull();
+    expect(screen.queryByText(message)).toBeNull();
+  });
+
+  it("names the next send on UTC, marked, while a signed-in runner's home zone is owed (R-96 (3))", async () => {
+    const user = userEvent.setup();
+    render(
+      <ResendLink
+        email="maya@example.com"
+        resend={resender({ status: "limited", until: UNTIL })}
+        viewer={OWED}
+      />,
+    );
+    await user.click(resendButton());
+    expect(
+      await screen.findByText(
+        "That's 5 links this hour. You can send another at 8:00 AM UTC.",
+      ),
+    ).toBeVisible();
+  });
+
+  describe("signed out, on the device's clock (Au4; R47·111)", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it.each([
+      ["America/Chicago", "2:00 AM"],
+      ["UTC", "8:00 AM UTC"],
+    ])("a device on %s reads %s", async (zone, clock) => {
+      deviceReads(zone);
+      const user = userEvent.setup();
+      render(
+        <ResendLink
+          email="maya@example.com"
+          resend={resender({ status: "limited", until: UNTIL })}
+          viewer={undefined}
+        />,
+      );
+      await user.click(resendButton());
+      expect(
+        await screen.findByText(
+          `That's 5 links this hour. You can send another at ${clock}.`,
+        ),
+      ).toBeVisible();
+    });
   });
 
   it("bands a failed send with its cause, and Try again sends again", async () => {
     const resend = resender(new Error("down"), { status: "sent" });
     const user = userEvent.setup();
-    render(<ResendLink email="maya@example.com" resend={resend} />);
+    render(
+      <ResendLink email="maya@example.com" resend={resend} viewer={OWED} />,
+    );
 
     await user.click(resendButton());
 
@@ -200,7 +275,9 @@ describe("ResendLink", () => {
 
   it("does not arm the sixty-second timeout before anything has been sent", () => {
     const timeout = vi.spyOn(globalThis, "setTimeout");
-    render(<ResendLink email="maya@example.com" resend={resender()} />);
+    render(
+      <ResendLink email="maya@example.com" resend={resender()} viewer={OWED} />,
+    );
     expect(timeout).not.toHaveBeenCalledWith(expect.any(Function), SENT_FOR_MS);
     timeout.mockRestore();
   });
@@ -211,7 +288,9 @@ describe("ResendLink", () => {
       advanceTimers: (ms) => vi.advanceTimersByTime(ms),
     });
     const resend = resender();
-    render(<ResendLink email="maya@example.com" resend={resend} />);
+    render(
+      <ResendLink email="maya@example.com" resend={resend} viewer={OWED} />,
+    );
 
     await user.click(resendButton());
     await screen.findByText(/^Sent ✓/u);
@@ -248,6 +327,7 @@ describe("CheckEmail (Au4)", () => {
       <CheckEmail
         email="maya@example.com"
         isSignedIn={false}
+        viewer={undefined}
         resend={resender()}
       />,
     );
@@ -272,6 +352,7 @@ describe("CheckEmail (Au4)", () => {
       <CheckEmail
         email="maya@example.com"
         isSignedIn={false}
+        viewer={undefined}
         resend={resender()}
       />,
     );
@@ -293,7 +374,12 @@ describe("CheckEmail (Au4)", () => {
 
   it("signed in, says so and offers the closet, as round 26 draws it", async () => {
     await renderWithRouter(
-      <CheckEmail email="maya@example.com" isSignedIn resend={resender()} />,
+      <CheckEmail
+        email="maya@example.com"
+        isSignedIn
+        viewer={OWED}
+        resend={resender()}
+      />,
     );
     expect(
       screen.getByText(/^You're signed in\./u).closest("p"),
@@ -382,6 +468,7 @@ describe("the confirm-first sheet and the nag", () => {
         onClose={onClose}
         email="maya@example.com"
         resend={resend}
+        viewer={OWED}
       />,
     );
     const sheet = screen.getByRole("dialog", {
@@ -416,6 +503,7 @@ describe("the confirm-first sheet and the nag", () => {
         onClose={vi.fn()}
         email="maya@example.com"
         resend={resend}
+        viewer={OWED}
       />,
     );
     // Shut, it takes nothing: the page keeps its own focus.
@@ -427,6 +515,7 @@ describe("the confirm-first sheet and the nag", () => {
         onClose={vi.fn()}
         email="maya@example.com"
         resend={resend}
+        viewer={OWED}
       />,
     );
     await waitFor(() => {
@@ -449,6 +538,7 @@ describe("the confirm-first sheet and the nag", () => {
           onClose={vi.fn()}
           email="maya@example.com"
           resend={resender()}
+          viewer={OWED}
           trigger={trigger}
         />,
       );
@@ -469,6 +559,7 @@ describe("the confirm-first sheet and the nag", () => {
         onClose={vi.fn()}
         email={undefined}
         resend={resender()}
+        viewer={OWED}
         trigger="report"
       />,
     );
@@ -494,6 +585,7 @@ describe("the confirm-first sheet and the nag", () => {
         onClose={vi.fn()}
         email={undefined}
         resend={resender()}
+        viewer={OWED}
       />,
     );
     const sheet = screen.getByRole("dialog", {
@@ -507,7 +599,9 @@ describe("the confirm-first sheet and the nag", () => {
 `account`'s `ownAccountQuery`, answering with the runner's address.
 */
 function ownAccount() {
-  return vi.fn(() => Promise.resolve({ email: "maya@example.com" }));
+  return vi.fn(() =>
+    Promise.resolve({ email: "maya@example.com", viewer: OWED }),
+  );
 }
 
 describe("the sheet the root opens on a refusal (design 133)", () => {
@@ -539,6 +633,29 @@ describe("the sheet the root opens on a refusal (design 133)", () => {
     expect(account).toHaveBeenCalledOnce();
   });
 
+  it("says the Resend limit on the clock the read gave, unmarked for a home zone (R-96 (3))", async () => {
+    const account = vi.fn(() =>
+      Promise.resolve({ email: "maya@example.com", viewer: CHICAGO }),
+    );
+    const gate = confirmEmailOnRefusal(
+      account,
+      resender({ status: "limited", until: UNTIL }),
+    );
+    const user = userEvent.setup();
+    render(<>{gate.sheet({ open: true, trigger: "report" }, vi.fn())}</>);
+    const sheet = screen.getByRole("dialog", {
+      name: "Confirm your email first",
+    });
+    await user.click(
+      await within(sheet).findByRole("button", { name: "Resend link" }),
+    );
+    expect(
+      await within(sheet).findByText(
+        "That's 5 links this hour. You can send another at 2:00 AM.",
+      ),
+    ).toBeVisible();
+  });
+
   it("asks nothing while shut, and keeps the address once it has it", async () => {
     const account = ownAccount();
     const gate = confirmEmailOnRefusal(account, resender());
@@ -560,9 +677,9 @@ describe("the sheet the root opens on a refusal (design 133)", () => {
 
   it("still says what waits when the address cannot be read, and asks again on the next opening", async () => {
     const account = vi
-      .fn<() => Promise<{ email: string }>>()
+      .fn<() => Promise<{ email: string; viewer: ViewerZone }>>()
       .mockRejectedValueOnce(new Error("D1 down"))
-      .mockResolvedValueOnce({ email: "maya@example.com" });
+      .mockResolvedValueOnce({ email: "maya@example.com", viewer: OWED });
     const gate = confirmEmailOnRefusal(account, resender());
     const { rerender } = render(
       <>{gate.sheet({ open: true, trigger: "useful" }, vi.fn())}</>,
@@ -587,7 +704,11 @@ describe("the sheet the root opens on a refusal (design 133)", () => {
     const resend = resender();
     const { rerender } = render(
       <ConfirmEmailBand
-        account={{ email: "maya@example.com", isVerified: false }}
+        account={{
+          email: "maya@example.com",
+          isVerified: false,
+          viewer: OWED,
+        }}
         resend={resend}
       />,
     );
@@ -607,7 +728,11 @@ describe("the sheet the root opens on a refusal (design 133)", () => {
 
     rerender(
       <ConfirmEmailBand
-        account={{ email: "maya@example.com", isVerified: true }}
+        account={{
+          email: "maya@example.com",
+          isVerified: true,
+          viewer: OWED,
+        }}
         resend={resend}
       />,
     );
@@ -625,7 +750,9 @@ function renderChange(
   const request = vi.fn(() =>
     Promise.resolve(options.answer ?? ({ status: "sent" } as const)),
   );
-  render(<ChangeEmail current="old@example.com" request={request} />);
+  render(
+    <ChangeEmail current="old@example.com" request={request} viewer={OWED} />,
+  );
   return { request, user: userEvent.setup() };
 }
 
@@ -689,13 +816,16 @@ describe("ChangeEmail (ACC-8)", () => {
   });
 
   it("bands the hour's limit", async () => {
-    const until = 1_800_000_000;
     const { request, user } = renderChange({
-      answer: { status: "limited", until },
+      answer: { status: "limited", until: UNTIL },
     });
     await fillChange(user, "new@example.com");
     await user.click(sendLink());
-    expect(await screen.findByText(limitedMessage(until))).toBeVisible();
+    expect(
+      await screen.findByText(
+        "That's 5 links this hour. You can send another at 8:00 AM UTC.",
+      ),
+    ).toBeVisible();
     // Nothing went, so nothing says it did (task 126 PR B).
     expect(screen.queryByText("Link sent.")).toBeNull();
     // The confirm-first sheet never opens for the hour's limit.
@@ -716,13 +846,17 @@ describe("ChangeEmail (ACC-8)", () => {
       ),
     );
     const ownAccount = vi.fn(() =>
-      Promise.resolve({ email: "old@example.com" }),
+      Promise.resolve({ email: "old@example.com", viewer: OWED }),
     );
     render(
       <UnconfirmedRefusalAnswer
         gate={confirmEmailOnRefusal(ownAccount, resender())}
       >
-        <ChangeEmail current="old@example.com" request={request} />
+        <ChangeEmail
+          current="old@example.com"
+          request={request}
+          viewer={OWED}
+        />
       </UnconfirmedRefusalAnswer>,
     );
     const user = userEvent.setup();
@@ -758,18 +892,42 @@ describe("ChangeEmail (ACC-8)", () => {
   });
 
   it("lands used-up tries at the password on its field, with when to try again", async () => {
-    const until = 1_800_000_000;
     const { user } = renderChange({
-      answer: { status: "password-limited", until },
+      answer: { status: "password-limited", until: UNTIL },
     });
     await fillChange(user, "new@example.com");
     await user.click(sendLink());
-    const clock = clockLabel(until, deviceTimeZone());
     expect(
-      await screen.findByText(currentPasswordLimited(clock)),
+      await screen.findByText(currentPasswordLimited("8:00 AM UTC")),
     ).toBeVisible();
     expect(currentPasswordField()).toHaveAttribute("aria-invalid", "true");
     expect(screen.queryByText(/^Sent ✓/u)).toBeNull();
+  });
+
+  it("says both limits on the runner's home clock, unmarked (R-96 (3))", async () => {
+    const request = vi
+      .fn<() => Promise<ChangeResult>>()
+      .mockResolvedValueOnce({ status: "password-limited", until: UNTIL })
+      .mockResolvedValueOnce({ status: "limited", until: UNTIL });
+    render(
+      <ChangeEmail
+        current="old@example.com"
+        request={request}
+        viewer={CHICAGO}
+      />,
+    );
+    const user = userEvent.setup();
+    await fillChange(user, "new@example.com");
+    await user.click(sendLink());
+    expect(
+      await screen.findByText(currentPasswordLimited("2:00 AM")),
+    ).toBeVisible();
+    await user.click(sendLink());
+    expect(
+      await screen.findByText(
+        "That's 5 links this hour. You can send another at 2:00 AM.",
+      ),
+    ).toBeVisible();
   });
 
   it("lands a wrong current password on its field, and says nothing was sent", async () => {

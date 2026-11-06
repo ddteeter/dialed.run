@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { CredentialFields } from "../../src/modules/auth/auth-page";
 import type { FieldProps } from "../../src/ui";
-import { clockLabel, deviceTimeZone } from "../../src/lib/dates";
+import type { ViewerZone } from "../../src/lib/dates";
 import { AUTH_COPY } from "../../src/modules/auth/auth-copy";
 import type { PasswordChange } from "../../src/modules/auth/change-password";
 import { ChangePassword } from "../../src/modules/auth/components/ChangePassword";
@@ -297,11 +297,19 @@ describe("ResetPassword", () => {
 });
 
 /**
+A runner whose home zone is still owed: their clock is UTC, marked.
+*/
+const OWED: ViewerZone = { homeZone: undefined };
+
+/**
 Fill both fields and press Change password, answered with `result`.
 */
-async function changeAnswered(result: PasswordChange): Promise<void> {
+async function changeAnswered(
+  result: PasswordChange,
+  viewer: ViewerZone = OWED,
+): Promise<void> {
   const user = userEvent.setup();
-  render(<ChangePassword change={answering(result)} />);
+  render(<ChangePassword change={answering(result)} viewer={viewer} />);
   await user.type(current(), LONG);
   await user.type(next(), OTHER);
   await user.click(screen.getByRole("button", { name: "Change password" }));
@@ -311,7 +319,7 @@ describe("ChangePassword (ACC-7)", () => {
   it("changes it, says every other device was signed out, and clears both fields", async () => {
     const change = answering({ status: "changed" });
     const user = userEvent.setup();
-    render(<ChangePassword change={change} />);
+    render(<ChangePassword change={change} viewer={OWED} />);
 
     expect(current()).toHaveAttribute("autocomplete", "current-password");
     expect(current()).toHaveAttribute("name", "currentPassword");
@@ -343,18 +351,23 @@ describe("ChangePassword (ACC-7)", () => {
     expect(next()).not.toHaveAttribute("aria-invalid", "true");
   });
 
-  it("says when the next try may go once the tries are used up (round 28 #10, R-124)", async () => {
-    const until = 1_800_000_000;
-    await changeAnswered({ status: "limited", until });
-    const clock = clockLabel(until, deviceTimeZone());
-    expect(
-      await screen.findByText(
-        `That's 5 wrong tries. You can try again at ${clock}.`,
-      ),
-    ).toBeVisible();
-    expect(current()).toHaveAttribute("aria-invalid", "true");
-    expect(screen.queryByText(/Password changed/u)).toBeNull();
-  });
+  it.each([
+    [{ homeZone: "America/Chicago" }, "2:00 AM"],
+    [OWED, "8:00 AM UTC"],
+  ])(
+    "says when the next try may go once the tries are used up, on the runner's home clock (round 28 #10, R-124, R-96 (3); %o: %s)",
+    async (viewer, clock) => {
+      // 2027-01-15T08:00:00Z.
+      await changeAnswered({ status: "limited", until: 1_800_000_000 }, viewer);
+      expect(
+        await screen.findByText(
+          `That's 5 wrong tries. You can try again at ${clock}.`,
+        ),
+      ).toBeVisible();
+      expect(current()).toHaveAttribute("aria-invalid", "true");
+      expect(screen.queryByText(/Password changed/u)).toBeNull();
+    },
+  );
 
   it("lands a breached new password on the new one's field", async () => {
     await changeAnswered({ status: "breached" });
@@ -366,7 +379,7 @@ describe("ChangePassword (ACC-7)", () => {
   it("lists both fields when both are missing, by their labels", async () => {
     const change = vi.fn();
     const user = userEvent.setup();
-    render(<ChangePassword change={change} />);
+    render(<ChangePassword change={change} viewer={OWED} />);
     await user.click(screen.getByRole("button", { name: "Change password" }));
     await waitFor(() => {
       expect(screen.getByRole("status")).toHaveTextContent(
@@ -403,7 +416,7 @@ describe("Sign out everywhere (ACC-7)", () => {
 describe("password pages: a lapsed session (Au7, D-155)", () => {
   it("carries settings to log-in", () => {
     carriedSince();
-    render(<ChangePassword change={vi.fn()} />);
+    render(<ChangePassword change={vi.fn()} viewer={OWED} />);
 
     expect(carriedSince()).toEqual(["settings"]);
   });

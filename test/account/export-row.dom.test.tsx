@@ -10,6 +10,7 @@ import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ExportRowState } from "../../src/lib/contracts/data-export";
+import type { ViewerZone } from "../../src/lib/dates";
 import { ExportRow } from "../../src/modules/account/components/ExportRow";
 
 /**
@@ -32,14 +33,25 @@ type Request = (input: {
   data: { idempotencyKey: string };
 }) => Promise<ExportRowState>;
 
+/**
+A runner whose home zone is still owed: days read on UTC.
+*/
+const OWED: ViewerZone = { homeZone: undefined };
+
 function renderRow(
   state: ExportRowState,
   request: Request = vi.fn<Request>().mockResolvedValue({ state: "preparing" }),
   onRequested = vi.fn<() => Promise<void>>().mockResolvedValue(),
+  viewer: ViewerZone = OWED,
 ) {
   return renderWithRouter(
     <ul>
-      <ExportRow state={state} request={request} onRequested={onRequested} />
+      <ExportRow
+        state={state}
+        viewer={viewer}
+        request={request}
+        onRequested={onRequested}
+      />
     </ul>,
   );
 }
@@ -63,9 +75,7 @@ describe("ExportRow", () => {
     expect(row().tagName).toBe("LI");
     expect(within(row()).getByText("Export your data")).toBeInTheDocument();
     expect(
-      within(row()).getByText(
-        "Runs, closet, entries and photos",
-      ),
+      within(row()).getByText("Runs, closet, entries and photos"),
     ).toBeInTheDocument();
     expect(
       within(row()).getByRole("button", { name: "Get a copy" }),
@@ -157,6 +167,23 @@ describe("ExportRow", () => {
     expect(within(row()).queryByRole("button")).toBeNull();
   });
 
+  it("names the link's last day on the runner's home zone, unmarked (R-96 (3))", async () => {
+    await renderRow(
+      {
+        state: "ready",
+        token: "0123456789abcdef0123456789abcdef",
+        // 03:53 UTC on Jan 22 2027: still the 21st in Chicago.
+        expiresAt: 1_800_590_000,
+      },
+      undefined,
+      undefined,
+      { homeZone: "America/Chicago" },
+    );
+    expect(
+      within(row()).getByText("Emailed. The link works until Thu, Jan 21."),
+    ).toBeInTheDocument();
+  });
+
   it("says a failed export didn't finish and doesn't count, and offers Try again (round 28 #15)", async () => {
     await renderRow({ state: "failed" });
     expect(
@@ -167,7 +194,9 @@ describe("ExportRow", () => {
     expect(
       within(row()).getByRole("button", { name: "Try again" }),
     ).toBeInTheDocument();
-    expect(within(row()).queryByRole("button", { name: "Get a copy" })).toBeNull();
+    expect(
+      within(row()).queryByRole("button", { name: "Get a copy" }),
+    ).toBeNull();
   });
 
   it("says a refused link is dead on an idle row, and nowhere else (round 28 #15)", async () => {
@@ -177,6 +206,7 @@ describe("ExportRow", () => {
         <ExportRow
           state={{ state: "idle" }}
           isLinkDead
+          viewer={OWED}
           request={vi.fn<Request>()}
           onRequested={vi.fn<() => Promise<void>>()}
         />
@@ -192,6 +222,7 @@ describe("ExportRow", () => {
         <ExportRow
           state={{ state: "preparing" }}
           isLinkDead
+          viewer={OWED}
           request={vi.fn<Request>()}
           onRequested={vi.fn<() => Promise<void>>()}
         />

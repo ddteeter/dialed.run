@@ -14,7 +14,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { z } from "zod";
 
 import { REGION_COPY, TURNSTILE_REFUSED } from "../../src/lib/contracts/access";
@@ -391,12 +391,26 @@ describe("Au5 · Request access", () => {
     ).toHaveLength(1);
   });
 
-  it("names the limit's time, and Turnstile's sentence for its refusal", () => {
-    expect(refusalMessage({ status: "refused" })).toBe(TURNSTILE_REFUSED);
-    expect(refusalMessage({ status: "limited", until: 0 })).toMatch(
-      /^Too many requests from here\. You can send another at .+\.$/u,
-    );
-  });
+  it.each([
+    ["UTC", "8:00 AM UTC"],
+    ["America/Chicago", "2:00 AM"],
+  ])(
+    "names the limit's time on the device's clock, marked when it is UTC (%s: %s), and Turnstile's sentence for its refusal",
+    (zone, clock) => {
+      const resolved = new Intl.DateTimeFormat().resolvedOptions();
+      const spy = vi
+        .spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions")
+        .mockReturnValue({ ...resolved, timeZone: zone });
+      onTestFinished(() => {
+        spy.mockRestore();
+      });
+      expect(refusalMessage({ status: "refused" })).toBe(TURNSTILE_REFUSED);
+      // 2027-01-15T08:00:00Z.
+      expect(refusalMessage({ status: "limited", until: 1_800_000_000 })).toBe(
+        `Too many requests from here. You can send another at ${clock}.`,
+      );
+    },
+  );
 });
 
 function code(overrides: Partial<DeskCode> = {}): DeskCode {

@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 
 import type { ResendResult } from "../verification";
+import type { ViewerZone } from "../../../lib/dates";
 import { ResendLink } from "./ResendLink";
 
 /**
@@ -16,7 +17,8 @@ export function ConfirmEmailBand({
   account,
   resend,
 }: Readonly<{
-  account: { email: string; isVerified: boolean } | undefined;
+  account:
+    { email: string; isVerified: boolean; viewer: ViewerZone } | undefined;
   resend: (input: { data: { email: string } }) => Promise<ResendResult>;
 }>): JSX.Element | undefined {
   if (account === undefined || account.isVerified) return undefined;
@@ -29,7 +31,11 @@ export function ConfirmEmailBand({
       <p className="m-0 text-body">
         Confirm your email to share runs with other runners.
       </p>
-      <ResendLink email={account.email} resend={resend} />
+      <ResendLink
+        email={account.email}
+        resend={resend}
+        viewer={account.viewer}
+      />
     </aside>
   );
 }

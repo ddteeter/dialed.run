@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 
-import { dayTimeLabel } from "../../../lib/dates";
+import { viewerDayTimeLabel } from "../../../lib/dates";
+import type { ViewerZone } from "../../../lib/dates";
 import {
   ControlFailureBand,
   FormStatus,
@@ -25,6 +26,10 @@ type NotificationRow = Awaited<ReturnType<typeof listNotifications>>[number];
 export interface NotificationListProps {
   notifications: readonly NotificationRow[];
   markAllRead: () => Promise<unknown>;
+  /**
+   * Whose clock the times read on: the home place's, or marked UTC (R-96).
+   */
+  viewer: ViewerZone;
 }
 
 /**
@@ -47,6 +52,7 @@ export interface NotificationListProps {
 export function NotificationList({
   notifications,
   markAllRead,
+  viewer,
 }: Readonly<NotificationListProps>) {
   const navigate = useNavigate();
   const marking = useControlAction({
@@ -139,7 +145,7 @@ export function NotificationList({
                 )}
                 <p className="m-0 text-body">{notification.body}</p>
                 <Mono step="xs" className="text-muted">
-                  {dayTimeLabel(notification.createdAt)}
+                  {viewerDayTimeLabel(notification.createdAt, viewer)}
                 </Mono>
               </div>
             </li>

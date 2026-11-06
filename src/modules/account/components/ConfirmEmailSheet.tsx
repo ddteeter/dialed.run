@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
 import type { ConfirmTrigger } from "../../../lib/auth-signal";
+import type { ViewerZone } from "../../../lib/dates";
 import { Sheet } from "../../../ui";
 import type { ConfirmGate } from "../../../ui";
 import type { ResendResult } from "../verification";
@@ -26,6 +27,16 @@ const WAITS_FOR: Readonly<Record<ConfirmTrigger, string>> = {
 type Resend = (input: { data: { email: string } }) => Promise<ResendResult>;
 
 /**
+What the sheet reads about the runner once a refusal opens it.
+*/
+interface OwnAddress {
+  readonly email: string;
+  readonly viewer: ViewerZone;
+}
+
+const OWED: ViewerZone = { homeZone: undefined };
+
+/**
  * "Confirm your email first" (round 26 #11, as round 27 #17 redrew it;
  * seam 7): what a control opens when the server refuses it for want of a
  * confirmed address — through `confirmEmailOnRefusal` below, one sheet
@@ -47,12 +58,17 @@ export function ConfirmEmailSheet({
   onClose,
   email,
   resend,
+  viewer,
   trigger,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   email: string | undefined;
   resend: Resend;
+  /**
+   * The signed-in runner's clock, for the resend limit (R-96 (3)).
+   */
+  viewer: ViewerZone;
   trigger?: ConfirmTrigger | undefined;
 }>): JSX.Element {
   // State rather than a ref, so the effect re-runs once the button exists
@@ -83,7 +99,7 @@ export function ConfirmEmailSheet({
             <p className="m-0 text-body">
               We sent a link to <strong>{email}</strong>.
             </p>
-            <ResendLink email={email} resend={resend} isPill />
+            <ResendLink email={email} resend={resend} viewer={viewer} isPill />
           </>
         )}
         <button
@@ -123,28 +139,30 @@ export function ConfirmEmailOnRefusal({
   open: boolean;
   onClose: () => void;
   trigger: ConfirmTrigger | undefined;
-  ownAccount: () => Promise<{ email: string }>;
+  ownAccount: () => Promise<OwnAddress>;
   resend: Resend;
 }>): JSX.Element {
-  const [email, setEmail] = useState<string | undefined>();
+  const [account, setAccount] = useState<OwnAddress | undefined>();
   useEffect(() => {
-    if (!open || email !== undefined) return;
+    if (!open || account !== undefined) return;
     async function askForAddress(): Promise<void> {
       try {
-        const account = await ownAccount();
-        setEmail(account.email);
+        setAccount(await ownAccount());
       } catch {
         // No address line, as said above.
       }
     }
     void askForAddress();
-  }, [open, email, ownAccount]);
+  }, [open, account, ownAccount]);
   return (
     <ConfirmEmailSheet
       open={open}
       onClose={onClose}
-      email={email}
+      email={account?.email}
       resend={resend}
+      // Without the read there is no Resend link to print a clock, so
+      // this owed zone is never shown; it keeps the prop required.
+      viewer={account?.viewer ?? OWED}
       trigger={trigger}
     />
   );
@@ -160,7 +178,7 @@ export function ConfirmEmailOnRefusal({
  * decides that on every press, and this only says where the link went.
  */
 export function confirmEmailOnRefusal(
-  ownAccount: () => Promise<{ email: string }>,
+  ownAccount: () => Promise<OwnAddress>,
   resend: Resend,
 ): ConfirmGate {
   return {

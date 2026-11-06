@@ -136,7 +136,11 @@ describe("OwnProfile (G): an unconfirmed runner (round 26 #11; FEED-11)", () => 
       <OwnProfile
         confirmBand={
           <ConfirmEmailBand
-            account={{ email: "maya@example.com", isVerified: false }}
+            account={{
+              email: "maya@example.com",
+              isVerified: false,
+              viewer: { homeZone: undefined },
+            }}
             resend={resend}
           />
         }
@@ -161,7 +165,11 @@ describe("OwnProfile (G): an unconfirmed runner (round 26 #11; FEED-11)", () => 
       <OwnProfile
         confirmBand={
           <ConfirmEmailBand
-            account={{ email: "maya@example.com", isVerified: true }}
+            account={{
+              email: "maya@example.com",
+              isVerified: true,
+              viewer: { homeZone: undefined },
+            }}
             resend={resend}
           />
         }
@@ -448,7 +456,7 @@ describe("OtherProfile (H)", () => {
         recentPublicEntries: [
           {
             entryId: "01A",
-            createdAt: 1_755_000_000,
+            day: "Tue Aug 12",
             verdict: -1,
             caption: NOTHING,
           },
@@ -474,13 +482,15 @@ describe("OtherProfile (H)", () => {
         recentPublicEntries: [
           {
             entryId: "01A",
-            createdAt: 1_755_000_000,
+            day: "Tue Aug 12",
             verdict: 0,
             caption: "Rain stopped at mile 2.",
           },
           {
             entryId: "01B",
-            createdAt: 1_755_000_000,
+            // The day as the server dated it, in the run's own zone: the
+            // screen prints it and computes none of its own.
+            day: "Wed Aug 13",
             verdict: NOTHING,
             caption: NOTHING,
           },
@@ -488,20 +498,20 @@ describe("OtherProfile (H)", () => {
       }),
     );
 
-    const [first, second] = screen.getAllByRole("link", {
-      name: /Tue Aug 12/u,
-    });
+    const first = screen.getByRole("link", { name: /Tue Aug 12/u });
+    const second = screen.getByRole("link", { name: /Wed Aug 13/u });
     expect(first).toHaveAttribute("href", "/feed/entry/01A");
     expect(first).toHaveTextContent(
       /^Tue Aug 12DialedRain stopped at mile 2\.$/u,
     );
     // No verdict, no badge; no caption, no line.
     expect(second).toHaveAttribute("href", "/feed/entry/01B");
-    expect(second).toHaveTextContent(/^Tue Aug 12$/u);
-    expect(second?.children).toHaveLength(1);
+    expect(second).toHaveTextContent(/^Wed Aug 13$/u);
+    expect(second.children).toHaveLength(1);
     // And Report still closes the list.
     expect(part("entries")?.lastElementChild).toBe(part("report"));
-    expect(screen.getAllByText("Tue Aug 12")[0]).toHaveClass("font-mono");
+    expect(screen.getByText("Tue Aug 12")).toHaveClass("font-mono");
+    expect(screen.getByText("Wed Aug 13")).toHaveClass("font-mono");
   });
 
   it("goes back to the feed", async () => {

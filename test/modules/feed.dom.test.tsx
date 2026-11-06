@@ -330,7 +330,11 @@ const resend = () => Promise.resolve({ status: "sent" } as const);
 function band(isVerified: boolean) {
   return (
     <ConfirmEmailBand
-      account={{ email: "maya@example.com", isVerified }}
+      account={{
+        email: "maya@example.com",
+        isVerified,
+        viewer: { homeZone: undefined },
+      }}
       resend={resend}
     />
   );

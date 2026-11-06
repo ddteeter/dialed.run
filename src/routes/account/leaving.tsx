@@ -19,9 +19,9 @@ import { signOut } from "../../modules/auth/credentials";
  */
 export const Route = createFileRoute("/account/leaving")({
   validateSearch: leavingSearch,
-  loaderDeps: ({ search }) => ({ on: search.on }),
+  loaderDeps: ({ search }) => ({ on: search.on, zone: search.zone }),
   loader: async ({ deps }) => {
-    const view = await leavingQuery({ data: { on: deps.on } });
+    const view = await leavingQuery({ data: deps });
     homeIfNothingToSay(view);
     return view;
   },

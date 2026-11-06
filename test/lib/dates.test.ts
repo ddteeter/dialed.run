@@ -12,8 +12,11 @@ import {
   previousCalendarDay,
   proseDayLabel,
   deviceTimeZone,
+  homeZoneOf,
   startAtTimeOfDay,
   timeOfDay,
+  viewerClockLabel,
+  viewerDayTimeLabel,
 } from "../../src/lib/dates";
 
 /**
@@ -308,5 +311,68 @@ describe("previousCalendarDay (the runner's yesterday, design 140)", () => {
     const lateOnFall = Math.floor(Date.UTC(2026, 10, 2, 4, 30) / 1000);
     expect(calendarDay(lateOnFall, NEW_YORK)).toBe("1 Nov 2026");
     expect(previousCalendarDay(lateOnFall, NEW_YORK)).toBe("31 Oct 2026");
+  });
+});
+
+describe("the viewer's clock, for times that are not a run's (R-96 (3))", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("reads a notification on the home zone, unmarked", () => {
+    expect(
+      viewerDayTimeLabel(LATE_ON_THE_21ST, { homeZone: "America/Chicago" }),
+    ).toBe("Mon Sep 21, 18:30");
+  });
+
+  it("marks a notification UTC while the home zone is owed", () => {
+    // UTC midnight has passed: the 22nd, and said so.
+    expect(viewerDayTimeLabel(EARLY_ON_THE_22ND, { homeZone: undefined })).toBe(
+      "Tue Sep 22, 00:30 UTC",
+    );
+  });
+
+  it("marks a home zone that really is UTC, which is true", () => {
+    expect(viewerDayTimeLabel(EARLY_ON_THE_22ND, { homeZone: "UTC" })).toBe(
+      "Tue Sep 22, 00:30 UTC",
+    );
+  });
+
+  it("reads a signed-in rate limit on the home zone, never the device's", () => {
+    deviceReads("Asia/Tokyo");
+    expect(
+      viewerClockLabel(LATE_ON_THE_21ST, { homeZone: "America/Chicago" }),
+    ).toBe("6:30 PM");
+    expect(viewerClockLabel(LATE_ON_THE_21ST, { homeZone: undefined })).toBe(
+      "11:30 PM UTC",
+    );
+  });
+
+  it("reads a signed-out rate limit on the device's clock (Au4, Au5)", () => {
+    deviceReads("America/Chicago");
+    expect(viewerClockLabel(LATE_ON_THE_21ST, undefined)).toBe("6:30 PM");
+  });
+
+  it("marks a signed-out clock UTC when the device resolves to UTC, as the server does", () => {
+    deviceReads("UTC");
+    expect(viewerClockLabel(LATE_ON_THE_21ST, undefined)).toBe("11:30 PM UTC");
+  });
+
+  it("marks a signed-out clock UTC when the device names no usable zone", () => {
+    deviceReads("Nowhere/Special");
+    expect(viewerClockLabel(LATE_ON_THE_21ST, undefined)).toBe("11:30 PM UTC");
+  });
+});
+
+describe("homeZoneOf", () => {
+  it("keeps a stored zone Intl accepts", () => {
+    expect(homeZoneOf("Europe/Berlin")).toStrictEqual({
+      homeZone: "Europe/Berlin",
+    });
+  });
+
+  it("is owed for a missing zone, and a zone Intl refuses", () => {
+    expect(homeZoneOf(undefined)).toStrictEqual({ homeZone: undefined });
+    expect(homeZoneOf("Not/AZone")).toStrictEqual({ homeZone: undefined });
   });
 });

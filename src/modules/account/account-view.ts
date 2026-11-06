@@ -8,9 +8,11 @@ import type { drizzle } from "drizzle-orm/d1";
 
 import { account, user } from "../../db/schema-auth";
 import type { ExportRowState } from "../../lib/contracts/data-export";
+import type { ViewerZone } from "../../lib/dates";
 import { firstRowWhere, hasRowWhere } from "../../lib/sql/keyed-read";
 import { nowSeconds } from "../../lib/now";
 import { notificationSettings, type NotificationSettings } from "../email";
+import { viewerZone } from "../notifications";
 import { isStravaConnected } from "../runs";
 import { exportRowState } from "./data-exports";
 import { currentTermsVersion, termsStanding } from "./terms-acceptance";
@@ -21,11 +23,14 @@ type Db = ReturnType<typeof drizzle>;
 /**
  * The address and whether it is confirmed: all that Feed, You, D and H
  * need (seam 7's nag band and confirm sheet), in the one read of the
- * `user` row.
+ * `user` row — and the runner's own clock, for the resend limit's time
+ * and every other time the account pages print that is not a run's
+ * (R-96 (3), design 173).
  */
 export interface AddressView {
   readonly email: string;
   readonly isVerified: boolean;
+  readonly viewer: ViewerZone;
 }
 
 export interface AccountView extends AddressView {
@@ -36,8 +41,11 @@ async function addressView(
   db: Db,
   userId: string,
 ): Promise<AddressView | undefined> {
-  const row = await firstRowWhere(db, user, eq(user.id, userId));
-  return row && { email: row.email, isVerified: row.emailVerified };
+  const [row, viewer] = await Promise.all([
+    firstRowWhere(db, user, eq(user.id, userId)),
+    viewerZone(db, userId),
+  ]);
+  return row && { email: row.email, isVerified: row.emailVerified, viewer };
 }
 
 /**

@@ -386,11 +386,64 @@ describe("otherProfile", () => {
 
     expect(profile?.recentPublicEntries[0]).toStrictEqual({
       entryId,
-      createdAt: NOW,
+      // No zone anywhere: the run's day in UTC.
+      day: "Thu Sep 4",
       verdict: -1,
       caption: "Cold first mile",
     });
     expect(Object.hasOwn(profile ?? {}, "coverage")).toBe(false);
+  });
+
+  it("dates each run where it was run: its observation's zone, else the runner's own place's (R-96)", async () => {
+    const userId = await makeVerifiedUser();
+    await db()
+      .update(userProfiles)
+      .set({ timeZone: "Asia/Tokyo" })
+      .where(eq(userProfiles.userId, userId));
+    // 03:30 UTC on Sep 4: Thu in Tokyo, still Wed in Chicago, where it ran.
+    const observedAt = Date.UTC(2025, 8, 4, 3, 30) / 1000;
+    const observedRun = await makeRun({
+      userId,
+      lat: 41.88,
+      lng: -87.63,
+      startedAt: observedAt,
+    });
+    await makeObservation({
+      lat: 41.88,
+      lng: -87.63,
+      startedAt: observedAt,
+      tempC: 10,
+      feelsLikeC: 8,
+      timeZone: "America/Chicago",
+    });
+    const observed = await makeEntry({
+      userId,
+      runId: observedRun,
+      verdict: 0,
+      createdAt: observedAt,
+      audience: "runners",
+    });
+    // 20:30 UTC on Sep 4, no observation: already Fri in Tokyo.
+    const unobservedAt = Date.UTC(2025, 8, 4, 20, 30) / 1000;
+    const unobserved = await makeEntry({
+      userId,
+      runId: await makeRun({ userId, lat: 35.68, startedAt: unobservedAt }),
+      verdict: 0,
+      createdAt: unobservedAt,
+      audience: "runners",
+    });
+
+    const profile = await otherProfile(userId, await makeVerifiedUser());
+
+    expect(
+      profile?.recentPublicEntries.map(({ entryId, day }) => ({
+        entryId,
+        day,
+      })),
+    ).toStrictEqual([
+      { entryId: unobserved, day: "Fri Sep 5" },
+      { entryId: observed, day: "Wed Sep 3" },
+    ]);
   });
 
   it("shows the city label a runner chose to publish", async () => {

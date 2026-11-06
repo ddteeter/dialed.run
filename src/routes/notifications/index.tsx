@@ -6,18 +6,18 @@ import {
   bellStateFn,
   listNotificationsFn,
   markAllNotificationsReadFn,
+  viewerZoneFn,
 } from "../../modules/notifications/functions";
+import { withBell } from "../../modules/notifications/with-bell";
 import { Page } from "../../ui";
 
 // fallow-ignore-next-line code-duplication -- two routes of the same kind are the same shape by mandate: createFileRoute + loader + useLoaderData + shell is exactly what server-functions-are-glue requires, and the branching that would make them differ is what it forbids
 export const Route = createFileRoute("/notifications/")({
-  loader: async () => {
-    const [notifications, bell] = await Promise.all([
-      listNotificationsFn(),
+  loader: () =>
+    withBell(
+      Promise.all([listNotificationsFn(), viewerZoneFn()]),
       bellStateFn(),
-    ]);
-    return { notifications, bell };
-  },
+    ),
   component: NotificationsPage,
 });
 
@@ -27,7 +27,8 @@ export const Route = createFileRoute("/notifications/")({
  * holds state a route may not.
  */
 function NotificationsPage() {
-  const { notifications, bell } = Route.useLoaderData();
+  const { data, bell } = Route.useLoaderData();
+  const [notifications, viewer] = data;
 
   return (
     <BelledLayout {...bell}>
@@ -35,6 +36,7 @@ function NotificationsPage() {
         <NotificationList
           notifications={notifications}
           markAllRead={markAllNotificationsReadFn}
+          viewer={viewer}
         />
       </Page>
     </BelledLayout>

@@ -18,7 +18,7 @@ import { garmentNamesByIds } from "./garment-names";
 import { readInChunks } from "../../lib/chunked";
 import { bandLabel } from "../../lib/contracts/temperature";
 import { topByCount } from "../../lib/top-by-count";
-import { observationsForEntries } from "./conditions";
+import { observationsForEntries, observationsForRuns } from "./conditions";
 import { recentOwnEntries } from "./own-history";
 import { bandsAscending, tallyCoverage } from "./coverage";
 import type { CoverageBand } from "./coverage";
@@ -29,6 +29,8 @@ import { lookUpHandle } from "../account";
 import { isUnderReviewForAuthor, publiclyVisibleEntry } from "../safety";
 import { runnersVisibleTo } from "./runner-visibility";
 import { outfitEntriesSelect } from "./entries-query";
+import { runDayOf } from "./public-kit";
+import { columnWhere } from "../../lib/sql/keyed-read";
 
 function db() {
   return coreDb();
@@ -139,7 +141,12 @@ export interface OtherProfile {
   cityLabel: string | null;
   recentPublicEntries: {
     entryId: string;
-    createdAt: number;
+    /**
+     * The run's day where it was run — its observation's zone, else the
+     * runner's own place's, else UTC — as the public profile dates the
+     * same kits (R-96; owner 2026-11-05, round 46 107d).
+     */
+    day: string;
     verdict: number | null;
     caption: string | null;
   }[];
@@ -191,9 +198,18 @@ export function recentPublicEntriesStatement(
       createdAt: outfitEntries.createdAt,
       verdict: outfitEntries.verdict,
       caption: outfitEntries.caption,
+      // The run's place, start and span, to date it where it was run.
+      run: {
+        id: runs.id,
+        lat: runs.lat,
+        lng: runs.lng,
+        startedAt: runs.startedAt,
+        durationS: runs.durationS,
+      },
     },
     and(eq(outfitEntries.userId, userId), publiclyVisibleEntry(viewerId)),
   )
+    .innerJoin(runs, eq(runs.id, outfitEntries.runId))
     .orderBy(desc(outfitEntries.createdAt))
     .limit(RECENT_LIMIT);
 }
@@ -229,6 +245,15 @@ export async function otherProfile(
     userId,
     viewerId,
   );
+  const [observed, [runnerZone]] = await Promise.all([
+    observationsForRuns(entries.map((e) => e.run)),
+    columnWhere(
+      database,
+      userProfiles,
+      userProfiles.timeZone,
+      eq(userProfiles.userId, userId),
+    ),
+  ]);
 
   return {
     userId,
@@ -236,7 +261,7 @@ export async function otherProfile(
     cityLabel: profile.cityLabel,
     recentPublicEntries: entries.map((e) => ({
       entryId: e.id,
-      createdAt: e.createdAt,
+      day: runDayOf(e.run.startedAt, observed.get(e.run.id), runnerZone),
       verdict: e.verdict,
       caption: e.caption,
     })),
