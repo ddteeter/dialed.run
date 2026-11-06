@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import { z } from "zod";
 
 import {
@@ -418,6 +418,46 @@ function useFieldErrors(isPending: boolean, initial: FieldErrors) {
   return { fieldErrors, setFieldErrors, field, markField };
 }
 
+/**
+ * The form's one status sentence, and the failure sentence the runner's
+ * next input inside the form takes away (R-179).
+ *
+ * A failure's sentence is said once and then sits in the region, so in
+ * browse mode a screen reader met one error two or three times. The
+ * owner's call is that it goes on the first input after the error, inside
+ * this form, silently: no focus move, and nothing said about the clearing.
+ * The field's own message and the summary stay until the field is fixed
+ * or the form is sent again; only this sentence goes. A success, or a
+ * sentence another control borrows the region for (`announce`), is not a
+ * failure and stays.
+ *
+ * Which sentence is the failure's is held beside the sentence rather than
+ * as a flag, so nothing that sets the region has to remember to lower one:
+ * the listener is held exactly while the region says the failure.
+ * Listened for on the form element, so a control not wired through
+ * `field()` — a toggle, a select — clears it as well.
+ */
+function useStatus(formRef: RefObject<HTMLFormElement | null>) {
+  const [status, setStatus] = useState("");
+  const [failureSaid, setFailureSaid] = useState<string | undefined>();
+  const isSayingFailure = status === failureSaid;
+
+  useEffect(() => {
+    const form = formRef.current;
+    // A hook whose form has not mounted has nothing to listen on.
+    if (!isSayingFailure || form === null) return;
+    const clear = () => {
+      setStatus("");
+    };
+    form.addEventListener("input", clear);
+    return () => {
+      form.removeEventListener("input", clear);
+    };
+  }, [isSayingFailure, formRef]);
+
+  return { status, setStatus, setFailureSaid };
+}
+
 export function useFormSubmit<TSchema extends z.ZodType, TResult>({
   schema,
   action,
@@ -435,8 +475,8 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
     initialErrors,
   );
   const [failure, setFailure] = useState<FormFailure | undefined>();
-  const [status, setStatus] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
+  const { status, setStatus, setFailureSaid } = useStatus(formRef);
   const summaryRef = useRef<HTMLDivElement>(null);
   const retryRef = useRef<HTMLButtonElement>(null);
   const inFlight = useRef(false);
@@ -477,11 +517,12 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
       // a statement nothing could observe.
       const names = Object.keys(errors);
       setFieldErrors(errors);
-      setStatus(
+      const sentence =
         names.length === 1
           ? "Nothing saved. One field needs a fix."
-          : `Nothing saved. ${String(names.length)} fields need a fix.`,
-      );
+          : `Nothing saved. ${String(names.length)} fields need a fix.`;
+      setStatus(sentence);
+      setFailureSaid(sentence);
       // One error focuses its field; two or more focus the summary, which
       // is the only thing that lists them all.
       const only = names.length === 1 ? names[0] : undefined;
@@ -497,7 +538,7 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
         else focusField(only);
       }, DURATION.instant);
     },
-    [focusField],
+    [focusField, setStatus, setFailureSaid],
   );
   // Stryker restore OptionalChaining,ArrayDeclaration
 
@@ -566,7 +607,9 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
             return;
           }
           setFailure(classified);
-          setStatus(`Nothing saved. ${classified.message}`);
+          const sentence = `Nothing saved. ${classified.message}`;
+          setStatus(sentence);
+          setFailureSaid(sentence);
           globalThis.setTimeout(() => {
             retryRef.current?.focus();
           }, DURATION.instant);
@@ -588,6 +631,8 @@ export function useFormSubmit<TSchema extends z.ZodType, TResult>({
       successMessage,
       land,
       refusal,
+      setStatus,
+      setFailureSaid,
       answerTermsRefusal,
       answerUnconfirmed,
       confirmTrigger,

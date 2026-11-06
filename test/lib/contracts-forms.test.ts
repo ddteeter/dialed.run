@@ -21,6 +21,9 @@ import {
   signUpSchema,
   usernameInput,
   usernameSchema,
+  spokenFormOf,
+  USERNAME_SHAPE_REFUSAL,
+  USERNAME_UNDERSCORE_REFUSAL,
 } from "../../src/lib/contracts";
 
 /**
@@ -401,5 +404,28 @@ describe("usernameSchema (round 26 #7)", () => {
     expect(
       messagesFor(usernameInput, { username: "_m" }, "username"),
     ).toStrictEqual(["Use 3–20 letters, numbers or _."]);
+  });
+
+  // Derive, don't mirror: the said form is found by the very string the
+  // schema sends, so a reworded message that left the lookup behind would
+  // fall back to the symbols in silence. Pinned against the schema's own
+  // issues, not against the constants.
+  it("says each shape refusal in words, keyed on the schema's message", () => {
+    const [shape] = messagesFor(usernameInput, { username: "ab" }, "username");
+    const [underscore] = messagesFor(
+      usernameInput,
+      { username: "_maya" },
+      "username",
+    );
+    expect(spokenFormOf(shape ?? "")).toBe(
+      "Use 3 to 20 letters, numbers or underscores.",
+    );
+    expect(spokenFormOf(underscore ?? "")).toBe(
+      "Handles can't start with an underscore.",
+    );
+    expect(shape).toBe(USERNAME_SHAPE_REFUSAL.shown);
+    expect(underscore).toBe(USERNAME_UNDERSCORE_REFUSAL.shown);
+    // A message drawn in plain words has no second form.
+    expect(spokenFormOf("Add a name.")).toBeUndefined();
   });
 });

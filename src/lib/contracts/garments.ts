@@ -407,16 +407,49 @@ const USERNAME_SHAPE = new RegExp(
   `^[a-z0-9_]{${String(USERNAME_MIN_LENGTH)},${String(USERNAME_MAX_LENGTH)}}$`,
 );
 
+/**
+ * The two shape refusals, drawn as the board words them (round 26 #7) and
+ * said in words: a screen reader reads "3–20 … or _" as "3 dash 20 … or
+ * underscore", or skips the marks (a11y judgment audit, R-179). The same
+ * pair as `HANDLE_COPY.rule`, for the same reason.
+ *
+ * The schema sends `shown`, a plain string, from either side; the form
+ * finds `said` by it (`spokenFormOf`), so the message and the key it is
+ * looked up by are one constant rather than two copies of a sentence.
+ */
+export const USERNAME_SHAPE_REFUSAL = {
+  shown: "Use 3–20 letters, numbers or _.",
+  said: "Use 3 to 20 letters, numbers or underscores.",
+} as const;
+
+export const USERNAME_UNDERSCORE_REFUSAL = {
+  shown: "Handles can't start with _.",
+  said: "Handles can't start with an underscore.",
+} as const;
+
+const SPOKEN_REFUSALS: readonly { shown: string; said: string }[] = [
+  USERNAME_SHAPE_REFUSAL,
+  USERNAME_UNDERSCORE_REFUSAL,
+];
+
+/**
+ * How a schema's message is said, when it is drawn in marks a screen
+ * reader would read out; `undefined` for a message said as it is shown.
+ */
+export function spokenFormOf(message: string): string | undefined {
+  return SPOKEN_REFUSALS.find((refusal) => refusal.shown === message)?.said;
+}
+
 const storedUsername = z
   .string()
   .check(
     z.regex(USERNAME_SHAPE, {
-      message: "Use 3–20 letters, numbers or _.",
+      message: USERNAME_SHAPE_REFUSAL.shown,
       abort: true,
     }),
   )
   .refine((handle) => !handle.startsWith("_"), {
-    message: "Handles can't start with _.",
+    message: USERNAME_UNDERSCORE_REFUSAL.shown,
   });
 
 export const usernameSchema = z

@@ -1,7 +1,9 @@
 import { useId } from "react";
 import type { ComponentProps, JSX, ReactNode, Ref, RefObject } from "react";
 
+import { spokenFormOf } from "../lib/contracts";
 import { Mono } from "./Mono";
+import { Spoken } from "./Spoken";
 import { describedByFor, hintIdFor, messageIdFor } from "./use-form-submit";
 import type {
   FieldOf,
@@ -137,9 +139,23 @@ export function FieldMessage({
       id={messageIdFor(name)}
       className="self-start bg-failure px-3 py-2 text-small text-ink"
     >
-      {error}
+      <ErrorWords message={error} />
     </span>
   );
+}
+
+/**
+ * A schema's message as the board draws it, and said in words where the
+ * drawing is marks a screen reader would read out — "3–20 … or _" is
+ * "3 dash 20 … or underscore" (R-179). The server sends the plain string;
+ * the said form is the contract's, looked up by it (`spokenFormOf`).
+ *
+ * Both halves sit inside `FieldMessage`'s span, so the description its
+ * id names is the said sentence whole: the drawn half is `aria-hidden`.
+ */
+function ErrorWords({ message }: Readonly<{ message: string }>): ReactNode {
+  const said = spokenFormOf(message);
+  return said === undefined ? message : <Spoken shown={message} said={said} />;
 }
 
 /**
@@ -554,7 +570,7 @@ export function FormErrorSummary({
               }}
               className="target cursor-pointer border-none bg-transparent p-0 text-left text-body underline underline-offset-4"
             >
-              {row.label} — {row.message}
+              {row.label} — <ErrorWords message={row.message} />
             </button>
           </li>
         ))}

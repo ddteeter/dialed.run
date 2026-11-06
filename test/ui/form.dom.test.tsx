@@ -1,6 +1,8 @@
 import {
+  act,
   fireEvent,
   render,
+  renderHook,
   screen,
   waitFor,
   within,
@@ -28,6 +30,7 @@ import {
   TextField,
   ToggleField,
 } from "../../src/ui/form";
+import { usernameSchema } from "../../src/lib/contracts";
 import { DURATION } from "../../src/ui/motion";
 import { describedByFor, useFormSubmit } from "../../src/ui/use-form-submit";
 import type { FieldErrors } from "../../src/ui/use-form-submit";
@@ -2502,5 +2505,179 @@ describe("FormEnd", () => {
       .setup()
       .click(screen.getByRole("button", { name: /try again/iu }));
     expect(retry).toHaveBeenCalledOnce();
+  });
+});
+
+describe("the status sentence goes on the next input after a failure (R-179)", () => {
+  // Said once, a failure's sentence used to sit in the region, so browse
+  // mode read one error two or three times. It goes on the runner's first
+  // input inside the form, silently; the marks it pointed at stay.
+  it("clears the field-error sentence on the first input, and leaves the marks and focus", async () => {
+    const user = userEvent.setup();
+    render(<Harness action={() => Promise.resolve()} />);
+
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    const status = await screen.findByRole("status");
+    expect(status).toHaveTextContent("Nothing saved. 2 fields need a fix.");
+
+    const name = screen.getByLabelText("Name");
+    await user.type(name, "H");
+    expect(status).toHaveTextContent("");
+    // Only the sentence goes: Brand is still marked and described, and
+    // nothing moved the runner from the box they are typing in.
+    const brand = screen.getByLabelText("Brand");
+    expect(brand).toHaveAttribute("aria-invalid", "true");
+    expect(brand).toHaveAccessibleDescription("Which brand?");
+    expect(name).toHaveFocus();
+  });
+
+  it("clears the band's sentence on input and keeps the band", async () => {
+    const user = userEvent.setup();
+    render(
+      <Harness action={() => rejectWith(new Error("network went away"))} />,
+    );
+    await fillValid(user);
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    const retry = await screen.findByRole("button", { name: /try again/i });
+    await waitFor(() => {
+      expect(retry).toHaveFocus();
+    });
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent(/^Nothing saved\./u);
+
+    await user.type(screen.getByLabelText("Name"), "!");
+    expect(status).toHaveTextContent("");
+    expect(retry).toBeVisible();
+  });
+
+  it("is cleared only by input inside its own form", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <Harness action={() => Promise.resolve()} />
+        <input aria-label="Elsewhere" />
+      </>,
+    );
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    const status = await screen.findByRole("status");
+    await user.type(screen.getByLabelText("Elsewhere"), "x");
+    expect(status).toHaveTextContent("Nothing saved. 2 fields need a fix.");
+  });
+
+  it("keeps a success sentence through typing, after a failure was cleared", async () => {
+    const user = userEvent.setup();
+    render(<Harness action={() => Promise.resolve()} />);
+
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    const status = await screen.findByRole("status");
+    await fillValid(user);
+    expect(status).toHaveTextContent("");
+
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    await waitFor(() => {
+      expect(status).toHaveTextContent("Saved.");
+    });
+    await user.type(screen.getByLabelText("Name"), "s");
+    expect(status).toHaveTextContent("Saved.");
+  });
+
+  it("says a failure without a form to listen on, and throws nothing", async () => {
+    // The hook can run before its form has mounted: the sentence is still
+    // the failure's, and there is simply no input to clear it yet.
+    const { result } = renderHook(() =>
+      useFormSubmit({
+        schema,
+        action: () => Promise.resolve(),
+        successMessage: "Saved.",
+      }),
+    );
+    await act(async () => {
+      await result.current.submit({ name: "", brand: "" });
+    });
+    expect(result.current.status).toBe("Nothing saved. 2 fields need a fix.");
+  });
+});
+
+const handleSchema = z.object({
+  username: usernameSchema,
+  name: z.string().min(1, "Give it a name."),
+});
+
+function HandleHarness() {
+  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
+  const form = useFormSubmit({
+    schema: handleSchema,
+    action: () => Promise.resolve(),
+    successMessage: "Saved.",
+    labels: { username: "Username", name: "Name" },
+  });
+  return (
+    <FormElement
+      form={form}
+      dataPart="handle"
+      onSubmit={() => {
+        void form.submit({ username, name });
+      }}
+    >
+      <TextField
+        name="username"
+        label="Username"
+        value={username}
+        onChange={setUsername}
+        field={form.field}
+        error={form.fieldErrors.username}
+      />
+      <TextField
+        name="name"
+        label="Name"
+        value={name}
+        onChange={setName}
+        field={form.field}
+        error={form.fieldErrors.name}
+      />
+      <SubmitButton label="Save" pendingLabel="Saving" pending={form.pending} />
+    </FormElement>
+  );
+}
+
+describe("a message drawn in marks is said in words (R-179)", () => {
+  it("shows the board's words and describes the field with the said ones", async () => {
+    const user = userEvent.setup();
+    render(<HandleHarness />);
+    await user.type(screen.getByLabelText("Name"), "Maya");
+    await user.type(screen.getByLabelText("Username"), "ab");
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    const field = screen.getByLabelText("Username");
+    await waitFor(() => {
+      expect(field).toHaveAttribute("aria-invalid", "true");
+    });
+    // The drawn sentence is the board's, hidden from the tree; the field's
+    // description is the whole said sentence, from the message's own id.
+    expect(screen.getByText("Use 3–20 letters, numbers or _.")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(field).toHaveAccessibleDescription(
+      "Use 3 to 20 letters, numbers or underscores.",
+    );
+  });
+
+  it("says the summary's row in words too", async () => {
+    const user = userEvent.setup();
+    render(<HandleHarness />);
+    await user.type(screen.getByLabelText("Username"), "_maya");
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Username — Handles can't start with an underscore.",
+      }),
+    ).toBeVisible();
+    // A message drawn in plain words is said as it is.
+    expect(
+      screen.getByRole("button", { name: "Name — Give it a name." }),
+    ).toBeVisible();
   });
 });
