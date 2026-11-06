@@ -88,15 +88,13 @@ before every push (the gate is machine-wide).
 ## Contract touches
 
 - Schema changes: **none**. Bindings, secrets, queues, crons, CI workflows: **none**.
-- `stryker.conf.json`: the two files that spawn processes (`say` in
-  `demo.ts`, already negated; `scripts/demo-mux.ts`, new) — see the question below.
+- `stryker.conf.json`: an exact-path negation for `scripts/demo-mux.ts`,
+  beside the existing `e2e/support/demo.ts` one _(owner, 2026-11-06: a
+  support utility, coverage not critical)_. It only spawns Chromium and
+  ffmpeg; every decision it makes lives in `caption.ts`, which stays at 100%.
+  The `//e2e` note in that file is updated to name it.
 
 ## Open questions
 
-- **A Stryker negation for `scripts/demo-mux.ts`?** It only spawns Chromium
-  and ffmpeg; every decision it makes moves to `caption.ts`, which stays at
-  100%. An exact-path negation is an exemption, so it is your call. The
-  alternative is unit-testing the argument arrays it passes, which a pure
-  builder already covers.
 - Which 3–5 walkthrough stories? Proposed: first run, logging a run and its
   verdict, the closet, the feed. Decided at step 5.
