@@ -31,19 +31,19 @@ listitem, level 1, position 1, set size 3
 paragraph
 Your run import didn't work.
 end of paragraph
-:day :month #, #:#
+:day :month #, #:# UTC
 end of listitem, level 1, position 1, set size 3
 listitem, level 1, position 2, set size 3
 paragraph
 New run on Strava — log your kit?
 end of paragraph
-:day :month #, #:#
+:day :month #, #:# UTC
 end of listitem, level 1, position 2, set size 3
 listitem, level 1, position 3, set size 3
 paragraph
 Your run import didn't work.
 end of paragraph
-:day :month #, #:#
+:day :month #, #:# UTC
 end of listitem, level 1, position 3, set size 3
 end of list
 end of main
