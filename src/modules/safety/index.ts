@@ -250,12 +250,14 @@ export {
 export {
   clustersIn,
   duplicateProducts,
-  duplicatesReport,
   type DuplicateCandidate,
-  type DuplicateGroup,
-  type DuplicatesReport,
   type DuplicateVariant,
 } from "./duplicates";
+export {
+  duplicatesReport,
+  type DuplicateGroup,
+  type DuplicatesReport,
+} from "./duplicates-report";
 
 export {
   blockAndDeclineAll,

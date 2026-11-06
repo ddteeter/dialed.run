@@ -1,0 +1,107 @@
+import type { JSX } from "react";
+
+import { Bracketed, Mono } from "../../../ui";
+import type { DuplicateVariant } from "../duplicates";
+import type { DuplicateGroup, DuplicatesReport } from "../duplicates-report";
+
+/**
+ * The Desk's D2 · Duplicates (task 110, Operator Screens D2): one probable
+ * product with several names per card, read as a heading and its variants
+ * rather than rows and columns. Brand, then the probable name in bold,
+ * then how many pieces sit under each other spelling.
+ *
+ * Read-only on purpose (D-30): there is no merge tool in v1, and nothing
+ * here links anywhere. Product and brand names are runner-typed, so they
+ * are only ever React text.
+ */
+export function DeskDuplicates({
+  report,
+}: Readonly<{ report: DuplicatesReport }>): JSX.Element {
+  return (
+    <section aria-labelledby="desk-duplicates" className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <h1
+          id="desk-duplicates"
+          className="m-0 font-display text-title uppercase"
+        >
+          Duplicates
+        </h1>
+        <Bracketed step="xs" className="text-muted">
+          {counted(report.names, "name")}{" "}
+          <span aria-hidden="true">→</span>
+          <span className="sr-only">as</span>{" "}
+          {counted(report.groups.length, "probable product")} ·{" "}
+          {counted(report.pieces, "piece")} affected
+        </Bracketed>
+      </div>
+      <p className="m-0 max-w-column text-small text-muted">
+        Nothing here does anything. This is how much dirt has built up, so
+        &ldquo;some dirt is accepted&rdquo; stays a decision instead of a
+        hope. Sorted by pieces affected.
+      </p>
+      {report.groups.length === 0 ? (
+        <p className="m-0 text-small text-muted">
+          No near-misses. Every product name under each brand is distinct.
+        </p>
+      ) : (
+        <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3 p-0">
+          {report.groups.map((group) => (
+            <GroupCard
+              key={group.products.map((row) => row.id).join(" ")}
+              group={group}
+            />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function GroupCard({ group }: Readonly<{ group: DuplicateGroup }>) {
+  return (
+    <li className="flex flex-col gap-3 border border-hairline bg-panel p-4">
+      <h2 className="m-0 flex items-baseline justify-between gap-3">
+        <Mono step="xs" className="text-muted">
+          {group.brand}
+        </Mono>
+        <Bracketed step="xs" className="text-hiviz-text">
+          {counted(group.pieces, "piece")}
+        </Bracketed>
+      </h2>
+      <ul className="m-0 flex list-none flex-col gap-1 p-0">
+        {group.products.map((variant, index) => (
+          <VariantRow
+            key={variant.id}
+            variant={variant}
+            isProbable={index === 0}
+          />
+        ))}
+      </ul>
+    </li>
+  );
+}
+
+function VariantRow({
+  variant,
+  isProbable,
+}: Readonly<{ variant: DuplicateVariant; isProbable: boolean }>) {
+  return (
+    <li className="flex items-baseline justify-between gap-3">
+      {isProbable ? (
+        <strong className="text-body font-bold">{variant.name}</strong>
+      ) : (
+        <span className="text-small">{variant.name}</span>
+      )}
+      <Mono step="xs" className="text-muted">
+        {variant.pieces}
+        <span className="sr-only">
+          {variant.pieces === 1 ? " piece" : " pieces"}
+        </span>
+      </Mono>
+    </li>
+  );
+}
+
+function counted(count: number, noun: string): string {
+  return `${String(count)} ${noun}${count === 1 ? "" : "s"}`;
+}

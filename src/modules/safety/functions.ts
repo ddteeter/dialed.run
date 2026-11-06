@@ -42,6 +42,8 @@ import {
 } from "../account";
 import { placeholderHandle, renameRecord } from "./rename";
 import { deskRunners, runnersWhere } from "./runners";
+import { duplicateProducts } from "./duplicates";
+import { duplicatesReport } from "./duplicates-report";
 import { blockRunner, blockedRunners, unblockRunner } from "./blocks";
 import { denyDomain } from "./denylist";
 import {
@@ -347,3 +349,15 @@ export const caseOverRestoreAction = createServerFn({ method: "POST" })
     const adminId = requireAdmin(await verifiedUserId());
     return restoreAfterCase(coreDb(), adminId, data.holdId);
   });
+
+/**
+ * The Desk's D2 · Duplicates (task 110): the read-only report of product
+ * names that are probably one product, sorted by pieces affected (D-30:
+ * no merge in v1).
+ */
+export const deskDuplicatesQuery = createServerFn({ method: "GET" }).handler(
+  async () => {
+    requireAdmin(await verifiedUserId());
+    return duplicatesReport(await duplicateProducts());
+  },
+);

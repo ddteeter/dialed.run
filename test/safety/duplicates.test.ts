@@ -11,10 +11,11 @@ import { newUlid } from "../../src/lib/ids";
 import { normalizeIdentity } from "../../src/lib/normalize";
 import {
   clustersIn,
+  DUPLICATES_PRODUCT_CAP,
   duplicateProducts,
-  duplicatesReport,
   type DuplicateCandidate,
 } from "../../src/modules/safety/duplicates";
+import { duplicatesReport } from "../../src/modules/safety/duplicates-report";
 
 import { NOW, resetSafetyTables } from "./helpers";
 
@@ -474,5 +475,60 @@ describe("the report the Desk draws", () => {
 
   it("is all zeroes over a clean catalogue", () => {
     expect(duplicatesReport([])).toEqual({ names: 0, pieces: 0, groups: [] });
+  });
+});
+
+/**
+ * `filler` distinct products under a brand that sorts first, then one
+ * near-miss pair under a brand that sorts after it: the pair's rows are
+ * the last two the report reads.
+ */
+async function pairAfter(filler: number): Promise<void> {
+  const first = "00000000000000000000000000";
+  const last = "ZZZZZZZZZZZZZZZZZZZZZZZZZZ";
+  await core()
+    .insert(brands)
+    .values([
+      { id: first, name: "Filler", normalized: "filler" },
+      { id: last, name: "Janji", normalized: "janji" },
+    ]);
+  const product = (brandId: string, name: string) =>
+    core()
+      .insert(productsTable)
+      .values({
+        id: newUlid(),
+        brandId,
+        name,
+        normalizedName: name,
+        createdBy: newUlid(),
+        createdAt: NOW,
+      });
+  const [head, ...rest] = [
+    ...Array.from({ length: filler }, (_, index) =>
+      product(first, `model ${String(index).padStart(4, "0")}`),
+    ),
+    product(last, "thermal tight"),
+    product(last, "thermal tights"),
+  ];
+  await core().batch([head, ...rest]);
+}
+
+describe("the report's cap, pinned", () => {
+  beforeEach(resetSafetyTables);
+
+  it("reads exactly DUPLICATES_PRODUCT_CAP rows: a pair ending on it is found", async () => {
+    await pairAfter(DUPLICATES_PRODUCT_CAP - 2);
+    expect(await duplicateProducts()).toHaveLength(1);
+  });
+
+  it("cuts the row after the cap, so a pair straddling it goes unreported", async () => {
+    // The deferral this pins: past the cap, a later brand's near-misses
+    // silently drop out of the report.
+    await pairAfter(DUPLICATES_PRODUCT_CAP - 1);
+    expect(await duplicateProducts()).toEqual([]);
+  });
+
+  it("is 500 products", () => {
+    expect(DUPLICATES_PRODUCT_CAP).toBe(500);
   });
 });

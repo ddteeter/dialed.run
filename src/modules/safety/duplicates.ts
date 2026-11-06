@@ -67,6 +67,14 @@ export interface DuplicateCandidate {
 }
 
 /**
+ * How many product rows one report reads, at most. The cut falls in
+ * `(brand_id, normalized_name)` order, so past it a later brand's
+ * near-misses go unreported and nothing on the page says so — accepted
+ * while the catalogue is far smaller (task 110's PR, Deferred).
+ */
+export const DUPLICATES_PRODUCT_CAP = 500;
+
+/**
  * Products under one brand whose normalised names are near-identical.
  *
  * **Grouped by brand first, and only then compared.** Two products called
@@ -74,7 +82,7 @@ export interface DuplicateCandidate {
  * report that pairs them is one an operator stops reading.
  */
 export async function duplicateProducts(
-  limit = 500,
+  limit = DUPLICATES_PRODUCT_CAP,
 ): Promise<DuplicateCandidate[]> {
   const rows = await db()
     .select({
@@ -150,42 +158,6 @@ function byPiecesThenName(
   right: Readonly<{ pieces: number; name: string }>,
 ): number {
   return right.pieces - left.pieces || left.name.localeCompare(right.name);
-}
-
-/**
-A candidate as the Desk draws it: its variants and their pieces, summed.
-*/
-export interface DuplicateGroup extends DuplicateCandidate {
-  pieces: number;
-}
-
-/**
- * The Desk's D2 page (task 110): every group, sorted by pieces affected,
- * under the board's header count: names → probable products · pieces.
- */
-export interface DuplicatesReport {
-  names: number;
-  pieces: number;
-  groups: readonly DuplicateGroup[];
-}
-
-export function duplicatesReport(
-  candidates: readonly DuplicateCandidate[],
-): DuplicatesReport {
-  const groups = candidates
-    .map((candidate) => ({
-      ...candidate,
-      pieces: candidate.products.reduce((sum, row) => sum + row.pieces, 0),
-    }))
-    .toSorted(
-      (left, right) =>
-        right.pieces - left.pieces || left.brand.localeCompare(right.brand),
-    );
-  return {
-    names: groups.reduce((sum, group) => sum + group.products.length, 0),
-    pieces: groups.reduce((sum, group) => sum + group.pieces, 0),
-    groups,
-  };
 }
 
 /**
