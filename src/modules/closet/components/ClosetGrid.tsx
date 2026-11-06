@@ -13,7 +13,7 @@ import { Bracketed, Icon, Mono, useListMotion } from "../../../ui";
 import { garmentLabel } from "../../../lib/garment-label";
 import { isPhotoBeingChecked } from "../photo-url";
 import { filterViews, railCounts, worksAtSpan } from "../filters";
-import type { ClosetSearch } from "../inputs";
+import { closetSearch, type ClosetSearch } from "../inputs";
 import type { ClosetItemView, ClosetListing } from "../service";
 import { ClosetFilters, coverageWords } from "./ClosetFilters";
 import { worksAtLabel } from "./WorksAt";
@@ -401,9 +401,16 @@ export function ClosetGrid({
   initialShowRetired = false,
   deleted,
   tempUnit,
-  search = NO_SEARCH,
+  search: routed = NO_SEARCH,
   onSearch,
 }: Readonly<ClosetGridProps>) {
+  // The router hands every route the whole query, its own parsed fields
+  // merged over the raw ones, so a GET from WORKS AT's form still carries
+  // `lowest`, `highest` and `unit` here beside the Celsius they made, and
+  // every link built from it would carry them on — `Any` landing on a URL
+  // that brings the span straight back (e2e, design 174). Parsed again,
+  // which keeps what they made and drops them.
+  const search = closetSearch({ ...routed });
   const [isRetiredShown, setRetiredShown] = useState(initialShowRetired);
   const said = useDeletedStatus(deleted);
   const screen = closetScreen(listing, isRetiredShown, search);

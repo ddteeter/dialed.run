@@ -882,3 +882,53 @@ describe("closetScreen", () => {
     });
   });
 });
+
+/**
+ * The app's shape: a root with no search of its own and the closet
+ * route parsing below it, which is where the router merges the raw
+ * query back under the parsed fields.
+ */
+async function routedAt(url: string) {
+  const rootRoute = createRootRoute();
+  const closetRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/closet",
+    validateSearch: closetSearch,
+    component: function Page() {
+      return (
+        <ClosetGrid
+          tempUnit="f"
+          listing={listing([harrier])}
+          search={closetRoute.useSearch()}
+        />
+      );
+    },
+  });
+  const router = createRouter({
+    routeTree: rootRoute.addChildren([closetRoute]),
+    history: createMemoryHistory({ initialEntries: [url] }),
+  });
+  await router.load();
+  render(<RouterProvider router={router} />);
+}
+
+describe("ClosetGrid: the search the router hands it (design 174)", () => {
+  it("keeps what WORKS AT's form made and none of the form's own fields", async () => {
+    await routedAt("/closet?lowest=40&highest=50&unit=f&group=tops");
+    const rail = document.querySelector<HTMLElement>("nav[data-part='rail']");
+    if (rail === null) throw new Error("no rail");
+    expect(document.querySelector("[data-part='filtered']")).toHaveTextContent(
+      "Filtered: [40–50°]",
+    );
+    // Any drops the span for good, rather than landing on a URL that
+    // brings it back from `lowest`.
+    expect(within(rail).getByRole("link", { name: "Any" })).toHaveAttribute(
+      "href",
+      "/closet?group=tops",
+    );
+    expect(within(rail).getByRole("link", { name: /^Outer/ })).toHaveAttribute(
+      "href",
+      "/closet?group=outer&from=4.4&to=10",
+    );
+  });
+});
