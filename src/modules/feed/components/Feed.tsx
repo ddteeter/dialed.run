@@ -198,11 +198,14 @@ function FollowingTab({
   // One status region for the screen, however many cards (Accessibility
   // Contract rule 08) — each card's Useful reports its sentence here.
   const [status, setStatus] = useState("");
-  // Visual Crossing's credit is heard on the first card that shows a
-  // provider's reading and drawn, unheard, on every later one (R-179).
-  const firstCredited = items.findIndex((item) =>
-    isProvidersReading(item.conditions),
-  );
+  // Visual Crossing's credit is heard once per feed (R-179): on the compact
+  // line when it shows (it always draws one, above every card), otherwise on
+  // the first card with a provider's reading. Every later card draws it,
+  // unheard. -1 makes every card a repeat.
+  const firstCredited =
+    compact === undefined
+      ? items.findIndex((item) => isProvidersReading(item.conditions))
+      : -1;
 
   if (items.length === 0) {
     return (
