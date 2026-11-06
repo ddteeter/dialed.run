@@ -331,10 +331,15 @@ function LoaderFailed({
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  // The first match is the root's: when it is the one in error, nothing
-  // beneath it ever ran and there is no shell to draw.
+  // The first match is the root's. A root that failed before it ever
+  // answered has drawn nothing and knows nobody, so there is no shell to
+  // keep. A root that failed on a later navigation still holds its last
+  // answer, and the shell stays with Try again, which re-runs it.
   const isRootCrash = useRouterState({
-    select: (state) => state.matches[0]?.status === "error",
+    select: (state) => {
+      const [root] = state.matches;
+      return root?.status === "error" && root.loaderData === undefined;
+    },
   });
   if (isRootCrash) {
     return (

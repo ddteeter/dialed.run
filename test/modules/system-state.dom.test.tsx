@@ -175,7 +175,7 @@ async function routedApp({
   answersTerms = false,
   termsLoaderPending = false,
   loadBell,
-  rootFails = false,
+  rootFails = { now: false },
 }: Readonly<{
   signedIn: boolean | "unloaded";
   path: string;
@@ -195,15 +195,19 @@ async function routedApp({
   */
   loadBell?: LoadBell;
   /**
-  The root's own loader throws: round 22's root crash.
+  Whether the root's own loader throws, read on each load: round 22's root
+  crash, from the first load or only a later one.
   */
-  rootFails?: boolean;
+  rootFails?: { now: boolean };
 }>) {
   const rootRoute = createRootRoute({
-    loader: () => {
-      if (rootFails) throw new Error("root down");
-      return signedIn === "unloaded" ? undefined : { signedIn };
+    // Like `__root.tsx`: a gate on every navigation, and an answer read
+    // once and kept.
+    beforeLoad: () => {
+      if (rootFails.now) throw new Error("root down");
     },
+    loader: () => (signedIn === "unloaded" ? undefined : { signedIn }),
+    staleTime: Infinity,
     component: () =>
       answersTerms ? (
         <TermsRefusalAnswer>
@@ -502,7 +506,11 @@ describe("X2 · root crash", () => {
         // Not in a test: there is no document to load again.
       });
     const user = userEvent.setup();
-    await routedApp({ signedIn: true, path: "/closet", rootFails: true });
+    await routedApp({
+      signedIn: true,
+      path: "/closet",
+      rootFails: { now: true },
+    });
 
     await screen.findByText("Our end failed.");
     expect(state()).toHaveAttribute("data-state", "root-crashed");
@@ -516,6 +524,29 @@ describe("X2 · root crash", () => {
 
     await user.click(screen.getByRole("button", { name: "Reload" }));
     expect(reload).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the shell, with Try again, when the root fails only after it has answered", async () => {
+    // A navigation whose every read fails: the root's gate fails, but its
+    // answer is kept from before, so it knows who is looking and the shell
+    // is still possible.
+    const rootFails = { now: false };
+    const router = await routedApp({
+      signedIn: true,
+      path: "/runs/gone",
+      rootFails,
+    });
+    await screen.findByText("Nothing here");
+    rootFails.now = true;
+    await router.navigate({ to: "/closet" });
+
+    await screen.findByText("Our end failed. Your closet is fine.");
+    // It is the root's failure on show, not the closet's: the closet's
+    // loader has nothing to throw here.
+    expect(router.state.matches[0]?.status).toBe("error");
+    expect(tabBar()).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Reload" })).toBeNull();
   });
 
   it("keeps a child's failure in the shell, with Try again", async () => {
