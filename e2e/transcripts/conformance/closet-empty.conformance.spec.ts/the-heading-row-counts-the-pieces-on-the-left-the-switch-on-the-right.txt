@@ -113,19 +113,21 @@ pieces are still generic — name the ones you reach for.
 end of paragraph
 list
 listitem, level 1, position 1, set size 3
-link, Harrier Generic Untested
+link, Harrier No runs yet Untested Generic
 Harrier
-Generic
+No runs yet
 Untested
-end of link, Harrier Generic Untested
+Generic
+end of link, Harrier No runs yet Untested Generic
 end of listitem, level 1, position 1, set size 3
 listitem, level 1, position 2, set size 3
-link, Old singlet Generic Retired Untested
+link, Old singlet No runs yet Untested Generic Retired
 Old singlet
+No runs yet
+Untested
 Generic
 Retired
-Untested
-end of link, Old singlet Generic Retired Untested
+end of link, Old singlet No runs yet Untested Generic Retired
 end of listitem, level 1, position 2, set size 3
 listitem, level 1, position 3, set size 3
 link, Add garment

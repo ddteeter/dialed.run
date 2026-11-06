@@ -46,9 +46,9 @@ export interface BandRun extends InBandEntry {
   */
   day: string;
   /**
-  The pieces worn, by their own names, oldest-added first.
+  The pieces worn, by their own names, in the order of their ids.
   */
-  pieces: string[];
+  pieces: { itemId: string; name: string }[];
 }
 
 export async function recentRunsInBand(
@@ -74,12 +74,23 @@ export async function recentRunsInBand(
       undefined,
       monthDayLabel,
     ),
-    pieces: rows
-      .filter((row) => row.entryId === entry.id)
-      .map((row) => row.name)
-      // The LEFT join's empty row, for a kit of no pieces.
-      .filter((name) => name !== null),
+    pieces: rows.filter(pieceOf(entry.id)).map(({ itemId, name }) => ({
+      itemId,
+      name,
+    })),
   }));
+}
+
+/**
+ * A row that is one of this entry's pieces. The LEFT joins' empty row, for
+ * a kit of no pieces, has neither a garment id nor a name: the two are
+ * NULL together, since a kit row's garment always exists and is always
+ * named, so the id alone decides.
+ */
+function pieceOf(entryId: string) {
+  type ShownRow = Awaited<ReturnType<typeof shownRunsAndKits>>[number];
+  return (row: ShownRow): row is ShownRow & { itemId: string; name: string } =>
+    row.entryId === entryId && row.itemId !== null;
 }
 
 /**
@@ -90,9 +101,10 @@ export async function recentRunsInBand(
 function shownRunsAndKits(entryIds: string[]) {
   return coreDb()
     .select({
-      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; shownRunsAndKits reads each shown band run's start and its pieces' names for the A2/A3 desk rails
       entryId: outfitEntries.id,
+      // fallow-ignore-next-line code-duplication -- fallow 3.34 matches drizzle's select/from/join/where grammar across tables; shownRunsAndKits reads each shown band run's start and its pieces' names for the A2/A3 desk rails
       startedAt: runs.startedAt,
+      itemId: wardrobeItems.id,
       name: wardrobeItems.name,
     })
     .from(outfitEntries)

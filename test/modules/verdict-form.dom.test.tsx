@@ -2178,7 +2178,10 @@ describe("VerdictForm: the rail's band record and history (round 25)", () => {
       day: "Aug 14",
       conditions: { ...damp, tempC: 6 },
       verdict: 0,
-      pieces: ["Harrier", "Bandit split"],
+      pieces: [
+        { itemId: "01P0", name: "Harrier" },
+        { itemId: "01P1", name: "Bandit split" },
+      ],
     },
     {
       id: "01OLD2",

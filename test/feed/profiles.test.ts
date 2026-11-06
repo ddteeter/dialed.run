@@ -564,6 +564,25 @@ describe("ownProfile: what it leaves out", () => {
     expect(second?.conditions).toBeUndefined();
   });
 
+  it("dates a recent entry in UTC for a runner with no profile row", async () => {
+    // Nothing creates a profile row at signup (contracts §users).
+    const userId = await makeVerifiedUser();
+    const indoorRun = await makeRun({ userId, startedAt: 1_757_037_600 });
+    await makeEntry({
+      userId,
+      runId: indoorRun,
+      verdict: 0,
+      createdAt: NOW,
+      itemIds: [],
+      audience: "runners",
+    });
+    await db().delete(userProfiles).where(eq(userProfiles.userId, userId));
+
+    const profile = await ownProfile(userId);
+
+    expect(profile.recentEntries[0]?.day).toBe("Fri, Sep 5");
+  });
+
   it("marks a recent entry reports have hidden, and only that one (round 28 #6)", async () => {
     const userId = await makeVerifiedUser();
     const hidden = await ratedEntry({

@@ -472,6 +472,20 @@ describe("OwnProfile (G): past day one", () => {
     expect(link).not.toContainElement(meta);
   });
 
+  it("carries the tag alone on the meta line when there are no conditions", async () => {
+    await renderFeedScreen(
+      <OwnProfile
+        confirmBand={undefined}
+        profile={ownProfile({
+          runCount: 1,
+          recentEntries: [recent({ underReview: true })],
+        })}
+      />,
+    );
+    expect(part("entry-meta")?.children).toHaveLength(1);
+    expect(part("entry-meta")?.firstElementChild).toBe(part("review-tag"));
+  });
+
   it("says Indoor for an indoor run with no conditions", async () => {
     await renderFeedScreen(
       <OwnProfile

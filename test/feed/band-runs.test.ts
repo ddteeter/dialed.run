@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { recentRunsInBand } from "../../src/modules/feed/band-runs";
+import {
+  bandRunsInput,
+  recentRunsInBand,
+} from "../../src/modules/feed/band-runs";
 import {
   makeEntry,
   makeItem,
@@ -164,9 +167,19 @@ describe("recentRunsInBand", () => {
 
     const rows = await recentRunsInBand(userId, BAND);
 
-    // Oldest-added first: the ids are ULIDs.
-    expect(rows.map((row) => row.pieces)).toEqual([
-      ["Harrier", "Bandit Split"],
+    // In the order of their ids, which two ULIDs minted in one
+    // millisecond do not fix: so the expectation is sorted the same way.
+    expect(rows[0]?.pieces.map((piece) => piece.itemId)).toEqual(
+      [harrier, split].toSorted((a, b) => a.localeCompare(b)),
+    );
+    const named = new Map([
+      [harrier, "Harrier"],
+      [split, "Bandit Split"],
+    ]);
+    expect(rows.map((row) => row.pieces.map((piece) => piece.name))).toEqual([
+      [harrier, split]
+        .toSorted((a, b) => a.localeCompare(b))
+        .map((id) => named.get(id)),
       ["Thin gloves"],
       [],
     ]);
@@ -181,5 +194,27 @@ describe("recentRunsInBand", () => {
     });
 
     expect(await recentRunsInBand(userId, BAND)).toEqual([]);
+  });
+});
+
+describe("bandRunsInput", () => {
+  it("takes a band, and an entry to leave out only as a ULID", () => {
+    expect(bandRunsInput.parse({ bandFloorC: 5 })).toStrictEqual({
+      bandFloorC: 5,
+    });
+    expect(
+      bandRunsInput.parse({
+        bandFloorC: -5,
+        excludeEntryId: "01M6S6XDWJWNPWYGWZB3N40V0G",
+      }),
+    ).toStrictEqual({
+      bandFloorC: -5,
+      excludeEntryId: "01M6S6XDWJWNPWYGWZB3N40V0G",
+    });
+    expect(bandRunsInput.safeParse({}).success).toBe(false);
+    expect(bandRunsInput.safeParse({ bandFloorC: "5" }).success).toBe(false);
+    expect(
+      bandRunsInput.safeParse({ bandFloorC: 5, excludeEntryId: "x" }).success,
+    ).toBe(false);
   });
 });

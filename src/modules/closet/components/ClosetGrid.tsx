@@ -137,9 +137,7 @@ function TileTags({
     >
       {view.isGeneric ? (
         <TilePill>
-          <Bracketed step="xs" className="text-muted">
-            Generic
-          </Bracketed>
+          <Bracketed step="xs">Generic</Bracketed>
         </TilePill>
       ) : undefined}
       {view.item.retired ? (
@@ -150,7 +148,7 @@ function TileTags({
         </TilePill>
       ) : undefined}
       {isChecking ? (
-        <TilePill part="checking-tag" className="text-muted">
+        <TilePill part="checking-tag">
           <span aria-hidden="true">
             <Bracketed step="xs">Checking</Bracketed>
           </span>
@@ -162,21 +160,19 @@ function TileTags({
 }
 
 /**
-One of board C's pills on a tile's photo: chalk ground, so it reads on any photo.
+One of board C's pills on a tile's photo: chalk ground, so it reads on any photo, muted unless its tag says otherwise.
 */
 function TilePill({
   part,
-  className = "",
   children,
 }: Readonly<{
   part?: string;
-  className?: string;
   children: ReactNode;
 }>): JSX.Element {
   return (
     <span
       data-part={part}
-      className={`rounded-pill bg-ground px-2 py-1 ${className}`}
+      className="rounded-pill bg-ground px-2 py-1 text-muted"
     >
       {children}
     </span>

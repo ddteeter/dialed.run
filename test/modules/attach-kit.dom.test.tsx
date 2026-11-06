@@ -348,7 +348,10 @@ describe("AttachKit: the rail's band history (round 25)", () => {
       day: "Aug 14",
       conditions: { ...conditions, tempC: 6 },
       verdict: 0,
-      pieces: ["Harrier", "Bandit split"],
+      pieces: [
+        { itemId: "01P0", name: "Harrier" },
+        { itemId: "01P1", name: "Bandit split" },
+      ],
     },
     {
       id: "01OLD2",
@@ -356,7 +359,7 @@ describe("AttachKit: the rail's band history (round 25)", () => {
       day: "Aug 3",
       conditions: { ...conditions, tempC: 4, precipMm: 4 },
       verdict: -1,
-      pieces: ["Green L/S crew"],
+      pieces: [{ itemId: "01P0", name: "Green L/S crew" }],
     },
   ];
 
@@ -403,6 +406,45 @@ describe("AttachKit: the rail's band history (round 25)", () => {
     });
     expect(within(rail()).getAllByRole("heading")).toHaveLength(1);
     expect(rail()).not.toHaveTextContent("No runs in this band yet.");
+  });
+
+  it("asks again, and names the new band, when the run's conditions change", async () => {
+    const user = userEvent.setup();
+    const bandRunsFor = vi.fn(() => Promise.resolve(evidence));
+    function Switching() {
+      const [shown, setShown] = useState(context());
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setShown(
+                context({
+                  conditions: { ...conditions, feelsLikeC: 12, precipMm: 0 },
+                }),
+              );
+            }}
+          >
+            Warmer run
+          </button>
+          {attach({ context: shown, bandRunsFor })}
+        </>
+      );
+    }
+    await renderWithRouter(<Switching />);
+    await within(rail()).findByRole("heading", {
+      name: "Last 2 in 32–41° damp",
+    });
+
+    await user.click(screen.getByRole("button", { name: "Warmer run" }));
+
+    // Feels 12°C: the 10–15° band, and a dry sky.
+    expect(
+      await within(rail()).findByRole("heading", {
+        name: "Last 2 in 50–59° dry",
+      }),
+    ).toBeInTheDocument();
+    expect(bandRunsFor).toHaveBeenLastCalledWith({ data: { bandFloorC: 10 } });
   });
 
   it("asks nothing for a run with no conditions, which has no band", async () => {

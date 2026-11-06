@@ -78,14 +78,12 @@ function BandRunRow({
       </span>
       {run.pieces.length === 0 ? undefined : (
         <ul className="m-0 flex list-none flex-wrap gap-1 p-0">
-          {run.pieces.map((piece, index) => (
+          {run.pieces.map((piece) => (
             <li
-              // A kit can hold two pieces of one name; the position keeps
-              // each its own row.
-              key={`${String(index)}-${piece}`}
+              key={piece.itemId}
               className="rounded-pill border border-ink px-2 py-1"
             >
-              <Mono step="xs">{piece}</Mono>
+              <Mono step="xs">{piece.name}</Mono>
             </li>
           ))}
         </ul>

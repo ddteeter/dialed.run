@@ -542,14 +542,7 @@ function AttachRail({
   bandRunsFor: AttachKitProps["bandRunsFor"];
 }>): JSX.Element {
   const { conditions } = context;
-  const band =
-    conditions === undefined
-      ? undefined
-      : {
-          floor: bandFloorC(conditions.feelsLikeC),
-          precipMm: conditions.precipMm,
-        };
-  const runs = useBandRuns(bandRunsFor, band?.floor);
+  const history = useBandRuns(bandRunsFor, conditions);
   return (
     <>
       <RailCard title="This run">
@@ -562,12 +555,12 @@ function AttachRail({
           </Mono>
         )}
       </RailCard>
-      {band === undefined || runs === undefined ? undefined : (
+      {history === undefined ? undefined : (
         <BandRunsCard
           lead={lastRunsLead}
-          bandFloor={band.floor}
-          precipMm={band.precipMm}
-          runs={runs}
+          bandFloor={history.band.floor}
+          precipMm={history.band.precipMm}
+          runs={history.runs}
           units={units}
         />
       )}
@@ -582,26 +575,37 @@ function lastRunsLead(count: number): string {
   return count === 0 ? "In" : `Last ${String(count)} in`;
 }
 
+interface RailBand {
+  floor: number;
+  precipMm: number;
+}
+
 /**
-The band history for the rail, once it has come; nothing before, or on failure.
+The band history for the rail, with the band it is for, once it has come;
+nothing before, on failure, or for a run with no conditions and so no band.
 */
 function useBandRuns(
   bandRunsFor: AttachKitProps["bandRunsFor"],
-  bandFloor: number | undefined,
-): readonly BandRun[] | undefined {
-  const [runs, setRuns] = useState<readonly BandRun[] | undefined>();
+  conditions: AttachContext["conditions"],
+): { band: RailBand; runs: readonly BandRun[] } | undefined {
+  const [history, setHistory] = useState<
+    { band: RailBand; runs: readonly BandRun[] } | undefined
+  >();
+  const feelsLikeC = conditions?.feelsLikeC;
+  const precipMm = conditions?.precipMm ?? 0;
   useEffect(() => {
-    if (bandFloor === undefined) return;
-    async function load(floor: number): Promise<void> {
+    if (feelsLikeC === undefined) return;
+    async function load(band: RailBand): Promise<void> {
       try {
-        setRuns(await bandRunsFor({ data: { bandFloorC: floor } }));
+        const runs = await bandRunsFor({ data: { bandFloorC: band.floor } });
+        setHistory({ band, runs });
       } catch {
         // Law 5: the evidence is a courtesy; the rail keeps the run.
       }
     }
-    void load(bandFloor);
-  }, [bandRunsFor, bandFloor]);
-  return runs;
+    void load({ floor: bandFloorC(feelsLikeC), precipMm });
+  }, [bandRunsFor, feelsLikeC, precipMm]);
+  return history;
 }
 
 /**
