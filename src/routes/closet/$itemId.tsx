@@ -10,24 +10,31 @@ import {
   unretireItemFn,
   uploadPhotoFn,
 } from "../../modules/closet/functions";
-import { garmentBandCountQuery } from "../../modules/feed/functions";
+import { garmentLoader } from "../../modules/closet/garment-page";
+import {
+  garmentBandCountQuery,
+  viewerUnitsQuery,
+} from "../../modules/feed/functions";
 import { PhotoBeingChecked } from "../../modules/safety/components/NoticeBand";
 import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
 import { Layout } from "../../ui";
 
 export const Route = createFileRoute("/closet/$itemId")({
-  loader: async ({ params, location }) => {
-    await requireSession(location);
-    return { detail: await getItemFn({ data: { itemId: params.itemId } }) };
-  },
+  loader: garmentLoader(
+    requireSession,
+    (itemId) => getItemFn({ data: { itemId } }),
+    viewerUnitsQuery,
+  ),
   component: GarmentDetailPage,
 });
 
 function GarmentDetailPage() {
+  const { detail, units } = Route.useLoaderData();
   return (
     <Layout>
       <GarmentDetail
-        detail={Route.useLoaderData().detail}
+        detail={detail}
+        tempUnit={units.temp}
         // Feed's (the band is the run's weather), asked for by round 26's
         // delete sheet when it opens — never with the page (task 128).
         bandCount={garmentBandCountQuery}

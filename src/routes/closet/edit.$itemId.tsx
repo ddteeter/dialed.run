@@ -15,16 +15,18 @@ import {
   updateItemFn,
   uploadPhotoFn,
 } from "../../modules/closet/functions";
+import { garmentLoader } from "../../modules/closet/garment-page";
+import { viewerUnitsQuery } from "../../modules/feed/functions";
 import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
 import { searchBrandsFn } from "../../modules/products/functions";
 import { Layout } from "../../ui";
 
 export const Route = createFileRoute("/closet/edit/$itemId")({
-  loader: async ({ params, location }) => {
-    await requireSession(location);
-    const detail = await getItemFn({ data: { itemId: params.itemId } });
-    return { detail };
-  },
+  loader: garmentLoader(
+    requireSession,
+    (itemId) => getItemFn({ data: { itemId } }),
+    viewerUnitsQuery,
+  ),
   component: EditGarmentPage,
 });
 
@@ -33,13 +35,14 @@ async function handleBrandInput(prefix: string) {
 }
 
 function EditGarmentPage() {
-  const { detail } = Route.useLoaderData();
+  const { detail, units } = Route.useLoaderData();
   const navigate = useNavigate();
 
   return (
     <Layout>
       <GarmentForm
         heading={`Edit ${detail.item.name}`}
+        tempUnit={units.temp}
         back={<BackToCloset />}
         initial={formValuesFromItem(detail.item, detail.effective)}
         stored={{

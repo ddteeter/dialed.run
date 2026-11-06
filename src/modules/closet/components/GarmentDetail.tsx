@@ -2,7 +2,7 @@ import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import type { JSX, ReactNode } from "react";
 
-import type { GarmentVisibility } from "../../../lib/contracts";
+import type { GarmentVisibility, TempUnit } from "../../../lib/contracts";
 import { photoAcceptAttribute } from "../../../lib/photo-constraints";
 import { formatTempRange } from "../../../lib/contracts/thermal";
 import {
@@ -319,7 +319,10 @@ function summaryOf(detail: Detail): typeof NEVER_WORN {
  * dialed hue for the band. Retired, the band is past tense — *"Works at →
  * WORKED AT"*. They share a row at width.
  */
-function Stats({ detail }: Readonly<{ detail: Detail }>): JSX.Element {
+function Stats({
+  detail,
+  tempUnit,
+}: Readonly<{ detail: Detail; tempUnit: TempUnit }>): JSX.Element {
   const { item, tempRange } = detail;
   const summary = summaryOf(detail);
   const km = Math.round(summary.mileageM / 1000);
@@ -345,7 +348,7 @@ function Stats({ detail }: Readonly<{ detail: Detail }>): JSX.Element {
       {tempRange ? (
         <p className="m-0 text-dialed-text">
           <Mono>{item.retired ? "Worked at " : "Works at "}</Mono>
-          <Bracketed>{formatTempRange(tempRange)}</Bracketed>
+          <Bracketed>{formatTempRange(tempRange, tempUnit)}</Bracketed>
         </p>
       ) : (
         <p className="m-0 text-muted">
@@ -391,6 +394,10 @@ function PairsWith({
 
 type GarmentDetailProps = Readonly<{
   detail: Detail;
+  /**
+  The runner's unit, for the works-at range.
+  */
+  tempUnit: TempUnit;
   retire: (input: { data: { itemId: string } }) => Promise<unknown>;
   unretire: (input: { data: { itemId: string } }) => Promise<unknown>;
   remove: (input: { data: { itemId: string } }) => Promise<unknown>;
@@ -718,6 +725,7 @@ export function GarmentDetail({
   renderPhotoStep,
   photoChecking,
   bandCount = noBandCount,
+  tempUnit,
 }: GarmentDetailProps) {
   const { item, isGeneric } = detail;
   const itemId = item.id;
@@ -758,7 +766,7 @@ export function GarmentDetail({
         photoChecking={photoChecking}
       />
 
-      <Stats detail={detail} />
+      <Stats detail={detail} tempUnit={tempUnit} />
 
       <CompositionSection detail={detail} />
 

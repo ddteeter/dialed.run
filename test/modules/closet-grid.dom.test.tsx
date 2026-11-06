@@ -65,7 +65,7 @@ const tile = (): HTMLElement =>
 
 describe("ClosetGrid: the empty closet (ruling 16)", () => {
   it("says so in brackets, asks for three pieces, and offers the Add tile", async () => {
-    await renderWithRouter(<ClosetGrid listing={listing([])} />);
+    await renderWithRouter(<ClosetGrid tempUnit="c" listing={listing([])} />);
 
     // Drawn in brackets, said without them (D-150).
     const heading = screen.getByRole("heading", {
@@ -94,14 +94,16 @@ describe("ClosetGrid: the empty closet (ruling 16)", () => {
     // row ran to nearly twice every row above it. `only:` keeps the
     // minimum for the empty closet, where there is no tile to match.
     const { unmount } = await renderWithRouter(
-      <ClosetGrid listing={listing([])} />,
+      <ClosetGrid tempUnit="c" listing={listing([])} />,
     );
     expect(tile().closest("li")).toHaveClass("only:min-h-40");
     expect(tile()).toHaveClass("h-full");
     expect(tile()).not.toHaveClass("min-h-40");
     unmount();
 
-    await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
+    await renderWithRouter(
+      <ClosetGrid tempUnit="c" listing={listing([harrier])} />,
+    );
     // Beside a garment, the grid's equal rows size it. happy-dom lays
     // nothing out, so the heights themselves are measured in a real
     // browser at 390 and 1440, alone on a row and sharing one
@@ -111,7 +113,7 @@ describe("ClosetGrid: the empty closet (ruling 16)", () => {
   });
 
   it("has no count and no switch about pieces there are none of", async () => {
-    await renderWithRouter(<ClosetGrid listing={listing([])} />);
+    await renderWithRouter(<ClosetGrid tempUnit="c" listing={listing([])} />);
     expect(screen.queryByText(/pieces?$/)).toBeNull();
     expect(screen.queryByRole("switch")).toBeNull();
   });
@@ -122,6 +124,7 @@ describe("ClosetGrid: the empty closet (ruling 16)", () => {
     // someone with a full closet reads as data loss.
     await renderWithRouter(
       <ClosetGrid
+        tempUnit="c"
         listing={{ items: [retiredTee], totalCount: 1, genericCount: 0 }}
       />,
     );
@@ -136,7 +139,10 @@ describe("ClosetGrid: the empty closet (ruling 16)", () => {
 describe("ClosetGrid: the heading row", () => {
   it("counts the pieces the grid is showing", async () => {
     await renderWithRouter(
-      <ClosetGrid listing={listing([harrier, genericTop, retiredTee])} />,
+      <ClosetGrid
+        tempUnit="c"
+        listing={listing([harrier, genericTop, retiredTee])}
+      />,
     );
     expect(
       screen.getByRole("heading", { level: 1, name: "2 pieces" }),
@@ -144,7 +150,9 @@ describe("ClosetGrid: the heading row", () => {
   });
 
   it("says one piece, not one pieces", async () => {
-    await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
+    await renderWithRouter(
+      <ClosetGrid tempUnit="c" listing={listing([harrier])} />,
+    );
     expect(
       screen.getByRole("heading", { level: 1, name: "1 piece" }),
     ).toBeVisible();
@@ -153,7 +161,7 @@ describe("ClosetGrid: the heading row", () => {
   it("puts the switch opposite the count, and the count follows it", async () => {
     const user = userEvent.setup();
     await renderWithRouter(
-      <ClosetGrid listing={listing([harrier, retiredTee])} />,
+      <ClosetGrid tempUnit="c" listing={listing([harrier, retiredTee])} />,
     );
 
     const header = document.querySelector<HTMLElement>(
@@ -172,14 +180,18 @@ describe("ClosetGrid: the heading row", () => {
   });
 
   it("offers no switch when nothing is retired — it would change nothing", async () => {
-    await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
+    await renderWithRouter(
+      <ClosetGrid tempUnit="c" listing={listing([harrier])} />,
+    );
     expect(screen.queryByRole("switch")).toBeNull();
   });
 
   it("has no Add in the heading: adding is the grid's tile", async () => {
     // §6c.10: "Adding a garment is the grid's dashed tile and the Y route;
     // never a bar action."
-    await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
+    await renderWithRouter(
+      <ClosetGrid tempUnit="c" listing={listing([harrier])} />,
+    );
     expect(screen.queryByRole("link", { name: /^Add$/ })).toBeNull();
     expect(cells().at(-1)).toBe("Add garment");
   });
@@ -188,7 +200,10 @@ describe("ClosetGrid: the heading row", () => {
 describe("ClosetGrid: one flat grid (§6c.10)", () => {
   it("has no group headings and no rail", async () => {
     await renderWithRouter(
-      <ClosetGrid listing={listing([harrier, genericTop, retiredTee])} />,
+      <ClosetGrid
+        tempUnit="c"
+        listing={listing([harrier, genericTop, retiredTee])}
+      />,
     );
     expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
     expect(document.querySelector("[data-slot='closet-rail']")).toBeNull();
@@ -212,7 +227,9 @@ describe("ClosetGrid: one flat grid (§6c.10)", () => {
       }),
     );
 
-    await renderWithRouter(<ClosetGrid listing={listing(views)} />);
+    await renderWithRouter(
+      <ClosetGrid tempUnit="c" listing={listing(views)} />,
+    );
 
     expect(cells().map((cell) => cell.split("[", 1)[0])).toStrictEqual([
       "Merino",
@@ -235,6 +252,7 @@ describe("ClosetGrid: one flat grid (§6c.10)", () => {
     });
     await renderWithRouter(
       <ClosetGrid
+        tempUnit="c"
         listing={listing([retiredTee, shoe, harrier])}
         initialShowRetired
       />,
@@ -254,7 +272,11 @@ describe("ClosetGrid: one flat grid (§6c.10)", () => {
       isGeneric: false,
     });
     await renderWithRouter(
-      <ClosetGrid listing={listing([shoe, harrier])} initialShowRetired />,
+      <ClosetGrid
+        tempUnit="c"
+        listing={listing([shoe, harrier])}
+        initialShowRetired
+      />,
     );
     expect(cells().map((cell) => cell.split("[", 1)[0])).toStrictEqual([
       "Tracksmith Harrier",
@@ -266,7 +288,9 @@ describe("ClosetGrid: one flat grid (§6c.10)", () => {
   it("lets the garment grid fill rather than counting columns", async () => {
     // DS3's reflow rule for a grid of garments: "auto-fill,
     // minmax(180px, 1fr)". One rule instead of a count per breakpoint.
-    await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
+    await renderWithRouter(
+      <ClosetGrid tempUnit="c" listing={listing([harrier])} />,
+    );
 
     expect(screen.getByRole("list")).toHaveClass(
       "grid-cols-[repeat(auto-fill,minmax(180px,1fr))]",
@@ -286,7 +310,9 @@ describe("ClosetGrid: a photo being checked (R-69, round 27 #21)", () => {
       }),
       isGeneric: false,
     });
-    await renderWithRouter(<ClosetGrid listing={listing([checking])} />);
+    await renderWithRouter(
+      <ClosetGrid tempUnit="c" listing={listing([checking])} />,
+    );
 
     const link = screen.getByRole("link", { name: /New jacket/ });
     const kicker = link.querySelector(".order-first");
@@ -325,7 +351,9 @@ describe("ClosetGrid: a photo being checked (R-69, round 27 #21)", () => {
       }),
       isGeneric: false,
     });
-    await renderWithRouter(<ClosetGrid listing={listing([cleared, bare])} />);
+    await renderWithRouter(
+      <ClosetGrid tempUnit="c" listing={listing([cleared, bare])} />,
+    );
 
     for (const name of [/Old jacket/, /Bare jacket/]) {
       const link = screen.getByRole("link", { name });
@@ -336,7 +364,9 @@ describe("ClosetGrid: a photo being checked (R-69, round 27 #21)", () => {
 
 describe("ClosetGrid: what a tile says", () => {
   it("names a branded piece and links to it, with no tags", async () => {
-    await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
+    await renderWithRouter(
+      <ClosetGrid tempUnit="c" listing={listing([harrier])} />,
+    );
 
     const branded = screen.getByRole("link", { name: /Harrier/ });
     expect(branded).toHaveAttribute("href", "/closet/01TOP");
@@ -348,7 +378,9 @@ describe("ClosetGrid: what a tile says", () => {
   });
 
   it("tags a generic piece in the kicker, above the name but after it in the name", async () => {
-    await renderWithRouter(<ClosetGrid listing={listing([genericTop])} />);
+    await renderWithRouter(
+      <ClosetGrid tempUnit="c" listing={listing([genericTop])} />,
+    );
 
     const generic = screen.getByRole("link", { name: /^Long sleeve top/ });
     const kicker = generic.querySelector(".order-first");
@@ -358,7 +390,11 @@ describe("ClosetGrid: what a tile says", () => {
 
   it("tags a retired piece [RETIRED] in the kicker, and does not dim it", async () => {
     await renderWithRouter(
-      <ClosetGrid listing={listing([retiredTee])} initialShowRetired />,
+      <ClosetGrid
+        tempUnit="c"
+        listing={listing([retiredTee])}
+        initialShowRetired
+      />,
     );
 
     const tile = screen.getByRole("link", { name: /^Old tee/ });
@@ -373,16 +409,27 @@ describe("ClosetGrid: what a tile says", () => {
       item: wardrobeItem({ id: "01BOTH", name: "Tee", retired: true }),
     });
     await renderWithRouter(
-      <ClosetGrid listing={listing([both])} initialShowRetired />,
+      <ClosetGrid tempUnit="c" listing={listing([both])} initialShowRetired />,
     );
     expect(
       screen.getByRole("link", { name: /^Tee/ }).querySelector(".order-first"),
     ).toHaveTextContent(/^\[Generic\]\[Retired\]$/);
   });
 
+  // R-94: the range used to print the stored Celsius to everyone.
+  it("prints the range in the runner's unit", async () => {
+    await renderWithRouter(
+      <ClosetGrid tempUnit="f" listing={listing([harrier])} />,
+    );
+
+    expect(screen.getByRole("link", { name: /Harrier/ })).toHaveTextContent(
+      "[39–54°]",
+    );
+  });
+
   it("shows the tested range, and says Untested when there is none", async () => {
     await renderWithRouter(
-      <ClosetGrid listing={listing([harrier, genericTop])} />,
+      <ClosetGrid tempUnit="c" listing={listing([harrier, genericTop])} />,
     );
 
     expect(screen.getByRole("link", { name: /Harrier/ })).toHaveTextContent(
@@ -395,7 +442,7 @@ describe("ClosetGrid: what a tile says", () => {
 
   it("wears no hue on the range or on Untested — teal means dialed", async () => {
     await renderWithRouter(
-      <ClosetGrid listing={listing([harrier, genericTop])} />,
+      <ClosetGrid tempUnit="c" listing={listing([harrier, genericTop])} />,
     );
 
     for (const name of [/Harrier/, /Long sleeve top/]) {
@@ -410,7 +457,9 @@ describe("ClosetGrid: what a tile says", () => {
       item: wardrobeItem({ id: "01VOID", name: "Mystery tee" }),
       tempRange: {},
     });
-    await renderWithRouter(<ClosetGrid listing={listing([halfKnown])} />);
+    await renderWithRouter(
+      <ClosetGrid tempUnit="c" listing={listing([halfKnown])} />,
+    );
 
     expect(screen.getByRole("link", { name: /Mystery tee/ })).toHaveTextContent(
       "[Untested]",
@@ -418,7 +467,9 @@ describe("ClosetGrid: what a tile says", () => {
   });
 
   it("presses a tile to ink rather than scaling it", async () => {
-    await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
+    await renderWithRouter(
+      <ClosetGrid tempUnit="c" listing={listing([harrier])} />,
+    );
 
     const row = screen.getByRole("link", { name: /Harrier/ });
     expect(row).toHaveClass("row-press");
@@ -429,7 +480,9 @@ describe("ClosetGrid: what a tile says", () => {
     // tokens.js gained `tile` in round 28: the closet tile is not a field,
     // and borrowing `rounded-field` tied its corners to the inputs'. The
     // two are both 10 today and stay two names because they are two jobs.
-    await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
+    await renderWithRouter(
+      <ClosetGrid tempUnit="c" listing={listing([harrier])} />,
+    );
 
     for (const cell of [
       screen.getByRole("link", { name: /Harrier/ }),
@@ -444,7 +497,7 @@ describe("ClosetGrid: what a tile says", () => {
 describe("ClosetGrid: the enrichment nudge", () => {
   it("counts the generic pieces against the whole closet", async () => {
     await renderWithRouter(
-      <ClosetGrid listing={listing([harrier, genericTop])} />,
+      <ClosetGrid tempUnit="c" listing={listing([harrier, genericTop])} />,
     );
     expect(screen.getByText(/still generic/)).toHaveTextContent(
       "1 of 2 pieces are still generic",
@@ -452,7 +505,9 @@ describe("ClosetGrid: the enrichment nudge", () => {
   });
 
   it("says nothing when every piece is named", async () => {
-    await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
+    await renderWithRouter(
+      <ClosetGrid tempUnit="c" listing={listing([harrier])} />,
+    );
     expect(screen.queryByText(/still generic/)).toBeNull();
   });
 });
@@ -461,7 +516,7 @@ describe("ClosetGrid: retired pieces behind the switch", () => {
   it("hides them, and shows them on demand", async () => {
     const user = userEvent.setup();
     await renderWithRouter(
-      <ClosetGrid listing={listing([harrier, retiredTee])} />,
+      <ClosetGrid tempUnit="c" listing={listing([harrier, retiredTee])} />,
     );
 
     expect(screen.queryByRole("link", { name: /Old tee/ })).toBeNull();
@@ -479,6 +534,7 @@ describe("ClosetGrid: retired pieces behind the switch", () => {
     const user = userEvent.setup();
     await renderWithRouter(
       <ClosetGrid
+        tempUnit="c"
         listing={listing([harrier, retiredTee])}
         initialShowRetired
       />,
@@ -496,6 +552,7 @@ describe("ClosetGrid: retired pieces behind the switch", () => {
   it("opens already showing them when the caller asks", async () => {
     await renderWithRouter(
       <ClosetGrid
+        tempUnit="c"
         listing={listing([harrier, retiredTee])}
         initialShowRetired
       />,
@@ -524,7 +581,7 @@ function TwoDeletes() {
       >
         Next delete
       </button>
-      <ClosetGrid listing={listing([harrier])} deleted={deleted} />
+      <ClosetGrid tempUnit="c" listing={listing([harrier])} deleted={deleted} />
     </>
   );
 }
@@ -537,7 +594,10 @@ describe("ClosetGrid: round 26's confirms", () => {
       uiGroup: "bottoms",
     });
     await renderWithRouter(
-      <ClosetGrid listing={listing([harrier, retiredTee, otherRetired])} />,
+      <ClosetGrid
+        tempUnit="c"
+        listing={listing([harrier, retiredTee, otherRetired])}
+      />,
     );
     expect(
       screen.getByRole("switch", { name: "Show retired (2)" }),
@@ -546,7 +606,11 @@ describe("ClosetGrid: round 26's confirms", () => {
 
   it("says which piece a delete took, in the status line", async () => {
     await renderWithRouter(
-      <ClosetGrid listing={listing([harrier])} deleted="Pegasus 40" />,
+      <ClosetGrid
+        tempUnit="c"
+        listing={listing([harrier])}
+        deleted="Pegasus 40"
+      />,
     );
     await waitFor(() => {
       expect(screen.getByRole("status")).toHaveTextContent(
@@ -556,7 +620,9 @@ describe("ClosetGrid: round 26's confirms", () => {
   });
 
   it("says nothing when nothing was deleted", async () => {
-    await renderWithRouter(<ClosetGrid listing={listing([harrier])} />);
+    await renderWithRouter(
+      <ClosetGrid tempUnit="c" listing={listing([harrier])} />,
+    );
     expect(screen.getByRole("status")).toHaveTextContent("");
   });
 

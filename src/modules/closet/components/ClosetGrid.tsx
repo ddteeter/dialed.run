@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 import { useEffect, useState } from "react";
 
-import { uiGroups } from "../../../lib/contracts";
+import { uiGroups, type TempUnit } from "../../../lib/contracts";
 import { formatTempRange } from "../../../lib/contracts/thermal";
 import { Bracketed, Icon, Mono, useListMotion } from "../../../ui";
 import { garmentLabel } from "../../../lib/garment-label";
@@ -17,10 +17,10 @@ function itemLabel(view: ClosetItemView): string {
   });
 }
 
-function tempLabel(view: ClosetItemView): string {
+function tempLabel(view: ClosetItemView, tempUnit: TempUnit): string {
   // "Untested" is uppercased by <Bracketed> in CSS.
   return view.tempRange
-    ? (formatTempRange(view.tempRange) ?? "Untested")
+    ? (formatTempRange(view.tempRange, tempUnit) ?? "Untested")
     : "Untested";
 }
 
@@ -93,7 +93,10 @@ function AddTile(): JSX.Element {
 export const CHECKING_NAME =
   "Being checked, other runners can't see this photo";
 
-function Tile({ view }: Readonly<{ view: ClosetItemView }>): JSX.Element {
+function Tile({
+  view,
+  tempUnit,
+}: Readonly<{ view: ClosetItemView; tempUnit: TempUnit }>): JSX.Element {
   return (
     <Link
       to="/closet/$itemId"
@@ -126,9 +129,14 @@ function Tile({ view }: Readonly<{ view: ClosetItemView }>): JSX.Element {
       {/* **Muted, never teal.** T2: teal means *dialed* — a verdict — and
           a garment's working range is not one. Board C draws the band line
           in `--muted`, and round 16 says coverage is monochrome. */}
-      <Bracketed className="text-muted">{tempLabel(view)}</Bracketed>
+      <Bracketed className="text-muted">{tempLabel(view, tempUnit)}</Bracketed>
     </Link>
   );
+}
+
+interface TilesProps {
+  items: readonly ClosetItemView[];
+  tempUnit: TempUnit;
 }
 
 /**
@@ -140,9 +148,7 @@ function Tile({ view }: Readonly<{ view: ClosetItemView }>): JSX.Element {
  * expressed as a move: the tile folds shut where it stood instead of
  * blinking out, and the rest reflow into the space.
  */
-function Tiles({
-  items,
-}: Readonly<{ items: readonly ClosetItemView[] }>): JSX.Element {
+function Tiles({ items, tempUnit }: Readonly<TilesProps>): JSX.Element {
   const { shown, leaving, listRef } = useListMotion(items, itemKey);
   return (
     <ul
@@ -161,7 +167,7 @@ function Tiles({
           className="collapsing-row"
           data-leaving={leaving.has(view.item.id) ? "true" : undefined}
         >
-          <Tile view={view} />
+          <Tile view={view} tempUnit={tempUnit} />
         </li>
       ))}
       <AddTile />
@@ -171,6 +177,10 @@ function Tiles({
 
 export interface ClosetGridProps {
   listing: ClosetListing;
+  /**
+  The runner's unit: every range on the screen is in it.
+  */
+  tempUnit: TempUnit;
   /**
   Open with retired pieces shown. Set after retiring one, so the runner
   lands on the piece still present and marked, rather than on a grid it
@@ -204,6 +214,7 @@ export function ClosetGrid({
   listing,
   initialShowRetired = false,
   deleted,
+  tempUnit,
 }: Readonly<ClosetGridProps>) {
   const [showRetired, setShowRetired] = useState(initialShowRetired);
   // Written after mount rather than rendered with the page: a status
@@ -273,7 +284,7 @@ export function ClosetGrid({
           </p>
         ) : undefined}
       </div>
-      <Tiles items={visible} />
+      <Tiles items={visible} tempUnit={tempUnit} />
     </div>
   );
 }

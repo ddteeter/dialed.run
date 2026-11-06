@@ -43,8 +43,25 @@ export function bandLabel(bandFloor: number, unit: TempUnit): string {
     : `${String(cToF(bandFloor))}–${String(cToF(bandFloor + 5))}°`;
 }
 
+/**
+A temperature as the number a reader sees: whole degrees, in their unit.
+*/
+export function tempInUnit(tempC: number, unit: TempUnit): number {
+  return unit === "c" ? Math.round(tempC) : cToF(tempC);
+}
+
+/**
+ * The way back, for a number a reader set in their own unit (Closet C's
+ * WORKS AT). Celsius to one decimal rather than whole: a whole °C is 1.8°F
+ * wide, so rounding to it would move a runner's 34° to 33° or 35°. A tenth
+ * is 0.18°F, inside the half-degree `tempInUnit` rounds by, so every whole
+ * °F comes back as itself.
+ */
+export function unitToC(value: number, unit: TempUnit): number {
+  const tempC = unit === "c" ? value : ((value - 32) * 5) / 9;
+  return Math.round(tempC * 10) / 10;
+}
+
 export function formatTemp(tempC: number, unit: TempUnit): string {
-  return unit === "c"
-    ? `${String(Math.round(tempC))}°`
-    : `${String(cToF(tempC))}°`;
+  return `${String(tempInUnit(tempC, unit))}°`;
 }

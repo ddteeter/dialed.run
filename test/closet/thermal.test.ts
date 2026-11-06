@@ -237,12 +237,25 @@ describe("the tables themselves", () => {
 
 describe("formatTempRange", () => {
   it("reads as a direction when an end is open", () => {
-    expect(formatTempRange({ lowC: 13 })).toBe("13°+");
-    expect(formatTempRange({ highC: 2 })).toBe("under 2°");
-    expect(formatTempRange({ lowC: 4, highC: 15 })).toBe("4–15°");
+    expect(formatTempRange({ lowC: 13 }, "c")).toBe("13°+");
+    expect(formatTempRange({ highC: 2 }, "c")).toBe("under 2°");
+    expect(formatTempRange({ lowC: 4, highC: 15 }, "c")).toBe("4–15°");
+  });
+
+  // It used to take no unit and print the stored Celsius to everyone, so
+  // a runner on Fahrenheit read a 3–8°C base layer as "3–8°" (R-94).
+  it("speaks the reader's unit at both ends and at each open end", () => {
+    expect(formatTempRange({ lowC: 3, highC: 8 }, "f")).toBe("37–46°");
+    expect(formatTempRange({ lowC: 13 }, "f")).toBe("55°+");
+    expect(formatTempRange({ highC: 2 }, "f")).toBe("under 36°");
+  });
+
+  it("rounds a fractional end in the reader's unit", () => {
+    expect(formatTempRange({ lowC: 3.4, highC: 7.6 }, "c")).toBe("3–8°");
   });
 
   it("has nothing to say about a band with no bounds at all", () => {
-    expect(formatTempRange({})).toBeUndefined();
+    expect(formatTempRange({}, "c")).toBeUndefined();
+    expect(formatTempRange({}, "f")).toBeUndefined();
   });
 });

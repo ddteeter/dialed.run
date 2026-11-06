@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import type { TempUnit } from "../../src/lib/contracts";
 import { AlreadyInCloset } from "../../src/modules/closet/components/AlreadyInCloset";
 import type {
   ClosetItemView,
@@ -58,9 +59,15 @@ const NOTHING_TYPED = { brand: "", name: "" };
 function card(
   pieces: readonly ClosetItemView[],
   typed: { brand: string; name: string } = NOTHING_TYPED,
+  tempUnit: TempUnit = "c",
 ) {
   return render(
-    <AlreadyInCloset category="top" pieces={pieces} typed={typed} />,
+    <AlreadyInCloset
+      category="top"
+      pieces={pieces}
+      typed={typed}
+      tempUnit={tempUnit}
+    />,
   );
 }
 
@@ -104,6 +111,7 @@ describe("AlreadyInCloset", () => {
     for (const [category, empty] of Object.entries(plurals)) {
       rerender(
         <AlreadyInCloset
+          tempUnit="c"
           category={category as keyof typeof plurals}
           pieces={[]}
           typed={{ brand: "", name: "" }}
@@ -111,6 +119,12 @@ describe("AlreadyInCloset", () => {
       );
       expect(screen.getByText(empty)).toBeVisible();
     }
+  });
+
+  // R-94: the range used to print the stored Celsius to everyone.
+  it("gives the record's range in the runner's unit", () => {
+    card([harrier], NOTHING_TYPED, "f");
+    expect(rows()[0]).toHaveTextContent("41 runs · 8/9 dialed 37–46°");
   });
 
   it("lists each piece with its record, in the order given", () => {
@@ -245,6 +259,7 @@ describe("AlreadyInCloset", () => {
   it("is titled for the type once one is picked, and says so in its plural", () => {
     render(
       <AlreadyInCloset
+        tempUnit="c"
         category="top"
         type="halfZip"
         pieces={[]}

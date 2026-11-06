@@ -24,6 +24,7 @@ function renderForm(overrides: Partial<GarmentFormProps> = {}) {
   const onSaved = vi.fn<GarmentFormProps["onSaved"]>(() => Promise.resolve());
   render(
     <GarmentForm
+      tempUnit="c"
       heading="Add a garment"
       save={() => Promise.resolve({ id: "01SAVED" })}
       onSaved={onSaved}

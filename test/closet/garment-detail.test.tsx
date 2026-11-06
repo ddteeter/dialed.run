@@ -46,6 +46,7 @@ async function renderedMarkup(isRetired = false): Promise<string> {
   const rootRoute = createRootRoute({
     component: () => (
       <GarmentDetail
+        tempUnit="c"
         detail={detail}
         retire={vi.fn()}
         unretire={vi.fn()}

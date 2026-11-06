@@ -9,6 +9,7 @@ import {
   removePhotoFn,
   uploadPhotoFn,
 } from "../../modules/closet/functions";
+import { viewerUnitsQuery } from "../../modules/feed/functions";
 import { photoBlurStep } from "../../modules/safety/components/PhotoBlur";
 import { searchBrandsFn } from "../../modules/products/functions";
 import { Layout, useIdempotencyKey } from "../../ui";
@@ -19,7 +20,11 @@ export const Route = createFileRoute("/closet/new")({
   loader: async ({ location }) => {
     await requireSession(location);
     // F at the desk's rail card (round 26 #10, task 128 · SAF-18).
-    return { nearby: await closetNearbyFn() };
+    const [nearby, units] = await Promise.all([
+      closetNearbyFn(),
+      viewerUnitsQuery(),
+    ]);
+    return { nearby, units };
   },
   component: NewGarmentPage,
 });
@@ -31,12 +36,13 @@ async function handleBrandInput(prefix: string) {
 function NewGarmentPage() {
   const navigate = useNavigate();
   const { idempotencyKey, rotate } = useIdempotencyKey();
-  const { nearby } = Route.useLoaderData();
+  const { nearby, units } = Route.useLoaderData();
 
   return (
     <Layout>
       <GarmentForm
         heading="Add a garment"
+        tempUnit={units.temp}
         back={<BackToCloset />}
         rail={{ nearby, reread: closetNearbyFn }}
         save={async (garment) =>

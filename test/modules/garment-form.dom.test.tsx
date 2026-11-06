@@ -5,6 +5,10 @@ import { describe, expect, it, vi } from "vitest";
 import { GarmentForm } from "../../src/modules/closet/components/GarmentForm";
 import type { GarmentFormProps } from "../../src/modules/closet/components/GarmentForm";
 import { garmentCategoriesInOrder } from "../../src/lib/contracts/garment-fields";
+import {
+  estimateTempRange,
+  formatTempRange,
+} from "../../src/lib/contracts/thermal";
 import { carriedSince } from "../ui/carry-spy";
 
 vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
@@ -51,6 +55,7 @@ function renderForm(overrides: Partial<GarmentFormProps> = {}) {
   const save: SaveMock = vi.fn(() => Promise.resolve({ id: "01ITEM" }));
   const props: GarmentFormProps = {
     heading: "Add a garment",
+    tempUnit: "c",
     save,
     // navigation is the route's, not the form's
     onSaved: () => Promise.resolve(),
@@ -559,6 +564,25 @@ describe("GarmentForm: the estimate", () => {
     await waitFor(() => {
       expect(screen.getByText(/Estimated/).textContent).not.toBe(first);
     });
+  });
+
+  // R-94: the estimate used to print Celsius to everyone.
+  it("gives the estimate in the runner's unit", async () => {
+    const user = userEvent.setup();
+    renderForm({ tempUnit: "f" });
+    await user.selectOptions(screen.getByLabelText("Layer"), "base");
+    await user.selectOptions(screen.getByLabelText("Weight"), "light");
+
+    const range = estimateTempRange({
+      category: "top",
+      layer: "base",
+      weight: "light",
+    });
+    if (range === undefined) throw new Error("no estimate for a light base");
+    expect(await screen.findByText(/Estimated/)).toHaveTextContent(
+      `Estimated [${formatTempRange(range, "f") ?? ""}]`,
+    );
+    expect(formatTempRange(range, "f")).not.toBe(formatTempRange(range, "c"));
   });
 
   it("treats an unanswered layer or weight as unanswered, not as a value", async () => {

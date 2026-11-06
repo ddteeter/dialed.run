@@ -53,7 +53,7 @@ import {
 } from "../../../ui";
 import { photoAcceptAttribute } from "../../../lib/photo-constraints";
 import type { FieldErrors, PhotoStep } from "../../../ui";
-import { httpsUrlProblem } from "../../../lib/contracts";
+import { httpsUrlProblem, type TempUnit } from "../../../lib/contracts";
 import type { ProductPlaceholders } from "../form-mapping";
 import {
   garmentFormSchema,
@@ -264,6 +264,10 @@ export interface GarmentFormProps {
    * given it, the form is DS1's split.
    */
   rail?: GarmentRail | undefined;
+  /**
+  The runner's unit, for the estimated range and the rail's records.
+  */
+  tempUnit: TempUnit;
 }
 
 interface StoredGarment {
@@ -558,6 +562,7 @@ export function GarmentForm({
   successMessage,
   photo,
   rail,
+  tempUnit,
 }: Readonly<GarmentFormProps>) {
   const [values, setValues] = useState<GarmentFormValues>({
     ...EMPTY_VALUES,
@@ -624,7 +629,7 @@ export function GarmentForm({
         placeholders={stored?.placeholders ?? {}}
       />
 
-      <EstimatedRange values={values} />
+      <EstimatedRange values={values} tempUnit={tempUnit} />
 
       <TextField
         name="size"
@@ -682,7 +687,12 @@ export function GarmentForm({
   );
 
   return (
-    <FormFrame nearby={well.nearby} values={values} type={pickedType}>
+    <FormFrame
+      nearby={well.nearby}
+      values={values}
+      type={pickedType}
+      tempUnit={tempUnit}
+    >
       {primary}
     </FormFrame>
   );
@@ -1112,7 +1122,11 @@ function ExactShade({
  */
 function EstimatedRange({
   values,
-}: Readonly<{ values: GarmentFormValues }>): JSX.Element | undefined {
+  tempUnit,
+}: Readonly<{
+  values: GarmentFormValues;
+  tempUnit: TempUnit;
+}>): JSX.Element | undefined {
   const estimate = useMemo(
     () =>
       estimateTempRange({
@@ -1137,7 +1151,7 @@ function EstimatedRange({
     <p className="text-small text-quiet">
       Estimated{" "}
       <Bracketed className="text-dialed-text">
-        {formatTempRange(estimate)}
+        {formatTempRange(estimate, tempUnit)}
       </Bracketed>
     </p>
   );
@@ -1190,9 +1204,11 @@ function FormFrame({
   nearby,
   values,
   type,
+  tempUnit,
   children,
 }: Readonly<{
   nearby: ClosetNearby | undefined;
+  tempUnit: TempUnit;
   values: GarmentFormValues;
   /**
   The picked type, when one is: the card then matches on it too.
@@ -1219,6 +1235,7 @@ function FormFrame({
               : nearby.byType[type]) ?? []
           }
           typed={{ brand: values.brand, name: values.name }}
+          tempUnit={tempUnit}
         />
       }
     >

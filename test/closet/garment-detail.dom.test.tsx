@@ -79,6 +79,7 @@ async function renderWithRouter(element: ReactElement) {
 function populated(uploadPhoto = vi.fn()): ReactElement {
   return (
     <GarmentDetail
+      tempUnit="c"
       detail={detail}
       retire={vi.fn()}
       unretire={vi.fn()}
@@ -92,6 +93,7 @@ function populated(uploadPhoto = vi.fn()): ReactElement {
 function withVisibility(visibility: typeof item.visibility): ReactElement {
   return (
     <GarmentDetail
+      tempUnit="c"
       detail={{ ...detail, item: { ...item, visibility } }}
       retire={vi.fn()}
       unretire={vi.fn()}
@@ -132,6 +134,7 @@ function linked(
 ): ReactElement {
   return (
     <GarmentDetail
+      tempUnit="c"
       detail={{
         ...detail,
         item: { ...item, ...changes.item },
@@ -282,6 +285,7 @@ function words(
 ): ReactElement {
   return (
     <GarmentDetail
+      tempUnit="c"
       detail={{
         ...detail,
         item: { ...item, ...own },

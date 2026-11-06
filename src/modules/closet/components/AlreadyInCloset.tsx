@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 
-import type { garmentCategories } from "../../../lib/contracts";
+import type { garmentCategories, TempUnit } from "../../../lib/contracts";
 import type { GarmentType } from "../../../lib/contracts/garment-fields";
 import { normalizeIdentity } from "../../../lib/normalize";
 import { formatTempRange } from "../../../lib/contracts/thermal";
@@ -45,7 +45,12 @@ const CATEGORY_PLURALS = {
 function RecordLine({
   view,
   zone,
-}: Readonly<{ view: ClosetItemView; zone: string | undefined }>): JSX.Element {
+  tempUnit,
+}: Readonly<{
+  view: ClosetItemView;
+  zone: string | undefined;
+  tempUnit: TempUnit;
+}>): JSX.Element {
   const summary = view.performance?.summary;
   const worn = runsLabel(summary?.runCount ?? 0);
   if (view.item.retired) {
@@ -60,7 +65,9 @@ function RecordLine({
   }
   const dialed = String(summary.dialedCount);
   const range =
-    view.tempRange === undefined ? undefined : formatTempRange(view.tempRange);
+    view.tempRange === undefined
+      ? undefined
+      : formatTempRange(view.tempRange, tempUnit);
   return (
     <>
       {`${worn} · `}
@@ -114,10 +121,12 @@ function Row({
   view,
   typed,
   zone,
+  tempUnit,
 }: Readonly<{
   view: ClosetItemView;
   typed: { brand: string; name: string };
   zone: string | undefined;
+  tempUnit: TempUnit;
 }>): JSX.Element {
   const photo = photoUrlFor(view.item);
   const flags = flagsOf(view, typed);
@@ -150,7 +159,7 @@ function Row({
         </span>
         {/* MONO.sm, the metadata row's step (round 28 #13). */}
         <Mono step="sm" className="text-label">
-          <RecordLine view={view} zone={zone} />
+          <RecordLine view={view} zone={zone} tempUnit={tempUnit} />
         </Mono>
       </span>
       {flags === "" ? undefined : (
@@ -162,6 +171,23 @@ function Row({
       )}
     </li>
   );
+}
+
+interface AlreadyInClosetProps {
+  category: Category;
+  /**
+  The picked type, if one is.
+  */
+  type?: GarmentType | undefined;
+  /**
+  This category's pieces, or this type's, newest first, up to five.
+  */
+  pieces: readonly ClosetItemView[];
+  /**
+  What the form holds now, for `SAME NAME`.
+  */
+  typed: { brand: string; name: string };
+  tempUnit: TempUnit;
 }
 
 /**
@@ -180,21 +206,8 @@ export function AlreadyInCloset({
   type,
   pieces,
   typed,
-}: Readonly<{
-  category: Category;
-  /**
-  The picked type, if one is.
-  */
-  type?: GarmentType | undefined;
-  /**
-  This category's pieces, or this type's, newest first, up to five.
-  */
-  pieces: readonly ClosetItemView[];
-  /**
-  What the form holds now, for `SAME NAME`.
-  */
-  typed: { brand: string; name: string };
-}>): JSX.Element {
+  tempUnit,
+}: Readonly<AlreadyInClosetProps>): JSX.Element {
   const zone = useRunnerZone();
   return (
     <RailCard
@@ -209,7 +222,13 @@ export function AlreadyInCloset({
       ) : (
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
           {pieces.map((view) => (
-            <Row key={view.item.id} view={view} typed={typed} zone={zone} />
+            <Row
+              key={view.item.id}
+              view={view}
+              typed={typed}
+              zone={zone}
+              tempUnit={tempUnit}
+            />
           ))}
         </ul>
       )}
