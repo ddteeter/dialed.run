@@ -60,7 +60,7 @@ describe("the header", () => {
     renderReport();
     expect(
       screen.getByText(
-        bracketed("5 names →as 2 probable products · 57 pieces affected"),
+        bracketed("5 names → become 2 probable products · 57 pieces affected"),
       ),
     ).toBeTruthy();
   });
@@ -69,7 +69,7 @@ describe("the header", () => {
     renderReport();
     const arrow = screen.getByText("→");
     expect(arrow.getAttribute("aria-hidden")).toBe("true");
-    expect(arrow.nextElementSibling?.textContent).toBe("as");
+    expect(arrow.nextElementSibling?.textContent).toBe("become ");
     expect(arrow.nextElementSibling?.className).toContain("sr-only");
   });
 
@@ -79,7 +79,7 @@ describe("the header", () => {
     renderReport(duplicatesReport([candidate("Ciele", [["GoCap", 1]])]));
     expect(
       screen.getByText(
-        bracketed("1 name →as 1 probable product · 1 piece affected"),
+        bracketed("1 name → become 1 probable product · 1 piece affected"),
       ),
     ).toBeTruthy();
     expect(screen.getByText(bracketed("1 piece"))).toBeTruthy();
@@ -153,9 +153,16 @@ describe("a clean catalogue", () => {
     ).toBeTruthy();
     expect(
       screen.getByText(
-        bracketed("0 names →as 0 probable products · 0 pieces affected"),
+        bracketed("0 names · 0 probable products · 0 pieces affected"),
       ),
     ).toBeTruthy();
+    // Round 46, 110a: nothing becomes anything at zero, so no arrow.
+    expect(screen.queryByText("→")).toBeNull();
+    expect(screen.queryByText(/become/u)).toBeNull();
+    // Body text on the column, not the intro's small size.
+    const clean = screen.getByText(/^No near-misses\./u);
+    expect(clean.className).toContain("text-body");
+    expect(clean.className).toContain("max-w-column");
     expect(screen.queryAllByRole("heading", { level: 2 })).toEqual([]);
   });
 

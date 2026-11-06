@@ -106,7 +106,7 @@ test("an operator reads the Desk's duplicates report", async ({ page }) => {
   ).toBeVisible();
   await expect(
     page.getByText(
-      /^\[\d+ names? →as \d+ probable products? · \d+ pieces? affected\]$/u,
+      /^\[\d+ names? → become \d+ probable products? · \d+ pieces? affected\]$/u,
     ),
   ).toBeVisible();
   await expect(page.getByText(/^Nothing here does anything\./u)).toBeVisible();

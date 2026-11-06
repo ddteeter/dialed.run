@@ -28,12 +28,7 @@ export function DeskDuplicates({
         >
           Duplicates
         </h1>
-        <Bracketed step="xs" className="text-muted">
-          {counted(report.names, "name")} <span aria-hidden="true">→</span>
-          <span className="sr-only">as</span>{" "}
-          {counted(report.groups.length, "probable product")} ·{" "}
-          {counted(report.pieces, "piece")} affected
-        </Bracketed>
+        <HeaderCount report={report} />
       </div>
       <p className="m-0 max-w-column text-small text-muted">
         Nothing here does anything. This is how much dirt has built up, so
@@ -41,7 +36,7 @@ export function DeskDuplicates({
         Sorted by pieces affected.
       </p>
       {report.groups.length === 0 ? (
-        <p className="m-0 text-small text-muted">
+        <p className="m-0 max-w-column text-body text-muted">
           No near-misses. Every product name under each brand is distinct.
         </p>
       ) : (
@@ -52,6 +47,32 @@ export function DeskDuplicates({
         </ul>
       )}
     </section>
+  );
+}
+
+/**
+ * `[61 NAMES → 23 PROBABLE PRODUCTS · 57 PIECES AFFECTED]`. The arrow is
+ * hidden from screen readers and spoken as "become" (Round 46, 110d); its
+ * visible space rides inside the hidden glyph, so no text node is spaces
+ * alone. At zero there is nothing to become anything, so a middle dot
+ * takes the arrow's place (Round 46, 110a).
+ */
+function HeaderCount({ report }: Readonly<{ report: DuplicatesReport }>) {
+  const names = `${counted(report.names, "name")} `;
+  const rest = `${counted(report.groups.length, "probable product")} · ${counted(report.pieces, "piece")} affected`;
+  return (
+    <Bracketed step="xs" className="text-muted">
+      {report.groups.length === 0 ? (
+        `${names}· ${rest}`
+      ) : (
+        <>
+          {names}
+          <span aria-hidden="true">→ </span>
+          <span className="sr-only">become </span>
+          {rest}
+        </>
+      )}
+    </Bracketed>
   );
 }
 

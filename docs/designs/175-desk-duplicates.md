@@ -42,7 +42,10 @@ Duplicates as unlinked text. This lane builds the read-only page.
 - Screen: Operator Screens **D2 · Duplicates**.
 - Empty state (none drawn): owner's words, 2026-11-05. The zeroed bracket
   count stays, followed by the muted line _"No near-misses. Every product
-  name under each brand is distinct."_
+  name under each brand is distinct."_ Round 46 (110a): at zero the arrow
+  becomes a middle dot, and the line is body text on the column.
+- Header arrow: hidden from screen readers, spoken as "become" (Round 46,
+  110d).
 - **Not built: the rail count.** Round 30's rail draws a muted "23" beside
   Duplicates. The owner deferred it on 2026-11-05: it would run the
   catalogue scan on every Desk page load, through `ops/desk.ts`.
