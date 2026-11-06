@@ -383,9 +383,14 @@ export function WorksAt({
   return (
     <section className="flex flex-col gap-2">
       <WorksAtHeading
-        // #109h: with no script the label names the unit the fields take
-        // (`WORKS AT · °F`); with script the readout does.
-        label={isLive ? "Works at" : `Works at · ${UNIT_MARK[tempUnit]}`}
+        // #109h: the no-script fields' label names the unit they take
+        // (`WORKS AT · °F`); the bar's readout says it, and with no span
+        // there are no numbers for a unit to belong to.
+        label={
+          span === undefined || isLive
+            ? "Works at"
+            : `Works at · ${UNIT_MARK[tempUnit]}`
+        }
         labelRef={labelRef}
       >
         <AnyControl

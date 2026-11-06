@@ -23,6 +23,84 @@ link, Search runners
 button, Log a run, has popup dialog
 end of banner
 main
+navigation, Filter the closet
+heading, Group, level 2
+Group
+end of heading, Group, level 2
+list
+listitem, level 1, position 1, set size 7
+link, All #, current page
+All
+#
+end of link, All #, current page
+end of listitem, level 1, position 1, set size 7
+listitem, level 1, position 2, set size 7
+link, Tops #
+Tops
+#
+end of link, Tops #
+end of listitem, level 1, position 2, set size 7
+listitem, level 1, position 3, set size 7
+link, Bottoms #
+Bottoms
+#
+end of link, Bottoms #
+end of listitem, level 1, position 3, set size 7
+listitem, level 1, position 4, set size 7
+link, Outer #
+Outer
+#
+end of link, Outer #
+end of listitem, level 1, position 4, set size 7
+listitem, level 1, position 5, set size 7
+link, Hands / head #
+Hands / head
+#
+end of link, Hands / head #
+end of listitem, level 1, position 5, set size 7
+listitem, level 1, position 6, set size 7
+link, Shoes #
+Shoes
+#
+end of link, Shoes #
+end of listitem, level 1, position 6, set size 7
+listitem, level 1, position 7, set size 7
+link, Socks / extras #
+Socks / extras
+#
+end of link, Socks / extras #
+end of listitem, level 1, position 7, set size 7
+end of list
+heading, Works at, level 2
+Works at
+end of heading, Works at, level 2
+paragraph
+Untested
+end of paragraph
+heading, Coverage, level 2
+Coverage
+end of heading, Coverage, level 2
+list
+listitem, level 1, position 1, set size 3
+button, Covered #, not pressed
+Covered
+#
+end of button, Covered #, not pressed
+end of listitem, level 1, position 1, set size 3
+listitem, level 1, position 2, set size 3
+button, Partial #, not pressed
+Partial
+#
+end of button, Partial #, not pressed
+end of listitem, level 1, position 2, set size 3
+listitem, level 1, position 3, set size 3
+button, Untested #, not pressed
+Untested
+#
+end of button, Untested #, not pressed
+end of listitem, level 1, position 3, set size 3
+end of list
+end of navigation, Filter the closet
 status
 heading, # pieces, level 1
 Show retired (#)

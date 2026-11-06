@@ -307,6 +307,11 @@ describe("ClosetFilters: WORKS AT before a script (#109h)", () => {
     expect(any).toHaveClass("target", "inline-flex");
   });
 
+  it("names no unit over Untested before a script, either", async () => {
+    await rail({ span: undefined });
+    expect(screen.getByRole("heading", { name: "Works at" })).toBeVisible();
+  });
+
   it("says Untested and draws no control when no piece states a range", async () => {
     await rail({ span: undefined, onSearch: vi.fn() });
     expect(screen.queryByLabelText("Lowest")).toBeNull();
@@ -314,6 +319,8 @@ describe("ClosetFilters: WORKS AT before a script (#109h)", () => {
       .getByRole("heading", { name: /^Works at/ })
       .closest("section");
     expect(worksAt?.querySelector("p")).toHaveTextContent("[Untested]");
+    // No numbers, so no unit for them to be in.
+    expect(screen.getByRole("heading", { name: "Works at" })).toBeVisible();
   });
 });
 
