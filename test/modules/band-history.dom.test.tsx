@@ -17,6 +17,23 @@ import { BandHistory } from "../../src/modules/feed/components/BandHistory";
 // both −2 and +2, and exactly that mutant survived.
 const COUNTS = { "-2": 3, "-1": 1, "0": 7, "1": 0, "2": 2 };
 
+/**
+ * The measured half by everything it draws. The brackets are their own
+ * hidden spans (D-150), so the line's text is split across three nodes and
+ * a plain text match would find none of them.
+ */
+function wholeText(
+  text: string | RegExp,
+): (content: string, element: Element | null) => boolean {
+  return (_content, element) => {
+    const drawn = element?.textContent ?? "";
+    return (
+      element?.tagName === "SPAN" &&
+      (typeof text === "string" ? drawn === text : text.test(drawn))
+    );
+  };
+}
+
 describe("BandHistory", () => {
   it("states the band and folds the counts by sign", () => {
     render(
@@ -29,7 +46,7 @@ describe("BandHistory", () => {
 
     // 5°C is 41°F; a band is five degrees Celsius wide.
     expect(
-      screen.getByText("[41–50°] · 4 cold · 7 dialed · 2 warm"),
+      screen.getByText(wholeText("[41–50°] · 4 cold · 7 dialed · 2 warm")),
     ).toBeVisible();
     // The whole sentence, spaces included — a regex on the prose half let
     // the space before the measured half go missing unnoticed.
@@ -37,6 +54,23 @@ describe("BandHistory", () => {
       "Five states. Your history in this band: [41–50°] · 4 cold · 7 dialed · 2 warm",
       { normalizeWhitespace: false },
     );
+  });
+
+  it("draws the band's brackets without saying them", () => {
+    // D-150: a reader hears "41–50° · 4 cold …", not "left bracket".
+    render(
+      <BandHistory
+        counts={COUNTS}
+        bandFloor={5}
+        units={{ temp: "f", distance: "mi" }}
+      />,
+    );
+
+    const glyphs = screen.getAllByText(/^[[\]]$/u);
+    expect(glyphs.map((glyph) => glyph.textContent)).toEqual(["[", "]"]);
+    for (const glyph of glyphs) {
+      expect(glyph).toHaveAttribute("aria-hidden", "true");
+    }
   });
 
   it("writes the band in the runner's own units", () => {
@@ -48,7 +82,7 @@ describe("BandHistory", () => {
       />,
     );
 
-    expect(screen.getByText(/^\[5–10°\]/)).toBeVisible();
+    expect(screen.getByText(wholeText(/^\[5–10°\]/u))).toBeVisible();
   });
 
   it("sets the measured half in mixed-case mono, because it sits in prose", () => {
@@ -63,7 +97,9 @@ describe("BandHistory", () => {
       />,
     );
 
-    const measured = screen.getByText("[41–50°] · 4 cold · 7 dialed · 2 warm");
+    const measured = screen.getByText(
+      wholeText("[41–50°] · 4 cold · 7 dialed · 2 warm"),
+    );
     expect(measured).toHaveClass("font-mono", "text-mono-md");
     expect(measured).not.toHaveClass("uppercase");
   });
@@ -117,7 +153,7 @@ describe("BandHistory", () => {
     );
 
     expect(
-      screen.getByText("[41–50°] · 0 cold · 3 dialed · 0 warm"),
+      screen.getByText(wholeText("[41–50°] · 0 cold · 3 dialed · 0 warm")),
     ).toBeVisible();
   });
 });

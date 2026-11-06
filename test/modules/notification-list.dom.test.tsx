@@ -90,6 +90,13 @@ describe("NotificationList · the rows", () => {
     expect(screen.getByText("Quiet").closest("p")).toHaveTextContent(
       /^\[ Quiet \]$/u,
     );
+    // Drawn, not said (D-150): both glyphs are hidden from a reader, so
+    // the headline is heard as "Quiet".
+    const glyphs = screen.getAllByText(/^[[\]]$/u);
+    expect(glyphs).toHaveLength(2);
+    for (const glyph of glyphs) {
+      expect(glyph).toHaveAttribute("aria-hidden", "true");
+    }
     expect(
       screen.getByText(
         "Log a run and we’ll ask you one question about it. That’s most of what lands here.",

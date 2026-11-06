@@ -107,8 +107,14 @@ export function NotificationList({
           className="flex flex-col gap-3 py-8"
         >
           <p className="m-0 font-display text-title uppercase">
-            <span className="text-action">[</span> Quiet{" "}
-            <span className="text-action">]</span>
+            {/* Drawn, not said (D-150): a reader hears "Quiet". */}
+            <span aria-hidden="true" className="text-action">
+              [
+            </span>{" "}
+            Quiet{" "}
+            <span aria-hidden="true" className="text-action">
+              ]
+            </span>
           </p>
           <p className="m-0 text-lead">
             Log a run and we&rsquo;ll ask you one question about it.
