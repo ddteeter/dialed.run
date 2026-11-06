@@ -963,6 +963,96 @@ _Nothing from 99 on is open: round 45 answered the last of it._
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 
+## Answered in round 46 (imported 2026-11-06)
+
+Design answered as `Round 46 Rulings.dc.html`, filed as R46·105–110
+because rounds 44 and 45 already used 105–107, plus R47·111, a follow-up
+on R46·107. Everything is confirmed or drawn as asked, with 109b redrawn
+and two rulings on the Duplicates page (110c, 110d). The board's text is
+the text of record. Design's notes say 110k was skipped this round.
+
+- **R46·105 · The Strava consent (round 39 #66). Confirmed as built.**
+  (a) P3's offer is headed "Connect Strava", an h2, with no "Not now":
+  "Done for now" covers it, and the board's heading and Not now were a
+  drawing slip. (b) The lead-ins end in colons, as `STRAVA_CONSENT` has
+  them; the words are the contract. (c) After Try again, focus goes to
+  the offer's h2. Built in design 172 (#345).
+- **R46·106 · Au2 on load (round 39 #69). Confirmed as built.** The
+  failure band with no retry: SIGN-UP CLOSED HERE, the NOT CREATED
+  sentence, the ink Ask for access and "Have an account? Log in". The
+  heading stays "Create account": it matches the button and Log in's
+  pairing. Built in design 172 (#345).
+- **R46·107 · The viewer's zone (R-96 (3)). Confirmed as built.**
+  (a) " UTC" follows any label with a time of day while no home zone is
+  set; day-only labels get none; with a zone set there is no suffix and
+  no zone name. (b) What moves: notification times, the four rate-limit
+  clocks, the export expiry and the deletion day (sheet and email). Desk
+  and safety screens do not, and no wording changes. (c) Au5 reads the
+  device zone, with " UTC" if none resolves. (d) H dates each kit by its
+  run's start in the run's zone, in the same format, matching the public
+  profile. Built in design 173 (#346).
+- **R46·108 · The bell on A2 and A3 (R-102). Confirmed as built.** The
+  standard bell slot on phone and desk, nothing new. A phone frame
+  without it is out of date: the slot rule wins. Built in design 173
+  (#344).
+- **R46·109 · Closet C's rail (R-94). Building in #349 (design 174).**
+  - (a) Coverage: 3+ verdicts covered, 1–2 partial, 0 untested.
+    Confirmed.
+  - (b) Below 1040, **redrawn**: one chip per group, always shown, in
+    rail order, reading GROUP · VALUE (ALL or ANY when unset). A tap opens
+    that group's control inline under the row, one at a time, with
+    `aria-expanded`. The open chip is ink-filled.
+  - (c) The range fill is ink; the board's pink is corrected, and the
+    rail carries no hue.
+  - (d) Zero results, **drawn**: "Nothing in your closet matches these
+    filters." and Clear filters, which resets all three and sends focus
+    to the header count. The Add tile stays.
+  - (e) The header count reads "N · Label" for every group; unfiltered,
+    "N pieces", and "1 piece" for one.
+  - (f) Clearing, **drawn** on the desk rail. GROUP keeps "All".
+    COVERAGE: tapping the selected level again clears it; the levels are
+    toggle buttons with `aria-pressed`, at most one pressed, not radios.
+    WORKS AT: an "Any" text button, right-aligned on the label line and
+    44 high, shown only while a range is set; it resets to the full span
+    and sends focus to the WORKS AT label. Without script it is a link to
+    the URL minus the range.
+  - (g) Whole degrees in the runner's unit wherever ranges print (C, Y,
+    F's estimate and the rail card). The C, Y and F boards should read °F
+    for a °F runner; a °C-only drawing is an example, not a rule.
+  - (h) Without script, **drawn**: two labelled inputs (Lowest and
+    Highest, their labels visually hidden) and a plain text button,
+    Apply, hidden when script runs.
+  - (i)–(l) Confirmed: counts ignore the other filters and honour the
+    retired switch; one choice per group; the span runs from the lowest
+    low to the highest high, an overlap matches, and unranged pieces are
+    hidden while WORKS AT is set; the FILTERED line as drawn.
+  - (m) The sort and the tile badges are deferred and do not block; the
+    order is active, then retired, in group order (R-185).
+- **R46·110 · D2 Duplicates. Confirmed, built** in design 175 (#343),
+  apart from two deferrals.
+  - (a) Empty, **drawn**:
+    `[0 NAMES · 0 PROBABLE PRODUCTS · 0 PIECES AFFECTED]`, with no arrow
+    at zero, then the muted line "No near-misses. Every product name
+    under each brand is distinct." verbatim.
+  - (b) The rail count stays off (R-181).
+  - (c) **Ruled:** the h1 is DUPLICATES, in the display face and upper
+    case, matching the built Review, Runners and Access. The board's
+    mixed-case h2 is superseded.
+  - (d) **Ruled:** the header count as drawn, singular for one. The arrow
+    is `aria-hidden`, with a visually hidden " become " in its place, so
+    it reads "61 names become 23 probable products".
+  - (e)–(h) and (j) Confirmed: variants by pieces, then A–Z, with the
+    most-used as the probable name in body bold and the others small;
+    groups by total pieces, then brand A–Z; pieces include retired ones;
+    a hidden " pieces" after a bare count; cards shrink at 320 and long
+    names wrap anywhere.
+  - (i) The 500 cap is deferred, with no line for now (R-182).
+- **R47·111 · Au4's resend clock, signed out. Confirmed as built.** One
+  rule for every rate-limit clock. Signed in, the home zone, or "… PM
+  UTC" while it is unknown. Signed out (Au4, Au5, takedown), the browser
+  zone, with " UTC" if none resolves. Wording unchanged. Built in design
+  173 (#346).
+
 ## Answered in round 45 (imported 2026-11-04)
 
 Design answered as `Round 45 Rulings.dc.html`, items 99–103 and 107: four
@@ -1592,7 +1682,7 @@ entries for them when it merges.
     again returns to T1, or to P3 when it came from there, with focus on
     the heading. The board's frames show placeholder text: the owner's
     three paragraphs in `STRAVA_CONSENT` are the words. **Built (design
-    172):** the semibold lead-ins (the owner's colons kept; the board's
+    172, #345):** the semibold lead-ins (the owner's colons kept; the board's
     periods are placeholder), the retired P3 line, the return to P3 and
     the focus on T1's heading or P3's offer heading.
 
@@ -1607,14 +1697,14 @@ entries for them when it merges.
     state and an order.** The words and the "SEP 10 2026" date shape stand.
     On recording: the live region says "Reported to NCMEC. Kept until
     {date}.", KEPT UNTIL re-reads, and the form leaves the row; with no
-    report number the tag ends at the date. **Built (design 172):** the
+    report number the tag ends at the date. **Built (design 172, #345):** the
     empty state, "Nothing is in quarantine." under QUARANTINE · 0. Review's
     foot was already in the order Takedown, Copyright holds, Quarantine
     (since design 128's move to `/desk/review`).
 
 69. **No new accounts from Mississippi or Tennessee. Confirmed, plus a
     notice on load.** The sentences and the four places stand. **Built
-    (design 172):** on load, Au2 shows SIGN-UP CLOSED HERE and the NOT
+    (design 172, #345):** on load, Au2 shows SIGN-UP CLOSED HERE and the NOT
     CREATED sentence in place of the form and Google, with Ask for access
     (to Au5) and "Have an account? Log in". The refusals stay, for a place
     that changes after the page loads.
