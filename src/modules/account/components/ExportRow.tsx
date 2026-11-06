@@ -3,6 +3,7 @@ import type { JSX } from "react";
 
 import type { ExportRowState } from "../../../lib/contracts/data-export";
 import { proseDayLabel } from "../../../lib/dates";
+import type { ViewerZone } from "../../../lib/dates";
 import {
   Bracketed,
   ControlFailureBand,
@@ -19,7 +20,11 @@ import {
  * opened says the link is dead, the same for an expired link and someone
  * else's (#15).
  */
-function subLine(state: ExportRowState, isLinkDead: boolean): string {
+function subLine(
+  state: ExportRowState,
+  isLinkDead: boolean,
+  viewer: ViewerZone,
+): string {
   switch (state.state) {
     case "idle": {
       return isLinkDead
@@ -30,8 +35,9 @@ function subLine(state: ExportRowState, isLinkDead: boolean): string {
       return "We'll email a link when it's ready.";
     }
     case "ready": {
-      // UTC, so the server's first paint and the browser's agree.
-      return `Emailed. The link works until ${proseDayLabel(state.expiresAt)}.`;
+      // On the home zone, passed explicitly so the server's first paint
+      // and the browser's agree (R-96 (3)). A day alone, so no UTC mark.
+      return `Emailed. The link works until ${proseDayLabel(state.expiresAt, viewer.homeZone)}.`;
     }
     case "failed": {
       return "Your export didn't finish, and it doesn't count as today's.";
@@ -51,8 +57,13 @@ export function ExportRow({
   isLinkDead = false,
   request,
   onRequested,
+  viewer,
 }: Readonly<{
   state: ExportRowState;
+  /**
+   * The runner's clock, for the link's last day (R-96 (3)).
+   */
+  viewer: ViewerZone;
   /**
   Whether a refused download link opened this page (`?export=expired`).
   */
@@ -80,7 +91,7 @@ export function ExportRow({
         <span className="flex flex-col gap-1">
           <span className="text-body font-semibold">Export your data</span>
           <span className="text-small text-muted">
-            {subLine(state, isLinkDead)}
+            {subLine(state, isLinkDead, viewer)}
           </span>
         </span>
         <ExportAction

@@ -389,9 +389,7 @@ export const keepAccountFn = createServerFn({ method: "POST" }).handler(
  */
 export const leavingQuery = createServerFn({ method: "GET" })
   .validator((data: unknown) => leavingSearch.parse(data))
-  .handler(async ({ data }) =>
-    leavingView(db(), await optionalUserId(), data.on),
-  );
+  .handler(async ({ data }) => leavingView(db(), await optionalUserId(), data));
 
 /**
  * What `/account/terms` shows this visitor (ACC-6): the prompt, for a

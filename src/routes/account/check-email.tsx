@@ -27,12 +27,13 @@ export const Route = createFileRoute("/account/check-email")({
 });
 
 function CheckEmailPage() {
-  const { email, isSignedIn } = Route.useLoaderData();
+  const { email, isSignedIn, viewer } = Route.useLoaderData();
   return (
     <CheckEmail
       email={email}
       isSignedIn={isSignedIn}
       resend={resendConfirmationFn}
+      viewer={viewer}
     />
   );
 }

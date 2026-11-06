@@ -135,7 +135,7 @@ export async function publicKitRead(
 export function runDayOf(
   startedAt: number,
   conditions: Conditions | undefined,
-  runnerZone: string | null,
+  runnerZone: string | null | undefined,
 ): string {
   const zone = conditions?.timeZone ?? runnerZone ?? undefined;
   return dayLabel(startedAt, isTimeZone(zone) ? zone : undefined);

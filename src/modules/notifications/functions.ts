@@ -13,12 +13,21 @@ import {
   listNotifications,
   markAllNotificationsRead,
 } from "./service";
+import { viewerZone } from "./viewer-zone";
 
 export const listNotificationsFn = createServerFn({ method: "GET" }).handler(
   async () => {
     const userId = await requireUserId();
     return listNotifications(notificationsDb(), userId);
   },
+);
+
+/**
+ * The viewer's clock, for a signed-in route to hand the screens that print
+ * a time that is not a run's (R-96 (3)).
+ */
+export const viewerZoneFn = createServerFn({ method: "GET" }).handler(
+  async () => viewerZone(notificationsDb(), await requireUserId()),
 );
 
 export const markAllNotificationsReadFn = createServerFn({

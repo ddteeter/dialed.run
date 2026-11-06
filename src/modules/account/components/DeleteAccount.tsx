@@ -9,7 +9,8 @@ import {
   accountDeletionInput,
   accountDeletionSchema,
 } from "../../../lib/contracts";
-import { clockLabel, deviceTimeZone, proseDayLabel } from "../../../lib/dates";
+import { proseDayLabel, viewerClockLabel } from "../../../lib/dates";
+import type { ViewerZone } from "../../../lib/dates";
 import { nowSeconds } from "../../../lib/now";
 import {
   FieldMessage,
@@ -40,6 +41,11 @@ interface DeleteAccountSeams {
   Where a scheduled deletion goes: signed out, to its date.
   */
   onScheduled: (purgeAfter: number) => Promise<void>;
+  /**
+   * The runner's clock: the deletion day and the limit's time are said on
+   * their home zone (R-96 (3); round 46, 107b).
+   */
+  viewer: ViewerZone;
 }
 
 /**
@@ -54,6 +60,7 @@ export function DeleteAccount({
   reauth,
   isReturningFromGoogle,
   onScheduled,
+  viewer,
 }: Readonly<
   DeleteAccountSeams & {
     /**
@@ -95,6 +102,7 @@ export function DeleteAccount({
           request={request}
           reauth={reauth}
           onScheduled={onScheduled}
+          viewer={viewer}
           isReturningFromGoogle={isReturningFromGoogle && !hasClosed}
           onClose={() => {
             setIsOpen(false);
@@ -135,6 +143,7 @@ function DeleteSheet({
   onScheduled,
   isReturningFromGoogle,
   onClose,
+  viewer,
 }: Readonly<
   DeleteAccountSeams & {
     isReturningFromGoogle: boolean;
@@ -144,9 +153,10 @@ function DeleteSheet({
   const [currentPassword, setCurrentPassword] = useState("");
   const [keep, setKeep] = useState<HTMLButtonElement | undefined>();
   const [confirm, setConfirm] = useState<HTMLButtonElement | undefined>();
-  // In UTC, as every other place that names this day does (`deletion.ts`'
-  // `deletionDay`): the sheet and the email must not name different days.
-  const day = proseDayLabel(nowSeconds() + DELETION_GRACE_S);
+  // On the home zone, as every other place that names this day does
+  // (`deletion.ts`' `deletionDay`): the sheet and the email must not name
+  // different days.
+  const day = proseDayLabel(nowSeconds() + DELETION_GRACE_S, viewer.homeZone);
   const form = useFormSubmit({
     carry: "settings",
     // An account with no password sends none; the field is asked for
@@ -158,7 +168,7 @@ function DeleteSheet({
         throw new Refused("currentPassword", CURRENT_PASSWORD_WRONG);
       }
       if (result.status === "password-limited") {
-        const clock = clockLabel(result.until, deviceTimeZone());
+        const clock = viewerClockLabel(result.until, viewer);
         throw new Refused("currentPassword", currentPasswordLimited(clock));
       }
       if (result.status === "reauth") {

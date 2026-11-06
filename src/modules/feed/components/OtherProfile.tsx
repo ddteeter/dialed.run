@@ -2,7 +2,6 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
-import { dayLabel } from "../../../lib/dates";
 import { FormStatus, Icon, Mono } from "../../../ui";
 import type { OtherProfile as OtherProfileData } from "../profiles";
 import { Avatar } from "./Avatar";
@@ -105,7 +104,7 @@ export function OtherProfile({
                 >
                   <span className="flex items-center justify-between gap-3">
                     <Mono step="xs" className="text-muted">
-                      {dayLabel(entry.createdAt)}
+                      {entry.day}
                     </Mono>
                     <VerdictBadge verdict={entry.verdict ?? undefined} />
                   </span>

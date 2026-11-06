@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
 import type { ConfirmTrigger } from "../../../lib/auth-signal";
+import type { ViewerZone } from "../../../lib/dates";
 import { Sheet } from "../../../ui";
 import type { ConfirmGate } from "../../../ui";
 import type { ResendResult } from "../verification";
@@ -26,6 +27,14 @@ const WAITS_FOR: Readonly<Record<ConfirmTrigger, string>> = {
 type Resend = (input: { data: { email: string } }) => Promise<ResendResult>;
 
 /**
+What the sheet reads about the runner once a refusal opens it.
+*/
+interface OwnAddress {
+  readonly email: string;
+  readonly viewer: ViewerZone;
+}
+
+/**
  * "Confirm your email first" (round 26 #11, as round 27 #17 redrew it;
  * seam 7): what a control opens when the server refuses it for want of a
  * confirmed address — through `confirmEmailOnRefusal` below, one sheet
@@ -45,13 +54,17 @@ type Resend = (input: { data: { email: string } }) => Promise<ResendResult>;
 export function ConfirmEmailSheet({
   open,
   onClose,
-  email,
+  address,
   resend,
   trigger,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
-  email: string | undefined;
+  /**
+   * The runner's address and clock, once read; undefined while it is
+   * on its way, or if the read failed, and then there is no Resend link.
+   */
+  address: OwnAddress | undefined;
   resend: Resend;
   trigger?: ConfirmTrigger | undefined;
 }>): JSX.Element {
@@ -75,15 +88,20 @@ export function ConfirmEmailSheet({
         <h2 className="m-0 font-display text-title uppercase">
           Confirm your email first
         </h2>
-        {email === undefined ? (
+        {address === undefined ? (
           leadAlone
         ) : (
           <>
             {leadAlone}
             <p className="m-0 text-body">
-              We sent a link to <strong>{email}</strong>.
+              We sent a link to <strong>{address.email}</strong>.
             </p>
-            <ResendLink email={email} resend={resend} isPill />
+            <ResendLink
+              email={address.email}
+              resend={resend}
+              viewer={address.viewer}
+              isPill
+            />
           </>
         )}
         <button
@@ -123,27 +141,26 @@ export function ConfirmEmailOnRefusal({
   open: boolean;
   onClose: () => void;
   trigger: ConfirmTrigger | undefined;
-  ownAccount: () => Promise<{ email: string }>;
+  ownAccount: () => Promise<OwnAddress>;
   resend: Resend;
 }>): JSX.Element {
-  const [email, setEmail] = useState<string | undefined>();
+  const [account, setAccount] = useState<OwnAddress | undefined>();
   useEffect(() => {
-    if (!open || email !== undefined) return;
+    if (!open || account !== undefined) return;
     async function askForAddress(): Promise<void> {
       try {
-        const account = await ownAccount();
-        setEmail(account.email);
+        setAccount(await ownAccount());
       } catch {
         // No address line, as said above.
       }
     }
     void askForAddress();
-  }, [open, email, ownAccount]);
+  }, [open, account, ownAccount]);
   return (
     <ConfirmEmailSheet
       open={open}
       onClose={onClose}
-      email={email}
+      address={account}
       resend={resend}
       trigger={trigger}
     />
@@ -160,7 +177,7 @@ export function ConfirmEmailOnRefusal({
  * decides that on every press, and this only says where the link went.
  */
 export function confirmEmailOnRefusal(
-  ownAccount: () => Promise<{ email: string }>,
+  ownAccount: () => Promise<OwnAddress>,
   resend: Resend,
 ): ConfirmGate {
   return {

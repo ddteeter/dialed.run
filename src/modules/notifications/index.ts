@@ -22,3 +22,5 @@ export {
   type NotificationKind,
 } from "./service";
 export type { BellState } from "./bell-state";
+// The viewer's own clock, for account and this module (design 173).
+export { viewerZone } from "./viewer-zone";

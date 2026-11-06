@@ -6,7 +6,8 @@ import {
   CURRENT_PASSWORD_WRONG,
   currentPasswordLimited,
 } from "../../../lib/contracts";
-import { clockLabel, deviceTimeZone } from "../../../lib/dates";
+import { viewerClockLabel } from "../../../lib/dates";
+import type { ViewerZone } from "../../../lib/dates";
 import {
   FailureBand,
   FormFailureBand,
@@ -44,8 +45,13 @@ class PasswordRefused extends Error {
 export function ChangeEmail({
   current,
   request,
+  viewer,
 }: Readonly<{
   current: string;
+  /**
+   * The runner's home zone, for the limit's clock (R-96 (3)).
+   */
+  viewer: ViewerZone;
   request: (input: {
     data: { email: string; currentPassword: string };
   }) => Promise<ChangeResult>;
@@ -62,7 +68,7 @@ export function ChangeEmail({
         throw new PasswordRefused(CURRENT_PASSWORD_WRONG);
       }
       if (result.status === "password-limited") {
-        const clock = clockLabel(result.until, deviceTimeZone());
+        const clock = viewerClockLabel(result.until, viewer);
         throw new PasswordRefused(currentPasswordLimited(clock));
       }
       return result;
@@ -125,7 +131,7 @@ export function ChangeEmail({
       {outcome?.status === "limited" ? (
         <FailureBand
           kicker="Not sent"
-          message={limitedMessage(outcome.until)}
+          message={limitedMessage(outcome.until, viewer)}
           onRetry={() => {
             void form.submit({ email, currentPassword });
           }}

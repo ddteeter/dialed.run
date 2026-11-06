@@ -103,6 +103,7 @@ function AccountSectionRoute() {
       isLinkDead={search.export === "expired"}
       request={requestExportFn}
       onRequested={() => router.invalidate()}
+      viewer={page.account.viewer}
     />
   );
   const deletion = (
@@ -111,11 +112,14 @@ function AccountSectionRoute() {
       request={requestDeletionFn}
       reauth={<GoogleButton google={google} />}
       isReturningFromGoogle={search.deleting === true}
+      viewer={page.account.viewer}
       onScheduled={async (purgeAfter) => {
         await router.invalidate();
         await navigate({
           to: "/account/leaving",
-          search: { on: purgeAfter },
+          // The home zone rides along: the runner is signed out by the
+          // time that page names the day (R-96 (3)).
+          search: { on: purgeAfter, zone: page.account.viewer.homeZone },
         });
       }}
     />
@@ -155,9 +159,15 @@ function AccountSectionRoute() {
       <ChangeEmail
         current={page.account.email}
         request={requestEmailChangeFn}
+        viewer={page.account.viewer}
       />
     ),
-    password: <ChangePassword change={changeCredentialFn} />,
+    password: (
+      <ChangePassword
+        change={changeCredentialFn}
+        viewer={page.account.viewer}
+      />
+    ),
     notifications: (
       <NotificationsForm
         current={page.notifications}
