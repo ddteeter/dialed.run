@@ -250,7 +250,11 @@ export {
 export {
   clustersIn,
   duplicateProducts,
+  duplicatesReport,
   type DuplicateCandidate,
+  type DuplicateGroup,
+  type DuplicatesReport,
+  type DuplicateVariant,
 } from "./duplicates";
 
 export {
