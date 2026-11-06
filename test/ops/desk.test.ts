@@ -16,6 +16,7 @@ import { nowSeconds } from "../../src/lib/now";
 import { handleScheduled } from "../../src/modules/ops";
 import { NotFoundError } from "../../src/lib/errors";
 import {
+  banCountsOf,
   deskToday,
   isOperator,
   outboxBehindOf,
@@ -416,6 +417,19 @@ describe("todayCounts' outbox behind", () => {
       "SEARCH outbox USING COVERING INDEX outbox_kind_due (kind=? AND next_attempt_at<?)",
       "SCALAR SUBQUERY 1",
       "SEARCH cron_checkpoints USING INDEX sqlite_autoindex_cron_checkpoints_1 (cron_name=?)",
+    ]);
+  });
+});
+
+describe("Today's ban counts (PR#112-1)", () => {
+  it("reads the closed accounts through user_profiles_banned_at, not every runner", async () => {
+    const { sql, params } = banCountsOf(coreDb(), 0).toSQL();
+    const plan = await env.DIALED_CORE.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+      .bind(...params)
+      .all<{ detail: string }>();
+    expect(plan.results.map((row) => row.detail)).toStrictEqual([
+      "SEARCH user_profiles USING COVERING INDEX user_profiles_banned_at (banned_at>?)",
+      "USE TEMP B-TREE FOR GROUP BY",
     ]);
   });
 });

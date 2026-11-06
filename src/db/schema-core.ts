@@ -169,6 +169,12 @@ export const userProfiles = /*#__PURE__*/ sqliteTable(
     uniqueIndex("user_profiles_username_nocase").on(
       sql`${t.username} COLLATE NOCASE`,
     ),
+    // Desk Today's ban counts (`ops/desk.ts`) and D8's Closed filter read
+    // the banned accounts only (PR#112-1). Partial, so it holds the few
+    // closed accounts rather than every runner.
+    index("user_profiles_banned_at")
+      .on(t.bannedAt)
+      .where(sql`${t.bannedAt} IS NOT NULL`),
   ],
 );
 

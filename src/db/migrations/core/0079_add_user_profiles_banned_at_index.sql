@@ -1,0 +1,1 @@
+CREATE INDEX `user_profiles_banned_at` ON `user_profiles` (`banned_at`) WHERE "user_profiles"."banned_at" IS NOT NULL;
