@@ -83,6 +83,7 @@ function ownProfile(coverage: readonly CoverageBand[]): OwnProfileData {
     runCount: 1,
     coverage: [...coverage],
     mostWornItems: [],
+    units: { temp: "f", distance: "mi" },
     recentEntries: [],
   };
 }
