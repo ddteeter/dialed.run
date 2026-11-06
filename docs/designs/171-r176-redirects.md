@@ -18,7 +18,7 @@ stay out of scope by choice.
   and un-denying the domain brings it back. Written for every read whose
   landing domain differs from the typed one, and only for those.
 - **One rule, by link.** `safety.deniedLinksOf(db, urls)` answers which
-  links are denied, by their own domain *or* their landing's, in one read
+  links are denied, by their own domain _or_ their landing's, in one read
   of each table. The save's refusal (`isDeniedLink`, primary),
   `allowedLinksOf` and `linkDetailOf` (and through it F's Edit
   `storedLinkErrors`) ask it instead of `deniedDomainsOf`. So a link that
@@ -44,6 +44,17 @@ stay out of scope by choice.
   (`INSERT OR IGNORE`, `added_by = 'seed'`), following the 0002 brand
   seed. `amzn.to`, `a.co`, `linktr.ee` and `google.com` are left off on
   purpose.
+
+- **A denied link at F's save lands on its field** (found recording the
+  demo). TanStack Start sends a thrown `Error` as its message alone, so
+  `DeniedLinkError`'s issues never reached `useFormSubmit`, and on `main`
+  every denied link at F's save read as "Our end failed". `lib/field-refusal`
+  adds a serialization adapter, beside the auth signals', for an `Error`
+  that opts in with `code: "FIELD_REFUSAL"`; both now share
+  `lib/wire-error`, which sends exactly what each schema reads.
+- **Left for later** (R-180): a kept snapshot is not re-checked on
+  `reextract` or a redelivery, and a refused save still resolves its
+  product, so enrichment fetches the denied URL once and discards it.
 
 ## Contract touches
 
