@@ -38,6 +38,10 @@ import { garmentSchema, uiGroupFor } from "../../lib/contracts";
 // Was private to this file until modules/safety needed the same helper.
 import { orSqlNull } from "../../lib/sql/sql-null";
 import { garmentTypesFor } from "../../lib/contracts/garment-fields";
+import {
+  FIELD_REFUSAL_CODE,
+  type FieldRefusalOnTheWire,
+} from "../../lib/field-refusal";
 import { NotFoundError } from "../../lib/errors";
 import { newUlid } from "../../lib/ids";
 import { topByCount } from "../../lib/top-by-count";
@@ -223,11 +227,14 @@ export async function getOwnedItem(
  * **A field issue, not a failure** (round 43 #93): it carries the
  * `{ issues: [{ path, message }] }` shape `useFormSubmit` lands on a
  * field, so F marks the link and keeps every other value, where a bare
- * `Error` read as "Our end failed". The issues are an own property, which
- * is what survives the server function's serialization.
+ * `Error` read as "Our end failed". The code is what carries the issues
+ * across the server function's response (`lib/field-refusal`): without it
+ * the framework sends the message alone, and F showed exactly that
+ * failure for every denied link until R-176 (design 171).
  */
 export class DeniedLinkError extends Error {
-  readonly issues: readonly { path: string[]; message: string }[];
+  readonly code = FIELD_REFUSAL_CODE;
+  readonly issues: FieldRefusalOnTheWire["issues"];
 
   constructor() {
     super(DENIED_LINK);

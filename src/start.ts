@@ -9,12 +9,20 @@
  * read as a failure. The adapter is `lib/auth-signal`'s `signalAdapter`,
  * where its decisions are tested; this file is glue, and cannot be
  * imported by a test (it pulls the framework's entries).
+ *
+ * **A field refusal keeps its issues the same way** (R-176, design 171):
+ * `lib/field-refusal`'s adapter, so a refusal the server lands on a field
+ * (a denied product link) reaches `useFormSubmit` as one.
  */
 import { createSerializationAdapter } from "@tanstack/react-router";
 import { createStart } from "@tanstack/react-start";
 
 import { signalAdapter } from "./lib/auth-signal";
+import { fieldRefusalAdapter } from "./lib/field-refusal";
 
 export const startInstance = createStart(() => ({
-  serializationAdapters: [createSerializationAdapter(signalAdapter)],
+  serializationAdapters: [
+    createSerializationAdapter(signalAdapter),
+    createSerializationAdapter(fieldRefusalAdapter),
+  ],
 }));

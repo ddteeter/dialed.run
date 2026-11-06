@@ -23,6 +23,8 @@
  */
 import { z } from "zod";
 
+import { wireErrorAdapter } from "./wire-error";
+
 export const AUTH_REQUIRED_CODE = "AUTH_REQUIRED";
 
 /**
@@ -103,11 +105,6 @@ const signalErrorSchema = z.object({
 });
 
 /**
-What a signal is on the wire: its code and its sentence.
-*/
-export type SignalOnTheWire = z.infer<typeof signalErrorSchema>;
-
-/**
  * The serialization adapter's options for the auth signals, as
  * `createSerializationAdapter` takes them (`src/start.ts` registers it):
  * an `Error` carrying one of the signal codes goes as `{ code, message }`
@@ -116,14 +113,4 @@ export type SignalOnTheWire = z.infer<typeof signalErrorSchema>;
  * server threw. Anything else is not matched, and keeps the framework's
  * message-only treatment.
  */
-export const signalAdapter = {
-  key: "auth-signal",
-  test: (value: unknown): value is Error & SignalOnTheWire =>
-    value instanceof Error && signalErrorSchema.safeParse(value).success,
-  toSerializable: (error: Error & SignalOnTheWire): SignalOnTheWire => ({
-    code: error.code,
-    message: error.message,
-  }),
-  fromSerializable: (wire: SignalOnTheWire): Error & SignalOnTheWire =>
-    Object.assign(new Error(wire.message), { code: wire.code }),
-};
+export const signalAdapter = wireErrorAdapter("auth-signal", signalErrorSchema);
