@@ -104,7 +104,7 @@ describe("garment photo fingerprints (D-142)", () => {
     await purgeAccount(
       {
         core,
-        weather: drizzle(env.DIALED_WEATHER),
+        forgetBands: () => Promise.resolve(),
         now: 1_757_000_000,
         revokeStrava: () => Promise.resolve(),
         importsBucket: env.IMPORTS,

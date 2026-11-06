@@ -4,20 +4,22 @@
  * touches `dialed-weather` (docs/architecture.md), so any other module
  * needs a read path through here.
  */
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, desc, eq, inArray, or } from "drizzle-orm";
 
 import { runs } from "../../db/schema-core";
 import { weatherObservations } from "../../db/schema-weather";
 import { coreDb, weatherDb } from "../../env";
-import { readInChunks } from "../../lib/chunked";
+import { chunked, readInChunks } from "../../lib/chunked";
 import type { ManualSky, WeatherObservation } from "../../lib/contracts";
 import type { Ulid } from "../../lib/ids";
 import {
   bandObservation,
   cacheKeyFor,
   manualBandsFor,
+  matchesKey,
   toWeatherObservation,
 } from "./store";
+import type { CacheKey, ObservationRow } from "./store";
 
 /** A resolved observation plus whether it came from a real fetch or a
  * user-typed fallback — 104 shows manual readings differently. */
@@ -146,4 +148,55 @@ export async function observationsForRuns(
     }
   }
   return result;
+}
+
+/**
+ * Cells per read in `observationsAtCells`: three bound parameters each,
+ * under D1's hundred, with room to spare.
+ */
+const CELLS_PER_ROW_READ = 20;
+
+/**
+ * The cached real observations at exactly these cells, as stored rows.
+ *
+ * For `modules/feed`, which assembles a run's conditions across every hour
+ * it touched and needs the row's own key and zone to do it. It used to
+ * read this table itself; only this module may (docs/architecture.md).
+ * Rows come back in no particular order, and a cell nothing was fetched
+ * for is simply absent — the caller matches by key.
+ */
+export async function observationsAtCells(
+  keys: readonly CacheKey[],
+): Promise<ObservationRow[]> {
+  const db = weatherDb();
+  const found: ObservationRow[] = [];
+  // The chunking keeps the `or(...)` bounded, and it is about what D1
+  // *scans* — which is what it bills — not about what comes back.
+  for (const chunk of chunked(keys, CELLS_PER_ROW_READ)) {
+    const cells = chunk.map((key) => matchesKey(key));
+    found.push(
+      ...(await db
+        .select()
+        .from(weatherObservations)
+        .where(or(...cells))),
+    );
+  }
+  return found;
+}
+
+/**
+ * The newest cached observation among these cells, by hour — "what is it
+ * like here now", when the caller hands over the last few hours of one
+ * place. Undefined when none of them has been fetched.
+ */
+export async function newestObservationAt(
+  keys: readonly CacheKey[],
+): Promise<ObservationRow | undefined> {
+  const [newest] = await weatherDb()
+    .select()
+    .from(weatherObservations)
+    .where(or(...keys.map((key) => matchesKey(key))))
+    .orderBy(desc(weatherObservations.hourBucket))
+    .limit(1);
+  return newest;
 }

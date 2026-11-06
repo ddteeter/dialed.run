@@ -19,7 +19,7 @@ import { weatherDb } from "../../env";
 import type { Ulid } from "../../lib/ids";
 import { newUlid } from "../../lib/ids";
 import type { ManualSky, WeatherObservation } from "../../lib/contracts";
-import { readInChunks } from "../../lib/chunked";
+import { chunked, IN_LIST_CHUNK, readInChunks } from "../../lib/chunked";
 import { isTimeZone } from "../../lib/dates";
 import { nowSeconds } from "../../lib/now";
 import { orSqlNull } from "../../lib/sql/sql-null";
@@ -172,6 +172,23 @@ export async function forgetManualBand(runId: string): Promise<void> {
   await weatherDb()
     .delete(manualConditions)
     .where(eq(manualConditions.runId, runId));
+}
+
+/**
+ * Every band these runs carry, gone — the account purge's step (ACC-9),
+ * which deletes a runner's whole run history at once. In chunks under D1's
+ * parameter cap. Re-runnable for the reason `forgetManualBand` is: a band
+ * already gone deletes nothing.
+ */
+export async function forgetManualBands(
+  runIds: readonly string[],
+): Promise<void> {
+  const db = weatherDb();
+  for (const chunk of chunked(runIds, IN_LIST_CHUNK)) {
+    await db
+      .delete(manualConditions)
+      .where(inArray(manualConditions.runId, chunk));
+  }
 }
 
 export type ManualBandRow = typeof manualConditions.$inferSelect;

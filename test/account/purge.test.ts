@@ -47,6 +47,7 @@ import {
   purgeDueAccounts,
 } from "../../src/modules/account/purge";
 import type { PurgeDeps } from "../../src/modules/account/purge";
+import { forgetManualBands } from "../../src/modules/weather";
 import { drainOutbox } from "../../src/modules/ops/outbox";
 import { ONLY_THEIRS_GONE, seedAthleteGaveUp } from "../gave-up-rows";
 
@@ -70,9 +71,14 @@ interface Recorded {
 
 /**
  * The purge's seams, recording what it asked of them. `failFor` makes the
- * Strava revoke throw for those runners, once each.
+ * Strava revoke throw for those runners, once each; `isBandStepDown` makes the
+ * band step throw, as `DIALED_WEATHER` being unreachable would.
  */
-function depsAt(now: number, failFor: readonly string[] = []): Recorded {
+function depsAt(
+  now: number,
+  failFor: readonly string[] = [],
+  isBandStepDown = false,
+): Recorded {
   const revoked: string[] = [];
   const reported: Recorded["reported"] = [];
   const pending = new Set(failFor);
@@ -81,7 +87,10 @@ function depsAt(now: number, failFor: readonly string[] = []): Recorded {
     reported,
     deps: {
       core,
-      weather,
+      forgetBands: (runIds) =>
+        isBandStepDown
+          ? Promise.reject(new Error("DIALED_WEATHER is down"))
+          : forgetManualBands(runIds),
       now,
       revokeStrava: (userId) => {
         revoked.push(userId);
@@ -1186,12 +1195,7 @@ const STEPS: readonly {
 }[] = [
   {
     step: "1 · the runner's bands in DIALED_WEATHER",
-    stop: () => {
-      vi.spyOn(weather, "delete").mockImplementationOnce(() => {
-        throw new Error("DIALED_WEATHER is down");
-      });
-      return depsAt(NOW);
-    },
+    stop: () => depsAt(NOW, [], true),
     stoppedAt: (partial, revoked) => {
       expect(partial.manualConditions).toHaveLength(1);
       expect(revoked).toStrictEqual([]);
@@ -1297,11 +1301,7 @@ describe("purgeDueAccounts — nobody signs in behind the purge", () => {
     await claim(runner.userId, NOW - 1);
     await claim(inTheWeek.userId, NOW + 86_400);
     // Stopped at its first step: the sign-out is the claim's, not a step's.
-    vi.spyOn(weather, "delete").mockImplementationOnce(() => {
-      throw new Error("DIALED_WEATHER is down");
-    });
-
-    await purgeDueAccounts([], depsAt(NOW).deps);
+    await purgeDueAccounts([], depsAt(NOW, [], true).deps);
 
     const partial = await footprint(runner);
     expect(partial.session).toStrictEqual([]);

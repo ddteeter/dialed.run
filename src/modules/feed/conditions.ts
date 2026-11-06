@@ -1,8 +1,10 @@
 /**
- * Weather reads for the feed lane. SEAM: when lane 103 lands, these
- * cache-key reads swap to the weather module's index.ts conditions API —
- * the cache-key shape (lat/lng rounded to 2dp + hour bucket) is the frozen
- * contract in docs/contracts.md, not this file.
+ * Conditions for the feed lane, assembled from the weather module's cache
+ * reads (design 173). Only `modules/weather` touches `dialed-weather`
+ * (docs/architecture.md); this file decides which cells a run touched and
+ * what its conditions are, and asks weather for the rows. The cache-key
+ * shape (lat/lng rounded to 2dp + hour bucket) is the frozen contract in
+ * docs/contracts.md, not this file.
  *
  * dialed-core and dialed-weather are separate D1 databases, so there is no
  * SQL join: observations are resolved by unique-index seeks on
@@ -10,28 +12,27 @@
  *
  * Pure classification/formatting helpers (precipClassOf, bandFloorC,
  * bandLabel, formatTemp) live in lib/contracts/temperature.ts, not here — this file
- * imports `env`, and a route component that value-imports anything from an
- * env-touching file breaks the client build (Vite/Rolldown must resolve
- * `cloudflare:workers` even for bindings the component never uses).
+ * reaches `env` through the weather barrel, and a route component that
+ * value-imports anything from an env-touching file breaks the client build
+ * (Vite/Rolldown must resolve `cloudflare:workers` even for bindings the
+ * component never uses).
  */
-import { desc, inArray, or } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { runs } from "../../db/schema-core";
-import { weatherObservations } from "../../db/schema-weather";
-import { chunked, readInChunks } from "../../lib/chunked";
+import { readInChunks } from "../../lib/chunked";
 import { isTimeZone } from "../../lib/dates";
 import { pointSpan } from "./conditions-shape";
 import type { Conditions } from "./conditions-shape";
-import { weatherDb } from "../../env";
-// The cache key and its predicate come from the module that owns the table
-// (docs/architecture.md: only modules/weather touches dialed-weather).
 import {
   cacheKeyFor,
   manualReadingsForRuns,
-  matchesKey,
+  newestObservationAt,
+  observationsAtCells,
   runHourKeys,
 } from "../weather";
+import type { ObservationRow } from "../weather";
 
 /** The core D1 handle. Callers hold their own — consensus takes one as
  * an argument so the cron can pass a non-request binding. */
@@ -39,8 +40,6 @@ type CoreDb = DrizzleD1Database;
 
 export { pointSpan } from "./conditions-shape";
 export type { Conditions, ConditionsSpan } from "./conditions-shape";
-
-const CHUNK = 20;
 
 /**
 One observation cache cell, as a Map key.
@@ -121,7 +120,6 @@ export async function observationsForEntries(
 export async function observationsForRuns(
   batch: readonly Locatable[],
 ): Promise<Map<string, Conditions>> {
-  type ObservationRow = typeof weatherObservations.$inferSelect;
   // Every hour the run touched, not just the one it began in. The walk is
   // `runHourKeys` from the weather module rather than a local copy,
   // because `attach.ts` uses the same one to decide which hours to
@@ -135,44 +133,15 @@ export async function observationsForRuns(
           keys: runHourKeys(run.lat, run.lng, run.startedAt, run.durationS),
         },
   );
-  const keyed = spans.flatMap(({ runId, keys }) =>
-    keys.map((key) => ({ runId, key })),
-  );
-  const db = weatherDb();
   // Keyed by cache cell rather than collected into a list: a run spans up
   // to six hours and a page holds two hundred runs, so a linear scan per
   // key is twelve hundred passes over the rows for an answer a lookup
-  // gives directly.
+  // gives directly. The cache holds real observations only: a band a
+  // runner set lives in `manual_conditions`, read below (contracts.md).
   const byCell = new Map<string, ObservationRow>();
-  // The chunking is what keeps the `or(...)` bounded, and it is about what
-  // D1 *scans* — which is what it bills — not about what comes back. The
-  // answer is assembled by matching keys afterwards either way, which is
-  // why `chunked` is tested where its mutants are visible rather than
-  // excused here.
-  for (const chunk of chunked(keyed, CHUNK)) {
-    // Equivalent mutant, and the proof is the one the chunking rests on:
-    // emptying this arrow widens the `where` to every observation, and the
-    // answer is assembled by matching keys against the rows afterwards —
-    // so a superset changes what is *scanned* and not what is *returned*.
-    // Scanned rows are what D1 bills, which is why the predicate stays.
-    //
-    // Block form, not `next-line`, kept from when the predicate was built
-    // inside the read — one statement over several lines, where a
-    // `next-line` directive attaches to the first line and silently does
-    // nothing.
-    // Stryker disable ArrowFunction
-    const cells = chunk.map(({ key }) => matchesKey(key));
-    // Stryker restore ArrowFunction
-    // The cache holds real observations only: a band a runner set lives
-    // in `manual_conditions`, read below, and no `source='manual'` cache
-    // row has ever been written (contracts.md).
-    const found = await db
-      .select()
-      .from(weatherObservations)
-      .where(or(...cells));
-    for (const row of found) {
-      byCell.set(cellKey(row.latR, row.lngR, row.hourBucket), row);
-    }
+  const cells = await observationsAtCells(spans.flatMap(({ keys }) => keys));
+  for (const row of cells) {
+    byCell.set(cellKey(row.latR, row.lngR, row.hourBucket), row);
   }
 
   const result = new Map<string, Conditions>();
@@ -264,16 +233,10 @@ export async function currentConditions(
     { length: FRESH_BUCKETS },
     (_unused, index) => nowBucket - index,
   );
-  const atBucket = (bucket: number) =>
-    matchesKey({ ...cacheKeyFor(lat, lng, new Date()), hourBucket: bucket });
-  const scope = or(...buckets.map((bucket) => atBucket(bucket)));
-  const db = weatherDb();
-  const [best] = await db
-    .select()
-    .from(weatherObservations)
-    .where(scope)
-    .orderBy(desc(weatherObservations.hourBucket))
-    .limit(1);
+  const here = cacheKeyFor(lat, lng, new Date());
+  const best = await newestObservationAt(
+    buckets.map((bucket) => ({ ...here, hourBucket: bucket })),
+  );
   if (!best) return;
   return {
     tempC: best.tempC,
