@@ -961,6 +961,18 @@ _Nothing from 99 on is open: round 45 answered the last of it._
      effort.
      **The ask:** confirm, or draw a select's anatomy.
 
+<!-- Numbered 112: rounds 44–46 and R47 filed 104–111. A list break, so Prettier keeps the number. -->
+
+112. **Five things Closet C's rail built where round 46 is silent (PR
+     #349, design 174).**
+     - Without script, below 1040, every chip's panel shows open.
+     - A group with 0 pieces is still shown in GROUP.
+     - WORKS AT reads `[Untested]`, with no unit, when no piece has a range.
+     - An empty closet has no rail.
+     - Once hydrated, WORKS AT's Any is a button; before, it is R46·109f's
+       link.
+       **The ask:** confirm, or draw the ones that should differ.
+
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 
 ## Answered in round 46 (imported 2026-11-06)
@@ -995,7 +1007,7 @@ the text of record. Design's notes say 110k was skipped this round.
   standard bell slot on phone and desk, nothing new. A phone frame
   without it is out of date: the slot rule wins. Built in design 173
   (#344).
-- **R46·109 · Closet C's rail (R-94). Building in #349 (design 174).**
+- **R46·109 · Closet C's rail (R-94). Built in #349 (design 174);** its five additions are open item 112.
   - (a) Coverage: 3+ verdicts covered, 1–2 partial, 0 untested.
     Confirmed.
   - (b) Below 1040, **redrawn**: one chip per group, always shown, in

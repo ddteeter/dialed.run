@@ -1,5 +1,5 @@
 {
-  "branches": 73.95,
+  "branches": 74.74,
   "unvisited": {
     "/api/health": "an endpoint: JSON, no page",
     "/api/strava": "an endpoint: Strava's webhook",
