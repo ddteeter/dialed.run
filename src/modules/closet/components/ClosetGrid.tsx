@@ -321,6 +321,7 @@ function useFocusAfterClear(search: ClosetSearch) {
     armedRef.current = false;
     // Equivalent without `?.`: the h1 is drawn on every render, so the ref
     // is always set by the time an effect runs. The `?.` is the type's.
+    // Stryker disable next-line OptionalChaining
     headingRef.current?.focus();
   }, [search]);
   return {

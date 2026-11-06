@@ -43,10 +43,7 @@ export function worksAtLabel(
   search: ClosetSearch,
   tempUnit: TempUnit,
 ): string | undefined {
-  return formatTempRange(
-    { lowC: search.from, highC: search.to },
-    tempUnit,
-  );
+  return formatTempRange({ lowC: search.from, highC: search.to }, tempUnit);
 }
 
 const UNIT_MARK: Readonly<Record<TempUnit, string>> = { f: "°F", c: "°C" };
@@ -321,6 +318,7 @@ function AnyControl({
         onSearch(cleared);
         // Equivalent without `?.`: the label is drawn beside this button,
         // so the ref is set whenever it can be clicked. The `?.` is the type's.
+        // Stryker disable next-line OptionalChaining
         labelRef.current?.focus();
       }}
     >
@@ -395,11 +393,7 @@ export function WorksAt({
         }
         labelRef={labelRef}
       >
-        <AnyControl
-          search={search}
-          onSearch={liveSearch}
-          labelRef={labelRef}
-        />
+        <AnyControl search={search} onSearch={liveSearch} labelRef={labelRef} />
       </WorksAtHeading>
       {control}
     </section>

@@ -260,6 +260,16 @@
       "count": 1
     },
     {
+      "key": "src/modules/closet/components/ClosetGrid.tsx|mutation-suppress|// Stryker disable next-line OptionalChaining",
+      "reason": "Equivalent mutant, proof at the site (R-94, focus after Clear filters): the h1 is drawn on every render, so headingRef is always set by the time the effect runs; the optional chain is the RefObject type's guard. Owner-granted, Drew, 2026-11-06.",
+      "count": 1
+    },
+    {
+      "key": "src/modules/closet/components/WorksAt.tsx|mutation-suppress|// Stryker disable next-line OptionalChaining",
+      "reason": "Equivalent mutant, proof at the site (R-94, WORKS AT's Any): the label h2 is drawn beside the Any button, so labelRef is always set whenever the button can be clicked; the optional chain is the RefObject type's guard. Owner-granted, Drew, 2026-11-06.",
+      "count": 1
+    },
+    {
       "key": "src/ui/use-form-submit.ts|mutation-suppress|// Stryker disable OptionalChaining,ArrayDeclaration",
       "reason": "Two equivalent mutants, each with its proof at the site: `formRef.current` is null only before mounting so the optional chain is the compiler's guard; and stryker's replacement for an empty dependency array is a constant array, exactly as stable as `[]`. Both hold at the focusField callback and the land effect timeout.",
       "count": 2
