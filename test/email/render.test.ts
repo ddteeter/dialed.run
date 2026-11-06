@@ -397,7 +397,7 @@ describe("emailContent", () => {
       },
       {
         subject: "We didn't remove what you reported",
-        body: "We looked at your request and didn't remove anything. Reason: it is a photo of shoes.",
+        body: "We looked at your request and didn't remove anything. Reason: it is a photo of shoes. If it's a photo of you that you didn't agree to, write to desk@dialed.run and we'll look at it as an ordinary report.",
         foot: "Questions? Reply to this email or write to hello@dialed.run.",
         footer: LEGAL,
       },
@@ -406,7 +406,7 @@ describe("emailContent", () => {
       { kind: "removal_request_decided", outcome: "declined" },
       {
         subject: "We didn't remove what you reported",
-        body: "We looked at your request and didn't remove anything. Reason: it isn't what the request described.",
+        body: "We looked at your request and didn't remove anything. Reason: it isn't what the request described. If it's a photo of you that you didn't agree to, write to desk@dialed.run and we'll look at it as an ordinary report.",
         foot: "Questions? Reply to this email or write to hello@dialed.run.",
         footer: LEGAL,
       },

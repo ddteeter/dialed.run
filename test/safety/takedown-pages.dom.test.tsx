@@ -601,7 +601,9 @@ describe("Review · removal requests", () => {
     );
     await user.click(ask);
     expect(
-      screen.getByText("The person who asked is sent this."),
+      screen.getByText(
+        "The person who asked is sent this. Not nude or sexual? Say so.",
+      ),
     ).toBeVisible();
     expect(screen.getByRole("button", { name: "Decline" })).toHaveAttribute(
       "type",
@@ -657,6 +659,19 @@ describe("Review · removal requests", () => {
     );
     expect(part("hold-state")).toBeNull();
     expect(part("related")).toBeNull();
+  });
+
+  it("says what intimate means on every request (D-161)", async () => {
+    await renderWithRouter(
+      <RemovalRequests
+        requests={[pending()]}
+        decide={vi.fn<DecideFn>()}
+        block={vi.fn<BlockFn>()}
+      />,
+    );
+    expect(part("statutory-line")).toHaveTextContent(
+      "Intimate means nudity or sexual content (15 U.S.C. § 6851). If it isn't, decline, and remove it under another rule if it breaks one.",
+    );
   });
 
   it("names the requester's other open requests", async () => {

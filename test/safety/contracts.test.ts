@@ -5,6 +5,8 @@ import {
   REMOVAL_DUE_SECONDS,
   reasonsThatHideAtOnce,
   removalDueLabel,
+  removalRule,
+  removalRuleLine,
   removalStatements,
   reportersToHide,
   reportReasonLabels,
@@ -122,6 +124,16 @@ describe("the reporters each reason needs (design 136, D-117)", () => {
       other: 3,
     });
     expect(reasonsThatHideAtOnce).toStrictEqual(["intimate"]);
+  });
+
+  it("offers a courtesy removal under the rule on photos of other people (D-161)", () => {
+    expect(removalStatements.othersPhotos).toBe(
+      "it shows someone who didn't agree to it",
+    );
+    expect(removalRule.othersPhotos).toBe("othersPhotos");
+    expect(removalRuleLine("remove", "othersPhotos")).toBe(
+      "That breaks our community rules: don't post photos of other people.",
+    );
   });
 
   it("gives the removal the TAKE IT DOWN Act's 48 hours", () => {

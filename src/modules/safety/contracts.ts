@@ -154,6 +154,17 @@ export const reasonsThatHideAtOnce: readonly ReportReason[] = reportReasons
   .filter((reason) => reportersToHide[reason] === 1);
 
 /**
+ * What "intimate" means on the Desk (D-161 2; owner, 2026-11-06): the
+ * TAKE IT DOWN Act's line, 15 U.S.C. § 6851(a)(5). Said to the operator
+ * on every row an intimate-image report or a `/takedown` request opened,
+ * so a photo outside it is declined, or removed under the rule it does
+ * break (a courtesy removal names `othersPhotos`). Runner-facing words
+ * keep "intimate".
+ */
+export const STATUTORY_LINE =
+  "Intimate means nudity or sexual content (15 U.S.C. § 6851). If it isn't, decline, and remove it under another rule if it breaks one.";
+
+/**
  * How long the TAKE IT DOWN Act allows between a valid request and its
  * removal: the Review row's clock for a subject reported `intimate`.
  */
@@ -195,6 +206,9 @@ export const removalStatements = {
   // Design 136; confirmed by round 35 #58c.
   intimate: "it's an intimate image shared without consent",
   harassment: "it harasses someone",
+  // A courtesy removal (D-161; owner, 2026-11-06): a photo of someone who
+  // did not agree to it, and is not intimate under the statutory line.
+  othersPhotos: "it shows someone who didn't agree to it",
   spam: "it's an ad or spam",
   copyright: "it uses someone else's work",
 } as const;
@@ -211,6 +225,7 @@ export const removalRule: Readonly<Record<RemovalReason, CommunityRule>> = {
   explicit: "explicit",
   intimate: "explicit",
   harassment: "harassment",
+  othersPhotos: "othersPhotos",
   spam: "spam",
   copyright: "othersWork",
 };
