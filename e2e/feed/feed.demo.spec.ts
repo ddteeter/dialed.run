@@ -483,12 +483,14 @@ test("follow a runner, browse their feed, open a verdict, and mark it useful", a
     await expect(card.locator('[data-part="run-strip"]')).toContainText(
       "43–57° · light rain",
     );
-    // Visual Crossing's reading, credited beside it (FEED-8).
-    await expect(
-      card.getByRole("link", {
-        name: "Weather data provided by Visual Crossing",
-      }),
-    ).toBeVisible();
+    // Visual Crossing's reading, credited beside it (FEED-8): drawn, as the
+    // licence asks, but unheard, because the compact line above already
+    // said it once for the feed (R-179).
+    const cardCredit = card.locator(
+      "a[href='https://www.visualcrossing.com/']",
+    );
+    await expect(cardCredit).toBeVisible();
+    await expect(cardCredit).toHaveAttribute("aria-hidden", "true");
     // ...their private entry never does (CLAUDE.md: private entries never
     // appear in feeds or consensus aggregates).
     await expect(page.getByText(privateCaption)).toHaveCount(0);

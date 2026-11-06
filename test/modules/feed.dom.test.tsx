@@ -293,6 +293,36 @@ describe("Feed: Visual Crossing's credit is heard once (R-179)", () => {
       1,
     );
   });
+
+  it("is heard on the compact line when it shows, and on no card", async () => {
+    const reading = pointConditions({ tempC: 8, feelsLikeC: 6 });
+    await renderFeedScreen(
+      feed({
+        items: [
+          feedItem({ entryId: "01A", conditions: reading }),
+          feedItem({ entryId: "01B", conditions: reading }),
+        ],
+        compact: matched(3),
+      }),
+    );
+
+    const posts = [
+      ...document.querySelectorAll<HTMLElement>('[data-part="post"]'),
+    ];
+    for (const post of posts) {
+      const credit = post.querySelector<HTMLElement>(
+        "a[href='https://www.visualcrossing.com/']",
+      );
+      expect(credit).toBeVisible();
+      expect(credit).toHaveAttribute("aria-hidden", "true");
+      expect(credit).toHaveAttribute("tabindex", "-1");
+    }
+    // getByRole throws on two: exactly one credit is heard, and it is the
+    // line's, under its band in the line's own wrapper.
+    const heard = screen.getByRole("link", { name: WEATHER_CREDIT });
+    const line = document.querySelector("[data-part='compact-conditions']");
+    expect(line?.parentElement).toContainElement(heard);
+  });
 });
 
 describe("Feed: Following, empty", () => {
