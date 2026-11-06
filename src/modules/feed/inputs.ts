@@ -29,15 +29,6 @@ export const attachKitInput = z.object({
 });
 
 /**
- * The picker asks for conditions when it has them and shows the whole
- * closet when it does not, so both coordinates are optional together.
- */
-export const pickerGroupsInput = z.object({
-  lat: latitudeSchema.optional(),
-  lng: longitudeSchema.optional(),
-});
-
-/**
  * One schema for both surfaces that take a coordinate: the prefill lookup
  * and the conditions consensus ask the same question of the same input.
  */
@@ -49,7 +40,6 @@ export const coordinatesInput = z.object({
 export const itemFlagInput = z.object({
   itemId: ulidSchema,
   flag: itemFlagSchema.optional(),
-  note: z.string().max(280).optional(),
 });
 
 /**

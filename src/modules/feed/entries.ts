@@ -218,7 +218,6 @@ export async function attachKit(input: AttachKitInput): Promise<string> {
 interface ItemFlagInput {
   itemId: string;
   flag?: ItemFlag | undefined;
-  note?: string | undefined;
 }
 
 export interface SubmitVerdictInput {
@@ -321,10 +320,7 @@ export async function submitVerdict(
     ...applicableFlags.map((itemFlag) =>
       database
         .update(outfitEntryItems)
-        .set({
-          flag: itemFlag.flag ?? sql`NULL`,
-          note: itemFlag.note ?? sql`NULL`,
-        })
+        .set({ flag: itemFlag.flag ?? sql`NULL` })
         .where(
           and(
             eq(outfitEntryItems.entryId, input.entryId),
@@ -567,7 +563,6 @@ interface EntryDetailItem {
   category: string;
   layer: string | undefined;
   flag: ItemFlag | undefined;
-  note: string | undefined;
   /**
    * The piece's product link, when closet's one read lets it show (round
    * 43 #96: D in, as /kit). Shown to anyone who can see the kit, as it is.
@@ -675,8 +670,9 @@ export async function getEntryDetail(
     .where(eq(userProfiles.userId, entry.userId))
     .limit(1);
 
+  // The item and its flag only: the per-item note is not read back (D-160).
   const entryItemRows = await database
-    .select()
+    .select({ itemId: outfitEntryItems.itemId, flag: outfitEntryItems.flag })
     .from(outfitEntryItems)
     .where(eq(outfitEntryItems.entryId, entryId));
   const itemIds = entryItemRows.map((row) => row.itemId);
@@ -719,7 +715,7 @@ export async function getEntryDetail(
 
   const observations = await observationsForRuns([run]);
 
-  // Per-item flags/notes are never public (docs/contracts.md): only the
+  // Per-item flags are never public (docs/contracts.md): only the
   // entry's own owner sees them, regardless of the entry's share state.
   // Equivalent mutant on the first operand: `undefined === entry.userId`
   // is already false, so the explicit check changes no answer. It is here
@@ -752,7 +748,6 @@ export async function getEntryDetail(
         category: garment?.category ?? "accessory",
         layer: garment?.layer ?? undefined,
         flag: isOwner ? (row.flag ?? undefined) : undefined,
-        note: isOwner ? (row.note ?? undefined) : undefined,
         url: links.get(row.itemId),
       };
     }),

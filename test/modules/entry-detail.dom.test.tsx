@@ -65,7 +65,6 @@ function item(overrides: Partial<Item> = {}): Item {
     category: "top",
     layer: "outer",
     flag: undefined,
-    note: undefined,
     url: undefined,
     ...overrides,
   };
