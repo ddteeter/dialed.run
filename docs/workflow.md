@@ -211,4 +211,5 @@ Where the old checklist's items went:
 
 The call epic is next (see `docs/post-mvp.md`); its packets get written the
 same way (design doc template, worktree lanes) once v1 verdict data exists.
-It starts from the generic dressing chart and v1's verdict data (D-159).
+The engine starts from the generic dressing chart; there is no validation
+study (D-159).
