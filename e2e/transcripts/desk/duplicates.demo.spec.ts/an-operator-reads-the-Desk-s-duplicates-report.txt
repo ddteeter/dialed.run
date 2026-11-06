@@ -1,0 +1,91 @@
+document
+navigation, Desk
+dialed
+.run
+Desk
+Operator
+list
+listitem, level 1, position 1, set size 5
+link, :when
+:when
+end of link, :when
+end of listitem, level 1, position 1, set size 5
+listitem, level 1, position 2, set size 5
+link, Review
+Review
+end of link, Review
+end of listitem, level 1, position 2, set size 5
+listitem, level 1, position 3, set size 5
+link, Access
+Access
+end of link, Access
+end of listitem, level 1, position 3, set size 5
+listitem, level 1, position 4, set size 5
+link, Duplicates, current page
+Duplicates
+end of link, Duplicates, current page
+end of listitem, level 1, position 4, set size 5
+listitem, level 1, position 5, set size 5
+link, Runners
+Runners
+end of link, Runners
+end of listitem, level 1, position 5, set size 5
+end of list
+end of navigation, Desk
+main
+region, Duplicates
+heading, Duplicates, level 1
+# names
+as
+# probable products
+·
+# pieces
+affected
+paragraph
+Nothing here does anything. This is how much dirt has built up, so “some dirt is accepted” stays a decision instead of a hope. Sorted by pieces affected.
+end of paragraph
+list
+listitem, level 1, position 1, set size 2
+heading, Tracksmith # pieces, level 2
+Tracksmith
+# pieces
+end of heading, Tracksmith # pieces, level 2
+list
+listitem, level 2, position 1, set size 2
+strong
+Harrier Long Sleeve
+end of strong
+#
+pieces
+end of listitem, level 2, position 1, set size 2
+listitem, level 2, position 2, set size 2
+Harrier Long Sleeves
+#
+pieces
+end of listitem, level 2, position 2, set size 2
+end of list
+end of listitem, level 1, position 1, set size 2
+listitem, level 1, position 2, set size 2
+heading, Janji # pieces, level 2
+Janji
+# pieces
+end of heading, Janji # pieces, level 2
+list
+listitem, level 2, position 1, set size 2
+strong
+Rapid Short
+end of strong
+#
+pieces
+end of listitem, level 2, position 1, set size 2
+listitem, level 2, position 2, set size 2
+Rapid Shorts
+#
+piece
+end of listitem, level 2, position 2, set size 2
+end of list
+end of listitem, level 1, position 2, set size 2
+end of list
+end of region, Duplicates
+end of main
+end of document

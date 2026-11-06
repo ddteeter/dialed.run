@@ -17,6 +17,8 @@ import type { DuplicateGroup, DuplicatesReport } from "../duplicates-report";
 export function DeskDuplicates({
   report,
 }: Readonly<{ report: DuplicatesReport }>): JSX.Element {
+  // `min(300px, 100%)`: the board's 300px card, but never wider than a
+  // 320px viewport's column, which reflow would scroll sideways.
   return (
     <section aria-labelledby="desk-duplicates" className="flex flex-col gap-6">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -27,8 +29,7 @@ export function DeskDuplicates({
           Duplicates
         </h1>
         <Bracketed step="xs" className="text-muted">
-          {counted(report.names, "name")}{" "}
-          <span aria-hidden="true">→</span>
+          {counted(report.names, "name")} <span aria-hidden="true">→</span>
           <span className="sr-only">as</span>{" "}
           {counted(report.groups.length, "probable product")} ·{" "}
           {counted(report.pieces, "piece")} affected
@@ -36,15 +37,15 @@ export function DeskDuplicates({
       </div>
       <p className="m-0 max-w-column text-small text-muted">
         Nothing here does anything. This is how much dirt has built up, so
-        &ldquo;some dirt is accepted&rdquo; stays a decision instead of a
-        hope. Sorted by pieces affected.
+        &ldquo;some dirt is accepted&rdquo; stays a decision instead of a hope.
+        Sorted by pieces affected.
       </p>
       {report.groups.length === 0 ? (
         <p className="m-0 text-small text-muted">
           No near-misses. Every product name under each brand is distinct.
         </p>
       ) : (
-        <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3 p-0">
+        <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(300px,100%),1fr))] gap-3 p-0">
           {report.groups.map((group) => (
             <GroupCard
               key={group.products.map((row) => row.id).join(" ")}
@@ -61,7 +62,7 @@ function GroupCard({ group }: Readonly<{ group: DuplicateGroup }>) {
   return (
     <li className="flex flex-col gap-3 border border-hairline bg-panel p-4">
       <h2 className="m-0 flex items-baseline justify-between gap-3">
-        <Mono step="xs" className="text-muted">
+        <Mono step="xs" className="min-w-0 text-muted wrap-anywhere">
           {group.brand}
         </Mono>
         <Bracketed step="xs" className="text-hiviz-text">
@@ -88,9 +89,11 @@ function VariantRow({
   return (
     <li className="flex items-baseline justify-between gap-3">
       {isProbable ? (
-        <strong className="text-body font-bold">{variant.name}</strong>
+        <strong className="min-w-0 text-body font-bold wrap-anywhere">
+          {variant.name}
+        </strong>
       ) : (
-        <span className="text-small">{variant.name}</span>
+        <span className="min-w-0 text-small wrap-anywhere">{variant.name}</span>
       )}
       <Mono step="xs" className="text-muted">
         {variant.pieces}
