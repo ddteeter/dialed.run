@@ -310,7 +310,12 @@ function NoMatches({ onClear }: Readonly<{ onClear: () => void }>) {
   return (
     <p data-part="no-matches" className="m-0 text-body text-quiet">
       Nothing in your closet matches these filters.{" "}
-      <Link to="/closet" onClick={onClear} className="target text-ink">
+      <Link
+        to="/closet"
+        activeOptions={{ exact: true }}
+        onClick={onClear}
+        className="target text-ink"
+      >
         Clear filters
       </Link>
     </p>

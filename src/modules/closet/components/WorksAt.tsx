@@ -251,7 +251,8 @@ function SpanBar({
       <Mono step="sm" className="text-ink">
         {`${String(ends.low)}–${String(ends.high)}${UNIT_MARK[tempUnit]}`}
       </Mono>
-      <div data-part="span-bar" className="relative h-4">
+      {/* 44 high, so each thumb's input is a full target (rule 03). */}
+      <div data-part="span-bar" className="relative h-11">
         <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-pill bg-hairline">
           <div
             data-part="span"
@@ -307,6 +308,7 @@ function AnyControl({
       <Link
         to="/closet"
         search={cleared}
+        activeOptions={{ exact: true }}
         className="target inline-flex items-center justify-center text-small text-ink"
       >
         Any

@@ -117,6 +117,43 @@ describe("ClosetFilters: GROUP", () => {
     expect(href(/^All/)).toBe("/closet?coverage=partial");
   });
 
+  it("is current on the page it links to, and only there, by the router's word", async () => {
+    const router = createRouter({
+      routeTree: createRootRoute({
+        component: () =>
+          filters({ search: { group: "tops", coverage: "partial" } }),
+      }),
+      history: createMemoryHistory({
+        initialEntries: ["/closet?group=tops&coverage=partial"],
+      }),
+    });
+    await router.load();
+    render(<RouterProvider router={router} />);
+    expect(link(/^Tops/)).toHaveAttribute("aria-current", "page");
+    // All's search is a part of this one's; it is still not this page.
+    expect(link(/^All/)).not.toHaveAttribute("aria-current");
+    expect(link(/^Shoes/)).not.toHaveAttribute("aria-current");
+    // The chosen level leads away, to clear it, so it is ours: "true".
+    expect(link(/^Partial/)).toHaveAttribute("aria-current", "true");
+    expect(link(/^Covered/)).not.toHaveAttribute("aria-current");
+  });
+
+  it("never calls Any current, though its search is a part of this one's", async () => {
+    const router = createRouter({
+      routeTree: createRootRoute({
+        component: () => filters({ search: { from: 1.1, group: "tops" } }),
+      }),
+      history: createMemoryHistory({
+        initialEntries: ["/closet?from=1.1&group=tops"],
+      }),
+    });
+    await router.load();
+    render(<RouterProvider router={router} />);
+    expect(screen.getByRole("link", { name: "Any" })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
+
   it("stays links once a script drives the rail", async () => {
     await rail({ onSearch: vi.fn() });
     expect(link(/^Tops/)).toHaveAttribute("href", "/closet?group=tops");
@@ -469,7 +506,7 @@ describe("ClosetFilters: the phone's chip row (#109b)", () => {
     expect(button(/^Covered/)).toHaveClass(
       "rounded-pill",
       "aria-pressed:bg-ink",
-      "aria-[current=true]:bg-ink",
+      "[&[aria-current]]:bg-ink",
     );
     expect(button(/^Covered/).closest("ul")).toHaveClass("flex-wrap");
   });
@@ -489,7 +526,7 @@ describe("ClosetFilters: the rail's look", () => {
     await rail();
     expect(screen.getByRole("navigation")).toHaveAttribute("data-part", "rail");
     expect(link(/^All/)).toHaveClass(
-      "aria-[current=true]:font-bold",
+      "[&[aria-current]]:font-bold",
       "aria-pressed:font-bold",
     );
     expect(link(/^All/)).not.toHaveClass("rounded-pill");

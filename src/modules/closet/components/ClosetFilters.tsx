@@ -61,12 +61,14 @@ export interface ClosetFiltersProps {
  * The look of one choice. A rail row is text, bold when chosen (board C);
  * a chip is a pill, ink when chosen, as every chosen chip in the app is.
  * The chosen state is `aria-current` on a link and `aria-pressed` on a
- * toggle, so both are styled.
+ * toggle, so both are styled — by the attribute's presence, because a
+ * link to exactly this page is `aria-current="page"` (the router's) and
+ * the chosen COVERAGE link, which leads away to clear it, is `"true"`.
  */
 const CHOICE_CLASS: Readonly<Record<FiltersVariant, string>> = {
-  rail: "target flex items-center gap-2 text-body text-ink no-underline aria-[current=true]:font-bold aria-pressed:font-bold",
+  rail: "target flex items-center gap-2 text-body text-ink no-underline [&[aria-current]]:font-bold aria-pressed:font-bold",
   chips:
-    "target flex items-center gap-2 rounded-pill border border-hairline px-3 py-1 text-small text-ink no-underline aria-[current=true]:border-ink aria-[current=true]:bg-ink aria-[current=true]:text-ground aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-ground",
+    "target flex items-center gap-2 rounded-pill border border-hairline px-3 py-1 text-small text-ink no-underline [&[aria-current]]:border-ink [&[aria-current]]:bg-ink [&[aria-current]]:text-ground aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-ground",
 };
 
 const GROUP_CLASS: Readonly<Record<FiltersVariant, string>> = {
@@ -133,6 +135,9 @@ function FilterGroup({
               <Link
                 to="/closet"
                 search={option.search}
+                // Exact, or a link whose search is a part of this one's —
+                // All while Tops is set — would be called current too.
+                activeOptions={{ exact: true }}
                 aria-current={option.isCurrent ? "true" : undefined}
                 className={CHOICE_CLASS[variant]}
               >

@@ -5,7 +5,10 @@ import { unitToC } from "../../src/lib/contracts/temperature";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { closetUserId } from "../conformance/closet-seed";
-import { expect, test } from "../support/a11y";
+// Plain Playwright, not the a11y fixture: that fixture reads the page by
+// running script in it, which is what this spec turns off.
+import { expect, test } from "@playwright/test";
+
 import { storageStateFor } from "../support/accounts";
 import { withLocalDb } from "../support/local-db";
 

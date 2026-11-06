@@ -438,7 +438,7 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await expect(filters.getByRole("link", { name: /^All/ })).toHaveText("All 2");
   await expect(filters.getByRole("link", { name: /^All/ })).toHaveAttribute(
     "aria-current",
-    "true",
+    "page",
   );
   await expect(filters.getByRole("button", { name: /^Untested/ })).toHaveText(
     /Untested\s*2/u,

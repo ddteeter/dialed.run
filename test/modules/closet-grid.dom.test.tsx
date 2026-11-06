@@ -747,6 +747,10 @@ describe("ClosetGrid: the rail (R-94)", () => {
     const heading = await screen.findByRole("heading", { level: 1 });
     expect(heading).toHaveTextContent("0 · Shoes");
     expect(heading).not.toHaveFocus();
+    // A link to the bare closet is a part of this search, not this page.
+    expect(
+      screen.getByRole("link", { name: "Clear filters" }),
+    ).not.toHaveAttribute("aria-current");
     await user.click(screen.getByRole("link", { name: "Clear filters" }));
     await waitFor(() => {
       expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
