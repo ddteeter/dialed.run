@@ -307,6 +307,10 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
 
     // ---- A2 · the kit, required, and the photo -----------------------
     await scene(page, "A2 · the picker is here from the first frame");
+    // DS1b: the bell is on every screen, A2 included (R-102).
+    await expect(
+      page.getByRole("link", { name: /^Notifications\b/u }).first(),
+    ).toBeVisible();
     await expect(page.getByText(/0 pieces/u)).toBeVisible();
     await scene(page, "A kit is required — the button never relabels");
     await page.getByRole("button", { name: "Next — did it work?" }).click();
@@ -342,6 +346,10 @@ test("log a run: read a file in place, pick the kit, note it, set conditions", a
 
     // ---- A3 · the receipt, even when nothing moved -------------------
     await scene(page, "A3 · log it — the receipt counts the piece in its band");
+    // And on A3 (R-102).
+    await expect(
+      page.getByRole("link", { name: /^Notifications\b/u }).first(),
+    ).toBeVisible();
     await page.getByRole("button", { name: "Dialed" }).click();
     await page.getByRole("button", { name: "Log it" }).click();
     const noted = page.locator('[data-slot="noted"]');

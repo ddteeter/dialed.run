@@ -400,16 +400,6 @@
       "count": 1
     },
     {
-      "key": "src/modules/feed/conditions.ts|mutation-suppress|// Stryker disable ArrowFunction",
-      "reason": "Equivalent mutant: emptying the where-clause arrow widens the query to every observation, and the answer is assembled by matching cache keys against the rows afterwards \u2014 so a superset changes what D1 *scans*, which is what it bills, and not what is returned. Block form because the read is one statement over five lines and a next-line directive would attach to its first line and silently do nothing.",
-      "count": 1
-    },
-    {
-      "key": "src/modules/feed/conditions.ts|mutation-suppress|// Stryker restore ArrowFunction",
-      "reason": "Closing directive for the block-scoped disable above it \u2014 the pair is one grant, not two decisions.",
-      "count": 1
-    },
-    {
       "key": "src/modules/feed/judged-conditions.ts|mutation-suppress|// Stryker disable next-line ConditionalExpression",
       "reason": "Equivalent by design: an unrated run and a dialed one have the same answer, so deleting the null guard lets null fall through two comparisons it fails and reach the same return. It stays because \"no verdict yet\" and \"the outfit was right\" are different facts that happen to share a value. The two comparisons below carry no directive and are not equivalent.",
       "count": 1

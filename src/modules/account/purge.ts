@@ -68,9 +68,7 @@ import {
   usernameHistory,
   wardrobeItems,
 } from "../../db/schema-core";
-import { manualConditions } from "../../db/schema-weather";
-import { coreDb, env, weatherDb } from "../../env";
-import { chunked, IN_LIST_CHUNK } from "../../lib/chunked";
+import { coreDb, env } from "../../env";
 import { importFilePrefix } from "../../lib/import-file-key";
 import { columnWhere, firstRowWhere } from "../../lib/sql/keyed-read";
 import { listedPages } from "../../lib/sql/r2-pages";
@@ -81,6 +79,7 @@ import { deleteRuns } from "../feed";
 import { captureException, outboxInsert, oweOutbox } from "../ops";
 import { disconnectStrava } from "../runs";
 import { settleOpenReviews } from "../safety";
+import { forgetManualBands } from "../weather";
 import { exportPrefixFor } from "./data-exports";
 
 type Db = ReturnType<typeof drizzle>;
@@ -101,7 +100,11 @@ export const PURGE_LEASE_S = 60 * 60;
 
 export interface PurgeDeps {
   readonly core: Db;
-  readonly weather: Db;
+  /**
+   * Weather's `forgetManualBands`: the runner's bands live in
+   * `DIALED_WEATHER`, which only that module touches (design 173).
+   */
+  readonly forgetBands: (runIds: readonly string[]) => Promise<void>;
   /**
   Runs' `disconnectStrava`, bound to the queue (seam 5).
   */
@@ -120,7 +123,7 @@ function liveDeps(): PurgeDeps {
   const core = coreDb();
   return {
     core,
-    weather: weatherDb(),
+    forgetBands: forgetManualBands,
     revokeStrava: (userId) =>
       disconnectStrava(core, env.IMPORTS_QUEUE, userId, captureException),
     importsBucket: env.IMPORTS,
@@ -261,7 +264,8 @@ async function deleteStoredFiles(
 /**
  * The runner's own bands for their runs, in `DIALED_WEATHER` — first,
  * because once the runs are gone nothing names these rows. Two databases,
- * so this is its own write (law 8c), in chunks under D1's parameter cap.
+ * so this is its own write (law 8c); weather chunks it under D1's
+ * parameter cap.
  */
 async function forgetManualConditions(
   deps: PurgeDeps,
@@ -273,11 +277,7 @@ async function forgetManualConditions(
     runs.id,
     eq(runs.userId, userId),
   );
-  for (const chunk of chunked(runIds, IN_LIST_CHUNK)) {
-    await deps.weather
-      .delete(manualConditions)
-      .where(inArray(manualConditions.runId, chunk));
-  }
+  await deps.forgetBands(runIds);
 }
 
 /**

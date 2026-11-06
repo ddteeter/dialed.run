@@ -30,6 +30,12 @@ export { cacheKeyFor, matchesKey, runHourKeys } from "./store";
 // A deleted run's band, for the outbox handler `feed`'s run delete owes
 // (C1): this module is the only one that writes `dialed-weather`.
 export { forgetManualBand } from "./store";
-export type { CacheKey } from "./store";
+// The account purge's band step (ACC-9), so `account` touches no weather
+// table (design 173).
+export { forgetManualBands } from "./store";
+export type { CacheKey, ObservationRow } from "./store";
 export { manualReadingsForRuns, observationsForRuns } from "./read";
+// The cache reads feed's conditions are assembled from (design 173): feed
+// used to read `weather_observations` itself.
+export { newestObservationAt, observationsAtCells } from "./read";
 export type { WeatherReading } from "./read";

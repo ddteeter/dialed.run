@@ -947,7 +947,7 @@ describe("screenings go with their photo (design 157)", () => {
     await purgeAccount(
       {
         core: core(),
-        weather: drizzle(env.DIALED_WEATHER),
+        forgetBands: () => Promise.resolve(),
         now: nowSeconds(),
         revokeStrava: () => Promise.resolve(),
         importsBucket: env.IMPORTS,

@@ -13,6 +13,8 @@ import {
   viewerUnitsQuery,
 } from "../../modules/feed/functions";
 import { orBackToFeed, requireSignedIn } from "../../modules/feed/redirect";
+import { BelledLayout } from "../../modules/notifications/components/BelledLayout";
+import { bellStateFn } from "../../modules/notifications/functions";
 import { PrivateRunLine } from "../../modules/onboarding/components/PrivateRunLine";
 import {
   countInTotalsQuery,
@@ -20,7 +22,6 @@ import {
 } from "../../modules/onboarding/functions";
 import { RunRemovals } from "../../modules/safety/components/RunRemovals";
 import { runRemovalsQuery } from "../../modules/safety/functions";
-import { Layout } from "../../ui";
 
 export const Route = createFileRoute("/feed/verdict/$entryId")({
   // D-102's name for the page: its heading is a question.
@@ -32,10 +33,11 @@ export const Route = createFileRoute("/feed/verdict/$entryId")({
       .emailVerified,
   }),
   loader: async ({ params, context }) => {
-    const [found, units, { countInTotals }] = await Promise.all([
+    const [found, units, { countInTotals }, bell] = await Promise.all([
       entryDetailQuery({ data: { entryId: params.entryId } }),
       viewerUnitsQuery(),
       countInTotalsQuery(),
+      bellStateFn(),
     ]);
     const entry = orBackToFeed(found);
     // R-140: the band where it was, as on the entry page — a runner is sent
@@ -50,6 +52,7 @@ export const Route = createFileRoute("/feed/verdict/$entryId")({
       units,
       isVerified: context.isVerified,
       countInTotals,
+      bell,
       ...(await bandContextFor(entry, bandFloorC, async (bandFloor) => {
         const [counts, signals] = await Promise.all([
           verdictBandCountsQuery({
@@ -75,10 +78,12 @@ function VerdictPage() {
     isVerified,
     countInTotals,
     removals,
+    bell,
   } = Route.useLoaderData();
 
+  // DS1b: the bell is on every screen (R-102).
   return (
-    <Layout>
+    <BelledLayout {...bell}>
       <RunRemovals removals={removals} />
       <VerdictForm
         entry={entry}
@@ -96,6 +101,6 @@ function VerdictPage() {
           />
         )}
       />
-    </Layout>
+    </BelledLayout>
   );
 }
