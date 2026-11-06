@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { optionalUserId } from "../../modules/auth";
 import { newUlid } from "../../lib/ids";
+import { stravaConnectSearch } from "../../lib/strava-origin";
 import { stravaConfigFromEnv } from "../../modules/runs/strava/api-from-env";
 import { stravaConnectRedirect } from "../../modules/runs/strava/oauth";
 
@@ -11,6 +12,8 @@ import { stravaConnectRedirect } from "../../modules/runs/strava/oauth";
  * `stravaConnectRedirect`'s.
  */
 export const Route = createFileRoute("/runs/strava-connect")({
+  // Types the button's link; `stravaConnectRedirect` parses what arrives.
+  validateSearch: stravaConnectSearch,
   server: {
     handlers: {
       GET: async ({ request }) =>
@@ -19,6 +22,7 @@ export const Route = createFileRoute("/runs/strava-connect")({
           config: stravaConfigFromEnv(),
           origin: new URL(request.url).origin,
           state: newUlid(),
+          from: new URL(request.url).searchParams.get("from"),
         }),
     },
   },

@@ -47,6 +47,7 @@ import { garminPicker, importGarminActivity } from "./garmin/service";
 import {
   connectFromCallback,
   disconnectStravaAndTell,
+  readStateCookie,
   STRAVA_STATE_COOKIE,
   stravaStatusOf,
 } from "./strava/oauth";
@@ -196,15 +197,17 @@ export const completeStravaConnectFn = createServerFn({ method: "POST" })
   .validator(stravaCallbackInput)
   .handler(async ({ data }) => {
     const userId = await requireUserId();
-    const expectedState = getCookie(STRAVA_STATE_COOKIE);
+    const { nonce, from } = readStateCookie(getCookie(STRAVA_STATE_COOKIE));
     deleteCookie(STRAVA_STATE_COOKIE);
-    return connectFromCallback(
+    const result = await connectFromCallback(
       coreDb(),
       stravaApiFromEnv(),
       userId,
-      { ...data, expectedState },
+      { ...data, expectedState: nonce },
       captureException,
     );
+    // Where Try again goes back to (round 39 #66): P3, or T1.
+    return { result, from };
   });
 
 export const disconnectStravaFn = createServerFn({ method: "POST" }).handler(

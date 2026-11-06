@@ -30,7 +30,7 @@ import {
   stravaConnections,
   stravaRevocations,
 } from "../../src/db/schema-core";
-import { STRAVA_CONSENT } from "../../src/lib/copy";
+import { STRAVA_CONSENT, stravaConsentText } from "../../src/lib/copy";
 import { newUlid } from "../../src/lib/ids";
 import { nowSeconds } from "../../src/lib/now";
 import { hydrated, userIdOf } from "../conformance/logging-fixtures";
@@ -53,7 +53,16 @@ const SUBSCRIPTION_ID = 1;
 async function expectConsent(page: Page): Promise<void> {
   const consent = page.locator('[data-slot="strava-consent"]');
   await expect(consent).toBeVisible();
-  await expect(consent.locator("p")).toHaveText([...STRAVA_CONSENT]);
+  await expect(consent.locator("p")).toHaveText(
+    STRAVA_CONSENT.map((paragraph) => stravaConsentText(paragraph)),
+  );
+  // Round 39 #66: the lead-ins run in, semibold.
+  await expect(consent.locator("p strong")).toHaveText([
+    "What we collect:",
+    "How:",
+    "Never:",
+    "To stop:",
+  ]);
 }
 
 test("Strava: connect with the official button, a reminder lands, disconnect", async ({

@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { JSX } from "react";
 
+import type { StravaOrigin } from "../../../lib/strava-origin";
 import { Mono, Page } from "../../../ui";
 
 /**
@@ -34,9 +35,14 @@ import { Mono, Page } from "../../../ui";
  */
 export function StravaCallbackResult({
   result,
+  from,
   configured,
 }: Readonly<{
   result: { ok: true } | { ok: false; reason: string; full: boolean };
+  /**
+  Where the trip started when it was not T1 — P3 — for Try again.
+  */
+  from: StravaOrigin | undefined;
   /**
    * Whether this deployment can talk to Strava at all. Not configured,
    * there is nothing to try again, so no Try again.
@@ -48,7 +54,7 @@ export function StravaCallbackResult({
       {result.ok ? (
         <Connected />
       ) : (
-        <NotConnected result={result} configured={configured} />
+        <NotConnected result={result} from={from} configured={configured} />
       )}
     </Page>
   );
@@ -83,15 +89,18 @@ function Connected(): JSX.Element {
 
 function NotConnected({
   result,
+  from,
   configured,
 }: Readonly<{
   result: { full: boolean };
+  from: StravaOrigin | undefined;
   configured: boolean;
 }>): JSX.Element {
-  // Try again goes back to T1 rather than straight to the redirect: the
-  // consent Strava's API Policy §2.1 asks for is read before every trip
-  // to Strava's authorize screen, and T1 is where it is drawn, in front
-  // of Strava's own button (owner, 2026-10-18).
+  // Try again goes back to the consent rather than straight to the
+  // redirect: what Strava's API Policy §2.1 asks for is read before every
+  // trip to Strava's authorize screen (owner, 2026-10-18). Round 39 #66:
+  // to T1, or to P3's offer when the trip started there, with focus on
+  // the heading (`again`), so the consent is the next thing read.
   const canTryAgain = configured && !result.full;
   return (
     <>
@@ -120,7 +129,8 @@ function NotConnected({
       <div className="flex flex-wrap gap-2">
         {canTryAgain ? (
           <Link
-            to="/runs/strava"
+            to={from === "onboarding" ? "/onboarding/done" : "/runs/strava"}
+            search={{ again: true }}
             className="target inline-flex items-center justify-center rounded-field bg-ink px-4 font-bold text-ground no-underline"
           >
             Try again

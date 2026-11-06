@@ -1,6 +1,9 @@
+import { Fragment } from "react";
 import type { JSX } from "react";
 
-import { STRAVA_CONSENT } from "../lib/copy";
+import { STRAVA_CONSENT, stravaConsentText } from "../lib/copy";
+import type { ConsentRun } from "../lib/copy";
+import type { StravaOrigin } from "../lib/strava-origin";
 import { StravaButton } from "./StravaButton";
 
 /**
@@ -13,21 +16,49 @@ import { StravaButton } from "./StravaButton";
  * comes first in reading order. The button itself is unchanged — Strava's
  * asset, our link, the same redirect.
  *
- * Undesigned (design-deltas, open queue): plain paragraphs in the body
- * face, no glyph or colour of their own. They inherit the surrounding
- * text colour, because T1 sits on the ground and O3's offer on ink.
+ * Round 39 (#66, D-143): plain paragraphs at `text-small`, no glyph or
+ * colour of their own, and the lead-ins ("What we collect:", "How:",
+ * "Never:", "To stop:") run in, semibold at the paragraph's own size —
+ * *"consent is read as sentences; four kickers over three paragraphs
+ * would read as a form."* They inherit the surrounding text colour,
+ * because T1 sits on the ground and P3's offer on ink.
  */
-export function StravaConsent(): JSX.Element {
+export function StravaConsent({
+  from,
+}: Readonly<{
+  /**
+  The screen the trip starts on, when it is not T1 — `StravaButton`'s.
+  */
+  from?: StravaOrigin | undefined;
+}>): JSX.Element {
   return (
     <div className="flex flex-col gap-3">
       <div data-slot="strava-consent" className="flex flex-col gap-2">
         {STRAVA_CONSENT.map((paragraph) => (
-          <p key={paragraph} className="m-0 text-small">
-            {paragraph}
+          <p key={stravaConsentText(paragraph)} className="m-0 text-small">
+            {paragraph.map((run, index) => (
+              <Fragment key={run.text}>
+                {index === 0 ? undefined : " "}
+                <Run run={run} />
+              </Fragment>
+            ))}
           </p>
         ))}
       </div>
-      <StravaButton />
+      <StravaButton from={from} />
     </div>
+  );
+}
+
+/**
+ * One run: its lead-in in `strong`, which is what semibold means here (a
+ * label the sentence leads with, not stress), then the text.
+ */
+function Run({ run }: Readonly<{ run: ConsentRun }>): JSX.Element {
+  if (run.lead === undefined) return <>{run.text}</>;
+  return (
+    <>
+      <strong className="font-semibold">{run.lead}</strong> {run.text}
+    </>
   );
 }

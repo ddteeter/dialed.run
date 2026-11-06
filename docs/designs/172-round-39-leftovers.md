@@ -27,17 +27,21 @@ heading to land on.
 ```mermaid
 sequenceDiagram
   P3->>/runs/strava-connect: ?from=onboarding (StravaButton prop)
-  /runs/strava-connect->>Strava: 302, cookies state + strava_oauth_from
+  /runs/strava-connect->>Strava: 302, state=nonce; cookie nonce.onboarding
   Strava->>/runs/strava-callback: refused
   /runs/strava-callback->>Receipt: result + from (cookie, read and deleted)
   Receipt->>P3: Try again → /onboarding/done?again=1 (else /runs/strava?again=1)
   P3->>P3: focus the offer's h2 (T1: Page's h1)
 ```
 
-The origin rides an httpOnly cookie beside the nonce rather than the
-redirect_uri, so nothing depends on Strava keeping a query string. It is
-parsed (`z.enum(["onboarding"])`); anything else means T1. `again` is a
-validated search param on both routes; `Page` gains `focusTitle` (h1 takes
+The origin rides the existing `strava_oauth_state` cookie after the nonce
+(`nonce.onboarding`; a ULID has no `.`), not the redirect_uri, so nothing
+depends on Strava keeping a query string, and no new cookie name enters
+the privacy policy's list (coordinator, 2026-11-05). `readStateCookie`
+splits at the first `.`; the callback still compares `state` to the nonce
+exactly, and the origin is parsed (`lib/strava-origin.ts`,
+`z.enum(["onboarding"])`) — anything else means T1, never echoed. `again`
+is a validated search param on both routes; `Page` gains `focusTitle` (h1 takes
 `tabIndex={-1}` and is focused once on mount, via a ref callback).
 
 **#68.** `QuarantineRecords` passes `whenEmpty`: "Nothing is in
@@ -57,16 +61,17 @@ refusal bands stay for a place that changes after load.
 - Schema changes needed: **none**
 - New route files: **none**; search params added to `/runs/strava`,
   `/runs/strava-connect`, `/onboarding/done`
-- New bindings/queues/crons: **none**. New cookie `strava_oauth_from`
-  (Path=/, HttpOnly, Secure, SameSite=Lax, 600 s, as the nonce's).
+- New bindings/queues/crons: **none**. No new cookie: the state cookie's
+  value gains an optional `.onboarding`.
 - Screens: T1, T3 refused receipt, P3, D1 Review, Au2. Deltas 66, 68, 69.
 
 ## Test plan
 
 - ui: `strava-consent.dom` — leads are `strong`, semibold, inside the `p`;
   each paragraph's text equals `stravaConsentText`; P3 has no retired line.
-- worker: `oauth` — `stravaConnectRedirect` sets the from-cookie only for
-  `onboarding`; callback returns `from`; a junk cookie means T1.
+- worker: `oauth` — the state cookie carries `.onboarding` only for that
+  origin, Strava sees the bare nonce; `readStateCookie` parses it back;
+  a junk origin means T1; the nonce match stays exact.
 - ui: `StravaCallbackResult` — Try again's href per `from`, `again=1`;
   none when full / unconfigured (kept).
 - ui: `Page` focusTitle focuses the h1; NowGoRun `again` focuses the h2.

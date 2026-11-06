@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { requireSession } from "../../modules/auth/functions";
 import { NowGoRun } from "../../modules/onboarding/components/NowGoRun";
 import { completeOnboardingFn } from "../../modules/onboarding/functions";
+import { tryAgainSearch } from "../../lib/strava-origin";
 import { Page } from "../../ui";
 
 /**
@@ -15,6 +16,8 @@ import { Page } from "../../ui";
  * idempotent by construction rather than by a guard (law 8b).
  */
 export const Route = createFileRoute("/onboarding/done")({
+  // `again`: back from a refused Strava receipt's Try again (round 39 #66).
+  validateSearch: tryAgainSearch,
   loader: async ({ location }) => {
     await requireSession(location);
     await completeOnboardingFn();
@@ -23,10 +26,11 @@ export const Route = createFileRoute("/onboarding/done")({
 });
 
 function DonePage() {
+  const { again } = Route.useSearch();
   return (
     <main>
       <Page width="panel">
-        <NowGoRun />
+        <NowGoRun again={again === true} />
       </Page>
     </main>
   );

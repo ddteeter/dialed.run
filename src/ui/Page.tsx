@@ -47,6 +47,7 @@ export function Page({
   title,
   width = "column",
   headingAction,
+  focusTitle = false,
   children,
 }: Readonly<{
   /**
@@ -66,6 +67,12 @@ export function Page({
    * this case.
    */
   headingAction?: ReactNode;
+  /**
+   * Lands focus on the heading when the page mounts — for a screen arrived
+   * at from somewhere that said to read it again, as T1 is from a refused
+   * Strava receipt's Try again (round 39, #66). Off by default.
+   */
+  focusTitle?: boolean | undefined;
   children: ReactNode;
 }>): JSX.Element {
   // Onboarding renders `Page` with no `Layout`, so this is where those
@@ -87,11 +94,24 @@ export function Page({
         // with a single child puts it exactly where a block-level `h1`
         // sits. `m-0` because the column's `gap-6` owns the spacing.
         <div className="flex items-center justify-between">
-          <h1 className="m-0 font-display text-display uppercase">{title}</h1>
+          <h1
+            ref={focusTitle ? focusOnMount : undefined}
+            tabIndex={focusTitle ? -1 : undefined}
+            className="m-0 font-display text-display uppercase"
+          >
+            {title}
+          </h1>
           {headingAction}
         </div>
       )}
       {children}
     </div>
   );
+}
+
+/**
+A ref callback: focus the element React has just attached.
+*/
+function focusOnMount(node: HTMLElement | null): void {
+  node?.focus();
 }

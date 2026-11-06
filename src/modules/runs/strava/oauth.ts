@@ -33,6 +33,8 @@ import {
 } from "../../../db/schema-core";
 import type { CoreDb } from "../core-db";
 import { newUlid } from "../../../lib/ids";
+import { stravaOriginSchema } from "../../../lib/strava-origin";
+import type { StravaOrigin } from "../../../lib/strava-origin";
 import { gaveUpClearPrefix } from "../../../db/gave-up";
 import { firstRowWhere, hasRowWhere } from "../../../lib/sql/keyed-read";
 import { StravaApiError } from "./api";
@@ -52,6 +54,31 @@ export type StravaConnectionRow = typeof stravaConnections.$inferSelect;
  * the connect redirect writes it and the callback reads it.
  */
 export const STRAVA_STATE_COOKIE = "strava_oauth_state";
+
+/**
+ * What the state cookie holds: the nonce, then — when the trip started
+ * somewhere other than T1 — this and the origin (round 39 #66, design
+ * 172). A ULID has no `.`, so the first one ends the nonce. One cookie,
+ * one lifetime, and no new name in the privacy policy's cookie list.
+ */
+const ORIGIN_SEPARATOR = ".";
+
+/**
+ * The state cookie read back: the nonce the callback must match exactly,
+ * and the origin, parsed — a value that is not one is T1, never echoed.
+ */
+export function readStateCookie(value: string | undefined): {
+  nonce: string | undefined;
+  from: StravaOrigin | undefined;
+} {
+  if (value === undefined) return { nonce: undefined, from: undefined };
+  const at = value.indexOf(ORIGIN_SEPARATOR);
+  if (at === -1) return { nonce: value, from: undefined };
+  return {
+    nonce: value.slice(0, at),
+    from: stravaOriginSchema.safeParse(value.slice(at + 1)).data,
+  };
+}
 
 /**
  * How long a runner has on Strava's consent screen before the nonce is
@@ -130,12 +157,16 @@ export function stravaAuthorizeUrl(
  * Signed out, the runner goes to log in; with no credentials configured,
  * back to T1, which draws no connect button in that case — so neither is
  * a dead end, and neither mints a nonce for a flow that cannot finish.
+ *
+ * `from` is the link's `?from=`, unparsed: an origin rides the cookie
+ * beside the nonce (`readStateCookie`), and anything else is dropped.
  */
 export function stravaConnectRedirect(request: {
   userId: string | undefined;
   config: StravaConfig | undefined;
   origin: string;
   state: string;
+  from?: unknown;
 }): Response {
   if (request.userId === undefined) {
     // Log-in's way back is T1, where the button is: a client navigation
@@ -155,9 +186,14 @@ export function stravaConnectRedirect(request: {
   );
   // `Path=/` because the callback is a different path from this one, and a
   // cookie with no path is scoped to the directory that set it.
+  const from = stravaOriginSchema.safeParse(request.from).data;
+  const value =
+    from === undefined
+      ? request.state
+      : `${request.state}${ORIGIN_SEPARATOR}${from}`;
   response.headers.append(
     "set-cookie",
-    `${STRAVA_STATE_COOKIE}=${request.state}; Path=/; Max-Age=${String(STATE_COOKIE_MAX_AGE_S)}; HttpOnly; Secure; SameSite=Lax`,
+    `${STRAVA_STATE_COOKIE}=${value}; Path=/; Max-Age=${String(STATE_COOKIE_MAX_AGE_S)}; HttpOnly; Secure; SameSite=Lax`,
   );
   return response;
 }

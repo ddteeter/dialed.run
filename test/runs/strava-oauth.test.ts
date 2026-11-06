@@ -21,6 +21,7 @@ import {
   getStravaConnection,
   isCapacityRefusal,
   isStravaConnected,
+  readStateCookie,
   STRAVA_STATE_COOKIE,
   stravaAuthorizeUrl,
   stravaCallbackOutcome,
@@ -698,6 +699,89 @@ describe("stravaConnectRedirect (STR-7: the official button is a link)", () => {
       "https://dialed.run/runs/strava",
     );
     expect(response.headers.get("set-cookie")).toBeNull();
+  });
+});
+
+describe("the trip's origin, beside the nonce (round 39 #66, design 172)", () => {
+  const CONFIG = { clientId: "client-1", clientSecret: "secret" };
+
+  function cookieFor(from: unknown): string | null {
+    return stravaConnectRedirect({
+      userId: newUlid(),
+      config: CONFIG,
+      origin: "https://dialed.run",
+      state: "nonce-1",
+      from,
+    }).headers.get("set-cookie");
+  }
+
+  it("rides the state cookie after a dot, and Strava sees only the nonce", () => {
+    const response = stravaConnectRedirect({
+      userId: newUlid(),
+      config: CONFIG,
+      origin: "https://dialed.run",
+      state: "nonce-1",
+      from: "onboarding",
+    });
+
+    expect(response.headers.get("set-cookie")).toBe(
+      `${STRAVA_STATE_COOKIE}=nonce-1.onboarding; Path=/; Max-Age=600; HttpOnly; Secure; SameSite=Lax`,
+    );
+    const location = new URL(response.headers.get("location") ?? "");
+    expect(location.searchParams.get("state")).toBe("nonce-1");
+  });
+
+  it("drops a from that is not an origin, never echoing it", () => {
+    for (const from of [null, "", "settings", "onboarding; Domain=evil", 1]) {
+      expect(cookieFor(from)).toBe(
+        `${STRAVA_STATE_COOKIE}=nonce-1; Path=/; Max-Age=600; HttpOnly; Secure; SameSite=Lax`,
+      );
+    }
+  });
+
+  it("reads the nonce and the origin back", () => {
+    expect(readStateCookie("nonce-1.onboarding")).toEqual({
+      nonce: "nonce-1",
+      from: "onboarding",
+    });
+    expect(readStateCookie("nonce-1")).toEqual({
+      nonce: "nonce-1",
+      from: undefined,
+    });
+    expect(readStateCookie(undefined)).toEqual({
+      nonce: undefined,
+      from: undefined,
+    });
+  });
+
+  it("reads an origin it does not know as T1, and keeps the nonce exact", () => {
+    expect(readStateCookie("nonce-1.settings")).toEqual({
+      nonce: "nonce-1",
+      from: undefined,
+    });
+    // The first dot ends the nonce; what follows is parsed whole.
+    expect(readStateCookie("nonce-1.onboarding.x")).toEqual({
+      nonce: "nonce-1",
+      from: undefined,
+    });
+    expect(readStateCookie(".onboarding")).toEqual({
+      nonce: "",
+      from: "onboarding",
+    });
+  });
+
+  it("matches the callback's state against the nonce alone", () => {
+    const { nonce } = readStateCookie("nonce-1.onboarding");
+    expect(
+      stravaCallbackOutcome({ expectedState: nonce, code: "c", state: "nonce-1" }),
+    ).toEqual({ ok: true, code: "c" });
+    expect(
+      stravaCallbackOutcome({
+        expectedState: nonce,
+        code: "c",
+        state: "nonce-1.onboarding",
+      }).ok,
+    ).toBe(false);
   });
 });
 

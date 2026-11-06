@@ -1591,9 +1591,10 @@ entries for them when it merges.
     that a run happened. Nothing else." retires. The refused receipt's Try
     again returns to T1, or to P3 when it came from there, with focus on
     the heading. The board's frames show placeholder text: the owner's
-    three paragraphs in `STRAVA_CONSENT` are the words. **Not built yet:**
-    the semibold lead-ins, the retired P3 line, the return to P3 and the
-    focus.
+    three paragraphs in `STRAVA_CONSENT` are the words. **Built (design
+    172):** the semibold lead-ins (the owner's colons kept; the board's
+    periods are placeholder), the retired P3 line, the return to P3 and
+    the focus on T1's heading or P3's offer heading.
 
 67. **Visual Crossing's credit on every conditions surface. Confirmed as
     built**, all eight placements. A3's header keeps the credit at every
@@ -1606,9 +1607,10 @@ entries for them when it merges.
     state and an order.** The words and the "SEP 10 2026" date shape stand.
     On recording: the live region says "Reported to NCMEC. Kept until
     {date}.", KEPT UNTIL re-reads, and the form leaves the row; with no
-    report number the tag ends at the date. **Not built yet:** the empty
-    state, "Nothing is in quarantine.", and Review's foot in the order
-    Takedown, Copyright holds, Quarantine.
+    report number the tag ends at the date. **Built (design 172):** the
+    empty state, "Nothing is in quarantine." under QUARANTINE · 0. Review's
+    foot was already in the order Takedown, Copyright holds, Quarantine
+    (since design 128's move to `/desk/review`).
 
 69. **No new accounts from Mississippi or Tennessee. Confirmed, plus a
     notice on load.** The sentences and the four places stand. **Not built
