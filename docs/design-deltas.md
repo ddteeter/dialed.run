@@ -974,6 +974,13 @@ _Nothing from 99 on is open: round 45 answered the last of it._
        **The ask:** confirm, or draw the ones that should differ.
 
 113. **What lane 178 built where the boards are silent (design 178).**
+     **ANSWERED by round 47 (113–119): every guess confirmed.** The E2
+     histogram is cut from v1, and the summary sentence is built to #114's
+     rule. Tiles read `NO RUNS YET`, give no mileage at 0 mi, bracket every
+     range and are complete without badges. An empty band history names
+     the band over "No runs in this band yet.", and a piece with no record
+     in the band has no line. 112b changed, and lane 178 built it: a group
+     holding nothing leaves the rail, and All always shows.
      G's Recent entries rows (round 35 #53b), the closet tile (board C,
      round 27 #31b) and the A2/A3 desk rails' band history (round 25).
      - **G's meta line** is the card strip's own cell: the range the run
@@ -998,6 +1005,17 @@ _Nothing from 99 on is open: round 45 answered the last of it._
      - **A3's kit record** is absent for a piece never worn in the band,
        never `0/0`. It is said "8 of 9 runs dialed in 38–46°".
        **The ask:** confirm, or draw the ones that should differ.
+
+114. **E2-lite's summary sentence, where round 47 #114 is silent (design
+     178).** The bars count closet groups, not garment types, so the
+     sentence names groups as the bars do, in lower case. The Feed board's
+     "long sleeve and shorts" reads "tops and bottoms" in the build. The
+     first word that has groups leads with "got it right in" and each one
+     after it says "added", in the order All, Most, Some: "All got it right
+     in bottoms. Most added tops. Some added shoes." Three or more groups
+     take a serial comma: "tops, bottoms, and socks / extras". The sentence
+     sits under the bars, on a hairline, before the weather credit.
+     **The ask:** confirm, or give the wording.
 
 <!-- Item numbers continue past rounds 35–42 (45–76, 82–92). Design numbered the Garmin asks 77–81 and 87 and the site's /open-source 83 itself, so items here skip those. Design 163 opened 93–98, so the open queue goes on from 99. This comment keeps the list from being renumbered. -->
 

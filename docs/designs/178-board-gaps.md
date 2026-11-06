@@ -39,9 +39,11 @@ summary sentence (PR#102-1); the closet tile has no photo, record or mileage
    `8/9 DIALED · 38–46°`, from the `bandSignals` the route already loads.
    `runsLabel` moves from `closet/label.ts` to `lib/runs-label.ts` so feed
    says "8 of 9 runs" as the closet does.
-5. **E2-lite summary sentence and histogram (PR#102-1): deferred.** Design
-   has to give the sentence's rule (Q2) and say whether the histogram is
-   still v1 (Q1). No unwired seam is built, because knip would reject it.
+5. **E2-lite summary sentence (PR#102-1), to round 47 #114.**
+   `matchTally` counts the dialed matched runners and their groups from
+   its existing garment read. `summarySentence` (`bar-share.ts`) says
+   them in round 35 #54's words. The histogram is cut (round 47 #113).
+6. **Closet rail, round 47 #112b:** a group holding nothing leaves the rail.
 
 All new reads are in `modules/feed`; routes only wire. No schema change.
 
@@ -50,7 +52,7 @@ All new reads are in `modules/feed`; routes only wire. No schema change.
 - Schema changes needed: **none**
 - New route files: **none** (attach, verdict, me, closet index loaders gain wiring)
 - New bindings/queues/crons: **none**
-- Screens: G, A2 desk, A3 desk, C. One new server fn → a
+- Screens: G, A2 desk, A3 desk, C, E2-lite. One new server fn → a
   verification-class row. Design-deltas item 113 lists the readings.
 - One fallow drizzle-rhyme grant for `band-runs.ts` (owner, 2026-11-06).
 
@@ -63,21 +65,13 @@ All new reads are in `modules/feed`; routes only wire. No schema change.
   no-verdict tile), `AttachKit.dom`/`VerdictForm.dom` rail cards incl. empty.
 - e2e transcripts updated for G, C, A2, A3; demo video.
 
-## Open questions (sent to Design via coordinator-2; building around them)
+## Open questions
 
-1. E2 histogram: the Feed board (through r27) draws Matched at 14 runners with
-   no "HOW IT WENT FOR THEM"; round 22 says it shows at 10+. Still v1?
-2. E2 sentence rule: which runners "got it right" (dialed only?), and which
-   groups enter each clause (tights 3/14 and gloves 2/6 are omitted on two
-   frames). Absent when nobody dialed?
-3. Closet tile with no verdicts / no runs, and 0 mi: what the record line says
-   (the picker draws NO RUNS YET). Guess: `NO RUNS YET`, mileage absent at 0.
-4. Rail band history empty: guess DS2's "No runs in this band yet."
-5. Board C brackets one range (`[38–46°]`) and not another (`62–78°`). Guess:
-   keep today's bracketed range on every tile.
+Round 47 (113–119) answered all five. The histogram is cut, the sentence
+rule is confirmed, and every other guess stands. 112b was taken here.
+Design-deltas item 114 holds the sentence's own readings.
 
 ## Register changes for the coordinator
 
-- On merge: PR#168-1, PR#113-1, PR#101-3 (photo/record/mileage) done.
-- PR#102-1 (the E2 sentence and histogram) becomes a deferred row that
-  waits on Design's Q1/Q2.
+- On merge: PR#168-1, PR#113-1, PR#101-3 and PR#102-1 done. The E2
+  histogram is cut by round 47 #113 and needs recording as cut.
