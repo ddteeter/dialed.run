@@ -484,13 +484,17 @@ function ImportWatch({
     // shares its keys — and a new import must never be served the last
     // one's answer.
     queryKey: [importId],
-    queryFn: async () => getOutcome({ data: { importId } }),
+    // A row this runner cannot see yet answers `undefined`, which TanStack
+    // Query refuses as data ("Query data cannot be undefined") and counts as
+    // an error. It is an answer — still waiting — so it travels wrapped.
+    queryFn: async () => ({ answer: await getOutcome({ data: { importId } }) }),
+    select: (polled) => polled.answer,
     // Answers and failures both count against the budget: a poll that
     // errors is still a poll, and the budget is what stops a tab asking
     // forever.
     refetchInterval: (query) =>
       importPollIntervalMs(
-        query.state.data,
+        query.state.data?.answer,
         query.state.dataUpdateCount + query.state.errorUpdateCount,
       ),
   });
