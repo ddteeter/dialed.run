@@ -10,7 +10,11 @@ import {
   photoAcceptAttribute,
   photoProblem,
 } from "../../../lib/photo-constraints";
-import { formatTemp, precipClassOf } from "../../../lib/contracts/temperature";
+import {
+  bandFloorC,
+  formatTemp,
+  precipClassOf,
+} from "../../../lib/contracts/temperature";
 import { toggledIn } from "../../../lib/toggled-in";
 import {
   ControlFailureBand,
@@ -29,6 +33,8 @@ import {
 } from "../../../ui";
 import type { PhotoStep } from "../../../ui";
 import type { AttachContext } from "../attach-context";
+import type { BandRun } from "../band-runs";
+import { BandRunsCard } from "./BandRunsCard";
 import { kitChoice, PHOTO_NOT_SENT } from "../attach-rules";
 import type { UiGroup } from "../groups";
 import type { PrefillCandidate } from "../prefill";
@@ -119,6 +125,13 @@ interface AttachKitProps {
   prefillFor: (input: {
     data: { runId: string };
   }) => Promise<PrefillCandidate | undefined>;
+  /**
+  The desk rail's band history (round 25), fetched after the screen is drawn
+  as the suggestion is: it is a second read over the runner's history.
+  */
+  bandRunsFor: (input: {
+    data: { bandFloorC: number };
+  }) => Promise<readonly BandRun[]>;
   attachKit: (input: {
     data: { runId: string; itemIds: string[] };
   }) => Promise<{ entryId: string }>;
@@ -247,6 +260,7 @@ export function AttachKit({
   units,
   context,
   prefillFor,
+  bandRunsFor,
   attachKit,
   uploadPhoto,
   renderPhotoStep,
@@ -321,7 +335,15 @@ export function AttachKit({
 
   return (
     <FlowStep step={LOG_FLOW.attach}>
-      <DeskSplit rail={<AttachRail context={context} units={units} />}>
+      <DeskSplit
+        rail={
+          <AttachRail
+            context={context}
+            units={units}
+            bandRunsFor={bandRunsFor}
+          />
+        }
+      >
         <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-5 pt-6 pb-8 wide:mx-0 wide:max-w-column">
           <AttachHeader context={context} units={units} count={selected.size} />
           <FormStatus>{attach.status === "" ? said : attach.status}</FormStatus>
@@ -500,30 +522,86 @@ function KitChooser({
 }
 
 /**
- * A2's rail at the desk (round 25): the run the kit is for, read-only.
+ * A2's rail at the desk (round 25): the run the kit is for, and beneath it
+ * the runner's last runs in the band, with their kit and verdict — *"the
+ * evidence behind MOST LIKELY"*. Read-only: *"Tapping a row does nothing,
+ * so 'That's it' stays the one way to take a suggestion."*
  *
- * The board's A2 rail is the evidence behind MOST LIKELY — the runner's
- * last three runs in the band, with their kit and verdict. That history is
- * not loaded on this screen yet, so the rail carries the run itself until
- * it is, rather than a guess at the evidence.
+ * The history is the second read over the runner's history, so it is
+ * fetched once the screen is drawn, as the suggestion is. Until it lands,
+ * and if it fails (law 5), the rail is the run alone. A run with no
+ * conditions has no band, and nothing to fetch.
  */
 function AttachRail({
   context,
   units,
-}: Readonly<{ context: AttachContext; units: Units }>): JSX.Element {
+  bandRunsFor,
+}: Readonly<{
+  context: AttachContext;
+  units: Units;
+  bandRunsFor: AttachKitProps["bandRunsFor"];
+}>): JSX.Element {
   const { conditions } = context;
+  const band =
+    conditions === undefined
+      ? undefined
+      : {
+          floor: bandFloorC(conditions.feelsLikeC),
+          precipMm: conditions.precipMm,
+        };
+  const runs = useBandRuns(bandRunsFor, band?.floor);
   return (
-    <RailCard title="This run">
-      <Mono step="sm">
-        {`${distanceNumber(context.distanceM, units.distance)} ${units.distance}`}
-      </Mono>
-      {conditions === undefined ? undefined : (
-        <Mono step="sm" className="text-dialed-text">
-          {`${formatTemp(conditions.tempC, units.temp)}${units.temp.toUpperCase()} ${precipClassOf(conditions.precipMm)}`}
+    <>
+      <RailCard title="This run">
+        <Mono step="sm">
+          {`${distanceNumber(context.distanceM, units.distance)} ${units.distance}`}
         </Mono>
+        {conditions === undefined ? undefined : (
+          <Mono step="sm" className="text-dialed-text">
+            {`${formatTemp(conditions.tempC, units.temp)}${units.temp.toUpperCase()} ${precipClassOf(conditions.precipMm)}`}
+          </Mono>
+        )}
+      </RailCard>
+      {band === undefined || runs === undefined ? undefined : (
+        <BandRunsCard
+          lead={lastRunsLead}
+          bandFloor={band.floor}
+          precipMm={band.precipMm}
+          runs={runs}
+          units={units}
+        />
       )}
-    </RailCard>
+    </>
   );
+}
+
+/**
+`LAST 3 IN 38–46° DAMP`, as many as there are; with none, `IN 38–46° DAMP`.
+*/
+function lastRunsLead(count: number): string {
+  return count === 0 ? "In" : `Last ${String(count)} in`;
+}
+
+/**
+The band history for the rail, once it has come; nothing before, or on failure.
+*/
+function useBandRuns(
+  bandRunsFor: AttachKitProps["bandRunsFor"],
+  bandFloor: number | undefined,
+): readonly BandRun[] | undefined {
+  const [runs, setRuns] = useState<readonly BandRun[] | undefined>();
+  useEffect(() => {
+    if (bandFloor === undefined) return;
+    async function load(floor: number): Promise<void> {
+      try {
+        setRuns(await bandRunsFor({ data: { bandFloorC: floor } }));
+      } catch {
+        // Law 5: the evidence is a courtesy; the rail keeps the run.
+      }
+    }
+    void load(bandFloor);
+  }, [bandRunsFor, bandFloor]);
+  return runs;
 }
 
 /**

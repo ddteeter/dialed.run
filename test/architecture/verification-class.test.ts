@@ -180,6 +180,7 @@ const CLASSES: Readonly<Record<string, VerificationClass>> = {
   "feed/functions.ts saveBacklogRowAction": "unconfirmed",
   "feed/functions.ts verdictBandCountsQuery": "unconfirmed",
   "feed/functions.ts bandSignalsQuery": "unconfirmed",
+  "feed/functions.ts bandRunsQuery": "unconfirmed",
   "feed/functions.ts itemBandWearStatQuery": "unconfirmed",
   "feed/functions.ts shouldPromptForVerdictQuery": "unconfirmed",
   "feed/functions.ts recordVerdictPromptedAction": "unconfirmed",

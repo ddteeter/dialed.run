@@ -6,6 +6,7 @@ import { orOnToVerdict } from "../../modules/feed/attach-rules";
 import {
   attachContextQuery,
   attachKitAction,
+  bandRunsQuery,
   prefillForRunQuery,
   uploadPhotoAction,
   viewerUnitsQuery,
@@ -43,6 +44,7 @@ function AttachKitPage() {
         units={units}
         context={context}
         prefillFor={prefillForRunQuery}
+        bandRunsFor={bandRunsQuery}
         attachKit={attachKitAction}
         uploadPhoto={uploadPhotoAction}
         renderPhotoStep={photoBlurStep}

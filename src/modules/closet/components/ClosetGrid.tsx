@@ -13,7 +13,7 @@ import { formatTempRange } from "../../../lib/contracts/thermal";
 import { wholeDistanceNumber } from "../../../lib/contracts/measures";
 import { Bracketed, Icon, Mono, useListMotion } from "../../../ui";
 import { garmentLabel } from "../../../lib/garment-label";
-import { runsLabel } from "../label";
+import { runsLabel } from "../../../lib/runs-label";
 import { isPhotoBeingChecked, photoUrlFor } from "../photo-url";
 import { filterViews, railCounts, worksAtSpan } from "../filters";
 import { closetSearch, type ClosetSearch } from "../inputs";
