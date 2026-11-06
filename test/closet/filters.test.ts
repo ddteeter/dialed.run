@@ -9,11 +9,11 @@ import {
   createItem,
   mergeWithProductDefaults,
   shouldIncludeByConditionFilters,
-  shouldIncludeByTempFilter,
   statedFlag,
   type ClosetFilters,
   type EffectiveAttributes,
 } from "../../src/modules/closet/service";
+import { shouldIncludeByTempFilter } from "../../src/modules/closet/filters";
 
 /**
  * The closet list's filters, which decide what a runner is shown and — more

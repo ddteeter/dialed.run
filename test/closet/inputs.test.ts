@@ -143,6 +143,47 @@ describe("closetSearch", () => {
     expect(closetSearch({ retired: false })).toStrictEqual({});
   });
 
+  it("keeps the rail's group and coverage, and only their own values", () => {
+    expect(closetSearch({ group: "hands_head" })).toStrictEqual({
+      group: "hands_head",
+    });
+    expect(closetSearch({ coverage: "partial" })).toStrictEqual({
+      coverage: "partial",
+    });
+    expect(closetSearch({ group: "hats", coverage: "most" })).toStrictEqual({});
+    // What an empty hidden input sends from the form before hydration.
+    expect(closetSearch({ group: "", coverage: "" })).toStrictEqual({});
+  });
+
+  it("keeps WORKS AT in Celsius when nothing says otherwise", () => {
+    expect(closetSearch({ from: 1.1, to: 14.4 })).toStrictEqual({
+      from: 1.1,
+      to: 14.4,
+    });
+    expect(closetSearch({ from: -5 })).toStrictEqual({ from: -5 });
+    expect(closetSearch({ to: 20 })).toStrictEqual({ to: 20 });
+    expect(closetSearch({ from: 4, unit: "c" })).toStrictEqual({ from: 4 });
+  });
+
+  it("converts what the form typed in Fahrenheit, and never keeps the unit", () => {
+    expect(closetSearch({ from: 34, to: 58, unit: "f" })).toStrictEqual({
+      from: 1.1,
+      to: 14.4,
+    });
+  });
+
+  it("reads an unknown unit as Celsius rather than guessing", () => {
+    expect(closetSearch({ from: 34, unit: "k" })).toStrictEqual({ from: 34 });
+  });
+
+  it("drops an end that is not a number, and a span that runs backwards", () => {
+    expect(closetSearch({ from: "", to: "" })).toStrictEqual({});
+    expect(closetSearch({ from: Infinity, to: NaN })).toStrictEqual({});
+    expect(closetSearch({ from: 20, to: 5 })).toStrictEqual({});
+    expect(closetSearch({ from: 5, to: 5 })).toStrictEqual({ from: 5, to: 5 });
+    expect(closetSearch({ from: "x", to: 5 })).toStrictEqual({ to: 5 });
+  });
+
   it("never carries a deleted garment's name, which only history state may", () => {
     expect(
       closetSearch({ retired: true, deleted: "Pegasus 40" }),

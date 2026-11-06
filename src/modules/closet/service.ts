@@ -63,6 +63,7 @@ import {
 import type { ProductAttributeDefaults, ProductComposition } from "../products";
 import { ownedBy } from "../../lib/sql/owned";
 import { garmentPhotoForgotten, isDeniedLink } from "../safety";
+import { shouldIncludeByTempFilter } from "./filters";
 import { linkDetailOf, type LinkDetail } from "./garment-link";
 import { DENIED_LINK } from "./link-copy";
 import { nowSeconds } from "../../lib/now";
@@ -730,30 +731,6 @@ export function shouldIncludeByConditionFilters(
     (filters.waterResistant === undefined ||
       effective.waterResistant === filters.waterResistant)
   );
-}
-
-export function shouldIncludeByTempFilter(
-  tempRange: TempRange | undefined,
-  filters: ClosetFilters,
-): boolean {
-  if (filters.minTempC === undefined && filters.maxTempC === undefined) {
-    return true;
-  }
-  if (!tempRange) return false;
-  // Open ends as infinities rather than as `!== undefined` guards.
-  //
-  // "An open end always satisfies its side of the overlap" was written as a
-  // comment above three `!== undefined` checks, and mutation testing showed
-  // why that is not the same as saying it: `x < undefined` is already
-  // false, so every one of those guards could be deleted without changing
-  // an answer. They were load-bearing for the compiler and decorative at
-  // runtime. Said this way it is one overlap test, and every part of it is
-  // reachable.
-  const askedFrom = filters.minTempC ?? -Infinity;
-  const askedTo = filters.maxTempC ?? Infinity;
-  const goodFrom = tempRange.lowC ?? -Infinity;
-  const goodTo = tempRange.highC ?? Infinity;
-  return goodTo >= askedFrom && goodFrom <= askedTo;
 }
 
 function toItemView(

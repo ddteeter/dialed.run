@@ -141,9 +141,11 @@ export const CALL_VERDICT_THRESHOLD = 15;
 export const BAND_COVERED_VERDICTS = 3;
 
 /**
-How well a count of verdicts knows something: ordinal, none to all.
+How well a count of verdicts knows something: ordinal, none to all, in
+that order. A list so Closet C's filter can parse a level from a URL.
 */
-export type VerdictCoverage = "covered" | "partial" | "unknown";
+export const verdictCoverages = ["covered", "partial", "unknown"] as const;
+export type VerdictCoverage = (typeof verdictCoverages)[number];
 
 /**
  * The ladder's rule for a count: `BAND_COVERED_VERDICTS` or more is
