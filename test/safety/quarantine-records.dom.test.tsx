@@ -213,10 +213,18 @@ describe("QuarantineRecords", () => {
     expect(part("ncmec")?.textContent).toBe("[not reported to NCMEC]");
   });
 
-  it("renders nothing when nothing is held", () => {
+  it("says nothing is held under QUARANTINE · 0, rather than going (round 39 #68)", () => {
     render(<QuarantineRecords records={[]} recordReport={vi.fn()} />);
     expect(part("quarantine-record")).toBeNull();
-    expect(screen.queryByRole("heading")).toBeNull();
+    const heading = screen.getByRole("heading", { name: "Quarantine · 0" });
+    const empty = screen.getByText("Nothing is in quarantine.");
+    expect(empty.tagName).toBe("P");
+    expect(empty).toHaveClass("m-0", "text-small", "text-quiet");
+    // Under the heading, in reading order.
+    expect(
+      heading.compareDocumentPosition(empty) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });
 
