@@ -235,6 +235,9 @@ describe("ClosetFilters: WORKS AT before a script (#109h)", () => {
     expect(lowest).toHaveAttribute("placeholder", "34");
     expect(highest).toHaveAttribute("placeholder", "58");
     expect(lowest).toHaveDisplayValue("");
+    // Its own names, which closetSearch reads in `unit` and never writes.
+    expect(lowest).toHaveAttribute("name", "lowest");
+    expect(highest).toHaveAttribute("name", "highest");
     expect(form).toHaveTextContent(/^Lowest\s*to\s*Highest\s*Apply$/u);
     expect(
       screen.getByRole("heading", { name: "Works at · °F" }),
@@ -243,10 +246,12 @@ describe("ClosetFilters: WORKS AT before a script (#109h)", () => {
 
   it("hides the two labels, and makes Apply a plain text button", async () => {
     await rail();
-    expect(document.querySelector("label[for$='-from']")).toHaveClass(
+    expect(document.querySelector("label[for$='-lowest']")).toHaveClass(
       "sr-only",
     );
-    expect(document.querySelector("label[for$='-to']")).toHaveClass("sr-only");
+    expect(document.querySelector("label[for$='-highest']")).toHaveClass(
+      "sr-only",
+    );
     const apply = screen.getByRole("button", { name: "Apply" });
     expect(apply).toHaveAttribute("type", "submit");
     expect(apply).toHaveClass("underline");

@@ -155,25 +155,57 @@ describe("closetSearch", () => {
     expect(closetSearch({ group: "", coverage: "" })).toStrictEqual({});
   });
 
-  it("keeps WORKS AT in Celsius when nothing says otherwise", () => {
+  it("keeps WORKS AT in Celsius, whatever the unit says about the form", () => {
     expect(closetSearch({ from: 1.1, to: 14.4 })).toStrictEqual({
       from: 1.1,
       to: 14.4,
     });
     expect(closetSearch({ from: -5 })).toStrictEqual({ from: -5 });
     expect(closetSearch({ to: 20 })).toStrictEqual({ to: 20 });
-    expect(closetSearch({ from: 4, unit: "c" })).toStrictEqual({ from: 4 });
-  });
-
-  it("converts what the form typed in Fahrenheit, and never keeps the unit", () => {
-    expect(closetSearch({ from: 34, to: 58, unit: "f" })).toStrictEqual({
-      from: 1.1,
-      to: 14.4,
+    // `unit` is the form's, and says nothing about `from` and `to`.
+    expect(closetSearch({ from: 4, to: 12, unit: "f" })).toStrictEqual({
+      from: 4,
+      to: 12,
     });
   });
 
+  it("converts what the form typed in its unit, and keeps none of the form's fields", () => {
+    expect(closetSearch({ lowest: 34, highest: 58, unit: "f" })).toStrictEqual({
+      from: 1.1,
+      to: 14.4,
+    });
+    expect(closetSearch({ lowest: 4, unit: "c" })).toStrictEqual({ from: 4 });
+  });
+
+  it("prefers what the form typed over a span the search already held", () => {
+    expect(
+      closetSearch({ lowest: 34, from: 20, highest: 58, to: 30, unit: "f" }),
+    ).toStrictEqual({ from: 1.1, to: 14.4 });
+  });
+
+  // The router runs it again over a search that still holds the raw
+  // fields beside what it made. Converting its own output again walked
+  // 60–80°F down to −40°, where the scales meet (design 174).
+  it("gives the same answer run again over its own output and the raw fields", () => {
+    const raw = { lowest: 60, highest: 80, unit: "f", group: "tops" };
+    const once = closetSearch(raw);
+    expect(once).toStrictEqual({ group: "tops", from: 15.6, to: 26.7 });
+    expect(closetSearch({ ...raw, ...once })).toStrictEqual(once);
+    expect(
+      closetSearch({ ...raw, ...closetSearch({ ...raw, ...once }) }),
+    ).toStrictEqual(once);
+  });
+
   it("reads an unknown unit as Celsius rather than guessing", () => {
-    expect(closetSearch({ from: 34, unit: "k" })).toStrictEqual({ from: 34 });
+    expect(closetSearch({ lowest: 34, unit: "k" })).toStrictEqual({
+      from: 34,
+    });
+  });
+
+  it("drops an empty field the form sent, falling back to nothing", () => {
+    expect(closetSearch({ lowest: "", highest: "", unit: "f" })).toStrictEqual(
+      {},
+    );
   });
 
   it("drops an end that is not a number, and a span that runs backwards", () => {

@@ -522,7 +522,7 @@ test("add garments with product identity -> detail in round 22's order -> retire
   await expect(
     chips.getByRole("button", { name: "Group · Outer" }),
   ).toBeVisible();
-  await chips.getByRole("button", { name: "Group · Outer" }).click();
+  // The group's control stays open under its chip after a pick.
   await chips.getByRole("link", { name: /^All/ }).click();
   await page.setViewportSize({ width: 1280, height: 720 });
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("2 pieces");

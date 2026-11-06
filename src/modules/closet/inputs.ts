@@ -48,10 +48,17 @@ export const itemIdInput = z.object({ itemId: ulidSchema });
  * - `group`, `coverage`, `from` and `to` are the rail's filters (R-94).
  *   `from`/`to` are Celsius: the one unit the URL holds, so a link means
  *   the same thing whoever's unit wrote it.
- * - `unit` is only ever *read*. WORKS AT works before hydration as a plain
- *   GET form, and a form cannot convert what the runner typed, so it says
- *   which unit it typed in and the conversion happens here, at the edge.
- *   It never comes back out: what the route holds is always Celsius.
+ * - `lowest`, `highest` and `unit` are only ever *read*. WORKS AT works
+ *   before hydration as a plain GET form, and a form cannot convert what
+ *   the runner typed, so it sends its own fields and says which unit they
+ *   are in, and the conversion happens here, at the edge. None of the
+ *   three comes back out: what the route holds is always Celsius.
+ * - **Idempotent, and it has to be.** The router runs this again over a
+ *   search that still holds the raw fields beside the Celsius it made, so
+ *   an end is always read from what was typed when that is there, never
+ *   from its own output. Converting `from` itself under `unit=f` turned
+ *   60–80°F into a Celsius that the next pass converted again, until it
+ *   settled where the scales meet: −40° (e2e, design 174).
  *
  * TanStack parses search values as JSON, so numbers and the boolean we
  * navigate with round-trip as themselves. Anything else is dropped rather
@@ -76,17 +83,26 @@ const groupParam = z.enum(uiGroups);
 const coverageParam = z.enum(verdictCoverages);
 const degreesParam = z.number();
 
-function degreesC(value: unknown, unit: TempUnit): number | undefined {
-  const parsed = degreesParam.safeParse(value);
-  return parsed.success ? unitToC(parsed.data, unit) : undefined;
+/**
+An end, in Celsius: as typed into the form, in its unit, or else as the search already holds it.
+*/
+function endC(
+  typed: unknown,
+  celsius: unknown,
+  unit: TempUnit,
+): number | undefined {
+  const fromForm = degreesParam.safeParse(typed);
+  if (fromForm.success) return unitToC(fromForm.data, unit);
+  const held = degreesParam.safeParse(celsius);
+  return held.success ? held.data : undefined;
 }
 
 export function closetSearch(search: Record<string, unknown>): ClosetSearch {
   const unit = tempUnitSchema.catch("c").parse(search.unit);
   const group = groupParam.safeParse(search.group);
   const coverage = coverageParam.safeParse(search.coverage);
-  const from = degreesC(search.from, unit);
-  const to = degreesC(search.to, unit);
+  const from = endC(search.lowest, search.from, unit);
+  const to = endC(search.highest, search.to, unit);
   const isBackwards = from !== undefined && to !== undefined && from > to;
   return {
     ...(search.retired === true && { retired: true }),

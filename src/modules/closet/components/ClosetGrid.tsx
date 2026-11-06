@@ -314,7 +314,8 @@ function NoMatches({ onClear }: Readonly<{ onClear: () => void }>) {
         to="/closet"
         activeOptions={{ exact: true }}
         onClick={onClear}
-        className="target text-ink"
+        // Underlined: inside a sentence, colour alone does not say "link".
+        className="target text-ink underline"
       >
         Clear filters
       </Link>

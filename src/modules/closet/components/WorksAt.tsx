@@ -61,7 +61,7 @@ function EndField({
   boundC,
   tempUnit,
 }: Readonly<{
-  name: "from" | "to";
+  name: "lowest" | "highest";
   label: string;
   valueC: number | undefined;
   boundC: number;
@@ -107,7 +107,7 @@ function WorksAtForm({
   return (
     <form method="get" className="flex items-center gap-2">
       <EndField
-        name="from"
+        name="lowest"
         label="Lowest"
         valueC={search.from}
         boundC={span.lowC}
@@ -115,7 +115,7 @@ function WorksAtForm({
       />
       <span className="text-small text-quiet">to</span>
       <EndField
-        name="to"
+        name="highest"
         label="Highest"
         valueC={search.to}
         boundC={span.highC}
