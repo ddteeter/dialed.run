@@ -124,7 +124,9 @@ describe("AlreadyInCloset", () => {
   // R-94: the range used to print the stored Celsius to everyone.
   it("gives the record's range in the runner's unit", () => {
     card([harrier], NOTHING_TYPED, "f");
-    expect(rows()[0]).toHaveTextContent("41 runs · 8/9 dialed 37–46°");
+    expect(rows()[0]).toHaveTextContent(
+      "41 runs · 8/9 dialed8 of 9 runs dialed, works at 37–46°",
+    );
   });
 
   it("lists each piece with its record, in the order given", () => {
