@@ -77,13 +77,19 @@ board's `PENDING DELETE` state (PR#126-1). Desk Today's ban count scans
 - migration chain test covers 0079. e2e: the Desk transcripts are
   regenerated.
 
-## Open questions (asked of Drew, 2026-11-06)
+## Owner answers (Drew, 2026-11-06)
 
-1. The words of the screening hold notice and its kept notice.
-2. The statutory-line wording at each site, and the courtesy-removal reason.
-3. The flag mechanism (derived, plus a Keep account action) and its words.
-4. The terms say "When reports hide your kit or photo, we tell you". Do
-   they gain "or our automatic screening"? That bumps the terms version.
+1. Hold notice: "Our automatic screening flagged a photo on your run…"; kept:
+   "We reviewed the flagged photo on your run and left it up." Terms gain
+   "When reports or our automatic screening hide…", and the version bumps.
+2. Runner-facing "intimate" labels stay (report reason, `/takedown`). The
+   statutory line is stated on the Review row, the Decline hint and a new
+   line in the declined email (pointing to desk@ for an ordinary report).
+3. Add a courtesy Remove reason under the `othersPhotos` rule: "it shows
+   someone who didn't agree to it".
+4. Flag on D8 Runners: FLAGGED mark, Flagged filter, Keep account, cleared by
+   Keep, a ban or an unban; Desk Today counts flagged accounts. Placeholder
+   words until Design rules (sent to coordinator-2 for the Design batch).
 
 ## Register changes for the coordinator
 
