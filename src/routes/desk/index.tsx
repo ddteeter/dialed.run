@@ -1,4 +1,6 @@
-import { createFileRoute, getRouteApi } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+
+import { useDeskToday } from "../../modules/ops/components/DeskPage";
 
 import { DeskTodayPage } from "../../modules/ops/components/Today";
 import {
@@ -6,8 +8,6 @@ import {
   dropGaveUpAction,
   retryGaveUpAction,
 } from "../../modules/ops/functions";
-
-const desk = getRouteApi("/desk");
 
 /**
  * Today (Operator Screens D0): the digest, rendered, from the `/desk`
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/desk/")({
 function TodayPage() {
   return (
     <DeskTodayPage
-      today={desk.useLoaderData()}
+      today={useDeskToday()}
       gaveUp={Route.useLoaderData()}
       retry={retryGaveUpAction}
       drop={dropGaveUpAction}

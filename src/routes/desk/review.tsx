@@ -1,6 +1,6 @@
-import { createFileRoute, getRouteApi } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
-import { DeskShell } from "../../modules/ops/components/DeskShell";
+import { DeskPage, useDeskToday } from "../../modules/ops/components/DeskPage";
 import { ReviewHeading } from "../../modules/ops/components/ReviewHeading";
 import { CopyrightHolds } from "../../modules/safety/components/CopyrightHolds";
 import { QuarantineRecords } from "../../modules/safety/components/QuarantineRecords";
@@ -26,9 +26,6 @@ import {
   reviewQueueQuery,
 } from "../../modules/safety/functions";
 
-// fallow-ignore-next-line code-duplication -- two Desk pages are the same shape by mandate: getRouteApi("/desk") + createFileRoute + one loader call + DeskShell + a component is exactly what server-functions-are-glue requires a route to be, and the branching that would make them differ is what it forbids
-const desk = getRouteApi("/desk");
-
 /**
  * Desk · Review (decision D-87), the queue task 106 built, moved inside
  * the Desk by R-173: dark, with the rail. Behind `/desk`'s not-found for
@@ -41,12 +38,12 @@ export const Route = createFileRoute("/desk/review")({
 });
 
 function ReviewPage() {
-  const today = desk.useLoaderData();
+  const today = useDeskToday();
   const { queue, requests, quarantine, holds, bursts, burstsSince } =
     Route.useLoaderData();
 
   return (
-    <DeskShell current="review" today={today}>
+    <DeskPage current="review">
       <ReviewHeading counts={today.counts} />
       {/* Design 164: a burst of holds a bug may have made, to release. */}
       <ReleaseHolds
@@ -83,6 +80,6 @@ function ReviewPage() {
         records={quarantine}
         recordReport={recordNcmecReportAction}
       />
-    </DeskShell>
+    </DeskPage>
   );
 }

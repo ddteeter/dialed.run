@@ -1,8 +1,4 @@
-import {
-  createFileRoute,
-  getRouteApi,
-  useRouter,
-} from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 
 import { DeskAccess } from "../../modules/account/components/DeskAccess";
 import {
@@ -13,9 +9,7 @@ import {
   restoreInviteCodeFn,
   revokeInviteCodeFn,
 } from "../../modules/account/functions";
-import { DeskShell } from "../../modules/ops/components/DeskShell";
-
-const desk = getRouteApi("/desk");
+import { DeskPage, useDeskToday } from "../../modules/ops/components/DeskPage";
 
 /**
  * Desk D7 · Access (task 126, ACC-5; round 26 #20), behind the `/desk`
@@ -28,12 +22,12 @@ export const Route = createFileRoute("/desk/access")({
 });
 
 function AccessPage() {
-  const today = desk.useLoaderData();
+  const today = useDeskToday();
   const access = Route.useLoaderData();
   const router = useRouter();
 
   return (
-    <DeskShell current="access" today={today}>
+    <DeskPage current="access">
       <DeskAccess
         desk={access}
         asOf={today.asOf}
@@ -51,6 +45,6 @@ function AccessPage() {
         revoke={revokeInviteCodeFn}
         restore={restoreInviteCodeFn}
       />
-    </DeskShell>
+    </DeskPage>
   );
 }
