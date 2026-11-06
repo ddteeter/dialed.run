@@ -234,9 +234,7 @@ export async function matchTally(
   // filter, so the empty list comes out either way. The return saves the
   // cross-database walk.
   // Stryker disable next-line ConditionalExpression
-  if (entries.length === 0) {
-    return { runners: 0, groups: {}, dialed: { runners: 0, groups: {} } };
-  }
+  if (entries.length === 0) return noTally();
   // In code rather than SQL: the observations live in DIALED_WEATHER, a
   // separate database D1 cannot join to (CLAUDE.md, D1 discipline).
   const observations = await observationsForEntries(database, entries);
@@ -264,6 +262,13 @@ export async function matchTally(
       groups: groupCounts(worn.filter((row) => dialedIds.has(row.entryId))),
     },
   };
+}
+
+/**
+Nobody matched: no runners, no groups, and nobody dialed.
+*/
+function noTally(): MatchTally {
+  return { runners: 0, groups: {}, dialed: { runners: 0, groups: {} } };
 }
 
 function runnersIn(entries: readonly { userId: string }[]): number {
@@ -314,21 +319,18 @@ async function wornByRunner(
     garments.map((g) => [g.id, uiGroupFor(g.category, g.layer)]),
   );
 
-  return itemRows
-    .map((row) => ({
-      entryId: row.entryId,
-      userId: row.userId,
-      group: groupByItemId.get(row.itemId),
-    }))
-    .filter(
-      (row): row is WornRow =>
-        // Equivalent mutant: `itemIds` is built from these very rows, so
-        // every one of them has a group unless its garment was deleted
-        // between the two reads. The guard is what keeps that race from
-        // counting a group of `undefined`.
-        // Stryker disable next-line ConditionalExpression
-        row.group !== undefined,
-    );
+  const worn: WornRow[] = [];
+  for (const row of itemRows) {
+    const group = groupByItemId.get(row.itemId);
+    // Equivalent mutant: `itemIds` is built from these very rows, so every
+    // one of them has a group unless its garment was deleted between the
+    // two reads. The guard is what keeps that race from counting a group
+    // of `undefined`.
+    // Stryker disable next-line ConditionalExpression
+    if (!group) continue;
+    worn.push({ entryId: row.entryId, userId: row.userId, group });
+  }
+  return worn;
 }
 
 /**

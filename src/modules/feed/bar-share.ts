@@ -72,7 +72,7 @@ export function summarySentence(
       .map((bar) => bar.row.group),
   })).filter((clause) => clause.groups.length > 0);
   if (clauses.length === 0) return undefined;
-  const list = new Intl.ListFormat("en", { type: "conjunction" });
+  const list = new Intl.ListFormat("en");
   return clauses
     .map(({ share, groups }, index) => {
       const named = list.format(

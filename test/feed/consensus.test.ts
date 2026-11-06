@@ -189,6 +189,14 @@ describe("matchTally: who matched", () => {
     });
   });
 
+  it("answers an empty tally, nobody dialed, when nobody logged anything", async () => {
+    expect(await matchTally(VIEWER, THREE_DAYS_AGO)).toStrictEqual({
+      runners: 0,
+      groups: {},
+      dialed: NOBODY_DIALED,
+    });
+  });
+
   it("counts the dialed runners apart, with what they wore when dialed (round 47 #114)", async () => {
     await runner({ verdict: 0, categories: ["top", "bottom"] });
     await runner({ verdict: 0, categories: ["top"] });
