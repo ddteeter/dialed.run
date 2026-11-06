@@ -2,7 +2,13 @@ import { Link } from "@tanstack/react-router";
 
 import type { Units } from "../../../lib/contracts";
 import { formatDistance } from "../../../lib/contracts/measures";
-import { GarminAttribution, Mono, WeatherAttribution } from "../../../ui";
+import {
+  GarminAttribution,
+  Mono,
+  SlowLabel,
+  useTappedSlow,
+  WeatherAttribution,
+} from "../../../ui";
 import type { FeedItem } from "../feed";
 import { postedLabel } from "../posted";
 import { isProvidersReading, stripConditions } from "../strip";
@@ -71,6 +77,9 @@ export function PostCard(props: Readonly<PostCardProps>) {
   } = props;
   const [photo] = item.photoKeys;
   const second = stripConditions(item.conditions, item.indoor, units);
+  // X3 on a whole-card link: the date breathes, the handle stays still
+  // (round 47 #122).
+  const { isWaiting, onClick } = useTappedSlow();
 
   return (
     <article
@@ -81,6 +90,7 @@ export function PostCard(props: Readonly<PostCardProps>) {
       <Link
         to="/feed/entry/$entryId"
         params={{ entryId: item.entryId }}
+        onClick={onClick}
         className="target flex flex-col gap-3 text-ink no-underline"
       >
         <div data-part="author" className="flex items-center gap-3">
@@ -90,7 +100,14 @@ export function PostCard(props: Readonly<PostCardProps>) {
               <Handle username={item.authorUsername} />
             </span>
             <Mono step="xs" className="text-muted">
-              {postedLabel(item.startedAt, now, item.conditions?.timeZone)}
+              <SlowLabel
+                label={postedLabel(
+                  item.startedAt,
+                  now,
+                  item.conditions?.timeZone,
+                )}
+                isWaiting={isWaiting}
+              />
               {item.isOwn ? OWN_SUFFIX : undefined}
             </Mono>
             <GarminAttribution deviceName={item.deviceName} />

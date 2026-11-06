@@ -18,8 +18,8 @@ import {
   FormFailureBand,
   FormStatus,
   Mono,
-  PendingLabel,
   PICKED_AUDIENCES,
+  SlowLabel,
   SubmitButton,
   ToggleField,
   useFormSubmit,
@@ -110,11 +110,7 @@ function SettingsRow({
       >
         <span className="flex flex-col gap-1">
           <span className="text-body font-semibold">
-            {isWaiting ? (
-              <PendingLabel label={label} pendingLabel={label} pending />
-            ) : (
-              label
-            )}
+            <SlowLabel label={label} isWaiting={isWaiting} />
           </span>
           <span className="text-small text-muted">{value}</span>
         </span>

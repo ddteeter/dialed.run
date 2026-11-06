@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
-import { FormStatus, Icon, Mono } from "../../../ui";
+import { FormStatus, Icon, Mono, SlowLabel, useTappedSlow } from "../../../ui";
 import type { OtherProfile as OtherProfileData } from "../profiles";
 import { Avatar } from "./Avatar";
 import { Handle, handleText } from "./Handle";
@@ -96,28 +96,44 @@ export function OtherProfile({
         <div data-part="entries" className="flex flex-col gap-3">
           <ul className="m-0 flex list-none flex-col gap-2 p-0">
             {profile.recentPublicEntries.map((entry) => (
-              <li key={entry.entryId} className="border-b border-hairline pb-3">
-                <Link
-                  to="/feed/entry/$entryId"
-                  params={{ entryId: entry.entryId }}
-                  className="target flex flex-col gap-2 text-ink no-underline"
-                >
-                  <span className="flex items-center justify-between gap-3">
-                    <Mono step="xs" className="text-muted">
-                      {entry.day}
-                    </Mono>
-                    <VerdictBadge verdict={entry.verdict ?? undefined} />
-                  </span>
-                  {entry.caption === null ? undefined : (
-                    <span className="text-body">{entry.caption}</span>
-                  )}
-                </Link>
-              </li>
+              <EntryRow key={entry.entryId} entry={entry} />
             ))}
           </ul>
           <ReportFoot>{reportAffordance}</ReportFoot>
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * One shared run in the list, a link to D. While D is slow its date
+ * breathes and nothing else moves (round 47 #122, X3).
+ */
+function EntryRow({
+  entry,
+}: Readonly<{
+  entry: OtherProfileData["recentPublicEntries"][number];
+}>) {
+  const { isWaiting, onClick } = useTappedSlow();
+  return (
+    <li className="border-b border-hairline pb-3">
+      <Link
+        to="/feed/entry/$entryId"
+        params={{ entryId: entry.entryId }}
+        onClick={onClick}
+        className="target flex flex-col gap-2 text-ink no-underline"
+      >
+        <span className="flex items-center justify-between gap-3">
+          <Mono step="xs" className="text-muted">
+            <SlowLabel label={entry.day} isWaiting={isWaiting} />
+          </Mono>
+          <VerdictBadge verdict={entry.verdict ?? undefined} />
+        </span>
+        {entry.caption === null ? undefined : (
+          <span className="text-body">{entry.caption}</span>
+        )}
+      </Link>
+    </li>
   );
 }

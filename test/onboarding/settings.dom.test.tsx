@@ -1,19 +1,10 @@
 import {
-  Outlet,
   RouterProvider,
   createMemoryHistory,
   createRootRoute,
-  createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -31,8 +22,12 @@ import {
   SettingsSubPage,
 } from "../../src/modules/onboarding/components/SettingsSubPage";
 import type { CurrentSettings } from "../../src/modules/onboarding/profile";
-import { SLOW_ROUTE_MS } from "../../src/ui/tabs";
 import { carriedSince } from "../ui/carry-spy";
+import {
+  ONLY_TIMERS,
+  renderWithSlowRoute,
+  tapAndWaitSlow,
+} from "../ui/slow-route";
 
 vi.mock("../../src/ui/use-form-submit", async (importOriginal) => {
   const { spyOnCarry } = await import("../ui/carry-spy");
@@ -258,47 +253,23 @@ describe("the index (U1/N)", () => {
 
 describe("the index while a sub-page is slow (X3)", () => {
   it("breathes the tapped row's label, and says it once", async () => {
-    // Only the timers: the router's own clock reads stay real.
-    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    vi.useFakeTimers(ONLY_TIMERS);
     try {
-      const rootRoute = createRootRoute({ component: () => <Outlet /> });
-      const index = createRoute({
-        getParentRoute: () => rootRoute,
-        path: "/onboarding/settings",
-        component: () => (
-          <SettingsIndex
-            current={ANSWERED}
-            username="maya_runs"
-            runReminderEmail
-            blockedCount={2}
-            signOut={undefined}
-          />
-        ),
-      });
-      const section = createRoute({
-        getParentRoute: () => rootRoute,
-        path: "/onboarding/settings/$section",
-        loader: () =>
-          new Promise<never>(() => {
-            // A sub-page that never arrives.
-          }),
-        component: () => <p>unreachable</p>,
-      });
-      const router = createRouter({
-        routeTree: rootRoute.addChildren([index, section]),
-        history: createMemoryHistory({
-          initialEntries: ["/onboarding/settings"],
-        }),
-      });
-      await act(async () => {
-        await router.load();
-      });
-      render(<RouterProvider router={router} />);
+      await renderWithSlowRoute(
+        <SettingsIndex
+          current={ANSWERED}
+          username="maya_runs"
+          runReminderEmail
+          blockedCount={2}
+          signOut={undefined}
+        />,
+        {
+          at: "/onboarding/settings",
+          slowPath: "/onboarding/settings/$section",
+        },
+      );
 
-      fireEvent.click(row(/^Units/u));
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(SLOW_ROUTE_MS);
-      });
+      await tapAndWaitSlow(row(/^Units/u));
 
       const units = row(/^Units/u);
       expect(units).toHaveAttribute("data-state", "navigating");
