@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { nearestPriorEntry, prefillAt } from "../../src/modules/feed/prefill";
+import { nearestPriorEntry } from "../../src/modules/feed/prefill";
 import type { Conditions } from "../../src/modules/feed/conditions";
 import {
   makeEntry,
@@ -185,34 +185,5 @@ describe("nearestPriorEntry", () => {
     await priorEntry({ userId: theirs, lat: 49.99, feelsLikeC: 3 });
 
     expect(await nearestPriorEntry(mine, conditions())).toBeUndefined();
-  });
-});
-
-describe("prefillAt", () => {
-  it("suggests nothing when the conditions there cannot be resolved", async () => {
-    // A prefill with no conditions has nothing to be near, so the form
-    // falls back to the picker rather than offering a guess. The runner
-    // has history — without it the lookup would stop before the
-    // conditions ever mattered.
-    const userId = await makeUser();
-    await priorEntry({ userId, lat: 70.11, feelsLikeC: 3 });
-
-    expect(await prefillAt(userId, 73.11, -93.27, NOW)).toBeUndefined();
-  });
-
-  it("suggests the nearest prior entry once the conditions are known", async () => {
-    const userId = await makeUser();
-    await priorEntry({ userId, lat: 71.11, feelsLikeC: 3 });
-    await makeObservation({
-      lat: 72.11,
-      lng: -93.27,
-      startedAt: NOW,
-      tempC: 5,
-      feelsLikeC: 3,
-    });
-
-    const suggestion = await prefillAt(userId, 72.11, -93.27, NOW);
-
-    expect(suggestion?.feelsLikeDeltaC).toBe(0);
   });
 });

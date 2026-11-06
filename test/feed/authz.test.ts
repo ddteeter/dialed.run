@@ -169,7 +169,7 @@ describe("authorization", () => {
     expect(result.runners).toBe(0);
   });
 
-  it("never shows another viewer a public entry's per-item flags/notes", async () => {
+  it("never shows another viewer a public entry's per-item flags", async () => {
     const owner = await makeUser();
     const stranger = await makeUser();
     const runId = await makeRun({ userId: owner });
@@ -186,21 +186,16 @@ describe("authorization", () => {
       verdict: 1,
       audience: "runners",
       tags: [],
-      itemFlags: [
-        { itemId: item, flag: "too_much", note: "sweated through it" },
-      ],
+      itemFlags: [{ itemId: item, flag: "too_much" }],
     });
 
     const asOwner = await getEntryDetail(entryId, owner);
     expect(asOwner?.items[0]?.flag).toBe("too_much");
-    expect(asOwner?.items[0]?.note).toBe("sweated through it");
 
     const asStranger = await getEntryDetail(entryId, stranger);
     expect(asStranger?.items[0]?.flag).toBeUndefined();
-    expect(asStranger?.items[0]?.note).toBeUndefined();
 
     const asAnonymous = await getEntryDetail(entryId, undefined);
     expect(asAnonymous?.items[0]?.flag).toBeUndefined();
-    expect(asAnonymous?.items[0]?.note).toBeUndefined();
   });
 });

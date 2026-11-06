@@ -302,7 +302,7 @@ describe("submitVerdict writes the whole submission or none of it", () => {
     expect(detail?.tags).toStrictEqual([]);
   });
 
-  it("records a per-item flag and note, and clears them again", async () => {
+  it("records a per-item flag, and clears it again", async () => {
     const { userId, entryId, itemId } = await ownEntry();
 
     await submitVerdict({
@@ -311,13 +311,10 @@ describe("submitVerdict writes the whole submission or none of it", () => {
       verdict: 0,
       audience: "runners",
       tags: [],
-      itemFlags: [{ itemId, flag: "too_much", note: "Hands cooked" }],
+      itemFlags: [{ itemId, flag: "too_much" }],
     });
     const flagged = await getEntryDetail(entryId, userId);
-    expect(flagged?.items[0]).toMatchObject({
-      flag: "too_much",
-      note: "Hands cooked",
-    });
+    expect(flagged?.items[0]?.flag).toBe("too_much");
 
     await submitVerdict({
       userId,
@@ -329,7 +326,43 @@ describe("submitVerdict writes the whole submission or none of it", () => {
     });
     const cleared = await getEntryDetail(entryId, userId);
     expect(cleared?.items[0]?.flag).toBeUndefined();
-    expect(cleared?.items[0]?.note).toBeUndefined();
+  });
+
+  it("never reads a per-item note back, even to its owner (D-160)", async () => {
+    // The column stays until a contract step drops it (law 8), so a note
+    // stored before the cut is still in the row; the detail must not carry it.
+    const { userId, entryId, itemId } = await ownEntry();
+    await db()
+      .update(outfitEntryItems)
+      .set({ flag: "too_much", note: "Hands cooked" })
+      .where(eq(outfitEntryItems.entryId, entryId));
+
+    const detail = await getEntryDetail(entryId, userId);
+    expect(detail?.items[0]?.itemId).toBe(itemId);
+    expect(detail?.items[0]?.flag).toBe("too_much");
+    expect(detail?.items[0]).not.toHaveProperty("note");
+  });
+
+  it("leaves a stored note alone when the verdict is logged again", async () => {
+    const { userId, entryId, itemId } = await ownEntry();
+    await db()
+      .update(outfitEntryItems)
+      .set({ note: "Hands cooked" })
+      .where(eq(outfitEntryItems.entryId, entryId));
+
+    await submitVerdict({
+      userId,
+      entryId,
+      verdict: 0,
+      audience: "runners",
+      tags: [],
+      itemFlags: [{ itemId, flag: "not_enough" }],
+    });
+    const [row] = await db()
+      .select({ flag: outfitEntryItems.flag, note: outfitEntryItems.note })
+      .from(outfitEntryItems)
+      .where(eq(outfitEntryItems.entryId, entryId));
+    expect(row).toStrictEqual({ flag: "not_enough", note: "Hands cooked" });
   });
 
   it("ignores a flag for an item the entry does not contain", async () => {
@@ -415,14 +448,13 @@ describe("getEntryDetail copes with what is missing", () => {
       verdict: 0,
       audience: "runners",
       tags: [],
-      itemFlags: [{ itemId, flag: "too_much", note: "Private note" }],
+      itemFlags: [{ itemId, flag: "too_much" }],
     });
 
     const asOwner = await getEntryDetail(entryId, userId);
     const asStranger = await getEntryDetail(entryId, viewer);
 
-    expect(asOwner?.items[0]?.note).toBe("Private note");
-    expect(asStranger?.items[0]?.note).toBeUndefined();
+    expect(asOwner?.items[0]?.flag).toBe("too_much");
     expect(asStranger?.items[0]?.flag).toBeUndefined();
   });
 

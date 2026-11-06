@@ -289,12 +289,15 @@ created_at   int
 entry_id   text FK
 item_id    text FK
 flag       text   -- enum: too_much | not_enough, NULLABLE
-note       text   -- NULLABLE, private to the owner (cut for v1, D-160; column kept)
+note       text   -- NULLABLE; cut for v1 (D-160): nothing writes or shows it, the export keeps it
 PK (entry_id, item_id)
 ```
 
 There is **no per-item verdict** — comfort is judged per-run; `flag` carries
-the item-level exception ("gloves too much").
+the item-level exception ("gloves too much"). The per-item note is cut for
+v1 (D-160): no input writes it and no read returns it, and the column stays
+until a contract step drops it (law 8). The account export still lists it,
+because what the column holds is the runner's data.
 
 ### entry_tags
 

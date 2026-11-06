@@ -541,6 +541,29 @@ describe("A1: sending and reading", () => {
     expect(router.state.location.pathname).toBe("/");
   });
 
+  it("waits on an import it cannot see yet, as an answer rather than an error (PR#288-2)", async () => {
+    // `getImportOutcome` answers `undefined` for a row this runner cannot
+    // see yet. TanStack Query refuses `undefined` as data and logs it, so
+    // the poll has to carry that answer as something else.
+    const logged = vi.spyOn(console, "error");
+    try {
+      const getOutcome = vi.fn<GetOutcome>(() => Promise.resolve(undefined));
+      const user = setupUser();
+      await renderWithRouter(form({ getOutcome }));
+      await user.upload(dropInput(), gpx());
+      await firstPoll(getOutcome);
+
+      await elapse(5000);
+
+      expect(getOutcome.mock.calls.length).toBeGreaterThan(1);
+      expect(well()).toHaveAttribute("data-state", "uploading");
+      expect(within(well()).getByText("Reading run.gpx")).toBeVisible();
+      expect(logged).not.toHaveBeenCalled();
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
   it("puts a dropped connection on the form's band, and resends the same upload", async () => {
     const user = setupUser();
     const upload = vi

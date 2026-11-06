@@ -21,7 +21,7 @@ import { outfitEntryItems } from "../../db/schema-core";
 import { coreDb } from "../../env";
 import { precipClassOf } from "../../lib/contracts/temperature";
 import type { Conditions } from "./conditions";
-import { conditionsAt, observationsForEntries } from "./conditions";
+import { observationsForEntries } from "./conditions";
 import { recentOwnEntries } from "./own-history";
 
 export interface PrefillCandidate {
@@ -125,23 +125,4 @@ export async function nearestPriorEntry(
     createdAt: best.entry.createdAt,
     feelsLikeDeltaC: best.feelsLikeDeltaC,
   };
-}
-
-/**
- * The nearest prior entry for a place, or nothing when the conditions
- * there cannot be resolved.
- *
- * A prefill without conditions has nothing to be near, so this returns
- * nothing rather than guessing — the form falls back to the picker.
- */
-export async function prefillAt(
-  userId: string,
-  lat: number,
-  lng: number,
-  nowEpochSeconds: number,
-): Promise<PrefillCandidate | undefined> {
-  const conditions = await conditionsAt(lat, lng, nowEpochSeconds);
-  return conditions === undefined
-    ? undefined
-    : nearestPriorEntry(userId, conditions);
 }

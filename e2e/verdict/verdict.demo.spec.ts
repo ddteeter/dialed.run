@@ -331,13 +331,10 @@ test("log a verdict on your own run: pick it, flag an item, read the receipt", a
   // And the verdict is on the entry.
   await scene(page, "And the verdict is on the entry");
   await page.goto(`/feed/entry/${entryId}`);
-  // D's badge, by the part lane 123's D names it. The `.or()` is main's
-  // bracketed badge until that lands, and goes when it does.
-  const badge = page
-    .locator('[data-part="verdict-badge"]')
-    .or(page.getByText("[A bit cold]"));
+  // D's badge, by the part lane 123's D names it.
+  const badge = page.locator('[data-part="verdict-badge"]');
   await expect(badge).toBeVisible({ timeout: 15_000 });
-  await expect(badge).toHaveText(/^\[?A bit cold\]?$/u);
+  await expect(badge).toHaveText("A bit cold");
 
   // Re-opening it shows what was saved, which is not what it used to do.
   //

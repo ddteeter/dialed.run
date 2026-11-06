@@ -16,7 +16,6 @@ import {
   usefulInput,
   feedInput,
   itemBandStatInput,
-  pickerGroupsInput,
   searchInput,
   submitVerdictInput,
   uploadPhotoFields,
@@ -80,17 +79,6 @@ describe("the coordinate inputs", () => {
     expect(coordinatesInput.safeParse({ lat: 44.98 }).success).toBe(false);
   });
 
-  it("lets the picker ask without a location at all", () => {
-    // A browser can refuse geolocation, and the picker still has to show
-    // the closet.
-    expect(pickerGroupsInput.safeParse({}).success).toBe(true);
-    expect(
-      pickerGroupsInput.safeParse({ lat: 44.98, lng: -93.27 }).success,
-    ).toBe(true);
-    expect(pickerGroupsInput.safeParse({ lat: 91, lng: 0 }).success).toBe(
-      false,
-    );
-  });
 });
 
 describe("submitVerdictInput: the runner's effort (G5)", () => {
@@ -191,19 +179,13 @@ describe("submitVerdictInput", () => {
     ).toBe(false);
   });
 
-  it("takes a per-item flag with a note, and caps the note", () => {
-    expect(
-      submitVerdictInput.safeParse({
-        ...valid,
-        itemFlags: [{ itemId: newUlid(), flag: "too_much", note: "Hands" }],
-      }).success,
-    ).toBe(true);
-    expect(
-      submitVerdictInput.safeParse({
-        ...valid,
-        itemFlags: [{ itemId: newUlid(), note: "a".repeat(281) }],
-      }).success,
-    ).toBe(false);
+  it("takes a per-item flag, and drops a note sent beside it (D-160)", () => {
+    const itemId = newUlid();
+    const parsed = submitVerdictInput.parse({
+      ...valid,
+      itemFlags: [{ itemId, flag: "too_much", note: "a".repeat(281) }],
+    });
+    expect(parsed.itemFlags).toStrictEqual([{ itemId, flag: "too_much" }]);
   });
 
   it("refuses a flag that is not one of the two", () => {
